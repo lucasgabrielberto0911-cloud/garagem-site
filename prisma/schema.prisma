@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Vehicle {
+  id           String   @id @default(cuid())
+  brand        String
+  model        String
+  version      String?
+  year         Int
+  yearModel    Int
+  km           Int
+  price        Float
+  fuel         String
+  transmission String
+  color        String?
+  description  String?
+  status       String   @default("disponivel")
+  featured     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  photos       Photo[]
+  sale         Sale?
+}
+
+model Photo {
+  id        String  @id @default(cuid())
+  url       String
+  order     Int     @default(0)
+  vehicleId String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  cpf       String?
+  phone     String
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  sales     Sale[]
+}
+
+model Sale {
+  id            String   @id @default(cuid())
+  vehicleId     String   @unique
+  vehicle       Vehicle  @relation(fields: [vehicleId], references: [id])
+  customerId    String
+  customer      Customer @relation(fields: [customerId], references: [id])
+  salePrice     Float
+  paymentMethod String
+  saleDate      DateTime @default(now())
+  notes         String?
+  createdAt     DateTime @default(now())
+}
+
+model Admin {
+  id           String @id @default(cuid())
+  name         String
+  email        String @unique
+  passwordHash String
+}
