@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Barlow_Condensed, Inter } from "next/font/google";
-import { Header } from "@/components/Header";
 import "./globals.css";
 
 const display = Barlow_Condensed({
@@ -38,7 +37,6 @@ export default function RootLayout({
       <body
         className={`${display.variable} ${body.variable} font-body antialiased bg-asphalt text-cream`}
       >
-        <Header />
         {children}
       </body>
     </html>
