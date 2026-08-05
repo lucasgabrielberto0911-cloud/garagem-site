@@ -172,6 +172,16 @@ export function IconImage({ className }: IconProps) {
   );
 }
 
+export function IconUserCircle({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="10" r="3" />
+      <path d="M6.2 18.4a6.5 6.5 0 0 1 11.6 0" />
+    </svg>
+  );
+}
+
 export function IconEye({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

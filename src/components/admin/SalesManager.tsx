@@ -2,10 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { IconCash, IconPlus, IconTrash } from "@/components/admin/icons";
+import {
+  IconCash,
+  IconDownload,
+  IconPlus,
+  IconTrash,
+} from "@/components/admin/icons";
 import { IconWhatsApp } from "@/components/site/icons";
 import { Badge, Card, EmptyState, Field, btn, inputClass } from "@/components/admin/ui";
 import { createSale, deleteSale } from "@/app/admin/vendas/actions";
@@ -46,6 +51,58 @@ function formatDate(date: Date) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(date);
 }
 
+const PERIODS = [
+  { value: "all", label: "Todo o período" },
+  { value: "month", label: "Mês atual" },
+  { value: "30", label: "Últimos 30 dias" },
+  { value: "90", label: "Últimos 90 dias" },
+  { value: "year", label: "Ano atual" },
+] as const;
+
+type Period = (typeof PERIODS)[number]["value"];
+
+function matchesPeriod(date: Date, period: Period) {
+  if (period === "all") return true;
+  const now = new Date();
+
+  if (period === "month") {
+    return (
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear()
+    );
+  }
+  if (period === "year") return date.getFullYear() === now.getFullYear();
+
+  const days = Number(period);
+  return now.getTime() - date.getTime() <= days * 24 * 60 * 60 * 1000;
+}
+
+function exportSalesCsv(sales: SaleRow[]) {
+  const header = ["Data", "Veículo", "Ano", "Cliente", "Telefone", "Pagamento", "Valor", "Observações"];
+  const rows = sales.map((sale) => [
+    formatDate(sale.saleDate),
+    `${sale.vehicle.brand} ${sale.vehicle.model}`,
+    String(sale.vehicle.yearModel),
+    sale.customer.name,
+    formatPhoneBR(sale.customer.phone),
+    sale.paymentMethod,
+    String(sale.salePrice),
+    (sale.notes ?? "").replace(/\s+/g, " "),
+  ]);
+
+  const csv = [header, ...rows]
+    .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `vendas-garagem-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function todayInputValue() {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -71,8 +128,19 @@ export function SalesManager({
   const [price, setPrice] = useState("");
   const [phone, setPhone] = useState("");
   const [cancelTarget, setCancelTarget] = useState<SaleRow | null>(null);
+  const [period, setPeriod] = useState<Period>("all");
 
   const isNewCustomer = customerId === "" || customerId === "novo";
+
+  const filteredSales = useMemo(
+    () => sales.filter((sale) => matchesPeriod(new Date(sale.saleDate), period)),
+    [sales, period],
+  );
+
+  const periodTotal = useMemo(
+    () => filteredSales.reduce((sum, sale) => sum + sale.salePrice, 0),
+    [filteredSales],
+  );
 
   function selectVehicle(id: string) {
     setVehicleId(id);
@@ -260,20 +328,54 @@ export function SalesManager({
           </form>
         </Card>
       ) : (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          disabled={vehicles.length === 0}
-          className={btn.primary}
-          title={
-            vehicles.length === 0
-              ? "Cadastre um veículo disponível para registrar a venda"
-              : undefined
-          }
-        >
-          <IconPlus className="h-4 w-4" />
-          Registrar venda
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            disabled={vehicles.length === 0}
+            className={btn.primary}
+            title={
+              vehicles.length === 0
+                ? "Cadastre um veículo disponível para registrar a venda"
+                : undefined
+            }
+          >
+            <IconPlus className="h-4 w-4" />
+            Registrar venda
+          </button>
+
+          {sales.length > 0 ? (
+            <>
+              <select
+                value={period}
+                onChange={(event) => setPeriod(event.target.value as Period)}
+                className={`${inputClass} sm:w-48`}
+                aria-label="Filtrar por período"
+              >
+                {PERIODS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs text-muted">
+                {filteredSales.length} venda(s)
+                {period !== "all"
+                  ? ` · ${formatCurrencyBRL(periodTotal)}`
+                  : ""}
+              </span>
+              <button
+                type="button"
+                onClick={() => exportSalesCsv(filteredSales)}
+                disabled={filteredSales.length === 0}
+                className="inline-flex items-center gap-2 border border-white/15 px-3 py-2.5 text-xs text-cream transition hover:border-brand disabled:opacity-50 sm:ml-auto"
+              >
+                <IconDownload className="h-4 w-4" />
+                Exportar CSV
+              </button>
+            </>
+          ) : null}
+        </div>
       )}
 
       {sales.length === 0 ? (
@@ -282,11 +384,17 @@ export function SalesManager({
           title="Nenhuma venda registrada"
           description="Registre as vendas para acompanhar faturamento, ticket médio e o histórico de cada cliente."
         />
+      ) : filteredSales.length === 0 ? (
+        <EmptyState
+          icon={<IconCash className="h-12 w-12" />}
+          title="Nenhuma venda neste período"
+          description="Amplie o filtro de datas para ver o histórico completo."
+        />
       ) : (
         <>
           {/* Mobile: cards. */}
           <ul className="space-y-3 lg:hidden">
-            {sales.map((sale) => (
+            {filteredSales.map((sale) => (
               <li key={sale.id} className="border border-white/10 bg-ink/50 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -352,7 +460,7 @@ export function SalesManager({
                 </tr>
               </thead>
               <tbody>
-                {sales.map((sale) => (
+                {filteredSales.map((sale) => (
                   <tr
                     key={sale.id}
                     className="border-t border-white/10 transition hover:bg-white/[0.04]"

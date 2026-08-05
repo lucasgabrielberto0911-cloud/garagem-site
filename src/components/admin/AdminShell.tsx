@@ -10,6 +10,7 @@ import {
   IconExternal,
   IconInbox,
   IconLogout,
+  IconUserCircle,
   IconUsers,
 } from "@/components/admin/icons";
 import {
@@ -112,6 +113,17 @@ export function AdminShell({
 
       <div className="space-y-1 border-t border-white/10 p-3">
         <Link
+          href="/admin/conta"
+          className={`flex min-h-[44px] items-center gap-3 px-3 py-2.5 text-sm transition ${
+            pathname.startsWith("/admin/conta")
+              ? "bg-brand text-cream"
+              : "text-muted hover:bg-white/5 hover:text-cream"
+          }`}
+        >
+          <IconUserCircle className="h-[18px] w-[18px] shrink-0" />
+          Minha conta
+        </Link>
+        <Link
           href="/"
           target="_blank"
           className="flex min-h-[44px] items-center gap-3 px-3 py-2.5 text-sm text-muted transition hover:bg-white/5 hover:text-cream"
@@ -129,9 +141,13 @@ export function AdminShell({
           {loggingOut ? "Saindo..." : "Sair"}
         </button>
         {email ? (
-          <p className="truncate px-3 pt-2 text-[11px] text-muted" title={email}>
+          <Link
+            href="/admin/conta"
+            title="Minha conta"
+            className="block truncate px-3 pt-2 text-[11px] text-muted transition hover:text-cream"
+          >
             {email}
-          </p>
+          </Link>
         ) : null}
       </div>
     </>

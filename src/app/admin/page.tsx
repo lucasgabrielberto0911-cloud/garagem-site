@@ -36,6 +36,7 @@ export default async function AdminDashboardPage() {
     alerts.withoutPhotos.length +
     (alerts.noFeatured ? 1 : 0) +
     (alerts.noTestimonials ? 1 : 0) +
+    (alerts.usingSeedPassword ? 1 : 0) +
     (alerts.placeholders.length > 0 ? 1 : 0);
 
   return (
@@ -138,6 +139,16 @@ export default async function AdminDashboardPage() {
             </p>
           ) : (
             <ul className="space-y-3 text-sm">
+              {alerts.usingSeedPassword ? (
+                <AlertRow
+                  tone="brand"
+                  icon={<IconAlert className="h-4 w-4" />}
+                  title="Senha padrão ainda em uso"
+                  description="Um acesso do painel continua com a senha criada na instalação. Troque em Minha conta."
+                  href="/admin/conta"
+                />
+              ) : null}
+
               {alerts.placeholders.length > 0 ? (
                 <AlertRow
                   tone="warning"
