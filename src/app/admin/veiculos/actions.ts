@@ -187,3 +187,71 @@ export async function markVehicleAsSold(id: string) {
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
 }
+
+const VEHICLE_STATUSES = ["disponivel", "reservado", "vendido"] as const;
+
+export async function setVehicleStatus(id: string, status: string) {
+  await requireAdmin();
+
+  if (!(VEHICLE_STATUSES as readonly string[]).includes(status)) {
+    return { ok: false, message: "Status inválido." };
+  }
+
+  await prisma.vehicle.update({ where: { id }, data: { status } });
+  revalidatePath("/admin/veiculos");
+  revalidatePath(`/admin/veiculos/${id}`);
+  return { ok: true, message: "Status atualizado." };
+}
+
+export async function setVehicleFeatured(id: string, featured: boolean) {
+  await requireAdmin();
+
+  await prisma.vehicle.update({ where: { id }, data: { featured } });
+  revalidatePath("/admin/veiculos");
+  revalidatePath(`/admin/veiculos/${id}`);
+  return {
+    ok: true,
+    message: featured ? "Veículo em destaque." : "Destaque removido.",
+  };
+}
+
+/**
+ * Duplica um anúncio para agilizar o cadastro de veículos parecidos. A cópia
+ * nasce como disponível, sem destaque e com as mesmas fotos.
+ */
+export async function duplicateVehicle(id: string) {
+  await requireAdmin();
+
+  const source = await prisma.vehicle.findUnique({
+    where: { id },
+    include: { photos: { orderBy: { order: "asc" } } },
+  });
+
+  if (!source) {
+    return { ok: false as const, message: "Veículo não encontrado." };
+  }
+
+  const copy = await prisma.vehicle.create({
+    data: {
+      brand: source.brand,
+      model: source.model,
+      version: source.version,
+      year: source.year,
+      yearModel: source.yearModel,
+      km: source.km,
+      price: source.price,
+      fuel: source.fuel,
+      transmission: source.transmission,
+      color: source.color,
+      description: source.description,
+      status: "disponivel",
+      featured: false,
+      photos: {
+        create: source.photos.map((photo, order) => ({ url: photo.url, order })),
+      },
+    },
+  });
+
+  revalidatePath("/admin/veiculos");
+  return { ok: true as const, message: "Cópia criada.", id: copy.id };
+}

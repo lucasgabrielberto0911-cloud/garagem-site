@@ -15,7 +15,16 @@ import {
 } from "@/app/admin/veiculos/actions";
 import { VehicleImage } from "@/components/VehicleImage";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconExternal,
+  IconImage,
+  IconStar,
+  IconTrash,
+} from "@/components/admin/icons";
+import { Card, Field, btn, inputClass } from "@/components/admin/ui";
+import { formatNumberBR } from "@/lib/format";
 
 type VehicleWithPhotos = Vehicle & { photos: Photo[] };
 
@@ -32,11 +41,7 @@ const initialState: VehicleFormState = {};
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="bg-brand px-5 py-2.5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60"
-    >
+    <button type="submit" disabled={pending} className={btn.primary}>
       {pending ? "Salvando..." : label}
     </button>
   );
@@ -59,61 +64,72 @@ export function VehicleForm({
   const [state, formAction] = useFormState(action, initialState);
 
   const [photoUrls, setPhotoUrls] = useState<string[]>(
-    () => vehicle?.photos.sort((a, b) => a.order - b.order).map((p) => p.url) ?? [],
+    () =>
+      vehicle?.photos
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((photo) => photo.url) ?? [],
   );
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const [pendingAction, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmSold, setConfirmSold] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Show action result as toast
   useEffect(() => {
     if (state.error) toast.error(state.error);
     if (state.success) toast.success("Veículo atualizado com sucesso.");
   }, [state]);
 
   const [values, setValues] = useState({
-    price: vehicle?.price != null ? formatCurrencyInput(vehicle.price) : "",
+    price: vehicle?.price != null ? formatNumberBR(vehicle.price) : "",
     km: vehicle?.km != null ? formatNumberBR(vehicle.km) : "",
   });
-
-  function formatCurrencyInput(num: number) {
-    return new Intl.NumberFormat("pt-BR").format(num);
-  }
 
   function validate(): boolean {
     const next: Record<string, string> = {};
     const form = document.getElementById("vehicle-form") as HTMLFormElement;
     if (!form) return true;
 
-    const brand = (form.elements.namedItem("brand") as HTMLInputElement)?.value.trim();
-    const model = (form.elements.namedItem("model") as HTMLInputElement)?.value.trim();
-    const year = (form.elements.namedItem("year") as HTMLInputElement)?.value;
-    const yearModel = (form.elements.namedItem("yearModel") as HTMLInputElement)?.value;
-    const kmRaw = (form.elements.namedItem("kmDisplay") as HTMLInputElement)?.value;
-    const priceRaw = (form.elements.namedItem("priceDisplay") as HTMLInputElement)?.value;
+    const value = (name: string) =>
+      (form.elements.namedItem(name) as HTMLInputElement | null)?.value ?? "";
+
+    const brand = value("brand").trim();
+    const model = value("model").trim();
+    const year = value("year");
+    const yearModel = value("yearModel");
+    const km = value("kmDisplay").replace(/\D/g, "");
+    const price = value("priceDisplay").replace(/\D/g, "");
+    const currentYear = new Date().getFullYear();
 
     if (!brand) next.brand = "Informe a marca.";
     if (!model) next.model = "Informe o modelo.";
-    if (!year || Number(year) < 1900 || Number(year) > 2100) next.year = "Ano inválido.";
-    if (!yearModel || Number(yearModel) < 1900 || Number(yearModel) > 2100)
+    if (!year || Number(year) < 1950 || Number(year) > currentYear + 1) {
+      next.year = "Ano inválido.";
+    }
+    if (
+      !yearModel ||
+      Number(yearModel) < 1950 ||
+      Number(yearModel) > currentYear + 2
+    ) {
       next.yearModel = "Ano modelo inválido.";
-    if (!kmRaw || Number(kmRaw.replace(/\D/g, "")) < 0) next.km = "Informe a quilometragem.";
-    if (!priceRaw || Number(priceRaw.replace(/\D/g, "")) <= 0)
-      next.price = "Informe um preço válido.";
+    }
+    if (km === "") next.km = "Informe a quilometragem.";
+    if (!price || Number(price) <= 0) next.price = "Informe um preço válido.";
 
     setErrors(next);
     return Object.keys(next).length === 0;
   }
 
-  async function handleFilesSelected(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    setUploading(true);
+  async function uploadFiles(files: FileList | File[] | null) {
+    const list = files ? Array.from(files) : [];
+    if (list.length === 0) return;
 
+    setUploading(list.length);
     try {
       const formData = new FormData();
-      Array.from(files).forEach((file) => formData.append("files", file));
+      list.forEach((file) => formData.append("files", file));
 
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -131,12 +147,31 @@ export function VehicleForm({
     } catch {
       toast.error("Erro de conexão no upload.");
     } finally {
-      setUploading(false);
+      setUploading(0);
     }
   }
 
-  function removePhoto(url: string) {
-    setPhotoUrls((current) => current.filter((item) => item !== url));
+  function movePhoto(index: number, direction: -1 | 1) {
+    setPhotoUrls((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  function makeCover(index: number) {
+    setPhotoUrls((current) => {
+      if (index === 0) return current;
+      const next = [...current];
+      const [picked] = next.splice(index, 1);
+      return [picked, ...next];
+    });
+  }
+
+  function removePhoto(index: number) {
+    setPhotoUrls((current) => current.filter((_, i) => i !== index));
   }
 
   function handleDelete() {
@@ -165,9 +200,7 @@ export function VehicleForm({
     });
   }
 
-  const inputClass =
-    "w-full border border-white/10 bg-ink px-3 py-2.5 text-cream outline-none focus:border-brand";
-  const inputError = "border-brand/60";
+  const errorBorder = "border-brand/60";
 
   return (
     <>
@@ -180,234 +213,345 @@ export function VehicleForm({
             toast.error("Corrija os campos destacados.");
           }
         }}
-        className="space-y-8"
+        className="space-y-5"
       >
         <input type="hidden" name="photoUrls" value={JSON.stringify(photoUrls)} />
-        {/* normalized numeric fields */}
-        <input
-          type="hidden"
-          name="price"
-          value={values.price.replace(/\D/g, "")}
-        />
+        <input type="hidden" name="price" value={values.price.replace(/\D/g, "")} />
         <input type="hidden" name="km" value={values.km.replace(/\D/g, "")} />
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Marca" name="brand" defaultValue={vehicle?.brand} error={errors.brand} />
-          <Field label="Modelo" name="model" defaultValue={vehicle?.model} error={errors.model} />
-          <Field label="Versão" name="version" defaultValue={vehicle?.version ?? ""} />
-          <Field label="Cor" name="color" defaultValue={vehicle?.color ?? ""} />
-          <Field
-            label="Ano"
-            name="year"
-            type="number"
-            defaultValue={vehicle?.year ?? new Date().getFullYear()}
-            error={errors.year}
-          />
-          <Field
-            label="Ano modelo"
-            name="yearModel"
-            type="number"
-            defaultValue={vehicle?.yearModel ?? new Date().getFullYear()}
-            error={errors.yearModel}
-          />
-
-          {/* KM with thousands mask */}
-          <label className="block text-sm">
-            <span className="mb-2 block text-xs uppercase tracking-wider text-muted">
-              KM
-            </span>
-            <input
-              name="kmDisplay"
-              inputMode="numeric"
-              value={values.km}
-              onChange={(event) =>
-                setValues((v) => ({
-                  ...v,
-                  km: formatNumberBR(Number(event.target.value.replace(/\D/g, "") || 0)),
-                }))
-              }
-              className={`${inputClass} ${errors.km ? inputError : ""}`}
-              placeholder="0"
-            />
-            {errors.km ? <ErrorText message={errors.km} /> : null}
-          </label>
-
-          {/* Price with thousands mask */}
-          <label className="block text-sm">
-            <span className="mb-2 block text-xs uppercase tracking-wider text-muted">
-              Preço (R$)
-            </span>
-            <input
-              name="priceDisplay"
-              inputMode="numeric"
-              value={values.price}
-              onChange={(event) =>
-                setValues((v) => ({
-                  ...v,
-                  price: formatCurrencyInput(
-                    Number(event.target.value.replace(/\D/g, "") || 0),
-                  ),
-                }))
-              }
-              className={`${inputClass} ${errors.price ? inputError : ""}`}
-              placeholder="0"
-            />
-            {errors.price ? <ErrorText message={errors.price} /> : null}
-          </label>
-
-          <label className="block text-sm">
-            <span className="mb-2 block text-xs uppercase tracking-wider text-muted">
-              Combustível
-            </span>
-            <select name="fuel" defaultValue={vehicle?.fuel ?? "Flex"} className={inputClass} required>
-              {FUELS.map((fuel) => (
-                <option key={fuel} value={fuel}>
-                  {fuel}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-sm">
-            <span className="mb-2 block text-xs uppercase tracking-wider text-muted">
-              Câmbio
-            </span>
-            <select
-              name="transmission"
-              defaultValue={vehicle?.transmission ?? "Automático"}
-              className={inputClass}
-              required
-            >
-              {TRANSMISSIONS.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-sm">
-            <span className="mb-2 block text-xs uppercase tracking-wider text-muted">
-              Status
-            </span>
-            <select name="status" defaultValue={vehicle?.status ?? "disponivel"} className={inputClass}>
-              {STATUSES.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex items-end gap-2 pb-3 text-sm text-cream">
-            <input
-              type="checkbox"
-              name="featured"
-              defaultChecked={vehicle?.featured ?? false}
-              className="h-4 w-4 accent-brand"
-            />
-            Destaque na vitrine
-          </label>
-        </div>
-
-        <label className="block text-sm">
-          <span className="mb-2 block text-xs uppercase tracking-wider text-muted">
-            Descrição
-          </span>
-          <textarea
-            name="description"
-            rows={4}
-            defaultValue={vehicle?.description ?? ""}
-            className={inputClass}
-          />
-        </label>
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-xl font-semibold tracking-tight text-cream">
-              Fotos
-            </h2>
-            <label className="cursor-pointer border border-white/15 px-3 py-2 text-sm text-cream transition hover:border-brand hover:text-brand">
-              {uploading ? "Enviando..." : "Adicionar fotos"}
+        <Card title="Identificação">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Marca" required error={errors.brand}>
               <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                multiple
-                className="hidden"
-                disabled={uploading}
-                onChange={(event) => {
-                  void handleFilesSelected(event.target.files);
-                  event.target.value = "";
-                }}
+                name="brand"
+                defaultValue={vehicle?.brand}
+                placeholder="Ex.: Volkswagen"
+                className={`${inputClass} ${errors.brand ? errorBorder : ""}`}
               />
-            </label>
+            </Field>
+            <Field label="Modelo" required error={errors.model}>
+              <input
+                name="model"
+                defaultValue={vehicle?.model}
+                placeholder="Ex.: Golf"
+                className={`${inputClass} ${errors.model ? errorBorder : ""}`}
+              />
+            </Field>
+            <Field label="Versão">
+              <input
+                name="version"
+                defaultValue={vehicle?.version ?? ""}
+                placeholder="Ex.: GTI 2.0 TSI"
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Cor">
+              <input
+                name="color"
+                defaultValue={vehicle?.color ?? ""}
+                placeholder="Ex.: Prata"
+                className={inputClass}
+              />
+            </Field>
           </div>
+        </Card>
 
-          {uploading ? (
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {[0, 1].map((i) => (
-                <li key={i} className="aspect-[4/3] animate-pulse bg-ink" />
+        <Card title="Ficha técnica">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label="Ano de fabricação" required error={errors.year}>
+              <input
+                name="year"
+                type="number"
+                inputMode="numeric"
+                defaultValue={vehicle?.year ?? new Date().getFullYear()}
+                className={`${inputClass} ${errors.year ? errorBorder : ""}`}
+              />
+            </Field>
+            <Field label="Ano modelo" required error={errors.yearModel}>
+              <input
+                name="yearModel"
+                type="number"
+                inputMode="numeric"
+                defaultValue={vehicle?.yearModel ?? new Date().getFullYear()}
+                className={`${inputClass} ${errors.yearModel ? errorBorder : ""}`}
+              />
+            </Field>
+            <Field label="Quilometragem" required error={errors.km}>
+              <input
+                name="kmDisplay"
+                inputMode="numeric"
+                value={values.km}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    km: formatNumberBR(
+                      Number(event.target.value.replace(/\D/g, "") || 0),
+                    ),
+                  }))
+                }
+                placeholder="0"
+                className={`${inputClass} ${errors.km ? errorBorder : ""}`}
+              />
+            </Field>
+            <Field label="Combustível">
+              <select
+                name="fuel"
+                defaultValue={vehicle?.fuel ?? "Flex"}
+                className={inputClass}
+                required
+              >
+                {FUELS.map((fuel) => (
+                  <option key={fuel} value={fuel}>
+                    {fuel}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Câmbio">
+              <select
+                name="transmission"
+                defaultValue={vehicle?.transmission ?? "Automático"}
+                className={inputClass}
+                required
+              >
+                {TRANSMISSIONS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        </Card>
+
+        <Card title="Preço e vitrine">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Field
+              label="Preço (R$)"
+              required
+              error={errors.price}
+              hint="Valor anunciado no site."
+            >
+              <input
+                name="priceDisplay"
+                inputMode="numeric"
+                value={values.price}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    price: formatNumberBR(
+                      Number(event.target.value.replace(/\D/g, "") || 0),
+                    ),
+                  }))
+                }
+                placeholder="0"
+                className={`${inputClass} ${errors.price ? errorBorder : ""}`}
+              />
+            </Field>
+            <Field label="Status">
+              <select
+                name="status"
+                defaultValue={vehicle?.status ?? "disponivel"}
+                className={inputClass}
+              >
+                {STATUSES.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <div className="flex items-end">
+              <label className="flex w-full cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition hover:border-brand/50">
+                <input
+                  type="checkbox"
+                  name="featured"
+                  defaultChecked={vehicle?.featured ?? false}
+                  className="h-4 w-4 accent-brand"
+                />
+                <IconStar className="h-4 w-4 text-brand-yellow" />
+                Destaque na vitrine
+              </label>
+            </div>
+          </div>
+        </Card>
+
+        <Card
+          title={`Fotos${photoUrls.length > 0 ? ` (${photoUrls.length})` : ""}`}
+          action={
+            photoUrls.length > 0 ? (
+              <span className="text-xs text-muted">
+                A primeira foto é a capa
+              </span>
+            ) : null
+          }
+        >
+          <label
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDragging(false);
+              void uploadFiles(event.dataTransfer.files);
+            }}
+            className={`flex cursor-pointer flex-col items-center justify-center border border-dashed px-6 py-8 text-center transition ${
+              dragging
+                ? "border-brand bg-brand/5"
+                : "border-white/15 hover:border-brand/50"
+            }`}
+          >
+            <IconImage className="h-8 w-8 text-white/25" />
+            <p className="mt-3 text-sm text-cream">
+              {uploading > 0
+                ? `Enviando ${uploading} foto(s)...`
+                : "Arraste as fotos aqui ou clique para escolher"}
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              JPG, PNG, WEBP ou GIF · várias de uma vez
+            </p>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              multiple
+              className="hidden"
+              disabled={uploading > 0}
+              onChange={(event) => {
+                void uploadFiles(event.target.files);
+                event.target.value = "";
+              }}
+            />
+          </label>
+
+          {uploading > 0 ? (
+            <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {Array.from({ length: uploading }).map((_, index) => (
+                <li key={index} className="skeleton aspect-[4/3]" />
               ))}
             </ul>
           ) : null}
 
-          {photoUrls.length === 0 && !uploading ? (
-            <p className="text-sm text-muted">Nenhuma foto adicionada.</p>
+          {photoUrls.length === 0 && uploading === 0 ? (
+            <p className="mt-4 text-sm text-muted">
+              Nenhuma foto adicionada. Anúncios com fotos recebem muito mais
+              contato.
+            </p>
           ) : (
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {photoUrls.map((url) => (
-                <li key={url} className="relative aspect-[4/3] overflow-hidden bg-ink">
+            <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {photoUrls.map((url, index) => (
+                <li
+                  key={`${url}-${index}`}
+                  className="group relative aspect-[4/3] overflow-hidden border border-white/10 bg-asphalt"
+                >
                   <VehicleImage
                     src={url}
-                    alt="Foto do veículo"
+                    alt={`Foto ${index + 1} do veículo`}
                     fill
                     className="object-cover"
-                    sizes="200px"
+                    sizes="240px"
                   />
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(url)}
-                    className="absolute right-2 top-2 bg-asphalt/80 px-2 py-1 text-xs text-cream hover:bg-brand"
-                  >
-                    Remover
-                  </button>
+                  {index === 0 ? (
+                    <span className="absolute left-1.5 top-1.5 bg-brand px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
+                      Capa
+                    </span>
+                  ) : null}
+
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-asphalt/85 px-1.5 py-1.5 backdrop-blur">
+                    <div className="flex gap-0.5">
+                      <PhotoAction
+                        label="Mover para trás"
+                        disabled={index === 0}
+                        onClick={() => movePhoto(index, -1)}
+                      >
+                        <IconArrowUp className="h-3.5 w-3.5 -rotate-90" />
+                      </PhotoAction>
+                      <PhotoAction
+                        label="Mover para frente"
+                        disabled={index === photoUrls.length - 1}
+                        onClick={() => movePhoto(index, 1)}
+                      >
+                        <IconArrowDown className="h-3.5 w-3.5 -rotate-90" />
+                      </PhotoAction>
+                      <PhotoAction
+                        label="Definir como capa"
+                        disabled={index === 0}
+                        onClick={() => makeCover(index)}
+                      >
+                        <IconStar className="h-3.5 w-3.5" />
+                      </PhotoAction>
+                    </div>
+                    <PhotoAction
+                      label="Remover foto"
+                      danger
+                      onClick={() => removePhoto(index)}
+                    >
+                      <IconTrash className="h-3.5 w-3.5" />
+                    </PhotoAction>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
-        </section>
+        </Card>
 
-        <div className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-6">
-          <SubmitButton label={mode === "create" ? "Cadastrar" : "Salvar alterações"} />
-          <Link
-            href="/admin/veiculos"
-            className="border border-white/15 px-4 py-2.5 text-sm text-muted transition hover:text-cream"
+        <Card title="Descrição">
+          <Field
+            label="Texto do anúncio"
+            hint="Conte o estado do veículo, itens, revisões e o que ajuda a vender."
           >
-            Voltar
-          </Link>
+            <textarea
+              name="description"
+              rows={5}
+              defaultValue={vehicle?.description ?? ""}
+              className={`${inputClass} resize-y`}
+            />
+          </Field>
+        </Card>
 
-          {mode === "edit" && vehicle ? (
-            <>
-              {vehicle.status !== "vendido" ? (
+        {/* Barra de ações fixa: salvar sempre ao alcance, sem rolar a página. */}
+        <div className="sticky bottom-0 -mx-4 border-t border-white/10 bg-asphalt/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <SubmitButton
+              label={mode === "create" ? "Cadastrar veículo" : "Salvar alterações"}
+            />
+            <Link href="/admin/veiculos" className={btn.outline}>
+              Voltar
+            </Link>
+
+            {mode === "edit" && vehicle ? (
+              <>
+                <Link
+                  href={`/estoque/${vehicle.id}`}
+                  target="_blank"
+                  className={`${btn.ghost} ml-auto`}
+                >
+                  <IconExternal className="h-4 w-4" />
+                  Ver no site
+                </Link>
+                {vehicle.status !== "vendido" ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmSold(true)}
+                    disabled={pendingAction}
+                    className="inline-flex items-center gap-2 border border-brand-orange/50 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/10 disabled:opacity-60"
+                  >
+                    Marcar como vendido
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  onClick={() => setConfirmSold(true)}
+                  onClick={() => setConfirmDelete(true)}
                   disabled={pendingAction}
-                  className="border border-brand-orange/50 px-4 py-2.5 text-sm text-brand-orange transition hover:bg-brand-orange/10 disabled:opacity-60"
+                  className={btn.danger}
                 >
-                  Marcar como vendido
+                  <IconTrash className="h-4 w-4" />
+                  Excluir
                 </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(true)}
-                disabled={pendingAction}
-                className="border border-brand/50 px-4 py-2.5 text-sm text-brand transition hover:bg-brand/10 disabled:opacity-60"
-              >
-                Excluir
-              </button>
-            </>
-          ) : null}
+              </>
+            ) : null}
+          </div>
         </div>
       </form>
 
@@ -428,7 +572,7 @@ export function VehicleForm({
       <ConfirmDialog
         open={confirmSold}
         title="Marcar como vendido"
-        description={`Confirmar venda de ${vehicle ? `${vehicle.brand} ${vehicle.model}` : "este veículo"}?`}
+        description={`Confirmar venda de ${vehicle ? `${vehicle.brand} ${vehicle.model}` : "este veículo"}? Para registrar valor e cliente, use a tela de Vendas.`}
         confirmLabel="Confirmar"
         danger={false}
         loading={pendingAction}
@@ -442,45 +586,33 @@ export function VehicleForm({
   );
 }
 
-function ErrorText({ message }: { message: string }) {
-  return <p className="mt-1.5 text-xs text-brand">{message}</p>;
-}
-
-function Field({
+function PhotoAction({
+  children,
   label,
-  name,
-  defaultValue,
-  type = "text",
-  error,
+  onClick,
+  disabled = false,
+  danger = false,
 }: {
+  children: React.ReactNode;
   label: string;
-  name: string;
-  defaultValue?: string | number;
-  type?: string;
-  error?: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
 }) {
   return (
-    <label className="block text-sm">
-      <span className="mb-2 block text-xs uppercase tracking-wider text-muted">
-        {label}
-      </span>
-      <input
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        className={`w-full border bg-ink px-3 py-2.5 text-cream outline-none focus:border-brand ${
-          error ? "border-brand/60" : "border-white/10"
-        }`}
-      />
-      {error ? <ErrorText message={error} /> : null}
-    </label>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className={`inline-flex h-7 w-7 items-center justify-center transition disabled:opacity-30 ${
+        danger
+          ? "text-brand hover:bg-brand/15"
+          : "text-cream hover:bg-white/10"
+      }`}
+    >
+      {children}
+    </button>
   );
-}
-
-// helper used above
-export function formatKm(value: number) {
-  return `${formatNumberBR(value)} km`;
-}
-export function formatPrice(value: number) {
-  return formatCurrencyBRL(value);
 }
