@@ -24,6 +24,16 @@ export async function getDashboardData() {
   const monthStart = startOfMonth();
   const staleBefore = new Date(Date.now() - STALE_DAYS * DAY_MS);
 
+  // Consultas isoladas: se uma tabela ainda não existir, o dashboard não cai inteiro.
+  const safe = async <T>(label: string, fn: () => Promise<T>, fallback: T) => {
+    try {
+      return await fn();
+    } catch (error) {
+      console.error(`[dashboard] ${label}:`, error);
+      return fallback;
+    }
+  };
+
   const [
     vehicleGroups,
     featured,
@@ -40,48 +50,73 @@ export async function getDashboardData() {
     admins,
     publicSite,
   ] = await Promise.all([
-    prisma.vehicle.groupBy({ by: ["status"], _count: { _all: true } }),
-    prisma.vehicle.count({ where: { status: "disponivel", featured: true } }),
-    prisma.vehicle.aggregate({
-      where: { status: "disponivel" },
-      _sum: { price: true },
-      _avg: { price: true, km: true },
-    }),
-    prisma.sale.aggregate({ _sum: { salePrice: true }, _count: { _all: true } }),
-    prisma.sale.aggregate({
-      where: { saleDate: { gte: monthStart } },
-      _sum: { salePrice: true },
-      _count: { _all: true },
-    }),
-    prisma.leadVenda.groupBy({ by: ["status"], _count: { _all: true } }),
-    prisma.leadVenda.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
-    prisma.vehicle.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      include: { photos: { orderBy: { order: "asc" }, take: 1 } },
-    }),
-    prisma.vehicle.findMany({
-      where: { status: "disponivel", createdAt: { lt: staleBefore } },
-      orderBy: { createdAt: "asc" },
-      take: 5,
-      select: { id: true, brand: true, model: true, createdAt: true },
-    }),
-    prisma.vehicle.findMany({
-      where: { status: { not: "vendido" }, photos: { none: {} } },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: { id: true, brand: true, model: true },
-    }),
-    prisma.customer.count(),
-    prisma.testimonial.count({ where: { published: true } }),
-    prisma.admin.findMany({ select: { passwordHash: true } }),
-    getPublicSite(),
+    safe("vehicle.groupBy", () => prisma.vehicle.groupBy({ by: ["status"], _count: { _all: true } }), []),
+    safe("featured", () => prisma.vehicle.count({ where: { status: "disponivel", featured: true } }), 0),
+    safe(
+      "availableAggregate",
+      () =>
+        prisma.vehicle.aggregate({
+          where: { status: "disponivel" },
+          _sum: { price: true },
+          _avg: { price: true, km: true },
+        }),
+      { _sum: { price: null }, _avg: { price: null, km: null } },
+    ),
+    safe(
+      "salesAggregate",
+      () => prisma.sale.aggregate({ _sum: { salePrice: true }, _count: { _all: true } }),
+      { _sum: { salePrice: null }, _count: { _all: 0 } },
+    ),
+    safe(
+      "monthSales",
+      () =>
+        prisma.sale.aggregate({
+          where: { saleDate: { gte: monthStart } },
+          _sum: { salePrice: true },
+          _count: { _all: true },
+        }),
+      { _sum: { salePrice: null }, _count: { _all: 0 } },
+    ),
+    safe("lead.groupBy", () => prisma.leadVenda.groupBy({ by: ["status"], _count: { _all: true } }), []),
+    safe("recentLeads", () => prisma.leadVenda.findMany({ orderBy: { createdAt: "desc" }, take: 5 }), []),
+    safe(
+      "recentVehicles",
+      () =>
+        prisma.vehicle.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          include: { photos: { orderBy: { order: "asc" }, take: 1 } },
+        }),
+      [],
+    ),
+    safe(
+      "staleVehicles",
+      () =>
+        prisma.vehicle.findMany({
+          where: { status: "disponivel", createdAt: { lt: staleBefore } },
+          orderBy: { createdAt: "asc" },
+          take: 5,
+          select: { id: true, brand: true, model: true, createdAt: true },
+        }),
+      [],
+    ),
+    safe(
+      "withoutPhotos",
+      () =>
+        prisma.vehicle.findMany({
+          where: { status: { not: "vendido" }, photos: { none: {} } },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: { id: true, brand: true, model: true },
+        }),
+      [],
+    ),
+    safe("customers", () => prisma.customer.count(), 0),
+    safe("testimonials", () => prisma.testimonial.count({ where: { published: true } }), 0),
+    safe("admins", () => prisma.admin.findMany({ select: { passwordHash: true } }), []),
+    safe("publicSite", () => getPublicSite(), null as Awaited<ReturnType<typeof getPublicSite>> | null),
   ]);
 
-  /**
-   * Enquanto algum acesso continuar com senha fraca/padrão, o painel avisa: é o
-   * risco de segurança mais provável numa instalação nova.
-   */
   const usingSeedPassword = (
     await Promise.all(
       admins.flatMap((admin) =>
@@ -103,6 +138,7 @@ export async function getDashboardData() {
   ) as Record<LeadStatus, number>;
 
   const available = byStatus("disponivel");
+  const siteForPlaceholders = publicSite ?? (await import("@/lib/site")).site;
 
   return {
     vehicles: {
@@ -139,7 +175,7 @@ export async function getDashboardData() {
       noFeatured: available > 0 && featured === 0,
       noTestimonials: publishedTestimonials === 0,
       usingSeedPassword,
-      placeholders: listPlaceholderLabels(publicSite),
+      placeholders: listPlaceholderLabels(siteForPlaceholders),
     },
   };
 }
