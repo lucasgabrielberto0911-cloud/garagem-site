@@ -65,10 +65,27 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     console.error("Login error:", error);
-    const message =
-      error instanceof Error && error.message.includes("JWT_SECRET")
-        ? "Servidor sem JWT_SECRET configurado. Defina a variável no Vercel."
-        : "Erro ao autenticar. Confira se o banco e o JWT_SECRET estão configurados.";
+
+    const raw = error instanceof Error ? error.message : String(error);
+    let message =
+      "Erro ao autenticar. Confira se o banco e o JWT_SECRET estão configurados.";
+
+    if (raw.includes("JWT_SECRET")) {
+      message =
+        "Servidor sem JWT_SECRET. Defina JWT_SECRET nas Environment Variables do Vercel (Production) e faça redeploy.";
+    } else if (
+      raw.includes("Prisma") ||
+      raw.includes("Can't reach database") ||
+      raw.includes("P1001") ||
+      raw.includes("P1017") ||
+      raw.includes("P2021") ||
+      raw.includes("does not exist") ||
+      error instanceof Error && error.name.includes("Prisma")
+    ) {
+      message =
+        "Não foi possível conectar ao banco. Configure DATABASE_URL e DIRECT_URL no Vercel (Production), rode prisma db push e o seed, e faça redeploy.";
+    }
+
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
