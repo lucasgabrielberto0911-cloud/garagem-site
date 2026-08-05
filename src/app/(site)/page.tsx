@@ -58,19 +58,15 @@ export default async function HomePage() {
   return (
     <>
       {/* 1. HERO */}
-      <section className="relative isolate min-h-[78dvh] overflow-hidden sm:min-h-[82dvh]">
-        <Image
-          src="/branding/hero-bg.jpg"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="-z-10 object-cover"
-        />
-        <div
-          className="absolute inset-0 -z-10 bg-gradient-to-r from-asphalt via-asphalt/92 to-asphalt/45"
-          aria-hidden="true"
-        />
+      <section className="hero-red-black relative isolate min-h-[78dvh] overflow-hidden sm:min-h-[82dvh]">
+        <div className="hero-color-field" aria-hidden="true">
+          <span className="hero-red-orb hero-red-orb-1" />
+          <span className="hero-red-orb hero-red-orb-2" />
+          <span className="hero-red-orb hero-red-orb-3" />
+          <span className="hero-red-glow-line" />
+          <span className="hero-grid" />
+          <span className="hero-noise" />
+        </div>
         <div
           className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-asphalt to-transparent"
           aria-hidden="true"
