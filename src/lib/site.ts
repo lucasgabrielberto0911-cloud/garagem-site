@@ -1,8 +1,7 @@
 /**
  * Dados de contato e institucionais do site público.
  *
- * Placeholders entre colchetes (região, e-mail, endereço, horários) podem ser
- * preenchidos no painel em /admin/site — o banco sobrescreve estes defaults.
+ * Região, e-mail, endereço e horários podem ser sobrescritos em /admin/site.
  * Telefones ficam em formato internacional (55 + DDD + número) para o WhatsApp.
  */
 export const PHONES = [
@@ -25,10 +24,11 @@ export const site = {
   email: "suagaragem2@gmail.com",
   instagram: "@suagaragem1",
   instagramUrl: "https://instagram.com/suagaragem1",
-  address: "[ENDEREÇO COMPLETO]",
-  hours: "[HORÁRIO]",
-  hoursWeekdays: "[HORÁRIO SEG-SEX]",
-  hoursSaturday: "[HORÁRIO SÁBADO]",
+  address: "Loja digital — atendimento online",
+  hours: "Todos os dias, 8h às 23h (online)",
+  hoursWeekdays: "08:00 – 23:00",
+  hoursSaturday: "08:00 – 23:00",
+  hoursSunday: "08:00 – 23:00",
 } as const;
 
 /** Config pública (defaults + overrides do painel). */
@@ -36,14 +36,27 @@ export type SiteConfig = {
   [K in keyof typeof site]: string;
 };
 
+/** Endereço físico real — loja digital não entra no mapa nem no schema.org. */
+export function isPhysicalAddress(value: string) {
+  if (!value || value.includes("[")) return false;
+  const lower = value.toLowerCase();
+  return !(
+    lower.includes("digital") ||
+    lower.includes("online") ||
+    lower.includes("sem endereço") ||
+    lower.includes("atendimento online")
+  );
+}
+
 export const WHATSAPP_MESSAGES = {
   general: "Olá! Vi o site da Garagem e gostaria de mais informações.",
   sell: "Olá! Gostaria de avaliar meu carro para venda/troca.",
-  visit: "Olá! Gostaria de agendar uma visita para conhecer o estoque.",
+  visit:
+    "Olá! Gostaria de conhecer o estoque e receber mais informações pelo WhatsApp.",
   vehicle: (label: string) =>
     `Olá! Tenho interesse no ${label} que vi no site da Garagem.`,
   vehicleVisit: (label: string) =>
-    `Olá! Gostaria de agendar uma visita para ver o ${label} de perto.`,
+    `Olá! Gostaria de agendar para ver o ${label} de perto.`,
   vehicleVideo: (label: string) =>
     `Olá! Podem me mandar um vídeo do ${label} que está no site?`,
   vehicleTrade: (label: string) =>

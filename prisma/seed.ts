@@ -129,6 +129,42 @@ async function main() {
     );
   }
   console.log(`${vehicles.length} veículos de exemplo criados.`);
+
+  const { SEED_TESTIMONIALS } = await import("../src/lib/testimonials-seed");
+  const existingTestimonials = await prisma.testimonial.count();
+  if (existingTestimonials === 0) {
+    await prisma.testimonial.createMany({
+      data: SEED_TESTIMONIALS.map((item) => ({
+        name: item.name,
+        city: item.city,
+        message: item.message,
+        order: item.order,
+        published: true,
+      })),
+    });
+    console.log(`${SEED_TESTIMONIALS.length} depoimentos de exemplo criados.`);
+  }
+
+  await prisma.siteSettings.upsert({
+    where: { id: "default" },
+    create: {
+      id: "default",
+      region: "Vitória, Linhares",
+      email: "suagaragem2@gmail.com",
+      address: "Loja digital — atendimento online",
+      hours: "Todos os dias, 8h às 23h (online)",
+      hoursWeekdays: "08:00 – 23:00",
+      hoursSaturday: "08:00 – 23:00",
+    },
+    update: {
+      region: "Vitória, Linhares",
+      email: "suagaragem2@gmail.com",
+      address: "Loja digital — atendimento online",
+      hours: "Todos os dias, 8h às 23h (online)",
+      hoursWeekdays: "08:00 – 23:00",
+      hoursSaturday: "08:00 – 23:00",
+    },
+  });
 }
 
 main()

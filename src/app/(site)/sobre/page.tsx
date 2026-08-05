@@ -12,6 +12,7 @@ import {
   IconClipboardCheck,
   IconHandshake,
   IconShieldCheck,
+  IconWhatsApp,
 } from "@/components/site/icons";
 import { site } from "@/lib/site";
 import { getPublicSite } from "@/lib/site-settings";
@@ -20,25 +21,37 @@ export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: `Sobre a ${site.name}`,
-  description: `Conheça a ${site.name}: história, missão e os diferenciais de quem vende seminovo com procedência no ${site.state}.`,
+  description: `Conheça a ${site.name}: mais de 20 anos de história, mais de 1.000 carros vendidos e atendimento digital com qualidade em ${site.region} e região.`,
   alternates: { canonical: "/sobre" },
 };
+
+const STATS = [
+  { value: "+20", label: "anos de história" },
+  { value: "+1.000", label: "carros vendidos" },
+  { value: "8h–23h", label: "atendimento online" },
+  { value: "100%", label: "foco no cliente" },
+] as const;
 
 const DIFERENCIAIS = [
   {
     Icon: IconClipboardCheck,
-    title: "Vistoria antes da vitrine",
-    text: "[TEXTO EDITÁVEL] Descreva aqui o processo de checagem que todo veículo passa antes de ser anunciado: itens avaliados, quem faz o laudo e o que o cliente recebe por escrito.",
+    title: "Qualidade antes do anúncio",
+    text: "Cada veículo passa por checagem de procedência, quilometragem e condição geral antes de entrar no estoque. Se algo importa para a decisão, a gente informa com clareza — sem surpresa na hora de fechar.",
   },
   {
     Icon: IconShieldCheck,
-    title: "Procedência e documentação",
-    text: "[TEXTO EDITÁVEL] Explique como vocês verificam histórico, débitos e restrições, e como conduzem a transferência para o cliente sair com tudo regularizado.",
+    title: "Negociação transparente",
+    text: "Preço, documentação, troca e financiamento são explicados sem enrolação. Nosso compromisso é você entender o que está comprando e sair seguro da decisão.",
   },
   {
     Icon: IconHandshake,
-    title: "Atendimento direto com o dono",
-    text: "[TEXTO EDITÁVEL] Conte como funciona o atendimento: quem recebe o cliente, o tempo de resposta no WhatsApp e o acompanhamento depois da venda.",
+    title: "Atendimento de perto, mesmo online",
+    text: "Somos loja digital, mas o contato é humano: WhatsApp rápido, vídeo do carro, avaliação de troca e acompanhamento até a transferência. Qualidade no atendimento é o nosso padrão.",
+  },
+  {
+    Icon: IconWhatsApp,
+    title: "Disponíveis quando você precisa",
+    text: "Atendemos todos os dias, das 8h às 23h. Escolha pelo site, tire dúvidas pelo WhatsApp e avance no seu ritmo — com a praticidade de quem vive o digital sem abrir mão do cuidado.",
   },
 ] as const;
 
@@ -51,22 +64,47 @@ export default async function SobrePage() {
         <PageHeader
           eyebrow="Sobre nós"
           title={`A ${publicSite.name}`}
-          description={`[TEXTO EDITÁVEL] Resuma em duas ou três linhas o posicionamento da loja: o que vocês vendem, para quem, e o que faz a ${publicSite.name} ser diferente das outras revendas de ${publicSite.region}.`}
+          description={`Há mais de 20 anos no mercado de seminovos, com mais de 1.000 carros vendidos. Atendemos ${publicSite.region} e região com compromisso total em qualidade e no melhor atendimento ao cliente.`}
         />
 
         <div className="relative mt-12 aspect-[16/9] overflow-hidden border border-white/10">
           <Image
             src="/branding/hero-bg.jpg"
-            alt={`Estoque da ${publicSite.name}`}
+            alt={`Estoque e atendimento da ${publicSite.name}`}
             fill
             sizes="(min-width: 1024px) 896px, 100vw"
             className="object-cover"
           />
           <div
-            className="absolute inset-0 bg-gradient-to-t from-asphalt/80 to-transparent"
+            className="absolute inset-0 bg-gradient-to-t from-asphalt via-asphalt/40 to-transparent"
             aria-hidden="true"
           />
+          <div className="absolute inset-x-0 bottom-0 p-6 text-center sm:p-8">
+            <p className="font-display text-lg font-semibold text-cream sm:text-xl">
+              Loja digital. Atendimento humano.
+            </p>
+            <p className="mx-auto mt-2 max-w-lg text-sm text-cream/75">
+              Compra, venda, troca e financiamento — com a praticidade do online
+              e a confiança de quem entende de carro.
+            </p>
+          </div>
         </div>
+
+        <ul className="mt-10 grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
+          {STATS.map((stat) => (
+            <li
+              key={stat.label}
+              className="flex flex-col items-center bg-ink px-4 py-6 text-center"
+            >
+              <p className="font-display text-2xl font-bold text-brand sm:text-3xl">
+                {stat.value}
+              </p>
+              <p className="mt-2 text-[11px] uppercase tracking-wider text-muted">
+                {stat.label}
+              </p>
+            </li>
+          ))}
+        </ul>
 
         <div className="mt-14 grid gap-10 lg:grid-cols-2">
           <article className="text-center lg:text-left">
@@ -79,19 +117,23 @@ export default async function SobrePage() {
             />
             <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
               <p>
-                [TEXTO EDITÁVEL] Conte quando e como a {publicSite.name} começou: quem
-                fundou, o que motivou abrir a loja e como era o começo — se nasceu
-                de outra atividade, de uma paixão por carros, de um negócio de
-                família.
+                A {publicSite.name} nasceu da paixão por carros e da vontade de
+                fazer diferente: vender seminovo com informação clara, respeito
+                ao cliente e zero enrolação. Ao longo de mais de duas décadas,
+                construímos uma trajetória marcada pela confiança de famílias em{" "}
+                {publicSite.region} e em todo o {publicSite.state}.
               </p>
               <p>
-                [TEXTO EDITÁVEL] Descreva a evolução: mudança de endereço,
-                crescimento do estoque, ampliação dos serviços (financiamento,
-                troca, consignação) e o momento atual da loja em {publicSite.region}.
+                Foram mais de 1.000 veículos entregues — cada um com atenção à
+                procedência, à documentação e ao que o cliente realmente
+                precisava. Crescemos ouvindo quem compra, quem vende e quem
+                volta para indicar um amigo.
               </p>
               <p>
-                [TEXTO EDITÁVEL] Feche com o presente: quantas famílias já foram
-                atendidas, a relação com clientes que voltam e o que vem por aí.
+                Hoje operamos como <strong className="text-cream">loja digital</strong>,
+                com atendimento online todos os dias, das 8h às 23h. A vitrine
+                está no site, a conversa no WhatsApp e o compromisso continua o
+                mesmo: qualidade no carro e excelência no atendimento.
               </p>
             </div>
           </article>
@@ -109,23 +151,25 @@ export default async function SobrePage() {
                 <strong className="font-display font-semibold text-cream">
                   Missão.
                 </strong>{" "}
-                [TEXTO EDITÁVEL] Ex.: tornar a compra de um seminovo uma decisão
-                segura, com informação clara e nenhum custo escondido.
+                Facilitar a compra e a venda de seminovos com transparência,
+                segurança e o melhor atendimento — do primeiro contato no
+                WhatsApp até a transferência do veículo.
               </p>
               <p>
                 <strong className="font-display font-semibold text-cream">
                   Visão.
                 </strong>{" "}
-                [TEXTO EDITÁVEL] Ex.: ser a revenda mais confiável de{" "}
-                {publicSite.region} e região.
+                Ser a referência em seminovos digitais de{" "}
+                {publicSite.region} e região: a loja em que o cliente confia
+                para negociar com clareza e sair satisfeito.
               </p>
               <p>
                 <strong className="font-display font-semibold text-cream">
                   Valores.
                 </strong>{" "}
-                [TEXTO EDITÁVEL] Ex.: transparência na negociação, respeito ao
-                cliente, cuidado técnico com cada veículo e compromisso com o
-                pós-venda.
+                Honestidade na negociação, cuidado com cada carro, respeito ao
+                tempo do cliente, disponibilidade real no atendimento e
+                compromisso com a qualidade do início ao fim.
               </p>
             </div>
           </article>
@@ -133,13 +177,17 @@ export default async function SobrePage() {
 
         <section className="mt-14">
           <h2 className="text-center font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
-            Nossos diferenciais
+            Nosso compromisso com você
           </h2>
           <div
             className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient"
             aria-hidden="true"
           />
-          <ul className="mt-8 grid gap-5 lg:grid-cols-3">
+          <p className="mx-auto mt-5 max-w-2xl text-center text-sm leading-relaxed text-muted">
+            Qualidade e atendimento não são slogan: são o jeito como fechamos
+            cada negócio. Você merece clareza, agilidade e um time que resolve.
+          </p>
+          <ul className="mt-8 grid gap-5 sm:grid-cols-2">
             {DIFERENCIAIS.map(({ Icon, title, text }) => (
               <li
                 key={title}
@@ -157,6 +205,47 @@ export default async function SobrePage() {
           </ul>
         </section>
 
+        <section className="mt-14 border border-brand/30 bg-ink p-8 text-center sm:p-10">
+          <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
+            Como funciona a Garagem digital
+          </h2>
+          <div
+            className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient"
+            aria-hidden="true"
+          />
+          <ol className="mx-auto mt-8 grid max-w-3xl gap-6 text-left sm:grid-cols-3">
+            {[
+              {
+                step: "01",
+                title: "Escolha no site",
+                text: "Navegue no estoque, filtre por marca, ano e valor e salve seus favoritos.",
+              },
+              {
+                step: "02",
+                title: "Fale no WhatsApp",
+                text: "Peça vídeo, tire dúvidas, avalie troca ou financiamento — respondemos das 8h às 23h.",
+              },
+              {
+                step: "03",
+                title: "Feche com segurança",
+                text: "Combinamos visita ou entrega, documentação e pagamento com acompanhamento completo.",
+              },
+            ].map((item) => (
+              <li key={item.step} className="text-center sm:text-left">
+                <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
+                  {item.step}
+                </p>
+                <h3 className="mt-2 font-display text-base font-semibold text-cream">
+                  {item.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  {item.text}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
         <div className="mt-12">
           <TrustBadges />
         </div>
@@ -165,18 +254,24 @@ export default async function SobrePage() {
           <h2 className="font-display text-base font-semibold text-cream">
             Dados da empresa
           </h2>
-          <dl className="mt-6 grid gap-6 sm:grid-cols-3">
+          <dl className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <dt className="text-[10px] uppercase tracking-wider text-muted">
                 Razão social
               </dt>
-              <dd className="mt-1 text-sm text-cream">{site.legalName}</dd>
+              <dd className="mt-1 text-sm text-cream">{publicSite.legalName}</dd>
             </div>
             <div>
               <dt className="text-[10px] uppercase tracking-wider text-muted">
                 CNPJ
               </dt>
-              <dd className="mt-1 text-sm text-cream">{site.cnpj}</dd>
+              <dd className="mt-1 text-sm text-cream">{publicSite.cnpj}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] uppercase tracking-wider text-muted">
+                Atendimento
+              </dt>
+              <dd className="mt-1 text-sm text-cream">{publicSite.address}</dd>
             </div>
             <div>
               <dt className="text-[10px] uppercase tracking-wider text-muted">
@@ -184,12 +279,12 @@ export default async function SobrePage() {
               </dt>
               <dd className="mt-1 text-sm">
                 <a
-                  href={site.instagramUrl}
+                  href={publicSite.instagramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-brand underline-offset-4 transition hover:underline"
                 >
-                  {site.instagram}
+                  {publicSite.instagram}
                 </a>
               </dd>
             </div>

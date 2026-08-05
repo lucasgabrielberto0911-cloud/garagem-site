@@ -1,4 +1,4 @@
-import { PHONES, site, type SiteConfig } from "@/lib/site";
+import { PHONES, isPhysicalAddress, site, type SiteConfig } from "@/lib/site";
 
 /**
  * Placeholders (entre colchetes) não devem ir para os dados estruturados:
@@ -13,6 +13,10 @@ export function absoluteUrl(path = "/") {
 }
 
 export function localBusinessJsonLd(config: SiteConfig = site) {
+  const street = isPhysicalAddress(config.address)
+    ? real(config.address)
+    : undefined;
+
   return {
     "@context": "https://schema.org",
     "@type": "AutoDealer",
@@ -31,9 +35,23 @@ export function localBusinessJsonLd(config: SiteConfig = site) {
       "@type": "State",
       name: config.state,
     },
+    openingHoursSpecification: {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ],
+      opens: "08:00",
+      closes: "23:00",
+    },
     address: {
       "@type": "PostalAddress",
-      streetAddress: real(config.address),
+      ...(street ? { streetAddress: street } : {}),
       addressRegion: config.stateCode,
       addressCountry: "BR",
     },

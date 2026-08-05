@@ -60,9 +60,10 @@ export function SiteSettingsForm({
             />
           </Field>
           <Field
-            label="Endereço completo"
+            label="Endereço / modalidade"
             required
             error={errors.address}
+            hint='Loja digital: use "Loja digital — atendimento online". Com showroom, informe o endereço completo.'
             className="sm:col-span-2"
           >
             <input
@@ -70,7 +71,7 @@ export function SiteSettingsForm({
               defaultValue={
                 initial.address.includes("[") ? "" : initial.address
               }
-              placeholder="Rua, número, bairro — cidade/ES"
+              placeholder="Loja digital — atendimento online"
               className={inputClass}
               aria-invalid={Boolean(errors.address)}
             />
@@ -84,13 +85,13 @@ export function SiteSettingsForm({
             label="Resumo (home / listagens)"
             required
             error={errors.hours}
-            hint="Texto curto, ex.: Seg–sex 9h–18h · Sáb 9h–13h"
+            hint="Texto curto, ex.: Todos os dias, 8h às 23h (online)"
             className="sm:col-span-2"
           >
             <input
               name="hours"
               defaultValue={initial.hours.includes("[") ? "" : initial.hours}
-              placeholder="Seg–sex 9h–18h · Sáb 9h–13h"
+              placeholder="Todos os dias, 8h às 23h (online)"
               className={inputClass}
               aria-invalid={Boolean(errors.hours)}
             />
