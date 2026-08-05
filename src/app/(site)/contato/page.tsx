@@ -7,7 +7,16 @@ import {
   IconMapPin,
   IconPhone,
 } from "@/components/site/icons";
-import { PHONES, WHATSAPP_MESSAGES, site, telUrl } from "@/lib/site";
+import {
+  PHONES,
+  WHATSAPP_MESSAGES,
+  site,
+  telUrl,
+  whatsappUrl,
+} from "@/lib/site";
+import { getPublicSite } from "@/lib/site-settings";
+
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: `Contato | ${site.name}`,
@@ -15,21 +24,22 @@ export const metadata: Metadata = {
   alternates: { canonical: "/contato" },
 };
 
-/**
- * O iframe usa o modo de busca do Google Maps, que funciona sem API key.
- * Troque `site.address` pelo endereço real e o mapa se ajusta sozinho.
- */
-const mapsQuery = encodeURIComponent(`${site.name} ${site.address}`);
-const mapsEmbedUrl = `https://www.google.com/maps?q=${mapsQuery}&output=embed`;
-const mapsLinkUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
+export default async function ContatoPage() {
+  const publicSite = await getPublicSite();
+  const addressReady = !publicSite.address.includes("[");
+  const mapsQuery = encodeURIComponent(
+    `${publicSite.name} ${addressReady ? publicSite.address : publicSite.state}`,
+  );
+  const mapsEmbedUrl = `https://www.google.com/maps?q=${mapsQuery}&output=embed`;
+  const mapsLinkUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
+  const emailReady = !publicSite.email.includes("[");
 
-export default function ContatoPage() {
   return (
     <div className="py-12 lg:py-16">
       <Container size="narrow">
         <PageHeader
           eyebrow="Contato"
-          title={`Fale com a ${site.name}`}
+          title={`Fale com a ${publicSite.name}`}
           description="Atendemos por WhatsApp, telefone e também na loja. Se quiser ver um veículo de perto, agende sua visita que a gente separa o carro para você."
         />
 
@@ -38,7 +48,9 @@ export default function ContatoPage() {
             <InfoCard
               key={phone.digits}
               Icon={IconPhone}
-              label={index === 0 ? "Telefone / WhatsApp" : "Telefone 2 / WhatsApp"}
+              label={
+                index === 0 ? "Telefone / WhatsApp" : "Telefone 2 / WhatsApp"
+              }
               value={phone.label}
               href={telUrl(index)}
               hrefLabel="Ligar agora"
@@ -47,7 +59,7 @@ export default function ContatoPage() {
           <InfoCard
             Icon={IconMapPin}
             label="Endereço"
-            value={site.address}
+            value={publicSite.address}
             href={mapsLinkUrl}
             hrefLabel="Abrir no Google Maps"
             external
@@ -55,17 +67,22 @@ export default function ContatoPage() {
           <InfoCard
             Icon={IconInstagram}
             label="Instagram"
-            value={site.instagram}
-            href={site.instagramUrl}
+            value={publicSite.instagram}
+            href={publicSite.instagramUrl}
             hrefLabel="Ver perfil"
             external
           />
           <InfoCard
             Icon={IconMail}
             label="E-mail"
-            value={site.email}
-            href={`mailto:${site.email}`}
-            hrefLabel="Enviar e-mail"
+            value={publicSite.email}
+            href={
+              emailReady
+                ? `mailto:${publicSite.email}`
+                : whatsappUrl(WHATSAPP_MESSAGES.general)
+            }
+            hrefLabel={emailReady ? "Enviar e-mail" : "Chamar no WhatsApp"}
+            external={!emailReady}
           />
           <div className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center">
             <IconClock className="h-6 w-6 shrink-0 text-brand" />
@@ -73,8 +90,11 @@ export default function ContatoPage() {
               Horário de atendimento
             </h2>
             <dl className="mt-4 w-full space-y-2 text-sm">
-              <HourRow label="Segunda a sexta" value={site.hoursWeekdays} />
-              <HourRow label="Sábado" value={site.hoursSaturday} />
+              <HourRow
+                label="Segunda a sexta"
+                value={publicSite.hoursWeekdays}
+              />
+              <HourRow label="Sábado" value={publicSite.hoursSaturday} />
               <HourRow label="Domingo e feriados" value="Fechado" />
             </dl>
           </div>
@@ -99,7 +119,7 @@ export default function ContatoPage() {
         <div className="mt-8">
           <div className="relative aspect-[4/3] overflow-hidden border border-white/10 bg-ink sm:aspect-[16/9]">
             <iframe
-              title={`Mapa da ${site.name}`}
+              title={`Mapa da ${publicSite.name}`}
               src={mapsEmbedUrl}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
@@ -108,14 +128,14 @@ export default function ContatoPage() {
             />
           </div>
           <p className="mx-auto mt-4 max-w-xl text-center text-xs leading-relaxed text-muted">
-            Endereço ainda em configuração ({site.address}) — o mapa passa a
-            apontar o ponto exato assim que o endereço real for preenchido em{" "}
-            <code className="text-cream">src/lib/site.ts</code>.
+            {addressReady
+              ? `Mapa baseado em ${publicSite.address}.`
+              : "Endereço ainda em configuração — preencha em Painel → Dados do site para o mapa apontar o ponto exato."}
           </p>
         </div>
 
         <p className="mt-8 text-center text-xs leading-relaxed text-muted">
-          {site.legalName} — CNPJ {site.cnpj}
+          {publicSite.legalName} — CNPJ {publicSite.cnpj}
         </p>
       </Container>
     </div>

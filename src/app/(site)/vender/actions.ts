@@ -1,6 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { checkSellLeadRateLimit } from "@/lib/rate-limit";
 
 export type SellLeadState = {
   ok: boolean;
@@ -12,7 +14,29 @@ function text(data: FormData, key: string) {
   return String(data.get(key) ?? "").trim();
 }
 
+function clientKey() {
+  const h = headers();
+  const forwarded = h.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return forwarded || h.get("x-real-ip") || "unknown";
+}
+
 export async function createSellLead(data: FormData): Promise<SellLeadState> {
+  // Honeypot: bots preenchem campos ocultos; humanos não veem.
+  if (text(data, "website")) {
+    return {
+      ok: true,
+      message: "Recebemos seus dados! Entraremos em contato em breve.",
+    };
+  }
+
+  const limited = checkSellLeadRateLimit(clientKey());
+  if (!limited.ok) {
+    return {
+      ok: false,
+      message: `Muitas solicitações. Tente de novo em ${limited.retryAfterSec}s ou chame no WhatsApp.`,
+    };
+  }
+
   const name = text(data, "name");
   const phone = text(data, "phone");
   const brand = text(data, "brand");

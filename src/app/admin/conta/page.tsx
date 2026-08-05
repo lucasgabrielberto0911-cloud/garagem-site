@@ -2,13 +2,11 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { AccountForms } from "@/components/admin/AccountForms";
 import { AdminPageHeader } from "@/components/admin/ui";
+import { WEAK_ADMIN_PASSWORDS } from "@/lib/admin-security";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
-
-/** Senha criada pelo seed: se ainda estiver valendo, o painel avisa. */
-const SEED_PASSWORD = "troque-esta-senha";
 
 export default async function ContaPage() {
   const session = await getSession();
@@ -21,10 +19,13 @@ export default async function ContaPage() {
 
   if (!admin) redirect("/admin/login");
 
-  const usingSeedPassword = await bcrypt.compare(
-    SEED_PASSWORD,
-    admin.passwordHash,
-  );
+  const usingSeedPassword = (
+    await Promise.all(
+      WEAK_ADMIN_PASSWORDS.map((password) =>
+        bcrypt.compare(password, admin.passwordHash),
+      ),
+    )
+  ).some(Boolean);
 
   return (
     <div className="space-y-6">

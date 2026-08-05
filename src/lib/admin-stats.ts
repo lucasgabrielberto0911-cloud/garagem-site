@@ -1,15 +1,13 @@
 import bcrypt from "bcryptjs";
+import { WEAK_ADMIN_PASSWORDS } from "@/lib/admin-security";
 import { prisma } from "@/lib/prisma";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/leads";
-import { site } from "@/lib/site";
+import { getPublicSite, listPlaceholderLabels } from "@/lib/site-settings";
 
 const DAY_MS = 1000 * 60 * 60 * 24;
 
 /** Veículo disponível parado há mais tempo que isso entra nos alertas. */
 export const STALE_DAYS = 60;
-
-/** Senha criada pelo seed: se ainda estiver valendo, o painel avisa. */
-const SEED_PASSWORD = "troque-esta-senha";
 
 export function daysInStock(createdAt: Date) {
   return Math.floor((Date.now() - createdAt.getTime()) / DAY_MS);
@@ -40,6 +38,7 @@ export async function getDashboardData() {
     customers,
     publishedTestimonials,
     admins,
+    publicSite,
   ] = await Promise.all([
     prisma.vehicle.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.vehicle.count({ where: { status: "disponivel", featured: true } }),
@@ -76,15 +75,20 @@ export async function getDashboardData() {
     prisma.customer.count(),
     prisma.testimonial.count({ where: { published: true } }),
     prisma.admin.findMany({ select: { passwordHash: true } }),
+    getPublicSite(),
   ]);
 
   /**
-   * Enquanto algum acesso continuar com a senha do seed, o painel avisa: é o
+   * Enquanto algum acesso continuar com senha fraca/padrão, o painel avisa: é o
    * risco de segurança mais provável numa instalação nova.
    */
   const usingSeedPassword = (
     await Promise.all(
-      admins.map((admin) => bcrypt.compare(SEED_PASSWORD, admin.passwordHash)),
+      admins.flatMap((admin) =>
+        WEAK_ADMIN_PASSWORDS.map((password) =>
+          bcrypt.compare(password, admin.passwordHash),
+        ),
+      ),
     )
   ).some(Boolean);
 
@@ -135,20 +139,7 @@ export async function getDashboardData() {
       noFeatured: available > 0 && featured === 0,
       noTestimonials: publishedTestimonials === 0,
       usingSeedPassword,
-      placeholders: PLACEHOLDER_FIELDS.filter(({ value }) =>
-        value.includes("["),
-      ).map(({ label }) => label),
+      placeholders: listPlaceholderLabels(publicSite),
     },
   };
 }
-
-/**
- * Campos de `src/lib/site.ts` que ainda estão como placeholder aparecem no
- * dashboard para lembrar de preencher antes de divulgar o site.
- */
-const PLACEHOLDER_FIELDS = [
-  { label: "Endereço", value: site.address },
-  { label: "Cidade/região", value: site.region },
-  { label: "E-mail", value: site.email },
-  { label: "Horário", value: site.hours },
-] as const;

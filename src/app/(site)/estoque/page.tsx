@@ -7,7 +7,7 @@ import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getStockFacets, getStockVehicles } from "@/lib/vehicles";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: `Estoque | ${site.name}`,

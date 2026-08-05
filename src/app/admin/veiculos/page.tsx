@@ -37,7 +37,7 @@ export default async function VehiclesPage({
             : {},
         ],
       },
-      include: { photos: { orderBy: { order: "asc" } } },
+      include: { photos: { orderBy: { order: "asc" }, take: 1 } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.vehicle.groupBy({ by: ["status"], _count: { _all: true } }),

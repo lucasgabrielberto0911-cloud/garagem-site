@@ -9,13 +9,16 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { WhatsAppFloat } from "@/components/site/WhatsAppFloat";
 import { localBusinessJsonLd } from "@/lib/seo";
+import { getPublicSite } from "@/lib/site-settings";
 
-export default function SiteLayout({
+export default async function SiteLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const publicSite = await getPublicSite();
+
   return (
     <div className="flex min-h-screen flex-col">
-      <JsonLd data={localBusinessJsonLd()} />
+      <JsonLd data={localBusinessJsonLd(publicSite)} />
       <ScrollProgress />
       <SiteHeader />
       <main className="flex-1 pt-[76px] lg:pt-[88px]">
