@@ -12,7 +12,12 @@ import {
   IconLogout,
   IconUsers,
 } from "@/components/admin/icons";
-import { IconCar, IconClose, IconMenu } from "@/components/site/icons";
+import {
+  IconCar,
+  IconClose,
+  IconMenu,
+  IconQuote,
+} from "@/components/site/icons";
 
 type NavItem = {
   href: string;
@@ -27,6 +32,7 @@ const NAV: NavItem[] = [
   { href: "/admin/leads", label: "Leads", Icon: IconInbox, badgeKey: "leads" },
   { href: "/admin/vendas", label: "Vendas", Icon: IconCash },
   { href: "/admin/clientes", label: "Clientes", Icon: IconUsers },
+  { href: "/admin/depoimentos", label: "Depoimentos", Icon: IconQuote },
 ];
 
 export function AdminShell({

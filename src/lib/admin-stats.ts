@@ -34,6 +34,7 @@ export async function getDashboardData() {
     staleVehicles,
     withoutPhotos,
     customers,
+    publishedTestimonials,
   ] = await Promise.all([
     prisma.vehicle.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.vehicle.count({ where: { status: "disponivel", featured: true } }),
@@ -68,6 +69,7 @@ export async function getDashboardData() {
       select: { id: true, brand: true, model: true },
     }),
     prisma.customer.count(),
+    prisma.testimonial.count({ where: { published: true } }),
   ]);
 
   const byStatus = (status: string) =>
@@ -109,11 +111,13 @@ export async function getDashboardData() {
       recent: recentLeads,
     },
     customers,
+    publishedTestimonials,
     recentVehicles,
     alerts: {
       staleVehicles,
       withoutPhotos,
       noFeatured: available > 0 && featured === 0,
+      noTestimonials: publishedTestimonials === 0,
       placeholders: PLACEHOLDER_FIELDS.filter(({ value }) =>
         value.includes("["),
       ).map(({ label }) => label),

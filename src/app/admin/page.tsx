@@ -16,6 +16,7 @@ import {
   StatCard,
   btn,
 } from "@/components/admin/ui";
+import { IconQuote } from "@/components/site/icons";
 import { getSession } from "@/lib/auth";
 import { daysInStock, getDashboardData, STALE_DAYS } from "@/lib/admin-stats";
 import { formatCurrencyBRL, formatNumberBR, formatPhoneBR } from "@/lib/format";
@@ -34,6 +35,7 @@ export default async function AdminDashboardPage() {
     alerts.staleVehicles.length +
     alerts.withoutPhotos.length +
     (alerts.noFeatured ? 1 : 0) +
+    (alerts.noTestimonials ? 1 : 0) +
     (alerts.placeholders.length > 0 ? 1 : 0);
 
   return (
@@ -152,6 +154,16 @@ export default async function AdminDashboardPage() {
                   title="Nenhum veículo em destaque"
                   description="Marque os melhores como destaque para eles aparecerem primeiro na home."
                   href="/admin/veiculos?status=disponivel"
+                />
+              ) : null}
+
+              {alerts.noTestimonials ? (
+                <AlertRow
+                  tone="neutral"
+                  icon={<IconQuote className="h-4 w-4" />}
+                  title="Nenhum depoimento publicado"
+                  description="A home mostra 'em breve' na seção de depoimentos. Publique avaliações reais de clientes."
+                  href="/admin/depoimentos"
                 />
               ) : null}
 
