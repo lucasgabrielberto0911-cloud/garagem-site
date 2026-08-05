@@ -13,17 +13,18 @@ import {
   updateVehicle,
   type VehicleFormState,
 } from "@/app/admin/veiculos/actions";
-import { VehicleImage } from "@/components/VehicleImage";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
-  IconArrowDown,
-  IconArrowUp,
   IconExternal,
-  IconImage,
   IconStar,
   IconTrash,
 } from "@/components/admin/icons";
 import { Card, Field, btn, inputClass } from "@/components/admin/ui";
+import {
+  VehiclePhotoManager,
+  photosFromUrls,
+  type PhotoItem,
+} from "@/components/admin/VehiclePhotoManager";
 import { formatNumberBR } from "@/lib/format";
 import {
   VEHICLE_CATEGORIES,
@@ -73,12 +74,13 @@ export function VehicleForm({
   const action = mode === "create" ? createVehicle : boundUpdate;
   const [state, formAction] = useFormState(action, initialState);
 
-  const [photoUrls, setPhotoUrls] = useState<string[]>(
-    () =>
+  const [photos, setPhotos] = useState<PhotoItem[]>(() =>
+    photosFromUrls(
       vehicle?.photos
         .slice()
         .sort((a, b) => a.order - b.order)
         .map((photo) => photo.url) ?? [],
+    ),
   );
   const [accessories, setAccessories] = useState<string[]>(() =>
     normalizeAccessories(vehicle?.accessories ?? []),
@@ -103,8 +105,6 @@ export function VehicleForm({
       ? current
       : defaultTransmission(initialCategory);
   });
-  const [uploading, setUploading] = useState(0);
-  const [dragging, setDragging] = useState(false);
   const [pendingAction, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmSold, setConfirmSold] = useState(false);
@@ -176,58 +176,6 @@ export function VehicleForm({
     return Object.keys(next).length === 0;
   }
 
-  async function uploadFiles(files: FileList | File[] | null) {
-    const list = files ? Array.from(files) : [];
-    if (list.length === 0) return;
-
-    setUploading(list.length);
-    try {
-      const formData = new FormData();
-      list.forEach((file) => formData.append("files", file));
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        toast.error(data.error || "Falha no upload.");
-        return;
-      }
-
-      setPhotoUrls((current) => [...current, ...(data.urls as string[])]);
-      toast.success(`${data.urls.length} foto(s) enviada(s).`);
-    } catch {
-      toast.error("Erro de conexão no upload.");
-    } finally {
-      setUploading(0);
-    }
-  }
-
-  function movePhoto(index: number, direction: -1 | 1) {
-    setPhotoUrls((current) => {
-      const target = index + direction;
-      if (target < 0 || target >= current.length) return current;
-      const next = [...current];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
-  }
-
-  function makeCover(index: number) {
-    setPhotoUrls((current) => {
-      if (index === 0) return current;
-      const next = [...current];
-      const [picked] = next.splice(index, 1);
-      return [picked, ...next];
-    });
-  }
-
-  function removePhoto(index: number) {
-    setPhotoUrls((current) => current.filter((_, i) => i !== index));
-  }
-
   function handleDelete() {
     if (!vehicle) return;
     startTransition(async () => {
@@ -269,7 +217,11 @@ export function VehicleForm({
         }}
         className="space-y-5"
       >
-        <input type="hidden" name="photoUrls" value={JSON.stringify(photoUrls)} />
+        <input
+          type="hidden"
+          name="photoUrls"
+          value={JSON.stringify(photos.map((photo) => photo.url))}
+        />
         <input
           type="hidden"
           name="accessories"
@@ -468,123 +420,16 @@ export function VehicleForm({
         </Card>
 
         <Card
-          title={`Fotos${photoUrls.length > 0 ? ` (${photoUrls.length})` : ""}`}
+          title={`Fotos${photos.length > 0 ? ` (${photos.length})` : ""}`}
           action={
-            photoUrls.length > 0 ? (
+            photos.length > 0 ? (
               <span className="text-xs text-muted">
-                A primeira foto é a capa
+                Arraste para reordenar · 1ª = capa
               </span>
             ) : null
           }
         >
-          <label
-            onDragOver={(event) => {
-              event.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(event) => {
-              event.preventDefault();
-              setDragging(false);
-              void uploadFiles(event.dataTransfer.files);
-            }}
-            className={`flex cursor-pointer flex-col items-center justify-center border border-dashed px-6 py-8 text-center transition ${
-              dragging
-                ? "border-brand bg-brand/5"
-                : "border-white/15 hover:border-brand/50"
-            }`}
-          >
-            <IconImage className="h-8 w-8 text-white/25" />
-            <p className="mt-3 text-sm text-cream">
-              {uploading > 0
-                ? `Enviando ${uploading} foto(s)...`
-                : "Arraste as fotos aqui ou clique para escolher"}
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              JPG, PNG, WEBP ou GIF · várias de uma vez
-            </p>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              multiple
-              className="hidden"
-              disabled={uploading > 0}
-              onChange={(event) => {
-                void uploadFiles(event.target.files);
-                event.target.value = "";
-              }}
-            />
-          </label>
-
-          {uploading > 0 ? (
-            <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {Array.from({ length: uploading }).map((_, index) => (
-                <li key={index} className="skeleton aspect-[4/3]" />
-              ))}
-            </ul>
-          ) : null}
-
-          {photoUrls.length === 0 && uploading === 0 ? (
-            <p className="mt-4 text-sm text-muted">
-              Nenhuma foto adicionada. Anúncios com fotos recebem muito mais
-              contato.
-            </p>
-          ) : (
-            <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {photoUrls.map((url, index) => (
-                <li
-                  key={`${url}-${index}`}
-                  className="group relative aspect-[4/3] overflow-hidden border border-white/10 bg-asphalt"
-                >
-                  <VehicleImage
-                    src={url}
-                    alt={`Foto ${index + 1} do veículo`}
-                    fill
-                    className="object-cover"
-                    sizes="240px"
-                  />
-                  {index === 0 ? (
-                    <span className="absolute left-1.5 top-1.5 bg-brand px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
-                      Capa
-                    </span>
-                  ) : null}
-
-                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-asphalt/85 px-1.5 py-1.5 backdrop-blur">
-                    <div className="flex gap-0.5">
-                      <PhotoAction
-                        label="Mover para trás"
-                        disabled={index === 0}
-                        onClick={() => movePhoto(index, -1)}
-                      >
-                        <IconArrowUp className="h-3.5 w-3.5 -rotate-90" />
-                      </PhotoAction>
-                      <PhotoAction
-                        label="Mover para frente"
-                        disabled={index === photoUrls.length - 1}
-                        onClick={() => movePhoto(index, 1)}
-                      >
-                        <IconArrowDown className="h-3.5 w-3.5 -rotate-90" />
-                      </PhotoAction>
-                      <PhotoAction
-                        label="Definir como capa"
-                        disabled={index === 0}
-                        onClick={() => makeCover(index)}
-                      >
-                        <IconStar className="h-3.5 w-3.5" />
-                      </PhotoAction>
-                    </div>
-                    <PhotoAction
-                      label="Remover foto"
-                      danger
-                      onClick={() => removePhoto(index)}
-                    >
-                      <IconTrash className="h-3.5 w-3.5" />
-                    </PhotoAction>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+          <VehiclePhotoManager photos={photos} onChange={setPhotos} />
         </Card>
 
         <Card
@@ -794,36 +639,5 @@ export function VehicleForm({
         }}
       />
     </>
-  );
-}
-
-function PhotoAction({
-  children,
-  label,
-  onClick,
-  disabled = false,
-  danger = false,
-}: {
-  children: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={label}
-      aria-label={label}
-      className={`inline-flex h-7 w-7 items-center justify-center transition disabled:opacity-30 ${
-        danger
-          ? "text-brand hover:bg-brand/15"
-          : "text-cream hover:bg-white/10"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
