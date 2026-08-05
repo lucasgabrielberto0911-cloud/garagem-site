@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
 
       if (response.status === 405 || response.status === 404) {
         setError(
-          "A API de login não está disponível neste domínio. O site precisa estar publicado no Vercel (Next.js), não em hospedagem estática.",
+          "Login indisponível neste domínio. Publique o site no Vercel com DATABASE_URL do Supabase.",
         );
         return;
       }
@@ -89,6 +89,9 @@ export default function AdminLoginPage() {
           <div className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
           <p className="mt-4 text-sm text-muted">
             Entre com suas credenciais para gerenciar o estoque.
+          </p>
+          <p className="mt-2 text-xs text-muted/80">
+            Padrão: admin@loja.com / Lucas0911
           </p>
         </div>
 

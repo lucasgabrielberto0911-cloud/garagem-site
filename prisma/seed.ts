@@ -1,30 +1,27 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import {
+  DEFAULT_ADMIN_EMAIL,
+  DEFAULT_ADMIN_NAME,
+  DEFAULT_ADMIN_PASSWORD,
+} from "../src/lib/secrets";
 
 const prisma = new PrismaClient();
 
-/**
- * A senha padrão do seed NÃO deve ser commitada. Defina SEED_ADMIN_PASSWORD
- * no ambiente. Se não houver, o upsert cria o admin só na primeira vez com
- * um valor temporário e o painel avisa para trocar.
- */
-const DEFAULT_WEAK_PASSWORD = "troque-esta-senha";
-
 async function main() {
   const seedPassword =
-    process.env.SEED_ADMIN_PASSWORD?.trim() || DEFAULT_WEAK_PASSWORD;
+    process.env.SEED_ADMIN_PASSWORD?.trim() || DEFAULT_ADMIN_PASSWORD;
   const passwordHash = await bcrypt.hash(seedPassword, 10);
 
   const admin = await prisma.admin.upsert({
-    where: { email: "admin@loja.com" },
-    // Não sobrescreve a senha em re-seeds — evita resetar a senha de produção
-    // toda vez que alguém roda `npm run db:seed`.
+    where: { email: DEFAULT_ADMIN_EMAIL },
+    // Não sobrescreve a senha em re-seeds.
     update: {
-      name: "Administrador",
+      name: DEFAULT_ADMIN_NAME,
     },
     create: {
-      name: "Administrador",
-      email: "admin@loja.com",
+      name: DEFAULT_ADMIN_NAME,
+      email: DEFAULT_ADMIN_EMAIL,
       passwordHash,
     },
   });
@@ -122,12 +119,7 @@ async function main() {
     }),
   ]);
 
-  console.log(`Admin: ${admin.email}`);
-  if (!process.env.SEED_ADMIN_PASSWORD) {
-    console.log(
-      `Senha temporária: ${DEFAULT_WEAK_PASSWORD} (defina SEED_ADMIN_PASSWORD para personalizar)`,
-    );
-  }
+  console.log(`Admin: ${admin.email} / senha padrão: ${DEFAULT_ADMIN_PASSWORD}`);
   console.log(`${vehicles.length} veículos de exemplo criados.`);
 
   const { SEED_TESTIMONIALS } = await import("../src/lib/testimonials-seed");
