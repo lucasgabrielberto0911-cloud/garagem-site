@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/site/ui";
 import {
+  IconClock,
   IconInstagram,
   IconMail,
   IconMapPin,
@@ -37,8 +38,9 @@ export async function SiteFooter() {
             Seminovos com procedência em {site.region} e região
           </p>
           <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
-            Compra, venda, troca e financiamento no {site.state} — com atendimento
-            direto pelo WhatsApp.
+            Loja digital com atendimento online das 8h às 23h — compra, venda,
+            troca e financiamento no {site.state}, com foco em qualidade e no
+            melhor atendimento.
           </p>
           <a
             href={site.instagramUrl}
@@ -106,6 +108,10 @@ export async function SiteFooter() {
               <li className="flex items-start justify-center gap-2">
                 <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
                 <span>{site.address}</span>
+              </li>
+              <li className="flex items-center justify-center gap-2 text-xs">
+                <IconClock className="h-4 w-4 shrink-0 text-brand" />
+                <span>{site.hours}</span>
               </li>
             </ul>
           </div>

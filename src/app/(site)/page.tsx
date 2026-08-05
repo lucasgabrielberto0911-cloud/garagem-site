@@ -41,17 +41,17 @@ const REASONS = [
   {
     Icon: IconClipboardCheck,
     title: "Vistoria Completa",
-    text: "Todo veículo passa por checagem mecânica, elétrica e estrutural antes de entrar no estoque. Você recebe o laudo e sabe exatamente o que está comprando.",
+    text: "Todo veículo passa por checagem de procedência e condição geral antes de entrar no estoque. Você sabe o que está comprando, com informação clara.",
   },
   {
     Icon: IconShieldCheck,
     title: "Procedência Verificada",
-    text: "Histórico, débitos e restrições consultados um por um. Nada de surpresa depois da transferência — a documentação sai limpa.",
+    text: "Histórico, débitos e restrições consultados com cuidado. Nada de surpresa depois da transferência — a documentação sai alinhada.",
   },
   {
     Icon: IconHandshake,
     title: "Negociação Transparente",
-    text: "Preço claro, sem taxa escondida. Avaliamos seu usado na hora e montamos o financiamento que caiba no seu bolso.",
+    text: "Preço claro, sem enrolação. Avaliamos seu usado e ajudamos com as opções de pagamento e financiamento que façam sentido para você.",
   },
 ] as const;
 
@@ -225,13 +225,13 @@ export default async function HomePage() {
         </div>
       </Section>
 
-      {/* 6. LOCALIZAÇÃO */}
+      {/* 6. ATENDIMENTO */}
       <Section className="border-t border-white/5 bg-ink/40" size="narrow">
         <ScrollReveal>
           <SectionHeading
-            eyebrow="Onde estamos"
+            eyebrow="Atendimento"
             title={`Atendemos ${publicSite.region} e região`}
-            description={`Somos de ${publicSite.region}, no ${publicSite.state}, e atendemos toda a região. Agende sua visita para ver o carro de perto e fazer o test-drive — ou resolva tudo à distância pelo WhatsApp, que a gente envia vídeo e laudo do veículo.`}
+            description={`Somos loja digital em ${publicSite.region}, no ${publicSite.state}. Escolha no site, peça vídeo pelo WhatsApp e feche com segurança — atendimento online todos os dias, das 8h às 23h.`}
           />
         </ScrollReveal>
 
@@ -240,14 +240,14 @@ export default async function HomePage() {
             <div className="flex flex-col items-center bg-asphalt px-6 py-7 text-center">
               <IconMapPin className="h-6 w-6 text-brand" />
               <dt className="mt-3 font-display text-sm font-semibold text-cream">
-                Endereço
+                Modalidade
               </dt>
               <dd className="mt-1 text-sm text-muted">{publicSite.address}</dd>
             </div>
             <div className="flex flex-col items-center bg-asphalt px-6 py-7 text-center">
               <IconClock className="h-6 w-6 text-brand" />
               <dt className="mt-3 font-display text-sm font-semibold text-cream">
-                Horário de funcionamento
+                Horário online
               </dt>
               <dd className="mt-1 text-sm text-muted">{publicSite.hours}</dd>
             </div>

@@ -36,7 +36,9 @@ export async function updateSiteSettings(
   const fieldErrors: Record<string, string> = {};
   if (region.length < 2) fieldErrors.region = "Informe a cidade ou região.";
   if (email && !email.includes("@")) fieldErrors.email = "E-mail inválido.";
-  if (address.length < 5) fieldErrors.address = "Informe o endereço completo.";
+  if (address.length < 5) {
+    fieldErrors.address = "Informe o endereço ou a modalidade (ex.: loja digital).";
+  }
   if (hours.length < 2) fieldErrors.hours = "Informe o horário resumido.";
   if (hoursWeekdays.length < 2) {
     fieldErrors.hoursWeekdays = "Informe o horário de segunda a sexta.";
