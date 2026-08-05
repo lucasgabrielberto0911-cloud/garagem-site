@@ -11,7 +11,7 @@ import { checkLoginRateLimit, clearLoginRateLimit } from "@/lib/rate-limit";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const email = typeof body.email === "string" ? body.email.trim() : "";
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body.password === "string" ? body.password : "";
 
     if (!email || !password) {
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
     const forwarded = request.headers.get("x-forwarded-for");
     const ip = forwarded?.split(",")[0]?.trim() || "unknown";
-    const rateKey = `${ip}:${email.toLowerCase()}`;
+    const rateKey = `${ip}:${email}`;
     const rate = checkLoginRateLimit(rateKey);
     if (!rate.ok) {
       return NextResponse.json(
@@ -65,9 +65,10 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     console.error("Login error:", error);
-    return NextResponse.json(
-      { error: "Erro ao autenticar." },
-      { status: 500 },
-    );
+    const message =
+      error instanceof Error && error.message.includes("JWT_SECRET")
+        ? "Servidor sem JWT_SECRET configurado. Defina a variável no Vercel."
+        : "Erro ao autenticar. Confira se o banco e o JWT_SECRET estão configurados.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

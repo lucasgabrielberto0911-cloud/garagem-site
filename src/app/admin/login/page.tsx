@@ -23,13 +23,29 @@ export default function AdminLoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        credentials: "same-origin",
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
       });
 
-      const data = await response.json().catch(() => ({}));
+      const contentType = response.headers.get("content-type") || "";
+      const data = contentType.includes("application/json")
+        ? await response.json().catch(() => ({}))
+        : {};
+
+      if (response.status === 405 || response.status === 404) {
+        setError(
+          "A API de login não está disponível neste domínio. O site precisa estar publicado no Vercel (Next.js), não em hospedagem estática.",
+        );
+        return;
+      }
 
       if (!response.ok) {
-        setError(data.error || "Não foi possível entrar.");
+        setError(
+          (data as { error?: string }).error || "Não foi possível entrar.",
+        );
         return;
       }
 
