@@ -3,7 +3,7 @@ import type { FaqItem } from "@/lib/faq";
 
 export function FaqAccordion({ items }: { items: FaqItem[] }) {
   return (
-    <div className="divide-y divide-white/10 border border-white/10 bg-ink">
+    <div className="mx-auto max-w-3xl divide-y divide-white/10 border border-white/10 bg-ink">
       {items.map((item, index) => (
         <ScrollReveal key={item.question} delay={index * 40}>
           <details className="group px-5 py-4 sm:px-6">

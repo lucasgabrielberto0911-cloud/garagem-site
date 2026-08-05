@@ -1,8 +1,8 @@
-import { ButtonLink, WhatsAppButton } from "@/components/site/ui";
+import { ActionRow, ButtonLink, Container, WhatsAppButton } from "@/components/site/ui";
 
 export default function SiteNotFound() {
   return (
-    <div className="px-4 py-20 text-center sm:px-6 lg:py-28">
+    <Container size="text" className="py-20 text-center lg:py-28">
       <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
         Erro 404
       </p>
@@ -14,14 +14,14 @@ export default function SiteNotFound() {
         O link pode estar desatualizado ou o veículo já foi vendido. Veja o que
         temos disponível agora.
       </p>
-      <div className="mt-9 flex flex-wrap justify-center gap-3">
+      <ActionRow className="mt-9">
         <ButtonLink href="/estoque" size="lg">
           Ver estoque
         </ButtonLink>
         <WhatsAppButton size="lg" variant="outline">
           WhatsApp
         </WhatsAppButton>
-      </div>
-    </div>
+      </ActionRow>
+    </Container>
   );
 }

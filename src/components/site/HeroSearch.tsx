@@ -18,7 +18,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
   }
 
   return (
-    <div className="w-full max-w-xl">
+    <div className="mx-auto w-full max-w-xl">
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -51,7 +51,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
       </form>
 
       {brands.length > 0 ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           <span className="text-xs uppercase tracking-wider text-muted">
             Marcas:
           </span>

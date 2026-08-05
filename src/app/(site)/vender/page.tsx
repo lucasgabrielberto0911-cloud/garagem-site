@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SellForm } from "@/components/site/SellForm";
+import { Container, PageHeader } from "@/components/site/ui";
 import {
   IconClipboardCheck,
   IconHandshake,
@@ -10,6 +11,7 @@ import { site } from "@/lib/site";
 export const metadata: Metadata = {
   title: `Vender ou trocar seu carro | ${site.name}`,
   description: `Avaliação gratuita e sem compromisso do seu veículo na ${site.name}. Compramos seu usado e aceitamos na troca.`,
+  alternates: { canonical: "/vender" },
 };
 
 const STEPS = [
@@ -32,27 +34,21 @@ const STEPS = [
 
 export default function VenderPage() {
   return (
-    <div className="px-4 py-12 sm:px-6 lg:py-16">
-      <div className="mx-auto max-w-5xl">
-        <header>
-          <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
-            Vender / Trocar
-          </p>
-          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-cream sm:text-4xl">
-            Avalie seu carro sem compromisso
-          </h1>
-          <div className="mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
-          <p className="mt-5 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
-            Compramos seu usado e também aceitamos na troca por um veículo do
-            nosso estoque. Preencha os dados abaixo que a gente retorna com uma
-            proposta — sem taxa e sem compromisso.
-          </p>
-        </header>
+    <div className="py-12 lg:py-16">
+      <Container size="narrow">
+        <PageHeader
+          eyebrow="Vender / Trocar"
+          title="Avalie seu carro sem compromisso"
+          description="Compramos seu usado e também aceitamos na troca por um veículo do nosso estoque. Preencha os dados abaixo que a gente retorna com uma proposta — sem taxa e sem compromisso."
+        />
 
-        <ul className="mt-10 grid gap-5 sm:grid-cols-3">
+        <ul className="mt-12 grid gap-5 sm:grid-cols-3">
           {STEPS.map(({ Icon, title, text }) => (
-            <li key={title} className="border border-white/10 bg-ink/60 p-6">
-              <Icon className="h-6 w-6 text-brand" />
+            <li
+              key={title}
+              className="flex flex-col items-center border border-white/10 bg-ink/60 p-6 text-center"
+            >
+              <Icon className="h-7 w-7 text-brand" />
               <h2 className="mt-4 font-display text-sm font-semibold uppercase tracking-wide text-cream">
                 {title}
               </h2>
@@ -61,15 +57,19 @@ export default function VenderPage() {
           ))}
         </ul>
 
-        <section className="mt-12">
-          <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
+        <section className="mt-14">
+          <h2 className="text-center font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
             Dados do seu veículo
           </h2>
-          <div className="mt-6">
+          <div
+            className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient"
+            aria-hidden="true"
+          />
+          <div className="mx-auto mt-8 max-w-2xl">
             <SellForm />
           </div>
         </section>
-      </div>
+      </Container>
     </div>
   );
 }

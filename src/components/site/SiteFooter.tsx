@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Container } from "@/components/site/ui";
 import {
   IconInstagram,
   IconMail,
@@ -20,30 +21,30 @@ export function SiteFooter() {
 
   return (
     <footer className="border-t border-white/10 bg-ink">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-16">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <Image
-              src="/branding/logo.png"
-              alt={site.name}
-              width={160}
-              height={44}
-              className="h-10 w-auto"
-            />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-              {site.tagline}
-            </p>
-            <a
-              href={site.instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-5 inline-flex items-center gap-2 text-sm text-muted transition hover:text-cream"
-            >
-              <IconInstagram className="h-4 w-4" />
-              {site.instagram}
-            </a>
-          </div>
+      <Container className="py-14 lg:py-16">
+        <div className="flex flex-col items-center text-center">
+          <Image
+            src="/branding/logo.png"
+            alt={site.name}
+            width={200}
+            height={56}
+            className="h-12 w-auto"
+          />
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted">
+            {site.tagline}
+          </p>
+          <a
+            href={site.instagramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-flex min-h-[44px] items-center gap-2 text-sm text-muted transition hover:text-cream"
+          >
+            <IconInstagram className="h-4 w-4" />
+            {site.instagram}
+          </a>
+        </div>
 
+        <div className="mt-12 grid gap-10 text-center sm:grid-cols-3">
           <div>
             <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
               Navegação
@@ -80,24 +81,24 @@ export function SiteFooter() {
               Contato
             </h2>
             <ul className="mt-4 space-y-3 text-sm text-muted">
-              <li className="flex gap-2.5">
-                <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-                <span>{site.address}</span>
-              </li>
               {PHONES.map((phone, index) => (
                 <li key={phone.digits}>
                   <a
                     href={telUrl(index)}
-                    className="flex gap-2.5 transition hover:text-cream"
+                    className="inline-flex items-center justify-center gap-2 transition hover:text-cream"
                   >
-                    <IconPhone className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                    <IconPhone className="h-4 w-4 shrink-0 text-brand" />
                     <span>{phone.label}</span>
                   </a>
                 </li>
               ))}
-              <li className="flex gap-2.5">
-                <IconMail className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+              <li className="flex items-center justify-center gap-2">
+                <IconMail className="h-4 w-4 shrink-0 text-brand" />
                 <span>{site.email}</span>
+              </li>
+              <li className="flex items-start justify-center gap-2">
+                <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                <span>{site.address}</span>
               </li>
             </ul>
           </div>
@@ -105,18 +106,18 @@ export function SiteFooter() {
 
         <div className="mt-12 h-0.5 w-full bg-brand-gradient" aria-hidden="true" />
 
-        <div className="mt-6 flex flex-col gap-2 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <p>
-              © {year} {site.name}. Todos os direitos reservados.
-            </p>
-            <p>CNPJ {site.cnpj}</p>
-          </div>
+        <div className="mt-6 flex flex-col items-center gap-2 text-center text-xs text-muted">
+          <p>
+            © {year} {site.name}. Todos os direitos reservados.
+          </p>
+          <p>
+            {site.legalName} — CNPJ {site.cnpj}
+          </p>
           <Link href="/admin/login" className="transition hover:text-cream">
             Área administrativa
           </Link>
         </div>
-      </div>
+      </Container>
     </footer>
   );
 }

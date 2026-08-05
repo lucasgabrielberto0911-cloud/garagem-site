@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
 import { FaqAccordion } from "@/components/site/FaqAccordion";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
-import { WhatsAppButton } from "@/components/site/ui";
+import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { FAQ_ITEMS } from "@/lib/faq";
 import { faqJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
@@ -15,25 +15,17 @@ export const metadata: Metadata = {
 
 export default function FaqPage() {
   return (
-    <div className="px-4 py-12 sm:px-6 lg:py-16">
+    <div className="py-12 lg:py-16">
       <JsonLd data={faqJsonLd(FAQ_ITEMS)} />
 
-      <div className="mx-auto max-w-4xl">
-        <header>
-          <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
-            Dúvidas frequentes
-          </p>
-          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-cream sm:text-4xl">
-            Tudo que perguntam antes de comprar
-          </h1>
-          <div className="mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
-          <p className="mt-5 text-sm leading-relaxed text-muted sm:text-base">
-            Se a sua dúvida não estiver aqui, chame no WhatsApp: respondemos no
-            horário de atendimento.
-          </p>
-        </header>
+      <Container size="narrow">
+        <PageHeader
+          eyebrow="Dúvidas frequentes"
+          title="Tudo que perguntam antes de comprar"
+          description="Se a sua dúvida não estiver aqui, chame no WhatsApp: respondemos no horário de atendimento."
+        />
 
-        <div className="mt-10">
+        <div className="mt-12">
           <FaqAccordion items={FAQ_ITEMS} />
         </div>
 
@@ -56,7 +48,7 @@ export default function FaqPage() {
         <div className="mt-10">
           <WantedVehicleCta />
         </div>
-      </div>
+      </Container>
     </div>
   );
 }

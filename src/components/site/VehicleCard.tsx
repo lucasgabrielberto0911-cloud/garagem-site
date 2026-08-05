@@ -70,7 +70,7 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
         ) : null}
       </Link>
 
-      <div className="flex flex-1 flex-col p-4 sm:p-5">
+      <div className="flex flex-1 flex-col p-4 text-center sm:p-5">
         <p className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-brand">
           {vehicle.brand}
         </p>
@@ -95,7 +95,7 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
           <Spec Icon={IconGearShift} label={vehicle.transmission} />
         </dl>
 
-        <div className="mt-auto flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mt-auto flex flex-col items-center gap-3 border-t border-white/10 pt-4">
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted">
               A partir de
@@ -109,7 +109,7 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
             href={whatsappUrl(interestMessage)}
             target="_blank"
             rel="noopener noreferrer"
-            className="whatsapp-btn inline-flex min-h-[48px] w-full items-center justify-center gap-1.5 px-4 py-3 font-display text-xs font-semibold uppercase tracking-wide text-white touch-manipulation sm:w-auto"
+            className="whatsapp-btn inline-flex min-h-[48px] w-full items-center justify-center gap-1.5 px-4 py-3 font-display text-xs font-semibold uppercase tracking-wide text-white touch-manipulation"
           >
             <IconWhatsApp className="h-3.5 w-3.5" />
             WhatsApp
@@ -128,7 +128,7 @@ function Spec({
   label: string;
 }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center justify-center gap-1.5">
       <Icon className="h-3.5 w-3.5 shrink-0 text-brand" />
       <dd className="truncate">{label}</dd>
     </div>

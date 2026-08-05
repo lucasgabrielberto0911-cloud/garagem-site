@@ -55,7 +55,7 @@ export function SiteHeader() {
         }`}
       >
         <div
-          className={`mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 transition-all duration-300 sm:px-6 ${
+          className={`mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 transition-all duration-300 sm:px-6 ${
             scrolled ? "h-[68px] lg:h-[76px]" : "h-[76px] lg:h-[88px]"
           }`}
         >
@@ -79,7 +79,7 @@ export function SiteHeader() {
           </Link>
 
           <nav
-            className="hidden items-center gap-1 lg:flex"
+            className="hidden flex-1 items-center justify-center gap-1 lg:flex"
             aria-label="Menu principal"
           >
             {NAV_LINKS.map((link) => {
@@ -108,7 +108,7 @@ export function SiteHeader() {
             })}
           </nav>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <a
               href={telUrl()}
               className="hidden items-center gap-2 text-sm text-muted transition hover:text-cream md:flex"
@@ -175,7 +175,7 @@ export function SiteHeader() {
                       <Link
                         href={link.href}
                         onClick={() => setOpen(false)}
-                        className={`flex min-h-[52px] items-center px-4 py-4 font-display text-base font-semibold transition touch-manipulation ${
+                        className={`flex min-h-[52px] items-center justify-center px-4 py-4 font-display text-base font-semibold transition touch-manipulation ${
                           active
                             ? "bg-brand/10 text-cream"
                             : "text-cream active:bg-white/5"
@@ -188,7 +188,7 @@ export function SiteHeader() {
                 })}
               </ul>
 
-              <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-2 border-t border-white/10 px-4 pt-4">
+              <ul className="mt-2 flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-white/10 px-4 pt-4">
                 {SECONDARY_LINKS.map((link) => (
                   <li key={link.href}>
                     <Link

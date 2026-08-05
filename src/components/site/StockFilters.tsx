@@ -125,7 +125,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
             ).value;
             update({ q: value });
           }}
-          className="flex gap-2"
+          className="mx-auto flex max-w-2xl gap-2"
           role="search"
         >
           <div className="flex min-h-[48px] flex-1 items-center gap-2 border border-white/10 bg-asphalt px-3 transition focus-within:border-brand">
@@ -154,7 +154,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
         </form>
 
         {/* Desktop: filtros completos. */}
-        <div className="mt-3 hidden grid-cols-3 gap-3 lg:grid">
+        <div className="mx-auto mt-3 hidden max-w-4xl grid-cols-3 gap-3 lg:grid">
           <FilterSelect
             label="Marca"
             value={current.brand}
@@ -224,7 +224,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           </select>
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
             onClick={() => {
@@ -264,16 +264,16 @@ export function StockFilters({ facets }: { facets: Facets }) {
             <button
               type="button"
               onClick={clearFilters}
-              className="ml-auto min-h-[44px] text-xs uppercase tracking-wider text-muted underline-offset-4 transition hover:text-cream hover:underline"
+              className="min-h-[44px] px-2 text-xs uppercase tracking-wider text-muted underline-offset-4 transition hover:text-cream hover:underline"
             >
               Limpar
             </button>
           ) : null}
         </div>
 
-        {/* Mobile/tablet: ordenação por chips com scroll horizontal. */}
-        <div className="-mx-3 mt-3 overflow-x-auto px-3 scrollbar-hide lg:hidden">
-          <div className="flex w-max gap-2">
+        {/* Mobile/tablet: ordenação por chips centralizados. */}
+        <div className="mt-3 lg:hidden">
+          <div className="flex flex-wrap justify-center gap-2">
             {SORT_OPTIONS.map((option) => (
               <button
                 key={option.value}

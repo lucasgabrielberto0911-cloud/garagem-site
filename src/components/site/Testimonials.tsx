@@ -16,7 +16,7 @@ export type TestimonialItem = {
 export function Testimonials({ items }: { items: TestimonialItem[] }) {
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center border border-dashed border-white/15 bg-ink/40 px-6 py-14 text-center">
+      <div className="mx-auto flex max-w-2xl flex-col items-center border border-dashed border-white/15 bg-ink/40 px-6 py-14 text-center">
         <IconQuote className="h-9 w-9 text-white/15" />
         <p className="mt-5 font-display text-lg font-semibold text-cream">
           Em breve, depoimentos de clientes reais
@@ -29,18 +29,21 @@ export function Testimonials({ items }: { items: TestimonialItem[] }) {
     );
   }
 
+  const width =
+    items.length === 1 ? "max-w-md" : items.length === 2 ? "max-w-3xl" : "";
+
   return (
-    <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className={`mx-auto grid gap-5 sm:grid-cols-2 lg:grid-cols-3 ${width}`}>
       {items.map((item) => (
         <li
           key={item.id}
-          className="flex flex-col border border-white/10 bg-ink p-6"
+          className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center"
         >
           <IconQuote className="h-6 w-6 text-brand/60" />
           <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-cream/90">
             {item.message}
           </blockquote>
-          <div className="mt-6 flex items-center gap-3 border-t border-white/10 pt-5">
+          <div className="mt-6 flex w-full items-center justify-center gap-3 border-t border-white/10 pt-5">
             <Avatar name={item.name} photoUrl={item.photoUrl} />
             <div className="min-w-0">
               <p className="truncate font-display text-sm font-semibold text-cream">

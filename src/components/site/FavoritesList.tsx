@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { VehicleCard, type VehicleCardData } from "@/components/site/VehicleCard";
+import type { VehicleCardData } from "@/components/site/VehicleCard";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
+import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
@@ -49,7 +50,7 @@ export function FavoritesList() {
 
   if (failed) {
     return (
-      <div className="border border-dashed border-white/15 bg-ink/40 px-6 py-16 text-center">
+      <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-16 text-center">
         <p className="font-display text-lg font-semibold text-cream">
           Não conseguimos carregar seus favoritos
         </p>
@@ -62,7 +63,7 @@ export function FavoritesList() {
 
   if (vehicles.length === 0) {
     return (
-      <div className="border border-dashed border-white/15 bg-ink/40 px-6 py-16 text-center">
+      <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-16 text-center">
         <p className="font-display text-lg font-semibold text-cream">
           Você ainda não salvou nenhum veículo
         </p>
@@ -70,10 +71,10 @@ export function FavoritesList() {
           Toque no coração dos veículos que te interessam e eles ficam guardados
           aqui, neste aparelho, para você comparar depois.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
           <Link
             href="/estoque"
-            className="inline-flex min-h-[48px] items-center bg-brand px-6 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:text-sm"
+            className="inline-flex min-h-[48px] items-center justify-center bg-brand px-6 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:text-sm"
           >
             Ver estoque
           </Link>
@@ -89,7 +90,7 @@ export function FavoritesList() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col items-center gap-2">
         <p className="text-xs uppercase tracking-wider text-muted">
           {vehicles.length} {vehicles.length === 1 ? "veículo salvo" : "veículos salvos"}
           {missing > 0
@@ -105,13 +106,11 @@ export function FavoritesList() {
         </button>
       </div>
 
-      <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {vehicles.map((vehicle) => (
-          <VehicleCard key={vehicle.id} vehicle={vehicle} />
-        ))}
+      <div className="mt-6">
+        <VehicleGrid vehicles={vehicles} />
       </div>
 
-      <div className="mt-10 border border-brand/40 bg-ink p-6 text-center">
+      <div className="mx-auto mt-12 max-w-2xl border border-brand/40 bg-ink p-8 text-center">
         <p className="font-display text-base font-semibold text-cream">
           Quer condições para um desses?
         </p>

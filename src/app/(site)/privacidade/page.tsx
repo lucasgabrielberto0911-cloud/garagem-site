@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { WhatsAppButton } from "@/components/site/ui";
+import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { PHONES, WHATSAPP_MESSAGES, site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -13,25 +13,15 @@ const UPDATED_AT = "agosto de 2026";
 
 export default function PrivacidadePage() {
   return (
-    <div className="px-4 py-12 sm:px-6 lg:py-16">
-      <div className="mx-auto max-w-3xl">
-        <header>
-          <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
-            Privacidade e LGPD
-          </p>
-          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-cream sm:text-4xl">
-            Política de privacidade
-          </h1>
-          <div className="mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
-          <p className="mt-5 text-sm leading-relaxed text-muted">
-            Última atualização: {UPDATED_AT}. Esta política explica quais dados
-            pessoais a {site.name} coleta neste site, para que eles são usados e
-            quais são os seus direitos como titular, conforme a Lei Geral de
-            Proteção de Dados (Lei 13.709/2018).
-          </p>
-        </header>
+    <div className="py-12 lg:py-16">
+      <Container size="text">
+        <PageHeader
+          eyebrow="Privacidade e LGPD"
+          title="Política de privacidade"
+          description={`Última atualização: ${UPDATED_AT}. Esta política explica quais dados pessoais a ${site.name} coleta neste site, para que eles são usados e quais são os seus direitos como titular, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018).`}
+        />
 
-        <div className="mt-10 space-y-8">
+        <div className="mt-12 space-y-6">
           <Block title="1. Quem é o controlador dos dados">
             <p>
               {site.legalName}, inscrita no CNPJ {site.cnpj}, é a responsável
@@ -166,7 +156,7 @@ export default function PrivacidadePage() {
             Falar sobre privacidade
           </WhatsAppButton>
         </div>
-      </div>
+      </Container>
     </div>
   );
 }

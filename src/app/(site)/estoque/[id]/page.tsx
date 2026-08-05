@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { VehicleCard } from "@/components/site/VehicleCard";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
+import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
-import { ButtonLink, WhatsAppButton } from "@/components/site/ui";
+import { ButtonLink, Container, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { JsonLd } from "@/components/JsonLd";
@@ -71,7 +71,7 @@ export default async function VehicleDetailPage({
   ];
 
   return (
-    <div className="px-4 py-10 pb-sticky-bar-safe sm:px-6 lg:py-14 lg:pb-14">
+    <div className="py-10 pb-sticky-bar-safe lg:py-14 lg:pb-14">
       <JsonLd data={vehicleJsonLd(vehicle)} />
       <JsonLd
         data={breadcrumbJsonLd([
@@ -80,8 +80,11 @@ export default async function VehicleDetailPage({
           { name: fullLabel, path: `/estoque/${vehicle.id}` },
         ])}
       />
-      <div className="mx-auto max-w-7xl">
-        <nav aria-label="Você está aqui" className="text-xs text-muted">
+      <Container>
+        <nav
+          aria-label="Você está aqui"
+          className="text-center text-xs text-muted"
+        >
           <Link href="/" className="transition hover:text-cream">
             Início
           </Link>
@@ -93,16 +96,16 @@ export default async function VehicleDetailPage({
           <span className="text-cream">{title}</span>
         </nav>
 
-        <div className="mt-6 grid gap-10 lg:grid-cols-[1.5fr_1fr]">
+        <div className="mt-8 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
           <div>
             <VehicleGallery photos={vehicle.photos} alt={fullLabel} />
 
             {vehicle.description ? (
-              <div className="mt-8 border border-white/10 bg-ink p-6">
+              <div className="mt-8 border border-white/10 bg-ink p-6 text-center">
                 <h2 className="font-display text-lg font-semibold text-cream">
                   Sobre este veículo
                 </h2>
-                <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">
+                <p className="mx-auto mt-3 max-w-xl whitespace-pre-line text-sm leading-relaxed text-muted">
                   {vehicle.description}
                 </p>
               </div>
@@ -110,7 +113,7 @@ export default async function VehicleDetailPage({
           </div>
 
           <aside className="lg:sticky lg:top-24 lg:self-start">
-            <div className="border border-white/10 bg-ink p-6">
+            <div className="border border-white/10 bg-ink p-6 text-center">
               {vehicle.status === "reservado" ? (
                 <span className="inline-block bg-brand-orange px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-wider text-asphalt">
                   Reservado
@@ -129,7 +132,7 @@ export default async function VehicleDetailPage({
 
               <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10">
                 {specs.map((spec) => (
-                  <div key={spec.label} className="bg-asphalt px-4 py-3">
+                  <div key={spec.label} className="bg-asphalt px-4 py-3 text-center">
                     <dt className="text-[10px] uppercase tracking-wider text-muted">
                       {spec.label}
                     </dt>
@@ -185,26 +188,28 @@ export default async function VehicleDetailPage({
 
         {related.length > 0 ? (
           <section className="mt-16 border-t border-white/5 pt-12">
-            <div className="flex items-end justify-between gap-4">
-              <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
-                Outros {vehicle.brand} no estoque
-              </h2>
+            <h2 className="text-center font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
+              Outros {vehicle.brand} no estoque
+            </h2>
+            <div
+              className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient"
+              aria-hidden="true"
+            />
+            <div className="mt-8">
+              <VehicleGrid vehicles={related} />
+            </div>
+            <div className="mt-8 text-center">
               <Link
                 href="/estoque"
-                className="inline-flex shrink-0 items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
+                className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
               >
-                Ver todos
+                Ver todo o estoque
                 <IconArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {related.map((item) => (
-                <VehicleCard key={item.id} vehicle={item} />
-              ))}
-            </div>
           </section>
         ) : null}
-      </div>
+      </Container>
 
       <VehicleMobileBar
         brand={vehicle.brand}

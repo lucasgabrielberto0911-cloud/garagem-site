@@ -3,18 +3,56 @@ import type { ReactNode } from "react";
 import { IconWhatsApp } from "@/components/site/icons";
 import { whatsappUrl } from "@/lib/site";
 
+/**
+ * Larguras de leitura padronizadas do site. Todo conteúdo passa por aqui para
+ * ficar centralizado e com a mesma margem lateral em qualquer página.
+ */
+const WIDTHS = {
+  text: "max-w-3xl",
+  narrow: "max-w-4xl",
+  content: "max-w-6xl",
+} as const;
+
+export type ContainerSize = keyof typeof WIDTHS;
+
+export function Container({
+  children,
+  size = "content",
+  className = "",
+}: {
+  children: ReactNode;
+  size?: ContainerSize;
+  className?: string;
+}) {
+  return (
+    <div className={`mx-auto w-full px-4 sm:px-6 ${WIDTHS[size]} ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+const SPACING = {
+  default: "py-14 lg:py-20",
+  tight: "py-8 lg:py-10",
+  none: "",
+} as const;
+
 export function Section({
   children,
   className = "",
+  size = "content",
+  spacing = "default",
   id,
 }: {
   children: ReactNode;
   className?: string;
+  size?: ContainerSize;
+  spacing?: keyof typeof SPACING;
   id?: string;
 }) {
   return (
-    <section id={id} className={`px-4 py-14 sm:px-6 lg:py-20 ${className}`}>
-      <div className="mx-auto max-w-7xl">{children}</div>
+    <section id={id} className={`${SPACING[spacing]} ${className}`}>
+      <Container size={size}>{children}</Container>
     </section>
   );
 }
@@ -23,16 +61,13 @@ export function SectionHeading({
   eyebrow,
   title,
   description,
-  align = "center",
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
-  align?: "center" | "left";
 }) {
-  const centered = align === "center";
   return (
-    <div className={centered ? "text-center" : ""}>
+    <div className="text-center">
       {eyebrow ? (
         <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
           {eyebrow}
@@ -41,20 +76,41 @@ export function SectionHeading({
       <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl lg:text-4xl">
         {title}
       </h2>
-      <div
-        className={`mt-4 h-0.5 w-16 bg-brand-gradient ${centered ? "mx-auto" : ""}`}
-        aria-hidden="true"
-      />
+      <div className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
       {description ? (
-        <p
-          className={`mt-5 text-sm leading-relaxed text-muted sm:text-base ${
-            centered ? "mx-auto max-w-2xl" : "max-w-2xl"
-          }`}
-        >
+        <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
           {description}
         </p>
       ) : null}
     </div>
+  );
+}
+
+/** Cabeçalho padrão das páginas internas — sempre centralizado. */
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <header className="text-center">
+      <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
+        {eyebrow}
+      </p>
+      <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-cream sm:text-4xl">
+        {title}
+      </h1>
+      <div className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
+      {description ? (
+        <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
+          {description}
+        </p>
+      ) : null}
+    </header>
   );
 }
 
@@ -73,8 +129,8 @@ export function WhatsAppButton({
 }) {
   const sizing =
     size === "lg"
-      ? "px-7 py-4 text-sm sm:text-base"
-      : "px-5 py-3 text-xs sm:text-sm";
+      ? "min-h-[52px] px-7 py-4 text-sm sm:text-base"
+      : "min-h-[48px] px-5 py-3 text-xs sm:text-sm";
   const look =
     variant === "solid"
       ? "bg-brand text-cream hover:bg-[#c91418]"
@@ -85,7 +141,7 @@ export function WhatsAppButton({
       href={whatsappUrl(message)}
       target="_blank"
       rel="noopener noreferrer"
-      className={`inline-flex items-center justify-center gap-2.5 font-display font-semibold uppercase tracking-wide transition ${sizing} ${look} ${className}`}
+      className={`inline-flex items-center justify-center gap-2.5 font-display font-semibold uppercase tracking-wide transition touch-manipulation ${sizing} ${look} ${className}`}
     >
       <IconWhatsApp className={size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
       {children}
@@ -108,8 +164,8 @@ export function ButtonLink({
 }) {
   const sizing =
     size === "lg"
-      ? "px-7 py-4 text-sm sm:text-base"
-      : "px-5 py-3 text-xs sm:text-sm";
+      ? "min-h-[52px] px-7 py-4 text-sm sm:text-base"
+      : "min-h-[48px] px-5 py-3 text-xs sm:text-sm";
   const look =
     variant === "solid"
       ? "bg-cream text-asphalt hover:bg-white"
@@ -118,9 +174,26 @@ export function ButtonLink({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center gap-2.5 font-display font-semibold uppercase tracking-wide transition ${sizing} ${look} ${className}`}
+      className={`inline-flex items-center justify-center gap-2.5 font-display font-semibold uppercase tracking-wide transition touch-manipulation ${sizing} ${look} ${className}`}
     >
       {children}
     </Link>
+  );
+}
+
+/** Linha de botões centralizada, com quebra previsível no mobile. */
+export function ActionRow({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center ${className}`}
+    >
+      {children}
+    </div>
   );
 }

@@ -159,20 +159,20 @@ export function SellForm() {
         </div>
       </div>
 
-      <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
         <button
           type="submit"
           disabled={isPending}
-          className="bg-brand px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70"
+          className="min-h-[52px] bg-brand px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70"
         >
           {isPending ? "Enviando..." : "Solicitar avaliação"}
         </button>
         <WhatsAppButton size="lg" variant="outline" message={WHATSAPP_MESSAGES.sell}>
-          Prefiro chamar no WhatsApp direto
+          Prefiro chamar no WhatsApp
         </WhatsAppButton>
       </div>
 
-      <p className="mt-4 text-xs leading-relaxed text-muted">
+      <p className="mt-4 text-center text-xs leading-relaxed text-muted">
         Seus dados são usados apenas para o contato da avaliação. Não enviamos
         spam nem compartilhamos com terceiros.
       </p>

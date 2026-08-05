@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { TrustBadges } from "@/components/site/TrustBadges";
-import { ButtonLink, WhatsAppButton } from "@/components/site/ui";
+import {
+  ActionRow,
+  ButtonLink,
+  Container,
+  PageHeader,
+  WhatsAppButton,
+} from "@/components/site/ui";
 import {
   IconClipboardCheck,
   IconHandshake,
@@ -12,6 +18,7 @@ import { site } from "@/lib/site";
 export const metadata: Metadata = {
   title: `Sobre a ${site.name}`,
   description: `Conheça a ${site.name}: história, missão e os diferenciais de quem vende seminovo com procedência no ${site.state}.`,
+  alternates: { canonical: "/sobre" },
 };
 
 const DIFERENCIAIS = [
@@ -34,75 +41,64 @@ const DIFERENCIAIS = [
 
 export default function SobrePage() {
   return (
-    <div>
-      <section className="px-4 py-12 sm:px-6 lg:py-16">
-        <div className="mx-auto max-w-5xl">
-          <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
-            Sobre nós
-          </p>
-          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-cream sm:text-4xl">
-            A {site.name}
-          </h1>
-          <div className="mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
-          <p className="mt-5 max-w-3xl text-sm leading-relaxed text-muted sm:text-base">
-            [TEXTO EDITÁVEL] Resuma em duas ou três linhas o posicionamento da
-            loja: o que vocês vendem, para quem, e o que faz a {site.name} ser
-            diferente das outras revendas de {site.region}.
-          </p>
-        </div>
-      </section>
+    <div className="py-12 lg:py-16">
+      <Container size="narrow">
+        <PageHeader
+          eyebrow="Sobre nós"
+          title={`A ${site.name}`}
+          description={`[TEXTO EDITÁVEL] Resuma em duas ou três linhas o posicionamento da loja: o que vocês vendem, para quem, e o que faz a ${site.name} ser diferente das outras revendas de ${site.region}.`}
+        />
 
-      <section className="px-4 pb-4 sm:px-6">
-        <div className="mx-auto max-w-5xl">
-          <div className="relative aspect-[16/7] overflow-hidden border border-white/10">
-            <Image
-              src="/branding/hero-bg.jpg"
-              alt={`Estoque da ${site.name}`}
-              fill
-              sizes="(min-width: 1024px) 1024px, 100vw"
-              className="object-cover"
-            />
-            <div
-              className="absolute inset-0 bg-gradient-to-t from-asphalt/80 to-transparent"
-              aria-hidden="true"
-            />
-          </div>
+        <div className="relative mt-12 aspect-[16/9] overflow-hidden border border-white/10">
+          <Image
+            src="/branding/hero-bg.jpg"
+            alt={`Estoque da ${site.name}`}
+            fill
+            sizes="(min-width: 1024px) 896px, 100vw"
+            className="object-cover"
+          />
+          <div
+            className="absolute inset-0 bg-gradient-to-t from-asphalt/80 to-transparent"
+            aria-hidden="true"
+          />
         </div>
-      </section>
 
-      <section className="px-4 py-12 sm:px-6 lg:py-16">
-        <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-2">
-          <article>
+        <div className="mt-14 grid gap-10 lg:grid-cols-2">
+          <article className="text-center lg:text-left">
             <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
               Nossa história
             </h2>
-            <div className="mt-4 h-0.5 w-12 bg-brand-gradient" aria-hidden="true" />
+            <div
+              className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
+              aria-hidden="true"
+            />
             <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
               <p>
                 [TEXTO EDITÁVEL] Conte quando e como a {site.name} começou: quem
-                fundou, o que motivou abrir a loja e como era o começo — se
-                nasceu de outra atividade, de uma paixão por carros, de um
-                negócio de família.
+                fundou, o que motivou abrir a loja e como era o começo — se nasceu
+                de outra atividade, de uma paixão por carros, de um negócio de
+                família.
               </p>
               <p>
                 [TEXTO EDITÁVEL] Descreva a evolução: mudança de endereço,
                 crescimento do estoque, ampliação dos serviços (financiamento,
-                troca, consignação) e o momento atual da loja em{" "}
-                {site.region}.
+                troca, consignação) e o momento atual da loja em {site.region}.
               </p>
               <p>
                 [TEXTO EDITÁVEL] Feche com o presente: quantas famílias já foram
-                atendidas, a relação com clientes que voltam e o que vem por
-                aí.
+                atendidas, a relação com clientes que voltam e o que vem por aí.
               </p>
             </div>
           </article>
 
-          <article>
+          <article className="text-center lg:text-left">
             <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
               Missão e valores
             </h2>
-            <div className="mt-4 h-0.5 w-12 bg-brand-gradient" aria-hidden="true" />
+            <div
+              className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
+              aria-hidden="true"
+            />
             <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
               <p>
                 <strong className="font-display font-semibold text-cream">
@@ -129,17 +125,21 @@ export default function SobrePage() {
             </div>
           </article>
         </div>
-      </section>
 
-      <section className="px-4 pb-12 sm:px-6 lg:pb-16">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
+        <section className="mt-14">
+          <h2 className="text-center font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
             Nossos diferenciais
           </h2>
-          <div className="mt-4 h-0.5 w-12 bg-brand-gradient" aria-hidden="true" />
+          <div
+            className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient"
+            aria-hidden="true"
+          />
           <ul className="mt-8 grid gap-5 lg:grid-cols-3">
             {DIFERENCIAIS.map(({ Icon, title, text }) => (
-              <li key={title} className="border border-white/10 bg-ink p-6">
+              <li
+                key={title}
+                className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center"
+              >
                 <span className="inline-flex h-11 w-11 items-center justify-center bg-brand/10">
                   <Icon className="h-5 w-5 text-brand" />
                 </span>
@@ -150,56 +150,56 @@ export default function SobrePage() {
               </li>
             ))}
           </ul>
+        </section>
 
-          <div className="mt-10">
-            <TrustBadges />
-          </div>
-
-          <div className="mt-10 border border-white/10 bg-ink p-6">
-            <h2 className="font-display text-base font-semibold text-cream">
-              Dados da empresa
-            </h2>
-            <dl className="mt-4 grid gap-4 sm:grid-cols-3">
-              <div>
-                <dt className="text-[10px] uppercase tracking-wider text-muted">
-                  Razão social
-                </dt>
-                <dd className="mt-1 text-sm text-cream">{site.legalName}</dd>
-              </div>
-              <div>
-                <dt className="text-[10px] uppercase tracking-wider text-muted">
-                  CNPJ
-                </dt>
-                <dd className="mt-1 text-sm text-cream">{site.cnpj}</dd>
-              </div>
-              <div>
-                <dt className="text-[10px] uppercase tracking-wider text-muted">
-                  Instagram
-                </dt>
-                <dd className="mt-1 text-sm">
-                  <a
-                    href={site.instagramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-brand underline-offset-4 transition hover:underline"
-                  >
-                    {site.instagram}
-                  </a>
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="mt-10 flex flex-wrap gap-3">
-            <ButtonLink href="/estoque" size="lg">
-              Ver estoque completo
-            </ButtonLink>
-            <WhatsAppButton size="lg" variant="outline">
-              Falar com a {site.name}
-            </WhatsAppButton>
-          </div>
+        <div className="mt-12">
+          <TrustBadges />
         </div>
-      </section>
+
+        <div className="mt-12 border border-white/10 bg-ink p-6 text-center">
+          <h2 className="font-display text-base font-semibold text-cream">
+            Dados da empresa
+          </h2>
+          <dl className="mt-6 grid gap-6 sm:grid-cols-3">
+            <div>
+              <dt className="text-[10px] uppercase tracking-wider text-muted">
+                Razão social
+              </dt>
+              <dd className="mt-1 text-sm text-cream">{site.legalName}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] uppercase tracking-wider text-muted">
+                CNPJ
+              </dt>
+              <dd className="mt-1 text-sm text-cream">{site.cnpj}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] uppercase tracking-wider text-muted">
+                Instagram
+              </dt>
+              <dd className="mt-1 text-sm">
+                <a
+                  href={site.instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand underline-offset-4 transition hover:underline"
+                >
+                  {site.instagram}
+                </a>
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        <ActionRow className="mt-12">
+          <ButtonLink href="/estoque" size="lg">
+            Ver estoque completo
+          </ButtonLink>
+          <WhatsAppButton size="lg" variant="outline">
+            Falar com a {site.name}
+          </WhatsAppButton>
+        </ActionRow>
+      </Container>
     </div>
   );
 }
