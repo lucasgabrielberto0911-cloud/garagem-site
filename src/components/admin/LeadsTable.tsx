@@ -1,10 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import type { LeadVenda } from "@prisma/client";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { IconDownload, IconTrash, IconUsers } from "@/components/admin/icons";
+import { IconInbox } from "@/components/admin/icons";
+import { IconPhone, IconWhatsApp } from "@/components/site/icons";
+import { EmptyState, inputClass } from "@/components/admin/ui";
 import { formatNumberBR, formatPhoneBR } from "@/lib/format";
 import {
   LEAD_STATUSES,
@@ -12,7 +16,11 @@ import {
   LEAD_STATUS_STYLE as STATUS_STYLE,
   type LeadStatus,
 } from "@/lib/leads";
-import { deleteLead, updateLeadStatus } from "@/app/admin/leads/actions";
+import {
+  convertLeadToCustomer,
+  deleteLead,
+  updateLeadStatus,
+} from "@/app/admin/leads/actions";
 
 function whatsappLink(lead: LeadVenda) {
   const digits = lead.phone.replace(/\D/g, "");
@@ -23,18 +31,65 @@ function whatsappLink(lead: LeadVenda) {
   return `https://wa.me/${withCountry}?text=${message}`;
 }
 
+function formatDateTime(value: Date) {
+  return new Date(value).toLocaleString("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
+
+function exportCsv(leads: LeadVenda[]) {
+  const header = ["Nome", "Telefone", "Veículo", "KM", "Status", "Observações", "Data"];
+  const rows = leads.map((lead) => [
+    lead.name,
+    formatPhoneBR(lead.phone),
+    lead.vehicleInfo,
+    lead.km !== null ? String(lead.km) : "",
+    STATUS_LABEL[lead.status as LeadStatus] ?? lead.status,
+    (lead.notes ?? "").replace(/\s+/g, " "),
+    formatDateTime(lead.createdAt),
+  ]);
+
+  const csv = [header, ...rows]
+    .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `leads-garagem-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function LeadsTable({
   leads,
   status,
+  counts,
 }: {
   leads: LeadVenda[];
   status: string;
+  counts: Record<string, number> & { total: number };
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LeadVenda | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [term, setTerm] = useState("");
+
+  const filtered = useMemo(() => {
+    const query = term.trim().toLowerCase();
+    if (!query) return leads;
+    const digits = query.replace(/\D/g, "");
+    return leads.filter(
+      (lead) =>
+        lead.name.toLowerCase().includes(query) ||
+        lead.vehicleInfo.toLowerCase().includes(query) ||
+        (digits.length > 0 && lead.phone.includes(digits)),
+    );
+  }, [leads, term]);
 
   function filterByStatus(value: string) {
     startTransition(() => {
@@ -49,6 +104,17 @@ export function LeadsTable({
     if (result.ok) {
       toast.success(result.message);
       router.refresh();
+    } else {
+      toast.error(result.message);
+    }
+  }
+
+  async function convert(lead: LeadVenda) {
+    setSavingId(lead.id);
+    const result = await convertLeadToCustomer(lead.id);
+    setSavingId(null);
+    if (result.ok) {
+      toast.success(result.message);
     } else {
       toast.error(result.message);
     }
@@ -70,41 +136,68 @@ export function LeadsTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <FilterChip
-          label="Todos"
-          active={!status}
-          disabled={isPending}
-          onClick={() => filterByStatus("")}
-        />
-        {LEAD_STATUSES.map((value) => (
+      <div className="border border-white/10 bg-ink/50 p-3 sm:p-4">
+        <div className="flex flex-wrap gap-2">
           <FilterChip
-            key={value}
-            label={STATUS_LABEL[value]}
-            active={status === value}
+            label={`Todos (${counts.total})`}
+            active={!status}
             disabled={isPending}
-            onClick={() => filterByStatus(value)}
+            onClick={() => filterByStatus("")}
           />
-        ))}
+          {LEAD_STATUSES.map((value) => (
+            <FilterChip
+              key={value}
+              label={`${STATUS_LABEL[value]} (${counts[value] ?? 0})`}
+              active={status === value}
+              disabled={isPending}
+              onClick={() => filterByStatus(value)}
+            />
+          ))}
+        </div>
+
+        <div className="mt-3 flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-center">
+          <input
+            type="search"
+            value={term}
+            onChange={(event) => setTerm(event.target.value)}
+            placeholder="Buscar por nome, telefone ou veículo"
+            className={`${inputClass} sm:max-w-sm`}
+          />
+          <span className="text-xs text-muted">
+            {filtered.length} de {leads.length} lead(s)
+          </span>
+          <button
+            type="button"
+            onClick={() => exportCsv(filtered)}
+            disabled={filtered.length === 0}
+            className="ml-auto inline-flex items-center gap-2 border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand disabled:opacity-50"
+          >
+            <IconDownload className="h-4 w-4" />
+            Exportar CSV
+          </button>
+        </div>
       </div>
 
-      {leads.length === 0 ? (
-        <div className="border border-dashed border-white/15 px-6 py-16 text-center">
-          <h2 className="font-display text-lg font-semibold text-cream">
-            {status ? "Nenhum lead com esse status" : "Nenhum lead recebido ainda"}
-          </h2>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-            Os pedidos de avaliação enviados pelo formulário da página
-            Vender/Trocar aparecem aqui.
-          </p>
-        </div>
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={<IconInbox className="h-12 w-12" />}
+          title={
+            leads.length === 0
+              ? status
+                ? "Nenhum lead com esse status"
+                : "Nenhum lead recebido ainda"
+              : "Nenhum lead para essa busca"
+          }
+          description={
+            leads.length === 0
+              ? "Os pedidos de avaliação enviados pelo formulário da página Vender/Trocar aparecem aqui."
+              : "Tente outro nome, telefone ou veículo."
+          }
+        />
       ) : (
         <ul className="space-y-3">
-          {leads.map((lead) => (
-            <li
-              key={lead.id}
-              className="border border-white/10 bg-ink/50 p-4 sm:p-5"
-            >
+          {filtered.map((lead) => (
+            <li key={lead.id} className="border border-white/10 bg-ink/50 p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -122,16 +215,10 @@ export function LeadsTable({
                   </div>
                   <p className="mt-1 text-sm text-muted">
                     {lead.vehicleInfo}
-                    {lead.km !== null
-                      ? ` · ${formatNumberBR(lead.km)} km`
-                      : ""}
+                    {lead.km !== null ? ` · ${formatNumberBR(lead.km)} km` : ""}
                   </p>
                   <p className="mt-1 text-sm text-muted">
-                    {formatPhoneBR(lead.phone)} ·{" "}
-                    {new Date(lead.createdAt).toLocaleString("pt-BR", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
+                    {formatPhoneBR(lead.phone)} · {formatDateTime(lead.createdAt)}
                   </p>
                 </div>
 
@@ -156,21 +243,35 @@ export function LeadsTable({
                     href={whatsappLink(lead)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="min-h-[40px] border border-[#25D366]/50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#25D366] transition hover:bg-[#25D366]/10"
+                    className="inline-flex min-h-[40px] items-center gap-2 border border-[#25D366]/50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#25D366] transition hover:bg-[#25D366]/10"
                   >
+                    <IconWhatsApp className="h-4 w-4" />
                     WhatsApp
                   </a>
                   <a
-                    href={`tel:${lead.phone.replace(/\D/g, "")}`}
-                    className="min-h-[40px] border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream"
+                    href={`tel:+55${lead.phone.replace(/\D/g, "")}`}
+                    className="inline-flex min-h-[40px] items-center gap-2 border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream"
                   >
+                    <IconPhone className="h-4 w-4" />
                     Ligar
                   </a>
                   <button
                     type="button"
-                    onClick={() => setDeleteTarget(lead)}
-                    className="min-h-[40px] border border-brand/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10"
+                    onClick={() => convert(lead)}
+                    disabled={savingId === lead.id}
+                    title="Criar cliente com estes dados"
+                    className="inline-flex min-h-[40px] items-center gap-2 border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream disabled:opacity-60"
                   >
+                    <IconUsers className="h-4 w-4" />
+                    Virar cliente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(lead)}
+                    aria-label="Excluir lead"
+                    className="inline-flex min-h-[40px] items-center gap-2 border border-brand/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10"
+                  >
+                    <IconTrash className="h-4 w-4" />
                     Excluir
                   </button>
                 </div>

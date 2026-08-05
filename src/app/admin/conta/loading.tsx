@@ -1,5 +1,5 @@
 import { AdminLoading } from "@/components/admin/AdminLoading";
 
 export default function Loading() {
-  return <AdminLoading cards={4} rows={5} />;
+  return <AdminLoading cards={0} rows={2} />;
 }

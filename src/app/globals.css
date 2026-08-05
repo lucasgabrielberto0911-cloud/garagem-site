@@ -178,6 +178,21 @@ body {
   animation: floatSoft 4s ease-in-out infinite;
 }
 
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 .animate-fade-in-scale {
   animation: fadeInScale 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -487,6 +502,7 @@ body {
   .whatsapp-pulse,
   .animate-float,
   .animate-slide-up,
+  .animate-slide-in-left,
   .animate-fade-in,
   .animate-fade-in-scale,
   .skeleton,

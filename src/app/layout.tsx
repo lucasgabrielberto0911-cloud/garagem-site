@@ -78,6 +78,11 @@ export const metadata: Metadata = {
     title: site.name,
     statusBarStyle: "black-translucent",
   },
+  /**
+   * O Next emite apenas a meta da Apple, que os navegadores atuais avisam estar
+   * obsoleta. A versão padronizada mantém o app instalável sem o alerta.
+   */
+  other: { "mobile-web-app-capable": "yes" },
   formatDetection: { telephone: true },
 };
 

@@ -33,6 +33,46 @@ export async function updateLeadStatus(
   }
 }
 
+/**
+ * Transforma um lead em cliente do cadastro, reaproveitando nome e telefone.
+ * Se já existir alguém com o mesmo telefone, apenas avisa em vez de duplicar.
+ */
+export async function convertLeadToCustomer(
+  id: string,
+): Promise<LeadActionState> {
+  try {
+    await requireAdmin();
+
+    const lead = await prisma.leadVenda.findUnique({ where: { id } });
+    if (!lead) return { ok: false, message: "Lead não encontrado." };
+
+    const phone = lead.phone.replace(/\D/g, "");
+    const existing = await prisma.customer.findFirst({ where: { phone } });
+    if (existing) {
+      return {
+        ok: false,
+        message: `${existing.name} já está no cadastro de clientes.`,
+      };
+    }
+
+    await prisma.customer.create({
+      data: {
+        name: lead.name,
+        phone,
+        notes: `Lead de venda/troca: ${lead.vehicleInfo}${
+          lead.notes ? ` — ${lead.notes}` : ""
+        }`,
+      },
+    });
+
+    revalidatePath("/admin/clientes");
+    return { ok: true, message: "Cliente criado a partir do lead." };
+  } catch (error) {
+    console.error("[admin/leads] falha ao converter lead:", error);
+    return { ok: false, message: "Não foi possível criar o cliente." };
+  }
+}
+
 export async function deleteLead(id: string): Promise<LeadActionState> {
   try {
     await requireAdmin();
