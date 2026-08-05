@@ -70,9 +70,23 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Login error:", error);
 
+    const dbUrl = process.env.DATABASE_URL || "";
+    const isLocalhost =
+      /localhost|127\.0\.0\.1/.test(dbUrl) || !dbUrl.trim();
+
+    if (isLocalhost) {
+      return NextResponse.json(
+        {
+          error:
+            "DATABASE_URL no Vercel está errada (localhost). Cole a URI do Supabase (Settings → Database → Connect) em DATABASE_URL e DIRECT_URL, depois Redeploy.",
+        },
+        { status: 500 },
+      );
+    }
+
     const raw = error instanceof Error ? error.message : String(error);
     let message =
-      "Não foi possível entrar. Confira se o DATABASE_URL do Vercel está correto (Supabase).";
+      "Não foi possível entrar. Confira se o DATABASE_URL do Vercel é a URI do Supabase.";
 
     if (
       raw.includes("Prisma") ||
@@ -84,7 +98,7 @@ export async function POST(request: Request) {
       (error instanceof Error && error.name.includes("Prisma"))
     ) {
       message =
-        "Banco indisponível. No Vercel, configure só o DATABASE_URL (e DIRECT_URL) do Supabase e faça redeploy.";
+        "Banco indisponível. No Vercel, use a URI do Supabase em DATABASE_URL (pooler) e DIRECT_URL (direct) e faça redeploy.";
     }
 
     return NextResponse.json({ error: message }, { status: 500 });
