@@ -4,16 +4,39 @@ import { ensureDefaultAdmin } from "@/lib/ensure-admin";
 
 export const dynamic = "force-dynamic";
 
-/** Diagnóstico simples: só precisa de DATABASE_URL no Vercel. */
+function databaseHost() {
+  const url = process.env.DATABASE_URL?.trim();
+  if (!url) return null;
+  try {
+    return new URL(url.replace(/^postgresql:/i, "http:")).host;
+  } catch {
+    return "invalid";
+  }
+}
+
+/** Diagnóstico simples: só precisa de DATABASE_URL do Supabase no Vercel. */
 export async function GET() {
   const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
+  const host = databaseHost();
 
   if (!hasDatabaseUrl) {
     return NextResponse.json(
       {
         ok: false,
         database: "missing",
-        hint: "Configure DATABASE_URL (Supabase) no Vercel → Environment Variables → Production e faça Redeploy.",
+        hint: "No Vercel → Settings → Environment Variables, cole o DATABASE_URL do Supabase (não use localhost) e faça Redeploy.",
+      },
+      { status: 503 },
+    );
+  }
+
+  if (host?.includes("localhost") || host?.startsWith("127.")) {
+    return NextResponse.json(
+      {
+        ok: false,
+        database: "localhost",
+        host,
+        hint: "O DATABASE_URL no Vercel está como localhost. Troque pela URI do Supabase: Project Settings → Database → Connect → URI (Transaction pooler). Também configure DIRECT_URL (Direct connection).",
       },
       { status: 503 },
     );
@@ -25,6 +48,7 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       database: "ok",
+      host,
       adminCount,
     });
   } catch (error) {
@@ -32,7 +56,8 @@ export async function GET() {
       {
         ok: false,
         database: "error",
-        hint: "DATABASE_URL inválida ou tabelas ainda não criadas. No Supabase/SQL ou com prisma db push, sincronize o schema.",
+        host,
+        hint: "DATABASE_URL inválida ou tabelas ainda não criadas. Confira a URI do Supabase e rode prisma db push no banco.",
         detail:
           error instanceof Error ? error.message.slice(0, 160) : undefined,
       },
