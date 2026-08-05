@@ -68,3 +68,25 @@ model Admin {
   email        String @unique
   passwordHash String
 }
+
+model LeadVenda {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String
+  vehicleInfo String
+  km          Int?
+  notes       String?
+  status      String   @default("novo")
+  createdAt   DateTime @default(now())
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  city      String?
+  message   String
+  photoUrl  String?
+  published Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}

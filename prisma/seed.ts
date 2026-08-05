@@ -42,8 +42,8 @@ async function main() {
         featured: true,
         photos: {
           create: [
-            { url: "/placeholder.png", order: 0 },
-            { url: "/placeholder.png", order: 1 },
+            { url: "/branding/placeholder-car.png", order: 0 },
+            { url: "/branding/placeholder-car.png", order: 1 },
           ],
         },
       },
@@ -64,7 +64,7 @@ async function main() {
         status: "disponivel",
         featured: true,
         photos: {
-          create: [{ url: "/placeholder.png", order: 0 }],
+          create: [{ url: "/branding/placeholder-car.png", order: 0 }],
         },
       },
     }),
@@ -85,8 +85,8 @@ async function main() {
         featured: false,
         photos: {
           create: [
-            { url: "/placeholder.png", order: 0 },
-            { url: "/placeholder.png", order: 1 },
+            { url: "/branding/placeholder-car.png", order: 0 },
+            { url: "/branding/placeholder-car.png", order: 1 },
           ],
         },
       },
@@ -107,7 +107,7 @@ async function main() {
         status: "disponivel",
         featured: false,
         photos: {
-          create: [{ url: "/placeholder.png", order: 0 }],
+          create: [{ url: "/branding/placeholder-car.png", order: 0 }],
         },
       },
     }),

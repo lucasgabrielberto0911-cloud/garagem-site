@@ -1,0 +1,375 @@
+import Image from "next/image";
+import Link from "next/link";
+import { Suspense } from "react";
+import { FaqAccordion } from "@/components/site/FaqAccordion";
+import { HeroSearch } from "@/components/site/HeroSearch";
+import { ScrollReveal } from "@/components/site/ScrollReveal";
+import { StatsBar, StatsBarSkeleton } from "@/components/site/StatsBar";
+import { Testimonials } from "@/components/site/Testimonials";
+import { TrustBadges } from "@/components/site/TrustBadges";
+import { VehicleGrid } from "@/components/site/VehicleGrid";
+import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
+import {
+  ActionRow,
+  ButtonLink,
+  Container,
+  Section,
+  SectionHeading,
+  WhatsAppButton,
+} from "@/components/site/ui";
+import {
+  IconArrowRight,
+  IconClipboardCheck,
+  IconClock,
+  IconHandshake,
+  IconInstagram,
+  IconMapPin,
+  IconShieldCheck,
+} from "@/components/site/icons";
+import { FAQ_ITEMS } from "@/lib/faq";
+import { WHATSAPP_MESSAGES, site } from "@/lib/site";
+import {
+  getFeaturedVehicles,
+  getStockFacets,
+  getTestimonials,
+} from "@/lib/vehicles";
+
+export const dynamic = "force-dynamic";
+
+const REASONS = [
+  {
+    Icon: IconClipboardCheck,
+    title: "Vistoria Completa",
+    text: "Todo veículo passa por checagem mecânica, elétrica e estrutural antes de entrar no estoque. Você recebe o laudo e sabe exatamente o que está comprando.",
+  },
+  {
+    Icon: IconShieldCheck,
+    title: "Procedência Verificada",
+    text: "Histórico, débitos e restrições consultados um por um. Nada de surpresa depois da transferência — a documentação sai limpa.",
+  },
+  {
+    Icon: IconHandshake,
+    title: "Negociação Transparente",
+    text: "Preço claro, sem taxa escondida. Avaliamos seu usado na hora e montamos o financiamento que caiba no seu bolso.",
+  },
+] as const;
+
+export default async function HomePage() {
+  const [featured, facets, testimonials] = await Promise.all([
+    getFeaturedVehicles(8),
+    getStockFacets(),
+    getTestimonials(6),
+  ]);
+
+  return (
+    <>
+      {/* 1. HERO */}
+      <section className="hero-red-black relative isolate overflow-hidden">
+        <div className="hero-color-field" aria-hidden="true">
+          <span className="hero-red-orb hero-red-orb-1" />
+          <span className="hero-red-orb hero-red-orb-2" />
+          <span className="hero-red-orb hero-red-orb-3" />
+          <span className="hero-red-glow-line" />
+          <span className="hero-grid" />
+          <span className="hero-noise" />
+        </div>
+        <div
+          className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-asphalt to-transparent"
+          aria-hidden="true"
+        />
+
+        <Container className="flex min-h-[74dvh] flex-col items-center justify-center py-16 text-center lg:py-24">
+          <div className="hero-brand">
+            <Image
+              src="/branding/logo.png"
+              alt={site.name}
+              width={420}
+              height={120}
+              priority
+              className="mx-auto h-auto w-[min(72vw,300px)] sm:w-[min(60vw,380px)] lg:w-[420px]"
+            />
+          </div>
+
+          <div className="hero-text mt-8">
+            <h1 className="mx-auto max-w-3xl font-display text-3xl font-bold leading-[1.15] tracking-tight text-cream sm:text-5xl">
+              Encontre seu <span className="brand-shimmer">próximo carro</span>
+            </h1>
+            <div
+              className="mx-auto mt-5 h-1 w-24 bg-brand-gradient"
+              aria-hidden="true"
+            />
+            <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-cream/80 sm:text-lg">
+              Seminovos revisados e com procedência, para quem é do {site.state}.
+              Escolha pelo site, feche pelo WhatsApp e saia dirigindo.
+            </p>
+          </div>
+
+          <div className="hero-search mt-9 flex w-full justify-center">
+            <HeroSearch brands={facets.brands} />
+          </div>
+
+          <ActionRow className="hero-cta mt-8 w-full sm:w-auto">
+            <ButtonLink href="/estoque" size="lg">
+              Ver estoque completo
+            </ButtonLink>
+            <WhatsAppButton size="lg" variant="outline">
+              Falar com um consultor
+            </WhatsAppButton>
+          </ActionRow>
+
+          <div className="hero-stats mt-12 w-full max-w-2xl">
+            <Suspense fallback={<StatsBarSkeleton />}>
+              <StatsBar />
+            </Suspense>
+          </div>
+        </Container>
+      </section>
+
+      {/* 2. SELOS DE CONFIANÇA */}
+      <Section spacing="tight">
+        <ScrollReveal>
+          <TrustBadges />
+        </ScrollReveal>
+      </Section>
+
+      {/* 3. VEÍCULOS EM DESTAQUE */}
+      <Section id="destaques" className="border-t border-white/5">
+        <ScrollReveal>
+          <SectionHeading
+            eyebrow="Estoque"
+            title="Veículos em destaque"
+            description="Uma seleção do que temos disponível agora. O estoque gira rápido — se gostar de algum, chame no WhatsApp para garantir."
+          />
+        </ScrollReveal>
+
+        <div className="mt-12">
+          {featured.length === 0 ? (
+            <ScrollReveal>
+              <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-14 text-center">
+                <p className="font-display text-lg font-semibold text-cream">
+                  Estoque sendo montado
+                </p>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+                  Estamos selecionando os próximos veículos. Fale com a gente e
+                  diga o que você procura — buscamos para você.
+                </p>
+                <WhatsAppButton
+                  className="mt-6"
+                  message={WHATSAPP_MESSAGES.general}
+                >
+                  Quero avisar o que procuro
+                </WhatsAppButton>
+              </div>
+            </ScrollReveal>
+          ) : (
+            <VehicleGrid vehicles={featured} reveal />
+          )}
+        </div>
+
+        <div className="mt-10 text-center">
+          <Link
+            href="/estoque"
+            className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
+          >
+            Ver todos os veículos
+            <IconArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <ScrollReveal className="mt-14">
+          <WantedVehicleCta />
+        </ScrollReveal>
+      </Section>
+
+      {/* 4. POR QUE ESCOLHER A GARAGEM */}
+      <Section className="border-t border-white/5 bg-ink/40">
+        <ScrollReveal>
+          <SectionHeading
+            eyebrow="Diferenciais"
+            title={`Por que escolher a ${site.name}`}
+            description="Comprar seminovo não precisa ser aposta. Estes são os três compromissos que assumimos com todo cliente."
+          />
+        </ScrollReveal>
+        <ul className="mx-auto mt-12 grid gap-5 lg:grid-cols-3">
+          {REASONS.map(({ Icon, title, text }, index) => (
+            <ScrollReveal key={title} delay={index * 100}>
+              <li className="card-lift flex h-full flex-col items-center border border-white/10 bg-asphalt p-7 text-center">
+                <span className="inline-flex h-12 w-12 items-center justify-center bg-brand/10">
+                  <Icon className="h-6 w-6 text-brand" />
+                </span>
+                <h3 className="mt-5 font-display text-lg font-semibold text-cream">
+                  {title}
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted">{text}</p>
+              </li>
+            </ScrollReveal>
+          ))}
+        </ul>
+      </Section>
+
+      {/* 5. DEPOIMENTOS */}
+      <Section className="border-t border-white/5">
+        <ScrollReveal>
+          <SectionHeading
+            eyebrow="Depoimentos"
+            title="Quem compra, indica"
+            description="Avaliações de clientes que fecharam negócio com a gente."
+          />
+        </ScrollReveal>
+        <div className="mt-12">
+          <ScrollReveal delay={80}>
+            <Testimonials items={testimonials} />
+          </ScrollReveal>
+        </div>
+      </Section>
+
+      {/* 6. LOCALIZAÇÃO */}
+      <Section className="border-t border-white/5 bg-ink/40" size="narrow">
+        <ScrollReveal>
+          <SectionHeading
+            eyebrow="Onde estamos"
+            title={`Atendemos ${site.region} e região`}
+            description={`Somos de ${site.region}, no ${site.state}, e atendemos toda a região. Agende sua visita para ver o carro de perto e fazer o test-drive — ou resolva tudo à distância pelo WhatsApp, que a gente envia vídeo e laudo do veículo.`}
+          />
+        </ScrollReveal>
+
+        <ScrollReveal delay={80}>
+          <dl className="mx-auto mt-10 grid max-w-3xl gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-2">
+            <div className="flex flex-col items-center bg-asphalt px-6 py-7 text-center">
+              <IconMapPin className="h-6 w-6 text-brand" />
+              <dt className="mt-3 font-display text-sm font-semibold text-cream">
+                Endereço
+              </dt>
+              <dd className="mt-1 text-sm text-muted">{site.address}</dd>
+            </div>
+            <div className="flex flex-col items-center bg-asphalt px-6 py-7 text-center">
+              <IconClock className="h-6 w-6 text-brand" />
+              <dt className="mt-3 font-display text-sm font-semibold text-cream">
+                Horário de funcionamento
+              </dt>
+              <dd className="mt-1 text-sm text-muted">{site.hours}</dd>
+            </div>
+          </dl>
+        </ScrollReveal>
+
+        <ScrollReveal delay={120}>
+          <div className="relative mx-auto mt-8 aspect-[16/9] max-w-3xl overflow-hidden border border-white/10">
+            <Image
+              src="/branding/hero-bg.jpg"
+              alt={`Loja ${site.name}`}
+              fill
+              sizes="(min-width: 1024px) 768px, 100vw"
+              className="object-cover"
+            />
+            <div
+              className="absolute inset-0 bg-gradient-to-t from-asphalt/80 to-transparent"
+              aria-hidden="true"
+            />
+          </div>
+        </ScrollReveal>
+
+        <ActionRow className="mt-8">
+          <WhatsAppButton size="lg" message={WHATSAPP_MESSAGES.visit}>
+            Chamar no WhatsApp
+          </WhatsAppButton>
+          <ButtonLink href="/contato" size="lg" variant="outline">
+            Ver contato completo
+          </ButtonLink>
+          <a
+            href={site.instagramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-[52px] items-center justify-center gap-2.5 border border-white/20 px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-white/5 sm:text-base"
+          >
+            <IconInstagram className="h-5 w-5" />
+            {site.instagram}
+          </a>
+        </ActionRow>
+      </Section>
+
+      {/* 7. VENDER OU TROCAR */}
+      <Section className="border-t border-white/5" size="narrow">
+        <ScrollReveal>
+          <div className="relative overflow-hidden border border-white/10 bg-ink text-center">
+            <div
+              className="absolute inset-x-0 top-0 h-1 bg-brand-gradient"
+              aria-hidden="true"
+            />
+            <div className="px-6 py-12 sm:px-10">
+              <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
+                Avaliação sem compromisso
+              </p>
+              <h2 className="mt-3 font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl">
+                Vender ou trocar seu carro
+              </h2>
+              <div
+                className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient"
+                aria-hidden="true"
+              />
+              <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
+                Compramos seu usado e aceitamos na troca. Manda os dados do
+                veículo que a gente avalia rápido e faz uma proposta justa, sem
+                enrolação.
+              </p>
+              <ActionRow className="mt-8">
+                <WhatsAppButton size="lg" message={WHATSAPP_MESSAGES.sell}>
+                  Avaliar pelo WhatsApp
+                </WhatsAppButton>
+                <ButtonLink href="/vender" size="lg" variant="outline">
+                  Preencher formulário
+                </ButtonLink>
+              </ActionRow>
+            </div>
+          </div>
+        </ScrollReveal>
+      </Section>
+
+      {/* 8. DÚVIDAS FREQUENTES */}
+      <Section className="border-t border-white/5 bg-ink/40" size="narrow">
+        <ScrollReveal>
+          <SectionHeading
+            eyebrow="Dúvidas frequentes"
+            title="Antes de fechar negócio"
+            description="As perguntas que mais recebemos sobre compra, troca, financiamento e documentação."
+          />
+        </ScrollReveal>
+        <div className="mt-12">
+          <FaqAccordion items={FAQ_ITEMS.slice(0, 4)} />
+          <div className="mt-6 text-center">
+            <Link
+              href="/faq"
+              className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
+            >
+              Ver todas as dúvidas
+              <IconArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </Section>
+
+      {/* 9. CTA FINAL */}
+      <Section className="border-t border-white/5 bg-ink/40 text-center" size="narrow">
+        <ScrollReveal>
+          <h2 className="mx-auto max-w-2xl font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl lg:text-4xl">
+            Pronto para encontrar seu próximo carro?
+          </h2>
+          <div
+            className="mx-auto mt-5 h-0.5 w-16 bg-brand-gradient"
+            aria-hidden="true"
+          />
+          <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
+            Veja o estoque completo ou fale agora com um consultor da {site.name}.
+          </p>
+          <ActionRow className="mt-9">
+            <ButtonLink href="/estoque" size="lg">
+              Ver estoque completo
+            </ButtonLink>
+            <WhatsAppButton size="lg" variant="outline">
+              WhatsApp
+            </WhatsAppButton>
+          </ActionRow>
+        </ScrollReveal>
+      </Section>
+    </>
+  );
+}

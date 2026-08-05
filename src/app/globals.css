@@ -19,10 +19,17 @@
   );
 }
 
+* {
+  scroll-behavior: smooth;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-body), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @layer utilities {
@@ -43,5 +50,453 @@ body {
 
   .glow-brand {
     box-shadow: 0 0 24px rgba(232, 24, 28, 0.35);
+  }
+
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .pb-nav-safe {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .pb-sticky-bar-safe {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* === KEYFRAMES === */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmerBrand {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes whatsappPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(37, 211, 102, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+  }
+}
+
+@keyframes floatSoft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes progressShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease both;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-float {
+  animation: floatSoft 4s ease-in-out infinite;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Placeholder de carregamento das listagens. */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.09) 37%,
+    rgba(255, 255, 255, 0.04) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeletonShimmer 1.4s ease infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Hero staggered entrance */
+.hero-brand {
+  animation: fadeInScale 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.hero-text {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+.hero-search {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both;
+}
+
+.hero-cta {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.65s both;
+}
+
+.hero-stats {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.85s both;
+}
+
+.brand-shimmer {
+  background: linear-gradient(
+    90deg,
+    #e8181c,
+    #ff8a00,
+    #ffc72c,
+    #ff8a00,
+    #e8181c
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmerBrand 4s ease infinite;
+}
+
+.progress-brand {
+  background: linear-gradient(90deg, #e8181c, #ff8a00, #ffc72c);
+  background-size: 200% 100%;
+  animation: progressShimmer 2.4s linear infinite;
+}
+
+.whatsapp-pulse {
+  animation: whatsappPulse 2s ease infinite;
+}
+
+.whatsapp-btn {
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  box-shadow: 0 3px 12px rgba(37, 211, 102, 0.25);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.whatsapp-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+}
+
+/* === HERO VERMELHO / PRETO ===
+ * Somente gradientes e transforms: sem imagem pesada e sem JS por frame.
+ */
+.hero-red-black {
+  background:
+    radial-gradient(circle at 48% 35%, #201012 0%, #111113 42%, #080809 100%);
+}
+
+.hero-color-field {
+  position: absolute;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hero-red-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(72px);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+.hero-red-orb-1 {
+  width: min(74vw, 980px);
+  height: min(74vw, 980px);
+  left: -18%;
+  top: -35%;
+  background: radial-gradient(
+    circle,
+    rgba(232, 24, 28, 0.58) 0%,
+    rgba(180, 10, 14, 0.26) 42%,
+    transparent 72%
+  );
+  animation: redOrbOne 14s ease-in-out infinite;
+}
+
+.hero-red-orb-2 {
+  width: min(62vw, 780px);
+  height: min(62vw, 780px);
+  right: -16%;
+  bottom: -38%;
+  background: radial-gradient(
+    circle,
+    rgba(232, 24, 28, 0.42) 0%,
+    rgba(120, 7, 10, 0.22) 44%,
+    transparent 72%
+  );
+  animation: redOrbTwo 18s ease-in-out infinite;
+}
+
+.hero-red-orb-3 {
+  width: min(38vw, 520px);
+  height: min(38vw, 520px);
+  left: 48%;
+  top: 36%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 63, 65, 0.2) 0%,
+    transparent 68%
+  );
+  animation: redOrbThree 11s ease-in-out infinite;
+}
+
+.hero-red-glow-line {
+  position: absolute;
+  width: 65%;
+  height: 2px;
+  left: -70%;
+  top: 72%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(232, 24, 28, 0.8),
+    rgba(255, 138, 0, 0.42),
+    transparent
+  );
+  box-shadow: 0 0 28px rgba(232, 24, 28, 0.55);
+  transform: rotate(-9deg);
+  animation: redLineSweep 9s ease-in-out infinite 1s;
+}
+
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.08;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.11) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(to bottom, black, transparent 86%);
+}
+
+.hero-noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
+}
+
+@keyframes redOrbOne {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.76;
+  }
+  50% {
+    transform: translate3d(18%, 10%, 0) scale(1.16);
+    opacity: 1;
+  }
+}
+
+@keyframes redOrbTwo {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.08);
+    opacity: 0.62;
+  }
+  50% {
+    transform: translate3d(-18%, -12%, 0) scale(0.92);
+    opacity: 0.92;
+  }
+}
+
+@keyframes redOrbThree {
+  0%,
+  100% {
+    transform: translate3d(-12%, 0, 0) scale(0.9);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translate3d(12%, -14%, 0) scale(1.24);
+    opacity: 0.72;
+  }
+}
+
+@keyframes redLineSweep {
+  0% {
+    transform: translateX(0) rotate(-9deg);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.7;
+  }
+  82% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateX(280%) rotate(-9deg);
+    opacity: 0;
+  }
+}
+
+.card-lift {
+  transition:
+    transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    border-color 0.45s ease,
+    box-shadow 0.45s ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-8px);
+  border-color: rgba(232, 24, 28, 0.45);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 1023px) {
+  .hero-red-orb {
+    filter: blur(50px);
+  }
+
+  .hero-red-orb-1 {
+    width: 120vw;
+    height: 120vw;
+    left: -55%;
+    top: -20%;
+  }
+
+  .hero-red-orb-2 {
+    width: 110vw;
+    height: 110vw;
+    right: -60%;
+    bottom: -20%;
+  }
+
+  .hero-red-orb-3,
+  .hero-red-glow-line {
+    display: none;
+  }
+
+  .hero-grid {
+    background-size: 42px 42px;
+    opacity: 0.06;
+  }
+
+  .card-lift:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .card-lift:active {
+    transform: scale(0.985);
+    transition: transform 0.15s ease;
+  }
+
+  .hero-brand,
+  .hero-text,
+  .hero-search,
+  .hero-cta,
+  .hero-stats {
+    animation-duration: 0.55s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-brand,
+  .hero-text,
+  .hero-search,
+  .hero-cta,
+  .hero-stats,
+  .brand-shimmer,
+  .progress-brand,
+  .whatsapp-pulse,
+  .animate-float,
+  .animate-slide-up,
+  .animate-fade-in,
+  .animate-fade-in-scale,
+  .skeleton,
+  .hero-red-orb,
+  .hero-red-glow-line {
+    animation: none !important;
+  }
+
+  .card-lift,
+  .card-lift:hover {
+    transform: none !important;
   }
 }

@@ -1,0 +1,234 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import {
+  IconClose,
+  IconMenu,
+  IconPhone,
+  IconWhatsApp,
+} from "@/components/site/icons";
+import { FavoritesLink } from "@/components/site/FavoritesLink";
+import {
+  NAV_LINKS,
+  PHONES,
+  SECONDARY_LINKS,
+  site,
+  telUrl,
+  whatsappUrl,
+} from "@/lib/site";
+
+export function SiteHeader() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    function onScroll() {
+      setScrolled(window.scrollY > 24);
+    }
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  return (
+    <>
+      <header
+        className={`fixed inset-x-0 top-0 z-50 pt-safe transition-all duration-500 ${
+          scrolled || open
+            ? "border-b border-white/10 bg-asphalt/98 backdrop-blur-md"
+            : "border-b border-transparent bg-asphalt/70 backdrop-blur-sm"
+        }`}
+      >
+        <div
+          className={`mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 transition-all duration-300 sm:px-6 ${
+            scrolled ? "h-[68px] lg:h-[76px]" : "h-[76px] lg:h-[88px]"
+          }`}
+        >
+          <Link
+            href="/"
+            className="flex shrink-0 items-center"
+            aria-label={`${site.name} — página inicial`}
+          >
+            <Image
+              src="/branding/logo.png"
+              alt={site.name}
+              width={220}
+              height={64}
+              priority
+              className={`w-auto transition-all duration-300 ${
+                scrolled
+                  ? "h-11 sm:h-12 lg:h-[52px]"
+                  : "h-12 sm:h-14 lg:h-16"
+              }`}
+            />
+          </Link>
+
+          <nav
+            className="hidden flex-1 items-center justify-center gap-1 lg:flex"
+            aria-label="Menu principal"
+          >
+            {NAV_LINKS.map((link) => {
+              const active =
+                link.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`relative px-3 py-2 font-display text-sm font-semibold transition ${
+                    active ? "text-cream" : "text-muted hover:text-cream"
+                  }`}
+                >
+                  {link.label}
+                  {active ? (
+                    <span
+                      className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-brand-gradient"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <a
+              href={telUrl()}
+              className="hidden items-center gap-2 text-sm text-muted transition hover:text-cream md:flex"
+            >
+              <IconPhone className="h-4 w-4" />
+              <span className="font-medium">{site.phoneLabel}</span>
+            </a>
+
+            <FavoritesLink />
+
+            <a
+              href={whatsappUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden items-center gap-2 bg-brand px-4 py-2.5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex"
+            >
+              <IconWhatsApp className="h-4 w-4" />
+              WhatsApp
+            </a>
+
+            <a
+              href={telUrl()}
+              aria-label="Ligar"
+              className="inline-flex h-11 w-11 items-center justify-center border border-white/15 text-cream transition active:bg-white/10 touch-manipulation sm:hidden"
+            >
+              <IconPhone className="h-5 w-5" />
+            </a>
+
+            <button
+              type="button"
+              onClick={() => setOpen((value) => !value)}
+              aria-expanded={open}
+              aria-controls="menu-mobile"
+              aria-label={open ? "Fechar menu" : "Abrir menu"}
+              className="inline-flex h-11 w-11 items-center justify-center border border-white/15 text-cream transition hover:border-brand touch-manipulation lg:hidden"
+            >
+              {open ? (
+                <IconClose className="h-5 w-5" />
+              ) : (
+                <IconMenu className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {open ? (
+        <div className="fixed inset-0 z-[45] lg:hidden" id="menu-mobile">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="relative mt-[76px] h-[calc(100dvh-76px)] overflow-y-auto overscroll-contain border-t border-white/10 bg-asphalt animate-slide-up pb-nav-safe">
+            <nav className="px-5 py-4" aria-label="Menu mobile">
+              <ul className="space-y-1">
+                {NAV_LINKS.map((link) => {
+                  const active =
+                    link.href === "/"
+                      ? pathname === "/"
+                      : pathname.startsWith(link.href);
+                  return (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        onClick={() => setOpen(false)}
+                        className={`flex min-h-[52px] items-center justify-center px-4 py-4 font-display text-base font-semibold transition touch-manipulation ${
+                          active
+                            ? "bg-brand/10 text-cream"
+                            : "text-cream active:bg-white/5"
+                        }`}
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <ul className="mt-2 flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-white/10 px-4 pt-4">
+                {SECONDARY_LINKS.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      onClick={() => setOpen(false)}
+                      className="inline-flex min-h-[36px] items-center text-sm text-muted transition active:text-cream"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-4 space-y-3 border-t border-white/10 pt-5">
+                <a
+                  href={whatsappUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setOpen(false)}
+                  className="whatsapp-btn flex min-h-[52px] w-full items-center justify-center gap-2.5 px-4 py-4 font-display text-base font-semibold text-white touch-manipulation"
+                >
+                  <IconWhatsApp className="h-5 w-5" />
+                  Chamar no WhatsApp
+                </a>
+                {PHONES.map((phone, index) => (
+                  <a
+                    key={phone.digits}
+                    href={telUrl(index)}
+                    onClick={() => setOpen(false)}
+                    className="flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/50 px-4 py-4 font-display text-base font-semibold text-brand touch-manipulation"
+                  >
+                    <IconPhone className="h-5 w-5" />
+                    {phone.label}
+                  </a>
+                ))}
+              </div>
+            </nav>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
