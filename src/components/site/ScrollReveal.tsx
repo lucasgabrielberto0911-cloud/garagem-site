@@ -27,17 +27,32 @@ export function ScrollReveal({
       return;
     }
 
+    let shown = false;
+    const show = () => {
+      if (shown) return;
+      shown = true;
+      window.setTimeout(() => setVisible(true), delay);
+    };
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;
-        window.setTimeout(() => setVisible(true), delay);
-        observer.unobserve(entry.target);
+        show();
+        observer.disconnect();
       },
-      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" },
+      // Margem generosa: seções próximas do viewport já contam como visíveis.
+      { threshold: 0.01, rootMargin: "80px 0px" },
     );
 
     observer.observe(node);
-    return () => observer.disconnect();
+
+    // Fallback: nunca deixar destaque/estoque invisíveis se o observer falhar.
+    const fallback = window.setTimeout(show, 900 + delay);
+
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(fallback);
+    };
   }, [delay]);
 
   return (

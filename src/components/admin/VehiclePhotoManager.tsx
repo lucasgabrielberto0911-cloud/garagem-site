@@ -14,11 +14,24 @@ import {
 
 export type PhotoItem = { id: string; url: string };
 
-const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
+const ACCEPT =
+  "image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif";
 
 function isImageFile(file: File) {
-  if (file.type && ACCEPT.split(",").includes(file.type)) return true;
-  return /\.(jpe?g|png|webp|gif)$/i.test(file.name);
+  if (file.type) {
+    const type = file.type.toLowerCase();
+    if (
+      type === "image/jpeg" ||
+      type === "image/png" ||
+      type === "image/webp" ||
+      type === "image/gif" ||
+      type === "image/heic" ||
+      type === "image/heif"
+    ) {
+      return true;
+    }
+  }
+  return /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.name);
 }
 
 export function createPhotoId() {
@@ -53,7 +66,7 @@ export function VehiclePhotoManager({
     const list = (files ? Array.from(files) : []).filter(isImageFile);
     if (list.length === 0) {
       if (files && files.length > 0) {
-        toast.error("Envie apenas imagens JPG, PNG, WEBP ou GIF.");
+        toast.error("Envie apenas imagens JPG, PNG, WEBP, GIF ou HEIC.");
       }
       return;
     }
@@ -156,7 +169,10 @@ export function VehiclePhotoManager({
                 : "Arraste as fotos aqui ou clique para escolher"}
           </p>
           <p className="mt-1 text-xs text-muted">
-            JPG, PNG, WEBP ou GIF · várias de uma vez
+            JPG, PNG, WEBP, GIF ou HEIC (iPhone) · várias de uma vez
+          </p>
+          <p className="mt-2 text-[11px] text-muted/80">
+            Espere o envio terminar antes de salvar o anúncio.
           </p>
           <input
             type="file"

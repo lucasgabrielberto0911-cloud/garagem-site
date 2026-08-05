@@ -6,7 +6,7 @@ import { IconClose, IconSearch } from "@/components/site/icons";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
 export type Facets = {
-  categories: string[];
+  categories?: string[];
   brands: string[];
   transmissions: string[];
   fuels: string[];
@@ -170,7 +170,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
             className={selectClass}
           >
             <option value="">Carros e motos</option>
-            {(facets.categories.length > 0
+            {(facets.categories?.length
               ? facets.categories
               : ["carro", "moto"]
             ).map((item) => (
@@ -357,7 +357,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   className={selectClass}
                 >
                   <option value="">Carros e motos</option>
-                  {(facets.categories.length > 0
+                  {(facets.categories?.length
                     ? facets.categories
                     : ["carro", "moto"]
                   ).map((item) => (
