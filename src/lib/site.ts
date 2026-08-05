@@ -11,7 +11,7 @@ export const PHONES = [
 
 export const site = {
   name: "Garagem",
-  legalName: "Garagem Veículos",
+  legalName: "Garagem Motocycles",
   cnpj: "47.740.076/0001-17",
   url: "https://suagaragem.net",
   tagline: "Seminovos com procedência em Vitória, Linhares e região.",
