@@ -65,7 +65,7 @@ export function SiteHeader() {
       >
         <div
           className={`mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 transition-all duration-300 sm:px-6 ${
-            scrolled ? "h-[68px] lg:h-[76px]" : "h-[76px] lg:h-[88px]"
+            scrolled ? "h-[72px] lg:h-[80px]" : "h-[84px] lg:h-[96px]"
           }`}
         >
           <Link
@@ -74,15 +74,15 @@ export function SiteHeader() {
             aria-label={`${site.name} — página inicial`}
           >
             <Image
-              src="/branding/logo.png"
+              src="/branding/logo-wordmark.png"
               alt={site.name}
-              width={220}
-              height={64}
+              width={280}
+              height={50}
               priority
               className={`w-auto transition-all duration-300 ${
                 scrolled
-                  ? "h-11 sm:h-12 lg:h-[52px]"
-                  : "h-12 sm:h-14 lg:h-16"
+                  ? "h-10 sm:h-11 lg:h-12"
+                  : "h-11 sm:h-12 lg:h-[52px]"
               }`}
             />
           </Link>
@@ -179,7 +179,7 @@ export function SiteHeader() {
             }}
             aria-label="Fechar menu"
           />
-          <div className="relative mt-[76px] h-[calc(100dvh-76px)] overflow-y-auto overscroll-contain border-t border-white/10 bg-asphalt animate-slide-up pb-nav-safe">
+          <div className="relative mt-[84px] h-[calc(100dvh-84px)] overflow-y-auto overscroll-contain border-t border-white/10 bg-asphalt animate-slide-up pb-nav-safe lg:mt-[96px] lg:h-[calc(100dvh-96px)]">
             <nav className="px-5 py-4" aria-label="Menu mobile">
               <ul className="space-y-1">
                 {NAV_LINKS.map((link) => {

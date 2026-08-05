@@ -159,11 +159,11 @@ export function AdminShell({
     <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
       <Link href="/admin" className="flex items-center gap-2.5">
         <Image
-          src="/branding/logo.png"
+          src="/branding/logo-wordmark.png"
           alt="Garagem"
-          width={140}
-          height={40}
-          className="h-8 w-auto"
+          width={160}
+          height={29}
+          className="h-7 w-auto"
         />
       </Link>
       <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -184,11 +184,11 @@ export function AdminShell({
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-white/10 bg-ink/95 px-4 py-3 backdrop-blur lg:hidden">
         <Link href="/admin" className="flex items-center gap-2">
           <Image
-            src="/branding/logo.png"
+            src="/branding/logo-wordmark.png"
             alt="Garagem"
-            width={110}
-            height={32}
-            className="h-7 w-auto"
+            width={140}
+            height={25}
+            className="h-6 w-auto"
           />
           <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
             Admin

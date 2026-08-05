@@ -12,11 +12,11 @@ export default function OfflinePage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6 py-16 text-center">
       <Image
-        src="/branding/logo.png"
+        src="/branding/logo-wordmark.png"
         alt={site.name}
-        width={220}
-        height={64}
-        className="h-14 w-auto"
+        width={280}
+        height={50}
+        className="h-12 w-auto"
       />
       <div className="mt-8 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
       <h1 className="mt-6 font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl">

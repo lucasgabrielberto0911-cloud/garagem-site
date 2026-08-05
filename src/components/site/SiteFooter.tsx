@@ -26,14 +26,19 @@ export async function SiteFooter() {
       <Container className="py-14 lg:py-16">
         <div className="flex flex-col items-center text-center">
           <Image
-            src="/branding/logo.png"
+            src="/branding/logo-wordmark.png"
             alt={site.name}
-            width={200}
-            height={56}
-            className="h-12 w-auto"
+            width={320}
+            height={58}
+            className="h-12 w-auto sm:h-14"
           />
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted">
-            {site.tagline}
+          <div className="mx-auto mt-5 h-0.5 w-14 bg-brand-gradient" aria-hidden="true" />
+          <p className="mt-5 max-w-lg font-display text-base font-semibold leading-snug text-cream sm:text-lg">
+            Seminovos com procedência em {site.region} e região
+          </p>
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
+            Compra, venda, troca e financiamento no {site.state} — com atendimento
+            direto pelo WhatsApp.
           </p>
           <a
             href={site.instagramUrl}
