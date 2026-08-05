@@ -144,10 +144,10 @@ export default async function HomePage() {
           />
         </ScrollReveal>
 
-        <div className="mt-12">
+        <div className="mt-8">
           {featured.length === 0 ? (
             <ScrollReveal>
-              <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-14 text-center">
+              <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-10 text-center">
                 <p className="font-display text-lg font-semibold text-cream">
                   Estoque sendo montado
                 </p>
@@ -156,7 +156,7 @@ export default async function HomePage() {
                   diga o que você procura — buscamos para você.
                 </p>
                 <WhatsAppButton
-                  className="mt-6"
+                  className="mt-5"
                   message={WHATSAPP_MESSAGES.general}
                 >
                   Quero avisar o que procuro
@@ -168,7 +168,7 @@ export default async function HomePage() {
           )}
         </div>
 
-        <div className="mt-10 text-center">
+        <div className="mt-7 text-center">
           <Link
             href="/estoque"
             className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
@@ -178,7 +178,7 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <ScrollReveal className="mt-14">
+        <ScrollReveal className="mt-10">
           <WantedVehicleCta />
         </ScrollReveal>
       </Section>
