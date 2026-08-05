@@ -16,6 +16,7 @@ import {
 import {
   IconCar,
   IconClose,
+  IconMapPin,
   IconMenu,
   IconQuote,
 } from "@/components/site/icons";
@@ -34,6 +35,7 @@ const NAV: NavItem[] = [
   { href: "/admin/vendas", label: "Vendas", Icon: IconCash },
   { href: "/admin/clientes", label: "Clientes", Icon: IconUsers },
   { href: "/admin/depoimentos", label: "Depoimentos", Icon: IconQuote },
+  { href: "/admin/site", label: "Dados do site", Icon: IconMapPin },
 ];
 
 export function AdminShell({

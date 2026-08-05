@@ -29,7 +29,7 @@ const ITEMS = [
     href: "/contato",
     label: "Contato",
     Icon: IconMapPin,
-    match: (p: string) => p.startsWith("/contato") || p.startsWith("/sobre"),
+    match: (p: string) => p.startsWith("/contato"),
   },
 ] as const;
 
@@ -56,6 +56,7 @@ export function MobileBottomNav() {
             href={whatsappUrl()}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="Abrir WhatsApp da Garagem"
             className="-mt-3 flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 touch-manipulation"
           >
             <span className="whatsapp-pulse flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-green-500/30">

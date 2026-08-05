@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { WEAK_ADMIN_PASSWORDS } from "@/lib/admin-security";
 import { prisma } from "@/lib/prisma";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/leads";
-import { site } from "@/lib/site";
+import { getPublicSite, listPlaceholderLabels } from "@/lib/site-settings";
 
 const DAY_MS = 1000 * 60 * 60 * 24;
 
@@ -38,6 +38,7 @@ export async function getDashboardData() {
     customers,
     publishedTestimonials,
     admins,
+    publicSite,
   ] = await Promise.all([
     prisma.vehicle.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.vehicle.count({ where: { status: "disponivel", featured: true } }),
@@ -74,6 +75,7 @@ export async function getDashboardData() {
     prisma.customer.count(),
     prisma.testimonial.count({ where: { published: true } }),
     prisma.admin.findMany({ select: { passwordHash: true } }),
+    getPublicSite(),
   ]);
 
   /**
@@ -137,20 +139,7 @@ export async function getDashboardData() {
       noFeatured: available > 0 && featured === 0,
       noTestimonials: publishedTestimonials === 0,
       usingSeedPassword,
-      placeholders: PLACEHOLDER_FIELDS.filter(({ value }) =>
-        value.includes("["),
-      ).map(({ label }) => label),
+      placeholders: listPlaceholderLabels(publicSite),
     },
   };
 }
-
-/**
- * Campos de `src/lib/site.ts` que ainda estão como placeholder aparecem no
- * dashboard para lembrar de preencher antes de divulgar o site.
- */
-const PLACEHOLDER_FIELDS = [
-  { label: "Endereço", value: site.address },
-  { label: "Cidade/região", value: site.region },
-  { label: "E-mail", value: site.email },
-  { label: "Horário", value: site.hours },
-] as const;

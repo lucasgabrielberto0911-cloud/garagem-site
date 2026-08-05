@@ -1,9 +1,9 @@
 /**
  * Dados de contato e institucionais do site público.
  *
- * Os valores entre colchetes continuam sendo placeholders: troque-os pelos
- * dados reais da loja. Os dígitos dos telefones ficam em formato internacional
- * (55 + DDD + número) porque é o formato exigido pelos links do WhatsApp.
+ * Placeholders entre colchetes (região, e-mail, endereço, horários) podem ser
+ * preenchidos no painel em /admin/site — o banco sobrescreve estes defaults.
+ * Telefones ficam em formato internacional (55 + DDD + número) para o WhatsApp.
  */
 export const PHONES = [
   { label: "(27) 99956-6161", digits: "5527999566161" },
@@ -30,6 +30,11 @@ export const site = {
   hoursWeekdays: "[HORÁRIO SEG-SEX]",
   hoursSaturday: "[HORÁRIO SÁBADO]",
 } as const;
+
+/** Config pública (defaults + overrides do painel). */
+export type SiteConfig = {
+  [K in keyof typeof site]: string;
+};
 
 export const WHATSAPP_MESSAGES = {
   general: "Olá! Vi o site da Garagem e gostaria de mais informações.",

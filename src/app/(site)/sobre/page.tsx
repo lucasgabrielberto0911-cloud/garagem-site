@@ -14,6 +14,9 @@ import {
   IconShieldCheck,
 } from "@/components/site/icons";
 import { site } from "@/lib/site";
+import { getPublicSite } from "@/lib/site-settings";
+
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: `Sobre a ${site.name}`,
@@ -39,20 +42,22 @@ const DIFERENCIAIS = [
   },
 ] as const;
 
-export default function SobrePage() {
+export default async function SobrePage() {
+  const publicSite = await getPublicSite();
+
   return (
     <div className="py-12 lg:py-16">
       <Container size="narrow">
         <PageHeader
           eyebrow="Sobre nós"
-          title={`A ${site.name}`}
-          description={`[TEXTO EDITÁVEL] Resuma em duas ou três linhas o posicionamento da loja: o que vocês vendem, para quem, e o que faz a ${site.name} ser diferente das outras revendas de ${site.region}.`}
+          title={`A ${publicSite.name}`}
+          description={`[TEXTO EDITÁVEL] Resuma em duas ou três linhas o posicionamento da loja: o que vocês vendem, para quem, e o que faz a ${publicSite.name} ser diferente das outras revendas de ${publicSite.region}.`}
         />
 
         <div className="relative mt-12 aspect-[16/9] overflow-hidden border border-white/10">
           <Image
             src="/branding/hero-bg.jpg"
-            alt={`Estoque da ${site.name}`}
+            alt={`Estoque da ${publicSite.name}`}
             fill
             sizes="(min-width: 1024px) 896px, 100vw"
             className="object-cover"
@@ -74,7 +79,7 @@ export default function SobrePage() {
             />
             <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
               <p>
-                [TEXTO EDITÁVEL] Conte quando e como a {site.name} começou: quem
+                [TEXTO EDITÁVEL] Conte quando e como a {publicSite.name} começou: quem
                 fundou, o que motivou abrir a loja e como era o começo — se nasceu
                 de outra atividade, de uma paixão por carros, de um negócio de
                 família.
@@ -82,7 +87,7 @@ export default function SobrePage() {
               <p>
                 [TEXTO EDITÁVEL] Descreva a evolução: mudança de endereço,
                 crescimento do estoque, ampliação dos serviços (financiamento,
-                troca, consignação) e o momento atual da loja em {site.region}.
+                troca, consignação) e o momento atual da loja em {publicSite.region}.
               </p>
               <p>
                 [TEXTO EDITÁVEL] Feche com o presente: quantas famílias já foram
@@ -112,7 +117,7 @@ export default function SobrePage() {
                   Visão.
                 </strong>{" "}
                 [TEXTO EDITÁVEL] Ex.: ser a revenda mais confiável de{" "}
-                {site.region} e região.
+                {publicSite.region} e região.
               </p>
               <p>
                 <strong className="font-display font-semibold text-cream">
@@ -196,7 +201,7 @@ export default function SobrePage() {
             Ver estoque completo
           </ButtonLink>
           <WhatsAppButton size="lg" variant="outline">
-            Falar com a {site.name}
+            Falar com a {publicSite.name}
           </WhatsAppButton>
         </ActionRow>
       </Container>

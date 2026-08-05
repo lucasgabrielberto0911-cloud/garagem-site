@@ -154,7 +154,8 @@ export default async function AdminDashboardPage() {
                   tone="warning"
                   icon={<IconAlert className="h-4 w-4" />}
                   title="Dados da loja incompletos"
-                  description={`Ainda em placeholder: ${alerts.placeholders.join(", ")}. Edite src/lib/site.ts.`}
+                  description={`Ainda em placeholder: ${alerts.placeholders.join(", ")}.`}
+                  href="/admin/site"
                 />
               ) : null}
 

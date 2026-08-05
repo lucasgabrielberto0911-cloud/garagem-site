@@ -45,6 +45,15 @@ export function SiteHeader() {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
   return (
     <>
       <header
@@ -158,9 +167,17 @@ export function SiteHeader() {
       {open ? (
         <div className="fixed inset-0 z-[45] lg:hidden" id="menu-mobile">
           <div
+            role="button"
+            tabIndex={0}
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setOpen(false)}
-            aria-hidden="true"
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setOpen(false);
+              }
+            }}
+            aria-label="Fechar menu"
           />
           <div className="relative mt-[76px] h-[calc(100dvh-76px)] overflow-y-auto overscroll-contain border-t border-white/10 bg-asphalt animate-slide-up pb-nav-safe">
             <nav className="px-5 py-4" aria-label="Menu mobile">
@@ -175,6 +192,7 @@ export function SiteHeader() {
                       <Link
                         href={link.href}
                         onClick={() => setOpen(false)}
+                        aria-current={active ? "page" : undefined}
                         className={`flex min-h-[52px] items-center justify-center px-4 py-4 font-display text-base font-semibold transition touch-manipulation ${
                           active
                             ? "bg-brand/10 text-cream"

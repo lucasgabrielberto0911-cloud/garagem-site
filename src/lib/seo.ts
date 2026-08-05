@@ -1,4 +1,4 @@
-import { PHONES, site } from "@/lib/site";
+import { PHONES, site, type SiteConfig } from "@/lib/site";
 
 /**
  * Placeholders (entre colchetes) não devem ir para os dados estruturados:
@@ -12,32 +12,32 @@ export function absoluteUrl(path = "/") {
   return new URL(path, site.url).toString();
 }
 
-export function localBusinessJsonLd() {
+export function localBusinessJsonLd(config: SiteConfig = site) {
   return {
     "@context": "https://schema.org",
     "@type": "AutoDealer",
     "@id": absoluteUrl("/#loja"),
-    name: site.name,
-    legalName: site.legalName,
-    taxID: site.cnpj.replace(/\D/g, ""),
+    name: config.name,
+    legalName: config.legalName,
+    taxID: config.cnpj.replace(/\D/g, ""),
     url: absoluteUrl("/"),
     image: absoluteUrl("/og.png"),
     logo: absoluteUrl("/icons/icon-512.png"),
-    description: site.tagline,
+    description: config.tagline,
     telephone: PHONES.map((phone) => `+${phone.digits}`),
-    sameAs: [site.instagramUrl],
+    sameAs: [config.instagramUrl],
     priceRange: "$$",
     areaServed: {
       "@type": "State",
-      name: site.state,
+      name: config.state,
     },
     address: {
       "@type": "PostalAddress",
-      streetAddress: real(site.address),
-      addressRegion: site.stateCode,
+      streetAddress: real(config.address),
+      addressRegion: config.stateCode,
       addressCountry: "BR",
     },
-    ...(real(site.email) ? { email: site.email } : {}),
+    ...(real(config.email) ? { email: config.email } : {}),
   };
 }
 

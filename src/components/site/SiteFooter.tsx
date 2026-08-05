@@ -12,11 +12,13 @@ import {
   PHONES,
   SECONDARY_LINKS,
   SERVICES,
-  site,
   telUrl,
+  type SiteConfig,
 } from "@/lib/site";
+import { getPublicSite } from "@/lib/site-settings";
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const site: SiteConfig = await getPublicSite();
   const year = new Date().getFullYear();
 
   return (

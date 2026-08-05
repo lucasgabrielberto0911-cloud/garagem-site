@@ -28,6 +28,7 @@ import {
 } from "@/components/site/icons";
 import { FAQ_ITEMS } from "@/lib/faq";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
+import { getPublicSite } from "@/lib/site-settings";
 import {
   getFeaturedVehicles,
   getStockFacets,
@@ -55,10 +56,11 @@ const REASONS = [
 ] as const;
 
 export default async function HomePage() {
-  const [featured, facets, testimonials] = await Promise.all([
+  const [featured, facets, testimonials, publicSite] = await Promise.all([
     getFeaturedVehicles(8),
     getStockFacets(),
     getTestimonials(6),
+    getPublicSite(),
   ]);
 
   return (
@@ -228,8 +230,8 @@ export default async function HomePage() {
         <ScrollReveal>
           <SectionHeading
             eyebrow="Onde estamos"
-            title={`Atendemos ${site.region} e região`}
-            description={`Somos de ${site.region}, no ${site.state}, e atendemos toda a região. Agende sua visita para ver o carro de perto e fazer o test-drive — ou resolva tudo à distância pelo WhatsApp, que a gente envia vídeo e laudo do veículo.`}
+            title={`Atendemos ${publicSite.region} e região`}
+            description={`Somos de ${publicSite.region}, no ${publicSite.state}, e atendemos toda a região. Agende sua visita para ver o carro de perto e fazer o test-drive — ou resolva tudo à distância pelo WhatsApp, que a gente envia vídeo e laudo do veículo.`}
           />
         </ScrollReveal>
 
@@ -240,14 +242,14 @@ export default async function HomePage() {
               <dt className="mt-3 font-display text-sm font-semibold text-cream">
                 Endereço
               </dt>
-              <dd className="mt-1 text-sm text-muted">{site.address}</dd>
+              <dd className="mt-1 text-sm text-muted">{publicSite.address}</dd>
             </div>
             <div className="flex flex-col items-center bg-asphalt px-6 py-7 text-center">
               <IconClock className="h-6 w-6 text-brand" />
               <dt className="mt-3 font-display text-sm font-semibold text-cream">
                 Horário de funcionamento
               </dt>
-              <dd className="mt-1 text-sm text-muted">{site.hours}</dd>
+              <dd className="mt-1 text-sm text-muted">{publicSite.hours}</dd>
             </div>
           </dl>
         </ScrollReveal>

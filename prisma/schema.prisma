@@ -90,3 +90,18 @@ model Testimonial {
   order     Int      @default(0)
   createdAt DateTime @default(now())
 }
+
+/**
+ * Dados públicos editáveis pelo painel (endereço, e-mail, horário, região).
+ * Singleton: sempre `id = "default"`. Campos vazios caem nos defaults de site.ts.
+ */
+model SiteSettings {
+  id             String   @id @default("default")
+  region         String?
+  email          String?
+  address        String?
+  hours          String?
+  hoursWeekdays  String?
+  hoursSaturday  String?
+  updatedAt      DateTime @updatedAt
+}

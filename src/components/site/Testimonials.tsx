@@ -1,5 +1,7 @@
 import Image from "next/image";
+import { WhatsAppButton } from "@/components/site/ui";
 import { IconQuote } from "@/components/site/icons";
+import { WHATSAPP_MESSAGES } from "@/lib/site";
 
 export type TestimonialItem = {
   id: string;
@@ -25,6 +27,13 @@ export function Testimonials({ items }: { items: TestimonialItem[] }) {
           Estamos reunindo as experiências de quem já comprou com a gente. Só
           publicamos avaliações verdadeiras, com nome e cidade.
         </p>
+        <WhatsAppButton
+          className="mt-7"
+          message={WHATSAPP_MESSAGES.general}
+          size="md"
+        >
+          Falar com a Garagem
+        </WhatsAppButton>
       </div>
     );
   }
