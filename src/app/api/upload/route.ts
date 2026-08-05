@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import convert from "heic-convert";
 import { getSession } from "@/lib/auth";
 import {
   VEHICLE_PHOTOS_BUCKET,
