@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Barlow_Condensed, Inter } from "next/font/google";
+import { Inter, Sora } from "next/font/google";
+import { AppToaster } from "@/components/Toaster";
 import "./globals.css";
 
-const display = Barlow_Condensed({
+const display = Sora({
   subsets: ["latin"],
   weight: ["600", "700"],
-  style: ["normal", "italic"],
   variable: "--font-display",
   display: "swap",
 });
@@ -38,6 +38,7 @@ export default function RootLayout({
         className={`${display.variable} ${body.variable} font-body antialiased bg-asphalt text-cream`}
       >
         {children}
+        <AppToaster />
       </body>
     </html>
   );

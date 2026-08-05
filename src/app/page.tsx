@@ -5,7 +5,7 @@ export default function Home() {
     <>
       <Header />
       <main className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-6">
-        <h1 className="font-display text-4xl font-bold italic tracking-tight text-cream sm:text-5xl">
+        <h1 className="font-display text-4xl font-bold tracking-tight text-cream sm:text-5xl">
           Garagem
         </h1>
         <div className="mt-4 h-1 w-24 bg-brand-gradient" aria-hidden="true" />

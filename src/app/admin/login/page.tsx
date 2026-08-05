@@ -64,7 +64,7 @@ export default function AdminLoginPage() {
             priority
             className="h-12 w-auto"
           />
-          <h1 className="mt-6 font-display text-3xl font-bold italic tracking-tight text-cream">
+          <h1 className="mt-6 font-display text-3xl font-bold tracking-tight text-cream">
             Painel Admin
           </h1>
           <p className="mt-2 text-sm text-muted">
