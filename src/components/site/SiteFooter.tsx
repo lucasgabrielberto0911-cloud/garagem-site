@@ -38,9 +38,14 @@ export async function SiteFooter() {
             Seminovos com procedência em {site.region} e região
           </p>
           <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
+<<<<<<< HEAD
             Loja digital com atendimento online das 8h às 23h — compra, venda,
             troca e financiamento no {site.state}, com foco em qualidade e no
             melhor atendimento.
+=======
+            Compra, venda, troca e financiamento no {site.state} — com atendimento
+            direto pelo WhatsApp.
+>>>>>>> origin/cursor/site-publico-base-5194
           </p>
           <a
             href={site.instagramUrl}
