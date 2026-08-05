@@ -21,7 +21,7 @@ export default async function SiteLayout({
       <JsonLd data={localBusinessJsonLd(publicSite)} />
       <ScrollProgress />
       <SiteHeader />
-      <main className="flex-1 pt-[76px] lg:pt-[88px]">
+      <main className="flex-1 pt-[84px] lg:pt-[96px]">
         <PageTransition>{children}</PageTransition>
       </main>
       <SiteFooter />

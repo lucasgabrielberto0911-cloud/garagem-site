@@ -40,7 +40,7 @@ export function SiteSettingsForm({
             <input
               name="region"
               defaultValue={initial.region.includes("[") ? "" : initial.region}
-              placeholder="Ex.: Vitória"
+              placeholder="Ex.: Vitória, Linhares"
               className={inputClass}
               aria-invalid={Boolean(errors.region)}
             />

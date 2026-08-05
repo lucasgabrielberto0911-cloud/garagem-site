@@ -83,12 +83,12 @@ export default async function HomePage() {
         <Container className="flex min-h-[74dvh] flex-col items-center justify-center py-16 text-center lg:py-24">
           <div className="hero-brand">
             <Image
-              src="/branding/logo.png"
+              src="/branding/logo-wordmark.png"
               alt={site.name}
               width={420}
-              height={120}
+              height={76}
               priority
-              className="mx-auto h-auto w-[min(72vw,300px)] sm:w-[min(60vw,380px)] lg:w-[420px]"
+              className="mx-auto h-auto w-[min(78vw,340px)] sm:w-[min(62vw,400px)] lg:w-[440px]"
             />
           </div>
 
@@ -101,7 +101,7 @@ export default async function HomePage() {
               aria-hidden="true"
             />
             <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-cream/80 sm:text-lg">
-              Seminovos revisados e com procedência, para quem é do {site.state}.
+              Seminovos revisados e com procedência em {site.region} e região.
               Escolha pelo site, feche pelo WhatsApp e saia dirigindo.
             </p>
           </div>

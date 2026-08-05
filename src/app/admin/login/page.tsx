@@ -60,12 +60,12 @@ export default function AdminLoginPage() {
       <div className="relative w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
           <Image
-            src="/branding/logo.png"
+            src="/branding/logo-wordmark.png"
             alt="Garagem"
-            width={200}
-            height={58}
+            width={260}
+            height={47}
             priority
-            className="h-14 w-auto"
+            className="h-12 w-auto"
           />
           <h1 className="mt-6 font-display text-3xl font-bold tracking-tight text-cream">
             Painel Admin
