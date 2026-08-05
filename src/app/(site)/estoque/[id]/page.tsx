@@ -59,9 +59,18 @@ export default async function VehicleDetailPage({
 
   const title = `${vehicle.brand} ${vehicle.model}`;
   const fullLabel = `${title}${vehicle.version ? ` ${vehicle.version}` : ""} ${vehicle.yearModel}`;
-  const related = await getRelatedVehicles(vehicle.id, vehicle.brand);
+  const related = await getRelatedVehicles(
+    vehicle.id,
+    vehicle.brand,
+    4,
+    vehicle.category,
+  );
 
   const specs = [
+    {
+      label: "Tipo",
+      value: vehicle.category === "moto" ? "Moto" : "Carro",
+    },
     { label: "Ano", value: `${vehicle.year}/${vehicle.yearModel}` },
     { label: "Quilometragem", value: `${formatNumberBR(vehicle.km)} km` },
     { label: "Câmbio", value: vehicle.transmission },
@@ -108,6 +117,28 @@ export default async function VehicleDetailPage({
                 <p className="mx-auto mt-3 max-w-xl whitespace-pre-line text-sm leading-relaxed text-muted">
                   {vehicle.description}
                 </p>
+              </div>
+            ) : null}
+
+            {vehicle.accessories.length > 0 ? (
+              <div className="mt-8 border border-white/10 bg-ink p-6">
+                <h2 className="text-center font-display text-lg font-semibold text-cream">
+                  Itens e acessórios
+                </h2>
+                <ul className="mx-auto mt-5 grid max-w-2xl gap-2 sm:grid-cols-2">
+                  {vehicle.accessories.map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-2.5 text-sm text-muted"
+                    >
+                      <span
+                        className="mt-1.5 h-1.5 w-1.5 shrink-0 bg-brand"
+                        aria-hidden="true"
+                      />
+                      <span className="leading-relaxed text-cream/90">{item}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : null}
           </div>

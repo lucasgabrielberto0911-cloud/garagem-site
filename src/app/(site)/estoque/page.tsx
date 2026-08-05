@@ -17,6 +17,7 @@ export const metadata: Metadata = {
 
 type SearchParams = {
   q?: string;
+  category?: string;
   brand?: string;
   transmission?: string;
   fuel?: string;
@@ -39,6 +40,7 @@ export default async function EstoquePage({
   const [vehicles, facets] = await Promise.all([
     getStockVehicles({
       q: searchParams.q,
+      category: searchParams.category,
       brand: searchParams.brand,
       transmission: searchParams.transmission,
       fuel: searchParams.fuel,
@@ -52,6 +54,7 @@ export default async function EstoquePage({
 
   const hasFilter = Boolean(
     searchParams.q ||
+      searchParams.category ||
       searchParams.brand ||
       searchParams.transmission ||
       searchParams.fuel ||

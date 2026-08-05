@@ -25,11 +25,21 @@ import {
 } from "@/components/admin/icons";
 import { Card, Field, btn, inputClass } from "@/components/admin/ui";
 import { formatNumberBR } from "@/lib/format";
+import {
+  VEHICLE_CATEGORIES,
+  defaultFuel,
+  defaultTransmission,
+  filterAccessoriesForCategory,
+  getAccessoryPresets,
+  getFuels,
+  getTransmissions,
+  normalizeAccessories,
+  parseVehicleCategory,
+  type VehicleCategory,
+} from "@/lib/vehicle-accessories";
 
 type VehicleWithPhotos = Vehicle & { photos: Photo[] };
 
-const FUELS = ["Flex", "Gasolina", "Etanol", "Diesel", "Híbrido", "Elétrico"];
-const TRANSMISSIONS = ["Manual", "Automático", "CVT", "Automatizado"];
 const STATUSES = [
   { value: "disponivel", label: "Disponível" },
   { value: "reservado", label: "Reservado" },
@@ -70,6 +80,29 @@ export function VehicleForm({
         .sort((a, b) => a.order - b.order)
         .map((photo) => photo.url) ?? [],
   );
+  const [accessories, setAccessories] = useState<string[]>(() =>
+    normalizeAccessories(vehicle?.accessories ?? []),
+  );
+  const [customAccessory, setCustomAccessory] = useState("");
+  const [category, setCategory] = useState<VehicleCategory>(() =>
+    parseVehicleCategory(vehicle?.category),
+  );
+  const [fuel, setFuel] = useState(() => {
+    const initialCategory = parseVehicleCategory(vehicle?.category);
+    const options = getFuels(initialCategory);
+    const current = vehicle?.fuel;
+    return current && options.includes(current)
+      ? current
+      : defaultFuel(initialCategory);
+  });
+  const [transmission, setTransmission] = useState(() => {
+    const initialCategory = parseVehicleCategory(vehicle?.category);
+    const options = getTransmissions(initialCategory);
+    const current = vehicle?.transmission;
+    return current && options.includes(current)
+      ? current
+      : defaultTransmission(initialCategory);
+  });
   const [uploading, setUploading] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [pendingAction, startTransition] = useTransition();
@@ -86,6 +119,27 @@ export function VehicleForm({
     price: vehicle?.price != null ? formatNumberBR(vehicle.price) : "",
     km: vehicle?.km != null ? formatNumberBR(vehicle.km) : "",
   });
+
+  const fuelOptions = getFuels(category);
+  const transmissionOptions = getTransmissions(category);
+  const accessoryPresets = getAccessoryPresets(category);
+  const isMoto = category === "moto";
+
+  function changeCategory(next: VehicleCategory) {
+    if (next === category) return;
+    setCategory(next);
+    setAccessories((current) => filterAccessoriesForCategory(current, next));
+    const nextFuels = getFuels(next);
+    const nextTransmissions = getTransmissions(next);
+    setFuel((current) =>
+      nextFuels.includes(current) ? current : defaultFuel(next),
+    );
+    setTransmission((current) =>
+      nextTransmissions.includes(current)
+        ? current
+        : defaultTransmission(next),
+    );
+  }
 
   function validate(): boolean {
     const next: Record<string, string> = {};
@@ -216,8 +270,43 @@ export function VehicleForm({
         className="space-y-5"
       >
         <input type="hidden" name="photoUrls" value={JSON.stringify(photoUrls)} />
+        <input
+          type="hidden"
+          name="accessories"
+          value={JSON.stringify(accessories)}
+        />
         <input type="hidden" name="price" value={values.price.replace(/\D/g, "")} />
         <input type="hidden" name="km" value={values.km.replace(/\D/g, "")} />
+
+        <Card title="Tipo do anúncio">
+          <input type="hidden" name="category" value={category} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            {VEHICLE_CATEGORIES.map((option) => {
+              const selected = category === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => changeCategory(option.value)}
+                  className={`border px-4 py-4 text-left transition ${
+                    selected
+                      ? "border-brand bg-brand/10 text-cream"
+                      : "border-white/10 bg-ink text-muted hover:border-white/25 hover:text-cream"
+                  }`}
+                >
+                  <span className="font-display text-sm font-semibold uppercase tracking-wide">
+                    {option.label}
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed opacity-80">
+                    {option.value === "moto"
+                      ? "Checklist e opções de moto (ABS, bauleto, painel digital…)."
+                      : "Checklist e opções de carro (multimídia, ar, bancos…)."}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
 
         <Card title="Identificação">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -225,7 +314,7 @@ export function VehicleForm({
               <input
                 name="brand"
                 defaultValue={vehicle?.brand}
-                placeholder="Ex.: Volkswagen"
+                placeholder={isMoto ? "Ex.: Honda" : "Ex.: Volkswagen"}
                 className={`${inputClass} ${errors.brand ? errorBorder : ""}`}
               />
             </Field>
@@ -233,15 +322,15 @@ export function VehicleForm({
               <input
                 name="model"
                 defaultValue={vehicle?.model}
-                placeholder="Ex.: Golf"
+                placeholder={isMoto ? "Ex.: CB 500F" : "Ex.: Golf"}
                 className={`${inputClass} ${errors.model ? errorBorder : ""}`}
               />
             </Field>
-            <Field label="Versão">
+            <Field label={isMoto ? "Versão / cilindrada" : "Versão"}>
               <input
                 name="version"
                 defaultValue={vehicle?.version ?? ""}
-                placeholder="Ex.: GTI 2.0 TSI"
+                placeholder={isMoto ? "Ex.: ABS 2023" : "Ex.: GTI 2.0 TSI"}
                 className={inputClass}
               />
             </Field>
@@ -296,27 +385,29 @@ export function VehicleForm({
             <Field label="Combustível">
               <select
                 name="fuel"
-                defaultValue={vehicle?.fuel ?? "Flex"}
+                value={fuel}
+                onChange={(event) => setFuel(event.target.value)}
                 className={inputClass}
                 required
               >
-                {FUELS.map((fuel) => (
-                  <option key={fuel} value={fuel}>
-                    {fuel}
+                {fuelOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
                   </option>
                 ))}
               </select>
             </Field>
-            <Field label="Câmbio">
+            <Field label={isMoto ? "Câmbio / transmissão" : "Câmbio"}>
               <select
                 name="transmission"
-                defaultValue={vehicle?.transmission ?? "Automático"}
+                value={transmission}
+                onChange={(event) => setTransmission(event.target.value)}
                 className={inputClass}
                 required
               >
-                {TRANSMISSIONS.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
+                {transmissionOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
                   </option>
                 ))}
               </select>
@@ -496,10 +587,130 @@ export function VehicleForm({
           )}
         </Card>
 
+        <Card
+          title={`Acessórios e itens · ${isMoto ? "moto" : "carro"}${
+            accessories.length > 0 ? ` (${accessories.length})` : ""
+          }`}
+        >
+          <p className="mb-4 text-xs leading-relaxed text-muted">
+            Opções prontas para {isMoto ? "moto" : "carro"}. Você também pode
+            escrever pontos manuais — tudo vira lista no anúncio.
+          </p>
+
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {accessoryPresets.map((preset) => {
+              const checked = accessories.some(
+                (item) =>
+                  item.toLocaleLowerCase("pt-BR") ===
+                  preset.toLocaleLowerCase("pt-BR"),
+              );
+              return (
+                <label
+                  key={preset}
+                  className={`flex cursor-pointer items-center gap-2.5 border px-3 py-2.5 text-sm transition ${
+                    checked
+                      ? "border-brand/50 bg-brand/10 text-cream"
+                      : "border-white/10 bg-ink text-muted hover:border-white/25 hover:text-cream"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      setAccessories((current) => {
+                        if (checked) {
+                          return current.filter(
+                            (item) =>
+                              item.toLocaleLowerCase("pt-BR") !==
+                              preset.toLocaleLowerCase("pt-BR"),
+                          );
+                        }
+                        return normalizeAccessories([...current, preset]);
+                      });
+                    }}
+                    className="h-4 w-4 accent-brand"
+                  />
+                  {preset}
+                </label>
+              );
+            })}
+          </div>
+
+          <div className="mt-5 border-t border-white/10 pt-5">
+            <Field
+              label="Ponto manual"
+              hint={
+                isMoto
+                  ? "Ex.: único dono, revisões na concessionária, pneus novos."
+                  : "Ex.: único dono, revisões na concessionária, pneus novos."
+              }
+            >
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  value={customAccessory}
+                  onChange={(event) => setCustomAccessory(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      const value = customAccessory.trim();
+                      if (!value) return;
+                      setAccessories((current) =>
+                        normalizeAccessories([...current, value]),
+                      );
+                      setCustomAccessory("");
+                    }
+                  }}
+                  placeholder="Digite e pressione Enter ou clique em Adicionar"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const value = customAccessory.trim();
+                    if (!value) return;
+                    setAccessories((current) =>
+                      normalizeAccessories([...current, value]),
+                    );
+                    setCustomAccessory("");
+                  }}
+                  className={`${btn.outline} shrink-0`}
+                >
+                  Adicionar
+                </button>
+              </div>
+            </Field>
+
+            {accessories.length > 0 ? (
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {accessories.map((item) => (
+                  <li
+                    key={item}
+                    className="inline-flex items-center gap-2 border border-white/15 bg-ink px-2.5 py-1.5 text-xs text-cream"
+                  >
+                    <span>{item}</span>
+                    <button
+                      type="button"
+                      aria-label={`Remover ${item}`}
+                      onClick={() =>
+                        setAccessories((current) =>
+                          current.filter((entry) => entry !== item),
+                        )
+                      }
+                      className="text-muted transition hover:text-brand"
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </Card>
+
         <Card title="Descrição">
           <Field
             label="Texto do anúncio"
-            hint="Conte o estado do veículo, itens, revisões e o que ajuda a vender."
+            hint="Conte o estado do veículo, revisões e o que ajuda a vender. Os acessórios ficam na lista acima."
           >
             <textarea
               name="description"

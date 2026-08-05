@@ -59,12 +59,22 @@ export function getVehicleById(id: string) {
   );
 }
 
-export function getRelatedVehicles(vehicleId: string, brand: string, take = 4) {
+export function getRelatedVehicles(
+  vehicleId: string,
+  brand: string,
+  take = 4,
+  category?: string,
+) {
   return safeQuery(
     "veículos relacionados",
     () =>
       prisma.vehicle.findMany({
-        where: { status: "disponivel", brand, id: { not: vehicleId } },
+        where: {
+          status: "disponivel",
+          brand,
+          id: { not: vehicleId },
+          ...(category ? { category } : {}),
+        },
         include: PUBLIC_VEHICLE_CARD_INCLUDE,
         orderBy: { createdAt: "desc" },
         take,
@@ -75,6 +85,7 @@ export function getRelatedVehicles(vehicleId: string, brand: string, take = 4) {
 
 export type StockFilters = {
   q?: string;
+  category?: string;
   brand?: string;
   transmission?: string;
   fuel?: string;
@@ -101,6 +112,7 @@ export function getStockVehicles(filters: StockFilters) {
       prisma.vehicle.findMany({
         where: {
           status: "disponivel",
+          ...(filters.category ? { category: filters.category } : {}),
           ...(filters.brand ? { brand: filters.brand } : {}),
           ...(filters.transmission ? { transmission: filters.transmission } : {}),
           ...(filters.fuel ? { fuel: filters.fuel } : {}),
@@ -133,6 +145,7 @@ export function getStockFacets() {
       const rows = await prisma.vehicle.findMany({
         where: { status: "disponivel" },
         select: {
+          category: true,
           brand: true,
           transmission: true,
           fuel: true,
@@ -146,6 +159,7 @@ export function getStockFacets() {
         );
 
       return {
+        categories: unique(rows.map((row) => row.category)),
         brands: unique(rows.map((row) => row.brand)),
         transmissions: unique(rows.map((row) => row.transmission)),
         fuels: unique(rows.map((row) => row.fuel)),
@@ -154,7 +168,13 @@ export function getStockFacets() {
         ),
       };
     },
-    { brands: [], transmissions: [], fuels: [], years: [] as number[] },
+    {
+      categories: [] as string[],
+      brands: [],
+      transmissions: [],
+      fuels: [],
+      years: [] as number[],
+    },
   );
 }
 

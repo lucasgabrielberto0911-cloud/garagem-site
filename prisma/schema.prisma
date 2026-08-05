@@ -10,6 +10,8 @@ datasource db {
 
 model Vehicle {
   id           String   @id @default(cuid())
+  /** "carro" | "moto" — define opções e acessórios do anúncio. */
+  category     String   @default("carro")
   brand        String
   model        String
   version      String?
@@ -21,6 +23,8 @@ model Vehicle {
   transmission String
   color        String?
   description  String?
+  /** Itens/acessórios do anúncio (checklist + pontos manuais). */
+  accessories  String[] @default([])
   status       String   @default("disponivel")
   featured     Boolean  @default(false)
   createdAt    DateTime @default(now())

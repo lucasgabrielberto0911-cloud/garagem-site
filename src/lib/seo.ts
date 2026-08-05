@@ -73,6 +73,7 @@ export function vehicleJsonLd(vehicle: {
   color: string | null;
   description: string | null;
   status: string;
+  category?: string;
   photos: { url: string }[];
 }) {
   const name = `${vehicle.brand} ${vehicle.model}${
@@ -81,7 +82,7 @@ export function vehicleJsonLd(vehicle: {
 
   return {
     "@context": "https://schema.org",
-    "@type": "Car",
+    "@type": vehicle.category === "moto" ? "Motorcycle" : "Car",
     name,
     brand: { "@type": "Brand", name: vehicle.brand },
     model: vehicle.model,

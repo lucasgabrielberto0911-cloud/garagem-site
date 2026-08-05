@@ -9,6 +9,7 @@ import {
   getSupabaseAdmin,
   storagePathFromPublicUrl,
 } from "@/lib/supabase";
+import { normalizeAccessories, parseVehicleCategory } from "@/lib/vehicle-accessories";
 
 export type VehicleFormState = {
   error?: string;
@@ -49,6 +50,7 @@ function requireNumber(value: FormDataEntryValue | null, label: string) {
 }
 
 function parseVehicleFields(formData: FormData) {
+  const category = parseVehicleCategory(String(formData.get("category") || "carro"));
   const brand = String(formData.get("brand") || "").trim();
   const model = String(formData.get("model") || "").trim();
   const version = String(formData.get("version") || "").trim() || null;
@@ -78,7 +80,16 @@ function parseVehicleFields(formData: FormData) {
     throw new Error("Fotos inválidas.");
   }
 
+  let accessories: string[] = [];
+  const accessoriesRaw = String(formData.get("accessories") || "[]");
+  try {
+    accessories = normalizeAccessories(JSON.parse(accessoriesRaw));
+  } catch {
+    throw new Error("Acessórios inválidos.");
+  }
+
   return {
+    category,
     brand,
     model,
     version,
@@ -90,6 +101,7 @@ function parseVehicleFields(formData: FormData) {
     transmission,
     color,
     description,
+    accessories,
     status,
     featured,
     photoUrls,
@@ -115,6 +127,7 @@ export async function createVehicle(
 
     const vehicle = await prisma.vehicle.create({
       data: {
+        category: data.category,
         brand: data.brand,
         model: data.model,
         version: data.version,
@@ -126,6 +139,7 @@ export async function createVehicle(
         transmission: data.transmission,
         color: data.color,
         description: data.description,
+        accessories: data.accessories,
         status: data.status,
         featured: data.featured,
         photos: {
@@ -168,6 +182,7 @@ export async function updateVehicle(
       prisma.vehicle.update({
         where: { id },
         data: {
+          category: data.category,
           brand: data.brand,
           model: data.model,
           version: data.version,
@@ -179,6 +194,7 @@ export async function updateVehicle(
           transmission: data.transmission,
           color: data.color,
           description: data.description,
+          accessories: data.accessories,
           status: data.status,
           featured: data.featured,
           photos: {
@@ -276,6 +292,7 @@ export async function duplicateVehicle(id: string) {
 
   const copy = await prisma.vehicle.create({
     data: {
+      category: source.category,
       brand: source.brand,
       model: source.model,
       version: source.version,
@@ -287,6 +304,7 @@ export async function duplicateVehicle(id: string) {
       transmission: source.transmission,
       color: source.color,
       description: source.description,
+      accessories: source.accessories,
       status: "disponivel",
       featured: false,
       photos: {

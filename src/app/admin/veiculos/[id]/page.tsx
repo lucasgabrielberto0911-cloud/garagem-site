@@ -4,6 +4,7 @@ import { AdminPageHeader, Badge } from "@/components/admin/ui";
 import { daysInStock } from "@/lib/admin-stats";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ export default async function EditVehiclePage({
         subtitle={`No estoque há ${days} dia(s) · ${vehicle.photos.length} foto(s)`}
         actions={
           <>
+            <Badge tone="neutral">{vehicleCategoryLabel(vehicle.category)}</Badge>
             <Badge tone={status.tone}>{status.label}</Badge>
             {vehicle.featured ? <Badge tone="warning">Destaque</Badge> : null}
           </>
