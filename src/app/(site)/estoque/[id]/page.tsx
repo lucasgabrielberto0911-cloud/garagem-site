@@ -59,9 +59,18 @@ export default async function VehicleDetailPage({
 
   const title = `${vehicle.brand} ${vehicle.model}`;
   const fullLabel = `${title}${vehicle.version ? ` ${vehicle.version}` : ""} ${vehicle.yearModel}`;
-  const related = await getRelatedVehicles(vehicle.id, vehicle.brand);
+  const related = await getRelatedVehicles(
+    vehicle.id,
+    vehicle.brand,
+    4,
+    vehicle.category,
+  );
 
   const specs = [
+    {
+      label: "Tipo",
+      value: vehicle.category === "moto" ? "Moto" : "Carro",
+    },
     { label: "Ano", value: `${vehicle.year}/${vehicle.yearModel}` },
     { label: "Quilometragem", value: `${formatNumberBR(vehicle.km)} km` },
     { label: "Câmbio", value: vehicle.transmission },

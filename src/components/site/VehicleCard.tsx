@@ -11,6 +11,7 @@ import {
 } from "@/components/site/icons";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { whatsappUrl } from "@/lib/site";
+import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
 export type VehicleCardData = Vehicle & { photos: Photo[] };
 
@@ -23,6 +24,7 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
   const title = `${vehicle.brand} ${vehicle.model}`;
   const cover = vehicle.photos[0]?.url;
   const badge = STATUS_BADGE[vehicle.status];
+  const categoryLabel = vehicleCategoryLabel(vehicle.category);
   const interestMessage = `Olá! Tenho interesse no ${title}${
     vehicle.version ? ` ${vehicle.version}` : ""
   } ${vehicle.yearModel}`;
@@ -50,6 +52,9 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
           aria-hidden="true"
         />
         <div className="absolute left-0 top-3 flex flex-col items-start gap-1.5">
+          <span className="bg-asphalt/85 px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-wider text-cream backdrop-blur">
+            {categoryLabel}
+          </span>
           {vehicle.featured ? (
             <span className="bg-brand px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
               Destaque

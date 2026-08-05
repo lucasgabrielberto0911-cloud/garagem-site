@@ -3,8 +3,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { IconClose, IconSearch } from "@/components/site/icons";
+import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
 export type Facets = {
+  categories: string[];
   brands: string[];
   transmissions: string[];
   fuels: string[];
@@ -47,6 +49,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
   const current = {
     q: params.get("q") ?? "",
+    category: params.get("category") ?? "",
     brand: params.get("brand") ?? "",
     transmission: params.get("transmission") ?? "",
     fuel: params.get("fuel") ?? "",
@@ -75,6 +78,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     ([key, value]) => value && !(key === "sort" && value === "recentes"),
   );
   const activeFilterCount = [
+    current.category,
     current.brand,
     current.transmission,
     current.fuel,
@@ -104,6 +108,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     setOpen(false);
     navigate({
       q: "",
+      category: "",
       brand: "",
       transmission: "",
       fuel: "",
@@ -154,7 +159,26 @@ export function StockFilters({ facets }: { facets: Facets }) {
         </form>
 
         {/* Desktop: filtros completos. */}
-        <div className="mx-auto mt-3 hidden max-w-4xl grid-cols-3 gap-3 lg:grid">
+        <div className="mx-auto mt-3 hidden max-w-4xl grid-cols-3 gap-3 lg:grid lg:grid-cols-4">
+          <label className="sr-only" htmlFor="desktop-tipo">
+            Tipo
+          </label>
+          <select
+            id="desktop-tipo"
+            value={current.category}
+            onChange={(event) => update({ category: event.target.value })}
+            className={selectClass}
+          >
+            <option value="">Carros e motos</option>
+            {(facets.categories.length > 0
+              ? facets.categories
+              : ["carro", "moto"]
+            ).map((item) => (
+              <option key={item} value={item}>
+                {vehicleCategoryLabel(item)}
+              </option>
+            ))}
+          </select>
           <FilterSelect
             label="Marca"
             value={current.brand}
@@ -324,6 +348,25 @@ export function StockFilters({ facets }: { facets: Facets }) {
             </div>
 
             <div className="space-y-5 px-5 py-6">
+              <MobileField label="Tipo">
+                <select
+                  value={draft.category}
+                  onChange={(event) =>
+                    setDraft({ ...draft, category: event.target.value })
+                  }
+                  className={selectClass}
+                >
+                  <option value="">Carros e motos</option>
+                  {(facets.categories.length > 0
+                    ? facets.categories
+                    : ["carro", "moto"]
+                  ).map((item) => (
+                    <option key={item} value={item}>
+                      {vehicleCategoryLabel(item)}
+                    </option>
+                  ))}
+                </select>
+              </MobileField>
               <MobileField label="Marca">
                 <select
                   value={draft.brand}
@@ -396,6 +439,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 onClick={() =>
                   setDraft({
                     ...draft,
+                    category: "",
                     brand: "",
                     transmission: "",
                     fuel: "",

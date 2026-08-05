@@ -33,6 +33,7 @@ async function main() {
   const vehicles = await Promise.all([
     prisma.vehicle.create({
       data: {
+        category: "carro",
         brand: "Volkswagen",
         model: "Golf",
         version: "GTI 2.0 TSI",
@@ -66,6 +67,7 @@ async function main() {
     }),
     prisma.vehicle.create({
       data: {
+        category: "carro",
         brand: "Toyota",
         model: "Corolla",
         version: "XEi 2.0",
@@ -94,6 +96,7 @@ async function main() {
     }),
     prisma.vehicle.create({
       data: {
+        category: "carro",
         brand: "Jeep",
         model: "Compass",
         version: "Longitude 2.0",
@@ -126,6 +129,7 @@ async function main() {
     }),
     prisma.vehicle.create({
       data: {
+        category: "carro",
         brand: "Honda",
         model: "Civic",
         version: "EXL 2.0",
@@ -147,6 +151,37 @@ async function main() {
         ],
         status: "disponivel",
         featured: false,
+        photos: {
+          create: [{ url: "/branding/placeholder-car.png", order: 0 }],
+        },
+      },
+    }),
+    prisma.vehicle.create({
+      data: {
+        category: "moto",
+        brand: "Honda",
+        model: "CB 500F",
+        version: "ABS",
+        year: 2022,
+        yearModel: 2022,
+        km: 12000,
+        price: 34900,
+        fuel: "Gasolina",
+        transmission: "Manual",
+        color: "Vermelha",
+        description: "CB 500F ABS, baixa km, revisões em dia.",
+        accessories: [
+          "ABS",
+          "Freio a disco (dianteiro e traseiro)",
+          "Injeção eletrônica",
+          "Partida elétrica",
+          "Painel digital",
+          "Farol de LED",
+          "Bauleto",
+          "Pneus novos",
+        ],
+        status: "disponivel",
+        featured: true,
         photos: {
           create: [{ url: "/branding/placeholder-car.png", order: 0 }],
         },

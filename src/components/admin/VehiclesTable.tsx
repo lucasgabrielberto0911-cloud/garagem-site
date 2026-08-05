@@ -18,6 +18,7 @@ import {
 } from "@/components/admin/icons";
 import { Badge, EmptyState, btn, inputClass } from "@/components/admin/ui";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
   deleteVehicle,
   duplicateVehicle,
@@ -281,10 +282,15 @@ export function VehiclesTable({
                       >
                         {vehicle.brand} {vehicle.model}
                       </Link>
-                      <Badge tone={STATUS_TONE[vehicle.status as keyof typeof STATUS_TONE] ?? "neutral"}>
-                        {STATUS_OPTIONS.find((s) => s.value === vehicle.status)
-                          ?.label ?? vehicle.status}
-                      </Badge>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <Badge tone="neutral">
+                          {vehicleCategoryLabel(vehicle.category)}
+                        </Badge>
+                        <Badge tone={STATUS_TONE[vehicle.status as keyof typeof STATUS_TONE] ?? "neutral"}>
+                          {STATUS_OPTIONS.find((s) => s.value === vehicle.status)
+                            ?.label ?? vehicle.status}
+                        </Badge>
+                      </div>
                     </div>
                     {vehicle.version ? (
                       <p className="truncate text-xs text-muted">
@@ -412,11 +418,10 @@ export function VehiclesTable({
                           >
                             {vehicle.brand} {vehicle.model}
                           </Link>
-                          {vehicle.version ? (
-                            <p className="truncate text-xs text-muted">
-                              {vehicle.version}
-                            </p>
-                          ) : null}
+                          <p className="text-xs text-muted">
+                            {vehicleCategoryLabel(vehicle.category)}
+                            {vehicle.version ? ` · ${vehicle.version}` : ""}
+                          </p>
                           <p className="text-xs text-muted">
                             {vehicle.photos.length === 0 ? (
                               <span className="text-brand">Sem fotos</span>
