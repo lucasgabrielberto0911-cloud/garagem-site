@@ -22,7 +22,7 @@ export const site = {
   phoneLabel: PHONES[0].label,
   whatsappLabel: PHONES[0].label,
   whatsappNumber: PHONES[0].digits,
-  email: "[E-MAIL]",
+  email: "suagaragem2@gmail.com",
   instagram: "@suagaragem1",
   instagramUrl: "https://instagram.com/suagaragem1",
   address: "[ENDEREÇO COMPLETO]",
