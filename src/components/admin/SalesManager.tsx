@@ -67,7 +67,7 @@ export function SalesManager({
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [vehicleId, setVehicleId] = useState("");
-  const [customerId, setCustomerId] = useState(customers.length > 0 ? "" : "novo");
+  const [customerId, setCustomerId] = useState("novo");
   const [price, setPrice] = useState("");
   const [phone, setPhone] = useState("");
   const [cancelTarget, setCancelTarget] = useState<SaleRow | null>(null);
@@ -82,7 +82,7 @@ export function SalesManager({
 
   function resetForm() {
     setVehicleId("");
-    setCustomerId(customers.length > 0 ? "" : "novo");
+    setCustomerId("novo");
     setPrice("");
     setPhone("");
     setErrors({});
