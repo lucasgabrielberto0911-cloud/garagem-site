@@ -54,7 +54,9 @@ export function VehiclePhotoManager({
   onChange,
 }: {
   photos: PhotoItem[];
-  onChange: (photos: PhotoItem[]) => void;
+  onChange: (
+    next: PhotoItem[] | ((current: PhotoItem[]) => PhotoItem[]),
+  ) => void;
 }) {
   const [uploading, setUploading] = useState(0);
   const [fileDragging, setFileDragging] = useState(false);
@@ -72,29 +74,87 @@ export function VehiclePhotoManager({
     }
 
     setUploading(list.length);
+    const uploaded: string[] = [];
+
     try {
-      const formData = new FormData();
-      list.forEach((file) => formData.append("files", file));
+      const { prepareImageForUpload } = await import(
+        "@/lib/prepare-image-upload"
+      );
 
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json();
+      // Uma por vez: evita estourar o limite de body da Vercel e perde menos progresso.
+      for (let index = 0; index < list.length; index += 1) {
+        const original = list[index];
+        setUploading(list.length - index);
 
-      if (!response.ok) {
-        toast.error(data.error || "Falha no upload.");
-        return;
+        let prepared: File;
+        try {
+          prepared = await prepareImageForUpload(original);
+        } catch (error) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : `Não foi possível preparar ${original.name}.`,
+          );
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append("files", prepared);
+
+        let response: Response;
+        try {
+          response = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+            credentials: "same-origin",
+          });
+        } catch {
+          toast.error(
+            `Falha de rede ao enviar ${original.name}. Verifique a conexão e tente de novo.`,
+          );
+          continue;
+        }
+
+        const rawText = await response.text();
+        let data: { error?: string; urls?: string[] } = {};
+        try {
+          data = rawText ? (JSON.parse(rawText) as typeof data) : {};
+        } catch {
+          toast.error(
+            response.ok
+              ? "Resposta inválida do servidor no upload."
+              : `Upload falhou (${response.status}). Tente JPG ou menos fotos por vez.`,
+          );
+          continue;
+        }
+
+        if (!response.ok) {
+          toast.error(
+            data.error || `Falha no upload de ${original.name} (${response.status}).`,
+          );
+          continue;
+        }
+
+        const urls = data.urls ?? [];
+        uploaded.push(...urls);
       }
 
-      const urls = (data.urls as string[]) ?? [];
-      onChange([
-        ...photos,
-        ...urls.map((url) => ({ id: createPhotoId(), url })),
-      ]);
-      toast.success(`${urls.length} foto(s) enviada(s).`);
-    } catch {
-      toast.error("Erro de conexão no upload.");
+      if (uploaded.length > 0) {
+        onChange((current) => [
+          ...current,
+          ...uploaded.map((url) => ({ id: createPhotoId(), url })),
+        ]);
+        toast.success(`${uploaded.length} foto(s) enviada(s).`);
+      } else {
+        toast.error("Nenhuma foto foi enviada.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erro inesperado no upload.",
+      );
     } finally {
       setUploading(0);
     }
@@ -169,7 +229,8 @@ export function VehiclePhotoManager({
                 : "Arraste as fotos aqui ou clique para escolher"}
           </p>
           <p className="mt-1 text-xs text-muted">
-            JPG, PNG, WEBP, GIF ou HEIC (iPhone) · várias de uma vez
+            JPG, PNG, WEBP, GIF ou HEIC (iPhone) · enviadas uma a uma, já
+            comprimidas
           </p>
           <p className="mt-2 text-[11px] text-muted/80">
             Espere o envio terminar antes de salvar o anúncio.
