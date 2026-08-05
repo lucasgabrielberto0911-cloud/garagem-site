@@ -10,7 +10,15 @@ import {
   IconPhone,
   IconWhatsApp,
 } from "@/components/site/icons";
-import { NAV_LINKS, site, telUrl, whatsappUrl } from "@/lib/site";
+import { FavoritesLink } from "@/components/site/FavoritesLink";
+import {
+  NAV_LINKS,
+  PHONES,
+  SECONDARY_LINKS,
+  site,
+  telUrl,
+  whatsappUrl,
+} from "@/lib/site";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -109,6 +117,8 @@ export function SiteHeader() {
               <span className="font-medium">{site.phoneLabel}</span>
             </a>
 
+            <FavoritesLink />
+
             <a
               href={whatsappUrl()}
               target="_blank"
@@ -178,6 +188,20 @@ export function SiteHeader() {
                 })}
               </ul>
 
+              <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-2 border-t border-white/10 px-4 pt-4">
+                {SECONDARY_LINKS.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      onClick={() => setOpen(false)}
+                      className="inline-flex min-h-[36px] items-center text-sm text-muted transition active:text-cream"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+
               <div className="mt-4 space-y-3 border-t border-white/10 pt-5">
                 <a
                   href={whatsappUrl()}
@@ -189,14 +213,17 @@ export function SiteHeader() {
                   <IconWhatsApp className="h-5 w-5" />
                   Chamar no WhatsApp
                 </a>
-                <a
-                  href={telUrl()}
-                  onClick={() => setOpen(false)}
-                  className="flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/50 px-4 py-4 font-display text-base font-semibold text-brand touch-manipulation"
-                >
-                  <IconPhone className="h-5 w-5" />
-                  {site.phoneLabel}
-                </a>
+                {PHONES.map((phone, index) => (
+                  <a
+                    key={phone.digits}
+                    href={telUrl(index)}
+                    onClick={() => setOpen(false)}
+                    className="flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/50 px-4 py-4 font-display text-base font-semibold text-brand touch-manipulation"
+                  >
+                    <IconPhone className="h-5 w-5" />
+                    {phone.label}
+                  </a>
+                ))}
               </div>
             </nav>
           </div>

@@ -6,7 +6,14 @@ import {
   IconMapPin,
   IconPhone,
 } from "@/components/site/icons";
-import { NAV_LINKS, SERVICES, site, telUrl } from "@/lib/site";
+import {
+  NAV_LINKS,
+  PHONES,
+  SECONDARY_LINKS,
+  SERVICES,
+  site,
+  telUrl,
+} from "@/lib/site";
 
 export function SiteFooter() {
   const year = new Date().getFullYear();
@@ -42,7 +49,7 @@ export function SiteFooter() {
               Navegação
             </h2>
             <ul className="mt-4 space-y-2.5">
-              {NAV_LINKS.map((link) => (
+              {[...NAV_LINKS, ...SECONDARY_LINKS].map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
@@ -77,15 +84,17 @@ export function SiteFooter() {
                 <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
                 <span>{site.address}</span>
               </li>
-              <li>
-                <a
-                  href={telUrl()}
-                  className="flex gap-2.5 transition hover:text-cream"
-                >
-                  <IconPhone className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-                  <span>{site.phoneLabel}</span>
-                </a>
-              </li>
+              {PHONES.map((phone, index) => (
+                <li key={phone.digits}>
+                  <a
+                    href={telUrl(index)}
+                    className="flex gap-2.5 transition hover:text-cream"
+                  >
+                    <IconPhone className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                    <span>{phone.label}</span>
+                  </a>
+                </li>
+              ))}
               <li className="flex gap-2.5">
                 <IconMail className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
                 <span>{site.email}</span>
@@ -97,9 +106,12 @@ export function SiteFooter() {
         <div className="mt-12 h-0.5 w-full bg-brand-gradient" aria-hidden="true" />
 
         <div className="mt-6 flex flex-col gap-2 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            © {year} {site.name}. Todos os direitos reservados.
-          </p>
+          <div className="space-y-1">
+            <p>
+              © {year} {site.name}. Todos os direitos reservados.
+            </p>
+            <p>CNPJ {site.cnpj}</p>
+          </div>
           <Link href="/admin/login" className="transition hover:text-cream">
             Área administrativa
           </Link>

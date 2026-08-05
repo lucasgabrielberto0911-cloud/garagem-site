@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { StockFilters } from "@/components/site/StockFilters";
 import { VehicleCard } from "@/components/site/VehicleCard";
+import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { WhatsAppButton } from "@/components/site/ui";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getStockFacets, getStockVehicles } from "@/lib/vehicles";
@@ -19,22 +20,30 @@ type SearchParams = {
   transmission?: string;
   fuel?: string;
   maxPrice?: string;
+  minYear?: string;
+  maxKm?: string;
   sort?: string;
 };
+
+function positiveNumber(value?: string) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
 
 export default async function EstoquePage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
-  const maxPrice = Number(searchParams.maxPrice);
   const [vehicles, facets] = await Promise.all([
     getStockVehicles({
       q: searchParams.q,
       brand: searchParams.brand,
       transmission: searchParams.transmission,
       fuel: searchParams.fuel,
-      maxPrice: Number.isFinite(maxPrice) && maxPrice > 0 ? maxPrice : undefined,
+      maxPrice: positiveNumber(searchParams.maxPrice),
+      minYear: positiveNumber(searchParams.minYear),
+      maxKm: positiveNumber(searchParams.maxKm),
       sort: searchParams.sort,
     }),
     getStockFacets(),
@@ -45,7 +54,9 @@ export default async function EstoquePage({
       searchParams.brand ||
       searchParams.transmission ||
       searchParams.fuel ||
-      searchParams.maxPrice,
+      searchParams.maxPrice ||
+      searchParams.minYear ||
+      searchParams.maxKm,
   );
 
   return (
@@ -99,6 +110,10 @@ export default async function EstoquePage({
             ))}
           </div>
         )}
+
+        <div className="mt-12">
+          <WantedVehicleCta />
+        </div>
       </div>
     </div>
   );

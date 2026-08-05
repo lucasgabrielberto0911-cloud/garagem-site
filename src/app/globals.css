@@ -178,6 +178,31 @@ body {
   animation: floatSoft 4s ease-in-out infinite;
 }
 
+.animate-fade-in-scale {
+  animation: fadeInScale 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Placeholder de carregamento das listagens. */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.09) 37%,
+    rgba(255, 255, 255, 0.04) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeletonShimmer 1.4s ease infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 /* Hero staggered entrance */
 .hero-brand {
   animation: fadeInScale 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -463,6 +488,8 @@ body {
   .animate-float,
   .animate-slide-up,
   .animate-fade-in,
+  .animate-fade-in-scale,
+  .skeleton,
   .hero-red-orb,
   .hero-red-glow-line {
     animation: none !important;

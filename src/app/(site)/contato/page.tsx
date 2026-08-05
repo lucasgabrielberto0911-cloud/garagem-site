@@ -7,7 +7,7 @@ import {
   IconMapPin,
   IconPhone,
 } from "@/components/site/icons";
-import { WHATSAPP_MESSAGES, site, telUrl } from "@/lib/site";
+import { PHONES, WHATSAPP_MESSAGES, site, telUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: `Contato | ${site.name}`,
@@ -51,13 +51,16 @@ export default function ContatoPage() {
               hrefLabel="Abrir no Google Maps"
               external
             />
-            <InfoCard
-              Icon={IconPhone}
-              label="Telefone"
-              value={site.phoneLabel}
-              href={telUrl()}
-              hrefLabel="Ligar agora"
-            />
+            {PHONES.map((phone, index) => (
+              <InfoCard
+                key={phone.digits}
+                Icon={IconPhone}
+                label={index === 0 ? "Telefone / WhatsApp" : "Telefone 2 / WhatsApp"}
+                value={phone.label}
+                href={telUrl(index)}
+                hrefLabel="Ligar agora"
+              />
+            ))}
             <InfoCard
               Icon={IconMail}
               label="E-mail"
@@ -112,6 +115,10 @@ export default function ContatoPage() {
                 Chamar no WhatsApp
               </WhatsAppButton>
             </div>
+
+            <p className="text-xs leading-relaxed text-muted">
+              {site.legalName} — CNPJ {site.cnpj}
+            </p>
           </div>
 
           <div>

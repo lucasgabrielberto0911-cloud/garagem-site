@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
 import { AppToaster } from "@/components/Toaster";
+import { site } from "@/lib/site";
 import "./globals.css";
 
 const display = Sora({
@@ -17,18 +18,75 @@ const body = Inter({
   display: "swap",
 });
 
+const description =
+  "Seminovos revisados, com procedência verificada e vistoria completa. Compra, venda, troca e financiamento na Garagem.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(site.url),
   title: {
-    default: "Garagem | Seminovos com procedência no Espírito Santo",
+    default: `${site.name} | Seminovos com procedência no ${site.state}`,
     template: "%s",
   },
-  description:
-    "Seminovos revisados, com procedência verificada e vistoria completa. Compra, venda, troca e financiamento na Garagem.",
+  description,
+  applicationName: site.name,
+  keywords: [
+    "seminovos",
+    "carros usados",
+    "revenda de veículos",
+    "Espírito Santo",
+    "financiamento de carros",
+    site.name,
+  ],
+  authors: [{ name: site.name, url: site.url }],
+  creator: site.name,
+  manifest: "/manifest.webmanifest",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: site.url,
+    siteName: site.name,
+    title: `${site.name} | Seminovos com procedência no ${site.state}`,
+    description,
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: `${site.name} — seminovos no ${site.state}`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${site.name} | Seminovos com procedência no ${site.state}`,
+    description,
+    images: ["/og.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
-    apple: "/favicon.png",
+    apple: "/apple-touch-icon.png",
   },
+  appleWebApp: {
+    capable: true,
+    title: site.name,
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: true },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0D0D0F",
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Photo, Vehicle } from "@prisma/client";
 import { VehicleImage } from "@/components/VehicleImage";
+import { FavoriteButton } from "@/components/site/FavoriteButton";
 import {
   IconCalendar,
   IconFuel,
@@ -27,7 +28,12 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
   } ${vehicle.yearModel}`;
 
   return (
-    <article className="card-lift group flex h-full flex-col border border-white/10 bg-ink touch-manipulation">
+    <article className="card-lift group relative flex h-full flex-col border border-white/10 bg-ink touch-manipulation">
+      <FavoriteButton
+        vehicleId={vehicle.id}
+        label={`${title} ${vehicle.yearModel}`}
+        className="absolute right-2 top-2 z-10"
+      />
       <Link
         href={`/estoque/${vehicle.id}`}
         className="relative block aspect-[4/3] overflow-hidden bg-asphalt"
@@ -43,18 +49,20 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
           className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent opacity-0 transition duration-500 group-hover:opacity-100"
           aria-hidden="true"
         />
-        {vehicle.featured ? (
-          <span className="absolute left-0 top-3 bg-brand px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
-            Destaque
-          </span>
-        ) : null}
-        {badge ? (
-          <span
-            className={`absolute right-3 top-3 px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-wider ${badge.className}`}
-          >
-            {badge.label}
-          </span>
-        ) : null}
+        <div className="absolute left-0 top-3 flex flex-col items-start gap-1.5">
+          {vehicle.featured ? (
+            <span className="bg-brand px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
+              Destaque
+            </span>
+          ) : null}
+          {badge ? (
+            <span
+              className={`px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-wider ${badge.className}`}
+            >
+              {badge.label}
+            </span>
+          ) : null}
+        </div>
         {vehicle.photos.length > 1 ? (
           <span className="absolute bottom-3 right-3 bg-asphalt/80 px-2.5 py-1 text-[11px] font-medium text-cream backdrop-blur">
             {vehicle.photos.length} fotos

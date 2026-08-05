@@ -6,7 +6,10 @@ import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
 import { ButtonLink, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
+import { FavoriteButton } from "@/components/site/FavoriteButton";
+import { JsonLd } from "@/components/JsonLd";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getRelatedVehicles, getVehicleById } from "@/lib/vehicles";
 
@@ -20,11 +23,29 @@ export async function generateMetadata({
   const vehicle = await getVehicleById(params.id);
   if (!vehicle) return { title: `Veículo não encontrado | ${site.name}` };
 
+  const title = `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel} | ${site.name}`;
+  const description =
+    vehicle.description ??
+    `${vehicle.brand} ${vehicle.model} ${vehicle.year}/${vehicle.yearModel} com ${formatNumberBR(vehicle.km)} km disponível na ${site.name}.`;
+  const cover = vehicle.photos[0]?.url;
+
   return {
-    title: `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel} | ${site.name}`,
-    description:
-      vehicle.description ??
-      `${vehicle.brand} ${vehicle.model} ${vehicle.year}/${vehicle.yearModel} com ${formatNumberBR(vehicle.km)} km disponível na ${site.name}.`,
+    title,
+    description,
+    alternates: { canonical: `/estoque/${vehicle.id}` },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: absoluteUrl(`/estoque/${vehicle.id}`),
+      images: cover ? [{ url: cover }] : ["/og.png"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: cover ? [cover] : ["/og.png"],
+    },
   };
 }
 
@@ -51,6 +72,14 @@ export default async function VehicleDetailPage({
 
   return (
     <div className="px-4 py-10 pb-sticky-bar-safe sm:px-6 lg:py-14 lg:pb-14">
+      <JsonLd data={vehicleJsonLd(vehicle)} />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Início", path: "/" },
+          { name: "Estoque", path: "/estoque" },
+          { name: fullLabel, path: `/estoque/${vehicle.id}` },
+        ])}
+      />
       <div className="mx-auto max-w-7xl">
         <nav aria-label="Você está aqui" className="text-xs text-muted">
           <Link href="/" className="transition hover:text-cream">
@@ -118,6 +147,29 @@ export default async function VehicleDetailPage({
                 >
                   Tenho interesse
                 </WhatsAppButton>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <WhatsAppButton
+                    variant="outline"
+                    message={WHATSAPP_MESSAGES.vehicleVisit(fullLabel)}
+                  >
+                    Agendar visita
+                  </WhatsAppButton>
+                  <WhatsAppButton
+                    variant="outline"
+                    message={WHATSAPP_MESSAGES.vehicleVideo(fullLabel)}
+                  >
+                    Pedir vídeo
+                  </WhatsAppButton>
+                </div>
+
+                <FavoriteButton
+                  vehicleId={vehicle.id}
+                  label={fullLabel}
+                  variant="full"
+                  className="w-full"
+                />
+
                 <ButtonLink href="/vender" size="md" variant="outline">
                   Quero dar meu carro na troca
                 </ButtonLink>

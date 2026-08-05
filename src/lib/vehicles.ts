@@ -73,6 +73,8 @@ export type StockFilters = {
   transmission?: string;
   fuel?: string;
   maxPrice?: number;
+  minYear?: number;
+  maxKm?: number;
   sort?: string;
 };
 
@@ -97,6 +99,8 @@ export function getStockVehicles(filters: StockFilters) {
           ...(filters.transmission ? { transmission: filters.transmission } : {}),
           ...(filters.fuel ? { fuel: filters.fuel } : {}),
           ...(filters.maxPrice ? { price: { lte: filters.maxPrice } } : {}),
+          ...(filters.minYear ? { yearModel: { gte: filters.minYear } } : {}),
+          ...(filters.maxKm ? { km: { lte: filters.maxKm } } : {}),
           ...(terms.length
             ? {
                 AND: terms.map((term) => ({
@@ -122,7 +126,12 @@ export function getStockFacets() {
     async () => {
       const rows = await prisma.vehicle.findMany({
         where: { status: "disponivel" },
-        select: { brand: true, transmission: true, fuel: true },
+        select: {
+          brand: true,
+          transmission: true,
+          fuel: true,
+          yearModel: true,
+        },
       });
 
       const unique = (values: string[]) =>
@@ -134,9 +143,12 @@ export function getStockFacets() {
         brands: unique(rows.map((row) => row.brand)),
         transmissions: unique(rows.map((row) => row.transmission)),
         fuels: unique(rows.map((row) => row.fuel)),
+        years: Array.from(new Set(rows.map((row) => row.yearModel))).sort(
+          (a, b) => b - a,
+        ),
       };
     },
-    { brands: [], transmissions: [], fuels: [] },
+    { brands: [], transmissions: [], fuels: [], years: [] as number[] },
   );
 }
 

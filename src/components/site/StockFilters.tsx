@@ -8,6 +8,7 @@ export type Facets = {
   brands: string[];
   transmissions: string[];
   fuels: string[];
+  years: number[];
 };
 
 const SORT_OPTIONS = [
@@ -30,6 +31,14 @@ const PRICE_OPTIONS = [
   { value: "250000", label: "Até R$ 250 mil" },
 ] as const;
 
+const KM_OPTIONS = [
+  { value: "", label: "Qualquer KM" },
+  { value: "20000", label: "Até 20 mil km" },
+  { value: "50000", label: "Até 50 mil km" },
+  { value: "80000", label: "Até 80 mil km" },
+  { value: "120000", label: "Até 120 mil km" },
+] as const;
+
 export function StockFilters({ facets }: { facets: Facets }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -42,6 +51,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
     transmission: params.get("transmission") ?? "",
     fuel: params.get("fuel") ?? "",
     maxPrice: params.get("maxPrice") ?? "",
+    minYear: params.get("minYear") ?? "",
+    maxKm: params.get("maxKm") ?? "",
     sort: params.get("sort") ?? "recentes",
   };
   const [draft, setDraft] = useState(current);
@@ -68,6 +79,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
     current.transmission,
     current.fuel,
     current.maxPrice,
+    current.minYear,
+    current.maxKm,
   ].filter(Boolean).length;
 
   function navigate(values: typeof current) {
@@ -89,7 +102,16 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
   function clearFilters() {
     setOpen(false);
-    navigate({ q: "", brand: "", transmission: "", fuel: "", maxPrice: "", sort: "recentes" });
+    navigate({
+      q: "",
+      brand: "",
+      transmission: "",
+      fuel: "",
+      maxPrice: "",
+      minYear: "",
+      maxKm: "",
+      sort: "recentes",
+    });
   }
 
   return (
@@ -132,7 +154,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
         </form>
 
         {/* Desktop: filtros completos. */}
-        <div className="mt-3 hidden grid-cols-4 gap-3 lg:grid">
+        <div className="mt-3 hidden grid-cols-3 gap-3 lg:grid">
           <FilterSelect
             label="Marca"
             value={current.brand}
@@ -164,6 +186,37 @@ export function StockFilters({ facets }: { facets: Facets }) {
             className={selectClass}
           >
             {PRICE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <label className="sr-only" htmlFor="desktop-ano">
+            Ano a partir de
+          </label>
+          <select
+            id="desktop-ano"
+            value={current.minYear}
+            onChange={(event) => update({ minYear: event.target.value })}
+            className={selectClass}
+          >
+            <option value="">Qualquer ano</option>
+            {facets.years.map((year) => (
+              <option key={year} value={year}>
+                A partir de {year}
+              </option>
+            ))}
+          </select>
+          <label className="sr-only" htmlFor="desktop-km">
+            Quilometragem máxima
+          </label>
+          <select
+            id="desktop-km"
+            value={current.maxKm}
+            onChange={(event) => update({ maxKm: event.target.value })}
+            className={selectClass}
+          >
+            {KM_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -312,12 +365,45 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   ))}
                 </select>
               </MobileField>
+              <MobileField label="Ano a partir de">
+                <select
+                  value={draft.minYear}
+                  onChange={(event) => setDraft({ ...draft, minYear: event.target.value })}
+                  className={selectClass}
+                >
+                  <option value="">Qualquer ano</option>
+                  {facets.years.map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </MobileField>
+              <MobileField label="Quilometragem máxima">
+                <select
+                  value={draft.maxKm}
+                  onChange={(event) => setDraft({ ...draft, maxKm: event.target.value })}
+                  className={selectClass}
+                >
+                  {KM_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </MobileField>
             </div>
 
             <div className="sticky bottom-0 grid grid-cols-[auto_1fr] gap-3 border-t border-white/10 bg-ink/95 px-5 py-4 backdrop-blur">
               <button
                 type="button"
-                onClick={() => setDraft({ ...draft, brand: "", transmission: "", fuel: "", maxPrice: "" })}
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    brand: "",
+                    transmission: "",
+                    fuel: "",
+                    maxPrice: "",
+                    minYear: "",
+                    maxKm: "",
+                  })
+                }
                 className="min-h-[52px] border border-white/15 px-5 font-display text-xs font-semibold uppercase tracking-wide text-muted"
               >
                 Limpar
