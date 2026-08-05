@@ -44,6 +44,16 @@ async function main() {
         transmission: "Automático",
         color: "Preto",
         description: "Golf GTI impecável, único dono, revisões em dia.",
+        accessories: [
+          "Multimídia",
+          "Bluetooth",
+          "Ar digital",
+          "Bancos de couro",
+          "Piloto automático",
+          "Sensor de estacionamento",
+          "Câmera de ré",
+          "Único dono",
+        ],
         status: "disponivel",
         featured: true,
         photos: {
@@ -67,6 +77,14 @@ async function main() {
         transmission: "Automático",
         color: "Prata",
         description: "Corolla XEi completo, baixo km, pronto para transferir.",
+        accessories: [
+          "Multimídia",
+          "Bluetooth",
+          "Ar-condicionado",
+          "Apple CarPlay / Android Auto",
+          "Bancos de couro",
+          "Keyless (partida por botão)",
+        ],
         status: "disponivel",
         featured: true,
         photos: {
@@ -87,6 +105,15 @@ async function main() {
         transmission: "Automático",
         color: "Branco",
         description: "Compass Longitude, banco de couro, multimídia.",
+        accessories: [
+          "Multimídia",
+          "Bluetooth",
+          "Ar digital",
+          "Bancos de couro",
+          "Sensor de estacionamento",
+          "Câmera de ré",
+          "Rodas de liga leve",
+        ],
         status: "disponivel",
         featured: false,
         photos: {
@@ -110,6 +137,14 @@ async function main() {
         transmission: "CVT",
         color: "Cinza",
         description: "Civic EXL, histórico completo, pneus novos.",
+        accessories: [
+          "Multimídia",
+          "Bluetooth",
+          "Ar-condicionado",
+          "Bancos de couro",
+          "Volante multifuncional",
+          "Pneus novos",
+        ],
         status: "disponivel",
         featured: false,
         photos: {

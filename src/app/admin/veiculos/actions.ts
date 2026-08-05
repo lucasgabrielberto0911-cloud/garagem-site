@@ -9,6 +9,7 @@ import {
   getSupabaseAdmin,
   storagePathFromPublicUrl,
 } from "@/lib/supabase";
+import { normalizeAccessories } from "@/lib/vehicle-accessories";
 
 export type VehicleFormState = {
   error?: string;
@@ -78,6 +79,14 @@ function parseVehicleFields(formData: FormData) {
     throw new Error("Fotos inválidas.");
   }
 
+  let accessories: string[] = [];
+  const accessoriesRaw = String(formData.get("accessories") || "[]");
+  try {
+    accessories = normalizeAccessories(JSON.parse(accessoriesRaw));
+  } catch {
+    throw new Error("Acessórios inválidos.");
+  }
+
   return {
     brand,
     model,
@@ -90,6 +99,7 @@ function parseVehicleFields(formData: FormData) {
     transmission,
     color,
     description,
+    accessories,
     status,
     featured,
     photoUrls,
@@ -126,6 +136,7 @@ export async function createVehicle(
         transmission: data.transmission,
         color: data.color,
         description: data.description,
+        accessories: data.accessories,
         status: data.status,
         featured: data.featured,
         photos: {
@@ -179,6 +190,7 @@ export async function updateVehicle(
           transmission: data.transmission,
           color: data.color,
           description: data.description,
+          accessories: data.accessories,
           status: data.status,
           featured: data.featured,
           photos: {
@@ -287,6 +299,7 @@ export async function duplicateVehicle(id: string) {
       transmission: source.transmission,
       color: source.color,
       description: source.description,
+      accessories: source.accessories,
       status: "disponivel",
       featured: false,
       photos: {

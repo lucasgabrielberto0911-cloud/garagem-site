@@ -25,6 +25,10 @@ import {
 } from "@/components/admin/icons";
 import { Card, Field, btn, inputClass } from "@/components/admin/ui";
 import { formatNumberBR } from "@/lib/format";
+import {
+  VEHICLE_ACCESSORY_PRESETS,
+  normalizeAccessories,
+} from "@/lib/vehicle-accessories";
 
 type VehicleWithPhotos = Vehicle & { photos: Photo[] };
 
@@ -70,6 +74,10 @@ export function VehicleForm({
         .sort((a, b) => a.order - b.order)
         .map((photo) => photo.url) ?? [],
   );
+  const [accessories, setAccessories] = useState<string[]>(() =>
+    normalizeAccessories(vehicle?.accessories ?? []),
+  );
+  const [customAccessory, setCustomAccessory] = useState("");
   const [uploading, setUploading] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [pendingAction, startTransition] = useTransition();
@@ -216,6 +224,11 @@ export function VehicleForm({
         className="space-y-5"
       >
         <input type="hidden" name="photoUrls" value={JSON.stringify(photoUrls)} />
+        <input
+          type="hidden"
+          name="accessories"
+          value={JSON.stringify(accessories)}
+        />
         <input type="hidden" name="price" value={values.price.replace(/\D/g, "")} />
         <input type="hidden" name="km" value={values.km.replace(/\D/g, "")} />
 
@@ -496,10 +509,126 @@ export function VehicleForm({
           )}
         </Card>
 
+        <Card
+          title={`Acessórios e itens${
+            accessories.length > 0 ? ` (${accessories.length})` : ""
+          }`}
+        >
+          <p className="mb-4 text-xs leading-relaxed text-muted">
+            Marque as opções prontas e, se quiser, escreva pontos manuais. Eles
+            aparecem como lista no anúncio do veículo.
+          </p>
+
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {VEHICLE_ACCESSORY_PRESETS.map((preset) => {
+              const checked = accessories.some(
+                (item) =>
+                  item.toLocaleLowerCase("pt-BR") ===
+                  preset.toLocaleLowerCase("pt-BR"),
+              );
+              return (
+                <label
+                  key={preset}
+                  className={`flex cursor-pointer items-center gap-2.5 border px-3 py-2.5 text-sm transition ${
+                    checked
+                      ? "border-brand/50 bg-brand/10 text-cream"
+                      : "border-white/10 bg-ink text-muted hover:border-white/25 hover:text-cream"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      setAccessories((current) => {
+                        if (checked) {
+                          return current.filter(
+                            (item) =>
+                              item.toLocaleLowerCase("pt-BR") !==
+                              preset.toLocaleLowerCase("pt-BR"),
+                          );
+                        }
+                        return normalizeAccessories([...current, preset]);
+                      });
+                    }}
+                    className="h-4 w-4 accent-brand"
+                  />
+                  {preset}
+                </label>
+              );
+            })}
+          </div>
+
+          <div className="mt-5 border-t border-white/10 pt-5">
+            <Field
+              label="Ponto manual"
+              hint="Ex.: único dono, revisões na concessionária, pneus novos."
+            >
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  value={customAccessory}
+                  onChange={(event) => setCustomAccessory(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      const value = customAccessory.trim();
+                      if (!value) return;
+                      setAccessories((current) =>
+                        normalizeAccessories([...current, value]),
+                      );
+                      setCustomAccessory("");
+                    }
+                  }}
+                  placeholder="Digite e pressione Enter ou clique em Adicionar"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const value = customAccessory.trim();
+                    if (!value) return;
+                    setAccessories((current) =>
+                      normalizeAccessories([...current, value]),
+                    );
+                    setCustomAccessory("");
+                  }}
+                  className={`${btn.outline} shrink-0`}
+                >
+                  Adicionar
+                </button>
+              </div>
+            </Field>
+
+            {accessories.length > 0 ? (
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {accessories.map((item) => (
+                  <li
+                    key={item}
+                    className="inline-flex items-center gap-2 border border-white/15 bg-ink px-2.5 py-1.5 text-xs text-cream"
+                  >
+                    <span>{item}</span>
+                    <button
+                      type="button"
+                      aria-label={`Remover ${item}`}
+                      onClick={() =>
+                        setAccessories((current) =>
+                          current.filter((entry) => entry !== item),
+                        )
+                      }
+                      className="text-muted transition hover:text-brand"
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </Card>
+
         <Card title="Descrição">
           <Field
             label="Texto do anúncio"
-            hint="Conte o estado do veículo, itens, revisões e o que ajuda a vender."
+            hint="Conte o estado do veículo, revisões e o que ajuda a vender. Os acessórios ficam na lista acima."
           >
             <textarea
               name="description"

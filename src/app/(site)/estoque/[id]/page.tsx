@@ -110,6 +110,28 @@ export default async function VehicleDetailPage({
                 </p>
               </div>
             ) : null}
+
+            {vehicle.accessories.length > 0 ? (
+              <div className="mt-8 border border-white/10 bg-ink p-6">
+                <h2 className="text-center font-display text-lg font-semibold text-cream">
+                  Itens e acessórios
+                </h2>
+                <ul className="mx-auto mt-5 grid max-w-2xl gap-2 sm:grid-cols-2">
+                  {vehicle.accessories.map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-2.5 text-sm text-muted"
+                    >
+                      <span
+                        className="mt-1.5 h-1.5 w-1.5 shrink-0 bg-brand"
+                        aria-hidden="true"
+                      />
+                      <span className="leading-relaxed text-cream/90">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
 
           <aside className="lg:sticky lg:top-24 lg:self-start">
