@@ -18,8 +18,12 @@ const body = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Garagem",
-  description: "Garagem — loja oficial",
+  title: {
+    default: "Garagem | Seminovos com procedência no Espírito Santo",
+    template: "%s",
+  },
+  description:
+    "Seminovos revisados, com procedência verificada e vistoria completa. Compra, venda, troca e financiamento na Garagem.",
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",

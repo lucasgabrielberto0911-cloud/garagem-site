@@ -1,0 +1,110 @@
+import Image from "next/image";
+import Link from "next/link";
+import {
+  IconInstagram,
+  IconMail,
+  IconMapPin,
+  IconPhone,
+} from "@/components/site/icons";
+import { NAV_LINKS, SERVICES, site, telUrl } from "@/lib/site";
+
+export function SiteFooter() {
+  const year = new Date().getFullYear();
+
+  return (
+    <footer className="border-t border-white/10 bg-ink">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-16">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <Image
+              src="/branding/logo.png"
+              alt={site.name}
+              width={160}
+              height={44}
+              className="h-10 w-auto"
+            />
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
+              {site.tagline}
+            </p>
+            <a
+              href={site.instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-flex items-center gap-2 text-sm text-muted transition hover:text-cream"
+            >
+              <IconInstagram className="h-4 w-4" />
+              {site.instagram}
+            </a>
+          </div>
+
+          <div>
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
+              Navegação
+            </h2>
+            <ul className="mt-4 space-y-2.5">
+              {NAV_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-muted transition hover:text-cream"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
+              Serviços
+            </h2>
+            <ul className="mt-4 space-y-2.5">
+              {SERVICES.map((service) => (
+                <li key={service} className="text-sm text-muted">
+                  {service}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
+              Contato
+            </h2>
+            <ul className="mt-4 space-y-3 text-sm text-muted">
+              <li className="flex gap-2.5">
+                <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                <span>{site.address}</span>
+              </li>
+              <li>
+                <a
+                  href={telUrl()}
+                  className="flex gap-2.5 transition hover:text-cream"
+                >
+                  <IconPhone className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                  <span>{site.phoneLabel}</span>
+                </a>
+              </li>
+              <li className="flex gap-2.5">
+                <IconMail className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                <span>{site.email}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-12 h-0.5 w-full bg-brand-gradient" aria-hidden="true" />
+
+        <div className="mt-6 flex flex-col gap-2 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            © {year} {site.name}. Todos os direitos reservados.
+          </p>
+          <Link href="/admin/login" className="transition hover:text-cream">
+            Área administrativa
+          </Link>
+        </div>
+      </div>
+    </footer>
+  );
+}
