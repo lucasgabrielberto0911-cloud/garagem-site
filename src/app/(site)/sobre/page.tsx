@@ -155,6 +155,41 @@ export default function SobrePage() {
             <TrustBadges />
           </div>
 
+          <div className="mt-10 border border-white/10 bg-ink p-6">
+            <h2 className="font-display text-base font-semibold text-cream">
+              Dados da empresa
+            </h2>
+            <dl className="mt-4 grid gap-4 sm:grid-cols-3">
+              <div>
+                <dt className="text-[10px] uppercase tracking-wider text-muted">
+                  Razão social
+                </dt>
+                <dd className="mt-1 text-sm text-cream">{site.legalName}</dd>
+              </div>
+              <div>
+                <dt className="text-[10px] uppercase tracking-wider text-muted">
+                  CNPJ
+                </dt>
+                <dd className="mt-1 text-sm text-cream">{site.cnpj}</dd>
+              </div>
+              <div>
+                <dt className="text-[10px] uppercase tracking-wider text-muted">
+                  Instagram
+                </dt>
+                <dd className="mt-1 text-sm">
+                  <a
+                    href={site.instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-brand underline-offset-4 transition hover:underline"
+                  >
+                    {site.instagram}
+                  </a>
+                </dd>
+              </div>
+            </dl>
+          </div>
+
           <div className="mt-10 flex flex-wrap gap-3">
             <ButtonLink href="/estoque" size="lg">
               Ver estoque completo

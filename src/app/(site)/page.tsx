@@ -1,12 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
+import { FaqAccordion } from "@/components/site/FaqAccordion";
 import { HeroSearch } from "@/components/site/HeroSearch";
 import { ScrollReveal } from "@/components/site/ScrollReveal";
 import { StatsBar, StatsBarSkeleton } from "@/components/site/StatsBar";
 import { Testimonials } from "@/components/site/Testimonials";
 import { TrustBadges } from "@/components/site/TrustBadges";
 import { VehicleCard } from "@/components/site/VehicleCard";
+import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import {
   ButtonLink,
   Section,
@@ -18,9 +20,11 @@ import {
   IconClipboardCheck,
   IconClock,
   IconHandshake,
+  IconInstagram,
   IconMapPin,
   IconShieldCheck,
 } from "@/components/site/icons";
+import { FAQ_ITEMS } from "@/lib/faq";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import {
   getFeaturedVehicles,
@@ -180,6 +184,10 @@ export default async function HomePage() {
           Ver todos os veículos
           <IconArrowRight className="h-4 w-4" />
         </Link>
+
+        <ScrollReveal className="mt-12">
+          <WantedVehicleCta />
+        </ScrollReveal>
       </Section>
 
       {/* 4. POR QUE ESCOLHER A GARAGEM */}
@@ -262,6 +270,15 @@ export default async function HomePage() {
                 <ButtonLink href="/contato" size="lg" variant="outline">
                   Ver contato completo
                 </ButtonLink>
+                <a
+                  href={site.instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2.5 border border-white/20 px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-white/5 sm:text-base"
+                >
+                  <IconInstagram className="h-5 w-5" />
+                  {site.instagram}
+                </a>
               </div>
             </div>
           </ScrollReveal>
@@ -319,7 +336,30 @@ export default async function HomePage() {
         </ScrollReveal>
       </Section>
 
-      {/* 8. CTA FINAL */}
+      {/* 8. DÚVIDAS FREQUENTES */}
+      <Section className="border-t border-white/5 bg-ink/40">
+        <ScrollReveal>
+          <SectionHeading
+            eyebrow="Dúvidas frequentes"
+            title="Antes de fechar negócio"
+            description="As perguntas que mais recebemos sobre compra, troca, financiamento e documentação."
+          />
+        </ScrollReveal>
+        <div className="mx-auto mt-12 max-w-4xl">
+          <FaqAccordion items={FAQ_ITEMS.slice(0, 4)} />
+          <div className="mt-6 text-center">
+            <Link
+              href="/faq"
+              className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
+            >
+              Ver todas as dúvidas
+              <IconArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </Section>
+
+      {/* 9. CTA FINAL */}
       <Section className="border-t border-white/5 bg-ink/40 text-center">
         <ScrollReveal>
           <h2 className="mx-auto max-w-2xl font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl lg:text-4xl">
