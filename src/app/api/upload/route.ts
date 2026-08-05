@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import convert from "heic-convert";
 import { getSession } from "@/lib/auth";
 import {
   VEHICLE_PHOTOS_BUCKET,
   getSupabaseAdmin,
   hasSupabaseServiceRole,
 } from "@/lib/supabase";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const MAX_SIZE = 15 * 1024 * 1024;
 const ALLOWED = {
@@ -70,7 +72,8 @@ async function toUploadable(
     return { buffer, mime: detected };
   }
 
-  // iPhone grava HEIC; convertemos para JPEG para o site abrir em qualquer navegador.
+  // Import dinâmico: evita derrubar a rota inteira se o pacote falhar no boot.
+  const convert = (await import("heic-convert")).default;
   const converted = await convert({
     buffer,
     format: "JPEG",
@@ -140,7 +143,9 @@ export async function POST(request: Request) {
     for (const file of files) {
       if (file.size > MAX_SIZE) {
         return NextResponse.json(
-          { error: `Arquivo muito grande: ${file.name}` },
+          {
+            error: `Arquivo muito grande: ${file.name}. Envie com no máximo 15 MB (ou use JPG).`,
+          },
           { status: 400 },
         );
       }
@@ -163,7 +168,7 @@ export async function POST(request: Request) {
         console.error("HEIC convert error:", error);
         return NextResponse.json(
           {
-            error: `Não foi possível converter o HEIC ${file.name}. Tente exportar como JPG.`,
+            error: `Não foi possível converter o HEIC ${file.name}. No iPhone: Ajustes → Câmera → Formatos → Mais Compatível, ou exporte como JPG.`,
           },
           { status: 400 },
         );
@@ -182,7 +187,7 @@ export async function POST(request: Request) {
       if (error) {
         console.error("Upload error:", error);
         return NextResponse.json(
-          { error: error.message || "Falha no upload." },
+          { error: error.message || "Falha no upload para o Storage." },
           { status: 500 },
         );
       }
@@ -199,9 +204,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Upload route error:", error);
-    return NextResponse.json(
-      { error: "Erro ao processar upload." },
-      { status: 500 },
-    );
+    const message =
+      error instanceof Error && /Body exceeded|Entity Too Large|413/i.test(error.message)
+        ? "Arquivo grande demais para o servidor. Envie menos fotos por vez ou use JPG."
+        : "Erro ao processar upload.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
