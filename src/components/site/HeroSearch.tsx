@@ -24,7 +24,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
           event.preventDefault();
           submit(term);
         }}
-        className="flex flex-col gap-2 border border-white/15 bg-asphalt/80 p-2 backdrop-blur sm:flex-row"
+        className="flex flex-col gap-2 border border-white/15 bg-asphalt/85 p-2 backdrop-blur-md transition focus-within:border-brand/60 sm:flex-row"
         role="search"
       >
         <label htmlFor="hero-busca" className="sr-only">
@@ -38,13 +38,13 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
             value={term}
             onChange={(event) => setTerm(event.target.value)}
             placeholder="Busque por marca ou modelo"
-            className="w-full bg-transparent py-2.5 text-sm text-cream placeholder:text-muted focus:outline-none"
+            className="w-full bg-transparent py-3 text-sm text-cream placeholder:text-muted focus:outline-none sm:py-2.5"
           />
         </div>
         <button
           type="submit"
           disabled={isPending}
-          className="bg-brand px-6 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70"
+          className="min-h-[48px] bg-brand px-6 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 touch-manipulation"
         >
           {isPending ? "Buscando..." : "Buscar"}
         </button>
@@ -53,14 +53,14 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
       {brands.length > 0 ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-xs uppercase tracking-wider text-muted">
-            Marcas no estoque:
+            Marcas:
           </span>
           {brands.slice(0, 5).map((brand) => (
             <button
               key={brand}
               type="button"
               onClick={() => submit(brand)}
-              className="border border-white/15 px-2.5 py-1 text-xs text-cream transition hover:border-brand hover:bg-white/5"
+              className="border border-white/15 px-2.5 py-1.5 text-xs text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation"
             >
               {brand}
             </button>

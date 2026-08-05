@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { VehicleCard } from "@/components/site/VehicleCard";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
+import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
 import { ButtonLink, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
@@ -49,7 +50,7 @@ export default async function VehicleDetailPage({
   ];
 
   return (
-    <div className="px-4 py-10 sm:px-6 lg:py-14">
+    <div className="px-4 py-10 pb-sticky-bar-safe sm:px-6 lg:py-14 lg:pb-14">
       <div className="mx-auto max-w-7xl">
         <nav aria-label="Você está aqui" className="text-xs text-muted">
           <Link href="/" className="transition hover:text-cream">
@@ -152,6 +153,13 @@ export default async function VehicleDetailPage({
           </section>
         ) : null}
       </div>
+
+      <VehicleMobileBar
+        brand={vehicle.brand}
+        model={vehicle.model}
+        year={vehicle.yearModel}
+        price={vehicle.price}
+      />
     </div>
   );
 }

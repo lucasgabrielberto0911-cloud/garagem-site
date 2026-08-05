@@ -19,10 +19,17 @@
   );
 }
 
+* {
+  scroll-behavior: smooth;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-body), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @layer utilities {
@@ -43,5 +50,242 @@ body {
 
   .glow-brand {
     box-shadow: 0 0 24px rgba(232, 24, 28, 0.35);
+  }
+
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .pb-nav-safe {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .pb-sticky-bar-safe {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* === KEYFRAMES === */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmerBrand {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes whatsappPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(37, 211, 102, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+  }
+}
+
+@keyframes floatSoft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes progressShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease both;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-float {
+  animation: floatSoft 4s ease-in-out infinite;
+}
+
+/* Hero staggered entrance */
+.hero-brand {
+  animation: fadeInScale 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.hero-text {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+.hero-search {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both;
+}
+
+.hero-cta {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.65s both;
+}
+
+.hero-stats {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.85s both;
+}
+
+.brand-shimmer {
+  background: linear-gradient(
+    90deg,
+    #e8181c,
+    #ff8a00,
+    #ffc72c,
+    #ff8a00,
+    #e8181c
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmerBrand 4s ease infinite;
+}
+
+.progress-brand {
+  background: linear-gradient(90deg, #e8181c, #ff8a00, #ffc72c);
+  background-size: 200% 100%;
+  animation: progressShimmer 2.4s linear infinite;
+}
+
+.whatsapp-pulse {
+  animation: whatsappPulse 2s ease infinite;
+}
+
+.whatsapp-btn {
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  box-shadow: 0 3px 12px rgba(37, 211, 102, 0.25);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.whatsapp-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+}
+
+.card-lift {
+  transition:
+    transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    border-color 0.45s ease,
+    box-shadow 0.45s ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-8px);
+  border-color: rgba(232, 24, 28, 0.45);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 1023px) {
+  .card-lift:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .card-lift:active {
+    transform: scale(0.985);
+    transition: transform 0.15s ease;
+  }
+
+  .hero-brand,
+  .hero-text,
+  .hero-search,
+  .hero-cta,
+  .hero-stats {
+    animation-duration: 0.55s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-brand,
+  .hero-text,
+  .hero-search,
+  .hero-cta,
+  .hero-stats,
+  .brand-shimmer,
+  .progress-brand,
+  .whatsapp-pulse,
+  .animate-float,
+  .animate-slide-up,
+  .animate-fade-in {
+    animation: none !important;
+  }
+
+  .card-lift,
+  .card-lift:hover {
+    transform: none !important;
   }
 }

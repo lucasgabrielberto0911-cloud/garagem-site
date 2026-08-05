@@ -15,10 +15,20 @@ import { NAV_LINKS, site, telUrl, whatsappUrl } from "@/lib/site";
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    function onScroll() {
+      setScrolled(window.scrollY > 24);
+    }
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -28,108 +38,170 @@ export function SiteHeader() {
   }, [open]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-asphalt/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:h-[72px]">
-        <Link
-          href="/"
-          className="flex shrink-0 items-center"
-          aria-label={`${site.name} — página inicial`}
-        >
-          <Image
-            src="/branding/logo.png"
-            alt={site.name}
-            width={160}
-            height={44}
-            priority
-            className="h-9 w-auto lg:h-10"
-          />
-        </Link>
-
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Menu principal">
-          {NAV_LINKS.map((link) => {
-            const active =
-              link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                aria-current={active ? "page" : undefined}
-                className={`relative px-3 py-2 font-display text-sm font-semibold transition ${
-                  active ? "text-cream" : "text-muted hover:text-cream"
-                }`}
-              >
-                {link.label}
-                {active ? (
-                  <span
-                    className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-brand-gradient"
-                    aria-hidden="true"
-                  />
-                ) : null}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="flex items-center gap-2 sm:gap-3">
-          <a
-            href={telUrl()}
-            className="hidden items-center gap-2 text-sm text-muted transition hover:text-cream md:flex"
-          >
-            <IconPhone className="h-4 w-4" />
-            <span className="font-medium">{site.phoneLabel}</span>
-          </a>
-
-          <a
-            href={whatsappUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-brand px-3 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:px-4 sm:text-sm"
-          >
-            <IconWhatsApp className="h-4 w-4" />
-            WhatsApp
-          </a>
-
-          <button
-            type="button"
-            onClick={() => setOpen((value) => !value)}
-            aria-expanded={open}
-            aria-controls="menu-mobile"
-            aria-label={open ? "Fechar menu" : "Abrir menu"}
-            className="inline-flex h-10 w-10 items-center justify-center border border-white/15 text-cream transition hover:border-brand lg:hidden"
-          >
-            {open ? <IconClose className="h-5 w-5" /> : <IconMenu className="h-5 w-5" />}
-          </button>
-        </div>
-      </div>
-
-      {open ? (
+    <>
+      <header
+        className={`fixed inset-x-0 top-0 z-50 pt-safe transition-all duration-500 ${
+          scrolled || open
+            ? "border-b border-white/10 bg-asphalt/98 backdrop-blur-md"
+            : "border-b border-transparent bg-asphalt/70 backdrop-blur-sm"
+        }`}
+      >
         <div
-          id="menu-mobile"
-          className="border-t border-white/10 bg-asphalt lg:hidden"
+          className={`mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 transition-all duration-300 sm:px-6 ${
+            scrolled ? "h-[68px] lg:h-[76px]" : "h-[76px] lg:h-[88px]"
+          }`}
         >
-          <nav className="mx-auto max-w-7xl px-4 py-3 sm:px-6" aria-label="Menu mobile">
-            <ul className="divide-y divide-white/5">
-              {NAV_LINKS.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="block py-3 font-display text-base font-semibold text-cream"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          <Link
+            href="/"
+            className="flex shrink-0 items-center"
+            aria-label={`${site.name} — página inicial`}
+          >
+            <Image
+              src="/branding/logo.png"
+              alt={site.name}
+              width={220}
+              height={64}
+              priority
+              className={`w-auto transition-all duration-300 ${
+                scrolled
+                  ? "h-11 sm:h-12 lg:h-[52px]"
+                  : "h-12 sm:h-14 lg:h-16"
+              }`}
+            />
+          </Link>
+
+          <nav
+            className="hidden items-center gap-1 lg:flex"
+            aria-label="Menu principal"
+          >
+            {NAV_LINKS.map((link) => {
+              const active =
+                link.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`relative px-3 py-2 font-display text-sm font-semibold transition ${
+                    active ? "text-cream" : "text-muted hover:text-cream"
+                  }`}
+                >
+                  {link.label}
+                  {active ? (
+                    <span
+                      className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-brand-gradient"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="flex items-center gap-2 sm:gap-3">
             <a
               href={telUrl()}
-              className="mt-3 inline-flex items-center gap-2 text-sm text-muted"
+              className="hidden items-center gap-2 text-sm text-muted transition hover:text-cream md:flex"
             >
               <IconPhone className="h-4 w-4" />
-              {site.phoneLabel}
+              <span className="font-medium">{site.phoneLabel}</span>
             </a>
-          </nav>
+
+            <a
+              href={whatsappUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden items-center gap-2 bg-brand px-4 py-2.5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex"
+            >
+              <IconWhatsApp className="h-4 w-4" />
+              WhatsApp
+            </a>
+
+            <a
+              href={telUrl()}
+              aria-label="Ligar"
+              className="inline-flex h-11 w-11 items-center justify-center border border-white/15 text-cream transition active:bg-white/10 touch-manipulation sm:hidden"
+            >
+              <IconPhone className="h-5 w-5" />
+            </a>
+
+            <button
+              type="button"
+              onClick={() => setOpen((value) => !value)}
+              aria-expanded={open}
+              aria-controls="menu-mobile"
+              aria-label={open ? "Fechar menu" : "Abrir menu"}
+              className="inline-flex h-11 w-11 items-center justify-center border border-white/15 text-cream transition hover:border-brand touch-manipulation lg:hidden"
+            >
+              {open ? (
+                <IconClose className="h-5 w-5" />
+              ) : (
+                <IconMenu className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {open ? (
+        <div className="fixed inset-0 z-[45] lg:hidden" id="menu-mobile">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="relative mt-[76px] h-[calc(100dvh-76px)] overflow-y-auto overscroll-contain border-t border-white/10 bg-asphalt animate-slide-up pb-nav-safe">
+            <nav className="px-5 py-4" aria-label="Menu mobile">
+              <ul className="space-y-1">
+                {NAV_LINKS.map((link) => {
+                  const active =
+                    link.href === "/"
+                      ? pathname === "/"
+                      : pathname.startsWith(link.href);
+                  return (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        onClick={() => setOpen(false)}
+                        className={`flex min-h-[52px] items-center px-4 py-4 font-display text-base font-semibold transition touch-manipulation ${
+                          active
+                            ? "bg-brand/10 text-cream"
+                            : "text-cream active:bg-white/5"
+                        }`}
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="mt-4 space-y-3 border-t border-white/10 pt-5">
+                <a
+                  href={whatsappUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setOpen(false)}
+                  className="whatsapp-btn flex min-h-[52px] w-full items-center justify-center gap-2.5 px-4 py-4 font-display text-base font-semibold text-white touch-manipulation"
+                >
+                  <IconWhatsApp className="h-5 w-5" />
+                  Chamar no WhatsApp
+                </a>
+                <a
+                  href={telUrl()}
+                  onClick={() => setOpen(false)}
+                  className="flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/50 px-4 py-4 font-display text-base font-semibold text-brand touch-manipulation"
+                >
+                  <IconPhone className="h-5 w-5" />
+                  {site.phoneLabel}
+                </a>
+              </div>
+            </nav>
+          </div>
         </div>
       ) : null}
-    </header>
+    </>
   );
 }

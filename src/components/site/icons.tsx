@@ -203,3 +203,23 @@ export function IconCalendar({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconRefresh({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 12a8 8 0 0113.66-5.66L20 9" />
+      <path d="M20 4v5h-5" />
+      <path d="M20 12a8 8 0 01-13.66 5.66L4 15" />
+      <path d="M4 20v-5h5" />
+    </svg>
+  );
+}
+
+export function IconShare({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7" />
+      <path d="M16 6l-4-4-4 4M12 2v13" />
+    </svg>
+  );
+}

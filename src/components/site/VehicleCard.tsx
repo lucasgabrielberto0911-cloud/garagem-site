@@ -6,8 +6,10 @@ import {
   IconFuel,
   IconGauge,
   IconGearShift,
+  IconWhatsApp,
 } from "@/components/site/icons";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import { whatsappUrl } from "@/lib/site";
 
 export type VehicleCardData = Vehicle & { photos: Photo[] };
 
@@ -20,9 +22,12 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
   const title = `${vehicle.brand} ${vehicle.model}`;
   const cover = vehicle.photos[0]?.url;
   const badge = STATUS_BADGE[vehicle.status];
+  const interestMessage = `Olá! Tenho interesse no ${title}${
+    vehicle.version ? ` ${vehicle.version}` : ""
+  } ${vehicle.yearModel}`;
 
   return (
-    <article className="group flex flex-col border border-white/10 bg-ink transition hover:border-brand/50">
+    <article className="card-lift group flex h-full flex-col border border-white/10 bg-ink touch-manipulation">
       <Link
         href={`/estoque/${vehicle.id}`}
         className="relative block aspect-[4/3] overflow-hidden bg-asphalt"
@@ -32,7 +37,11 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
           alt={title}
           fill
           sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-          className="object-cover transition duration-500 group-hover:scale-105"
+          className="object-cover transition duration-700 group-hover:scale-105"
+        />
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent opacity-0 transition duration-500 group-hover:opacity-100"
+          aria-hidden="true"
         />
         {vehicle.featured ? (
           <span className="absolute left-0 top-3 bg-brand px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
@@ -46,35 +55,57 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
             {badge.label}
           </span>
         ) : null}
+        {vehicle.photos.length > 1 ? (
+          <span className="absolute bottom-3 right-3 bg-asphalt/80 px-2.5 py-1 text-[11px] font-medium text-cream backdrop-blur">
+            {vehicle.photos.length} fotos
+          </span>
+        ) : null}
       </Link>
 
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="font-display text-base font-semibold leading-snug text-cream">
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
+        <p className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-brand">
+          {vehicle.brand}
+        </p>
+        <h3 className="mt-1 font-display text-base font-semibold leading-snug text-cream sm:text-lg">
           <Link href={`/estoque/${vehicle.id}`} className="hover:text-brand">
-            {title}
+            {vehicle.model}
+            {vehicle.version ? (
+              <span className="block truncate text-xs font-normal text-muted">
+                {vehicle.version}
+              </span>
+            ) : null}
           </Link>
         </h3>
-        {vehicle.version ? (
-          <p className="mt-1 line-clamp-1 text-xs text-muted">{vehicle.version}</p>
-        ) : null}
 
         <dl className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted">
-          <Spec Icon={IconCalendar} label={`${vehicle.year}/${vehicle.yearModel}`} />
+          <Spec
+            Icon={IconCalendar}
+            label={`${vehicle.year}/${vehicle.yearModel}`}
+          />
           <Spec Icon={IconGauge} label={`${formatNumberBR(vehicle.km)} km`} />
           <Spec Icon={IconFuel} label={vehicle.fuel} />
           <Spec Icon={IconGearShift} label={vehicle.transmission} />
         </dl>
 
-        <div className="mt-auto pt-5">
-          <p className="font-display text-xl font-bold text-cream">
-            {formatCurrencyBRL(vehicle.price)}
-          </p>
-          <Link
-            href={`/estoque/${vehicle.id}`}
-            className="mt-3 block w-full border border-white/15 py-2.5 text-center font-display text-xs font-semibold uppercase tracking-wide text-cream transition group-hover:border-brand group-hover:bg-brand group-hover:text-cream"
+        <div className="mt-auto flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted">
+              A partir de
+            </p>
+            <p className="font-display text-xl font-bold text-cream sm:text-2xl">
+              {formatCurrencyBRL(vehicle.price)}
+            </p>
+          </div>
+
+          <a
+            href={whatsappUrl(interestMessage)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="whatsapp-btn inline-flex min-h-[48px] w-full items-center justify-center gap-1.5 px-4 py-3 font-display text-xs font-semibold uppercase tracking-wide text-white touch-manipulation sm:w-auto"
           >
-            Ver detalhes
-          </Link>
+            <IconWhatsApp className="h-3.5 w-3.5" />
+            WhatsApp
+          </a>
         </div>
       </div>
     </article>
