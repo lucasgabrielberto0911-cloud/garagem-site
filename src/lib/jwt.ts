@@ -1,13 +1,8 @@
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
+import { getJwtSecret } from "@/lib/secrets";
 
 function getSecretKey() {
-  const secret = process.env.JWT_SECRET;
-
-  if (!secret) {
-    throw new Error("JWT_SECRET is not set");
-  }
-
-  return new TextEncoder().encode(secret);
+  return new TextEncoder().encode(getJwtSecret());
 }
 
 export async function signToken(
