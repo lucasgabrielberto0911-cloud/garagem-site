@@ -26,6 +26,11 @@ export function getSupabaseAdmin(): SupabaseClient {
   });
 }
 
+/** Sem service role o Storage (RLS) costuma bloquear o upload das fotos. */
+export function hasSupabaseServiceRole() {
+  return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+}
+
 export const VEHICLE_PHOTOS_BUCKET = "veiculos";
 
 /** Extrai o path do objeto a partir da URL pública do Storage. */

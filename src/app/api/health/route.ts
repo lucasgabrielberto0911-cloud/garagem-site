@@ -50,6 +50,13 @@ export async function GET() {
       database: "ok",
       host,
       adminCount,
+      storage: {
+        configured: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()),
+        serviceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
+        hint: process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+          ? undefined
+          : "Adicione SUPABASE_SERVICE_ROLE_KEY no Vercel para o upload de fotos funcionar.",
+      },
     });
   } catch (error) {
     return NextResponse.json(

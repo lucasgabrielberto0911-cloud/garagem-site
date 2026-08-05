@@ -171,6 +171,9 @@ export function VehiclePhotoManager({
           <p className="mt-1 text-xs text-muted">
             JPG, PNG, WEBP, GIF ou HEIC (iPhone) · várias de uma vez
           </p>
+          <p className="mt-2 text-[11px] text-muted/80">
+            Espere o envio terminar antes de salvar o anúncio.
+          </p>
           <input
             type="file"
             accept={ACCEPT}

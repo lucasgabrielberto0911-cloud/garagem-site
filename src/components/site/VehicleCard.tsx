@@ -67,6 +67,11 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
               {badge.label}
             </span>
           ) : null}
+          {!cover ? (
+            <span className="bg-white/15 px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
+              Sem foto
+            </span>
+          ) : null}
         </div>
         {vehicle.photos.length > 1 ? (
           <span className="absolute bottom-3 right-3 bg-asphalt/80 px-2.5 py-1 text-[11px] font-medium text-cream backdrop-blur">

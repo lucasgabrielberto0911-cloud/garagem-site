@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import convert from "heic-convert";
 import { getSession } from "@/lib/auth";
-import { VEHICLE_PHOTOS_BUCKET, getSupabaseAdmin } from "@/lib/supabase";
+import {
+  VEHICLE_PHOTOS_BUCKET,
+  getSupabaseAdmin,
+  hasSupabaseServiceRole,
+} from "@/lib/supabase";
 
 const MAX_SIZE = 15 * 1024 * 1024;
 const ALLOWED = {
@@ -83,6 +87,26 @@ export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  }
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) {
+    return NextResponse.json(
+      {
+        error:
+          "Upload indisponível: configure NEXT_PUBLIC_SUPABASE_URL no Vercel.",
+      },
+      { status: 503 },
+    );
+  }
+
+  if (!hasSupabaseServiceRole()) {
+    return NextResponse.json(
+      {
+        error:
+          "Upload indisponível: falta SUPABASE_SERVICE_ROLE_KEY no Vercel (Supabase → Settings → API → service_role). Sem isso as fotos não gravam e o estoque fica sem imagem.",
+      },
+      { status: 503 },
+    );
   }
 
   try {
