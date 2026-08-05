@@ -32,6 +32,7 @@ export function PhotoLightbox({
   const offsetStart = useRef({ x: 0, y: 0 });
   const pinchStart = useRef<{ distance: number; scale: number } | null>(null);
   const dragged = useRef(false);
+  const lastTapAt = useRef(0);
 
   const reset = useCallback(() => {
     setScale(1);
@@ -138,13 +139,31 @@ export function PhotoLightbox({
   }
 
   function onTouchEnd(event: React.TouchEvent) {
-    if (scale === 1 && pointerStart.current && event.changedTouches[0]) {
-      const dx = event.changedTouches[0].clientX - pointerStart.current.x;
-      const dy = event.changedTouches[0].clientY - pointerStart.current.y;
-      if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+    const touch = event.changedTouches[0];
+
+    if (pointerStart.current && touch) {
+      const dx = touch.clientX - pointerStart.current.x;
+      const dy = touch.clientY - pointerStart.current.y;
+
+      if (Math.hypot(dx, dy) < 12) {
+        // Toque parado: pode ser o segundo toque de um duplo toque. O evento
+        // dblclick nativo não é confiável em todos os navegadores móveis.
+        const now = Date.now();
+        if (now - lastTapAt.current < 320) {
+          lastTapAt.current = 0;
+          toggleZoom();
+        } else {
+          lastTapAt.current = now;
+        }
+      } else if (
+        scale === 1 &&
+        Math.abs(dx) > SWIPE_THRESHOLD &&
+        Math.abs(dx) > Math.abs(dy)
+      ) {
         go(dx < 0 ? 1 : -1);
       }
     }
+
     pointerStart.current = null;
     pinchStart.current = null;
   }
