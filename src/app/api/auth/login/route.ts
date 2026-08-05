@@ -6,6 +6,7 @@ import {
   createSessionToken,
   sessionCookieOptions,
 } from "@/lib/auth";
+import { checkLoginRateLimit, clearLoginRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
@@ -17,6 +18,19 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Email e senha são obrigatórios." },
         { status: 400 },
+      );
+    }
+
+    const forwarded = request.headers.get("x-forwarded-for");
+    const ip = forwarded?.split(",")[0]?.trim() || "unknown";
+    const rateKey = `${ip}:${email.toLowerCase()}`;
+    const rate = checkLoginRateLimit(rateKey);
+    if (!rate.ok) {
+      return NextResponse.json(
+        {
+          error: `Muitas tentativas. Aguarde ${rate.retryAfterSec}s e tente de novo.`,
+        },
+        { status: 429 },
       );
     }
 
@@ -37,6 +51,8 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     }
+
+    clearLoginRateLimit(rateKey);
 
     const token = await createSessionToken(admin.id, admin.email);
     const response = NextResponse.json({

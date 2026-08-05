@@ -3,14 +3,24 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+/**
+ * A senha padrão do seed NÃO deve ser commitada. Defina SEED_ADMIN_PASSWORD
+ * no ambiente. Se não houver, o upsert cria o admin só na primeira vez com
+ * um valor temporário e o painel avisa para trocar.
+ */
+const DEFAULT_WEAK_PASSWORD = "troque-esta-senha";
+
 async function main() {
-  const passwordHash = await bcrypt.hash("Lucas0911", 10);
+  const seedPassword =
+    process.env.SEED_ADMIN_PASSWORD?.trim() || DEFAULT_WEAK_PASSWORD;
+  const passwordHash = await bcrypt.hash(seedPassword, 10);
 
   const admin = await prisma.admin.upsert({
     where: { email: "admin@loja.com" },
+    // Não sobrescreve a senha em re-seeds — evita resetar a senha de produção
+    // toda vez que alguém roda `npm run db:seed`.
     update: {
       name: "Administrador",
-      passwordHash,
     },
     create: {
       name: "Administrador",
@@ -29,15 +39,14 @@ async function main() {
         brand: "Volkswagen",
         model: "Golf",
         version: "GTI 2.0 TSI",
-        year: 2021,
-        yearModel: 2022,
+        year: 2020,
+        yearModel: 2021,
         km: 42000,
-        price: 189900,
+        price: 149900,
         fuel: "Gasolina",
         transmission: "Automático",
         color: "Preto",
-        description:
-          "Golf GTI impecável, único dono, revisões na concessionária.",
+        description: "Golf GTI impecável, único dono, revisões em dia.",
         status: "disponivel",
         featured: true,
         photos: {
@@ -53,14 +62,14 @@ async function main() {
         brand: "Toyota",
         model: "Corolla",
         version: "XEi 2.0",
-        year: 2020,
-        yearModel: 2020,
-        km: 58000,
-        price: 124900,
+        year: 2022,
+        yearModel: 2022,
+        km: 28000,
+        price: 139900,
         fuel: "Flex",
         transmission: "Automático",
         color: "Prata",
-        description: "Corolla XEi completo, baixo consumo e ótimo estado.",
+        description: "Corolla XEi completo, baixo km, pronto para transferir.",
         status: "disponivel",
         featured: true,
         photos: {
@@ -72,15 +81,15 @@ async function main() {
       data: {
         brand: "Jeep",
         model: "Compass",
-        version: "Longitude 2.0 Diesel",
-        year: 2022,
-        yearModel: 2023,
-        km: 31000,
-        price: 169900,
-        fuel: "Diesel",
+        version: "Longitude 2.0",
+        year: 2021,
+        yearModel: 2021,
+        km: 51000,
+        price: 159900,
+        fuel: "Flex",
         transmission: "Automático",
         color: "Branco",
-        description: "Compass Longitude 4x4, pacote de segurança completo.",
+        description: "Compass Longitude, banco de couro, multimídia.",
         status: "disponivel",
         featured: false,
         photos: {
@@ -95,15 +104,15 @@ async function main() {
       data: {
         brand: "Honda",
         model: "Civic",
-        version: "Touring 1.5 Turbo",
+        version: "EXL 2.0",
         year: 2019,
         yearModel: 2019,
         km: 67000,
-        price: 139900,
-        fuel: "Gasolina",
+        price: 124900,
+        fuel: "Flex",
         transmission: "CVT",
         color: "Cinza",
-        description: "Civic Touring top de linha, teto solar e bancos em couro.",
+        description: "Civic EXL, histórico completo, pneus novos.",
         status: "disponivel",
         featured: false,
         photos: {
@@ -113,8 +122,13 @@ async function main() {
     }),
   ]);
 
-  console.log(`Admin criado: ${admin.email}`);
-  console.log(`Veículos criados: ${vehicles.length}`);
+  console.log(`Admin: ${admin.email}`);
+  if (!process.env.SEED_ADMIN_PASSWORD) {
+    console.log(
+      `Senha temporária: ${DEFAULT_WEAK_PASSWORD} (defina SEED_ADMIN_PASSWORD para personalizar)`,
+    );
+  }
+  console.log(`${vehicles.length} veículos de exemplo criados.`);
 }
 
 main()

@@ -4,11 +4,41 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import {
+  VEHICLE_PHOTOS_BUCKET,
+  getSupabaseAdmin,
+  storagePathFromPublicUrl,
+} from "@/lib/supabase";
 
 export type VehicleFormState = {
   error?: string;
   success?: boolean;
 };
+
+/** Invalida o cache do site público sempre que o estoque muda. */
+function revalidatePublicStock(vehicleId?: string) {
+  revalidatePath("/");
+  revalidatePath("/estoque");
+  revalidatePath("/sitemap.xml");
+  if (vehicleId) revalidatePath(`/estoque/${vehicleId}`);
+}
+
+async function deleteStoragePhotos(urls: string[]) {
+  const paths = urls
+    .map(storagePathFromPublicUrl)
+    .filter((path): path is string => Boolean(path));
+  if (paths.length === 0) return;
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase.storage
+      .from(VEHICLE_PHOTOS_BUCKET)
+      .remove(paths);
+    if (error) console.error("[storage] falha ao remover fotos:", error);
+  } catch (error) {
+    console.error("[storage] falha ao remover fotos:", error);
+  }
+}
 
 function requireNumber(value: FormDataEntryValue | null, label: string) {
   const parsed = Number(value);
@@ -105,6 +135,7 @@ export async function createVehicle(
     });
 
     revalidatePath("/admin/veiculos");
+    revalidatePublicStock(vehicle.id);
     redirect(`/admin/veiculos/${vehicle.id}`);
   } catch (error) {
     if (
@@ -159,6 +190,7 @@ export async function updateVehicle(
 
     revalidatePath("/admin/veiculos");
     revalidatePath(`/admin/veiculos/${id}`);
+    revalidatePublicStock(id);
     return { success: true };
   } catch (error) {
     console.error(error);
@@ -171,8 +203,16 @@ export async function updateVehicle(
 export async function deleteVehicle(id: string) {
   await requireAdmin();
 
+  const photos = await prisma.photo.findMany({
+    where: { vehicleId: id },
+    select: { url: true },
+  });
+
   await prisma.vehicle.delete({ where: { id } });
+  await deleteStoragePhotos(photos.map((photo) => photo.url));
+
   revalidatePath("/admin/veiculos");
+  revalidatePublicStock(id);
   redirect("/admin/veiculos");
 }
 
@@ -186,6 +226,7 @@ export async function markVehicleAsSold(id: string) {
 
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
+  revalidatePublicStock(id);
 }
 
 const VEHICLE_STATUSES = ["disponivel", "reservado", "vendido"] as const;
@@ -200,6 +241,7 @@ export async function setVehicleStatus(id: string, status: string) {
   await prisma.vehicle.update({ where: { id }, data: { status } });
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
+  revalidatePublicStock(id);
   return { ok: true, message: "Status atualizado." };
 }
 
@@ -209,6 +251,7 @@ export async function setVehicleFeatured(id: string, featured: boolean) {
   await prisma.vehicle.update({ where: { id }, data: { featured } });
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
+  revalidatePublicStock(id);
   return {
     ok: true,
     message: featured ? "Veículo em destaque." : "Destaque removido.",
@@ -253,5 +296,6 @@ export async function duplicateVehicle(id: string) {
   });
 
   revalidatePath("/admin/veiculos");
+  revalidatePublicStock(copy.id);
   return { ok: true as const, message: "Cópia criada.", id: copy.id };
 }

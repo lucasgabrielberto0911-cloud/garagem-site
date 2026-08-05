@@ -13,7 +13,7 @@ export function VehicleImage({
   height,
   sizes,
   className = "",
-  unoptimized = true,
+  unoptimized = false,
 }: {
   src?: string | null;
   alt: string;

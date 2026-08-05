@@ -11,6 +11,12 @@ export type SaleActionState = {
   fieldErrors?: Record<string, string>;
 };
 
+function revalidatePublicStock(vehicleId?: string) {
+  revalidatePath("/");
+  revalidatePath("/estoque");
+  if (vehicleId) revalidatePath(`/estoque/${vehicleId}`);
+}
+
 async function requireAdmin() {
   const session = await getSession();
   if (!session) redirect("/admin/login");
@@ -98,6 +104,7 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
   revalidatePath("/admin/vendas");
   revalidatePath("/admin/veiculos");
   revalidatePath("/admin");
+  revalidatePublicStock(vehicleId);
   return { ok: true, message: "Venda registrada." };
 }
 
@@ -122,5 +129,6 @@ export async function deleteSale(id: string): Promise<SaleActionState> {
   revalidatePath("/admin/vendas");
   revalidatePath("/admin/veiculos");
   revalidatePath("/admin");
+  revalidatePublicStock(sale.vehicleId);
   return { ok: true, message: "Venda cancelada e veículo devolvido ao estoque." };
 }

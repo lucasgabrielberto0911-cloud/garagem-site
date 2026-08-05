@@ -34,7 +34,7 @@ import {
   getTestimonials,
 } from "@/lib/vehicles";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const REASONS = [
   {

@@ -71,8 +71,23 @@ export function SellForm() {
       ref={formRef}
       onSubmit={handleSubmit}
       noValidate
-      className="border border-white/10 bg-ink p-6 sm:p-8"
+      className="relative border border-white/10 bg-ink p-6 sm:p-8"
     >
+      {/* Honeypot anti-spam — oculto de leitores de tela e usuários. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0"
+      >
+        <label htmlFor="website">Website</label>
+        <input
+          id="website"
+          name="website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+        />
+      </div>
+
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Seu nome" error={errors.name} htmlFor="name">
           <input

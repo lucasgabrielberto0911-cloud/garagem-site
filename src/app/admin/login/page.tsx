@@ -60,7 +60,7 @@ export default function AdminLoginPage() {
       <div className="relative w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
           <Image
-            src="/logo.png"
+            src="/branding/logo.png"
             alt="Garagem"
             width={200}
             height={58}

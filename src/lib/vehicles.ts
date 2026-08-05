@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/prisma";
 
+/** Listagens só precisam da capa — evita carregar a galeria inteira. */
+export const PUBLIC_VEHICLE_CARD_INCLUDE = {
+  photos: { orderBy: { order: "asc" as const }, take: 1 },
+};
+
+/** Detalhe e edição carregam todas as fotos. */
 export const PUBLIC_VEHICLE_INCLUDE = {
   photos: { orderBy: { order: "asc" as const } },
 };
@@ -23,7 +29,7 @@ export function getFeaturedVehicles(take = 8) {
     async () => {
       const featured = await prisma.vehicle.findMany({
         where: { status: "disponivel", featured: true },
-        include: PUBLIC_VEHICLE_INCLUDE,
+        include: PUBLIC_VEHICLE_CARD_INCLUDE,
         orderBy: { createdAt: "desc" },
         take,
       });
@@ -32,7 +38,7 @@ export function getFeaturedVehicles(take = 8) {
 
       return prisma.vehicle.findMany({
         where: { status: "disponivel" },
-        include: PUBLIC_VEHICLE_INCLUDE,
+        include: PUBLIC_VEHICLE_CARD_INCLUDE,
         orderBy: { createdAt: "desc" },
         take: 4,
       });
@@ -59,7 +65,7 @@ export function getRelatedVehicles(vehicleId: string, brand: string, take = 4) {
     () =>
       prisma.vehicle.findMany({
         where: { status: "disponivel", brand, id: { not: vehicleId } },
-        include: PUBLIC_VEHICLE_INCLUDE,
+        include: PUBLIC_VEHICLE_CARD_INCLUDE,
         orderBy: { createdAt: "desc" },
         take,
       }),
@@ -113,7 +119,7 @@ export function getStockVehicles(filters: StockFilters) {
               }
             : {}),
         },
-        include: PUBLIC_VEHICLE_INCLUDE,
+        include: PUBLIC_VEHICLE_CARD_INCLUDE,
         orderBy: SORT_MAP[filters.sort ?? "recentes"] ?? SORT_MAP.recentes,
       }),
     [],

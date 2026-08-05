@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { WEAK_ADMIN_PASSWORDS } from "@/lib/admin-security";
 import { prisma } from "@/lib/prisma";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/leads";
 import { site } from "@/lib/site";
@@ -7,9 +8,6 @@ const DAY_MS = 1000 * 60 * 60 * 24;
 
 /** Veículo disponível parado há mais tempo que isso entra nos alertas. */
 export const STALE_DAYS = 60;
-
-/** Senha criada pelo seed: se ainda estiver valendo, o painel avisa. */
-const SEED_PASSWORD = "troque-esta-senha";
 
 export function daysInStock(createdAt: Date) {
   return Math.floor((Date.now() - createdAt.getTime()) / DAY_MS);
@@ -79,12 +77,16 @@ export async function getDashboardData() {
   ]);
 
   /**
-   * Enquanto algum acesso continuar com a senha do seed, o painel avisa: é o
+   * Enquanto algum acesso continuar com senha fraca/padrão, o painel avisa: é o
    * risco de segurança mais provável numa instalação nova.
    */
   const usingSeedPassword = (
     await Promise.all(
-      admins.map((admin) => bcrypt.compare(SEED_PASSWORD, admin.passwordHash)),
+      admins.flatMap((admin) =>
+        WEAK_ADMIN_PASSWORDS.map((password) =>
+          bcrypt.compare(password, admin.passwordHash),
+        ),
+      ),
     )
   ).some(Boolean);
 
