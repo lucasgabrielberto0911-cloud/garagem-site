@@ -220,6 +220,8 @@ export function PhotoLightbox({
             alt={`${alt} — foto ${index + 1} de ${total}`}
             fill
             sizes="100vw"
+            quality={82}
+            priority
             className="object-contain"
           />
         </div>
@@ -276,6 +278,7 @@ export function PhotoLightbox({
                   alt=""
                   fill
                   sizes="80px"
+                  quality={45}
                   className="object-cover"
                 />
               </button>

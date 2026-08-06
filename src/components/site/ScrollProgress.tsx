@@ -6,7 +6,10 @@ export function ScrollProgress() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    function onScroll() {
+    let frame = 0;
+
+    function update() {
+      frame = 0;
       const total =
         document.documentElement.scrollHeight - window.innerHeight;
       if (total <= 0) {
@@ -16,9 +19,17 @@ export function ScrollProgress() {
       setProgress(Math.min((window.scrollY / total) * 100, 100));
     }
 
-    onScroll();
+    function onScroll() {
+      if (frame) return;
+      frame = window.requestAnimationFrame(update);
+    }
+
+    update();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   return (
@@ -27,7 +38,7 @@ export function ScrollProgress() {
       aria-hidden="true"
     >
       <div
-        className="h-full progress-brand transition-[width] duration-150 ease-out"
+        className="h-full progress-brand"
         style={{ width: `${progress}%` }}
       />
     </div>

@@ -4,13 +4,14 @@ import { notFound } from "next/navigation";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
-import { ButtonLink, Container, WhatsAppButton } from "@/components/site/ui";
+import { Container, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { JsonLd } from "@/components/JsonLd";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
-import { WHATSAPP_MESSAGES, site } from "@/lib/site";
+import { WHATSAPP_MESSAGES, site, whatsappUrl } from "@/lib/site";
+import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { getRelatedVehicles, getVehicleById } from "@/lib/vehicles";
 
 export const revalidate = 60;
@@ -67,20 +68,16 @@ export default async function VehicleDetailPage({
   );
 
   const specs = [
-    {
-      label: "Tipo",
-      value: vehicle.category === "moto" ? "Moto" : "Carro",
-    },
+    { label: "Tipo", value: vehicleCategoryLabel(vehicle.category) },
     { label: "Ano", value: `${vehicle.year}/${vehicle.yearModel}` },
-    { label: "Quilometragem", value: `${formatNumberBR(vehicle.km)} km` },
+    { label: "KM", value: formatNumberBR(vehicle.km) },
     { label: "Câmbio", value: vehicle.transmission },
     { label: "Combustível", value: vehicle.fuel },
     ...(vehicle.color ? [{ label: "Cor", value: vehicle.color }] : []),
-    ...(vehicle.version ? [{ label: "Versão", value: vehicle.version }] : []),
   ];
 
   return (
-    <div className="py-10 pb-sticky-bar-safe lg:py-14 lg:pb-14">
+    <div className="py-8 pb-sticky-bar-safe lg:py-10 lg:pb-10">
       <JsonLd data={vehicleJsonLd(vehicle)} />
       <JsonLd
         data={breadcrumbJsonLd([
@@ -92,7 +89,7 @@ export default async function VehicleDetailPage({
       <Container>
         <nav
           aria-label="Você está aqui"
-          className="text-center text-xs text-muted"
+          className="text-xs text-muted sm:text-center"
         >
           <Link href="/" className="transition hover:text-cream">
             Início
@@ -105,65 +102,82 @@ export default async function VehicleDetailPage({
           <span className="text-cream">{title}</span>
         </nav>
 
-        <div className="mt-8 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
-          <div>
+        <div className="mt-5 grid gap-6 lg:grid-cols-[1.35fr_0.9fr] lg:gap-8 lg:items-start">
+          <div className="min-w-0 space-y-5">
             <VehicleGallery photos={vehicle.photos} alt={fullLabel} />
 
-            {vehicle.description ? (
-              <div className="mt-8 border border-white/10 bg-ink p-6 text-center">
-                <h2 className="font-display text-lg font-semibold text-cream">
-                  Sobre este veículo
-                </h2>
-                <p className="mx-auto mt-3 max-w-xl whitespace-pre-line text-sm leading-relaxed text-muted">
-                  {vehicle.description}
-                </p>
-              </div>
-            ) : null}
+            {(vehicle.description || vehicle.accessories.length > 0) && (
+              <section className="border-t border-white/10 pt-5">
+                {vehicle.description ? (
+                  <div>
+                    <h2 className="font-display text-base font-semibold text-cream">
+                      Sobre o veículo
+                    </h2>
+                    <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted">
+                      {vehicle.description}
+                    </p>
+                  </div>
+                ) : null}
 
-            {vehicle.accessories.length > 0 ? (
-              <div className="mt-8 border border-white/10 bg-ink p-6">
-                <h2 className="text-center font-display text-lg font-semibold text-cream">
-                  Itens e acessórios
-                </h2>
-                <ul className="mx-auto mt-5 grid max-w-2xl gap-2 sm:grid-cols-2">
-                  {vehicle.accessories.map((item) => (
-                    <li
-                      key={item}
-                      className="flex items-start gap-2.5 text-sm text-muted"
-                    >
-                      <span
-                        className="mt-1.5 h-1.5 w-1.5 shrink-0 bg-brand"
-                        aria-hidden="true"
-                      />
-                      <span className="leading-relaxed text-cream/90">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+                {vehicle.accessories.length > 0 ? (
+                  <div className={vehicle.description ? "mt-5" : undefined}>
+                    <h2 className="font-display text-base font-semibold text-cream">
+                      Itens e acessórios
+                    </h2>
+                    <ul className="mt-3 columns-1 gap-x-8 text-sm text-cream/90 sm:columns-2">
+                      {vehicle.accessories.map((item) => (
+                        <li
+                          key={item}
+                          className="mb-1.5 flex break-inside-avoid items-start gap-2"
+                        >
+                          <span
+                            className="mt-2 h-1 w-1 shrink-0 bg-brand"
+                            aria-hidden="true"
+                          />
+                          <span className="leading-snug">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </section>
+            )}
           </div>
 
-          <aside className="lg:sticky lg:top-24 lg:self-start">
-            <div className="border border-white/10 bg-ink p-6 text-center">
-              {vehicle.status === "reservado" ? (
-                <span className="inline-block bg-brand-orange px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-wider text-asphalt">
-                  Reservado
+          <aside className="lg:sticky lg:top-24">
+            <div className="space-y-4 border border-white/10 bg-ink p-5 sm:p-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-display text-[10px] font-semibold uppercase tracking-wider text-brand">
+                  {vehicleCategoryLabel(vehicle.category)}
                 </span>
-              ) : null}
-              <h1 className="mt-3 font-display text-2xl font-bold leading-tight tracking-tight text-cream sm:text-3xl">
-                {title}
-              </h1>
-              {vehicle.version ? (
-                <p className="mt-1.5 text-sm text-muted">{vehicle.version}</p>
-              ) : null}
+                {vehicle.status === "reservado" ? (
+                  <span className="bg-brand-orange px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-asphalt">
+                    Reservado
+                  </span>
+                ) : null}
+                <FavoriteButton
+                  vehicleId={vehicle.id}
+                  label={fullLabel}
+                  className="ml-auto"
+                />
+              </div>
 
-              <p className="mt-6 font-display text-3xl font-bold text-cream">
+              <div>
+                <h1 className="font-display text-2xl font-bold leading-tight tracking-tight text-cream sm:text-[1.75rem]">
+                  {title}
+                </h1>
+                {vehicle.version ? (
+                  <p className="mt-1 text-sm text-muted">{vehicle.version}</p>
+                ) : null}
+              </div>
+
+              <p className="font-display text-3xl font-bold leading-none text-cream">
                 {formatCurrencyBRL(vehicle.price)}
               </p>
 
-              <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10">
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 border-y border-white/10 py-3.5 text-sm">
                 {specs.map((spec) => (
-                  <div key={spec.label} className="bg-asphalt px-4 py-3 text-center">
+                  <div key={spec.label} className="min-w-0">
                     <dt className="text-[10px] uppercase tracking-wider text-muted">
                       {spec.label}
                     </dt>
@@ -174,69 +188,55 @@ export default async function VehicleDetailPage({
                 ))}
               </dl>
 
-              <div className="mt-6 flex flex-col gap-3">
-                <WhatsAppButton
-                  size="lg"
-                  message={WHATSAPP_MESSAGES.vehicle(fullLabel)}
+              <WhatsAppButton
+                size="lg"
+                className="w-full"
+                message={WHATSAPP_MESSAGES.vehicle(fullLabel)}
+              >
+                Falar no WhatsApp
+              </WhatsAppButton>
+
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
+                <Link
+                  href="/vender"
+                  className="text-muted underline-offset-4 transition hover:text-cream hover:underline"
                 >
-                  Tenho interesse
-                </WhatsAppButton>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <WhatsAppButton
-                    variant="outline"
-                    message={WHATSAPP_MESSAGES.vehicleVisit(fullLabel)}
-                  >
-                    Agendar visita
-                  </WhatsAppButton>
-                  <WhatsAppButton
-                    variant="outline"
-                    message={WHATSAPP_MESSAGES.vehicleVideo(fullLabel)}
-                  >
-                    Pedir vídeo
-                  </WhatsAppButton>
-                </div>
-
-                <FavoriteButton
-                  vehicleId={vehicle.id}
-                  label={fullLabel}
-                  variant="full"
-                  className="w-full"
-                />
-
-                <ButtonLink href="/vender" size="md" variant="outline">
-                  Quero dar meu carro na troca
-                </ButtonLink>
+                  Quero dar na troca
+                </Link>
+                <a
+                  href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted underline-offset-4 transition hover:text-cream hover:underline"
+                >
+                  Pedir vídeo
+                </a>
               </div>
 
-              <p className="mt-5 text-xs leading-relaxed text-muted">
-                Valores e disponibilidade sujeitos a alteração. Consulte as
-                condições de financiamento pelo WhatsApp {site.whatsappLabel}.
+              <p className="text-[11px] leading-relaxed text-muted">
+                Valores e disponibilidade sujeitos a alteração. Financiamento
+                pelo WhatsApp {site.whatsappLabel}.
               </p>
             </div>
           </aside>
         </div>
 
         {related.length > 0 ? (
-          <section className="mt-16 border-t border-white/5 pt-12">
-            <h2 className="text-center font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
-              Outros {vehicle.brand} no estoque
-            </h2>
-            <div
-              className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient"
-              aria-hidden="true"
-            />
-            <div className="mt-8">
-              <VehicleGrid vehicles={related} />
-            </div>
-            <div className="mt-8 text-center">
+          <section className="mt-12 border-t border-white/5 pt-10">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <h2 className="font-display text-lg font-bold tracking-tight text-cream sm:text-xl">
+                Outros {vehicle.brand}
+              </h2>
               <Link
                 href="/estoque"
-                className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
+                className="inline-flex items-center gap-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
               >
-                Ver todo o estoque
-                <IconArrowRight className="h-4 w-4" />
+                Ver estoque
+                <IconArrowRight className="h-3.5 w-3.5" />
               </Link>
+            </div>
+            <div className="mt-5">
+              <VehicleGrid vehicles={related} />
             </div>
           </section>
         ) : null}

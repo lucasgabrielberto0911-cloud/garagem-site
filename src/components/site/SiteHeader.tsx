@@ -57,14 +57,14 @@ export function SiteHeader() {
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-50 pt-safe transition-all duration-500 ${
+        className={`fixed inset-x-0 top-0 z-50 pt-safe transition-[background-color,border-color,backdrop-filter] duration-200 ${
           scrolled || open
             ? "border-b border-white/10 bg-asphalt/98 backdrop-blur-md"
             : "border-b border-transparent bg-asphalt/70 backdrop-blur-sm"
         }`}
       >
         <div
-          className={`mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 transition-all duration-300 sm:px-6 ${
+          className={`mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 transition-[height] duration-200 sm:px-6 ${
             scrolled ? "h-[72px] lg:h-[80px]" : "h-[84px] lg:h-[96px]"
           }`}
         >

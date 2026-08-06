@@ -64,30 +64,30 @@ export default async function EstoquePage({
   );
 
   return (
-    <div className="py-12 lg:py-16">
+    <div className="py-10 lg:py-12">
       <Container>
         <PageHeader
           eyebrow="Estoque"
           title="Veículos disponíveis"
-          description="Todos os veículos passam por vistoria e checagem de procedência antes de entrar no estoque. Use os filtros para encontrar o seu."
+          description="Vistoria e procedência em cada anúncio. Use os filtros para achar o seu."
         />
 
-        <div className="mt-10">
+        <div className="mt-8">
           <Suspense
-            fallback={<div className="h-32 border border-white/10 bg-ink" />}
+            fallback={<div className="h-28 border border-white/10 bg-ink" />}
           >
             <StockFilters facets={facets} />
           </Suspense>
         </div>
 
-        <p className="mt-6 text-center text-xs uppercase tracking-wider text-muted">
+        <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted">
           {vehicles.length}{" "}
           {vehicles.length === 1 ? "veículo encontrado" : "veículos encontrados"}
         </p>
 
-        <div className="mt-6">
+        <div className="mt-4">
           {vehicles.length === 0 ? (
-            <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-16 text-center">
+            <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-12 text-center">
               <p className="font-display text-lg font-semibold text-cream">
                 {hasFilter
                   ? "Nenhum veículo com esses filtros"
@@ -98,7 +98,7 @@ export default async function EstoquePage({
                   ? "Tente ampliar a busca. Se você já sabe o que quer, a gente procura o veículo para você."
                   : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
               </p>
-              <WhatsAppButton className="mt-6" message={WHATSAPP_MESSAGES.general}>
+              <WhatsAppButton className="mt-5" message={WHATSAPP_MESSAGES.general}>
                 Quero avisar o que procuro
               </WhatsAppButton>
             </div>
@@ -107,7 +107,7 @@ export default async function EstoquePage({
           )}
         </div>
 
-        <div className="mt-14">
+        <div className="mt-10">
           <WantedVehicleCta />
         </div>
       </Container>
