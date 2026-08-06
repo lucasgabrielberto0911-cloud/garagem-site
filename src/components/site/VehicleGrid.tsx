@@ -3,7 +3,7 @@ import { VehicleCard, type VehicleCardData } from "@/components/site/VehicleCard
 
 /**
  * Grade densa: cards menores, gaps curtos, largura alinhada à quantidade.
- * Evita o bug de 1 item + `xl:grid-cols-4` espremendo o card.
+ * No máximo 3 por linha — com sidebar o 4º card ficava estreito demais.
  */
 function layoutForCount(count: number) {
   if (count <= 1) {
@@ -12,10 +12,7 @@ function layoutForCount(count: number) {
   if (count === 2) {
     return "max-w-2xl grid-cols-1 sm:grid-cols-2";
   }
-  if (count === 3) {
-    return "max-w-4xl grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
-  }
-  return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+  return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
 }
 
 export function VehicleGrid({
