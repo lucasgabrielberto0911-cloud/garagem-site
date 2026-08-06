@@ -114,10 +114,10 @@ export default async function SobrePage() {
           ))}
         </ul>
 
-        <div className="mt-14 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="mx-auto mt-14 max-w-5xl lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[220px_minmax(0,1fr)] xl:gap-12">
           <nav
             aria-label="Índice da página"
-            className="mb-8 flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:sticky lg:top-24 lg:mb-0 lg:flex-col lg:overflow-visible lg:pb-0"
+            className="mb-8 flex justify-center gap-2 overflow-x-auto pb-1 scrollbar-hide lg:sticky lg:top-24 lg:mb-0 lg:flex-col lg:justify-start lg:overflow-visible lg:pb-0"
           >
             {TOC.map((item) => (
               <a
@@ -130,7 +130,7 @@ export default async function SobrePage() {
             ))}
           </nav>
 
-          <div className="min-w-0 max-w-3xl">
+          <div className="min-w-0">
             <div className="grid gap-10 lg:grid-cols-2">
               <article id="historia" className="scroll-mt-28 text-center lg:text-left">
                 <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">

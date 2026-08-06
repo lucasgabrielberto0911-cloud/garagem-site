@@ -67,7 +67,7 @@ export function FaqExplorer({ items }: { items: FaqItem[] }) {
         })}
       </div>
 
-      <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted lg:text-left">
+      <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted">
         {filtered.length}{" "}
         {filtered.length === 1 ? "dúvida encontrada" : "dúvidas encontradas"}
       </p>
