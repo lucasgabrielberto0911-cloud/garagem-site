@@ -146,11 +146,44 @@ export function VehicleGallery({
       </div>
 
       {total > 1 ? (
-        <p className="mt-1.5 text-xs text-muted">
-          Deslize para o lado · toque para ampliar
-        </p>
+        <>
+          <div className="mt-2 hidden gap-2 overflow-x-auto pb-1 scrollbar-hide lg:flex">
+            {photos.map((photo, index) => (
+              <button
+                key={photo.id}
+                type="button"
+                onClick={() => goTo(index)}
+                aria-label={`Ver foto ${index + 1}`}
+                aria-current={index === active}
+                className={`relative h-16 w-24 shrink-0 overflow-hidden border transition ${
+                  index === active
+                    ? "border-brand"
+                    : "border-white/15 opacity-70 hover:opacity-100"
+                }`}
+              >
+                <VehicleImage
+                  src={photo.url}
+                  alt=""
+                  fill
+                  sizes="96px"
+                  quality={45}
+                  className="object-cover"
+                />
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-muted lg:hidden">
+            Deslize para o lado · toque para ampliar
+          </p>
+          <p className="mt-1.5 hidden text-xs text-muted lg:block">
+            Use as setas ou as miniaturas · clique para ampliar
+          </p>
+        </>
       ) : (
-        <p className="mt-1.5 text-xs text-muted">Toque na foto para ampliar</p>
+        <p className="mt-1.5 text-xs text-muted">
+          <span className="lg:hidden">Toque na foto para ampliar</span>
+          <span className="hidden lg:inline">Clique na foto para ampliar</span>
+        </p>
       )}
 
       {zoomOpen ? (

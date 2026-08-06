@@ -219,12 +219,33 @@ export default async function VehicleDetailPage({
                 className="hidden w-full lg:inline-flex"
                 message={WHATSAPP_MESSAGES.vehicle(fullLabel)}
               >
-                Falar no WhatsApp
+                Tenho interesse
               </WhatsAppButton>
+
+              <div className="hidden gap-2 lg:grid lg:grid-cols-2">
+                <a
+                  href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
+                >
+                  Pedir vídeo
+                </a>
+                <a
+                  href={whatsappUrl(
+                    `Olá! Gostaria de opções de financiamento para o ${fullLabel}.`,
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
+                >
+                  Financiar
+                </a>
+              </div>
 
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
                 <Link
-                  href="/vender"
+                  href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
                   className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline"
                 >
                   Quero colocar meu veículo na troca
@@ -233,7 +254,7 @@ export default async function VehicleDetailPage({
                   href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline"
+                  className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline lg:hidden"
                 >
                   Pedir vídeo
                 </a>

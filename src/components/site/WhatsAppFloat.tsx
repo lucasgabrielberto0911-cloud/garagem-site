@@ -18,7 +18,15 @@ export function WhatsAppFloat() {
 
   useEffect(() => {
     const showTimer = window.setTimeout(() => setShow(true), 3200);
-    const tipTimer = window.setTimeout(() => setTooltip(true), 9000);
+    const tipTimer = window.setTimeout(() => {
+      try {
+        if (window.localStorage.getItem("garagem:wa-tip") !== "1") {
+          setTooltip(true);
+        }
+      } catch {
+        setTooltip(true);
+      }
+    }, 9000);
     return () => {
       window.clearTimeout(showTimer);
       window.clearTimeout(tipTimer);
@@ -33,7 +41,14 @@ export function WhatsAppFloat() {
         <div className="animate-fade-in relative max-w-[220px] border border-white/10 bg-ink p-4 shadow-xl">
           <button
             type="button"
-            onClick={() => setTooltip(false)}
+            onClick={() => {
+              setTooltip(false);
+              try {
+                window.localStorage.setItem("garagem:wa-tip", "1");
+              } catch {
+                /* ignore */
+              }
+            }}
             className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center text-muted transition hover:text-cream"
             aria-label="Fechar dica"
           >
@@ -53,7 +68,7 @@ export function WhatsAppFloat() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Abrir WhatsApp"
-        className="whatsapp-pulse flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition active:scale-95 touch-manipulation"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition hover:scale-105 active:scale-95 touch-manipulation"
       >
         <IconWhatsApp className="h-7 w-7" />
       </a>

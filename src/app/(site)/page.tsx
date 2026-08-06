@@ -80,7 +80,7 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="flex min-h-[auto] flex-col items-center justify-center py-12 text-center sm:min-h-[68dvh] sm:py-16 lg:min-h-[74dvh] lg:py-24">
+        <Container className="flex min-h-[auto] flex-col items-center justify-center py-12 text-center sm:min-h-[62dvh] sm:py-16 lg:min-h-[64dvh] lg:py-20">
           <div className="hero-brand">
             <Image
               src="/branding/logo-wordmark.png"

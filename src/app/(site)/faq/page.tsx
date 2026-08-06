@@ -25,7 +25,33 @@ export default function FaqPage() {
           description="Se a sua dúvida não estiver aqui, chame no WhatsApp: respondemos no horário de atendimento."
         />
 
-        <div className="mt-12">
+        <nav
+          aria-label="Índice de dúvidas"
+          className="mt-8 hidden flex-wrap gap-2 lg:flex"
+        >
+          {FAQ_ITEMS.map((item, index) => {
+            const id = `faq-${item.question
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/(^-|-$)/g, "")
+              .slice(0, 48) || index}`;
+            return (
+              <a
+                key={item.question}
+                href={`#${id}`}
+                className="inline-flex min-h-[36px] items-center border border-white/10 px-3 text-xs text-muted transition hover:border-brand hover:text-cream"
+              >
+                {item.question.length > 42
+                  ? `${item.question.slice(0, 42)}…`
+                  : item.question}
+              </a>
+            );
+          })}
+        </nav>
+
+        <div className="mt-8 lg:mt-10">
           <FaqAccordion items={FAQ_ITEMS} />
         </div>
 

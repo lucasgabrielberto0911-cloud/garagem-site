@@ -5,16 +5,16 @@ import { useFavorites } from "@/lib/favorites";
 
 export function FavoritesLink({ className = "" }: { className?: string }) {
   const { count, ready } = useFavorites();
+  const label =
+    count > 0
+      ? `Favoritos (${count} ${count === 1 ? "veículo" : "veículos"})`
+      : "Favoritos";
 
   return (
     <Link
       href="/favoritos"
-      aria-label={
-        count > 0
-          ? `Favoritos (${count} ${count === 1 ? "veículo" : "veículos"})`
-          : "Favoritos"
-      }
-      className={`relative inline-flex h-11 w-11 items-center justify-center border border-white/15 text-cream transition hover:border-brand active:bg-white/10 touch-manipulation ${className}`}
+      aria-label={label}
+      className={`relative inline-flex h-11 items-center justify-center gap-2 border border-white/15 text-cream transition hover:border-brand active:bg-white/10 touch-manipulation focus-visible:border-brand ${className} w-11 xl:w-auto xl:px-3`}
     >
       <svg
         viewBox="0 0 24 24"
@@ -28,8 +28,11 @@ export function FavoritesLink({ className = "" }: { className?: string }) {
       >
         <path d="M12 20s-7-4.6-7-9.6A4.4 4.4 0 0112 7a4.4 4.4 0 017 3.4c0 5-7 9.6-7 9.6z" />
       </svg>
+      <span className="hidden font-display text-xs font-semibold uppercase tracking-wide xl:inline">
+        Favoritos
+      </span>
       {ready && count > 0 ? (
-        <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold text-white">
+        <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold text-white xl:static xl:ml-0.5">
           {count > 9 ? "9+" : count}
         </span>
       ) : null}

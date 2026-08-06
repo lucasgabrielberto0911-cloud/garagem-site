@@ -48,7 +48,7 @@ export function InstallPrompt() {
   if (!visible || !event) return null;
 
   return (
-    <div className="fixed inset-x-3 bottom-[84px] z-[60] border border-white/15 bg-ink/95 p-4 shadow-2xl backdrop-blur animate-slide-up lg:inset-x-auto lg:right-6 lg:bottom-6 lg:w-[380px]">
+    <div className="fixed inset-x-3 bottom-[84px] z-[60] border border-white/15 bg-ink/95 p-4 shadow-2xl backdrop-blur animate-slide-up lg:inset-x-auto lg:left-6 lg:right-auto lg:bottom-6 lg:w-[380px]">
       <div className="flex items-start gap-3">
         <Image
           src="/icons/icon-192.png"

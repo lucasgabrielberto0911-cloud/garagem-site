@@ -10,7 +10,11 @@ import { WHATSAPP_MESSAGES } from "@/lib/site";
 const inputClass =
   "w-full min-h-[48px] border border-white/10 bg-asphalt px-3 py-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand sm:py-2.5 sm:text-sm";
 
-export function SellForm() {
+export function SellForm({
+  interestNote,
+}: {
+  interestNote?: string;
+}) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -167,6 +171,7 @@ export function SellForm() {
               id="notes"
               name="notes"
               rows={4}
+              defaultValue={interestNote ?? ""}
               placeholder="Conte o estado do veículo, itens opcionais, se há débitos, se quer vender ou trocar..."
               className={`${inputClass} resize-y`}
             />
