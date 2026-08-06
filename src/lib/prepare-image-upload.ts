@@ -59,7 +59,7 @@ async function canvasFromFile(
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
     return canvas;
-  } catch (error) {
+  } catch {
     if (isHeicLike(file)) {
       throw new Error(
         "HEIC não pode ser comprimido aqui. Exporte como JPG (iPhone: Formatos → Mais Compatível) e envie de novo.",
