@@ -13,6 +13,22 @@ export type Facets = {
   years: number[];
 };
 
+type FilterValues = {
+  q: string;
+  category: string;
+  brand: string;
+  transmission: string;
+  fuel: string;
+  minPrice: string;
+  maxPrice: string;
+  minYear: string;
+  maxYear: string;
+  maxKm: string;
+  sort: string;
+};
+
+type FilterKey = Exclude<keyof FilterValues, "sort">;
+
 const SORT_OPTIONS = [
   { value: "recentes", label: "Mais recentes" },
   { value: "menor-preco", label: "Menor preço" },
@@ -56,7 +72,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
 
-  const current = {
+  const current: FilterValues = {
     q: params.get("q") ?? "",
     category: params.get("category") ?? "",
     brand: params.get("brand") ?? "",
@@ -89,6 +105,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     ([key, value]) => value && !(key === "sort" && value === "recentes"),
   );
   const activeFilterCount = [
+    current.q,
     current.category,
     current.brand,
     current.transmission,
@@ -100,7 +117,50 @@ export function StockFilters({ facets }: { facets: Facets }) {
     current.maxKm,
   ].filter(Boolean).length;
 
-  function navigate(values: typeof current) {
+  const activeFilters: Array<{ key: FilterKey; label: string }> = [];
+  if (current.q) activeFilters.push({ key: "q", label: `Busca: “${current.q}”` });
+  if (current.category) {
+    activeFilters.push({
+      key: "category",
+      label: `Tipo: ${vehicleCategoryLabel(current.category)}`,
+    });
+  }
+  if (current.brand) activeFilters.push({ key: "brand", label: `Marca: ${current.brand}` });
+  if (current.transmission) {
+    activeFilters.push({
+      key: "transmission",
+      label: `Câmbio: ${current.transmission}`,
+    });
+  }
+  if (current.fuel) {
+    activeFilters.push({ key: "fuel", label: `Combustível: ${current.fuel}` });
+  }
+  if (current.minPrice) {
+    activeFilters.push({
+      key: "minPrice",
+      label: priceFilterLabel(current.minPrice, "mín."),
+    });
+  }
+  if (current.maxPrice) {
+    activeFilters.push({
+      key: "maxPrice",
+      label: priceFilterLabel(current.maxPrice, "máx."),
+    });
+  }
+  if (current.minYear) {
+    activeFilters.push({ key: "minYear", label: `Ano mín.: ${current.minYear}` });
+  }
+  if (current.maxYear) {
+    activeFilters.push({ key: "maxYear", label: `Ano máx.: ${current.maxYear}` });
+  }
+  if (current.maxKm) {
+    activeFilters.push({
+      key: "maxKm",
+      label: `Até ${formatCompactNumber(current.maxKm)} km`,
+    });
+  }
+
+  function navigate(values: FilterValues) {
     const next = new URLSearchParams();
     Object.entries(values).forEach(([key, value]) => {
       if (value && !(key === "sort" && value === "recentes")) {
@@ -111,11 +171,19 @@ export function StockFilters({ facets }: { facets: Facets }) {
     next.delete("page");
     const query = next.toString();
     startTransition(() => {
-      router.push(query ? `/estoque?${query}` : "/estoque");
+      const href = query ? `/estoque?${query}` : "/estoque";
+      if (
+        typeof window !== "undefined" &&
+        window.matchMedia("(min-width: 1024px)").matches
+      ) {
+        router.replace(href);
+      } else {
+        router.push(href);
+      }
     });
   }
 
-  function update(patch: Partial<typeof current>) {
+  function update(patch: Partial<FilterValues>) {
     navigate({ ...current, ...patch });
   }
 
@@ -138,7 +206,13 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
   return (
     <>
-      <div className="border border-white/10 bg-ink p-3 sm:p-5">
+      <div
+        aria-busy={isPending}
+        data-pending={isPending}
+        className={`border border-white/10 bg-ink p-3 transition-opacity sm:p-5 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto ${
+          isPending ? "opacity-70" : ""
+        }`}
+      >
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -147,7 +221,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
             ).value;
             update({ q: value });
           }}
-          className="mx-auto flex max-w-2xl gap-2"
+          className="mx-auto flex max-w-2xl gap-2 lg:flex-col"
           role="search"
         >
           <div className="flex min-h-[48px] flex-1 items-center gap-2 border border-white/10 bg-asphalt px-3 transition focus-within:border-brand">
@@ -168,7 +242,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           <button
             type="submit"
             disabled={isPending}
-            className="min-h-[48px] bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 sm:px-6"
+            className="min-h-[48px] bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 sm:px-6 lg:w-full"
           >
             <span className="hidden sm:inline">{isPending ? "Buscando..." : "Buscar"}</span>
             <IconSearch className="h-5 w-5 sm:hidden" />
@@ -176,134 +250,191 @@ export function StockFilters({ facets }: { facets: Facets }) {
         </form>
 
         {/* Desktop: filtros completos. */}
-        <div className="mx-auto mt-3 hidden max-w-4xl grid-cols-3 gap-3 lg:grid lg:grid-cols-4">
-          <label className="sr-only" htmlFor="desktop-tipo">
-            Tipo
-          </label>
-          <select
-            id="desktop-tipo"
-            value={current.category}
-            onChange={(event) => update({ category: event.target.value })}
-            className={selectClass}
+        <div className="mt-5 hidden lg:block">
+          <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+            <FilterIcon />
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
+              Filtrar estoque
+            </h2>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            <DesktopField label="Tipo" htmlFor="desktop-tipo">
+              <select
+                id="desktop-tipo"
+                value={current.category}
+                onChange={(event) => update({ category: event.target.value })}
+                className={selectClass}
+              >
+                <option value="">Carros e motos</option>
+                {(facets.categories?.length
+                  ? facets.categories
+                  : ["carro", "moto"]
+                ).map((item) => (
+                  <option key={item} value={item}>
+                    {vehicleCategoryLabel(item)}
+                  </option>
+                ))}
+              </select>
+            </DesktopField>
+            <FilterSelect
+              label="Marca"
+              id="desktop-marca"
+              value={current.brand}
+              onChange={(value) => update({ brand: value })}
+              options={facets.brands}
+              emptyLabel="Todas as marcas"
+            />
+            <FilterSelect
+              label="Câmbio"
+              id="desktop-cambio"
+              value={current.transmission}
+              onChange={(value) => update({ transmission: value })}
+              options={facets.transmissions}
+              emptyLabel="Todos os câmbios"
+            />
+            <FilterSelect
+              label="Combustível"
+              id="desktop-combustivel"
+              value={current.fuel}
+              onChange={(value) => update({ fuel: value })}
+              options={facets.fuels}
+              emptyLabel="Todos os combustíveis"
+            />
+            <DesktopField label="Preço mínimo" htmlFor="desktop-preco-min">
+              <select
+                id="desktop-preco-min"
+                value={current.minPrice}
+                onChange={(event) => update({ minPrice: event.target.value })}
+                className={selectClass}
+              >
+                {MIN_PRICE_OPTIONS.map((option) => (
+                  <option key={option.value || "min"} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </DesktopField>
+            <DesktopField label="Preço máximo" htmlFor="desktop-preco-max">
+              <select
+                id="desktop-preco-max"
+                value={current.maxPrice}
+                onChange={(event) => update({ maxPrice: event.target.value })}
+                className={selectClass}
+              >
+                {MAX_PRICE_OPTIONS.map((option) => (
+                  <option key={option.value || "max"} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </DesktopField>
+            <DesktopField label="Ano mínimo" htmlFor="desktop-ano-min">
+              <select
+                id="desktop-ano-min"
+                value={current.minYear}
+                onChange={(event) => update({ minYear: event.target.value })}
+                className={selectClass}
+              >
+                <option value="">Qualquer ano</option>
+                {facets.years.map((year) => (
+                  <option key={`min-${year}`} value={year}>
+                    A partir de {year}
+                  </option>
+                ))}
+              </select>
+            </DesktopField>
+            <DesktopField label="Ano máximo" htmlFor="desktop-ano-max">
+              <select
+                id="desktop-ano-max"
+                value={current.maxYear}
+                onChange={(event) => update({ maxYear: event.target.value })}
+                className={selectClass}
+              >
+                <option value="">Qualquer ano</option>
+                {facets.years.map((year) => (
+                  <option key={`max-${year}`} value={year}>
+                    Até {year}
+                  </option>
+                ))}
+              </select>
+            </DesktopField>
+            <DesktopField label="Quilometragem" htmlFor="desktop-km">
+              <select
+                id="desktop-km"
+                value={current.maxKm}
+                onChange={(event) => update({ maxKm: event.target.value })}
+                className={selectClass}
+              >
+                {KM_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </DesktopField>
+          </div>
+
+          <DesktopField
+            label="Ordenar resultados"
+            htmlFor="estoque-ordem"
+            className="mt-4 border-t border-white/10 pt-4"
           >
-            <option value="">Carros e motos</option>
-            {(facets.categories?.length
-              ? facets.categories
-              : ["carro", "moto"]
-            ).map((item) => (
-              <option key={item} value={item}>
-                {vehicleCategoryLabel(item)}
-              </option>
-            ))}
-          </select>
-          <FilterSelect
-            label="Marca"
-            value={current.brand}
-            onChange={(value) => update({ brand: value })}
-            options={facets.brands}
-            emptyLabel="Todas as marcas"
-          />
-          <FilterSelect
-            label="Câmbio"
-            value={current.transmission}
-            onChange={(value) => update({ transmission: value })}
-            options={facets.transmissions}
-            emptyLabel="Todos os câmbios"
-          />
-          <FilterSelect
-            label="Combustível"
-            value={current.fuel}
-            onChange={(value) => update({ fuel: value })}
-            options={facets.fuels}
-            emptyLabel="Todos os combustíveis"
-          />
-          <label className="sr-only" htmlFor="desktop-preco-min">
-            Preço mínimo
-          </label>
-          <select
-            id="desktop-preco-min"
-            value={current.minPrice}
-            onChange={(event) => update({ minPrice: event.target.value })}
-            className={selectClass}
-          >
-            {MIN_PRICE_OPTIONS.map((option) => (
-              <option key={option.value || "min"} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <label className="sr-only" htmlFor="desktop-preco">
-            Preço máximo
-          </label>
-          <select
-            id="desktop-preco"
-            value={current.maxPrice}
-            onChange={(event) => update({ maxPrice: event.target.value })}
-            className={selectClass}
-          >
-            {MAX_PRICE_OPTIONS.map((option) => (
-              <option key={option.value || "max"} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <label className="sr-only" htmlFor="desktop-ano-min">
-            Ano a partir de
-          </label>
-          <select
-            id="desktop-ano-min"
-            value={current.minYear}
-            onChange={(event) => update({ minYear: event.target.value })}
-            className={selectClass}
-          >
-            <option value="">Ano mínimo</option>
-            {facets.years.map((year) => (
-              <option key={`min-${year}`} value={year}>
-                A partir de {year}
-              </option>
-            ))}
-          </select>
-          <label className="sr-only" htmlFor="desktop-ano-max">
-            Ano até
-          </label>
-          <select
-            id="desktop-ano-max"
-            value={current.maxYear}
-            onChange={(event) => update({ maxYear: event.target.value })}
-            className={selectClass}
-          >
-            <option value="">Ano máximo</option>
-            {facets.years.map((year) => (
-              <option key={`max-${year}`} value={year}>
-                Até {year}
-              </option>
-            ))}
-          </select>
-          <label className="sr-only" htmlFor="desktop-km">
-            Quilometragem máxima
-          </label>
-          <select
-            id="desktop-km"
-            value={current.maxKm}
-            onChange={(event) => update({ maxKm: event.target.value })}
-            className={selectClass}
-          >
-            {KM_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <select
+              id="estoque-ordem"
+              value={current.sort}
+              onChange={(event) => update({ sort: event.target.value })}
+              className={selectClass}
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </DesktopField>
+
+          {activeFilters.length > 0 ? (
+            <div className="mt-5 border-t border-white/10 pt-4">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+                Filtros ativos
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {activeFilters.map((filter) => (
+                  <button
+                    key={filter.key}
+                    type="button"
+                    onClick={() => update({ [filter.key]: "" })}
+                    className="inline-flex min-h-[32px] items-center gap-1.5 border border-brand/50 bg-brand/10 px-2 py-1 text-left text-[11px] leading-tight text-cream transition hover:border-brand"
+                    aria-label={`Remover ${filter.label}`}
+                  >
+                    <span>{filter.label}</span>
+                    <IconClose className="h-3 w-3 shrink-0 text-brand" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {hasFilter ? (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="mt-4 min-h-[40px] w-full border border-white/15 px-3 font-display text-xs font-semibold uppercase tracking-wider text-muted transition hover:border-brand hover:text-cream"
+            >
+              Limpar filtros
+            </button>
+          ) : null}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 lg:hidden">
           <button
             type="button"
             onClick={() => {
               setDraft(current);
               setOpen(true);
             }}
-            className="relative inline-flex min-h-[44px] items-center gap-2 border border-white/15 px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream lg:hidden"
+            className="relative inline-flex min-h-[44px] items-center gap-2 border border-white/15 px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream"
           >
             <FilterIcon />
             Filtros
@@ -313,24 +444,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </span>
             ) : null}
           </button>
-
-          <div className="hidden items-center gap-2 lg:flex">
-            <label htmlFor="estoque-ordem" className="text-xs uppercase tracking-wider text-muted">
-              Ordenar
-            </label>
-            <select
-              id="estoque-ordem"
-              value={current.sort}
-              onChange={(event) => update({ sort: event.target.value })}
-              className="min-h-[44px] border border-white/10 bg-asphalt px-3 text-sm text-cream outline-none transition focus:border-brand"
-            >
-              {SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
 
           {hasFilter ? (
             <button
@@ -545,21 +658,23 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
 function FilterSelect({
   label,
+  id,
   value,
   onChange,
   options,
   emptyLabel,
 }: {
   label: string;
+  id: string;
   value: string;
   onChange: (value: string) => void;
   options: string[];
   emptyLabel: string;
 }) {
   return (
-    <label>
-      <span className="sr-only">{label}</span>
+    <DesktopField label={label} htmlFor={id}>
       <select
+        id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className={selectClass}
@@ -569,7 +684,31 @@ function FilterSelect({
           <option key={item} value={item}>{item}</option>
         ))}
       </select>
-    </label>
+    </DesktopField>
+  );
+}
+
+function DesktopField({
+  label,
+  htmlFor,
+  children,
+  className = "",
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <label
+        htmlFor={htmlFor}
+        className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-muted"
+      >
+        {label}
+      </label>
+      {children}
+    </div>
   );
 }
 
@@ -582,6 +721,17 @@ function MobileField({ label, children }: { label: string; children: React.React
       {children}
     </label>
   );
+}
+
+function formatCompactNumber(value: string) {
+  const number = Number(value);
+  return Number.isFinite(number)
+    ? new Intl.NumberFormat("pt-BR").format(number)
+    : value;
+}
+
+function priceFilterLabel(value: string, qualifier: "mín." | "máx.") {
+  return `Preço ${qualifier}: R$ ${formatCompactNumber(value)}`;
 }
 
 function FilterIcon() {

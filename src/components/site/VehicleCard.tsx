@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Photo, Vehicle } from "@prisma/client";
 import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
@@ -21,15 +24,21 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 export function VehicleCard({
   vehicle,
   priority = false,
+  returnTo,
 }: {
   vehicle: VehicleCardData;
   priority?: boolean;
+  returnTo?: string;
 }) {
+  const router = useRouter();
   const title = `${vehicle.brand} ${vehicle.model}`;
   const cover = vehicle.photos[0]?.url;
   const badge = STATUS_BADGE[vehicle.status];
   const categoryLabel = vehicleCategoryLabel(vehicle.category);
-  const href = `/estoque/${vehicle.id}`;
+  const vehiclePath = `/estoque/${vehicle.id}`;
+  const href = returnTo
+    ? `${vehiclePath}?from=${encodeURIComponent(returnTo)}`
+    : vehiclePath;
   const photoCount = vehicle._count?.photos ?? vehicle.photos.length;
 
   const meta = [
@@ -49,6 +58,8 @@ export function VehicleCard({
       <Link
         href={href}
         prefetch={false}
+        onMouseEnter={() => router.prefetch(href)}
+        onFocus={() => router.prefetch(href)}
         className="flex h-full flex-col outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt"
         aria-label={`${title} ${vehicle.yearModel} — ${formatCurrencyBRL(vehicle.price)}`}
       >

@@ -17,6 +17,36 @@ import { getRelatedVehicles, getVehicleById } from "@/lib/vehicles";
 
 export const revalidate = 60;
 
+type DetailSearchParams = {
+  from?: string | string[];
+};
+
+function safeStockReturnPath(from?: string | string[]) {
+  const value = Array.isArray(from) ? from[0] : from;
+  if (
+    !value ||
+    !value.startsWith("/estoque") ||
+    value.startsWith("//") ||
+    value.includes("\\") ||
+    /[\u0000-\u001f\u007f]/.test(value)
+  ) {
+    return undefined;
+  }
+
+  try {
+    const origin = "https://garagem.local";
+    const parsed = new URL(value, origin);
+    const isStockPath =
+      parsed.pathname === "/estoque" ||
+      parsed.pathname.startsWith("/estoque/");
+
+    if (parsed.origin !== origin || !isStockPath) return undefined;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -53,9 +83,12 @@ export async function generateMetadata({
 
 export default async function VehicleDetailPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams?: DetailSearchParams;
 }) {
+  const returnTo = safeStockReturnPath(searchParams?.from);
   const vehicle = await getVehicleById(params.id);
   if (!vehicle) notFound();
 
@@ -100,11 +133,22 @@ export default async function VehicleDetailPage({
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Início", path: "/" },
-          { name: "Estoque", path: "/estoque" },
+          { name: "Estoque", path: returnTo ?? "/estoque" },
           { name: fullLabel, path: `/estoque/${vehicle.id}` },
         ])}
       />
       <Container>
+        {returnTo ? (
+          <Link
+            href={returnTo}
+            className="mb-3 inline-flex min-h-[40px] items-center text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
+          >
+            <span className="mr-2 text-brand" aria-hidden="true">
+              ←
+            </span>
+            Voltar aos resultados
+          </Link>
+        ) : null}
         <nav
           aria-label="Você está aqui"
           className="text-xs text-muted sm:text-center"
@@ -113,7 +157,7 @@ export default async function VehicleDetailPage({
             Início
           </Link>
           <span className="mx-2">/</span>
-          <Link href="/estoque" className="transition hover:text-cream">
+          <Link href={returnTo ?? "/estoque"} className="transition hover:text-cream">
             Estoque
           </Link>
           <span className="mx-2">/</span>

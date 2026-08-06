@@ -22,11 +22,14 @@ export function VehicleGrid({
   vehicles,
   reveal = false,
   priorityCount = 0,
+  returnTo,
 }: {
   vehicles: VehicleCardData[];
   reveal?: boolean;
   /** Quantos cards iniciais recebem `priority` (LCP). */
   priorityCount?: number;
+  /** Caminho da listagem para retornar depois de abrir o anúncio. */
+  returnTo?: string;
 }) {
   return (
     <div
@@ -37,6 +40,7 @@ export function VehicleGrid({
           <VehicleCard
             vehicle={vehicle}
             priority={index < priorityCount}
+            returnTo={returnTo}
           />
         );
 
