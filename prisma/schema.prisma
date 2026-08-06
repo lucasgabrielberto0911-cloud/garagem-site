@@ -23,6 +23,16 @@ model Vehicle {
   transmission String
   color        String?
   description  String?
+  /** Motor / cilindrada — ex.: "2.0 TSI", "500cc". */
+  engine       String?
+  /** Portas (carros). Null em motos. */
+  doors        Int?
+  /** Garantia anunciada — ex.: "3 meses", "Garantia de fábrica". */
+  warranty     String?
+  /** Final da placa — ex.: "1", "2/3". */
+  plateEnd     String?
+  /** Laudo / vistoria — ex.: "Cautelar aprovado", "Com laudo". */
+  inspection   String?
   /** Itens/acessórios do anúncio (checklist + pontos manuais). */
   accessories  String[] @default([])
   status       String   @default("disponivel")
@@ -107,5 +117,10 @@ model SiteSettings {
   hours          String?
   hoursWeekdays  String?
   hoursSaturday  String?
+  /** Valores exibidos em Sobre nós (ex.: "+20", "+1.000"). */
+  aboutYears     String?
+  aboutSold      String?
+  aboutHours     String?
+  aboutFocus     String?
   updatedAt      DateTime @updatedAt
 }

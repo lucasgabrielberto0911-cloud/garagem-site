@@ -9,7 +9,18 @@ export type EditableSiteFields = {
   hours: string;
   hoursWeekdays: string;
   hoursSaturday: string;
+  aboutYears: string;
+  aboutSold: string;
+  aboutHours: string;
+  aboutFocus: string;
 };
+
+const DEFAULT_ABOUT = {
+  aboutYears: "+20",
+  aboutSold: "+1.000",
+  aboutHours: "8h–23h",
+  aboutFocus: "100%",
+} as const;
 
 const EDITABLE_KEYS = [
   "region",
@@ -18,9 +29,16 @@ const EDITABLE_KEYS = [
   "hours",
   "hoursWeekdays",
   "hoursSaturday",
+  "aboutYears",
+  "aboutSold",
+  "aboutHours",
+  "aboutFocus",
 ] as const satisfies readonly (keyof EditableSiteFields)[];
 
-function pickEditable(source: SiteConfig | EditableSiteFields): EditableSiteFields {
+function pickEditable(
+  source: SiteConfig | EditableSiteFields,
+): EditableSiteFields {
+  const about = source as Partial<EditableSiteFields>;
   return {
     region: source.region,
     email: source.email,
@@ -28,6 +46,10 @@ function pickEditable(source: SiteConfig | EditableSiteFields): EditableSiteFiel
     hours: source.hours,
     hoursWeekdays: source.hoursWeekdays,
     hoursSaturday: source.hoursSaturday,
+    aboutYears: about.aboutYears ?? DEFAULT_ABOUT.aboutYears,
+    aboutSold: about.aboutSold ?? DEFAULT_ABOUT.aboutSold,
+    aboutHours: about.aboutHours ?? DEFAULT_ABOUT.aboutHours,
+    aboutFocus: about.aboutFocus ?? DEFAULT_ABOUT.aboutFocus,
   };
 }
 
@@ -38,17 +60,18 @@ function coalesce(value: string | null | undefined, fallback: string) {
 
 /**
  * Mistura defaults de `site.ts` com o que estiver salvo no banco.
- * Cache por request (React.cache) — várias páginas no mesmo render compartilham.
  */
-export const getPublicSite = cache(async (): Promise<SiteConfig> => {
-  const defaults = pickEditable(site);
+export const getPublicSite = cache(async (): Promise<SiteConfig & EditableSiteFields> => {
+  const defaults = pickEditable(site as SiteConfig & EditableSiteFields);
 
   try {
     const row = await prisma.siteSettings.findUnique({
       where: { id: "default" },
     });
 
-    if (!row) return { ...site };
+    if (!row) {
+      return { ...site, ...defaults };
+    }
 
     return {
       ...site,
@@ -58,10 +81,14 @@ export const getPublicSite = cache(async (): Promise<SiteConfig> => {
       hours: coalesce(row.hours, defaults.hours),
       hoursWeekdays: coalesce(row.hoursWeekdays, defaults.hoursWeekdays),
       hoursSaturday: coalesce(row.hoursSaturday, defaults.hoursSaturday),
+      aboutYears: coalesce(row.aboutYears, defaults.aboutYears),
+      aboutSold: coalesce(row.aboutSold, defaults.aboutSold),
+      aboutHours: coalesce(row.aboutHours, defaults.aboutHours),
+      aboutFocus: coalesce(row.aboutFocus, defaults.aboutFocus),
     };
   } catch (error) {
     console.error("[site-settings] falha ao ler config:", error);
-    return { ...site };
+    return { ...site, ...defaults };
   }
 });
 
@@ -71,7 +98,10 @@ export async function getEditableSiteFields(): Promise<EditableSiteFields> {
 }
 
 export function listPlaceholderLabels(config: EditableSiteFields) {
-  return EDITABLE_KEYS.filter((key) => config[key].includes("[")).map((key) => {
+  return EDITABLE_KEYS.filter((key) => {
+    if (key.startsWith("about")) return false;
+    return config[key].includes("[");
+  }).map((key) => {
     switch (key) {
       case "region":
         return "Cidade/região";
@@ -90,3 +120,5 @@ export function listPlaceholderLabels(config: EditableSiteFields) {
     }
   });
 }
+
+export { DEFAULT_ABOUT };

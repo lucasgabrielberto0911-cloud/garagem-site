@@ -58,15 +58,26 @@ function parseVehicleFields(formData: FormData) {
   const transmission = String(formData.get("transmission") || "").trim();
   const color = String(formData.get("color") || "").trim() || null;
   const description = String(formData.get("description") || "").trim() || null;
+  const engine = String(formData.get("engine") || "").trim() || null;
+  const warranty = String(formData.get("warranty") || "").trim() || null;
+  const plateEnd = String(formData.get("plateEnd") || "").trim() || null;
+  const inspection = String(formData.get("inspection") || "").trim() || null;
   const status = String(formData.get("status") || "disponivel").trim();
   const featured = formData.get("featured") === "on" || formData.get("featured") === "true";
   const year = requireNumber(formData.get("year"), "Ano");
   const yearModel = requireNumber(formData.get("yearModel"), "Ano modelo");
   const km = requireNumber(formData.get("km"), "KM");
   const price = requireNumber(formData.get("price"), "Preço");
+  const doorsRaw = String(formData.get("doors") || "").trim();
+  const doors = doorsRaw
+    ? requireNumber(formData.get("doors"), "Portas")
+    : null;
 
   if (!brand || !model || !fuel || !transmission) {
     throw new Error("Preencha marca, modelo, combustível e câmbio.");
+  }
+  if (doors !== null && (doors < 0 || doors > 6)) {
+    throw new Error("Portas inválidas.");
   }
 
   let photoUrls: string[] = [];
@@ -101,6 +112,11 @@ function parseVehicleFields(formData: FormData) {
     transmission,
     color,
     description,
+    engine,
+    doors,
+    warranty,
+    plateEnd,
+    inspection,
     accessories,
     status,
     featured,
@@ -139,6 +155,11 @@ export async function createVehicle(
         transmission: data.transmission,
         color: data.color,
         description: data.description,
+        engine: data.engine,
+        doors: data.doors,
+        warranty: data.warranty,
+        plateEnd: data.plateEnd,
+        inspection: data.inspection,
         accessories: data.accessories,
         status: data.status,
         featured: data.featured,
@@ -177,6 +198,11 @@ export async function updateVehicle(
   try {
     const data = parseVehicleFields(formData);
 
+    const previous = await prisma.photo.findMany({
+      where: { vehicleId: id },
+      select: { url: true },
+    });
+
     await prisma.$transaction([
       prisma.photo.deleteMany({ where: { vehicleId: id } }),
       prisma.vehicle.update({
@@ -194,6 +220,11 @@ export async function updateVehicle(
           transmission: data.transmission,
           color: data.color,
           description: data.description,
+          engine: data.engine,
+          doors: data.doors,
+          warranty: data.warranty,
+          plateEnd: data.plateEnd,
+          inspection: data.inspection,
           accessories: data.accessories,
           status: data.status,
           featured: data.featured,
@@ -203,6 +234,14 @@ export async function updateVehicle(
         },
       }),
     ]);
+
+    const kept = new Set(data.photoUrls);
+    const removed = previous
+      .map((photo) => photo.url)
+      .filter((url) => !kept.has(url));
+    if (removed.length > 0) {
+      await deleteStoragePhotos(removed);
+    }
 
     revalidatePath("/admin/veiculos");
     revalidatePath(`/admin/veiculos/${id}`);
@@ -304,6 +343,11 @@ export async function duplicateVehicle(id: string) {
       transmission: source.transmission,
       color: source.color,
       description: source.description,
+      engine: source.engine,
+      doors: source.doors,
+      warranty: source.warranty,
+      plateEnd: source.plateEnd,
+      inspection: source.inspection,
       accessories: source.accessories,
       status: "disponivel",
       featured: false,

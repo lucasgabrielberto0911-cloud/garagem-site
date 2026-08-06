@@ -364,6 +364,66 @@ export function VehicleForm({
                 ))}
               </select>
             </Field>
+            <Field
+              label={isMoto ? "Motor / cilindrada" : "Motor"}
+              hint={isMoto ? "Ex.: 500cc" : "Ex.: 1.0 TSI"}
+            >
+              <input
+                name="engine"
+                defaultValue={vehicle?.engine ?? ""}
+                placeholder={isMoto ? "Ex.: 500cc" : "Ex.: 2.0 Flex"}
+                className={inputClass}
+              />
+            </Field>
+            {!isMoto ? (
+              <Field label="Portas">
+                <input
+                  name="doors"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={6}
+                  defaultValue={vehicle?.doors ?? ""}
+                  placeholder="Ex.: 4"
+                  className={inputClass}
+                />
+              </Field>
+            ) : (
+              <input type="hidden" name="doors" value="" />
+            )}
+          </div>
+        </Card>
+
+        <Card title="Procedência e garantia">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label="Final da placa" hint="Ex.: 1 ou 2/3">
+              <input
+                name="plateEnd"
+                defaultValue={vehicle?.plateEnd ?? ""}
+                placeholder="Ex.: 7"
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Garantia" hint="Ex.: 3 meses, fábrica">
+              <input
+                name="warranty"
+                defaultValue={vehicle?.warranty ?? ""}
+                placeholder="Ex.: 3 meses"
+                className={inputClass}
+              />
+            </Field>
+            <Field
+              label="Laudo / vistoria"
+              hint="Ex.: Cautelar aprovado"
+              className="sm:col-span-2 lg:col-span-1"
+            >
+              <input
+                name="inspection"
+                defaultValue={vehicle?.inspection ?? ""}
+                placeholder="Ex.: Laudo cautelar aprovado"
+                className={inputClass}
+              />
+            </Field>
           </div>
         </Card>
 
