@@ -80,7 +80,7 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="flex min-h-[74dvh] flex-col items-center justify-center py-16 text-center lg:py-24">
+        <Container className="flex min-h-[auto] flex-col items-center justify-center py-12 text-center sm:min-h-[68dvh] sm:py-16 lg:min-h-[74dvh] lg:py-24">
           <div className="hero-brand">
             <Image
               src="/branding/logo-wordmark.png"
@@ -88,38 +88,38 @@ export default async function HomePage() {
               width={420}
               height={76}
               priority
-              className="mx-auto h-auto w-[min(78vw,340px)] sm:w-[min(62vw,400px)] lg:w-[440px]"
+              className="mx-auto h-auto w-[min(70vw,280px)] sm:w-[min(62vw,400px)] lg:w-[440px]"
             />
           </div>
 
-          <div className="hero-text mt-8">
-            <h1 className="mx-auto max-w-3xl font-display text-3xl font-bold leading-[1.15] tracking-tight text-cream sm:text-5xl">
+          <div className="hero-text mt-6 sm:mt-8">
+            <h1 className="mx-auto max-w-3xl font-display text-[1.75rem] font-bold leading-[1.15] tracking-tight text-cream sm:text-5xl">
               Encontre seu <span className="brand-shimmer">próximo carro</span>
             </h1>
             <div
-              className="mx-auto mt-5 h-1 w-24 bg-brand-gradient"
+              className="mx-auto mt-4 h-1 w-20 bg-brand-gradient sm:mt-5 sm:w-24"
               aria-hidden="true"
             />
-            <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-cream/80 sm:text-lg">
+            <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-cream/80 sm:mt-5 sm:text-lg">
               Seminovos revisados e com procedência em {site.region} e região.
               Escolha pelo site, feche pelo WhatsApp e saia dirigindo.
             </p>
           </div>
 
-          <div className="hero-search mt-9 flex w-full justify-center">
+          <div className="hero-search mt-7 flex w-full justify-center sm:mt-9">
             <HeroSearch brands={facets.brands} />
           </div>
 
-          <ActionRow className="hero-cta mt-8 w-full sm:w-auto">
+          <ActionRow className="hero-cta mt-6 w-full sm:mt-8 sm:w-auto">
             <ButtonLink href="/estoque" size="lg">
               Ver estoque completo
             </ButtonLink>
-            <WhatsAppButton size="lg" variant="outline">
+            <WhatsAppButton size="lg" variant="outline" className="hidden sm:inline-flex">
               Falar com um consultor
             </WhatsAppButton>
           </ActionRow>
 
-          <div className="hero-stats mt-12 w-full max-w-2xl">
+          <div className="hero-stats mt-8 w-full max-w-2xl sm:mt-12">
             <Suspense fallback={<StatsBarSkeleton />}>
               <StatsBar />
             </Suspense>
@@ -164,7 +164,7 @@ export default async function HomePage() {
               </div>
             </ScrollReveal>
           ) : (
-            <VehicleGrid vehicles={featured} reveal priorityCount={4} />
+            <VehicleGrid vehicles={featured} reveal priorityCount={2} />
           )}
         </div>
 

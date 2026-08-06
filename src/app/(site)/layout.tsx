@@ -39,12 +39,11 @@ export default async function SiteLayout({
       <JsonLd data={localBusinessJsonLd(publicSite)} />
       <ScrollProgress />
       <SiteHeader />
-      <main className="flex-1 pt-[84px] lg:pt-[96px]">
+      <main className="flex-1 pt-site-header">
         <PageTransition>{children}</PageTransition>
       </main>
       <SiteFooter />
-      {/* Compensa a bottom nav fixa do mobile. */}
-      <div className="h-[72px] lg:hidden" aria-hidden="true" />
+      <div className="pb-site-nav lg:hidden" aria-hidden="true" />
       <MobileBottomNav />
       <WhatsAppFloat />
       <BackToTop />

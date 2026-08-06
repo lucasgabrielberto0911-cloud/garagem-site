@@ -125,32 +125,32 @@ export function VehicleGallery({
               <Arrow direction="right" />
             </button>
 
-            <span className="pointer-events-none absolute right-2 top-2 z-[2] bg-asphalt/80 px-2 py-1 text-[11px] font-medium text-cream backdrop-blur">
+            <span className="pointer-events-none absolute right-2 top-2 z-[2] bg-asphalt/80 px-2 py-1 text-xs font-medium text-cream backdrop-blur">
               {active + 1}/{total}
             </span>
 
-            <div className="pointer-events-none absolute inset-x-0 bottom-2 z-[2] flex justify-center gap-1">
-              {photos.map((photo, index) => (
-                <span
-                  key={photo.id}
-                  className={`h-1 rounded-full transition-all ${
-                    active === index ? "w-5 bg-brand" : "w-1 bg-white/50"
-                  }`}
-                />
-              ))}
-            </div>
+            {total <= 8 ? (
+              <div className="pointer-events-none absolute inset-x-0 bottom-2 z-[2] flex justify-center gap-1">
+                {photos.map((photo, index) => (
+                  <span
+                    key={photo.id}
+                    className={`h-1 rounded-full transition-all ${
+                      active === index ? "w-5 bg-brand" : "w-1 bg-white/50"
+                    }`}
+                  />
+                ))}
+              </div>
+            ) : null}
           </>
         ) : null}
       </div>
 
       {total > 1 ? (
-        <p className="mt-1.5 text-[10px] uppercase tracking-wider text-muted">
+        <p className="mt-1.5 text-xs text-muted">
           Deslize para o lado · toque para ampliar
         </p>
       ) : (
-        <p className="mt-1.5 text-[10px] uppercase tracking-wider text-muted">
-          Toque na foto para ampliar
-        </p>
+        <p className="mt-1.5 text-xs text-muted">Toque na foto para ampliar</p>
       )}
 
       {zoomOpen ? (

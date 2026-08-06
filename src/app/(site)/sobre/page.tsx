@@ -63,29 +63,30 @@ export default async function SobrePage() {
       <Container size="narrow">
         <PageHeader
           eyebrow="Sobre nós"
-          title={`A ${publicSite.name}`}
-          description={`Há mais de 20 anos no mercado de seminovos, com mais de 1.000 carros vendidos. Atendemos ${publicSite.region} e região com compromisso total em qualidade e no melhor atendimento ao cliente.`}
+          title={publicSite.name}
+          description={`Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência, negociação clara e atendimento de excelência em ${publicSite.region} e região.`}
         />
 
-        <div className="relative mt-12 aspect-[16/9] overflow-hidden border border-white/10">
+        <div className="relative mt-10 aspect-[4/3] overflow-hidden border border-white/10 sm:mt-12 sm:aspect-[16/9]">
           <Image
             src="/branding/hero-bg.jpg"
             alt={`Estoque e atendimento da ${publicSite.name}`}
             fill
             sizes="(min-width: 1024px) 896px, 100vw"
+            quality={70}
             className="object-cover"
           />
           <div
             className="absolute inset-0 bg-gradient-to-t from-asphalt via-asphalt/40 to-transparent"
             aria-hidden="true"
           />
-          <div className="absolute inset-x-0 bottom-0 p-6 text-center sm:p-8">
-            <p className="font-display text-lg font-semibold text-cream sm:text-xl">
-              Loja digital. Atendimento humano.
+          <div className="absolute inset-x-0 bottom-0 p-4 text-center sm:p-8">
+            <p className="font-display text-base font-semibold text-cream sm:text-xl">
+              Procedência. Clareza. Resultado.
             </p>
-            <p className="mx-auto mt-2 max-w-lg text-sm text-cream/75">
-              Compra, venda, troca e financiamento — com a praticidade do online
-              e a confiança de quem entende de carro.
+            <p className="mx-auto mt-1.5 max-w-lg text-xs text-cream/75 sm:mt-2 sm:text-sm">
+              Compra, venda, troca e financiamento com o rigor de quem trata
+              cada negócio com seriedade — do primeiro contato à entrega.
             </p>
           </div>
         </div>

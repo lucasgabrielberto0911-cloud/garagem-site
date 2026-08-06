@@ -202,7 +202,7 @@ export function PhotoLightbox({
       </div>
 
       <div
-        className="relative flex-1 select-none overflow-hidden"
+        className="relative flex-1 select-none overflow-hidden touch-none"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}

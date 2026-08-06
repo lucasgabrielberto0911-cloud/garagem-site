@@ -5,6 +5,9 @@ import { usePathname } from "next/navigation";
 import { IconClose, IconWhatsApp } from "@/components/site/icons";
 import { whatsappUrl } from "@/lib/site";
 
+/**
+ * Float só no desktop/tablet largo — no mobile o WhatsApp já está na bottom nav.
+ */
 export function WhatsAppFloat() {
   const pathname = usePathname() || "/";
   const [show, setShow] = useState(false);
@@ -14,8 +17,8 @@ export function WhatsAppFloat() {
     pathname.startsWith("/admin") || pathname.startsWith("/estoque/");
 
   useEffect(() => {
-    const showTimer = window.setTimeout(() => setShow(true), 2500);
-    const tipTimer = window.setTimeout(() => setTooltip(true), 7000);
+    const showTimer = window.setTimeout(() => setShow(true), 3200);
+    const tipTimer = window.setTimeout(() => setTooltip(true), 9000);
     return () => {
       window.clearTimeout(showTimer);
       window.clearTimeout(tipTimer);
@@ -25,9 +28,9 @@ export function WhatsAppFloat() {
   if (!show || hide) return null;
 
   return (
-    <div className="fixed bottom-[5.75rem] right-4 z-50 flex items-end gap-3 pb-safe sm:right-6 lg:bottom-6">
+    <div className="fixed bottom-6 right-6 z-50 hidden items-end gap-3 lg:flex">
       {tooltip ? (
-        <div className="animate-fade-in relative hidden max-w-[220px] border border-white/10 bg-ink p-4 shadow-xl sm:block">
+        <div className="animate-fade-in relative max-w-[220px] border border-white/10 bg-ink p-4 shadow-xl">
           <button
             type="button"
             onClick={() => setTooltip(false)}
