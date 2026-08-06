@@ -201,7 +201,7 @@ export default async function VehicleDetailPage({
                   href="/vender"
                   className="text-muted underline-offset-4 transition hover:text-cream hover:underline"
                 >
-                  Quero dar na troca
+                  Quero colocar meu veículo na troca
                 </Link>
                 <a
                   href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
