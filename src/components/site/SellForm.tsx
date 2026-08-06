@@ -75,7 +75,7 @@ export function SellForm({
       ref={formRef}
       onSubmit={handleSubmit}
       noValidate
-      className="relative border border-white/10 bg-ink p-6 sm:p-8"
+      className="relative border border-white/10 bg-ink p-6 sm:p-8 lg:p-10"
     >
       {/* Honeypot anti-spam — oculto de leitores de tela e usuários. */}
       <div
@@ -92,7 +92,7 @@ export function SellForm({
         />
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-6">
         <Field label="Seu nome" error={errors.name} htmlFor="name">
           <input
             id="name"
@@ -217,7 +217,7 @@ function Field({
     <div>
       <label
         htmlFor={htmlFor}
-        className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
+        className="mb-2 block text-xs uppercase tracking-wider text-muted"
       >
         {label}
         {optional ? <span className="ml-1 normal-case">(opcional)</span> : null}

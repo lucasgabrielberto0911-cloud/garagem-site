@@ -74,7 +74,7 @@ export default async function SobrePage() {
           description={`Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência, negociação clara e atendimento de excelência em ${publicSite.region} e região.`}
         />
 
-        <div className="relative mt-10 aspect-[4/3] overflow-hidden border border-white/10 sm:mt-12 sm:aspect-[16/9] lg:max-w-4xl">
+        <div className="relative mx-auto mt-10 aspect-[4/3] max-w-4xl overflow-hidden border border-white/10 sm:mt-12 sm:aspect-[16/9]">
           <Image
             src="/branding/hero-bg.jpg"
             alt={`Estoque e atendimento da ${publicSite.name}`}
@@ -98,7 +98,7 @@ export default async function SobrePage() {
           </div>
         </div>
 
-        <ul className="mt-10 grid max-w-4xl grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
+        <ul className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
           {stats.map((stat) => (
             <li
               key={stat.label}
