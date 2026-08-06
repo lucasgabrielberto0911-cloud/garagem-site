@@ -64,7 +64,7 @@ export function SiteHeader() {
         }`}
       >
         <div
-          className={`mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 transition-[height] duration-200 sm:gap-3 sm:px-6 xl:gap-4 ${
+          className={`mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-3 px-3 transition-[height] duration-200 sm:gap-4 sm:px-6 lg:gap-5 ${
             scrolled
               ? "h-[64px] sm:h-[72px] lg:h-[76px]"
               : "h-[72px] sm:h-[84px] lg:h-[88px]"
@@ -72,7 +72,7 @@ export function SiteHeader() {
         >
           <Link
             href="/"
-            className="flex min-w-0 shrink items-center focus-visible:outline-offset-4"
+            className="relative z-10 flex shrink-0 items-center focus-visible:outline-offset-4"
             aria-label={`${site.name} — página inicial`}
           >
             <Image
@@ -81,16 +81,16 @@ export function SiteHeader() {
               width={280}
               height={50}
               priority
-              className={`w-auto max-w-[min(52vw,200px)] transition-all duration-300 sm:max-w-none ${
+              className={`w-auto max-w-[min(46vw,168px)] object-contain object-left transition-all duration-300 sm:max-w-[180px] lg:max-w-[168px] xl:max-w-[200px] ${
                 scrolled
-                  ? "h-8 sm:h-10 lg:h-10 xl:h-12"
-                  : "h-9 sm:h-11 lg:h-11 xl:h-[52px]"
+                  ? "h-8 sm:h-9 lg:h-9 xl:h-11"
+                  : "h-9 sm:h-10 lg:h-10 xl:h-12"
               }`}
             />
           </Link>
 
           <nav
-            className="hidden flex-1 items-center justify-center gap-0.5 xl:gap-1 lg:flex"
+            className="hidden min-w-0 items-center justify-center gap-0 lg:flex xl:gap-0.5"
             aria-label="Menu principal"
           >
             {NAV_LINKS.map((link) => {
@@ -103,13 +103,13 @@ export function SiteHeader() {
                   key={link.href}
                   href={link.href}
                   aria-current={active ? "page" : undefined}
-                  className={`group relative px-2.5 py-2 font-display text-[13px] font-semibold transition xl:px-3 xl:text-sm ${
+                  className={`group relative shrink-0 px-2 py-2 font-display text-[12px] font-semibold transition xl:px-2.5 xl:text-[13px] 2xl:px-3 2xl:text-sm ${
                     active ? "text-cream" : "text-muted hover:text-cream"
                   }`}
                 >
                   {link.label}
                   <span
-                    className={`absolute inset-x-2.5 -bottom-0.5 h-0.5 transition xl:inset-x-3 ${
+                    className={`absolute inset-x-2 -bottom-0.5 h-0.5 transition xl:inset-x-2.5 ${
                       active
                         ? "bg-brand-gradient"
                         : "bg-white/0 group-hover:bg-white/35 group-focus-visible:bg-white/35"
@@ -121,7 +121,7 @@ export function SiteHeader() {
             })}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 xl:gap-3">
+          <div className="relative z-10 flex shrink-0 items-center justify-end gap-1.5 sm:gap-2 xl:gap-3">
             <a
               href={telUrl()}
               className="hidden items-center gap-2 text-sm text-muted transition hover:text-cream xl:flex"
