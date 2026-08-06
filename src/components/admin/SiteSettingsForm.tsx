@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateSiteSettings } from "@/app/admin/site/actions";
+import { cleanupOrphanPhotos } from "@/app/admin/site/cleanup-actions";
 import { Card, Field, btn, inputClass } from "@/components/admin/ui";
 import type { EditableSiteFields } from "@/lib/site-settings";
 
@@ -14,6 +15,7 @@ export function SiteSettingsForm({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [cleanupPending, startCleanup] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -29,6 +31,14 @@ export function SiteSettingsForm({
       } else {
         toast.error(result.message);
       }
+    });
+  }
+
+  function runCleanup() {
+    startCleanup(async () => {
+      const result = await cleanupOrphanPhotos();
+      if (result.ok) toast.success(result.message);
+      else toast.error(result.message);
     });
   }
 
@@ -129,6 +139,48 @@ export function SiteSettingsForm({
         </div>
       </Card>
 
+      <Card
+        title="Números da página Sobre"
+        action={
+          <span className="text-xs text-muted">Exibidos nos cards de estatística</span>
+        }
+      >
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Anos de história" hint='Ex.: +20'>
+            <input
+              name="aboutYears"
+              defaultValue={initial.aboutYears}
+              placeholder="+20"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Carros vendidos" hint='Ex.: +1.000'>
+            <input
+              name="aboutSold"
+              defaultValue={initial.aboutSold}
+              placeholder="+1.000"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Atendimento" hint='Ex.: 8h–23h'>
+            <input
+              name="aboutHours"
+              defaultValue={initial.aboutHours}
+              placeholder="8h–23h"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Foco no cliente" hint='Ex.: 100%'>
+            <input
+              name="aboutFocus"
+              defaultValue={initial.aboutFocus}
+              placeholder="100%"
+              className={inputClass}
+            />
+          </Field>
+        </div>
+      </Card>
+
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={isPending} className={btn.primary}>
           {isPending ? "Salvando…" : "Salvar dados do site"}
@@ -138,6 +190,21 @@ export function SiteSettingsForm({
           <code className="text-cream/80">src/lib/site.ts</code>.
         </p>
       </div>
+
+      <Card title="Manutenção de fotos">
+        <p className="text-sm leading-relaxed text-muted">
+          Remove do Storage fotos que não estão ligadas a nenhum anúncio
+          (órfãs de edições antigas ou uploads cancelados).
+        </p>
+        <button
+          type="button"
+          disabled={cleanupPending}
+          onClick={runCleanup}
+          className={`${btn.outline} mt-4`}
+        >
+          {cleanupPending ? "Limpando…" : "Limpar fotos órfãs"}
+        </button>
+      </Card>
     </form>
   );
 }

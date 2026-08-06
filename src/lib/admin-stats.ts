@@ -2,7 +2,11 @@ import bcrypt from "bcryptjs";
 import { WEAK_ADMIN_PASSWORDS } from "@/lib/admin-security";
 import { prisma } from "@/lib/prisma";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/leads";
-import { getPublicSite, listPlaceholderLabels } from "@/lib/site-settings";
+import {
+  DEFAULT_ABOUT,
+  getPublicSite,
+  listPlaceholderLabels,
+} from "@/lib/site-settings";
 
 const DAY_MS = 1000 * 60 * 60 * 24;
 
@@ -138,7 +142,11 @@ export async function getDashboardData() {
   ) as Record<LeadStatus, number>;
 
   const available = byStatus("disponivel");
-  const siteForPlaceholders = publicSite ?? (await import("@/lib/site")).site;
+  const siteDefaults = (await import("@/lib/site")).site;
+  const siteForPlaceholders = publicSite ?? {
+    ...siteDefaults,
+    ...DEFAULT_ABOUT,
+  };
 
   return {
     vehicles: {

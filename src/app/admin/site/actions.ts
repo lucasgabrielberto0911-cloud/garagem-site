@@ -32,6 +32,10 @@ export async function updateSiteSettings(
   const hours = text(formData, "hours");
   const hoursWeekdays = text(formData, "hoursWeekdays");
   const hoursSaturday = text(formData, "hoursSaturday");
+  const aboutYears = text(formData, "aboutYears") || "+20";
+  const aboutSold = text(formData, "aboutSold") || "+1.000";
+  const aboutHours = text(formData, "aboutHours") || "8h–23h";
+  const aboutFocus = text(formData, "aboutFocus") || "100%";
 
   const fieldErrors: Record<string, string> = {};
   if (region.length < 2) fieldErrors.region = "Informe a cidade ou região.";
@@ -62,6 +66,10 @@ export async function updateSiteSettings(
         hours,
         hoursWeekdays,
         hoursSaturday,
+        aboutYears,
+        aboutSold,
+        aboutHours,
+        aboutFocus,
       },
       update: {
         region,
@@ -70,6 +78,10 @@ export async function updateSiteSettings(
         hours,
         hoursWeekdays,
         hoursSaturday,
+        aboutYears,
+        aboutSold,
+        aboutHours,
+        aboutFocus,
       },
     });
   } catch (error) {

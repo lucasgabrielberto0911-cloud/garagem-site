@@ -5,7 +5,10 @@ import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
-export type VehicleCardData = Vehicle & { photos: Photo[] };
+export type VehicleCardData = Vehicle & {
+  photos: Photo[];
+  _count?: { photos: number };
+};
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   reservado: { label: "Reservado", className: "bg-brand-orange text-asphalt" },
@@ -27,6 +30,7 @@ export function VehicleCard({
   const badge = STATUS_BADGE[vehicle.status];
   const categoryLabel = vehicleCategoryLabel(vehicle.category);
   const href = `/estoque/${vehicle.id}`;
+  const photoCount = vehicle._count?.photos ?? vehicle.photos.length;
 
   const meta = [
     `${vehicle.yearModel}`,
@@ -87,9 +91,9 @@ export function VehicleCard({
             {categoryLabel}
           </span>
 
-          {vehicle.photos.length > 1 ? (
+          {photoCount > 1 ? (
             <span className="absolute bottom-2 right-2 bg-asphalt/80 px-1.5 py-0.5 text-[11px] text-cream backdrop-blur">
-              {vehicle.photos.length} fotos
+              {photoCount} fotos
             </span>
           ) : null}
         </div>

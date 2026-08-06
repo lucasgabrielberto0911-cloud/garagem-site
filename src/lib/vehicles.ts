@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 
-/** Listagens só precisam da capa — evita carregar a galeria inteira. */
+/** Listagens: capa + contagem (badge "X fotos"). */
 export const PUBLIC_VEHICLE_CARD_INCLUDE = {
   photos: { orderBy: { order: "asc" as const }, take: 1 },
+  _count: { select: { photos: true } },
 };
 
 /** Detalhe e edição carregam todas as fotos. */
@@ -10,17 +11,38 @@ export const PUBLIC_VEHICLE_INCLUDE = {
   photos: { orderBy: { order: "asc" as const } },
 };
 
+export const STOCK_PAGE_SIZE = 12;
+
+export type SiteQueryMeta = {
+  /** Preenchido quando a consulta falhou e o fallback foi usado. */
+  error?: string;
+};
+
 /**
- * O site público nunca deve quebrar por indisponibilidade do banco: cada
- * consulta devolve um fallback vazio e registra o erro no servidor.
+ * O site público evita quebrar por falha de banco, mas registra e sinaliza
+ * o erro para a UI mostrar aviso (em vez de "estoque vazio" silencioso).
  */
-async function safeQuery<T>(label: string, run: () => Promise<T>, fallback: T) {
+async function safeQuery<T>(
+  label: string,
+  run: () => Promise<T>,
+  fallback: T,
+): Promise<T & SiteQueryMeta> {
   try {
-    return await run();
+    const data = await run();
+    return data as T & SiteQueryMeta;
   } catch (error) {
     console.error(`[site] falha ao consultar ${label}:`, error);
-    return fallback;
+    const message =
+      error instanceof Error ? error.message : `Falha ao consultar ${label}`;
+    if (dataIsObject(fallback)) {
+      return { ...fallback, error: message } as T & SiteQueryMeta;
+    }
+    return fallback as T & SiteQueryMeta;
   }
+}
+
+function dataIsObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function getFeaturedVehicles(take = 8) {
@@ -59,26 +81,119 @@ export function getVehicleById(id: string) {
   );
 }
 
+/**
+ * Relacionados: mesma marca → mesma categoria + faixa de preço → categoria → estoque.
+ */
 export function getRelatedVehicles(
   vehicleId: string,
   brand: string,
   take = 4,
   category?: string,
+  price?: number,
 ) {
   return safeQuery(
     "veículos relacionados",
-    () =>
-      prisma.vehicle.findMany({
+    async () => {
+      const include = PUBLIC_VEHICLE_CARD_INCLUDE;
+      const base = {
+        status: "disponivel" as const,
+        id: { not: vehicleId },
+      };
+
+      const byBrand = await prisma.vehicle.findMany({
         where: {
-          status: "disponivel",
+          ...base,
           brand,
-          id: { not: vehicleId },
           ...(category ? { category } : {}),
         },
-        include: PUBLIC_VEHICLE_CARD_INCLUDE,
+        include,
         orderBy: { createdAt: "desc" },
         take,
-      }),
+      });
+      if (byBrand.length >= take) return byBrand;
+
+      const seen = new Set(byBrand.map((item) => item.id));
+      const remaining = take - byBrand.length;
+
+      if (category && price && price > 0) {
+        const margin = price * 0.25;
+        const byPrice = await prisma.vehicle.findMany({
+          where: {
+            ...base,
+            category,
+            price: { gte: price - margin, lte: price + margin },
+            id: { notIn: [vehicleId, ...Array.from(seen)] },
+          },
+          include,
+          orderBy: { createdAt: "desc" },
+          take: remaining,
+        });
+        for (const item of byPrice) seen.add(item.id);
+        const merged = [...byBrand, ...byPrice];
+        if (merged.length >= take) return merged;
+
+        const still = take - merged.length;
+        const byCategory = await prisma.vehicle.findMany({
+          where: {
+            ...base,
+            category,
+            id: { notIn: [vehicleId, ...Array.from(seen)] },
+          },
+          include,
+          orderBy: { createdAt: "desc" },
+          take: still,
+        });
+        const withCategory = [...merged, ...byCategory];
+        if (withCategory.length >= take) return withCategory;
+
+        const fill = take - withCategory.length;
+        const extras = await prisma.vehicle.findMany({
+          where: {
+            ...base,
+            id: { notIn: [vehicleId, ...withCategory.map((item) => item.id)] },
+          },
+          include,
+          orderBy: { createdAt: "desc" },
+          take: fill,
+        });
+        return [...withCategory, ...extras];
+      }
+
+      if (category) {
+        const byCategory = await prisma.vehicle.findMany({
+          where: {
+            ...base,
+            category,
+            id: { notIn: [vehicleId, ...Array.from(seen)] },
+          },
+          include,
+          orderBy: { createdAt: "desc" },
+          take: remaining,
+        });
+        const merged = [...byBrand, ...byCategory];
+        if (merged.length >= take) return merged;
+
+        const extras = await prisma.vehicle.findMany({
+          where: {
+            ...base,
+            id: { notIn: [vehicleId, ...merged.map((item) => item.id)] },
+          },
+          include,
+          orderBy: { createdAt: "desc" },
+          take: take - merged.length,
+        });
+        return [...merged, ...extras];
+      }
+
+      if (byBrand.length > 0) return byBrand;
+
+      return prisma.vehicle.findMany({
+        where: base,
+        include,
+        orderBy: { createdAt: "desc" },
+        take,
+      });
+    },
     [],
   );
 }
@@ -89,10 +204,28 @@ export type StockFilters = {
   brand?: string;
   transmission?: string;
   fuel?: string;
+  minPrice?: number;
   maxPrice?: number;
   minYear?: number;
+  maxYear?: number;
   maxKm?: number;
   sort?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type StockPageResult = {
+  vehicles: Array<
+    Awaited<ReturnType<typeof prisma.vehicle.findMany>>[number] & {
+      photos: Array<{ id: string; url: string; order: number; vehicleId: string }>;
+      _count: { photos: number };
+    }
+  >;
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  error?: string;
 };
 
 const SORT_MAP: Record<string, { [key: string]: "asc" | "desc" }> = {
@@ -103,38 +236,106 @@ const SORT_MAP: Record<string, { [key: string]: "asc" | "desc" }> = {
   "mais-novo": { yearModel: "desc" },
 };
 
-export function getStockVehicles(filters: StockFilters) {
+function buildStockWhere(filters: StockFilters) {
   const terms = (filters.q ?? "").trim().split(/\s+/).filter(Boolean);
+  const priceFilter =
+    filters.minPrice || filters.maxPrice
+      ? {
+          price: {
+            ...(filters.minPrice ? { gte: filters.minPrice } : {}),
+            ...(filters.maxPrice ? { lte: filters.maxPrice } : {}),
+          },
+        }
+      : {};
+  const yearFilter =
+    filters.minYear || filters.maxYear
+      ? {
+          yearModel: {
+            ...(filters.minYear ? { gte: filters.minYear } : {}),
+            ...(filters.maxYear ? { lte: filters.maxYear } : {}),
+          },
+        }
+      : {};
 
+  return {
+    status: "disponivel" as const,
+    ...(filters.category ? { category: filters.category } : {}),
+    ...(filters.brand ? { brand: filters.brand } : {}),
+    ...(filters.transmission ? { transmission: filters.transmission } : {}),
+    ...(filters.fuel ? { fuel: filters.fuel } : {}),
+    ...priceFilter,
+    ...yearFilter,
+    ...(filters.maxKm ? { km: { lte: filters.maxKm } } : {}),
+    ...(terms.length
+      ? {
+          AND: terms.map((term) => ({
+            OR: [
+              { brand: { contains: term, mode: "insensitive" as const } },
+              { model: { contains: term, mode: "insensitive" as const } },
+              { version: { contains: term, mode: "insensitive" as const } },
+            ],
+          })),
+        }
+      : {}),
+  };
+}
+
+async function fetchStockPage(filters: StockFilters) {
+  const pageSize = Math.min(
+    Math.max(filters.pageSize ?? STOCK_PAGE_SIZE, 1),
+    48,
+  );
+  const page = Math.max(filters.page ?? 1, 1);
+  const where = buildStockWhere(filters);
+  const orderBy = SORT_MAP[filters.sort ?? "recentes"] ?? SORT_MAP.recentes;
+
+  const [total, vehicles] = await Promise.all([
+    prisma.vehicle.count({ where }),
+    prisma.vehicle.findMany({
+      where,
+      include: PUBLIC_VEHICLE_CARD_INCLUDE,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+
+  return {
+    vehicles,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  };
+}
+
+/** @deprecated Use getStockPage — mantido para callers simples. */
+export function getStockVehicles(filters: StockFilters) {
   return safeQuery(
     "estoque",
-    () =>
-      prisma.vehicle.findMany({
-        where: {
-          status: "disponivel",
-          ...(filters.category ? { category: filters.category } : {}),
-          ...(filters.brand ? { brand: filters.brand } : {}),
-          ...(filters.transmission ? { transmission: filters.transmission } : {}),
-          ...(filters.fuel ? { fuel: filters.fuel } : {}),
-          ...(filters.maxPrice ? { price: { lte: filters.maxPrice } } : {}),
-          ...(filters.minYear ? { yearModel: { gte: filters.minYear } } : {}),
-          ...(filters.maxKm ? { km: { lte: filters.maxKm } } : {}),
-          ...(terms.length
-            ? {
-                AND: terms.map((term) => ({
-                  OR: [
-                    { brand: { contains: term, mode: "insensitive" as const } },
-                    { model: { contains: term, mode: "insensitive" as const } },
-                    { version: { contains: term, mode: "insensitive" as const } },
-                  ],
-                })),
-              }
-            : {}),
-        },
-        include: PUBLIC_VEHICLE_CARD_INCLUDE,
-        orderBy: SORT_MAP[filters.sort ?? "recentes"] ?? SORT_MAP.recentes,
-      }),
+    async () => {
+      const result = await fetchStockPage({
+        ...filters,
+        page: 1,
+        pageSize: 500,
+      });
+      return result.vehicles;
+    },
     [],
+  );
+}
+
+export function getStockPage(filters: StockFilters): Promise<StockPageResult> {
+  return safeQuery(
+    "estoque",
+    () => fetchStockPage(filters),
+    {
+      vehicles: [],
+      total: 0,
+      page: 1,
+      pageSize: filters.pageSize ?? STOCK_PAGE_SIZE,
+      totalPages: 1,
+    },
   );
 }
 

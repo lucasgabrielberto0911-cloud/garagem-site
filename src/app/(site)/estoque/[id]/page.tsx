@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
+import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { Container, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
@@ -65,6 +66,7 @@ export default async function VehicleDetailPage({
     vehicle.brand,
     4,
     vehicle.category,
+    vehicle.price,
   );
 
   const specs = [
@@ -74,6 +76,19 @@ export default async function VehicleDetailPage({
     { label: "Câmbio", value: vehicle.transmission },
     { label: "Combustível", value: vehicle.fuel },
     ...(vehicle.color ? [{ label: "Cor", value: vehicle.color }] : []),
+    ...(vehicle.engine ? [{ label: "Motor", value: vehicle.engine }] : []),
+    ...(vehicle.doors != null
+      ? [{ label: "Portas", value: String(vehicle.doors) }]
+      : []),
+    ...(vehicle.plateEnd
+      ? [{ label: "Final placa", value: vehicle.plateEnd }]
+      : []),
+    ...(vehicle.warranty
+      ? [{ label: "Garantia", value: vehicle.warranty }]
+      : []),
+    ...(vehicle.inspection
+      ? [{ label: "Laudo", value: vehicle.inspection }]
+      : []),
   ];
 
   const hasDetails =
@@ -180,6 +195,12 @@ export default async function VehicleDetailPage({
                 </a>
               </div>
 
+              <ShareVehicle
+                title={fullLabel}
+                path={`/estoque/${vehicle.id}`}
+                className="border-t border-white/10 pt-3"
+              />
+
               <p className="text-xs leading-relaxed text-muted">
                 Valores e disponibilidade sujeitos a alteração. Financiamento
                 pelo WhatsApp {site.whatsappLabel}.
@@ -229,7 +250,7 @@ export default async function VehicleDetailPage({
           <section className="mt-10 border-t border-white/5 pt-8 sm:mt-12 sm:pt-10">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <h2 className="font-display text-lg font-bold tracking-tight text-cream sm:text-xl">
-                Outros {vehicle.brand}
+                Você também pode gostar
               </h2>
               <Link
                 href="/estoque"

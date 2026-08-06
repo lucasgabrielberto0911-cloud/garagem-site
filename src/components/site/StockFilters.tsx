@@ -24,8 +24,17 @@ const SORT_OPTIONS = [
 const selectClass =
   "w-full min-h-[48px] border border-white/10 bg-asphalt px-3 py-2.5 text-sm text-cream outline-none transition focus:border-brand";
 
-const PRICE_OPTIONS = [
-  { value: "", label: "Qualquer preço" },
+const MIN_PRICE_OPTIONS = [
+  { value: "", label: "Preço mínimo" },
+  { value: "30000", label: "A partir de R$ 30 mil" },
+  { value: "50000", label: "A partir de R$ 50 mil" },
+  { value: "80000", label: "A partir de R$ 80 mil" },
+  { value: "120000", label: "A partir de R$ 120 mil" },
+  { value: "180000", label: "A partir de R$ 180 mil" },
+] as const;
+
+const MAX_PRICE_OPTIONS = [
+  { value: "", label: "Preço máximo" },
   { value: "50000", label: "Até R$ 50 mil" },
   { value: "80000", label: "Até R$ 80 mil" },
   { value: "120000", label: "Até R$ 120 mil" },
@@ -53,8 +62,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
     brand: params.get("brand") ?? "",
     transmission: params.get("transmission") ?? "",
     fuel: params.get("fuel") ?? "",
+    minPrice: params.get("minPrice") ?? "",
     maxPrice: params.get("maxPrice") ?? "",
     minYear: params.get("minYear") ?? "",
+    maxYear: params.get("maxYear") ?? "",
     maxKm: params.get("maxKm") ?? "",
     sort: params.get("sort") ?? "recentes",
   };
@@ -82,8 +93,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
     current.brand,
     current.transmission,
     current.fuel,
+    current.minPrice,
     current.maxPrice,
     current.minYear,
+    current.maxYear,
     current.maxKm,
   ].filter(Boolean).length;
 
@@ -94,6 +107,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
         next.set(key, String(value));
       }
     });
+    // Nova busca/filtro volta à página 1.
+    next.delete("page");
     const query = next.toString();
     startTransition(() => {
       router.push(query ? `/estoque?${query}` : "/estoque");
@@ -112,8 +127,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
       brand: "",
       transmission: "",
       fuel: "",
+      minPrice: "",
       maxPrice: "",
       minYear: "",
+      maxYear: "",
       maxKm: "",
       sort: "recentes",
     });
@@ -200,6 +217,21 @@ export function StockFilters({ facets }: { facets: Facets }) {
             options={facets.fuels}
             emptyLabel="Todos os combustíveis"
           />
+          <label className="sr-only" htmlFor="desktop-preco-min">
+            Preço mínimo
+          </label>
+          <select
+            id="desktop-preco-min"
+            value={current.minPrice}
+            onChange={(event) => update({ minPrice: event.target.value })}
+            className={selectClass}
+          >
+            {MIN_PRICE_OPTIONS.map((option) => (
+              <option key={option.value || "min"} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
           <label className="sr-only" htmlFor="desktop-preco">
             Preço máximo
           </label>
@@ -209,25 +241,41 @@ export function StockFilters({ facets }: { facets: Facets }) {
             onChange={(event) => update({ maxPrice: event.target.value })}
             className={selectClass}
           >
-            {PRICE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
+            {MAX_PRICE_OPTIONS.map((option) => (
+              <option key={option.value || "max"} value={option.value}>
                 {option.label}
               </option>
             ))}
           </select>
-          <label className="sr-only" htmlFor="desktop-ano">
+          <label className="sr-only" htmlFor="desktop-ano-min">
             Ano a partir de
           </label>
           <select
-            id="desktop-ano"
+            id="desktop-ano-min"
             value={current.minYear}
             onChange={(event) => update({ minYear: event.target.value })}
             className={selectClass}
           >
-            <option value="">Qualquer ano</option>
+            <option value="">Ano mínimo</option>
             {facets.years.map((year) => (
-              <option key={year} value={year}>
+              <option key={`min-${year}`} value={year}>
                 A partir de {year}
+              </option>
+            ))}
+          </select>
+          <label className="sr-only" htmlFor="desktop-ano-max">
+            Ano até
+          </label>
+          <select
+            id="desktop-ano-max"
+            value={current.maxYear}
+            onChange={(event) => update({ maxYear: event.target.value })}
+            className={selectClass}
+          >
+            <option value="">Ano máximo</option>
+            {facets.years.map((year) => (
+              <option key={`max-${year}`} value={year}>
+                Até {year}
               </option>
             ))}
           </select>
@@ -397,26 +445,49 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   {facets.fuels.map((item) => <option key={item}>{item}</option>)}
                 </select>
               </MobileField>
+              <MobileField label="Preço mínimo">
+                <select
+                  value={draft.minPrice}
+                  onChange={(event) => setDraft({ ...draft, minPrice: event.target.value })}
+                  className={selectClass}
+                >
+                  {MIN_PRICE_OPTIONS.map((option) => (
+                    <option key={option.value || "min"} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </MobileField>
               <MobileField label="Preço máximo">
                 <select
                   value={draft.maxPrice}
                   onChange={(event) => setDraft({ ...draft, maxPrice: event.target.value })}
                   className={selectClass}
                 >
-                  {PRICE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
+                  {MAX_PRICE_OPTIONS.map((option) => (
+                    <option key={option.value || "max"} value={option.value}>{option.label}</option>
                   ))}
                 </select>
               </MobileField>
-              <MobileField label="Ano a partir de">
+              <MobileField label="Ano mínimo">
                 <select
                   value={draft.minYear}
                   onChange={(event) => setDraft({ ...draft, minYear: event.target.value })}
                   className={selectClass}
                 >
-                  <option value="">Qualquer ano</option>
+                  <option value="">Qualquer</option>
                   {facets.years.map((year) => (
-                    <option key={year} value={year}>{year}</option>
+                    <option key={`m-min-${year}`} value={year}>{year}</option>
+                  ))}
+                </select>
+              </MobileField>
+              <MobileField label="Ano máximo">
+                <select
+                  value={draft.maxYear}
+                  onChange={(event) => setDraft({ ...draft, maxYear: event.target.value })}
+                  className={selectClass}
+                >
+                  <option value="">Qualquer</option>
+                  {facets.years.map((year) => (
+                    <option key={`m-max-${year}`} value={year}>{year}</option>
                   ))}
                 </select>
               </MobileField>
@@ -443,8 +514,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
                     brand: "",
                     transmission: "",
                     fuel: "",
+                    minPrice: "",
                     maxPrice: "",
                     minYear: "",
+                    maxYear: "",
                     maxKm: "",
                   })
                 }

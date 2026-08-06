@@ -25,13 +25,6 @@ export const metadata: Metadata = {
   alternates: { canonical: "/sobre" },
 };
 
-const STATS = [
-  { value: "+20", label: "anos de história" },
-  { value: "+1.000", label: "carros vendidos" },
-  { value: "8h–23h", label: "atendimento online" },
-  { value: "100%", label: "foco no cliente" },
-] as const;
-
 const DIFERENCIAIS = [
   {
     Icon: IconClipboardCheck,
@@ -57,6 +50,12 @@ const DIFERENCIAIS = [
 
 export default async function SobrePage() {
   const publicSite = await getPublicSite();
+  const stats = [
+    { value: publicSite.aboutYears, label: "anos de história" },
+    { value: publicSite.aboutSold, label: "carros vendidos" },
+    { value: publicSite.aboutHours, label: "atendimento online" },
+    { value: publicSite.aboutFocus, label: "foco no cliente" },
+  ];
 
   return (
     <div className="py-12 lg:py-16">
@@ -92,7 +91,7 @@ export default async function SobrePage() {
         </div>
 
         <ul className="mt-10 grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
-          {STATS.map((stat) => (
+          {stats.map((stat) => (
             <li
               key={stat.label}
               className="flex flex-col items-center bg-ink px-4 py-6 text-center"
