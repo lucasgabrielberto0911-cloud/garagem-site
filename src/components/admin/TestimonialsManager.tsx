@@ -67,20 +67,16 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
     if (!file) return;
     setUploading(true);
     try {
-      const data = new FormData();
-      data.append("files", file);
-      const response = await fetch("/api/upload", { method: "POST", body: data });
-      const json = await response.json();
-      if (!response.ok) {
-        toast.error(json.error || "Falha no upload.");
-        return;
-      }
+      const { uploadImageDirect } = await import("@/lib/upload-image-direct");
+      const photoUrl = await uploadImageDirect(file);
       setForm((current) =>
-        current ? { ...current, photoUrl: json.urls[0] as string } : current,
+        current ? { ...current, photoUrl } : current,
       );
       toast.success("Foto enviada.");
-    } catch {
-      toast.error("Erro de conexão no upload.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Erro de conexão no upload.",
+      );
     } finally {
       setUploading(false);
     }
