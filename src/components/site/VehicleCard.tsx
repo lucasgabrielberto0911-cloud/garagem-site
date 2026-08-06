@@ -52,6 +52,7 @@ export function VehicleCard({
       <FavoriteButton
         vehicleId={vehicle.id}
         label={`${title} ${vehicle.yearModel}`}
+        size="sm"
         className="absolute right-2 top-2 z-20"
       />
 
