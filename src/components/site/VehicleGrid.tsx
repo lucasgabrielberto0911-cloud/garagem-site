@@ -30,7 +30,7 @@ export function VehicleGrid({
 }) {
   return (
     <div
-      className={`mx-auto grid w-full gap-3 sm:gap-4 ${layoutForCount(vehicles.length)}`}
+      className={`mx-auto grid w-full gap-2.5 sm:gap-4 ${layoutForCount(vehicles.length)}`}
     >
       {vehicles.map((vehicle, index) => {
         const card = (
