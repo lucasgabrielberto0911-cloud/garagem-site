@@ -119,7 +119,7 @@ export default async function ContatoPage() {
               Horário de atendimento online
             </h3>
             <p className="mt-3 text-sm text-muted">{publicSite.hours}</p>
-            <dl className="mt-5 w-full max-w-md space-y-2 text-sm">
+            <dl className="mx-auto mt-5 w-full max-w-md space-y-2 text-sm">
               <HourRow label="Segunda a sexta" value={publicSite.hoursWeekdays} />
               <HourRow label="Sábado" value={publicSite.hoursSaturday} />
               <HourRow

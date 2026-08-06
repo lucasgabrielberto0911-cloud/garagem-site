@@ -39,7 +39,7 @@ const SORT_OPTIONS = [
 ] as const;
 
 const selectClass =
-  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3 py-2.5 text-sm text-cream outline-none transition focus:border-brand";
+  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-sm text-cream outline-none transition focus:border-brand";
 
 const MIN_PRICE_OPTIONS = [
   { value: "", label: "Preço mínimo" },
@@ -210,7 +210,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
       <div
         aria-busy={isPending}
         data-pending={isPending}
-        className={`border border-white/10 bg-ink p-3 transition-opacity sm:p-5 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto ${
+        className={`border border-white/10 bg-ink p-4 transition-opacity sm:p-5 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-6 lg:pr-5 ${
           isPending ? "opacity-70" : ""
         }`}
       >
@@ -222,10 +222,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
             ).value;
             update({ q: value });
           }}
-          className="mx-auto flex max-w-2xl gap-2 lg:flex-col"
+          className="mx-auto flex max-w-2xl gap-2 lg:flex-col lg:gap-3"
           role="search"
         >
-          <div className="flex min-h-[48px] flex-1 items-center gap-2 border border-white/10 bg-asphalt px-3 transition focus-within:border-brand">
+          <div className="flex min-h-[48px] flex-1 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand lg:min-h-[52px]">
             <IconSearch className="h-4 w-4 shrink-0 text-muted" />
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
@@ -237,13 +237,13 @@ export function StockFilters({ facets }: { facets: Facets }) {
               defaultValue={current.q}
               key={current.q}
               placeholder="Marca, modelo ou versão"
-              className="w-full bg-transparent py-3 text-base text-cream placeholder:text-muted focus:outline-none sm:text-sm"
+              className="w-full min-w-0 bg-transparent py-3 text-base text-cream placeholder:text-muted focus:outline-none sm:text-sm"
             />
           </div>
           <button
             type="submit"
             disabled={isPending}
-            className="min-h-[48px] bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 sm:px-6 lg:w-full"
+            className="min-h-[48px] bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 sm:px-6 lg:min-h-[52px] lg:w-full"
           >
             <span className="hidden sm:inline">{isPending ? "Buscando..." : "Buscar"}</span>
             <IconSearch className="h-5 w-5 sm:hidden" />
@@ -251,15 +251,15 @@ export function StockFilters({ facets }: { facets: Facets }) {
         </form>
 
         {/* Desktop: filtros completos. */}
-        <div className="mt-5 hidden lg:block">
-          <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+        <div className="mt-6 hidden lg:block">
+          <div className="flex items-center gap-2.5 border-b border-white/10 pb-4">
             <FilterIcon />
             <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
               Filtrar estoque
             </h2>
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-5 space-y-4">
             <DesktopField label="Tipo" htmlFor="desktop-tipo">
               <select
                 id="desktop-tipo"
@@ -379,7 +379,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           <DesktopField
             label="Ordenar resultados"
             htmlFor="estoque-ordem"
-            className="mt-4 border-t border-white/10 pt-4"
+            className="mt-5 border-t border-white/10 pt-5"
           >
             <select
               id="estoque-ordem"
@@ -396,17 +396,17 @@ export function StockFilters({ facets }: { facets: Facets }) {
           </DesktopField>
 
           {activeFilters.length > 0 ? (
-            <div className="mt-5 border-t border-white/10 pt-4">
+            <div className="mt-5 border-t border-white/10 pt-5">
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
                 Filtros ativos
               </p>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {activeFilters.map((filter) => (
                   <button
                     key={filter.key}
                     type="button"
                     onClick={() => update({ [filter.key]: "" })}
-                    className="inline-flex min-h-[32px] items-center gap-1.5 border border-brand/50 bg-brand/10 px-2 py-1 text-left text-[11px] leading-tight text-cream transition hover:border-brand"
+                    className="inline-flex min-h-[36px] items-center gap-1.5 border border-brand/50 bg-brand/10 px-2.5 py-1.5 text-left text-[11px] leading-tight text-cream transition hover:border-brand"
                     aria-label={`Remover ${filter.label}`}
                   >
                     <span>{filter.label}</span>
@@ -421,7 +421,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
             <button
               type="button"
               onClick={clearFilters}
-              className="mt-4 min-h-[40px] w-full border border-white/15 px-3 font-display text-xs font-semibold uppercase tracking-wider text-muted transition hover:border-brand hover:text-cream"
+              className="mt-5 min-h-[44px] w-full border border-white/15 px-3 font-display text-xs font-semibold uppercase tracking-wider text-muted transition hover:border-brand hover:text-cream"
             >
               Limpar filtros
             </button>
@@ -704,7 +704,7 @@ function DesktopField({
     <div className={className}>
       <label
         htmlFor={htmlFor}
-        className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-muted"
+        className="mb-2 block text-[11px] font-medium uppercase tracking-wider text-muted"
       >
         {label}
       </label>

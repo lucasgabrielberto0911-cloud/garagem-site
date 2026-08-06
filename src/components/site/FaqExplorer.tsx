@@ -44,7 +44,7 @@ export function FaqExplorer({ items }: { items: FaqItem[] }) {
       <div
         role="tablist"
         aria-label="Categorias"
-        className="mt-4 flex gap-2 overflow-x-auto pb-1 scrollbar-hide"
+        className="mt-4 flex flex-wrap justify-center gap-2"
       >
         {FAQ_CATEGORIES.map((cat) => {
           const active = category === cat.id;
@@ -67,7 +67,7 @@ export function FaqExplorer({ items }: { items: FaqItem[] }) {
         })}
       </div>
 
-      <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted lg:text-left">
+      <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted">
         {filtered.length}{" "}
         {filtered.length === 1 ? "dúvida encontrada" : "dúvidas encontradas"}
       </p>

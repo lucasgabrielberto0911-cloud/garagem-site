@@ -74,7 +74,7 @@ export default async function SobrePage() {
           description={`Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência, negociação clara e atendimento de excelência em ${publicSite.region} e região.`}
         />
 
-        <div className="relative mt-10 aspect-[4/3] overflow-hidden border border-white/10 sm:mt-12 sm:aspect-[16/9] lg:max-w-4xl">
+        <div className="relative mx-auto mt-10 aspect-[4/3] max-w-4xl overflow-hidden border border-white/10 sm:mt-12 sm:aspect-[16/9]">
           <Image
             src="/branding/hero-bg.jpg"
             alt={`Estoque e atendimento da ${publicSite.name}`}
@@ -98,7 +98,7 @@ export default async function SobrePage() {
           </div>
         </div>
 
-        <ul className="mt-10 grid max-w-4xl grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
+        <ul className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
           {stats.map((stat) => (
             <li
               key={stat.label}
@@ -114,10 +114,10 @@ export default async function SobrePage() {
           ))}
         </ul>
 
-        <div className="mt-14 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="mx-auto mt-14 max-w-5xl lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[220px_minmax(0,1fr)] xl:gap-12">
           <nav
             aria-label="Índice da página"
-            className="mb-8 flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:sticky lg:top-24 lg:mb-0 lg:flex-col lg:overflow-visible lg:pb-0"
+            className="mb-8 flex justify-center gap-2 overflow-x-auto pb-1 scrollbar-hide lg:sticky lg:top-24 lg:mb-0 lg:flex-col lg:justify-start lg:overflow-visible lg:pb-0"
           >
             {TOC.map((item) => (
               <a
@@ -130,7 +130,7 @@ export default async function SobrePage() {
             ))}
           </nav>
 
-          <div className="min-w-0 max-w-3xl">
+          <div className="min-w-0">
             <div className="grid gap-10 lg:grid-cols-2">
               <article id="historia" className="scroll-mt-28 text-center lg:text-left">
                 <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">

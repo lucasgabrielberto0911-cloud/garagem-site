@@ -90,14 +90,14 @@ body {
     padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Compensa header fixo + notch. */
+  /* Compensa header fixo + notch (altura alinhada ao SiteHeader). */
   .pt-site-header {
     padding-top: calc(4.5rem + env(safe-area-inset-top, 0px));
   }
 
   @media (min-width: 1024px) {
     .pt-site-header {
-      padding-top: 6rem;
+      padding-top: 5.5rem; /* ~88px: barra 80px + folga */
     }
   }
 
