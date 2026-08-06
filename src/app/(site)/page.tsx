@@ -65,22 +65,20 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* 1. HERO */}
+      {/* 1. HERO — compacto no desktop para o estoque aparecer cedo */}
       <section className="hero-red-black relative isolate overflow-hidden">
         <div className="hero-color-field" aria-hidden="true">
           <span className="hero-red-orb hero-red-orb-1" />
           <span className="hero-red-orb hero-red-orb-2" />
-          <span className="hero-red-orb hero-red-orb-3" />
-          <span className="hero-red-glow-line" />
           <span className="hero-grid" />
           <span className="hero-noise" />
         </div>
         <div
-          className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-asphalt to-transparent"
+          className="absolute inset-x-0 bottom-0 -z-10 h-28 bg-gradient-to-t from-asphalt to-transparent"
           aria-hidden="true"
         />
 
-        <Container className="flex min-h-[auto] flex-col items-center justify-center py-12 text-center sm:min-h-[62dvh] sm:py-16 lg:min-h-[64dvh] lg:py-20">
+        <Container className="flex flex-col items-center justify-center py-10 text-center sm:py-12 lg:min-h-[46dvh] lg:py-14">
           <div className="hero-brand">
             <Image
               src="/branding/logo-wordmark.png"
@@ -88,38 +86,43 @@ export default async function HomePage() {
               width={420}
               height={76}
               priority
-              className="mx-auto h-auto w-[min(70vw,280px)] sm:w-[min(62vw,400px)] lg:w-[440px]"
+              className="mx-auto h-auto w-[min(70vw,260px)] sm:w-[min(58vw,360px)] lg:w-[380px]"
             />
           </div>
 
-          <div className="hero-text mt-6 sm:mt-8">
-            <h1 className="mx-auto max-w-3xl font-display text-[1.75rem] font-bold leading-[1.15] tracking-tight text-cream sm:text-5xl">
-              Encontre seu <span className="brand-shimmer">próximo carro</span>
+          <div className="hero-text mt-5 sm:mt-6">
+            <h1 className="mx-auto max-w-3xl font-display text-[1.65rem] font-bold leading-[1.15] tracking-tight text-cream sm:text-4xl lg:text-[2.75rem]">
+              Encontre seu <span className="text-brand">próximo carro</span>
             </h1>
             <div
-              className="mx-auto mt-4 h-1 w-20 bg-brand-gradient sm:mt-5 sm:w-24"
+              className="mx-auto mt-3 h-1 w-16 bg-brand-gradient sm:mt-4 sm:w-20"
               aria-hidden="true"
             />
-            <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-cream/80 sm:mt-5 sm:text-lg">
-              Seminovos revisados e com procedência em {site.region} e região.
-              Escolha pelo site, feche pelo WhatsApp e saia dirigindo.
+            <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-cream/80 sm:mt-4 sm:text-base">
+              Seminovos revisados em {site.region} e região. Escolha no site,
+              feche pelo WhatsApp.
             </p>
           </div>
 
-          <div className="hero-search mt-7 flex w-full justify-center sm:mt-9">
+          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6">
             <HeroSearch brands={facets.brands} />
           </div>
 
-          <ActionRow className="hero-cta mt-6 w-full sm:mt-8 sm:w-auto">
+          <ActionRow className="hero-cta mt-5 w-full sm:mt-6 sm:w-auto">
             <ButtonLink href="/estoque" size="lg">
-              Ver estoque completo
+              Ver estoque
             </ButtonLink>
-            <WhatsAppButton size="lg" variant="outline" className="hidden sm:inline-flex">
-              Falar com um consultor
+            <WhatsAppButton
+              size="lg"
+              variant="outline"
+              className="hidden sm:inline-flex"
+              message={WHATSAPP_MESSAGES.general}
+            >
+              Quero ajuda para escolher
             </WhatsAppButton>
           </ActionRow>
 
-          <div className="hero-stats mt-8 w-full max-w-2xl sm:mt-12">
+          <div className="hero-stats mt-6 hidden w-full max-w-2xl sm:mt-8 lg:block">
             <Suspense fallback={<StatsBarSkeleton />}>
               <StatsBar />
             </Suspense>
@@ -127,20 +130,13 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      {/* 2. SELOS DE CONFIANÇA */}
-      <Section spacing="tight">
-        <ScrollReveal>
-          <TrustBadges />
-        </ScrollReveal>
-      </Section>
-
-      {/* 3. VEÍCULOS EM DESTAQUE */}
-      <Section id="destaques" className="border-t border-white/5">
+      {/* 2. ESTOQUE CEDO — logo após o hero */}
+      <Section id="destaques" spacing="tight" className="border-t border-white/5">
         <ScrollReveal>
           <SectionHeading
             eyebrow="Estoque"
             title="Veículos em destaque"
-            description="Uma seleção do que temos disponível agora. O estoque gira rápido — se gostar de algum, chame no WhatsApp para garantir."
+            description="Seleção do que está disponível agora. O estoque gira rápido."
           />
         </ScrollReveal>
 
@@ -152,8 +148,8 @@ export default async function HomePage() {
                   Estoque sendo montado
                 </p>
                 <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-                  Estamos selecionando os próximos veículos. Fale com a gente e
-                  diga o que você procura — buscamos para você.
+                  Estamos selecionando os próximos veículos. Diga o que você
+                  procura — buscamos para você.
                 </p>
                 <WhatsAppButton
                   className="mt-5"
@@ -178,8 +174,15 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <ScrollReveal className="mt-10">
+        <ScrollReveal className="mt-8">
           <WantedVehicleCta />
+        </ScrollReveal>
+      </Section>
+
+      {/* 3. SELOS DE CONFIANÇA */}
+      <Section spacing="tight" className="border-t border-white/5">
+        <ScrollReveal>
+          <TrustBadges />
         </ScrollReveal>
       </Section>
 
@@ -189,7 +192,7 @@ export default async function HomePage() {
           <SectionHeading
             eyebrow="Diferenciais"
             title={`Por que escolher a ${site.name}`}
-            description="Comprar seminovo não precisa ser aposta. Estes são os três compromissos que assumimos com todo cliente."
+            description="Comprar seminovo não precisa ser aposta. Três compromissos com todo cliente."
           />
         </ScrollReveal>
         <ul className="mx-auto mt-12 grid gap-5 lg:grid-cols-3">
@@ -231,7 +234,7 @@ export default async function HomePage() {
           <SectionHeading
             eyebrow="Atendimento"
             title={`Atendemos ${publicSite.region} e região`}
-            description={`Somos loja digital em ${publicSite.region}, no ${publicSite.state}. Escolha no site, peça vídeo pelo WhatsApp e feche com segurança — atendimento online todos os dias, das 8h às 23h.`}
+            description={`Loja digital em ${publicSite.region}, ${publicSite.state}. Escolha no site, peça vídeo pelo WhatsApp — online das 8h às 23h.`}
           />
         </ScrollReveal>
 
@@ -254,29 +257,9 @@ export default async function HomePage() {
           </dl>
         </ScrollReveal>
 
-        <ScrollReveal delay={60}>
-          <div className="relative mx-auto mt-8 aspect-[16/9] max-w-3xl overflow-hidden border border-white/10">
-            <Image
-              src="/branding/hero-bg.jpg"
-              alt={`Loja ${site.name}`}
-              fill
-              sizes="(min-width: 1024px) 768px, 100vw"
-              quality={70}
-              className="object-cover"
-            />
-            <div
-              className="absolute inset-0 bg-gradient-to-t from-asphalt/80 to-transparent"
-              aria-hidden="true"
-            />
-          </div>
-        </ScrollReveal>
-
         <ActionRow className="mt-8">
-          <WhatsAppButton size="lg" message={WHATSAPP_MESSAGES.visit}>
-            Chamar no WhatsApp
-          </WhatsAppButton>
-          <ButtonLink href="/contato" size="lg" variant="outline">
-            Ver contato completo
+          <ButtonLink href="/contato" size="lg">
+            Ver canais de contato
           </ButtonLink>
           <a
             href={site.instagramUrl}
@@ -310,9 +293,8 @@ export default async function HomePage() {
                 aria-hidden="true"
               />
               <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-                Compramos seu usado e aceitamos na troca. Manda os dados do
-                veículo que a gente avalia rápido e faz uma proposta justa, sem
-                enrolação.
+                Compramos seu usado e aceitamos na troca. Manda os dados que a
+                gente avalia e faz uma proposta justa.
               </p>
               <ActionRow className="mt-8">
                 <WhatsAppButton size="lg" message={WHATSAPP_MESSAGES.sell}>
@@ -327,13 +309,13 @@ export default async function HomePage() {
         </ScrollReveal>
       </Section>
 
-      {/* 8. DÚVIDAS FREQUENTES */}
+      {/* 8. DÚVIDAS */}
       <Section className="border-t border-white/5 bg-ink/40" size="narrow">
         <ScrollReveal>
           <SectionHeading
             eyebrow="Dúvidas frequentes"
             title="Antes de fechar negócio"
-            description="As perguntas que mais recebemos sobre compra, troca, financiamento e documentação."
+            description="As perguntas que mais recebemos sobre compra, troca e documentação."
           />
         </ScrollReveal>
         <div className="mt-12">
@@ -350,26 +332,27 @@ export default async function HomePage() {
         </div>
       </Section>
 
-      {/* 9. CTA FINAL */}
+      {/* 9. CTA FINAL — intenção distinta do hero */}
       <Section className="border-t border-white/5 bg-ink/40 text-center" size="narrow">
         <ScrollReveal>
-          <h2 className="mx-auto max-w-2xl font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl lg:text-4xl">
-            Pronto para encontrar seu próximo carro?
+          <h2 className="mx-auto max-w-2xl font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl">
+            Ainda em dúvida sobre o próximo passo?
           </h2>
           <div
             className="mx-auto mt-5 h-0.5 w-16 bg-brand-gradient"
             aria-hidden="true"
           />
           <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-            Veja o estoque completo ou fale agora com um consultor da {site.name}.
+            Um consultor da {site.name} te ajuda a comparar opções e fechar com
+            segurança.
           </p>
           <ActionRow className="mt-9">
-            <ButtonLink href="/estoque" size="lg">
-              Ver estoque completo
-            </ButtonLink>
-            <WhatsAppButton size="lg" variant="outline">
-              WhatsApp
+            <WhatsAppButton size="lg" message={WHATSAPP_MESSAGES.visit}>
+              Falar com um consultor
             </WhatsAppButton>
+            <ButtonLink href="/estoque" size="lg" variant="outline">
+              Continuar no estoque
+            </ButtonLink>
           </ActionRow>
         </ScrollReveal>
       </Section>

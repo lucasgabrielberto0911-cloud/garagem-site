@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { IconClose, IconSearch } from "@/components/site/icons";
+import { useStockPendingOptional } from "@/components/site/StockPending";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
 export type Facets = {
@@ -69,7 +70,7 @@ const KM_OPTIONS = [
 export function StockFilters({ facets }: { facets: Facets }) {
   const router = useRouter();
   const params = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const { isPending, startTransition } = useStockPendingOptional();
   const [open, setOpen] = useState(false);
 
   const current: FilterValues = {

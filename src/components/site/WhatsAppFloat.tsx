@@ -7,6 +7,7 @@ import { whatsappUrl } from "@/lib/site";
 
 /**
  * Float só no desktop/tablet largo — no mobile o WhatsApp já está na bottom nav.
+ * Posição: canto inferior direito. BackToTop fica acima; InstallPrompt à esquerda.
  */
 export function WhatsAppFloat() {
   const pathname = usePathname() || "/";
@@ -17,7 +18,7 @@ export function WhatsAppFloat() {
     pathname.startsWith("/admin") || pathname.startsWith("/estoque/");
 
   useEffect(() => {
-    const showTimer = window.setTimeout(() => setShow(true), 3200);
+    const showTimer = window.setTimeout(() => setShow(true), 2800);
     const tipTimer = window.setTimeout(() => {
       try {
         if (window.localStorage.getItem("garagem:wa-tip") !== "1") {
@@ -26,7 +27,7 @@ export function WhatsAppFloat() {
       } catch {
         setTooltip(true);
       }
-    }, 9000);
+    }, 8000);
     return () => {
       window.clearTimeout(showTimer);
       window.clearTimeout(tipTimer);
@@ -36,9 +37,9 @@ export function WhatsAppFloat() {
   if (!show || hide) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 hidden items-end gap-3 lg:flex">
+    <div className="pointer-events-none fixed bottom-6 right-6 z-50 hidden flex-col items-end gap-3 lg:flex">
       {tooltip ? (
-        <div className="animate-fade-in relative max-w-[220px] border border-white/10 bg-ink p-4 shadow-xl">
+        <div className="pointer-events-auto animate-fade-in relative max-w-[220px] border border-white/10 bg-ink p-4 shadow-xl">
           <button
             type="button"
             onClick={() => {
@@ -68,7 +69,7 @@ export function WhatsAppFloat() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Abrir WhatsApp"
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition hover:scale-105 active:scale-95 touch-manipulation"
+        className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition hover:scale-105 active:scale-95 touch-manipulation"
       >
         <IconWhatsApp className="h-7 w-7" />
       </a>

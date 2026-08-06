@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
-import { FaqAccordion } from "@/components/site/FaqAccordion";
+import { FaqExplorer } from "@/components/site/FaqExplorer";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { FAQ_ITEMS } from "@/lib/faq";
@@ -22,37 +22,11 @@ export default function FaqPage() {
         <PageHeader
           eyebrow="Dúvidas frequentes"
           title="Tudo que perguntam antes de comprar"
-          description="Se a sua dúvida não estiver aqui, chame no WhatsApp: respondemos no horário de atendimento."
+          description="Busque por palavra-chave ou filtre por categoria. Se a sua dúvida não estiver aqui, chame no WhatsApp."
         />
 
-        <nav
-          aria-label="Índice de dúvidas"
-          className="mt-8 hidden flex-wrap gap-2 lg:flex"
-        >
-          {FAQ_ITEMS.map((item, index) => {
-            const id = `faq-${item.question
-              .toLowerCase()
-              .normalize("NFD")
-              .replace(/[\u0300-\u036f]/g, "")
-              .replace(/[^a-z0-9]+/g, "-")
-              .replace(/(^-|-$)/g, "")
-              .slice(0, 64) || index}`;
-            return (
-              <a
-                key={item.question}
-                href={`#${id}`}
-                className="inline-flex min-h-[36px] items-center border border-white/10 px-3 text-xs text-muted transition hover:border-brand hover:text-cream"
-              >
-                {item.question.length > 42
-                  ? `${item.question.slice(0, 42)}…`
-                  : item.question}
-              </a>
-            );
-          })}
-        </nav>
-
         <div className="mt-8 lg:mt-10">
-          <FaqAccordion items={FAQ_ITEMS} />
+          <FaqExplorer items={FAQ_ITEMS} />
         </div>
 
         <div className="mt-10 border border-brand/40 bg-ink p-6 text-center sm:p-8">

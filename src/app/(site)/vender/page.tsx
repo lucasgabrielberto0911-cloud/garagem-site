@@ -78,20 +78,22 @@ export default async function VenderPage({
         ) : null}
 
         <div className="mt-8 lg:mt-10 lg:grid lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-10">
-          <ul className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide lg:flex-col lg:overflow-visible">
-            {STEPS.map(({ Icon, title, text }) => (
-              <li
-                key={title}
-                className="flex w-[78%] max-w-xs shrink-0 flex-col items-center border border-white/10 bg-ink/60 p-5 text-center lg:w-auto lg:max-w-none lg:items-start lg:p-5 lg:text-left"
-              >
-                <Icon className="h-7 w-7 text-brand" />
-                <h2 className="mt-3 font-display text-sm font-semibold uppercase tracking-wide text-cream">
-                  {title}
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted">{text}</p>
-              </li>
-            ))}
-          </ul>
+          <aside className="lg:sticky lg:top-24">
+            <ul className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide lg:flex-col lg:overflow-visible lg:gap-4">
+              {STEPS.map(({ Icon, title, text }) => (
+                <li
+                  key={title}
+                  className="flex w-[78%] max-w-xs shrink-0 flex-col items-center border border-white/10 bg-ink/60 p-5 text-center lg:w-auto lg:max-w-none lg:items-start lg:text-left"
+                >
+                  <Icon className="h-7 w-7 text-brand" />
+                  <h2 className="mt-3 font-display text-sm font-semibold uppercase tracking-wide text-cream">
+                    {title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">{text}</p>
+                </li>
+              ))}
+            </ul>
+          </aside>
 
           <section className="mt-10 lg:mt-0">
             <h2 className="text-center font-display text-xl font-bold tracking-tight text-cream sm:text-2xl lg:text-left">

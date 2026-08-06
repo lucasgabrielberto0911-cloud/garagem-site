@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-/** Desktop/tablet: no mobile a bottom nav já ocupa o canto. */
+/** Desktop: acima do float do WhatsApp (right-6 bottom-24). */
 export function BackToTop() {
   const [show, setShow] = useState(false);
 
@@ -11,6 +11,7 @@ export function BackToTop() {
       setShow(window.scrollY > 640);
     }
     window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -21,7 +22,7 @@ export function BackToTop() {
       type="button"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       aria-label="Voltar ao topo"
-      className="fixed bottom-24 right-6 z-50 hidden h-11 w-11 items-center justify-center border border-white/15 bg-ink text-cream shadow-lg transition hover:border-brand active:scale-95 touch-manipulation lg:flex"
+      className="fixed bottom-24 right-6 z-40 hidden h-11 w-11 items-center justify-center border border-white/15 bg-ink text-cream shadow-lg transition hover:border-brand active:scale-95 touch-manipulation lg:flex"
     >
       <svg
         viewBox="0 0 24 24"

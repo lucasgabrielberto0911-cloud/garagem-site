@@ -1,21 +1,11 @@
 import { ScrollReveal } from "@/components/site/ScrollReveal";
-import type { FaqItem } from "@/lib/faq";
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .slice(0, 64);
-}
+import { faqItemId, type FaqItem } from "@/lib/faq";
 
 export function FaqAccordion({ items }: { items: FaqItem[] }) {
   return (
     <div className="mx-auto max-w-3xl divide-y divide-white/10 border border-white/10 bg-ink">
       {items.map((item, index) => {
-        const id = `faq-${slugify(item.question) || index}`;
+        const id = faqItemId(item.question, index);
         return (
           <ScrollReveal key={item.question} delay={Math.min(index * 30, 120)}>
             <details id={id} className="group scroll-mt-28 px-5 py-4 sm:px-6">

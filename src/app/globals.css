@@ -292,17 +292,19 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: shimmerBrand 4s ease infinite;
+  /* Sem loop contínuo — brilho único na entrada */
+  animation: shimmerBrand 1.6s ease 1 both;
 }
 
 .progress-brand {
   background: linear-gradient(90deg, #e8181c, #ff8a00, #ffc72c);
   background-size: 200% 100%;
-  animation: progressShimmer 2.4s linear infinite;
+  /* Removido shimmer contínuo; a barra já anima via width no JS */
 }
 
 .whatsapp-pulse {
-  animation: whatsappPulse 2s ease infinite;
+  /* Sem pulso infinito — presença estática */
+  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.35);
 }
 
 .whatsapp-btn {
@@ -337,7 +339,6 @@ body {
   border-radius: 9999px;
   filter: blur(56px);
   opacity: 0.85;
-  will-change: transform;
   backface-visibility: hidden;
 }
 
@@ -352,7 +353,7 @@ body {
     rgba(180, 10, 14, 0.26) 42%,
     transparent 72%
   );
-  animation: redOrbOne 22s ease-in-out infinite;
+  /* Orbs estáticos — sem drift contínuo */
 }
 
 .hero-red-orb-2 {
@@ -366,7 +367,6 @@ body {
     rgba(120, 7, 10, 0.22) 44%,
     transparent 72%
   );
-  animation: redOrbTwo 28s ease-in-out infinite;
 }
 
 .hero-red-orb-3 {
@@ -379,25 +379,25 @@ body {
     rgba(255, 63, 65, 0.2) 0%,
     transparent 68%
   );
-  animation: redOrbThree 20s ease-in-out infinite;
+  opacity: 0.7;
 }
 
 .hero-red-glow-line {
   position: absolute;
   width: 65%;
   height: 2px;
-  left: -70%;
+  left: 18%;
   top: 72%;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(232, 24, 28, 0.8),
-    rgba(255, 138, 0, 0.42),
+    rgba(232, 24, 28, 0.55),
+    rgba(255, 138, 0, 0.28),
     transparent
   );
-  box-shadow: 0 0 28px rgba(232, 24, 28, 0.55);
+  box-shadow: 0 0 28px rgba(232, 24, 28, 0.35);
   transform: rotate(-9deg);
-  animation: redLineSweep 14s ease-in-out infinite 1s;
+  opacity: 0.65;
 }
 
 .hero-grid {
