@@ -64,13 +64,15 @@ export function SiteHeader() {
         }`}
       >
         <div
-          className={`mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 transition-[height] duration-200 sm:gap-4 sm:px-6 ${
-            scrolled ? "h-[64px] sm:h-[72px] lg:h-[80px]" : "h-[72px] sm:h-[84px] lg:h-[96px]"
+          className={`mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 transition-[height] duration-200 sm:gap-3 sm:px-6 xl:gap-4 ${
+            scrolled
+              ? "h-[64px] sm:h-[72px] lg:h-[76px]"
+              : "h-[72px] sm:h-[84px] lg:h-[88px]"
           }`}
         >
           <Link
             href="/"
-            className="flex min-w-0 shrink items-center"
+            className="flex min-w-0 shrink items-center focus-visible:outline-offset-4"
             aria-label={`${site.name} — página inicial`}
           >
             <Image
@@ -81,14 +83,14 @@ export function SiteHeader() {
               priority
               className={`w-auto max-w-[min(52vw,200px)] transition-all duration-300 sm:max-w-none ${
                 scrolled
-                  ? "h-8 sm:h-10 lg:h-12"
-                  : "h-9 sm:h-11 lg:h-[52px]"
+                  ? "h-8 sm:h-10 lg:h-10 xl:h-12"
+                  : "h-9 sm:h-11 lg:h-11 xl:h-[52px]"
               }`}
             />
           </Link>
 
           <nav
-            className="hidden flex-1 items-center justify-center gap-1 lg:flex"
+            className="hidden flex-1 items-center justify-center gap-0.5 xl:gap-1 lg:flex"
             aria-label="Menu principal"
           >
             {NAV_LINKS.map((link) => {
@@ -101,26 +103,28 @@ export function SiteHeader() {
                   key={link.href}
                   href={link.href}
                   aria-current={active ? "page" : undefined}
-                  className={`relative px-3 py-2 font-display text-sm font-semibold transition ${
+                  className={`group relative px-2.5 py-2 font-display text-[13px] font-semibold transition xl:px-3 xl:text-sm ${
                     active ? "text-cream" : "text-muted hover:text-cream"
                   }`}
                 >
                   {link.label}
-                  {active ? (
-                    <span
-                      className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-brand-gradient"
-                      aria-hidden="true"
-                    />
-                  ) : null}
+                  <span
+                    className={`absolute inset-x-2.5 -bottom-0.5 h-0.5 transition xl:inset-x-3 ${
+                      active
+                        ? "bg-brand-gradient"
+                        : "bg-white/0 group-hover:bg-white/35 group-focus-visible:bg-white/35"
+                    }`}
+                    aria-hidden="true"
+                  />
                 </Link>
               );
             })}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 xl:gap-3">
             <a
               href={telUrl()}
-              className="hidden items-center gap-2 text-sm text-muted transition hover:text-cream md:flex"
+              className="hidden items-center gap-2 text-sm text-muted transition hover:text-cream xl:flex"
             >
               <IconPhone className="h-4 w-4" />
               <span className="font-medium">{site.phoneLabel}</span>
@@ -132,7 +136,7 @@ export function SiteHeader() {
               href={whatsappUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden items-center gap-2 bg-brand px-4 py-2.5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex"
+              className="hidden items-center gap-2 bg-brand px-3.5 py-2.5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex xl:px-4"
             >
               <IconWhatsApp className="h-4 w-4" />
               WhatsApp

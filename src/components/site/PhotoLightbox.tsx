@@ -168,6 +168,47 @@ export function PhotoLightbox({
     pinchStart.current = null;
   }
 
+  function onPointerDown(event: React.PointerEvent) {
+    if (event.pointerType === "touch") return;
+    dragged.current = false;
+    pointerStart.current = { x: event.clientX, y: event.clientY };
+    offsetStart.current = offset;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  }
+
+  function onPointerMove(event: React.PointerEvent) {
+    if (event.pointerType === "touch" || !pointerStart.current) return;
+    const dx = event.clientX - pointerStart.current.x;
+    const dy = event.clientY - pointerStart.current.y;
+    if (scale > 1) {
+      dragged.current = true;
+      setOffset(
+        clampOffset(
+          { x: offsetStart.current.x + dx, y: offsetStart.current.y + dy },
+          scale,
+        ),
+      );
+    } else if (Math.abs(dx) > 8) {
+      dragged.current = true;
+    }
+  }
+
+  function onPointerUp(event: React.PointerEvent) {
+    if (event.pointerType === "touch" || !pointerStart.current) return;
+    const dx = event.clientX - pointerStart.current.x;
+    const dy = event.clientY - pointerStart.current.y;
+    if (Math.hypot(dx, dy) < 12) {
+      // handled by double-click
+    } else if (
+      scale === 1 &&
+      Math.abs(dx) > SWIPE_THRESHOLD &&
+      Math.abs(dx) > Math.abs(dy)
+    ) {
+      go(dx < 0 ? 1 : -1);
+    }
+    pointerStart.current = null;
+  }
+
   const photo = photos[index];
 
   return (
@@ -206,6 +247,9 @@ export function PhotoLightbox({
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
         onDoubleClick={toggleZoom}
       >
         <div

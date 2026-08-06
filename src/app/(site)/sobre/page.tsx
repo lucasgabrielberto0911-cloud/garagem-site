@@ -48,6 +48,14 @@ const DIFERENCIAIS = [
   },
 ] as const;
 
+const TOC = [
+  { id: "historia", label: "Nossa história" },
+  { id: "missao", label: "Missão e valores" },
+  { id: "compromisso", label: "Compromisso" },
+  { id: "como-funciona", label: "Como funciona" },
+  { id: "dados", label: "Dados da empresa" },
+] as const;
+
 export default async function SobrePage() {
   const publicSite = await getPublicSite();
   const stats = [
@@ -59,14 +67,14 @@ export default async function SobrePage() {
 
   return (
     <div className="py-12 lg:py-16">
-      <Container size="narrow">
+      <Container>
         <PageHeader
           eyebrow="Sobre nós"
           title={publicSite.name}
           description={`Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência, negociação clara e atendimento de excelência em ${publicSite.region} e região.`}
         />
 
-        <div className="relative mt-10 aspect-[4/3] overflow-hidden border border-white/10 sm:mt-12 sm:aspect-[16/9]">
+        <div className="relative mt-10 aspect-[4/3] overflow-hidden border border-white/10 sm:mt-12 sm:aspect-[16/9] lg:max-w-4xl">
           <Image
             src="/branding/hero-bg.jpg"
             alt={`Estoque e atendimento da ${publicSite.name}`}
@@ -90,7 +98,7 @@ export default async function SobrePage() {
           </div>
         </div>
 
-        <ul className="mt-10 grid grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
+        <ul className="mt-10 grid max-w-4xl grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
           {stats.map((stat) => (
             <li
               key={stat.label}
@@ -106,199 +114,225 @@ export default async function SobrePage() {
           ))}
         </ul>
 
-        <div className="mt-14 grid gap-10 lg:grid-cols-2">
-          <article className="text-center lg:text-left">
-            <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
-              Nossa história
-            </h2>
-            <div
-              className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
-              aria-hidden="true"
-            />
-            <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
-              <p>
-                A {publicSite.name} nasceu da paixão por carros e da vontade de
-                fazer diferente: vender seminovo com informação clara, respeito
-                ao cliente e zero enrolação. Ao longo de mais de duas décadas,
-                construímos uma trajetória marcada pela confiança de famílias em{" "}
-                {publicSite.region} e em todo o {publicSite.state}.
-              </p>
-              <p>
-                Foram mais de 1.000 veículos entregues — cada um com atenção à
-                procedência, à documentação e ao que o cliente realmente
-                precisava. Crescemos ouvindo quem compra, quem vende e quem
-                volta para indicar um amigo.
-              </p>
-              <p>
-                Hoje operamos como <strong className="text-cream">loja digital</strong>,
-                com atendimento online todos os dias, das 8h às 23h. A vitrine
-                está no site, a conversa no WhatsApp e o compromisso continua o
-                mesmo: qualidade no carro e excelência no atendimento.
-              </p>
-            </div>
-          </article>
-
-          <article className="text-center lg:text-left">
-            <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
-              Missão e valores
-            </h2>
-            <div
-              className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
-              aria-hidden="true"
-            />
-            <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
-              <p>
-                <strong className="font-display font-semibold text-cream">
-                  Missão.
-                </strong>{" "}
-                Facilitar a compra e a venda de seminovos com transparência,
-                segurança e o melhor atendimento — do primeiro contato no
-                WhatsApp até a transferência do veículo.
-              </p>
-              <p>
-                <strong className="font-display font-semibold text-cream">
-                  Visão.
-                </strong>{" "}
-                Ser a referência em seminovos digitais de{" "}
-                {publicSite.region} e região: a loja em que o cliente confia
-                para negociar com clareza e sair satisfeito.
-              </p>
-              <p>
-                <strong className="font-display font-semibold text-cream">
-                  Valores.
-                </strong>{" "}
-                Honestidade na negociação, cuidado com cada carro, respeito ao
-                tempo do cliente, disponibilidade real no atendimento e
-                compromisso com a qualidade do início ao fim.
-              </p>
-            </div>
-          </article>
-        </div>
-
-        <section className="mt-14">
-          <h2 className="text-center font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
-            Nosso compromisso com você
-          </h2>
-          <div
-            className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient"
-            aria-hidden="true"
-          />
-          <p className="mx-auto mt-5 max-w-2xl text-center text-sm leading-relaxed text-muted">
-            Qualidade e atendimento não são slogan: são o jeito como fechamos
-            cada negócio. Você merece clareza, agilidade e um time que resolve.
-          </p>
-          <ul className="mt-8 grid gap-5 sm:grid-cols-2">
-            {DIFERENCIAIS.map(({ Icon, title, text }) => (
-              <li
-                key={title}
-                className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center"
+        <div className="mt-14 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[220px_minmax(0,1fr)]">
+          <nav
+            aria-label="Índice da página"
+            className="mb-8 flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:sticky lg:top-24 lg:mb-0 lg:flex-col lg:overflow-visible lg:pb-0"
+          >
+            {TOC.map((item) => (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                className="inline-flex min-h-[40px] shrink-0 items-center border border-white/10 px-3 font-display text-xs font-semibold uppercase tracking-wider text-muted transition hover:border-brand hover:text-cream lg:w-full"
               >
-                <span className="inline-flex h-11 w-11 items-center justify-center bg-brand/10">
-                  <Icon className="h-5 w-5 text-brand" />
-                </span>
-                <h3 className="mt-5 font-display text-base font-semibold text-cream">
-                  {title}
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-muted">{text}</p>
-              </li>
+                {item.label}
+              </a>
             ))}
-          </ul>
-        </section>
+          </nav>
 
-        <section className="mt-14 border border-brand/30 bg-ink p-8 text-center sm:p-10">
-          <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
-            Como funciona a Garagem digital
-          </h2>
-          <div
-            className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient"
-            aria-hidden="true"
-          />
-          <ol className="mx-auto mt-8 grid max-w-3xl gap-6 text-left sm:grid-cols-3">
-            {[
-              {
-                step: "01",
-                title: "Escolha no site",
-                text: "Navegue no estoque, filtre por marca, ano e valor e salve seus favoritos.",
-              },
-              {
-                step: "02",
-                title: "Fale no WhatsApp",
-                text: "Peça vídeo, tire dúvidas, avalie troca ou financiamento — respondemos das 8h às 23h.",
-              },
-              {
-                step: "03",
-                title: "Feche com segurança",
-                text: "Combinamos visita ou entrega, documentação e pagamento com acompanhamento completo.",
-              },
-            ].map((item) => (
-              <li key={item.step} className="text-center sm:text-left">
-                <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
-                  {item.step}
-                </p>
-                <h3 className="mt-2 font-display text-base font-semibold text-cream">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted">
-                  {item.text}
-                </p>
-              </li>
-            ))}
-          </ol>
-        </section>
+          <div className="min-w-0 max-w-3xl">
+            <div className="grid gap-10 lg:grid-cols-2">
+              <article id="historia" className="scroll-mt-28 text-center lg:text-left">
+                <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
+                  Nossa história
+                </h2>
+                <div
+                  className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
+                  aria-hidden="true"
+                />
+                <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
+                  <p>
+                    A {publicSite.name} nasceu da paixão por carros e da vontade de
+                    fazer diferente: vender seminovo com informação clara, respeito
+                    ao cliente e zero enrolação. Ao longo de mais de duas décadas,
+                    construímos uma trajetória marcada pela confiança de famílias em{" "}
+                    {publicSite.region} e em todo o {publicSite.state}.
+                  </p>
+                  <p>
+                    Foram mais de 1.000 veículos entregues — cada um com atenção à
+                    procedência, à documentação e ao que o cliente realmente
+                    precisava. Crescemos ouvindo quem compra, quem vende e quem
+                    volta para indicar um amigo.
+                  </p>
+                  <p>
+                    Hoje operamos como{" "}
+                    <strong className="text-cream">loja digital</strong>, com
+                    atendimento online todos os dias, das 8h às 23h. A vitrine
+                    está no site, a conversa no WhatsApp e o compromisso continua o
+                    mesmo: qualidade no carro e excelência no atendimento.
+                  </p>
+                </div>
+              </article>
 
-        <div className="mt-12">
-          <TrustBadges />
+              <article id="missao" className="scroll-mt-28 text-center lg:text-left">
+                <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
+                  Missão e valores
+                </h2>
+                <div
+                  className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
+                  aria-hidden="true"
+                />
+                <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
+                  <p>
+                    <strong className="font-display font-semibold text-cream">
+                      Missão.
+                    </strong>{" "}
+                    Facilitar a compra e a venda de seminovos com transparência,
+                    segurança e o melhor atendimento — do primeiro contato no
+                    WhatsApp até a transferência do veículo.
+                  </p>
+                  <p>
+                    <strong className="font-display font-semibold text-cream">
+                      Visão.
+                    </strong>{" "}
+                    Ser a referência em seminovos digitais de {publicSite.region}{" "}
+                    e região: a loja em que o cliente confia para negociar com
+                    clareza e sair satisfeito.
+                  </p>
+                  <p>
+                    <strong className="font-display font-semibold text-cream">
+                      Valores.
+                    </strong>{" "}
+                    Honestidade na negociação, cuidado com cada carro, respeito ao
+                    tempo do cliente, disponibilidade real no atendimento e
+                    compromisso com a qualidade do início ao fim.
+                  </p>
+                </div>
+              </article>
+            </div>
+
+            <section id="compromisso" className="mt-14 scroll-mt-28">
+              <h2 className="text-center font-display text-xl font-bold tracking-tight text-cream sm:text-2xl lg:text-left">
+                Nosso compromisso com você
+              </h2>
+              <div
+                className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
+                aria-hidden="true"
+              />
+              <p className="mx-auto mt-5 max-w-2xl text-center text-sm leading-relaxed text-muted lg:mx-0 lg:text-left">
+                Qualidade e atendimento não são slogan: são o jeito como fechamos
+                cada negócio. Você merece clareza, agilidade e um time que resolve.
+              </p>
+              <ul className="mt-8 grid gap-5 sm:grid-cols-2">
+                {DIFERENCIAIS.map(({ Icon, title, text }) => (
+                  <li
+                    key={title}
+                    className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center lg:items-start lg:text-left"
+                  >
+                    <span className="inline-flex h-11 w-11 items-center justify-center bg-brand/10">
+                      <Icon className="h-5 w-5 text-brand" />
+                    </span>
+                    <h3 className="mt-5 font-display text-base font-semibold text-cream">
+                      {title}
+                    </h3>
+                    <p className="mt-3 text-sm leading-relaxed text-muted">{text}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section
+              id="como-funciona"
+              className="mt-14 scroll-mt-28 border border-brand/30 bg-ink p-8 text-center sm:p-10 lg:text-left"
+            >
+              <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
+                Como funciona a Garagem digital
+              </h2>
+              <div
+                className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"
+                aria-hidden="true"
+              />
+              <ol className="mx-auto mt-8 grid max-w-3xl gap-6 text-left sm:grid-cols-3 lg:mx-0">
+                {[
+                  {
+                    step: "01",
+                    title: "Escolha no site",
+                    text: "Navegue no estoque, filtre por marca, ano e valor e salve seus favoritos.",
+                  },
+                  {
+                    step: "02",
+                    title: "Fale no WhatsApp",
+                    text: "Peça vídeo, tire dúvidas, avalie troca ou financiamento — respondemos das 8h às 23h.",
+                  },
+                  {
+                    step: "03",
+                    title: "Feche com segurança",
+                    text: "Combinamos visita ou entrega, documentação e pagamento com acompanhamento completo.",
+                  },
+                ].map((item) => (
+                  <li key={item.step} className="text-center sm:text-left">
+                    <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
+                      {item.step}
+                    </p>
+                    <h3 className="mt-2 font-display text-base font-semibold text-cream">
+                      {item.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted">
+                      {item.text}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            <div className="mt-12">
+              <TrustBadges />
+            </div>
+
+            <div
+              id="dados"
+              className="mt-12 scroll-mt-28 border border-white/10 bg-ink p-6 text-center lg:text-left"
+            >
+              <h2 className="font-display text-base font-semibold text-cream">
+                Dados da empresa
+              </h2>
+              <dl className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <dt className="text-[10px] uppercase tracking-wider text-muted">
+                    Razão social
+                  </dt>
+                  <dd className="mt-1 text-sm text-cream">{publicSite.legalName}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-wider text-muted">
+                    CNPJ
+                  </dt>
+                  <dd className="mt-1 text-sm text-cream">{publicSite.cnpj}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-wider text-muted">
+                    Atendimento
+                  </dt>
+                  <dd className="mt-1 text-sm text-cream">{publicSite.address}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-wider text-muted">
+                    Instagram
+                  </dt>
+                  <dd className="mt-1 text-sm">
+                    <a
+                      href={publicSite.instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand underline-offset-4 transition hover:underline"
+                    >
+                      {publicSite.instagram}
+                    </a>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+
+            <ActionRow className="mt-12">
+              <ButtonLink href="/estoque" size="lg">
+                Ver estoque completo
+              </ButtonLink>
+              <WhatsAppButton size="lg" variant="outline">
+                Falar com a {publicSite.name}
+              </WhatsAppButton>
+            </ActionRow>
+          </div>
         </div>
-
-        <div className="mt-12 border border-white/10 bg-ink p-6 text-center">
-          <h2 className="font-display text-base font-semibold text-cream">
-            Dados da empresa
-          </h2>
-          <dl className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <dt className="text-[10px] uppercase tracking-wider text-muted">
-                Razão social
-              </dt>
-              <dd className="mt-1 text-sm text-cream">{publicSite.legalName}</dd>
-            </div>
-            <div>
-              <dt className="text-[10px] uppercase tracking-wider text-muted">
-                CNPJ
-              </dt>
-              <dd className="mt-1 text-sm text-cream">{publicSite.cnpj}</dd>
-            </div>
-            <div>
-              <dt className="text-[10px] uppercase tracking-wider text-muted">
-                Atendimento
-              </dt>
-              <dd className="mt-1 text-sm text-cream">{publicSite.address}</dd>
-            </div>
-            <div>
-              <dt className="text-[10px] uppercase tracking-wider text-muted">
-                Instagram
-              </dt>
-              <dd className="mt-1 text-sm">
-                <a
-                  href={publicSite.instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-brand underline-offset-4 transition hover:underline"
-                >
-                  {publicSite.instagram}
-                </a>
-              </dd>
-            </div>
-          </dl>
-        </div>
-
-        <ActionRow className="mt-12">
-          <ButtonLink href="/estoque" size="lg">
-            Ver estoque completo
-          </ButtonLink>
-          <WhatsAppButton size="lg" variant="outline">
-            Falar com a {publicSite.name}
-          </WhatsAppButton>
-        </ActionRow>
       </Container>
     </div>
   );

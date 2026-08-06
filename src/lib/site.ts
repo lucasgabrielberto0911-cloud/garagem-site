@@ -93,18 +93,18 @@ export const NAV_LINKS = [
   { href: "/estoque", label: "Estoque" },
   { href: "/vender", label: "Vender/Trocar" },
   { href: "/sobre", label: "Sobre" },
+  { href: "/faq", label: "Dúvidas" },
   { href: "/contato", label: "Contato" },
 ] as const;
 
 export const SECONDARY_LINKS = [
   { href: "/favoritos", label: "Favoritos" },
-  { href: "/faq", label: "Dúvidas frequentes" },
   { href: "/privacidade", label: "Política de privacidade" },
 ] as const;
 
 export const SERVICES = [
-  "Compra",
-  "Venda",
-  "Troca",
-  "Financiamento",
+  { label: "Compra", href: "/estoque" },
+  { label: "Venda", href: "/vender" },
+  { label: "Troca", href: "/vender" },
+  { label: "Financiamento", href: "/contato" },
 ] as const;

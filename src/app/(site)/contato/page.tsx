@@ -41,38 +41,50 @@ export default async function ContatoPage() {
         <PageHeader
           eyebrow="Contato"
           title={`Fale com a ${publicSite.name}`}
-          description={`Somos loja digital e atendemos ${publicSite.region} e região pelo WhatsApp, telefone e e-mail — todos os dias, das 8h às 23h. Escolha o canal e fale com a gente.`}
+          description={`Somos loja digital e atendemos ${publicSite.region} e região — todos os dias, das 8h às 23h. O canal mais rápido é o WhatsApp.`}
         />
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2">
+        {/* Canal dominante */}
+        <div className="relative mt-10 overflow-hidden border border-[#25D366]/40 bg-ink p-7 text-center sm:mt-12 sm:p-10">
+          <div
+            className="absolute inset-x-0 top-0 h-1 bg-[#25D366]"
+            aria-hidden="true"
+          />
+          <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366]/15 text-[#25D366]">
+            <IconWhatsApp className="h-8 w-8" />
+          </span>
+          <h2 className="mt-4 font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
+            WhatsApp — resposta mais rápida
+          </h2>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-muted sm:text-base">
+            Tire dúvidas, peça vídeo do carro ou avalie troca. Estamos online
+            das 8h às 23h, todos os dias.
+          </p>
+          <WhatsAppButton
+            className="mt-6"
+            size="lg"
+            message={WHATSAPP_MESSAGES.visit}
+          >
+            Chamar no WhatsApp
+          </WhatsAppButton>
+          <p className="mt-4 text-xs text-muted">{PHONES[0]?.label}</p>
+        </div>
+
+        <h2 className="mt-12 text-center font-display text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+          Outros canais
+        </h2>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
           {PHONES.map((phone, index) => (
             <InfoCard
               key={phone.digits}
               Icon={IconPhone}
-              label={
-                index === 0 ? "Telefone / WhatsApp" : "Telefone 2 / WhatsApp"
-              }
+              label={index === 0 ? "Telefone" : "Telefone 2"}
               value={phone.label}
               href={telUrl(index)}
               hrefLabel="Ligar agora"
             />
           ))}
-          <InfoCard
-            Icon={IconWhatsApp}
-            label="WhatsApp"
-            value="Resposta mais rápida"
-            href={whatsappUrl(WHATSAPP_MESSAGES.general)}
-            hrefLabel="Chamar no WhatsApp"
-            external
-          />
-          <InfoCard
-            Icon={IconMapPin}
-            label={physical ? "Endereço" : "Atendimento"}
-            value={publicSite.address}
-            href={physical ? undefined : whatsappUrl(WHATSAPP_MESSAGES.visit)}
-            hrefLabel={physical ? undefined : "Falar com a gente"}
-            external={!physical}
-          />
           <InfoCard
             Icon={IconInstagram}
             label="Instagram"
@@ -93,14 +105,20 @@ export default async function ContatoPage() {
             hrefLabel={emailReady ? "Enviar e-mail" : "Chamar no WhatsApp"}
             external={!emailReady}
           />
+          <InfoCard
+            Icon={IconMapPin}
+            label={physical ? "Endereço" : "Atendimento"}
+            value={publicSite.address}
+            href={physical ? undefined : whatsappUrl(WHATSAPP_MESSAGES.visit)}
+            hrefLabel={physical ? undefined : "Falar com a gente"}
+            external={!physical}
+          />
           <div className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center sm:col-span-2">
             <IconClock className="h-6 w-6 shrink-0 text-brand" />
-            <h2 className="mt-3 font-display text-sm font-semibold uppercase tracking-wider text-cream">
+            <h3 className="mt-3 font-display text-sm font-semibold uppercase tracking-wider text-cream">
               Horário de atendimento online
-            </h2>
-            <p className="mt-3 text-sm text-muted">
-              {publicSite.hours}
-            </p>
+            </h3>
+            <p className="mt-3 text-sm text-muted">{publicSite.hours}</p>
             <dl className="mt-5 w-full max-w-md space-y-2 text-sm">
               <HourRow label="Segunda a sexta" value={publicSite.hoursWeekdays} />
               <HourRow label="Sábado" value={publicSite.hoursSaturday} />
@@ -110,23 +128,6 @@ export default async function ContatoPage() {
               />
             </dl>
           </div>
-        </div>
-
-        <div className="mt-8 border border-brand/40 bg-ink p-8 text-center">
-          <p className="font-display text-lg font-semibold text-cream">
-            Resposta mais rápida é no WhatsApp
-          </p>
-          <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-muted">
-            Mande sua dúvida, peça vídeo do carro ou avalie uma troca — estamos
-            online das 8h às 23h, todos os dias.
-          </p>
-          <WhatsAppButton
-            className="mt-6"
-            size="lg"
-            message={WHATSAPP_MESSAGES.visit}
-          >
-            Chamar no WhatsApp
-          </WhatsAppButton>
         </div>
 
         {!physical ? (
@@ -178,9 +179,9 @@ function InfoCard({
   return (
     <div className="flex flex-col items-center border border-white/10 bg-ink p-5 text-center sm:p-6">
       <Icon className="h-6 w-6 shrink-0 text-brand" />
-      <h2 className="mt-3 font-display text-sm font-semibold uppercase tracking-wider text-cream">
+      <h3 className="mt-3 font-display text-sm font-semibold uppercase tracking-wider text-cream">
         {label}
-      </h2>
+      </h3>
       <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{value}</p>
       {href && hrefLabel ? (
         <a
@@ -188,7 +189,7 @@ function InfoCard({
           {...(external
             ? { target: "_blank", rel: "noopener noreferrer" }
             : {})}
-          className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center border border-brand/40 px-4 font-display text-xs font-semibold uppercase tracking-wider text-brand transition hover:border-brand hover:bg-brand/10 touch-manipulation"
+          className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center border border-white/20 px-4 font-display text-xs font-semibold uppercase tracking-wider text-cream/90 transition hover:border-brand hover:bg-brand/10 touch-manipulation"
         >
           {hrefLabel}
         </a>
