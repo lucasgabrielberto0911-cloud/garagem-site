@@ -38,7 +38,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
             value={term}
             onChange={(event) => setTerm(event.target.value)}
             placeholder="Busque por marca ou modelo"
-            className="w-full bg-transparent py-3 text-sm text-cream placeholder:text-muted focus:outline-none sm:py-2.5"
+            className="w-full bg-transparent py-3.5 text-base text-cream placeholder:text-muted focus:outline-none sm:py-2.5 sm:text-sm"
           />
         </div>
         <button
@@ -51,8 +51,8 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
       </form>
 
       {brands.length > 0 ? (
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-          <span className="text-xs uppercase tracking-wider text-muted">
+        <div className="mt-3 -mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 scrollbar-hide sm:flex-wrap sm:justify-center sm:overflow-visible">
+          <span className="shrink-0 text-xs uppercase tracking-wider text-muted">
             Marcas:
           </span>
           {brands.slice(0, 5).map((brand) => (
@@ -60,7 +60,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
               key={brand}
               type="button"
               onClick={() => submit(brand)}
-              className="border border-white/15 px-2.5 py-1.5 text-xs text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation"
+              className="min-h-[40px] shrink-0 border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation sm:min-h-0 sm:px-2.5 sm:py-1.5"
             >
               {brand}
             </button>

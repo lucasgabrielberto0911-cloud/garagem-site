@@ -42,14 +42,14 @@ export default function VenderPage() {
           description="Compramos seu usado e também aceitamos na troca por um veículo do nosso estoque. Preencha os dados abaixo que a gente retorna com uma proposta — sem taxa e sem compromisso."
         />
 
-        <ul className="mt-12 grid gap-5 sm:grid-cols-3">
+        <ul className="mt-8 flex gap-3 overflow-x-auto pb-1 scrollbar-hide sm:mt-12 sm:grid sm:grid-cols-3 sm:gap-5 sm:overflow-visible">
           {STEPS.map(({ Icon, title, text }) => (
             <li
               key={title}
-              className="flex flex-col items-center border border-white/10 bg-ink/60 p-6 text-center"
+              className="flex w-[78%] max-w-xs shrink-0 flex-col items-center border border-white/10 bg-ink/60 p-5 text-center sm:w-auto sm:max-w-none sm:p-6"
             >
               <Icon className="h-7 w-7 text-brand" />
-              <h2 className="mt-4 font-display text-sm font-semibold uppercase tracking-wide text-cream">
+              <h2 className="mt-3 font-display text-sm font-semibold uppercase tracking-wide text-cream sm:mt-4">
                 {title}
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-muted">{text}</p>
@@ -57,7 +57,7 @@ export default function VenderPage() {
           ))}
         </ul>
 
-        <section className="mt-14">
+        <section className="mt-10 sm:mt-14">
           <h2 className="text-center font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
             Dados do seu veículo
           </h2>

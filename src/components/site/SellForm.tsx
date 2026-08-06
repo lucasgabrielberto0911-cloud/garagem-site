@@ -8,7 +8,7 @@ import { formatNumberBR, formatPhoneBR } from "@/lib/format";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
 
 const inputClass =
-  "w-full border border-white/10 bg-asphalt px-3 py-2.5 text-sm text-cream outline-none transition placeholder:text-muted focus:border-brand";
+  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3 py-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand sm:py-2.5 sm:text-sm";
 
 export function SellForm() {
   const formRef = useRef<HTMLFormElement>(null);

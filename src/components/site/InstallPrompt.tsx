@@ -23,7 +23,7 @@ export function InstallPrompt() {
     function onPrompt(nativeEvent: Event) {
       nativeEvent.preventDefault();
       setEvent(nativeEvent as InstallEvent);
-      window.setTimeout(() => setVisible(true), 2500);
+      window.setTimeout(() => setVisible(true), 12000);
     }
 
     window.addEventListener("beforeinstallprompt", onPrompt);

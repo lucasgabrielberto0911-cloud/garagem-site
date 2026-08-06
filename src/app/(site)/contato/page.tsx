@@ -176,7 +176,7 @@ function InfoCard({
   external?: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center">
+    <div className="flex flex-col items-center border border-white/10 bg-ink p-5 text-center sm:p-6">
       <Icon className="h-6 w-6 shrink-0 text-brand" />
       <h2 className="mt-3 font-display text-sm font-semibold uppercase tracking-wider text-cream">
         {label}
@@ -188,7 +188,7 @@ function InfoCard({
           {...(external
             ? { target: "_blank", rel: "noopener noreferrer" }
             : {})}
-          className="mt-4 inline-block text-xs font-semibold uppercase tracking-wider text-brand underline-offset-4 transition hover:underline"
+          className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center border border-brand/40 px-4 font-display text-xs font-semibold uppercase tracking-wider text-brand transition hover:border-brand hover:bg-brand/10 touch-manipulation"
         >
           {hrefLabel}
         </a>

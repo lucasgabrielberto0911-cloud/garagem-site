@@ -64,13 +64,13 @@ export function SiteHeader() {
         }`}
       >
         <div
-          className={`mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 transition-[height] duration-200 sm:px-6 ${
-            scrolled ? "h-[72px] lg:h-[80px]" : "h-[84px] lg:h-[96px]"
+          className={`mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 transition-[height] duration-200 sm:gap-4 sm:px-6 ${
+            scrolled ? "h-[64px] sm:h-[72px] lg:h-[80px]" : "h-[72px] sm:h-[84px] lg:h-[96px]"
           }`}
         >
           <Link
             href="/"
-            className="flex shrink-0 items-center"
+            className="flex min-w-0 shrink items-center"
             aria-label={`${site.name} — página inicial`}
           >
             <Image
@@ -79,10 +79,10 @@ export function SiteHeader() {
               width={280}
               height={50}
               priority
-              className={`w-auto transition-all duration-300 ${
+              className={`w-auto max-w-[min(52vw,200px)] transition-all duration-300 sm:max-w-none ${
                 scrolled
-                  ? "h-10 sm:h-11 lg:h-12"
-                  : "h-11 sm:h-12 lg:h-[52px]"
+                  ? "h-8 sm:h-10 lg:h-12"
+                  : "h-9 sm:h-11 lg:h-[52px]"
               }`}
             />
           </Link>
@@ -117,7 +117,7 @@ export function SiteHeader() {
             })}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <a
               href={telUrl()}
               className="hidden items-center gap-2 text-sm text-muted transition hover:text-cream md:flex"
@@ -136,14 +136,6 @@ export function SiteHeader() {
             >
               <IconWhatsApp className="h-4 w-4" />
               WhatsApp
-            </a>
-
-            <a
-              href={telUrl()}
-              aria-label="Ligar"
-              className="inline-flex h-11 w-11 items-center justify-center border border-white/15 text-cream transition active:bg-white/10 touch-manipulation sm:hidden"
-            >
-              <IconPhone className="h-5 w-5" />
             </a>
 
             <button
@@ -179,7 +171,7 @@ export function SiteHeader() {
             }}
             aria-label="Fechar menu"
           />
-          <div className="relative mt-[84px] h-[calc(100dvh-84px)] overflow-y-auto overscroll-contain border-t border-white/10 bg-asphalt animate-slide-up pb-nav-safe lg:mt-[96px] lg:h-[calc(100dvh-96px)]">
+          <div className="relative mt-[calc(4.5rem+env(safe-area-inset-top,0px))] h-[calc(100dvh-4.5rem-env(safe-area-inset-top,0px))] overflow-y-auto overscroll-contain border-t border-white/10 bg-asphalt animate-slide-up pb-nav-safe sm:mt-[84px] sm:h-[calc(100dvh-84px)] lg:mt-[96px] lg:h-[calc(100dvh-96px)]">
             <nav className="px-5 py-4" aria-label="Menu mobile">
               <ul className="space-y-1">
                 {NAV_LINKS.map((link) => {

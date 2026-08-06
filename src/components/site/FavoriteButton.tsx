@@ -54,7 +54,7 @@ export function FavoriteButton({
       onClick={onClick}
       aria-pressed={active}
       aria-label={active ? `Remover ${label} dos favoritos` : `Salvar ${label} nos favoritos`}
-      className={`flex h-10 w-10 items-center justify-center border backdrop-blur transition touch-manipulation ${
+      className={`flex h-11 w-11 items-center justify-center border backdrop-blur transition touch-manipulation ${
         active
           ? "border-brand bg-brand/20 text-brand"
           : "border-white/20 bg-asphalt/70 text-cream hover:border-brand"

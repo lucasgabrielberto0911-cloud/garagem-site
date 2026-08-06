@@ -145,7 +145,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
               defaultValue={current.q}
               key={current.q}
               placeholder="Marca, modelo ou versão"
-              className="w-full bg-transparent py-3 text-sm text-cream placeholder:text-muted focus:outline-none"
+              className="w-full bg-transparent py-3 text-base text-cream placeholder:text-muted focus:outline-none sm:text-sm"
             />
           </div>
           <button
@@ -295,15 +295,15 @@ export function StockFilters({ facets }: { facets: Facets }) {
           ) : null}
         </div>
 
-        {/* Mobile/tablet: ordenação por chips centralizados. */}
+        {/* Mobile/tablet: ordenação em faixa horizontal. */}
         <div className="mt-3 lg:hidden">
-          <div className="flex flex-wrap justify-center gap-2">
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-hide">
             {SORT_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => update({ sort: option.value })}
-                className={`min-h-[38px] whitespace-nowrap border px-3 text-xs font-medium transition ${
+                className={`min-h-[44px] shrink-0 whitespace-nowrap border px-3.5 text-xs font-medium transition touch-manipulation ${
                   current.sort === option.value
                     ? "border-brand bg-brand/10 text-cream"
                     : "border-white/10 text-muted active:bg-white/5"

@@ -53,7 +53,7 @@ export async function SiteFooter() {
           </a>
         </div>
 
-        <div className="mt-12 grid gap-10 text-center sm:grid-cols-3">
+        <div className="mt-10 hidden gap-10 text-center sm:mt-12 sm:grid sm:grid-cols-3">
           <div>
             <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
               Navegação
@@ -63,7 +63,7 @@ export async function SiteFooter() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-muted transition hover:text-cream"
+                    className="inline-flex min-h-[40px] items-center text-sm text-muted transition hover:text-cream"
                   >
                     {link.label}
                   </Link>
@@ -94,16 +94,21 @@ export async function SiteFooter() {
                 <li key={phone.digits}>
                   <a
                     href={telUrl(index)}
-                    className="inline-flex items-center justify-center gap-2 transition hover:text-cream"
+                    className="inline-flex min-h-[40px] items-center justify-center gap-2 transition hover:text-cream"
                   >
                     <IconPhone className="h-4 w-4 shrink-0 text-brand" />
                     <span>{phone.label}</span>
                   </a>
                 </li>
               ))}
-              <li className="flex items-center justify-center gap-2">
-                <IconMail className="h-4 w-4 shrink-0 text-brand" />
-                <span>{site.email}</span>
+              <li>
+                <a
+                  href={`mailto:${site.email}`}
+                  className="inline-flex min-h-[40px] items-center justify-center gap-2 transition hover:text-cream"
+                >
+                  <IconMail className="h-4 w-4 shrink-0 text-brand" />
+                  <span>{site.email}</span>
+                </a>
               </li>
               <li className="flex items-start justify-center gap-2">
                 <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
@@ -115,6 +120,28 @@ export async function SiteFooter() {
               </li>
             </ul>
           </div>
+        </div>
+
+        {/* Mobile: contato essencial sem repetir a bottom nav. */}
+        <div className="mt-8 space-y-3 text-center sm:hidden">
+          {PHONES.map((phone, index) => (
+            <a
+              key={phone.digits}
+              href={telUrl(index)}
+              className="flex min-h-[48px] items-center justify-center gap-2 border border-white/10 bg-asphalt/50 text-sm text-cream touch-manipulation"
+            >
+              <IconPhone className="h-4 w-4 text-brand" />
+              {phone.label}
+            </a>
+          ))}
+          <a
+            href={`mailto:${site.email}`}
+            className="flex min-h-[48px] items-center justify-center gap-2 border border-white/10 bg-asphalt/50 text-sm text-cream touch-manipulation"
+          >
+            <IconMail className="h-4 w-4 text-brand" />
+            {site.email}
+          </a>
+          <p className="pt-1 text-xs text-muted">{site.hours}</p>
         </div>
 
         <div className="mt-12 h-0.5 w-full bg-brand-gradient" aria-hidden="true" />
