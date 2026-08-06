@@ -2,16 +2,16 @@ import { Container } from "@/components/site/ui";
 
 export default function VehicleDetailLoading() {
   return (
-    <div className="py-10 pb-sticky-bar-safe lg:py-14 lg:pb-14">
+    <div className="animate-fade-in py-10 pb-sticky-bar-safe lg:py-14 lg:pb-14">
       <Container>
         <div className="skeleton mx-auto h-3 w-48" />
 
         <div className="mt-8 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
           <div>
-            <div className="skeleton aspect-[4/3] w-full border border-white/10" />
-            <div className="mt-3 grid grid-cols-6 gap-3">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="skeleton aspect-[4/3] w-full" />
+            <div className="skeleton aspect-[16/10] w-full border border-white/10" />
+            <div className="mt-2 flex justify-center gap-1.5">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="skeleton h-1.5 w-1.5 rounded-full" />
               ))}
             </div>
           </div>

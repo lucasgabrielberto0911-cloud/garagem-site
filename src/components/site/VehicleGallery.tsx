@@ -5,7 +5,7 @@ import { VehicleImage } from "@/components/VehicleImage";
 import { PhotoLightbox } from "@/components/site/PhotoLightbox";
 
 /**
- * Galeria em faixa horizontal (snap). Sem grade de miniaturas ocupando a tela.
+ * Galeria em faixa horizontal (snap). Carrega só a foto ativa ±1.
  */
 export function VehicleGallery({
   photos,
@@ -24,9 +24,11 @@ export function VehicleGallery({
     if (!scroller || total < 2) return;
 
     function onScroll() {
-      const width = scroller.clientWidth;
+      const el = scrollerRef.current;
+      if (!el) return;
+      const width = el.clientWidth;
       if (width <= 0) return;
-      const index = Math.round(scroller.scrollLeft / width);
+      const index = Math.round(el.scrollLeft / width);
       setActive(Math.min(Math.max(index, 0), total - 1));
     }
 
@@ -53,6 +55,7 @@ export function VehicleGallery({
           alt={alt}
           fill
           sizes="(min-width: 1024px) 60vw, 100vw"
+          quality={70}
           className="object-cover"
         />
       </div>
@@ -67,31 +70,38 @@ export function VehicleGallery({
           className="flex snap-x snap-mandatory overflow-x-auto scrollbar-hide"
           aria-label={`Fotos de ${alt}`}
         >
-          {photos.map((photo, index) => (
-            <li
-              key={photo.id}
-              className="relative aspect-[16/10] w-full shrink-0 snap-center"
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setActive(index);
-                  setZoomOpen(true);
-                }}
-                aria-label={`Ampliar foto ${index + 1} de ${total}`}
-                className="absolute inset-0 z-[1] cursor-zoom-in"
+          {photos.map((photo, index) => {
+            const near = Math.abs(index - active) <= 1;
+            return (
+              <li
+                key={photo.id}
+                className="relative aspect-[16/10] w-full shrink-0 snap-center bg-asphalt"
               >
-                <span className="sr-only">Ampliar</span>
-              </button>
-              <VehicleImage
-                src={photo.url}
-                alt={`${alt} — foto ${index + 1} de ${total}`}
-                fill
-                sizes="(min-width: 1024px) 60vw, 100vw"
-                className="object-cover"
-              />
-            </li>
-          ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActive(index);
+                    setZoomOpen(true);
+                  }}
+                  aria-label={`Ampliar foto ${index + 1} de ${total}`}
+                  className="absolute inset-0 z-[1] cursor-zoom-in"
+                >
+                  <span className="sr-only">Ampliar</span>
+                </button>
+                {near ? (
+                  <VehicleImage
+                    src={photo.url}
+                    alt={`${alt} — foto ${index + 1} de ${total}`}
+                    fill
+                    sizes="(min-width: 1024px) 60vw, 100vw"
+                    quality={index === 0 ? 75 : 68}
+                    priority={index === 0}
+                    className="object-cover"
+                  />
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
 
         {total > 1 ? (

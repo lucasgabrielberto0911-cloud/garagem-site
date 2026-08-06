@@ -87,7 +87,7 @@ body {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(25px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -98,7 +98,7 @@ body {
 @keyframes fadeInScale {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(10px);
+    transform: scale(0.98) translateY(6px);
   }
   to {
     opacity: 1;
@@ -220,23 +220,23 @@ body {
 
 /* Hero staggered entrance */
 .hero-brand {
-  animation: fadeInScale 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fadeInScale 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .hero-text {
-  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.06s both;
 }
 
 .hero-search {
-  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both;
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
 }
 
 .hero-cta {
-  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.65s both;
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
 }
 
 .hero-stats {
-  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.85s both;
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.24s both;
 }
 
 .brand-shimmer {
@@ -295,8 +295,9 @@ body {
 .hero-red-orb {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(72px);
-  will-change: transform, opacity;
+  filter: blur(56px);
+  opacity: 0.85;
+  will-change: transform;
   backface-visibility: hidden;
 }
 
@@ -311,7 +312,7 @@ body {
     rgba(180, 10, 14, 0.26) 42%,
     transparent 72%
   );
-  animation: redOrbOne 14s ease-in-out infinite;
+  animation: redOrbOne 22s ease-in-out infinite;
 }
 
 .hero-red-orb-2 {
@@ -325,7 +326,7 @@ body {
     rgba(120, 7, 10, 0.22) 44%,
     transparent 72%
   );
-  animation: redOrbTwo 18s ease-in-out infinite;
+  animation: redOrbTwo 28s ease-in-out infinite;
 }
 
 .hero-red-orb-3 {
@@ -338,7 +339,7 @@ body {
     rgba(255, 63, 65, 0.2) 0%,
     transparent 68%
   );
-  animation: redOrbThree 11s ease-in-out infinite;
+  animation: redOrbThree 20s ease-in-out infinite;
 }
 
 .hero-red-glow-line {
@@ -356,7 +357,7 @@ body {
   );
   box-shadow: 0 0 28px rgba(232, 24, 28, 0.55);
   transform: rotate(-9deg);
-  animation: redLineSweep 9s ease-in-out infinite 1s;
+  animation: redLineSweep 14s ease-in-out infinite 1s;
 }
 
 .hero-grid {
@@ -432,15 +433,31 @@ body {
 
 .card-lift {
   transition:
-    transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    border-color 0.45s ease,
-    box-shadow 0.45s ease;
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.card-lift:hover {
-  transform: translateY(-8px);
-  border-color: rgba(232, 24, 28, 0.45);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+@media (hover: hover) and (pointer: fine) {
+  .card-lift:hover {
+    transform: translateY(-4px);
+    border-color: rgba(232, 24, 28, 0.45);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
+  }
+}
+
+/* Transição de página leve (substitui framer-motion). */
+.page-enter {
+  animation: page-enter 0.2s ease-out both;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 1023px) {
@@ -487,7 +504,7 @@ body {
   .hero-search,
   .hero-cta,
   .hero-stats {
-    animation-duration: 0.55s;
+    animation-duration: 0.35s;
   }
 }
 
@@ -514,5 +531,9 @@ body {
   .card-lift,
   .card-lift:hover {
     transform: none !important;
+  }
+
+  .page-enter {
+    animation: none !important;
   }
 }

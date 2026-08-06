@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
+/**
+ * Reveal barato: opacity curta, fallback rápido, sem atrasar o LCP.
+ */
 export function ScrollReveal({
   children,
   delay = 0,
@@ -31,6 +34,10 @@ export function ScrollReveal({
     const show = () => {
       if (shown) return;
       shown = true;
+      if (delay <= 0) {
+        setVisible(true);
+        return;
+      }
       window.setTimeout(() => setVisible(true), delay);
     };
 
@@ -40,14 +47,11 @@ export function ScrollReveal({
         show();
         observer.disconnect();
       },
-      // Margem generosa: seções próximas do viewport já contam como visíveis.
-      { threshold: 0.01, rootMargin: "80px 0px" },
+      { threshold: 0.08, rootMargin: "40px 0px" },
     );
 
     observer.observe(node);
-
-    // Fallback: nunca deixar destaque/estoque invisíveis se o observer falhar.
-    const fallback = window.setTimeout(show, 900 + delay);
+    const fallback = window.setTimeout(show, 600 + delay);
 
     return () => {
       observer.disconnect();
@@ -58,8 +62,8 @@ export function ScrollReveal({
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ease-out ${
-        visible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+      className={`transition-opacity duration-300 ease-out ${
+        visible ? "opacity-100" : "opacity-0"
       } ${className}`}
     >
       {children}

@@ -164,7 +164,7 @@ export default async function HomePage() {
               </div>
             </ScrollReveal>
           ) : (
-            <VehicleGrid vehicles={featured} reveal />
+            <VehicleGrid vehicles={featured} reveal priorityCount={4} />
           )}
         </div>
 
@@ -194,7 +194,7 @@ export default async function HomePage() {
         </ScrollReveal>
         <ul className="mx-auto mt-12 grid gap-5 lg:grid-cols-3">
           {REASONS.map(({ Icon, title, text }, index) => (
-            <ScrollReveal key={title} delay={index * 100}>
+            <ScrollReveal key={title} delay={index * 50}>
               <li className="card-lift flex h-full flex-col items-center border border-white/10 bg-asphalt p-7 text-center">
                 <span className="inline-flex h-12 w-12 items-center justify-center bg-brand/10">
                   <Icon className="h-6 w-6 text-brand" />
@@ -219,7 +219,7 @@ export default async function HomePage() {
           />
         </ScrollReveal>
         <div className="mt-12">
-          <ScrollReveal delay={80}>
+          <ScrollReveal delay={40}>
             <Testimonials items={testimonials} />
           </ScrollReveal>
         </div>
@@ -235,7 +235,7 @@ export default async function HomePage() {
           />
         </ScrollReveal>
 
-        <ScrollReveal delay={80}>
+        <ScrollReveal delay={40}>
           <dl className="mx-auto mt-10 grid max-w-3xl gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-2">
             <div className="flex flex-col items-center bg-asphalt px-6 py-7 text-center">
               <IconMapPin className="h-6 w-6 text-brand" />
@@ -254,13 +254,14 @@ export default async function HomePage() {
           </dl>
         </ScrollReveal>
 
-        <ScrollReveal delay={120}>
+        <ScrollReveal delay={60}>
           <div className="relative mx-auto mt-8 aspect-[16/9] max-w-3xl overflow-hidden border border-white/10">
             <Image
               src="/branding/hero-bg.jpg"
               alt={`Loja ${site.name}`}
               fill
               sizes="(min-width: 1024px) 768px, 100vw"
+              quality={70}
               className="object-cover"
             />
             <div

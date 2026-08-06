@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import sharp from "sharp";
 import { getSession } from "@/lib/auth";
 import {
   VEHICLE_PHOTOS_BUCKET,
@@ -10,20 +11,12 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_SIZE = 15 * 1024 * 1024;
-const ALLOWED = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/gif": "gif",
-} as const;
+const MAX_EDGE = 1600;
+const WEBP_QUALITY = 72;
 
-type AllowedMime = keyof typeof ALLOWED;
+type Detected = "image/jpeg" | "image/png" | "image/webp" | "image/gif" | "image/heic";
 
-/**
- * Confere os magic bytes reais do arquivo. O `file.type` do browser é fácil de
- * forjar; o cabeçalho binário não.
- */
-function detectMime(buffer: Buffer): AllowedMime | "image/heic" | null {
+function detectMime(buffer: Buffer): Detected | null {
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
     return "image/jpeg";
   }
@@ -51,7 +44,6 @@ function detectMime(buffer: Buffer): AllowedMime | "image/heic" | null {
   return null;
 }
 
-/** HEIC/HEIF: box ISO BMFF com `ftyp` e brand heic/heif/mif1 etc. */
 function isHeicBuffer(buffer: Buffer): boolean {
   if (buffer.length < 12) return false;
   if (buffer.toString("ascii", 4, 8) !== "ftyp") return false;
@@ -64,25 +56,37 @@ function isHeicBuffer(buffer: Buffer): boolean {
   return /heic|heix|hevc|hevx|heim|heis|mif1|msf1/.test(brands);
 }
 
-async function toUploadable(
+/**
+ * Normaliza qualquer formato aceito para WebP leve (redimensiona + comprime).
+ * HEIC passa por heic-convert → JPEG → sharp/WebP.
+ */
+async function optimizeForStorage(
   buffer: Buffer,
-  detected: AllowedMime | "image/heic",
-): Promise<{ buffer: Buffer; mime: AllowedMime }> {
-  if (detected !== "image/heic") {
-    return { buffer, mime: detected };
+  detected: Detected,
+): Promise<{ buffer: Buffer; contentType: "image/webp"; extension: "webp" }> {
+  let input = buffer;
+
+  if (detected === "image/heic") {
+    const convert = (await import("heic-convert")).default;
+    const jpeg = await convert({ buffer, format: "JPEG", quality: 0.82 });
+    input = Buffer.from(jpeg);
   }
 
-  // Import dinâmico: evita derrubar a rota inteira se o pacote falhar no boot.
-  const convert = (await import("heic-convert")).default;
-  const converted = await convert({
-    buffer,
-    format: "JPEG",
-    quality: 0.9,
-  });
+  const optimized = await sharp(input)
+    .rotate()
+    .resize({
+      width: MAX_EDGE,
+      height: MAX_EDGE,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: WEBP_QUALITY, effort: 4 })
+    .toBuffer();
 
   return {
-    buffer: Buffer.from(converted),
-    mime: "image/jpeg",
+    buffer: optimized,
+    contentType: "image/webp",
+    extension: "webp",
   };
 }
 
@@ -106,7 +110,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Upload indisponível: falta SUPABASE_SERVICE_ROLE_KEY no Vercel (Supabase → Settings → API → service_role). Sem isso as fotos não gravam e o estoque fica sem imagem.",
+          "Upload indisponível: falta SUPABASE_SERVICE_ROLE_KEY no Vercel (Supabase → Settings → API → service_role).",
       },
       { status: 503 },
     );
@@ -144,7 +148,7 @@ export async function POST(request: Request) {
       if (file.size > MAX_SIZE) {
         return NextResponse.json(
           {
-            error: `Arquivo muito grande: ${file.name}. Envie com no máximo 15 MB (ou use JPG).`,
+            error: `Arquivo muito grande: ${file.name}. Máximo 15 MB.`,
           },
           { status: 400 },
         );
@@ -155,33 +159,40 @@ export async function POST(request: Request) {
       if (!detected) {
         return NextResponse.json(
           {
-            error: `Arquivo inválido ou tipo não suportado: ${file.name}. Use JPG, PNG, WEBP, GIF ou HEIC.`,
+            error: `Arquivo inválido: ${file.name}. Use JPG, PNG, WEBP, GIF ou HEIC.`,
           },
           { status: 400 },
         );
       }
 
-      let prepared: { buffer: Buffer; mime: AllowedMime };
+      let prepared: {
+        buffer: Buffer;
+        contentType: "image/webp";
+        extension: "webp";
+      };
       try {
-        prepared = await toUploadable(raw, detected);
+        prepared = await optimizeForStorage(raw, detected);
       } catch (error) {
-        console.error("HEIC convert error:", error);
+        console.error("Image optimize error:", error);
         return NextResponse.json(
           {
-            error: `Não foi possível converter o HEIC ${file.name}. No iPhone: Ajustes → Câmera → Formatos → Mais Compatível, ou exporte como JPG.`,
+            error:
+              detected === "image/heic"
+                ? `Não foi possível converter o HEIC ${file.name}. Exporte como JPG no iPhone (Formatos → Mais Compatível).`
+                : `Não foi possível otimizar ${file.name}.`,
           },
           { status: 400 },
         );
       }
 
-      const extension = ALLOWED[prepared.mime];
-      const path = `${Date.now()}-${crypto.randomUUID()}.${extension}`;
+      const path = `${Date.now()}-${crypto.randomUUID()}.${prepared.extension}`;
 
       const { error } = await supabase.storage
         .from(VEHICLE_PHOTOS_BUCKET)
         .upload(path, prepared.buffer, {
-          contentType: prepared.mime,
+          contentType: prepared.contentType,
           upsert: false,
+          cacheControl: "31536000",
         });
 
       if (error) {
@@ -206,7 +217,7 @@ export async function POST(request: Request) {
     console.error("Upload route error:", error);
     const message =
       error instanceof Error && /Body exceeded|Entity Too Large|413/i.test(error.message)
-        ? "Arquivo grande demais para o servidor. Envie menos fotos por vez ou use JPG."
+        ? "Arquivo grande demais. Envie menos fotos ou use JPG."
         : "Erro ao processar upload.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

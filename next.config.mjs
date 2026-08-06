@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    formats: ["image/avif", "image/webp"],
+    // Breakpoints alinhados a cards (25–50vw) e galeria (~60vw).
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [96, 128, 256, 384],
+    minimumCacheTTL: 60 * 60 * 24 * 30,
     remotePatterns: [
       {
         protocol: "https",
@@ -9,12 +14,12 @@ const nextConfig = {
       },
     ],
   },
-  // heic-convert / libheif usam binários nativos; não empacotar no bundle do Next.
   experimental: {
     serverComponentsExternalPackages: [
       "heic-convert",
       "heic-decode",
       "libheif-js",
+      "sharp",
     ],
   },
 };

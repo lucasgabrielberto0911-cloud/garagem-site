@@ -14,6 +14,8 @@ export function VehicleImage({
   sizes,
   className = "",
   unoptimized = false,
+  priority = false,
+  quality = 70,
 }: {
   src?: string | null;
   alt: string;
@@ -23,6 +25,9 @@ export function VehicleImage({
   sizes?: string;
   className?: string;
   unoptimized?: boolean;
+  priority?: boolean;
+  /** 1–100; cards ~65–70, hero/galeria ~75. */
+  quality?: number;
 }) {
   const [failed, setFailed] = useState(false);
   const finalSrc = !src || failed ? VEHICLE_PLACEHOLDER : src;
@@ -30,11 +35,21 @@ export function VehicleImage({
   const common = {
     className,
     unoptimized,
+    priority,
+    quality,
     onError: () => setFailed(true),
   };
 
   if (fill) {
-    return <Image src={finalSrc} alt={alt} fill sizes={sizes} {...common} />;
+    return (
+      <Image
+        src={finalSrc}
+        alt={alt}
+        fill
+        sizes={sizes}
+        {...common}
+      />
+    );
   }
 
   return (

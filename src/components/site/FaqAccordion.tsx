@@ -5,7 +5,7 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
   return (
     <div className="mx-auto max-w-3xl divide-y divide-white/10 border border-white/10 bg-ink">
       {items.map((item, index) => (
-        <ScrollReveal key={item.question} delay={index * 40}>
+        <ScrollReveal key={item.question} delay={Math.min(index * 30, 120)}>
           <details className="group px-5 py-4 sm:px-6">
             <summary className="flex cursor-pointer list-none items-start justify-between gap-4 font-display text-base font-semibold text-cream marker:hidden">
               {item.question}

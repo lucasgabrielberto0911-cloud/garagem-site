@@ -84,7 +84,7 @@ function Avatar({
           alt={name}
           fill
           sizes="40px"
-          unoptimized
+          quality={60}
           className="object-cover"
         />
       </div>

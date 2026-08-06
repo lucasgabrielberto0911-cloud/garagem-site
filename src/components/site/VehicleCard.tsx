@@ -16,7 +16,14 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
  * Card compacto para listagens: foto, identificação, 3 dados-chave e preço.
  * O WhatsApp fica no anúncio — aqui o clique leva ao detalhe.
  */
-export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
+export function VehicleCard({
+  vehicle,
+  priority = false,
+}: {
+  vehicle: VehicleCardData;
+  /** Primeiros cards da home: prioriza LCP. */
+  priority?: boolean;
+}) {
   const title = `${vehicle.brand} ${vehicle.model}`;
   const cover = vehicle.photos[0]?.url;
   const badge = STATUS_BADGE[vehicle.status];
@@ -37,13 +44,19 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
         className="absolute right-2 top-2 z-10"
       />
 
-      <Link href={href} className="relative block aspect-[16/10] overflow-hidden bg-asphalt">
+      <Link
+        href={href}
+        prefetch={false}
+        className="relative block aspect-[16/10] overflow-hidden bg-asphalt"
+      >
         <VehicleImage
           src={cover}
           alt={title}
           fill
           sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-          className="object-cover transition duration-500 group-hover:scale-[1.03]"
+          quality={priority ? 72 : 65}
+          priority={priority}
+          className="object-cover transition duration-300 group-hover:scale-[1.03]"
         />
         <div
           className="absolute inset-0 bg-gradient-to-t from-asphalt/70 via-transparent to-transparent"
@@ -84,7 +97,7 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
       <div className="flex flex-1 flex-col gap-2 p-3">
         <div className="min-w-0">
           <h3 className="truncate font-display text-sm font-semibold leading-snug text-cream">
-            <Link href={href} className="transition hover:text-brand">
+            <Link href={href} prefetch={false} className="transition hover:text-brand">
               {title}
             </Link>
           </h3>
@@ -100,6 +113,7 @@ export function VehicleCard({ vehicle }: { vehicle: VehicleCardData }) {
           </p>
           <Link
             href={href}
+            prefetch={false}
             className="shrink-0 font-display text-[10px] font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
           >
             Ver anúncio
