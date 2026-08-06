@@ -8,7 +8,7 @@ import { formatNumberBR, formatPhoneBR } from "@/lib/format";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
 
 const inputClass =
-  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3 py-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand sm:py-2.5 sm:text-sm";
+  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand sm:min-h-[52px] sm:text-sm";
 
 export function SellForm({
   interestNote,
