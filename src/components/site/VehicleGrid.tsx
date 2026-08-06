@@ -2,17 +2,17 @@ import { ScrollReveal } from "@/components/site/ScrollReveal";
 import { VehicleCard, type VehicleCardData } from "@/components/site/VehicleCard";
 
 /**
- * Grade densa: cards menores, gaps curtos, largura alinhada à quantidade.
- * No máximo 3 por linha — com sidebar o 4º card ficava estreito demais.
+ * Grade: 2 por linha no mobile (1 fica espaçoso demais), 3 no desktop.
+ * Um único veículo continua em coluna única.
  */
 function layoutForCount(count: number) {
   if (count <= 1) {
     return "max-w-sm grid-cols-1";
   }
   if (count === 2) {
-    return "max-w-2xl grid-cols-1 sm:grid-cols-2";
+    return "max-w-2xl grid-cols-2";
   }
-  return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+  return "grid-cols-2 lg:grid-cols-3";
 }
 
 export function VehicleGrid({
@@ -30,7 +30,7 @@ export function VehicleGrid({
 }) {
   return (
     <div
-      className={`mx-auto grid w-full gap-3 sm:gap-4 ${layoutForCount(vehicles.length)}`}
+      className={`mx-auto grid w-full gap-2.5 sm:gap-4 ${layoutForCount(vehicles.length)}`}
     >
       {vehicles.map((vehicle, index) => {
         const card = (

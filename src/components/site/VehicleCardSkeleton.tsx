@@ -17,7 +17,7 @@ export function VehicleCardSkeleton() {
 
 export function VehicleCardSkeletonGrid({ count = 8 }: { count?: number }) {
   return (
-    <div className="mx-auto grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="mx-auto grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
       {Array.from({ length: count }).map((_, index) => (
         <VehicleCardSkeleton key={index} />
       ))}

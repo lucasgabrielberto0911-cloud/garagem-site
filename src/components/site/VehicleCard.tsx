@@ -104,22 +104,26 @@ export function VehicleCard({
           ) : null}
         </div>
 
-        <div className="flex flex-1 flex-col gap-2 p-3.5 sm:p-3">
+        <div className="flex flex-1 flex-col gap-1.5 p-2.5 sm:gap-2 sm:p-3">
           <div className="min-w-0">
-            <h3 className="truncate font-display text-[15px] font-semibold leading-snug text-cream sm:text-sm">
+            <h3 className="truncate font-display text-[13px] font-semibold leading-snug text-cream sm:text-sm">
               {title}
             </h3>
             {vehicle.version ? (
-              <p className="mt-0.5 truncate text-xs text-muted">{vehicle.version}</p>
+              <p className="mt-0.5 truncate text-[11px] text-muted sm:text-xs">
+                {vehicle.version}
+              </p>
             ) : null}
-            <p className="mt-1.5 truncate text-xs text-muted">{meta}</p>
+            <p className="mt-1 truncate text-[11px] text-muted sm:mt-1.5 sm:text-xs">
+              {meta}
+            </p>
           </div>
 
-          <div className="mt-auto flex items-end justify-between gap-2 border-t border-white/10 pt-2.5">
-            <p className="font-display text-lg font-bold leading-none text-cream sm:text-base">
+          <div className="mt-auto flex items-end justify-between gap-1.5 border-t border-white/10 pt-2 sm:gap-2 sm:pt-2.5">
+            <p className="min-w-0 truncate font-display text-[15px] font-bold leading-none text-cream sm:text-base">
               {formatCurrencyBRL(vehicle.price)}
             </p>
-            <span className="shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-brand transition group-hover:text-brand-orange">
+            <span className="hidden shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-brand transition group-hover:text-brand-orange sm:inline">
               Ver anúncio
             </span>
           </div>
