@@ -8,11 +8,13 @@ export function FavoriteButton({
   vehicleId,
   label,
   variant = "icon",
+  size = "md",
   className = "",
 }: {
   vehicleId: string;
   label: string;
   variant?: "icon" | "full";
+  size?: "sm" | "md";
   className?: string;
 }) {
   const { has, toggle, ready } = useFavorites();
@@ -48,19 +50,28 @@ export function FavoriteButton({
     );
   }
 
+  const compact = size === "sm";
+
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
       aria-label={active ? `Remover ${label} dos favoritos` : `Salvar ${label} nos favoritos`}
-      className={`flex h-11 w-11 items-center justify-center border backdrop-blur transition touch-manipulation ${
+      className={`flex items-center justify-center border backdrop-blur transition touch-manipulation ${
+        compact ? "h-8 w-8" : "h-11 w-11"
+      } ${
         active
           ? "border-brand bg-brand/20 text-brand"
           : "border-white/20 bg-asphalt/70 text-cream hover:border-brand"
       } ${className}`}
     >
-      <Heart filled={active} className={`h-[18px] w-[18px] ${pulse ? "animate-fade-in-scale" : ""}`} />
+      <Heart
+        filled={active}
+        className={`${compact ? "h-3.5 w-3.5" : "h-[18px] w-[18px]"} ${
+          pulse ? "animate-fade-in-scale" : ""
+        }`}
+      />
     </button>
   );
 }

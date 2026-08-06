@@ -217,8 +217,11 @@ export async function POST(request: Request) {
     console.error("Upload route error:", error);
     const message =
       error instanceof Error && /Body exceeded|Entity Too Large|413/i.test(error.message)
-        ? "Arquivo grande demais. Envie menos fotos ou use JPG."
+        ? "Arquivo grande demais para o servidor. O admin agora envia direto ao Storage — atualize a página e tente de novo com JPG."
         : "Erro ao processar upload.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: message },
+      { status: error instanceof Error && /413|Too Large/i.test(error.message) ? 413 : 500 },
+    );
   }
 }

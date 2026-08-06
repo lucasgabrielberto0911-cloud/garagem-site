@@ -6,7 +6,6 @@ import type { Photo, Vehicle } from "@prisma/client";
 import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
-import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
 export type VehicleCardData = Vehicle & {
   photos: Photo[];
@@ -34,7 +33,6 @@ export function VehicleCard({
   const title = `${vehicle.brand} ${vehicle.model}`;
   const cover = vehicle.photos[0]?.url;
   const badge = STATUS_BADGE[vehicle.status];
-  const categoryLabel = vehicleCategoryLabel(vehicle.category);
   const vehiclePath = `/estoque/${vehicle.id}`;
   const href = returnTo
     ? `${vehiclePath}?from=${encodeURIComponent(returnTo)}`
@@ -52,6 +50,7 @@ export function VehicleCard({
       <FavoriteButton
         vehicleId={vehicle.id}
         label={`${title} ${vehicle.yearModel}`}
+        size="sm"
         className="absolute right-2 top-2 z-20"
       />
 
@@ -97,10 +96,6 @@ export function VehicleCard({
               </span>
             ) : null}
           </div>
-
-          <span className="absolute bottom-2 left-2 bg-asphalt/80 px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream/90 backdrop-blur">
-            {categoryLabel}
-          </span>
 
           {photoCount > 1 ? (
             <span className="absolute bottom-2 right-2 bg-asphalt/80 px-1.5 py-0.5 text-[11px] text-cream backdrop-blur">

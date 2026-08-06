@@ -77,66 +77,23 @@ export function VehiclePhotoManager({
     const uploaded: string[] = [];
 
     try {
-      const { prepareImageForUpload } = await import(
-        "@/lib/prepare-image-upload"
-      );
+      const { uploadImageDirect } = await import("@/lib/upload-image-direct");
 
-      // Uma por vez: evita estourar o limite de body da Vercel e perde menos progresso.
+      // Uma por vez + upload direto ao Storage (evita 413 da Vercel).
       for (let index = 0; index < list.length; index += 1) {
         const original = list[index];
         setUploading(list.length - index);
 
-        let prepared: File;
         try {
-          prepared = await prepareImageForUpload(original);
+          const url = await uploadImageDirect(original);
+          uploaded.push(url);
         } catch (error) {
           toast.error(
             error instanceof Error
               ? error.message
-              : `Não foi possível preparar ${original.name}.`,
+              : `Falha no upload de ${original.name}.`,
           );
-          continue;
         }
-
-        const formData = new FormData();
-        formData.append("files", prepared);
-
-        let response: Response;
-        try {
-          response = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-            credentials: "same-origin",
-          });
-        } catch {
-          toast.error(
-            `Falha de rede ao enviar ${original.name}. Verifique a conexão e tente de novo.`,
-          );
-          continue;
-        }
-
-        const rawText = await response.text();
-        let data: { error?: string; urls?: string[] } = {};
-        try {
-          data = rawText ? (JSON.parse(rawText) as typeof data) : {};
-        } catch {
-          toast.error(
-            response.ok
-              ? "Resposta inválida do servidor no upload."
-              : `Upload falhou (${response.status}). Tente JPG ou menos fotos por vez.`,
-          );
-          continue;
-        }
-
-        if (!response.ok) {
-          toast.error(
-            data.error || `Falha no upload de ${original.name} (${response.status}).`,
-          );
-          continue;
-        }
-
-        const urls = data.urls ?? [];
-        uploaded.push(...urls);
       }
 
       if (uploaded.length > 0) {
@@ -229,8 +186,8 @@ export function VehiclePhotoManager({
                 : "Arraste as fotos aqui ou clique para escolher"}
           </p>
           <p className="mt-1 text-xs text-muted">
-            JPG, PNG, WEBP, GIF ou HEIC (iPhone) · enviadas uma a uma, já
-            comprimidas
+            JPG, PNG, WEBP ou GIF · HEIC: exporte como JPG no iPhone · enviadas
+            uma a uma, comprimidas no aparelho
           </p>
           <p className="mt-2 text-[11px] text-muted/80">
             Espere o envio terminar antes de salvar o anúncio.
