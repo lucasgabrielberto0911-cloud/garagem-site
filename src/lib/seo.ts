@@ -107,9 +107,11 @@ export function vehicleJsonLd(vehicle: {
       price: vehicle.price,
       priceCurrency: "BRL",
       availability:
-        vehicle.status === "disponivel"
-          ? "https://schema.org/InStock"
-          : "https://schema.org/LimitedAvailability",
+        vehicle.status === "vendido"
+          ? "https://schema.org/OutOfStock"
+          : vehicle.status === "disponivel"
+            ? "https://schema.org/InStock"
+            : "https://schema.org/LimitedAvailability",
       url: absoluteUrl(path),
       seller: { "@id": absoluteUrl("/#loja") },
     },

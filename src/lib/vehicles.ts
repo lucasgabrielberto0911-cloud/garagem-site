@@ -70,6 +70,7 @@ export function getFeaturedVehicles(take = 8) {
   );
 }
 
+/** Para interesse/troca: não resolve veículos já vendidos. */
 export function getVehicleById(id: string) {
   return safeQuery(
     `veículo ${id}`,
@@ -82,10 +83,24 @@ export function getVehicleById(id: string) {
   );
 }
 
+/**
+ * Resolve por cuid ou slug SEO (`marca-modelo-ano-{cuid}`).
+ * Inclui vendidos para a página de detalhe não retornar 404 após a venda.
+ * (Fluxos de interesse/vender devem usar getVehicleById.)
+ */
 export function getVehicleByParam(param: string) {
   const id = extractVehicleIdFromParam(param);
   if (!id) return Promise.resolve(null);
-  return getVehicleById(id);
+
+  return safeQuery(
+    `veículo ${id}`,
+    () =>
+      prisma.vehicle.findUnique({
+        where: { id },
+        include: PUBLIC_VEHICLE_INCLUDE,
+      }),
+    null,
+  );
 }
 
 /**
