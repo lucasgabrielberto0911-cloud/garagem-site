@@ -22,6 +22,26 @@ const nextConfig = {
       "sharp",
     ],
   },
+  async redirects() {
+    // URLs antigas de anúncios já apagados do banco (antes do fluxo "vendido").
+    return [
+      {
+        source: "/honda-hrv-2020",
+        destination: "/estoque",
+        permanent: true,
+      },
+      {
+        source: "/chevrolet-cruze-lt",
+        destination: "/estoque",
+        permanent: true,
+      },
+      {
+        source: "/etios-xls-2018",
+        destination: "/estoque",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

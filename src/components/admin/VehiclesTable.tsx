@@ -23,6 +23,7 @@ import { vehiclePath } from "@/lib/vehicle-slug";
 import {
   deleteVehicle,
   duplicateVehicle,
+  markVehicleAsSold,
   setVehicleFeatured,
   setVehicleStatus,
 } from "@/app/admin/veiculos/actions";
@@ -63,7 +64,9 @@ export function VehiclesTable({
   });
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<VehicleRow | null>(null);
+  const [soldTarget, setSoldTarget] = useState<VehicleRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [markingSold, setMarkingSold] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const sorted = useMemo(() => {
@@ -146,6 +149,21 @@ export function VehiclesTable({
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
+    }
+  }
+
+  async function confirmMarkSold() {
+    if (!soldTarget) return;
+    setMarkingSold(true);
+    try {
+      await markVehicleAsSold(soldTarget.id);
+      toast.success("Veículo marcado como vendido. A página permanece no site.");
+      router.refresh();
+    } catch {
+      toast.error("Erro ao marcar como vendido.");
+    } finally {
+      setMarkingSold(false);
+      setSoldTarget(null);
     }
   }
 
@@ -353,11 +371,23 @@ export function VehiclesTable({
                   >
                     <IconExternal className="h-4 w-4" />
                   </Link>
+                  {vehicle.status !== "vendido" ? (
+                    <button
+                      type="button"
+                      onClick={() => setSoldTarget(vehicle)}
+                      className="px-2 py-1.5 font-display text-[10px] font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/10"
+                      aria-label="Marcar como vendido"
+                      title="Sai do estoque; a página permanece no site"
+                    >
+                      Vendido
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => setDeleteTarget(vehicle)}
                     className="p-2 text-brand transition hover:text-cream"
-                    aria-label="Excluir"
+                    aria-label="Excluir definitivamente"
+                    title="Apaga do banco (404) — só para duplicata/erro"
                   >
                     <IconTrash className="h-4 w-4" />
                   </button>
@@ -506,12 +536,23 @@ export function VehiclesTable({
                         >
                           <IconCopy className="h-4 w-4" />
                         </button>
+                        {vehicle.status !== "vendido" ? (
+                          <button
+                            type="button"
+                            onClick={() => setSoldTarget(vehicle)}
+                            className="px-2 py-1.5 font-display text-[10px] font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/10"
+                            aria-label="Marcar como vendido"
+                            title="Sai do estoque; a página permanece no site"
+                          >
+                            Vendido
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => setDeleteTarget(vehicle)}
                           className="p-2 text-brand transition hover:text-cream"
-                          aria-label="Excluir"
-                          title="Excluir"
+                          aria-label="Excluir definitivamente"
+                          title="Apaga do banco (404) — só para duplicata/erro"
                         >
                           <IconTrash className="h-4 w-4" />
                         </button>
@@ -553,14 +594,29 @@ export function VehiclesTable({
       )}
 
       <ConfirmDialog
-        open={deleteTarget !== null}
-        title="Excluir veículo"
+        open={soldTarget !== null}
+        title="Marcar como vendido"
         description={
-          deleteTarget
-            ? `Tem certeza que deseja excluir ${deleteTarget.brand} ${deleteTarget.model}? Esta ação não pode ser desfeita.`
+          soldTarget
+            ? `Confirmar venda de ${soldTarget.brand} ${soldTarget.model}? Sai do estoque e do sitemap, mas a página continua no ar com aviso (sem 404).`
             : undefined
         }
-        confirmLabel="Excluir"
+        confirmLabel="Marcar como vendido"
+        danger={false}
+        loading={markingSold}
+        onCancel={() => setSoldTarget(null)}
+        onConfirm={confirmMarkSold}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Excluir definitivamente"
+        description={
+          deleteTarget
+            ? `Apagar ${deleteTarget.brand} ${deleteTarget.model} do banco? A página some (404) e isso prejudica o SEO. Prefira “Marcar como vendido” quando o carro foi vendido. Use exclusão só para cadastro duplicado ou erro.`
+            : undefined
+        }
+        confirmLabel="Excluir definitivamente"
         danger
         loading={deleting}
         onCancel={() => setDeleteTarget(null)}

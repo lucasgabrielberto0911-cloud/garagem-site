@@ -653,18 +653,24 @@ export function VehicleForm({
                     onClick={() => setConfirmSold(true)}
                     disabled={pendingAction}
                     className="inline-flex items-center gap-2 border border-brand-orange/50 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/10 disabled:opacity-60"
+                    title="Tira do estoque, mas mantém a página no site (SEO)"
                   >
                     Marcar como vendido
                   </button>
-                ) : null}
+                ) : (
+                  <span className="font-display text-xs font-semibold uppercase tracking-wide text-muted">
+                    Já marcado como vendido
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(true)}
                   disabled={pendingAction}
                   className={btn.danger}
+                  title="Apaga o registro e a página — use só em duplicata/erro"
                 >
                   <IconTrash className="h-4 w-4" />
-                  Excluir
+                  Excluir definitivamente
                 </button>
               </>
             ) : null}
@@ -674,9 +680,9 @@ export function VehicleForm({
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Excluir veículo"
-        description={`Tem certeza que deseja excluir ${vehicle ? `${vehicle.brand} ${vehicle.model}` : "este veículo"}? Esta ação não pode ser desfeita.`}
-        confirmLabel="Excluir"
+        title="Excluir definitivamente"
+        description={`Apagar ${vehicle ? `${vehicle.brand} ${vehicle.model}` : "este veículo"} do banco? A página some (404) e isso prejudica o SEO. Prefira “Marcar como vendido” quando o carro foi vendido. Use exclusão só para cadastro duplicado ou erro.`}
+        confirmLabel="Excluir definitivamente"
         danger
         loading={pendingAction}
         onCancel={() => setConfirmDelete(false)}
@@ -689,8 +695,8 @@ export function VehicleForm({
       <ConfirmDialog
         open={confirmSold}
         title="Marcar como vendido"
-        description={`Confirmar venda de ${vehicle ? `${vehicle.brand} ${vehicle.model}` : "este veículo"}? Para registrar valor e cliente, use a tela de Vendas.`}
-        confirmLabel="Confirmar"
+        description={`Confirmar venda de ${vehicle ? `${vehicle.brand} ${vehicle.model}` : "este veículo"}? O anúncio sai do estoque e do sitemap, mas a página continua no ar com aviso de vendido (sem 404). Para registrar valor e cliente, use a tela de Vendas.`}
+        confirmLabel="Marcar como vendido"
         danger={false}
         loading={pendingAction}
         onCancel={() => setConfirmSold(false)}

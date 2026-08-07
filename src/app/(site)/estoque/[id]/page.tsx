@@ -56,10 +56,14 @@ export async function generateMetadata({
   const vehicle = await getVehicleByParam(params.id);
   if (!vehicle) return { title: `Veículo não encontrado | ${site.name}` };
 
-  const title = `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel} | ${site.name}`;
-  const description =
-    vehicle.description ??
-    `${vehicle.brand} ${vehicle.model} ${vehicle.year}/${vehicle.yearModel} com ${formatNumberBR(vehicle.km)} km disponível na ${site.name}.`;
+  const sold = vehicle.status === "vendido";
+  const title = sold
+    ? `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel} (vendido) | ${site.name}`
+    : `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel} | ${site.name}`;
+  const description = sold
+    ? `Este ${vehicle.brand} ${vehicle.model} já foi vendido. Confira o estoque disponível na ${site.name}.`
+    : (vehicle.description ??
+      `${vehicle.brand} ${vehicle.model} ${vehicle.year}/${vehicle.yearModel} com ${formatNumberBR(vehicle.km)} km disponível na ${site.name}.`);
   const cover = vehicle.photos[0]?.url;
   const path = vehiclePath(vehicle);
 
@@ -67,6 +71,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: path },
+    robots: sold ? { index: false, follow: true } : undefined,
     openGraph: {
       type: "website",
       title,
@@ -103,6 +108,7 @@ export default async function VehicleDetailPage({
   }
 
   const path = vehiclePath(vehicle);
+  const sold = vehicle.status === "vendido";
   const title = `${vehicle.brand} ${vehicle.model}`;
   const fullLabel = `${title}${vehicle.version ? ` ${vehicle.version}` : ""} ${vehicle.yearModel}`;
   const related = await getRelatedVehicles(
@@ -149,6 +155,26 @@ export default async function VehicleDetailPage({
         ])}
       />
       <Container>
+        {sold ? (
+          <div
+            role="status"
+            className="mb-4 border border-brand-orange/40 bg-brand-orange/10 px-4 py-3 sm:px-5"
+          >
+            <p className="font-display text-sm font-semibold text-cream sm:text-base">
+              Este veículo já foi vendido
+            </p>
+            <p className="mt-1 text-sm text-muted">
+              A página permanece no ar para quem chegou por um link antigo.{" "}
+              <Link
+                href="/estoque"
+                className="font-medium text-brand underline-offset-4 hover:underline"
+              >
+                Ver estoque disponível
+              </Link>
+            </p>
+          </div>
+        ) : null}
+
         {returnTo ? (
           <Link
             href={returnTo}
@@ -187,16 +213,22 @@ export default async function VehicleDetailPage({
                 <span className="font-display text-[11px] font-semibold uppercase tracking-wider text-brand">
                   {vehicleCategoryLabel(vehicle.category)}
                 </span>
-                {vehicle.status === "reservado" ? (
+                {sold ? (
+                  <span className="bg-white/15 px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wider text-cream">
+                    Vendido
+                  </span>
+                ) : vehicle.status === "reservado" ? (
                   <span className="bg-brand-orange px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wider text-asphalt">
                     Reservado
                   </span>
                 ) : null}
-                <FavoriteButton
-                  vehicleId={vehicle.id}
-                  label={fullLabel}
-                  className="ml-auto"
-                />
+                {!sold ? (
+                  <FavoriteButton
+                    vehicleId={vehicle.id}
+                    label={fullLabel}
+                    className="ml-auto"
+                  />
+                ) : null}
               </div>
 
               <div>
@@ -209,7 +241,13 @@ export default async function VehicleDetailPage({
               </div>
 
               <p className="font-display text-3xl font-bold leading-none text-cream">
-                {formatCurrencyBRL(vehicle.price)}
+                {sold ? (
+                  <span className="text-muted line-through decoration-white/30">
+                    {formatCurrencyBRL(vehicle.price)}
+                  </span>
+                ) : (
+                  formatCurrencyBRL(vehicle.price)
+                )}
               </p>
 
               <dl className="grid grid-cols-2 gap-x-3 gap-y-3 border-y border-white/10 py-3.5 text-sm">
@@ -225,51 +263,62 @@ export default async function VehicleDetailPage({
                 ))}
               </dl>
 
-              <WhatsAppButton
-                size="lg"
-                className="hidden w-full lg:inline-flex"
-                message={WHATSAPP_MESSAGES.vehicle(fullLabel)}
-              >
-                Tenho interesse
-              </WhatsAppButton>
-
-              <div className="hidden gap-2 lg:grid lg:grid-cols-2">
-                <a
-                  href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
-                >
-                  Pedir vídeo
-                </a>
-                <a
-                  href={whatsappUrl(
-                    `Olá! Gostaria de opções de financiamento para o ${fullLabel}.`,
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
-                >
-                  Financiar
-                </a>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+              {sold ? (
                 <Link
-                  href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
-                  className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline"
+                  href="/estoque"
+                  className="hidden w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-asphalt transition hover:bg-brand-orange lg:inline-flex"
                 >
-                  Quero colocar meu veículo na troca
+                  Ver estoque disponível
                 </Link>
-                <a
-                  href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline lg:hidden"
-                >
-                  Pedir vídeo
-                </a>
-              </div>
+              ) : (
+                <>
+                  <WhatsAppButton
+                    size="lg"
+                    className="hidden w-full lg:inline-flex"
+                    message={WHATSAPP_MESSAGES.vehicle(fullLabel)}
+                  >
+                    Tenho interesse
+                  </WhatsAppButton>
+
+                  <div className="hidden gap-2 lg:grid lg:grid-cols-2">
+                    <a
+                      href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
+                    >
+                      Pedir vídeo
+                    </a>
+                    <a
+                      href={whatsappUrl(
+                        `Olá! Gostaria de opções de financiamento para o ${fullLabel}.`,
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
+                    >
+                      Financiar
+                    </a>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+                    <Link
+                      href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
+                      className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline"
+                    >
+                      Quero colocar meu veículo na troca
+                    </Link>
+                    <a
+                      href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline lg:hidden"
+                    >
+                      Pedir vídeo
+                    </a>
+                  </div>
+                </>
+              )}
 
               <ShareVehicle
                 title={fullLabel}
@@ -278,8 +327,9 @@ export default async function VehicleDetailPage({
               />
 
               <p className="text-xs leading-relaxed text-muted">
-                Valores e disponibilidade sujeitos a alteração. Financiamento
-                pelo WhatsApp {site.whatsappLabel}.
+                {sold
+                  ? "Este anúncio não está mais à venda. Confira outras opções no estoque."
+                  : `Valores e disponibilidade sujeitos a alteração. Financiamento pelo WhatsApp ${site.whatsappLabel}.`}
               </p>
             </div>
           </aside>
@@ -326,7 +376,7 @@ export default async function VehicleDetailPage({
           <section className="mt-10 border-t border-white/5 pt-8 sm:mt-12 sm:pt-10">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <h2 className="font-display text-lg font-bold tracking-tight text-cream sm:text-xl">
-                Você também pode gostar
+                {sold ? "Veja opções disponíveis" : "Você também pode gostar"}
               </h2>
               <Link
                 href="/estoque"
@@ -348,6 +398,7 @@ export default async function VehicleDetailPage({
         model={vehicle.model}
         year={vehicle.yearModel}
         price={vehicle.price}
+        sold={sold}
       />
     </div>
   );
