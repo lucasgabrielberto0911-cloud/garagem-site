@@ -19,6 +19,7 @@ import {
 import { Badge, EmptyState, btn, inputClass } from "@/components/admin/ui";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
+import { vehiclePath } from "@/lib/vehicle-slug";
 import {
   deleteVehicle,
   duplicateVehicle,
@@ -345,7 +346,7 @@ export function VehiclesTable({
                     <IconPencil className="h-4 w-4" />
                   </Link>
                   <Link
-                    href={`/estoque/${vehicle.id}`}
+                    href={vehiclePath(vehicle)}
                     target="_blank"
                     className="p-2 text-muted transition hover:text-cream"
                     aria-label="Ver no site"
@@ -483,7 +484,7 @@ export function VehiclesTable({
                           <IconPencil className="h-4 w-4" />
                         </Link>
                         <Link
-                          href={`/estoque/${vehicle.id}`}
+                          href={vehiclePath(vehicle)}
                           target="_blank"
                           className="p-2 text-muted transition hover:text-cream"
                           aria-label="Ver no site"

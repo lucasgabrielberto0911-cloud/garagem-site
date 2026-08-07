@@ -14,6 +14,7 @@ export type SaleActionState = {
 function revalidatePublicStock(vehicleId?: string) {
   revalidatePath("/");
   revalidatePath("/estoque");
+  revalidatePath("/estoque/[id]", "page");
   if (vehicleId) revalidatePath(`/estoque/${vehicleId}`);
 }
 

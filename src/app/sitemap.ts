@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { absoluteUrl } from "@/lib/seo";
+import { vehiclePath } from "@/lib/vehicle-slug";
 
 const STATIC_ROUTES: {
   path: string;
@@ -19,11 +20,25 @@ const STATIC_ROUTES: {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
-  let vehicles: { id: string; updatedAt: Date }[] = [];
+  let vehicles: {
+    id: string;
+    brand: string;
+    model: string;
+    version: string | null;
+    yearModel: number;
+    updatedAt: Date;
+  }[] = [];
   try {
     vehicles = await prisma.vehicle.findMany({
       where: { status: { not: "vendido" } },
-      select: { id: true, updatedAt: true },
+      select: {
+        id: true,
+        brand: true,
+        model: true,
+        version: true,
+        yearModel: true,
+        updatedAt: true,
+      },
       orderBy: { updatedAt: "desc" },
     });
   } catch (error) {
@@ -38,7 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: route.priority,
     })),
     ...vehicles.map((vehicle) => ({
-      url: absoluteUrl(`/estoque/${vehicle.id}`),
+      url: absoluteUrl(vehiclePath(vehicle)),
       lastModified: vehicle.updatedAt,
       changeFrequency: "weekly" as const,
       priority: 0.7,
