@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { extractVehicleIdFromParam } from "@/lib/vehicle-slug";
 
 /** Listagens: capa + contagem (badge "X fotos"). */
 export const PUBLIC_VEHICLE_CARD_INCLUDE = {
@@ -79,6 +80,12 @@ export function getVehicleById(id: string) {
       }),
     null,
   );
+}
+
+export function getVehicleByParam(param: string) {
+  const id = extractVehicleIdFromParam(param);
+  if (!id) return Promise.resolve(null);
+  return getVehicleById(id);
 }
 
 /**

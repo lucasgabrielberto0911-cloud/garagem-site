@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
@@ -13,7 +13,8 @@ import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site, whatsappUrl } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
-import { getRelatedVehicles, getVehicleById } from "@/lib/vehicles";
+import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
+import { getRelatedVehicles, getVehicleByParam } from "@/lib/vehicles";
 
 export const revalidate = 60;
 
@@ -52,7 +53,7 @@ export async function generateMetadata({
 }: {
   params: { id: string };
 }): Promise<Metadata> {
-  const vehicle = await getVehicleById(params.id);
+  const vehicle = await getVehicleByParam(params.id);
   if (!vehicle) return { title: `Veículo não encontrado | ${site.name}` };
 
   const title = `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel} | ${site.name}`;
@@ -60,16 +61,17 @@ export async function generateMetadata({
     vehicle.description ??
     `${vehicle.brand} ${vehicle.model} ${vehicle.year}/${vehicle.yearModel} com ${formatNumberBR(vehicle.km)} km disponível na ${site.name}.`;
   const cover = vehicle.photos[0]?.url;
+  const path = vehiclePath(vehicle);
 
   return {
     title,
     description,
-    alternates: { canonical: `/estoque/${vehicle.id}` },
+    alternates: { canonical: path },
     openGraph: {
       type: "website",
       title,
       description,
-      url: absoluteUrl(`/estoque/${vehicle.id}`),
+      url: absoluteUrl(path),
       images: cover ? [{ url: cover }] : ["/og.png"],
     },
     twitter: {
@@ -89,9 +91,18 @@ export default async function VehicleDetailPage({
   searchParams?: DetailSearchParams;
 }) {
   const returnTo = safeStockReturnPath(searchParams?.from);
-  const vehicle = await getVehicleById(params.id);
+  const vehicle = await getVehicleByParam(params.id);
   if (!vehicle) notFound();
 
+  const canonicalSlug = vehicleSlug(vehicle);
+  if (params.id !== canonicalSlug) {
+    const query = new URLSearchParams();
+    if (returnTo) query.set("from", returnTo);
+    const qs = query.toString();
+    permanentRedirect(qs ? `${vehiclePath(vehicle)}?${qs}` : vehiclePath(vehicle));
+  }
+
+  const path = vehiclePath(vehicle);
   const title = `${vehicle.brand} ${vehicle.model}`;
   const fullLabel = `${title}${vehicle.version ? ` ${vehicle.version}` : ""} ${vehicle.yearModel}`;
   const related = await getRelatedVehicles(
@@ -134,7 +145,7 @@ export default async function VehicleDetailPage({
         data={breadcrumbJsonLd([
           { name: "Início", path: "/" },
           { name: "Estoque", path: returnTo ?? "/estoque" },
-          { name: fullLabel, path: `/estoque/${vehicle.id}` },
+          { name: fullLabel, path },
         ])}
       />
       <Container>
@@ -262,7 +273,7 @@ export default async function VehicleDetailPage({
 
               <ShareVehicle
                 title={fullLabel}
-                path={`/estoque/${vehicle.id}`}
+                path={path}
                 className="border-t border-white/10 pt-3"
               />
 

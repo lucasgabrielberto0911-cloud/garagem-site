@@ -21,6 +21,7 @@ import { getSession } from "@/lib/auth";
 import { daysInStock, getDashboardData, STALE_DAYS } from "@/lib/admin-stats";
 import { formatCurrencyBRL, formatNumberBR, formatPhoneBR } from "@/lib/format";
 import { LEAD_STATUS_LABEL, LEAD_STATUSES } from "@/lib/leads";
+import { vehiclePath } from "@/lib/vehicle-slug";
 
 export const dynamic = "force-dynamic";
 
@@ -323,7 +324,7 @@ export default async function AdminDashboardPage() {
                     </p>
                   </div>
                   <Link
-                    href={`/estoque/${vehicle.id}`}
+                    href={vehiclePath(vehicle)}
                     target="_blank"
                     aria-label="Ver no site"
                     className="shrink-0 p-2 text-muted transition hover:text-cream"

@@ -8,6 +8,7 @@ import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
+import { vehiclePath } from "@/lib/vehicle-slug";
 
 export function FavoritesList() {
   const { ids, ready, clear } = useFavorites();
@@ -119,7 +120,7 @@ export function FavoritesList() {
                 <th className="px-4 py-3 font-medium">Comparar</th>
                 {compare.map((vehicle) => (
                   <th key={vehicle.id} className="px-4 py-3 font-display text-cream normal-case tracking-normal">
-                    <Link href={`/estoque/${vehicle.id}`} className="hover:text-brand">
+                    <Link href={vehiclePath(vehicle)} className="hover:text-brand">
                       {vehicle.brand} {vehicle.model}
                     </Link>
                   </th>

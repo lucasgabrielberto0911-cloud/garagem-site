@@ -26,6 +26,7 @@ import {
   type PhotoItem,
 } from "@/components/admin/VehiclePhotoManager";
 import { formatNumberBR } from "@/lib/format";
+import { vehiclePath } from "@/lib/vehicle-slug";
 import {
   VEHICLE_CATEGORIES,
   defaultFuel,
@@ -639,7 +640,7 @@ export function VehicleForm({
             {mode === "edit" && vehicle ? (
               <>
                 <Link
-                  href={`/estoque/${vehicle.id}`}
+                  href={vehiclePath(vehicle)}
                   target="_blank"
                   className={`${btn.ghost} ml-auto`}
                 >

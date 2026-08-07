@@ -6,6 +6,7 @@ import type { Photo, Vehicle } from "@prisma/client";
 import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import { vehiclePath } from "@/lib/vehicle-slug";
 
 export type VehicleCardData = Vehicle & {
   photos: Photo[];
@@ -33,10 +34,9 @@ export function VehicleCard({
   const title = `${vehicle.brand} ${vehicle.model}`;
   const cover = vehicle.photos[0]?.url;
   const badge = STATUS_BADGE[vehicle.status];
-  const vehiclePath = `/estoque/${vehicle.id}`;
   const href = returnTo
-    ? `${vehiclePath}?from=${encodeURIComponent(returnTo)}`
-    : vehiclePath;
+    ? `${vehiclePath(vehicle)}?from=${encodeURIComponent(returnTo)}`
+    : vehiclePath(vehicle);
   const photoCount = vehicle._count?.photos ?? vehicle.photos.length;
 
   const meta = [

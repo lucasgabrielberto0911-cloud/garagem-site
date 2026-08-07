@@ -1,4 +1,5 @@
 import { PHONES, isPhysicalAddress, site, type SiteConfig } from "@/lib/site";
+import { vehiclePath } from "@/lib/vehicle-slug";
 
 /**
  * Placeholders (entre colchetes) não devem ir para os dados estruturados:
@@ -79,6 +80,7 @@ export function vehicleJsonLd(vehicle: {
   const name = `${vehicle.brand} ${vehicle.model}${
     vehicle.version ? ` ${vehicle.version}` : ""
   } ${vehicle.yearModel}`;
+  const path = vehiclePath(vehicle);
 
   return {
     "@context": "https://schema.org",
@@ -91,7 +93,7 @@ export function vehicleJsonLd(vehicle: {
     ...(vehicle.color ? { color: vehicle.color } : {}),
     ...(vehicle.description ? { description: vehicle.description } : {}),
     image: vehicle.photos.map((photo) => photo.url),
-    url: absoluteUrl(`/estoque/${vehicle.id}`),
+    url: absoluteUrl(path),
     mileageFromOdometer: {
       "@type": "QuantitativeValue",
       value: vehicle.km,
@@ -108,7 +110,7 @@ export function vehicleJsonLd(vehicle: {
         vehicle.status === "disponivel"
           ? "https://schema.org/InStock"
           : "https://schema.org/LimitedAvailability",
-      url: absoluteUrl(`/estoque/${vehicle.id}`),
+      url: absoluteUrl(path),
       seller: { "@id": absoluteUrl("/#loja") },
     },
   };
