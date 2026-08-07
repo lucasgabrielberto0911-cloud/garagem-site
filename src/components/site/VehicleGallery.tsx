@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
 import { PhotoLightbox } from "@/components/site/PhotoLightbox";
+import { vehiclePhotoAlt } from "@/lib/format";
 
 /**
  * Galeria em faixa horizontal (snap). Carrega só a foto ativa ±1.
@@ -91,7 +92,7 @@ export function VehicleGallery({
                 {near ? (
                   <VehicleImage
                     src={photo.url}
-                    alt={`${alt} — foto ${index + 1} de ${total}`}
+                    alt={vehiclePhotoAlt(alt, index, total)}
                     fill
                     sizes="(min-width: 1024px) 60vw, 100vw"
                     quality={index === 0 ? 75 : 68}
@@ -163,7 +164,7 @@ export function VehicleGallery({
               >
                 <VehicleImage
                   src={photo.url}
-                  alt=""
+                  alt={vehiclePhotoAlt(alt, index, total)}
                   fill
                   sizes="96px"
                   quality={45}

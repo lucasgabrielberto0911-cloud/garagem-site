@@ -9,7 +9,7 @@ import { Container, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { JsonLd } from "@/components/JsonLd";
-import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatVehicleLabel, vehicleSeoDescription } from "@/lib/format";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site, whatsappUrl } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
@@ -57,13 +57,20 @@ export async function generateMetadata({
   if (!vehicle) return { title: `Veículo não encontrado | ${site.name}` };
 
   const sold = vehicle.status === "vendido";
+  const label = formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel);
   const title = sold
-    ? `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel} (vendido) | ${site.name}`
-    : `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel} | ${site.name}`;
-  const description = sold
-    ? `Este ${vehicle.brand} ${vehicle.model} já foi vendido. Confira o estoque disponível na ${site.name}.`
-    : (vehicle.description ??
-      `${vehicle.brand} ${vehicle.model} ${vehicle.year}/${vehicle.yearModel} com ${formatNumberBR(vehicle.km)} km disponível na ${site.name}.`);
+    ? `${label} (vendido) | ${site.name}`
+    : `${label} | ${site.name}`;
+  const description = vehicleSeoDescription({
+    brand: vehicle.brand,
+    model: vehicle.model,
+    year: vehicle.yearModel,
+    price: vehicle.price,
+    km: vehicle.km,
+    transmission: vehicle.transmission,
+    sold,
+    siteName: site.name,
+  });
   const cover = vehicle.photos[0]?.url;
   const path = vehiclePath(vehicle);
 
@@ -109,8 +116,13 @@ export default async function VehicleDetailPage({
 
   const path = vehiclePath(vehicle);
   const sold = vehicle.status === "vendido";
-  const title = `${vehicle.brand} ${vehicle.model}`;
+  const title = formatVehicleLabel(vehicle.brand, vehicle.model);
   const fullLabel = `${title}${vehicle.version ? ` ${vehicle.version}` : ""} ${vehicle.yearModel}`;
+  const galleryAlt = formatVehicleLabel(
+    vehicle.brand,
+    vehicle.model,
+    vehicle.yearModel,
+  );
   const related = await getRelatedVehicles(
     vehicle.id,
     vehicle.brand,
@@ -204,7 +216,7 @@ export default async function VehicleDetailPage({
         {/* Mobile: galeria → ficha → detalhes. Desktop: galeria+detalhes | ficha. */}
         <div className="mt-4 grid gap-5 lg:mt-5 lg:grid-cols-[1.35fr_0.9fr] lg:items-start lg:gap-8">
           <div className="order-1 min-w-0">
-            <VehicleGallery photos={vehicle.photos} alt={fullLabel} />
+            <VehicleGallery photos={vehicle.photos} alt={galleryAlt} />
           </div>
 
           <aside className="order-2 lg:sticky lg:top-24 lg:row-span-2">
@@ -394,8 +406,8 @@ export default async function VehicleDetailPage({
       </Container>
 
       <VehicleMobileBar
-        brand={vehicle.brand}
-        model={vehicle.model}
+        brand={formatBrandName(vehicle.brand)}
+        model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}
         price={vehicle.price}
         sold={sold}

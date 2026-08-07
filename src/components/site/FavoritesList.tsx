@@ -7,6 +7,7 @@ import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
+import { formatVehicleLabel } from "@/lib/format";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
@@ -121,7 +122,7 @@ export function FavoritesList() {
                 {compare.map((vehicle) => (
                   <th key={vehicle.id} className="px-4 py-3 font-display text-cream normal-case tracking-normal">
                     <Link href={vehiclePath(vehicle)} className="hover:text-brand">
-                      {vehicle.brand} {vehicle.model}
+                      {formatVehicleLabel(vehicle.brand, vehicle.model)}
                     </Link>
                   </th>
                 ))}
@@ -179,7 +180,9 @@ export function FavoritesList() {
           className="mt-5"
           size="lg"
           message={`Olá! Separei alguns veículos no site: ${vehicles
-            .map((vehicle) => `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel}`)
+            .map((vehicle) =>
+              formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel),
+            )
             .join(", ")}. Pode me passar as condições?`}
         >
           Enviar minha lista

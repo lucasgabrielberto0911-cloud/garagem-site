@@ -1,3 +1,4 @@
+import { formatBrandName, formatModelName } from "@/lib/format";
 import { PHONES, isPhysicalAddress, site, type SiteConfig } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
@@ -77,17 +78,19 @@ export function vehicleJsonLd(vehicle: {
   category?: string;
   photos: { url: string }[];
 }) {
-  const name = `${vehicle.brand} ${vehicle.model}${
+  const brand = formatBrandName(vehicle.brand);
+  const model = formatModelName(vehicle.model);
+  const name = `${brand} ${model}${
     vehicle.version ? ` ${vehicle.version}` : ""
-  } ${vehicle.yearModel}`;
+  } ${vehicle.yearModel}`.replace(/\s+/g, " ").trim();
   const path = vehiclePath(vehicle);
 
   return {
     "@context": "https://schema.org",
     "@type": vehicle.category === "moto" ? "Motorcycle" : "Car",
     name,
-    brand: { "@type": "Brand", name: vehicle.brand },
-    model: vehicle.model,
+    brand: { "@type": "Brand", name: brand },
+    model,
     vehicleModelDate: String(vehicle.yearModel),
     productionDate: String(vehicle.year),
     ...(vehicle.color ? { color: vehicle.color } : {}),

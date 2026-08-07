@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
 import { IconClose } from "@/components/site/icons";
+import { vehiclePhotoAlt } from "@/lib/format";
 
 const MAX_SCALE = 4;
 const ZOOM_STEP = 2.4;
@@ -261,7 +262,7 @@ export function PhotoLightbox({
         >
           <VehicleImage
             src={photo?.url}
-            alt={`${alt} — foto ${index + 1} de ${total}`}
+            alt={vehiclePhotoAlt(alt, index, total)}
             fill
             sizes="100vw"
             quality={82}
@@ -319,7 +320,7 @@ export function PhotoLightbox({
               >
                 <VehicleImage
                   src={item.url}
-                  alt=""
+                  alt={vehiclePhotoAlt(alt, itemIndex, total)}
                   fill
                   sizes="80px"
                   quality={45}

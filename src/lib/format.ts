@@ -6,6 +6,141 @@ export function formatCurrencyBRL(value: number) {
   }).format(value);
 }
 
+/** Chave estável para unificar marcas com grafias diferentes (hyundai / Hyundai). */
+export function brandKey(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+const BRAND_CANONICAL: Record<string, string> = {
+  chevrolet: "Chevrolet",
+  ford: "Ford",
+  fiat: "Fiat",
+  volkswagen: "Volkswagen",
+  vw: "Volkswagen",
+  hyundai: "Hyundai",
+  toyota: "Toyota",
+  honda: "Honda",
+  jeep: "Jeep",
+  mitsubishi: "Mitsubishi",
+  renault: "Renault",
+  nissan: "Nissan",
+  peugeot: "Peugeot",
+  citroen: "Citroën",
+  kia: "Kia",
+  bmw: "BMW",
+  "mercedes-benz": "Mercedes-Benz",
+  mercedes: "Mercedes-Benz",
+  audi: "Audi",
+  volvo: "Volvo",
+  chery: "Chery",
+  caoa: "Caoa",
+  "caoa chery": "Caoa Chery",
+  byd: "BYD",
+  gwm: "GWM",
+  suzuki: "Suzuki",
+  subaru: "Subaru",
+  landrover: "Land Rover",
+  "land rover": "Land Rover",
+  ram: "RAM",
+  dodge: "Dodge",
+  chrysler: "Chrysler",
+  mini: "Mini",
+  porsche: "Porsche",
+  jaguar: "Jaguar",
+  lexus: "Lexus",
+  iveco: "Iveco",
+  yamaha: "Yamaha",
+  kawasaki: "Kawasaki",
+  harley: "Harley-Davidson",
+  "harley-davidson": "Harley-Davidson",
+};
+
+/** Marcas do mapa canônico (para auditoria de valores fora da lista). */
+export const KNOWN_BRAND_KEYS = new Set(Object.keys(BRAND_CANONICAL));
+
+function titleCaseWords(value: string) {
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => {
+      // Siglas curtas (BMW, GWM, HR-V partes) — evita "Bmw".
+      if (/^[A-Z0-9-]{2,4}$/.test(word) && word === word.toUpperCase()) {
+        return word;
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+/** Normaliza marca para exibição (mapa BR + title case como fallback). */
+export function formatBrandName(value: string) {
+  const trimmed = value.trim().replace(/\s+/g, " ");
+  if (!trimmed) return trimmed;
+  return BRAND_CANONICAL[brandKey(trimmed)] ?? titleCaseWords(trimmed);
+}
+
+/** Capitaliza modelo para exibição (sem mapa de marcas). */
+export function formatModelName(value: string) {
+  const trimmed = value.trim().replace(/\s+/g, " ");
+  if (!trimmed) return trimmed;
+  return titleCaseWords(trimmed);
+}
+
+/** Ex.: "Hyundai Creta" ou "Hyundai Creta 2022". */
+export function formatVehicleLabel(
+  brand: string,
+  model: string,
+  year?: number | null,
+) {
+  const label = `${formatBrandName(brand)} ${formatModelName(model)}`.trim();
+  return year != null ? `${label} ${year}` : label;
+}
+
+/**
+ * Meta description curta (≈120–155 chars), sem emoji e sem o texto de legenda
+ * do anúncio (WhatsApp/redes).
+ */
+export function vehicleSeoDescription(input: {
+  brand: string;
+  model: string;
+  year: number;
+  price: number;
+  km: number;
+  transmission: string;
+  sold?: boolean;
+  siteName?: string;
+}) {
+  const brand = formatBrandName(input.brand);
+  const model = formatModelName(input.model);
+  const siteName = input.siteName ?? "Garagem";
+
+  const text = input.sold
+    ? `Este ${brand} ${model} já foi vendido. Confira outras opções disponíveis no estoque da ${siteName}.`
+    : `${brand} ${model} ${input.year} à venda por ${formatCurrencyBRL(input.price)}. ${formatNumberBR(input.km)} km, câmbio ${input.transmission}. Confira fotos e condições de pagamento na ${siteName}.`;
+
+  let clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length < 120) {
+    clean = `${clean.replace(/\.$/, "")}. Atendimento rápido pelo WhatsApp.`;
+  }
+  if (clean.length <= 155) return clean;
+  return `${clean.slice(0, 154).trimEnd()}…`;
+}
+
+/** Alt text de foto na ficha: "Marca Modelo Ano - foto N de T". */
+export function vehiclePhotoAlt(
+  label: string,
+  index: number,
+  total: number,
+) {
+  return `${label} - foto ${index + 1} de ${total}`;
+}
+
 export function formatNumberBR(value: number) {
   return new Intl.NumberFormat("pt-BR").format(value);
 }
