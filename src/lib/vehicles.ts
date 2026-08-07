@@ -83,6 +83,12 @@ export function getVehicleById(id: string) {
   );
 }
 
+export function getVehicleByParam(param: string) {
+  const id = extractVehicleIdFromParam(param);
+  if (!id) return Promise.resolve(null);
+  return getVehicleById(id);
+}
+
 /**
  * Resolve por cuid ou slug SEO (`marca-modelo-ano-{cuid}`).
  * Inclui vendidos para a página de detalhe não retornar 404 após a venda.
