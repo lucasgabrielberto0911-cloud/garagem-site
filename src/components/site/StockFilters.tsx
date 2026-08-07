@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { IconClose, IconSearch } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
+import { formatBrandName } from "@/lib/format";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
 export type Facets = {
@@ -126,7 +127,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
       label: `Tipo: ${vehicleCategoryLabel(current.category)}`,
     });
   }
-  if (current.brand) activeFilters.push({ key: "brand", label: `Marca: ${current.brand}` });
+  if (current.brand) {
+    activeFilters.push({
+      key: "brand",
+      label: `Marca: ${formatBrandName(current.brand)}`,
+    });
+  }
   if (current.transmission) {
     activeFilters.push({
       key: "transmission",

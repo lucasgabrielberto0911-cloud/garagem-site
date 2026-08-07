@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Photo, Vehicle } from "@prisma/client";
 import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
-import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export type VehicleCardData = Vehicle & {
@@ -31,7 +31,7 @@ export function VehicleCard({
   returnTo?: string;
 }) {
   const router = useRouter();
-  const title = `${vehicle.brand} ${vehicle.model}`;
+  const title = formatVehicleLabel(vehicle.brand, vehicle.model);
   const cover = vehicle.photos[0]?.url;
   const badge = STATUS_BADGE[vehicle.status];
   const href = returnTo

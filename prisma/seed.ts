@@ -211,7 +211,7 @@ async function main() {
     where: { id: "default" },
     create: {
       id: "default",
-      region: "Vitória, Linhares",
+      region: "Aracruz, Vitória, Linhares",
       email: "suagaragem2@gmail.com",
       address: "Loja digital — atendimento online",
       hours: "Todos os dias, 8h às 23h (online)",
@@ -219,7 +219,7 @@ async function main() {
       hoursSaturday: "08:00 – 23:00",
     },
     update: {
-      region: "Vitória, Linhares",
+      region: "Aracruz, Vitória, Linhares",
       email: "suagaragem2@gmail.com",
       address: "Loja digital — atendimento online",
       hours: "Todos os dias, 8h às 23h (online)",

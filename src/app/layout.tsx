@@ -20,7 +20,7 @@ const body = Inter({
 });
 
 const description =
-  "Seminovos revisados, com procedência verificada e vistoria completa. Compra, venda, troca e financiamento na Garagem.";
+  "Seminovos com procedência verificada em Aracruz, Vitória, Linhares e região do ES. Compra, venda, troca e financiamento na Garagem.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),

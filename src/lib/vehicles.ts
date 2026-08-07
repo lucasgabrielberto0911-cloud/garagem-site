@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { brandKey, formatBrandName } from "@/lib/format";
 import { extractVehicleIdFromParam } from "@/lib/vehicle-slug";
 
 /** Listagens: capa + contagem (badge "X fotos"). */
@@ -282,7 +283,9 @@ function buildStockWhere(filters: StockFilters) {
   return {
     status: "disponivel" as const,
     ...(filters.category ? { category: filters.category } : {}),
-    ...(filters.brand ? { brand: filters.brand } : {}),
+    ...(filters.brand
+      ? { brand: { equals: filters.brand, mode: "insensitive" as const } }
+      : {}),
     ...(filters.transmission ? { transmission: filters.transmission } : {}),
     ...(filters.fuel ? { fuel: filters.fuel } : {}),
     ...priceFilter,
@@ -381,9 +384,21 @@ export function getStockFacets() {
           a.localeCompare(b, "pt-BR"),
         );
 
+      const brandsByKey = new Map<string, string>();
+      for (const row of rows) {
+        const raw = row.brand?.trim();
+        if (!raw) continue;
+        const key = brandKey(raw);
+        if (!brandsByKey.has(key)) {
+          brandsByKey.set(key, formatBrandName(raw));
+        }
+      }
+
       return {
         categories: unique(rows.map((row) => row.category)),
-        brands: unique(rows.map((row) => row.brand)),
+        brands: Array.from(brandsByKey.values()).sort((a, b) =>
+          a.localeCompare(b, "pt-BR"),
+        ),
         transmissions: unique(rows.map((row) => row.transmission)),
         fuels: unique(rows.map((row) => row.fuel)),
         years: Array.from(new Set(rows.map((row) => row.yearModel))).sort(
