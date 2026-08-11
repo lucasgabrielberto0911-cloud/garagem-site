@@ -16,6 +16,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-rekognition": "^3.1108.0",
     "@prisma/client": "^6.19.3",
     "@supabase/supabase-js": "^2.109.0",
     "@vercel/analytics": "^2.0.1",

@@ -9,13 +9,65 @@ type SignResponse = {
   contentType?: string;
 };
 
+type UploadApiResponse = {
+  error?: string;
+  url?: string;
+  urls?: string[];
+};
+
 /**
- * Comprime no browser e sobe direto ao Supabase via URL assinada
- * (não passa o arquivo pela Vercel → evita 413).
+ * Comprime no browser e sobe pela API do servidor (blur de placa via
+ * Rekognition). Se a Vercel recusar por tamanho (413), cai no upload
+ * assinado direto ao Storage — sem blur, mas o cadastro não trava.
  */
 export async function uploadImageDirect(file: File): Promise<string> {
   const prepared = await prepareImageForUpload(file);
 
+  try {
+    const form = new FormData();
+    form.append("file", prepared, prepared.name || "photo.webp");
+
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      credentials: "same-origin",
+      body: form,
+    });
+
+    const raw = await response.text();
+    let data: UploadApiResponse = {};
+    try {
+      data = raw ? (JSON.parse(raw) as UploadApiResponse) : {};
+    } catch {
+      // segue para fallback se 413 / resposta estranha
+    }
+
+    if (response.ok) {
+      const url = data.url || data.urls?.[0];
+      if (url) return url;
+    }
+
+    if (response.status !== 413) {
+      throw new Error(
+        data.error || `Falha no upload (${response.status}). Tente de novo.`,
+      );
+    }
+
+    console.warn(
+      "[upload] /api/upload retornou 413 — usando upload assinado (sem blur).",
+    );
+  } catch (error) {
+    // Rede / parse: tenta o caminho assinado antes de desistir.
+    if (!(error instanceof Error && /413|Too Large/i.test(error.message))) {
+      console.warn("[upload] falha em /api/upload, tentando signed URL:", error);
+    } else {
+      throw error;
+    }
+  }
+
+  return uploadViaSignedUrl(prepared);
+}
+
+async function uploadViaSignedUrl(prepared: File): Promise<string> {
   const signResponse = await fetch("/api/upload/sign", {
     method: "POST",
     credentials: "same-origin",
