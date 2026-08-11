@@ -44,6 +44,13 @@ const STATUS_TONE = {
   vendido: "neutral",
 } as const;
 
+const MARK_SOLD_BTN =
+  "inline-flex min-h-[32px] items-center border border-brand-orange/50 bg-transparent px-2.5 py-1.5 font-display text-[10px] font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/15 hover:border-brand-orange";
+
+function canMarkAsSold(status: string) {
+  return status === "disponivel" || status === "reservado";
+}
+
 const PAGE_SIZE = 10;
 
 type SortKey = "recent" | "year" | "km" | "price";
