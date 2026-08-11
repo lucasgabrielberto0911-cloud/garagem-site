@@ -168,3 +168,45 @@ export function formatCpfBR(value: string) {
   }
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
+
+/** Placa só com letras/números em maiúsculas (ex.: ABC1234, ABC1D23). */
+export function normalizePlate(value: string) {
+  return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 7);
+}
+
+/**
+ * Máscara de digitação: formato antigo com hífen (ABC-1234) ou Mercosul
+ * sem hífen (ABC1D23), conforme o que o usuário digita.
+ */
+export function formatPlateInput(value: string) {
+  const raw = normalizePlate(value);
+  if (raw.length <= 3) return raw;
+
+  const head = raw.slice(0, 3);
+  const rest = raw.slice(3);
+
+  // Antigo (só dígitos após as 3 letras): ABC-1234
+  if (/^\d*$/.test(rest)) {
+    return `${head}-${rest}`;
+  }
+
+  // Mercosul: ABC1D23
+  return `${head}${rest}`;
+}
+
+/** Aceita ABC1234 / ABC-1234 (antigo) ou ABC1D23 (Mercosul). */
+export function isValidPlate(value: string) {
+  const plate = normalizePlate(value);
+  return (
+    /^[A-Z]{3}\d{4}$/.test(plate) || /^[A-Z]{3}\d[A-Z]\d{2}$/.test(plate)
+  );
+}
+
+/** Exibição amigável: ABC-1234 (antigo) ou ABC1D23 (Mercosul). */
+export function formatPlateDisplay(value: string) {
+  const plate = normalizePlate(value);
+  if (/^[A-Z]{3}\d{4}$/.test(plate)) {
+    return `${plate.slice(0, 3)}-${plate.slice(3)}`;
+  }
+  return plate;
+}

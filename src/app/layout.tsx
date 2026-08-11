@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AppToaster } from "@/components/Toaster";
 import { site } from "@/lib/site";
 import "./globals.css";
@@ -108,6 +109,7 @@ export default function RootLayout({
         {children}
         <AppToaster />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

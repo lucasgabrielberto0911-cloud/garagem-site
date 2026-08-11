@@ -30,6 +30,8 @@ import {
 
 export type VehicleRow = Vehicle & { photos: Photo[] };
 
+export type VehiclesTab = "estoque" | "vendidos";
+
 const STATUS_OPTIONS = [
   { value: "disponivel", label: "Disponível" },
   { value: "reservado", label: "Reservado" },
@@ -49,11 +51,15 @@ type SortKey = "recent" | "year" | "km" | "price";
 export function VehiclesTable({
   vehicles,
   q,
-  status,
+  tab,
+  estoqueCount,
+  vendidosCount,
 }: {
   vehicles: VehicleRow[];
   q: string;
-  status: string;
+  tab: VehiclesTab;
+  estoqueCount: number;
+  vendidosCount: number;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -92,18 +98,18 @@ export function VehiclesTable({
   );
 
   const applyFilters = useCallback(
-    (params: { q?: string; status?: string }) => {
+    (params: { q?: string; tab?: VehiclesTab }) => {
       const search = new URLSearchParams();
       const nextQ = params.q ?? q;
-      const nextStatus = params.status ?? status;
+      const nextTab = params.tab ?? tab;
       if (nextQ) search.set("q", nextQ);
-      if (nextStatus) search.set("status", nextStatus);
+      if (nextTab === "vendidos") search.set("tab", "vendidos");
       startTransition(() => {
         router.push(search.toString() ? `${pathname}?${search}` : pathname);
       });
       setPage(1);
     },
-    [q, status, router, pathname],
+    [q, tab, router, pathname],
   );
 
   function toggleSort(key: Exclude<SortKey, "recent">) {
@@ -157,7 +163,7 @@ export function VehiclesTable({
     setMarkingSold(true);
     try {
       await markVehicleAsSold(soldTarget.id);
-      toast.success("Veículo marcado como vendido. A página permanece no site.");
+      toast.success("Veículo movido para a aba Vendidos. A página permanece no site.");
       router.refresh();
     } catch {
       toast.error("Erro ao marcar como vendido.");
@@ -174,6 +180,53 @@ export function VehiclesTable({
 
   return (
     <div className="space-y-4">
+      <div
+        role="tablist"
+        aria-label="Separar estoque e vendidos"
+        className="flex flex-wrap gap-2 border-b border-white/10 pb-3"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "estoque"}
+          onClick={() => applyFilters({ tab: "estoque" })}
+          className={`inline-flex min-h-[40px] items-center gap-2 px-4 py-2 font-display text-xs font-semibold uppercase tracking-wide transition ${
+            tab === "estoque"
+              ? "border-b-2 border-brand text-cream"
+              : "text-muted hover:text-cream"
+          }`}
+        >
+          Em estoque
+          <span
+            className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+              tab === "estoque" ? "bg-brand/20 text-brand" : "bg-white/10 text-muted"
+            }`}
+          >
+            {estoqueCount}
+          </span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "vendidos"}
+          onClick={() => applyFilters({ tab: "vendidos" })}
+          className={`inline-flex min-h-[40px] items-center gap-2 px-4 py-2 font-display text-xs font-semibold uppercase tracking-wide transition ${
+            tab === "vendidos"
+              ? "border-b-2 border-brand text-cream"
+              : "text-muted hover:text-cream"
+          }`}
+        >
+          Vendidos
+          <span
+            className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+              tab === "vendidos" ? "bg-brand/20 text-brand" : "bg-white/10 text-muted"
+            }`}
+          >
+            {vendidosCount}
+          </span>
+        </button>
+      </div>
+
       <div className="border border-white/10 bg-ink/50 p-3 sm:p-4">
         <form
           className="flex flex-col gap-3 sm:flex-row"
@@ -182,8 +235,6 @@ export function VehiclesTable({
             const form = event.currentTarget;
             applyFilters({
               q: (form.elements.namedItem("q") as HTMLInputElement).value,
-              status: (form.elements.namedItem("status") as HTMLSelectElement)
-                .value,
             });
           }}
         >
@@ -194,16 +245,8 @@ export function VehiclesTable({
             placeholder="Buscar marca, modelo, versão, cor..."
             className={`${inputClass} flex-1`}
           />
-          <select name="status" defaultValue={status} className={`${inputClass} sm:w-48`}>
-            <option value="">Todos os status</option>
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
           <button type="submit" disabled={isPending} className={btn.outline}>
-            {isPending ? "Buscando..." : "Filtrar"}
+            {isPending ? "Buscando..." : "Buscar"}
           </button>
         </form>
 
@@ -239,13 +282,13 @@ export function VehiclesTable({
                 : ""}
             </button>
           ))}
-          {q || status ? (
+          {q ? (
             <button
               type="button"
-              onClick={() => applyFilters({ q: "", status: "" })}
+              onClick={() => applyFilters({ q: "" })}
               className="ml-auto text-xs text-muted underline-offset-4 transition hover:text-cream hover:underline"
             >
-              Limpar filtros
+              Limpar busca
             </button>
           ) : null}
         </div>
@@ -255,20 +298,26 @@ export function VehiclesTable({
         <EmptyState
           icon={<IconImage className="h-12 w-12" />}
           title={
-            q || status
+            q
               ? "Nenhum veículo encontrado"
-              : "Nenhum veículo cadastrado ainda"
+              : tab === "vendidos"
+                ? "Nenhum veículo vendido ainda"
+                : "Nenhum veículo em estoque"
           }
           description={
-            q || status
-              ? "Tente ajustar a busca ou o filtro de status."
-              : "Cadastre o primeiro veículo do estoque para começar."
+            q
+              ? "Tente ajustar a busca nesta aba."
+              : tab === "vendidos"
+                ? "Quando marcar um carro como vendido, ele aparece aqui — fora do estoque ativo."
+                : "Cadastre o primeiro veículo do estoque para começar."
           }
           action={
-            <Link href="/admin/veiculos/novo" className={btn.primary}>
-              <IconPlus className="h-4 w-4" />
-              {q || status ? "Cadastrar veículo" : "Cadastrar o primeiro"}
-            </Link>
+            tab === "estoque" ? (
+              <Link href="/admin/veiculos/novo" className={btn.primary}>
+                <IconPlus className="h-4 w-4" />
+                {q ? "Cadastrar veículo" : "Cadastrar o primeiro"}
+              </Link>
+            ) : undefined
           }
         />
       ) : (
@@ -598,7 +647,7 @@ export function VehiclesTable({
         title="Marcar como vendido"
         description={
           soldTarget
-            ? `Confirmar venda de ${soldTarget.brand} ${soldTarget.model}? Sai do estoque e do sitemap, mas a página continua no ar com aviso (sem 404).`
+            ? `Confirmar venda de ${soldTarget.brand} ${soldTarget.model}? Sai da aba Em estoque e vai para Vendidos. A página pública continua no ar com aviso (sem 404).`
             : undefined
         }
         confirmLabel="Marcar como vendido"

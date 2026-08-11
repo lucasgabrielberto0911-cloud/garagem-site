@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/site/ui";
 import { createSellLead } from "@/app/(site)/vender/actions";
-import { formatNumberBR, formatPhoneBR } from "@/lib/format";
+import { formatNumberBR, formatPhoneBR, formatPlateInput } from "@/lib/format";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
 
 const inputClass =
@@ -21,6 +21,7 @@ export function SellForm({
   const [sent, setSent] = useState(false);
   const [phone, setPhone] = useState("");
   const [km, setKm] = useState("");
+  const [plate, setPlate] = useState("");
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,6 +36,7 @@ export function SellForm({
         setSent(true);
         setPhone("");
         setKm("");
+        setPlate("");
         formRef.current?.reset();
       } else {
         toast.error(result.message);
@@ -148,6 +150,24 @@ export function SellForm({
             placeholder="Ex.: 2021"
             className={inputClass}
           />
+        </Field>
+
+        <Field label="Placa do veículo" error={errors.plate} htmlFor="plate">
+          <input
+            id="plate"
+            name="plate"
+            required
+            autoComplete="off"
+            spellCheck={false}
+            value={plate}
+            onChange={(event) => setPlate(formatPlateInput(event.target.value))}
+            placeholder="ABC-1234 ou ABC1D23"
+            className={`${inputClass} uppercase`}
+            aria-describedby="plate-hint"
+          />
+          <p id="plate-hint" className="mt-1.5 text-[11px] text-muted">
+            Aceita placa antiga (ABC-1234) ou Mercosul (ABC1D23).
+          </p>
         </Field>
 
         <Field label="Quilometragem" error={errors.km} htmlFor="km" optional>

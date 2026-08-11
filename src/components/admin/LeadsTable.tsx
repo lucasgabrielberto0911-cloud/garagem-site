@@ -9,7 +9,12 @@ import { IconDownload, IconTrash, IconUsers } from "@/components/admin/icons";
 import { IconInbox } from "@/components/admin/icons";
 import { IconPhone, IconWhatsApp } from "@/components/site/icons";
 import { EmptyState, inputClass } from "@/components/admin/ui";
-import { formatNumberBR, formatPhoneBR } from "@/lib/format";
+import {
+  formatNumberBR,
+  formatPhoneBR,
+  formatPlateDisplay,
+  normalizePlate,
+} from "@/lib/format";
 import {
   LEAD_STATUSES,
   LEAD_STATUS_LABEL as STATUS_LABEL,
@@ -22,11 +27,22 @@ import {
   updateLeadStatus,
 } from "@/app/admin/leads/actions";
 
+/** Troque aqui se mudar o serviço de consulta de placa. */
+const CONSULTA_PLACA_URL_BASE =
+  "https://buscafipe.com/consulta-placa/?placa=";
+
+function consultaPlacaUrl(plate: string) {
+  return `${CONSULTA_PLACA_URL_BASE}${encodeURIComponent(normalizePlate(plate))}`;
+}
+
 function whatsappLink(lead: LeadVenda) {
   const digits = lead.phone.replace(/\D/g, "");
   const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
+  const plateLabel = lead.plate
+    ? ` (placa ${formatPlateDisplay(lead.plate)})`
+    : "";
   const message = encodeURIComponent(
-    `Olá, ${lead.name.split(" ")[0]}! Aqui é da Garagem. Recebemos sua solicitação de avaliação do ${lead.vehicleInfo}.`,
+    `Olá, ${lead.name.split(" ")[0]}! Aqui é da Garagem. Recebemos sua solicitação de avaliação do ${lead.vehicleInfo}${plateLabel}.`,
   );
   return `https://wa.me/${withCountry}?text=${message}`;
 }
@@ -39,11 +55,21 @@ function formatDateTime(value: Date) {
 }
 
 function exportCsv(leads: LeadVenda[]) {
-  const header = ["Nome", "Telefone", "Veículo", "KM", "Status", "Observações", "Data"];
+  const header = [
+    "Nome",
+    "Telefone",
+    "Veículo",
+    "Placa",
+    "KM",
+    "Status",
+    "Observações",
+    "Data",
+  ];
   const rows = leads.map((lead) => [
     lead.name,
     formatPhoneBR(lead.phone),
     lead.vehicleInfo,
+    lead.plate ? formatPlateDisplay(lead.plate) : "",
     lead.km !== null ? String(lead.km) : "",
     STATUS_LABEL[lead.status as LeadStatus] ?? lead.status,
     (lead.notes ?? "").replace(/\s+/g, " "),
@@ -83,10 +109,12 @@ export function LeadsTable({
     const query = term.trim().toLowerCase();
     if (!query) return leads;
     const digits = query.replace(/\D/g, "");
+    const plateQuery = normalizePlate(query).toLowerCase();
     return leads.filter(
       (lead) =>
         lead.name.toLowerCase().includes(query) ||
         lead.vehicleInfo.toLowerCase().includes(query) ||
+        (lead.plate && lead.plate.toLowerCase().includes(plateQuery)) ||
         (digits.length > 0 && lead.phone.includes(digits)),
     );
   }, [leads, term]);
@@ -117,6 +145,16 @@ export function LeadsTable({
       toast.success(result.message);
     } else {
       toast.error(result.message);
+    }
+  }
+
+  async function copyPlate(plate: string) {
+    const normalized = normalizePlate(plate);
+    try {
+      await navigator.clipboard.writeText(normalized);
+      toast.success(`Placa ${formatPlateDisplay(normalized)} copiada.`);
+    } catch {
+      toast.error("Não foi possível copiar a placa.");
     }
   }
 
@@ -160,7 +198,7 @@ export function LeadsTable({
             type="search"
             value={term}
             onChange={(event) => setTerm(event.target.value)}
-            placeholder="Buscar por nome, telefone ou veículo"
+            placeholder="Buscar por nome, telefone, placa ou veículo"
             className={`${inputClass} sm:max-w-sm`}
           />
           <span className="text-xs text-muted">
@@ -191,13 +229,16 @@ export function LeadsTable({
           description={
             leads.length === 0
               ? "Os pedidos de avaliação enviados pelo formulário da página Vender/Trocar aparecem aqui."
-              : "Tente outro nome, telefone ou veículo."
+              : "Tente outro nome, telefone, placa ou veículo."
           }
         />
       ) : (
         <ul className="space-y-3">
           {filtered.map((lead) => (
-            <li key={lead.id} className="border border-white/10 bg-ink/50 p-4 sm:p-5">
+            <li
+              key={lead.id}
+              className="border border-white/10 bg-ink/50 p-4 sm:p-5"
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -217,8 +258,17 @@ export function LeadsTable({
                     {lead.vehicleInfo}
                     {lead.km !== null ? ` · ${formatNumberBR(lead.km)} km` : ""}
                   </p>
+                  <p className="mt-1 text-sm text-cream">
+                    Placa:{" "}
+                    <span className="font-display font-semibold tracking-wide">
+                      {lead.plate
+                        ? formatPlateDisplay(lead.plate)
+                        : "Não informada"}
+                    </span>
+                  </p>
                   <p className="mt-1 text-sm text-muted">
-                    {formatPhoneBR(lead.phone)} · {formatDateTime(lead.createdAt)}
+                    {formatPhoneBR(lead.phone)} ·{" "}
+                    {formatDateTime(lead.createdAt)}
                   </p>
                 </div>
 
@@ -239,6 +289,25 @@ export function LeadsTable({
                       </option>
                     ))}
                   </select>
+                  {lead.plate ? (
+                    <>
+                      <a
+                        href={consultaPlacaUrl(lead.plate)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-[40px] items-center gap-2 border border-brand/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10"
+                      >
+                        Consultar histórico
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => copyPlate(lead.plate)}
+                        className="inline-flex min-h-[40px] items-center gap-2 border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream"
+                      >
+                        Copiar placa
+                      </button>
+                    </>
+                  ) : null}
                   <a
                     href={whatsappLink(lead)}
                     target="_blank"
