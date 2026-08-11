@@ -40,11 +40,9 @@ const NAV: NavItem[] = [
 
 export function AdminShell({
   children,
-  email,
   newLeads = 0,
 }: {
   children: React.ReactNode;
-  email?: string;
   newLeads?: number;
 }) {
   const pathname = usePathname();
