@@ -61,6 +61,10 @@ function parseVehicleFields(formData: FormData) {
   const description = String(formData.get("description") || "").trim() || null;
   const engine = String(formData.get("engine") || "").trim() || null;
   const warranty = String(formData.get("warranty") || "").trim() || null;
+  const plateRaw = String(formData.get("plate") || "").trim();
+  const plate = plateRaw
+    ? plateRaw.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 7)
+    : null;
   const plateEnd = String(formData.get("plateEnd") || "").trim() || null;
   const inspection = String(formData.get("inspection") || "").trim() || null;
   const status = String(formData.get("status") || "disponivel").trim();
@@ -127,6 +131,7 @@ function parseVehicleFields(formData: FormData) {
     engine,
     doors,
     warranty,
+    plate,
     plateEnd,
     inspection,
     accessories,
@@ -171,6 +176,7 @@ export async function createVehicle(
         engine: data.engine,
         doors: data.doors,
         warranty: data.warranty,
+        plate: data.plate,
         plateEnd: data.plateEnd,
         inspection: data.inspection,
         accessories: data.accessories,
@@ -237,6 +243,7 @@ export async function updateVehicle(
           engine: data.engine,
           doors: data.doors,
           warranty: data.warranty,
+          plate: data.plate,
           plateEnd: data.plateEnd,
           inspection: data.inspection,
           accessories: data.accessories,
@@ -361,6 +368,7 @@ export async function duplicateVehicle(id: string) {
       engine: source.engine,
       doors: source.doors,
       warranty: source.warranty,
+      plate: source.plate,
       plateEnd: source.plateEnd,
       inspection: source.inspection,
       accessories: source.accessories,

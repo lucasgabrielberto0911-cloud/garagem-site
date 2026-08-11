@@ -7,6 +7,8 @@ import {
   fetchFipeYears,
   type FipeVehicleType,
 } from "@/lib/fipe";
+import { lookupVehicleByPlate } from "@/lib/plate-lookup";
+import { isValidPlate, normalizePlate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +20,9 @@ function parseType(raw: string | null): FipeVehicleType | null {
 }
 
 /**
- * Proxy autenticado da FIPE para o formulário admin.
- * Query: resource=brands|models|years|detail + vehicleType + ids.
- * Falhas da FIPE retornam 502 com mensagem — o formulário segue editável.
+ * Proxy autenticado da FIPE / consulta por placa para o formulário admin.
+ * Query: resource=brands|models|years|detail|plate
+ * Falhas retornam erro JSON — o formulário segue editável.
  */
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -34,15 +36,35 @@ export async function GET(request: NextRequest) {
   const brandId = params.get("brandId")?.trim() ?? "";
   const modelId = params.get("modelId")?.trim() ?? "";
   const yearId = params.get("yearId")?.trim() ?? "";
+  const category = params.get("category")?.trim() || null;
 
-  if (!resource || !vehicleType) {
-    return NextResponse.json(
-      { error: "Parâmetros inválidos (resource, vehicleType)." },
-      { status: 400 },
-    );
+  if (!resource) {
+    return NextResponse.json({ error: "resource obrigatório." }, { status: 400 });
   }
 
   try {
+    if (resource === "plate") {
+      const plate = normalizePlate(params.get("plate") ?? "");
+      if (!isValidPlate(plate)) {
+        return NextResponse.json(
+          { error: "Placa inválida. Use ABC1D23 ou ABC-1234." },
+          { status: 400 },
+        );
+      }
+      const result = await lookupVehicleByPlate(
+        plate,
+        category ?? (vehicleType === "motorcycles" ? "moto" : "carro"),
+      );
+      return NextResponse.json({ result });
+    }
+
+    if (!vehicleType) {
+      return NextResponse.json(
+        { error: "Parâmetros inválidos (vehicleType)." },
+        { status: 400 },
+      );
+    }
+
     if (resource === "brands") {
       const brands = await fetchFipeBrands(vehicleType);
       return NextResponse.json({ brands });
