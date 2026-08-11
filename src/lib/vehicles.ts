@@ -6,12 +6,17 @@ import { extractVehicleIdFromParam } from "@/lib/vehicle-slug";
 export const PUBLIC_VEHICLE_CARD_INCLUDE = {
   photos: { orderBy: { order: "asc" as const }, take: 1 },
   _count: { select: { photos: true } },
-};
+} as const;
 
 /** Detalhe e edição carregam todas as fotos. */
 export const PUBLIC_VEHICLE_INCLUDE = {
   photos: { orderBy: { order: "asc" as const } },
-};
+} as const;
+
+/** Nunca enviar preço FIPE ao site / APIs públicas. */
+export const PUBLIC_VEHICLE_OMIT = {
+  fipePrice: true,
+} as const;
 
 export const STOCK_PAGE_SIZE = 12;
 
@@ -53,6 +58,7 @@ export function getFeaturedVehicles(take = 8) {
     async () => {
       const featured = await prisma.vehicle.findMany({
         where: { status: "disponivel", featured: true },
+        omit: PUBLIC_VEHICLE_OMIT,
         include: PUBLIC_VEHICLE_CARD_INCLUDE,
         orderBy: { createdAt: "desc" },
         take,
@@ -62,6 +68,7 @@ export function getFeaturedVehicles(take = 8) {
 
       return prisma.vehicle.findMany({
         where: { status: "disponivel" },
+        omit: PUBLIC_VEHICLE_OMIT,
         include: PUBLIC_VEHICLE_CARD_INCLUDE,
         orderBy: { createdAt: "desc" },
         take: 4,
@@ -78,6 +85,7 @@ export function getVehicleById(id: string) {
     () =>
       prisma.vehicle.findFirst({
         where: { id, status: { not: "vendido" } },
+        omit: PUBLIC_VEHICLE_OMIT,
         include: PUBLIC_VEHICLE_INCLUDE,
       }),
     null,
@@ -98,6 +106,7 @@ export function getVehicleByParam(param: string) {
     () =>
       prisma.vehicle.findUnique({
         where: { id },
+        omit: PUBLIC_VEHICLE_OMIT,
         include: PUBLIC_VEHICLE_INCLUDE,
       }),
     null,
@@ -118,6 +127,7 @@ export function getRelatedVehicles(
     "veículos relacionados",
     async () => {
       const include = PUBLIC_VEHICLE_CARD_INCLUDE;
+      const omit = PUBLIC_VEHICLE_OMIT;
       const base = {
         status: "disponivel" as const,
         id: { not: vehicleId },
@@ -129,6 +139,7 @@ export function getRelatedVehicles(
           brand,
           ...(category ? { category } : {}),
         },
+        omit,
         include,
         orderBy: { createdAt: "desc" },
         take,
@@ -147,6 +158,7 @@ export function getRelatedVehicles(
             price: { gte: price - margin, lte: price + margin },
             id: { notIn: [vehicleId, ...Array.from(seen)] },
           },
+          omit,
           include,
           orderBy: { createdAt: "desc" },
           take: remaining,
@@ -162,6 +174,7 @@ export function getRelatedVehicles(
             category,
             id: { notIn: [vehicleId, ...Array.from(seen)] },
           },
+          omit,
           include,
           orderBy: { createdAt: "desc" },
           take: still,
@@ -175,6 +188,7 @@ export function getRelatedVehicles(
             ...base,
             id: { notIn: [vehicleId, ...withCategory.map((item) => item.id)] },
           },
+          omit,
           include,
           orderBy: { createdAt: "desc" },
           take: fill,
@@ -189,6 +203,7 @@ export function getRelatedVehicles(
             category,
             id: { notIn: [vehicleId, ...Array.from(seen)] },
           },
+          omit,
           include,
           orderBy: { createdAt: "desc" },
           take: remaining,
@@ -201,6 +216,7 @@ export function getRelatedVehicles(
             ...base,
             id: { notIn: [vehicleId, ...merged.map((item) => item.id)] },
           },
+          omit,
           include,
           orderBy: { createdAt: "desc" },
           take: take - merged.length,
@@ -212,6 +228,7 @@ export function getRelatedVehicles(
 
       return prisma.vehicle.findMany({
         where: base,
+        omit,
         include,
         orderBy: { createdAt: "desc" },
         take,
@@ -239,7 +256,10 @@ export type StockFilters = {
 
 export type StockPageResult = {
   vehicles: Array<
-    Awaited<ReturnType<typeof prisma.vehicle.findMany>>[number] & {
+    Omit<
+      Awaited<ReturnType<typeof prisma.vehicle.findMany>>[number],
+      "fipePrice"
+    > & {
       photos: Array<{ id: string; url: string; order: number; vehicleId: string }>;
       _count: { photos: number };
     }
@@ -318,6 +338,7 @@ async function fetchStockPage(filters: StockFilters) {
     prisma.vehicle.count({ where }),
     prisma.vehicle.findMany({
       where,
+      omit: PUBLIC_VEHICLE_OMIT,
       include: PUBLIC_VEHICLE_CARD_INCLUDE,
       orderBy,
       skip: (page - 1) * pageSize,

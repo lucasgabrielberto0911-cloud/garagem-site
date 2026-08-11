@@ -69,6 +69,16 @@ function parseVehicleFields(formData: FormData) {
   const yearModel = requireNumber(formData.get("yearModel"), "Ano modelo");
   const km = requireNumber(formData.get("km"), "KM");
   const price = requireNumber(formData.get("price"), "Preço");
+  const fipePriceRaw = String(formData.get("fipePrice") || "").trim();
+  const fipePrice = fipePriceRaw
+    ? (() => {
+        const parsed = Number(fipePriceRaw);
+        if (!Number.isFinite(parsed) || parsed < 0) {
+          throw new Error("Preço FIPE inválido.");
+        }
+        return parsed;
+      })()
+    : null;
   const doorsRaw = String(formData.get("doors") || "").trim();
   const doors = doorsRaw
     ? requireNumber(formData.get("doors"), "Portas")
@@ -109,6 +119,7 @@ function parseVehicleFields(formData: FormData) {
     yearModel,
     km,
     price,
+    fipePrice,
     fuel,
     transmission,
     color,
@@ -152,6 +163,7 @@ export async function createVehicle(
         yearModel: data.yearModel,
         km: data.km,
         price: data.price,
+        fipePrice: data.fipePrice,
         fuel: data.fuel,
         transmission: data.transmission,
         color: data.color,
@@ -217,6 +229,7 @@ export async function updateVehicle(
           yearModel: data.yearModel,
           km: data.km,
           price: data.price,
+          fipePrice: data.fipePrice,
           fuel: data.fuel,
           transmission: data.transmission,
           color: data.color,
@@ -340,6 +353,7 @@ export async function duplicateVehicle(id: string) {
       yearModel: source.yearModel,
       km: source.km,
       price: source.price,
+      fipePrice: source.fipePrice,
       fuel: source.fuel,
       transmission: source.transmission,
       color: source.color,

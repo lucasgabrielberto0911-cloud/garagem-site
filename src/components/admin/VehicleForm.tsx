@@ -25,7 +25,8 @@ import {
   photosFromUrls,
   type PhotoItem,
 } from "@/components/admin/VehiclePhotoManager";
-import { formatNumberBR } from "@/lib/format";
+import { FipeLookup } from "@/components/admin/FipeLookup";
+import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
   VEHICLE_CATEGORIES,
@@ -120,6 +121,11 @@ export function VehicleForm({
     price: vehicle?.price != null ? formatNumberBR(vehicle.price) : "",
     km: vehicle?.km != null ? formatNumberBR(vehicle.km) : "",
   });
+  const [brand, setBrand] = useState(vehicle?.brand ?? "");
+  const [model, setModel] = useState(vehicle?.model ?? "");
+  const [fipePrice, setFipePrice] = useState<number | null>(
+    vehicle?.fipePrice ?? null,
+  );
 
   const fuelOptions = getFuels(category);
   const transmissionOptions = getTransmissions(category);
@@ -140,6 +146,22 @@ export function VehicleForm({
         ? current
         : defaultTransmission(next),
     );
+  }
+
+  function applyFipeSelection(payload: {
+    brand: string;
+    model: string;
+    fipePrice: number | null;
+  }) {
+    if (payload.brand) setBrand(payload.brand);
+    if (payload.model) setModel(payload.model);
+    setFipePrice(payload.fipePrice);
+    setErrors((current) => {
+      const next = { ...current };
+      if (payload.brand) delete next.brand;
+      if (payload.model) delete next.model;
+      return next;
+    });
   }
 
   function validate(): boolean {
@@ -262,11 +284,17 @@ export function VehicleForm({
         </Card>
 
         <Card title="Identificação">
+          <FipeLookup
+            category={category}
+            initialFipePrice={vehicle?.fipePrice}
+            onApply={applyFipeSelection}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Marca" required error={errors.brand}>
               <input
                 name="brand"
-                defaultValue={vehicle?.brand}
+                value={brand}
+                onChange={(event) => setBrand(event.target.value)}
                 placeholder={isMoto ? "Ex.: Honda" : "Ex.: Volkswagen"}
                 className={`${inputClass} ${errors.brand ? errorBorder : ""}`}
               />
@@ -274,7 +302,8 @@ export function VehicleForm({
             <Field label="Modelo" required error={errors.model}>
               <input
                 name="model"
-                defaultValue={vehicle?.model}
+                value={model}
+                onChange={(event) => setModel(event.target.value)}
                 placeholder={isMoto ? "Ex.: CB 500F" : "Ex.: Golf"}
                 className={`${inputClass} ${errors.model ? errorBorder : ""}`}
               />
@@ -451,6 +480,17 @@ export function VehicleForm({
                 placeholder="0"
                 className={`${inputClass} ${errors.price ? errorBorder : ""}`}
               />
+              {fipePrice != null && fipePrice > 0 ? (
+                <p
+                  className="mt-2 text-xs text-muted"
+                  data-testid="fipe-price-reference"
+                >
+                  Referência FIPE:{" "}
+                  <span className="font-medium text-cream">
+                    {formatCurrencyBRL(fipePrice)}
+                  </span>
+                </p>
+              ) : null}
             </Field>
             <Field label="Status">
               <select
