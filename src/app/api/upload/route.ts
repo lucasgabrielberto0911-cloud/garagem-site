@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { getSession } from "@/lib/auth";
+import { blurDetectedPlates } from "@/lib/blur-plates";
 import {
   VEHICLE_PHOTOS_BUCKET,
   getSupabaseAdmin,
@@ -56,23 +57,27 @@ function isHeicBuffer(buffer: Buffer): boolean {
   return /heic|heix|hevc|hevx|heim|heis|mif1|msf1/.test(brands);
 }
 
+async function toProcessableBuffer(
+  buffer: Buffer,
+  detected: Detected,
+): Promise<{ buffer: Buffer; detected: Detected }> {
+  if (detected !== "image/heic") {
+    return { buffer, detected };
+  }
+
+  const convert = (await import("heic-convert")).default;
+  const jpeg = await convert({ buffer, format: "JPEG", quality: 0.9 });
+  return { buffer: Buffer.from(jpeg), detected: "image/jpeg" };
+}
+
 /**
  * Normaliza qualquer formato aceito para WebP leve (redimensiona + comprime).
- * HEIC passa por heic-convert → JPEG → sharp/WebP.
+ * HEIC já deve ter sido convertido antes (ver toProcessableBuffer).
  */
 async function optimizeForStorage(
   buffer: Buffer,
-  detected: Detected,
 ): Promise<{ buffer: Buffer; contentType: "image/webp"; extension: "webp" }> {
-  let input = buffer;
-
-  if (detected === "image/heic") {
-    const convert = (await import("heic-convert")).default;
-    const jpeg = await convert({ buffer, format: "JPEG", quality: 0.82 });
-    input = Buffer.from(jpeg);
-  }
-
-  const optimized = await sharp(input)
+  const optimized = await sharp(buffer)
     .rotate()
     .resize({
       width: MAX_EDGE,
@@ -171,7 +176,11 @@ export async function POST(request: Request) {
         extension: "webp";
       };
       try {
-        prepared = await optimizeForStorage(raw, detected);
+        // 1) HEIC → JPEG (se preciso), 2) blur de placa na resolução alta,
+        // 3) só então redimensiona/comprime para o Storage.
+        const processable = await toProcessableBuffer(raw, detected);
+        const withPlatesBlurred = await blurDetectedPlates(processable.buffer);
+        prepared = await optimizeForStorage(withPlatesBlurred);
       } catch (error) {
         console.error("Image optimize error:", error);
         return NextResponse.json(
