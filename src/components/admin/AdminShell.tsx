@@ -142,15 +142,6 @@ export function AdminShell({
           <IconLogout className="h-[18px] w-[18px] shrink-0" />
           {loggingOut ? "Saindo..." : "Sair"}
         </button>
-        {email ? (
-          <Link
-            href="/admin/conta"
-            title="Minha conta"
-            className="block truncate px-3 pt-2 text-[11px] text-muted transition hover:text-cream"
-          >
-            {email}
-          </Link>
-        ) : null}
       </div>
     </>
   );
