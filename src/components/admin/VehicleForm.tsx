@@ -195,8 +195,8 @@ export function VehicleForm({
     startTransition(async () => {
       try {
         await markVehicleAsSold(vehicle.id);
-        toast.success("Veículo marcado como vendido.");
-        router.refresh();
+        toast.success("Veículo movido para a aba Vendidos.");
+        router.push("/admin/veiculos?tab=vendidos");
       } catch {
         toast.error("Erro ao atualizar o status.");
       }
@@ -695,7 +695,7 @@ export function VehicleForm({
       <ConfirmDialog
         open={confirmSold}
         title="Marcar como vendido"
-        description={`Confirmar venda de ${vehicle ? `${vehicle.brand} ${vehicle.model}` : "este veículo"}? O anúncio sai do estoque e do sitemap, mas a página continua no ar com aviso de vendido (sem 404). Para registrar valor e cliente, use a tela de Vendas.`}
+        description={`Confirmar venda de ${vehicle ? `${vehicle.brand} ${vehicle.model}` : "este veículo"}? Ele sai da aba Em estoque e vai para Vendidos. A página pública continua no ar com aviso (sem 404). Para registrar valor e cliente, use a tela de Vendas.`}
         confirmLabel="Marcar como vendido"
         danger={false}
         loading={pendingAction}
