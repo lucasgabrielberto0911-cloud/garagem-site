@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { isValidPlate, normalizePlate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { checkSellLeadRateLimit } from "@/lib/rate-limit";
 
@@ -42,6 +43,7 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
   const brand = text(data, "brand");
   const model = text(data, "model");
   const year = text(data, "year");
+  const plate = normalizePlate(text(data, "plate"));
   const kmRaw = text(data, "km").replace(/\D/g, "");
   const notes = text(data, "notes");
 
@@ -53,6 +55,12 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
   if (!brand) fieldErrors.brand = "Informe a marca.";
   if (!model) fieldErrors.model = "Informe o modelo.";
   if (!/^\d{4}$/.test(year)) fieldErrors.year = "Informe o ano com 4 dígitos.";
+  if (!plate) {
+    fieldErrors.plate = "Informe a placa do veículo.";
+  } else if (!isValidPlate(plate)) {
+    fieldErrors.plate =
+      "Placa inválida. Use o formato antigo (ABC-1234) ou Mercosul (ABC1D23).";
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     return {
@@ -70,6 +78,7 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
         name,
         phone,
         vehicleInfo,
+        plate,
         km: kmRaw ? Number(kmRaw) : null,
         notes: notes || null,
       },

@@ -60,8 +60,8 @@ export async function convertLeadToCustomer(
         name: lead.name,
         phone,
         notes: `Lead de venda/troca: ${lead.vehicleInfo}${
-          lead.notes ? ` — ${lead.notes}` : ""
-        }`,
+          lead.plate ? ` · placa ${lead.plate}` : ""
+        }${lead.notes ? ` — ${lead.notes}` : ""}`,
       },
     });
 

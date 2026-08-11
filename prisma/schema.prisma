@@ -88,6 +88,8 @@ model LeadVenda {
   name        String
   phone       String
   vehicleInfo String
+  /** Placa normalizada (ABC1234 / ABC1D23), sem traço, maiúsculas. */
+  plate       String   @default("")
   km          Int?
   notes       String?
   status      String   @default("novo")
