@@ -90,13 +90,11 @@ export default function AdminLoginPage() {
           <p className="mt-4 text-sm text-muted">
             Entre com suas credenciais para gerenciar o estoque.
           </p>
-          <p className="mt-2 text-xs text-muted/80">
-            Padrão: admin@loja.com / Lucas0911
-          </p>
         </div>
 
         <form
           onSubmit={handleSubmit}
+          autoComplete="off"
           className="border border-white/10 bg-ink/60 p-6 backdrop-blur-sm sm:p-8"
         >
           <div className="space-y-5">
@@ -111,13 +109,13 @@ export default function AdminLoginPage() {
                 id="email"
                 name="email"
                 type="email"
-                autoComplete="email"
+                autoComplete="off"
                 autoFocus
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className="w-full border border-white/10 bg-asphalt px-4 py-3 text-cream outline-none transition focus:border-brand"
-                placeholder="admin@loja.com"
+                placeholder="E-mail"
               />
             </div>
 
@@ -133,12 +131,12 @@ export default function AdminLoginPage() {
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   className="w-full border border-white/10 bg-asphalt px-4 py-3 pr-12 text-cream outline-none transition focus:border-brand"
-                  placeholder="••••••••"
+                  placeholder="Senha"
                 />
                 <button
                   type="button"
