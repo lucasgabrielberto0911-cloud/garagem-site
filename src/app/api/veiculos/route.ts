@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { PUBLIC_VEHICLE_INCLUDE } from "@/lib/vehicles";
+import {
+  PUBLIC_VEHICLE_INCLUDE,
+  PUBLIC_VEHICLE_OMIT,
+} from "@/lib/vehicles";
 
 const MAX_IDS = 60;
 
@@ -23,6 +26,7 @@ export async function GET(request: NextRequest) {
   try {
     const vehicles = await prisma.vehicle.findMany({
       where: { id: { in: ids }, status: { not: "vendido" } },
+      omit: PUBLIC_VEHICLE_OMIT,
       include: PUBLIC_VEHICLE_INCLUDE,
     });
 

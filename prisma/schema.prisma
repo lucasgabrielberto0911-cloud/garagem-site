@@ -19,6 +19,8 @@ model Vehicle {
   yearModel    Int
   km           Int
   price        Float
+  /** Preço de referência FIPE (uso interno do admin — nunca exibir no site). */
+  fipePrice    Float?
   fuel         String
   transmission String
   color        String?

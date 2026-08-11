@@ -29,10 +29,7 @@ export default async function AdminLayout({
   }
 
   return (
-    <AdminShell
-      email={typeof session?.email === "string" ? session.email : undefined}
-      newLeads={newLeads}
-    >
+    <AdminShell newLeads={newLeads}>
       {children}
     </AdminShell>
   );

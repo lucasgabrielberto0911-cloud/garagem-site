@@ -8,7 +8,7 @@ import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
-export type VehicleCardData = Vehicle & {
+export type VehicleCardData = Omit<Vehicle, "fipePrice"> & {
   photos: Photo[];
   _count?: { photos: number };
 };
