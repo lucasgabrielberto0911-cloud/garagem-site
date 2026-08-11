@@ -427,15 +427,15 @@ export function VehiclesTable({
                   >
                     <IconExternal className="h-4 w-4" />
                   </Link>
-                  {vehicle.status !== "vendido" ? (
+                  {canMarkAsSold(vehicle.status) ? (
                     <button
                       type="button"
                       onClick={() => setSoldTarget(vehicle)}
-                      className="px-2 py-1.5 font-display text-[10px] font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/10"
+                      className={MARK_SOLD_BTN}
                       aria-label="Marcar como vendido"
-                      title="Sai do estoque; a página permanece no site"
+                      title="Marcar como vendido — sai do estoque; a página permanece no site"
                     >
-                      Vendido
+                      Marcar vendido
                     </button>
                   ) : null}
                   <button
@@ -592,15 +592,15 @@ export function VehiclesTable({
                         >
                           <IconCopy className="h-4 w-4" />
                         </button>
-                        {vehicle.status !== "vendido" ? (
+                        {canMarkAsSold(vehicle.status) ? (
                           <button
                             type="button"
                             onClick={() => setSoldTarget(vehicle)}
-                            className="px-2 py-1.5 font-display text-[10px] font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/10"
+                            className={MARK_SOLD_BTN}
                             aria-label="Marcar como vendido"
-                            title="Sai do estoque; a página permanece no site"
+                            title="Marcar como vendido — sai do estoque; a página permanece no site"
                           >
-                            Vendido
+                            Marcar vendido
                           </button>
                         ) : null}
                         <button
