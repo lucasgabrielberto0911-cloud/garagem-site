@@ -17,6 +17,7 @@ import {
   whatsappUrl,
   type SiteConfig,
 } from "@/lib/site";
+import { SERVICE_CITIES } from "@/lib/seo";
 import { getPublicSite } from "@/lib/site-settings";
 
 export async function SiteFooter() {
@@ -86,6 +87,21 @@ export async function SiteFooter() {
                     className="inline-flex min-h-[36px] items-center text-sm text-muted transition hover:text-cream"
                   >
                     {service.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <h2 className="mt-8 font-display text-sm font-semibold uppercase tracking-wider text-cream">
+              Cidades
+            </h2>
+            <ul className="mt-4 space-y-1">
+              {SERVICE_CITIES.map((city) => (
+                <li key={city.slug}>
+                  <Link
+                    href={`/seminovos/${city.slug}`}
+                    className="inline-flex min-h-[36px] items-center text-sm text-muted transition hover:text-cream"
+                  >
+                    Seminovos em {city.name}
                   </Link>
                 </li>
               ))}
@@ -178,9 +194,6 @@ export async function SiteFooter() {
             </Link>
             <Link href="/faq" className="transition hover:text-cream">
               Dúvidas
-            </Link>
-            <Link href="/admin/login" className="transition hover:text-cream">
-              Área administrativa
             </Link>
           </div>
         </div>

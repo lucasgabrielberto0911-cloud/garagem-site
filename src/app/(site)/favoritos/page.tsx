@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import { FavoritesList } from "@/components/site/FavoritesList";
 import { Container, PageHeader } from "@/components/site/ui";
+import { buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: `Favoritos | ${site.name}`,
   description:
     "Veículos que você salvou para comparar depois. A lista fica guardada neste aparelho.",
-  robots: { index: false, follow: true },
-};
+  path: "/favoritos",
+  noIndex: true,
+});
 
 export default function FavoritosPage() {
   return (
