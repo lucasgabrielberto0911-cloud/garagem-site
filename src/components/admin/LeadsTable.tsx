@@ -28,8 +28,7 @@ import {
 } from "@/app/admin/leads/actions";
 
 /** Troque aqui se mudar o serviço de consulta de placa. */
-const CONSULTA_PLACA_URL_BASE =
-  "https://buscafipe.com/consulta-placa/?placa=";
+const CONSULTA_PLACA_URL_BASE = "https://placafipe.com/placa/";
 
 function consultaPlacaUrl(plate: string) {
   return `${CONSULTA_PLACA_URL_BASE}${encodeURIComponent(normalizePlate(plate))}`;
@@ -297,7 +296,7 @@ export function LeadsTable({
                         rel="noopener noreferrer"
                         className="inline-flex min-h-[40px] items-center gap-2 border border-brand/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10"
                       >
-                        Consultar histórico
+                        Consultar FIPE
                       </a>
                       <button
                         type="button"

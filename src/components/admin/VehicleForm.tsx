@@ -143,6 +143,7 @@ export function VehicleForm({
   const [fipePrice, setFipePrice] = useState<number | null>(
     vehicle?.fipePrice ?? null,
   );
+  const [engine, setEngine] = useState(vehicle?.engine ?? "");
 
   const fuelOptions = getFuels(category);
   const transmissionOptions = getTransmissions(category);
@@ -170,6 +171,7 @@ export function VehicleForm({
     if (payload.model) setModel(payload.model);
     if (payload.version) setVersion(payload.version);
     if (payload.color) setColor(payload.color);
+    if (payload.engine) setEngine(payload.engine);
     if (payload.year != null) setYear(String(payload.year));
     if (payload.yearModel != null) setYearModel(String(payload.yearModel));
     if (payload.fipePrice !== undefined) setFipePrice(payload.fipePrice);
@@ -441,7 +443,8 @@ export function VehicleForm({
             >
               <input
                 name="engine"
-                defaultValue={vehicle?.engine ?? ""}
+                value={engine}
+                onChange={(event) => setEngine(event.target.value)}
                 placeholder={isMoto ? "Ex.: 500cc" : "Ex.: 2.0 Flex"}
                 className={inputClass}
               />

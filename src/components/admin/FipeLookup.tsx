@@ -18,6 +18,7 @@ import {
   type FipeYear,
 } from "@/lib/fipe";
 import type { PlateFipeVersion, PlateLookupResult } from "@/lib/plate-lookup";
+import { placafipeUrl } from "@/lib/plate-lookup";
 import type { VehicleCategory } from "@/lib/vehicle-accessories";
 
 export type FipeApplyPayload = {
@@ -28,6 +29,7 @@ export type FipeApplyPayload = {
   yearModel?: number | null;
   color?: string;
   fuel?: string;
+  engine?: string;
   fipePrice?: number | null;
   plateEnd?: string | null;
 };
@@ -257,13 +259,15 @@ export function FipeLookup({
     setDetail(null);
 
     onApply({
-      brand: version?.brand || result.brand || undefined,
-      model: version?.model || result.model || undefined,
+      brand: result.brand || version?.brand || undefined,
+      // Modelo DETRAN no campo modelo; detalhe FIPE vai em versão
+      model: result.model || version?.model || undefined,
       version: version?.model || result.version || undefined,
       year: result.year,
       yearModel: version?.modelYear ?? result.yearModel,
       color: result.color || undefined,
       fuel: version?.fuel || result.fuel || undefined,
+      engine: result.engine || undefined,
       fipePrice: price,
       plateEnd,
     });
@@ -335,8 +339,8 @@ export function FipeLookup({
           Consulta FIPE
         </p>
         <p className="mt-1 text-xs text-muted">
-          Uso interno — placa e preço FIPE não aparecem no site. Uma placa pode
-          ter várias versões; escolha a correta antes de salvar.
+          Fonte: placafipe.com — placa e preço FIPE não aparecem no site. Se
+          houver várias versões, escolha a correta antes de salvar.
         </p>
       </div>
 
@@ -346,7 +350,7 @@ export function FipeLookup({
         value={fipePrice != null && fipePrice > 0 ? String(fipePrice) : ""}
       />
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
         <Field
           label="Placa (interna)"
           hint="Só no admin. O site mostra no máximo o final da placa."
@@ -370,6 +374,16 @@ export function FipeLookup({
         >
           {loadingPlate ? "Consultando…" : "Buscar pela placa"}
         </button>
+        {normalizePlate(plate).length >= 7 ? (
+          <a
+            href={placafipeUrl(plate)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${btn.ghost} h-[42px] shrink-0`}
+          >
+            Abrir no PlacaFipe
+          </a>
+        ) : null}
       </div>
 
       {plateResult?.versions.length ? (
