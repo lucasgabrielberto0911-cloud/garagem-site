@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { site, type SiteConfig } from "@/lib/site";
 
@@ -58,38 +59,47 @@ function coalesce(value: string | null | undefined, fallback: string) {
   return trimmed ? trimmed : fallback;
 }
 
-/**
- * Mistura defaults de `site.ts` com o que estiver salvo no banco.
- */
-export const getPublicSite = cache(async (): Promise<SiteConfig & EditableSiteFields> => {
-  const defaults = pickEditable(site as SiteConfig & EditableSiteFields);
+const loadPublicSiteCached = unstable_cache(
+  async (): Promise<SiteConfig & EditableSiteFields> => {
+    const defaults = pickEditable(site as SiteConfig & EditableSiteFields);
 
-  try {
-    const row = await prisma.siteSettings.findUnique({
-      where: { id: "default" },
-    });
+    try {
+      const row = await prisma.siteSettings.findUnique({
+        where: { id: "default" },
+      });
 
-    if (!row) {
+      if (!row) {
+        return { ...site, ...defaults };
+      }
+
+      return {
+        ...site,
+        region: coalesce(row.region, defaults.region),
+        email: coalesce(row.email, defaults.email),
+        address: coalesce(row.address, defaults.address),
+        hours: coalesce(row.hours, defaults.hours),
+        hoursWeekdays: coalesce(row.hoursWeekdays, defaults.hoursWeekdays),
+        hoursSaturday: coalesce(row.hoursSaturday, defaults.hoursSaturday),
+        aboutYears: coalesce(row.aboutYears, defaults.aboutYears),
+        aboutSold: coalesce(row.aboutSold, defaults.aboutSold),
+        aboutHours: coalesce(row.aboutHours, defaults.aboutHours),
+        aboutFocus: coalesce(row.aboutFocus, defaults.aboutFocus),
+      };
+    } catch (error) {
+      console.error("[site-settings] falha ao ler config:", error);
       return { ...site, ...defaults };
     }
+  },
+  ["public-site-settings-v1"],
+  { revalidate: 120, tags: ["site-settings"] },
+);
 
-    return {
-      ...site,
-      region: coalesce(row.region, defaults.region),
-      email: coalesce(row.email, defaults.email),
-      address: coalesce(row.address, defaults.address),
-      hours: coalesce(row.hours, defaults.hours),
-      hoursWeekdays: coalesce(row.hoursWeekdays, defaults.hoursWeekdays),
-      hoursSaturday: coalesce(row.hoursSaturday, defaults.hoursSaturday),
-      aboutYears: coalesce(row.aboutYears, defaults.aboutYears),
-      aboutSold: coalesce(row.aboutSold, defaults.aboutSold),
-      aboutHours: coalesce(row.aboutHours, defaults.aboutHours),
-      aboutFocus: coalesce(row.aboutFocus, defaults.aboutFocus),
-    };
-  } catch (error) {
-    console.error("[site-settings] falha ao ler config:", error);
-    return { ...site, ...defaults };
-  }
+/**
+ * Mistura defaults de `site.ts` com o que estiver salvo no banco.
+ * React cache deduplica no request; unstable_cache cobre requests seguintes.
+ */
+export const getPublicSite = cache(async (): Promise<SiteConfig & EditableSiteFields> => {
+  return loadPublicSiteCached();
 });
 
 /** Valores efetivos dos campos editáveis (já com fallback). */

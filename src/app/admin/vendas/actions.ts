@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
 
 export type SaleActionState = {
   ok: boolean;
@@ -12,6 +13,7 @@ export type SaleActionState = {
 };
 
 function revalidatePublicStock(vehicleId?: string) {
+  revalidateTag(VEHICLES_PUBLIC_CACHE_TAG);
   revalidatePath("/");
   revalidatePath("/estoque");
   revalidatePath("/estoque/[id]", "page");

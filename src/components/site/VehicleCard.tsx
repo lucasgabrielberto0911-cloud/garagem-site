@@ -2,16 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Photo, Vehicle } from "@prisma/client";
 import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
+import type { VehicleCardRecord } from "@/lib/vehicles";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
-export type VehicleCardData = Omit<Vehicle, "fipePrice" | "plate"> & {
-  photos: Photo[];
-  _count?: { photos: number };
-};
+export type VehicleCardData = VehicleCardRecord;
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   reservado: { label: "Reservado", className: "bg-brand-orange text-asphalt" },

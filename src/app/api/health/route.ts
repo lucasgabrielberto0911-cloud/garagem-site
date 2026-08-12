@@ -42,6 +42,29 @@ export async function GET() {
     );
   }
 
+  const dbUrl = process.env.DATABASE_URL?.trim() ?? "";
+  let dbPort = "";
+  try {
+    dbPort = new URL(dbUrl.replace(/^postgresql:/i, "http:")).port || "5432";
+  } catch {
+    dbPort = "";
+  }
+  const looksPooled =
+    dbPort === "6543" ||
+    host?.includes("pooler") ||
+    /(?:^|[?&])pgbouncer=true(?:&|$)/i.test(dbUrl);
+  if (!looksPooled) {
+    return NextResponse.json(
+      {
+        ok: false,
+        database: "direct-url",
+        host,
+        hint: "DATABASE_URL parece conexão direta (porta 5432). No Vercel use a URI Transaction pooler do Supabase (porta 6543, com ?pgbouncer=true). Deixe a Direct connection só em DIRECT_URL (migrations).",
+      },
+      { status: 503 },
+    );
+  }
+
   try {
     await ensureDefaultAdmin();
     const adminCount = await prisma.admin.count();
