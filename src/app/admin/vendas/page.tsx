@@ -23,13 +23,20 @@ export default async function VendasPage() {
       orderBy: { saleDate: "desc" },
       include: {
         vehicle: {
-          select: { id: true, brand: true, model: true, yearModel: true },
+          select: {
+            id: true,
+            brand: true,
+            model: true,
+            yearModel: true,
+            plate: true,
+            historical: true,
+          },
         },
         customer: { select: { id: true, name: true, phone: true } },
       },
     }),
     prisma.vehicle.findMany({
-      where: { sale: null },
+      where: { sale: null, historical: false },
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       select: {
         id: true,
@@ -60,7 +67,7 @@ export default async function VendasPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Vendas"
-        subtitle="Registre cada negócio fechado para acompanhar faturamento e histórico do cliente."
+        subtitle="Registre vendas do estoque ou históricas (antes do site). Cliente é opcional — basta carro, placa e valor nas históricas."
       />
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
