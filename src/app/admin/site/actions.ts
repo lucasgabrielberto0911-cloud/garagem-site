@@ -21,6 +21,13 @@ function text(data: FormData, key: string) {
   return String(data.get(key) ?? "").trim();
 }
 
+function nonNegativeInt(data: FormData, key: string) {
+  const raw = String(data.get(key) ?? "").replace(/\D/g, "");
+  if (!raw) return 0;
+  const value = Number(raw);
+  return Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+}
+
 export async function updateSiteSettings(
   formData: FormData,
 ): Promise<SiteSettingsState> {
@@ -33,9 +40,10 @@ export async function updateSiteSettings(
   const hoursWeekdays = text(formData, "hoursWeekdays");
   const hoursSaturday = text(formData, "hoursSaturday");
   const aboutYears = text(formData, "aboutYears") || "+20";
-  const aboutSold = text(formData, "aboutSold") || "+1.000";
   const aboutHours = text(formData, "aboutHours") || "8h–23h";
   const aboutFocus = text(formData, "aboutFocus") || "100%";
+  const statsStockBase = nonNegativeInt(formData, "statsStockBase");
+  const statsSalesBase = nonNegativeInt(formData, "statsSalesBase");
 
   const fieldErrors: Record<string, string> = {};
   if (region.length < 2) fieldErrors.region = "Informe a cidade ou região.";
@@ -67,9 +75,12 @@ export async function updateSiteSettings(
         hoursWeekdays,
         hoursSaturday,
         aboutYears,
-        aboutSold,
         aboutHours,
         aboutFocus,
+        statsStockBase,
+        statsSalesBase,
+        // Mantém aboutSold alinhado para leitores legados.
+        aboutSold: String(statsSalesBase),
       },
       update: {
         region,
@@ -79,9 +90,11 @@ export async function updateSiteSettings(
         hoursWeekdays,
         hoursSaturday,
         aboutYears,
-        aboutSold,
         aboutHours,
         aboutFocus,
+        statsStockBase,
+        statsSalesBase,
+        aboutSold: String(statsSalesBase),
       },
     });
   } catch (error) {

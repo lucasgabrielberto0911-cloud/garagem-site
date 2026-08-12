@@ -500,13 +500,43 @@ export function getSiteStats() {
   return safeQuery(
     "estatísticas",
     async () => {
-      const [available, sales] = await Promise.all([
+      const [availableLive, salesLive, settings] = await Promise.all([
         prisma.vehicle.count({ where: { status: "disponivel" } }),
         prisma.sale.count(),
+        prisma.siteSettings.findUnique({
+          where: { id: "default" },
+          select: {
+            statsStockBase: true,
+            statsSalesBase: true,
+            aboutSold: true,
+          },
+        }),
       ]);
-      return { available, sales };
+
+      const stockBase = settings?.statsStockBase ?? 0;
+      const salesBaseFromRow = settings?.statsSalesBase ?? 0;
+      const salesBase =
+        salesBaseFromRow > 0
+          ? salesBaseFromRow
+          : Number(String(settings?.aboutSold ?? "").replace(/\D/g, "") || 0);
+
+      return {
+        availableLive,
+        salesLive,
+        stockBase,
+        salesBase,
+        available: availableLive + stockBase,
+        sales: salesLive + salesBase,
+      };
     },
-    { available: 0, sales: 0 },
+    {
+      availableLive: 0,
+      salesLive: 0,
+      stockBase: 0,
+      salesBase: 0,
+      available: 0,
+      sales: 0,
+    },
   );
 }
 

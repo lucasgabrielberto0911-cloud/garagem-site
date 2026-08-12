@@ -140,25 +140,54 @@ export function SiteSettingsForm({
       </Card>
 
       <Card
-        title="Números da página Sobre"
+        title="Números da home e Sobre"
         action={
-          <span className="text-xs text-muted">Exibidos nos cards de estatística</span>
+          <span className="text-xs text-muted">
+            Base + contagem real do sistema
+          </span>
         }
       >
+        <p className="mb-4 text-sm leading-relaxed text-muted">
+          As bases somam com o que já está no sistema: cada carro disponível
+          aumenta o estoque da home; cada venda registrada aumenta os negócios
+          fechados (home) e os carros vendidos (Sobre).
+        </p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Field
+            label="Base de estoque (home)"
+            hint="Soma com veículos disponíveis"
+          >
+            <input
+              name="statsStockBase"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1}
+              defaultValue={initial.statsStockBase}
+              placeholder="0"
+              className={inputClass}
+            />
+          </Field>
+          <Field
+            label="Base de vendas (home + Sobre)"
+            hint="Soma com vendas registradas"
+          >
+            <input
+              name="statsSalesBase"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1}
+              defaultValue={initial.statsSalesBase}
+              placeholder="0"
+              className={inputClass}
+            />
+          </Field>
           <Field label="Anos de história" hint='Ex.: +20'>
             <input
               name="aboutYears"
               defaultValue={initial.aboutYears}
               placeholder="+20"
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Carros vendidos" hint='Ex.: +1.000'>
-            <input
-              name="aboutSold"
-              defaultValue={initial.aboutSold}
-              placeholder="+1.000"
               className={inputClass}
             />
           </Field>

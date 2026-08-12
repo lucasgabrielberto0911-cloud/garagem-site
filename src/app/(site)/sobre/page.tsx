@@ -14,14 +14,16 @@ import {
   IconShieldCheck,
   IconWhatsApp,
 } from "@/components/site/icons";
+import { formatNumberBR } from "@/lib/format";
 import { site } from "@/lib/site";
 import { getPublicSite } from "@/lib/site-settings";
+import { getSiteStats } from "@/lib/vehicles";
 
 export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: `Sobre a ${site.name}`,
-  description: `Conheça a ${site.name}: mais de 20 anos de história, mais de 1.000 carros vendidos e atendimento digital com qualidade em ${site.region} e região.`,
+  description: `Conheça a ${site.name}: mais de 20 anos de história, seminovos com procedência e atendimento digital com qualidade em ${site.region} e região.`,
   alternates: { canonical: "/sobre" },
 };
 
@@ -57,10 +59,15 @@ const TOC = [
 ] as const;
 
 export default async function SobrePage() {
-  const publicSite = await getPublicSite();
-  const stats = [
+  const [publicSite, stats] = await Promise.all([
+    getPublicSite(),
+    getSiteStats(),
+  ]);
+  const soldLabel =
+    stats.sales > 0 ? `+${formatNumberBR(stats.sales)}` : "0";
+  const highlightStats = [
     { value: publicSite.aboutYears, label: "anos de história" },
-    { value: publicSite.aboutSold, label: "carros vendidos" },
+    { value: soldLabel, label: "carros vendidos" },
     { value: publicSite.aboutHours, label: "atendimento online" },
     { value: publicSite.aboutFocus, label: "foco no cliente" },
   ];
@@ -99,7 +106,7 @@ export default async function SobrePage() {
         </div>
 
         <ul className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
-          {stats.map((stat) => (
+          {highlightStats.map((stat) => (
             <li
               key={stat.label}
               className="flex flex-col items-center bg-ink px-4 py-6 text-center"
