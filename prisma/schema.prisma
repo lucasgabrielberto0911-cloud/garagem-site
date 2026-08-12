@@ -45,6 +45,13 @@ model Vehicle {
   updatedAt    DateTime @updatedAt
   photos       Photo[]
   sale         Sale?
+
+  @@index([status, createdAt])
+  @@index([status, price])
+  @@index([status, brand])
+  @@index([status, yearModel])
+  @@index([status, km])
+  @@index([status, featured])
 }
 
 model Photo {
@@ -53,6 +60,8 @@ model Photo {
   order     Int     @default(0)
   vehicleId String
   vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, order])
 }
 
 model Customer {

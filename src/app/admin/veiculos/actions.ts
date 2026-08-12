@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
@@ -10,6 +10,7 @@ import {
   storagePathFromPublicUrl,
 } from "@/lib/supabase";
 import { normalizeAccessories, parseVehicleCategory } from "@/lib/vehicle-accessories";
+import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
 
 export type VehicleFormState = {
   error?: string;
@@ -18,6 +19,7 @@ export type VehicleFormState = {
 
 /** Invalida o cache do site público sempre que o estoque muda. */
 function revalidatePublicStock(vehicleId?: string) {
+  revalidateTag(VEHICLES_PUBLIC_CACHE_TAG);
   revalidatePath("/");
   revalidatePath("/estoque");
   revalidatePath("/sitemap.xml");
