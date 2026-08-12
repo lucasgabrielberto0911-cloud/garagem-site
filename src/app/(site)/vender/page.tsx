@@ -7,14 +7,15 @@ import {
   IconHandshake,
   IconShieldCheck,
 } from "@/components/site/icons";
+import { buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { getVehicleById } from "@/lib/vehicles";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: `Vender ou trocar seu carro | ${site.name}`,
-  description: `Avaliação gratuita e sem compromisso do seu veículo na ${site.name}. Compramos seu usado e aceitamos na troca.`,
-  alternates: { canonical: "/vender" },
-};
+  description: `Avaliação gratuita e sem compromisso do seu veículo na ${site.name}. Compramos seu usado e aceitamos na troca em Aracruz, Vitória, Linhares e região.`,
+  path: "/vender",
+});
 
 const STEPS = [
   {

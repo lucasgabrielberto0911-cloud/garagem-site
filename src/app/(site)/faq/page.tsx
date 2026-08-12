@@ -4,14 +4,14 @@ import { FaqExplorer } from "@/components/site/FaqExplorer";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { FAQ_ITEMS } from "@/lib/faq";
-import { faqJsonLd } from "@/lib/seo";
+import { buildPageMetadata, faqJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: `Dúvidas frequentes | ${site.name}`,
-  description: `Como funciona a compra, a troca, o financiamento e a documentação na ${site.name}.`,
-  alternates: { canonical: "/faq" },
-};
+  description: `Como funciona a compra, a troca, o financiamento e a documentação na ${site.name} — seminovos em Aracruz, Vitória, Linhares e região.`,
+  path: "/faq",
+});
 
 export default function FaqPage() {
   return (

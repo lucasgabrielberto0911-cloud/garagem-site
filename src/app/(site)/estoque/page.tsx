@@ -7,16 +7,17 @@ import { StockPagination } from "@/components/site/StockPagination";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
+import { buildPageMetadata } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getStockFacets, getStockPage } from "@/lib/vehicles";
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: `Estoque | ${site.name}`,
-  description: `Veículos seminovos disponíveis na ${site.name}, com procedência verificada e vistoria completa.`,
-  alternates: { canonical: "/estoque" },
-};
+  description: `Veículos seminovos disponíveis na ${site.name} — Aracruz, Vitória, Linhares e região do ES. Procedência verificada e vistoria completa.`,
+  path: "/estoque",
+});
 
 type SearchParams = {
   q?: string;

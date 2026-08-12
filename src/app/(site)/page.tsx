@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
+import { JsonLd } from "@/components/JsonLd";
 import { FaqAccordion } from "@/components/site/FaqAccordion";
 import { HeroSearch } from "@/components/site/HeroSearch";
 import { ScrollReveal } from "@/components/site/ScrollReveal";
@@ -27,6 +28,7 @@ import {
   IconShieldCheck,
 } from "@/components/site/icons";
 import { FAQ_ITEMS } from "@/lib/faq";
+import { itemListJsonLd, websiteJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getPublicSite } from "@/lib/site-settings";
 import {
@@ -65,6 +67,16 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={websiteJsonLd()} />
+      {featured.length > 0 ? (
+        <JsonLd
+          data={itemListJsonLd(featured, {
+            name: `Destaques — ${site.name}`,
+            path: "/",
+          })}
+        />
+      ) : null}
+
       {/* 1. HERO — compacto no desktop para o estoque aparecer cedo */}
       <section className="hero-red-black relative isolate overflow-hidden">
         <div className="hero-color-field" aria-hidden="true">

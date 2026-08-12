@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { JsonLd } from "@/components/JsonLd";
 import { MobileBottomNav } from "@/components/site/MobileBottomNav";
 import { PageTransition } from "@/components/site/PageTransition";
@@ -36,6 +37,7 @@ export default async function SiteLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
+      <GoogleAnalytics />
       <JsonLd data={localBusinessJsonLd(publicSite)} />
       <ScrollProgress />
       <SiteHeader />

@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
+import { buildPageMetadata } from "@/lib/seo";
 import { PHONES, WHATSAPP_MESSAGES, site } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: `Política de privacidade | ${site.name}`,
   description: `Como a ${site.name} coleta, usa e protege os dados pessoais dos clientes, conforme a LGPD.`,
-  alternates: { canonical: "/privacidade" },
-};
+  path: "/privacidade",
+});
 
 const UPDATED_AT = "agosto de 2026";
 

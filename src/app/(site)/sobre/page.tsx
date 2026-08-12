@@ -15,17 +15,18 @@ import {
   IconWhatsApp,
 } from "@/components/site/icons";
 import { formatNumberBR } from "@/lib/format";
+import { buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { getPublicSite } from "@/lib/site-settings";
 import { getSiteStats } from "@/lib/vehicles";
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: `Sobre a ${site.name}`,
-  description: `Conheça a ${site.name}: mais de 20 anos de história, seminovos com procedência e atendimento digital com qualidade em ${site.region} e região.`,
-  alternates: { canonical: "/sobre" },
-};
+  description: `Conheça a ${site.name}: mais de 20 anos de história, seminovos com procedência e atendimento digital em Aracruz, Vitória, Linhares e região do ES.`,
+  path: "/sobre",
+});
 
 const DIFERENCIAIS = [
   {
