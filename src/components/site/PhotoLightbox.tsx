@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import { VehicleImage } from "@/components/VehicleImage";
 import { IconClose } from "@/components/site/icons";
 import { vehiclePhotoAlt } from "@/lib/format";
@@ -11,6 +18,10 @@ const SWIPE_THRESHOLD = 55;
 
 type Photo = { id: string; url: string };
 
+/**
+ * Galeria em quase tela cheia. Renderiza via portal no `document.body`
+ * para não ficar preso em sticky/overflow da página do anúncio.
+ */
 export function PhotoLightbox({
   photos,
   alt,
@@ -24,7 +35,10 @@ export function PhotoLightbox({
   onIndexChange: (index: number) => void;
   onClose: () => void;
 }) {
+  const titleId = useId();
   const total = photos.length;
+  const safeIndex = ((index % total) + total) % total;
+  const [mounted, setMounted] = useState(false);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [hint, setHint] = useState(true);
@@ -32,10 +46,10 @@ export function PhotoLightbox({
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const offsetStart = useRef({ x: 0, y: 0 });
   const pinchStart = useRef<{ distance: number; scale: number } | null>(null);
-  const dragged = useRef(false);
   const lastTapAt = useRef(0);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
 
-  const reset = useCallback(() => {
+  const resetZoom = useCallback(() => {
     setScale(1);
     setOffset({ x: 0, y: 0 });
   }, []);
@@ -43,46 +57,68 @@ export function PhotoLightbox({
   const go = useCallback(
     (direction: 1 | -1) => {
       if (total < 2) return;
-      reset();
-      onIndexChange((index + direction + total) % total);
+      resetZoom();
+      const next = (safeIndex + direction + total) % total;
+      onIndexChange(next);
     },
-    [index, total, onIndexChange, reset],
+    [safeIndex, total, onIndexChange, resetZoom],
   );
 
   useEffect(() => {
-    const previous = document.body.style.overflow;
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    resetZoom();
+  }, [safeIndex, resetZoom]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const previousPadding = document.body.style.paddingRight;
+    const scrollbar = window.innerWidth - document.documentElement.clientWidth;
     document.body.style.overflow = "hidden";
+    if (scrollbar > 0) {
+      document.body.style.paddingRight = `${scrollbar}px`;
+    }
+    closeBtnRef.current?.focus();
     return () => {
-      document.body.style.overflow = previous;
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPadding;
     };
   }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setHint(false), 2600);
+    const timer = window.setTimeout(() => setHint(false), 2800);
     return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-      if (event.key === "ArrowRight") go(1);
-      if (event.key === "ArrowLeft") go(-1);
-      if (event.key === "0") reset();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        go(1);
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        go(-1);
+      }
+      if (event.key === "0") resetZoom();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [go, onClose, reset]);
+  }, [go, onClose, resetZoom]);
 
   function toggleZoom() {
-    if (scale > 1) {
-      reset();
-    } else {
-      setScale(ZOOM_STEP);
-    }
+    if (scale > 1) resetZoom();
+    else setScale(ZOOM_STEP);
   }
 
   function clampOffset(next: { x: number; y: number }, currentScale: number) {
-    const limit = 240 * (currentScale - 1);
+    const limit = 280 * (currentScale - 1);
     return {
       x: Math.max(-limit, Math.min(limit, next.x)),
       y: Math.max(-limit, Math.min(limit, next.y)),
@@ -90,7 +126,6 @@ export function PhotoLightbox({
   }
 
   function onTouchStart(event: React.TouchEvent) {
-    dragged.current = false;
     if (event.touches.length === 2) {
       const [a, b] = [event.touches[0], event.touches[1]];
       pinchStart.current = {
@@ -114,11 +149,13 @@ export function PhotoLightbox({
       const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
       const next = Math.max(
         1,
-        Math.min(MAX_SCALE, (distance / pinchStart.current.distance) * pinchStart.current.scale),
+        Math.min(
+          MAX_SCALE,
+          (distance / pinchStart.current.distance) * pinchStart.current.scale,
+        ),
       );
       setScale(next);
       if (next === 1) setOffset({ x: 0, y: 0 });
-      dragged.current = true;
       return;
     }
 
@@ -127,28 +164,22 @@ export function PhotoLightbox({
     const dy = event.touches[0].clientY - pointerStart.current.y;
 
     if (scale > 1) {
-      dragged.current = true;
       setOffset(
         clampOffset(
           { x: offsetStart.current.x + dx, y: offsetStart.current.y + dy },
           scale,
         ),
       );
-    } else if (Math.abs(dx) > 8) {
-      dragged.current = true;
     }
   }
 
   function onTouchEnd(event: React.TouchEvent) {
     const touch = event.changedTouches[0];
-
     if (pointerStart.current && touch) {
       const dx = touch.clientX - pointerStart.current.x;
       const dy = touch.clientY - pointerStart.current.y;
 
       if (Math.hypot(dx, dy) < 12) {
-        // Toque parado: pode ser o segundo toque de um duplo toque. O evento
-        // dblclick nativo não é confiável em todos os navegadores móveis.
         const now = Date.now();
         if (now - lastTapAt.current < 320) {
           lastTapAt.current = 0;
@@ -164,14 +195,12 @@ export function PhotoLightbox({
         go(dx < 0 ? 1 : -1);
       }
     }
-
     pointerStart.current = null;
     pinchStart.current = null;
   }
 
   function onPointerDown(event: React.PointerEvent) {
     if (event.pointerType === "touch") return;
-    dragged.current = false;
     pointerStart.current = { x: event.clientX, y: event.clientY };
     offsetStart.current = offset;
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -182,15 +211,12 @@ export function PhotoLightbox({
     const dx = event.clientX - pointerStart.current.x;
     const dy = event.clientY - pointerStart.current.y;
     if (scale > 1) {
-      dragged.current = true;
       setOffset(
         clampOffset(
           { x: offsetStart.current.x + dx, y: offsetStart.current.y + dy },
           scale,
         ),
       );
-    } else if (Math.abs(dx) > 8) {
-      dragged.current = true;
     }
   }
 
@@ -198,9 +224,7 @@ export function PhotoLightbox({
     if (event.pointerType === "touch" || !pointerStart.current) return;
     const dx = event.clientX - pointerStart.current.x;
     const dy = event.clientY - pointerStart.current.y;
-    if (Math.hypot(dx, dy) < 12) {
-      // handled by double-click
-    } else if (
+    if (
       scale === 1 &&
       Math.abs(dx) > SWIPE_THRESHOLD &&
       Math.abs(dx) > Math.abs(dy)
@@ -210,129 +234,166 @@ export function PhotoLightbox({
     pointerStart.current = null;
   }
 
-  const photo = photos[index];
+  const photo = photos[safeIndex];
 
-  return (
+  const content = (
     <div
-      className="fixed inset-0 z-[100] flex flex-col bg-black/96 animate-fade-in"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={`Fotos do ${alt}`}
+      aria-labelledby={titleId}
     >
-      <div className="flex items-center justify-between gap-3 px-4 pt-safe">
-        <span className="py-4 text-xs font-medium text-cream/80">
-          {index + 1} / {total}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleZoom}
-            aria-label={scale > 1 ? "Reduzir zoom" : "Ampliar foto"}
-            className="flex h-11 w-11 items-center justify-center border border-white/20 text-cream transition hover:border-brand touch-manipulation"
-          >
-            <ZoomIcon zoomed={scale > 1} />
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar galeria"
-            className="flex h-11 w-11 items-center justify-center border border-white/20 text-cream transition hover:border-brand touch-manipulation"
-          >
-            <IconClose className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
+      {/* Fundo borrado + escurecido — cobre a página inteira */}
+      <button
+        type="button"
+        aria-label="Fechar galeria"
+        className="absolute inset-0 bg-asphalt/80 backdrop-blur-md animate-fade-in"
+        onClick={onClose}
+      />
 
-      <div
-        className="relative flex-1 select-none overflow-hidden touch-none"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onDoubleClick={toggleZoom}
-      >
-        <div
-          className="absolute inset-0 transition-transform duration-200 ease-out"
-          style={{
-            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-            cursor: scale > 1 ? "grab" : "zoom-in",
-          }}
-        >
-          <VehicleImage
-            src={photo?.url}
-            alt={vehiclePhotoAlt(alt, index, total)}
-            fill
-            sizes="100vw"
-            quality={82}
-            priority
-            className="object-contain"
-          />
+      <div className="relative z-[1] flex h-[100dvh] w-full max-w-6xl flex-col overflow-hidden bg-black shadow-2xl animate-fade-in-scale sm:h-[min(92dvh,920px)] sm:border sm:border-white/10">
+        <header className="relative z-[2] flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-black/70 px-3 py-2.5 backdrop-blur sm:px-4">
+          <div className="min-w-0">
+            <p id={titleId} className="truncate text-sm font-medium text-cream">
+              {alt}
+            </p>
+            <p className="text-[11px] uppercase tracking-wider text-cream/60">
+              {safeIndex + 1} / {total}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                toggleZoom();
+              }}
+              aria-label={scale > 1 ? "Reduzir zoom" : "Ampliar foto"}
+              className="flex h-11 w-11 items-center justify-center border border-white/20 text-cream transition hover:border-brand touch-manipulation"
+            >
+              <ZoomIcon zoomed={scale > 1} />
+            </button>
+            <button
+              ref={closeBtnRef}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onClose();
+              }}
+              aria-label="Fechar galeria"
+              className="flex h-11 w-11 items-center justify-center border border-white/20 text-cream transition hover:border-brand touch-manipulation"
+            >
+              <IconClose className="h-5 w-5" />
+            </button>
+          </div>
+        </header>
+
+        <div className="relative min-h-0 flex-1 bg-black">
+          <div
+            className="absolute inset-0 touch-none select-none"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onDoubleClick={toggleZoom}
+          >
+            <div
+              className="absolute inset-0 transition-transform duration-200 ease-out"
+              style={{
+                transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+                cursor: scale > 1 ? "grab" : "zoom-in",
+              }}
+            >
+              <VehicleImage
+                src={photo?.url}
+                alt={vehiclePhotoAlt(alt, safeIndex, total)}
+                fill
+                sizes="100vw"
+                quality={85}
+                priority
+                className="object-contain"
+              />
+            </div>
+          </div>
+
+          {total > 1 ? (
+            <>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  go(-1);
+                }}
+                onPointerDown={(event) => event.stopPropagation()}
+                aria-label="Foto anterior"
+                className="absolute left-2 top-1/2 z-[3] flex h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/25 bg-black/55 text-cream backdrop-blur transition hover:border-brand touch-manipulation sm:left-4 sm:h-14 sm:w-14"
+              >
+                <Chevron direction="left" />
+              </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  go(1);
+                }}
+                onPointerDown={(event) => event.stopPropagation()}
+                aria-label="Próxima foto"
+                className="absolute right-2 top-1/2 z-[3] flex h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/25 bg-black/55 text-cream backdrop-blur transition hover:border-brand touch-manipulation sm:right-4 sm:h-14 sm:w-14"
+              >
+                <Chevron direction="right" />
+              </button>
+            </>
+          ) : null}
+
+          {hint ? (
+            <p className="pointer-events-none absolute inset-x-0 bottom-3 z-[3] text-center text-[11px] uppercase tracking-wider text-cream/55">
+              Deslize ou use as setas · toque duas vezes para ampliar
+            </p>
+          ) : null}
         </div>
 
         {total > 1 ? (
-          <>
-            <button
-              type="button"
-              onClick={() => go(-1)}
-              aria-label="Foto anterior"
-              className="absolute left-3 top-1/2 hidden h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/40 text-cream backdrop-blur transition hover:border-brand sm:flex"
-            >
-              <Chevron direction="left" />
-            </button>
-            <button
-              type="button"
-              onClick={() => go(1)}
-              aria-label="Próxima foto"
-              className="absolute right-3 top-1/2 hidden h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/40 text-cream backdrop-blur transition hover:border-brand sm:flex"
-            >
-              <Chevron direction="right" />
-            </button>
-          </>
-        ) : null}
-
-        {hint ? (
-          <p className="pointer-events-none absolute inset-x-0 bottom-4 text-center text-[11px] uppercase tracking-wider text-cream/60">
-            Toque duas vezes para ampliar · deslize para trocar
-          </p>
+          <div className="relative z-[2] shrink-0 border-t border-white/10 bg-black/80 px-3 py-3 backdrop-blur sm:px-4 pb-safe">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+              {photos.map((item, itemIndex) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    resetZoom();
+                    onIndexChange(itemIndex);
+                  }}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  aria-label={`Ver foto ${itemIndex + 1}`}
+                  aria-current={itemIndex === safeIndex}
+                  className={`relative h-14 w-[4.5rem] shrink-0 overflow-hidden border transition sm:h-16 sm:w-24 ${
+                    itemIndex === safeIndex
+                      ? "border-brand opacity-100"
+                      : "border-white/15 opacity-55 hover:opacity-100"
+                  }`}
+                >
+                  <VehicleImage
+                    src={item.url}
+                    alt={vehiclePhotoAlt(alt, itemIndex, total)}
+                    fill
+                    sizes="96px"
+                    quality={45}
+                    className="object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
         ) : null}
       </div>
-
-      {total > 1 ? (
-        <div className="overflow-x-auto px-4 py-3 scrollbar-hide pb-safe">
-          <div className="mx-auto flex w-max gap-2">
-            {photos.map((item, itemIndex) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  reset();
-                  onIndexChange(itemIndex);
-                }}
-                aria-label={`Ver foto ${itemIndex + 1}`}
-                aria-current={itemIndex === index}
-                className={`relative h-14 w-20 shrink-0 overflow-hidden border transition ${
-                  itemIndex === index
-                    ? "border-brand"
-                    : "border-white/15 opacity-60 hover:opacity-100"
-                }`}
-              >
-                <VehicleImage
-                  src={item.url}
-                  alt={vehiclePhotoAlt(alt, itemIndex, total)}
-                  fill
-                  sizes="80px"
-                  quality={45}
-                  className="object-cover"
-                />
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
+
+  if (!mounted) return null;
+  return createPortal(content, document.body);
 }
 
 function ZoomIcon({ zoomed }: { zoomed: boolean }) {

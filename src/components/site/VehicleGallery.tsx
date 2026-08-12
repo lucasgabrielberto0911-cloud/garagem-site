@@ -192,9 +192,16 @@ export function VehicleGallery({
           photos={photos}
           alt={alt}
           index={active}
-          onIndexChange={(index) => {
-            setActive(index);
-            goTo(index);
+          onIndexChange={(next) => {
+            setActive(next);
+            // Sincroniza a faixa por baixo sem animação (lightbox já cobre a tela).
+            const scroller = scrollerRef.current;
+            if (scroller) {
+              scroller.scrollTo({
+                left: next * scroller.clientWidth,
+                behavior: "auto",
+              });
+            }
           }}
           onClose={() => setZoomOpen(false)}
         />
