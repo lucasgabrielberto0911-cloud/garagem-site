@@ -28,8 +28,7 @@ import {
 } from "@/app/admin/leads/actions";
 
 /** Troque aqui se mudar o serviço de consulta de placa. */
-const CONSULTA_PLACA_URL_BASE =
-  "https://buscafipe.com/consulta-placa/?placa=";
+const CONSULTA_PLACA_URL_BASE = "https://placafipe.com/placa/";
 
 function consultaPlacaUrl(plate: string) {
   return `${CONSULTA_PLACA_URL_BASE}${encodeURIComponent(normalizePlate(plate))}`;

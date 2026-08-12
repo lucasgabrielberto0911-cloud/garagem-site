@@ -1,18 +1,15 @@
 /**
  * Consulta de veículo pela placa (uso exclusivo do admin).
  *
- * A API pública Parallelum/FIPE não busca por placa. Usamos a WDAPI
- * (apiplacas / wdapi2) quando `PLACA_API_TOKEN` estiver configurado.
- * Uma placa pode retornar várias versões FIPE — o lojista escolhe.
+ * Fonte: https://placafipe.com/placa/{PLACA} — página pública com dados do
+ * veículo e versões FIPE. Sem token. Se o Cloudflare bloquear o fetch direto,
+ * usamos o leitor r.jina.ai como fallback.
  */
 
-import {
-  fipeVehicleTypeFromCategory,
-  parseFipePrice,
-  resolveFipeDetailByCode,
-  type FipeVehicleType,
-} from "@/lib/fipe";
+import { parseFipePrice } from "@/lib/fipe";
 import { normalizePlate } from "@/lib/format";
+
+export const PLACAFIPE_SITE = "https://placafipe.com";
 
 export type PlateFipeVersion = {
   id: string;
@@ -36,185 +33,10 @@ export type PlateLookupResult = {
   yearModel: number | null;
   color: string | null;
   fuel: string | null;
+  engine: string | null;
   versions: PlateFipeVersion[];
+  sourceUrl: string;
 };
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
-function asString(value: unknown): string | null {
-  if (typeof value === "string" && value.trim()) return value.trim();
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  return null;
-}
-
-function asNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const digits = value.replace(/[^\d]/g, "");
-    if (!digits) return null;
-    const n = Number(digits);
-    return Number.isFinite(n) ? n : null;
-  }
-  return null;
-}
-
-function pickString(
-  record: Record<string, unknown> | null,
-  keys: string[],
-): string | null {
-  if (!record) return null;
-  for (const key of keys) {
-    const value = asString(record[key]);
-    if (value) return value;
-  }
-  return null;
-}
-
-function pickNumber(
-  record: Record<string, unknown> | null,
-  keys: string[],
-): number | null {
-  if (!record) return null;
-  for (const key of keys) {
-    const value = asNumber(record[key]);
-    if (value != null) return value;
-  }
-  return null;
-}
-
-function parseYearPair(raw: string | null): {
-  year: number | null;
-  yearModel: number | null;
-} {
-  if (!raw) return { year: null, yearModel: null };
-  const parts = raw.split(/[\/\-]/).map((part) => Number(part.replace(/\D/g, "")));
-  const year = Number.isFinite(parts[0]) ? parts[0] : null;
-  const yearModel = Number.isFinite(parts[1]) ? parts[1] : year;
-  return { year, yearModel };
-}
-
-function collectFipeArrays(payload: Record<string, unknown>): unknown[] {
-  const bags: unknown[] = [];
-  for (const key of ["fipe", "fipes", "FIPE", "Fipes", "lista_fipe"]) {
-    const value = payload[key];
-    if (Array.isArray(value)) bags.push(...value);
-  }
-  const extra = asRecord(payload.extra);
-  if (extra) {
-    for (const key of ["fipe", "fipes", "FIPE"]) {
-      const value = extra[key];
-      if (Array.isArray(value)) bags.push(...value);
-    }
-  }
-  return bags;
-}
-
-function normalizeFipeItem(
-  item: unknown,
-  index: number,
-  fallbackBrand: string | null,
-  fallbackYear: number | null,
-): PlateFipeVersion | null {
-  const record = asRecord(item);
-  if (!record) return null;
-
-  const codeFipe =
-    pickString(record, [
-      "codigo_fipe",
-      "codigoFipe",
-      "codeFipe",
-      "codigo",
-      "code",
-      "fipe",
-    ]) ?? "";
-  const model =
-    pickString(record, [
-      "texto_modelo",
-      "modelo",
-      "model",
-      "marca_modelo",
-      "modelo_versao",
-      "texto",
-    ]) ?? "";
-  const brand =
-    pickString(record, ["texto_marca", "marca", "brand"]) ?? fallbackBrand ?? "";
-
-  if (!codeFipe && !model) return null;
-
-  const modelYear =
-    pickNumber(record, ["ano_modelo", "anoModelo", "modelYear", "ano"]) ??
-    fallbackYear;
-
-  const rawPrice =
-    pickString(record, ["texto_valor", "valor", "price", "preco"]) ??
-    (typeof record.valor === "number" ? String(record.valor) : null);
-  const price =
-    parseFipePrice(rawPrice ?? undefined) ??
-    (typeof record.valor === "number" && record.valor > 0 ? record.valor : null);
-
-  const score =
-    pickNumber(record, ["score", "similaridade", "correspondencia"]) ?? null;
-
-  return {
-    id: `${codeFipe || "sem-codigo"}-${index}`,
-    codeFipe: codeFipe || `versão-${index + 1}`,
-    brand,
-    model: model || codeFipe,
-    modelYear,
-    fuel: pickString(record, ["combustivel", "fuel", "Combustivel"]),
-    price,
-    priceLabel: rawPrice,
-    score,
-    referenceMonth: pickString(record, [
-      "mes_referencia",
-      "referenceMonth",
-      "referencia",
-    ]),
-  };
-}
-
-async function enrichVersionsWithParallelum(
-  versions: PlateFipeVersion[],
-  vehicleType: FipeVehicleType,
-): Promise<PlateFipeVersion[]> {
-  const enriched: PlateFipeVersion[] = [];
-  for (const version of versions.slice(0, 10)) {
-    if (!version.codeFipe || version.codeFipe.startsWith("versão-")) {
-      enriched.push(version);
-      continue;
-    }
-    try {
-      const detail = await resolveFipeDetailByCode(
-        vehicleType,
-        version.codeFipe,
-        version.modelYear,
-      );
-      if (!detail) {
-        enriched.push(version);
-        continue;
-      }
-      const price = parseFipePrice(detail.price) ?? version.price;
-      enriched.push({
-        ...version,
-        brand: detail.brand || version.brand,
-        model: detail.model || version.model,
-        modelYear: detail.modelYear || version.modelYear,
-        fuel: detail.fuel || version.fuel,
-        price,
-        priceLabel: detail.price || version.priceLabel,
-        referenceMonth: detail.referenceMonth || version.referenceMonth,
-        codeFipe: detail.codeFipe || version.codeFipe,
-      });
-    } catch {
-      enriched.push(version);
-    }
-  }
-  return enriched;
-}
 
 function mapFuelHint(raw: string | null): string | null {
   if (!raw) return null;
@@ -222,131 +44,301 @@ function mapFuelHint(raw: string | null): string | null {
   if (value.includes("diesel")) return "Diesel";
   if (value.includes("híbrid") || value.includes("hibrid")) return "Híbrido";
   if (value.includes("elétr") || value.includes("eletr")) return "Elétrico";
-  if (value.includes("álcool") || value.includes("alcool") || value.includes("etanol")) {
+  if (
+    value.includes("álcool") ||
+    value.includes("alcool") ||
+    value.includes("etanol")
+  ) {
     if (value.includes("gasolina") || value.includes("flex")) return "Flex";
     return "Etanol";
   }
-  if (value.includes("flex") || (value.includes("gasolina") && value.includes("álcool"))) {
+  if (
+    value.includes("flex") ||
+    (value.includes("gasolina") && value.includes("álcool"))
+  ) {
     return "Flex";
   }
   if (value.includes("gasolina")) return "Gasolina";
   return null;
 }
 
+function pickField(text: string, label: string): string | null {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = [
+    new RegExp(`\\*\\*${escaped}:\\*\\*\\s*([^\\n*]+)`, "i"),
+    new RegExp(`${escaped}:\\s*\\|\\s*([^|\\n]+)`, "i"),
+    new RegExp(`<t[dh][^>]*>\\s*${escaped}\\s*:?\\s*</t[dh]>\\s*<t[dh][^>]*>\\s*([^<]+)`, "i"),
+    new RegExp(`${escaped}:\\s*([^\\n<|]+)`, "i"),
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      const value = match[1].replace(/\*\*/g, "").replace(/\|/g, "").trim();
+      if (value) return value;
+    }
+  }
+  return null;
+}
+
+function parseYear(raw: string | null): number | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "").slice(0, 4);
+  const year = Number(digits);
+  return year >= 1950 && year <= new Date().getFullYear() + 1 ? year : null;
+}
+
+/** Expande abreviações DETRAN comuns para melhorar o match com nomes FIPE. */
+function expandModelHints(raw: string): string {
+  return raw
+    .toLocaleLowerCase("pt-BR")
+    .replace(/\bprem\b/g, "premium")
+    .replace(/\bcomf\b/g, "comfort")
+    .replace(/\bexp\b/g, "expression")
+    .replace(/\bltz\b/g, "ltz")
+    .replace(/\b(\d)[.,](\d)a\b/g, "$1.$2 aut")
+    .replace(/\b(\d)[.,](\d)m\b/g, "$1.$2 mec")
+    .replace(/\baut\b/g, "aut")
+    .replace(/\bmec\b/g, "mec");
+}
+
+function tokenize(value: string): string[] {
+  return expandModelHints(value)
+    .replace(/[^a-z0-9.]+/gi, " ")
+    .split(/\s+/)
+    .filter((token) => token.length >= 2);
+}
+
+function scoreModelMatch(detranModel: string | null, fipeModel: string): number {
+  if (!detranModel) return 0;
+  const needle = tokenize(detranModel);
+  const hay = new Set(tokenize(fipeModel));
+  if (needle.length === 0) return 0;
+  let hits = 0;
+  for (const token of needle) {
+    if (hay.has(token)) {
+      hits += 1;
+      continue;
+    }
+    // "1.6" vs "16v" etc.
+    if ([...hay].some((item) => item.includes(token) || token.includes(item))) {
+      hits += 0.5;
+    }
+  }
+  return Math.round((hits / needle.length) * 100);
+}
+
+function parseFipeBlocks(text: string, brand: string | null): PlateFipeVersion[] {
+  const versions: PlateFipeVersion[] = [];
+  const seen = new Set<string>();
+
+  // Blocos "FIPE: CODE / Modelo: ... / Valor: ..."
+  const blockRe =
+    /FIPE:\s*([0-9]{5,7}-[0-9])\s*(?:\n|\r|\|)?\s*Modelo:\s*([^\n|]+?)\s*(?:\n|\r|\|)?\s*Valor:\s*(R\$\s*[\d.]+,\d{2})/gi;
+  let match: RegExpExecArray | null;
+  while ((match = blockRe.exec(text)) !== null) {
+    const codeFipe = match[1].trim();
+    const model = match[2].replace(/\*\*/g, "").trim();
+    const priceLabel = match[3].replace(/\s+/g, " ").trim();
+    if (seen.has(codeFipe)) continue;
+    seen.add(codeFipe);
+    versions.push({
+      id: codeFipe,
+      codeFipe,
+      brand: brand ?? "",
+      model,
+      modelYear: null,
+      fuel: null,
+      price: parseFipePrice(priceLabel),
+      priceLabel,
+      score: null,
+      referenceMonth: null,
+    });
+  }
+
+  // Tabela markdown "| CODE | Modelo | R$ ... |"
+  const rowRe =
+    /\|\s*([0-9]{5,7}-[0-9])\s*\|\s*([^|]+?)\s*\|\s*(R\$\s*[\d.]+,\d{2})\s*\|/gi;
+  while ((match = rowRe.exec(text)) !== null) {
+    const codeFipe = match[1].trim();
+    if (seen.has(codeFipe)) continue;
+    seen.add(codeFipe);
+    const model = match[2].replace(/\*\*/g, "").trim();
+    const priceLabel = match[3].replace(/\s+/g, " ").trim();
+    versions.push({
+      id: codeFipe,
+      codeFipe,
+      brand: brand ?? "",
+      model,
+      modelYear: null,
+      fuel: null,
+      price: parseFipePrice(priceLabel),
+      priceLabel,
+      score: null,
+      referenceMonth: null,
+    });
+  }
+
+  // Linhas compactas do jina: "015092-4 HB20 Premium ...R$ 56.035,00"
+  const compactRe =
+    /(?:^|\n)\s*([0-9]{5,7}-[0-9])\s+(.+?)\s*(R\$\s*[\d.]+,\d{2})/g;
+  while ((match = compactRe.exec(text)) !== null) {
+    const codeFipe = match[1].trim();
+    if (seen.has(codeFipe)) continue;
+    seen.add(codeFipe);
+    const model = match[2].replace(/\*\*/g, "").replace(/\|/g, "").trim();
+    const priceLabel = match[3].replace(/\s+/g, " ").trim();
+    if (!model || model.length < 3) continue;
+    versions.push({
+      id: codeFipe,
+      codeFipe,
+      brand: brand ?? "",
+      model,
+      modelYear: null,
+      fuel: null,
+      price: parseFipePrice(priceLabel),
+      priceLabel,
+      score: null,
+      referenceMonth: null,
+    });
+  }
+
+  return versions;
+}
+
+function parseReferenceMonth(text: string): string | null {
+  const match = text.match(
+    /Tabela FIPE de\s+([A-Za-zçÇáéíóúãõâêôÁÉÍÓÚÃÕÂÊÔ]+\s+\d{4})/i,
+  );
+  return match?.[1]?.trim() ?? null;
+}
+
+function parseLookupText(plate: string, text: string, sourceUrl: string): PlateLookupResult {
+  if (
+    /placa\s+n[aã]o\s+(encontrada|localizada|reconhecida)/i.test(text) ||
+    /n[aã]o\s+foi\s+poss[ií]vel\s+encontrar/i.test(text)
+  ) {
+    throw new Error("Placa não encontrada no PlacaFipe.");
+  }
+
+  const brand = pickField(text, "Marca");
+  const model = pickField(text, "Modelo");
+  const color = pickField(text, "Cor");
+  const fuelRaw = pickField(text, "Combustível") ?? pickField(text, "Combustivel");
+  const year = parseYear(pickField(text, "Ano"));
+  const yearModel =
+    parseYear(pickField(text, "Ano Modelo")) ??
+    parseYear(pickField(text, "Ano modelo")) ??
+    year;
+  const engineCc = pickField(text, "Cilindrada");
+  const referenceMonth = parseReferenceMonth(text);
+
+  // Título SEO: "Placa X - MARCA MODELO ANO (modelo ANOMODELO)"
+  const titleMatch = text.match(
+    /Placa\s+[A-Z0-9]{7}\s*[-–]\s*([A-Z0-9 .\-\/]+?)\s+(\d{4})\s*\(modelo\s+(\d{4})\)/i,
+  );
+
+  const resolvedBrand = brand ?? titleMatch?.[1]?.split(/\s+/)[0] ?? null;
+  const resolvedModel =
+    model ??
+    (titleMatch
+      ? titleMatch[1].replace(new RegExp(`^${resolvedBrand}\\s*`, "i"), "").trim()
+      : null);
+
+  const versions = parseFipeBlocks(text, resolvedBrand).map((version) => ({
+    ...version,
+    brand: version.brand || resolvedBrand || "",
+    modelYear: yearModel,
+    fuel: mapFuelHint(fuelRaw) ?? version.fuel,
+    referenceMonth: referenceMonth ?? version.referenceMonth,
+    score: scoreModelMatch(resolvedModel, version.model),
+  }));
+
+  versions.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
+  if (!resolvedBrand && !resolvedModel && versions.length === 0) {
+    throw new Error(
+      "Não foi possível ler os dados desta placa no PlacaFipe. Tente de novo em instantes.",
+    );
+  }
+
+  return {
+    plate,
+    brand: resolvedBrand,
+    model: resolvedModel,
+    version: resolvedModel,
+    year: year ?? (titleMatch ? Number(titleMatch[2]) : null),
+    yearModel:
+      yearModel ?? (titleMatch ? Number(titleMatch[3]) : null) ?? year,
+    color,
+    fuel: mapFuelHint(fuelRaw),
+    engine: engineCc,
+    versions,
+    sourceUrl,
+  };
+}
+
+async function fetchText(url: string, headers?: HeadersInit): Promise<string | null> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "text/html,text/plain,application/xhtml+xml",
+        "User-Agent":
+          "Mozilla/5.0 (compatible; GaragemBot/1.0; +https://suagaragem.net)",
+        ...headers,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(25_000),
+    });
+    if (!response.ok) return null;
+    const text = await response.text();
+    if (!text || text.length < 200) return null;
+    if (/Attention Required|cf-error|Just a moment/i.test(text) && text.length < 20_000) {
+      return null;
+    }
+    return text;
+  } catch (error) {
+    console.warn("[plate-lookup] fetch falhou:", url, error);
+    return null;
+  }
+}
+
 /**
- * Consulta WDAPI2. Exige `PLACA_API_TOKEN` no ambiente (Vercel / .env).
+ * Consulta placafipe.com pela placa. Não exige token.
  */
 export async function lookupVehicleByPlate(
   rawPlate: string,
-  category: string | null | undefined,
+  category?: string | null,
 ): Promise<PlateLookupResult> {
+  void category;
   const plate = normalizePlate(rawPlate);
   if (plate.length < 7) {
     throw new Error("Informe uma placa válida (ABC1D23 ou ABC1234).");
   }
 
-  const token = process.env.PLACA_API_TOKEN?.trim();
-  if (!token) {
+  const sourceUrl = `${PLACAFIPE_SITE}/placa/${encodeURIComponent(plate)}`;
+
+  // 1) HTML direto
+  let text = await fetchText(sourceUrl, {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+  });
+
+  // 2) Fallback: leitor jina (bypass Cloudflare)
+  if (!text) {
+    text = await fetchText(`https://r.jina.ai/${sourceUrl}`, {
+      Accept: "text/plain",
+      "User-Agent": "Mozilla/5.0 GaragemAdmin/1.0",
+    });
+  }
+
+  if (!text) {
     throw new Error(
-      "Configure PLACA_API_TOKEN no Vercel (.env) para consultar por placa. Enquanto isso, use a busca FIPE por marca/modelo/ano ou preencha manualmente.",
+      "PlacaFipe indisponível no momento (bloqueio ou timeout). Tente novamente em alguns segundos.",
     );
   }
 
-  const base =
-    process.env.PLACA_API_BASE?.trim().replace(/\/$/, "") ||
-    "https://wdapi2.com.br/consulta";
-  const url = `${base}/${encodeURIComponent(plate)}/${encodeURIComponent(token)}`;
-
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
-
-  const payloadUnknown: unknown = await response.json().catch(() => null);
-  const payload = asRecord(payloadUnknown);
-
-  if (!response.ok) {
-    const message =
-      pickString(payload, ["message", "erro", "error", "msg"]) ||
-      `Consulta por placa falhou (${response.status}).`;
-    throw new Error(message);
-  }
-
-  if (!payload) {
-    throw new Error("Resposta inválida da consulta por placa.");
-  }
-
-  const errorMessage = pickString(payload, ["erro", "error", "message"]);
-  if (
-    errorMessage &&
-    /não encontrado|nao encontrado|inválid|invalid|não localiz/i.test(
-      errorMessage,
-    )
-  ) {
-    throw new Error(errorMessage);
-  }
-
-  const brand =
-    pickString(payload, ["MARCA", "marca", "brand", "Marca"]) ??
-    pickString(asRecord(payload.extra), ["marca", "MARCA"]);
-  const modelRaw =
-    pickString(payload, ["MODELO", "modelo", "model", "Modelo", "marcaModelo"]) ??
-    pickString(asRecord(payload.extra), ["modelo", "MODELO"]);
-  const color =
-    pickString(payload, ["cor", "COR", "color", "Cor"]) ??
-    pickString(asRecord(payload.extra), ["cor", "COR"]);
-
-  const yearFabricacao =
-    pickNumber(payload, ["ano", "anoFabricacao", "ano_fabricacao"]) ??
-    pickNumber(asRecord(payload.extra), ["ano", "ano_fabricacao"]);
-  const yearModelo =
-    pickNumber(payload, ["anoModelo", "ano_modelo", "anoModelo"]) ??
-    pickNumber(asRecord(payload.extra), ["ano_modelo", "anoModelo"]);
-
-  const anoTexto = pickString(payload, ["ano", "anoModelo"]);
-  const fromPair = parseYearPair(anoTexto);
-  const year = yearFabricacao ?? fromPair.year;
-  const yearModel = yearModelo ?? fromPair.yearModel ?? year;
-
-  const fuelRaw =
-    pickString(payload, ["combustivel", "combustível", "fuel"]) ??
-    pickString(asRecord(payload.extra), ["combustivel", "combustível"]);
-
-  const versionsRaw = collectFipeArrays(payload)
-    .map((item, index) =>
-      normalizeFipeItem(item, index, brand, yearModel ?? year),
-    )
-    .filter((item): item is PlateFipeVersion => Boolean(item));
-
-  // Dedup por código FIPE
-  const seen = new Set<string>();
-  const uniqueVersions = versionsRaw.filter((item) => {
-    const key = item.codeFipe.toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
-  // Ordena pelo score (maior primeiro) quando disponível
-  uniqueVersions.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-
-  const vehicleType = fipeVehicleTypeFromCategory(category);
-  const versions = await enrichVersionsWithParallelum(
-    uniqueVersions,
-    vehicleType,
-  );
-
-  return {
-    plate,
-    brand,
-    model: modelRaw,
-    version: modelRaw,
-    year,
-    yearModel,
-    color,
-    fuel: mapFuelHint(fuelRaw),
-    versions,
-  };
+  return parseLookupText(plate, text, sourceUrl);
 }
 
 /** Último dígito da placa para o campo público "final da placa". */
@@ -355,4 +347,8 @@ export function plateEndFromPlate(plate: string): string | null {
   if (!normalized) return null;
   const last = normalized.slice(-1);
   return /\d/.test(last) ? last : null;
+}
+
+export function placafipeUrl(plate: string) {
+  return `${PLACAFIPE_SITE}/placa/${encodeURIComponent(normalizePlate(plate))}`;
 }
