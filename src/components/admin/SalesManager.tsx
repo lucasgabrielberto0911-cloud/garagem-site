@@ -8,12 +8,13 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   IconCash,
   IconDownload,
+  IconPencil,
   IconPlus,
   IconTrash,
 } from "@/components/admin/icons";
 import { IconWhatsApp } from "@/components/site/icons";
 import { Badge, Card, EmptyState, Field, btn, inputClass } from "@/components/admin/ui";
-import { createSale, deleteSale } from "@/app/admin/vendas/actions";
+import { createSale, deleteSale, updateSale } from "@/app/admin/vendas/actions";
 import {
   formatCurrencyBRL,
   formatNumberBR,
@@ -133,10 +134,13 @@ function exportSalesCsv(sales: SaleRow[]) {
 }
 
 function todayInputValue() {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
+  return dateInputFrom(new Date());
+}
+
+function dateInputFrom(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 function customerPhoneDigits(customer: SaleRow["customer"]) {
@@ -154,19 +158,50 @@ export function SalesManager({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [source, setSource] = useState<SaleSource>("estoque");
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [vehicleId, setVehicleId] = useState("");
+  const [brand, setBrand] = useState("");
+  const [model, setModel] = useState("");
+  const [yearModel, setYearModel] = useState("");
   const [customerId, setCustomerId] = useState("novo");
+  const [customerName, setCustomerName] = useState("");
   const [price, setPrice] = useState("");
   const [phone, setPhone] = useState("");
   const [plate, setPlate] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [saleDate, setSaleDate] = useState(todayInputValue());
+  const [notes, setNotes] = useState("");
   const [cancelTarget, setCancelTarget] = useState<SaleRow | null>(null);
   const [period, setPeriod] = useState<Period>("all");
 
+  const isEditing = editingId !== null;
   const isHistorical = source === "historica";
   const isNewCustomer = customerId === "" || customerId === "novo";
+  const editingSale = isEditing
+    ? sales.find((sale) => sale.id === editingId) ?? null
+    : null;
+
+  const stockOptions = useMemo(() => {
+    if (!editingSale || editingSale.vehicle.historical) return vehicles;
+    if (vehicles.some((item) => item.id === editingSale.vehicle.id)) {
+      return vehicles;
+    }
+    return [
+      {
+        id: editingSale.vehicle.id,
+        brand: editingSale.vehicle.brand,
+        model: editingSale.vehicle.model,
+        version: null,
+        yearModel: editingSale.vehicle.yearModel,
+        price: editingSale.salePrice,
+        status: "vendido",
+      },
+      ...vehicles,
+    ];
+  }, [vehicles, editingSale]);
 
   const filteredSales = useMemo(
     () => sales.filter((sale) => matchesPeriod(new Date(sale.saleDate), period)),
@@ -185,12 +220,49 @@ export function SalesManager({
   }
 
   function resetForm() {
+    setEditingId(null);
     setSource("estoque");
     setVehicleId("");
+    setBrand("");
+    setModel("");
+    setYearModel("");
     setCustomerId("novo");
+    setCustomerName("");
     setPrice("");
     setPhone("");
     setPlate("");
+    setPaymentMethod("");
+    setSaleDate(todayInputValue());
+    setNotes("");
+    setErrors({});
+  }
+
+  function startEdit(sale: SaleRow) {
+    setOpen(true);
+    setEditingId(sale.id);
+    setSource(sale.vehicle.historical ? "historica" : "estoque");
+    setVehicleId(sale.vehicle.id);
+    setBrand(sale.vehicle.brand);
+    setModel(sale.vehicle.model);
+    setYearModel(
+      sale.vehicle.yearModel > 0 ? String(sale.vehicle.yearModel) : "",
+    );
+    setPlate(
+      sale.vehicle.plate ? formatPlateDisplay(sale.vehicle.plate) : "",
+    );
+    setPrice(formatNumberBR(Math.round(sale.salePrice)));
+    setCustomerId(sale.customer?.id ?? "novo");
+    setCustomerName(
+      sale.customer && sale.customer.name !== "Não informado"
+        ? sale.customer.name
+        : "",
+    );
+    setPhone(
+      sale.customer?.phone ? formatPhoneBR(sale.customer.phone) : "",
+    );
+    setPaymentMethod(sale.paymentMethod);
+    setSaleDate(dateInputFrom(new Date(sale.saleDate)));
+    setNotes(sale.notes ?? "");
     setErrors({});
   }
 
@@ -200,7 +272,9 @@ export function SalesManager({
     const form = event.currentTarget;
 
     startTransition(async () => {
-      const result = await createSale(formData);
+      const result = isEditing
+        ? await updateSale(formData)
+        : await createSale(formData);
       setErrors(result.fieldErrors ?? {});
 
       if (result.ok) {
@@ -233,33 +307,43 @@ export function SalesManager({
   return (
     <div className="space-y-5">
       {open ? (
-        <Card title="Registrar venda">
+        <Card title={isEditing ? "Editar venda" : "Registrar venda"}>
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <input type="hidden" name="source" value={source} />
+            {isEditing ? (
+              <input type="hidden" name="saleId" value={editingId} />
+            ) : null}
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSource("estoque");
-                  setErrors({});
-                }}
-                className={source === "estoque" ? btn.primary : btn.outline}
-              >
-                Do estoque
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSource("historica");
-                  setVehicleId("");
-                  setErrors({});
-                }}
-                className={source === "historica" ? btn.primary : btn.outline}
-              >
-                Venda histórica
-              </button>
-            </div>
+            {!isEditing ? (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSource("estoque");
+                    setErrors({});
+                  }}
+                  className={source === "estoque" ? btn.primary : btn.outline}
+                >
+                  Do estoque
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSource("historica");
+                    setVehicleId("");
+                    if (!paymentMethod) setPaymentMethod("Histórico");
+                    setErrors({});
+                  }}
+                  className={source === "historica" ? btn.primary : btn.outline}
+                >
+                  Venda histórica
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs uppercase tracking-wider text-muted">
+                {isHistorical ? "Venda histórica" : "Venda do estoque"}
+              </p>
+            )}
             <p className="text-xs text-muted">
               {isHistorical
                 ? "Para negócios feitos antes do site: informe carro, placa e valor. Cliente é opcional."
@@ -272,6 +356,8 @@ export function SalesManager({
                   <Field label="Marca" required error={errors.brand}>
                     <input
                       name="brand"
+                      value={brand}
+                      onChange={(event) => setBrand(event.target.value)}
                       placeholder="Ex.: Volkswagen"
                       className={inputClass}
                       autoComplete="off"
@@ -280,6 +366,8 @@ export function SalesManager({
                   <Field label="Modelo" required error={errors.model}>
                     <input
                       name="model"
+                      value={model}
+                      onChange={(event) => setModel(event.target.value)}
                       placeholder="Ex.: Gol"
                       className={inputClass}
                       autoComplete="off"
@@ -306,6 +394,8 @@ export function SalesManager({
                     <input
                       name="yearModel"
                       inputMode="numeric"
+                      value={yearModel}
+                      onChange={(event) => setYearModel(event.target.value)}
                       placeholder="Ex.: 2019"
                       className={inputClass}
                     />
@@ -318,14 +408,14 @@ export function SalesManager({
                     value={vehicleId}
                     onChange={(event) => selectVehicle(event.target.value)}
                     className={inputClass}
-                    disabled={vehicles.length === 0}
+                    disabled={stockOptions.length === 0}
                   >
                     <option value="">
-                      {vehicles.length === 0
+                      {stockOptions.length === 0
                         ? "Nenhum veículo sem venda"
                         : "Selecione o veículo"}
                     </option>
-                    {vehicles.map((vehicle) => (
+                    {stockOptions.map((vehicle) => (
                       <option key={vehicle.id} value={vehicle.id}>
                         {vehicle.brand} {vehicle.model}
                         {vehicle.version ? ` ${vehicle.version}` : ""} ·{" "}
@@ -392,10 +482,11 @@ export function SalesManager({
                 }
               >
                 <select
-                  key={`payment-${source}`}
+                  key={`payment-${source}-${editingId ?? "new"}`}
                   name="paymentMethod"
                   className={inputClass}
-                  defaultValue={isHistorical ? "Histórico" : ""}
+                  value={paymentMethod}
+                  onChange={(event) => setPaymentMethod(event.target.value)}
                 >
                   <option value="">
                     {isHistorical ? "Histórico (padrão)" : "Selecione"}
@@ -405,6 +496,12 @@ export function SalesManager({
                       {method}
                     </option>
                   ))}
+                  {paymentMethod &&
+                  !(PAYMENT_METHODS as readonly string[]).includes(
+                    paymentMethod,
+                  ) ? (
+                    <option value={paymentMethod}>{paymentMethod}</option>
+                  ) : null}
                 </select>
               </Field>
 
@@ -413,6 +510,8 @@ export function SalesManager({
                   <Field label="Nome do cliente" error={errors.customerName}>
                     <input
                       name="customerName"
+                      value={customerName}
+                      onChange={(event) => setCustomerName(event.target.value)}
                       placeholder="Opcional"
                       className={inputClass}
                     />
@@ -439,7 +538,8 @@ export function SalesManager({
                 <input
                   type="date"
                   name="saleDate"
-                  defaultValue={todayInputValue()}
+                  value={saleDate}
+                  onChange={(event) => setSaleDate(event.target.value)}
                   className={inputClass}
                 />
               </Field>
@@ -449,6 +549,8 @@ export function SalesManager({
               <textarea
                 name="notes"
                 rows={3}
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
                 placeholder="Detalhes da negociação, entrada, troca, prazos..."
                 className={`${inputClass} resize-y`}
               />
@@ -456,7 +558,13 @@ export function SalesManager({
 
             <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4">
               <button type="submit" disabled={isPending} className={btn.primary}>
-                {isPending ? "Registrando..." : "Registrar venda"}
+                {isPending
+                  ? isEditing
+                    ? "Salvando..."
+                    : "Registrando..."
+                  : isEditing
+                    ? "Salvar alterações"
+                    : "Registrar venda"}
               </button>
               <button
                 type="button"
@@ -597,6 +705,14 @@ export function SalesManager({
                     )}
                     <button
                       type="button"
+                      onClick={() => startEdit(sale)}
+                      className="p-2 text-muted transition hover:text-cream"
+                      aria-label="Editar venda"
+                    >
+                      <IconPencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setCancelTarget(sale)}
                       className="p-2 text-brand transition hover:text-cream"
                       aria-label="Cancelar venda"
@@ -694,6 +810,15 @@ export function SalesManager({
                               <IconWhatsApp className="h-4 w-4" />
                             </a>
                           ) : null}
+                          <button
+                            type="button"
+                            onClick={() => startEdit(sale)}
+                            className="p-2 text-muted transition hover:text-cream"
+                            aria-label="Editar venda"
+                            title="Editar venda"
+                          >
+                            <IconPencil className="h-4 w-4" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => setCancelTarget(sale)}

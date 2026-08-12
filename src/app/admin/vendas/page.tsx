@@ -67,7 +67,7 @@ export default async function VendasPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Vendas"
-        subtitle="Registre vendas do estoque ou históricas (antes do site). Cliente é opcional — basta carro, placa e valor nas históricas."
+        subtitle="Registre e edite vendas do estoque ou históricas. Cliente é opcional — basta carro, placa e valor nas históricas."
       />
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -59,9 +59,24 @@ async function resolveCustomerId(
   ).id;
 }
 
-export async function createSale(formData: FormData): Promise<SaleActionState> {
-  await requireAdmin();
+type ParsedSaleForm = {
+  isHistorical: boolean;
+  vehicleId: string;
+  brand: string;
+  model: string;
+  plate: string;
+  yearModel: number | undefined;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  paymentMethod: string;
+  notes: string | null;
+  salePrice: number;
+  saleDate: Date;
+  fieldErrors: Record<string, string>;
+};
 
+function parseSaleForm(formData: FormData): ParsedSaleForm {
   const source = String(formData.get("source") || "estoque").trim();
   const isHistorical = source === "historica";
 
@@ -120,6 +135,53 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
   if (Number.isNaN(saleDate.getTime())) {
     fieldErrors.saleDate = "Data inválida.";
   }
+
+  return {
+    isHistorical,
+    vehicleId,
+    brand,
+    model,
+    plate,
+    yearModel,
+    customerId,
+    customerName,
+    customerPhone,
+    paymentMethod,
+    notes,
+    salePrice,
+    saleDate,
+    fieldErrors,
+  };
+}
+
+function revalidateSales(vehicleId?: string) {
+  revalidatePath("/admin/vendas");
+  revalidatePath("/admin/veiculos");
+  revalidatePath("/admin");
+  revalidatePath("/admin/clientes");
+  revalidatePublicStock(vehicleId);
+}
+
+export async function createSale(formData: FormData): Promise<SaleActionState> {
+  await requireAdmin();
+
+  const parsed = parseSaleForm(formData);
+  const {
+    isHistorical,
+    vehicleId,
+    brand,
+    model,
+    plate,
+    yearModel,
+    customerId,
+    customerName,
+    customerPhone,
+    paymentMethod,
+    notes,
+    salePrice,
+    saleDate,
+    fieldErrors,
+  } = parsed;
 
   if (Object.keys(fieldErrors).length > 0) {
     return { ok: false, message: "Corrija os campos destacados.", fieldErrors };
@@ -211,12 +273,138 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
     return { ok: false, message: "Não foi possível registrar a venda." };
   }
 
-  revalidatePath("/admin/vendas");
-  revalidatePath("/admin/veiculos");
-  revalidatePath("/admin");
-  revalidatePath("/admin/clientes");
-  revalidatePublicStock(createdVehicleId);
+  revalidateSales(createdVehicleId);
   return { ok: true, message: "Venda registrada." };
+}
+
+export async function updateSale(formData: FormData): Promise<SaleActionState> {
+  await requireAdmin();
+
+  const saleId = String(formData.get("saleId") || "").trim();
+  if (!saleId) return { ok: false, message: "Venda não encontrada." };
+
+  const parsed = parseSaleForm(formData);
+  const {
+    isHistorical,
+    vehicleId,
+    brand,
+    model,
+    plate,
+    yearModel,
+    customerId,
+    customerName,
+    customerPhone,
+    paymentMethod,
+    notes,
+    salePrice,
+    saleDate,
+    fieldErrors,
+  } = parsed;
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { ok: false, message: "Corrija os campos destacados.", fieldErrors };
+  }
+
+  const existing = await prisma.sale.findUnique({
+    where: { id: saleId },
+    include: { vehicle: { select: { id: true, historical: true } } },
+  });
+  if (!existing) return { ok: false, message: "Venda não encontrada." };
+
+  if (existing.vehicle.historical !== isHistorical) {
+    return {
+      ok: false,
+      message: "Não é possível mudar o tipo da venda (estoque / histórica).",
+    };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const finalCustomerId = await resolveCustomerId(tx, {
+        customerId,
+        customerName,
+        customerPhone,
+      });
+
+      if (isHistorical) {
+        const resolvedYear =
+          yearModel && Number.isFinite(yearModel)
+            ? Math.round(yearModel)
+            : existing.saleDate.getFullYear();
+
+        await tx.vehicle.update({
+          where: { id: existing.vehicleId },
+          data: {
+            brand,
+            model,
+            plate,
+            year: resolvedYear,
+            yearModel: resolvedYear,
+            price: salePrice,
+          },
+        });
+
+        await tx.sale.update({
+          where: { id: saleId },
+          data: {
+            customerId: finalCustomerId,
+            salePrice,
+            paymentMethod,
+            saleDate,
+            notes,
+          },
+        });
+        return;
+      }
+
+      const nextVehicleId = vehicleId || existing.vehicleId;
+      if (nextVehicleId !== existing.vehicleId) {
+        const otherSale = await tx.sale.findUnique({
+          where: { vehicleId: nextVehicleId },
+        });
+        if (otherSale && otherSale.id !== saleId) {
+          throw new Error("VEHICLE_ALREADY_SOLD");
+        }
+
+        await tx.vehicle.update({
+          where: { id: existing.vehicleId },
+          data: { status: "disponivel" },
+        });
+        await tx.vehicle.update({
+          where: { id: nextVehicleId },
+          data: { status: "vendido" },
+        });
+      }
+
+      await tx.sale.update({
+        where: { id: saleId },
+        data: {
+          vehicleId: nextVehicleId,
+          customerId: finalCustomerId,
+          salePrice,
+          paymentMethod,
+          saleDate,
+          notes,
+        },
+      });
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "VEHICLE_ALREADY_SOLD") {
+      return {
+        ok: false,
+        message: "Este veículo já tem uma venda registrada.",
+        fieldErrors: { vehicleId: "Este veículo já tem uma venda registrada." },
+      };
+    }
+    console.error(error);
+    return { ok: false, message: "Não foi possível atualizar a venda." };
+  }
+
+  revalidateSales(existing.vehicleId);
+  if (!isHistorical && vehicleId && vehicleId !== existing.vehicleId) {
+    revalidatePublicStock(vehicleId);
+  }
+  return { ok: true, message: "Venda atualizada." };
 }
 
 /**
@@ -252,11 +440,7 @@ export async function deleteSale(id: string): Promise<SaleActionState> {
     return { ok: false, message: "Não foi possível cancelar a venda." };
   }
 
-  revalidatePath("/admin/vendas");
-  revalidatePath("/admin/veiculos");
-  revalidatePath("/admin");
-  revalidatePath("/admin/clientes");
-  revalidatePublicStock(sale.vehicleId);
+  revalidateSales(sale.vehicleId);
   return {
     ok: true,
     message: sale.vehicle.historical
