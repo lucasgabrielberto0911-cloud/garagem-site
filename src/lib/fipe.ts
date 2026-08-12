@@ -82,3 +82,44 @@ export function fetchFipeDetail(
     `/${type}/brands/${brandId}/models/${modelId}/years/${yearId}`,
   );
 }
+
+export function fetchFipeYearsByCode(
+  type: FipeVehicleType,
+  fipeCode: string,
+) {
+  return fipeFetch<FipeYear[]>(`/${type}/${encodeURIComponent(fipeCode)}/years`);
+}
+
+export function fetchFipeDetailByCode(
+  type: FipeVehicleType,
+  fipeCode: string,
+  yearId: string,
+) {
+  return fipeFetch<FipeDetail>(
+    `/${type}/${encodeURIComponent(fipeCode)}/years/${encodeURIComponent(yearId)}`,
+  );
+}
+
+/**
+ * Busca o detalhe FIPE pelo código, preferindo o yearId cujo ano bate com
+ * modelYear (quando informado).
+ */
+export async function resolveFipeDetailByCode(
+  type: FipeVehicleType,
+  fipeCode: string,
+  modelYear?: number | null,
+): Promise<FipeDetail | null> {
+  const years = await fetchFipeYearsByCode(type, fipeCode);
+  if (!years.length) return null;
+
+  let yearId = years[0]?.code;
+  if (modelYear != null) {
+    const match = years.find((item) => {
+      const yearPart = Number(String(item.code).split("-")[0]);
+      return yearPart === modelYear || item.name.startsWith(String(modelYear));
+    });
+    if (match) yearId = match.code;
+  }
+  if (!yearId) return null;
+  return fetchFipeDetailByCode(type, fipeCode, yearId);
+}

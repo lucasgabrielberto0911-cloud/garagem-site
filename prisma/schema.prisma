@@ -21,6 +21,8 @@ model Vehicle {
   price        Float
   /** Preço de referência FIPE (uso interno do admin — nunca exibir no site). */
   fipePrice    Float?
+  /** Placa completa — uso interno do admin (nunca exibir no site). */
+  plate        String?
   fuel         String
   transmission String
   color        String?

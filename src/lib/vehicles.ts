@@ -13,9 +13,10 @@ export const PUBLIC_VEHICLE_INCLUDE = {
   photos: { orderBy: { order: "asc" as const } },
 } as const;
 
-/** Nunca enviar preço FIPE ao site / APIs públicas. */
+/** Nunca enviar preço FIPE nem placa completa ao site / APIs públicas. */
 export const PUBLIC_VEHICLE_OMIT = {
   fipePrice: true,
+  plate: true,
 } as const;
 
 export const STOCK_PAGE_SIZE = 12;
@@ -258,7 +259,7 @@ export type StockPageResult = {
   vehicles: Array<
     Omit<
       Awaited<ReturnType<typeof prisma.vehicle.findMany>>[number],
-      "fipePrice"
+      "fipePrice" | "plate"
     > & {
       photos: Array<{ id: string; url: string; order: number; vehicleId: string }>;
       _count: { photos: number };

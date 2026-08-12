@@ -25,8 +25,13 @@ import {
   photosFromUrls,
   type PhotoItem,
 } from "@/components/admin/VehiclePhotoManager";
-import { FipeLookup } from "@/components/admin/FipeLookup";
-import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import { FipeLookup, type FipeApplyPayload } from "@/components/admin/FipeLookup";
+import {
+  formatCurrencyBRL,
+  formatNumberBR,
+  formatPlateDisplay,
+} from "@/lib/format";
+import { plateEndFromPlate } from "@/lib/plate-lookup";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
   VEHICLE_CATEGORIES,
@@ -123,6 +128,18 @@ export function VehicleForm({
   });
   const [brand, setBrand] = useState(vehicle?.brand ?? "");
   const [model, setModel] = useState(vehicle?.model ?? "");
+  const [version, setVersion] = useState(vehicle?.version ?? "");
+  const [color, setColor] = useState(vehicle?.color ?? "");
+  const [year, setYear] = useState(
+    String(vehicle?.year ?? new Date().getFullYear()),
+  );
+  const [yearModel, setYearModel] = useState(
+    String(vehicle?.yearModel ?? new Date().getFullYear()),
+  );
+  const [plate, setPlate] = useState(
+    vehicle?.plate ? formatPlateDisplay(vehicle.plate) : "",
+  );
+  const [plateEnd, setPlateEnd] = useState(vehicle?.plateEnd ?? "");
   const [fipePrice, setFipePrice] = useState<number | null>(
     vehicle?.fipePrice ?? null,
   );
@@ -148,20 +165,38 @@ export function VehicleForm({
     );
   }
 
-  function applyFipeSelection(payload: {
-    brand: string;
-    model: string;
-    fipePrice: number | null;
-  }) {
+  function applyFipeSelection(payload: FipeApplyPayload) {
     if (payload.brand) setBrand(payload.brand);
     if (payload.model) setModel(payload.model);
-    setFipePrice(payload.fipePrice);
+    if (payload.version) setVersion(payload.version);
+    if (payload.color) setColor(payload.color);
+    if (payload.year != null) setYear(String(payload.year));
+    if (payload.yearModel != null) setYearModel(String(payload.yearModel));
+    if (payload.fipePrice !== undefined) setFipePrice(payload.fipePrice);
+    if (payload.plateEnd) setPlateEnd(payload.plateEnd);
+    if (payload.fuel) {
+      const options = getFuels(category);
+      const matched = options.find(
+        (option) =>
+          option.toLocaleLowerCase("pt-BR") ===
+          payload.fuel!.toLocaleLowerCase("pt-BR"),
+      );
+      if (matched) setFuel(matched);
+    }
     setErrors((current) => {
       const next = { ...current };
       if (payload.brand) delete next.brand;
       if (payload.model) delete next.model;
+      if (payload.year != null) delete next.year;
+      if (payload.yearModel != null) delete next.yearModel;
       return next;
     });
+  }
+
+  function handlePlateChange(next: string) {
+    setPlate(next);
+    const end = plateEndFromPlate(next);
+    if (end && !plateEnd) setPlateEnd(end);
   }
 
   function validate(): boolean {
@@ -286,6 +321,8 @@ export function VehicleForm({
         <Card title="Identificação">
           <FipeLookup
             category={category}
+            plate={plate}
+            onPlateChange={handlePlateChange}
             initialFipePrice={vehicle?.fipePrice}
             onApply={applyFipeSelection}
           />
@@ -311,7 +348,8 @@ export function VehicleForm({
             <Field label={isMoto ? "Versão / cilindrada" : "Versão"}>
               <input
                 name="version"
-                defaultValue={vehicle?.version ?? ""}
+                value={version}
+                onChange={(event) => setVersion(event.target.value)}
                 placeholder={isMoto ? "Ex.: ABS 2023" : "Ex.: GTI 2.0 TSI"}
                 className={inputClass}
               />
@@ -319,7 +357,8 @@ export function VehicleForm({
             <Field label="Cor">
               <input
                 name="color"
-                defaultValue={vehicle?.color ?? ""}
+                value={color}
+                onChange={(event) => setColor(event.target.value)}
                 placeholder="Ex.: Prata"
                 className={inputClass}
               />
@@ -334,7 +373,8 @@ export function VehicleForm({
                 name="year"
                 type="number"
                 inputMode="numeric"
-                defaultValue={vehicle?.year ?? new Date().getFullYear()}
+                value={year}
+                onChange={(event) => setYear(event.target.value)}
                 className={`${inputClass} ${errors.year ? errorBorder : ""}`}
               />
             </Field>
@@ -343,7 +383,8 @@ export function VehicleForm({
                 name="yearModel"
                 type="number"
                 inputMode="numeric"
-                defaultValue={vehicle?.yearModel ?? new Date().getFullYear()}
+                value={yearModel}
+                onChange={(event) => setYearModel(event.target.value)}
                 className={`${inputClass} ${errors.yearModel ? errorBorder : ""}`}
               />
             </Field>
@@ -426,10 +467,11 @@ export function VehicleForm({
 
         <Card title="Procedência e garantia">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Final da placa" hint="Ex.: 1 ou 2/3">
+            <Field label="Final da placa" hint="Ex.: 1 ou 2/3 — visível no site">
               <input
                 name="plateEnd"
-                defaultValue={vehicle?.plateEnd ?? ""}
+                value={plateEnd}
+                onChange={(event) => setPlateEnd(event.target.value)}
                 placeholder="Ex.: 7"
                 className={inputClass}
               />
