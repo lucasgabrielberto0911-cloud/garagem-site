@@ -296,7 +296,7 @@ export function LeadsTable({
                         rel="noopener noreferrer"
                         className="inline-flex min-h-[40px] items-center gap-2 border border-brand/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10"
                       >
-                        Consultar histórico
+                        Consultar FIPE
                       </a>
                       <button
                         type="button"
