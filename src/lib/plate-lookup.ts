@@ -120,7 +120,7 @@ function scoreModelMatch(detranModel: string | null, fipeModel: string): number 
       continue;
     }
     // "1.6" vs "16v" etc.
-    if ([...hay].some((item) => item.includes(token) || token.includes(item))) {
+    if (Array.from(hay).some((item) => item.includes(token) || token.includes(item))) {
       hits += 0.5;
     }
   }
