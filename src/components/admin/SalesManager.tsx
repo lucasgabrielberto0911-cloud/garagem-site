@@ -14,7 +14,13 @@ import {
 import { IconWhatsApp } from "@/components/site/icons";
 import { Badge, Card, EmptyState, Field, btn, inputClass } from "@/components/admin/ui";
 import { createSale, deleteSale } from "@/app/admin/vendas/actions";
-import { formatCurrencyBRL, formatNumberBR, formatPhoneBR } from "@/lib/format";
+import {
+  formatCurrencyBRL,
+  formatNumberBR,
+  formatPhoneBR,
+  formatPlateDisplay,
+  formatPlateInput,
+} from "@/lib/format";
 
 export const PAYMENT_METHODS = [
   "À vista (Pix/dinheiro)",
@@ -22,6 +28,7 @@ export const PAYMENT_METHODS = [
   "Consórcio",
   "Cartão",
   "Troca + valor",
+  "Histórico",
   "Outro",
 ] as const;
 
@@ -31,8 +38,15 @@ export type SaleRow = {
   paymentMethod: string;
   saleDate: Date;
   notes: string | null;
-  vehicle: { id: string; brand: string; model: string; yearModel: number };
-  customer: { id: string; name: string; phone: string };
+  vehicle: {
+    id: string;
+    brand: string;
+    model: string;
+    yearModel: number;
+    plate: string | null;
+    historical: boolean;
+  };
+  customer: { id: string; name: string; phone: string } | null;
 };
 
 export type SellableVehicle = {
@@ -46,6 +60,8 @@ export type SellableVehicle = {
 };
 
 export type CustomerOption = { id: string; name: string; phone: string };
+
+type SaleSource = "estoque" | "historica";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(date);
@@ -78,15 +94,28 @@ function matchesPeriod(date: Date, period: Period) {
 }
 
 function exportSalesCsv(sales: SaleRow[]) {
-  const header = ["Data", "Veículo", "Ano", "Cliente", "Telefone", "Pagamento", "Valor", "Observações"];
+  const header = [
+    "Data",
+    "Veículo",
+    "Ano",
+    "Placa",
+    "Cliente",
+    "Telefone",
+    "Pagamento",
+    "Valor",
+    "Tipo",
+    "Observações",
+  ];
   const rows = sales.map((sale) => [
     formatDate(sale.saleDate),
     `${sale.vehicle.brand} ${sale.vehicle.model}`,
     String(sale.vehicle.yearModel),
-    sale.customer.name,
-    formatPhoneBR(sale.customer.phone),
+    sale.vehicle.plate ? formatPlateDisplay(sale.vehicle.plate) : "",
+    sale.customer?.name ?? "",
+    sale.customer?.phone ? formatPhoneBR(sale.customer.phone) : "",
     sale.paymentMethod,
     String(sale.salePrice),
+    sale.vehicle.historical ? "Histórica" : "Estoque",
     (sale.notes ?? "").replace(/\s+/g, " "),
   ]);
 
@@ -110,6 +139,10 @@ function todayInputValue() {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
+function customerPhoneDigits(customer: SaleRow["customer"]) {
+  return customer?.phone?.replace(/\D/g, "") ?? "";
+}
+
 export function SalesManager({
   sales,
   vehicles,
@@ -121,15 +154,18 @@ export function SalesManager({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [source, setSource] = useState<SaleSource>("estoque");
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [vehicleId, setVehicleId] = useState("");
   const [customerId, setCustomerId] = useState("novo");
   const [price, setPrice] = useState("");
   const [phone, setPhone] = useState("");
+  const [plate, setPlate] = useState("");
   const [cancelTarget, setCancelTarget] = useState<SaleRow | null>(null);
   const [period, setPeriod] = useState<Period>("all");
 
+  const isHistorical = source === "historica";
   const isNewCustomer = customerId === "" || customerId === "novo";
 
   const filteredSales = useMemo(
@@ -149,10 +185,12 @@ export function SalesManager({
   }
 
   function resetForm() {
+    setSource("estoque");
     setVehicleId("");
     setCustomerId("novo");
     setPrice("");
     setPhone("");
+    setPlate("");
     setErrors({});
   }
 
@@ -197,30 +235,116 @@ export function SalesManager({
       {open ? (
         <Card title="Registrar venda">
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <input type="hidden" name="source" value={source} />
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSource("estoque");
+                  setErrors({});
+                }}
+                className={source === "estoque" ? btn.primary : btn.outline}
+              >
+                Do estoque
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSource("historica");
+                  setVehicleId("");
+                  setErrors({});
+                }}
+                className={source === "historica" ? btn.primary : btn.outline}
+              >
+                Venda histórica
+              </button>
+            </div>
+            <p className="text-xs text-muted">
+              {isHistorical
+                ? "Para negócios feitos antes do site: informe carro, placa e valor. Cliente é opcional."
+                : "Liga a venda a um veículo do estoque. Cliente é opcional."}
+            </p>
+
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Veículo vendido" required error={errors.vehicleId}>
-                <select
-                  name="vehicleId"
-                  value={vehicleId}
-                  onChange={(event) => selectVehicle(event.target.value)}
-                  className={inputClass}
-                >
-                  <option value="">Selecione o veículo</option>
-                  {vehicles.map((vehicle) => (
-                    <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.brand} {vehicle.model}
-                      {vehicle.version ? ` ${vehicle.version}` : ""} ·{" "}
-                      {vehicle.yearModel} · {formatCurrencyBRL(vehicle.price)}
+              {isHistorical ? (
+                <>
+                  <Field label="Marca" required error={errors.brand}>
+                    <input
+                      name="brand"
+                      placeholder="Ex.: Volkswagen"
+                      className={inputClass}
+                      autoComplete="off"
+                    />
+                  </Field>
+                  <Field label="Modelo" required error={errors.model}>
+                    <input
+                      name="model"
+                      placeholder="Ex.: Gol"
+                      className={inputClass}
+                      autoComplete="off"
+                    />
+                  </Field>
+                  <Field
+                    label="Placa"
+                    required
+                    error={errors.plate}
+                    hint="Uso interno — não aparece no site."
+                  >
+                    <input
+                      name="plate"
+                      value={plate}
+                      onChange={(event) =>
+                        setPlate(formatPlateInput(event.target.value))
+                      }
+                      placeholder="ABC1D23"
+                      className={inputClass}
+                      autoComplete="off"
+                    />
+                  </Field>
+                  <Field label="Ano modelo" error={errors.yearModel}>
+                    <input
+                      name="yearModel"
+                      inputMode="numeric"
+                      placeholder="Ex.: 2019"
+                      className={inputClass}
+                    />
+                  </Field>
+                </>
+              ) : (
+                <Field label="Veículo vendido" required error={errors.vehicleId}>
+                  <select
+                    name="vehicleId"
+                    value={vehicleId}
+                    onChange={(event) => selectVehicle(event.target.value)}
+                    className={inputClass}
+                    disabled={vehicles.length === 0}
+                  >
+                    <option value="">
+                      {vehicles.length === 0
+                        ? "Nenhum veículo sem venda"
+                        : "Selecione o veículo"}
                     </option>
-                  ))}
-                </select>
-              </Field>
+                    {vehicles.map((vehicle) => (
+                      <option key={vehicle.id} value={vehicle.id}>
+                        {vehicle.brand} {vehicle.model}
+                        {vehicle.version ? ` ${vehicle.version}` : ""} ·{" "}
+                        {vehicle.yearModel} · {formatCurrencyBRL(vehicle.price)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
 
               <Field
                 label="Valor da venda (R$)"
                 required
                 error={errors.salePrice}
-                hint="Preenchido com o preço do anúncio; ajuste se houve desconto."
+                hint={
+                  isHistorical
+                    ? "Valor pelo qual o veículo foi vendido."
+                    : "Preenchido com o preço do anúncio; ajuste se houve desconto."
+                }
               >
                 <input
                   name="salePrice"
@@ -238,14 +362,17 @@ export function SalesManager({
                 />
               </Field>
 
-              <Field label="Cliente" required>
+              <Field
+                label="Cliente"
+                hint="Opcional — deixe em novo cliente sem preencher nome."
+              >
                 <select
                   name="customerId"
                   value={customerId}
                   onChange={(event) => setCustomerId(event.target.value)}
                   className={inputClass}
                 >
-                  <option value="novo">+ Novo cliente</option>
+                  <option value="novo">Sem cliente / novo</option>
                   {customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>
                       {customer.name} · {formatPhoneBR(customer.phone)}
@@ -254,9 +381,25 @@ export function SalesManager({
                 </select>
               </Field>
 
-              <Field label="Forma de pagamento" required error={errors.paymentMethod}>
-                <select name="paymentMethod" className={inputClass} defaultValue="">
-                  <option value="">Selecione</option>
+              <Field
+                label="Forma de pagamento"
+                required={!isHistorical}
+                error={errors.paymentMethod}
+                hint={
+                  isHistorical
+                    ? "Opcional — se vazio, fica como Histórico."
+                    : undefined
+                }
+              >
+                <select
+                  key={`payment-${source}`}
+                  name="paymentMethod"
+                  className={inputClass}
+                  defaultValue={isHistorical ? "Histórico" : ""}
+                >
+                  <option value="">
+                    {isHistorical ? "Histórico (padrão)" : "Selecione"}
+                  </option>
                   {PAYMENT_METHODS.map((method) => (
                     <option key={method} value={method}>
                       {method}
@@ -267,24 +410,25 @@ export function SalesManager({
 
               {isNewCustomer ? (
                 <>
-                  <Field label="Nome do cliente" required error={errors.customerName}>
+                  <Field label="Nome do cliente" error={errors.customerName}>
                     <input
                       name="customerName"
-                      placeholder="Nome completo"
+                      placeholder="Opcional"
                       className={inputClass}
                     />
                   </Field>
                   <Field
                     label="Telefone do cliente"
-                    required
                     error={errors.customerPhone}
                   >
                     <input
                       name="customerPhone"
                       inputMode="tel"
                       value={phone}
-                      onChange={(event) => setPhone(formatPhoneBR(event.target.value))}
-                      placeholder="(00) 00000-0000"
+                      onChange={(event) =>
+                        setPhone(formatPhoneBR(event.target.value))
+                      }
+                      placeholder="Opcional"
                       className={inputClass}
                     />
                   </Field>
@@ -332,13 +476,7 @@ export function SalesManager({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            disabled={vehicles.length === 0}
             className={btn.primary}
-            title={
-              vehicles.length === 0
-                ? "Cadastre um veículo disponível para registrar a venda"
-                : undefined
-            }
           >
             <IconPlus className="h-4 w-4" />
             Registrar venda
@@ -382,7 +520,7 @@ export function SalesManager({
         <EmptyState
           icon={<IconCash className="h-12 w-12" />}
           title="Nenhuma venda registrada"
-          description="Registre as vendas para acompanhar faturamento, ticket médio e o histórico de cada cliente."
+          description="Registre vendas do estoque ou históricas (antes do site) para acompanhar faturamento."
         />
       ) : filteredSales.length === 0 ? (
         <EmptyState
@@ -392,61 +530,85 @@ export function SalesManager({
         />
       ) : (
         <>
-          {/* Mobile: cards. */}
           <ul className="space-y-3 lg:hidden">
-            {filteredSales.map((sale) => (
-              <li key={sale.id} className="border border-white/10 bg-ink/50 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/admin/veiculos/${sale.vehicle.id}`}
-                      className="font-display text-sm font-semibold text-cream"
-                    >
-                      {sale.vehicle.brand} {sale.vehicle.model}
-                    </Link>
-                    <p className="text-xs text-muted">
-                      {sale.vehicle.yearModel} · {formatDate(sale.saleDate)}
+            {filteredSales.map((sale) => {
+              const wa = customerPhoneDigits(sale.customer);
+              return (
+                <li key={sale.id} className="border border-white/10 bg-ink/50 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      {sale.vehicle.historical ? (
+                        <p className="font-display text-sm font-semibold text-cream">
+                          {sale.vehicle.brand} {sale.vehicle.model}
+                        </p>
+                      ) : (
+                        <Link
+                          href={`/admin/veiculos/${sale.vehicle.id}`}
+                          className="font-display text-sm font-semibold text-cream"
+                        >
+                          {sale.vehicle.brand} {sale.vehicle.model}
+                        </Link>
+                      )}
+                      <p className="text-xs text-muted">
+                        {sale.vehicle.yearModel > 0
+                          ? `${sale.vehicle.yearModel} · `
+                          : ""}
+                        {formatDate(sale.saleDate)}
+                        {sale.vehicle.plate
+                          ? ` · ${formatPlateDisplay(sale.vehicle.plate)}`
+                          : ""}
+                      </p>
+                    </div>
+                    <p className="shrink-0 font-display text-base font-bold text-cream">
+                      {formatCurrencyBRL(sale.salePrice)}
                     </p>
                   </div>
-                  <p className="shrink-0 font-display text-base font-bold text-cream">
-                    {formatCurrencyBRL(sale.salePrice)}
-                  </p>
-                </div>
 
-                <div className="mt-3 space-y-1 text-xs text-muted">
-                  <p>
-                    Cliente:{" "}
-                    <span className="text-cream">{sale.customer.name}</span>
-                  </p>
-                  <p>{formatPhoneBR(sale.customer.phone)}</p>
-                  {sale.notes ? <p className="italic">{sale.notes}</p> : null}
-                </div>
+                  <div className="mt-3 space-y-1 text-xs text-muted">
+                    <p>
+                      Cliente:{" "}
+                      <span className="text-cream">
+                        {sale.customer?.name ?? "Não informado"}
+                      </span>
+                    </p>
+                    {sale.customer?.phone ? (
+                      <p>{formatPhoneBR(sale.customer.phone)}</p>
+                    ) : null}
+                    {sale.notes ? <p className="italic">{sale.notes}</p> : null}
+                  </div>
 
-                <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
-                  <Badge tone="success">{sale.paymentMethod}</Badge>
-                  <a
-                    href={`https://wa.me/55${sale.customer.phone.replace(/\D/g, "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-auto p-2 text-muted transition hover:text-cream"
-                    aria-label="WhatsApp do cliente"
-                  >
-                    <IconWhatsApp className="h-4 w-4" />
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => setCancelTarget(sale)}
-                    className="p-2 text-brand transition hover:text-cream"
-                    aria-label="Cancelar venda"
-                  >
-                    <IconTrash className="h-4 w-4" />
-                  </button>
-                </div>
-              </li>
-            ))}
+                  <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
+                    <Badge tone="success">{sale.paymentMethod}</Badge>
+                    {sale.vehicle.historical ? (
+                      <Badge tone="neutral">Histórica</Badge>
+                    ) : null}
+                    {wa ? (
+                      <a
+                        href={`https://wa.me/55${wa}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-auto p-2 text-muted transition hover:text-cream"
+                        aria-label="WhatsApp do cliente"
+                      >
+                        <IconWhatsApp className="h-4 w-4" />
+                      </a>
+                    ) : (
+                      <span className="ml-auto" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setCancelTarget(sale)}
+                      className="p-2 text-brand transition hover:text-cream"
+                      aria-label="Cancelar venda"
+                    >
+                      <IconTrash className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
 
-          {/* Desktop: tabela. */}
           <div className="hidden overflow-x-auto border border-white/10 lg:block">
             <table className="min-w-full text-left text-sm">
               <thead className="bg-ink text-xs uppercase tracking-wider text-muted">
@@ -460,65 +622,92 @@ export function SalesManager({
                 </tr>
               </thead>
               <tbody>
-                {filteredSales.map((sale) => (
-                  <tr
-                    key={sale.id}
-                    className="border-t border-white/10 transition hover:bg-white/[0.04]"
-                  >
-                    <td className="px-4 py-3 text-muted">
-                      {formatDate(sale.saleDate)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/veiculos/${sale.vehicle.id}`}
-                        className="font-medium text-cream transition hover:text-brand"
-                      >
-                        {sale.vehicle.brand} {sale.vehicle.model}
-                      </Link>
-                      <p className="text-xs text-muted">{sale.vehicle.yearModel}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href="/admin/clientes"
-                        className="font-medium text-cream transition hover:text-brand"
-                      >
-                        {sale.customer.name}
-                      </Link>
-                      <p className="text-xs text-muted">
-                        {formatPhoneBR(sale.customer.phone)}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone="success">{sale.paymentMethod}</Badge>
-                    </td>
-                    <td className="px-4 py-3 font-medium">
-                      {formatCurrencyBRL(sale.salePrice)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <a
-                          href={`https://wa.me/55${sale.customer.phone.replace(/\D/g, "")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 text-muted transition hover:text-cream"
-                          aria-label="WhatsApp do cliente"
-                          title="WhatsApp do cliente"
-                        >
-                          <IconWhatsApp className="h-4 w-4" />
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => setCancelTarget(sale)}
-                          className="p-2 text-brand transition hover:text-cream"
-                          aria-label="Cancelar venda"
-                          title="Cancelar venda"
-                        >
-                          <IconTrash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filteredSales.map((sale) => {
+                  const wa = customerPhoneDigits(sale.customer);
+                  return (
+                    <tr
+                      key={sale.id}
+                      className="border-t border-white/10 transition hover:bg-white/[0.04]"
+                    >
+                      <td className="px-4 py-3 text-muted">
+                        {formatDate(sale.saleDate)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {sale.vehicle.historical ? (
+                          <p className="font-medium text-cream">
+                            {sale.vehicle.brand} {sale.vehicle.model}
+                          </p>
+                        ) : (
+                          <Link
+                            href={`/admin/veiculos/${sale.vehicle.id}`}
+                            className="font-medium text-cream transition hover:text-brand"
+                          >
+                            {sale.vehicle.brand} {sale.vehicle.model}
+                          </Link>
+                        )}
+                        <p className="text-xs text-muted">
+                          {sale.vehicle.yearModel > 0
+                            ? `${sale.vehicle.yearModel}`
+                            : "—"}
+                          {sale.vehicle.plate
+                            ? ` · ${formatPlateDisplay(sale.vehicle.plate)}`
+                            : ""}
+                          {sale.vehicle.historical ? " · Histórica" : ""}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        {sale.customer ? (
+                          <>
+                            <Link
+                              href="/admin/clientes"
+                              className="font-medium text-cream transition hover:text-brand"
+                            >
+                              {sale.customer.name}
+                            </Link>
+                            {sale.customer.phone ? (
+                              <p className="text-xs text-muted">
+                                {formatPhoneBR(sale.customer.phone)}
+                              </p>
+                            ) : null}
+                          </>
+                        ) : (
+                          <span className="text-muted">Não informado</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge tone="success">{sale.paymentMethod}</Badge>
+                      </td>
+                      <td className="px-4 py-3 font-medium">
+                        {formatCurrencyBRL(sale.salePrice)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          {wa ? (
+                            <a
+                              href={`https://wa.me/55${wa}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 text-muted transition hover:text-cream"
+                              aria-label="WhatsApp do cliente"
+                              title="WhatsApp do cliente"
+                            >
+                              <IconWhatsApp className="h-4 w-4" />
+                            </a>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => setCancelTarget(sale)}
+                            className="p-2 text-brand transition hover:text-cream"
+                            aria-label="Cancelar venda"
+                            title="Cancelar venda"
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -530,7 +719,9 @@ export function SalesManager({
         title="Cancelar venda"
         description={
           cancelTarget
-            ? `A venda de ${cancelTarget.vehicle.brand} ${cancelTarget.vehicle.model} será apagada e o veículo volta para o estoque como disponível.`
+            ? cancelTarget.vehicle.historical
+              ? `A venda histórica de ${cancelTarget.vehicle.brand} ${cancelTarget.vehicle.model} será apagada.`
+              : `A venda de ${cancelTarget.vehicle.brand} ${cancelTarget.vehicle.model} será apagada e o veículo volta para o estoque como disponível.`
             : undefined
         }
         confirmLabel="Cancelar venda"

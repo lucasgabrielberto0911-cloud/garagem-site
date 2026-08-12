@@ -147,8 +147,8 @@ export function getVehicleByParam(param: string) {
   return safeQuery(
     `veículo ${id}`,
     () =>
-      prisma.vehicle.findUnique({
-        where: { id },
+      prisma.vehicle.findFirst({
+        where: { id, historical: false },
         omit: PUBLIC_VEHICLE_OMIT,
         include: PUBLIC_VEHICLE_INCLUDE,
       }),

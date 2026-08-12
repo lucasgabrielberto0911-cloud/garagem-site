@@ -41,6 +41,11 @@ model Vehicle {
   accessories  String[] @default([])
   status       String   @default("disponivel")
   featured     Boolean  @default(false)
+  /**
+   * Venda registrada fora do estoque do site (ex.: negócio antes do site).
+   * Não deve aparecer na vitrine pública.
+   */
+  historical   Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   photos       Photo[]
@@ -77,16 +82,17 @@ model Customer {
 }
 
 model Sale {
-  id            String   @id @default(cuid())
-  vehicleId     String   @unique
-  vehicle       Vehicle  @relation(fields: [vehicleId], references: [id])
-  customerId    String
-  customer      Customer @relation(fields: [customerId], references: [id])
+  id            String    @id @default(cuid())
+  vehicleId     String    @unique
+  vehicle       Vehicle   @relation(fields: [vehicleId], references: [id])
+  /** Opcional — vendas históricas ou negócios sem cadastro de cliente. */
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
   salePrice     Float
   paymentMethod String
-  saleDate      DateTime @default(now())
+  saleDate      DateTime  @default(now())
   notes         String?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
 }
 
 model Admin {

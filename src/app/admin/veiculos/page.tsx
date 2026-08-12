@@ -39,6 +39,7 @@ export default async function VehiclesPage({
     prisma.vehicle.findMany({
       where: {
         AND: [
+          { historical: false },
           statusFilter,
           q
             ? {
@@ -55,9 +56,13 @@ export default async function VehiclesPage({
       include: { photos: { orderBy: { order: "asc" }, take: 1 } },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.vehicle.groupBy({ by: ["status"], _count: { _all: true } }),
+    prisma.vehicle.groupBy({
+      by: ["status"],
+      where: { historical: false },
+      _count: { _all: true },
+    }),
     prisma.vehicle.aggregate({
-      where: { status: "disponivel" },
+      where: { status: "disponivel", historical: false },
       _sum: { price: true },
     }),
   ]);
