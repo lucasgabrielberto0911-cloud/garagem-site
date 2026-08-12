@@ -31,6 +31,12 @@ type FilterValues = {
 
 type FilterKey = Exclude<keyof FilterValues, "sort">;
 
+const CATEGORY_FILTER_OPTIONS = [
+  { value: "", label: "Ambos" },
+  { value: "carro", label: "Carro" },
+  { value: "moto", label: "Moto" },
+] as const;
+
 const SORT_OPTIONS = [
   { value: "recentes", label: "Mais recentes" },
   { value: "menor-preco", label: "Menor preço" },
@@ -273,13 +279,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 onChange={(event) => update({ category: event.target.value })}
                 className={selectClass}
               >
-                <option value="">Carros e motos</option>
-                {(facets.categories?.length
-                  ? facets.categories
-                  : ["carro", "moto"]
-                ).map((item) => (
-                  <option key={item} value={item}>
-                    {vehicleCategoryLabel(item)}
+                {CATEGORY_FILTER_OPTIONS.map((option) => (
+                  <option key={option.value || "ambos"} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
@@ -524,13 +526,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   }
                   className={selectClass}
                 >
-                  <option value="">Carros e motos</option>
-                  {(facets.categories?.length
-                    ? facets.categories
-                    : ["carro", "moto"]
-                  ).map((item) => (
-                    <option key={item} value={item}>
-                      {vehicleCategoryLabel(item)}
+                  {CATEGORY_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value || "ambos"} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
