@@ -132,10 +132,21 @@ model SiteSettings {
   hours          String?
   hoursWeekdays  String?
   hoursSaturday  String?
-  /** Valores exibidos em Sobre nós (ex.: "+20", "+1.000"). */
+  /** Valores exibidos em Sobre nós (ex.: "+20", "8h–23h"). */
   aboutYears     String?
+  /** @deprecated Use statsSalesBase — mantido só para migração legada. */
   aboutSold      String?
   aboutHours     String?
   aboutFocus     String?
+  /**
+   * Base somada aos veículos disponíveis reais (home).
+   * Exibido = statsStockBase + count(status=disponivel).
+   */
+  statsStockBase Int      @default(0)
+  /**
+   * Base somada às vendas reais (home + Sobre "carros vendidos").
+   * Exibido = statsSalesBase + count(Sale).
+   */
+  statsSalesBase Int      @default(0)
   updatedAt      DateTime @updatedAt
 }

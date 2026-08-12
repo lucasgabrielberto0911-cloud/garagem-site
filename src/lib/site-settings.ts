@@ -11,16 +11,20 @@ export type EditableSiteFields = {
   hoursWeekdays: string;
   hoursSaturday: string;
   aboutYears: string;
-  aboutSold: string;
   aboutHours: string;
   aboutFocus: string;
+  /** Soma com veículos disponíveis reais na home. */
+  statsStockBase: number;
+  /** Soma com vendas reais na home e em Sobre. */
+  statsSalesBase: number;
 };
 
 const DEFAULT_ABOUT = {
   aboutYears: "+20",
-  aboutSold: "+1.000",
   aboutHours: "8h–23h",
   aboutFocus: "100%",
+  statsStockBase: 0,
+  statsSalesBase: 0,
 } as const;
 
 const EDITABLE_KEYS = [
@@ -31,15 +35,23 @@ const EDITABLE_KEYS = [
   "hoursWeekdays",
   "hoursSaturday",
   "aboutYears",
-  "aboutSold",
   "aboutHours",
   "aboutFocus",
 ] as const satisfies readonly (keyof EditableSiteFields)[];
 
+/** Extrai dígitos de textos legados tipo "+1.000". */
+export function parseLegacySoldBase(raw: string | null | undefined): number {
+  if (!raw) return 0;
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return 0;
+  const value = Number(digits);
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
 function pickEditable(
-  source: SiteConfig | EditableSiteFields,
+  source: Partial<EditableSiteFields> &
+    Pick<SiteConfig, "region" | "email" | "address" | "hours" | "hoursWeekdays" | "hoursSaturday">,
 ): EditableSiteFields {
-  const about = source as Partial<EditableSiteFields>;
   return {
     region: source.region,
     email: source.email,
@@ -47,10 +59,17 @@ function pickEditable(
     hours: source.hours,
     hoursWeekdays: source.hoursWeekdays,
     hoursSaturday: source.hoursSaturday,
-    aboutYears: about.aboutYears ?? DEFAULT_ABOUT.aboutYears,
-    aboutSold: about.aboutSold ?? DEFAULT_ABOUT.aboutSold,
-    aboutHours: about.aboutHours ?? DEFAULT_ABOUT.aboutHours,
-    aboutFocus: about.aboutFocus ?? DEFAULT_ABOUT.aboutFocus,
+    aboutYears: source.aboutYears ?? DEFAULT_ABOUT.aboutYears,
+    aboutHours: source.aboutHours ?? DEFAULT_ABOUT.aboutHours,
+    aboutFocus: source.aboutFocus ?? DEFAULT_ABOUT.aboutFocus,
+    statsStockBase:
+      typeof source.statsStockBase === "number" && source.statsStockBase >= 0
+        ? Math.floor(source.statsStockBase)
+        : DEFAULT_ABOUT.statsStockBase,
+    statsSalesBase:
+      typeof source.statsSalesBase === "number" && source.statsSalesBase >= 0
+        ? Math.floor(source.statsSalesBase)
+        : DEFAULT_ABOUT.statsSalesBase,
   };
 }
 
@@ -72,6 +91,10 @@ const loadPublicSiteCached = unstable_cache(
         return { ...site, ...defaults };
       }
 
+      const salesBaseFromLegacy = parseLegacySoldBase(row.aboutSold);
+      const statsSalesBase =
+        row.statsSalesBase > 0 ? row.statsSalesBase : salesBaseFromLegacy;
+
       return {
         ...site,
         region: coalesce(row.region, defaults.region),
@@ -81,16 +104,17 @@ const loadPublicSiteCached = unstable_cache(
         hoursWeekdays: coalesce(row.hoursWeekdays, defaults.hoursWeekdays),
         hoursSaturday: coalesce(row.hoursSaturday, defaults.hoursSaturday),
         aboutYears: coalesce(row.aboutYears, defaults.aboutYears),
-        aboutSold: coalesce(row.aboutSold, defaults.aboutSold),
         aboutHours: coalesce(row.aboutHours, defaults.aboutHours),
         aboutFocus: coalesce(row.aboutFocus, defaults.aboutFocus),
+        statsStockBase: row.statsStockBase ?? 0,
+        statsSalesBase,
       };
     } catch (error) {
       console.error("[site-settings] falha ao ler config:", error);
       return { ...site, ...defaults };
     }
   },
-  ["public-site-settings-v1"],
+  ["public-site-settings-v2"],
   { revalidate: 120, tags: ["site-settings"] },
 );
 
