@@ -182,6 +182,14 @@ export function IconImage({ className }: IconProps) {
   );
 }
 
+export function IconAttach({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M21.4 11.6l-8.5 8.5a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8l8.2-8.2" />
+    </svg>
+  );
+}
+
 export function IconUserCircle({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

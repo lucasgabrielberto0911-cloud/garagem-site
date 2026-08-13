@@ -17,6 +17,7 @@ import {
   IconPlus,
   IconTrash,
 } from "@/components/admin/icons";
+import { AdminFileDrop } from "@/components/admin/AdminFileDrop";
 import { Badge, Card, Field, btn, inputClass } from "@/components/admin/ui";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { uploadAdminFile } from "@/lib/upload-admin-file";
@@ -317,6 +318,17 @@ export function VehicleOpsPanel({
         {showCostForm ? (
           <form
             onSubmit={handleAddCost}
+            onDragOver={(event) => {
+              if (Array.from(event.dataTransfer.types).includes("Files")) {
+                event.preventDefault();
+              }
+            }}
+            onDrop={(event) => {
+              if (!Array.from(event.dataTransfer.types).includes("Files")) return;
+              event.preventDefault();
+              const file = event.dataTransfer.files?.[0];
+              if (file) void onReceiptChange(file);
+            }}
             className="mb-5 grid gap-3 border border-white/10 bg-asphalt/40 p-4 sm:grid-cols-2 lg:grid-cols-4"
           >
             <Field label="Tipo" required>
@@ -361,26 +373,15 @@ export function VehicleOpsPanel({
               />
             </Field>
             <div className="sm:col-span-2 lg:col-span-3">
-              <Field
+              <AdminFileDrop
                 label="Comprovante"
-                hint="Opcional — PDF ou imagem."
-              >
-                <input
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png,image/webp"
-                  className={`${inputClass} file:mr-3 file:border-0 file:bg-transparent file:text-xs file:text-muted`}
-                  onChange={(event) =>
-                    void onReceiptChange(event.target.files?.[0])
-                  }
-                />
-                {uploadingCost ? (
-                  <p className="mt-1 text-xs text-muted">Enviando comprovante…</p>
-                ) : costReceipt ? (
-                  <p className="mt-1 truncate text-xs text-emerald-300">
-                    {costReceipt.name}
-                  </p>
-                ) : null}
-              </Field>
+                hint="Opcional — PDF ou imagem. Arraste ou clique."
+                fileName={costReceipt?.name}
+                uploading={uploadingCost}
+                disabled={pending}
+                onFile={(file) => void onReceiptChange(file)}
+                onClear={() => setCostReceipt(null)}
+              />
             </div>
             <div className="flex items-end">
               <button
@@ -468,6 +469,17 @@ export function VehicleOpsPanel({
         {showDocForm ? (
           <form
             onSubmit={handleAddDoc}
+            onDragOver={(event) => {
+              if (Array.from(event.dataTransfer.types).includes("Files")) {
+                event.preventDefault();
+              }
+            }}
+            onDrop={(event) => {
+              if (!Array.from(event.dataTransfer.types).includes("Files")) return;
+              event.preventDefault();
+              const file = event.dataTransfer.files?.[0];
+              if (file) void onDocFileChange(file);
+            }}
             className="mb-5 grid gap-3 border border-white/10 bg-asphalt/40 p-4 sm:grid-cols-2"
           >
             <Field label="Tipo" required>
@@ -488,23 +500,16 @@ export function VehicleOpsPanel({
               />
             </Field>
             <div className="sm:col-span-2">
-              <Field label="Arquivo" required hint="PDF ou imagem.">
-                <input
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png,image/webp"
-                  className={`${inputClass} file:mr-3 file:border-0 file:bg-transparent file:text-xs file:text-muted`}
-                  onChange={(event) =>
-                    void onDocFileChange(event.target.files?.[0])
-                  }
-                />
-                {uploadingDoc ? (
-                  <p className="mt-1 text-xs text-muted">Enviando arquivo…</p>
-                ) : docFile ? (
-                  <p className="mt-1 truncate text-xs text-emerald-300">
-                    {docFile.name}
-                  </p>
-                ) : null}
-              </Field>
+              <AdminFileDrop
+                label="Arquivo"
+                hint="PDF ou imagem. Arraste ou clique."
+                required
+                fileName={docFile?.name}
+                uploading={uploadingDoc}
+                disabled={pending}
+                onFile={(file) => void onDocFileChange(file)}
+                onClear={() => setDocFile(null)}
+              />
             </div>
             <div className="sm:col-span-2">
               <Field label="Observação">
