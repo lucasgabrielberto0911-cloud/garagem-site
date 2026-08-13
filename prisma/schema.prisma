@@ -46,10 +46,18 @@ model Vehicle {
    * Não deve aparecer na vitrine pública.
    */
   historical   Boolean  @default(false)
+  /** Documento já transferido para a loja (uso interno). */
+  inStoreName  Boolean  @default(false)
+  hasSpareKey  Boolean  @default(false)
+  hasManual    Boolean  @default(false)
+  /** Preço de aquisição — nunca exibir no site. */
+  purchasePrice Float?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   photos       Photo[]
   sale         Sale?
+  costs        VehicleCost[]
+  documents    VehicleDocument[]
 
   @@index([status, createdAt])
   @@index([status, price])
@@ -67,6 +75,37 @@ model Photo {
   vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
   @@index([vehicleId, order])
+}
+
+model VehicleCost {
+  id          String   @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  /** despachante | mecanica | estetica | documentacao | transporte | laudo | outro */
+  kind        String
+  description String   @default("")
+  amount      Float
+  incurredAt  DateTime @default(now())
+  receiptUrl  String?
+  receiptName String?
+  createdAt   DateTime @default(now())
+
+  @@index([vehicleId, incurredAt])
+}
+
+model VehicleDocument {
+  id        String   @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  /** crlv | recibo | procuracao | laudo | nf | outro */
+  kind      String
+  title     String
+  fileUrl   String
+  fileName  String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([vehicleId])
 }
 
 model Customer {

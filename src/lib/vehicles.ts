@@ -41,10 +41,14 @@ export const PUBLIC_VEHICLE_INCLUDE = {
   photos: { orderBy: { order: "asc" as const } },
 } as const;
 
-/** Nunca enviar preço FIPE nem placa completa ao site / APIs públicas. */
+/** Nunca enviar preço FIPE, placa completa nem dados de operação ao site. */
 export const PUBLIC_VEHICLE_OMIT = {
   fipePrice: true,
   plate: true,
+  inStoreName: true,
+  hasSpareKey: true,
+  hasManual: true,
+  purchasePrice: true,
 } as const;
 
 export const STOCK_PAGE_SIZE = 12;

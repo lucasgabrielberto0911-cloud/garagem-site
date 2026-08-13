@@ -111,6 +111,16 @@ export function IconCheck({ className }: IconProps) {
   );
 }
 
+export function IconClipboard({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="6" y="5" width="12" height="16" rx="1.5" />
+      <path d="M9 5.5V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V5.5" />
+      <path d="M9 11h6M9 15h4" />
+    </svg>
+  );
+}
+
 export function IconCopy({ className }: IconProps) {
   return (
     <svg {...base} className={className}>
