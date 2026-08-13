@@ -4,11 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import {
-  VEHICLE_PHOTOS_BUCKET,
-  getSupabaseAdmin,
-  storagePathFromPublicUrl,
-} from "@/lib/supabase";
+import { deleteStoragePublicUrls } from "@/lib/supabase";
 import { normalizeAccessories, parseVehicleCategory } from "@/lib/vehicle-accessories";
 import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
 
@@ -25,23 +21,6 @@ function revalidatePublicStock(vehicleId?: string) {
   revalidatePath("/sitemap.xml");
   revalidatePath("/estoque/[id]", "page");
   if (vehicleId) revalidatePath(`/estoque/${vehicleId}`);
-}
-
-async function deleteStoragePhotos(urls: string[]) {
-  const paths = urls
-    .map(storagePathFromPublicUrl)
-    .filter((path): path is string => Boolean(path));
-  if (paths.length === 0) return;
-
-  try {
-    const supabase = getSupabaseAdmin();
-    const { error } = await supabase.storage
-      .from(VEHICLE_PHOTOS_BUCKET)
-      .remove(paths);
-    if (error) console.error("[storage] falha ao remover fotos:", error);
-  } catch (error) {
-    console.error("[storage] falha ao remover fotos:", error);
-  }
 }
 
 function requireNumber(value: FormDataEntryValue | null, label: string) {
@@ -89,6 +68,15 @@ function parseVehicleFields(formData: FormData) {
   const doors = doorsRaw
     ? requireNumber(formData.get("doors"), "Portas")
     : null;
+
+  const purchaseRaw = String(formData.get("purchasePrice") || "").replace(/\D/g, "");
+  const purchasePrice = purchaseRaw ? Number(purchaseRaw) : null;
+  if (purchasePrice != null && (!Number.isFinite(purchasePrice) || purchasePrice < 0)) {
+    throw new Error("Preço de compra inválido.");
+  }
+  const inStoreName = formData.get("inStoreName") === "on";
+  const hasSpareKey = formData.get("hasSpareKey") === "on";
+  const hasManual = formData.get("hasManual") === "on";
 
   if (!brand || !model || !fuel || !transmission) {
     throw new Error("Preencha marca, modelo, combustível e câmbio.");
@@ -140,6 +128,10 @@ function parseVehicleFields(formData: FormData) {
     status,
     featured,
     photoUrls,
+    purchasePrice,
+    inStoreName,
+    hasSpareKey,
+    hasManual,
   };
 }
 
@@ -184,6 +176,10 @@ export async function createVehicle(
         accessories: data.accessories,
         status: data.status,
         featured: data.featured,
+        purchasePrice: data.purchasePrice,
+        inStoreName: data.inStoreName,
+        hasSpareKey: data.hasSpareKey,
+        hasManual: data.hasManual,
         photos: {
           create: data.photoUrls.map((url, order) => ({ url, order })),
         },
@@ -263,7 +259,7 @@ export async function updateVehicle(
       .map((photo) => photo.url)
       .filter((url) => !kept.has(url));
     if (removed.length > 0) {
-      await deleteStoragePhotos(removed);
+      await deleteStoragePublicUrls(removed);
     }
 
     revalidatePath("/admin/veiculos");
@@ -281,13 +277,21 @@ export async function updateVehicle(
 export async function deleteVehicle(id: string) {
   await requireAdmin();
 
-  const photos = await prisma.photo.findMany({
-    where: { vehicleId: id },
-    select: { url: true },
+  const vehicle = await prisma.vehicle.findUnique({
+    where: { id },
+    include: {
+      photos: { select: { url: true } },
+      costs: { select: { receiptUrl: true } },
+      documents: { select: { fileUrl: true } },
+    },
   });
 
   await prisma.vehicle.delete({ where: { id } });
-  await deleteStoragePhotos(photos.map((photo) => photo.url));
+  await deleteStoragePublicUrls([
+    ...(vehicle?.photos.map((photo) => photo.url) ?? []),
+    ...(vehicle?.costs.map((cost) => cost.receiptUrl) ?? []),
+    ...(vehicle?.documents.map((doc) => doc.fileUrl) ?? []),
+  ]);
 
   revalidatePath("/admin/veiculos");
   revalidatePublicStock(id);
@@ -376,6 +380,9 @@ export async function duplicateVehicle(id: string) {
       accessories: source.accessories,
       status: "disponivel",
       featured: false,
+      inStoreName: source.inStoreName,
+      hasSpareKey: source.hasSpareKey,
+      hasManual: source.hasManual,
       photos: {
         create: source.photos.map((photo, order) => ({ url: photo.url, order })),
       },

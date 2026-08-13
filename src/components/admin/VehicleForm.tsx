@@ -144,6 +144,7 @@ export function VehicleForm({
     vehicle?.fipePrice ?? null,
   );
   const [engine, setEngine] = useState(vehicle?.engine ?? "");
+  const [purchase, setPurchase] = useState("");
 
   const fuelOptions = getFuels(category);
   const transmissionOptions = getTransmissions(category);
@@ -697,6 +698,51 @@ export function VehicleForm({
             ) : null}
           </div>
         </Card>
+
+        {mode === "create" ? (
+          <Card
+            title="Operação interna"
+            action={
+              <span className="text-[11px] text-muted">Não aparece no site</span>
+            }
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Preço de compra"
+                hint="Opcional. Custos extras entram depois, na aba Operação."
+              >
+                <input
+                  name="purchasePrice"
+                  inputMode="numeric"
+                  value={purchase}
+                  onChange={(event) =>
+                    setPurchase(
+                      formatNumberBR(
+                        Number(event.target.value.replace(/\D/g, "") || 0),
+                      ),
+                    )
+                  }
+                  placeholder="0"
+                  className={inputClass}
+                />
+              </Field>
+              <div className="grid gap-2 sm:grid-cols-1">
+                <label className="flex min-h-[42px] items-center gap-2 text-sm text-cream">
+                  <input type="checkbox" name="inStoreName" className="accent-brand" />
+                  Documento em nome da loja
+                </label>
+                <label className="flex min-h-[42px] items-center gap-2 text-sm text-cream">
+                  <input type="checkbox" name="hasSpareKey" className="accent-brand" />
+                  Chave reserva
+                </label>
+                <label className="flex min-h-[42px] items-center gap-2 text-sm text-cream">
+                  <input type="checkbox" name="hasManual" className="accent-brand" />
+                  Manual
+                </label>
+              </div>
+            </div>
+          </Card>
+        ) : null}
 
         <Card title="Descrição">
           <Field

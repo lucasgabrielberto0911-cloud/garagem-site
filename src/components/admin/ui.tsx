@@ -98,11 +98,16 @@ export function StatCard({
     <>
       <p className="text-[11px] uppercase tracking-wider text-muted">{label}</p>
       <p
-        className={`mt-2 font-display text-2xl font-bold sm:text-3xl ${tokens.value}`}
+        title={String(value)}
+        className={`mt-2 font-display font-bold leading-[1.15] tracking-tight tabular-nums whitespace-nowrap ${tokens.value} [font-size:clamp(0.92rem,10.5cqi,1.65rem)]`}
       >
         {value}
       </p>
-      {hint ? <p className="mt-1 text-xs text-muted">{hint}</p> : null}
+      {hint ? (
+        <p className="mt-1 truncate text-xs text-muted" title={hint}>
+          {hint}
+        </p>
+      ) : null}
     </>
   );
 
@@ -110,7 +115,7 @@ export function StatCard({
     return (
       <Link
         href={href}
-        className={`block border bg-ink/50 px-5 py-4 transition hover:bg-white/[0.04] ${tokens.border}`}
+        className={`block min-w-0 overflow-hidden [container-type:inline-size] border bg-ink/50 px-4 py-4 transition hover:bg-white/[0.04] sm:px-5 ${tokens.border}`}
       >
         {content}
       </Link>
@@ -118,7 +123,11 @@ export function StatCard({
   }
 
   return (
-    <div className={`border bg-ink/50 px-5 py-4 ${tokens.border}`}>{content}</div>
+    <div
+      className={`min-w-0 overflow-hidden [container-type:inline-size] border bg-ink/50 px-4 py-4 sm:px-5 ${tokens.border}`}
+    >
+      {content}
+    </div>
   );
 }
 

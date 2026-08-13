@@ -42,9 +42,22 @@ export async function cleanupOrphanPhotos(): Promise<CleanupResult> {
   try {
     const supabase = getSupabaseAdmin();
     const photos = await prisma.photo.findMany({ select: { url: true } });
+    let extraUrls: Array<string | null | undefined> = [];
+    try {
+      const [costs, documents] = await Promise.all([
+        prisma.vehicleCost.findMany({ select: { receiptUrl: true } }),
+        prisma.vehicleDocument.findMany({ select: { fileUrl: true } }),
+      ]);
+      extraUrls = [
+        ...costs.map((cost) => cost.receiptUrl),
+        ...documents.map((doc) => doc.fileUrl),
+      ];
+    } catch (error) {
+      console.warn("[storage] cleanup: tabelas de operação ainda não existem.", error);
+    }
     const referenced = new Set(
-      photos
-        .map((photo) => storagePathFromPublicUrl(photo.url))
+      [...photos.map((photo) => photo.url), ...extraUrls]
+        .map((url) => (url ? storagePathFromPublicUrl(url) : null))
         .filter((path): path is string => Boolean(path)),
     );
 
@@ -65,6 +78,8 @@ export async function cleanupOrphanPhotos(): Promise<CleanupResult> {
 
       for (const item of data) {
         if (!item.name || item.name.endsWith("/")) continue;
+        // Pasta de comprovantes/documentos — não entra na limpeza de fotos.
+        if (item.name === "docs") continue;
         // Ignora "pastas" sem id/metadata de arquivo.
         if (item.id === null && !item.metadata) continue;
         checked += 1;

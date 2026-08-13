@@ -40,3 +40,21 @@ export function storagePathFromPublicUrl(url: string): string | null {
   if (index === -1) return null;
   return decodeURIComponent(url.slice(index + marker.length));
 }
+
+/** Remove blobs do bucket a partir das URLs públicas (fotos, comprovantes, docs). */
+export async function deleteStoragePublicUrls(urls: Array<string | null | undefined>) {
+  const paths = urls
+    .map((url) => (url ? storagePathFromPublicUrl(url) : null))
+    .filter((path): path is string => Boolean(path));
+  if (paths.length === 0) return;
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase.storage
+      .from(VEHICLE_PHOTOS_BUCKET)
+      .remove(paths);
+    if (error) console.error("[storage] falha ao remover arquivos:", error);
+  } catch (error) {
+    console.error("[storage] falha ao remover arquivos:", error);
+  }
+}

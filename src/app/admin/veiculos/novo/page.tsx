@@ -13,7 +13,7 @@ export default async function NewVehiclePage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Novo veículo"
-        subtitle="Preencha os dados, envie as fotos e escolha a capa do anúncio."
+        subtitle="Preencha o anúncio e as fotos. Custos e documentos ficam na aba Operação depois de salvar."
       />
       <VehicleForm mode="create" />
     </div>

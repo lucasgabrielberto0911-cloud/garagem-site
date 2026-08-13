@@ -97,7 +97,11 @@ export default async function VehiclesPage({
         <StatCard
           label="Valor do estoque"
           value={formatCurrencyBRL(stockValue._sum.price ?? 0)}
-          hint="Somente disponíveis"
+          hint={
+            count("disponivel") > 0
+              ? `Média ${formatCurrencyBRL((stockValue._sum.price ?? 0) / count("disponivel"))}`
+              : "Somente disponíveis"
+          }
         />
       </section>
 

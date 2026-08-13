@@ -6,6 +6,7 @@ import type { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { isValidPlate, normalizePlate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { deleteStoragePublicUrls } from "@/lib/supabase";
 import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
 
 export type SaleActionState = {
@@ -422,9 +423,22 @@ export async function deleteSale(id: string): Promise<SaleActionState> {
 
   try {
     if (sale.vehicle.historical) {
+      const files = await prisma.vehicle.findUnique({
+        where: { id: sale.vehicleId },
+        include: {
+          photos: { select: { url: true } },
+          costs: { select: { receiptUrl: true } },
+          documents: { select: { fileUrl: true } },
+        },
+      });
       await prisma.$transaction([
         prisma.sale.delete({ where: { id } }),
         prisma.vehicle.delete({ where: { id: sale.vehicleId } }),
+      ]);
+      await deleteStoragePublicUrls([
+        ...(files?.photos.map((photo) => photo.url) ?? []),
+        ...(files?.costs.map((cost) => cost.receiptUrl) ?? []),
+        ...(files?.documents.map((doc) => doc.fileUrl) ?? []),
       ]);
     } else {
       await prisma.$transaction([

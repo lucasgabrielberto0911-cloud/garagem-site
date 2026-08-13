@@ -8,6 +8,7 @@ import type { Photo, Vehicle } from "@prisma/client";
 import { VehicleImage } from "@/components/VehicleImage";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
+  IconClipboard,
   IconCopy,
   IconExternal,
   IconImage,
@@ -52,6 +53,14 @@ function canMarkAsSold(status: string) {
 }
 
 const PAGE_SIZE = 10;
+
+function opsHints(vehicle: VehicleRow) {
+  return [
+    vehicle.inStoreName ? "Loja" : null,
+    vehicle.hasSpareKey ? "Reserva" : null,
+    vehicle.hasManual ? "Manual" : null,
+  ].filter(Boolean);
+}
 
 type SortKey = "recent" | "year" | "km" | "price";
 
@@ -379,6 +388,11 @@ export function VehiclesTable({
                     <p className="mt-1 font-display text-base font-bold text-cream">
                       {formatCurrencyBRL(vehicle.price)}
                     </p>
+                    {opsHints(vehicle).length > 0 ? (
+                      <p className="mt-1 text-[10px] uppercase tracking-wider text-muted">
+                        {opsHints(vehicle).join(" · ")}
+                      </p>
+                    ) : null}
                     {vehicle.photos.length === 0 ? (
                       <p className="mt-1 text-xs text-brand">Sem fotos</p>
                     ) : null}
@@ -412,6 +426,14 @@ export function VehiclesTable({
                       </option>
                     ))}
                   </select>
+                  <Link
+                    href={`/admin/veiculos/${vehicle.id}?view=operacao`}
+                    className="p-2 text-muted transition hover:text-cream"
+                    aria-label="Operação"
+                    title="Custos e documentos"
+                  >
+                    <IconClipboard className="h-4 w-4" />
+                  </Link>
                   <Link
                     href={`/admin/veiculos/${vehicle.id}`}
                     className="ml-auto p-2 text-muted transition hover:text-cream"
@@ -509,6 +531,11 @@ export function VehiclesTable({
                             {vehicleCategoryLabel(vehicle.category)}
                             {vehicle.version ? ` · ${vehicle.version}` : ""}
                           </p>
+                          {opsHints(vehicle).length > 0 ? (
+                            <p className="text-[10px] uppercase tracking-wider text-muted">
+                              {opsHints(vehicle).join(" · ")}
+                            </p>
+                          ) : null}
                           <p className="text-xs text-muted">
                             {vehicle.photos.length === 0 ? (
                               <span className="text-brand">Sem fotos</span>
@@ -568,6 +595,14 @@ export function VehiclesTable({
                           title="Editar"
                         >
                           <IconPencil className="h-4 w-4" />
+                        </Link>
+                        <Link
+                          href={`/admin/veiculos/${vehicle.id}?view=operacao`}
+                          className="p-2 text-muted transition hover:text-cream"
+                          aria-label="Operação"
+                          title="Custos e documentos"
+                        >
+                          <IconClipboard className="h-4 w-4" />
                         </Link>
                         <Link
                           href={vehiclePath(vehicle)}
