@@ -24,10 +24,14 @@ import { uploadAdminFile } from "@/lib/upload-admin-file";
 import {
   VEHICLE_COST_KINDS,
   VEHICLE_DOC_KINDS,
-  costKindLabel,
+  costListTitle,
   docKindLabel,
+  docListTitle,
   expectedMargin,
   investedTotal,
+  isOtherKind,
+  type VehicleCostKind,
+  type VehicleDocKind,
 } from "@/lib/vehicle-ops";
 
 export type VehicleOpsVehicle = {
@@ -110,6 +114,7 @@ export function VehicleOpsPanel({
   );
 
   const [showCostForm, setShowCostForm] = useState(false);
+  const [costKind, setCostKind] = useState<VehicleCostKind>("despachante");
   const [costAmount, setCostAmount] = useState("");
   const [costReceipt, setCostReceipt] = useState<{ url: string; name: string } | null>(
     null,
@@ -117,6 +122,7 @@ export function VehicleOpsPanel({
   const [uploadingCost, setUploadingCost] = useState(false);
 
   const [showDocForm, setShowDocForm] = useState(false);
+  const [docKind, setDocKind] = useState<VehicleDocKind>("crlv");
   const [docFile, setDocFile] = useState<{ url: string; name: string } | null>(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
 
@@ -148,6 +154,10 @@ export function VehicleOpsPanel({
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
+    if (isOtherKind(costKind) && !String(formData.get("description") || "").trim()) {
+      toast.error("Informe o nome do custo.");
+      return;
+    }
     if (costReceipt) {
       formData.set("receiptUrl", costReceipt.url);
       formData.set("receiptName", costReceipt.name);
@@ -158,6 +168,7 @@ export function VehicleOpsPanel({
         toast.success(result.message);
         form.reset();
         setCostAmount("");
+        setCostKind("despachante");
         setCostReceipt(null);
         setShowCostForm(false);
         refresh();
@@ -175,6 +186,10 @@ export function VehicleOpsPanel({
     }
     const form = event.currentTarget;
     const formData = new FormData(form);
+    if (isOtherKind(docKind) && !String(formData.get("title") || "").trim()) {
+      toast.error("Informe o nome do documento.");
+      return;
+    }
     formData.set("fileUrl", docFile.url);
     formData.set("fileName", docFile.name);
     startTransition(async () => {
@@ -183,6 +198,7 @@ export function VehicleOpsPanel({
         toast.success(result.message);
         form.reset();
         setDocFile(null);
+        setDocKind("crlv");
         setShowDocForm(false);
         refresh();
       } else {
@@ -332,7 +348,14 @@ export function VehicleOpsPanel({
             className="mb-5 grid gap-3 border border-white/10 bg-asphalt/40 p-4 sm:grid-cols-2 lg:grid-cols-4"
           >
             <Field label="Tipo" required>
-              <select name="kind" className={inputClass} defaultValue="despachante">
+              <select
+                name="kind"
+                className={inputClass}
+                value={costKind}
+                onChange={(event) =>
+                  setCostKind(event.target.value as VehicleCostKind)
+                }
+              >
                 {VEHICLE_COST_KINDS.map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.label}
@@ -364,14 +387,30 @@ export function VehicleOpsPanel({
                 className={inputClass}
               />
             </Field>
-            <Field label="Descrição">
-              <input
-                name="description"
-                placeholder="Opcional"
-                className={inputClass}
-                autoComplete="off"
-              />
-            </Field>
+            {isOtherKind(costKind) ? (
+              <Field
+                label="Nome do custo"
+                hint="Ex.: IPVA, chaveiro."
+                required
+              >
+                <input
+                  name="description"
+                  placeholder="Como deve aparecer na lista"
+                  className={inputClass}
+                  autoComplete="off"
+                  required
+                />
+              </Field>
+            ) : (
+              <Field label="Observação">
+                <input
+                  name="description"
+                  placeholder="Opcional"
+                  className={inputClass}
+                  autoComplete="off"
+                />
+              </Field>
+            )}
             <div className="sm:col-span-2 lg:col-span-3">
               <AdminFileDrop
                 label="Comprovante"
@@ -409,8 +448,7 @@ export function VehicleOpsPanel({
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-cream">
-                    {costKindLabel(cost.kind)}
-                    {cost.description ? ` · ${cost.description}` : ""}
+                    {costListTitle(cost.kind, cost.description)}
                   </p>
                   <p className="text-xs text-muted">
                     {formatDate(cost.incurredAt)}
@@ -483,7 +521,14 @@ export function VehicleOpsPanel({
             className="mb-5 grid gap-3 border border-white/10 bg-asphalt/40 p-4 sm:grid-cols-2"
           >
             <Field label="Tipo" required>
-              <select name="kind" className={inputClass} defaultValue="crlv">
+              <select
+                name="kind"
+                className={inputClass}
+                value={docKind}
+                onChange={(event) =>
+                  setDocKind(event.target.value as VehicleDocKind)
+                }
+              >
                 {VEHICLE_DOC_KINDS.map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.label}
@@ -491,14 +536,30 @@ export function VehicleOpsPanel({
                 ))}
               </select>
             </Field>
-            <Field label="Nome" hint="Opcional">
-              <input
-                name="title"
-                placeholder="Ex.: CRLV 2026"
-                className={inputClass}
-                autoComplete="off"
-              />
-            </Field>
+            {isOtherKind(docKind) ? (
+              <Field
+                label="Nome do documento"
+                hint="Ex.: contrato, boleto, termo de garantia."
+                required
+              >
+                <input
+                  name="title"
+                  placeholder="Como deve aparecer na lista"
+                  className={inputClass}
+                  autoComplete="off"
+                  required
+                />
+              </Field>
+            ) : (
+              <Field label="Nome" hint="Opcional">
+                <input
+                  name="title"
+                  placeholder="Ex.: CRLV 2026"
+                  className={inputClass}
+                  autoComplete="off"
+                />
+              </Field>
+            )}
             <div className="sm:col-span-2">
               <AdminFileDrop
                 label="Arquivo"
@@ -544,13 +605,22 @@ export function VehicleOpsPanel({
                 className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-cream">{doc.title}</p>
-                  <p className="text-xs text-muted">
-                    {docKindLabel(doc.kind)}
-                    {doc.notes ? ` · ${doc.notes}` : ""}
+                  <p className="text-sm text-cream">
+                    {docListTitle(doc.kind, doc.title)}
                   </p>
+                  {doc.notes || !isOtherKind(doc.kind) ? (
+                    <p className="text-xs text-muted">
+                      {isOtherKind(doc.kind)
+                        ? doc.notes
+                        : [docKindLabel(doc.kind), doc.notes]
+                            .filter(Boolean)
+                            .join(" · ")}
+                    </p>
+                  ) : null}
                 </div>
-                <Badge tone="neutral">{docKindLabel(doc.kind)}</Badge>
+                {isOtherKind(doc.kind) ? null : (
+                  <Badge tone="neutral">{docKindLabel(doc.kind)}</Badge>
+                )}
                 <a
                   href={doc.fileUrl}
                   target="_blank"

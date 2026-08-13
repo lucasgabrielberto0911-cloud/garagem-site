@@ -8,6 +8,7 @@ import { deleteStoragePublicUrls } from "@/lib/supabase";
 import {
   isCostKind,
   isDocKind,
+  isOtherKind,
 } from "@/lib/vehicle-ops";
 
 export type OpsActionState = {
@@ -75,6 +76,9 @@ export async function addVehicleCost(
 
   if (!isCostKind(kind)) {
     return { ok: false, message: "Escolha o tipo do custo." };
+  }
+  if (isOtherKind(kind) && !description) {
+    return { ok: false, message: "Informe o nome do custo." };
   }
   if (!amount || amount <= 0) {
     return { ok: false, message: "Informe o valor do custo." };
@@ -144,6 +148,9 @@ export async function addVehicleDocument(
   if (!isDocKind(kind)) {
     return { ok: false, message: "Escolha o tipo do documento." };
   }
+  if (isOtherKind(kind) && !title) {
+    return { ok: false, message: "Informe o nome do documento." };
+  }
   if (!fileUrl) {
     return { ok: false, message: "Anexe o arquivo do documento." };
   }
@@ -153,7 +160,7 @@ export async function addVehicleDocument(
       data: {
         vehicleId,
         kind,
-        title: title || "Documento",
+        title: title || (isOtherKind(kind) ? "Outro" : "Documento"),
         fileUrl,
         fileName,
         notes,

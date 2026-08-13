@@ -29,6 +29,23 @@ export function docKindLabel(kind: string) {
   return VEHICLE_DOC_KINDS.find((item) => item.value === kind)?.label ?? kind;
 }
 
+export function isOtherKind(kind: string) {
+  return kind === "outro";
+}
+
+/** Título na lista: o nome livre entra no lugar de “Outro”. */
+export function costListTitle(kind: string, description: string) {
+  const note = description.trim();
+  if (isOtherKind(kind)) return note || "Outro";
+  return note ? `${costKindLabel(kind)} · ${note}` : costKindLabel(kind);
+}
+
+export function docListTitle(kind: string, title: string) {
+  const name = title.trim();
+  if (isOtherKind(kind)) return name || "Outro";
+  return name || docKindLabel(kind);
+}
+
 export function isCostKind(value: string): value is VehicleCostKind {
   return VEHICLE_COST_KINDS.some((item) => item.value === value);
 }
