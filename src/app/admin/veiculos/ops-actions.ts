@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { deleteStoragePublicUrls } from "@/lib/supabase";
+import { deleteStoragePublicUrls, isInternalAdminFileUrl } from "@/lib/supabase";
 import {
+  docKindLabel,
   isCostKind,
   isDocKind,
   isOtherKind,
@@ -79,6 +80,9 @@ export async function addVehicleCost(
   }
   if (isOtherKind(kind) && !description) {
     return { ok: false, message: "Informe o nome do custo." };
+  }
+  if (receiptUrl && !isInternalAdminFileUrl(receiptUrl)) {
+    return { ok: false, message: "Comprovante inválido." };
   }
   if (!amount || amount <= 0) {
     return { ok: false, message: "Informe o valor do custo." };
@@ -154,13 +158,16 @@ export async function addVehicleDocument(
   if (!fileUrl) {
     return { ok: false, message: "Anexe o arquivo do documento." };
   }
+  if (!isInternalAdminFileUrl(fileUrl)) {
+    return { ok: false, message: "Arquivo inválido." };
+  }
 
   try {
     await prisma.vehicleDocument.create({
       data: {
         vehicleId,
         kind,
-        title: title || (isOtherKind(kind) ? "Outro" : "Documento"),
+        title: title || docKindLabel(kind),
         fileUrl,
         fileName,
         notes,

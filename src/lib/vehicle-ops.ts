@@ -1,6 +1,7 @@
 export const VEHICLE_COST_KINDS = [
   { value: "despachante", label: "Despachante" },
   { value: "documentacao", label: "Documentação" },
+  { value: "ipva", label: "IPVA" },
   { value: "mecanica", label: "Mecânica / revisão" },
   { value: "estetica", label: "Estética" },
   { value: "laudo", label: "Laudo / vistoria" },
@@ -54,12 +55,22 @@ export function isDocKind(value: string): value is VehicleDocKind {
   return VEHICLE_DOC_KINDS.some((item) => item.value === value);
 }
 
+export function extrasTotal(costs: Array<{ amount: number }>) {
+  return costs.reduce((sum, item) => sum + (item.amount || 0), 0);
+}
+
 export function investedTotal(
   purchasePrice: number | null | undefined,
   costs: Array<{ amount: number }>,
 ) {
-  const extras = costs.reduce((sum, item) => sum + (item.amount || 0), 0);
-  return (purchasePrice ?? 0) + extras;
+  return (purchasePrice ?? 0) + extrasTotal(costs);
+}
+
+export function hasCostBasis(
+  purchasePrice: number | null | undefined,
+  costs: Array<{ amount: number }>,
+) {
+  return (purchasePrice != null && purchasePrice > 0) || extrasTotal(costs) > 0;
 }
 
 export function expectedMargin(

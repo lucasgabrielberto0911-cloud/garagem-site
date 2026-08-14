@@ -81,7 +81,7 @@ model VehicleCost {
   id          String   @id @default(cuid())
   vehicleId   String
   vehicle     Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  /** despachante | mecanica | estetica | documentacao | transporte | laudo | outro */
+  /** despachante | documentacao | ipva | mecanica | estetica | transporte | laudo | outro
   kind        String
   description String   @default("")
   amount      Float

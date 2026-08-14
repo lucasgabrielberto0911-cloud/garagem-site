@@ -4,6 +4,7 @@ import { AdminPageHeader, StatCard } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
 import { formatCurrencyBRL } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { expectedMargin, hasCostBasis } from "@/lib/vehicle-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,8 @@ export default async function VendasPage() {
             yearModel: true,
             plate: true,
             historical: true,
+            purchasePrice: true,
+            costs: { select: { amount: true } },
           },
         },
         customer: { select: { id: true, name: true, phone: true } },
@@ -46,6 +49,8 @@ export default async function VendasPage() {
         yearModel: true,
         price: true,
         status: true,
+        purchasePrice: true,
+        costs: { select: { amount: true } },
       },
     }),
     prisma.customer.findMany({
@@ -62,6 +67,19 @@ export default async function VendasPage() {
 
   const revenue = totals._sum.salePrice ?? 0;
   const count = totals._count._all;
+  const knownProfitSales = sales.filter((sale) =>
+    hasCostBasis(sale.vehicle.purchasePrice, sale.vehicle.costs),
+  );
+  const knownProfit = knownProfitSales.reduce(
+    (sum, sale) =>
+      sum +
+      expectedMargin(
+        sale.salePrice,
+        sale.vehicle.purchasePrice,
+        sale.vehicle.costs,
+      ),
+    0,
+  );
 
   return (
     <div className="space-y-6">
@@ -75,6 +93,11 @@ export default async function VendasPage() {
         <StatCard
           label="Faturamento total"
           value={formatCurrencyBRL(revenue)}
+          hint={
+            knownProfitSales.length > 0
+              ? `Lucro ${formatCurrencyBRL(knownProfit)} em ${knownProfitSales.length} venda(s) com custo`
+              : undefined
+          }
           tone={revenue > 0 ? "success" : "default"}
         />
         <StatCard

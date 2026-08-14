@@ -22,6 +22,11 @@ import {
   formatPlateDisplay,
   formatPlateInput,
 } from "@/lib/format";
+import {
+  expectedMargin,
+  hasCostBasis,
+  investedTotal,
+} from "@/lib/vehicle-ops";
 
 export const PAYMENT_METHODS = [
   "À vista (Pix/dinheiro)",
@@ -46,6 +51,8 @@ export type SaleRow = {
     yearModel: number;
     plate: string | null;
     historical: boolean;
+    purchasePrice: number | null;
+    costs: Array<{ amount: number }>;
   };
   customer: { id: string; name: string; phone: string } | null;
 };
@@ -58,6 +65,8 @@ export type SellableVehicle = {
   yearModel: number;
   price: number;
   status: string;
+  purchasePrice: number | null;
+  costs: Array<{ amount: number }>;
 };
 
 export type CustomerOption = { id: string; name: string; phone: string };
@@ -66,6 +75,19 @@ type SaleSource = "estoque" | "historica";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(date);
+}
+
+function saleFinance(
+  salePrice: number,
+  purchasePrice: number | null,
+  costs: Array<{ amount: number }>,
+) {
+  if (!hasCostBasis(purchasePrice, costs)) return null;
+  const margin = expectedMargin(salePrice, purchasePrice, costs);
+  return {
+    invested: investedTotal(purchasePrice, costs),
+    margin,
+  };
 }
 
 const PERIODS = [
@@ -104,6 +126,7 @@ function exportSalesCsv(sales: SaleRow[]) {
     "Telefone",
     "Pagamento",
     "Valor",
+    "Lucro",
     "Tipo",
     "Observações",
   ];
@@ -116,6 +139,15 @@ function exportSalesCsv(sales: SaleRow[]) {
     sale.customer?.phone ? formatPhoneBR(sale.customer.phone) : "",
     sale.paymentMethod,
     String(sale.salePrice),
+    hasCostBasis(sale.vehicle.purchasePrice, sale.vehicle.costs)
+      ? String(
+          expectedMargin(
+            sale.salePrice,
+            sale.vehicle.purchasePrice,
+            sale.vehicle.costs,
+          ),
+        )
+      : "",
     sale.vehicle.historical ? "Histórica" : "Estoque",
     (sale.notes ?? "").replace(/\s+/g, " "),
   ]);
@@ -198,6 +230,8 @@ export function SalesManager({
         yearModel: editingSale.vehicle.yearModel,
         price: editingSale.salePrice,
         status: "vendido",
+        purchasePrice: editingSale.vehicle.purchasePrice,
+        costs: editingSale.vehicle.costs ?? [],
       },
       ...vehicles,
     ];
@@ -212,6 +246,24 @@ export function SalesManager({
     () => filteredSales.reduce((sum, sale) => sum + sale.salePrice, 0),
     [filteredSales],
   );
+
+  const selectedVehicle = stockOptions.find((item) => item.id === vehicleId);
+  const liveSalePrice = Number(price.replace(/\D/g, "")) || 0;
+  const liveFinance = !isHistorical
+    ? selectedVehicle
+      ? saleFinance(
+          liveSalePrice || selectedVehicle.price,
+          selectedVehicle.purchasePrice,
+          selectedVehicle.costs,
+        )
+      : null
+    : editingSale
+      ? saleFinance(
+          liveSalePrice || editingSale.salePrice,
+          editingSale.vehicle.purchasePrice,
+          editingSale.vehicle.costs,
+        )
+      : null;
 
   function selectVehicle(id: string) {
     setVehicleId(id);
@@ -431,9 +483,11 @@ export function SalesManager({
                 required
                 error={errors.salePrice}
                 hint={
-                  isHistorical
-                    ? "Valor pelo qual o veículo foi vendido."
-                    : "Preenchido com o preço do anúncio; ajuste se houve desconto."
+                  liveFinance
+                    ? `Investido ${formatCurrencyBRL(liveFinance.invested)} · ${liveFinance.margin >= 0 ? "lucro" : "prejuízo"} ${formatCurrencyBRL(liveFinance.margin)}`
+                    : isHistorical
+                      ? "Valor pelo qual o veículo foi vendido."
+                      : "Preenchido com o preço do anúncio; ajuste se houve desconto."
                 }
               >
                 <input
@@ -641,6 +695,11 @@ export function SalesManager({
           <ul className="space-y-3 lg:hidden">
             {filteredSales.map((sale) => {
               const wa = customerPhoneDigits(sale.customer);
+              const finance = saleFinance(
+                sale.salePrice,
+                sale.vehicle.purchasePrice,
+                sale.vehicle.costs,
+              );
               return (
                 <li key={sale.id} className="border border-white/10 bg-ink/50 p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -651,7 +710,7 @@ export function SalesManager({
                         </p>
                       ) : (
                         <Link
-                          href={`/admin/veiculos/${sale.vehicle.id}`}
+                          href={`/admin/veiculos/${sale.vehicle.id}?view=operacao`}
                           className="font-display text-sm font-semibold text-cream"
                         >
                           {sale.vehicle.brand} {sale.vehicle.model}
@@ -667,9 +726,20 @@ export function SalesManager({
                           : ""}
                       </p>
                     </div>
-                    <p className="shrink-0 font-display text-base font-bold text-cream">
-                      {formatCurrencyBRL(sale.salePrice)}
-                    </p>
+                    <div className="shrink-0 text-right">
+                      <p className="font-display text-base font-bold text-cream">
+                        {formatCurrencyBRL(sale.salePrice)}
+                      </p>
+                      {finance ? (
+                        <p
+                          className={`text-[11px] ${
+                            finance.margin >= 0 ? "text-emerald-300" : "text-brand"
+                          }`}
+                        >
+                          {formatCurrencyBRL(finance.margin)}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
 
                   <div className="mt-3 space-y-1 text-xs text-muted">
@@ -740,6 +810,11 @@ export function SalesManager({
               <tbody>
                 {filteredSales.map((sale) => {
                   const wa = customerPhoneDigits(sale.customer);
+                  const finance = saleFinance(
+                    sale.salePrice,
+                    sale.vehicle.purchasePrice,
+                    sale.vehicle.costs,
+                  );
                   return (
                     <tr
                       key={sale.id}
@@ -755,7 +830,7 @@ export function SalesManager({
                           </p>
                         ) : (
                           <Link
-                            href={`/admin/veiculos/${sale.vehicle.id}`}
+                            href={`/admin/veiculos/${sale.vehicle.id}?view=operacao`}
                             className="font-medium text-cream transition hover:text-brand"
                           >
                             {sale.vehicle.brand} {sale.vehicle.model}
@@ -795,6 +870,17 @@ export function SalesManager({
                       </td>
                       <td className="px-4 py-3 font-medium">
                         {formatCurrencyBRL(sale.salePrice)}
+                        {finance ? (
+                          <p
+                            className={`text-[11px] font-normal ${
+                              finance.margin >= 0
+                                ? "text-emerald-300"
+                                : "text-brand"
+                            }`}
+                          >
+                            {formatCurrencyBRL(finance.margin)}
+                          </p>
+                        ) : null}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">

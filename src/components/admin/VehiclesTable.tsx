@@ -19,6 +19,7 @@ import {
 } from "@/components/admin/icons";
 import { Badge, EmptyState, btn, inputClass } from "@/components/admin/ui";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import { expectedMargin, hasCostBasis } from "@/lib/vehicle-ops";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
@@ -29,7 +30,11 @@ import {
   setVehicleStatus,
 } from "@/app/admin/veiculos/actions";
 
-export type VehicleRow = Vehicle & { photos: Photo[] };
+export type VehicleRow = Vehicle & {
+  photos: Photo[];
+  costs?: Array<{ amount: number }>;
+  sale?: { salePrice: number } | null;
+};
 
 export type VehiclesTab = "estoque" | "vendidos";
 
@@ -55,10 +60,16 @@ function canMarkAsSold(status: string) {
 const PAGE_SIZE = 10;
 
 function opsHints(vehicle: VehicleRow) {
+  const costs = vehicle.costs ?? [];
+  const reference = vehicle.sale?.salePrice ?? vehicle.price;
+  const finance = hasCostBasis(vehicle.purchasePrice, costs)
+    ? `${vehicle.sale ? "Lucro" : "Margem"} ${formatCurrencyBRL(expectedMargin(reference, vehicle.purchasePrice, costs))}`
+    : "Sem compra";
   return [
     vehicle.inStoreName ? "Loja" : null,
     vehicle.hasSpareKey ? "Reserva" : null,
     vehicle.hasManual ? "Manual" : null,
+    finance,
   ].filter(Boolean);
 }
 

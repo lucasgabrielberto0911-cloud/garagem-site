@@ -41,6 +41,10 @@ export function storagePathFromPublicUrl(url: string): string | null {
   return decodeURIComponent(url.slice(index + marker.length));
 }
 
+export function isInternalAdminFileUrl(url: string) {
+  return storagePathFromPublicUrl(url) != null;
+}
+
 /** Remove blobs do bucket a partir das URLs públicas (fotos, comprovantes, docs). */
 export async function deleteStoragePublicUrls(urls: Array<string | null | undefined>) {
   const paths = urls
