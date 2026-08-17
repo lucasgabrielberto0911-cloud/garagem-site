@@ -13,6 +13,7 @@ import {
   Field,
   btn,
   inputClass,
+  mobileActionCell,
 } from "@/components/admin/ui";
 import { deleteCustomer, saveCustomer } from "@/app/admin/clientes/actions";
 import { formatCpfBR, formatCurrencyBRL, formatPhoneBR } from "@/lib/format";
@@ -226,7 +227,7 @@ export function CustomersManager({ customers }: { customers: CustomerRow[] }) {
           </form>
         </Card>
       ) : (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <input
             type="search"
             value={term}
@@ -234,7 +235,11 @@ export function CustomersManager({ customers }: { customers: CustomerRow[] }) {
             placeholder="Buscar por nome, telefone ou e-mail"
             className={`${inputClass} sm:max-w-sm`}
           />
-          <button type="button" onClick={openCreate} className={btn.primary}>
+          <button
+            type="button"
+            onClick={openCreate}
+            className={`${btn.primary} w-full sm:w-auto`}
+          >
             <IconPlus className="h-4 w-4" />
             Novo cliente
           </button>
@@ -268,87 +273,93 @@ export function CustomersManager({ customers }: { customers: CustomerRow[] }) {
           {filtered.map((customer) => (
             <li
               key={customer.id}
-              className="border border-white/10 bg-ink/50 p-4"
+              className="overflow-hidden border border-white/10 bg-ink/50"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-display text-sm font-semibold text-cream">
-                    {customer.name}
-                  </p>
-                  <p className="text-xs text-muted">
-                    {formatPhoneBR(customer.phone)}
-                    {customer.email ? ` · ${customer.email}` : ""}
-                  </p>
-                  {customer.cpf ? (
-                    <p className="text-xs text-muted">
-                      CPF {formatCpfBR(customer.cpf)}
+              <div className="p-4 pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-display text-sm font-semibold text-cream">
+                      {customer.name}
                     </p>
-                  ) : null}
+                    <p className="text-xs text-muted">
+                      {formatPhoneBR(customer.phone)}
+                      {customer.email ? ` · ${customer.email}` : ""}
+                    </p>
+                    {customer.cpf ? (
+                      <p className="text-xs text-muted">
+                        CPF {formatCpfBR(customer.cpf)}
+                      </p>
+                    ) : null}
+                  </div>
+                  {customer.purchases > 0 ? (
+                    <Badge tone="success">
+                      {customer.purchases} compra{customer.purchases > 1 ? "s" : ""}
+                    </Badge>
+                  ) : (
+                    <Badge>Sem compras</Badge>
+                  )}
                 </div>
+
                 {customer.purchases > 0 ? (
-                  <Badge tone="success">
-                    {customer.purchases} compra{customer.purchases > 1 ? "s" : ""}
-                  </Badge>
+                  <p className="mt-3 text-xs text-muted">
+                    Total {formatCurrencyBRL(customer.totalSpent)}
+                    {customer.lastPurchase
+                      ? ` · última em ${formatDate(customer.lastPurchase)}`
+                      : ""}
+                  </p>
                 ) : (
-                  <Badge>Sem compras</Badge>
+                  <p className="mt-3 text-xs text-muted">
+                    Cadastrado em {formatDate(customer.createdAt)}
+                  </p>
                 )}
+
+                {customer.notes ? (
+                  <p className="mt-2 line-clamp-2 text-xs italic text-muted">
+                    {customer.notes}
+                  </p>
+                ) : null}
               </div>
 
-              {customer.purchases > 0 ? (
-                <p className="mt-3 text-xs text-muted">
-                  Total {formatCurrencyBRL(customer.totalSpent)}
-                  {customer.lastPurchase
-                    ? ` · última em ${formatDate(customer.lastPurchase)}`
-                    : ""}
-                </p>
-              ) : (
-                <p className="mt-3 text-xs text-muted">
-                  Cadastrado em {formatDate(customer.createdAt)}
-                </p>
-              )}
-
-              {customer.notes ? (
-                <p className="mt-2 line-clamp-2 text-xs italic text-muted">
-                  {customer.notes}
-                </p>
-              ) : null}
-
-              <div className="mt-3 flex items-center gap-1 border-t border-white/10 pt-3">
+              <div className="grid grid-cols-4 border-t border-white/10">
                 <a
                   href={`https://wa.me/55${customer.phone}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 text-muted transition hover:text-cream"
+                  className={mobileActionCell}
                   aria-label="WhatsApp"
                   title="WhatsApp"
                 >
                   <IconWhatsApp className="h-4 w-4" />
+                  Zap
                 </a>
                 <a
                   href={`tel:+55${customer.phone}`}
-                  className="p-2 text-muted transition hover:text-cream"
+                  className={`${mobileActionCell} border-l border-white/10`}
                   aria-label="Ligar"
                   title="Ligar"
                 >
                   <IconPhone className="h-4 w-4" />
+                  Ligar
                 </a>
                 <button
                   type="button"
                   onClick={() => openEdit(customer)}
-                  className="ml-auto p-2 text-muted transition hover:text-cream"
+                  className={`${mobileActionCell} border-l border-white/10`}
                   aria-label="Editar cliente"
                   title="Editar"
                 >
                   <IconPencil className="h-4 w-4" />
+                  Editar
                 </button>
                 <button
                   type="button"
                   onClick={() => setDeleteTarget(customer)}
-                  className="p-2 text-brand transition hover:text-cream"
+                  className={`${mobileActionCell} border-l border-white/10 text-brand`}
                   aria-label="Excluir cliente"
                   title="Excluir"
                 >
                   <IconTrash className="h-4 w-4" />
+                  Excluir
                 </button>
               </div>
             </li>

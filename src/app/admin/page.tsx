@@ -14,6 +14,7 @@ import {
   Card,
   EmptyState,
   StatCard,
+  adminStatGrid,
   btn,
 } from "@/components/admin/ui";
 import { IconQuote } from "@/components/site/icons";
@@ -58,7 +59,7 @@ export default async function AdminDashboardPage() {
         }
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className={adminStatGrid}>
         <StatCard
           label="Disponíveis"
           value={vehicles.available}
@@ -94,7 +95,7 @@ export default async function AdminDashboardPage() {
         />
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className={adminStatGrid}>
         <StatCard
           label="Faturamento total"
           value={formatCurrencyBRL(sales.revenue)}

@@ -7,18 +7,30 @@ import type { ReactNode } from "react";
  */
 
 export const inputClass =
-  "w-full border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream outline-none transition placeholder:text-muted focus:border-brand";
+  "min-h-[44px] w-full border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream outline-none transition placeholder:text-muted focus:border-brand";
 
 export const btn = {
   primary:
-    "inline-flex items-center justify-center gap-2 bg-brand px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 bg-brand px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60",
   outline:
-    "inline-flex items-center justify-center gap-2 border border-white/15 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand disabled:cursor-not-allowed disabled:opacity-60",
   ghost:
-    "inline-flex items-center justify-center gap-2 px-3 py-2 text-xs text-muted transition hover:text-cream disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 px-3 py-2 text-xs text-muted transition hover:text-cream disabled:opacity-60",
   danger:
-    "inline-flex items-center justify-center gap-2 border border-brand/50 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/50 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60",
 } as const;
+
+/** Grade de métricas: 2 colunas no celular, 4 no desktop. */
+export const adminStatGrid =
+  "grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4";
+
+/** Toque de 44px para ícones no celular. */
+export const iconTap =
+  "inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted transition hover:text-cream";
+
+/** Célula de ação (ícone + rótulo) nos cards do painel no celular. */
+export const mobileActionCell =
+  "flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 px-1 text-center text-[10px] font-semibold uppercase tracking-wide text-muted transition hover:text-cream";
 
 export function AdminPageHeader({
   title,
@@ -33,7 +45,7 @@ export function AdminPageHeader({
     <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <div className="mb-2 h-1 w-16 bg-brand-gradient" aria-hidden="true" />
-        <h1 className="font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl">
+        <h1 className="font-display text-xl font-bold tracking-tight text-cream sm:text-3xl">
           {title}
         </h1>
         {subtitle ? (
@@ -41,7 +53,9 @@ export function AdminPageHeader({
         ) : null}
       </div>
       {actions ? (
-        <div className="flex flex-wrap items-center gap-2">{actions}</div>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end [&>a]:w-full [&>button]:w-full sm:[&>a]:w-auto sm:[&>button]:w-auto">
+          {actions}
+        </div>
       ) : null}
     </header>
   );
@@ -61,14 +75,14 @@ export function Card({
   return (
     <section className={`border border-white/10 bg-ink/50 ${className}`}>
       {title ? (
-        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-3.5">
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5 sm:py-3.5">
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
             {title}
           </h2>
           {action}
         </div>
       ) : null}
-      <div className="p-5">{children}</div>
+      <div className="p-4 sm:p-5">{children}</div>
     </section>
   );
 }
@@ -115,7 +129,7 @@ export function StatCard({
     return (
       <Link
         href={href}
-        className={`block min-w-0 overflow-hidden [container-type:inline-size] border bg-ink/50 px-4 py-4 transition hover:bg-white/[0.04] sm:px-5 ${tokens.border}`}
+        className={`block min-w-0 overflow-hidden [container-type:inline-size] border bg-ink/50 px-3 py-3 transition hover:bg-white/[0.04] sm:px-5 sm:py-4 ${tokens.border}`}
       >
         {content}
       </Link>
@@ -124,7 +138,7 @@ export function StatCard({
 
   return (
     <div
-      className={`min-w-0 overflow-hidden [container-type:inline-size] border bg-ink/50 px-4 py-4 sm:px-5 ${tokens.border}`}
+      className={`min-w-0 overflow-hidden [container-type:inline-size] border bg-ink/50 px-3 py-3 sm:px-5 sm:py-4 ${tokens.border}`}
     >
       {content}
     </div>

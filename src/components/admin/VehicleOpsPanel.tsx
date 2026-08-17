@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import type { VehicleCost, VehicleDocument } from "@prisma/client";
 import {
@@ -11,6 +11,7 @@ import {
   deleteVehicleDocument,
   updateVehicleOps,
 } from "@/app/admin/veiculos/ops-actions";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   IconCheck,
   IconDownload,
@@ -18,7 +19,7 @@ import {
   IconTrash,
 } from "@/components/admin/icons";
 import { AdminFileDrop } from "@/components/admin/AdminFileDrop";
-import { Badge, Card, Field, btn, inputClass } from "@/components/admin/ui";
+import { Badge, Card, Field, btn, iconTap, inputClass } from "@/components/admin/ui";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { uploadAdminFile } from "@/lib/upload-admin-file";
 import {
@@ -28,6 +29,8 @@ import {
   docKindLabel,
   docListTitle,
   expectedMargin,
+  extrasTotal,
+  hasCostBasis,
   investedTotal,
   isOtherKind,
   type VehicleCostKind,
@@ -37,10 +40,18 @@ import {
 export type VehicleOpsVehicle = {
   id: string;
   price: number;
+  salePrice: number | null;
   purchasePrice: number | null;
   inStoreName: boolean;
   hasSpareKey: boolean;
   hasManual: boolean;
+};
+
+type OpsDraft = {
+  inStoreName: boolean;
+  hasSpareKey: boolean;
+  hasManual: boolean;
+  purchase: string;
 };
 
 function todayInput() {
@@ -53,13 +64,11 @@ function formatDate(date: Date) {
 }
 
 function Toggle({
-  name,
   label,
   hint,
   checked,
   onChange,
 }: {
-  name: string;
   label: string;
   hint: string;
   checked: boolean;
@@ -75,7 +84,6 @@ function Toggle({
           : "border-white/10 bg-ink hover:border-white/25"
       }`}
     >
-      <input type="hidden" name={name} value={checked ? "on" : "off"} />
       <span
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border ${
           checked ? "border-brand bg-brand text-cream" : "border-white/20 text-transparent"
@@ -103,7 +111,9 @@ export function VehicleOpsPanel({
   documents: VehicleDocument[];
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [opsPending, startOpsTransition] = useTransition();
+  const [itemPending, startItemTransition] = useTransition();
+  const [opsNote, setOpsNote] = useState("Salva ao tocar");
   const [inStoreName, setInStoreName] = useState(vehicle.inStoreName);
   const [hasSpareKey, setHasSpareKey] = useState(vehicle.hasSpareKey);
   const [hasManual, setHasManual] = useState(vehicle.hasManual);
@@ -112,6 +122,15 @@ export function VehicleOpsPanel({
       ? formatNumberBR(Math.round(vehicle.purchasePrice))
       : "",
   );
+  const draftRef = useRef<OpsDraft>({
+    inStoreName: vehicle.inStoreName,
+    hasSpareKey: vehicle.hasSpareKey,
+    hasManual: vehicle.hasManual,
+    purchase:
+      vehicle.purchasePrice != null
+        ? formatNumberBR(Math.round(vehicle.purchasePrice))
+        : "",
+  });
 
   const [showCostForm, setShowCostForm] = useState(false);
   const [costKind, setCostKind] = useState<VehicleCostKind>("despachante");
@@ -125,26 +144,68 @@ export function VehicleOpsPanel({
   const [docKind, setDocKind] = useState<VehicleDocKind>("crlv");
   const [docFile, setDocFile] = useState<{ url: string; name: string } | null>(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<
+    | { type: "cost"; id: string; label: string }
+    | { type: "doc"; id: string; label: string }
+    | null
+  >(null);
+
+  useEffect(() => {
+    const next: OpsDraft = {
+      inStoreName: vehicle.inStoreName,
+      hasSpareKey: vehicle.hasSpareKey,
+      hasManual: vehicle.hasManual,
+      purchase:
+        vehicle.purchasePrice != null
+          ? formatNumberBR(Math.round(vehicle.purchasePrice))
+          : "",
+    };
+    draftRef.current = next;
+    setInStoreName(next.inStoreName);
+    setHasSpareKey(next.hasSpareKey);
+    setHasManual(next.hasManual);
+    setPurchase(next.purchase);
+  }, [
+    vehicle.inStoreName,
+    vehicle.hasSpareKey,
+    vehicle.hasManual,
+    vehicle.purchasePrice,
+  ]);
 
   const livePurchaseRaw = purchase.replace(/\D/g, "");
   const livePurchase = livePurchaseRaw ? Number(livePurchaseRaw) : null;
+  const referencePrice = vehicle.salePrice ?? vehicle.price;
   const invested = investedTotal(livePurchase, costs);
-  const margin = expectedMargin(vehicle.price, livePurchase, costs);
-  const hasPurchase = livePurchase != null && livePurchase > 0;
+  const margin = expectedMargin(referencePrice, livePurchase, costs);
+  const extras = extrasTotal(costs);
+  const hasBasis = hasCostBasis(livePurchase, costs);
+  const sold = vehicle.salePrice != null;
 
   function refresh() {
     router.refresh();
   }
 
-  function handleSaveOps(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    startTransition(async () => {
+  function persistOps(patch: Partial<OpsDraft>) {
+    const next = { ...draftRef.current, ...patch };
+    draftRef.current = next;
+    setInStoreName(next.inStoreName);
+    setHasSpareKey(next.hasSpareKey);
+    setHasManual(next.hasManual);
+    setPurchase(next.purchase);
+
+    const formData = new FormData();
+    formData.set("inStoreName", next.inStoreName ? "on" : "off");
+    formData.set("hasSpareKey", next.hasSpareKey ? "on" : "off");
+    formData.set("hasManual", next.hasManual ? "on" : "off");
+    formData.set("purchasePrice", next.purchase);
+
+    startOpsTransition(async () => {
       const result = await updateVehicleOps(vehicle.id, formData);
       if (result.ok) {
-        toast.success(result.message);
+        setOpsNote("Salvo");
         refresh();
       } else {
+        setOpsNote("Erro ao salvar");
         toast.error(result.message);
       }
     });
@@ -162,7 +223,7 @@ export function VehicleOpsPanel({
       formData.set("receiptUrl", costReceipt.url);
       formData.set("receiptName", costReceipt.name);
     }
-    startTransition(async () => {
+    startItemTransition(async () => {
       const result = await addVehicleCost(vehicle.id, formData);
       if (result.ok) {
         toast.success(result.message);
@@ -192,7 +253,7 @@ export function VehicleOpsPanel({
     }
     formData.set("fileUrl", docFile.url);
     formData.set("fileName", docFile.name);
-    startTransition(async () => {
+    startItemTransition(async () => {
       const result = await addVehicleDocument(vehicle.id, formData);
       if (result.ok) {
         toast.success(result.message);
@@ -241,85 +302,77 @@ export function VehicleOpsPanel({
 
   return (
     <div className="space-y-5">
-      <form onSubmit={handleSaveOps} className="space-y-5">
-        <Card title="Checklist interno">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Toggle
-              name="inStoreName"
-              label="Em nome da loja"
-              hint="Documento já transferido"
-              checked={inStoreName}
-              onChange={setInStoreName}
-            />
-            <Toggle
-              name="hasSpareKey"
-              label="Chave reserva"
-              hint="Veículo tem chave extra"
-              checked={hasSpareKey}
-              onChange={setHasSpareKey}
-            />
-            <Toggle
-              name="hasManual"
-              label="Manual"
-              hint="Manual do proprietário"
-              checked={hasManual}
-              onChange={setHasManual}
-            />
-          </div>
-        </Card>
+      <Card
+        title="Checklist interno"
+        action={
+          <span className="text-[11px] text-muted">
+            {opsPending ? "Salvando…" : opsNote}
+          </span>
+        }
+      >
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Toggle
+            label="Em nome da loja"
+            hint="Documento já transferido"
+            checked={inStoreName}
+            onChange={(next) => persistOps({ inStoreName: next })}
+          />
+          <Toggle
+            label="Chave reserva"
+            hint="Veículo tem chave extra"
+            checked={hasSpareKey}
+            onChange={(next) => persistOps({ hasSpareKey: next })}
+          />
+          <Toggle
+            label="Manual"
+            hint="Manual do proprietário"
+            checked={hasManual}
+            onChange={(next) => persistOps({ hasManual: next })}
+          />
+        </div>
+      </Card>
 
-        <Card title="Compra e margem">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,16rem)_1fr] lg:items-end">
-            <Field
-              label="Preço de compra"
-              hint="Uso interno — não aparece no site."
-            >
-              <input
-                name="purchasePrice"
-                inputMode="numeric"
-                value={purchase}
-                onChange={(event) =>
-                  setPurchase(
-                    formatNumberBR(
-                      Number(event.target.value.replace(/\D/g, "") || 0),
-                    ),
-                  )
-                }
-                placeholder="0"
-                className={inputClass}
-              />
-            </Field>
-            <div className="grid grid-cols-3 gap-3">
-              <MiniStat
-                label="Investido"
-                value={hasPurchase || costs.length > 0 ? formatCurrencyBRL(invested) : "—"}
-              />
-              <MiniStat label="Anunciado" value={formatCurrencyBRL(vehicle.price)} />
-              <MiniStat
-                label="Margem"
-                value={
-                  hasPurchase || costs.length > 0 ? formatCurrencyBRL(margin) : "—"
-                }
-                tone={
-                  !hasPurchase && costs.length === 0
-                    ? "muted"
-                    : margin >= 0
-                      ? "good"
-                      : "bad"
-                }
-              />
-            </div>
+      <Card title="Compra e margem">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,16rem)_1fr] lg:items-end">
+          <Field
+            label="Preço de compra"
+            hint="Salva ao sair do campo. Não aparece no site."
+          >
+            <input
+              inputMode="numeric"
+              value={purchase}
+              onChange={(event) => {
+                const next = formatNumberBR(
+                  Number(event.target.value.replace(/\D/g, "") || 0),
+                );
+                setPurchase(next);
+                draftRef.current = { ...draftRef.current, purchase: next };
+              }}
+              onBlur={() => persistOps({ purchase })}
+              placeholder="0"
+              className={inputClass}
+            />
+          </Field>
+          <div className="grid grid-cols-3 gap-3">
+            <MiniStat
+              label="Investido"
+              value={hasBasis ? formatCurrencyBRL(invested) : "—"}
+            />
+            <MiniStat
+              label={sold ? "Vendido" : "Anunciado"}
+              value={formatCurrencyBRL(referencePrice)}
+            />
+            <MiniStat
+              label={sold ? "Lucro" : "Margem"}
+              value={hasBasis ? formatCurrencyBRL(margin) : "—"}
+              tone={!hasBasis ? "muted" : margin >= 0 ? "good" : "bad"}
+            />
           </div>
-          <div className="mt-4">
-            <button type="submit" disabled={pending} className={btn.primary}>
-              {pending ? "Salvando..." : "Salvar operação"}
-            </button>
-          </div>
-        </Card>
-      </form>
+        </div>
+      </Card>
 
       <Card
-        title="Custos"
+        title={extras > 0 ? `Custos · ${formatCurrencyBRL(extras)}` : "Custos"}
         action={
           <button
             type="button"
@@ -417,7 +470,7 @@ export function VehicleOpsPanel({
                 hint="Opcional — PDF ou imagem. Arraste ou clique."
                 fileName={costReceipt?.name}
                 uploading={uploadingCost}
-                disabled={pending}
+                disabled={itemPending}
                 onFile={(file) => void onReceiptChange(file)}
                 onClear={() => setCostReceipt(null)}
               />
@@ -425,7 +478,7 @@ export function VehicleOpsPanel({
             <div className="flex items-end">
               <button
                 type="submit"
-                disabled={pending || uploadingCost}
+                disabled={itemPending || uploadingCost}
                 className={btn.primary}
               >
                 Registrar custo
@@ -463,7 +516,7 @@ export function VehicleOpsPanel({
                     href={cost.receiptUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 text-muted transition hover:text-cream"
+                    className={iconTap}
                     title={cost.receiptName || "Comprovante"}
                   >
                     <IconDownload className="h-4 w-4" />
@@ -472,15 +525,13 @@ export function VehicleOpsPanel({
                 <button
                   type="button"
                   onClick={() =>
-                    startTransition(async () => {
-                      const result = await deleteVehicleCost(vehicle.id, cost.id);
-                      if (result.ok) {
-                        toast.success(result.message);
-                        refresh();
-                      } else toast.error(result.message);
+                    setPendingDelete({
+                      type: "cost",
+                      id: cost.id,
+                      label: costListTitle(cost.kind, cost.description),
                     })
                   }
-                  className="p-2 text-brand transition hover:text-cream"
+                  className={`${iconTap} text-brand hover:text-cream`}
                   aria-label="Remover custo"
                 >
                   <IconTrash className="h-4 w-4" />
@@ -492,7 +543,11 @@ export function VehicleOpsPanel({
       </Card>
 
       <Card
-        title="Documentos"
+        title={
+          documents.length > 0
+            ? `Documentos · ${documents.length}`
+            : "Documentos"
+        }
         action={
           <button
             type="button"
@@ -567,7 +622,7 @@ export function VehicleOpsPanel({
                 required
                 fileName={docFile?.name}
                 uploading={uploadingDoc}
-                disabled={pending}
+                disabled={itemPending}
                 onFile={(file) => void onDocFileChange(file)}
                 onClear={() => setDocFile(null)}
               />
@@ -584,7 +639,7 @@ export function VehicleOpsPanel({
             <div>
               <button
                 type="submit"
-                disabled={pending || uploadingDoc}
+                disabled={itemPending || uploadingDoc}
                 className={btn.primary}
               >
                 Salvar documento
@@ -625,7 +680,7 @@ export function VehicleOpsPanel({
                   href={doc.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 text-muted transition hover:text-cream"
+                  className={iconTap}
                   title={doc.fileName || "Abrir"}
                 >
                   <IconDownload className="h-4 w-4" />
@@ -633,18 +688,13 @@ export function VehicleOpsPanel({
                 <button
                   type="button"
                   onClick={() =>
-                    startTransition(async () => {
-                      const result = await deleteVehicleDocument(
-                        vehicle.id,
-                        doc.id,
-                      );
-                      if (result.ok) {
-                        toast.success(result.message);
-                        refresh();
-                      } else toast.error(result.message);
+                    setPendingDelete({
+                      type: "doc",
+                      id: doc.id,
+                      label: docListTitle(doc.kind, doc.title),
                     })
                   }
-                  className="p-2 text-brand transition hover:text-cream"
+                  className={`${iconTap} text-brand hover:text-cream`}
                   aria-label="Remover documento"
                 >
                   <IconTrash className="h-4 w-4" />
@@ -654,6 +704,40 @@ export function VehicleOpsPanel({
           </ul>
         )}
       </Card>
+
+      <ConfirmDialog
+        open={pendingDelete != null}
+        title={
+          pendingDelete?.type === "doc"
+            ? "Remover documento?"
+            : "Remover custo?"
+        }
+        description={
+          pendingDelete
+            ? `${pendingDelete.label} será apagado. Essa ação não tem volta.`
+            : undefined
+        }
+        confirmLabel="Remover"
+        loading={itemPending}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (!pendingDelete) return;
+          const target = pendingDelete;
+          startItemTransition(async () => {
+            const result =
+              target.type === "cost"
+                ? await deleteVehicleCost(vehicle.id, target.id)
+                : await deleteVehicleDocument(vehicle.id, target.id);
+            if (result.ok) {
+              toast.success(result.message);
+              setPendingDelete(null);
+              refresh();
+            } else {
+              toast.error(result.message);
+            }
+          });
+        }}
+      />
     </div>
   );
 }

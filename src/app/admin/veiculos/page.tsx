@@ -2,10 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { VehiclesTable } from "@/components/admin/VehiclesTable";
 import { IconPlus } from "@/components/admin/icons";
-import { AdminPageHeader, StatCard, btn } from "@/components/admin/ui";
+import { AdminPageHeader, StatCard, adminStatGrid, btn } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
 import { formatCurrencyBRL } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { hasCostBasis, investedTotal } from "@/lib/vehicle-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,11 @@ export default async function VehiclesPage({
             : {},
         ],
       },
-      include: { photos: { orderBy: { order: "asc" }, take: 1 } },
+      include: {
+        photos: { orderBy: { order: "asc" }, take: 1 },
+        costs: { select: { amount: true } },
+        sale: { select: { salePrice: true } },
+      },
       orderBy: { createdAt: "desc" },
     }),
     prisma.vehicle.groupBy({
@@ -72,6 +77,14 @@ export default async function VehiclesPage({
 
   const estoqueCount = count("disponivel") + count("reservado");
   const vendidosCount = count("vendido");
+  const available = vehicles.filter((item) => item.status === "disponivel");
+  const invested = available.reduce(
+    (sum, item) => sum + investedTotal(item.purchasePrice, item.costs),
+    0,
+  );
+  const withCostBasis = available.filter((item) =>
+    hasCostBasis(item.purchasePrice, item.costs),
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -90,7 +103,7 @@ export default async function VehiclesPage({
         }
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className={adminStatGrid}>
         <StatCard label="Disponíveis" value={count("disponivel")} />
         <StatCard label="Reservados" value={count("reservado")} tone="warning" />
         <StatCard label="Vendidos" value={vendidosCount} />
@@ -99,7 +112,9 @@ export default async function VehiclesPage({
           value={formatCurrencyBRL(stockValue._sum.price ?? 0)}
           hint={
             count("disponivel") > 0
-              ? `Média ${formatCurrencyBRL((stockValue._sum.price ?? 0) / count("disponivel"))}`
+              ? tab === "estoque" && withCostBasis > 0
+                ? `Média ${formatCurrencyBRL((stockValue._sum.price ?? 0) / count("disponivel"))} · investido ${formatCurrencyBRL(invested)}`
+                : `Média ${formatCurrencyBRL((stockValue._sum.price ?? 0) / count("disponivel"))}`
               : "Somente disponíveis"
           }
         />

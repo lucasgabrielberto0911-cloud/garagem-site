@@ -20,6 +20,7 @@ import {
   Field,
   btn,
   inputClass,
+  mobileActionCell,
 } from "@/components/admin/ui";
 import {
   deleteTestimonial,
@@ -274,7 +275,7 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
           </form>
         </Card>
       ) : (
-        <button type="button" onClick={openCreate} className={btn.primary}>
+        <button type="button" onClick={openCreate} className={`${btn.primary} w-full sm:w-auto`}>
           <IconPlus className="h-4 w-4" />
           Novo depoimento
         </button>
@@ -332,12 +333,12 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                 {item.message}
               </p>
 
-              <div className="mt-3 flex items-center gap-1 border-t border-white/10 pt-3">
+              <div className="mt-3 grid grid-cols-3 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => togglePublished(item)}
                   disabled={isPending}
-                  className="inline-flex items-center gap-2 px-2 py-1.5 text-xs text-muted transition hover:text-cream disabled:opacity-50"
+                  className={`${mobileActionCell} disabled:opacity-50`}
                 >
                   <IconEye className="h-4 w-4" />
                   {item.published ? "Ocultar" : "Publicar"}
@@ -345,20 +346,22 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                 <button
                   type="button"
                   onClick={() => openEdit(item)}
-                  className="ml-auto p-2 text-muted transition hover:text-cream"
+                  className={`${mobileActionCell} border-l border-white/10`}
                   aria-label="Editar depoimento"
                   title="Editar"
                 >
                   <IconPencil className="h-4 w-4" />
+                  Editar
                 </button>
                 <button
                   type="button"
                   onClick={() => setDeleteTarget(item)}
-                  className="p-2 text-brand transition hover:text-cream"
+                  className={`${mobileActionCell} border-l border-white/10 text-brand`}
                   aria-label="Excluir depoimento"
                   title="Excluir"
                 >
                   <IconTrash className="h-4 w-4" />
+                  Excluir
                 </button>
               </div>
             </li>

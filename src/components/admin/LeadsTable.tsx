@@ -8,7 +8,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { IconDownload, IconTrash, IconUsers } from "@/components/admin/icons";
 import { IconInbox } from "@/components/admin/icons";
 import { IconPhone, IconWhatsApp } from "@/components/site/icons";
-import { EmptyState, inputClass } from "@/components/admin/ui";
+import { EmptyState, btn, inputClass } from "@/components/admin/ui";
 import {
   formatNumberBR,
   formatPhoneBR,
@@ -174,7 +174,7 @@ export function LeadsTable({
   return (
     <div className="space-y-4">
       <div className="border border-white/10 bg-ink/50 p-3 sm:p-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <FilterChip
             label={`Todos (${counts.total})`}
             active={!status}
@@ -192,7 +192,7 @@ export function LeadsTable({
           ))}
         </div>
 
-        <div className="mt-3 flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-center">
+        <div className="mt-3 flex flex-col gap-2 border-t border-white/10 pt-3 sm:flex-row sm:items-center">
           <input
             type="search"
             value={term}
@@ -207,7 +207,7 @@ export function LeadsTable({
             type="button"
             onClick={() => exportCsv(filtered)}
             disabled={filtered.length === 0}
-            className="ml-auto inline-flex items-center gap-2 border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand disabled:opacity-50"
+            className={`${btn.outline} w-full sm:ml-auto sm:w-auto`}
           >
             <IconDownload className="h-4 w-4" />
             Exportar CSV
@@ -238,70 +238,69 @@ export function LeadsTable({
               key={lead.id}
               className="border border-white/10 bg-ink/50 p-4 sm:p-5"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-display text-base font-semibold text-cream">
-                      {lead.name}
-                    </p>
-                    <span
-                      className={`px-2 py-0.5 text-[10px] uppercase tracking-wider ${
-                        STATUS_STYLE[lead.status as LeadStatus] ??
-                        "bg-white/10 text-muted"
-                      }`}
-                    >
-                      {STATUS_LABEL[lead.status as LeadStatus] ?? lead.status}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-muted">
-                    {lead.vehicleInfo}
-                    {lead.km !== null ? ` · ${formatNumberBR(lead.km)} km` : ""}
-                  </p>
-                  <p className="mt-1 text-sm text-cream">
-                    Placa:{" "}
-                    <span className="font-display font-semibold tracking-wide">
-                      {lead.plate
-                        ? formatPlateDisplay(lead.plate)
-                        : "Não informada"}
-                    </span>
-                  </p>
-                  <p className="mt-1 text-sm text-muted">
-                    {formatPhoneBR(lead.phone)} ·{" "}
-                    {formatDateTime(lead.createdAt)}
-                  </p>
-                </div>
-
+              <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <label className="sr-only" htmlFor={`status-${lead.id}`}>
-                    Status do lead
-                  </label>
-                  <select
-                    id={`status-${lead.id}`}
-                    value={lead.status}
-                    disabled={savingId === lead.id}
-                    onChange={(event) => changeStatus(lead, event.target.value)}
-                    className="min-h-[40px] border border-white/10 bg-asphalt px-3 text-sm text-cream outline-none transition focus:border-brand disabled:opacity-60"
+                  <p className="font-display text-base font-semibold text-cream">
+                    {lead.name}
+                  </p>
+                  <span
+                    className={`px-2 py-0.5 text-[10px] uppercase tracking-wider ${
+                      STATUS_STYLE[lead.status as LeadStatus] ??
+                      "bg-white/10 text-muted"
+                    }`}
                   >
-                    {LEAD_STATUSES.map((value) => (
-                      <option key={value} value={value}>
-                        {STATUS_LABEL[value]}
-                      </option>
-                    ))}
-                  </select>
+                    {STATUS_LABEL[lead.status as LeadStatus] ?? lead.status}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-muted">
+                  {lead.vehicleInfo}
+                  {lead.km !== null ? ` · ${formatNumberBR(lead.km)} km` : ""}
+                </p>
+                <p className="mt-1 text-sm text-cream">
+                  Placa:{" "}
+                  <span className="font-display font-semibold tracking-wide">
+                    {lead.plate
+                      ? formatPlateDisplay(lead.plate)
+                      : "Não informada"}
+                  </span>
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  {formatPhoneBR(lead.phone)} · {formatDateTime(lead.createdAt)}
+                </p>
+              </div>
+
+              <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
+                <label className="sr-only" htmlFor={`status-${lead.id}`}>
+                  Status do lead
+                </label>
+                <select
+                  id={`status-${lead.id}`}
+                  value={lead.status}
+                  disabled={savingId === lead.id}
+                  onChange={(event) => changeStatus(lead, event.target.value)}
+                  className="h-11 w-full border border-white/10 bg-asphalt px-3 text-sm text-cream outline-none transition focus:border-brand disabled:opacity-60"
+                >
+                  {LEAD_STATUSES.map((value) => (
+                    <option key={value} value={value}>
+                      {STATUS_LABEL[value]}
+                    </option>
+                  ))}
+                </select>
+                <div className="grid grid-cols-2 gap-2">
                   {lead.plate ? (
                     <>
                       <a
                         href={consultaPlacaUrl(lead.plate)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex min-h-[40px] items-center gap-2 border border-brand/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10"
+                        className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10"
                       >
                         Consultar FIPE
                       </a>
                       <button
                         type="button"
                         onClick={() => copyPlate(lead.plate)}
-                        className="inline-flex min-h-[40px] items-center gap-2 border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream"
+                        className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream"
                       >
                         Copiar placa
                       </button>
@@ -311,14 +310,14 @@ export function LeadsTable({
                     href={whatsappLink(lead)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-[40px] items-center gap-2 border border-[#25D366]/50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#25D366] transition hover:bg-[#25D366]/10"
+                    className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-[#25D366]/50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#25D366] transition hover:bg-[#25D366]/10"
                   >
                     <IconWhatsApp className="h-4 w-4" />
                     WhatsApp
                   </a>
                   <a
                     href={`tel:+55${lead.phone.replace(/\D/g, "")}`}
-                    className="inline-flex min-h-[40px] items-center gap-2 border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream"
+                    className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream"
                   >
                     <IconPhone className="h-4 w-4" />
                     Ligar
@@ -328,7 +327,7 @@ export function LeadsTable({
                     onClick={() => convert(lead)}
                     disabled={savingId === lead.id}
                     title="Criar cliente com estes dados"
-                    className="inline-flex min-h-[40px] items-center gap-2 border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream disabled:opacity-60"
+                    className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream disabled:opacity-60"
                   >
                     <IconUsers className="h-4 w-4" />
                     Virar cliente
@@ -337,7 +336,7 @@ export function LeadsTable({
                     type="button"
                     onClick={() => setDeleteTarget(lead)}
                     aria-label="Excluir lead"
-                    className="inline-flex min-h-[40px] items-center gap-2 border border-brand/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10"
+                    className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10"
                   >
                     <IconTrash className="h-4 w-4" />
                     Excluir
@@ -389,7 +388,7 @@ function FilterChip({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`min-h-[38px] border px-3 text-xs font-semibold uppercase tracking-wide transition disabled:opacity-60 ${
+      className={`min-h-[40px] shrink-0 border px-3 text-xs font-semibold uppercase tracking-wide transition disabled:opacity-60 ${
         active
           ? "border-brand bg-brand/10 text-cream"
           : "border-white/10 text-muted hover:text-cream"

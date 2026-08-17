@@ -13,7 +13,7 @@ import {
   IconTrash,
 } from "@/components/admin/icons";
 import { IconWhatsApp } from "@/components/site/icons";
-import { Badge, Card, EmptyState, Field, btn, inputClass } from "@/components/admin/ui";
+import { Badge, Card, EmptyState, Field, btn, inputClass, mobileActionCell } from "@/components/admin/ui";
 import { createSale, deleteSale, updateSale } from "@/app/admin/vendas/actions";
 import {
   formatCurrencyBRL,
@@ -22,6 +22,11 @@ import {
   formatPlateDisplay,
   formatPlateInput,
 } from "@/lib/format";
+import {
+  expectedMargin,
+  hasCostBasis,
+  investedTotal,
+} from "@/lib/vehicle-ops";
 
 export const PAYMENT_METHODS = [
   "À vista (Pix/dinheiro)",
@@ -46,6 +51,8 @@ export type SaleRow = {
     yearModel: number;
     plate: string | null;
     historical: boolean;
+    purchasePrice: number | null;
+    costs: Array<{ amount: number }>;
   };
   customer: { id: string; name: string; phone: string } | null;
 };
@@ -58,6 +65,8 @@ export type SellableVehicle = {
   yearModel: number;
   price: number;
   status: string;
+  purchasePrice: number | null;
+  costs: Array<{ amount: number }>;
 };
 
 export type CustomerOption = { id: string; name: string; phone: string };
@@ -66,6 +75,19 @@ type SaleSource = "estoque" | "historica";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(date);
+}
+
+function saleFinance(
+  salePrice: number,
+  purchasePrice: number | null,
+  costs: Array<{ amount: number }>,
+) {
+  if (!hasCostBasis(purchasePrice, costs)) return null;
+  const margin = expectedMargin(salePrice, purchasePrice, costs);
+  return {
+    invested: investedTotal(purchasePrice, costs),
+    margin,
+  };
 }
 
 const PERIODS = [
@@ -104,6 +126,7 @@ function exportSalesCsv(sales: SaleRow[]) {
     "Telefone",
     "Pagamento",
     "Valor",
+    "Lucro",
     "Tipo",
     "Observações",
   ];
@@ -116,6 +139,15 @@ function exportSalesCsv(sales: SaleRow[]) {
     sale.customer?.phone ? formatPhoneBR(sale.customer.phone) : "",
     sale.paymentMethod,
     String(sale.salePrice),
+    hasCostBasis(sale.vehicle.purchasePrice, sale.vehicle.costs)
+      ? String(
+          expectedMargin(
+            sale.salePrice,
+            sale.vehicle.purchasePrice,
+            sale.vehicle.costs,
+          ),
+        )
+      : "",
     sale.vehicle.historical ? "Histórica" : "Estoque",
     (sale.notes ?? "").replace(/\s+/g, " "),
   ]);
@@ -198,6 +230,8 @@ export function SalesManager({
         yearModel: editingSale.vehicle.yearModel,
         price: editingSale.salePrice,
         status: "vendido",
+        purchasePrice: editingSale.vehicle.purchasePrice,
+        costs: editingSale.vehicle.costs ?? [],
       },
       ...vehicles,
     ];
@@ -212,6 +246,24 @@ export function SalesManager({
     () => filteredSales.reduce((sum, sale) => sum + sale.salePrice, 0),
     [filteredSales],
   );
+
+  const selectedVehicle = stockOptions.find((item) => item.id === vehicleId);
+  const liveSalePrice = Number(price.replace(/\D/g, "")) || 0;
+  const liveFinance = !isHistorical
+    ? selectedVehicle
+      ? saleFinance(
+          liveSalePrice || selectedVehicle.price,
+          selectedVehicle.purchasePrice,
+          selectedVehicle.costs,
+        )
+      : null
+    : editingSale
+      ? saleFinance(
+          liveSalePrice || editingSale.salePrice,
+          editingSale.vehicle.purchasePrice,
+          editingSale.vehicle.costs,
+        )
+      : null;
 
   function selectVehicle(id: string) {
     setVehicleId(id);
@@ -431,9 +483,11 @@ export function SalesManager({
                 required
                 error={errors.salePrice}
                 hint={
-                  isHistorical
-                    ? "Valor pelo qual o veículo foi vendido."
-                    : "Preenchido com o preço do anúncio; ajuste se houve desconto."
+                  liveFinance
+                    ? `Investido ${formatCurrencyBRL(liveFinance.invested)} · ${liveFinance.margin >= 0 ? "lucro" : "prejuízo"} ${formatCurrencyBRL(liveFinance.margin)}`
+                    : isHistorical
+                      ? "Valor pelo qual o veículo foi vendido."
+                      : "Preenchido com o preço do anúncio; ajuste se houve desconto."
                 }
               >
                 <input
@@ -580,11 +634,11 @@ export function SalesManager({
           </form>
         </Card>
       ) : (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className={btn.primary}
+            className={`${btn.primary} w-full sm:w-auto`}
           >
             <IconPlus className="h-4 w-4" />
             Registrar venda
@@ -614,7 +668,7 @@ export function SalesManager({
                 type="button"
                 onClick={() => exportSalesCsv(filteredSales)}
                 disabled={filteredSales.length === 0}
-                className="inline-flex items-center gap-2 border border-white/15 px-3 py-2.5 text-xs text-cream transition hover:border-brand disabled:opacity-50 sm:ml-auto"
+                className={`${btn.outline} w-full sm:ml-auto sm:w-auto`}
               >
                 <IconDownload className="h-4 w-4" />
                 Exportar CSV
@@ -641,9 +695,14 @@ export function SalesManager({
           <ul className="space-y-3 lg:hidden">
             {filteredSales.map((sale) => {
               const wa = customerPhoneDigits(sale.customer);
+              const finance = saleFinance(
+                sale.salePrice,
+                sale.vehicle.purchasePrice,
+                sale.vehicle.costs,
+              );
               return (
-                <li key={sale.id} className="border border-white/10 bg-ink/50 p-4">
-                  <div className="flex items-start justify-between gap-3">
+                <li key={sale.id} className="overflow-hidden border border-white/10 bg-ink/50">
+                  <div className="flex items-start justify-between gap-3 p-4 pb-3">
                     <div className="min-w-0">
                       {sale.vehicle.historical ? (
                         <p className="font-display text-sm font-semibold text-cream">
@@ -651,7 +710,7 @@ export function SalesManager({
                         </p>
                       ) : (
                         <Link
-                          href={`/admin/veiculos/${sale.vehicle.id}`}
+                          href={`/admin/veiculos/${sale.vehicle.id}?view=operacao`}
                           className="font-display text-sm font-semibold text-cream"
                         >
                           {sale.vehicle.brand} {sale.vehicle.model}
@@ -667,12 +726,23 @@ export function SalesManager({
                           : ""}
                       </p>
                     </div>
-                    <p className="shrink-0 font-display text-base font-bold text-cream">
-                      {formatCurrencyBRL(sale.salePrice)}
-                    </p>
+                    <div className="shrink-0 text-right">
+                      <p className="font-display text-base font-bold text-cream">
+                        {formatCurrencyBRL(sale.salePrice)}
+                      </p>
+                      {finance ? (
+                        <p
+                          className={`text-[11px] ${
+                            finance.margin >= 0 ? "text-emerald-300" : "text-brand"
+                          }`}
+                        >
+                          {formatCurrencyBRL(finance.margin)}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
 
-                  <div className="mt-3 space-y-1 text-xs text-muted">
+                  <div className="space-y-1 px-4 pb-3 text-xs text-muted">
                     <p>
                       Cliente:{" "}
                       <span className="text-cream">
@@ -683,41 +753,49 @@ export function SalesManager({
                       <p>{formatPhoneBR(sale.customer.phone)}</p>
                     ) : null}
                     {sale.notes ? <p className="italic">{sale.notes}</p> : null}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <Badge tone="success">{sale.paymentMethod}</Badge>
+                      {sale.vehicle.historical ? (
+                        <Badge tone="neutral">Histórica</Badge>
+                      ) : null}
+                    </div>
                   </div>
 
-                  <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
-                    <Badge tone="success">{sale.paymentMethod}</Badge>
-                    {sale.vehicle.historical ? (
-                      <Badge tone="neutral">Histórica</Badge>
-                    ) : null}
+                  <div className="grid grid-cols-3 border-t border-white/10">
                     {wa ? (
                       <a
                         href={`https://wa.me/55${wa}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="ml-auto p-2 text-muted transition hover:text-cream"
+                        className={mobileActionCell}
                         aria-label="WhatsApp do cliente"
                       >
                         <IconWhatsApp className="h-4 w-4" />
+                        WhatsApp
                       </a>
                     ) : (
-                      <span className="ml-auto" />
+                      <span className={`${mobileActionCell} opacity-30`}>
+                        <IconWhatsApp className="h-4 w-4" />
+                        WhatsApp
+                      </span>
                     )}
                     <button
                       type="button"
                       onClick={() => startEdit(sale)}
-                      className="p-2 text-muted transition hover:text-cream"
+                      className={`${mobileActionCell} border-l border-white/10`}
                       aria-label="Editar venda"
                     >
                       <IconPencil className="h-4 w-4" />
+                      Editar
                     </button>
                     <button
                       type="button"
                       onClick={() => setCancelTarget(sale)}
-                      className="p-2 text-brand transition hover:text-cream"
+                      className={`${mobileActionCell} border-l border-white/10 text-brand`}
                       aria-label="Cancelar venda"
                     >
                       <IconTrash className="h-4 w-4" />
+                      Excluir
                     </button>
                   </div>
                 </li>
@@ -740,6 +818,11 @@ export function SalesManager({
               <tbody>
                 {filteredSales.map((sale) => {
                   const wa = customerPhoneDigits(sale.customer);
+                  const finance = saleFinance(
+                    sale.salePrice,
+                    sale.vehicle.purchasePrice,
+                    sale.vehicle.costs,
+                  );
                   return (
                     <tr
                       key={sale.id}
@@ -755,7 +838,7 @@ export function SalesManager({
                           </p>
                         ) : (
                           <Link
-                            href={`/admin/veiculos/${sale.vehicle.id}`}
+                            href={`/admin/veiculos/${sale.vehicle.id}?view=operacao`}
                             className="font-medium text-cream transition hover:text-brand"
                           >
                             {sale.vehicle.brand} {sale.vehicle.model}
@@ -795,6 +878,17 @@ export function SalesManager({
                       </td>
                       <td className="px-4 py-3 font-medium">
                         {formatCurrencyBRL(sale.salePrice)}
+                        {finance ? (
+                          <p
+                            className={`text-[11px] font-normal ${
+                              finance.margin >= 0
+                                ? "text-emerald-300"
+                                : "text-brand"
+                            }`}
+                          >
+                            {formatCurrencyBRL(finance.margin)}
+                          </p>
+                        ) : null}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">

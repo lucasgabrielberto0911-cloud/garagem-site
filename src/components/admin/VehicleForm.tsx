@@ -59,7 +59,7 @@ const initialState: VehicleFormState = {};
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className={btn.primary}>
+    <button type="submit" disabled={pending} className={`${btn.primary} w-full sm:w-auto`}>
       {pending ? "Salvando..." : label}
     </button>
   );
@@ -759,49 +759,51 @@ export function VehicleForm({
         </Card>
 
         {/* Barra de ações fixa: salvar sempre ao alcance, sem rolar a página. */}
-        <div className="sticky bottom-0 -mx-4 border-t border-white/10 bg-asphalt/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="sticky bottom-0 -mx-3 border-t border-white/10 bg-asphalt/95 px-3 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <SubmitButton
               label={mode === "create" ? "Cadastrar veículo" : "Salvar alterações"}
             />
-            <Link href="/admin/veiculos" className={btn.outline}>
+            <Link href="/admin/veiculos" className={`${btn.outline} w-full sm:w-auto`}>
               Voltar
             </Link>
 
             {mode === "edit" && vehicle ? (
               <>
-                <Link
-                  href={vehiclePath(vehicle)}
-                  target="_blank"
-                  className={`${btn.ghost} ml-auto`}
-                >
-                  <IconExternal className="h-4 w-4" />
-                  Ver no site
-                </Link>
-                {vehicle.status !== "vendido" ? (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmSold(true)}
-                    disabled={pendingAction}
-                    className="inline-flex items-center gap-2 border border-brand-orange/50 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/10 disabled:opacity-60"
-                    title="Tira do estoque, mas mantém a página no site (SEO)"
+                <div className="grid grid-cols-2 gap-2 sm:contents">
+                  <Link
+                    href={vehiclePath(vehicle)}
+                    target="_blank"
+                    className={btn.ghost}
                   >
-                    Marcar como vendido
-                  </button>
-                ) : (
-                  <span className="font-display text-xs font-semibold uppercase tracking-wide text-muted">
-                    Já marcado como vendido
-                  </span>
-                )}
+                    <IconExternal className="h-4 w-4" />
+                    Ver no site
+                  </Link>
+                  {vehicle.status !== "vendido" ? (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmSold(true)}
+                      disabled={pendingAction}
+                      className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand-orange/50 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/10 disabled:opacity-60"
+                      title="Tira do estoque, mas mantém a página no site (SEO)"
+                    >
+                      Marcar vendido
+                    </button>
+                  ) : (
+                    <span className="inline-flex min-h-[44px] items-center justify-center font-display text-xs font-semibold uppercase tracking-wide text-muted">
+                      Já vendido
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(true)}
                   disabled={pendingAction}
-                  className={btn.danger}
+                  className={`${btn.danger} w-full sm:w-auto`}
                   title="Apaga o registro e a página — use só em duplicata/erro"
                 >
                   <IconTrash className="h-4 w-4" />
-                  Excluir definitivamente
+                  Excluir
                 </button>
               </>
             ) : null}

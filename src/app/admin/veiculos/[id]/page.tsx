@@ -38,6 +38,7 @@ export default async function EditVehiclePage({
       photos: { orderBy: { order: "asc" } },
       costs: { orderBy: { incurredAt: "desc" } },
       documents: { orderBy: { createdAt: "desc" } },
+      sale: { select: { salePrice: true } },
     },
   });
 
@@ -65,7 +66,7 @@ export default async function EditVehiclePage({
         }
       />
 
-      <nav className="flex gap-1 border-b border-white/10">
+      <nav className="grid grid-cols-2 border-b border-white/10">
         <TabLink
           href={`/admin/veiculos/${vehicle.id}`}
           active={view === "anuncio"}
@@ -75,6 +76,7 @@ export default async function EditVehiclePage({
         <TabLink
           href={`/admin/veiculos/${vehicle.id}?view=operacao`}
           active={view === "operacao"}
+          mark={!vehicle.purchasePrice}
         >
           Operação
         </TabLink>
@@ -85,6 +87,7 @@ export default async function EditVehiclePage({
           vehicle={{
             id: vehicle.id,
             price: vehicle.price,
+            salePrice: vehicle.sale?.salePrice ?? null,
             purchasePrice: vehicle.purchasePrice,
             inStoreName: vehicle.inStoreName,
             hasSpareKey: vehicle.hasSpareKey,
@@ -103,22 +106,30 @@ export default async function EditVehiclePage({
 function TabLink({
   href,
   active,
+  mark = false,
   children,
 }: {
   href: string;
   active: boolean;
+  mark?: boolean;
   children: ReactNode;
 }) {
   return (
     <Link
       href={href}
-      className={`-mb-px border-b-2 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wider transition ${
+      className={`-mb-px inline-flex min-h-[48px] items-center justify-center gap-2 border-b-2 px-3 py-2.5 font-display text-xs font-semibold uppercase tracking-wider transition sm:px-4 ${
         active
           ? "border-brand text-cream"
           : "border-transparent text-muted hover:text-cream"
       }`}
     >
       {children}
+      {mark ? (
+        <span
+          className="h-1.5 w-1.5 bg-brand-orange"
+          title="Falta preço de compra"
+        />
+      ) : null}
     </Link>
   );
 }
