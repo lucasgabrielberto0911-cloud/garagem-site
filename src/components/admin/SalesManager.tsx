@@ -13,7 +13,7 @@ import {
   IconTrash,
 } from "@/components/admin/icons";
 import { IconWhatsApp } from "@/components/site/icons";
-import { Badge, Card, EmptyState, Field, btn, inputClass } from "@/components/admin/ui";
+import { Badge, Card, EmptyState, Field, btn, inputClass, mobileActionCell } from "@/components/admin/ui";
 import { createSale, deleteSale, updateSale } from "@/app/admin/vendas/actions";
 import {
   formatCurrencyBRL,
@@ -634,11 +634,11 @@ export function SalesManager({
           </form>
         </Card>
       ) : (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className={btn.primary}
+            className={`${btn.primary} w-full sm:w-auto`}
           >
             <IconPlus className="h-4 w-4" />
             Registrar venda
@@ -668,7 +668,7 @@ export function SalesManager({
                 type="button"
                 onClick={() => exportSalesCsv(filteredSales)}
                 disabled={filteredSales.length === 0}
-                className="inline-flex items-center gap-2 border border-white/15 px-3 py-2.5 text-xs text-cream transition hover:border-brand disabled:opacity-50 sm:ml-auto"
+                className={`${btn.outline} w-full sm:ml-auto sm:w-auto`}
               >
                 <IconDownload className="h-4 w-4" />
                 Exportar CSV
@@ -701,8 +701,8 @@ export function SalesManager({
                 sale.vehicle.costs,
               );
               return (
-                <li key={sale.id} className="border border-white/10 bg-ink/50 p-4">
-                  <div className="flex items-start justify-between gap-3">
+                <li key={sale.id} className="overflow-hidden border border-white/10 bg-ink/50">
+                  <div className="flex items-start justify-between gap-3 p-4 pb-3">
                     <div className="min-w-0">
                       {sale.vehicle.historical ? (
                         <p className="font-display text-sm font-semibold text-cream">
@@ -742,7 +742,7 @@ export function SalesManager({
                     </div>
                   </div>
 
-                  <div className="mt-3 space-y-1 text-xs text-muted">
+                  <div className="space-y-1 px-4 pb-3 text-xs text-muted">
                     <p>
                       Cliente:{" "}
                       <span className="text-cream">
@@ -753,41 +753,49 @@ export function SalesManager({
                       <p>{formatPhoneBR(sale.customer.phone)}</p>
                     ) : null}
                     {sale.notes ? <p className="italic">{sale.notes}</p> : null}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <Badge tone="success">{sale.paymentMethod}</Badge>
+                      {sale.vehicle.historical ? (
+                        <Badge tone="neutral">Histórica</Badge>
+                      ) : null}
+                    </div>
                   </div>
 
-                  <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
-                    <Badge tone="success">{sale.paymentMethod}</Badge>
-                    {sale.vehicle.historical ? (
-                      <Badge tone="neutral">Histórica</Badge>
-                    ) : null}
+                  <div className="grid grid-cols-3 border-t border-white/10">
                     {wa ? (
                       <a
                         href={`https://wa.me/55${wa}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="ml-auto p-2 text-muted transition hover:text-cream"
+                        className={mobileActionCell}
                         aria-label="WhatsApp do cliente"
                       >
                         <IconWhatsApp className="h-4 w-4" />
+                        WhatsApp
                       </a>
                     ) : (
-                      <span className="ml-auto" />
+                      <span className={`${mobileActionCell} opacity-30`}>
+                        <IconWhatsApp className="h-4 w-4" />
+                        WhatsApp
+                      </span>
                     )}
                     <button
                       type="button"
                       onClick={() => startEdit(sale)}
-                      className="p-2 text-muted transition hover:text-cream"
+                      className={`${mobileActionCell} border-l border-white/10`}
                       aria-label="Editar venda"
                     >
                       <IconPencil className="h-4 w-4" />
+                      Editar
                     </button>
                     <button
                       type="button"
                       onClick={() => setCancelTarget(sale)}
-                      className="p-2 text-brand transition hover:text-cream"
+                      className={`${mobileActionCell} border-l border-white/10 text-brand`}
                       aria-label="Cancelar venda"
                     >
                       <IconTrash className="h-4 w-4" />
+                      Excluir
                     </button>
                   </div>
                 </li>

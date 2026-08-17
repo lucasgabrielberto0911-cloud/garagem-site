@@ -48,7 +48,7 @@ export default async function ClientesPage() {
         subtitle="Cadastro dos clientes da loja, com histórico de compras e contato rápido."
       />
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <StatCard label="Clientes cadastrados" value={rows.length} />
         <StatCard label="Já compraram" value={buyers.length} tone={buyers.length > 0 ? "success" : "default"} />
         <StatCard

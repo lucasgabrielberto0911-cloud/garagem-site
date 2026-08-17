@@ -19,7 +19,7 @@ import {
   IconTrash,
 } from "@/components/admin/icons";
 import { AdminFileDrop } from "@/components/admin/AdminFileDrop";
-import { Badge, Card, Field, btn, inputClass } from "@/components/admin/ui";
+import { Badge, Card, Field, btn, iconTap, inputClass } from "@/components/admin/ui";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { uploadAdminFile } from "@/lib/upload-admin-file";
 import {
@@ -516,7 +516,7 @@ export function VehicleOpsPanel({
                     href={cost.receiptUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 text-muted transition hover:text-cream"
+                    className={iconTap}
                     title={cost.receiptName || "Comprovante"}
                   >
                     <IconDownload className="h-4 w-4" />
@@ -531,7 +531,7 @@ export function VehicleOpsPanel({
                       label: costListTitle(cost.kind, cost.description),
                     })
                   }
-                  className="p-2 text-brand transition hover:text-cream"
+                  className={`${iconTap} text-brand hover:text-cream`}
                   aria-label="Remover custo"
                 >
                   <IconTrash className="h-4 w-4" />
@@ -680,7 +680,7 @@ export function VehicleOpsPanel({
                   href={doc.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 text-muted transition hover:text-cream"
+                  className={iconTap}
                   title={doc.fileName || "Abrir"}
                 >
                   <IconDownload className="h-4 w-4" />
@@ -694,7 +694,7 @@ export function VehicleOpsPanel({
                       label: docListTitle(doc.kind, doc.title),
                     })
                   }
-                  className="p-2 text-brand transition hover:text-cream"
+                  className={`${iconTap} text-brand hover:text-cream`}
                   aria-label="Remover documento"
                 >
                   <IconTrash className="h-4 w-4" />

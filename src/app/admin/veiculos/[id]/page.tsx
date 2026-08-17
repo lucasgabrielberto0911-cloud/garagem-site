@@ -66,7 +66,7 @@ export default async function EditVehiclePage({
         }
       />
 
-      <nav className="flex gap-1 border-b border-white/10">
+      <nav className="grid grid-cols-2 border-b border-white/10">
         <TabLink
           href={`/admin/veiculos/${vehicle.id}`}
           active={view === "anuncio"}
@@ -117,7 +117,7 @@ function TabLink({
   return (
     <Link
       href={href}
-      className={`-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wider transition ${
+      className={`-mb-px inline-flex min-h-[48px] items-center justify-center gap-2 border-b-2 px-3 py-2.5 font-display text-xs font-semibold uppercase tracking-wider transition sm:px-4 ${
         active
           ? "border-brand text-cream"
           : "border-transparent text-muted hover:text-cream"

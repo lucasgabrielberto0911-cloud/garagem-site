@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { VehiclesTable } from "@/components/admin/VehiclesTable";
 import { IconPlus } from "@/components/admin/icons";
-import { AdminPageHeader, StatCard, btn } from "@/components/admin/ui";
+import { AdminPageHeader, StatCard, adminStatGrid, btn } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
 import { formatCurrencyBRL } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -103,7 +103,7 @@ export default async function VehiclesPage({
         }
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className={adminStatGrid}>
         <StatCard label="Disponíveis" value={count("disponivel")} />
         <StatCard label="Reservados" value={count("reservado")} tone="warning" />
         <StatCard label="Vendidos" value={vendidosCount} />

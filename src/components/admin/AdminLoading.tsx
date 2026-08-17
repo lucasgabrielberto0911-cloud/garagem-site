@@ -1,3 +1,5 @@
+import { adminStatGrid } from "@/components/admin/ui";
+
 /** Skeleton padrão das telas do painel: cabeçalho, cards e lista. */
 export function AdminLoading({
   cards = 4,
@@ -15,7 +17,7 @@ export function AdminLoading({
       </div>
 
       {cards > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={adminStatGrid}>
           {Array.from({ length: cards }).map((_, index) => (
             <div key={index} className="border border-white/10 px-5 py-4">
               <div className="skeleton h-2.5 w-24" />

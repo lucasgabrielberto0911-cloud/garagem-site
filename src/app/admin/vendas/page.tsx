@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { SalesManager } from "@/components/admin/SalesManager";
-import { AdminPageHeader, StatCard } from "@/components/admin/ui";
+import { AdminPageHeader, StatCard, adminStatGrid } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
 import { formatCurrencyBRL } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -88,7 +88,7 @@ export default async function VendasPage() {
         subtitle="Registre e edite vendas do estoque ou históricas. Cliente é opcional — basta carro, placa e valor nas históricas."
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className={adminStatGrid}>
         <StatCard label="Vendas registradas" value={count} />
         <StatCard
           label="Faturamento total"

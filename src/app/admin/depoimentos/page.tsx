@@ -23,7 +23,7 @@ export default async function DepoimentosPage() {
         subtitle="Os depoimentos publicados aparecem na home. Sem nenhum publicado, a seção mostra o aviso de 'em breve'."
       />
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard label="Cadastrados" value={items.length} />
         <StatCard
           label="Publicados no site"
