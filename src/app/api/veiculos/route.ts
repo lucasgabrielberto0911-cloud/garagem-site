@@ -31,7 +31,14 @@ export async function GET(request: NextRequest) {
       (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
     );
 
-    return NextResponse.json({ vehicles });
+    return NextResponse.json(
+      { vehicles },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=120",
+        },
+      },
+    );
   } catch (error) {
     console.error("[api/veiculos] falha ao buscar veículos:", error);
     return NextResponse.json(

@@ -15,9 +15,11 @@ export function ScrollReveal({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(delay <= 0);
 
   useEffect(() => {
+    if (delay <= 0) return;
+
     const node = ref.current;
     if (!node) return;
 

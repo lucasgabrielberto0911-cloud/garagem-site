@@ -2,7 +2,6 @@ import dynamic from "next/dynamic";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { JsonLd } from "@/components/JsonLd";
 import { MobileBottomNav } from "@/components/site/MobileBottomNav";
-import { PageTransition } from "@/components/site/PageTransition";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { localBusinessJsonLd } from "@/lib/seo";
@@ -42,7 +41,7 @@ export default async function SiteLayout({
       <ScrollProgress />
       <SiteHeader />
       <main className="flex-1 pt-site-header">
-        <PageTransition>{children}</PageTransition>
+        {children}
       </main>
       <SiteFooter />
       <div className="pb-site-nav lg:hidden" aria-hidden="true" />

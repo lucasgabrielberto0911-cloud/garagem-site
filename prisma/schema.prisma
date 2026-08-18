@@ -65,6 +65,7 @@ model Vehicle {
   @@index([status, yearModel])
   @@index([status, km])
   @@index([status, featured])
+  @@index([status, category])
 }
 
 model Photo {

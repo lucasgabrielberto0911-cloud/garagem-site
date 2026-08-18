@@ -11,6 +11,7 @@ const display = Sora({
   weight: ["600", "700"],
   variable: "--font-display",
   display: "swap",
+  preload: true,
 });
 
 const body = Inter({
@@ -18,6 +19,7 @@ const body = Inter({
   weight: ["400", "500"],
   variable: "--font-body",
   display: "swap",
+  preload: true,
 });
 
 const description =

@@ -1,17 +1,24 @@
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { brandKey, formatBrandName } from "@/lib/format";
-import { extractVehicleIdFromParam } from "@/lib/vehicle-slug";
+import { extractVehicleIdFromParam, vehicleSlug } from "@/lib/vehicle-slug";
 
 /** Tag do cache público — invalidada quando o estoque muda no admin. */
 export const VEHICLES_PUBLIC_CACHE_TAG = "vehicles-public";
 
+const PUBLIC_CACHE: { revalidate: number; tags: string[] } = {
+  revalidate: 60,
+  tags: [VEHICLES_PUBLIC_CACHE_TAG],
+};
+
 /**
  * Campos mínimos do card de listagem (estoque / home / relacionados).
- * Evita puxar description, accessories, fipePrice, etc.
+ * Só a capa — sem count de fotos (subquery extra por linha).
  */
 export const PUBLIC_VEHICLE_CARD_SELECT = {
   id: true,
+  category: true,
   brand: true,
   model: true,
   version: true,
@@ -25,18 +32,45 @@ export const PUBLIC_VEHICLE_CARD_SELECT = {
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,
-    select: { id: true, url: true, order: true, vehicleId: true },
+    select: { url: true },
   },
-  _count: { select: { photos: true } },
 } as const;
 
-/** @deprecated Prefira PUBLIC_VEHICLE_CARD_SELECT (select enxuto). */
+/** Anúncio público: sem FIPE, placa, compra, custos ou documentos. */
+export const PUBLIC_VEHICLE_DETAIL_SELECT = {
+  id: true,
+  category: true,
+  brand: true,
+  model: true,
+  version: true,
+  year: true,
+  yearModel: true,
+  km: true,
+  price: true,
+  fuel: true,
+  transmission: true,
+  color: true,
+  description: true,
+  engine: true,
+  doors: true,
+  warranty: true,
+  plateEnd: true,
+  inspection: true,
+  accessories: true,
+  status: true,
+  featured: true,
+  photos: {
+    orderBy: { order: "asc" as const },
+    select: { id: true, url: true },
+  },
+} as const;
+
+/** @deprecated Prefira PUBLIC_VEHICLE_CARD_SELECT. */
 export const PUBLIC_VEHICLE_CARD_INCLUDE = {
   photos: { orderBy: { order: "asc" as const }, take: 1 },
-  _count: { select: { photos: true } },
 } as const;
 
-/** Detalhe e edição carregam todas as fotos. */
+/** @deprecated Prefira PUBLIC_VEHICLE_DETAIL_SELECT. */
 export const PUBLIC_VEHICLE_INCLUDE = {
   photos: { orderBy: { order: "asc" as const } },
 } as const;
@@ -55,6 +89,7 @@ export const STOCK_PAGE_SIZE = 12;
 
 export type VehicleCardRecord = {
   id: string;
+  category?: string;
   brand: string;
   model: string;
   version: string | null;
@@ -65,8 +100,32 @@ export type VehicleCardRecord = {
   fuel: string;
   status: string;
   featured: boolean;
-  photos: Array<{ id: string; url: string; order: number; vehicleId: string }>;
-  _count?: { photos: number };
+  photos: Array<{ url: string }>;
+};
+
+export type PublicVehicleDetail = {
+  id: string;
+  category: string;
+  brand: string;
+  model: string;
+  version: string | null;
+  year: number;
+  yearModel: number;
+  km: number;
+  price: number;
+  fuel: string;
+  transmission: string;
+  color: string | null;
+  description: string | null;
+  engine: string | null;
+  doors: number | null;
+  warranty: string | null;
+  plateEnd: string | null;
+  inspection: string | null;
+  accessories: string[];
+  status: string;
+  featured: boolean;
+  photos: Array<{ id: string; url: string }>;
 };
 
 export type SiteQueryMeta = {
@@ -101,181 +160,163 @@ function dataIsObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function getFeaturedVehicles(take = 8) {
-  return safeQuery(
-    "veículos em destaque",
-    async () => {
-      const featured = await prisma.vehicle.findMany({
-        where: { status: "disponivel", featured: true },
-        select: PUBLIC_VEHICLE_CARD_SELECT,
-        orderBy: { createdAt: "desc" },
-        take,
-      });
+async function fetchFeaturedVehicles(take: number): Promise<VehicleCardRecord[]> {
+  const featured = await prisma.vehicle.findMany({
+    where: { status: "disponivel", featured: true },
+    select: PUBLIC_VEHICLE_CARD_SELECT,
+    orderBy: { createdAt: "desc" },
+    take,
+  });
 
-      if (featured.length > 0) return featured;
+  if (featured.length > 0) return featured;
 
-      return prisma.vehicle.findMany({
-        where: { status: "disponivel" },
-        select: PUBLIC_VEHICLE_CARD_SELECT,
-        orderBy: { createdAt: "desc" },
-        take: 4,
-      });
-    },
-    [] as VehicleCardRecord[],
-  );
+  return prisma.vehicle.findMany({
+    where: { status: "disponivel" },
+    select: PUBLIC_VEHICLE_CARD_SELECT,
+    orderBy: { createdAt: "desc" },
+    take: Math.min(take, 4),
+  });
 }
+
+const loadFeaturedCached = unstable_cache(
+  async (take: number) => fetchFeaturedVehicles(take),
+  ["featured-vehicles-v3"],
+  PUBLIC_CACHE,
+);
+
+export const getFeaturedVehicles = cache((take = 8) =>
+  safeQuery(
+    "veículos em destaque",
+    () => loadFeaturedCached(take),
+    [] as VehicleCardRecord[],
+  ),
+);
+
+const loadVehicleByIdCached = unstable_cache(
+  async (id: string) =>
+    prisma.vehicle.findFirst({
+      where: { id, status: { not: "vendido" } },
+      select: {
+        id: true,
+        brand: true,
+        model: true,
+        yearModel: true,
+      },
+    }),
+  ["vehicle-interest-v1"],
+  PUBLIC_CACHE,
+);
 
 /** Para interesse/troca: não resolve veículos já vendidos. */
-export function getVehicleById(id: string) {
-  return safeQuery(
-    `veículo ${id}`,
-    () =>
-      prisma.vehicle.findFirst({
-        where: { id, status: { not: "vendido" } },
-        omit: PUBLIC_VEHICLE_OMIT,
-        include: PUBLIC_VEHICLE_INCLUDE,
-      }),
-    null,
-  );
-}
+export const getVehicleById = cache((id: string) =>
+  safeQuery(`veículo ${id}`, () => loadVehicleByIdCached(id), null),
+);
+
+const loadVehicleDetailCached = unstable_cache(
+  async (id: string) =>
+    prisma.vehicle.findFirst({
+      where: { id, historical: false },
+      select: PUBLIC_VEHICLE_DETAIL_SELECT,
+    }),
+  ["vehicle-detail-v3"],
+  PUBLIC_CACHE,
+);
 
 /**
  * Resolve por cuid ou slug SEO (`marca-modelo-ano-{cuid}`).
  * Inclui vendidos para a página de detalhe não retornar 404 após a venda.
- * (Fluxos de interesse/vender devem usar getVehicleById.)
+ * Deduplica generateMetadata + page no mesmo request e cacheia 60s.
  */
-export function getVehicleByParam(param: string) {
+export const getVehicleByParam = cache(async (param: string) => {
   const id = extractVehicleIdFromParam(param);
-  if (!id) return Promise.resolve(null);
+  if (!id) return null;
 
   return safeQuery(
     `veículo ${id}`,
-    () =>
-      prisma.vehicle.findFirst({
-        where: { id, historical: false },
-        omit: PUBLIC_VEHICLE_OMIT,
-        include: PUBLIC_VEHICLE_INCLUDE,
-      }),
+    () => loadVehicleDetailCached(id),
     null,
   );
+});
+
+function relatedScore(
+  item: VehicleCardRecord,
+  brand: string,
+  category: string,
+  price: number,
+) {
+  let score = 0;
+  if (item.brand.localeCompare(brand, "pt-BR", { sensitivity: "accent" }) === 0) {
+    score += 8;
+  }
+  if (category && item.category === category) score += 4;
+  if (price > 0) {
+    const diff = Math.abs(item.price - price) / price;
+    if (diff <= 0.25) score += 3;
+    else if (diff <= 0.4) score += 1;
+  }
+  if (item.featured) score += 1;
+  return score;
 }
 
-/**
- * Relacionados: mesma marca → mesma categoria + faixa de preço → categoria → estoque.
- */
-export function getRelatedVehicles(
+async function fetchRelatedVehicles(
   vehicleId: string,
   brand: string,
-  take = 4,
-  category?: string,
-  price?: number,
-) {
-  return safeQuery(
-    "veículos relacionados",
-    async () => {
-      const select = PUBLIC_VEHICLE_CARD_SELECT;
-      const base = {
-        status: "disponivel" as const,
-        id: { not: vehicleId },
-      };
+  take: number,
+  category: string,
+  price: number,
+): Promise<VehicleCardRecord[]> {
+  const pool = await prisma.vehicle.findMany({
+    where: { status: "disponivel", id: { not: vehicleId } },
+    select: PUBLIC_VEHICLE_CARD_SELECT,
+    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+    take: 48,
+  });
 
-      const byBrand = await prisma.vehicle.findMany({
-        where: {
-          ...base,
-          brand,
-          ...(category ? { category } : {}),
-        },
-        select,
-        orderBy: { createdAt: "desc" },
-        take,
-      });
-      if (byBrand.length >= take) return byBrand;
-
-      const seen = new Set(byBrand.map((item) => item.id));
-      const remaining = take - byBrand.length;
-
-      if (category && price && price > 0) {
-        const margin = price * 0.25;
-        const byPrice = await prisma.vehicle.findMany({
-          where: {
-            ...base,
-            category,
-            price: { gte: price - margin, lte: price + margin },
-            id: { notIn: [vehicleId, ...Array.from(seen)] },
-          },
-          select,
-          orderBy: { createdAt: "desc" },
-          take: remaining,
-        });
-        for (const item of byPrice) seen.add(item.id);
-        const merged = [...byBrand, ...byPrice];
-        if (merged.length >= take) return merged;
-
-        const still = take - merged.length;
-        const byCategory = await prisma.vehicle.findMany({
-          where: {
-            ...base,
-            category,
-            id: { notIn: [vehicleId, ...Array.from(seen)] },
-          },
-          select,
-          orderBy: { createdAt: "desc" },
-          take: still,
-        });
-        const withCategory = [...merged, ...byCategory];
-        if (withCategory.length >= take) return withCategory;
-
-        const fill = take - withCategory.length;
-        const extras = await prisma.vehicle.findMany({
-          where: {
-            ...base,
-            id: { notIn: [vehicleId, ...withCategory.map((item) => item.id)] },
-          },
-          select,
-          orderBy: { createdAt: "desc" },
-          take: fill,
-        });
-        return [...withCategory, ...extras];
-      }
-
-      if (category) {
-        const byCategory = await prisma.vehicle.findMany({
-          where: {
-            ...base,
-            category,
-            id: { notIn: [vehicleId, ...Array.from(seen)] },
-          },
-          select,
-          orderBy: { createdAt: "desc" },
-          take: remaining,
-        });
-        const merged = [...byBrand, ...byCategory];
-        if (merged.length >= take) return merged;
-
-        const extras = await prisma.vehicle.findMany({
-          where: {
-            ...base,
-            id: { notIn: [vehicleId, ...merged.map((item) => item.id)] },
-          },
-          select,
-          orderBy: { createdAt: "desc" },
-          take: take - merged.length,
-        });
-        return [...merged, ...extras];
-      }
-
-      if (byBrand.length > 0) return byBrand;
-
-      return prisma.vehicle.findMany({
-        where: base,
-        select,
-        orderBy: { createdAt: "desc" },
-        take,
-      });
-    },
-    [] as VehicleCardRecord[],
-  );
+  return [...pool]
+    .sort(
+      (a, b) =>
+        relatedScore(b, brand, category, price) -
+        relatedScore(a, brand, category, price),
+    )
+    .slice(0, take);
 }
+
+const loadRelatedCached = unstable_cache(
+  async (
+    vehicleId: string,
+    brand: string,
+    take: number,
+    category: string,
+    price: number,
+  ) => fetchRelatedVehicles(vehicleId, brand, take, category, price),
+  ["related-vehicles-v3"],
+  PUBLIC_CACHE,
+);
+
+/**
+ * Relacionados: uma consulta ao pool recente, ranqueada por marca/categoria/preço.
+ */
+export const getRelatedVehicles = cache(
+  (
+    vehicleId: string,
+    brand: string,
+    take = 4,
+    category?: string,
+    price?: number,
+  ) =>
+    safeQuery(
+      "veículos relacionados",
+      () =>
+        loadRelatedCached(
+          vehicleId,
+          brand,
+          take,
+          category ?? "",
+          price && price > 0 ? price : 0,
+        ),
+      [] as VehicleCardRecord[],
+    ),
+);
 
 export type StockFilters = {
   q?: string;
@@ -356,7 +397,30 @@ function buildStockWhere(filters: StockFilters) {
   };
 }
 
-async function fetchStockPage(filters: StockFilters) {
+function stockQueryKey(filters: StockFilters) {
+  const pageSize = Math.min(
+    Math.max(filters.pageSize ?? STOCK_PAGE_SIZE, 1),
+    48,
+  );
+  const page = Math.max(filters.page ?? 1, 1);
+  return JSON.stringify({
+    q: (filters.q ?? "").trim(),
+    category: filters.category ?? "",
+    brand: filters.brand ?? "",
+    transmission: filters.transmission ?? "",
+    fuel: filters.fuel ?? "",
+    minPrice: filters.minPrice ?? 0,
+    maxPrice: filters.maxPrice ?? 0,
+    minYear: filters.minYear ?? 0,
+    maxYear: filters.maxYear ?? 0,
+    maxKm: filters.maxKm ?? 0,
+    sort: filters.sort ?? "recentes",
+    page,
+    pageSize,
+  });
+}
+
+async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
   const pageSize = Math.min(
     Math.max(filters.pageSize ?? STOCK_PAGE_SIZE, 1),
     48,
@@ -385,35 +449,40 @@ async function fetchStockPage(filters: StockFilters) {
   };
 }
 
+const loadStockPageCached = unstable_cache(
+  async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
+  ["stock-page-v3"],
+  PUBLIC_CACHE,
+);
+
 /** @deprecated Use getStockPage — mantido para callers simples. */
 export function getStockVehicles(filters: StockFilters) {
   return safeQuery(
     "estoque",
     async () => {
-      const result = await fetchStockPage({
-        ...filters,
-        page: 1,
-        pageSize: 500,
-      });
+      const result = await loadStockPageCached(
+        stockQueryKey({ ...filters, page: 1, pageSize: 48 }),
+      );
       return result.vehicles;
     },
     [] as VehicleCardRecord[],
   );
 }
 
-export function getStockPage(filters: StockFilters): Promise<StockPageResult> {
-  return safeQuery(
-    "estoque",
-    () => fetchStockPage(filters),
-    {
-      vehicles: [] as VehicleCardRecord[],
-      total: 0,
-      page: 1,
-      pageSize: filters.pageSize ?? STOCK_PAGE_SIZE,
-      totalPages: 1,
-    },
-  );
-}
+export const getStockPage = cache(
+  (filters: StockFilters): Promise<StockPageResult> =>
+    safeQuery(
+      "estoque",
+      () => loadStockPageCached(stockQueryKey(filters)),
+      {
+        vehicles: [] as VehicleCardRecord[],
+        total: 0,
+        page: 1,
+        pageSize: filters.pageSize ?? STOCK_PAGE_SIZE,
+        totalPages: 1,
+      },
+    ),
+);
 
 type StockFacets = {
   categories: string[];
@@ -431,10 +500,6 @@ const EMPTY_FACETS: StockFacets = {
   years: [],
 };
 
-/**
- * Facets via groupBy (não carrega todos os veículos).
- * Cache cross-request — invalidado com VEHICLES_PUBLIC_CACHE_TAG.
- */
 const loadStockFacetsCached = unstable_cache(
   async (): Promise<StockFacets> => {
     const available = { status: "disponivel" as const };
@@ -492,67 +557,105 @@ const loadStockFacetsCached = unstable_cache(
       years: years.map((row) => row.yearModel),
     };
   },
-  ["stock-facets-v2"],
-  { revalidate: 60, tags: [VEHICLES_PUBLIC_CACHE_TAG] },
+  ["stock-facets-v3"],
+  PUBLIC_CACHE,
 );
 
-export function getStockFacets() {
-  return safeQuery("filtros do estoque", () => loadStockFacetsCached(), EMPTY_FACETS);
-}
+export const getStockFacets = cache(() =>
+  safeQuery("filtros do estoque", () => loadStockFacetsCached(), EMPTY_FACETS),
+);
 
-export function getSiteStats() {
-  return safeQuery(
-    "estatísticas",
-    async () => {
-      const [availableLive, salesLive, settings] = await Promise.all([
-        prisma.vehicle.count({ where: { status: "disponivel" } }),
-        prisma.sale.count(),
-        prisma.siteSettings.findUnique({
-          where: { id: "default" },
-          select: {
-            statsStockBase: true,
-            statsSalesBase: true,
-            aboutSold: true,
-          },
-        }),
-      ]);
+const EMPTY_STATS = {
+  availableLive: 0,
+  salesLive: 0,
+  stockBase: 0,
+  salesBase: 0,
+  available: 0,
+  sales: 0,
+};
 
-      const stockBase = settings?.statsStockBase ?? 0;
-      const salesBaseFromRow = settings?.statsSalesBase ?? 0;
-      const salesBase =
-        salesBaseFromRow > 0
-          ? salesBaseFromRow
-          : Number(String(settings?.aboutSold ?? "").replace(/\D/g, "") || 0);
-
-      return {
-        availableLive,
-        salesLive,
-        stockBase,
-        salesBase,
-        available: availableLive + stockBase,
-        sales: salesLive + salesBase,
-      };
-    },
-    {
-      availableLive: 0,
-      salesLive: 0,
-      stockBase: 0,
-      salesBase: 0,
-      available: 0,
-      sales: 0,
-    },
-  );
-}
-
-export function getTestimonials(take = 6) {
-  return safeQuery(
-    "depoimentos",
-    () =>
-      prisma.testimonial.findMany({
-        where: { published: true },
-        orderBy: [{ order: "asc" }, { createdAt: "desc" }],
-        take,
+const loadSiteStatsCached = unstable_cache(
+  async () => {
+    const [availableLive, salesLive, settings] = await Promise.all([
+      prisma.vehicle.count({ where: { status: "disponivel" } }),
+      prisma.sale.count(),
+      prisma.siteSettings.findUnique({
+        where: { id: "default" },
+        select: {
+          statsStockBase: true,
+          statsSalesBase: true,
+          aboutSold: true,
+        },
       }),
-    [],
-  );
+    ]);
+
+    const stockBase = settings?.statsStockBase ?? 0;
+    const salesBaseFromRow = settings?.statsSalesBase ?? 0;
+    const salesBase =
+      salesBaseFromRow > 0
+        ? salesBaseFromRow
+        : Number(String(settings?.aboutSold ?? "").replace(/\D/g, "") || 0);
+
+    return {
+      availableLive,
+      salesLive,
+      stockBase,
+      salesBase,
+      available: availableLive + stockBase,
+      sales: salesLive + salesBase,
+    };
+  },
+  ["site-stats-v3"],
+  PUBLIC_CACHE,
+);
+
+export const getSiteStats = cache(() =>
+  safeQuery("estatísticas", () => loadSiteStatsCached(), EMPTY_STATS),
+);
+
+const loadTestimonialsCached = unstable_cache(
+  async (take: number) =>
+    prisma.testimonial.findMany({
+      where: { published: true },
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        message: true,
+        photoUrl: true,
+      },
+      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+      take,
+    }),
+  ["testimonials-v3"],
+  PUBLIC_CACHE,
+);
+
+export const getTestimonials = cache((take = 6) =>
+  safeQuery("depoimentos", () => loadTestimonialsCached(take), []),
+);
+
+/** Pré-gera os anúncios ativos no build / ISR. Falha de banco não quebra o build. */
+export async function getPublicVehicleStaticParams() {
+  try {
+    const vehicles = await prisma.vehicle.findMany({
+      where: {
+        historical: false,
+        status: { in: ["disponivel", "reservado"] },
+      },
+      select: {
+        id: true,
+        brand: true,
+        model: true,
+        version: true,
+        yearModel: true,
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 80,
+    });
+    return vehicles.map((vehicle) => ({ id: vehicleSlug(vehicle) }));
+  } catch (error) {
+    console.error("[site] falha ao pré-gerar anúncios:", error);
+    return [] as Array<{ id: string }>;
+  }
 }

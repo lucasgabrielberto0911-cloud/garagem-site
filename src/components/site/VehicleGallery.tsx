@@ -149,29 +149,35 @@ export function VehicleGallery({
       {total > 1 ? (
         <>
           <div className="mt-2 hidden gap-2 overflow-x-auto pb-1 scrollbar-hide lg:flex">
-            {photos.map((photo, index) => (
-              <button
-                key={photo.id}
-                type="button"
-                onClick={() => goTo(index)}
-                aria-label={`Ver foto ${index + 1}`}
-                aria-current={index === active}
-                className={`relative h-16 w-24 shrink-0 overflow-hidden border transition ${
-                  index === active
-                    ? "border-brand"
-                    : "border-white/15 opacity-70 hover:opacity-100"
-                }`}
-              >
-                <VehicleImage
-                  src={photo.url}
-                  alt={vehiclePhotoAlt(alt, index, total)}
-                  fill
-                  sizes="96px"
-                  quality={45}
-                  className="object-cover"
-                />
-              </button>
-            ))}
+            {photos.map((photo, index) => {
+              const loadThumb =
+                index < 8 || Math.abs(index - active) <= 1;
+              return (
+                <button
+                  key={photo.id}
+                  type="button"
+                  onClick={() => goTo(index)}
+                  aria-label={`Ver foto ${index + 1}`}
+                  aria-current={index === active}
+                  className={`relative h-16 w-24 shrink-0 overflow-hidden border bg-asphalt transition ${
+                    index === active
+                      ? "border-brand"
+                      : "border-white/15 opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  {loadThumb ? (
+                    <VehicleImage
+                      src={photo.url}
+                      alt={vehiclePhotoAlt(alt, index, total)}
+                      fill
+                      sizes="96px"
+                      quality={40}
+                      className="object-cover"
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
           <p className="mt-1.5 text-xs text-muted lg:hidden">
             Deslize para o lado · toque para ampliar
