@@ -166,7 +166,11 @@ export default async function EstoquePage({
                     </WhatsAppButton>
                   </div>
                 ) : (
-                  <VehicleGrid vehicles={stock.vehicles} returnTo={returnTo} />
+                  <VehicleGrid
+                    vehicles={stock.vehicles}
+                    returnTo={returnTo}
+                    priorityCount={4}
+                  />
                 )}
               </div>
 

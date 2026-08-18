@@ -488,16 +488,7 @@ body {
 
 /* Transição de página leve (substitui framer-motion). */
 .page-enter {
-  animation: page-enter 0.2s ease-out both;
-}
-
-@keyframes page-enter {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  animation: none;
 }
 
 @media (max-width: 1023px) {

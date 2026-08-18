@@ -172,7 +172,7 @@ export default async function HomePage() {
               </div>
             </ScrollReveal>
           ) : (
-            <VehicleGrid vehicles={featured} reveal priorityCount={2} />
+            <VehicleGrid vehicles={featured} priorityCount={2} />
           )}
         </div>
 

@@ -1,9 +1,6 @@
-"use client";
-
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
+import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
 import type { VehicleCardRecord } from "@/lib/vehicles";
 import { vehiclePath } from "@/lib/vehicle-slug";
@@ -15,8 +12,10 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   vendido: { label: "Vendido", className: "bg-white/15 text-cream" },
 };
 
+const CARD_SIZES = "(min-width: 1024px) 33vw, 50vw";
+
 /**
- * Card compacto: área inteira tocável (exceto favorito).
+ * Card de servidor: só o favorito e o link hidratam no cliente.
  */
 export function VehicleCard({
   vehicle,
@@ -27,14 +26,10 @@ export function VehicleCard({
   priority?: boolean;
   returnTo?: string;
 }) {
-  const router = useRouter();
   const title = formatVehicleLabel(vehicle.brand, vehicle.model);
   const cover = vehicle.photos[0]?.url;
   const badge = STATUS_BADGE[vehicle.status];
-  const href = returnTo
-    ? `${vehiclePath(vehicle)}?from=${encodeURIComponent(returnTo)}`
-    : vehiclePath(vehicle);
-  const photoCount = vehicle._count?.photos ?? vehicle.photos.length;
+  const href = vehiclePath(vehicle);
 
   const meta = [
     `${vehicle.yearModel}`,
@@ -51,21 +46,18 @@ export function VehicleCard({
         className="absolute right-2 top-2 z-20"
       />
 
-      <Link
+      <StockVehicleLink
         href={href}
-        prefetch={false}
-        onMouseEnter={() => router.prefetch(href)}
-        onFocus={() => router.prefetch(href)}
-        className="flex h-full flex-col outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt"
-        aria-label={`${title} ${vehicle.yearModel} — ${formatCurrencyBRL(vehicle.price)}`}
+        returnTo={returnTo}
+        ariaLabel={`${title} ${vehicle.yearModel} — ${formatCurrencyBRL(vehicle.price)}`}
       >
         <div className="relative aspect-[16/10] overflow-hidden bg-asphalt">
           <VehicleImage
             src={cover}
             alt={title}
             fill
-            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-            quality={priority ? 72 : 65}
+            sizes={CARD_SIZES}
+            quality={priority ? 70 : 58}
             priority={priority}
             className="object-cover transition duration-300 group-hover:scale-[1.03]"
           />
@@ -93,12 +85,6 @@ export function VehicleCard({
               </span>
             ) : null}
           </div>
-
-          {photoCount > 1 ? (
-            <span className="absolute bottom-2 right-2 bg-asphalt/80 px-1.5 py-0.5 text-[11px] text-cream backdrop-blur">
-              {photoCount} fotos
-            </span>
-          ) : null}
         </div>
 
         <div className="flex flex-1 flex-col gap-1.5 p-2.5 sm:gap-2 sm:p-3">
@@ -125,7 +111,7 @@ export function VehicleCard({
             </span>
           </div>
         </div>
-      </Link>
+      </StockVehicleLink>
     </article>
   );
 }

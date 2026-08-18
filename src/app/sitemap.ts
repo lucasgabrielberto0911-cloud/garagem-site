@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { SERVICE_CITIES, absoluteUrl } from "@/lib/seo";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
+export const revalidate = 3600;
+
 const STATIC_ROUTES: {
   path: string;
   changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];

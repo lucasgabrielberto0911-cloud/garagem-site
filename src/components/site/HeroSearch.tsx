@@ -1,29 +1,16 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import Link from "next/link";
 import { IconSearch } from "@/components/site/icons";
+import { formatBrandName } from "@/lib/format";
 
+/**
+ * Formulário nativo GET — busca no estoque sem esperar hidratação.
+ */
 export function HeroSearch({ brands = [] }: { brands?: string[] }) {
-  const router = useRouter();
-  const [term, setTerm] = useState("");
-  const [isPending, startTransition] = useTransition();
-
-  function submit(query: string) {
-    const trimmed = query.trim();
-    const search = trimmed ? `?q=${encodeURIComponent(trimmed)}` : "";
-    startTransition(() => {
-      router.push(`/estoque${search}`);
-    });
-  }
-
   return (
     <div className="mx-auto w-full max-w-xl">
       <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          submit(term);
-        }}
+        action="/estoque"
+        method="get"
         className="flex flex-col gap-2 border border-white/15 bg-asphalt/85 p-2 backdrop-blur-md transition focus-within:border-brand/60 sm:flex-row"
         role="search"
       >
@@ -35,18 +22,16 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
           <input
             id="hero-busca"
             type="search"
-            value={term}
-            onChange={(event) => setTerm(event.target.value)}
+            name="q"
             placeholder="Busque por marca ou modelo"
             className="w-full bg-transparent py-3.5 text-base text-cream placeholder:text-muted focus:outline-none sm:py-2.5 sm:text-sm"
           />
         </div>
         <button
           type="submit"
-          disabled={isPending}
-          className="min-h-[48px] bg-brand px-6 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 touch-manipulation"
+          className="min-h-[48px] bg-brand px-6 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] touch-manipulation"
         >
-          {isPending ? "Buscando..." : "Buscar"}
+          Buscar
         </button>
       </form>
 
@@ -56,14 +41,13 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
             Marcas:
           </span>
           {brands.slice(0, 5).map((brand) => (
-            <button
+            <Link
               key={brand}
-              type="button"
-              onClick={() => submit(brand)}
-              className="min-h-[40px] shrink-0 border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation sm:min-h-0 sm:px-2.5 sm:py-1.5"
+              href={`/estoque?q=${encodeURIComponent(brand)}`}
+              className="inline-flex min-h-[40px] shrink-0 items-center border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation sm:min-h-0 sm:px-2.5 sm:py-1.5"
             >
-              {brand}
-            </button>
+              {formatBrandName(brand)}
+            </Link>
           ))}
         </div>
       ) : null}

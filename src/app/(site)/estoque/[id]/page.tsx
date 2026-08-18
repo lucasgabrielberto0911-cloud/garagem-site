@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
+import { StockBackLink } from "@/components/site/StockBackLink";
 import { Container, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
@@ -14,38 +16,17 @@ import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site, whatsappUrl } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
-import { getRelatedVehicles, getVehicleByParam } from "@/lib/vehicles";
+import {
+  getPublicVehicleStaticParams,
+  getRelatedVehicles,
+  getVehicleByParam,
+} from "@/lib/vehicles";
 
 export const revalidate = 60;
+export const dynamicParams = true;
 
-type DetailSearchParams = {
-  from?: string | string[];
-};
-
-function safeStockReturnPath(from?: string | string[]) {
-  const value = Array.isArray(from) ? from[0] : from;
-  if (
-    !value ||
-    !value.startsWith("/estoque") ||
-    value.startsWith("//") ||
-    value.includes("\\") ||
-    /[\u0000-\u001f\u007f]/.test(value)
-  ) {
-    return undefined;
-  }
-
-  try {
-    const origin = "https://garagem.local";
-    const parsed = new URL(value, origin);
-    const isStockPath =
-      parsed.pathname === "/estoque" ||
-      parsed.pathname.startsWith("/estoque/");
-
-    if (parsed.origin !== origin || !isStockPath) return undefined;
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-  } catch {
-    return undefined;
-  }
+export async function generateStaticParams() {
+  return getPublicVehicleStaticParams();
 }
 
 export async function generateMetadata({
@@ -97,21 +78,15 @@ export async function generateMetadata({
 
 export default async function VehicleDetailPage({
   params,
-  searchParams,
 }: {
   params: { id: string };
-  searchParams?: DetailSearchParams;
 }) {
-  const returnTo = safeStockReturnPath(searchParams?.from);
   const vehicle = await getVehicleByParam(params.id);
   if (!vehicle) notFound();
 
   const canonicalSlug = vehicleSlug(vehicle);
   if (params.id !== canonicalSlug) {
-    const query = new URLSearchParams();
-    if (returnTo) query.set("from", returnTo);
-    const qs = query.toString();
-    permanentRedirect(qs ? `${vehiclePath(vehicle)}?${qs}` : vehiclePath(vehicle));
+    permanentRedirect(vehiclePath(vehicle));
   }
 
   const path = vehiclePath(vehicle);
@@ -162,7 +137,7 @@ export default async function VehicleDetailPage({
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Início", path: "/" },
-          { name: "Estoque", path: returnTo ?? "/estoque" },
+          { name: "Estoque", path: "/estoque" },
           { name: fullLabel, path },
         ])}
       />
@@ -187,17 +162,9 @@ export default async function VehicleDetailPage({
           </div>
         ) : null}
 
-        {returnTo ? (
-          <Link
-            href={returnTo}
-            className="mb-3 inline-flex min-h-[40px] items-center text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
-          >
-            <span className="mr-2 text-brand" aria-hidden="true">
-              ←
-            </span>
-            Voltar aos resultados
-          </Link>
-        ) : null}
+        <Suspense fallback={null}>
+          <StockBackLink />
+        </Suspense>
         <nav
           aria-label="Você está aqui"
           className="text-xs text-muted sm:text-center"
@@ -206,7 +173,7 @@ export default async function VehicleDetailPage({
             Início
           </Link>
           <span className="mx-2">/</span>
-          <Link href={returnTo ?? "/estoque"} className="transition hover:text-cream">
+          <Link href="/estoque" className="transition hover:text-cream">
             Estoque
           </Link>
           <span className="mx-2">/</span>
