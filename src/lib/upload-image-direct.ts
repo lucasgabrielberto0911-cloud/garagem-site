@@ -46,25 +46,21 @@ export async function uploadImageDirect(file: File): Promise<string> {
       if (url) return url;
     }
 
-    if (response.status !== 413) {
-      throw new Error(
-        data.error || `Falha no upload (${response.status}). Tente de novo.`,
+    if (response.status === 413) {
+      console.warn(
+        "[upload] /api/upload retornou 413 — usando upload assinado (sem blur nesta foto).",
       );
+      return uploadViaSignedUrl(prepared);
     }
 
-    console.warn(
-      "[upload] /api/upload retornou 413 — usando upload assinado (sem blur).",
+    throw new Error(
+      data.error || `Falha no upload (${response.status}). Tente de novo.`,
     );
   } catch (error) {
-    // Rede / parse: tenta o caminho assinado antes de desistir.
-    if (!(error instanceof Error && /413|Too Large/i.test(error.message))) {
-      console.warn("[upload] falha em /api/upload, tentando signed URL:", error);
-    } else {
-      throw error;
-    }
+    throw error instanceof Error
+      ? error
+      : new Error("Falha no upload. Tente de novo.");
   }
-
-  return uploadViaSignedUrl(prepared);
 }
 
 async function uploadViaSignedUrl(prepared: File): Promise<string> {
