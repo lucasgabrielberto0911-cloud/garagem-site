@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import type { Photo, Vehicle } from "@prisma/client";
+import { InfiniteSentinel } from "@/components/InfiniteSentinel";
 import { VehicleImage } from "@/components/VehicleImage";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
@@ -27,6 +27,7 @@ import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { expectedMargin, hasCostBasis } from "@/lib/vehicle-ops";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath } from "@/lib/vehicle-slug";
+import type { AdminVehicleListItem, VehiclesTab } from "@/lib/admin-vehicles";
 import {
   deleteVehicle,
   duplicateVehicle,
@@ -35,13 +36,16 @@ import {
   setVehicleStatus,
 } from "@/app/admin/veiculos/actions";
 
-export type VehicleRow = Vehicle & {
-  photos: Photo[];
-  costs?: Array<{ amount: number }>;
-  sale?: { salePrice: number } | null;
-};
+export type VehicleRow = AdminVehicleListItem;
 
-export type VehiclesTab = "estoque" | "vendidos";
+export type { VehiclesTab };
+
+function hydrateVehicle(row: VehicleRow): VehicleRow {
+  return {
+    ...row,
+    createdAt: new Date(row.createdAt),
+  };
+}
 
 const STATUS_OPTIONS = [
   { value: "disponivel", label: "Disponível" },
@@ -62,8 +66,6 @@ function canMarkAsSold(status: string) {
   return status === "disponivel" || status === "reservado";
 }
 
-const PAGE_SIZE = 10;
-
 function opsHints(vehicle: VehicleRow) {
   const costs = vehicle.costs ?? [];
   const reference = vehicle.sale?.salePrice ?? vehicle.price;
@@ -82,12 +84,16 @@ type SortKey = "recent" | "year" | "km" | "price";
 
 export function VehiclesTable({
   vehicles,
+  initialTotal,
+  pageSize,
   q,
   tab,
-  estoqueCount,
-  vendidosCount,
+  estoqueCount: estoqueCountProp,
+  vendidosCount: vendidosCountProp,
 }: {
   vehicles: VehicleRow[];
+  initialTotal: number;
+  pageSize: number;
   q: string;
   tab: VehiclesTab;
   estoqueCount: number;
@@ -100,33 +106,73 @@ export function VehiclesTable({
     key: "recent",
     dir: "desc",
   });
+  const [items, setItems] = useState(vehicles);
+  const [total, setTotal] = useState(initialTotal);
   const [page, setPage] = useState(1);
+  const [estoqueCount, setEstoqueCount] = useState(estoqueCountProp);
+  const [vendidosCount, setVendidosCount] = useState(vendidosCountProp);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadingSort, setLoadingSort] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const loadingRef = useRef(false);
   const [deleteTarget, setDeleteTarget] = useState<VehicleRow | null>(null);
   const [soldTarget, setSoldTarget] = useState<VehicleRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [markingSold, setMarkingSold] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const sorted = useMemo(() => {
-    const items = [...vehicles];
-    const factor = sort.dir === "asc" ? 1 : -1;
+  const hasMore = items.length < total;
 
-    items.sort((a, b) => {
-      if (sort.key === "recent") {
-        return (a.createdAt.getTime() - b.createdAt.getTime()) * factor;
+  const fetchPage = useCallback(
+    async (
+      nextPage: number,
+      nextSort: { key: SortKey; dir: "asc" | "desc" },
+      replace: boolean,
+    ) => {
+      if (loadingRef.current && !replace) return;
+      loadingRef.current = true;
+      if (replace) setLoadingSort(true);
+      else setLoadingMore(true);
+      setLoadError(false);
+      try {
+        const search = new URLSearchParams();
+        if (q) search.set("q", q);
+        if (tab === "vendidos") search.set("tab", "vendidos");
+        search.set("sort", nextSort.key);
+        search.set("dir", nextSort.dir);
+        search.set("page", String(nextPage));
+        search.set("pageSize", String(pageSize));
+        const response = await fetch(`/api/admin/veiculos?${search.toString()}`);
+        if (!response.ok) throw new Error("fetch");
+        const data = (await response.json()) as {
+          vehicles?: VehicleRow[];
+          total?: number;
+        };
+        const incoming = (data.vehicles ?? []).map(hydrateVehicle);
+        setTotal(data.total ?? 0);
+        if (replace) {
+          setItems(incoming);
+          setPage(1);
+        } else {
+          setItems((current) => {
+            const seen = new Set(current.map((item) => item.id));
+            return [
+              ...current,
+              ...incoming.filter((item) => !seen.has(item.id)),
+            ];
+          });
+          setPage(nextPage);
+        }
+      } catch {
+        setLoadError(true);
+        toast.error("Não foi possível carregar os veículos.");
+      } finally {
+        loadingRef.current = false;
+        setLoadingMore(false);
+        setLoadingSort(false);
       }
-      const key = sort.key === "year" ? "yearModel" : sort.key;
-      return ((a[key] as number) - (b[key] as number)) * factor;
-    });
-
-    return items;
-  }, [vehicles, sort]);
-
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageItems = sorted.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
+    },
+    [pageSize, q, tab],
   );
 
   const applyFilters = useCallback(
@@ -139,23 +185,53 @@ export function VehiclesTable({
       startTransition(() => {
         router.push(search.toString() ? `${pathname}?${search}` : pathname);
       });
-      setPage(1);
     },
     [q, tab, router, pathname],
   );
 
+  function changeSort(next: { key: SortKey; dir: "asc" | "desc" }) {
+    setSort(next);
+    void fetchPage(1, next, true);
+  }
+
   function toggleSort(key: Exclude<SortKey, "recent">) {
-    setSort((current) =>
-      current.key === key
-        ? { key, dir: current.dir === "asc" ? "desc" : "asc" }
+    changeSort(
+      sort.key === key
+        ? { key, dir: sort.dir === "asc" ? "desc" : "asc" }
         : { key, dir: "asc" },
     );
-    setPage(1);
+  }
+
+  function removeFromList(id: string, fromTab: VehiclesTab) {
+    setItems((current) => current.filter((item) => item.id !== id));
+    setTotal((current) => Math.max(0, current - 1));
+    if (fromTab === "estoque") {
+      setEstoqueCount((current) => Math.max(0, current - 1));
+    } else {
+      setVendidosCount((current) => Math.max(0, current - 1));
+    }
+  }
+
+  function applyLocalStatus(id: string, status: string) {
+    if (tab === "estoque" && status === "vendido") {
+      removeFromList(id, "estoque");
+      setVendidosCount((current) => current + 1);
+      return;
+    }
+    if (tab === "vendidos" && status !== "vendido") {
+      removeFromList(id, "vendidos");
+      setEstoqueCount((current) => current + 1);
+      return;
+    }
+    setItems((current) =>
+      current.map((item) => (item.id === id ? { ...item, status } : item)),
+    );
   }
 
   function runQuickAction(
     id: string,
     action: () => Promise<{ ok: boolean; message: string }>,
+    onOk?: () => void,
   ) {
     setBusyId(id);
     startTransition(async () => {
@@ -163,6 +239,7 @@ export function VehiclesTable({
         const result = await action();
         if (result.ok) {
           toast.success(result.message);
+          onOk?.();
           router.refresh();
         } else {
           toast.error(result.message);
@@ -181,6 +258,7 @@ export function VehiclesTable({
     try {
       await deleteVehicle(deleteTarget.id);
       toast.success("Veículo excluído.");
+      removeFromList(deleteTarget.id, tab);
       router.refresh();
     } catch {
       toast.error("Erro ao excluir o veículo.");
@@ -196,6 +274,7 @@ export function VehiclesTable({
     try {
       await markVehicleAsSold(soldTarget.id);
       toast.success("Veículo movido para a aba Vendidos. A página permanece no site.");
+      applyLocalStatus(soldTarget.id, "vendido");
       router.refresh();
     } catch {
       toast.error("Erro ao marcar como vendido.");
@@ -304,7 +383,9 @@ export function VehiclesTable({
                 type="button"
                 onClick={() =>
                   option.key === "recent"
-                    ? setSort({ key: "recent", dir: "desc" })
+                    ? sort.key === "recent"
+                      ? undefined
+                      : changeSort({ key: "recent", dir: "desc" })
                     : toggleSort(option.key)
                 }
                 className={`shrink-0 px-3 py-2 text-xs transition ${
@@ -332,7 +413,7 @@ export function VehiclesTable({
         </div>
       </div>
 
-      {vehicles.length === 0 ? (
+      {items.length === 0 && !loadingSort ? (
         <EmptyState
           icon={<IconImage className="h-12 w-12" />}
           title={
@@ -360,9 +441,16 @@ export function VehiclesTable({
         />
       ) : (
         <>
+          <div
+            className={
+              loadingSort
+                ? "pointer-events-none opacity-50 transition-opacity"
+                : "transition-opacity"
+            }
+          >
           {/* Mobile: cards, porque tabela larga não cabe na tela. */}
           <ul className="space-y-3 lg:hidden">
-            {pageItems.map((vehicle) => (
+            {items.map((vehicle) => (
               <li
                 key={vehicle.id}
                 className="overflow-hidden border border-white/10 bg-ink/50"
@@ -425,8 +513,10 @@ export function VehiclesTable({
                     value={vehicle.status}
                     disabled={busyId === vehicle.id}
                     onChange={(event) =>
-                      runQuickAction(vehicle.id, () =>
-                        setVehicleStatus(vehicle.id, event.target.value),
+                      runQuickAction(
+                        vehicle.id,
+                        () => setVehicleStatus(vehicle.id, event.target.value),
+                        () => applyLocalStatus(vehicle.id, event.target.value),
                       )
                     }
                     className="h-11 w-full border border-white/10 bg-ink px-3 text-sm text-cream outline-none focus:border-brand disabled:opacity-60"
@@ -472,8 +562,17 @@ export function VehiclesTable({
                     featured={vehicle.featured}
                     busy={busyId === vehicle.id}
                     onClick={() =>
-                      runQuickAction(vehicle.id, () =>
-                        setVehicleFeatured(vehicle.id, !vehicle.featured),
+                      runQuickAction(
+                        vehicle.id,
+                        () => setVehicleFeatured(vehicle.id, !vehicle.featured),
+                        () =>
+                          setItems((current) =>
+                            current.map((item) =>
+                              item.id === vehicle.id
+                                ? { ...item, featured: !item.featured }
+                                : item,
+                            ),
+                          ),
                       )
                     }
                   />
@@ -539,7 +638,7 @@ export function VehiclesTable({
                 </tr>
               </thead>
               <tbody>
-                {pageItems.map((vehicle) => (
+                {items.map((vehicle) => (
                   <tr
                     key={vehicle.id}
                     className="border-t border-white/10 transition hover:bg-white/[0.04]"
@@ -574,13 +673,9 @@ export function VehiclesTable({
                               {opsHints(vehicle).join(" · ")}
                             </p>
                           ) : null}
-                          <p className="text-xs text-muted">
-                            {vehicle.photos.length === 0 ? (
-                              <span className="text-brand">Sem fotos</span>
-                            ) : (
-                              `${vehicle.photos.length} foto(s)`
-                            )}
-                          </p>
+                          {vehicle.photos.length === 0 ? (
+                            <p className="text-xs text-brand">Sem fotos</p>
+                          ) : null}
                         </div>
                       </div>
                     </td>
@@ -598,8 +693,10 @@ export function VehiclesTable({
                         value={vehicle.status}
                         disabled={busyId === vehicle.id}
                         onChange={(event) =>
-                          runQuickAction(vehicle.id, () =>
-                            setVehicleStatus(vehicle.id, event.target.value),
+                          runQuickAction(
+                            vehicle.id,
+                            () => setVehicleStatus(vehicle.id, event.target.value),
+                            () => applyLocalStatus(vehicle.id, event.target.value),
                           )
                         }
                         className="border border-white/10 bg-ink px-2 py-1.5 text-xs text-cream outline-none focus:border-brand"
@@ -618,8 +715,17 @@ export function VehiclesTable({
                         featured={vehicle.featured}
                         busy={busyId === vehicle.id}
                         onClick={() =>
-                          runQuickAction(vehicle.id, () =>
-                            setVehicleFeatured(vehicle.id, !vehicle.featured),
+                          runQuickAction(
+                            vehicle.id,
+                            () => setVehicleFeatured(vehicle.id, !vehicle.featured),
+                            () =>
+                              setItems((current) =>
+                                current.map((item) =>
+                                  item.id === vehicle.id
+                                    ? { ...item, featured: !item.featured }
+                                    : item,
+                                ),
+                              ),
                           )
                         }
                       />
@@ -655,8 +761,12 @@ export function VehiclesTable({
                           type="button"
                           disabled={busyId === vehicle.id}
                           onClick={() =>
-                            runQuickAction(vehicle.id, () =>
-                              duplicateVehicle(vehicle.id),
+                            runQuickAction(
+                              vehicle.id,
+                              () => duplicateVehicle(vehicle.id),
+                              () => {
+                                void fetchPage(1, sort, true);
+                              },
                             )
                           }
                           className="p-2 text-muted transition hover:text-cream disabled:opacity-50"
@@ -692,31 +802,35 @@ export function VehiclesTable({
               </tbody>
             </table>
           </div>
+          </div>
 
-          <div className="flex flex-col items-center justify-between gap-3 text-sm text-muted sm:flex-row">
+          <div className="flex flex-col items-center gap-2 text-sm text-muted">
             <span>
-              Mostrando {pageItems.length} de {vehicles.length} veículo(s)
-              {totalPages > 1 ? ` · página ${currentPage} de ${totalPages}` : ""}
+              Mostrando {items.length} de {total} veículo(s)
             </span>
-            {totalPages > 1 ? (
-              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
-                <button
-                  type="button"
-                  disabled={currentPage <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="min-h-[44px] border border-white/15 px-3 py-1.5 transition hover:text-cream disabled:opacity-40"
-                >
-                  Anterior
-                </button>
-                <button
-                  type="button"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="min-h-[44px] border border-white/15 px-3 py-1.5 transition hover:text-cream disabled:opacity-40"
-                >
-                  Próximo
-                </button>
-              </div>
+            {hasMore ? (
+              <InfiniteSentinel
+                onVisible={() => void fetchPage(page + 1, sort, false)}
+                disabled={loadingMore || loadingSort || loadError}
+              >
+                {loadingMore ? (
+                  <p className="flex items-center gap-2 text-xs uppercase tracking-wider">
+                    <span
+                      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-r-transparent"
+                      aria-hidden="true"
+                    />
+                    Carregando mais…
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void fetchPage(page + 1, sort, false)}
+                    className="min-h-[44px] border border-white/15 px-4 text-xs uppercase tracking-wider text-cream transition hover:border-brand"
+                  >
+                    Carregar mais
+                  </button>
+                )}
+              </InfiniteSentinel>
             ) : null}
           </div>
         </>

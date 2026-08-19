@@ -11,32 +11,51 @@ export default async function ClientesPage() {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const customers = await prisma.customer.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      sales: { select: { salePrice: true, saleDate: true } },
-    },
-  });
+  const [customers, saleGroups] = await Promise.all([
+    prisma.customer.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        cpf: true,
+        email: true,
+        address: true,
+        notes: true,
+        createdAt: true,
+      },
+    }),
+    prisma.sale.groupBy({
+      by: ["customerId"],
+      where: { customerId: { not: null } },
+      _sum: { salePrice: true },
+      _max: { saleDate: true },
+      _count: { _all: true },
+    }),
+  ]);
 
-  const rows = customers.map((customer) => ({
-    id: customer.id,
-    name: customer.name,
-    phone: customer.phone,
-    cpf: customer.cpf,
-    email: customer.email,
-    address: customer.address,
-    notes: customer.notes,
-    createdAt: customer.createdAt,
-    purchases: customer.sales.length,
-    totalSpent: customer.sales.reduce((sum, sale) => sum + sale.salePrice, 0),
-    lastPurchase:
-      customer.sales.length > 0
-        ? customer.sales.reduce(
-            (latest, sale) => (sale.saleDate > latest ? sale.saleDate : latest),
-            customer.sales[0].saleDate,
-          )
-        : null,
-  }));
+  const byCustomer = new Map(
+    saleGroups
+      .filter((group) => group.customerId)
+      .map((group) => [group.customerId as string, group]),
+  );
+
+  const rows = customers.map((customer) => {
+    const stats = byCustomer.get(customer.id);
+    return {
+      id: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      cpf: customer.cpf,
+      email: customer.email,
+      address: customer.address,
+      notes: customer.notes,
+      createdAt: customer.createdAt,
+      purchases: stats?._count._all ?? 0,
+      totalSpent: stats?._sum.salePrice ?? 0,
+      lastPurchase: stats?._max.saleDate ?? null,
+    };
+  });
 
   const buyers = rows.filter((row) => row.purchases > 0);
   const revenue = buyers.reduce((sum, row) => sum + row.totalSpent, 0);

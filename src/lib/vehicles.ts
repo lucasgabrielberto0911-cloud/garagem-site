@@ -87,6 +87,45 @@ export const PUBLIC_VEHICLE_OMIT = {
 
 export const STOCK_PAGE_SIZE = 12;
 
+function optionalPositiveNumber(value?: string | number) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 ? value : undefined;
+  }
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function pickParam(
+  input: Record<string, string | string[] | undefined>,
+  key: string,
+) {
+  const value = input[key];
+  return Array.isArray(value) ? value[0] : value;
+}
+
+/** Interpreta query string do estoque (página, API e rolagem infinita). */
+export function parseStockFilters(
+  input: Record<string, string | string[] | undefined>,
+  options?: { page?: number },
+): StockFilters {
+  return {
+    q: pickParam(input, "q"),
+    category: pickParam(input, "category"),
+    brand: pickParam(input, "brand"),
+    transmission: pickParam(input, "transmission"),
+    fuel: pickParam(input, "fuel"),
+    minPrice: optionalPositiveNumber(pickParam(input, "minPrice")),
+    maxPrice: optionalPositiveNumber(pickParam(input, "maxPrice")),
+    minYear: optionalPositiveNumber(pickParam(input, "minYear")),
+    maxYear: optionalPositiveNumber(pickParam(input, "maxYear")),
+    maxKm: optionalPositiveNumber(pickParam(input, "maxKm")),
+    sort: pickParam(input, "sort"),
+    page: options?.page ?? Math.max(1, Number(pickParam(input, "page")) || 1),
+    pageSize: optionalPositiveNumber(pickParam(input, "pageSize")),
+  };
+}
+
 export type VehicleCardRecord = {
   id: string;
   category?: string;

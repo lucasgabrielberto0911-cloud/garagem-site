@@ -1,4 +1,9 @@
+import { unstable_cache } from "next/cache";
 import bcrypt from "bcryptjs";
+import {
+  ADMIN_NEW_LEADS_TAG,
+  ADMIN_SEED_PASSWORD_TAG,
+} from "@/lib/admin-cache";
 import { WEAK_ADMIN_PASSWORDS } from "@/lib/admin-security";
 import { prisma } from "@/lib/prisma";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/leads";
@@ -7,6 +12,42 @@ import {
   getPublicSite,
   listPlaceholderLabels,
 } from "@/lib/site-settings";
+
+/** Badge do menu: 15s de cache para não consultar o banco em toda navegação. */
+export const getNewLeadsBadgeCount = unstable_cache(
+  async () => {
+    try {
+      return await prisma.leadVenda.count({ where: { status: "novo" } });
+    } catch {
+      return 0;
+    }
+  },
+  ["admin-new-leads-badge"],
+  { revalidate: 15, tags: [ADMIN_NEW_LEADS_TAG] },
+);
+
+/** bcrypt em todo admin a cada dashboard é caro — cacheia o alerta. */
+export const getUsingSeedPassword = unstable_cache(
+  async () => {
+    try {
+      const admins = await prisma.admin.findMany({
+        select: { passwordHash: true },
+      });
+      const matches = await Promise.all(
+        admins.flatMap((admin) =>
+          WEAK_ADMIN_PASSWORDS.map((password) =>
+            bcrypt.compare(password, admin.passwordHash),
+          ),
+        ),
+      );
+      return matches.some(Boolean);
+    } catch {
+      return false;
+    }
+  },
+  ["admin-seed-password"],
+  { revalidate: 300, tags: [ADMIN_SEED_PASSWORD_TAG] },
+);
 
 const DAY_MS = 1000 * 60 * 60 * 24;
 
@@ -51,7 +92,7 @@ export async function getDashboardData() {
     withoutPhotos,
     customers,
     publishedTestimonials,
-    admins,
+    usingSeedPassword,
     publicSite,
   ] = await Promise.all([
     safe("vehicle.groupBy", () => prisma.vehicle.groupBy({ by: ["status"], _count: { _all: true } }), []),
@@ -89,7 +130,19 @@ export async function getDashboardData() {
         prisma.vehicle.findMany({
           orderBy: { createdAt: "desc" },
           take: 5,
-          include: { photos: { orderBy: { order: "asc" }, take: 1 } },
+          select: {
+            id: true,
+            brand: true,
+            model: true,
+            version: true,
+            yearModel: true,
+            price: true,
+            photos: {
+              orderBy: { order: "asc" },
+              take: 1,
+              select: { url: true },
+            },
+          },
         }),
       [],
     ),
@@ -117,19 +170,9 @@ export async function getDashboardData() {
     ),
     safe("customers", () => prisma.customer.count(), 0),
     safe("testimonials", () => prisma.testimonial.count({ where: { published: true } }), 0),
-    safe("admins", () => prisma.admin.findMany({ select: { passwordHash: true } }), []),
+    getUsingSeedPassword(),
     safe("publicSite", () => getPublicSite(), null as Awaited<ReturnType<typeof getPublicSite>> | null),
   ]);
-
-  const usingSeedPassword = (
-    await Promise.all(
-      admins.flatMap((admin) =>
-        WEAK_ADMIN_PASSWORDS.map((password) =>
-          bcrypt.compare(password, admin.passwordHash),
-        ),
-      ),
-    )
-  ).some(Boolean);
 
   const byStatus = (status: string) =>
     vehicleGroups.find((group) => group.status === status)?._count._all ?? 0;

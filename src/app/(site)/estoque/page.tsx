@@ -3,13 +3,12 @@ import { Suspense } from "react";
 import { SiteErrorNotice } from "@/components/site/SiteErrorNotice";
 import { StockBrowseShell } from "@/components/site/StockPending";
 import { StockFilters } from "@/components/site/StockFilters";
-import { StockPagination } from "@/components/site/StockPagination";
-import { VehicleGrid } from "@/components/site/VehicleGrid";
+import { StockInfiniteList } from "@/components/site/StockInfiniteList";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { buildPageMetadata } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
-import { getStockFacets, getStockPage } from "@/lib/vehicles";
+import { getStockFacets, getStockPage, parseStockFilters } from "@/lib/vehicles";
 
 export const revalidate = 60;
 
@@ -34,41 +33,30 @@ type SearchParams = {
   page?: string;
 };
 
-function positiveNumber(value?: string) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-function buildBaseQuery(params: SearchParams) {
-  const search = new URLSearchParams();
-  const keys: (keyof SearchParams)[] = [
-    "q",
-    "category",
-    "brand",
-    "transmission",
-    "fuel",
-    "minPrice",
-    "maxPrice",
-    "minYear",
-    "maxYear",
-    "maxKm",
-    "sort",
-  ];
-  for (const key of keys) {
-    const value = params[key];
-    if (value) search.set(key, value);
-  }
-  const qs = search.toString();
-  return qs ? `?${qs}` : "";
-}
-
 function buildReturnTo(params: SearchParams) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value) search.set(key, value);
+    if (key === "page" || !value) continue;
+    search.set(key, value);
   }
   const qs = search.toString();
   return qs ? `/estoque?${qs}` : "/estoque";
+}
+
+function stockQuery(params: SearchParams) {
+  return {
+    q: params.q,
+    category: params.category,
+    brand: params.brand,
+    transmission: params.transmission,
+    fuel: params.fuel,
+    minPrice: params.minPrice,
+    maxPrice: params.maxPrice,
+    minYear: params.minYear,
+    maxYear: params.maxYear,
+    maxKm: params.maxKm,
+    sort: params.sort,
+  };
 }
 
 export default async function EstoquePage({
@@ -76,22 +64,9 @@ export default async function EstoquePage({
 }: {
   searchParams: SearchParams;
 }) {
-  const page = Math.max(1, Number(searchParams.page) || 1);
+  const filters = parseStockFilters(searchParams, { page: 1 });
   const [stock, facets] = await Promise.all([
-    getStockPage({
-      q: searchParams.q,
-      category: searchParams.category,
-      brand: searchParams.brand,
-      transmission: searchParams.transmission,
-      fuel: searchParams.fuel,
-      minPrice: positiveNumber(searchParams.minPrice),
-      maxPrice: positiveNumber(searchParams.maxPrice),
-      minYear: positiveNumber(searchParams.minYear),
-      maxYear: positiveNumber(searchParams.maxYear),
-      maxKm: positiveNumber(searchParams.maxKm),
-      sort: searchParams.sort,
-      page,
-    }),
+    getStockPage(filters),
     getStockFacets(),
   ]);
 
@@ -108,8 +83,8 @@ export default async function EstoquePage({
       searchParams.maxKm,
   );
 
-  const baseQuery = buildBaseQuery(searchParams);
   const returnTo = buildReturnTo(searchParams);
+  const filterKey = JSON.stringify(stockQuery(searchParams));
 
   return (
     <div className="py-10 lg:py-12">
@@ -139,47 +114,42 @@ export default async function EstoquePage({
               <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
                 {stock.total}{" "}
                 {stock.total === 1 ? "veículo encontrado" : "veículos encontrados"}
-                {stock.totalPages > 1
-                  ? ` · página ${stock.page} de ${stock.totalPages}`
+                {stock.total > stock.vehicles.length
+                  ? " · role para ver todos"
                   : ""}
               </p>
 
               <div className="mt-4">
-                {stock.vehicles.length === 0 ? (
-                  <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-12 text-center">
-                    <p className="font-display text-lg font-semibold text-cream">
-                      {stock.error
-                        ? "Não foi possível carregar o estoque"
-                        : hasFilter
-                          ? "Nenhum veículo com esses filtros"
-                          : "Estoque sendo montado"}
-                    </p>
-                    <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-                      {stock.error
-                        ? "Tente novamente em alguns instantes. Se preferir, fale conosco no WhatsApp."
-                        : hasFilter
-                          ? "Tente ampliar a busca. Se você já sabe o que quer, a gente procura o veículo para você."
-                          : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
-                    </p>
-                    <WhatsAppButton className="mt-5" message={WHATSAPP_MESSAGES.general}>
-                      Quero avisar o que procuro
-                    </WhatsAppButton>
-                  </div>
-                ) : (
-                  <VehicleGrid
-                    vehicles={stock.vehicles}
-                    returnTo={returnTo}
-                    priorityCount={4}
-                  />
-                )}
+                <StockInfiniteList
+                  key={filterKey}
+                  initialVehicles={stock.vehicles}
+                  total={stock.total}
+                  pageSize={stock.pageSize}
+                  query={stockQuery(searchParams)}
+                  returnTo={returnTo}
+                  empty={
+                    <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-12 text-center">
+                      <p className="font-display text-lg font-semibold text-cream">
+                        {stock.error
+                          ? "Não foi possível carregar o estoque"
+                          : hasFilter
+                            ? "Nenhum veículo com esses filtros"
+                            : "Estoque sendo montado"}
+                      </p>
+                      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+                        {stock.error
+                          ? "Tente novamente em alguns instantes. Se preferir, fale conosco no WhatsApp."
+                          : hasFilter
+                            ? "Tente ampliar a busca. Se você já sabe o que quer, a gente procura o veículo para você."
+                            : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
+                      </p>
+                      <WhatsAppButton className="mt-5" message={WHATSAPP_MESSAGES.general}>
+                        Quero avisar o que procuro
+                      </WhatsAppButton>
+                    </div>
+                  }
+                />
               </div>
-
-              <StockPagination
-                page={stock.page}
-                totalPages={stock.totalPages}
-                total={stock.total}
-                baseQuery={baseQuery}
-              />
             </>
           }
         />

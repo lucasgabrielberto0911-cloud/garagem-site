@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { SalesManager } from "@/components/admin/SalesManager";
 import { AdminPageHeader, StatCard, adminStatGrid } from "@/components/admin/ui";
+import { getAdminSalesPage } from "@/lib/admin-vehicles";
 import { getSession } from "@/lib/auth";
 import { formatCurrencyBRL } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -19,55 +20,56 @@ export default async function VendasPage() {
 
   const monthStart = startOfMonth();
 
-  const [sales, vehicles, customers, totals, monthTotals] = await Promise.all([
-    prisma.sale.findMany({
-      orderBy: { saleDate: "desc" },
-      include: {
-        vehicle: {
-          select: {
-            id: true,
-            brand: true,
-            model: true,
-            yearModel: true,
-            plate: true,
-            historical: true,
-            purchasePrice: true,
-            costs: { select: { amount: true } },
+  const [list, vehicles, customers, totals, monthTotals, profitRows] =
+    await Promise.all([
+      getAdminSalesPage({ page: 1 }),
+      prisma.vehicle.findMany({
+        where: { sale: null, historical: false },
+        orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          brand: true,
+          model: true,
+          version: true,
+          yearModel: true,
+          price: true,
+          status: true,
+          purchasePrice: true,
+          costs: { select: { amount: true } },
+        },
+      }),
+      prisma.customer.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, phone: true },
+      }),
+      prisma.sale.aggregate({ _sum: { salePrice: true }, _count: { _all: true } }),
+      prisma.sale.aggregate({
+        where: { saleDate: { gte: monthStart } },
+        _sum: { salePrice: true },
+        _count: { _all: true },
+      }),
+      prisma.sale.findMany({
+        where: {
+          OR: [
+            { vehicle: { purchasePrice: { gt: 0 } } },
+            { vehicle: { costs: { some: {} } } },
+          ],
+        },
+        select: {
+          salePrice: true,
+          vehicle: {
+            select: {
+              purchasePrice: true,
+              costs: { select: { amount: true } },
+            },
           },
         },
-        customer: { select: { id: true, name: true, phone: true } },
-      },
-    }),
-    prisma.vehicle.findMany({
-      where: { sale: null, historical: false },
-      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-      select: {
-        id: true,
-        brand: true,
-        model: true,
-        version: true,
-        yearModel: true,
-        price: true,
-        status: true,
-        purchasePrice: true,
-        costs: { select: { amount: true } },
-      },
-    }),
-    prisma.customer.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, phone: true },
-    }),
-    prisma.sale.aggregate({ _sum: { salePrice: true }, _count: { _all: true } }),
-    prisma.sale.aggregate({
-      where: { saleDate: { gte: monthStart } },
-      _sum: { salePrice: true },
-      _count: { _all: true },
-    }),
-  ]);
+      }),
+    ]);
 
   const revenue = totals._sum.salePrice ?? 0;
   const count = totals._count._all;
-  const knownProfitSales = sales.filter((sale) =>
+  const knownProfitSales = profitRows.filter((sale) =>
     hasCostBasis(sale.vehicle.purchasePrice, sale.vehicle.costs),
   );
   const knownProfit = knownProfitSales.reduce(
@@ -115,7 +117,13 @@ export default async function VendasPage() {
         />
       </section>
 
-      <SalesManager sales={sales} vehicles={vehicles} customers={customers} />
+      <SalesManager
+        sales={list.sales}
+        salesTotal={list.total}
+        pageSize={list.pageSize}
+        vehicles={vehicles}
+        customers={customers}
+      />
     </div>
   );
 }

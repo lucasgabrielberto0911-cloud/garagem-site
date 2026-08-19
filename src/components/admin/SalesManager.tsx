@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { InfiniteSentinel } from "@/components/InfiniteSentinel";
 import {
   IconCash,
   IconDownload,
@@ -179,16 +180,33 @@ function customerPhoneDigits(customer: SaleRow["customer"]) {
   return customer?.phone?.replace(/\D/g, "") ?? "";
 }
 
+function hydrateSale(sale: SaleRow): SaleRow {
+  return {
+    ...sale,
+    saleDate: new Date(sale.saleDate),
+  };
+}
+
 export function SalesManager({
   sales,
+  salesTotal,
+  pageSize,
   vehicles,
   customers,
 }: {
   sales: SaleRow[];
+  salesTotal: number;
+  pageSize: number;
   vehicles: SellableVehicle[];
   customers: CustomerOption[];
 }) {
   const router = useRouter();
+  const [rows, setRows] = useState(() => sales.map(hydrateSale));
+  const [total, setTotal] = useState(salesTotal);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const loadingRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [source, setSource] = useState<SaleSource>("estoque");
@@ -213,7 +231,7 @@ export function SalesManager({
   const isHistorical = source === "historica";
   const isNewCustomer = customerId === "" || customerId === "novo";
   const editingSale = isEditing
-    ? sales.find((sale) => sale.id === editingId) ?? null
+    ? rows.find((sale) => sale.id === editingId) ?? null
     : null;
 
   const stockOptions = useMemo(() => {
@@ -238,9 +256,48 @@ export function SalesManager({
   }, [vehicles, editingSale]);
 
   const filteredSales = useMemo(
-    () => sales.filter((sale) => matchesPeriod(new Date(sale.saleDate), period)),
-    [sales, period],
+    () => rows.filter((sale) => matchesPeriod(new Date(sale.saleDate), period)),
+    [rows, period],
   );
+
+  const hasMore = rows.length < total;
+
+  async function loadMoreSales() {
+    if (loadingRef.current || !hasMore) return;
+    loadingRef.current = true;
+    setLoadingMore(true);
+    setLoadError(false);
+    try {
+      const nextPage = page + 1;
+      const response = await fetch(
+        `/api/admin/vendas?page=${nextPage}&pageSize=${pageSize}`,
+      );
+      if (!response.ok) throw new Error("fetch");
+      const data = (await response.json()) as {
+        sales?: SaleRow[];
+        total?: number;
+      };
+      const incoming = (data.sales ?? []).map(hydrateSale);
+      setTotal(data.total ?? total);
+      setRows((current) => {
+        const seen = new Set(current.map((item) => item.id));
+        return [...current, ...incoming.filter((item) => !seen.has(item.id))];
+      });
+      setPage(nextPage);
+    } catch {
+      setLoadError(true);
+      toast.error("Não foi possível carregar mais vendas.");
+    } finally {
+      loadingRef.current = false;
+      setLoadingMore(false);
+    }
+  }
+
+  useEffect(() => {
+    setRows(sales.map(hydrateSale));
+    setTotal(salesTotal);
+    setPage(1);
+  }, [sales, salesTotal]);
 
   const periodTotal = useMemo(
     () => filteredSales.reduce((sum, sale) => sum + sale.salePrice, 0),
@@ -644,7 +701,7 @@ export function SalesManager({
             Registrar venda
           </button>
 
-          {sales.length > 0 ? (
+          {rows.length > 0 ? (
             <>
               <select
                 value={period}
@@ -659,14 +716,40 @@ export function SalesManager({
                 ))}
               </select>
               <span className="text-xs text-muted">
-                {filteredSales.length} venda(s)
+                {filteredSales.length}
+                {period === "all" && total > rows.length
+                  ? ` de ${total}`
+                  : ""}{" "}
+                venda(s)
                 {period !== "all"
                   ? ` · ${formatCurrencyBRL(periodTotal)}`
                   : ""}
               </span>
               <button
                 type="button"
-                onClick={() => exportSalesCsv(filteredSales)}
+                onClick={async () => {
+                  let source = rows;
+                  if (hasMore) {
+                    try {
+                      const response = await fetch(
+                        `/api/admin/vendas?page=1&pageSize=500`,
+                      );
+                      if (response.ok) {
+                        const data = (await response.json()) as {
+                          sales?: SaleRow[];
+                        };
+                        source = (data.sales ?? []).map(hydrateSale);
+                      }
+                    } catch {
+                      toast.error("Exportando só as vendas já carregadas.");
+                    }
+                  }
+                  exportSalesCsv(
+                    source.filter((sale) =>
+                      matchesPeriod(new Date(sale.saleDate), period),
+                    ),
+                  );
+                }}
                 disabled={filteredSales.length === 0}
                 className={`${btn.outline} w-full sm:ml-auto sm:w-auto`}
               >
@@ -678,7 +761,7 @@ export function SalesManager({
         </div>
       )}
 
-      {sales.length === 0 ? (
+      {rows.length === 0 ? (
         <EmptyState
           icon={<IconCash className="h-12 w-12" />}
           title="Nenhuma venda registrada"
@@ -930,6 +1013,27 @@ export function SalesManager({
               </tbody>
             </table>
           </div>
+          {hasMore ? (
+            <InfiniteSentinel onVisible={() => void loadMoreSales()} disabled={loadingMore || loadError}>
+              {loadingMore ? (
+                <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
+                  <span
+                    className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-r-transparent"
+                    aria-hidden="true"
+                  />
+                  Carregando mais vendas…
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void loadMoreSales()}
+                  className="min-h-[44px] border border-white/15 px-4 text-xs uppercase tracking-wider text-cream transition hover:border-brand"
+                >
+                  Carregar mais
+                </button>
+              )}
+            </InfiniteSentinel>
+          ) : null}
         </>
       )}
 
