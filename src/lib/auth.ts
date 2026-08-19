@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import type { JWTPayload } from "jose";
 import { signToken, verifyToken } from "@/lib/jwt";
@@ -28,7 +29,8 @@ export function sessionCookieOptions(maxAge = SESSION_MAX_AGE) {
   };
 }
 
-export async function getSession() {
+/** Uma verificação de JWT por request — layout e página compartilham o resultado. */
+export const getSession = cache(async () => {
   const token = cookies().get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
@@ -37,4 +39,4 @@ export async function getSession() {
   } catch {
     return null;
   }
-}
+});

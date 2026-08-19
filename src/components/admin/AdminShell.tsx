@@ -55,6 +55,14 @@ export function AdminShell({
   }, [pathname]);
 
   useEffect(() => {
+    for (const item of NAV) {
+      router.prefetch(item.href);
+    }
+    router.prefetch("/admin/conta");
+    router.prefetch("/admin/veiculos/novo");
+  }, [router]);
+
+  useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";

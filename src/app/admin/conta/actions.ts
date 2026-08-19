@@ -2,7 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   SESSION_COOKIE,
@@ -10,6 +10,7 @@ import {
   getSession,
   sessionCookieOptions,
 } from "@/lib/auth";
+import { ADMIN_SEED_PASSWORD_TAG } from "@/lib/admin-cache";
 import { prisma } from "@/lib/prisma";
 
 export type AccountActionState = {
@@ -108,6 +109,7 @@ export async function changeAdminPassword(
     data: { passwordHash: await bcrypt.hash(next, 10) },
   });
 
+  revalidateTag(ADMIN_SEED_PASSWORD_TAG);
   revalidatePath("/admin");
   revalidatePath("/admin/conta");
   return { ok: true, message: "Senha alterada com sucesso." };

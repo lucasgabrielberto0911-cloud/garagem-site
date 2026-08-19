@@ -22,6 +22,7 @@ export default async function LeadsPage({
     prisma.leadVenda.findMany({
       where: valid ? { status } : {},
       orderBy: { createdAt: "desc" },
+      take: 200,
     }),
     prisma.leadVenda.groupBy({ by: ["status"], _count: { _all: true } }),
   ]);
@@ -41,9 +42,14 @@ export default async function LeadsPage({
       <AdminPageHeader
         title="Leads de venda"
         subtitle={
-          counts.novo > 0
-            ? `${counts.total} lead(s) no total · ${counts.novo} aguardando contato`
-            : `${counts.total} lead(s) no total`
+          [
+            counts.novo > 0
+              ? `${counts.total} lead(s) no total · ${counts.novo} aguardando contato`
+              : `${counts.total} lead(s) no total`,
+            counts.total > leads.length
+              ? ` · mostrando os ${leads.length} mais recentes`
+              : "",
+          ].join("")
         }
       />
 

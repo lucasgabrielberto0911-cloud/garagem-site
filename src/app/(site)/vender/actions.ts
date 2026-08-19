@@ -1,9 +1,11 @@
 "use server";
 
+import { revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { isValidPlate, normalizePlate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { checkSellLeadRateLimit } from "@/lib/rate-limit";
+import { ADMIN_NEW_LEADS_TAG } from "@/lib/admin-cache";
 
 export type SellLeadState = {
   ok: boolean;
@@ -83,6 +85,7 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
         notes: notes || null,
       },
     });
+    revalidateTag(ADMIN_NEW_LEADS_TAG);
   } catch (error) {
     console.error("[vender] falha ao registrar lead:", error);
     return {

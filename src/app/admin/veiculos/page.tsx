@@ -3,14 +3,15 @@ import { redirect } from "next/navigation";
 import { VehiclesTable } from "@/components/admin/VehiclesTable";
 import { IconPlus } from "@/components/admin/icons";
 import { AdminPageHeader, StatCard, adminStatGrid, btn } from "@/components/admin/ui";
+import {
+  getAdminVehicleStats,
+  getAdminVehiclesPage,
+  type VehiclesTab,
+} from "@/lib/admin-vehicles";
 import { getSession } from "@/lib/auth";
 import { formatCurrencyBRL } from "@/lib/format";
-import { prisma } from "@/lib/prisma";
-import { hasCostBasis, investedTotal } from "@/lib/vehicle-ops";
 
 export const dynamic = "force-dynamic";
-
-type VehiclesTab = "estoque" | "vendidos";
 
 function resolveTab(raw?: string): VehiclesTab {
   return raw === "vendidos" ? "vendidos" : "estoque";
@@ -25,66 +26,15 @@ export default async function VehiclesPage({
   if (!session) redirect("/admin/login");
 
   const q = (searchParams.q || "").trim();
-  // Compat: ?status=vendido antigo abre a aba Vendidos.
   const tab = resolveTab(
     searchParams.tab ||
       (searchParams.status === "vendido" ? "vendidos" : undefined),
   );
 
-  const statusFilter =
-    tab === "vendidos"
-      ? { status: "vendido" }
-      : { status: { in: ["disponivel", "reservado"] } };
-
-  const [vehicles, groups, stockValue] = await Promise.all([
-    prisma.vehicle.findMany({
-      where: {
-        AND: [
-          { historical: false },
-          statusFilter,
-          q
-            ? {
-                OR: [
-                  { brand: { contains: q, mode: "insensitive" } },
-                  { model: { contains: q, mode: "insensitive" } },
-                  { version: { contains: q, mode: "insensitive" } },
-                  { color: { contains: q, mode: "insensitive" } },
-                ],
-              }
-            : {},
-        ],
-      },
-      include: {
-        photos: { orderBy: { order: "asc" }, take: 1 },
-        costs: { select: { amount: true } },
-        sale: { select: { salePrice: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.vehicle.groupBy({
-      by: ["status"],
-      where: { historical: false },
-      _count: { _all: true },
-    }),
-    prisma.vehicle.aggregate({
-      where: { status: "disponivel", historical: false },
-      _sum: { price: true },
-    }),
+  const [stats, list] = await Promise.all([
+    getAdminVehicleStats(),
+    getAdminVehiclesPage({ q, tab, page: 1 }),
   ]);
-
-  const count = (value: string) =>
-    groups.find((group) => group.status === value)?._count._all ?? 0;
-
-  const estoqueCount = count("disponivel") + count("reservado");
-  const vendidosCount = count("vendido");
-  const available = vehicles.filter((item) => item.status === "disponivel");
-  const invested = available.reduce(
-    (sum, item) => sum + investedTotal(item.purchasePrice, item.costs),
-    0,
-  );
-  const withCostBasis = available.filter((item) =>
-    hasCostBasis(item.purchasePrice, item.costs),
-  ).length;
 
   return (
     <div className="space-y-6">
@@ -92,8 +42,8 @@ export default async function VehiclesPage({
         title="Veículos"
         subtitle={
           tab === "vendidos"
-            ? `${vehicles.length} vendido(s) na visualização atual`
-            : `${vehicles.length} veículo(s) em estoque na visualização atual`
+            ? `${list.total} vendido(s) na visualização atual`
+            : `${list.total} veículo(s) em estoque na visualização atual`
         }
         actions={
           <Link href="/admin/veiculos/novo" className={btn.primary}>
@@ -104,28 +54,31 @@ export default async function VehiclesPage({
       />
 
       <section className={adminStatGrid}>
-        <StatCard label="Disponíveis" value={count("disponivel")} />
-        <StatCard label="Reservados" value={count("reservado")} tone="warning" />
-        <StatCard label="Vendidos" value={vendidosCount} />
+        <StatCard label="Disponíveis" value={stats.available} />
+        <StatCard label="Reservados" value={stats.reserved} tone="warning" />
+        <StatCard label="Vendidos" value={stats.vendidosCount} />
         <StatCard
           label="Valor do estoque"
-          value={formatCurrencyBRL(stockValue._sum.price ?? 0)}
+          value={formatCurrencyBRL(stats.stockValue)}
           hint={
-            count("disponivel") > 0
-              ? tab === "estoque" && withCostBasis > 0
-                ? `Média ${formatCurrencyBRL((stockValue._sum.price ?? 0) / count("disponivel"))} · investido ${formatCurrencyBRL(invested)}`
-                : `Média ${formatCurrencyBRL((stockValue._sum.price ?? 0) / count("disponivel"))}`
+            stats.available > 0
+              ? tab === "estoque" && stats.withCostBasis > 0
+                ? `Média ${formatCurrencyBRL(stats.stockValue / stats.available)} · investido ${formatCurrencyBRL(stats.invested)}`
+                : `Média ${formatCurrencyBRL(stats.stockValue / stats.available)}`
               : "Somente disponíveis"
           }
         />
       </section>
 
       <VehiclesTable
-        vehicles={vehicles}
+        key={`${tab}:${q}`}
+        vehicles={list.vehicles}
+        initialTotal={list.total}
+        pageSize={list.pageSize}
         q={q}
         tab={tab}
-        estoqueCount={estoqueCount}
-        vendidosCount={vendidosCount}
+        estoqueCount={stats.estoqueCount}
+        vendidosCount={stats.vendidosCount}
       />
     </div>
   );

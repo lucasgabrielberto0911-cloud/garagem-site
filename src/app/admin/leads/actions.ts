@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getSession } from "@/lib/auth";
+import { ADMIN_NEW_LEADS_TAG } from "@/lib/admin-cache";
 import { isLeadStatus } from "@/lib/leads";
 import { prisma } from "@/lib/prisma";
 
@@ -24,6 +25,7 @@ export async function updateLeadStatus(
     }
 
     await prisma.leadVenda.update({ where: { id }, data: { status } });
+    revalidateTag(ADMIN_NEW_LEADS_TAG);
     revalidatePath("/admin/leads");
     revalidatePath("/admin");
     return { ok: true, message: "Status atualizado." };
@@ -77,6 +79,7 @@ export async function deleteLead(id: string): Promise<LeadActionState> {
   try {
     await requireAdmin();
     await prisma.leadVenda.delete({ where: { id } });
+    revalidateTag(ADMIN_NEW_LEADS_TAG);
     revalidatePath("/admin/leads");
     revalidatePath("/admin");
     return { ok: true, message: "Lead removido." };

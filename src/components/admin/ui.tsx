@@ -28,9 +28,13 @@ export const adminStatGrid =
 export const iconTap =
   "inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted transition hover:text-cream";
 
-/** Célula de ação (ícone + rótulo) nos cards do painel no celular. */
+/** Célula de ação (ícone + rótulo) nos cards do painel. */
 export const mobileActionCell =
   "flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 px-1 text-center text-[10px] font-semibold uppercase tracking-wide text-muted transition hover:text-cream";
+
+/** Igual ao celular, mas vira botão horizontal no desktop. */
+export const listActionCell =
+  `${mobileActionCell} lg:min-h-[44px] lg:w-auto lg:flex-row lg:gap-1.5 lg:px-3.5 lg:text-[11px]`;
 
 export function AdminPageHeader({
   title,
