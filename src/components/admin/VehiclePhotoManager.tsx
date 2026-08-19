@@ -285,7 +285,8 @@ export function VehiclePhotoManager({
               {blurring ? "Borrando placas…" : "Borrar placas nestas fotos"}
             </button>
             <p className="text-[11px] text-muted">
-              Use se alguma placa ainda aparecer no site. Depois salve o anúncio.
+              Use se a placa ainda aparecer. Se o borrão já tapou o carro, envie
+              de novo a foto original e depois salve o anúncio.
             </p>
           </div>
           <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

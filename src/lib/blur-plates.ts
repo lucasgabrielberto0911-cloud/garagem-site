@@ -6,8 +6,9 @@ import {
 } from "@aws-sdk/client-rekognition";
 import sharp from "sharp";
 
-const PLATE_MARGIN = 0.22;
-const BLUR_SIGMA = 28;
+/** Folga curta depois de achar a placa — só a faixa, sem comer o para-choque. */
+const PLATE_PAD_X = 0.08;
+const PLATE_PAD_Y = 0.1;
 /** DetectText via bytes aceita no máximo ~5 MB. */
 const REKOGNITION_MAX_BYTES = 4.5 * 1024 * 1024;
 
@@ -113,6 +114,12 @@ export function textLooksLikePlate(text: string | undefined) {
   return false;
 }
 
+/** Placa (7) ou BR + placa (8–9). Textos longos (cidade, linha inteira) ficam de fora. */
+function isTightPlateText(text: string) {
+  const length = compactAlphanumeric(text).length;
+  return length >= 7 && length <= 9 && textLooksLikePlate(text);
+}
+
 function boxToPixels(
   box: BoundingBox,
   imageWidth: number,
@@ -125,24 +132,25 @@ function boxToPixels(
 
   if (widthRatio <= 0 || heightRatio <= 0) return null;
 
-  const padX = widthRatio * PLATE_MARGIN;
-  const padY = heightRatio * PLATE_MARGIN;
-
-  let left = Math.floor((leftRatio - padX) * imageWidth);
-  let top = Math.floor((topRatio - padY) * imageHeight);
-  let right = Math.ceil((leftRatio + widthRatio + padX) * imageWidth);
-  let bottom = Math.ceil((topRatio + heightRatio + padY) * imageHeight);
-
-  left = Math.max(0, left);
-  top = Math.max(0, top);
-  right = Math.min(imageWidth, right);
-  bottom = Math.min(imageHeight, bottom);
-
+  const left = Math.max(0, Math.floor(leftRatio * imageWidth));
+  const top = Math.max(0, Math.floor(topRatio * imageHeight));
+  const right = Math.min(imageWidth, Math.ceil((leftRatio + widthRatio) * imageWidth));
+  const bottom = Math.min(imageHeight, Math.ceil((topRatio + heightRatio) * imageHeight));
   const width = right - left;
   const height = bottom - top;
   if (width < 4 || height < 4) return null;
 
   return { left, top, width, height };
+}
+
+function padBox(box: PixelBox, imageWidth: number, imageHeight: number): PixelBox {
+  const padX = Math.max(2, Math.round(box.width * PLATE_PAD_X));
+  const padY = Math.max(2, Math.round(box.height * PLATE_PAD_Y));
+  const left = Math.max(0, box.left - padX);
+  const top = Math.max(0, box.top - padY);
+  const right = Math.min(imageWidth, box.left + box.width + padX);
+  const bottom = Math.min(imageHeight, box.top + box.height + padY);
+  return { left, top, width: right - left, height: bottom - top };
 }
 
 function unionBox(boxes: PixelBox[]): PixelBox {
@@ -153,13 +161,85 @@ function unionBox(boxes: PixelBox[]): PixelBox {
   return { left, top, width: right - left, height: bottom - top };
 }
 
+function boxArea(box: PixelBox) {
+  return box.width * box.height;
+}
+
+function smallerBox(a: PixelBox, b: PixelBox) {
+  return boxArea(a) <= boxArea(b) ? a : b;
+}
+
+function boxesOverlap(a: PixelBox, b: PixelBox) {
+  return (
+    a.left < b.left + b.width &&
+    a.left + a.width > b.left &&
+    a.top < b.top + b.height &&
+    a.top + a.height > b.top
+  );
+}
+
+function isPlateShaped(box: PixelBox, imageWidth: number, imageHeight: number) {
+  if (box.width < 16 || box.height < 8) return false;
+  const aspect = box.width / box.height;
+  const areaRatio = boxArea(box) / (imageWidth * imageHeight);
+  if (areaRatio > 0.05) return false;
+  if (box.width > imageWidth * 0.28) return false;
+  if (box.height > imageHeight * 0.11) return false;
+  if (aspect < 0.7) return false;
+  if (aspect > 6.5) return false;
+  return true;
+}
+
+/**
+ * Se o Rekognition devolver uma faixa alta (lateral do carro, linha com cidade),
+ * recorta para o tamanho de uma placa na base da região.
+ */
+function clampToPlateShape(
+  box: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox {
+  const maxW = Math.max(24, Math.round(imageWidth * 0.2));
+  const maxH = Math.max(14, Math.round(imageHeight * 0.085));
+  let { left, top, width, height } = box;
+
+  if (width > maxW) {
+    left += Math.round((width - maxW) / 2);
+    width = maxW;
+  }
+  if (height > maxH) {
+    top += height - maxH;
+    height = maxH;
+  }
+
+  const aspect = width / Math.max(1, height);
+  if (aspect < 0.85) {
+    const targetH = Math.max(12, Math.round(width / 2.6));
+    if (height > targetH) {
+      top += height - targetH;
+      height = targetH;
+    }
+  }
+
+  left = Math.max(0, Math.min(left, Math.max(0, imageWidth - width)));
+  top = Math.max(0, Math.min(top, Math.max(0, imageHeight - height)));
+  return { left, top, width, height };
+}
+
 function areNearby(a: PixelBox, b: PixelBox) {
-  const ax = a.left + a.width / 2;
-  const ay = a.top + a.height / 2;
-  const bx = b.left + b.width / 2;
-  const by = b.top + b.height / 2;
-  const maxDim = Math.max(a.width, a.height, b.width, b.height, 1);
-  return Math.hypot(ax - bx, ay - by) < maxDim * 2.4;
+  const ax2 = a.left + a.width;
+  const ay2 = a.top + a.height;
+  const bx2 = b.left + b.width;
+  const by2 = b.top + b.height;
+  const gapX = Math.max(0, Math.max(a.left, b.left) - Math.min(ax2, bx2));
+  const gapY = Math.max(0, Math.max(a.top, b.top) - Math.min(ay2, by2));
+  const similarH =
+    Math.min(a.height, b.height) / Math.max(a.height, b.height) > 0.4;
+  const sameRow = gapY <= Math.max(a.height, b.height) * 0.35;
+  const stacked = gapX <= Math.max(a.width, b.width) * 0.35;
+  if (sameRow && similarH) return gapX <= Math.max(a.width, b.width) * 0.55;
+  if (stacked && similarH) return gapY <= Math.max(a.height, b.height) * 0.7;
+  return false;
 }
 
 function readingOrder(pieces: TextPiece[]) {
@@ -242,21 +322,36 @@ function piecesFromDetections(
   return pieces;
 }
 
-function boxesFromPieces(pieces: TextPiece[]): PixelBox[] {
+function boxesFromPieces(
+  pieces: TextPiece[],
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox[] {
   const boxes: PixelBox[] = [];
+  const seen = new Set<string>();
 
-  for (const piece of pieces) {
-    if (textLooksLikePlate(piece.text)) boxes.push(piece.box);
-  }
+  const addBox = (box: PixelBox) => {
+    const clamped = clampToPlateShape(box, imageWidth, imageHeight);
+    if (!isPlateShaped(clamped, imageWidth, imageHeight)) return;
+    const key = `${clamped.left},${clamped.top},${clamped.width},${clamped.height}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    boxes.push(clamped);
+  };
 
   const words = pieces.filter((piece) => piece.type === "WORD");
+
+  for (const word of words) {
+    if (isTightPlateText(word.text)) addBox(word.box);
+  }
+
   for (let i = 0; i < words.length; i += 1) {
     for (let j = i + 1; j < words.length; j += 1) {
       if (!areNearby(words[i].box, words[j].box)) continue;
       const pair = readingOrder([words[i], words[j]]);
       const pairText = pair.map((item) => item.text).join("");
-      if (textLooksLikePlate(pairText)) {
-        boxes.push(unionBox(pair.map((item) => item.box)));
+      if (isTightPlateText(pairText)) {
+        addBox(unionBox(pair.map((item) => item.box)));
       }
 
       for (let k = j + 1; k < words.length; k += 1) {
@@ -267,61 +362,86 @@ function boxesFromPieces(pieces: TextPiece[]): PixelBox[] {
           continue;
         }
         const triple = readingOrder([words[i], words[j], words[k]]);
+        const a = triple[0];
+        const b = triple[1];
+        const c = triple[2];
+        if (!areNearby(a.box, b.box) || !areNearby(b.box, c.box)) continue;
         const tripleText = triple.map((item) => item.text).join("");
-        if (textLooksLikePlate(tripleText)) {
-          boxes.push(unionBox(triple.map((item) => item.box)));
+        if (isTightPlateText(tripleText)) {
+          addBox(unionBox(triple.map((item) => item.box)));
         }
       }
     }
   }
 
-  return mergeOverlappingBoxes(boxes);
+  if (boxes.length === 0) {
+    for (const line of pieces.filter((piece) => piece.type === "LINE")) {
+      if (!textLooksLikePlate(line.text)) continue;
+      addBox(line.box);
+    }
+  }
+
+  return mergeOverlappingBoxes(boxes).map((box) =>
+    padBox(box, imageWidth, imageHeight),
+  );
 }
 
-/** Une boxes que se sobrepõem bastante (mesmo placa, LINE + WORD). */
+/** Quando dois achados se sobrepõem, fica o menor — a linha gorda não engole a placa. */
 function mergeOverlappingBoxes(boxes: PixelBox[]): PixelBox[] {
   if (boxes.length <= 1) return boxes;
 
-  const sorted = [...boxes].sort((a, b) => a.left - b.left || a.top - b.top);
+  const sorted = [...boxes].sort(
+    (a, b) => boxArea(a) - boxArea(b) || a.left - b.left || a.top - b.top,
+  );
   const merged: PixelBox[] = [];
 
   for (const box of sorted) {
-    const prev = merged[merged.length - 1];
-    if (!prev) {
+    const overlapIndex = merged.findIndex((item) => boxesOverlap(item, box));
+    if (overlapIndex === -1) {
       merged.push({ ...box });
       continue;
     }
-
-    const overlap =
-      box.left < prev.left + prev.width &&
-      box.left + box.width > prev.left &&
-      box.top < prev.top + prev.height &&
-      box.top + box.height > prev.top;
-
-    if (overlap) {
-      const right = Math.max(prev.left + prev.width, box.left + box.width);
-      const bottom = Math.max(prev.top + prev.height, box.top + box.height);
-      prev.left = Math.min(prev.left, box.left);
-      prev.top = Math.min(prev.top, box.top);
-      prev.width = right - prev.left;
-      prev.height = bottom - prev.top;
-    } else {
-      merged.push({ ...box });
-    }
+    merged[overlapIndex] = smallerBox(merged[overlapIndex], box);
   }
 
   return merged;
 }
 
-async function applyBlurRegions(
-  image: Buffer,
-  boxes: PixelBox[],
-): Promise<Buffer> {
+async function applyBlurRegions(image: Buffer, boxes: PixelBox[]): Promise<Buffer> {
   if (boxes.length === 0) return image;
 
   const composites: { input: Buffer; left: number; top: number }[] = [];
 
   for (const box of boxes) {
+    if (box.width < 4 || box.height < 4) continue;
+
+    const sigma = Math.min(
+      12,
+      Math.max(4, Math.round(Math.min(box.width, box.height) / 8)),
+    );
+    const radius = Math.max(3, Math.round(Math.min(box.width, box.height) * 0.2));
+    const feather = Math.max(1.2, Math.min(box.width, box.height) * 0.07);
+    const inset = Math.max(1, Math.round(feather));
+    const mask = Buffer.from(
+      `<svg width="${box.width}" height="${box.height}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="feather" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="${feather}" />
+          </filter>
+        </defs>
+        <rect
+          x="${inset}"
+          y="${inset}"
+          width="${Math.max(1, box.width - inset * 2)}"
+          height="${Math.max(1, box.height - inset * 2)}"
+          rx="${radius}"
+          ry="${radius}"
+          fill="white"
+          filter="url(#feather)"
+        />
+      </svg>`,
+    );
+
     const blurred = await sharp(image, { failOn: "none" })
       .extract({
         left: box.left,
@@ -329,21 +449,30 @@ async function applyBlurRegions(
         width: box.width,
         height: box.height,
       })
-      .blur(BLUR_SIGMA)
+      .blur(sigma)
+      .toBuffer();
+
+    const masked = await sharp(blurred)
+      .ensureAlpha()
+      .composite([{ input: mask, blend: "dest-in" }])
+      .png()
       .toBuffer();
 
     composites.push({
-      input: blurred,
+      input: masked,
       left: box.left,
       top: box.top,
     });
   }
 
+  if (composites.length === 0) return image;
+
   return sharp(image, { failOn: "none" }).composite(composites).toBuffer();
 }
 
 /**
- * Detecta placas BR via AWS Rekognition DetectText e aplica blur forte.
+ * Detecta placas BR via AWS Rekognition DetectText e aplica blur pequeno
+ * só na faixa da placa, com borda suave para não tapar o carro.
  * Em qualquer falha, devolve o buffer original (nunca bloqueia o upload).
  */
 export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
@@ -370,7 +499,7 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
 
     const detections = response.TextDetections ?? [];
     const pieces = piecesFromDetections(detections, width, height);
-    const boxes = boxesFromPieces(pieces);
+    const boxes = boxesFromPieces(pieces, width, height);
 
     if (boxes.length === 0) {
       const sample = pieces
@@ -385,7 +514,7 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
     }
 
     console.info(
-      `[blur-plates] ${boxes.length} região(ões) de placa detectada(s) — aplicando blur.`,
+      `[blur-plates] ${boxes.length} região(ões) de placa detectada(s) — aplicando blur sutil.`,
     );
 
     return await applyBlurRegions(bytes, boxes);
