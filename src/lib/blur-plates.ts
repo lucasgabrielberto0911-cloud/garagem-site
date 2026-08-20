@@ -14,6 +14,118 @@ const REKOGNITION_MAX_BYTES = 4.5 * 1024 * 1024;
 
 const OLD_PLATE = /^[A-Z]{3}\d{4}$/;
 const MERCOSUL_PLATE = /^[A-Z]{3}\d[A-Z]\d{2}$/;
+const MIN_WORD_CONFIDENCE = 80;
+const LETTER_FROM_DIGIT: Record<string, string> = {
+  "0": "O",
+  "1": "I",
+  "5": "S",
+  "8": "B",
+};
+const DIGIT_FROM_LETTER: Record<string, string> = {
+  O: "0",
+  I: "1",
+  L: "1",
+  S: "5",
+  B: "8",
+  G: "6",
+};
+
+/** Siglas de painel/moto que o OCR junta com números e “vira placa”. */
+const DASHBOARD_TOKENS = new Set([
+  "ABS",
+  "ASR",
+  "TCS",
+  "ESC",
+  "ESP",
+  "EBD",
+  "DRL",
+  "EFI",
+  "ECU",
+  "ECO",
+  "TRIP",
+  "ODO",
+  "RPM",
+  "KMH",
+  "MPH",
+  "TEMP",
+  "OIL",
+  "FUEL",
+  "VOLT",
+  "WATER",
+  "ENGINE",
+  "BRAKE",
+  "HOLD",
+  "READY",
+  "MODE",
+  "SPORT",
+  "CHECK",
+  "SRS",
+  "AIRBAG",
+  "TFT",
+  "LCD",
+  "HUD",
+  "GPS",
+  "HONDA",
+  "YAMAHA",
+  "SUZUKI",
+  "KAWASAKI",
+  "DUCATI",
+  "TRIUMPH",
+  "SHINERAY",
+  "HAOJUE",
+  "PAINEL",
+  "MARCHA",
+  "NEUTRO",
+  "AUTONOMIA",
+  "CONSUMO",
+  "FAROL",
+  "COMBUSTIVEL",
+  "TEMPERATURA",
+  "VELOCIDADE",
+  "ODOMETRO",
+  "NMAX",
+  "PCX",
+]);
+
+/** Prefixo LLL que, sozinho no painel, não é placa (ABS 1234, ECO 1234…). */
+const FALSE_PLATE_PREFIXES = new Set([
+  "ABS",
+  "ASR",
+  "TCS",
+  "ESC",
+  "ESP",
+  "EBD",
+  "DRL",
+  "LED",
+  "HUD",
+  "GPS",
+  "LCD",
+  "ECU",
+  "EFI",
+  "DTC",
+  "OBD",
+  "RPM",
+  "ECO",
+  "OIL",
+  "AIR",
+  "SRS",
+  "BAG",
+  "TMP",
+  "ECT",
+  "USB",
+  "AUX",
+  "AVG",
+  "STD",
+  "KMH",
+  "MPH",
+  "TFT",
+  "ODO",
+  "CEL",
+  "MIL",
+  "ATF",
+  "CVT",
+  "DCT",
+]);
 
 type PixelBox = {
   left: number;
@@ -26,6 +138,7 @@ type TextPiece = {
   text: string;
   box: PixelBox;
   type: string;
+  confidence: number;
 };
 
 export function hasPlateBlurConfigured() {
@@ -44,80 +157,77 @@ function compactAlphanumeric(text: string) {
   return text.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
 
-function asLetter(char: string) {
-  const value = char.toUpperCase();
-  if (value === "0") return "O";
-  if (value === "1") return "I";
-  if (value === "5") return "S";
-  if (value === "8") return "B";
-  return value;
+function normalizeToken(text: string) {
+  return compactAlphanumeric(text);
 }
 
-function asDigit(char: string) {
-  const value = char.toUpperCase();
-  if (value === "O") return "0";
-  if (value === "I" || value === "L") return "1";
-  if (value === "S") return "5";
-  if (value === "B") return "8";
-  if (value === "G") return "6";
-  return value;
+function isDashboardToken(text: string) {
+  const compact = normalizeToken(text);
+  if (!compact) return false;
+  if (DASHBOARD_TOKENS.has(compact)) return true;
+  const upper = text.toUpperCase();
+  return /KM\s*\/\s*H/.test(upper) || upper.includes("KM/H");
 }
 
-function forceOldPlate(value: string) {
-  if (value.length !== 7) return value;
-  return (
-    asLetter(value[0]) +
-    asLetter(value[1]) +
-    asLetter(value[2]) +
-    asDigit(value[3]) +
-    asDigit(value[4]) +
-    asDigit(value[5]) +
-    asDigit(value[6])
-  );
+function matchesSlotPattern(
+  value: string,
+  slots: Array<"L" | "D">,
+  maxSwaps: number,
+) {
+  if (value.length !== slots.length) return false;
+  let swaps = 0;
+  let built = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    const slot = slots[index];
+    if (slot === "L") {
+      if (/[A-Z]/.test(char)) {
+        built += char;
+      } else if (LETTER_FROM_DIGIT[char]) {
+        built += LETTER_FROM_DIGIT[char];
+        swaps += 1;
+      } else {
+        return false;
+      }
+    } else if (/\d/.test(char)) {
+      built += char;
+    } else if (DIGIT_FROM_LETTER[char]) {
+      built += DIGIT_FROM_LETTER[char];
+      swaps += 1;
+    } else {
+      return false;
+    }
+  }
+  if (swaps > maxSwaps) return false;
+  return slots[4] === "L" ? MERCOSUL_PLATE.test(built) : OLD_PLATE.test(built);
 }
 
-function forceMercosulPlate(value: string) {
-  if (value.length !== 7) return value;
-  return (
-    asLetter(value[0]) +
-    asLetter(value[1]) +
-    asLetter(value[2]) +
-    asDigit(value[3]) +
-    asLetter(value[4]) +
-    asDigit(value[5]) +
-    asDigit(value[6])
-  );
-}
-
-function isSevenCharPlate(value: string) {
+function isActualPlate(value: string) {
   if (value.length !== 7) return false;
+  if (FALSE_PLATE_PREFIXES.has(value.slice(0, 3))) return false;
+  if (OLD_PLATE.test(value) || MERCOSUL_PLATE.test(value)) return true;
   return (
-    OLD_PLATE.test(value) ||
-    MERCOSUL_PLATE.test(value) ||
-    OLD_PLATE.test(forceOldPlate(value)) ||
-    MERCOSUL_PLATE.test(forceMercosulPlate(value))
+    matchesSlotPattern(value, ["L", "L", "L", "D", "D", "D", "D"], 2) ||
+    matchesSlotPattern(value, ["L", "L", "L", "D", "L", "D", "D"], 2)
   );
 }
 
 /**
- * O Rekognition quase nunca devolve só "ABC1D23": vem "BR ABC1D23",
- * cidade, ou a placa partida em palavras. Por isso varremos janelas de 7.
+ * Placa BR (7) ou BR + placa (9). Sem janela deslizante: texto de painel
+ * tipo "ABS 1234 km/h" não pode virar placa.
  */
 export function textLooksLikePlate(text: string | undefined) {
   if (!text) return false;
   const compact = compactAlphanumeric(text);
-  if (compact.length < 7) return false;
-  if (isSevenCharPlate(compact)) return true;
-  for (let index = 0; index <= compact.length - 7; index += 1) {
-    if (isSevenCharPlate(compact.slice(index, index + 7))) return true;
+  if (compact.length === 7) return isActualPlate(compact);
+  if (compact.startsWith("BR") && compact.length === 9) {
+    return isActualPlate(compact.slice(2));
   }
   return false;
 }
 
-/** Placa (7) ou BR + placa (8–9). Textos longos (cidade, linha inteira) ficam de fora. */
 function isTightPlateText(text: string) {
-  const length = compactAlphanumeric(text).length;
-  return length >= 7 && length <= 9 && textLooksLikePlate(text);
+  return textLooksLikePlate(text);
 }
 
 function boxToPixels(
@@ -182,11 +292,20 @@ function isPlateShaped(box: PixelBox, imageWidth: number, imageHeight: number) {
   if (box.width < 16 || box.height < 8) return false;
   const aspect = box.width / box.height;
   const areaRatio = boxArea(box) / (imageWidth * imageHeight);
-  if (areaRatio > 0.05) return false;
-  if (box.width > imageWidth * 0.28) return false;
-  if (box.height > imageHeight * 0.11) return false;
-  if (aspect < 0.7) return false;
-  if (aspect > 6.5) return false;
+  if (areaRatio > 0.04) return false;
+  if (box.width > imageWidth * 0.26) return false;
+  if (box.height > imageHeight * 0.1) return false;
+  if (aspect < 0.75) return false;
+  if (aspect > 6) return false;
+  return true;
+}
+
+/** Caixa crua grande demais (display do painel) não é placa — nem recortando. */
+function isPlausiblePlateBox(box: PixelBox, imageWidth: number, imageHeight: number) {
+  const areaRatio = boxArea(box) / (imageWidth * imageHeight);
+  if (areaRatio > 0.045) return false;
+  if (box.width > imageWidth * 0.32) return false;
+  if (box.height > imageHeight * 0.14) return false;
   return true;
 }
 
@@ -303,6 +422,36 @@ async function toRekognitionJpeg(input: Buffer): Promise<{
   return { bytes, width, height };
 }
 
+function collectTokens(pieces: TextPiece[]) {
+  const tokens = new Set<string>();
+  for (const piece of pieces) {
+    const upper = piece.text.toUpperCase();
+    if (/KM\s*\/\s*H/.test(upper) || upper.includes("KM/H")) tokens.add("KMH");
+    const compact = normalizeToken(piece.text);
+    if (compact) tokens.add(compact);
+    for (const part of upper.split(/[^A-Z0-9]+/)) {
+      if (part.length >= 2) tokens.add(part);
+    }
+  }
+  return tokens;
+}
+
+function looksLikeInstrumentCluster(pieces: TextPiece[]) {
+  const words = pieces.filter((piece) => piece.type === "WORD");
+  const tokens = collectTokens(pieces);
+  let hits = 0;
+  for (const token of tokens) {
+    if (DASHBOARD_TOKENS.has(token)) hits += 1;
+  }
+  const numericWords = words.filter((piece) =>
+    /^\d+[.,:]?\d*$/.test(piece.text.trim()),
+  ).length;
+  if (hits >= 2) return true;
+  if (hits >= 1 && numericWords >= 3) return true;
+  if (words.length >= 10 && numericWords >= 5) return true;
+  return false;
+}
+
 function piecesFromDetections(
   detections: TextDetection[],
   imageWidth: number,
@@ -313,11 +462,13 @@ function piecesFromDetections(
     if (item.Type !== "LINE" && item.Type !== "WORD") continue;
     const text = item.DetectedText?.trim();
     if (!text) continue;
+    const confidence = item.Confidence ?? 0;
+    if (item.Type === "WORD" && confidence < MIN_WORD_CONFIDENCE) continue;
     const geometry = item.Geometry?.BoundingBox;
     if (!geometry) continue;
     const box = boxToPixels(geometry, imageWidth, imageHeight);
     if (!box) continue;
-    pieces.push({ text, box, type: item.Type });
+    pieces.push({ text, box, type: item.Type, confidence });
   }
   return pieces;
 }
@@ -331,6 +482,7 @@ function boxesFromPieces(
   const seen = new Set<string>();
 
   const addBox = (box: PixelBox) => {
+    if (!isPlausiblePlateBox(box, imageWidth, imageHeight)) return;
     const clamped = clampToPlateShape(box, imageWidth, imageHeight);
     if (!isPlateShaped(clamped, imageWidth, imageHeight)) return;
     const key = `${clamped.left},${clamped.top},${clamped.width},${clamped.height}`;
@@ -339,7 +491,9 @@ function boxesFromPieces(
     boxes.push(clamped);
   };
 
-  const words = pieces.filter((piece) => piece.type === "WORD");
+  const words = pieces.filter(
+    (piece) => piece.type === "WORD" && !isDashboardToken(piece.text),
+  );
 
   for (const word of words) {
     if (isTightPlateText(word.text)) addBox(word.box);
@@ -374,13 +528,6 @@ function boxesFromPieces(
     }
   }
 
-  if (boxes.length === 0) {
-    for (const line of pieces.filter((piece) => piece.type === "LINE")) {
-      if (!textLooksLikePlate(line.text)) continue;
-      addBox(line.box);
-    }
-  }
-
   return mergeOverlappingBoxes(boxes).map((box) =>
     padBox(box, imageWidth, imageHeight),
   );
@@ -407,6 +554,30 @@ function mergeOverlappingBoxes(boxes: PixelBox[]): PixelBox[] {
   return merged;
 }
 
+async function looksLikeDarkDisplay(image: Buffer, box: PixelBox) {
+  try {
+    const { channels } = await sharp(image, { failOn: "none" })
+      .extract({
+        left: box.left,
+        top: box.top,
+        width: box.width,
+        height: box.height,
+      })
+      .resize(48, 48, { fit: "fill" })
+      .stats();
+    const mean =
+      (channels[0].mean + channels[1].mean + channels[2].mean) / 3;
+    const stdev =
+      (channels[0].stdev + channels[1].stdev + channels[2].stdev) / 3;
+    // Painel: fundo preto/cinza e dígitos claros. Placa BR é cinza/branca.
+    if (mean < 50) return true;
+    if (mean < 88 && stdev > 42) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 async function applyBlurRegions(image: Buffer, boxes: PixelBox[]): Promise<Buffer> {
   if (boxes.length === 0) return image;
 
@@ -414,6 +585,7 @@ async function applyBlurRegions(image: Buffer, boxes: PixelBox[]): Promise<Buffe
 
   for (const box of boxes) {
     if (box.width < 4 || box.height < 4) continue;
+    if (await looksLikeDarkDisplay(image, box)) continue;
 
     const sigma = Math.min(
       12,
@@ -494,14 +666,32 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
     const response = await client.send(
       new DetectTextCommand({
         Image: { Bytes: bytes },
+        Filters: {
+          WordFilter: {
+            MinConfidence: MIN_WORD_CONFIDENCE,
+          },
+        },
       }),
     );
 
     const detections = response.TextDetections ?? [];
     const pieces = piecesFromDetections(detections, width, height);
-    const boxes = boxesFromPieces(pieces, width, height);
 
-    if (boxes.length === 0) {
+    if (looksLikeInstrumentCluster(pieces)) {
+      console.info(
+        "[blur-plates] foto parece painel de moto/carro — sem blur.",
+      );
+      return input;
+    }
+
+    const boxes = boxesFromPieces(pieces, width, height);
+    const plateBoxes: PixelBox[] = [];
+    for (const box of boxes) {
+      if (await looksLikeDarkDisplay(bytes, box)) continue;
+      plateBoxes.push(box);
+    }
+
+    if (plateBoxes.length === 0) {
       const sample = pieces
         .map((piece) => piece.text)
         .filter(Boolean)
@@ -514,10 +704,10 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
     }
 
     console.info(
-      `[blur-plates] ${boxes.length} região(ões) de placa detectada(s) — aplicando blur sutil.`,
+      `[blur-plates] ${plateBoxes.length} região(ões) de placa detectada(s) — aplicando blur sutil.`,
     );
 
-    return await applyBlurRegions(bytes, boxes);
+    return await applyBlurRegions(bytes, plateBoxes);
   } catch (error) {
     console.error("[blur-plates] falha no Rekognition/blur — upload segue:", error);
     return input;
