@@ -3,11 +3,15 @@
  * Enquanto rating/reviewCount forem 0 ou a URL tiver PREENCHER,
  * o badge não aparece no site (não inventamos nota).
  */
-export const GOOGLE_REVIEWS = {
+export const GOOGLE_REVIEWS: {
+  rating: number;
+  reviewCount: number;
+  profileUrl: string;
+} = {
   rating: 0, // ex.: 4.8
   reviewCount: 0, // ex.: 127
   profileUrl: "PREENCHER: URL do perfil Google Meu Negócio",
-} as const;
+};
 
 export function googleReviewsReady() {
   return (
