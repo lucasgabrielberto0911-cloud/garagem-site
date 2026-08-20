@@ -433,15 +433,15 @@ function collectTokens(pieces: TextPiece[]) {
       if (part.length >= 2) tokens.add(part);
     }
   }
-  return tokens;
+  return Array.from(tokens);
 }
 
 function looksLikeInstrumentCluster(pieces: TextPiece[]) {
   const words = pieces.filter((piece) => piece.type === "WORD");
   const tokens = collectTokens(pieces);
   let hits = 0;
-  for (const token of tokens) {
-    if (DASHBOARD_TOKENS.has(token)) hits += 1;
+  for (let index = 0; index < tokens.length; index += 1) {
+    if (DASHBOARD_TOKENS.has(tokens[index])) hits += 1;
   }
   const numericWords = words.filter((piece) =>
     /^\d+[.,:]?\d*$/.test(piece.text.trim()),
