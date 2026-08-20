@@ -7,6 +7,7 @@ import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { StockBackLink } from "@/components/site/StockBackLink";
+import { VehicleContactHit, VehicleViewContent } from "@/components/site/VehiclePixel";
 import { Container, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
@@ -133,6 +134,11 @@ export default async function VehicleDetailPage({
 
   return (
     <div className="py-6 pb-sticky-bar-safe sm:py-8 lg:py-10 lg:pb-10">
+      <VehicleViewContent
+        contentId={vehicle.id}
+        contentName={fullLabel}
+        value={vehicle.price}
+      />
       <JsonLd data={vehicleJsonLd(vehicle)} />
       <JsonLd
         data={breadcrumbJsonLd([
@@ -251,33 +257,48 @@ export default async function VehicleDetailPage({
                 </Link>
               ) : (
                 <>
-                  <WhatsAppButton
-                    size="lg"
-                    className="hidden w-full lg:inline-flex"
-                    message={WHATSAPP_MESSAGES.vehicle(fullLabel)}
+                  <VehicleContactHit
+                    contentId={vehicle.id}
+                    contentName={fullLabel}
                   >
-                    Tenho interesse
-                  </WhatsAppButton>
+                    <WhatsAppButton
+                      size="lg"
+                      className="hidden w-full lg:inline-flex"
+                      message={WHATSAPP_MESSAGES.vehicle(fullLabel)}
+                    >
+                      Tenho interesse
+                    </WhatsAppButton>
+                  </VehicleContactHit>
 
                   <div className="hidden gap-2 lg:grid lg:grid-cols-2">
-                    <a
-                      href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
+                    <VehicleContactHit
+                      contentId={vehicle.id}
+                      contentName={fullLabel}
                     >
-                      Pedir vídeo
-                    </a>
-                    <a
-                      href={whatsappUrl(
-                        `Olá! Gostaria de opções de financiamento para o ${fullLabel}.`,
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
+                      <a
+                        href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
+                      >
+                        Pedir vídeo
+                      </a>
+                    </VehicleContactHit>
+                    <VehicleContactHit
+                      contentId={vehicle.id}
+                      contentName={fullLabel}
                     >
-                      Financiar
-                    </a>
+                      <a
+                        href={whatsappUrl(
+                          `Olá! Gostaria de opções de financiamento para o ${fullLabel}.`,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
+                      >
+                        Financiar
+                      </a>
+                    </VehicleContactHit>
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
@@ -287,14 +308,19 @@ export default async function VehicleDetailPage({
                     >
                       Quero colocar meu veículo na troca
                     </Link>
-                    <a
-                      href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline lg:hidden"
+                    <VehicleContactHit
+                      contentId={vehicle.id}
+                      contentName={fullLabel}
                     >
-                      Pedir vídeo
-                    </a>
+                      <a
+                        href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline lg:hidden"
+                      >
+                        Pedir vídeo
+                      </a>
+                    </VehicleContactHit>
                   </div>
                 </>
               )}
@@ -373,6 +399,8 @@ export default async function VehicleDetailPage({
       </Container>
 
       <VehicleMobileBar
+        vehicleId={vehicle.id}
+        contentName={fullLabel}
         brand={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}

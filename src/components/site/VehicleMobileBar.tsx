@@ -1,17 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { VehicleContactHit } from "@/components/site/VehiclePixel";
 import { formatCurrencyBRL } from "@/lib/format";
 import { whatsappUrl } from "@/lib/site";
 
 /** Barra fixa no mobile: preço + um único CTA de WhatsApp. */
 export function VehicleMobileBar({
+  vehicleId,
+  contentName,
   brand,
   model,
   year,
   price,
   sold = false,
 }: {
+  vehicleId: string;
+  contentName: string;
   brand: string;
   model: string;
   year: number;
@@ -40,16 +45,18 @@ export function VehicleMobileBar({
             Ver estoque
           </Link>
         ) : (
-          <a
-            href={whatsappUrl(
-              `Olá! Vi o ${label} no site da Garagem e tenho interesse!`,
-            )}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="whatsapp-btn inline-flex min-h-[48px] shrink-0 items-center justify-center px-5 py-3 font-display text-sm font-semibold text-white touch-manipulation"
-          >
-            WhatsApp
-          </a>
+          <VehicleContactHit contentId={vehicleId} contentName={contentName}>
+            <a
+              href={whatsappUrl(
+                `Olá! Vi o ${label} no site da Garagem e tenho interesse!`,
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="whatsapp-btn inline-flex min-h-[48px] shrink-0 items-center justify-center px-5 py-3 font-display text-sm font-semibold text-white touch-manipulation"
+            >
+              WhatsApp
+            </a>
+          </VehicleContactHit>
         )}
       </div>
     </div>

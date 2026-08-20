@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { MetaPixel } from "@/components/MetaPixel";
 import { AppToaster } from "@/components/Toaster";
 import { site } from "@/lib/site";
 import "./globals.css";
@@ -115,6 +116,7 @@ export default function RootLayout({
         className={`${display.variable} ${body.variable} font-body antialiased bg-asphalt text-cream`}
       >
         {children}
+        <MetaPixel />
         <AppToaster />
         <Analytics />
         <SpeedInsights />
