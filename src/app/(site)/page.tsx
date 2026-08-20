@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { JsonLd } from "@/components/JsonLd";
 import { FaqAccordion } from "@/components/site/FaqAccordion";
+import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { HeroSearch } from "@/components/site/HeroSearch";
 import { ScrollReveal } from "@/components/site/ScrollReveal";
 import { StatsBar, StatsBarSkeleton } from "@/components/site/StatsBar";
@@ -27,7 +28,7 @@ import {
   IconMapPin,
   IconShieldCheck,
 } from "@/components/site/icons";
-import { FAQ_ITEMS } from "@/lib/faq";
+import { publishedFaqItems } from "@/lib/faq";
 import { itemListJsonLd, websiteJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getPublicSite } from "@/lib/site-settings";
@@ -232,6 +233,9 @@ export default async function HomePage() {
             title="Quem compra, indica"
             description="Avaliações de clientes que fecharam negócio com a gente."
           />
+          <div className="flex justify-center">
+            <GoogleReviewsBadge />
+          </div>
         </ScrollReveal>
         <div className="mt-12">
           <ScrollReveal delay={40}>
@@ -246,7 +250,7 @@ export default async function HomePage() {
           <SectionHeading
             eyebrow="Atendimento"
             title={`Atendemos ${publicSite.region} e região`}
-            description={`Loja digital em ${publicSite.region}, ${publicSite.state}. Escolha no site, peça vídeo pelo WhatsApp — online das 8h às 23h.`}
+            description={`Loja 100% digital em ${publicSite.region}, ${publicSite.state}. Escolha no site, peça vídeo pelo WhatsApp e combine visita, entrega ou retirada — online das 8h às 23h.`}
           />
         </ScrollReveal>
 
@@ -331,7 +335,7 @@ export default async function HomePage() {
           />
         </ScrollReveal>
         <div className="mt-12">
-          <FaqAccordion items={FAQ_ITEMS.slice(0, 4)} />
+          <FaqAccordion items={publishedFaqItems().slice(0, 5)} />
           <div className="mt-6 text-center">
             <Link
               href="/faq"

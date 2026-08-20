@@ -3,9 +3,11 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { brandKey, formatBrandName } from "@/lib/format";
 import { extractVehicleIdFromParam, vehicleSlug } from "@/lib/vehicle-slug";
+import { SEED_TESTIMONIALS } from "@/lib/testimonials-seed";
 
 /** Tag do cache público — invalidada quando o estoque muda no admin. */
 export const VEHICLES_PUBLIC_CACHE_TAG = "vehicles-public";
+export const TESTIMONIALS_CACHE_TAG = "testimonials";
 
 const PUBLIC_CACHE: { revalidate: number; tags: string[] } = {
   revalidate: 60,
@@ -59,6 +61,7 @@ export const PUBLIC_VEHICLE_DETAIL_SELECT = {
   accessories: true,
   status: true,
   featured: true,
+  createdAt: true,
   photos: {
     orderBy: { order: "asc" as const },
     select: { id: true, url: true },
@@ -164,6 +167,7 @@ export type PublicVehicleDetail = {
   accessories: string[];
   status: string;
   featured: boolean;
+  createdAt: Date;
   photos: Array<{ id: string; url: string }>;
 };
 
@@ -652,6 +656,23 @@ export const getSiteStats = cache(() =>
   safeQuery("estatísticas", () => loadSiteStatsCached(), EMPTY_STATS),
 );
 
+const TESTIMONIALS_CACHE: { revalidate: number; tags: string[] } = {
+  revalidate: 60,
+  tags: [TESTIMONIALS_CACHE_TAG],
+};
+
+function testimonialsFromSeed() {
+  return SEED_TESTIMONIALS.map((item, index) => ({
+    id: `seed-${index}`,
+    name: item.name,
+    city: item.city,
+    message: item.message,
+    photoUrl: null as string | null,
+    rating: item.rating,
+    vehicleLabel: item.vehicleLabel ?? null,
+  }));
+}
+
 const loadTestimonialsCached = unstable_cache(
   async (take: number) =>
     prisma.testimonial.findMany({
@@ -662,17 +683,31 @@ const loadTestimonialsCached = unstable_cache(
         city: true,
         message: true,
         photoUrl: true,
+        rating: true,
+        vehicleLabel: true,
       },
       orderBy: [{ order: "asc" }, { createdAt: "desc" }],
       take,
     }),
-  ["testimonials-v3"],
-  PUBLIC_CACHE,
+  ["testimonials-v4"],
+  TESTIMONIALS_CACHE,
 );
 
-export const getTestimonials = cache((take = 6) =>
-  safeQuery("depoimentos", () => loadTestimonialsCached(take), []),
-);
+export const getTestimonials = cache(async (take = 6) => {
+  const fromDb = await safeQuery(
+    "depoimentos",
+    () => loadTestimonialsCached(take),
+    [] as Awaited<ReturnType<typeof loadTestimonialsCached>>,
+  );
+  if (fromDb.length > 0) {
+    return fromDb.map((item) => ({
+      ...item,
+      rating: Math.min(5, Math.max(1, item.rating || 5)),
+      vehicleLabel: item.vehicleLabel ?? null,
+    }));
+  }
+  return testimonialsFromSeed().slice(0, take);
+});
 
 /** Pré-gera os anúncios ativos no build / ISR. Falha de banco não quebra o build. */
 export async function getPublicVehicleStaticParams() {

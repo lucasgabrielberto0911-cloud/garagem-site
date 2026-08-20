@@ -5,6 +5,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
+import { VehicleConditions } from "@/components/site/VehicleConditions";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { StockBackLink } from "@/components/site/StockBackLink";
 import { VehicleContactHit, VehicleViewContent } from "@/components/site/VehiclePixel";
@@ -12,7 +13,7 @@ import { Container, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { JsonLd } from "@/components/JsonLd";
-import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatVehicleLabel, vehicleSeoDescription } from "@/lib/format";
+import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatVehicleLabel, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site, whatsappUrl } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
@@ -234,6 +235,11 @@ export default async function VehicleDetailPage({
                   formatCurrencyBRL(vehicle.price)
                 )}
               </p>
+              {vehicle.createdAt ? (
+                <p className="text-xs text-muted">
+                  {formatListedAgo(vehicle.createdAt)}
+                </p>
+              ) : null}
 
               <dl className="grid grid-cols-2 gap-x-3 gap-y-3 border-y border-white/10 py-3.5 text-sm">
                 {specs.map((spec) => (
@@ -324,6 +330,10 @@ export default async function VehicleDetailPage({
                   </div>
                 </>
               )}
+
+              {!sold ? (
+                <VehicleConditions vehicleWarranty={vehicle.warranty} />
+              ) : null}
 
               <ShareVehicle
                 title={fullLabel}

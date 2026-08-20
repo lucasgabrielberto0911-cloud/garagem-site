@@ -138,9 +138,10 @@ export default async function ContatoPage() {
               Loja 100% digital
             </p>
             <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-muted">
-              Ainda não temos showroom físico. O estoque está no site e o
-              atendimento é online — com vídeo, avaliação e suporte até a
-              documentação. Atendemos {publicSite.region} e região.
+              Não temos showroom físico. Você escolhe no site, tira dúvidas e
+              pede vídeo pelo WhatsApp, e combinamos visita ao veículo, entrega
+              ou retirada. Atendimento online todos os dias, das 8h às 23h, em{" "}
+              {publicSite.region} e região.
             </p>
           </div>
         ) : null}

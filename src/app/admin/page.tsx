@@ -176,7 +176,7 @@ export default async function AdminDashboardPage() {
                   tone="neutral"
                   icon={<IconQuote className="h-4 w-4" />}
                   title="Nenhum depoimento publicado"
-                  description="A home mostra 'em breve' na seção de depoimentos. Publique avaliações reais de clientes."
+                  description="A home ainda usa depoimentos de exemplo. Publique os reais em Depoimentos."
                   href="/admin/depoimentos"
                 />
               ) : null}

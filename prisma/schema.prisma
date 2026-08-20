@@ -156,14 +156,18 @@ model LeadVenda {
 }
 
 model Testimonial {
-  id        String   @id @default(cuid())
-  name      String
-  city      String?
-  message   String
-  photoUrl  String?
-  published Boolean  @default(true)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  name         String
+  city         String?
+  message      String
+  /** Nota de 1 a 5 — exibida na home. */
+  rating       Int      @default(5)
+  /** Veículo comprado (texto livre, opcional). */
+  vehicleLabel String?
+  photoUrl     String?
+  published    Boolean  @default(true)
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
 }
 
 /**

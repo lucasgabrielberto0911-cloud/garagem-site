@@ -210,3 +210,16 @@ export function formatPlateDisplay(value: string) {
   }
   return plate;
 }
+
+const DAY_MS = 86_400_000;
+
+/** Texto público a partir do createdAt real do anúncio. */
+export function formatListedAgo(createdAt: Date) {
+  const days = Math.max(
+    0,
+    Math.floor((Date.now() - createdAt.getTime()) / DAY_MS),
+  );
+  if (days <= 0) return "Anunciado hoje";
+  if (days === 1) return "Anunciado há 1 dia";
+  return `Anunciado há ${days} dias`;
+}

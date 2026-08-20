@@ -33,8 +33,10 @@ const emptyForm = {
   name: "",
   city: "",
   message: "",
+  vehicleLabel: "",
   photoUrl: "",
   order: "0",
+  rating: "5",
   published: true,
 };
 
@@ -58,8 +60,10 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
       name: item.name,
       city: item.city ?? "",
       message: item.message,
+      vehicleLabel: item.vehicleLabel ?? "",
       photoUrl: item.photoUrl ?? "",
       order: String(item.order),
+      rating: String(item.rating ?? 5),
       published: item.published,
     });
   }
@@ -157,6 +161,42 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                   placeholder="Ex.: Vitória - ES"
                   className={inputClass}
                 />
+              </Field>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Veículo (opcional)" hint="Ex.: Onix 2021">
+                <input
+                  name="vehicleLabel"
+                  value={form.vehicleLabel}
+                  onChange={(event) =>
+                    setForm((current) =>
+                      current
+                        ? { ...current, vehicleLabel: event.target.value }
+                        : current,
+                    )
+                  }
+                  placeholder="Modelo que a pessoa comprou"
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Nota" hint="De 1 a 5.">
+                <select
+                  name="rating"
+                  value={form.rating}
+                  onChange={(event) =>
+                    setForm((current) =>
+                      current ? { ...current, rating: event.target.value } : current,
+                    )
+                  }
+                  className={inputClass}
+                >
+                  <option value="5">5</option>
+                  <option value="4">4</option>
+                  <option value="3">3</option>
+                  <option value="2">2</option>
+                  <option value="1">1</option>
+                </select>
               </Field>
             </div>
 
@@ -285,7 +325,7 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
         <EmptyState
           icon={<IconQuote className="h-12 w-12" />}
           title="Nenhum depoimento cadastrado"
-          description="Enquanto não houver depoimentos, a home mostra um aviso de 'em breve'. Publique avaliações reais de clientes."
+          description="Enquanto não houver depoimentos publicados, a home mostra exemplos do código. Cadastre os reais e publique."
           action={
             <button type="button" onClick={openCreate} className={btn.primary}>
               <IconPlus className="h-4 w-4" />
@@ -320,7 +360,9 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                       {item.name}
                     </p>
                     <p className="truncate text-xs text-muted">
-                      {item.city ?? "Sem cidade"} · ordem {item.order}
+                      {item.city ?? "Sem cidade"}
+                      {item.vehicleLabel ? ` · ${item.vehicleLabel}` : ""} · nota{" "}
+                      {item.rating ?? 5} · ordem {item.order}
                     </p>
                   </div>
                 </div>
