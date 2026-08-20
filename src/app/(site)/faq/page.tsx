@@ -3,7 +3,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { FaqExplorer } from "@/components/site/FaqExplorer";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
-import { FAQ_ITEMS } from "@/lib/faq";
+import { publishedFaqItems } from "@/lib/faq";
 import { buildPageMetadata, faqJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 
@@ -14,9 +14,10 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default function FaqPage() {
+  const items = publishedFaqItems();
   return (
     <div className="py-12 lg:py-16">
-      <JsonLd data={faqJsonLd(FAQ_ITEMS)} />
+      <JsonLd data={faqJsonLd(items)} />
 
       <Container size="narrow">
         <PageHeader
@@ -26,7 +27,7 @@ export default function FaqPage() {
         />
 
         <div className="mt-8 lg:mt-10">
-          <FaqExplorer items={FAQ_ITEMS} />
+          <FaqExplorer items={items} />
         </div>
 
         <div className="mt-10 border border-brand/40 bg-ink p-6 text-center sm:p-8">

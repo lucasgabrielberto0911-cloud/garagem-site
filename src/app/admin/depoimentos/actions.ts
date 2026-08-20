@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { TESTIMONIALS_CACHE_TAG } from "@/lib/vehicles";
 
 export type TestimonialActionState = {
   ok: boolean;
@@ -27,9 +28,15 @@ export async function saveTestimonial(
   const city = String(formData.get("city") || "").trim() || null;
   const message = String(formData.get("message") || "").trim();
   const photoUrl = String(formData.get("photoUrl") || "").trim() || null;
+  const vehicleLabel = String(formData.get("vehicleLabel") || "").trim() || null;
   const published = formData.get("published") === "on";
   const orderRaw = Number(formData.get("order"));
   const order = Number.isFinite(orderRaw) ? orderRaw : 0;
+  const ratingRaw = Number(formData.get("rating"));
+  const rating =
+    Number.isFinite(ratingRaw) && ratingRaw >= 1 && ratingRaw <= 5
+      ? Math.round(ratingRaw)
+      : 5;
 
   const fieldErrors: Record<string, string> = {};
   if (name.length < 2) fieldErrors.name = "Informe o nome de quem avaliou.";
@@ -41,7 +48,7 @@ export async function saveTestimonial(
     return { ok: false, message: "Corrija os campos destacados.", fieldErrors };
   }
 
-  const data = { name, city, message, photoUrl, published, order };
+  const data = { name, city, message, photoUrl, vehicleLabel, published, order, rating };
 
   try {
     if (id) {
@@ -54,6 +61,7 @@ export async function saveTestimonial(
     return { ok: false, message: "Não foi possível salvar o depoimento." };
   }
 
+  revalidateTag(TESTIMONIALS_CACHE_TAG);
   revalidatePath("/admin/depoimentos");
   revalidatePath("/");
   return {
@@ -66,6 +74,7 @@ export async function setTestimonialPublished(id: string, published: boolean) {
   await requireAdmin();
 
   await prisma.testimonial.update({ where: { id }, data: { published } });
+  revalidateTag(TESTIMONIALS_CACHE_TAG);
   revalidatePath("/admin/depoimentos");
   revalidatePath("/");
   return {
@@ -80,6 +89,7 @@ export async function deleteTestimonial(
   await requireAdmin();
 
   await prisma.testimonial.delete({ where: { id } });
+  revalidateTag(TESTIMONIALS_CACHE_TAG);
   revalidatePath("/admin/depoimentos");
   revalidatePath("/");
   return { ok: true, message: "Depoimento excluído." };

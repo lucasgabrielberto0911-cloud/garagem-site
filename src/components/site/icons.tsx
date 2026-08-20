@@ -150,6 +150,14 @@ export function IconQuote({ className }: IconProps) {
   );
 }
 
+export function IconStar({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12 3.2l2.4 4.86 5.36.78-3.88 3.78.92 5.34L12 15.44l-4.8 2.52.92-5.34L4.24 8.84l5.36-.78L12 3.2z" />
+    </svg>
+  );
+}
+
 export function IconArrowRight({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

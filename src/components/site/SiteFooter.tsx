@@ -44,7 +44,8 @@ export async function SiteFooter() {
               Seminovos com procedência em {site.region} e região
             </p>
             <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
-              Loja digital · atendimento online das 8h às 23h.
+              Loja 100% digital · atendimento online das 8h às 23h. Sem ponto
+              físico: combinamos visita, entrega ou retirada pelo WhatsApp.
             </p>
             <a
               href={site.instagramUrl}

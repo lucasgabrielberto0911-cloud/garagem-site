@@ -20,7 +20,7 @@ export default async function DepoimentosPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Depoimentos"
-        subtitle="Os depoimentos publicados aparecem na home. Sem nenhum publicado, a seção mostra o aviso de 'em breve'."
+        subtitle="Os depoimentos publicados aparecem na home, na ordem do campo Ordem (menor primeiro). Sem nenhum publicado, a home usa exemplos do código — troque pelos reais aqui."
       />
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4">

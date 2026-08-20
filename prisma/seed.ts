@@ -200,6 +200,8 @@ async function main() {
         name: item.name,
         city: item.city,
         message: item.message,
+        rating: item.rating,
+        vehicleLabel: item.vehicleLabel ?? null,
         order: item.order,
         published: true,
       })),
