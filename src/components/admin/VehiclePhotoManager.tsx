@@ -11,6 +11,7 @@ import {
   IconStar,
   IconTrash,
 } from "@/components/admin/icons";
+import { btn } from "@/components/admin/ui";
 
 export type PhotoItem = { id: string; url: string };
 
@@ -59,6 +60,7 @@ export function VehiclePhotoManager({
   ) => void;
 }) {
   const [uploading, setUploading] = useState(0);
+  const [blurring, setBlurring] = useState(false);
   const [fileDragging, setFileDragging] = useState(false);
   const fileDragDepth = useRef(0);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -138,6 +140,55 @@ export function VehiclePhotoManager({
     onChange(photos.filter((_, i) => i !== index));
   }
 
+  async function reblurPlates() {
+    if (photos.length === 0 || blurring) return;
+    setBlurring(true);
+    const next = [...photos];
+    let blurredCount = 0;
+
+    try {
+      for (let index = 0; index < next.length; index += 1) {
+        const response = await fetch("/api/upload/reblur", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: next[index].url }),
+        });
+        const data = (await response.json()) as {
+          url?: string;
+          blurred?: boolean;
+          error?: string;
+        };
+        if (!response.ok) {
+          throw new Error(data.error || "Falha ao borrar a placa.");
+        }
+        if (data.url) {
+          next[index] = { ...next[index], url: data.url };
+        }
+        if (data.blurred) blurredCount += 1;
+      }
+
+      onChange(next);
+      if (blurredCount === 0) {
+        toast.message(
+          "Não achei placa nessas fotos. Tente uma foto mais de perto da traseira e salve de novo.",
+        );
+      } else {
+        toast.success(
+          `${blurredCount} foto(s) com placa borracha. Salve o anúncio para publicar.`,
+        );
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível borrar as placas.",
+      );
+    } finally {
+      setBlurring(false);
+    }
+  }
+
   function hasFiles(event: React.DragEvent) {
     return Array.from(event.dataTransfer.types).includes("Files");
   }
@@ -186,8 +237,8 @@ export function VehiclePhotoManager({
                 : "Arraste as fotos aqui ou clique para escolher"}
           </p>
           <p className="mt-1 text-xs text-muted">
-            JPG, PNG, WEBP ou GIF · HEIC: exporte como JPG no iPhone · enviadas
-            uma a uma, comprimidas no aparelho
+            JPG, PNG, WEBP ou GIF · HEIC: exporte como JPG no iPhone · a placa
+            é borracha no servidor na hora do envio
           </p>
           <p className="mt-2 text-[11px] text-muted/80">
             Espere o envio terminar antes de salvar o anúncio.
@@ -224,6 +275,20 @@ export function VehiclePhotoManager({
           <p className="mt-4 text-xs text-muted">
             Arraste as fotos para reorganizar. A primeira é a capa do anúncio.
           </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={blurring || uploading > 0}
+              onClick={() => void reblurPlates()}
+              className={btn.outline}
+            >
+              {blurring ? "Borrando placas…" : "Borrar placas nestas fotos"}
+            </button>
+            <p className="text-[11px] text-muted">
+              Use se a placa ainda aparecer. Foto de painel não é borracha. Se o
+              borrão já tapou o veículo, envie de novo a foto original e salve.
+            </p>
+          </div>
           <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {photos.map((photo, index) => {
               const isDragging = dragIndex === index;
