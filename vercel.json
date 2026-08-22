@@ -1,0 +1,34 @@
+{
+  "redirects": [
+    {
+      "source": "/honda-hrv-2020",
+      "destination": "/estoque",
+      "statusCode": 301
+    },
+    {
+      "source": "/honda-hrv-2020/",
+      "destination": "/estoque",
+      "statusCode": 301
+    },
+    {
+      "source": "/chevrolet-cruze-lt",
+      "destination": "/estoque",
+      "statusCode": 301
+    },
+    {
+      "source": "/chevrolet-cruze-lt/",
+      "destination": "/estoque",
+      "statusCode": 301
+    },
+    {
+      "source": "/etios-xls-2018",
+      "destination": "/estoque",
+      "statusCode": 301
+    },
+    {
+      "source": "/etios-xls-2018/",
+      "destination": "/estoque",
+      "statusCode": 301
+    }
+  ]
+}
