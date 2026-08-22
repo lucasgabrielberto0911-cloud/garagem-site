@@ -77,11 +77,15 @@ export function StockInfiniteList({
       <VehicleGrid
         vehicles={vehicles}
         returnTo={returnTo}
-        priorityCount={4}
+        priorityCount={2}
       />
 
       {hasMore ? (
-        <InfiniteSentinel onVisible={loadMore} disabled={loading || failed}>
+        <InfiniteSentinel
+          onVisible={loadMore}
+          disabled={loading || failed}
+          rootMargin="400px 0px"
+        >
           {loading ? (
             <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
               <span

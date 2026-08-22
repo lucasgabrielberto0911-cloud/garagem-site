@@ -66,7 +66,7 @@ export function SiteHeader() {
         <div
           className={`mx-auto grid max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 transition-[height] duration-200 sm:gap-4 sm:px-6 lg:gap-8 xl:gap-12 ${
             scrolled
-              ? "h-[64px] lg:h-[76px]"
+              ? "h-[72px] lg:h-[76px]"
               : "h-[72px] lg:h-[88px]"
           }`}
         >
@@ -80,9 +80,10 @@ export function SiteHeader() {
               alt={site.name}
               width={280}
               height={50}
-              priority
+              priority={pathname !== "/"}
+              sizes="200px"
               className={`w-auto max-w-[min(46vw,160px)] object-contain object-left transition-all duration-300 sm:max-w-[168px] lg:max-w-[176px] xl:max-w-[200px] ${
-                scrolled ? "h-8 lg:h-10" : "h-9 lg:h-11"
+                scrolled ? "h-9 lg:h-10" : "h-9 lg:h-11"
               }`}
             />
           </Link>
@@ -159,7 +160,7 @@ export function SiteHeader() {
       </header>
 
       {open ? (
-        <div className="fixed inset-0 z-[45] lg:hidden" id="menu-mobile">
+        <div className="fixed inset-0 z-[48] lg:hidden" id="menu-mobile">
           <div
             role="button"
             tabIndex={0}

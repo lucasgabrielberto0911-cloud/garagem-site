@@ -357,34 +357,39 @@ export function PhotoLightbox({
         {total > 1 ? (
           <div className="relative z-[2] shrink-0 border-t border-white/10 bg-black/80 px-3 py-3 backdrop-blur sm:px-4 pb-safe">
             <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-              {photos.map((item, itemIndex) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    resetZoom();
-                    onIndexChange(itemIndex);
-                  }}
-                  onPointerDown={(event) => event.stopPropagation()}
-                  aria-label={`Ver foto ${itemIndex + 1}`}
-                  aria-current={itemIndex === safeIndex}
-                  className={`relative h-14 w-[4.5rem] shrink-0 overflow-hidden border transition sm:h-16 sm:w-24 ${
-                    itemIndex === safeIndex
-                      ? "border-brand opacity-100"
-                      : "border-white/15 opacity-55 hover:opacity-100"
-                  }`}
-                >
-                  <VehicleImage
-                    src={item.url}
-                    alt={vehiclePhotoAlt(alt, itemIndex, total)}
-                    fill
-                    sizes="96px"
-                    quality={45}
-                    className="object-cover"
-                  />
-                </button>
-              ))}
+              {photos.map((item, itemIndex) => {
+                const near = Math.abs(itemIndex - safeIndex) <= 2;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      resetZoom();
+                      onIndexChange(itemIndex);
+                    }}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    aria-label={`Ver foto ${itemIndex + 1}`}
+                    aria-current={itemIndex === safeIndex}
+                    className={`relative h-14 w-[4.5rem] shrink-0 overflow-hidden border bg-asphalt transition sm:h-16 sm:w-24 ${
+                      itemIndex === safeIndex
+                        ? "border-brand opacity-100"
+                        : "border-white/15 opacity-55 hover:opacity-100"
+                    }`}
+                  >
+                    {near ? (
+                      <VehicleImage
+                        src={item.url}
+                        alt={vehiclePhotoAlt(alt, itemIndex, total)}
+                        fill
+                        sizes="96px"
+                        quality={45}
+                        className="object-cover"
+                      />
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ) : null}
