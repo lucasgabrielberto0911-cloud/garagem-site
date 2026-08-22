@@ -213,5 +213,7 @@ model SiteSettings {
   conditionsIntro   String?
   /** Itens do bloco garantia/condições na ficha. Null = vehicle-conditions.ts. */
   conditionsJson    Json?
+  /** Foto original do sócio na página Sobre. URL pública do Storage, ou vazia. */
+  founderPhotoUrl String?
   updatedAt      DateTime @updatedAt
 }

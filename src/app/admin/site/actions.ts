@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { parseFaqItems } from "@/lib/faq";
 import { prisma } from "@/lib/prisma";
-import { parseConditionItems } from "@/lib/site-content";
+import { parseConditionItems, parseFounderPhotoUrl } from "@/lib/site-content";
 
 export type SiteSettingsState = {
   ok: boolean;
@@ -74,6 +74,8 @@ export async function updateSiteSettings(
   const conditionsItems = parseConditionItems(
     parseJsonField(formData, "conditionsJson"),
   );
+  const founderPhotoRaw = text(formData, "founderPhotoUrl");
+  const founderPhotoUrl = parseFounderPhotoUrl(founderPhotoRaw);
 
   const fieldErrors: Record<string, string> = {};
   if (region.length < 2) fieldErrors.region = "Informe a cidade ou região.";
@@ -110,59 +112,61 @@ export async function updateSiteSettings(
     fieldErrors.googleProfileUrl =
       "Cole o link do Google Meu Negócio para o selo aparecer.";
   }
+  if (founderPhotoRaw && !founderPhotoUrl) {
+    fieldErrors.founderPhotoUrl =
+      "Envie a foto pelo campo acima ou cole uma URL https da imagem.";
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     return { ok: false, message: "Corrija os campos destacados.", fieldErrors };
   }
 
+  const payload = {
+    region,
+    email: email || null,
+    address,
+    hours,
+    hoursWeekdays,
+    hoursSaturday,
+    aboutYears,
+    aboutHours,
+    aboutFocus,
+    statsStockBase,
+    statsSalesBase,
+    // Mantém aboutSold alinhado para leitores legados.
+    aboutSold: String(statsSalesBase),
+    googleRating: googleRating ?? 0,
+    googleReviewCount,
+    googleProfileUrl: googleProfileUrl || null,
+    faqJson: faqItems ?? Prisma.DbNull,
+    conditionsTitle,
+    conditionsIntro: conditionsIntro || null,
+    conditionsJson: conditionsItems ?? Prisma.DbNull,
+    founderPhotoUrl,
+  };
+
   try {
-    await prisma.siteSettings.upsert({
-      where: { id: "default" },
-      create: {
-        id: "default",
-        region,
-        email: email || null,
-        address,
-        hours,
-        hoursWeekdays,
-        hoursSaturday,
-        aboutYears,
-        aboutHours,
-        aboutFocus,
-        statsStockBase,
-        statsSalesBase,
-        // Mantém aboutSold alinhado para leitores legados.
-        aboutSold: String(statsSalesBase),
-        googleRating: googleRating ?? 0,
-        googleReviewCount,
-        googleProfileUrl: googleProfileUrl || null,
-        faqJson: faqItems ?? Prisma.DbNull,
-        conditionsTitle,
-        conditionsIntro: conditionsIntro || null,
-        conditionsJson: conditionsItems ?? Prisma.DbNull,
-      },
-      update: {
-        region,
-        email: email || null,
-        address,
-        hours,
-        hoursWeekdays,
-        hoursSaturday,
-        aboutYears,
-        aboutHours,
-        aboutFocus,
-        statsStockBase,
-        statsSalesBase,
-        aboutSold: String(statsSalesBase),
-        googleRating: googleRating ?? 0,
-        googleReviewCount,
-        googleProfileUrl: googleProfileUrl || null,
-        faqJson: faqItems ?? Prisma.DbNull,
-        conditionsTitle,
-        conditionsIntro: conditionsIntro || null,
-        conditionsJson: conditionsItems ?? Prisma.DbNull,
-      },
-    });
+    try {
+      await prisma.siteSettings.upsert({
+        where: { id: "default" },
+        create: { id: "default", ...payload },
+        update: payload,
+      });
+    } catch {
+      const { founderPhotoUrl: _ignored, ...legacy } = payload;
+      await prisma.siteSettings.upsert({
+        where: { id: "default" },
+        create: { id: "default", ...legacy },
+        update: legacy,
+      });
+      if (founderPhotoUrl) {
+        return {
+          ok: false,
+          message:
+            "A foto do Elias precisa do campo novo no banco. Rode `prisma db push` e envie de novo.",
+        };
+      }
+    }
   } catch (error) {
     console.error("[admin/site] falha ao salvar:", error);
     return {

@@ -1,29 +1,45 @@
 import Image from "next/image";
 
-export function FounderSection() {
+export function FounderSection({
+  photoUrl,
+}: {
+  photoUrl?: string | null;
+}) {
+  const portrait = photoUrl?.trim() || null;
+
   return (
     <section
       id="por-tras"
       aria-labelledby="titulo-por-tras"
       className="mx-auto mt-14 max-w-5xl scroll-mt-28 overflow-hidden border border-white/10 bg-black lg:mt-16"
     >
-      <div className="grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-        <div className="relative min-h-[380px] bg-black sm:min-h-[460px] lg:min-h-full lg:order-2">
-          <Image
-            src="/branding/elias-clovis.jpg"
-            alt="Elias Clovis Gonçalves dos Santos Neto, dono e sócio-administrador da Garagem"
-            fill
-            sizes="(min-width: 1024px) 480px, 100vw"
-            quality={80}
-            className="object-cover object-[72%_100%]"
-          />
-          <div
-            className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black to-transparent lg:hidden"
-            aria-hidden="true"
-          />
-        </div>
+      <div
+        className={
+          portrait
+            ? "grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]"
+            : ""
+        }
+      >
+        {portrait ? (
+          <div className="relative min-h-[420px] bg-black sm:min-h-[520px] lg:order-2 lg:min-h-full">
+            <Image
+              src={portrait}
+              alt="Elias Clovis Gonçalves dos Santos Neto, dono e sócio-administrador da Garagem"
+              fill
+              sizes="(min-width: 1024px) 480px, 100vw"
+              quality={90}
+              className="object-contain object-bottom"
+            />
+          </div>
+        ) : null}
 
-        <div className="flex flex-col justify-center px-6 py-10 sm:px-10 sm:py-12 lg:order-1 lg:px-12 lg:py-14">
+        <div
+          className={
+            portrait
+              ? "flex flex-col justify-center px-6 py-10 sm:px-10 sm:py-12 lg:order-1 lg:px-12 lg:py-14"
+              : "mx-auto max-w-3xl px-6 py-10 sm:px-10 sm:py-12 lg:px-12 lg:py-14"
+          }
+        >
           <p className="font-display text-[11px] font-semibold uppercase tracking-[0.22em] text-brand">
             Quem está por trás da Garagem?
           </p>

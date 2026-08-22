@@ -18,6 +18,7 @@ import {
 import { formatNumberBR } from "@/lib/format";
 import { buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
+import { getSiteContent } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 import { getSiteStats } from "@/lib/vehicles";
 
@@ -62,9 +63,10 @@ const TOC = [
 ] as const;
 
 export default async function SobrePage() {
-  const [publicSite, stats] = await Promise.all([
+  const [publicSite, stats, siteContent] = await Promise.all([
     getPublicSite(),
     getSiteStats(),
+    getSiteContent(),
   ]);
   const soldLabel =
     stats.sales > 0 ? `+${formatNumberBR(stats.sales)}` : "0";
@@ -124,7 +126,7 @@ export default async function SobrePage() {
           ))}
         </ul>
 
-        <FounderSection />
+        <FounderSection photoUrl={siteContent.founderPhotoUrl} />
 
         <div className="mx-auto mt-14 max-w-5xl lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[220px_minmax(0,1fr)] xl:gap-12">
           <nav
