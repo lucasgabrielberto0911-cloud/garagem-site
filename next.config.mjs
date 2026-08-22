@@ -39,24 +39,18 @@ const nextConfig = {
     ];
   },
   async redirects() {
-    // URLs antigas de anúncios já apagados do banco (antes do fluxo "vendido").
-    return [
-      {
-        source: "/honda-hrv-2020",
-        destination: "/estoque",
-        permanent: true,
-      },
-      {
-        source: "/chevrolet-cruze-lt",
-        destination: "/estoque",
-        permanent: true,
-      },
-      {
-        source: "/etios-xls-2018",
-        destination: "/estoque",
-        permanent: true,
-      },
+    // Anúncios apagados do banco (antes do fluxo "vendido").
+    // statusCode 301 (não `permanent: true`, que no Next vira 308) e
+    // variante com barra — senão o Next só normaliza /url/ → /url.
+    const retiredListings = [
+      "/honda-hrv-2020",
+      "/chevrolet-cruze-lt",
+      "/etios-xls-2018",
     ];
+    return retiredListings.flatMap((source) => [
+      { source, destination: "/estoque", statusCode: 301 },
+      { source: `${source}/`, destination: "/estoque", statusCode: 301 },
+    ]);
   },
 };
 
