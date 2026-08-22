@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { FounderSection } from "@/components/site/FounderSection";
 import { TrustBadges } from "@/components/site/TrustBadges";
 import {
   ActionRow,
@@ -17,6 +18,7 @@ import {
 import { formatNumberBR } from "@/lib/format";
 import { buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
+import { getSiteContent } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 import { getSiteStats } from "@/lib/vehicles";
 
@@ -52,6 +54,7 @@ const DIFERENCIAIS = [
 ] as const;
 
 const TOC = [
+  { id: "por-tras", label: "Quem está por trás" },
   { id: "historia", label: "Nossa história" },
   { id: "missao", label: "Missão e valores" },
   { id: "compromisso", label: "Compromisso" },
@@ -60,9 +63,10 @@ const TOC = [
 ] as const;
 
 export default async function SobrePage() {
-  const [publicSite, stats] = await Promise.all([
+  const [publicSite, stats, siteContent] = await Promise.all([
     getPublicSite(),
     getSiteStats(),
+    getSiteContent(),
   ]);
   const soldLabel =
     stats.sales > 0 ? `+${formatNumberBR(stats.sales)}` : "0";
@@ -81,6 +85,8 @@ export default async function SobrePage() {
           title={publicSite.name}
           description={`Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência, negociação clara e atendimento de excelência em ${publicSite.region} e região.`}
         />
+
+        <FounderSection photoUrl={siteContent.founderPhotoUrl} />
 
         <div className="relative mx-auto mt-10 aspect-[4/3] max-w-4xl overflow-hidden border border-white/10 sm:mt-12 sm:aspect-[16/9]">
           <Image

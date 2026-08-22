@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, Field, btn, inputClass } from "@/components/admin/ui";
 import {
   FAQ_CATEGORIES,
@@ -30,6 +32,27 @@ export function SiteContentEditor({
   const [conditionItems, setConditionItems] = useState<ConditionItem[]>(() =>
     initial.conditions.items.map((item) => ({ ...item })),
   );
+  const [founderPhotoUrl, setFounderPhotoUrl] = useState(
+    initial.founderPhotoUrl ?? "",
+  );
+  const [uploadingFounder, setUploadingFounder] = useState(false);
+
+  async function uploadFounderPhoto(file: File | undefined) {
+    if (!file) return;
+    setUploadingFounder(true);
+    try {
+      const { uploadImageDirect } = await import("@/lib/upload-image-direct");
+      const url = await uploadImageDirect(file);
+      setFounderPhotoUrl(url);
+      toast.success("Foto do Elias enviada. Clique em salvar.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Erro de conexão no upload.",
+      );
+    } finally {
+      setUploadingFounder(false);
+    }
+  }
 
   return (
     <>
@@ -39,6 +62,57 @@ export function SiteContentEditor({
         name="conditionsJson"
         value={JSON.stringify(conditionItems)}
       />
+      <input type="hidden" name="founderPhotoUrl" value={founderPhotoUrl} />
+
+      <Card title="Foto do Elias na página Sobre">
+        <p className="mb-4 text-sm leading-relaxed text-muted">
+          Use a foto original dele, com o fundo já removido. O site não gera
+          retrato — só exibe o arquivo que você enviar.
+        </p>
+        {founderPhotoUrl ? (
+          <div className="relative mb-4 h-64 w-full max-w-xs overflow-hidden border border-white/10 bg-black">
+            <Image
+              src={founderPhotoUrl}
+              alt="Pré-visualização da foto do Elias"
+              fill
+              className="object-contain object-bottom"
+              sizes="320px"
+            />
+          </div>
+        ) : (
+          <p className="mb-4 text-sm text-cream/80">
+            Nenhuma foto no site agora. A biografia continua visível sem
+            retrato.
+          </p>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <label className={`${btn.outline} cursor-pointer`}>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="sr-only"
+              disabled={uploadingFounder}
+              onChange={(event) => {
+                void uploadFounderPhoto(event.target.files?.[0]);
+                event.currentTarget.value = "";
+              }}
+            />
+            {uploadingFounder ? "Enviando…" : "Enviar foto original"}
+          </label>
+          {founderPhotoUrl ? (
+            <button
+              type="button"
+              className={btn.ghost}
+              onClick={() => setFounderPhotoUrl("")}
+            >
+              Remover foto
+            </button>
+          ) : null}
+        </div>
+        {errors.founderPhotoUrl ? (
+          <p className="mt-3 text-sm text-brand">{errors.founderPhotoUrl}</p>
+        ) : null}
+      </Card>
 
       <Card title="Google Meu Negócio">
         <p className="mb-4 text-sm leading-relaxed text-muted">

@@ -97,7 +97,7 @@ body {
 
   @media (min-width: 1024px) {
     .pt-site-header {
-      padding-top: 5.5rem; /* ~88px: barra 80px + folga */
+      padding-top: 7rem; /* barra 88px + folga para o hero não colar no menu */
     }
   }
 

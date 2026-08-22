@@ -32,8 +32,8 @@ export function Container({
 }
 
 const SPACING = {
-  default: "py-14 lg:py-20",
-  tight: "py-8 lg:py-10",
+  default: "py-14 lg:py-24",
+  tight: "py-8 lg:py-16",
   none: "",
 } as const;
 

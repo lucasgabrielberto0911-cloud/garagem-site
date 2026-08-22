@@ -94,37 +94,37 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="flex flex-col items-center justify-center py-10 text-center sm:py-12 lg:min-h-[46dvh] lg:py-14">
+        <Container className="flex flex-col items-center justify-center py-10 text-center sm:py-12 lg:min-h-[56dvh] lg:py-20">
           <div className="hero-brand">
             <Image
               src="/branding/logo-wordmark.png"
               alt={site.name}
-              width={420}
-              height={76}
+              width={480}
+              height={86}
               priority
-              className="mx-auto h-auto w-[min(70vw,260px)] sm:w-[min(58vw,360px)] lg:w-[380px]"
+              className="mx-auto h-auto w-[min(70vw,260px)] sm:w-[min(58vw,360px)] lg:w-[460px]"
             />
           </div>
 
-          <div className="hero-text mt-5 sm:mt-6">
-            <h1 className="mx-auto max-w-3xl font-display text-[1.65rem] font-bold leading-[1.15] tracking-tight text-cream sm:text-4xl lg:text-[2.75rem]">
+          <div className="hero-text mt-5 sm:mt-6 lg:mt-10">
+            <h1 className="mx-auto max-w-3xl font-display text-[1.65rem] font-bold leading-[1.15] tracking-tight text-cream sm:text-4xl lg:text-[3rem]">
               Encontre seu <span className="text-brand">próximo carro</span>
             </h1>
             <div
-              className="mx-auto mt-3 h-1 w-16 bg-brand-gradient sm:mt-4 sm:w-20"
+              className="mx-auto mt-3 h-1 w-16 bg-brand-gradient sm:mt-4 sm:w-20 lg:mt-5"
               aria-hidden="true"
             />
-            <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-cream/80 sm:mt-4 sm:text-base">
+            <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-cream/80 sm:mt-4 sm:text-base lg:mt-5">
               Seminovos revisados em {site.region} e região. Escolha no site,
               feche pelo WhatsApp.
             </p>
           </div>
 
-          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6">
+          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6 lg:mt-10">
             <HeroSearch brands={facets.brands} />
           </div>
 
-          <ActionRow className="hero-cta mt-5 w-full sm:mt-6 sm:w-auto">
+          <ActionRow className="hero-cta mt-5 w-full sm:mt-6 lg:mt-8 sm:w-auto">
             <ButtonLink href="/estoque" size="lg">
               Ver estoque
             </ButtonLink>
@@ -138,7 +138,7 @@ export default async function HomePage() {
             </WhatsAppButton>
           </ActionRow>
 
-          <div className="hero-stats mx-auto mt-6 hidden w-full max-w-2xl sm:mt-8 lg:block">
+          <div className="hero-stats mx-auto mt-6 hidden w-full max-w-2xl sm:mt-8 lg:mt-12 lg:block">
             <Suspense fallback={<StatsBarSkeleton />}>
               <StatsBar />
             </Suspense>
