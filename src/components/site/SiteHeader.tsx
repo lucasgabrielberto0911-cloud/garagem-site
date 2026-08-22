@@ -64,10 +64,10 @@ export function SiteHeader() {
         }`}
       >
         <div
-          className={`mx-auto grid max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 transition-[height] duration-200 sm:gap-4 sm:px-6 lg:gap-4 xl:gap-5 ${
+          className={`mx-auto grid max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 transition-[height] duration-200 sm:gap-4 sm:px-6 lg:gap-8 xl:gap-12 ${
             scrolled
-              ? "h-[64px] lg:h-[72px]"
-              : "h-[72px] lg:h-[80px]"
+              ? "h-[64px] lg:h-[76px]"
+              : "h-[72px] lg:h-[88px]"
           }`}
         >
           <Link
@@ -81,14 +81,14 @@ export function SiteHeader() {
               width={280}
               height={50}
               priority
-              className={`w-auto max-w-[min(46vw,160px)] object-contain object-left transition-all duration-300 sm:max-w-[168px] lg:max-w-[152px] xl:max-w-[168px] ${
-                scrolled ? "h-8 lg:h-9" : "h-9 lg:h-10"
+              className={`w-auto max-w-[min(46vw,160px)] object-contain object-left transition-all duration-300 sm:max-w-[168px] lg:max-w-[176px] xl:max-w-[200px] ${
+                scrolled ? "h-8 lg:h-10" : "h-9 lg:h-11"
               }`}
             />
           </Link>
 
           <nav
-            className="hidden min-w-0 items-center justify-center overflow-hidden lg:flex"
+            className="hidden min-w-0 items-center justify-center gap-x-1 overflow-hidden lg:flex xl:gap-x-2"
             aria-label="Menu principal"
           >
             {NAV_LINKS.map((link) => {
@@ -101,13 +101,13 @@ export function SiteHeader() {
                   key={link.href}
                   href={link.href}
                   aria-current={active ? "page" : undefined}
-                  className={`group relative px-1.5 py-2 font-display text-[12px] font-semibold transition xl:px-2.5 xl:text-[13px] ${
+                  className={`group relative px-2.5 py-2.5 font-display text-[13px] font-semibold tracking-wide transition xl:px-3.5 xl:text-[14px] ${
                     active ? "text-cream" : "text-muted hover:text-cream"
                   }`}
                 >
                   {link.label}
                   <span
-                    className={`absolute inset-x-1.5 -bottom-0.5 h-0.5 transition xl:inset-x-2.5 ${
+                    className={`absolute inset-x-2.5 -bottom-0.5 h-0.5 transition xl:inset-x-3.5 ${
                       active
                         ? "bg-brand-gradient"
                         : "bg-white/0 group-hover:bg-white/35 group-focus-visible:bg-white/35"
