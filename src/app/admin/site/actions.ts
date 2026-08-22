@@ -153,13 +153,13 @@ export async function updateSiteSettings(
         update: payload,
       });
     } catch {
-      const { founderPhotoUrl: _ignored, ...legacy } = payload;
+      const { founderPhotoUrl: photoUrl, ...legacy } = payload;
       await prisma.siteSettings.upsert({
         where: { id: "default" },
         create: { id: "default", ...legacy },
         update: legacy,
       });
-      if (founderPhotoUrl) {
+      if (photoUrl) {
         return {
           ok: false,
           message:
