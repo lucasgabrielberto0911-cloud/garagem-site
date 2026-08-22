@@ -40,8 +40,8 @@ const nextConfig = {
   },
   async redirects() {
     // Anúncios apagados do banco (antes do fluxo "vendido").
-    // statusCode 301 (não `permanent: true`, que no Next vira 308) e
-    // variante com barra — senão o Next só normaliza /url/ → /url.
+    // statusCode 301 — `permanent: true` no Next vira 308. Em produção a
+    // mesma lista está em vercel.json para a borda pegar também /url/.
     const retiredListings = [
       "/honda-hrv-2020",
       "/chevrolet-cruze-lt",
