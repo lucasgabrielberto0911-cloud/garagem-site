@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { FounderSection } from "@/components/site/FounderSection";
 import { TrustBadges } from "@/components/site/TrustBadges";
 import {
   ActionRow,
@@ -52,6 +53,7 @@ const DIFERENCIAIS = [
 ] as const;
 
 const TOC = [
+  { id: "por-tras", label: "Quem está por trás" },
   { id: "historia", label: "Nossa história" },
   { id: "missao", label: "Missão e valores" },
   { id: "compromisso", label: "Compromisso" },
@@ -121,6 +123,8 @@ export default async function SobrePage() {
             </li>
           ))}
         </ul>
+
+        <FounderSection />
 
         <div className="mx-auto mt-14 max-w-5xl lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[220px_minmax(0,1fr)] xl:gap-12">
           <nav
