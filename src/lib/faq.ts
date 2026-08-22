@@ -1,4 +1,5 @@
 import { site } from "@/lib/site";
+import { STORE_WARRANTY } from "@/lib/vehicle-conditions";
 
 export type FaqCategory =
   | "compra"
@@ -125,8 +126,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     category: "compra",
     question: "Como funciona a garantia?",
-    answer:
-      "PREENCHER: resposta real da loja — prazo, cobertura e se a garantia varia por veículo",
+    answer: STORE_WARRANTY.body,
   },
   {
     category: "documentacao",

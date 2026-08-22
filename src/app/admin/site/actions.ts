@@ -68,7 +68,8 @@ export async function updateSiteSettings(
   const googleReviewCount = nonNegativeInt(formData, "googleReviewCount");
   const googleProfileUrl = text(formData, "googleProfileUrl");
   const faqItems = parseFaqItems(parseJsonField(formData, "faqJson"));
-  const conditionsTitle = text(formData, "conditionsTitle") || "Garantia e condições";
+  const conditionsTitle =
+    text(formData, "conditionsTitle") || "Garantia de 3 Meses Garagem";
   const conditionsIntro = text(formData, "conditionsIntro");
   const conditionsItems = parseConditionItems(
     parseJsonField(formData, "conditionsJson"),

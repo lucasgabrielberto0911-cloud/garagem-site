@@ -1,13 +1,20 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { FAQ_ITEMS, parseFaqItems, publishedFaqItems, type FaqItem } from "@/lib/faq";
+import {
+  FAQ_ITEMS,
+  isFaqAnswerReady,
+  parseFaqItems,
+  publishedFaqItems,
+  type FaqItem,
+} from "@/lib/faq";
 import {
   DEFAULT_GOOGLE_REVIEWS,
   type GoogleReviews,
 } from "@/lib/google-reviews";
 import {
   DEFAULT_VEHICLE_CONDITIONS,
+  isPlaceholderCopy,
   publishedConditionItems,
   type ConditionItem,
   type VehicleConditionsContent,
@@ -37,17 +44,50 @@ function parseGoogle(
   };
 }
 
-function parseConditions(
+function fallbackIfPlaceholder(value: string, fallback: string) {
+  const trimmed = value.trim();
+  if (!trimmed || isPlaceholderCopy(trimmed)) return fallback;
+  return trimmed;
+}
+
+function mergeConditions(
   title: string | null | undefined,
   intro: string | null | undefined,
   raw: unknown,
 ): VehicleConditionsContent {
   const items = parseConditionItems(raw);
+  const mergedItems = (items ?? DEFAULT_VEHICLE_CONDITIONS.items).map((item) => {
+    const fallback = DEFAULT_VEHICLE_CONDITIONS.items.find(
+      (defaultItem) =>
+        defaultItem.label.toLocaleLowerCase("pt-BR") ===
+        item.label.toLocaleLowerCase("pt-BR"),
+    );
+    if (!fallback || isPlaceholderCopy(fallback.text)) return item;
+    return {
+      ...item,
+      text: fallbackIfPlaceholder(item.text, fallback.text),
+    };
+  });
+
   return {
-    title: title?.trim() || DEFAULT_VEHICLE_CONDITIONS.title,
-    intro: intro?.trim() || DEFAULT_VEHICLE_CONDITIONS.intro,
-    items: items ?? DEFAULT_VEHICLE_CONDITIONS.items.map((item) => ({ ...item })),
+    title: fallbackIfPlaceholder(title ?? "", DEFAULT_VEHICLE_CONDITIONS.title),
+    intro: fallbackIfPlaceholder(intro ?? "", DEFAULT_VEHICLE_CONDITIONS.intro),
+    items: mergedItems,
   };
+}
+
+/** Se o painel ainda tiver PREENCHER, usa o texto-base já preenchido (ex.: garantia). */
+function mergeFaqItems(items: FaqItem[]): FaqItem[] {
+  return items.map((item) => {
+    if (isFaqAnswerReady(item.answer)) return item;
+    const fallback = FAQ_ITEMS.find(
+      (defaultItem) => defaultItem.question === item.question,
+    );
+    if (fallback && isFaqAnswerReady(fallback.answer)) {
+      return { ...item, answer: fallback.answer };
+    }
+    return item;
+  });
 }
 
 export function parseConditionItems(raw: unknown): ConditionItem[] | null {
@@ -97,8 +137,8 @@ const loadSiteContentCached = unstable_cache(
           row.googleReviewCount,
           row.googleProfileUrl,
         ),
-        faqItems: parseFaqItems(row.faqJson) ?? FAQ_ITEMS,
-        conditions: parseConditions(
+        faqItems: mergeFaqItems(parseFaqItems(row.faqJson) ?? FAQ_ITEMS),
+        conditions: mergeConditions(
           row.conditionsTitle,
           row.conditionsIntro,
           row.conditionsJson,
@@ -113,7 +153,7 @@ const loadSiteContentCached = unstable_cache(
       };
     }
   },
-  ["public-site-content-v1"],
+  ["public-site-content-v2"],
   { revalidate: 120, tags: ["site-settings"] },
 );
 

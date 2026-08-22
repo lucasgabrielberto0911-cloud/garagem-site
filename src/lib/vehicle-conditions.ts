@@ -1,8 +1,16 @@
 /**
  * Bloco único da ficha do veículo (perto do CTA).
- * Defaults com PREENCHER — o texto real se edita em Admin → Site.
- * Não inventar prazo, cobertura ou custo.
+ * Garantia: texto oficial da loja. O restante ainda se edita em Admin → Site.
+ * Não inventar documentação, vistoria ou custo que a loja não confirmou.
  */
+
+/** Texto oficial da garantia — ficha, FAQ e defaults do painel. */
+export const STORE_WARRANTY = {
+  title: "Garantia de 3 Meses Garagem",
+  summary: "3 meses de cobertura para motor e câmbio em todos os nossos carros.",
+  body:
+    "Na Garagem, todo veículo passa por uma revisão completa antes de chegar até você. Por isso, oferecemos 3 meses de garantia em todos os nossos carros, com cobertura para os itens que mais pesam no bolso: motor e câmbio.",
+} as const;
 
 export type ConditionItem = {
   label: string;
@@ -16,12 +24,12 @@ export type VehicleConditionsContent = {
 };
 
 export const DEFAULT_VEHICLE_CONDITIONS: VehicleConditionsContent = {
-  title: "Garantia e condições",
-  intro: "PREENCHER: condições reais de garantia, documentação e transferência",
+  title: STORE_WARRANTY.title,
+  intro: STORE_WARRANTY.body,
   items: [
     {
       label: "Garantia",
-      text: "PREENCHER: prazo e cobertura da garantia (ou se varia por veículo)",
+      text: STORE_WARRANTY.summary,
     },
     {
       label: "Documentação e transferência",

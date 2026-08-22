@@ -480,11 +480,14 @@ export function VehicleForm({
                 className={inputClass}
               />
             </Field>
-            <Field label="Garantia" hint="Ex.: 3 meses, fábrica">
+            <Field
+              label="Garantia"
+              hint="A loja já anuncia 3 meses (motor e câmbio) no site. Preencha só se este carro for diferente."
+            >
               <input
                 name="warranty"
                 defaultValue={vehicle?.warranty ?? ""}
-                placeholder="Ex.: 3 meses"
+                placeholder="Ex.: 3 meses — motor e câmbio"
                 className={inputClass}
               />
             </Field>
