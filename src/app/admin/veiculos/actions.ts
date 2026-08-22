@@ -77,6 +77,8 @@ function parseVehicleFields(formData: FormData) {
   const inStoreName = formData.get("inStoreName") === "on";
   const hasSpareKey = formData.get("hasSpareKey") === "on";
   const hasManual = formData.get("hasManual") === "on";
+  const hasVideo =
+    formData.get("hasVideo") === "on" || formData.get("hasVideo") === "true";
 
   if (!brand || !model || !fuel || !transmission) {
     throw new Error("Preencha marca, modelo, combustível e câmbio.");
@@ -132,6 +134,7 @@ function parseVehicleFields(formData: FormData) {
     inStoreName,
     hasSpareKey,
     hasManual,
+    hasVideo,
   };
 }
 
@@ -180,6 +183,7 @@ export async function createVehicle(
         inStoreName: data.inStoreName,
         hasSpareKey: data.hasSpareKey,
         hasManual: data.hasManual,
+        hasVideo: data.hasVideo,
         photos: {
           create: data.photoUrls.map((url, order) => ({ url, order })),
         },
@@ -247,6 +251,7 @@ export async function updateVehicle(
           accessories: data.accessories,
           status: data.status,
           featured: data.featured,
+          hasVideo: data.hasVideo,
           photos: {
             create: data.photoUrls.map((url, order) => ({ url, order })),
           },

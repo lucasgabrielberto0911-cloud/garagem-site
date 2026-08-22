@@ -5,7 +5,7 @@
  * Telefones ficam em formato internacional (55 + DDD + número) para o WhatsApp.
  */
 export const PHONES = [
-  { label: "(27) 99956-6161", digits: "5527999566161" },
+  { label: "(27) 99626-8595", digits: "5527996268595" },
   { label: "(27) 99633-0706", digits: "5527996330706" },
 ] as const;
 

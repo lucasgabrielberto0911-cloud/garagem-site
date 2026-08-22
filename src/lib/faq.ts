@@ -39,6 +39,37 @@ export function isFaqAnswerReady(answer: string) {
   return !answer.includes("PREENCHER");
 }
 
+const FAQ_CATEGORY_IDS = new Set<FaqCategory>(
+  FAQ_CATEGORIES.filter((item): item is { id: FaqCategory; label: string } => item.id !== "todas").map(
+    (item) => item.id,
+  ),
+);
+
+export function isFaqCategory(value: unknown): value is FaqCategory {
+  return typeof value === "string" && FAQ_CATEGORY_IDS.has(value as FaqCategory);
+}
+
+/** Interpreta o JSON salvo no painel. Array vazio/inválido = null (usa o texto-base). */
+export function parseFaqItems(raw: unknown): FaqItem[] | null {
+  if (!Array.isArray(raw)) return null;
+
+  const items: FaqItem[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const row = entry as Record<string, unknown>;
+    const question = typeof row.question === "string" ? row.question.trim() : "";
+    const answer = typeof row.answer === "string" ? row.answer.trim() : "";
+    if (!question) continue;
+    items.push({
+      question: question.slice(0, 180),
+      answer: answer.slice(0, 2000),
+      category: isFaqCategory(row.category) ? row.category : "compra",
+    });
+  }
+
+  return items.length > 0 ? items : null;
+}
+
 /**
  * Ordem do array = ordem de exibição (home usa os primeiros prontos).
  * Respostas com PREENCHER não entram no site até você trocar o texto.

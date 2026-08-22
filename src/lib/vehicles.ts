@@ -107,6 +107,33 @@ function pickParam(
   return Array.isArray(value) ? value[0] : value;
 }
 
+function pickParamList(
+  input: Record<string, string | string[] | undefined>,
+  key: string,
+) {
+  const value = input[key];
+  const parts = Array.isArray(value) ? value : value ? [value] : [];
+  const items: string[] = [];
+  const seen = new Set<string>();
+  for (const part of parts) {
+    for (const item of part.split(",")) {
+      const trimmed = item.trim();
+      if (!trimmed) continue;
+      const keyName = trimmed.toLocaleLowerCase("pt-BR");
+      if (seen.has(keyName)) continue;
+      seen.add(keyName);
+      items.push(trimmed.slice(0, 80));
+    }
+  }
+  return items.slice(0, 12);
+}
+
+function truthyFlag(value?: string) {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "sim";
+}
+
 /** Interpreta query string do estoque (página, API e rolagem infinita). */
 export function parseStockFilters(
   input: Record<string, string | string[] | undefined>,
@@ -118,6 +145,9 @@ export function parseStockFilters(
     brand: pickParam(input, "brand"),
     transmission: pickParam(input, "transmission"),
     fuel: pickParam(input, "fuel"),
+    color: pickParam(input, "color"),
+    accessories: pickParamList(input, "accessory"),
+    hasInspection: truthyFlag(pickParam(input, "laudo")),
     minPrice: optionalPositiveNumber(pickParam(input, "minPrice")),
     maxPrice: optionalPositiveNumber(pickParam(input, "maxPrice")),
     minYear: optionalPositiveNumber(pickParam(input, "minYear")),
@@ -367,6 +397,9 @@ export type StockFilters = {
   brand?: string;
   transmission?: string;
   fuel?: string;
+  color?: string;
+  accessories?: string[];
+  hasInspection?: boolean;
   minPrice?: number;
   maxPrice?: number;
   minYear?: number;
@@ -415,6 +448,22 @@ function buildStockWhere(filters: StockFilters) {
         }
       : {};
 
+  const and: object[] = [];
+  if (filters.hasInspection) {
+    and.push({ inspection: { not: null } }, { inspection: { not: "" } });
+  }
+  if (terms.length) {
+    and.push(
+      ...terms.map((term) => ({
+        OR: [
+          { brand: { contains: term, mode: "insensitive" as const } },
+          { model: { contains: term, mode: "insensitive" as const } },
+          { version: { contains: term, mode: "insensitive" as const } },
+        ],
+      })),
+    );
+  }
+
   return {
     status: "disponivel" as const,
     ...(filters.category ? { category: filters.category } : {}),
@@ -423,20 +472,16 @@ function buildStockWhere(filters: StockFilters) {
       : {}),
     ...(filters.transmission ? { transmission: filters.transmission } : {}),
     ...(filters.fuel ? { fuel: filters.fuel } : {}),
+    ...(filters.color
+      ? { color: { equals: filters.color, mode: "insensitive" as const } }
+      : {}),
+    ...(filters.accessories && filters.accessories.length > 0
+      ? { accessories: { hasEvery: filters.accessories } }
+      : {}),
     ...priceFilter,
     ...yearFilter,
     ...(filters.maxKm ? { km: { lte: filters.maxKm } } : {}),
-    ...(terms.length
-      ? {
-          AND: terms.map((term) => ({
-            OR: [
-              { brand: { contains: term, mode: "insensitive" as const } },
-              { model: { contains: term, mode: "insensitive" as const } },
-              { version: { contains: term, mode: "insensitive" as const } },
-            ],
-          })),
-        }
-      : {}),
+    ...(and.length ? { AND: and } : {}),
   };
 }
 
@@ -452,6 +497,12 @@ function stockQueryKey(filters: StockFilters) {
     brand: filters.brand ?? "",
     transmission: filters.transmission ?? "",
     fuel: filters.fuel ?? "",
+    color: (filters.color ?? "").trim().toLocaleLowerCase("pt-BR"),
+    accessories: (filters.accessories ?? [])
+      .map((item) => item.toLocaleLowerCase("pt-BR"))
+      .sort()
+      .join("|"),
+    hasInspection: Boolean(filters.hasInspection),
     minPrice: filters.minPrice ?? 0,
     maxPrice: filters.maxPrice ?? 0,
     minYear: filters.minYear ?? 0,
@@ -494,7 +545,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v3"],
+  ["stock-page-v4"],
   PUBLIC_CACHE,
 );
 
@@ -532,6 +583,8 @@ type StockFacets = {
   brands: string[];
   transmissions: string[];
   fuels: string[];
+  colors: string[];
+  accessories: string[];
   years: number[];
 };
 
@@ -540,6 +593,8 @@ const EMPTY_FACETS: StockFacets = {
   brands: [],
   transmissions: [],
   fuels: [],
+  colors: [],
+  accessories: [],
   years: [],
 };
 
@@ -547,7 +602,8 @@ const loadStockFacetsCached = unstable_cache(
   async (): Promise<StockFacets> => {
     const available = { status: "disponivel" as const };
 
-    const [categories, brands, transmissions, fuels, years] = await Promise.all([
+    const [categories, brands, transmissions, fuels, colors, years, accessoryRows] =
+      await Promise.all([
       prisma.vehicle.groupBy({
         by: ["category"],
         where: available,
@@ -569,9 +625,19 @@ const loadStockFacetsCached = unstable_cache(
         orderBy: { fuel: "asc" },
       }),
       prisma.vehicle.groupBy({
+        by: ["color"],
+        where: available,
+        orderBy: { color: "asc" },
+      }),
+      prisma.vehicle.groupBy({
         by: ["yearModel"],
         where: available,
         orderBy: { yearModel: "desc" },
+      }),
+      prisma.vehicle.findMany({
+        where: available,
+        select: { accessories: true },
+        take: 400,
       }),
     ]);
 
@@ -590,6 +656,16 @@ const loadStockFacetsCached = unstable_cache(
         a.localeCompare(b, "pt-BR"),
       );
 
+    const accessoryByKey = new Map<string, string>();
+    for (const row of accessoryRows) {
+      for (const item of row.accessories) {
+        const raw = item?.trim();
+        if (!raw) continue;
+        const key = raw.toLocaleLowerCase("pt-BR");
+        if (!accessoryByKey.has(key)) accessoryByKey.set(key, raw);
+      }
+    }
+
     return {
       categories: unique(categories.map((row) => row.category)),
       brands: Array.from(brandsByKey.values()).sort((a, b) =>
@@ -597,10 +673,18 @@ const loadStockFacetsCached = unstable_cache(
       ),
       transmissions: unique(transmissions.map((row) => row.transmission)),
       fuels: unique(fuels.map((row) => row.fuel)),
+      colors: unique(
+        colors
+          .map((row) => row.color?.trim() ?? "")
+          .filter(Boolean),
+      ),
+      accessories: Array.from(accessoryByKey.values()).sort((a, b) =>
+        a.localeCompare(b, "pt-BR"),
+      ),
       years: years.map((row) => row.yearModel),
     };
   },
-  ["stock-facets-v3"],
+  ["stock-facets-v4"],
   PUBLIC_CACHE,
 );
 

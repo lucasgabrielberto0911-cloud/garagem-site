@@ -12,6 +12,11 @@ import {
   getPublicSite,
   listPlaceholderLabels,
 } from "@/lib/site-settings";
+import { getGoogleReviews } from "@/lib/site-content";
+import { DEFAULT_GOOGLE_REVIEWS, googleReviewsReady } from "@/lib/google-reviews";
+import { staleCutoffDate } from "@/lib/stock-quality";
+
+export { daysInStock, STALE_DAYS } from "@/lib/stock-quality";
 
 /** Badge do menu: 15s de cache para não consultar o banco em toda navegação. */
 export const getNewLeadsBadgeCount = unstable_cache(
@@ -49,15 +54,6 @@ export const getUsingSeedPassword = unstable_cache(
   { revalidate: 300, tags: [ADMIN_SEED_PASSWORD_TAG] },
 );
 
-const DAY_MS = 1000 * 60 * 60 * 24;
-
-/** Veículo disponível parado há mais tempo que isso entra nos alertas. */
-export const STALE_DAYS = 60;
-
-export function daysInStock(createdAt: Date) {
-  return Math.floor((Date.now() - createdAt.getTime()) / DAY_MS);
-}
-
 function startOfMonth() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -67,7 +63,7 @@ export type DashboardData = Awaited<ReturnType<typeof getDashboardData>>;
 
 export async function getDashboardData() {
   const monthStart = startOfMonth();
-  const staleBefore = new Date(Date.now() - STALE_DAYS * DAY_MS);
+  const staleBefore = staleCutoffDate();
 
   // Consultas isoladas: se uma tabela ainda não existir, o dashboard não cai inteiro.
   const safe = async <T>(label: string, fn: () => Promise<T>, fallback: T) => {
@@ -90,10 +86,12 @@ export async function getDashboardData() {
     recentVehicles,
     staleVehicles,
     withoutPhotos,
+    withoutVideo,
     customers,
     publishedTestimonials,
     usingSeedPassword,
     publicSite,
+    googleReviews,
   ] = await Promise.all([
     safe("vehicle.groupBy", () => prisma.vehicle.groupBy({ by: ["status"], _count: { _all: true } }), []),
     safe("featured", () => prisma.vehicle.count({ where: { status: "disponivel", featured: true } }), 0),
@@ -168,10 +166,26 @@ export async function getDashboardData() {
         }),
       [],
     ),
+    safe(
+      "withoutVideo",
+      () =>
+        prisma.vehicle.findMany({
+          where: {
+            status: { not: "vendido" },
+            historical: false,
+            hasVideo: false,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: { id: true, brand: true, model: true },
+        }),
+      [],
+    ),
     safe("customers", () => prisma.customer.count(), 0),
     safe("testimonials", () => prisma.testimonial.count({ where: { published: true } }), 0),
     getUsingSeedPassword(),
     safe("publicSite", () => getPublicSite(), null as Awaited<ReturnType<typeof getPublicSite>> | null),
+    safe("googleReviews", () => getGoogleReviews(), DEFAULT_GOOGLE_REVIEWS),
   ]);
 
   const byStatus = (status: string) =>
@@ -223,8 +237,10 @@ export async function getDashboardData() {
     alerts: {
       staleVehicles,
       withoutPhotos,
+      withoutVideo,
       noFeatured: available > 0 && featured === 0,
       noTestimonials: publishedTestimonials === 0,
+      noGoogleReviews: !googleReviewsReady(googleReviews),
       usingSeedPassword,
       placeholders: listPlaceholderLabels(siteForPlaceholders),
     },

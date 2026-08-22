@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { SiteSettingsForm } from "@/components/admin/SiteSettingsForm";
 import { AdminPageHeader, Card } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
+import { getSiteContent } from "@/lib/site-content";
 import {
   getEditableSiteFields,
   listPlaceholderLabels,
@@ -13,14 +14,17 @@ export default async function AdminSitePage() {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const fields = await getEditableSiteFields();
+  const [fields, content] = await Promise.all([
+    getEditableSiteFields(),
+    getSiteContent(),
+  ]);
   const placeholders = listPlaceholderLabels(fields);
 
   return (
     <div className="space-y-6">
       <AdminPageHeader
         title="Dados do site"
-        subtitle="Endereço, e-mail e horários que aparecem no site público."
+        subtitle="Endereço, horários, Google, FAQ e condições da ficha — sem editar arquivo."
       />
 
       {placeholders.length > 0 ? (
@@ -33,7 +37,7 @@ export default async function AdminSitePage() {
         </Card>
       ) : null}
 
-      <SiteSettingsForm initial={fields} />
+      <SiteSettingsForm initial={fields} content={content} />
     </div>
   );
 }

@@ -37,6 +37,11 @@ model Vehicle {
   plateEnd     String?
   /** Laudo / vistoria — ex.: "Cautelar aprovado", "Com laudo". */
   inspection   String?
+  /**
+   * Já existe vídeo do veículo (WhatsApp / Instagram / arquivo interno).
+   * Não é player no site — só qualidade do anúncio no painel.
+   */
+  hasVideo     Boolean  @default(false)
   /** Itens/acessórios do anúncio (checklist + pontos manuais). */
   accessories  String[] @default([])
   status       String   @default("disponivel")
@@ -198,5 +203,15 @@ model SiteSettings {
    * Exibido = statsSalesBase + count(Sale).
    */
   statsSalesBase Int      @default(0)
+  /** Nota do Google Meu Negócio (0 = oculto no site). */
+  googleRating      Float   @default(0)
+  googleReviewCount Int     @default(0)
+  googleProfileUrl  String?
+  /** FAQ pública. Null = usa o texto-base de faq.ts. */
+  faqJson           Json?
+  conditionsTitle   String?
+  conditionsIntro   String?
+  /** Itens do bloco garantia/condições na ficha. Null = vehicle-conditions.ts. */
+  conditionsJson    Json?
   updatedAt      DateTime @updatedAt
 }

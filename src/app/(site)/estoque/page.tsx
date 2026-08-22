@@ -24,6 +24,9 @@ type SearchParams = {
   brand?: string;
   transmission?: string;
   fuel?: string;
+  color?: string;
+  accessory?: string;
+  laudo?: string;
   minPrice?: string;
   maxPrice?: string;
   minYear?: string;
@@ -50,6 +53,9 @@ function stockQuery(params: SearchParams) {
     brand: params.brand,
     transmission: params.transmission,
     fuel: params.fuel,
+    color: params.color,
+    accessory: params.accessory,
+    laudo: params.laudo,
     minPrice: params.minPrice,
     maxPrice: params.maxPrice,
     minYear: params.minYear,
@@ -76,6 +82,9 @@ export default async function EstoquePage({
       searchParams.brand ||
       searchParams.transmission ||
       searchParams.fuel ||
+      searchParams.color ||
+      searchParams.accessory ||
+      searchParams.laudo ||
       searchParams.minPrice ||
       searchParams.maxPrice ||
       searchParams.minYear ||

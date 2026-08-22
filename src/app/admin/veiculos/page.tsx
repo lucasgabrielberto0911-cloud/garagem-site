@@ -8,6 +8,7 @@ import {
   getAdminVehiclesPage,
   type VehiclesTab,
 } from "@/lib/admin-vehicles";
+import { STALE_DAYS } from "@/lib/stock-quality";
 import { getSession } from "@/lib/auth";
 import { formatCurrencyBRL } from "@/lib/format";
 
@@ -79,6 +80,12 @@ export default async function VehiclesPage({
         tab={tab}
         estoqueCount={stats.estoqueCount}
         vendidosCount={stats.vendidosCount}
+        quality={{
+          withoutPhotos: stats.withoutPhotos,
+          withoutVideo: stats.withoutVideo,
+          stale: stats.stale,
+          staleDays: STALE_DAYS,
+        }}
       />
     </div>
   );

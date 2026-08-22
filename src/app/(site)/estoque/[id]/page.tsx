@@ -18,6 +18,7 @@ import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site, whatsappUrl } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
+import { getVehicleConditions } from "@/lib/site-content";
 import {
   getPublicVehicleStaticParams,
   getRelatedVehicles,
@@ -100,13 +101,16 @@ export default async function VehicleDetailPage({
     vehicle.model,
     vehicle.yearModel,
   );
-  const related = await getRelatedVehicles(
-    vehicle.id,
-    vehicle.brand,
-    4,
-    vehicle.category,
-    vehicle.price,
-  );
+  const [related, conditions] = await Promise.all([
+    getRelatedVehicles(
+      vehicle.id,
+      vehicle.brand,
+      4,
+      vehicle.category,
+      vehicle.price,
+    ),
+    getVehicleConditions(),
+  ]);
 
   const specs = [
     { label: "Tipo", value: vehicleCategoryLabel(vehicle.category) },
@@ -332,7 +336,10 @@ export default async function VehicleDetailPage({
               )}
 
               {!sold ? (
-                <VehicleConditions vehicleWarranty={vehicle.warranty} />
+                <VehicleConditions
+                  vehicleWarranty={vehicle.warranty}
+                  conditions={conditions}
+                />
               ) : null}
 
               <ShareVehicle

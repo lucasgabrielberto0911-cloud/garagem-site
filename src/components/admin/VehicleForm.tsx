@@ -567,7 +567,7 @@ export function VehicleForm({
         </Card>
 
         <Card
-          title={`Fotos${photos.length > 0 ? ` (${photos.length})` : ""}`}
+          title={`Fotos e vídeo${photos.length > 0 ? ` (${photos.length} fotos)` : ""}`}
           action={
             photos.length > 0 ? (
               <span className="text-xs text-muted">
@@ -577,6 +577,19 @@ export function VehicleForm({
           }
         >
           <VehiclePhotoManager photos={photos} onChange={setPhotos} />
+          <label className="mt-4 flex cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition hover:border-brand/50">
+            <input
+              type="checkbox"
+              name="hasVideo"
+              defaultChecked={vehicle?.hasVideo ?? false}
+              className="h-4 w-4 accent-brand"
+            />
+            Já temos vídeo deste veículo
+          </label>
+          <p className="mt-2 text-xs text-muted">
+            Não sobe o vídeo no site — só tira o aviso “sem vídeo” no estoque.
+            O visitante continua pedindo pelo WhatsApp.
+          </p>
         </Card>
 
         <Card

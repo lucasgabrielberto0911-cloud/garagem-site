@@ -3,9 +3,9 @@ import { JsonLd } from "@/components/JsonLd";
 import { FaqExplorer } from "@/components/site/FaqExplorer";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
-import { publishedFaqItems } from "@/lib/faq";
 import { buildPageMetadata, faqJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
+import { getPublishedFaq } from "@/lib/site-content";
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Dúvidas frequentes | ${site.name}`,
@@ -13,8 +13,8 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/faq",
 });
 
-export default function FaqPage() {
-  const items = publishedFaqItems();
+export default async function FaqPage() {
+  const items = await getPublishedFaq();
   return (
     <div className="py-12 lg:py-16">
       <JsonLd data={faqJsonLd(items)} />
