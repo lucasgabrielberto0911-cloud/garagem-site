@@ -1,7 +1,19 @@
 import type { Metadata } from "next";
 import { formatBrandName, formatModelName } from "@/lib/format";
+import {
+  SERVICE_CITIES,
+  type ServiceCity,
+} from "@/lib/service-cities";
 import { PHONES, isPhysicalAddress, site, type SiteConfig } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
+
+export {
+  SERVICE_CITIES,
+  getServiceCity,
+  otherServiceCities,
+  type ServiceCity,
+  type ServiceCitySlug,
+} from "@/lib/service-cities";
 
 /**
  * Placeholders (entre colchetes) não devem ir para os dados estruturados:
@@ -9,19 +21,6 @@ import { vehiclePath } from "@/lib/vehicle-slug";
  */
 function real(value: string) {
   return value.includes("[") ? undefined : value;
-}
-
-/** Cidades de atuação — schema, landings e llms.txt. */
-export const SERVICE_CITIES = [
-  { slug: "aracruz", name: "Aracruz" },
-  { slug: "vitoria", name: "Vitória" },
-  { slug: "linhares", name: "Linhares" },
-] as const;
-
-export type ServiceCitySlug = (typeof SERVICE_CITIES)[number]["slug"];
-
-export function getServiceCity(slug: string) {
-  return SERVICE_CITIES.find((city) => city.slug === slug) ?? null;
 }
 
 export function absoluteUrl(path = "/") {
@@ -151,6 +150,41 @@ export function localBusinessJsonLd(config: SiteConfig = site) {
       addressCountry: "BR",
     },
     ...(real(config.email) ? { email: config.email } : {}),
+  };
+}
+
+/** JSON-LD da landing de cidade — amarra a página à cidade sem inventar endereço. */
+export function serviceCityJsonLd(city: ServiceCity) {
+  const path = `/seminovos/${city.slug}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": absoluteUrl(`${path}#pagina`),
+    name: `Seminovos em ${city.name}`,
+    description: city.metaDescription,
+    url: absoluteUrl(path),
+    isPartOf: { "@id": absoluteUrl("/#website") },
+    about: {
+      "@type": "City",
+      name: city.name,
+      containedInPlace: {
+        "@type": "State",
+        name: site.state,
+      },
+    },
+    provider: {
+      "@type": "AutoDealer",
+      "@id": absoluteUrl("/#loja"),
+      name: site.name,
+      areaServed: {
+        "@type": "City",
+        name: city.name,
+        containedInPlace: {
+          "@type": "State",
+          name: site.state,
+        },
+      },
+    },
   };
 }
 

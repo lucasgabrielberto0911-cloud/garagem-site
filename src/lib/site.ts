@@ -14,8 +14,9 @@ export const site = {
   legalName: "Garagem Motocycles",
   cnpj: "47.740.076/0001-17",
   url: "https://suagaragem.net",
-  tagline: "Seminovos com procedência em Aracruz, Vitória, Linhares e região.",
-  region: "Aracruz, Vitória, Linhares",
+  tagline:
+    "Seminovos com procedência em Aracruz, Vitória, Linhares, Serra, Vila Velha e região.",
+  region: "Aracruz, Vitória, Linhares, Serra, Vila Velha",
   state: "Espírito Santo",
   stateCode: "ES",
   phoneLabel: PHONES[0].label,

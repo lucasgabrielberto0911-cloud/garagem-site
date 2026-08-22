@@ -9,7 +9,7 @@ import {
   PageHeader,
   WhatsAppButton,
 } from "@/components/site/ui";
-import { PHONES, WHATSAPP_MESSAGES, site } from "@/lib/site";
+import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import {
   SERVICE_CITIES,
   absoluteUrl,
@@ -17,6 +17,8 @@ import {
   buildPageMetadata,
   faqJsonLd,
   getServiceCity,
+  otherServiceCities,
+  serviceCityJsonLd,
 } from "@/lib/seo";
 
 export const revalidate = 3600;
@@ -36,7 +38,7 @@ export function generateMetadata({
   if (!city) return {};
   return buildPageMetadata({
     title: `Seminovos em ${city.name} | ${site.name}`,
-    description: `Seminovos com procedência para quem está em ${city.name} e região. Compra, venda, troca e financiamento com atendimento online da ${site.name}.`,
+    description: city.metaDescription,
     path: `/seminovos/${city.slug}`,
   });
 }
@@ -50,22 +52,11 @@ export default function SeminovosCidadePage({
   if (!city) notFound();
 
   const path = `/seminovos/${city.slug}`;
-  const faqs = [
-    {
-      question: `A Garagem atende quem está em ${city.name}?`,
-      answer: `Sim. Atendemos clientes em ${city.name} e região por WhatsApp e telefone, com avaliação, fotos, vídeos e orientação de documentação — tudo online, todos os dias das 8h às 23h.`,
-    },
-    {
-      question: "Como funciona a compra de um seminovo à distância?",
-      answer:
-        "Você escolhe no estoque, tira dúvidas pelo WhatsApp, recebe detalhes e vídeos do veículo e avança na proposta com transparência. A transferência e a documentação são acompanhadas pela equipe.",
-    },
-    {
-      question: "Posso dar meu carro na troca?",
-      answer:
-        "Pode. Envie os dados do seu veículo pela página Vender/Trocar ou pelo WhatsApp para uma avaliação sem compromisso.",
-    },
-  ];
+  const nearby = otherServiceCities(city.slug);
+  const faqs = city.faqs.map((item) => ({
+    question: item.question,
+    answer: item.answer,
+  }));
 
   return (
     <div className="py-12 lg:py-16">
@@ -76,13 +67,14 @@ export default function SeminovosCidadePage({
           { name: `Seminovos em ${city.name}`, path },
         ])}
       />
+      <JsonLd data={serviceCityJsonLd(city)} />
       <JsonLd data={faqJsonLd(faqs)} />
 
       <Container>
         <PageHeader
           eyebrow={`${city.name} · ${site.state}`}
           title={`Seminovos em ${city.name}`}
-          description={`A ${site.name} atende ${city.name} e região com seminovos vistoriados, negociação clara e atendimento online — compra, venda, troca e financiamento.`}
+          description={city.lead}
         />
 
         <nav
@@ -102,21 +94,13 @@ export default function SeminovosCidadePage({
 
         <section className="mt-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-5 text-sm leading-relaxed text-muted">
-            <p>
-              Se você está em <strong className="text-cream">{city.name}</strong>{" "}
-              e procura um seminovo com procedência, a {site.name} concentra o
-              atendimento no digital: estoque atualizado no site, conversa direta
-              no WhatsApp e suporte até a documentação.
-            </p>
-            <p>
-              Atendemos também Vitória, Linhares, Aracruz e demais cidades do{" "}
-              {site.state}. O horário é todos os dias, das 8h às 23h.
-            </p>
+            {city.paragraphs.map((text) => (
+              <p key={text.slice(0, 40)}>{text}</p>
+            ))}
             <ul className="list-disc space-y-2 pl-5">
-              <li>Estoque com fotos e ficha técnica</li>
-              <li>Avaliação para venda ou troca</li>
-              <li>Orientação de financiamento</li>
-              <li>Canais oficiais: WhatsApp {PHONES[0].label}</li>
+              {city.bullets.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
             </ul>
           </div>
 
@@ -167,17 +151,15 @@ export default function SeminovosCidadePage({
             Outras cidades
           </h2>
           <div className="mt-4 flex flex-wrap gap-2">
-            {SERVICE_CITIES.filter((item) => item.slug !== city.slug).map(
-              (item) => (
-                <Link
-                  key={item.slug}
-                  href={`/seminovos/${item.slug}`}
-                  className="border border-white/15 px-3 py-2 text-xs uppercase tracking-wider text-muted transition hover:border-brand hover:text-cream"
-                >
-                  Seminovos em {item.name}
-                </Link>
-              ),
-            )}
+            {nearby.map((item) => (
+              <Link
+                key={item.slug}
+                href={`/seminovos/${item.slug}`}
+                className="border border-white/15 px-3 py-2 text-xs uppercase tracking-wider text-muted transition hover:border-brand hover:text-cream"
+              >
+                Seminovos em {item.name}
+              </Link>
+            ))}
           </div>
         </section>
 

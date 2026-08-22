@@ -10,7 +10,7 @@ export const VEHICLES_PUBLIC_CACHE_TAG = "vehicles-public";
 export const TESTIMONIALS_CACHE_TAG = "testimonials";
 
 const PUBLIC_CACHE: { revalidate: number; tags: string[] } = {
-  revalidate: 60,
+  revalidate: 120,
   tags: [VEHICLES_PUBLIC_CACHE_TAG],
 };
 

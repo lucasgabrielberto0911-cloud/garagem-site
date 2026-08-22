@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { JsonLd } from "@/components/JsonLd";
 import { MobileBottomNav } from "@/components/site/MobileBottomNav";
@@ -29,15 +30,20 @@ const PwaRegister = dynamic(
   { ssr: false },
 );
 
-export default async function SiteLayout({
+async function SiteJsonLd() {
+  const publicSite = await getPublicSite();
+  return <JsonLd data={localBusinessJsonLd(publicSite)} />;
+}
+
+export default function SiteLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const publicSite = await getPublicSite();
-
   return (
     <div className="flex min-h-screen flex-col">
       <GoogleAnalytics />
-      <JsonLd data={localBusinessJsonLd(publicSite)} />
+      <Suspense fallback={null}>
+        <SiteJsonLd />
+      </Suspense>
       <ScrollProgress />
       <SiteHeader />
       <main className="flex-1 pt-site-header">

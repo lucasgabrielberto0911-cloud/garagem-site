@@ -1,7 +1,7 @@
 # Garagem — seminovos com procedência
 # https://suagaragem.net
 
-> Loja digital de seminovos no Espírito Santo. Atendimento online todos os dias, das 8h às 23h, com foco em Aracruz, Vitória, Linhares e região.
+> Loja digital de seminovos no Espírito Santo. Atendimento online todos os dias, das 8h às 23h, com foco em Aracruz, Vitória, Linhares, Serra, Vila Velha e região.
 
 ## Identidade
 - Nome: Garagem
@@ -17,6 +17,8 @@
 - Aracruz (ES)
 - Vitória (ES)
 - Linhares (ES)
+- Serra (ES)
+- Vila Velha (ES)
 - Região metropolitana e demais cidades do Espírito Santo sob consulta
 
 ## O que fazer neste site
@@ -28,6 +30,8 @@
 - Seminovos em Aracruz: https://suagaragem.net/seminovos/aracruz
 - Seminovos em Vitória: https://suagaragem.net/seminovos/vitoria
 - Seminovos em Linhares: https://suagaragem.net/seminovos/linhares
+- Seminovos em Serra: https://suagaragem.net/seminovos/serra
+- Seminovos em Vila Velha: https://suagaragem.net/seminovos/vila-velha
 - Privacidade (LGPD): https://suagaragem.net/privacidade
 
 ## Serviços

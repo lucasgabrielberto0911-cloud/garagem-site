@@ -9,7 +9,7 @@ import { getPublishedFaq } from "@/lib/site-content";
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Dúvidas frequentes | ${site.name}`,
-  description: `Como funciona a compra, a troca, o financiamento e a documentação na ${site.name} — seminovos em Aracruz, Vitória, Linhares e região.`,
+  description: `Como funciona a compra, a troca, o financiamento e a documentação na ${site.name} — seminovos em ${site.region} e região.`,
   path: "/faq",
 });
 
