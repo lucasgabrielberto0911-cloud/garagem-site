@@ -86,6 +86,8 @@ export default async function SobrePage() {
           description={`Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência, negociação clara e atendimento de excelência em ${publicSite.region} e região.`}
         />
 
+        <FounderSection photoUrl={siteContent.founderPhotoUrl} />
+
         <div className="relative mx-auto mt-10 aspect-[4/3] max-w-4xl overflow-hidden border border-white/10 sm:mt-12 sm:aspect-[16/9]">
           <Image
             src="/branding/hero-bg.jpg"
@@ -125,8 +127,6 @@ export default async function SobrePage() {
             </li>
           ))}
         </ul>
-
-        <FounderSection photoUrl={siteContent.founderPhotoUrl} />
 
         <div className="mx-auto mt-14 max-w-5xl lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[220px_minmax(0,1fr)] xl:gap-12">
           <nav

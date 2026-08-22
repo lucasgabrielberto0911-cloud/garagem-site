@@ -11,7 +11,7 @@ export function FounderSection({
     <section
       id="por-tras"
       aria-labelledby="titulo-por-tras"
-      className="mx-auto mt-14 max-w-5xl scroll-mt-28 overflow-hidden border border-white/10 bg-black lg:mt-16"
+      className="mx-auto mt-10 max-w-5xl scroll-mt-28 overflow-hidden border border-white/10 bg-black sm:mt-12"
     >
       <div
         className={
