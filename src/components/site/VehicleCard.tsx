@@ -42,8 +42,7 @@ export function VehicleCard({
       <FavoriteButton
         vehicleId={vehicle.id}
         label={`${title} ${vehicle.yearModel}`}
-        size="sm"
-        className="absolute right-2 top-2 z-20"
+        className="absolute right-1.5 top-1.5 z-20"
       />
 
       <StockVehicleLink

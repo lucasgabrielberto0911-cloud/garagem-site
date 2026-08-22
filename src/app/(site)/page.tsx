@@ -94,19 +94,20 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="flex flex-col items-center justify-center py-10 text-center sm:py-12 lg:min-h-[56dvh] lg:py-20">
-          <div className="hero-brand">
+        <Container className="flex flex-col items-center justify-center py-6 text-center sm:py-10 lg:min-h-[56dvh] lg:py-20">
+          <div>
             <Image
               src="/branding/logo-wordmark.png"
               alt={site.name}
               width={480}
               height={86}
               priority
+              sizes="(min-width: 1024px) 460px, (min-width: 640px) 360px, 260px"
               className="mx-auto h-auto w-[min(70vw,260px)] sm:w-[min(58vw,360px)] lg:w-[460px]"
             />
           </div>
 
-          <div className="hero-text mt-5 sm:mt-6 lg:mt-10">
+          <div className="hero-text mt-4 sm:mt-6 lg:mt-10">
             <h1 className="mx-auto max-w-3xl font-display text-[1.65rem] font-bold leading-[1.15] tracking-tight text-cream sm:text-4xl lg:text-[3rem]">
               Encontre seu <span className="text-brand">próximo carro</span>
             </h1>
@@ -148,13 +149,11 @@ export default async function HomePage() {
 
       {/* 2. ESTOQUE CEDO — logo após o hero */}
       <Section id="destaques" spacing="tight" className="border-t border-white/5">
-        <ScrollReveal>
-          <SectionHeading
-            eyebrow="Estoque"
-            title="Veículos em destaque"
-            description="Seleção do que está disponível agora. O estoque gira rápido."
-          />
-        </ScrollReveal>
+        <SectionHeading
+          eyebrow="Estoque"
+          title="Veículos em destaque"
+          description="Seleção do que está disponível agora. O estoque gira rápido."
+        />
 
         <div className="mt-8">
           {featured.length === 0 ? (

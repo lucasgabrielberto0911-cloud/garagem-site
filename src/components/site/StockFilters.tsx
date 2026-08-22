@@ -302,7 +302,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
               defaultValue={current.q}
               key={current.q}
               placeholder="Marca, modelo ou versão"
-              className="w-full min-w-0 bg-transparent py-3 text-base text-cream placeholder:text-muted focus:outline-none sm:text-sm"
+              className="w-full min-w-0 bg-transparent py-3 text-base text-cream placeholder:text-muted focus:outline-none"
             />
           </div>
           <button
@@ -561,6 +561,30 @@ export function StockFilters({ facets }: { facets: Facets }) {
             </button>
           ) : null}
         </div>
+
+        {activeFilters.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2 lg:hidden">
+            {activeFilters.map((filter) => (
+              <button
+                key={filter.accessory ? `accessory:${filter.accessory}` : filter.key}
+                type="button"
+                onClick={() =>
+                  update({
+                    [filter.key]:
+                      filter.key === "accessory" && filter.accessory
+                        ? toggleAccessoryValue(current.accessory, filter.accessory)
+                        : "",
+                  })
+                }
+                className="inline-flex min-h-[44px] items-center gap-1.5 border border-brand/50 bg-brand/10 px-2.5 py-1.5 text-left text-[11px] leading-tight text-cream"
+                aria-label={`Remover ${filter.label}`}
+              >
+                <span>{filter.label}</span>
+                <IconClose className="h-3 w-3 shrink-0 text-brand" />
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         {/* Mobile/tablet: ordenação em faixa horizontal. */}
         <div className="mt-3 lg:hidden">

@@ -1,9 +1,15 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
-import { PhotoLightbox } from "@/components/site/PhotoLightbox";
 import { vehiclePhotoAlt } from "@/lib/format";
+
+const PhotoLightbox = dynamic(
+  () =>
+    import("@/components/site/PhotoLightbox").then((mod) => mod.PhotoLightbox),
+  { ssr: false },
+);
 
 /**
  * Galeria em faixa horizontal (snap). Carrega só a foto ativa ±1.
@@ -95,7 +101,7 @@ export function VehicleGallery({
                     alt={vehiclePhotoAlt(alt, index, total)}
                     fill
                     sizes="(min-width: 1024px) 60vw, 100vw"
-                    quality={index === 0 ? 75 : 68}
+                    quality={index === 0 ? 68 : 62}
                     priority={index === 0}
                     className="object-cover"
                   />

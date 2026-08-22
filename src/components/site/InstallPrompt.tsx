@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { IconClose } from "@/components/site/icons";
 import { site } from "@/lib/site";
@@ -13,8 +14,11 @@ type InstallEvent = Event & {
 const DISMISS_KEY = "garagem:instalar-dispensado";
 
 export function InstallPrompt() {
+  const pathname = usePathname();
   const [event, setEvent] = useState<InstallEvent | null>(null);
   const [visible, setVisible] = useState(false);
+  const hideOnMoneyPage =
+    pathname === "/estoque" || pathname.startsWith("/estoque/");
 
   useEffect(() => {
     if (window.localStorage.getItem(DISMISS_KEY) === "1") return;
@@ -45,11 +49,11 @@ export function InstallPrompt() {
     setVisible(false);
   }
 
-  if (!visible || !event) return null;
+  if (!visible || !event || hideOnMoneyPage) return null;
 
   return (
     <div
-      className="fixed inset-x-3 bottom-[84px] z-[45] border border-white/15 bg-ink/95 p-4 shadow-2xl backdrop-blur animate-slide-up lg:inset-x-auto lg:bottom-6 lg:left-6 lg:right-auto lg:w-[360px]"
+      className="fixed inset-x-3 bottom-[84px] z-[35] border border-white/15 bg-ink/95 p-3 shadow-2xl backdrop-blur animate-slide-up lg:inset-x-auto lg:bottom-6 lg:left-6 lg:right-auto lg:w-[360px] lg:p-4"
       role="dialog"
       aria-label="Instalar aplicativo"
     >

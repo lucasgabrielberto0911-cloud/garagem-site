@@ -34,6 +34,7 @@ export async function SiteFooter() {
               alt={site.name}
               width={320}
               height={58}
+              sizes="200px"
               className="h-11 w-auto sm:h-12"
             />
             <div
