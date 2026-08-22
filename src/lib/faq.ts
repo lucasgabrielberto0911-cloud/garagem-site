@@ -1,4 +1,5 @@
 import { site } from "@/lib/site";
+import { STORE_WARRANTY } from "@/lib/vehicle-conditions";
 
 export type FaqCategory =
   | "compra"
@@ -37,6 +38,37 @@ export function faqItemId(question: string, index = 0) {
 
 export function isFaqAnswerReady(answer: string) {
   return !answer.includes("PREENCHER");
+}
+
+const FAQ_CATEGORY_IDS = new Set<FaqCategory>(
+  FAQ_CATEGORIES.filter((item): item is { id: FaqCategory; label: string } => item.id !== "todas").map(
+    (item) => item.id,
+  ),
+);
+
+export function isFaqCategory(value: unknown): value is FaqCategory {
+  return typeof value === "string" && FAQ_CATEGORY_IDS.has(value as FaqCategory);
+}
+
+/** Interpreta o JSON salvo no painel. Array vazio/inválido = null (usa o texto-base). */
+export function parseFaqItems(raw: unknown): FaqItem[] | null {
+  if (!Array.isArray(raw)) return null;
+
+  const items: FaqItem[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const row = entry as Record<string, unknown>;
+    const question = typeof row.question === "string" ? row.question.trim() : "";
+    const answer = typeof row.answer === "string" ? row.answer.trim() : "";
+    if (!question) continue;
+    items.push({
+      question: question.slice(0, 180),
+      answer: answer.slice(0, 2000),
+      category: isFaqCategory(row.category) ? row.category : "compra",
+    });
+  }
+
+  return items.length > 0 ? items : null;
 }
 
 /**
@@ -94,8 +126,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     category: "compra",
     question: "Como funciona a garantia?",
-    answer:
-      "PREENCHER: resposta real da loja — prazo, cobertura e se a garantia varia por veículo",
+    answer: STORE_WARRANTY.body,
   },
   {
     category: "documentacao",

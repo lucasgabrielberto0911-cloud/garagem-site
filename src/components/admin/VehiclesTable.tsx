@@ -28,6 +28,7 @@ import { expectedMargin, hasCostBasis } from "@/lib/vehicle-ops";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import type { AdminVehicleListItem, VehiclesTab } from "@/lib/admin-vehicles";
+import { daysInStock, isStaleListing } from "@/lib/stock-quality";
 import {
   deleteVehicle,
   duplicateVehicle,
@@ -58,6 +59,17 @@ const MARK_SOLD_BTN =
 
 const CHIP_SCROLL =
   "flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+
+function vehicleQualityAlerts(vehicle: VehicleRow) {
+  if (vehicle.status === "vendido") return [];
+  const alerts: string[] = [];
+  if (vehicle.photos.length === 0) alerts.push("Sem foto");
+  if (!vehicle.hasVideo) alerts.push("Sem vídeo");
+  if (isStaleListing(vehicle.createdAt, vehicle.status)) {
+    alerts.push(`Parado há ${daysInStock(vehicle.createdAt)} dias`);
+  }
+  return alerts;
+}
 
 function canMarkAsSold(status: string) {
   return status === "disponivel" || status === "reservado";
@@ -95,6 +107,7 @@ export function VehiclesTable({
   tab,
   estoqueCount: estoqueCountProp,
   vendidosCount: vendidosCountProp,
+  quality,
 }: {
   vehicles: VehicleRow[];
   initialTotal: number;
@@ -103,6 +116,12 @@ export function VehiclesTable({
   tab: VehiclesTab;
   estoqueCount: number;
   vendidosCount: number;
+  quality?: {
+    withoutPhotos: number;
+    withoutVideo: number;
+    stale: number;
+    staleDays: number;
+  };
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -342,6 +361,30 @@ export function VehiclesTable({
           </span>
         </button>
       </div>
+
+      {tab === "estoque" && quality && quality.withoutPhotos + quality.withoutVideo + quality.stale > 0 ? (
+        <div className="border border-brand-orange/40 bg-brand-orange/10 px-4 py-3 text-sm text-cream">
+          <p className="font-display text-xs font-semibold uppercase tracking-wider text-brand-orange">
+            Avisos do estoque
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-cream/90">
+            {[
+              quality.withoutPhotos > 0
+                ? `${quality.withoutPhotos} sem foto`
+                : null,
+              quality.withoutVideo > 0
+                ? `${quality.withoutVideo} sem vídeo`
+                : null,
+              quality.stale > 0
+                ? `${quality.stale} parado${quality.stale === 1 ? "" : "s"} há mais de ${quality.staleDays} dias`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            . Marque o vídeo no cadastro quando já existir; anúncio sem foto some do interesse.
+          </p>
+        </div>
+      ) : null}
 
       <div className="border border-white/10 bg-ink/50 p-3 sm:p-4">
         <form
@@ -639,8 +682,17 @@ function VehicleAdminCard({
             </p>
           ) : null}
 
-          {vehicle.photos.length === 0 ? (
-            <p className="mt-2 text-xs text-brand">Sem fotos</p>
+          {vehicleQualityAlerts(vehicle).length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {vehicleQualityAlerts(vehicle).map((alert) => (
+                <span
+                  key={alert}
+                  className="border border-brand/40 bg-brand/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-brand"
+                >
+                  {alert}
+                </span>
+              ))}
+            </div>
           ) : null}
 
           <p className="mt-2 font-display text-lg font-bold leading-none text-cream lg:hidden">

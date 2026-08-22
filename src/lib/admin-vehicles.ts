@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { staleCutoffDate } from "@/lib/stock-quality";
 import { hasCostBasis, investedTotal } from "@/lib/vehicle-ops";
 
 export const ADMIN_VEHICLES_PAGE_SIZE = 20;
@@ -24,6 +25,7 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
   hasManual: true,
   purchasePrice: true,
   createdAt: true,
+  hasVideo: true,
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,
@@ -50,6 +52,7 @@ export type AdminVehicleListItem = {
   hasManual: boolean;
   purchasePrice: number | null;
   createdAt: Date;
+  hasVideo: boolean;
   photos: Array<{ url: string }>;
   costs: Array<{ amount: number }>;
   sale: { salePrice: number } | null;
@@ -157,7 +160,13 @@ export async function getAdminVehiclesPage(options: {
 }
 
 export async function getAdminVehicleStats() {
-  const [groups, stockValue, availableRows] = await Promise.all([
+  const stockWhere = {
+    historical: false,
+    status: { in: ["disponivel", "reservado"] },
+  };
+
+  const [groups, stockValue, availableRows, withoutPhotos, withoutVideo, stale] =
+    await Promise.all([
     prisma.vehicle.groupBy({
       by: ["status"],
       where: { historical: false },
@@ -170,6 +179,19 @@ export async function getAdminVehicleStats() {
     prisma.vehicle.findMany({
       where: { status: "disponivel", historical: false },
       select: { purchasePrice: true, costs: { select: { amount: true } } },
+    }),
+    prisma.vehicle.count({
+      where: { ...stockWhere, photos: { none: {} } },
+    }),
+    prisma.vehicle.count({
+      where: { ...stockWhere, hasVideo: false },
+    }),
+    prisma.vehicle.count({
+      where: {
+        historical: false,
+        status: "disponivel",
+        createdAt: { lt: staleCutoffDate() },
+      },
     }),
   ]);
 
@@ -193,6 +215,9 @@ export async function getAdminVehicleStats() {
     stockValue: stockValue._sum.price ?? 0,
     invested,
     withCostBasis,
+    withoutPhotos,
+    withoutVideo,
+    stale,
   };
 }
 

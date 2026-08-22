@@ -28,9 +28,9 @@ import {
   IconMapPin,
   IconShieldCheck,
 } from "@/components/site/icons";
-import { publishedFaqItems } from "@/lib/faq";
 import { itemListJsonLd, websiteJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
+import { getPublishedFaq, getSiteContent } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 import {
   getFeaturedVehicles,
@@ -59,11 +59,14 @@ const REASONS = [
 ] as const;
 
 export default async function HomePage() {
-  const [featured, facets, testimonials, publicSite] = await Promise.all([
+  const [featured, facets, testimonials, publicSite, siteContent, faqItems] =
+    await Promise.all([
     getFeaturedVehicles(8),
     getStockFacets(),
     getTestimonials(6),
     getPublicSite(),
+    getSiteContent(),
+    getPublishedFaq(),
   ]);
 
   return (
@@ -234,7 +237,7 @@ export default async function HomePage() {
             description="Avaliações de clientes que fecharam negócio com a gente."
           />
           <div className="flex justify-center">
-            <GoogleReviewsBadge />
+            <GoogleReviewsBadge reviews={siteContent.google} />
           </div>
         </ScrollReveal>
         <div className="mt-12">
@@ -335,7 +338,7 @@ export default async function HomePage() {
           />
         </ScrollReveal>
         <div className="mt-12">
-          <FaqAccordion items={publishedFaqItems().slice(0, 5)} />
+          <FaqAccordion items={faqItems.slice(0, 5)} />
           <div className="mt-6 text-center">
             <Link
               href="/faq"

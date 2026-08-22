@@ -12,6 +12,8 @@ export type Facets = {
   brands: string[];
   transmissions: string[];
   fuels: string[];
+  colors?: string[];
+  accessories?: string[];
   years: number[];
 };
 
@@ -21,6 +23,9 @@ type FilterValues = {
   brand: string;
   transmission: string;
   fuel: string;
+  color: string;
+  accessory: string;
+  laudo: string;
   minPrice: string;
   maxPrice: string;
   minYear: string;
@@ -29,7 +34,33 @@ type FilterValues = {
   sort: string;
 };
 
-type FilterKey = Exclude<keyof FilterValues, "sort">;
+type ActiveFilter = {
+  key: Exclude<keyof FilterValues, "sort">;
+  label: string;
+  accessory?: string;
+};
+
+function splitAccessories(value: string) {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function joinAccessories(items: string[]) {
+  return items.join(",");
+}
+
+function toggleAccessoryValue(current: string, name: string) {
+  const items = splitAccessories(current);
+  const key = name.toLocaleLowerCase("pt-BR");
+  const exists = items.some((item) => item.toLocaleLowerCase("pt-BR") === key);
+  return joinAccessories(
+    exists
+      ? items.filter((item) => item.toLocaleLowerCase("pt-BR") !== key)
+      : [...items, name],
+  );
+}
 
 const CATEGORY_FILTER_OPTIONS = [
   { value: "", label: "Ambos" },
@@ -86,6 +117,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
     brand: params.get("brand") ?? "",
     transmission: params.get("transmission") ?? "",
     fuel: params.get("fuel") ?? "",
+    color: params.get("color") ?? "",
+    accessory: params.get("accessory") ?? "",
+    laudo: params.get("laudo") ?? "",
     minPrice: params.get("minPrice") ?? "",
     maxPrice: params.get("maxPrice") ?? "",
     minYear: params.get("minYear") ?? "",
@@ -118,6 +152,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
     current.brand,
     current.transmission,
     current.fuel,
+    current.color,
+    current.accessory,
+    current.laudo,
     current.minPrice,
     current.maxPrice,
     current.minYear,
@@ -125,7 +162,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     current.maxKm,
   ].filter(Boolean).length;
 
-  const activeFilters: Array<{ key: FilterKey; label: string }> = [];
+  const activeFilters: ActiveFilter[] = [];
   if (current.q) activeFilters.push({ key: "q", label: `Busca: “${current.q}”` });
   if (current.category) {
     activeFilters.push({
@@ -147,6 +184,19 @@ export function StockFilters({ facets }: { facets: Facets }) {
   }
   if (current.fuel) {
     activeFilters.push({ key: "fuel", label: `Combustível: ${current.fuel}` });
+  }
+  if (current.color) {
+    activeFilters.push({ key: "color", label: `Cor: ${current.color}` });
+  }
+  for (const name of splitAccessories(current.accessory)) {
+    activeFilters.push({
+      key: "accessory",
+      label: name,
+      accessory: name,
+    });
+  }
+  if (current.laudo) {
+    activeFilters.push({ key: "laudo", label: "Com laudo" });
   }
   if (current.minPrice) {
     activeFilters.push({
@@ -208,6 +258,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
       brand: "",
       transmission: "",
       fuel: "",
+      color: "",
+      accessory: "",
+      laudo: "",
       minPrice: "",
       maxPrice: "",
       minYear: "",
@@ -310,6 +363,43 @@ export function StockFilters({ facets }: { facets: Facets }) {
               options={facets.fuels}
               emptyLabel="Todos os combustíveis"
             />
+            {(facets.colors ?? []).length > 0 ? (
+              <FilterSelect
+                label="Cor"
+                id="desktop-cor"
+                value={current.color}
+                onChange={(value) => update({ color: value })}
+                options={facets.colors ?? []}
+                emptyLabel="Todas as cores"
+              />
+            ) : null}
+            {(facets.accessories ?? []).length > 0 ? (
+              <div>
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+                  Acessórios
+                </p>
+                <AccessoryChips
+                  options={facets.accessories ?? []}
+                  value={current.accessory}
+                  onToggle={(name) =>
+                    update({
+                      accessory: toggleAccessoryValue(current.accessory, name),
+                    })
+                  }
+                />
+              </div>
+            ) : null}
+            <label className="flex min-h-[48px] cursor-pointer items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 text-sm text-cream">
+              <input
+                type="checkbox"
+                checked={Boolean(current.laudo)}
+                onChange={(event) =>
+                  update({ laudo: event.target.checked ? "1" : "" })
+                }
+                className="h-4 w-4 accent-brand"
+              />
+              Com laudo
+            </label>
             <DesktopField label="Preço mínimo" htmlFor="desktop-preco-min">
               <select
                 id="desktop-preco-min"
@@ -411,9 +501,16 @@ export function StockFilters({ facets }: { facets: Facets }) {
               <div className="mt-3 flex flex-wrap gap-2">
                 {activeFilters.map((filter) => (
                   <button
-                    key={filter.key}
+                    key={filter.accessory ? `accessory:${filter.accessory}` : filter.key}
                     type="button"
-                    onClick={() => update({ [filter.key]: "" })}
+                    onClick={() =>
+                      update({
+                        [filter.key]:
+                          filter.key === "accessory" && filter.accessory
+                            ? toggleAccessoryValue(current.accessory, filter.accessory)
+                            : "",
+                      })
+                    }
                     className="inline-flex min-h-[36px] items-center gap-1.5 border border-brand/50 bg-brand/10 px-2.5 py-1.5 text-left text-[11px] leading-tight text-cream transition hover:border-brand"
                     aria-label={`Remover ${filter.label}`}
                   >
@@ -563,6 +660,48 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   {facets.fuels.map((item) => <option key={item}>{item}</option>)}
                 </select>
               </MobileField>
+              {(facets.colors ?? []).length > 0 ? (
+                <MobileField label="Cor">
+                  <select
+                    value={draft.color}
+                    onChange={(event) => setDraft({ ...draft, color: event.target.value })}
+                    className={selectClass}
+                  >
+                    <option value="">Todas as cores</option>
+                    {(facets.colors ?? []).map((item) => (
+                      <option key={item}>{item}</option>
+                    ))}
+                  </select>
+                </MobileField>
+              ) : null}
+              {(facets.accessories ?? []).length > 0 ? (
+                <div>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
+                    Acessórios
+                  </p>
+                  <AccessoryChips
+                    options={facets.accessories ?? []}
+                    value={draft.accessory}
+                    onToggle={(name) =>
+                      setDraft({
+                        ...draft,
+                        accessory: toggleAccessoryValue(draft.accessory, name),
+                      })
+                    }
+                  />
+                </div>
+              ) : null}
+              <label className="flex min-h-[48px] cursor-pointer items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 text-sm text-cream">
+                <input
+                  type="checkbox"
+                  checked={Boolean(draft.laudo)}
+                  onChange={(event) =>
+                    setDraft({ ...draft, laudo: event.target.checked ? "1" : "" })
+                  }
+                  className="h-4 w-4 accent-brand"
+                />
+                Com laudo
+              </label>
               <MobileField label="Preço mínimo">
                 <select
                   value={draft.minPrice}
@@ -632,6 +771,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
                     brand: "",
                     transmission: "",
                     fuel: "",
+                    color: "",
+                    accessory: "",
+                    laudo: "",
                     minPrice: "",
                     maxPrice: "",
                     minYear: "",
@@ -658,6 +800,42 @@ export function StockFilters({ facets }: { facets: Facets }) {
         </div>
       ) : null}
     </>
+  );
+}
+
+function AccessoryChips({
+  options,
+  value,
+  onToggle,
+}: {
+  options: string[];
+  value: string;
+  onToggle: (name: string) => void;
+}) {
+  const selected = new Set(
+    splitAccessories(value).map((item) => item.toLocaleLowerCase("pt-BR")),
+  );
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.slice(0, 16).map((item) => {
+        const active = selected.has(item.toLocaleLowerCase("pt-BR"));
+        return (
+          <button
+            key={item}
+            type="button"
+            onClick={() => onToggle(item)}
+            className={`min-h-[40px] border px-3 text-left text-xs transition ${
+              active
+                ? "border-brand bg-brand/10 text-cream"
+                : "border-white/10 text-muted hover:border-white/25 hover:text-cream"
+            }`}
+            aria-pressed={active}
+          >
+            {item}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

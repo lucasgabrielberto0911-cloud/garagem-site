@@ -5,13 +5,17 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateSiteSettings } from "@/app/admin/site/actions";
 import { cleanupOrphanPhotos } from "@/app/admin/site/cleanup-actions";
+import { SiteContentEditor } from "@/components/admin/SiteContentEditor";
 import { Card, Field, btn, inputClass } from "@/components/admin/ui";
+import type { SiteContent } from "@/lib/site-content";
 import type { EditableSiteFields } from "@/lib/site-settings";
 
 export function SiteSettingsForm({
   initial,
+  content,
 }: {
   initial: EditableSiteFields;
+  content: SiteContent;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -209,6 +213,8 @@ export function SiteSettingsForm({
           </Field>
         </div>
       </Card>
+
+      <SiteContentEditor initial={content} errors={errors} />
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={isPending} className={btn.primary}>

@@ -36,8 +36,10 @@ export default async function AdminDashboardPage() {
   const alertCount =
     alerts.staleVehicles.length +
     alerts.withoutPhotos.length +
+    (alerts.withoutVideo.length > 0 ? 1 : 0) +
     (alerts.noFeatured ? 1 : 0) +
     (alerts.noTestimonials ? 1 : 0) +
+    (alerts.noGoogleReviews ? 1 : 0) +
     (alerts.usingSeedPassword ? 1 : 0) +
     (alerts.placeholders.length > 0 ? 1 : 0);
 
@@ -178,6 +180,30 @@ export default async function AdminDashboardPage() {
                   title="Nenhum depoimento publicado"
                   description="A home ainda usa depoimentos de exemplo. Publique os reais em Depoimentos."
                   href="/admin/depoimentos"
+                />
+              ) : null}
+
+              {alerts.noGoogleReviews ? (
+                <AlertRow
+                  tone="neutral"
+                  icon={<IconStar className="h-4 w-4" />}
+                  title="Selo do Google ainda oculto"
+                  description="Preencha nota, quantidade e o link do perfil em Site. Sem isso o selo não aparece."
+                  href="/admin/site"
+                />
+              ) : null}
+
+              {alerts.withoutVideo.length > 0 ? (
+                <AlertRow
+                  tone="neutral"
+                  icon={<IconAlert className="h-4 w-4" />}
+                  title={
+                    alerts.withoutVideo.length === 1
+                      ? `${alerts.withoutVideo[0].brand} ${alerts.withoutVideo[0].model} sem vídeo`
+                      : `${alerts.withoutVideo.length}+ anúncios sem vídeo`
+                  }
+                  description="Marque no cadastro quando já tiver vídeo. O site continua com “Pedir vídeo” no WhatsApp."
+                  href="/admin/veiculos"
                 />
               ) : null}
 
