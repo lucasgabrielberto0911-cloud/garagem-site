@@ -27,7 +27,7 @@ export const revalidate = 60;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Contato | ${site.name}`,
-  description: `WhatsApp, telefone, e-mail e horário de atendimento online da ${site.name} em Aracruz, Vitória, Linhares e região — todos os dias, das 8h às 23h.`,
+  description: `WhatsApp, telefone, e-mail e horário de atendimento online da ${site.name} em ${site.region} e região — todos os dias, das 8h às 23h.`,
   path: "/contato",
 });
 

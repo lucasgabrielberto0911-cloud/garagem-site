@@ -98,7 +98,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: "loja",
     question: "Vocês têm loja física?",
     answer:
-      "Não: somos loja digital. O estoque está no site e o atendimento é online, todos os dias das 8h às 23h. Combinamos visita ao veículo, entrega ou retirada pelo WhatsApp, em Aracruz, Vitória, Linhares e região.",
+      `Não: somos loja digital. O estoque está no site e o atendimento é online, todos os dias das 8h às 23h. Combinamos visita ao veículo, entrega ou retirada pelo WhatsApp, em ${site.region} e região.`,
   },
   {
     category: "atendimento",

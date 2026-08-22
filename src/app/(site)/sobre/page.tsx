@@ -26,7 +26,7 @@ export const revalidate = 60;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Sobre a ${site.name}`,
-  description: `Conheça a ${site.name}: mais de 20 anos de história, seminovos com procedência e atendimento digital em Aracruz, Vitória, Linhares e região do ES.`,
+  description: `Conheça a ${site.name}: mais de 20 anos de história, seminovos com procedência e atendimento digital em ${site.region} e região do ES.`,
   path: "/sobre",
 });
 

@@ -66,8 +66,9 @@ export function FounderSection({
             </p>
             <p>
               Foi essa estrada que o trouxe à frente da Garagem: uma loja digital
-              no Espírito Santo, com atendimento em Aracruz, Vitória, Linhares e
-              região, feita para quem busca seminovo com procedência e alguém do
+              no Espírito Santo, com atendimento em Aracruz, Vitória, Linhares,
+              Serra, Vila Velha e região, feita para quem busca seminovo com
+              procedência e alguém do
               outro lado do WhatsApp que realmente resolve.
             </p>
             <p>

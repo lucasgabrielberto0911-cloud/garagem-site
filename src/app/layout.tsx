@@ -20,11 +20,11 @@ const body = Inter({
   weight: ["400", "500"],
   variable: "--font-body",
   display: "swap",
-  preload: true,
+  preload: false,
 });
 
 const description =
-  "Seminovos com procedência verificada em Aracruz, Vitória, Linhares e região do ES. Compra, venda, troca e financiamento na Garagem.";
+  "Seminovos com procedência verificada em Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Compra, venda, troca e financiamento na Garagem.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -43,6 +43,8 @@ export const metadata: Metadata = {
     "Aracruz",
     "Vitória",
     "Linhares",
+    "Serra",
+    "Vila Velha",
     "financiamento de carros",
     "vender carro usado",
     "troca de veículo",
