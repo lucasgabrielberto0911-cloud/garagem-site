@@ -1,8 +1,8 @@
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { getJwtSecret } from "@/lib/secrets";
 
-function getSecretKey() {
-  return new TextEncoder().encode(getJwtSecret());
+async function getSecretKey() {
+  return getJwtSecret();
 }
 
 export async function signToken(
@@ -13,12 +13,12 @@ export async function signToken(
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(expiresIn)
-    .sign(getSecretKey());
+    .sign(await getSecretKey());
 }
 
 export async function verifyToken<T extends JWTPayload = JWTPayload>(
   token: string,
 ) {
-  const { payload } = await jwtVerify(token, getSecretKey());
+  const { payload } = await jwtVerify(token, await getSecretKey());
   return payload as T;
 }
