@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { localBusinessJsonLd } from "@/lib/seo";
 import { getPublicSite } from "@/lib/site-settings";
+import { getTestimonials } from "@/lib/vehicles";
 
 const ScrollProgress = dynamic(
   () =>
@@ -31,8 +32,26 @@ const PwaRegister = dynamic(
 );
 
 async function SiteJsonLd() {
-  const publicSite = await getPublicSite();
-  return <JsonLd data={localBusinessJsonLd(publicSite)} />;
+  // Ambas as leituras são cacheadas (unstable_cache + React cache):
+  // na home, o segundo fetch é dedupado com <Testimonials /> — zero query extra.
+  const [publicSite, testimonials] = await Promise.all([
+    getPublicSite(),
+    getTestimonials(6),
+  ]);
+
+  // Rich snippet de estrelas apenas com depoimentos reais (ids "seed-" ficam de fora).
+  const reviews = testimonials
+    .filter((item) => !String(item.id).startsWith("seed-"))
+    .map((item) => ({
+      name: item.name,
+      city: item.city,
+      message: item.message,
+      rating: item.rating,
+    }));
+
+  return (
+    <JsonLd data={localBusinessJsonLd(publicSite, reviews)} />
+  );
 }
 
 export default function SiteLayout({

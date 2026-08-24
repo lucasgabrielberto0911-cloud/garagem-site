@@ -80,7 +80,21 @@ export function buildPageMetadata({
   };
 }
 
-export function localBusinessJsonLd(config: SiteConfig = site) {
+/** Depoimento real (do banco) pronto para virar Review no JSON-LD. */
+export type ReviewInput = {
+  name: string;
+  city?: string | null;
+  message: string;
+  rating: number;
+};
+
+const clampRating = (rating: number) =>
+  String(Math.min(5, Math.max(1, Math.round(rating || 5))));
+
+export function localBusinessJsonLd(
+  config: SiteConfig = site,
+  reviews?: ReviewInput[],
+) {
   const street = isPhysicalAddress(config.address)
     ? real(config.address)
     : undefined;
@@ -88,7 +102,7 @@ export function localBusinessJsonLd(config: SiteConfig = site) {
   const saturday = parseHourRange(config.hoursSaturday);
   const sunday = parseHourRange(config.hoursSunday);
 
-  return {
+  const data: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "AutoDealer",
     "@id": absoluteUrl("/#loja"),
@@ -151,6 +165,41 @@ export function localBusinessJsonLd(config: SiteConfig = site) {
     },
     ...(real(config.email) ? { email: config.email } : {}),
   };
+
+  // Rich snippet de estrelas — somente com depoimentos REAIS aprovados
+  // (o fallback de seed nunca entra nos dados estruturados).
+  if (reviews && reviews.length > 0) {
+    const ratings = reviews.map((review) =>
+      Math.min(5, Math.max(1, Math.round(review.rating || 5))),
+    );
+    const average =
+      ratings.reduce((total, value) => total + value, 0) / ratings.length;
+
+    data.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: average.toFixed(1),
+      reviewCount: String(ratings.length),
+      bestRating: "5",
+      worstRating: "1",
+    };
+    data.review = reviews.slice(0, 5).map((review) => ({
+      "@type": "Review",
+      author: {
+        "@type": "Person",
+        name: review.name,
+        ...(review.city ? { address: { "@type": "Place", name: `${review.city}, ES` } } : {}),
+      },
+      reviewRating: {
+        "@type": "Rating",
+        ratingValue: clampRating(review.rating),
+        bestRating: "5",
+        worstRating: "1",
+      },
+      reviewBody: review.message,
+    }));
+  }
+
+  return data;
 }
 
 /** JSON-LD da landing de cidade — amarra a página à cidade sem inventar endereço. */
