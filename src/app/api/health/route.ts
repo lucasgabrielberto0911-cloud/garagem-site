@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ensureDefaultAdmin } from "@/lib/ensure-admin";
+import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +14,33 @@ function databaseHost() {
   }
 }
 
-/** Diagnóstico simples: só precisa de DATABASE_URL do Supabase no Vercel. */
+/**
+ * Diagnóstico do deploy.
+ *
+ * - Sem sessão de admin (ex.: monitores de uptime): resposta MÍNIMA —
+ *   apenas ok/erro de banco. Não expõe host, envs nem dicas internas.
+ * - Com sessão de admin ativa: diagnóstico completo com host e hints,
+ *   igual ao comportamento anterior.
+ *
+ * NÃO cria/migra admin aqui mais (isso agora é bootstrap explícito
+ * via ADMIN_BOOTSTRAP_PASSWORD em src/lib/ensure-admin.ts).
+ */
 export async function GET() {
+  const session = await getSession();
+
+  if (!session) {
+    try {
+      if (!process.env.DATABASE_URL?.trim()) {
+        return NextResponse.json({ ok: false }, { status: 503 });
+      }
+      await prisma.admin.count();
+      return NextResponse.json({ ok: true });
+    } catch {
+      return NextResponse.json({ ok: false }, { status: 503 });
+    }
+  }
+
+  // ===== Diagnóstico completo (somente admin autenticado) =====
   const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
   const host = databaseHost();
 
@@ -66,7 +91,6 @@ export async function GET() {
   }
 
   try {
-    await ensureDefaultAdmin();
     const adminCount = await prisma.admin.count();
     return NextResponse.json({
       ok: true,

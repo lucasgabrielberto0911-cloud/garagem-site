@@ -1,16 +1,19 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "node:crypto";
 import {
   DEFAULT_ADMIN_EMAIL,
   DEFAULT_ADMIN_NAME,
-  DEFAULT_ADMIN_PASSWORD,
 } from "../src/lib/secrets";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  // Senha do seed: SEED_ADMIN_PASSWORD se definida; senão, gera aleatória
+  // (o valor usado é impresso uma única vez no fim do seed).
+  const generatedPassword = `seed-${randomUUID().replace(/-/g, "").slice(0, 14)}`;
   const seedPassword =
-    process.env.SEED_ADMIN_PASSWORD?.trim() || DEFAULT_ADMIN_PASSWORD;
+    process.env.SEED_ADMIN_PASSWORD?.trim() || generatedPassword;
   const passwordHash = await bcrypt.hash(seedPassword, 10);
 
   const admin = await prisma.admin.upsert({
@@ -189,7 +192,7 @@ async function main() {
     }),
   ]);
 
-  console.log(`Admin: ${admin.email} / senha padrão: ${DEFAULT_ADMIN_PASSWORD}`);
+  console.log(`Admin: ${admin.email} / senha: ${seedPassword}`);
   console.log(`${vehicles.length} veículos de exemplo criados.`);
 
   const { SEED_TESTIMONIALS } = await import("../src/lib/testimonials-seed");

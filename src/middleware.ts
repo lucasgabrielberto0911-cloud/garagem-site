@@ -4,8 +4,8 @@ import { getJwtSecret } from "@/lib/secrets";
 
 const SESSION_COOKIE = "session";
 
-function getSecretKey() {
-  return new TextEncoder().encode(getJwtSecret());
+async function getSecretKey() {
+  return getJwtSecret();
 }
 
 export async function middleware(request: NextRequest) {
@@ -22,7 +22,7 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    await jwtVerify(token, getSecretKey());
+    await jwtVerify(token, await getSecretKey());
     return NextResponse.next();
   } catch {
     const response = NextResponse.redirect(

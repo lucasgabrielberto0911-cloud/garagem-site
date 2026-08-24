@@ -3,18 +3,24 @@ import { prisma } from "@/lib/prisma";
 import {
   DEFAULT_ADMIN_EMAIL,
   DEFAULT_ADMIN_NAME,
-  DEFAULT_ADMIN_PASSWORD,
 } from "@/lib/secrets";
 
-/** Senhas antigas de instalação que devem ser trocadas pela padrão atual. */
+/** Senhas antigas de instalação que podem ser migradas para a senha de bootstrap. */
 const LEGACY_PASSWORDS = ["troque-esta-senha"] as const;
 
 /**
- * Garante o admin padrão. Se a senha ainda for a antiga de instalação,
- * atualiza para Lucas0911 automaticamente.
+ * Bootstrap EXPLÍCITO do admin.
+ *
+ * Em produção isto é um no-op seguro: nada é criado ou alterado a menos que
+ * a env ADMIN_BOOTSTRAP_PASSWORD esteja definida (fluxo de instalação).
+ * Assim, quem lê o repositório não descobre nenhuma credencial válida e o
+ * /api/health público nunca recria o admin sozinho.
  */
 export async function ensureDefaultAdmin() {
-  const passwordHash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10);
+  const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD?.trim();
+  if (!bootstrapPassword || bootstrapPassword.length < 8) return;
+
+  const passwordHash = await bcrypt.hash(bootstrapPassword, 10);
 
   const existing = await prisma.admin.findUnique({
     where: { email: DEFAULT_ADMIN_EMAIL },
@@ -31,11 +37,11 @@ export async function ensureDefaultAdmin() {
     return;
   }
 
-  const alreadyDefault = await bcrypt.compare(
-    DEFAULT_ADMIN_PASSWORD,
+  const alreadyBootstrap = await bcrypt.compare(
+    bootstrapPassword,
     existing.passwordHash,
   );
-  if (alreadyDefault) return;
+  if (alreadyBootstrap) return;
 
   const isLegacy = (
     await Promise.all(
