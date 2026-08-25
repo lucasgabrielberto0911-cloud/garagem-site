@@ -251,7 +251,7 @@ export default async function AdminDashboardPage() {
                 <li key={status}>
                   <Link
                     href={`/admin/leads?status=${status}`}
-                    className="block border border-white/10 px-3 py-2.5 transition hover:border-brand/50"
+                    className="block min-h-[72px] border border-white/10 px-3 py-2.5 transition touch-manipulation hover:border-brand/50"
                   >
                     <p className="text-[11px] uppercase tracking-wider text-muted">
                       {LEAD_STATUS_LABEL[status]}
@@ -281,23 +281,25 @@ export default async function AdminDashboardPage() {
           ) : (
             <ul className="divide-y divide-white/10">
               {leads.recent.map((lead) => (
-                <li
-                  key={lead.id}
-                  className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-cream">
-                      {lead.name}
-                    </p>
-                    <p className="truncate text-xs text-muted">
-                      {formatPhoneBR(lead.phone)} · {lead.vehicleInfo}
-                    </p>
-                  </div>
-                  <Badge tone={lead.status === "novo" ? "brand" : "neutral"}>
-                    {LEAD_STATUS_LABEL[
-                      lead.status as keyof typeof LEAD_STATUS_LABEL
-                    ] ?? lead.status}
-                  </Badge>
+                <li key={lead.id}>
+                  <Link
+                    href="/admin/leads"
+                    className="flex min-h-[56px] items-center justify-between gap-3 py-3 touch-manipulation first:pt-0 last:pb-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-cream">
+                        {lead.name}
+                      </p>
+                      <p className="truncate text-xs text-muted">
+                        {formatPhoneBR(lead.phone)} · {lead.vehicleInfo}
+                      </p>
+                    </div>
+                    <Badge tone={lead.status === "novo" ? "brand" : "neutral"}>
+                      {LEAD_STATUS_LABEL[
+                        lead.status as keyof typeof LEAD_STATUS_LABEL
+                      ] ?? lead.status}
+                    </Badge>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -329,32 +331,34 @@ export default async function AdminDashboardPage() {
           ) : (
             <ul className="divide-y divide-white/10">
               {data.recentVehicles.map((vehicle) => (
-                <li key={vehicle.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                  <div className="relative h-12 w-16 shrink-0 overflow-hidden bg-asphalt">
-                    <VehicleImage
-                      src={vehicle.photos[0]?.url}
-                      alt={`${vehicle.brand} ${vehicle.model}`}
-                      fill
-                      sizes="64px"
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/admin/veiculos/${vehicle.id}`}
-                      className="truncate text-sm font-medium text-cream transition hover:text-brand"
-                    >
-                      {vehicle.brand} {vehicle.model}
-                    </Link>
-                    <p className="text-xs text-muted">
-                      {vehicle.yearModel} · {formatCurrencyBRL(vehicle.price)}
-                    </p>
-                  </div>
+                <li key={vehicle.id} className="flex items-center gap-1 py-1">
+                  <Link
+                    href={`/admin/veiculos/${vehicle.id}`}
+                    className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 py-2 touch-manipulation"
+                  >
+                    <div className="relative h-12 w-16 shrink-0 overflow-hidden bg-asphalt">
+                      <VehicleImage
+                        src={vehicle.photos[0]?.url}
+                        alt={`${vehicle.brand} ${vehicle.model}`}
+                        fill
+                        sizes="64px"
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-cream">
+                        {vehicle.brand} {vehicle.model}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {vehicle.yearModel} · {formatCurrencyBRL(vehicle.price)}
+                      </p>
+                    </div>
+                  </Link>
                   <Link
                     href={vehiclePath(vehicle)}
                     target="_blank"
                     aria-label="Ver no site"
-                    className="shrink-0 p-2 text-muted transition hover:text-cream"
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted transition touch-manipulation hover:text-cream"
                   >
                     <IconExternal className="h-4 w-4" />
                   </Link>
@@ -403,7 +407,7 @@ function AlertRow({
       {href ? (
         <Link
           href={href}
-          className="block border border-white/10 px-3 py-2.5 transition hover:border-brand/50"
+          className="block min-h-[52px] border border-white/10 px-3 py-2.5 transition touch-manipulation hover:border-brand/50"
         >
           {content}
         </Link>

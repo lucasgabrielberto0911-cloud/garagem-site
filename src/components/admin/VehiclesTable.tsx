@@ -325,7 +325,7 @@ export function VehiclesTable({
           role="tab"
           aria-selected={tab === "estoque"}
           onClick={() => applyFilters({ tab: "estoque" })}
-          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition lg:justify-start lg:px-4 ${
+          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation lg:justify-start lg:px-4 ${
             tab === "estoque"
               ? "border-b-2 border-brand text-cream"
               : "border-b-2 border-transparent text-muted hover:text-cream"
@@ -345,7 +345,7 @@ export function VehiclesTable({
           role="tab"
           aria-selected={tab === "vendidos"}
           onClick={() => applyFilters({ tab: "vendidos" })}
-          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition lg:justify-start lg:px-4 ${
+          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation lg:justify-start lg:px-4 ${
             tab === "vendidos"
               ? "border-b-2 border-brand text-cream"
               : "border-b-2 border-transparent text-muted hover:text-cream"
@@ -436,7 +436,7 @@ export function VehiclesTable({
                       : changeSort({ key: "recent", dir: "desc" })
                     : toggleSort(option.key)
                 }
-                className={`shrink-0 px-3 py-2 text-xs transition ${
+                className={`min-h-[44px] shrink-0 px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
                   sort.key === option.key
                     ? "bg-brand/15 text-brand"
                     : "border border-white/10 text-muted hover:text-cream"
@@ -452,7 +452,7 @@ export function VehiclesTable({
               <button
                 type="button"
                 onClick={() => applyFilters({ q: "" })}
-                className="shrink-0 px-3 py-2 text-xs text-muted underline-offset-4 transition hover:text-cream hover:underline"
+                className="min-h-[44px] shrink-0 px-3 text-xs text-muted underline-offset-4 transition touch-manipulation hover:text-cream hover:underline"
               >
                 Limpar
               </button>
@@ -721,7 +721,7 @@ function VehicleAdminCard({
             value={vehicle.status}
             disabled={busy}
             onChange={(event) => onStatus(event.target.value)}
-            className="h-10 w-full border border-white/10 bg-ink px-2.5 text-sm text-cream outline-none focus:border-brand disabled:opacity-60"
+            className={`${inputClass} h-11 disabled:opacity-60`}
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -741,7 +741,7 @@ function VehicleAdminCard({
           value={vehicle.status}
           disabled={busy}
           onChange={(event) => onStatus(event.target.value)}
-          className="h-11 w-full border border-white/10 bg-ink px-3 text-sm text-cream outline-none focus:border-brand disabled:opacity-60"
+          className={`${inputClass} disabled:opacity-60`}
         >
           {STATUS_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>

@@ -117,7 +117,7 @@ function TabLink({
   return (
     <Link
       href={href}
-      className={`-mb-px inline-flex min-h-[48px] items-center justify-center gap-2 border-b-2 px-3 py-2.5 font-display text-xs font-semibold uppercase tracking-wider transition sm:px-4 ${
+      className={`-mb-px inline-flex min-h-[48px] items-center justify-center gap-2 border-b-2 px-3 py-2.5 font-display text-xs font-semibold uppercase tracking-wider transition touch-manipulation sm:px-4 ${
         active
           ? "border-brand text-cream"
           : "border-transparent text-muted hover:text-cream"

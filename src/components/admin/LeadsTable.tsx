@@ -278,7 +278,7 @@ export function LeadsTable({
                   value={lead.status}
                   disabled={savingId === lead.id}
                   onChange={(event) => changeStatus(lead, event.target.value)}
-                  className="h-11 w-full border border-white/10 bg-asphalt px-3 text-sm text-cream outline-none transition focus:border-brand disabled:opacity-60"
+                  className={`${inputClass} bg-asphalt disabled:opacity-60`}
                 >
                   {LEAD_STATUSES.map((value) => (
                     <option key={value} value={value}>
@@ -388,7 +388,7 @@ function FilterChip({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`min-h-[40px] shrink-0 border px-3 text-xs font-semibold uppercase tracking-wide transition disabled:opacity-60 ${
+      className={`min-h-[44px] shrink-0 border px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation disabled:opacity-60 ${
         active
           ? "border-brand bg-brand/10 text-cream"
           : "border-white/10 text-muted hover:text-cream"

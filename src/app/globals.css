@@ -17,6 +17,13 @@
     #ff8a00 50%,
     #ffc72c 100%
   );
+  --admin-nav-h: 0px;
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --admin-nav-h: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 * {
@@ -110,6 +117,21 @@ body {
     .pb-site-nav {
       padding-bottom: 0;
     }
+  }
+
+  /* Folga do conteúdo acima da bottom nav do admin. */
+  .pb-admin-nav {
+    padding-bottom: calc(var(--admin-nav-h) + 1rem);
+  }
+
+  @media (min-width: 1024px) {
+    .pb-admin-nav {
+      padding-bottom: 2rem;
+    }
+  }
+
+  .bottom-admin-nav {
+    bottom: var(--admin-nav-h);
   }
 
   .scrollbar-hide {

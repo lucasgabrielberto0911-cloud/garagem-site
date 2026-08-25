@@ -59,7 +59,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-asphalt px-4 py-12">
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-asphalt px-4 py-12">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-brand-gradient"
         aria-hidden="true"
@@ -114,7 +114,7 @@ export default function AdminLoginPage() {
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="w-full border border-white/10 bg-asphalt px-4 py-3 text-cream outline-none transition focus:border-brand"
+                className="min-h-[44px] w-full border border-white/10 bg-asphalt px-4 py-3 text-base text-cream outline-none transition touch-manipulation focus:border-brand"
                 placeholder="E-mail"
               />
             </div>
@@ -135,14 +135,14 @@ export default function AdminLoginPage() {
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="w-full border border-white/10 bg-asphalt px-4 py-3 pr-12 text-cream outline-none transition focus:border-brand"
+                  className="min-h-[44px] w-full border border-white/10 bg-asphalt px-4 py-3 pr-12 text-base text-cream outline-none transition touch-manipulation focus:border-brand"
                   placeholder="Senha"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((value) => !value)}
                   aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-3 text-muted transition hover:text-cream"
+                  className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-muted transition touch-manipulation hover:text-cream"
                 >
                   <IconEye className="h-5 w-5" />
                 </button>
@@ -162,7 +162,7 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-6 w-full bg-brand py-3.5 font-display text-base font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 min-h-[48px] w-full bg-brand py-3.5 font-display text-base font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>
