@@ -555,7 +555,7 @@ export function VehicleForm({
               </select>
             </Field>
             <div className="flex items-end">
-              <label className="flex w-full cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition hover:border-brand/50">
+              <label className="flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50">
                 <input
                   type="checkbox"
                   name="featured"
@@ -743,16 +743,16 @@ export function VehicleForm({
                 />
               </Field>
               <div className="grid gap-2 sm:grid-cols-1">
-                <label className="flex min-h-[42px] items-center gap-2 text-sm text-cream">
-                  <input type="checkbox" name="inStoreName" className="accent-brand" />
+                <label className="flex min-h-[44px] items-center gap-2 text-sm text-cream">
+                  <input type="checkbox" name="inStoreName" className="h-4 w-4 accent-brand" />
                   Documento em nome da loja
                 </label>
-                <label className="flex min-h-[42px] items-center gap-2 text-sm text-cream">
-                  <input type="checkbox" name="hasSpareKey" className="accent-brand" />
+                <label className="flex min-h-[44px] items-center gap-2 text-sm text-cream">
+                  <input type="checkbox" name="hasSpareKey" className="h-4 w-4 accent-brand" />
                   Chave reserva
                 </label>
-                <label className="flex min-h-[42px] items-center gap-2 text-sm text-cream">
-                  <input type="checkbox" name="hasManual" className="accent-brand" />
+                <label className="flex min-h-[44px] items-center gap-2 text-sm text-cream">
+                  <input type="checkbox" name="hasManual" className="h-4 w-4 accent-brand" />
                   Manual
                 </label>
               </div>
@@ -775,7 +775,7 @@ export function VehicleForm({
         </Card>
 
         {/* Barra de ações fixa: salvar sempre ao alcance, sem rolar a página. */}
-        <div className="sticky bottom-0 -mx-3 border-t border-white/10 bg-asphalt/95 px-3 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+        <div className="sticky bottom-admin-nav z-20 -mx-3 border-t border-white/10 bg-asphalt/95 px-3 py-3 backdrop-blur sm:-mx-6 sm:px-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <SubmitButton
               label={mode === "create" ? "Cadastrar veículo" : "Salvar alterações"}

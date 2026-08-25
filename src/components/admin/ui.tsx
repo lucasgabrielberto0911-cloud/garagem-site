@@ -7,17 +7,17 @@ import type { ReactNode } from "react";
  */
 
 export const inputClass =
-  "min-h-[44px] w-full border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream outline-none transition placeholder:text-muted focus:border-brand";
+  "min-h-[44px] w-full border border-white/10 bg-ink px-3 py-2.5 text-base text-cream outline-none transition placeholder:text-muted touch-manipulation focus:border-brand";
 
 export const btn = {
   primary:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 bg-brand px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 bg-brand px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60",
   outline:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand disabled:cursor-not-allowed disabled:opacity-60",
   ghost:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 px-3 py-2 text-xs text-muted transition hover:text-cream disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 px-3 py-2 text-xs text-muted transition touch-manipulation hover:text-cream disabled:opacity-60",
   danger:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/50 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/50 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-brand transition touch-manipulation hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60",
 } as const;
 
 /** Grade de métricas: 2 colunas no celular, 4 no desktop. */
@@ -26,11 +26,11 @@ export const adminStatGrid =
 
 /** Toque de 44px para ícones no celular. */
 export const iconTap =
-  "inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted transition hover:text-cream";
+  "inline-flex h-11 w-11 shrink-0 items-center justify-center text-muted transition touch-manipulation hover:text-cream";
 
 /** Célula de ação (ícone + rótulo) nos cards do painel. */
 export const mobileActionCell =
-  "flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 px-1 text-center text-[10px] font-semibold uppercase tracking-wide text-muted transition hover:text-cream";
+  "flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 px-1 text-center text-[10px] font-semibold uppercase tracking-wide text-muted transition touch-manipulation hover:text-cream";
 
 /** Igual ao celular, mas vira botão horizontal no desktop. */
 export const listActionCell =
