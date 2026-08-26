@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IconClose, IconSearch } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName } from "@/lib/format";
@@ -76,8 +76,12 @@ const SORT_OPTIONS = [
   { value: "mais-novo", label: "Ano mais novo" },
 ] as const;
 
+/**
+ * 16px no celular: abaixo disso o Safari do iPhone dá zoom ao focar o campo e
+ * o visitante precisa pinçar de volta. No desktop mantém 14px pela densidade.
+ */
 const selectClass =
-  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-sm text-cream outline-none transition focus:border-brand";
+  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition touch-manipulation focus:border-brand lg:text-sm";
 
 const MIN_PRICE_OPTIONS = [
   { value: "", label: "Preço mínimo" },
@@ -110,6 +114,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const params = useSearchParams();
   const { isPending, startTransition } = useStockPendingOptional();
   const [open, setOpen] = useState(false);
+  const sheetRef = useRef<HTMLElement>(null);
 
   const current: FilterValues = {
     q: params.get("q") ?? "",
@@ -138,6 +143,16 @@ export function StockFilters({ facets }: { facets: Facets }) {
   }, [open]);
 
   useEffect(() => {
+    if (!open) return;
+    sheetRef.current?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
     setDraft(current);
     // URL params are the source of truth after navigation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,6 +175,22 @@ export function StockFilters({ facets }: { facets: Facets }) {
     current.minYear,
     current.maxYear,
     current.maxKm,
+  ].filter(Boolean).length;
+
+  /** Só os campos que existem dentro do painel do celular (a busca fica fora). */
+  const draftFilterCount = [
+    draft.category,
+    draft.brand,
+    draft.transmission,
+    draft.fuel,
+    draft.color,
+    draft.accessory,
+    draft.laudo,
+    draft.minPrice,
+    draft.maxPrice,
+    draft.minYear,
+    draft.maxYear,
+    draft.maxKm,
   ].filter(Boolean).length;
 
   const activeFilters: ActiveFilter[] = [];
@@ -308,6 +339,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           <button
             type="submit"
             disabled={isPending}
+            aria-label="Buscar"
             className="min-h-[48px] bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 sm:px-6 lg:min-h-[52px] lg:w-full"
           >
             <span className="hidden sm:inline">{isPending ? "Buscando..." : "Buscar"}</span>
@@ -511,7 +543,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                             : "",
                       })
                     }
-                    className="inline-flex min-h-[36px] items-center gap-1.5 border border-brand/50 bg-brand/10 px-2.5 py-1.5 text-left text-[11px] leading-tight text-cream transition hover:border-brand"
+                    className="inline-flex min-h-[44px] items-center gap-1.5 border border-brand/50 bg-brand/10 px-2.5 py-1.5 text-left text-[11px] leading-tight text-cream transition hover:border-brand"
                     aria-label={`Remover ${filter.label}`}
                   >
                     <span>{filter.label}</span>
@@ -616,10 +648,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
             className="absolute inset-0 bg-black/65 backdrop-blur-sm animate-fade-in"
           />
           <section
+            ref={sheetRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-labelledby="titulo-filtros"
-            className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto border-t border-white/10 bg-ink animate-slide-up pb-safe"
+            className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto overscroll-contain border-t border-white/10 bg-ink animate-slide-up pb-safe focus:outline-none"
           >
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-ink/95 px-5 py-4 backdrop-blur">
               <div>
@@ -785,7 +819,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </MobileField>
             </div>
 
-            <div className="sticky bottom-0 grid grid-cols-[auto_1fr] gap-3 border-t border-white/10 bg-ink/95 px-5 py-4 backdrop-blur">
+            <div className="sticky bottom-0 grid grid-cols-[auto_1fr] gap-3 border-t border-white/10 bg-ink/95 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] backdrop-blur">
               <button
                 type="button"
                 onClick={() =>
@@ -817,7 +851,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 }}
                 className="min-h-[52px] bg-brand px-5 font-display text-xs font-semibold uppercase tracking-wide text-white"
               >
-                Aplicar filtros
+                {draftFilterCount > 0
+                  ? `Aplicar filtros (${draftFilterCount})`
+                  : "Aplicar filtros"}
               </button>
             </div>
           </section>
@@ -848,7 +884,7 @@ function AccessoryChips({
             key={item}
             type="button"
             onClick={() => onToggle(item)}
-            className={`min-h-[40px] border px-3 text-left text-xs transition ${
+            className={`min-h-[44px] border px-3 text-left text-xs transition touch-manipulation ${
               active
                 ? "border-brand bg-brand/10 text-cream"
                 : "border-white/10 text-muted hover:border-white/25 hover:text-cream"
