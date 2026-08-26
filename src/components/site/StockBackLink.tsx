@@ -31,7 +31,7 @@ export function StockBackLink() {
   return (
     <Link
       href={href}
-      className="mb-3 inline-flex min-h-[40px] items-center text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
+      className="mb-3 inline-flex min-h-[44px] items-center text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
     >
       <span className="mr-2 text-brand" aria-hidden="true">
         ←

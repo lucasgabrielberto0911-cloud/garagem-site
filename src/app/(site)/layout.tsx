@@ -65,7 +65,13 @@ export default function SiteLayout({
       </Suspense>
       <ScrollProgress />
       <SiteHeader />
-      <main className="flex-1 pt-site-header">
+      <a
+        href="#conteudo"
+        className="fixed left-4 top-0 z-[80] -translate-y-full bg-brand px-4 py-3 font-display text-sm font-semibold text-cream outline-none transition focus:translate-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream"
+      >
+        Pular para o conteúdo
+      </a>
+      <main id="conteudo" tabIndex={-1} className="flex-1 pt-site-header outline-none">
         {children}
       </main>
       <SiteFooter />

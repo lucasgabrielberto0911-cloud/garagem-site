@@ -251,7 +251,8 @@ export default async function VehicleDetailPage({
                     <dt className="text-[11px] uppercase tracking-wider text-muted">
                       {spec.label}
                     </dt>
-                    <dd className="mt-0.5 truncate font-display text-sm font-semibold text-cream">
+                    {/* Sem truncate: valores como "Cautelar aprovado" precisam aparecer inteiros. */}
+                    <dd className="mt-0.5 font-display text-sm font-semibold leading-snug text-cream [overflow-wrap:anywhere]">
                       {spec.value}
                     </dd>
                   </div>
@@ -261,7 +262,7 @@ export default async function VehicleDetailPage({
               {sold ? (
                 <Link
                   href="/estoque"
-                  className="hidden w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-asphalt transition hover:bg-brand-orange lg:inline-flex"
+                  className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-asphalt transition hover:bg-brand-orange"
                 >
                   Ver estoque disponível
                 </Link>
@@ -280,7 +281,8 @@ export default async function VehicleDetailPage({
                     </WhatsAppButton>
                   </VehicleContactHit>
 
-                  <div className="hidden gap-2 lg:grid lg:grid-cols-2">
+                  {/* Vídeo e financiamento também no celular — antes só apareciam no desktop. */}
+                  <div className="grid grid-cols-2 gap-2">
                     <VehicleContactHit
                       contentId={vehicle.id}
                       contentName={fullLabel}
@@ -289,7 +291,7 @@ export default async function VehicleDetailPage({
                         href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
+                        className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
                         Pedir vídeo
                       </a>
@@ -304,7 +306,7 @@ export default async function VehicleDetailPage({
                         )}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand"
+                        className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
                         Financiar
                       </a>
@@ -318,19 +320,6 @@ export default async function VehicleDetailPage({
                     >
                       Quero colocar meu veículo na troca
                     </Link>
-                    <VehicleContactHit
-                      contentId={vehicle.id}
-                      contentName={fullLabel}
-                    >
-                      <a
-                        href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline lg:hidden"
-                      >
-                        Pedir vídeo
-                      </a>
-                    </VehicleContactHit>
                   </div>
                 </>
               )}

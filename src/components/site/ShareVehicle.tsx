@@ -51,7 +51,7 @@ export function ShareVehicle({ title, path, className = "" }: Props) {
       <button
         type="button"
         onClick={nativeShare}
-        className="inline-flex min-h-[40px] items-center border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
+        className="inline-flex min-h-[44px] items-center border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
       >
         {copied ? "Copiado" : "Copiar link"}
       </button>
@@ -59,7 +59,7 @@ export function ShareVehicle({ title, path, className = "" }: Props) {
         href={whatsappUrl(`${text}\n${url}`)}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex min-h-[40px] items-center gap-1.5 border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
+        className="inline-flex min-h-[44px] items-center gap-1.5 border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
       >
         <IconWhatsApp className="h-3.5 w-3.5" />
         WhatsApp
@@ -70,7 +70,7 @@ export function ShareVehicle({ title, path, className = "" }: Props) {
           await copyLink();
           window.open(site.instagramUrl, "_blank", "noopener,noreferrer");
         }}
-        className="inline-flex min-h-[40px] items-center border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
+        className="inline-flex min-h-[44px] items-center border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
       >
         Instagram
       </button>

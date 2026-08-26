@@ -118,7 +118,7 @@ export function VehicleGallery({
               onClick={() => goTo(active - 1)}
               aria-label="Foto anterior"
               disabled={active === 0}
-              className="absolute left-2 top-1/2 z-[2] hidden h-10 w-10 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream backdrop-blur transition hover:border-brand disabled:opacity-30 sm:flex"
+              className="absolute left-2 top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream backdrop-blur transition touch-manipulation hover:border-brand disabled:opacity-30"
             >
               <Arrow direction="left" />
             </button>
@@ -127,7 +127,7 @@ export function VehicleGallery({
               onClick={() => goTo(active + 1)}
               aria-label="Próxima foto"
               disabled={active === total - 1}
-              className="absolute right-2 top-1/2 z-[2] hidden h-10 w-10 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream backdrop-blur transition hover:border-brand disabled:opacity-30 sm:flex"
+              className="absolute right-2 top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream backdrop-blur transition touch-manipulation hover:border-brand disabled:opacity-30"
             >
               <Arrow direction="right" />
             </button>
@@ -186,7 +186,7 @@ export function VehicleGallery({
             })}
           </div>
           <p className="mt-1.5 text-xs text-muted lg:hidden">
-            Deslize para o lado · toque para ampliar
+            Deslize ou use as setas · toque para ampliar
           </p>
           <p className="mt-1.5 hidden text-xs text-muted lg:block">
             Use as setas ou as miniaturas · clique para ampliar

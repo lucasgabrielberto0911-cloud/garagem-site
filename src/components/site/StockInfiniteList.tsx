@@ -98,7 +98,7 @@ export function StockInfiniteList({
             <button
               type="button"
               onClick={() => void loadMore()}
-              className="min-h-[44px] border border-white/15 px-4 text-xs uppercase tracking-wider text-cream transition hover:border-brand"
+              className="min-h-[48px] border border-white/15 px-4 text-xs uppercase tracking-wider text-cream transition hover:border-brand touch-manipulation"
             >
               Tentar de novo
             </button>

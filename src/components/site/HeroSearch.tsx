@@ -24,7 +24,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
             type="search"
             name="q"
             placeholder="Busque por marca ou modelo"
-            className="w-full bg-transparent py-3.5 text-base text-cream placeholder:text-muted focus:outline-none sm:py-2.5 sm:text-sm"
+            className="w-full bg-transparent py-3.5 text-base text-cream placeholder:text-muted focus:outline-none"
           />
         </div>
         <button
@@ -43,7 +43,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
           {brands.slice(0, 5).map((brand) => (
             <Link
               key={brand}
-              href={`/estoque?q=${encodeURIComponent(brand)}`}
+              href={`/estoque?brand=${encodeURIComponent(brand)}`}
               className="inline-flex min-h-[40px] shrink-0 items-center border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation sm:min-h-0 sm:px-2.5 sm:py-1.5"
             >
               {formatBrandName(brand)}

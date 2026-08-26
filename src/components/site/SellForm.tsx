@@ -8,7 +8,7 @@ import { formatNumberBR, formatPhoneBR, formatPlateInput } from "@/lib/format";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
 
 const inputClass =
-  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand sm:min-h-[52px] sm:text-sm";
+  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand sm:min-h-[52px]";
 
 export function SellForm({
   interestNote,
@@ -63,7 +63,7 @@ export function SellForm({
           <button
             type="button"
             onClick={() => setSent(false)}
-            className="border border-white/20 px-5 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-white/5"
+            className="min-h-[48px] border border-white/20 px-5 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-white/5"
           >
             Enviar outro veículo
           </button>

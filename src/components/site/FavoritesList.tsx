@@ -7,7 +7,7 @@ import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
-import { formatVehicleLabel } from "@/lib/format";
+import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
@@ -114,7 +114,8 @@ export function FavoritesList() {
       </div>
 
       {compare.length >= 2 ? (
-        <div className="mt-8 hidden overflow-x-auto border border-white/10 lg:block">
+        <>
+          <div className="mt-8 hidden overflow-x-auto border border-white/10 lg:block">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="bg-ink text-xs uppercase tracking-wider text-muted">
               <tr>
@@ -132,18 +133,12 @@ export function FavoritesList() {
               {[
                 {
                   label: "Preço",
-                  value: (v: VehicleCardData) =>
-                    new Intl.NumberFormat("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                      maximumFractionDigits: 0,
-                    }).format(v.price),
+                  value: (v: VehicleCardData) => formatCurrencyBRL(v.price),
                 },
                 { label: "Ano", value: (v: VehicleCardData) => String(v.yearModel) },
                 {
                   label: "KM",
-                  value: (v: VehicleCardData) =>
-                    `${new Intl.NumberFormat("pt-BR").format(v.km)} km`,
+                  value: (v: VehicleCardData) => `${formatNumberBR(v.km)} km`,
                 },
                 { label: "Câmbio", value: (v: VehicleCardData) => v.transmission },
                 { label: "Combustível", value: (v: VehicleCardData) => v.fuel },
@@ -161,7 +156,53 @@ export function FavoritesList() {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+
+          <div className="-mx-4 mt-8 overflow-x-auto px-4 lg:hidden">
+            <p className="mb-3 text-xs uppercase tracking-wider text-muted">
+              Comparar os {compare.length} primeiros
+            </p>
+            <ul className="flex snap-x snap-mandatory gap-3 pb-2">
+              {compare.map((vehicle) => (
+                <li
+                  key={vehicle.id}
+                  className="w-[min(78vw,18rem)] shrink-0 snap-start border border-white/10 bg-ink p-4"
+                >
+                  <Link
+                    href={vehiclePath(vehicle)}
+                    className="block font-display text-sm font-semibold text-cream"
+                  >
+                    {formatVehicleLabel(vehicle.brand, vehicle.model)}
+                  </Link>
+                  <dl className="mt-3 space-y-1.5 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted">Preço</dt>
+                      <dd className="font-display font-semibold text-cream">
+                        {formatCurrencyBRL(vehicle.price)}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted">Ano</dt>
+                      <dd className="text-cream">{vehicle.yearModel}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted">KM</dt>
+                      <dd className="text-cream">{formatNumberBR(vehicle.km)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted">Câmbio</dt>
+                      <dd className="text-right text-cream">{vehicle.transmission}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted">Combustível</dt>
+                      <dd className="text-right text-cream">{vehicle.fuel}</dd>
+                    </div>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
       ) : null}
 
       <div className="mt-6">

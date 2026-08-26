@@ -105,7 +105,7 @@ export function VehicleCard({
             <p className="min-w-0 truncate font-display text-[15px] font-bold leading-none text-cream sm:text-base">
               {formatCurrencyBRL(vehicle.price)}
             </p>
-            <span className="hidden shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-brand transition group-hover:text-brand-orange sm:inline">
+            <span className="shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-brand transition group-hover:text-brand-orange">
               Ver anúncio
             </span>
           </div>
