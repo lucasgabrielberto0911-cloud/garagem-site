@@ -2,6 +2,9 @@ import Image from "next/image";
 
 export const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 
+/** Uma quality só: a mesma foto+width não vira várias transformações na Vercel. */
+const VEHICLE_IMAGE_QUALITY = 65;
+
 export function VehicleImage({
   src,
   alt,
@@ -12,7 +15,6 @@ export function VehicleImage({
   className = "",
   unoptimized = false,
   priority = false,
-  quality = 70,
 }: {
   src?: string | null;
   alt: string;
@@ -23,7 +25,10 @@ export function VehicleImage({
   className?: string;
   unoptimized?: boolean;
   priority?: boolean;
-  /** 1–100; cards ~60–70, hero/galeria ~75. */
+  /**
+   * Aceito por compatibilidade e ignorado.
+   * Sempre 65 — quality diferente por chamada multiplicava a cota de imagens.
+   */
   quality?: number;
 }) {
   const finalSrc = src || VEHICLE_PLACEHOLDER;
@@ -38,7 +43,7 @@ export function VehicleImage({
         className={className}
         unoptimized={unoptimized}
         priority={priority}
-        quality={quality}
+        quality={VEHICLE_IMAGE_QUALITY}
       />
     );
   }
@@ -52,7 +57,7 @@ export function VehicleImage({
       className={className}
       unoptimized={unoptimized}
       priority={priority}
-      quality={quality}
+      quality={VEHICLE_IMAGE_QUALITY}
     />
   );
 }
