@@ -2,11 +2,14 @@
 const nextConfig = {
   poweredByHeader: false,
   images: {
-    formats: ["image/avif", "image/webp"],
-    // Breakpoints alinhados a cards (50vw/33vw) e galeria (~60vw).
-    deviceSizes: [640, 750, 828, 1080, 1200],
-    imageSizes: [96, 128, 256, 384],
+    // Um formato só: avif+webp duplicava cada foto na cota da Vercel.
+    formats: ["image/webp"],
+    // 96 = miniatura da galeria; 384 cobre card 50vw. Menos widths = menos transformações.
+    deviceSizes: [640, 828, 1080],
+    imageSizes: [96, 384],
     minimumCacheTTL: 60 * 60 * 24 * 30,
+    // Preview de PR não queima a cota Hobby; produção continua otimizando.
+    unoptimized: process.env.VERCEL_ENV === "preview",
     remotePatterns: [
       {
         protocol: "https",

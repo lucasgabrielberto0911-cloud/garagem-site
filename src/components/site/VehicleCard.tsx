@@ -56,7 +56,6 @@ export function VehicleCard({
             alt={title}
             fill
             sizes={CARD_SIZES}
-            quality={priority ? 70 : 58}
             priority={priority}
             className="object-cover transition duration-300 group-hover:scale-[1.03]"
           />

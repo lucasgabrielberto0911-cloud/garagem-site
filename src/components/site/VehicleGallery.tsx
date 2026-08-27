@@ -62,7 +62,6 @@ export function VehicleGallery({
           alt={alt}
           fill
           sizes="(min-width: 1024px) 60vw, 100vw"
-          quality={70}
           className="object-cover"
         />
       </div>
@@ -101,7 +100,6 @@ export function VehicleGallery({
                     alt={vehiclePhotoAlt(alt, index, total)}
                     fill
                     sizes="(min-width: 1024px) 60vw, 100vw"
-                    quality={index === 0 ? 68 : 62}
                     priority={index === 0}
                     className="object-cover"
                   />
@@ -177,7 +175,6 @@ export function VehicleGallery({
                       alt={vehiclePhotoAlt(alt, index, total)}
                       fill
                       sizes="96px"
-                      quality={40}
                       className="object-cover"
                     />
                   ) : null}
