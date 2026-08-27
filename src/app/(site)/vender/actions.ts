@@ -56,7 +56,15 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
   }
   if (!brand) fieldErrors.brand = "Informe a marca.";
   if (!model) fieldErrors.model = "Informe o modelo.";
-  if (!/^\d{4}$/.test(year)) fieldErrors.year = "Informe o ano com 4 dígitos.";
+  if (!/^\d{4}$/.test(year)) {
+    fieldErrors.year = "Informe o ano com 4 dígitos.";
+  } else {
+    const yearNumber = Number(year);
+    const maxYear = new Date().getFullYear() + 1;
+    if (yearNumber < 1950 || yearNumber > maxYear) {
+      fieldErrors.year = `Ano entre 1950 e ${maxYear}.`;
+    }
+  }
   if (!plate) {
     fieldErrors.plate = "Informe a placa do veículo.";
   } else if (!isValidPlate(plate)) {

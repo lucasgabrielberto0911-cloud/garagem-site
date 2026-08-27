@@ -4,6 +4,32 @@ import { hasCostBasis, investedTotal } from "@/lib/vehicle-ops";
 
 export const ADMIN_VEHICLES_PAGE_SIZE = 20;
 export const ADMIN_SALES_PAGE_SIZE = 30;
+export const ADMIN_CUSTOMERS_PAGE_SIZE = 40;
+export const ADMIN_LEADS_PAGE_SIZE = 40;
+
+export type SalesPeriod = "all" | "month" | "30" | "90" | "year";
+
+export function parseSalesPeriod(value?: string | null): SalesPeriod {
+  if (value === "month" || value === "30" || value === "90" || value === "year") {
+    return value;
+  }
+  return "all";
+}
+
+export function salesPeriodWhere(period: SalesPeriod) {
+  if (period === "all") return {};
+  const now = new Date();
+  if (period === "month") {
+    return { saleDate: { gte: new Date(now.getFullYear(), now.getMonth(), 1) } };
+  }
+  if (period === "year") {
+    return { saleDate: { gte: new Date(now.getFullYear(), 0, 1) } };
+  }
+  const days = Number(period);
+  return {
+    saleDate: { gte: new Date(now.getTime() - days * 24 * 60 * 60 * 1000) },
+  };
+}
 
 export type VehiclesTab = "estoque" | "vendidos";
 export type AdminVehiclesSort = "recent" | "year" | "km" | "price";
@@ -119,6 +145,7 @@ export function parseAdminVehiclesDir(
 export async function getAdminVehiclesPage(options: {
   q?: string;
   tab: VehiclesTab;
+  status?: string;
   page?: number;
   pageSize?: number;
   sort?: AdminVehiclesSort;
@@ -131,10 +158,14 @@ export async function getAdminVehiclesPage(options: {
   const page = Math.max(options.page ?? 1, 1);
   const sort = options.sort ?? "recent";
   const dir = options.dir ?? (sort === "recent" ? "desc" : "asc");
+  const statusFilter =
+    options.status === "disponivel" || options.status === "reservado"
+      ? { status: options.status }
+      : tabStatusFilter(options.tab);
   const where = {
     AND: [
       { historical: false },
-      tabStatusFilter(options.tab),
+      statusFilter,
       searchWhere(options.q ?? ""),
     ],
   };
@@ -224,16 +255,20 @@ export async function getAdminVehicleStats() {
 export async function getAdminSalesPage(options?: {
   page?: number;
   pageSize?: number;
+  period?: SalesPeriod;
 }) {
   const pageSize = Math.min(
     Math.max(options?.pageSize ?? ADMIN_SALES_PAGE_SIZE, 1),
     80,
   );
   const page = Math.max(options?.page ?? 1, 1);
+  const period = options?.period ?? "all";
+  const where = salesPeriodWhere(period);
 
   const [total, sales] = await Promise.all([
-    prisma.sale.count(),
+    prisma.sale.count({ where }),
     prisma.sale.findMany({
+      where,
       orderBy: { saleDate: "desc" },
       include: ADMIN_SALE_LIST_INCLUDE,
       skip: (page - 1) * pageSize,

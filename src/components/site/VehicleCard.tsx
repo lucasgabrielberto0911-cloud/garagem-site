@@ -2,7 +2,7 @@ import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
-import type { VehicleCardRecord } from "@/lib/vehicles";
+import { coverSrc, type VehicleCardRecord } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export type VehicleCardData = VehicleCardRecord;
@@ -27,7 +27,7 @@ export function VehicleCard({
   returnTo?: string;
 }) {
   const title = formatVehicleLabel(vehicle.brand, vehicle.model);
-  const cover = vehicle.photos[0]?.url;
+  const cover = coverSrc(vehicle.photos);
   const badge = STATUS_BADGE[vehicle.status];
   const href = vehiclePath(vehicle);
 
@@ -100,8 +100,8 @@ export function VehicleCard({
             </p>
           </div>
 
-          <div className="mt-auto flex items-end justify-between gap-1.5 border-t border-white/10 pt-2 sm:gap-2 sm:pt-2.5">
-            <p className="min-w-0 truncate font-display text-[15px] font-bold leading-none text-cream sm:text-base">
+          <div className="mt-auto flex flex-col gap-1.5 border-t border-white/10 pt-2 sm:flex-row sm:items-end sm:justify-between sm:gap-2 sm:pt-2.5">
+            <p className="font-display text-[15px] font-bold leading-none text-cream sm:text-base">
               {formatCurrencyBRL(vehicle.price)}
             </p>
             <span className="shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-brand transition group-hover:text-brand-orange">

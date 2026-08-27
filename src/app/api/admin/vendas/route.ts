@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getAdminSalesPage } from "@/lib/admin-vehicles";
+import { getAdminSalesPage, parseSalesPeriod } from "@/lib/admin-vehicles";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -13,7 +13,11 @@ export async function GET(request: NextRequest) {
   const pageSize = Number(params.get("pageSize")) || undefined;
 
   try {
-    const result = await getAdminSalesPage({ page, pageSize });
+    const result = await getAdminSalesPage({
+      page,
+      pageSize,
+      period: parseSalesPeriod(params.get("period")),
+    });
     return NextResponse.json(result, {
       headers: { "Cache-Control": "private, no-store" },
     });

@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
 
         <form
           onSubmit={handleSubmit}
-          autoComplete="off"
+          autoComplete="on"
           className="border border-white/10 bg-ink/60 p-6 backdrop-blur-sm sm:p-8"
         >
           <div className="space-y-5">
@@ -109,7 +109,7 @@ export default function AdminLoginPage() {
                 id="email"
                 name="email"
                 type="email"
-                autoComplete="off"
+                autoComplete="username"
                 autoFocus
                 required
                 value={email}
@@ -131,7 +131,7 @@ export default function AdminLoginPage() {
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}

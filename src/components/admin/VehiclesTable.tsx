@@ -105,6 +105,7 @@ export function VehiclesTable({
   pageSize,
   q,
   tab,
+  status,
   estoqueCount: estoqueCountProp,
   vendidosCount: vendidosCountProp,
   quality,
@@ -114,6 +115,7 @@ export function VehiclesTable({
   pageSize: number;
   q: string;
   tab: VehiclesTab;
+  status?: string;
   estoqueCount: number;
   vendidosCount: number;
   quality?: {
@@ -162,6 +164,7 @@ export function VehiclesTable({
         const search = new URLSearchParams();
         if (q) search.set("q", q);
         if (tab === "vendidos") search.set("tab", "vendidos");
+        if (status) search.set("status", status);
         search.set("sort", nextSort.key);
         search.set("dir", nextSort.dir);
         search.set("page", String(nextPage));
@@ -196,7 +199,7 @@ export function VehiclesTable({
         setLoadingSort(false);
       }
     },
-    [pageSize, q, tab],
+    [pageSize, q, tab, status],
   );
 
   const applyFilters = useCallback(
@@ -206,11 +209,14 @@ export function VehiclesTable({
       const nextTab = params.tab ?? tab;
       if (nextQ) search.set("q", nextQ);
       if (nextTab === "vendidos") search.set("tab", "vendidos");
+      if (status && !params.tab && nextTab !== "vendidos") {
+        search.set("status", status);
+      }
       startTransition(() => {
         router.push(search.toString() ? `${pathname}?${search}` : pathname);
       });
     },
-    [q, tab, router, pathname],
+    [q, tab, status, router, pathname],
   );
 
   function changeSort(next: { key: SortKey; dir: "asc" | "desc" }) {

@@ -2,20 +2,42 @@
 
 import { useEffect, useState } from "react";
 
-/** Desktop: acima do float do WhatsApp (right-6 bottom-24). */
+/** Desktop: acima do float do WhatsApp. Não monta no viewport mobile. */
 export function BackToTop() {
+  const [desktop, setDesktop] = useState(false);
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    function onScroll() {
-      setShow(window.scrollY > 640);
+    const media = window.matchMedia("(min-width: 1024px)");
+    function sync() {
+      setDesktop(media.matches);
     }
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
   }, []);
 
-  if (!show) return null;
+  useEffect(() => {
+    if (!desktop) return;
+
+    const sentinel = document.createElement("div");
+    sentinel.setAttribute("aria-hidden", "true");
+    sentinel.style.cssText =
+      "position:absolute;top:0;left:0;height:640px;width:1px;pointer-events:none;visibility:hidden";
+    document.body.prepend(sentinel);
+
+    const observer = new IntersectionObserver(([entry]) => {
+      setShow(!entry.isIntersecting);
+    });
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+      sentinel.remove();
+    };
+  }, [desktop]);
+
+  if (!desktop || !show) return null;
 
   return (
     <button

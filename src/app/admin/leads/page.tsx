@@ -4,27 +4,48 @@ import { AdminPageHeader } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
 import { LEAD_STATUSES, isLeadStatus } from "@/lib/leads";
 import { prisma } from "@/lib/prisma";
+import { ADMIN_LEADS_PAGE_SIZE } from "@/lib/admin-vehicles";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: { status?: string };
+  searchParams: { status?: string; page?: string; q?: string };
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
   const status = (searchParams.status ?? "").trim();
   const valid = isLeadStatus(status);
+  const q = (searchParams.q ?? "").trim();
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  const pageSize = ADMIN_LEADS_PAGE_SIZE;
+  const digits = q.replace(/\D/g, "");
+  const searchWhere = q
+    ? {
+        OR: [
+          { name: { contains: q, mode: "insensitive" as const } },
+          { vehicleInfo: { contains: q, mode: "insensitive" as const } },
+          { plate: { contains: q.replace(/[^a-zA-Z0-9]/g, ""), mode: "insensitive" as const } },
+          ...(digits ? [{ phone: { contains: digits } }] : []),
+        ],
+      }
+    : {};
+  const where = {
+    ...(valid ? { status } : {}),
+    ...searchWhere,
+  };
 
-  const [leads, groups] = await Promise.all([
+  const [leads, groups, total] = await Promise.all([
     prisma.leadVenda.findMany({
-      where: valid ? { status } : {},
+      where,
       orderBy: { createdAt: "desc" },
-      take: 200,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }),
     prisma.leadVenda.groupBy({ by: ["status"], _count: { _all: true } }),
+    prisma.leadVenda.count({ where }),
   ]);
 
   const counts: Record<string, number> & { total: number } = {
@@ -47,13 +68,21 @@ export default async function LeadsPage({
               ? `${counts.total} lead(s) no total · ${counts.novo} aguardando contato`
               : `${counts.total} lead(s) no total`,
             counts.total > leads.length
-              ? ` · mostrando os ${leads.length} mais recentes`
+              ? ` · mostrando ${leads.length} de ${total}`
               : "",
           ].join("")
         }
       />
 
-      <LeadsTable leads={leads} status={valid ? status : ""} counts={counts} />
+      <LeadsTable
+        leads={leads}
+        status={valid ? status : ""}
+        query={q}
+        counts={counts}
+        page={page}
+        pageSize={pageSize}
+        total={total}
+      />
     </div>
   );
 }

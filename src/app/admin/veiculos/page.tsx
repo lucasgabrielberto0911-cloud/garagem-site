@@ -27,6 +27,10 @@ export default async function VehiclesPage({
   if (!session) redirect("/admin/login");
 
   const q = (searchParams.q || "").trim();
+  const status =
+    searchParams.status === "disponivel" || searchParams.status === "reservado"
+      ? searchParams.status
+      : undefined;
   const tab = resolveTab(
     searchParams.tab ||
       (searchParams.status === "vendido" ? "vendidos" : undefined),
@@ -34,7 +38,7 @@ export default async function VehiclesPage({
 
   const [stats, list] = await Promise.all([
     getAdminVehicleStats(),
-    getAdminVehiclesPage({ q, tab, page: 1 }),
+    getAdminVehiclesPage({ q, tab, status, page: 1 }),
   ]);
 
   return (
@@ -72,12 +76,13 @@ export default async function VehiclesPage({
       </section>
 
       <VehiclesTable
-        key={`${tab}:${q}`}
+        key={`${tab}:${q}:${status ?? ""}`}
         vehicles={list.vehicles}
         initialTotal={list.total}
         pageSize={list.pageSize}
         q={q}
         tab={tab}
+        status={status}
         estoqueCount={stats.estoqueCount}
         vendidosCount={stats.vendidosCount}
         quality={{

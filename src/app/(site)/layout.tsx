@@ -1,13 +1,13 @@
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
-import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { DeferredMarketing } from "@/components/DeferredMarketing";
 import { JsonLd } from "@/components/JsonLd";
 import { MobileBottomNav } from "@/components/site/MobileBottomNav";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { FavoritesProvider } from "@/lib/favorites";
 import { localBusinessJsonLd } from "@/lib/seo";
 import { getPublicSite } from "@/lib/site-settings";
-import { getTestimonials } from "@/lib/vehicles";
 
 const ScrollProgress = dynamic(
   () =>
@@ -32,55 +32,39 @@ const PwaRegister = dynamic(
 );
 
 async function SiteJsonLd() {
-  // Ambas as leituras são cacheadas (unstable_cache + React cache):
-  // na home, o segundo fetch é dedupado com <Testimonials /> — zero query extra.
-  const [publicSite, testimonials] = await Promise.all([
-    getPublicSite(),
-    getTestimonials(6),
-  ]);
-
-  // Rich snippet de estrelas apenas com depoimentos reais (ids "seed-" ficam de fora).
-  const reviews = testimonials
-    .filter((item) => !String(item.id).startsWith("seed-"))
-    .map((item) => ({
-      name: item.name,
-      city: item.city,
-      message: item.message,
-      rating: item.rating,
-    }));
-
-  return (
-    <JsonLd data={localBusinessJsonLd(publicSite, reviews)} />
-  );
+  const publicSite = await getPublicSite();
+  return <JsonLd data={localBusinessJsonLd(publicSite)} />;
 }
 
 export default function SiteLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <GoogleAnalytics />
-      <Suspense fallback={null}>
-        <SiteJsonLd />
-      </Suspense>
-      <ScrollProgress />
-      <SiteHeader />
-      <a
-        href="#conteudo"
-        className="fixed left-4 top-0 z-[80] -translate-y-full bg-brand px-4 py-3 font-display text-sm font-semibold text-cream outline-none transition focus:translate-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream"
-      >
-        Pular para o conteúdo
-      </a>
-      <main id="conteudo" tabIndex={-1} className="flex-1 pt-site-header outline-none">
-        {children}
-      </main>
-      <SiteFooter />
-      <div className="pb-site-nav lg:hidden" aria-hidden="true" />
-      <MobileBottomNav />
-      <WhatsAppFloat />
-      <BackToTop />
-      <InstallPrompt />
-      <PwaRegister />
-    </div>
+    <FavoritesProvider>
+      <div className="flex min-h-screen flex-col">
+        <DeferredMarketing />
+        <Suspense fallback={null}>
+          <SiteJsonLd />
+        </Suspense>
+        <ScrollProgress />
+        <SiteHeader />
+        <a
+          href="#conteudo"
+          className="fixed left-4 top-0 z-[80] -translate-y-full bg-brand px-4 py-3 font-display text-sm font-semibold text-cream outline-none transition focus:translate-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream"
+        >
+          Pular para o conteúdo
+        </a>
+        <main id="conteudo" tabIndex={-1} className="flex-1 pt-site-header outline-none">
+          {children}
+        </main>
+        <SiteFooter />
+        <div className="pb-site-nav lg:hidden" aria-hidden="true" />
+        <MobileBottomNav />
+        <WhatsAppFloat />
+        <BackToTop />
+        <InstallPrompt />
+        <PwaRegister />
+      </div>
+    </FavoritesProvider>
   );
 }

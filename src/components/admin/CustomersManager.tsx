@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { IconPencil, IconPlus, IconTrash, IconUsers } from "@/components/admin/icons";
@@ -46,25 +46,39 @@ function formatDate(date: Date) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(date);
 }
 
-export function CustomersManager({ customers }: { customers: CustomerRow[] }) {
+export function CustomersManager({
+  customers,
+  query = "",
+  page = 1,
+  pageSize = 40,
+  total,
+}: {
+  customers: CustomerRow[];
+  query?: string;
+  page?: number;
+  pageSize?: number;
+  total?: number;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [term, setTerm] = useState("");
+  const [term, setTerm] = useState(query);
   const [form, setForm] = useState<typeof emptyForm | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<CustomerRow | null>(null);
 
-  const filtered = useMemo(() => {
-    const query = term.trim().toLowerCase();
-    if (!query) return customers;
-    const digits = query.replace(/\D/g, "");
-    return customers.filter(
-      (customer) =>
-        customer.name.toLowerCase().includes(query) ||
-        (digits && customer.phone.includes(digits)) ||
-        (customer.email ?? "").toLowerCase().includes(query),
-    );
-  }, [customers, term]);
+  const totalCount = total ?? customers.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  function applySearch(nextQuery: string, nextPage = 1) {
+    const params = new URLSearchParams();
+    if (nextQuery.trim()) params.set("q", nextQuery.trim());
+    if (nextPage > 1) params.set("page", String(nextPage));
+    startTransition(() => {
+      router.push(
+        params.toString() ? `/admin/clientes?${params.toString()}` : "/admin/clientes",
+      );
+    });
+  }
 
   function openCreate() {
     setErrors({});
@@ -228,13 +242,24 @@ export function CustomersManager({ customers }: { customers: CustomerRow[] }) {
         </Card>
       ) : (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <input
-            type="search"
-            value={term}
-            onChange={(event) => setTerm(event.target.value)}
-            placeholder="Buscar por nome, telefone ou e-mail"
-            className={`${inputClass} sm:max-w-sm`}
-          />
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              applySearch(term, 1);
+            }}
+            className="flex min-w-0 flex-1 gap-2 sm:max-w-sm"
+          >
+            <input
+              type="search"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              placeholder="Buscar por nome, telefone ou e-mail"
+              className={inputClass}
+            />
+            <button type="submit" className={btn.outline}>
+              Buscar
+            </button>
+          </form>
           <button
             type="button"
             onClick={openCreate}
@@ -243,9 +268,9 @@ export function CustomersManager({ customers }: { customers: CustomerRow[] }) {
             <IconPlus className="h-4 w-4" />
             Novo cliente
           </button>
-          {term ? (
+          {query || totalCount > customers.length ? (
             <span className="text-xs text-muted">
-              {filtered.length} resultado(s)
+              {totalCount} cliente(s)
             </span>
           ) : null}
         </div>
@@ -254,23 +279,24 @@ export function CustomersManager({ customers }: { customers: CustomerRow[] }) {
       {customers.length === 0 ? (
         <EmptyState
           icon={<IconUsers className="h-12 w-12" />}
-          title="Nenhum cliente cadastrado"
-          description="Cadastre clientes para registrar vendas e manter o histórico de contato organizado."
+          title={query ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+          description={
+            query
+              ? "Tente outro nome, telefone ou e-mail."
+              : "Cadastre clientes para registrar vendas e manter o histórico de contato organizado."
+          }
           action={
+            query ? undefined : (
             <button type="button" onClick={openCreate} className={btn.primary}>
               <IconPlus className="h-4 w-4" />
               Cadastrar cliente
             </button>
+            )
           }
-        />
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          title="Nenhum cliente encontrado"
-          description="Tente outro nome, telefone ou e-mail."
         />
       ) : (
         <ul className="grid gap-3 lg:grid-cols-2">
-          {filtered.map((customer) => (
+          {customers.map((customer) => (
             <li
               key={customer.id}
               className="overflow-hidden border border-white/10 bg-ink/50"
@@ -366,6 +392,30 @@ export function CustomersManager({ customers }: { customers: CustomerRow[] }) {
           ))}
         </ul>
       )}
+
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between gap-3 text-sm text-muted">
+          <button
+            type="button"
+            disabled={page <= 1}
+            onClick={() => applySearch(query, page - 1)}
+            className={btn.outline}
+          >
+            Anterior
+          </button>
+          <span>
+            Página {page} de {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page >= totalPages}
+            onClick={() => applySearch(query, page + 1)}
+            className={btn.outline}
+          >
+            Próxima
+          </button>
+        </div>
+      ) : null}
 
       <ConfirmDialog
         open={deleteTarget !== null}

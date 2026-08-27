@@ -54,7 +54,14 @@ export function StockVehicleLink({
       href={href}
       prefetch={false}
       aria-label={ariaLabel}
-      onClick={() => rememberStockReturn(returnTo)}
+      onClick={() => {
+        rememberStockReturn(returnTo);
+        try {
+          sessionStorage.setItem("garagem:estoque-scroll", String(window.scrollY));
+        } catch {
+          // private mode
+        }
+      }}
       className="flex h-full flex-col outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt"
     >
       {children}

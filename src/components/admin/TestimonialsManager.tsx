@@ -73,9 +73,9 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
     setUploading(true);
     try {
       const { uploadImageDirect } = await import("@/lib/upload-image-direct");
-      const photoUrl = await uploadImageDirect(file);
+      const photo = await uploadImageDirect(file);
       setForm((current) =>
-        current ? { ...current, photoUrl } : current,
+        current ? { ...current, photoUrl: photo.url } : current,
       );
       toast.success("Foto enviada.");
     } catch (error) {

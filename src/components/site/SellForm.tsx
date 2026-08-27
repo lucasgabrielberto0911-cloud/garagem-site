@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, Children, cloneElement, isValidElement } from "react";
 import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/site/ui";
 import { createSellLead } from "@/app/(site)/vender/actions";
@@ -29,7 +29,8 @@ export function SellForm({
 
     startTransition(async () => {
       const result = await createSellLead(data);
-      setErrors(result.fieldErrors ?? {});
+      const fieldErrors = result.fieldErrors ?? {};
+      setErrors(fieldErrors);
 
       if (result.ok) {
         toast.success(result.message);
@@ -40,6 +41,12 @@ export function SellForm({
         formRef.current?.reset();
       } else {
         toast.error(result.message);
+        const first = Object.keys(fieldErrors)[0];
+        if (first) {
+          window.requestAnimationFrame(() => {
+            document.getElementById(first)?.focus();
+          });
+        }
       }
     });
   }
@@ -233,6 +240,22 @@ function Field({
   optional?: boolean;
   children: React.ReactNode;
 }) {
+  const errorId = `${htmlFor}-error`;
+  const decorated = Children.map(children, (child, index) => {
+    if (index === 0 && isValidElement(child)) {
+      const describedBy = [
+        (child.props as { "aria-describedby"?: string })["aria-describedby"],
+        error ? errorId : null,
+      ]
+        .filter(Boolean)
+        .join(" ");
+      return cloneElement(child as React.ReactElement<Record<string, unknown>>, {
+        "aria-invalid": Boolean(error) || undefined,
+        "aria-describedby": describedBy || undefined,
+      });
+    }
+    return child;
+  });
   return (
     <div>
       <label
@@ -242,8 +265,12 @@ function Field({
         {label}
         {optional ? <span className="ml-1 normal-case">(opcional)</span> : null}
       </label>
-      {children}
-      {error ? <p className="mt-1.5 text-xs text-brand">{error}</p> : null}
+      {decorated}
+      {error ? (
+        <p id={errorId} className="mt-1.5 text-xs text-brand" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

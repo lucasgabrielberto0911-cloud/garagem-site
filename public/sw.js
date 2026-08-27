@@ -6,17 +6,18 @@
  * network-first para nunca servir estoque desatualizado, caindo no cache (e
  * depois em /offline) apenas quando a rede falha. Admin e API ficam fora.
  */
-const VERSION = "garagem-v1";
+const VERSION = "garagem-v2";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const PAGE_CACHE = `${VERSION}-pages`;
+const ASSET_CACHE_LIMIT = 80;
 
 const SHELL_URLS = [
   "/offline",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
-  "/branding/logo.png",
+  "/branding/logo-wordmark.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -53,13 +54,25 @@ function isCacheableAsset(url) {
   );
 }
 
+async function trimCache(cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length <= maxEntries) return;
+  await Promise.all(
+    keys.slice(0, keys.length - maxEntries).map((request) => cache.delete(request)),
+  );
+}
+
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
   if (cached) return cached;
 
   const response = await fetch(request);
-  if (response && response.ok) cache.put(request, response.clone());
+  if (response && response.ok) {
+    cache.put(request, response.clone());
+    trimCache(cacheName, ASSET_CACHE_LIMIT).catch(() => undefined);
+  }
   return response;
 }
 

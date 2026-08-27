@@ -10,7 +10,9 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "photos:backfill": "tsx scripts/backfill-photo-thumbnails.ts",
+    "docs:migrate": "tsx scripts/migrate-private-docs.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

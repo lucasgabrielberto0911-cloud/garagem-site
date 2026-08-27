@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { InfiniteSentinel } from "@/components/InfiniteSentinel";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
-import type { VehicleCardRecord } from "@/lib/vehicles";
+import type { VehicleCardRecord } from "@/lib/stock-query";
 
 type StockQuery = Record<string, string | undefined>;
 
@@ -87,7 +87,7 @@ export function StockInfiniteList({
           rootMargin="400px 0px"
         >
           {loading ? (
-            <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
+            <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted" aria-live="polite">
               <span
                 className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-r-transparent"
                 aria-hidden="true"

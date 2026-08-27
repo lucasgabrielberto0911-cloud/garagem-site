@@ -13,7 +13,7 @@ import {
 } from "@/components/admin/icons";
 import { btn } from "@/components/admin/ui";
 
-export type PhotoItem = { id: string; url: string };
+export type PhotoItem = { id: string; url: string; thumbnailUrl?: string | null };
 
 const ACCEPT =
   "image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif";
@@ -42,8 +42,18 @@ export function createPhotoId() {
   return `photo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+export function photosFromRecords(
+  photos: Array<{ url: string; thumbnailUrl?: string | null }>,
+): PhotoItem[] {
+  return photos.map((photo) => ({
+    id: createPhotoId(),
+    url: photo.url,
+    thumbnailUrl: photo.thumbnailUrl ?? null,
+  }));
+}
+
 export function photosFromUrls(urls: string[]): PhotoItem[] {
-  return urls.map((url) => ({ id: createPhotoId(), url }));
+  return urls.map((url) => ({ id: createPhotoId(), url, thumbnailUrl: null }));
 }
 
 /**
@@ -76,7 +86,7 @@ export function VehiclePhotoManager({
     }
 
     setUploading(list.length);
-    const uploaded: string[] = [];
+    const uploaded: PhotoItem[] = [];
 
     try {
       const { uploadImageDirect } = await import("@/lib/upload-image-direct");
@@ -87,8 +97,12 @@ export function VehiclePhotoManager({
         setUploading(list.length - index);
 
         try {
-          const url = await uploadImageDirect(original);
-          uploaded.push(url);
+          const photo = await uploadImageDirect(original);
+          uploaded.push({
+            id: createPhotoId(),
+            url: photo.url,
+            thumbnailUrl: photo.thumbnailUrl,
+          });
         } catch (error) {
           toast.error(
             error instanceof Error
@@ -99,10 +113,7 @@ export function VehiclePhotoManager({
       }
 
       if (uploaded.length > 0) {
-        onChange((current) => [
-          ...current,
-          ...uploaded.map((url) => ({ id: createPhotoId(), url })),
-        ]);
+        onChange((current) => [...current, ...uploaded]);
         toast.success(`${uploaded.length} foto(s) enviada(s).`);
       } else {
         toast.error("Nenhuma foto foi enviada.");
@@ -156,6 +167,7 @@ export function VehiclePhotoManager({
         });
         const data = (await response.json()) as {
           url?: string;
+          thumbnailUrl?: string | null;
           blurred?: boolean;
           error?: string;
         };
@@ -163,7 +175,11 @@ export function VehiclePhotoManager({
           throw new Error(data.error || "Falha ao borrar a placa.");
         }
         if (data.url) {
-          next[index] = { ...next[index], url: data.url };
+          next[index] = {
+            ...next[index],
+            url: data.url,
+            thumbnailUrl: data.thumbnailUrl ?? next[index].thumbnailUrl,
+          };
         }
         if (data.blurred) blurredCount += 1;
       }
@@ -256,6 +272,12 @@ export function VehiclePhotoManager({
           />
         </label>
       </div>
+
+      {uploading > 0 ? (
+        <p className="mt-3 text-sm text-cream" aria-live="polite">
+          Enviando {uploading} foto(s)…
+        </p>
+      ) : null}
 
       {uploading > 0 ? (
         <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -370,21 +392,21 @@ export function VehiclePhotoManager({
                         disabled={index === 0}
                         onClick={() => movePhoto(index, -1)}
                       >
-                        <IconArrowUp className="h-3.5 w-3.5 -rotate-90" />
+                        <IconArrowUp className="h-4 w-4 -rotate-90" />
                       </PhotoAction>
                       <PhotoAction
                         label="Mover para frente"
                         disabled={index === photos.length - 1}
                         onClick={() => movePhoto(index, 1)}
                       >
-                        <IconArrowDown className="h-3.5 w-3.5 -rotate-90" />
+                        <IconArrowDown className="h-4 w-4 -rotate-90" />
                       </PhotoAction>
                       <PhotoAction
                         label="Definir como capa"
                         disabled={index === 0}
                         onClick={() => makeCover(index)}
                       >
-                        <IconStar className="h-3.5 w-3.5" />
+                        <IconStar className="h-4 w-4" />
                       </PhotoAction>
                     </div>
                     <PhotoAction
@@ -392,7 +414,7 @@ export function VehiclePhotoManager({
                       danger
                       onClick={() => removePhoto(index)}
                     >
-                      <IconTrash className="h-3.5 w-3.5" />
+                      <IconTrash className="h-4 w-4" />
                     </PhotoAction>
                   </div>
                 </li>
@@ -430,7 +452,7 @@ function PhotoAction({
         onClick();
       }}
       onMouseDown={(event) => event.stopPropagation()}
-      className={`inline-flex h-7 w-7 items-center justify-center transition disabled:opacity-30 ${
+      className={`inline-flex h-11 w-11 items-center justify-center transition disabled:opacity-30 touch-manipulation ${
         danger
           ? "text-brand hover:bg-brand/20 hover:text-cream"
           : "text-cream/80 hover:bg-white/10 hover:text-cream"

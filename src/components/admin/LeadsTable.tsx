@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import type { LeadVenda } from "@prisma/client";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -91,36 +91,42 @@ function exportCsv(leads: LeadVenda[]) {
 export function LeadsTable({
   leads,
   status,
+  query = "",
   counts,
+  page = 1,
+  pageSize = 40,
+  total,
 }: {
   leads: LeadVenda[];
   status: string;
+  query?: string;
   counts: Record<string, number> & { total: number };
+  page?: number;
+  pageSize?: number;
+  total?: number;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LeadVenda | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [term, setTerm] = useState("");
+  const [term, setTerm] = useState(query);
 
-  const filtered = useMemo(() => {
-    const query = term.trim().toLowerCase();
-    if (!query) return leads;
-    const digits = query.replace(/\D/g, "");
-    const plateQuery = normalizePlate(query).toLowerCase();
-    return leads.filter(
-      (lead) =>
-        lead.name.toLowerCase().includes(query) ||
-        lead.vehicleInfo.toLowerCase().includes(query) ||
-        (lead.plate && lead.plate.toLowerCase().includes(plateQuery)) ||
-        (digits.length > 0 && lead.phone.includes(digits)),
-    );
-  }, [leads, term]);
+  const totalCount = total ?? leads.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  function filterByStatus(value: string) {
+  function goTo(next: { status?: string; page?: number; q?: string }) {
+    const params = new URLSearchParams();
+    const nextStatus = next.status ?? status;
+    const nextQuery = next.q ?? query;
+    const nextPage = next.page ?? 1;
+    if (nextStatus) params.set("status", nextStatus);
+    if (nextQuery.trim()) params.set("q", nextQuery.trim());
+    if (nextPage > 1) params.set("page", String(nextPage));
     startTransition(() => {
-      router.push(value ? `/admin/leads?status=${value}` : "/admin/leads");
+      router.push(
+        params.toString() ? `/admin/leads?${params.toString()}` : "/admin/leads",
+      );
     });
   }
 
@@ -179,7 +185,7 @@ export function LeadsTable({
             label={`Todos (${counts.total})`}
             active={!status}
             disabled={isPending}
-            onClick={() => filterByStatus("")}
+            onClick={() => goTo({ status: "", q: query, page: 1 })}
           />
           {LEAD_STATUSES.map((value) => (
             <FilterChip
@@ -187,26 +193,37 @@ export function LeadsTable({
               label={`${STATUS_LABEL[value]} (${counts[value] ?? 0})`}
               active={status === value}
               disabled={isPending}
-              onClick={() => filterByStatus(value)}
+              onClick={() => goTo({ status: value, q: query, page: 1 })}
             />
           ))}
         </div>
 
         <div className="mt-3 flex flex-col gap-2 border-t border-white/10 pt-3 sm:flex-row sm:items-center">
-          <input
-            type="search"
-            value={term}
-            onChange={(event) => setTerm(event.target.value)}
-            placeholder="Buscar por nome, telefone, placa ou veículo"
-            className={`${inputClass} sm:max-w-sm`}
-          />
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              goTo({ status, q: term, page: 1 });
+            }}
+            className="flex min-w-0 flex-1 gap-2 sm:max-w-sm"
+          >
+            <input
+              type="search"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              placeholder="Buscar por nome, telefone, placa ou veículo"
+              className={inputClass}
+            />
+            <button type="submit" className={btn.outline}>
+              Buscar
+            </button>
+          </form>
           <span className="text-xs text-muted">
-            {filtered.length} de {leads.length} lead(s)
+            {leads.length} de {totalCount} lead(s)
           </span>
           <button
             type="button"
-            onClick={() => exportCsv(filtered)}
-            disabled={filtered.length === 0}
+            onClick={() => exportCsv(leads)}
+            disabled={leads.length === 0}
             className={`${btn.outline} w-full sm:ml-auto sm:w-auto`}
           >
             <IconDownload className="h-4 w-4" />
@@ -215,25 +232,25 @@ export function LeadsTable({
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {leads.length === 0 ? (
         <EmptyState
           icon={<IconInbox className="h-12 w-12" />}
           title={
-            leads.length === 0
-              ? status
+            query
+              ? "Nenhum lead para essa busca"
+              : status
                 ? "Nenhum lead com esse status"
                 : "Nenhum lead recebido ainda"
-              : "Nenhum lead para essa busca"
           }
           description={
-            leads.length === 0
-              ? "Os pedidos de avaliação enviados pelo formulário da página Vender/Trocar aparecem aqui."
-              : "Tente outro nome, telefone, placa ou veículo."
+            query
+              ? "Tente outro nome, telefone, placa ou veículo."
+              : "Os pedidos de avaliação enviados pelo formulário da página Vender/Trocar aparecem aqui."
           }
         />
       ) : (
         <ul className="space-y-3">
-          {filtered.map((lead) => (
+          {leads.map((lead) => (
             <li
               key={lead.id}
               className="border border-white/10 bg-ink/50 p-4 sm:p-5"
@@ -353,6 +370,30 @@ export function LeadsTable({
           ))}
         </ul>
       )}
+
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between gap-3 text-sm text-muted">
+          <button
+            type="button"
+            disabled={page <= 1 || isPending}
+            onClick={() => goTo({ status, q: query, page: page - 1 })}
+            className="min-h-[44px] border border-white/15 px-3 text-cream disabled:opacity-40"
+          >
+            Anterior
+          </button>
+          <span>
+            Página {page} de {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page >= totalPages || isPending}
+            onClick={() => goTo({ status, q: query, page: page + 1 })}
+            className="min-h-[44px] border border-white/15 px-3 text-cream disabled:opacity-40"
+          >
+            Próxima
+          </button>
+        </div>
+      ) : null}
 
       <ConfirmDialog
         open={deleteTarget !== null}

@@ -30,12 +30,19 @@ export function SiteHeader() {
   }, [pathname]);
 
   useEffect(() => {
-    function onScroll() {
-      setScrolled(window.scrollY > 24);
-    }
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const sentinel = document.createElement("div");
+    sentinel.setAttribute("aria-hidden", "true");
+    sentinel.style.cssText =
+      "position:absolute;top:0;left:0;height:24px;width:1px;pointer-events:none;visibility:hidden";
+    document.body.prepend(sentinel);
+    const observer = new IntersectionObserver(([entry]) => {
+      setScrolled(!entry.isIntersecting);
+    });
+    observer.observe(sentinel);
+    return () => {
+      observer.disconnect();
+      sentinel.remove();
+    };
   }, []);
 
   useEffect(() => {

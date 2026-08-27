@@ -44,7 +44,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
             <Link
               key={brand}
               href={`/estoque?brand=${encodeURIComponent(brand)}`}
-              className="inline-flex min-h-[40px] shrink-0 items-center border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation sm:min-h-0 sm:px-2.5 sm:py-1.5"
+              className="inline-flex min-h-[44px] shrink-0 items-center border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation sm:px-2.5 sm:py-1.5"
             >
               {formatBrandName(brand)}
             </Link>

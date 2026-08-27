@@ -10,7 +10,7 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
           <ScrollReveal key={item.question} delay={Math.min(index * 30, 120)}>
             <details id={id} className="group scroll-mt-28 px-5 py-4 sm:px-6">
               <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-4 py-1 font-display text-base font-semibold text-cream marker:hidden touch-manipulation">
-                {item.question}
+                <span>{item.question}</span>
                 <span
                   className="mt-1 shrink-0 text-brand transition-transform duration-300 group-open:rotate-45"
                   aria-hidden="true"

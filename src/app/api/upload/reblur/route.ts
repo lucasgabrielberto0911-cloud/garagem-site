@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import sharp from "sharp";
 import { getSession } from "@/lib/auth";
 import {
   blurDetectedPlates,
   hasPlateBlurConfigured,
 } from "@/lib/blur-plates";
+import { cardObjectPath, encodeCardImage, encodeGalleryImage } from "@/lib/image-variants";
 import {
   VEHICLE_PHOTOS_BUCKET,
   getSupabaseAdmin,
@@ -14,9 +14,6 @@ import {
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-const MAX_EDGE = 1600;
-const WEBP_QUALITY = 72;
 
 /**
  * Reprocessa uma foto já enviada para borrar a placa (carros antigos
@@ -71,39 +68,47 @@ export async function POST(request: Request) {
       return NextResponse.json({ url, blurred: false });
     }
 
-    const optimized = await sharp(processed, { failOn: "none" })
-      .rotate()
-      .resize({
-        width: MAX_EDGE,
-        height: MAX_EDGE,
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .webp({ quality: WEBP_QUALITY, effort: 4 })
-      .toBuffer();
-
-    const path = `${Date.now()}-${crypto.randomUUID()}.webp`;
+    const [gallery, card] = await Promise.all([
+      encodeGalleryImage(processed),
+      encodeCardImage(processed),
+    ]);
+    const id = `${Date.now()}-${crypto.randomUUID()}`;
+    const galleryPath = `${id}.${gallery.extension}`;
+    const cardPath = cardObjectPath(galleryPath);
     const supabase = getSupabaseAdmin();
-    const { error } = await supabase.storage
-      .from(VEHICLE_PHOTOS_BUCKET)
-      .upload(path, optimized, {
-        contentType: "image/webp",
+
+    const [galleryUpload, cardUpload] = await Promise.all([
+      supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(galleryPath, gallery.buffer, {
+        contentType: gallery.contentType,
         upsert: false,
         cacheControl: "31536000",
-      });
+      }),
+      supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(cardPath, card.buffer, {
+        contentType: card.contentType,
+        upsert: false,
+        cacheControl: "31536000",
+      }),
+    ]);
 
-    if (error) {
+    if (galleryUpload.error) {
       return NextResponse.json(
-        { error: error.message || "Falha ao salvar a foto borracha." },
+        { error: galleryUpload.error.message || "Falha ao salvar a foto borracha." },
         { status: 500 },
       );
     }
 
     const { data } = supabase.storage
       .from(VEHICLE_PHOTOS_BUCKET)
-      .getPublicUrl(path);
+      .getPublicUrl(galleryPath);
+    const thumb = supabase.storage
+      .from(VEHICLE_PHOTOS_BUCKET)
+      .getPublicUrl(cardPath);
 
-    return NextResponse.json({ url: data.publicUrl, blurred: true });
+    return NextResponse.json({
+      url: data.publicUrl,
+      thumbnailUrl: cardUpload.error ? null : thumb.data.publicUrl,
+      blurred: true,
+    });
   } catch (error) {
     console.error("[upload/reblur]", error);
     return NextResponse.json(

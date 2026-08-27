@@ -28,13 +28,13 @@ import {
   IconMapPin,
   IconShieldCheck,
 } from "@/components/site/icons";
-import { itemListJsonLd, websiteJsonLd } from "@/lib/seo";
+import { itemListJsonLd, localBusinessJsonLd, websiteJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getPublishedFaq, getSiteContent } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 import {
   getFeaturedVehicles,
-  getStockFacets,
+  getStockBrands,
   getTestimonials,
 } from "@/lib/vehicles";
 
@@ -59,10 +59,10 @@ const REASONS = [
 ] as const;
 
 export default async function HomePage() {
-  const [featured, facets, testimonials, publicSite, siteContent, faqItems] =
+  const [featured, brands, testimonials, publicSite, siteContent, faqItems] =
     await Promise.all([
     getFeaturedVehicles(8),
-    getStockFacets(),
+    getStockBrands(5),
     getTestimonials(6),
     getPublicSite(),
     getSiteContent(),
@@ -78,6 +78,21 @@ export default async function HomePage() {
             name: `Destaques — ${site.name}`,
             path: "/",
           })}
+        />
+      ) : null}
+      {testimonials.filter((item) => !String(item.id).startsWith("seed-")).length > 0 ? (
+        <JsonLd
+          data={localBusinessJsonLd(
+            publicSite,
+            testimonials
+              .filter((item) => !String(item.id).startsWith("seed-"))
+              .map((item) => ({
+                name: item.name,
+                city: item.city,
+                message: item.message,
+                rating: item.rating,
+              })),
+          )}
         />
       ) : null}
 
@@ -122,7 +137,7 @@ export default async function HomePage() {
           </div>
 
           <div className="hero-search mt-5 flex w-full justify-center sm:mt-6 lg:mt-10">
-            <HeroSearch brands={facets.brands} />
+            <HeroSearch brands={brands} />
           </div>
 
           <ActionRow className="hero-cta mt-5 w-full sm:mt-6 lg:mt-8 sm:w-auto">

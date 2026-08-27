@@ -1,22 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
 export function ScrollProgress() {
-  const [progress, setProgress] = useState(0);
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const bar = barRef.current;
+    if (!bar) return;
     let frame = 0;
 
     function update() {
       frame = 0;
       const total =
         document.documentElement.scrollHeight - window.innerHeight;
-      if (total <= 0) {
-        setProgress(0);
-        return;
-      }
-      setProgress(Math.min((window.scrollY / total) * 100, 100));
+      const progress = total <= 0 ? 0 : Math.min(window.scrollY / total, 1);
+      if (bar) bar.style.transform = `scaleX(${progress})`;
     }
 
     function onScroll() {
@@ -34,12 +33,13 @@ export function ScrollProgress() {
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-[3px]"
+      className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-[3px] origin-left"
       aria-hidden="true"
     >
       <div
-        className="h-full progress-brand"
-        style={{ width: `${progress}%` }}
+        ref={barRef}
+        className="h-full origin-left progress-brand will-change-transform"
+        style={{ transform: "scaleX(0)" }}
       />
     </div>
   );

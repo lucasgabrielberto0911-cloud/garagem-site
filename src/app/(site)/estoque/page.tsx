@@ -3,12 +3,12 @@ import { Suspense } from "react";
 import {
   EstoqueBrowse,
   EstoqueBrowseFallback,
-  type EstoqueSearchParams,
 } from "@/components/site/EstoqueBrowse";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader } from "@/components/site/ui";
 import { buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
+import { getStockFacets, getStockPage } from "@/lib/vehicles";
 
 export const revalidate = 120;
 
@@ -18,11 +18,12 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/estoque",
 });
 
-export default function EstoquePage({
-  searchParams,
-}: {
-  searchParams: EstoqueSearchParams;
-}) {
+export default async function EstoquePage() {
+  const [stock, facets] = await Promise.all([
+    getStockPage({ page: 1 }),
+    getStockFacets(),
+  ]);
+
   return (
     <div className="py-10 lg:py-12">
       <Container>
@@ -33,7 +34,7 @@ export default function EstoquePage({
         />
 
         <Suspense fallback={<EstoqueBrowseFallback />}>
-          <EstoqueBrowse searchParams={searchParams} />
+          <EstoqueBrowse initialStock={stock} facets={facets} />
         </Suspense>
 
         <div className="mt-10">
