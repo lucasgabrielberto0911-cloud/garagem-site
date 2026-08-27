@@ -1,7 +1,7 @@
 import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
-import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
+import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatVehicleLabel } from "@/lib/format";
 import { coverSrc, type VehicleCardRecord } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
@@ -42,6 +42,10 @@ export function VehicleCard({
       <FavoriteButton
         vehicleId={vehicle.id}
         label={`${title} ${vehicle.yearModel}`}
+        value={vehicle.price}
+        make={formatBrandName(vehicle.brand)}
+        model={formatModelName(vehicle.model)}
+        year={vehicle.yearModel}
         className="absolute right-1.5 top-1.5 z-20"
       />
 

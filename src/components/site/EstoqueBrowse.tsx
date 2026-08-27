@@ -7,6 +7,7 @@ import { StockBrowseShell } from "@/components/site/StockPending";
 import { StockFilters, type Facets } from "@/components/site/StockFilters";
 import { StockInfiniteList } from "@/components/site/StockInfiniteList";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
+import { StockSearchPixel } from "@/components/site/VehiclePixel";
 import { WhatsAppButton } from "@/components/site/ui";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
 import {
@@ -14,6 +15,7 @@ import {
   STOCK_PAGE_SIZE,
   type StockPageResult,
 } from "@/lib/stock-query";
+import { stockSearchString } from "@/lib/meta-pixel";
 
 export type EstoqueSearchParams = {
   q?: string;
@@ -199,9 +201,18 @@ export function EstoqueBrowse({
 
   const returnTo = buildReturnTo(params);
   const filters = parseStockFilters(params, { page: 1 });
+  const searchString = stockSearchString(params);
+  const resultIds = stock.vehicles.map((vehicle) => vehicle.id);
 
   return (
     <>
+      {!loading && filtered && searchString ? (
+        <StockSearchPixel
+          active
+          searchString={searchString}
+          contentIds={resultIds}
+        />
+      ) : null}
       {stock.error ? (
         <div className="mt-6">
           <SiteErrorNotice message="O estoque pode estar incompleto por uma falha temporária de conexão. Atualize a página em instantes." />

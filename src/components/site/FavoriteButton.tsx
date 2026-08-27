@@ -3,16 +3,25 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useFavorites } from "@/lib/favorites";
+import { trackAddToWishlist } from "@/lib/meta-pixel";
 
 export function FavoriteButton({
   vehicleId,
   label,
+  value,
+  make,
+  model,
+  year,
   variant = "icon",
   size = "md",
   className = "",
 }: {
   vehicleId: string;
   label: string;
+  value?: number;
+  make?: string;
+  model?: string;
+  year?: number;
   variant?: "icon" | "full";
   size?: "sm" | "md";
   className?: string;
@@ -24,6 +33,16 @@ export function FavoriteButton({
   function applyToggle() {
     try {
       const added = toggle(vehicleId);
+      if (added) {
+        trackAddToWishlist({
+          content_ids: [vehicleId],
+          content_name: label,
+          value,
+          make,
+          model,
+          year,
+        });
+      }
       setPulse(true);
       window.setTimeout(() => setPulse(false), 320);
       toast.success(

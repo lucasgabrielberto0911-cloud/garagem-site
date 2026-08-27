@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { VehicleContactHit } from "@/components/site/VehiclePixel";
+import { VehicleLeadHit } from "@/components/site/VehiclePixel";
 import { formatCurrencyBRL } from "@/lib/format";
 import { whatsappUrl } from "@/lib/site";
 
@@ -45,7 +45,14 @@ export function VehicleMobileBar({
             Ver estoque
           </Link>
         ) : (
-          <VehicleContactHit contentId={vehicleId} contentName={contentName}>
+          <VehicleLeadHit
+            contentId={vehicleId}
+            contentName={contentName}
+            value={price}
+            make={brand}
+            model={model}
+            year={year}
+          >
             <a
               href={whatsappUrl(
                 `Olá! Vi o ${label} no site da Garagem e tenho interesse!`,
@@ -56,7 +63,7 @@ export function VehicleMobileBar({
             >
               WhatsApp
             </a>
-          </VehicleContactHit>
+          </VehicleLeadHit>
         )}
       </div>
     </div>
