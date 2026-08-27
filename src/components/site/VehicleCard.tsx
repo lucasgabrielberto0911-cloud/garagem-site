@@ -2,7 +2,7 @@ import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
-import { coverSrc, type VehicleCardRecord } from "@/lib/vehicles";
+import { coverSrc, type VehicleCardRecord } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export type VehicleCardData = VehicleCardRecord;

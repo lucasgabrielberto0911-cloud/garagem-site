@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { InfiniteSentinel } from "@/components/InfiniteSentinel";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
-import type { VehicleCardRecord } from "@/lib/vehicles";
+import type { VehicleCardRecord } from "@/lib/stock-query";
 
 type StockQuery = Record<string, string | undefined>;
 

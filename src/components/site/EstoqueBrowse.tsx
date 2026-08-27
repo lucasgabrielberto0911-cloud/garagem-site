@@ -13,7 +13,7 @@ import {
   parseStockFilters,
   STOCK_PAGE_SIZE,
   type StockPageResult,
-} from "@/lib/vehicles";
+} from "@/lib/stock-query";
 
 export type EstoqueSearchParams = {
   q?: string;
