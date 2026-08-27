@@ -104,6 +104,7 @@ function Avatar({
           fill
           sizes="40px"
           quality={60}
+          unoptimized={/^https?:\/\//i.test(photoUrl)}
           className="object-cover"
         />
       </div>

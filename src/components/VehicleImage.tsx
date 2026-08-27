@@ -32,6 +32,10 @@ export function VehicleImage({
   quality?: number;
 }) {
   const finalSrc = src || VEHICLE_PLACEHOLDER;
+  // Fotos remotas (Supabase) não passam pelo otimizador da Vercel: a cota
+  // Hobby esgotou e /_next/image devolve 402. Placeholder local segue o
+  // default do next.config.
+  const skipOptimizer = unoptimized || /^https?:\/\//i.test(finalSrc);
 
   if (fill) {
     return (
@@ -41,7 +45,7 @@ export function VehicleImage({
         fill
         sizes={sizes}
         className={className}
-        unoptimized={unoptimized}
+        unoptimized={skipOptimizer}
         priority={priority}
         quality={VEHICLE_IMAGE_QUALITY}
       />
@@ -55,7 +59,7 @@ export function VehicleImage({
       width={width ?? 160}
       height={height ?? 120}
       className={className}
-      unoptimized={unoptimized}
+      unoptimized={skipOptimizer}
       priority={priority}
       quality={VEHICLE_IMAGE_QUALITY}
     />
