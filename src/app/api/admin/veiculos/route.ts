@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
     const result = await getAdminVehiclesPage({
       q: params.get("q") ?? "",
       tab: resolveTab(params.get("tab")),
+      status: params.get("status") ?? undefined,
       page,
       pageSize,
       sort,

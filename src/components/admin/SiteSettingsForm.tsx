@@ -216,7 +216,8 @@ export function SiteSettingsForm({
 
       <SiteContentEditor initial={content} errors={errors} />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="sticky bottom-0 z-20 -mx-4 mt-2 border-t border-white/10 bg-ink/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0 lg:pb-0">
+        <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={isPending} className={btn.primary}>
           {isPending ? "Salvando…" : "Salvar dados do site"}
         </button>
@@ -224,6 +225,7 @@ export function SiteSettingsForm({
           Telefones, Instagram e CNPJ continuam em{" "}
           <code className="text-cream/80">src/lib/site.ts</code>.
         </p>
+        </div>
       </div>
 
       <Card title="Manutenção de fotos">

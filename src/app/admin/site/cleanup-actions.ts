@@ -41,7 +41,13 @@ export async function cleanupOrphanPhotos(): Promise<CleanupResult> {
 
   try {
     const supabase = getSupabaseAdmin();
-    const photos = await prisma.photo.findMany({ select: { url: true } });
+    const photos = await prisma.photo.findMany({
+      select: { url: true, thumbnailUrl: true },
+    }).catch(async (error) => {
+      console.warn("[storage] cleanup: thumbnailUrl ainda não existe.", error);
+      const legacy = await prisma.photo.findMany({ select: { url: true } });
+      return legacy.map((photo) => ({ ...photo, thumbnailUrl: null as string | null }));
+    });
     let extraUrls: Array<string | null | undefined> = [];
     try {
       const [costs, documents] = await Promise.all([
@@ -56,7 +62,10 @@ export async function cleanupOrphanPhotos(): Promise<CleanupResult> {
       console.warn("[storage] cleanup: tabelas de operação ainda não existem.", error);
     }
     const referenced = new Set(
-      [...photos.map((photo) => photo.url), ...extraUrls]
+      [
+        ...photos.flatMap((photo) => [photo.url, photo.thumbnailUrl]),
+        ...extraUrls,
+      ]
         .map((url) => (url ? storagePathFromPublicUrl(url) : null))
         .filter((path): path is string => Boolean(path)),
     );

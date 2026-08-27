@@ -87,12 +87,33 @@ function parseVehicleFields(formData: FormData) {
     throw new Error("Portas inválidas.");
   }
 
-  let photoUrls: string[] = [];
+  let photos: Array<{ url: string; thumbnailUrl: string | null }> = [];
   const photosRaw = String(formData.get("photoUrls") || "[]");
   try {
-    const parsed = JSON.parse(photosRaw);
+    const parsed = JSON.parse(photosRaw) as unknown;
     if (Array.isArray(parsed)) {
-      photoUrls = parsed.filter((url): url is string => typeof url === "string");
+      photos = parsed
+        .map((item) => {
+          if (typeof item === "string" && item) {
+            return { url: item, thumbnailUrl: null };
+          }
+          if (
+            item &&
+            typeof item === "object" &&
+            typeof (item as { url?: unknown }).url === "string"
+          ) {
+            const url = (item as { url: string }).url;
+            const thumbnailUrl =
+              typeof (item as { thumbnailUrl?: unknown }).thumbnailUrl === "string"
+                ? (item as { thumbnailUrl: string }).thumbnailUrl
+                : null;
+            return { url, thumbnailUrl };
+          }
+          return null;
+        })
+        .filter((item): item is { url: string; thumbnailUrl: string | null } =>
+          Boolean(item),
+        );
     }
   } catch {
     throw new Error("Fotos inválidas.");
@@ -129,7 +150,7 @@ function parseVehicleFields(formData: FormData) {
     accessories,
     status,
     featured,
-    photoUrls,
+    photos,
     purchasePrice,
     inStoreName,
     hasSpareKey,
@@ -185,7 +206,11 @@ export async function createVehicle(
         hasManual: data.hasManual,
         hasVideo: data.hasVideo,
         photos: {
-          create: data.photoUrls.map((url, order) => ({ url, order })),
+          create: data.photos.map((photo, order) => ({
+            url: photo.url,
+            thumbnailUrl: photo.thumbnailUrl,
+            order,
+          })),
         },
       },
     });
@@ -219,10 +244,19 @@ export async function updateVehicle(
   try {
     const data = parseVehicleFields(formData);
 
-    const previous = await prisma.photo.findMany({
-      where: { vehicleId: id },
-      select: { url: true },
-    });
+    let previous: Array<{ url: string; thumbnailUrl: string | null }> = [];
+    try {
+      previous = await prisma.photo.findMany({
+        where: { vehicleId: id },
+        select: { url: true, thumbnailUrl: true },
+      });
+    } catch {
+      const legacy = await prisma.photo.findMany({
+        where: { vehicleId: id },
+        select: { url: true },
+      });
+      previous = legacy.map((photo) => ({ ...photo, thumbnailUrl: null }));
+    }
 
     await prisma.$transaction([
       prisma.photo.deleteMany({ where: { vehicleId: id } }),
@@ -253,16 +287,20 @@ export async function updateVehicle(
           featured: data.featured,
           hasVideo: data.hasVideo,
           photos: {
-            create: data.photoUrls.map((url, order) => ({ url, order })),
+            create: data.photos.map((photo, order) => ({
+              url: photo.url,
+              thumbnailUrl: photo.thumbnailUrl,
+              order,
+            })),
           },
         },
       }),
     ]);
 
-    const kept = new Set(data.photoUrls);
-    const removed = previous
-      .map((photo) => photo.url)
-      .filter((url) => !kept.has(url));
+    const kept = new Set(data.photos.map((photo) => photo.url));
+    const removed = previous.flatMap((photo) =>
+      kept.has(photo.url) ? [] : [photo.url, photo.thumbnailUrl],
+    );
     if (removed.length > 0) {
       await deleteStoragePublicUrls(removed);
     }
@@ -285,7 +323,7 @@ export async function deleteVehicle(id: string) {
   const vehicle = await prisma.vehicle.findUnique({
     where: { id },
     include: {
-      photos: { select: { url: true } },
+      photos: { select: { url: true, thumbnailUrl: true } },
       costs: { select: { receiptUrl: true } },
       documents: { select: { fileUrl: true } },
     },
@@ -293,7 +331,7 @@ export async function deleteVehicle(id: string) {
 
   await prisma.vehicle.delete({ where: { id } });
   await deleteStoragePublicUrls([
-    ...(vehicle?.photos.map((photo) => photo.url) ?? []),
+    ...(vehicle?.photos.flatMap((photo) => [photo.url, photo.thumbnailUrl]) ?? []),
     ...(vehicle?.costs.map((cost) => cost.receiptUrl) ?? []),
     ...(vehicle?.documents.map((doc) => doc.fileUrl) ?? []),
   ]);
@@ -389,7 +427,11 @@ export async function duplicateVehicle(id: string) {
       hasSpareKey: source.hasSpareKey,
       hasManual: source.hasManual,
       photos: {
-        create: source.photos.map((photo, order) => ({ url: photo.url, order })),
+        create: source.photos.map((photo, order) => ({
+          url: photo.url,
+          thumbnailUrl: photo.thumbnailUrl,
+          order,
+        })),
       },
     },
   });

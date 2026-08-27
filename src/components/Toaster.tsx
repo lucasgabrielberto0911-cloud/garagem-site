@@ -6,7 +6,8 @@ export function AppToaster() {
   return (
     <Sonner
       theme="dark"
-      position="top-right"
+      position="top-center"
+      offset="max(0.75rem, env(safe-area-inset-top, 0px))"
       toastOptions={{
         style: {
           background: "#17171A",

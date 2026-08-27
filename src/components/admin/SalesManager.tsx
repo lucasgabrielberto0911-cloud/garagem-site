@@ -101,22 +101,6 @@ const PERIODS = [
 
 type Period = (typeof PERIODS)[number]["value"];
 
-function matchesPeriod(date: Date, period: Period) {
-  if (period === "all") return true;
-  const now = new Date();
-
-  if (period === "month") {
-    return (
-      date.getMonth() === now.getMonth() &&
-      date.getFullYear() === now.getFullYear()
-    );
-  }
-  if (period === "year") return date.getFullYear() === now.getFullYear();
-
-  const days = Number(period);
-  return now.getTime() - date.getTime() <= days * 24 * 60 * 60 * 1000;
-}
-
 function exportSalesCsv(sales: SaleRow[]) {
   const header = [
     "Data",
@@ -191,12 +175,14 @@ export function SalesManager({
   sales,
   salesTotal,
   pageSize,
+  period,
   vehicles,
   customers,
 }: {
   sales: SaleRow[];
   salesTotal: number;
   pageSize: number;
+  period: Period;
   vehicles: SellableVehicle[];
   customers: CustomerOption[];
 }) {
@@ -225,7 +211,6 @@ export function SalesManager({
   const [saleDate, setSaleDate] = useState(todayInputValue());
   const [notes, setNotes] = useState("");
   const [cancelTarget, setCancelTarget] = useState<SaleRow | null>(null);
-  const [period, setPeriod] = useState<Period>("all");
 
   const isEditing = editingId !== null;
   const isHistorical = source === "historica";
@@ -255,10 +240,7 @@ export function SalesManager({
     ];
   }, [vehicles, editingSale]);
 
-  const filteredSales = useMemo(
-    () => rows.filter((sale) => matchesPeriod(new Date(sale.saleDate), period)),
-    [rows, period],
-  );
+  const filteredSales = rows;
 
   const hasMore = rows.length < total;
 
@@ -270,7 +252,7 @@ export function SalesManager({
     try {
       const nextPage = page + 1;
       const response = await fetch(
-        `/api/admin/vendas?page=${nextPage}&pageSize=${pageSize}`,
+        `/api/admin/vendas?page=${nextPage}&pageSize=${pageSize}&period=${period}`,
       );
       if (!response.ok) throw new Error("fetch");
       const data = (await response.json()) as {
@@ -705,7 +687,16 @@ export function SalesManager({
             <>
               <select
                 value={period}
-                onChange={(event) => setPeriod(event.target.value as Period)}
+                onChange={(event) => {
+                  const next = event.target.value as Period;
+                  const params = new URLSearchParams();
+                  if (next !== "all") params.set("period", next);
+                  router.push(
+                    params.toString()
+                      ? `/admin/vendas?${params.toString()}`
+                      : "/admin/vendas",
+                  );
+                }}
                 className={`${inputClass} sm:w-48`}
                 aria-label="Filtrar por período"
               >
@@ -732,7 +723,7 @@ export function SalesManager({
                   if (hasMore) {
                     try {
                       const response = await fetch(
-                        `/api/admin/vendas?page=1&pageSize=500`,
+                        `/api/admin/vendas?page=1&pageSize=500&period=${period}`,
                       );
                       if (response.ok) {
                         const data = (await response.json()) as {
@@ -744,11 +735,7 @@ export function SalesManager({
                       toast.error("Exportando só as vendas já carregadas.");
                     }
                   }
-                  exportSalesCsv(
-                    source.filter((sale) =>
-                      matchesPeriod(new Date(sale.saleDate), period),
-                    ),
-                  );
+                  exportSalesCsv(source);
                 }}
                 disabled={filteredSales.length === 0}
                 className={`${btn.outline} w-full sm:ml-auto sm:w-auto`}

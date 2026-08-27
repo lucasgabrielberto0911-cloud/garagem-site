@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { SalesManager } from "@/components/admin/SalesManager";
 import { AdminPageHeader, StatCard, adminStatGrid } from "@/components/admin/ui";
-import { getAdminSalesPage } from "@/lib/admin-vehicles";
+import { getAdminSalesPage, parseSalesPeriod } from "@/lib/admin-vehicles";
 import { getSession } from "@/lib/auth";
 import { formatCurrencyBRL } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -14,15 +14,20 @@ function startOfMonth() {
   return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
-export default async function VendasPage() {
+export default async function VendasPage({
+  searchParams,
+}: {
+  searchParams: { period?: string };
+}) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
   const monthStart = startOfMonth();
+  const period = parseSalesPeriod(searchParams.period);
 
   const [list, vehicles, customers, totals, monthTotals, profitRows] =
     await Promise.all([
-      getAdminSalesPage({ page: 1 }),
+      getAdminSalesPage({ page: 1, period }),
       prisma.vehicle.findMany({
         where: { sale: null, historical: false },
         orderBy: [{ status: "asc" }, { createdAt: "desc" }],
@@ -118,9 +123,11 @@ export default async function VendasPage() {
       </section>
 
       <SalesManager
+        key={period}
         sales={list.sales}
         salesTotal={list.total}
         pageSize={list.pageSize}
+        period={period}
         vehicles={vehicles}
         customers={customers}
       />

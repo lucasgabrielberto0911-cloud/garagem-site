@@ -42,8 +42,8 @@ export function SiteContentEditor({
     setUploadingFounder(true);
     try {
       const { uploadImageDirect } = await import("@/lib/upload-image-direct");
-      const url = await uploadImageDirect(file);
-      setFounderPhotoUrl(url);
+      const photo = await uploadImageDirect(file);
+      setFounderPhotoUrl(photo.url);
       toast.success("Foto do Elias enviada. Clique em salvar.");
     } catch (error) {
       toast.error(

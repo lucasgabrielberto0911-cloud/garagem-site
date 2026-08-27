@@ -87,7 +87,7 @@ export function StockInfiniteList({
           rootMargin="400px 0px"
         >
           {loading ? (
-            <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
+            <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted" aria-live="polite">
               <span
                 className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-r-transparent"
                 aria-hidden="true"

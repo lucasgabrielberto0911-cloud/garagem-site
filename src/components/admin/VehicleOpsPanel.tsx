@@ -21,6 +21,7 @@ import {
 import { AdminFileDrop } from "@/components/admin/AdminFileDrop";
 import { Badge, Card, Field, btn, iconTap, inputClass } from "@/components/admin/ui";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import { adminFileViewHref } from "@/lib/supabase";
 import { uploadAdminFile } from "@/lib/upload-admin-file";
 import {
   VEHICLE_COST_KINDS,
@@ -114,6 +115,7 @@ export function VehicleOpsPanel({
   const [opsPending, startOpsTransition] = useTransition();
   const [itemPending, startItemTransition] = useTransition();
   const [opsNote, setOpsNote] = useState("Salva ao tocar");
+  const saveTimer = useRef<number>(0);
   const [inStoreName, setInStoreName] = useState(vehicle.inStoreName);
   const [hasSpareKey, setHasSpareKey] = useState(vehicle.hasSpareKey);
   const [hasManual, setHasManual] = useState(vehicle.hasManual);
@@ -149,6 +151,10 @@ export function VehicleOpsPanel({
     | { type: "doc"; id: string; label: string }
     | null
   >(null);
+
+  useEffect(() => {
+    return () => window.clearTimeout(saveTimer.current);
+  }, []);
 
   useEffect(() => {
     const next: OpsDraft = {
@@ -192,23 +198,27 @@ export function VehicleOpsPanel({
     setHasSpareKey(next.hasSpareKey);
     setHasManual(next.hasManual);
     setPurchase(next.purchase);
+    setOpsNote("Salvando…");
 
-    const formData = new FormData();
-    formData.set("inStoreName", next.inStoreName ? "on" : "off");
-    formData.set("hasSpareKey", next.hasSpareKey ? "on" : "off");
-    formData.set("hasManual", next.hasManual ? "on" : "off");
-    formData.set("purchasePrice", next.purchase);
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      const formData = new FormData();
+      formData.set("inStoreName", next.inStoreName ? "on" : "off");
+      formData.set("hasSpareKey", next.hasSpareKey ? "on" : "off");
+      formData.set("hasManual", next.hasManual ? "on" : "off");
+      formData.set("purchasePrice", next.purchase);
 
-    startOpsTransition(async () => {
-      const result = await updateVehicleOps(vehicle.id, formData);
-      if (result.ok) {
-        setOpsNote("Salvo");
-        refresh();
-      } else {
-        setOpsNote("Erro ao salvar");
-        toast.error(result.message);
-      }
-    });
+      startOpsTransition(async () => {
+        const result = await updateVehicleOps(vehicle.id, formData);
+        if (result.ok) {
+          setOpsNote("Salvo");
+          refresh();
+        } else {
+          setOpsNote("Erro ao salvar");
+          toast.error(result.message);
+        }
+      });
+    }, 600);
   }
 
   function handleAddCost(event: React.FormEvent<HTMLFormElement>) {
@@ -305,7 +315,7 @@ export function VehicleOpsPanel({
       <Card
         title="Checklist interno"
         action={
-          <span className="text-[11px] text-muted">
+          <span className="text-[11px] text-muted" aria-live="polite">
             {opsPending ? "Salvando…" : opsNote}
           </span>
         }
@@ -513,7 +523,7 @@ export function VehicleOpsPanel({
                 </p>
                 {cost.receiptUrl ? (
                   <a
-                    href={cost.receiptUrl}
+                    href={adminFileViewHref(cost.receiptUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={iconTap}
@@ -677,7 +687,7 @@ export function VehicleOpsPanel({
                   <Badge tone="neutral">{docKindLabel(doc.kind)}</Badge>
                 )}
                 <a
-                  href={doc.fileUrl}
+                  href={adminFileViewHref(doc.fileUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={iconTap}

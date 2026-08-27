@@ -36,8 +36,6 @@ export default async function EditVehiclePage({
     where: { id: params.id },
     include: {
       photos: { orderBy: { order: "asc" } },
-      costs: { orderBy: { incurredAt: "desc" } },
-      documents: { orderBy: { createdAt: "desc" } },
       sale: { select: { salePrice: true } },
     },
   });
@@ -45,6 +43,20 @@ export default async function EditVehiclePage({
   if (!vehicle) {
     notFound();
   }
+
+  const [costs, documents] =
+    view === "operacao"
+      ? await Promise.all([
+          prisma.vehicleCost.findMany({
+            where: { vehicleId: vehicle.id },
+            orderBy: { incurredAt: "desc" },
+          }),
+          prisma.vehicleDocument.findMany({
+            where: { vehicleId: vehicle.id },
+            orderBy: { createdAt: "desc" },
+          }),
+        ])
+      : [[], []];
 
   const status = STATUS_LABEL[vehicle.status] ?? {
     label: vehicle.status,
@@ -93,8 +105,8 @@ export default async function EditVehiclePage({
             hasSpareKey: vehicle.hasSpareKey,
             hasManual: vehicle.hasManual,
           }}
-          costs={vehicle.costs}
-          documents={vehicle.documents}
+          costs={costs}
+          documents={documents}
         />
       ) : (
         <VehicleForm mode="edit" vehicle={vehicle} />

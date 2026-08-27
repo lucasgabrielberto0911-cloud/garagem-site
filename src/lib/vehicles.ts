@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { isMissingColumnError } from "@/lib/prisma-errors";
 import { brandKey, formatBrandName } from "@/lib/format";
 import { extractVehicleIdFromParam, vehicleSlug } from "@/lib/vehicle-slug";
 import { SEED_TESTIMONIALS } from "@/lib/testimonials-seed";
@@ -19,6 +20,26 @@ const PUBLIC_CACHE: { revalidate: number; tags: string[] } = {
  * Só a capa — sem count de fotos (subquery extra por linha).
  */
 export const PUBLIC_VEHICLE_CARD_SELECT = {
+  id: true,
+  category: true,
+  brand: true,
+  model: true,
+  version: true,
+  yearModel: true,
+  km: true,
+  price: true,
+  transmission: true,
+  fuel: true,
+  status: true,
+  featured: true,
+  photos: {
+    orderBy: { order: "asc" as const },
+    take: 1,
+    select: { url: true, thumbnailUrl: true },
+  },
+} as const;
+
+const PUBLIC_VEHICLE_CARD_SELECT_LEGACY = {
   id: true,
   category: true,
   brand: true,
@@ -159,6 +180,8 @@ export function parseStockFilters(
   };
 }
 
+export type VehicleCardPhoto = { url: string; thumbnailUrl?: string | null };
+
 export type VehicleCardRecord = {
   id: string;
   category?: string;
@@ -172,8 +195,13 @@ export type VehicleCardRecord = {
   fuel: string;
   status: string;
   featured: boolean;
-  photos: Array<{ url: string }>;
+  photos: VehicleCardPhoto[];
 };
+
+export function coverSrc(photos: VehicleCardPhoto[] | undefined) {
+  const photo = photos?.[0];
+  return photo?.thumbnailUrl || photo?.url;
+}
 
 export type PublicVehicleDetail = {
   id: string;
@@ -233,19 +261,38 @@ function dataIsObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+async function findCardVehicles(
+  args: Omit<Parameters<typeof prisma.vehicle.findMany>[0], "select">,
+): Promise<VehicleCardRecord[]> {
+  try {
+    return (await prisma.vehicle.findMany({
+      ...args,
+      select: PUBLIC_VEHICLE_CARD_SELECT,
+    })) as VehicleCardRecord[];
+  } catch (error) {
+    if (!isMissingColumnError(error, "thumbnailUrl")) throw error;
+    const rows = await prisma.vehicle.findMany({
+      ...args,
+      select: PUBLIC_VEHICLE_CARD_SELECT_LEGACY,
+    });
+    return rows.map((row) => ({
+      ...row,
+      photos: row.photos.map((photo) => ({ ...photo, thumbnailUrl: null })),
+    }));
+  }
+}
+
 async function fetchFeaturedVehicles(take: number): Promise<VehicleCardRecord[]> {
-  const featured = await prisma.vehicle.findMany({
+  const featured = await findCardVehicles({
     where: { status: "disponivel", featured: true },
-    select: PUBLIC_VEHICLE_CARD_SELECT,
     orderBy: { createdAt: "desc" },
     take,
   });
 
   if (featured.length > 0) return featured;
 
-  return prisma.vehicle.findMany({
+  return findCardVehicles({
     where: { status: "disponivel" },
-    select: PUBLIC_VEHICLE_CARD_SELECT,
     orderBy: { createdAt: "desc" },
     take: Math.min(take, 4),
   });
@@ -253,7 +300,7 @@ async function fetchFeaturedVehicles(take: number): Promise<VehicleCardRecord[]>
 
 const loadFeaturedCached = unstable_cache(
   async (take: number) => fetchFeaturedVehicles(take),
-  ["featured-vehicles-v3"],
+  ["featured-vehicles-v4"],
   PUBLIC_CACHE,
 );
 
@@ -338,9 +385,8 @@ async function fetchRelatedVehicles(
   category: string,
   price: number,
 ): Promise<VehicleCardRecord[]> {
-  const pool = await prisma.vehicle.findMany({
+  const pool = await findCardVehicles({
     where: { status: "disponivel", id: { not: vehicleId } },
-    select: PUBLIC_VEHICLE_CARD_SELECT,
     orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
     take: 48,
   });
@@ -362,7 +408,7 @@ const loadRelatedCached = unstable_cache(
     category: string,
     price: number,
   ) => fetchRelatedVehicles(vehicleId, brand, take, category, price),
-  ["related-vehicles-v3"],
+  ["related-vehicles-v4"],
   PUBLIC_CACHE,
 );
 
@@ -525,9 +571,8 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
   const [total, vehicles] = await Promise.all([
     prisma.vehicle.count({ where }),
-    prisma.vehicle.findMany({
+    findCardVehicles({
       where,
-      select: PUBLIC_VEHICLE_CARD_SELECT,
       orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -545,7 +590,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v4"],
+  ["stock-page-v5"],
   PUBLIC_CACHE,
 );
 
@@ -692,6 +737,36 @@ export const getStockFacets = cache(() =>
   safeQuery("filtros do estoque", () => loadStockFacetsCached(), EMPTY_FACETS),
 );
 
+const loadStockBrandsCached = unstable_cache(
+  async (take: number) => {
+    const rows = await prisma.vehicle.groupBy({
+      by: ["brand"],
+      where: { status: "disponivel" },
+      _count: { _all: true },
+      orderBy: { _count: { brand: "desc" } },
+      take,
+    });
+
+    const brandsByKey = new Map<string, string>();
+    for (const row of rows) {
+      const raw = row.brand?.trim();
+      if (!raw) continue;
+      const key = brandKey(raw);
+      if (!brandsByKey.has(key)) {
+        brandsByKey.set(key, formatBrandName(raw));
+      }
+    }
+    return Array.from(brandsByKey.values());
+  },
+  ["stock-brands-v1"],
+  PUBLIC_CACHE,
+);
+
+/** Só as marcas mais presentes — home/hero, sem as 7 consultas de facets. */
+export const getStockBrands = cache((take = 5) =>
+  safeQuery("marcas do estoque", () => loadStockBrandsCached(take), [] as string[]),
+);
+
 const EMPTY_STATS = {
   availableLive: 0,
   salesLive: 0,
@@ -757,23 +832,48 @@ function testimonialsFromSeed() {
   }));
 }
 
-const loadTestimonialsCached = unstable_cache(
-  async (take: number) =>
-    prisma.testimonial.findMany({
+const TESTIMONIAL_SELECT = {
+  id: true,
+  name: true,
+  city: true,
+  message: true,
+  photoUrl: true,
+  rating: true,
+  vehicleLabel: true,
+} as const;
+
+const TESTIMONIAL_SELECT_LEGACY = {
+  id: true,
+  name: true,
+  city: true,
+  message: true,
+  photoUrl: true,
+  vehicleLabel: true,
+} as const;
+
+async function fetchPublishedTestimonials(take: number) {
+  try {
+    return await prisma.testimonial.findMany({
       where: { published: true },
-      select: {
-        id: true,
-        name: true,
-        city: true,
-        message: true,
-        photoUrl: true,
-        rating: true,
-        vehicleLabel: true,
-      },
+      select: TESTIMONIAL_SELECT,
       orderBy: [{ order: "asc" }, { createdAt: "desc" }],
       take,
-    }),
-  ["testimonials-v4"],
+    });
+  } catch (error) {
+    if (!isMissingColumnError(error, "rating")) throw error;
+    const rows = await prisma.testimonial.findMany({
+      where: { published: true },
+      select: TESTIMONIAL_SELECT_LEGACY,
+      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+      take,
+    });
+    return rows.map((item) => ({ ...item, rating: 5 }));
+  }
+}
+
+const loadTestimonialsCached = unstable_cache(
+  async (take: number) => fetchPublishedTestimonials(take),
+  ["testimonials-v5"],
   TESTIMONIALS_CACHE,
 );
 

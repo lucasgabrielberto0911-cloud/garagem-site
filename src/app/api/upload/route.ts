@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import sharp from "sharp";
 import { getSession } from "@/lib/auth";
 import { blurDetectedPlates } from "@/lib/blur-plates";
+import { cardObjectPath, encodeCardImage, encodeGalleryImage } from "@/lib/image-variants";
 import {
   VEHICLE_PHOTOS_BUCKET,
   getSupabaseAdmin,
@@ -12,8 +12,6 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_SIZE = 15 * 1024 * 1024;
-const MAX_EDGE = 1600;
-const WEBP_QUALITY = 72;
 
 type Detected = "image/jpeg" | "image/png" | "image/webp" | "image/gif" | "image/heic";
 
@@ -70,29 +68,22 @@ async function toProcessableBuffer(
   return { buffer: Buffer.from(jpeg), detected: "image/jpeg" };
 }
 
-/**
- * Normaliza qualquer formato aceito para WebP leve (redimensiona + comprime).
- * HEIC já deve ter sido convertido antes (ver toProcessableBuffer).
- */
-async function optimizeForStorage(
+async function uploadPublicObject(
+  path: string,
   buffer: Buffer,
-): Promise<{ buffer: Buffer; contentType: "image/webp"; extension: "webp" }> {
-  const optimized = await sharp(buffer)
-    .rotate()
-    .resize({
-      width: MAX_EDGE,
-      height: MAX_EDGE,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
-    .webp({ quality: WEBP_QUALITY, effort: 4 })
-    .toBuffer();
-
-  return {
-    buffer: optimized,
-    contentType: "image/webp",
-    extension: "webp",
-  };
+  contentType: string,
+) {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.storage
+    .from(VEHICLE_PHOTOS_BUCKET)
+    .upload(path, buffer, {
+      contentType,
+      upsert: false,
+      cacheControl: "31536000",
+    });
+  if (error) throw error;
+  const { data } = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
 }
 
 export async function POST(request: Request) {
@@ -146,8 +137,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = getSupabaseAdmin();
     const urls: string[] = [];
+    const photos: Array<{ url: string; thumbnailUrl: string | null }> = [];
 
     for (const file of files) {
       if (file.size > MAX_SIZE) {
@@ -170,17 +161,17 @@ export async function POST(request: Request) {
         );
       }
 
-      let prepared: {
-        buffer: Buffer;
-        contentType: "image/webp";
-        extension: "webp";
-      };
+      let gallery: Awaited<ReturnType<typeof encodeGalleryImage>>;
+      let card: Awaited<ReturnType<typeof encodeCardImage>>;
       try {
         // 1) HEIC → JPEG (se preciso), 2) blur de placa na resolução alta,
-        // 3) só então redimensiona/comprime para o Storage.
+        // 3) só então gera galeria 1280 e capa 480×300.
         const processable = await toProcessableBuffer(raw, detected);
         const withPlatesBlurred = await blurDetectedPlates(processable.buffer);
-        prepared = await optimizeForStorage(withPlatesBlurred);
+        [gallery, card] = await Promise.all([
+          encodeGalleryImage(withPlatesBlurred),
+          encodeCardImage(withPlatesBlurred),
+        ]);
       } catch (error) {
         console.error("Image optimize error:", error);
         return NextResponse.json(
@@ -194,33 +185,36 @@ export async function POST(request: Request) {
         );
       }
 
-      const path = `${Date.now()}-${crypto.randomUUID()}.${prepared.extension}`;
+      const id = `${Date.now()}-${crypto.randomUUID()}`;
+      const galleryPath = `${id}.${gallery.extension}`;
+      const cardPath = cardObjectPath(galleryPath);
 
-      const { error } = await supabase.storage
-        .from(VEHICLE_PHOTOS_BUCKET)
-        .upload(path, prepared.buffer, {
-          contentType: prepared.contentType,
-          upsert: false,
-          cacheControl: "31536000",
-        });
-
-      if (error) {
+      try {
+        const [url, thumbnailUrl] = await Promise.all([
+          uploadPublicObject(galleryPath, gallery.buffer, gallery.contentType),
+          uploadPublicObject(cardPath, card.buffer, card.contentType),
+        ]);
+        urls.push(url);
+        photos.push({ url, thumbnailUrl });
+      } catch (error) {
         console.error("Upload error:", error);
         return NextResponse.json(
-          { error: error.message || "Falha no upload para o Storage." },
+          {
+            error:
+              error instanceof Error
+                ? error.message
+                : "Falha no upload para o Storage.",
+          },
           { status: 500 },
         );
       }
-
-      const { data } = supabase.storage
-        .from(VEHICLE_PHOTOS_BUCKET)
-        .getPublicUrl(path);
-      urls.push(data.publicUrl);
     }
 
     return NextResponse.json({
       urls,
       url: urls[0],
+      thumbnailUrl: photos[0]?.thumbnailUrl ?? null,
+      photos,
     });
   } catch (error) {
     console.error("Upload route error:", error);

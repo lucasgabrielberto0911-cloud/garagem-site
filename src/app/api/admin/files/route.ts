@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import {
-  VEHICLE_PHOTOS_BUCKET,
+  VEHICLE_DOCS_BUCKET,
+  ensurePrivateDocsBucket,
   getSupabaseAdmin,
   hasSupabaseServiceRole,
+  privateFileRef,
 } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -89,17 +91,19 @@ export async function POST(request: Request) {
       ? vehicleIdRaw
       : null;
     const path = vehicleId
-      ? `docs/${vehicleId}/${Date.now()}-${crypto.randomUUID()}.${extension}`
-      : `docs/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+      ? `${vehicleId}/${Date.now()}-${crypto.randomUUID()}.${extension}`
+      : `${Date.now()}-${crypto.randomUUID()}.${extension}`;
+
+    await ensurePrivateDocsBucket();
     const supabase = getSupabaseAdmin();
     const buffer = Buffer.from(await file.arrayBuffer());
 
     const { error } = await supabase.storage
-      .from(VEHICLE_PHOTOS_BUCKET)
+      .from(VEHICLE_DOCS_BUCKET)
       .upload(path, buffer, {
         contentType,
         upsert: false,
-        cacheControl: "31536000",
+        cacheControl: "private, max-age=60",
       });
 
     if (error) {
@@ -110,16 +114,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data } = supabase.storage
-      .from(VEHICLE_PHOTOS_BUCKET)
-      .getPublicUrl(path);
-
     return NextResponse.json({
-      url: data.publicUrl,
+      url: privateFileRef(path),
       name: file.name,
     });
   } catch (error) {
     console.error("[admin/files]", error);
-    return NextResponse.json({ error: "Erro ao enviar arquivo." }, { status: 500 });
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Erro ao enviar arquivo.",
+      },
+      { status: 500 },
+    );
   }
 }

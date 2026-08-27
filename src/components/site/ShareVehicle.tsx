@@ -47,10 +47,14 @@ export function ShareVehicle({ title, path, className = "" }: Props) {
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      <span className="text-xs uppercase tracking-wider text-muted">Compartilhar</span>
+      <span className="sr-only">Compartilhar anúncio</span>
+      <span className="text-xs uppercase tracking-wider text-muted" aria-hidden="true">
+        Compartilhar
+      </span>
       <button
         type="button"
         onClick={nativeShare}
+        aria-label="Copiar link do anúncio"
         className="inline-flex min-h-[44px] items-center border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
       >
         {copied ? "Copiado" : "Copiar link"}

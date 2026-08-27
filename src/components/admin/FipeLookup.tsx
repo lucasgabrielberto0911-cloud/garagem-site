@@ -43,8 +43,8 @@ type Props = {
   onApply: (payload: FipeApplyPayload) => void;
 };
 
-async function loadJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { cache: "no-store" });
+async function loadJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(url, { cache: "no-store", signal });
   const data = (await response.json()) as T & { error?: string };
   if (!response.ok) {
     throw new Error(
@@ -73,6 +73,7 @@ export function FipeLookup({
   const [modelId, setModelId] = useState("");
   const [yearId, setYearId] = useState("");
 
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [loadingBrands, setLoadingBrands] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
   const [loadingYears, setLoadingYears] = useState(false);
@@ -101,14 +102,18 @@ export function FipeLookup({
   }, []);
 
   useEffect(() => {
+    if (!catalogOpen) return;
     let cancelled = false;
     resetCascade();
     setFipePrice(initialFipePrice ?? null);
     setLoadingBrands(true);
     setUnavailable(false);
 
+    const controller = new AbortController();
+
     loadJson<{ brands: FipeBrand[] }>(
       `/api/admin/fipe?resource=brands&vehicleType=${vehicleType}`,
+      controller.signal,
     )
       .then((data) => {
         if (cancelled) return;
@@ -128,9 +133,10 @@ export function FipeLookup({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vehicleType]);
+  }, [vehicleType, catalogOpen]);
 
   useEffect(() => {
     if (!brandId) {
@@ -150,8 +156,10 @@ export function FipeLookup({
     setDetail(null);
     setStatus(null);
 
+    const controller = new AbortController();
     loadJson<{ models: FipeModel[] }>(
       `/api/admin/fipe?resource=models&vehicleType=${vehicleType}&brandId=${encodeURIComponent(brandId)}`,
+      controller.signal,
     )
       .then((data) => {
         if (cancelled) return;
@@ -168,6 +176,7 @@ export function FipeLookup({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [brandId, vehicleType]);
 
@@ -185,8 +194,10 @@ export function FipeLookup({
     setDetail(null);
     setStatus(null);
 
+    const controller = new AbortController();
     loadJson<{ years: FipeYear[] }>(
       `/api/admin/fipe?resource=years&vehicleType=${vehicleType}&brandId=${encodeURIComponent(brandId)}&modelId=${encodeURIComponent(modelId)}`,
+      controller.signal,
     )
       .then((data) => {
         if (cancelled) return;
@@ -203,6 +214,7 @@ export function FipeLookup({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [brandId, modelId, vehicleType]);
 
@@ -213,8 +225,10 @@ export function FipeLookup({
     setLoadingDetail(true);
     setStatus(null);
 
+    const controller = new AbortController();
     loadJson<{ detail: FipeDetail }>(
       `/api/admin/fipe?resource=detail&vehicleType=${vehicleType}&brandId=${encodeURIComponent(brandId)}&modelId=${encodeURIComponent(modelId)}&yearId=${encodeURIComponent(yearId)}`,
+      controller.signal,
     )
       .then((data) => {
         if (cancelled) return;
@@ -241,6 +255,7 @@ export function FipeLookup({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandId, modelId, yearId, vehicleType]);
@@ -426,6 +441,8 @@ export function FipeLookup({
       ) : null}
 
       <div className="border-t border-white/10 pt-4">
+        {catalogOpen ? (
+          <>
         <p className="mb-3 text-[11px] uppercase tracking-wider text-muted">
           Ou busque por marca / modelo / ano
         </p>
@@ -496,6 +513,16 @@ export function FipeLookup({
               </select>
             </Field>
           </div>
+        )}
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCatalogOpen(true)}
+            className={`${btn.ghost} min-h-[44px]`}
+          >
+            Abrir busca por marca / modelo / ano
+          </button>
         )}
       </div>
 

@@ -4,6 +4,35 @@ import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+async function inspectSchema() {
+  try {
+    const rows = await prisma.$queryRaw<Array<{ table_name: string; column_name: string }>>`
+      SELECT table_name, column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND (
+          (table_name = 'Testimonial' AND column_name = 'rating')
+          OR (table_name = 'Photo' AND column_name = 'thumbnailUrl')
+        )
+    `;
+    const has = (table: string, column: string) =>
+      rows.some((row) => row.table_name === table && row.column_name === column);
+    const missing: string[] = [];
+    if (!has("Testimonial", "rating")) missing.push("Testimonial.rating");
+    if (!has("Photo", "thumbnailUrl")) missing.push("Photo.thumbnailUrl");
+    return {
+      ok: missing.length === 0,
+      missing,
+      hint:
+        missing.length > 0
+          ? "Rode prisma/sql/schema-align.sql no SQL Editor do Supabase."
+          : undefined,
+    };
+  } catch {
+    return { ok: false, missing: ["unknown"], hint: "Não foi possível inspecionar o schema." };
+  }
+}
+
 function databaseHost() {
   const url = process.env.DATABASE_URL?.trim();
   if (!url) return null;
@@ -92,11 +121,13 @@ export async function GET() {
 
   try {
     const adminCount = await prisma.admin.count();
+    const schema = await inspectSchema();
     return NextResponse.json({
-      ok: true,
+      ok: schema.ok,
       database: "ok",
       host,
       adminCount,
+      schema,
       storage: {
         configured: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()),
         serviceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),

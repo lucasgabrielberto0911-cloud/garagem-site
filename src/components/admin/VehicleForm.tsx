@@ -22,7 +22,7 @@ import {
 import { Card, Field, btn, inputClass } from "@/components/admin/ui";
 import {
   VehiclePhotoManager,
-  photosFromUrls,
+  photosFromRecords,
   type PhotoItem,
 } from "@/components/admin/VehiclePhotoManager";
 import { FipeLookup, type FipeApplyPayload } from "@/components/admin/FipeLookup";
@@ -82,11 +82,14 @@ export function VehicleForm({
   const [state, formAction] = useFormState(action, initialState);
 
   const [photos, setPhotos] = useState<PhotoItem[]>(() =>
-    photosFromUrls(
+    photosFromRecords(
       vehicle?.photos
         .slice()
         .sort((a, b) => a.order - b.order)
-        .map((photo) => photo.url) ?? [],
+        .map((photo) => ({
+          url: photo.url,
+          thumbnailUrl: photo.thumbnailUrl,
+        })) ?? [],
     ),
   );
   const [accessories, setAccessories] = useState<string[]>(() =>
@@ -281,7 +284,12 @@ export function VehicleForm({
         <input
           type="hidden"
           name="photoUrls"
-          value={JSON.stringify(photos.map((photo) => photo.url))}
+          value={JSON.stringify(
+            photos.map((photo) => ({
+              url: photo.url,
+              thumbnailUrl: photo.thumbnailUrl ?? null,
+            })),
+          )}
         />
         <input
           type="hidden"

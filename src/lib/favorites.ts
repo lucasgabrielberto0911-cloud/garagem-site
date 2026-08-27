@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "garagem:favoritos";
 const CHANGE_EVENT = "garagem:favoritos-alterados";
@@ -22,12 +22,19 @@ function write(ids: string[]) {
   window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
 }
 
-/**
- * Favoritos ficam apenas no dispositivo (localStorage), sem login. O evento
- * customizado mantém header, cards e a página /favoritos sincronizados na
- * mesma aba; `storage` cobre as outras abas.
- */
-export function useFavorites() {
+type FavoritesContextValue = {
+  ids: string[];
+  ready: boolean;
+  count: number;
+  has: (id: string) => boolean;
+  toggle: (id: string) => boolean;
+  remove: (id: string) => void;
+  clear: () => void;
+};
+
+const FavoritesContext = createContext<FavoritesContextValue | null>(null);
+
+export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const [ids, setIds] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
 
@@ -66,5 +73,21 @@ export function useFavorites() {
 
   const has = useCallback((id: string) => ids.includes(id), [ids]);
 
-  return { ids, ready, has, toggle, remove, clear, count: ids.length };
+  const value = useMemo(
+    () => ({ ids, ready, has, toggle, remove, clear, count: ids.length }),
+    [ids, ready, has, toggle, remove, clear],
+  );
+
+  return createElement(FavoritesContext.Provider, { value }, children);
+}
+
+/**
+ * Favoritos ficam apenas no dispositivo (localStorage), sem login.
+ * Com FavoritesProvider no layout, há um par de listeners para toda a página.
+ */
+export function useFavorites() {
+  const context = useContext(FavoritesContext);
+  if (context) return context;
+
+  throw new Error("useFavorites precisa de FavoritesProvider no layout público.");
 }

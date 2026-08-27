@@ -872,29 +872,42 @@ function AccessoryChips({
   value: string;
   onToggle: (name: string) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const selected = new Set(
     splitAccessories(value).map((item) => item.toLocaleLowerCase("pt-BR")),
   );
+  const visible = expanded ? options : options.slice(0, 8);
   return (
-    <div className="flex flex-wrap gap-2">
-      {options.slice(0, 16).map((item) => {
-        const active = selected.has(item.toLocaleLowerCase("pt-BR"));
-        return (
-          <button
-            key={item}
-            type="button"
-            onClick={() => onToggle(item)}
-            className={`min-h-[44px] border px-3 text-left text-xs transition touch-manipulation ${
-              active
-                ? "border-brand bg-brand/10 text-cream"
-                : "border-white/10 text-muted hover:border-white/25 hover:text-cream"
-            }`}
-            aria-pressed={active}
-          >
-            {item}
-          </button>
-        );
-      })}
+    <div>
+      <div className="flex flex-wrap gap-2">
+        {visible.map((item) => {
+          const active = selected.has(item.toLocaleLowerCase("pt-BR"));
+          return (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onToggle(item)}
+              className={`min-h-[44px] border px-3 text-left text-xs transition touch-manipulation ${
+                active
+                  ? "border-brand bg-brand/10 text-cream"
+                  : "border-white/10 text-muted hover:border-white/25 hover:text-cream"
+              }`}
+              aria-pressed={active}
+            >
+              {item}
+            </button>
+          );
+        })}
+      </div>
+      {options.length > 8 ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((open) => !open)}
+          className="mt-2 min-h-[44px] text-xs font-semibold uppercase tracking-wide text-brand"
+        >
+          {expanded ? "Ver menos" : `Ver mais (${options.length - 8})`}
+        </button>
+      ) : null}
     </div>
   );
 }

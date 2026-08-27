@@ -74,11 +74,13 @@ model Vehicle {
 }
 
 model Photo {
-  id        String  @id @default(cuid())
-  url       String
-  order     Int     @default(0)
-  vehicleId String
-  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  id           String  @id @default(cuid())
+  url          String
+  /** Capa WebP 480×300 para cards. Null = usa `url` até o backfill. */
+  thumbnailUrl String?
+  order        Int     @default(0)
+  vehicleId    String
+  vehicle      Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
   @@index([vehicleId, order])
 }

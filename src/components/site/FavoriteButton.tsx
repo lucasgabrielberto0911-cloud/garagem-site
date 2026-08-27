@@ -21,15 +21,36 @@ export function FavoriteButton({
   const [pulse, setPulse] = useState(false);
   const active = ready && has(vehicleId);
 
+  function applyToggle() {
+    try {
+      const added = toggle(vehicleId);
+      setPulse(true);
+      window.setTimeout(() => setPulse(false), 320);
+      toast.success(
+        added ? `${label} salvo nos favoritos` : `${label} removido dos favoritos`,
+        added
+          ? undefined
+          : {
+              action: {
+                label: "Desfazer",
+                onClick: () => toggle(vehicleId),
+              },
+            },
+      );
+    } catch {
+      toast.error("Não foi possível atualizar os favoritos neste aparelho.", {
+        action: {
+          label: "Tentar de novo",
+          onClick: () => applyToggle(),
+        },
+      });
+    }
+  }
+
   function onClick(event: React.MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
-    const added = toggle(vehicleId);
-    setPulse(true);
-    window.setTimeout(() => setPulse(false), 320);
-    toast.success(
-      added ? `${label} salvo nos favoritos` : `${label} removido dos favoritos`,
-    );
+    applyToggle();
   }
 
   if (variant === "full") {
@@ -58,8 +79,8 @@ export function FavoriteButton({
       onClick={onClick}
       aria-pressed={active}
       aria-label={active ? `Remover ${label} dos favoritos` : `Salvar ${label} nos favoritos`}
-      className={`flex items-center justify-center border backdrop-blur transition touch-manipulation ${
-        compact ? "h-8 w-8" : "h-11 w-11"
+        className={`flex items-center justify-center border backdrop-blur transition touch-manipulation ${
+        compact ? "h-11 w-11" : "h-11 w-11"
       } ${
         active
           ? "border-brand bg-brand/20 text-brand"

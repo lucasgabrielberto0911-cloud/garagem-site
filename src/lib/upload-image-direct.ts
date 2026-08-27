@@ -1,3 +1,4 @@
+import { createClient } from "@supabase/supabase-js";
 import { prepareImageForUpload } from "@/lib/prepare-image-upload";
 
 type SignResponse = {
@@ -13,14 +14,21 @@ type UploadApiResponse = {
   error?: string;
   url?: string;
   urls?: string[];
+  thumbnailUrl?: string | null;
+  photos?: Array<{ url: string; thumbnailUrl: string | null }>;
+};
+
+export type UploadedPhoto = {
+  url: string;
+  thumbnailUrl: string | null;
 };
 
 /**
  * Comprime no browser e sobe pela API do servidor (blur de placa via
- * Rekognition). Se a Vercel recusar por tamanho (413), cai no upload
- * assinado direto ao Storage — sem blur, mas o cadastro não trava.
+ * Rekognition + variantes WebP). Se a Vercel recusar por tamanho (413),
+ * cai no upload assinado direto ao Storage e gera a miniatura em seguida.
  */
-export async function uploadImageDirect(file: File): Promise<string> {
+export async function uploadImageDirect(file: File): Promise<UploadedPhoto> {
   const prepared = await prepareImageForUpload(file);
 
   try {
@@ -42,8 +50,13 @@ export async function uploadImageDirect(file: File): Promise<string> {
     }
 
     if (response.ok) {
-      const url = data.url || data.urls?.[0];
-      if (url) return url;
+      const url = data.photos?.[0]?.url || data.url || data.urls?.[0];
+      if (url) {
+        return {
+          url,
+          thumbnailUrl: data.photos?.[0]?.thumbnailUrl ?? data.thumbnailUrl ?? null,
+        };
+      }
     }
 
     if (response.status === 413) {
@@ -63,7 +76,23 @@ export async function uploadImageDirect(file: File): Promise<string> {
   }
 }
 
-async function uploadViaSignedUrl(prepared: File): Promise<string> {
+async function deriveThumbnail(url: string): Promise<string | null> {
+  try {
+    const response = await fetch("/api/upload/variants", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as { thumbnailUrl?: string };
+    return data.thumbnailUrl ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function uploadViaSignedUrl(prepared: File): Promise<UploadedPhoto> {
   const signResponse = await fetch("/api/upload/sign", {
     method: "POST",
     credentials: "same-origin",
@@ -86,18 +115,78 @@ async function uploadViaSignedUrl(prepared: File): Promise<string> {
     );
   }
 
-  if (!signResponse.ok || !signData.signedUrl || !signData.publicUrl) {
+  if (
+    !signResponse.ok ||
+    !signData.signedUrl ||
+    !signData.publicUrl ||
+    !signData.path ||
+    !signData.token
+  ) {
     throw new Error(
       signData.error ||
         `Falha ao preparar upload (${signResponse.status}).`,
     );
   }
 
-  const put = await fetch(signData.signedUrl, {
+  const contentType =
+    signData.contentType || prepared.type || "application/octet-stream";
+  const uploaded = await putWithCacheControl({
+    path: signData.path,
+    token: signData.token,
+    signedUrl: signData.signedUrl,
+    prepared,
+    contentType,
+  });
+
+  if (!uploaded) {
+    throw new Error("Falha no Storage. Tente de novo.");
+  }
+
+  const thumbnailUrl = await deriveThumbnail(signData.publicUrl);
+  return { url: signData.publicUrl, thumbnailUrl };
+}
+
+async function putWithCacheControl({
+  path,
+  token,
+  signedUrl,
+  prepared,
+  contentType,
+}: {
+  path: string;
+  token: string;
+  signedUrl: string;
+  prepared: File;
+  contentType: string;
+}) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+
+  if (url && anon) {
+    try {
+      const supabase = createClient(url, anon, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { error } = await supabase.storage
+        .from("veiculos")
+        .uploadToSignedUrl(path, token, prepared, {
+          contentType,
+          cacheControl: "31536000",
+          upsert: false,
+        });
+      if (!error) return true;
+      console.warn("[upload] uploadToSignedUrl falhou, tentando PUT:", error.message);
+    } catch (error) {
+      console.warn("[upload] uploadToSignedUrl indisponível:", error);
+    }
+  }
+
+  const put = await fetch(signedUrl, {
     method: "PUT",
     headers: {
-      "Content-Type":
-        signData.contentType || prepared.type || "application/octet-stream",
+      "Content-Type": contentType,
+      "cache-control": "31536000",
+      "x-upsert": "false",
     },
     body: prepared,
   });
@@ -112,5 +201,5 @@ async function uploadViaSignedUrl(prepared: File): Promise<string> {
     );
   }
 
-  return signData.publicUrl;
+  return true;
 }
