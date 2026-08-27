@@ -8,7 +8,7 @@ import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
 import { VehicleConditions } from "@/components/site/VehicleConditions";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { StockBackLink } from "@/components/site/StockBackLink";
-import { VehicleContactHit, VehicleViewContent } from "@/components/site/VehiclePixel";
+import { VehicleLeadHit, VehicleViewContent } from "@/components/site/VehiclePixel";
 import { Container, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
@@ -139,11 +139,16 @@ export default async function VehicleDetailPage({
 
   return (
     <div className="py-6 pb-sticky-bar-safe sm:py-8 lg:py-10 lg:pb-10">
-      <VehicleViewContent
-        contentId={vehicle.id}
-        contentName={fullLabel}
-        value={vehicle.price}
-      />
+      {!sold ? (
+        <VehicleViewContent
+          contentId={vehicle.id}
+          contentName={fullLabel}
+          value={vehicle.price}
+          make={formatBrandName(vehicle.brand)}
+          model={formatModelName(vehicle.model)}
+          year={vehicle.yearModel}
+        />
+      ) : null}
       <JsonLd data={vehicleJsonLd(vehicle)} />
       <JsonLd
         data={breadcrumbJsonLd([
@@ -216,6 +221,10 @@ export default async function VehicleDetailPage({
                   <FavoriteButton
                     vehicleId={vehicle.id}
                     label={fullLabel}
+                    value={vehicle.price}
+                    make={formatBrandName(vehicle.brand)}
+                    model={formatModelName(vehicle.model)}
+                    year={vehicle.yearModel}
                     className="ml-auto"
                   />
                 ) : null}
@@ -268,9 +277,13 @@ export default async function VehicleDetailPage({
                 </Link>
               ) : (
                 <>
-                  <VehicleContactHit
+                  <VehicleLeadHit
                     contentId={vehicle.id}
                     contentName={fullLabel}
+                    value={vehicle.price}
+                    make={formatBrandName(vehicle.brand)}
+                    model={formatModelName(vehicle.model)}
+                    year={vehicle.yearModel}
                   >
                     <WhatsAppButton
                       size="lg"
@@ -279,13 +292,17 @@ export default async function VehicleDetailPage({
                     >
                       Tenho interesse
                     </WhatsAppButton>
-                  </VehicleContactHit>
+                  </VehicleLeadHit>
 
                   {/* Vídeo e financiamento também no celular — antes só apareciam no desktop. */}
                   <div className="grid grid-cols-2 gap-2">
-                    <VehicleContactHit
+                    <VehicleLeadHit
                       contentId={vehicle.id}
                       contentName={fullLabel}
+                      value={vehicle.price}
+                      make={formatBrandName(vehicle.brand)}
+                      model={formatModelName(vehicle.model)}
+                      year={vehicle.yearModel}
                     >
                       <a
                         href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
@@ -295,10 +312,14 @@ export default async function VehicleDetailPage({
                       >
                         Pedir vídeo
                       </a>
-                    </VehicleContactHit>
-                    <VehicleContactHit
+                    </VehicleLeadHit>
+                    <VehicleLeadHit
                       contentId={vehicle.id}
                       contentName={fullLabel}
+                      value={vehicle.price}
+                      make={formatBrandName(vehicle.brand)}
+                      model={formatModelName(vehicle.model)}
+                      year={vehicle.yearModel}
                     >
                       <a
                         href={whatsappUrl(
@@ -310,7 +331,7 @@ export default async function VehicleDetailPage({
                       >
                         Financiar
                       </a>
-                    </VehicleContactHit>
+                    </VehicleLeadHit>
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">

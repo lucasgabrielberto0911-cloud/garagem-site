@@ -1,6 +1,7 @@
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import { DeferredMarketing } from "@/components/DeferredMarketing";
+import { MetaPixel } from "@/components/MetaPixel";
 import { JsonLd } from "@/components/JsonLd";
 import { MobileBottomNav } from "@/components/site/MobileBottomNav";
 import { SiteFooter } from "@/components/site/SiteFooter";
@@ -42,6 +43,7 @@ export default function SiteLayout({
   return (
     <FavoritesProvider>
       <div className="flex min-h-screen flex-col">
+        <MetaPixel />
         <DeferredMarketing />
         <Suspense fallback={null}>
           <SiteJsonLd />

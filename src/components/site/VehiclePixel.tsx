@@ -1,51 +1,97 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
-import { trackContact, trackViewContent } from "@/lib/meta-pixel";
+import { useEffect, useRef, type ReactNode } from "react";
+import {
+  trackLead,
+  trackSearch,
+  trackViewContent,
+  type CatalogEventParams,
+} from "@/lib/meta-pixel";
 
-export function VehicleViewContent({
+type VehicleHitProps = {
+  contentId: string;
+  contentName: string;
+  value?: number;
+  make?: string;
+  model?: string;
+  year?: number;
+};
+
+function catalogParams({
   contentId,
   contentName,
   value,
-}: {
-  contentId: string;
-  contentName: string;
-  value: number;
-}) {
+  make,
+  model,
+  year,
+}: VehicleHitProps): CatalogEventParams {
+  return {
+    content_ids: [contentId],
+    content_name: contentName,
+    value,
+    make,
+    model,
+    year,
+  };
+}
+
+export function VehicleViewContent(props: VehicleHitProps) {
+  const { contentId, contentName, value, make, model, year } = props;
+
   useEffect(() => {
-    trackViewContent({
-      content_ids: [contentId],
-      content_name: contentName,
-      content_type: "vehicle",
-      value,
-      currency: "BRL",
-    });
-  }, [contentId, contentName, value]);
+    if (!contentId) return;
+    trackViewContent(
+      catalogParams({ contentId, contentName, value, make, model, year }),
+    );
+  }, [contentId, contentName, value, make, model, year]);
 
   return null;
 }
 
-/** Dispara Contact no clique, sem atrasar o WhatsApp (não chama preventDefault). */
-export function VehicleContactHit({
-  contentId,
-  contentName,
+/** Dispara Lead no clique do WhatsApp/interesse, sem atrasar o app (sem preventDefault). */
+export function VehicleLeadHit({
   children,
-}: {
-  contentId: string;
-  contentName: string;
-  children: ReactNode;
-}) {
+  ...props
+}: VehicleHitProps & { children: ReactNode }) {
   return (
     <span
       className="contents"
       onClickCapture={() => {
-        trackContact({
-          content_ids: [contentId],
-          content_name: contentName,
-        });
+        if (!props.contentId) return;
+        trackLead(catalogParams(props));
       }}
     >
       {children}
     </span>
   );
+}
+
+/** @deprecated Use VehicleLeadHit. */
+export const VehicleContactHit = VehicleLeadHit;
+
+export function StockSearchPixel({
+  active,
+  searchString,
+  contentIds,
+}: {
+  active: boolean;
+  searchString: string;
+  contentIds: string[];
+}) {
+  const sentKey = useRef("");
+
+  const idsKey = contentIds.join(",");
+
+  useEffect(() => {
+    if (!active || !searchString) return;
+    const key = `${searchString}|${idsKey}`;
+    if (sentKey.current === key) return;
+    sentKey.current = key;
+    trackSearch({
+      content_ids: idsKey ? idsKey.split(",") : [],
+      search_string: searchString,
+    });
+  }, [active, searchString, idsKey]);
+
+  return null;
 }

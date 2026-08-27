@@ -2,11 +2,12 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
-import { MetaPixel } from "@/components/MetaPixel";
 
 /**
- * GA e Meta só entram depois da primeira interação ou de um idle longo,
+ * GA só entra depois da primeira interação ou de um idle longo,
  * para não disputar CPU/rede com o LCP no celular.
+ * O Meta Pixel fica no layout (stub imediato + fbevents async) para
+ * ViewContent da ficha não se perder antes do idle.
  */
 export function DeferredMarketing({ children }: { children?: ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -55,7 +56,6 @@ export function DeferredMarketing({ children }: { children?: ReactNode }) {
     <>
       {children}
       <GoogleAnalytics />
-      <MetaPixel />
     </>
   );
 }
