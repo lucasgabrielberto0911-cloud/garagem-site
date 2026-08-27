@@ -8,8 +8,10 @@ const nextConfig = {
     deviceSizes: [640, 828, 1080],
     imageSizes: [96, 384],
     minimumCacheTTL: 60 * 60 * 24 * 30,
-    // Preview de PR não queima a cota Hobby; produção continua otimizando.
-    unoptimized: process.env.VERCEL_ENV === "preview",
+    // Cota Hobby de Image Optimization esgotada: /_next/image devolve 402
+    // (OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED) e o estoque/galeria ficam
+    // sem foto. Servir originais (Supabase + /branding) até upgrade de plano.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",

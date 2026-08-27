@@ -77,6 +77,7 @@ export function SiteContentEditor({
               fill
               className="object-contain object-bottom"
               sizes="320px"
+              unoptimized={/^https?:\/\//i.test(founderPhotoUrl)}
             />
           </div>
         ) : (
