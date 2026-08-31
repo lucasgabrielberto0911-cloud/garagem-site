@@ -284,3 +284,73 @@ export async function getAdminSalesPage(options?: {
     hasMore: page * pageSize < total,
   };
 }
+
+export const SELLABLE_VEHICLE_SELECT = {
+  id: true,
+  brand: true,
+  model: true,
+  version: true,
+  yearModel: true,
+  price: true,
+  status: true,
+  purchasePrice: true,
+  costs: { select: { amount: true } },
+} as const;
+
+export type SellableVehicleRecord = {
+  id: string;
+  brand: string;
+  model: string;
+  version: string | null;
+  yearModel: number;
+  price: number;
+  status: string;
+  purchasePrice: number | null;
+  costs: Array<{ amount: number }>;
+};
+
+/** Veículos sem venda para o formulário de vendas — busca sob demanda. */
+export async function getSellableVehicles(options?: {
+  q?: string;
+  take?: number;
+}) {
+  const take = Math.min(Math.max(options?.take ?? 20, 1), 50);
+  const vehicles = await prisma.vehicle.findMany({
+    where: {
+      AND: [{ sale: null, historical: false }, searchWhere(options?.q ?? "")],
+    },
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    take,
+    select: SELLABLE_VEHICLE_SELECT,
+  });
+  return vehicles as SellableVehicleRecord[];
+}
+
+export type CustomerSearchRecord = {
+  id: string;
+  name: string;
+  phone: string;
+};
+
+export async function searchCustomers(options?: { q?: string; take?: number }) {
+  const take = Math.min(Math.max(options?.take ?? 20, 1), 50);
+  const term = (options?.q ?? "").trim();
+  const digits = term.replace(/\D/g, "");
+  const where = term
+    ? {
+        OR: [
+          { name: { contains: term, mode: "insensitive" as const } },
+          { phone: { contains: digits || term, mode: "insensitive" as const } },
+          { email: { contains: term, mode: "insensitive" as const } },
+          { cpf: { contains: digits || term, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
+
+  return prisma.customer.findMany({
+    where,
+    orderBy: { name: "asc" },
+    take,
+    select: { id: true, name: true, phone: true },
+  }) as Promise<CustomerSearchRecord[]>;
+}

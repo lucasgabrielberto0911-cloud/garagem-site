@@ -25,52 +25,32 @@ export default async function VendasPage({
   const monthStart = startOfMonth();
   const period = parseSalesPeriod(searchParams.period);
 
-  const [list, vehicles, customers, totals, monthTotals, profitRows] =
-    await Promise.all([
-      getAdminSalesPage({ page: 1, period }),
-      prisma.vehicle.findMany({
-        where: { sale: null, historical: false },
-        orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-        select: {
-          id: true,
-          brand: true,
-          model: true,
-          version: true,
-          yearModel: true,
-          price: true,
-          status: true,
-          purchasePrice: true,
-          costs: { select: { amount: true } },
-        },
-      }),
-      prisma.customer.findMany({
-        orderBy: { name: "asc" },
-        select: { id: true, name: true, phone: true },
-      }),
-      prisma.sale.aggregate({ _sum: { salePrice: true }, _count: { _all: true } }),
-      prisma.sale.aggregate({
-        where: { saleDate: { gte: monthStart } },
-        _sum: { salePrice: true },
-        _count: { _all: true },
-      }),
-      prisma.sale.findMany({
-        where: {
-          OR: [
-            { vehicle: { purchasePrice: { gt: 0 } } },
-            { vehicle: { costs: { some: {} } } },
-          ],
-        },
-        select: {
-          salePrice: true,
-          vehicle: {
-            select: {
-              purchasePrice: true,
-              costs: { select: { amount: true } },
-            },
+  const [list, totals, monthTotals, profitRows] = await Promise.all([
+    getAdminSalesPage({ page: 1, period }),
+    prisma.sale.aggregate({ _sum: { salePrice: true }, _count: { _all: true } }),
+    prisma.sale.aggregate({
+      where: { saleDate: { gte: monthStart } },
+      _sum: { salePrice: true },
+      _count: { _all: true },
+    }),
+    prisma.sale.findMany({
+      where: {
+        OR: [
+          { vehicle: { purchasePrice: { gt: 0 } } },
+          { vehicle: { costs: { some: {} } } },
+        ],
+      },
+      select: {
+        salePrice: true,
+        vehicle: {
+          select: {
+            purchasePrice: true,
+            costs: { select: { amount: true } },
           },
         },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
   const revenue = totals._sum.salePrice ?? 0;
   const count = totals._count._all;
@@ -128,8 +108,6 @@ export default async function VendasPage({
         salesTotal={list.total}
         pageSize={list.pageSize}
         period={period}
-        vehicles={vehicles}
-        customers={customers}
       />
     </div>
   );

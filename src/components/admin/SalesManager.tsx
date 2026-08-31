@@ -15,6 +15,7 @@ import {
 } from "@/components/admin/icons";
 import { IconWhatsApp } from "@/components/site/icons";
 import { Badge, Card, EmptyState, Field, btn, inputClass, mobileActionCell } from "@/components/admin/ui";
+import { SearchSelect } from "@/components/admin/SearchSelect";
 import { createSale, deleteSale, updateSale } from "@/app/admin/vendas/actions";
 import {
   formatCurrencyBRL,
@@ -101,6 +102,21 @@ const PERIODS = [
 
 type Period = (typeof PERIODS)[number]["value"];
 
+const NEW_CUSTOMER_OPTION = {
+  id: "novo",
+  label: "Sem cliente / novo",
+};
+
+function vehicleOptionLabel(vehicle: SellableVehicle) {
+  return `${vehicle.brand} ${vehicle.model}${
+    vehicle.version ? ` ${vehicle.version}` : ""
+  } · ${vehicle.yearModel} · ${formatCurrencyBRL(vehicle.price)}`;
+}
+
+function customerOptionLabel(customer: CustomerOption) {
+  return `${customer.name} · ${formatPhoneBR(customer.phone)}`;
+}
+
 function exportSalesCsv(sales: SaleRow[]) {
   const header = [
     "Data",
@@ -176,15 +192,11 @@ export function SalesManager({
   salesTotal,
   pageSize,
   period,
-  vehicles,
-  customers,
 }: {
   sales: SaleRow[];
   salesTotal: number;
   pageSize: number;
   period: Period;
-  vehicles: SellableVehicle[];
-  customers: CustomerOption[];
 }) {
   const router = useRouter();
   const [rows, setRows] = useState(() => sales.map(hydrateSale));
@@ -211,6 +223,12 @@ export function SalesManager({
   const [saleDate, setSaleDate] = useState(todayInputValue());
   const [notes, setNotes] = useState("");
   const [cancelTarget, setCancelTarget] = useState<SaleRow | null>(null);
+  const [pickedVehicle, setPickedVehicle] = useState<SellableVehicle | null>(
+    null,
+  );
+  const [pickedCustomer, setPickedCustomer] = useState<CustomerOption | null>(
+    null,
+  );
 
   const isEditing = editingId !== null;
   const isHistorical = source === "historica";
@@ -219,26 +237,7 @@ export function SalesManager({
     ? rows.find((sale) => sale.id === editingId) ?? null
     : null;
 
-  const stockOptions = useMemo(() => {
-    if (!editingSale || editingSale.vehicle.historical) return vehicles;
-    if (vehicles.some((item) => item.id === editingSale.vehicle.id)) {
-      return vehicles;
-    }
-    return [
-      {
-        id: editingSale.vehicle.id,
-        brand: editingSale.vehicle.brand,
-        model: editingSale.vehicle.model,
-        version: null,
-        yearModel: editingSale.vehicle.yearModel,
-        price: editingSale.salePrice,
-        status: "vendido",
-        purchasePrice: editingSale.vehicle.purchasePrice,
-        costs: editingSale.vehicle.costs ?? [],
-      },
-      ...vehicles,
-    ];
-  }, [vehicles, editingSale]);
+  const selectedVehicle = pickedVehicle;
 
   const filteredSales = rows;
 
@@ -286,7 +285,6 @@ export function SalesManager({
     [filteredSales],
   );
 
-  const selectedVehicle = stockOptions.find((item) => item.id === vehicleId);
   const liveSalePrice = Number(price.replace(/\D/g, "")) || 0;
   const liveFinance = !isHistorical
     ? selectedVehicle
@@ -304,20 +302,42 @@ export function SalesManager({
         )
       : null;
 
-  function selectVehicle(id: string) {
-    setVehicleId(id);
-    const vehicle = vehicles.find((item) => item.id === id);
-    if (vehicle) setPrice(formatNumberBR(Math.round(vehicle.price)));
+  async function loadVehicleOptions(query: string) {
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    params.set("take", "20");
+    const response = await fetch(`/api/admin/vendas/veiculos?${params}`);
+    if (!response.ok) throw new Error("fetch");
+    const data = (await response.json()) as { vehicles?: SellableVehicle[] };
+    return (data.vehicles ?? []).map((vehicle) => ({
+      ...vehicle,
+      label: vehicleOptionLabel(vehicle),
+    }));
+  }
+
+  async function loadCustomerOptions(query: string) {
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    params.set("take", "20");
+    const response = await fetch(`/api/admin/clientes?${params}`);
+    if (!response.ok) throw new Error("fetch");
+    const data = (await response.json()) as { customers?: CustomerOption[] };
+    return (data.customers ?? []).map((customer) => ({
+      ...customer,
+      label: customerOptionLabel(customer),
+    }));
   }
 
   function resetForm() {
     setEditingId(null);
     setSource("estoque");
     setVehicleId("");
+    setPickedVehicle(null);
     setBrand("");
     setModel("");
     setYearModel("");
     setCustomerId("novo");
+    setPickedCustomer(null);
     setCustomerName("");
     setPrice("");
     setPhone("");
@@ -333,6 +353,21 @@ export function SalesManager({
     setEditingId(sale.id);
     setSource(sale.vehicle.historical ? "historica" : "estoque");
     setVehicleId(sale.vehicle.id);
+    setPickedVehicle(
+      sale.vehicle.historical
+        ? null
+        : {
+            id: sale.vehicle.id,
+            brand: sale.vehicle.brand,
+            model: sale.vehicle.model,
+            version: null,
+            yearModel: sale.vehicle.yearModel,
+            price: sale.salePrice,
+            status: "vendido",
+            purchasePrice: sale.vehicle.purchasePrice,
+            costs: sale.vehicle.costs ?? [],
+          },
+    );
     setBrand(sale.vehicle.brand);
     setModel(sale.vehicle.model);
     setYearModel(
@@ -343,6 +378,7 @@ export function SalesManager({
     );
     setPrice(formatNumberBR(Math.round(sale.salePrice)));
     setCustomerId(sale.customer?.id ?? "novo");
+    setPickedCustomer(sale.customer);
     setCustomerName(
       sale.customer && sale.customer.name !== "Não informado"
         ? sale.customer.name
@@ -493,27 +529,33 @@ export function SalesManager({
                   </Field>
                 </>
               ) : (
-                <Field label="Veículo vendido" required error={errors.vehicleId}>
-                  <select
+                <Field
+                  label="Veículo vendido"
+                  required
+                  error={errors.vehicleId}
+                  className="sm:col-span-2"
+                  as="div"
+                >
+                  <SearchSelect
                     name="vehicleId"
                     value={vehicleId}
-                    onChange={(event) => selectVehicle(event.target.value)}
-                    className={inputClass}
-                    disabled={stockOptions.length === 0}
-                  >
-                    <option value="">
-                      {stockOptions.length === 0
-                        ? "Nenhum veículo sem venda"
-                        : "Selecione o veículo"}
-                    </option>
-                    {stockOptions.map((vehicle) => (
-                      <option key={vehicle.id} value={vehicle.id}>
-                        {vehicle.brand} {vehicle.model}
-                        {vehicle.version ? ` ${vehicle.version}` : ""} ·{" "}
-                        {vehicle.yearModel} · {formatCurrencyBRL(vehicle.price)}
-                      </option>
-                    ))}
-                  </select>
+                    selectedLabel={
+                      pickedVehicle ? vehicleOptionLabel(pickedVehicle) : ""
+                    }
+                    enabled={open && !isHistorical}
+                    placeholder="Busque por marca, modelo ou placa"
+                    emptyText="Nenhum veículo sem venda"
+                    loadOptions={loadVehicleOptions}
+                    onChange={(id, item) => {
+                      setVehicleId(id);
+                      if (item) {
+                        setPickedVehicle(item);
+                        setPrice(formatNumberBR(Math.round(item.price)));
+                      } else {
+                        setPickedVehicle(null);
+                      }
+                    }}
+                  />
                 </Field>
               )}
 
@@ -547,21 +589,36 @@ export function SalesManager({
 
               <Field
                 label="Cliente"
-                hint="Opcional — deixe em novo cliente sem preencher nome."
+                hint="Opcional — busque pelo nome ou deixe em sem cliente."
+                as="div"
               >
-                <select
+                <SearchSelect
                   name="customerId"
                   value={customerId}
-                  onChange={(event) => setCustomerId(event.target.value)}
-                  className={inputClass}
-                >
-                  <option value="novo">Sem cliente / novo</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name} · {formatPhoneBR(customer.phone)}
-                    </option>
-                  ))}
-                </select>
+                  selectedLabel={
+                    pickedCustomer ? customerOptionLabel(pickedCustomer) : ""
+                  }
+                  enabled={open}
+                  placeholder="Busque por nome, telefone ou CPF"
+                  emptyText="Nenhum cliente encontrado"
+                  noneOption={NEW_CUSTOMER_OPTION}
+                  loadOptions={loadCustomerOptions}
+                  onChange={(id, item) => {
+                    setCustomerId(id);
+                    setPickedCustomer(item);
+                    if (item) {
+                      setCustomerName(
+                        item.name !== "Não informado" ? item.name : "",
+                      );
+                      setPhone(
+                        item.phone ? formatPhoneBR(item.phone) : "",
+                      );
+                    } else {
+                      setCustomerName("");
+                      setPhone("");
+                    }
+                  }}
+                />
               </Field>
 
               <Field

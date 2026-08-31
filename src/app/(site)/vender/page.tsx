@@ -11,6 +11,8 @@ import { buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { getVehicleById } from "@/lib/vehicles";
 
+export const revalidate = 120;
+
 export const metadata: Metadata = buildPageMetadata({
   title: `Vender ou trocar seu carro | ${site.name}`,
   description: `Avaliação gratuita e sem compromisso do seu veículo na ${site.name}. Compramos seu usado e aceitamos na troca em ${site.region} e região.`,

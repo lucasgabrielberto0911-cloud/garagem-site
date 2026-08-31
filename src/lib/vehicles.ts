@@ -15,7 +15,9 @@ import {
 export {
   STOCK_PAGE_SIZE,
   coverSrc,
+  galleryThumbSrc,
   parseStockFilters,
+  type GalleryPhoto,
   type StockFilters,
   type StockPageResult,
   type VehicleCardPhoto,
@@ -101,6 +103,35 @@ export const PUBLIC_VEHICLE_DETAIL_SELECT = {
   createdAt: true,
   photos: {
     orderBy: { order: "asc" as const },
+    select: { id: true, url: true, thumbnailUrl: true },
+  },
+} as const;
+
+const PUBLIC_VEHICLE_DETAIL_SELECT_LEGACY = {
+  id: true,
+  category: true,
+  brand: true,
+  model: true,
+  version: true,
+  year: true,
+  yearModel: true,
+  km: true,
+  price: true,
+  fuel: true,
+  transmission: true,
+  color: true,
+  description: true,
+  engine: true,
+  doors: true,
+  warranty: true,
+  plateEnd: true,
+  inspection: true,
+  accessories: true,
+  status: true,
+  featured: true,
+  createdAt: true,
+  photos: {
+    orderBy: { order: "asc" as const },
     select: { id: true, url: true },
   },
 } as const;
@@ -148,7 +179,7 @@ export type PublicVehicleDetail = {
   status: string;
   featured: boolean;
   createdAt: Date;
-  photos: Array<{ id: string; url: string }>;
+  photos: Array<{ id: string; url: string; thumbnailUrl?: string | null }>;
 };
 
 export type SiteQueryMeta = {
@@ -204,6 +235,28 @@ async function findCardVehicles(
   }
 }
 
+async function findDetailVehicle(
+  id: string,
+): Promise<PublicVehicleDetail | null> {
+  try {
+    return (await prisma.vehicle.findFirst({
+      where: { id, historical: false },
+      select: PUBLIC_VEHICLE_DETAIL_SELECT,
+    })) as PublicVehicleDetail | null;
+  } catch (error) {
+    if (!isMissingColumnError(error, "thumbnailUrl")) throw error;
+    const row = await prisma.vehicle.findFirst({
+      where: { id, historical: false },
+      select: PUBLIC_VEHICLE_DETAIL_SELECT_LEGACY,
+    });
+    if (!row) return null;
+    return {
+      ...row,
+      photos: row.photos.map((photo) => ({ ...photo, thumbnailUrl: null })),
+    };
+  }
+}
+
 async function fetchFeaturedVehicles(take: number): Promise<VehicleCardRecord[]> {
   const featured = await findCardVehicles({
     where: { status: "disponivel", featured: true },
@@ -255,12 +308,8 @@ export const getVehicleById = cache((id: string) =>
 );
 
 const loadVehicleDetailCached = unstable_cache(
-  async (id: string) =>
-    prisma.vehicle.findFirst({
-      where: { id, historical: false },
-      select: PUBLIC_VEHICLE_DETAIL_SELECT,
-    }),
-  ["vehicle-detail-v3"],
+  async (id: string) => findDetailVehicle(id),
+  ["vehicle-detail-v4"],
   PUBLIC_CACHE,
 );
 
@@ -803,7 +852,6 @@ export async function getPublicVehicleStaticParams() {
         yearModel: true,
       },
       orderBy: { updatedAt: "desc" },
-      take: 80,
     });
     return vehicles.map((vehicle) => ({ id: vehicleSlug(vehicle) }));
   } catch (error) {

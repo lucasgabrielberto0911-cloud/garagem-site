@@ -157,7 +157,7 @@ export async function SiteFooter() {
           </div>
         </div>
 
-        {/* Mobile: contato essencial */}
+        {/* Mobile: contato essencial + cidades (SEO e atalho) */}
         <div className="mt-8 space-y-3 text-center sm:hidden">
           {PHONES.map((phone, index) => (
             <a
@@ -176,6 +176,23 @@ export async function SiteFooter() {
             <IconMail className="h-4 w-4 text-brand" />
             {site.email}
           </a>
+          <nav aria-label="Cidades atendidas" className="pt-2">
+            <p className="mb-2 text-[11px] uppercase tracking-wider text-muted">
+              Cidades
+            </p>
+            <ul className="flex flex-wrap justify-center gap-2">
+              {SERVICE_CITIES.map((city) => (
+                <li key={city.slug}>
+                  <Link
+                    href={`/seminovos/${city.slug}`}
+                    className="inline-flex min-h-[44px] items-center border border-white/10 bg-asphalt/50 px-3 text-xs uppercase tracking-wider text-cream touch-manipulation"
+                  >
+                    {city.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
           <p className="pt-1 text-xs text-muted">{site.hours}</p>
         </div>
 

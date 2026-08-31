@@ -4,7 +4,11 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { deleteStoragePublicUrls } from "@/lib/supabase";
+import {
+  copyPublicStorageObject,
+  deleteStoragePublicUrls,
+  storagePathFromPublicUrl,
+} from "@/lib/supabase";
 import { normalizeAccessories, parseVehicleCategory } from "@/lib/vehicle-accessories";
 import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
 
@@ -385,7 +389,8 @@ export async function setVehicleFeatured(id: string, featured: boolean) {
 
 /**
  * Duplica um anúncio para agilizar o cadastro de veículos parecidos. A cópia
- * nasce como disponível, sem destaque e com as mesmas fotos.
+ * nasce como disponível, sem destaque, com fotos novas no Storage — apagar
+ * um não quebra o outro.
  */
 export async function duplicateVehicle(id: string) {
   await requireAdmin();
@@ -398,6 +403,8 @@ export async function duplicateVehicle(id: string) {
   if (!source) {
     return { ok: false as const, message: "Veículo não encontrado." };
   }
+
+  const photos = await duplicateVehiclePhotos(source.photos);
 
   const copy = await prisma.vehicle.create({
     data: {
@@ -427,7 +434,7 @@ export async function duplicateVehicle(id: string) {
       hasSpareKey: source.hasSpareKey,
       hasManual: source.hasManual,
       photos: {
-        create: source.photos.map((photo, order) => ({
+        create: photos.map((photo, order) => ({
           url: photo.url,
           thumbnailUrl: photo.thumbnailUrl,
           order,
@@ -439,4 +446,42 @@ export async function duplicateVehicle(id: string) {
   revalidatePath("/admin/veiculos");
   revalidatePublicStock(copy.id);
   return { ok: true as const, message: "Cópia criada.", id: copy.id };
+}
+
+function cardObjectDest(galleryPath: string) {
+  return galleryPath.replace(/(\.[a-z0-9]+)?$/i, "-card.webp");
+}
+
+async function duplicateVehiclePhotos(
+  photos: Array<{ url: string; thumbnailUrl: string | null }>,
+) {
+  const copied: Array<{ url: string; thumbnailUrl: string | null }> = [];
+
+  for (const photo of photos) {
+    const sourcePath = storagePathFromPublicUrl(photo.url);
+    if (!sourcePath) {
+      copied.push({ url: photo.url, thumbnailUrl: photo.thumbnailUrl });
+      continue;
+    }
+
+    const ext = sourcePath.match(/\.([a-z0-9]+)$/i)?.[1] ?? "webp";
+    const destPath = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    const newUrl = await copyPublicStorageObject(photo.url, destPath);
+
+    if (!newUrl) {
+      copied.push({ url: photo.url, thumbnailUrl: photo.thumbnailUrl });
+      continue;
+    }
+
+    let thumbnailUrl: string | null = null;
+    if (photo.thumbnailUrl) {
+      thumbnailUrl = await copyPublicStorageObject(
+        photo.thumbnailUrl,
+        cardObjectDest(destPath),
+      );
+    }
+    copied.push({ url: newUrl, thumbnailUrl });
+  }
+
+  return copied;
 }
