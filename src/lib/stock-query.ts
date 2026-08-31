@@ -25,6 +25,17 @@ export function coverSrc(photos: VehicleCardPhoto[] | undefined) {
   return photo?.thumbnailUrl || photo?.url;
 }
 
+/** Foto da galeria do anúncio: miniatura no strip, original no slide ativo. */
+export type GalleryPhoto = {
+  id: string;
+  url: string;
+  thumbnailUrl?: string | null;
+};
+
+export function galleryThumbSrc(photo: GalleryPhoto) {
+  return photo.thumbnailUrl || photo.url;
+}
+
 export type StockFilters = {
   q?: string;
   category?: string;

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { JsonLd } from "@/components/JsonLd";
 import {
   EstoqueBrowse,
   EstoqueBrowseFallback,
 } from "@/components/site/EstoqueBrowse";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader } from "@/components/site/ui";
-import { buildPageMetadata } from "@/lib/seo";
+import { buildPageMetadata, itemListJsonLd } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { getStockFacets, getStockPage } from "@/lib/vehicles";
 
@@ -26,6 +27,14 @@ export default async function EstoquePage() {
 
   return (
     <div className="py-10 lg:py-12">
+      {stock.vehicles.length > 0 ? (
+        <JsonLd
+          data={itemListJsonLd(stock.vehicles, {
+            name: `Estoque — ${site.name}`,
+            path: "/estoque",
+          })}
+        />
+      ) : null}
       <Container>
         <PageHeader
           eyebrow="Estoque"

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
 import { vehiclePhotoAlt } from "@/lib/format";
+import { galleryThumbSrc, type GalleryPhoto } from "@/lib/stock-query";
 
 const PhotoLightbox = dynamic(
   () =>
@@ -18,7 +19,7 @@ export function VehicleGallery({
   photos,
   alt,
 }: {
-  photos: { id: string; url: string }[];
+  photos: GalleryPhoto[];
   alt: string;
 }) {
   const scrollerRef = useRef<HTMLUListElement>(null);
@@ -96,7 +97,7 @@ export function VehicleGallery({
                 </button>
                 {near ? (
                   <VehicleImage
-                    src={photo.url}
+                    src={index === active ? photo.url : galleryThumbSrc(photo)}
                     alt={vehiclePhotoAlt(alt, index, total)}
                     fill
                     sizes="(min-width: 1024px) 60vw, 100vw"
@@ -171,7 +172,7 @@ export function VehicleGallery({
                 >
                   {loadThumb ? (
                     <VehicleImage
-                      src={photo.url}
+                      src={galleryThumbSrc(photo)}
                       alt={vehiclePhotoAlt(alt, index, total)}
                       fill
                       sizes="96px"

@@ -154,7 +154,7 @@ export default async function HomePage() {
             </WhatsAppButton>
           </ActionRow>
 
-          <div className="hero-stats mx-auto mt-6 hidden w-full max-w-2xl sm:mt-8 lg:mt-12 lg:block">
+          <div className="hero-stats mx-auto mt-5 w-full max-w-2xl sm:mt-8 lg:mt-12">
             <Suspense fallback={<StatsBarSkeleton />}>
               <StatsBar />
             </Suspense>

@@ -11,12 +11,13 @@ import { createPortal } from "react-dom";
 import { VehicleImage } from "@/components/VehicleImage";
 import { IconClose } from "@/components/site/icons";
 import { vehiclePhotoAlt } from "@/lib/format";
+import { galleryThumbSrc, type GalleryPhoto } from "@/lib/stock-query";
 
 const MAX_SCALE = 4;
 const ZOOM_STEP = 2.4;
 const SWIPE_THRESHOLD = 55;
 
-type Photo = { id: string; url: string };
+type Photo = GalleryPhoto;
 
 /**
  * Galeria em quase tela cheia. Renderiza via portal no `document.body`
@@ -379,7 +380,7 @@ export function PhotoLightbox({
                   >
                     {near ? (
                       <VehicleImage
-                        src={item.url}
+                        src={galleryThumbSrc(item)}
                         alt={vehiclePhotoAlt(alt, itemIndex, total)}
                         fill
                         sizes="96px"

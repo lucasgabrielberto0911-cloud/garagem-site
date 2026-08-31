@@ -209,6 +209,7 @@ export function Field({
   required = false,
   children,
   className = "",
+  as: Wrapper = "label",
 }: {
   label: string;
   hint?: string;
@@ -216,9 +217,11 @@ export function Field({
   required?: boolean;
   children: ReactNode;
   className?: string;
+  /** Use `div` when o campo tem botões internos (combobox). */
+  as?: "label" | "div";
 }) {
   return (
-    <label className={`block text-sm ${className}`}>
+    <Wrapper className={`block text-sm ${className}`}>
       <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
         {label}
         {required ? <span className="ml-1 text-brand">*</span> : null}
@@ -228,7 +231,7 @@ export function Field({
       {!error && hint ? (
         <p className="mt-1.5 text-xs text-muted">{hint}</p>
       ) : null}
-    </label>
+    </Wrapper>
   );
 }
 

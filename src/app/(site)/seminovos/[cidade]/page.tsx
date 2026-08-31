@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
+import { VehicleGrid } from "@/components/site/VehicleGrid";
 import {
   ActionRow,
   ButtonLink,
@@ -20,6 +21,7 @@ import {
   otherServiceCities,
   serviceCityJsonLd,
 } from "@/lib/seo";
+import { getFeaturedVehicles } from "@/lib/vehicles";
 
 export const revalidate = 3600;
 
@@ -43,7 +45,7 @@ export function generateMetadata({
   });
 }
 
-export default function SeminovosCidadePage({
+export default async function SeminovosCidadePage({
   params,
 }: {
   params: Params;
@@ -57,6 +59,7 @@ export default function SeminovosCidadePage({
     question: item.question,
     answer: item.answer,
   }));
+  const featured = await getFeaturedVehicles(8);
 
   return (
     <div className="py-12 lg:py-16">
@@ -123,6 +126,37 @@ export default function SeminovosCidadePage({
               </ButtonLink>
             </div>
           </aside>
+        </section>
+
+        <section className="mt-12">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="font-display text-xl font-semibold text-cream">
+                Estoque disponível agora
+              </h2>
+              <p className="mt-1.5 text-sm text-muted">
+                O mesmo estoque da loja digital — atendemos {city.name} pelo
+                WhatsApp.
+              </p>
+            </div>
+            <ButtonLink href="/estoque" variant="outline" className="sm:shrink-0">
+              Ver todos em {city.name}
+            </ButtonLink>
+          </div>
+          <div className="mt-6">
+            {featured.length === 0 ? (
+              <p className="border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-center text-sm text-muted">
+                Estoque sendo montado. Chame no WhatsApp e diga o que você
+                procura em {city.name}.
+              </p>
+            ) : (
+              <VehicleGrid
+                vehicles={featured}
+                priorityCount={2}
+                returnTo={path}
+              />
+            )}
+          </div>
         </section>
 
         <section className="mt-12">

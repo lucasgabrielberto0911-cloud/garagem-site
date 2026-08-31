@@ -131,5 +131,36 @@ export async function deleteStorageFiles(urls: Array<string | null | undefined>)
   }
 }
 
+/**
+ * Copia um objeto público do bucket de fotos para um path novo.
+ * Devolve a URL pública do destino, ou null se a origem não for do Storage
+ * ou se a cópia falhar (aí o chamador reutiliza a URL original).
+ */
+export async function copyPublicStorageObject(
+  sourceUrl: string,
+  destPath: string,
+): Promise<string | null> {
+  const sourcePath = storagePathFromPublicUrl(sourceUrl);
+  if (!sourcePath || !destPath || destPath.includes("..")) return null;
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase.storage
+      .from(VEHICLE_PHOTOS_BUCKET)
+      .copy(sourcePath, destPath);
+    if (error) {
+      console.error("[storage] falha ao copiar objeto:", error);
+      return null;
+    }
+    const { data } = supabase.storage
+      .from(VEHICLE_PHOTOS_BUCKET)
+      .getPublicUrl(destPath);
+    return data.publicUrl;
+  } catch (error) {
+    console.error("[storage] falha ao copiar objeto:", error);
+    return null;
+  }
+}
+
 /** @deprecated Use deleteStorageFiles — aceita refs privadas e URLs públicas. */
 export const deleteStoragePublicUrls = deleteStorageFiles;

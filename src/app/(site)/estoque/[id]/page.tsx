@@ -295,7 +295,7 @@ export default async function VehicleDetailPage({
                   </VehicleLeadHit>
 
                   {/* Vídeo e financiamento também no celular — antes só apareciam no desktop. */}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
                     <VehicleLeadHit
                       contentId={vehicle.id}
                       contentName={fullLabel}
@@ -330,6 +330,25 @@ export default async function VehicleDetailPage({
                         className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
                         Financiar
+                      </a>
+                    </VehicleLeadHit>
+                    <VehicleLeadHit
+                      contentId={vehicle.id}
+                      contentName={fullLabel}
+                      value={vehicle.price}
+                      make={formatBrandName(vehicle.brand)}
+                      model={formatModelName(vehicle.model)}
+                      year={vehicle.yearModel}
+                    >
+                      <a
+                        href={whatsappUrl(
+                          WHATSAPP_MESSAGES.vehicleVisit(fullLabel),
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="col-span-2 inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:col-span-1 lg:min-h-[44px]"
+                      >
+                        Agendar visita
                       </a>
                     </VehicleLeadHit>
                   </div>

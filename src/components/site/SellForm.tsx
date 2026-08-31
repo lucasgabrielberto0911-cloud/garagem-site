@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/site/ui";
 import { createSellLead } from "@/app/(site)/vender/actions";
 import { formatNumberBR, formatPhoneBR, formatPlateInput } from "@/lib/format";
+import { trackLead } from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
 
 const inputClass =
@@ -33,6 +34,10 @@ export function SellForm({
       setErrors(fieldErrors);
 
       if (result.ok) {
+        trackLead({
+          content_ids: [],
+          content_name: "Vender/Trocar",
+        });
         toast.success(result.message);
         setSent(true);
         setPhone("");
