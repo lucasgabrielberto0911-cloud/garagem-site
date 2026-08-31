@@ -23,7 +23,7 @@ import {
 } from "@/lib/seo";
 import { getFeaturedVehicles } from "@/lib/vehicles";
 
-export const revalidate = 3600;
+export const revalidate = 120;
 
 type Params = { cidade: string };
 

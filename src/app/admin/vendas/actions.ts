@@ -20,6 +20,7 @@ function revalidatePublicStock(vehicleId?: string) {
   revalidatePath("/");
   revalidatePath("/estoque");
   revalidatePath("/estoque/[id]", "page");
+  revalidatePath("/seminovos/[cidade]", "page");
   if (vehicleId) revalidatePath(`/estoque/${vehicleId}`);
 }
 

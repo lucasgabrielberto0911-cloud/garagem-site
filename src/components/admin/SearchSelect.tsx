@@ -117,6 +117,11 @@ export function SearchSelect<T extends SearchSelectItem>({
     }
     if (event.key === "Enter" && open && rows[highlight]) {
       event.preventDefault();
+      // Enter sem texto não troca a seleção atual pelo primeiro resultado.
+      if (!query && value && rows[highlight].id !== value) {
+        setOpen(false);
+        return;
+      }
       choose(rows[highlight].id);
     }
   }
