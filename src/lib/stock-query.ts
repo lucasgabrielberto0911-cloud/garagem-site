@@ -21,9 +21,61 @@ export type VehicleCardRecord = {
   photos: VehicleCardPhoto[];
 };
 
+const SUPABASE_OBJECT_PUBLIC = "/storage/v1/object/public/";
+const SUPABASE_RENDER_PUBLIC = "/storage/v1/render/image/public/";
+
+/** Mesmas medidas do card WebP gerado no upload (image-variants). */
+const CARD_RENDER_WIDTH = 480;
+const CARD_RENDER_HEIGHT = 300;
+const CARD_RENDER_2X_WIDTH = 720;
+const CARD_RENDER_2X_HEIGHT = 450;
+
+/**
+ * Recorte leve via Image Transformations do Storage.
+ * Sem thumbnailUrl no banco, o card baixava o original (~100–200 KB).
+ */
+export function supabaseCardSrc(
+  url: string,
+  width = CARD_RENDER_WIDTH,
+  height = CARD_RENDER_HEIGHT,
+) {
+  if (!url.includes(SUPABASE_OBJECT_PUBLIC) || url.includes(SUPABASE_RENDER_PUBLIC)) {
+    return url;
+  }
+  const hashIndex = url.indexOf("#");
+  const hash = hashIndex === -1 ? "" : url.slice(hashIndex);
+  const withoutHash = hashIndex === -1 ? url : url.slice(0, hashIndex);
+  const path = withoutHash.split("?")[0];
+  const render = path.replace(SUPABASE_OBJECT_PUBLIC, SUPABASE_RENDER_PUBLIC);
+  const params = new URLSearchParams({
+    width: String(width),
+    height: String(height),
+    resize: "cover",
+    quality: "65",
+  });
+  return `${render}?${params.toString()}${hash}`;
+}
+
+/** Se o recorte falhar, o <img> volta ao arquivo original. */
+export function supabaseOriginalSrc(url: string) {
+  if (!url.includes(SUPABASE_RENDER_PUBLIC)) return url;
+  return url.split("?")[0].replace(SUPABASE_RENDER_PUBLIC, SUPABASE_OBJECT_PUBLIC);
+}
+
 export function coverSrc(photos: VehicleCardPhoto[] | undefined) {
   const photo = photos?.[0];
-  return photo?.thumbnailUrl || photo?.url;
+  if (!photo) return undefined;
+  if (photo.thumbnailUrl) return photo.thumbnailUrl;
+  return photo.url ? supabaseCardSrc(photo.url) : undefined;
+}
+
+export function coverSrcSet(photos: VehicleCardPhoto[] | undefined) {
+  const photo = photos?.[0];
+  if (!photo?.url || photo.thumbnailUrl) return undefined;
+  if (!photo.url.includes(SUPABASE_OBJECT_PUBLIC)) return undefined;
+  const small = supabaseCardSrc(photo.url, CARD_RENDER_WIDTH, CARD_RENDER_HEIGHT);
+  const large = supabaseCardSrc(photo.url, CARD_RENDER_2X_WIDTH, CARD_RENDER_2X_HEIGHT);
+  return `${small} ${CARD_RENDER_WIDTH}w, ${large} ${CARD_RENDER_2X_WIDTH}w`;
 }
 
 /** Foto da galeria do anúncio: miniatura no strip, original no slide ativo. */

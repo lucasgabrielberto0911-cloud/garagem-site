@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { NativeRemoteFillImage } from "@/components/NativeRemoteFillImage";
 
 export const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 
@@ -15,6 +16,7 @@ export function VehicleImage({
   className = "",
   unoptimized = false,
   priority = false,
+  srcSet,
 }: {
   src?: string | null;
   alt: string;
@@ -22,6 +24,7 @@ export function VehicleImage({
   width?: number;
   height?: number;
   sizes?: string;
+  srcSet?: string;
   className?: string;
   unoptimized?: boolean;
   priority?: boolean;
@@ -41,17 +44,15 @@ export function VehicleImage({
   // wrapper do next/image — a rolagem infinita no celular fica mais leve.
   if (fill && skipOptimizer) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <NativeRemoteFillImage
         src={finalSrc}
         alt={alt}
         width={width ?? 480}
         height={height ?? 300}
-        loading={priority ? "eager" : "lazy"}
-        decoding="async"
-        fetchPriority={priority ? "high" : "low"}
-        draggable={false}
-        className={`absolute inset-0 h-full w-full ${className}`}
+        sizes={sizes}
+        srcSet={srcSet}
+        className={className}
+        priority={priority}
       />
     );
   }
