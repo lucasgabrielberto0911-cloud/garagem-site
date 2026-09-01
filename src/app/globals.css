@@ -26,14 +26,8 @@
   }
 }
 
-* {
+html {
   scroll-behavior: smooth;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    scroll-behavior: auto !important;
-  }
 }
 
 :focus-visible {
@@ -500,6 +494,12 @@ body {
     box-shadow 0.2s ease;
 }
 
+/* Cards fora da tela não pintam — a rolagem do estoque no celular não trava. */
+.vehicle-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 280px;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .card-lift:hover {
     transform: translateY(-4px);
@@ -564,6 +564,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
   .hero-brand,
   .hero-text,
   .hero-search,

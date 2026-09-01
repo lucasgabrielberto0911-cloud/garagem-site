@@ -3,10 +3,9 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteErrorNotice } from "@/components/site/SiteErrorNotice";
-import { StockBrowseShell } from "@/components/site/StockPending";
-import { StockFilters, type Facets } from "@/components/site/StockFilters";
 import { StockInfiniteList } from "@/components/site/StockInfiniteList";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
+import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { SiteLeadHit, StockSearchPixel } from "@/components/site/VehiclePixel";
 import { WhatsAppButton } from "@/components/site/ui";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
@@ -93,17 +92,35 @@ function hasActiveFilters(params: EstoqueSearchParams) {
   return FILTER_KEYS.some((key) => Boolean(params[key]));
 }
 
-export function EstoqueBrowseFallback() {
+export function EstoqueBrowseFallback({
+  stock,
+}: {
+  stock?: StockPageResult;
+}) {
+  const total = stock?.total ?? 0;
+  const vehicles = stock?.vehicles ?? [];
+
   return (
-    <div className="mt-8 lg:grid lg:grid-cols-[minmax(300px,340px)_minmax(0,1fr)] lg:items-start lg:gap-8">
-      <div className="h-28 border border-white/10 bg-ink lg:h-[70vh]" />
-      <div>
-        <div className="skeleton mx-auto mt-5 h-3 w-40 lg:mx-0 lg:mt-0" />
-        <div className="mt-4">
+    <>
+      <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
+        {vehicles.length > 0
+          ? `${total} ${total === 1 ? "veículo no estoque" : "veículos no estoque"} · sem filtros${
+              total > vehicles.length ? " · role para ver todos" : ""
+            }`
+          : "Atualizando o estoque…"}
+      </p>
+      <div className="mt-4">
+        {vehicles.length > 0 ? (
+          <VehicleGrid
+            vehicles={vehicles}
+            priorityCount={2}
+            returnTo="/estoque"
+          />
+        ) : (
           <VehicleCardSkeletonGrid count={6} />
-        </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }
 
@@ -113,10 +130,8 @@ export function EstoqueBrowseFallback() {
  */
 export function EstoqueBrowse({
   initialStock,
-  facets,
 }: {
   initialStock: StockPageResult;
-  facets: Facets;
 }) {
   const searchParams = useSearchParams();
   const params = useMemo(
@@ -200,6 +215,7 @@ export function EstoqueBrowse({
   }, []);
 
   const returnTo = buildReturnTo(params);
+  const query = useMemo(() => stockQuery(params), [params]);
   const filters = parseStockFilters(params, { page: 1 });
   const searchString = stockSearchString(params);
   const resultIds = stock.vehicles.map((vehicle) => vehicle.id);
@@ -219,75 +235,66 @@ export function EstoqueBrowse({
         </div>
       ) : null}
 
-      <StockBrowseShell
-        filters={<StockFilters facets={facets} />}
-        results={
-          <>
-            <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
-              {loading
-                ? "Atualizando o estoque…"
-                : filtered
-                  ? `${stock.total} ${stock.total === 1 ? "veículo encontrado" : "veículos encontrados"}`
-                  : `${stock.total} ${stock.total === 1 ? "veículo no estoque" : "veículos no estoque"} · sem filtros`}
-              {!loading && stock.total > stock.vehicles.length
-                ? " · role para ver todos"
-                : ""}
-            </p>
+      <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
+        {loading
+          ? "Atualizando o estoque…"
+          : filtered
+            ? `${stock.total} ${stock.total === 1 ? "veículo encontrado" : "veículos encontrados"}`
+            : `${stock.total} ${stock.total === 1 ? "veículo no estoque" : "veículos no estoque"} · sem filtros`}
+        {!loading && stock.total > stock.vehicles.length
+          ? " · role para ver todos"
+          : ""}
+      </p>
 
-            <div className="mt-4" aria-live="polite">
-              {loading ? (
-                <VehicleCardSkeletonGrid count={6} />
-              ) : (
-                <StockInfiniteList
-                  key={filterKey}
-                  initialVehicles={stock.vehicles}
-                  total={stock.total}
-                  pageSize={stock.pageSize ?? filters.pageSize ?? STOCK_PAGE_SIZE}
-                  query={stockQuery(params)}
-                  returnTo={returnTo}
-                  empty={
-                    <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-12 text-center">
-                      <p className="font-display text-lg font-semibold text-cream">
-                        {stock.error
-                          ? "Não foi possível carregar o estoque"
-                          : filtered
-                            ? "Nenhum veículo com esses filtros"
-                            : "Estoque sendo montado"}
-                      </p>
-                      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-                        {stock.error
-                          ? "Tente novamente em alguns instantes. Se preferir, fale conosco no WhatsApp."
-                          : filtered
-                            ? "Tente ampliar a busca. Se você já sabe o que quer, a gente procura o veículo para você."
-                            : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
-                      </p>
-                      <SiteLeadHit
-                        contentName="Avise-me"
-                        searchString={
-                          filtered ? searchString || undefined : undefined
-                        }
-                      >
-                        <WhatsAppButton
-                          className="mt-5"
-                          message={
-                            filtered
-                              ? WHATSAPP_MESSAGES.wanted(
-                                  searchString || undefined,
-                                )
-                              : WHATSAPP_MESSAGES.wanted()
-                          }
-                        >
-                          Quero avisar o que procuro
-                        </WhatsAppButton>
-                      </SiteLeadHit>
-                    </div>
+      <div className="mt-4" aria-live="polite">
+        {loading ? (
+          <VehicleCardSkeletonGrid count={6} />
+        ) : (
+          <StockInfiniteList
+            key={filterKey}
+            initialVehicles={stock.vehicles}
+            total={stock.total}
+            pageSize={stock.pageSize ?? filters.pageSize ?? STOCK_PAGE_SIZE}
+            query={query}
+            returnTo={returnTo}
+            empty={
+              <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-12 text-center">
+                <p className="font-display text-lg font-semibold text-cream">
+                  {stock.error
+                    ? "Não foi possível carregar o estoque"
+                    : filtered
+                      ? "Nenhum veículo com esses filtros"
+                      : "Estoque sendo montado"}
+                </p>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+                  {stock.error
+                    ? "Tente novamente em alguns instantes. Se preferir, fale conosco no WhatsApp."
+                    : filtered
+                      ? "Tente ampliar a busca. Se você já sabe o que quer, a gente procura o veículo para você."
+                      : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
+                </p>
+                <SiteLeadHit
+                  contentName="Avise-me"
+                  searchString={
+                    filtered ? searchString || undefined : undefined
                   }
-                />
-              )}
-            </div>
-          </>
-        }
-      />
+                >
+                  <WhatsAppButton
+                    className="mt-5"
+                    message={
+                      filtered
+                        ? WHATSAPP_MESSAGES.wanted(searchString || undefined)
+                        : WHATSAPP_MESSAGES.wanted()
+                    }
+                  >
+                    Quero avisar o que procuro
+                  </WhatsAppButton>
+                </SiteLeadHit>
+              </div>
+            }
+          />
+        )}
+      </div>
     </>
   );
 }

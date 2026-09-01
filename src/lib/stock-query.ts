@@ -1,6 +1,7 @@
 /** Tipos e parsers do estoque — seguro para o bundle do cliente. */
 
-export const STOCK_PAGE_SIZE = 12;
+/** 8 no celular = 4 linhas; lotes menores descem mais rápido na rolagem. */
+export const STOCK_PAGE_SIZE = 8;
 
 export type VehicleCardPhoto = { url: string; thumbnailUrl?: string | null };
 

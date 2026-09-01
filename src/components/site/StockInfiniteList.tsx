@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useRef, useState, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { InfiniteSentinel } from "@/components/InfiniteSentinel";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import type { VehicleCardRecord } from "@/lib/stock-query";
@@ -16,6 +23,18 @@ function buildEstoqueUrl(query: StockQuery, page: number, pageSize: number) {
   params.set("pageSize", String(pageSize));
   return `/api/estoque?${params.toString()}`;
 }
+
+async function fetchStockVehicles(url: string, signal?: AbortSignal) {
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" },
+    signal,
+  });
+  if (!response.ok) throw new Error("Falha ao carregar o estoque");
+  const data = (await response.json()) as { vehicles?: VehicleCardRecord[] };
+  return data.vehicles ?? [];
+}
+
+const MemoVehicleGrid = memo(VehicleGrid);
 
 export function StockInfiniteList({
   initialVehicles,
@@ -37,44 +56,94 @@ export function StockInfiniteList({
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const loadingRef = useRef(false);
+  const bufferRef = useRef<{ page: number; vehicles: VehicleCardRecord[] } | null>(
+    null,
+  );
+  const inflightRef = useRef<Promise<VehicleCardRecord[]> | null>(null);
+  const inflightPageRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const queryRef = useRef(query);
+  queryRef.current = query;
 
   const hasMore = vehicles.length < total;
+
+  const loadPage = useCallback(
+    async (targetPage: number) => {
+      const buffered = bufferRef.current;
+      if (buffered?.page === targetPage) return buffered.vehicles;
+      if (inflightRef.current && inflightPageRef.current === targetPage) {
+        return inflightRef.current;
+      }
+
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      inflightPageRef.current = targetPage;
+
+      const request = fetchStockVehicles(
+        buildEstoqueUrl(queryRef.current, targetPage, pageSize),
+        controller.signal,
+      )
+        .then((rows) => {
+          bufferRef.current = { page: targetPage, vehicles: rows };
+          return rows;
+        })
+        .finally(() => {
+          if (inflightRef.current === request) inflightRef.current = null;
+        });
+
+      inflightRef.current = request;
+      return request;
+    },
+    [pageSize],
+  );
+
+  useEffect(() => {
+    if (!hasMore) return;
+    void loadPage(page + 1).catch(() => {
+      /* o sentinel tenta de novo se a pré-carga falhar */
+    });
+  }, [hasMore, loadPage, page]);
+
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
 
   const loadMore = useCallback(async () => {
     if (loadingRef.current || !hasMore) return;
     loadingRef.current = true;
-    setLoading(true);
     setFailed(false);
 
     const nextPage = page + 1;
+    const buffered =
+      bufferRef.current?.page === nextPage ? bufferRef.current.vehicles : null;
+
     try {
-      const response = await fetch(
-        buildEstoqueUrl(query, nextPage, pageSize),
-        { headers: { Accept: "application/json" } },
-      );
-      if (!response.ok) throw new Error("Falha ao carregar o estoque");
-      const data = (await response.json()) as {
-        vehicles?: VehicleCardRecord[];
-      };
-      const incoming = data.vehicles ?? [];
+      let incoming = buffered;
+      if (!incoming) {
+        setLoading(true);
+        incoming = await loadPage(nextPage);
+      }
+      bufferRef.current = null;
       setVehicles((current) => {
         const seen = new Set(current.map((item) => item.id));
         return [...current, ...incoming.filter((item) => !seen.has(item.id))];
       });
       setPage(nextPage);
-    } catch {
+    } catch (error) {
+      if ((error as { name?: string }).name === "AbortError") return;
       setFailed(true);
     } finally {
       loadingRef.current = false;
       setLoading(false);
     }
-  }, [hasMore, page, pageSize, query]);
+  }, [hasMore, loadPage, page]);
 
   if (initialVehicles.length === 0) return <>{empty}</>;
 
   return (
     <>
-      <VehicleGrid
+      <MemoVehicleGrid
         vehicles={vehicles}
         returnTo={returnTo}
         priorityCount={2}
@@ -84,10 +153,13 @@ export function StockInfiniteList({
         <InfiniteSentinel
           onVisible={loadMore}
           disabled={loading || failed}
-          rootMargin="400px 0px"
+          rootMargin="320px 0px"
         >
           {loading ? (
-            <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted" aria-live="polite">
+            <p
+              className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted"
+              aria-live="polite"
+            >
               <span
                 className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-r-transparent"
                 aria-hidden="true"

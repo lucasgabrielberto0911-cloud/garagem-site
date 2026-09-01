@@ -37,6 +37,25 @@ export function VehicleImage({
   // default do next.config.
   const skipOptimizer = unoptimized || /^https?:\/\//i.test(finalSrc);
 
+  // Capa do card: <img> nativo baixa a miniatura com lazy/async, sem o
+  // wrapper do next/image — a rolagem infinita no celular fica mais leve.
+  if (fill && skipOptimizer) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={finalSrc}
+        alt={alt}
+        width={width ?? 480}
+        height={height ?? 300}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        fetchPriority={priority ? "high" : "low"}
+        draggable={false}
+        className={`absolute inset-0 h-full w-full ${className}`}
+      />
+    );
+  }
+
   if (fill) {
     return (
       <Image
