@@ -512,15 +512,25 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
   const where = buildStockWhere(filters);
   const orderBy = SORT_MAP[filters.sort ?? "recentes"] ?? SORT_MAP.recentes;
 
-  const [total, vehicles] = await Promise.all([
-    prisma.vehicle.count({ where }),
-    findCardVehicles({
-      where,
-      orderBy,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-  ]);
+  const vehicles = await findCardVehicles({
+    where,
+    orderBy,
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  });
+
+  // Página 2+ da rolagem infinita: o cliente já tem o total da 1ª resposta.
+  if (page > 1) {
+    return {
+      vehicles,
+      total: 0,
+      page,
+      pageSize,
+      totalPages: 1,
+    };
+  }
+
+  const total = await prisma.vehicle.count({ where });
 
   return {
     vehicles,
@@ -533,7 +543,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v5"],
+  ["stock-page-v6"],
   PUBLIC_CACHE,
 );
 

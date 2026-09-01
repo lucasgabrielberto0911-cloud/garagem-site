@@ -11,7 +11,12 @@ export default function EstoqueLoading() {
           title="Veículos disponíveis"
           description="Vistoria e procedência em cada anúncio. Use os filtros para achar o seu."
         />
-        <EstoqueBrowseFallback />
+        <div className="mt-8 lg:grid lg:grid-cols-[minmax(300px,340px)_minmax(0,1fr)] lg:items-start lg:gap-8">
+          <div className="h-28 border border-white/10 bg-ink lg:h-[70vh]" />
+          <div>
+            <EstoqueBrowseFallback />
+          </div>
+        </div>
       </Container>
     </div>
   );

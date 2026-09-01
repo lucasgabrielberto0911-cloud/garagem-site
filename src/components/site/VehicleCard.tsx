@@ -3,7 +3,7 @@ import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatVehicleLabel } from "@/lib/format";
-import { coverSrc, type VehicleCardRecord } from "@/lib/stock-query";
+import { coverSrc, coverSrcSet, type VehicleCardRecord } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export type VehicleCardData = VehicleCardRecord;
@@ -29,6 +29,7 @@ export function VehicleCard({
 }) {
   const title = formatVehicleLabel(vehicle.brand, vehicle.model);
   const cover = coverSrc(vehicle.photos);
+  const coverSet = coverSrcSet(vehicle.photos);
   const badge = STATUS_BADGE[vehicle.status];
   const href = vehiclePath(vehicle);
   const sold = vehicle.status === "vendido";
@@ -41,7 +42,7 @@ export function VehicleCard({
   ].join(" · ");
 
   return (
-    <article className="card-lift group relative flex h-full flex-col overflow-hidden border border-white/10 bg-ink touch-manipulation">
+    <article className="vehicle-card card-lift group relative flex h-full flex-col overflow-hidden border border-white/10 bg-ink touch-manipulation">
       <FavoriteButton
         vehicleId={vehicle.id}
         label={`${title} ${vehicle.yearModel}`}
@@ -63,8 +64,9 @@ export function VehicleCard({
             alt={title}
             fill
             sizes={CARD_SIZES}
+            srcSet={coverSet}
             priority={priority}
-            className="object-cover transition duration-300 group-hover:scale-[1.03]"
+            className="object-cover"
           />
           <div
             className="absolute inset-0 bg-gradient-to-t from-asphalt/70 via-transparent to-transparent"

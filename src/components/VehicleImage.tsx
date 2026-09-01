@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { NativeRemoteFillImage } from "@/components/NativeRemoteFillImage";
 
 export const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 
@@ -15,6 +16,7 @@ export function VehicleImage({
   className = "",
   unoptimized = false,
   priority = false,
+  srcSet,
 }: {
   src?: string | null;
   alt: string;
@@ -22,6 +24,7 @@ export function VehicleImage({
   width?: number;
   height?: number;
   sizes?: string;
+  srcSet?: string;
   className?: string;
   unoptimized?: boolean;
   priority?: boolean;
@@ -36,6 +39,23 @@ export function VehicleImage({
   // Hobby esgotou e /_next/image devolve 402. Placeholder local segue o
   // default do next.config.
   const skipOptimizer = unoptimized || /^https?:\/\//i.test(finalSrc);
+
+  // Capa do card: <img> nativo baixa a miniatura com lazy/async, sem o
+  // wrapper do next/image — a rolagem infinita no celular fica mais leve.
+  if (fill && skipOptimizer) {
+    return (
+      <NativeRemoteFillImage
+        src={finalSrc}
+        alt={alt}
+        width={width ?? 480}
+        height={height ?? 300}
+        sizes={sizes}
+        srcSet={srcSet}
+        className={className}
+        priority={priority}
+      />
+    );
+  }
 
   if (fill) {
     return (
