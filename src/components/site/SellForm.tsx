@@ -7,6 +7,7 @@ import { createSellLead } from "@/app/(site)/vender/actions";
 import { formatNumberBR, formatPhoneBR, formatPlateInput } from "@/lib/format";
 import { trackLead } from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
+import { SiteLeadHit } from "@/components/site/VehiclePixel";
 
 const inputClass =
   "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition placeholder:text-muted focus:border-brand sm:min-h-[52px]";
@@ -219,9 +220,11 @@ export function SellForm({
         >
           {isPending ? "Enviando..." : "Solicitar avaliação"}
         </button>
-        <WhatsAppButton size="lg" variant="outline" message={WHATSAPP_MESSAGES.sell}>
-          Prefiro chamar no WhatsApp
-        </WhatsAppButton>
+        <SiteLeadHit contentName="Vender/Trocar">
+          <WhatsAppButton size="lg" variant="outline" message={WHATSAPP_MESSAGES.sell}>
+            Prefiro chamar no WhatsApp
+          </WhatsAppButton>
+        </SiteLeadHit>
       </div>
 
       <p className="mt-4 text-center text-xs leading-relaxed text-muted">

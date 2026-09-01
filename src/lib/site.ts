@@ -51,6 +51,7 @@ export function isPhysicalAddress(value: string) {
 
 export const WHATSAPP_MESSAGES = {
   general: "Olá! Vi o site da Garagem e gostaria de mais informações.",
+  help: "Olá! Vi o site da Garagem e quero ajuda para escolher um seminovo.",
   sell: "Olá! Gostaria de avaliar meu carro para venda/troca.",
   visit:
     "Olá! Gostaria de conhecer o estoque e receber mais informações pelo WhatsApp.",
@@ -60,9 +61,16 @@ export const WHATSAPP_MESSAGES = {
     `Olá! Gostaria de agendar para ver o ${label} de perto.`,
   vehicleVideo: (label: string) =>
     `Olá! Podem me mandar um vídeo do ${label} que está no site?`,
+  vehicleFinance: (label: string) =>
+    `Olá! Gostaria de opções de financiamento para o ${label}.`,
   vehicleTrade: (label: string) =>
     `Olá! Tenho interesse no ${label} e gostaria de dar meu carro na troca.`,
-  wanted: "Olá! Não achei o que procuro no site. Estou buscando: ",
+  wanted: (detail?: string) => {
+    const text = (detail ?? "").trim();
+    return text
+      ? `Olá! Quero ser avisado quando chegar: ${text}.`
+      : "Olá! Não achei o que procuro no site. Podem me avisar quando chegar?";
+  },
 } as const;
 
 /**

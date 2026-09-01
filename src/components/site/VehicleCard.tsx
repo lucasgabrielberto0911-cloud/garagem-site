@@ -1,6 +1,7 @@
 import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
+import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatVehicleLabel } from "@/lib/format";
 import { coverSrc, type VehicleCardRecord } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
@@ -30,6 +31,8 @@ export function VehicleCard({
   const cover = coverSrc(vehicle.photos);
   const badge = STATUS_BADGE[vehicle.status];
   const href = vehiclePath(vehicle);
+  const sold = vehicle.status === "vendido";
+  const label = `${title}${vehicle.version ? ` ${vehicle.version}` : ""} ${vehicle.yearModel}`;
 
   const meta = [
     `${vehicle.yearModel}`,
@@ -114,6 +117,16 @@ export function VehicleCard({
           </div>
         </div>
       </StockVehicleLink>
+      {!sold ? (
+        <VehicleCardWhatsApp
+          vehicleId={vehicle.id}
+          label={label}
+          value={vehicle.price}
+          make={formatBrandName(vehicle.brand)}
+          model={formatModelName(vehicle.model)}
+          year={vehicle.yearModel}
+        />
+      ) : null}
     </article>
   );
 }

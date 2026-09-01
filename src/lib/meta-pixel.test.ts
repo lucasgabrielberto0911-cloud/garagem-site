@@ -69,6 +69,18 @@ test("stockSearchString prefers q and otherwise joins filters", () => {
   );
 });
 
+test("Lead without catalog ids keeps content_name for CTAs do site", () => {
+  const payload = buildCatalogPayload({
+    content_ids: [],
+    content_name: "Avise-me",
+    search_string: "civic",
+  });
+  assert.deepEqual(payload.content_ids, []);
+  assert.equal(payload.content_name, "Avise-me");
+  assert.equal(payload.search_string, "civic");
+  assert.equal(payload.contents, undefined);
+});
+
 type FbqCall = unknown[];
 
 function installFbq() {

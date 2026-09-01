@@ -12,13 +12,14 @@ import { VehicleLeadHit, VehicleViewContent } from "@/components/site/VehiclePix
 import { Container, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
+import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { JsonLd } from "@/components/JsonLd";
 import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatVehicleLabel, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site, whatsappUrl } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
-import { getVehicleConditions } from "@/lib/site-content";
+import { getVehicleConditions, getGoogleReviews } from "@/lib/site-content";
 import {
   getPublicVehicleStaticParams,
   getRelatedVehicles,
@@ -101,7 +102,7 @@ export default async function VehicleDetailPage({
     vehicle.model,
     vehicle.yearModel,
   );
-  const [related, conditions] = await Promise.all([
+  const [related, conditions, google] = await Promise.all([
     getRelatedVehicles(
       vehicle.id,
       vehicle.brand,
@@ -110,6 +111,7 @@ export default async function VehicleDetailPage({
       vehicle.price,
     ),
     getVehicleConditions(),
+    getGoogleReviews(),
   ]);
 
   const specs = [
@@ -253,6 +255,12 @@ export default async function VehicleDetailPage({
                   {formatListedAgo(vehicle.createdAt)}
                 </p>
               ) : null}
+              {!sold ? (
+                <GoogleReviewsBadge
+                  reviews={google}
+                  className="mt-0 border-white/10"
+                />
+              ) : null}
 
               <dl className="grid grid-cols-2 gap-x-3 gap-y-3 border-y border-white/10 py-3.5 text-sm">
                 {specs.map((spec) => (
@@ -323,7 +331,7 @@ export default async function VehicleDetailPage({
                     >
                       <a
                         href={whatsappUrl(
-                          `Olá! Gostaria de opções de financiamento para o ${fullLabel}.`,
+                          WHATSAPP_MESSAGES.vehicleFinance(fullLabel),
                         )}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -353,12 +361,30 @@ export default async function VehicleDetailPage({
                     </VehicleLeadHit>
                   </div>
 
+                  <VehicleLeadHit
+                    contentId={vehicle.id}
+                    contentName={fullLabel}
+                    value={vehicle.price}
+                    make={formatBrandName(vehicle.brand)}
+                    model={formatModelName(vehicle.model)}
+                    year={vehicle.yearModel}
+                  >
+                    <a
+                      href={whatsappUrl(WHATSAPP_MESSAGES.vehicleTrade(fullLabel))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex w-full min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
+                    >
+                      Quero dar na troca
+                    </a>
+                  </VehicleLeadHit>
+
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
                     <Link
                       href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
                       className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline"
                     >
-                      Quero colocar meu veículo na troca
+                      Ou preencha a avaliação do seu usado
                     </Link>
                   </div>
                 </>
