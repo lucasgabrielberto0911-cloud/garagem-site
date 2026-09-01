@@ -10,6 +10,7 @@ import { StatsBar, StatsBarSkeleton } from "@/components/site/StatsBar";
 import { Testimonials } from "@/components/site/Testimonials";
 import { TrustBadges } from "@/components/site/TrustBadges";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
+import { SiteLeadHit } from "@/components/site/VehiclePixel";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import {
   ActionRow,
@@ -144,14 +145,18 @@ export default async function HomePage() {
             <ButtonLink href="/estoque" size="lg">
               Ver estoque
             </ButtonLink>
-            <WhatsAppButton
-              size="lg"
-              variant="outline"
-              className="hidden sm:inline-flex"
-              message={WHATSAPP_MESSAGES.general}
-            >
-              Quero ajuda para escolher
-            </WhatsAppButton>
+            <SiteLeadHit contentName="Ajuda para escolher">
+              <WhatsAppButton
+                size="lg"
+                variant="outline"
+                message={WHATSAPP_MESSAGES.help}
+              >
+                <span className="sm:hidden">Ajuda no WhatsApp</span>
+                <span className="hidden sm:inline">
+                  Quero ajuda para escolher
+                </span>
+              </WhatsAppButton>
+            </SiteLeadHit>
           </ActionRow>
 
           <div className="hero-stats mx-auto mt-5 w-full max-w-2xl sm:mt-8 lg:mt-12">
@@ -181,12 +186,14 @@ export default async function HomePage() {
                   Estamos selecionando os próximos veículos. Diga o que você
                   procura — buscamos para você.
                 </p>
-                <WhatsAppButton
-                  className="mt-5"
-                  message={WHATSAPP_MESSAGES.general}
-                >
-                  Quero avisar o que procuro
-                </WhatsAppButton>
+                <SiteLeadHit contentName="Avise-me">
+                  <WhatsAppButton
+                    className="mt-5"
+                    message={WHATSAPP_MESSAGES.wanted()}
+                  >
+                    Quero avisar o que procuro
+                  </WhatsAppButton>
+                </SiteLeadHit>
               </div>
             </ScrollReveal>
           ) : (
@@ -251,7 +258,7 @@ export default async function HomePage() {
             description="Avaliações de clientes que fecharam negócio com a gente."
           />
           <div className="flex justify-center">
-            <GoogleReviewsBadge reviews={siteContent.google} />
+            <GoogleReviewsBadge reviews={siteContent.google} className="mt-5" />
           </div>
         </ScrollReveal>
         <div className="mt-12">
@@ -330,9 +337,11 @@ export default async function HomePage() {
                 gente avalia e faz uma proposta justa.
               </p>
               <ActionRow className="mt-8">
-                <WhatsAppButton size="lg" message={WHATSAPP_MESSAGES.sell}>
-                  Avaliar pelo WhatsApp
-                </WhatsAppButton>
+                <SiteLeadHit contentName="Vender/Trocar">
+                  <WhatsAppButton size="lg" message={WHATSAPP_MESSAGES.sell}>
+                    Avaliar pelo WhatsApp
+                  </WhatsAppButton>
+                </SiteLeadHit>
                 <ButtonLink href="/vender" size="lg" variant="outline">
                   Preencher formulário
                 </ButtonLink>

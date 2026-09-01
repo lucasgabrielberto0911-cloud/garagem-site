@@ -7,7 +7,7 @@ import { StockBrowseShell } from "@/components/site/StockPending";
 import { StockFilters, type Facets } from "@/components/site/StockFilters";
 import { StockInfiniteList } from "@/components/site/StockInfiniteList";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
-import { StockSearchPixel } from "@/components/site/VehiclePixel";
+import { SiteLeadHit, StockSearchPixel } from "@/components/site/VehiclePixel";
 import { WhatsAppButton } from "@/components/site/ui";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
 import {
@@ -261,9 +261,25 @@ export function EstoqueBrowse({
                             ? "Tente ampliar a busca. Se você já sabe o que quer, a gente procura o veículo para você."
                             : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
                       </p>
-                      <WhatsAppButton className="mt-5" message={WHATSAPP_MESSAGES.general}>
-                        Quero avisar o que procuro
-                      </WhatsAppButton>
+                      <SiteLeadHit
+                        contentName="Avise-me"
+                        searchString={
+                          filtered ? searchString || undefined : undefined
+                        }
+                      >
+                        <WhatsAppButton
+                          className="mt-5"
+                          message={
+                            filtered
+                              ? WHATSAPP_MESSAGES.wanted(
+                                  searchString || undefined,
+                                )
+                              : WHATSAPP_MESSAGES.wanted()
+                          }
+                        >
+                          Quero avisar o que procuro
+                        </WhatsAppButton>
+                      </SiteLeadHit>
                     </div>
                   }
                 />

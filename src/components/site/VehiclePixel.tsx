@@ -66,6 +66,35 @@ export function VehicleLeadHit({
   );
 }
 
+/**
+ * Lead sem veículo do catálogo (ajuda no hero, avise-me, busca vazia).
+ * `VehicleLeadHit` ignora clique sem `contentId`.
+ */
+export function SiteLeadHit({
+  children,
+  contentName,
+  searchString,
+}: {
+  children: ReactNode;
+  contentName: string;
+  searchString?: string;
+}) {
+  return (
+    <span
+      className="contents"
+      onClickCapture={() => {
+        trackLead({
+          content_ids: [],
+          content_name: contentName,
+          search_string: searchString,
+        });
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 /** @deprecated Use VehicleLeadHit. */
 export const VehicleContactHit = VehicleLeadHit;
 

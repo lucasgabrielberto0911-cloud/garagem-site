@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { SiteLeadHit } from "@/components/site/VehiclePixel";
 import { IconWhatsApp } from "@/components/site/icons";
-import { whatsappUrl } from "@/lib/site";
+import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 
 const BUDGETS = [
   "Até R$ 50 mil",
@@ -19,16 +20,18 @@ const BUDGETS = [
 export function WantedVehicleCta({
   title = "Não achou o que procura?",
   description = "Diga o que você quer que a gente avisa assim que entrar no estoque — geralmente antes de anunciar.",
+  initialWanted = "",
 }: {
   title?: string;
   description?: string;
+  initialWanted?: string;
 }) {
-  const [wanted, setWanted] = useState("");
+  const [wanted, setWanted] = useState(initialWanted);
   const [budget, setBudget] = useState<string>("");
 
-  const message = `Olá! Quero ser avisado quando chegar: ${
-    wanted.trim() || "(modelo que procuro)"
-  }${budget ? `. Faixa de preço: ${budget}` : ""}.`;
+  const model = wanted.trim() || "(modelo que procuro)";
+  const detail = budget ? `${model}. Faixa de preço: ${budget}` : model;
+  const searchString = [wanted.trim(), budget].filter(Boolean).join(" · ");
 
   return (
     <div className="mx-auto max-w-3xl border border-white/10 bg-ink p-6 text-center sm:p-8">
@@ -71,15 +74,20 @@ export function WantedVehicleCta({
         </label>
       </div>
 
-      <a
-        href={whatsappUrl(message)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="whatsapp-btn mt-4 inline-flex min-h-[52px] w-full items-center justify-center gap-2 px-6 font-display text-xs font-semibold uppercase tracking-wide text-white touch-manipulation sm:w-auto sm:text-sm"
+      <SiteLeadHit
+        contentName="Avise-me"
+        searchString={searchString || undefined}
       >
-        <IconWhatsApp className="h-4 w-4" />
-        Quero ser avisado
-      </a>
+        <a
+          href={whatsappUrl(WHATSAPP_MESSAGES.wanted(detail))}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="whatsapp-btn mt-4 inline-flex min-h-[52px] w-full items-center justify-center gap-2 px-6 font-display text-xs font-semibold uppercase tracking-wide text-white touch-manipulation sm:w-auto sm:text-sm"
+        >
+          <IconWhatsApp className="h-4 w-4" />
+          Quero ser avisado
+        </a>
+      </SiteLeadHit>
     </div>
   );
 }

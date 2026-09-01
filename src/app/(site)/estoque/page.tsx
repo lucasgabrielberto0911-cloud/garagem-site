@@ -47,7 +47,7 @@ export default async function EstoquePage() {
         </Suspense>
 
         <div className="mt-10">
-          <WantedVehicleCta />
+          <WantedVehicleCta description="Não achou no filtro? Diz o modelo e a faixa — a gente avisa no WhatsApp quando entrar no estoque." />
         </div>
       </Container>
     </div>
