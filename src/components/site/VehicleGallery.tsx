@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
 import { vehiclePhotoAlt } from "@/lib/format";
-import { galleryThumbSrc, type GalleryPhoto } from "@/lib/stock-query";
+import { galleryPreviewSrc, galleryPreviewSrcSet, galleryThumbSrc, type GalleryPhoto } from "@/lib/stock-query";
 
 const PhotoLightbox = dynamic(
   () =>
@@ -97,10 +97,11 @@ export function VehicleGallery({
                 </button>
                 {near ? (
                   <VehicleImage
-                    src={index === active ? photo.url : galleryThumbSrc(photo)}
+                    src={galleryPreviewSrc(photo)}
                     alt={vehiclePhotoAlt(alt, index, total)}
                     fill
                     sizes="(min-width: 1024px) 60vw, 100vw"
+                    srcSet={galleryPreviewSrcSet(photo)}
                     priority={index === 0}
                     className="object-cover"
                   />

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateSiteSettings } from "@/app/admin/site/actions";
-import { cleanupOrphanPhotos } from "@/app/admin/site/cleanup-actions";
+import { cleanupOrphanPhotos, backfillMissingThumbnails } from "@/app/admin/site/cleanup-actions";
 import { SiteContentEditor } from "@/components/admin/SiteContentEditor";
 import { Card, Field, btn, inputClass } from "@/components/admin/ui";
 import type { SiteContent } from "@/lib/site-content";
@@ -20,6 +20,7 @@ export function SiteSettingsForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [cleanupPending, startCleanup] = useTransition();
+  const [thumbsPending, startThumbs] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -35,6 +36,16 @@ export function SiteSettingsForm({
       } else {
         toast.error(result.message);
       }
+    });
+  }
+
+  function runThumbs() {
+    startThumbs(async () => {
+      const result = await backfillMissingThumbnails();
+      if (result.ok) {
+        toast.success(result.message);
+        router.refresh();
+      } else toast.error(result.message);
     });
   }
 
@@ -230,17 +241,27 @@ export function SiteSettingsForm({
 
       <Card title="Manutenção de fotos">
         <p className="text-sm leading-relaxed text-muted">
-          Remove do Storage fotos que não estão ligadas a nenhum anúncio
-          (órfãs de edições antigas ou uploads cancelados).
+          Miniaturas 480×300 deixam o estoque e a ficha mais leves no celular.
+          Fotos antigas ainda não têm capa gravada — gere em lotes de 20.
         </p>
-        <button
-          type="button"
-          disabled={cleanupPending}
-          onClick={runCleanup}
-          className={`${btn.outline} mt-4`}
-        >
-          {cleanupPending ? "Limpando…" : "Limpar fotos órfãs"}
-        </button>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            disabled={thumbsPending}
+            onClick={runThumbs}
+            className={btn.primary}
+          >
+            {thumbsPending ? "Gerando miniaturas…" : "Gerar miniaturas faltantes"}
+          </button>
+          <button
+            type="button"
+            disabled={cleanupPending}
+            onClick={runCleanup}
+            className={btn.outline}
+          >
+            {cleanupPending ? "Limpando…" : "Limpar fotos órfãs"}
+          </button>
+        </div>
       </Card>
     </form>
   );

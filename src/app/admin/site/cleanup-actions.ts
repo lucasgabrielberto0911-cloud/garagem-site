@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { storeCardThumbnail } from "@/lib/photo-thumbnails";
 import { prisma } from "@/lib/prisma";
 import {
   VEHICLE_PHOTOS_BUCKET,
@@ -10,13 +11,17 @@ import {
   hasSupabaseServiceRole,
   storagePathFromPublicUrl,
 } from "@/lib/supabase";
+import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
 
 export type CleanupResult = {
   ok: boolean;
   message: string;
   removed?: number;
   checked?: number;
+  remaining?: number;
 };
+
+const BACKFILL_BATCH = 20;
 
 async function requireAdmin() {
   const session = await getSession();
@@ -145,6 +150,88 @@ export async function cleanupOrphanPhotos(): Promise<CleanupResult> {
         error instanceof Error
           ? error.message
           : "Não foi possível limpar o Storage.",
+    };
+  }
+}
+
+/**
+ * Gera capas 480×300 para fotos antigas sem thumbnailUrl.
+ * Lote pequeno para caber no tempo da função na Vercel — clique de novo se ainda faltar.
+ */
+export async function backfillMissingThumbnails(): Promise<CleanupResult> {
+  await requireAdmin();
+
+  if (!hasSupabaseServiceRole()) {
+    return {
+      ok: false,
+      message:
+        "Configure SUPABASE_SERVICE_ROLE_KEY para gerar miniaturas no Storage.",
+    };
+  }
+
+  try {
+    const missing = await prisma.photo.findMany({
+      where: { OR: [{ thumbnailUrl: null }, { thumbnailUrl: "" }] },
+      orderBy: { order: "asc" },
+      take: BACKFILL_BATCH,
+      select: { id: true, url: true },
+    });
+
+    if (missing.length === 0) {
+      return {
+        ok: true,
+        message: "Todas as fotos do estoque já têm miniatura.",
+        removed: 0,
+        remaining: 0,
+      };
+    }
+
+    let done = 0;
+    let skipped = 0;
+
+    for (const photo of missing) {
+      const result = await storeCardThumbnail(photo.url);
+      if (!result.ok) {
+        skipped += 1;
+        console.warn(`[thumbs] foto ${photo.id}: ${result.error}`);
+        continue;
+      }
+      await prisma.photo.update({
+        where: { id: photo.id },
+        data: { thumbnailUrl: result.thumbnailUrl },
+      });
+      done += 1;
+    }
+
+    const remaining = await prisma.photo.count({
+      where: { OR: [{ thumbnailUrl: null }, { thumbnailUrl: "" }] },
+    });
+
+    revalidateTag(VEHICLES_PUBLIC_CACHE_TAG);
+    revalidatePath("/");
+    revalidatePath("/estoque");
+    revalidatePath("/estoque/[id]", "page");
+    revalidatePath("/admin/site");
+
+    const extra =
+      remaining > 0
+        ? ` Ainda faltam ${remaining} — clique de novo.`
+        : " Estoque completo.";
+
+    return {
+      ok: done > 0 || skipped === 0,
+      message: `Geradas ${done} miniatura(s)${skipped ? `, ${skipped} ignorada(s)` : ""}.${extra}`,
+      removed: done,
+      remaining,
+    };
+  } catch (error) {
+    console.error("[thumbs] backfill:", error);
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Não foi possível gerar as miniaturas.",
     };
   }
 }

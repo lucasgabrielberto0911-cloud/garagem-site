@@ -29,15 +29,23 @@ const CARD_RENDER_WIDTH = 480;
 const CARD_RENDER_HEIGHT = 300;
 const CARD_RENDER_2X_WIDTH = 720;
 const CARD_RENDER_2X_HEIGHT = 450;
+const GALLERY_PREVIEW_WIDTH = 960;
+const GALLERY_PREVIEW_HEIGHT = 600;
+const GALLERY_THUMB_WIDTH = 240;
+const GALLERY_THUMB_HEIGHT = 150;
+
+type TransformResize = "cover" | "contain";
 
 /**
  * Recorte leve via Image Transformations do Storage.
  * Sem thumbnailUrl no banco, o card baixava o original (~100–200 KB).
  */
-export function supabaseCardSrc(
+export function supabaseTransformSrc(
   url: string,
-  width = CARD_RENDER_WIDTH,
-  height = CARD_RENDER_HEIGHT,
+  width: number,
+  height: number,
+  resize: TransformResize = "cover",
+  quality = "65",
 ) {
   if (!url.includes(SUPABASE_OBJECT_PUBLIC) || url.includes(SUPABASE_RENDER_PUBLIC)) {
     return url;
@@ -50,10 +58,18 @@ export function supabaseCardSrc(
   const params = new URLSearchParams({
     width: String(width),
     height: String(height),
-    resize: "cover",
-    quality: "65",
+    resize,
+    quality,
   });
   return `${render}?${params.toString()}${hash}`;
+}
+
+export function supabaseCardSrc(
+  url: string,
+  width = CARD_RENDER_WIDTH,
+  height = CARD_RENDER_HEIGHT,
+) {
+  return supabaseTransformSrc(url, width, height, "cover");
 }
 
 /** Se o recorte falhar, o <img> volta ao arquivo original. */
@@ -78,7 +94,7 @@ export function coverSrcSet(photos: VehicleCardPhoto[] | undefined) {
   return `${small} ${CARD_RENDER_WIDTH}w, ${large} ${CARD_RENDER_2X_WIDTH}w`;
 }
 
-/** Foto da galeria do anúncio: miniatura no strip, original no slide ativo. */
+/** Foto da galeria do anúncio: miniatura no strip, preview no slide, original no zoom. */
 export type GalleryPhoto = {
   id: string;
   url: string;
@@ -86,7 +102,30 @@ export type GalleryPhoto = {
 };
 
 export function galleryThumbSrc(photo: GalleryPhoto) {
-  return photo.thumbnailUrl || photo.url;
+  if (photo.thumbnailUrl) return photo.thumbnailUrl;
+  return photo.url
+    ? supabaseTransformSrc(photo.url, GALLERY_THUMB_WIDTH, GALLERY_THUMB_HEIGHT)
+    : photo.url;
+}
+
+/** Slide da ficha (~100vw no celular): recorte 960×600, não o original. */
+export function galleryPreviewSrc(photo: GalleryPhoto) {
+  return photo.url
+    ? supabaseTransformSrc(
+        photo.url,
+        GALLERY_PREVIEW_WIDTH,
+        GALLERY_PREVIEW_HEIGHT,
+        "cover",
+        "70",
+      )
+    : photo.url;
+}
+
+export function galleryPreviewSrcSet(photo: GalleryPhoto) {
+  if (!photo.url?.includes(SUPABASE_OBJECT_PUBLIC)) return undefined;
+  const small = supabaseTransformSrc(photo.url, 640, 400, "cover", "70");
+  const large = galleryPreviewSrc(photo);
+  return `${small} 640w, ${large} 960w`;
 }
 
 export type StockFilters = {

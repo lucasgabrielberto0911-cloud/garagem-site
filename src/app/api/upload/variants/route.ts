@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { cardObjectPath, encodeCardImage } from "@/lib/image-variants";
-import {
-  VEHICLE_PHOTOS_BUCKET,
-  getSupabaseAdmin,
-  hasSupabaseServiceRole,
-  storagePathFromPublicUrl,
-} from "@/lib/supabase";
+import { storeCardThumbnail } from "@/lib/photo-thumbnails";
+import { hasSupabaseServiceRole } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -31,44 +26,13 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { url?: string };
     const url = body.url?.trim() ?? "";
-    const path = storagePathFromPublicUrl(url);
-    if (!path) {
-      return NextResponse.json({ error: "URL de foto inválida." }, { status: 400 });
+    const result = await storeCardThumbnail(url);
+    if (!result.ok) {
+      const status = result.error.includes("inválida") ? 400 : 500;
+      return NextResponse.json({ error: result.error }, { status });
     }
 
-    const imageResponse = await fetch(url);
-    if (!imageResponse.ok) {
-      return NextResponse.json(
-        { error: "Não foi possível baixar a foto para gerar a capa." },
-        { status: 400 },
-      );
-    }
-
-    const original = Buffer.from(await imageResponse.arrayBuffer());
-    const card = await encodeCardImage(original);
-    const cardPath = cardObjectPath(path);
-    const supabase = getSupabaseAdmin();
-
-    const { error } = await supabase.storage
-      .from(VEHICLE_PHOTOS_BUCKET)
-      .upload(cardPath, card.buffer, {
-        contentType: card.contentType,
-        upsert: true,
-        cacheControl: "31536000",
-      });
-
-    if (error) {
-      return NextResponse.json(
-        { error: error.message || "Falha ao salvar a miniatura." },
-        { status: 500 },
-      );
-    }
-
-    const { data } = supabase.storage
-      .from(VEHICLE_PHOTOS_BUCKET)
-      .getPublicUrl(cardPath);
-
-    return NextResponse.json({ url, thumbnailUrl: data.publicUrl });
+    return NextResponse.json({ url, thumbnailUrl: result.thumbnailUrl });
   } catch (error) {
     console.error("[upload/variants]", error);
     return NextResponse.json(

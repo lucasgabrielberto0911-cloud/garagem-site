@@ -9,6 +9,7 @@ import {
 } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export default async function AdminSitePage() {
   const session = await getSession();
