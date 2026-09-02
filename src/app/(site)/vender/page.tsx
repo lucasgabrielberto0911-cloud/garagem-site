@@ -40,11 +40,12 @@ const STEPS = [
 export default async function VenderPage({
   searchParams,
 }: {
-  searchParams: { interesse?: string; label?: string };
+  searchParams: Promise<{ interesse?: string; label?: string }>;
 }) {
-  const interestId = searchParams.interesse?.trim();
+  const query = await searchParams;
+  const interestId = query.interesse?.trim();
   const interestLabel =
-    searchParams.label?.trim() ||
+    query.label?.trim() ||
     (interestId
       ? await getVehicleById(interestId).then((vehicle) =>
           vehicle

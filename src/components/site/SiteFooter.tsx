@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/site/ui";
 import {
@@ -29,12 +28,13 @@ export async function SiteFooter() {
       <Container className="py-12 lg:py-16">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr_1fr_1fr] lg:items-start lg:gap-8 lg:text-left">
           <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-            <Image
-              src="/branding/logo-wordmark.png"
+            {/* eslint-disable-next-line @next/next/no-img-element -- logo estático, sem cota /_next/image */}
+            <img
+              src="/branding/logo-wordmark.webp"
               alt={site.name}
               width={320}
               height={58}
-              sizes="200px"
+              decoding="async"
               className="h-11 w-auto sm:h-12"
             />
             <div

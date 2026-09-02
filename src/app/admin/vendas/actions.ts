@@ -16,7 +16,7 @@ export type SaleActionState = {
 };
 
 function revalidatePublicStock(vehicleId?: string) {
-  revalidateTag(VEHICLES_PUBLIC_CACHE_TAG);
+  revalidateTag(VEHICLES_PUBLIC_CACHE_TAG, "max");
   revalidatePath("/");
   revalidatePath("/estoque");
   revalidatePath("/estoque/[id]", "page");

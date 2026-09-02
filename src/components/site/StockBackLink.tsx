@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { readStockReturn } from "@/components/site/StockVehicleLink";
+import { readStockReturn } from "@/lib/stock-return";
 
 function safeFromParam(raw: string | null) {
   if (

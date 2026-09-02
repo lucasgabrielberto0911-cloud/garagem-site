@@ -61,7 +61,7 @@ export async function saveTestimonial(
     return { ok: false, message: "Não foi possível salvar o depoimento." };
   }
 
-  revalidateTag(TESTIMONIALS_CACHE_TAG);
+  revalidateTag(TESTIMONIALS_CACHE_TAG, "max");
   revalidatePath("/admin/depoimentos");
   revalidatePath("/");
   return {
@@ -74,7 +74,7 @@ export async function setTestimonialPublished(id: string, published: boolean) {
   await requireAdmin();
 
   await prisma.testimonial.update({ where: { id }, data: { published } });
-  revalidateTag(TESTIMONIALS_CACHE_TAG);
+  revalidateTag(TESTIMONIALS_CACHE_TAG, "max");
   revalidatePath("/admin/depoimentos");
   revalidatePath("/");
   return {
@@ -89,7 +89,7 @@ export async function deleteTestimonial(
   await requireAdmin();
 
   await prisma.testimonial.delete({ where: { id } });
-  revalidateTag(TESTIMONIALS_CACHE_TAG);
+  revalidateTag(TESTIMONIALS_CACHE_TAG, "max");
   revalidatePath("/admin/depoimentos");
   revalidatePath("/");
   return { ok: true, message: "Depoimento excluído." };

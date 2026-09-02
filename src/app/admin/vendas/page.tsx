@@ -17,13 +17,14 @@ function startOfMonth() {
 export default async function VendasPage({
   searchParams,
 }: {
-  searchParams: { period?: string };
+  searchParams: Promise<{ period?: string }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
   const monthStart = startOfMonth();
-  const period = parseSalesPeriod(searchParams.period);
+  const { period: periodParam } = await searchParams;
+  const period = parseSalesPeriod(periodParam);
 
   const [list, totals, monthTotals, profitRows] = await Promise.all([
     getAdminSalesPage({ page: 1, period }),

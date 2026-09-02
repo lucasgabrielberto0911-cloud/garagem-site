@@ -1,7 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AppToaster } from "@/components/Toaster";
 import { site } from "@/lib/site";
 import "./globals.css";
@@ -12,6 +10,7 @@ const display = Sora({
   variable: "--font-display",
   display: "swap",
   preload: true,
+  adjustFontFallback: true,
 });
 
 const body = Inter({
@@ -20,10 +19,21 @@ const body = Inter({
   variable: "--font-body",
   display: "swap",
   preload: false,
+  adjustFontFallback: true,
 });
 
 const description =
   "Seminovos com procedência verificada em Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Compra, venda, troca e financiamento na Garagem.";
+
+function supabaseOrigin() {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!raw) return null;
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return null;
+  }
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -111,15 +121,20 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const storageOrigin = supabaseOrigin();
+
   return (
     <html lang="pt-BR">
+      {storageOrigin ? (
+        <head>
+          <link rel="preconnect" href={storageOrigin} crossOrigin="anonymous" />
+        </head>
+      ) : null}
       <body
         className={`${display.variable} ${body.variable} font-body antialiased bg-asphalt text-cream`}
       >
         {children}
         <AppToaster />
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { FounderSection } from "@/components/site/FounderSection";
 import { TrustBadges } from "@/components/site/TrustBadges";
 import {
@@ -89,13 +88,14 @@ export default async function SobrePage() {
         <FounderSection photoUrl={siteContent.founderPhotoUrl} />
 
         <div className="relative mx-auto mt-10 aspect-[4/3] max-w-4xl overflow-hidden border border-white/10 sm:mt-12 sm:aspect-[16/9]">
-          <Image
-            src="/branding/hero-bg.jpg"
+          {/* eslint-disable-next-line @next/next/no-img-element -- estático, sem cota /_next/image */}
+          <img
+            src="/branding/hero-bg.webp"
             alt={`Estoque e atendimento da ${publicSite.name}`}
-            fill
-            sizes="(min-width: 1024px) 896px, 100vw"
-            quality={70}
-            className="object-cover"
+            width={1600}
+            height={900}
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
           />
           <div
             className="absolute inset-0 bg-gradient-to-t from-asphalt via-asphalt/40 to-transparent"

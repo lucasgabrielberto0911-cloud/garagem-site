@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -23,27 +22,10 @@ import {
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
-
-  useEffect(() => {
-    const sentinel = document.createElement("div");
-    sentinel.setAttribute("aria-hidden", "true");
-    sentinel.style.cssText =
-      "position:absolute;top:0;left:0;height:24px;width:1px;pointer-events:none;visibility:hidden";
-    document.body.prepend(sentinel);
-    const observer = new IntersectionObserver(([entry]) => {
-      setScrolled(!entry.isIntersecting);
-    });
-    observer.observe(sentinel);
-    return () => {
-      observer.disconnect();
-      sentinel.remove();
-    };
-  }, []);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -63,35 +45,22 @@ export function SiteHeader() {
 
   return (
     <>
-      <header
-        className={`fixed inset-x-0 top-0 z-50 pt-safe transition-[background-color,border-color,backdrop-filter] duration-200 ${
-          scrolled || open
-            ? "border-b border-white/10 bg-asphalt/98 backdrop-blur-md"
-            : "border-b border-transparent bg-asphalt/70 backdrop-blur-sm"
-        }`}
-      >
-        <div
-          className={`mx-auto grid max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 transition-[height] duration-200 sm:gap-4 sm:px-6 lg:gap-8 xl:gap-12 ${
-            scrolled
-              ? "h-[72px] lg:h-[76px]"
-              : "h-[72px] lg:h-[88px]"
-          }`}
-        >
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-asphalt/98 pt-safe backdrop-blur-md">
+        <div className="mx-auto grid h-[72px] max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 sm:gap-4 sm:px-6 lg:h-[76px] lg:gap-8 xl:gap-12">
           <Link
             href="/"
             className="relative z-10 flex shrink-0 items-center focus-visible:outline-offset-4"
             aria-label={`${site.name} — página inicial`}
           >
-            <Image
-              src="/branding/logo-wordmark.png"
+            {/* eslint-disable-next-line @next/next/no-img-element -- LCP: nativo, cota Hobby sem /_next/image */}
+            <img
+              src="/branding/logo-wordmark.webp"
               alt={site.name}
               width={280}
               height={50}
-              priority={pathname !== "/"}
-              sizes="200px"
-              className={`w-auto max-w-[min(46vw,160px)] object-contain object-left transition-all duration-300 sm:max-w-[168px] lg:max-w-[176px] xl:max-w-[200px] ${
-                scrolled ? "h-9 lg:h-10" : "h-9 lg:h-11"
-              }`}
+              decoding="async"
+              fetchPriority={pathname === "/" ? "low" : "high"}
+              className="h-9 w-auto max-w-[min(46vw,160px)] object-contain object-left sm:max-w-[168px] lg:h-10 lg:max-w-[176px] xl:max-w-[200px]"
             />
           </Link>
 

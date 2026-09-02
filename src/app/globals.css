@@ -98,7 +98,7 @@ body {
 
   @media (min-width: 1024px) {
     .pt-site-header {
-      padding-top: 7rem; /* barra 88px + folga para o hero não colar no menu */
+      padding-top: 6.5rem; /* barra 76px + folga para o hero não colar no menu */
     }
   }
 
@@ -315,7 +315,31 @@ body {
 .progress-brand {
   background: linear-gradient(90deg, #e8181c, #ff8a00, #ffc72c);
   background-size: 200% 100%;
-  /* Removido shimmer contínuo; a barra já anima via width no JS */
+}
+
+.scroll-progress-bar {
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+@supports (animation-timeline: scroll()) {
+  .scroll-progress-bar {
+    animation: scroll-progress-grow linear;
+    animation-timeline: scroll(root);
+  }
+}
+
+@keyframes scroll-progress-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+body:has([data-vehicle-mobile-bar]) .whatsapp-float {
+  display: none;
 }
 
 .whatsapp-pulse {
@@ -593,6 +617,10 @@ body {
   }
 
   .page-enter {
+    animation: none !important;
+  }
+
+  .scroll-progress-bar {
     animation: none !important;
   }
 }

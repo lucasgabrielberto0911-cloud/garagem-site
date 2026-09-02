@@ -31,12 +31,13 @@ export function generateStaticParams() {
   return SERVICE_CITIES.map((c) => ({ cidade: c.slug }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: Params;
-}): Metadata {
-  const city = getServiceCity(params.cidade);
+  params: Promise<Params>;
+}): Promise<Metadata> {
+  const { cidade } = await params;
+  const city = getServiceCity(cidade);
   if (!city) return {};
   return buildPageMetadata({
     title: `Seminovos em ${city.name} | ${site.name}`,
@@ -48,9 +49,10 @@ export function generateMetadata({
 export default async function SeminovosCidadePage({
   params,
 }: {
-  params: Params;
+  params: Promise<Params>;
 }) {
-  const city = getServiceCity(params.cidade);
+  const { cidade } = await params;
+  const city = getServiceCity(cidade);
   if (!city) notFound();
 
   const path = `/seminovos/${city.slug}`;

@@ -4,11 +4,7 @@ import { getJwtSecret } from "@/lib/secrets";
 
 const SESSION_COOKIE = "session";
 
-async function getSecretKey() {
-  return getJwtSecret();
-}
-
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname === "/admin/login") {
@@ -22,7 +18,7 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    await jwtVerify(token, await getSecretKey());
+    await jwtVerify(token, await getJwtSecret());
     return NextResponse.next();
   } catch {
     const response = NextResponse.redirect(

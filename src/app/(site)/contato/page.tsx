@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import {
   Container,
   PageHeader,
@@ -171,7 +172,7 @@ function InfoCard({
   hrefLabel,
   external = false,
 }: {
-  Icon: (props: { className?: string }) => JSX.Element;
+  Icon: (props: { className?: string }) => ReactNode;
   label: string;
   value: string;
   href?: string;

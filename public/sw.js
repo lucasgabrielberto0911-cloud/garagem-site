@@ -6,7 +6,7 @@
  * network-first para nunca servir estoque desatualizado, caindo no cache (e
  * depois em /offline) apenas quando a rede falha. Admin e API ficam fora.
  */
-const VERSION = "garagem-v2";
+const VERSION = "garagem-v3";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const PAGE_CACHE = `${VERSION}-pages`;
@@ -17,7 +17,7 @@ const SHELL_URLS = [
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
-  "/branding/logo-wordmark.png",
+  "/branding/logo-wordmark.webp",
 ];
 
 self.addEventListener("install", (event) => {

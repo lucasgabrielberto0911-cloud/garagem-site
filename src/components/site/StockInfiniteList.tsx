@@ -10,6 +10,7 @@ import {
 } from "react";
 import { InfiniteSentinel } from "@/components/InfiniteSentinel";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
+import { StockReturnCapture } from "@/components/site/StockReturnCapture";
 import type { VehicleCardRecord } from "@/lib/stock-query";
 
 type StockQuery = Record<string, string | undefined>;
@@ -143,11 +144,13 @@ export function StockInfiniteList({
 
   return (
     <>
-      <MemoVehicleGrid
-        vehicles={vehicles}
-        returnTo={returnTo}
-        priorityCount={2}
-      />
+      <StockReturnCapture returnTo={returnTo}>
+        <MemoVehicleGrid
+          vehicles={vehicles}
+          returnTo={returnTo}
+          priorityCount={2}
+        />
+      </StockReturnCapture>
 
       {hasMore ? (
         <InfiniteSentinel

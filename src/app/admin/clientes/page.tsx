@@ -11,13 +11,14 @@ export const dynamic = "force-dynamic";
 export default async function ClientesPage({
   searchParams,
 }: {
-  searchParams: { q?: string; page?: string };
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const q = (searchParams.q || "").trim();
-  const page = Math.max(1, Number(searchParams.page) || 1);
+  const query = await searchParams;
+  const q = (query.q || "").trim();
+  const page = Math.max(1, Number(query.page) || 1);
   const pageSize = ADMIN_CUSTOMERS_PAGE_SIZE;
   const where = q
     ? {

@@ -62,7 +62,7 @@ export async function updateAdminProfile(
   // Atualiza o cookie para o e-mail novo aparecer no menu sem precisar sair.
   if (email !== session.email) {
     const token = await createSessionToken(String(session.adminId), email);
-    cookies().set(SESSION_COOKIE, token, sessionCookieOptions());
+    (await cookies()).set(SESSION_COOKIE, token, sessionCookieOptions());
   }
 
   revalidatePath("/admin/conta");
@@ -109,7 +109,7 @@ export async function changeAdminPassword(
     data: { passwordHash: await bcrypt.hash(next, 10) },
   });
 
-  revalidateTag(ADMIN_SEED_PASSWORD_TAG);
+  revalidateTag(ADMIN_SEED_PASSWORD_TAG, "max");
   revalidatePath("/admin");
   revalidatePath("/admin/conta");
   return { ok: true, message: "Senha alterada com sucesso." };

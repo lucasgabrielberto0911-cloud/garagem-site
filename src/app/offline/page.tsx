@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { site } from "@/lib/site";
 
@@ -11,11 +10,13 @@ export const metadata: Metadata = {
 export default function OfflinePage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6 py-16 text-center">
-      <Image
-        src="/branding/logo-wordmark.png"
+      {/* eslint-disable-next-line @next/next/no-img-element -- logo estático, sem cota /_next/image */}
+      <img
+        src="/branding/logo-wordmark.webp"
         alt={site.name}
         width={280}
         height={50}
+        decoding="async"
         className="h-12 w-auto"
       />
       <div className="mt-8 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
