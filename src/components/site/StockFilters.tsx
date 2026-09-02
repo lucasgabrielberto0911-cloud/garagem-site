@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { IconClose, IconSearch } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName } from "@/lib/format";
@@ -74,6 +74,13 @@ const SORT_OPTIONS = [
   { value: "maior-preco", label: "Maior preço" },
   { value: "menor-km", label: "Menor KM" },
   { value: "mais-novo", label: "Ano mais novo" },
+] as const;
+
+const BUDGET_CHIPS = [
+  { label: "Até 50 mil", minPrice: "", maxPrice: "50000" },
+  { label: "50 a 80 mil", minPrice: "50000", maxPrice: "80000" },
+  { label: "80 a 120 mil", minPrice: "80000", maxPrice: "120000" },
+  { label: "Acima de 120 mil", minPrice: "120000", maxPrice: "" },
 ] as const;
 
 /**
@@ -594,6 +601,63 @@ export function StockFilters({ facets }: { facets: Facets }) {
           ) : null}
         </div>
 
+        <div className="mt-3 space-y-2.5 lg:hidden">
+          <ChipRow label="Faixa">
+            {BUDGET_CHIPS.map((chip) => {
+              const active =
+                (current.minPrice || "") === chip.minPrice &&
+                (current.maxPrice || "") === chip.maxPrice;
+              return (
+                <Chip
+                  key={chip.label}
+                  active={active}
+                  onClick={() =>
+                    update(
+                      active
+                        ? { minPrice: "", maxPrice: "" }
+                        : { minPrice: chip.minPrice, maxPrice: chip.maxPrice },
+                    )
+                  }
+                >
+                  {chip.label}
+                </Chip>
+              );
+            })}
+          </ChipRow>
+          <ChipRow label="Tipo">
+            {CATEGORY_FILTER_OPTIONS.filter((option) => option.value).map((option) => (
+              <Chip
+                key={option.value}
+                active={current.category === option.value}
+                onClick={() =>
+                  update({
+                    category: current.category === option.value ? "" : option.value,
+                  })
+                }
+              >
+                {option.label}
+              </Chip>
+            ))}
+          </ChipRow>
+          {facets.transmissions.length > 0 ? (
+            <ChipRow label="Câmbio">
+              {facets.transmissions.map((item) => (
+                <Chip
+                  key={item}
+                  active={current.transmission === item}
+                  onClick={() =>
+                    update({
+                      transmission: current.transmission === item ? "" : item,
+                    })
+                  }
+                >
+                  {item}
+                </Chip>
+              ))}
+            </ChipRow>
+          ) : null}
+        </div>
+
         {activeFilters.length > 0 ? (
           <div className="mt-3 flex flex-wrap gap-2 lg:hidden">
             {activeFilters.map((filter) => (
@@ -708,6 +772,41 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   {facets.transmissions.map((item) => <option key={item}>{item}</option>)}
                 </select>
               </MobileField>
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
+                  Faixa de preço
+                </p>
+                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-hide">
+                  {BUDGET_CHIPS.map((chip) => {
+                    const active =
+                      (draft.minPrice || "") === chip.minPrice &&
+                      (draft.maxPrice || "") === chip.maxPrice;
+                    return (
+                      <Chip
+                        key={`sheet-${chip.label}`}
+                        active={active}
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            minPrice: active ? "" : chip.minPrice,
+                            maxPrice: active ? "" : chip.maxPrice,
+                          })
+                        }
+                      >
+                        {chip.label}
+                      </Chip>
+                    );
+                  })}
+                </div>
+              </div>
+              <details className="border border-white/10 bg-asphalt/30 px-3.5 py-1">
+                <summary className="flex min-h-[48px] cursor-pointer list-none items-center font-display text-xs font-semibold uppercase tracking-wider text-cream [&::-webkit-details-marker]:hidden">
+                  Mais opções
+                  <span className="ml-auto text-[10px] font-medium normal-case tracking-wide text-muted">
+                    combustível, ano, km
+                  </span>
+                </summary>
+                <div className="space-y-5 pb-4 pt-1">
               <MobileField label="Combustível">
                 <select
                   value={draft.fuel}
@@ -817,6 +916,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   ))}
                 </select>
               </MobileField>
+                </div>
+              </details>
             </div>
 
             <div className="sticky bottom-0 grid grid-cols-[auto_1fr] gap-3 border-t border-white/10 bg-ink/95 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] backdrop-blur">
@@ -860,6 +961,48 @@ export function StockFilters({ facets }: { facets: Facets }) {
         </div>
       ) : null}
     </>
+  );
+}
+
+function ChipRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-0.5 scrollbar-hide">
+      <span className="shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`min-h-[44px] shrink-0 whitespace-nowrap border px-3.5 text-xs font-medium transition touch-manipulation ${
+        active
+          ? "border-brand bg-brand/10 text-cream"
+          : "border-white/10 text-muted active:bg-white/5"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -952,7 +1095,7 @@ function DesktopField({
 }: {
   label: string;
   htmlFor: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
@@ -968,7 +1111,7 @@ function DesktopField({
   );
 }
 
-function MobileField({ label, children }: { label: string; children: React.ReactNode }) {
+function MobileField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted">

@@ -15,6 +15,7 @@ import {
 export {
   STOCK_PAGE_SIZE,
   coverSrc,
+  galleryPreviewSrc,
   galleryThumbSrc,
   parseStockFilters,
   type GalleryPhoto,
