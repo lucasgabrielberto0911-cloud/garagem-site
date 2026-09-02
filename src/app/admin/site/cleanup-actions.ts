@@ -207,7 +207,7 @@ export async function backfillMissingThumbnails(): Promise<CleanupResult> {
       where: { OR: [{ thumbnailUrl: null }, { thumbnailUrl: "" }] },
     });
 
-    revalidateTag(VEHICLES_PUBLIC_CACHE_TAG);
+    revalidateTag(VEHICLES_PUBLIC_CACHE_TAG, "max");
     revalidatePath("/");
     revalidatePath("/estoque");
     revalidatePath("/estoque/[id]", "page");

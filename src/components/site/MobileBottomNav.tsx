@@ -10,6 +10,7 @@ import {
   IconWhatsApp,
 } from "@/components/site/icons";
 import { whatsappUrl } from "@/lib/site";
+import type { ReactNode } from "react";
 
 const ITEMS = [
   { href: "/", label: "Início", Icon: IconHome, match: (p: string) => p === "/" },
@@ -84,7 +85,7 @@ function NavItem({
 }: {
   href: string;
   label: string;
-  Icon: (props: { className?: string }) => JSX.Element;
+  Icon: (props: { className?: string }) => ReactNode;
   active: boolean;
 }) {
   return (

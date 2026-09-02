@@ -24,7 +24,10 @@ export function VehicleMobileBar({
   sold?: boolean;
 }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt/95 px-3 pt-3 backdrop-blur pb-safe lg:hidden">
+    <div
+      data-vehicle-mobile-bar=""
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt/95 px-3 pt-3 backdrop-blur pb-safe lg:hidden"
+    >
       <div className="mx-auto flex max-w-6xl items-center gap-3">
         <div className="min-w-0 flex-1 pl-0.5">
           <p className="truncate text-xs text-muted">

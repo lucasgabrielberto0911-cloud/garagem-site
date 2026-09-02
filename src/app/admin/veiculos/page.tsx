@@ -21,19 +21,20 @@ function resolveTab(raw?: string): VehiclesTab {
 export default async function VehiclesPage({
   searchParams,
 }: {
-  searchParams: { q?: string; tab?: string; status?: string };
+  searchParams: Promise<{ q?: string; tab?: string; status?: string }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const q = (searchParams.q || "").trim();
+  const query = await searchParams;
+  const q = (query.q || "").trim();
   const status =
-    searchParams.status === "disponivel" || searchParams.status === "reservado"
-      ? searchParams.status
+    query.status === "disponivel" || query.status === "reservado"
+      ? query.status
       : undefined;
   const tab = resolveTab(
-    searchParams.tab ||
-      (searchParams.status === "vendido" ? "vendidos" : undefined),
+    query.tab ||
+      (query.status === "vendido" ? "vendidos" : undefined),
   );
 
   const [stats, list] = await Promise.all([

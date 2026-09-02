@@ -36,9 +36,10 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const vehicle = await getVehicleByParam(params.id);
+  const { id } = await params;
+  const vehicle = await getVehicleByParam(id);
   if (!vehicle) return { title: `Veículo não encontrado | ${site.name}` };
 
   const sold = vehicle.status === "vendido";
@@ -83,13 +84,14 @@ export async function generateMetadata({
 export default async function VehicleDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const vehicle = await getVehicleByParam(params.id);
+  const { id } = await params;
+  const vehicle = await getVehicleByParam(id);
   if (!vehicle) notFound();
 
   const canonicalSlug = vehicleSlug(vehicle);
-  if (params.id !== canonicalSlug) {
+  if (id !== canonicalSlug) {
     permanentRedirect(vehiclePath(vehicle));
   }
 

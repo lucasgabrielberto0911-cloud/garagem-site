@@ -1,4 +1,3 @@
-import { ScrollReveal } from "@/components/site/ScrollReveal";
 import { VehicleCard, type VehicleCardData } from "@/components/site/VehicleCard";
 
 /**
@@ -17,12 +16,10 @@ function layoutForCount(count: number) {
 
 export function VehicleGrid({
   vehicles,
-  reveal = false,
   priorityCount = 0,
   returnTo,
 }: {
   vehicles: VehicleCardData[];
-  reveal?: boolean;
   /** Quantos cards iniciais recebem `priority` (LCP). */
   priorityCount?: number;
   /** Caminho da listagem para retornar depois de abrir o anúncio. */
@@ -32,37 +29,15 @@ export function VehicleGrid({
     <div
       className={`mx-auto grid w-full gap-2.5 sm:gap-4 ${layoutForCount(vehicles.length)}`}
     >
-      {vehicles.map((vehicle, index) => {
-        const card = (
+      {vehicles.map((vehicle, index) => (
+        <div key={vehicle.id} className="h-full min-w-0 w-full">
           <VehicleCard
             vehicle={vehicle}
             priority={index < priorityCount}
             returnTo={returnTo}
           />
-        );
-
-        if (!reveal) {
-          return (
-            <div key={vehicle.id} className="h-full min-w-0 w-full">
-              {card}
-            </div>
-          );
-        }
-
-        // Sem delay nos primeiros cards para não atrasar o LCP.
-        const delay =
-          index < Math.max(priorityCount, 2) ? 0 : Math.min(index * 40, 160);
-
-        return (
-          <ScrollReveal
-            key={vehicle.id}
-            delay={delay}
-            className="h-full min-w-0 w-full"
-          >
-            {card}
-          </ScrollReveal>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }

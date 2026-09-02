@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  reactCompiler: true,
+  compiler: {
+    removeConsole: {
+      exclude: ["error", "warn"],
+    },
+  },
   images: {
     // Um formato só: avif+webp duplicava cada foto na cota da Vercel.
     formats: ["image/webp"],
@@ -18,15 +24,21 @@ const nextConfig = {
         hostname: "vesmqhyxautgtvgccweo.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      {
+        protocol: "https",
+        hostname: "vesmqhyxautgtvgccweo.supabase.co",
+        pathname: "/storage/v1/render/image/public/**",
+      },
     ],
   },
+  serverExternalPackages: [
+    "heic-convert",
+    "heic-decode",
+    "libheif-js",
+    "sharp",
+  ],
   experimental: {
-    serverComponentsExternalPackages: [
-      "heic-convert",
-      "heic-decode",
-      "libheif-js",
-      "sharp",
-    ],
+    optimizePackageImports: ["@aws-sdk/client-rekognition"],
   },
   async headers() {
     const immutable = [

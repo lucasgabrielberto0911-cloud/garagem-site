@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -75,12 +74,14 @@ export default function AdminLoginPage() {
 
       <div className="relative w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
-          <Image
-            src="/branding/logo-wordmark.png"
+          {/* eslint-disable-next-line @next/next/no-img-element -- logo estático, sem cota /_next/image */}
+          <img
+            src="/branding/logo-wordmark.webp"
             alt="Garagem"
             width={260}
             height={47}
-            priority
+            decoding="async"
+            fetchPriority="high"
             className="h-12 w-auto"
           />
           <h1 className="mt-6 font-display text-3xl font-bold tracking-tight text-cream">

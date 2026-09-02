@@ -23,17 +23,18 @@ export default async function EditVehiclePage({
   params,
   searchParams,
 }: {
-  params: { id: string };
-  searchParams: { view?: string };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ view?: string }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
+  const [{ id }, { view: viewParam }] = await Promise.all([params, searchParams]);
   const view: EditView =
-    searchParams.view === "operacao" ? "operacao" : "anuncio";
+    viewParam === "operacao" ? "operacao" : "anuncio";
 
   const vehicle = await prisma.vehicle.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       photos: { orderBy: { order: "asc" } },
       sale: { select: { salePrice: true } },

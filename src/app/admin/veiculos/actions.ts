@@ -19,7 +19,7 @@ export type VehicleFormState = {
 
 /** Invalida o cache do site público sempre que o estoque muda. */
 function revalidatePublicStock(vehicleId?: string) {
-  revalidateTag(VEHICLES_PUBLIC_CACHE_TAG);
+  revalidateTag(VEHICLES_PUBLIC_CACHE_TAG, "max");
   revalidatePath("/");
   revalidatePath("/estoque");
   revalidatePath("/sitemap.xml");

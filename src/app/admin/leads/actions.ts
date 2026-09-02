@@ -25,7 +25,7 @@ export async function updateLeadStatus(
     }
 
     await prisma.leadVenda.update({ where: { id }, data: { status } });
-    revalidateTag(ADMIN_NEW_LEADS_TAG);
+    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
     revalidatePath("/admin/leads");
     revalidatePath("/admin");
     return { ok: true, message: "Status atualizado." };
@@ -79,7 +79,7 @@ export async function deleteLead(id: string): Promise<LeadActionState> {
   try {
     await requireAdmin();
     await prisma.leadVenda.delete({ where: { id } });
-    revalidateTag(ADMIN_NEW_LEADS_TAG);
+    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
     revalidatePath("/admin/leads");
     revalidatePath("/admin");
     return { ok: true, message: "Lead removido." };

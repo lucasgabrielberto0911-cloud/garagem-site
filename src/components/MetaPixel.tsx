@@ -37,7 +37,7 @@ export function MetaPixel() {
       <Script
         id="meta-pixel-fbevents"
         src="https://connect.facebook.net/en_US/fbevents.js"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
       />
       <noscript
         dangerouslySetInnerHTML={{

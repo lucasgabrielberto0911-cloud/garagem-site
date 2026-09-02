@@ -17,8 +17,8 @@ function text(data: FormData, key: string) {
   return String(data.get(key) ?? "").trim();
 }
 
-function clientKey() {
-  const h = headers();
+async function clientKey() {
+  const h = await headers();
   const forwarded = h.get("x-forwarded-for")?.split(",")[0]?.trim();
   return forwarded || h.get("x-real-ip") || "unknown";
 }
@@ -32,7 +32,7 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
     };
   }
 
-  const limited = checkSellLeadRateLimit(clientKey());
+  const limited = checkSellLeadRateLimit(await clientKey());
   if (!limited.ok) {
     return {
       ok: false,
@@ -93,7 +93,7 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
         notes: notes || null,
       },
     });
-    revalidateTag(ADMIN_NEW_LEADS_TAG);
+    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
   } catch (error) {
     console.error("[vender] falha ao registrar lead:", error);
     return {

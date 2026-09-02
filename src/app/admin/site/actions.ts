@@ -175,7 +175,7 @@ export async function updateSiteSettings(
     };
   }
 
-  revalidateTag("site-settings");
+  revalidateTag("site-settings", "max");
   revalidatePath("/");
   revalidatePath("/faq");
   revalidatePath("/contato");

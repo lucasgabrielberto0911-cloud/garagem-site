@@ -11,15 +11,16 @@ export const dynamic = "force-dynamic";
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: { status?: string; page?: string; q?: string };
+  searchParams: Promise<{ status?: string; page?: string; q?: string }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const status = (searchParams.status ?? "").trim();
+  const query = await searchParams;
+  const status = (query.status ?? "").trim();
   const valid = isLeadStatus(status);
-  const q = (searchParams.q ?? "").trim();
-  const page = Math.max(1, Number(searchParams.page) || 1);
+  const q = (query.q ?? "").trim();
+  const page = Math.max(1, Number(query.page) || 1);
   const pageSize = ADMIN_LEADS_PAGE_SIZE;
   const digits = q.replace(/\D/g, "");
   const searchWhere = q

@@ -31,7 +31,7 @@ export function sessionCookieOptions(maxAge = SESSION_MAX_AGE) {
 
 /** Uma verificação de JWT por request — layout e página compartilham o resultado. */
 export const getSession = cache(async () => {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
   try {

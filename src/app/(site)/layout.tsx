@@ -1,36 +1,15 @@
-import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import { DeferredMarketing } from "@/components/DeferredMarketing";
 import { MetaPixel } from "@/components/MetaPixel";
 import { JsonLd } from "@/components/JsonLd";
 import { MobileBottomNav } from "@/components/site/MobileBottomNav";
+import { ScrollProgress } from "@/components/site/ScrollProgress";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { WhatsAppFloat } from "@/components/site/WhatsAppFloat";
 import { FavoritesProvider } from "@/lib/favorites";
 import { localBusinessJsonLd } from "@/lib/seo";
 import { getPublicSite } from "@/lib/site-settings";
-
-const ScrollProgress = dynamic(
-  () =>
-    import("@/components/site/ScrollProgress").then((m) => m.ScrollProgress),
-  { ssr: false },
-);
-const WhatsAppFloat = dynamic(
-  () => import("@/components/site/WhatsAppFloat").then((m) => m.WhatsAppFloat),
-  { ssr: false },
-);
-const BackToTop = dynamic(
-  () => import("@/components/site/BackToTop").then((m) => m.BackToTop),
-  { ssr: false },
-);
-const InstallPrompt = dynamic(
-  () => import("@/components/site/InstallPrompt").then((m) => m.InstallPrompt),
-  { ssr: false },
-);
-const PwaRegister = dynamic(
-  () => import("@/components/site/PwaRegister").then((m) => m.PwaRegister),
-  { ssr: false },
-);
 
 async function SiteJsonLd() {
   const publicSite = await getPublicSite();
@@ -63,9 +42,6 @@ export default function SiteLayout({
         <div className="pb-site-nav lg:hidden" aria-hidden="true" />
         <MobileBottomNav />
         <WhatsAppFloat />
-        <BackToTop />
-        <InstallPrompt />
-        <PwaRegister />
       </div>
     </FavoritesProvider>
   );

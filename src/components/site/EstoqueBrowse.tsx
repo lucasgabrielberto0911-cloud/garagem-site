@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteErrorNotice } from "@/components/site/SiteErrorNotice";
 import { StockInfiniteList } from "@/components/site/StockInfiniteList";
+import { StockReturnCapture } from "@/components/site/StockReturnCapture";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { SiteLeadHit, StockSearchPixel } from "@/components/site/VehiclePixel";
@@ -111,11 +112,13 @@ export function EstoqueBrowseFallback({
       </p>
       <div className="mt-4">
         {vehicles.length > 0 ? (
-          <VehicleGrid
-            vehicles={vehicles}
-            priorityCount={2}
-            returnTo="/estoque"
-          />
+          <StockReturnCapture returnTo="/estoque">
+            <VehicleGrid
+              vehicles={vehicles}
+              priorityCount={2}
+              returnTo="/estoque"
+            />
+          </StockReturnCapture>
         ) : (
           <VehicleCardSkeletonGrid count={6} />
         )}
