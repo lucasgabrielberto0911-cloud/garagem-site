@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
 import { AppToaster } from "@/components/Toaster";
+import { PwaRegister } from "@/components/site/PwaRegister";
 import { site } from "@/lib/site";
 import "./globals.css";
 
@@ -134,6 +135,7 @@ export default function RootLayout({
         className={`${display.variable} ${body.variable} font-body antialiased bg-asphalt text-cream`}
       >
         {children}
+        <PwaRegister />
         <AppToaster />
       </body>
     </html>
