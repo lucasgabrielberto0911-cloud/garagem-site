@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
 import { AppToaster } from "@/components/Toaster";
+import { BootSplash } from "@/components/site/BootSplash";
 import { PwaRegister } from "@/components/site/PwaRegister";
 import { site } from "@/lib/site";
 import "./globals.css";
@@ -100,6 +101,24 @@ export const metadata: Metadata = {
     capable: true,
     title: site.name,
     statusBarStyle: "black-translucent",
+    startupImage: [
+      {
+        url: "/branding/splash-iphone.png",
+        media:
+          "(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)",
+      },
+      {
+        url: "/branding/splash-iphone.png",
+        media:
+          "(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)",
+      },
+      {
+        url: "/branding/splash-iphone.png",
+        media:
+          "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)",
+      },
+      { url: "/branding/splash-iphone.png" },
+    ],
   },
   /**
    * O Next emite apenas a meta da Apple, que os navegadores atuais avisam estar
@@ -134,6 +153,7 @@ export default function RootLayout({
       <body
         className={`${display.variable} ${body.variable} font-body antialiased bg-asphalt text-cream`}
       >
+        <BootSplash />
         {children}
         <PwaRegister />
         <AppToaster />
