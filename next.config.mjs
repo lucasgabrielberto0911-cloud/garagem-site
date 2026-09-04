@@ -47,7 +47,18 @@ const nextConfig = {
         value: "public, max-age=31536000, immutable",
       },
     ];
+    const sw = [
+      { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+      { key: "Service-Worker-Allowed", value: "/" },
+    ];
     return [
+      { source: "/sw.js", headers: sw },
+      {
+        source: "/manifest.webmanifest",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+        ],
+      },
       { source: "/branding/:path*", headers: immutable },
       { source: "/icons/:path*", headers: immutable },
       { source: "/favicon.png", headers: immutable },
