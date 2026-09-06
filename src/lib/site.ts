@@ -106,6 +106,9 @@ export const NAV_LINKS = [
   { href: "/contato", label: "Contato" },
 ] as const;
 
+/** Menu do topo no desktop — Início fica no logo. */
+export const DESKTOP_NAV_LINKS = NAV_LINKS.filter((link) => link.href !== "/");
+
 export const SECONDARY_LINKS = [
   { href: "/favoritos", label: "Favoritos" },
   { href: "/privacidade", label: "Política de privacidade" },

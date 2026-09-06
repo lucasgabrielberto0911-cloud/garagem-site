@@ -13,7 +13,8 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   vendido: { label: "Vendido", className: "bg-white/15 text-cream" },
 };
 
-const CARD_SIZES = "(min-width: 1024px) 33vw, 50vw";
+const CARD_SIZES =
+  "(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, 50vw";
 
 /**
  * Card de servidor: só o favorito e o link hidratam no cliente.

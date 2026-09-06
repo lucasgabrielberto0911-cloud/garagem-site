@@ -108,7 +108,7 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="flex flex-col items-center justify-center py-6 text-center sm:py-10 lg:min-h-[56dvh] lg:py-20">
+        <Container className="flex flex-col items-center justify-center py-6 text-center sm:py-10 lg:py-14">
           <div>
             {/* LCP: WebP nativo, sem wrapper do next/image (cota Hobby). */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -119,12 +119,12 @@ export default async function HomePage() {
               height={86}
               fetchPriority="high"
               decoding="async"
-              className="mx-auto h-auto w-[min(70vw,260px)] sm:w-[min(58vw,360px)] lg:w-[460px]"
+              className="mx-auto h-auto w-[min(70vw,260px)] sm:w-[min(58vw,360px)] lg:w-[380px]"
             />
           </div>
 
-          <div className="hero-text mt-4 sm:mt-6 lg:mt-10">
-            <h1 className="mx-auto max-w-3xl font-display text-[1.65rem] font-bold leading-[1.15] tracking-tight text-cream sm:text-4xl lg:text-[3rem]">
+          <div className="hero-text mt-4 sm:mt-6 lg:mt-8">
+            <h1 className="mx-auto max-w-3xl font-display text-[1.65rem] font-bold leading-[1.15] tracking-tight text-cream sm:text-4xl lg:text-[2.75rem]">
               Encontre seu <span className="text-brand">próximo carro</span>
             </h1>
             <div
@@ -137,11 +137,11 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6 lg:mt-10">
+          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6 lg:mt-8">
             <HeroSearch brands={brands} />
           </div>
 
-          <ActionRow className="hero-cta mt-5 w-full sm:mt-6 lg:mt-8 sm:w-auto">
+          <ActionRow className="hero-cta mt-5 w-full sm:mt-6 lg:mt-7 sm:w-auto">
             <ButtonLink href="/estoque" size="lg">
               Ver estoque
             </ButtonLink>
@@ -159,7 +159,7 @@ export default async function HomePage() {
             </SiteLeadHit>
           </ActionRow>
 
-          <div className="hero-stats mx-auto mt-5 w-full max-w-2xl sm:mt-8 lg:mt-12">
+          <div className="hero-stats mx-auto mt-5 w-full max-w-2xl sm:mt-8 lg:mt-8">
             <Suspense fallback={<StatsBarSkeleton />}>
               <StatsBar />
             </Suspense>
@@ -195,7 +195,11 @@ export default async function HomePage() {
               </SiteLeadHit>
             </div>
           ) : (
-            <VehicleGrid vehicles={featured} priorityCount={2} />
+            <VehicleGrid
+              vehicles={featured}
+              priorityCount={2}
+              desktopCols={4}
+            />
           )}
         </div>
 

@@ -14,7 +14,7 @@ const BUDGET_LINKS = [
  */
 export function HeroSearch({ brands = [] }: { brands?: string[] }) {
   return (
-    <div className="mx-auto w-full max-w-xl">
+    <div className="mx-auto w-full max-w-xl lg:max-w-2xl">
       <form
         action="/estoque"
         method="get"
