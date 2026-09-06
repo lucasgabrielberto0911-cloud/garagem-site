@@ -30,7 +30,14 @@ async function downloadFromApi(href: string, fallbackName: string) {
     throw new Error(message);
   }
 
-  const blob = await response.blob();
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (fallbackName.endsWith(".zip") && (bytes[0] !== 0x50 || bytes[1] !== 0x4b)) {
+    throw new Error("O arquivo baixado não é um ZIP válido. Tente de novo.");
+  }
+  const type = fallbackName.endsWith(".zip")
+    ? "application/zip"
+    : response.headers.get("content-type") || "application/octet-stream";
+  const blob = new Blob([bytes], { type });
   const name = filenameFromDisposition(
     response.headers.get("content-disposition"),
     fallbackName,

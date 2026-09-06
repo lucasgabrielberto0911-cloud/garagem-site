@@ -79,7 +79,7 @@ export function buildZipStore(entries: ZipEntry[]): Uint8Array {
 
   const total = localSize + centralSize + 22;
   const out = new Uint8Array(total);
-  const view = new DataView(out.buffer);
+  const view = new DataView(out.buffer, out.byteOffset, out.byteLength);
 
   let offset = 0;
   const localOffsets: number[] = [];
@@ -115,13 +115,13 @@ export function buildZipStore(entries: ZipEntry[]): Uint8Array {
     writeU32(view, offset + 16, item.crc);
     writeU32(view, offset + 20, item.size);
     writeU32(view, offset + 24, item.size);
-    writeU16(view, offset + 26, item.nameBytes.length);
-    writeU16(view, offset + 28, 0);
+    writeU16(view, offset + 28, item.nameBytes.length);
     writeU16(view, offset + 30, 0);
     writeU16(view, offset + 32, 0);
     writeU16(view, offset + 34, 0);
-    writeU32(view, offset + 36, 0);
-    writeU32(view, offset + 40, localOffsets[i]);
+    writeU16(view, offset + 36, 0);
+    writeU32(view, offset + 38, 0);
+    writeU32(view, offset + 42, localOffsets[i]);
     out.set(item.nameBytes, offset + 46);
     offset += 46 + item.nameBytes.length;
   }

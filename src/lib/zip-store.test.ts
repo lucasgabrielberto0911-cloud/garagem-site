@@ -42,3 +42,24 @@ test("ZIP com dois arquivos mantém a ordem dos nomes", () => {
   const text = new TextDecoder().decode(zip);
   assert.ok(text.indexOf("a.txt") < text.indexOf("b.txt"));
 });
+
+test("diretório central aponta para cada arquivo (Windows precisa disso)", () => {
+  const payloads = [
+    { name: "fiat-palio-weekend-2016-01.webp", data: new Uint8Array(8000).fill(1) },
+    { name: "fiat-palio-weekend-2016-02.webp", data: new Uint8Array(8000).fill(2) },
+  ];
+  const zip = buildZipStore(payloads);
+  const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+  const eocd = zip.length - 22;
+  assert.equal(view.getUint32(eocd, true), 0x06054b50);
+  assert.equal(view.getUint16(eocd + 8, true), 2);
+  const central = view.getUint32(eocd + 16, true);
+  assert.equal(view.getUint32(central, true), 0x02014b50);
+  const nameLen = view.getUint16(central + 28, true);
+  const name = new TextDecoder().decode(
+    zip.subarray(central + 46, central + 46 + nameLen),
+  );
+  assert.equal(name, payloads[0].name);
+  const second = central + 46 + nameLen;
+  assert.equal(view.getUint32(second, true), 0x02014b50);
+});
