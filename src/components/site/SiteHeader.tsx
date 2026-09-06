@@ -11,6 +11,7 @@ import {
 } from "@/components/site/icons";
 import { FavoritesLink } from "@/components/site/FavoritesLink";
 import {
+  DESKTOP_NAV_LINKS,
   NAV_LINKS,
   PHONES,
   SECONDARY_LINKS,
@@ -46,10 +47,10 @@ export function SiteHeader() {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-asphalt/98 pt-safe backdrop-blur-md">
-        <div className="mx-auto grid h-[72px] max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 sm:gap-4 sm:px-6 lg:h-[76px] lg:gap-8 xl:gap-12">
+        <div className="mx-auto flex h-[72px] w-full max-w-[90rem] items-center gap-3 px-3 sm:gap-5 sm:px-6 lg:h-[76px] lg:gap-8 lg:px-8 xl:gap-10">
           <Link
             href="/"
-            className="relative z-10 flex shrink-0 items-center focus-visible:outline-offset-4"
+            className="flex shrink-0 items-center focus-visible:outline-offset-4"
             aria-label={`${site.name} — página inicial`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- LCP: nativo, cota Hobby sem /_next/image */}
@@ -60,26 +61,23 @@ export function SiteHeader() {
               height={50}
               decoding="async"
               fetchPriority={pathname === "/" ? "low" : "high"}
-              className="h-9 w-auto max-w-[min(46vw,160px)] object-contain object-left sm:max-w-[168px] lg:h-10 lg:max-w-[176px] xl:max-w-[200px]"
+              className="h-9 w-auto max-w-[min(46vw,160px)] object-contain object-left sm:max-w-[168px] lg:h-10 lg:max-w-[168px] xl:max-w-[196px]"
             />
           </Link>
 
           <nav
-            className="hidden min-w-0 items-center justify-center gap-x-1 overflow-hidden lg:flex xl:gap-x-2"
+            className="hidden flex-1 items-center justify-center gap-x-1 lg:flex xl:gap-x-2"
             aria-label="Menu principal"
           >
-            {NAV_LINKS.map((link) => {
-              const active =
-                link.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(link.href);
+            {DESKTOP_NAV_LINKS.map((link) => {
+              const active = pathname.startsWith(link.href);
               return (
                 <Link
                   key={link.href}
                   href={link.href}
                   aria-current={active ? "page" : undefined}
-                  className={`group relative px-2.5 py-2.5 font-display text-[13px] font-semibold tracking-wide transition xl:px-3.5 xl:text-[14px] ${
-                    active ? "text-cream" : "text-muted hover:text-cream"
+                  className={`group relative shrink-0 whitespace-nowrap px-2.5 py-2.5 font-display text-[13px] font-semibold tracking-wide transition xl:px-3.5 xl:text-[14px] ${
+                    active ? "text-cream" : "text-cream/70 hover:text-cream"
                   }`}
                 >
                   {link.label}
@@ -96,10 +94,10 @@ export function SiteHeader() {
             })}
           </nav>
 
-          <div className="relative z-10 flex shrink-0 items-center justify-end gap-2 sm:gap-2.5 xl:gap-3">
+          <div className="ml-auto flex shrink-0 items-center justify-end gap-2 sm:gap-2.5 lg:ml-0 xl:gap-3">
             <a
               href={telUrl()}
-              className="hidden items-center gap-2 text-sm text-muted transition hover:text-cream 2xl:flex"
+              className="hidden items-center gap-2 whitespace-nowrap text-sm text-cream/70 transition hover:text-cream xl:flex"
             >
               <IconPhone className="h-4 w-4" />
               <span className="font-medium">{site.phoneLabel}</span>
@@ -111,7 +109,7 @@ export function SiteHeader() {
               href={whatsappUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden items-center gap-2 bg-brand px-3.5 py-2.5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex"
+              className="hidden h-11 items-center gap-2 bg-brand px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex xl:px-4 xl:text-sm"
             >
               <IconWhatsApp className="h-4 w-4" />
               WhatsApp

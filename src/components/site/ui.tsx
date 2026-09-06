@@ -10,7 +10,7 @@ import { whatsappUrl } from "@/lib/site";
 const WIDTHS = {
   text: "max-w-3xl",
   narrow: "max-w-4xl",
-  content: "max-w-6xl",
+  content: "max-w-7xl",
 } as const;
 
 export type ContainerSize = keyof typeof WIDTHS;
@@ -25,7 +25,9 @@ export function Container({
   className?: string;
 }) {
   return (
-    <div className={`mx-auto w-full px-4 sm:px-6 ${WIDTHS[size]} ${className}`}>
+    <div
+      className={`mx-auto w-full px-4 sm:px-6 lg:px-8 ${WIDTHS[size]} ${className}`}
+    >
       {children}
     </div>
   );
