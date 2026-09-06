@@ -29,6 +29,10 @@ yarn-error.log*
 .env
 .env*.local
 
+# fotos de intake (nunca commitar originais de anúncio)
+/prisma-photos/
+/palio-weekend-photos/
+
 # prisma
 /prisma/*.db
 /prisma/*.db-journal
