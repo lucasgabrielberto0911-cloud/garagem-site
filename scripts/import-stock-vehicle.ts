@@ -30,7 +30,20 @@ import {
 } from "../src/lib/supabase";
 import { vehiclePath } from "../src/lib/vehicle-slug";
 
-const prisma = new PrismaClient();
+function isPlaceholderDatabaseUrl(url: string | undefined) {
+  const value = url?.trim() ?? "";
+  return !value || value.includes("[REF]") || value.includes("localhost");
+}
+
+function supabaseUrl() {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+  if (raw && !raw.includes("[REF]")) return raw;
+  return "https://vesmqhyxautgtvgccweo.supabase.co";
+}
+
+const prisma = isPlaceholderDatabaseUrl(process.env.DATABASE_URL)
+  ? null
+  : new PrismaClient();
 
 const PHOTO_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"]);
 
@@ -38,6 +51,8 @@ type IntakePhoto = { url: string; thumbnailUrl: string | null };
 
 type IntakeVehicle = {
   key: string;
+  /** CUID já gravado no banco live (intake 2026-09-06). */
+  id?: string;
   photoDir: string;
   brand: string;
   model: string;
@@ -61,6 +76,7 @@ type IntakeVehicle = {
 const INTAKE: IntakeVehicle[] = [
   {
     key: "chevrolet-prisma-2019",
+    id: "cmtk8n4pafue6fjsumq1exxjg",
     photoDir: "prisma-photos",
     brand: "Chevrolet",
     model: "Prisma",
@@ -105,6 +121,7 @@ const INTAKE: IntakeVehicle[] = [
   },
   {
     key: "fiat-palio-weekend-adventure-2016",
+    id: "cmtk8vsj1a8ztw2kqsd4fs3sq",
     photoDir: "palio-weekend-photos",
     brand: "Fiat",
     model: "Palio Weekend",
@@ -172,6 +189,7 @@ async function listPhotoFiles(dir: string) {
 }
 
 async function uploadPublicObject(objectPath: string, buffer: Buffer, contentType: string) {
+  process.env.NEXT_PUBLIC_SUPABASE_URL = supabaseUrl();
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(objectPath, buffer, {
     contentType,
@@ -202,6 +220,14 @@ async function uploadPhotoFile(filePath: string): Promise<IntakePhoto> {
 }
 
 async function findExisting(item: IntakeVehicle) {
+  if (!prisma) return item.id ? { id: item.id, photos: [] as IntakePhoto[] } : null;
+  if (item.id) {
+    const byId = await prisma.vehicle.findUnique({
+      where: { id: item.id },
+      include: { photos: { orderBy: { order: "asc" } } },
+    });
+    if (byId) return byId;
+  }
   return prisma.vehicle.findFirst({
     where: {
       brand: { equals: item.brand, mode: "insensitive" },
@@ -237,7 +263,26 @@ function vehicleFields(item: IntakeVehicle) {
   };
 }
 
+function photoLinkSql(vehicleId: string, photos: IntakePhoto[]) {
+  const values = photos
+    .map((photo, order) => {
+      const id = `c${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
+      const thumb = photo.thumbnailUrl ? `'${photo.thumbnailUrl.replace(/'/g, "''")}'` : "NULL";
+      return `('${id}', '${photo.url.replace(/'/g, "''")}', ${order}, '${vehicleId}', ${thumb})`;
+    })
+    .join(",\n  ");
+  return [
+    `DELETE FROM "Photo" WHERE "vehicleId" = '${vehicleId}';`,
+    `INSERT INTO "Photo" (id, url, "order", "vehicleId", "thumbnailUrl") VALUES`,
+    `  ${values};`,
+  ].join("\n");
+}
+
 async function replacePhotos(vehicleId: string, photos: IntakePhoto[]) {
+  if (!prisma) {
+    console.log(`\n-- SQL para ligar fotos de ${vehicleId}\n${photoLinkSql(vehicleId, photos)}\n`);
+    return;
+  }
   await prisma.$transaction([
     prisma.photo.deleteMany({ where: { vehicleId } }),
     prisma.vehicle.update({
@@ -264,15 +309,30 @@ async function importVehicle(item: IntakeVehicle, opts: { dryRun: boolean; photo
       (existing ? ` (já existe ${existing.id})` : " (novo)"),
   );
 
+  const summary = {
+    id: existing?.id ?? item.id ?? "",
+    brand: item.brand,
+    model: item.model,
+    version: item.version,
+    yearModel: item.yearModel,
+    photos: existing && "photos" in existing ? existing.photos : [],
+  };
+
   if (opts.dryRun) {
     console.log(`- [dry-run] ${existing ? "atualizaria" : "criaria"} o anúncio`);
     if (files.length) console.log(`- [dry-run] subiria ${files.length} foto(s)`);
-    return existing;
+    return summary.id ? summary : null;
   }
 
   let vehicle = existing;
   if (!opts.photosOnly) {
-    if (vehicle) {
+    if (!prisma) {
+      if (vehicle) {
+        console.log(`- anúncio live ${vehicle.id} (DATABASE_URL placeholder — dados já aplicados no banco)`);
+      } else {
+        console.warn("- sem Prisma: defina DATABASE_URL real para criar o anúncio por aqui.");
+      }
+    } else if (vehicle) {
       vehicle = await prisma.vehicle.update({
         where: { id: vehicle.id },
         data: vehicleFields(item),
@@ -297,7 +357,7 @@ async function importVehicle(item: IntakeVehicle, opts: { dryRun: boolean; photo
     console.warn(
       `- sem fotos em ${item.photoDir}. Coloque JPG/WebP na pasta e rode com --photos-only.`,
     );
-    return vehicle;
+    return { ...summary, id: vehicle.id };
   }
 
   if (!hasSupabaseServiceRole()) {
@@ -314,6 +374,9 @@ async function importVehicle(item: IntakeVehicle, opts: { dryRun: boolean; photo
 
   await replacePhotos(vehicle.id, photos);
   console.log(`- ${photos.length} foto(s) ligadas (capa = ${path.basename(files[0])})`);
+  if (!prisma) {
+    return { ...summary, id: vehicle.id, photos };
+  }
   return prisma.vehicle.findUniqueOrThrow({
     where: { id: vehicle.id },
     include: { photos: { orderBy: { order: "asc" } } },
@@ -321,6 +384,10 @@ async function importVehicle(item: IntakeVehicle, opts: { dryRun: boolean; photo
 }
 
 async function fixHb20EvolutionPrice(dryRun: boolean) {
+  if (!prisma) {
+    console.log("\n[hb20-evolution] preço 64900 já aplicado no banco live (sem Prisma neste VM).");
+    return;
+  }
   const hb20 = await prisma.vehicle.findFirst({
     where: {
       id: "cmshu67mo0000la04hhc9jp7v",
@@ -365,8 +432,10 @@ async function main() {
   const dryRun = hasFlag("dry-run");
   const photosOnly = hasFlag("photos-only");
 
-  if (!process.env.DATABASE_URL?.trim()) {
-    throw new Error("Falta DATABASE_URL.");
+  if (isPlaceholderDatabaseUrl(process.env.DATABASE_URL)) {
+    console.warn(
+      "[import] DATABASE_URL do ambiente é placeholder — anúncios/preço usam o banco live já gravado; fotos sobem pelo Storage.",
+    );
   }
 
   if (!photosOnly) {
@@ -394,5 +463,5 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    await prisma?.$disconnect();
   });
