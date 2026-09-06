@@ -106,6 +106,11 @@ export default async function EditVehiclePage({
             hasSpareKey: vehicle.hasSpareKey,
             hasManual: vehicle.hasManual,
           }}
+          photos={vehicle.photos.map((photo) => ({
+            id: photo.id,
+            url: photo.url,
+            thumbnailUrl: photo.thumbnailUrl,
+          }))}
           costs={costs}
           documents={documents}
         />

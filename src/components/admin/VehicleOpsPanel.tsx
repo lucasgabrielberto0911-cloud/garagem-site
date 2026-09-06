@@ -19,6 +19,10 @@ import {
   IconTrash,
 } from "@/components/admin/icons";
 import { AdminFileDrop } from "@/components/admin/AdminFileDrop";
+import {
+  VehiclePhotoArchive,
+  type ArchivePhotoItem,
+} from "@/components/admin/VehiclePhotoArchive";
 import { Badge, Card, Field, btn, iconTap, inputClass } from "@/components/admin/ui";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { adminFileViewHref } from "@/lib/supabase";
@@ -104,10 +108,12 @@ function Toggle({
 
 export function VehicleOpsPanel({
   vehicle,
+  photos,
   costs,
   documents,
 }: {
   vehicle: VehicleOpsVehicle;
+  photos: ArchivePhotoItem[];
   costs: VehicleCost[];
   documents: VehicleDocument[];
 }) {
@@ -312,6 +318,8 @@ export function VehicleOpsPanel({
 
   return (
     <div className="space-y-5">
+      <VehiclePhotoArchive vehicleId={vehicle.id} photos={photos} />
+
       <Card
         title="Checklist interno"
         action={
