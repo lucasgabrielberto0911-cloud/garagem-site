@@ -18,12 +18,23 @@ ALTER TABLE "Testimonial"
 ALTER TABLE "Photo"
   ADD COLUMN IF NOT EXISTS "thumbnailUrl" TEXT;
 
--- Conferência rápida (deve listar rating e thumbnailUrl).
+-- Lead de venda/troca: interesse no estoque, origem, fotos e updatedAt.
+ALTER TABLE "LeadVenda"
+  ADD COLUMN IF NOT EXISTS "interestVehicleId" TEXT;
+ALTER TABLE "LeadVenda"
+  ADD COLUMN IF NOT EXISTS "source" TEXT;
+ALTER TABLE "LeadVenda"
+  ADD COLUMN IF NOT EXISTS "photoUrls" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+ALTER TABLE "LeadVenda"
+  ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+-- Conferência rápida (deve listar rating, thumbnailUrl e campos novos do lead).
 SELECT table_name, column_name
 FROM information_schema.columns
 WHERE table_schema = 'public'
   AND (
     (table_name = 'Testimonial' AND column_name IN ('rating', 'vehicleLabel', 'photoUrl', 'published', 'order'))
     OR (table_name = 'Photo' AND column_name = 'thumbnailUrl')
+    OR (table_name = 'LeadVenda' AND column_name IN ('interestVehicleId', 'source', 'photoUrls', 'updatedAt'))
   )
 ORDER BY table_name, column_name;

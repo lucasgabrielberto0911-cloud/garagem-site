@@ -181,6 +181,176 @@ export const SERVICE_CITIES = [
       },
     ],
   },
+  {
+    slug: "guarapari",
+    name: "Guarapari",
+    metaDescription:
+      "Seminovos em Guarapari (ES) — Muquiçaba, Praia do Morro e Centro. Estoque da Garagem no site, vídeo no WhatsApp e atendimento online todos os dias, das 8h às 23h.",
+    lead: "Guarapari mistura temporada, orla e o vai-e-vem da ES-060. A Garagem atende quem está na Praia do Morro, em Meaípe, no Centro ou na Muquiçaba com estoque no site e conversa no WhatsApp.",
+    paragraphs: [
+      "Na alta temporada o trânsito da orla come o sábado. Em vez de sair às cegas, você compara seminovos no celular — preço, câmbio, km — e pede o vídeo do carro que passou no filtro. A Garagem responde todos os dias, das 8h às 23h.",
+      "Somos loja digital: não inventamos showroom na Praia do Morro. Compra, venda e troca entram na mesma conversa. Visita, entrega ou retirada só depois que a proposta estiver alinhada.",
+    ],
+    bullets: [
+      "Ficha e fotos para escolher sem perder o fim de semana na orla",
+      "Vídeo do seminovo antes de pegar a ES-060 à toa",
+      "Avaliação do usado para venda ou troca",
+      `WhatsApp ${PHONES[0].label} · loja digital, atendimento humano`,
+    ],
+    faqs: [
+      {
+        question: "A Garagem atende quem está em Guarapari?",
+        answer:
+          "Sim. Atendemos Guarapari e o litoral sul da Grande Vitória por WhatsApp e telefone, com fotos, vídeos e orientação de documentação — online, todos os dias das 8h às 23h.",
+      },
+      {
+        question: "Tem loja na Praia do Morro?",
+        answer:
+          "Não. A Garagem é loja digital. O estoque está no site e o contato é no WhatsApp. Combinamos visita ou entrega quando o negócio avançar.",
+      },
+      {
+        question: "Posso dar meu carro na troca morando em Guarapari?",
+        answer:
+          "Pode. Envie os dados pela página Vender/Trocar ou pelo WhatsApp. A avaliação é sem compromisso.",
+      },
+    ],
+  },
+  {
+    slug: "cachoeiro-de-itapemirim",
+    name: "Cachoeiro de Itapemirim",
+    metaDescription:
+      "Seminovos para Cachoeiro de Itapemirim e sul do ES. Veja o estoque da Garagem no site, peça vídeo no WhatsApp e feche sem viajar à toa — atendimento das 8h às 23h.",
+    lead: "De Cachoeiro à Grande Vitória são horas na BR-101. Por isso a Garagem mostra o seminovo no site e no WhatsApp antes de você sair — Centro, Independência, Recanto ou distrito.",
+    paragraphs: [
+      "Cachoeiro é polo do sul capixaba: mármore, comércio e estrada. A Garagem atende essa distância no digital. Você vê ficha, quilometragem e fotos, pede vídeo e só combina o encontro quando o negócio estiver alinhado.",
+      "O atendimento roda todos os dias, das 8h às 23h. Troca, financiamento e documentação entram na mesma conversa — sem inventar loja física na cidade e sem pressão de balcão.",
+    ],
+    bullets: [
+      "Triagem completa no site para quem está no sul do Estado",
+      "Vídeo do veículo antes de qualquer deslocamento longo",
+      "Avaliação do usado para venda ou troca",
+      `WhatsApp ${PHONES[0].label} — resposta no horário estendido`,
+    ],
+    faqs: [
+      {
+        question: "A Garagem atende Cachoeiro de Itapemirim?",
+        answer:
+          "Sim. Atendemos Cachoeiro e o sul do ES por WhatsApp e telefone: fotos, vídeos e orientação de documentação — online, todos os dias das 8h às 23h.",
+      },
+      {
+        question: "Consigo resolver quase tudo sem ir à capital?",
+        answer:
+          "A Garagem é loja digital. A escolha, as dúvidas e a proposta acontecem no site e no WhatsApp. Visita, entrega ou retirada só entram quando vocês combinam.",
+      },
+      {
+        question: "Posso dar meu carro na troca?",
+        answer:
+          "Pode. Envie os dados pela página Vender/Trocar ou pelo WhatsApp para uma avaliação sem compromisso.",
+      },
+    ],
+  },
+  {
+    slug: "colatina",
+    name: "Colatina",
+    metaDescription:
+      "Seminovos para Colatina e noroeste do ES. Estoque da Garagem no site, vídeo pelo WhatsApp e atendimento online todos os dias, das 8h às 23h.",
+    lead: "Colatina concentra o noroeste capixaba. Quem está no Centro, no São Silvano, na Honório Fraga ou no entorno do Rio Doce escolhe o seminovo no site da Garagem e fecha pelo WhatsApp.",
+    paragraphs: [
+      "A distância até a Grande Vitória pede triagem boa. A Garagem deixa ficha, fotos e preço no site e manda vídeo do motor e do câmbio quando você pede — sem deslocamento cego.",
+      "Atendemos todos os dias, das 8h às 23h. Troca do usado e orientação de documentação entram na mesma conversa. Sem ponto físico obrigatório: combinamos o encontro só depois que a proposta estiver clara.",
+    ],
+    bullets: [
+      "Estoque para filtrar à noite, no ritmo de Colatina",
+      "Vídeo e procedência antes de pegar a estrada",
+      "Avaliação para venda ou troca do seu usado",
+      `WhatsApp oficial ${PHONES[0].label}`,
+    ],
+    faqs: [
+      {
+        question: "A Garagem atende quem mora em Colatina?",
+        answer:
+          "Sim. Atendemos Colatina e o noroeste do ES por WhatsApp e telefone. Você vê o estoque no site, pede vídeo e tira dúvida de documentação — online, todos os dias das 8h às 23h.",
+      },
+      {
+        question: "Tem loja física em Colatina?",
+        answer:
+          "Não. A Garagem é loja digital. A vitrine é o site e o atendimento é no WhatsApp. Combinamos visita, entrega ou retirada quando o negócio avançar.",
+      },
+      {
+        question: "Consigo dar o carro na troca morando em Colatina?",
+        answer:
+          "Sim. Envie marca, ano, km e fotos pela página Vender/Trocar ou pelo WhatsApp. A avaliação é sem compromisso.",
+      },
+    ],
+  },
+  {
+    slug: "cariacica",
+    name: "Cariacica",
+    metaDescription:
+      "Seminovos em Cariacica (ES) — Campo Grande, Porto de Santana e Itacibá. Estoque da Garagem no site, WhatsApp das 8h às 23h, troca e orientação de financiamento.",
+    lead: "Cariacica é corredor da Grande Vitória: Campo Grande, Flexal, Itacibá e o porto. A Garagem deixa a escolha do seminovo no site e a conversa no WhatsApp, no fim do expediente.",
+    paragraphs: [
+      "O dia a dia aqui é deslocamento — BR-101, shopping, colégio. A Garagem não pede que você perca uma tarde em showroom. O estoque está no site, com foto, ano, km e preço, e o consultor manda vídeo pelo WhatsApp.",
+      "Atendemos a Grande Vitória a partir do digital, todos os dias das 8h às 23h. Troca, financiamento e documentação entram na mesma conversa. Combinamos visita ou entrega só depois que a proposta estiver clara.",
+    ],
+    bullets: [
+      "Filtros de preço e câmbio para achar o carro depois do trânsito",
+      "Vídeo antes de sair de Campo Grande ou do Porto de Santana",
+      "Avaliação do usado para venda ou troca",
+      `WhatsApp ${PHONES[0].label} · todos os dias, 8h–23h`,
+    ],
+    faqs: [
+      {
+        question: "A Garagem atende Cariacica?",
+        answer:
+          "Sim. Atendemos Cariacica e a Grande Vitória por WhatsApp e telefone, com fotos, vídeos e orientação de documentação — online, todos os dias das 8h às 23h.",
+      },
+      {
+        question: "Vocês têm loja em Campo Grande?",
+        answer:
+          "Não. Somos loja digital. O estoque está no site e o contato é no WhatsApp. Visita, entrega ou retirada são combinadas depois que você já viu o veículo com calma.",
+      },
+      {
+        question: "Posso avaliar meu carro para troca em Cariacica?",
+        answer:
+          "Pode. Mande os dados na página Vender/Trocar ou no WhatsApp. A avaliação é gratuita e sem compromisso.",
+      },
+    ],
+  },
+  {
+    slug: "viana",
+    name: "Viana",
+    metaDescription:
+      "Seminovos em Viana (ES) — Centro, Marcílio de Noronha e região. A Garagem atende pelo site e WhatsApp, com procedência, troca e horário das 8h às 23h.",
+    lead: "Viana fica no eixo da BR-262, entre Cariacica e o interior. Quem mora no Centro, em Marcílio de Noronha ou no Universal escolhe o seminovo no site da Garagem e fecha pelo WhatsApp.",
+    paragraphs: [
+      "O município cresce no entorno da Grande Vitória e pede praticidade: comparar anúncio no celular, pedir vídeo e negociar sem furar o expediente. A Garagem é loja digital, com atendimento humano do primeiro recado até a transferência.",
+      "Compra, venda e troca entram no mesmo canal. Não inventamos ponto físico na cidade: visita ou entrega só quando a proposta já estiver alinhada — todos os dias, das 8h às 23h.",
+    ],
+    bullets: [
+      "Estoque no site para triar sem deslocamento cego",
+      "Vídeo do seminovo antes de pegar a BR-262",
+      "Troca do usado e orientação de financiamento",
+      `WhatsApp oficial ${PHONES[0].label}`,
+    ],
+    faqs: [
+      {
+        question: "A Garagem atende quem está em Viana?",
+        answer:
+          "Sim. Atendemos Viana e o entorno da Grande Vitória por WhatsApp e telefone — online, todos os dias das 8h às 23h.",
+      },
+      {
+        question: "Preciso ir a Vitória para começar?",
+        answer:
+          "Não. Você escolhe no estoque, recebe detalhes e vídeo e só combina visita ou entrega quando a proposta já fizer sentido.",
+      },
+      {
+        question: "Posso dar meu carro na troca?",
+        answer:
+          "Pode. Envie os dados pela página Vender/Trocar ou pelo WhatsApp para uma avaliação sem compromisso.",
+      },
+    ],
+  },
 ] as const satisfies readonly ServiceCity[];
 
 export type ServiceCitySlug = (typeof SERVICE_CITIES)[number]["slug"];

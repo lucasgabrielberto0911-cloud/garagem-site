@@ -13,6 +13,9 @@ async function inspectSchema() {
         AND (
           (table_name = 'Testimonial' AND column_name = 'rating')
           OR (table_name = 'Photo' AND column_name = 'thumbnailUrl')
+          OR (table_name = 'LeadVenda' AND column_name IN (
+            'interestVehicleId', 'source', 'photoUrls', 'updatedAt'
+          ))
         )
     `;
     const has = (table: string, column: string) =>
@@ -20,6 +23,10 @@ async function inspectSchema() {
     const missing: string[] = [];
     if (!has("Testimonial", "rating")) missing.push("Testimonial.rating");
     if (!has("Photo", "thumbnailUrl")) missing.push("Photo.thumbnailUrl");
+    if (!has("LeadVenda", "interestVehicleId")) missing.push("LeadVenda.interestVehicleId");
+    if (!has("LeadVenda", "source")) missing.push("LeadVenda.source");
+    if (!has("LeadVenda", "photoUrls")) missing.push("LeadVenda.photoUrls");
+    if (!has("LeadVenda", "updatedAt")) missing.push("LeadVenda.updatedAt");
     return {
       ok: missing.length === 0,
       missing,

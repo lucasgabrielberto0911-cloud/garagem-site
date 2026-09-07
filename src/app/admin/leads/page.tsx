@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { LeadsTable } from "@/components/admin/LeadsTable";
 import { AdminPageHeader } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
+import { findLeadVendas } from "@/lib/lead-venda";
 import { LEAD_STATUSES, isLeadStatus } from "@/lib/leads";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_LEADS_PAGE_SIZE } from "@/lib/admin-vehicles";
@@ -39,9 +40,8 @@ export default async function LeadsPage({
   };
 
   const [leads, groups, total] = await Promise.all([
-    prisma.leadVenda.findMany({
+    findLeadVendas({
       where,
-      orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),

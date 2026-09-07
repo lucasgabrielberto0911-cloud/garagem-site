@@ -9,6 +9,7 @@ import {
   trackLead,
   trackSearch,
   trackViewContent,
+  trackWhatsAppClick,
 } from "./meta-pixel";
 
 const VEHICLE_CUID = "cmt0ewzpg0000lc0493fl02h7";
@@ -85,21 +86,32 @@ type FbqCall = unknown[];
 
 function installFbq() {
   const calls: FbqCall[] = [];
+  const gtagCalls: unknown[][] = [];
   const fbq = Object.assign(
     (...args: unknown[]) => {
       calls.push(args);
     },
     { queue: [] as unknown[], push() {} },
   );
-  (globalThis as { window: { fbq: typeof fbq; setTimeout: typeof setTimeout } }).window = {
+  const gtag = (...args: unknown[]) => {
+    gtagCalls.push(args);
+  };
+  (globalThis as {
+    window: {
+      fbq: typeof fbq;
+      gtag: typeof gtag;
+      setTimeout: typeof setTimeout;
+    };
+  }).window = {
     fbq,
+    gtag,
     setTimeout,
   };
-  return calls;
+  return { calls, gtagCalls };
 }
 
 test("ViewContent / Lead / Search / AddToWishlist go through fbq with the CUID", () => {
-  const calls = installFbq();
+  const { calls, gtagCalls } = installFbq();
 
   trackViewContent({
     content_ids: [VEHICLE_CUID],
@@ -122,4 +134,21 @@ test("ViewContent / Lead / Search / AddToWishlist go through fbq with the CUID",
     assert.deepEqual(payload.content_ids, [VEHICLE_CUID]);
     assert.equal(payload.content_type, "vehicle");
   }
+
+  assert.deepEqual(
+    gtagCalls.map((call) => call[1]),
+    ["view_item", "generate_lead", "search", "add_to_wishlist"],
+  );
+});
+
+test("WhatsAppClick vai para Meta custom e GA4", () => {
+  const { calls, gtagCalls } = installFbq();
+  trackWhatsAppClick("float");
+  assert.equal(calls[0]?.[0], "trackCustom");
+  assert.equal(calls[0]?.[1], "WhatsAppClick");
+  assert.deepEqual(gtagCalls[0], [
+    "event",
+    "whatsapp_click",
+    { event_category: "engagement", event_label: "float" },
+  ]);
 });

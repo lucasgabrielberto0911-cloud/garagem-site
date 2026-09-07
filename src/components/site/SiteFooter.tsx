@@ -97,6 +97,14 @@ export async function SiteFooter() {
               Cidades
             </h2>
             <ul className="mt-4 space-y-1">
+              <li>
+                <Link
+                  href="/seminovos"
+                  className="inline-flex min-h-[36px] items-center text-sm text-muted transition hover:text-cream"
+                >
+                  Todas as cidades
+                </Link>
+              </li>
               {SERVICE_CITIES.map((city) => (
                 <li key={city.slug}>
                   <Link
@@ -181,6 +189,14 @@ export async function SiteFooter() {
               Cidades
             </p>
             <ul className="flex flex-wrap justify-center gap-2">
+              <li>
+                <Link
+                  href="/seminovos"
+                  className="inline-flex min-h-[44px] items-center border border-brand/40 bg-asphalt/50 px-3 text-xs uppercase tracking-wider text-cream touch-manipulation"
+                >
+                  Todas
+                </Link>
+              </li>
               {SERVICE_CITIES.map((city) => (
                 <li key={city.slug}>
                   <Link

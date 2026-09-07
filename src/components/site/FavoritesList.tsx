@@ -8,6 +8,7 @@ import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
 import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
+import { trackLead, trackWhatsAppClick } from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
@@ -80,9 +81,20 @@ export function FavoritesList() {
           >
             Ver estoque
           </Link>
-          <WhatsAppButton message={WHATSAPP_MESSAGES.general} variant="outline">
-            Falar com um consultor
-          </WhatsAppButton>
+          <span
+            className="contents"
+            onClickCapture={() => {
+              trackWhatsAppClick("favoritos-vazio");
+              trackLead({
+                content_ids: [],
+                content_name: "Favoritos vazio",
+              });
+            }}
+          >
+            <WhatsAppButton message={WHATSAPP_MESSAGES.general} variant="outline">
+              Falar com um consultor
+            </WhatsAppButton>
+          </span>
         </div>
       </div>
     );
@@ -217,17 +229,28 @@ export function FavoritesList() {
           Manda a lista no WhatsApp que a gente monta a proposta com as opções de
           pagamento e avaliação do seu usado.
         </p>
-        <WhatsAppButton
-          className="mt-5"
-          size="lg"
-          message={`Olá! Separei alguns veículos no site: ${vehicles
-            .map((vehicle) =>
-              formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel),
-            )
-            .join(", ")}. Pode me passar as condições?`}
+        <span
+          className="contents"
+          onClickCapture={() => {
+            trackWhatsAppClick("favoritos-lista");
+            trackLead({
+              content_ids: vehicles.map((vehicle) => vehicle.id),
+              content_name: "Favoritos",
+            });
+          }}
         >
-          Enviar minha lista
-        </WhatsAppButton>
+          <WhatsAppButton
+            className="mt-5"
+            size="lg"
+            message={`Olá! Separei alguns veículos no site: ${vehicles
+              .map((vehicle) =>
+                formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel),
+              )
+              .join(", ")}. Pode me passar as condições?`}
+          >
+            Enviar minha lista
+          </WhatsAppButton>
+        </span>
       </div>
     </div>
   );

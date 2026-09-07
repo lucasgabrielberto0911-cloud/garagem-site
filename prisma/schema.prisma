@@ -150,16 +150,23 @@ model Admin {
 }
 
 model LeadVenda {
-  id          String   @id @default(cuid())
-  name        String
-  phone       String
-  vehicleInfo String
+  id                String   @id @default(cuid())
+  name              String
+  phone             String
+  vehicleInfo       String
   /** Placa normalizada (ABC1234 / ABC1D23), sem traço, maiúsculas. */
-  plate       String   @default("")
-  km          Int?
-  notes       String?
-  status      String   @default("novo")
-  createdAt   DateTime @default(now())
+  plate             String   @default("")
+  km                Int?
+  notes             String?
+  status            String   @default("novo")
+  /** Anúncio do estoque que originou o interesse (`/vender?interesse=`). */
+  interestVehicleId String?
+  /** Origem do formulário — hoje `vender`. */
+  source            String?
+  /** Refs privadas (`private://documentos/vender/...`) das fotos do usado. */
+  photoUrls         String[] @default([])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model Testimonial {
