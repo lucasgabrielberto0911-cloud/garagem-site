@@ -59,7 +59,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error("[catalog/meta.csv]", error);
-    return new NextResponse("vehicle_id\n", {
+    return new NextResponse(buildCatalogCsv([], site.url), {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
