@@ -5,6 +5,7 @@ import { isMissingColumnError } from "@/lib/prisma-errors";
 import { brandKey, formatBrandName } from "@/lib/format";
 import { extractVehicleIdFromParam, vehicleSlug } from "@/lib/vehicle-slug";
 import { SEED_TESTIMONIALS } from "@/lib/testimonials-seed";
+import { pickCityShowcase } from "@/lib/city-showcase";
 import {
   STOCK_PAGE_SIZE,
   type StockFilters,
@@ -284,6 +285,33 @@ export const getFeaturedVehicles = cache((take = 8) =>
   safeQuery(
     "veículos em destaque",
     () => loadFeaturedCached(take),
+    [] as VehicleCardRecord[],
+  ),
+);
+
+async function fetchCityShowcaseVehicles(
+  slug: string,
+  take: number,
+): Promise<VehicleCardRecord[]> {
+  const pool = await findCardVehicles({
+    where: { status: "disponivel" },
+    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+    take: 40,
+  });
+  return pickCityShowcase(pool, slug, take);
+}
+
+const loadCityShowcaseCached = unstable_cache(
+  async (slug: string, take: number) => fetchCityShowcaseVehicles(slug, take),
+  ["city-showcase-v1"],
+  PUBLIC_CACHE,
+);
+
+/** Recorte do estoque real — cada cidade começa em um ponto diferente da lista. */
+export const getCityShowcaseVehicles = cache((slug: string, take = 8) =>
+  safeQuery(
+    `vitrine ${slug}`,
+    () => loadCityShowcaseCached(slug, take),
     [] as VehicleCardRecord[],
   ),
 );

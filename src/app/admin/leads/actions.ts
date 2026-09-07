@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { ADMIN_NEW_LEADS_TAG } from "@/lib/admin-cache";
+import { markLeadContatado } from "@/lib/lead-venda";
 import { isLeadStatus } from "@/lib/leads";
 import { prisma } from "@/lib/prisma";
 
@@ -67,6 +68,10 @@ export async function convertLeadToCustomer(
       },
     });
 
+    await markLeadContatado(id);
+    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
+    revalidatePath("/admin/leads");
+    revalidatePath("/admin");
     revalidatePath("/admin/clientes");
     return { ok: true, message: "Cliente criado a partir do lead." };
   } catch (error) {

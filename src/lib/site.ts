@@ -15,8 +15,8 @@ export const site = {
   cnpj: "47.740.076/0001-17",
   url: "https://www.suagaragem.net",
   tagline:
-    "Seminovos com procedência em Aracruz, Vitória, Linhares, Serra, Vila Velha e região.",
-  region: "Aracruz, Vitória, Linhares, Serra, Vila Velha",
+    "Seminovos com procedência em Aracruz, Grande Vitória, Linhares, Guarapari, Cachoeiro, Colatina e região.",
+  region: "Aracruz, Grande Vitória, Linhares e interior do ES",
   state: "Espírito Santo",
   stateCode: "ES",
   phoneLabel: PHONES[0].label,

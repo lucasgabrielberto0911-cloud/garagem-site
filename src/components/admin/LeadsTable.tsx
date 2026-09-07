@@ -26,6 +26,7 @@ import {
   deleteLead,
   updateLeadStatus,
 } from "@/app/admin/leads/actions";
+import { adminFileViewHref } from "@/lib/supabase";
 
 /** Troque aqui se mudar o serviço de consulta de placa. */
 const CONSULTA_PLACA_URL_BASE = "https://placafipe.com/placa/";
@@ -61,6 +62,9 @@ function exportCsv(leads: LeadVenda[]) {
     "Placa",
     "KM",
     "Status",
+    "Origem",
+    "Interesse",
+    "Fotos",
     "Observações",
     "Data",
   ];
@@ -71,6 +75,9 @@ function exportCsv(leads: LeadVenda[]) {
     lead.plate ? formatPlateDisplay(lead.plate) : "",
     lead.km !== null ? String(lead.km) : "",
     STATUS_LABEL[lead.status as LeadStatus] ?? lead.status,
+    lead.source ?? "",
+    lead.interestVehicleId ?? "",
+    String(lead.photoUrls?.length ?? 0),
     (lead.notes ?? "").replace(/\s+/g, " "),
     formatDateTime(lead.createdAt),
   ]);
@@ -284,6 +291,20 @@ export function LeadsTable({
                 <p className="mt-1 text-sm text-muted">
                   {formatPhoneBR(lead.phone)} · {formatDateTime(lead.createdAt)}
                 </p>
+                {lead.source || lead.interestVehicleId ? (
+                  <p className="mt-1 text-xs text-muted">
+                    {lead.source ? `Origem: ${lead.source}` : null}
+                    {lead.source && lead.interestVehicleId ? " · " : null}
+                    {lead.interestVehicleId ? (
+                      <a
+                        href={`/estoque/${lead.interestVehicleId}`}
+                        className="text-cream underline-offset-2 hover:underline"
+                      >
+                        Interesse no estoque
+                      </a>
+                    ) : null}
+                  </p>
+                ) : null}
               </div>
 
               <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
@@ -360,6 +381,28 @@ export function LeadsTable({
                   </button>
                 </div>
               </div>
+
+              {lead.photoUrls && lead.photoUrls.length > 0 ? (
+                <div className="mt-3 border-t border-white/10 pt-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted">
+                    Fotos do usado
+                  </p>
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {lead.photoUrls.map((url, index) => (
+                      <li key={url}>
+                        <a
+                          href={adminFileViewHref(url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-h-[36px] items-center border border-white/15 px-2.5 text-xs text-cream transition hover:border-brand"
+                        >
+                          Foto {index + 1}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               {lead.notes ? (
                 <p className="mt-3 whitespace-pre-line border-t border-white/10 pt-3 text-sm leading-relaxed text-muted">

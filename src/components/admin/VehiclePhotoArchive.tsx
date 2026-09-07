@@ -64,7 +64,7 @@ export function VehiclePhotoArchive({
       toast.success(
         photos.length === 1
           ? "Foto baixada."
-          : `${photos.length} fotos baixadas em alta.`,
+          : `${photos.length} fotos da galeria baixadas.`,
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha no download.");
@@ -113,9 +113,9 @@ export function VehiclePhotoArchive({
       ) : (
         <div className="space-y-4">
           <p className="text-sm leading-relaxed text-muted">
-            Arquivo mais nítido que o site guarda — a foto da galeria, sem o
-            recorte pequeno do card. Serve para arquivo da loja ou reutilizar
-            o anúncio.
+            As fotos do ZIP são as mesmas da galeria do site (WebP até 1280px),
+            sem o recorte pequeno do card. Não são o arquivo original da câmera
+            — o upload já redimensiona para caber no anúncio.
           </p>
 
           <button
@@ -127,7 +127,7 @@ export function VehiclePhotoArchive({
             <IconDownload className="h-4 w-4" />
             {zipPending
               ? "Montando ZIP…"
-              : `Baixar ${photos.length} foto${photos.length === 1 ? "" : "s"} em alta`}
+              : `Baixar ${photos.length} foto${photos.length === 1 ? "" : "s"} da galeria`}
           </button>
 
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -157,8 +157,8 @@ export function VehiclePhotoArchive({
                       onClick={() => void handleOne(photo.id, index)}
                       disabled={busy || zipPending}
                       className={iconTap}
-                      title="Baixar esta foto em alta"
-                      aria-label={`Baixar foto ${index + 1} em alta`}
+                      title="Baixar esta foto da galeria"
+                      aria-label={`Baixar foto ${index + 1} da galeria`}
                     >
                       <IconDownload className="h-4 w-4" />
                     </button>

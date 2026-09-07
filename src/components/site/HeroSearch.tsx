@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { IconSearch } from "@/components/site/icons";
 import { formatBrandName } from "@/lib/format";
+import { trackSearch } from "@/lib/meta-pixel";
 
 const BUDGET_LINKS = [
   { label: "Até 50 mil", href: "/estoque?maxPrice=50000" },
@@ -18,6 +21,13 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
       <form
         action="/estoque"
         method="get"
+        onSubmit={(event) => {
+          const term = new FormData(event.currentTarget).get("q");
+          const search = String(term ?? "").trim();
+          if (search) {
+            trackSearch({ content_ids: [], search_string: search });
+          }
+        }}
         className="flex flex-col gap-2 border border-white/15 bg-asphalt/85 p-2 backdrop-blur-md transition focus-within:border-brand/60 sm:flex-row"
         role="search"
       >

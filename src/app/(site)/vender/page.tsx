@@ -9,6 +9,7 @@ import {
 } from "@/components/site/icons";
 import { buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
+import { vehiclePath } from "@/lib/vehicle-slug";
 import { getVehicleById } from "@/lib/vehicles";
 
 export const revalidate = 120;
@@ -44,14 +45,11 @@ export default async function VenderPage({
 }) {
   const query = await searchParams;
   const interestId = query.interesse?.trim();
+  const interestVehicle = interestId ? await getVehicleById(interestId) : null;
   const interestLabel =
     query.label?.trim() ||
-    (interestId
-      ? await getVehicleById(interestId).then((vehicle) =>
-          vehicle
-            ? `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel}`
-            : "",
-        )
+    (interestVehicle
+      ? `${interestVehicle.brand} ${interestVehicle.model} ${interestVehicle.yearModel}`
       : "");
 
   return (
@@ -67,11 +65,11 @@ export default async function VenderPage({
           <div className="mt-6 border border-brand/30 bg-ink px-5 py-4 text-center text-sm text-cream lg:text-left">
             Interesse na troca por:{" "}
             <strong className="font-display">{interestLabel}</strong>
-            {interestId ? (
+            {interestVehicle ? (
               <>
                 {" · "}
                 <Link
-                  href={`/estoque/${interestId}`}
+                  href={vehiclePath(interestVehicle)}
                   className="text-brand underline-offset-4 hover:underline"
                 >
                   Ver anúncio
@@ -111,9 +109,10 @@ export default async function VenderPage({
             />
             <div className="mt-8">
               <SellForm
+                interestVehicleId={interestVehicle?.id}
                 interestNote={
                   interestLabel
-                    ? `Interesse na troca pelo veículo: ${interestLabel}${interestId ? ` (id ${interestId})` : ""}`
+                    ? `Interesse na troca pelo veículo: ${interestLabel}${interestVehicle ? ` (id ${interestVehicle.id})` : ""}`
                     : undefined
                 }
               />

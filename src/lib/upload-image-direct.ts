@@ -143,7 +143,19 @@ async function uploadViaSignedUrl(prepared: File): Promise<UploadedPhoto> {
   }
 
   const thumbnailUrl = await deriveThumbnail(signData.publicUrl);
+  enqueuePlateReblur(signData.publicUrl);
   return { url: signData.publicUrl, thumbnailUrl };
+}
+
+/** 413 pulou o Rekognition — tenta borrar depois, sem travar o upload. */
+function enqueuePlateReblur(url: string) {
+  if (!url) return;
+  void fetch("/api/upload/reblur", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  }).catch(() => {});
 }
 
 async function putWithCacheControl({

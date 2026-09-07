@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
+import { SiteLeadHit } from "@/components/site/VehiclePixel";
 import {
   ActionRow,
   ButtonLink,
@@ -21,7 +22,7 @@ import {
   otherServiceCities,
   serviceCityJsonLd,
 } from "@/lib/seo";
-import { getFeaturedVehicles } from "@/lib/vehicles";
+import { getCityShowcaseVehicles } from "@/lib/vehicles";
 
 export const revalidate = 3600;
 
@@ -61,14 +62,14 @@ export default async function SeminovosCidadePage({
     question: item.question,
     answer: item.answer,
   }));
-  const featured = await getFeaturedVehicles(8);
+  const featured = await getCityShowcaseVehicles(city.slug, 8);
 
   return (
     <div className="py-12 lg:py-16">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Início", path: "/" },
-          { name: "Estoque", path: "/estoque" },
+          { name: "Seminovos", path: "/seminovos" },
           { name: `Seminovos em ${city.name}`, path },
         ])}
       />
@@ -90,8 +91,8 @@ export default async function SeminovosCidadePage({
             Início
           </Link>
           <span className="mx-2">/</span>
-          <Link href="/estoque" className="transition hover:text-cream">
-            Estoque
+          <Link href="/seminovos" className="transition hover:text-cream">
+            Seminovos
           </Link>
           <span className="mx-2">/</span>
           <span className="text-cream">{city.name}</span>
@@ -118,11 +119,13 @@ export default async function SeminovosCidadePage({
               ou troca — que a gente responde pelo WhatsApp.
             </p>
             <div className="mt-5 flex flex-col gap-3">
-              <WhatsAppButton
-                message={`${WHATSAPP_MESSAGES.general} Estou em ${city.name}.`}
-              >
-                Chamar no WhatsApp
-              </WhatsAppButton>
+              <SiteLeadHit contentName={`Seminovos ${city.name}`}>
+                <WhatsAppButton
+                  message={`${WHATSAPP_MESSAGES.general} Estou em ${city.name}.`}
+                >
+                  Chamar no WhatsApp
+                </WhatsAppButton>
+              </SiteLeadHit>
               <ButtonLink href="/estoque" variant="outline">
                 Ver estoque completo
               </ButtonLink>
@@ -187,6 +190,12 @@ export default async function SeminovosCidadePage({
             Outras cidades
           </h2>
           <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href="/seminovos"
+              className="border border-brand/40 px-3 py-2 text-xs uppercase tracking-wider text-cream transition hover:border-brand hover:bg-brand/10"
+            >
+              Todas as cidades
+            </Link>
             {nearby.map((item) => (
               <Link
                 key={item.slug}

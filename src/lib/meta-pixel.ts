@@ -41,10 +41,14 @@ type Fbq = {
   push: Fbq;
 };
 
+type Gtag = (...args: unknown[]) => void;
+
 declare global {
   interface Window {
     fbq?: Fbq;
     _fbq?: Fbq;
+    gtag?: Gtag;
+    dataLayer?: unknown[];
   }
 }
 
@@ -118,6 +122,36 @@ export function buildCatalogPayload(
   return payload;
 }
 
+function getGtag() {
+  if (typeof window === "undefined") return undefined;
+  return window.gtag;
+}
+
+function fireGtag(event: string, params?: Record<string, unknown>) {
+  const gtag = getGtag();
+  if (!gtag) return;
+  if (params) gtag("event", event, params);
+  else gtag("event", event);
+}
+
+function gtagItemParams(payload?: CatalogEventPayload) {
+  if (!payload) return {};
+  const params: Record<string, unknown> = {};
+  if (payload.content_ids.length > 0) {
+    params.item_id = payload.content_ids[0];
+    params.items = payload.content_ids.map((id) => ({ item_id: id }));
+  }
+  if (payload.content_name) params.item_name = payload.content_name;
+  if (typeof payload.value === "number") {
+    params.value = payload.value;
+    params.currency = payload.currency ?? "BRL";
+  } else if (payload.currency) {
+    params.currency = payload.currency;
+  }
+  if (payload.search_string) params.search_term = payload.search_string;
+  return params;
+}
+
 function fire(event: string, payload?: CatalogEventPayload) {
   if (typeof window === "undefined") return;
 
@@ -145,12 +179,16 @@ export function trackPageView() {
 }
 
 export function trackViewContent(params: CatalogEventParams) {
-  fire("ViewContent", buildCatalogPayload(params));
+  const payload = buildCatalogPayload(params);
+  fire("ViewContent", payload);
+  fireGtag("view_item", gtagItemParams(payload));
 }
 
 /** WhatsApp / interesse na ficha — sinal de Lead do catálogo (não Contact). */
 export function trackLead(params: CatalogEventParams) {
-  fire("Lead", buildCatalogPayload(params));
+  const payload = buildCatalogPayload(params);
+  fire("Lead", payload);
+  fireGtag("generate_lead", gtagItemParams(payload));
 }
 
 /** @deprecated Use trackLead — Commerce Manager casa Lead, não Contact. */
@@ -159,11 +197,26 @@ export function trackContact(params: CatalogEventParams) {
 }
 
 export function trackSearch(params: CatalogEventParams) {
-  fire("Search", buildCatalogPayload(params));
+  const payload = buildCatalogPayload(params);
+  fire("Search", payload);
+  fireGtag("search", gtagItemParams(payload));
 }
 
 export function trackAddToWishlist(params: CatalogEventParams) {
-  fire("AddToWishlist", buildCatalogPayload(params));
+  const payload = buildCatalogPayload(params);
+  fire("AddToWishlist", payload);
+  fireGtag("add_to_wishlist", gtagItemParams(payload));
+}
+
+/** Clique em WhatsApp (float, favoritos, hero) — Meta custom + GA4. */
+export function trackWhatsAppClick(label: string) {
+  if (typeof window === "undefined") return;
+  const fbq = getFbq();
+  if (fbq) fbq("trackCustom", "WhatsAppClick", { label });
+  fireGtag("whatsapp_click", {
+    event_category: "engagement",
+    event_label: label,
+  });
 }
 
 export function stockSearchString(input: {

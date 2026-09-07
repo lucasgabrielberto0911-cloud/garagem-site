@@ -17,6 +17,7 @@ const STATIC_ROUTES: {
   { path: "/contato", changeFrequency: "yearly", priority: 0.6 },
   { path: "/faq", changeFrequency: "monthly", priority: 0.5 },
   { path: "/privacidade", changeFrequency: "yearly", priority: 0.3 },
+  { path: "/seminovos", changeFrequency: "weekly", priority: 0.75 },
   ...SERVICE_CITIES.map((city) => ({
     path: `/seminovos/${city.slug}`,
     changeFrequency: "monthly" as const,

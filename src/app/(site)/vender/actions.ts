@@ -3,15 +3,20 @@
 import { revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { isValidPlate, normalizePlate } from "@/lib/format";
-import { prisma } from "@/lib/prisma";
+import { notifyNewLead } from "@/lib/lead-notify";
+import { createLeadVenda } from "@/lib/lead-venda";
 import { checkSellLeadRateLimit } from "@/lib/rate-limit";
 import { ADMIN_NEW_LEADS_TAG } from "@/lib/admin-cache";
+import { isVehicleCuid } from "@/lib/vehicle-slug";
+import { parseStoredFileRef } from "@/lib/supabase";
 
 export type SellLeadState = {
   ok: boolean;
   message: string;
   fieldErrors?: Record<string, string>;
 };
+
+const MAX_VENDER_PHOTOS = 3;
 
 function text(data: FormData, key: string) {
   return String(data.get(key) ?? "").trim();
@@ -23,6 +28,26 @@ async function clientKey() {
   return forwarded || h.get("x-real-ip") || "unknown";
 }
 
+function parsePhotoUrls(data: FormData) {
+  const raw = [
+    ...data.getAll("photoUrls"),
+    ...data.getAll("photoUrl"),
+  ]
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean);
+
+  const unique: string[] = [];
+  for (const value of raw) {
+    const parsed = parseStoredFileRef(value);
+    if (!parsed || parsed.kind !== "private") continue;
+    if (!parsed.path.startsWith("vender/")) continue;
+    if (unique.includes(value)) continue;
+    unique.push(value);
+    if (unique.length >= MAX_VENDER_PHOTOS) break;
+  }
+  return unique;
+}
+
 export async function createSellLead(data: FormData): Promise<SellLeadState> {
   // Honeypot: bots preenchem campos ocultos; humanos não veem.
   if (text(data, "website")) {
@@ -32,7 +57,7 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
     };
   }
 
-  const limited = checkSellLeadRateLimit(await clientKey());
+  const limited = await checkSellLeadRateLimit(await clientKey());
   if (!limited.ok) {
     return {
       ok: false,
@@ -48,6 +73,10 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
   const plate = normalizePlate(text(data, "plate"));
   const kmRaw = text(data, "km").replace(/\D/g, "");
   const notes = text(data, "notes");
+  const interestRaw = text(data, "interestVehicleId");
+  const interestVehicleId = isVehicleCuid(interestRaw) ? interestRaw : null;
+  const source = text(data, "source") || "vender";
+  const photoUrls = parsePhotoUrls(data);
 
   const fieldErrors: Record<string, string> = {};
   if (name.length < 3) fieldErrors.name = "Informe seu nome completo.";
@@ -83,17 +112,30 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
   const vehicleInfo = `${brand} ${model} ${year}`;
 
   try {
-    await prisma.leadVenda.create({
-      data: {
-        name,
-        phone,
-        vehicleInfo,
-        plate,
-        km: kmRaw ? Number(kmRaw) : null,
-        notes: notes || null,
-      },
+    const lead = await createLeadVenda({
+      name,
+      phone,
+      vehicleInfo,
+      plate,
+      km: kmRaw ? Number(kmRaw) : null,
+      notes: notes || null,
+      interestVehicleId,
+      source,
+      photoUrls,
     });
     revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
+    notifyNewLead({
+      id: lead.id,
+      name,
+      phone,
+      vehicleInfo,
+      plate,
+      km: kmRaw ? Number(kmRaw) : null,
+      notes: notes || null,
+      source,
+      interestVehicleId,
+      photoCount: photoUrls.length,
+    });
   } catch (error) {
     console.error("[vender] falha ao registrar lead:", error);
     return {
