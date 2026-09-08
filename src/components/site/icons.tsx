@@ -190,6 +190,15 @@ export function IconChat({ className }: IconProps) {
   );
 }
 
+export function IconSend({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 12l16-8-6.5 16-1.8-6.7L4 12z" />
+      <path d="M11.7 13.3L20 4" />
+    </svg>
+  );
+}
+
 export function IconFuel({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

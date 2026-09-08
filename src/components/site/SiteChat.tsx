@@ -1,22 +1,23 @@
 "use client";
 
-import { Barlow_Condensed } from "next/font/google";
-import { useEffect, useRef, useState } from "react";
-import { IconChat, IconClose, IconWhatsApp } from "@/components/site/icons";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  IconChat,
+  IconClose,
+  IconSend,
+  IconWhatsApp,
+} from "@/components/site/icons";
 import { chatWhatsAppCta, displayChatText, splitChatLinks } from "@/lib/chat-text";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
-
-const chatDisplay = Barlow_Condensed({
-  subsets: ["latin"],
-  weight: ["600", "700"],
-  display: "swap",
-});
 
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
 };
+
+const CHAT_LOGO_SRC = "/apple-touch-icon.png";
+const ASSISTANT_NAME = "Assistente Garagem";
 
 const OPENING: ChatMessage = {
   role: "assistant",
@@ -31,11 +32,32 @@ const SUGGESTIONS = [
   "Aceita troca?",
 ];
 
+function ChatLogo({ size = "md" }: { size?: "sm" | "md" }) {
+  const px = size === "sm" ? 32 : 40;
+  return (
+    <span
+      className={`relative shrink-0 overflow-hidden rounded-lg bg-black ring-1 ring-white/15 ${
+        size === "sm" ? "h-8 w-8" : "h-10 w-10"
+      }`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- logo estático, sem cota /_next/image */}
+      <img
+        src={CHAT_LOGO_SRC}
+        alt=""
+        width={px}
+        height={px}
+        decoding="async"
+        className="h-full w-full object-cover"
+      />
+    </span>
+  );
+}
+
 function ChatWhatsAppButton({
   href,
   label,
   benefit,
-  className = "mt-2",
+  className = "mt-2.5",
 }: {
   href: string;
   label: string;
@@ -48,15 +70,13 @@ function ChatWhatsAppButton({
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => trackWhatsAppClick("chat")}
-      className={`whatsapp-btn flex w-full min-h-[52px] items-center gap-3 px-3 py-2 text-left text-cream ${className}`}
+      className={`whatsapp-btn flex w-full min-h-[52px] items-center gap-3 overflow-hidden rounded-xl px-3 py-2 text-left text-cream ${className}`}
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-black/20">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-black/20">
         <IconWhatsApp className="h-5 w-5 text-white" />
       </span>
       <span className="min-w-0 flex-1">
-        <span
-          className={`${chatDisplay.className} block text-[13px] font-semibold uppercase tracking-wide`}
-        >
+        <span className="block font-display text-[13px] font-semibold uppercase tracking-wide">
           {label}
         </span>
         <span className="mt-0.5 block text-[11px] font-normal leading-snug text-white/90">
@@ -105,6 +125,32 @@ function ChatText({ text }: { text: string }) {
   );
 }
 
+function AssistantRow({
+  children,
+  pending = false,
+}: {
+  children: ReactNode;
+  pending?: boolean;
+}) {
+  return (
+    <div className="flex items-end gap-2.5">
+      <ChatLogo size="sm" />
+      <div className="min-w-0 flex-1">
+        <p className="mb-1 pl-0.5 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/75">
+          {ASSISTANT_NAME}
+        </p>
+        <div
+          className={`rounded-2xl rounded-bl-md border border-white/10 bg-asphalt px-3.5 py-2.5 ${
+            pending ? "w-fit" : ""
+          }`}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SiteChat() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([OPENING]);
@@ -126,6 +172,15 @@ export function SiteChat() {
     node.style.height = "auto";
     node.style.height = `${Math.min(node.scrollHeight, 112)}px`;
   }, [draft, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
 
   async function send(text: string) {
     const mensagem = text.trim();
@@ -176,35 +231,56 @@ export function SiteChat() {
   }
 
   const showSuggestions = messages.length === 1 && !pending;
+  const canSend = !pending && draft.trim().length >= 2;
 
   return (
     <div className="site-chat pointer-events-none fixed z-[60] flex flex-col items-end gap-3">
       {open ? (
         <section
           role="dialog"
+          aria-labelledby="site-chat-title"
           aria-label="Chat da Garagem"
-          className="pointer-events-auto flex h-[min(620px,calc(100dvh-7.5rem))] w-[min(22.5rem,calc(100vw-1.5rem))] flex-col overflow-hidden border border-white/10 bg-ink shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
+          className="site-chat-panel pointer-events-auto flex h-[min(640px,calc(100dvh-7.25rem))] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink shadow-[0_24px_64px_rgba(0,0,0,0.55)]"
         >
-          <header className="relative border-b border-white/10 bg-[#121214] px-4 py-3">
+          <header className="relative border-b border-white/10 bg-[#121214] px-3 py-3 sm:px-4">
             <div
               className="absolute inset-x-0 top-0 h-0.5 bg-brand-gradient"
               aria-hidden="true"
             />
-            <div className="flex items-start justify-between gap-3">
-              <div>
+            <div className="flex items-center gap-3">
+              <ChatLogo />
+              <div className="min-w-0 flex-1">
                 <p
-                  className={`${chatDisplay.className} text-sm font-semibold uppercase tracking-wide text-cream`}
+                  id="site-chat-title"
+                  className="truncate font-display text-sm font-semibold tracking-wide text-cream"
                 >
-                  Garagem
+                  {ASSISTANT_NAME}
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted">
-                  Assistente · estoque e dúvidas
+                <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted">
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#25D366]"
+                    aria-hidden="true"
+                  />
+                  Online · estoque e dúvidas
                 </p>
               </div>
+              <a
+                href={whatsappUrl(WHATSAPP_MESSAGES.help)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClick("chat")}
+                className="whatsapp-btn flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-white"
+                aria-label="Falar com um vendedor no WhatsApp"
+              >
+                <IconWhatsApp className="h-4 w-4" />
+                <span className="max-[20rem]:hidden font-display text-[11px] font-semibold uppercase tracking-wide">
+                  WhatsApp
+                </span>
+              </a>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex h-9 w-9 items-center justify-center text-muted transition hover:text-cream"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-white/5 hover:text-cream"
                 aria-label="Fechar chat"
               >
                 <IconClose className="h-4 w-4" />
@@ -212,47 +288,43 @@ export function SiteChat() {
             </div>
           </header>
 
-          <ChatWhatsAppButton
-            href={whatsappUrl(WHATSAPP_MESSAGES.help)}
-            label="Falar com um vendedor"
-            benefit="Consultor das 8h às 23h"
-            className=""
-          />
-
           <div
             ref={listRef}
-            className="flex-1 space-y-3 overflow-y-auto px-3 py-3"
+            className="flex-1 space-y-3.5 overflow-y-auto overscroll-contain px-3 py-3.5"
+            aria-live="polite"
           >
-            {messages.map((message, index) => (
-              <div
-                key={`${message.role}-${index}`}
-                className={`max-w-[92%] ${
-                  message.role === "user"
-                    ? "ml-auto bg-brand/20 px-3 py-2 text-sm leading-relaxed text-cream"
-                    : "border border-white/10 bg-asphalt px-3 py-2"
-                }`}
-              >
-                {message.role === "user" ? (
-                  <p className="whitespace-pre-wrap">{message.content}</p>
-                ) : (
+            {messages.map((message, index) =>
+              message.role === "user" ? (
+                <div key={`user-${index}`} className="flex justify-end">
+                  <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-brand px-3.5 py-2.5 text-sm leading-relaxed text-cream">
+                    {message.content}
+                  </p>
+                </div>
+              ) : (
+                <AssistantRow key={`assistant-${index}`}>
                   <ChatText text={message.content} />
-                )}
-              </div>
-            ))}
+                </AssistantRow>
+              ),
+            )}
             {pending ? (
-              <p className="border border-white/10 bg-asphalt px-3 py-2 text-sm text-muted">
-                Digitando…
-              </p>
+              <AssistantRow pending>
+                <span className="sr-only">Digitando</span>
+                <span className="site-chat-typing" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+              </AssistantRow>
             ) : null}
             {showSuggestions ? (
-              <div className="flex flex-wrap gap-2 pt-1">
+              <div className="flex flex-wrap gap-2 pl-10 pt-0.5">
                 {SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
                     type="button"
                     disabled={pending}
                     onClick={() => void send(suggestion)}
-                    className="border border-white/15 bg-[#121214] px-2.5 py-1.5 text-left text-[11px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15"
+                    className="rounded-xl border border-white/15 bg-[#121214] px-3 py-2 text-left text-[12px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15"
                   >
                     {suggestion}
                   </button>
@@ -287,14 +359,15 @@ export function SiteChat() {
                 maxLength={800}
                 rows={2}
                 autoComplete="off"
-                className="min-h-[56px] max-h-28 min-w-0 flex-1 resize-none border border-white/10 bg-asphalt px-3 py-2.5 text-sm text-cream outline-none placeholder:text-muted focus:border-brand"
+                className="min-h-[56px] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-asphalt px-3 py-2.5 text-sm text-cream outline-none placeholder:text-muted focus:border-brand"
               />
               <button
                 type="submit"
-                disabled={pending || draft.trim().length < 2}
-                className={`${chatDisplay.className} min-h-[56px] bg-brand px-3 text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-50`}
+                disabled={!canSend}
+                aria-label="Enviar"
+                className="flex h-14 w-12 shrink-0 items-center justify-center rounded-xl bg-brand text-cream transition hover:bg-[#c91418] disabled:opacity-40"
               >
-                Enviar
+                <IconSend className="h-5 w-5" />
               </button>
             </div>
             <p className="mt-2 text-[10px] leading-relaxed text-muted">
