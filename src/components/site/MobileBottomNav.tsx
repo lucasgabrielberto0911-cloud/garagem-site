@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   IconCar,
+  IconHeart,
   IconHome,
-  IconMapPin,
   IconRefresh,
   IconWhatsApp,
 } from "@/components/site/icons";
@@ -27,10 +27,10 @@ const ITEMS = [
     match: (p: string) => p.startsWith("/vender"),
   },
   {
-    href: "/contato",
-    label: "Contato",
-    Icon: IconMapPin,
-    match: (p: string) => p.startsWith("/contato"),
+    href: "/favoritos",
+    label: "Favoritos",
+    Icon: IconHeart,
+    match: (p: string) => p.startsWith("/favoritos"),
   },
 ] as const;
 

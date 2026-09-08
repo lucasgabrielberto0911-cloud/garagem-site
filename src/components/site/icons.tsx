@@ -30,6 +30,14 @@ export function IconInstagram({ className }: IconProps) {
   );
 }
 
+export function IconHeart({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M20.8 4.9a5.5 5.5 0 00-7.8 0L12 5.9l-1-1a5.5 5.5 0 00-7.8 7.8L12 21l8.8-8.3a5.5 5.5 0 000-7.8z" />
+    </svg>
+  );
+}
+
 export function IconPhone({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

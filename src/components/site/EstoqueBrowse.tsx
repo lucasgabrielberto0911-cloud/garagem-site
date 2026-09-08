@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { SiteErrorNotice } from "@/components/site/SiteErrorNotice";
 import { StockInfiniteList } from "@/components/site/StockInfiniteList";
 import { StockReturnCapture } from "@/components/site/StockReturnCapture";
@@ -276,23 +277,38 @@ export function EstoqueBrowse({
                       ? "Tente ampliar a busca. Se você já sabe o que quer, a gente procura o veículo para você."
                       : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
                 </p>
-                <SiteLeadHit
-                  contentName="Avise-me"
-                  searchString={
-                    filtered ? searchString || undefined : undefined
-                  }
-                >
-                  <WhatsAppButton
-                    className="mt-5"
-                    message={
-                      filtered
-                        ? WHATSAPP_MESSAGES.wanted(searchString || undefined)
-                        : WHATSAPP_MESSAGES.wanted()
+                <div className="mt-5 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+                  {!stock.error ? (
+                    <ChatOpenButton
+                      source={filtered ? "estoque-filtro-vazio" : "estoque-vazio"}
+                      prompt={
+                        searchString
+                          ? `Quero ajuda para encontrar: ${searchString}`
+                          : "Quero ajuda para escolher um veículo"
+                      }
+                      variant="solid"
+                    >
+                      Me ajude a escolher
+                    </ChatOpenButton>
+                  ) : null}
+                  <SiteLeadHit
+                    contentName="Avise-me"
+                    searchString={
+                      filtered ? searchString || undefined : undefined
                     }
                   >
-                    Quero avisar o que procuro
-                  </WhatsAppButton>
-                </SiteLeadHit>
+                    <WhatsAppButton
+                      message={
+                        filtered
+                          ? WHATSAPP_MESSAGES.wanted(searchString || undefined)
+                          : WHATSAPP_MESSAGES.wanted()
+                      }
+                      variant={stock.error ? "solid" : "outline"}
+                    >
+                      Quero avisar o que procuro
+                    </WhatsAppButton>
+                  </SiteLeadHit>
+                </div>
               </div>
             }
           />

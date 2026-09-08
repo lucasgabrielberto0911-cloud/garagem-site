@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import type { VehicleCardData } from "@/components/site/VehicleCard";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
@@ -9,7 +10,6 @@ import { WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
 import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
 import { trackLead, trackWhatsAppClick } from "@/lib/meta-pixel";
-import { WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export function FavoritesList() {
@@ -81,20 +81,13 @@ export function FavoritesList() {
           >
             Ver estoque
           </Link>
-          <span
-            className="contents"
-            onClickCapture={() => {
-              trackWhatsAppClick("favoritos-vazio");
-              trackLead({
-                content_ids: [],
-                content_name: "Favoritos vazio",
-              });
-            }}
+          <ChatOpenButton
+            source="favoritos-vazio"
+            prompt="Quero ajuda para escolher um veículo"
+            variant="outline"
           >
-            <WhatsAppButton message={WHATSAPP_MESSAGES.general} variant="outline">
-              Falar com um consultor
-            </WhatsAppButton>
-          </span>
+            Me ajude a escolher
+          </ChatOpenButton>
         </div>
       </div>
     );

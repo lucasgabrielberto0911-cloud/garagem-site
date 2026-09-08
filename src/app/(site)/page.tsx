@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { JsonLd } from "@/components/JsonLd";
+import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { FaqAccordion } from "@/components/site/FaqAccordion";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { HeroSearch } from "@/components/site/HeroSearch";
@@ -145,18 +146,9 @@ export default async function HomePage() {
             <ButtonLink href="/estoque" size="lg">
               Ver estoque
             </ButtonLink>
-            <SiteLeadHit contentName="Ajuda para escolher">
-              <WhatsAppButton
-                size="lg"
-                variant="outline"
-                message={WHATSAPP_MESSAGES.help}
-              >
-                <span className="sm:hidden">Ajuda no WhatsApp</span>
-                <span className="hidden sm:inline">
-                  Quero ajuda para escolher
-                </span>
-              </WhatsAppButton>
-            </SiteLeadHit>
+            <ChatOpenButton source="home-hero" size="lg">
+              Quero ajuda para escolher
+            </ChatOpenButton>
           </ActionRow>
 
           <div className="hero-stats mx-auto mt-5 w-full max-w-2xl sm:mt-8 lg:mt-8">

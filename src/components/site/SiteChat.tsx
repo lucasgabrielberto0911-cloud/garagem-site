@@ -19,6 +19,11 @@ import {
   polishChatReplyWithCards,
   type ChatVehicleCard,
 } from "@/lib/chat-cards";
+import {
+  consumeSiteChatOpenRequest,
+  SITE_CHAT_OPEN_EVENT,
+  type SiteChatOpenRequest,
+} from "@/lib/chat-open";
 import { chatWhatsAppCta, displayChatText, splitChatLinks } from "@/lib/chat-text";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
@@ -351,6 +356,24 @@ export function SiteChat() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const keepFocusRef = useRef(false);
+  const sourceRef = useRef("launcher");
+
+  useEffect(() => {
+    function applyRequest(request: SiteChatOpenRequest | null) {
+      if (!request) return;
+      sourceRef.current = request.source || "site";
+      if (request.prompt?.trim()) setDraft(request.prompt.trim().slice(0, 800));
+      setOpen(true);
+    }
+
+    function onOpen(event: Event) {
+      applyRequest((event as CustomEvent<SiteChatOpenRequest>).detail ?? null);
+    }
+
+    window.addEventListener(SITE_CHAT_OPEN_EVENT, onOpen);
+    applyRequest(consumeSiteChatOpenRequest());
+    return () => window.removeEventListener(SITE_CHAT_OPEN_EVENT, onOpen);
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -693,7 +716,10 @@ export function SiteChat() {
 
       <button
         type="button"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          sourceRef.current = "launcher";
+          setOpen((current) => !current);
+        }}
         aria-expanded={open}
         aria-label={open ? "Fechar chat" : "Abrir chat da Garagem"}
         className={`site-chat-launcher pointer-events-auto flex h-14 items-center justify-center rounded-full bg-brand text-cream shadow-[0_10px_24px_rgba(232,24,28,0.4)] transition hover:bg-[#c91418] hover:scale-105 active:scale-95 touch-manipulation ${
