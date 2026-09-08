@@ -340,7 +340,9 @@ export function compareChatStockPicks(vehicles: ChatVehicleRecord[]) {
       `${talkName(auto).cap} é o automático da lista — mais conforto no trânsito.`,
     );
     mentioned.add(auto.id);
-  } else if (mixed && auto?.id === cheapest.id) {
+  }
+
+  if (mixed && auto?.id === cheapest.id) {
     picks[0] =
       `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e o automático da lista — mais conforto no trânsito.`;
   }
@@ -349,16 +351,29 @@ export function compareChatStockPicks(vehicles: ChatVehicleRecord[]) {
   const newest = vehicles.reduce((best, vehicle) =>
     vehicle.yearModel > best.yearModel ? vehicle : best,
   );
+  const maxPrice = Math.max(...vehicles.map((vehicle) => vehicle.price));
+  const distinctPrices = [...new Set(vehicles.map((vehicle) => vehicle.price))].sort(
+    (a, b) => a - b,
+  );
+  const middlePrice = distinctPrices.length >= 3 ? distinctPrices[1] : null;
   for (const vehicle of leftover) {
     const name = talkName(vehicle);
-    if (
+    if (vehicle.price === cheapest.price) {
+      picks.push(
+        `${name.cap} também está em ${formatChatPrice(vehicle.price)}.`,
+      );
+    } else if (
       vehicle.id === newest.id &&
       vehicles.some((other) => other.yearModel < newest.yearModel)
     ) {
       picks.push(`${name.cap} é o mais novo (${vehicle.yearModel}).`);
-    } else {
+    } else if (middlePrice != null && vehicle.price === middlePrice) {
       picks.push(
         `${name.cap} fica no meio do preço (${formatChatPrice(vehicle.price)}).`,
+      );
+    } else if (vehicle.price === maxPrice && vehicle.price > cheapest.price) {
+      picks.push(
+        `${name.cap} fica um pouco acima (${formatChatPrice(vehicle.price)}).`,
       );
     }
   }

@@ -387,6 +387,50 @@ Hyundai HB20 Premium Automatico 1.6 2015 · 127.000 km · R$ 55.900`,
   assert.match(result.reply, /não foi medido|foi medido na loja/);
 });
 
+test("dois carros no mesmo preço não viram meio do preço", () => {
+  const i30: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-i30-same-price",
+    brand: "Hyundai",
+    model: "I30",
+    yearModel: 2011,
+    km: 140000,
+    price: 47900,
+    transmission: "Automático",
+    engine: "2.0",
+    category: "carro",
+  };
+  const palioSame: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-palio-same-price",
+    brand: "Fiat",
+    model: "Palio Weekend",
+    yearModel: 2016,
+    km: 156400,
+    price: 47900,
+    transmission: "Manual",
+    engine: "1.8 16V",
+    category: "carro",
+  };
+  const prismaMid: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-prisma-same-price",
+    brand: "Chevrolet",
+    model: "Prisma",
+    yearModel: 2019,
+    km: 152000,
+    price: 52900,
+    transmission: "Manual",
+    engine: "1.0",
+    category: "carro",
+  };
+  const compared = compareChatStockPicks([i30, palioSame, prismaMid]);
+  assert.match(compared, /I30 é o mais em conta/);
+  assert.match(compared, /automático da lista/);
+  assert.match(compared, /Palio Weekend também está em R\$ 47\.900/);
+  assert.doesNotMatch(compared, /meio do preço/);
+});
+
 test("comparação fala Lancer, não LANCER", () => {
   const hb20Auto: ChatVehicleRecord = {
     ...hb20,
@@ -427,8 +471,9 @@ test("comparação fala Lancer, não LANCER", () => {
   assert.doesNotMatch(compared, /LANCER/);
   assert.match(compared, /HB20/);
   assert.match(compared, /Onix/);
-  assert.match(compared, /meio do preço/);
+  assert.match(compared, /um pouco acima/);
   assert.doesNotMatch(compared, /Entre esses/);
+  assert.doesNotMatch(compared, /meio do preço/);
 });
 
 test("eae recusado pelo modelo vira cumprimento da loja", async () => {
