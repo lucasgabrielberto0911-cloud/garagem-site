@@ -9,7 +9,7 @@
  * Admin e API ficam fora. `/?utm_source=pwa` e `/` compartilham a mesma
  * entrada — senão a abertura do app instalado nunca acerta o cache.
  */
-const VERSION = "garagem-v5";
+const VERSION = "garagem-v6";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const PAGE_CACHE = `${VERSION}-pages`;
