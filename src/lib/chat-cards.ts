@@ -119,7 +119,7 @@ export function stripChatVehicleListingLines(
 
 const CARD_INTRO_MAX = 220;
 const CARD_FILLER =
-  /tem o mais em conta|o de menor km|automatico se houver|se quiser esticar|logo acima/;
+  /tem o mais em conta|o de menor km|automatico se houver|se quiser esticar|logo acima|qual perfil te serve/;
 
 function sentenceMentionsUnshownVehicle(
   sentence: string,
@@ -367,7 +367,27 @@ export function chatStockExploreLabel(href: string) {
 }
 
 export function chatVehicleKm(vehicle: ChatVehicleCard) {
+  if (vehicle.km >= 10_000) {
+    return `${Math.round(vehicle.km / 1000)} mil km`;
+  }
   return formatKmBR(vehicle.km);
+}
+
+/** Atalhos depois dos mini-anúncios, com a faixa que o visitante já pediu. */
+export function chatFollowupsAfterCards(
+  stockHref: string | null,
+  vehicles: ChatVehicleCard[],
+) {
+  if (vehicles.length === 0) return [];
+  if (stockHref && /transmission=/i.test(stockHref)) {
+    return ["Financiar em 60x", "Aceita troca?"];
+  }
+  const max = stockHref?.match(/maxPrice=(\d+)/);
+  const mil = max ? Math.round(Number(max[1]) / 1000) : null;
+  if (mil) {
+    return [`Automático até ${mil} mil?`, "Financiar em 60x", "Aceita troca?"];
+  }
+  return ["Tem automático?", "Financiar em 60x", "Aceita troca?"];
 }
 
 export function chatVehiclePrice(vehicle: ChatVehicleCard) {

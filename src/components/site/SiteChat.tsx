@@ -10,6 +10,7 @@ import {
   IconWhatsApp,
 } from "@/components/site/icons";
 import {
+  chatFollowupsAfterCards,
   chatStockExploreLabel,
   chatVehicleKm,
   chatVehicleLabel,
@@ -217,10 +218,14 @@ function ChatText({
   text,
   vehicles = [],
   stockHref = null,
+  followups = [],
+  onFollowup,
 }: {
   text: string;
   vehicles?: ChatVehicleCard[];
   stockHref?: string | null;
+  followups?: string[];
+  onFollowup?: (text: string) => void;
 }) {
   const source =
     vehicles.length > 0 ? polishChatReplyWithCards(text, vehicles) : text;
@@ -271,6 +276,20 @@ function ChatText({
       ) : null}
       {showCta && cta ? (
         <ChatWhatsAppButton href={cta.href} label={cta.label} benefit={cta.benefit} />
+      ) : null}
+      {followups.length > 0 && onFollowup ? (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {followups.map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onFollowup(item)}
+              className="min-h-9 rounded-lg border border-white/15 bg-[#121214] px-2.5 py-1.5 text-left text-[11px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15"
+            >
+              {item}
+            </button>
+          ))}
+        </div>
       ) : null}
     </>
   );
@@ -512,6 +531,17 @@ export function SiteChat() {
                     text={message.content}
                     vehicles={message.vehicles}
                     stockHref={message.stockHref}
+                    followups={
+                      !pending &&
+                      index === messages.length - 1 &&
+                      (message.vehicles?.length ?? 0) > 0
+                        ? chatFollowupsAfterCards(
+                            message.stockHref ?? null,
+                            message.vehicles ?? [],
+                          )
+                        : []
+                    }
+                    onFollowup={(item) => void send(item)}
                   />
                 </AssistantRow>
               );

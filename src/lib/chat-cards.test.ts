@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  chatFollowupsAfterCards,
   chatStockExploreHref,
   chatStockExploreLabel,
+  chatVehicleKm,
   isBareBudgetQuery,
   isChatVehicleListingLine,
   matchVehiclesInReply,
@@ -268,10 +270,15 @@ Qual perfil te serve?`;
   const cards = [toChatVehicleCard(palio), toChatVehicleCard(prisma)];
   const polished = polishChatReplyWithCards(leftover, cards);
   assert.match(polished, /70\.000/);
-  assert.match(polished, /perfil/);
+  assert.doesNotMatch(polished, /perfil/);
   assert.doesNotMatch(polished, /Onix/);
   assert.doesNotMatch(polished, /Lancer/);
   assert.doesNotMatch(polished, /156\.400/);
+  assert.deepEqual(
+    chatFollowupsAfterCards("/estoque?maxPrice=70000&category=carro", cards),
+    ["Automático até 70 mil?", "Financiar em 60x", "Aceita troca?"],
+  );
+  assert.equal(chatVehicleKm(cards[0]!), "156 mil km");
 });
 
 test("financiamento sem carro citado não inventa anúncio", () => {

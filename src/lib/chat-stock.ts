@@ -228,7 +228,7 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
     const why = bits.length ? ` — ${bits.join(", ")}` : "";
     return `${formatVehicleLine(vehicle)}${why}`;
   });
-  return `Até ${ceiling} eu começaria por estes:\n${lines.join("\n")}\n\nQual perfil te serve — hatch, automático ou o mais barato?`;
+  return `Até ${ceiling} eu começaria por estes:\n${lines.join("\n")}`;
 }
 
 /** Resposta da loja sem Gemini — só dados reais do estoque e política fixa. */
