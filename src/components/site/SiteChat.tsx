@@ -12,9 +12,8 @@ import {
 import {
   chatFollowupsAfterCards,
   chatStockExploreLabel,
-  chatVehicleGear,
-  chatVehicleKm,
   chatVehicleLabel,
+  chatVehicleMeta,
   chatVehiclePrice,
   chatVehicleVersion,
   polishChatReplyWithCards,
@@ -101,13 +100,7 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
   const version = chatVehicleVersion(vehicle);
   const photo = vehicle.photo || VEHICLE_PLACEHOLDER;
   const label = chatVehicleLabel(vehicle);
-  const meta = [
-    String(vehicle.year || ""),
-    chatVehicleKm(vehicle),
-    chatVehicleGear(vehicle),
-  ]
-    .filter((item): item is string => Boolean(item && item !== "0"))
-    .join(" · ");
+  const meta = chatVehicleMeta(vehicle);
 
   return (
     <article className="mt-1.5 flex overflow-hidden rounded-xl border border-white/10 bg-[#121214]">
@@ -278,7 +271,7 @@ function ChatText({
         <ChatWhatsAppButton href={cta.href} label={cta.label} benefit={cta.benefit} />
       ) : null}
       {followups.length > 0 && onFollowup ? (
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
+        <div className="mt-1.5 grid grid-cols-2 gap-1.5">
           {followups.map((item) => (
             <button
               key={item}
@@ -347,12 +340,17 @@ export function SiteChat() {
     if (node) {
       const latest = node.querySelector("[data-chat-latest='1']");
       if (latest instanceof HTMLElement) {
-        const top =
-          latest.getBoundingClientRect().top -
-          node.getBoundingClientRect().top +
-          node.scrollTop -
-          8;
-        node.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        const tooTall = latest.offsetHeight + 16 >= node.clientHeight;
+        if (tooTall) {
+          node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
+        } else {
+          const top =
+            latest.getBoundingClientRect().top -
+            node.getBoundingClientRect().top +
+            node.scrollTop -
+            8;
+          node.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        }
       } else {
         node.scrollTop = node.scrollHeight;
       }

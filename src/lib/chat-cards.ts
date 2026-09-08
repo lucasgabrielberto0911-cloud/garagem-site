@@ -366,11 +366,27 @@ export function chatStockExploreLabel(href: string) {
   return `Ver todos até ${formatCurrencyBRL(Number(match[1]))}`;
 }
 
-export function chatVehicleKm(vehicle: ChatVehicleCard) {
+export function chatVehicleKm(
+  vehicle: ChatVehicleCard,
+  opts: { compact?: boolean } = {},
+) {
   if (vehicle.km >= 10_000) {
-    return `${Math.round(vehicle.km / 1000)} mil km`;
+    const mil = `${Math.round(vehicle.km / 1000)} mil`;
+    return opts.compact ? mil : `${mil} km`;
   }
   return formatKmBR(vehicle.km);
+}
+
+/** Ano · km · câmbio — sem “km” quando o câmbio já ocupa a linha. */
+export function chatVehicleMeta(vehicle: ChatVehicleCard) {
+  const gear = chatVehicleGear(vehicle);
+  return [
+    vehicle.year ? String(vehicle.year) : "",
+    chatVehicleKm(vehicle, { compact: Boolean(gear) }),
+    gear,
+  ]
+    .filter((item): item is string => Boolean(item && item !== "0"))
+    .join(" · ");
 }
 
 /** Câmbio curto no mini-anúncio — “Automático” estourava a linha do km. */

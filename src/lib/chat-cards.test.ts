@@ -6,6 +6,7 @@ import {
   chatStockExploreLabel,
   chatVehicleGear,
   chatVehicleKm,
+  chatVehicleMeta,
   isBareBudgetQuery,
   isChatVehicleListingLine,
   matchVehiclesInReply,
@@ -283,7 +284,9 @@ Qual perfil te serve?`;
     ["Automático até 70 mil?", "Financiar em 60x", "Aceita troca?"],
   );
   assert.equal(chatVehicleKm(cards[0]!), "156 mil km");
+  assert.equal(chatVehicleKm(cards[0]!, { compact: true }), "156 mil");
   assert.equal(chatVehicleGear(cards[0]!), "Manual");
+  assert.equal(chatVehicleMeta(cards[0]!), "2016 · 156 mil · Manual");
   assert.equal(
     chatVehicleGear(
       toChatVehicleCard({ ...prisma, transmission: "Automático" }),
