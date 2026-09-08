@@ -134,12 +134,13 @@ async function fetchFreshPage(event, request) {
   try {
     const preloaded = await event.preloadResponse;
     const response = preloaded || (await fetch(request));
-    if (response && response.ok) {
+    if (!response) return null;
+    if (response.ok) {
       const cache = await caches.open(PAGE_CACHE);
       await cache.put(pageCacheKey(request), response.clone());
       trimCache(PAGE_CACHE, PAGE_CACHE_LIMIT).catch(() => undefined);
     }
-    return response && response.ok ? response : null;
+    return response;
   } catch {
     return null;
   }
