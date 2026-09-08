@@ -31,9 +31,13 @@ Se a pergunta for sobre um carro que não está na lista atual, ou se o assisten
 
 Nunca mencionar ou vazar preço de referência FIPE (nem deveria estar no contexto, mas reforçar essa regra de qualquer forma).
 
-Tom: direto, simpático, sem parecer robótico, respostas curtas. Texto simples, sem markdown (sem **, # ou listas com hífen). Loja digital — não oferecer visita a um endereço físico.
+Tom: direto, simpático, sem parecer robótico. Texto simples, sem markdown (sem ** nem #). Loja digital — não oferecer visita a um endereço físico.
 
-Se o visitante só disser oi, teste ou algo parecido, cumprimente de verdade e ofereça ajuda com o estoque, financiamento ou troca — isso é conversa da loja, não recuse.
+Cumprimento informal (oi, eae, eai, blz, teste, opa) é conversa da loja: cumprimente e ofereça ajuda com estoque, financiamento ou troca. NÃO recuse e NÃO mande para o WhatsApp só por ser um oi.
+
+Quando o visitante pedir carros por preço (até 70 mil, abaixo de 80 mil, etc.), liste de 3 a 8 veículos REAIS da lista, um por linha, neste formato:
+Marca Modelo ano · km · R$ preço
+Nunca escreva “temos opções” e pare. Se não houver carro na faixa, diga isso e ofereça o estoque ou o WhatsApp.
 
 Quando o visitante demonstrar interesse real de compra E fornecer nome e telefone de contato, chame a função criar_lead. Não invente telefone nem nome. Só chame a função se os dois dados tiverem sido ditos pelo visitante.
 
@@ -71,17 +75,54 @@ export function formatStockForPrompt(vehicles: ChatStockLine[]) {
     return "ESTOQUE ATUAL (dados reais do banco):\n(nenhum veículo disponível no momento)";
   }
 
-  const lines = vehicles.map((vehicle) => {
-    const version = vehicle.version?.trim() ? ` ${vehicle.version.trim()}` : "";
-    const color = vehicle.color?.trim() ? vehicle.color.trim() : "cor não informada";
-    return `- ${vehicle.brand} ${vehicle.model}${version} ${vehicle.year} · ${vehicle.km} km · R$ ${vehicle.price} · ${color} · ${vehicle.transmission} · ${vehicle.fuel}`;
-  });
+  const lines = [...vehicles]
+    .sort((a, b) => a.price - b.price)
+    .map((vehicle) => {
+      const version = vehicle.version?.trim() ? ` ${vehicle.version.trim()}` : "";
+      const color = vehicle.color?.trim() ? vehicle.color.trim() : "cor não informada";
+      return `- ${vehicle.brand} ${vehicle.model}${version} ${vehicle.year} · ${vehicle.km} km · R$ ${vehicle.price} · ${color} · ${vehicle.transmission} · ${vehicle.fuel}`;
+    });
 
-  return `ESTOQUE ATUAL (dados reais do banco — use SOMENTE estes veículos):\n${lines.join("\n")}`;
+  return `ESTOQUE ATUAL (dados reais do banco — use SOMENTE estes veículos, mais baratos primeiro):\n${lines.join("\n")}`;
 }
 
-export function buildChatSystemPrompt(vehicles: ChatStockLine[]) {
-  return `${CHAT_SYSTEM_PROMPT}\n\n${formatStockForPrompt(vehicles)}`;
+export function parsePriceLimit(mensagem: string): number | null {
+  const text = mensagem
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/r\$/g, " ")
+    .replace(/\./g, "")
+    .replace(/,/g, "");
+  const match = text.match(
+    /(?:ate|abaixo de|menos de|no maximo|maximo|por ate)\s+(\d+)\s*(mil|k)?/,
+  );
+  if (!match) return null;
+  let amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  if (match[2] === "mil" || match[2] === "k" || amount < 1000) amount *= 1000;
+  if (amount < 8000 || amount > 2_000_000) return null;
+  return Math.round(amount);
+}
+
+export function buildChatSystemPrompt(vehicles: ChatStockLine[], mensagem = "") {
+  const stock = formatStockForPrompt(vehicles);
+  const limit = parsePriceLimit(mensagem);
+  if (limit == null) return `${CHAT_SYSTEM_PROMPT}\n\n${stock}`;
+  const matches = vehicles
+    .filter((vehicle) => vehicle.price <= limit)
+    .sort((a, b) => a.price - b.price)
+    .slice(0, 8);
+  const extra =
+    matches.length === 0
+      ? `\n\nFILTRO DO VISITANTE: até R$ ${limit}. Nenhum veículo nesta faixa — diga isso com clareza.`
+      : `\n\nFILTRO DO VISITANTE: até R$ ${limit}. Liste SOMENTE estes, um por linha:\n${matches
+          .map((vehicle) => {
+            const version = vehicle.version?.trim() ? ` ${vehicle.version.trim()}` : "";
+            return `${vehicle.brand} ${vehicle.model}${version} ${vehicle.year} · ${vehicle.km} km · R$ ${vehicle.price}`;
+          })
+          .join("\n")}`;
+  return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${extra}`;
 }
 
 export function stockSelectHasForbiddenField(

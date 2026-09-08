@@ -15,7 +15,7 @@ const JAILBREAK_HINT =
   /\b(ignore (as )?instrucoes|ignore previous|ignore all previous|aja como|act as|modo desenvolvedor|developer mode|dan mode|revela(r)? (o |seu )?prompt|system prompt|prompt de sistema|instrucoes (secretas|internas|deste prompt))\b/;
 
 const PING_ONLY =
-  /^(oi+|ola|e ai|bom dia|boa tarde|boa noite|opa|fala|hey|hi|hello|obrigado|obrigada|valeu|beleza|ok|sim|nao|tudo bem|td bem|teste|test|ping)[\s!.?]*$/;
+  /^(oi+|ola|eae+|e ai|eai+|falae|falai|salve|blz|beleza|tmj|suave|de boa|bom dia|boa tarde|boa noite|opa|fala|hey|hi|hello|obrigado|obrigada|valeu|ok|sim|nao|tudo bem|td bem|teste|test|ping)[\s!.?]*$/;
 
 const REDIRECT_HINT =
   /assuntos da garagem|so posso ajudar|chama no whatsapp pra outros/;
@@ -33,6 +33,10 @@ export function isJailbreakAttempt(message: string) {
 
 export function isChatPing(message: string) {
   return PING_ONLY.test(fold(message).trim());
+}
+
+export function looksLikeOffScopeRedirect(text: string) {
+  return REDIRECT_HINT.test(fold(text));
 }
 
 export function isOffScopeMessage(message: string) {

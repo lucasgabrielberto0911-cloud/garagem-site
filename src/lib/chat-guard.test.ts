@@ -27,7 +27,9 @@ test("perguntas de estoque, financiamento geral e lead ficam no escopo", () => {
   );
   assert.equal(isOffScopeMessage("oi"), false);
   assert.equal(isOffScopeMessage("teste"), false);
+  assert.equal(isOffScopeMessage("eae"), false);
   assert.equal(isChatPing("teste"), true);
+  assert.equal(isChatPing("eae"), true);
   assert.equal(isChatPing("Tem o HB20?"), false);
 });
 

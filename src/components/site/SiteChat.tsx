@@ -20,7 +20,7 @@ type ChatMessage = {
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Olá! Sou o assistente da Garagem. Posso te ajudar a encontrar o carro ideal, tirar dúvida sobre financiamento ou troca.",
+    "Olá! Sou o assistente da Garagem. Pergunta tipo HB20, carro até 70 mil, troca ou financiamento.",
 };
 
 export function SiteChat() {
@@ -29,7 +29,7 @@ export function SiteChat() {
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -92,7 +92,7 @@ export function SiteChat() {
         <section
           role="dialog"
           aria-label="Chat da Garagem"
-          className="pointer-events-auto flex h-[min(520px,calc(100dvh-8.5rem))] w-[min(22.5rem,calc(100vw-1.5rem))] flex-col overflow-hidden border border-white/10 bg-ink shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
+          className="pointer-events-auto flex h-[min(580px,calc(100dvh-7.5rem))] w-[min(22.5rem,calc(100vw-1.5rem))] flex-col overflow-hidden border border-white/10 bg-ink shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
         >
           <header className="relative border-b border-white/10 bg-[#121214] px-4 py-3">
             <div
@@ -165,21 +165,28 @@ export function SiteChat() {
             <label htmlFor="site-chat-input" className="sr-only">
               Mensagem
             </label>
-            <div className="flex gap-2">
-              <input
+            <div className="flex items-end gap-2">
+              <textarea
                 ref={inputRef}
                 id="site-chat-input"
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                placeholder="Escreva sua dúvida"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    void send(draft);
+                  }
+                }}
+                placeholder="Ex.: HB20 até 70 mil"
                 maxLength={800}
+                rows={2}
                 autoComplete="off"
-                className="min-h-[44px] min-w-0 flex-1 border border-white/10 bg-asphalt px-3 text-sm text-cream outline-none placeholder:text-muted focus:border-brand"
+                className="min-h-[52px] max-h-28 min-w-0 flex-1 resize-none border border-white/10 bg-asphalt px-3 py-2 text-sm text-cream outline-none placeholder:text-muted focus:border-brand"
               />
               <button
                 type="submit"
                 disabled={pending || draft.trim().length < 2}
-                className={`${chatDisplay.className} min-h-[44px] bg-brand px-3 text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-50`}
+                className={`${chatDisplay.className} min-h-[52px] bg-brand px-3 text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-50`}
               >
                 Enviar
               </button>

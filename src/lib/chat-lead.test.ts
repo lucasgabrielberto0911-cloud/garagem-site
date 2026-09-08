@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { leadArgsAreComplete, parseCriarLeadArgs } from "./chat-lead";
-import { matchInterestVehicle, type ChatVehicleRecord } from "./chat-stock";
+import {
+  isIncompleteStockReply,
+  listStockByBudget,
+  matchInterestVehicle,
+  type ChatVehicleRecord,
+} from "./chat-stock";
+import { parsePriceLimit } from "./chat-prompt";
 import {
   extractGeminiFunctionCall,
   extractGeminiText,
@@ -11,6 +17,19 @@ import {
 } from "./chat-gemini";
 import { runChatTurn } from "./chat-turn";
 import { checkRateLimit, clearRateLimit } from "./rate-limit";
+
+const compass: ChatVehicleRecord = {
+  id: "c-compass-2022",
+  brand: "Jeep",
+  model: "Compass",
+  version: "longitude",
+  yearModel: 2022,
+  km: 40000,
+  price: 129900,
+  color: "Branco",
+  transmission: "Automático",
+  fuel: "Flex",
+};
 
 const hb20: ChatVehicleRecord = {
   id: "c-hb20-2022",
@@ -28,6 +47,18 @@ const hb20: ChatVehicleRecord = {
 test("casa interesse com o carro do estoque e ignora texto frouxo", () => {
   assert.equal(matchInterestVehicle("hyundai hb20 2022", [hb20])?.id, hb20.id);
   assert.equal(matchInterestVehicle("porsche cayenne turbo", [hb20]), null);
+});
+
+test("até 70 mil lista o HB20 e deixa o Compass de fora", () => {
+  assert.equal(parsePriceLimit("Quais carros temos ate 70 mil?"), 70_000);
+  const listed = listStockByBudget("Quais carros temos ate 70 mil?", [hb20, compass]);
+  assert.match(listed ?? "", /HB20/);
+  assert.match(listed ?? "", /64\.900/);
+  assert.doesNotMatch(listed ?? "", /Compass/);
+  assert.equal(
+    isIncompleteStockReply("Temos ótimas opções até R$ 70 mil no momento:"),
+    true,
+  );
 });
 
 test("criar_lead só fecha com nome e telefone válidos", () => {
@@ -147,6 +178,38 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
   assert.equal(lead.leadCreated, true);
   assert.equal(created[0]?.source, "chatbot-site");
   assert.match(lead.reply, /Ana/);
+});
+
+test("lista vazia do modelo é preenchida com o estoque até o valor", async () => {
+  const result = await runChatTurn({
+    mensagem: "Quais carros temos ate 70 mil?",
+    historico: [],
+    stock: [hb20, compass],
+    generate: async ({ systemPrompt }) => {
+      assert.match(systemPrompt, /FILTRO DO VISITANTE: até R\$ 70000/);
+      assert.match(systemPrompt, /Hyundai HB20/);
+      return {
+        text: "Temos ótimas opções até R$ 70 mil no momento:",
+        functionCall: null,
+      };
+    },
+  });
+  assert.match(result.reply, /HB20/);
+  assert.doesNotMatch(result.reply, /Compass/);
+});
+
+test("eae recusado pelo modelo vira cumprimento da loja", async () => {
+  const result = await runChatTurn({
+    mensagem: "eae",
+    historico: [],
+    stock: [],
+    generate: async () => ({
+      text: "Posso ajudar só com assuntos da Garagem: estoque, compra, venda, troca, financiamento e garantia.",
+      functionCall: null,
+    }),
+  });
+  assert.match(result.reply, /estoque/);
+  assert.doesNotMatch(result.reply, /só com assuntos da Garagem/);
 });
 
 test("Gemini fora do ar ainda responde o estoque e o financiamento", async () => {

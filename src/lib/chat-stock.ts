@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
-import type { ChatStockLine } from "@/lib/chat-prompt";
+import { parsePriceLimit, type ChatStockLine } from "@/lib/chat-prompt";
 
 /**
  * Campos públicos do bot. `id` fica só no servidor para amarrar o lead.
@@ -105,7 +105,35 @@ export function matchInterestVehicle(
 }
 
 const GENERIC_STOCK_TOKEN =
-  /^(tem|vende|vendem|estoque|carro|carros|modelo|marca|ano|seminovo|preco|valor|qual|quanto)$/;
+  /^(tem|vende|vendem|estoque|carro|carros|modelo|marca|ano|seminovo|preco|valor|qual|quanto|quais|ate|mil)$/;
+
+export function formatVehicleLine(vehicle: ChatVehicleRecord) {
+  const version = vehicle.version?.trim() ? ` ${vehicle.version.trim()}` : "";
+  return `${vehicle.brand} ${vehicle.model}${version} ${vehicle.yearModel} · ${vehicle.km.toLocaleString("pt-BR")} km · R$ ${vehicle.price.toLocaleString("pt-BR")}`;
+}
+
+export function isIncompleteStockReply(reply: string) {
+  const text = reply.trim();
+  if (!text) return true;
+  if (/:\s*$/.test(text)) return true;
+  if (/op[cç][oõ]es|no momento/i.test(text) && !/R\$\s*\d/.test(text)) return true;
+  return false;
+}
+
+export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) {
+  const limit = parsePriceLimit(mensagem);
+  if (limit == null) return null;
+  const matches = stock
+    .filter((vehicle) => vehicle.price <= limit)
+    .sort((a, b) => a.price - b.price)
+    .slice(0, 8);
+  const ceiling = `R$ ${limit.toLocaleString("pt-BR")}`;
+  if (matches.length === 0) {
+    return `Neste valor até ${ceiling} não tem anúncio agora. Posso mostrar outra faixa ou você chama no WhatsApp: https://wa.me/5527996330706`;
+  }
+  const lines = matches.map((vehicle) => formatVehicleLine(vehicle)).join("\n");
+  return `Temos estas opções até ${ceiling}:\n${lines}\n\nQuer que eu afine por marca ou te passo no WhatsApp? https://wa.me/5527996330706`;
+}
 
 /** Resposta da loja sem Gemini — só dados reais do estoque e política fixa. */
 export function localGarageReply(
@@ -113,6 +141,8 @@ export function localGarageReply(
   stock: ChatVehicleRecord[],
 ) {
   const text = normalize(mensagem);
+  const byBudget = listStockByBudget(mensagem, stock);
+  if (byBudget) return byBudget;
 
   if (/\b(financi\w*|parcela|juros|60x)\b/.test(text)) {
     return "A Garagem financia em até 60x e aceita troca. Valor de parcela e aprovação um consultor faz no WhatsApp: https://wa.me/5527996330706";
