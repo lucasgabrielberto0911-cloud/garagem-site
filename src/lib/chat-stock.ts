@@ -271,7 +271,7 @@ export function compareChatStockPicks(vehicles: ChatVehicleRecord[]) {
   if (autos.length > 0 && manuals.length > 0) {
     const auto = autos[0]!;
     sentences.push(
-      `${vehicleShortName(auto)} é automático — mais conforto no trânsito; o manual equivalente costuma ser um pouco mais econômico na mesma motorização.`,
+      `O ${vehicleShortName(auto)} é automático — mais conforto no trânsito; o manual equivalente costuma ser um pouco mais econômico na mesma motorização.`,
     );
   } else if (autos.length === vehicles.length) {
     sentences.push(
@@ -345,7 +345,16 @@ export function enrichChatStockReply(
   vehicles: ChatVehicleRecord[],
 ) {
   if (vehicles.length === 0) return reply;
-  if (replyAlreadyCompares(reply, vehicles)) return reply;
+  const foldedAll = foldReply(reply);
+  if (replyAlreadyCompares(reply, vehicles)) {
+    if (
+      /consumo|km\/l|catalogo/.test(foldedAll) &&
+      !/medido/.test(foldedAll)
+    ) {
+      return `${reply.trim()} Nenhum desses usados foi medido na loja.`;
+    }
+    return reply;
+  }
   const extra = compareChatStockPicks(vehicles);
   if (!extra) return reply;
   return `${reply.trim()}\n${extra}`;
