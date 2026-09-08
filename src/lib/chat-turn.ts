@@ -30,6 +30,7 @@ import {
   CHAT_FINANCE_REPLY,
   CHAT_TRADE_REPLY,
   chatPolicyShortcut,
+  enrichChatStockReply,
   isIncompleteStockReply,
   localGarageReply,
   toChatStockLine,
@@ -61,11 +62,11 @@ export async function runChatTurn(input: {
   const createLead = input.createLead ?? createChatLead;
 
   const finish = (reply: string, leadCreated = false): ChatTurnResult => {
-    const vehicles = selectChatVehicles(reply, input.mensagem, input.stock).map(
-      toChatVehicleCard,
-    );
+    const picked = selectChatVehicles(reply, input.mensagem, input.stock);
+    const enriched = enrichChatStockReply(reply, picked);
+    const vehicles = picked.map(toChatVehicleCard);
     return {
-      reply,
+      reply: enriched,
       leadCreated,
       vehicles,
       stockHref: chatStockExploreHref(

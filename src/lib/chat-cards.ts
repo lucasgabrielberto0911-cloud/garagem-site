@@ -59,8 +59,16 @@ export function looksLikeLooseVehicleTitle(line: string) {
   const trimmed = line.trim().replace(/^[-•*\d.)\s]+/, "");
   if (trimmed.length < 8 || trimmed.length > 90) return false;
   if (/[?]/.test(trimmed)) return false;
+  if (trimmed.split(/\s+/).length >= 10) return false;
   if (
-    /até r\$|orcamento|orçamento|financi|troca|qual perfil|aqui estao|aqui estão|cabem no|mais em conta|whatsapp/i.test(
+    /até r\$|orcamento|orçamento|financi|troca|qual perfil|aqui estao|aqui estão|cabem no|mais em conta|whatsapp|consumo|catálogo|catalogo|km\/l|entre esses|compar|conforto|medido/i.test(
+      trimmed,
+    )
+  ) {
+    return false;
+  }
+  if (
+    /é o|é a|\bsão\b|\bsao\b|\btem |\btinha\b|\bfaz |\bcusta\b|\bvale |\bfica |\bcostuma\b/i.test(
       trimmed,
     )
   ) {
@@ -117,7 +125,7 @@ export function stripChatVehicleListingLines(
     .trim();
 }
 
-const CARD_INTRO_MAX = 220;
+const CARD_INTRO_MAX = 720;
 const CARD_FILLER =
   /tem o mais em conta|o de menor km|automatico se houver|se quiser esticar|logo acima|qual perfil te serve|qual desses|hatch ou sedan/;
 
@@ -168,7 +176,13 @@ export function polishChatReplyWithCards(
 
   let intro = parts.join(" ").replace(/\s+/g, " ").trim();
   if (intro.length > CARD_INTRO_MAX) {
-    intro = parts.slice(0, 2).join(" ");
+    let kept = "";
+    for (const part of parts) {
+      const next = kept ? `${kept} ${part}` : part;
+      if (next.length > CARD_INTRO_MAX && kept) break;
+      kept = next;
+    }
+    intro = kept;
   }
   if (!intro) {
     return vehicles.length === 1

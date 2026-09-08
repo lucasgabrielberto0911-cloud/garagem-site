@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { leadArgsAreComplete, parseCriarLeadArgs } from "./chat-lead";
 import {
+  compareChatStockPicks,
   isIncompleteStockReply,
   listStockByBudget,
   matchInterestVehicle,
@@ -59,6 +60,9 @@ test("até 70 mil lista o HB20 e deixa o Compass de fora", () => {
   assert.match(listed ?? "", /HB20/);
   assert.match(listed ?? "", /64\.900/);
   assert.doesNotMatch(listed ?? "", /Compass/);
+  assert.match(listed ?? "", /mais em conta/);
+  assert.match(listed ?? "", /consumo|catálogo|catalogo/);
+  assert.match(listed ?? "", /não foi medido/);
   assert.equal(
     isIncompleteStockReply("Temos ótimas opções até R$ 70 mil no momento:"),
     true,
@@ -230,8 +234,75 @@ test("lista vazia do modelo é preenchida com o estoque até o valor", async () 
   });
   assert.match(result.reply, /HB20/);
   assert.doesNotMatch(result.reply, /Compass/);
+  assert.match(result.reply, /consumo|catálogo|1\.0 flex/);
   assert.equal(result.vehicles.length, 1);
   assert.equal(result.vehicles[0]?.id, hb20.id);
+});
+
+test("resposta seca do modelo ganha comparação e consumo do estoque", async () => {
+  const palio: ChatVehicleRecord = {
+    id: "c-palio-2016",
+    brand: "Fiat",
+    model: "Palio Weekend",
+    version: "Adventure 1.8 Flex 16V",
+    yearModel: 2016,
+    km: 156400,
+    price: 47900,
+    color: "Branca",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.8 16V",
+    category: "carro",
+  };
+  const prismaJoy: ChatVehicleRecord = {
+    id: "c-prisma-2019",
+    brand: "Chevrolet",
+    model: "Prisma",
+    version: "Sed. Joy/LS 1.0",
+    yearModel: 2019,
+    km: 152000,
+    price: 52900,
+    color: "Prata",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.0",
+    category: "carro",
+  };
+  const hb20Auto: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb20-2015-auto",
+    yearModel: 2015,
+    km: 127000,
+    price: 55900,
+    transmission: "Automático",
+    version: "Comfort 1.0",
+    engine: "1.0",
+  };
+  const compared = compareChatStockPicks([palio, prismaJoy, hb20Auto]);
+  assert.match(compared, /Palio Weekend/);
+  assert.match(compared, /mais em conta/);
+  assert.match(compared, /HB20/);
+  assert.match(compared, /automático/);
+  assert.match(compared, /11–14/);
+  assert.match(compared, /8–11/);
+  assert.match(compared, /foi medido na loja/i);
+
+  const result = await runChatTurn({
+    mensagem: "Quais carros até 70 mil?",
+    historico: [],
+    stock: [palio, prismaJoy, hb20Auto],
+    generate: async () => ({
+      text: `Até R$ 70.000 eu começaria por estes:
+Fiat Palio Weekend Adventure 1.8 Flex 16V 2016 · 156.400 km · R$ 47.900
+Chevrolet Prisma Sed. Joy/LS 1.0 2019 · 152.000 km · R$ 52.900
+Hyundai HB20 Comfort 1.0 2015 · 127.000 km · R$ 55.900`,
+      functionCall: null,
+    }),
+  });
+  assert.match(result.reply, /mais em conta/);
+  assert.match(result.reply, /consumo|catálogo|11–14/);
+  assert.match(result.reply, /automático/);
+  assert.equal(result.vehicles.length, 3);
 });
 
 test("eae recusado pelo modelo vira cumprimento da loja", async () => {
@@ -257,8 +328,9 @@ test("Gemini fora do ar ainda responde o estoque e o financiamento", async () =>
       throw new Error("quota");
     },
   });
-  assert.match(stock.reply, /64900/);
-  assert.match(stock.reply, /68450/);
+  assert.match(stock.reply, /64\.900/);
+  assert.match(stock.reply, /68\.450/);
+  assert.match(stock.reply, /consumo|catálogo|1\.0 flex/);
   assert.equal(stock.leadCreated, false);
 
   const finance = await runChatTurn({

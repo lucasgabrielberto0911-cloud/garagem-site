@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
-import { parsePriceLimit, type ChatStockLine } from "@/lib/chat-prompt";
+import {
+  parseEngineDisplacementLiters,
+  typicalConsumptionHint,
+  typicalConsumptionRange,
+} from "@/lib/chat-consumption";
+import { formatChatPrice, parsePriceLimit, type ChatStockLine } from "@/lib/chat-prompt";
 
 /**
  * Campos públicos do bot. `id` fica só no servidor para amarrar o lead.
@@ -18,6 +23,9 @@ export const CHAT_VEHICLE_SELECT = {
   transmission: true,
   fuel: true,
   category: true,
+  engine: true,
+  doors: true,
+  accessories: true,
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,
@@ -37,6 +45,9 @@ export type ChatVehicleRecord = {
   transmission: string;
   fuel: string;
   category?: string;
+  engine?: string | null;
+  doors?: number | null;
+  accessories?: string[];
   photos?: Array<{ url: string; thumbnailUrl?: string | null }>;
 };
 
@@ -52,6 +63,9 @@ export function toChatStockLine(vehicle: ChatVehicleRecord): ChatStockLine {
     transmission: vehicle.transmission,
     fuel: vehicle.fuel,
     category: vehicle.category ?? "carro",
+    engine: vehicle.engine ?? null,
+    doors: vehicle.doors ?? null,
+    accessories: vehicle.accessories ?? [],
   };
 }
 
@@ -191,6 +205,152 @@ export function formatVehicleLine(vehicle: ChatVehicleRecord) {
   return `${vehicle.brand} ${vehicle.model}${version} ${vehicle.yearModel} · ${vehicle.km.toLocaleString("pt-BR")} km · R$ ${vehicle.price.toLocaleString("pt-BR")}`;
 }
 
+function vehicleShortName(vehicle: ChatVehicleRecord) {
+  return `${vehicle.brand} ${vehicle.model}`.trim();
+}
+
+function formatChatKm(km: number) {
+  if (km >= 10_000) return `${Math.round(km / 1000)} mil km`;
+  return `${km.toLocaleString("pt-BR")} km`;
+}
+
+function isAutomaticVehicle(vehicle: ChatVehicleRecord) {
+  return /automatic|cvt/.test(normalize(vehicle.transmission ?? ""));
+}
+
+function isManualVehicle(vehicle: ChatVehicleRecord) {
+  const value = normalize(vehicle.transmission ?? "");
+  return /manual/.test(value) && !/automatic/.test(value);
+}
+
+function consumptionBit(vehicle: ChatVehicleRecord) {
+  const range = typicalConsumptionRange({
+    fuel: vehicle.fuel,
+    engine: vehicle.engine,
+    version: vehicle.version,
+    category: vehicle.category ?? "carro",
+  });
+  if (!range) return typicalConsumptionHint(vehicle);
+  return `${range.label} ~${range.city}`;
+}
+
+/** Compara os 2–3 anúncios da tela com dados reais + faixa de catálogo. */
+export function compareChatStockPicks(vehicles: ChatVehicleRecord[]) {
+  if (vehicles.length === 0) return "";
+  if (vehicles.length === 1) {
+    const vehicle = vehicles[0]!;
+    return `${vehicleShortName(vehicle)} ${vehicle.yearModel}: ${vehicle.transmission}, ${formatChatKm(vehicle.km)}, ${formatChatPrice(vehicle.price)}. ${typicalConsumptionHint(vehicle)}.`;
+  }
+
+  const cheapest = vehicles.reduce((best, vehicle) =>
+    vehicle.price < best.price ? vehicle : best,
+  );
+  const lowestKm = vehicles.reduce((best, vehicle) =>
+    vehicle.km < best.km ? vehicle : best,
+  );
+  const newest = vehicles.reduce((best, vehicle) =>
+    vehicle.yearModel > best.yearModel ? vehicle : best,
+  );
+  const autos = vehicles.filter(isAutomaticVehicle);
+  const manuals = vehicles.filter(isManualVehicle);
+
+  const sentences: string[] = [];
+  sentences.push(
+    `Entre esses, o ${vehicleShortName(cheapest)} é o mais em conta (${formatChatPrice(cheapest.price)}).`,
+  );
+  if (lowestKm.id !== cheapest.id) {
+    sentences.push(
+      `O ${vehicleShortName(lowestKm)} tem menos km (${formatChatKm(lowestKm.km)}).`,
+    );
+  } else if (newest.id !== cheapest.id) {
+    sentences.push(
+      `O ${vehicleShortName(newest)} é o mais novo (${newest.yearModel}).`,
+    );
+  }
+
+  if (autos.length > 0 && manuals.length > 0) {
+    const auto = autos[0]!;
+    sentences.push(
+      `${vehicleShortName(auto)} é automático — mais conforto no trânsito; o manual equivalente costuma ser um pouco mais econômico na mesma motorização.`,
+    );
+  } else if (autos.length === vehicles.length) {
+    sentences.push(
+      vehicles.length === 2
+        ? "Os dois são automático, então o recorte fica em preço, km e motor."
+        : "Todos são automático, então o recorte fica em preço, km e motor.",
+    );
+  }
+
+  const withLiters = vehicles.map((vehicle) => ({
+    vehicle,
+    liters: parseEngineDisplacementLiters(
+      vehicle.engine,
+      vehicle.version,
+      vehicle.category ?? "carro",
+    ),
+  }));
+  const known = withLiters.filter(
+    (item): item is { vehicle: ChatVehicleRecord; liters: number } =>
+      item.liters != null,
+  );
+  const smallest = [...known].sort((a, b) => a.liters - b.liters)[0];
+  const largest = [...known].sort((a, b) => b.liters - a.liters)[0];
+  if (
+    smallest &&
+    largest &&
+    smallest.vehicle.id !== largest.vehicle.id &&
+    smallest.liters !== largest.liters
+  ) {
+    sentences.push(
+      `No consumo, faixa típica de catálogo: ${vehicleShortName(smallest.vehicle)} ${consumptionBit(smallest.vehicle)}; ${vehicleShortName(largest.vehicle)} ${consumptionBit(largest.vehicle)}. Nenhum desses usados foi medido na loja.`,
+    );
+  } else {
+    sentences.push(
+      `Consumo: ${typicalConsumptionHint(vehicles[0]!)}.`,
+    );
+  }
+
+  return sentences.join(" ");
+}
+
+function foldReply(value: string) {
+  return normalize(value);
+}
+
+export function replyAlreadyCompares(
+  reply: string,
+  vehicles: ChatVehicleRecord[],
+) {
+  const remainder = reply
+    .split("\n")
+    .filter((line) => !(/·/.test(line) && /R\$/.test(line)))
+    .join(" ");
+  const folded = foldReply(remainder);
+  if (/consumo|km\/l|catalogo|faixa tipica/.test(folded)) return true;
+  if (vehicles.length < 2) return false;
+  const mentioned = vehicles.filter((vehicle) =>
+    folded.includes(normalize(vehicle.model)),
+  ).length;
+  return (
+    mentioned >= 2 &&
+    /(mais em conta|menos km|menor km|mais novo|entre ess|compar|conforto)/.test(
+      folded,
+    )
+  );
+}
+
+/** Se o modelo vier seco, completa com comparação e consumo dos cards. */
+export function enrichChatStockReply(
+  reply: string,
+  vehicles: ChatVehicleRecord[],
+) {
+  if (vehicles.length === 0) return reply;
+  if (replyAlreadyCompares(reply, vehicles)) return reply;
+  const extra = compareChatStockPicks(vehicles);
+  if (!extra) return reply;
+  return `${reply.trim()}\n${extra}`;
+}
+
 export function isIncompleteStockReply(reply: string) {
   const text = reply.trim();
   if (!text) return true;
@@ -228,7 +388,7 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
     const why = bits.length ? ` — ${bits.join(", ")}` : "";
     return `${formatVehicleLine(vehicle)}${why}`;
   });
-  return `Até ${ceiling} eu começaria por estes:\n${lines.join("\n")}`;
+  return `Até ${ceiling} eu começaria por estes:\n${lines.join("\n")}\n${compareChatStockPicks(picks)}`;
 }
 
 export const CHAT_FINANCE_REPLY =
@@ -282,7 +442,7 @@ export function localGarageReply(
     matchInterestVehicle(mensagem, stock, 1);
   if (match) {
     const version = match.version?.trim() ? ` ${match.version.trim()}` : "";
-    return `Temos o ${match.brand} ${match.model}${version} ${match.yearModel}, ${match.km} km, R$ ${match.price}. Quer que um consultor te chame no WhatsApp? https://wa.me/5527996330706`;
+    return `Temos o ${match.brand} ${match.model}${version} ${match.yearModel}, ${match.km.toLocaleString("pt-BR")} km, ${formatChatPrice(match.price)}, ${match.transmission}. ${typicalConsumptionHint(match)}.`;
   }
 
   const looksLikeVehicle = /\b(tem|vende|estoque|carro|modelo|marca|km)\b/.test(

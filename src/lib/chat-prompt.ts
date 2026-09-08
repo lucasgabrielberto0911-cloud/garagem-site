@@ -3,6 +3,8 @@
  * troca, financiamento, garantia nem estoque — tudo está escrito aqui.
  */
 
+import { typicalConsumptionHint } from "@/lib/chat-consumption";
+
 export const CHAT_WHATSAPP_URL = "https://wa.me/5527996330706";
 
 export const CHAT_FALLBACK_REPLY =
@@ -36,10 +38,15 @@ Tom: direto, simpático, sem parecer robótico. Texto simples, sem markdown (sem
 Cumprimento informal (oi, eae, eai, blz, teste, opa) é conversa da loja: cumprimente e ofereça ajuda com estoque, financiamento ou troca. NÃO recuse e NÃO mande para o WhatsApp só por ser um oi.
 
 COMO AJUDAR DE VERDADE:
-- Seu trabalho é ajudar a ESCOLHER um carro do estoque e explicar compra, troca e financiamento da Garagem.
-- Se faltar orçamento, tipo (hatch/sedan/SUV), câmbio ou se tem veículo na troca, faça UMA pergunta objetiva. Sem questionário.
-- Ao listar, escolha no máximo 3 opções que façam sentido — não despeje o estoque inteiro. O site vira cada linha em mini-anúncio com foto e já mostra atalhos (financiar, troca, automático). Escreva só 1 frase curta antes da lista. Não descreva a foto, não use markdown, não cite carro fora dessas linhas e não pergunte hatch, sedan, “qual desses” nem “qual perfil”.
-- Se perguntarem “qual o melhor”, compare 2 ou 3 da lista só com dados reais (preço, ano, km, câmbio, combustível). Sem inventar opcional.
+- Seu trabalho é ser consultor de verdade: ajudar a ESCOLHER um carro do estoque comparando as opções reais (preço, km, ano, câmbio, motor, consumo típico), não só listar nem responder seco.
+- Se faltar orçamento, tipo (hatch/sedan/SUV), câmbio ou se tem veículo na troca, faça UMA pergunta objetiva. Sem questionário. Se o visitante já deu orçamento ou pediu automático/manual, NÃO pergunte hatch/sedan.
+- Ao listar, escolha no máximo 3 opções que façam sentido — não despeje o estoque inteiro. O site vira cada linha em mini-anúncio com foto e já mostra atalhos (financiar, troca). Formato da lista, um por linha:
+Marca Modelo ano · km · R$ preço
+Antes da lista: 1 frase curta com o recorte (orçamento, automático, modelo). DEPOIS da lista: 2 a 4 frases comparando SOMENTE esses mesmos carros, com dados da linha de estoque. Diga quem está mais em conta, quem tem menos km, quem é automático e o que isso muda no dia a dia, e a faixa de consumo típico de catálogo. Frases completas, úteis, sem telegrama e sem emoji.
+- Consumo / média / km/l: use SOMENTE o texto “consumo típico” já escrito na linha do estoque. NUNCA invente outro número, NUNCA diga que a loja mediu este usado, NUNCA apresente a faixa como garantia. Fale como faixa típica de catálogo / média da motorização.
+- Não descreva a foto, não use markdown, não cite carro fora dessas 3 linhas e não pergunte hatch, sedan, “qual desses” nem “qual perfil” depois da lista (os atalhos do site já existem).
+- Se perguntarem “qual o melhor”, compare 2 ou 3 da lista só com dados reais (preço, ano, km, câmbio, combustível, motor, acessórios da linha). Sem inventar opcional.
+- Acessórios e motor: só o que estiver na linha do estoque. Se não estiver escrito, não invente ar, multimídia, couro, teto, sensor.
 - Financiamento: explique o processo — até 60x, aceita troca (carro ou moto) como parte do negócio, garantia de 3 meses. NUNCA invente banco, financeira, taxa, entrada mínima, parcela, documento exigido ou “aprovado”. Diga que o consultor monta a simulação no WhatsApp com o carro escolhido.
 - Troca: sempre aceita carro ou moto; avaliação pelo WhatsApp.
 - Não mande para o WhatsApp em toda frase. Use o link quando a pessoa quiser simular parcela, fechar, avaliar troca, ou quando o carro não está na lista. Se for oferecer WhatsApp, coloque o link https://wa.me/5527996330706 no final da mensagem (o site vira botão).
@@ -47,7 +54,7 @@ COMO AJUDAR DE VERDADE:
 
 Quando o visitante pedir carros por preço (até 70 mil, abaixo de 80 mil, etc.), liste no máximo 3 veículos REAIS da lista, um por linha, neste formato:
 Marca Modelo ano · km · R$ preço
-Antes da lista, uma frase só. Sem pergunta depois da lista. Nunca escreva “temos opções” e pare. Não cite modelo extra fora dessas linhas. Se não houver carro na faixa, diga isso e ofereça outra faixa ou o WhatsApp.
+Antes da lista, uma frase. Depois da lista, a comparação (2 a 4 frases) com consumo típico de catálogo. Nunca escreva “temos opções” e pare. Não cite modelo extra fora dessas linhas. Se não houver carro na faixa, diga isso e ofereça outra faixa ou o WhatsApp.
 
 Quando o visitante demonstrar interesse real de compra E fornecer nome e telefone de contato, chame a função criar_lead. Não invente telefone nem nome. Só chame a função se os dois dados tiverem sido ditos pelo visitante.
 
@@ -79,10 +86,22 @@ export type ChatStockLine = {
   transmission: string;
   fuel: string;
   category?: string;
+  engine?: string | null;
+  doors?: number | null;
+  accessories?: string[];
 };
 
 export function formatChatPrice(value: number) {
   return `R$ ${value.toLocaleString("pt-BR")}`;
+}
+
+function accessoryBits(items?: string[]) {
+  if (!items?.length) return "";
+  const clean = items
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 2 && item.length <= 42)
+    .slice(0, 4);
+  return clean.length ? ` · ${clean.join(", ")}` : "";
 }
 
 function stockLineLabel(vehicle: ChatStockLine, withExtras = false) {
@@ -91,7 +110,18 @@ function stockLineLabel(vehicle: ChatStockLine, withExtras = false) {
   if (!withExtras) return base;
   const color = vehicle.color?.trim() ? vehicle.color.trim() : "cor não informada";
   const kind = vehicle.category === "moto" ? "moto" : "carro";
-  return `${base} · ${color} · ${vehicle.transmission} · ${vehicle.fuel} · ${kind}`;
+  const engine = vehicle.engine?.trim() ? ` · motor ${vehicle.engine.trim()}` : "";
+  const doors =
+    vehicle.doors != null && vehicle.doors > 0
+      ? ` · ${vehicle.doors} portas`
+      : "";
+  const consumption = typicalConsumptionHint({
+    fuel: vehicle.fuel,
+    engine: vehicle.engine,
+    version: vehicle.version,
+    category: vehicle.category ?? "carro",
+  });
+  return `${base} · ${color} · ${vehicle.transmission} · ${vehicle.fuel} · ${kind}${engine}${doors}${accessoryBits(vehicle.accessories)} · ${consumption}`;
 }
 
 export function formatStockForPrompt(vehicles: ChatStockLine[]) {

@@ -25,7 +25,9 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /COMO AJUDAR DE VERDADE/);
   assert.match(CHAT_SYSTEM_PROMPT, /mini-anúncio com foto/);
   assert.match(CHAT_SYSTEM_PROMPT, /não pergunte hatch/);
-  assert.match(CHAT_SYSTEM_PROMPT, /Sem pergunta depois da lista/);
+  assert.match(CHAT_SYSTEM_PROMPT, /faixa típica de catálogo/);
+  assert.match(CHAT_SYSTEM_PROMPT, /2 a 4 frases comparando/);
+  assert.match(CHAT_SYSTEM_PROMPT, /NUNCA invente outro número/);
   assert.match(CHAT_SYSTEM_PROMPT, /ESCOLHER um carro/);
   assert.match(CHAT_SYSTEM_PROMPT, /consultor monta a simulação/);
   assert.match(CHAT_SYSTEM_PROMPT, /NUNCA invente banco/);
@@ -76,8 +78,17 @@ test("estoque real entra no prompt; carro fora da lista não é inventado", () =
       color: "Prata",
       transmission: "Manual",
       fuel: "Flex",
+      engine: "1.0 12V",
+      doors: 4,
+      accessories: ["Ar condicionado", "Direção hidráulica"],
     },
   ]);
+  assert.match(stockBlock, /motor 1\.0 12V/);
+  assert.match(stockBlock, /4 portas/);
+  assert.match(stockBlock, /Ar condicionado/);
+  assert.match(stockBlock, /consumo típico|faixa típica de catálogo/);
+  assert.match(stockBlock, /11–14 km\/l/);
+  assert.match(stockBlock, /não foi medido/);
   assert.doesNotMatch(stockBlock, /fipe/i);
   assert.doesNotMatch(formatStockForPrompt([]), /R\$/);
 });

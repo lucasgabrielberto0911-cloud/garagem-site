@@ -207,7 +207,7 @@ function buildGenerateBody(
     ...(withTools
       ? { tools: [{ function_declarations: [CRIAR_LEAD_DECLARATION] }] }
       : {}),
-    generationConfig: generationConfig(1024, 0.4, model),
+    generationConfig: generationConfig(1536, 0.55, model),
   };
 }
 

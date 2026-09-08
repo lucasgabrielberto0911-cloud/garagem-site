@@ -9,6 +9,7 @@ import {
   chatVehicleMeta,
   isBareBudgetQuery,
   isChatVehicleListingLine,
+  looksLikeLooseVehicleTitle,
   matchVehiclesInReply,
   polishChatReplyWithCards,
   selectChatVehicles,
@@ -319,4 +320,59 @@ test("financiamento sem carro citado não inventa anúncio", () => {
     [biz, compass],
   );
   assert.equal(matched.length, 0);
+});
+
+test("com cards, a comparação e o consumo típico ficam na bolha", () => {
+  const palio: ChatVehicleRecord = {
+    id: "cpaliogaragem000000000001",
+    brand: "Fiat",
+    model: "Palio Weekend",
+    version: "Adventure 1.8 Flex 16V",
+    yearModel: 2016,
+    km: 156400,
+    price: 47900,
+    color: "Branca",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.8 16V",
+    category: "carro",
+  };
+  const hb20: ChatVehicleRecord = {
+    id: "chb20garagem000000000001",
+    brand: "Hyundai",
+    model: "HB20",
+    version: "Comfort 1.0",
+    yearModel: 2015,
+    km: 127000,
+    price: 55900,
+    color: "Prata",
+    transmission: "Automático",
+    fuel: "Flex",
+    engine: "1.0",
+    category: "carro",
+  };
+  const leftover = `Até R$ 70.000 estes cabem no orçamento.
+Fiat Palio Weekend Adventure 1.8 Flex 16V 2016 · 156.400 km · R$ 47.900
+Chevrolet Prisma Sed. Joy/LS 1.0 2019 · 152.000 km · R$ 52.900
+Hyundai HB20 Comfort 1.0 2015 · 127.000 km · R$ 55.900
+Entre esses, o Palio Weekend é o mais em conta (R$ 47.900). O HB20 tem menos km (127 mil) e é o automático da lista — mais conforto no trânsito. No consumo, faixa típica de catálogo: Prisma e HB20 1.0 ~11–14 km/l na cidade (gasolina); o Palio 1.8 ~8–11 km/l. Nenhum desses usados foi medido na loja.`;
+  const cards = [
+    toChatVehicleCard(palio),
+    toChatVehicleCard(prisma),
+    toChatVehicleCard(hb20),
+  ];
+  const polished = polishChatReplyWithCards(leftover, cards);
+  assert.match(polished, /70\.000/);
+  assert.match(polished, /mais em conta/);
+  assert.match(polished, /conforto/);
+  assert.match(polished, /consumo/);
+  assert.match(polished, /11–14/);
+  assert.match(polished, /foi medido na loja/i);
+  assert.doesNotMatch(polished, /156\.400 km · R\$/);
+  assert.doesNotMatch(polished, /qual desses/i);
+  assert.equal(
+    looksLikeLooseVehicleTitle("Hyundai HB20 é o automático da lista"),
+    false,
+  );
+  assert.equal(looksLikeLooseVehicleTitle("Mitsubishi LANCER 2.0"), true);
 });
