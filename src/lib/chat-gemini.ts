@@ -88,13 +88,22 @@ export function redactGeminiError(text: string) {
     .slice(0, 200);
 }
 
-function configuredModels() {
-  const preferred = process.env.GEMINI_MODEL?.trim();
-  const list = preferred ? [preferred, ...CHAT_GEMINI_MODELS] : [...CHAT_GEMINI_MODELS];
-  return [...new Set(list)];
+function isCheapChatModel(model: string) {
+  const id = model.toLowerCase();
+  if (/\bpro\b/.test(id)) return false;
+  return /flash-lite|flash-latest|gemini-2\.[05]-flash$/.test(id);
 }
 
-/** Fila real de modelos (override GEMINI_MODEL primeiro, depois o mais barato). */
+function configuredModels() {
+  const preferred = process.env.GEMINI_MODEL?.trim();
+  if (!preferred) return [...CHAT_GEMINI_MODELS];
+  if (isCheapChatModel(preferred)) {
+    return [...new Set([preferred, ...CHAT_GEMINI_MODELS])];
+  }
+  return [...new Set([...CHAT_GEMINI_MODELS, preferred])];
+}
+
+/** Fila real: Lite primeiro. Modelo mais caro no env só entra como fallback. */
 export function chatGeminiModels() {
   return configuredModels();
 }

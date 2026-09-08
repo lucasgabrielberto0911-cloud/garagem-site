@@ -4,7 +4,7 @@ import { Barlow_Condensed } from "next/font/google";
 import { useEffect, useRef, useState } from "react";
 import { IconChat, IconClose, IconWhatsApp } from "@/components/site/icons";
 import { CHAT_WHATSAPP_URL } from "@/lib/chat-prompt";
-import { splitChatLinks } from "@/lib/chat-text";
+import { chatWhatsAppCta, displayChatText, splitChatLinks } from "@/lib/chat-text";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 
 const chatDisplay = Barlow_Condensed({
@@ -32,26 +32,54 @@ const SUGGESTIONS = [
 ];
 
 function ChatText({ text }: { text: string }) {
+  const visible = displayChatText(text);
+  const cta = chatWhatsAppCta(text);
+  const parts = splitChatLinks(visible).filter(
+    (part) => part.type !== "link" || !/wa\.me\//i.test(part.href),
+  );
+
   return (
     <>
-      {splitChatLinks(text).map((part, index) =>
-        part.type === "link" ? (
-          <a
-            key={`${part.href}-${index}`}
-            href={part.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => {
-              if (/wa\.me\//i.test(part.href)) trackWhatsAppClick("chat");
-            }}
-            className="underline decoration-white/40 underline-offset-2 transition hover:text-brand hover:decoration-brand"
-          >
-            {part.label}
-          </a>
-        ) : (
-          <span key={`t-${index}`}>{part.value}</span>
-        ),
-      )}
+      {visible ? (
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-cream">
+          {parts.map((part, index) =>
+            part.type === "link" ? (
+              <a
+                key={`${part.href}-${index}`}
+                href={part.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-white/40 underline-offset-2 transition hover:text-brand hover:decoration-brand"
+              >
+                {part.label}
+              </a>
+            ) : (
+              <span key={`t-${index}`}>{part.value}</span>
+            ),
+          )}
+        </p>
+      ) : null}
+      {cta ? (
+        <a
+          href={cta.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => trackWhatsAppClick("chat")}
+          className="whatsapp-btn mt-2 flex min-h-[48px] items-center gap-2.5 px-3 py-2 text-left text-cream"
+        >
+          <IconWhatsApp className="h-5 w-5 shrink-0 text-white" />
+          <span className="min-w-0">
+            <span
+              className={`${chatDisplay.className} block text-xs font-semibold uppercase tracking-wide`}
+            >
+              {cta.label}
+            </span>
+            <span className="mt-0.5 block text-[11px] font-normal leading-snug text-white/85">
+              {cta.benefit}
+            </span>
+          </span>
+        </a>
+      ) : null}
     </>
   );
 }
@@ -179,16 +207,20 @@ export function SiteChat() {
             className="flex-1 space-y-3 overflow-y-auto px-3 py-3"
           >
             {messages.map((message, index) => (
-              <p
+              <div
                 key={`${message.role}-${index}`}
-                className={`max-w-[92%] whitespace-pre-wrap text-sm leading-relaxed ${
+                className={`max-w-[92%] ${
                   message.role === "user"
-                    ? "ml-auto bg-brand/20 px-3 py-2 text-cream"
-                    : "border border-white/10 bg-asphalt px-3 py-2 text-cream"
+                    ? "ml-auto bg-brand/20 px-3 py-2 text-sm leading-relaxed text-cream"
+                    : "border border-white/10 bg-asphalt px-3 py-2"
                 }`}
               >
-                <ChatText text={message.content} />
-              </p>
+                {message.role === "user" ? (
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                ) : (
+                  <ChatText text={message.content} />
+                )}
+              </div>
             ))}
             {pending ? (
               <p className="border border-white/10 bg-asphalt px-3 py-2 text-sm text-muted">

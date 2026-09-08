@@ -96,6 +96,9 @@ test("usa Gemini Flash-Lite primeiro, o modelo mais barato da fila", () => {
   delete process.env.GEMINI_MODEL;
   try {
     assert.equal(chatGeminiModels()[0], "gemini-2.5-flash-lite");
+    process.env.GEMINI_MODEL = "gemini-2.5-pro";
+    assert.equal(chatGeminiModels()[0], "gemini-2.5-flash-lite");
+    assert.equal(chatGeminiModels().includes("gemini-2.5-pro"), true);
   } finally {
     if (prev === undefined) delete process.env.GEMINI_MODEL;
     else process.env.GEMINI_MODEL = prev;

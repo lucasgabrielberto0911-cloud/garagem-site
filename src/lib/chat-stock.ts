@@ -133,14 +133,23 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
   if (limit == null) return null;
   const matches = stock
     .filter((vehicle) => vehicle.price <= limit)
-    .sort((a, b) => a.price - b.price)
-    .slice(0, 8);
+    .sort((a, b) => a.price - b.price);
   const ceiling = `R$ ${limit.toLocaleString("pt-BR")}`;
   if (matches.length === 0) {
     return `Neste valor até ${ceiling} não tem anúncio agora. Posso mostrar outra faixa, ou um consultor te ajuda no WhatsApp: https://wa.me/5527996330706`;
   }
-  const lines = matches.map((vehicle) => formatVehicleLine(vehicle)).join("\n");
-  return `Até ${ceiling} estes cabem no orçamento (do mais em conta ao mais caro):\n${lines}\n\nSe quiser, eu afino por automático, hatch ou SUV. Financiamos em até 60x e aceitamos troca. Qual te interessa?`;
+  const picks = matches.slice(0, 5);
+  const cheapestId = picks[0]?.id;
+  const lowestKmId = [...picks].sort((a, b) => a.km - b.km)[0]?.id;
+  const lines = picks.map((vehicle) => {
+    const bits: string[] = [];
+    if (vehicle.id === cheapestId) bits.push("mais em conta");
+    if (vehicle.id === lowestKmId) bits.push("menor km");
+    if (/automatic/i.test(vehicle.transmission)) bits.push("automático");
+    const why = bits.length ? ` — ${bits.join(", ")}` : "";
+    return `${formatVehicleLine(vehicle)}${why}`;
+  });
+  return `Até ${ceiling} estes cabem no orçamento. Eu começaria por estes:\n${lines.join("\n")}\n\nTem o mais em conta, o de menor km e automático se houver. Financiamos em até 60x e aceitamos troca. Qual perfil te serve — hatch, automático ou o mais barato?`;
 }
 
 /** Resposta da loja sem Gemini — só dados reais do estoque e política fixa. */
