@@ -1,0 +1,155 @@
+import { prisma } from "@/lib/prisma";
+import { isMissingColumnError } from "@/lib/prisma-errors";
+import type { ChatStockLine } from "@/lib/chat-prompt";
+
+/**
+ * Campos públicos do bot. `id` fica só no servidor para amarrar o lead.
+ * NUNCA incluir fipePrice (nem placa, compra, custos).
+ */
+export const CHAT_VEHICLE_SELECT = {
+  id: true,
+  brand: true,
+  model: true,
+  version: true,
+  yearModel: true,
+  km: true,
+  price: true,
+  color: true,
+  transmission: true,
+  fuel: true,
+} as const;
+
+export type ChatVehicleRecord = {
+  id: string;
+  brand: string;
+  model: string;
+  version: string | null;
+  yearModel: number;
+  km: number;
+  price: number;
+  color: string | null;
+  transmission: string;
+  fuel: string;
+};
+
+export function toChatStockLine(vehicle: ChatVehicleRecord): ChatStockLine {
+  return {
+    brand: vehicle.brand,
+    model: vehicle.model,
+    version: vehicle.version,
+    year: vehicle.yearModel,
+    km: vehicle.km,
+    price: vehicle.price,
+    color: vehicle.color,
+    transmission: vehicle.transmission,
+    fuel: vehicle.fuel,
+  };
+}
+
+export async function loadChatStock(): Promise<ChatVehicleRecord[]> {
+  try {
+    return await prisma.vehicle.findMany({
+      where: { status: "disponivel", historical: false },
+      orderBy: { updatedAt: "desc" },
+      take: 80,
+      select: CHAT_VEHICLE_SELECT,
+    });
+  } catch (error) {
+    if (!isMissingColumnError(error, "historical")) throw error;
+    return prisma.vehicle.findMany({
+      where: { status: "disponivel" },
+      orderBy: { updatedAt: "desc" },
+      take: 80,
+      select: CHAT_VEHICLE_SELECT,
+    });
+  }
+}
+
+function normalize(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** Casa o texto do interesse com um anúncio do estoque, se der. */
+export function matchInterestVehicle(
+  interest: string | undefined,
+  stock: ChatVehicleRecord[],
+  minScore = 2,
+) {
+  const needle = normalize(interest ?? "");
+  if (!needle || stock.length === 0) return null;
+
+  let best: ChatVehicleRecord | null = null;
+  let bestScore = 0;
+
+  for (const vehicle of stock) {
+    const hay = normalize(
+      `${vehicle.brand} ${vehicle.model} ${vehicle.version ?? ""} ${vehicle.yearModel}`,
+    );
+    let score = 0;
+    for (const part of needle.split(" ").filter((token) => token.length >= 3)) {
+      if (hay.includes(part)) score += 1;
+    }
+    if (hay.includes(needle)) score += 3;
+    if (score > bestScore) {
+      best = vehicle;
+      bestScore = score;
+    }
+  }
+
+  return bestScore >= minScore ? best : null;
+}
+
+const GENERIC_STOCK_TOKEN =
+  /^(tem|vende|vendem|estoque|carro|carros|modelo|marca|ano|seminovo|preco|valor|qual|quanto)$/;
+
+/** Resposta da loja sem Gemini — só dados reais do estoque e política fixa. */
+export function localGarageReply(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+) {
+  const text = normalize(mensagem);
+
+  if (/\b(financi\w*|parcela|juros|60x)\b/.test(text)) {
+    return "A Garagem financia em até 60x e aceita troca. Valor de parcela e aprovação um consultor faz no WhatsApp: https://wa.me/5527996330706";
+  }
+  if (/\bgarantia\b/.test(text)) {
+    return "Garantia padrão de 3 meses em todos os veículos. Se quiser detalhes do carro, chama no WhatsApp: https://wa.me/5527996330706";
+  }
+  if (/\b(horario|atendimento|endereco|localizacao)\b/.test(text)) {
+    return "Atendemos Aracruz, Vitória, Linhares, Serra e Vila Velha (loja digital). Um consultor confirma horário no WhatsApp: https://wa.me/5527996330706";
+  }
+  if (/\btroca\b/.test(text)) {
+    return "Sempre aceitamos veículo na troca (carro ou moto). Um consultor avalia no WhatsApp: https://wa.me/5527996330706";
+  }
+
+  const match =
+    matchInterestVehicle(mensagem, stock) ??
+    matchInterestVehicle(mensagem, stock, 1);
+  if (match) {
+    const version = match.version?.trim() ? ` ${match.version.trim()}` : "";
+    return `Temos o ${match.brand} ${match.model}${version} ${match.yearModel}, ${match.km} km, R$ ${match.price}. Quer que um consultor te chame no WhatsApp? https://wa.me/5527996330706`;
+  }
+
+  const looksLikeVehicle = /\b(tem|vende|estoque|carro|modelo|marca|km)\b/.test(
+    text,
+  );
+  const specific = text
+    .split(" ")
+    .filter((token) => token.length >= 3 && !GENERIC_STOCK_TOKEN.test(token));
+  if (looksLikeVehicle && specific.length > 0) {
+    return "Esse modelo não está na lista atual. Fala com a gente no WhatsApp: https://wa.me/5527996330706";
+  }
+  if (looksLikeVehicle && stock.length > 0) {
+    const sample = stock
+      .slice(0, 3)
+      .map((vehicle) => `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel}`)
+      .join("; ");
+    return `No estoque agora tem, entre outros: ${sample}. Me diz marca ou modelo que eu afino. WhatsApp: https://wa.me/5527996330706`;
+  }
+  return null;
+}

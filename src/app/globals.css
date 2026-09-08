@@ -342,6 +342,23 @@ body:has([data-vehicle-mobile-bar]) .whatsapp-float {
   display: none;
 }
 
+/* Bolha do chatbot: acima da bottom nav no mobile; acima do WhatsApp no desktop. */
+.site-chat {
+  right: 1rem;
+  bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
+}
+
+@media (min-width: 1024px) {
+  .site-chat {
+    right: 1.5rem;
+    bottom: 6.25rem;
+  }
+}
+
+body:has([data-vehicle-mobile-bar]) .site-chat {
+  bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+}
+
 .whatsapp-pulse {
   /* Sem pulso infinito — presença estática */
   box-shadow: 0 6px 18px rgba(37, 211, 102, 0.35);
