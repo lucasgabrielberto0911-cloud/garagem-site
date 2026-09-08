@@ -376,3 +376,47 @@ Entre esses, o Palio Weekend é o mais em conta (R$ 47.900). O HB20 tem menos km
   );
   assert.equal(looksLikeLooseVehicleTitle("Mitsubishi LANCER 2.0"), true);
 });
+
+test("comparação com o nome completo do card não some da bolha", () => {
+  const palio: ChatVehicleRecord = {
+    id: "cpaliogaragem000000000002",
+    brand: "Fiat",
+    model: "Palio Weekend",
+    version: "Adventure 1.8 Flex 16V",
+    yearModel: 2016,
+    km: 156400,
+    price: 47900,
+    color: "Branca",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.8 16V",
+    category: "carro",
+  };
+  const hb20: ChatVehicleRecord = {
+    id: "chb20garagem000000000002",
+    brand: "Hyundai",
+    model: "HB20",
+    version: "Premium Automatico 1.6",
+    yearModel: 2015,
+    km: 127000,
+    price: 55900,
+    color: "Branco",
+    transmission: "Automático",
+    fuel: "Flex",
+    engine: "1.6",
+    category: "carro",
+  };
+  const leftover = `Até R$ 70.000 eu começaria por estes:
+Entre esses, o Fiat Palio Weekend é o mais em conta (R$ 47.900). O Hyundai HB20 tem menos km (127 mil km). O Hyundai HB20 é automático — mais conforto no trânsito. No consumo, faixa típica de catálogo: Chevrolet Prisma 1.0 flex ~11–14 km/l cidade (gasolina); Fiat Palio Weekend 1.8 ~8–11 km/l. Nenhum desses usados foi medido na loja.`;
+  const cards = [
+    toChatVehicleCard(palio),
+    toChatVehicleCard(prisma),
+    toChatVehicleCard(hb20),
+  ];
+  const polished = polishChatReplyWithCards(leftover, cards);
+  assert.match(polished, /mais em conta/);
+  assert.match(polished, /Prisma/);
+  assert.match(polished, /11–14/);
+  assert.match(polished, /foi medido na loja/);
+  assert.doesNotMatch(polished, /156\.400 km · R\$/);
+});

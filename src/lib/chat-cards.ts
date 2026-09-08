@@ -112,6 +112,13 @@ export function stripChatVehicleListingLines(
     .filter((line) => {
       if (isChatVehicleListingLine(line)) return false;
       if (vehicles.length === 0) return true;
+      if (
+        /mais em conta|menos km|consumo|catálogo|catalogo|km\/l|entre esses|conforto|medido|faixa típica|faixa tipica/i.test(
+          line,
+        )
+      ) {
+        return true;
+      }
       if (looksLikeLooseVehicleTitle(line)) return false;
       const folded = fold(line);
       return !vehicles.some((vehicle) => {
