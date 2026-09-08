@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   isChatVehicleListingLine,
   matchVehiclesInReply,
+  selectChatVehicles,
   stripChatVehicleListingLines,
   toChatVehicleCard,
 } from "./chat-cards";
@@ -86,6 +87,8 @@ test("casa a lista do assistente com foto, preço, ano, cor, km e link do anúnc
   assert.equal(card.km, 22000);
   assert.equal(card.price, 17900);
   assert.equal(card.color, "Vermelha");
+  assert.equal(card.brand, "Honda");
+  assert.equal(card.model, "BIZ 125");
   assert.equal(card.photo, "https://cdn.example/biz-card.webp");
   assert.match(card.href, /^\/estoque\/honda-biz-125/);
   assert.equal(card.href.includes(biz.id), true);
@@ -113,6 +116,18 @@ Fiat Palio Weekend Adventure 1.8 Flex 16V 2016 · 156.400 km · R$ 47.900`;
   assert.match(stripped, /70\.000/);
   assert.doesNotMatch(stripped, /LANCER/);
   assert.doesNotMatch(stripped, /Palio/);
+});
+
+test("faixa de preço completa anúncios se o texto citou poucos", () => {
+  const picked = selectChatVehicles(
+    "Honda BIZ 125 EX 125 FLEX 2023 · 22.000 km · R$ 17.900",
+    "Quais carros até 70 mil?",
+    [biz, prisma, compass],
+  );
+  assert.deepEqual(
+    picked.map((vehicle) => vehicle.id),
+    [biz.id, prisma.id],
+  );
 });
 
 test("financiamento sem carro citado não inventa anúncio", () => {

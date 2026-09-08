@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import {
   IconChat,
   IconClose,
@@ -9,7 +10,8 @@ import {
   IconWhatsApp,
 } from "@/components/site/icons";
 import {
-  chatVehicleMeta,
+  chatVehicleKm,
+  chatVehicleLabel,
   chatVehiclePrice,
   chatVehicleVersion,
   stripChatVehicleListingLines,
@@ -43,11 +45,11 @@ const SUGGESTIONS = [
 ];
 
 function ChatLogo({ size = "md" }: { size?: "sm" | "md" }) {
-  const px = size === "sm" ? 32 : 40;
+  const px = size === "sm" ? 36 : 40;
   return (
     <span
-      className={`relative shrink-0 overflow-hidden rounded-lg bg-black ring-1 ring-white/15 ${
-        size === "sm" ? "h-8 w-8" : "h-10 w-10"
+      className={`relative shrink-0 overflow-hidden rounded-lg bg-black ring-2 ring-brand/80 ${
+        size === "sm" ? "h-9 w-9" : "h-10 w-10"
       }`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- logo estático, sem cota /_next/image */}
@@ -103,51 +105,68 @@ function ChatWhatsAppButton({
 function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
   const version = chatVehicleVersion(vehicle);
   const photo = vehicle.photo || VEHICLE_PLACEHOLDER;
+  const label = chatVehicleLabel(vehicle);
   return (
-    <Link
-      href={vehicle.href}
-      prefetch={false}
-      className="mt-2 flex overflow-hidden rounded-xl border border-white/10 bg-[#121214] transition hover:border-brand/50"
-      aria-label={`${vehicle.title} ${vehicle.year} — ${chatVehiclePrice(vehicle)}. Ver anúncio`}
-    >
-      <span className="relative w-[7.25rem] min-h-[4.75rem] shrink-0 self-stretch overflow-hidden bg-asphalt">
-        {/* eslint-disable-next-line @next/next/no-img-element -- capa remota, sem cota /_next/image */}
-        <img
-          src={photo}
-          alt=""
-          width={116}
-          height={76}
-          loading="lazy"
-          decoding="async"
-          className="absolute inset-0 h-full w-full object-cover"
-          onError={(event) => {
-            const image = event.currentTarget;
-            if (image.dataset.fallbackUsed === "1") return;
-            image.dataset.fallbackUsed = "1";
-            image.src = VEHICLE_PLACEHOLDER;
-          }}
-        />
-      </span>
-      <span className="min-w-0 flex-1 px-2.5 py-2">
-        <span className="block truncate font-display text-[13px] font-semibold leading-snug text-cream">
-          {vehicle.title}
-        </span>
-        {version ? (
-          <span className="mt-0.5 block truncate text-[11px] text-muted">
-            {version}
+    <article className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-[#121214]">
+      <Link
+        href={vehicle.href}
+        prefetch={false}
+        className="block transition hover:bg-white/[0.03]"
+        aria-label={`${label} — ${chatVehiclePrice(vehicle)}. Ver anúncio`}
+      >
+        <span className="relative block aspect-[16/10] overflow-hidden bg-asphalt">
+          {/* eslint-disable-next-line @next/next/no-img-element -- capa remota, sem cota /_next/image */}
+          <img
+            src={photo}
+            alt=""
+            width={480}
+            height={300}
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
+            onError={(event) => {
+              const image = event.currentTarget;
+              if (image.dataset.fallbackUsed === "1") return;
+              image.dataset.fallbackUsed = "1";
+              image.src = VEHICLE_PLACEHOLDER;
+            }}
+          />
+          <span
+            className="absolute inset-0 bg-gradient-to-t from-asphalt/80 via-transparent to-transparent"
+            aria-hidden="true"
+          />
+          <span className="absolute bottom-2 left-2 font-display text-base font-bold leading-none text-cream">
+            {chatVehiclePrice(vehicle)}
           </span>
-        ) : null}
-        <span className="mt-1 block font-display text-sm font-bold leading-none text-cream">
-          {chatVehiclePrice(vehicle)}
         </span>
-        <span className="mt-1 block truncate text-[11px] text-muted">
-          {chatVehicleMeta(vehicle)}
+        <span className="block px-3 py-2.5">
+          <span className="block font-display text-sm font-semibold leading-snug text-cream">
+            {vehicle.title}
+          </span>
+          {version ? (
+            <span className="mt-0.5 block text-[12px] leading-snug text-muted">
+              {version}
+            </span>
+          ) : null}
+          <span className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted">
+            <span>{vehicle.year}</span>
+            {vehicle.color ? <span>{vehicle.color}</span> : null}
+            <span>{chatVehicleKm(vehicle)}</span>
+          </span>
+          <span className="mt-2 inline-flex font-display text-[11px] font-semibold uppercase tracking-wide text-brand">
+            Ver anúncio
+          </span>
         </span>
-        <span className="mt-1 block font-display text-[10px] font-semibold uppercase tracking-wide text-brand">
-          Ver anúncio
-        </span>
-      </span>
-    </Link>
+      </Link>
+      <VehicleCardWhatsApp
+        vehicleId={vehicle.id}
+        label={label}
+        value={vehicle.price}
+        make={vehicle.brand}
+        model={vehicle.model}
+        year={vehicle.year}
+      />
+    </article>
   );
 }
 
@@ -170,6 +189,8 @@ function readVehicleCards(raw: unknown): ChatVehicleCard[] {
       id,
       href,
       title,
+      brand: String(row.brand ?? "").trim() || title,
+      model: String(row.model ?? "").trim() || title,
       version: row.version ? String(row.version) : null,
       year: Number(row.year) || 0,
       km: Number(row.km) || 0,
@@ -199,23 +220,25 @@ function ChatText({
   return (
     <>
       {visible ? (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-cream">
-          {parts.map((part, index) =>
-            part.type === "link" ? (
-              <a
-                key={`${part.href}-${index}`}
-                href={part.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-white/40 underline-offset-2 transition hover:text-brand hover:decoration-brand"
-              >
-                {part.label}
-              </a>
-            ) : (
-              <span key={`t-${index}`}>{part.value}</span>
-            ),
-          )}
-        </p>
+        <div className="rounded-2xl rounded-bl-md border border-white/10 bg-asphalt px-3.5 py-2.5">
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-cream">
+            {parts.map((part, index) =>
+              part.type === "link" ? (
+                <a
+                  key={`${part.href}-${index}`}
+                  href={part.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline decoration-white/40 underline-offset-2 transition hover:text-brand hover:decoration-brand"
+                >
+                  {part.label}
+                </a>
+              ) : (
+                <span key={`t-${index}`}>{part.value}</span>
+              ),
+            )}
+          </p>
+        </div>
       ) : null}
       {vehicles.map((vehicle) => (
         <ChatVehicleMini key={vehicle.id} vehicle={vehicle} />
@@ -241,13 +264,13 @@ function AssistantRow({
         <p className="mb-1 pl-0.5 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/75">
           {ASSISTANT_NAME}
         </p>
-        <div
-          className={`rounded-2xl rounded-bl-md border border-white/10 bg-asphalt px-3.5 py-2.5 ${
-            pending ? "w-fit" : ""
-          }`}
-        >
-          {children}
-        </div>
+        {pending ? (
+          <div className="w-fit rounded-2xl rounded-bl-md border border-white/10 bg-asphalt px-3.5 py-2.5">
+            {children}
+          </div>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );
@@ -338,7 +361,11 @@ export function SiteChat() {
   const canSend = !pending && draft.trim().length >= 2;
 
   return (
-    <div className="site-chat pointer-events-none fixed z-[60] flex flex-col items-end gap-3">
+    <div
+      className={`site-chat pointer-events-none fixed z-[60] flex flex-col items-end gap-3${
+        open ? " is-open" : ""
+      }`}
+    >
       {open ? (
         <section
           role="dialog"
@@ -356,16 +383,16 @@ export function SiteChat() {
               <div className="min-w-0 flex-1">
                 <p
                   id="site-chat-title"
-                  className="truncate font-display text-sm font-semibold tracking-wide text-cream"
+                  className="font-display text-sm font-semibold tracking-wide text-cream"
                 >
-                  {ASSISTANT_NAME}
+                  Garagem
                 </p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted">
                   <span
                     className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#25D366]"
                     aria-hidden="true"
                   />
-                  Online · estoque e dúvidas
+                  Assistente · online
                 </p>
               </div>
               <a
@@ -373,13 +400,10 @@ export function SiteChat() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackWhatsAppClick("chat")}
-                className="whatsapp-btn flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-white"
+                className="whatsapp-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white"
                 aria-label="Falar com um vendedor no WhatsApp"
               >
                 <IconWhatsApp className="h-4 w-4" />
-                <span className="max-[20rem]:hidden font-display text-[11px] font-semibold uppercase tracking-wide">
-                  WhatsApp
-                </span>
               </a>
               <button
                 type="button"
@@ -421,7 +445,7 @@ export function SiteChat() {
               </AssistantRow>
             ) : null}
             {showSuggestions ? (
-              <div className="flex flex-wrap gap-2 pl-10 pt-0.5">
+              <div className="flex flex-wrap gap-2 pl-12 pt-0.5">
                 {SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
@@ -475,8 +499,7 @@ export function SiteChat() {
               </button>
             </div>
             <p className="mt-2 text-[10px] leading-relaxed text-muted">
-              Enter envia · Shift+Enter quebra a linha. Ao conversar, você
-              concorda em ser contatado pela nossa equipe.
+              Enter envia. Ao conversar, podemos te chamar no WhatsApp.
             </p>
           </form>
         </section>

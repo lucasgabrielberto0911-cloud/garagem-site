@@ -1,5 +1,5 @@
 import {
-  matchVehiclesInReply,
+  selectChatVehicles,
   toChatVehicleCard,
   type ChatVehicleCard,
 } from "@/lib/chat-cards";
@@ -57,7 +57,9 @@ export async function runChatTurn(input: {
   const finish = (reply: string, leadCreated = false): ChatTurnResult => ({
     reply,
     leadCreated,
-    vehicles: matchVehiclesInReply(reply, input.stock).map(toChatVehicleCard),
+    vehicles: selectChatVehicles(reply, input.mensagem, input.stock).map(
+      toChatVehicleCard,
+    ),
   });
 
   if (isOffScopeMessage(input.mensagem)) {

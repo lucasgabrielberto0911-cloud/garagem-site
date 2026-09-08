@@ -1,9 +1,11 @@
 import {
+  formatBrandName,
   formatCurrencyBRL,
+  formatKmBR,
   formatModelName,
-  formatNumberBR,
   formatVehicleLabel,
 } from "@/lib/format";
+import { parsePriceLimit } from "@/lib/chat-prompt";
 import { coverSrc } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import type { ChatVehicleRecord } from "@/lib/chat-stock";
@@ -12,6 +14,8 @@ export type ChatVehicleCard = {
   id: string;
   href: string;
   title: string;
+  brand: string;
+  model: string;
   version: string | null;
   year: number;
   km: number;
@@ -174,6 +178,8 @@ export function toChatVehicleCard(vehicle: ChatVehicleRecord): ChatVehicleCard {
     id: vehicle.id,
     href: vehiclePath(vehicle),
     title: formatVehicleLabel(vehicle.brand, vehicle.model),
+    brand: formatBrandName(vehicle.brand),
+    model: formatModelName(vehicle.model),
     version,
     year: vehicle.yearModel,
     km: vehicle.km,
@@ -183,13 +189,34 @@ export function toChatVehicleCard(vehicle: ChatVehicleRecord): ChatVehicleCard {
   };
 }
 
-export function chatVehicleMeta(vehicle: ChatVehicleCard) {
-  const bits = [
-    String(vehicle.year),
-    vehicle.color,
-    `${formatNumberBR(vehicle.km)} km`,
-  ].filter(Boolean);
-  return bits.join(" · ");
+/** Na faixa de preço, completa até 5 anúncios reais se o texto citou poucos. */
+export function selectChatVehicles(
+  reply: string,
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+  limit = 5,
+) {
+  const mentioned = matchVehiclesInReply(reply, stock, limit);
+  const budget = parsePriceLimit(mensagem);
+  if (budget == null) return mentioned;
+
+  const inBudget = [...stock]
+    .filter((vehicle) => vehicle.price <= budget)
+    .sort((a, b) => a.price - b.price);
+
+  const seen = new Set(mentioned.map((vehicle) => vehicle.id));
+  const merged = [...mentioned];
+  for (const vehicle of inBudget) {
+    if (seen.has(vehicle.id)) continue;
+    merged.push(vehicle);
+    seen.add(vehicle.id);
+    if (merged.length >= limit) break;
+  }
+  return (merged.length > 0 ? merged : inBudget).slice(0, limit);
+}
+
+export function chatVehicleKm(vehicle: ChatVehicleCard) {
+  return formatKmBR(vehicle.km);
 }
 
 export function chatVehiclePrice(vehicle: ChatVehicleCard) {
@@ -198,4 +225,9 @@ export function chatVehiclePrice(vehicle: ChatVehicleCard) {
 
 export function chatVehicleVersion(vehicle: ChatVehicleCard) {
   return vehicle.version ? formatModelName(vehicle.version) : null;
+}
+
+export function chatVehicleLabel(vehicle: ChatVehicleCard) {
+  const version = vehicle.version?.trim();
+  return `${vehicle.title}${version ? ` ${version}` : ""} ${vehicle.year}`.trim();
 }
