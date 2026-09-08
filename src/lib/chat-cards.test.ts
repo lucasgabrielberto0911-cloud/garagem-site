@@ -4,6 +4,7 @@ import {
   chatFollowupsAfterCards,
   chatStockExploreHref,
   chatStockExploreLabel,
+  chatVehicleGear,
   chatVehicleKm,
   isBareBudgetQuery,
   isChatVehicleListingLine,
@@ -253,6 +254,7 @@ test("com cards, a bolha some lista extra e fica só o gancho", () => {
 Fiat Palio Weekend Adventure 1.8 Flex 16V 2016 · 156.400 km · R$ 47.900
 Também tem Chevrolet Onix e Mitsubishi Lancer se quiser esticar.
 Tem o mais em conta, o de menor km e automático se houver.
+Qual desses estilos você prefere, hatch ou sedan?
 Qual perfil te serve?`;
   const palio: ChatVehicleRecord = {
     id: "cpaliogaragem000000000001",
@@ -271,6 +273,8 @@ Qual perfil te serve?`;
   const polished = polishChatReplyWithCards(leftover, cards);
   assert.match(polished, /70\.000/);
   assert.doesNotMatch(polished, /perfil/);
+  assert.doesNotMatch(polished, /hatch/);
+  assert.doesNotMatch(polished, /qual desses/i);
   assert.doesNotMatch(polished, /Onix/);
   assert.doesNotMatch(polished, /Lancer/);
   assert.doesNotMatch(polished, /156\.400/);
@@ -279,6 +283,31 @@ Qual perfil te serve?`;
     ["Automático até 70 mil?", "Financiar em 60x", "Aceita troca?"],
   );
   assert.equal(chatVehicleKm(cards[0]!), "156 mil km");
+  assert.equal(chatVehicleGear(cards[0]!), "Manual");
+  assert.equal(
+    chatVehicleGear(
+      toChatVehicleCard({ ...prisma, transmission: "Automático" }),
+    ),
+    "Auto",
+  );
+  assert.deepEqual(chatFollowupsAfterCards(null, cards), [
+    "Tem automático?",
+    "Financiar em 60x",
+    "Aceita troca?",
+  ]);
+  const autoCards = [
+    toChatVehicleCard({
+      ...prisma,
+      id: "cautogaragem0000000000001",
+      model: "Onix",
+      transmission: "Automático",
+      price: 56900,
+    }),
+  ];
+  assert.deepEqual(chatFollowupsAfterCards(null, autoCards), [
+    "Financiar em 60x",
+    "Aceita troca?",
+  ]);
 });
 
 test("financiamento sem carro citado não inventa anúncio", () => {

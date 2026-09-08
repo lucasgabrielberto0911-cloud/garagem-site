@@ -119,7 +119,7 @@ export function stripChatVehicleListingLines(
 
 const CARD_INTRO_MAX = 220;
 const CARD_FILLER =
-  /tem o mais em conta|o de menor km|automatico se houver|se quiser esticar|logo acima|qual perfil te serve/;
+  /tem o mais em conta|o de menor km|automatico se houver|se quiser esticar|logo acima|qual perfil te serve|qual desses|hatch ou sedan/;
 
 function sentenceMentionsUnshownVehicle(
   sentence: string,
@@ -373,13 +373,36 @@ export function chatVehicleKm(vehicle: ChatVehicleCard) {
   return formatKmBR(vehicle.km);
 }
 
+/** Câmbio curto no mini-anúncio — “Automático” estourava a linha do km. */
+export function chatVehicleGear(vehicle: ChatVehicleCard) {
+  const raw = vehicle.transmission?.trim();
+  if (!raw) return null;
+  const folded = fold(raw);
+  if (/cvt/.test(folded) && !/automatic/.test(folded)) return "CVT";
+  if (/automatic|cvt/.test(folded)) return "Auto";
+  if (/manual/.test(folded)) return "Manual";
+  return raw;
+}
+
 /** Atalhos depois dos mini-anúncios, com a faixa que o visitante já pediu. */
+function isAutomaticCard(vehicle: ChatVehicleCard) {
+  return /automatic|cvt/.test(fold(vehicle.transmission ?? ""));
+}
+
+function isManualCard(vehicle: ChatVehicleCard) {
+  const folded = fold(vehicle.transmission ?? "");
+  return /manual/.test(folded) && !/automatic/.test(folded);
+}
+
 export function chatFollowupsAfterCards(
   stockHref: string | null,
   vehicles: ChatVehicleCard[],
 ) {
   if (vehicles.length === 0) return [];
-  if (stockHref && /transmission=/i.test(stockHref)) {
+  const alreadyAuto =
+    (stockHref != null && /transmission=/i.test(stockHref)) ||
+    (vehicles.some(isAutomaticCard) && !vehicles.some(isManualCard));
+  if (alreadyAuto) {
     return ["Financiar em 60x", "Aceita troca?"];
   }
   const max = stockHref?.match(/maxPrice=(\d+)/);

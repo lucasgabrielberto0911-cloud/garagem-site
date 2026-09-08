@@ -12,6 +12,7 @@ import {
 import {
   chatFollowupsAfterCards,
   chatStockExploreLabel,
+  chatVehicleGear,
   chatVehicleKm,
   chatVehicleLabel,
   chatVehiclePrice,
@@ -102,9 +103,8 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
   const label = chatVehicleLabel(vehicle);
   const meta = [
     String(vehicle.year || ""),
-    vehicle.color,
     chatVehicleKm(vehicle),
-    vehicle.transmission,
+    chatVehicleGear(vehicle),
   ]
     .filter((item): item is string => Boolean(item && item !== "0"))
     .join(" · ");
@@ -159,7 +159,7 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
             </span>
           ) : null}
           <span className="mt-1.5 flex items-baseline justify-between gap-2">
-            <span className="font-display text-[15px] font-bold leading-none text-cream">
+            <span className="font-display text-[16px] font-bold leading-none tabular-nums tracking-tight text-cream">
               {chatVehiclePrice(vehicle)}
             </span>
             <span className="font-display text-[10px] font-semibold uppercase tracking-wide text-brand">
