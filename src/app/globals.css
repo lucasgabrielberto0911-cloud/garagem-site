@@ -372,21 +372,36 @@ body:has([data-vehicle-mobile-bar]) .site-chat {
   .site-chat.is-open {
     left: 0.5rem;
     right: 0.5rem;
+    top: 0.5rem;
+    bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.5rem);
+    height: auto;
     align-items: stretch;
   }
 
   .site-chat.is-open .site-chat-panel {
     width: 100%;
-    height: calc(100dvh - 5.35rem - env(safe-area-inset-bottom, 0px));
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+    animation: fadeIn 0.2s ease both;
   }
 
   .site-chat.is-open .site-chat-launcher {
     display: none;
   }
+
+  /*
+   * Safari no iPhone dá zoom em input/textarea com fonte < 16px.
+   * text-base no campo já cobre; isto impede regressão de utilitário.
+   */
+  .site-chat-panel textarea,
+  .site-chat-panel textarea:focus {
+    font-size: 16px;
+  }
 }
 
-body:has([data-vehicle-mobile-bar]) .site-chat.is-open .site-chat-panel {
-  height: calc(100dvh - 6.35rem - env(safe-area-inset-bottom, 0px));
+body:has([data-vehicle-mobile-bar]) .site-chat.is-open {
+  bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .site-chat-panel {

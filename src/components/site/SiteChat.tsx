@@ -320,6 +320,7 @@ export function SiteChat() {
   const [pending, setPending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
   const keepFocusRef = useRef(false);
 
   useEffect(() => {
@@ -373,6 +374,44 @@ export function SiteChat() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const shell = shellRef.current;
+    const viewport = window.visualViewport;
+    if (!shell || !viewport) return;
+
+    const sync = () => {
+      if (window.matchMedia("(min-width: 1024px)").matches) {
+        shell.style.top = "";
+        shell.style.height = "";
+        shell.style.bottom = "";
+        return;
+      }
+      const covered =
+        window.innerHeight - viewport.height - viewport.offsetTop;
+      if (covered > 120) {
+        shell.style.top = `${Math.max(0, viewport.offsetTop) + 8}px`;
+        shell.style.height = `${Math.max(200, viewport.height - 16)}px`;
+        shell.style.bottom = "auto";
+      } else {
+        shell.style.top = "";
+        shell.style.height = "";
+        shell.style.bottom = "";
+      }
+    };
+
+    sync();
+    viewport.addEventListener("resize", sync);
+    viewport.addEventListener("scroll", sync);
+    return () => {
+      viewport.removeEventListener("resize", sync);
+      viewport.removeEventListener("scroll", sync);
+      shell.style.top = "";
+      shell.style.height = "";
+      shell.style.bottom = "";
+    };
   }, [open]);
 
   async function send(text: string) {
@@ -449,6 +488,7 @@ export function SiteChat() {
 
   return (
     <div
+      ref={shellRef}
       className={`site-chat pointer-events-none fixed z-[60] flex flex-col items-end gap-3${
         open ? " is-open" : ""
       }`}
@@ -600,7 +640,7 @@ export function SiteChat() {
                 maxLength={800}
                 rows={1}
                 autoComplete="off"
-                className="min-h-[48px] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-asphalt px-3 py-2.5 text-sm text-cream outline-none placeholder:text-muted focus:border-white/25 focus:bg-[#141416]"
+                className="min-h-[48px] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-asphalt px-3 py-2.5 text-base text-cream outline-none placeholder:text-muted focus:border-white/25 focus:bg-[#141416] lg:text-sm"
               />
               <button
                 type="submit"
