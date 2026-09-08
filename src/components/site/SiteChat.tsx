@@ -135,16 +135,25 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
           />
         </span>
         <span className="flex min-w-0 flex-1 flex-col justify-center py-0.5">
-          <span className="block truncate font-display text-[13px] font-semibold leading-snug text-cream">
+          <span
+            className="block truncate font-display text-[13px] font-semibold leading-snug text-cream"
+            title={vehicle.title}
+          >
             {vehicle.title}
           </span>
           {version ? (
-            <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted">
+            <span
+              className="mt-0.5 block truncate text-[11px] leading-snug text-muted"
+              title={version}
+            >
               {version}
             </span>
           ) : null}
           {meta ? (
-            <span className="mt-0.5 block truncate text-[11px] leading-snug text-cream/70">
+            <span
+              className="mt-0.5 block truncate text-[11px] leading-snug text-cream/70"
+              title={meta}
+            >
               {meta}
             </span>
           ) : null}
@@ -365,10 +374,15 @@ export function SiteChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mensagem,
-          historico: messages.map((item) => ({
-            role: item.role,
-            content: item.content,
-          })),
+          historico: messages
+            .filter((item, index) => {
+              if (index !== 0) return true;
+              return item.content !== OPENING.content;
+            })
+            .map((item) => ({
+              role: item.role,
+              content: item.content,
+            })),
         }),
       });
       const data = (await response.json().catch(() => ({}))) as {
@@ -405,8 +419,16 @@ export function SiteChat() {
     }
   }
 
-  const showSuggestions = messages.length === 1 && !pending;
+  const started = messages.length > 1;
+  const showSuggestions = !started && !pending;
   const canSend = !pending && draft.trim().length >= 2;
+
+  function resetConversation() {
+    if (pending) return;
+    keepFocusRef.current = false;
+    setMessages([OPENING]);
+    setDraft("");
+  }
 
   return (
     <div
@@ -469,8 +491,9 @@ export function SiteChat() {
             className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3"
             aria-live="polite"
           >
-            {messages.map((message, index) =>
-              message.role === "user" ? (
+            {messages.map((message, index) => {
+              if (index === 0 && started) return null;
+              return message.role === "user" ? (
                 <div
                   key={`user-${index}`}
                   className="flex justify-end"
@@ -491,8 +514,8 @@ export function SiteChat() {
                     stockHref={message.stockHref}
                   />
                 </AssistantRow>
-              ),
-            )}
+              );
+            })}
             {pending ? (
               <AssistantRow pending latest>
                 <span className="sr-only">Digitando</span>
@@ -560,8 +583,17 @@ export function SiteChat() {
                 <IconSend className="h-5 w-5" />
               </button>
             </div>
-            <p className="mt-2 text-[10px] leading-relaxed text-muted">
-              Enter envia. Ao conversar, podemos te chamar no WhatsApp.
+            <p className="mt-2 flex items-center justify-between gap-2 text-[10px] leading-relaxed text-muted">
+              <span>Enter envia. Ao conversar, podemos te chamar no WhatsApp.</span>
+              {started ? (
+                <button
+                  type="button"
+                  onClick={resetConversation}
+                  className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-cream/70 transition hover:text-cream"
+                >
+                  Nova conversa
+                </button>
+              ) : null}
             </p>
           </form>
         </section>
