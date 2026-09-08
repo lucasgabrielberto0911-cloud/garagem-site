@@ -12,7 +12,7 @@ import { isUpstashConfigured } from "@/lib/rate-limit";
 export type ChatRateLimitMode = "upstash" | "memory";
 
 export function chatRateLimitStatus(
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): {
   mode: ChatRateLimitMode;
   launchException?: string;
@@ -27,7 +27,9 @@ export function chatRateLimitStatus(
   };
 }
 
-export function geminiKeyConfigured(env: NodeJS.ProcessEnv = process.env) {
+export function geminiKeyConfigured(
+  env: Record<string, string | undefined> = process.env,
+) {
   return Boolean(
     env.GEMINI_API_KEY?.trim() ||
       env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() ||

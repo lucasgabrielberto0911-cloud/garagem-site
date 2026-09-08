@@ -37,7 +37,7 @@ export function clearRateLimit(key: string) {
 }
 
 export function isUpstashConfigured(
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ) {
   return Boolean(
     env.UPSTASH_REDIS_REST_URL?.trim() &&

@@ -11,7 +11,7 @@ test("Upstash ausente vira exceção operacional explícita", () => {
   const empty = {
     UPSTASH_REDIS_REST_URL: "",
     UPSTASH_REDIS_REST_TOKEN: "",
-  } as NodeJS.ProcessEnv;
+  };
   assert.equal(isUpstashConfigured(empty), false);
   const status = chatRateLimitStatus(empty);
   assert.equal(status.mode, "memory");
@@ -22,7 +22,7 @@ test("Upstash configurado libera o lançamento do rate limit", () => {
   const ready = {
     UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
     UPSTASH_REDIS_REST_TOKEN: "token",
-  } as NodeJS.ProcessEnv;
+  };
   assert.equal(isUpstashConfigured(ready), true);
   assert.deepEqual(chatRateLimitStatus(ready), { mode: "upstash" });
 });
@@ -30,7 +30,7 @@ test("Upstash configurado libera o lançamento do rate limit", () => {
 test("gemini configurado não vaza a chave", () => {
   const env = {
     GEMINI_API_KEY: "secret-key",
-  } as NodeJS.ProcessEnv;
+  };
   assert.equal(geminiKeyConfigured(env), true);
   assert.doesNotMatch(JSON.stringify(geminiKeyConfigured(env)), /secret-key/);
 });
