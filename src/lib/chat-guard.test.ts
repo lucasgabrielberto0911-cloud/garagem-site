@@ -13,6 +13,11 @@ import {
   sanitizeSensitiveText,
 } from "./chat-guard";
 import { parseCriarLeadArgs } from "./chat-lead";
+import {
+  CHAT_FINANCE_REPLY,
+  CHAT_TRADE_REPLY,
+  chatPolicyShortcut,
+} from "./chat-stock";
 import { runChatTurn } from "./chat-turn";
 
 test("perguntas de estoque, financiamento geral e lead ficam no escopo", () => {
@@ -123,4 +128,39 @@ test("turno fora de escopo não chama o Gemini", async () => {
   });
   assert.equal(called, 0);
   assert.equal(repeat.reply, CHAT_OFF_SCOPE_REPEAT_REPLY);
+});
+
+test("atalhos de financiar e troca não pedem modelo de novo", async () => {
+  assert.equal(chatPolicyShortcut("Financiar em 60x"), "finance");
+  assert.equal(chatPolicyShortcut("Financiamento em 60x"), "finance");
+  assert.equal(chatPolicyShortcut("Aceita troca?"), "troca");
+  assert.equal(chatPolicyShortcut("Quero financiar o HB20"), null);
+
+  let called = 0;
+  const finance = await runChatTurn({
+    mensagem: "Financiar em 60x",
+    historico: [],
+    stock: [],
+    generate: async () => {
+      called += 1;
+      return { text: "não deveria", functionCall: null };
+    },
+  });
+  assert.equal(called, 0);
+  assert.equal(finance.reply, CHAT_FINANCE_REPLY);
+  assert.doesNotMatch(finance.reply, /qual modelo/i);
+  assert.equal(finance.vehicles.length, 0);
+
+  const trade = await runChatTurn({
+    mensagem: "Aceita troca?",
+    historico: [],
+    stock: [],
+    generate: async () => {
+      called += 1;
+      return { text: "não deveria", functionCall: null };
+    },
+  });
+  assert.equal(called, 0);
+  assert.equal(trade.reply, CHAT_TRADE_REPLY);
+  assert.doesNotMatch(trade.reply, /qual carro/i);
 });

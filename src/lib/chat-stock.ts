@@ -231,6 +231,26 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
   return `Até ${ceiling} eu começaria por estes:\n${lines.join("\n")}`;
 }
 
+export const CHAT_FINANCE_REPLY =
+  "A gente financia em até 60x e aceita carro ou moto na troca. Parcela o consultor monta no WhatsApp — eu não fecho valor pelo chat. https://wa.me/5527996330706";
+
+export const CHAT_TRADE_REPLY =
+  "Sempre aceitamos carro ou moto na troca. A avaliação o consultor faz no WhatsApp, de preferência com fotos. https://wa.me/5527996330706";
+
+/** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
+export function chatPolicyShortcut(mensagem: string): "finance" | "troca" | null {
+  const folded = normalize(mensagem);
+  if (
+    /^(financiamento em 60x|financiar em 60x|como funciona o financiamento|voces financiam(?: em quantas vezes)?)$/.test(
+      folded,
+    )
+  ) {
+    return "finance";
+  }
+  if (/^(aceita troca|faz troca|tem troca)$/.test(folded)) return "troca";
+  return null;
+}
+
 /** Resposta da loja sem Gemini — só dados reais do estoque e política fixa. */
 export function localGarageReply(
   mensagem: string,
@@ -240,8 +260,12 @@ export function localGarageReply(
   const byBudget = listStockByBudget(mensagem, stock);
   if (byBudget) return byBudget;
 
+  const policy = chatPolicyShortcut(mensagem);
+  if (policy === "finance") return CHAT_FINANCE_REPLY;
+  if (policy === "troca") return CHAT_TRADE_REPLY;
+
   if (/\b(financi\w*|parcela|juros|60x)\b/.test(text)) {
-    return "A gente financia em até 60x e aceita carro ou moto na troca. Parcela e aprovação o consultor monta no WhatsApp com o carro que você escolher — eu não fecho valor pelo chat. Qual modelo você tem em mente? https://wa.me/5527996330706";
+    return CHAT_FINANCE_REPLY;
   }
   if (/\bgarantia\b/.test(text)) {
     return "Garantia padrão de 3 meses em todos os veículos. Se quiser, te mostro um carro do estoque ou um consultor detalha no WhatsApp: https://wa.me/5527996330706";
@@ -250,7 +274,7 @@ export function localGarageReply(
     return "Atendemos Aracruz, Vitória, Linhares, Serra e Vila Velha (loja digital). Um consultor confirma o melhor horário no WhatsApp: https://wa.me/5527996330706";
   }
   if (/\btroca\b/.test(text)) {
-    return "Sempre aceitamos veículo na troca — carro ou moto. A avaliação um consultor faz no WhatsApp, de preferência com fotos. Qual carro do estoque você quer cruzar com a troca? https://wa.me/5527996330706";
+    return CHAT_TRADE_REPLY;
   }
 
   const match =

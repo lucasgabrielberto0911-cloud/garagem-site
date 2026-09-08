@@ -27,6 +27,9 @@ import {
   parseCriarLeadArgs,
 } from "@/lib/chat-lead";
 import {
+  CHAT_FINANCE_REPLY,
+  CHAT_TRADE_REPLY,
+  chatPolicyShortcut,
   isIncompleteStockReply,
   localGarageReply,
   toChatStockLine,
@@ -76,6 +79,10 @@ export async function runChatTurn(input: {
   if (isOffScopeMessage(input.mensagem)) {
     return finish(offScopeReply(input.historico));
   }
+
+  const policy = chatPolicyShortcut(input.mensagem);
+  if (policy === "finance") return finish(CHAT_FINANCE_REPLY);
+  if (policy === "troca") return finish(CHAT_TRADE_REPLY);
 
   const fromStock = () => {
     if (isChatPing(input.mensagem)) return CHAT_PING_REPLY;
