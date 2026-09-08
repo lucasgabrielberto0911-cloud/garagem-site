@@ -23,6 +23,7 @@ const biz: ChatVehicleRecord = {
   color: "Vermelha",
   transmission: "Manual",
   fuel: "Flex",
+  category: "moto",
   photos: [
     {
       url: "https://cdn.example/biz.jpg",
@@ -43,6 +44,7 @@ const prisma: ChatVehicleRecord = {
   transmission: "Manual",
   fuel: "Flex",
   photos: [],
+  category: "carro",
 };
 
 const compass: ChatVehicleRecord = {
@@ -56,6 +58,7 @@ const compass: ChatVehicleRecord = {
   color: "Branco",
   transmission: "Automático",
   fuel: "Flex",
+  category: "carro",
 };
 
 const LIST = `Até R$ 70.000 estes cabem no orçamento. Eu começaria por estes:
@@ -123,14 +126,24 @@ Fiat Palio Weekend Adventure 1.8 Flex 16V 2016 · 156.400 km · R$ 47.900`;
 });
 
 test("faixa de preço completa anúncios se o texto citou poucos", () => {
+  const onix: ChatVehicleRecord = {
+    ...prisma,
+    id: "conixgaragem0000000000001",
+    model: "Onix",
+    price: 39900,
+  };
   const picked = selectChatVehicles(
-    "Honda BIZ 125 EX 125 FLEX 2023 · 22.000 km · R$ 17.900",
+    "Chevrolet Prisma Sed. Joy/LS 1.0 8V FlexPower 4p 2019 · 152.000 km · R$ 52.900",
     "Quais carros até 70 mil?",
-    [biz, prisma, compass],
+    [biz, prisma, compass, onix],
   );
   assert.deepEqual(
     picked.map((vehicle) => vehicle.id),
-    [biz.id, prisma.id],
+    [onix.id, prisma.id],
+  );
+  assert.equal(
+    picked.some((vehicle) => vehicle.id === biz.id),
+    false,
   );
 });
 
@@ -150,35 +163,57 @@ test("orçamento genérico ignora carro acima da faixa e aponta o estoque", () =
   );
   assert.deepEqual(
     picked.map((vehicle) => vehicle.id),
-    [biz.id, extra.id, prisma.id],
+    [extra.id, prisma.id],
   );
   assert.equal(
-    picked.some((vehicle) => vehicle.id === compass.id),
+    picked.some((vehicle) => vehicle.id === compass.id || vehicle.id === biz.id),
     false,
   );
   assert.equal(
-    chatStockExploreHref("Quais carros até 70 mil?", [biz, prisma, compass, extra], 3),
+    chatStockExploreHref("Quais carros até 70 mil?", [biz, prisma, compass, extra], 2),
     null,
   );
   assert.equal(
     chatStockExploreHref(
       "Quais carros até 70 mil?",
       [biz, prisma, compass, extra, { ...extra, id: "cextra2garagem0000000001", price: 25000 }],
-      3,
+      2,
     ),
-    "/estoque?maxPrice=70000",
+    "/estoque?maxPrice=70000&category=carro",
   );
   assert.match(chatStockExploreLabel("/estoque?maxPrice=70000"), /70\.000/);
 });
 
 test("pedido de modelo na faixa mantém o carro citado na frente", () => {
+  const onix: ChatVehicleRecord = {
+    ...prisma,
+    id: "conixgaragem0000000000001",
+    model: "Onix",
+    price: 39900,
+  };
   const picked = selectChatVehicles(
     "Chevrolet Prisma Sed. Joy/LS 1.0 8V FlexPower 4p 2019 · 152.000 km · R$ 52.900",
     "Tem Prisma até 70 mil?",
-    [biz, prisma, compass],
+    [biz, prisma, compass, onix],
   );
   assert.equal(picked[0]?.id, prisma.id);
-  assert.equal(picked[1]?.id, biz.id);
+  assert.equal(picked[1]?.id, onix.id);
+  assert.equal(
+    picked.some((vehicle) => vehicle.id === biz.id),
+    false,
+  );
+});
+
+test("pedido de moto na faixa não mistura carro", () => {
+  const picked = selectChatVehicles(
+    "Honda BIZ 125 EX 125 FLEX 2023 · 22.000 km · R$ 17.900",
+    "Tem moto até 20 mil?",
+    [biz, prisma, compass],
+  );
+  assert.deepEqual(
+    picked.map((vehicle) => vehicle.id),
+    [biz.id],
+  );
 });
 
 test("financiamento sem carro citado não inventa anúncio", () => {

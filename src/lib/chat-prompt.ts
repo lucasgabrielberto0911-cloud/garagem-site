@@ -79,6 +79,7 @@ export type ChatStockLine = {
   color: string | null;
   transmission: string;
   fuel: string;
+  category?: string;
 };
 
 export function formatChatPrice(value: number) {
@@ -90,7 +91,8 @@ function stockLineLabel(vehicle: ChatStockLine, withExtras = false) {
   const base = `${vehicle.brand} ${vehicle.model}${version} ${vehicle.year} · ${vehicle.km.toLocaleString("pt-BR")} km · ${formatChatPrice(vehicle.price)}`;
   if (!withExtras) return base;
   const color = vehicle.color?.trim() ? vehicle.color.trim() : "cor não informada";
-  return `${base} · ${color} · ${vehicle.transmission} · ${vehicle.fuel}`;
+  const kind = vehicle.category === "moto" ? "moto" : "carro";
+  return `${base} · ${color} · ${vehicle.transmission} · ${vehicle.fuel} · ${kind}`;
 }
 
 export function formatStockForPrompt(vehicles: ChatStockLine[]) {

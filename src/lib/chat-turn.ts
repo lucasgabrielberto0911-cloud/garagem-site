@@ -30,6 +30,7 @@ import {
   isIncompleteStockReply,
   localGarageReply,
   toChatStockLine,
+  filterStockByCategory,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 
@@ -49,7 +50,7 @@ export async function runChatTurn(input: {
   createLead?: typeof createChatLead;
 }): Promise<ChatTurnResult> {
   const systemPrompt = buildChatSystemPrompt(
-    input.stock.map(toChatStockLine),
+    filterStockByCategory(input.stock, input.mensagem).map(toChatStockLine),
     input.mensagem,
   );
   const generate = input.generate ?? generateChatReply;

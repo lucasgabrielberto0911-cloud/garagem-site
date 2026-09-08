@@ -17,6 +17,7 @@ export const CHAT_VEHICLE_SELECT = {
   color: true,
   transmission: true,
   fuel: true,
+  category: true,
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,
@@ -35,6 +36,7 @@ export type ChatVehicleRecord = {
   color: string | null;
   transmission: string;
   fuel: string;
+  category?: string;
   photos?: Array<{ url: string; thumbnailUrl?: string | null }>;
 };
 
@@ -49,6 +51,7 @@ export function toChatStockLine(vehicle: ChatVehicleRecord): ChatStockLine {
     color: vehicle.color,
     transmission: vehicle.transmission,
     fuel: vehicle.fuel,
+    category: vehicle.category ?? "carro",
   };
 }
 
@@ -78,6 +81,37 @@ function normalize(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+/** “carros até 70 mil” não mistura moto; “moto até 15 mil” não mistura carro. */
+export function parseVehicleCategoryFilter(
+  mensagem: string,
+): "carro" | "moto" | null {
+  const folded = normalize(mensagem);
+  const wantsMoto = /\b(moto|motos|motocicleta|motoca|scooter)\b/.test(folded);
+  const wantsCar = /\b(carro|carros|hatch|sedan|suv|pickup|caminhonete)\b/.test(
+    folded,
+  );
+  if (wantsMoto && !wantsCar) return "moto";
+  if (wantsCar && !wantsMoto) return "carro";
+  return null;
+}
+
+/** Na faixa de preço, o padrão da loja é carro — moto só se o visitante pedir. */
+export function resolveChatCategory(mensagem: string): "carro" | "moto" | null {
+  return parseVehicleCategoryFilter(mensagem) ??
+    (parsePriceLimit(mensagem) != null ? "carro" : null);
+}
+
+export function filterStockByCategory(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+) {
+  const category = resolveChatCategory(mensagem);
+  if (!category) return stock;
+  return stock.filter(
+    (vehicle) => (vehicle.category ?? "carro") === category,
+  );
 }
 
 /** Casa o texto do interesse com um anúncio do estoque, se der. */
@@ -137,7 +171,7 @@ export function isIncompleteStockReply(reply: string) {
 export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) {
   const limit = parsePriceLimit(mensagem);
   if (limit == null) return null;
-  const matches = stock
+  const matches = filterStockByCategory(stock, mensagem)
     .filter((vehicle) => vehicle.price <= limit)
     .sort((a, b) => a.price - b.price);
   const ceiling = `R$ ${limit.toLocaleString("pt-BR")}`;

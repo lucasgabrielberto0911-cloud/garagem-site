@@ -8,7 +8,11 @@ import {
 import { parsePriceLimit } from "@/lib/chat-prompt";
 import { coverSrc } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
-import type { ChatVehicleRecord } from "@/lib/chat-stock";
+import {
+  filterStockByCategory,
+  resolveChatCategory,
+  type ChatVehicleRecord,
+} from "@/lib/chat-stock";
 
 export const CHAT_CARD_LIMIT = 3;
 
@@ -236,11 +240,12 @@ export function selectChatVehicles(
   stock: ChatVehicleRecord[],
   limit = CHAT_CARD_LIMIT,
 ) {
-  const mentioned = matchVehiclesInReply(reply, stock, Math.max(limit, 5));
+  const pool = filterStockByCategory(stock, mensagem);
+  const mentioned = matchVehiclesInReply(reply, pool, Math.max(limit, 5));
   const budget = parsePriceLimit(mensagem);
   if (budget == null) return mentioned.slice(0, limit);
 
-  const inBudget = inBudgetStock(stock, budget);
+  const inBudget = inBudgetStock(pool, budget);
   const mentionedInBudget = mentioned.filter((vehicle) => vehicle.price <= budget);
 
   if (mentionedInBudget.length > 0 && !isBareBudgetQuery(mensagem)) {
@@ -255,12 +260,18 @@ export function chatStockExploreHref(
   shown: number,
 ) {
   const budget = parsePriceLimit(mensagem);
-  const pool =
+  const category = resolveChatCategory(mensagem);
+  const pool = filterStockByCategory(stock, mensagem);
+  const priced =
     budget == null
-      ? stock
-      : stock.filter((vehicle) => vehicle.price <= budget);
-  if (pool.length <= shown) return null;
-  return budget == null ? "/estoque" : `/estoque?maxPrice=${budget}`;
+      ? pool
+      : pool.filter((vehicle) => vehicle.price <= budget);
+  if (priced.length <= shown) return null;
+  const params = new URLSearchParams();
+  if (budget != null) params.set("maxPrice", String(budget));
+  if (category) params.set("category", category);
+  const query = params.toString();
+  return query ? `/estoque?${query}` : "/estoque";
 }
 
 export function chatStockExploreLabel(href: string) {
