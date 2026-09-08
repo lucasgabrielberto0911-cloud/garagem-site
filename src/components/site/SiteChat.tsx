@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   IconChat,
@@ -7,6 +8,13 @@ import {
   IconSend,
   IconWhatsApp,
 } from "@/components/site/icons";
+import {
+  chatVehicleMeta,
+  chatVehiclePrice,
+  chatVehicleVersion,
+  stripChatVehicleListingLines,
+  type ChatVehicleCard,
+} from "@/lib/chat-cards";
 import { chatWhatsAppCta, displayChatText, splitChatLinks } from "@/lib/chat-text";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
@@ -14,10 +22,12 @@ import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
+  vehicles?: ChatVehicleCard[];
 };
 
 const CHAT_LOGO_SRC = "/apple-touch-icon.png";
 const ASSISTANT_NAME = "Assistente Garagem";
+const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 
 const OPENING: ChatMessage = {
   role: "assistant",
@@ -90,8 +100,97 @@ function ChatWhatsAppButton({
   );
 }
 
-function ChatText({ text }: { text: string }) {
-  const visible = displayChatText(text);
+function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
+  const version = chatVehicleVersion(vehicle);
+  const photo = vehicle.photo || VEHICLE_PLACEHOLDER;
+  return (
+    <Link
+      href={vehicle.href}
+      prefetch={false}
+      className="mt-2 flex overflow-hidden rounded-xl border border-white/10 bg-[#121214] transition hover:border-brand/50"
+      aria-label={`${vehicle.title} ${vehicle.year} — ${chatVehiclePrice(vehicle)}. Ver anúncio`}
+    >
+      <span className="relative w-[7.25rem] min-h-[4.75rem] shrink-0 self-stretch overflow-hidden bg-asphalt">
+        {/* eslint-disable-next-line @next/next/no-img-element -- capa remota, sem cota /_next/image */}
+        <img
+          src={photo}
+          alt=""
+          width={116}
+          height={76}
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(event) => {
+            const image = event.currentTarget;
+            if (image.dataset.fallbackUsed === "1") return;
+            image.dataset.fallbackUsed = "1";
+            image.src = VEHICLE_PLACEHOLDER;
+          }}
+        />
+      </span>
+      <span className="min-w-0 flex-1 px-2.5 py-2">
+        <span className="block truncate font-display text-[13px] font-semibold leading-snug text-cream">
+          {vehicle.title}
+        </span>
+        {version ? (
+          <span className="mt-0.5 block truncate text-[11px] text-muted">
+            {version}
+          </span>
+        ) : null}
+        <span className="mt-1 block font-display text-sm font-bold leading-none text-cream">
+          {chatVehiclePrice(vehicle)}
+        </span>
+        <span className="mt-1 block truncate text-[11px] text-muted">
+          {chatVehicleMeta(vehicle)}
+        </span>
+        <span className="mt-1 block font-display text-[10px] font-semibold uppercase tracking-wide text-brand">
+          Ver anúncio
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+function readVehicleCards(raw: unknown): ChatVehicleCard[] {
+  if (!Array.isArray(raw)) return [];
+  const cards: ChatVehicleCard[] = [];
+  for (const item of raw.slice(0, 5)) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Partial<ChatVehicleCard>;
+    const id = String(row.id ?? "").trim();
+    const href = String(row.href ?? "").trim();
+    const title = String(row.title ?? "").trim();
+    if (!id || !title || !href.startsWith("/estoque/")) continue;
+    const photoRaw = String(row.photo ?? "").trim();
+    const photo =
+      /^https:\/\//i.test(photoRaw) || photoRaw.startsWith("/")
+        ? photoRaw
+        : null;
+    cards.push({
+      id,
+      href,
+      title,
+      version: row.version ? String(row.version) : null,
+      year: Number(row.year) || 0,
+      km: Number(row.km) || 0,
+      price: Number(row.price) || 0,
+      color: row.color ? String(row.color) : null,
+      photo,
+    });
+  }
+  return cards;
+}
+
+function ChatText({
+  text,
+  vehicles = [],
+}: {
+  text: string;
+  vehicles?: ChatVehicleCard[];
+}) {
+  const source =
+    vehicles.length > 0 ? stripChatVehicleListingLines(text) : text;
+  const visible = displayChatText(source);
   const cta = chatWhatsAppCta(text);
   const parts = splitChatLinks(visible).filter(
     (part) => part.type !== "link" || !/wa\.me\//i.test(part.href),
@@ -118,6 +217,9 @@ function ChatText({ text }: { text: string }) {
           )}
         </p>
       ) : null}
+      {vehicles.map((vehicle) => (
+        <ChatVehicleMini key={vehicle.id} vehicle={vehicle} />
+      ))}
       {cta ? (
         <ChatWhatsAppButton href={cta.href} label={cta.label} benefit={cta.benefit} />
       ) : null}
@@ -206,6 +308,7 @@ export function SiteChat() {
       });
       const data = (await response.json().catch(() => ({}))) as {
         reply?: string;
+        vehicles?: unknown;
       };
       setMessages((current) => [
         ...current,
@@ -214,6 +317,7 @@ export function SiteChat() {
           content:
             data.reply?.trim() ||
             "Não consegui responder agora. Fala com a gente no WhatsApp: https://wa.me/5527996330706",
+          vehicles: readVehicleCards(data.vehicles),
         },
       ]);
     } catch {
@@ -302,7 +406,7 @@ export function SiteChat() {
                 </div>
               ) : (
                 <AssistantRow key={`assistant-${index}`}>
-                  <ChatText text={message.content} />
+                  <ChatText text={message.content} vehicles={message.vehicles} />
                 </AssistantRow>
               ),
             )}

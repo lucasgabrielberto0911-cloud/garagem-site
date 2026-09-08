@@ -1,4 +1,9 @@
 import {
+  matchVehiclesInReply,
+  toChatVehicleCard,
+  type ChatVehicleCard,
+} from "@/lib/chat-cards";
+import {
   isChatPing,
   isOffScopeMessage,
   looksLikeOffScopeRedirect,
@@ -30,6 +35,7 @@ import {
 export type ChatTurnResult = {
   reply: string;
   leadCreated: boolean;
+  vehicles: ChatVehicleCard[];
 };
 
 export async function runChatTurn(input: {
@@ -48,8 +54,14 @@ export async function runChatTurn(input: {
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
 
+  const finish = (reply: string, leadCreated = false): ChatTurnResult => ({
+    reply,
+    leadCreated,
+    vehicles: matchVehiclesInReply(reply, input.stock).map(toChatVehicleCard),
+  });
+
   if (isOffScopeMessage(input.mensagem)) {
-    return { reply: offScopeReply(input.historico), leadCreated: false };
+    return finish(offScopeReply(input.historico));
   }
 
   const fromStock = () => {
@@ -65,22 +77,22 @@ export async function runChatTurn(input: {
       mensagem: input.mensagem,
     });
   } catch {
-    return { reply: fromStock(), leadCreated: false };
+    return finish(fromStock());
   }
 
   const generated = first.text?.trim() ?? "";
   if (!first.functionCall && (!generated || generated === CHAT_FALLBACK_REPLY)) {
-    return { reply: fromStock(), leadCreated: false };
+    return finish(fromStock());
   }
   if (!first.functionCall && isChatPing(input.mensagem) && looksLikeOffScopeRedirect(generated)) {
-    return { reply: CHAT_PING_REPLY, leadCreated: false };
+    return finish(CHAT_PING_REPLY);
   }
   if (
     !first.functionCall &&
     parsePriceLimit(input.mensagem) != null &&
     isIncompleteStockReply(generated)
   ) {
-    return { reply: fromStock(), leadCreated: false };
+    return finish(fromStock());
   }
 
   if (first.functionCall?.name === "criar_lead") {
@@ -103,15 +115,12 @@ export async function runChatTurn(input: {
         } catch {
           // confirmação é extra — o lead já foi gravado
         }
-        return { reply, leadCreated: true };
+        return finish(reply, true);
       } catch {
         // segue para o texto do modelo ou fallback
       }
     }
   }
 
-  return {
-    reply: first.text?.trim() || CHAT_FALLBACK_REPLY,
-    leadCreated: false,
-  };
+  return finish(first.text?.trim() || CHAT_FALLBACK_REPLY);
 }

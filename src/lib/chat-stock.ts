@@ -17,6 +17,11 @@ export const CHAT_VEHICLE_SELECT = {
   color: true,
   transmission: true,
   fuel: true,
+  photos: {
+    orderBy: { order: "asc" as const },
+    take: 1,
+    select: { url: true, thumbnailUrl: true },
+  },
 } as const;
 
 export type ChatVehicleRecord = {
@@ -30,6 +35,7 @@ export type ChatVehicleRecord = {
   color: string | null;
   transmission: string;
   fuel: string;
+  photos?: Array<{ url: string; thumbnailUrl?: string | null }>;
 };
 
 export function toChatStockLine(vehicle: ChatVehicleRecord): ChatStockLine {

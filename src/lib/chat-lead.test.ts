@@ -167,6 +167,9 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
   assert.match(existing.reply, /64900/);
   assert.match(existing.reply, /68450/);
   assert.equal(existing.leadCreated, false);
+  assert.equal(existing.vehicles.length, 1);
+  assert.equal(existing.vehicles[0]?.id, hb20.id);
+  assert.match(existing.vehicles[0]?.href ?? "", /estoque/);
 
   const missing = await runChatTurn({
     mensagem: "Tem Porsche Cayenne 2024?",
@@ -227,6 +230,8 @@ test("lista vazia do modelo é preenchida com o estoque até o valor", async () 
   });
   assert.match(result.reply, /HB20/);
   assert.doesNotMatch(result.reply, /Compass/);
+  assert.equal(result.vehicles.length, 1);
+  assert.equal(result.vehicles[0]?.id, hb20.id);
 });
 
 test("eae recusado pelo modelo vira cumprimento da loja", async () => {

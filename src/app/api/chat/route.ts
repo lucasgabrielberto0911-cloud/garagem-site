@@ -56,6 +56,7 @@ export async function POST(request: Request) {
           reply:
             "Você mandou várias mensagens seguidas. Chama a gente no WhatsApp que um consultor te atende agora: https://wa.me/5527996330706",
           leadCreated: false,
+          vehicles: [],
         },
         429,
       );
@@ -72,6 +73,7 @@ export async function POST(request: Request) {
         {
           reply: "Pode escrever sua dúvida — marca, modelo ou faixa de preço.",
           leadCreated: false,
+          vehicles: [],
         },
         400,
       );
@@ -92,6 +94,6 @@ export async function POST(request: Request) {
     return json(session, result);
   } catch (error) {
     console.error("[chat]", error);
-    return json(session, { reply: CHAT_FALLBACK_REPLY, leadCreated: false });
+    return json(session, { reply: CHAT_FALLBACK_REPLY, leadCreated: false, vehicles: [] });
   }
 }
