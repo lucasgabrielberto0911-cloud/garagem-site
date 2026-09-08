@@ -339,17 +339,43 @@ export function replyAlreadyCompares(
   );
 }
 
-/** Se o modelo vier seco, completa com comparação e consumo dos cards. */
+function chatListIntro(reply: string) {
+  const remainder = reply
+    .split("\n")
+    .filter((line) => !(/·/.test(line) && /R\$/.test(line)))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!remainder) return "";
+  const first = (remainder.split(/(?<=[.!?])\s+/)[0] ?? "").trim();
+  if (!first || first.length > 180) return "";
+  const folded = foldReply(first);
+  if (
+    /consumo|km\/l|catalogo|entre ess|mais em conta|menos km|conforto|medido/.test(
+      folded,
+    )
+  ) {
+    return "";
+  }
+  return first;
+}
+
+/** Comparação sempre dos cards na tela — o modelo não pode falar de outro carro. */
 export function enrichChatStockReply(
   reply: string,
   vehicles: ChatVehicleRecord[],
 ) {
   if (vehicles.length === 0) return reply;
-  const foldedAll = foldReply(reply);
+  if (vehicles.length >= 2) {
+    const intro = chatListIntro(reply);
+    const compare = compareChatStockPicks(vehicles);
+    if (!compare) return reply;
+    return intro ? `${intro.trim()}\n${compare}` : compare;
+  }
   if (replyAlreadyCompares(reply, vehicles)) {
     if (
-      /consumo|km\/l|catalogo/.test(foldedAll) &&
-      !/medido/.test(foldedAll)
+      /consumo|km\/l|catalogo/.test(foldReply(reply)) &&
+      !/medido/.test(foldReply(reply))
     ) {
       return `${reply.trim()} Nenhum desses usados foi medido na loja.`;
     }

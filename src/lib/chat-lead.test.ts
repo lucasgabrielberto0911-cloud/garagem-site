@@ -305,6 +305,65 @@ Hyundai HB20 Comfort 1.0 2015 · 127.000 km · R$ 55.900`,
   assert.equal(result.vehicles.length, 3);
 });
 
+test("comparação fala dos cards na tela, não de um Onix que o modelo inventou", async () => {
+  const palio: ChatVehicleRecord = {
+    id: "c-palio-2016-b",
+    brand: "Fiat",
+    model: "Palio Weekend",
+    version: "Adventure 1.8 Flex 16V",
+    yearModel: 2016,
+    km: 156400,
+    price: 47900,
+    color: "Branca",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.8 16V",
+    category: "carro",
+  };
+  const prismaJoy: ChatVehicleRecord = {
+    id: "c-prisma-2019-b",
+    brand: "Chevrolet",
+    model: "Prisma",
+    version: "Sed. Joy/LS 1.0",
+    yearModel: 2019,
+    km: 152000,
+    price: 52900,
+    color: "Prata",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.0",
+    category: "carro",
+  };
+  const hb20Auto: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb20-2015-b",
+    yearModel: 2015,
+    km: 127000,
+    price: 55900,
+    transmission: "Automático",
+    version: "Premium Automatico 1.6",
+    engine: "1.6",
+  };
+  const result = await runChatTurn({
+    mensagem: "Quais carros até 70 mil?",
+    historico: [],
+    stock: [palio, prismaJoy, hb20Auto],
+    generate: async () => ({
+      text: `Separei 3 opções até R$ 70.000. A Palio é mais em conta. O Onix lt/ltz é automático com 32 mil km. O HB20 Evolution 1.0 faz 11 a 14 km/l.
+Fiat Palio Weekend Adventure 1.8 Flex 16V 2016 · 156.400 km · R$ 47.900
+Chevrolet Prisma Sed. Joy/LS 1.0 2019 · 152.000 km · R$ 52.900
+Hyundai HB20 Premium Automatico 1.6 2015 · 127.000 km · R$ 55.900`,
+      functionCall: null,
+    }),
+  });
+  assert.match(result.reply, /Prisma/);
+  assert.match(result.reply, /Palio Weekend/);
+  assert.match(result.reply, /HB20/);
+  assert.doesNotMatch(result.reply, /Onix/);
+  assert.doesNotMatch(result.reply, /Evolution/);
+  assert.match(result.reply, /não foi medido|foi medido na loja/);
+});
+
 test("eae recusado pelo modelo vira cumprimento da loja", async () => {
   const result = await runChatTurn({
     mensagem: "eae",
