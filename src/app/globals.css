@@ -353,6 +353,15 @@ body:has([data-vehicle-mobile-bar]) .whatsapp-float {
     right: 1.5rem;
     bottom: 6.25rem;
   }
+
+  body:has(.site-chat.is-open) .whatsapp-float {
+    display: none;
+  }
+}
+
+.site-chat-panel :focus-visible {
+  outline: 2px solid rgba(247, 245, 242, 0.28);
+  outline-offset: 2px;
 }
 
 body:has([data-vehicle-mobile-bar]) .site-chat {
