@@ -204,6 +204,30 @@ test("pedido de modelo na faixa mantém o carro citado na frente", () => {
   );
 });
 
+test("automático na faixa não mistura manual", () => {
+  const auto: ChatVehicleRecord = {
+    ...prisma,
+    id: "conixautogaragem00000001",
+    model: "Onix",
+    transmission: "Automático",
+    price: 55900,
+  };
+  assert.equal(isBareBudgetQuery("Automático até 80 mil?"), true);
+  const picked = selectChatVehicles(
+    "Chevrolet Prisma Sed. Joy/LS 1.0 8V FlexPower 4p 2019 · 152.000 km · R$ 52.900",
+    "Automático até 80 mil?",
+    [biz, prisma, compass, auto],
+  );
+  assert.deepEqual(
+    picked.map((vehicle) => vehicle.id),
+    [auto.id],
+  );
+  assert.match(
+    chatStockExploreHref("Automático até 80 mil?", [biz, prisma, compass, auto], 0) ?? "",
+    /transmission=Autom%C3%A1tico|transmission=Automático/,
+  );
+});
+
 test("pedido de moto na faixa não mistura carro", () => {
   const picked = selectChatVehicles(
     "Honda BIZ 125 EX 125 FLEX 2023 · 22.000 km · R$ 17.900",

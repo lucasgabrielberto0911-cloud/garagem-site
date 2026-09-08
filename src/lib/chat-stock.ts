@@ -114,6 +114,45 @@ export function filterStockByCategory(
   );
 }
 
+export function foldedTransmission(value: string) {
+  return normalize(value);
+}
+
+export function parseTransmissionFilter(
+  mensagem: string,
+): "automatico" | "manual" | null {
+  const folded = normalize(mensagem);
+  const auto = /\b(automatico|automatica|cvt)\b/.test(folded);
+  const manual = /\bmanual(?:is)?\b/.test(folded);
+  if (auto && !manual) return "automatico";
+  if (manual && !auto) return "manual";
+  return null;
+}
+
+export function filterStockByTransmission(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+) {
+  const wanted = parseTransmissionFilter(mensagem);
+  if (!wanted) return stock;
+  const matched = stock.filter((vehicle) => {
+    const value = normalize(vehicle.transmission ?? "");
+    if (wanted === "automatico") return /automatic|cvt/.test(value);
+    return /manual/.test(value) && !/automatic/.test(value);
+  });
+  return matched.length > 0 ? matched : stock;
+}
+
+export function applyChatStockFilters(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+) {
+  return filterStockByTransmission(
+    filterStockByCategory(stock, mensagem),
+    mensagem,
+  );
+}
+
 /** Casa o texto do interesse com um anúncio do estoque, se der. */
 export function matchInterestVehicle(
   interest: string | undefined,
@@ -171,7 +210,7 @@ export function isIncompleteStockReply(reply: string) {
 export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) {
   const limit = parsePriceLimit(mensagem);
   if (limit == null) return null;
-  const matches = filterStockByCategory(stock, mensagem)
+  const matches = applyChatStockFilters(stock, mensagem)
     .filter((vehicle) => vehicle.price <= limit)
     .sort((a, b) => a.price - b.price);
   const ceiling = `R$ ${limit.toLocaleString("pt-BR")}`;
@@ -185,11 +224,11 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
     const bits: string[] = [];
     if (vehicle.id === cheapestId) bits.push("mais em conta");
     if (vehicle.id === lowestKmId) bits.push("menor km");
-    if (/automatic/i.test(vehicle.transmission)) bits.push("automático");
+    if (/automatic/.test(normalize(vehicle.transmission))) bits.push("automático");
     const why = bits.length ? ` — ${bits.join(", ")}` : "";
     return `${formatVehicleLine(vehicle)}${why}`;
   });
-  return `Até ${ceiling} estes cabem no orçamento. Eu começaria por estes:\n${lines.join("\n")}\n\nTem o mais em conta, o de menor km e automático se houver. Financiamos em até 60x e aceitamos troca. Qual perfil te serve — hatch, automático ou o mais barato?`;
+  return `Até ${ceiling} eu começaria por estes:\n${lines.join("\n")}\n\nQual perfil te serve — hatch, automático ou o mais barato?`;
 }
 
 /** Resposta da loja sem Gemini — só dados reais do estoque e política fixa. */

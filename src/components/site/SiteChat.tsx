@@ -35,12 +35,12 @@ const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Olá! Sou o assistente da Garagem. Te ajudo a escolher no estoque, falar de financiamento em até 60x ou troca. Pode perguntar tipo HB20, carro até 70 mil ou automático.",
+    "Olá! Te ajudo a escolher no estoque, falar de financiamento em até 60x ou troca. Manda o orçamento ou o modelo — tipo HB20 ou automático até 80 mil.",
 };
 
 const SUGGESTIONS = [
   "Quais carros até 70 mil?",
-  "Tem HB20?",
+  "Automático até 80 mil?",
   "Como funciona o financiamento?",
   "Aceita troca?",
 ];
@@ -114,7 +114,7 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
         className="block transition hover:bg-white/[0.03]"
         aria-label={`${label} — ${chatVehiclePrice(vehicle)}. Ver anúncio`}
       >
-        <span className="relative block aspect-[16/10] overflow-hidden bg-asphalt">
+        <span className="relative block aspect-[2/1] overflow-hidden bg-asphalt">
           {/* eslint-disable-next-line @next/next/no-img-element -- capa remota, sem cota /_next/image */}
           <img
             src={photo}
@@ -141,7 +141,7 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
             {vehicle.title}
           </span>
           {version ? (
-            <span className="mt-0.5 block text-[12px] leading-snug text-muted">
+            <span className="mt-0.5 block truncate text-[12px] leading-snug text-muted">
               {version}
             </span>
           ) : null}
@@ -172,7 +172,7 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
         make={vehicle.brand}
         model={vehicle.model}
         year={vehicle.year}
-        className="rounded-none"
+        className="min-h-11 rounded-none bg-[#121214]"
       />
     </article>
   );
@@ -223,10 +223,8 @@ function ChatText({
   const source =
     vehicles.length > 0 ? stripChatVehicleListingLines(text, vehicles) : text;
   const visible = displayChatText(source);
-  const cta = chatWhatsAppCta(text);
-  const showCta =
-    Boolean(cta) &&
-    !(vehicles.length > 0 && cta?.label === "Chamar consultor");
+  const cta = vehicles.length > 0 ? null : chatWhatsAppCta(text);
+  const showCta = Boolean(cta);
   const parts = splitChatLinks(visible).filter(
     (part) => part.type !== "link" || !/wa\.me\//i.test(part.href),
   );
@@ -279,12 +277,14 @@ function ChatText({
 function AssistantRow({
   children,
   pending = false,
+  latest = false,
 }: {
   children: ReactNode;
   pending?: boolean;
+  latest?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-2.5">
+    <div className="flex items-start gap-2.5" data-chat-latest={latest ? "1" : undefined}>
       <ChatLogo size="sm" />
       <div className="min-w-0 flex-1">
         <p className="mb-1 pl-0.5 font-display text-[12px] font-semibold leading-tight text-cream/80">
@@ -309,12 +309,38 @@ export function SiteChat() {
   const [pending, setPending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const keepFocusRef = useRef(false);
+
+  useEffect(() => {
+    if (!open) {
+      keepFocusRef.current = false;
+      return;
+    }
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const node = listRef.current;
-    if (node) node.scrollTop = node.scrollHeight;
-    inputRef.current?.focus();
+    if (node) {
+      const latest = node.querySelector("[data-chat-latest='1']");
+      if (latest instanceof HTMLElement) {
+        const top =
+          latest.getBoundingClientRect().top -
+          node.getBoundingClientRect().top +
+          node.scrollTop -
+          8;
+        node.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+      } else {
+        node.scrollTop = node.scrollHeight;
+      }
+    }
+    const desktop = window.matchMedia("(min-width: 1024px)").matches;
+    if (keepFocusRef.current || desktop) inputRef.current?.focus();
   }, [open, messages, pending]);
 
   useEffect(() => {
@@ -403,7 +429,7 @@ export function SiteChat() {
           role="dialog"
           aria-labelledby="site-chat-title"
           aria-label="Chat da Garagem"
-          className="site-chat-panel pointer-events-auto flex h-[min(640px,calc(100dvh-7.25rem))] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink shadow-[0_24px_64px_rgba(0,0,0,0.55)]"
+          className="site-chat-panel pointer-events-auto flex h-[min(680px,calc(100dvh-7.25rem))] w-[min(26rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink shadow-[0_24px_64px_rgba(0,0,0,0.55)]"
         >
           <header className="relative border-b border-white/10 bg-[#121214] px-3 py-3 sm:px-4">
             <div
@@ -455,13 +481,20 @@ export function SiteChat() {
           >
             {messages.map((message, index) =>
               message.role === "user" ? (
-                <div key={`user-${index}`} className="flex justify-end">
+                <div
+                  key={`user-${index}`}
+                  className="flex justify-end"
+                  data-chat-latest={index === messages.length - 1 ? "1" : undefined}
+                >
                   <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-brand px-3.5 py-2.5 text-sm leading-relaxed text-cream">
                     {message.content}
                   </p>
                 </div>
               ) : (
-                <AssistantRow key={`assistant-${index}`}>
+                <AssistantRow
+                  key={`assistant-${index}`}
+                  latest={index === messages.length - 1}
+                >
                   <ChatText
                     text={message.content}
                     vehicles={message.vehicles}
@@ -471,7 +504,7 @@ export function SiteChat() {
               ),
             )}
             {pending ? (
-              <AssistantRow pending>
+              <AssistantRow pending latest>
                 <span className="sr-only">Digitando</span>
                 <span className="site-chat-typing" aria-hidden="true">
                   <span />
@@ -512,6 +545,9 @@ export function SiteChat() {
                 ref={inputRef}
                 id="site-chat-input"
                 value={draft}
+                onFocus={() => {
+                  keepFocusRef.current = true;
+                }}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
@@ -521,15 +557,15 @@ export function SiteChat() {
                 }}
                 placeholder="Ex.: HB20 até 70 mil"
                 maxLength={800}
-                rows={2}
+                rows={1}
                 autoComplete="off"
-                className="min-h-[56px] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-asphalt px-3 py-2.5 text-sm text-cream outline-none placeholder:text-muted focus:border-brand"
+                className="min-h-[48px] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-asphalt px-3 py-2.5 text-sm text-cream outline-none placeholder:text-muted focus:border-brand"
               />
               <button
                 type="submit"
                 disabled={!canSend}
                 aria-label="Enviar"
-                className="flex h-14 w-12 shrink-0 items-center justify-center rounded-xl bg-brand text-cream transition hover:bg-[#c91418] disabled:opacity-40"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand text-cream transition hover:bg-[#c91418] disabled:opacity-40"
               >
                 <IconSend className="h-5 w-5" />
               </button>

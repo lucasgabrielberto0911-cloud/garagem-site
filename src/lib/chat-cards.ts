@@ -9,7 +9,9 @@ import { parsePriceLimit } from "@/lib/chat-prompt";
 import { coverSrc } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
-  filterStockByCategory,
+  applyChatStockFilters,
+  foldedTransmission,
+  parseTransmissionFilter,
   resolveChatCategory,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
@@ -20,7 +22,7 @@ const CHAT_BRANDS =
   "honda|hyundai|fiat|chevrolet|ford|jeep|toyota|volkswagen|vw|renault|nissan|mitsubishi|bmw|mercedes|peugeot|citroen|kia|byd|caoa|chery|yamaha|kawasaki";
 
 const BUDGET_QUERY_NOISE =
-  /^(quais|qual|tem|temos|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|abaixo|menos|maximo|orcamento|faixa|preco|valor|carros|carro|veiculos|veiculo|seminovos|opcoes|opcao|mil|k|\d+)$/;
+  /^(quais|qual|tem|temos|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|abaixo|menos|maximo|orcamento|faixa|preco|valor|carros|carro|veiculos|veiculo|seminovos|opcoes|opcao|automatico|automatica|manual|cvt|hatch|sedan|suv|mil|k|\d+)$/;
 
 export type ChatVehicleCard = {
   id: string;
@@ -240,7 +242,7 @@ export function selectChatVehicles(
   stock: ChatVehicleRecord[],
   limit = CHAT_CARD_LIMIT,
 ) {
-  const pool = filterStockByCategory(stock, mensagem);
+  const pool = applyChatStockFilters(stock, mensagem);
   const mentioned = matchVehiclesInReply(reply, pool, Math.max(limit, 5));
   const budget = parsePriceLimit(mensagem);
   if (budget == null) return mentioned.slice(0, limit);
@@ -261,7 +263,7 @@ export function chatStockExploreHref(
 ) {
   const budget = parsePriceLimit(mensagem);
   const category = resolveChatCategory(mensagem);
-  const pool = filterStockByCategory(stock, mensagem);
+  const pool = applyChatStockFilters(stock, mensagem);
   const priced =
     budget == null
       ? pool
@@ -270,6 +272,20 @@ export function chatStockExploreHref(
   const params = new URLSearchParams();
   if (budget != null) params.set("maxPrice", String(budget));
   if (category) params.set("category", category);
+  const gear = parseTransmissionFilter(mensagem);
+  if (gear === "automatico") {
+    const label = priced.find((vehicle) =>
+      /automatic|cvt/.test(foldedTransmission(vehicle.transmission)),
+    )?.transmission;
+    if (label) params.set("transmission", label);
+  }
+  if (gear === "manual") {
+    const label = priced.find((vehicle) => {
+      const value = foldedTransmission(vehicle.transmission);
+      return /manual/.test(value) && !/automatic/.test(value);
+    })?.transmission;
+    if (label) params.set("transmission", label);
+  }
   const query = params.toString();
   return query ? `/estoque?${query}` : "/estoque";
 }
