@@ -16,6 +16,7 @@ export function VehicleCardWhatsApp({
   model,
   year,
   className = "",
+  variant = "bar",
 }: {
   vehicleId: string;
   label: string;
@@ -24,7 +25,9 @@ export function VehicleCardWhatsApp({
   model: string;
   year: number;
   className?: string;
+  variant?: "bar" | "icon";
 }) {
+  const icon = variant === "icon";
   return (
     <VehicleLeadHit
       contentId={vehicleId}
@@ -39,9 +42,15 @@ export function VehicleCardWhatsApp({
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`Tenho interesse no ${label} pelo WhatsApp`}
-        className={`inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 border-t border-white/10 bg-ink px-2 font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-white/5 hover:text-brand ${className}`}
+        className={
+          icon
+            ? `inline-flex min-h-[72px] w-12 shrink-0 flex-col items-center justify-center gap-1 self-stretch border-l border-white/10 bg-[#101612] px-0 font-display text-[9px] font-semibold uppercase tracking-wide text-[#25D366] transition touch-manipulation hover:bg-[#14301c] ${className}`
+            : `inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 border-t border-white/10 bg-ink px-2 font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-white/5 hover:text-brand ${className}`
+        }
       >
-        <IconWhatsApp className="h-3.5 w-3.5 text-[#25D366]" />
+        <IconWhatsApp
+          className={icon ? "h-4 w-4 text-[#25D366]" : "h-3.5 w-3.5 text-[#25D366]"}
+        />
         WhatsApp
       </a>
     </VehicleLeadHit>

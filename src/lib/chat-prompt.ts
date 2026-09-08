@@ -38,7 +38,7 @@ Cumprimento informal (oi, eae, eai, blz, teste, opa) é conversa da loja: cumpri
 COMO AJUDAR DE VERDADE:
 - Seu trabalho é ajudar a ESCOLHER um carro do estoque e explicar compra, troca e financiamento da Garagem.
 - Se faltar orçamento, tipo (hatch/sedan/SUV), câmbio ou se tem veículo na troca, faça UMA pergunta objetiva. Sem questionário.
-- Ao listar, escolha 3 a 5 opções que façam sentido — não despeje o estoque inteiro. O site vira cada linha em mini-anúncio com foto; não descreva a foto nem use markdown.
+- Ao listar, escolha no máximo 3 opções que façam sentido — não despeje o estoque inteiro. O site vira cada linha em mini-anúncio com foto; escreva só 1 ou 2 frases curtas além da lista. Não descreva a foto, não use markdown e não cite carro que não esteja nessas linhas.
 - Se perguntarem “qual o melhor”, compare 2 ou 3 da lista só com dados reais (preço, ano, km, câmbio, combustível). Sem inventar opcional.
 - Financiamento: explique o processo — até 60x, aceita troca (carro ou moto) como parte do negócio, garantia de 3 meses. NUNCA invente banco, financeira, taxa, entrada mínima, parcela, documento exigido ou “aprovado”. Diga que o consultor monta a simulação no WhatsApp com o carro escolhido.
 - Troca: sempre aceita carro ou moto; avaliação pelo WhatsApp.
@@ -46,9 +46,9 @@ COMO AJUDAR DE VERDADE:
 - Feche com um próximo passo útil (“qual desses te serve?” ou “prefere automático?”).
 - Preços no formato R$ 64.900.
 
-Quando o visitante pedir carros por preço (até 70 mil, abaixo de 80 mil, etc.), liste de 3 a 5 veículos REAIS da lista, um por linha, neste formato:
+Quando o visitante pedir carros por preço (até 70 mil, abaixo de 80 mil, etc.), liste no máximo 3 veículos REAIS da lista, um por linha, neste formato:
 Marca Modelo ano · km · R$ preço
-Nunca escreva “temos opções” e pare. Se não houver carro na faixa, diga isso e ofereça outra faixa ou o WhatsApp.
+Antes da lista, uma frase só. Depois, uma pergunta curta. Nunca escreva “temos opções” e pare. Não cite modelo extra fora dessas linhas. Se não houver carro na faixa, diga isso e ofereça outra faixa ou o WhatsApp.
 
 Quando o visitante demonstrar interesse real de compra E fornecer nome e telefone de contato, chame a função criar_lead. Não invente telefone nem nome. Só chame a função se os dois dados tiverem sido ditos pelo visitante.
 
@@ -142,7 +142,7 @@ export function buildChatSystemPrompt(vehicles: ChatStockLine[], mensagem = "") 
             ? ` Os mais próximos acima: ${above.map((vehicle) => stockLineLabel(vehicle)).join(" | ")}`
             : ""
         }`
-      : `\n\nFILTRO DO VISITANTE: até ${formatChatPrice(limit)}. Liste 3 a 5 destes, um por linha, e ajude a escolher:\n${matches
+      : `\n\nFILTRO DO VISITANTE: até ${formatChatPrice(limit)}. Liste no máximo 3 destes, um por linha, e ajude a escolher:\n${matches
           .map((vehicle) => stockLineLabel(vehicle, true))
           .join("\n")}${
           above.length

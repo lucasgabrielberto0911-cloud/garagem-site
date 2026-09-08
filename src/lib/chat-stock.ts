@@ -241,7 +241,7 @@ export function localGarageReply(
   if (byBudget) return byBudget;
 
   if (/\b(financi\w*|parcela|juros|60x)\b/.test(text)) {
-    return "A gente financia em até 60x e aceita seu carro ou moto na troca como parte do negócio. Parcela, entrada e aprovação um consultor monta no WhatsApp com o carro que você escolher — eu não fecho valor de parcela pelo chat. Qual carro do estoque você tem em mente? https://wa.me/5527996330706";
+    return "A gente financia em até 60x e aceita carro ou moto na troca. Parcela e aprovação o consultor monta no WhatsApp com o carro que você escolher — eu não fecho valor pelo chat. Qual modelo você tem em mente? https://wa.me/5527996330706";
   }
   if (/\bgarantia\b/.test(text)) {
     return "Garantia padrão de 3 meses em todos os veículos. Se quiser, te mostro um carro do estoque ou um consultor detalha no WhatsApp: https://wa.me/5527996330706";

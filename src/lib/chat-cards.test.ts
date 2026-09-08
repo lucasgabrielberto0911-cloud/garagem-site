@@ -6,6 +6,7 @@ import {
   isBareBudgetQuery,
   isChatVehicleListingLine,
   matchVehiclesInReply,
+  polishChatReplyWithCards,
   selectChatVehicles,
   stripChatVehicleListingLines,
   toChatVehicleCard,
@@ -238,6 +239,34 @@ test("pedido de moto na faixa não mistura carro", () => {
     picked.map((vehicle) => vehicle.id),
     [biz.id],
   );
+});
+
+test("com cards, a bolha some lista extra e fica só o gancho", () => {
+  const leftover = `Até R$ 70.000 estes cabem no orçamento.
+Fiat Palio Weekend Adventure 1.8 Flex 16V 2016 · 156.400 km · R$ 47.900
+Também tem Chevrolet Onix e Mitsubishi Lancer se quiser esticar.
+Tem o mais em conta, o de menor km e automático se houver.
+Qual perfil te serve?`;
+  const palio: ChatVehicleRecord = {
+    id: "cpaliogaragem000000000001",
+    brand: "Fiat",
+    model: "Palio Weekend",
+    version: "Adventure 1.8 Flex 16V",
+    yearModel: 2016,
+    km: 156400,
+    price: 47900,
+    color: "Branca",
+    transmission: "Manual",
+    fuel: "Flex",
+    category: "carro",
+  };
+  const cards = [toChatVehicleCard(palio), toChatVehicleCard(prisma)];
+  const polished = polishChatReplyWithCards(leftover, cards);
+  assert.match(polished, /70\.000/);
+  assert.match(polished, /perfil/);
+  assert.doesNotMatch(polished, /Onix/);
+  assert.doesNotMatch(polished, /Lancer/);
+  assert.doesNotMatch(polished, /156\.400/);
 });
 
 test("financiamento sem carro citado não inventa anúncio", () => {

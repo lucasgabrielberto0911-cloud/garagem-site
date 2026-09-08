@@ -15,7 +15,7 @@ import {
   chatVehicleLabel,
   chatVehiclePrice,
   chatVehicleVersion,
-  stripChatVehicleListingLines,
+  polishChatReplyWithCards,
   type ChatVehicleCard,
 } from "@/lib/chat-cards";
 import { chatWhatsAppCta, displayChatText, splitChatLinks } from "@/lib/chat-text";
@@ -35,7 +35,7 @@ const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Olá! Te ajudo a escolher no estoque, falar de financiamento em até 60x ou troca. Manda o orçamento ou o modelo — tipo HB20 ou automático até 80 mil.",
+    "Olá! Te ajudo a escolher no estoque, financiamento em até 60x ou troca. Manda o orçamento ou o modelo.",
 };
 
 const SUGGESTIONS = [
@@ -104,23 +104,25 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
     vehicle.color,
     chatVehicleKm(vehicle),
     vehicle.transmission,
-  ].filter((item): item is string => Boolean(item && item !== "0"));
+  ]
+    .filter((item): item is string => Boolean(item && item !== "0"))
+    .join(" · ");
 
   return (
-    <article className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-[#121214]">
+    <article className="mt-1.5 flex overflow-hidden rounded-xl border border-white/10 bg-[#121214]">
       <Link
         href={vehicle.href}
         prefetch={false}
-        className="block transition hover:bg-white/[0.03]"
+        className="flex min-w-0 flex-1 items-stretch gap-2.5 p-2 transition hover:bg-white/[0.03]"
         aria-label={`${label} — ${chatVehiclePrice(vehicle)}. Ver anúncio`}
       >
-        <span className="relative block aspect-[2/1] overflow-hidden bg-asphalt">
+        <span className="relative h-[4.75rem] w-[6.35rem] shrink-0 overflow-hidden rounded-lg bg-asphalt">
           {/* eslint-disable-next-line @next/next/no-img-element -- capa remota, sem cota /_next/image */}
           <img
             src={photo}
             alt=""
-            width={480}
-            height={300}
+            width={160}
+            height={120}
             loading="lazy"
             decoding="async"
             className="absolute inset-0 h-full w-full object-cover"
@@ -131,35 +133,26 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
               image.src = VEHICLE_PLACEHOLDER;
             }}
           />
-          <span
-            className="absolute inset-0 bg-gradient-to-t from-asphalt/70 via-transparent to-transparent"
-            aria-hidden="true"
-          />
         </span>
-        <span className="block px-3 py-2.5">
-          <span className="block font-display text-sm font-semibold leading-snug text-cream">
+        <span className="flex min-w-0 flex-1 flex-col justify-center py-0.5">
+          <span className="block truncate font-display text-[13px] font-semibold leading-snug text-cream">
             {vehicle.title}
           </span>
           {version ? (
-            <span className="mt-0.5 block truncate text-[12px] leading-snug text-muted">
+            <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted">
               {version}
             </span>
           ) : null}
-          <span className="mt-1.5 flex flex-wrap gap-1">
-            {meta.map((item) => (
-              <span
-                key={item}
-                className="rounded-md bg-white/5 px-1.5 py-0.5 text-[11px] leading-snug text-cream/80"
-              >
-                {item}
-              </span>
-            ))}
-          </span>
-          <span className="mt-2.5 flex items-end justify-between gap-2 border-t border-white/10 pt-2">
-            <span className="font-display text-base font-bold leading-none text-cream">
+          {meta ? (
+            <span className="mt-0.5 block truncate text-[11px] leading-snug text-cream/70">
+              {meta}
+            </span>
+          ) : null}
+          <span className="mt-1.5 flex items-baseline justify-between gap-2">
+            <span className="font-display text-[15px] font-bold leading-none text-cream">
               {chatVehiclePrice(vehicle)}
             </span>
-            <span className="font-display text-[11px] font-semibold uppercase tracking-wide text-brand">
+            <span className="font-display text-[10px] font-semibold uppercase tracking-wide text-brand">
               Ver anúncio
             </span>
           </span>
@@ -172,7 +165,7 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
         make={vehicle.brand}
         model={vehicle.model}
         year={vehicle.year}
-        className="min-h-11 rounded-none bg-[#121214]"
+        variant="icon"
       />
     </article>
   );
@@ -221,7 +214,7 @@ function ChatText({
   stockHref?: string | null;
 }) {
   const source =
-    vehicles.length > 0 ? stripChatVehicleListingLines(text, vehicles) : text;
+    vehicles.length > 0 ? polishChatReplyWithCards(text, vehicles) : text;
   const visible = displayChatText(source);
   const cta = vehicles.length > 0 ? null : chatWhatsAppCta(text);
   const showCta = Boolean(cta);
@@ -259,7 +252,7 @@ function ChatText({
         <Link
           href={stockHref}
           prefetch={false}
-          className="mt-2 flex min-h-[44px] items-center justify-between gap-2 rounded-xl border border-white/10 bg-[#121214] px-3 font-display text-[12px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand/50 hover:bg-brand/10"
+          className="mt-1.5 flex min-h-11 items-center justify-between gap-2 rounded-xl border border-white/10 bg-[#121214] px-3 font-display text-[12px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand/50 hover:bg-brand/10"
         >
           {chatStockExploreLabel(stockHref)}
           <span aria-hidden="true">
@@ -287,9 +280,6 @@ function AssistantRow({
     <div className="flex items-start gap-2.5" data-chat-latest={latest ? "1" : undefined}>
       <ChatLogo size="sm" />
       <div className="min-w-0 flex-1">
-        <p className="mb-1 pl-0.5 font-display text-[12px] font-semibold leading-tight text-cream/80">
-          {ASSISTANT_NAME}
-        </p>
         {pending ? (
           <div className="w-fit rounded-2xl rounded-bl-md border border-white/10 bg-asphalt px-3.5 py-2.5">
             {children}
@@ -429,7 +419,7 @@ export function SiteChat() {
           role="dialog"
           aria-labelledby="site-chat-title"
           aria-label="Chat da Garagem"
-          className="site-chat-panel pointer-events-auto flex h-[min(680px,calc(100dvh-7.25rem))] w-[min(26rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink shadow-[0_24px_64px_rgba(0,0,0,0.55)]"
+          className="site-chat-panel pointer-events-auto flex h-[min(680px,calc(100dvh-7.25rem))] w-[min(28rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink shadow-[0_24px_64px_rgba(0,0,0,0.55)]"
         >
           <header className="relative border-b border-white/10 bg-[#121214] px-3 py-3 sm:px-4">
             <div
@@ -443,14 +433,14 @@ export function SiteChat() {
                   id="site-chat-title"
                   className="font-display text-[13px] font-semibold leading-tight tracking-wide text-cream sm:text-sm"
                 >
-                  Assistente Garagem
+                  {ASSISTANT_NAME}
                 </p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted">
                   <span
                     className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#25D366]"
                     aria-hidden="true"
                   />
-                  online
+                  online · 8h às 23h
                 </p>
               </div>
               <a
@@ -476,7 +466,7 @@ export function SiteChat() {
 
           <div
             ref={listRef}
-            className="flex-1 space-y-3.5 overflow-y-auto overscroll-contain px-3 py-3.5"
+            className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3"
             aria-live="polite"
           >
             {messages.map((message, index) =>
@@ -514,14 +504,14 @@ export function SiteChat() {
               </AssistantRow>
             ) : null}
             {showSuggestions ? (
-              <div className="flex flex-wrap gap-2 pl-12 pt-0.5">
+              <div className="grid grid-cols-1 gap-2 pl-[2.875rem] pt-0.5 sm:grid-cols-2">
                 {SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
                     type="button"
                     disabled={pending}
                     onClick={() => void send(suggestion)}
-                    className="rounded-xl border border-white/15 bg-[#121214] px-3 py-2 text-left text-[12px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15"
+                    className="min-h-11 rounded-xl border border-white/15 bg-[#121214] px-3 py-2 text-left text-[12px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15"
                   >
                     {suggestion}
                   </button>
@@ -559,7 +549,7 @@ export function SiteChat() {
                 maxLength={800}
                 rows={1}
                 autoComplete="off"
-                className="min-h-[48px] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-asphalt px-3 py-2.5 text-sm text-cream outline-none placeholder:text-muted focus:border-brand"
+                className="min-h-[48px] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-asphalt px-3 py-2.5 text-sm text-cream outline-none placeholder:text-muted focus:border-white/25 focus:bg-[#141416]"
               />
               <button
                 type="submit"
@@ -582,9 +572,20 @@ export function SiteChat() {
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-label={open ? "Fechar chat" : "Abrir chat da Garagem"}
-        className="site-chat-launcher pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand text-cream shadow-[0_10px_24px_rgba(232,24,28,0.4)] transition hover:bg-[#c91418] hover:scale-105 active:scale-95 touch-manipulation"
+        className={`site-chat-launcher pointer-events-auto flex h-14 items-center justify-center rounded-full bg-brand text-cream shadow-[0_10px_24px_rgba(232,24,28,0.4)] transition hover:bg-[#c91418] hover:scale-105 active:scale-95 touch-manipulation ${
+          open ? "w-14" : "w-14 lg:w-auto lg:gap-2.5 lg:px-4"
+        }`}
       >
-        {open ? <IconClose className="h-6 w-6" /> : <IconChat className="h-6 w-6" />}
+        {open ? (
+          <IconClose className="h-6 w-6" />
+        ) : (
+          <>
+            <IconChat className="h-6 w-6" />
+            <span className="hidden font-display text-[13px] font-semibold lg:inline">
+              Ajuda pra escolher
+            </span>
+          </>
+        )}
       </button>
     </div>
   );

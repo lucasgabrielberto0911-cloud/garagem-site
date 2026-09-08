@@ -116,6 +116,67 @@ export function stripChatVehicleListingLines(
     .trim();
 }
 
+const CARD_INTRO_MAX = 220;
+const CARD_FILLER =
+  /tem o mais em conta|o de menor km|automatico se houver|se quiser esticar|logo acima/;
+
+function sentenceMentionsUnshownVehicle(
+  sentence: string,
+  vehicles: ChatVehicleCard[],
+) {
+  const folded = fold(sentence);
+  const brandRe = new RegExp(`\\b(${CHAT_BRANDS})\\b`, "g");
+  for (const match of folded.matchAll(brandRe)) {
+    const brand = match[1];
+    const rest = folded.slice(
+      (match.index ?? 0) + brand.length,
+      (match.index ?? 0) + brand.length + 28,
+    );
+    const token = rest.trim().split(/\s+/)[0] ?? "";
+    const covered = vehicles.some((vehicle) => {
+      if (fold(vehicle.brand) !== brand) return false;
+      if (!token || token.length < 2) return true;
+      const model = fold(vehicle.model);
+      const title = fold(vehicle.title);
+      return model.includes(token) || title.includes(token);
+    });
+    if (!covered) return true;
+  }
+  return false;
+}
+
+/** Com mini-anúncio na tela, a bolha fica só com o gancho curto. */
+export function polishChatReplyWithCards(
+  text: string,
+  vehicles: ChatVehicleCard[],
+) {
+  const stripped = stripChatVehicleListingLines(text, vehicles);
+  if (vehicles.length === 0) return stripped;
+
+  const parts = stripped
+    .split(/\n+|(?<=[.!?])\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => {
+      if (looksLikeLooseVehicleTitle(part)) return false;
+      if (isChatVehicleListingLine(part)) return false;
+      if (CARD_FILLER.test(fold(part))) return false;
+      if (sentenceMentionsUnshownVehicle(part, vehicles)) return false;
+      return true;
+    });
+
+  let intro = parts.join(" ").replace(/\s+/g, " ").trim();
+  if (intro.length > CARD_INTRO_MAX) {
+    intro = parts.slice(0, 2).join(" ");
+  }
+  if (!intro) {
+    return vehicles.length === 1
+      ? "Achei este no estoque:"
+      : `Separei ${vehicles.length} do estoque pra você escolher:`;
+  }
+  return intro;
+}
+
 function scoreVehicleInText(
   vehicle: ChatVehicleRecord,
   foldedHay: string,
