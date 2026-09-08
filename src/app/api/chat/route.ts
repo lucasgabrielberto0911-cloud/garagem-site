@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
-import { type ChatTurn } from "@/lib/chat-gemini";
+import { geminiConfigured, type ChatTurn } from "@/lib/chat-gemini";
 import {
   applyChatSessionCookie,
   checkChatRateLimit,
@@ -38,6 +38,10 @@ function readTurns(raw: unknown): ChatTurn[] {
     }
   }
   return turns;
+}
+
+export async function GET() {
+  return NextResponse.json({ ok: true, gemini: geminiConfigured() });
 }
 
 export async function POST(request: Request) {

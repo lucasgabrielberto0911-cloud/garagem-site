@@ -1,6 +1,7 @@
-import { isOffScopeMessage, offScopeReply } from "@/lib/chat-guard";
+import { isChatPing, isOffScopeMessage, offScopeReply } from "@/lib/chat-guard";
 import {
   CHAT_FALLBACK_REPLY,
+  CHAT_PING_REPLY,
   buildChatSystemPrompt,
 } from "@/lib/chat-prompt";
 import {
@@ -13,7 +14,11 @@ import {
   leadArgsAreComplete,
   parseCriarLeadArgs,
 } from "@/lib/chat-lead";
-import { toChatStockLine, type ChatVehicleRecord } from "@/lib/chat-stock";
+import {
+  localGarageReply,
+  toChatStockLine,
+  type ChatVehicleRecord,
+} from "@/lib/chat-stock";
 
 export type ChatTurnResult = {
   reply: string;
@@ -33,9 +38,16 @@ export async function runChatTurn(input: {
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
 
+  if (isChatPing(input.mensagem)) {
+    return { reply: CHAT_PING_REPLY, leadCreated: false };
+  }
+
   if (isOffScopeMessage(input.mensagem)) {
     return { reply: offScopeReply(input.historico), leadCreated: false };
   }
+
+  const fromStock = () =>
+    localGarageReply(input.mensagem, input.stock) ?? CHAT_FALLBACK_REPLY;
 
   let first;
   try {
@@ -45,7 +57,11 @@ export async function runChatTurn(input: {
       mensagem: input.mensagem,
     });
   } catch {
-    return { reply: CHAT_FALLBACK_REPLY, leadCreated: false };
+    return { reply: fromStock(), leadCreated: false };
+  }
+
+  if (!first.functionCall && (!first.text?.trim() || first.text === CHAT_FALLBACK_REPLY)) {
+    return { reply: fromStock(), leadCreated: false };
   }
 
   if (first.functionCall?.name === "criar_lead") {

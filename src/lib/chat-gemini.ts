@@ -2,6 +2,12 @@ import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
 
 export const CHAT_GEMINI_MODEL = "gemini-2.5-flash";
 
+export const CHAT_GEMINI_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-flash-latest",
+] as const;
+
 export type ChatTurn = {
   role: "user" | "assistant";
   content: string;
@@ -12,19 +18,19 @@ export const CRIAR_LEAD_DECLARATION = {
   description:
     "Registra um lead quando o visitante demonstrou interesse real de compra e informou nome e telefone. Use só nome e telefone — nunca CPF, dados bancários ou outro dado sensível.",
   parameters: {
-    type: "OBJECT",
+    type: "object",
     properties: {
-      nome: { type: "STRING", description: "Nome completo dito pelo visitante." },
+      nome: { type: "string", description: "Nome completo dito pelo visitante." },
       telefone: {
-        type: "STRING",
+        type: "string",
         description: "Telefone/WhatsApp com DDD dito pelo visitante.",
       },
       veiculo_interesse: {
-        type: "STRING",
+        type: "string",
         description: "Veículo da lista de estoque que a pessoa quer, se houver.",
       },
       mensagem: {
-        type: "STRING",
+        type: "string",
         description:
           "Resumo curto do interesse no estoque. Sem CPF, banco, PIX ou dado sensível.",
       },
@@ -49,8 +55,41 @@ export type GeminiFunctionCall = {
   args: unknown;
 };
 
+export function normalizeGeminiKey(raw: string) {
+  return raw
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(
+      /^(GEMINI_API_KEY|GOOGLE_GENERATIVE_AI_API_KEY|GOOGLE_API_KEY)\s*=\s*/i,
+      "",
+    )
+    .trim();
+}
+
 export function geminiApiKey() {
-  return process.env.GEMINI_API_KEY?.trim() ?? "";
+  return normalizeGeminiKey(
+    process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
+      process.env.GOOGLE_API_KEY ||
+      "",
+  );
+}
+
+export function geminiConfigured() {
+  return Boolean(geminiApiKey());
+}
+
+export function redactGeminiError(text: string) {
+  return text
+    .replace(/key=[^&\s"]+/gi, "key=redacted")
+    .replace(/\bAIza[0-9A-Za-z_-]{8,}/g, "redacted")
+    .slice(0, 200);
+}
+
+function configuredModels() {
+  const preferred = process.env.GEMINI_MODEL?.trim();
+  const list = preferred ? [preferred, ...CHAT_GEMINI_MODELS] : [...CHAT_GEMINI_MODELS];
+  return [...new Set(list)];
 }
 
 export function historyToGeminiContents(history: ChatTurn[], mensagem: string) {
@@ -92,14 +131,17 @@ export function extractGeminiFunctionCall(data: unknown): GeminiFunctionCall | n
   return null;
 }
 
-function endpoint(model: string, key: string) {
-  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+function endpoint(model: string) {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 }
 
-async function postGemini(body: unknown, key: string, model = CHAT_GEMINI_MODEL) {
-  const response = await fetch(endpoint(model, key), {
+async function postGemini(body: unknown, key: string, model: string) {
+  const response = await fetch(endpoint(model), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": key,
+    },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(20_000),
   });
@@ -109,9 +151,58 @@ async function postGemini(body: unknown, key: string, model = CHAT_GEMINI_MODEL)
       typeof data.error === "object" && data.error && "message" in data.error
         ? String((data.error as { message?: string }).message)
         : `gemini ${response.status}`;
-    throw new Error(message);
+    const error = new Error(redactGeminiError(message)) as Error & {
+      status?: number;
+    };
+    error.status = response.status;
+    throw error;
   }
   return data;
+}
+
+function buildGenerateBody(
+  input: {
+    systemPrompt: string;
+    history: ChatTurn[];
+    mensagem: string;
+  },
+  withTools: boolean,
+) {
+  return {
+    system_instruction: { parts: [{ text: input.systemPrompt }] },
+    contents: historyToGeminiContents(input.history, input.mensagem),
+    ...(withTools
+      ? { tools: [{ function_declarations: [CRIAR_LEAD_DECLARATION] }] }
+      : {}),
+    generationConfig: {
+      temperature: 0.4,
+      maxOutputTokens: 512,
+    },
+  };
+}
+
+async function generateWithFallback(
+  input: {
+    systemPrompt: string;
+    history: ChatTurn[];
+    mensagem: string;
+  },
+  key: string,
+) {
+  let lastError: unknown;
+  for (const model of configuredModels()) {
+    for (const withTools of [true, false]) {
+      try {
+        return await postGemini(buildGenerateBody(input, withTools), key, model);
+      } catch (error) {
+        lastError = error;
+        const status = (error as { status?: number }).status;
+        if (status === 401 || status === 403) throw error;
+        if (status !== 400 && status !== 404) throw error;
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("gemini failed");
 }
 
 export async function generateChatReply(input: {
@@ -121,25 +212,23 @@ export async function generateChatReply(input: {
 }) {
   const key = geminiApiKey();
   if (!key) {
+    console.error("[chat] gemini: missing_key");
     return { text: CHAT_FALLBACK_REPLY, functionCall: null as GeminiFunctionCall | null };
   }
 
-  const body = {
-    system_instruction: { parts: [{ text: input.systemPrompt }] },
-    contents: historyToGeminiContents(input.history, input.mensagem),
-    tools: [{ function_declarations: [CRIAR_LEAD_DECLARATION] }],
-    generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 512,
-    },
-  };
-
-  const data = await postGemini(body, key);
-  return {
-    text: extractGeminiText(data),
-    functionCall: extractGeminiFunctionCall(data),
-    raw: data,
-  };
+  try {
+    const data = await generateWithFallback(input, key);
+    return {
+      text: extractGeminiText(data),
+      functionCall: extractGeminiFunctionCall(data),
+      raw: data,
+    };
+  } catch (error) {
+    const status = (error as { status?: number }).status;
+    const message = error instanceof Error ? error.message : "gemini failed";
+    console.error("[chat] gemini:", status ?? "err", redactGeminiError(message));
+    throw error;
+  }
 }
 
 export async function confirmAfterLead(input: {
@@ -180,6 +269,7 @@ export async function confirmAfterLead(input: {
       generationConfig: { temperature: 0.3, maxOutputTokens: 280 },
     },
     key,
+    configuredModels()[0] ?? CHAT_GEMINI_MODEL,
   );
   return extractGeminiText(data);
 }

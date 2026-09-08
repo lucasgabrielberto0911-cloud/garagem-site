@@ -14,6 +14,9 @@ export const CHAT_OFF_SCOPE_REPLY =
 export const CHAT_OFF_SCOPE_REPEAT_REPLY =
   "Só posso ajudar com assuntos da Garagem — chama no WhatsApp pra outros temas: https://wa.me/5527996330706";
 
+export const CHAT_PING_REPLY =
+  "Tô aqui. Pode perguntar de um carro do estoque, financiamento, troca ou garantia.";
+
 export const CHAT_SYSTEM_PROMPT = `Você é o assistente virtual da Garagem, revenda de veículos seminovos há mais de 20 anos, mais de 1.000 carros vendidos.
 
 Área de atendimento: Aracruz, Vitória, Linhares, Serra, Vila Velha (ES).

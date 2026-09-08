@@ -3,8 +3,10 @@ import { test } from "node:test";
 import {
   CHAT_OFF_SCOPE_REPEAT_REPLY,
   CHAT_OFF_SCOPE_REPLY,
+  CHAT_PING_REPLY,
 } from "./chat-prompt";
 import {
+  isChatPing,
   isJailbreakAttempt,
   isOffScopeMessage,
   offScopeReply,
@@ -25,6 +27,9 @@ test("perguntas de estoque, financiamento geral e lead ficam no escopo", () => {
     false,
   );
   assert.equal(isOffScopeMessage("oi"), false);
+  assert.equal(isOffScopeMessage("teste"), false);
+  assert.equal(isChatPing("teste"), true);
+  assert.equal(isChatPing("Tem o HB20?"), false);
 });
 
 test("fora de escopo, jailbreak e revelar prompt são bloqueados", () => {
@@ -68,6 +73,21 @@ test("sanitize remove CPF e dado bancário e não come a palavra conta comum", (
   });
   assert.equal(parsed?.nome, "Maria Silva");
   assert.doesNotMatch(parsed?.mensagem ?? "", /cpf|987|agencia/i);
+});
+
+test("teste responde no escopo sem chamar o Gemini", async () => {
+  let called = 0;
+  const result = await runChatTurn({
+    mensagem: "teste",
+    historico: [],
+    stock: [],
+    generate: async () => {
+      called += 1;
+      return { text: "não deveria", functionCall: null };
+    },
+  });
+  assert.equal(called, 0);
+  assert.equal(result.reply, CHAT_PING_REPLY);
 });
 
 test("turno fora de escopo não chama o Gemini", async () => {

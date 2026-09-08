@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { leadArgsAreComplete, parseCriarLeadArgs } from "./chat-lead";
 import { matchInterestVehicle, type ChatVehicleRecord } from "./chat-stock";
-import { extractGeminiFunctionCall, extractGeminiText } from "./chat-gemini";
+import {
+  extractGeminiFunctionCall,
+  extractGeminiText,
+  geminiApiKey,
+  normalizeGeminiKey,
+  redactGeminiError,
+} from "./chat-gemini";
 import { runChatTurn } from "./chat-turn";
 import { checkRateLimit, clearRateLimit } from "./rate-limit";
 
@@ -35,6 +41,23 @@ test("criar_lead só fecha com nome e telefone válidos", () => {
     leadArgsAreComplete(parseCriarLeadArgs({ nome: "Li", telefone: "9999" })),
     false,
   );
+});
+
+test("chave Gemini aceita nome alternativo e o erro não vaza segredo", () => {
+  assert.equal(normalizeGeminiKey("  GEMINI_API_KEY=abc123  "), "abc123");
+  assert.match(redactGeminiError("failed key=super-secret-token"), /redacted/);
+  const prev = process.env.GEMINI_API_KEY;
+  const prevAlt = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  process.env.GOOGLE_GENERATIVE_AI_API_KEY = "alt-key";
+  try {
+    assert.equal(geminiApiKey(), "alt-key");
+  } finally {
+    if (prev === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = prev;
+    if (prevAlt === undefined) delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    else process.env.GOOGLE_GENERATIVE_AI_API_KEY = prevAlt;
+  }
 });
 
 test("Gemini devolve texto e function call criar_lead", () => {
@@ -126,17 +149,29 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
   assert.match(lead.reply, /Ana/);
 });
 
-test("Gemini fora do ar devolve fallback com WhatsApp", async () => {
-  const result = await runChatTurn({
-    mensagem: "oi",
+test("Gemini fora do ar ainda responde o estoque e o financiamento", async () => {
+  const stock = await runChatTurn({
+    mensagem: "Tem o HB20 2022? Qual o preço e a km?",
+    historico: [],
+    stock: [hb20],
+    generate: async () => {
+      throw new Error("quota");
+    },
+  });
+  assert.match(stock.reply, /64900/);
+  assert.match(stock.reply, /68450/);
+  assert.equal(stock.leadCreated, false);
+
+  const finance = await runChatTurn({
+    mensagem: "Vocês financiam em quantas vezes?",
     historico: [],
     stock: [],
     generate: async () => {
       throw new Error("quota");
     },
   });
-  assert.match(result.reply, /WhatsApp/);
-  assert.equal(result.leadCreated, false);
+  assert.match(finance.reply, /60x/);
+  assert.match(finance.reply, /WhatsApp/);
 });
 
 test("sessão do chat bloqueia depois de 30 mensagens", () => {

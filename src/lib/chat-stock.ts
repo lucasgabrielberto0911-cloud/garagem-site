@@ -78,6 +78,7 @@ function normalize(value: string) {
 export function matchInterestVehicle(
   interest: string | undefined,
   stock: ChatVehicleRecord[],
+  minScore = 2,
 ) {
   const needle = normalize(interest ?? "");
   if (!needle || stock.length === 0) return null;
@@ -100,5 +101,55 @@ export function matchInterestVehicle(
     }
   }
 
-  return bestScore >= 2 ? best : null;
+  return bestScore >= minScore ? best : null;
+}
+
+const GENERIC_STOCK_TOKEN =
+  /^(tem|vende|vendem|estoque|carro|carros|modelo|marca|ano|seminovo|preco|valor|qual|quanto)$/;
+
+/** Resposta da loja sem Gemini — só dados reais do estoque e política fixa. */
+export function localGarageReply(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+) {
+  const text = normalize(mensagem);
+
+  if (/\b(financi\w*|parcela|juros|60x)\b/.test(text)) {
+    return "A Garagem financia em até 60x e aceita troca. Valor de parcela e aprovação um consultor faz no WhatsApp: https://wa.me/5527996330706";
+  }
+  if (/\bgarantia\b/.test(text)) {
+    return "Garantia padrão de 3 meses em todos os veículos. Se quiser detalhes do carro, chama no WhatsApp: https://wa.me/5527996330706";
+  }
+  if (/\b(horario|atendimento|endereco|localizacao)\b/.test(text)) {
+    return "Atendemos Aracruz, Vitória, Linhares, Serra e Vila Velha (loja digital). Um consultor confirma horário no WhatsApp: https://wa.me/5527996330706";
+  }
+  if (/\btroca\b/.test(text)) {
+    return "Sempre aceitamos veículo na troca (carro ou moto). Um consultor avalia no WhatsApp: https://wa.me/5527996330706";
+  }
+
+  const match =
+    matchInterestVehicle(mensagem, stock) ??
+    matchInterestVehicle(mensagem, stock, 1);
+  if (match) {
+    const version = match.version?.trim() ? ` ${match.version.trim()}` : "";
+    return `Temos o ${match.brand} ${match.model}${version} ${match.yearModel}, ${match.km} km, R$ ${match.price}. Quer que um consultor te chame no WhatsApp? https://wa.me/5527996330706`;
+  }
+
+  const looksLikeVehicle = /\b(tem|vende|estoque|carro|modelo|marca|km)\b/.test(
+    text,
+  );
+  const specific = text
+    .split(" ")
+    .filter((token) => token.length >= 3 && !GENERIC_STOCK_TOKEN.test(token));
+  if (looksLikeVehicle && specific.length > 0) {
+    return "Esse modelo não está na lista atual. Fala com a gente no WhatsApp: https://wa.me/5527996330706";
+  }
+  if (looksLikeVehicle && stock.length > 0) {
+    const sample = stock
+      .slice(0, 3)
+      .map((vehicle) => `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel}`)
+      .join("; ");
+    return `No estoque agora tem, entre outros: ${sample}. Me diz marca ou modelo que eu afino. WhatsApp: https://wa.me/5527996330706`;
+  }
+  return null;
 }
