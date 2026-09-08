@@ -182,6 +182,14 @@ export function IconClose({ className }: IconProps) {
   );
 }
 
+export function IconChat({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H9l-4 3v-3H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
+    </svg>
+  );
+}
+
 export function IconFuel({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

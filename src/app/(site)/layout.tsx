@@ -6,6 +6,7 @@ import { MobileBottomNav } from "@/components/site/MobileBottomNav";
 import { ScrollProgress } from "@/components/site/ScrollProgress";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteChat } from "@/components/site/SiteChat";
 import { WhatsAppFloat } from "@/components/site/WhatsAppFloat";
 import { FavoritesProvider } from "@/lib/favorites";
 import { localBusinessJsonLd } from "@/lib/seo";
@@ -42,6 +43,7 @@ export default function SiteLayout({
         <div className="pb-site-nav lg:hidden" aria-hidden="true" />
         <MobileBottomNav />
         <WhatsAppFloat />
+        <SiteChat />
       </div>
     </FavoritesProvider>
   );
