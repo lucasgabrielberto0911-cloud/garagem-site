@@ -133,8 +133,8 @@ export default async function HomePage() {
               aria-hidden="true"
             />
             <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-cream/80 sm:mt-4 sm:text-base lg:mt-5">
-              Seminovos revisados em {site.region} e região. Escolha no site,
-              feche pelo WhatsApp.
+              Seminovos revisados em {site.region} e região. Compare o estoque
+              no site, peça ajuda no assistente e feche no WhatsApp.
             </p>
           </div>
 
@@ -180,6 +180,7 @@ export default async function HomePage() {
               <SiteLeadHit contentName="Avise-me">
                 <WhatsAppButton
                   className="mt-5"
+                  trackingLabel="home-wanted"
                   message={WHATSAPP_MESSAGES.wanted()}
                 >
                   Quero avisar o que procuro
@@ -320,7 +321,11 @@ export default async function HomePage() {
             </p>
             <ActionRow className="mt-8">
               <SiteLeadHit contentName="Vender/Trocar">
-                <WhatsAppButton size="lg" message={WHATSAPP_MESSAGES.sell}>
+                <WhatsAppButton
+                  size="lg"
+                  trackingLabel="home-vender"
+                  message={WHATSAPP_MESSAGES.sell}
+                >
                   Avaliar pelo WhatsApp
                 </WhatsAppButton>
               </SiteLeadHit>
@@ -363,11 +368,15 @@ export default async function HomePage() {
           aria-hidden="true"
         />
         <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-          Um consultor da {site.name} te ajuda a comparar opções e fechar com
-          segurança.
+          Compare aqui no assistente. Simule parcela, troca e o fechamento
+          ficam com o consultor no WhatsApp.
         </p>
         <ActionRow className="mt-9">
-          <WhatsAppButton size="lg" message={WHATSAPP_MESSAGES.visit}>
+          <WhatsAppButton
+            size="lg"
+            trackingLabel="home-final"
+            message={WHATSAPP_MESSAGES.visit}
+          >
             Falar com um consultor
           </WhatsAppButton>
           <ButtonLink href="/estoque" size="lg" variant="outline">

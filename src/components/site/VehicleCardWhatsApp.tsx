@@ -2,6 +2,7 @@
 
 import { VehicleLeadHit } from "@/components/site/VehiclePixel";
 import { IconWhatsApp } from "@/components/site/icons";
+import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 
 /**
@@ -17,6 +18,7 @@ export function VehicleCardWhatsApp({
   year,
   className = "",
   variant = "bar",
+  trackingLabel = "vehicle-card",
 }: {
   vehicleId: string;
   label: string;
@@ -26,6 +28,7 @@ export function VehicleCardWhatsApp({
   year: number;
   className?: string;
   variant?: "bar" | "icon";
+  trackingLabel?: string;
 }) {
   const icon = variant === "icon";
   return (
@@ -41,6 +44,7 @@ export function VehicleCardWhatsApp({
         href={whatsappUrl(WHATSAPP_MESSAGES.vehicle(label))}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => trackWhatsAppClick(trackingLabel)}
         aria-label={`Tenho interesse no ${label} pelo WhatsApp`}
         className={
           icon

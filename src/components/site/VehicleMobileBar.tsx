@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { VehicleLeadHit } from "@/components/site/VehiclePixel";
 import { formatCurrencyBRL } from "@/lib/format";
+import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 
 /** Barra fixa no mobile: preço + CTA de interesse no WhatsApp. */
@@ -58,6 +59,7 @@ export function VehicleMobileBar({
               href={whatsappUrl(WHATSAPP_MESSAGES.vehicle(contentName))}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackWhatsAppClick("ficha-mobile")}
               className="whatsapp-btn inline-flex min-h-[48px] shrink-0 items-center justify-center px-4 py-3 font-display text-sm font-semibold text-white touch-manipulation"
             >
               Tenho interesse

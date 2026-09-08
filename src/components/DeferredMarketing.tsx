@@ -3,11 +3,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 /**
- * Marketing, extras e telemetria só baixam depois da primeira interação
+ * Extras e telemetria técnica só baixam depois da primeira interação
  * ou de um idle longo — o import estático puxava esses chunks no LCP.
- * O service worker registra no layout (PwaRegister), não aqui.
- * O Meta Pixel fica no layout (stub imediato + fbevents lazy) para
- * ViewContent da ficha não se perder antes do idle.
+ * Google Analytics e Meta Pixel ficam em MarketingScripts, após consentimento.
  */
 export function DeferredMarketing() {
   const [slot, setSlot] = useState<ReactNode>(null);
@@ -33,28 +31,19 @@ export function DeferredMarketing() {
       started = true;
       cleanup();
       void Promise.all([
-        import("@/components/GoogleAnalytics"),
         import("@vercel/analytics/next"),
         import("@vercel/speed-insights/next"),
         import("@/components/site/SiteExtras"),
-      ]).then(
-        ([
-          { GoogleAnalytics },
-          { Analytics },
-          { SpeedInsights },
-          { SiteExtras },
-        ]) => {
-          if (cancelled) return;
-          setSlot(
-            <>
-              <GoogleAnalytics />
-              <Analytics />
-              <SpeedInsights />
-              <SiteExtras />
-            </>,
-          );
-        },
-      );
+      ]).then(([{ Analytics }, { SpeedInsights }, { SiteExtras }]) => {
+        if (cancelled) return;
+        setSlot(
+          <>
+            <Analytics />
+            <SpeedInsights />
+            <SiteExtras />
+          </>,
+        );
+      });
     }
 
     window.addEventListener("pointerdown", load, { once: true, passive: true });

@@ -1,6 +1,18 @@
 {
   "redirects": [
     {
+      "source": "/",
+      "has": [{ "type": "host", "value": "suagaragem.net" }],
+      "destination": "https://www.suagaragem.net/",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "suagaragem.net" }],
+      "destination": "https://www.suagaragem.net/:path*",
+      "permanent": true
+    },
+    {
       "source": "/honda-hrv-2020",
       "destination": "/estoque",
       "statusCode": 301

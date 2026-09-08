@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { IconWhatsApp } from "@/components/site/icons";
+import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
 import { whatsappUrl } from "@/lib/site";
 
 /**
@@ -122,12 +123,14 @@ export function WhatsAppButton({
   size = "md",
   variant = "solid",
   className = "",
+  trackingLabel = "site",
 }: {
   message?: string;
   children?: ReactNode;
   size?: "md" | "lg";
   variant?: "solid" | "outline";
   className?: string;
+  trackingLabel?: string;
 }) {
   const sizing =
     size === "lg"
@@ -139,15 +142,14 @@ export function WhatsAppButton({
       : "border border-white/20 text-cream hover:border-brand hover:bg-white/5";
 
   return (
-    <a
+    <TrackedWhatsAppLink
       href={whatsappUrl(message)}
-      target="_blank"
-      rel="noopener noreferrer"
+      trackingLabel={trackingLabel}
       className={`inline-flex items-center justify-center gap-2.5 font-display font-semibold uppercase tracking-wide transition touch-manipulation ${sizing} ${look} ${className}`}
     >
       <IconWhatsApp className={size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
       {children}
-    </a>
+    </TrackedWhatsAppLink>
   );
 }
 

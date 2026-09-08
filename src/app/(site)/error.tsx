@@ -39,7 +39,7 @@ export default function SiteError({
         <ButtonLink href="/" size="lg" variant="outline">
           Ir ao início
         </ButtonLink>
-        <WhatsAppButton size="lg" variant="outline">
+        <WhatsAppButton size="lg" variant="outline" trackingLabel="erro">
           WhatsApp
         </WhatsAppButton>
       </ActionRow>

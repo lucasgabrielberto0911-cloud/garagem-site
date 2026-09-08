@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
 import { Container } from "@/components/site/ui";
 import {
   IconClock,
@@ -135,14 +136,13 @@ export async function SiteFooter() {
                 </li>
               ))}
               <li>
-                <a
+                <TrackedWhatsAppLink
                   href={whatsappUrl()}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  trackingLabel="footer"
                   className="inline-flex min-h-[36px] items-center gap-2 transition hover:text-cream"
                 >
                   WhatsApp
-                </a>
+                </TrackedWhatsAppLink>
               </li>
               <li>
                 <a

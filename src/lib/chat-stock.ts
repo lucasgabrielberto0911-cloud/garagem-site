@@ -6,7 +6,19 @@ import {
   typicalConsumptionHint,
   typicalConsumptionRange,
 } from "@/lib/chat-consumption";
-import { formatChatPrice, parsePriceLimit, type ChatStockLine } from "@/lib/chat-prompt";
+import {
+  CHAT_WHATSAPP_URL,
+  formatChatPrice,
+  parsePriceLimit,
+  type ChatStockLine,
+} from "@/lib/chat-prompt";
+
+/** Teto da carga atual. Se o estoque chegar aqui, consultar pela pergunta — não só aumentar o take. */
+export const CHAT_STOCK_TAKE = 80;
+
+export function chatStockAtCap(count: number, take = CHAT_STOCK_TAKE) {
+  return count >= take;
+}
 
 /**
  * Campos públicos do bot. `id` fica só no servidor para amarrar o lead.
@@ -70,22 +82,33 @@ export function toChatStockLine(vehicle: ChatVehicleRecord): ChatStockLine {
   };
 }
 
+function noteChatStockCap(rows: ChatVehicleRecord[]) {
+  if (chatStockAtCap(rows.length)) {
+    console.warn(
+      `[chat] estoque no teto de ${CHAT_STOCK_TAKE} anúncios — migrar para consulta orientada pela pergunta`,
+    );
+  }
+  return rows;
+}
+
 export async function loadChatStock(): Promise<ChatVehicleRecord[]> {
   try {
-    return await prisma.vehicle.findMany({
+    const rows = await prisma.vehicle.findMany({
       where: { status: "disponivel", historical: false },
       orderBy: { updatedAt: "desc" },
-      take: 80,
+      take: CHAT_STOCK_TAKE,
       select: CHAT_VEHICLE_SELECT,
     });
+    return noteChatStockCap(rows);
   } catch (error) {
     if (!isMissingColumnError(error, "historical")) throw error;
-    return prisma.vehicle.findMany({
+    const rows = await prisma.vehicle.findMany({
       where: { status: "disponivel" },
       orderBy: { updatedAt: "desc" },
-      take: 80,
+      take: CHAT_STOCK_TAKE,
       select: CHAT_VEHICLE_SELECT,
     });
+    return noteChatStockCap(rows);
   }
 }
 
@@ -506,7 +529,7 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
     .sort((a, b) => a.price - b.price);
   const ceiling = `R$ ${limit.toLocaleString("pt-BR")}`;
   if (matches.length === 0) {
-    return `Neste valor até ${ceiling} não tem anúncio agora. Posso mostrar outra faixa, ou um consultor te ajuda no WhatsApp: https://wa.me/5527996330706`;
+    return `Neste valor até ${ceiling} não tem anúncio agora. Posso mostrar outra faixa, ou um consultor te ajuda no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   const picks = matches.slice(0, 3);
   const cheapestId = picks[0]?.id;
@@ -523,10 +546,10 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
 }
 
 export const CHAT_FINANCE_REPLY =
-  "Financia em até 60x e aceita carro ou moto na troca. A parcela o consultor monta no WhatsApp com o carro escolhido — eu não fecho valor pelo chat. https://wa.me/5527996330706";
+  `Financia em até 60x e aceita carro ou moto na troca. A parcela o consultor monta no WhatsApp com o carro escolhido — eu não fecho valor pelo chat. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_TRADE_REPLY =
-  "Sempre aceitamos carro ou moto na troca. A avaliação o consultor faz no WhatsApp, de preferência com fotos. https://wa.me/5527996330706";
+  `Sempre aceitamos carro ou moto na troca. A avaliação o consultor faz no WhatsApp, de preferência com fotos. ${CHAT_WHATSAPP_URL}`;
 
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(mensagem: string): "finance" | "troca" | null {
@@ -559,10 +582,10 @@ export function localGarageReply(
     return CHAT_FINANCE_REPLY;
   }
   if (/\bgarantia\b/.test(text)) {
-    return "Garantia padrão de 3 meses em todos os veículos. Se quiser, te mostro um carro do estoque ou um consultor detalha no WhatsApp: https://wa.me/5527996330706";
+    return `Garantia padrão de 3 meses em todos os veículos. Se quiser, te mostro um carro do estoque ou um consultor detalha no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (/\b(horario|atendimento|endereco|localizacao)\b/.test(text)) {
-    return "Atendemos Aracruz, Vitória, Linhares, Serra e Vila Velha (loja digital). Um consultor confirma o melhor horário no WhatsApp: https://wa.me/5527996330706";
+    return `Atendemos Aracruz, Vitória, Linhares, Serra e Vila Velha (loja digital). Um consultor confirma o melhor horário no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (/\btroca\b/.test(text)) {
     return CHAT_TRADE_REPLY;
@@ -583,14 +606,14 @@ export function localGarageReply(
     .split(" ")
     .filter((token) => token.length >= 3 && !GENERIC_STOCK_TOKEN.test(token));
   if (looksLikeVehicle && specific.length > 0) {
-    return "Esse modelo não está na lista atual. Fala com a gente no WhatsApp: https://wa.me/5527996330706";
+    return `Esse modelo não está na lista atual. Fala com a gente no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (looksLikeVehicle && stock.length > 0) {
     const sample = stock
       .slice(0, 3)
       .map((vehicle) => `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel}`)
       .join("; ");
-    return `No estoque agora tem, entre outros: ${sample}. Me diz marca ou modelo que eu afino. WhatsApp: https://wa.me/5527996330706`;
+    return `No estoque agora tem, entre outros: ${sample}. Me diz marca ou modelo que eu afino. WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   return null;
 }

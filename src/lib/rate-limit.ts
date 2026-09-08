@@ -36,10 +36,12 @@ export function clearRateLimit(key: string) {
   buckets.delete(key);
 }
 
-function upstashConfigured() {
+export function isUpstashConfigured(
+  env: NodeJS.ProcessEnv = process.env,
+) {
   return Boolean(
-    process.env.UPSTASH_REDIS_REST_URL?.trim() &&
-      process.env.UPSTASH_REDIS_REST_TOKEN?.trim(),
+    env.UPSTASH_REDIS_REST_URL?.trim() &&
+      env.UPSTASH_REDIS_REST_TOKEN?.trim(),
   );
 }
 
@@ -81,7 +83,7 @@ export async function checkDistributedRateLimit(
   key: string,
   options: { windowMs: number; max: number },
 ): Promise<RateLimitResult> {
-  if (upstashConfigured()) {
+  if (isUpstashConfigured()) {
     try {
       const remote = await checkUpstashRateLimit(key, options);
       if (remote) return remote;

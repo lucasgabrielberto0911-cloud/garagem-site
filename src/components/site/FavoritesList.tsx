@@ -9,7 +9,7 @@ import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
 import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
-import { trackLead, trackWhatsAppClick } from "@/lib/meta-pixel";
+import { trackLead } from "@/lib/meta-pixel";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export function FavoritesList() {
@@ -225,7 +225,6 @@ export function FavoritesList() {
         <span
           className="contents"
           onClickCapture={() => {
-            trackWhatsAppClick("favoritos-lista");
             trackLead({
               content_ids: vehicles.map((vehicle) => vehicle.id),
               content_name: "Favoritos",
@@ -235,6 +234,7 @@ export function FavoritesList() {
           <WhatsAppButton
             className="mt-5"
             size="lg"
+            trackingLabel="favoritos-lista"
             message={`Olá! Separei alguns veículos no site: ${vehicles
               .map((vehicle) =>
                 formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel),

@@ -75,10 +75,24 @@ const nextConfig = {
       "/chevrolet-cruze-lt",
       "/etios-xls-2018",
     ];
-    return retiredListings.flatMap((source) => [
-      { source, destination: "/estoque", statusCode: 301 },
-      { source: `${source}/`, destination: "/estoque", statusCode: 301 },
-    ]);
+    return [
+      {
+        source: "/",
+        has: [{ type: "host", value: "suagaragem.net" }],
+        destination: "https://www.suagaragem.net/",
+        permanent: true,
+      },
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "suagaragem.net" }],
+        destination: "https://www.suagaragem.net/:path*",
+        permanent: true,
+      },
+      ...retiredListings.flatMap((source) => [
+        { source, destination: "/estoque", statusCode: 301 },
+        { source: `${source}/`, destination: "/estoque", statusCode: 301 },
+      ]),
+    ];
   },
 };
 

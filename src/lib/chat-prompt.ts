@@ -4,17 +4,18 @@
  */
 
 import { typicalConsumptionHint } from "@/lib/chat-consumption";
+import { site } from "@/lib/site";
 
-export const CHAT_WHATSAPP_URL = "https://wa.me/5527996330706";
+export const CHAT_WHATSAPP_URL = `https://wa.me/${site.whatsappNumber}`;
 
 export const CHAT_FALLBACK_REPLY =
-  "Não consegui responder agora. Sem problema: fala com a gente no WhatsApp e um consultor te atende — https://wa.me/5527996330706";
+  `Não consegui responder agora. Sem problema: fala com a gente no WhatsApp e um consultor te atende — ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_OFF_SCOPE_REPLY =
-  "Posso ajudar só com assuntos da Garagem: estoque, compra, venda, troca, financiamento e garantia. Para outros temas, chama no WhatsApp: https://wa.me/5527996330706";
+  `Posso ajudar só com assuntos da Garagem: estoque, compra, venda, troca, financiamento e garantia. Para outros temas, chama no WhatsApp: ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_OFF_SCOPE_REPEAT_REPLY =
-  "Só posso ajudar com assuntos da Garagem — chama no WhatsApp pra outros temas: https://wa.me/5527996330706";
+  `Só posso ajudar com assuntos da Garagem — chama no WhatsApp pra outros temas: ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_PING_REPLY =
   "Tô aqui. Posso te ajudar a escolher no estoque, falar de financiamento em até 60x ou troca. Qual o orçamento ou o modelo que você procura?";
@@ -29,7 +30,7 @@ Garantia padrão de 3 meses em todos os veículos.
 
 REGRA CRÍTICA: o assistente só pode falar sobre veículos que estejam na lista de estoque fornecida no contexto (injetada pela API, dados reais do banco). NUNCA inventar equipamento, opcional, ou preço que não esteja explicitamente nos dados fornecidos.
 
-Se a pergunta for sobre um carro que não está na lista atual, ou se o assistente não tiver certeza da resposta, dizer isso claramente e oferecer o WhatsApp: https://wa.me/5527996330706
+Se a pergunta for sobre um carro que não está na lista atual, ou se o assistente não tiver certeza da resposta, dizer isso claramente e oferecer o WhatsApp: ${CHAT_WHATSAPP_URL}
 
 Nunca mencionar ou vazar preço de referência FIPE (nem deveria estar no contexto, mas reforçar essa regra de qualquer forma).
 
@@ -49,7 +50,7 @@ Antes da lista: 1 frase curta de recorte (Carros até R$ 70.000 / Automáticos a
 - Acessórios e motor: só o que estiver na linha do estoque. Se não estiver escrito, não invente ar, multimídia, couro, teto, sensor.
 - Financiamento: explique o processo — até 60x, aceita troca (carro ou moto) como parte do negócio, garantia de 3 meses. NUNCA invente banco, financeira, taxa, entrada mínima, parcela, documento exigido ou “aprovado”. Diga que o consultor monta a simulação no WhatsApp com o carro escolhido.
 - Troca: sempre aceita carro ou moto; avaliação pelo WhatsApp.
-- Não mande para o WhatsApp em toda frase. Use o link quando a pessoa quiser simular parcela, fechar, avaliar troca, ou quando o carro não está na lista. Se for oferecer WhatsApp, coloque o link https://wa.me/5527996330706 no final da mensagem (o site vira botão).
+- Não mande para o WhatsApp em toda frase. Use o link quando a pessoa quiser simular parcela, fechar, avaliar troca, ou quando o carro não está na lista. Se for oferecer WhatsApp, coloque o link ${CHAT_WHATSAPP_URL} no final da mensagem (o site vira botão).
 - Preços no formato R$ 64.900.
 
 Quando o visitante pedir carros por preço (até 70 mil, abaixo de 80 mil, etc.), liste no máximo 3 veículos REAIS da lista, um por linha, neste formato:

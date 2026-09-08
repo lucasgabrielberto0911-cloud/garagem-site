@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import {
+  chatRateLimitStatus,
+  geminiKeyConfigured,
+} from "@/lib/launch-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +133,22 @@ export async function GET() {
   try {
     const adminCount = await prisma.admin.count();
     const schema = await inspectSchema();
+    const rateLimit = chatRateLimitStatus();
+    let thumbnails: { total: number; withThumb: number; coverage: number } | null =
+      null;
+    try {
+      const [total, withThumb] = await Promise.all([
+        prisma.photo.count(),
+        prisma.photo.count({ where: { thumbnailUrl: { not: null } } }),
+      ]);
+      thumbnails = {
+        total,
+        withThumb,
+        coverage: total > 0 ? Math.round((withThumb / total) * 100) : 100,
+      };
+    } catch {
+      thumbnails = null;
+    }
     return NextResponse.json({
       ok: schema.ok,
       database: "ok",
@@ -141,6 +161,12 @@ export async function GET() {
         hint: process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
           ? undefined
           : "Adicione SUPABASE_SERVICE_ROLE_KEY no Vercel para o upload de fotos funcionar.",
+        thumbnails,
+      },
+      chat: {
+        gemini: geminiKeyConfigured(),
+        rateLimit: rateLimit.mode,
+        launchException: rateLimit.launchException,
       },
     });
   } catch (error) {

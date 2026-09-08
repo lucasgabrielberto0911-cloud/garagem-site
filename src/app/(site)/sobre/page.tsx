@@ -341,7 +341,7 @@ export default async function SobrePage() {
               <ButtonLink href="/estoque" size="lg">
                 Ver estoque completo
               </ButtonLink>
-              <WhatsAppButton size="lg" variant="outline">
+              <WhatsAppButton size="lg" variant="outline" trackingLabel="sobre">
                 Falar com a {publicSite.name}
               </WhatsAppButton>
             </ActionRow>

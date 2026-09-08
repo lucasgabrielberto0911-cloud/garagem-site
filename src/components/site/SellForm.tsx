@@ -6,7 +6,7 @@ import { WhatsAppButton } from "@/components/site/ui";
 import { createSellLead } from "@/app/(site)/vender/actions";
 import { formatNumberBR, formatPhoneBR, formatPlateInput } from "@/lib/format";
 import { prepareImageForUpload } from "@/lib/prepare-image-upload";
-import { trackLead, trackWhatsAppClick } from "@/lib/meta-pixel";
+import { trackLead } from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
 import { SiteLeadHit } from "@/components/site/VehiclePixel";
 
@@ -115,7 +115,7 @@ export function SellForm({
           WhatsApp.
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
-          <WhatsAppButton message={WHATSAPP_MESSAGES.sell}>
+          <WhatsAppButton trackingLabel="vender" message={WHATSAPP_MESSAGES.sell}>
             Chamar no WhatsApp
           </WhatsAppButton>
           <button
@@ -324,14 +324,14 @@ export function SellForm({
           {isPending ? "Enviando..." : "Solicitar avaliação"}
         </button>
         <SiteLeadHit contentName="Vender/Trocar">
-          <span
-            className="contents"
-            onClickCapture={() => trackWhatsAppClick("vender")}
+          <WhatsAppButton
+            size="lg"
+            variant="outline"
+            trackingLabel="vender"
+            message={WHATSAPP_MESSAGES.sell}
           >
-            <WhatsAppButton size="lg" variant="outline" message={WHATSAPP_MESSAGES.sell}>
-              Prefiro chamar no WhatsApp
-            </WhatsAppButton>
-          </span>
+            Prefiro chamar no WhatsApp
+          </WhatsAppButton>
         </SiteLeadHit>
       </div>
 

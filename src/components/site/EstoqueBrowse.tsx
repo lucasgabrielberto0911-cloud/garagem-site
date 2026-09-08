@@ -298,6 +298,9 @@ export function EstoqueBrowse({
                     }
                   >
                     <WhatsAppButton
+                      trackingLabel={
+                        filtered ? "estoque-filtro-vazio" : "estoque-vazio"
+                      }
                       message={
                         filtered
                           ? WHATSAPP_MESSAGES.wanted(searchString || undefined)

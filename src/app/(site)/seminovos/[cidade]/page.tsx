@@ -121,6 +121,7 @@ export default async function SeminovosCidadePage({
             <div className="mt-5 flex flex-col gap-3">
               <SiteLeadHit contentName={`Seminovos ${city.name}`}>
                 <WhatsAppButton
+                  trackingLabel="seminovos"
                   message={`${WHATSAPP_MESSAGES.general} Estou em ${city.name}.`}
                 >
                   Chamar no WhatsApp

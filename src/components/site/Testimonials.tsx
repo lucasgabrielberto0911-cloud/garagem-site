@@ -44,6 +44,7 @@ export function Testimonials({ items }: { items: TestimonialItem[] }) {
         </p>
         <WhatsAppButton
           className="mt-7"
+          trackingLabel="depoimentos"
           message={WHATSAPP_MESSAGES.general}
           size="md"
         >

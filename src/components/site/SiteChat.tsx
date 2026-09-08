@@ -24,8 +24,14 @@ import {
   SITE_CHAT_OPEN_EVENT,
   type SiteChatOpenRequest,
 } from "@/lib/chat-open";
+import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
 import { chatWhatsAppCta, displayChatText, splitChatLinks } from "@/lib/chat-text";
-import { trackWhatsAppClick } from "@/lib/meta-pixel";
+import {
+  classifyChatIntent,
+  trackChatEvent,
+  trackLead,
+  trackWhatsAppClick,
+} from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 
 type ChatMessage = {
@@ -33,6 +39,7 @@ type ChatMessage = {
   content: string;
   vehicles?: ChatVehicleCard[];
   stockHref?: string | null;
+  leadCreated?: boolean;
 };
 
 const ASSISTANT_NAME = "Assistente Garagem";
@@ -101,7 +108,13 @@ function ChatWhatsAppButton({
   );
 }
 
-function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
+function ChatVehicleMini({
+  vehicle,
+  onVehicleClick,
+}: {
+  vehicle: ChatVehicleCard;
+  onVehicleClick?: (vehicle: ChatVehicleCard) => void;
+}) {
   const version = chatVehicleVersion(vehicle);
   const photo = vehicle.photo || VEHICLE_PLACEHOLDER;
   const label = chatVehicleLabel(vehicle);
@@ -112,6 +125,7 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
       <Link
         href={vehicle.href}
         prefetch={false}
+        onClick={() => onVehicleClick?.(vehicle)}
         className="flex min-w-0 flex-1 items-stretch gap-2.5 p-2 transition hover:bg-white/[0.03]"
         aria-label={`${label} — ${chatVehiclePrice(vehicle)}. Ver anúncio`}
       >
@@ -174,6 +188,7 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
         model={vehicle.model}
         year={vehicle.year}
         variant="icon"
+        trackingLabel="chat-card"
       />
     </article>
   );
@@ -261,14 +276,20 @@ function ChatText({
   text,
   vehicles = [],
   stockHref = null,
+  leadCreated = false,
   followups = [],
   onFollowup,
+  onVehicleClick,
+  onStockExplore,
 }: {
   text: string;
   vehicles?: ChatVehicleCard[];
   stockHref?: string | null;
+  leadCreated?: boolean;
   followups?: string[];
   onFollowup?: (text: string) => void;
+  onVehicleClick?: (vehicle: ChatVehicleCard) => void;
+  onStockExplore?: () => void;
 }) {
   const source =
     vehicles.length > 0 ? polishChatReplyWithCards(text, vehicles) : text;
@@ -279,13 +300,30 @@ function ChatText({
   return (
     <>
       {visible ? <ChatBubbleBody text={visible} /> : null}
+      {leadCreated ? (
+        <div
+          role="status"
+          className="mt-1.5 flex min-h-11 items-center gap-2 rounded-xl border border-[#25D366]/30 bg-[#25D366]/10 px-3 text-[12px] text-cream"
+        >
+          <span
+            className="h-2 w-2 shrink-0 rounded-full bg-[#25D366]"
+            aria-hidden="true"
+          />
+          Contato registrado. A equipe continua com você no WhatsApp.
+        </div>
+      ) : null}
       {vehicles.map((vehicle) => (
-        <ChatVehicleMini key={vehicle.id} vehicle={vehicle} />
+        <ChatVehicleMini
+          key={vehicle.id}
+          vehicle={vehicle}
+          onVehicleClick={onVehicleClick}
+        />
       ))}
       {stockHref ? (
         <Link
           href={stockHref}
           prefetch={false}
+          onClick={onStockExplore}
           className="mt-1.5 flex min-h-11 items-center justify-between gap-2 rounded-xl border border-white/10 bg-[#121214] px-3 font-display text-[12px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand/50 hover:bg-brand/10"
         >
           {chatStockExploreLabel(stockHref)}
@@ -357,13 +395,39 @@ export function SiteChat() {
   const shellRef = useRef<HTMLDivElement>(null);
   const keepFocusRef = useRef(false);
   const sourceRef = useRef("launcher");
+  const openRef = useRef(false);
+  const messageCountRef = useRef(0);
+  const lastIntentRef = useRef("other");
+  const leadTrackedRef = useRef(false);
+
+  function openChat(source: string) {
+    sourceRef.current = source || "site";
+    if (!openRef.current) {
+      openRef.current = true;
+      trackChatEvent("ChatOpen", {
+        source: sourceRef.current,
+        message_count: messageCountRef.current,
+      });
+    }
+    setOpen(true);
+  }
+
+  function closeChat() {
+    if (openRef.current) {
+      trackChatEvent("ChatClose", {
+        source: sourceRef.current,
+        message_count: messageCountRef.current,
+      });
+    }
+    openRef.current = false;
+    setOpen(false);
+  }
 
   useEffect(() => {
     function applyRequest(request: SiteChatOpenRequest | null) {
       if (!request) return;
-      sourceRef.current = request.source || "site";
       if (request.prompt?.trim()) setDraft(request.prompt.trim().slice(0, 800));
-      setOpen(true);
+      openChat(request.source);
     }
 
     function onOpen(event: Event) {
@@ -417,7 +481,7 @@ export function SiteChat() {
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") closeChat();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -461,9 +525,31 @@ export function SiteChat() {
     };
   }, [open]);
 
-  async function send(text: string) {
+  async function send(
+    text: string,
+    origin: "typed" | "suggestion" | "followup" = "typed",
+  ) {
     const mensagem = text.trim();
     if (!mensagem || pending) return;
+
+    const intent = classifyChatIntent(mensagem);
+    lastIntentRef.current = intent;
+    const isFirst = messageCountRef.current === 0;
+    messageCountRef.current += 1;
+    if (isFirst) {
+      trackChatEvent("ChatFirstMessage", {
+        source: sourceRef.current,
+        intent,
+        message_count: 1,
+      });
+    }
+    if (origin === "followup") {
+      trackChatEvent("ChatFollowupClick", {
+        source: sourceRef.current,
+        intent,
+        message_count: messageCountRef.current,
+      });
+    }
 
     const nextHistory = [...messages, { role: "user" as const, content: mensagem }];
     setMessages(nextHistory);
@@ -492,20 +578,43 @@ export function SiteChat() {
         reply?: string;
         vehicles?: unknown;
         stockHref?: unknown;
+        leadCreated?: unknown;
       };
       const stockHref =
         typeof data.stockHref === "string" && data.stockHref.startsWith("/estoque")
           ? data.stockHref
           : null;
+      const vehicles = readVehicleCards(data.vehicles);
+      const leadCreated = data.leadCreated === true;
+      if (vehicles.length > 0) {
+        trackChatEvent("ChatStockShown", {
+          source: sourceRef.current,
+          intent,
+          vehicle_ids: vehicles.map((vehicle) => vehicle.id),
+          result_count: vehicles.length,
+          message_count: messageCountRef.current,
+        });
+      }
+      if (leadCreated && !leadTrackedRef.current) {
+        leadTrackedRef.current = true;
+        trackChatEvent("ChatLeadCreated", {
+          source: sourceRef.current,
+          intent,
+          message_count: messageCountRef.current,
+        });
+        trackLead({
+          content_ids: [],
+          content_name: "chatbot-site",
+        });
+      }
       setMessages((current) => [
         ...current,
         {
           role: "assistant",
-          content:
-            data.reply?.trim() ||
-            "Não consegui responder agora. Fala com a gente no WhatsApp: https://wa.me/5527996330706",
-          vehicles: readVehicleCards(data.vehicles),
+          content: data.reply?.trim() || CHAT_FALLBACK_REPLY,
+          vehicles,
           stockHref,
+          leadCreated,
         },
       ]);
     } catch {
@@ -513,8 +622,7 @@ export function SiteChat() {
         ...current,
         {
           role: "assistant",
-          content:
-            "Não consegui responder agora. Fala com a gente no WhatsApp: https://wa.me/5527996330706",
+          content: CHAT_FALLBACK_REPLY,
         },
       ]);
     } finally {
@@ -529,6 +637,8 @@ export function SiteChat() {
   function resetConversation() {
     if (pending) return;
     keepFocusRef.current = false;
+    messageCountRef.current = 0;
+    lastIntentRef.current = "other";
     setMessages([OPENING]);
     setDraft("");
   }
@@ -581,7 +691,7 @@ export function SiteChat() {
               </a>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={closeChat}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-white/5 hover:text-cream"
                 aria-label="Fechar chat"
               >
@@ -616,6 +726,7 @@ export function SiteChat() {
                     text={message.content}
                     vehicles={message.vehicles}
                     stockHref={message.stockHref}
+                    leadCreated={message.leadCreated}
                     followups={
                       !pending &&
                       index === messages.length - 1 &&
@@ -626,7 +737,23 @@ export function SiteChat() {
                           )
                         : []
                     }
-                    onFollowup={(item) => void send(item)}
+                    onFollowup={(item) => void send(item, "followup")}
+                    onVehicleClick={(vehicle) => {
+                      trackChatEvent("ChatVehicleClick", {
+                        source: sourceRef.current,
+                        intent: lastIntentRef.current,
+                        vehicle_ids: [vehicle.id],
+                        message_count: messageCountRef.current,
+                      });
+                    }}
+                    onStockExplore={() => {
+                      trackChatEvent("ChatStockExplore", {
+                        source: sourceRef.current,
+                        intent: lastIntentRef.current,
+                        result_count: message.vehicles?.length ?? 0,
+                        message_count: messageCountRef.current,
+                      });
+                    }}
                   />
                 </AssistantRow>
               );
@@ -648,7 +775,7 @@ export function SiteChat() {
                     key={suggestion}
                     type="button"
                     disabled={pending}
-                    onClick={() => void send(suggestion)}
+                    onClick={() => void send(suggestion, "suggestion")}
                     className="min-h-11 rounded-xl border border-white/15 bg-[#121214] px-3 py-2 text-left text-[12px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15"
                   >
                     {suggestion}
@@ -717,8 +844,8 @@ export function SiteChat() {
       <button
         type="button"
         onClick={() => {
-          sourceRef.current = "launcher";
-          setOpen((current) => !current);
+          if (open) closeChat();
+          else openChat("launcher");
         }}
         aria-expanded={open}
         aria-label={open ? "Fechar chat" : "Abrir chat da Garagem"}
