@@ -227,6 +227,11 @@ test("automático na faixa não mistura manual", () => {
     chatStockExploreHref("Automático até 80 mil?", [biz, prisma, compass, auto], 0) ?? "",
     /transmission=Autom%C3%A1tico|transmission=Automático/,
   );
+  assert.equal(
+    chatStockExploreHref("Como funciona o financiamento?", [biz, prisma, compass], 0),
+    null,
+  );
+  assert.equal(chatStockExploreHref("Aceita troca?", [biz, prisma], 0), null);
 });
 
 test("pedido de moto na faixa não mistura carro", () => {

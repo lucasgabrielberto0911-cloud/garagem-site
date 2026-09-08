@@ -12,6 +12,7 @@ import {
   applyChatStockFilters,
   foldedTransmission,
   parseTransmissionFilter,
+  parseVehicleCategoryFilter,
   resolveChatCategory,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
@@ -330,6 +331,14 @@ export function chatStockExploreHref(
       ? pool
       : pool.filter((vehicle) => vehicle.price <= budget);
   if (priced.length <= shown) return null;
+  if (
+    shown === 0 &&
+    budget == null &&
+    parseTransmissionFilter(mensagem) == null &&
+    parseVehicleCategoryFilter(mensagem) == null
+  ) {
+    return null;
+  }
   const params = new URLSearchParams();
   if (budget != null) params.set("maxPrice", String(budget));
   if (category) params.set("category", category);

@@ -39,9 +39,9 @@ const OPENING: ChatMessage = {
 };
 
 const SUGGESTIONS = [
-  "Quais carros até 70 mil?",
+  "Carros até 70 mil?",
   "Automático até 80 mil?",
-  "Como funciona o financiamento?",
+  "Financiamento em 60x",
   "Aceita troca?",
 ];
 
@@ -504,7 +504,7 @@ export function SiteChat() {
               </AssistantRow>
             ) : null}
             {showSuggestions ? (
-              <div className="grid grid-cols-1 gap-2 pl-[2.875rem] pt-0.5 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-2 pl-[2.875rem] pt-0.5">
                 {SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
