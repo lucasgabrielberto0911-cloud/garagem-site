@@ -21,12 +21,14 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   const finance =
     "A gente financia em até 60x. Parcela no WhatsApp: https://wa.me/5527996330706";
   assert.equal(displayChatText(finance).includes("wa.me"), false);
+  assert.doesNotMatch(displayChatText(finance), /wa\.me/);
+  assert.match(displayChatText(finance), /60x/);
   const financeCta = chatWhatsAppCta(finance);
-  assert.equal(financeCta?.label, "Simular no WhatsApp");
-  assert.match(financeCta?.benefit ?? "", /parcela/);
+  assert.equal(financeCta?.label, "Simular parcela");
+  assert.match(financeCta?.benefit ?? "", /perfil/);
   assert.match(financeCta?.href ?? "", /wa\.me\/5527996330706/);
 
   const trade =
     "Aceitamos carro ou moto na troca. Avaliação no WhatsApp: https://wa.me/5527996330706";
-  assert.equal(chatWhatsAppCta(trade)?.label, "Avaliar troca no WhatsApp");
+  assert.equal(chatWhatsAppCta(trade)?.label, "Avaliar meu usado");
 });

@@ -3,9 +3,9 @@
 import { Barlow_Condensed } from "next/font/google";
 import { useEffect, useRef, useState } from "react";
 import { IconChat, IconClose, IconWhatsApp } from "@/components/site/icons";
-import { CHAT_WHATSAPP_URL } from "@/lib/chat-prompt";
 import { chatWhatsAppCta, displayChatText, splitChatLinks } from "@/lib/chat-text";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
+import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 
 const chatDisplay = Barlow_Condensed({
   subsets: ["latin"],
@@ -30,6 +30,45 @@ const SUGGESTIONS = [
   "Como funciona o financiamento?",
   "Aceita troca?",
 ];
+
+function ChatWhatsAppButton({
+  href,
+  label,
+  benefit,
+  className = "mt-2",
+}: {
+  href: string;
+  label: string;
+  benefit: string;
+  className?: string;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={() => trackWhatsAppClick("chat")}
+      className={`whatsapp-btn flex w-full min-h-[52px] items-center gap-3 px-3 py-2 text-left text-cream ${className}`}
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-black/20">
+        <IconWhatsApp className="h-5 w-5 text-white" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span
+          className={`${chatDisplay.className} block text-[13px] font-semibold uppercase tracking-wide`}
+        >
+          {label}
+        </span>
+        <span className="mt-0.5 block text-[11px] font-normal leading-snug text-white/90">
+          {benefit}
+        </span>
+      </span>
+      <span className="text-lg leading-none text-white/80" aria-hidden="true">
+        ›
+      </span>
+    </a>
+  );
+}
 
 function ChatText({ text }: { text: string }) {
   const visible = displayChatText(text);
@@ -60,25 +99,7 @@ function ChatText({ text }: { text: string }) {
         </p>
       ) : null}
       {cta ? (
-        <a
-          href={cta.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => trackWhatsAppClick("chat")}
-          className="whatsapp-btn mt-2 flex min-h-[48px] items-center gap-2.5 px-3 py-2 text-left text-cream"
-        >
-          <IconWhatsApp className="h-5 w-5 shrink-0 text-white" />
-          <span className="min-w-0">
-            <span
-              className={`${chatDisplay.className} block text-xs font-semibold uppercase tracking-wide`}
-            >
-              {cta.label}
-            </span>
-            <span className="mt-0.5 block text-[11px] font-normal leading-snug text-white/85">
-              {cta.benefit}
-            </span>
-          </span>
-        </a>
+        <ChatWhatsAppButton href={cta.href} label={cta.label} benefit={cta.benefit} />
       ) : null}
     </>
   );
@@ -191,16 +212,12 @@ export function SiteChat() {
             </div>
           </header>
 
-          <a
-            href={CHAT_WHATSAPP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => trackWhatsAppClick("chat")}
-            className={`${chatDisplay.className} flex min-h-[44px] items-center justify-center gap-2 border-b border-white/10 bg-brand/15 px-3 text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-brand/25`}
-          >
-            <IconWhatsApp className="h-4 w-4 text-[#25D366]" />
-            Falar com um vendedor no WhatsApp
-          </a>
+          <ChatWhatsAppButton
+            href={whatsappUrl(WHATSAPP_MESSAGES.help)}
+            label="Falar com um vendedor"
+            benefit="Consultor das 8h às 23h"
+            className=""
+          />
 
           <div
             ref={listRef}
