@@ -10,6 +10,7 @@ import {
   IconWhatsApp,
 } from "@/components/site/icons";
 import {
+  chatStockExploreLabel,
   chatVehicleKm,
   chatVehicleLabel,
   chatVehiclePrice,
@@ -25,9 +26,9 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   vehicles?: ChatVehicleCard[];
+  stockHref?: string | null;
 };
 
-const CHAT_LOGO_SRC = "/apple-touch-icon.png";
 const ASSISTANT_NAME = "Assistente Garagem";
 const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 
@@ -45,22 +46,14 @@ const SUGGESTIONS = [
 ];
 
 function ChatLogo({ size = "md" }: { size?: "sm" | "md" }) {
-  const px = size === "sm" ? 36 : 40;
   return (
     <span
-      className={`relative shrink-0 overflow-hidden rounded-lg bg-black ring-2 ring-brand/80 ${
-        size === "sm" ? "h-9 w-9" : "h-10 w-10"
+      className={`flex shrink-0 items-center justify-center rounded-lg bg-brand font-display font-bold italic leading-none text-cream ${
+        size === "sm" ? "h-9 w-9 text-[17px]" : "h-10 w-10 text-[19px]"
       }`}
+      aria-hidden="true"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element -- logo estático, sem cota /_next/image */}
-      <img
-        src={CHAT_LOGO_SRC}
-        alt=""
-        width={px}
-        height={px}
-        decoding="async"
-        className="h-full w-full object-cover"
-      />
+      G
     </span>
   );
 }
@@ -106,6 +99,13 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
   const version = chatVehicleVersion(vehicle);
   const photo = vehicle.photo || VEHICLE_PLACEHOLDER;
   const label = chatVehicleLabel(vehicle);
+  const meta = [
+    String(vehicle.year || ""),
+    vehicle.color,
+    chatVehicleKm(vehicle),
+    vehicle.transmission,
+  ].filter((item): item is string => Boolean(item && item !== "0"));
+
   return (
     <article className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-[#121214]">
       <Link
@@ -132,12 +132,9 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
             }}
           />
           <span
-            className="absolute inset-0 bg-gradient-to-t from-asphalt/80 via-transparent to-transparent"
+            className="absolute inset-0 bg-gradient-to-t from-asphalt/70 via-transparent to-transparent"
             aria-hidden="true"
           />
-          <span className="absolute bottom-2 left-2 font-display text-base font-bold leading-none text-cream">
-            {chatVehiclePrice(vehicle)}
-          </span>
         </span>
         <span className="block px-3 py-2.5">
           <span className="block font-display text-sm font-semibold leading-snug text-cream">
@@ -148,13 +145,23 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
               {version}
             </span>
           ) : null}
-          <span className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted">
-            <span>{vehicle.year}</span>
-            {vehicle.color ? <span>{vehicle.color}</span> : null}
-            <span>{chatVehicleKm(vehicle)}</span>
+          <span className="mt-1.5 flex flex-wrap gap-1">
+            {meta.map((item) => (
+              <span
+                key={item}
+                className="rounded-md bg-white/5 px-1.5 py-0.5 text-[11px] leading-snug text-cream/80"
+              >
+                {item}
+              </span>
+            ))}
           </span>
-          <span className="mt-2 inline-flex font-display text-[11px] font-semibold uppercase tracking-wide text-brand">
-            Ver anúncio
+          <span className="mt-2.5 flex items-end justify-between gap-2 border-t border-white/10 pt-2">
+            <span className="font-display text-base font-bold leading-none text-cream">
+              {chatVehiclePrice(vehicle)}
+            </span>
+            <span className="font-display text-[11px] font-semibold uppercase tracking-wide text-brand">
+              Ver anúncio
+            </span>
           </span>
         </span>
       </Link>
@@ -165,6 +172,7 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
         make={vehicle.brand}
         model={vehicle.model}
         year={vehicle.year}
+        className="rounded-none"
       />
     </article>
   );
@@ -173,7 +181,7 @@ function ChatVehicleMini({ vehicle }: { vehicle: ChatVehicleCard }) {
 function readVehicleCards(raw: unknown): ChatVehicleCard[] {
   if (!Array.isArray(raw)) return [];
   const cards: ChatVehicleCard[] = [];
-  for (const item of raw.slice(0, 5)) {
+  for (const item of raw.slice(0, 3)) {
     if (!item || typeof item !== "object") continue;
     const row = item as Partial<ChatVehicleCard>;
     const id = String(row.id ?? "").trim();
@@ -196,6 +204,7 @@ function readVehicleCards(raw: unknown): ChatVehicleCard[] {
       km: Number(row.km) || 0,
       price: Number(row.price) || 0,
       color: row.color ? String(row.color) : null,
+      transmission: row.transmission ? String(row.transmission) : null,
       photo,
     });
   }
@@ -205,14 +214,19 @@ function readVehicleCards(raw: unknown): ChatVehicleCard[] {
 function ChatText({
   text,
   vehicles = [],
+  stockHref = null,
 }: {
   text: string;
   vehicles?: ChatVehicleCard[];
+  stockHref?: string | null;
 }) {
   const source =
     vehicles.length > 0 ? stripChatVehicleListingLines(text, vehicles) : text;
   const visible = displayChatText(source);
   const cta = chatWhatsAppCta(text);
+  const showCta =
+    Boolean(cta) &&
+    !(vehicles.length > 0 && cta?.label === "Chamar consultor");
   const parts = splitChatLinks(visible).filter(
     (part) => part.type !== "link" || !/wa\.me\//i.test(part.href),
   );
@@ -243,7 +257,19 @@ function ChatText({
       {vehicles.map((vehicle) => (
         <ChatVehicleMini key={vehicle.id} vehicle={vehicle} />
       ))}
-      {cta ? (
+      {stockHref ? (
+        <Link
+          href={stockHref}
+          prefetch={false}
+          className="mt-2 flex min-h-[44px] items-center justify-between gap-2 rounded-xl border border-white/10 bg-[#121214] px-3 font-display text-[12px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand/50 hover:bg-brand/10"
+        >
+          {chatStockExploreLabel(stockHref)}
+          <span aria-hidden="true">
+            ›
+          </span>
+        </Link>
+      ) : null}
+      {showCta && cta ? (
         <ChatWhatsAppButton href={cta.href} label={cta.label} benefit={cta.benefit} />
       ) : null}
     </>
@@ -261,7 +287,7 @@ function AssistantRow({
     <div className="flex items-start gap-2.5">
       <ChatLogo size="sm" />
       <div className="min-w-0 flex-1">
-        <p className="mb-1 pl-0.5 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/75">
+        <p className="mb-1 pl-0.5 font-display text-[12px] font-semibold leading-tight text-cream/80">
           {ASSISTANT_NAME}
         </p>
         {pending ? (
@@ -332,7 +358,12 @@ export function SiteChat() {
       const data = (await response.json().catch(() => ({}))) as {
         reply?: string;
         vehicles?: unknown;
+        stockHref?: unknown;
       };
+      const stockHref =
+        typeof data.stockHref === "string" && data.stockHref.startsWith("/estoque")
+          ? data.stockHref
+          : null;
       setMessages((current) => [
         ...current,
         {
@@ -341,6 +372,7 @@ export function SiteChat() {
             data.reply?.trim() ||
             "Não consegui responder agora. Fala com a gente no WhatsApp: https://wa.me/5527996330706",
           vehicles: readVehicleCards(data.vehicles),
+          stockHref,
         },
       ]);
     } catch {
@@ -383,16 +415,16 @@ export function SiteChat() {
               <div className="min-w-0 flex-1">
                 <p
                   id="site-chat-title"
-                  className="font-display text-sm font-semibold tracking-wide text-cream"
+                  className="font-display text-[13px] font-semibold leading-tight tracking-wide text-cream sm:text-sm"
                 >
-                  Garagem
+                  Assistente Garagem
                 </p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted">
                   <span
                     className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#25D366]"
                     aria-hidden="true"
                   />
-                  Assistente · online
+                  online
                 </p>
               </div>
               <a
@@ -430,7 +462,11 @@ export function SiteChat() {
                 </div>
               ) : (
                 <AssistantRow key={`assistant-${index}`}>
-                  <ChatText text={message.content} vehicles={message.vehicles} />
+                  <ChatText
+                    text={message.content}
+                    vehicles={message.vehicles}
+                    stockHref={message.stockHref}
+                  />
                 </AssistantRow>
               ),
             )}

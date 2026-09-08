@@ -10,6 +10,14 @@ import { coverSrc } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import type { ChatVehicleRecord } from "@/lib/chat-stock";
 
+export const CHAT_CARD_LIMIT = 3;
+
+const CHAT_BRANDS =
+  "honda|hyundai|fiat|chevrolet|ford|jeep|toyota|volkswagen|vw|renault|nissan|mitsubishi|bmw|mercedes|peugeot|citroen|kia|byd|caoa|chery|yamaha|kawasaki";
+
+const BUDGET_QUERY_NOISE =
+  /^(quais|qual|tem|temos|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|abaixo|menos|maximo|orcamento|faixa|preco|valor|carros|carro|veiculos|veiculo|seminovos|opcoes|opcao|mil|k|\d+)$/;
+
 export type ChatVehicleCard = {
   id: string;
   href: string;
@@ -21,6 +29,7 @@ export type ChatVehicleCard = {
   km: number;
   price: number;
   color: string | null;
+  transmission: string | null;
   photo: string | null;
 };
 
@@ -50,9 +59,17 @@ export function looksLikeLooseVehicleTitle(line: string) {
   ) {
     return false;
   }
-  return /^(honda|hyundai|fiat|chevrolet|ford|jeep|toyota|volkswagen|vw|renault|nissan|mitsubishi|bmw|mercedes|peugeot|citroen|kia|byd|caoa|chery|yamaha|kawasaki)\b/i.test(
-    trimmed,
-  );
+  return new RegExp(`^(${CHAT_BRANDS})\\b`, "i").test(trimmed);
+}
+
+/** “Quais carros até 70 mil?” — sem marca/modelo. */
+export function isBareBudgetQuery(mensagem: string) {
+  if (parsePriceLimit(mensagem) == null) return false;
+  const folded = fold(mensagem);
+  if (new RegExp(`\\b(${CHAT_BRANDS})\\b`, "i").test(folded)) return false;
+  const tokens = folded.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return false;
+  return tokens.every((token) => BUDGET_QUERY_NOISE.test(token));
 }
 
 export function isChatVehicleListingLine(line: string) {
@@ -185,27 +202,24 @@ export function toChatVehicleCard(vehicle: ChatVehicleRecord): ChatVehicleCard {
     km: vehicle.km,
     price: vehicle.price,
     color,
+    transmission: vehicle.transmission?.trim() || null,
     photo: coverSrc(vehicle.photos ?? []) ?? null,
   };
 }
 
-/** Na faixa de preço, completa até 5 anúncios reais se o texto citou poucos. */
-export function selectChatVehicles(
-  reply: string,
-  mensagem: string,
-  stock: ChatVehicleRecord[],
-  limit = 5,
-) {
-  const mentioned = matchVehiclesInReply(reply, stock, limit);
-  const budget = parsePriceLimit(mensagem);
-  if (budget == null) return mentioned;
-
-  const inBudget = [...stock]
+function inBudgetStock(stock: ChatVehicleRecord[], budget: number) {
+  return [...stock]
     .filter((vehicle) => vehicle.price <= budget)
     .sort((a, b) => a.price - b.price);
+}
 
-  const seen = new Set(mentioned.map((vehicle) => vehicle.id));
-  const merged = [...mentioned];
+function fillBudgetCards(
+  preferred: ChatVehicleRecord[],
+  inBudget: ChatVehicleRecord[],
+  limit: number,
+) {
+  const seen = new Set(preferred.map((vehicle) => vehicle.id));
+  const merged = [...preferred];
   for (const vehicle of inBudget) {
     if (seen.has(vehicle.id)) continue;
     merged.push(vehicle);
@@ -213,6 +227,46 @@ export function selectChatVehicles(
     if (merged.length >= limit) break;
   }
   return (merged.length > 0 ? merged : inBudget).slice(0, limit);
+}
+
+/** Na faixa de preço, completa anúncios reais se o texto citou poucos. */
+export function selectChatVehicles(
+  reply: string,
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+  limit = CHAT_CARD_LIMIT,
+) {
+  const mentioned = matchVehiclesInReply(reply, stock, Math.max(limit, 5));
+  const budget = parsePriceLimit(mensagem);
+  if (budget == null) return mentioned.slice(0, limit);
+
+  const inBudget = inBudgetStock(stock, budget);
+  const mentionedInBudget = mentioned.filter((vehicle) => vehicle.price <= budget);
+
+  if (mentionedInBudget.length > 0 && !isBareBudgetQuery(mensagem)) {
+    return fillBudgetCards(mentionedInBudget, inBudget, limit);
+  }
+  return inBudget.slice(0, limit);
+}
+
+export function chatStockExploreHref(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+  shown: number,
+) {
+  const budget = parsePriceLimit(mensagem);
+  const pool =
+    budget == null
+      ? stock
+      : stock.filter((vehicle) => vehicle.price <= budget);
+  if (pool.length <= shown) return null;
+  return budget == null ? "/estoque" : `/estoque?maxPrice=${budget}`;
+}
+
+export function chatStockExploreLabel(href: string) {
+  const match = href.match(/maxPrice=(\d+)/);
+  if (!match) return "Ver o estoque completo";
+  return `Ver todos até ${formatCurrencyBRL(Number(match[1]))}`;
 }
 
 export function chatVehicleKm(vehicle: ChatVehicleCard) {

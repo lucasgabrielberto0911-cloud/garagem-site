@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  chatStockExploreHref,
+  chatStockExploreLabel,
+  isBareBudgetQuery,
   isChatVehicleListingLine,
   matchVehiclesInReply,
   selectChatVehicles,
@@ -90,6 +93,7 @@ test("casa a lista do assistente com foto, preço, ano, cor, km e link do anúnc
   assert.equal(card.brand, "Honda");
   assert.equal(card.model, "BIZ 125");
   assert.equal(card.photo, "https://cdn.example/biz-card.webp");
+  assert.equal(card.transmission, "Manual");
   assert.match(card.href, /^\/estoque\/honda-biz-125/);
   assert.equal(card.href.includes(biz.id), true);
 });
@@ -128,6 +132,53 @@ test("faixa de preço completa anúncios se o texto citou poucos", () => {
     picked.map((vehicle) => vehicle.id),
     [biz.id, prisma.id],
   );
+});
+
+test("orçamento genérico ignora carro acima da faixa e aponta o estoque", () => {
+  assert.equal(isBareBudgetQuery("Quais carros até 70 mil?"), true);
+  assert.equal(isBareBudgetQuery("Tem Prisma até 70 mil?"), false);
+  const extra: ChatVehicleRecord = {
+    ...prisma,
+    id: "conixgaragem0000000000001",
+    model: "Onix",
+    price: 39900,
+  };
+  const picked = selectChatVehicles(
+    "Jeep Compass Longitude 2022 · 40.000 km · R$ 129.900",
+    "Quais carros até 70 mil?",
+    [biz, prisma, compass, extra],
+  );
+  assert.deepEqual(
+    picked.map((vehicle) => vehicle.id),
+    [biz.id, extra.id, prisma.id],
+  );
+  assert.equal(
+    picked.some((vehicle) => vehicle.id === compass.id),
+    false,
+  );
+  assert.equal(
+    chatStockExploreHref("Quais carros até 70 mil?", [biz, prisma, compass, extra], 3),
+    null,
+  );
+  assert.equal(
+    chatStockExploreHref(
+      "Quais carros até 70 mil?",
+      [biz, prisma, compass, extra, { ...extra, id: "cextra2garagem0000000001", price: 25000 }],
+      3,
+    ),
+    "/estoque?maxPrice=70000",
+  );
+  assert.match(chatStockExploreLabel("/estoque?maxPrice=70000"), /70\.000/);
+});
+
+test("pedido de modelo na faixa mantém o carro citado na frente", () => {
+  const picked = selectChatVehicles(
+    "Chevrolet Prisma Sed. Joy/LS 1.0 8V FlexPower 4p 2019 · 152.000 km · R$ 52.900",
+    "Tem Prisma até 70 mil?",
+    [biz, prisma, compass],
+  );
+  assert.equal(picked[0]?.id, prisma.id);
+  assert.equal(picked[1]?.id, biz.id);
 });
 
 test("financiamento sem carro citado não inventa anúncio", () => {

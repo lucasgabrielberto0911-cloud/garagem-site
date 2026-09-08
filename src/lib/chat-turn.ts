@@ -1,4 +1,5 @@
 import {
+  chatStockExploreHref,
   selectChatVehicles,
   toChatVehicleCard,
   type ChatVehicleCard,
@@ -36,6 +37,7 @@ export type ChatTurnResult = {
   reply: string;
   leadCreated: boolean;
   vehicles: ChatVehicleCard[];
+  stockHref: string | null;
 };
 
 export async function runChatTurn(input: {
@@ -54,13 +56,21 @@ export async function runChatTurn(input: {
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
 
-  const finish = (reply: string, leadCreated = false): ChatTurnResult => ({
-    reply,
-    leadCreated,
-    vehicles: selectChatVehicles(reply, input.mensagem, input.stock).map(
+  const finish = (reply: string, leadCreated = false): ChatTurnResult => {
+    const vehicles = selectChatVehicles(reply, input.mensagem, input.stock).map(
       toChatVehicleCard,
-    ),
-  });
+    );
+    return {
+      reply,
+      leadCreated,
+      vehicles,
+      stockHref: chatStockExploreHref(
+        input.mensagem,
+        input.stock,
+        vehicles.length,
+      ),
+    };
+  };
 
   if (isOffScopeMessage(input.mensagem)) {
     return finish(offScopeReply(input.historico));

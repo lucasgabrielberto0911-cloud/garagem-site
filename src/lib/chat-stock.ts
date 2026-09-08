@@ -144,7 +144,7 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
   if (matches.length === 0) {
     return `Neste valor até ${ceiling} não tem anúncio agora. Posso mostrar outra faixa, ou um consultor te ajuda no WhatsApp: https://wa.me/5527996330706`;
   }
-  const picks = matches.slice(0, 5);
+  const picks = matches.slice(0, 3);
   const cheapestId = picks[0]?.id;
   const lowestKmId = [...picks].sort((a, b) => a.km - b.km)[0]?.id;
   const lines = picks.map((vehicle) => {
