@@ -1,8 +1,10 @@
 import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
 
-export const CHAT_GEMINI_MODEL = "gemini-2.5-flash";
+/** Mais barato e rápido para chat de loja. Flash entra só se o Lite falhar. */
+export const CHAT_GEMINI_MODEL = "gemini-2.5-flash-lite";
 
 export const CHAT_GEMINI_MODELS = [
+  "gemini-2.5-flash-lite",
   "gemini-2.5-flash",
   "gemini-2.0-flash",
   "gemini-flash-latest",
@@ -92,6 +94,27 @@ function configuredModels() {
   return [...new Set(list)];
 }
 
+/** Fila real de modelos (override GEMINI_MODEL primeiro, depois o mais barato). */
+export function chatGeminiModels() {
+  return configuredModels();
+}
+
+function generationConfig(
+  maxOutputTokens: number,
+  temperature: number,
+  model = CHAT_GEMINI_MODEL,
+) {
+  const config: Record<string, unknown> = {
+    temperature,
+    maxOutputTokens,
+  };
+  // Flash-Lite já vem sem thinking; no Flash 2.5/3 isso evita token extra de raciocínio.
+  if (/gemini-(2\.5|3)/.test(model)) {
+    config.thinkingConfig = { thinkingBudget: 0 };
+  }
+  return config;
+}
+
 export function historyToGeminiContents(history: ChatTurn[], mensagem: string) {
   const contents: GeminiContent[] = [];
   for (const turn of history.slice(-12)) {
@@ -167,6 +190,7 @@ function buildGenerateBody(
     mensagem: string;
   },
   withTools: boolean,
+  model: string,
 ) {
   return {
     system_instruction: { parts: [{ text: input.systemPrompt }] },
@@ -174,10 +198,7 @@ function buildGenerateBody(
     ...(withTools
       ? { tools: [{ function_declarations: [CRIAR_LEAD_DECLARATION] }] }
       : {}),
-    generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 1024,
-    },
+    generationConfig: generationConfig(1024, 0.4, model),
   };
 }
 
@@ -193,7 +214,11 @@ async function generateWithFallback(
   for (const model of configuredModels()) {
     for (const withTools of [true, false]) {
       try {
-        return await postGemini(buildGenerateBody(input, withTools), key, model);
+        return await postGemini(
+          buildGenerateBody(input, withTools, model),
+          key,
+          model,
+        );
       } catch (error) {
         lastError = error;
         const status = (error as { status?: number }).status;
@@ -266,7 +291,11 @@ export async function confirmAfterLead(input: {
       system_instruction: { parts: [{ text: input.systemPrompt }] },
       contents,
       tools: [{ function_declarations: [CRIAR_LEAD_DECLARATION] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 280 },
+      generationConfig: generationConfig(
+        280,
+        0.3,
+        configuredModels()[0] ?? CHAT_GEMINI_MODEL,
+      ),
     },
     key,
     configuredModels()[0] ?? CHAT_GEMINI_MODEL,

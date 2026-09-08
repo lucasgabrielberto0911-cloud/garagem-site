@@ -9,6 +9,8 @@ import {
 } from "./chat-stock";
 import { parsePriceLimit } from "./chat-prompt";
 import {
+  CHAT_GEMINI_MODEL,
+  chatGeminiModels,
   extractGeminiFunctionCall,
   extractGeminiText,
   geminiApiKey,
@@ -51,6 +53,8 @@ test("casa interesse com o carro do estoque e ignora texto frouxo", () => {
 
 test("até 70 mil lista o HB20 e deixa o Compass de fora", () => {
   assert.equal(parsePriceLimit("Quais carros temos ate 70 mil?"), 70_000);
+  assert.equal(parsePriceLimit("carros de 70 mil"), 70_000);
+  assert.equal(parsePriceLimit("orcamento 80 mil"), 80_000);
   const listed = listStockByBudget("Quais carros temos ate 70 mil?", [hb20, compass]);
   assert.match(listed ?? "", /HB20/);
   assert.match(listed ?? "", /64\.900/);
@@ -72,6 +76,18 @@ test("criar_lead só fecha com nome e telefone válidos", () => {
     leadArgsAreComplete(parseCriarLeadArgs({ nome: "Li", telefone: "9999" })),
     false,
   );
+});
+
+test("usa Gemini Flash-Lite primeiro, o modelo mais barato da fila", () => {
+  assert.equal(CHAT_GEMINI_MODEL, "gemini-2.5-flash-lite");
+  const prev = process.env.GEMINI_MODEL;
+  delete process.env.GEMINI_MODEL;
+  try {
+    assert.equal(chatGeminiModels()[0], "gemini-2.5-flash-lite");
+  } finally {
+    if (prev === undefined) delete process.env.GEMINI_MODEL;
+    else process.env.GEMINI_MODEL = prev;
+  }
 });
 
 test("chave Gemini aceita nome alternativo e o erro não vaza segredo", () => {
@@ -126,7 +142,7 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
     stock: [hb20],
     generate: async ({ systemPrompt }) => {
       assert.match(systemPrompt, /Hyundai HB20 evolution 1\.0 2022/);
-      assert.match(systemPrompt, /R\$ 64900/);
+      assert.match(systemPrompt, /R\$ 64\.900/);
       return {
         text: "Temos o Hyundai HB20 evolution 1.0 2022, 68450 km, R$ 64900, Prata.",
         functionCall: null,
@@ -186,7 +202,7 @@ test("lista vazia do modelo é preenchida com o estoque até o valor", async () 
     historico: [],
     stock: [hb20, compass],
     generate: async ({ systemPrompt }) => {
-      assert.match(systemPrompt, /FILTRO DO VISITANTE: até R\$ 70000/);
+      assert.match(systemPrompt, /FILTRO DO VISITANTE: até R\$ 70\.000/);
       assert.match(systemPrompt, /Hyundai HB20/);
       return {
         text: "Temos ótimas opções até R$ 70 mil no momento:",

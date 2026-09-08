@@ -22,6 +22,9 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /sem markdown/);
   assert.match(CHAT_SYSTEM_PROMPT, /eae/);
   assert.match(CHAT_SYSTEM_PROMPT, /um por linha/);
+  assert.match(CHAT_SYSTEM_PROMPT, /COMO AJUDAR DE VERDADE/);
+  assert.match(CHAT_SYSTEM_PROMPT, /ESCOLHER um carro/);
+  assert.match(CHAT_SYSTEM_PROMPT, /consultor monta a simulação/);
   assert.equal(CHAT_WHATSAPP_URL, "https://wa.me/5527996330706");
   assert.match(CHAT_SYSTEM_PROMPT, /https:\/\/wa\.me\/5527996330706/);
   assert.match(CHAT_SYSTEM_PROMPT, /ESCOPO RESTRITO/);
@@ -56,8 +59,8 @@ test("estoque real entra no prompt; carro fora da lista não é inventado", () =
   ]);
 
   assert.match(prompt, /Hyundai HB20 evolution 1\.0 2022/);
-  assert.match(prompt, /R\$ 64900/);
-  assert.match(prompt, /68450 km/);
+  assert.match(prompt, /R\$ 64\.900/);
+  assert.match(prompt, /68\.450 km/);
   const stockBlock = formatStockForPrompt([
     {
       brand: "Hyundai",

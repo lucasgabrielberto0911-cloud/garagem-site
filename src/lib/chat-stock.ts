@@ -129,10 +129,10 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
     .slice(0, 8);
   const ceiling = `R$ ${limit.toLocaleString("pt-BR")}`;
   if (matches.length === 0) {
-    return `Neste valor até ${ceiling} não tem anúncio agora. Posso mostrar outra faixa ou você chama no WhatsApp: https://wa.me/5527996330706`;
+    return `Neste valor até ${ceiling} não tem anúncio agora. Posso mostrar outra faixa, ou um consultor te ajuda no WhatsApp: https://wa.me/5527996330706`;
   }
   const lines = matches.map((vehicle) => formatVehicleLine(vehicle)).join("\n");
-  return `Temos estas opções até ${ceiling}:\n${lines}\n\nQuer que eu afine por marca ou te passo no WhatsApp? https://wa.me/5527996330706`;
+  return `Até ${ceiling} estes cabem no orçamento (do mais em conta ao mais caro):\n${lines}\n\nSe quiser, eu afino por automático, hatch ou SUV. Financiamos em até 60x e aceitamos troca. Qual te interessa?`;
 }
 
 /** Resposta da loja sem Gemini — só dados reais do estoque e política fixa. */
@@ -145,16 +145,16 @@ export function localGarageReply(
   if (byBudget) return byBudget;
 
   if (/\b(financi\w*|parcela|juros|60x)\b/.test(text)) {
-    return "A Garagem financia em até 60x e aceita troca. Valor de parcela e aprovação um consultor faz no WhatsApp: https://wa.me/5527996330706";
+    return "A gente financia em até 60x e aceita seu carro ou moto na troca como parte do negócio. Parcela, entrada e aprovação um consultor monta no WhatsApp com o carro que você escolher — eu não fecho valor de parcela pelo chat. Qual carro do estoque você tem em mente? https://wa.me/5527996330706";
   }
   if (/\bgarantia\b/.test(text)) {
-    return "Garantia padrão de 3 meses em todos os veículos. Se quiser detalhes do carro, chama no WhatsApp: https://wa.me/5527996330706";
+    return "Garantia padrão de 3 meses em todos os veículos. Se quiser, te mostro um carro do estoque ou um consultor detalha no WhatsApp: https://wa.me/5527996330706";
   }
   if (/\b(horario|atendimento|endereco|localizacao)\b/.test(text)) {
-    return "Atendemos Aracruz, Vitória, Linhares, Serra e Vila Velha (loja digital). Um consultor confirma horário no WhatsApp: https://wa.me/5527996330706";
+    return "Atendemos Aracruz, Vitória, Linhares, Serra e Vila Velha (loja digital). Um consultor confirma o melhor horário no WhatsApp: https://wa.me/5527996330706";
   }
   if (/\btroca\b/.test(text)) {
-    return "Sempre aceitamos veículo na troca (carro ou moto). Um consultor avalia no WhatsApp: https://wa.me/5527996330706";
+    return "Sempre aceitamos veículo na troca — carro ou moto. A avaliação um consultor faz no WhatsApp, de preferência com fotos. Qual carro do estoque você quer cruzar com a troca? https://wa.me/5527996330706";
   }
 
   const match =

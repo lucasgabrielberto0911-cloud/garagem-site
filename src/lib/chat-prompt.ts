@@ -15,7 +15,7 @@ export const CHAT_OFF_SCOPE_REPEAT_REPLY =
   "Só posso ajudar com assuntos da Garagem — chama no WhatsApp pra outros temas: https://wa.me/5527996330706";
 
 export const CHAT_PING_REPLY =
-  "Tô aqui. Pode perguntar de um carro do estoque, financiamento, troca ou garantia.";
+  "Tô aqui. Posso te ajudar a escolher no estoque, falar de financiamento em até 60x ou troca. Qual o orçamento ou o modelo que você procura?";
 
 export const CHAT_SYSTEM_PROMPT = `Você é o assistente virtual da Garagem, revenda de veículos seminovos há mais de 20 anos, mais de 1.000 carros vendidos.
 
@@ -35,9 +35,20 @@ Tom: direto, simpático, sem parecer robótico. Texto simples, sem markdown (sem
 
 Cumprimento informal (oi, eae, eai, blz, teste, opa) é conversa da loja: cumprimente e ofereça ajuda com estoque, financiamento ou troca. NÃO recuse e NÃO mande para o WhatsApp só por ser um oi.
 
-Quando o visitante pedir carros por preço (até 70 mil, abaixo de 80 mil, etc.), liste de 3 a 8 veículos REAIS da lista, um por linha, neste formato:
+COMO AJUDAR DE VERDADE:
+- Seu trabalho é ajudar a ESCOLHER um carro do estoque e explicar compra, troca e financiamento da Garagem.
+- Se faltar orçamento, tipo (hatch/sedan/SUV), câmbio ou se tem veículo na troca, faça UMA pergunta objetiva. Sem questionário.
+- Ao listar, escolha 3 a 5 opções que façam sentido — não despeje o estoque inteiro. Em uma frase curta, diga por que cada um entra (cabe no preço, km menor, automático, hatch).
+- Se perguntarem “qual o melhor”, compare 2 ou 3 da lista só com dados reais (preço, ano, km, câmbio, combustível). Sem inventar opcional.
+- Financiamento: explique o processo — até 60x, aceita troca (carro ou moto) como parte do negócio, garantia de 3 meses. NUNCA invente taxa, entrada mínima, parcela ou “aprovado”. Diga que o consultor monta a simulação no WhatsApp com o carro escolhido.
+- Troca: sempre aceita carro ou moto; avaliação pelo WhatsApp.
+- Não mande para o WhatsApp em toda frase. Use o link quando a pessoa quiser simular parcela, fechar, avaliar troca, ou quando o carro não está na lista.
+- Feche com um próximo passo útil (“qual desses te serve?” ou “prefere automático?”).
+- Preços no formato R$ 64.900.
+
+Quando o visitante pedir carros por preço (até 70 mil, abaixo de 80 mil, etc.), liste de 3 a 5 veículos REAIS da lista, um por linha, neste formato:
 Marca Modelo ano · km · R$ preço
-Nunca escreva “temos opções” e pare. Se não houver carro na faixa, diga isso e ofereça o estoque ou o WhatsApp.
+Nunca escreva “temos opções” e pare. Se não houver carro na faixa, diga isso e ofereça outra faixa ou o WhatsApp.
 
 Quando o visitante demonstrar interesse real de compra E fornecer nome e telefone de contato, chame a função criar_lead. Não invente telefone nem nome. Só chame a função se os dois dados tiverem sido ditos pelo visitante.
 
@@ -70,6 +81,18 @@ export type ChatStockLine = {
   fuel: string;
 };
 
+export function formatChatPrice(value: number) {
+  return `R$ ${value.toLocaleString("pt-BR")}`;
+}
+
+function stockLineLabel(vehicle: ChatStockLine, withExtras = false) {
+  const version = vehicle.version?.trim() ? ` ${vehicle.version.trim()}` : "";
+  const base = `${vehicle.brand} ${vehicle.model}${version} ${vehicle.year} · ${vehicle.km.toLocaleString("pt-BR")} km · ${formatChatPrice(vehicle.price)}`;
+  if (!withExtras) return base;
+  const color = vehicle.color?.trim() ? vehicle.color.trim() : "cor não informada";
+  return `${base} · ${color} · ${vehicle.transmission} · ${vehicle.fuel}`;
+}
+
 export function formatStockForPrompt(vehicles: ChatStockLine[]) {
   if (vehicles.length === 0) {
     return "ESTOQUE ATUAL (dados reais do banco):\n(nenhum veículo disponível no momento)";
@@ -77,11 +100,7 @@ export function formatStockForPrompt(vehicles: ChatStockLine[]) {
 
   const lines = [...vehicles]
     .sort((a, b) => a.price - b.price)
-    .map((vehicle) => {
-      const version = vehicle.version?.trim() ? ` ${vehicle.version.trim()}` : "";
-      const color = vehicle.color?.trim() ? vehicle.color.trim() : "cor não informada";
-      return `- ${vehicle.brand} ${vehicle.model}${version} ${vehicle.year} · ${vehicle.km} km · R$ ${vehicle.price} · ${color} · ${vehicle.transmission} · ${vehicle.fuel}`;
-    });
+    .map((vehicle) => `- ${stockLineLabel(vehicle, true)}`);
 
   return `ESTOQUE ATUAL (dados reais do banco — use SOMENTE estes veículos, mais baratos primeiro):\n${lines.join("\n")}`;
 }
@@ -93,10 +112,12 @@ export function parsePriceLimit(mensagem: string): number | null {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/r\$/g, " ")
     .replace(/\./g, "")
-    .replace(/,/g, "");
-  const match = text.match(
-    /(?:ate|abaixo de|menos de|no maximo|maximo|por ate)\s+(\d+)\s*(mil|k)?/,
-  );
+    .replace(/,/g, "")
+    .replace(/(\d)(mil|k)\b/g, "$1 $2");
+  const match =
+    text.match(
+      /(?:ate|abaixo de|menos de|no maximo|maximo|por ate|de ate|ate uns|em torno de|orcamento de|orcamento|faixa de)\s+(\d+)\s*(mil|k)?/,
+    ) ?? text.match(/(\d+)\s*(mil|k)\b/);
   if (!match) return null;
   let amount = Number(match[1]);
   if (!Number.isFinite(amount) || amount <= 0) return null;
@@ -109,19 +130,25 @@ export function buildChatSystemPrompt(vehicles: ChatStockLine[], mensagem = "") 
   const stock = formatStockForPrompt(vehicles);
   const limit = parsePriceLimit(mensagem);
   if (limit == null) return `${CHAT_SYSTEM_PROMPT}\n\n${stock}`;
-  const matches = vehicles
-    .filter((vehicle) => vehicle.price <= limit)
-    .sort((a, b) => a.price - b.price)
-    .slice(0, 8);
+  const sorted = [...vehicles].sort((a, b) => a.price - b.price);
+  const matches = sorted.filter((vehicle) => vehicle.price <= limit).slice(0, 8);
+  const above = sorted.filter((vehicle) => vehicle.price > limit).slice(0, 3);
   const extra =
     matches.length === 0
-      ? `\n\nFILTRO DO VISITANTE: até R$ ${limit}. Nenhum veículo nesta faixa — diga isso com clareza.`
-      : `\n\nFILTRO DO VISITANTE: até R$ ${limit}. Liste SOMENTE estes, um por linha:\n${matches
-          .map((vehicle) => {
-            const version = vehicle.version?.trim() ? ` ${vehicle.version.trim()}` : "";
-            return `${vehicle.brand} ${vehicle.model}${version} ${vehicle.year} · ${vehicle.km} km · R$ ${vehicle.price}`;
-          })
-          .join("\n")}`;
+      ? `\n\nFILTRO DO VISITANTE: até ${formatChatPrice(limit)}. Nenhum veículo nesta faixa — diga isso com clareza.${
+          above.length
+            ? ` Os mais próximos acima: ${above.map((vehicle) => stockLineLabel(vehicle)).join(" | ")}`
+            : ""
+        }`
+      : `\n\nFILTRO DO VISITANTE: até ${formatChatPrice(limit)}. Liste 3 a 5 destes, um por linha, e ajude a escolher:\n${matches
+          .map((vehicle) => stockLineLabel(vehicle, true))
+          .join("\n")}${
+          above.length
+            ? `\nLogo acima do orçamento (só se a pessoa quiser esticar): ${above
+                .map((vehicle) => stockLineLabel(vehicle))
+                .join(" | ")}`
+            : ""
+        }`;
   return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${extra}`;
 }
 

@@ -4,6 +4,7 @@ import { Barlow_Condensed } from "next/font/google";
 import { useEffect, useRef, useState } from "react";
 import { IconChat, IconClose, IconWhatsApp } from "@/components/site/icons";
 import { CHAT_WHATSAPP_URL } from "@/lib/chat-prompt";
+import { splitChatLinks } from "@/lib/chat-text";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 
 const chatDisplay = Barlow_Condensed({
@@ -20,8 +21,40 @@ type ChatMessage = {
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Olá! Sou o assistente da Garagem. Pergunta tipo HB20, carro até 70 mil, troca ou financiamento.",
+    "Olá! Sou o assistente da Garagem. Te ajudo a escolher no estoque, falar de financiamento em até 60x ou troca. Pode perguntar tipo HB20, carro até 70 mil ou automático.",
 };
+
+const SUGGESTIONS = [
+  "Quais carros até 70 mil?",
+  "Tem HB20?",
+  "Como funciona o financiamento?",
+  "Aceita troca?",
+];
+
+function ChatText({ text }: { text: string }) {
+  return (
+    <>
+      {splitChatLinks(text).map((part, index) =>
+        part.type === "link" ? (
+          <a
+            key={`${part.href}-${index}`}
+            href={part.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              if (/wa\.me\//i.test(part.href)) trackWhatsAppClick("chat");
+            }}
+            className="underline decoration-white/40 underline-offset-2 transition hover:text-brand hover:decoration-brand"
+          >
+            {part.label}
+          </a>
+        ) : (
+          <span key={`t-${index}`}>{part.value}</span>
+        ),
+      )}
+    </>
+  );
+}
 
 export function SiteChat() {
   const [open, setOpen] = useState(false);
@@ -37,6 +70,13 @@ export function SiteChat() {
     if (node) node.scrollTop = node.scrollHeight;
     inputRef.current?.focus();
   }, [open, messages, pending]);
+
+  useEffect(() => {
+    const node = inputRef.current;
+    if (!node) return;
+    node.style.height = "auto";
+    node.style.height = `${Math.min(node.scrollHeight, 112)}px`;
+  }, [draft, open]);
 
   async function send(text: string) {
     const mensagem = text.trim();
@@ -86,13 +126,15 @@ export function SiteChat() {
     }
   }
 
+  const showSuggestions = messages.length === 1 && !pending;
+
   return (
     <div className="site-chat pointer-events-none fixed z-[60] flex flex-col items-end gap-3">
       {open ? (
         <section
           role="dialog"
           aria-label="Chat da Garagem"
-          className="pointer-events-auto flex h-[min(580px,calc(100dvh-7.5rem))] w-[min(22.5rem,calc(100vw-1.5rem))] flex-col overflow-hidden border border-white/10 bg-ink shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
+          className="pointer-events-auto flex h-[min(620px,calc(100dvh-7.5rem))] w-[min(22.5rem,calc(100vw-1.5rem))] flex-col overflow-hidden border border-white/10 bg-ink shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
         >
           <header className="relative border-b border-white/10 bg-[#121214] px-4 py-3">
             <div
@@ -145,13 +187,28 @@ export function SiteChat() {
                     : "border border-white/10 bg-asphalt px-3 py-2 text-cream"
                 }`}
               >
-                {message.content}
+                <ChatText text={message.content} />
               </p>
             ))}
             {pending ? (
               <p className="border border-white/10 bg-asphalt px-3 py-2 text-sm text-muted">
                 Digitando…
               </p>
+            ) : null}
+            {showSuggestions ? (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {SUGGESTIONS.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    disabled={pending}
+                    onClick={() => void send(suggestion)}
+                    className="border border-white/15 bg-[#121214] px-2.5 py-1.5 text-left text-[11px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
             ) : null}
           </div>
 
@@ -181,18 +238,19 @@ export function SiteChat() {
                 maxLength={800}
                 rows={2}
                 autoComplete="off"
-                className="min-h-[52px] max-h-28 min-w-0 flex-1 resize-none border border-white/10 bg-asphalt px-3 py-2 text-sm text-cream outline-none placeholder:text-muted focus:border-brand"
+                className="min-h-[56px] max-h-28 min-w-0 flex-1 resize-none border border-white/10 bg-asphalt px-3 py-2.5 text-sm text-cream outline-none placeholder:text-muted focus:border-brand"
               />
               <button
                 type="submit"
                 disabled={pending || draft.trim().length < 2}
-                className={`${chatDisplay.className} min-h-[52px] bg-brand px-3 text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-50`}
+                className={`${chatDisplay.className} min-h-[56px] bg-brand px-3 text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-50`}
               >
                 Enviar
               </button>
             </div>
             <p className="mt-2 text-[10px] leading-relaxed text-muted">
-              Ao conversar, você concorda em ser contatado pela nossa equipe.
+              Enter envia · Shift+Enter quebra a linha. Ao conversar, você
+              concorda em ser contatado pela nossa equipe.
             </p>
           </form>
         </section>
