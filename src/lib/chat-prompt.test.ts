@@ -25,6 +25,7 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /COMO AJUDAR DE VERDADE/);
   assert.match(CHAT_SYSTEM_PROMPT, /ESCOLHER um carro/);
   assert.match(CHAT_SYSTEM_PROMPT, /consultor monta a simulação/);
+  assert.match(CHAT_SYSTEM_PROMPT, /NUNCA invente banco/);
   assert.equal(CHAT_WHATSAPP_URL, "https://wa.me/5527996330706");
   assert.match(CHAT_SYSTEM_PROMPT, /https:\/\/wa\.me\/5527996330706/);
   assert.match(CHAT_SYSTEM_PROMPT, /ESCOPO RESTRITO/);

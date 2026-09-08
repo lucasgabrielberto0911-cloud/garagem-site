@@ -214,11 +214,13 @@ async function generateWithFallback(
   for (const model of configuredModels()) {
     for (const withTools of [true, false]) {
       try {
-        return await postGemini(
+        const data = await postGemini(
           buildGenerateBody(input, withTools, model),
           key,
           model,
         );
+        console.info("[chat] gemini:model", model);
+        return data;
       } catch (error) {
         lastError = error;
         const status = (error as { status?: number }).status;
