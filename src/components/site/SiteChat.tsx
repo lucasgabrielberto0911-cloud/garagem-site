@@ -189,7 +189,7 @@ function ChatText({
   vehicles?: ChatVehicleCard[];
 }) {
   const source =
-    vehicles.length > 0 ? stripChatVehicleListingLines(text) : text;
+    vehicles.length > 0 ? stripChatVehicleListingLines(text, vehicles) : text;
   const visible = displayChatText(source);
   const cta = chatWhatsAppCta(text);
   const parts = splitChatLinks(visible).filter(
@@ -235,7 +235,7 @@ function AssistantRow({
   pending?: boolean;
 }) {
   return (
-    <div className="flex items-end gap-2.5">
+    <div className="flex items-start gap-2.5">
       <ChatLogo size="sm" />
       <div className="min-w-0 flex-1">
         <p className="mb-1 pl-0.5 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/75">

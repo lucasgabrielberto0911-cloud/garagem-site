@@ -35,6 +35,22 @@ function priceInText(text: string, price: number) {
   return text.includes(br) || text.includes(String(rounded));
 }
 
+export function looksLikeLooseVehicleTitle(line: string) {
+  const trimmed = line.trim().replace(/^[-•*\d.)\s]+/, "");
+  if (trimmed.length < 8 || trimmed.length > 90) return false;
+  if (/[?]/.test(trimmed)) return false;
+  if (
+    /até r\$|orcamento|orçamento|financi|troca|qual perfil|aqui estao|aqui estão|cabem no|mais em conta|whatsapp/i.test(
+      trimmed,
+    )
+  ) {
+    return false;
+  }
+  return /^(honda|hyundai|fiat|chevrolet|ford|jeep|toyota|volkswagen|vw|renault|nissan|mitsubishi|bmw|mercedes|peugeot|citroen|kia|byd|caoa|chery|yamaha|kawasaki)\b/i.test(
+    trimmed,
+  );
+}
+
 export function isChatVehicleListingLine(line: string) {
   const trimmed = line.trim().replace(/^[-•*\d.)\s]+/, "");
   if (!trimmed) return false;
@@ -51,10 +67,22 @@ export function isChatVehicleListingLine(line: string) {
   return /·/.test(trimmed) || trimmed.length < 160;
 }
 
-export function stripChatVehicleListingLines(text: string) {
+export function stripChatVehicleListingLines(
+  text: string,
+  vehicles: ChatVehicleCard[] = [],
+) {
   return text
     .split("\n")
-    .filter((line) => !isChatVehicleListingLine(line))
+    .filter((line) => {
+      if (isChatVehicleListingLine(line)) return false;
+      if (vehicles.length === 0) return true;
+      if (looksLikeLooseVehicleTitle(line)) return false;
+      const folded = fold(line);
+      return !vehicles.some((vehicle) => {
+        const title = fold(vehicle.title);
+        return title.length >= 5 && folded.includes(title);
+      });
+    })
     .join("\n")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
@@ -109,6 +137,7 @@ export function matchVehiclesInReply(
   for (const line of reply.split("\n")) {
     const listing =
       isChatVehicleListingLine(line) ||
+      looksLikeLooseVehicleTitle(line) ||
       (/[\d.]+\s*km/i.test(line) && /R\$\s*\d/.test(line));
     if (!listing) continue;
     const match = bestMatchForSnippet(line, stock, seen);

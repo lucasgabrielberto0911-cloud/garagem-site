@@ -91,6 +91,30 @@ test("casa a lista do assistente com foto, preço, ano, cor, km e link do anúnc
   assert.equal(card.href.includes(biz.id), true);
 });
 
+test("tira título solto quando o mini-anúncio já cobre o carro", () => {
+  const leftover = `Aqui estão algumas opções até R$ 70.000:
+Mitsubishi LANCER 2.0
+Fiat Palio Weekend Adventure 1.8 Flex 16V 2016 · 156.400 km · R$ 47.900`;
+  const palio: ChatVehicleRecord = {
+    id: "cpaliogaragem000000000001",
+    brand: "Fiat",
+    model: "Palio Weekend",
+    version: "Adventure 1.8 Flex 16V",
+    yearModel: 2016,
+    km: 156400,
+    price: 47900,
+    color: "Branca",
+    transmission: "Manual",
+    fuel: "Flex",
+  };
+  const cards = matchVehiclesInReply(leftover, [palio]).map(toChatVehicleCard);
+  assert.equal(cards[0]?.id, palio.id);
+  const stripped = stripChatVehicleListingLines(leftover, cards);
+  assert.match(stripped, /70\.000/);
+  assert.doesNotMatch(stripped, /LANCER/);
+  assert.doesNotMatch(stripped, /Palio/);
+});
+
 test("financiamento sem carro citado não inventa anúncio", () => {
   const matched = matchVehiclesInReply(
     "A gente financia em até 60x. Parcela no WhatsApp.",
