@@ -63,7 +63,7 @@ export async function runChatTurn(input: {
 
   const finish = (reply: string, leadCreated = false): ChatTurnResult => {
     const picked = selectChatVehicles(reply, input.mensagem, input.stock);
-    const enriched = enrichChatStockReply(reply, picked);
+    const enriched = enrichChatStockReply(reply, picked, input.mensagem);
     const vehicles = picked.map(toChatVehicleCard);
     return {
       reply: enriched,

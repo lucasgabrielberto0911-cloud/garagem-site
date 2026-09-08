@@ -204,7 +204,7 @@ export function polishChatReplyWithCards(
   if (!intro) {
     return vehicles.length === 1
       ? "Achei este no estoque:"
-      : `Separei ${vehicles.length} do estoque pra você escolher:`;
+      : `Estas ${vehicles.length} opções do estoque:`;
   }
   return intro;
 }

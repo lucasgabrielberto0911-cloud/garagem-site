@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { leadArgsAreComplete, parseCriarLeadArgs } from "./chat-lead";
 import {
+  chatFilterIntro,
   compareChatStockPicks,
   isIncompleteStockReply,
   listStockByBudget,
@@ -46,6 +47,16 @@ const hb20: ChatVehicleRecord = {
   transmission: "Manual",
   fuel: "Flex",
 };
+
+test("recorte da pergunta vira frase curta", () => {
+  assert.equal(chatFilterIntro("Carros até 70 mil?"), "Carros até R$ 70.000.");
+  assert.equal(
+    chatFilterIntro("Automático até 80 mil?"),
+    "Automáticos até R$ 80.000.",
+  );
+  assert.equal(chatFilterIntro("moto até 15 mil"), "Motos até R$ 15.000.");
+  assert.equal(chatFilterIntro("eae"), "");
+});
 
 test("casa interesse com o carro do estoque e ignora texto frouxo", () => {
   assert.equal(matchInterestVehicle("hyundai hb20 2022", [hb20])?.id, hb20.id);
@@ -283,11 +294,13 @@ test("resposta seca do modelo ganha comparação e consumo do estoque", async ()
   assert.match(compared, /mais em conta/);
   assert.match(compared, /HB20/);
   assert.match(compared, /Prisma e HB20/);
+  assert.match(compared, /Prisma é o mais novo \(2019\)/);
   assert.match(compared, /automático da lista/);
   assert.match(compared, /11–14/);
   assert.match(compared, /8–11/);
   assert.match(compared, /foi medido na loja/i);
   assert.match(compared, /\n\n/);
+  assert.doesNotMatch(compared, /Entre esses/);
   assert.doesNotMatch(compared, /Todos são automático/);
   assert.doesNotMatch(compared, /Fiat Palio Weekend é o mais em conta/);
 
@@ -306,6 +319,7 @@ Hyundai HB20 Comfort 1.0 2015 · 127.000 km · R$ 55.900`,
   assert.match(result.reply, /70\.000/);
   assert.match(result.reply, /mais em conta/);
   assert.match(result.reply, /Prisma e HB20/);
+  assert.match(result.reply, /Prisma é o mais novo/);
   assert.match(result.reply, /consumo|catálogo|11–14/);
   assert.match(result.reply, /automático/);
   assert.match(result.reply, /\n\n/);
@@ -363,11 +377,13 @@ Hyundai HB20 Premium Automatico 1.6 2015 · 127.000 km · R$ 55.900`,
       functionCall: null,
     }),
   });
+  assert.match(result.reply, /Carros até R\$ 70\.000/);
   assert.match(result.reply, /Prisma/);
   assert.match(result.reply, /Palio Weekend/);
   assert.match(result.reply, /HB20/);
   assert.doesNotMatch(result.reply, /Onix/);
   assert.doesNotMatch(result.reply, /Evolution/);
+  assert.doesNotMatch(result.reply, /Separei 3/);
   assert.match(result.reply, /não foi medido|foi medido na loja/);
 });
 
@@ -411,6 +427,8 @@ test("comparação fala Lancer, não LANCER", () => {
   assert.doesNotMatch(compared, /LANCER/);
   assert.match(compared, /HB20/);
   assert.match(compared, /Onix/);
+  assert.match(compared, /meio do preço/);
+  assert.doesNotMatch(compared, /Entre esses/);
 });
 
 test("eae recusado pelo modelo vira cumprimento da loja", async () => {

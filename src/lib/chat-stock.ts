@@ -314,8 +314,9 @@ export function compareChatStockPicks(vehicles: ChatVehicleRecord[]) {
 
   const cheap = talkName(cheapest);
   const picks: string[] = [
-    `Entre esses, ${cheap.labeled} é o mais em conta (${formatChatPrice(cheapest.price)}).`,
+    `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}).`,
   ];
+  const mentioned = new Set<string>([cheapest.id]);
 
   if (lowestKm.id !== cheapest.id) {
     const low = talkName(lowestKm);
@@ -323,23 +324,43 @@ export function compareChatStockPicks(vehicles: ChatVehicleRecord[]) {
       picks.push(
         `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}) e é o automático da lista — mais conforto no trânsito.`,
       );
+      mentioned.add(lowestKm.id);
     } else {
-      picks.push(
-        `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}).`,
-      );
-      if (mixed && auto && auto.id !== cheapest.id && auto.id !== lowestKm.id) {
+      picks.push(`${low.cap} tem menos km (${formatChatKm(lowestKm.km)}).`);
+      mentioned.add(lowestKm.id);
+      if (mixed && auto && !mentioned.has(auto.id)) {
         picks.push(
           `${talkName(auto).cap} é o automático da lista — mais conforto no trânsito.`,
         );
+        mentioned.add(auto.id);
       }
     }
   } else if (mixed && auto && auto.id !== cheapest.id) {
     picks.push(
       `${talkName(auto).cap} é o automático da lista — mais conforto no trânsito.`,
     );
+    mentioned.add(auto.id);
   } else if (mixed && auto?.id === cheapest.id) {
     picks[0] =
-      `Entre esses, ${cheap.labeled} é o mais em conta (${formatChatPrice(cheapest.price)}) e o automático da lista — mais conforto no trânsito.`;
+      `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e o automático da lista — mais conforto no trânsito.`;
+  }
+
+  const leftover = vehicles.filter((vehicle) => !mentioned.has(vehicle.id));
+  const newest = vehicles.reduce((best, vehicle) =>
+    vehicle.yearModel > best.yearModel ? vehicle : best,
+  );
+  for (const vehicle of leftover) {
+    const name = talkName(vehicle);
+    if (
+      vehicle.id === newest.id &&
+      vehicles.some((other) => other.yearModel < newest.yearModel)
+    ) {
+      picks.push(`${name.cap} é o mais novo (${vehicle.yearModel}).`);
+    } else {
+      picks.push(
+        `${name.cap} fica no meio do preço (${formatChatPrice(vehicle.price)}).`,
+      );
+    }
   }
 
   return `${picks.join(" ")}\n\n${formatConsumptionCompare(vehicles)}`;
@@ -394,14 +415,40 @@ function chatListIntro(reply: string) {
   return /[.!?]$/.test(first) ? first : `${first}.`;
 }
 
+/** Recorte da pergunta quando o modelo começa com “Separei 3 / ótimas opções”. */
+export function chatFilterIntro(mensagem: string) {
+  const budget = parsePriceLimit(mensagem);
+  const gear = parseTransmissionFilter(mensagem);
+  const category = parseVehicleCategoryFilter(mensagem);
+  const ceiling = budget != null ? `até ${formatChatPrice(budget)}` : "";
+
+  if (gear === "automatico" && ceiling) {
+    return category === "moto"
+      ? `Motos automáticas ${ceiling}.`
+      : `Automáticos ${ceiling}.`;
+  }
+  if (gear === "manual" && ceiling) {
+    return `Manuais ${ceiling}.`;
+  }
+  if (category === "moto" && ceiling) return `Motos ${ceiling}.`;
+  if (category === "carro" && ceiling) return `Carros ${ceiling}.`;
+  if (ceiling) {
+    return `${ceiling.charAt(0).toUpperCase()}${ceiling.slice(1)}.`;
+  }
+  if (gear === "automatico") return "Automáticos do estoque.";
+  if (gear === "manual") return "Manuais do estoque.";
+  return "";
+}
+
 /** Comparação sempre dos cards na tela — o modelo não pode falar de outro carro. */
 export function enrichChatStockReply(
   reply: string,
   vehicles: ChatVehicleRecord[],
+  mensagem = "",
 ) {
   if (vehicles.length === 0) return reply;
   if (vehicles.length >= 2) {
-    const intro = chatListIntro(reply);
+    const intro = chatListIntro(reply) || chatFilterIntro(mensagem);
     const compare = compareChatStockPicks(vehicles);
     if (!compare) return reply;
     return intro ? `${intro.trim()}\n\n${compare}` : compare;

@@ -36,7 +36,7 @@ const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Olá! Te ajudo a escolher no estoque, financiamento em até 60x ou troca. Manda o orçamento ou o modelo.",
+    "Olá! Comparo o estoque por preço, km e câmbio. Manda o orçamento ou o modelo — também falo de 60x e troca.",
 };
 
 const SUGGESTIONS = [
@@ -294,12 +294,16 @@ function ChatText({
       ) : null}
       {followups.length > 0 && onFollowup ? (
         <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-          {followups.map((item) => (
+          {followups.map((item, index) => (
             <button
               key={item}
               type="button"
               onClick={() => onFollowup(item)}
-              className="min-h-11 rounded-lg border border-white/15 bg-[#121214] px-2.5 py-1.5 text-left text-[12px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15"
+              className={`min-h-11 rounded-lg border border-white/15 bg-[#121214] px-2.5 py-1.5 text-left text-[12px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15${
+                followups.length % 2 === 1 && index === followups.length - 1
+                  ? " col-span-2"
+                  : ""
+              }`}
             >
               {item}
             </button>
