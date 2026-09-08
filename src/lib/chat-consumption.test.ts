@@ -32,6 +32,7 @@ test("faixa de consumo é catálogo, nunca medição do usado", () => {
     category: "carro",
   });
   assert.equal(palio18?.label, "1.8");
+  assert.equal(palio18?.kmL, "8–11 km/l");
   assert.match(palio18?.city ?? "", /8–11 km\/l/);
 
   const biz = typicalConsumptionHint({

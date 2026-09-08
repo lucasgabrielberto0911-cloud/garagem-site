@@ -207,6 +207,51 @@ function readVehicleCards(raw: unknown): ChatVehicleCard[] {
   return cards;
 }
 
+function ChatBubbleBody({ text }: { text: string }) {
+  const blocks = text.split(/\n{2,}/).filter(Boolean);
+  return (
+    <div className="rounded-2xl rounded-bl-md border border-white/10 bg-asphalt px-3.5 py-2.5">
+      {blocks.map((block, index) => {
+        const parts = splitChatLinks(block).filter(
+          (part) => part.type !== "link" || !/wa\.me\//i.test(part.href),
+        );
+        const consumo =
+          /consumo|catálogo|catalogo|km\/l|não foi medido|nao foi medido/i.test(
+            block,
+          );
+        return (
+          <p
+            key={`p-${index}`}
+            className={`whitespace-pre-wrap leading-[1.45] ${
+              index > 0 ? "mt-2 " : ""
+            }${
+              consumo
+                ? "text-[13px] text-cream/75"
+                : "text-sm text-cream"
+            }`}
+          >
+            {parts.map((part, partIndex) =>
+              part.type === "link" ? (
+                <a
+                  key={`${part.href}-${partIndex}`}
+                  href={part.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline decoration-white/40 underline-offset-2 transition hover:text-brand hover:decoration-brand"
+                >
+                  {part.label}
+                </a>
+              ) : (
+                <span key={`t-${partIndex}`}>{part.value}</span>
+              ),
+            )}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 function ChatText({
   text,
   vehicles = [],
@@ -225,33 +270,10 @@ function ChatText({
   const visible = displayChatText(source);
   const cta = vehicles.length > 0 ? null : chatWhatsAppCta(text);
   const showCta = Boolean(cta);
-  const parts = splitChatLinks(visible).filter(
-    (part) => part.type !== "link" || !/wa\.me\//i.test(part.href),
-  );
 
   return (
     <>
-      {visible ? (
-        <div className="rounded-2xl rounded-bl-md border border-white/10 bg-asphalt px-3.5 py-2.5">
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-cream">
-            {parts.map((part, index) =>
-              part.type === "link" ? (
-                <a
-                  key={`${part.href}-${index}`}
-                  href={part.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline decoration-white/40 underline-offset-2 transition hover:text-brand hover:decoration-brand"
-                >
-                  {part.label}
-                </a>
-              ) : (
-                <span key={`t-${index}`}>{part.value}</span>
-              ),
-            )}
-          </p>
-        </div>
-      ) : null}
+      {visible ? <ChatBubbleBody text={visible} /> : null}
       {vehicles.map((vehicle) => (
         <ChatVehicleMini key={vehicle.id} vehicle={vehicle} />
       ))}
@@ -277,7 +299,7 @@ function ChatText({
               key={item}
               type="button"
               onClick={() => onFollowup(item)}
-              className="min-h-9 rounded-lg border border-white/15 bg-[#121214] px-2.5 py-1.5 text-left text-[11px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15"
+              className="min-h-11 rounded-lg border border-white/15 bg-[#121214] px-2.5 py-1.5 text-left text-[12px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15"
             >
               {item}
             </button>
@@ -298,7 +320,10 @@ function AssistantRow({
   latest?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-2.5" data-chat-latest={latest ? "1" : undefined}>
+    <div
+      className={`flex items-start gap-2.5${latest ? " scroll-mt-2" : ""}`}
+      data-chat-latest={latest ? "1" : undefined}
+    >
       <ChatLogo size="sm" />
       <div className="min-w-0 flex-1">
         {pending ? (
@@ -341,17 +366,12 @@ export function SiteChat() {
     if (node) {
       const latest = node.querySelector("[data-chat-latest='1']");
       if (latest instanceof HTMLElement) {
-        const tooTall = latest.offsetHeight + 16 >= node.clientHeight;
-        if (tooTall) {
-          node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
-        } else {
-          const top =
-            latest.getBoundingClientRect().top -
-            node.getBoundingClientRect().top +
-            node.scrollTop -
-            8;
-          node.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-        }
+        const top =
+          latest.getBoundingClientRect().top -
+          node.getBoundingClientRect().top +
+          node.scrollTop -
+          8;
+        node.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
       } else {
         node.scrollTop = node.scrollHeight;
       }
@@ -553,7 +573,7 @@ export function SiteChat() {
               return message.role === "user" ? (
                 <div
                   key={`user-${index}`}
-                  className="flex justify-end"
+                  className={`flex justify-end${index === messages.length - 1 ? " scroll-mt-2" : ""}`}
                   data-chat-latest={index === messages.length - 1 ? "1" : undefined}
                 >
                   <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-brand px-3.5 py-2.5 text-sm leading-relaxed text-cream">

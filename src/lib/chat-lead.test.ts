@@ -282,10 +282,14 @@ test("resposta seca do modelo ganha comparação e consumo do estoque", async ()
   assert.match(compared, /Palio Weekend/);
   assert.match(compared, /mais em conta/);
   assert.match(compared, /HB20/);
-  assert.match(compared, /automático/);
+  assert.match(compared, /Prisma e HB20/);
+  assert.match(compared, /automático da lista/);
   assert.match(compared, /11–14/);
   assert.match(compared, /8–11/);
   assert.match(compared, /foi medido na loja/i);
+  assert.match(compared, /\n\n/);
+  assert.doesNotMatch(compared, /Todos são automático/);
+  assert.doesNotMatch(compared, /Fiat Palio Weekend é o mais em conta/);
 
   const result = await runChatTurn({
     mensagem: "Quais carros até 70 mil?",
@@ -299,9 +303,12 @@ Hyundai HB20 Comfort 1.0 2015 · 127.000 km · R$ 55.900`,
       functionCall: null,
     }),
   });
+  assert.match(result.reply, /70\.000/);
   assert.match(result.reply, /mais em conta/);
+  assert.match(result.reply, /Prisma e HB20/);
   assert.match(result.reply, /consumo|catálogo|11–14/);
   assert.match(result.reply, /automático/);
+  assert.match(result.reply, /\n\n/);
   assert.equal(result.vehicles.length, 3);
 });
 

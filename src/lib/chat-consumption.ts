@@ -13,11 +13,9 @@ export type ConsumptionVehicle = {
 export type ConsumptionRange = {
   label: string;
   city: string;
+  /** Trecho curto pra lista: "11–14 km/l". */
+  kmL: string;
 };
-
-function blobOf(vehicle: ConsumptionVehicle) {
-  return `${vehicle.engine ?? ""} ${vehicle.version ?? ""}`;
-}
 
 /** Cilindrada em litros: "1.0", "2.0 TSI", "160cc", moto "BIZ 125". */
 export function parseEngineDisplacementLiters(
@@ -68,22 +66,46 @@ export function typicalConsumptionRange(
   if (category === "moto") {
     const cc = liters != null ? Math.round(liters * 1000) : null;
     if (cc != null && cc <= 125) {
-      return { label: `${cc}cc`, city: "35–45 km/l cidade" };
+      return {
+        label: `${cc}cc`,
+        city: "35–45 km/l cidade",
+        kmL: "35–45 km/l",
+      };
     }
     if (cc != null && cc <= 160) {
-      return { label: `${cc}cc`, city: "30–40 km/l cidade" };
+      return {
+        label: `${cc}cc`,
+        city: "30–40 km/l cidade",
+        kmL: "30–40 km/l",
+      };
     }
     if (cc != null) {
-      return { label: `${cc}cc`, city: "20–32 km/l cidade" };
+      return {
+        label: `${cc}cc`,
+        city: "20–32 km/l cidade",
+        kmL: "20–32 km/l",
+      };
     }
-    return { label: "moto leve", city: "bem menos que um carro 1.0" };
+    return {
+      label: "moto leve",
+      city: "bem menos que um carro 1.0",
+      kmL: "bem menos que um 1.0",
+    };
   }
 
   if (isElectric(fuel)) {
-    return { label: "elétrico", city: "sem km/l (autonomia da bateria)" };
+    return {
+      label: "elétrico",
+      city: "sem km/l (autonomia da bateria)",
+      kmL: "sem km/l",
+    };
   }
   if (isHybrid(fuel)) {
-    return { label: "híbrido", city: "15–22 km/l cidade" };
+    return {
+      label: "híbrido",
+      city: "15–22 km/l cidade",
+      kmL: "15–22 km/l",
+    };
   }
 
   if (liters != null && isDiesel(fuel)) {
@@ -91,39 +113,49 @@ export function typicalConsumptionRange(
       return {
         label: `diesel ${liters.toFixed(1)}`,
         city: "9–12 km/l cidade / 12–16 km/l estrada",
+        kmL: "9–12 km/l cidade",
       };
     }
     return {
       label: `diesel ${liters.toFixed(1)}`,
       city: "8–11 km/l cidade / 10–14 km/l estrada",
+      kmL: "8–11 km/l cidade",
     };
   }
 
   if (liters != null) {
     if (liters <= 1.0) {
-      return { label: "1.0 flex", city: "11–14 km/l cidade (gasolina)" };
+      return {
+        label: "1.0 flex",
+        city: "11–14 km/l cidade (gasolina)",
+        kmL: "11–14 km/l",
+      };
     }
     if (liters <= 1.4) {
       return {
         label: `${liters.toFixed(1)} flex`,
         city: "10–13 km/l cidade (gasolina)",
+        kmL: "10–13 km/l",
       };
     }
     if (liters <= 1.6) {
       return {
         label: `${liters.toFixed(1)} flex`,
         city: "9–12 km/l cidade (gasolina)",
+        kmL: "9–12 km/l",
       };
     }
     if (liters <= 2.0) {
       return {
         label: `${liters.toFixed(1)}`,
         city: "8–11 km/l cidade (gasolina)",
+        kmL: "8–11 km/l",
       };
     }
     return {
       label: `${liters.toFixed(1)}`,
       city: "7–10 km/l cidade (gasolina)",
+      kmL: "7–10 km/l",
     };
   }
 
@@ -131,6 +163,7 @@ export function typicalConsumptionRange(
     return {
       label: "diesel",
       city: "em geral mais km/l que um flex equivalente",
+      kmL: "mais km/l que um flex",
     };
   }
   return null;

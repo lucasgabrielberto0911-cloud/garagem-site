@@ -161,7 +161,7 @@ function sentenceMentionsUnshownVehicle(
   return false;
 }
 
-/** Com mini-anúncio na tela, a bolha fica só com o gancho curto. */
+/** Com mini-anúncio na tela, a bolha fica a comparação útil — parágrafos intactos. */
 export function polishChatReplyWithCards(
   text: string,
   vehicles: ChatVehicleCard[],
@@ -169,23 +169,33 @@ export function polishChatReplyWithCards(
   const stripped = stripChatVehicleListingLines(text, vehicles);
   if (vehicles.length === 0) return stripped;
 
-  const parts = stripped
-    .split(/\n+|(?<=[.!?])\s+/)
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .filter((part) => {
-      if (looksLikeLooseVehicleTitle(part)) return false;
-      if (isChatVehicleListingLine(part)) return false;
-      if (CARD_FILLER.test(fold(part))) return false;
-      if (sentenceMentionsUnshownVehicle(part, vehicles)) return false;
-      return true;
-    });
+  const keep = (part: string) => {
+    if (looksLikeLooseVehicleTitle(part)) return false;
+    if (isChatVehicleListingLine(part)) return false;
+    if (CARD_FILLER.test(fold(part))) return false;
+    if (sentenceMentionsUnshownVehicle(part, vehicles)) return false;
+    return true;
+  };
 
-  let intro = parts.join(" ").replace(/\s+/g, " ").trim();
+  const paragraphs = stripped
+    .split(/\n+/)
+    .map((para) =>
+      para
+        .split(/(?<=[.!?])\s+/)
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .filter(keep)
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter(Boolean);
+
+  let intro = paragraphs.join("\n\n").trim();
   if (intro.length > CARD_INTRO_MAX) {
     let kept = "";
-    for (const part of parts) {
-      const next = kept ? `${kept} ${part}` : part;
+    for (const para of paragraphs) {
+      const next = kept ? `${kept}\n\n${para}` : para;
       if (next.length > CARD_INTRO_MAX && kept) break;
       kept = next;
     }

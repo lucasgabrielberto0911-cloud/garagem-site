@@ -407,16 +407,20 @@ test("comparação com o nome completo do card não some da bolha", () => {
     category: "carro",
   };
   const leftover = `Até R$ 70.000 eu começaria por estes:
-Entre esses, o Fiat Palio Weekend é o mais em conta (R$ 47.900). O Hyundai HB20 tem menos km (127 mil km). O Hyundai HB20 é automático — mais conforto no trânsito. No consumo, faixa típica de catálogo: Chevrolet Prisma 1.0 flex ~11–14 km/l cidade (gasolina); Fiat Palio Weekend 1.8 ~8–11 km/l. Nenhum desses usados foi medido na loja.`;
+Entre esses, o Fiat Palio Weekend é o mais em conta (R$ 47.900). O Hyundai HB20 tem menos km (127 mil km). O Hyundai HB20 é automático — mais conforto no trânsito.
+
+No consumo, faixa típica de catálogo: Chevrolet Prisma 1.0 flex ~11–14 km/l cidade (gasolina); Fiat Palio Weekend 1.8 ~8–11 km/l. Nenhum desses usados foi medido na loja.`;
   const cards = [
     toChatVehicleCard(palio),
     toChatVehicleCard(prisma),
     toChatVehicleCard(hb20),
   ];
   const polished = polishChatReplyWithCards(leftover, cards);
+  assert.match(polished, /70\.000/);
   assert.match(polished, /mais em conta/);
   assert.match(polished, /Prisma/);
   assert.match(polished, /11–14/);
   assert.match(polished, /foi medido na loja/);
+  assert.match(polished, /\n\n/);
   assert.doesNotMatch(polished, /156\.400 km · R\$/);
 });

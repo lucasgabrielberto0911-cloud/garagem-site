@@ -17,6 +17,12 @@ test("transforma o wa.me em link com rótulo WhatsApp", () => {
   ]);
 });
 
+test("mantém a quebra entre a comparação e o consumo", () => {
+  const text =
+    "Entre esses, o Palio Weekend é o mais em conta (R$ 47.900).\n\nConsumo de catálogo na cidade: Prisma e HB20 1.0 ~11–14 km/l.";
+  assert.match(displayChatText(text), /\n\nConsumo/);
+});
+
 test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   const finance =
     "A gente financia em até 60x. Parcela no WhatsApp: https://wa.me/5527996330706";
