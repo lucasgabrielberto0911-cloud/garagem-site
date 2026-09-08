@@ -371,6 +371,48 @@ Hyundai HB20 Premium Automatico 1.6 2015 · 127.000 km · R$ 55.900`,
   assert.match(result.reply, /não foi medido|foi medido na loja/);
 });
 
+test("comparação fala Lancer, não LANCER", () => {
+  const hb20Auto: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb20-auto-case",
+    yearModel: 2015,
+    km: 127300,
+    price: 55900,
+    transmission: "Automático",
+    engine: "1.6",
+    category: "carro",
+  };
+  const onixAuto: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-onix-auto-case",
+    brand: "Chevrolet",
+    model: "Onix",
+    yearModel: 2014,
+    km: 32500,
+    price: 56900,
+    transmission: "Automático",
+    engine: "1.4",
+    category: "carro",
+  };
+  const lancer: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-lancer-auto-case",
+    brand: "Mitsubishi",
+    model: "LANCER",
+    yearModel: 2014,
+    km: 80000,
+    price: 62900,
+    transmission: "Automático",
+    engine: "2.0",
+    category: "carro",
+  };
+  const compared = compareChatStockPicks([hb20Auto, onixAuto, lancer]);
+  assert.match(compared, /Lancer/);
+  assert.doesNotMatch(compared, /LANCER/);
+  assert.match(compared, /HB20/);
+  assert.match(compared, /Onix/);
+});
+
 test("eae recusado pelo modelo vira cumprimento da loja", async () => {
   const result = await runChatTurn({
     mensagem: "eae",

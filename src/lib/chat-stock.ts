@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
+import { formatModelName } from "@/lib/format";
 import {
   parseEngineDisplacementLiters,
   typicalConsumptionHint,
@@ -206,7 +207,7 @@ export function formatVehicleLine(vehicle: ChatVehicleRecord) {
 }
 
 function talkName(vehicle: ChatVehicleRecord) {
-  const name = (vehicle.model || vehicle.brand).trim();
+  const name = formatModelName(vehicle.model || vehicle.brand).trim();
   const article = (vehicle.category ?? "carro") === "moto" ? "a" : "o";
   const labeled = `${article} ${name}`;
   return {
