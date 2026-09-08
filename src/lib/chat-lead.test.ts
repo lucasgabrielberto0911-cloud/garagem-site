@@ -63,6 +63,18 @@ test("até 70 mil lista o HB20 e deixa o Compass de fora", () => {
     isIncompleteStockReply("Temos ótimas opções até R$ 70 mil no momento:"),
     true,
   );
+  assert.equal(
+    isIncompleteStockReply(
+      "Temos estas opções até R$ 70.000 no estoque: Chevrolet Prisma Sed. Joy/LS 1.0 8V FlexPower 4p",
+    ),
+    true,
+  );
+  assert.equal(
+    isIncompleteStockReply(
+      "Até R$ 70.000:\nHyundai HB20 2022 · 68.450 km · R$ 64.900\nChevrolet Onix 2014 · 32.500 km · R$ 56.900",
+    ),
+    false,
+  );
 });
 
 test("criar_lead só fecha com nome e telefone válidos", () => {

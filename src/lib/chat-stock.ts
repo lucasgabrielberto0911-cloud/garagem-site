@@ -116,7 +116,15 @@ export function isIncompleteStockReply(reply: string) {
   const text = reply.trim();
   if (!text) return true;
   if (/:\s*$/.test(text)) return true;
-  if (/op[cç][oõ]es|no momento/i.test(text) && !/R\$\s*\d/.test(text)) return true;
+  const pricedCars = (text.match(/·\s*R\$\s*\d/g) ?? []).length;
+  if (
+    /op[cç][oõ]es|no estoque|no momento|cabem no orcamento|cabem no orçamento/i.test(
+      text,
+    ) &&
+    pricedCars < 2
+  ) {
+    return true;
+  }
   return false;
 }
 
