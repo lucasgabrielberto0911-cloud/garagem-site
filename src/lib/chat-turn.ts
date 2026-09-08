@@ -1,3 +1,4 @@
+import { isOffScopeMessage, offScopeReply } from "@/lib/chat-guard";
 import {
   CHAT_FALLBACK_REPLY,
   buildChatSystemPrompt,
@@ -31,6 +32,10 @@ export async function runChatTurn(input: {
   const generate = input.generate ?? generateChatReply;
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
+
+  if (isOffScopeMessage(input.mensagem)) {
+    return { reply: offScopeReply(input.historico), leadCreated: false };
+  }
 
   let first;
   try {

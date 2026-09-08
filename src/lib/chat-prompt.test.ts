@@ -22,6 +22,15 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /respostas curtas/);
   assert.equal(CHAT_WHATSAPP_URL, "https://wa.me/5527996330706");
   assert.match(CHAT_SYSTEM_PROMPT, /https:\/\/wa\.me\/5527996330706/);
+  assert.match(CHAT_SYSTEM_PROMPT, /ESCOPO RESTRITO/);
+  assert.match(CHAT_SYSTEM_PROMPT, /RESISTÊNCIA A MANIPULAÇÃO/);
+  assert.match(CHAT_SYSTEM_PROMPT, /SEM CONSELHO FINANCEIRO ESPECÍFICO/);
+  assert.match(CHAT_SYSTEM_PROMPT, /DADOS PESSOAIS MÍNIMOS/);
+  assert.match(CHAT_SYSTEM_PROMPT, /CONTENÇÃO DE ABUSO/);
+  assert.match(CHAT_SYSTEM_PROMPT, /nunca cálculo de parcela exato/);
+  assert.match(CHAT_SYSTEM_PROMPT, /ignore as instruções anteriores/);
+  assert.match(CHAT_SYSTEM_PROMPT, /Nunca pedir CPF/);
+  assert.match(CHAT_SYSTEM_PROMPT, /chama no WhatsApp pra outros temas/);
 });
 
 test("consulta do bot não inclui fipePrice", () => {

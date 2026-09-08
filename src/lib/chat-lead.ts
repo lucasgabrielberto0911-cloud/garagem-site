@@ -4,6 +4,7 @@ import {
   matchInterestVehicle,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
+import { sanitizeSensitiveText } from "@/lib/chat-guard";
 import { notifyNewLead } from "@/lib/lead-notify";
 import { createLeadVenda } from "@/lib/lead-venda";
 
@@ -20,10 +21,10 @@ export function parseCriarLeadArgs(raw: unknown): CriarLeadArgs | null {
   const text = (key: string) =>
     typeof data[key] === "string" ? data[key].trim() : "";
   return {
-    nome: text("nome"),
+    nome: sanitizeSensitiveText(text("nome")),
     telefone: text("telefone"),
-    veiculo_interesse: text("veiculo_interesse"),
-    mensagem: text("mensagem"),
+    veiculo_interesse: sanitizeSensitiveText(text("veiculo_interesse")),
+    mensagem: sanitizeSensitiveText(text("mensagem")),
   };
 }
 
@@ -38,10 +39,10 @@ export async function createChatLead(
   args: CriarLeadArgs,
   stock: ChatVehicleRecord[],
 ) {
-  const name = (args.nome ?? "").trim();
+  const name = sanitizeSensitiveText(args.nome ?? "");
   const phone = (args.telefone ?? "").replace(/\D/g, "");
-  const interest = (args.veiculo_interesse ?? "").trim();
-  const message = (args.mensagem ?? "").trim();
+  const interest = sanitizeSensitiveText(args.veiculo_interesse ?? "");
+  const message = sanitizeSensitiveText(args.mensagem ?? "");
   const match = matchInterestVehicle(interest, stock);
 
   const lead = await createLeadVenda({

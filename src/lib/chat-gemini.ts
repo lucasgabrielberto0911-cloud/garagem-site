@@ -10,7 +10,7 @@ export type ChatTurn = {
 export const CRIAR_LEAD_DECLARATION = {
   name: "criar_lead",
   description:
-    "Registra um lead quando o visitante demonstrou interesse real de compra e informou nome e telefone.",
+    "Registra um lead quando o visitante demonstrou interesse real de compra e informou nome e telefone. Use só nome e telefone — nunca CPF, dados bancários ou outro dado sensível.",
   parameters: {
     type: "OBJECT",
     properties: {
@@ -25,7 +25,8 @@ export const CRIAR_LEAD_DECLARATION = {
       },
       mensagem: {
         type: "STRING",
-        description: "Resumo do que a pessoa pediu.",
+        description:
+          "Resumo curto do interesse no estoque. Sem CPF, banco, PIX ou dado sensível.",
       },
     },
     required: ["nome", "telefone"],
