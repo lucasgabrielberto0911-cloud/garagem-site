@@ -38,16 +38,14 @@ export async function runChatTurn(input: {
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
 
-  if (isChatPing(input.mensagem)) {
-    return { reply: CHAT_PING_REPLY, leadCreated: false };
-  }
-
   if (isOffScopeMessage(input.mensagem)) {
     return { reply: offScopeReply(input.historico), leadCreated: false };
   }
 
-  const fromStock = () =>
-    localGarageReply(input.mensagem, input.stock) ?? CHAT_FALLBACK_REPLY;
+  const fromStock = () => {
+    if (isChatPing(input.mensagem)) return CHAT_PING_REPLY;
+    return localGarageReply(input.mensagem, input.stock) ?? CHAT_FALLBACK_REPLY;
+  };
 
   let first;
   try {

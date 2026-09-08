@@ -40,9 +40,7 @@ export function isOffScopeMessage(message: string) {
   if (!text) return false;
   if (isChatPing(text)) return false;
   if (isJailbreakAttempt(text)) return true;
-  if (GARAGE_HINT.test(text) && !OFF_SCOPE_HINT.test(text)) return false;
-  if (OFF_SCOPE_HINT.test(text)) return true;
-  return !GARAGE_HINT.test(text);
+  return OFF_SCOPE_HINT.test(text) && !GARAGE_HINT.test(text);
 }
 
 export function previousOffScopeRedirects(history: ChatTurn[]) {
