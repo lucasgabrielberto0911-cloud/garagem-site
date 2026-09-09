@@ -62,7 +62,10 @@ export function displayChatText(text: string) {
   return value;
 }
 
-export function chatWhatsAppCta(text: string): ChatWhatsAppCta | null {
+export function chatWhatsAppCta(
+  text: string,
+  vehicle?: { label: string; model?: string; category?: string } | null,
+): ChatWhatsAppCta | null {
   if (!/whatsapp|wa\.me/i.test(text)) return null;
   const folded = fold(text);
 
@@ -76,7 +79,9 @@ export function chatWhatsAppCta(text: string): ChatWhatsAppCta | null {
   if (/financi|parcela|60x|simul|cartao|18 vez/.test(folded)) {
     return {
       href: whatsappUrl(
-        "Olá! Vi o assistente da Garagem e quero simular financiamento em até 60x.",
+        vehicle
+          ? WHATSAPP_MESSAGES.vehicleFinance(vehicle.label)
+          : "Olá! Vi o assistente da Garagem e quero simular financiamento em até 60x.",
       ),
       label: "Simular parcela",
       benefit: "O consultor calcula no seu caso",
@@ -84,7 +89,11 @@ export function chatWhatsAppCta(text: string): ChatWhatsAppCta | null {
   }
   if (/\btroca\b/.test(folded)) {
     return {
-      href: whatsappUrl(WHATSAPP_MESSAGES.sell),
+      href: whatsappUrl(
+        vehicle
+          ? WHATSAPP_MESSAGES.vehicleTrade(vehicle.label)
+          : WHATSAPP_MESSAGES.sell,
+      ),
       label: "Avaliar meu usado",
       benefit: "Valor da troca com fotos, pelo WhatsApp",
     };
@@ -97,8 +106,12 @@ export function chatWhatsAppCta(text: string): ChatWhatsAppCta | null {
     };
   }
   return {
-    href: whatsappUrl(WHATSAPP_MESSAGES.help),
+    href: whatsappUrl(
+      vehicle
+        ? WHATSAPP_MESSAGES.vehicle(vehicle.label)
+        : WHATSAPP_MESSAGES.help,
+    ),
     label: "Chamar consultor",
-    benefit: "Confirma o carro · das 8h às 23h",
+    benefit: "Confirma o modelo · das 8h às 23h",
   };
 }

@@ -423,6 +423,15 @@ export function replyAlreadyCompares(
     .join(" ");
   const folded = foldReply(remainder);
   if (/consumo|km\/l|catalogo|faixa tipica/.test(folded)) return true;
+  if (vehicles.length === 1) {
+    const vehicle = vehicles[0]!;
+    const model = normalize(vehicle.model);
+    const brand = normalize(vehicle.brand);
+    if (folded.includes(model) || folded.includes(brand)) {
+      return true;
+    }
+    return false;
+  }
   if (vehicles.length < 2) return false;
   const mentioned = vehicles.filter((vehicle) =>
     folded.includes(normalize(vehicle.model)),
@@ -509,6 +518,19 @@ export function enrichChatStockReply(
     }
     return reply;
   }
+
+  const foldedMsg = foldReply(mensagem);
+  const foldedReply = foldReply(reply);
+  const isPolicyOrService =
+    /troca|financi|parcela|cartao|garantia|contato|vendedor|consultor|video|avaliacao/.test(
+      foldedMsg,
+    ) ||
+    /troca|financi|parcela|cartao|garantia|consultor/.test(foldedReply);
+
+  if (isPolicyOrService) {
+    return reply;
+  }
+
   const extra = compareChatStockPicks(vehicles);
   if (!extra) return reply;
   return `${reply.trim()}\n\n${extra}`;
@@ -555,7 +577,7 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
 }
 
 export const CHAT_FINANCE_REPLY =
-  `Dá sim — a gente parcela o seminovo em até 60 vezes no financiamento, e no cartão de crédito aceitamos em até 18 vezes. O usado também pode entrar na conta. A condição certinha depende do seu perfil e do carro, então o consultor monta no WhatsApp com o modelo que você escolher, bem no seu caso. ${CHAT_WHATSAPP_URL}`;
+  `Dá sim — a gente parcela o seminovo em até 60 vezes no financiamento, e no cartão de crédito aceitamos em até 18 vezes. O usado também pode entrar na conta. A condição certinha depende do seu perfil e do modelo, então o consultor monta no WhatsApp com o modelo que você escolher, bem no seu caso. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_CARD_REPLY =
   `Dá sim — no cartão de crédito a gente parcela em até 18 vezes. Se preferir, o seminovo também financia em até 60 vezes, e o usado pode entrar na conta. O consultor confirma a melhor forma no WhatsApp, no seu caso. ${CHAT_WHATSAPP_URL}`;
@@ -607,7 +629,7 @@ export function localGarageReply(
   const byBudget = listStockByBudget(mensagem, stock);
   if (byBudget) return byBudget;
   if (/\bgarantia\b/.test(text)) {
-    return `Fica tranquilo: todos os seminovos saem com garantia de 3 meses. Se quiser, eu já te mostro um carro do estoque, ou o consultor detalha no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `Fica tranquilo: todos os seminovos saem com garantia de 3 meses. Se quiser, eu já te mostro um modelo do estoque, ou o consultor detalha no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (/\b(horario|atendimento|endereco|localizacao)\b/.test(text)) {
     return `A gente atende online todos os dias, das 8h às 23h — Aracruz, Vitória, Linhares, Serra e Vila Velha. Loja digital, visita combinada. Um consultor confirma o melhor jeito no WhatsApp: ${CHAT_WHATSAPP_URL}`;

@@ -163,6 +163,7 @@ export default async function VehicleDetailPage({
           brand: formatBrandName(vehicle.brand),
           model: formatModelName(vehicle.model),
           price: vehicle.price,
+          category: vehicle.category,
         }}
       />
       <JsonLd data={vehicleJsonLd(vehicle)} />

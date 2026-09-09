@@ -37,4 +37,21 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   const trade =
     "Aceitamos carro ou moto na troca. Avaliação no WhatsApp: https://wa.me/5527996330706";
   assert.equal(chatWhatsAppCta(trade)?.label, "Avaliar meu usado");
+
+  const tradeVehicle = chatWhatsAppCta(trade, {
+    label: "Honda BIZ 125 EX 2023",
+    model: "BIZ 125",
+    category: "moto",
+  });
+  assert.equal(tradeVehicle?.label, "Avaliar meu usado");
+  assert.match(decodeURIComponent(tradeVehicle?.href ?? ""), /Honda BIZ 125 EX 2023/);
+  assert.match(decodeURIComponent(tradeVehicle?.href ?? ""), /usado na troca/);
+
+  const financeVehicle = chatWhatsAppCta(finance, {
+    label: "Honda BIZ 125 EX 2023",
+    model: "BIZ 125",
+    category: "moto",
+  });
+  assert.equal(financeVehicle?.label, "Simular parcela");
+  assert.match(decodeURIComponent(financeVehicle?.href ?? ""), /Honda BIZ 125 EX 2023/);
 });

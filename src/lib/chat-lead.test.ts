@@ -550,3 +550,31 @@ test("sessão do chat bloqueia depois de 30 mensagens", () => {
     clearRateLimit(key);
   }
 });
+
+test("pergunta de troca de seminovo não injeta catálogo duplicado", async () => {
+  const biz: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-biz-trade-test",
+    brand: "Honda",
+    model: "BIZ 125",
+    version: "EX 125 FLEX",
+    yearModel: 2023,
+    km: 22000,
+    price: 17900,
+    transmission: "Semi-automático",
+    engine: "125cc",
+    category: "moto",
+  };
+  const result = await runChatTurn({
+    mensagem: "Vocês aceitam meu veículo usado na troca pelo Honda BIZ 125 EX 125 FLEX 2023?",
+    historico: [],
+    stock: [biz],
+    generate: async () => ({
+      text: "Com certeza, a gente aceita veículo na troca sim, seja carro ou moto, inclusive para abater na Biz 125. Para avaliar o seu veículo, o consultor faz tudo pelo WhatsApp.",
+      functionCall: null,
+    }),
+  });
+  assert.doesNotMatch(result.reply, /Achei ele no estoque/);
+  assert.match(result.reply, /Com certeza, a gente aceita veículo na troca sim/);
+});
+

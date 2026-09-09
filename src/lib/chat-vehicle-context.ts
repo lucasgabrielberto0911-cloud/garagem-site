@@ -4,6 +4,7 @@ export type ChatVehicleContext = {
   brand: string;
   model: string;
   price?: number;
+  category?: string;
 };
 
 let currentContext: ChatVehicleContext | null = null;

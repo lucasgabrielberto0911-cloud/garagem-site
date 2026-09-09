@@ -65,10 +65,10 @@ const SUGGESTIONS = [
 ];
 
 const VEHICLE_SUGGESTIONS = [
-  "Condições e garantia deste carro",
-  "Pedir vídeo dele no WhatsApp",
+  "Garantia e condições",
+  "Pedir vídeo no WhatsApp",
   "Aceita meu usado na troca?",
-  "Falar com um vendedor",
+  "Falar com um consultor",
 ];
 
 const CHAT_STORAGE_KEY = "garagem_site_chat_history_v1";
@@ -79,21 +79,26 @@ function resolveSuggestionPrompt(
   vehicle?: ChatVehicleContext | null,
 ): string {
   if (!vehicle) return suggestion;
+  const isMoto = vehicle.category === "moto";
+  const articleO = isMoto ? "a" : "o";
+  const prepDa = isMoto ? "da" : "do";
+  const prepPela = isMoto ? "pela" : "pelo";
   const lower = suggestion.toLowerCase();
+
   if (lower.includes("financiamento")) {
-    return `Como funciona o financiamento para o ${vehicle.label}?`;
+    return `Como funciona o financiamento para ${articleO} ${vehicle.label}?`;
   }
   if (lower.includes("vídeo") || lower.includes("video")) {
-    return `Como faço para pedir um vídeo do ${vehicle.label} pelo WhatsApp?`;
+    return `Como faço para pedir um vídeo ${prepDa} ${vehicle.label} pelo WhatsApp?`;
   }
-  if (lower.includes("troca")) {
-    return `Vocês aceitam meu veículo usado na troca pelo ${vehicle.label}?`;
+  if (lower.includes("troca") || lower.includes("usado")) {
+    return `Vocês aceitam meu veículo usado na troca ${prepPela} ${vehicle.label}?`;
   }
   if (lower.includes("garantia") || lower.includes("condições") || lower.includes("condicoes")) {
-    return `Qual é a garantia e as condições do ${vehicle.label}?`;
+    return `Qual é a garantia e as condições ${prepDa} ${vehicle.label}?`;
   }
-  if (lower.includes("vendedor")) {
-    return `Quero falar com um consultor sobre o ${vehicle.label}.`;
+  if (lower.includes("vendedor") || lower.includes("consultor")) {
+    return `Quero falar com um consultor sobre ${articleO} ${vehicle.label}.`;
   }
   return suggestion;
 }
@@ -321,6 +326,8 @@ function ChatText({
   onFollowup,
   onVehicleClick,
   onStockExplore,
+  activeVehicleId,
+  vehicleContext,
 }: {
   text: string;
   vehicles?: ChatVehicleCard[];
@@ -330,11 +337,16 @@ function ChatText({
   onFollowup?: (text: string) => void;
   onVehicleClick?: (vehicle: ChatVehicleCard) => void;
   onStockExplore?: () => void;
+  activeVehicleId?: string;
+  vehicleContext?: ChatVehicleContext | null;
 }) {
+  const filteredVehicles = activeVehicleId
+    ? vehicles.filter((vehicle) => vehicle.id !== activeVehicleId)
+    : vehicles;
   const source =
-    vehicles.length > 0 ? polishChatReplyWithCards(text, vehicles) : text;
+    filteredVehicles.length > 0 ? polishChatReplyWithCards(text, filteredVehicles) : text;
   const visible = displayChatText(source);
-  const cta = vehicles.length > 0 ? null : chatWhatsAppCta(text);
+  const cta = chatWhatsAppCta(text, vehicleContext);
   const showCta = Boolean(cta);
 
   return (
@@ -352,7 +364,7 @@ function ChatText({
           Contato registrado. A equipe continua com você no WhatsApp.
         </div>
       ) : null}
-      {vehicles.map((vehicle) => (
+      {filteredVehicles.map((vehicle) => (
         <ChatVehicleMini
           key={vehicle.id}
           vehicle={vehicle}
@@ -436,12 +448,16 @@ export function SiteChat() {
     return subscribeChatVehicleContext(setVehicleContext);
   }, []);
 
+  const isMoto = vehicleContext?.category === "moto";
+  const vehicleNoun = isMoto ? "desta moto" : "deste carro";
+  const vehiclePrep = isMoto ? "da" : "do";
+
   const activeSuggestions = vehicleContext
     ? [
-        `Financiamento do ${vehicleContext.model}`,
+        `Financiamento ${vehiclePrep} ${vehicleContext.model}`,
         `Pedir vídeo no WhatsApp`,
-        `Troca pelo ${vehicleContext.model}?`,
-        `Garantia deste carro`,
+        `Aceita meu usado na troca?`,
+        `Garantia ${vehicleNoun}`,
       ]
     : isVehiclePage
       ? VEHICLE_SUGGESTIONS
@@ -565,17 +581,29 @@ export function SiteChat() {
     if (!open) return;
     const node = listRef.current;
     if (node) {
-      const latest = node.querySelector("[data-chat-latest='1']");
-      if (latest instanceof HTMLElement) {
-        const top =
-          latest.getBoundingClientRect().top -
-          node.getBoundingClientRect().top +
-          node.scrollTop -
-          8;
-        node.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-      } else {
-        node.scrollTop = node.scrollHeight;
-      }
+      const scrollDown = () => {
+        const latest = node.querySelector("[data-chat-latest='1']");
+        if (latest instanceof HTMLElement) {
+          const latestHeight = latest.offsetHeight;
+          const containerHeight = node.clientHeight;
+          if (latestHeight > containerHeight) {
+            const top =
+              latest.getBoundingClientRect().top -
+              node.getBoundingClientRect().top +
+              node.scrollTop -
+              12;
+            node.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+          } else {
+            node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
+          }
+        } else {
+          node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
+        }
+      };
+
+      scrollDown();
+      const timer = setTimeout(scrollDown, 80);
+      return () => clearTimeout(timer);
     }
     const desktop = window.matchMedia("(min-width: 1024px)").matches;
     if (keepFocusRef.current || desktop) inputRef.current?.focus();
@@ -820,15 +848,23 @@ export function SiteChat() {
               <span className="flex items-center gap-1.5 min-w-0 text-[11px] text-muted truncate">
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
                 <span className="truncate">
-                  Vendo: <strong className="text-cream font-medium">{vehicleContext.label}</strong>
+                  {isMoto ? "Moto:" : "Na tela:"}{" "}
+                  <strong className="text-cream font-medium">{vehicleContext.label}</strong>
                 </span>
               </span>
               <button
                 type="button"
-                onClick={() => void send(`Tenho interesse no ${vehicleContext.label}. Gostaria de mais informações sobre ele.`, "suggestion")}
+                onClick={() =>
+                  void send(
+                    isMoto
+                      ? `Tenho interesse na ${vehicleContext.label}. Gostaria de mais informações sobre ela.`
+                      : `Tenho interesse no ${vehicleContext.label}. Gostaria de mais informações sobre ele.`,
+                    "suggestion",
+                  )
+                }
                 className="shrink-0 rounded border border-brand/40 bg-brand/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand hover:bg-brand/25 transition"
               >
-                Perguntar dele
+                {isMoto ? "Perguntar dela" : "Perguntar dele"}
               </button>
             </div>
           ) : null}
@@ -859,6 +895,8 @@ export function SiteChat() {
                     vehicles={message.vehicles}
                     stockHref={message.stockHref}
                     leadCreated={message.leadCreated}
+                    activeVehicleId={vehicleContext?.id}
+                    vehicleContext={vehicleContext}
                     followups={
                       !pending &&
                       index === messages.length - 1 &&
@@ -918,13 +956,13 @@ export function SiteChat() {
           </div>
 
           {vehicleContext && started && !pending ? (
-            <div className="flex gap-1.5 overflow-x-auto px-3 py-1.5 border-t border-white/10 bg-[#121214] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid grid-cols-2 gap-1.5 border-t border-white/10 bg-[#121214] px-3 py-2">
               {activeSuggestions.map((suggestion) => (
                 <button
                   key={suggestion}
                   type="button"
                   onClick={() => void send(resolveSuggestionPrompt(suggestion, vehicleContext), "suggestion")}
-                  className="shrink-0 rounded-lg border border-white/15 bg-asphalt px-2.5 py-1 text-[11px] font-medium text-cream/90 transition hover:border-brand/40 hover:bg-brand/15 hover:text-cream whitespace-nowrap"
+                  className="flex items-center justify-center rounded-lg border border-white/15 bg-asphalt px-2 py-1.5 text-center text-[11px] font-medium leading-tight text-cream/90 transition hover:border-brand/40 hover:bg-brand/15 hover:text-cream"
                 >
                   {suggestion}
                 </button>
@@ -959,7 +997,9 @@ export function SiteChat() {
                 }}
                 placeholder={
                   vehicleContext
-                    ? `Dúvida sobre o ${vehicleContext.model}?`
+                    ? isMoto
+                      ? `Dúvida sobre a ${vehicleContext.model}?`
+                      : `Dúvida sobre o ${vehicleContext.model}?`
                     : "Ex.: HB20 até 70 mil"
                 }
                 maxLength={800}
