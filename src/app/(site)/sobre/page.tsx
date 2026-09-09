@@ -43,7 +43,7 @@ const DIFERENCIAIS = [
   {
     Icon: IconHandshake,
     title: "Atendimento de perto, mesmo online",
-    text: "Somos loja digital, mas o contato é humano: WhatsApp rápido, vídeo do carro, avaliação de troca e acompanhamento até a transferência. Qualidade no atendimento é o nosso padrão.",
+    text: "Somos loja digital, mas o contato é humano: WhatsApp rápido, vídeo do veículo, avaliação de troca e acompanhamento até a transferência. Qualidade no atendimento é o nosso padrão.",
   },
   {
     Icon: IconWhatsApp,
@@ -71,7 +71,7 @@ export default async function SobrePage() {
     stats.sales > 0 ? `+${formatNumberBR(stats.sales)}` : "0";
   const highlightStats = [
     { value: publicSite.aboutYears, label: "anos de história" },
-    { value: soldLabel, label: "carros vendidos" },
+    { value: soldLabel, label: "veículos vendidos" },
     { value: publicSite.aboutHours, label: "atendimento online" },
     { value: publicSite.aboutFocus, label: "foco no cliente" },
   ];
