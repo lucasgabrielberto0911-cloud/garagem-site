@@ -77,6 +77,7 @@ const SORT_OPTIONS = [
 ] as const;
 
 const BUDGET_CHIPS = [
+  { label: "Até 30 mil", minPrice: "", maxPrice: "30000" },
   { label: "Até 50 mil", minPrice: "", maxPrice: "50000" },
   { label: "50 a 80 mil", minPrice: "50000", maxPrice: "80000" },
   { label: "80 a 120 mil", minPrice: "80000", maxPrice: "120000" },
@@ -92,6 +93,7 @@ const selectClass =
 
 const MIN_PRICE_OPTIONS = [
   { value: "", label: "Preço mínimo" },
+  { value: "15000", label: "A partir de R$ 15 mil" },
   { value: "30000", label: "A partir de R$ 30 mil" },
   { value: "50000", label: "A partir de R$ 50 mil" },
   { value: "80000", label: "A partir de R$ 80 mil" },
@@ -101,6 +103,8 @@ const MIN_PRICE_OPTIONS = [
 
 const MAX_PRICE_OPTIONS = [
   { value: "", label: "Preço máximo" },
+  { value: "20000", label: "Até R$ 20 mil" },
+  { value: "35000", label: "Até R$ 35 mil" },
   { value: "50000", label: "Até R$ 50 mil" },
   { value: "80000", label: "Até R$ 80 mil" },
   { value: "120000", label: "Até R$ 120 mil" },

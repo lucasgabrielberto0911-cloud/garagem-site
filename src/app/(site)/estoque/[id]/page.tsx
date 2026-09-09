@@ -127,7 +127,9 @@ export default async function VehicleDetailPage({
     { label: "Combustível", value: vehicle.fuel },
     ...(vehicle.color ? [{ label: "Cor", value: vehicle.color }] : []),
     ...(vehicle.engine ? [{ label: "Motor", value: vehicle.engine }] : []),
-    ...(vehicle.doors != null
+    ...(vehicle.category !== "moto" &&
+    vehicle.doors != null &&
+    vehicle.doors > 0
       ? [{ label: "Portas", value: String(vehicle.doors) }]
       : []),
     ...(vehicle.plateEnd
