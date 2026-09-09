@@ -64,10 +64,23 @@ export function displayChatText(text: string) {
 
 export function chatWhatsAppCta(
   text: string,
-  vehicle?: { label: string; model?: string; category?: string } | null,
+  vehicle?: {
+    label: string;
+    model?: string;
+    category?: string;
+    sold?: boolean;
+  } | null,
 ): ChatWhatsAppCta | null {
   if (!/whatsapp|wa\.me/i.test(text)) return null;
   const folded = fold(text);
+
+  if (vehicle?.sold) {
+    return {
+      href: whatsappUrl(WHATSAPP_MESSAGES.wanted(vehicle.label)),
+      label: "Avisar quando chegar",
+      benefit: "Consultor procura o modelo pra você",
+    };
+  }
 
   if (/assuntos da garagem|outros temas/.test(folded)) {
     return {

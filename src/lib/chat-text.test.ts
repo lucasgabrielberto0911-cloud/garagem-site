@@ -54,4 +54,13 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   });
   assert.equal(financeVehicle?.label, "Simular parcela");
   assert.match(decodeURIComponent(financeVehicle?.href ?? ""), /Honda BIZ 125 EX 2023/);
+
+  const soldVehicle = chatWhatsAppCta("Chama no WhatsApp: https://wa.me/5527996330706", {
+    label: "Hyundai i30",
+    model: "i30",
+    sold: true,
+  });
+  assert.equal(soldVehicle?.label, "Avisar quando chegar");
+  assert.match(decodeURIComponent(soldVehicle?.href ?? ""), /quando chegar: Hyundai i30/);
 });
+

@@ -324,7 +324,7 @@ export function compareChatStockPicks(
   if (vehicles.length === 0) return "";
   if (vehicles.length === 1) {
     const vehicle = vehicles[0]!;
-    return `Achei ele no estoque: ${talkName(vehicle).cap} ${vehicle.yearModel}, ${vehicle.transmission}, ${formatChatKm(vehicle.km)}, ${formatChatPrice(vehicle.price)}.\n\n${typicalConsumptionHint(vehicle)}.`;
+    return `Achei no estoque: ${talkName(vehicle).cap} ${vehicle.yearModel}, ${vehicle.transmission}, ${formatChatKm(vehicle.km)}, ${formatChatPrice(vehicle.price)}.\n\n${typicalConsumptionHint(vehicle)}.`;
   }
 
   const cheapest = vehicles.reduce((best, vehicle) =>
@@ -642,8 +642,7 @@ export function localGarageReply(
     matchInterestVehicle(mensagem, stock) ??
     matchInterestVehicle(mensagem, stock, 1);
   if (match) {
-    const version = match.version?.trim() ? ` ${match.version.trim()}` : "";
-    return `Achei no estoque: ${match.brand} ${match.model}${version} ${match.yearModel}, ${match.km.toLocaleString("pt-BR")} km, ${formatChatPrice(match.price)}, ${match.transmission}. ${typicalConsumptionHint(match)}.`;
+    return `Achei no estoque: ${match.brand} ${match.model} ${match.yearModel}, ${match.km.toLocaleString("pt-BR")} km, ${formatChatPrice(match.price)}, ${match.transmission}. ${typicalConsumptionHint(match)}.`;
   }
 
   const looksLikeVehicle = /\b(tem|vende|estoque|carro|modelo|marca|km)\b/.test(

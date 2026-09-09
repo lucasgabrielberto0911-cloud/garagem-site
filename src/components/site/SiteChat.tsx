@@ -85,6 +85,21 @@ function resolveSuggestionPrompt(
   const prepPela = isMoto ? "pela" : "pelo";
   const lower = suggestion.toLowerCase();
 
+  if (vehicle.sold) {
+    if (lower.includes("avisar") || lower.includes("chegar")) {
+      return `Vi que ${articleO} ${vehicle.label} já foi vendid${articleO}. Podem me avisar quando chegar outro similar no estoque?`;
+    }
+    if (lower.includes("semelhante") || lower.includes("opções") || lower.includes("opcoes")) {
+      return `Vi que ${articleO} ${vehicle.label} já foi vendid${articleO}. Vocês têm outras opções parecidas no estoque agora?`;
+    }
+    if (lower.includes("encomend") || lower.includes("modelo")) {
+      return `Gostei muito d${prepDa} ${vehicle.label}. Vocês conseguem encomendar ou achar um similar pra mim?`;
+    }
+    if (lower.includes("vendedor") || lower.includes("consultor")) {
+      return `Quero falar com um consultor sobre opções parecidas com ${articleO} ${vehicle.label}.`;
+    }
+  }
+
   if (lower.includes("financiamento")) {
     return `Como funciona o financiamento para ${articleO} ${vehicle.label}?`;
   }
@@ -453,12 +468,19 @@ export function SiteChat() {
   const vehiclePrep = isMoto ? "da" : "do";
 
   const activeSuggestions = vehicleContext
-    ? [
-        `Financiamento ${vehiclePrep} ${vehicleContext.model}`,
-        `Pedir vídeo no WhatsApp`,
-        `Aceita meu usado na troca?`,
-        `Garantia ${vehicleNoun}`,
-      ]
+    ? vehicleContext.sold
+      ? [
+          "Avisar quando chegar similar",
+          "Ver opções semelhantes",
+          "Encomendar este modelo",
+          "Falar com um consultor",
+        ]
+      : [
+          `Financiamento ${vehiclePrep} ${vehicleContext.model}`,
+          `Pedir vídeo no WhatsApp`,
+          `Aceita meu usado na troca?`,
+          `Garantia ${vehicleNoun}`,
+        ]
     : isVehiclePage
       ? VEHICLE_SUGGESTIONS
       : SUGGESTIONS;
@@ -846,25 +868,45 @@ export function SiteChat() {
           {vehicleContext ? (
             <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-[#161619] px-3.5 py-2">
               <span className="flex items-center gap-1.5 min-w-0 text-[11px] text-muted truncate">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    vehicleContext.sold ? "bg-amber-400" : "bg-brand"
+                  }`}
+                />
                 <span className="truncate">
-                  {isMoto ? "Moto:" : "Na tela:"}{" "}
-                  <strong className="text-cream font-medium">{vehicleContext.label}</strong>
+                  {vehicleContext.sold
+                    ? "Vendido:"
+                    : isMoto
+                      ? "Moto:"
+                      : "Na tela:"}{" "}
+                  <strong className="text-cream font-medium">
+                    {vehicleContext.label}
+                  </strong>
                 </span>
               </span>
               <button
                 type="button"
                 onClick={() =>
                   void send(
-                    isMoto
-                      ? `Tenho interesse na ${vehicleContext.label}. Gostaria de mais informações sobre ela.`
-                      : `Tenho interesse no ${vehicleContext.label}. Gostaria de mais informações sobre ele.`,
+                    vehicleContext.sold
+                      ? `Vi que ${isMoto ? "a" : "o"} ${vehicleContext.label} foi vendid${isMoto ? "a" : "o"}. Podem me avisar quando chegar outro similar no estoque?`
+                      : isMoto
+                        ? `Tenho interesse na ${vehicleContext.label}. Gostaria de mais informações sobre ela.`
+                        : `Tenho interesse no ${vehicleContext.label}. Gostaria de mais informações sobre ele.`,
                     "suggestion",
                   )
                 }
-                className="shrink-0 rounded border border-brand/40 bg-brand/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand hover:bg-brand/25 transition"
+                className={`shrink-0 rounded border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition ${
+                  vehicleContext.sold
+                    ? "border-amber-400/40 bg-amber-400/15 text-amber-300 hover:bg-amber-400/25"
+                    : "border-brand/40 bg-brand/15 text-brand hover:bg-brand/25"
+                }`}
               >
-                {isMoto ? "Perguntar dela" : "Perguntar dele"}
+                {vehicleContext.sold
+                  ? "Avisar quando chegar"
+                  : isMoto
+                    ? "Perguntar dela"
+                    : "Perguntar dele"}
               </button>
             </div>
           ) : null}
@@ -997,9 +1039,11 @@ export function SiteChat() {
                 }}
                 placeholder={
                   vehicleContext
-                    ? isMoto
-                      ? `Dúvida sobre a ${vehicleContext.model}?`
-                      : `Dúvida sobre o ${vehicleContext.model}?`
+                    ? vehicleContext.sold
+                      ? `Procurando similar a ${isMoto ? "esta" : "este"} ${vehicleContext.model}?`
+                      : isMoto
+                        ? `Dúvida sobre a ${vehicleContext.model}?`
+                        : `Dúvida sobre o ${vehicleContext.model}?`
                     : "Ex.: HB20 até 70 mil"
                 }
                 maxLength={800}

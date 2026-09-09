@@ -574,7 +574,7 @@ test("pergunta de troca de seminovo não injeta catálogo duplicado", async () =
       functionCall: null,
     }),
   });
-  assert.doesNotMatch(result.reply, /Achei ele no estoque/);
+  assert.doesNotMatch(result.reply, /Achei (?:ele )?no estoque/);
   assert.match(result.reply, /Com certeza, a gente aceita veículo na troca sim/);
 });
 
