@@ -201,6 +201,7 @@ test("classifica intenção sem guardar o texto da mensagem", () => {
   assert.equal(classifyChatIntent("Financiamento em 60x"), "finance");
   assert.equal(classifyChatIntent("Tem garantia?"), "warranty");
   assert.equal(classifyChatIntent("Quero ver o estoque de hatch"), "stock");
+  assert.equal(classifyChatIntent("Avisar quando chegar similar"), "wanted");
   assert.equal(classifyChatIntent("oi"), "other");
   const payload = buildChatEventPayload({
     source: "home-hero",

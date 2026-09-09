@@ -304,6 +304,9 @@ export function classifyChatIntent(message: string) {
   if (/estoque|carro|moto|modelo|marca|hatch|sedan|suv/.test(text)) {
     return "stock";
   }
+  if (/avisar|quando chegar|encomend|similar/.test(text)) {
+    return "wanted";
+  }
   return "other";
 }
 
