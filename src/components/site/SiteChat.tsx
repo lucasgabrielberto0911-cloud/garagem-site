@@ -34,6 +34,11 @@ import {
   trackWhatsAppClick,
 } from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
+import {
+  getChatVehicleContext,
+  subscribeChatVehicleContext,
+  type ChatVehicleContext,
+} from "@/lib/chat-vehicle-context";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -68,6 +73,30 @@ const VEHICLE_SUGGESTIONS = [
 
 const CHAT_STORAGE_KEY = "garagem_site_chat_history_v1";
 const CHAT_STORAGE_OPEN_KEY = "garagem_site_chat_is_open_v1";
+
+function resolveSuggestionPrompt(
+  suggestion: string,
+  vehicle?: ChatVehicleContext | null,
+): string {
+  if (!vehicle) return suggestion;
+  const lower = suggestion.toLowerCase();
+  if (lower.includes("financiamento")) {
+    return `Como funciona o financiamento para o ${vehicle.label}?`;
+  }
+  if (lower.includes("vídeo") || lower.includes("video")) {
+    return `Como faço para pedir um vídeo do ${vehicle.label} pelo WhatsApp?`;
+  }
+  if (lower.includes("troca")) {
+    return `Vocês aceitam meu veículo usado na troca pelo ${vehicle.label}?`;
+  }
+  if (lower.includes("garantia") || lower.includes("condições") || lower.includes("condicoes")) {
+    return `Qual é a garantia e as condições do ${vehicle.label}?`;
+  }
+  if (lower.includes("vendedor")) {
+    return `Quero falar com um consultor sobre o ${vehicle.label}.`;
+  }
+  return suggestion;
+}
 
 function ChatLogo({ size = "md" }: { size?: "sm" | "md" }) {
   return (
@@ -401,7 +430,22 @@ export function SiteChat() {
   const isVehiclePage = Boolean(
     pathname?.startsWith("/estoque/") && pathname !== "/estoque",
   );
-  const activeSuggestions = isVehiclePage ? VEHICLE_SUGGESTIONS : SUGGESTIONS;
+  const [vehicleContext, setVehicleContext] = useState<ChatVehicleContext | null>(getChatVehicleContext);
+
+  useEffect(() => {
+    return subscribeChatVehicleContext(setVehicleContext);
+  }, []);
+
+  const activeSuggestions = vehicleContext
+    ? [
+        `Financiamento do ${vehicleContext.model}`,
+        `Pedir vídeo no WhatsApp`,
+        `Troca pelo ${vehicleContext.model}?`,
+        `Garantia deste carro`,
+      ]
+    : isVehiclePage
+      ? VEHICLE_SUGGESTIONS
+      : SUGGESTIONS;
 
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([OPENING]);
@@ -508,6 +552,8 @@ export function SiteChat() {
       keepFocusRef.current = false;
       return;
     }
+    const desktop = window.matchMedia("(min-width: 1024px)").matches;
+    if (desktop) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -769,13 +815,30 @@ export function SiteChat() {
             </div>
           </header>
 
+          {vehicleContext ? (
+            <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-[#161619] px-3.5 py-2">
+              <span className="flex items-center gap-1.5 min-w-0 text-[11px] text-muted truncate">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                <span className="truncate">
+                  Vendo: <strong className="text-cream font-medium">{vehicleContext.label}</strong>
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => void send(`Tenho interesse no ${vehicleContext.label}. Gostaria de mais informações sobre ele.`, "suggestion")}
+                className="shrink-0 rounded border border-brand/40 bg-brand/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand hover:bg-brand/25 transition"
+              >
+                Perguntar dele
+              </button>
+            </div>
+          ) : null}
+
           <div
             ref={listRef}
-            className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3"
+            className="flex-1 space-y-3 overflow-y-auto px-3 py-3"
             aria-live="polite"
           >
             {messages.map((message, index) => {
-              if (index === 0 && started) return null;
               return message.role === "user" ? (
                 <div
                   key={`user-${index}`}
@@ -844,7 +907,7 @@ export function SiteChat() {
                     key={suggestion}
                     type="button"
                     disabled={pending}
-                    onClick={() => void send(suggestion, "suggestion")}
+                    onClick={() => void send(resolveSuggestionPrompt(suggestion, vehicleContext), "suggestion")}
                     className="min-h-11 rounded-xl border border-white/15 bg-[#121214] px-3 py-2 text-left text-[12px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15"
                   >
                     {suggestion}
@@ -853,6 +916,21 @@ export function SiteChat() {
               </div>
             ) : null}
           </div>
+
+          {vehicleContext && started && !pending ? (
+            <div className="flex gap-1.5 overflow-x-auto px-3 py-1.5 border-t border-white/10 bg-[#121214] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {activeSuggestions.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => void send(resolveSuggestionPrompt(suggestion, vehicleContext), "suggestion")}
+                  className="shrink-0 rounded-lg border border-white/15 bg-asphalt px-2.5 py-1 text-[11px] font-medium text-cream/90 transition hover:border-brand/40 hover:bg-brand/15 hover:text-cream whitespace-nowrap"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <form
             className="border-t border-white/10 bg-[#121214] p-3"
@@ -879,7 +957,11 @@ export function SiteChat() {
                     void send(draft);
                   }
                 }}
-                placeholder="Ex.: HB20 até 70 mil"
+                placeholder={
+                  vehicleContext
+                    ? `Dúvida sobre o ${vehicleContext.model}?`
+                    : "Ex.: HB20 até 70 mil"
+                }
                 maxLength={800}
                 rows={1}
                 autoComplete="off"

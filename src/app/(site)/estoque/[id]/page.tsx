@@ -14,6 +14,7 @@ import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
+import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { JsonLd } from "@/components/JsonLd";
 import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatVehicleLabel, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
@@ -155,6 +156,15 @@ export default async function VehicleDetailPage({
           year={vehicle.yearModel}
         />
       ) : null}
+      <VehicleChatContext
+        vehicle={{
+          id: vehicle.id,
+          label: fullLabel,
+          brand: formatBrandName(vehicle.brand),
+          model: formatModelName(vehicle.model),
+          price: vehicle.price,
+        }}
+      />
       <JsonLd data={vehicleJsonLd(vehicle)} />
       <JsonLd
         data={breadcrumbJsonLd([
