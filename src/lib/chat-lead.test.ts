@@ -48,13 +48,19 @@ const hb20: ChatVehicleRecord = {
   fuel: "Flex",
 };
 
-test("recorte da pergunta vira frase curta", () => {
-  assert.equal(chatFilterIntro("Carros até 70 mil?"), "Carros até R$ 70.000.");
+test("recorte da pergunta vira frase falada", () => {
+  assert.equal(
+    chatFilterIntro("Carros até 70 mil?"),
+    "Olha só: carros até R$ 70.000 no estoque agora.",
+  );
   assert.equal(
     chatFilterIntro("Automático até 80 mil?"),
-    "Automáticos até R$ 80.000.",
+    "Olha só: automáticos até R$ 80.000 no estoque agora.",
   );
-  assert.equal(chatFilterIntro("moto até 15 mil"), "Motos até R$ 15.000.");
+  assert.equal(
+    chatFilterIntro("moto até 15 mil"),
+    "Olha só: motos até R$ 15.000 no estoque agora.",
+  );
   assert.equal(chatFilterIntro("eae"), "");
 });
 
@@ -377,7 +383,7 @@ Hyundai HB20 Premium Automatico 1.6 2015 · 127.000 km · R$ 55.900`,
       functionCall: null,
     }),
   });
-  assert.match(result.reply, /Carros até R\$ 70\.000/);
+  assert.match(result.reply, /carros até R\$ 70\.000/i);
   assert.match(result.reply, /Prisma/);
   assert.match(result.reply, /Palio Weekend/);
   assert.match(result.reply, /HB20/);

@@ -31,7 +31,7 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   assert.match(displayChatText(finance), /60x/);
   const financeCta = chatWhatsAppCta(finance);
   assert.equal(financeCta?.label, "Simular parcela");
-  assert.match(financeCta?.benefit ?? "", /perfil/);
+  assert.match(financeCta?.benefit ?? "", /seu caso/);
   assert.match(financeCta?.href ?? "", /wa\.me\/5527996330706/);
 
   const trade =

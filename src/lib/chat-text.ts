@@ -79,7 +79,7 @@ export function chatWhatsAppCta(text: string): ChatWhatsAppCta | null {
         "Olá! Vi o assistente da Garagem e quero simular financiamento em até 60x.",
       ),
       label: "Simular parcela",
-      benefit: "Consultor monta no seu perfil, agora",
+      benefit: "O consultor calcula no seu caso",
     };
   }
   if (/\btroca\b/.test(folded)) {

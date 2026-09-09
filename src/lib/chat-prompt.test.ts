@@ -35,7 +35,9 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /faixa típica de catálogo/);
   assert.match(CHAT_SYSTEM_PROMPT, /2 a 4 frases comparando/);
   assert.match(CHAT_SYSTEM_PROMPT, /Não comece com/);
-  assert.match(CHAT_SYSTEM_PROMPT, /frase curta de recorte/);
+  assert.match(CHAT_SYSTEM_PROMPT, /frase falada de recorte/);
+  assert.match(CHAT_SYSTEM_PROMPT, /consultor humano/);
+  assert.match(CHAT_SYSTEM_PROMPT, /um pouco animado/);
   assert.match(CHAT_SYSTEM_PROMPT, /NUNCA invente outro número/);
   assert.match(CHAT_SYSTEM_PROMPT, /ESCOLHER um carro/);
   assert.match(CHAT_SYSTEM_PROMPT, /consultor monta a simulação/);

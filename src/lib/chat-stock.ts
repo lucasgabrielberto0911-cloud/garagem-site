@@ -401,7 +401,7 @@ export function compareChatStockPicks(vehicles: ChatVehicleRecord[]) {
     }
   }
 
-  return `${picks.join(" ")}\n\n${formatConsumptionCompare(vehicles)}`;
+  return `Pra te ajudar a escolher: ${picks.join(" ")}\n\n${formatConsumptionCompare(vehicles)}`;
 }
 
 function foldReply(value: string) {
@@ -462,19 +462,23 @@ export function chatFilterIntro(mensagem: string) {
 
   if (gear === "automatico" && ceiling) {
     return category === "moto"
-      ? `Motos automáticas ${ceiling}.`
-      : `Automáticos ${ceiling}.`;
+      ? `Olha só: motos automáticas ${ceiling} no estoque agora.`
+      : `Olha só: automáticos ${ceiling} no estoque agora.`;
   }
   if (gear === "manual" && ceiling) {
-    return `Manuais ${ceiling}.`;
+    return `Olha só: manuais ${ceiling} no estoque agora.`;
   }
-  if (category === "moto" && ceiling) return `Motos ${ceiling}.`;
-  if (category === "carro" && ceiling) return `Carros ${ceiling}.`;
+  if (category === "moto" && ceiling) {
+    return `Olha só: motos ${ceiling} no estoque agora.`;
+  }
+  if (category === "carro" && ceiling) {
+    return `Olha só: carros ${ceiling} no estoque agora.`;
+  }
   if (ceiling) {
-    return `${ceiling.charAt(0).toUpperCase()}${ceiling.slice(1)}.`;
+    return `Olha só: ${ceiling} no estoque agora.`;
   }
-  if (gear === "automatico") return "Automáticos do estoque.";
-  if (gear === "manual") return "Manuais do estoque.";
+  if (gear === "automatico") return "Olha só: automáticos do estoque agora.";
+  if (gear === "manual") return "Olha só: manuais do estoque agora.";
   return "";
 }
 
@@ -529,7 +533,7 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
     .sort((a, b) => a.price - b.price);
   const ceiling = `R$ ${limit.toLocaleString("pt-BR")}`;
   if (matches.length === 0) {
-    return `Neste valor até ${ceiling} não tem anúncio agora. Posso mostrar outra faixa, ou um consultor te ajuda no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `Nessa faixa até ${ceiling} ainda não tem anúncio agora. Posso olhar outra faixa com você, ou um consultor te ajuda no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   const picks = matches.slice(0, 3);
   const cheapestId = picks[0]?.id;
@@ -542,14 +546,14 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
     const why = bits.length ? ` — ${bits.join(", ")}` : "";
     return `${formatVehicleLine(vehicle)}${why}`;
   });
-  return `Até ${ceiling} eu começaria por estes.\n${lines.join("\n")}\n\n${compareChatStockPicks(picks)}`;
+  return `Beleza — até ${ceiling}, eu olharia estes primeiro.\n${lines.join("\n")}\n\n${compareChatStockPicks(picks)}`;
 }
 
 export const CHAT_FINANCE_REPLY =
-  `A gente parcela o seminovo em até 60 vezes. Entrada e valor da parcela o consultor monta no WhatsApp com o carro que você escolher — eu não fecho número pelo chat. ${CHAT_WHATSAPP_URL}`;
+  `Dá sim para parcelar o seminovo, em até 60 vezes. Eu não monto o valor da parcela daqui porque cada perfil é diferente — o consultor calcula no WhatsApp com o carro que você escolher, bem no seu caso. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_TRADE_REPLY =
-  `Sempre aceitamos carro ou moto na troca. A avaliação o consultor faz no WhatsApp, de preferência com fotos. ${CHAT_WHATSAPP_URL}`;
+  `Aceitamos sim, carro ou moto na troca. Manda umas fotos no WhatsApp que o consultor avalia e já encaixa no negócio. ${CHAT_WHATSAPP_URL}`;
 
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(mensagem: string): "finance" | "troca" | null {
@@ -582,10 +586,10 @@ export function localGarageReply(
     return CHAT_FINANCE_REPLY;
   }
   if (/\bgarantia\b/.test(text)) {
-    return `Garantia padrão de 3 meses em todos os veículos. Se quiser, te mostro um carro do estoque ou um consultor detalha no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `Todos os seminovos saem com garantia de 3 meses. Se quiser, eu já te mostro um carro do estoque, ou o consultor detalha no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (/\b(horario|atendimento|endereco|localizacao)\b/.test(text)) {
-    return `Atendemos Aracruz, Vitória, Linhares, Serra e Vila Velha (loja digital). Um consultor confirma o melhor horário no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `A gente atende Aracruz, Vitória, Linhares, Serra e Vila Velha — loja digital, visita combinada. Um consultor confirma o melhor horário no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (/\btroca\b/.test(text)) {
     return CHAT_TRADE_REPLY;
