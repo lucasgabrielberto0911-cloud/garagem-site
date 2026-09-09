@@ -7,9 +7,9 @@
 /** Texto oficial da garantia — ficha, FAQ e defaults do painel. */
 export const STORE_WARRANTY = {
   title: "Garantia de 3 Meses Garagem",
-  summary: "3 meses de cobertura para motor e câmbio em todos os nossos carros.",
+  summary: "3 meses de cobertura para motor e câmbio em todos os nossos seminovos.",
   body:
-    "Na Garagem, todo veículo passa por uma revisão completa antes de chegar até você. Por isso, oferecemos 3 meses de garantia em todos os nossos carros, com cobertura para os itens que mais pesam no bolso: motor e câmbio.",
+    "Na Garagem, todo veículo passa por uma revisão completa antes de chegar até você. Por isso, oferecemos 3 meses de garantia em todos os nossos seminovos, com cobertura para os itens que mais pesam no bolso: motor e câmbio.",
 } as const;
 
 export type ConditionItem = {

@@ -62,7 +62,7 @@ export function FounderSection({
             <p>
               Natural de Feira de Santana, na Bahia, Elias construiu a vida no
               mercado de veículos. Há mais de 20 anos ele compra, avalia e vende
-              carros — um ofício que trata como conversa de confiança, não como
+              veículos — um ofício que trata como conversa de confiança, não como
               pressão de balcão.
             </p>
             <p>
@@ -74,7 +74,7 @@ export function FounderSection({
             </p>
             <p>
               O foco dele é simples e difícil de fingir: entregar a melhor
-              experiência para cada cliente. Do primeiro “olá” ao vídeo do carro,
+              experiência para cada cliente. Do primeiro “olá” ao vídeo do veículo,
               da troca à transferência, o padrão é o mesmo — clareza no preço,
               seriedade na procedência e cuidado com o que pesa no bolso e na
               decisão.

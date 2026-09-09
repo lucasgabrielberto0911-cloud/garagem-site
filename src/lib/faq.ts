@@ -84,7 +84,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     category: "troca",
-    question: "Posso dar meu carro ou moto na troca?",
+    question: "Posso colocar meu veículo na troca?",
     answer:
       "Sim. Aceitamos carro ou moto: avaliamos seu usado e o valor entra como parte do pagamento. Para agilizar, preencha o formulário da página Vender/Trocar com marca, modelo, ano e quilometragem — a avaliação inicial sai pelo WhatsApp.",
   },
@@ -136,7 +136,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     category: "compra",
-    question: "O carro já passou por vistoria?",
+    question: "O veículo já passou por vistoria?",
     answer:
       "PREENCHER: resposta real da loja — o que é checado antes do anúncio e se há laudo/cautelar",
   },

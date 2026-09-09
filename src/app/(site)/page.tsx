@@ -126,7 +126,7 @@ export default async function HomePage() {
 
           <div className="hero-text mt-4 sm:mt-6 lg:mt-8">
             <h1 className="mx-auto max-w-3xl font-display text-[1.65rem] font-bold leading-[1.15] tracking-tight text-cream sm:text-4xl lg:text-[2.75rem]">
-              Encontre seu <span className="text-brand">próximo carro</span>
+              Encontre seu <span className="text-brand">próximo seminovo</span>
             </h1>
             <div
               className="mx-auto mt-3 h-1 w-16 bg-brand-gradient sm:mt-4 sm:w-20 lg:mt-5"
@@ -309,7 +309,7 @@ export default async function HomePage() {
               Avaliação sem compromisso
             </p>
             <h2 className="mt-3 font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl">
-              Vender ou trocar seu carro
+              Vender ou trocar seu veículo
             </h2>
             <div
               className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient"
@@ -368,8 +368,8 @@ export default async function HomePage() {
           aria-hidden="true"
         />
         <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-          Compare aqui no assistente. Simule parcela, troca e o fechamento
-          ficam com o consultor no WhatsApp.
+          Compare aqui no assistente. Simulação de parcela, avaliação de troca e
+          fechamento ficam com o consultor no WhatsApp.
         </p>
         <ActionRow className="mt-9">
           <WhatsAppButton

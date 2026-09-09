@@ -327,7 +327,7 @@ function formatConsumptionCompare(vehicles: ChatVehicleRecord[]) {
 /** Identifica se o visitante perguntou especificamente sobre consumo / economia de combustível. */
 export function asksAboutConsumption(mensagem: string): boolean {
   const folded = normalize(mensagem);
-  return /\b(consumo|km\/l|kml|quanto faz|bebe|bebe muito|economico|economica|economia|gasta|gasto|litro|autonomia)\b/.test(
+  return /\b(consumo|km\s*l|kml|quanto faz|beb\w*|economico|economica|economia|gasta|gasto|litros?|autonomia)\b/.test(
     folded,
   );
 }

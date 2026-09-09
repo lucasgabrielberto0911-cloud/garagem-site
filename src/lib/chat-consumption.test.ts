@@ -5,6 +5,7 @@ import {
   typicalConsumptionHint,
   typicalConsumptionRange,
 } from "./chat-consumption";
+import { asksAboutConsumption } from "./chat-stock";
 
 test("lê cilindrada do motor, da versão e de moto em cc", () => {
   assert.equal(parseEngineDisplacementLiters("2.0 TSI", null), 2);
@@ -66,4 +67,22 @@ test("faixa de consumo é catálogo, nunca medição do usado", () => {
   });
   assert.match(unknown, /1\.0 flex costuma gastar menos/);
   assert.match(unknown, /não foi medido/);
+});
+
+test("detecta perguntas específicas sobre consumo de combustível", () => {
+  assert.equal(asksAboutConsumption("qual o consumo desse carro?"), true);
+  assert.equal(asksAboutConsumption("qual o km/l dele na cidade?"), true);
+  assert.equal(asksAboutConsumption("ele faz quantos km l?"), true);
+  assert.equal(asksAboutConsumption("quantos kml faz?"), true);
+  assert.equal(asksAboutConsumption("ele é economico?"), true);
+  assert.equal(asksAboutConsumption("bebe muito na cidade?"), true);
+  assert.equal(asksAboutConsumption("quantos km faz por litro?"), true);
+  assert.equal(asksAboutConsumption("qual a autonomia do tanque?"), true);
+
+  // Perguntas que NÃO devem ativar o bloco de consumo
+  assert.equal(asksAboutConsumption("qual o valor do carro?"), false);
+  assert.equal(asksAboutConsumption("aceita troca?"), false);
+  assert.equal(asksAboutConsumption("tem garantia?"), false);
+  assert.equal(asksAboutConsumption("como funciona o financiamento?"), false);
+  assert.equal(asksAboutConsumption("quanto custa a transferência?"), false);
 });

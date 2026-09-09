@@ -28,22 +28,6 @@ export function VehicleGallery({
   const [zoomOpen, setZoomOpen] = useState(false);
   const total = photos.length;
 
-  const [loadedIndices, setLoadedIndices] = useState<Set<number>>(
-    () => new Set([0, 1, 2]),
-  );
-
-  useEffect(() => {
-    setLoadedIndices((prev) => {
-      const next = new Set(prev);
-      const min = Math.max(0, active - 2);
-      const max = Math.min(total - 1, active + 2);
-      for (let i = min; i <= max; i++) {
-        next.add(i);
-      }
-      return next.size === prev.size ? prev : next;
-    });
-  }, [active, total]);
-
   useEffect(() => {
     const strip = thumbsRef.current;
     if (!strip) return;
@@ -108,7 +92,6 @@ export function VehicleGallery({
           aria-label={`Fotos de ${alt}`}
         >
           {photos.map((photo, index) => {
-            const shouldRender = loadedIndices.has(index);
             return (
               <li
                 key={photo.id}
@@ -125,17 +108,15 @@ export function VehicleGallery({
                 >
                   <span className="sr-only">Ampliar</span>
                 </button>
-                {shouldRender ? (
-                  <VehicleImage
-                    src={galleryPreviewSrc(photo)}
-                    alt={vehiclePhotoAlt(alt, index, total)}
-                    fill
-                    sizes="(min-width: 1024px) 60vw, 100vw"
-                    srcSet={galleryPreviewSrcSet(photo)}
-                    priority={index === 0}
-                    className="object-cover"
-                  />
-                ) : null}
+                <VehicleImage
+                  src={galleryPreviewSrc(photo)}
+                  alt={vehiclePhotoAlt(alt, index, total)}
+                  fill
+                  sizes="(min-width: 1024px) 60vw, 100vw"
+                  srcSet={galleryPreviewSrcSet(photo)}
+                  priority={index === 0}
+                  className="object-cover"
+                />
               </li>
             );
           })}
