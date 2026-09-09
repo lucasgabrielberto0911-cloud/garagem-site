@@ -48,7 +48,7 @@ const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Olá! Comparo o estoque por preço, km e câmbio. Manda o orçamento ou o modelo — também falo de 60x e troca.",
+    "Oi! Eu te ajudo a escolher no estoque da Garagem. Me conta o orçamento ou o modelo que você tem em mente — a gente compara juntos.",
 };
 
 const SUGGESTIONS = [

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  CHAT_PING_REPLY,
   CHAT_SYSTEM_PROMPT,
   CHAT_WHATSAPP_URL,
   buildChatSystemPrompt,
@@ -8,6 +9,12 @@ import {
   stockSelectHasForbiddenField,
 } from "./chat-prompt";
 import { CHAT_VEHICLE_SELECT } from "./chat-stock";
+
+test("saudação de ping ajuda a escolher sem jargão de 60x", () => {
+  assert.match(CHAT_PING_REPLY, /estoque/);
+  assert.match(CHAT_PING_REPLY, /orçamento|modelo/);
+  assert.doesNotMatch(CHAT_PING_REPLY, /60x/);
+});
 
 test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /assistente virtual da Garagem/);
