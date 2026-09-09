@@ -512,7 +512,7 @@ test("Gemini fora do ar ainda responde o estoque e o financiamento", async () =>
       throw new Error("quota");
     },
   });
-  assert.match(finance.reply, /60x/);
+  assert.match(finance.reply, /60 vezes/);
   assert.match(finance.reply, /WhatsApp/);
 });
 

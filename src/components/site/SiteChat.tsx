@@ -48,13 +48,13 @@ const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Oi! Eu te ajudo a escolher no estoque da Garagem. Me conta o orçamento ou o modelo que você tem em mente — a gente compara juntos.",
+    "Oi! Pode deixar comigo — eu te ajudo a escolher no estoque. Me conta o orçamento ou o modelo que você tem em mente.",
 };
 
 const SUGGESTIONS = [
   "Carros até 70 mil?",
   "Automático até 80 mil?",
-  "Financiamento em 60x",
+  "Como funciona o financiamento?",
   "Aceita troca?",
 ];
 

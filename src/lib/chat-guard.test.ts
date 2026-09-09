@@ -133,6 +133,8 @@ test("turno fora de escopo não chama o Gemini", async () => {
 test("atalhos de financiar e troca não pedem modelo de novo", async () => {
   assert.equal(chatPolicyShortcut("Financiar em 60x"), "finance");
   assert.equal(chatPolicyShortcut("Financiamento em 60x"), "finance");
+  assert.equal(chatPolicyShortcut("Como funciona o financiamento?"), "finance");
+  assert.equal(chatPolicyShortcut("Dá para parcelar?"), "finance");
   assert.equal(chatPolicyShortcut("Aceita troca?"), "troca");
   assert.equal(chatPolicyShortcut("Quero financiar o HB20"), null);
 

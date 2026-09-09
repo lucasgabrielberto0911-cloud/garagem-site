@@ -282,7 +282,7 @@ Qual perfil te serve?`;
   assert.doesNotMatch(polished, /156\.400/);
   assert.deepEqual(
     chatFollowupsAfterCards("/estoque?maxPrice=70000&category=carro", cards),
-    ["Automático até 70 mil?", "Financiar em 60x", "Aceita troca?"],
+    ["Automático até 70 mil?", "Dá para parcelar?", "Aceita troca?"],
   );
   assert.equal(chatVehicleKm(cards[0]!), "156 mil km");
   assert.equal(chatVehicleKm(cards[0]!, { compact: true }), "156 mil");
@@ -296,7 +296,7 @@ Qual perfil te serve?`;
   );
   assert.deepEqual(chatFollowupsAfterCards(null, cards), [
     "Tem automático?",
-    "Financiar em 60x",
+    "Dá para parcelar?",
     "Aceita troca?",
   ]);
   const autoCards = [
@@ -309,7 +309,7 @@ Qual perfil te serve?`;
     }),
   ];
   assert.deepEqual(chatFollowupsAfterCards(null, autoCards), [
-    "Financiar em 60x",
+    "Dá para parcelar?",
     "Aceita troca?",
   ]);
 });

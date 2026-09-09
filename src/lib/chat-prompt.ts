@@ -18,7 +18,7 @@ export const CHAT_OFF_SCOPE_REPEAT_REPLY =
   `Só posso ajudar com assuntos da Garagem — chama no WhatsApp pra outros temas: ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_PING_REPLY =
-  "Oi, tô aqui. Me conta o orçamento ou o modelo que você procura — eu comparo o que tem no estoque e te ajudo a escolher.";
+  "Oi, tô aqui. Pode deixar comigo — me conta o orçamento ou o modelo que você procura que eu comparo o estoque e te ajudo a escolher.";
 
 export const CHAT_SYSTEM_PROMPT = `Você é o assistente virtual da Garagem, revenda de veículos seminovos há mais de 20 anos, mais de 1.000 carros vendidos.
 

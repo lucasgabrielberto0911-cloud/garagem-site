@@ -546,7 +546,7 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
 }
 
 export const CHAT_FINANCE_REPLY =
-  `Financia em até 60x e aceita carro ou moto na troca. A parcela o consultor monta no WhatsApp com o carro escolhido — eu não fecho valor pelo chat. ${CHAT_WHATSAPP_URL}`;
+  `A gente parcela o seminovo em até 60 vezes. Entrada e valor da parcela o consultor monta no WhatsApp com o carro que você escolher — eu não fecho número pelo chat. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_TRADE_REPLY =
   `Sempre aceitamos carro ou moto na troca. A avaliação o consultor faz no WhatsApp, de preferência com fotos. ${CHAT_WHATSAPP_URL}`;
@@ -555,7 +555,7 @@ export const CHAT_TRADE_REPLY =
 export function chatPolicyShortcut(mensagem: string): "finance" | "troca" | null {
   const folded = normalize(mensagem);
   if (
-    /^(financiamento em 60x|financiar em 60x|como funciona o financiamento|voces financiam(?: em quantas vezes)?)$/.test(
+    /^(financiamento em 60x|financiar em 60x|como funciona o financiamento|da para parcelar|da pra parcelar|voces financiam(?: em quantas vezes)?)$/.test(
       folded,
     )
   ) {

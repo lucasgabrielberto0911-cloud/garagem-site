@@ -450,14 +450,14 @@ export function chatFollowupsAfterCards(
     (stockHref != null && /transmission=/i.test(stockHref)) ||
     (vehicles.some(isAutomaticCard) && !vehicles.some(isManualCard));
   if (alreadyAuto) {
-    return ["Financiar em 60x", "Aceita troca?"];
+    return ["Dá para parcelar?", "Aceita troca?"];
   }
   const max = stockHref?.match(/maxPrice=(\d+)/);
   const mil = max ? Math.round(Number(max[1]) / 1000) : null;
   if (mil) {
-    return [`Automático até ${mil} mil?`, "Financiar em 60x", "Aceita troca?"];
+    return [`Automático até ${mil} mil?`, "Dá para parcelar?", "Aceita troca?"];
   }
-  return ["Tem automático?", "Financiar em 60x", "Aceita troca?"];
+  return ["Tem automático?", "Dá para parcelar?", "Aceita troca?"];
 }
 
 export function chatVehiclePrice(vehicle: ChatVehicleCard) {
