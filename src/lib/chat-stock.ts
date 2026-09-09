@@ -555,14 +555,26 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
 }
 
 export const CHAT_FINANCE_REPLY =
-  `Dá sim — a gente parcela o seminovo em até 60 vezes, e ainda aceita o usado na conta. A parcela certinha depende do seu perfil e do carro, então o consultor monta no WhatsApp com o modelo que você escolher, bem no seu caso. ${CHAT_WHATSAPP_URL}`;
+  `Dá sim — a gente parcela o seminovo em até 60 vezes no financiamento, e no cartão de crédito aceitamos em até 18 vezes. O usado também pode entrar na conta. A condição certinha depende do seu perfil e do carro, então o consultor monta no WhatsApp com o modelo que você escolher, bem no seu caso. ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_CARD_REPLY =
+  `Dá sim — no cartão de crédito a gente parcela em até 18 vezes. Se preferir, o seminovo também financia em até 60 vezes, e o usado pode entrar na conta. O consultor confirma a melhor forma no WhatsApp, no seu caso. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_TRADE_REPLY =
   `Aceitamos sim — carro ou moto entram na conta. Manda umas fotos no WhatsApp que o consultor avalia e já encaixa no negócio com você. ${CHAT_WHATSAPP_URL}`;
 
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
-export function chatPolicyShortcut(mensagem: string): "finance" | "troca" | null {
+export function chatPolicyShortcut(
+  mensagem: string,
+): "finance" | "card" | "troca" | null {
   const folded = normalize(mensagem);
+  if (
+    /^(aceita cartao|aceitam cartao|cartao de credito|parcela no cartao|da para parcelar no cartao|da pra parcelar no cartao|aceita cartao de credito)$/.test(
+      folded,
+    )
+  ) {
+    return "card";
+  }
   if (
     /^(financiamento em 60x|financiar em 60x|como funciona o financiamento|da para parcelar|da pra parcelar|voces financiam(?: em quantas vezes)?)$/.test(
       folded,
@@ -580,21 +592,25 @@ export function localGarageReply(
   stock: ChatVehicleRecord[],
 ) {
   const text = normalize(mensagem);
-  const byBudget = listStockByBudget(mensagem, stock);
-  if (byBudget) return byBudget;
-
   const policy = chatPolicyShortcut(mensagem);
+  if (policy === "card") return CHAT_CARD_REPLY;
   if (policy === "finance") return CHAT_FINANCE_REPLY;
   if (policy === "troca") return CHAT_TRADE_REPLY;
 
+  if (/\b(cartao|credito|18x)\b/.test(text)) {
+    return CHAT_CARD_REPLY;
+  }
   if (/\b(financi\w*|parcela|juros|60x)\b/.test(text)) {
     return CHAT_FINANCE_REPLY;
   }
+
+  const byBudget = listStockByBudget(mensagem, stock);
+  if (byBudget) return byBudget;
   if (/\bgarantia\b/.test(text)) {
     return `Fica tranquilo: todos os seminovos saem com garantia de 3 meses. Se quiser, eu já te mostro um carro do estoque, ou o consultor detalha no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (/\b(horario|atendimento|endereco|localizacao)\b/.test(text)) {
-    return `A gente atende Aracruz, Vitória, Linhares, Serra e Vila Velha — loja digital, visita combinada. Um consultor confirma o melhor horário no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `A gente atende online todos os dias, das 8h às 23h — Aracruz, Vitória, Linhares, Serra e Vila Velha. Loja digital, visita combinada. Um consultor confirma o melhor jeito no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (/\btroca\b/.test(text)) {
     return CHAT_TRADE_REPLY;

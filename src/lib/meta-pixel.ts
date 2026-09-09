@@ -294,7 +294,7 @@ export function classifyChatIntent(message: string) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-  if (/financi|parcela|60x|juros/.test(text)) return "finance";
+  if (/financi|parcela|60x|juros|cartao|credito|18x/.test(text)) return "finance";
   if (/\btroca\b|meu usado|avali/.test(text)) return "trade";
   if (/garantia/.test(text)) return "warranty";
   if (/automatic|cvt/.test(text)) return "automatic";

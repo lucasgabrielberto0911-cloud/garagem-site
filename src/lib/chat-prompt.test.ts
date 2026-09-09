@@ -23,6 +23,8 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /Aracruz, Vitória, Linhares, Serra, Vila Velha/);
   assert.match(CHAT_SYSTEM_PROMPT, /troca \(carro ou moto\)/);
   assert.match(CHAT_SYSTEM_PROMPT, /financia em até 60x/);
+  assert.match(CHAT_SYSTEM_PROMPT, /cartão de crédito em até 18x/);
+  assert.match(CHAT_SYSTEM_PROMPT, /POLÍTICA DA LOJA/);
   assert.match(CHAT_SYSTEM_PROMPT, /Garantia padrão de 3 meses/);
   assert.match(CHAT_SYSTEM_PROMPT, /NUNCA inventar equipamento/);
   assert.match(CHAT_SYSTEM_PROMPT, /preço de referência FIPE/);

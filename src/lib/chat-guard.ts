@@ -6,7 +6,7 @@ import type { ChatTurn } from "@/lib/chat-gemini";
 
 /** Depois do fold (minúsculas, sem acento). Palavras da loja / estoque / lead. */
 const GARAGE_HINT =
-  /\b(carro|carros|moto|veiculo|estoque|seminovo|comprar|compra|vender|vende|vendem|troca|financi\w*|parcela|juros|garantia|horario|atendimento|whatsapp|garagem|loja|endereco|localizacao|hb20|onix|civic|corolla|palio|prisma|kwid|mobi|argo|polo|creta|compass|renegade|hilux|s10|amarok|ranger|honda|fiat|hyundai|chevrolet|toyota|volkswagen|vw|nissan|ford|jeep|porsche|km|preco|valor|tem|modelo|marca|anunciar|blindad\w*|disponivel|anuncio|consultor|vendedor|telefone|celular|contato|nome)\b/;
+  /\b(carro|carros|moto|veiculo|estoque|seminovo|comprar|compra|vender|vende|vendem|troca|financi\w*|parcela|juros|cartao|credito|pix|vista|18x|60x|garantia|horario|atendimento|whatsapp|garagem|loja|endereco|localizacao|entrega|visita|video|documento|hb20|onix|civic|corolla|palio|prisma|kwid|mobi|argo|polo|creta|compass|renegade|hilux|s10|amarok|ranger|honda|fiat|hyundai|chevrolet|toyota|volkswagen|vw|nissan|ford|jeep|porsche|km|preco|valor|tem|modelo|marca|anunciar|blindad\w*|disponivel|anuncio|consultor|vendedor|telefone|celular|contato|nome)\b/;
 
 const OFF_SCOPE_HINT =
   /\b(codigo|javascript|python|html|licao de casa|redacao|poema|receita|piada|traduz|escreva (um|uma|o|a) (texto|codigo|ensaio|historia)|modo desenvolvedor|developer mode|jailbreak|ignore (as )?instrucoes|ignore previous|aja como|act as|system prompt|prompt de sistema)\b/;
@@ -67,7 +67,7 @@ export function sanitizeSensitiveText(value: string) {
     .replace(/\b(?:agencia|ag[eê]ncia)\b[:\s-]*\S*/gi, "")
     .replace(/\b(?:conta corrente|conta banc[aá]ria)\b[:\s-]*\S*/gi, "")
     .replace(/\b(?:pix|iban|cvv|senha)\b[:\s-]*\S*/gi, "")
-    .replace(/\b(?:cart[aã]o|cartao)\b[:\s-]*\S*/gi, "")
+    .replace(/\b(?:cart[aã]o|cartao)\b[:\s-]*\d[\d\s.-]*/gi, "")
     .replace(/\s+/g, " ")
     .trim();
 }

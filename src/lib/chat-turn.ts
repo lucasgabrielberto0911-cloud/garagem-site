@@ -27,6 +27,7 @@ import {
   parseCriarLeadArgs,
 } from "@/lib/chat-lead";
 import {
+  CHAT_CARD_REPLY,
   CHAT_FINANCE_REPLY,
   CHAT_TRADE_REPLY,
   chatPolicyShortcut,
@@ -82,6 +83,7 @@ export async function runChatTurn(input: {
   }
 
   const policy = chatPolicyShortcut(input.mensagem);
+  if (policy === "card") return finish(CHAT_CARD_REPLY);
   if (policy === "finance") return finish(CHAT_FINANCE_REPLY);
   if (policy === "troca") return finish(CHAT_TRADE_REPLY);
 

@@ -73,7 +73,7 @@ export function chatWhatsAppCta(text: string): ChatWhatsAppCta | null {
       benefit: "Consultor humano · das 8h às 23h",
     };
   }
-  if (/financi|parcela|60x|simul/.test(folded)) {
+  if (/financi|parcela|60x|simul|cartao|18 vez/.test(folded)) {
     return {
       href: whatsappUrl(
         "Olá! Vi o assistente da Garagem e quero simular financiamento em até 60x.",

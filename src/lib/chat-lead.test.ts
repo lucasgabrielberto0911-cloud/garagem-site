@@ -74,6 +74,8 @@ test("até 70 mil lista o HB20 e deixa o Compass de fora", () => {
   assert.equal(parsePriceLimit("Quais carros temos ate 70 mil?"), 70_000);
   assert.equal(parsePriceLimit("carros de 70 mil"), 70_000);
   assert.equal(parsePriceLimit("orcamento 80 mil"), 80_000);
+  assert.equal(parsePriceLimit("Aceita cartão de crédito até 18x?"), null);
+  assert.equal(parsePriceLimit("financia em até 60 vezes"), null);
   const listed = listStockByBudget("Quais carros temos ate 70 mil?", [hb20, compass]);
   assert.match(listed ?? "", /HB20/);
   assert.match(listed ?? "", /64\.900/);
@@ -522,7 +524,19 @@ test("Gemini fora do ar ainda responde o estoque e o financiamento", async () =>
     },
   });
   assert.match(finance.reply, /60 vezes/);
+  assert.match(finance.reply, /18 vezes/);
   assert.match(finance.reply, /WhatsApp/);
+
+  const card = await runChatTurn({
+    mensagem: "Aceita cartão de crédito até 18x?",
+    historico: [],
+    stock: [],
+    generate: async () => {
+      throw new Error("quota");
+    },
+  });
+  assert.match(card.reply, /18 vezes/);
+  assert.match(card.reply, /cartão/);
 });
 
 test("sessão do chat bloqueia depois de 30 mensagens", () => {
