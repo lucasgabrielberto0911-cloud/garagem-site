@@ -159,7 +159,7 @@ export default async function VehicleDetailPage({
       <VehicleChatContext
         vehicle={{
           id: vehicle.id,
-          label: fullLabel,
+          label: title,
           brand: formatBrandName(vehicle.brand),
           model: formatModelName(vehicle.model),
           price: vehicle.price,
