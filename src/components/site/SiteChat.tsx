@@ -48,7 +48,7 @@ const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Oi! Que bom te ver por aqui. Eu te ajudo a achar o seminovo certo no estoque — sem pressa. Me conta o orçamento ou o modelo que você tem em mente.",
+    "Oi! Que bom te ver por aqui. Eu te ajudo a achar o seminovo certo no estoque, com calma e sem enrolação. Me conta o orçamento ou o modelo que você tem em mente que a gente escolhe juntos.",
 };
 
 const SUGGESTIONS = [

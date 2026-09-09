@@ -12,6 +12,7 @@ import {
 import { parsePriceLimit } from "./chat-prompt";
 import {
   CHAT_GEMINI_MODEL,
+  CHAT_GEMINI_TEMPERATURE,
   chatGeminiModels,
   extractGeminiFunctionCall,
   extractGeminiText,
@@ -113,6 +114,7 @@ test("criar_lead só fecha com nome e telefone válidos", () => {
 
 test("usa Gemini Flash-Lite primeiro, o modelo mais barato da fila", () => {
   assert.equal(CHAT_GEMINI_MODEL, "gemini-2.5-flash-lite");
+  assert.equal(CHAT_GEMINI_TEMPERATURE, 0.7);
   const prev = process.env.GEMINI_MODEL;
   delete process.env.GEMINI_MODEL;
   try {
@@ -296,6 +298,7 @@ test("resposta seca do modelo ganha comparação e consumo do estoque", async ()
     engine: "1.0",
   };
   const compared = compareChatStockPicks([palio, prismaJoy, hb20Auto]);
+  assert.match(compared, /Vou te ajudar a escolher/);
   assert.match(compared, /Palio Weekend/);
   assert.match(compared, /mais em conta/);
   assert.match(compared, /HB20/);

@@ -3,6 +3,9 @@ import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
 /** Mais barato e rápido para chat de loja. Flash entra só se o Lite falhar. */
 export const CHAT_GEMINI_MODEL = "gemini-2.5-flash-lite";
 
+/** Um pouco mais solto que o padrão seco — ainda profissional. */
+export const CHAT_GEMINI_TEMPERATURE = 0.7;
+
 export const CHAT_GEMINI_MODELS = [
   "gemini-2.5-flash-lite",
   "gemini-2.5-flash",
@@ -207,7 +210,7 @@ function buildGenerateBody(
     ...(withTools
       ? { tools: [{ function_declarations: [CRIAR_LEAD_DECLARATION] }] }
       : {}),
-    generationConfig: generationConfig(1536, 0.55, model),
+    generationConfig: generationConfig(1536, CHAT_GEMINI_TEMPERATURE, model),
   };
 }
 

@@ -122,7 +122,7 @@ export async function runChatTurn(input: {
       try {
         const created = await createLead(args, input.stock);
         let reply =
-          "Pronto, registrei seu contato. Um consultor da Garagem te chama no WhatsApp.";
+          "Pronto — registrei seu contato. A equipe continua com você no WhatsApp.";
         try {
           const confirmation = await confirm({
             systemPrompt,

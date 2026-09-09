@@ -150,6 +150,9 @@ test("atalhos de financiar e troca não pedem modelo de novo", async () => {
   });
   assert.equal(called, 0);
   assert.equal(finance.reply, CHAT_FINANCE_REPLY);
+  assert.match(finance.reply, /Dá sim/);
+  assert.match(finance.reply, /60 vezes/);
+  assert.doesNotMatch(finance.reply, /não (monto|posso|calculo|cubro)/i);
   assert.doesNotMatch(finance.reply, /qual modelo/i);
   assert.equal(finance.vehicles.length, 0);
 

@@ -297,7 +297,7 @@ function formatConsumptionCompare(vehicles: ChatVehicleRecord[]) {
     return typicalConsumptionHint(vehicles[0]!);
   }
   if (rows.length === 1) {
-    return `Consumo de catálogo: ${rows[0]!.label} ~${rows[0]!.kmL}. Nenhum desses usados foi medido na loja.`;
+    return `Na cidade, o consumo de catálogo fica por aí: ${rows[0]!.label} ~${rows[0]!.kmL}. Nenhum desses usados foi medido na loja.`;
   }
 
   const groups: { names: string[]; label: string; kmL: string }[] = [];
@@ -313,15 +313,18 @@ function formatConsumptionCompare(vehicles: ChatVehicleRecord[]) {
     const motor = group.label.replace(/\s*flex$/i, "");
     return `${joinPtNames(group.names)} ${motor} ~${group.kmL}`;
   });
-  return `Consumo de catálogo na cidade: ${bits.join(" · ")}. Nenhum desses usados foi medido na loja.`;
+  return `Na cidade, o consumo de catálogo fica por aí: ${bits.join(" · ")}. Nenhum desses usados foi medido na loja.`;
 }
 
 /** Compara os 2–3 anúncios da tela com dados reais + faixa de catálogo. */
-export function compareChatStockPicks(vehicles: ChatVehicleRecord[]) {
+export function compareChatStockPicks(
+  vehicles: ChatVehicleRecord[],
+  opts: { withLeadin?: boolean } = {},
+) {
   if (vehicles.length === 0) return "";
   if (vehicles.length === 1) {
     const vehicle = vehicles[0]!;
-    return `${talkName(vehicle).cap} ${vehicle.yearModel}: ${vehicle.transmission}, ${formatChatKm(vehicle.km)}, ${formatChatPrice(vehicle.price)}.\n\n${typicalConsumptionHint(vehicle)}.`;
+    return `Achei ele no estoque: ${talkName(vehicle).cap} ${vehicle.yearModel}, ${vehicle.transmission}, ${formatChatKm(vehicle.km)}, ${formatChatPrice(vehicle.price)}.\n\n${typicalConsumptionHint(vehicle)}.`;
   }
 
   const cheapest = vehicles.reduce((best, vehicle) =>
@@ -337,7 +340,7 @@ export function compareChatStockPicks(vehicles: ChatVehicleRecord[]) {
 
   const cheap = talkName(cheapest);
   const picks: string[] = [
-    `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}).`,
+    `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) — um bom começo.`,
   ];
   const mentioned = new Set<string>([cheapest.id]);
 
@@ -401,7 +404,9 @@ export function compareChatStockPicks(vehicles: ChatVehicleRecord[]) {
     }
   }
 
-  return `Pra te ajudar a escolher: ${picks.join(" ")}\n\n${formatConsumptionCompare(vehicles)}`;
+  const body = `${picks.join(" ")}\n\n${formatConsumptionCompare(vehicles)}`;
+  if (opts.withLeadin === false) return body;
+  return `Vou te ajudar a escolher.\n\n${body}`;
 }
 
 function foldReply(value: string) {
@@ -444,7 +449,7 @@ function chatListIntro(reply: string) {
   if (!first || first.length > 180) return "";
   const folded = foldReply(first);
   if (
-    /consumo|km\/l|catalogo|entre ess|mais em conta|menos km|conforto|medido|^temos |separei \d|otimas opcoes|^aqui estao/.test(
+    /consumo|km\/l|catalogo|entre ess|mais em conta|menos km|conforto|medido|^temos |separei \d|otimas opcoes|^aqui estao|vou te ajudar/.test(
       folded,
     )
   ) {
@@ -491,7 +496,7 @@ export function enrichChatStockReply(
   if (vehicles.length === 0) return reply;
   if (vehicles.length >= 2) {
     const intro = chatListIntro(reply) || chatFilterIntro(mensagem);
-    const compare = compareChatStockPicks(vehicles);
+    const compare = compareChatStockPicks(vehicles, { withLeadin: !intro });
     if (!compare) return reply;
     return intro ? `${intro.trim()}\n\n${compare}` : compare;
   }
@@ -533,7 +538,7 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
     .sort((a, b) => a.price - b.price);
   const ceiling = `R$ ${limit.toLocaleString("pt-BR")}`;
   if (matches.length === 0) {
-    return `Nessa faixa até ${ceiling} ainda não tem anúncio agora. Posso olhar outra faixa com você, ou um consultor te ajuda no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `Nessa faixa até ${ceiling} ainda não tem anúncio agora. Sem estresse: posso olhar outra faixa com você, ou um consultor te ajuda no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   const picks = matches.slice(0, 3);
   const cheapestId = picks[0]?.id;
@@ -546,14 +551,14 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
     const why = bits.length ? ` — ${bits.join(", ")}` : "";
     return `${formatVehicleLine(vehicle)}${why}`;
   });
-  return `Beleza — até ${ceiling}, eu olharia estes primeiro.\n${lines.join("\n")}\n\n${compareChatStockPicks(picks)}`;
+  return `Beleza — até ${ceiling}, estes aqui fazem sentido pra começar.\n${lines.join("\n")}\n\n${compareChatStockPicks(picks, { withLeadin: false })}`;
 }
 
 export const CHAT_FINANCE_REPLY =
-  `Dá sim para parcelar o seminovo, em até 60 vezes. Eu não monto o valor da parcela daqui porque cada perfil é diferente — o consultor calcula no WhatsApp com o carro que você escolher, bem no seu caso. ${CHAT_WHATSAPP_URL}`;
+  `Dá sim — a gente parcela o seminovo em até 60 vezes, e ainda aceita o usado na conta. A parcela certinha depende do seu perfil e do carro, então o consultor monta no WhatsApp com o modelo que você escolher, bem no seu caso. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_TRADE_REPLY =
-  `Aceitamos sim, carro ou moto na troca. Manda umas fotos no WhatsApp que o consultor avalia e já encaixa no negócio. ${CHAT_WHATSAPP_URL}`;
+  `Aceitamos sim — carro ou moto entram na conta. Manda umas fotos no WhatsApp que o consultor avalia e já encaixa no negócio com você. ${CHAT_WHATSAPP_URL}`;
 
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(mensagem: string): "finance" | "troca" | null {
@@ -586,7 +591,7 @@ export function localGarageReply(
     return CHAT_FINANCE_REPLY;
   }
   if (/\bgarantia\b/.test(text)) {
-    return `Todos os seminovos saem com garantia de 3 meses. Se quiser, eu já te mostro um carro do estoque, ou o consultor detalha no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `Fica tranquilo: todos os seminovos saem com garantia de 3 meses. Se quiser, eu já te mostro um carro do estoque, ou o consultor detalha no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (/\b(horario|atendimento|endereco|localizacao)\b/.test(text)) {
     return `A gente atende Aracruz, Vitória, Linhares, Serra e Vila Velha — loja digital, visita combinada. Um consultor confirma o melhor horário no WhatsApp: ${CHAT_WHATSAPP_URL}`;
@@ -600,7 +605,7 @@ export function localGarageReply(
     matchInterestVehicle(mensagem, stock, 1);
   if (match) {
     const version = match.version?.trim() ? ` ${match.version.trim()}` : "";
-    return `Temos o ${match.brand} ${match.model}${version} ${match.yearModel}, ${match.km.toLocaleString("pt-BR")} km, ${formatChatPrice(match.price)}, ${match.transmission}. ${typicalConsumptionHint(match)}.`;
+    return `Achei no estoque: ${match.brand} ${match.model}${version} ${match.yearModel}, ${match.km.toLocaleString("pt-BR")} km, ${formatChatPrice(match.price)}, ${match.transmission}. ${typicalConsumptionHint(match)}.`;
   }
 
   const looksLikeVehicle = /\b(tem|vende|estoque|carro|modelo|marca|km)\b/.test(
@@ -610,14 +615,14 @@ export function localGarageReply(
     .split(" ")
     .filter((token) => token.length >= 3 && !GENERIC_STOCK_TOKEN.test(token));
   if (looksLikeVehicle && specific.length > 0) {
-    return `Esse modelo não está na lista atual. Fala com a gente no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `Esse modelo não está na lista atual. Posso olhar outro na mesma ideia, ou o consultor procura no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (looksLikeVehicle && stock.length > 0) {
     const sample = stock
       .slice(0, 3)
       .map((vehicle) => `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel}`)
       .join("; ");
-    return `No estoque agora tem, entre outros: ${sample}. Me diz marca ou modelo que eu afino. WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `No estoque agora tem, entre outros: ${sample}. Me diz marca ou modelo que eu afino pra você.`;
   }
   return null;
 }
