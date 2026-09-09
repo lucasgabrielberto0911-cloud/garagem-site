@@ -30,3 +30,26 @@ export const LEAD_STATUS_STYLE: Record<LeadStatus, string> = {
 export function isLeadStatus(value: string): value is LeadStatus {
   return (LEAD_STATUSES as readonly string[]).includes(value);
 }
+
+export function buildLeadWhatsAppUrl(lead: {
+  phone: string;
+  name: string;
+  vehicleInfo?: string | null;
+  plate?: string | null;
+  source?: string | null;
+}): string {
+  const digits = lead.phone.replace(/\D/g, "");
+  const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
+  const firstName = lead.name.trim().split(/\s+/)[0] || "cliente";
+  let text = "";
+  if (lead.source === "chatbot-site") {
+    const topic = lead.vehicleInfo ? ` sobre o ${lead.vehicleInfo}` : "";
+    text = `Olá, ${firstName}! Aqui é da Garagem. Você conversou com nosso assistente virtual no site${topic}. Como posso te ajudar?`;
+  } else {
+    const plateClean = (lead.plate ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    const plateLabel = plateClean ? ` (placa ${plateClean})` : "";
+    const vehicle = lead.vehicleInfo ? ` do ${lead.vehicleInfo}` : "";
+    text = `Olá, ${firstName}! Aqui é da Garagem. Recebemos sua solicitação de avaliação${vehicle}${plateLabel}.`;
+  }
+  return `https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`;
+}

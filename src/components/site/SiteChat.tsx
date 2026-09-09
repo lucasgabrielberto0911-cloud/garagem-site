@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import {
@@ -57,6 +58,16 @@ const SUGGESTIONS = [
   "Como funciona o financiamento?",
   "Aceita troca?",
 ];
+
+const VEHICLE_SUGGESTIONS = [
+  "Condições e garantia deste carro",
+  "Pedir vídeo dele no WhatsApp",
+  "Aceita meu usado na troca?",
+  "Falar com um vendedor",
+];
+
+const CHAT_STORAGE_KEY = "garagem_site_chat_history_v1";
+const CHAT_STORAGE_OPEN_KEY = "garagem_site_chat_is_open_v1";
 
 function ChatLogo({ size = "md" }: { size?: "sm" | "md" }) {
   return (
@@ -386,6 +397,12 @@ function AssistantRow({
 }
 
 export function SiteChat() {
+  const pathname = usePathname();
+  const isVehiclePage = Boolean(
+    pathname?.startsWith("/estoque/") && pathname !== "/estoque",
+  );
+  const activeSuggestions = isVehiclePage ? VEHICLE_SUGGESTIONS : SUGGESTIONS;
+
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([OPENING]);
   const [draft, setDraft] = useState("");
@@ -399,6 +416,53 @@ export function SiteChat() {
   const messageCountRef = useRef(0);
   const lastIntentRef = useRef("other");
   const leadTrackedRef = useRef(false);
+  const restoredRef = useRef(false);
+
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const saved = sessionStorage.getItem(CHAT_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as ChatMessage[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          messageCountRef.current = parsed.filter((m) => m.role === "user").length;
+        }
+      }
+      const wasOpen = sessionStorage.getItem(CHAT_STORAGE_OPEN_KEY) === "1";
+      if (wasOpen) {
+        openRef.current = true;
+        setOpen(true);
+      }
+    } catch {
+      // Ignora erro de sessionStorage em ambientes restritos
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (messages.length > 1) {
+        sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+      } else if (restoredRef.current) {
+        sessionStorage.removeItem(CHAT_STORAGE_KEY);
+      }
+    } catch {
+      // Ignora
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    try {
+      if (open) {
+        sessionStorage.setItem(CHAT_STORAGE_OPEN_KEY, "1");
+      } else if (restoredRef.current) {
+        sessionStorage.removeItem(CHAT_STORAGE_OPEN_KEY);
+      }
+    } catch {
+      // Ignora
+    }
+  }, [open]);
 
   function openChat(source: string) {
     sourceRef.current = source || "site";
@@ -641,6 +705,11 @@ export function SiteChat() {
     lastIntentRef.current = "other";
     setMessages([OPENING]);
     setDraft("");
+    try {
+      sessionStorage.removeItem(CHAT_STORAGE_KEY);
+    } catch {
+      // Ignora
+    }
   }
 
   return (
@@ -770,7 +839,7 @@ export function SiteChat() {
             ) : null}
             {showSuggestions ? (
               <div className="grid grid-cols-2 gap-2 pl-[2.875rem] pt-0.5">
-                {SUGGESTIONS.map((suggestion) => (
+                {activeSuggestions.map((suggestion) => (
                   <button
                     key={suggestion}
                     type="button"
