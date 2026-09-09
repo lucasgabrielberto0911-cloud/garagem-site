@@ -80,13 +80,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: "compra",
     question: "Como funciona a compra de um veículo na Garagem?",
     answer:
-      "Você escolhe o veículo no site, chama no WhatsApp e a gente tira as dúvidas — com fotos extras, vídeo e detalhes do carro. Depois do aceite, alinhamos pagamento e os próximos passos da documentação. Somos loja digital, com atendimento humano do início ao fim.",
+      "Você escolhe o veículo no site, chama no WhatsApp e a gente tira as dúvidas — com fotos extras, vídeo e detalhes do veículo. Depois do aceite, alinhamos pagamento e os próximos passos da documentação. Somos loja digital, com atendimento humano do início ao fim.",
   },
   {
     category: "troca",
-    question: "Posso dar meu carro na troca?",
+    question: "Posso dar meu carro ou moto na troca?",
     answer:
-      "Sim. Avaliamos seu usado e o valor entra como parte do pagamento. Para agilizar, preencha o formulário da página Vender/Trocar com marca, modelo, ano e quilometragem — a avaliação inicial sai pelo WhatsApp.",
+      "Sim. Aceitamos carro ou moto: avaliamos seu usado e o valor entra como parte do pagamento. Para agilizar, preencha o formulário da página Vender/Trocar com marca, modelo, ano e quilometragem — a avaliação inicial sai pelo WhatsApp.",
   },
   {
     category: "financiamento",
@@ -102,7 +102,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     category: "atendimento",
-    question: "Podem me mandar mais fotos ou um vídeo do carro?",
+    question: "Podem me mandar mais fotos ou um vídeo do veículo?",
     answer:
       "Sim. Na página de cada veículo existe o botão “Pedir vídeo”, que já abre o WhatsApp com o modelo escolhido. Gravamos o vídeo mostrando os detalhes que você pedir.",
   },

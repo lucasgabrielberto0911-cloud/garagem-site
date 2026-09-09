@@ -258,7 +258,7 @@ export function SellForm({
 
         <div className="sm:col-span-2">
           <p className="mb-2 text-xs uppercase tracking-wider text-muted">
-            Fotos do seu carro <span className="normal-case">(opcional, até {MAX_PHOTOS})</span>
+            Fotos do seu veículo <span className="normal-case">(opcional, até {MAX_PHOTOS})</span>
           </p>
           <p className="mb-3 text-[11px] leading-relaxed text-muted">
             Ajudam na avaliação. Não precisa ser profissional — celular serve.
