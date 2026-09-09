@@ -23,9 +23,39 @@ export function VehicleGallery({
   alt: string;
 }) {
   const scrollerRef = useRef<HTMLUListElement>(null);
+  const thumbsRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
   const total = photos.length;
+
+  const [loadedIndices, setLoadedIndices] = useState<Set<number>>(
+    () => new Set([0, 1, 2]),
+  );
+
+  useEffect(() => {
+    setLoadedIndices((prev) => {
+      const next = new Set(prev);
+      const min = Math.max(0, active - 2);
+      const max = Math.min(total - 1, active + 2);
+      for (let i = min; i <= max; i++) {
+        next.add(i);
+      }
+      return next.size === prev.size ? prev : next;
+    });
+  }, [active, total]);
+
+  useEffect(() => {
+    const strip = thumbsRef.current;
+    if (!strip) return;
+    const activeBtn = strip.children[active] as HTMLElement | undefined;
+    if (activeBtn?.scrollIntoView) {
+      activeBtn.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [active]);
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -78,7 +108,7 @@ export function VehicleGallery({
           aria-label={`Fotos de ${alt}`}
         >
           {photos.map((photo, index) => {
-            const near = Math.abs(index - active) <= 1;
+            const shouldRender = loadedIndices.has(index);
             return (
               <li
                 key={photo.id}
@@ -95,7 +125,7 @@ export function VehicleGallery({
                 >
                   <span className="sr-only">Ampliar</span>
                 </button>
-                {near ? (
+                {shouldRender ? (
                   <VehicleImage
                     src={galleryPreviewSrc(photo)}
                     alt={vehiclePhotoAlt(alt, index, total)}
@@ -154,10 +184,11 @@ export function VehicleGallery({
 
       {total > 1 ? (
         <>
-          <div className="mt-2 hidden gap-2 overflow-x-auto pb-1 scrollbar-hide lg:flex">
+          <div
+            ref={thumbsRef}
+            className="mt-2 hidden gap-2 overflow-x-auto pb-1 scrollbar-hide lg:flex"
+          >
             {photos.map((photo, index) => {
-              const loadThumb =
-                index < 8 || Math.abs(index - active) <= 1;
               return (
                 <button
                   key={photo.id}
@@ -171,15 +202,13 @@ export function VehicleGallery({
                       : "border-white/15 opacity-70 hover:opacity-100"
                   }`}
                 >
-                  {loadThumb ? (
-                    <VehicleImage
-                      src={galleryThumbSrc(photo)}
-                      alt={vehiclePhotoAlt(alt, index, total)}
-                      fill
-                      sizes="96px"
-                      className="object-cover"
-                    />
-                  ) : null}
+                  <VehicleImage
+                    src={galleryThumbSrc(photo)}
+                    alt={vehiclePhotoAlt(alt, index, total)}
+                    fill
+                    sizes="96px"
+                    className="object-cover"
+                  />
                 </button>
               );
             })}
