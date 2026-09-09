@@ -407,7 +407,7 @@ export default async function VehicleDetailPage({
                         trackingLabel="ficha-trade"
                         className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
-                        Quero dar na troca
+                        Tenho veículo na troca
                       </TrackedWhatsAppLink>
                     </VehicleLeadHit>
                     </div>

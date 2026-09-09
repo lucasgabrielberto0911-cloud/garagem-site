@@ -64,7 +64,7 @@ export const WHATSAPP_MESSAGES = {
   vehicleFinance: (label: string) =>
     `Olá! Gostaria de opções de financiamento para o ${label}.`,
   vehicleTrade: (label: string) =>
-    `Olá! Tenho interesse no ${label} e gostaria de dar meu usado na troca.`,
+    `Olá! Tenho interesse no ${label} e gostaria de colocar meu veículo na troca.`,
   wanted: (detail?: string) => {
     const text = (detail ?? "").trim();
     return text

@@ -45,7 +45,7 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   });
   assert.equal(tradeVehicle?.label, "Avaliar meu usado");
   assert.match(decodeURIComponent(tradeVehicle?.href ?? ""), /Honda BIZ 125 EX 2023/);
-  assert.match(decodeURIComponent(tradeVehicle?.href ?? ""), /usado na troca/);
+  assert.match(decodeURIComponent(tradeVehicle?.href ?? ""), /veículo na troca/);
 
   const financeVehicle = chatWhatsAppCta(finance, {
     label: "Honda BIZ 125 EX 2023",
