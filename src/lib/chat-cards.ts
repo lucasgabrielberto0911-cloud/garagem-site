@@ -213,6 +213,7 @@ function scoreVehicleInText(
   vehicle: ChatVehicleRecord,
   foldedHay: string,
   raw: string,
+  preferredVehicleId?: string,
 ) {
   const brand = fold(vehicle.brand);
   const model = fold(vehicle.model);
@@ -221,6 +222,13 @@ function scoreVehicleInText(
   if (model && foldedHay.includes(model)) score += 3;
   if (raw.includes(String(vehicle.yearModel))) score += 1;
   if (priceInText(raw, vehicle.price)) score += 2;
+  if (
+    preferredVehicleId &&
+    vehicle.id === preferredVehicleId &&
+    ((brand && foldedHay.includes(brand)) || (model && foldedHay.includes(model)))
+  ) {
+    score += 3;
+  }
   return score;
 }
 
@@ -228,13 +236,14 @@ function bestMatchForSnippet(
   snippet: string,
   stock: ChatVehicleRecord[],
   seen: Set<string>,
+  preferredVehicleId?: string,
 ) {
   const folded = fold(snippet);
   let best: ChatVehicleRecord | null = null;
   let bestScore = 0;
   for (const vehicle of stock) {
     if (seen.has(vehicle.id)) continue;
-    const score = scoreVehicleInText(vehicle, folded, snippet);
+    const score = scoreVehicleInText(vehicle, folded, snippet, preferredVehicleId);
     if (score > bestScore) {
       best = vehicle;
       bestScore = score;
@@ -248,6 +257,7 @@ export function matchVehiclesInReply(
   reply: string,
   stock: ChatVehicleRecord[],
   limit = 5,
+  preferredVehicleId?: string,
 ) {
   if (!reply.trim() || stock.length === 0) return [];
 
@@ -260,7 +270,7 @@ export function matchVehiclesInReply(
       looksLikeLooseVehicleTitle(line) ||
       (/[\d.]+\s*km/i.test(line) && /R\$\s*\d/.test(line));
     if (!listing) continue;
-    const match = bestMatchForSnippet(line, stock, seen);
+    const match = bestMatchForSnippet(line, stock, seen, preferredVehicleId);
     if (!match) continue;
     seen.add(match.id);
     found.push(match);
@@ -273,7 +283,7 @@ export function matchVehiclesInReply(
   const ranked = stock
     .map((vehicle) => ({
       vehicle,
-      score: scoreVehicleInText(vehicle, foldedReply, reply),
+      score: scoreVehicleInText(vehicle, foldedReply, reply, preferredVehicleId),
     }))
     .filter((item) => item.score >= 5)
     .sort((a, b) => b.score - a.score);
@@ -334,9 +344,15 @@ export function selectChatVehicles(
   mensagem: string,
   stock: ChatVehicleRecord[],
   limit = CHAT_CARD_LIMIT,
+  preferredVehicleId?: string,
 ) {
   const pool = applyChatStockFilters(stock, mensagem);
-  const mentioned = matchVehiclesInReply(reply, pool, Math.max(limit, 5));
+  const mentioned = matchVehiclesInReply(
+    reply,
+    pool,
+    Math.max(limit, 5),
+    preferredVehicleId,
+  );
   const budget = parsePriceLimit(mensagem);
   if (budget == null) return mentioned.slice(0, limit);
 

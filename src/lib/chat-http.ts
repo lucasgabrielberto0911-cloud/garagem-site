@@ -89,7 +89,12 @@ export async function handleChatPost(
     const body = (await request.json().catch(() => ({}))) as {
       mensagem?: unknown;
       historico?: unknown;
+      vehicleId?: unknown;
     };
+    const vehicleId =
+      typeof body.vehicleId === "string" && body.vehicleId.trim()
+        ? body.vehicleId.trim().slice(0, 100)
+        : undefined;
     const mensagem = String(body.mensagem ?? "")
       .trim()
       .slice(0, CHAT_MAX_MESSAGE);
@@ -117,6 +122,7 @@ export async function handleChatPost(
       mensagem,
       historico,
       stock,
+      vehicleId,
     });
     return json(session, result);
   } catch (error) {

@@ -424,3 +424,52 @@ No consumo, faixa típica de catálogo: Chevrolet Prisma 1.0 flex ~11–14 km/l 
   assert.match(polished, /\n\n/);
   assert.doesNotMatch(polished, /156\.400 km · R\$/);
 });
+
+test("desambiguação prioriza unidade ativa quando existem dois modelos iguais no estoque", () => {
+  const hb20_2021: ChatVehicleRecord = {
+    id: "chb20_2021_evolution",
+    brand: "Hyundai",
+    model: "HB20",
+    version: "Evolution 1.0",
+    yearModel: 2021,
+    km: 54000,
+    price: 64900,
+    color: "Prata",
+    transmission: "Manual",
+    fuel: "Flex",
+    category: "carro",
+  };
+  const hb20_2015: ChatVehicleRecord = {
+    id: "chb20_2015_premium",
+    brand: "Hyundai",
+    model: "HB20",
+    version: "Premium 1.6",
+    yearModel: 2015,
+    km: 110000,
+    price: 55900,
+    color: "Branco",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+  };
+  const stock = [hb20_2015, hb20_2021];
+
+  const pickedDefault = selectChatVehicles(
+    "Achei o Hyundai HB20 no estoque pra você.",
+    "Tenho interesse no Hyundai HB20",
+    stock,
+    1,
+  );
+  assert.equal(pickedDefault[0]?.id, hb20_2015.id);
+
+  const pickedActive = selectChatVehicles(
+    "Achei o Hyundai HB20 no estoque pra você.",
+    "Tenho interesse no Hyundai HB20",
+    stock,
+    1,
+    hb20_2021.id,
+  );
+  assert.equal(pickedActive[0]?.id, hb20_2021.id);
+  assert.equal(pickedActive[0]?.yearModel, 2021);
+  assert.equal(pickedActive[0]?.price, 64900);
+});

@@ -56,12 +56,12 @@ Nunca começar com “não posso”, “não monto” ou “não cubro”. Quand
 Cumprimento informal (oi, eae, eai, blz, teste, opa) é conversa da loja: cumprimente com calor e ofereça ajuda para escolher no estoque. Só fale de financiamento ou troca se a pessoa pedir — e aí explique em português simples (parcelar o carro, dar o usado na conta), sem “60x” solto. NÃO recuse e NÃO mande para o WhatsApp só por ser um oi.
 
 COMO AJUDAR DE VERDADE:
-- Seu trabalho é ser consultor de verdade: ajudar a ESCOLHER um carro do estoque comparando as opções reais (preço, km, ano, câmbio, motor, consumo típico), não só listar nem responder seco. Se não puder calcular parcela ou inventar um dado, explique o próximo passo com calma (consultor no WhatsApp), como quem ajuda — nunca como quem trava a conversa.
+- Seu trabalho é ser consultor de verdade: ajudar a ESCOLHER um carro do estoque comparando as opções reais (preço, km, ano, câmbio, motor), não só listar nem responder seco. Se não puder calcular parcela ou inventar um dado, explique o próximo passo com calma (consultor no WhatsApp), como quem ajuda — nunca como quem trava a conversa.
 - Se faltar orçamento, tipo (hatch/sedan/SUV), câmbio ou se tem veículo na troca, faça UMA pergunta objetiva. Sem questionário. Se o visitante já deu orçamento ou pediu automático/manual, NÃO pergunte hatch/sedan.
 - Ao listar, escolha no máximo 3 opções que façam sentido — não despeje o estoque inteiro. O site vira cada linha em mini-anúncio com foto e já mostra atalhos (financiar, troca). Formato da lista, um por linha:
 Marca Modelo ano · km · R$ preço
-Antes da lista: 1 frase falada de recorte (Olha só, carros até R$ 70.000 no estoque agora / Automáticos até R$ 80.000). Não comece com “Separei N” nem “Temos três ótimas opções”. DEPOIS da lista: 2 a 4 frases comparando SOMENTE esses mesmos carros, com dados da linha de estoque. Diga quem está mais em conta, quem tem menos km, quem é automático e o que isso muda no dia a dia, e a faixa de consumo típico de catálogo. Frases completas, faladas, sem telegrama e sem emoji.
-- Consumo / média / km/l: use SOMENTE o texto “consumo típico” já escrito na linha do estoque. NUNCA invente outro número, NUNCA invente cv, potência, torque ou INMETRO, NUNCA diga que a loja mediu este usado, NUNCA apresente a faixa como garantia. Fale como faixa típica de catálogo / média da motorização. Sempre deixe claro que o usado não foi medido na loja.
+Antes da lista: 1 frase falada de recorte (Olha só, carros até R$ 70.000 no estoque agora / Automáticos até R$ 80.000). Não comece com “Separei N” nem “Temos três ótimas opções”. DEPOIS da lista: 2 a 4 frases comparando SOMENTE esses mesmos carros, com dados da linha de estoque. Diga quem está mais em conta, quem tem menos km, quem é automático e o que isso muda no dia a dia. NÃO mencione consumo de combustível espontaneamente. Frases completas, faladas, sem telegrama e sem emoji.
+- Consumo / média / km/l: NUNCA mencione consumo espontaneamente. O consumo só deve ser informado SE o visitante perguntar especificamente sobre o consumo, gasto de combustível, quanto faz por litro ou se o veículo é econômico. Quando ele perguntar de consumo, use SOMENTE o texto “consumo típico” já escrito na linha do estoque. NUNCA invente outro número, NUNCA invente cv, potência, torque ou INMETRO, NUNCA diga que a loja mediu este usado, NUNCA apresente a faixa como garantia. Fale como faixa típica de catálogo / média da motorização. Sempre deixe claro que o usado não foi medido na loja.
 - Não descreva a foto, não use markdown, não cite carro fora dessas 3 linhas e não pergunte hatch, sedan, “qual desses” nem “qual perfil” depois da lista (os atalhos do site já existem).
 - Se perguntarem “qual o melhor”, compare 2 ou 3 da lista só com dados reais (preço, ano, km, câmbio, combustível, motor, acessórios da linha). Sem inventar opcional.
 - Acessórios e motor: só o que estiver na linha do estoque. Se não estiver escrito, não invente ar, multimídia, couro, teto, sensor.
@@ -72,7 +72,7 @@ Antes da lista: 1 frase falada de recorte (Olha só, carros até R$ 70.000 no es
 
 Quando o visitante pedir carros por preço (até 70 mil, abaixo de 80 mil, etc.), liste no máximo 3 veículos REAIS da lista, um por linha, neste formato:
 Marca Modelo ano · km · R$ preço
-Antes da lista, uma frase. Depois da lista, a comparação (2 a 4 frases) com consumo típico de catálogo. Nunca escreva “temos opções” e pare. Não cite modelo extra fora dessas linhas. Se não houver carro na faixa, diga isso e ofereça outra faixa ou o WhatsApp.
+Antes da lista, uma frase. Depois da lista, a comparação (2 a 4 frases) com dados reais de preço, km e câmbio. Nunca escreva “temos opções” e pare. Não cite modelo extra fora dessas linhas. Se não houver carro na faixa, diga isso e ofereça outra faixa ou o WhatsApp.
 
 Quando o visitante demonstrar interesse real de compra E fornecer nome e telefone de contato, chame a função criar_lead. Não invente telefone nem nome. Só chame a função se os dois dados tiverem sido ditos pelo visitante.
 
@@ -176,10 +176,21 @@ export function parsePriceLimit(mensagem: string): number | null {
   return Math.round(amount);
 }
 
-export function buildChatSystemPrompt(vehicles: ChatStockLine[], mensagem = "") {
+export function buildChatSystemPrompt(
+  vehicles: ChatStockLine[],
+  mensagem = "",
+  activeVehicle?: ChatStockLine,
+) {
   const stock = formatStockForPrompt(vehicles);
+  let activeNotice = "";
+  if (activeVehicle) {
+    const kind = activeVehicle.category === "moto" ? "moto" : "carro";
+    activeNotice = `\n\nVEÍCULO QUE O VISITANTE ESTÁ VENDO NA TELA AGORA:
+- ${stockLineLabel(activeVehicle, true)}
+REGRA DE DESAMBIGUAÇÃO: O visitante está atualmente na página deste veículo (${activeVehicle.brand} ${activeVehicle.model} ${activeVehicle.year}). Se ele perguntar sobre este veículo, disser "este ${kind}", perguntar de garantia, troca, financiamento ou pedir mais informações sobre ele, refira-se ESTRITAMENTE a esta unidade específica (${activeVehicle.brand} ${activeVehicle.model} ${activeVehicle.year}, R$ ${activeVehicle.price.toLocaleString("pt-BR")}, ${activeVehicle.km.toLocaleString("pt-BR")} km). NÃO confunda com outras unidades do mesmo modelo e NÃO cite outra unidade de ${activeVehicle.model} sem que o visitante peça explicitamente para comparar.`;
+  }
   const limit = parsePriceLimit(mensagem);
-  if (limit == null) return `${CHAT_SYSTEM_PROMPT}\n\n${stock}`;
+  if (limit == null) return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}`;
   const sorted = [...vehicles].sort((a, b) => a.price - b.price);
   const matches = sorted.filter((vehicle) => vehicle.price <= limit).slice(0, 8);
   const above = sorted.filter((vehicle) => vehicle.price > limit).slice(0, 3);
@@ -199,7 +210,7 @@ export function buildChatSystemPrompt(vehicles: ChatStockLine[], mensagem = "") 
                 .join(" | ")}`
             : ""
         }`;
-  return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${extra}`;
+  return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${extra}`;
 }
 
 export function stockSelectHasForbiddenField(

@@ -164,6 +164,8 @@ export default async function VehicleDetailPage({
           label: title,
           brand: formatBrandName(vehicle.brand),
           model: formatModelName(vehicle.model),
+          version: vehicle.version,
+          year: vehicle.yearModel,
           price: vehicle.price,
           category: vehicle.category,
           sold: sold,

@@ -1,4 +1,5 @@
 import {
+  CHAT_CARD_LIMIT,
   chatStockExploreHref,
   selectChatVehicles,
   toChatVehicleCard,
@@ -50,20 +51,31 @@ export async function runChatTurn(input: {
   mensagem: string;
   historico: ChatTurn[];
   stock: ChatVehicleRecord[];
+  vehicleId?: string;
   generate?: typeof generateChatReply;
   confirm?: typeof confirmAfterLead;
   createLead?: typeof createChatLead;
 }): Promise<ChatTurnResult> {
+  const activeVehicle = input.vehicleId
+    ? input.stock.find((v) => v.id === input.vehicleId)
+    : undefined;
   const systemPrompt = buildChatSystemPrompt(
     applyChatStockFilters(input.stock, input.mensagem).map(toChatStockLine),
     input.mensagem,
+    activeVehicle ? toChatStockLine(activeVehicle) : undefined,
   );
   const generate = input.generate ?? generateChatReply;
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
 
   const finish = (reply: string, leadCreated = false): ChatTurnResult => {
-    const picked = selectChatVehicles(reply, input.mensagem, input.stock);
+    const picked = selectChatVehicles(
+      reply,
+      input.mensagem,
+      input.stock,
+      CHAT_CARD_LIMIT,
+      activeVehicle?.id,
+    );
     const enriched = enrichChatStockReply(reply, picked, input.mensagem);
     const vehicles = picked.map(toChatVehicleCard);
     return {
@@ -89,7 +101,10 @@ export async function runChatTurn(input: {
 
   const fromStock = () => {
     if (isChatPing(input.mensagem)) return CHAT_PING_REPLY;
-    return localGarageReply(input.mensagem, input.stock) ?? CHAT_FALLBACK_REPLY;
+    return (
+      localGarageReply(input.mensagem, input.stock, activeVehicle) ??
+      CHAT_FALLBACK_REPLY
+    );
   };
 
   let first;

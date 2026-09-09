@@ -151,3 +151,17 @@ test("histórico inválido é ignorado", () => {
     [{ role: "user", content: "hb20" }],
   );
 });
+
+test("POST com vehicleId repassa o identificador para o runTurn", async () => {
+  let passedVehicleId: string | undefined;
+  await post(
+    { mensagem: "Tenho interesse no HB20", vehicleId: "c-hb20-2021" },
+    {
+      runTurn: async (input) => {
+        passedVehicleId = input.vehicleId;
+        return emptyResult();
+      },
+    },
+  );
+  assert.equal(passedVehicleId, "c-hb20-2021");
+});

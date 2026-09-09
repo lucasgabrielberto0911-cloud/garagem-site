@@ -196,6 +196,7 @@ export function matchInterestVehicle(
   interest: string | undefined,
   stock: ChatVehicleRecord[],
   minScore = 2,
+  preferredVehicleId?: string,
 ) {
   const needle = normalize(interest ?? "");
   if (!needle || stock.length === 0) return null;
@@ -212,6 +213,13 @@ export function matchInterestVehicle(
       if (hay.includes(part)) score += 1;
     }
     if (hay.includes(needle)) score += 3;
+    if (preferredVehicleId && vehicle.id === preferredVehicleId) {
+      const model = normalize(vehicle.model);
+      const brand = normalize(vehicle.brand);
+      if (needle.includes(model) || (brand && needle.includes(brand))) {
+        score += 3;
+      }
+    }
     if (score > bestScore) {
       best = vehicle;
       bestScore = score;
@@ -316,15 +324,27 @@ function formatConsumptionCompare(vehicles: ChatVehicleRecord[]) {
   return `Na cidade, o consumo de catálogo fica por aí: ${bits.join(" · ")}. Nenhum desses usados foi medido na loja.`;
 }
 
-/** Compara os 2–3 anúncios da tela com dados reais + faixa de catálogo. */
+/** Identifica se o visitante perguntou especificamente sobre consumo / economia de combustível. */
+export function asksAboutConsumption(mensagem: string): boolean {
+  const folded = normalize(mensagem);
+  return /\b(consumo|km\/l|kml|quanto faz|bebe|bebe muito|economico|economica|economia|gasta|gasto|litro|autonomia)\b/.test(
+    folded,
+  );
+}
+
+/** Compara os 2–3 anúncios da tela com dados reais. Consumo só se solicitado. */
 export function compareChatStockPicks(
   vehicles: ChatVehicleRecord[],
-  opts: { withLeadin?: boolean } = {},
+  opts: { withLeadin?: boolean; includeConsumption?: boolean } = {},
 ) {
   if (vehicles.length === 0) return "";
   if (vehicles.length === 1) {
     const vehicle = vehicles[0]!;
-    return `Achei no estoque: ${talkName(vehicle).cap} ${vehicle.yearModel}, ${vehicle.transmission}, ${formatChatKm(vehicle.km)}, ${formatChatPrice(vehicle.price)}.\n\n${typicalConsumptionHint(vehicle)}.`;
+    const base = `Achei no estoque: ${talkName(vehicle).cap} ${vehicle.yearModel}, ${vehicle.transmission}, ${formatChatKm(vehicle.km)}, ${formatChatPrice(vehicle.price)}.`;
+    if (opts.includeConsumption) {
+      return `${base}\n\n${typicalConsumptionHint(vehicle)}.`;
+    }
+    return base;
   }
 
   const cheapest = vehicles.reduce((best, vehicle) =>
@@ -404,7 +424,9 @@ export function compareChatStockPicks(
     }
   }
 
-  const body = `${picks.join(" ")}\n\n${formatConsumptionCompare(vehicles)}`;
+  const body = opts.includeConsumption
+    ? `${picks.join(" ")}\n\n${formatConsumptionCompare(vehicles)}`
+    : picks.join(" ");
   if (opts.withLeadin === false) return body;
   return `Vou te ajudar a escolher.\n\n${body}`;
 }
@@ -503,14 +525,19 @@ export function enrichChatStockReply(
   mensagem = "",
 ) {
   if (vehicles.length === 0) return reply;
+  const wantsConsumption = asksAboutConsumption(mensagem);
   if (vehicles.length >= 2) {
     const intro = chatListIntro(reply) || chatFilterIntro(mensagem);
-    const compare = compareChatStockPicks(vehicles, { withLeadin: !intro });
+    const compare = compareChatStockPicks(vehicles, {
+      withLeadin: !intro,
+      includeConsumption: wantsConsumption,
+    });
     if (!compare) return reply;
     return intro ? `${intro.trim()}\n\n${compare}` : compare;
   }
   if (replyAlreadyCompares(reply, vehicles)) {
     if (
+      wantsConsumption &&
       /consumo|km\/l|catalogo/.test(foldReply(reply)) &&
       !/medido/.test(foldReply(reply))
     ) {
@@ -531,7 +558,9 @@ export function enrichChatStockReply(
     return reply;
   }
 
-  const extra = compareChatStockPicks(vehicles);
+  const extra = compareChatStockPicks(vehicles, {
+    includeConsumption: wantsConsumption,
+  });
   if (!extra) return reply;
   return `${reply.trim()}\n\n${extra}`;
 }
@@ -573,7 +602,8 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
     const why = bits.length ? ` — ${bits.join(", ")}` : "";
     return `${formatVehicleLine(vehicle)}${why}`;
   });
-  return `Beleza — até ${ceiling}, estes aqui fazem sentido pra começar.\n${lines.join("\n")}\n\n${compareChatStockPicks(picks, { withLeadin: false })}`;
+  const wantsConsumption = asksAboutConsumption(mensagem);
+  return `Beleza — até ${ceiling}, estes aqui fazem sentido pra começar.\n${lines.join("\n")}\n\n${compareChatStockPicks(picks, { withLeadin: false, includeConsumption: wantsConsumption })}`;
 }
 
 export const CHAT_FINANCE_REPLY =
@@ -612,6 +642,7 @@ export function chatPolicyShortcut(
 export function localGarageReply(
   mensagem: string,
   stock: ChatVehicleRecord[],
+  activeVehicle?: ChatVehicleRecord,
 ) {
   const text = normalize(mensagem);
   const policy = chatPolicyShortcut(mensagem);
@@ -639,10 +670,14 @@ export function localGarageReply(
   }
 
   const match =
-    matchInterestVehicle(mensagem, stock) ??
-    matchInterestVehicle(mensagem, stock, 1);
+    (activeVehicle && matchInterestVehicle(mensagem, [activeVehicle], 1) ? activeVehicle : null) ??
+    matchInterestVehicle(mensagem, stock, 2, activeVehicle?.id) ??
+    matchInterestVehicle(mensagem, stock, 1, activeVehicle?.id);
   if (match) {
-    return `Achei no estoque: ${match.brand} ${match.model} ${match.yearModel}, ${match.km.toLocaleString("pt-BR")} km, ${formatChatPrice(match.price)}, ${match.transmission}. ${typicalConsumptionHint(match)}.`;
+    const consumptionExtra = asksAboutConsumption(mensagem)
+      ? ` ${typicalConsumptionHint(match)}.`
+      : "";
+    return `Achei no estoque: ${match.brand} ${match.model} ${match.yearModel}, ${match.km.toLocaleString("pt-BR")} km, ${formatChatPrice(match.price)}, ${match.transmission}.${consumptionExtra}`;
   }
 
   const looksLikeVehicle = /\b(tem|vende|estoque|carro|modelo|marca|km)\b/.test(

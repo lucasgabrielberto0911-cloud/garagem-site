@@ -83,37 +83,38 @@ function resolveSuggestionPrompt(
   const articleO = isMoto ? "a" : "o";
   const prepDa = isMoto ? "da" : "do";
   const prepPela = isMoto ? "pela" : "pelo";
+  const vehicleName = `${vehicle.label}${vehicle.year ? ` ${vehicle.year}` : ""}`;
   const lower = suggestion.toLowerCase();
 
   if (vehicle.sold) {
     if (lower.includes("avisar") || lower.includes("chegar")) {
-      return `Vi que ${articleO} ${vehicle.label} já foi vendid${articleO}. Podem me avisar quando chegar outro similar no estoque?`;
+      return `Vi que ${articleO} ${vehicleName} já foi vendid${articleO}. Podem me avisar quando chegar outro similar no estoque?`;
     }
     if (lower.includes("semelhante") || lower.includes("opções") || lower.includes("opcoes")) {
-      return `Vi que ${articleO} ${vehicle.label} já foi vendid${articleO}. Vocês têm outras opções parecidas no estoque agora?`;
+      return `Vi que ${articleO} ${vehicleName} já foi vendid${articleO}. Vocês têm outras opções parecidas no estoque agora?`;
     }
     if (lower.includes("encomend") || lower.includes("modelo")) {
-      return `Gostei muito d${prepDa} ${vehicle.label}. Vocês conseguem encomendar ou achar um similar pra mim?`;
+      return `Gostei muito d${prepDa} ${vehicleName}. Vocês conseguem encomendar ou achar um similar pra mim?`;
     }
     if (lower.includes("vendedor") || lower.includes("consultor")) {
-      return `Quero falar com um consultor sobre opções parecidas com ${articleO} ${vehicle.label}.`;
+      return `Quero falar com um consultor sobre opções parecidas com ${articleO} ${vehicleName}.`;
     }
   }
 
   if (lower.includes("financiamento")) {
-    return `Como funciona o financiamento para ${articleO} ${vehicle.label}?`;
+    return `Como funciona o financiamento para ${articleO} ${vehicleName}?`;
   }
   if (lower.includes("vídeo") || lower.includes("video")) {
-    return `Como faço para pedir um vídeo ${prepDa} ${vehicle.label} pelo WhatsApp?`;
+    return `Como faço para pedir um vídeo ${prepDa} ${vehicleName} pelo WhatsApp?`;
   }
   if (lower.includes("troca") || lower.includes("usado")) {
-    return `Vocês aceitam meu veículo usado na troca ${prepPela} ${vehicle.label}?`;
+    return `Vocês aceitam meu veículo usado na troca ${prepPela} ${vehicleName}?`;
   }
   if (lower.includes("garantia") || lower.includes("condições") || lower.includes("condicoes")) {
-    return `Qual é a garantia e as condições ${prepDa} ${vehicle.label}?`;
+    return `Qual é a garantia e as condições ${prepDa} ${vehicleName}?`;
   }
   if (lower.includes("vendedor") || lower.includes("consultor")) {
-    return `Quero falar com um consultor sobre ${articleO} ${vehicle.label}.`;
+    return `Quero falar com um consultor sobre ${articleO} ${vehicleName}.`;
   }
   return suggestion;
 }
@@ -341,7 +342,6 @@ function ChatText({
   onFollowup,
   onVehicleClick,
   onStockExplore,
-  activeVehicleId,
   vehicleContext,
 }: {
   text: string;
@@ -352,14 +352,10 @@ function ChatText({
   onFollowup?: (text: string) => void;
   onVehicleClick?: (vehicle: ChatVehicleCard) => void;
   onStockExplore?: () => void;
-  activeVehicleId?: string;
   vehicleContext?: ChatVehicleContext | null;
 }) {
-  const filteredVehicles = activeVehicleId
-    ? vehicles.filter((vehicle) => vehicle.id !== activeVehicleId)
-    : vehicles;
   const source =
-    filteredVehicles.length > 0 ? polishChatReplyWithCards(text, filteredVehicles) : text;
+    vehicles.length > 0 ? polishChatReplyWithCards(text, vehicles) : text;
   const visible = displayChatText(source);
   const cta = chatWhatsAppCta(text, vehicleContext);
   const showCta = Boolean(cta);
@@ -379,7 +375,7 @@ function ChatText({
           Contato registrado. A equipe continua com você no WhatsApp.
         </div>
       ) : null}
-      {filteredVehicles.map((vehicle) => (
+      {vehicles.map((vehicle) => (
         <ChatVehicleMini
           key={vehicle.id}
           vehicle={vehicle}
@@ -723,6 +719,7 @@ export function SiteChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mensagem,
+          vehicleId: vehicleContext?.id,
           historico: messages
             .filter((item, index) => {
               if (index !== 0) return true;
@@ -881,6 +878,7 @@ export function SiteChat() {
                       : "Na tela:"}{" "}
                   <strong className="text-cream font-medium">
                     {vehicleContext.label}
+                    {vehicleContext.year ? ` ${vehicleContext.year}` : ""}
                   </strong>
                 </span>
               </span>
@@ -889,10 +887,8 @@ export function SiteChat() {
                 onClick={() =>
                   void send(
                     vehicleContext.sold
-                      ? `Vi que ${isMoto ? "a" : "o"} ${vehicleContext.label} foi vendid${isMoto ? "a" : "o"}. Podem me avisar quando chegar outro similar no estoque?`
-                      : isMoto
-                        ? `Tenho interesse na ${vehicleContext.label}. Gostaria de mais informações sobre ela.`
-                        : `Tenho interesse no ${vehicleContext.label}. Gostaria de mais informações sobre ele.`,
+                      ? `Vi que ${isMoto ? "a" : "o"} ${vehicleContext.label}${vehicleContext.year ? ` ${vehicleContext.year}` : ""} foi vendid${isMoto ? "a" : "o"}. Podem me avisar quando chegar outro similar no estoque?`
+                      : `Tenho interesse ${isMoto ? "na" : "no"} ${vehicleContext.label}${vehicleContext.year ? ` ${vehicleContext.year}` : ""}. Gostaria de mais informações sobre ${isMoto ? "ela" : "ele"}.`,
                     "suggestion",
                   )
                 }
@@ -904,9 +900,7 @@ export function SiteChat() {
               >
                 {vehicleContext.sold
                   ? "Avisar quando chegar"
-                  : isMoto
-                    ? "Perguntar dela"
-                    : "Perguntar dele"}
+                  : "Perguntar sobre"}
               </button>
             </div>
           ) : null}
@@ -937,7 +931,6 @@ export function SiteChat() {
                     vehicles={message.vehicles}
                     stockHref={message.stockHref}
                     leadCreated={message.leadCreated}
-                    activeVehicleId={vehicleContext?.id}
                     vehicleContext={vehicleContext}
                     followups={
                       !pending &&

@@ -81,8 +81,13 @@ test("até 70 mil lista o HB20 e deixa o Compass de fora", () => {
   assert.match(listed ?? "", /64\.900/);
   assert.doesNotMatch(listed ?? "", /Compass/);
   assert.match(listed ?? "", /mais em conta/);
-  assert.match(listed ?? "", /consumo|catálogo|catalogo/);
-  assert.match(listed ?? "", /não foi medido/);
+  assert.doesNotMatch(listed ?? "", /consumo|catálogo|catalogo/);
+  const listedWithConsumption = listStockByBudget(
+    "Quais carros de bom consumo temos ate 70 mil?",
+    [hb20, compass],
+  );
+  assert.match(listedWithConsumption ?? "", /consumo|catálogo|catalogo/);
+  assert.match(listedWithConsumption ?? "", /não foi medido/);
   assert.equal(
     isIncompleteStockReply("Temos ótimas opções até R$ 70 mil no momento:"),
     true,
@@ -255,7 +260,7 @@ test("lista vazia do modelo é preenchida com o estoque até o valor", async () 
   });
   assert.match(result.reply, /HB20/);
   assert.doesNotMatch(result.reply, /Compass/);
-  assert.match(result.reply, /consumo|catálogo|1\.0 flex/);
+  assert.doesNotMatch(result.reply, /consumo|catálogo/);
   assert.equal(result.vehicles.length, 1);
   assert.equal(result.vehicles[0]?.id, hb20.id);
 });
@@ -299,7 +304,9 @@ test("resposta seca do modelo ganha comparação e consumo do estoque", async ()
     version: "Comfort 1.0",
     engine: "1.0",
   };
-  const compared = compareChatStockPicks([palio, prismaJoy, hb20Auto]);
+  const compared = compareChatStockPicks([palio, prismaJoy, hb20Auto], {
+    includeConsumption: true,
+  });
   assert.match(compared, /Vou te ajudar a escolher/);
   assert.match(compared, /Palio Weekend/);
   assert.match(compared, /mais em conta/);
@@ -316,7 +323,7 @@ test("resposta seca do modelo ganha comparação e consumo do estoque", async ()
   assert.doesNotMatch(compared, /Fiat Palio Weekend é o mais em conta/);
 
   const result = await runChatTurn({
-    mensagem: "Quais carros até 70 mil?",
+    mensagem: "Quais carros até 70 mil e qual o consumo deles?",
     historico: [],
     stock: [palio, prismaJoy, hb20Auto],
     generate: async () => ({
@@ -395,7 +402,7 @@ Hyundai HB20 Premium Automatico 1.6 2015 · 127.000 km · R$ 55.900`,
   assert.doesNotMatch(result.reply, /Onix/);
   assert.doesNotMatch(result.reply, /Evolution/);
   assert.doesNotMatch(result.reply, /Separei 3/);
-  assert.match(result.reply, /não foi medido|foi medido na loja/);
+  assert.doesNotMatch(result.reply, /não foi medido/);
 });
 
 test("dois carros no mesmo preço não viram meio do preço", () => {
@@ -503,7 +510,7 @@ test("eae recusado pelo modelo vira cumprimento da loja", async () => {
 
 test("Gemini fora do ar ainda responde o estoque e o financiamento", async () => {
   const stock = await runChatTurn({
-    mensagem: "Tem o HB20 2022? Qual o preço e a km?",
+    mensagem: "Tem o HB20 2022? Qual o preço, km e consumo?",
     historico: [],
     stock: [hb20],
     generate: async () => {

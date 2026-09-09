@@ -106,3 +106,55 @@ test("estoque real entra no prompt; carro fora da lista não é inventado", () =
   assert.doesNotMatch(stockBlock, /fipe/i);
   assert.doesNotMatch(formatStockForPrompt([]), /R\$/);
 });
+
+test("prompt proíbe falar de consumo espontaneamente", () => {
+  assert.match(CHAT_SYSTEM_PROMPT, /NUNCA mencione consumo espontaneamente/);
+  assert.match(CHAT_SYSTEM_PROMPT, /NÃO mencione consumo de combustível espontaneamente/);
+});
+
+test("prompt com activeVehicle injeta contexto e regra de desambiguação", () => {
+  const prompt = buildChatSystemPrompt(
+    [
+      {
+        brand: "Hyundai",
+        model: "HB20",
+        version: "evolution 1.0",
+        year: 2021,
+        km: 54000,
+        price: 64900,
+        color: "Prata",
+        transmission: "Manual",
+        fuel: "Flex",
+      },
+      {
+        brand: "Hyundai",
+        model: "HB20",
+        version: "Premium 1.6",
+        year: 2015,
+        km: 110000,
+        price: 55900,
+        color: "Branco",
+        transmission: "Automático",
+        fuel: "Flex",
+      },
+    ],
+    "Tenho interesse no HB20",
+    {
+      brand: "Hyundai",
+      model: "HB20",
+      version: "evolution 1.0",
+      year: 2021,
+      km: 54000,
+      price: 64900,
+      color: "Prata",
+      transmission: "Manual",
+      fuel: "Flex",
+    },
+  );
+
+  assert.match(prompt, /VEÍCULO QUE O VISITANTE ESTÁ VENDO NA TELA AGORA/);
+  assert.match(prompt, /Hyundai HB20 evolution 1\.0 2021/);
+  assert.match(prompt, /REGRA DE DESAMBIGUAÇÃO/);
+  assert.match(prompt, /refira-se ESTRITAMENTE a esta unidade específica/);
+  assert.match(prompt, /NÃO confunda com outras unidades do mesmo modelo/);
+});

@@ -3,6 +3,8 @@ export type ChatVehicleContext = {
   label: string;
   brand: string;
   model: string;
+  version?: string | null;
+  year?: number;
   price?: number;
   category?: string;
   sold?: boolean;
