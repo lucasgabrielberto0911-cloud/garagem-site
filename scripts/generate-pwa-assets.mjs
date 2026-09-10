@@ -47,7 +47,6 @@ async function composeStoreShot({
   const svg = Buffer.from(`
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <rect width="100%" height="100%" fill="#0D0D0F"/>
-      <text x="${Math.round(width * 0.08)}" y="${Math.round(height * 0.11)}" fill="#E8181C" font-size="${Math.round(width * 0.045)}" font-family="system-ui, sans-serif" font-weight="800" letter-spacing="6">SUA</text>
       <text x="${Math.round(width * 0.08)}" y="${Math.round(height * 0.22)}" fill="#F7F5F2" font-size="${Math.round(width * 0.055)}" font-family="system-ui, sans-serif" font-weight="800">${label}</text>
       <rect x="${Math.round(width * 0.08)}" y="${Math.round(height * 0.245)}" width="${Math.round(width * 0.12)}" height="6" fill="#E8181C"/>
       ${svgCard(Math.round(width * 0.08), Math.round(height * 0.3), Math.round(width * 0.4), Math.round(height * 0.28), "Honda HR-V", "R$ 89.900")}
@@ -65,7 +64,7 @@ async function composeStoreShot({
     {
       input: logo,
       top: Math.round(height * 0.14 - logoH / 2),
-      left: Math.round(width * 0.5 - logoW / 2 + width * 0.12),
+      left: Math.round(width * 0.5 - logoW / 2),
     },
   ]);
 
