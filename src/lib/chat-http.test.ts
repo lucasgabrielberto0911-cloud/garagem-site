@@ -152,6 +152,36 @@ test("histórico inválido é ignorado", () => {
   );
 });
 
+test("POST com stream devolve SSE e o JSON final no done", async () => {
+  const request = new Request("http://localhost/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    },
+    body: JSON.stringify({ mensagem: "Carros até 70 mil?", stream: true }),
+  });
+  const tokens: string[] = [];
+  const response = await handleChatPost(
+    request,
+    deps({
+      runTurn: async (input) => {
+        input.onToken?.("Olha só");
+        tokens.push("called");
+        return emptyResult({
+          reply: "Olha só: carros até R$ 70.000 no estoque agora.",
+        });
+      },
+    }),
+  );
+  assert.match(response.headers.get("content-type") ?? "", /text\/event-stream/);
+  const body = await response.text();
+  assert.match(body, /event: token/);
+  assert.match(body, /Olha só/);
+  assert.match(body, /event: done/);
+  assert.deepEqual(tokens, ["called"]);
+});
+
 test("POST com vehicleId repassa o identificador para o runTurn", async () => {
   let passedVehicleId: string | undefined;
   await post(
