@@ -81,7 +81,7 @@ export async function GET(
     year: vehicle.yearModel,
   });
 
-  return new NextResponse(Buffer.from(zip), {
+  return new NextResponse(Uint8Array.from(zip), {
     status: 200,
     headers: {
       ...attachmentHeaders(filename, "application/zip"),

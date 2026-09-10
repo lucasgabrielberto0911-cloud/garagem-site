@@ -57,7 +57,7 @@ export async function GET(
     url: photo.url,
   });
 
-  return new NextResponse(Buffer.from(file.bytes), {
+  return new NextResponse(Uint8Array.from(file.bytes), {
     status: 200,
     headers: {
       ...attachmentHeaders(filename, file.contentType),
