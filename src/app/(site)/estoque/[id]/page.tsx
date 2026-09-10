@@ -18,6 +18,7 @@ import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { JsonLd } from "@/components/JsonLd";
 import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatVehicleLabel, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
+import { supabaseTransformSrc } from "@/lib/stock-query";
 import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
 import { WHATSAPP_MESSAGES, site, whatsappUrl } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
@@ -60,7 +61,10 @@ export async function generateMetadata({
     sold,
     siteName: site.name,
   });
-  const cover = vehicle.photos[0]?.url;
+  const rawCover = vehicle.photos[0]?.url;
+  const cover = rawCover
+    ? supabaseTransformSrc(rawCover, 1200, 630, "cover", "75")
+    : null;
   const path = vehiclePath(vehicle);
 
   return {
@@ -73,13 +77,29 @@ export async function generateMetadata({
       title,
       description,
       url: absoluteUrl(path),
-      images: cover ? [{ url: cover }] : ["/og.png"],
+      images: cover
+        ? [
+            {
+              url: cover,
+              width: 1200,
+              height: 630,
+              alt: label,
+            },
+          ]
+        : [
+            {
+              url: absoluteUrl("/og.png"),
+              width: 1200,
+              height: 630,
+              alt: title,
+            },
+          ],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: cover ? [cover] : ["/og.png"],
+      images: cover ? [cover] : [absoluteUrl("/og.png")],
     },
   };
 }
@@ -100,6 +120,7 @@ export default async function VehicleDetailPage({
 
   const path = vehiclePath(vehicle);
   const sold = vehicle.status === "vendido";
+  const isMoto = vehicle.category === "moto";
   const title = formatVehicleLabel(vehicle.brand, vehicle.model);
   const fullLabel = `${title}${vehicle.version ? ` ${vehicle.version}` : ""} ${vehicle.yearModel}`;
   const galleryAlt = formatVehicleLabel(
@@ -317,7 +338,7 @@ export default async function VehicleDetailPage({
                       size="lg"
                       className="hidden w-full lg:inline-flex"
                       trackingLabel="ficha"
-                      message={WHATSAPP_MESSAGES.vehicle(fullLabel)}
+                      message={WHATSAPP_MESSAGES.vehicle(fullLabel, isMoto)}
                     >
                       Tenho interesse
                     </WhatsAppButton>
@@ -353,7 +374,7 @@ export default async function VehicleDetailPage({
                       year={vehicle.yearModel}
                     >
                       <TrackedWhatsAppLink
-                        href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
+                        href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel, isMoto))}
                         trackingLabel="ficha-video"
                         className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
@@ -370,7 +391,7 @@ export default async function VehicleDetailPage({
                     >
                       <TrackedWhatsAppLink
                         href={whatsappUrl(
-                          WHATSAPP_MESSAGES.vehicleFinance(fullLabel),
+                          WHATSAPP_MESSAGES.vehicleFinance(fullLabel, isMoto),
                         )}
                         trackingLabel="ficha-finance"
                         className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
@@ -388,7 +409,7 @@ export default async function VehicleDetailPage({
                     >
                       <TrackedWhatsAppLink
                         href={whatsappUrl(
-                          WHATSAPP_MESSAGES.vehicleVisit(fullLabel),
+                          WHATSAPP_MESSAGES.vehicleVisit(fullLabel, isMoto),
                         )}
                         trackingLabel="ficha-visit"
                         className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
@@ -405,7 +426,7 @@ export default async function VehicleDetailPage({
                       year={vehicle.yearModel}
                     >
                       <TrackedWhatsAppLink
-                        href={whatsappUrl(WHATSAPP_MESSAGES.vehicleTrade(fullLabel))}
+                        href={whatsappUrl(WHATSAPP_MESSAGES.vehicleTrade(fullLabel, isMoto))}
                         trackingLabel="ficha-trade"
                         className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
@@ -514,6 +535,7 @@ export default async function VehicleDetailPage({
         year={vehicle.yearModel}
         price={vehicle.price}
         sold={sold}
+        category={vehicle.category}
       />
     </div>
   );

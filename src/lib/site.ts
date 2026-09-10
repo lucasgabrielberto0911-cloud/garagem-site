@@ -55,16 +55,16 @@ export const WHATSAPP_MESSAGES = {
   sell: "Olá! Gostaria de avaliar meu veículo para venda/troca.",
   visit:
     "Olá! Gostaria de conhecer o estoque e receber mais informações pelo WhatsApp.",
-  vehicle: (label: string) =>
-    `Olá! Tenho interesse no ${label} que vi no site da Garagem.`,
-  vehicleVisit: (label: string) =>
-    `Olá! Gostaria de agendar para ver o ${label} de perto.`,
-  vehicleVideo: (label: string) =>
-    `Olá! Podem me mandar um vídeo do ${label} que está no site?`,
-  vehicleFinance: (label: string) =>
-    `Olá! Gostaria de opções de financiamento para o ${label}.`,
-  vehicleTrade: (label: string) =>
-    `Olá! Tenho interesse no ${label} e gostaria de colocar meu veículo na troca.`,
+  vehicle: (label: string, isMoto = false) =>
+    `Olá! Tenho interesse ${isMoto ? "na" : "no"} ${label} que vi no site da Garagem.`,
+  vehicleVisit: (label: string, isMoto = false) =>
+    `Olá! Gostaria de agendar para ver ${isMoto ? "a" : "o"} ${label} de perto.`,
+  vehicleVideo: (label: string, isMoto = false) =>
+    `Olá! Podem me mandar um vídeo ${isMoto ? "da" : "do"} ${label} que está no site?`,
+  vehicleFinance: (label: string, isMoto = false) =>
+    `Olá! Gostaria de opções de financiamento para ${isMoto ? "a" : "o"} ${label}.`,
+  vehicleTrade: (label: string, isMoto = false) =>
+    `Olá! Tenho interesse ${isMoto ? "na" : "no"} ${label} e gostaria de colocar meu veículo na troca.`,
   wanted: (detail?: string) => {
     const text = (detail ?? "").trim();
     return text
