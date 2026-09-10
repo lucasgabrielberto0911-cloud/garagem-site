@@ -186,8 +186,8 @@ export function suggestedTransmission(
 }
 
 const FIPE_JUNK = [
-  /\bsed\.?\b/gi,
-  /\bhatch\.?\b/gi,
+  /\bsed\.?/gi,
+  /\bhatch\.?/gi,
   /\b\d{1,2}p\b/gi,
   /\b(8|12|16|20|24)v\b/gi,
 ];
@@ -219,7 +219,7 @@ export function shortVersion(
   }
   text = stripDuplicateTokens(text, model);
   text = text.replace(GEAR_STRIP, " ");
-  text = collapseWhitespace(text).replace(/^[/,-]+|[/,-]+$/g, "");
+  text = collapseWhitespace(text).replace(/^[\s/.,-]+|[\s/.,-]+$/g, "");
   if (mostlyUppercase(text)) {
     text = applyPtAccents(formatModelName(text));
   }
