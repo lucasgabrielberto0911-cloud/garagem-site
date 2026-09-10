@@ -93,7 +93,10 @@ export function chatWhatsAppCta(
     return {
       href: whatsappUrl(
         vehicle
-          ? WHATSAPP_MESSAGES.vehicleFinance(vehicle.label)
+          ? WHATSAPP_MESSAGES.vehicleFinance(
+              vehicle.label,
+              vehicle.category === "moto",
+            )
           : "Olá! Vi o assistente da Garagem e quero simular financiamento em até 60x.",
       ),
       label: "Simular parcela",
@@ -104,7 +107,10 @@ export function chatWhatsAppCta(
     return {
       href: whatsappUrl(
         vehicle
-          ? WHATSAPP_MESSAGES.vehicleTrade(vehicle.label)
+          ? WHATSAPP_MESSAGES.vehicleTrade(
+              vehicle.label,
+              vehicle.category === "moto",
+            )
           : WHATSAPP_MESSAGES.sell,
       ),
       label: "Avaliar meu usado",
@@ -121,7 +127,7 @@ export function chatWhatsAppCta(
   return {
     href: whatsappUrl(
       vehicle
-        ? WHATSAPP_MESSAGES.vehicle(vehicle.label)
+        ? WHATSAPP_MESSAGES.vehicle(vehicle.label, vehicle.category === "moto")
         : WHATSAPP_MESSAGES.help,
     ),
     label: "Chamar consultor",

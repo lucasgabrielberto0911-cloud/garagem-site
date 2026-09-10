@@ -1,7 +1,7 @@
 import { handleChatGet, handleChatPost } from "@/lib/chat-http";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 45;
 
 export function GET() {
   return handleChatGet();

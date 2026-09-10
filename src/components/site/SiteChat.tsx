@@ -25,7 +25,12 @@ import {
   SITE_CHAT_OPEN_EVENT,
   type SiteChatOpenRequest,
 } from "@/lib/chat-open";
+import { chatPageKey } from "@/lib/chat-page";
 import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
+import {
+  parseSseChunks,
+  readChatStreamFrame,
+} from "@/lib/chat-stream";
 import { chatWhatsAppCta, displayChatText, splitChatLinks } from "@/lib/chat-text";
 import {
   classifyChatIntent,
@@ -71,8 +76,50 @@ const VEHICLE_SUGGESTIONS = [
   "Falar com um consultor",
 ];
 
-const CHAT_STORAGE_KEY = "garagem_site_chat_history_v1";
+const CHAT_STORAGE_KEY = "garagem_site_chat_history_v2";
+const CHAT_STORAGE_LEGACY_KEY = "garagem_site_chat_history_v1";
 const CHAT_STORAGE_OPEN_KEY = "garagem_site_chat_is_open_v1";
+
+type ChatHistoryStore = {
+  v: 2;
+  byKey: Record<string, ChatMessage[]>;
+};
+
+function emptyHistory(): ChatHistoryStore {
+  return { v: 2, byKey: {} };
+}
+
+function readHistoryStore(): ChatHistoryStore {
+  try {
+    sessionStorage.removeItem(CHAT_STORAGE_LEGACY_KEY);
+  } catch {
+    // ignora
+  }
+  try {
+    const raw = sessionStorage.getItem(CHAT_STORAGE_KEY);
+    if (!raw) return emptyHistory();
+    const parsed = JSON.parse(raw) as Partial<ChatHistoryStore>;
+    if (parsed?.v !== 2 || !parsed.byKey || typeof parsed.byKey !== "object") {
+      return emptyHistory();
+    }
+    return { v: 2, byKey: parsed.byKey };
+  } catch {
+    return emptyHistory();
+  }
+}
+
+function writeHistoryStore(store: ChatHistoryStore) {
+  try {
+    sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(store));
+  } catch {
+    // ignora
+  }
+}
+
+function historyForKey(store: ChatHistoryStore, key: string): ChatMessage[] {
+  const saved = store.byKey[key];
+  return Array.isArray(saved) && saved.length > 0 ? saved : [OPENING];
+}
 
 function resolveSuggestionPrompt(
   suggestion: string,
@@ -231,11 +278,11 @@ function ChatVehicleMini({
               {meta}
             </span>
           ) : null}
-          <span className="mt-1.5 flex items-baseline justify-between gap-2">
+          <span className="mt-1.5 flex flex-col items-start gap-1">
             <span className="font-display text-[16px] font-bold leading-none tabular-nums tracking-tight text-cream">
               {chatVehiclePrice(vehicle)}
             </span>
-            <span className="font-display text-[10px] font-semibold uppercase tracking-wide text-brand">
+            <span className="whitespace-nowrap font-display text-[10px] font-semibold uppercase tracking-wide text-brand">
               Ver anúncio
             </span>
           </span>
@@ -481,6 +528,7 @@ export function SiteChat() {
       ? VEHICLE_SUGGESTIONS
       : SUGGESTIONS;
 
+  const pageKey = chatPageKey(pathname);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([OPENING]);
   const [draft, setDraft] = useState("");
@@ -495,19 +543,22 @@ export function SiteChat() {
   const lastIntentRef = useRef("other");
   const leadTrackedRef = useRef(false);
   const restoredRef = useRef(false);
+  const sendingRef = useRef(false);
+  const pageKeyRef = useRef(pageKey);
+  const messagesRef = useRef(messages);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   useEffect(() => {
     if (restoredRef.current) return;
     restoredRef.current = true;
+    const store = readHistoryStore();
+    const saved = historyForKey(store, pageKey);
+    setMessages(saved);
+    messageCountRef.current = saved.filter((item) => item.role === "user").length;
     try {
-      const saved = sessionStorage.getItem(CHAT_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as ChatMessage[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
-          messageCountRef.current = parsed.filter((m) => m.role === "user").length;
-        }
-      }
       const wasOpen = sessionStorage.getItem(CHAT_STORAGE_OPEN_KEY) === "1";
       if (wasOpen) {
         openRef.current = true;
@@ -516,19 +567,36 @@ export function SiteChat() {
     } catch {
       // Ignora erro de sessionStorage em ambientes restritos
     }
-  }, []);
+  }, [pageKey]);
 
   useEffect(() => {
-    try {
-      if (messages.length > 1) {
-        sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
-      } else if (restoredRef.current) {
-        sessionStorage.removeItem(CHAT_STORAGE_KEY);
-      }
-    } catch {
-      // Ignora
+    if (!restoredRef.current) return;
+    if (pageKeyRef.current !== pageKey) return;
+    const store = readHistoryStore();
+    if (messages.length > 1) {
+      store.byKey[pageKey] = messages;
+    } else {
+      delete store.byKey[pageKey];
     }
-  }, [messages]);
+    writeHistoryStore(store);
+  }, [messages, pageKey]);
+
+  useEffect(() => {
+    if (!restoredRef.current) return;
+    if (pageKeyRef.current === pageKey) return;
+    const previousKey = pageKeyRef.current;
+    pageKeyRef.current = pageKey;
+    const store = readHistoryStore();
+    if (messagesRef.current.length > 1) {
+      store.byKey[previousKey] = messagesRef.current;
+      writeHistoryStore(store);
+    }
+    const next = historyForKey(store, pageKey);
+    setMessages(next);
+    messageCountRef.current = next.filter((item) => item.role === "user").length;
+    leadTrackedRef.current = false;
+    lastIntentRef.current = "other";
+  }, [pageKey]);
 
   useEffect(() => {
     try {
@@ -681,12 +749,68 @@ export function SiteChat() {
     };
   }, [open]);
 
+  function commitAssistant(
+    data: {
+      reply?: string;
+      vehicles?: unknown;
+      stockHref?: unknown;
+      leadCreated?: unknown;
+    },
+    intent: string,
+    replaceLastAssistant: boolean,
+  ) {
+    const stockHref =
+      typeof data.stockHref === "string" && data.stockHref.startsWith("/estoque")
+        ? data.stockHref
+        : null;
+    const vehicles = readVehicleCards(data.vehicles);
+    const leadCreated = data.leadCreated === true;
+    if (vehicles.length > 0) {
+      trackChatEvent("ChatStockShown", {
+        source: sourceRef.current,
+        intent,
+        vehicle_ids: vehicles.map((vehicle) => vehicle.id),
+        result_count: vehicles.length,
+        message_count: messageCountRef.current,
+      });
+    }
+    if (leadCreated && !leadTrackedRef.current) {
+      leadTrackedRef.current = true;
+      trackChatEvent("ChatLeadCreated", {
+        source: sourceRef.current,
+        intent,
+        message_count: messageCountRef.current,
+      });
+      trackLead({
+        content_ids: [],
+        content_name: "chatbot-site",
+      });
+    }
+    const next: ChatMessage = {
+      role: "assistant",
+      content: data.reply?.trim() || CHAT_FALLBACK_REPLY,
+      vehicles,
+      stockHref,
+      leadCreated,
+    };
+    setMessages((current) => {
+      if (
+        replaceLastAssistant &&
+        current[current.length - 1]?.role === "assistant"
+      ) {
+        return [...current.slice(0, -1), next];
+      }
+      return [...current, next];
+    });
+  }
+
   async function send(
     text: string,
     origin: "typed" | "suggestion" | "followup" = "typed",
   ) {
     const mensagem = text.trim();
-    if (!mensagem || pending) return;
+    if (!mensagem || pending || sendingRef.current) return;
+    sendingRef.current = true;
 
     const intent = classifyChatIntent(mensagem);
     lastIntentRef.current = intent;
@@ -716,9 +840,13 @@ export function SiteChat() {
       const response = await fetch("/api/chat", {
         method: "POST",
         credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
         body: JSON.stringify({
           mensagem,
+          stream: true,
           vehicleId: vehicleContext?.id,
           historico: messages
             .filter((item, index) => {
@@ -731,78 +859,99 @@ export function SiteChat() {
             })),
         }),
       });
-      const data = (await response.json().catch(() => ({}))) as {
-        reply?: string;
-        vehicles?: unknown;
-        stockHref?: unknown;
-        leadCreated?: unknown;
-      };
-      const stockHref =
-        typeof data.stockHref === "string" && data.stockHref.startsWith("/estoque")
-          ? data.stockHref
-          : null;
-      const vehicles = readVehicleCards(data.vehicles);
-      const leadCreated = data.leadCreated === true;
-      if (vehicles.length > 0) {
-        trackChatEvent("ChatStockShown", {
-          source: sourceRef.current,
+      const contentType = response.headers.get("content-type") ?? "";
+      if (contentType.includes("text/event-stream") && response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let streamed = false;
+        let donePayload: {
+          reply?: string;
+          vehicles?: unknown;
+          stockHref?: unknown;
+          leadCreated?: unknown;
+        } | null = null;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parsed = parseSseChunks(buffer);
+          buffer = parsed.rest;
+          for (const frame of parsed.frames) {
+            const event = readChatStreamFrame(frame.event, frame.data);
+            if (!event) continue;
+            if (event.type === "token" && event.text) {
+              streamed = true;
+              setMessages((current) => {
+                const last = current[current.length - 1];
+                if (last?.role === "assistant") {
+                  const next = [...current];
+                  next[next.length - 1] = {
+                    ...last,
+                    content: `${last.content}${event.text}`,
+                  };
+                  return next;
+                }
+                return [
+                  ...current,
+                  { role: "assistant", content: event.text },
+                ];
+              });
+            }
+            if (event.type === "done" || event.type === "error") {
+              donePayload = event;
+            }
+          }
+        }
+        commitAssistant(
+          donePayload ?? { reply: CHAT_FALLBACK_REPLY },
           intent,
-          vehicle_ids: vehicles.map((vehicle) => vehicle.id),
-          result_count: vehicles.length,
-          message_count: messageCountRef.current,
-        });
+          streamed,
+        );
+      } else {
+        const data = (await response.json().catch(() => ({}))) as {
+          reply?: string;
+          vehicles?: unknown;
+          stockHref?: unknown;
+          leadCreated?: unknown;
+        };
+        commitAssistant(data, intent, false);
       }
-      if (leadCreated && !leadTrackedRef.current) {
-        leadTrackedRef.current = true;
-        trackChatEvent("ChatLeadCreated", {
-          source: sourceRef.current,
-          intent,
-          message_count: messageCountRef.current,
-        });
-        trackLead({
-          content_ids: [],
-          content_name: "chatbot-site",
-        });
-      }
-      setMessages((current) => [
-        ...current,
-        {
-          role: "assistant",
-          content: data.reply?.trim() || CHAT_FALLBACK_REPLY,
-          vehicles,
-          stockHref,
-          leadCreated,
-        },
-      ]);
     } catch {
-      setMessages((current) => [
-        ...current,
-        {
-          role: "assistant",
-          content: CHAT_FALLBACK_REPLY,
-        },
-      ]);
+      setMessages((current) => {
+        const last = current[current.length - 1];
+        if (last?.role === "assistant") {
+          return [
+            ...current.slice(0, -1),
+            { role: "assistant", content: CHAT_FALLBACK_REPLY },
+          ];
+        }
+        return [
+          ...current,
+          { role: "assistant", content: CHAT_FALLBACK_REPLY },
+        ];
+      });
     } finally {
+      sendingRef.current = false;
       setPending(false);
     }
   }
 
   const started = messages.length > 1;
   const showSuggestions = !started && !pending;
-  const canSend = !pending && draft.trim().length >= 2;
+  const canSend = !pending && !sendingRef.current && draft.trim().length >= 2;
+  const lastIsAssistant = messages[messages.length - 1]?.role === "assistant";
+  const showTyping = pending && !lastIsAssistant;
 
   function resetConversation() {
-    if (pending) return;
+    if (pending || sendingRef.current) return;
     keepFocusRef.current = false;
     messageCountRef.current = 0;
     lastIntentRef.current = "other";
+    leadTrackedRef.current = false;
     setMessages([OPENING]);
     setDraft("");
-    try {
-      sessionStorage.removeItem(CHAT_STORAGE_KEY);
-    } catch {
-      // Ignora
-    }
+    writeHistoryStore(emptyHistory());
   }
 
   return (
@@ -818,6 +967,7 @@ export function SiteChat() {
           aria-labelledby="site-chat-title"
           aria-label="Chat da Garagem"
           className="site-chat-panel pointer-events-auto flex h-[min(680px,calc(100dvh-7.25rem))] w-[min(28rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink shadow-[0_24px_64px_rgba(0,0,0,0.55)]"
+          aria-busy={pending}
         >
           <header className="relative border-b border-white/10 bg-[#121214] px-3 py-3 sm:px-4">
             <div
@@ -884,6 +1034,7 @@ export function SiteChat() {
               </span>
               <button
                 type="button"
+                disabled={pending}
                 onClick={() =>
                   void send(
                     vehicleContext.sold
@@ -963,7 +1114,7 @@ export function SiteChat() {
                 </AssistantRow>
               );
             })}
-            {pending ? (
+            {showTyping ? (
               <AssistantRow pending latest>
                 <span className="sr-only">Digitando</span>
                 <span className="site-chat-typing" aria-hidden="true">
@@ -991,7 +1142,7 @@ export function SiteChat() {
           </div>
 
           {vehicleContext && started && !pending ? (
-            <div className="grid grid-cols-2 gap-1.5 border-t border-white/10 bg-[#121214] px-3 py-2">
+            <div className="hidden grid-cols-2 gap-1.5 border-t border-white/10 bg-[#121214] px-3 py-2 lg:grid">
               {activeSuggestions.map((suggestion) => (
                 <button
                   key={suggestion}
@@ -1024,10 +1175,11 @@ export function SiteChat() {
                   keepFocusRef.current = true;
                 }}
                 onChange={(event) => setDraft(event.target.value)}
+                disabled={pending}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
-                    void send(draft);
+                    if (!pending) void send(draft);
                   }
                 }}
                 placeholder={
@@ -1042,7 +1194,7 @@ export function SiteChat() {
                 maxLength={800}
                 rows={1}
                 autoComplete="off"
-                className="min-h-[48px] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-asphalt px-3 py-2.5 text-base text-cream outline-none placeholder:text-muted focus:border-white/25 focus:bg-[#141416] lg:text-sm"
+                className="min-h-[48px] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-asphalt px-3 py-2.5 text-base text-cream outline-none placeholder:text-muted focus:border-white/25 focus:bg-[#141416] disabled:opacity-60 lg:text-sm"
               />
               <button
                 type="submit"

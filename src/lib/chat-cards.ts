@@ -5,11 +5,12 @@ import {
   formatModelName,
   formatVehicleLabel,
 } from "@/lib/format";
-import { parsePriceLimit } from "@/lib/chat-prompt";
+import { parseCheapIntent, parsePriceLimit } from "@/lib/chat-prompt";
 import { coverSrc } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
   applyChatStockFilters,
+  cheapPriceCap,
   foldedTransmission,
   parseTransmissionFilter,
   parseVehicleCategoryFilter,
@@ -132,7 +133,7 @@ export function stripChatVehicleListingLines(
     .trim();
 }
 
-const CARD_INTRO_MAX = 720;
+const CARD_INTRO_MAX = 1200;
 const CARD_FILLER =
   /tem o mais em conta|o de menor km|automatico se houver|se quiser esticar|logo acima|qual perfil te serve|qual desses|hatch ou sedan/;
 
@@ -354,6 +355,17 @@ export function selectChatVehicles(
     preferredVehicleId,
   );
   const budget = parsePriceLimit(mensagem);
+  const cheap = parseCheapIntent(mensagem);
+  if (budget == null && cheap) {
+    const inCheap = [...pool].sort((a, b) => a.price - b.price);
+    const mentionedCheap = mentioned.filter((vehicle) =>
+      inCheap.some((row) => row.id === vehicle.id),
+    );
+    if (mentionedCheap.length > 0) {
+      return fillBudgetCards(mentionedCheap, inCheap, limit);
+    }
+    return inCheap.slice(0, limit);
+  }
   if (budget == null) return mentioned.slice(0, limit);
 
   const inBudget = inBudgetStock(pool, budget);
@@ -370,14 +382,17 @@ export function chatStockExploreHref(
   stock: ChatVehicleRecord[],
   shown: number,
 ) {
-  const budget = parsePriceLimit(mensagem);
+  const budget =
+    parsePriceLimit(mensagem) ??
+    (parseCheapIntent(mensagem) ? cheapPriceCap(applyChatStockFilters(stock, mensagem)) : null);
   const category = resolveChatCategory(mensagem);
   const pool = applyChatStockFilters(stock, mensagem);
   const priced =
     budget == null
       ? pool
       : pool.filter((vehicle) => vehicle.price <= budget);
-  if (priced.length <= shown) return null;
+  const cheap = parseCheapIntent(mensagem);
+  if (priced.length <= shown && !(cheap && budget != null)) return null;
   if (
     shown === 0 &&
     budget == null &&

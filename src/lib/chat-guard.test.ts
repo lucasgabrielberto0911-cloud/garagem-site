@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  CHAT_FIPE_REPLY,
   CHAT_OFF_SCOPE_REPEAT_REPLY,
   CHAT_OFF_SCOPE_REPLY,
 } from "./chat-prompt";
 import {
   isChatPing,
+  isFipeQuestion,
   isJailbreakAttempt,
   isOffScopeMessage,
   offScopeReply,
@@ -17,6 +19,7 @@ import {
   CHAT_CARD_REPLY,
   CHAT_FINANCE_REPLY,
   CHAT_TRADE_REPLY,
+  CHAT_WARRANTY_REPLY,
   chatPolicyShortcut,
 } from "./chat-stock";
 import { runChatTurn } from "./chat-turn";
@@ -134,6 +137,61 @@ test("turno fora de escopo não chama o Gemini", async () => {
   });
   assert.equal(called, 0);
   assert.equal(repeat.reply, CHAT_OFF_SCOPE_REPEAT_REPLY);
+});
+
+test("FIPE é pergunta guardada e não cola no veículo da página", async () => {
+  assert.equal(isFipeQuestion("Me passa o preço FIPE do Corolla"), true);
+  assert.equal(isFipeQuestion("qual a tabela fipe desse?"), true);
+  assert.equal(isFipeQuestion("Qual o preço do Corolla?"), false);
+  assert.equal(isOffScopeMessage("Me passa o preço FIPE do Corolla"), false);
+
+  let called = 0;
+  const etios = {
+    id: "c-etios-2017",
+    brand: "Toyota",
+    model: "Etios",
+    version: "XS",
+    yearModel: 2017,
+    km: 90000,
+    price: 60900,
+    color: "Branco",
+    transmission: "Automático",
+    fuel: "Flex",
+    accessories: ["Ar-condicionado", "Bluetooth"],
+  };
+  const result = await runChatTurn({
+    mensagem: "Me passa o preço FIPE do Corolla",
+    historico: [],
+    stock: [etios],
+    vehicleId: etios.id,
+    generate: async () => {
+      called += 1;
+      return { text: "O Etios XS custa R$ 60.900.", functionCall: null };
+    },
+  });
+  assert.equal(called, 0);
+  assert.equal(result.reply, CHAT_FIPE_REPLY);
+  assert.equal(result.vehicles.length, 0);
+  assert.equal(result.stockHref, null);
+  assert.doesNotMatch(result.reply, /Etios|Corolla|60\.900/);
+});
+
+test("atalho de garantia cita motor e câmbio", async () => {
+  assert.equal(chatPolicyShortcut("Qual é a garantia?"), "warranty");
+  assert.equal(chatPolicyShortcut("Garantia deste carro"), "warranty");
+  let called = 0;
+  const result = await runChatTurn({
+    mensagem: "Qual é a garantia?",
+    historico: [],
+    stock: [],
+    generate: async () => {
+      called += 1;
+      return { text: "não deveria", functionCall: null };
+    },
+  });
+  assert.equal(called, 0);
+  assert.equal(result.reply, CHAT_WARRANTY_REPLY);
+  assert.match(result.reply, /3 meses de motor e câmbio/);
 });
 
 test("atalhos de financiar e troca não pedem modelo de novo", async () => {

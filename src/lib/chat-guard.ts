@@ -14,6 +14,9 @@ const OFF_SCOPE_HINT =
 const JAILBREAK_HINT =
   /\b(ignore (as )?instrucoes|ignore previous|ignore all previous|aja como|act as|modo desenvolvedor|developer mode|dan mode|revela(r)? (o |seu )?prompt|system prompt|prompt de sistema|instrucoes (secretas|internas|deste prompt))\b/;
 
+const FIPE_HINT =
+  /\b(fipe|tabela fipe|preco fipe|valor fipe|preco da fipe|valor da fipe)\b/;
+
 const PING_ONLY =
   /^(oi+|ola|eae+|e ai|eai+|falae|falai|salve|blz|beleza|tmj|suave|de boa|bom dia|boa tarde|boa noite|opa|fala|hey|hi|hello|obrigado|obrigada|valeu|ok|sim|nao|tudo bem|td bem|teste|test|ping)[\s!.?]*$/;
 
@@ -29,6 +32,10 @@ function fold(value: string) {
 
 export function isJailbreakAttempt(message: string) {
   return JAILBREAK_HINT.test(fold(message));
+}
+
+export function isFipeQuestion(message: string) {
+  return FIPE_HINT.test(fold(message));
 }
 
 export function isChatPing(message: string) {

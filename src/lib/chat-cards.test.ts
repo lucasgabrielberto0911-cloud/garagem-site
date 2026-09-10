@@ -314,6 +314,50 @@ Qual perfil te serve?`;
   ]);
 });
 
+test("baratinho do HB20 não puxa irmão caro", () => {
+  const cheapHb20: ChatVehicleRecord = {
+    ...prisma,
+    id: "chb20barato0000000000001",
+    brand: "Hyundai",
+    model: "HB20",
+    transmission: "Automático",
+    price: 45900,
+  };
+  const richHb20: ChatVehicleRecord = {
+    ...prisma,
+    id: "chb20caro00000000000001",
+    brand: "Hyundai",
+    model: "HB20",
+    transmission: "Automático",
+    price: 89900,
+  };
+  const picked = selectChatVehicles(
+    "Hyundai HB20 Comfort 2015 · 110.000 km · R$ 45.900",
+    "hb20 automatico baratinho",
+    [biz, prisma, compass, cheapHb20, richHb20],
+  );
+  assert.deepEqual(
+    picked.map((vehicle) => vehicle.id),
+    [cheapHb20.id],
+  );
+  assert.match(
+    chatStockExploreHref(
+      "hb20 automatico baratinho",
+      [biz, prisma, compass, cheapHb20, richHb20],
+      0,
+    ) ?? "",
+    /maxPrice=45900/,
+  );
+  assert.match(
+    chatStockExploreHref(
+      "hb20 automatico baratinho",
+      [biz, prisma, compass, cheapHb20, richHb20],
+      1,
+    ) ?? "",
+    /maxPrice=45900/,
+  );
+});
+
 test("financiamento sem carro citado não inventa anúncio", () => {
   const matched = matchVehiclesInReply(
     "A gente financia em até 60x. Parcela no WhatsApp.",
