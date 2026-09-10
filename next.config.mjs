@@ -83,6 +83,7 @@ const nextConfig = {
       { source: "/favicon.png", headers: immutable },
       { source: "/apple-touch-icon.png", headers: immutable },
       { source: "/og.png", headers: immutable },
+      { source: "/screenshots/:path*", headers: immutable },
     ];
   },
   async redirects() {
@@ -93,6 +94,7 @@ const nextConfig = {
       "/honda-hrv-2020",
       "/chevrolet-cruze-lt",
       "/etios-xls-2018",
+      "/estoque/toyota-etios-xs-xs-1-5-16v-flex-automatico-2017-cmturwtw30000l804s8700mu4",
     ];
     return [
       {

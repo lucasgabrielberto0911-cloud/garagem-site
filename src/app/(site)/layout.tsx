@@ -7,6 +7,7 @@ import { MobileBottomNav } from "@/components/site/MobileBottomNav";
 import { ScrollProgress } from "@/components/site/ScrollProgress";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { OfflineLeadFlush } from "@/components/site/OfflineLeadFlush";
 import { SiteChat } from "@/components/site/SiteChat";
 import { WhatsAppFloat } from "@/components/site/WhatsAppFloat";
 import { FavoritesProvider } from "@/lib/favorites";
@@ -50,6 +51,7 @@ export default function SiteLayout({
         <MobileBottomNav />
         <WhatsAppFloat />
         <SiteChat />
+        <OfflineLeadFlush />
       </div>
     </FavoritesProvider>
   );

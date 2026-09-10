@@ -98,22 +98,44 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   appleWebApp: {
+    // Next 16 emite `mobile-web-app-capable` quando capable=true (padrão).
+    // Mantemos o padrão do Next e só acrescentamos o prefixo Apple em `other`.
     capable: true,
     title: site.name,
     statusBarStyle: "black-translucent",
     startupImage: [
       {
-        url: "/branding/splash-iphone.png",
+        url: "/branding/splash-750x1334.png",
+        media:
+          "(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)",
+      },
+      {
+        url: "/branding/splash-828x1792.png",
+        media:
+          "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)",
+      },
+      {
+        url: "/branding/splash-1125x2436.png",
+        media:
+          "(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)",
+      },
+      {
+        url: "/branding/splash-1170x2532.png",
         media:
           "(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)",
       },
       {
-        url: "/branding/splash-iphone.png",
+        url: "/branding/splash-1170x2532.png",
         media:
           "(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)",
       },
       {
-        url: "/branding/splash-iphone.png",
+        url: "/branding/splash-1284x2778.png",
+        media:
+          "(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)",
+      },
+      {
+        url: "/branding/splash-1290x2796.png",
         media:
           "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)",
       },
@@ -121,19 +143,27 @@ export const metadata: Metadata = {
     ],
   },
   /**
-   * O Next emite apenas a meta da Apple, que os navegadores atuais avisam estar
-   * obsoleta. A versão padronizada mantém o app instalável sem o alerta.
+   * Next 16 só emite `mobile-web-app-capable` (via appleWebApp.capable).
+   * iOS Safari ainda lê `apple-mobile-web-app-capable` — uma vez, sem
+   * duplicar a meta padronizada.
    */
-  other: { "mobile-web-app-capable": "yes" },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
   formatDetection: { telephone: true },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0D0D0F",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0D0D0F" },
+    { media: "(prefers-color-scheme: light)", color: "#0D0D0F" },
+    { color: "#0D0D0F" },
+  ],
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

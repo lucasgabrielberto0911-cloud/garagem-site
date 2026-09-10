@@ -226,6 +226,41 @@ export function trackAddToWishlist(params: CatalogEventParams) {
   fireGtag("add_to_wishlist", gtagItemParams(payload));
 }
 
+export type PwaEventName =
+  | "PwaInstallPromptShown"
+  | "PwaInstallAccepted"
+  | "PwaInstallDismissed"
+  | "PwaIosTipShown"
+  | "PwaIosTipDismissed"
+  | "PwaOfflineQueued"
+  | "PwaOfflineFlushed";
+
+const PWA_GA_EVENTS: Record<PwaEventName, string> = {
+  PwaInstallPromptShown: "pwa_install_prompt_shown",
+  PwaInstallAccepted: "pwa_install_accepted",
+  PwaInstallDismissed: "pwa_install_dismissed",
+  PwaIosTipShown: "pwa_ios_tip_shown",
+  PwaIosTipDismissed: "pwa_ios_tip_dismissed",
+  PwaOfflineQueued: "pwa_offline_queued",
+  PwaOfflineFlushed: "pwa_offline_flushed",
+};
+
+/** Instalação PWA / fila offline — só o nome do evento, sem PII. */
+export function trackPwaEvent(
+  event: PwaEventName,
+  params: { kind?: string } = {},
+) {
+  if (typeof window === "undefined") return;
+  const kind = compactString(params.kind)?.slice(0, 24);
+  const payload = kind ? { kind } : {};
+  const fbq = getFbq();
+  if (fbq) fbq("trackCustom", event, payload);
+  fireGtag(PWA_GA_EVENTS[event], {
+    event_category: "pwa",
+    ...payload,
+  });
+}
+
 /** Clique em WhatsApp (float, favoritos, hero) — Meta custom + GA4. */
 export function trackWhatsAppClick(label: string) {
   if (typeof window === "undefined") return;

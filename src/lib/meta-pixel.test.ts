@@ -10,6 +10,7 @@ import {
   trackAddToWishlist,
   trackChatEvent,
   trackLead,
+  trackPwaEvent,
   trackSearch,
   trackViewContent,
   trackWhatsAppClick,
@@ -210,6 +211,17 @@ test("classifica intenção sem guardar o texto da mensagem", () => {
   assert.equal(payload.intent, "other");
   assert.equal("message" in payload, false);
   assert.doesNotMatch(JSON.stringify(payload), /Ana|27999999999/);
+});
+
+test("eventos PWA só levam o nome e o tipo, sem PII", () => {
+  const { calls, gtagCalls } = installFbq();
+  trackPwaEvent("PwaInstallAccepted");
+  trackPwaEvent("PwaOfflineQueued", { kind: "whatsapp" });
+  assert.equal(calls[0]?.[1], "PwaInstallAccepted");
+  assert.equal(calls[1]?.[1], "PwaOfflineQueued");
+  assert.deepEqual(calls[1]?.[2], { kind: "whatsapp" });
+  assert.equal(gtagCalls[0]?.[1], "pwa_install_accepted");
+  assert.doesNotMatch(JSON.stringify(calls), /wa\.me|telefone|@/);
 });
 
 test("ChatLeadCreated e Lead do catálogo não levam telefone", () => {

@@ -7,6 +7,7 @@ import { vehicleSeoDescription } from "@/lib/format";
 import { site } from "@/lib/site";
 import {
   buildVehicleFullLabel,
+  formatColorLabel,
   resolveTransmission,
 } from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
@@ -134,7 +135,7 @@ export function catalogVehicleRow(
     "address.city": "Aracruz",
     "address.region": "ES",
     "address.country": "Brazil",
-    exterior_color: vehicle.color?.trim() || "Não informado",
+    exterior_color: formatColorLabel(vehicle.color) || "Não informado",
     transmission: mapCatalogTransmission(
       resolveTransmission(vehicle.version, vehicle.transmission),
     ),

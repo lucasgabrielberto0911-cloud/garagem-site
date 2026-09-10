@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
+import { isMissingColumnError } from "@/lib/prisma-errors";
+import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
 import { SERVICE_CITIES, absoluteUrl } from "@/lib/seo";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
@@ -37,18 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     updatedAt: Date;
   }[] = [];
   try {
-    vehicles = await prisma.vehicle.findMany({
-      where: { status: { not: "vendido" } },
-      select: {
-        id: true,
-        brand: true,
-        model: true,
-        version: true,
-        yearModel: true,
-        updatedAt: true,
-      },
-      orderBy: { updatedAt: "desc" },
-    });
+    vehicles = await loadPublicSitemapVehicles();
   } catch (error) {
     console.error("[sitemap] falha ao listar veículos:", error);
   }
@@ -67,4 +58,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     })),
   ];
+}
+
+async function loadPublicSitemapVehicles() {
+  const select = {
+    id: true,
+    brand: true,
+    model: true,
+    version: true,
+    yearModel: true,
+    updatedAt: true,
+  } as const;
+
+  try {
+    return await prisma.vehicle.findMany({
+      where: PUBLIC_SITEMAP_VEHICLE_WHERE,
+      select,
+      orderBy: { updatedAt: "desc" },
+    });
+  } catch (error) {
+    if (!isMissingColumnError(error, "historical")) throw error;
+    return prisma.vehicle.findMany({
+      where: { status: "disponivel" },
+      select,
+      orderBy: { updatedAt: "desc" },
+    });
+  }
 }

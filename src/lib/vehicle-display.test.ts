@@ -5,7 +5,10 @@ import {
   buildVehicleFullLabel,
   collapseDuplicateAccessories,
   collapseWhitespace,
+  colorFilterValues,
+  colorWhere,
   featuredBadgeIds,
+  formatColorLabel,
   formatTransmissionLabel,
   formatVehicleDisplay,
   formatVehicleWhatsAppMessage,
@@ -54,6 +57,33 @@ test("HR-V: versão Automático + câmbio Manual não divergem na exibição", (
   assert.ok(display.metaParts.includes("Automático"));
   assert.ok(display.metaParts.includes("Branco"));
   assert.ok(!display.metaParts.includes("Manual"));
+});
+
+test("HR-V Grafite e Cinza viram o mesmo rótulo", () => {
+  assert.equal(formatColorLabel("Grafite"), "Cinza");
+  assert.equal(formatColorLabel("cinza grafite"), "Cinza");
+  assert.equal(formatColorLabel("Cinza"), "Cinza");
+  assert.equal(formatColorLabel("branco"), "Branco");
+  assert.equal(formatColorLabel(""), "");
+
+  const hrv = formatVehicleDisplay({
+    id: "cmtbv7xso0000l50429oklxxy",
+    brand: "Honda",
+    model: "HR-V",
+    version: "EX 1.8 FLEX ONE Automático",
+    yearModel: 2018,
+    transmission: "Automático",
+    color: "Grafite",
+  });
+  assert.equal(hrv.color, "Cinza");
+  assert.ok(hrv.metaParts.includes("Cinza"));
+  assert.ok(!hrv.metaParts.includes("Grafite"));
+
+  const values = colorFilterValues("Cinza");
+  assert.ok(values.includes("Cinza"));
+  assert.ok(values.includes("grafite"));
+  const where = colorWhere("Cinza") as { OR?: unknown };
+  assert.ok(Array.isArray(where.OR));
 });
 
 test("Etios e Altis não repetem o acabamento no label / WhatsApp", () => {

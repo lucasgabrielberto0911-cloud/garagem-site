@@ -64,6 +64,16 @@
       "source": "/etios-xls-2018/",
       "destination": "/estoque",
       "statusCode": 301
+    },
+    {
+      "source": "/estoque/toyota-etios-xs-xs-1-5-16v-flex-automatico-2017-cmturwtw30000l804s8700mu4",
+      "destination": "/estoque",
+      "statusCode": 301
+    },
+    {
+      "source": "/estoque/toyota-etios-xs-xs-1-5-16v-flex-automatico-2017-cmturwtw30000l804s8700mu4/",
+      "destination": "/estoque",
+      "statusCode": 301
     }
   ]
 }

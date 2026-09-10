@@ -8,6 +8,7 @@ import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
+import { snapshotsForIds, writeFavoriteSnapshot } from "@/lib/offline-queue";
 import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
 import { trackLead } from "@/lib/meta-pixel";
 import { vehiclePath } from "@/lib/vehicle-slug";
@@ -30,16 +31,39 @@ export function FavoritesList() {
     let active = true;
     setFailed(false);
 
+    const cached = snapshotsForIds(key.split(",")) as VehicleCardData[];
+    if (typeof navigator !== "undefined" && !navigator.onLine && cached.length > 0) {
+      setVehicles(cached);
+    }
+
     fetch(`/api/veiculos?ids=${encodeURIComponent(key)}`)
-      .then((response) => response.json())
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`favoritos ${response.status}`);
+        return response.json();
+      })
       .then((data) => {
-        if (active) setVehicles(data.vehicles ?? []);
+        if (!active) return;
+        const next = (data.vehicles ?? []) as VehicleCardData[];
+        setVehicles(next);
+        for (const vehicle of next) {
+          writeFavoriteSnapshot({
+            ...vehicle,
+            updatedAt:
+              vehicle.updatedAt instanceof Date
+                ? vehicle.updatedAt.toISOString()
+                : vehicle.updatedAt ?? null,
+          });
+        }
       })
       .catch(() => {
-        if (active) {
-          setFailed(true);
-          setVehicles([]);
+        if (!active) return;
+        if (cached.length > 0) {
+          setVehicles(cached);
+          setFailed(false);
+          return;
         }
+        setFailed(true);
+        setVehicles([]);
       });
 
     return () => {

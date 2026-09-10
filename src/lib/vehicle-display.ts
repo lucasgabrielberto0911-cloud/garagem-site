@@ -344,9 +344,78 @@ export function featuredBadgeIds<T extends { id: string; featured?: boolean }>(
   return ids;
 }
 
+/**
+ * Cores de vitrine: um rótulo canônico.
+ * HR-V no estoque vinha como Grafite no campo e Cinza na ficha/descrição.
+ */
+const COLOR_CANONICAL: Record<string, string> = {
+  grafite: "Cinza",
+  "cinza grafite": "Cinza",
+  "cinza-grafite": "Cinza",
+  gray: "Cinza",
+  grey: "Cinza",
+  cinza: "Cinza",
+  prata: "Prata",
+  silver: "Prata",
+  branco: "Branco",
+  branca: "Branco",
+  white: "Branco",
+  preto: "Preto",
+  preta: "Preto",
+  black: "Preto",
+  vermelho: "Vermelho",
+  vermelha: "Vermelho",
+  red: "Vermelho",
+  azul: "Azul",
+  blue: "Azul",
+  verde: "Verde",
+  green: "Verde",
+  dourado: "Dourado",
+  dourada: "Dourado",
+  bege: "Bege",
+  marrom: "Marrom",
+  vinho: "Vinho",
+  laranja: "Laranja",
+  amarelo: "Amarelo",
+  amarela: "Amarelo",
+};
+
+export function colorKey(value: string) {
+  return foldToken(value);
+}
+
 export function formatColorLabel(color: string | null | undefined) {
   const trimmed = collapseWhitespace(color ?? "");
-  return trimmed ? formatModelName(applyPtAccents(trimmed)) : "";
+  if (!trimmed) return "";
+  const key = colorKey(trimmed);
+  if (COLOR_CANONICAL[key]) return COLOR_CANONICAL[key];
+  if (/\bgrafite\b/.test(key) || /\bcinza\b/.test(key)) return "Cinza";
+  return formatModelName(applyPtAccents(trimmed));
+}
+
+/** Valores gravados que devem cair no mesmo chip/filtro do rótulo canônico. */
+export function colorFilterValues(selected: string) {
+  const canonical = formatColorLabel(selected);
+  if (!canonical) return [];
+  const aliases = Object.entries(COLOR_CANONICAL)
+    .filter(([, label]) => foldToken(label) === foldToken(canonical))
+    .map(([key]) => key);
+  const unique = new Set<string>([canonical, selected, ...aliases]);
+  return [...unique].filter(Boolean);
+}
+
+export function colorWhere(selected: string | null | undefined) {
+  const value = collapseWhitespace(selected ?? "");
+  if (!value) return {};
+  const values = colorFilterValues(value);
+  if (values.length <= 1) {
+    return { color: { equals: values[0] ?? value, mode: "insensitive" as const } };
+  }
+  return {
+    OR: values.map((item) => ({
+      color: { equals: item, mode: "insensitive" as const },
+    })),
+  };
 }
 
 export function formatUpdatedAt(value: Date | string) {

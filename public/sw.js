@@ -1,5 +1,5 @@
 /*
- * Service worker do site da Garagem.
+ * Service worker do site da Sua Garagem.
  *
  * Assets versionados (/_next/static) = cache-first.
  * Navegação geral = mostra o HTML em cache na hora e atualiza atrás
@@ -9,7 +9,7 @@
  * Admin e API ficam fora. `/?utm_source=pwa` e `/` compartilham a mesma
  * entrada — senão a abertura do app instalado nunca acerta o cache.
  */
-const VERSION = "garagem-v6";
+const VERSION = "garagem-v7";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const PAGE_CACHE = `${VERSION}-pages`;
@@ -20,13 +20,14 @@ const TRACKING_PARAM =
 
 const SHELL_URLS = [
   "/offline",
+  "/favoritos",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/branding/logo-wordmark.webp",
 ];
 
-const WARM_PAGES = ["/", "/estoque"];
+const WARM_PAGES = ["/", "/estoque", "/favoritos"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

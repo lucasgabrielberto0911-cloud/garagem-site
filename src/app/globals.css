@@ -83,6 +83,19 @@ body {
     padding-top: env(safe-area-inset-top, 0px);
   }
 
+  .pl-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+
+  .pr-safe {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .px-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
   .pb-nav-safe {
     padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
   }
@@ -355,7 +368,7 @@ body:has([data-vehicle-mobile-bar]) .whatsapp-float {
 
 /* Bolha do chatbot: acima da bottom nav no mobile; acima do WhatsApp no desktop. */
 .site-chat {
-  right: 1rem;
+  right: max(1rem, env(safe-area-inset-right, 0px));
   bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
 }
 
@@ -395,9 +408,9 @@ body:has([data-vehicle-mobile-bar]):has(.site-consent) .site-chat {
 
 @media (max-width: 1023px) {
   .site-chat.is-open {
-    left: 0.5rem;
-    right: 0.5rem;
-    top: 0.5rem;
+    left: max(0.5rem, env(safe-area-inset-left, 0px));
+    right: max(0.5rem, env(safe-area-inset-right, 0px));
+    top: max(0.5rem, env(safe-area-inset-top, 0px));
     bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.5rem);
     height: auto;
     align-items: stretch;
@@ -430,7 +443,7 @@ body:has([data-vehicle-mobile-bar]) .site-chat.is-open {
 }
 
 .site-consent {
-  left: 0.5rem;
+  left: max(0.5rem, env(safe-area-inset-left, 0px));
   right: auto;
   bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
   max-width: min(16.5rem, calc(100vw - 6.25rem));
@@ -450,8 +463,25 @@ body:has([data-vehicle-mobile-bar]) .site-consent {
 
 body:has(.site-chat.is-open) .site-consent,
 body:has([data-nav-open]) .site-consent,
-body:has([data-nav-open]) .site-chat {
+body:has([data-nav-open]) .site-chat:not(.is-open),
+body:has([data-filters-open]) .site-chat:not(.is-open),
+body:has([data-install-coach]) .site-chat:not(.is-open) {
   display: none;
+}
+
+/*
+ * A barra sticky da ficha e a listagem do estoque existem no DOM também no
+ * desktop (`lg:hidden`). :has() ainda casa — só escondemos o FAB no mobile,
+ * onde ele cobria Tenho interesse / chips / busca.
+ */
+@media (max-width: 1023px) {
+  body:has([data-vehicle-mobile-bar]) .site-chat:not(.is-open),
+  body:has([data-estoque-list]) .site-chat:not(.is-open),
+  body:has(.vehicle-card) .site-chat:not(.is-open),
+  body:has(.chip-scroll) .site-chat:not(.is-open),
+  body:has(.step-scroll) .site-chat:not(.is-open) {
+    display: none;
+  }
 }
 
 .chip-scroll {
@@ -460,8 +490,15 @@ body:has([data-nav-open]) .site-chat {
   gap: 0.5rem;
   overflow-x: auto;
   padding-bottom: 0.35rem;
+  padding-right: 0.25rem;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - 1.75rem),
+    transparent 100%
+  );
 }
 
 .chip-scroll > * {
@@ -470,7 +507,7 @@ body:has([data-nav-open]) .site-chat {
 
 .chip-scroll::after {
   content: "";
-  flex: 0 0 1.25rem;
+  flex: 0 0 2.25rem;
 }
 
 .step-scroll {
@@ -478,8 +515,20 @@ body:has([data-nav-open]) .site-chat {
   gap: 0.75rem;
   overflow-x: auto;
   padding-bottom: 0.25rem;
+  padding-right: 0.25rem;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - 1.75rem),
+    transparent 100%
+  );
+}
+
+.step-scroll::after {
+  content: "";
+  flex: 0 0 2rem;
 }
 
 .step-scroll > * {
@@ -498,6 +547,10 @@ body:has([data-nav-open]) .site-chat {
   .chip-scroll::after {
     display: none;
   }
+
+  .chip-scroll {
+    mask-image: none;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -507,6 +560,11 @@ body:has([data-nav-open]) .site-chat {
     scroll-snap-type: none;
     gap: 1.25rem;
     padding-bottom: 0;
+    mask-image: none;
+  }
+
+  .step-scroll::after {
+    display: none;
   }
 }
 

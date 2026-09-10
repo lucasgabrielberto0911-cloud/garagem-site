@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useFavorites } from "@/lib/favorites";
-import { trackAddToWishlist } from "@/lib/meta-pixel";
+import { trackAddToWishlist, trackPwaEvent } from "@/lib/meta-pixel";
+import { enqueueIntent } from "@/lib/offline-queue";
 
 export function FavoriteButton({
   vehicleId,
@@ -33,6 +34,10 @@ export function FavoriteButton({
   function applyToggle() {
     try {
       const added = toggle(vehicleId);
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        void enqueueIntent({ type: "favorite", vehicleId, added });
+        trackPwaEvent("PwaOfflineQueued", { kind: "favorite" });
+      }
       if (added) {
         trackAddToWishlist({
           content_ids: [vehicleId],

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SiteWordmark } from "@/components/site/SiteWordmark";
 import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
 import { Container } from "@/components/site/ui";
 import {
@@ -36,15 +37,7 @@ export async function SiteFooter() {
       <Container className="py-12 lg:py-16">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr_1fr_1fr] lg:items-start lg:gap-8 lg:text-left">
           <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-            {/* eslint-disable-next-line @next/next/no-img-element -- logo estático, sem cota /_next/image */}
-            <img
-              src="/branding/logo-wordmark.webp"
-              alt={site.name}
-              width={320}
-              height={58}
-              decoding="async"
-              className="h-11 w-auto sm:h-12"
-            />
+            <SiteWordmark size="footer" />
             <div
               className="mt-4 h-0.5 w-14 bg-brand-gradient"
               aria-hidden="true"
