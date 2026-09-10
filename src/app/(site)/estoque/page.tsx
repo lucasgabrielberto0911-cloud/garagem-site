@@ -62,7 +62,7 @@ export default async function EstoquePage() {
         />
 
         <div className="mt-10">
-          <WantedVehicleCta description="Não achou no filtro? Diz o modelo e a faixa — a gente avise no WhatsApp quando entrar no estoque." />
+          <WantedVehicleCta description="Não achou no filtro? Diz o modelo e a faixa para que a gente avise no WhatsApp quando entrar no estoque." />
         </div>
       </Container>
     </div>
