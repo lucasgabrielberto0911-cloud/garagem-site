@@ -770,9 +770,12 @@ export async function findMercosulStripeBoxes(
   image: Buffer,
   region: PixelBox,
 ): Promise<PixelBox[]> {
-  let extracted: { data: Buffer; info: sharp.OutputInfo };
+  let data: Buffer;
+  let width = 0;
+  let height = 0;
+  let channels = 0;
   try {
-    extracted = await sharp(image, { failOn: "none" })
+    const extracted = await sharp(image, { failOn: "none" })
       .extract({
         left: region.left,
         top: region.top,
@@ -782,14 +785,13 @@ export async function findMercosulStripeBoxes(
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
+    data = extracted.data;
+    width = extracted.info.width;
+    height = extracted.info.height;
+    channels = extracted.info.channels;
   } catch {
     return [];
   }
-
-  const { data, info } = extracted;
-  const width = info.width;
-  const height = info.height;
-  const channels = info.channels;
   const mask = new Uint8Array(width * height);
   for (let index = 0; index < width * height; index += 1) {
     const offset = index * channels;
