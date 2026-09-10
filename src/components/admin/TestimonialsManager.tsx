@@ -27,6 +27,7 @@ import {
   saveTestimonial,
   setTestimonialPublished,
 } from "@/app/admin/depoimentos/actions";
+import { cleanTestimonialField } from "@/lib/testimonials-clean";
 
 const emptyForm = {
   id: "",
@@ -357,11 +358,13 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                   </div>
                   <div className="min-w-0">
                     <p className="truncate font-display text-sm font-semibold text-cream">
-                      {item.name}
+                      {cleanTestimonialField(item.name) ?? item.name}
                     </p>
                     <p className="truncate text-xs text-muted">
-                      {item.city ?? "Sem cidade"}
-                      {item.vehicleLabel ? ` · ${item.vehicleLabel}` : ""} · nota{" "}
+                      {cleanTestimonialField(item.city) ?? "Sem cidade"}
+                      {cleanTestimonialField(item.vehicleLabel)
+                        ? ` · ${cleanTestimonialField(item.vehicleLabel)}`
+                        : ""} · nota{" "}
                       {item.rating ?? 5} · ordem {item.order}
                     </p>
                   </div>
@@ -372,7 +375,7 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
               </div>
 
               <p className="mt-3 text-sm leading-relaxed text-muted">
-                {item.message}
+                {cleanTestimonialField(item.message) ?? item.message}
               </p>
 
               <div className="mt-3 grid grid-cols-3 border-t border-white/10">

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TESTIMONIALS_CACHE_TAG } from "@/lib/vehicles";
+import { cleanTestimonialField } from "@/lib/testimonials-clean";
 
 export type TestimonialActionState = {
   ok: boolean;
@@ -24,11 +25,16 @@ export async function saveTestimonial(
   await requireAdmin();
 
   const id = String(formData.get("id") || "").trim();
-  const name = String(formData.get("name") || "").trim();
-  const city = String(formData.get("city") || "").trim() || null;
-  const message = String(formData.get("message") || "").trim();
+  const rawName = String(formData.get("name") || "").trim();
+  const rawCity = String(formData.get("city") || "").trim();
+  const rawMessage = String(formData.get("message") || "").trim();
+  const rawVehicleLabel = String(formData.get("vehicleLabel") || "").trim();
+
+  const name = cleanTestimonialField(rawName) ?? rawName;
+  const city = cleanTestimonialField(rawCity);
+  const message = cleanTestimonialField(rawMessage) ?? rawMessage;
+  const vehicleLabel = cleanTestimonialField(rawVehicleLabel);
   const photoUrl = String(formData.get("photoUrl") || "").trim() || null;
-  const vehicleLabel = String(formData.get("vehicleLabel") || "").trim() || null;
   const published = formData.get("published") === "on";
   const orderRaw = Number(formData.get("order"));
   const order = Number.isFinite(orderRaw) ? orderRaw : 0;
