@@ -391,7 +391,8 @@ export function chatStockExploreHref(
     budget == null
       ? pool
       : pool.filter((vehicle) => vehicle.price <= budget);
-  if (priced.length <= shown) return null;
+  const cheap = parseCheapIntent(mensagem);
+  if (priced.length <= shown && !(cheap && budget != null)) return null;
   if (
     shown === 0 &&
     budget == null &&

@@ -16,6 +16,7 @@ import {
   CHAT_FALLBACK_REPLY,
   CHAT_FIPE_REPLY,
   CHAT_PING_REPLY,
+  CHAT_WHATSAPP_URL,
   buildChatSystemPrompt,
   parsePriceLimit,
 } from "@/lib/chat-prompt";
@@ -41,6 +42,7 @@ import {
   enrichChatStockReply,
   enrichMissingModelReply,
   isIncompleteStockReply,
+  looksLikeMissingModelReply,
   localGarageReply,
   toChatStockLine,
   applyChatStockFilters,
@@ -130,9 +132,15 @@ export async function runChatTurn(input: {
       picked.length > 0
         ? enrichChatStockReply(text, picked, input.mensagem)
         : text;
-    const guarded = applyChatReplyGuards(enriched, picked, {
+    let guarded = applyChatReplyGuards(enriched, picked, {
       truncated: opts.truncated,
     });
+    if (
+      looksLikeMissingModelReply(guarded) &&
+      !/whatsapp|wa\.me/i.test(guarded)
+    ) {
+      guarded = `${guarded.trim()} Se quiser, o consultor anota e te avisa no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    }
     const vehicles = picked.map(toChatVehicleCard);
     return {
       reply: guarded,

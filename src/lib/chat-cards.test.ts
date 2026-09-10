@@ -348,6 +348,14 @@ test("baratinho do HB20 não puxa irmão caro", () => {
     ) ?? "",
     /maxPrice=45900/,
   );
+  assert.match(
+    chatStockExploreHref(
+      "hb20 automatico baratinho",
+      [biz, prisma, compass, cheapHb20, richHb20],
+      1,
+    ) ?? "",
+    /maxPrice=45900/,
+  );
 });
 
 test("financiamento sem carro citado não inventa anúncio", () => {
