@@ -1,4 +1,5 @@
 import {
+  DetectLabelsCommand,
   DetectTextCommand,
   RekognitionClient,
   type BoundingBox,
@@ -7,14 +8,52 @@ import {
 import sharp from "sharp";
 
 /** Folga curta depois de achar a placa — só a faixa, sem comer o para-choque. */
-const PLATE_PAD_X = 0.08;
-const PLATE_PAD_Y = 0.1;
+const PLATE_PAD_X = 0.12;
+const PLATE_PAD_Y = 0.18;
 /** DetectText via bytes aceita no máximo ~5 MB. */
 const REKOGNITION_MAX_BYTES = 4.5 * 1024 * 1024;
 
 const OLD_PLATE = /^[A-Z]{3}\d{4}$/;
 const MERCOSUL_PLATE = /^[A-Z]{3}\d[A-Z]\d{2}$/;
+/** Palavras soltas (cidade, HR-V) precisam de confiança alta. */
 const MIN_WORD_CONFIDENCE = 80;
+/**
+ * Placa de frente, longe, costuma vir com ~55–70%. O filtro da API em 80
+ * descartava a dianteira do HR-V e deixava só a traseira.
+ */
+const MIN_PLATE_TEXT_CONFIDENCE = 52;
+const REKOGNITION_WORD_FILTER = 50;
+const MIN_CAR_AREA_RATIO = 0.12;
+const LICENSE_PLATE_LABEL = /license\s*plate|vehicle\s*registration\s*plate/i;
+const MERCOSUL_UFS = new Set([
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+]);
 const LETTER_FROM_DIGIT: Record<string, string> = {
   "0": "O",
   "1": "I",
@@ -65,14 +104,6 @@ const DASHBOARD_TOKENS = new Set([
   "LCD",
   "HUD",
   "GPS",
-  "HONDA",
-  "YAMAHA",
-  "SUZUKI",
-  "KAWASAKI",
-  "DUCATI",
-  "TRIUMPH",
-  "SHINERAY",
-  "HAOJUE",
   "PAINEL",
   "MARCHA",
   "NEUTRO",
@@ -213,17 +244,39 @@ function isActualPlate(value: string) {
 }
 
 /**
- * Placa BR (7) ou BR + placa (9). Sem janela deslizante: texto de painel
- * tipo "ABS 1234 km/h" não pode virar placa.
+ * Placa BR (7), BR/BRASIL + placa, ou placa colada no estado.
+ * Janela só em texto curto já “limpo” — "ABS 1234 km/h" não vira placa.
  */
-export function textLooksLikePlate(text: string | undefined) {
-  if (!text) return false;
+export function extractPlateCandidate(text: string | undefined) {
+  if (!text) return null;
   const compact = compactAlphanumeric(text);
-  if (compact.length === 7) return isActualPlate(compact);
-  if (compact.startsWith("BR") && compact.length === 9) {
-    return isActualPlate(compact.slice(2));
+  if (!compact) return null;
+
+  let value = compact;
+  if (value.startsWith("BRASIL")) value = value.slice(6);
+  else if (value.startsWith("BR") && value.length >= 9) value = value.slice(2);
+  if (value.endsWith("BRASIL")) value = value.slice(0, -6);
+
+  if (value.length >= 9 && MERCOSUL_UFS.has(value.slice(0, 2))) {
+    value = value.slice(2);
   }
-  return false;
+  if (value.length >= 9 && MERCOSUL_UFS.has(value.slice(-2))) {
+    value = value.slice(0, -2);
+  }
+
+  if (isActualPlate(value)) return value;
+
+  if (value.length >= 8 && value.length <= 12) {
+    for (let index = 0; index <= value.length - 7; index += 1) {
+      const slice = value.slice(index, index + 7);
+      if (isActualPlate(slice)) return slice;
+    }
+  }
+  return null;
+}
+
+export function textLooksLikePlate(text: string | undefined) {
+  return extractPlateCandidate(text) !== null;
 }
 
 function isTightPlateText(text: string) {
@@ -254,8 +307,8 @@ function boxToPixels(
 }
 
 function padBox(box: PixelBox, imageWidth: number, imageHeight: number): PixelBox {
-  const padX = Math.max(2, Math.round(box.width * PLATE_PAD_X));
-  const padY = Math.max(2, Math.round(box.height * PLATE_PAD_Y));
+  const padX = Math.max(4, Math.round(box.width * PLATE_PAD_X));
+  const padY = Math.max(5, Math.round(box.height * PLATE_PAD_Y));
   const left = Math.max(0, box.left - padX);
   const top = Math.max(0, box.top - padY);
   const right = Math.min(imageWidth, box.left + box.width + padX);
@@ -289,7 +342,7 @@ function boxesOverlap(a: PixelBox, b: PixelBox) {
 }
 
 function isPlateShaped(box: PixelBox, imageWidth: number, imageHeight: number) {
-  if (box.width < 16 || box.height < 8) return false;
+  if (box.width < 14 || box.height < 8) return false;
   const aspect = box.width / box.height;
   const areaRatio = boxArea(box) / (imageWidth * imageHeight);
   if (areaRatio > 0.04) return false;
@@ -452,6 +505,18 @@ function looksLikeInstrumentCluster(pieces: TextPiece[]) {
   return false;
 }
 
+/** Marca no grade (HONDA) não conta — senão a foto da frente inteira é pulada. */
+export function textsLookLikeDashboard(texts: string[]) {
+  return looksLikeInstrumentCluster(
+    texts.map((text) => ({
+      text,
+      box: { left: 0, top: 0, width: 12, height: 12 },
+      type: "WORD",
+      confidence: 99,
+    })),
+  );
+}
+
 function piecesFromDetections(
   detections: TextDetection[],
   imageWidth: number,
@@ -463,7 +528,10 @@ function piecesFromDetections(
     const text = item.DetectedText?.trim();
     if (!text) continue;
     const confidence = item.Confidence ?? 0;
-    if (item.Type === "WORD" && confidence < MIN_WORD_CONFIDENCE) continue;
+    if (item.Type === "WORD") {
+      if (confidence < MIN_PLATE_TEXT_CONFIDENCE) continue;
+      if (confidence < MIN_WORD_CONFIDENCE && !textLooksLikePlate(text)) continue;
+    }
     const geometry = item.Geometry?.BoundingBox;
     if (!geometry) continue;
     const box = boxToPixels(geometry, imageWidth, imageHeight);
@@ -494,6 +562,13 @@ function boxesFromPieces(
   const words = pieces.filter(
     (piece) => piece.type === "WORD" && !isDashboardToken(piece.text),
   );
+  const lines = pieces.filter(
+    (piece) => piece.type === "LINE" && !isDashboardToken(piece.text),
+  );
+
+  for (const line of lines) {
+    if (isTightPlateText(line.text)) addBox(line.box);
+  }
 
   for (const word of words) {
     if (isTightPlateText(word.text)) addBox(word.box);
@@ -533,6 +608,14 @@ function boxesFromPieces(
   );
 }
 
+export function plateBoxesFromText(
+  pieces: TextPiece[],
+  imageWidth: number,
+  imageHeight: number,
+) {
+  return boxesFromPieces(pieces, imageWidth, imageHeight);
+}
+
 /** Quando dois achados se sobrepõem, fica o menor — a linha gorda não engole a placa. */
 function mergeOverlappingBoxes(boxes: PixelBox[]): PixelBox[] {
   if (boxes.length <= 1) return boxes;
@@ -552,6 +635,273 @@ function mergeOverlappingBoxes(boxes: PixelBox[]): PixelBox[] {
   }
 
   return merged;
+}
+
+function bumperSearchRegion(
+  car: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox | null {
+  const top = Math.max(0, car.top + Math.round(car.height * 0.42));
+  const bottom = Math.min(
+    imageHeight,
+    car.top + car.height + Math.round(car.height * 0.04),
+  );
+  const left = Math.max(0, car.left - Math.round(car.width * 0.04));
+  const right = Math.min(
+    imageWidth,
+    car.left + car.width + Math.round(car.width * 0.04),
+  );
+  const width = right - left;
+  const height = bottom - top;
+  if (width < 24 || height < 16) return null;
+  return { left, top, width, height };
+}
+
+function isMercosulBlue(r: number, g: number, b: number) {
+  return b > 65 && b > r + 10 && b > g + 3 && r < 140 && g < 150 && b < 210;
+}
+
+type BlueBlob = PixelBox & { pixels: number };
+
+function connectedBlueBlobs(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+): BlueBlob[] {
+  const seen = new Uint8Array(width * height);
+  const blobs: BlueBlob[] = [];
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const start = y * width + x;
+      if (!mask[start] || seen[start]) continue;
+
+      let minX = x;
+      let maxX = x;
+      let minY = y;
+      let maxY = y;
+      let pixels = 0;
+      const stack = [start];
+      seen[start] = 1;
+
+      while (stack.length > 0) {
+        const current = stack.pop() as number;
+        const cx = current % width;
+        const cy = (current - cx) / width;
+        pixels += 1;
+        if (cx < minX) minX = cx;
+        if (cx > maxX) maxX = cx;
+        if (cy < minY) minY = cy;
+        if (cy > maxY) maxY = cy;
+
+        const neighbors = [
+          [cx - 1, cy],
+          [cx + 1, cy],
+          [cx, cy - 1],
+          [cx, cy + 1],
+        ];
+        for (let index = 0; index < neighbors.length; index += 1) {
+          const nx = neighbors[index][0];
+          const ny = neighbors[index][1];
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+          const next = ny * width + nx;
+          if (seen[next] || !mask[next]) continue;
+          seen[next] = 1;
+          stack.push(next);
+        }
+      }
+
+      blobs.push({
+        left: minX,
+        top: minY,
+        width: maxX - minX + 1,
+        height: maxY - minY + 1,
+        pixels,
+      });
+    }
+  }
+
+  return blobs;
+}
+
+function plateBoxFromBlueBlob(
+  blob: BlueBlob,
+  regionWidth: number,
+  regionHeight: number,
+): PixelBox | null {
+  if (blob.pixels < 8) return null;
+  if (blob.width < 10 || blob.height < 2) return null;
+  if (blob.width > regionWidth * 0.45 || blob.height > regionHeight * 0.45) {
+    return null;
+  }
+  const aspect = blob.width / Math.max(1, blob.height);
+  if (aspect < 1.15 || aspect > 14) return null;
+
+  if (
+    aspect <= 4.8 &&
+    blob.height >= 10 &&
+    blob.width >= 18 &&
+    blob.height <= blob.width * 0.85
+  ) {
+    let height = blob.height;
+    // 3/4: o azul pega só o topo; a placa inteira é mais alta.
+    if (aspect < 1.75) {
+      height = Math.max(height + 10, Math.round(blob.width * 1.25));
+    }
+    height = Math.min(regionHeight - blob.top, height);
+    return { left: blob.left, top: blob.top, width: blob.width, height };
+  }
+
+  if (blob.height <= blob.width * 0.55) {
+    const plateH = Math.max(
+      blob.height + 8,
+      Math.min(Math.round(blob.width / 2.4), Math.round(blob.width * 0.9)),
+    );
+    const height = Math.min(regionHeight - blob.top, plateH);
+    if (height < 8) return null;
+    return { left: blob.left, top: blob.top, width: blob.width, height };
+  }
+
+  return null;
+}
+
+export async function findMercosulStripeBoxes(
+  image: Buffer,
+  region: PixelBox,
+): Promise<PixelBox[]> {
+  let data: Buffer;
+  let width = 0;
+  let height = 0;
+  let channels = 0;
+  try {
+    const extracted = await sharp(image, { failOn: "none" })
+      .extract({
+        left: region.left,
+        top: region.top,
+        width: region.width,
+        height: region.height,
+      })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    data = extracted.data;
+    width = extracted.info.width;
+    height = extracted.info.height;
+    channels = extracted.info.channels;
+  } catch {
+    return [];
+  }
+  const mask = new Uint8Array(width * height);
+  for (let index = 0; index < width * height; index += 1) {
+    const offset = index * channels;
+    if (isMercosulBlue(data[offset], data[offset + 1], data[offset + 2])) {
+      mask[index] = 1;
+    }
+  }
+
+  const boxes: PixelBox[] = [];
+  const blobs = connectedBlueBlobs(mask, width, height);
+  for (let index = 0; index < blobs.length; index += 1) {
+    const shaped = plateBoxFromBlueBlob(blobs[index], width, height);
+    if (!shaped) continue;
+    // Cromado no corte do para-choque vira blob no topo da região.
+    if (shaped.top <= 2 && shaped.height < 22) continue;
+    if (shaped.width < 22 || shaped.height < 12) continue;
+    if (shaped.width * shaped.height < 360) continue;
+    boxes.push({
+      left: region.left + shaped.left,
+      top: region.top + shaped.top,
+      width: shaped.width,
+      height: shaped.height,
+    });
+  }
+  return boxes;
+}
+
+async function detectVehicleLabels(
+  client: RekognitionClient,
+  bytes: Buffer,
+  imageWidth: number,
+  imageHeight: number,
+) {
+  const cars: PixelBox[] = [];
+  const plates: PixelBox[] = [];
+  try {
+    const response = await client.send(
+      new DetectLabelsCommand({
+        Image: { Bytes: bytes },
+        MaxLabels: 30,
+        MinConfidence: 55,
+      }),
+    );
+    const labels = response.Labels ?? [];
+    for (let index = 0; index < labels.length; index += 1) {
+      const label = labels[index];
+      const name = label.Name ?? "";
+      const isPlate = LICENSE_PLATE_LABEL.test(name);
+      const isCar = /^car$/i.test(name) || /^automobile$/i.test(name);
+      if (!isPlate && !isCar) continue;
+      const instances = label.Instances ?? [];
+      for (let instIndex = 0; instIndex < instances.length; instIndex += 1) {
+        const instance = instances[instIndex];
+        if ((instance.Confidence ?? 0) < 55) continue;
+        const geometry = instance.BoundingBox;
+        if (!geometry) continue;
+        const box = boxToPixels(geometry, imageWidth, imageHeight);
+        if (!box) continue;
+        if (isPlate) plates.push(box);
+        if (isCar && boxArea(box) / (imageWidth * imageHeight) >= MIN_CAR_AREA_RATIO) {
+          cars.push(box);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn("[blur-plates] DetectLabels falhou — segue só o texto:", error);
+  }
+  return { cars, plates };
+}
+
+function acceptFoundBox(
+  box: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox | null {
+  if (!isPlausiblePlateBox(box, imageWidth, imageHeight)) return null;
+  if (isPlateShaped(box, imageWidth, imageHeight)) {
+    return padBox(box, imageWidth, imageHeight);
+  }
+  const clamped = clampToPlateShape(box, imageWidth, imageHeight);
+  if (!isPlateShaped(clamped, imageWidth, imageHeight)) return null;
+  return padBox(clamped, imageWidth, imageHeight);
+}
+
+async function findPlatesWithoutReadableText(
+  client: RekognitionClient,
+  bytes: Buffer,
+  imageWidth: number,
+  imageHeight: number,
+): Promise<PixelBox[]> {
+  const labels = await detectVehicleLabels(client, bytes, imageWidth, imageHeight);
+  const boxes: PixelBox[] = [];
+
+  for (let index = 0; index < labels.plates.length; index += 1) {
+    const accepted = acceptFoundBox(labels.plates[index], imageWidth, imageHeight);
+    if (accepted) boxes.push(accepted);
+  }
+  if (boxes.length > 0) return mergeOverlappingBoxes(boxes);
+
+  for (let index = 0; index < labels.cars.length; index += 1) {
+    const region = bumperSearchRegion(labels.cars[index], imageWidth, imageHeight);
+    if (!region) continue;
+    const found = await findMercosulStripeBoxes(bytes, region);
+    for (let boxIndex = 0; boxIndex < found.length; boxIndex += 1) {
+      const accepted = acceptFoundBox(found[boxIndex], imageWidth, imageHeight);
+      if (accepted) boxes.push(accepted);
+    }
+  }
+
+  return mergeOverlappingBoxes(boxes);
 }
 
 async function looksLikeDarkDisplay(image: Buffer, box: PixelBox) {
@@ -587,13 +937,15 @@ async function applyBlurRegions(image: Buffer, boxes: PixelBox[]): Promise<Buffe
     if (box.width < 4 || box.height < 4) continue;
     if (await looksLikeDarkDisplay(image, box)) continue;
 
+    const shortSide = Math.min(box.width, box.height);
+    const smallPlate = shortSide < 40;
     const sigma = Math.min(
-      12,
-      Math.max(4, Math.round(Math.min(box.width, box.height) / 8)),
+      16,
+      Math.max(smallPlate ? 8 : 5, Math.round(shortSide / (smallPlate ? 4 : 6))),
     );
-    const radius = Math.max(3, Math.round(Math.min(box.width, box.height) * 0.2));
-    const feather = Math.max(1.2, Math.min(box.width, box.height) * 0.07);
-    const inset = Math.max(1, Math.round(feather));
+    const radius = Math.max(2, Math.round(shortSide * (smallPlate ? 0.12 : 0.2)));
+    const feather = smallPlate ? 0.7 : Math.max(1.2, shortSide * 0.07);
+    const inset = smallPlate ? 0 : Math.max(1, Math.round(feather));
     const mask = Buffer.from(
       `<svg width="${box.width}" height="${box.height}" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -668,7 +1020,7 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
         Image: { Bytes: bytes },
         Filters: {
           WordFilter: {
-            MinConfidence: MIN_WORD_CONFIDENCE,
+            MinConfidence: REKOGNITION_WORD_FILTER,
           },
         },
       }),
@@ -684,7 +1036,11 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
       return input;
     }
 
-    const boxes = boxesFromPieces(pieces, width, height);
+    let boxes = boxesFromPieces(pieces, width, height);
+    if (boxes.length === 0) {
+      boxes = await findPlatesWithoutReadableText(client, bytes, width, height);
+    }
+
     const plateBoxes: PixelBox[] = [];
     for (const box of boxes) {
       if (await looksLikeDarkDisplay(bytes, box)) continue;
@@ -692,14 +1048,7 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
     }
 
     if (plateBoxes.length === 0) {
-      const sample = pieces
-        .map((piece) => piece.text)
-        .filter(Boolean)
-        .slice(0, 16);
-      console.warn(
-        "[blur-plates] nenhuma placa reconhecida.",
-        sample.length ? `textos: ${sample.join(" | ")}` : "sem texto na imagem",
-      );
+      console.warn("[blur-plates] nenhuma placa reconhecida.");
       return input;
     }
 

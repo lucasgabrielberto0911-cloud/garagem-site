@@ -307,8 +307,9 @@ export function VehiclePhotoManager({
               {blurring ? "Borrando placas…" : "Borrar placas nestas fotos"}
             </button>
             <p className="text-[11px] text-muted">
-              Use se a placa ainda aparecer. Foto de painel não é borracha. Se o
-              borrão já tapou o veículo, envie de novo a foto original e salve.
+              Use se a placa da frente ou de trás ainda aparecer. Foto de
+              painel não é borracha. Se o borrão já tapou o veículo, envie de
+              novo a foto original e salve.
             </p>
           </div>
           <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

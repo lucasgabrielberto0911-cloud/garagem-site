@@ -15,6 +15,7 @@ export function VehicleMobileBar({
   year,
   price,
   sold = false,
+  category,
 }: {
   vehicleId: string;
   contentName: string;
@@ -23,7 +24,9 @@ export function VehicleMobileBar({
   year: number;
   price: number;
   sold?: boolean;
+  category?: string;
 }) {
+  const isMoto = category === "moto";
   return (
     <div
       data-vehicle-mobile-bar=""
@@ -56,7 +59,7 @@ export function VehicleMobileBar({
             year={year}
           >
             <a
-              href={whatsappUrl(WHATSAPP_MESSAGES.vehicle(contentName))}
+              href={whatsappUrl(WHATSAPP_MESSAGES.vehicle(contentName, isMoto))}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackWhatsAppClick("ficha-mobile")}
