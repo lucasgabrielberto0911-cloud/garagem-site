@@ -5,6 +5,7 @@ import { isMissingColumnError } from "@/lib/prisma-errors";
 import { brandKey, formatBrandName } from "@/lib/format";
 import { extractVehicleIdFromParam, vehicleSlug } from "@/lib/vehicle-slug";
 import { SEED_TESTIMONIALS } from "@/lib/testimonials-seed";
+import { cleanTestimonialField } from "@/lib/testimonials-clean";
 import { pickCityShowcase } from "@/lib/city-showcase";
 import {
   STOCK_PAGE_SIZE,
@@ -805,12 +806,12 @@ const TESTIMONIALS_CACHE: { revalidate: number; tags: string[] } = {
 function testimonialsFromSeed() {
   return SEED_TESTIMONIALS.map((item, index) => ({
     id: `seed-${index}`,
-    name: item.name,
-    city: item.city,
-    message: item.message,
+    name: cleanTestimonialField(item.name) ?? item.name,
+    city: cleanTestimonialField(item.city),
+    message: cleanTestimonialField(item.message) ?? item.message,
     photoUrl: null as string | null,
     rating: item.rating,
-    vehicleLabel: item.vehicleLabel ?? null,
+    vehicleLabel: cleanTestimonialField(item.vehicleLabel) ?? null,
   }));
 }
 
@@ -835,12 +836,54 @@ const TESTIMONIAL_SELECT_LEGACY = {
 
 async function fetchPublishedTestimonials(take: number) {
   try {
-    return await prisma.testimonial.findMany({
+    const rows = await prisma.testimonial.findMany({
       where: { published: true },
       select: TESTIMONIAL_SELECT,
       orderBy: [{ order: "asc" }, { createdAt: "desc" }],
       take,
     });
+
+    const hasDirty = rows.some(
+      (r) =>
+        (r.city && /ilustrativo/i.test(r.city)) ||
+        (r.vehicleLabel && /ilustrativo/i.test(r.vehicleLabel)) ||
+        (r.message && /ilustrativo/i.test(r.message)),
+    );
+    if (hasDirty) {
+      void prisma.testimonial
+        .findMany({
+          where: {
+            OR: [
+              { city: { contains: "ilustrativo", mode: "insensitive" } },
+              { vehicleLabel: { contains: "ilustrativo", mode: "insensitive" } },
+              { message: { contains: "ilustrativo", mode: "insensitive" } },
+            ],
+          },
+        })
+        .then(async (dirtyItems) => {
+          for (const item of dirtyItems) {
+            await prisma.testimonial
+              .update({
+                where: { id: item.id },
+                data: {
+                  city: cleanTestimonialField(item.city),
+                  vehicleLabel: cleanTestimonialField(item.vehicleLabel),
+                  message: cleanTestimonialField(item.message) ?? item.message,
+                },
+              })
+              .catch(() => {});
+          }
+        })
+        .catch(() => {});
+    }
+
+    return rows.map((item) => ({
+      ...item,
+      name: cleanTestimonialField(item.name) ?? item.name,
+      city: cleanTestimonialField(item.city),
+      vehicleLabel: cleanTestimonialField(item.vehicleLabel),
+      message: cleanTestimonialField(item.message) ?? item.message,
+    }));
   } catch (error) {
     if (!isMissingColumnError(error, "rating")) throw error;
     const rows = await prisma.testimonial.findMany({
@@ -849,13 +892,20 @@ async function fetchPublishedTestimonials(take: number) {
       orderBy: [{ order: "asc" }, { createdAt: "desc" }],
       take,
     });
-    return rows.map((item) => ({ ...item, rating: 5 }));
+    return rows.map((item) => ({
+      ...item,
+      name: cleanTestimonialField(item.name) ?? item.name,
+      city: cleanTestimonialField(item.city),
+      vehicleLabel: cleanTestimonialField(item.vehicleLabel),
+      message: cleanTestimonialField(item.message) ?? item.message,
+      rating: 5,
+    }));
   }
 }
 
 const loadTestimonialsCached = unstable_cache(
   async (take: number) => fetchPublishedTestimonials(take),
-  ["testimonials-v5"],
+  ["testimonials-v6"],
   TESTIMONIALS_CACHE,
 );
 
@@ -868,8 +918,11 @@ export const getTestimonials = cache(async (take = 6) => {
   if (fromDb.length > 0) {
     return fromDb.map((item) => ({
       ...item,
+      name: cleanTestimonialField(item.name) ?? item.name,
+      city: cleanTestimonialField(item.city),
+      vehicleLabel: cleanTestimonialField(item.vehicleLabel),
+      message: cleanTestimonialField(item.message) ?? item.message,
       rating: Math.min(5, Math.max(1, item.rating || 5)),
-      vehicleLabel: item.vehicleLabel ?? null,
     }));
   }
   return testimonialsFromSeed().slice(0, take);

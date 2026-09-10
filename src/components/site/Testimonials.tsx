@@ -2,6 +2,7 @@ import Image from "next/image";
 import { WhatsAppButton } from "@/components/site/ui";
 import { IconQuote, IconStar } from "@/components/site/icons";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
+import { cleanTestimonialField } from "@/lib/testimonials-clean";
 
 export type TestimonialItem = {
   id: string;
@@ -59,32 +60,39 @@ export function Testimonials({ items }: { items: TestimonialItem[] }) {
 
   return (
     <ul className={`mx-auto grid gap-5 sm:grid-cols-2 lg:grid-cols-3 ${width}`}>
-      {items.map((item) => (
-        <li
-          key={item.id}
-          className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center"
-        >
-          <IconQuote className="h-6 w-6 text-brand/60" />
-          <StarRow rating={item.rating} />
-          <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-cream/90">
-            {item.message}
-          </blockquote>
-          <div className="mt-6 flex w-full items-center justify-center gap-3 border-t border-white/10 pt-5">
-            <Avatar name={item.name} photoUrl={item.photoUrl} />
-            <div className="min-w-0">
-              <p className="truncate font-display text-sm font-semibold text-cream">
-                {item.name}
-              </p>
-              {item.vehicleLabel ? (
-                <p className="truncate text-xs text-brand/80">{item.vehicleLabel}</p>
-              ) : null}
-              {item.city ? (
-                <p className="truncate text-xs text-muted">{item.city}</p>
-              ) : null}
+      {items.map((item) => {
+        const cleanName = cleanTestimonialField(item.name) ?? item.name;
+        const cleanVehicleLabel = cleanTestimonialField(item.vehicleLabel);
+        const cleanCity = cleanTestimonialField(item.city);
+        const cleanMessage = cleanTestimonialField(item.message) ?? item.message;
+
+        return (
+          <li
+            key={item.id}
+            className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center"
+          >
+            <IconQuote className="h-6 w-6 text-brand/60" />
+            <StarRow rating={item.rating} />
+            <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-cream/90">
+              {cleanMessage}
+            </blockquote>
+            <div className="mt-6 flex w-full items-center justify-center gap-3 border-t border-white/10 pt-5">
+              <Avatar name={cleanName} photoUrl={item.photoUrl} />
+              <div className="min-w-0">
+                <p className="truncate font-display text-sm font-semibold text-cream">
+                  {cleanName}
+                </p>
+                {cleanVehicleLabel ? (
+                  <p className="truncate text-xs text-brand/80">{cleanVehicleLabel}</p>
+                ) : null}
+                {cleanCity ? (
+                  <p className="truncate text-xs text-muted">{cleanCity}</p>
+                ) : null}
+              </div>
             </div>
-          </div>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ul>
   );
 }
