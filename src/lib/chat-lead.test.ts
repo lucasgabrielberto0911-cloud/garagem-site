@@ -14,6 +14,7 @@ import {
   CHAT_GEMINI_MODEL,
   CHAT_GEMINI_TEMPERATURE,
   chatGeminiModels,
+  extractGeminiFinishReason,
   extractGeminiFunctionCall,
   extractGeminiText,
   geminiApiKey,
@@ -178,6 +179,12 @@ test("Gemini devolve texto e function call criar_lead", () => {
   assert.match(extractGeminiText(payload), /registrar/);
   const call = extractGeminiFunctionCall(payload);
   assert.equal(call?.name, "criar_lead");
+  assert.equal(
+    extractGeminiFinishReason({
+      candidates: [{ finishReason: "MAX_TOKENS", content: { parts: [] } }],
+    }),
+    "MAX_TOKENS",
+  );
 });
 
 test("turno com carro do estoque, carro inexistente e lead", async () => {
@@ -215,6 +222,7 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
   });
   assert.match(missing.reply, /não está na lista atual/i);
   assert.match(missing.reply, /wa\.me\/5527996330706/);
+  assert.match(missing.reply, /HB20/);
 
   const created: Array<{ source: string; name: string; status?: string }> = [];
   const lead = await runChatTurn({
@@ -492,6 +500,37 @@ test("comparação fala Lancer, não LANCER", () => {
   assert.match(compared, /um pouco acima/);
   assert.doesNotMatch(compared, /Entre esses/);
   assert.doesNotMatch(compared, /meio do preço/);
+});
+
+test("dois automáticos na lista não viram o único automático", () => {
+  const hb20Auto: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb20-auto-mix",
+    transmission: "Automático",
+    price: 55900,
+    km: 80000,
+  };
+  const onixAuto: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-onix-auto-mix",
+    brand: "Chevrolet",
+    model: "Onix",
+    transmission: "Automático",
+    price: 58900,
+    km: 40000,
+  };
+  const prismaManual: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-prisma-manual-mix",
+    brand: "Chevrolet",
+    model: "Prisma",
+    transmission: "Manual",
+    price: 52900,
+    km: 90000,
+  };
+  const compared = compareChatStockPicks([prismaManual, hb20Auto, onixAuto]);
+  assert.doesNotMatch(compared, /é o automático da lista/);
+  assert.match(compared, /automático/);
 });
 
 test("eae recusado pelo modelo vira cumprimento da loja", async () => {

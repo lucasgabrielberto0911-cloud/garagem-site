@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  CHAT_FIPE_REPLY,
   CHAT_PING_REPLY,
   CHAT_SYSTEM_PROMPT,
   CHAT_WHATSAPP_URL,
   buildChatSystemPrompt,
   formatStockForPrompt,
+  parseCheapIntent,
   stockSelectHasForbiddenField,
 } from "./chat-prompt";
 import { CHAT_VEHICLE_SELECT } from "./chat-stock";
@@ -25,7 +27,10 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /financia em até 60x/);
   assert.match(CHAT_SYSTEM_PROMPT, /cartão de crédito em até 18x/);
   assert.match(CHAT_SYSTEM_PROMPT, /POLÍTICA DA LOJA/);
-  assert.match(CHAT_SYSTEM_PROMPT, /Garantia padrão de 3 meses/);
+  assert.match(CHAT_SYSTEM_PROMPT, /3 meses de motor e câmbio/);
+  assert.match(CHAT_SYSTEM_PROMPT, /pela loja/);
+  assert.match(CHAT_SYSTEM_PROMPT, /Nunca misture os prazos/);
+  assert.match(CHAT_SYSTEM_PROMPT, /único automático/);
   assert.match(CHAT_SYSTEM_PROMPT, /NUNCA inventar equipamento/);
   assert.match(CHAT_SYSTEM_PROMPT, /preço de referência FIPE/);
   assert.match(CHAT_SYSTEM_PROMPT, /sem markdown/);
@@ -105,6 +110,46 @@ test("estoque real entra no prompt; carro fora da lista não é inventado", () =
   assert.match(stockBlock, /não foi medido/);
   assert.doesNotMatch(stockBlock, /fipe/i);
   assert.doesNotMatch(formatStockForPrompt([]), /R\$/);
+});
+
+test("baratinho entra no filtro do prompt sem inventar faixa numérica", () => {
+  assert.equal(parseCheapIntent("hb20 automatico baratinho"), true);
+  assert.equal(parseCheapIntent("Carros até 70 mil?"), false);
+  const prompt = buildChatSystemPrompt(
+    [
+      {
+        brand: "Hyundai",
+        model: "HB20",
+        version: "Comfort",
+        year: 2015,
+        km: 110000,
+        price: 45900,
+        color: "Prata",
+        transmission: "Automático",
+        fuel: "Flex",
+      },
+      {
+        brand: "Hyundai",
+        model: "HB20",
+        version: "Diamond",
+        year: 2022,
+        km: 20000,
+        price: 89900,
+        color: "Branco",
+        transmission: "Automático",
+        fuel: "Flex",
+      },
+    ],
+    "hb20 automatico baratinho",
+  );
+  assert.match(prompt, /mais em conta/);
+  assert.match(prompt, /45\.900/);
+  assert.doesNotMatch(prompt, /FILTRO DO VISITANTE: até/);
+});
+
+test("resposta fixa de FIPE não cita carro nem preço", () => {
+  assert.match(CHAT_FIPE_REPLY, /FIPE/);
+  assert.doesNotMatch(CHAT_FIPE_REPLY, /Etios|Corolla|R\$/);
 });
 
 test("prompt proíbe falar de consumo espontaneamente", () => {

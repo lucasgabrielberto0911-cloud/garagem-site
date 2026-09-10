@@ -9,6 +9,7 @@ import {
 import {
   CHAT_WHATSAPP_URL,
   formatChatPrice,
+  parseCheapIntent,
   parsePriceLimit,
   type ChatStockLine,
 } from "@/lib/chat-prompt";
@@ -181,14 +182,56 @@ export function filterStockByTransmission(
   return matched.length > 0 ? matched : stock;
 }
 
+export function cheapPriceCap(stock: ChatVehicleRecord[]): number | null {
+  if (stock.length === 0) return null;
+  const sorted = [...stock].sort((a, b) => a.price - b.price);
+  const cheapest = sorted[0]!.price;
+  const soft = Math.round(cheapest * 1.35);
+  let cap = cheapest;
+  for (const vehicle of sorted.slice(0, 3)) {
+    if (vehicle.price <= soft) cap = Math.max(cap, vehicle.price);
+  }
+  return cap;
+}
+
+/** Um único modelo citado (ex.: “hb20 baratinho”) — não mistura irmão de outra família. */
+export function singleMentionedModelPool(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+): ChatVehicleRecord[] | null {
+  const folded = normalize(mensagem);
+  const models = new Map<string, ChatVehicleRecord[]>();
+  for (const vehicle of stock) {
+    const model = normalize(vehicle.model);
+    if (model.length >= 3 && folded.includes(model)) {
+      const list = models.get(model) ?? [];
+      list.push(vehicle);
+      models.set(model, list);
+    }
+  }
+  if (models.size !== 1) return null;
+  return [...models.values()][0] ?? null;
+}
+
 export function applyChatStockFilters(
   stock: ChatVehicleRecord[],
   mensagem: string,
 ) {
-  return filterStockByTransmission(
+  let next = filterStockByTransmission(
     filterStockByCategory(stock, mensagem),
     mensagem,
   );
+  if (parseCheapIntent(mensagem)) {
+    const modelPool = singleMentionedModelPool(next, mensagem);
+    if (modelPool) next = modelPool;
+    if (parsePriceLimit(mensagem) == null) {
+      const cap = cheapPriceCap(next);
+      if (cap != null) {
+        next = next.filter((vehicle) => vehicle.price <= cap);
+      }
+    }
+  }
+  return next;
 }
 
 /** Casa o texto do interesse com um anúncio do estoque, se der. */
@@ -357,6 +400,10 @@ export function compareChatStockPicks(
   const manuals = vehicles.filter(isManualVehicle);
   const mixed = autos.length > 0 && manuals.length > 0;
   const auto = autos[0];
+  const autoOnly = autos.length <= 1;
+  const autoBit = autoOnly
+    ? "é o automático da lista — mais conforto no trânsito"
+    : "é automático — mais conforto no trânsito";
 
   const cheap = talkName(cheapest);
   const picks: string[] = [
@@ -368,29 +415,26 @@ export function compareChatStockPicks(
     const low = talkName(lowestKm);
     if (mixed && auto?.id === lowestKm.id) {
       picks.push(
-        `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}) e é o automático da lista — mais conforto no trânsito.`,
+        `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}) e ${autoBit}.`,
       );
       mentioned.add(lowestKm.id);
     } else {
       picks.push(`${low.cap} tem menos km (${formatChatKm(lowestKm.km)}).`);
       mentioned.add(lowestKm.id);
       if (mixed && auto && !mentioned.has(auto.id)) {
-        picks.push(
-          `${talkName(auto).cap} é o automático da lista — mais conforto no trânsito.`,
-        );
+        picks.push(`${talkName(auto).cap} ${autoBit}.`);
         mentioned.add(auto.id);
       }
     }
   } else if (mixed && auto && auto.id !== cheapest.id) {
-    picks.push(
-      `${talkName(auto).cap} é o automático da lista — mais conforto no trânsito.`,
-    );
+    picks.push(`${talkName(auto).cap} ${autoBit}.`);
     mentioned.add(auto.id);
   }
 
   if (mixed && auto?.id === cheapest.id) {
-    picks[0] =
-      `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e o automático da lista — mais conforto no trânsito.`;
+    picks[0] = autoOnly
+      ? `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e o automático da lista — mais conforto no trânsito.`
+      : `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e é automático — mais conforto no trânsito.`;
   }
 
   const leftover = vehicles.filter((vehicle) => !mentioned.has(vehicle.id));
@@ -606,19 +650,99 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
   return `Beleza — até ${ceiling}, estes aqui fazem sentido pra começar.\n${lines.join("\n")}\n\n${compareChatStockPicks(picks, { withLeadin: false, includeConsumption: wantsConsumption })}`;
 }
 
+export function listStockByCheap(mensagem: string, stock: ChatVehicleRecord[]) {
+  if (!parseCheapIntent(mensagem) || parsePriceLimit(mensagem) != null) {
+    return null;
+  }
+  const matches = applyChatStockFilters(stock, mensagem).sort(
+    (a, b) => a.price - b.price,
+  );
+  if (matches.length === 0) return null;
+  const picks = matches.slice(0, 3);
+  const lines = picks.map((vehicle) => formatVehicleLine(vehicle));
+  const wantsConsumption = asksAboutConsumption(mensagem);
+  return `Beleza — olha as opções mais em conta que achei agora.\n${lines.join("\n")}\n\n${compareChatStockPicks(picks, { withLeadin: false, includeConsumption: wantsConsumption })}`;
+}
+
+export function findSimilarVehicles(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+  limit = 3,
+): ChatVehicleRecord[] {
+  const category = resolveChatCategory(mensagem) ?? "carro";
+  const mentioned = singleMentionedModelPool(stock, mensagem);
+  const mentionedIds = new Set((mentioned ?? []).map((vehicle) => vehicle.id));
+  const pool = applyChatStockFilters(stock, mensagem)
+    .filter((vehicle) => !mentionedIds.has(vehicle.id))
+    .filter((vehicle) => (vehicle.category ?? "carro") === category)
+    .sort((a, b) => a.price - b.price);
+  return pool.slice(0, limit);
+}
+
+export function looksLikeMissingModelReply(reply: string): boolean {
+  const folded = normalize(reply);
+  return /\b(nao esta na lista atual|nao tem anuncio|nao temos (esse|este) modelo|modelo nao esta)\b/.test(
+    folded,
+  );
+}
+
+export function missingModelReply(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+): string {
+  const similar = findSimilarVehicles(mensagem, stock, 3);
+  if (similar.length === 0) {
+    return `Esse modelo não está na lista atual. Posso olhar outro na mesma ideia, ou o consultor anota e te avisa no WhatsApp quando chegar: ${CHAT_WHATSAPP_URL}`;
+  }
+  const lines = similar.map((vehicle) => formatVehicleLine(vehicle));
+  return `Esse modelo não está na lista atual. Na mesma ideia, agora no estoque tem:\n${lines.join("\n")}\n\nSe quiser, o consultor anota o modelo e te avisa no WhatsApp quando chegar: ${CHAT_WHATSAPP_URL}`;
+}
+
+export function enrichMissingModelReply(
+  reply: string,
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+): { reply: string; vehicles: ChatVehicleRecord[] } {
+  if (!looksLikeMissingModelReply(reply)) {
+    return { reply, vehicles: [] };
+  }
+  const similar = findSimilarVehicles(mensagem, stock, 3);
+  if (similar.length === 0) {
+    if (!/whatsapp|wa\.me/i.test(reply)) {
+      return {
+        reply: `${reply.trim()} O consultor anota e te avisa no WhatsApp quando chegar: ${CHAT_WHATSAPP_URL}`,
+        vehicles: [],
+      };
+    }
+    return { reply, vehicles: [] };
+  }
+  const alreadyLists = similar.some((vehicle) =>
+    normalize(reply).includes(normalize(vehicle.model)),
+  );
+  if (alreadyLists) return { reply, vehicles: similar };
+  const lines = similar.map((vehicle) => formatVehicleLine(vehicle));
+  return {
+    reply: `${reply.trim()}\n\nNa mesma ideia, agora no estoque tem:\n${lines.join("\n")}`,
+    vehicles: similar,
+  };
+}
+
 export const CHAT_FINANCE_REPLY =
-  `Dá sim — a gente parcela o seminovo em até 60 vezes no financiamento, e no cartão de crédito aceitamos em até 18 vezes. O usado também pode entrar na conta. A condição certinha depende do seu perfil e do modelo, então o consultor monta no WhatsApp com o modelo que você escolher, bem no seu caso. ${CHAT_WHATSAPP_URL}`;
+  `Dá sim — são duas formas diferentes: financiamento em até 60 vezes, e cartão de crédito em até 18 vezes. Não misturamos os prazos e não inventamos taxa nem valor de parcela. O usado também pode entrar na conta. A condição certinha o consultor monta no WhatsApp com o modelo que você escolher, bem no seu caso. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_CARD_REPLY =
-  `Dá sim — no cartão de crédito a gente parcela em até 18 vezes. Se preferir, o seminovo também financia em até 60 vezes, e o usado pode entrar na conta. O consultor confirma a melhor forma no WhatsApp, no seu caso. ${CHAT_WHATSAPP_URL}`;
+  `Dá sim — no cartão de crédito a gente parcela em até 18 vezes. Isso é diferente do financiamento, que vai em até 60 vezes. Não inventamos taxa nem valor de parcela; o consultor confirma a melhor forma no WhatsApp, no seu caso. O usado também pode entrar na conta. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_TRADE_REPLY =
   `Aceitamos sim — carro ou moto entram na conta. Manda umas fotos no WhatsApp que o consultor avalia e já encaixa no negócio com você. ${CHAT_WHATSAPP_URL}`;
 
+export const CHAT_WARRANTY_REPLY =
+  `Fica tranquilo: todos os seminovos saem com garantia de 3 meses de motor e câmbio. Se quiser o detalhe no seu caso, o consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(
   mensagem: string,
-): "finance" | "card" | "troca" | null {
+): "finance" | "card" | "troca" | "warranty" | null {
   const folded = normalize(mensagem);
   if (
     /^(aceita cartao|aceitam cartao|cartao de credito|parcela no cartao|da para parcelar no cartao|da pra parcelar no cartao|aceita cartao de credito)$/.test(
@@ -635,6 +759,12 @@ export function chatPolicyShortcut(
     return "finance";
   }
   if (/^(aceita troca|faz troca|tem troca)$/.test(folded)) return "troca";
+  if (
+    /\bgarantia\b/.test(folded) &&
+    !/\b(troca|financi|cartao|fipe|preco|valor|estoque)\b/.test(folded)
+  ) {
+    return "warranty";
+  }
   return null;
 }
 
@@ -649,6 +779,7 @@ export function localGarageReply(
   if (policy === "card") return CHAT_CARD_REPLY;
   if (policy === "finance") return CHAT_FINANCE_REPLY;
   if (policy === "troca") return CHAT_TRADE_REPLY;
+  if (policy === "warranty") return CHAT_WARRANTY_REPLY;
 
   if (/\b(cartao|credito|18x)\b/.test(text)) {
     return CHAT_CARD_REPLY;
@@ -659,8 +790,10 @@ export function localGarageReply(
 
   const byBudget = listStockByBudget(mensagem, stock);
   if (byBudget) return byBudget;
+  const byCheap = listStockByCheap(mensagem, stock);
+  if (byCheap) return byCheap;
   if (/\bgarantia\b/.test(text)) {
-    return `Fica tranquilo: todos os seminovos saem com garantia de 3 meses. Se quiser, eu já te mostro um modelo do estoque, ou o consultor detalha no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return CHAT_WARRANTY_REPLY;
   }
   if (/\b(horario|atendimento|endereco|localizacao)\b/.test(text)) {
     return `A gente atende online todos os dias, das 8h às 23h — Aracruz, Vitória, Linhares, Serra e Vila Velha. Loja digital, visita combinada. Um consultor confirma o melhor jeito no WhatsApp: ${CHAT_WHATSAPP_URL}`;
@@ -687,7 +820,7 @@ export function localGarageReply(
     .split(" ")
     .filter((token) => token.length >= 3 && !GENERIC_STOCK_TOKEN.test(token));
   if (looksLikeVehicle && specific.length > 0) {
-    return `Esse modelo não está na lista atual. Posso olhar outro na mesma ideia, ou o consultor procura no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return missingModelReply(mensagem, stock);
   }
   if (looksLikeVehicle && stock.length > 0) {
     const sample = stock
