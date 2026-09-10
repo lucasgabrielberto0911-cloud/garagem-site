@@ -199,7 +199,7 @@ export default async function SobrePage() {
                     <strong className="font-display font-semibold text-cream">
                       Visão.
                     </strong>{" "}
-                    Ser a referência em seminovos digitais de {publicSite.region}{" "}
+                      Ser uma loja digital de seminovos de confiança em {publicSite.region}{" "}
                     e região: a loja em que o cliente confia para negociar com
                     clareza e sair satisfeito.
                   </p>
@@ -250,7 +250,7 @@ export default async function SobrePage() {
               className="mt-14 scroll-mt-28 border border-brand/30 bg-ink p-8 text-center sm:p-10 lg:text-left"
             >
               <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
-                Como funciona a Garagem digital
+                Como funciona a Sua Garagem digital
               </h2>
               <div
                 className="mx-auto mt-4 h-0.5 w-12 bg-brand-gradient lg:mx-0"

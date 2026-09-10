@@ -41,6 +41,16 @@ const nextConfig = {
     optimizePackageImports: ["@aws-sdk/client-rekognition"],
   },
   async headers() {
+    const security = [
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      {
+        key: "Permissions-Policy",
+        value: "camera=(), microphone=(), geolocation=()",
+      },
+      { key: "X-Frame-Options", value: "SAMEORIGIN" },
+      { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+    ];
     const immutable = [
       {
         key: "Cache-Control",
@@ -52,6 +62,15 @@ const nextConfig = {
       { key: "Service-Worker-Allowed", value: "/" },
     ];
     return [
+      { source: "/(.*)", headers: security },
+      {
+        source: "/admin",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/admin/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
       { source: "/sw.js", headers: sw },
       {
         source: "/manifest.webmanifest",

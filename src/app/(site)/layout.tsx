@@ -11,11 +11,15 @@ import { SiteChat } from "@/components/site/SiteChat";
 import { WhatsAppFloat } from "@/components/site/WhatsAppFloat";
 import { FavoritesProvider } from "@/lib/favorites";
 import { localBusinessJsonLd } from "@/lib/seo";
+import { getGoogleReviews } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 
 async function SiteJsonLd() {
-  const publicSite = await getPublicSite();
-  return <JsonLd data={localBusinessJsonLd(publicSite)} />;
+  const [publicSite, google] = await Promise.all([
+    getPublicSite(),
+    getGoogleReviews(),
+  ]);
+  return <JsonLd data={localBusinessJsonLd(publicSite, undefined, google)} />;
 }
 
 export default function SiteLayout({

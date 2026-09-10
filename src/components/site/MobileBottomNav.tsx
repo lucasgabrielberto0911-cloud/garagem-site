@@ -58,7 +58,7 @@ export function MobileBottomNav() {
             href={whatsappUrl()}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Abrir WhatsApp da Garagem"
+            aria-label="Abrir WhatsApp da Sua Garagem"
             onClick={() => trackWhatsAppClick("nav-mobile")}
             className="-mt-3 flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 touch-manipulation"
           >

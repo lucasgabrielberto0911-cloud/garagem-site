@@ -34,6 +34,10 @@ import {
 import { plateEndFromPlate } from "@/lib/plate-lookup";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
+  suggestedTransmission,
+  transmissionConflictAlert,
+} from "@/lib/vehicle-display";
+import {
   VEHICLE_CATEGORIES,
   defaultFuel,
   defaultTransmission,
@@ -153,6 +157,13 @@ export function VehicleForm({
   const transmissionOptions = getTransmissions(category);
   const accessoryPresets = getAccessoryPresets(category);
   const isMoto = category === "moto";
+  const transmissionAlert = transmissionConflictAlert(version, transmission);
+  const transmissionSuggestion = suggestedTransmission(
+    version,
+    transmission,
+    transmissionOptions,
+  );
+  const canFixTransmission = transmissionOptions.includes(transmissionSuggestion);
 
   function changeCategory(next: VehicleCategory) {
     if (next === category) return;
@@ -445,6 +456,24 @@ export function VehicleForm({
                   </option>
                 ))}
               </select>
+              {transmissionAlert ? (
+                <p className="mt-2 text-xs leading-relaxed text-brand-orange">
+                  {transmissionAlert}. O site público mostra{" "}
+                  {transmissionSuggestion}.
+                  {canFixTransmission ? (
+                    <>
+                      {" "}
+                      <button
+                        type="button"
+                        className="underline underline-offset-2"
+                        onClick={() => setTransmission(transmissionSuggestion)}
+                      >
+                        Corrigir câmbio
+                      </button>
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
             </Field>
             <Field
               label={isMoto ? "Motor / cilindrada" : "Motor"}

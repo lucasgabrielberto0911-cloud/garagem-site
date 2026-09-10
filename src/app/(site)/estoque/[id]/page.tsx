@@ -16,12 +16,18 @@ import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { JsonLd } from "@/components/JsonLd";
-import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatVehicleLabel, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
+import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { supabaseTransformSrc } from "@/lib/stock-query";
 import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
-import { WHATSAPP_MESSAGES, site, whatsappUrl } from "@/lib/site";
+import { site, whatsappUrl } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
+import {
+  collapseDuplicateAccessories,
+  formatUpdatedAt,
+  formatVehicleDisplay,
+  formatVehicleWhatsAppMessage,
+} from "@/lib/vehicle-display";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
 import { getVehicleConditions, getGoogleReviews } from "@/lib/site-content";
 import {
@@ -47,7 +53,8 @@ export async function generateMetadata({
   if (!vehicle) return { title: `Veículo não encontrado | ${site.name}` };
 
   const sold = vehicle.status === "vendido";
-  const label = formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel);
+  const display = formatVehicleDisplay(vehicle);
+  const label = display.titleWithYear;
   const title = sold
     ? `${label} (vendido) | ${site.name}`
     : `${label} | ${site.name}`;
@@ -57,7 +64,7 @@ export async function generateMetadata({
     year: vehicle.yearModel,
     price: vehicle.price,
     km: vehicle.km,
-    transmission: vehicle.transmission,
+    transmission: display.transmission,
     sold,
     siteName: site.name,
   });
@@ -121,13 +128,43 @@ export default async function VehicleDetailPage({
   const path = vehiclePath(vehicle);
   const sold = vehicle.status === "vendido";
   const isMoto = vehicle.category === "moto";
-  const title = formatVehicleLabel(vehicle.brand, vehicle.model);
-  const fullLabel = `${title}${vehicle.version ? ` ${vehicle.version}` : ""} ${vehicle.yearModel}`;
-  const galleryAlt = formatVehicleLabel(
-    vehicle.brand,
-    vehicle.model,
-    vehicle.yearModel,
-  );
+  const display = formatVehicleDisplay(vehicle);
+  const title = display.title;
+  const fullLabel = display.fullLabel;
+  const galleryAlt = display.titleWithYear;
+  const accessories = collapseDuplicateAccessories(vehicle.accessories);
+  const whatsapp = {
+    interest: formatVehicleWhatsAppMessage({
+      ...vehicle,
+      path,
+      isMoto,
+      intent: "interest",
+    }),
+    video: formatVehicleWhatsAppMessage({
+      ...vehicle,
+      path,
+      isMoto,
+      intent: "video",
+    }),
+    finance: formatVehicleWhatsAppMessage({
+      ...vehicle,
+      path,
+      isMoto,
+      intent: "finance",
+    }),
+    visit: formatVehicleWhatsAppMessage({
+      ...vehicle,
+      path,
+      isMoto,
+      intent: "visit",
+    }),
+    trade: formatVehicleWhatsAppMessage({
+      ...vehicle,
+      path,
+      isMoto,
+      intent: "trade",
+    }),
+  };
   const [related, conditions, google] = await Promise.all([
     getRelatedVehicles(
       vehicle.id,
@@ -144,9 +181,9 @@ export default async function VehicleDetailPage({
     { label: "Tipo", value: vehicleCategoryLabel(vehicle.category) },
     { label: "Ano", value: `${vehicle.year}/${vehicle.yearModel}` },
     { label: "KM", value: formatNumberBR(vehicle.km) },
-    { label: "Câmbio", value: vehicle.transmission },
+    { label: "Câmbio", value: display.transmission },
     { label: "Combustível", value: vehicle.fuel },
-    ...(vehicle.color ? [{ label: "Cor", value: vehicle.color }] : []),
+    ...(display.color ? [{ label: "Cor", value: display.color }] : []),
     ...(vehicle.engine ? [{ label: "Motor", value: vehicle.engine }] : []),
     ...(vehicle.category !== "moto" &&
     vehicle.doors != null &&
@@ -165,7 +202,7 @@ export default async function VehicleDetailPage({
   ];
 
   const hasDetails =
-    Boolean(vehicle.description) || vehicle.accessories.length > 0;
+    Boolean(vehicle.description) || accessories.length > 0;
 
   return (
     <div className="py-6 pb-sticky-bar-safe sm:py-8 lg:py-10 lg:pb-10">
@@ -277,8 +314,8 @@ export default async function VehicleDetailPage({
                 <h1 className="font-display text-[1.65rem] font-bold leading-tight tracking-tight text-cream sm:text-2xl sm:text-[1.75rem]">
                   {title}
                 </h1>
-                {vehicle.version ? (
-                  <p className="mt-1 text-sm text-muted">{vehicle.version}</p>
+                {display.version ? (
+                  <p className="mt-1 text-sm text-muted">{display.version}</p>
                 ) : null}
               </div>
 
@@ -294,6 +331,11 @@ export default async function VehicleDetailPage({
               {vehicle.createdAt ? (
                 <p className="text-xs text-muted">
                   {formatListedAgo(vehicle.createdAt)}
+                </p>
+              ) : null}
+              {vehicle.updatedAt ? (
+                <p className="text-xs text-muted">
+                  {formatUpdatedAt(vehicle.updatedAt)}
                 </p>
               ) : null}
               {!sold ? (
@@ -338,7 +380,7 @@ export default async function VehicleDetailPage({
                       size="lg"
                       className="hidden w-full lg:inline-flex"
                       trackingLabel="ficha"
-                      message={WHATSAPP_MESSAGES.vehicle(fullLabel, isMoto)}
+                      message={whatsapp.interest}
                     >
                       Tenho interesse
                     </WhatsAppButton>
@@ -374,7 +416,7 @@ export default async function VehicleDetailPage({
                       year={vehicle.yearModel}
                     >
                       <TrackedWhatsAppLink
-                        href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel, isMoto))}
+                        href={whatsappUrl(whatsapp.video)}
                         trackingLabel="ficha-video"
                         className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
@@ -390,9 +432,7 @@ export default async function VehicleDetailPage({
                       year={vehicle.yearModel}
                     >
                       <TrackedWhatsAppLink
-                        href={whatsappUrl(
-                          WHATSAPP_MESSAGES.vehicleFinance(fullLabel, isMoto),
-                        )}
+                        href={whatsappUrl(whatsapp.finance)}
                         trackingLabel="ficha-finance"
                         className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
@@ -408,9 +448,7 @@ export default async function VehicleDetailPage({
                       year={vehicle.yearModel}
                     >
                       <TrackedWhatsAppLink
-                        href={whatsappUrl(
-                          WHATSAPP_MESSAGES.vehicleVisit(fullLabel, isMoto),
-                        )}
+                        href={whatsappUrl(whatsapp.visit)}
                         trackingLabel="ficha-visit"
                         className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
@@ -426,7 +464,7 @@ export default async function VehicleDetailPage({
                       year={vehicle.yearModel}
                     >
                       <TrackedWhatsAppLink
-                        href={whatsappUrl(WHATSAPP_MESSAGES.vehicleTrade(fullLabel, isMoto))}
+                        href={whatsappUrl(whatsapp.trade)}
                         trackingLabel="ficha-trade"
                         className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
@@ -434,6 +472,11 @@ export default async function VehicleDetailPage({
                       </TrackedWhatsAppLink>
                     </VehicleLeadHit>
                     </div>
+                    <p className="border-t border-white/10 px-3 py-2 text-[11px] leading-relaxed text-muted">
+                      Financiamento em até 60x e cartão em até 18x. Simulação
+                      sujeita a análise de crédito e CET — valores pelo WhatsApp,
+                      sem taxa inventada no site.
+                    </p>
                   </details>
 
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
@@ -463,7 +506,7 @@ export default async function VehicleDetailPage({
               <p className="text-xs leading-relaxed text-muted">
                 {sold
                   ? "Este anúncio não está mais à venda. Confira outras opções no estoque."
-                  : `Valores e disponibilidade sujeitos a alteração. Financiamento pelo WhatsApp ${site.whatsappLabel}.`}
+                  : `Valores e disponibilidade sujeitos a alteração. Financiamento em até 60x e cartão em até 18x, sujeitos a análise de crédito e CET. Combine pelo WhatsApp ${site.whatsappLabel}.`}
               </p>
             </div>
           </aside>
@@ -481,13 +524,13 @@ export default async function VehicleDetailPage({
                 </div>
               ) : null}
 
-              {vehicle.accessories.length > 0 ? (
+              {accessories.length > 0 ? (
                 <div className={vehicle.description ? "mt-5" : undefined}>
                   <h2 className="font-display text-base font-semibold text-cream">
                     Itens e acessórios
                   </h2>
                   <ul className="mt-3 columns-1 gap-x-8 text-sm text-cream/90 sm:columns-2">
-                    {vehicle.accessories.map((item) => (
+                    {accessories.map((item) => (
                       <li
                         key={item}
                         className="mb-1.5 flex break-inside-avoid items-start gap-2"
@@ -530,6 +573,7 @@ export default async function VehicleDetailPage({
       <VehicleMobileBar
         vehicleId={vehicle.id}
         contentName={fullLabel}
+        message={whatsapp.interest}
         brand={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}

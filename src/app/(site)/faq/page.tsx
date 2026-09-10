@@ -29,7 +29,7 @@ export default async function FaqPage() {
           description="Busque por palavra-chave ou filtre por categoria. O assistente compara o estoque no site; para simular e fechar, chame no WhatsApp."
         />
 
-        <div className="mt-8 lg:mt-10">
+        <div id="financiamento" className="mt-8 lg:mt-10 scroll-mt-28">
           <FaqExplorer items={items} />
         </div>
 

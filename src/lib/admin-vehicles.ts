@@ -52,6 +52,7 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
   purchasePrice: true,
   createdAt: true,
   hasVideo: true,
+  transmission: true,
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,
@@ -79,6 +80,7 @@ export type AdminVehicleListItem = {
   purchasePrice: number | null;
   createdAt: Date;
   hasVideo: boolean;
+  transmission: string;
   photos: Array<{ url: string }>;
   costs: Array<{ amount: number }>;
   sale: { salePrice: number } | null;

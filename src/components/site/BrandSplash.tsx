@@ -1,7 +1,7 @@
 import { site } from "@/lib/site";
 
 export function BrandSplash({
-  label = "Carregando…",
+  label = "",
   compact = false,
 }: {
   label?: string;
@@ -12,7 +12,7 @@ export function BrandSplash({
       className={`brand-splash ${compact ? "brand-splash-compact" : ""}`}
       role="status"
       aria-live="polite"
-      aria-label={label}
+      aria-label={label || site.name}
     >
       <div className="brand-splash-field" aria-hidden="true">
         <span className="brand-splash-orb brand-splash-orb-1" />
@@ -25,10 +25,11 @@ export function BrandSplash({
         width={480}
         height={86}
         decoding="async"
+        fetchPriority={compact ? "low" : "high"}
         className="brand-splash-logo"
       />
       <div className="brand-splash-bar" aria-hidden="true" />
-      <p className="brand-splash-copy">{label}</p>
+      {label ? <p className="brand-splash-copy">{label}</p> : null}
     </div>
   );
 }

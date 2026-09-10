@@ -1,5 +1,9 @@
 /** Avisos de qualidade do anúncio (painel de estoque e dashboard). */
 
+import { transmissionConflictAlert } from "@/lib/vehicle-display";
+
+export { transmissionConflictAlert };
+
 const DAY_MS = 1000 * 60 * 60 * 24;
 
 /** Disponível parado há mais tempo que isso entra nos alertas. */

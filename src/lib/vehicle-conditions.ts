@@ -6,10 +6,10 @@
 
 /** Texto oficial da garantia — ficha, FAQ e defaults do painel. */
 export const STORE_WARRANTY = {
-  title: "Garantia de 3 Meses Garagem",
+  title: "Garantia de 3 meses (motor e câmbio)",
   summary: "3 meses de cobertura para motor e câmbio em todos os nossos seminovos.",
   body:
-    "Na Garagem, todo veículo passa por uma revisão completa antes de chegar até você. Por isso, oferecemos 3 meses de garantia em todos os nossos seminovos, com cobertura para os itens que mais pesam no bolso: motor e câmbio.",
+    "Na Sua Garagem, todo veículo passa por uma revisão completa antes de chegar até você. Por isso, oferecemos 3 meses de garantia em todos os nossos seminovos, com cobertura para os itens que mais pesam no bolso: motor e câmbio. Desgaste natural, mau uso e itens de manutenção (pneus, pastilhas, filtros) ficam de fora — em dúvida, pergunte no WhatsApp.",
 } as const;
 
 export type ConditionItem = {
@@ -33,11 +33,19 @@ export const DEFAULT_VEHICLE_CONDITIONS: VehicleConditionsContent = {
     },
     {
       label: "Documentação e transferência",
-      text: "PREENCHER: o que a loja cuida e o que fica com o comprador",
+      text: "Combinamos a transferência pelo WhatsApp. Custos de Detran, despachante e deslocamento variam por caso — não há taxa fixa no site. Confirme com o consultor antes de fechar.",
     },
     {
       label: "Vistoria",
-      text: "PREENCHER: o que é checado antes do anúncio e se há laudo",
+      text: "Todo seminovo passa por checagem de procedência e condição geral antes do anúncio. Laudo cautelar só aparece na ficha quando constar no campo Laudo.",
+    },
+    {
+      label: "Entrega",
+      text: "Somos loja digital: visita, entrega ou retirada são combinadas no WhatsApp. Não publicamos valor de frete — depende da cidade e do veículo.",
+    },
+    {
+      label: "O que a garantia não cobre",
+      text: "A cobertura de 3 meses é de motor e câmbio. Desgaste natural, mau uso e peças de manutenção (pneus, pastilhas, filtros etc.) ficam de fora.",
     },
   ],
 };

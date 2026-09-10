@@ -10,6 +10,7 @@ import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 export function VehicleMobileBar({
   vehicleId,
   contentName,
+  message,
   brand,
   model,
   year,
@@ -19,6 +20,7 @@ export function VehicleMobileBar({
 }: {
   vehicleId: string;
   contentName: string;
+  message?: string;
   brand: string;
   model: string;
   year: number;
@@ -27,6 +29,9 @@ export function VehicleMobileBar({
   category?: string;
 }) {
   const isMoto = category === "moto";
+  const href = whatsappUrl(
+    message ?? WHATSAPP_MESSAGES.vehicle(contentName, isMoto),
+  );
   return (
     <div
       data-vehicle-mobile-bar=""
@@ -59,7 +64,7 @@ export function VehicleMobileBar({
             year={year}
           >
             <a
-              href={whatsappUrl(WHATSAPP_MESSAGES.vehicle(contentName, isMoto))}
+              href={href}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackWhatsAppClick("ficha-mobile")}

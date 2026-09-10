@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { WhatsAppButton } from "@/components/site/ui";
 import { IconQuote, IconStar } from "@/components/site/icons";
-import { WHATSAPP_MESSAGES } from "@/lib/site";
+import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 
 export type TestimonialItem = {
   id: string;
@@ -11,7 +11,18 @@ export type TestimonialItem = {
   photoUrl: string | null;
   rating: number;
   vehicleLabel: string | null;
+  createdAt?: Date | string | null;
 };
+
+function formatTestimonialDate(value: Date | string | null | undefined) {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("pt-BR", {
+    month: "short",
+    year: "numeric",
+  });
+}
 
 function StarRow({ rating }: { rating: number }) {
   const safe = Math.min(5, Math.max(1, Math.round(rating)));
@@ -48,7 +59,7 @@ export function Testimonials({ items }: { items: TestimonialItem[] }) {
           message={WHATSAPP_MESSAGES.general}
           size="md"
         >
-          Falar com a Garagem
+          Falar com a {site.name}
         </WhatsAppButton>
       </div>
     );
@@ -76,11 +87,20 @@ export function Testimonials({ items }: { items: TestimonialItem[] }) {
                 {item.name}
               </p>
               {item.vehicleLabel ? (
-                <p className="truncate text-xs text-brand/80">{item.vehicleLabel}</p>
+                <p className="truncate text-xs text-cream/70">
+                  Sobre {item.vehicleLabel}
+                </p>
               ) : null}
               {item.city ? (
                 <p className="truncate text-xs text-muted">{item.city}</p>
               ) : null}
+              <p className="truncate text-[10px] uppercase tracking-wider text-muted">
+                {item.id.startsWith("seed-")
+                  ? "Exemplo ilustrativo da loja"
+                  : formatTestimonialDate(item.createdAt)
+                    ? `Depoimento à loja · ${formatTestimonialDate(item.createdAt)}`
+                    : "Depoimento enviado à loja"}
+              </p>
             </div>
           </div>
         </li>

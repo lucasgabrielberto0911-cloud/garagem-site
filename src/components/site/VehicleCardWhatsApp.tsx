@@ -12,6 +12,7 @@ import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 export function VehicleCardWhatsApp({
   vehicleId,
   label,
+  message,
   value,
   make,
   model,
@@ -22,6 +23,7 @@ export function VehicleCardWhatsApp({
 }: {
   vehicleId: string;
   label: string;
+  message?: string;
   value: number;
   make: string;
   model: string;
@@ -31,6 +33,7 @@ export function VehicleCardWhatsApp({
   trackingLabel?: string;
 }) {
   const icon = variant === "icon";
+  const text = message ?? WHATSAPP_MESSAGES.vehicle(label);
   return (
     <VehicleLeadHit
       contentId={vehicleId}
@@ -41,7 +44,7 @@ export function VehicleCardWhatsApp({
       year={year}
     >
       <a
-        href={whatsappUrl(WHATSAPP_MESSAGES.vehicle(label))}
+        href={whatsappUrl(text)}
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => trackWhatsAppClick(trackingLabel)}
@@ -49,13 +52,13 @@ export function VehicleCardWhatsApp({
         className={
           icon
             ? `inline-flex min-h-11 w-11 shrink-0 flex-col items-center justify-center self-stretch border-l border-white/10 bg-[#101612] text-[#25D366] transition touch-manipulation hover:bg-[#14301c] ${className}`
-            : `inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 border-t border-white/10 bg-ink px-2 font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-white/5 hover:text-brand ${className}`
+            : `inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 border-t border-white/10 bg-[#101612] px-2 font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-[#14301c] ${className}`
         }
       >
         <IconWhatsApp
           className={icon ? "h-5 w-5 text-[#25D366]" : "h-3.5 w-3.5 text-[#25D366]"}
         />
-        {icon ? <span className="sr-only">WhatsApp</span> : "WhatsApp"}
+        {icon ? <span className="sr-only">Tenho interesse</span> : "Tenho interesse"}
       </a>
     </VehicleLeadHit>
   );

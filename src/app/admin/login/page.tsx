@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { IconEye } from "@/components/admin/icons";
+import { site } from "@/lib/site";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -77,7 +78,7 @@ export default function AdminLoginPage() {
           {/* eslint-disable-next-line @next/next/no-img-element -- logo estático, sem cota /_next/image */}
           <img
             src="/branding/logo-wordmark.webp"
-            alt="Garagem"
+            alt={site.name}
             width={260}
             height={47}
             decoding="async"

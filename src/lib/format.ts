@@ -122,7 +122,7 @@ export function vehicleSeoDescription(input: {
 }) {
   const brand = formatBrandName(input.brand);
   const model = formatModelName(input.model);
-  const siteName = input.siteName ?? "Garagem";
+  const siteName = input.siteName ?? "Sua Garagem";
 
   const text = input.sold
     ? `Este ${brand} ${model} já foi vendido. Confira outras opções disponíveis no estoque da ${siteName}.`

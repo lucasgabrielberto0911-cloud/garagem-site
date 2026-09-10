@@ -52,7 +52,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
         </button>
       </form>
 
-      <div className="mt-3 -mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 scrollbar-hide sm:flex-wrap sm:justify-center sm:overflow-visible">
+      <div className="chip-scroll mt-3 -mx-1 px-1">
         <span className="shrink-0 text-xs uppercase tracking-wider text-muted">
           Faixa:
         </span>
@@ -67,8 +67,11 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
         ))}
       </div>
 
+      <p className="mt-1.5 text-center text-[10px] uppercase tracking-wider text-muted sm:hidden">
+        Deslize as faixas
+      </p>
       {brands.length > 0 ? (
-        <div className="mt-2 -mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 scrollbar-hide sm:flex-wrap sm:justify-center sm:overflow-visible">
+        <div className="chip-scroll mt-2 -mx-1 px-1">
           <span className="shrink-0 text-xs uppercase tracking-wider text-muted">
             Marcas:
           </span>

@@ -2,9 +2,13 @@ import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
-import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatVehicleLabel } from "@/lib/format";
+import { formatCurrencyBRL, formatBrandName, formatModelName } from "@/lib/format";
 import { coverSrc, coverSrcSet, type VehicleCardRecord } from "@/lib/stock-query";
-import { vehiclePath } from "@/lib/vehicle-slug";
+import {
+  formatUpdatedAt,
+  formatVehicleDisplay,
+  formatVehicleWhatsAppMessage,
+} from "@/lib/vehicle-display";
 
 export type VehicleCardData = VehicleCardRecord;
 
@@ -23,30 +27,37 @@ export function VehicleCard({
   vehicle,
   priority = false,
   returnTo,
+  showDestaque = false,
 }: {
   vehicle: VehicleCardData;
   priority?: boolean;
   returnTo?: string;
+  showDestaque?: boolean;
 }) {
-  const title = formatVehicleLabel(vehicle.brand, vehicle.model);
+  const display = formatVehicleDisplay(vehicle);
   const cover = coverSrc(vehicle.photos);
   const coverSet = coverSrcSet(vehicle.photos);
   const badge = STATUS_BADGE[vehicle.status];
-  const href = vehiclePath(vehicle);
+  const href = display.path;
   const sold = vehicle.status === "vendido";
-  const label = `${title}${vehicle.version ? ` ${vehicle.version}` : ""} ${vehicle.yearModel}`;
-
-  const meta = [
-    `${vehicle.yearModel}`,
-    `${formatNumberBR(vehicle.km)} km`,
-    vehicle.transmission,
-  ].join(" · ");
+  const updated =
+    vehicle.updatedAt != null ? formatUpdatedAt(vehicle.updatedAt) : "";
+  const whatsappMessage = formatVehicleWhatsAppMessage({
+    brand: vehicle.brand,
+    model: vehicle.model,
+    version: vehicle.version,
+    yearModel: vehicle.yearModel,
+    transmission: vehicle.transmission,
+    price: vehicle.price,
+    path: href,
+    isMoto: vehicle.category === "moto",
+  });
 
   return (
     <article className="vehicle-card card-lift group relative flex h-full flex-col overflow-hidden border border-white/10 bg-ink touch-manipulation">
       <FavoriteButton
         vehicleId={vehicle.id}
-        label={`${title} ${vehicle.yearModel}`}
+        label={display.titleWithYear}
         value={vehicle.price}
         make={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
@@ -57,13 +68,15 @@ export function VehicleCard({
       <StockVehicleLink
         href={href}
         returnTo={returnTo}
-        ariaLabel={`${title} ${vehicle.yearModel} — ${formatCurrencyBRL(vehicle.price)}`}
+        ariaLabel={`${display.titleWithYear} — ${formatCurrencyBRL(vehicle.price)}`}
       >
         <div className="relative aspect-[16/10] overflow-hidden bg-asphalt">
           <VehicleImage
             src={cover}
-            alt={title}
+            alt={display.title}
             fill
+            width={480}
+            height={300}
             sizes={CARD_SIZES}
             srcSet={coverSet}
             priority={priority}
@@ -75,7 +88,7 @@ export function VehicleCard({
           />
 
           <div className="absolute left-2 top-2 flex flex-wrap gap-1">
-            {vehicle.featured ? (
+            {showDestaque ? (
               <span className="bg-brand px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
                 Destaque
               </span>
@@ -98,24 +111,27 @@ export function VehicleCard({
         <div className="flex flex-1 flex-col gap-1.5 p-2.5 sm:gap-2 sm:p-3">
           <div className="min-w-0">
             <h3 className="truncate font-display text-[13px] font-semibold leading-snug text-cream sm:text-sm">
-              {title}
+              {display.title}
             </h3>
-            {vehicle.version ? (
+            {display.version ? (
               <p className="mt-0.5 truncate text-[11px] text-muted sm:text-xs">
-                {vehicle.version}
+                {display.version}
               </p>
             ) : null}
             <p className="mt-1 truncate text-[11px] text-muted sm:mt-1.5 sm:text-xs">
-              {meta}
+              {display.metaParts.join(" · ")}
             </p>
+            {updated ? (
+              <p className="mt-0.5 truncate text-[10px] text-muted/90">{updated}</p>
+            ) : null}
           </div>
 
           <div className="mt-auto flex flex-col gap-1.5 border-t border-white/10 pt-2 sm:flex-row sm:items-end sm:justify-between sm:gap-2 sm:pt-2.5">
             <p className="font-display text-[15px] font-bold leading-none text-cream sm:text-base">
               {formatCurrencyBRL(vehicle.price)}
             </p>
-            <span className="shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-brand transition group-hover:text-brand-orange">
-              Ver anúncio
+            <span className="shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-cream/70 transition group-hover:text-cream">
+              Ver detalhes
             </span>
           </div>
         </div>
@@ -123,7 +139,8 @@ export function VehicleCard({
       {!sold ? (
         <VehicleCardWhatsApp
           vehicleId={vehicle.id}
-          label={label}
+          label={display.fullLabel}
+          message={whatsappMessage}
           value={vehicle.price}
           make={formatBrandName(vehicle.brand)}
           model={formatModelName(vehicle.model)}

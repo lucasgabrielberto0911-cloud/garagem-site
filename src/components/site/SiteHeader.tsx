@@ -31,8 +31,14 @@ export function SiteHeader() {
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
+    if (open) {
+      document.body.setAttribute("data-nav-open", "");
+    } else {
+      document.body.removeAttribute("data-nav-open");
+    }
     return () => {
       document.body.style.overflow = "";
+      document.body.removeAttribute("data-nav-open");
     };
   }, [open]);
 
@@ -136,7 +142,7 @@ export function SiteHeader() {
       </header>
 
       {open ? (
-        <div className="fixed inset-0 z-[48] lg:hidden" id="menu-mobile">
+        <div className="fixed inset-0 z-[70] lg:hidden" id="menu-mobile">
           <div
             role="button"
             tabIndex={0}
@@ -150,7 +156,7 @@ export function SiteHeader() {
             }}
             aria-label="Fechar menu"
           />
-          <div className="relative mt-[calc(4.5rem+env(safe-area-inset-top,0px))] h-[calc(100dvh-4.5rem-env(safe-area-inset-top,0px))] overflow-y-auto overscroll-contain border-t border-white/10 bg-asphalt animate-slide-up pb-nav-safe">
+          <div className="relative mt-[calc(4.5rem+env(safe-area-inset-top,0px))] h-[calc(100dvh-4.5rem-env(safe-area-inset-top,0px))] overflow-y-auto overscroll-contain border-t border-white/10 bg-asphalt animate-slide-up pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
             <nav className="px-5 py-4" aria-label="Menu mobile">
               <ul className="space-y-1">
                 {NAV_LINKS.map((link) => {
@@ -210,10 +216,17 @@ export function SiteHeader() {
                     key={phone.digits}
                     href={telUrl(index)}
                     onClick={() => setOpen(false)}
-                    className="flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/50 px-4 py-4 font-display text-base font-semibold text-brand touch-manipulation"
+                    className={
+                      phone.kind === "whatsapp"
+                        ? "flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/50 px-4 py-4 font-display text-base font-semibold text-brand touch-manipulation"
+                        : "flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2 text-sm text-cream/80 touch-manipulation"
+                    }
                   >
                     <IconPhone className="h-5 w-5" />
-                    {phone.label}
+                    <span>
+                      {phone.kind === "alternate" ? `${phone.note}: ` : null}
+                      {phone.label}
+                    </span>
                   </a>
                 ))}
               </div>

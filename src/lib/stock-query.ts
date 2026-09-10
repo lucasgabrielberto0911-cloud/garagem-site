@@ -18,6 +18,8 @@ export type VehicleCardRecord = {
   fuel: string;
   status: string;
   featured: boolean;
+  color?: string | null;
+  updatedAt?: Date | string | null;
   photos: VehicleCardPhoto[];
 };
 

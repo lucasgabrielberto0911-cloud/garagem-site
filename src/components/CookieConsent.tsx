@@ -24,7 +24,7 @@ export function CookieConsent() {
     <div
       role="dialog"
       aria-label="Consentimento de cookies"
-      className="site-consent pointer-events-auto fixed z-[55] max-w-[min(22rem,calc(100vw-7.5rem))] border border-white/15 bg-ink/95 px-3 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur"
+      className="site-consent pointer-events-auto fixed z-[55] border border-white/15 bg-ink/95 px-3 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur"
     >
       <p className="text-[12px] leading-snug text-cream/90">
         Cookies de medição (Google e Meta) só entram com o seu ok. O site, o

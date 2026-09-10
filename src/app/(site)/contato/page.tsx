@@ -18,6 +18,7 @@ import { buildPageMetadata } from "@/lib/seo";
 import {
   PHONES,
   WHATSAPP_MESSAGES,
+  emailChannelCopy,
   isPhysicalAddress,
   site,
   telUrl,
@@ -37,6 +38,7 @@ export default async function ContatoPage() {
   const publicSite = await getPublicSite();
   const physical = isPhysicalAddress(publicSite.address);
   const emailReady = !publicSite.email.includes("[");
+  const emailCopy = emailChannelCopy(publicSite.email);
 
   return (
     <div className="py-12 lg:py-16">
@@ -87,10 +89,10 @@ export default async function ContatoPage() {
             <InfoCard
               key={phone.digits}
               Icon={IconPhone}
-              label={index === 0 ? "Telefone" : "Telefone 2"}
+              label={phone.note}
               value={phone.label}
-              href={telUrl(index)}
-              hrefLabel="Ligar agora"
+              href={phone.kind === "whatsapp" ? whatsappUrl() : telUrl(index)}
+              hrefLabel={phone.kind === "whatsapp" ? "Chamar no WhatsApp" : "Ligar agora"}
             />
           ))}
           <InfoCard
@@ -103,14 +105,14 @@ export default async function ContatoPage() {
           />
           <InfoCard
             Icon={IconMail}
-            label="E-mail"
+            label={emailCopy.label}
             value={publicSite.email}
             href={
               emailReady
                 ? `mailto:${publicSite.email}`
                 : whatsappUrl(WHATSAPP_MESSAGES.general)
             }
-            hrefLabel={emailReady ? "Enviar e-mail" : "Chamar no WhatsApp"}
+            hrefLabel={emailReady ? emailCopy.hrefLabel : "Chamar no WhatsApp"}
             external={!emailReady}
           />
           <InfoCard

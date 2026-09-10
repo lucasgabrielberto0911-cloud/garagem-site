@@ -3,8 +3,12 @@
  * `vehicle_id` = Prisma CUID — o mesmo valor enviado em `content_ids` do Pixel.
  */
 
-import { formatVehicleLabel, vehicleSeoDescription } from "@/lib/format";
+import { vehicleSeoDescription } from "@/lib/format";
 import { site } from "@/lib/site";
+import {
+  buildVehicleFullLabel,
+  resolveTransmission,
+} from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export type CatalogFeedVehicle = {
@@ -85,9 +89,7 @@ export function mapCatalogBodyStyle(category: string) {
 }
 
 function catalogTitle(vehicle: CatalogFeedVehicle) {
-  const base = formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel);
-  const version = vehicle.version?.trim();
-  return version ? `${base} ${version}` : base;
+  return buildVehicleFullLabel(vehicle);
 }
 
 function catalogDescription(vehicle: CatalogFeedVehicle) {
@@ -99,7 +101,7 @@ function catalogDescription(vehicle: CatalogFeedVehicle) {
     year: vehicle.yearModel,
     price: vehicle.price,
     km: vehicle.km,
-    transmission: vehicle.transmission,
+    transmission: resolveTransmission(vehicle.version, vehicle.transmission),
     siteName: site.name,
   });
 }
@@ -133,7 +135,9 @@ export function catalogVehicleRow(
     "address.region": "ES",
     "address.country": "Brazil",
     exterior_color: vehicle.color?.trim() || "Não informado",
-    transmission: mapCatalogTransmission(vehicle.transmission),
+    transmission: mapCatalogTransmission(
+      resolveTransmission(vehicle.version, vehicle.transmission),
+    ),
     fuel_type: mapCatalogFuel(vehicle.fuel),
     body_style: mapCatalogBodyStyle(vehicle.category),
     state_of_vehicle: "Used",

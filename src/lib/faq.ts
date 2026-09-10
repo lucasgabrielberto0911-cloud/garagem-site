@@ -78,7 +78,7 @@ export function parseFaqItems(raw: unknown): FaqItem[] | null {
 export const FAQ_ITEMS: FaqItem[] = [
   {
     category: "compra",
-    question: "Como funciona a compra de um veículo na Garagem?",
+    question: "Como funciona a compra de um veículo na Sua Garagem?",
     answer:
       "Você escolhe o veículo no site, chama no WhatsApp e a gente tira as dúvidas — com fotos extras, vídeo e detalhes do veículo. Depois do aceite, alinhamos pagamento e os próximos passos da documentação. Somos loja digital, com atendimento humano do início ao fim.",
   },
@@ -92,7 +92,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: "financiamento",
     question: "Trabalham com financiamento?",
     answer:
-      "Sim. Financiamos em até 60 vezes com bancos e financeiras parceiras, e também aceitamos cartão de crédito em até 18 vezes. Aprovação e taxas dependem da análise de cada caso — o consultor passa no WhatsApp. Também aceitamos pagamento à vista e o usado na troca.",
+      "Sim. Financiamos em até 60 vezes com bancos e financeiras parceiras, e também aceitamos cartão de crédito em até 18 vezes. Aprovação, taxas e CET dependem da análise de cada caso — a simulação pelo WhatsApp não é proposta vinculante. Também aceitamos pagamento à vista e o usado na troca.",
   },
   {
     category: "loja",
@@ -132,19 +132,19 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: "documentacao",
     question: "Quais documentos preciso levar para fechar?",
     answer:
-      "PREENCHER: resposta real da loja — documentos do comprador e do veículo na transferência",
+      "RG/CPF (ou CNH) e comprovante de residência do comprador. A documentação do veículo e os passos no Detran combinamos no WhatsApp — prazos e quem paga despachante variam por caso, sem taxa padronizada no site.",
   },
   {
     category: "compra",
     question: "O veículo já passou por vistoria?",
     answer:
-      "PREENCHER: resposta real da loja — o que é checado antes do anúncio e se há laudo/cautelar",
+      "Sim: procedência e condição geral são checadas antes do anúncio. Laudo cautelar só entra na ficha quando estiver informado no campo Laudo. Se quiser conferir um ponto específico, peça vídeo ou visita no WhatsApp.",
   },
   {
     category: "documentacao",
     question: "Como funciona a transferência de documentação?",
     answer:
-      "PREENCHER: resposta real da loja — quem cuida do Detran, prazos e se há custo à parte",
+      "A transferência é combinada com o consultor. Custos de Detran, despachante e deslocamento dependem do estado do documento e da cidade — não publicamos valor fechado. Confirme no WhatsApp antes de fechar.",
   },
 ];
 
