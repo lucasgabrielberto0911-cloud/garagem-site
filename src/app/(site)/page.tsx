@@ -139,10 +139,6 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6 lg:mt-8">
-            <HeroSearch brands={brands} />
-          </div>
-
           <ActionRow className="hero-cta mt-5 w-full sm:mt-6 lg:mt-7 sm:w-auto">
             <ButtonLink href="/estoque" size="lg">
               Ver estoque
@@ -164,6 +160,10 @@ export default async function HomePage() {
               Ajuda pra escolher
             </ChatOpenButton>
           </p>
+
+          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6 lg:mt-8">
+            <HeroSearch brands={brands} />
+          </div>
 
           <div className="hero-stats mx-auto mt-5 w-full max-w-2xl sm:mt-8 lg:mt-8">
             <Suspense fallback={<StatsBarSkeleton />}>

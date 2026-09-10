@@ -24,7 +24,7 @@ export function FounderSection({
           <div className="relative min-h-[420px] bg-black sm:min-h-[520px] lg:order-2 lg:min-h-full">
             <Image
               src={portrait}
-              alt="Elias Clovis Gonçalves dos Santos Neto, dono e sócio-administrador da Garagem"
+              alt="Elias Clovis Gonçalves dos Santos Neto, dono e sócio-administrador da Sua Garagem"
               fill
               sizes="(min-width: 1024px) 480px, 100vw"
               quality={90}
@@ -42,7 +42,7 @@ export function FounderSection({
           }
         >
           <p className="font-display text-[11px] font-semibold uppercase tracking-[0.22em] text-brand">
-            Quem está por trás da Garagem?
+            Quem está por trás da Sua Garagem?
           </p>
           <h2
             id="titulo-por-tras"
@@ -66,7 +66,7 @@ export function FounderSection({
               pressão de balcão.
             </p>
             <p>
-              Foi essa estrada que o trouxe à frente da Garagem: uma loja digital
+              Foi essa estrada que o trouxe à frente da Sua Garagem: uma loja digital
               no Espírito Santo, com atendimento em Aracruz, Vitória, Linhares,
               Serra, Vila Velha e região, feita para quem busca seminovo com
               procedência e alguém do
@@ -80,7 +80,7 @@ export function FounderSection({
               decisão.
             </p>
             <p>
-              Por isso a Garagem não é só estoque na tela. É o jeito de Elias de
+              Por isso a Sua Garagem não é só estoque na tela. É o jeito de Elias de
               trabalhar: perto de quem compra, disponível todos os dias e
               comprometido com o resultado de cada negócio — um cliente de cada
               vez.

@@ -84,7 +84,7 @@ export const SERVICE_CITIES = [
     name: "Linhares",
     metaDescription:
       "Seminovos para Linhares e norte do ES, com procedência e atendimento online da Sua Garagem. Veja o estoque, peça vídeo no WhatsApp e feche sem viajar à toa.",
-    lead: "De Linhares à capital são horas na BR-101. Por isso a Garagem mostra o seminovo no site e no WhatsApp antes de você sair — para quem está no Centro, no Araçá, no Interlagos ou no interior do município.",
+    lead: "De Linhares à capital são horas na BR-101. Por isso a Sua Garagem mostra o seminovo no site e no WhatsApp antes de você sair — para quem está no Centro, no Araçá, no Interlagos ou no interior do município.",
     paragraphs: [
       "Linhares é polo do norte capixaba: Rio Doce, estrada, trabalho no campo e na indústria. A Sua Garagem atende essa distância no digital. Você vê ficha, quilometragem e fotos, pede vídeo e só combina o encontro quando o negócio estiver alinhado.",
       "O atendimento roda todos os dias, das 8h às 23h. Troca, financiamento e documentação entram na mesma conversa — sem pressão de balcão e sem inventar loja física na cidade.",
@@ -220,7 +220,7 @@ export const SERVICE_CITIES = [
     name: "Cachoeiro de Itapemirim",
     metaDescription:
       "Seminovos para Cachoeiro de Itapemirim e sul do ES. Veja o estoque da Sua Garagem no site, peça vídeo no WhatsApp e feche sem viajar à toa — atendimento das 8h às 23h.",
-    lead: "De Cachoeiro à Grande Vitória são horas na BR-101. Por isso a Garagem mostra o seminovo no site e no WhatsApp antes de você sair — Centro, Independência, Recanto ou distrito.",
+    lead: "De Cachoeiro à Grande Vitória são horas na BR-101. Por isso a Sua Garagem mostra o seminovo no site e no WhatsApp antes de você sair — Centro, Independência, Recanto ou distrito.",
     paragraphs: [
       "Cachoeiro é polo do sul capixaba: mármore, comércio e estrada. A Sua Garagem atende essa distância no digital. Você vê ficha, quilometragem e fotos, pede vídeo e só combina o encontro quando o negócio estiver alinhado.",
       "O atendimento roda todos os dias, das 8h às 23h. Troca, financiamento e documentação entram na mesma conversa — sem inventar loja física na cidade e sem pressão de balcão.",
