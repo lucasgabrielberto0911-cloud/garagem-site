@@ -113,6 +113,17 @@ body {
     }
   }
 
+  /* Banner de cookies no rodapé: folga para CTAs do fim da página. */
+  body:has(.site-consent) .pb-site-nav {
+    padding-bottom: calc(4.5rem + 9.25rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 1024px) {
+    body:has(.site-consent) .pb-site-nav {
+      padding-bottom: 0;
+    }
+  }
+
   /* Folga do conteúdo acima da bottom nav do admin. */
   .pb-admin-nav {
     padding-bottom: calc(var(--admin-nav-h) + 1rem);
