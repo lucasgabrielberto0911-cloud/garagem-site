@@ -64,3 +64,21 @@ test("CSV escapa aspas e vírgulas", () => {
   assert.match(csv, new RegExp(VEHICLE_CUID));
   assert.match(csv, /82900\.00 BRL/);
 });
+
+test("HR-V com versão Automático e campo Manual vai AUTOMATIC no feed", () => {
+  const row = catalogVehicleRow(
+    {
+      ...sample,
+      brand: "Honda",
+      model: "HR-V",
+      version: "EX 1.8 FLEX ONE Automático",
+      transmission: "Manual",
+      yearModel: 2018,
+    },
+    "https://www.suagaragem.net",
+  );
+  assert.ok(row);
+  assert.equal(row.transmission, "AUTOMATIC");
+  assert.match(row.title, /Honda HR-V EX 1\.8 Flex ONE 2018/);
+  assert.doesNotMatch(row.title, /Manual/);
+});

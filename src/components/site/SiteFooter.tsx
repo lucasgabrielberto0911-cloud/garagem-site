@@ -13,16 +13,23 @@ import {
   PHONES,
   SECONDARY_LINKS,
   SERVICES,
+  configuredMapsUrl,
+  emailChannelCopy,
   telUrl,
   whatsappUrl,
-  type SiteConfig,
 } from "@/lib/site";
 import { SERVICE_CITIES } from "@/lib/seo";
+import { getGoogleReviews } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 
 export async function SiteFooter() {
-  const site: SiteConfig = await getPublicSite();
+  const [site, google] = await Promise.all([
+    getPublicSite(),
+    getGoogleReviews(),
+  ]);
   const year = new Date().getFullYear();
+  const mapsUrl = configuredMapsUrl(site.googleMapsUrl, google.profileUrl);
+  const emailCopy = emailChannelCopy(site.email);
 
   return (
     <footer className="border-t border-white/10 bg-ink">
@@ -58,6 +65,17 @@ export async function SiteFooter() {
               <IconInstagram className="h-4 w-4" />
               {site.instagram}
             </a>
+            {mapsUrl ? (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex min-h-[40px] items-center gap-2 text-sm text-muted transition hover:text-cream"
+              >
+                <IconMapPin className="h-4 w-4" />
+                Google Maps
+              </a>
+            ) : null}
           </div>
 
           <div className="hidden sm:block">
@@ -131,7 +149,10 @@ export async function SiteFooter() {
                     className="inline-flex min-h-[36px] items-center gap-2 transition hover:text-cream"
                   >
                     <IconPhone className="h-4 w-4 shrink-0 text-brand" />
-                    <span>{phone.label}</span>
+                    <span>
+                      {phone.kind === "alternate" ? `${phone.note}: ` : null}
+                      {phone.label}
+                    </span>
                   </a>
                 </li>
               ))}
@@ -150,9 +171,25 @@ export async function SiteFooter() {
                   className="inline-flex min-h-[36px] items-center gap-2 transition hover:text-cream"
                 >
                   <IconMail className="h-4 w-4 shrink-0 text-brand" />
-                  <span>{site.email}</span>
+                  <span className="flex flex-col">
+                    <span>{site.email}</span>
+                    <span className="text-[11px] text-muted">{emailCopy.hint}</span>
+                  </span>
                 </a>
               </li>
+              {mapsUrl ? (
+                <li>
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-[36px] items-center gap-2 transition hover:text-cream"
+                  >
+                    <IconMapPin className="h-4 w-4 shrink-0 text-brand" />
+                    <span>Google Maps</span>
+                  </a>
+                </li>
+              ) : null}
               <li className="flex items-start gap-2">
                 <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
                 <span>{site.address}</span>
@@ -174,6 +211,7 @@ export async function SiteFooter() {
               className="flex min-h-[48px] items-center justify-center gap-2 border border-white/10 bg-asphalt/50 text-sm text-cream touch-manipulation"
             >
               <IconPhone className="h-4 w-4 text-brand" />
+              {phone.kind === "alternate" ? `${phone.note}: ` : null}
               {phone.label}
             </a>
           ))}

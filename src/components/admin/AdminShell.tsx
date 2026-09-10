@@ -197,7 +197,7 @@ export function AdminShell({
       <Link href="/admin" className="flex items-center gap-2.5">
         <Image
           src="/branding/logo-wordmark.webp"
-          alt="Garagem"
+          alt="Sua Garagem"
           width={160}
           height={29}
           className="h-7 w-auto"
@@ -222,7 +222,7 @@ export function AdminShell({
         <Link href="/admin" className="flex min-h-[44px] items-center gap-2 touch-manipulation">
           <Image
             src="/branding/logo-wordmark.webp"
-            alt="Garagem"
+            alt="Sua Garagem"
             width={140}
             height={25}
             className="h-6 w-auto"
@@ -273,7 +273,7 @@ export function AdminShell({
               <Link href="/admin" className="flex min-h-[44px] items-center gap-2.5">
                 <Image
                   src="/branding/logo-wordmark.webp"
-                  alt="Garagem"
+                  alt="Sua Garagem"
                   width={160}
                   height={29}
                   className="h-7 w-auto"

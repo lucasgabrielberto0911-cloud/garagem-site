@@ -45,7 +45,7 @@ export function buildLeadWebhookBody(payload: LeadNotifyPayload) {
 
 export function buildLeadNotifyEmail(payload: LeadNotifyPayload) {
   const lines = [
-    "Novo lead de venda/troca no site da Garagem.",
+    "Novo lead de venda/troca no site da Sua Garagem.",
     "",
     `Nome: ${payload.name}`,
     `Telefone: ${payload.phone}`,

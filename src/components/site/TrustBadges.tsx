@@ -6,8 +6,8 @@ import {
 } from "@/components/site/icons";
 
 const BADGES = [
+  { Icon: IconShieldCheck, label: "Garantia 3 meses · motor e câmbio" },
   { Icon: IconClipboardCheck, label: "Vistoria Completa" },
-  { Icon: IconShieldCheck, label: "Procedência Garantida" },
   { Icon: IconGauge, label: "KM Verificado" },
   { Icon: IconFileText, label: "Documentação OK" },
 ] as const;

@@ -4,8 +4,9 @@ import { getNewLeadsBadgeCount } from "@/lib/admin-stats";
 import { getSession } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Painel | Garagem",
-  robots: { index: false, follow: false },
+  title: "Painel | Sua Garagem",
+  robots: { index: false, follow: false, nocache: true },
+  alternates: { canonical: "/admin" },
 };
 
 export default async function AdminLayout({

@@ -94,19 +94,23 @@ export function PageHeader({
   eyebrow,
   title,
   description,
+  headingAs = "h1",
 }: {
   eyebrow: string;
   title: string;
   description?: string;
+  /** Use `p` no loading.tsx para não duplicar H1 com a página. */
+  headingAs?: "h1" | "p";
 }) {
+  const Heading = headingAs;
   return (
     <header className="text-center">
       <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
         {eyebrow}
       </p>
-      <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-cream sm:text-4xl">
+      <Heading className="mt-2 font-display text-3xl font-bold tracking-tight text-cream sm:text-4xl">
         {title}
-      </h1>
+      </Heading>
       <div className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
       {description ? (
         <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">

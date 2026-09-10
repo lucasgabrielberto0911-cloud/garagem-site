@@ -1,4 +1,5 @@
 import { VehicleCard, type VehicleCardData } from "@/components/site/VehicleCard";
+import { featuredBadgeIds } from "@/lib/vehicle-display";
 
 /**
  * Grade: 2 por linha no mobile (1 fica espaçoso demais), 3 no desktop.
@@ -22,6 +23,7 @@ export function VehicleGrid({
   priorityCount = 0,
   returnTo,
   desktopCols = 3,
+  destaqueLimit = 3,
 }: {
   vehicles: VehicleCardData[];
   /** Quantos cards iniciais recebem `priority` (LCP). */
@@ -30,7 +32,10 @@ export function VehicleGrid({
   returnTo?: string;
   /** 4 só na home (sem sidebar). Estoque permanece em 3. */
   desktopCols?: 3 | 4;
+  /** 0 = nenhum selo Destaque (ex.: bloco que já é “destaques”). */
+  destaqueLimit?: number;
 }) {
+  const destaqueIds = featuredBadgeIds(vehicles, destaqueLimit);
   return (
     <div
       className={`mx-auto grid w-full gap-2.5 sm:gap-4 ${layoutForCount(vehicles.length, desktopCols)}`}
@@ -41,6 +46,7 @@ export function VehicleGrid({
             vehicle={vehicle}
             priority={index < priorityCount}
             returnTo={returnTo}
+            showDestaque={destaqueIds.has(vehicle.id)}
           />
         </div>
       ))}

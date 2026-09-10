@@ -20,7 +20,7 @@ const BUDGETS = [
  */
 export function WantedVehicleCta({
   title = "Não achou o que procura?",
-  description = "Diga o que você quer que a gente avisa assim que entrar no estoque — geralmente antes de anunciar.",
+  description = "Diga o que você quer que a gente avise assim que entrar no estoque — geralmente antes de anunciar.",
   initialWanted = "",
 }: {
   title?: string;

@@ -72,6 +72,27 @@ export function SellForm({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
+    const nextErrors: Record<string, string> = {};
+    const name = String(data.get("name") ?? "").trim();
+    const phoneDigits = String(data.get("phone") ?? "").replace(/\D/g, "");
+    const brand = String(data.get("brand") ?? "").trim();
+    const model = String(data.get("model") ?? "").trim();
+    const year = String(data.get("year") ?? "").trim();
+    const plate = String(data.get("plate") ?? "").trim();
+    if (name.length < 3) nextErrors.name = "Informe seu nome completo.";
+    if (phoneDigits.length < 10) nextErrors.phone = "Informe um WhatsApp com DDD.";
+    if (!brand) nextErrors.brand = "Informe a marca.";
+    if (!model) nextErrors.model = "Informe o modelo.";
+    if (!/^\d{4}$/.test(year)) nextErrors.year = "Informe o ano com 4 dígitos.";
+    if (!plate) nextErrors.plate = "Informe a placa.";
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      const first = Object.keys(nextErrors)[0];
+      window.requestAnimationFrame(() => {
+        document.getElementById(first)?.focus();
+      });
+      return;
+    }
 
     startTransition(async () => {
       const result = await createSellLead(data);
@@ -318,7 +339,8 @@ export function SellForm({
       <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || photoBusy}
+          aria-busy={isPending}
           className="min-h-[52px] bg-brand px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70"
         >
           {isPending ? "Enviando..." : "Solicitar avaliação"}
@@ -379,7 +401,13 @@ function Field({
         className="mb-2 block text-xs uppercase tracking-wider text-muted"
       >
         {label}
-        {optional ? <span className="ml-1 normal-case">(opcional)</span> : null}
+        {optional ? (
+          <span className="ml-1 normal-case">(opcional)</span>
+        ) : (
+          <span className="ml-1 text-brand" aria-hidden="true">
+            *
+          </span>
+        )}
       </label>
       {decorated}
       {error ? (

@@ -18,13 +18,17 @@ export const DEFAULT_GOOGLE_REVIEWS: GoogleReviews = {
 /** @deprecated Use DEFAULT_GOOGLE_REVIEWS ou getGoogleReviews(). */
 export const GOOGLE_REVIEWS = DEFAULT_GOOGLE_REVIEWS;
 
+/** URL pública do Google (Maps / Meu Negócio) — vazia se não estiver configurada. */
+export function publicGoogleUrl(reviews?: GoogleReviews | null) {
+  const url = (reviews?.profileUrl ?? "").trim();
+  if (!url || url.includes("PREENCHER") || url.includes("[")) return "";
+  return /^https?:\/\//i.test(url) ? url : "";
+}
+
 export function googleReviewsReady(reviews: GoogleReviews = DEFAULT_GOOGLE_REVIEWS) {
-  const url = reviews.profileUrl.trim();
   return (
     reviews.rating > 0 &&
     reviews.reviewCount > 0 &&
-    url.length > 0 &&
-    !url.includes("PREENCHER") &&
-    /^https?:\/\//i.test(url)
+    Boolean(publicGoogleUrl(reviews))
   );
 }

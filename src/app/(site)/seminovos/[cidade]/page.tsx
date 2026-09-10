@@ -14,7 +14,6 @@ import {
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import {
   SERVICE_CITIES,
-  absoluteUrl,
   breadcrumbJsonLd,
   buildPageMetadata,
   faqJsonLd,
@@ -112,7 +111,7 @@ export default async function SeminovosCidadePage({
 
           <aside className="border border-white/10 bg-ink p-5 sm:p-6">
             <p className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
-              Fale com a Garagem
+              Fale com a Sua Garagem
             </p>
             <p className="mt-2 text-sm text-muted">
               Conte o que você procura em {city.name} — modelo, faixa de preço
@@ -216,9 +215,6 @@ export default async function SeminovosCidadePage({
               Quero vender ou trocar
             </ButtonLink>
           </ActionRow>
-          <p className="mt-4 text-center text-xs text-muted">
-            Página de referência local: {absoluteUrl(path)}
-          </p>
         </div>
       </Container>
     </div>

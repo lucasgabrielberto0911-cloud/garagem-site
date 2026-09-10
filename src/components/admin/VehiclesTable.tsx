@@ -28,7 +28,7 @@ import { expectedMargin, hasCostBasis } from "@/lib/vehicle-ops";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import type { AdminVehicleListItem, VehiclesTab } from "@/lib/admin-vehicles";
-import { daysInStock, isStaleListing } from "@/lib/stock-quality";
+import { daysInStock, isStaleListing, transmissionConflictAlert } from "@/lib/stock-quality";
 import {
   deleteVehicle,
   duplicateVehicle,
@@ -68,6 +68,11 @@ function vehicleQualityAlerts(vehicle: VehicleRow) {
   if (isStaleListing(vehicle.createdAt, vehicle.status)) {
     alerts.push(`Parado há ${daysInStock(vehicle.createdAt)} dias`);
   }
+  const conflict = transmissionConflictAlert(
+    vehicle.version,
+    vehicle.transmission,
+  );
+  if (conflict) alerts.push(conflict);
   return alerts;
 }
 

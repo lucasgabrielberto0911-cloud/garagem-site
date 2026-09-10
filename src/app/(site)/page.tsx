@@ -92,6 +92,7 @@ export default async function HomePage() {
                 message: item.message,
                 rating: item.rating,
               })),
+            siteContent.google,
           )}
         />
       ) : null}
@@ -133,23 +134,36 @@ export default async function HomePage() {
               aria-hidden="true"
             />
             <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-cream/80 sm:mt-4 sm:text-base lg:mt-5">
-              Seminovos revisados em {site.region} e região. Compare o estoque
-              no site, peça ajuda no assistente e feche no WhatsApp.
+              Seminovos revisados em {site.region} e região. Veja o estoque,
+              chame no WhatsApp ou peça uma ajuda rápida no assistente.
             </p>
-          </div>
-
-          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6 lg:mt-8">
-            <HeroSearch brands={brands} />
           </div>
 
           <ActionRow className="hero-cta mt-5 w-full sm:mt-6 lg:mt-7 sm:w-auto">
             <ButtonLink href="/estoque" size="lg">
               Ver estoque
             </ButtonLink>
-            <ChatOpenButton source="home-hero" size="lg">
-              Quero ajuda para escolher
-            </ChatOpenButton>
+            <WhatsAppButton
+              size="lg"
+              trackingLabel="home-hero"
+              message={WHATSAPP_MESSAGES.help}
+            >
+              Falar no WhatsApp
+            </WhatsAppButton>
           </ActionRow>
+          <p className="hero-cta mt-3">
+            <ChatOpenButton
+              source="home-hero"
+              size="md"
+              className="min-h-11 border-0 px-3 text-[11px] font-medium normal-case tracking-normal text-cream/75 hover:bg-transparent hover:text-cream"
+            >
+              Ajuda pra escolher
+            </ChatOpenButton>
+          </p>
+
+          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6 lg:mt-8">
+            <HeroSearch brands={brands} />
+          </div>
 
           <div className="hero-stats mx-auto mt-5 w-full max-w-2xl sm:mt-8 lg:mt-8">
             <Suspense fallback={<StatsBarSkeleton />}>
@@ -192,6 +206,7 @@ export default async function HomePage() {
               vehicles={featured}
               priorityCount={2}
               desktopCols={4}
+              destaqueLimit={0}
             />
           )}
         </div>
@@ -246,7 +261,7 @@ export default async function HomePage() {
         <SectionHeading
           eyebrow="Depoimentos"
           title="Quem compra, indica"
-          description="Avaliações de clientes que fecharam negócio com a gente."
+          description="Depoimentos enviados à loja. Não substituem avaliações do Google."
         />
         <div className="flex justify-center">
           <GoogleReviewsBadge reviews={siteContent.google} className="mt-5" />
@@ -368,7 +383,7 @@ export default async function HomePage() {
           aria-hidden="true"
         />
         <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-          Compare aqui no assistente. Simulação de parcela, avaliação de troca e
+          Compare no estoque ou no assistente. Simulação de parcela, CET e
           fechamento ficam com o consultor no WhatsApp.
         </p>
         <ActionRow className="mt-9">

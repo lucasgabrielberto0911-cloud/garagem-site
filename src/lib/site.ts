@@ -5,13 +5,23 @@
  * Telefones ficam em formato internacional (55 + DDD + número) para o WhatsApp.
  */
 export const PHONES = [
-  { label: "(27) 99633-0706", digits: "5527996330706" },
-  { label: "(27) 99956-6161", digits: "5527999566161" },
+  {
+    label: "(27) 99633-0706",
+    digits: "5527996330706",
+    kind: "whatsapp",
+    note: "WhatsApp",
+  },
+  {
+    label: "(27) 99956-6161",
+    digits: "5527999566161",
+    kind: "alternate",
+    note: "Telefone alternativo",
+  },
 ] as const;
 
 export const site = {
-  name: "Garagem",
-  legalName: "Garagem Motocycles",
+  name: "Sua Garagem",
+  legalName: "Garagem Motorcycle Ltda",
   cnpj: "47.740.076/0001-17",
   url: "https://www.suagaragem.net",
   tagline:
@@ -30,6 +40,12 @@ export const site = {
   hoursWeekdays: "08:00 – 23:00",
   hoursSaturday: "08:00 – 23:00",
   hoursSunday: "08:00 – 23:00",
+  /**
+   * URL pública do Google Maps / Meu Negócio. Vazio de propósito:
+   * preencha NEXT_PUBLIC_GOOGLE_MAPS_URL ou Admin → Site (googleProfileUrl).
+   * Não inventar link.
+   */
+  googleMapsUrl: "",
 } as const;
 
 /** Config pública (defaults + overrides do painel). */
@@ -49,20 +65,58 @@ export function isPhysicalAddress(value: string) {
   );
 }
 
+export function isConsumerMailbox(email: string) {
+  return /@(gmail|hotmail|outlook|yahoo|icloud)\./i.test(email.trim());
+}
+
+/** E-mail de contato: Gmail não é apresentado como canal institucional. */
+export function emailChannelCopy(email: string) {
+  if (isConsumerMailbox(email)) {
+    return {
+      label: "E-mail",
+      hint: "Canal complementar — o WhatsApp responde mais rápido.",
+      hrefLabel: "Enviar e-mail",
+    };
+  }
+  return {
+    label: "E-mail",
+    hint: "Resposta em horário comercial, pelo endereço da loja.",
+    hrefLabel: "Enviar e-mail",
+  };
+}
+
+export function configuredMapsUrl(
+  mapsUrl?: string | null,
+  googleProfileUrl?: string | null,
+) {
+  const candidates = [
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_URL,
+    mapsUrl,
+    googleProfileUrl,
+    site.googleMapsUrl,
+  ];
+  for (const raw of candidates) {
+    const url = (raw ?? "").trim();
+    if (!url || url.includes("PREENCHER") || url.includes("[")) continue;
+    if (/^https?:\/\//i.test(url)) return url;
+  }
+  return "";
+}
+
 export const WHATSAPP_MESSAGES = {
-  general: "Olá! Vi o site da Garagem e gostaria de mais informações.",
-  help: "Olá! Vi o site da Garagem e quero ajuda para escolher um seminovo.",
+  general: `Olá! Vi o site da ${site.name} e gostaria de mais informações.`,
+  help: `Olá! Vi o site da ${site.name} e quero ajuda para escolher um seminovo.`,
   sell: "Olá! Gostaria de avaliar meu veículo para venda/troca.",
   visit:
     "Olá! Gostaria de conhecer o estoque e receber mais informações pelo WhatsApp.",
   vehicle: (label: string, isMoto = false) =>
-    `Olá! Tenho interesse ${isMoto ? "na" : "no"} ${label} que vi no site da Garagem.`,
+    `Olá! Tenho interesse ${isMoto ? "na" : "no"} ${label} que vi no site da ${site.name}.`,
   vehicleVisit: (label: string, isMoto = false) =>
     `Olá! Gostaria de agendar para ver ${isMoto ? "a" : "o"} ${label} de perto.`,
   vehicleVideo: (label: string, isMoto = false) =>
     `Olá! Podem me mandar um vídeo ${isMoto ? "da" : "do"} ${label} que está no site?`,
   vehicleFinance: (label: string, isMoto = false) =>
-    `Olá! Gostaria de opções de financiamento para ${isMoto ? "a" : "o"} ${label}.`,
+    `Olá! Gostaria de opções de financiamento para ${isMoto ? "a" : "o"} ${label}. Simulação sujeita a análise de crédito e CET.`,
   vehicleTrade: (label: string, isMoto = false) =>
     `Olá! Tenho interesse ${isMoto ? "na" : "no"} ${label} e gostaria de colocar meu veículo na troca.`,
   wanted: (detail?: string) => {
@@ -118,5 +172,5 @@ export const SERVICES = [
   { label: "Compra", href: "/estoque" },
   { label: "Venda", href: "/vender" },
   { label: "Troca", href: "/vender" },
-  { label: "Financiamento", href: "/contato" },
+  { label: "Financiamento", href: "/faq#financiamento" },
 ] as const;

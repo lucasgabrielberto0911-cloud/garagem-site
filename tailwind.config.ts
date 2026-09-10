@@ -17,7 +17,7 @@ const config: Config = {
           orange: "#FF8A00",
           yellow: "#FFC72C",
         },
-        muted: "#8A8A8E",
+        muted: "#B4B4BA",
         background: "var(--background)",
         foreground: "var(--foreground)",
       },

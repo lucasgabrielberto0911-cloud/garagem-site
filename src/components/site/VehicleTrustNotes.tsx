@@ -7,7 +7,7 @@ import {
 const NOTES = [
   {
     Icon: IconShieldCheck,
-    label: "Garantia de 3 meses",
+    label: "3 meses (motor e câmbio)",
   },
   {
     Icon: IconHandshake,

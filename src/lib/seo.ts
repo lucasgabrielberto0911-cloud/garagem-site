@@ -1,10 +1,24 @@
 import type { Metadata } from "next";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import {
+  publicGoogleUrl,
+  type GoogleReviews,
+} from "@/lib/google-reviews";
+import {
   SERVICE_CITIES,
   type ServiceCity,
 } from "@/lib/service-cities";
-import { PHONES, isPhysicalAddress, site, type SiteConfig } from "@/lib/site";
+import {
+  PHONES,
+  configuredMapsUrl,
+  isPhysicalAddress,
+  site,
+  type SiteConfig,
+} from "@/lib/site";
+import {
+  buildVehicleFullLabel,
+  formatVehicleDisplay,
+} from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export {
@@ -94,6 +108,7 @@ const clampRating = (rating: number) =>
 export function localBusinessJsonLd(
   config: SiteConfig = site,
   reviews?: ReviewInput[],
+  google?: GoogleReviews,
 ) {
   const street = isPhysicalAddress(config.address)
     ? real(config.address)
@@ -114,7 +129,13 @@ export function localBusinessJsonLd(
     logo: absoluteUrl("/icons/icon-512.png"),
     description: config.tagline,
     telephone: PHONES.map((phone) => `+${phone.digits}`),
-    sameAs: [config.instagramUrl],
+    sameAs: [
+      config.instagramUrl,
+      configuredMapsUrl(
+        "googleMapsUrl" in config ? config.googleMapsUrl : "",
+        publicGoogleUrl(google),
+      ),
+    ].filter(Boolean),
     priceRange: "$$",
     areaServed: [
       {
@@ -275,16 +296,11 @@ export function itemListJsonLd(
     url: absoluteUrl(opts?.path ?? "/estoque"),
     numberOfItems: items.length,
     itemListElement: items.map((vehicle, index) => {
-      const brand = formatBrandName(vehicle.brand);
-      const model = formatModelName(vehicle.model);
-      const name = `${brand} ${model}${
-        vehicle.version ? ` ${vehicle.version}` : ""
-      } ${vehicle.yearModel}`.replace(/\s+/g, " ").trim();
       return {
         "@type": "ListItem",
         position: index + 1,
         url: absoluteUrl(vehiclePath(vehicle)),
-        name,
+        name: buildVehicleFullLabel(vehicle),
       };
     }),
   };
@@ -309,10 +325,9 @@ export function vehicleJsonLd(vehicle: {
 }) {
   const brand = formatBrandName(vehicle.brand);
   const model = formatModelName(vehicle.model);
-  const name = `${brand} ${model}${
-    vehicle.version ? ` ${vehicle.version}` : ""
-  } ${vehicle.yearModel}`.replace(/\s+/g, " ").trim();
-  const path = vehiclePath(vehicle);
+  const display = formatVehicleDisplay(vehicle);
+  const name = display.fullLabel;
+  const path = display.path;
 
   return {
     "@context": "https://schema.org",
@@ -322,7 +337,7 @@ export function vehicleJsonLd(vehicle: {
     model,
     vehicleModelDate: String(vehicle.yearModel),
     productionDate: String(vehicle.year),
-    ...(vehicle.color ? { color: vehicle.color } : {}),
+    ...(display.color ? { color: display.color } : {}),
     ...(vehicle.description ? { description: vehicle.description } : {}),
     image: vehicle.photos.map((photo) => photo.url),
     url: absoluteUrl(path),
@@ -332,7 +347,7 @@ export function vehicleJsonLd(vehicle: {
       unitCode: "KMT",
     },
     fuelType: vehicle.fuel,
-    vehicleTransmission: vehicle.transmission,
+    vehicleTransmission: display.transmission,
     itemCondition: "https://schema.org/UsedCondition",
     offers: {
       "@type": "Offer",

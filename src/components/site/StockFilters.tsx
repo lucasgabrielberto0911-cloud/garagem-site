@@ -688,7 +688,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
         {/* Mobile/tablet: ordenação em faixa horizontal. */}
         <div className="mt-3 lg:hidden">
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-hide">
+          <p className="mb-1 px-1 text-[10px] uppercase tracking-wider text-muted">
+            Deslize para ordenar
+          </p>
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [mask-image:linear-gradient(to_right,black_86%,transparent)]">
             {SORT_OPTIONS.map((option) => (
               <button
                 key={option.value}

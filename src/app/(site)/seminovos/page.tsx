@@ -11,7 +11,6 @@ import {
 import { site } from "@/lib/site";
 import {
   SERVICE_CITIES,
-  absoluteUrl,
   breadcrumbJsonLd,
   buildPageMetadata,
 } from "@/lib/seo";
@@ -22,7 +21,7 @@ export const revalidate = 3600;
 export const metadata: Metadata = buildPageMetadata({
   title: `Seminovos no Espírito Santo | ${site.name}`,
   description:
-    "Seminovos com procedência para Aracruz, Grande Vitória, Linhares, Guarapari, Cachoeiro, Colatina e região. Estoque no site e atendimento da Garagem pelo WhatsApp, todos os dias das 8h às 23h.",
+    "Seminovos com procedência para Aracruz, Grande Vitória, Linhares, Guarapari, Cachoeiro, Colatina e região. Estoque no site e atendimento da Sua Garagem pelo WhatsApp, todos os dias das 8h às 23h.",
   path: "/seminovos",
 });
 
@@ -43,7 +42,7 @@ export default async function SeminovosHubPage() {
         <PageHeader
           eyebrow={`${site.state} · loja digital`}
           title="Seminovos no Espírito Santo"
-          description="A Garagem atende o Estado pelo site e WhatsApp — sem ponto físico obrigatório. Escolha a cidade para ver o estoque com texto local, ou vá direto aos anúncios."
+          description="A Sua Garagem atende o Estado pelo site e WhatsApp — sem ponto físico obrigatório. Escolha a cidade para ver o estoque com texto local, ou vá direto aos anúncios."
         />
 
         <nav aria-label="Você está aqui" className="mt-4 text-xs text-muted">
@@ -119,9 +118,6 @@ export default async function SeminovosHubPage() {
               Quero vender ou trocar
             </ButtonLink>
           </ActionRow>
-          <p className="mt-4 text-center text-xs text-muted">
-            Hub local: {absoluteUrl(path)}
-          </p>
         </div>
       </Container>
     </div>

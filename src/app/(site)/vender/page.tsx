@@ -81,11 +81,11 @@ export default async function VenderPage({
 
         <div className="mt-10 lg:mt-12 lg:grid lg:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] lg:items-start lg:gap-10 xl:gap-14">
           <aside className="lg:sticky lg:top-24">
-            <ul className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide lg:flex-col lg:overflow-visible lg:gap-5">
+            <ul className="step-scroll lg:flex-col">
               {STEPS.map(({ Icon, title, text }) => (
                 <li
                   key={title}
-                  className="flex w-[78%] max-w-xs shrink-0 flex-col items-center border border-white/10 bg-ink/60 p-5 text-center sm:p-6 lg:w-auto lg:max-w-none lg:items-start lg:p-6 lg:text-left"
+                  className="flex w-[72%] max-w-xs shrink-0 flex-col items-center border border-white/10 bg-ink/60 p-5 text-center sm:p-6 lg:w-auto lg:max-w-none lg:items-start lg:p-6 lg:text-left"
                 >
                   <Icon className="h-7 w-7 text-brand" />
                   <h2 className="mt-4 font-display text-sm font-semibold uppercase tracking-wide text-cream">
@@ -97,6 +97,9 @@ export default async function VenderPage({
                 </li>
               ))}
             </ul>
+            <p className="mt-2 text-center text-[11px] text-muted lg:hidden">
+              Deslize para ver os passos
+            </p>
           </aside>
 
           <section className="mt-10 lg:mt-0">

@@ -52,6 +52,8 @@ export const PUBLIC_VEHICLE_CARD_SELECT = {
   fuel: true,
   status: true,
   featured: true,
+  color: true,
+  updatedAt: true,
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,
@@ -72,6 +74,8 @@ const PUBLIC_VEHICLE_CARD_SELECT_LEGACY = {
   fuel: true,
   status: true,
   featured: true,
+  color: true,
+  updatedAt: true,
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,
@@ -103,6 +107,7 @@ export const PUBLIC_VEHICLE_DETAIL_SELECT = {
   status: true,
   featured: true,
   createdAt: true,
+  updatedAt: true,
   photos: {
     orderBy: { order: "asc" as const },
     select: { id: true, url: true, thumbnailUrl: true },
@@ -132,6 +137,7 @@ const PUBLIC_VEHICLE_DETAIL_SELECT_LEGACY = {
   status: true,
   featured: true,
   createdAt: true,
+  updatedAt: true,
   photos: {
     orderBy: { order: "asc" as const },
     select: { id: true, url: true },
@@ -181,6 +187,7 @@ export type PublicVehicleDetail = {
   status: string;
   featured: boolean;
   createdAt: Date;
+  updatedAt?: Date;
   photos: Array<{ id: string; url: string; thumbnailUrl?: string | null }>;
 };
 
@@ -811,6 +818,7 @@ function testimonialsFromSeed() {
     photoUrl: null as string | null,
     rating: item.rating,
     vehicleLabel: item.vehicleLabel ?? null,
+    createdAt: null as Date | null,
   }));
 }
 
@@ -822,6 +830,7 @@ const TESTIMONIAL_SELECT = {
   photoUrl: true,
   rating: true,
   vehicleLabel: true,
+  createdAt: true,
 } as const;
 
 const TESTIMONIAL_SELECT_LEGACY = {
@@ -831,6 +840,7 @@ const TESTIMONIAL_SELECT_LEGACY = {
   message: true,
   photoUrl: true,
   vehicleLabel: true,
+  createdAt: true,
 } as const;
 
 async function fetchPublishedTestimonials(take: number) {

@@ -42,7 +42,7 @@ const BOOT_SCRIPT = `
   }
   var reduced = false;
   try { reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
-  window.setTimeout(hide, force ? 3500 : reduced ? 200 : 800);
+  window.setTimeout(hide, force ? 1200 : reduced ? 120 : 280);
   window.addEventListener("load", function(){ window.setTimeout(hide, 160); }, { once: true });
 })();
 `;
@@ -51,7 +51,7 @@ export function BootSplash() {
   return (
     <>
       <div id="garagem-boot" className="garagem-boot" aria-hidden="true">
-        <BrandSplash label="Seminovos com procedência" />
+        <BrandSplash />
       </div>
       <script
         id="garagem-boot-script"

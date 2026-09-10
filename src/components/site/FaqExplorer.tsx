@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaqAccordion } from "@/components/site/FaqAccordion";
 import {
   FAQ_CATEGORIES,
@@ -12,6 +12,13 @@ import { IconSearch } from "@/components/site/icons";
 export function FaqExplorer({ items }: { items: FaqItem[] }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<FaqCategory | "todas">("todas");
+
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    if (hash === "financiamento") {
+      setCategory("financiamento");
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
