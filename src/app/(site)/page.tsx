@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { JsonLd } from "@/components/JsonLd";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
+import { SiteWordmark } from "@/components/site/SiteWordmark";
 import { FaqAccordion } from "@/components/site/FaqAccordion";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { HeroSearch } from "@/components/site/HeroSearch";
@@ -111,18 +112,8 @@ export default async function HomePage() {
         />
 
         <Container className="flex flex-col items-center justify-center py-6 text-center sm:py-10 lg:py-14">
-          <div>
-            {/* LCP: WebP nativo, sem wrapper do next/image (cota Hobby). */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/branding/logo-wordmark.webp"
-              alt={site.name}
-              width={480}
-              height={86}
-              fetchPriority="high"
-              decoding="async"
-              className="mx-auto h-auto w-[min(70vw,260px)] sm:w-[min(58vw,360px)] lg:w-[380px]"
-            />
+          <div className="hero-brand">
+            <SiteWordmark size="hero" priority className="mx-auto" />
           </div>
 
           <div className="hero-text mt-4 sm:mt-6 lg:mt-8">

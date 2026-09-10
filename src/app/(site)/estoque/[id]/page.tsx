@@ -28,6 +28,7 @@ import {
   formatVehicleDisplay,
   formatVehicleWhatsAppMessage,
 } from "@/lib/vehicle-display";
+import { isRetiredStockSlug } from "@/lib/retired-listings";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
 import { getVehicleConditions, getGoogleReviews } from "@/lib/site-content";
 import {
@@ -50,7 +51,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const vehicle = await getVehicleByParam(id);
-  if (!vehicle) return { title: `Veículo não encontrado | ${site.name}` };
+  if (!vehicle) {
+    if (isRetiredStockSlug(id)) {
+      return {
+        title: `Anúncio indisponível | ${site.name}`,
+        robots: { index: false, follow: true },
+      };
+    }
+    return { title: `Veículo não encontrado | ${site.name}` };
+  }
 
   const sold = vehicle.status === "vendido";
   const display = formatVehicleDisplay(vehicle);
@@ -118,7 +127,12 @@ export default async function VehicleDetailPage({
 }) {
   const { id } = await params;
   const vehicle = await getVehicleByParam(id);
-  if (!vehicle) notFound();
+  if (!vehicle) {
+    if (isRetiredStockSlug(id)) {
+      permanentRedirect("/estoque");
+    }
+    notFound();
+  }
 
   const canonicalSlug = vehicleSlug(vehicle);
   if (id !== canonicalSlug) {

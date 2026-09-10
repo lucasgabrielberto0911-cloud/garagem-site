@@ -10,6 +10,7 @@ import {
   IconWhatsApp,
 } from "@/components/site/icons";
 import { FavoritesLink } from "@/components/site/FavoritesLink";
+import { SiteWordmark } from "@/components/site/SiteWordmark";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import {
   DESKTOP_NAV_LINKS,
@@ -53,22 +54,16 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-asphalt/98 pt-safe backdrop-blur-md">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-asphalt/98 pt-safe backdrop-blur-md pl-safe pr-safe">
         <div className="mx-auto flex h-[72px] w-full max-w-[90rem] items-center gap-3 px-3 sm:gap-5 sm:px-6 lg:h-[76px] lg:gap-8 lg:px-8 xl:gap-10">
           <Link
             href="/"
             className="flex shrink-0 items-center focus-visible:outline-offset-4"
             aria-label={`${site.name} — página inicial`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- LCP: nativo, cota Hobby sem /_next/image */}
-            <img
-              src="/branding/logo-wordmark.webp"
-              alt={site.name}
-              width={280}
-              height={50}
-              decoding="async"
-              fetchPriority={pathname === "/" ? "low" : "high"}
-              className="h-9 w-auto max-w-[min(46vw,160px)] object-contain object-left sm:max-w-[168px] lg:h-10 lg:max-w-[168px] xl:max-w-[196px]"
+            <SiteWordmark
+              size="header"
+              priority={pathname !== "/"}
             />
           </Link>
 

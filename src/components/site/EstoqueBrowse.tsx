@@ -250,7 +250,7 @@ export function EstoqueBrowse({
           : ""}
       </p>
 
-      <div className="mt-4" aria-live="polite">
+      <div className="mt-4" data-estoque-list="" aria-live="polite">
         {loading ? (
           <VehicleCardSkeletonGrid count={6} />
         ) : (

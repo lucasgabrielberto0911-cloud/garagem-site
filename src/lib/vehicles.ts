@@ -12,6 +12,7 @@ import {
   type StockPageResult,
   type VehicleCardRecord,
 } from "@/lib/stock-query";
+import { colorWhere, formatColorLabel } from "@/lib/vehicle-display";
 
 export {
   STOCK_PAGE_SIZE,
@@ -497,9 +498,7 @@ function buildStockWhere(filters: StockFilters) {
       : {}),
     ...(filters.transmission ? { transmission: filters.transmission } : {}),
     ...(filters.fuel ? { fuel: filters.fuel } : {}),
-    ...(filters.color
-      ? { color: { equals: filters.color, mode: "insensitive" as const } }
-      : {}),
+    ...colorWhere(filters.color),
     ...(filters.accessories && filters.accessories.length > 0
       ? { accessories: { hasEvery: filters.accessories } }
       : {}),
@@ -579,7 +578,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v6"],
+  ["stock-page-v7"],
   PUBLIC_CACHE,
 );
 
@@ -709,7 +708,7 @@ const loadStockFacetsCached = unstable_cache(
       fuels: unique(fuels.map((row) => row.fuel)),
       colors: unique(
         colors
-          .map((row) => row.color?.trim() ?? "")
+          .map((row) => formatColorLabel(row.color))
           .filter(Boolean),
       ),
       accessories: Array.from(accessoryByKey.values()).sort((a, b) =>
@@ -718,7 +717,7 @@ const loadStockFacetsCached = unstable_cache(
       years: years.map((row) => row.yearModel),
     };
   },
-  ["stock-facets-v4"],
+  ["stock-facets-v5"],
   PUBLIC_CACHE,
 );
 

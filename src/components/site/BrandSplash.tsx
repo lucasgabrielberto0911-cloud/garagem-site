@@ -1,3 +1,4 @@
+import { SiteWordmark } from "@/components/site/SiteWordmark";
 import { site } from "@/lib/site";
 
 export function BrandSplash({
@@ -18,16 +19,7 @@ export function BrandSplash({
         <span className="brand-splash-orb brand-splash-orb-1" />
         <span className="brand-splash-orb brand-splash-orb-2" />
       </div>
-      {/* eslint-disable-next-line @next/next/no-img-element -- logo estático da splash */}
-      <img
-        src="/branding/logo-wordmark.webp"
-        alt={site.name}
-        width={480}
-        height={86}
-        decoding="async"
-        fetchPriority={compact ? "low" : "high"}
-        className="brand-splash-logo"
-      />
+      <SiteWordmark size="splash" priority={!compact} />
       <div className="brand-splash-bar" aria-hidden="true" />
       {label ? <p className="brand-splash-copy">{label}</p> : null}
     </div>

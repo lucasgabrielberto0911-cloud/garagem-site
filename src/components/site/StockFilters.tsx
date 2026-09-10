@@ -2,9 +2,11 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { IconClose, IconSearch } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName } from "@/lib/format";
+import { formatColorLabel } from "@/lib/vehicle-display";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
 export type Facets = {
@@ -148,8 +150,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
   useEffect(() => {
     if (!open) return;
     document.body.style.overflow = "hidden";
+    document.body.setAttribute("data-filters-open", "");
     return () => {
       document.body.style.overflow = "";
+      document.body.removeAttribute("data-filters-open");
     };
   }, [open]);
 
@@ -228,7 +232,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
     activeFilters.push({ key: "fuel", label: `Combustível: ${current.fuel}` });
   }
   if (current.color) {
-    activeFilters.push({ key: "color", label: `Cor: ${current.color}` });
+    activeFilters.push({
+      key: "color",
+      label: `Cor: ${formatColorLabel(current.color) || current.color}`,
+    });
   }
   for (const name of splitAccessories(current.accessory)) {
     activeFilters.push({
@@ -603,6 +610,14 @@ export function StockFilters({ facets }: { facets: Facets }) {
               Limpar
             </button>
           ) : null}
+          <ChatOpenButton
+            source="estoque-filtros"
+            prompt="Quero ajuda para escolher no estoque"
+            size="md"
+            className="min-h-[44px] border-white/15 px-3 text-[11px]"
+          >
+            Ajuda
+          </ChatOpenButton>
         </div>
 
         <div className="mt-3 space-y-2.5 lg:hidden">
@@ -691,7 +706,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           <p className="mb-1 px-1 text-[10px] uppercase tracking-wider text-muted">
             Deslize para ordenar
           </p>
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [mask-image:linear-gradient(to_right,black_86%,transparent)]">
+          <div className="chip-scroll -mx-1 px-1">
             {SORT_OPTIONS.map((option) => (
               <button
                 key={option.value}
@@ -783,7 +798,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
                   Faixa de preço
                 </p>
-                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-hide">
+                <div className="chip-scroll -mx-1 px-1">
                   {BUDGET_CHIPS.map((chip) => {
                     const active =
                       (draft.minPrice || "") === chip.minPrice &&
@@ -979,7 +994,7 @@ function ChipRow({
   children: ReactNode;
 }) {
   return (
-    <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-0.5 scrollbar-hide">
+    <div className="chip-scroll -mx-1 px-1">
       <span className="shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted">
         {label}
       </span>
