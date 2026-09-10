@@ -43,6 +43,24 @@ type Fbq = {
 
 type Gtag = (...args: unknown[]) => void;
 
+export type ChatEventName =
+  | "ChatOpen"
+  | "ChatFirstMessage"
+  | "ChatStockShown"
+  | "ChatVehicleClick"
+  | "ChatStockExplore"
+  | "ChatFollowupClick"
+  | "ChatClose"
+  | "ChatLeadCreated";
+
+export type ChatEventParams = {
+  source?: string;
+  intent?: string;
+  vehicle_ids?: string[];
+  result_count?: number;
+  message_count?: number;
+};
+
 declare global {
   interface Window {
     fbq?: Fbq;
@@ -217,6 +235,79 @@ export function trackWhatsAppClick(label: string) {
     event_category: "engagement",
     event_label: label,
   });
+}
+
+const CHAT_GA_EVENTS: Record<ChatEventName, string> = {
+  ChatOpen: "chat_open",
+  ChatFirstMessage: "chat_first_message",
+  ChatStockShown: "chat_stock_shown",
+  ChatVehicleClick: "chat_vehicle_click",
+  ChatStockExplore: "chat_stock_explore",
+  ChatFollowupClick: "chat_followup_click",
+  ChatClose: "chat_close",
+  ChatLeadCreated: "chat_lead_created",
+};
+
+/** Funil do chat: somente categorias e IDs públicos, nunca texto ou PII. */
+export function buildChatEventPayload(params: ChatEventParams = {}) {
+  const payload: Record<string, string | number | string[]> = {};
+  const source = compactString(params.source);
+  const intent = compactString(params.intent);
+  const ids = (params.vehicle_ids ?? [])
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  if (source) payload.source = source.slice(0, 48);
+  if (intent) payload.intent = intent.slice(0, 32);
+  if (ids.length) payload.vehicle_ids = ids;
+  if (
+    typeof params.result_count === "number" &&
+    Number.isFinite(params.result_count)
+  ) {
+    payload.result_count = Math.max(0, Math.round(params.result_count));
+  }
+  if (
+    typeof params.message_count === "number" &&
+    Number.isFinite(params.message_count)
+  ) {
+    payload.message_count = Math.max(0, Math.round(params.message_count));
+  }
+  return payload;
+}
+
+export function trackChatEvent(
+  event: ChatEventName,
+  params: ChatEventParams = {},
+) {
+  if (typeof window === "undefined") return;
+  const payload = buildChatEventPayload(params);
+  const fbq = getFbq();
+  if (fbq) fbq("trackCustom", event, payload);
+  fireGtag(CHAT_GA_EVENTS[event], {
+    event_category: "chat",
+    ...payload,
+  });
+}
+
+export function classifyChatIntent(message: string) {
+  const text = message
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (/financi|parcela|60x|juros|cartao|credito|18x/.test(text)) return "finance";
+  if (/\btroca\b|meu usado|avali/.test(text)) return "trade";
+  if (/garantia/.test(text)) return "warranty";
+  if (/automatic|cvt/.test(text)) return "automatic";
+  if (/\b\d+\s*(mil|k)\b|r\$\s*\d|orcamento|ate\s+\d/.test(text)) {
+    return "budget";
+  }
+  if (/estoque|carro|moto|modelo|marca|hatch|sedan|suv/.test(text)) {
+    return "stock";
+  }
+  if (/avisar|quando chegar|encomend|similar/.test(text)) {
+    return "wanted";
+  }
+  return "other";
 }
 
 export function stockSearchString(input: {

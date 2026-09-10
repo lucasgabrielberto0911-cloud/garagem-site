@@ -49,6 +49,7 @@ export function PhotoLightbox({
   const pinchStart = useRef<{ distance: number; scale: number } | null>(null);
   const lastTapAt = useRef(0);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const thumbStripRef = useRef<HTMLDivElement>(null);
 
   const resetZoom = useCallback(() => {
     setScale(1);
@@ -72,6 +73,19 @@ export function PhotoLightbox({
   useEffect(() => {
     resetZoom();
   }, [safeIndex, resetZoom]);
+
+  useEffect(() => {
+    const strip = thumbStripRef.current;
+    if (!strip) return;
+    const activeBtn = strip.children[safeIndex] as HTMLElement | undefined;
+    if (activeBtn?.scrollIntoView) {
+      activeBtn.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [safeIndex]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -357,9 +371,11 @@ export function PhotoLightbox({
 
         {total > 1 ? (
           <div className="relative z-[2] shrink-0 border-t border-white/10 bg-black/80 px-3 py-3 backdrop-blur sm:px-4 pb-safe">
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            <div
+              ref={thumbStripRef}
+              className="flex gap-2 overflow-x-auto scrollbar-hide"
+            >
               {photos.map((item, itemIndex) => {
-                const near = Math.abs(itemIndex - safeIndex) <= 2;
                 return (
                   <button
                     key={item.id}
@@ -378,16 +394,14 @@ export function PhotoLightbox({
                         : "border-white/15 opacity-55 hover:opacity-100"
                     }`}
                   >
-                    {near ? (
-                      <VehicleImage
-                        src={galleryThumbSrc(item)}
-                        alt={vehiclePhotoAlt(alt, itemIndex, total)}
-                        fill
-                        sizes="96px"
-                        quality={45}
-                        className="object-cover"
-                      />
-                    ) : null}
+                    <VehicleImage
+                      src={galleryThumbSrc(item)}
+                      alt={vehiclePhotoAlt(alt, itemIndex, total)}
+                      fill
+                      sizes="96px"
+                      quality={45}
+                      className="object-cover"
+                    />
                   </button>
                 );
               })}

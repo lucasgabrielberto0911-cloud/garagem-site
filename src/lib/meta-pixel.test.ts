@@ -3,9 +3,12 @@ import { test } from "node:test";
 import { isVehicleCuid } from "./vehicle-slug";
 import {
   META_CATALOG_CONTENT_TYPE,
+  buildChatEventPayload,
   buildCatalogPayload,
+  classifyChatIntent,
   stockSearchString,
   trackAddToWishlist,
+  trackChatEvent,
   trackLead,
   trackSearch,
   trackViewContent,
@@ -151,4 +154,78 @@ test("WhatsAppClick vai para Meta custom e GA4", () => {
     "whatsapp_click",
     { event_category: "engagement", event_label: "float" },
   ]);
+});
+
+test("evento do chat guarda só categorias, contagem e IDs públicos", () => {
+  assert.deepEqual(
+    buildChatEventPayload({
+      source: "home-hero",
+      intent: "budget",
+      vehicle_ids: [" a ", VEHICLE_CUID, "", "b", "c"],
+      result_count: 3.2,
+      message_count: 2,
+    }),
+    {
+      source: "home-hero",
+      intent: "budget",
+      vehicle_ids: ["a", VEHICLE_CUID, "b"],
+      result_count: 3,
+      message_count: 2,
+    },
+  );
+  assert.equal(classifyChatIntent("Automático até 80 mil?"), "automatic");
+  assert.equal(classifyChatIntent("Aceita meu usado na troca?"), "trade");
+  assert.equal(classifyChatIntent("Carros até 70 mil?"), "budget");
+});
+
+test("ChatOpen vai para Meta custom e GA4 sem texto da conversa", () => {
+  const { calls, gtagCalls } = installFbq();
+  trackChatEvent("ChatOpen", { source: "home-hero", message_count: 0 });
+  assert.deepEqual(calls[0], [
+    "trackCustom",
+    "ChatOpen",
+    { source: "home-hero", message_count: 0 },
+  ]);
+  assert.deepEqual(gtagCalls[0], [
+    "event",
+    "chat_open",
+    {
+      event_category: "chat",
+      source: "home-hero",
+      message_count: 0,
+    },
+  ]);
+});
+
+test("classifica intenção sem guardar o texto da mensagem", () => {
+  assert.equal(classifyChatIntent("Financiamento em 60x"), "finance");
+  assert.equal(classifyChatIntent("Tem garantia?"), "warranty");
+  assert.equal(classifyChatIntent("Quero ver o estoque de hatch"), "stock");
+  assert.equal(classifyChatIntent("Avisar quando chegar similar"), "wanted");
+  assert.equal(classifyChatIntent("oi"), "other");
+  const payload = buildChatEventPayload({
+    source: "home-hero",
+    intent: classifyChatIntent("Meu nome é Ana e o telefone é 27999999999"),
+  });
+  assert.equal(payload.intent, "other");
+  assert.equal("message" in payload, false);
+  assert.doesNotMatch(JSON.stringify(payload), /Ana|27999999999/);
+});
+
+test("ChatLeadCreated e Lead do catálogo não levam telefone", () => {
+  const { calls, gtagCalls } = installFbq();
+  trackChatEvent("ChatLeadCreated", {
+    source: "home-hero",
+    intent: "stock",
+    message_count: 2,
+  });
+  trackLead({ content_ids: [], content_name: "chatbot-site" });
+  assert.equal(calls[0]?.[1], "ChatLeadCreated");
+  assert.deepEqual(calls[0]?.[2], {
+    source: "home-hero",
+    intent: "stock",
+    message_count: 2,
+  });
+  assert.equal(calls[1]?.[1], "Lead");
+  assert.equal(gtagCalls[1]?.[1], "generate_lead");
 });

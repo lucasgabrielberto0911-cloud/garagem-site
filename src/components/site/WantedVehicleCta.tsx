@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SiteLeadHit } from "@/components/site/VehiclePixel";
 import { IconWhatsApp } from "@/components/site/icons";
+import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 
 const BUDGETS = [
@@ -82,6 +83,7 @@ export function WantedVehicleCta({
           href={whatsappUrl(WHATSAPP_MESSAGES.wanted(detail))}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackWhatsAppClick("avise-me")}
           className="whatsapp-btn mt-4 inline-flex min-h-[52px] w-full items-center justify-center gap-2 px-6 font-display text-xs font-semibold uppercase tracking-wide text-white touch-manipulation sm:w-auto sm:text-sm"
         >
           <IconWhatsApp className="h-4 w-4" />

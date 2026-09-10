@@ -43,7 +43,7 @@ const DIFERENCIAIS = [
   {
     Icon: IconHandshake,
     title: "Atendimento de perto, mesmo online",
-    text: "Somos loja digital, mas o contato é humano: WhatsApp rápido, vídeo do carro, avaliação de troca e acompanhamento até a transferência. Qualidade no atendimento é o nosso padrão.",
+    text: "Somos loja digital, mas o contato é humano: WhatsApp rápido, vídeo do veículo, avaliação de troca e acompanhamento até a transferência. Qualidade no atendimento é o nosso padrão.",
   },
   {
     Icon: IconWhatsApp,
@@ -71,7 +71,7 @@ export default async function SobrePage() {
     stats.sales > 0 ? `+${formatNumberBR(stats.sales)}` : "0";
   const highlightStats = [
     { value: publicSite.aboutYears, label: "anos de história" },
-    { value: soldLabel, label: "carros vendidos" },
+    { value: soldLabel, label: "veículos vendidos" },
     { value: publicSite.aboutHours, label: "atendimento online" },
     { value: publicSite.aboutFocus, label: "foco no cliente" },
   ];
@@ -156,7 +156,7 @@ export default async function SobrePage() {
                 />
                 <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
                   <p>
-                    A {publicSite.name} nasceu da paixão por carros e da vontade de
+                    A {publicSite.name} nasceu da paixão por veículos e da vontade de
                     fazer diferente: vender seminovo com informação clara, respeito
                     ao cliente e zero enrolação. Ao longo de mais de duas décadas,
                     construímos uma trajetória marcada pela confiança de famílias em{" "}
@@ -173,7 +173,7 @@ export default async function SobrePage() {
                     <strong className="text-cream">loja digital</strong>, com
                     atendimento online todos os dias, das 8h às 23h. A vitrine
                     está no site, a conversa no WhatsApp e o compromisso continua o
-                    mesmo: qualidade no carro e excelência no atendimento.
+                    mesmo: qualidade em cada veículo e excelência no atendimento.
                   </p>
                 </div>
               </article>
@@ -207,7 +207,7 @@ export default async function SobrePage() {
                     <strong className="font-display font-semibold text-cream">
                       Valores.
                     </strong>{" "}
-                    Honestidade na negociação, cuidado com cada carro, respeito ao
+                    Honestidade na negociação, cuidado com cada veículo, respeito ao
                     tempo do cliente, disponibilidade real no atendimento e
                     compromisso com a qualidade do início ao fim.
                   </p>
@@ -341,7 +341,7 @@ export default async function SobrePage() {
               <ButtonLink href="/estoque" size="lg">
                 Ver estoque completo
               </ButtonLink>
-              <WhatsAppButton size="lg" variant="outline">
+              <WhatsAppButton size="lg" variant="outline" trackingLabel="sobre">
                 Falar com a {publicSite.name}
               </WhatsAppButton>
             </ActionRow>

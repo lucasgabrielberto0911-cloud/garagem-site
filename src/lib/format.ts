@@ -73,6 +73,10 @@ function titleCaseWords(value: string) {
       if (/^[A-Z0-9-]{2,4}$/.test(word) && word === word.toUpperCase()) {
         return word;
       }
+      // HB20 / HB20S — title case virava "Hb20s".
+      if (/^[A-Za-z]{1,3}\d/.test(word.replace(/[^A-Za-z0-9]/g, ""))) {
+        return word.toUpperCase();
+      }
       return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     })
     .join(" ");

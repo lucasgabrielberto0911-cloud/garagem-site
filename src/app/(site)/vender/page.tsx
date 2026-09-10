@@ -15,7 +15,7 @@ import { getVehicleById } from "@/lib/vehicles";
 export const revalidate = 120;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: `Vender ou trocar seu carro | ${site.name}`,
+  title: `Vender ou trocar seu veículo | ${site.name}`,
   description: `Avaliação gratuita e sem compromisso do seu veículo na ${site.name}. Compramos seu usado e aceitamos na troca em ${site.region} e região.`,
   path: "/vender",
 });
@@ -57,7 +57,7 @@ export default async function VenderPage({
       <Container>
         <PageHeader
           eyebrow="Vender / Trocar"
-          title="Avalie seu carro sem compromisso"
+          title="Avalie seu veículo sem compromisso"
           description="Compramos seu usado e também aceitamos na troca por um veículo do nosso estoque. Preencha os dados abaixo que a gente retorna com uma proposta — sem taxa e sem compromisso."
         />
 

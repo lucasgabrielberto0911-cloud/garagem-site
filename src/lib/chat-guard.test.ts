@@ -13,12 +13,19 @@ import {
   sanitizeSensitiveText,
 } from "./chat-guard";
 import { parseCriarLeadArgs } from "./chat-lead";
+import {
+  CHAT_CARD_REPLY,
+  CHAT_FINANCE_REPLY,
+  CHAT_TRADE_REPLY,
+  chatPolicyShortcut,
+} from "./chat-stock";
 import { runChatTurn } from "./chat-turn";
 
 test("perguntas de estoque, financiamento geral e lead ficam no escopo", () => {
   assert.equal(isOffScopeMessage("Tem o HB20 2022? Qual o preço e a km?"), false);
   assert.equal(isOffScopeMessage("Tem Porsche Cayenne 2024?"), false);
   assert.equal(isOffScopeMessage("Vocês financiam em quantas vezes?"), false);
+  assert.equal(isOffScopeMessage("Aceita cartão de crédito até 18x?"), false);
   assert.equal(isOffScopeMessage("Aceita troca e qual a garantia?"), false);
   assert.equal(isOffScopeMessage("Qual o horário de atendimento?"), false);
   assert.equal(
@@ -27,7 +34,9 @@ test("perguntas de estoque, financiamento geral e lead ficam no escopo", () => {
   );
   assert.equal(isOffScopeMessage("oi"), false);
   assert.equal(isOffScopeMessage("teste"), false);
+  assert.equal(isOffScopeMessage("eae"), false);
   assert.equal(isChatPing("teste"), true);
+  assert.equal(isChatPing("eae"), true);
   assert.equal(isChatPing("Tem o HB20?"), false);
 });
 
@@ -63,6 +72,10 @@ test("sanitize remove CPF e dado bancário e não come a palavra conta comum", (
   assert.equal(
     sanitizeSensitiveText("me conta o preço do HB20"),
     "me conta o preço do HB20",
+  );
+  assert.match(
+    sanitizeSensitiveText("Aceitamos cartão de crédito até 18x no HB20"),
+    /cartão de crédito até 18x/,
   );
   const parsed = parseCriarLeadArgs({
     nome: "Maria Silva CPF 123.456.789-00",
@@ -121,4 +134,60 @@ test("turno fora de escopo não chama o Gemini", async () => {
   });
   assert.equal(called, 0);
   assert.equal(repeat.reply, CHAT_OFF_SCOPE_REPEAT_REPLY);
+});
+
+test("atalhos de financiar e troca não pedem modelo de novo", async () => {
+  assert.equal(chatPolicyShortcut("Financiar em 60x"), "finance");
+  assert.equal(chatPolicyShortcut("Financiamento em 60x"), "finance");
+  assert.equal(chatPolicyShortcut("Como funciona o financiamento?"), "finance");
+  assert.equal(chatPolicyShortcut("Dá para parcelar?"), "finance");
+  assert.equal(chatPolicyShortcut("Aceita cartão?"), "card");
+  assert.equal(chatPolicyShortcut("Aceita troca?"), "troca");
+  assert.equal(chatPolicyShortcut("Quero financiar o HB20"), null);
+
+  let called = 0;
+  const finance = await runChatTurn({
+    mensagem: "Financiar em 60x",
+    historico: [],
+    stock: [],
+    generate: async () => {
+      called += 1;
+      return { text: "não deveria", functionCall: null };
+    },
+  });
+  assert.equal(called, 0);
+  assert.equal(finance.reply, CHAT_FINANCE_REPLY);
+  assert.match(finance.reply, /Dá sim/);
+  assert.match(finance.reply, /60 vezes/);
+  assert.match(finance.reply, /18 vezes/);
+  assert.doesNotMatch(finance.reply, /não (monto|posso|calculo|cubro)/i);
+  assert.doesNotMatch(finance.reply, /qual modelo/i);
+
+  const card = await runChatTurn({
+    mensagem: "Aceita cartão?",
+    historico: [],
+    stock: [],
+    generate: async () => {
+      called += 1;
+      return { text: "não deveria", functionCall: null };
+    },
+  });
+  assert.equal(called, 0);
+  assert.equal(card.reply, CHAT_CARD_REPLY);
+  assert.match(card.reply, /18 vezes/);
+  assert.doesNotMatch(card.reply, /não (monto|posso|calculo|cubro)/i);
+  assert.equal(finance.vehicles.length, 0);
+
+  const trade = await runChatTurn({
+    mensagem: "Aceita troca?",
+    historico: [],
+    stock: [],
+    generate: async () => {
+      called += 1;
+      return { text: "não deveria", functionCall: null };
+    },
+  });
+  assert.equal(called, 0);
+  assert.equal(trade.reply, CHAT_TRADE_REPLY);
+  assert.doesNotMatch(trade.reply, /qual carro/i);
 });

@@ -39,7 +39,7 @@ export const SERVICE_CITIES = [
           "Não para começar. Você escolhe no estoque, recebe detalhes e vídeo e só combina visita ou entrega quando a proposta já fizer sentido.",
       },
       {
-        question: "Posso dar meu carro na troca?",
+        question: "Posso colocar meu veículo na troca?",
         answer:
           "Pode. Envie os dados pela página Vender/Trocar ou pelo WhatsApp para uma avaliação sem compromisso.",
       },
@@ -73,7 +73,7 @@ export const SERVICE_CITIES = [
           "Você escolhe no estoque, tira dúvidas pelo WhatsApp, recebe detalhes e vídeos do veículo e avança na proposta com transparência. A transferência é acompanhada pela equipe.",
       },
       {
-        question: "Posso dar meu carro na troca?",
+        question: "Posso colocar meu veículo na troca?",
         answer:
           "Pode. Envie os dados do seu veículo pela página Vender/Trocar ou pelo WhatsApp para uma avaliação sem compromisso.",
       },
@@ -107,7 +107,7 @@ export const SERVICE_CITIES = [
           "A Garagem é loja digital. A escolha, as dúvidas e a proposta acontecem no site e no WhatsApp. Visita, entrega ou retirada só entram quando vocês combinam.",
       },
       {
-        question: "Posso dar meu carro na troca?",
+        question: "Posso colocar meu veículo na troca?",
         answer:
           "Pode. Envie os dados pela página Vender/Trocar ou pelo WhatsApp para uma avaliação sem compromisso.",
       },
@@ -141,7 +141,7 @@ export const SERVICE_CITIES = [
           "Não. A Garagem é loja digital. A vitrine é o site e o atendimento é no WhatsApp. Combinamos visita ao veículo, entrega ou retirada quando o negócio avançar.",
       },
       {
-        question: "Consigo dar o carro na troca morando na Serra?",
+        question: "Consigo colocar meu veículo na troca morando na Serra?",
         answer:
           "Sim. Envie marca, ano, km e fotos pela página Vender/Trocar ou pelo WhatsApp. A avaliação é sem compromisso.",
       },
@@ -209,7 +209,7 @@ export const SERVICE_CITIES = [
           "Não. A Garagem é loja digital. O estoque está no site e o contato é no WhatsApp. Combinamos visita ou entrega quando o negócio avançar.",
       },
       {
-        question: "Posso dar meu carro na troca morando em Guarapari?",
+        question: "Posso colocar meu veículo na troca morando em Guarapari?",
         answer:
           "Pode. Envie os dados pela página Vender/Trocar ou pelo WhatsApp. A avaliação é sem compromisso.",
       },
@@ -243,7 +243,7 @@ export const SERVICE_CITIES = [
           "A Garagem é loja digital. A escolha, as dúvidas e a proposta acontecem no site e no WhatsApp. Visita, entrega ou retirada só entram quando vocês combinam.",
       },
       {
-        question: "Posso dar meu carro na troca?",
+        question: "Posso colocar meu veículo na troca?",
         answer:
           "Pode. Envie os dados pela página Vender/Trocar ou pelo WhatsApp para uma avaliação sem compromisso.",
       },
@@ -277,7 +277,7 @@ export const SERVICE_CITIES = [
           "Não. A Garagem é loja digital. A vitrine é o site e o atendimento é no WhatsApp. Combinamos visita, entrega ou retirada quando o negócio avançar.",
       },
       {
-        question: "Consigo dar o carro na troca morando em Colatina?",
+        question: "Consigo colocar meu veículo na troca morando em Colatina?",
         answer:
           "Sim. Envie marca, ano, km e fotos pela página Vender/Trocar ou pelo WhatsApp. A avaliação é sem compromisso.",
       },
@@ -345,7 +345,7 @@ export const SERVICE_CITIES = [
           "Não. Você escolhe no estoque, recebe detalhes e vídeo e só combina visita ou entrega quando a proposta já fizer sentido.",
       },
       {
-        question: "Posso dar meu carro na troca?",
+        question: "Posso colocar meu veículo na troca?",
         answer:
           "Pode. Envie os dados pela página Vender/Trocar ou pelo WhatsApp para uma avaliação sem compromisso.",
       },

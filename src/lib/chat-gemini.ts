@@ -1,8 +1,13 @@
 import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
 
-export const CHAT_GEMINI_MODEL = "gemini-2.5-flash";
+/** Mais barato e rápido para chat de loja. Flash entra só se o Lite falhar. */
+export const CHAT_GEMINI_MODEL = "gemini-2.5-flash-lite";
+
+/** Um pouco mais solto que o padrão seco — ainda profissional. */
+export const CHAT_GEMINI_TEMPERATURE = 0.7;
 
 export const CHAT_GEMINI_MODELS = [
+  "gemini-2.5-flash-lite",
   "gemini-2.5-flash",
   "gemini-2.0-flash",
   "gemini-flash-latest",
@@ -86,10 +91,40 @@ export function redactGeminiError(text: string) {
     .slice(0, 200);
 }
 
+function isCheapChatModel(model: string) {
+  const id = model.toLowerCase();
+  if (/\bpro\b/.test(id)) return false;
+  return /flash-lite|flash-latest|gemini-2\.[05]-flash$/.test(id);
+}
+
 function configuredModels() {
   const preferred = process.env.GEMINI_MODEL?.trim();
-  const list = preferred ? [preferred, ...CHAT_GEMINI_MODELS] : [...CHAT_GEMINI_MODELS];
-  return [...new Set(list)];
+  if (!preferred) return [...CHAT_GEMINI_MODELS];
+  if (isCheapChatModel(preferred)) {
+    return [...new Set([preferred, ...CHAT_GEMINI_MODELS])];
+  }
+  return [...new Set([...CHAT_GEMINI_MODELS, preferred])];
+}
+
+/** Fila real: Lite primeiro. Modelo mais caro no env só entra como fallback. */
+export function chatGeminiModels() {
+  return configuredModels();
+}
+
+function generationConfig(
+  maxOutputTokens: number,
+  temperature: number,
+  model = CHAT_GEMINI_MODEL,
+) {
+  const config: Record<string, unknown> = {
+    temperature,
+    maxOutputTokens,
+  };
+  // Flash-Lite já vem sem thinking; no Flash 2.5/3 isso evita token extra de raciocínio.
+  if (/gemini-(2\.5|3)/.test(model)) {
+    config.thinkingConfig = { thinkingBudget: 0 };
+  }
+  return config;
 }
 
 export function historyToGeminiContents(history: ChatTurn[], mensagem: string) {
@@ -167,6 +202,7 @@ function buildGenerateBody(
     mensagem: string;
   },
   withTools: boolean,
+  model: string,
 ) {
   return {
     system_instruction: { parts: [{ text: input.systemPrompt }] },
@@ -174,10 +210,7 @@ function buildGenerateBody(
     ...(withTools
       ? { tools: [{ function_declarations: [CRIAR_LEAD_DECLARATION] }] }
       : {}),
-    generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 512,
-    },
+    generationConfig: generationConfig(1536, CHAT_GEMINI_TEMPERATURE, model),
   };
 }
 
@@ -193,7 +226,13 @@ async function generateWithFallback(
   for (const model of configuredModels()) {
     for (const withTools of [true, false]) {
       try {
-        return await postGemini(buildGenerateBody(input, withTools), key, model);
+        const data = await postGemini(
+          buildGenerateBody(input, withTools, model),
+          key,
+          model,
+        );
+        console.info("[chat] gemini:model", model);
+        return data;
       } catch (error) {
         lastError = error;
         const status = (error as { status?: number }).status;
@@ -266,7 +305,11 @@ export async function confirmAfterLead(input: {
       system_instruction: { parts: [{ text: input.systemPrompt }] },
       contents,
       tools: [{ function_declarations: [CRIAR_LEAD_DECLARATION] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 280 },
+      generationConfig: generationConfig(
+        280,
+        0.3,
+        configuredModels()[0] ?? CHAT_GEMINI_MODEL,
+      ),
     },
     key,
     configuredModels()[0] ?? CHAT_GEMINI_MODEL,

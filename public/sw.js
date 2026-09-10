@@ -2,13 +2,14 @@
  * Service worker do site da Garagem.
  *
  * Assets versionados (/_next/static) = cache-first.
- * Navegação = mostra o HTML em cache na hora e atualiza atrás
- * (stale-while-revalidate). Sem cache, busca a rede; se falhar, /offline.
+ * Navegação geral = mostra o HTML em cache na hora e atualiza atrás
+ * (stale-while-revalidate). Estoque e ficha = rede primeiro, para não
+ * servir preço/status antigo. Sem cache, busca a rede; se falhar, /offline.
  *
  * Admin e API ficam fora. `/?utm_source=pwa` e `/` compartilham a mesma
  * entrada — senão a abertura do app instalado nunca acerta o cache.
  */
-const VERSION = "garagem-v4";
+const VERSION = "garagem-v6";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const PAGE_CACHE = `${VERSION}-pages`;
@@ -133,12 +134,13 @@ async function fetchFreshPage(event, request) {
   try {
     const preloaded = await event.preloadResponse;
     const response = preloaded || (await fetch(request));
-    if (response && response.ok) {
+    if (!response) return null;
+    if (response.ok) {
       const cache = await caches.open(PAGE_CACHE);
       await cache.put(pageCacheKey(request), response.clone());
       trimCache(PAGE_CACHE, PAGE_CACHE_LIMIT).catch(() => undefined);
     }
-    return response && response.ok ? response : null;
+    return response;
   } catch {
     return null;
   }
@@ -160,6 +162,24 @@ async function maybeReloadIfShellChanged(cached, fresh) {
   } catch {
     /* ignore */
   }
+}
+
+function isNetworkFirstPage(url) {
+  return url.pathname === "/estoque" || url.pathname.startsWith("/estoque/");
+}
+
+async function networkFirstPage(event) {
+  const fresh = await fetchFreshPage(event, event.request);
+  if (fresh) return fresh;
+
+  const cache = await caches.open(PAGE_CACHE);
+  const cached = await matchPage(cache, event.request);
+  if (cached) return cached;
+
+  const shell = await caches.open(SHELL_CACHE);
+  const offline = await shell.match("/offline");
+  if (offline) return offline;
+  return Response.error();
 }
 
 async function staleWhileRevalidatePage(event) {
@@ -207,6 +227,10 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (isNavigate(request)) {
+    if (isNetworkFirstPage(url)) {
+      event.respondWith(networkFirstPage(event));
+      return;
+    }
     event.respondWith(staleWhileRevalidatePage(event));
   }
 });

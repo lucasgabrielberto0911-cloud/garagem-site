@@ -23,9 +23,23 @@ export function VehicleGallery({
   alt: string;
 }) {
   const scrollerRef = useRef<HTMLUListElement>(null);
+  const thumbsRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
   const total = photos.length;
+
+  useEffect(() => {
+    const strip = thumbsRef.current;
+    if (!strip) return;
+    const activeBtn = strip.children[active] as HTMLElement | undefined;
+    if (activeBtn?.scrollIntoView) {
+      activeBtn.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [active]);
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -78,7 +92,6 @@ export function VehicleGallery({
           aria-label={`Fotos de ${alt}`}
         >
           {photos.map((photo, index) => {
-            const near = Math.abs(index - active) <= 1;
             return (
               <li
                 key={photo.id}
@@ -95,17 +108,15 @@ export function VehicleGallery({
                 >
                   <span className="sr-only">Ampliar</span>
                 </button>
-                {near ? (
-                  <VehicleImage
-                    src={galleryPreviewSrc(photo)}
-                    alt={vehiclePhotoAlt(alt, index, total)}
-                    fill
-                    sizes="(min-width: 1024px) 60vw, 100vw"
-                    srcSet={galleryPreviewSrcSet(photo)}
-                    priority={index === 0}
-                    className="object-cover"
-                  />
-                ) : null}
+                <VehicleImage
+                  src={galleryPreviewSrc(photo)}
+                  alt={vehiclePhotoAlt(alt, index, total)}
+                  fill
+                  sizes="(min-width: 1024px) 60vw, 100vw"
+                  srcSet={galleryPreviewSrcSet(photo)}
+                  priority={index === 0}
+                  className="object-cover"
+                />
               </li>
             );
           })}
@@ -154,10 +165,11 @@ export function VehicleGallery({
 
       {total > 1 ? (
         <>
-          <div className="mt-2 hidden gap-2 overflow-x-auto pb-1 scrollbar-hide lg:flex">
+          <div
+            ref={thumbsRef}
+            className="mt-2 hidden gap-2 overflow-x-auto pb-1 scrollbar-hide lg:flex"
+          >
             {photos.map((photo, index) => {
-              const loadThumb =
-                index < 8 || Math.abs(index - active) <= 1;
               return (
                 <button
                   key={photo.id}
@@ -171,15 +183,13 @@ export function VehicleGallery({
                       : "border-white/15 opacity-70 hover:opacity-100"
                   }`}
                 >
-                  {loadThumb ? (
-                    <VehicleImage
-                      src={galleryThumbSrc(photo)}
-                      alt={vehiclePhotoAlt(alt, index, total)}
-                      fill
-                      sizes="96px"
-                      className="object-cover"
-                    />
-                  ) : null}
+                  <VehicleImage
+                    src={galleryThumbSrc(photo)}
+                    alt={vehiclePhotoAlt(alt, index, total)}
+                    fill
+                    sizes="96px"
+                    className="object-cover"
+                  />
                 </button>
               );
             })}

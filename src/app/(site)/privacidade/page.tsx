@@ -10,7 +10,7 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/privacidade",
 });
 
-const UPDATED_AT = "agosto de 2026";
+const UPDATED_AT = "setembro de 2026";
 
 export default function PrivacidadePage() {
   return (
@@ -37,7 +37,9 @@ export default function PrivacidadePage() {
                 <strong className="text-cream">Dados que você envia:</strong>{" "}
                 nome, telefone e informações do veículo (marca, modelo, ano,
                 quilometragem e observações) quando você preenche o formulário de
-                avaliação da página Vender/Trocar.
+                avaliação da página Vender/Trocar. No assistente, nome e telefone
+                só entram se você pedir contato — o texto da conversa não vai
+                para analytics.
               </Item>
               <Item>
                 <strong className="text-cream">Dados de navegação:</strong>{" "}
@@ -122,11 +124,21 @@ export default function PrivacidadePage() {
 
           <Block title="8. Cookies e armazenamento local">
             <p>
-              Usamos armazenamento local do navegador para guardar seus favoritos
-              e a preferência de exibir (ou não) o convite para instalar o app.
-              Também podem ser usados cookies estritamente necessários ao
-              funcionamento do site e à medição de audiência de forma agregada.
-              Você pode limpar esses dados nas configurações do seu navegador.
+              Usamos armazenamento local do navegador para guardar seus favoritos,
+              a preferência de exibir (ou não) o convite para instalar o app e a
+              sua escolha de consentimento de cookies.
+            </p>
+            <p>
+              Cookies e scripts de medição (Google Analytics e Meta Pixel) só são
+              carregados se você aceitar. A base legal dessa medição é o
+              consentimento. Sem o aceite, o site, o assistente e o WhatsApp
+              continuam funcionando com o essencial. Vercel Analytics e Speed
+              Insights medem desempenho técnico, sem o conteúdo da conversa.
+            </p>
+            <p>
+              O chat não grava o texto da conversa em analytics nem no
+              armazenamento local. Você pode limpar esses dados nas configurações
+              do seu navegador ou voltar a esta página para revisar a política.
             </p>
           </Block>
 
@@ -152,6 +164,7 @@ export default function PrivacidadePage() {
           </p>
           <WhatsAppButton
             className="mt-5"
+            trackingLabel="privacidade"
             message={`${WHATSAPP_MESSAGES.general} Tenho uma dúvida sobre privacidade de dados.`}
           >
             Falar sobre privacidade

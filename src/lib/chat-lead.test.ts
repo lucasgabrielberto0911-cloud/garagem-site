@@ -1,8 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { leadArgsAreComplete, parseCriarLeadArgs } from "./chat-lead";
-import { matchInterestVehicle, type ChatVehicleRecord } from "./chat-stock";
 import {
+  chatFilterIntro,
+  compareChatStockPicks,
+  isIncompleteStockReply,
+  listStockByBudget,
+  matchInterestVehicle,
+  type ChatVehicleRecord,
+} from "./chat-stock";
+import { parsePriceLimit } from "./chat-prompt";
+import {
+  CHAT_GEMINI_MODEL,
+  CHAT_GEMINI_TEMPERATURE,
+  chatGeminiModels,
   extractGeminiFunctionCall,
   extractGeminiText,
   geminiApiKey,
@@ -11,6 +22,19 @@ import {
 } from "./chat-gemini";
 import { runChatTurn } from "./chat-turn";
 import { checkRateLimit, clearRateLimit } from "./rate-limit";
+
+const compass: ChatVehicleRecord = {
+  id: "c-compass-2022",
+  brand: "Jeep",
+  model: "Compass",
+  version: "longitude",
+  yearModel: 2022,
+  km: 40000,
+  price: 129900,
+  color: "Branco",
+  transmission: "Automático",
+  fuel: "Flex",
+};
 
 const hb20: ChatVehicleRecord = {
   id: "c-hb20-2022",
@@ -25,9 +49,61 @@ const hb20: ChatVehicleRecord = {
   fuel: "Flex",
 };
 
+test("recorte da pergunta vira frase falada", () => {
+  assert.equal(
+    chatFilterIntro("Carros até 70 mil?"),
+    "Olha só: carros até R$ 70.000 no estoque agora.",
+  );
+  assert.equal(
+    chatFilterIntro("Automático até 80 mil?"),
+    "Olha só: automáticos até R$ 80.000 no estoque agora.",
+  );
+  assert.equal(
+    chatFilterIntro("moto até 15 mil"),
+    "Olha só: motos até R$ 15.000 no estoque agora.",
+  );
+  assert.equal(chatFilterIntro("eae"), "");
+});
+
 test("casa interesse com o carro do estoque e ignora texto frouxo", () => {
   assert.equal(matchInterestVehicle("hyundai hb20 2022", [hb20])?.id, hb20.id);
   assert.equal(matchInterestVehicle("porsche cayenne turbo", [hb20]), null);
+});
+
+test("até 70 mil lista o HB20 e deixa o Compass de fora", () => {
+  assert.equal(parsePriceLimit("Quais carros temos ate 70 mil?"), 70_000);
+  assert.equal(parsePriceLimit("carros de 70 mil"), 70_000);
+  assert.equal(parsePriceLimit("orcamento 80 mil"), 80_000);
+  assert.equal(parsePriceLimit("Aceita cartão de crédito até 18x?"), null);
+  assert.equal(parsePriceLimit("financia em até 60 vezes"), null);
+  const listed = listStockByBudget("Quais carros temos ate 70 mil?", [hb20, compass]);
+  assert.match(listed ?? "", /HB20/);
+  assert.match(listed ?? "", /64\.900/);
+  assert.doesNotMatch(listed ?? "", /Compass/);
+  assert.match(listed ?? "", /mais em conta/);
+  assert.doesNotMatch(listed ?? "", /consumo|catálogo|catalogo/);
+  const listedWithConsumption = listStockByBudget(
+    "Quais carros de bom consumo temos ate 70 mil?",
+    [hb20, compass],
+  );
+  assert.match(listedWithConsumption ?? "", /consumo|catálogo|catalogo/);
+  assert.match(listedWithConsumption ?? "", /não foi medido/);
+  assert.equal(
+    isIncompleteStockReply("Temos ótimas opções até R$ 70 mil no momento:"),
+    true,
+  );
+  assert.equal(
+    isIncompleteStockReply(
+      "Temos estas opções até R$ 70.000 no estoque: Chevrolet Prisma Sed. Joy/LS 1.0 8V FlexPower 4p",
+    ),
+    true,
+  );
+  assert.equal(
+    isIncompleteStockReply(
+      "Até R$ 70.000:\nHyundai HB20 2022 · 68.450 km · R$ 64.900\nChevrolet Onix 2014 · 32.500 km · R$ 56.900",
+    ),
+    false,
+  );
 });
 
 test("criar_lead só fecha com nome e telefone válidos", () => {
@@ -41,6 +117,22 @@ test("criar_lead só fecha com nome e telefone válidos", () => {
     leadArgsAreComplete(parseCriarLeadArgs({ nome: "Li", telefone: "9999" })),
     false,
   );
+});
+
+test("usa Gemini Flash-Lite primeiro, o modelo mais barato da fila", () => {
+  assert.equal(CHAT_GEMINI_MODEL, "gemini-2.5-flash-lite");
+  assert.equal(CHAT_GEMINI_TEMPERATURE, 0.7);
+  const prev = process.env.GEMINI_MODEL;
+  delete process.env.GEMINI_MODEL;
+  try {
+    assert.equal(chatGeminiModels()[0], "gemini-2.5-flash-lite");
+    process.env.GEMINI_MODEL = "gemini-2.5-pro";
+    assert.equal(chatGeminiModels()[0], "gemini-2.5-flash-lite");
+    assert.equal(chatGeminiModels().includes("gemini-2.5-pro"), true);
+  } finally {
+    if (prev === undefined) delete process.env.GEMINI_MODEL;
+    else process.env.GEMINI_MODEL = prev;
+  }
 });
 
 test("chave Gemini aceita nome alternativo e o erro não vaza segredo", () => {
@@ -95,7 +187,7 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
     stock: [hb20],
     generate: async ({ systemPrompt }) => {
       assert.match(systemPrompt, /Hyundai HB20 evolution 1\.0 2022/);
-      assert.match(systemPrompt, /R\$ 64900/);
+      assert.match(systemPrompt, /R\$ 64\.900/);
       return {
         text: "Temos o Hyundai HB20 evolution 1.0 2022, 68450 km, R$ 64900, Prata.",
         functionCall: null,
@@ -105,6 +197,9 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
   assert.match(existing.reply, /64900/);
   assert.match(existing.reply, /68450/);
   assert.equal(existing.leadCreated, false);
+  assert.equal(existing.vehicles.length, 1);
+  assert.equal(existing.vehicles[0]?.id, hb20.id);
+  assert.match(existing.vehicles[0]?.href ?? "", /estoque/);
 
   const missing = await runChatTurn({
     mensagem: "Tem Porsche Cayenne 2024?",
@@ -149,17 +244,282 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
   assert.match(lead.reply, /Ana/);
 });
 
+test("lista vazia do modelo é preenchida com o estoque até o valor", async () => {
+  const result = await runChatTurn({
+    mensagem: "Quais carros temos ate 70 mil?",
+    historico: [],
+    stock: [hb20, compass],
+    generate: async ({ systemPrompt }) => {
+      assert.match(systemPrompt, /FILTRO DO VISITANTE: até R\$ 70\.000/);
+      assert.match(systemPrompt, /Hyundai HB20/);
+      return {
+        text: "Temos ótimas opções até R$ 70 mil no momento:",
+        functionCall: null,
+      };
+    },
+  });
+  assert.match(result.reply, /HB20/);
+  assert.doesNotMatch(result.reply, /Compass/);
+  assert.doesNotMatch(result.reply, /consumo|catálogo/);
+  assert.equal(result.vehicles.length, 1);
+  assert.equal(result.vehicles[0]?.id, hb20.id);
+});
+
+test("resposta seca do modelo ganha comparação e consumo do estoque", async () => {
+  const palio: ChatVehicleRecord = {
+    id: "c-palio-2016",
+    brand: "Fiat",
+    model: "Palio Weekend",
+    version: "Adventure 1.8 Flex 16V",
+    yearModel: 2016,
+    km: 156400,
+    price: 47900,
+    color: "Branca",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.8 16V",
+    category: "carro",
+  };
+  const prismaJoy: ChatVehicleRecord = {
+    id: "c-prisma-2019",
+    brand: "Chevrolet",
+    model: "Prisma",
+    version: "Sed. Joy/LS 1.0",
+    yearModel: 2019,
+    km: 152000,
+    price: 52900,
+    color: "Prata",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.0",
+    category: "carro",
+  };
+  const hb20Auto: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb20-2015-auto",
+    yearModel: 2015,
+    km: 127000,
+    price: 55900,
+    transmission: "Automático",
+    version: "Comfort 1.0",
+    engine: "1.0",
+  };
+  const compared = compareChatStockPicks([palio, prismaJoy, hb20Auto], {
+    includeConsumption: true,
+  });
+  assert.match(compared, /Vou te ajudar a escolher/);
+  assert.match(compared, /Palio Weekend/);
+  assert.match(compared, /mais em conta/);
+  assert.match(compared, /HB20/);
+  assert.match(compared, /Prisma e HB20/);
+  assert.match(compared, /Prisma é o mais novo \(2019\)/);
+  assert.match(compared, /automático da lista/);
+  assert.match(compared, /11–14/);
+  assert.match(compared, /8–11/);
+  assert.match(compared, /foi medido na loja/i);
+  assert.match(compared, /\n\n/);
+  assert.doesNotMatch(compared, /Entre esses/);
+  assert.doesNotMatch(compared, /Todos são automático/);
+  assert.doesNotMatch(compared, /Fiat Palio Weekend é o mais em conta/);
+
+  const result = await runChatTurn({
+    mensagem: "Quais carros até 70 mil e qual o consumo deles?",
+    historico: [],
+    stock: [palio, prismaJoy, hb20Auto],
+    generate: async () => ({
+      text: `Até R$ 70.000 eu começaria por estes:
+Fiat Palio Weekend Adventure 1.8 Flex 16V 2016 · 156.400 km · R$ 47.900
+Chevrolet Prisma Sed. Joy/LS 1.0 2019 · 152.000 km · R$ 52.900
+Hyundai HB20 Comfort 1.0 2015 · 127.000 km · R$ 55.900`,
+      functionCall: null,
+    }),
+  });
+  assert.match(result.reply, /70\.000/);
+  assert.match(result.reply, /mais em conta/);
+  assert.match(result.reply, /Prisma e HB20/);
+  assert.match(result.reply, /Prisma é o mais novo/);
+  assert.match(result.reply, /consumo|catálogo|11–14/);
+  assert.match(result.reply, /automático/);
+  assert.match(result.reply, /\n\n/);
+  assert.equal(result.vehicles.length, 3);
+});
+
+test("comparação fala dos cards na tela, não de um Onix que o modelo inventou", async () => {
+  const palio: ChatVehicleRecord = {
+    id: "c-palio-2016-b",
+    brand: "Fiat",
+    model: "Palio Weekend",
+    version: "Adventure 1.8 Flex 16V",
+    yearModel: 2016,
+    km: 156400,
+    price: 47900,
+    color: "Branca",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.8 16V",
+    category: "carro",
+  };
+  const prismaJoy: ChatVehicleRecord = {
+    id: "c-prisma-2019-b",
+    brand: "Chevrolet",
+    model: "Prisma",
+    version: "Sed. Joy/LS 1.0",
+    yearModel: 2019,
+    km: 152000,
+    price: 52900,
+    color: "Prata",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.0",
+    category: "carro",
+  };
+  const hb20Auto: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb20-2015-b",
+    yearModel: 2015,
+    km: 127000,
+    price: 55900,
+    transmission: "Automático",
+    version: "Premium Automatico 1.6",
+    engine: "1.6",
+  };
+  const result = await runChatTurn({
+    mensagem: "Quais carros até 70 mil?",
+    historico: [],
+    stock: [palio, prismaJoy, hb20Auto],
+    generate: async () => ({
+      text: `Separei 3 opções até R$ 70.000. A Palio é mais em conta. O Onix lt/ltz é automático com 32 mil km. O HB20 Evolution 1.0 faz 11 a 14 km/l.
+Fiat Palio Weekend Adventure 1.8 Flex 16V 2016 · 156.400 km · R$ 47.900
+Chevrolet Prisma Sed. Joy/LS 1.0 2019 · 152.000 km · R$ 52.900
+Hyundai HB20 Premium Automatico 1.6 2015 · 127.000 km · R$ 55.900`,
+      functionCall: null,
+    }),
+  });
+  assert.match(result.reply, /carros até R\$ 70\.000/i);
+  assert.match(result.reply, /Prisma/);
+  assert.match(result.reply, /Palio Weekend/);
+  assert.match(result.reply, /HB20/);
+  assert.doesNotMatch(result.reply, /Onix/);
+  assert.doesNotMatch(result.reply, /Evolution/);
+  assert.doesNotMatch(result.reply, /Separei 3/);
+  assert.doesNotMatch(result.reply, /não foi medido/);
+});
+
+test("dois carros no mesmo preço não viram meio do preço", () => {
+  const i30: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-i30-same-price",
+    brand: "Hyundai",
+    model: "I30",
+    yearModel: 2011,
+    km: 140000,
+    price: 47900,
+    transmission: "Automático",
+    engine: "2.0",
+    category: "carro",
+  };
+  const palioSame: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-palio-same-price",
+    brand: "Fiat",
+    model: "Palio Weekend",
+    yearModel: 2016,
+    km: 156400,
+    price: 47900,
+    transmission: "Manual",
+    engine: "1.8 16V",
+    category: "carro",
+  };
+  const prismaMid: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-prisma-same-price",
+    brand: "Chevrolet",
+    model: "Prisma",
+    yearModel: 2019,
+    km: 152000,
+    price: 52900,
+    transmission: "Manual",
+    engine: "1.0",
+    category: "carro",
+  };
+  const compared = compareChatStockPicks([i30, palioSame, prismaMid]);
+  assert.match(compared, /I30 é o mais em conta/);
+  assert.match(compared, /automático da lista/);
+  assert.match(compared, /Palio Weekend também está em R\$ 47\.900/);
+  assert.doesNotMatch(compared, /meio do preço/);
+});
+
+test("comparação fala Lancer, não LANCER", () => {
+  const hb20Auto: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb20-auto-case",
+    yearModel: 2015,
+    km: 127300,
+    price: 55900,
+    transmission: "Automático",
+    engine: "1.6",
+    category: "carro",
+  };
+  const onixAuto: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-onix-auto-case",
+    brand: "Chevrolet",
+    model: "Onix",
+    yearModel: 2014,
+    km: 32500,
+    price: 56900,
+    transmission: "Automático",
+    engine: "1.4",
+    category: "carro",
+  };
+  const lancer: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-lancer-auto-case",
+    brand: "Mitsubishi",
+    model: "LANCER",
+    yearModel: 2014,
+    km: 80000,
+    price: 62900,
+    transmission: "Automático",
+    engine: "2.0",
+    category: "carro",
+  };
+  const compared = compareChatStockPicks([hb20Auto, onixAuto, lancer]);
+  assert.match(compared, /Lancer/);
+  assert.doesNotMatch(compared, /LANCER/);
+  assert.match(compared, /HB20/);
+  assert.match(compared, /Onix/);
+  assert.match(compared, /um pouco acima/);
+  assert.doesNotMatch(compared, /Entre esses/);
+  assert.doesNotMatch(compared, /meio do preço/);
+});
+
+test("eae recusado pelo modelo vira cumprimento da loja", async () => {
+  const result = await runChatTurn({
+    mensagem: "eae",
+    historico: [],
+    stock: [],
+    generate: async () => ({
+      text: "Posso ajudar só com assuntos da Garagem: estoque, compra, venda, troca, financiamento e garantia.",
+      functionCall: null,
+    }),
+  });
+  assert.match(result.reply, /estoque/);
+  assert.doesNotMatch(result.reply, /só com assuntos da Garagem/);
+});
+
 test("Gemini fora do ar ainda responde o estoque e o financiamento", async () => {
   const stock = await runChatTurn({
-    mensagem: "Tem o HB20 2022? Qual o preço e a km?",
+    mensagem: "Tem o HB20 2022? Qual o preço, km e consumo?",
     historico: [],
     stock: [hb20],
     generate: async () => {
       throw new Error("quota");
     },
   });
-  assert.match(stock.reply, /64900/);
-  assert.match(stock.reply, /68450/);
+  assert.match(stock.reply, /64\.900/);
+  assert.match(stock.reply, /68\.450/);
+  assert.match(stock.reply, /consumo|catálogo|1\.0 flex/);
   assert.equal(stock.leadCreated, false);
 
   const finance = await runChatTurn({
@@ -170,8 +530,20 @@ test("Gemini fora do ar ainda responde o estoque e o financiamento", async () =>
       throw new Error("quota");
     },
   });
-  assert.match(finance.reply, /60x/);
+  assert.match(finance.reply, /60 vezes/);
+  assert.match(finance.reply, /18 vezes/);
   assert.match(finance.reply, /WhatsApp/);
+
+  const card = await runChatTurn({
+    mensagem: "Aceita cartão de crédito até 18x?",
+    historico: [],
+    stock: [],
+    generate: async () => {
+      throw new Error("quota");
+    },
+  });
+  assert.match(card.reply, /18 vezes/);
+  assert.match(card.reply, /cartão/);
 });
 
 test("sessão do chat bloqueia depois de 30 mensagens", () => {
@@ -185,3 +557,31 @@ test("sessão do chat bloqueia depois de 30 mensagens", () => {
     clearRateLimit(key);
   }
 });
+
+test("pergunta de troca de seminovo não injeta catálogo duplicado", async () => {
+  const biz: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-biz-trade-test",
+    brand: "Honda",
+    model: "BIZ 125",
+    version: "EX 125 FLEX",
+    yearModel: 2023,
+    km: 22000,
+    price: 17900,
+    transmission: "Semi-automático",
+    engine: "125cc",
+    category: "moto",
+  };
+  const result = await runChatTurn({
+    mensagem: "Vocês aceitam meu veículo usado na troca pelo Honda BIZ 125 EX 125 FLEX 2023?",
+    historico: [],
+    stock: [biz],
+    generate: async () => ({
+      text: "Com certeza, a gente aceita veículo na troca sim, seja carro ou moto, inclusive para abater na Biz 125. Para avaliar o seu veículo, o consultor faz tudo pelo WhatsApp.",
+      functionCall: null,
+    }),
+  });
+  assert.doesNotMatch(result.reply, /Achei (?:ele )?no estoque/);
+  assert.match(result.reply, /Com certeza, a gente aceita veículo na troca sim/);
+});
+

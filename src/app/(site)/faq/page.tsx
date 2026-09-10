@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
+import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { FaqExplorer } from "@/components/site/FaqExplorer";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
@@ -25,7 +26,7 @@ export default async function FaqPage() {
         <PageHeader
           eyebrow="Dúvidas frequentes"
           title="Tudo que perguntam antes de comprar"
-          description="Busque por palavra-chave ou filtre por categoria. Se a sua dúvida não estiver aqui, chame no WhatsApp."
+          description="Busque por palavra-chave ou filtre por categoria. O assistente compara o estoque no site; para simular e fechar, chame no WhatsApp."
         />
 
         <div className="mt-8 lg:mt-10">
@@ -37,15 +38,21 @@ export default async function FaqPage() {
             Ficou com outra dúvida?
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-muted">
-            Manda a pergunta no WhatsApp. Sem robô, sem formulário longo.
+            Compare o estoque no assistente. Para parcela, troca ou fechamento,
+            fale com a gente no WhatsApp.
           </p>
-          <WhatsAppButton
-            className="mt-5"
-            size="lg"
-            message={WHATSAPP_MESSAGES.general}
-          >
-            Falar com a {site.name}
-          </WhatsAppButton>
+          <div className="mt-5 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+            <ChatOpenButton source="faq" variant="outline">
+              Ajuda para escolher
+            </ChatOpenButton>
+            <WhatsAppButton
+              size="lg"
+              trackingLabel="faq"
+              message={WHATSAPP_MESSAGES.general}
+            >
+              Falar com a {site.name}
+            </WhatsAppButton>
+          </div>
         </div>
 
         <div className="mt-10">

@@ -2,6 +2,7 @@
 
 import { VehicleLeadHit } from "@/components/site/VehiclePixel";
 import { IconWhatsApp } from "@/components/site/icons";
+import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 
 /**
@@ -15,6 +16,9 @@ export function VehicleCardWhatsApp({
   make,
   model,
   year,
+  className = "",
+  variant = "bar",
+  trackingLabel = "vehicle-card",
 }: {
   vehicleId: string;
   label: string;
@@ -22,7 +26,11 @@ export function VehicleCardWhatsApp({
   make: string;
   model: string;
   year: number;
+  className?: string;
+  variant?: "bar" | "icon";
+  trackingLabel?: string;
 }) {
+  const icon = variant === "icon";
   return (
     <VehicleLeadHit
       contentId={vehicleId}
@@ -36,11 +44,18 @@ export function VehicleCardWhatsApp({
         href={whatsappUrl(WHATSAPP_MESSAGES.vehicle(label))}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => trackWhatsAppClick(trackingLabel)}
         aria-label={`Tenho interesse no ${label} pelo WhatsApp`}
-        className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 border-t border-white/10 bg-ink px-2 font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-white/5 hover:text-brand"
+        className={
+          icon
+            ? `inline-flex min-h-11 w-11 shrink-0 flex-col items-center justify-center self-stretch border-l border-white/10 bg-[#101612] text-[#25D366] transition touch-manipulation hover:bg-[#14301c] ${className}`
+            : `inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 border-t border-white/10 bg-ink px-2 font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-white/5 hover:text-brand ${className}`
+        }
       >
-        <IconWhatsApp className="h-3.5 w-3.5 text-[#25D366]" />
-        WhatsApp
+        <IconWhatsApp
+          className={icon ? "h-5 w-5 text-[#25D366]" : "h-3.5 w-3.5 text-[#25D366]"}
+        />
+        {icon ? <span className="sr-only">WhatsApp</span> : "WhatsApp"}
       </a>
     </VehicleLeadHit>
   );

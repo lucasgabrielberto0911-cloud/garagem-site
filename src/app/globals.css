@@ -353,10 +353,123 @@ body:has([data-vehicle-mobile-bar]) .whatsapp-float {
     right: 1.5rem;
     bottom: 6.25rem;
   }
+
+  body:has(.site-chat.is-open) .whatsapp-float {
+    display: none;
+  }
+}
+
+.site-chat-panel :focus-visible {
+  outline: 2px solid rgba(247, 245, 242, 0.28);
+  outline-offset: 2px;
 }
 
 body:has([data-vehicle-mobile-bar]) .site-chat {
-  bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 1023px) {
+  .site-chat.is-open {
+    left: 0.5rem;
+    right: 0.5rem;
+    top: 0.5rem;
+    bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.5rem);
+    height: auto;
+    align-items: stretch;
+  }
+
+  .site-chat.is-open .site-chat-panel {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+    animation: fadeIn 0.2s ease both;
+  }
+
+  .site-chat.is-open .site-chat-launcher {
+    display: none;
+  }
+
+  /*
+   * Safari no iPhone dá zoom em input/textarea com fonte < 16px.
+   * text-base no campo já cobre; isto impede regressão de utilitário.
+   */
+  .site-chat-panel textarea,
+  .site-chat-panel textarea:focus {
+    font-size: 16px;
+  }
+}
+
+body:has([data-vehicle-mobile-bar]) .site-chat.is-open {
+  bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+.site-consent {
+  left: 0.75rem;
+  bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
+}
+
+@media (min-width: 1024px) {
+  .site-consent {
+    left: 1.5rem;
+    bottom: 1.5rem;
+  }
+}
+
+body:has([data-vehicle-mobile-bar]) .site-consent {
+  bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+body:has(.site-chat.is-open) .site-consent {
+  display: none;
+}
+
+.site-chat-panel {
+  animation: fadeInScale 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.site-chat-typing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 1.15rem;
+}
+
+.site-chat-typing span {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #8a8a8e;
+  animation: site-chat-typing 1.1s infinite ease-in-out;
+}
+
+.site-chat-typing span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.site-chat-typing span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes site-chat-typing {
+  0%,
+  80%,
+  100% {
+    opacity: 0.28;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-chat-panel,
+  .site-chat-typing span {
+    animation: none;
+  }
 }
 
 .whatsapp-pulse {

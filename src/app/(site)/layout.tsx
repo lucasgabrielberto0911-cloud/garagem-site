@@ -1,6 +1,7 @@
 import { Suspense } from "react";
+import { CookieConsent } from "@/components/CookieConsent";
 import { DeferredMarketing } from "@/components/DeferredMarketing";
-import { MetaPixel } from "@/components/MetaPixel";
+import { MarketingScripts } from "@/components/MarketingScripts";
 import { JsonLd } from "@/components/JsonLd";
 import { MobileBottomNav } from "@/components/site/MobileBottomNav";
 import { ScrollProgress } from "@/components/site/ScrollProgress";
@@ -23,8 +24,9 @@ export default function SiteLayout({
   return (
     <FavoritesProvider>
       <div className="flex min-h-screen flex-col">
-        <MetaPixel />
+        <MarketingScripts />
         <DeferredMarketing />
+        <CookieConsent />
         <Suspense fallback={null}>
           <SiteJsonLd />
         </Suspense>

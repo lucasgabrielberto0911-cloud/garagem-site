@@ -10,6 +10,7 @@ import {
   IconWhatsApp,
 } from "@/components/site/icons";
 import { FavoritesLink } from "@/components/site/FavoritesLink";
+import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import {
   DESKTOP_NAV_LINKS,
   NAV_LINKS,
@@ -109,6 +110,7 @@ export function SiteHeader() {
               href={whatsappUrl()}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackWhatsAppClick("header")}
               className="hidden h-11 items-center gap-2 bg-brand px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex xl:px-4 xl:text-sm"
             >
               <IconWhatsApp className="h-4 w-4" />
@@ -194,7 +196,10 @@ export function SiteHeader() {
                   href={whatsappUrl()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => setOpen(false)}
+                  onClick={() => {
+                    trackWhatsAppClick("header-menu");
+                    setOpen(false);
+                  }}
                   className="whatsapp-btn flex min-h-[52px] w-full items-center justify-center gap-2.5 px-4 py-4 font-display text-base font-semibold text-white touch-manipulation"
                 >
                   <IconWhatsApp className="h-5 w-5" />

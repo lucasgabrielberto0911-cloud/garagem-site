@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { IconWhatsApp } from "@/components/site/icons";
+import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { site, whatsappUrl } from "@/lib/site";
 
 type Props = {
@@ -63,6 +64,7 @@ export function ShareVehicle({ title, path, className = "" }: Props) {
         href={whatsappUrl(`${text}\n${url}`)}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => trackWhatsAppClick("ficha-share")}
         className="inline-flex min-h-[44px] items-center gap-1.5 border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
       >
         <IconWhatsApp className="h-3.5 w-3.5" />

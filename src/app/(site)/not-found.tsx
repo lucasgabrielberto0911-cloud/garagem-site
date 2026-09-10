@@ -18,7 +18,7 @@ export default function SiteNotFound() {
         <ButtonLink href="/estoque" size="lg">
           Ver estoque
         </ButtonLink>
-        <WhatsAppButton size="lg" variant="outline">
+        <WhatsAppButton size="lg" variant="outline" trackingLabel="404">
           WhatsApp
         </WhatsAppButton>
       </ActionRow>

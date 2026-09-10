@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import {
   Container,
   PageHeader,
@@ -43,7 +44,7 @@ export default async function ContatoPage() {
         <PageHeader
           eyebrow="Contato"
           title={`Fale com a ${publicSite.name}`}
-          description={`Somos loja digital e atendemos ${publicSite.region} e região — todos os dias, das 8h às 23h. O canal mais rápido é o WhatsApp.`}
+          description={`Somos loja digital e atendemos ${publicSite.region} e região — todos os dias, das 8h às 23h. Compare o estoque no assistente; simule e feche no WhatsApp.`}
         />
 
         {/* Canal dominante */}
@@ -59,16 +60,21 @@ export default async function ContatoPage() {
             WhatsApp — resposta mais rápida
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-muted sm:text-base">
-            Tire dúvidas, peça vídeo do carro ou avalie troca. Estamos online
-            das 8h às 23h, todos os dias.
+            O assistente compara o estoque no site. Para vídeo, parcela, troca
+            ou fechamento, o canal é o WhatsApp — online das 8h às 23h.
           </p>
-          <WhatsAppButton
-            className="mt-6"
-            size="lg"
-            message={WHATSAPP_MESSAGES.visit}
-          >
-            Chamar no WhatsApp
-          </WhatsAppButton>
+          <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+            <ChatOpenButton source="contato" variant="outline" size="lg">
+              Ajuda para escolher
+            </ChatOpenButton>
+            <WhatsAppButton
+              size="lg"
+              trackingLabel="contato"
+              message={WHATSAPP_MESSAGES.visit}
+            >
+              Chamar no WhatsApp
+            </WhatsAppButton>
+          </div>
           <p className="mt-4 text-xs text-muted">{PHONES[0]?.label}</p>
         </div>
 

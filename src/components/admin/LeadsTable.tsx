@@ -19,6 +19,7 @@ import {
   LEAD_STATUSES,
   LEAD_STATUS_LABEL as STATUS_LABEL,
   LEAD_STATUS_STYLE as STATUS_STYLE,
+  buildLeadWhatsAppUrl,
   type LeadStatus,
 } from "@/lib/leads";
 import {
@@ -36,15 +37,7 @@ function consultaPlacaUrl(plate: string) {
 }
 
 function whatsappLink(lead: LeadVenda) {
-  const digits = lead.phone.replace(/\D/g, "");
-  const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
-  const plateLabel = lead.plate
-    ? ` (placa ${formatPlateDisplay(lead.plate)})`
-    : "";
-  const message = encodeURIComponent(
-    `Olá, ${lead.name.split(" ")[0]}! Aqui é da Garagem. Recebemos sua solicitação de avaliação do ${lead.vehicleInfo}${plateLabel}.`,
-  );
-  return `https://wa.me/${withCountry}?text=${message}`;
+  return buildLeadWhatsAppUrl(lead);
 }
 
 function formatDateTime(value: Date) {
@@ -275,6 +268,19 @@ export function LeadsTable({
                   >
                     {STATUS_LABEL[lead.status as LeadStatus] ?? lead.status}
                   </span>
+                  {lead.source === "chatbot-site" ? (
+                    <span className="rounded border border-brand/40 bg-brand/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand">
+                      Chatbot IA
+                    </span>
+                  ) : lead.source === "vender" ? (
+                    <span className="rounded border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-cream/80">
+                      Avaliação
+                    </span>
+                  ) : lead.source ? (
+                    <span className="rounded border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted">
+                      {lead.source}
+                    </span>
+                  ) : null}
                 </div>
                 <p className="mt-1 text-sm text-muted">
                   {lead.vehicleInfo}
@@ -293,7 +299,18 @@ export function LeadsTable({
                 </p>
                 {lead.source || lead.interestVehicleId ? (
                   <p className="mt-1 text-xs text-muted">
-                    {lead.source ? `Origem: ${lead.source}` : null}
+                    {lead.source ? (
+                      <span>
+                        Origem:{" "}
+                        <strong className="font-medium text-cream">
+                          {lead.source === "chatbot-site"
+                            ? "Chatbot do site"
+                            : lead.source === "vender"
+                              ? "Formulário de avaliação"
+                              : lead.source}
+                        </strong>
+                      </span>
+                    ) : null}
                     {lead.source && lead.interestVehicleId ? " · " : null}
                     {lead.interestVehicleId ? (
                       <a

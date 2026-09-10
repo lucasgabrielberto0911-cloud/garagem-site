@@ -13,9 +13,12 @@ import { Container, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
+import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
+import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { JsonLd } from "@/components/JsonLd";
 import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatVehicleLabel, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
+import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
 import { WHATSAPP_MESSAGES, site, whatsappUrl } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
@@ -124,7 +127,9 @@ export default async function VehicleDetailPage({
     { label: "Combustível", value: vehicle.fuel },
     ...(vehicle.color ? [{ label: "Cor", value: vehicle.color }] : []),
     ...(vehicle.engine ? [{ label: "Motor", value: vehicle.engine }] : []),
-    ...(vehicle.doors != null
+    ...(vehicle.category !== "moto" &&
+    vehicle.doors != null &&
+    vehicle.doors > 0
       ? [{ label: "Portas", value: String(vehicle.doors) }]
       : []),
     ...(vehicle.plateEnd
@@ -153,6 +158,19 @@ export default async function VehicleDetailPage({
           year={vehicle.yearModel}
         />
       ) : null}
+      <VehicleChatContext
+        vehicle={{
+          id: vehicle.id,
+          label: title,
+          brand: formatBrandName(vehicle.brand),
+          model: formatModelName(vehicle.model),
+          version: vehicle.version,
+          year: vehicle.yearModel,
+          price: vehicle.price,
+          category: vehicle.category,
+          sold: sold,
+        }}
+      />
       <JsonLd data={vehicleJsonLd(vehicle)} />
       <JsonLd
         data={breadcrumbJsonLd([
@@ -229,7 +247,7 @@ export default async function VehicleDetailPage({
                     make={formatBrandName(vehicle.brand)}
                     model={formatModelName(vehicle.model)}
                     year={vehicle.yearModel}
-                    className="ml-auto"
+                    className="ml-auto hidden lg:flex"
                   />
                 ) : null}
               </div>
@@ -298,14 +316,34 @@ export default async function VehicleDetailPage({
                     <WhatsAppButton
                       size="lg"
                       className="hidden w-full lg:inline-flex"
+                      trackingLabel="ficha"
                       message={WHATSAPP_MESSAGES.vehicle(fullLabel)}
                     >
                       Tenho interesse
                     </WhatsAppButton>
                   </VehicleLeadHit>
 
-                  {/* Vídeo e financiamento também no celular — antes só apareciam no desktop. */}
-                  <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+                  {!sold ? (
+                    <FavoriteButton
+                      vehicleId={vehicle.id}
+                      label={fullLabel}
+                      value={vehicle.price}
+                      make={formatBrandName(vehicle.brand)}
+                      model={formatModelName(vehicle.model)}
+                      year={vehicle.yearModel}
+                      variant="full"
+                      className="w-full lg:hidden"
+                    />
+                  ) : null}
+
+                  <VehicleTrustNotes />
+
+                  <details className="border border-white/10 bg-asphalt/40">
+                    <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-3 font-display text-[11px] font-semibold uppercase tracking-wide text-cream [&::-webkit-details-marker]:hidden">
+                      Vídeo, financiamento, visita ou troca
+                      <span aria-hidden="true">›</span>
+                    </summary>
+                    <div className="grid grid-cols-2 gap-2 border-t border-white/10 p-3 lg:grid-cols-3">
                     <VehicleLeadHit
                       contentId={vehicle.id}
                       contentName={fullLabel}
@@ -314,14 +352,13 @@ export default async function VehicleDetailPage({
                       model={formatModelName(vehicle.model)}
                       year={vehicle.yearModel}
                     >
-                      <a
+                      <TrackedWhatsAppLink
                         href={whatsappUrl(WHATSAPP_MESSAGES.vehicleVideo(fullLabel))}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        trackingLabel="ficha-video"
                         className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
                         Pedir vídeo
-                      </a>
+                      </TrackedWhatsAppLink>
                     </VehicleLeadHit>
                     <VehicleLeadHit
                       contentId={vehicle.id}
@@ -331,16 +368,15 @@ export default async function VehicleDetailPage({
                       model={formatModelName(vehicle.model)}
                       year={vehicle.yearModel}
                     >
-                      <a
+                      <TrackedWhatsAppLink
                         href={whatsappUrl(
                           WHATSAPP_MESSAGES.vehicleFinance(fullLabel),
                         )}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        trackingLabel="ficha-finance"
                         className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
                         Financiar
-                      </a>
+                      </TrackedWhatsAppLink>
                     </VehicleLeadHit>
                     <VehicleLeadHit
                       contentId={vehicle.id}
@@ -350,36 +386,34 @@ export default async function VehicleDetailPage({
                       model={formatModelName(vehicle.model)}
                       year={vehicle.yearModel}
                     >
-                      <a
+                      <TrackedWhatsAppLink
                         href={whatsappUrl(
                           WHATSAPP_MESSAGES.vehicleVisit(fullLabel),
                         )}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="col-span-2 inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:col-span-1 lg:min-h-[44px]"
+                        trackingLabel="ficha-visit"
+                        className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
                       >
                         Agendar visita
-                      </a>
+                      </TrackedWhatsAppLink>
                     </VehicleLeadHit>
-                  </div>
-
-                  <VehicleLeadHit
-                    contentId={vehicle.id}
-                    contentName={fullLabel}
-                    value={vehicle.price}
-                    make={formatBrandName(vehicle.brand)}
-                    model={formatModelName(vehicle.model)}
-                    year={vehicle.yearModel}
-                  >
-                    <a
-                      href={whatsappUrl(WHATSAPP_MESSAGES.vehicleTrade(fullLabel))}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex w-full min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
+                    <VehicleLeadHit
+                      contentId={vehicle.id}
+                      contentName={fullLabel}
+                      value={vehicle.price}
+                      make={formatBrandName(vehicle.brand)}
+                      model={formatModelName(vehicle.model)}
+                      year={vehicle.yearModel}
                     >
-                      Quero dar na troca
-                    </a>
-                  </VehicleLeadHit>
+                      <TrackedWhatsAppLink
+                        href={whatsappUrl(WHATSAPP_MESSAGES.vehicleTrade(fullLabel))}
+                        trackingLabel="ficha-trade"
+                        className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
+                      >
+                        Tenho veículo na troca
+                      </TrackedWhatsAppLink>
+                    </VehicleLeadHit>
+                    </div>
+                  </details>
 
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
                     <Link
