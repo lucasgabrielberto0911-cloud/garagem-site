@@ -1,5 +1,6 @@
 import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
+import { RememberVehicleSnapshot } from "@/components/site/RememberVehicleSnapshot";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import { formatCurrencyBRL, formatBrandName, formatModelName } from "@/lib/format";
@@ -55,6 +56,28 @@ export function VehicleCard({
 
   return (
     <article className="vehicle-card card-lift group relative flex h-full flex-col overflow-hidden border border-white/10 bg-ink touch-manipulation">
+      <RememberVehicleSnapshot
+        vehicle={{
+          id: vehicle.id,
+          category: vehicle.category,
+          brand: vehicle.brand,
+          model: vehicle.model,
+          version: vehicle.version,
+          yearModel: vehicle.yearModel,
+          km: vehicle.km,
+          price: vehicle.price,
+          transmission: vehicle.transmission,
+          fuel: vehicle.fuel,
+          status: vehicle.status,
+          featured: vehicle.featured,
+          color: vehicle.color,
+          updatedAt:
+            vehicle.updatedAt instanceof Date
+              ? vehicle.updatedAt.toISOString()
+              : vehicle.updatedAt ?? null,
+          photos: vehicle.photos,
+        }}
+      />
       <FavoriteButton
         vehicleId={vehicle.id}
         label={display.titleWithYear}

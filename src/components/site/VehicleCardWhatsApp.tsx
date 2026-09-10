@@ -3,6 +3,7 @@
 import { VehicleLeadHit } from "@/components/site/VehiclePixel";
 import { IconWhatsApp } from "@/components/site/icons";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
+import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 
 /**
@@ -47,7 +48,17 @@ export function VehicleCardWhatsApp({
         href={whatsappUrl(text)}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => trackWhatsAppClick(trackingLabel)}
+        onClick={(event) => {
+          trackWhatsAppClick(trackingLabel);
+          if (typeof navigator !== "undefined" && !navigator.onLine) {
+            event.preventDefault();
+            void queueWhatsAppIfOffline({
+              url: whatsappUrl(text),
+              label: trackingLabel,
+              vehicleId,
+            });
+          }
+        }}
         aria-label={`Tenho interesse no ${label} pelo WhatsApp`}
         className={
           icon

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { VehicleLeadHit } from "@/components/site/VehiclePixel";
 import { formatCurrencyBRL } from "@/lib/format";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
+import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 
 /** Barra fixa no mobile: preço + CTA de interesse no WhatsApp. */
@@ -35,7 +36,7 @@ export function VehicleMobileBar({
   return (
     <div
       data-vehicle-mobile-bar=""
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt/95 px-3 pt-3 backdrop-blur pb-safe lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt/95 px-3 pt-3 backdrop-blur pb-safe pl-safe pr-safe lg:hidden"
     >
       <div className="mx-auto flex max-w-6xl items-center gap-3">
         <div className="min-w-0 flex-1 pl-0.5">
@@ -67,7 +68,17 @@ export function VehicleMobileBar({
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackWhatsAppClick("ficha-mobile")}
+              onClick={(event) => {
+                trackWhatsAppClick("ficha-mobile");
+                if (typeof navigator !== "undefined" && !navigator.onLine) {
+                  event.preventDefault();
+                  void queueWhatsAppIfOffline({
+                    url: href,
+                    label: "ficha-mobile",
+                    vehicleId,
+                  });
+                }
+              }}
               className="whatsapp-btn inline-flex min-h-[48px] shrink-0 items-center justify-center px-4 py-3 font-display text-sm font-semibold text-white touch-manipulation"
             >
               Tenho interesse

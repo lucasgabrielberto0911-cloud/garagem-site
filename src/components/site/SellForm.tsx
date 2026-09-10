@@ -6,7 +6,8 @@ import { WhatsAppButton } from "@/components/site/ui";
 import { createSellLead } from "@/app/(site)/vender/actions";
 import { formatNumberBR, formatPhoneBR, formatPlateInput } from "@/lib/format";
 import { prepareImageForUpload } from "@/lib/prepare-image-upload";
-import { trackLead } from "@/lib/meta-pixel";
+import { trackLead, trackPwaEvent } from "@/lib/meta-pixel";
+import { enqueueIntent, isLikelyNetworkFailure } from "@/lib/offline-queue";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
 import { SiteLeadHit } from "@/components/site/VehiclePixel";
 
@@ -95,30 +96,74 @@ export function SellForm({
     }
 
     startTransition(async () => {
-      const result = await createSellLead(data);
-      const fieldErrors = result.fieldErrors ?? {};
-      setErrors(fieldErrors);
-
-      if (result.ok) {
-        trackLead({
-          content_ids: [],
-          content_name: "Vender/Trocar",
-        });
-        toast.success(result.message);
-        setSent(true);
-        setPhone("");
-        setKm("");
-        setPlate("");
-        setPhotoUrls([]);
-        formRef.current?.reset();
-      } else {
-        toast.error(result.message);
-        const first = Object.keys(fieldErrors)[0];
-        if (first) {
-          window.requestAnimationFrame(() => {
-            document.getElementById(first)?.focus();
-          });
+      const online = typeof navigator === "undefined" ? true : navigator.onLine;
+      if (!online) {
+        const fields: Record<string, string> = {};
+        for (const [key, value] of data.entries()) {
+          if (typeof value === "string") fields[key] = value;
         }
+        await enqueueIntent({
+          type: "sell",
+          fields,
+          photoUrls: (data.getAll("photoUrls") as string[]).filter(
+            (item) => typeof item === "string",
+          ),
+        });
+        trackPwaEvent("PwaOfflineQueued", { kind: "sell" });
+        toast.success(
+          "Sem conexão. Guardamos a avaliação e enviamos quando a internet voltar.",
+        );
+        setSent(true);
+        return;
+      }
+
+      try {
+        const result = await createSellLead(data);
+        const fieldErrors = result.fieldErrors ?? {};
+        setErrors(fieldErrors);
+
+        if (result.ok) {
+          trackLead({
+            content_ids: [],
+            content_name: "Vender/Trocar",
+          });
+          toast.success(result.message);
+          setSent(true);
+          setPhone("");
+          setKm("");
+          setPlate("");
+          setPhotoUrls([]);
+          formRef.current?.reset();
+        } else {
+          toast.error(result.message);
+          const first = Object.keys(fieldErrors)[0];
+          if (first) {
+            window.requestAnimationFrame(() => {
+              document.getElementById(first)?.focus();
+            });
+          }
+        }
+      } catch (error) {
+        if (isLikelyNetworkFailure(error, navigator.onLine)) {
+          const fields: Record<string, string> = {};
+          for (const [key, value] of data.entries()) {
+            if (typeof value === "string") fields[key] = value;
+          }
+          await enqueueIntent({
+            type: "sell",
+            fields,
+            photoUrls: (data.getAll("photoUrls") as string[]).filter(
+              (item) => typeof item === "string",
+            ),
+          });
+          trackPwaEvent("PwaOfflineQueued", { kind: "sell" });
+          toast.success(
+            "Sem conexão. Guardamos a avaliação e enviamos quando a internet voltar.",
+          );
+          setSent(true);
+          return;
+        }
+        toast.error("Não foi possível enviar agora. Tente de novo.");
       }
     });
   }
