@@ -477,7 +477,9 @@ body:has([data-install-coach]) .site-chat:not(.is-open) {
 @media (max-width: 1023px) {
   body:has([data-vehicle-mobile-bar]) .site-chat:not(.is-open),
   body:has([data-estoque-list]) .site-chat:not(.is-open),
-  body:has(.vehicle-card) .site-chat:not(.is-open) {
+  body:has(.vehicle-card) .site-chat:not(.is-open),
+  body:has(.chip-scroll) .site-chat:not(.is-open),
+  body:has(.step-scroll) .site-chat:not(.is-open) {
     display: none;
   }
 }
