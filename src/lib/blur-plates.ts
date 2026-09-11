@@ -156,6 +156,20 @@ const FALSE_PLATE_PREFIXES = new Set([
   "ATF",
   "CVT",
   "DCT",
+  "DOT",
+  "SAE",
+  "HEL",
+  "VAL",
+  "ART",
+  "KOI",
+  "BOS",
+  "OSR",
+  "PHI",
+  "LUC",
+  "HID",
+  "XEN",
+  "VOL",
+  "CIB",
 ]);
 
 type PixelBox = {
@@ -342,14 +356,15 @@ function boxesOverlap(a: PixelBox, b: PixelBox) {
 }
 
 function isPlateShaped(box: PixelBox, imageWidth: number, imageHeight: number) {
-  if (box.width < 14 || box.height < 8) return false;
+  if (box.width < 16 || box.height < 8) return false;
   const aspect = box.width / box.height;
   const areaRatio = boxArea(box) / (imageWidth * imageHeight);
   if (areaRatio > 0.04) return false;
-  if (box.width > imageWidth * 0.26) return false;
-  if (box.height > imageHeight * 0.1) return false;
-  if (aspect < 0.75) return false;
-  if (aspect > 6) return false;
+  if (box.width > imageWidth * 0.32) return false;
+  if (box.height > imageHeight * 0.12) return false;
+  // Placas são retangulares horizontais: moto ~1.18, carro ~3.08. Rejeita verticais e quadradas.
+  if (aspect < 1.15) return false;
+  if (aspect > 5.5) return false;
   return true;
 }
 
@@ -642,15 +657,17 @@ function bumperSearchRegion(
   imageWidth: number,
   imageHeight: number,
 ): PixelBox | null {
-  const top = Math.max(0, car.top + Math.round(car.height * 0.42));
+  // A placa dianteira/traseira fica na faixa central do para-choque.
+  // Evita o terço superior (faróis/grade) e as extremidades laterais (milhas/rodas).
+  const top = Math.max(0, car.top + Math.round(car.height * 0.46));
   const bottom = Math.min(
     imageHeight,
     car.top + car.height + Math.round(car.height * 0.04),
   );
-  const left = Math.max(0, car.left - Math.round(car.width * 0.04));
+  const left = Math.max(0, car.left + Math.round(car.width * 0.16));
   const right = Math.min(
     imageWidth,
-    car.left + car.width + Math.round(car.width * 0.04),
+    car.left + Math.round(car.width * 0.84),
   );
   const width = right - left;
   const height = bottom - top;
@@ -659,7 +676,48 @@ function bumperSearchRegion(
 }
 
 function isMercosulBlue(r: number, g: number, b: number) {
-  return b > 65 && b > r + 10 && b > g + 3 && r < 140 && g < 150 && b < 210;
+  // Azul Mercosul oficial (Pantone 286C / #003399):
+  // Azul forte e saturado. Rejeita reflexos cinza, faróis xenon e céu refletido.
+  return (
+    b >= 75 &&
+    b <= 215 &&
+    b - r >= 24 &&
+    b - g >= 14 &&
+    r <= 115 &&
+    g <= 130
+  );
+}
+
+function hasLightPlateBodyBelow(
+  data: Buffer,
+  width: number,
+  height: number,
+  channels: number,
+  blob: BlueBlob,
+): boolean {
+  // Placa Mercosul possui corpo branco/cinza claro abaixo da faixa azul.
+  // Faróis e grades pretas têm plástico escuro ou lâmpada.
+  const startY = blob.top + blob.height;
+  const sampleHeight = Math.min(Math.max(4, Math.round(blob.height * 1.2)), height - startY);
+  if (sampleHeight < 3) return true;
+
+  let totalLuma = 0;
+  let sampleCount = 0;
+  const startX = Math.round(blob.left + blob.width * 0.15);
+  const endX = Math.round(blob.left + blob.width * 0.85);
+
+  for (let y = startY; y < startY + sampleHeight; y += 1) {
+    for (let x = startX; x < endX; x += 1) {
+      const offset = (y * width + x) * channels;
+      const luma = 0.299 * data[offset] + 0.587 * data[offset + 1] + 0.114 * data[offset + 2];
+      totalLuma += luma;
+      sampleCount += 1;
+    }
+  }
+
+  if (sampleCount === 0) return true;
+  const avgLuma = totalLuma / sampleCount;
+  return avgLuma >= 65;
 }
 
 type BlueBlob = PixelBox & { pixels: number };
@@ -803,7 +861,9 @@ export async function findMercosulStripeBoxes(
   const boxes: PixelBox[] = [];
   const blobs = connectedBlueBlobs(mask, width, height);
   for (let index = 0; index < blobs.length; index += 1) {
-    const shaped = plateBoxFromBlueBlob(blobs[index], width, height);
+    const blob = blobs[index];
+    if (!hasLightPlateBodyBelow(data, width, height, channels, blob)) continue;
+    const shaped = plateBoxFromBlueBlob(blob, width, height);
     if (!shaped) continue;
     // Cromado no corte do para-choque vira blob no topo da região.
     if (shaped.top <= 2 && shaped.height < 22) continue;
@@ -840,7 +900,8 @@ async function detectVehicleLabels(
       const label = labels[index];
       const name = label.Name ?? "";
       const isPlate = LICENSE_PLATE_LABEL.test(name);
-      const isCar = /^car$/i.test(name) || /^automobile$/i.test(name);
+      const isCar =
+        /^(car|automobile|vehicle|suv|truck|pickup truck|van)$/i.test(name);
       if (!isPlate && !isCar) continue;
       const instances = label.Instances ?? [];
       for (let instIndex = 0; instIndex < instances.length; instIndex += 1) {
@@ -889,7 +950,15 @@ async function findPlatesWithoutReadableText(
     const accepted = acceptFoundBox(labels.plates[index], imageWidth, imageHeight);
     if (accepted) boxes.push(accepted);
   }
-  if (boxes.length > 0) return mergeOverlappingBoxes(boxes);
+  if (boxes.length > 0) {
+    const filtered = disambiguateCarPlates(
+      boxes,
+      labels.cars,
+      imageWidth,
+      imageHeight,
+    );
+    return mergeOverlappingBoxes(filtered);
+  }
 
   for (let index = 0; index < labels.cars.length; index += 1) {
     const region = bumperSearchRegion(labels.cars[index], imageWidth, imageHeight);
@@ -901,7 +970,103 @@ async function findPlatesWithoutReadableText(
     }
   }
 
-  return mergeOverlappingBoxes(boxes);
+  const filtered = disambiguateCarPlates(
+    boxes,
+    labels.cars,
+    imageWidth,
+    imageHeight,
+  );
+  return mergeOverlappingBoxes(filtered);
+}
+
+export function isHeadlightOrCornerZone(
+  box: PixelBox,
+  car: PixelBox | null,
+  imageWidth: number,
+  imageHeight: number,
+): boolean {
+  const reference = car ?? { left: 0, top: 0, width: imageWidth, height: imageHeight };
+  const relLeft = (box.left - reference.left) / reference.width;
+  const relRight = (box.left + box.width - reference.left) / reference.width;
+  const relTop = (box.top - reference.top) / reference.height;
+  const relCenterY = (box.top + box.height / 2 - reference.top) / reference.height;
+
+  // 1. Faróis dianteiros / lanternas superiores:
+  // Terço superior/médio nas laterais (esquerda < 0.28 ou direita > 0.72, topo < 0.58)
+  const isFarLeft = relRight < 0.28;
+  const isFarRight = relLeft > 0.72;
+  if ((isFarLeft || isFarRight) && relTop < 0.58) {
+    return true;
+  }
+
+  // 2. Extremidades externas do para-choque (milhas, caixas de roda, pneus)
+  // As placas no Brasil ficam na faixa central do para-choque (entre 0.16 e 0.84)
+  if (relRight < 0.16 || relLeft > 0.84) {
+    return true;
+  }
+
+  // 3. Capô / topo do veículo (nunca há placa no terço superior)
+  if (relCenterY < 0.35) {
+    return true;
+  }
+
+  return false;
+}
+
+export function disambiguateCarPlates(
+  boxes: PixelBox[],
+  cars: PixelBox[],
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox[] {
+  if (boxes.length === 0) return [];
+
+  const validBoxes: PixelBox[] = [];
+  for (const box of boxes) {
+    const parentCar = cars.find((c) => boxesOverlap(c, box)) ?? null;
+    if (isHeadlightOrCornerZone(box, parentCar, imageWidth, imageHeight)) {
+      continue;
+    }
+    validBoxes.push(box);
+  }
+
+  if (validBoxes.length <= 1) return validBoxes;
+
+  // Se há carros detectados, agrupa por carro para permitir no máximo 1 placa por veículo
+  if (cars.length > 0) {
+    const result: PixelBox[] = [];
+    for (const car of cars) {
+      const carBoxes = validBoxes.filter((b) => boxesOverlap(car, b));
+      if (carBoxes.length === 1) {
+        result.push(carBoxes[0]);
+      } else if (carBoxes.length > 1) {
+        // Escolhe o box mais centralizado no carro horizontalmente
+        const carCenterX = car.left + car.width / 2;
+        const sorted = [...carBoxes].sort((a, b) => {
+          const aDist = Math.abs(a.left + a.width / 2 - carCenterX) / car.width;
+          const bDist = Math.abs(b.left + b.width / 2 - carCenterX) / car.width;
+          return aDist - bDist;
+        });
+        result.push(sorted[0]);
+      }
+    }
+    const orphans = validBoxes.filter(
+      (b) => !cars.some((c) => boxesOverlap(c, b)),
+    );
+    if (orphans.length > 0) {
+      result.push(...orphans);
+    }
+    return result;
+  }
+
+  // Sem carro explícito: escolhe a placa mais centralizada horizontalmente na imagem
+  const imgCenterX = imageWidth / 2;
+  const sorted = [...validBoxes].sort((a, b) => {
+    const aDist = Math.abs(a.left + a.width / 2 - imgCenterX) / imageWidth;
+    const bDist = Math.abs(b.left + b.width / 2 - imgCenterX) / imageWidth;
+    return aDist - bDist;
+  });
+  return [sorted[0]];
 }
 
 async function looksLikeDarkDisplay(image: Buffer, box: PixelBox) {
@@ -1037,6 +1202,9 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
     }
 
     let boxes = boxesFromPieces(pieces, width, height);
+    if (boxes.length > 0) {
+      boxes = disambiguateCarPlates(boxes, [], width, height);
+    }
     if (boxes.length === 0) {
       boxes = await findPlatesWithoutReadableText(client, bytes, width, height);
     }
