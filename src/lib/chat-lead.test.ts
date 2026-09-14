@@ -660,6 +660,39 @@ test("consumo do Fox responde km/l sem colar o disclaimer no fica", async () => 
   assert.equal(result.vehicles[0]?.id, fox.id);
 });
 
+test("consumo do Fox sem vehicleId no stream não chama Gemini e completa km/l", async () => {
+  const fox: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-fox-home-stream",
+    brand: "Volkswagen",
+    model: "Fox",
+    version: "Trend 1.6",
+    engine: "1.6",
+    category: "carro",
+    fuel: "Flex",
+  };
+  let streamed = false;
+  const tokens: string[] = [];
+  const result = await runChatTurn({
+    mensagem: "Qual consumo do fox",
+    historico: [],
+    stock: [fox],
+    onToken: (text) => tokens.push(text),
+    generateStream: async () => {
+      streamed = true;
+      return {
+        text: "Para o Volkswagen Fox com motor 1.6 flex",
+        functionCall: null,
+      };
+    },
+  });
+  assert.equal(streamed, false);
+  assert.match(result.reply, /9–12 km\/l/);
+  assert.match(tokens.join(""), /9–12 km\/l/);
+  assert.doesNotMatch(result.reply, /fica\s+Nenhum desses/);
+  assert.equal(result.vehicles[0]?.id, fox.id);
+});
+
 test("consumo do HB20 Premium foca o Premium e não a shortlist", async () => {
   const premium: ChatVehicleRecord = {
     ...hb20,

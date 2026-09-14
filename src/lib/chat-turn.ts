@@ -310,28 +310,23 @@ export async function runChatTurn(input: {
     const broken =
       consumptionReplyLooksBroken(generated) ||
       looksTruncated(generated, first.finishReason);
-    if (local && (hasConsumptionFigures(local) || broken)) {
-      if (!generated || local.startsWith(generated)) {
-        emit(generated ? local.slice(generated.length) : local);
+    const inferred =
+      matchFocusedVehicle(input.mensagem, input.stock, activeVehicle?.id) ??
+      (generated
+        ? matchFocusedVehicle(generated, input.stock, activeVehicle?.id)
+        : undefined) ??
+      activeVehicle;
+    const catalog =
+      local && hasConsumptionFigures(local)
+        ? local
+        : inferred && !asksAboutListedFacts(input.mensagem)
+          ? formatFocusedConsumptionReply(inferred)
+          : local;
+    if (catalog && (hasConsumptionFigures(catalog) || broken || !generated)) {
+      if (!generated || catalog.startsWith(generated)) {
+        emit(generated ? catalog.slice(generated.length) : catalog);
       }
-      return finish(local, false, {
-        finishReason: first.finishReason,
-        truncated: false,
-        retried: first.retried,
-        policy: "stock-fact",
-        model: first.model,
-      });
-    }
-    if (
-      activeVehicle &&
-      !asksAboutListedFacts(input.mensagem) &&
-      (broken || !generated)
-    ) {
-      const reply = formatFocusedConsumptionReply(activeVehicle);
-      if (!generated || reply.startsWith(generated)) {
-        emit(generated ? reply.slice(generated.length) : reply);
-      }
-      return finish(reply, false, {
+      return finish(catalog, false, {
         finishReason: first.finishReason,
         truncated: false,
         retried: first.retried,

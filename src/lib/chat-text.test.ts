@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   chatWhatsAppCta,
   displayChatText,
+  lastShownChatVehicles,
   lastSingleChatVehicleId,
   resolveChatRequestVehicleId,
   splitChatLinks,
@@ -102,6 +103,44 @@ test("vehicleId de follow-up só no esse/dele com um card, nunca no modelo nomea
       lastSingleCardId: "c-fox-1",
     }),
     "c-hb20-page",
+  );
+});
+
+test("nomeia o Fox dos cards mostrados e não pega outro anúncio da lista", () => {
+  const shown = [
+    { id: "c-hb20-1", brand: "Hyundai", model: "HB20" },
+    { id: "c-fox-1", brand: "Volkswagen", model: "Fox" },
+    { id: "c-onix-1", brand: "Chevrolet", model: "Onix" },
+  ];
+  assert.equal(
+    resolveChatRequestVehicleId({
+      mensagem: "Qual consumo do fox",
+      shownCards: shown,
+      lastSingleCardId: "c-hb20-1",
+    }),
+    "c-fox-1",
+  );
+  assert.equal(
+    resolveChatRequestVehicleId({
+      mensagem: "Qual consumo do fox",
+      shownCards: shown.slice(0, 1),
+    }),
+    undefined,
+  );
+  assert.deepEqual(
+    lastShownChatVehicles([
+      { role: "assistant", vehicles: shown },
+      { role: "user" },
+    ]).map((vehicle) => vehicle.id),
+    ["c-hb20-1", "c-fox-1", "c-onix-1"],
+  );
+  assert.equal(
+    resolveChatRequestVehicleId({
+      mensagem: "Qual consumo do fox",
+      pageVehicleId: "c-hb20-page",
+      shownCards: shown,
+    }),
+    "c-fox-1",
   );
 });
 

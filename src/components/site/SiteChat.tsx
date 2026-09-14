@@ -35,6 +35,7 @@ import {
 import {
   chatWhatsAppCta,
   displayChatText,
+  lastShownChatVehicles,
   lastSingleChatVehicleId,
   resolveChatRequestVehicleId,
   splitChatLinks,
@@ -858,6 +859,7 @@ export function SiteChat() {
             mensagem,
             pageVehicleId: vehicleContext?.id,
             lastSingleCardId: lastSingleChatVehicleId(messages),
+            shownCards: lastShownChatVehicles(messages),
           }),
           historico: messages
             .filter((item, index) => {
