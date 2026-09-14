@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chatWhatsAppCta, displayChatText, splitChatLinks } from "./chat-text";
+import {
+  chatWhatsAppCta,
+  displayChatText,
+  lastShownChatVehicles,
+  lastSingleChatVehicleId,
+  resolveChatRequestVehicleId,
+  splitChatLinks,
+} from "./chat-text";
 
 test("transforma o wa.me em link com rótulo WhatsApp", () => {
   const parts = splitChatLinks(
@@ -62,5 +69,78 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   });
   assert.equal(soldVehicle?.label, "Avisar quando chegar");
   assert.match(decodeURIComponent(soldVehicle?.href ?? ""), /quando chegar: Hyundai i30/);
+});
+
+test("vehicleId de follow-up só no esse/dele com um card, nunca no modelo nomeado", () => {
+  const lastSingle = lastSingleChatVehicleId([
+    { role: "assistant", vehicles: [{ id: "c-fox-1" }] },
+  ]);
+  assert.equal(lastSingle, "c-fox-1");
+  assert.equal(
+    lastSingleChatVehicleId([
+      { role: "assistant", vehicles: [{ id: "a" }, { id: "b" }] },
+    ]),
+    undefined,
+  );
+  assert.equal(
+    resolveChatRequestVehicleId({
+      mensagem: "qual o consumo dele?",
+      lastSingleCardId: "c-fox-1",
+    }),
+    "c-fox-1",
+  );
+  assert.equal(
+    resolveChatRequestVehicleId({
+      mensagem: "Qual consumo do fox",
+      lastSingleCardId: "c-fox-1",
+    }),
+    undefined,
+  );
+  assert.equal(
+    resolveChatRequestVehicleId({
+      mensagem: "qual o consumo dele?",
+      pageVehicleId: "c-hb20-page",
+      lastSingleCardId: "c-fox-1",
+    }),
+    "c-hb20-page",
+  );
+});
+
+test("nomeia o Fox dos cards mostrados e não pega outro anúncio da lista", () => {
+  const shown = [
+    { id: "c-hb20-1", brand: "Hyundai", model: "HB20" },
+    { id: "c-fox-1", brand: "Volkswagen", model: "Fox" },
+    { id: "c-onix-1", brand: "Chevrolet", model: "Onix" },
+  ];
+  assert.equal(
+    resolveChatRequestVehicleId({
+      mensagem: "Qual consumo do fox",
+      shownCards: shown,
+      lastSingleCardId: "c-hb20-1",
+    }),
+    "c-fox-1",
+  );
+  assert.equal(
+    resolveChatRequestVehicleId({
+      mensagem: "Qual consumo do fox",
+      shownCards: shown.slice(0, 1),
+    }),
+    undefined,
+  );
+  assert.deepEqual(
+    lastShownChatVehicles([
+      { role: "assistant", vehicles: shown },
+      { role: "user" },
+    ]).map((vehicle) => vehicle.id),
+    ["c-hb20-1", "c-fox-1", "c-onix-1"],
+  );
+  assert.equal(
+    resolveChatRequestVehicleId({
+      mensagem: "Qual consumo do fox",
+      pageVehicleId: "c-hb20-page",
+      shownCards: shown,
+    }),
+    "c-fox-1",
+  );
 });
 

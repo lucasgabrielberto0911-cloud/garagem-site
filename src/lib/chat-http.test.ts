@@ -180,6 +180,40 @@ test("POST com stream devolve SSE e o JSON final no done", async () => {
   assert.match(body, /Olha só/);
   assert.match(body, /event: done/);
   assert.deepEqual(tokens, ["called"]);
+  const doneMatch = body.match(/event: done\ndata: ({[\s\S]*?})\n\n/);
+  assert.ok(doneMatch);
+  const done = JSON.parse(doneMatch[1]!) as { reply: string };
+  assert.equal(done.reply, "Olha só: carros até R$ 70.000 no estoque agora.");
+});
+
+test("POST stream:true completa o done.reply mesmo se o token veio truncado", async () => {
+  const full =
+    "Para o Fox 1.6 flex, a faixa típica de catálogo fica 9–12 km/l na cidade na gasolina e 6–8 km/l no álcool. Este usado não foi medido na loja.";
+  const request = new Request("http://localhost/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    },
+    body: JSON.stringify({ mensagem: "Qual consumo do fox", stream: true }),
+  });
+  const response = await handleChatPost(
+    request,
+    deps({
+      runTurn: async (input) => {
+        input.onToken?.("Ol");
+        return emptyResult({ reply: full });
+      },
+    }),
+  );
+  const body = await response.text();
+  assert.match(body, /event: done/);
+  const doneMatch = body.match(/event: done\ndata: ({[\s\S]*?})\n\n/);
+  assert.ok(doneMatch);
+  const done = JSON.parse(doneMatch[1]!) as { reply: string };
+  assert.equal(done.reply, full);
+  assert.doesNotMatch(done.reply, /fica\s+Nenhum desses/);
+  assert.match(done.reply, /9–12 km\/l/);
 });
 
 test("POST com vehicleId repassa o identificador para o runTurn", async () => {

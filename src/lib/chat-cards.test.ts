@@ -517,3 +517,71 @@ test("desambiguação prioriza unidade ativa quando existem dois modelos iguais 
   assert.equal(pickedActive[0]?.yearModel, 2021);
   assert.equal(pickedActive[0]?.price, 64900);
 });
+
+test("consumo do HB20 Premium foca a unidade Premium, não a shortlist", () => {
+  const hb20Premium: ChatVehicleRecord = {
+    id: "chb20_2015_premium_focus",
+    brand: "Hyundai",
+    model: "HB20",
+    version: "Premium 1.6",
+    yearModel: 2015,
+    km: 110000,
+    price: 55900,
+    color: "Branco",
+    transmission: "Automático",
+    fuel: "Flex",
+    engine: "1.6",
+    category: "carro",
+  };
+  const hb20Evo: ChatVehicleRecord = {
+    id: "chb20_2021_evolution_focus",
+    brand: "Hyundai",
+    model: "HB20",
+    version: "Evolution 1.0",
+    yearModel: 2021,
+    km: 54000,
+    price: 64900,
+    color: "Prata",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.0",
+    category: "carro",
+  };
+  const picked = selectChatVehicles(
+    "Separei o HB20 Evolution e o Premium.",
+    "Qual consumo do HB20 Premium",
+    [hb20Evo, hb20Premium],
+  );
+  assert.deepEqual(
+    picked.map((vehicle) => vehicle.id),
+    [hb20Premium.id],
+  );
+});
+
+test("consumo dele com um card preferido foca essa unidade", () => {
+  const fox: ChatVehicleRecord = {
+    id: "cfox_anaphora_card",
+    brand: "Volkswagen",
+    model: "Fox",
+    version: "Trend 1.6",
+    yearModel: 2014,
+    km: 98000,
+    price: 38900,
+    color: "Prata",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.6",
+    category: "carro",
+  };
+  const picked = selectChatVehicles(
+    "Para o Volkswagen Fox com motor 1.6 flex",
+    "qual o consumo dele?",
+    [fox, prisma],
+    3,
+    fox.id,
+  );
+  assert.deepEqual(
+    picked.map((vehicle) => vehicle.id),
+    [fox.id],
+  );
+});

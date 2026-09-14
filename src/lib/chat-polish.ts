@@ -6,9 +6,6 @@ import type { ChatVehicleRecord } from "@/lib/chat-stock";
 
 export const WARRANTY_PHRASE = "garantia de 3 meses de motor e câmbio";
 
-const TRAILING_CONJ =
-  /\b(e|ou|mas|de|do|da|dos|das|com|para|pra|por|em|no|na|nos|nas|que|se|um|uma|o|a|os|as|ao|aos)$/i;
-
 function fold(value: string) {
   return value
     .toLowerCase()
@@ -29,10 +26,18 @@ export function looksTruncated(
   if (/R\$\s*[\d.]+$/.test(trimmed)) return false;
   if (/\d[\d.]*\s*km$/i.test(trimmed)) return false;
   if (/[.!?]["”']?$/.test(trimmed)) return false;
-  if (/[,:;…]$/.test(trimmed)) return true;
-  const withoutDots = trimmed.replace(/[.…]+$/, "").trim();
-  if (TRAILING_CONJ.test(withoutDots)) return true;
-  if (/,\s*[\p{L}]{3,}$/u.test(trimmed)) return true;
+  // Frase sem ponto/!/? — inclusive cortes de produção ("Para o Fox com motor 1.6 flex").
+  return true;
+}
+
+/** Stream Gemini que só entregou o começo ("Ol") deve regenerar, não continuar. */
+export function streamTextNeedsRegen(
+  text: string,
+  finishReason?: string | null,
+) {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  if (looksTruncated(trimmed, finishReason) && trimmed.length < 96) return true;
   return false;
 }
 

@@ -20,7 +20,7 @@ import {
   buildChatSystemPrompt,
   parsePriceLimit,
 } from "@/lib/chat-prompt";
-import { applyChatReplyGuards } from "@/lib/chat-polish";
+import { applyChatReplyGuards, looksTruncated } from "@/lib/chat-polish";
 import {
   confirmAfterLead,
   generateChatReply,
@@ -38,14 +38,25 @@ import {
   CHAT_FINANCE_REPLY,
   CHAT_TRADE_REPLY,
   CHAT_WARRANTY_REPLY,
+  asksAboutConsumption,
+  asksAboutEquipment,
+  asksAboutListedFacts,
+  asksAboutNamedGear,
   chatPolicyShortcut,
   enrichChatStockReply,
   enrichMissingModelReply,
+  formatFocusedConsumptionReply,
+  formatFocusedEquipmentReply,
   isIncompleteStockReply,
+  isFocusedVehicleFactQuestion,
   looksLikeMissingModelReply,
   localGarageReply,
+  matchFocusedVehicle,
+  singleMentionedModelPool,
   toChatStockLine,
   applyChatStockFilters,
+  consumptionReplyLooksBroken,
+  hasConsumptionFigures,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 
@@ -189,6 +200,45 @@ export async function runChatTurn(input: {
     return finish(CHAT_WARRANTY_REPLY, false, { policy });
   }
 
+  const mentionedPool = singleMentionedModelPool(input.stock, input.mensagem);
+  const focusedVehicle =
+    matchFocusedVehicle(input.mensagem, input.stock, activeVehicle?.id) ??
+    (!mentionedPool &&
+    (asksAboutConsumption(input.mensagem) || asksAboutEquipment(input.mensagem))
+      ? activeVehicle
+      : undefined);
+  const mixedPrice = asksAboutListedFacts(input.mensagem);
+  if (
+    focusedVehicle &&
+    !mixedPrice &&
+    isFocusedVehicleFactQuestion(
+      input.mensagem,
+      input.stock,
+      activeVehicle?.id,
+    ) &&
+    (asksAboutConsumption(input.mensagem) ||
+      asksAboutEquipment(input.mensagem) ||
+      asksAboutNamedGear(input.mensagem))
+  ) {
+    const reply = asksAboutConsumption(input.mensagem)
+      ? formatFocusedConsumptionReply(focusedVehicle)
+      : formatFocusedEquipmentReply(focusedVehicle, input.mensagem);
+    emit(reply);
+    return finish(reply, false, { policy: "stock-fact" });
+  }
+  if (
+    focusedVehicle &&
+    !mixedPrice &&
+    !mentionedPool &&
+    asksAboutConsumption(input.mensagem) &&
+    activeVehicle &&
+    focusedVehicle.id === activeVehicle.id
+  ) {
+    const reply = formatFocusedConsumptionReply(focusedVehicle);
+    emit(reply);
+    return finish(reply, false, { policy: "stock-fact" });
+  }
+
   const fromStock = () => {
     if (isChatPing(input.mensagem)) return CHAT_PING_REPLY;
     return (
@@ -245,6 +295,45 @@ export async function runChatTurn(input: {
     const fallback = fromStock();
     emit(fallback);
     return finish(fallback);
+  }
+
+  if (
+    !first.functionCall &&
+    asksAboutConsumption(input.mensagem) &&
+    !hasConsumptionFigures(generated)
+  ) {
+    const local = localGarageReply(
+      input.mensagem,
+      input.stock,
+      activeVehicle,
+    );
+    const broken =
+      consumptionReplyLooksBroken(generated) ||
+      looksTruncated(generated, first.finishReason);
+    const inferred =
+      matchFocusedVehicle(input.mensagem, input.stock, activeVehicle?.id) ??
+      (generated
+        ? matchFocusedVehicle(generated, input.stock, activeVehicle?.id)
+        : undefined) ??
+      activeVehicle;
+    const catalog =
+      local && hasConsumptionFigures(local)
+        ? local
+        : inferred && !asksAboutListedFacts(input.mensagem)
+          ? formatFocusedConsumptionReply(inferred)
+          : local;
+    if (catalog && (hasConsumptionFigures(catalog) || broken || !generated)) {
+      if (!generated || catalog.startsWith(generated)) {
+        emit(generated ? catalog.slice(generated.length) : catalog);
+      }
+      return finish(catalog, false, {
+        finishReason: first.finishReason,
+        truncated: false,
+        retried: first.retried,
+        policy: "stock-fact",
+        model: first.model,
+      });
+    }
   }
 
   if (first.functionCall?.name === "criar_lead") {

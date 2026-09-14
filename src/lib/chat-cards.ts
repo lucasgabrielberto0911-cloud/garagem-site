@@ -10,8 +10,11 @@ import { coverSrc } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
   applyChatStockFilters,
+  asksAboutConsumption,
   cheapPriceCap,
   foldedTransmission,
+  isFocusedVehicleFactQuestion,
+  matchFocusedVehicle,
   parseTransmissionFilter,
   parseVehicleCategoryFilter,
   resolveChatCategory,
@@ -348,6 +351,16 @@ export function selectChatVehicles(
   preferredVehicleId?: string,
 ) {
   const pool = applyChatStockFilters(stock, mensagem);
+  if (isFocusedVehicleFactQuestion(mensagem, pool, preferredVehicleId)) {
+    const focused = matchFocusedVehicle(mensagem, pool, preferredVehicleId);
+    if (focused) return [focused];
+  }
+  if (asksAboutConsumption(mensagem) && parsePriceLimit(mensagem) == null) {
+    const focused =
+      matchFocusedVehicle(mensagem, pool, preferredVehicleId) ??
+      matchFocusedVehicle(reply, pool, preferredVehicleId);
+    if (focused) return [focused];
+  }
   const mentioned = matchVehiclesInReply(
     reply,
     pool,

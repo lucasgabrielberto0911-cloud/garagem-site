@@ -6,6 +6,7 @@ import {
   ensureWarrantyCopy,
   looksTruncated,
   polishPortuguese,
+  streamTextNeedsRegen,
   stripInventedAccessories,
 } from "./chat-polish";
 import type { ChatVehicleRecord } from "./chat-stock";
@@ -33,6 +34,29 @@ test("detecta resposta cortada no meio da frase", () => {
     false,
   );
   assert.equal(looksTruncated("texto incompleto", "MAX_TOKENS"), true);
+  assert.equal(looksTruncated("Ol", "STOP"), true);
+  assert.equal(
+    looksTruncated(
+      "Para o Volkswagen Fox 1.6, a faixa típica de catálogo fica",
+      "STOP",
+    ),
+    true,
+  );
+  assert.equal(
+    looksTruncated("Para o Volkswagen Fox com motor 1.6 flex", "STOP"),
+    true,
+  );
+  assert.equal(looksTruncated("No Volkswagen Fox com motor 1.6", "STOP"), true);
+  assert.equal(
+    looksTruncated("Para o Volkswagen Fox com motor 1.6 flex, a faixa típica de catálogo fica", "STOP"),
+    true,
+  );
+  assert.equal(streamTextNeedsRegen("Ol", "STOP"), true);
+  assert.equal(
+    streamTextNeedsRegen("Para o Volkswagen Fox com motor 1.6 flex", "STOP"),
+    true,
+  );
+  assert.equal(streamTextNeedsRegen("Beleza, te mostro o estoque.", "STOP"), false);
 });
 
 test("fecha no último ponto e não deixa frase pela metade", () => {

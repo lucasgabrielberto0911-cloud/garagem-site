@@ -134,3 +134,81 @@ export function chatWhatsAppCta(
     benefit: "Confirma o modelo · das 8h às 23h",
   };
 }
+
+/** “esse / dele” — aponta pro card único da tela, não pra um modelo nomeado. */
+export function isAnaphoricVehicleFollowUp(mensagem: string): boolean {
+  const folded = fold(mensagem);
+  return /\b(esse|essa|esses|essas|este|esta|estes|estas|isso|isto|ele|ela|dele|dela|desse|dessa|deste|desta|nele|nela)\b/.test(
+    folded,
+  );
+}
+
+export type ChatShownVehicle = {
+  id: string;
+  brand?: string;
+  model?: string;
+};
+
+export function lastSingleChatVehicleId(
+  messages: Array<{ role: string; vehicles?: ChatShownVehicle[] }>,
+): string | undefined {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const msg = messages[i];
+    if (msg?.role !== "assistant") continue;
+    const vehicles = msg.vehicles ?? [];
+    if (vehicles.length === 1) return vehicles[0]?.id;
+    if (vehicles.length > 1) return undefined;
+  }
+  return undefined;
+}
+
+/** Últimos mini-anúncios da conversa — inclusive lista de 2–3 cards. */
+export function lastShownChatVehicles(
+  messages: Array<{ role: string; vehicles?: ChatShownVehicle[] }>,
+): ChatShownVehicle[] {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const msg = messages[i];
+    if (msg?.role !== "assistant") continue;
+    const vehicles = msg.vehicles ?? [];
+    if (vehicles.length > 0) return vehicles;
+  }
+  return [];
+}
+
+/** Casa “do fox” com um card já mostrado. Não pega marca solta (volkswagen). */
+export function namedShownChatVehicleId(
+  mensagem: string,
+  shown: ChatShownVehicle[],
+): string | undefined {
+  if (shown.length === 0) return undefined;
+  const folded = fold(mensagem);
+  const hits = shown.filter((vehicle) => {
+    const model = fold(vehicle.model ?? "");
+    return model.length >= 3 && folded.includes(model);
+  });
+  if (hits.length === 0) return undefined;
+  const uniqueIds = [...new Set(hits.map((vehicle) => vehicle.id))];
+  if (uniqueIds.length === 1) return uniqueIds[0];
+  const uniqueModels = [
+    ...new Set(hits.map((vehicle) => fold(vehicle.model ?? ""))),
+  ];
+  if (uniqueModels.length === 1) return hits[0]?.id;
+  return undefined;
+}
+
+export function resolveChatRequestVehicleId(opts: {
+  mensagem: string;
+  pageVehicleId?: string;
+  lastSingleCardId?: string;
+  shownCards?: ChatShownVehicle[];
+}): string | undefined {
+  const named = namedShownChatVehicleId(opts.mensagem, opts.shownCards ?? []);
+  if (opts.pageVehicleId) {
+    if (named && named !== opts.pageVehicleId) return named;
+    return opts.pageVehicleId;
+  }
+  if (named) return named;
+  if (!opts.lastSingleCardId) return undefined;
+  if (!isAnaphoricVehicleFollowUp(opts.mensagem)) return undefined;
+  return opts.lastSingleCardId;
+}

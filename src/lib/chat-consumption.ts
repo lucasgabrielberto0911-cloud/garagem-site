@@ -15,7 +15,36 @@ export type ConsumptionRange = {
   city: string;
   /** Trecho curto pra lista: "11–14 km/l". */
   kmL: string;
+  gasolineKmL?: string;
+  ethanolKmL?: string;
 };
+
+function flexCityRange(
+  label: string,
+  gasolineKmL: string,
+  ethanolKmL: string,
+): ConsumptionRange {
+  return {
+    label,
+    city: `${gasolineKmL} cidade (gasolina) e ${ethanolKmL} (álcool)`,
+    kmL: gasolineKmL,
+    gasolineKmL,
+    ethanolKmL,
+  };
+}
+
+function gasCityRange(label: string, gasolineKmL: string): ConsumptionRange {
+  return {
+    label,
+    city: `${gasolineKmL} cidade (gasolina)`,
+    kmL: gasolineKmL,
+    gasolineKmL,
+  };
+}
+
+function isFlexFuel(fuel: string) {
+  return /flex/.test(fuel.toLowerCase()) || !fuel.trim();
+}
 
 /** Cilindrada em litros: "1.0", "2.0 TSI", "160cc", moto "BIZ 125". */
 export function parseEngineDisplacementLiters(
@@ -124,39 +153,34 @@ export function typicalConsumptionRange(
   }
 
   if (liters != null) {
+    const flex = isFlexFuel(fuel);
     if (liters <= 1.0) {
-      return {
-        label: "1.0 flex",
-        city: "11–14 km/l cidade (gasolina)",
-        kmL: "11–14 km/l",
-      };
+      return flex
+        ? flexCityRange("1.0 flex", "11–14 km/l", "8–10 km/l")
+        : gasCityRange("1.0", "11–14 km/l");
     }
     if (liters <= 1.4) {
-      return {
-        label: `${liters.toFixed(1)} flex`,
-        city: "10–13 km/l cidade (gasolina)",
-        kmL: "10–13 km/l",
-      };
+      const label = `${liters.toFixed(1)}${flex ? " flex" : ""}`;
+      return flex
+        ? flexCityRange(label, "10–13 km/l", "7–9 km/l")
+        : gasCityRange(label, "10–13 km/l");
     }
     if (liters <= 1.6) {
-      return {
-        label: `${liters.toFixed(1)} flex`,
-        city: "9–12 km/l cidade (gasolina)",
-        kmL: "9–12 km/l",
-      };
+      const label = `${liters.toFixed(1)}${flex ? " flex" : ""}`;
+      return flex
+        ? flexCityRange(label, "9–12 km/l", "6–8 km/l")
+        : gasCityRange(label, "9–12 km/l");
     }
     if (liters <= 2.0) {
-      return {
-        label: `${liters.toFixed(1)}`,
-        city: "8–11 km/l cidade (gasolina)",
-        kmL: "8–11 km/l",
-      };
+      const label = `${liters.toFixed(1)}`;
+      return flex
+        ? flexCityRange(label, "8–11 km/l", "6–8 km/l")
+        : gasCityRange(label, "8–11 km/l");
     }
-    return {
-      label: `${liters.toFixed(1)}`,
-      city: "7–10 km/l cidade (gasolina)",
-      kmL: "7–10 km/l",
-    };
+    const label = `${liters.toFixed(1)}`;
+    return flex
+      ? flexCityRange(label, "7–10 km/l", "5–7 km/l")
+      : gasCityRange(label, "7–10 km/l");
   }
 
   if (isDiesel(fuel)) {

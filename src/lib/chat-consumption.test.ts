@@ -5,7 +5,13 @@ import {
   typicalConsumptionHint,
   typicalConsumptionRange,
 } from "./chat-consumption";
-import { asksAboutConsumption } from "./chat-stock";
+import {
+  asksAboutConsumption,
+  consumptionReplyLooksBroken,
+  enrichChatStockReply,
+  formatFocusedConsumptionReply,
+  type ChatVehicleRecord,
+} from "./chat-stock";
 
 test("lê cilindrada do motor, da versão e de moto em cc", () => {
   assert.equal(parseEngineDisplacementLiters("2.0 TSI", null), 2);
@@ -35,6 +41,18 @@ test("faixa de consumo é catálogo, nunca medição do usado", () => {
   assert.equal(palio18?.label, "1.8");
   assert.equal(palio18?.kmL, "8–11 km/l");
   assert.match(palio18?.city ?? "", /8–11 km\/l/);
+  assert.match(palio18?.city ?? "", /álcool/);
+  assert.equal(palio18?.ethanolKmL, "6–8 km/l");
+
+  const fox16 = typicalConsumptionRange({
+    fuel: "Flex",
+    engine: "1.6",
+    category: "carro",
+  });
+  assert.equal(fox16?.kmL, "9–12 km/l");
+  assert.equal(fox16?.ethanolKmL, "6–8 km/l");
+  assert.match(fox16?.city ?? "", /gasolina/);
+  assert.match(fox16?.city ?? "", /álcool/);
 
   const biz = typicalConsumptionHint({
     fuel: "Flex",
@@ -85,4 +103,75 @@ test("detecta perguntas específicas sobre consumo de combustível", () => {
   assert.equal(asksAboutConsumption("tem garantia?"), false);
   assert.equal(asksAboutConsumption("como funciona o financiamento?"), false);
   assert.equal(asksAboutConsumption("quanto custa a transferência?"), false);
+});
+
+const fox: ChatVehicleRecord = {
+  id: "c-fox-16",
+  brand: "Volkswagen",
+  model: "Fox",
+  version: "Trend 1.6",
+  yearModel: 2014,
+  km: 98000,
+  price: 38900,
+  color: "Prata",
+  transmission: "Manual",
+  fuel: "Flex",
+  engine: "1.6",
+  category: "carro",
+};
+
+test("template de consumo nunca cola o disclaimer no fica", () => {
+  const reply = formatFocusedConsumptionReply(fox);
+  assert.match(reply, /9–12 km\/l/);
+  assert.match(reply, /6–8 km\/l/);
+  assert.match(reply, /gasolina/);
+  assert.match(reply, /álcool/);
+  assert.match(reply, /não foi medido/);
+  assert.doesNotMatch(reply, /fica\s+Nenhum desses/i);
+  assert.equal(
+    consumptionReplyLooksBroken(
+      "Para o Volkswagen Fox 1.6, a faixa típica de catálogo fica",
+    ),
+    true,
+  );
+  assert.equal(
+    consumptionReplyLooksBroken(
+      "Para o Volkswagen Fox 1.6, a faixa típica de catálogo fica Nenhum desses usados foi medido na loja.",
+    ),
+    true,
+  );
+  assert.equal(
+    consumptionReplyLooksBroken("Para o Volkswagen Fox com motor 1.6 flex"),
+    true,
+  );
+  assert.equal(
+    consumptionReplyLooksBroken("No Volkswagen Fox com motor 1.6"),
+    true,
+  );
+  assert.equal(
+    consumptionReplyLooksBroken(
+      "No estoque agora tem, entre outros: Honda BIZ 125 2023.",
+    ),
+    false,
+  );
+  const repaired = enrichChatStockReply(
+    "Para o Volkswagen Fox 1.6, a faixa típica de catálogo fica",
+    [fox],
+    "Qual consumo do fox",
+  );
+  assert.match(repaired, /9–12 km\/l/);
+  assert.doesNotMatch(repaired, /fica\s+Nenhum desses/i);
+  assert.match(repaired, /não foi medido/);
+});
+
+test("sem faixa na ficha não usa o disclaimer como objeto do fica", () => {
+  const comfort: ChatVehicleRecord = {
+    ...fox,
+    id: "c-fox-comfort",
+    engine: null,
+    version: "Comfort",
+  };
+  const reply = formatFocusedConsumptionReply(comfort);
+  assert.doesNotMatch(reply, /fica\s+Nenhum desses/i);
+  assert.match(reply, /não tenho faixa de catálogo/i);
 });

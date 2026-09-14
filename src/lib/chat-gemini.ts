@@ -3,7 +3,9 @@ import {
   looksTruncated,
   mergeContinuation,
   closeTruncatedReply,
+  streamTextNeedsRegen,
 } from "@/lib/chat-polish";
+import { drainJsonSseBuffer, parseJsonSseFrames } from "@/lib/chat-stream";
 
 /** Mais barato e rápido para chat de loja. Flash entra só se o Lite falhar. */
 export const CHAT_GEMINI_MODEL = "gemini-2.5-flash-lite";
@@ -378,23 +380,7 @@ export async function generateChatReply(input: {
 }
 
 function parseSseJsonFrames(buffer: string): { frames: unknown[]; rest: string } {
-  const frames: unknown[] = [];
-  const parts = buffer.split("\n\n");
-  const rest = parts.pop() ?? "";
-  for (const part of parts) {
-    const line = part
-      .split("\n")
-      .find((row) => row.startsWith("data:"));
-    if (!line) continue;
-    const raw = line.slice(5).trim();
-    if (!raw || raw === "[DONE]") continue;
-    try {
-      frames.push(JSON.parse(raw));
-    } catch {
-      // chunk incompleto — fica para o próximo read
-    }
-  }
-  return { frames, rest };
+  return parseJsonSseFrames(buffer);
 }
 
 async function* streamGemini(
@@ -432,14 +418,16 @@ async function* streamGemini(
   let buffer = "";
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+    if (value) buffer += decoder.decode(value, { stream: true });
+    if (done) {
+      buffer += decoder.decode();
+      const parsed = parseSseJsonFrames(buffer);
+      for (const frame of parsed.frames) yield frame;
+      for (const frame of drainJsonSseBuffer(parsed.rest)) yield frame;
+      break;
+    }
     const parsed = parseSseJsonFrames(buffer);
     buffer = parsed.rest;
-    for (const frame of parsed.frames) yield frame;
-  }
-  if (buffer.trim()) {
-    const parsed = parseSseJsonFrames(`${buffer}\n\n`);
     for (const frame of parsed.frames) yield frame;
   }
 }
@@ -483,6 +471,24 @@ export async function generateChatReplyStream(
         }
         console.info("[chat] gemini:model", model);
         let retried = false;
+        const regen = !functionCall && streamTextNeedsRegen(text, finishReason);
+        if (regen) {
+          try {
+            const full = await generateChatReply(input);
+            if (full.text && full.text.trim().length >= text.trim().length) {
+              const piece = full.text.startsWith(text)
+                ? full.text.slice(text.length)
+                : "";
+              if (piece) opts.onToken?.(piece);
+              return { ...full, retried: true };
+            }
+          } catch (error) {
+            console.info(
+              "[chat] gemini:stream_regen_failed",
+              redactGeminiError(error instanceof Error ? error.message : "err"),
+            );
+          }
+        }
         if (!functionCall && looksTruncated(text, finishReason)) {
           try {
             const extra = await continueTruncatedReply(input, text, key, model);
@@ -501,7 +507,28 @@ export async function generateChatReplyStream(
             );
           }
         }
+        if (!functionCall && looksTruncated(text, finishReason) && !regen) {
+          try {
+            const full = await generateChatReply(input);
+            if (full.text && full.text.trim().length > text.trim().length) {
+              const piece = full.text.startsWith(text)
+                ? full.text.slice(text.length)
+                : "";
+              if (piece) opts.onToken?.(piece);
+              return { ...full, retried: true };
+            }
+          } catch (error) {
+            console.info(
+              "[chat] gemini:stream_regen_failed",
+              redactGeminiError(error instanceof Error ? error.message : "err"),
+            );
+          }
+        }
         const closed = finalizeGeneratedText(text, finishReason, retried);
+        if (closed.text.startsWith(text) && closed.text.length > text.length) {
+          const piece = closed.text.slice(text.length);
+          if (piece) opts.onToken?.(piece);
+        }
         return {
           text: closed.text,
           functionCall,

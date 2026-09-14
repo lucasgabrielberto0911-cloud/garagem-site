@@ -10,7 +10,7 @@ import {
   checkChatRateLimit,
   getOrCreateChatSession,
 } from "@/lib/chat-session";
-import { encodeSse } from "@/lib/chat-stream";
+import { catchUpStreamText, encodeSse } from "@/lib/chat-stream";
 import { loadChatStock, type ChatVehicleRecord } from "@/lib/chat-stock";
 import { runChatTurn, type ChatTurnResult } from "@/lib/chat-turn";
 import type { RateLimitResult } from "@/lib/rate-limit";
@@ -188,12 +188,14 @@ export async function handleChatPost(
           controller.enqueue(encoder.encode(encodeSse(event, data)));
         };
         try {
+          let emitted = "";
           const result = await deps.runTurn({
             mensagem,
             historico,
             stock,
             vehicleId,
             onToken: (text) => {
+              emitted += text;
               send("token", { text });
             },
           });
@@ -210,6 +212,8 @@ export async function handleChatPost(
             cards: result.vehicles.length,
             model: result.meta?.model,
           });
+          const catchUp = catchUpStreamText(emitted, result.reply);
+          if (catchUp) send("token", { text: catchUp });
           send("done", publicResult(result));
         } catch (error) {
           console.error("[chat] stream:", error);
