@@ -1,25 +1,25 @@
 import {
-  IconHandshake,
-  IconMapPin,
+  IconClock,
+  IconClipboardCheck,
   IconShieldCheck,
 } from "@/components/site/icons";
 
 const NOTES = [
   {
     Icon: IconShieldCheck,
-    label: "3 meses (motor e câmbio)",
+    label: "Garantia de 3 meses — motor e câmbio",
   },
   {
-    Icon: IconHandshake,
-    label: "Atendimento humano",
+    Icon: IconClipboardCheck,
+    label: "Procedência verificada",
   },
   {
-    Icon: IconMapPin,
-    label: "Loja digital; visita combinada",
+    Icon: IconClock,
+    label: "Atendimento online 8h–23h",
   },
 ] as const;
 
-/** Bloco curto ao lado do CTA — sem números inventados nem urgência. */
+/** Confiança ao lado do preço — garantia, procedência e horário reais da loja. */
 export function VehicleTrustNotes({ className = "" }: { className?: string }) {
   return (
     <ul

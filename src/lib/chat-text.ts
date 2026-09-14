@@ -1,4 +1,8 @@
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
+import {
+  formatVehicleWhatsAppMessage,
+  type VehicleWhatsAppIntent,
+} from "@/lib/vehicle-display";
 
 export type ChatTextPart =
   | { type: "text"; value: string }
@@ -62,16 +66,104 @@ export function displayChatText(text: string) {
   return value;
 }
 
+export type ChatWhatsAppVehicle = {
+  id?: string;
+  label: string;
+  brand?: string;
+  model?: string;
+  version?: string | null;
+  year?: number;
+  price?: number;
+  path?: string;
+  category?: string;
+  sold?: boolean;
+};
+
+export function chatCardWhatsAppVehicle(vehicle: {
+  href: string;
+  title: string;
+  brand: string;
+  model: string;
+  version?: string | null;
+  year: number;
+  price: number;
+  category?: string;
+}): ChatWhatsAppVehicle {
+  const version = vehicle.version?.trim();
+  return {
+    label: `${vehicle.title}${version ? ` ${version}` : ""} ${vehicle.year}`.trim(),
+    brand: vehicle.brand,
+    model: vehicle.model,
+    version: vehicle.version,
+    year: vehicle.year,
+    price: vehicle.price,
+    path: vehicle.href,
+    category: vehicle.category,
+  };
+}
+
+export function resolveChatWhatsAppVehicle(
+  pageVehicle?: ChatWhatsAppVehicle | null,
+  cards: Array<{
+    href: string;
+    title: string;
+    brand: string;
+    model: string;
+    version?: string | null;
+    year: number;
+    price: number;
+    category?: string;
+  }> = [],
+): ChatWhatsAppVehicle | null {
+  if (pageVehicle?.sold) return pageVehicle;
+  if (pageVehicle && cards.length <= 1) return pageVehicle;
+  if (cards.length === 1) return chatCardWhatsAppVehicle(cards[0]!);
+  return pageVehicle ?? null;
+}
+
+function chatVehicleWhatsAppText(
+  vehicle: ChatWhatsAppVehicle,
+  intent: VehicleWhatsAppIntent,
+) {
+  const isMoto = vehicle.category === "moto";
+  const path = vehicle.path?.startsWith("/estoque/") ? vehicle.path : "";
+  if (
+    vehicle.price != null &&
+    vehicle.price > 0 &&
+    vehicle.brand &&
+    vehicle.model &&
+    vehicle.year &&
+    path
+  ) {
+    return formatVehicleWhatsAppMessage({
+      brand: vehicle.brand,
+      model: vehicle.model,
+      version: vehicle.version,
+      yearModel: vehicle.year,
+      price: vehicle.price,
+      path,
+      isMoto,
+      intent,
+    });
+  }
+  if (intent === "finance") {
+    return WHATSAPP_MESSAGES.vehicleFinance(vehicle.label, isMoto);
+  }
+  if (intent === "trade") {
+    return WHATSAPP_MESSAGES.vehicleTrade(vehicle.label, isMoto);
+  }
+  if (intent === "video") {
+    return WHATSAPP_MESSAGES.vehicleVideo(vehicle.label, isMoto);
+  }
+  return WHATSAPP_MESSAGES.vehicle(vehicle.label, isMoto);
+}
+
 export function chatWhatsAppCta(
   text: string,
-  vehicle?: {
-    label: string;
-    model?: string;
-    category?: string;
-    sold?: boolean;
-  } | null,
+  vehicle?: ChatWhatsAppVehicle | null,
+  opts: { force?: boolean } = {},
 ): ChatWhatsAppCta | null {
-  if (!/whatsapp|wa\.me/i.test(text)) return null;
+  if (!opts.force && !/whatsapp|wa\.me/i.test(text)) return null;
   const folded = fold(text);
 
   if (vehicle?.sold) {
@@ -93,10 +185,7 @@ export function chatWhatsAppCta(
     return {
       href: whatsappUrl(
         vehicle
-          ? WHATSAPP_MESSAGES.vehicleFinance(
-              vehicle.label,
-              vehicle.category === "moto",
-            )
+          ? chatVehicleWhatsAppText(vehicle, "finance")
           : "Olá! Vi o assistente da Garagem e quero simular financiamento em até 60x.",
       ),
       label: "Simular parcela",
@@ -107,10 +196,7 @@ export function chatWhatsAppCta(
     return {
       href: whatsappUrl(
         vehicle
-          ? WHATSAPP_MESSAGES.vehicleTrade(
-              vehicle.label,
-              vehicle.category === "moto",
-            )
+          ? chatVehicleWhatsAppText(vehicle, "trade")
           : WHATSAPP_MESSAGES.sell,
       ),
       label: "Avaliar meu usado",
@@ -126,9 +212,7 @@ export function chatWhatsAppCta(
   }
   return {
     href: whatsappUrl(
-      vehicle
-        ? WHATSAPP_MESSAGES.vehicle(vehicle.label, vehicle.category === "moto")
-        : WHATSAPP_MESSAGES.help,
+      vehicle ? chatVehicleWhatsAppText(vehicle, "interest") : WHATSAPP_MESSAGES.help,
     ),
     label: "Chamar consultor",
     benefit: "Confirma o modelo · das 8h às 23h",

@@ -31,7 +31,7 @@ export function salesPeriodWhere(period: SalesPeriod) {
   };
 }
 
-export type VehiclesTab = "estoque" | "vendidos";
+export type VehiclesTab = "estoque" | "vendidos" | "destaques";
 export type AdminVehiclesSort = "recent" | "year" | "km" | "price";
 
 export const ADMIN_VEHICLE_LIST_SELECT = {
@@ -53,10 +53,11 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
   createdAt: true,
   hasVideo: true,
   transmission: true,
+  color: true,
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,
-    select: { url: true },
+    select: { url: true, thumbnailUrl: true },
   },
   costs: { select: { amount: true } },
   sale: { select: { salePrice: true } },
@@ -81,7 +82,8 @@ export type AdminVehicleListItem = {
   createdAt: Date;
   hasVideo: boolean;
   transmission: string;
-  photos: Array<{ url: string }>;
+  color: string | null;
+  photos: Array<{ url: string; thumbnailUrl?: string | null }>;
   costs: Array<{ amount: number }>;
   sale: { salePrice: number } | null;
 };
@@ -103,9 +105,11 @@ export const ADMIN_SALE_LIST_INCLUDE = {
 } as const;
 
 function tabStatusFilter(tab: VehiclesTab) {
-  return tab === "vendidos"
-    ? { status: "vendido" }
-    : { status: { in: ["disponivel", "reservado"] } };
+  if (tab === "vendidos") return { status: "vendido" };
+  if (tab === "destaques") {
+    return { featured: true, status: { in: ["disponivel", "reservado"] } };
+  }
+  return { status: { in: ["disponivel", "reservado"] } };
 }
 
 function searchWhere(q: string) {
@@ -198,7 +202,7 @@ export async function getAdminVehicleStats() {
     status: { in: ["disponivel", "reservado"] },
   };
 
-  const [groups, stockValue, availableRows, withoutPhotos, withoutVideo, stale] =
+  const [groups, stockValue, availableRows, withoutPhotos, withoutVideo, stale, featured] =
     await Promise.all([
     prisma.vehicle.groupBy({
       by: ["status"],
@@ -226,6 +230,9 @@ export async function getAdminVehicleStats() {
         createdAt: { lt: staleCutoffDate() },
       },
     }),
+    prisma.vehicle.count({
+      where: { historical: false, status: "disponivel", featured: true },
+    }),
   ]);
 
   const count = (value: string) =>
@@ -251,6 +258,7 @@ export async function getAdminVehicleStats() {
     withoutPhotos,
     withoutVideo,
     stale,
+    featured,
   };
 }
 

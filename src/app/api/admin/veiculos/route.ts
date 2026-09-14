@@ -8,7 +8,9 @@ import {
 } from "@/lib/admin-vehicles";
 
 function resolveTab(raw: string | null): VehiclesTab {
-  return raw === "vendidos" ? "vendidos" : "estoque";
+  if (raw === "vendidos") return "vendidos";
+  if (raw === "destaques") return "destaques";
+  return "estoque";
 }
 
 export async function GET(request: NextRequest) {

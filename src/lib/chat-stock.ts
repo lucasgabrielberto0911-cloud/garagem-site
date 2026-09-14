@@ -194,11 +194,7 @@ export function cheapPriceCap(stock: ChatVehicleRecord[]): number | null {
   return cap;
 }
 
-/** Um único modelo citado (ex.: “hb20 baratinho”) — não mistura irmão de outra família. */
-export function singleMentionedModelPool(
-  stock: ChatVehicleRecord[],
-  mensagem: string,
-): ChatVehicleRecord[] | null {
+function mentionedModelGroups(stock: ChatVehicleRecord[], mensagem: string) {
   const folded = normalize(mensagem);
   const models = new Map<string, ChatVehicleRecord[]>();
   for (const vehicle of stock) {
@@ -209,8 +205,49 @@ export function singleMentionedModelPool(
       models.set(model, list);
     }
   }
+  return models;
+}
+
+/** Um único modelo citado (ex.: “hb20 baratinho”) — não mistura irmão de outra família. */
+export function singleMentionedModelPool(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+): ChatVehicleRecord[] | null {
+  const models = mentionedModelGroups(stock, mensagem);
   if (models.size !== 1) return null;
   return [...models.values()][0] ?? null;
+}
+
+/** Dois ou três modelos nomeados (“HB20 ou Onix”, “Pulse vs Argo”). */
+export function mentionedModelPools(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+): ChatVehicleRecord[][] {
+  const models = mentionedModelGroups(stock, mensagem);
+  return [...models.values()].filter((group) => group.length > 0);
+}
+
+function pickFromModelGroup(group: ChatVehicleRecord[]) {
+  return [...group].sort((a, b) => a.price - b.price || a.km - b.km)[0] ?? null;
+}
+
+export function pickComparedModelVehicles(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+  limit = 2,
+): ChatVehicleRecord[] {
+  const groups = mentionedModelPools(stock, mensagem);
+  if (groups.length < 2) return [];
+  const picks: ChatVehicleRecord[] = [];
+  const seen = new Set<string>();
+  for (const group of groups) {
+    const vehicle = pickFromModelGroup(group);
+    if (!vehicle || seen.has(vehicle.id)) continue;
+    seen.add(vehicle.id);
+    picks.push(vehicle);
+    if (picks.length >= limit) break;
+  }
+  return picks.length >= 2 ? picks : [];
 }
 
 export function matchFocusedVehicle(
@@ -564,14 +601,79 @@ export function asksAboutEquipment(mensagem: string): boolean {
 
 export function asksAboutNamedGear(mensagem: string): boolean {
   const folded = normalize(mensagem);
-  return /\b(tem|e|eh|possui)\s+(automatico|automatica|manual|cvt)\b/.test(
+  if (
+    /\b(tem|e|eh|possui)\s+(automatico|automatica|manual|cvt)\b/.test(folded)
+  ) {
+    return true;
+  }
+  if (/\b(cambio|transmissao)\b/.test(folded)) return true;
+  if (
+    /\b(automatico|automatica|cvt|manual)\b/.test(folded) &&
+    /\b(e|eh|tem|qual|quais|desse|dessa|deste|desta|nele|nela|esse|essa|este|esta)\b/.test(
+      folded,
+    )
+  ) {
+    return true;
+  }
+  return /\b(manual ou auto|auto ou manual|automatico ou manual|manual ou automatico)\b/.test(
     folded,
   );
+}
+
+export function asksAboutKm(mensagem: string): boolean {
+  const folded = normalize(mensagem);
+  if (asksAboutConsumption(mensagem)) return false;
+  return /\b(km|quilometragem|rodado|rodagem|quanto tem de km|quantos km)\b/.test(
+    folded,
+  );
+}
+
+export function asksAboutAvailability(mensagem: string): boolean {
+  const folded = normalize(mensagem);
+  return /\b(ainda tem|ainda esta|ainda ta|tem ainda|ainda vende|ja vendeu|ja foi vendido|esse carro ainda|essa moto ainda|ainda esta no estoque|tem no estoque agora)\b/.test(
+    folded,
+  );
+}
+
+export function asksToCompareModels(mensagem: string): boolean {
+  const folded = normalize(mensagem);
+  return /\b(compar|vs|versus|diferen|melhor que|qual dos dois|qual o melhor)\b/.test(
+    folded,
+  ) || /\sou\s/.test(folded);
 }
 
 export function asksAboutListedFacts(mensagem: string): boolean {
   const folded = normalize(mensagem);
   return /\b(preco|valor|quanto custa)\b/.test(folded);
+}
+
+export function formatFocusedKmReply(vehicle: ChatVehicleRecord) {
+  const named = talkName(vehicle);
+  return `${named.cap} nesta unidade está com ${formatChatKm(vehicle.km)} no hodômetro.`;
+}
+
+export function equipmentReplyLooksBroken(text: string) {
+  const trimmed = text.trim();
+  const folded = normalize(trimmed);
+  if (!trimmed) return true;
+  if (/[.!?]$/.test(trimmed) && trimmed.length >= 40) return false;
+  if (/^(o|a|para o|para a)\b/.test(folded) && trimmed.length < 80) return true;
+  if (/, ?dire[cç][aã]o$/i.test(trimmed)) return true;
+  if (/\b(tem|possui)\b/.test(folded) && !/[.!?]$/.test(trimmed) && trimmed.length < 140) {
+    return true;
+  }
+  return false;
+}
+
+export function formatAvailabilityReply(
+  vehicle: ChatVehicleRecord | null | undefined,
+  opts: { sold?: boolean } = {},
+) {
+  if (opts.sold || !vehicle) {
+    return `Essa unidade já saiu do estoque. Se quiser, o consultor procura outra parecida e te avisa no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  }
+  const named = talkName(vehicle);
+  return `Sim — ${named.labeled} ${vehicle.yearModel} ainda está no estoque (${formatChatPrice(vehicle.price)}). Confirma no WhatsApp antes de fechar: ${CHAT_WHATSAPP_URL}`;
 }
 
 export function isFocusedVehicleFactQuestion(
@@ -582,12 +684,17 @@ export function isFocusedVehicleFactQuestion(
   const consumption = asksAboutConsumption(mensagem);
   const equipment = asksAboutEquipment(mensagem);
   const geared = asksAboutNamedGear(mensagem);
-  if (!consumption && !equipment && !geared) return false;
+  const km = asksAboutKm(mensagem);
+  const availability = asksAboutAvailability(mensagem);
+  if (!consumption && !equipment && !geared && !km && !availability) {
+    return false;
+  }
   const mentioned = stock.length
     ? singleMentionedModelPool(stock, mensagem)
     : null;
   if (parsePriceLimit(mensagem) != null && !mentioned) return false;
-  if (stock.length === 0) return consumption || equipment;
+  if (stock.length === 0) return consumption || equipment || km || availability;
+  if (availability && preferredVehicleId && !mentioned) return true;
   return matchFocusedVehicle(mensagem, stock, preferredVehicleId) != null;
 }
 
@@ -693,6 +800,12 @@ export function compareChatStockPicks(
 
 function foldReply(value: string) {
   return normalize(value);
+}
+
+function looksTruncatedReply(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  return !/[.!?]$/.test(trimmed);
 }
 
 export function replyAlreadyCompares(
@@ -820,10 +933,23 @@ export function enrichChatStockReply(
       return reply;
     }
     if (asksAboutEquipment(mensagem) || asksAboutNamedGear(mensagem)) {
-      if (vehicles.length > 1 || consumptionReplyLooksBroken(reply)) {
+      if (
+        vehicles.length > 1 ||
+        equipmentReplyLooksBroken(reply) ||
+        looksTruncatedReply(reply)
+      ) {
         return formatFocusedEquipmentReply(focused, mensagem);
       }
       return reply;
+    }
+    if (asksAboutKm(mensagem)) {
+      if (vehicles.length > 1 || looksTruncatedReply(reply) || !/\bkm\b/i.test(reply)) {
+        return formatFocusedKmReply(focused);
+      }
+      return reply;
+    }
+    if (asksAboutAvailability(mensagem)) {
+      return formatAvailabilityReply(focused);
     }
   }
   if (vehicles.length >= 2) {

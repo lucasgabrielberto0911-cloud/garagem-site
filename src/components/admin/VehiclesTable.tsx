@@ -28,6 +28,8 @@ import { expectedMargin, hasCostBasis } from "@/lib/vehicle-ops";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import type { AdminVehicleListItem, VehiclesTab } from "@/lib/admin-vehicles";
+import { coverSrc } from "@/lib/stock-query";
+import { MAX_HOME_FEATURED } from "@/lib/featured";
 import { daysInStock, isStaleListing, transmissionConflictAlert } from "@/lib/stock-quality";
 import {
   deleteVehicle,
@@ -54,6 +56,12 @@ const STATUS_OPTIONS = [
   { value: "vendido", label: "Vendido" },
 ] as const;
 
+const STATUS_LABEL: Record<string, string> = {
+  disponivel: "Disponível",
+  reservado: "Reservado",
+  vendido: "Vendido",
+};
+
 const MARK_SOLD_BTN =
   "inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 border border-brand-orange/50 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/15 hover:border-brand-orange lg:min-w-[10.75rem] lg:flex-none lg:px-4";
 
@@ -64,6 +72,7 @@ function vehicleQualityAlerts(vehicle: VehicleRow) {
   if (vehicle.status === "vendido") return [];
   const alerts: string[] = [];
   if (vehicle.photos.length === 0) alerts.push("Sem foto");
+  if (!vehicle.color?.trim()) alerts.push("Sem cor");
   if (!vehicle.hasVideo) alerts.push("Sem vídeo");
   if (isStaleListing(vehicle.createdAt, vehicle.status)) {
     alerts.push(`Parado há ${daysInStock(vehicle.createdAt)} dias`);
@@ -113,6 +122,7 @@ export function VehiclesTable({
   status,
   estoqueCount: estoqueCountProp,
   vendidosCount: vendidosCountProp,
+  featuredCount: featuredCountProp,
   quality,
 }: {
   vehicles: VehicleRow[];
@@ -123,6 +133,7 @@ export function VehiclesTable({
   status?: string;
   estoqueCount: number;
   vendidosCount: number;
+  featuredCount: number;
   quality?: {
     withoutPhotos: number;
     withoutVideo: number;
@@ -142,6 +153,7 @@ export function VehiclesTable({
   const [page, setPage] = useState(1);
   const [estoqueCount, setEstoqueCount] = useState(estoqueCountProp);
   const [vendidosCount, setVendidosCount] = useState(vendidosCountProp);
+  const [featuredCount, setFeaturedCount] = useState(featuredCountProp);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadingSort, setLoadingSort] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -169,7 +181,8 @@ export function VehiclesTable({
         const search = new URLSearchParams();
         if (q) search.set("q", q);
         if (tab === "vendidos") search.set("tab", "vendidos");
-        if (status) search.set("status", status);
+        if (tab === "destaques") search.set("tab", "destaques");
+        if (status && tab === "estoque") search.set("status", status);
         search.set("sort", nextSort.key);
         search.set("dir", nextSort.dir);
         search.set("page", String(nextPage));
@@ -208,14 +221,19 @@ export function VehiclesTable({
   );
 
   const applyFilters = useCallback(
-    (params: { q?: string; tab?: VehiclesTab }) => {
+    (params: { q?: string; tab?: VehiclesTab; status?: string | null }) => {
       const search = new URLSearchParams();
       const nextQ = params.q ?? q;
       const nextTab = params.tab ?? tab;
       if (nextQ) search.set("q", nextQ);
       if (nextTab === "vendidos") search.set("tab", "vendidos");
-      if (status && !params.tab && nextTab !== "vendidos") {
-        search.set("status", status);
+      if (nextTab === "destaques") search.set("tab", "destaques");
+      const nextStatus =
+        params.status === undefined
+          ? status
+          : params.status;
+      if (nextStatus && nextTab === "estoque") {
+        search.set("status", nextStatus);
       }
       startTransition(() => {
         router.push(search.toString() ? `${pathname}?${search}` : pathname);
@@ -242,24 +260,30 @@ export function VehiclesTable({
     setTotal((current) => Math.max(0, current - 1));
     if (fromTab === "estoque") {
       setEstoqueCount((current) => Math.max(0, current - 1));
-    } else {
+    } else if (fromTab === "vendidos") {
       setVendidosCount((current) => Math.max(0, current - 1));
     }
   }
 
-  function applyLocalStatus(id: string, status: string) {
-    if (tab === "estoque" && status === "vendido") {
-      removeFromList(id, "estoque");
-      setVendidosCount((current) => current + 1);
+  function applyLocalStatus(id: string, nextStatus: string, featured = false) {
+    if ((tab === "estoque" || tab === "destaques") && nextStatus === "vendido") {
+      if (featured) {
+        setFeaturedCount((count) => Math.max(0, count - 1));
+      }
+      removeFromList(id, tab);
+      setVendidosCount((count) => count + 1);
+      if (tab === "destaques") {
+        setEstoqueCount((count) => Math.max(0, count - 1));
+      }
       return;
     }
-    if (tab === "vendidos" && status !== "vendido") {
+    if (tab === "vendidos" && nextStatus !== "vendido") {
       removeFromList(id, "vendidos");
-      setEstoqueCount((current) => current + 1);
+      setEstoqueCount((count) => count + 1);
       return;
     }
-    setItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, status } : item)),
+    setItems((rows) =>
+      rows.map((item) => (item.id === id ? { ...item, status: nextStatus } : item)),
     );
   }
 
@@ -293,6 +317,9 @@ export function VehiclesTable({
     try {
       await deleteVehicle(deleteTarget.id);
       toast.success("Veículo excluído.");
+      if (deleteTarget.featured) {
+        setFeaturedCount((count) => Math.max(0, count - 1));
+      }
       removeFromList(deleteTarget.id, tab);
       router.refresh();
     } catch {
@@ -309,7 +336,7 @@ export function VehiclesTable({
     try {
       await markVehicleAsSold(soldTarget.id);
       toast.success("Veículo movido para a aba Vendidos. A página permanece no site.");
-      applyLocalStatus(soldTarget.id, "vendido");
+      applyLocalStatus(soldTarget.id, "vendido", soldTarget.featured);
       router.refresh();
     } catch {
       toast.error("Erro ao marcar como vendido.");
@@ -329,13 +356,13 @@ export function VehiclesTable({
       <div
         role="tablist"
         aria-label="Separar estoque e vendidos"
-        className="grid grid-cols-2 border-b border-white/10 lg:flex lg:flex-wrap"
+        className="grid grid-cols-3 border-b border-white/10 lg:flex lg:flex-wrap"
       >
         <button
           type="button"
           role="tab"
           aria-selected={tab === "estoque"}
-          onClick={() => applyFilters({ tab: "estoque" })}
+          onClick={() => applyFilters({ tab: "estoque", status: null })}
           className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation lg:justify-start lg:px-4 ${
             tab === "estoque"
               ? "border-b-2 border-brand text-cream"
@@ -354,8 +381,28 @@ export function VehiclesTable({
         <button
           type="button"
           role="tab"
+          aria-selected={tab === "destaques"}
+          onClick={() => applyFilters({ tab: "destaques", status: null })}
+          className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation lg:justify-start lg:px-4 ${
+            tab === "destaques"
+              ? "border-b-2 border-brand text-cream"
+              : "border-b-2 border-transparent text-muted hover:text-cream"
+          }`}
+        >
+          Destaques
+          <span
+            className={`px-1.5 py-0.5 text-[10px] ${
+              tab === "destaques" ? "bg-brand/20 text-brand" : "bg-white/10 text-muted"
+            }`}
+          >
+            {featuredCount}/{MAX_HOME_FEATURED}
+          </span>
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === "vendidos"}
-          onClick={() => applyFilters({ tab: "vendidos" })}
+          onClick={() => applyFilters({ tab: "vendidos", status: null })}
           className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation lg:justify-start lg:px-4 ${
             tab === "vendidos"
               ? "border-b-2 border-brand text-cream"
@@ -412,7 +459,7 @@ export function VehiclesTable({
             type="search"
             name="q"
             defaultValue={q}
-            placeholder="Buscar marca, modelo, versão, cor..."
+            placeholder="Buscar marca, modelo ou placa…"
             className={`${inputClass} min-w-0 flex-1`}
           />
           <button
@@ -470,7 +517,74 @@ export function VehiclesTable({
             ) : null}
           </div>
         </div>
+
+        {tab === "estoque" ? (
+          <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
+            <span className="shrink-0 text-[11px] uppercase tracking-wider text-muted">
+              Status
+            </span>
+            <div className={CHIP_SCROLL}>
+              {(
+                [
+                  { value: null, label: "Todos" },
+                  { value: "disponivel", label: "Disponível" },
+                  { value: "reservado", label: "Reservado" },
+                ] as const
+              ).map((option) => {
+                const active =
+                  option.value === null ? !status : status === option.value;
+                return (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => applyFilters({ status: option.value })}
+                    className={`min-h-[44px] shrink-0 px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
+                      active
+                        ? "bg-brand/15 text-brand"
+                        : "border border-white/10 text-muted hover:text-cream"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </div>
+
+      {tab === "destaques" ? (
+        <div className="border border-brand/30 bg-brand/10 px-4 py-3 text-sm text-cream">
+          <p className="font-display text-xs font-semibold uppercase tracking-wider text-brand">
+            Home · {featuredCount}/{MAX_HOME_FEATURED} destaques
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-cream/90">
+            Só o que está marcado aparece na vitrine. Ordem: cadastro mais
+            recente primeiro. Teto de {MAX_HOME_FEATURED} para não bagunçar a
+            home.{" "}
+            <Link
+              href="/"
+              target="_blank"
+              className="font-medium text-brand underline-offset-4 hover:underline"
+            >
+              Ver a home
+            </Link>
+          </p>
+        </div>
+      ) : null}
+
+      {loadError ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-brand-orange/40 bg-brand-orange/10 px-4 py-3 text-sm text-cream">
+          <p>Não deu para carregar o restante da lista.</p>
+          <button
+            type="button"
+            onClick={() => void fetchPage(page + 1, sort, items.length === 0)}
+            className={btn.outline}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
 
       {items.length === 0 && !loadingSort ? (
         <EmptyState
@@ -480,14 +594,18 @@ export function VehiclesTable({
               ? "Nenhum veículo encontrado"
               : tab === "vendidos"
                 ? "Nenhum veículo vendido ainda"
-                : "Nenhum veículo em estoque"
+                : tab === "destaques"
+                  ? "Nenhum destaque na home"
+                  : "Nenhum veículo em estoque"
           }
           description={
             q
               ? "Tente ajustar a busca nesta aba."
               : tab === "vendidos"
                 ? "Quando marcar um carro como vendido, ele aparece aqui — fora do estoque ativo."
-                : "Cadastre o primeiro veículo do estoque para começar."
+                : tab === "destaques"
+                  ? "Marque até 8 anúncios disponíveis com a estrela. A home não escolhe carro sozinha."
+                  : "Cadastre o primeiro veículo do estoque para começar."
           }
           action={
             tab === "estoque" ? (
@@ -518,21 +636,30 @@ export function VehiclesTable({
                   runQuickAction(
                     vehicle.id,
                     () => setVehicleStatus(vehicle.id, status),
-                    () => applyLocalStatus(vehicle.id, status),
+                    () => applyLocalStatus(vehicle.id, status, vehicle.featured),
                   )
                 }
                 onFeatured={() =>
                   runQuickAction(
                     vehicle.id,
                     () => setVehicleFeatured(vehicle.id, !vehicle.featured),
-                    () =>
+                    () => {
+                      const nextFeatured = !vehicle.featured;
+                      setFeaturedCount((count) =>
+                        Math.max(0, count + (nextFeatured ? 1 : -1)),
+                      );
+                      if (tab === "destaques" && !nextFeatured) {
+                        removeFromList(vehicle.id, "destaques");
+                        return;
+                      }
                       setItems((current) =>
                         current.map((item) =>
                           item.id === vehicle.id
-                            ? { ...item, featured: !item.featured }
+                            ? { ...item, featured: nextFeatured }
                             : item,
                         ),
-                      ),
+                      );
+                    },
                   )
                 }
                 onDuplicate={() =>
@@ -635,6 +762,14 @@ function VehicleAdminCard({
   const ops = vehicleOpsMeta(vehicle);
   const title = `${vehicle.brand} ${vehicle.model}`;
 
+  function handleStatusChange(next: string) {
+    if (next === "vendido") {
+      onMarkSold();
+      return;
+    }
+    onStatus(next);
+  }
+
   return (
     <li className="overflow-hidden border border-white/10 bg-ink/50">
       <div className="flex gap-3 p-3 lg:gap-4 lg:p-4">
@@ -643,7 +778,7 @@ function VehicleAdminCard({
           className="relative h-[88px] w-[88px] shrink-0 overflow-hidden bg-asphalt lg:h-[104px] lg:w-[148px]"
         >
           <VehicleImage
-            src={vehicle.photos[0]?.url}
+            src={coverSrc(vehicle.photos)}
             alt={title}
             fill
             sizes="(min-width: 1024px) 148px, 88px"
@@ -658,9 +793,22 @@ function VehicleAdminCard({
 
         <div className="min-w-0 flex-1">
           <Link href={`/admin/veiculos/${vehicle.id}`} className="block min-w-0">
-            <p className="truncate font-display text-[15px] font-semibold leading-tight text-cream lg:text-base">
-              {title}
-            </p>
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="truncate font-display text-[15px] font-semibold leading-tight text-cream lg:text-base">
+                {title}
+              </p>
+              <span
+                className={`shrink-0 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                  vehicle.status === "disponivel"
+                    ? "border border-emerald-500/30 text-emerald-300"
+                    : vehicle.status === "reservado"
+                      ? "border border-brand-orange/40 text-brand-orange"
+                      : "border border-white/15 text-muted"
+                }`}
+              >
+                {STATUS_LABEL[vehicle.status] ?? vehicle.status}
+              </span>
+            </div>
             <p className="mt-0.5 truncate text-xs text-muted">
               {vehicleCategoryLabel(vehicle.category)}
               {vehicle.version ? ` · ${vehicle.version}` : ""}
@@ -690,6 +838,13 @@ function VehicleAdminCard({
               }`}
             >
               {ops.finance.label} {formatCurrencyBRL(ops.finance.value)}
+            </p>
+          ) : null}
+
+          {vehicle.status === "vendido" && !vehicle.sale ? (
+            <p className="mt-2 text-xs text-muted">
+              Sem venda registrada — a página continua no site; valor e cliente
+              entram em Vendas.
             </p>
           ) : null}
 
@@ -731,7 +886,7 @@ function VehicleAdminCard({
             id={`status-d-${vehicle.id}`}
             value={vehicle.status}
             disabled={busy}
-            onChange={(event) => onStatus(event.target.value)}
+            onChange={(event) => handleStatusChange(event.target.value)}
             className={`${inputClass} h-11 disabled:opacity-60`}
           >
             {STATUS_OPTIONS.map((option) => (
@@ -751,7 +906,7 @@ function VehicleAdminCard({
           id={`status-m-${vehicle.id}`}
           value={vehicle.status}
           disabled={busy}
-          onChange={(event) => onStatus(event.target.value)}
+          onChange={(event) => handleStatusChange(event.target.value)}
           className={`${inputClass} disabled:opacity-60`}
         >
           {STATUS_OPTIONS.map((option) => (
@@ -763,7 +918,7 @@ function VehicleAdminCard({
       </div>
 
       <div className="border-t border-white/10 lg:flex lg:items-center lg:justify-between lg:gap-3 lg:px-2 lg:py-1.5">
-        <div className="grid grid-cols-4 lg:flex lg:flex-1 lg:flex-wrap">
+        <div className="grid grid-cols-5 lg:flex lg:flex-1 lg:flex-wrap">
           <Link
             href={`/admin/veiculos/${vehicle.id}`}
             className={listActionCell}
@@ -808,7 +963,7 @@ function VehicleAdminCard({
             type="button"
             disabled={busy}
             onClick={onDuplicate}
-            className={`${listActionCell} max-lg:hidden border-l border-white/10 disabled:opacity-50`}
+            className={`${listActionCell} border-l border-white/10 disabled:opacity-50`}
             aria-label="Duplicar"
             title="Duplicar anúncio"
           >

@@ -14,6 +14,7 @@ import {
   type VehicleCardRecord,
 } from "@/lib/stock-query";
 import { colorWhere, formatColorLabel } from "@/lib/vehicle-display";
+import { MAX_HOME_FEATURED } from "@/lib/featured";
 
 export {
   STOCK_PAGE_SIZE,
@@ -269,28 +270,20 @@ async function findDetailVehicle(
 }
 
 async function fetchFeaturedVehicles(take: number): Promise<VehicleCardRecord[]> {
-  const featured = await findCardVehicles({
+  return findCardVehicles({
     where: { status: "disponivel", featured: true },
     orderBy: { createdAt: "desc" },
     take,
-  });
-
-  if (featured.length > 0) return featured;
-
-  return findCardVehicles({
-    where: { status: "disponivel" },
-    orderBy: { createdAt: "desc" },
-    take: Math.min(take, 4),
   });
 }
 
 const loadFeaturedCached = unstable_cache(
   async (take: number) => fetchFeaturedVehicles(take),
-  ["featured-vehicles-v4"],
+  ["featured-vehicles-v5"],
   PUBLIC_CACHE,
 );
 
-export const getFeaturedVehicles = cache((take = 8) =>
+export const getFeaturedVehicles = cache((take = MAX_HOME_FEATURED) =>
   safeQuery(
     "veículos em destaque",
     () => loadFeaturedCached(take),

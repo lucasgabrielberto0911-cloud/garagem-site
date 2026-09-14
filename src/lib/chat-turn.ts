@@ -40,22 +40,30 @@ import {
   CHAT_WARRANTY_REPLY,
   asksAboutConsumption,
   asksAboutEquipment,
+  asksAboutKm,
+  asksAboutAvailability,
   asksAboutListedFacts,
   asksAboutNamedGear,
+  asksToCompareModels,
   chatPolicyShortcut,
+  compareChatStockPicks,
   enrichChatStockReply,
   enrichMissingModelReply,
+  formatAvailabilityReply,
   formatFocusedConsumptionReply,
   formatFocusedEquipmentReply,
+  formatFocusedKmReply,
   isIncompleteStockReply,
   isFocusedVehicleFactQuestion,
   looksLikeMissingModelReply,
   localGarageReply,
   matchFocusedVehicle,
+  pickComparedModelVehicles,
   singleMentionedModelPool,
   toChatStockLine,
   applyChatStockFilters,
   consumptionReplyLooksBroken,
+  equipmentReplyLooksBroken,
   hasConsumptionFigures,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
@@ -201,13 +209,42 @@ export async function runChatTurn(input: {
   }
 
   const mentionedPool = singleMentionedModelPool(input.stock, input.mensagem);
+  const compared = pickComparedModelVehicles(input.stock, input.mensagem);
   const focusedVehicle =
     matchFocusedVehicle(input.mensagem, input.stock, activeVehicle?.id) ??
     (!mentionedPool &&
-    (asksAboutConsumption(input.mensagem) || asksAboutEquipment(input.mensagem))
+    (asksAboutConsumption(input.mensagem) ||
+      asksAboutEquipment(input.mensagem) ||
+      asksAboutKm(input.mensagem) ||
+      asksAboutAvailability(input.mensagem))
       ? activeVehicle
       : undefined);
   const mixedPrice = asksAboutListedFacts(input.mensagem);
+  if (
+    compared.length >= 2 &&
+    asksToCompareModels(input.mensagem) &&
+    !asksAboutConsumption(input.mensagem) &&
+    !asksAboutEquipment(input.mensagem)
+  ) {
+    const reply = compareChatStockPicks(compared, { withLeadin: true });
+    emit(reply);
+    return finish(reply, false, { policy: "compare" });
+  }
+  if (
+    asksAboutAvailability(input.mensagem) &&
+    !mixedPrice &&
+    isFocusedVehicleFactQuestion(
+      input.mensagem,
+      input.stock,
+      input.vehicleId ?? activeVehicle?.id,
+    )
+  ) {
+    const reply = formatAvailabilityReply(focusedVehicle, {
+      sold: Boolean(input.vehicleId && !focusedVehicle),
+    });
+    emit(reply);
+    return finish(reply, false, { policy: "availability" });
+  }
   if (
     focusedVehicle &&
     !mixedPrice &&
@@ -218,11 +255,14 @@ export async function runChatTurn(input: {
     ) &&
     (asksAboutConsumption(input.mensagem) ||
       asksAboutEquipment(input.mensagem) ||
-      asksAboutNamedGear(input.mensagem))
+      asksAboutNamedGear(input.mensagem) ||
+      asksAboutKm(input.mensagem))
   ) {
     const reply = asksAboutConsumption(input.mensagem)
       ? formatFocusedConsumptionReply(focusedVehicle)
-      : formatFocusedEquipmentReply(focusedVehicle, input.mensagem);
+      : asksAboutKm(input.mensagem)
+        ? formatFocusedKmReply(focusedVehicle)
+        : formatFocusedEquipmentReply(focusedVehicle, input.mensagem);
     emit(reply);
     return finish(reply, false, { policy: "stock-fact" });
   }
@@ -323,6 +363,35 @@ export async function runChatTurn(input: {
           ? formatFocusedConsumptionReply(inferred)
           : local;
     if (catalog && (hasConsumptionFigures(catalog) || broken || !generated)) {
+      if (!generated || catalog.startsWith(generated)) {
+        emit(generated ? catalog.slice(generated.length) : catalog);
+      }
+      return finish(catalog, false, {
+        finishReason: first.finishReason,
+        truncated: false,
+        retried: first.retried,
+        policy: "stock-fact",
+        model: first.model,
+      });
+    }
+  }
+
+  if (
+    !first.functionCall &&
+    (asksAboutEquipment(input.mensagem) ||
+      asksAboutNamedGear(input.mensagem) ||
+      asksAboutKm(input.mensagem))
+  ) {
+    const inferred =
+      matchFocusedVehicle(input.mensagem, input.stock, activeVehicle?.id) ??
+      activeVehicle;
+    const broken =
+      equipmentReplyLooksBroken(generated) ||
+      looksTruncated(generated, first.finishReason);
+    if (inferred && (broken || asksAboutKm(input.mensagem))) {
+      const catalog = asksAboutKm(input.mensagem)
+        ? formatFocusedKmReply(inferred)
+        : formatFocusedEquipmentReply(inferred, input.mensagem);
       if (!generated || catalog.startsWith(generated)) {
         emit(generated ? catalog.slice(generated.length) : catalog);
       }

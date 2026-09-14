@@ -122,10 +122,11 @@ export default async function AdminDashboardPage() {
           value={vehicles.featured}
           hint={
             vehicles.featured === 0
-              ? "A home mostra os mais recentes"
-              : "Aparecem primeiro na home"
+              ? "A home fica vazia até você marcar destaques"
+              : `${vehicles.featured}/8 na home · ordem pelo cadastro`
           }
           tone={alerts.noFeatured ? "warning" : "default"}
+          href="/admin/veiculos?tab=destaques"
         />
       </section>
 
@@ -168,8 +169,8 @@ export default async function AdminDashboardPage() {
                   tone="warning"
                   icon={<IconStar className="h-4 w-4" />}
                   title="Nenhum veículo em destaque"
-                  description="Marque os melhores como destaque para eles aparecerem primeiro na home."
-                  href="/admin/veiculos?status=disponivel"
+                  description="Marque até 8 anúncios disponíveis. A home não escolhe carro sozinha — sem destaque, a vitrine fica vazia."
+                  href="/admin/veiculos?tab=destaques"
                 />
               ) : null}
 

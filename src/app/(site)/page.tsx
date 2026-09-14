@@ -38,6 +38,7 @@ import {
   getStockBrands,
   getTestimonials,
 } from "@/lib/vehicles";
+import { MAX_HOME_FEATURED } from "@/lib/featured";
 
 export const revalidate = 60;
 
@@ -62,7 +63,7 @@ const REASONS = [
 export default async function HomePage() {
   const [featured, brands, testimonials, publicSite, siteContent, faqItems] =
     await Promise.all([
-    getFeaturedVehicles(8),
+    getFeaturedVehicles(MAX_HOME_FEATURED),
     getStockBrands(5),
     getTestimonials(6),
     getPublicSite(),

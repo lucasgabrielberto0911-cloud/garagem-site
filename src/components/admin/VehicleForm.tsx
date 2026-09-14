@@ -49,6 +49,7 @@ import {
   parseVehicleCategory,
   type VehicleCategory,
 } from "@/lib/vehicle-accessories";
+import { kmHint, validateVehicleListing } from "@/lib/admin-vehicle-validate";
 
 type VehicleWithPhotos = Vehicle & { photos: Photo[] };
 
@@ -60,11 +61,18 @@ const STATUSES = [
 
 const initialState: VehicleFormState = {};
 
-function SubmitButton({ label }: { label: string }) {
+function SubmitButton({
+  label,
+  disabled,
+}: {
+  label: string;
+  disabled?: boolean;
+}) {
   const { pending } = useFormStatus();
+  const blocked = pending || disabled;
   return (
-    <button type="submit" disabled={pending} className={`${btn.primary} w-full sm:w-auto`}>
-      {pending ? "Salvando..." : label}
+    <button type="submit" disabled={blocked} className={`${btn.primary} w-full sm:w-auto`}>
+      {pending ? "Salvando..." : disabled ? "Enviando fotos..." : label}
     </button>
   );
 }
@@ -96,6 +104,7 @@ export function VehicleForm({
         })) ?? [],
     ),
   );
+  const [photosUploading, setPhotosUploading] = useState(false);
   const [accessories, setAccessories] = useState<string[]>(() =>
     normalizeAccessories(vehicle?.accessories ?? []),
   );
@@ -204,6 +213,7 @@ export function VehicleForm({
       const next = { ...current };
       if (payload.brand) delete next.brand;
       if (payload.model) delete next.model;
+      if (payload.color) delete next.color;
       if (payload.year != null) delete next.year;
       if (payload.yearModel != null) delete next.yearModel;
       return next;
@@ -232,8 +242,6 @@ export function VehicleForm({
     const price = value("priceDisplay").replace(/\D/g, "");
     const currentYear = new Date().getFullYear();
 
-    if (!brand) next.brand = "Informe a marca.";
-    if (!model) next.model = "Informe o modelo.";
     if (!year || Number(year) < 1950 || Number(year) > currentYear + 1) {
       next.year = "Ano inválido.";
     }
@@ -244,8 +252,20 @@ export function VehicleForm({
     ) {
       next.yearModel = "Ano modelo inválido.";
     }
-    if (km === "") next.km = "Informe a quilometragem.";
-    if (!price || Number(price) <= 0) next.price = "Informe um preço válido.";
+
+    const listingIssues = validateVehicleListing({
+      brand,
+      model,
+      fuel,
+      transmission,
+      color: value("color").trim() || color,
+      km: km === "" ? null : Number(km),
+      price: price === "" ? null : Number(price),
+    });
+    for (const issue of listingIssues) {
+      if (issue.field === "form") continue;
+      next[issue.field] = issue.message;
+    }
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -285,6 +305,11 @@ export function VehicleForm({
         id="vehicle-form"
         action={formAction}
         onSubmit={(event) => {
+          if (photosUploading) {
+            event.preventDefault();
+            toast.error("Espere o envio das fotos terminar.");
+            return;
+          }
           if (!validate()) {
             event.preventDefault();
             toast.error("Corrija os campos destacados.");
@@ -376,13 +401,18 @@ export function VehicleForm({
                 className={inputClass}
               />
             </Field>
-            <Field label="Cor">
+            <Field
+              label="Cor"
+              required
+              error={errors.color}
+              hint="Fica vazia no anúncio se faltar."
+            >
               <input
                 name="color"
                 value={color}
                 onChange={(event) => setColor(event.target.value)}
                 placeholder="Ex.: Prata"
-                className={inputClass}
+                className={`${inputClass} ${errors.color ? errorBorder : ""}`}
               />
             </Field>
           </div>
@@ -410,7 +440,15 @@ export function VehicleForm({
                 className={`${inputClass} ${errors.yearModel ? errorBorder : ""}`}
               />
             </Field>
-            <Field label="Quilometragem" required error={errors.km}>
+            <Field
+              label="Quilometragem"
+              required
+              error={errors.km}
+              hint={
+                kmHint(Number(values.km.replace(/\D/g, "") || Number.NaN)) ??
+                undefined
+              }
+            >
               <input
                 name="kmDisplay"
                 inputMode="numeric"
@@ -591,7 +629,7 @@ export function VehicleForm({
                 ))}
               </select>
             </Field>
-            <div className="flex items-end">
+            <div className="flex flex-col justify-end gap-2">
               <label className="flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50">
                 <input
                   type="checkbox"
@@ -600,8 +638,12 @@ export function VehicleForm({
                   className="h-4 w-4 accent-brand"
                 />
                 <IconStar className="h-4 w-4 text-brand-yellow" />
-                Destaque na vitrine
+                Destaque na home
               </label>
+              <p className="text-xs leading-relaxed text-muted">
+                Até 8 na vitrine. Só o que você marcar aparece — a home não
+                escolhe carro sozinha. Precisa estar disponível.
+              </p>
             </div>
           </div>
         </Card>
@@ -616,7 +658,11 @@ export function VehicleForm({
             ) : null
           }
         >
-          <VehiclePhotoManager photos={photos} onChange={setPhotos} />
+          <VehiclePhotoManager
+            photos={photos}
+            onChange={setPhotos}
+            onUploadingChange={setPhotosUploading}
+          />
           <label className="mt-4 flex cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition hover:border-brand/50">
             <input
               type="checkbox"
@@ -816,6 +862,7 @@ export function VehicleForm({
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <SubmitButton
               label={mode === "create" ? "Cadastrar veículo" : "Salvar alterações"}
+              disabled={photosUploading}
             />
             <Link href="/admin/veiculos" className={`${btn.outline} w-full sm:w-auto`}>
               Voltar

@@ -1,0 +1,63 @@
+import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
+import { VehicleLeadHit } from "@/components/site/VehiclePixel";
+import { whatsappUrl } from "@/lib/site";
+
+type Action = {
+  trackingLabel: string;
+  hrefMessage: string;
+  label: string;
+};
+
+export function VehicleQuickActions({
+  contentId,
+  contentName,
+  value,
+  make,
+  model,
+  year,
+  video,
+  finance,
+  trade,
+  className = "",
+}: {
+  contentId: string;
+  contentName: string;
+  value: number;
+  make: string;
+  model: string;
+  year: number;
+  video: string;
+  finance: string;
+  trade: string;
+  className?: string;
+}) {
+  const actions: Action[] = [
+    { trackingLabel: "ficha-finance", hrefMessage: finance, label: "Simular parcela" },
+    { trackingLabel: "ficha-trade", hrefMessage: trade, label: "Troca" },
+    { trackingLabel: "ficha-video", hrefMessage: video, label: "Pedir vídeo" },
+  ];
+
+  return (
+    <div className={`grid grid-cols-3 gap-2 ${className}`}>
+      {actions.map((action) => (
+        <VehicleLeadHit
+          key={action.trackingLabel}
+          contentId={contentId}
+          contentName={contentName}
+          value={value}
+          make={make}
+          model={model}
+          year={year}
+        >
+          <TrackedWhatsAppLink
+            href={whatsappUrl(action.hrefMessage)}
+            trackingLabel={action.trackingLabel}
+            className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-1.5 text-center font-display text-[10px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand sm:text-[11px] lg:min-h-[44px]"
+          >
+            {action.label}
+          </TrackedWhatsAppLink>
+        </VehicleLeadHit>
+      ))}
+    </div>
+  );
+}

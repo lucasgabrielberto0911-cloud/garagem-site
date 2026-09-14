@@ -14,13 +14,12 @@ import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
+import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { JsonLd } from "@/components/JsonLd";
 import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
-import { supabaseTransformSrc } from "@/lib/stock-query";
-import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
-import { site, whatsappUrl } from "@/lib/site";
+import { site } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
   collapseDuplicateAccessories,
@@ -78,9 +77,7 @@ export async function generateMetadata({
     siteName: site.name,
   });
   const rawCover = vehicle.photos[0]?.url;
-  const cover = rawCover
-    ? supabaseTransformSrc(rawCover, 1200, 630, "cover", "75")
-    : null;
+  const cover = rawCover ?? null;
   const path = vehiclePath(vehicle);
 
   return {
@@ -239,6 +236,7 @@ export default async function VehicleDetailPage({
           version: vehicle.version,
           year: vehicle.yearModel,
           price: vehicle.price,
+          path,
           category: vehicle.category,
           sold: sold,
         }}
@@ -342,6 +340,7 @@ export default async function VehicleDetailPage({
                   formatCurrencyBRL(vehicle.price)
                 )}
               </p>
+              {!sold ? <VehicleTrustNotes /> : null}
               {vehicle.createdAt ? (
                 <p className="text-xs text-muted">
                   {formatListedAgo(vehicle.createdAt)}
@@ -413,85 +412,23 @@ export default async function VehicleDetailPage({
                     />
                   ) : null}
 
-                  <VehicleTrustNotes />
+                  <VehicleQuickActions
+                    contentId={vehicle.id}
+                    contentName={fullLabel}
+                    value={vehicle.price}
+                    make={formatBrandName(vehicle.brand)}
+                    model={formatModelName(vehicle.model)}
+                    year={vehicle.yearModel}
+                    video={whatsapp.video}
+                    finance={whatsapp.finance}
+                    trade={whatsapp.trade}
+                  />
 
-                  <details className="border border-white/10 bg-asphalt/40">
-                    <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-3 font-display text-[11px] font-semibold uppercase tracking-wide text-cream [&::-webkit-details-marker]:hidden">
-                      Vídeo, financiamento, visita ou troca
-                      <span aria-hidden="true">›</span>
-                    </summary>
-                    <div className="grid grid-cols-2 gap-2 border-t border-white/10 p-3 lg:grid-cols-3">
-                    <VehicleLeadHit
-                      contentId={vehicle.id}
-                      contentName={fullLabel}
-                      value={vehicle.price}
-                      make={formatBrandName(vehicle.brand)}
-                      model={formatModelName(vehicle.model)}
-                      year={vehicle.yearModel}
-                    >
-                      <TrackedWhatsAppLink
-                        href={whatsappUrl(whatsapp.video)}
-                        trackingLabel="ficha-video"
-                        className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
-                      >
-                        Pedir vídeo
-                      </TrackedWhatsAppLink>
-                    </VehicleLeadHit>
-                    <VehicleLeadHit
-                      contentId={vehicle.id}
-                      contentName={fullLabel}
-                      value={vehicle.price}
-                      make={formatBrandName(vehicle.brand)}
-                      model={formatModelName(vehicle.model)}
-                      year={vehicle.yearModel}
-                    >
-                      <TrackedWhatsAppLink
-                        href={whatsappUrl(whatsapp.finance)}
-                        trackingLabel="ficha-finance"
-                        className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
-                      >
-                        Financiar
-                      </TrackedWhatsAppLink>
-                    </VehicleLeadHit>
-                    <VehicleLeadHit
-                      contentId={vehicle.id}
-                      contentName={fullLabel}
-                      value={vehicle.price}
-                      make={formatBrandName(vehicle.brand)}
-                      model={formatModelName(vehicle.model)}
-                      year={vehicle.yearModel}
-                    >
-                      <TrackedWhatsAppLink
-                        href={whatsappUrl(whatsapp.visit)}
-                        trackingLabel="ficha-visit"
-                        className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
-                      >
-                        Agendar visita
-                      </TrackedWhatsAppLink>
-                    </VehicleLeadHit>
-                    <VehicleLeadHit
-                      contentId={vehicle.id}
-                      contentName={fullLabel}
-                      value={vehicle.price}
-                      make={formatBrandName(vehicle.brand)}
-                      model={formatModelName(vehicle.model)}
-                      year={vehicle.yearModel}
-                    >
-                      <TrackedWhatsAppLink
-                        href={whatsappUrl(whatsapp.trade)}
-                        trackingLabel="ficha-trade"
-                        className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-3 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
-                      >
-                        Tenho veículo na troca
-                      </TrackedWhatsAppLink>
-                    </VehicleLeadHit>
-                    </div>
-                    <p className="border-t border-white/10 px-3 py-2 text-[11px] leading-relaxed text-muted">
-                      Financiamento em até 60x e cartão em até 18x. Simulação
-                      sujeita a análise de crédito e CET — valores pelo WhatsApp,
-                      sem taxa inventada no site.
-                    </p>
-                  </details>
+                  <p className="text-[11px] leading-relaxed text-muted">
+                    Financiamento em até 60x e cartão em até 18x. Simulação
+                    sujeita a análise de crédito e CET — valores pelo WhatsApp,
+                    sem taxa inventada no site.
+                  </p>
 
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
                     <Link
@@ -588,6 +525,9 @@ export default async function VehicleDetailPage({
         vehicleId={vehicle.id}
         contentName={fullLabel}
         message={whatsapp.interest}
+        videoMessage={whatsapp.video}
+        financeMessage={whatsapp.finance}
+        tradeMessage={whatsapp.trade}
         brand={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}

@@ -101,7 +101,7 @@ body {
   }
 
   .pb-sticky-bar-safe {
-    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(9.25rem + env(safe-area-inset-bottom, 0px));
   }
 
   /* Compensa header fixo + notch (altura alinhada ao SiteHeader). */

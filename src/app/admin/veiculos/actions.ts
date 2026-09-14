@@ -10,6 +10,8 @@ import {
   storagePathFromPublicUrl,
 } from "@/lib/supabase";
 import { normalizeAccessories, parseVehicleCategory } from "@/lib/vehicle-accessories";
+import { vehicleListingError } from "@/lib/admin-vehicle-validate";
+import { canEnableFeatured, featuredCapMessage } from "@/lib/featured";
 import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
 
 export type VehicleFormState = {
@@ -53,7 +55,12 @@ function parseVehicleFields(formData: FormData) {
   const plateEnd = String(formData.get("plateEnd") || "").trim() || null;
   const inspection = String(formData.get("inspection") || "").trim() || null;
   const status = String(formData.get("status") || "disponivel").trim();
-  const featured = formData.get("featured") === "on" || formData.get("featured") === "true";
+  const featuredRequested =
+    formData.get("featured") === "on" || formData.get("featured") === "true";
+  if (featuredRequested && status === "reservado") {
+    throw new Error("Só anúncio disponível entra na home. Marque disponível antes.");
+  }
+  const featured = featuredRequested && status === "disponivel";
   const year = requireNumber(formData.get("year"), "Ano");
   const yearModel = requireNumber(formData.get("yearModel"), "Ano modelo");
   const km = requireNumber(formData.get("km"), "KM");
@@ -90,6 +97,16 @@ function parseVehicleFields(formData: FormData) {
   if (doors !== null && (doors < 0 || doors > 6)) {
     throw new Error("Portas inválidas.");
   }
+  const listingError = vehicleListingError({
+    brand,
+    model,
+    fuel,
+    transmission,
+    color,
+    km,
+    price,
+  });
+  if (listingError) throw new Error(listingError);
 
   let photos: Array<{ url: string; thumbnailUrl: string | null }> = [];
   const photosRaw = String(formData.get("photoUrls") || "[]");
@@ -163,6 +180,27 @@ function parseVehicleFields(formData: FormData) {
   };
 }
 
+async function assertCanFeature(opts: { vehicleId?: string; featured: boolean }) {
+  if (!opts.featured) return;
+  const current = opts.vehicleId
+    ? await prisma.vehicle.findUnique({
+        where: { id: opts.vehicleId },
+        select: { featured: true },
+      })
+    : null;
+  const featuredCount = await prisma.vehicle.count({
+    where: {
+      featured: true,
+      status: "disponivel",
+      historical: false,
+      ...(opts.vehicleId ? { id: { not: opts.vehicleId } } : {}),
+    },
+  });
+  if (!canEnableFeatured(featuredCount, Boolean(current?.featured))) {
+    throw new Error(featuredCapMessage());
+  }
+}
+
 async function requireAdmin() {
   const session = await getSession();
   if (!session) {
@@ -179,6 +217,7 @@ export async function createVehicle(
 
   try {
     const data = parseVehicleFields(formData);
+    await assertCanFeature({ featured: data.featured });
 
     const vehicle = await prisma.vehicle.create({
       data: {
@@ -247,6 +286,7 @@ export async function updateVehicle(
 
   try {
     const data = parseVehicleFields(formData);
+    await assertCanFeature({ vehicleId: id, featured: data.featured });
 
     let previous: Array<{ url: string; thumbnailUrl: string | null }> = [];
     try {
@@ -350,7 +390,7 @@ export async function markVehicleAsSold(id: string) {
 
   await prisma.vehicle.update({
     where: { id },
-    data: { status: "vendido" },
+    data: { status: "vendido", featured: false },
   });
 
   revalidatePath("/admin/veiculos");
@@ -367,7 +407,10 @@ export async function setVehicleStatus(id: string, status: string) {
     return { ok: false, message: "Status inválido." };
   }
 
-  await prisma.vehicle.update({ where: { id }, data: { status } });
+  await prisma.vehicle.update({
+    where: { id },
+    data: status === "vendido" ? { status, featured: false } : { status },
+  });
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
   revalidatePublicStock(id);
@@ -377,13 +420,37 @@ export async function setVehicleStatus(id: string, status: string) {
 export async function setVehicleFeatured(id: string, featured: boolean) {
   await requireAdmin();
 
+  const current = await prisma.vehicle.findUnique({
+    where: { id },
+    select: { featured: true, status: true },
+  });
+  if (!current) {
+    return { ok: false, message: "Veículo não encontrado." };
+  }
+  if (featured && current.status !== "disponivel") {
+    return {
+      ok: false,
+      message: "Só anúncio disponível entra na home. Marque disponível antes.",
+    };
+  }
+  if (featured && !current.featured) {
+    const featuredCount = await prisma.vehicle.count({
+      where: { featured: true, status: "disponivel", historical: false },
+    });
+    if (!canEnableFeatured(featuredCount, current.featured)) {
+      return { ok: false, message: featuredCapMessage() };
+    }
+  }
+
   await prisma.vehicle.update({ where: { id }, data: { featured } });
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
   revalidatePublicStock(id);
   return {
     ok: true,
-    message: featured ? "Veículo em destaque." : "Destaque removido.",
+    message: featured
+      ? "Na home (destaque). A ordem é a do cadastro — mais recente primeiro."
+      : "Destaque removido da home.",
   };
 }
 
