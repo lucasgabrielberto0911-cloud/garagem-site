@@ -623,6 +623,7 @@ export function asksAboutNamedGear(mensagem: string): boolean {
 export function asksAboutKm(mensagem: string): boolean {
   const folded = normalize(mensagem);
   if (asksAboutConsumption(mensagem)) return false;
+  if (asksAboutListedFacts(mensagem)) return false;
   return /\b(km|quilometragem|rodado|rodagem|quanto tem de km|quantos km)\b/.test(
     folded,
   );

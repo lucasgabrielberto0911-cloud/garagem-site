@@ -57,9 +57,6 @@ const nextConfig = {
       "./node_modules/heic-convert/**",
     ],
   },
-  experimental: {
-    optimizePackageImports: ["@aws-sdk/client-rekognition"],
-  },
   async headers() {
     const security = [
       { key: "X-Content-Type-Options", value: "nosniff" },

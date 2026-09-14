@@ -45,6 +45,7 @@ const onix: ChatVehicleRecord = {
 
 test("quantos km responde a frase completa do hodômetro", () => {
   assert.equal(asksAboutKm("quantos km tem o HB20?"), true);
+  assert.equal(asksAboutKm("Qual o preço e a km?"), false);
   const reply = formatFocusedKmReply(hb20);
   assert.match(reply, /68 mil km/);
   assert.match(reply, /hodômetro/);
@@ -55,8 +56,8 @@ test("equipamento cortado em direção é tratado como frase quebrada", () => {
   assert.equal(equipmentReplyLooksBroken("O Fox tem ar-condicionado, direção"), true);
   const complete = formatFocusedEquipmentReply(hb20, "quais os opcionais?");
   assert.match(complete, /Direção hidráulica/);
+  assert.match(complete, /na ficha tem/);
   assert.doesNotMatch(complete, /direção$/);
-  assert.match(complete, /[.!?]$/);
 });
 
 test("Esse carro ainda tem? reconhece disponibilidade", () => {

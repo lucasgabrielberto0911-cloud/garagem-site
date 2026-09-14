@@ -388,8 +388,9 @@ export async function runChatTurn(input: {
     const broken =
       equipmentReplyLooksBroken(generated) ||
       looksTruncated(generated, first.finishReason);
-    if (inferred && (broken || asksAboutKm(input.mensagem))) {
-      const catalog = asksAboutKm(input.mensagem)
+    const kmOnly = asksAboutKm(input.mensagem) && !mixedPrice;
+    if (inferred && (broken || kmOnly)) {
+      const catalog = kmOnly
         ? formatFocusedKmReply(inferred)
         : formatFocusedEquipmentReply(inferred, input.mensagem);
       if (!generated || catalog.startsWith(generated)) {
