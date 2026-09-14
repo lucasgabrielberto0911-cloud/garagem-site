@@ -51,6 +51,7 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
   hasManual: true,
   purchasePrice: true,
   createdAt: true,
+  updatedAt: true,
   hasVideo: true,
   transmission: true,
   color: true,
@@ -80,6 +81,7 @@ export type AdminVehicleListItem = {
   hasManual: boolean;
   purchasePrice: number | null;
   createdAt: Date;
+  updatedAt?: Date | string | null;
   hasVideo: boolean;
   transmission: string;
   color: string | null;

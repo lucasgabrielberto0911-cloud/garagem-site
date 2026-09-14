@@ -56,6 +56,16 @@ const nextConfig = {
       "./node_modules/sharp/**",
       "./node_modules/heic-convert/**",
     ],
+    "/api/health/**": [
+      "./node_modules/@aws-sdk/**",
+      "./node_modules/sharp/**",
+      "./node_modules/heic-convert/**",
+    ],
+    "/api/auth/**": [
+      "./node_modules/@aws-sdk/**",
+      "./node_modules/sharp/**",
+      "./node_modules/heic-convert/**",
+    ],
   },
   async headers() {
     const security = [

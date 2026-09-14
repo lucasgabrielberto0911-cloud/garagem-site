@@ -2,9 +2,17 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   PUBLIC_SITEMAP_VEHICLE_WHERE,
+  PUBLIC_VEHICLE_CARD_SELECT,
   isPublicStockVehicle,
 } from "./public-stock";
 import { isRetiredStockSlug, retiredRedirectSources } from "./retired-listings";
+
+test("card público traz miniatura sem campos de admin", () => {
+  assert.equal(PUBLIC_VEHICLE_CARD_SELECT.photos.select.thumbnailUrl, true);
+  assert.equal("plate" in PUBLIC_VEHICLE_CARD_SELECT, false);
+  assert.equal("fipePrice" in PUBLIC_VEHICLE_CARD_SELECT, false);
+  assert.equal("purchasePrice" in PUBLIC_VEHICLE_CARD_SELECT, false);
+});
 
 test("sitemap só inclui estoque disponível e não histórico", () => {
   assert.equal(PUBLIC_SITEMAP_VEHICLE_WHERE.status, "disponivel");

@@ -203,7 +203,7 @@ export function chatWhatsAppCta(
       benefit: "Valor da troca com fotos, pelo WhatsApp",
     };
   }
-  if (/nao esta na lista|nao tem anuncio/.test(folded)) {
+  if (/nao esta na lista|nao tem anuncio|nessa combinacao/.test(folded)) {
     return {
       href: whatsappUrl(WHATSAPP_MESSAGES.wanted()),
       label: "Avisar quando chegar",

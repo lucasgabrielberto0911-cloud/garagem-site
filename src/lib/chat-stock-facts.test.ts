@@ -4,11 +4,16 @@ import { selectChatVehicles } from "./chat-cards";
 import {
   asksAboutAvailability,
   asksAboutKm,
+  asksAboutTransmissionCompare,
   asksToCompareModels,
+  chatPolicyShortcut,
+  emptyFilterReply,
   equipmentReplyLooksBroken,
+  filterStockByTransmission,
   formatAvailabilityReply,
   formatFocusedEquipmentReply,
   formatFocusedKmReply,
+  formatTransmissionCompareReply,
   pickComparedModelVehicles,
   type ChatVehicleRecord,
 } from "./chat-stock";
@@ -84,4 +89,26 @@ test("HB20 vs Onix escolhe uma unidade de cada modelo", () => {
   );
   assert.equal(cards.length, 2);
   assert.ok(cards.every((card) => card.category === "carro"));
+});
+
+test("filtro automático vazio não cai no estoque inteiro — waitlist + similar", () => {
+  const autos = filterStockByTransmission([hb20], "Tem automático?");
+  assert.equal(autos.length, 0);
+  const reply = emptyFilterReply("Tem automático até 40 mil?", [hb20, onix]);
+  assert.match(reply ?? "", /não tem anúncio agora/i);
+  assert.match(reply ?? "", /WhatsApp|wa\.me/);
+  assert.match(reply ?? "", /Onix|HB20/);
+});
+
+test("diferença automático vs manual compara o estoque atual", () => {
+  assert.equal(
+    asksAboutTransmissionCompare("Qual a diferença do automático e do manual no estoque?"),
+    true,
+  );
+  assert.equal(chatPolicyShortcut("Qual a diferença do automático vs manual?"), "gear");
+  const reply = formatTransmissionCompareReply([hb20, onix], "automático vs manual");
+  assert.match(reply, /trânsito|marcha/);
+  assert.match(reply, /HB20/);
+  assert.match(reply, /Onix/);
+  assert.doesNotMatch(reply, /fipe/i);
 });

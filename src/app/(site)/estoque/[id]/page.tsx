@@ -425,9 +425,9 @@ export default async function VehicleDetailPage({
                   />
 
                   <p className="text-[11px] leading-relaxed text-muted">
-                    Financiamento em até 60x e cartão em até 18x. Simulação
-                    sujeita a análise de crédito e CET — valores pelo WhatsApp,
-                    sem taxa inventada no site.
+                    Financiamento em até 60x e cartão em até 18x. O consultor
+                    calcula a parcela no WhatsApp — o site não publica valor de
+                    parcela. Sujeito a análise de crédito e CET.
                   </p>
 
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
@@ -457,7 +457,7 @@ export default async function VehicleDetailPage({
               <p className="text-xs leading-relaxed text-muted">
                 {sold
                   ? "Este anúncio não está mais à venda. Confira outras opções no estoque."
-                  : `Valores e disponibilidade sujeitos a alteração. Financiamento em até 60x e cartão em até 18x, sujeitos a análise de crédito e CET. Combine pelo WhatsApp ${site.whatsappLabel}.`}
+                  : `Valores e disponibilidade sujeitos a alteração. Financiamento em até 60x e cartão em até 18x. Parcela só no WhatsApp, com análise de crédito e CET. Combine pelo WhatsApp ${site.whatsappLabel}.`}
               </p>
             </div>
           </aside>

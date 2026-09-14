@@ -11,6 +11,10 @@ import {
 } from "@/lib/supabase";
 import { normalizeAccessories, parseVehicleCategory } from "@/lib/vehicle-accessories";
 import { vehicleListingError } from "@/lib/admin-vehicle-validate";
+import {
+  isAdminBulkStatus,
+  normalizeBulkVehicleIds,
+} from "@/lib/admin-bulk";
 import { canEnableFeatured, featuredCapMessage } from "@/lib/featured";
 import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
 
@@ -415,6 +419,38 @@ export async function setVehicleStatus(id: string, status: string) {
   revalidatePath(`/admin/veiculos/${id}`);
   revalidatePublicStock(id);
   return { ok: true, message: "Status atualizado." };
+}
+
+export async function setVehiclesStatus(ids: string[], status: string) {
+  await requireAdmin();
+
+  if (!isAdminBulkStatus(status)) {
+    return {
+      ok: false,
+      message: "Em lote só dá para marcar disponível ou vendido.",
+    };
+  }
+
+  const unique = normalizeBulkVehicleIds(ids);
+  if (unique.length === 0) {
+    return { ok: false, message: "Selecione pelo menos um veículo." };
+  }
+
+  await prisma.vehicle.updateMany({
+    where: { id: { in: unique }, historical: false },
+    data:
+      status === "vendido" ? { status, featured: false } : { status },
+  });
+
+  revalidatePath("/admin/veiculos");
+  revalidatePublicStock();
+  return {
+    ok: true,
+    message:
+      status === "vendido"
+        ? `${unique.length} veículo(s) marcados como vendidos. A página pública continua no ar.`
+        : `${unique.length} veículo(s) voltaram para disponível.`,
+  };
 }
 
 export async function setVehicleFeatured(id: string, featured: boolean) {

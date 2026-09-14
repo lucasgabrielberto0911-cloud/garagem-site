@@ -28,15 +28,27 @@ import { expectedMargin, hasCostBasis } from "@/lib/vehicle-ops";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import type { AdminVehicleListItem, VehiclesTab } from "@/lib/admin-vehicles";
+import {
+  ADMIN_BULK_MAX,
+  bulkStatusLabel,
+  type AdminBulkStatus,
+} from "@/lib/admin-bulk";
 import { coverSrc } from "@/lib/stock-query";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
-import { daysInStock, isStaleListing, transmissionConflictAlert } from "@/lib/stock-quality";
+import {
+  daysInStock,
+  formatRelativeUpdatedAt,
+  isStaleListing,
+  listingGapBadges,
+  transmissionConflictAlert,
+} from "@/lib/stock-quality";
 import {
   deleteVehicle,
   duplicateVehicle,
   markVehicleAsSold,
   setVehicleFeatured,
   setVehicleStatus,
+  setVehiclesStatus,
 } from "@/app/admin/veiculos/actions";
 
 export type VehicleRow = AdminVehicleListItem;
@@ -47,6 +59,7 @@ function hydrateVehicle(row: VehicleRow): VehicleRow {
   return {
     ...row,
     createdAt: new Date(row.createdAt),
+    updatedAt: row.updatedAt ? new Date(row.updatedAt) : row.createdAt,
   };
 }
 
@@ -70,9 +83,11 @@ const CHIP_SCROLL =
 
 function vehicleQualityAlerts(vehicle: VehicleRow) {
   if (vehicle.status === "vendido") return [];
-  const alerts: string[] = [];
-  if (vehicle.photos.length === 0) alerts.push("Sem foto");
-  if (!vehicle.color?.trim()) alerts.push("Sem cor");
+  const alerts = listingGapBadges({
+    color: vehicle.color,
+    photos: vehicle.photos,
+    price: vehicle.price,
+  });
   if (!vehicle.hasVideo) alerts.push("Sem vídeo");
   if (isStaleListing(vehicle.createdAt, vehicle.status)) {
     alerts.push(`Parado há ${daysInStock(vehicle.createdAt)} dias`);
@@ -163,6 +178,9 @@ export function VehiclesTable({
   const [deleting, setDeleting] = useState(false);
   const [markingSold, setMarkingSold] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulkTarget, setBulkTarget] = useState<AdminBulkStatus | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const hasMore = items.length < total;
 
@@ -343,6 +361,41 @@ export function VehiclesTable({
     } finally {
       setMarkingSold(false);
       setSoldTarget(null);
+    }
+  }
+
+  function toggleSelected(id: string) {
+    setSelected((current) => {
+      if (current.includes(id)) return current.filter((item) => item !== id);
+      if (current.length >= ADMIN_BULK_MAX) {
+        toast.error(`Selecione no máximo ${ADMIN_BULK_MAX} veículos por vez.`);
+        return current;
+      }
+      return [...current, id];
+    });
+  }
+
+  async function confirmBulkStatus() {
+    if (!bulkTarget || selected.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const result = await setVehiclesStatus(selected, bulkTarget);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(result.message);
+      const featuredById = new Map(items.map((item) => [item.id, item.featured]));
+      for (const id of selected) {
+        applyLocalStatus(id, bulkTarget, featuredById.get(id) ?? false);
+      }
+      setSelected([]);
+      router.refresh();
+    } catch {
+      toast.error("Não foi possível atualizar o lote.");
+    } finally {
+      setBulkBusy(false);
+      setBulkTarget(null);
     }
   }
 
@@ -586,6 +639,38 @@ export function VehiclesTable({
         </div>
       ) : null}
 
+      {selected.length > 0 ? (
+        <div className="sticky top-0 z-10 flex flex-col gap-3 border border-brand/40 bg-ink/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-cream">
+            {selected.length} selecionado(s)
+            <span className="text-muted"> · máx. {ADMIN_BULK_MAX} · só disponível/vendido</span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setBulkTarget("disponivel")}
+              className={btn.outline}
+            >
+              Marcar disponível
+            </button>
+            <button
+              type="button"
+              onClick={() => setBulkTarget("vendido")}
+              className={MARK_SOLD_BTN}
+            >
+              Marcar vendido
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelected([])}
+              className="min-h-11 px-3 text-xs uppercase tracking-wider text-muted hover:text-cream"
+            >
+              Limpar
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {items.length === 0 && !loadingSort ? (
         <EmptyState
           icon={<IconImage className="h-12 w-12" />}
@@ -632,6 +717,8 @@ export function VehiclesTable({
                 key={vehicle.id}
                 vehicle={vehicle}
                 busy={busyId === vehicle.id}
+                selected={selected.includes(vehicle.id)}
+                onToggleSelect={() => toggleSelected(vehicle.id)}
                 onStatus={(status) =>
                   runQuickAction(
                     vehicle.id,
@@ -725,6 +812,27 @@ export function VehiclesTable({
       />
 
       <ConfirmDialog
+        open={bulkTarget !== null}
+        title={
+          bulkTarget
+            ? bulkStatusLabel(bulkTarget, selected.length)
+            : "Atualizar lote"
+        }
+        description={
+          bulkTarget === "vendido"
+            ? `Confirmar venda de ${selected.length} veículo(s)? Saem do estoque ativo. As páginas públicas continuam no ar com aviso (sem 404, sem sync de Marketplace).`
+            : `Voltar ${selected.length} veículo(s) para disponível no site?`
+        }
+        confirmLabel={
+          bulkTarget === "vendido" ? "Marcar como vendidos" : "Marcar disponíveis"
+        }
+        danger={bulkTarget === "vendido"}
+        loading={bulkBusy}
+        onCancel={() => setBulkTarget(null)}
+        onConfirm={() => void confirmBulkStatus()}
+      />
+
+      <ConfirmDialog
         open={deleteTarget !== null}
         title="Excluir definitivamente"
         description={
@@ -745,6 +853,8 @@ export function VehiclesTable({
 function VehicleAdminCard({
   vehicle,
   busy,
+  selected,
+  onToggleSelect,
   onStatus,
   onFeatured,
   onDuplicate,
@@ -753,6 +863,8 @@ function VehicleAdminCard({
 }: {
   vehicle: VehicleRow;
   busy: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
   onStatus: (status: string) => void;
   onFeatured: () => void;
   onDuplicate: () => void;
@@ -773,6 +885,15 @@ function VehicleAdminCard({
   return (
     <li className="overflow-hidden border border-white/10 bg-ink/50">
       <div className="flex gap-3 p-3 lg:gap-4 lg:p-4">
+        <label className="flex shrink-0 items-start pt-1">
+          <span className="sr-only">Selecionar {title}</span>
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            className="h-5 w-5 accent-brand"
+          />
+        </label>
         <Link
           href={`/admin/veiculos/${vehicle.id}`}
           className="relative h-[88px] w-[88px] shrink-0 overflow-hidden bg-asphalt lg:h-[104px] lg:w-[148px]"
@@ -815,6 +936,9 @@ function VehicleAdminCard({
             </p>
             <p className="mt-0.5 text-xs text-muted">
               {vehicle.year}/{vehicle.yearModel} · {formatNumberBR(vehicle.km)} km
+              {vehicle.updatedAt
+                ? ` · ${formatRelativeUpdatedAt(vehicle.updatedAt)}`
+                : ""}
             </p>
           </Link>
 
@@ -973,6 +1097,16 @@ function VehicleAdminCard({
         </div>
 
         <div className="flex gap-2 border-t border-white/10 p-3 lg:border-t-0 lg:pr-4">
+          {vehicle.status === "reservado" ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onStatus("disponivel")}
+              className="inline-flex h-11 min-w-0 flex-1 items-center justify-center border border-emerald-500/40 px-3 font-display text-xs font-semibold uppercase tracking-wide text-emerald-300 disabled:opacity-50 lg:min-w-[9.5rem] lg:flex-none"
+            >
+              Disponível
+            </button>
+          ) : null}
           {canMarkAsSold(vehicle.status) ? (
             <button
               type="button"

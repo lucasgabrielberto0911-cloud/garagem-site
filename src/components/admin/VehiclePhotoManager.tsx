@@ -13,6 +13,13 @@ import {
   IconTrash,
 } from "@/components/admin/icons";
 import { btn } from "@/components/admin/ui";
+import {
+  photoUploadProgressLabel,
+  summarizePhotoUploads,
+  type PhotoUploadJobState,
+} from "@/lib/photo-upload-jobs";
+
+type LocalPhotoJob = PhotoUploadJobState & { file: File };
 
 export type PhotoItem = { id: string; url: string; thumbnailUrl?: string | null };
 
@@ -72,7 +79,7 @@ export function VehiclePhotoManager({
   ) => void;
   onUploadingChange?: (uploading: boolean) => void;
 }) {
-  const [uploading, setUploading] = useState(0);
+  const [jobs, setJobs] = useState<LocalPhotoJob[]>([]);
   const [blurring, setBlurring] = useState(false);
   const [fileDragging, setFileDragging] = useState(false);
   const fileDragDepth = useRef(0);
@@ -80,9 +87,77 @@ export function VehiclePhotoManager({
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [removeIndex, setRemoveIndex] = useState<number | null>(null);
 
+  const summary = summarizePhotoUploads(jobs);
+  const inFlight = summary.uploading > 0 || summary.queued > 0;
+  const pendingSkeletons = summary.uploading + summary.queued;
+
   useEffect(() => {
-    onUploadingChange?.(uploading > 0);
-  }, [uploading, onUploadingChange]);
+    onUploadingChange?.(inFlight);
+  }, [inFlight, onUploadingChange]);
+
+  function patchJob(id: string, patch: Partial<LocalPhotoJob>) {
+    setJobs((current) =>
+      current.map((job) => (job.id === id ? { ...job, ...patch } : job)),
+    );
+  }
+
+  async function runJobs(batch: LocalPhotoJob[]) {
+    if (batch.length === 0) return;
+
+    const uploaded: PhotoItem[] = [];
+    try {
+      const { uploadImageDirect } = await import("@/lib/upload-image-direct");
+
+      for (const job of batch) {
+        patchJob(job.id, { status: "uploading", error: undefined });
+        try {
+          const photo = await uploadImageDirect(job.file);
+          uploaded.push({
+            id: createPhotoId(),
+            url: photo.url,
+            thumbnailUrl: photo.thumbnailUrl,
+          });
+          patchJob(job.id, { status: "done" });
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : `Falha no upload de ${job.name}.`;
+          patchJob(job.id, { status: "error", error: message });
+          toast.error(message);
+        }
+      }
+
+      if (uploaded.length > 0) {
+        onChange((current) => [...current, ...uploaded]);
+        toast.success(`${uploaded.length} foto(s) enviada(s).`);
+      } else if (batch.length > 0) {
+        toast.error("Nenhuma foto foi enviada.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erro inesperado no upload.",
+      );
+      setJobs((current) =>
+        current.map((job) =>
+          batch.some((item) => item.id === job.id) &&
+          job.status !== "done"
+            ? {
+                ...job,
+                status: "error" as const,
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Erro inesperado no upload.",
+              }
+            : job,
+        ),
+      );
+    }
+  }
 
   async function uploadFiles(files: FileList | File[] | null) {
     const list = (files ? Array.from(files) : []).filter(isImageFile);
@@ -93,49 +168,26 @@ export function VehiclePhotoManager({
       return;
     }
 
-    setUploading(list.length);
-    const uploaded: PhotoItem[] = [];
+    const nextJobs: LocalPhotoJob[] = list.map((file) => ({
+      id: createPhotoId(),
+      name: file.name,
+      status: "queued",
+      file,
+    }));
+    setJobs(nextJobs);
+    await runJobs(nextJobs);
+  }
 
-    try {
-      const { uploadImageDirect } = await import("@/lib/upload-image-direct");
-
-      // Uma por vez + upload direto ao Storage (evita 413 da Vercel).
-      for (let index = 0; index < list.length; index += 1) {
-        const original = list[index];
-        setUploading(list.length - index);
-
-        try {
-          const photo = await uploadImageDirect(original);
-          uploaded.push({
-            id: createPhotoId(),
-            url: photo.url,
-            thumbnailUrl: photo.thumbnailUrl,
-          });
-        } catch (error) {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : `Falha no upload de ${original.name}.`,
-          );
-        }
-      }
-
-      if (uploaded.length > 0) {
-        onChange((current) => [...current, ...uploaded]);
-        toast.success(`${uploaded.length} foto(s) enviada(s).`);
-      } else {
-        toast.error("Nenhuma foto foi enviada.");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Erro inesperado no upload.",
-      );
-    } finally {
-      setUploading(0);
-    }
+  async function retryJobs(failed: LocalPhotoJob[]) {
+    if (failed.length === 0 || inFlight) return;
+    setJobs((current) =>
+      current.map((job) =>
+        failed.some((item) => item.id === job.id)
+          ? { ...job, status: "queued", error: undefined }
+          : job,
+      ),
+    );
+    await runJobs(failed.map((job) => ({ ...job, status: "queued", error: undefined })));
   }
 
   function reorder(from: number, to: number) {
@@ -260,8 +312,8 @@ export function VehiclePhotoManager({
         <label className="flex cursor-pointer flex-col items-center justify-center">
           <IconImage className="h-8 w-8 text-white/25" />
           <p className="mt-3 text-sm text-cream">
-            {uploading > 0
-              ? `Enviando ${uploading} foto(s)...`
+            {inFlight
+              ? photoUploadProgressLabel(jobs)
               : fileDragging
                 ? "Solte as fotos para enviar"
                 : "Arraste as fotos aqui ou clique para escolher"}
@@ -278,7 +330,7 @@ export function VehiclePhotoManager({
             accept={ACCEPT}
             multiple
             className="hidden"
-            disabled={uploading > 0}
+            disabled={inFlight}
             onChange={(event) => {
               void uploadFiles(event.target.files);
               event.target.value = "";
@@ -287,21 +339,72 @@ export function VehiclePhotoManager({
         </label>
       </div>
 
-      {uploading > 0 ? (
-        <p className="mt-3 text-sm text-cream" aria-live="polite">
-          Enviando {uploading} foto(s)…
-        </p>
+      {jobs.length > 0 ? (
+        <div className="mt-3 space-y-2" aria-live="polite">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-cream">
+              {photoUploadProgressLabel(jobs)}
+            </p>
+            {summary.hasFailures && !inFlight ? (
+              <button
+                type="button"
+                onClick={() =>
+                  void retryJobs(jobs.filter((job) => job.status === "error"))
+                }
+                className={btn.outline}
+              >
+                Tentar de novo
+              </button>
+            ) : null}
+          </div>
+          <div className="h-1.5 overflow-hidden bg-white/10">
+            <div
+              className="h-full bg-brand transition-[width]"
+              style={{
+                width: `${Math.max(summary.percent, inFlight ? 8 : 0)}%`,
+              }}
+            />
+          </div>
+          {summary.hasFailures ? (
+            <ul className="space-y-1 text-xs text-muted">
+              {summary.failed.map((job) => (
+                <li
+                  key={job.id}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <span className="min-w-0 truncate text-brand">
+                    {job.name}
+                    {job.error ? ` — ${job.error}` : ""}
+                  </span>
+                  {!inFlight ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void retryJobs(
+                          jobs.filter((item) => item.id === job.id),
+                        )
+                      }
+                      className="shrink-0 text-[11px] uppercase tracking-wider text-cream underline-offset-2 hover:underline"
+                    >
+                      Reenviar
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       ) : null}
 
-      {uploading > 0 ? (
+      {pendingSkeletons > 0 ? (
         <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: uploading }).map((_, index) => (
+          {Array.from({ length: pendingSkeletons }).map((_, index) => (
             <li key={index} className="skeleton aspect-[4/3]" />
           ))}
         </ul>
       ) : null}
 
-      {photos.length === 0 && uploading === 0 ? (
+      {photos.length === 0 && !inFlight ? (
         <p className="mt-4 text-sm text-muted">
           Nenhuma foto adicionada. Anúncios com fotos recebem muito mais
           contato.
@@ -314,7 +417,7 @@ export function VehiclePhotoManager({
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <button
               type="button"
-              disabled={blurring || uploading > 0}
+              disabled={blurring || inFlight}
               onClick={() => void reblurPlates()}
               className={btn.outline}
             >

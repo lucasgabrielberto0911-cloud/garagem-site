@@ -8,6 +8,7 @@ import {
 import { StockFilters } from "@/components/site/StockFilters";
 import { StockBrowseShell } from "@/components/site/StockPending";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
+import { StockMobileCtaBar } from "@/components/site/StockMobileCtaBar";
 import { Container, PageHeader } from "@/components/site/ui";
 import { buildPageMetadata, itemListJsonLd } from "@/lib/seo";
 import { site } from "@/lib/site";
@@ -28,7 +29,7 @@ export default async function EstoquePage() {
   ]);
 
   return (
-    <div className="py-10 lg:py-12">
+    <div className="py-10 pb-stock-cta-safe lg:py-12 lg:pb-12">
       {stock.vehicles.length > 0 ? (
         <JsonLd
           data={itemListJsonLd(stock.vehicles, {
@@ -62,9 +63,10 @@ export default async function EstoquePage() {
         />
 
         <div className="mt-10">
-          <WantedVehicleCta description="Não achou no filtro? Diz o modelo e a faixa para que a gente avise no WhatsApp quando entrar no estoque." />
+          <WantedVehicleCta description="Não achou no filtro? Diz o modelo e a faixa — a gente avisa no WhatsApp quando entrar." />
         </div>
       </Container>
+      <StockMobileCtaBar />
     </div>
   );
 }

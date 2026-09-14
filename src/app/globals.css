@@ -101,7 +101,18 @@ body {
   }
 
   .pb-sticky-bar-safe {
-    padding-bottom: calc(9.25rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Barra de conversão do estoque (acima da bottom nav). */
+  .pb-stock-cta-safe {
+    padding-bottom: calc(8.25rem + 4.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 1024px) {
+    .pb-stock-cta-safe {
+      padding-bottom: 3rem;
+    }
   }
 
   /* Compensa header fixo + notch (altura alinhada ao SiteHeader). */
@@ -362,8 +373,23 @@ body {
   }
 }
 
-body:has([data-vehicle-mobile-bar]) .whatsapp-float {
+[data-stock-mobile-cta] {
+  bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 0.5rem;
+}
+
+body:has([data-filters-open]) [data-stock-mobile-cta],
+body:has([data-nav-open]) [data-stock-mobile-cta],
+body:has(.site-chat.is-open) [data-stock-mobile-cta] {
   display: none;
+}
+
+body:has([data-stock-mobile-cta]) .site-consent {
+  bottom: calc(4.5rem + 8.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+body:has([data-stock-mobile-cta]) .site-chat.is-open {
+  bottom: calc(4.5rem + 8.25rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* Bolha do chatbot: acima da bottom nav no mobile; acima do WhatsApp no desktop. */
@@ -389,7 +415,7 @@ body:has([data-vehicle-mobile-bar]) .whatsapp-float {
 }
 
 body:has([data-vehicle-mobile-bar]) .site-chat {
-  bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 body:has(.site-consent) .site-chat {
@@ -397,7 +423,7 @@ body:has(.site-consent) .site-chat {
 }
 
 body:has([data-vehicle-mobile-bar]):has(.site-consent) .site-chat {
-  bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px) + 7.5rem);
+  bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px) + 7.5rem);
 }
 
 @media (min-width: 1024px) {
@@ -439,7 +465,7 @@ body:has([data-vehicle-mobile-bar]):has(.site-consent) .site-chat {
 }
 
 body:has([data-vehicle-mobile-bar]) .site-chat.is-open {
-  bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .site-consent {
@@ -458,7 +484,7 @@ body:has([data-vehicle-mobile-bar]) .site-chat.is-open {
 }
 
 body:has([data-vehicle-mobile-bar]) .site-consent {
-  bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 body:has(.site-chat.is-open) .site-consent,

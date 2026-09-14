@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getStockPage, parseStockFilters, STOCK_PAGE_SIZE } from "@/lib/vehicles";
+import { getStockPage } from "@/lib/vehicles";
+import { parseStockFilters, STOCK_PAGE_SIZE } from "@/lib/stock-query";
 
 /**
  * Páginas seguintes do estoque público (rolagem infinita).

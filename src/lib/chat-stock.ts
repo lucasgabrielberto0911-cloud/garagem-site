@@ -174,12 +174,63 @@ export function filterStockByTransmission(
 ) {
   const wanted = parseTransmissionFilter(mensagem);
   if (!wanted) return stock;
-  const matched = stock.filter((vehicle) => {
+  return stock.filter((vehicle) => {
     const value = normalize(vehicle.transmission ?? "");
     if (wanted === "automatico") return /automatic|cvt/.test(value);
     return /manual/.test(value) && !/automatic/.test(value);
   });
-  return matched.length > 0 ? matched : stock;
+}
+
+export function hasChatStockFilter(mensagem: string) {
+  return (
+    parseTransmissionFilter(mensagem) != null ||
+    parsePriceLimit(mensagem) != null ||
+    parseVehicleCategoryFilter(mensagem) != null
+  );
+}
+
+function filterStockByPrice(stock: ChatVehicleRecord[], mensagem: string) {
+  const limit = parsePriceLimit(mensagem);
+  if (limit == null) return stock;
+  return stock.filter((vehicle) => vehicle.price <= limit);
+}
+
+export function applyChatStockFilters(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+) {
+  let next = filterStockByTransmission(
+    filterStockByCategory(stock, mensagem),
+    mensagem,
+  );
+  if (parseCheapIntent(mensagem)) {
+    const modelPool = singleMentionedModelPool(next, mensagem);
+    if (modelPool) next = modelPool;
+    if (parsePriceLimit(mensagem) == null) {
+      const cap = cheapPriceCap(next);
+      if (cap != null) {
+        next = next.filter((vehicle) => vehicle.price <= cap);
+      }
+    }
+  }
+  return next;
+}
+
+/** Filtro da pergunta sem o critério que esvaziou — para sugerir similares. */
+export function relaxChatStockFilters(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+) {
+  const withoutGear = filterStockByPrice(
+    filterStockByCategory(stock, mensagem),
+    mensagem,
+  );
+  if (withoutGear.length > 0 && parseTransmissionFilter(mensagem)) {
+    return withoutGear;
+  }
+  const categoryOnly = filterStockByCategory(stock, mensagem);
+  if (categoryOnly.length > 0) return categoryOnly;
+  return stock;
 }
 
 export function cheapPriceCap(stock: ChatVehicleRecord[]): number | null {
@@ -285,27 +336,6 @@ export function matchFocusedVehicle(
     return withRange ?? mentioned[0]!;
   }
   return matchInterestVehicle(mensagem, stock, 1, preferredVehicleId);
-}
-
-export function applyChatStockFilters(
-  stock: ChatVehicleRecord[],
-  mensagem: string,
-) {
-  let next = filterStockByTransmission(
-    filterStockByCategory(stock, mensagem),
-    mensagem,
-  );
-  if (parseCheapIntent(mensagem)) {
-    const modelPool = singleMentionedModelPool(next, mensagem);
-    if (modelPool) next = modelPool;
-    if (parsePriceLimit(mensagem) == null) {
-      const cap = cheapPriceCap(next);
-      if (cap != null) {
-        next = next.filter((vehicle) => vehicle.price <= cap);
-      }
-    }
-  }
-  return next;
 }
 
 /** Casa o texto do interesse com um anúncio do estoque, se der. */
@@ -616,6 +646,24 @@ export function asksAboutNamedGear(mensagem: string): boolean {
     return true;
   }
   return /\b(manual ou auto|auto ou manual|automatico ou manual|manual ou automatico)\b/.test(
+    folded,
+  );
+}
+
+/** Diferença automático vs manual no estoque (não “esse é automático?”). */
+export function asksAboutTransmissionCompare(mensagem: string): boolean {
+  const folded = normalize(mensagem);
+  const hasAuto = /\b(automatico|automatica|cvt)\b/.test(folded);
+  const hasManual = /\bmanual(?:is)?\b/.test(folded);
+  if (!hasAuto || !hasManual) return false;
+  if (
+    /\b(diferenc\w*|vs|versus|estoque atual|no estoque|do estoque)\b/.test(
+      folded,
+    )
+  ) {
+    return true;
+  }
+  return /\b(automatico ou manual|manual ou automatico|auto ou manual|manual ou auto)\b/.test(
     folded,
   );
 }
@@ -1021,7 +1069,10 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
     .sort((a, b) => a.price - b.price);
   const ceiling = `R$ ${limit.toLocaleString("pt-BR")}`;
   if (matches.length === 0) {
-    return `Nessa faixa até ${ceiling} ainda não tem anúncio agora. Sem estresse: posso olhar outra faixa com você, ou um consultor te ajuda no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return (
+      emptyFilterReply(mensagem, stock) ??
+      `Nessa faixa até ${ceiling} ainda não tem anúncio agora. Sem estresse: posso olhar outra faixa com você, ou um consultor te ajuda no WhatsApp: ${CHAT_WHATSAPP_URL}`
+    );
   }
   const picks = matches.slice(0, 3);
   const cheapestId = picks[0]?.id;
@@ -1067,9 +1118,46 @@ export function findSimilarVehicles(
   return pool.slice(0, limit);
 }
 
+export function similarAfterEmptyFilter(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+  limit = 3,
+): ChatVehicleRecord[] {
+  const mentioned = singleMentionedModelPool(stock, mensagem);
+  const mentionedIds = new Set((mentioned ?? []).map((vehicle) => vehicle.id));
+  return relaxChatStockFilters(stock, mensagem)
+    .filter((vehicle) => !mentionedIds.has(vehicle.id))
+    .sort((a, b) => a.price - b.price)
+    .slice(0, limit);
+}
+
+export function matchedChatStock(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+) {
+  const filtered = applyChatStockFilters(stock, mensagem);
+  const limit = parsePriceLimit(mensagem);
+  if (limit == null) return filtered;
+  return filtered.filter((vehicle) => vehicle.price <= limit);
+}
+
+export function emptyFilterReply(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+): string | null {
+  if (!hasChatStockFilter(mensagem)) return null;
+  if (matchedChatStock(mensagem, stock).length > 0) return null;
+  const similar = similarAfterEmptyFilter(mensagem, stock, 3);
+  if (similar.length === 0) {
+    return `Nessa combinação ainda não tem anúncio agora. O consultor anota e te avisa no WhatsApp quando chegar: ${CHAT_WHATSAPP_URL}`;
+  }
+  const lines = similar.map((vehicle) => formatVehicleLine(vehicle));
+  return `Nessa combinação ainda não tem anúncio agora. Na mesma ideia, o estoque tem:\n${lines.join("\n")}\n\nSe quiser, o consultor anota e te avisa no WhatsApp quando chegar: ${CHAT_WHATSAPP_URL}`;
+}
+
 export function looksLikeMissingModelReply(reply: string): boolean {
   const folded = normalize(reply);
-  return /\b(nao esta na lista atual|nao tem anuncio|nao temos (esse|este) modelo|modelo nao esta)\b/.test(
+  return /\b(nao esta na lista atual|nao tem anuncio|nao temos (esse|este) modelo|modelo nao esta|nessa combinacao ainda nao tem)\b/.test(
     folded,
   );
 }
@@ -1127,15 +1215,70 @@ export const CHAT_TRADE_REPLY =
 export const CHAT_WARRANTY_REPLY =
   `Fica tranquilo: todos os seminovos saem com garantia de 3 meses de motor e câmbio. Se quiser o detalhe no seu caso, o consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
 
+export const CHAT_DOCS_REPLY =
+  `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+
+export function formatTransmissionCompareReply(
+  stock: ChatVehicleRecord[],
+  mensagem = "",
+) {
+  const mentioned = singleMentionedModelPool(stock, mensagem);
+  const pool = mentioned ?? filterStockByCategory(stock, mensagem);
+  const autos = pool.filter(isAutomaticVehicle);
+  const manuals = pool.filter(isManualVehicle);
+  const autoPick = [...autos].sort((a, b) => a.price - b.price).slice(0, 2);
+  const manualPick = [...manuals].sort((a, b) => a.price - b.price).slice(0, 2);
+
+  if (autos.length === 0 && manuals.length === 0) {
+    return (
+      emptyFilterReply(mensagem, stock) ??
+      `Agora não tenho automático nem manual nessa recorte. O consultor anota e te avisa no WhatsApp quando chegar: ${CHAT_WHATSAPP_URL}`
+    );
+  }
+
+  const bits: string[] = [];
+  bits.push(
+    "No automático o trânsito cansa menos; no manual você controla mais a troca de marcha e em geral o anúncio sai mais em conta.",
+  );
+  if (autoPick.length === 0) {
+    bits.push(
+      "Neste recorte do estoque agora só tem manual — automático a gente avisa no WhatsApp quando entrar.",
+    );
+  } else if (manualPick.length === 0) {
+    bits.push(
+      "Neste recorte do estoque agora só tem automático — manual a gente avisa no WhatsApp quando entrar.",
+    );
+  } else {
+    bits.push("Olha o que tem agora, um de cada lado:");
+  }
+  const lines = [...autoPick, ...manualPick].map((vehicle) =>
+    formatVehicleLine(vehicle),
+  );
+  const wait =
+    autoPick.length === 0 || manualPick.length === 0
+      ? ` Se faltar o câmbio que você quer, o consultor te avisa no WhatsApp: ${CHAT_WHATSAPP_URL}`
+      : "";
+  if (lines.length === 0) {
+    return `${bits.join(" ")}${wait}`.trim();
+  }
+  return `${bits.join(" ")}\n${lines.join("\n")}${wait ? `\n\n${wait.trim()}` : ""}`;
+}
+
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(
   mensagem: string,
-): "finance" | "card" | "troca" | "warranty" | null {
+): "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | null {
   const folded = normalize(mensagem);
   if (
     /^(aceita cartao|aceitam cartao|cartao de credito|parcela no cartao|da para parcelar no cartao|da pra parcelar no cartao|aceita cartao de credito)$/.test(
       folded,
     )
+  ) {
+    return "card";
+  }
+  if (
+    /\b(financi\w*|parcela|60x)\b/.test(folded) &&
+    /\b(cartao|credito|18x)\b/.test(folded)
   ) {
     return "card";
   }
@@ -1153,6 +1296,15 @@ export function chatPolicyShortcut(
   ) {
     return "warranty";
   }
+  if (
+    /\b(documentacao|transferencia|transferir|detran|despachante)\b/.test(
+      folded,
+    ) &&
+    !/\b(fipe|preco|valor)\b/.test(folded)
+  ) {
+    return "docs";
+  }
+  if (asksAboutTransmissionCompare(mensagem)) return "gear";
   return null;
 }
 
@@ -1168,6 +1320,8 @@ export function localGarageReply(
   if (policy === "finance") return CHAT_FINANCE_REPLY;
   if (policy === "troca") return CHAT_TRADE_REPLY;
   if (policy === "warranty") return CHAT_WARRANTY_REPLY;
+  if (policy === "docs") return CHAT_DOCS_REPLY;
+  if (policy === "gear") return formatTransmissionCompareReply(stock, mensagem);
 
   if (/\b(cartao|credito|18x)\b/.test(text)) {
     return CHAT_CARD_REPLY;
@@ -1175,6 +1329,9 @@ export function localGarageReply(
   if (/\b(financi\w*|parcela|juros|60x)\b/.test(text)) {
     return CHAT_FINANCE_REPLY;
   }
+
+  const empty = emptyFilterReply(mensagem, stock);
+  if (empty) return empty;
 
   const byBudget = listStockByBudget(mensagem, stock);
   if (byBudget) return byBudget;
@@ -1188,6 +1345,9 @@ export function localGarageReply(
   }
   if (/\btroca\b/.test(text)) {
     return CHAT_TRADE_REPLY;
+  }
+  if (/\b(documentacao|transferencia|detran|despachante)\b/.test(text)) {
+    return CHAT_DOCS_REPLY;
   }
 
   const match =

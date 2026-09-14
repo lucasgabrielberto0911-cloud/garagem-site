@@ -294,7 +294,7 @@ export function formatVehicleWhatsAppMessage(input: {
       break;
     case "finance":
       lines.push(
-        `Olá! Gostaria de opções de financiamento para ${article2} ${label} (${price}). Simulação sujeita a análise de crédito e CET.`,
+        `Olá! Gostaria de opções de financiamento para ${article2} ${label} (${price}). O consultor calcula a parcela no WhatsApp — sem valor inventado no site. Sujeito a análise de crédito e CET.`,
       );
       break;
     case "visit":

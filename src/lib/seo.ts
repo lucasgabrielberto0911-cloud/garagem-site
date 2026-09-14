@@ -41,6 +41,22 @@ export function absoluteUrl(path = "/") {
   return new URL(path, site.url).toString();
 }
 
+/** Canonical relativo — o metadataBase do root vira URL absoluta. */
+export function pageCanonicalPath(path: string) {
+  if (!path || path === "/") return "/";
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
+export function hasPublishablePrice(price: number) {
+  return Number.isFinite(price) && price > 0;
+}
+
+export function vehicleAvailabilityUrl(status: string) {
+  if (status === "vendido") return "https://schema.org/OutOfStock";
+  if (status === "disponivel") return "https://schema.org/InStock";
+  return "https://schema.org/LimitedAvailability";
+}
+
 function parseHourRange(raw: string | undefined) {
   const match = String(raw ?? "").match(/(\d{1,2}:\d{2}).*?(\d{1,2}:\d{2})/);
   if (!match) return { opens: "08:00", closes: "23:00" };
@@ -65,7 +81,7 @@ export function buildPageMetadata({
   return {
     title,
     description,
-    alternates: { canonical: path },
+    alternates: { canonical: pageCanonicalPath(path) },
     ...(noIndex
       ? { robots: { index: false, follow: true } }
       : { robots: { index: true, follow: true } }),
@@ -321,6 +337,8 @@ export function vehicleJsonLd(vehicle: {
   description: string | null;
   status: string;
   category?: string;
+  engine?: string | null;
+  doors?: number | null;
   photos: { url: string }[];
 }) {
   const brand = formatBrandName(vehicle.brand);
@@ -328,40 +346,55 @@ export function vehicleJsonLd(vehicle: {
   const display = formatVehicleDisplay(vehicle);
   const name = display.fullLabel;
   const path = display.path;
+  const priceOk = hasPublishablePrice(vehicle.price);
+  const availability = vehicleAvailabilityUrl(vehicle.status);
+
+  const offers: Record<string, unknown> = {
+    "@type": "Offer",
+    priceCurrency: "BRL",
+    availability,
+    url: absoluteUrl(path),
+    seller: { "@id": absoluteUrl("/#loja") },
+    itemCondition: "https://schema.org/UsedCondition",
+  };
+  if (priceOk) {
+    offers.price = vehicle.price;
+  }
 
   return {
     "@context": "https://schema.org",
     "@type": vehicle.category === "moto" ? "Motorcycle" : "Car",
+    "@id": absoluteUrl(`${path}#veiculo`),
     name,
+    sku: vehicle.id,
     brand: { "@type": "Brand", name: brand },
     model,
     vehicleModelDate: String(vehicle.yearModel),
     productionDate: String(vehicle.year),
     ...(display.color ? { color: display.color } : {}),
     ...(vehicle.description ? { description: vehicle.description } : {}),
-    image: vehicle.photos.map((photo) => photo.url),
+    ...(vehicle.engine?.trim()
+      ? {
+          vehicleEngine: {
+            "@type": "EngineSpecification",
+            name: vehicle.engine.trim(),
+          },
+        }
+      : {}),
+    ...(vehicle.doors != null && vehicle.doors > 0
+      ? { numberOfDoors: vehicle.doors }
+      : {}),
+    image: vehicle.photos.map((photo) => photo.url).filter(Boolean),
     url: absoluteUrl(path),
     mileageFromOdometer: {
       "@type": "QuantitativeValue",
-      value: vehicle.km,
+      value: Number.isFinite(vehicle.km) ? Math.max(0, vehicle.km) : 0,
       unitCode: "KMT",
     },
     fuelType: vehicle.fuel,
     vehicleTransmission: display.transmission,
     itemCondition: "https://schema.org/UsedCondition",
-    offers: {
-      "@type": "Offer",
-      price: vehicle.price,
-      priceCurrency: "BRL",
-      availability:
-        vehicle.status === "vendido"
-          ? "https://schema.org/OutOfStock"
-          : vehicle.status === "disponivel"
-            ? "https://schema.org/InStock"
-            : "https://schema.org/LimitedAvailability",
-      url: absoluteUrl(path),
-      seller: { "@id": absoluteUrl("/#loja") },
-    },
+    offers,
   };
 }
 

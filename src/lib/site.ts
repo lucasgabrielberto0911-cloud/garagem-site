@@ -116,9 +116,12 @@ export const WHATSAPP_MESSAGES = {
   vehicleVideo: (label: string, isMoto = false) =>
     `Olá! Podem me mandar um vídeo ${isMoto ? "da" : "do"} ${label} que está no site?`,
   vehicleFinance: (label: string, isMoto = false) =>
-    `Olá! Gostaria de opções de financiamento para ${isMoto ? "a" : "o"} ${label}. Simulação sujeita a análise de crédito e CET.`,
+    `Olá! Gostaria de opções de financiamento para ${isMoto ? "a" : "o"} ${label}. O consultor calcula a parcela no WhatsApp — sem valor inventado no site. Sujeito a análise de crédito e CET.`,
   vehicleTrade: (label: string, isMoto = false) =>
     `Olá! Tenho interesse ${isMoto ? "na" : "no"} ${label} e gostaria de colocar meu veículo na troca.`,
+  finance: `Olá! Vi o site da ${site.name} e quero simular financiamento. O consultor calcula a parcela no WhatsApp, no meu caso — sem valor inventado no site. Sujeito a análise de crédito e CET.`,
+  similarFavorites:
+    `Olá! Ainda não salvei favoritos no site da ${site.name}. Podem me indicar seminovos parecidos com o que vocês têm agora?`,
   wanted: (detail?: string) => {
     const text = (detail ?? "").trim();
     return text
