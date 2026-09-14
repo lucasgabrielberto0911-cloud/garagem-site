@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chatWhatsAppCta, displayChatText, splitChatLinks } from "./chat-text";
+import {
+  chatWhatsAppCta,
+  displayChatText,
+  lastSingleChatVehicleId,
+  resolveChatRequestVehicleId,
+  splitChatLinks,
+} from "./chat-text";
 
 test("transforma o wa.me em link com rótulo WhatsApp", () => {
   const parts = splitChatLinks(
@@ -62,5 +68,40 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   });
   assert.equal(soldVehicle?.label, "Avisar quando chegar");
   assert.match(decodeURIComponent(soldVehicle?.href ?? ""), /quando chegar: Hyundai i30/);
+});
+
+test("vehicleId de follow-up só no esse/dele com um card, nunca no modelo nomeado", () => {
+  const lastSingle = lastSingleChatVehicleId([
+    { role: "assistant", vehicles: [{ id: "c-fox-1" }] },
+  ]);
+  assert.equal(lastSingle, "c-fox-1");
+  assert.equal(
+    lastSingleChatVehicleId([
+      { role: "assistant", vehicles: [{ id: "a" }, { id: "b" }] },
+    ]),
+    undefined,
+  );
+  assert.equal(
+    resolveChatRequestVehicleId({
+      mensagem: "qual o consumo dele?",
+      lastSingleCardId: "c-fox-1",
+    }),
+    "c-fox-1",
+  );
+  assert.equal(
+    resolveChatRequestVehicleId({
+      mensagem: "Qual consumo do fox",
+      lastSingleCardId: "c-fox-1",
+    }),
+    undefined,
+  );
+  assert.equal(
+    resolveChatRequestVehicleId({
+      mensagem: "qual o consumo dele?",
+      pageVehicleId: "c-hb20-page",
+      lastSingleCardId: "c-fox-1",
+    }),
+    "c-hb20-page",
+  );
 });
 

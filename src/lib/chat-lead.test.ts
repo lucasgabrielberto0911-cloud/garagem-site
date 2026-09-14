@@ -696,6 +696,59 @@ Nenhum desses usados foi medido na loja.`,
   assert.equal(result.vehicles[0]?.id, premium.id);
 });
 
+test("consumo dele com vehicleId do card único não chama o modelo", async () => {
+  const fox: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-fox-anaphora",
+    brand: "Volkswagen",
+    model: "Fox",
+    version: "Trend 1.6",
+    engine: "1.6",
+    fuel: "Flex",
+  };
+  let called = false;
+  const result = await runChatTurn({
+    mensagem: "qual o consumo dele?",
+    historico: [],
+    stock: [fox],
+    vehicleId: fox.id,
+    generate: async () => {
+      called = true;
+      return {
+        text: "Para o Volkswagen Fox com motor 1.6 flex",
+        functionCall: null,
+      };
+    },
+  });
+  assert.equal(called, false);
+  assert.match(result.reply, /9–12 km\/l/);
+  assert.equal(result.vehicles[0]?.id, fox.id);
+});
+
+test("fragmento do Gemini sem km/l vira faixa de catálogo do Fox citado", async () => {
+  const fox: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-fox-gemini-stub",
+    brand: "Volkswagen",
+    model: "Fox",
+    version: "Trend 1.6",
+    engine: "1.6",
+    fuel: "Flex",
+  };
+  const result = await runChatTurn({
+    mensagem: "qual o consumo?",
+    historico: [],
+    stock: [fox],
+    generate: async () => ({
+      text: "Para o Volkswagen Fox com motor 1.6 flex",
+      functionCall: null,
+    }),
+  });
+  assert.match(result.reply, /9–12 km\/l/);
+  assert.doesNotMatch(result.reply, /fica\s+Nenhum desses/);
+  assert.equal(result.vehicles[0]?.id, fox.id);
+});
+
 test("Fox tem ar-condicionado responde a ficha da unidade", async () => {
   const fox: ChatVehicleRecord = {
     ...hb20,

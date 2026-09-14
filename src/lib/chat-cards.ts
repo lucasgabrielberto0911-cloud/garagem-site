@@ -350,7 +350,7 @@ export function selectChatVehicles(
   preferredVehicleId?: string,
 ) {
   const pool = applyChatStockFilters(stock, mensagem);
-  if (isFocusedVehicleFactQuestion(mensagem, pool)) {
+  if (isFocusedVehicleFactQuestion(mensagem, pool, preferredVehicleId)) {
     const focused = matchFocusedVehicle(mensagem, pool, preferredVehicleId);
     if (focused) return [focused];
   }

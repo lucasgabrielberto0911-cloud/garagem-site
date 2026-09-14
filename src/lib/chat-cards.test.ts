@@ -557,3 +557,31 @@ test("consumo do HB20 Premium foca a unidade Premium, não a shortlist", () => {
     [hb20Premium.id],
   );
 });
+
+test("consumo dele com um card preferido foca essa unidade", () => {
+  const fox: ChatVehicleRecord = {
+    id: "cfox_anaphora_card",
+    brand: "Volkswagen",
+    model: "Fox",
+    version: "Trend 1.6",
+    yearModel: 2014,
+    km: 98000,
+    price: 38900,
+    color: "Prata",
+    transmission: "Manual",
+    fuel: "Flex",
+    engine: "1.6",
+    category: "carro",
+  };
+  const picked = selectChatVehicles(
+    "Para o Volkswagen Fox com motor 1.6 flex",
+    "qual o consumo dele?",
+    [fox, prisma],
+    3,
+    fox.id,
+  );
+  assert.deepEqual(
+    picked.map((vehicle) => vehicle.id),
+    [fox.id],
+  );
+});

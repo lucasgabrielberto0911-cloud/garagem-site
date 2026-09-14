@@ -140,6 +140,20 @@ test("template de consumo nunca cola o disclaimer no fica", () => {
     ),
     true,
   );
+  assert.equal(
+    consumptionReplyLooksBroken("Para o Volkswagen Fox com motor 1.6 flex"),
+    true,
+  );
+  assert.equal(
+    consumptionReplyLooksBroken("No Volkswagen Fox com motor 1.6"),
+    true,
+  );
+  assert.equal(
+    consumptionReplyLooksBroken(
+      "No estoque agora tem, entre outros: Honda BIZ 125 2023.",
+    ),
+    false,
+  );
   const repaired = enrichChatStockReply(
     "Para o Volkswagen Fox 1.6, a faixa típica de catálogo fica",
     [fox],

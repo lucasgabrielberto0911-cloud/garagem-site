@@ -20,7 +20,7 @@ import {
   buildChatSystemPrompt,
   parsePriceLimit,
 } from "@/lib/chat-prompt";
-import { applyChatReplyGuards } from "@/lib/chat-polish";
+import { applyChatReplyGuards, looksTruncated } from "@/lib/chat-polish";
 import {
   confirmAfterLead,
   generateChatReply,
@@ -55,6 +55,8 @@ import {
   singleMentionedModelPool,
   toChatStockLine,
   applyChatStockFilters,
+  consumptionReplyLooksBroken,
+  hasConsumptionFigures,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 
@@ -209,7 +211,11 @@ export async function runChatTurn(input: {
   if (
     focusedVehicle &&
     !mixedPrice &&
-    isFocusedVehicleFactQuestion(input.mensagem, input.stock) &&
+    isFocusedVehicleFactQuestion(
+      input.mensagem,
+      input.stock,
+      activeVehicle?.id,
+    ) &&
     (asksAboutConsumption(input.mensagem) ||
       asksAboutEquipment(input.mensagem) ||
       asksAboutNamedGear(input.mensagem))
@@ -289,6 +295,50 @@ export async function runChatTurn(input: {
     const fallback = fromStock();
     emit(fallback);
     return finish(fallback);
+  }
+
+  if (
+    !first.functionCall &&
+    asksAboutConsumption(input.mensagem) &&
+    !hasConsumptionFigures(generated)
+  ) {
+    const local = localGarageReply(
+      input.mensagem,
+      input.stock,
+      activeVehicle,
+    );
+    const broken =
+      consumptionReplyLooksBroken(generated) ||
+      looksTruncated(generated, first.finishReason);
+    if (local && (hasConsumptionFigures(local) || broken)) {
+      if (!generated || local.startsWith(generated)) {
+        emit(generated ? local.slice(generated.length) : local);
+      }
+      return finish(local, false, {
+        finishReason: first.finishReason,
+        truncated: false,
+        retried: first.retried,
+        policy: "stock-fact",
+        model: first.model,
+      });
+    }
+    if (
+      activeVehicle &&
+      !asksAboutListedFacts(input.mensagem) &&
+      (broken || !generated)
+    ) {
+      const reply = formatFocusedConsumptionReply(activeVehicle);
+      if (!generated || reply.startsWith(generated)) {
+        emit(generated ? reply.slice(generated.length) : reply);
+      }
+      return finish(reply, false, {
+        finishReason: first.finishReason,
+        truncated: false,
+        retried: first.retried,
+        policy: "stock-fact",
+        model: first.model,
+      });
+    }
   }
 
   if (first.functionCall?.name === "criar_lead") {

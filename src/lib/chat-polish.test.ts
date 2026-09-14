@@ -42,7 +42,20 @@ test("detecta resposta cortada no meio da frase", () => {
     ),
     true,
   );
+  assert.equal(
+    looksTruncated("Para o Volkswagen Fox com motor 1.6 flex", "STOP"),
+    true,
+  );
+  assert.equal(looksTruncated("No Volkswagen Fox com motor 1.6", "STOP"), true);
+  assert.equal(
+    looksTruncated("Para o Volkswagen Fox com motor 1.6 flex, a faixa típica de catálogo fica", "STOP"),
+    true,
+  );
   assert.equal(streamTextNeedsRegen("Ol", "STOP"), true);
+  assert.equal(
+    streamTextNeedsRegen("Para o Volkswagen Fox com motor 1.6 flex", "STOP"),
+    true,
+  );
   assert.equal(streamTextNeedsRegen("Beleza, te mostro o estoque.", "STOP"), false);
 });
 

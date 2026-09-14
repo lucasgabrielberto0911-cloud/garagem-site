@@ -32,7 +32,13 @@ import {
   parseSseChunks,
   readChatStreamFrame,
 } from "@/lib/chat-stream";
-import { chatWhatsAppCta, displayChatText, splitChatLinks } from "@/lib/chat-text";
+import {
+  chatWhatsAppCta,
+  displayChatText,
+  lastSingleChatVehicleId,
+  resolveChatRequestVehicleId,
+  splitChatLinks,
+} from "@/lib/chat-text";
 import {
   classifyChatIntent,
   trackChatEvent,
@@ -848,7 +854,11 @@ export function SiteChat() {
         body: JSON.stringify({
           mensagem,
           stream: true,
-          vehicleId: vehicleContext?.id,
+          vehicleId: resolveChatRequestVehicleId({
+            mensagem,
+            pageVehicleId: vehicleContext?.id,
+            lastSingleCardId: lastSingleChatVehicleId(messages),
+          }),
           historico: messages
             .filter((item, index) => {
               if (index !== 0) return true;

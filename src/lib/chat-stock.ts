@@ -12,6 +12,7 @@ import {
   parsePriceLimit,
   type ChatStockLine,
 } from "@/lib/chat-prompt";
+import { isAnaphoricVehicleFollowUp } from "@/lib/chat-text";
 
 /** Teto da carga atual. Se o estoque chegar aqui, consultar pela pergunta — não só aumentar o take. */
 export const CHAT_STOCK_TAKE = 80;
@@ -219,6 +220,13 @@ export function matchFocusedVehicle(
 ): ChatVehicleRecord | null {
   if (stock.length === 0) return null;
   const mentioned = singleMentionedModelPool(stock, mensagem);
+  if (
+    preferredVehicleId &&
+    isAnaphoricVehicleFollowUp(mensagem) &&
+    !mentioned
+  ) {
+    return stock.find((vehicle) => vehicle.id === preferredVehicleId) ?? null;
+  }
   const pool = mentioned ?? stock;
   const matched = matchInterestVehicle(
     mensagem,
@@ -367,6 +375,23 @@ export function consumptionReplyLooksBroken(text: string) {
     /\bfica\b/.test(folded)
   ) {
     return true;
+  }
+  if (!hasConsumptionFigures(trimmed)) {
+    if (
+      /faixa t[ií]pica de catalogo/.test(folded) &&
+      !/\d+\s*[–\-]\s*\d+/.test(trimmed)
+    ) {
+      return true;
+    }
+    if (
+      (/^(para o|para a)\b/.test(folded) ||
+        (/^(no|na)\b/.test(folded) &&
+          /\b(motor|flex|catalogo|consumo)\b/.test(folded))) &&
+      trimmed.length < 180 &&
+      !/nao tenho faixa|nao foi medido|whatsapp|wa\.me/.test(folded)
+    ) {
+      return true;
+    }
   }
   return false;
 }
@@ -552,6 +577,7 @@ export function asksAboutListedFacts(mensagem: string): boolean {
 export function isFocusedVehicleFactQuestion(
   mensagem: string,
   stock: ChatVehicleRecord[] = [],
+  preferredVehicleId?: string,
 ): boolean {
   const consumption = asksAboutConsumption(mensagem);
   const equipment = asksAboutEquipment(mensagem);
@@ -562,7 +588,7 @@ export function isFocusedVehicleFactQuestion(
     : null;
   if (parsePriceLimit(mensagem) != null && !mentioned) return false;
   if (stock.length === 0) return consumption || equipment;
-  return matchFocusedVehicle(mensagem, stock) != null;
+  return matchFocusedVehicle(mensagem, stock, preferredVehicleId) != null;
 }
 
 /** Compara os 2–3 anúncios da tela com dados reais. Consumo só se solicitado. */
@@ -760,7 +786,18 @@ export function enrichChatStockReply(
 ) {
   if (vehicles.length === 0) return reply;
   const wantsConsumption = asksAboutConsumption(mensagem);
-  const focusedFact = isFocusedVehicleFactQuestion(mensagem, vehicles);
+  const focusedFact = isFocusedVehicleFactQuestion(
+    mensagem,
+    vehicles,
+    vehicles.length === 1 ? vehicles[0]?.id : undefined,
+  );
+  if (
+    wantsConsumption &&
+    vehicles.length === 1 &&
+    (consumptionReplyLooksBroken(reply) || !hasConsumptionFigures(reply))
+  ) {
+    return formatFocusedConsumptionReply(vehicles[0]!);
+  }
   if (focusedFact) {
     const focused =
       vehicles.length === 1

@@ -134,3 +134,35 @@ export function chatWhatsAppCta(
     benefit: "Confirma o modelo · das 8h às 23h",
   };
 }
+
+/** “esse / dele” — aponta pro card único da tela, não pra um modelo nomeado. */
+export function isAnaphoricVehicleFollowUp(mensagem: string): boolean {
+  const folded = fold(mensagem);
+  return /\b(esse|essa|esses|essas|este|esta|estes|estas|isso|isto|ele|ela|dele|dela|desse|dessa|deste|desta|nele|nela)\b/.test(
+    folded,
+  );
+}
+
+export function lastSingleChatVehicleId(
+  messages: Array<{ role: string; vehicles?: Array<{ id: string }> }>,
+): string | undefined {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const msg = messages[i];
+    if (msg?.role !== "assistant") continue;
+    const vehicles = msg.vehicles ?? [];
+    if (vehicles.length === 1) return vehicles[0]?.id;
+    if (vehicles.length > 1) return undefined;
+  }
+  return undefined;
+}
+
+export function resolveChatRequestVehicleId(opts: {
+  mensagem: string;
+  pageVehicleId?: string;
+  lastSingleCardId?: string;
+}): string | undefined {
+  if (opts.pageVehicleId) return opts.pageVehicleId;
+  if (!opts.lastSingleCardId) return undefined;
+  if (!isAnaphoricVehicleFollowUp(opts.mensagem)) return undefined;
+  return opts.lastSingleCardId;
+}
