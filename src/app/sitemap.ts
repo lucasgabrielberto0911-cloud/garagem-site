@@ -5,7 +5,7 @@ import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
 import { SERVICE_CITIES, absoluteUrl } from "@/lib/seo";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 const STATIC_ROUTES: {
   path: string;

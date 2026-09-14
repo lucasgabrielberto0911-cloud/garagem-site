@@ -15,6 +15,7 @@ import {
 } from "@/lib/stock-query";
 import { colorWhere, formatColorLabel } from "@/lib/vehicle-display";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
+import { PUBLIC_VEHICLE_CARD_SELECT } from "@/lib/public-stock";
 
 export {
   STOCK_PAGE_SIZE,
@@ -29,6 +30,8 @@ export {
   type VehicleCardRecord,
 } from "@/lib/stock-query";
 
+export { PUBLIC_VEHICLE_CARD_SELECT } from "@/lib/public-stock";
+
 /** Tag do cache público — invalidada quando o estoque muda no admin. */
 export const VEHICLES_PUBLIC_CACHE_TAG = "vehicles-public";
 export const TESTIMONIALS_CACHE_TAG = "testimonials";
@@ -37,32 +40,6 @@ const PUBLIC_CACHE: { revalidate: number; tags: string[] } = {
   revalidate: 120,
   tags: [VEHICLES_PUBLIC_CACHE_TAG],
 };
-
-/**
- * Campos mínimos do card de listagem (estoque / home / relacionados).
- * Só a capa — sem count de fotos (subquery extra por linha).
- */
-export const PUBLIC_VEHICLE_CARD_SELECT = {
-  id: true,
-  category: true,
-  brand: true,
-  model: true,
-  version: true,
-  yearModel: true,
-  km: true,
-  price: true,
-  transmission: true,
-  fuel: true,
-  status: true,
-  featured: true,
-  color: true,
-  updatedAt: true,
-  photos: {
-    orderBy: { order: "asc" as const },
-    take: 1,
-    select: { url: true, thumbnailUrl: true },
-  },
-} as const;
 
 const PUBLIC_VEHICLE_CARD_SELECT_LEGACY = {
   id: true,

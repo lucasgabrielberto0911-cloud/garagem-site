@@ -29,7 +29,7 @@ import {
   IconMapPin,
   IconShieldCheck,
 } from "@/components/site/icons";
-import { itemListJsonLd, localBusinessJsonLd, websiteJsonLd } from "@/lib/seo";
+import { buildPageMetadata, itemListJsonLd, localBusinessJsonLd, websiteJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getPublishedFaq, getSiteContent } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
@@ -41,6 +41,13 @@ import {
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 
 export const revalidate = 60;
+
+export const metadata = buildPageMetadata({
+  title: `${site.name} | Seminovos com procedência no ${site.state}`,
+  description:
+    "Seminovos com procedência verificada em Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Compra, venda, troca e financiamento na Sua Garagem.",
+  path: "/",
+});
 
 const REASONS = [
   {
@@ -375,8 +382,8 @@ export default async function HomePage() {
           aria-hidden="true"
         />
         <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-          Compare no estoque ou no assistente. Simulação de parcela, CET e
-          fechamento ficam com o consultor no WhatsApp.
+          Compare no estoque ou no assistente. O consultor calcula a parcela no
+          WhatsApp — o site não publica valor de parcela.
         </p>
         <ActionRow className="mt-9">
           <WhatsAppButton

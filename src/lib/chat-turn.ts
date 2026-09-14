@@ -38,6 +38,7 @@ import {
   CHAT_FINANCE_REPLY,
   CHAT_TRADE_REPLY,
   CHAT_WARRANTY_REPLY,
+  CHAT_DOCS_REPLY,
   asksAboutConsumption,
   asksAboutEquipment,
   asksAboutKm,
@@ -63,7 +64,9 @@ import {
   toChatStockLine,
   applyChatStockFilters,
   consumptionReplyLooksBroken,
+  emptyFilterReply,
   equipmentReplyLooksBroken,
+  formatTransmissionCompareReply,
   hasConsumptionFigures,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
@@ -206,6 +209,21 @@ export async function runChatTurn(input: {
   if (policy === "warranty") {
     emit(CHAT_WARRANTY_REPLY);
     return finish(CHAT_WARRANTY_REPLY, false, { policy });
+  }
+  if (policy === "docs") {
+    emit(CHAT_DOCS_REPLY);
+    return finish(CHAT_DOCS_REPLY, false, { policy });
+  }
+  if (policy === "gear") {
+    const reply = formatTransmissionCompareReply(input.stock, input.mensagem);
+    emit(reply);
+    return finish(reply, false, { policy });
+  }
+
+  const empty = emptyFilterReply(input.mensagem, input.stock);
+  if (empty) {
+    emit(empty);
+    return finish(empty, false, { policy: "waitlist" });
   }
 
   const mentionedPool = singleMentionedModelPool(input.stock, input.mensagem);

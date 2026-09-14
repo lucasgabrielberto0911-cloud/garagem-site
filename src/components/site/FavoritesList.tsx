@@ -11,6 +11,7 @@ import { useFavorites } from "@/lib/favorites";
 import { snapshotsForIds, writeFavoriteSnapshot } from "@/lib/offline-queue";
 import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
 import { trackLead } from "@/lib/meta-pixel";
+import { WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export function FavoritesList() {
@@ -96,7 +97,8 @@ export function FavoritesList() {
         </p>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
           Toque no coração dos veículos que te interessam e eles ficam guardados
-          aqui, neste aparelho, para você comparar depois.
+          aqui, neste aparelho. Sem lista ainda? Pede no WhatsApp um seminovo
+          parecido com o que você procura.
         </p>
         <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
           <Link
@@ -105,6 +107,13 @@ export function FavoritesList() {
           >
             Ver estoque
           </Link>
+          <WhatsAppButton
+            trackingLabel="favoritos-vazio"
+            message={WHATSAPP_MESSAGES.similarFavorites}
+            variant="solid"
+          >
+            Pedir carros parecidos
+          </WhatsAppButton>
           <ChatOpenButton
             source="favoritos-vazio"
             prompt="Quero ajuda para escolher um veículo"

@@ -92,7 +92,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: "financiamento",
     question: "Trabalham com financiamento?",
     answer:
-      "Sim. Financiamos em até 60 vezes com bancos e financeiras parceiras, e também aceitamos cartão de crédito em até 18 vezes. Aprovação, taxas e CET dependem da análise de cada caso — a simulação pelo WhatsApp não é proposta vinculante. Também aceitamos pagamento à vista e o usado na troca.",
+      "Sim. Financiamos em até 60 vezes com bancos e financeiras parceiras, e também aceitamos cartão de crédito em até 18 vezes. Aprovação, taxas e CET dependem da análise de cada caso. O consultor calcula a parcela no WhatsApp — o site não publica valor de parcela. Também aceitamos pagamento à vista e o usado na troca.",
   },
   {
     category: "loja",

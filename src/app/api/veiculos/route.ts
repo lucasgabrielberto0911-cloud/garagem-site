@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { PUBLIC_VEHICLE_CARD_SELECT } from "@/lib/vehicles";
+import { PUBLIC_VEHICLE_CARD_SELECT } from "@/lib/public-stock";
 
 const MAX_IDS = 60;
 

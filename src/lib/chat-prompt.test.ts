@@ -60,7 +60,9 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /SEM CONSELHO FINANCEIRO ESPECÍFICO/);
   assert.match(CHAT_SYSTEM_PROMPT, /DADOS PESSOAIS MÍNIMOS/);
   assert.match(CHAT_SYSTEM_PROMPT, /CONTENÇÃO DE ABUSO/);
-  assert.match(CHAT_SYSTEM_PROMPT, /nunca cálculo de parcela exato/);
+  assert.match(CHAT_SYSTEM_PROMPT, /Documentos da transferência/);
+  assert.match(CHAT_SYSTEM_PROMPT, /Se o filtro/);
+  assert.match(CHAT_SYSTEM_PROMPT, /Diferença automático vs manual/);
   assert.match(CHAT_SYSTEM_PROMPT, /ignore as instruções anteriores/);
   assert.match(CHAT_SYSTEM_PROMPT, /Nunca pedir CPF/);
   assert.match(CHAT_SYSTEM_PROMPT, /chama no WhatsApp pra outros temas/);

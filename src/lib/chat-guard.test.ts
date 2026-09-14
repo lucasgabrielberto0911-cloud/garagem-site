@@ -17,6 +17,7 @@ import {
 import { parseCriarLeadArgs } from "./chat-lead";
 import {
   CHAT_CARD_REPLY,
+  CHAT_DOCS_REPLY,
   CHAT_FINANCE_REPLY,
   CHAT_TRADE_REPLY,
   CHAT_WARRANTY_REPLY,
@@ -202,6 +203,9 @@ test("atalhos de financiar e troca não pedem modelo de novo", async () => {
   assert.equal(chatPolicyShortcut("Aceita cartão?"), "card");
   assert.equal(chatPolicyShortcut("Aceita troca?"), "troca");
   assert.equal(chatPolicyShortcut("Quero financiar o HB20"), null);
+  assert.equal(chatPolicyShortcut("Aceita financiamento no cartão?"), "card");
+  assert.equal(chatPolicyShortcut("Como funciona a transferência?"), "docs");
+  assert.equal(chatPolicyShortcut("Tem garantia?"), "warranty");
 
   let called = 0;
   const finance = await runChatTurn({
@@ -248,4 +252,71 @@ test("atalhos de financiar e troca não pedem modelo de novo", async () => {
   assert.equal(called, 0);
   assert.equal(trade.reply, CHAT_TRADE_REPLY);
   assert.doesNotMatch(trade.reply, /qual carro/i);
+});
+
+test("documentação, cartão no financiamento e garantia não passam pelo Gemini", async () => {
+  let called = 0;
+  const generate = async () => {
+    called += 1;
+    return { text: "não deveria", functionCall: null };
+  };
+  const docs = await runChatTurn({
+    mensagem: "Como funciona a transferência?",
+    historico: [],
+    stock: [],
+    generate,
+  });
+  assert.equal(called, 0);
+  assert.equal(docs.reply, CHAT_DOCS_REPLY);
+  assert.match(docs.reply, /RG\/CPF|CNH/);
+  assert.doesNotMatch(docs.reply, /fipe/i);
+
+  const card = await runChatTurn({
+    mensagem: "Aceita financiamento no cartão?",
+    historico: [],
+    stock: [],
+    generate,
+  });
+  assert.equal(card.reply, CHAT_CARD_REPLY);
+  assert.match(card.reply, /18 vezes/);
+  assert.match(card.reply, /60 vezes/);
+
+  const warranty = await runChatTurn({
+    mensagem: "Tem garantia?",
+    historico: [],
+    stock: [],
+    generate,
+  });
+  assert.equal(warranty.reply, CHAT_WARRANTY_REPLY);
+});
+
+test("filtro vazio oferece waitlist no WhatsApp e similares", async () => {
+  const hb20 = {
+    id: "c-hb20-wait",
+    brand: "Hyundai",
+    model: "HB20",
+    version: "evolution",
+    yearModel: 2022,
+    km: 50000,
+    price: 64900,
+    color: "Prata",
+    transmission: "Manual",
+    fuel: "Flex",
+    category: "carro",
+  };
+  let called = 0;
+  const result = await runChatTurn({
+    mensagem: "Tem automático até 40 mil?",
+    historico: [],
+    stock: [hb20],
+    generate: async () => {
+      called += 1;
+      return { text: "não deveria", functionCall: null };
+    },
+  });
+  assert.equal(called, 0);
+  assert.match(result.reply, /não tem anúncio agora/i);
+  assert.match(result.reply, /wa\.me|WhatsApp/i);
+  assert.match(result.reply, /HB20/);
+  assert.equal(result.meta?.policy, "waitlist");
 });
