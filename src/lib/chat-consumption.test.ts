@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  joinNameAndMotor,
   parseEngineDisplacementLiters,
   typicalConsumptionHint,
   typicalConsumptionRange,
@@ -162,6 +163,24 @@ test("template de consumo nunca cola o disclaimer no fica", () => {
   assert.match(repaired, /9–12 km\/l/);
   assert.doesNotMatch(repaired, /fica\s+Nenhum desses/i);
   assert.match(repaired, /não foi medido/);
+});
+
+test("modelo Fox 1.6 não vira Fox 1.6 1.6 na fala de consumo", () => {
+  assert.equal(joinNameAndMotor("o Fox", "1.6 flex"), "o Fox 1.6 flex");
+  assert.equal(joinNameAndMotor("o Fox 1.6", "1.6 flex"), "o Fox 1.6 flex");
+  assert.equal(joinNameAndMotor("o FOX 1.6", "1.6"), "o FOX 1.6");
+  assert.equal(joinNameAndMotor("o Golf", "2.0"), "o Golf 2.0");
+
+  const foxNamed: ChatVehicleRecord = {
+    ...fox,
+    model: "Fox 1.6",
+    version: "Trend 1.6",
+  };
+  const reply = formatFocusedConsumptionReply(foxNamed);
+  assert.match(reply, /Fox 1\.6/);
+  assert.doesNotMatch(reply, /1\.6 1\.6/);
+  assert.match(reply, /9–12 km\/l/);
+  assert.match(reply, /não foi medido/);
 });
 
 test("sem faixa na ficha não usa o disclaimer como objeto do fica", () => {

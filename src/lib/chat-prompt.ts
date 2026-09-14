@@ -5,6 +5,7 @@
 
 import { typicalConsumptionHint } from "@/lib/chat-consumption";
 import { site } from "@/lib/site";
+import { shortVersion } from "@/lib/vehicle-display";
 
 export const CHAT_WHATSAPP_URL = `https://wa.me/${site.whatsappNumber}`;
 
@@ -68,7 +69,7 @@ COMO AJUDAR DE VERDADE:
 - Ao listar, escolha no máximo 3 opções que façam sentido — não despeje o estoque inteiro. Se o visitante pedir barato / baratinho / mais em conta, prefira os mais baratos do modelo pedido e NÃO cite irmão mais caro sem necessidade. O site vira cada linha em mini-anúncio com foto e já mostra atalhos (financiar, troca). Formato da lista, um por linha:
 Marca Modelo ano · km · R$ preço
 Antes da lista: 1 frase falada de recorte (Olha só, carros até R$ 70.000 no estoque agora / Automáticos até R$ 80.000). Não comece com “Separei N” nem “Temos três ótimas opções”. DEPOIS da lista: 2 a 4 frases comparando SOMENTE esses mesmos carros, com dados da linha de estoque. Diga quem está mais em conta, quem tem menos km, quem é automático e o que isso muda no dia a dia. Só diga que um carro “é o automático da lista” ou “o único automático” se nenhum outro da mesma lista for automático. NÃO mencione consumo de combustível espontaneamente. Frases completas, faladas, sem telegrama e sem emoji.
-- Consumo / média / km/l: NUNCA mencione consumo espontaneamente. O consumo só deve ser informado SE o visitante perguntar especificamente sobre o consumo, gasto de combustível, quanto faz por litro ou se o veículo é econômico. Quando ele perguntar de consumo, use SOMENTE o texto “consumo típico” já escrito na linha do estoque. Se a linha tiver gasolina e álcool, cite as duas faixas. NUNCA invente outro número, NUNCA invente cv, potência, torque ou INMETRO, NUNCA diga que a loja mediu este usado, NUNCA apresente a faixa como garantia. Fale como faixa típica de catálogo / média da motorização. Complete a frase com os km/l ANTES do aviso de que o usado não foi medido na loja — nunca junte o aviso no lugar da faixa (“fica Nenhum desses…”). Se não houver km/l na linha, diga isso com clareza; não complete “fica” com o disclaimer.
+- Consumo / média / km/l: NUNCA mencione consumo espontaneamente. O consumo só deve ser informado SE o visitante perguntar especificamente sobre o consumo, gasto de combustível, quanto faz por litro ou se o veículo é econômico. Quando ele perguntar de consumo, use SOMENTE o texto “consumo típico” já escrito na linha do estoque. Se a linha tiver gasolina e álcool, cite as duas faixas. NUNCA invente outro número, NUNCA invente cv, potência, torque ou INMETRO, NUNCA diga que a loja mediu este usado, NUNCA apresente a faixa como garantia. Fale como faixa típica de catálogo / média da motorização. Não repita a cilindrada se o modelo já tiver (nunca “Fox 1.6 1.6”). Complete a frase com os km/l ANTES do aviso de que o usado não foi medido na loja — nunca junte o aviso no lugar da faixa (“fica Nenhum desses…”). Se não houver km/l na linha, diga isso com clareza; não complete “fica” com o disclaimer.
 - Não descreva a foto, não use markdown, não cite carro fora dessas 3 linhas e não pergunte hatch, sedan, “qual desses” nem “qual perfil” depois da lista (os atalhos do site já existem).
 - Se perguntarem “qual o melhor”, compare 2 ou 3 da lista só com dados reais (preço, ano, km, câmbio, combustível, motor, acessórios da linha). Sem inventar opcional.
 - Acessórios, motor e cor: só o que estiver na linha do estoque. Se não estiver escrito, não invente ar digital, multimídia, couro, teto, sensor, cor ou motorização.
@@ -133,8 +134,9 @@ function accessoryBits(items?: string[]) {
 }
 
 function stockLineLabel(vehicle: ChatStockLine, withExtras = false) {
-  const version = vehicle.version?.trim() ? ` ${vehicle.version.trim()}` : "";
-  const base = `${vehicle.brand} ${vehicle.model}${version} ${vehicle.year} · ${vehicle.km.toLocaleString("pt-BR")} km · ${formatChatPrice(vehicle.price)}`;
+  const version = shortVersion(vehicle.version, vehicle.model);
+  const versionBit = version ? ` ${version}` : "";
+  const base = `${vehicle.brand} ${vehicle.model}${versionBit} ${vehicle.year} · ${vehicle.km.toLocaleString("pt-BR")} km · ${formatChatPrice(vehicle.price)}`;
   if (!withExtras) return base;
   const color = vehicle.color?.trim() ? vehicle.color.trim() : "cor não informada";
   const kind = vehicle.category === "moto" ? "moto" : "carro";

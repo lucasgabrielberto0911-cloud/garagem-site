@@ -675,6 +675,23 @@ export function StockFilters({ facets }: { facets: Facets }) {
               ))}
             </ChipRow>
           ) : null}
+          {facets.brands.length > 0 ? (
+            <ChipRow label="Marca">
+              {facets.brands.slice(0, 8).map((item) => (
+                <Chip
+                  key={item}
+                  active={current.brand === item}
+                  onClick={() =>
+                    update({
+                      brand: current.brand === item ? "" : item,
+                    })
+                  }
+                >
+                  {formatBrandName(item)}
+                </Chip>
+              ))}
+            </ChipRow>
+          ) : null}
         </div>
 
         {activeFilters.length > 0 ? (

@@ -25,11 +25,12 @@ function openWhatsApp(
   }
 }
 
-/** Barra fixa no mobile: WhatsApp em destaque, Simular/Troca no segundo nível. */
+/** Barra fixa no mobile: WhatsApp em destaque; parcela, troca e vídeo no segundo nível. */
 export function VehicleMobileBar({
   vehicleId,
   contentName,
   message,
+  videoMessage,
   financeMessage,
   tradeMessage,
   brand,
@@ -58,11 +59,23 @@ export function VehicleMobileBar({
   );
   const financeHref = financeMessage ? whatsappUrl(financeMessage) : null;
   const tradeHref = tradeMessage ? whatsappUrl(tradeMessage) : null;
+  const videoHref = videoMessage ? whatsappUrl(videoMessage) : null;
+  const secondary = [
+    financeHref
+      ? { href: financeHref, label: "Parcela", tracking: "ficha-finance" }
+      : null,
+    tradeHref
+      ? { href: tradeHref, label: "Troca", tracking: "ficha-trade" }
+      : null,
+    videoHref
+      ? { href: videoHref, label: "Vídeo", tracking: "ficha-video" }
+      : null,
+  ].filter(Boolean) as Array<{ href: string; label: string; tracking: string }>;
 
   return (
     <div
       data-vehicle-mobile-bar=""
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt/95 px-3 pt-2 backdrop-blur pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pl-safe pr-safe lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt/95 px-3 pt-2 backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-safe pr-safe lg:hidden"
     >
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center gap-3">
@@ -107,30 +120,26 @@ export function VehicleMobileBar({
           )}
         </div>
 
-        {!sold && financeHref && tradeHref ? (
-          <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-            <a
-              href={financeHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) =>
-                openWhatsApp(event, financeHref, "ficha-finance", vehicleId)
-              }
-              className="inline-flex min-h-10 items-center justify-center border border-white/15 px-1 text-center font-display text-[10px] font-semibold uppercase tracking-wide text-cream touch-manipulation"
-            >
-              Simular
-            </a>
-            <a
-              href={tradeHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) =>
-                openWhatsApp(event, tradeHref, "ficha-trade", vehicleId)
-              }
-              className="inline-flex min-h-10 items-center justify-center border border-white/15 px-1 text-center font-display text-[10px] font-semibold uppercase tracking-wide text-cream touch-manipulation"
-            >
-              Troca
-            </a>
+        {!sold && secondary.length > 0 ? (
+          <div
+            className={`mt-1.5 grid gap-1.5 ${
+              secondary.length === 3 ? "grid-cols-3" : "grid-cols-2"
+            }`}
+          >
+            {secondary.map((action) => (
+              <a
+                key={action.tracking}
+                href={action.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) =>
+                  openWhatsApp(event, action.href, action.tracking, vehicleId)
+                }
+                className="inline-flex min-h-11 items-center justify-center border border-white/15 px-1 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream touch-manipulation"
+              >
+                {action.label}
+              </a>
+            ))}
           </div>
         ) : null}
       </div>

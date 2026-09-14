@@ -96,7 +96,7 @@ export function VehicleCard({
         <div className="relative aspect-[16/10] overflow-hidden bg-asphalt">
           <VehicleImage
             src={cover}
-            alt={display.title}
+            alt={display.titleWithYear}
             fill
             width={480}
             height={300}
@@ -131,17 +131,17 @@ export function VehicleCard({
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-1.5 p-2.5 sm:gap-2 sm:p-3">
+        <div className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2">
           <div className="min-w-0">
-            <h3 className="truncate font-display text-[13px] font-semibold leading-snug text-cream sm:text-sm">
+            <h3 className="truncate font-display text-sm font-semibold leading-snug text-cream">
               {display.title}
             </h3>
             {display.version ? (
-              <p className="mt-0.5 truncate text-[11px] text-muted sm:text-xs">
+              <p className="mt-0.5 truncate text-xs text-muted">
                 {display.version}
               </p>
             ) : null}
-            <p className="mt-1 truncate text-[11px] text-muted sm:mt-1.5 sm:text-xs">
+            <p className="mt-1 truncate text-xs text-muted">
               {display.metaParts.join(" · ")}
             </p>
             {updated ? (
@@ -150,11 +150,11 @@ export function VehicleCard({
           </div>
 
           <div className="mt-auto flex flex-col gap-1.5 border-t border-white/10 pt-2 sm:flex-row sm:items-end sm:justify-between sm:gap-2 sm:pt-2.5">
-            <p className="font-display text-[15px] font-bold leading-none text-cream sm:text-base">
+            <p className="font-display text-base font-bold leading-none text-cream">
               {formatCurrencyBRL(vehicle.price)}
             </p>
-            <span className="shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-cream/70 transition group-hover:text-cream">
-              Ver detalhes
+            <span className="shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-cream/80 transition group-hover:text-cream">
+              Ver ficha
             </span>
           </div>
         </div>

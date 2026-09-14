@@ -38,7 +38,7 @@ export function VehicleGrid({
   const destaqueIds = featuredBadgeIds(vehicles, destaqueLimit);
   return (
     <div
-      className={`mx-auto grid w-full gap-2.5 sm:gap-4 ${layoutForCount(vehicles.length, desktopCols)}`}
+      className={`mx-auto grid w-full gap-3 sm:gap-4 ${layoutForCount(vehicles.length, desktopCols)}`}
     >
       {vehicles.map((vehicle, index) => (
         <div key={vehicle.id} className="h-full min-w-0 w-full">

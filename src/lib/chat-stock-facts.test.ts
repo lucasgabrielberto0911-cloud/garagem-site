@@ -14,6 +14,7 @@ import {
   formatFocusedEquipmentReply,
   formatFocusedKmReply,
   formatTransmissionCompareReply,
+  formatVehicleLine,
   pickComparedModelVehicles,
   type ChatVehicleRecord,
 } from "./chat-stock";
@@ -71,6 +72,22 @@ test("Esse carro ainda tem? reconhece disponibilidade", () => {
   assert.equal(asksAboutAvailability("está disponível amanhã?"), false);
   assert.match(formatAvailabilityReply(hb20), /ainda está no estoque/);
   assert.match(formatAvailabilityReply(null, { sold: true }), /já saiu do estoque/);
+});
+
+test("linha do estoque não repete 1.6 quando o modelo já tem", () => {
+  const fox16: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-fox-line",
+    brand: "Volkswagen",
+    model: "Fox 1.6",
+    version: "Trend 1.6",
+    yearModel: 2014,
+    km: 98000,
+    price: 38900,
+  };
+  const line = formatVehicleLine(fox16);
+  assert.match(line, /Volkswagen Fox 1\.6 Trend 2014/);
+  assert.doesNotMatch(line, /1\.6 1\.6|Trend 1\.6 2014/);
 });
 
 test("HB20 vs Onix escolhe uma unidade de cada modelo", () => {

@@ -52,18 +52,18 @@ export const metadata = buildPageMetadata({
 const REASONS = [
   {
     Icon: IconClipboardCheck,
-    title: "Vistoria Completa",
+    title: "Vistoria completa",
     text: "Todo veículo passa por checagem de procedência e condição geral antes de entrar no estoque. Você sabe o que está comprando, com informação clara.",
   },
   {
     Icon: IconShieldCheck,
-    title: "Procedência Verificada",
+    title: "Procedência verificada",
     text: "Histórico, débitos e restrições consultados com cuidado. Nada de surpresa depois da transferência — a documentação sai alinhada.",
   },
   {
     Icon: IconHandshake,
-    title: "Negociação Transparente",
-    text: "Preço claro, sem enrolação. Avaliamos seu usado e ajudamos com as opções de pagamento e financiamento que façam sentido para você.",
+    title: "Negociação clara",
+    text: "Preço no anúncio, sem enrolação. Avaliamos seu usado e explicamos financiamento em até 60x e cartão em até 18x — a parcela o consultor calcula no WhatsApp.",
   },
 ] as const;
 
@@ -133,8 +133,9 @@ export default async function HomePage() {
               aria-hidden="true"
             />
             <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-cream/80 sm:mt-4 sm:text-base lg:mt-5">
-              Seminovos revisados em {site.region} e região. Veja o estoque,
-              chame no WhatsApp ou peça uma ajuda rápida no assistente.
+              Seminovos com procedência em {site.region} e região. Veja o
+              estoque, chame no WhatsApp ou peça uma ajuda rápida no assistente
+              — atendimento online todos os dias, das 8h às 23h.
             </p>
           </div>
 
@@ -177,7 +178,7 @@ export default async function HomePage() {
         <SectionHeading
           eyebrow="Estoque"
           title="Veículos em destaque"
-          description="Seleção do que está disponível agora. O estoque gira rápido."
+          description="Seleção da loja — no máximo 8 anúncios. O estoque muda rápido."
         />
 
         <div className="mt-8">

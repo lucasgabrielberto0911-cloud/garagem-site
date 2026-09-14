@@ -58,7 +58,7 @@ export default async function VenderPage({
         <PageHeader
           eyebrow="Vender / Trocar"
           title="Avalie seu veículo sem compromisso"
-          description="Compramos seu usado e também aceitamos na troca por um veículo do nosso estoque. Preencha os dados abaixo que a gente retorna com uma proposta — sem taxa e sem compromisso."
+          description="Compramos seu usado e também aceitamos na troca por um veículo do nosso estoque. Preencha os dados — retornamos no WhatsApp, das 8h às 23h, sem taxa e sem compromisso."
         />
 
         {interestLabel ? (
