@@ -12,6 +12,8 @@ import {
   applyChatStockFilters,
   cheapPriceCap,
   foldedTransmission,
+  isFocusedVehicleFactQuestion,
+  matchFocusedVehicle,
   parseTransmissionFilter,
   parseVehicleCategoryFilter,
   resolveChatCategory,
@@ -348,6 +350,10 @@ export function selectChatVehicles(
   preferredVehicleId?: string,
 ) {
   const pool = applyChatStockFilters(stock, mensagem);
+  if (isFocusedVehicleFactQuestion(mensagem, pool)) {
+    const focused = matchFocusedVehicle(mensagem, pool, preferredVehicleId);
+    if (focused) return [focused];
+  }
   const mentioned = matchVehiclesInReply(
     reply,
     pool,

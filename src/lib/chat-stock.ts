@@ -3,7 +3,6 @@ import { isMissingColumnError } from "@/lib/prisma-errors";
 import { formatModelName } from "@/lib/format";
 import {
   parseEngineDisplacementLiters,
-  typicalConsumptionHint,
   typicalConsumptionRange,
 } from "@/lib/chat-consumption";
 import {
@@ -213,6 +212,36 @@ export function singleMentionedModelPool(
   return [...models.values()][0] ?? null;
 }
 
+export function matchFocusedVehicle(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+  preferredVehicleId?: string,
+): ChatVehicleRecord | null {
+  if (stock.length === 0) return null;
+  const mentioned = singleMentionedModelPool(stock, mensagem);
+  const pool = mentioned ?? stock;
+  const matched = matchInterestVehicle(
+    mensagem,
+    pool,
+    mentioned ? 1 : 2,
+    preferredVehicleId,
+  );
+  if (matched) return matched;
+  if (mentioned?.length === 1) return mentioned[0]!;
+  if (mentioned && mentioned.length > 1) {
+    const withRange = mentioned.find((vehicle) =>
+      typicalConsumptionRange({
+        fuel: vehicle.fuel,
+        engine: vehicle.engine,
+        version: vehicle.version,
+        category: vehicle.category ?? "carro",
+      }),
+    );
+    return withRange ?? mentioned[0]!;
+  }
+  return matchInterestVehicle(mensagem, stock, 1, preferredVehicleId);
+}
+
 export function applyChatStockFilters(
   stock: ChatVehicleRecord[],
   mensagem: string,
@@ -255,10 +284,16 @@ export function matchInterestVehicle(
     for (const part of needle.split(" ").filter((token) => token.length >= 3)) {
       if (hay.includes(part)) score += 1;
     }
+    const model = normalize(vehicle.model);
+    const brand = normalize(vehicle.brand);
+    const version = normalize(vehicle.version ?? "");
+    if (model.length >= 3 && needle.includes(model)) score += 2;
+    if (brand.length >= 3 && needle.includes(brand)) score += 1;
+    for (const part of needle.split(" ").filter((token) => token.length >= 4)) {
+      if (version.includes(part)) score += 2;
+    }
     if (hay.includes(needle)) score += 3;
     if (preferredVehicleId && vehicle.id === preferredVehicleId) {
-      const model = normalize(vehicle.model);
-      const brand = normalize(vehicle.brand);
       if (needle.includes(model) || (brand && needle.includes(brand))) {
         score += 3;
       }
@@ -311,6 +346,102 @@ function joinPtNames(names: string[]) {
   return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
 }
 
+export function hasConsumptionFigures(text: string) {
+  return /\d+\s*[–\-]\s*\d+\s*km\s*\/?\s*l/i.test(text);
+}
+
+export function consumptionReplyLooksBroken(text: string) {
+  const trimmed = text.trim();
+  const folded = normalize(trimmed);
+  if (/fica\s+nenhum desses/.test(folded)) return true;
+  if (/catalogo fica\s*(nenhum desses|este usado)/.test(folded)) return true;
+  if (
+    /faixa t[ií]pica de catalogo fica\s*$/i.test(trimmed) ||
+    /catalogo fica\s*$/.test(folded)
+  ) {
+    return true;
+  }
+  if (
+    /(consumo|catalogo|faixa tipica)/.test(folded) &&
+    !hasConsumptionFigures(trimmed) &&
+    /\bfica\b/.test(folded)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+const MEASURED_DISCLAIMER = "Este usado não foi medido na loja.";
+const MEASURED_DISCLAIMER_PLURAL =
+  "Nenhum desses usados foi medido na loja.";
+
+export function formatFocusedConsumptionReply(vehicle: ChatVehicleRecord) {
+  const named = talkName(vehicle);
+  const range = typicalConsumptionRange({
+    fuel: vehicle.fuel,
+    engine: vehicle.engine,
+    version: vehicle.version,
+    category: vehicle.category ?? "carro",
+  });
+  if (!range?.kmL || range.label === "elétrico") {
+    if (range?.label === "elétrico") {
+      return `Para ${named.labeled}, o catálogo não fala em km/l — é elétrico (autonomia da bateria). ${MEASURED_DISCLAIMER}`;
+    }
+    return `Não tenho faixa de catálogo na ficha d${named.labeled} — a loja não mediu este usado. Se quiser, o consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  }
+  const motor = range.label.replace(/\s*flex$/i, "");
+  const gas = range.gasolineKmL ?? range.kmL;
+  if (range.ethanolKmL) {
+    return `Para ${named.labeled} ${range.label}, a faixa típica de catálogo fica ${gas} na cidade na gasolina e ${range.ethanolKmL} no álcool. ${MEASURED_DISCLAIMER}`;
+  }
+  return `Para ${named.labeled} ${motor}, a faixa típica de catálogo fica ${gas} na cidade. ${MEASURED_DISCLAIMER}`;
+}
+
+export function formatFocusedEquipmentReply(
+  vehicle: ChatVehicleRecord,
+  mensagem: string,
+) {
+  const folded = normalize(mensagem);
+  const named = talkName(vehicle);
+  const items = (vehicle.accessories ?? [])
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 2);
+
+  if (/ar condicionado|arcondicionado|\btem ar\b|\bar[- ]condicionado\b/.test(folded)) {
+    const has = items.some((item) => {
+      const key = normalize(item).replace(/\s+/g, "");
+      return (
+        key.includes("arcondicionado") ||
+        key === "ar" ||
+        /\bar\b/.test(normalize(item))
+      );
+    });
+    if (has) {
+      return `Sim — ${named.labeled} tem ar-condicionado na ficha. Se quiser conferir no detalhe, o consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    }
+    return `Na ficha d${named.labeled} não está escrito ar-condicionado. O consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  }
+
+  if (/\b(automatico|automatica|cvt)\b/.test(folded) && !/\bmanual\b/.test(folded)) {
+    if (isAutomaticVehicle(vehicle)) {
+      return `Sim — ${named.labeled} é ${vehicle.transmission}.`;
+    }
+    return `${named.cap} nesta unidade está como ${vehicle.transmission}.`;
+  }
+
+  if (/\bmanual\b/.test(folded) && !/\b(automatico|cvt)\b/.test(folded)) {
+    if (isManualVehicle(vehicle)) {
+      return `Sim — ${named.labeled} é ${vehicle.transmission}.`;
+    }
+    return `${named.cap} nesta unidade está como ${vehicle.transmission}.`;
+  }
+
+  if (items.length === 0) {
+    return `Na ficha d${named.labeled} não tem opcional listado. O consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  }
+  return `${named.cap} na ficha tem ${items.slice(0, 6).join(", ")}. O que não estiver escrito a gente não inventa — o consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+}
+
 function formatConsumptionCompare(vehicles: ChatVehicleRecord[]) {
   const rows = vehicles
     .map((vehicle) => {
@@ -320,11 +451,12 @@ function formatConsumptionCompare(vehicles: ChatVehicleRecord[]) {
         version: vehicle.version,
         category: vehicle.category ?? "carro",
       });
-      if (!range) return null;
+      if (!range?.kmL) return null;
       return {
         name: talkName(vehicle).name,
         label: range.label,
         kmL: range.kmL,
+        ethanolKmL: range.ethanolKmL ?? null,
         liters: parseEngineDisplacementLiters(
           vehicle.engine,
           vehicle.version,
@@ -339,32 +471,55 @@ function formatConsumptionCompare(vehicles: ChatVehicleRecord[]) {
         name: string;
         label: string;
         kmL: string;
+        ethanolKmL: string | null;
         liters: number | null;
       } => row != null,
     )
     .sort((a, b) => (a.liters ?? 99) - (b.liters ?? 99));
 
   if (rows.length === 0) {
-    return typicalConsumptionHint(vehicles[0]!);
+    return `Não tenho faixa de catálogo na ficha desses usados. ${MEASURED_DISCLAIMER_PLURAL}`;
   }
   if (rows.length === 1) {
-    return `Na cidade, o consumo de catálogo fica por aí: ${rows[0]!.label} ~${rows[0]!.kmL}. Nenhum desses usados foi medido na loja.`;
+    const row = rows[0]!;
+    const ethanol = row.ethanolKmL
+      ? ` gasolina / ${row.ethanolKmL} álcool`
+      : "";
+    return `Na cidade, o consumo de catálogo fica por aí: ${row.label} ~${row.kmL}${ethanol}. ${MEASURED_DISCLAIMER_PLURAL}`;
   }
 
-  const groups: { names: string[]; label: string; kmL: string }[] = [];
+  const groups: {
+    names: string[];
+    label: string;
+    kmL: string;
+    ethanolKmL: string | null;
+  }[] = [];
   for (const row of rows) {
     const last = groups[groups.length - 1];
-    if (last && last.kmL === row.kmL && last.label === row.label) {
+    if (
+      last &&
+      last.kmL === row.kmL &&
+      last.label === row.label &&
+      last.ethanolKmL === row.ethanolKmL
+    ) {
       last.names.push(row.name);
       continue;
     }
-    groups.push({ names: [row.name], label: row.label, kmL: row.kmL });
+    groups.push({
+      names: [row.name],
+      label: row.label,
+      kmL: row.kmL,
+      ethanolKmL: row.ethanolKmL,
+    });
   }
   const bits = groups.map((group) => {
     const motor = group.label.replace(/\s*flex$/i, "");
-    return `${joinPtNames(group.names)} ${motor} ~${group.kmL}`;
+    const ethanol = group.ethanolKmL
+      ? ` gasolina / ${group.ethanolKmL} álcool`
+      : "";
+    return `${joinPtNames(group.names)} ${motor} ~${group.kmL}${ethanol}`;
   });
-  return `Na cidade, o consumo de catálogo fica por aí: ${bits.join(" · ")}. Nenhum desses usados foi medido na loja.`;
+  return `Na cidade, o consumo de catálogo fica por aí: ${bits.join(" · ")}. ${MEASURED_DISCLAIMER_PLURAL}`;
 }
 
 /** Identifica se o visitante perguntou especificamente sobre consumo / economia de combustível. */
@@ -373,6 +528,41 @@ export function asksAboutConsumption(mensagem: string): boolean {
   return /\b(consumo|km\s*l|kml|quanto faz|beb\w*|economico|economica|economia|gasta|gasto|litros?|autonomia)\b/.test(
     folded,
   );
+}
+
+export function asksAboutEquipment(mensagem: string): boolean {
+  const folded = normalize(mensagem);
+  return /\b(ar condicionado|arcondicionado|multimidia|bluetooth|direcao|airbag|abs|couro|teto solar|sensor|camera|vidros? eletricos|piloto|acessorios?|opcionais|equipado)\b/.test(
+    folded,
+  );
+}
+
+export function asksAboutNamedGear(mensagem: string): boolean {
+  const folded = normalize(mensagem);
+  return /\b(tem|e|eh|possui)\s+(automatico|automatica|manual|cvt)\b/.test(
+    folded,
+  );
+}
+
+export function asksAboutListedFacts(mensagem: string): boolean {
+  const folded = normalize(mensagem);
+  return /\b(preco|valor|quanto custa)\b/.test(folded);
+}
+
+export function isFocusedVehicleFactQuestion(
+  mensagem: string,
+  stock: ChatVehicleRecord[] = [],
+): boolean {
+  const consumption = asksAboutConsumption(mensagem);
+  const equipment = asksAboutEquipment(mensagem);
+  const geared = asksAboutNamedGear(mensagem);
+  if (!consumption && !equipment && !geared) return false;
+  const mentioned = stock.length
+    ? singleMentionedModelPool(stock, mensagem)
+    : null;
+  if (parsePriceLimit(mensagem) != null && !mentioned) return false;
+  if (stock.length === 0) return consumption || equipment;
+  return matchFocusedVehicle(mensagem, stock) != null;
 }
 
 /** Compara os 2–3 anúncios da tela com dados reais. Consumo só se solicitado. */
@@ -385,7 +575,7 @@ export function compareChatStockPicks(
     const vehicle = vehicles[0]!;
     const base = `Achei no estoque: ${talkName(vehicle).cap} ${vehicle.yearModel}, ${vehicle.transmission}, ${formatChatKm(vehicle.km)}, ${formatChatPrice(vehicle.price)}.`;
     if (opts.includeConsumption) {
-      return `${base}\n\n${typicalConsumptionHint(vehicle)}.`;
+      return `${base}\n\n${formatFocusedConsumptionReply(vehicle)}`;
     }
     return base;
   }
@@ -570,6 +760,35 @@ export function enrichChatStockReply(
 ) {
   if (vehicles.length === 0) return reply;
   const wantsConsumption = asksAboutConsumption(mensagem);
+  const focusedFact = isFocusedVehicleFactQuestion(mensagem, vehicles);
+  if (focusedFact) {
+    const focused =
+      vehicles.length === 1
+        ? vehicles[0]!
+        : (matchFocusedVehicle(mensagem, vehicles) ?? vehicles[0]!);
+    if (wantsConsumption) {
+      if (
+        vehicles.length > 1 ||
+        consumptionReplyLooksBroken(reply) ||
+        !hasConsumptionFigures(reply)
+      ) {
+        return formatFocusedConsumptionReply(focused);
+      }
+      if (!/medido/.test(foldReply(reply))) {
+        const closed = /[.!?]$/.test(reply.trim())
+          ? reply.trim()
+          : `${reply.trim()}.`;
+        return `${closed} ${MEASURED_DISCLAIMER}`;
+      }
+      return reply;
+    }
+    if (asksAboutEquipment(mensagem) || asksAboutNamedGear(mensagem)) {
+      if (vehicles.length > 1 || consumptionReplyLooksBroken(reply)) {
+        return formatFocusedEquipmentReply(focused, mensagem);
+      }
+      return reply;
+    }
+  }
   if (vehicles.length >= 2) {
     const intro = chatListIntro(reply) || chatFilterIntro(mensagem);
     const compare = compareChatStockPicks(vehicles, {
@@ -582,10 +801,15 @@ export function enrichChatStockReply(
   if (replyAlreadyCompares(reply, vehicles)) {
     if (
       wantsConsumption &&
-      /consumo|km\/l|catalogo/.test(foldReply(reply)) &&
-      !/medido/.test(foldReply(reply))
+      (consumptionReplyLooksBroken(reply) || !hasConsumptionFigures(reply))
     ) {
-      return `${reply.trim()} Nenhum desses usados foi medido na loja.`;
+      return formatFocusedConsumptionReply(vehicles[0]!);
+    }
+    if (wantsConsumption && !/medido/.test(foldReply(reply))) {
+      const closed = /[.!?]$/.test(reply.trim())
+        ? reply.trim()
+        : `${reply.trim()}.`;
+      return `${closed} ${MEASURED_DISCLAIMER}`;
     }
     return reply;
   }
@@ -803,14 +1027,24 @@ export function localGarageReply(
   }
 
   const match =
-    (activeVehicle && matchInterestVehicle(mensagem, [activeVehicle], 1) ? activeVehicle : null) ??
+    matchFocusedVehicle(mensagem, stock, activeVehicle?.id) ??
+    (activeVehicle && matchInterestVehicle(mensagem, [activeVehicle], 1)
+      ? activeVehicle
+      : null) ??
     matchInterestVehicle(mensagem, stock, 2, activeVehicle?.id) ??
     matchInterestVehicle(mensagem, stock, 1, activeVehicle?.id);
   if (match) {
-    const consumptionExtra = asksAboutConsumption(mensagem)
-      ? ` ${typicalConsumptionHint(match)}.`
-      : "";
-    return `Achei no estoque: ${match.brand} ${match.model} ${match.yearModel}, ${match.km.toLocaleString("pt-BR")} km, ${formatChatPrice(match.price)}, ${match.transmission}.${consumptionExtra}`;
+    if (asksAboutConsumption(mensagem)) {
+      const consumption = formatFocusedConsumptionReply(match);
+      if (asksAboutListedFacts(mensagem) || /\bkm\b/.test(text)) {
+        return `Achei no estoque: ${match.brand} ${match.model} ${match.yearModel}, ${match.km.toLocaleString("pt-BR")} km, ${formatChatPrice(match.price)}, ${match.transmission}.\n\n${consumption}`;
+      }
+      return consumption;
+    }
+    if (asksAboutEquipment(mensagem) || asksAboutNamedGear(mensagem)) {
+      return formatFocusedEquipmentReply(match, mensagem);
+    }
+    return `Achei no estoque: ${match.brand} ${match.model} ${match.yearModel}, ${match.km.toLocaleString("pt-BR")} km, ${formatChatPrice(match.price)}, ${match.transmission}.`;
   }
 
   const looksLikeVehicle = /\b(tem|vende|estoque|carro|modelo|marca|km)\b/.test(

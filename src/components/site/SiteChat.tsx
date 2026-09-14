@@ -28,6 +28,7 @@ import {
 import { chatPageKey } from "@/lib/chat-page";
 import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
 import {
+  drainSseBuffer,
   parseSseChunks,
   readChatStreamFrame,
 } from "@/lib/chat-stream";
@@ -873,9 +874,11 @@ export function SiteChat() {
         } | null = null;
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const parsed = parseSseChunks(buffer);
+          if (value) buffer += decoder.decode(value, { stream: true });
+          if (done) buffer += decoder.decode();
+          const parsed = done
+            ? { frames: drainSseBuffer(buffer), rest: "" }
+            : parseSseChunks(buffer);
           buffer = parsed.rest;
           for (const frame of parsed.frames) {
             const event = readChatStreamFrame(frame.event, frame.data);
@@ -902,6 +905,7 @@ export function SiteChat() {
               donePayload = event;
             }
           }
+          if (done) break;
         }
         commitAssistant(
           donePayload ?? { reply: CHAT_FALLBACK_REPLY },

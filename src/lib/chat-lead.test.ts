@@ -624,3 +624,99 @@ test("pergunta de troca de seminovo não injeta catálogo duplicado", async () =
   assert.match(result.reply, /Com certeza, a gente aceita veículo na troca sim/);
 });
 
+test("consumo do Fox responde km/l sem colar o disclaimer no fica", async () => {
+  const fox: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-fox-consumo",
+    brand: "Volkswagen",
+    model: "Fox",
+    version: "Trend 1.6",
+    yearModel: 2014,
+    km: 98000,
+    price: 38900,
+    transmission: "Manual",
+    engine: "1.6",
+    category: "carro",
+    fuel: "Flex",
+  };
+  let called = false;
+  const result = await runChatTurn({
+    mensagem: "Qual consumo do fox",
+    historico: [],
+    stock: [fox],
+    generate: async () => {
+      called = true;
+      return {
+        text: "Para o Volkswagen Fox 1.6, a faixa típica de catálogo fica",
+        functionCall: null,
+      };
+    },
+  });
+  assert.equal(called, false);
+  assert.match(result.reply, /9–12 km\/l/);
+  assert.match(result.reply, /álcool|alcool/i);
+  assert.doesNotMatch(result.reply, /fica\s+Nenhum desses/);
+  assert.equal(result.vehicles.length, 1);
+  assert.equal(result.vehicles[0]?.id, fox.id);
+});
+
+test("consumo do HB20 Premium foca o Premium e não a shortlist", async () => {
+  const premium: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb20-premium",
+    version: "Premium 1.6",
+    yearModel: 2015,
+    km: 110000,
+    price: 55900,
+    transmission: "Automático",
+    engine: "1.6",
+  };
+  const evolution: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb20-evolution",
+    version: "Evolution 1.0",
+    engine: "1.0",
+  };
+  const result = await runChatTurn({
+    mensagem: "Qual consumo do HB20 Premium",
+    historico: [],
+    stock: [evolution, premium],
+    generate: async () => ({
+      text: `Separei duas opções:
+Hyundai HB20 Evolution 1.0 2022 · 68.450 km · R$ 64.900
+Hyundai HB20 Premium 1.6 2015 · 110.000 km · R$ 55.900
+Nenhum desses usados foi medido na loja.`,
+      functionCall: null,
+    }),
+  });
+  assert.match(result.reply, /Premium|1\.6/);
+  assert.match(result.reply, /9–12 km\/l/);
+  assert.doesNotMatch(result.reply, /Evolution 1\.0/);
+  assert.equal(result.vehicles.length, 1);
+  assert.equal(result.vehicles[0]?.id, premium.id);
+});
+
+test("Fox tem ar-condicionado responde a ficha da unidade", async () => {
+  const fox: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-fox-ar",
+    brand: "Volkswagen",
+    model: "Fox",
+    version: "Trend 1.6",
+    engine: "1.6",
+    accessories: ["Ar-condicionado", "Direção hidráulica"],
+  };
+  const result = await runChatTurn({
+    mensagem: "Fox tem ar-condicionado?",
+    historico: [],
+    stock: [fox],
+    generate: async () => ({
+      text: "O Fox tem ar-condicionado, direção",
+      functionCall: null,
+    }),
+  });
+  assert.match(result.reply, /ar-condicionado/i);
+  assert.doesNotMatch(result.reply, /direção$/);
+  assert.equal(result.vehicles[0]?.id, fox.id);
+});
+

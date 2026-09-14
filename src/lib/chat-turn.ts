@@ -38,12 +38,21 @@ import {
   CHAT_FINANCE_REPLY,
   CHAT_TRADE_REPLY,
   CHAT_WARRANTY_REPLY,
+  asksAboutConsumption,
+  asksAboutEquipment,
+  asksAboutListedFacts,
+  asksAboutNamedGear,
   chatPolicyShortcut,
   enrichChatStockReply,
   enrichMissingModelReply,
+  formatFocusedConsumptionReply,
+  formatFocusedEquipmentReply,
   isIncompleteStockReply,
+  isFocusedVehicleFactQuestion,
   looksLikeMissingModelReply,
   localGarageReply,
+  matchFocusedVehicle,
+  singleMentionedModelPool,
   toChatStockLine,
   applyChatStockFilters,
   type ChatVehicleRecord,
@@ -187,6 +196,41 @@ export async function runChatTurn(input: {
   if (policy === "warranty") {
     emit(CHAT_WARRANTY_REPLY);
     return finish(CHAT_WARRANTY_REPLY, false, { policy });
+  }
+
+  const mentionedPool = singleMentionedModelPool(input.stock, input.mensagem);
+  const focusedVehicle =
+    matchFocusedVehicle(input.mensagem, input.stock, activeVehicle?.id) ??
+    (!mentionedPool &&
+    (asksAboutConsumption(input.mensagem) || asksAboutEquipment(input.mensagem))
+      ? activeVehicle
+      : undefined);
+  const mixedPrice = asksAboutListedFacts(input.mensagem);
+  if (
+    focusedVehicle &&
+    !mixedPrice &&
+    isFocusedVehicleFactQuestion(input.mensagem, input.stock) &&
+    (asksAboutConsumption(input.mensagem) ||
+      asksAboutEquipment(input.mensagem) ||
+      asksAboutNamedGear(input.mensagem))
+  ) {
+    const reply = asksAboutConsumption(input.mensagem)
+      ? formatFocusedConsumptionReply(focusedVehicle)
+      : formatFocusedEquipmentReply(focusedVehicle, input.mensagem);
+    emit(reply);
+    return finish(reply, false, { policy: "stock-fact" });
+  }
+  if (
+    focusedVehicle &&
+    !mixedPrice &&
+    !mentionedPool &&
+    asksAboutConsumption(input.mensagem) &&
+    activeVehicle &&
+    focusedVehicle.id === activeVehicle.id
+  ) {
+    const reply = formatFocusedConsumptionReply(focusedVehicle);
+    emit(reply);
+    return finish(reply, false, { policy: "stock-fact" });
   }
 
   const fromStock = () => {
