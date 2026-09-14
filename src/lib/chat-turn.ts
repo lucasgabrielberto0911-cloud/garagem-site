@@ -223,7 +223,7 @@ export async function runChatTurn(input: {
   const empty = emptyFilterReply(input.mensagem, input.stock);
   if (empty) {
     emit(empty);
-    return finish(empty, false, { policy: "waitlist" });
+    return finish(empty, false, { policy: "waitlist", cards: false });
   }
 
   const mentionedPool = singleMentionedModelPool(input.stock, input.mensagem);

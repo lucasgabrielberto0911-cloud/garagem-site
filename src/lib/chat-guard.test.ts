@@ -304,11 +304,24 @@ test("filtro vazio oferece waitlist no WhatsApp e similares", async () => {
     fuel: "Flex",
     category: "carro",
   };
+  const compass = {
+    id: "c-compass-wait",
+    brand: "Jeep",
+    model: "Compass",
+    version: "Longitude",
+    yearModel: 2021,
+    km: 51000,
+    price: 159900,
+    color: "Branco",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+  };
   let called = 0;
   const result = await runChatTurn({
     mensagem: "Tem automático até 40 mil?",
     historico: [],
-    stock: [hb20],
+    stock: [hb20, compass],
     generate: async () => {
       called += 1;
       return { text: "não deveria", functionCall: null };
@@ -318,5 +331,8 @@ test("filtro vazio oferece waitlist no WhatsApp e similares", async () => {
   assert.match(result.reply, /não tem anúncio agora/i);
   assert.match(result.reply, /wa\.me|WhatsApp/i);
   assert.match(result.reply, /HB20/);
+  assert.doesNotMatch(result.reply, /mais em conta/);
+  assert.doesNotMatch(result.reply, /R\$ 0/);
+  assert.equal(result.vehicles.length, 0);
   assert.equal(result.meta?.policy, "waitlist");
 });
