@@ -15,7 +15,9 @@ import { formatCurrencyBRL } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 function resolveTab(raw?: string): VehiclesTab {
-  return raw === "vendidos" ? "vendidos" : "estoque";
+  if (raw === "vendidos") return "vendidos";
+  if (raw === "destaques") return "destaques";
+  return "estoque";
 }
 
 export default async function VehiclesPage({
@@ -49,7 +51,9 @@ export default async function VehiclesPage({
         subtitle={
           tab === "vendidos"
             ? `${list.total} vendido(s) na visualização atual`
-            : `${list.total} veículo(s) em estoque na visualização atual`
+            : tab === "destaques"
+              ? `${list.total} destaque(s) na home (máx. 8)`
+              : `${list.total} veículo(s) em estoque na visualização atual`
         }
         actions={
           <Link href="/admin/veiculos/novo" className={btn.primary}>
@@ -86,6 +90,7 @@ export default async function VehiclesPage({
         status={status}
         estoqueCount={stats.estoqueCount}
         vendidosCount={stats.vendidosCount}
+        featuredCount={stats.featured}
         quality={{
           withoutPhotos: stats.withoutPhotos,
           withoutVideo: stats.withoutVideo,

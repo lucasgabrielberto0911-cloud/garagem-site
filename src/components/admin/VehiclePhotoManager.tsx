@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { VehicleImage } from "@/components/VehicleImage";
 import {
   IconArrowDown,
@@ -63,11 +64,13 @@ export function photosFromUrls(urls: string[]): PhotoItem[] {
 export function VehiclePhotoManager({
   photos,
   onChange,
+  onUploadingChange,
 }: {
   photos: PhotoItem[];
   onChange: (
     next: PhotoItem[] | ((current: PhotoItem[]) => PhotoItem[]),
   ) => void;
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   const [uploading, setUploading] = useState(0);
   const [blurring, setBlurring] = useState(false);
@@ -75,6 +78,11 @@ export function VehiclePhotoManager({
   const fileDragDepth = useRef(0);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
+  const [removeIndex, setRemoveIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    onUploadingChange?.(uploading > 0);
+  }, [uploading, onUploadingChange]);
 
   async function uploadFiles(files: FileList | File[] | null) {
     const list = (files ? Array.from(files) : []).filter(isImageFile);
@@ -149,6 +157,12 @@ export function VehiclePhotoManager({
 
   function removePhoto(index: number) {
     onChange(photos.filter((_, i) => i !== index));
+  }
+
+  function confirmRemovePhoto() {
+    if (removeIndex == null) return;
+    removePhoto(removeIndex);
+    setRemoveIndex(null);
   }
 
   async function reblurPlates() {
@@ -413,7 +427,7 @@ export function VehiclePhotoManager({
                     <PhotoAction
                       label="Remover foto"
                       danger
-                      onClick={() => removePhoto(index)}
+                      onClick={() => setRemoveIndex(index)}
                     >
                       <IconTrash className="h-4 w-4" />
                     </PhotoAction>
@@ -424,6 +438,16 @@ export function VehiclePhotoManager({
           </ul>
         </>
       ) : null}
+
+      <ConfirmDialog
+        open={removeIndex !== null}
+        title="Remover foto"
+        description="Tirar esta foto do anúncio? Ela some da galeria quando você salvar."
+        confirmLabel="Remover foto"
+        danger
+        onCancel={() => setRemoveIndex(null)}
+        onConfirm={confirmRemovePhoto}
+      />
     </div>
   );
 }

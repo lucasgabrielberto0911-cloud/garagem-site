@@ -29,10 +29,6 @@ const SUPABASE_RENDER_PUBLIC = "/storage/v1/render/image/public/";
 /** Mesmas medidas do card WebP gerado no upload (image-variants). */
 const CARD_RENDER_WIDTH = 480;
 const CARD_RENDER_HEIGHT = 300;
-const CARD_RENDER_2X_WIDTH = 720;
-const CARD_RENDER_2X_HEIGHT = 450;
-const GALLERY_PREVIEW_WIDTH = 960;
-const GALLERY_PREVIEW_HEIGHT = 600;
 const GALLERY_THUMB_WIDTH = 240;
 const GALLERY_THUMB_HEIGHT = 150;
 
@@ -92,8 +88,7 @@ export function coverSrcSet(photos: VehicleCardPhoto[] | undefined) {
   if (!photo?.url || photo.thumbnailUrl) return undefined;
   if (!photo.url.includes(SUPABASE_OBJECT_PUBLIC)) return undefined;
   const small = supabaseCardSrc(photo.url, CARD_RENDER_WIDTH, CARD_RENDER_HEIGHT);
-  const large = supabaseCardSrc(photo.url, CARD_RENDER_2X_WIDTH, CARD_RENDER_2X_HEIGHT);
-  return `${small} ${CARD_RENDER_WIDTH}w, ${large} ${CARD_RENDER_2X_WIDTH}w`;
+  return `${small} ${CARD_RENDER_WIDTH}w`;
 }
 
 /** Foto da galeria do anúncio: miniatura no strip, preview no slide, original no zoom. */
@@ -110,24 +105,16 @@ export function galleryThumbSrc(photo: GalleryPhoto) {
     : photo.url;
 }
 
-/** Slide da ficha (~100vw no celular): recorte 960×600, não o original. */
+/** Slide da ficha: WebP da galeria (já no upload, ~1280px) — sem recorte extra. */
 export function galleryPreviewSrc(photo: GalleryPhoto) {
-  return photo.url
-    ? supabaseTransformSrc(
-        photo.url,
-        GALLERY_PREVIEW_WIDTH,
-        GALLERY_PREVIEW_HEIGHT,
-        "cover",
-        "70",
-      )
-    : photo.url;
+  return photo.url;
 }
 
 export function galleryPreviewSrcSet(photo: GalleryPhoto) {
-  if (!photo.url?.includes(SUPABASE_OBJECT_PUBLIC)) return undefined;
-  const small = supabaseTransformSrc(photo.url, 640, 400, "cover", "70");
-  const large = galleryPreviewSrc(photo);
-  return `${small} 640w, ${large} 960w`;
+  if (photo.thumbnailUrl) {
+    return `${photo.thumbnailUrl} ${CARD_RENDER_WIDTH}w, ${photo.url} 1280w`;
+  }
+  return undefined;
 }
 
 export type StockFilters = {

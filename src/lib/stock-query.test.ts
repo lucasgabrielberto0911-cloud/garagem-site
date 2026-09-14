@@ -36,16 +36,24 @@ test("coverSrc usa thumbnail quando existe e recorte quando não", () => {
   assert.equal(coverSrc([{ url: ORIGINAL, thumbnailUrl: null }]), supabaseCardSrc(ORIGINAL));
   assert.equal(coverSrcSet([{ url: ORIGINAL, thumbnailUrl: "https://cdn.example/card.webp" }]), undefined);
   assert.match(coverSrcSet([{ url: ORIGINAL }]) ?? "", /480w/);
-  assert.match(coverSrcSet([{ url: ORIGINAL }]) ?? "", /720w/);
+  assert.doesNotMatch(coverSrcSet([{ url: ORIGINAL }]) ?? "", /720w/);
 });
 
-test("galleryThumbSrc recorta o strip; preview não usa o original", () => {
+test("galleryThumbSrc recorta o strip; preview usa o WebP da galeria", () => {
   const photo = { id: "1", url: ORIGINAL, thumbnailUrl: null };
   assert.match(galleryThumbSrc(photo), /width=240/);
-  assert.match(galleryPreviewSrc(photo), /width=960/);
-  assert.match(galleryPreviewSrcSet(photo) ?? "", /640w/);
+  assert.equal(galleryPreviewSrc(photo), ORIGINAL);
+  assert.equal(galleryPreviewSrcSet(photo), undefined);
   assert.equal(
     galleryThumbSrc({ id: "1", url: ORIGINAL, thumbnailUrl: "https://cdn.example/card.webp" }),
     "https://cdn.example/card.webp",
+  );
+  assert.match(
+    galleryPreviewSrcSet({
+      id: "1",
+      url: ORIGINAL,
+      thumbnailUrl: "https://cdn.example/card.webp",
+    }) ?? "",
+    /480w/,
   );
 });

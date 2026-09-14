@@ -6,6 +6,7 @@ export type ChatVehicleContext = {
   version?: string | null;
   year?: number;
   price?: number;
+  path?: string;
   category?: string;
   sold?: boolean;
 };

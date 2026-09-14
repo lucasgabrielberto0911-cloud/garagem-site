@@ -806,3 +806,89 @@ test("Fox tem ar-condicionado responde a ficha da unidade", async () => {
   assert.equal(result.vehicles[0]?.id, fox.id);
 });
 
+test("Esse carro ainda tem? responde da ficha da unidade", async () => {
+  let called = false;
+  const result = await runChatTurn({
+    mensagem: "Esse carro ainda tem?",
+    historico: [],
+    stock: [hb20],
+    vehicleId: hb20.id,
+    generate: async () => {
+      called = true;
+      return { text: "não deveria gerar", functionCall: null };
+    },
+  });
+  assert.equal(called, false);
+  assert.match(result.reply, /ainda está no estoque/);
+  assert.equal(result.vehicles[0]?.id, hb20.id);
+  assert.equal(result.meta?.policy, "availability");
+});
+
+test("ainda tem? com vehicleId fora do estoque diz que já vendeu", async () => {
+  let called = false;
+  const result = await runChatTurn({
+    mensagem: "Esse carro ainda tem?",
+    historico: [],
+    stock: [hb20],
+    vehicleId: "c-siena-vendido",
+    generate: async () => {
+      called = true;
+      return { text: "não deveria gerar", functionCall: null };
+    },
+  });
+  assert.equal(called, false);
+  assert.match(result.reply, /já saiu do estoque/);
+  assert.equal(result.vehicles.length, 0);
+  assert.equal(result.meta?.policy, "availability");
+});
+
+test("HB20 ou Onix compara duas unidades reais", async () => {
+  const onix: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-onix-compare",
+    brand: "Chevrolet",
+    model: "Onix",
+    version: "LT 1.0",
+    yearModel: 2021,
+    km: 41000,
+    price: 59900,
+    color: "Branco",
+    transmission: "Automático",
+  };
+  let called = false;
+  const result = await runChatTurn({
+    mensagem: "HB20 ou Onix?",
+    historico: [],
+    stock: [hb20, onix],
+    generate: async () => {
+      called = true;
+      return { text: "não deveria gerar", functionCall: null };
+    },
+  });
+  assert.equal(called, false);
+  assert.equal(result.meta?.policy, "compare");
+  assert.equal(result.vehicles.length, 2);
+  assert.deepEqual(
+    result.vehicles.map((vehicle) => vehicle.model).sort(),
+    ["HB20", "Onix"],
+  );
+  assert.match(result.reply, /mais em conta|estoque/i);
+});
+
+test("quantos km do HB20 usa o hodômetro da ficha", async () => {
+  let called = false;
+  const result = await runChatTurn({
+    mensagem: "quantos km tem o HB20?",
+    historico: [],
+    stock: [hb20],
+    generate: async () => {
+      called = true;
+      return { text: "não deveria gerar", functionCall: null };
+    },
+  });
+  assert.equal(called, false);
+  assert.match(result.reply, /68 mil km/);
+  assert.match(result.reply, /hodômetro/);
+  assert.equal(result.vehicles[0]?.id, hb20.id);
+});
+

@@ -71,6 +71,23 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   assert.match(decodeURIComponent(soldVehicle?.href ?? ""), /quando chegar: Hyundai i30/);
 });
 
+test("CTA com preço e path manda R$ e o link do anúncio", () => {
+  const cta = chatWhatsAppCta(
+    "Chama no WhatsApp: https://wa.me/5527996330706",
+    {
+      label: "Hyundai HB20 2022",
+      brand: "Hyundai",
+      model: "HB20",
+      year: 2022,
+      price: 64900,
+      path: "/estoque/hyundai-hb20-2022-xyz",
+    },
+  );
+  const decoded = decodeURIComponent(cta?.href ?? "");
+  assert.match(decoded, /R\$/);
+  assert.match(decoded, /estoque\/hyundai-hb20-2022-xyz/);
+});
+
 test("vehicleId de follow-up só no esse/dele com um card, nunca no modelo nomeado", () => {
   const lastSingle = lastSingleChatVehicleId([
     { role: "assistant", vehicles: [{ id: "c-fox-1" }] },

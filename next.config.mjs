@@ -36,9 +36,26 @@ const nextConfig = {
     "heic-decode",
     "libheif-js",
     "sharp",
+    "@aws-sdk/client-rekognition",
   ],
-  experimental: {
-    optimizePackageImports: ["@aws-sdk/client-rekognition"],
+  outputFileTracingExcludes: {
+    "/api/chat/**": [
+      "./node_modules/@aws-sdk/**",
+      "./node_modules/sharp/**",
+      "./node_modules/heic-convert/**",
+      "./node_modules/heic-decode/**",
+      "./node_modules/libheif-js/**",
+    ],
+    "/api/estoque/**": [
+      "./node_modules/@aws-sdk/**",
+      "./node_modules/sharp/**",
+      "./node_modules/heic-convert/**",
+    ],
+    "/api/veiculos/**": [
+      "./node_modules/@aws-sdk/**",
+      "./node_modules/sharp/**",
+      "./node_modules/heic-convert/**",
+    ],
   },
   async headers() {
     const security = [

@@ -10,6 +10,7 @@ import { coverSrc } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
   applyChatStockFilters,
+  asksAboutAvailability,
   asksAboutConsumption,
   cheapPriceCap,
   foldedTransmission,
@@ -17,6 +18,7 @@ import {
   matchFocusedVehicle,
   parseTransmissionFilter,
   parseVehicleCategoryFilter,
+  pickComparedModelVehicles,
   resolveChatCategory,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
@@ -41,6 +43,7 @@ export type ChatVehicleCard = {
   price: number;
   color: string | null;
   transmission: string | null;
+  category?: string;
   photo: string | null;
 };
 
@@ -316,6 +319,7 @@ export function toChatVehicleCard(vehicle: ChatVehicleRecord): ChatVehicleCard {
     price: vehicle.price,
     color,
     transmission: vehicle.transmission?.trim() || null,
+    category: vehicle.category ?? "carro",
     photo: coverSrc(vehicle.photos ?? []) ?? null,
   };
 }
@@ -351,9 +355,17 @@ export function selectChatVehicles(
   preferredVehicleId?: string,
 ) {
   const pool = applyChatStockFilters(stock, mensagem);
+  const compared = pickComparedModelVehicles(pool, mensagem);
+  if (compared.length >= 2 && parsePriceLimit(mensagem) == null) {
+    return compared.slice(0, Math.min(limit, compared.length));
+  }
   if (isFocusedVehicleFactQuestion(mensagem, pool, preferredVehicleId)) {
     const focused = matchFocusedVehicle(mensagem, pool, preferredVehicleId);
     if (focused) return [focused];
+    if (asksAboutAvailability(mensagem) && preferredVehicleId) {
+      const preferred = pool.find((vehicle) => vehicle.id === preferredVehicleId);
+      if (preferred) return [preferred];
+    }
   }
   if (asksAboutConsumption(mensagem) && parsePriceLimit(mensagem) == null) {
     const focused =

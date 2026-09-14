@@ -585,3 +585,33 @@ test("consumo dele com um card preferido foca essa unidade", () => {
     [fox.id],
   );
 });
+
+test("HB20 vs Onix vira dois cards, um de cada modelo", () => {
+  const hb20: ChatVehicleRecord = {
+    ...prisma,
+    id: "chb20comparegaragem000001",
+    brand: "Hyundai",
+    model: "HB20",
+    price: 64900,
+    category: "carro",
+  };
+  const onix: ChatVehicleRecord = {
+    ...prisma,
+    id: "conixcomparegaragem000001",
+    brand: "Chevrolet",
+    model: "Onix",
+    price: 39900,
+    category: "carro",
+  };
+  const picked = selectChatVehicles(
+    "comparando os dois",
+    "HB20 vs Onix",
+    [hb20, onix, compass],
+  );
+  assert.equal(picked.length, 2);
+  assert.deepEqual(
+    picked.map((vehicle) => vehicle.model).sort(),
+    ["HB20", "Onix"],
+  );
+  assert.ok(picked.every((vehicle) => vehicle.category === "carro"));
+});

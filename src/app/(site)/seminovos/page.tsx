@@ -15,6 +15,7 @@ import {
   buildPageMetadata,
 } from "@/lib/seo";
 import { getFeaturedVehicles } from "@/lib/vehicles";
+import { MAX_HOME_FEATURED } from "@/lib/featured";
 
 export const revalidate = 3600;
 
@@ -26,7 +27,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function SeminovosHubPage() {
-  const featured = await getFeaturedVehicles(8);
+  const featured = await getFeaturedVehicles(MAX_HOME_FEATURED);
   const path = "/seminovos";
 
   return (

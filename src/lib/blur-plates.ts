@@ -1,9 +1,7 @@
-import {
-  DetectLabelsCommand,
-  DetectTextCommand,
+import type {
+  BoundingBox,
   RekognitionClient,
-  type BoundingBox,
-  type TextDetection,
+  TextDetection,
 } from "@aws-sdk/client-rekognition";
 import sharp from "sharp";
 
@@ -193,7 +191,8 @@ export function hasPlateBlurConfigured() {
   );
 }
 
-function getRekognitionClient() {
+async function getRekognitionClient() {
+  const { RekognitionClient } = await import("@aws-sdk/client-rekognition");
   const region = process.env.AWS_REGION?.trim() || "us-east-1";
   return new RekognitionClient({ region });
 }
@@ -888,6 +887,7 @@ async function detectVehicleLabels(
   const cars: PixelBox[] = [];
   const plates: PixelBox[] = [];
   try {
+    const { DetectLabelsCommand } = await import("@aws-sdk/client-rekognition");
     const response = await client.send(
       new DetectLabelsCommand({
         Image: { Bytes: bytes },
@@ -1179,7 +1179,8 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
       return input;
     }
 
-    const client = getRekognitionClient();
+    const client = await getRekognitionClient();
+    const { DetectTextCommand } = await import("@aws-sdk/client-rekognition");
     const response = await client.send(
       new DetectTextCommand({
         Image: { Bytes: bytes },

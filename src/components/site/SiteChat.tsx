@@ -38,8 +38,10 @@ import {
   lastShownChatVehicles,
   lastSingleChatVehicleId,
   resolveChatRequestVehicleId,
+  resolveChatWhatsAppVehicle,
   splitChatLinks,
 } from "@/lib/chat-text";
+import { formatVehicleWhatsAppMessage } from "@/lib/vehicle-display";
 import {
   classifyChatIntent,
   trackChatEvent,
@@ -235,6 +237,15 @@ function ChatVehicleMini({
   const photo = vehicle.photo || VEHICLE_PLACEHOLDER;
   const label = chatVehicleLabel(vehicle);
   const meta = chatVehicleMeta(vehicle);
+  const whatsappMessage = formatVehicleWhatsAppMessage({
+    brand: vehicle.brand,
+    model: vehicle.model,
+    version: vehicle.version,
+    yearModel: vehicle.year,
+    price: vehicle.price,
+    path: vehicle.href,
+    isMoto: vehicle.category === "moto",
+  });
 
   return (
     <article className="mt-1.5 flex overflow-hidden rounded-xl border border-white/10 bg-[#121214]">
@@ -299,6 +310,7 @@ function ChatVehicleMini({
       <VehicleCardWhatsApp
         vehicleId={vehicle.id}
         label={label}
+        message={whatsappMessage}
         value={vehicle.price}
         make={vehicle.brand}
         model={vehicle.model}
@@ -337,6 +349,7 @@ function readVehicleCards(raw: unknown): ChatVehicleCard[] {
       price: Number(row.price) || 0,
       color: row.color ? String(row.color) : null,
       transmission: row.transmission ? String(row.transmission) : null,
+      category: row.category ? String(row.category) : undefined,
       photo,
     });
   }
@@ -412,7 +425,28 @@ function ChatText({
   const source =
     vehicles.length > 0 ? polishChatReplyWithCards(text, vehicles) : text;
   const visible = displayChatText(source);
-  const cta = chatWhatsAppCta(text, vehicleContext);
+  const ctaVehicle = resolveChatWhatsAppVehicle(
+    vehicleContext
+      ? {
+          id: vehicleContext.id,
+          label: vehicleContext.label,
+          brand: vehicleContext.brand,
+          model: vehicleContext.model,
+          version: vehicleContext.version,
+          year: vehicleContext.year,
+          price: vehicleContext.price,
+          path: vehicleContext.path,
+          category: vehicleContext.category,
+          sold: vehicleContext.sold,
+        }
+      : null,
+    vehicles,
+  );
+  const forceCta =
+    leadCreated || vehicles.length === 1 || Boolean(vehicleContext && vehicles.length <= 1);
+  const cta = chatWhatsAppCta(text, ctaVehicle, {
+    force: forceCta && (Boolean(ctaVehicle) || leadCreated),
+  });
   const showCta = Boolean(cta);
 
   return (
