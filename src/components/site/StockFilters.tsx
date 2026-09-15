@@ -657,20 +657,24 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 {option.label}
               </Chip>
             ))}
-            {facets.transmissions.map((item) => (
-              <Chip
-                key={item}
-                active={current.transmission === item}
-                onClick={() =>
-                  update({
-                    transmission: current.transmission === item ? "" : item,
-                  })
-                }
-              >
-                {item}
-              </Chip>
-            ))}
           </ChipRow>
+          {facets.transmissions.length > 0 ? (
+            <ChipRow label="Câmbio">
+              {facets.transmissions.map((item) => (
+                <Chip
+                  key={item}
+                  active={current.transmission === item}
+                  onClick={() =>
+                    update({
+                      transmission: current.transmission === item ? "" : item,
+                    })
+                  }
+                >
+                  {item}
+                </Chip>
+              ))}
+            </ChipRow>
+          ) : null}
           {facets.brands.length > 0 ? (
             <ChipRow label="Marca">
               {facets.brands.slice(0, 8).map((item) => (

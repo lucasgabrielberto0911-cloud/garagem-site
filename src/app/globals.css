@@ -393,10 +393,7 @@ body:has([data-stock-mobile-cta]) .site-consent {
   bottom: calc(4.5rem + 8.25rem + env(safe-area-inset-bottom, 0px));
 }
 
-/* FAB fechado no estoque: acima da barra sticky, sem cobrir Simular/Troca. */
-body:has([data-stock-mobile-cta]) .site-chat:not(.is-open) {
-  bottom: calc(4.5rem + 8.25rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
-}
+/* FAB fechado some no estoque: a barra sticky + “Ajuda” já cobrem o chat. */
 
 /* Bolha do chatbot: acima da bottom nav no mobile; acima do WhatsApp no desktop. */
 .site-chat {
@@ -511,12 +508,14 @@ body:has([data-install-coach]) .site-chat:not(.is-open) {
 }
 
 /*
- * FAB fechado some só na ficha: o WhatsApp sticky é o CTA e o chat
- * abre por “Perguntar no chat”. Home e estoque mantêm o FAB acima da
- * nav / barra de conversão — :has(.vehicle-card) escondia o chat na home.
+ * FAB fechado some onde briga com chips / sticky. O chat abre pelos
+ * botões Ajuda / Perguntar no chat / Ajuda pra escolher — sem cobrir
+ * Faixa na home nem Simular/Troca no estoque.
  */
 @media (max-width: 1023px) {
-  body:has([data-vehicle-mobile-bar]) .site-chat:not(.is-open) {
+  body:has([data-vehicle-mobile-bar]) .site-chat:not(.is-open),
+  body:has([data-stock-mobile-cta]) .site-chat:not(.is-open),
+  body:has(.chip-scroll) .site-chat:not(.is-open) {
     display: none;
   }
 }
