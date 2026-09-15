@@ -175,7 +175,7 @@ export default function RootLayout({
   const storageOrigin = supabaseOrigin();
 
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-scroll-behavior="smooth">
       {storageOrigin ? (
         <head>
           <link rel="preconnect" href={storageOrigin} crossOrigin="anonymous" />
