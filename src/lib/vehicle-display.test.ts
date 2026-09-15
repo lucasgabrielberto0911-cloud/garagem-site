@@ -241,6 +241,22 @@ test("WhatsApp sem preço não inventa “por R$” e sem path não manda URL", 
   );
   assert.doesNotMatch(noPrice, /por R\$/);
 
+  for (const missing of [null, undefined] as const) {
+    const text = formatVehicleWhatsAppMessage({
+      brand: "Hyundai",
+      model: "HB20",
+      yearModel: 2022,
+      price: missing,
+      path: "/estoque/hyundai-hb20-2022",
+      origin: "https://www.suagaragem.net",
+    });
+    assert.match(
+      text,
+      /^Oi! Vi o Hyundai HB20 2022 no site da Garagem e quero saber mais\./,
+    );
+    assert.doesNotMatch(text, /por R\$/);
+  }
+
   const noPath = formatVehicleWhatsAppMessage({
     brand: "Hyundai",
     model: "HB20",

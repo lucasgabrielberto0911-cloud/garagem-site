@@ -297,14 +297,15 @@ export function formatVehicleWhatsAppMessage(input: {
 }) {
   const label = collapseWhitespace(buildVehicleFullLabel(input));
   const usableLabel = label && !/^\d{4}$/.test(label) ? label : "";
-  const hasPrice =
-    typeof input.price === "number" &&
-    Number.isFinite(input.price) &&
-    input.price > 0;
+  const price = input.price;
+  const priceLabel =
+    typeof price === "number" && Number.isFinite(price) && price > 0
+      ? formatCurrencyBRL(price)
+      : "";
   const line = formatCustomerVehicleWhatsAppText({
     intent: input.intent ?? "interest",
     label: usableLabel,
-    priceLabel: hasPrice ? formatCurrencyBRL(input.price) : "",
+    priceLabel,
     isMoto: input.isMoto,
   });
 
