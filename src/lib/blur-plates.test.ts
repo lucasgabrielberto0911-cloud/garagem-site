@@ -13,6 +13,8 @@ import {
   findBlackDealerPlateBoxes,
   findMercosulStripeBoxes,
   isHeadlightOrCornerZone,
+  isUnlikelyPlateGeometry,
+  looksLikeBodyPanelFalsePositive,
   plateBoxesFromText,
   textLooksLikeDealerPlate,
   textLooksLikePlate,
@@ -522,7 +524,97 @@ test("blur da placa Forte na foto real reduz o contraste do texto", async () => 
   const afterStd =
     (after.channels[0].stdev + after.channels[1].stdev + after.channels[2].stdev) / 3;
   assert.ok(beforeStd > 35, `contraste original baixo demais: ${beforeStd}`);
-  assert.ok(afterStd < beforeStd * 0.55, `blur fraco: ${beforeStd} → ${afterStd}`);
+  assert.ok(afterStd < beforeStd * 0.4, `blur fraco: ${beforeStd} → ${afterStd}`);
+});
+
+test("círculo/quadrado (portinhola, calota) não vira geometria de placa", () => {
+  assert.equal(isUnlikelyPlateGeometry({ left: 80, top: 20, width: 70, height: 70 }), true);
+  assert.equal(isUnlikelyPlateGeometry({ left: 200, top: 450, width: 102, height: 35 }), false);
+  assert.equal(isUnlikelyPlateGeometry({ left: 135, top: 128, width: 123, height: 36 }), false);
+});
+
+test("fixture da portinhola/caixa de roda: sem placa e sem retângulo de loja", async () => {
+  const image = await readFile(join(FIXTURES, "fuel-door-wheel-arch.png"));
+  const meta = await sharp(image).metadata();
+  const width = meta.width ?? 292;
+  const height = meta.height ?? 201;
+  const whole = { left: 0, top: 0, width, height };
+
+  assert.equal(plateBoxesFromText([], width, height).length, 0);
+  assert.equal((await dealerBoxesFromImage(image, [], width, height)).length, 0);
+  assert.equal((await findMercosulStripeBoxes(image, whole)).length, 0);
+
+  const dealers = await findBlackDealerPlateBoxes(image, whole);
+  assert.equal(
+    dealers.length,
+    0,
+    `friso da caixa de roda não é placa Forte: ${JSON.stringify(dealers)}`,
+  );
+
+  const windows = [
+    { left: 0, top: 0, width, height },
+    { left: 51, top: 0, width: 146, height: 101 },
+    { left: 40, top: 50, width: 200, height: 80 },
+    { left: 70, top: 8, width: 70, height: 70 },
+    { left: 81, top: 71, width: 112, height: 27 },
+  ];
+  for (const region of windows) {
+    const found = await findBlackDealerPlateBoxes(image, region);
+    assert.equal(
+      found.length,
+      0,
+      `região ${JSON.stringify(region)} não deve ter placa preta: ${JSON.stringify(found)}`,
+    );
+  }
+
+  assert.equal(
+    await looksLikeBodyPanelFalsePositive(image, { left: 70, top: 8, width: 70, height: 70 }),
+    true,
+    "portinhola circular é falso positivo",
+  );
+  assert.equal(
+    await looksLikeBodyPanelFalsePositive(image, { left: 81, top: 71, width: 112, height: 27 }),
+    true,
+    "friso da caixa de roda é falso positivo",
+  );
+});
+
+test("OCR FORTE solto na portinhola não inventa placa de loja no friso", async () => {
+  const image = await readFile(join(FIXTURES, "fuel-door-wheel-arch.png"));
+  const meta = await sharp(image).metadata();
+  const width = meta.width ?? 292;
+  const height = meta.height ?? 201;
+  const dealers = await dealerBoxesFromImage(
+    image,
+    [
+      {
+        text: "FORTE",
+        type: "WORD",
+        confidence: 88,
+        box: { left: 90, top: 20, width: 40, height: 16 },
+      },
+    ],
+    width,
+    height,
+  );
+  assert.equal(
+    dealers.length,
+    0,
+    `OCR sem placa preta real não deve borrar a lateral: ${JSON.stringify(dealers)}`,
+  );
+});
+
+test("placa Forte real não é classificada como painel/friso", async () => {
+  const image = await readFile(join(FIXTURES, "forte-black-dealer-plate.jpg"));
+  assert.equal(
+    await looksLikeBodyPanelFalsePositive(image, {
+      left: 203,
+      top: 452,
+      width: 102,
+      height: 35,
+    }),
+    false,
+  );
 });
 
 test("OCR Forte + imagem sintética não apaga a caixa Mercosul", async () => {
