@@ -103,30 +103,72 @@ export function configuredMapsUrl(
   return "";
 }
 
+/** Wordmark falado no WhatsApp do cliente → loja (não o nome comercial). */
+export const WHATSAPP_BRAND = "Garagem";
+
+export type CustomerWhatsAppVehicleIntent =
+  | "interest"
+  | "video"
+  | "finance"
+  | "visit"
+  | "trade";
+
+/** Texto natural do cliente no WhatsApp. Sem “por R$” se faltar preço. */
+export function formatCustomerVehicleWhatsAppText(input: {
+  intent?: CustomerWhatsAppVehicleIntent;
+  label?: string | null;
+  priceLabel?: string | null;
+  isMoto?: boolean;
+}) {
+  const label = (input.label ?? "").replace(/\s+/g, " ").trim();
+  const priceLabel = (input.priceLabel ?? "").replace(/\s+/g, " ").trim();
+  const article = input.isMoto ? "a" : "o";
+  const seen = label
+    ? priceLabel
+      ? `Vi ${article} ${label} por ${priceLabel} no site da ${WHATSAPP_BRAND}`
+      : `Vi ${article} ${label} no site da ${WHATSAPP_BRAND}`
+    : `Vi o site da ${WHATSAPP_BRAND}`;
+
+  switch (input.intent) {
+    case "finance":
+      return `Oi! ${seen} e quero simular as parcelas.`;
+    case "trade":
+      return `Oi! ${seen} e quero avaliar uma troca.`;
+    case "video":
+      return `Oi! ${seen} e queria um vídeo${label ? ` ${input.isMoto ? "dela" : "dele"}` : ""}.`;
+    case "visit":
+      return label
+        ? `Oi! ${seen} e quero ver ${input.isMoto ? "ela" : "ele"} de perto.`
+        : `Oi! ${seen} e quero conhecer o estoque.`;
+    default:
+      return label
+        ? `Oi! ${seen} e quero saber mais.`
+        : `Oi! ${seen} e gostaria de mais informações.`;
+  }
+}
+
 export const WHATSAPP_MESSAGES = {
-  general: `Olá! Vi o site da ${site.name} e gostaria de mais informações.`,
-  help: `Olá! Vi o site da ${site.name} e quero ajuda para escolher um seminovo.`,
-  sell: "Olá! Gostaria de avaliar meu veículo para venda/troca.",
-  visit:
-    "Olá! Gostaria de conhecer o estoque e receber mais informações pelo WhatsApp.",
+  general: `Oi! Vi o site da ${WHATSAPP_BRAND} e gostaria de mais informações.`,
+  help: `Oi! Vi o site da ${WHATSAPP_BRAND} e quero ajuda pra escolher um seminovo.`,
+  sell: `Oi! Vi o site da ${WHATSAPP_BRAND} e quero avaliar meu veículo pra venda ou troca.`,
+  visit: `Oi! Vi o site da ${WHATSAPP_BRAND} e quero conhecer o estoque.`,
   vehicle: (label: string, isMoto = false) =>
-    `Olá! Tenho interesse ${isMoto ? "na" : "no"} ${label} que vi no site da ${site.name}.`,
+    formatCustomerVehicleWhatsAppText({ intent: "interest", label, isMoto }),
   vehicleVisit: (label: string, isMoto = false) =>
-    `Olá! Gostaria de agendar para ver ${isMoto ? "a" : "o"} ${label} de perto.`,
+    formatCustomerVehicleWhatsAppText({ intent: "visit", label, isMoto }),
   vehicleVideo: (label: string, isMoto = false) =>
-    `Olá! Podem me mandar um vídeo ${isMoto ? "da" : "do"} ${label} que está no site?`,
+    formatCustomerVehicleWhatsAppText({ intent: "video", label, isMoto }),
   vehicleFinance: (label: string, isMoto = false) =>
-    `Olá! Gostaria de opções de financiamento para ${isMoto ? "a" : "o"} ${label}. O consultor calcula a parcela no WhatsApp — sem valor inventado no site. Sujeito a análise de crédito e CET.`,
+    formatCustomerVehicleWhatsAppText({ intent: "finance", label, isMoto }),
   vehicleTrade: (label: string, isMoto = false) =>
-    `Olá! Tenho interesse ${isMoto ? "na" : "no"} ${label} e gostaria de colocar meu veículo na troca.`,
-  finance: `Olá! Vi o site da ${site.name} e quero simular financiamento. O consultor calcula a parcela no WhatsApp, no meu caso — sem valor inventado no site. Sujeito a análise de crédito e CET.`,
-  similarFavorites:
-    `Olá! Ainda não salvei favoritos no site da ${site.name}. Podem me indicar seminovos parecidos com o que vocês têm agora?`,
+    formatCustomerVehicleWhatsAppText({ intent: "trade", label, isMoto }),
+  finance: formatCustomerVehicleWhatsAppText({ intent: "finance" }),
+  similarFavorites: `Oi! Ainda não salvei favoritos no site da ${WHATSAPP_BRAND}. Podem me indicar seminovos parecidos?`,
   wanted: (detail?: string) => {
     const text = (detail ?? "").trim();
     return text
-      ? `Olá! Quero ser avisado quando chegar: ${text}.`
-      : "Olá! Não achei o que procuro no site. Podem me avisar quando chegar?";
+      ? `Oi! Quero ser avisado quando chegar: ${text}.`
+      : `Oi! Não achei o que procuro no site da ${WHATSAPP_BRAND}. Podem me avisar quando chegar?`;
   },
 } as const;
 

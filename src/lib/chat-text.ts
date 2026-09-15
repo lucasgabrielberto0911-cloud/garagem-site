@@ -200,7 +200,7 @@ export function chatWhatsAppCta(
       href: whatsappUrl(
         vehicle
           ? chatVehicleWhatsAppText(vehicle, "finance")
-          : "Olá! Vi o assistente da Garagem e quero simular financiamento em até 60x.",
+          : WHATSAPP_MESSAGES.finance,
       ),
       label: "Simular parcela",
       benefit: "O consultor calcula no seu caso",

@@ -11,7 +11,7 @@ import { useFavorites } from "@/lib/favorites";
 import { snapshotsForIds, writeFavoriteSnapshot } from "@/lib/offline-queue";
 import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
 import { trackLead } from "@/lib/meta-pixel";
-import { WHATSAPP_MESSAGES } from "@/lib/site";
+import { WHATSAPP_BRAND, WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export function FavoritesList() {
@@ -268,7 +268,7 @@ export function FavoritesList() {
             className="mt-5"
             size="lg"
             trackingLabel="favoritos-lista"
-            message={`Olá! Separei alguns veículos no site: ${vehicles
+            message={`Oi! Separei alguns veículos no site da ${WHATSAPP_BRAND}: ${vehicles
               .map((vehicle) =>
                 formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel),
               )
