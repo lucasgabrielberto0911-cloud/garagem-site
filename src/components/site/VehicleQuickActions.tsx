@@ -32,9 +32,9 @@ export function VehicleQuickActions({
   className?: string;
 }) {
   const actions: Action[] = [
-    { trackingLabel: "ficha-finance", hrefMessage: finance, label: "Simular parcela" },
+    { trackingLabel: "ficha-finance", hrefMessage: finance, label: "Simular" },
     { trackingLabel: "ficha-trade", hrefMessage: trade, label: "Troca" },
-    { trackingLabel: "ficha-video", hrefMessage: video, label: "Pedir vídeo" },
+    { trackingLabel: "ficha-video", hrefMessage: video, label: "Vídeo" },
   ];
 
   return (

@@ -62,7 +62,7 @@ export function VehicleMobileBar({
   const videoHref = videoMessage ? whatsappUrl(videoMessage) : null;
   const secondary = [
     financeHref
-      ? { href: financeHref, label: "Parcela", tracking: "ficha-finance" }
+      ? { href: financeHref, label: "Simular", tracking: "ficha-finance" }
       : null,
     tradeHref
       ? { href: tradeHref, label: "Troca", tracking: "ficha-trade" }
@@ -75,7 +75,7 @@ export function VehicleMobileBar({
   return (
     <div
       data-vehicle-mobile-bar=""
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt/95 px-3 pt-2 backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-safe pr-safe lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt/95 px-3 pt-2 backdrop-blur pb-[max(1rem,env(safe-area-inset-bottom,0px))] pl-safe pr-safe lg:hidden"
     >
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center gap-3">

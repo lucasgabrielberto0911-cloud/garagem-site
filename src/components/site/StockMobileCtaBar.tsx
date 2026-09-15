@@ -31,14 +31,14 @@ export function StockMobileCtaBar() {
           <TrackedWhatsAppLink
             href={financeHref}
             trackingLabel="estoque-bar-finance"
-            className="inline-flex min-h-10 items-center justify-center border border-white/15 px-2 text-center font-display text-[10px] font-semibold uppercase tracking-wide text-cream touch-manipulation"
+            className="inline-flex min-h-11 items-center justify-center border border-white/15 px-2 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream touch-manipulation"
           >
             Simular
           </TrackedWhatsAppLink>
           <TrackedWhatsAppLink
             href={tradeHref}
             trackingLabel="estoque-bar-trade"
-            className="inline-flex min-h-10 items-center justify-center border border-white/15 px-2 text-center font-display text-[10px] font-semibold uppercase tracking-wide text-cream touch-manipulation"
+            className="inline-flex min-h-11 items-center justify-center border border-white/15 px-2 text-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream touch-manipulation"
           >
             Troca
           </TrackedWhatsAppLink>

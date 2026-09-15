@@ -163,6 +163,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: "cover",
+  // visualViewport + JS no chat: o campo fica acima do teclado iOS/Android.
+  interactiveWidget: "resizes-visual",
 };
 
 export default function RootLayout({

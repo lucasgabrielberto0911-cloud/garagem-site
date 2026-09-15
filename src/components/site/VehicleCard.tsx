@@ -133,7 +133,7 @@ export function VehicleCard({
 
         <div className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2">
           <div className="min-w-0">
-            <h3 className="truncate font-display text-sm font-semibold leading-snug text-cream">
+            <h3 className="truncate font-display text-[15px] font-semibold leading-snug text-cream sm:text-sm">
               {display.title}
             </h3>
             {display.version ? (
@@ -150,10 +150,10 @@ export function VehicleCard({
           </div>
 
           <div className="mt-auto flex flex-col gap-1.5 border-t border-white/10 pt-2 sm:flex-row sm:items-end sm:justify-between sm:gap-2 sm:pt-2.5">
-            <p className="font-display text-base font-bold leading-none text-cream">
+            <p className="font-display text-lg font-bold leading-none text-cream sm:text-base">
               {formatCurrencyBRL(vehicle.price)}
             </p>
-            <span className="shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-cream/80 transition group-hover:text-cream">
+            <span className="inline-flex min-h-8 shrink-0 items-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream/80 transition group-hover:text-cream">
               Ver ficha
             </span>
           </div>

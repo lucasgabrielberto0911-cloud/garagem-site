@@ -33,13 +33,11 @@ export function VehicleGallery({
     const strip = thumbsRef.current;
     if (!strip) return;
     const activeBtn = strip.children[active] as HTMLElement | undefined;
-    if (activeBtn?.scrollIntoView) {
-      activeBtn.scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-        block: "nearest",
-      });
-    }
+    if (!activeBtn) return;
+    // scrollIntoView no iOS empurra a página; rolamos só a faixa.
+    const left =
+      activeBtn.offsetLeft - (strip.clientWidth - activeBtn.clientWidth) / 2;
+    strip.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
   }, [active]);
 
   useEffect(() => {
@@ -115,14 +113,14 @@ export function VehicleGallery({
       <div className="relative aspect-[16/10] overflow-hidden border border-white/10 bg-ink">
         <ul
           ref={scrollerRef}
-          className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto scrollbar-hide"
+          className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain scrollbar-hide"
           aria-label={`Fotos de ${alt}`}
         >
           {photos.map((photo, index) => {
             return (
               <li
                 key={photo.id}
-                className="relative aspect-[16/10] w-full shrink-0 snap-center bg-asphalt"
+                className="relative h-full w-full min-w-full shrink-0 snap-center snap-always bg-asphalt"
               >
                 <button
                   type="button"

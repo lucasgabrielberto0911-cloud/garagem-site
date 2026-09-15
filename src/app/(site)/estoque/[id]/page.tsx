@@ -14,6 +14,7 @@ import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
+import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { JsonLd } from "@/components/JsonLd";
@@ -420,6 +421,14 @@ export default async function VehicleDetailPage({
                     finance={whatsapp.finance}
                     trade={whatsapp.trade}
                   />
+
+                  <ChatOpenButton
+                    source="ficha"
+                    prompt={`Tenho dúvida sobre o ${title}`}
+                    className="w-full lg:hidden"
+                  >
+                    Perguntar no chat
+                  </ChatOpenButton>
 
                   <p className="text-[11px] leading-relaxed text-muted">
                     Financiamento em até 60x e cartão em até 18x. O consultor
