@@ -385,6 +385,7 @@ body:has(.site-chat.is-open) [data-vehicle-mobile-bar] {
   display: none;
 }
 
+body:has(.site-chat.is-open) [data-mobile-bottom-nav],
 body[data-chat-keyboard] [data-mobile-bottom-nav] {
   display: none;
 }
@@ -441,14 +442,9 @@ body:has([data-vehicle-mobile-bar]):has(.site-consent) .site-chat {
     left: max(0.5rem, env(safe-area-inset-left, 0px));
     right: max(0.5rem, env(safe-area-inset-right, 0px));
     top: max(0.5rem, env(safe-area-inset-top, 0px));
-    bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.5rem);
+    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
     height: auto;
     align-items: stretch;
-  }
-
-  /* Ficha não tem bottom nav; sticky some com o chat aberto. */
-  body:has([data-vehicle-mobile-bar]) .site-chat.is-open {
-    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
   }
 
   body[data-chat-keyboard] .site-chat.is-open {
