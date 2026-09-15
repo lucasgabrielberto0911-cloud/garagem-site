@@ -2,9 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { formatModelName } from "@/lib/format";
 import {
+  joinNameAndMotor,
   parseEngineDisplacementLiters,
   typicalConsumptionRange,
 } from "@/lib/chat-consumption";
+import { shortVersion } from "@/lib/vehicle-display";
 import {
   CHAT_WHATSAPP_URL,
   formatChatPrice,
@@ -386,8 +388,8 @@ const GENERIC_STOCK_TOKEN =
   /^(tem|vende|vendem|estoque|carro|carros|modelo|marca|ano|seminovo|preco|valor|qual|quanto|quais|ate|mil)$/;
 
 export function formatVehicleLine(vehicle: ChatVehicleRecord) {
-  const version = vehicle.version?.trim() ? ` ${vehicle.version.trim()}` : "";
-  return `${vehicle.brand} ${vehicle.model}${version} ${vehicle.yearModel} · ${vehicle.km.toLocaleString("pt-BR")} km · R$ ${vehicle.price.toLocaleString("pt-BR")}`;
+  const version = shortVersion(vehicle.version, vehicle.model);
+  return `${vehicle.brand} ${vehicle.model}${version ? ` ${version}` : ""} ${vehicle.yearModel} · ${vehicle.km.toLocaleString("pt-BR")} km · R$ ${vehicle.price.toLocaleString("pt-BR")}`;
 }
 
 function talkName(vehicle: ChatVehicleRecord) {
@@ -481,12 +483,12 @@ export function formatFocusedConsumptionReply(vehicle: ChatVehicleRecord) {
     }
     return `Não tenho faixa de catálogo na ficha d${named.labeled} — a loja não mediu este usado. Se quiser, o consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
-  const motor = range.label.replace(/\s*flex$/i, "");
+  const subject = joinNameAndMotor(named.labeled, range.label);
   const gas = range.gasolineKmL ?? range.kmL;
   if (range.ethanolKmL) {
-    return `Para ${named.labeled} ${range.label}, a faixa típica de catálogo fica ${gas} na cidade na gasolina e ${range.ethanolKmL} no álcool. ${MEASURED_DISCLAIMER}`;
+    return `Para ${subject}, a faixa típica de catálogo fica ${gas} na cidade na gasolina e ${range.ethanolKmL} no álcool. ${MEASURED_DISCLAIMER}`;
   }
-  return `Para ${named.labeled} ${motor}, a faixa típica de catálogo fica ${gas} na cidade. ${MEASURED_DISCLAIMER}`;
+  return `Para ${subject}, a faixa típica de catálogo fica ${gas} na cidade. ${MEASURED_DISCLAIMER}`;
 }
 
 export function formatFocusedEquipmentReply(
@@ -609,7 +611,8 @@ function formatConsumptionCompare(vehicles: ChatVehicleRecord[]) {
     const ethanol = group.ethanolKmL
       ? ` gasolina / ${group.ethanolKmL} álcool`
       : "";
-    return `${joinPtNames(group.names)} ${motor} ~${group.kmL}${ethanol}`;
+    const subject = joinNameAndMotor(joinPtNames(group.names), motor);
+    return `${subject} ~${group.kmL}${ethanol}`;
   });
   return `Na cidade, o consumo de catálogo fica por aí: ${bits.join(" · ")}. ${MEASURED_DISCLAIMER_PLURAL}`;
 }
@@ -722,7 +725,7 @@ export function formatAvailabilityReply(
     return `Essa unidade já saiu do estoque. Se quiser, o consultor procura outra parecida e te avisa no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   const named = talkName(vehicle);
-  return `Sim — ${named.labeled} ${vehicle.yearModel} ainda está no estoque (${formatChatPrice(vehicle.price)}). Confirma no WhatsApp antes de fechar: ${CHAT_WHATSAPP_URL}`;
+  return `Sim — ${named.labeled} ${vehicle.yearModel} ainda está no estoque (${formatChatPrice(vehicle.price)}). Confirma no WhatsApp antes de fechar, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
 }
 
 export function isFocusedVehicleFactQuestion(
@@ -1213,10 +1216,10 @@ export const CHAT_TRADE_REPLY =
   `Aceitamos sim — carro ou moto entram na conta. Manda umas fotos no WhatsApp que o consultor avalia e já encaixa no negócio com você. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_WARRANTY_REPLY =
-  `Fica tranquilo: todos os seminovos saem com garantia de 3 meses de motor e câmbio. Se quiser o detalhe no seu caso, o consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  `Fica tranquilo: todos os seminovos saem com garantia de 3 meses de motor e câmbio. Procedência conferida antes de entrar no estoque. Se quiser o detalhe no seu caso, o consultor confirma no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_DOCS_REPLY =
-  `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
 
 export function formatTransmissionCompareReply(
   stock: ChatVehicleRecord[],

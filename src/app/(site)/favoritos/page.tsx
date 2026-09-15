@@ -7,7 +7,7 @@ import { site } from "@/lib/site";
 export const metadata: Metadata = buildPageMetadata({
   title: `Favoritos | ${site.name}`,
   description:
-    "Veículos que você salvou para comparar depois. A lista fica guardada neste aparelho.",
+    "Veículos que você salvou para comparar com calma. A lista fica neste aparelho, sem cadastro.",
   path: "/favoritos",
   noIndex: true,
 });
@@ -19,7 +19,7 @@ export default function FavoritosPage() {
         <PageHeader
           eyebrow="Meus favoritos"
           title="Veículos que você salvou"
-          description="A lista fica salva neste aparelho, sem cadastro. Se limpar os dados do navegador, ela é apagada."
+          description="Salvos neste aparelho para você comparar com calma. Sem cadastro — se limpar os dados do navegador, a lista some."
         />
 
         <div className="mt-12">

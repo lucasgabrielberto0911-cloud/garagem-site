@@ -26,6 +26,7 @@ import {
   type SiteChatOpenRequest,
 } from "@/lib/chat-open";
 import { chatPageKey } from "@/lib/chat-page";
+import { chatMobileKeyboardCovered } from "@/lib/chat-mobile-viewport";
 import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
 import {
   drainSseBuffer,
@@ -69,7 +70,7 @@ const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Oi! Que bom te ver por aqui. Eu te ajudo a achar o seminovo certo no estoque, com calma e sem enrolação. Me conta o orçamento ou o modelo que você tem em mente que a gente escolhe juntos.",
+    "Oi! Te ajudo a achar o seminovo certo. Me conta o orçamento ou o modelo que você tem em mente.",
 };
 
 const SUGGESTIONS = [
@@ -359,7 +360,7 @@ function readVehicleCards(raw: unknown): ChatVehicleCard[] {
 function ChatBubbleBody({ text }: { text: string }) {
   const blocks = text.split(/\n{2,}/).filter(Boolean);
   return (
-    <div className="rounded-2xl rounded-bl-md border border-white/10 bg-asphalt px-3.5 py-2.5">
+    <div className="rounded-2xl rounded-bl-md border border-white/10 bg-asphalt px-3 py-2 sm:px-3.5 sm:py-2.5">
       {blocks.map((block, index) => {
         const parts = splitChatLinks(block).filter(
           (part) => part.type !== "link" || !/wa\.me\//i.test(part.href),
@@ -371,12 +372,12 @@ function ChatBubbleBody({ text }: { text: string }) {
         return (
           <p
             key={`p-${index}`}
-            className={`whitespace-pre-wrap leading-[1.45] ${
+            className={`whitespace-pre-wrap leading-snug sm:leading-[1.45] ${
               index > 0 ? "mt-2 " : ""
             }${
               consumo
                 ? "text-[13px] text-cream/75"
-                : "text-sm text-cream"
+                : "text-[13px] text-cream sm:text-sm"
             }`}
           >
             {parts.map((part, partIndex) =>
@@ -754,6 +755,19 @@ export function SiteChat() {
   }, [open]);
 
   useEffect(() => {
+    if (!open) {
+      document.body.removeAttribute("data-chat-open");
+      document.body.removeAttribute("data-chat-keyboard");
+      return;
+    }
+    document.body.setAttribute("data-chat-open", "");
+    return () => {
+      document.body.removeAttribute("data-chat-open");
+      document.body.removeAttribute("data-chat-keyboard");
+    };
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     const shell = shellRef.current;
     const viewport = window.visualViewport;
@@ -761,18 +775,24 @@ export function SiteChat() {
 
     const sync = () => {
       if (window.matchMedia("(min-width: 1024px)").matches) {
+        document.body.removeAttribute("data-chat-keyboard");
         shell.style.top = "";
         shell.style.height = "";
         shell.style.bottom = "";
         return;
       }
-      const covered =
-        window.innerHeight - viewport.height - viewport.offsetTop;
-      if (covered > 120) {
-        shell.style.top = `${Math.max(0, viewport.offsetTop) + 8}px`;
-        shell.style.height = `${Math.max(200, viewport.height - 16)}px`;
+      const { keyboardOpen } = chatMobileKeyboardCovered({
+        innerHeight: window.innerHeight,
+        viewportHeight: viewport.height,
+        viewportOffsetTop: viewport.offsetTop,
+      });
+      if (keyboardOpen) {
+        document.body.setAttribute("data-chat-keyboard", "");
+        shell.style.top = `${Math.max(0, viewport.offsetTop) + 4}px`;
+        shell.style.height = `${Math.max(220, viewport.height - 8)}px`;
         shell.style.bottom = "auto";
       } else {
+        document.body.removeAttribute("data-chat-keyboard");
         shell.style.top = "";
         shell.style.height = "";
         shell.style.bottom = "";
@@ -785,6 +805,7 @@ export function SiteChat() {
     return () => {
       viewport.removeEventListener("resize", sync);
       viewport.removeEventListener("scroll", sync);
+      document.body.removeAttribute("data-chat-keyboard");
       shell.style.top = "";
       shell.style.height = "";
       shell.style.bottom = "";
@@ -1046,7 +1067,7 @@ export function SiteChat() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackWhatsAppClick("chat")}
-                className="whatsapp-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white"
+                className="whatsapp-btn flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-white touch-manipulation"
                 aria-label="Falar com um vendedor no WhatsApp"
               >
                 <IconWhatsApp className="h-4 w-4" />
@@ -1054,7 +1075,7 @@ export function SiteChat() {
               <button
                 type="button"
                 onClick={closeChat}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-white/5 hover:text-cream"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-white/5 hover:text-cream touch-manipulation"
                 aria-label="Fechar chat"
               >
                 <IconClose className="h-4 w-4" />
@@ -1093,7 +1114,7 @@ export function SiteChat() {
                     "suggestion",
                   )
                 }
-                className={`shrink-0 rounded border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition ${
+                className={`inline-flex min-h-11 shrink-0 items-center rounded border px-2.5 text-[10px] font-semibold uppercase tracking-wide transition touch-manipulation ${
                   vehicleContext.sold
                     ? "border-amber-400/40 bg-amber-400/15 text-amber-300 hover:bg-amber-400/25"
                     : "border-brand/40 bg-brand/15 text-brand hover:bg-brand/25"
@@ -1108,7 +1129,7 @@ export function SiteChat() {
 
           <div
             ref={listRef}
-            className="flex-1 space-y-3 overflow-y-auto px-3 py-3"
+            className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3"
             aria-live="polite"
           >
             {messages.map((message, index) => {
@@ -1118,7 +1139,7 @@ export function SiteChat() {
                   className={`flex justify-end${index === messages.length - 1 ? " scroll-mt-2" : ""}`}
                   data-chat-latest={index === messages.length - 1 ? "1" : undefined}
                 >
-                  <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-brand px-3.5 py-2.5 text-sm leading-relaxed text-cream">
+                  <p className="max-w-[88%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-brand px-3 py-2 text-[13px] leading-snug text-cream sm:max-w-[85%] sm:px-3.5 sm:py-2.5 sm:text-sm sm:leading-relaxed">
                     {message.content}
                   </p>
                 </div>
@@ -1223,7 +1244,14 @@ export function SiteChat() {
                 value={draft}
                 onFocus={() => {
                   keepFocusRef.current = true;
+                  window.setTimeout(() => {
+                    listRef.current?.scrollTo({
+                      top: listRef.current.scrollHeight,
+                    });
+                  }, 280);
                 }}
+                enterKeyHint="send"
+                inputMode="text"
                 onChange={(event) => setDraft(event.target.value)}
                 disabled={pending}
                 onKeyDown={(event) => {
@@ -1250,13 +1278,16 @@ export function SiteChat() {
                 type="submit"
                 disabled={!canSend}
                 aria-label="Enviar"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand text-cream transition hover:bg-[#c91418] disabled:opacity-40"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand text-cream transition hover:bg-[#c91418] disabled:opacity-40 touch-manipulation"
               >
                 <IconSend className="h-5 w-5" />
               </button>
             </div>
             <p className="mt-2 flex items-center justify-between gap-2 text-[10px] leading-relaxed text-muted">
-              <span>Enter envia. Ao conversar, podemos te chamar no WhatsApp.</span>
+              <span className="lg:hidden">Enter envia · WhatsApp se precisar</span>
+              <span className="hidden lg:inline">
+                Enter envia. Ao conversar, podemos te chamar no WhatsApp.
+              </span>
               {started ? (
                 <button
                   type="button"

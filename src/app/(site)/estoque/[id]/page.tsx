@@ -14,10 +14,12 @@ import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
+import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { JsonLd } from "@/components/JsonLd";
-import { formatCurrencyBRL, formatNumberBR, formatBrandName, formatModelName, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
+import { formatCurrencyBRL, formatBrandName, formatModelName, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
+import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
@@ -188,32 +190,24 @@ export default async function VehicleDetailPage({
     getGoogleReviews(),
   ]);
 
-  const specs = [
-    { label: "Tipo", value: vehicleCategoryLabel(vehicle.category) },
-    { label: "Ano", value: `${vehicle.year}/${vehicle.yearModel}` },
-    { label: "KM", value: formatNumberBR(vehicle.km) },
-    { label: "Câmbio", value: display.transmission },
-    { label: "Combustível", value: vehicle.fuel },
-    ...(display.color ? [{ label: "Cor", value: display.color }] : []),
-    ...(vehicle.engine ? [{ label: "Motor", value: vehicle.engine }] : []),
-    ...(vehicle.category !== "moto" &&
-    vehicle.doors != null &&
-    vehicle.doors > 0
-      ? [{ label: "Portas", value: String(vehicle.doors) }]
-      : []),
-    ...(vehicle.plateEnd
-      ? [{ label: "Final placa", value: vehicle.plateEnd }]
-      : []),
-    ...(vehicle.warranty
-      ? [{ label: "Garantia", value: vehicle.warranty }]
-      : []),
-    ...(vehicle.inspection
-      ? [{ label: "Laudo", value: vehicle.inspection }]
-      : []),
-  ];
+  const specs = buildVehiclePublicSpecs({
+    category: vehicle.category,
+    year: vehicle.year,
+    yearModel: vehicle.yearModel,
+    km: vehicle.km,
+    fuel: vehicle.fuel,
+    transmission: display.transmission,
+    color: display.color,
+    engine: vehicle.engine,
+    doors: vehicle.doors,
+    plateEnd: vehicle.plateEnd,
+    warranty: vehicle.warranty,
+    inspection: vehicle.inspection,
+  });
 
   const hasDetails =
     Boolean(vehicle.description) || accessories.length > 0;
+  const listedAgo = formatListedAgo(vehicle.createdAt);
 
   return (
     <div className="py-6 pb-sticky-bar-safe sm:py-8 lg:py-10 lg:pb-10">
@@ -341,10 +335,8 @@ export default async function VehicleDetailPage({
                 )}
               </p>
               {!sold ? <VehicleTrustNotes /> : null}
-              {vehicle.createdAt ? (
-                <p className="text-xs text-muted">
-                  {formatListedAgo(vehicle.createdAt)}
-                </p>
+              {listedAgo ? (
+                <p className="text-xs text-muted">{listedAgo}</p>
               ) : null}
               {vehicle.updatedAt ? (
                 <p className="text-xs text-muted">
@@ -365,7 +357,13 @@ export default async function VehicleDetailPage({
                       {spec.label}
                     </dt>
                     {/* Sem truncate: valores como "Cautelar aprovado" precisam aparecer inteiros. */}
-                    <dd className="mt-0.5 font-display text-sm font-semibold leading-snug text-cream [overflow-wrap:anywhere]">
+                    <dd
+                      className={`mt-0.5 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
+                        spec.empty
+                          ? "font-medium text-muted"
+                          : "font-semibold text-cream"
+                      }`}
+                    >
                       {spec.value}
                     </dd>
                   </div>
@@ -423,6 +421,14 @@ export default async function VehicleDetailPage({
                     finance={whatsapp.finance}
                     trade={whatsapp.trade}
                   />
+
+                  <ChatOpenButton
+                    source="ficha"
+                    prompt={`Tenho dúvida sobre o ${title}`}
+                    className="w-full lg:hidden"
+                  >
+                    Perguntar no chat
+                  </ChatOpenButton>
 
                   <p className="text-[11px] leading-relaxed text-muted">
                     Financiamento em até 60x e cartão em até 18x. O consultor
@@ -504,7 +510,9 @@ export default async function VehicleDetailPage({
           <section className="mt-10 border-t border-white/5 pt-8 sm:mt-12 sm:pt-10">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <h2 className="font-display text-lg font-bold tracking-tight text-cream sm:text-xl">
-                {sold ? "Veja opções disponíveis" : "Você também pode gostar"}
+                {sold
+                  ? "Outros seminovos no estoque agora"
+                  : "Seminovos parecidos no estoque"}
               </h2>
               <Link
                 href="/estoque"

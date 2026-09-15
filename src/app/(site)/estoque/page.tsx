@@ -42,7 +42,7 @@ export default async function EstoquePage() {
         <PageHeader
           eyebrow="Estoque"
           title="Veículos disponíveis"
-          description="Vistoria e procedência em cada anúncio. Use os filtros para achar o seu."
+          description="Vistoria e procedência em cada anúncio. Filtre por preço, câmbio ou marca — se esvaziar, a gente avisa no WhatsApp."
         />
 
         <StockBrowseShell
@@ -63,7 +63,7 @@ export default async function EstoquePage() {
         />
 
         <div className="mt-10">
-          <WantedVehicleCta description="Não achou no filtro? Diz o modelo e a faixa — a gente avisa no WhatsApp quando entrar." />
+          <WantedVehicleCta description="Não achou no filtro? Diz o modelo e a faixa — a gente avisa no WhatsApp, das 8h às 23h, quando entrar." />
         </div>
       </Container>
       <StockMobileCtaBar />

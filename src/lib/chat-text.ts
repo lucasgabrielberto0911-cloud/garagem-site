@@ -1,6 +1,7 @@
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 import {
   formatVehicleWhatsAppMessage,
+  shortVersion,
   type VehicleWhatsAppIntent,
 } from "@/lib/vehicle-display";
 
@@ -89,7 +90,7 @@ export function chatCardWhatsAppVehicle(vehicle: {
   price: number;
   category?: string;
 }): ChatWhatsAppVehicle {
-  const version = vehicle.version?.trim();
+  const version = shortVersion(vehicle.version, vehicle.model);
   return {
     label: `${vehicle.title}${version ? ` ${version}` : ""} ${vehicle.year}`.trim(),
     brand: vehicle.brand,

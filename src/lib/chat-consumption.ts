@@ -42,6 +42,35 @@ function gasCityRange(label: string, gasolineKmL: string): ConsumptionRange {
   };
 }
 
+function foldChatLabel(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9.]+/g, " ")
+    .trim();
+}
+
+/**
+ * Evita “Fox 1.6 1.6 flex” quando o modelo já traz a cilindrada.
+ * “o Fox” + “1.6 flex” continua “o Fox 1.6 flex”.
+ */
+export function joinNameAndMotor(name: string, motorLabel: string) {
+  const spoken = name.replace(/\s+/g, " ").trim();
+  const motor = motorLabel.replace(/\s+/g, " ").trim();
+  if (!spoken) return motor;
+  if (!motor) return spoken;
+  const nameKey = foldChatLabel(spoken);
+  const motorKey = foldChatLabel(motor);
+  if (nameKey.includes(motorKey)) return spoken;
+  const displacement = motor.match(/\b(\d+[.,]\d+)\b/);
+  if (displacement && nameKey.includes(foldChatLabel(displacement[1]!))) {
+    const rest = motor.replace(displacement[0], "").replace(/\s+/g, " ").trim();
+    return rest ? `${spoken} ${rest}` : spoken;
+  }
+  return `${spoken} ${motor}`;
+}
+
 function isFlexFuel(fuel: string) {
   return /flex/.test(fuel.toLowerCase()) || !fuel.trim();
 }

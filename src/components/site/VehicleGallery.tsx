@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
 import { vehiclePhotoAlt } from "@/lib/format";
 import { galleryPreviewSrc, galleryPreviewSrcSet, galleryThumbSrc, type GalleryPhoto } from "@/lib/stock-query";
@@ -13,7 +13,8 @@ const PhotoLightbox = dynamic(
 );
 
 /**
- * Galeria em faixa horizontal (snap). Carrega só a foto ativa ±1.
+ * Galeria em faixa horizontal (snap). Miniaturas no mobile e no desktop.
+ * A proporção 16/10 fica reservada para não pular o layout.
  */
 export function VehicleGallery({
   photos,
@@ -32,13 +33,11 @@ export function VehicleGallery({
     const strip = thumbsRef.current;
     if (!strip) return;
     const activeBtn = strip.children[active] as HTMLElement | undefined;
-    if (activeBtn?.scrollIntoView) {
-      activeBtn.scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-        block: "nearest",
-      });
-    }
+    if (!activeBtn) return;
+    // scrollIntoView no iOS empurra a página; rolamos só a faixa.
+    const left =
+      activeBtn.offsetLeft - (strip.clientWidth - activeBtn.clientWidth) / 2;
+    strip.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
   }, [active]);
 
   useEffect(() => {
@@ -58,7 +57,7 @@ export function VehicleGallery({
     return () => scroller.removeEventListener("scroll", onScroll);
   }, [total]);
 
-  function goTo(index: number) {
+  const goTo = useCallback((index: number) => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
     const next = Math.min(Math.max(index, 0), Math.max(total - 1, 0));
@@ -67,7 +66,33 @@ export function VehicleGallery({
       behavior: "smooth",
     });
     setActive(next);
-  }
+  }, [total]);
+
+  useEffect(() => {
+    if (zoomOpen || total < 2) return;
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        goTo(active - 1);
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        goTo(active + 1);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [active, goTo, total, zoomOpen]);
 
   if (total === 0) {
     return (
@@ -85,17 +110,17 @@ export function VehicleGallery({
 
   return (
     <div>
-      <div className="relative overflow-hidden border border-white/10 bg-ink">
+      <div className="relative aspect-[16/10] overflow-hidden border border-white/10 bg-ink">
         <ul
           ref={scrollerRef}
-          className="flex snap-x snap-mandatory overflow-x-auto scrollbar-hide"
+          className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain scrollbar-hide"
           aria-label={`Fotos de ${alt}`}
         >
           {photos.map((photo, index) => {
             return (
               <li
                 key={photo.id}
-                className="relative aspect-[16/10] w-full shrink-0 snap-center bg-asphalt"
+                className="relative h-full w-full min-w-full shrink-0 snap-center snap-always bg-asphalt"
               >
                 <button
                   type="button"
@@ -143,22 +168,12 @@ export function VehicleGallery({
               <Arrow direction="right" />
             </button>
 
-            <span className="pointer-events-none absolute right-2 top-2 z-[2] bg-asphalt/80 px-2 py-1 text-xs font-medium text-cream backdrop-blur">
+            <span
+              className="pointer-events-none absolute right-2 top-2 z-[2] bg-asphalt/80 px-2 py-1 text-xs font-medium text-cream backdrop-blur"
+              aria-live="polite"
+            >
               {active + 1}/{total}
             </span>
-
-            {total <= 8 ? (
-              <div className="pointer-events-none absolute inset-x-0 bottom-2 z-[2] flex justify-center gap-1">
-                {photos.map((photo, index) => (
-                  <span
-                    key={photo.id}
-                    className={`h-1 rounded-full transition-all ${
-                      active === index ? "w-5 bg-brand" : "w-1 bg-white/50"
-                    }`}
-                  />
-                ))}
-              </div>
-            ) : null}
           </>
         ) : null}
       </div>
@@ -167,7 +182,9 @@ export function VehicleGallery({
         <>
           <div
             ref={thumbsRef}
-            className="mt-2 hidden gap-2 overflow-x-auto pb-1 scrollbar-hide lg:flex"
+            className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide"
+            role="tablist"
+            aria-label="Miniaturas"
           >
             {photos.map((photo, index) => {
               return (
@@ -175,9 +192,9 @@ export function VehicleGallery({
                   key={photo.id}
                   type="button"
                   onClick={() => goTo(index)}
-                  aria-label={`Ver foto ${index + 1}`}
+                  aria-label={`Ver foto ${index + 1} de ${total}`}
                   aria-current={index === active}
-                  className={`relative h-16 w-24 shrink-0 overflow-hidden border bg-asphalt transition ${
+                  className={`relative h-14 w-[4.5rem] shrink-0 overflow-hidden border bg-asphalt transition touch-manipulation sm:h-16 sm:w-24 ${
                     index === active
                       ? "border-brand"
                       : "border-white/15 opacity-70 hover:opacity-100"
@@ -195,10 +212,10 @@ export function VehicleGallery({
             })}
           </div>
           <p className="mt-1.5 text-xs text-muted lg:hidden">
-            Deslize ou use as setas · toque para ampliar
+            Deslize as fotos ou toque nas miniaturas · toque para ampliar
           </p>
           <p className="mt-1.5 hidden text-xs text-muted lg:block">
-            Use as setas ou as miniaturas · clique para ampliar
+            Use as setas, o teclado ou as miniaturas · clique para ampliar
           </p>
         </>
       ) : (
@@ -215,7 +232,6 @@ export function VehicleGallery({
           index={active}
           onIndexChange={(next) => {
             setActive(next);
-            // Sincroniza a faixa por baixo sem animação (lightbox já cobre a tela).
             const scroller = scrollerRef.current;
             if (scroller) {
               scroller.scrollTo({

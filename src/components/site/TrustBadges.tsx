@@ -7,9 +7,9 @@ import {
 
 const BADGES = [
   { Icon: IconShieldCheck, label: "Garantia 3 meses · motor e câmbio" },
-  { Icon: IconClipboardCheck, label: "Vistoria Completa" },
-  { Icon: IconGauge, label: "KM Verificado" },
-  { Icon: IconFileText, label: "Documentação OK" },
+  { Icon: IconClipboardCheck, label: "Vistoria completa" },
+  { Icon: IconGauge, label: "KM conferido" },
+  { Icon: IconFileText, label: "Documentação em dia" },
 ] as const;
 
 export function TrustBadges() {

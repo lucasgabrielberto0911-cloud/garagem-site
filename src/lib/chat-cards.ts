@@ -7,6 +7,7 @@ import {
 } from "@/lib/format";
 import { parseCheapIntent, parsePriceLimit } from "@/lib/chat-prompt";
 import { coverSrc } from "@/lib/stock-query";
+import { shortVersion } from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
   applyChatStockFilters,
@@ -525,6 +526,6 @@ export function chatVehicleVersion(vehicle: ChatVehicleCard) {
 }
 
 export function chatVehicleLabel(vehicle: ChatVehicleCard) {
-  const version = vehicle.version?.trim();
+  const version = shortVersion(vehicle.version, vehicle.model);
   return `${vehicle.title}${version ? ` ${version}` : ""} ${vehicle.year}`.trim();
 }

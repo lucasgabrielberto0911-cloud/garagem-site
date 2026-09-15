@@ -161,6 +161,35 @@ async function main() {
     }),
     prisma.vehicle.create({
       data: {
+        category: "carro",
+        brand: "Volkswagen",
+        model: "Fox 1.6",
+        version: "Trend 1.6",
+        year: 2013,
+        yearModel: 2014,
+        km: 98000,
+        price: 38900,
+        fuel: "Flex",
+        transmission: "Manual",
+        color: null,
+        description:
+          "Fox 1.6 Trend, manual, flex. Bom para cidade, revisão em dia.",
+        engine: "1.6",
+        doors: 4,
+        accessories: ["Ar-condicionado", "Direção hidráulica", "Vidros elétricos"],
+        status: "disponivel",
+        featured: true,
+        photos: {
+          create: [
+            { url: "/branding/placeholder-car.png", order: 0 },
+            { url: "/branding/placeholder-car.png", order: 1 },
+            { url: "/branding/placeholder-car.png", order: 2 },
+          ],
+        },
+      },
+    }),
+    prisma.vehicle.create({
+      data: {
         category: "moto",
         brand: "Honda",
         model: "CB 500F",

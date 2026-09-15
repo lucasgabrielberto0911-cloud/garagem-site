@@ -11,6 +11,7 @@ import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { SiteLeadHit, StockSearchPixel } from "@/components/site/VehiclePixel";
 import { WhatsAppButton } from "@/components/site/ui";
 import { WHATSAPP_MESSAGES } from "@/lib/site";
+import { formatStockWaitlistQuery } from "@/lib/stock-waitlist";
 import {
   parseStockFilters,
   STOCK_PAGE_SIZE,
@@ -222,6 +223,7 @@ export function EstoqueBrowse({
   const query = useMemo(() => stockQuery(params), [params]);
   const filters = parseStockFilters(params, { page: 1 });
   const searchString = stockSearchString(params);
+  const waitlistQuery = formatStockWaitlistQuery(params);
   const resultIds = stock.vehicles.map((vehicle) => vehicle.id);
 
   return (
@@ -274,7 +276,9 @@ export function EstoqueBrowse({
                   {stock.error
                     ? "Tente novamente em alguns instantes. Se preferir, fale conosco no WhatsApp."
                     : filtered
-                      ? "Tente ampliar a busca. Se você já sabe o que quer, a gente procura o veículo para você."
+                      ? waitlistQuery
+                        ? `Não tem ${waitlistQuery} agora. Manda no WhatsApp — a gente avisa quando entrar.`
+                        : "Não tem essa combinação agora. Manda no WhatsApp o que você procura — a gente avisa quando entrar."
                       : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
                 </p>
                 <div className="mt-5 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
@@ -303,7 +307,7 @@ export function EstoqueBrowse({
                       }
                       message={
                         filtered
-                          ? WHATSAPP_MESSAGES.wanted(searchString || undefined)
+                          ? WHATSAPP_MESSAGES.wanted(waitlistQuery || undefined)
                           : WHATSAPP_MESSAGES.wanted()
                       }
                       variant={stock.error ? "solid" : "outline"}
