@@ -17,6 +17,14 @@ export type ChatWhatsAppCta = {
 
 const URL_RE = /https?:\/\/[^\s]+/g;
 
+export function extractWhatsAppHref(text: string): string | null {
+  const match = text.match(/https:\/\/wa\.me\/\d+(?:\?text=[^\s<]+)?/i);
+  if (!match) return null;
+  const href = match[0];
+  if (/[?&]text=/i.test(href)) return href.replace(/[;,!?]+$/, "");
+  return href.replace(/[.,;:!?]+$/, "");
+}
+
 function fold(value: string) {
   return value
     .toLowerCase()
@@ -166,6 +174,11 @@ export function chatWhatsAppCta(
 ): ChatWhatsAppCta | null {
   if (!opts.force && !/whatsapp|wa\.me/i.test(text)) return null;
   const folded = fold(text);
+  const fromReply = extractWhatsAppHref(text);
+  const waitlistHref =
+    fromReply && /[?&]text=/.test(fromReply)
+      ? fromReply
+      : whatsappUrl(WHATSAPP_MESSAGES.wanted());
 
   if (vehicle?.sold) {
     return {
@@ -204,9 +217,9 @@ export function chatWhatsAppCta(
       benefit: "Valor da troca com fotos, pelo WhatsApp",
     };
   }
-  if (/nao esta na lista|nao tem anuncio|nessa combinacao/.test(folded)) {
+  if (/nao esta na lista|nao tem anuncio|nessa combinacao|quando chegar/.test(folded)) {
     return {
-      href: whatsappUrl(WHATSAPP_MESSAGES.wanted()),
+      href: waitlistHref,
       label: "Avisar quando chegar",
       benefit: "Consultor procura o modelo pra você",
     };

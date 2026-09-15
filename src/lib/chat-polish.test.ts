@@ -8,6 +8,7 @@ import {
   polishPortuguese,
   streamTextNeedsRegen,
   stripInventedAccessories,
+  stripRepeatedDisplacement,
 } from "./chat-polish";
 import type { ChatVehicleRecord } from "./chat-stock";
 
@@ -51,9 +52,31 @@ test("detecta resposta cortada no meio da frase", () => {
     looksTruncated("Para o Volkswagen Fox com motor 1.6 flex, a faixa típica de catálogo fica", "STOP"),
     true,
   );
+  assert.equal(looksTruncated("Olha só: automáticos até o limite de R$", "STOP"), true);
+  assert.equal(looksTruncated("Olha só: automáticos até o limite de R$ ", "STOP"), true);
+  assert.equal(looksTruncated("Olha só: automáticos até o limite de R$.", "STOP"), true);
+  assert.equal(
+    closeTruncatedReply("Olha só: automáticos até o limite de R$"),
+    "Olha só: automáticos até o limite de R$",
+  );
+  assert.doesNotMatch(
+    closeTruncatedReply("Olha só: automáticos até o limite de R$."),
+    /R\$\.$/,
+  );
   assert.equal(streamTextNeedsRegen("Ol", "STOP"), true);
   assert.equal(
     streamTextNeedsRegen("Para o Volkswagen Fox com motor 1.6 flex", "STOP"),
+    true,
+  );
+  assert.equal(
+    streamTextNeedsRegen("Olha só: carros até o limite de R$", "STOP"),
+    true,
+  );
+  assert.equal(
+    streamTextNeedsRegen(
+      "Olha só, separei os automáticos que cabem no seu limite de R$",
+      "STOP",
+    ),
     true,
   );
   assert.equal(streamTextNeedsRegen("Beleza, te mostro o estoque.", "STOP"), false);
@@ -75,6 +98,17 @@ test("corrige pelo loja e reescreve garantia", () => {
     ensureWarrantyCopy("Todos os seminovos saem com garantia de 3 meses."),
     /3 meses de motor e câmbio/,
   );
+});
+
+test("Fox 1.6 1.6 some da fala e da guarda da resposta", () => {
+  assert.equal(stripRepeatedDisplacement("o FOX 1.6 1.6 flex"), "o FOX 1.6 flex");
+  assert.equal(stripRepeatedDisplacement("o Fox 1.6 flex"), "o Fox 1.6 flex");
+  const cleaned = applyChatReplyGuards(
+    "Para o FOX 1.6 1.6, a faixa típica de catálogo fica 9–12 km/l na cidade.",
+    [etios],
+  );
+  assert.match(cleaned, /Fox 1\.6|FOX 1\.6/i);
+  assert.doesNotMatch(cleaned, /1\.6 1\.6/);
 });
 
 test("acessório inventado some; o da ficha permanece", () => {

@@ -107,6 +107,34 @@ test("Etios e Altis não repetem o acabamento no label / WhatsApp", () => {
   assert.doesNotMatch(altis, /ALTIS ALTIS/);
 });
 
+test("Fox 1.6 Bluemotion não duplica a cilindrada na versão", () => {
+  assert.equal(
+    shortVersion("FOX 1.6 BLUEMOTION 1.6 GII", "FOX 1.6"),
+    "Bluemotion GII",
+  );
+  assert.equal(
+    shortVersion("1.6 BLUEMOTION 1.6 GII", "FOX"),
+    "1.6 Bluemotion GII",
+  );
+  const display = formatVehicleDisplay({
+    id: "c-fox-bluemotion",
+    brand: "Volkswagen",
+    model: "FOX 1.6",
+    version: "FOX 1.6 BLUEMOTION 1.6 GII",
+    yearModel: 2014,
+    transmission: "Manual",
+    km: 98000,
+    price: 38900,
+    color: "prata",
+  });
+  assert.equal(display.title, "Volkswagen Fox 1.6");
+  assert.equal(display.version, "Bluemotion GII");
+  assert.doesNotMatch(display.version, /1\.6/);
+  assert.doesNotMatch(`${display.title} ${display.version}`, /1\.6.*1\.6/);
+  assert.doesNotMatch(display.fullLabel, /1\.6.*1\.6/);
+  assert.doesNotMatch(display.fullLabel, /FOX 1\.6 BLUEMOTION 1\.6/i);
+});
+
 test("Prisma FIPE junk e Fastback Automatico viram versão curta", () => {
   assert.equal(
     shortVersion("Sed. Joy/LS 1.0 8V FlexPower 4p", "Prisma"),

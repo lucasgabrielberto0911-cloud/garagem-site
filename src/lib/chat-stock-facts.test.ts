@@ -69,6 +69,7 @@ test("equipamento cortado em direção é tratado como frase quebrada", () => {
 test("Esse carro ainda tem? reconhece disponibilidade", () => {
   assert.equal(asksAboutAvailability("Esse carro ainda tem?"), true);
   assert.equal(asksAboutAvailability("já vendeu?"), true);
+  assert.equal(asksAboutAvailability("está disponível?"), true);
   assert.equal(asksAboutAvailability("está disponível amanhã?"), false);
   assert.match(formatAvailabilityReply(hb20), /ainda está no estoque/);
   assert.match(formatAvailabilityReply(null, { sold: true }), /já saiu do estoque/);
@@ -114,7 +115,8 @@ test("filtro automático vazio não cai no estoque inteiro — waitlist + simila
   const reply = emptyFilterReply("Tem automático até 40 mil?", [hb20, onix]);
   assert.match(reply ?? "", /não tem anúncio agora/i);
   assert.match(reply ?? "", /WhatsApp|wa\.me/);
-  assert.match(reply ?? "", /Onix|HB20/);
+  assert.match(decodeURIComponent(reply ?? ""), /automático até R\$\s*40\.000/i);
+  assert.doesNotMatch(reply ?? "", /·\s*R\$/);
 });
 
 test("diferença automático vs manual compara o estoque atual", () => {

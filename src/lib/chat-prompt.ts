@@ -3,7 +3,10 @@
  * troca, financiamento, garantia nem estoque — tudo está escrito aqui.
  */
 
-import { typicalConsumptionHint } from "@/lib/chat-consumption";
+import {
+  parseEngineDisplacementLiters,
+  typicalConsumptionHint,
+} from "@/lib/chat-consumption";
 import { site } from "@/lib/site";
 import { shortVersion } from "@/lib/vehicle-display";
 
@@ -68,7 +71,7 @@ COMO AJUDAR DE VERDADE:
 - Se faltar orçamento, tipo (hatch/sedan/SUV), câmbio ou se tem veículo na troca, faça UMA pergunta objetiva. Sem questionário. Se o visitante já deu orçamento ou pediu automático/manual, NÃO pergunte hatch/sedan.
 - Ao listar, escolha no máximo 3 opções que façam sentido — não despeje o estoque inteiro. Se o visitante pedir barato / baratinho / mais em conta, prefira os mais baratos do modelo pedido e NÃO cite irmão mais caro sem necessidade. O site vira cada linha em mini-anúncio com foto e já mostra atalhos (financiar, troca). Formato da lista, um por linha:
 Marca Modelo ano · km · R$ preço
-Antes da lista: 1 frase falada de recorte (Olha só, carros até R$ 70.000 no estoque agora / Automáticos até R$ 80.000). Não comece com “Separei N” nem “Temos três ótimas opções”. DEPOIS da lista: 2 a 4 frases comparando SOMENTE esses mesmos carros, com dados da linha de estoque. Diga quem está mais em conta, quem tem menos km, quem é automático e o que isso muda no dia a dia. Só diga que um carro “é o automático da lista” ou “o único automático” se nenhum outro da mesma lista for automático. NÃO mencione consumo de combustível espontaneamente. Frases completas, faladas, sem telegrama e sem emoji.
+Antes da lista: 1 frase falada de recorte (Olha só, carros até R$ 70.000 no estoque agora / Automáticos até R$ 80.000). Não comece com “Separei N” nem “Temos três ótimas opções”. DEPOIS da lista: 2 a 4 frases comparando SOMENTE esses mesmos carros, com dados da linha de estoque. Só diga que um está mais em conta se o preço for menor de fato — se empatar, compare km, ano e câmbio, nunca invente desconto. Diga quem tem menos km, quem é automático e o que isso muda no dia a dia. Só diga que um carro “é o automático da lista” ou “o único automático” se nenhum outro da mesma lista for automático. NÃO mencione consumo de combustível espontaneamente. Frases completas, faladas, sem telegrama e sem emoji.
 - Consumo / média / km/l: NUNCA mencione consumo espontaneamente. O consumo só deve ser informado SE o visitante perguntar especificamente sobre o consumo, gasto de combustível, quanto faz por litro ou se o veículo é econômico. Quando ele perguntar de consumo, use SOMENTE o texto “consumo típico” já escrito na linha do estoque. Se a linha tiver gasolina e álcool, cite as duas faixas. NUNCA invente outro número, NUNCA invente cv, potência, torque ou INMETRO, NUNCA diga que a loja mediu este usado, NUNCA apresente a faixa como garantia. Fale como faixa típica de catálogo / média da motorização. Não repita a cilindrada se o modelo já tiver (nunca “Fox 1.6 1.6”). Complete a frase com os km/l ANTES do aviso de que o usado não foi medido na loja — nunca junte o aviso no lugar da faixa (“fica Nenhum desses…”). Se não houver km/l na linha, diga isso com clareza; não complete “fica” com o disclaimer.
 - Não descreva a foto, não use markdown, não cite carro fora dessas 3 linhas e não pergunte hatch, sedan, “qual desses” nem “qual perfil” depois da lista (os atalhos do site já existem).
 - Se perguntarem “qual o melhor”, compare 2 ou 3 da lista só com dados reais (preço, ano, km, câmbio, combustível, motor, acessórios da linha). Sem inventar opcional.
@@ -124,6 +127,13 @@ export function formatChatPrice(value: number) {
   return `R$ ${value.toLocaleString("pt-BR")}`;
 }
 
+export type ChatStockPromptOpts = {
+  /** Inclui km/l de catálogo — só quando a pergunta é de consumo. */
+  consumption?: boolean;
+  /** Inclui opcionais da ficha — só quando a pergunta é de equipamento. */
+  equipment?: boolean;
+};
+
 function accessoryBits(items?: string[]) {
   if (!items?.length) return "";
   const clean = items
@@ -133,35 +143,78 @@ function accessoryBits(items?: string[]) {
   return clean.length ? ` · ${clean.join(", ")}` : "";
 }
 
-function stockLineLabel(vehicle: ChatStockLine, withExtras = false) {
+function foldLabel(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9.]+/g, " ")
+    .trim();
+}
+
+function engineAlreadyInName(vehicle: ChatStockLine) {
+  const engine = vehicle.engine?.trim();
+  if (!engine) return true;
+  const named = foldLabel(
+    `${vehicle.model} ${shortVersion(vehicle.version, vehicle.model)} ${vehicle.version ?? ""}`,
+  );
+  const liters = parseEngineDisplacementLiters(
+    vehicle.engine,
+    vehicle.version,
+    vehicle.category,
+  );
+  if (liters != null && liters >= 1) {
+    const label = liters.toFixed(1);
+    if (named.includes(foldLabel(label))) return true;
+  }
+  return named.includes(foldLabel(engine));
+}
+
+function stockLineLabel(
+  vehicle: ChatStockLine,
+  withExtras = false,
+  opts: ChatStockPromptOpts = {},
+) {
   const version = shortVersion(vehicle.version, vehicle.model);
   const versionBit = version ? ` ${version}` : "";
   const base = `${vehicle.brand} ${vehicle.model}${versionBit} ${vehicle.year} · ${vehicle.km.toLocaleString("pt-BR")} km · ${formatChatPrice(vehicle.price)}`;
   if (!withExtras) return base;
   const color = vehicle.color?.trim() ? vehicle.color.trim() : "cor não informada";
   const kind = vehicle.category === "moto" ? "moto" : "carro";
-  const engine = vehicle.engine?.trim() ? ` · motor ${vehicle.engine.trim()}` : "";
+  const engine =
+    vehicle.engine?.trim() && !engineAlreadyInName(vehicle)
+      ? ` · motor ${vehicle.engine.trim()}`
+      : "";
   const doors =
     vehicle.doors != null && vehicle.doors > 0
       ? ` · ${vehicle.doors} portas`
       : "";
-  const consumption = typicalConsumptionHint({
-    fuel: vehicle.fuel,
-    engine: vehicle.engine,
-    version: vehicle.version,
-    category: vehicle.category ?? "carro",
-  });
-  return `${base} · ${color} · ${vehicle.transmission} · ${vehicle.fuel} · ${kind}${engine}${doors}${accessoryBits(vehicle.accessories)} · ${consumption}`;
+  const extras = opts.equipment ? accessoryBits(vehicle.accessories) : "";
+  const consumption = opts.consumption
+    ? ` · ${typicalConsumptionHint(
+        {
+          fuel: vehicle.fuel,
+          engine: vehicle.engine,
+          version: vehicle.version,
+          category: vehicle.category ?? "carro",
+        },
+        { omitLabel: engineAlreadyInName(vehicle) || Boolean(vehicle.engine) },
+      )}`
+    : "";
+  return `${base} · ${color} · ${vehicle.transmission} · ${vehicle.fuel} · ${kind}${engine}${doors}${extras}${consumption}`;
 }
 
-export function formatStockForPrompt(vehicles: ChatStockLine[]) {
+export function formatStockForPrompt(
+  vehicles: ChatStockLine[],
+  opts: ChatStockPromptOpts = {},
+) {
   if (vehicles.length === 0) {
     return "ESTOQUE ATUAL (dados reais do banco):\n(nenhum veículo disponível no momento)";
   }
 
   const lines = [...vehicles]
     .sort((a, b) => a.price - b.price)
-    .map((vehicle) => `- ${stockLineLabel(vehicle, true)}`);
+    .map((vehicle) => `- ${stockLineLabel(vehicle, true, opts)}`);
 
   return `ESTOQUE ATUAL (dados reais do banco — use SOMENTE estes veículos, mais baratos primeiro):\n${lines.join("\n")}`;
 }
@@ -202,8 +255,9 @@ export function buildChatSystemPrompt(
   vehicles: ChatStockLine[],
   mensagem = "",
   activeVehicle?: ChatStockLine,
+  opts: ChatStockPromptOpts = {},
 ) {
-  const stock = formatStockForPrompt(vehicles);
+  const stock = formatStockForPrompt(vehicles, opts);
   let activeNotice = "";
   if (activeVehicle) {
     const kind = activeVehicle.category === "moto" ? "moto" : "carro";

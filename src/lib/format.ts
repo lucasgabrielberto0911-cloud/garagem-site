@@ -62,6 +62,9 @@ const BRAND_CANONICAL: Record<string, string> = {
 /** Marcas do mapa canônico (para auditoria de valores fora da lista). */
 export const KNOWN_BRAND_KEYS = new Set(Object.keys(BRAND_CANONICAL));
 
+/** FIPE grita FOX/GOL; na vitrine isso é nome de modelo, não sigla. */
+const TITLECASE_SHORT_MODELS = new Set(["fox", "gol", "ka"]);
+
 function titleCaseWords(value: string) {
   return value
     .trim()
@@ -71,6 +74,10 @@ function titleCaseWords(value: string) {
     .map((word) => {
       // Siglas curtas (BMW, GWM, HR-V partes) — evita "Bmw".
       if (/^[A-Z0-9-]{2,4}$/.test(word) && word === word.toUpperCase()) {
+        const folded = word.toLowerCase();
+        if (TITLECASE_SHORT_MODELS.has(folded)) {
+          return folded.charAt(0).toUpperCase() + folded.slice(1);
+        }
         return word;
       }
       // HB20 / HB20S — title case virava "Hb20s".

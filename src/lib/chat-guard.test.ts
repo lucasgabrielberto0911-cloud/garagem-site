@@ -330,9 +330,9 @@ test("filtro vazio oferece waitlist no WhatsApp e similares", async () => {
   assert.equal(called, 0);
   assert.match(result.reply, /não tem anúncio agora/i);
   assert.match(result.reply, /wa\.me|WhatsApp/i);
-  assert.match(result.reply, /HB20/);
+  assert.match(decodeURIComponent(result.reply), /automático até R\$\s*40\.000/i);
   assert.doesNotMatch(result.reply, /mais em conta/);
   assert.doesNotMatch(result.reply, /R\$ 0/);
-  assert.equal(result.vehicles.length, 0);
+  assert.ok(result.vehicles.some((vehicle) => vehicle.model === "HB20"));
   assert.equal(result.meta?.policy, "waitlist");
 });

@@ -218,6 +218,7 @@ export function shortVersion(
     text = text.replace(pattern, " ");
   }
   text = stripDuplicateTokens(text, model);
+  text = collapseRepeatedDisplacement(text);
   text = text.replace(GEAR_STRIP, " ");
   text = collapseWhitespace(text).replace(/^[\s/.,-]+|[\s/.,-]+$/g, "");
   if (mostlyUppercase(text)) {
@@ -236,6 +237,23 @@ function stripDuplicateTokens(version: string, model: string) {
       const key = foldToken(token);
       if (!key) return false;
       if (modelTokens.has(key)) return false;
+      return true;
+    })
+    .join(" ");
+}
+
+/** “FOX 1.6 BLUEMOTION 1.6 GII” — a mesma cilindrada não aparece duas vezes. */
+function collapseRepeatedDisplacement(version: string) {
+  const seen = new Set<string>();
+  return version
+    .split(/\s+/)
+    .filter((token) => {
+      const key = foldToken(token);
+      const match = key.match(/^(\d+[.,]\d+)$/);
+      if (!match) return Boolean(key);
+      const liters = match[1].replace(",", ".");
+      if (seen.has(liters)) return false;
+      seen.add(liters);
       return true;
     })
     .join(" ");

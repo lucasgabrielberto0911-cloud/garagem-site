@@ -13,11 +13,19 @@ import {
   parseCheapIntent,
   parsePriceLimit,
   type ChatStockLine,
+  type ChatStockPromptOpts,
 } from "@/lib/chat-prompt";
 import { isAnaphoricVehicleFollowUp } from "@/lib/chat-text";
+import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 
 /** Teto da carga atual. Se o estoque chegar aqui, consultar pela pergunta — não só aumentar o take. */
 export const CHAT_STOCK_TAKE = 80;
+
+/** Linhas no prompt do Gemini — Hobby Functions / payload enxuto. */
+export const CHAT_PROMPT_STOCK_LIMIT = 16;
+
+const MOTO_NAME_HINT =
+  /\b(biz|bros|titan|twister|crosser|xre|factor|fazer|pcx|nmax|n max|scooter|cg\s?\d{2,3}|fan\s?\d{2,3}|pop\s?\d{2,3}|yamaha|kawasaki|harley)\b/;
 
 export function chatStockAtCap(count: number, take = CHAT_STOCK_TAKE) {
   return count >= take;
@@ -124,12 +132,50 @@ function normalize(value: string) {
     .trim();
 }
 
-/** “carros até 70 mil” não mistura moto; “moto até 15 mil” não mistura carro. */
+function compactAlnum(value: string) {
+  return normalize(value).replace(/ /g, "");
+}
+
+/** Distância de edição ≤ 1: onixx→onix, civc→civic. */
+export function isEditDistanceAtMostOne(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let shorter = a;
+  let longer = b;
+  if (a.length > b.length) {
+    shorter = b;
+    longer = a;
+  }
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+  while (i < shorter.length && j < longer.length) {
+    if (shorter[i] === longer[j]) {
+      i += 1;
+      j += 1;
+      continue;
+    }
+    edits += 1;
+    if (edits > 1) return false;
+    if (shorter.length === longer.length) {
+      i += 1;
+      j += 1;
+    } else {
+      j += 1;
+    }
+  }
+  if (i < shorter.length || j < longer.length) edits += 1;
+  return edits <= 1;
+}
+
+/** “carros até 70 mil” não mistura moto; “moto até 15 mil” / “tem biz” não mistura carro. */
 export function parseVehicleCategoryFilter(
   mensagem: string,
 ): "carro" | "moto" | null {
   const folded = normalize(mensagem);
-  const wantsMoto = /\b(moto|motos|motocicleta|motoca|scooter)\b/.test(folded);
+  const wantsMoto =
+    /\b(moto|motos|motocicleta|motoca|scooter)\b/.test(folded) ||
+    MOTO_NAME_HINT.test(folded);
   const wantsCar = /\b(carro|carros|hatch|sedan|suv|pickup|caminhonete)\b/.test(
     folded,
   );
@@ -247,16 +293,55 @@ export function cheapPriceCap(stock: ChatVehicleRecord[]): number | null {
   return cap;
 }
 
-function mentionedModelGroups(stock: ChatVehicleRecord[], mensagem: string) {
+function modelMatchNeedles(model: string) {
+  const full = normalize(model);
+  const compact = compactAlnum(model);
+  const first = full.split(" ").find((token) => /[a-z]/.test(token) && token.length >= 3);
+  const needles = [full];
+  if (compact.length >= 3 && compact !== full.replace(/ /g, "")) {
+    needles.push(compact);
+  } else if (compact.length >= 3) {
+    needles.push(compact);
+  }
+  if (first && first !== full) needles.push(first);
+  return [...new Set(needles.filter((item) => item.length >= 3))];
+}
+
+function messageMentionsModel(mensagem: string, model: string) {
   const folded = normalize(mensagem);
+  const compactMsg = compactAlnum(mensagem);
+  for (const needle of modelMatchNeedles(model)) {
+    if (needle.includes(" ") ? folded.includes(needle) : new RegExp(`\\b${needle}\\b`).test(folded)) {
+      return true;
+    }
+    if (!needle.includes(" ") && compactMsg.includes(needle) && needle.length >= 3) {
+      return true;
+    }
+  }
+  const compactModel = compactAlnum(model);
+  if (compactModel.length >= 4) {
+    for (const token of compactMsg
+      ? normalize(mensagem).split(" ").flatMap((part) => {
+          const compact = compactAlnum(part);
+          return compact.length >= 4 ? [compact] : [];
+        })
+      : []) {
+      if (isEditDistanceAtMostOne(token, compactModel)) return true;
+      const first = compactAlnum(model.split(/[\s./-]+/)[0] ?? "");
+      if (first.length >= 4 && isEditDistanceAtMostOne(token, first)) return true;
+    }
+  }
+  return false;
+}
+
+function mentionedModelGroups(stock: ChatVehicleRecord[], mensagem: string) {
   const models = new Map<string, ChatVehicleRecord[]>();
   for (const vehicle of stock) {
+    if (!messageMentionsModel(mensagem, vehicle.model)) continue;
     const model = normalize(vehicle.model);
-    if (model.length >= 3 && folded.includes(model)) {
-      const list = models.get(model) ?? [];
-      list.push(vehicle);
-      models.set(model, list);
-    }
+    const list = models.get(model) ?? [];
+    list.push(vehicle);
+    models.set(model, list);
   }
   return models;
 }
@@ -340,6 +425,66 @@ export function matchFocusedVehicle(
   return matchInterestVehicle(mensagem, stock, 1, preferredVehicleId);
 }
 
+export function chatPromptStockOpts(mensagem: string): ChatStockPromptOpts {
+  return {
+    consumption: asksAboutConsumption(mensagem),
+    equipment:
+      asksAboutEquipment(mensagem) || asksAboutNamedGear(mensagem),
+  };
+}
+
+/** Recorte enxuto do estoque para o prompt — não manda 80 fichas completas. */
+export function selectVehiclesForChatPrompt(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+  activeVehicle?: ChatVehicleRecord,
+  limit = CHAT_PROMPT_STOCK_LIMIT,
+): ChatVehicleRecord[] {
+  if (stock.length === 0) return [];
+  const compared = pickComparedModelVehicles(stock, mensagem);
+  if (compared.length >= 2) {
+    return uniqueChatVehicles([activeVehicle, ...compared], limit);
+  }
+  const mentioned = mentionedModelGroups(stock, mensagem);
+  if (mentioned.size > 0) {
+    const rows = [...mentioned.values()].flat();
+    return uniqueChatVehicles([activeVehicle, ...rows], limit);
+  }
+  const focused = matchFocusedVehicle(mensagem, stock, activeVehicle?.id);
+  if (
+    focused &&
+    (asksAboutConsumption(mensagem) ||
+      asksAboutEquipment(mensagem) ||
+      asksAboutNamedGear(mensagem) ||
+      asksAboutKm(mensagem) ||
+      asksAboutAvailability(mensagem))
+  ) {
+    return uniqueChatVehicles([activeVehicle, focused], limit);
+  }
+  const filtered = matchedChatStock(mensagem, stock);
+  const pool = filtered.length > 0 ? filtered : stock;
+  const sorted =
+    parsePriceLimit(mensagem) != null || parseCheapIntent(mensagem)
+      ? [...pool].sort((a, b) => a.price - b.price)
+      : pool;
+  return uniqueChatVehicles([activeVehicle, ...sorted], limit);
+}
+
+function uniqueChatVehicles(
+  rows: Array<ChatVehicleRecord | undefined>,
+  limit: number,
+) {
+  const seen = new Set<string>();
+  const next: ChatVehicleRecord[] = [];
+  for (const vehicle of rows) {
+    if (!vehicle || seen.has(vehicle.id)) continue;
+    seen.add(vehicle.id);
+    next.push(vehicle);
+    if (next.length >= limit) break;
+  }
+  return next;
+}
+
 /** Casa o texto do interesse com um anúncio do estoque, se der. */
 export function matchInterestVehicle(
   interest: string | undefined,
@@ -360,6 +505,22 @@ export function matchInterestVehicle(
     let score = 0;
     for (const part of needle.split(" ").filter((token) => token.length >= 3)) {
       if (hay.includes(part)) score += 1;
+    }
+    const compactNeedle = compactAlnum(interest ?? "");
+    const compactHay = compactAlnum(
+      `${vehicle.brand} ${vehicle.model} ${vehicle.version ?? ""} ${vehicle.yearModel}`,
+    );
+    const compactModel = compactAlnum(vehicle.model);
+    if (compactModel.length >= 3 && compactNeedle.includes(compactModel)) {
+      score += 3;
+    }
+    if (compactModel.length >= 4) {
+      for (const token of needle.split(" ").map((part) => compactAlnum(part)).filter((part) => part.length >= 4)) {
+        if (isEditDistanceAtMostOne(token, compactModel)) score += 3;
+      }
+    }
+    if (compactHay && compactNeedle && compactHay.includes(compactNeedle) && compactNeedle.length >= 4) {
+      score += 2;
     }
     const model = normalize(vehicle.model);
     const brand = normalize(vehicle.brand);
@@ -682,16 +843,33 @@ export function asksAboutKm(mensagem: string): boolean {
 
 export function asksAboutAvailability(mensagem: string): boolean {
   const folded = normalize(mensagem);
-  return /\b(ainda tem|ainda esta|ainda ta|tem ainda|ainda vende|ja vendeu|ja foi vendido|esse carro ainda|essa moto ainda|ainda esta no estoque|tem no estoque agora)\b/.test(
+  if (/\bamanha\b/.test(folded)) return false;
+  return /\b(ainda tem|ainda esta|ainda ta|tem ainda|ainda vende|ja vendeu|ja foi vendido|esse carro ainda|essa moto ainda|ainda esta no estoque|tem no estoque agora|esta disponivel|ta disponivel|disponivel ainda|ainda esta a venda|ainda ta a venda|tem esse (carro|modelo|ai)|essa unidade ainda)\b/.test(
     folded,
   );
 }
 
 export function asksToCompareModels(mensagem: string): boolean {
   const folded = normalize(mensagem);
-  return /\b(compar|vs|versus|diferen|melhor que|qual dos dois|qual o melhor)\b/.test(
-    folded,
-  ) || /\sou\s/.test(folded);
+  if (
+    /\b(compar|vs|versus|qual dos dois|qual o melhor|melhor que)\b/.test(
+      folded,
+    )
+  ) {
+    return true;
+  }
+  if (/\bdiferen/.test(folded) && !asksAboutTransmissionCompare(mensagem)) {
+    return true;
+  }
+  return /\sou\s/.test(folded);
+}
+
+/** “qual o melhor?” / “compara” sem dois modelos — não despeja o estoque. */
+export function asksWhichTwoToCompare(mensagem: string): boolean {
+  const folded = normalize(mensagem);
+  if (/\b(vs|versus)\b/.test(folded) || /\sou\s/.test(folded)) return false;
+  if (waitlistInterestBits(mensagem).length >= 2) return false;
+  return /\b(compar|qual dos dois|qual o melhor)\b/.test(folded);
 }
 
 export function asksAboutListedFacts(mensagem: string): boolean {
@@ -721,8 +899,11 @@ export function formatAvailabilityReply(
   vehicle: ChatVehicleRecord | null | undefined,
   opts: { sold?: boolean } = {},
 ) {
-  if (opts.sold || !vehicle) {
+  if (opts.sold) {
     return `Essa unidade já saiu do estoque. Se quiser, o consultor procura outra parecida e te avisa no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  }
+  if (!vehicle) {
+    return CHAT_AVAILABILITY_ASK_REPLY;
   }
   const named = talkName(vehicle);
   return `Sim — ${named.labeled} ${vehicle.yearModel} ainda está no estoque (${formatChatPrice(vehicle.price)}). Confirma no WhatsApp antes de fechar, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
@@ -745,7 +926,9 @@ export function isFocusedVehicleFactQuestion(
     ? singleMentionedModelPool(stock, mensagem)
     : null;
   if (parsePriceLimit(mensagem) != null && !mentioned) return false;
-  if (stock.length === 0) return consumption || equipment || km || availability;
+  if (stock.length === 0) {
+    return Boolean(preferredVehicleId && availability);
+  }
   if (availability && preferredVehicleId && !mentioned) return true;
   return matchFocusedVehicle(mensagem, stock, preferredVehicleId) != null;
 }
@@ -771,6 +954,18 @@ export function compareChatStockPicks(
   const lowestKm = vehicles.reduce((best, vehicle) =>
     vehicle.km < best.km ? vehicle : best,
   );
+  const newest = vehicles.reduce((best, vehicle) =>
+    vehicle.yearModel > best.yearModel ? vehicle : best,
+  );
+  const minPrice = cheapest.price;
+  const maxPrice = Math.max(...vehicles.map((vehicle) => vehicle.price));
+  const tiedCheap = vehicles.filter((vehicle) => vehicle.price === minPrice);
+  const uniqueCheap = tiedCheap.length === 1;
+  const allSamePrice = minPrice === maxPrice;
+  const hasKmSpread = vehicles.some((vehicle) => vehicle.km !== lowestKm.km);
+  const hasYearSpread = vehicles.some(
+    (vehicle) => vehicle.yearModel !== newest.yearModel,
+  );
   const autos = vehicles.filter(isAutomaticVehicle);
   const manuals = vehicles.filter(isManualVehicle);
   const mixed = autos.length > 0 && manuals.length > 0;
@@ -780,66 +975,80 @@ export function compareChatStockPicks(
     ? "é o automático da lista — mais conforto no trânsito"
     : "é automático — mais conforto no trânsito";
 
-  const cheap = talkName(cheapest);
-  const picks: string[] = [
-    `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) — um bom começo.`,
-  ];
-  const mentioned = new Set<string>([cheapest.id]);
+  const picks: string[] = [];
+  const mentioned = new Set<string>();
 
-  if (lowestKm.id !== cheapest.id) {
-    const low = talkName(lowestKm);
-    if (mixed && auto?.id === lowestKm.id) {
+  if (allSamePrice) {
+    picks.push(
+      vehicles.length === 2
+        ? `Os dois estão em ${formatChatPrice(minPrice)} — o desempate é km e ano.`
+        : `Estes estão em ${formatChatPrice(minPrice)} — o desempate é km e ano.`,
+    );
+  } else if (uniqueCheap) {
+    const cheap = talkName(cheapest);
+    if (mixed && auto?.id === cheapest.id) {
       picks.push(
-        `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}) e ${autoBit}.`,
+        autoOnly
+          ? `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e o automático da lista — mais conforto no trânsito.`
+          : `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e é automático — mais conforto no trânsito.`,
       );
-      mentioned.add(lowestKm.id);
+      mentioned.add(cheapest.id);
+      if (auto) mentioned.add(auto.id);
     } else {
-      picks.push(`${low.cap} tem menos km (${formatChatKm(lowestKm.km)}).`);
-      mentioned.add(lowestKm.id);
-      if (mixed && auto && !mentioned.has(auto.id)) {
-        picks.push(`${talkName(auto).cap} ${autoBit}.`);
+      picks.push(
+        `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) — um bom começo.`,
+      );
+      mentioned.add(cheapest.id);
+    }
+  } else {
+    picks.push(
+      `${joinPtNames(tiedCheap.map((vehicle) => talkName(vehicle).name))} saem por ${formatChatPrice(minPrice)}.`,
+    );
+  }
+
+  if (hasKmSpread && (allSamePrice || lowestKm.id !== cheapest.id || !uniqueCheap)) {
+    const alreadyKm = picks.some((pick) => /menos km/.test(pick));
+    if (!alreadyKm) {
+      const low = talkName(lowestKm);
+      const alsoNewest =
+        allSamePrice && hasYearSpread && lowestKm.id === newest.id;
+      if (mixed && auto?.id === lowestKm.id && !mentioned.has(auto.id)) {
+        picks.push(
+          alsoNewest
+            ? `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}), é o mais novo (${newest.yearModel}) e ${autoBit}.`
+            : `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}) e ${autoBit}.`,
+        );
+        mentioned.add(lowestKm.id);
         mentioned.add(auto.id);
+      } else {
+        picks.push(
+          alsoNewest
+            ? `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}) e é o mais novo (${newest.yearModel}).`
+            : `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}).`,
+        );
+        mentioned.add(lowestKm.id);
       }
     }
-  } else if (mixed && auto && auto.id !== cheapest.id) {
+  }
+
+  if (mixed && auto && !mentioned.has(auto.id)) {
     picks.push(`${talkName(auto).cap} ${autoBit}.`);
     mentioned.add(auto.id);
   }
 
-  if (mixed && auto?.id === cheapest.id) {
-    picks[0] = autoOnly
-      ? `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e o automático da lista — mais conforto no trânsito.`
-      : `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e é automático — mais conforto no trânsito.`;
+  if (hasYearSpread && !mentioned.has(newest.id)) {
+    picks.push(`${talkName(newest).cap} é o mais novo (${newest.yearModel}).`);
+    mentioned.add(newest.id);
   }
 
-  const leftover = vehicles.filter((vehicle) => !mentioned.has(vehicle.id));
-  const newest = vehicles.reduce((best, vehicle) =>
-    vehicle.yearModel > best.yearModel ? vehicle : best,
-  );
-  const maxPrice = Math.max(...vehicles.map((vehicle) => vehicle.price));
-  const distinctPrices = [...new Set(vehicles.map((vehicle) => vehicle.price))].sort(
-    (a, b) => a - b,
-  );
-  const middlePrice = distinctPrices.length >= 3 ? distinctPrices[1] : null;
-  for (const vehicle of leftover) {
-    const name = talkName(vehicle);
-    if (vehicle.price === cheapest.price) {
+  for (const vehicle of vehicles) {
+    if (mentioned.has(vehicle.id)) continue;
+    if (allSamePrice || vehicle.price === minPrice) continue;
+    if (vehicle.price === maxPrice && vehicle.price > minPrice) {
       picks.push(
-        `${name.cap} também está em ${formatChatPrice(vehicle.price)}.`,
+        `${talkName(vehicle).cap} fica um pouco acima (${formatChatPrice(vehicle.price)}).`,
       );
-    } else if (
-      vehicle.id === newest.id &&
-      vehicles.some((other) => other.yearModel < newest.yearModel)
-    ) {
-      picks.push(`${name.cap} é o mais novo (${vehicle.yearModel}).`);
-    } else if (middlePrice != null && vehicle.price === middlePrice) {
-      picks.push(
-        `${name.cap} fica no meio do preço (${formatChatPrice(vehicle.price)}).`,
-      );
-    } else if (vehicle.price === maxPrice && vehicle.price > cheapest.price) {
-      picks.push(
-        `${name.cap} fica um pouco acima (${formatChatPrice(vehicle.price)}).`,
-      );
+      mentioned.add(vehicle.id);
     }
   }
 
@@ -950,6 +1159,12 @@ export function enrichChatStockReply(
   mensagem = "",
 ) {
   if (vehicles.length === 0) return reply;
+  if (
+    looksLikeMissingModelReply(reply) ||
+    /nessa combinacao/.test(foldReply(reply))
+  ) {
+    return reply;
+  }
   const wantsConsumption = asksAboutConsumption(mensagem);
   const focusedFact = isFocusedVehicleFactQuestion(
     mensagem,
@@ -1051,6 +1266,7 @@ export function enrichChatStockReply(
 export function isIncompleteStockReply(reply: string) {
   const text = reply.trim();
   if (!text) return true;
+  if (/R\$\s*\.?$/.test(text)) return true;
   if (/:\s*$/.test(text)) return true;
   const pricedCars = (text.match(/·\s*R\$\s*\d/g) ?? []).length;
   if (
@@ -1079,10 +1295,13 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
   }
   const picks = matches.slice(0, 3);
   const cheapestId = picks[0]?.id;
+  const minPickPrice = picks[0]?.price;
+  const uniqueCheap =
+    picks.filter((vehicle) => vehicle.price === minPickPrice).length === 1;
   const lowestKmId = [...picks].sort((a, b) => a.km - b.km)[0]?.id;
   const lines = picks.map((vehicle) => {
     const bits: string[] = [];
-    if (vehicle.id === cheapestId) bits.push("mais em conta");
+    if (uniqueCheap && vehicle.id === cheapestId) bits.push("mais em conta");
     if (vehicle.id === lowestKmId) bits.push("menor km");
     if (/automatic/.test(normalize(vehicle.transmission))) bits.push("automático");
     const why = bits.length ? ` — ${bits.join(", ")}` : "";
@@ -1111,12 +1330,14 @@ export function findSimilarVehicles(
   stock: ChatVehicleRecord[],
   limit = 3,
 ): ChatVehicleRecord[] {
-  const category = resolveChatCategory(mensagem) ?? "carro";
+  const category = parseVehicleCategoryFilter(mensagem);
   const mentioned = singleMentionedModelPool(stock, mensagem);
   const mentionedIds = new Set((mentioned ?? []).map((vehicle) => vehicle.id));
   const pool = applyChatStockFilters(stock, mensagem)
     .filter((vehicle) => !mentionedIds.has(vehicle.id))
-    .filter((vehicle) => (vehicle.category ?? "carro") === category)
+    .filter((vehicle) =>
+      category ? (vehicle.category ?? "carro") === category : true,
+    )
     .sort((a, b) => a.price - b.price);
   return pool.slice(0, limit);
 }
@@ -1134,6 +1355,48 @@ export function similarAfterEmptyFilter(
     .slice(0, limit);
 }
 
+const WAITLIST_STOP =
+  /^(tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|chegou|chegar|sim|nao|mais|barato|baratinho)$/;
+
+function waitlistInterestBits(mensagem: string) {
+  return normalize(mensagem)
+    .split(" ")
+    .filter(
+      (token) =>
+        token.length >= 3 &&
+        !WAITLIST_STOP.test(token) &&
+        !/^\d+$/.test(token),
+    );
+}
+
+/** “automático até R$ 40.000” — texto humano pro WhatsApp da lista de espera. */
+export function formatChatWaitlistQuery(mensagem: string) {
+  const bits: string[] = [];
+  const named = waitlistInterestBits(mensagem);
+  if (named.length > 0) {
+    bits.push(named.slice(0, 3).join(" "));
+  }
+  const category = parseVehicleCategoryFilter(mensagem);
+  const gear = parseTransmissionFilter(mensagem);
+  const limit = parsePriceLimit(mensagem);
+  if (category === "moto" && !/\bmoto\b/.test(bits.join(" "))) bits.push("moto");
+  if (category === "carro" && !/\bcarro\b/.test(bits.join(" "))) {
+    bits.push("carro");
+  }
+  if (gear === "automatico" && !named.includes("automatico")) {
+    bits.push("automático");
+  }
+  if (gear === "manual" && !named.includes("manual")) bits.push("manual");
+  if (limit != null) bits.push(`até ${formatChatPrice(limit)}`);
+  if (parseCheapIntent(mensagem) && limit == null) bits.push("mais em conta");
+  return bits.join(" ").replace(/\s+/g, " ").trim();
+}
+
+export function chatWaitlistWhatsAppUrl(mensagem: string) {
+  const query = formatChatWaitlistQuery(mensagem);
+  return whatsappUrl(WHATSAPP_MESSAGES.wanted(query || undefined));
+}
+
 export function matchedChatStock(
   mensagem: string,
   stock: ChatVehicleRecord[],
@@ -1149,13 +1412,22 @@ export function emptyFilterReply(
   stock: ChatVehicleRecord[],
 ): string | null {
   if (!hasChatStockFilter(mensagem)) return null;
-  if (matchedChatStock(mensagem, stock).length > 0) return null;
-  const similar = similarAfterEmptyFilter(mensagem, stock, 3);
-  if (similar.length === 0) {
-    return `Nessa combinação ainda não tem anúncio agora. O consultor anota e te avisa no WhatsApp quando chegar: ${CHAT_WHATSAPP_URL}`;
+  if (
+    asksAboutAvailability(mensagem) &&
+    parseTransmissionFilter(mensagem) == null &&
+    parsePriceLimit(mensagem) == null
+  ) {
+    return null;
   }
-  const lines = similar.map((vehicle) => formatVehicleLine(vehicle));
-  return `Nessa combinação ainda não tem anúncio agora. Na mesma ideia, o estoque tem:\n${lines.join("\n")}\n\nSe quiser, o consultor anota e te avisa no WhatsApp quando chegar: ${CHAT_WHATSAPP_URL}`;
+  if (matchedChatStock(mensagem, stock).length > 0) return null;
+  const query = formatChatWaitlistQuery(mensagem);
+  const recorte = query ? ` (${query})` : "";
+  const similar = similarAfterEmptyFilter(mensagem, stock, 3);
+  const wait = `Se quiser, o consultor anota e te avisa no WhatsApp quando chegar: ${chatWaitlistWhatsAppUrl(mensagem)}`;
+  if (similar.length === 0) {
+    return `Nessa combinação${recorte} ainda não tem anúncio agora. ${wait}`;
+  }
+  return `Nessa combinação${recorte} ainda não tem anúncio agora. Na mesma ideia, olha o que tem no estoque. ${wait}`;
 }
 
 export function looksLikeMissingModelReply(reply: string): boolean {
@@ -1170,11 +1442,11 @@ export function missingModelReply(
   stock: ChatVehicleRecord[],
 ): string {
   const similar = findSimilarVehicles(mensagem, stock, 3);
+  const wait = `o consultor anota e te avisa no WhatsApp quando chegar: ${chatWaitlistWhatsAppUrl(mensagem)}`;
   if (similar.length === 0) {
-    return `Esse modelo não está na lista atual. Posso olhar outro na mesma ideia, ou o consultor anota e te avisa no WhatsApp quando chegar: ${CHAT_WHATSAPP_URL}`;
+    return `Esse modelo não está na lista atual. Posso olhar outro na mesma ideia, ou ${wait}`;
   }
-  const lines = similar.map((vehicle) => formatVehicleLine(vehicle));
-  return `Esse modelo não está na lista atual. Na mesma ideia, agora no estoque tem:\n${lines.join("\n")}\n\nSe quiser, o consultor anota o modelo e te avisa no WhatsApp quando chegar: ${CHAT_WHATSAPP_URL}`;
+  return `Esse modelo não está na lista atual. Na mesma ideia, olha o que tem no estoque — ou ${wait}`;
 }
 
 export function enrichMissingModelReply(
@@ -1189,7 +1461,7 @@ export function enrichMissingModelReply(
   if (similar.length === 0) {
     if (!/whatsapp|wa\.me/i.test(reply)) {
       return {
-        reply: `${reply.trim()} O consultor anota e te avisa no WhatsApp quando chegar: ${CHAT_WHATSAPP_URL}`,
+        reply: `${reply.trim()} O consultor anota e te avisa no WhatsApp quando chegar: ${chatWaitlistWhatsAppUrl(mensagem)}`,
         vehicles: [],
       };
     }
@@ -1199,11 +1471,10 @@ export function enrichMissingModelReply(
     normalize(reply).includes(normalize(vehicle.model)),
   );
   if (alreadyLists) return { reply, vehicles: similar };
-  const lines = similar.map((vehicle) => formatVehicleLine(vehicle));
-  return {
-    reply: `${reply.trim()}\n\nNa mesma ideia, agora no estoque tem:\n${lines.join("\n")}`,
-    vehicles: similar,
-  };
+  const wait = /whatsapp|wa\.me/i.test(reply)
+    ? reply
+    : `${reply.trim()} O consultor anota e te avisa no WhatsApp quando chegar: ${chatWaitlistWhatsAppUrl(mensagem)}`;
+  return { reply: wait, vehicles: similar };
 }
 
 export const CHAT_FINANCE_REPLY =
@@ -1220,6 +1491,12 @@ export const CHAT_WARRANTY_REPLY =
 
 export const CHAT_DOCS_REPLY =
   `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_COMPARE_ASK_REPLY =
+  "Me diz os dois modelos que você quer comparar — por exemplo HB20 ou Onix — que eu cruzo o estoque agora, com preço e km reais.";
+
+export const CHAT_AVAILABILITY_ASK_REPLY =
+  "Me diz o modelo que você quer conferir — eu olho no estoque agora e te falo se ainda tem.";
 
 export function formatTransmissionCompareReply(
   stock: ChatVehicleRecord[],
@@ -1309,6 +1586,32 @@ export function chatPolicyShortcut(
   }
   if (asksAboutTransmissionCompare(mensagem)) return "gear";
   return null;
+}
+
+const NAMED_STOCK_SEEK =
+  /\b(tem|vende|procuro|quero|ainda|estoque|chegou|modelo)\b/;
+const POLICY_SEEK =
+  /\b(financi|parcela|cartao|troca|garantia|document|horario|whatsapp|atendimento|transferenc|despachante|detran)\b/;
+
+/** “tem civic?” sem civic no estoque — waitlist, sem despejar o inventário. */
+export function seeksMissingNamedModel(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+) {
+  const folded = normalize(mensagem);
+  if (POLICY_SEEK.test(folded)) return false;
+  if (chatPolicyShortcut(mensagem)) return false;
+  if (asksAboutTransmissionCompare(mensagem)) return false;
+  if (parsePriceLimit(mensagem) != null && waitlistInterestBits(mensagem).length === 0) {
+    return false;
+  }
+  const tokens = waitlistInterestBits(mensagem);
+  if (tokens.length === 0) return false;
+  if (!NAMED_STOCK_SEEK.test(folded)) return false;
+  if (singleMentionedModelPool(stock, mensagem)) return false;
+  if (matchFocusedVehicle(mensagem, stock)) return false;
+  if (matchInterestVehicle(mensagem, stock, 2)) return false;
+  return true;
 }
 
 /** Resposta da loja sem Gemini — só dados reais do estoque e política fixa. */

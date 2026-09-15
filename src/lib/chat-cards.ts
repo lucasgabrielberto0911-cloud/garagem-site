@@ -140,7 +140,7 @@ export function stripChatVehicleListingLines(
     .trim();
 }
 
-const CARD_INTRO_MAX = 1200;
+const CARD_INTRO_MAX = 720;
 const CARD_FILLER =
   /tem o mais em conta|o de menor km|automatico se houver|se quiser esticar|logo acima|qual perfil te serve|qual desses|hatch ou sedan/;
 
@@ -522,7 +522,8 @@ export function chatVehiclePrice(vehicle: ChatVehicleCard) {
 }
 
 export function chatVehicleVersion(vehicle: ChatVehicleCard) {
-  return vehicle.version ? formatModelName(vehicle.version) : null;
+  const version = shortVersion(vehicle.version, vehicle.model);
+  return version || null;
 }
 
 export function chatVehicleLabel(vehicle: ChatVehicleCard) {

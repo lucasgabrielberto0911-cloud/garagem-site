@@ -23,7 +23,8 @@ export function looksTruncated(
   const trimmed = text.trim();
   if (!trimmed) return true;
   if (/https?:\/\/\S+$/i.test(trimmed)) return false;
-  if (/R\$\s*[\d.]+$/.test(trimmed)) return false;
+  if (/R\$\s*\.?$/.test(trimmed)) return true;
+  if (/R\$\s*\d[\d.]*$/.test(trimmed)) return false;
   if (/\d[\d.]*\s*km$/i.test(trimmed)) return false;
   if (/[.!?]["”']?$/.test(trimmed)) return false;
   // Frase sem ponto/!/? — inclusive cortes de produção ("Para o Fox com motor 1.6 flex").
@@ -37,6 +38,7 @@ export function streamTextNeedsRegen(
 ) {
   const trimmed = text.trim();
   if (!trimmed) return true;
+  if (/R\$\s*\.?$/.test(trimmed)) return true;
   if (looksTruncated(trimmed, finishReason) && trimmed.length < 96) return true;
   return false;
 }
@@ -67,8 +69,13 @@ export function mergeContinuation(partial: string, extra: string): string {
   return `${head}${joiner}${tail}`.replace(/\s+/g, " ").trim();
 }
 
+/** “Fox 1.6 1.6 flex” / “FOX 1.6 1.6” — cilindrada colada duas vezes. */
+export function stripRepeatedDisplacement(text: string): string {
+  return text.replace(/\b(\d+[.,]\d+)\s+\1\b/gi, "$1");
+}
+
 export function polishPortuguese(text: string): string {
-  return text
+  return stripRepeatedDisplacement(text)
     .replace(/\bpelo loja\b/gi, "pela loja")
     .replace(/\bdo loja\b/gi, "da loja")
     .replace(/\bno loja\b/gi, "na loja")
@@ -222,6 +229,8 @@ export function closeTruncatedReply(text: string): string {
   const trimmed = trimToLastCompleteSentence(text);
   if (!looksTruncated(trimmed)) return trimmed;
   if (!trimmed) return text.trim();
+  // "limite de R$" / "limite de R$." — ponto no fim não completa o valor.
+  if (/R\$\s*\.?$/.test(trimmed)) return trimmed.replace(/\s*\.$/, "").trim();
   if (/[.!?]$/.test(trimmed)) return trimmed;
   return `${trimmed}.`;
 }
@@ -233,6 +242,7 @@ export function applyChatReplyGuards(
 ): string {
   let next = stripInventedAccessories(text, vehicles);
   next = polishPortuguese(next);
+  next = stripRepeatedDisplacement(next);
   next = ensureWarrantyCopy(next);
   if (opts.truncated || looksTruncated(next)) {
     next = closeTruncatedReply(next);

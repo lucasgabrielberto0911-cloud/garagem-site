@@ -5,6 +5,7 @@ import {
   drainJsonSseBuffer,
   drainSseBuffer,
   encodeSse,
+  finalChatStreamReply,
   parseJsonSseFrames,
   parseSseChunks,
   readChatStreamFrame,
@@ -85,5 +86,28 @@ test("catch-up do stream só completa o prefixo, sem duplicar resposta diferente
   assert.equal(
     catchUpStreamText("Ol", "Para o Fox 1.6 flex, a faixa típica de catálogo fica 9–12 km/l."),
     "",
+  );
+  assert.equal(
+    catchUpStreamText(
+      "Olha só: automáticos até o limite de R$",
+      "Olha só: automáticos até o limite de R$ 70.000 no estoque agora.",
+    ),
+    " 70.000 no estoque agora.",
+  );
+});
+
+test("done.reply completo substitui o corte em limite de R$", () => {
+  const full = "Olha só: automáticos até o limite de R$ 70.000 no estoque agora.";
+  assert.equal(
+    finalChatStreamReply("Olha só: automáticos até o limite de R$", full),
+    full,
+  );
+  assert.equal(
+    finalChatStreamReply("Olha só: automáticos até o limite de R$.", full),
+    full,
+  );
+  assert.doesNotMatch(
+    finalChatStreamReply("Olha só: automáticos até o limite de R$", full),
+    /R\$$/,
   );
 });

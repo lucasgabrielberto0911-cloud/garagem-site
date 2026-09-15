@@ -41,7 +41,7 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /não pergunte hatch/);
   assert.match(CHAT_SYSTEM_PROMPT, /faixa típica de catálogo/);
   assert.match(CHAT_SYSTEM_PROMPT, /Fox 1\.6 1\.6/);
-  assert.match(CHAT_SYSTEM_PROMPT, /2 a 4 frases comparando/);
+  assert.match(CHAT_SYSTEM_PROMPT, /mais em conta se o preço for menor/);
   assert.match(CHAT_SYSTEM_PROMPT, /2 a 4 frases curtas/);
   assert.match(CHAT_SYSTEM_PROMPT, /Não comece com/);
   assert.match(CHAT_SYSTEM_PROMPT, /frase falada de recorte/);
@@ -93,23 +93,26 @@ test("estoque real entra no prompt; carro fora da lista não é inventado", () =
   assert.match(prompt, /Hyundai HB20 evolution 1\.0 2022/);
   assert.match(prompt, /R\$ 64\.900/);
   assert.match(prompt, /68\.450 km/);
-  const stockBlock = formatStockForPrompt([
-    {
-      brand: "Hyundai",
-      model: "HB20",
-      version: "evolution 1.0",
-      year: 2022,
-      km: 68450,
-      price: 64900,
-      color: "Prata",
-      transmission: "Manual",
-      fuel: "Flex",
-      engine: "1.0 12V",
-      doors: 4,
-      accessories: ["Ar condicionado", "Direção hidráulica"],
-    },
-  ]);
-  assert.match(stockBlock, /motor 1\.0 12V/);
+  const stockBlock = formatStockForPrompt(
+    [
+      {
+        brand: "Hyundai",
+        model: "HB20",
+        version: "evolution 1.0",
+        year: 2022,
+        km: 68450,
+        price: 64900,
+        color: "Prata",
+        transmission: "Manual",
+        fuel: "Flex",
+        engine: "1.0 12V",
+        doors: 4,
+        accessories: ["Ar condicionado", "Direção hidráulica"],
+      },
+    ],
+    { consumption: true, equipment: true },
+  );
+  assert.match(stockBlock, /motor 1\.0 12V|evolution 1\.0/);
   assert.match(stockBlock, /4 portas/);
   assert.match(stockBlock, /Ar condicionado/);
   assert.match(stockBlock, /consumo típico|faixa típica de catálogo/);
@@ -117,6 +120,26 @@ test("estoque real entra no prompt; carro fora da lista não é inventado", () =
   assert.match(stockBlock, /não foi medido/);
   assert.doesNotMatch(stockBlock, /fipe/i);
   assert.doesNotMatch(formatStockForPrompt([]), /R\$/);
+  const foxLine = formatStockForPrompt(
+    [
+      {
+        brand: "Volkswagen",
+        model: "Fox 1.6",
+        version: "Trend 1.6",
+        year: 2014,
+        km: 98000,
+        price: 38900,
+        color: "Prata",
+        transmission: "Manual",
+        fuel: "Flex",
+        engine: "1.6",
+        category: "carro",
+      },
+    ],
+    { consumption: true },
+  );
+  assert.match(foxLine, /Fox 1\.6/);
+  assert.doesNotMatch(foxLine, /1\.6 1\.6|motor 1\.6/);
 });
 
 test("baratinho entra no filtro do prompt sem inventar faixa numérica", () => {

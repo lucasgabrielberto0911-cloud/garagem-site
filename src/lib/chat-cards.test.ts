@@ -6,7 +6,9 @@ import {
   chatStockExploreLabel,
   chatVehicleGear,
   chatVehicleKm,
+  chatVehicleLabel,
   chatVehicleMeta,
+  chatVehicleVersion,
   isBareBudgetQuery,
   isChatVehicleListingLine,
   looksLikeLooseVehicleTitle,
@@ -105,6 +107,29 @@ test("casa a lista do assistente com foto, preço, ano, cor, km e link do anúnc
   assert.equal(card.transmission, "Manual");
   assert.match(card.href, /^\/estoque\/honda-biz-125/);
   assert.equal(card.href.includes(biz.id), true);
+});
+
+test("card do Fox 1.6 não mostra BLUEMOTION 1.6 duplicado", () => {
+  const fox = toChatVehicleCard({
+    id: "cfox16bluemotion000000001",
+    brand: "Volkswagen",
+    model: "FOX 1.6",
+    version: "FOX 1.6 BLUEMOTION 1.6 GII",
+    yearModel: 2014,
+    km: 98000,
+    price: 38900,
+    color: "Prata",
+    transmission: "Manual",
+    fuel: "Flex",
+    category: "carro",
+  });
+  const version = chatVehicleVersion(fox);
+  const label = chatVehicleLabel(fox);
+  assert.equal(fox.title, "Volkswagen Fox 1.6");
+  assert.equal(version, "Bluemotion GII");
+  assert.doesNotMatch(version ?? "", /1\.6/);
+  assert.doesNotMatch(label, /1\.6.*1\.6/);
+  assert.doesNotMatch(`${fox.title} ${version}`, /FOX 1\.6 BLUEMOTION 1\.6/i);
 });
 
 test("tira título solto quando o mini-anúncio já cobre o carro", () => {
