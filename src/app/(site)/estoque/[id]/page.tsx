@@ -206,6 +206,7 @@ export default async function VehicleDetailPage({
 
   const hasDetails =
     Boolean(vehicle.description) || accessories.length > 0;
+  const listedAgo = formatListedAgo(vehicle.createdAt);
 
   return (
     <div className="py-6 pb-sticky-bar-safe sm:py-8 lg:py-10 lg:pb-10">
@@ -333,10 +334,8 @@ export default async function VehicleDetailPage({
                 )}
               </p>
               {!sold ? <VehicleTrustNotes /> : null}
-              {vehicle.createdAt ? (
-                <p className="text-xs text-muted">
-                  {formatListedAgo(vehicle.createdAt)}
-                </p>
+              {listedAgo ? (
+                <p className="text-xs text-muted">{listedAgo}</p>
               ) : null}
               {vehicle.updatedAt ? (
                 <p className="text-xs text-muted">

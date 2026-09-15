@@ -217,11 +217,13 @@ export function formatPlateDisplay(value: string) {
 
 const DAY_MS = 86_400_000;
 
-/** Texto público a partir do createdAt real do anúncio. */
-export function formatListedAgo(createdAt: Date) {
+/** Texto público a partir do createdAt real do anúncio. Aceita Date ou ISO. */
+export function formatListedAgo(createdAt: Date | string) {
+  const date = createdAt instanceof Date ? createdAt : new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return "";
   const days = Math.max(
     0,
-    Math.floor((Date.now() - createdAt.getTime()) / DAY_MS),
+    Math.floor((Date.now() - date.getTime()) / DAY_MS),
   );
   if (days <= 0) return "Anunciado hoje";
   if (days === 1) return "Anunciado há 1 dia";
