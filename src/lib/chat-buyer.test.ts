@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { applyChatReplyGuards } from "./chat-polish";
 import { chatTurnMayCreateLead } from "./chat-guard";
 import {
+  CHAT_AVAILABILITY_ASK_REPLY,
   CHAT_COMPARE_ASK_REPLY,
   CHAT_PROMPT_STOCK_LIMIT,
   asksAboutAvailability,
@@ -187,6 +188,31 @@ test("HB20 vs Onix compara só os dois e deixa o Compass de fora", async () => {
   assert.doesNotMatch(result.reply, /BIZ|Civic/);
 });
 
+test("HB20 vs Onix fora do estoque vira waitlist, não pede os dois modelos", async () => {
+  const result = await runChatTurn({
+    mensagem: "HB20 vs Onix",
+    historico: [],
+    stock: [compass, biz],
+    generate: blockedGenerate(),
+  });
+  assert.equal(result.meta?.policy, "waitlist");
+  assert.doesNotMatch(result.reply, /Me diz os dois modelos/);
+  assert.match(result.reply, /não está na lista atual/i);
+  assert.match(decodeURIComponent(result.reply), /hb20|onix/i);
+});
+
+test("Esse carro ainda tem? sem ficha pede o modelo, não waitlist de carro", async () => {
+  const result = await runChatTurn({
+    mensagem: "Esse carro ainda tem?",
+    historico: [],
+    stock: [],
+    generate: blockedGenerate(),
+  });
+  assert.equal(result.meta?.policy, "availability-ask");
+  assert.equal(result.reply, CHAT_AVAILABILITY_ASK_REPLY);
+  assert.doesNotMatch(result.reply, /combinação \(carro\)/);
+});
+
 test("qual o melhor? sem modelo não despeja o estoque", async () => {
   const result = await runChatTurn({
     mensagem: "qual o melhor?",
@@ -210,6 +236,18 @@ test("ainda tem civic? fora do estoque vira waitlist, não inventa", async () =>
   assert.match(result.reply, /não está na lista atual/i);
   assert.match(decodeURIComponent(result.reply), /civic/i);
   assert.doesNotMatch(result.reply, /Compass/);
+});
+
+test("ainda tem civic? com estoque vazio não diz que já saiu", async () => {
+  const result = await runChatTurn({
+    mensagem: "ainda tem civic?",
+    historico: [],
+    stock: [],
+    generate: blockedGenerate(),
+  });
+  assert.equal(result.meta?.policy, "waitlist");
+  assert.doesNotMatch(result.reply, /já saiu do estoque/);
+  assert.match(decodeURIComponent(result.reply), /civic/i);
 });
 
 test("tem civic? fora do estoque não chama Gemini", async () => {

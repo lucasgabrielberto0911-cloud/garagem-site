@@ -867,7 +867,9 @@ export function asksToCompareModels(mensagem: string): boolean {
 /** “qual o melhor?” / “compara” sem dois modelos — não despeja o estoque. */
 export function asksWhichTwoToCompare(mensagem: string): boolean {
   const folded = normalize(mensagem);
-  return /\b(compar|vs|versus|qual dos dois|qual o melhor)\b/.test(folded);
+  if (/\b(vs|versus)\b/.test(folded) || /\sou\s/.test(folded)) return false;
+  if (waitlistInterestBits(mensagem).length >= 2) return false;
+  return /\b(compar|qual dos dois|qual o melhor)\b/.test(folded);
 }
 
 export function asksAboutListedFacts(mensagem: string): boolean {
@@ -897,8 +899,11 @@ export function formatAvailabilityReply(
   vehicle: ChatVehicleRecord | null | undefined,
   opts: { sold?: boolean } = {},
 ) {
-  if (opts.sold || !vehicle) {
+  if (opts.sold) {
     return `Essa unidade já saiu do estoque. Se quiser, o consultor procura outra parecida e te avisa no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  }
+  if (!vehicle) {
+    return CHAT_AVAILABILITY_ASK_REPLY;
   }
   const named = talkName(vehicle);
   return `Sim — ${named.labeled} ${vehicle.yearModel} ainda está no estoque (${formatChatPrice(vehicle.price)}). Confirma no WhatsApp antes de fechar, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
@@ -921,7 +926,9 @@ export function isFocusedVehicleFactQuestion(
     ? singleMentionedModelPool(stock, mensagem)
     : null;
   if (parsePriceLimit(mensagem) != null && !mentioned) return false;
-  if (stock.length === 0) return consumption || equipment || km || availability;
+  if (stock.length === 0) {
+    return Boolean(preferredVehicleId && availability);
+  }
   if (availability && preferredVehicleId && !mentioned) return true;
   return matchFocusedVehicle(mensagem, stock, preferredVehicleId) != null;
 }
@@ -1375,6 +1382,13 @@ export function emptyFilterReply(
   stock: ChatVehicleRecord[],
 ): string | null {
   if (!hasChatStockFilter(mensagem)) return null;
+  if (
+    asksAboutAvailability(mensagem) &&
+    parseTransmissionFilter(mensagem) == null &&
+    parsePriceLimit(mensagem) == null
+  ) {
+    return null;
+  }
   if (matchedChatStock(mensagem, stock).length > 0) return null;
   const query = formatChatWaitlistQuery(mensagem);
   const recorte = query ? ` (${query})` : "";

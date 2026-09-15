@@ -290,6 +290,22 @@ export async function runChatTurn(input: {
       cards: false,
     });
   }
+  if (
+    asksToCompareModels(input.mensagem) &&
+    compared.length < 2 &&
+    !asksWhichTwoToCompare(input.mensagem) &&
+    !asksAboutConsumption(input.mensagem) &&
+    !asksAboutEquipment(input.mensagem)
+  ) {
+    const reply = missingModelReply(input.mensagem, input.stock);
+    const similar = similarAfterEmptyFilter(input.mensagem, input.stock, 3);
+    emit(reply);
+    return finish(reply, false, {
+      policy: "waitlist",
+      forcedVehicles: similar,
+      cards: similar.length > 0,
+    });
+  }
   if (asksAboutAvailability(input.mensagem) && !mixedPrice) {
     if (
       isFocusedVehicleFactQuestion(
