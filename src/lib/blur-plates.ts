@@ -292,6 +292,48 @@ export function textLooksLikePlate(text: string | undefined) {
   return extractPlateCandidate(text) !== null;
 }
 
+/**
+ * Placa preta promocional de loja (ex.: Forte Automóveis no para-choque).
+ * Lista curta e explícita — não casa “forte” no meio de outra palavra.
+ */
+const DEALER_PLATE_BRANDS = ["FORTE", "FORTEAUTOMOVEIS", "FORTEAUTO"] as const;
+const DEALER_PLATE_WORDS = new Set(["FORTE", "AUTOMOVEIS"]);
+const DEALER_PAD_X = 0.4;
+const DEALER_PAD_Y_TOP = 0.35;
+const DEALER_PAD_Y_BOTTOM = 0.8;
+const DEALER_EXTRA_LEFT = 0.42;
+const DEALER_DARK_LUMA = 68;
+const DEALER_LETTER_GAP = 56;
+
+function foldLatinUpper(text: string) {
+  return text.normalize("NFD").replace(/\p{M}/gu, "").toUpperCase();
+}
+
+function compactDealerText(text: string) {
+  return foldLatinUpper(text).replace(/[^A-Z0-9]/g, "").replace(/0/g, "O");
+}
+
+function dealerWordsFrom(text: string) {
+  return foldLatinUpper(text)
+    .replace(/0/g, "O")
+    .split(/[^A-Z]+/)
+    .filter((part) => part.length >= 4);
+}
+
+export function textLooksLikeDealerPlate(text: string | undefined) {
+  if (!text) return false;
+  const compact = compactDealerText(text);
+  if (!compact) return false;
+  for (let index = 0; index < DEALER_PLATE_BRANDS.length; index += 1) {
+    if (compact === DEALER_PLATE_BRANDS[index]) return true;
+  }
+  const words = dealerWordsFrom(text);
+  for (let index = 0; index < words.length; index += 1) {
+    if (DEALER_PLATE_WORDS.has(words[index])) return true;
+  }
+  return false;
+}
+
 function isTightPlateText(text: string) {
   return textLooksLikePlate(text);
 }
@@ -544,7 +586,13 @@ function piecesFromDetections(
     const confidence = item.Confidence ?? 0;
     if (item.Type === "WORD") {
       if (confidence < MIN_PLATE_TEXT_CONFIDENCE) continue;
-      if (confidence < MIN_WORD_CONFIDENCE && !textLooksLikePlate(text)) continue;
+      if (
+        confidence < MIN_WORD_CONFIDENCE &&
+        !textLooksLikePlate(text) &&
+        !textLooksLikeDealerPlate(text)
+      ) {
+        continue;
+      }
     }
     const geometry = item.Geometry?.BoundingBox;
     if (!geometry) continue;
@@ -628,6 +676,379 @@ export function plateBoxesFromText(
   imageHeight: number,
 ) {
   return boxesFromPieces(pieces, imageWidth, imageHeight);
+}
+
+function isPlausibleDealerBox(
+  box: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+) {
+  if (box.width < 12 || box.height < 6) return false;
+  const areaRatio = boxArea(box) / (imageWidth * imageHeight);
+  if (areaRatio > 0.08) return false;
+  if (box.width > imageWidth * 0.4) return false;
+  if (box.height > imageHeight * 0.18) return false;
+  return true;
+}
+
+function padDealerBox(
+  box: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox {
+  const padX = Math.max(8, Math.round(box.width * DEALER_PAD_X));
+  const padTop = Math.max(4, Math.round(box.height * DEALER_PAD_Y_TOP));
+  const padBottom = Math.max(8, Math.round(box.height * DEALER_PAD_Y_BOTTOM));
+  const extraLeft = Math.max(10, Math.round(box.width * DEALER_EXTRA_LEFT));
+  const left = Math.max(0, box.left - padX - extraLeft);
+  const top = Math.max(0, box.top - padTop);
+  const right = Math.min(imageWidth, box.left + box.width + padX);
+  const bottom = Math.min(imageHeight, box.top + box.height + padBottom);
+  return { left, top, width: right - left, height: bottom - top };
+}
+
+function mergeUnionBoxes(boxes: PixelBox[]): PixelBox[] {
+  if (boxes.length <= 1) return boxes;
+
+  const sorted = [...boxes].sort(
+    (a, b) => a.left - b.left || a.top - b.top || boxArea(a) - boxArea(b),
+  );
+  const merged: PixelBox[] = [];
+
+  for (const box of sorted) {
+    const overlapIndex = merged.findIndex((item) => boxesOverlap(item, box));
+    if (overlapIndex === -1) {
+      merged.push({ ...box });
+      continue;
+    }
+    merged[overlapIndex] = unionBox([merged[overlapIndex], box]);
+  }
+
+  return merged;
+}
+
+function dealerBoxesFromPieces(
+  pieces: TextPiece[],
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox[] {
+  const hits = pieces.filter((piece) => textLooksLikeDealerPlate(piece.text));
+  if (hits.length === 0) return [];
+
+  const boxes: PixelBox[] = [];
+  const used = new Set<number>();
+
+  for (let i = 0; i < hits.length; i += 1) {
+    if (used.has(i)) continue;
+    const group = [hits[i]];
+    used.add(i);
+    for (let j = i + 1; j < hits.length; j += 1) {
+      if (used.has(j)) continue;
+      if (group.some((item) => areNearby(item.box, hits[j].box))) {
+        group.push(hits[j]);
+        used.add(j);
+      }
+    }
+    const united = unionBox(group.map((item) => item.box));
+    if (!isPlausibleDealerBox(united, imageWidth, imageHeight)) continue;
+    boxes.push(padDealerBox(united, imageWidth, imageHeight));
+  }
+
+  return mergeUnionBoxes(boxes);
+}
+
+export function dealerPlateBoxesFromText(
+  pieces: TextPiece[],
+  imageWidth: number,
+  imageHeight: number,
+) {
+  return dealerBoxesFromPieces(pieces, imageWidth, imageHeight);
+}
+
+type DealerRun = { left: number; right: number; y: number };
+
+function mergeRowRuns(runs: DealerRun[], gap: number): DealerRun[] {
+  if (runs.length <= 1) return runs;
+  const sorted = [...runs].sort((a, b) => a.left - b.left);
+  const merged: DealerRun[] = [{ ...sorted[0] }];
+  for (let index = 1; index < sorted.length; index += 1) {
+    const current = sorted[index];
+    const prev = merged[merged.length - 1];
+    if (current.left - prev.right - 1 <= gap) {
+      prev.right = Math.max(prev.right, current.right);
+    } else {
+      merged.push({ ...current });
+    }
+  }
+  return merged;
+}
+
+function darkRunsOnRow(
+  luma: Float32Array,
+  width: number,
+  y: number,
+  minW: number,
+  maxW: number,
+): DealerRun[] {
+  const raw: DealerRun[] = [];
+  let start = -1;
+  const row = y * width;
+  for (let x = 0; x < width; x += 1) {
+    if (luma[row + x] < DEALER_DARK_LUMA) {
+      if (start < 0) start = x;
+    } else if (start >= 0) {
+      raw.push({ left: start, right: x - 1, y });
+      start = -1;
+    }
+  }
+  if (start >= 0) raw.push({ left: start, right: width - 1, y });
+
+  const merged = mergeRowRuns(raw, DEALER_LETTER_GAP);
+  return merged.filter((run) => {
+    const runW = run.right - run.left + 1;
+    return runW >= minW && runW <= maxW;
+  });
+}
+
+function clusterDealerRuns(runs: DealerRun[]): DealerRun[][] {
+  if (runs.length === 0) return [];
+  const sorted = [...runs].sort((a, b) => a.y - b.y || a.left - b.left);
+  const clusters: DealerRun[][] = [];
+
+  for (let index = 0; index < sorted.length; index += 1) {
+    const run = sorted[index];
+    let placed = false;
+    for (let c = 0; c < clusters.length; c += 1) {
+      const cluster = clusters[c];
+      const last = cluster[cluster.length - 1];
+      const gapY = run.y - last.y;
+      if (gapY < 0 || gapY > 3) continue;
+      const overlap =
+        Math.min(run.right, last.right) - Math.max(run.left, last.left) + 1;
+      const minW = Math.min(run.right - run.left + 1, last.right - last.left + 1);
+      if (overlap >= minW * 0.35) {
+        const currentLeft = Math.min(...cluster.map((item) => item.left));
+        const currentRight = Math.max(...cluster.map((item) => item.right));
+        const currentW = currentRight - currentLeft + 1;
+        const nextW =
+          Math.max(currentRight, run.right) - Math.min(currentLeft, run.left) + 1;
+        if (currentW >= 40 && nextW > currentW * 1.4) {
+          continue;
+        }
+        cluster.push(run);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) clusters.push([run]);
+  }
+
+  return clusters;
+}
+
+function scoreBlackDealerPlate(
+  data: Buffer,
+  width: number,
+  height: number,
+  channels: number,
+  box: PixelBox,
+): number {
+  if (box.width < 28 || box.height < 16) return 0;
+  const aspect = box.width / box.height;
+  if (aspect < 1.85 || aspect > 6.0) return 0;
+  if (box.left < 0 || box.top < 0) return 0;
+  if (box.left + box.width > width || box.top + box.height > height) return 0;
+
+  let dark = 0;
+  let black = 0;
+  let light = 0;
+  let white = 0;
+  let blueish = 0;
+  let sum = 0;
+  let sumSq = 0;
+  let count = 0;
+
+  for (let y = box.top; y < box.top + box.height; y += 1) {
+    for (let x = box.left; x < box.left + box.width; x += 1) {
+      const offset = (y * width + x) * channels;
+      const r = data[offset];
+      const g = data[offset + 1];
+      const b = data[offset + 2];
+      const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+      sum += luma;
+      sumSq += luma * luma;
+      count += 1;
+      if (luma < DEALER_DARK_LUMA) dark += 1;
+      if (luma < 48) black += 1;
+      if (luma > 165) light += 1;
+      if (luma > 200) white += 1;
+      if (isMercosulBlue(r, g, b)) blueish += 1;
+    }
+  }
+  if (count === 0) return 0;
+
+  const darkRatio = dark / count;
+  const blackRatio = black / count;
+  const lightRatio = light / count;
+  const whiteRatio = white / count;
+  const blueRatio = blueish / count;
+  const mean = sum / count;
+  const variance = Math.max(0, sumSq / count - mean * mean);
+  const stdev = Math.sqrt(variance);
+
+  // Placa Mercosul é branca; faixa azul sozinha não tem texto branco suficiente
+  // no mesmo retângulo escuro. Placa preta da loja é bimodal (preto + branco).
+  if (darkRatio < 0.22 || darkRatio > 0.88) return 0;
+  if (blackRatio < 0.2) return 0;
+  if (lightRatio < 0.08 || whiteRatio < 0.1) return 0;
+  if (blueRatio > 0.14) return 0;
+  if (stdev < 28) return 0;
+
+  let ring = 0;
+  let ringCount = 0;
+  const pad = 3;
+  for (let y = Math.max(0, box.top - pad); y < Math.min(height, box.top + box.height + pad); y += 1) {
+    for (let x = Math.max(0, box.left - pad); x < Math.min(width, box.left + box.width + pad); x += 1) {
+      const inside =
+        x >= box.left &&
+        x < box.left + box.width &&
+        y >= box.top &&
+        y < box.top + box.height;
+      if (inside) continue;
+      const offset = (y * width + x) * channels;
+      ring += 0.299 * data[offset] + 0.587 * data[offset + 1] + 0.114 * data[offset + 2];
+      ringCount += 1;
+    }
+  }
+  if (ringCount > 0) {
+    const ringMean = ring / ringCount;
+    // Isolada no para-choque claro — rejeita grade/pneu/saia preta.
+    if (ringMean < mean + 28) return 0;
+  }
+
+  return stdev * (0.35 + lightRatio) * (0.4 + darkRatio);
+}
+
+/**
+ * Acha retângulos pretos de placa promocional (fundo escuro + texto claro)
+ * numa região — caminho extra, independente da faixa azul Mercosul.
+ */
+export async function findBlackDealerPlateBoxes(
+  image: Buffer,
+  region: PixelBox,
+): Promise<PixelBox[]> {
+  let data: Buffer;
+  let width = 0;
+  let height = 0;
+  let channels = 0;
+  try {
+    const extracted = await sharp(image, { failOn: "none" })
+      .extract({
+        left: region.left,
+        top: region.top,
+        width: region.width,
+        height: region.height,
+      })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    data = extracted.data;
+    width = extracted.info.width;
+    height = extracted.info.height;
+    channels = extracted.info.channels;
+  } catch {
+    return [];
+  }
+
+  const luma = new Float32Array(width * height);
+  for (let index = 0; index < width * height; index += 1) {
+    const offset = index * channels;
+    luma[index] =
+      0.299 * data[offset] + 0.587 * data[offset + 1] + 0.114 * data[offset + 2];
+  }
+
+  // Largura de placa, não de saia/grade. Ombros claros por linha falham na
+  // Forte em 3/4 (letras brancas grandes) — o score do retângulo filtra.
+  const minW = Math.max(24, Math.round(width * 0.03));
+  const maxW = Math.max(110, Math.min(210, Math.round(width * 0.32)));
+  const runs: DealerRun[] = [];
+  for (let y = 0; y < height; y += 1) {
+    const rowRuns = darkRunsOnRow(luma, width, y, minW, maxW);
+    runs.push(...rowRuns);
+  }
+
+  const clusters = clusterDealerRuns(runs);
+  const boxes: PixelBox[] = [];
+  for (let index = 0; index < clusters.length; index += 1) {
+    const cluster = clusters[index];
+    if (cluster.length < 6) continue;
+    const left = Math.min(...cluster.map((run) => run.left));
+    const right = Math.max(...cluster.map((run) => run.right));
+    const top = cluster[0].y;
+    const bottom = cluster[cluster.length - 1].y;
+    const local: PixelBox = {
+      left,
+      top,
+      width: right - left + 1,
+      height: bottom - top + 1,
+    };
+    if (scoreBlackDealerPlate(data, width, height, channels, local) <= 0) {
+      continue;
+    }
+    boxes.push({
+      left: region.left + local.left,
+      top: region.top + local.top,
+      width: local.width,
+      height: local.height,
+    });
+  }
+
+  return mergeUnionBoxes(boxes);
+}
+
+function regionAroundBox(
+  box: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox {
+  const width = Math.min(imageWidth, Math.max(96, Math.round(box.width * 3.2)));
+  const height = Math.min(imageHeight, Math.max(56, Math.round(box.height * 3.2)));
+  const cx = box.left + box.width / 2;
+  const cy = box.top + box.height / 2;
+  const left = Math.max(0, Math.round(cx - width / 2));
+  const top = Math.max(0, Math.round(cy - height / 2));
+  return {
+    left: Math.min(left, Math.max(0, imageWidth - width)),
+    top: Math.min(top, Math.max(0, imageHeight - height)),
+    width: Math.min(width, imageWidth - Math.min(left, imageWidth - width)),
+    height: Math.min(height, imageHeight - Math.min(top, imageHeight - height)),
+  };
+}
+
+export async function dealerBoxesFromImage(
+  image: Buffer,
+  pieces: TextPiece[],
+  imageWidth: number,
+  imageHeight: number,
+): Promise<PixelBox[]> {
+  const fromText = dealerBoxesFromPieces(pieces, imageWidth, imageHeight);
+  // Só expande em volta do texto da loja. Varredura larga pega farol/pneu.
+  const regions: PixelBox[] = [];
+  for (let index = 0; index < fromText.length; index += 1) {
+    regions.push(regionAroundBox(fromText[index], imageWidth, imageHeight));
+  }
+
+  const visual: PixelBox[] = [];
+  for (let index = 0; index < regions.length; index += 1) {
+    const found = await findBlackDealerPlateBoxes(image, regions[index]);
+    visual.push(...found);
+  }
+
+  const paddedVisual = visual
+    .filter((box) => isPlausibleDealerBox(box, imageWidth, imageHeight))
+    .map((box) => padDealerBox(box, imageWidth, imageHeight));
+
+  return mergeUnionBoxes([...fromText, ...paddedVisual]);
 }
 
 /** Quando dois achados se sobrepõem, fica o menor — a linha gorda não engole a placa. */
@@ -1093,14 +1514,19 @@ async function looksLikeDarkDisplay(image: Buffer, box: PixelBox) {
   }
 }
 
-async function applyBlurRegions(image: Buffer, boxes: PixelBox[]): Promise<Buffer> {
+type BlurBox = PixelBox & { allowDark?: boolean };
+
+export async function applyBlurRegions(
+  image: Buffer,
+  boxes: BlurBox[],
+): Promise<Buffer> {
   if (boxes.length === 0) return image;
 
   const composites: { input: Buffer; left: number; top: number }[] = [];
 
   for (const box of boxes) {
     if (box.width < 4 || box.height < 4) continue;
-    if (await looksLikeDarkDisplay(image, box)) continue;
+    if (!box.allowDark && (await looksLikeDarkDisplay(image, box))) continue;
 
     const shortSide = Math.min(box.width, box.height);
     const smallPlate = shortSide < 40;
@@ -1162,6 +1588,8 @@ async function applyBlurRegions(image: Buffer, boxes: PixelBox[]): Promise<Buffe
 /**
  * Detecta placas BR via AWS Rekognition DetectText e aplica blur pequeno
  * só na faixa da placa, com borda suave para não tapar o carro.
+ * Também borra placa preta promocional de loja (Forte Automóveis), sem
+ * alterar o caminho da Mercosul.
  * Em qualquer falha, devolve o buffer original (nunca bloqueia o upload).
  */
 export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
@@ -1216,16 +1644,23 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
       plateBoxes.push(box);
     }
 
-    if (plateBoxes.length === 0) {
+    const dealerBoxes = await dealerBoxesFromImage(bytes, pieces, width, height);
+
+    const blurBoxes: BlurBox[] = [
+      ...plateBoxes.map((box) => ({ ...box, allowDark: false })),
+      ...dealerBoxes.map((box) => ({ ...box, allowDark: true })),
+    ];
+
+    if (blurBoxes.length === 0) {
       console.warn("[blur-plates] nenhuma placa reconhecida.");
       return input;
     }
 
     console.info(
-      `[blur-plates] ${plateBoxes.length} região(ões) de placa detectada(s) — aplicando blur sutil.`,
+      `[blur-plates] ${plateBoxes.length} placa(s) + ${dealerBoxes.length} placa(s) de loja — aplicando blur.`,
     );
 
-    return await applyBlurRegions(bytes, plateBoxes);
+    return await applyBlurRegions(bytes, blurBoxes);
   } catch (error) {
     console.error("[blur-plates] falha no Rekognition/blur — upload segue:", error);
     return input;
