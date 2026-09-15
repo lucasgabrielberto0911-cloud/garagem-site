@@ -176,10 +176,15 @@ test("WhatsApp leva preço, URL e acento — sem XS XS", () => {
     /https:\/\/www\.suagaragem\.net\/estoque\/toyota-etios-xs-2017-cmturwtw30000l804s8700mu4/,
   );
   assert.doesNotMatch(text, /Automatico/);
-  assert.match(text, /Sua Garagem/);
+  assert.match(
+    text,
+    /^Oi! Vi o Toyota Etios XS 1\.5 Flex 2017 por R\$\s*64\.900 no site da Garagem e quero saber mais\.\nhttps:\/\/www\.suagaragem\.net\/estoque\/toyota-etios-xs-2017-cmturwtw30000l804s8700mu4$/,
+  );
+  assert.doesNotMatch(text, /Sua Garagem/);
+  assert.doesNotMatch(text, /Tenho interesse/);
 });
 
-test("mensagem de financiamento cita análise e CET", () => {
+test("mensagem de financiamento pede simulação de parcelas", () => {
   const text = formatVehicleWhatsAppMessage({
     brand: "Honda",
     model: "HR-V",
@@ -190,8 +195,74 @@ test("mensagem de financiamento cita análise e CET", () => {
     intent: "finance",
     origin: "https://www.suagaragem.net",
   });
-  assert.match(text, /análise de crédito e CET/);
+  assert.match(text, /quero simular as parcelas/);
   assert.match(text, /R\$\s*89\.900/);
+  assert.doesNotMatch(text, /análise de crédito e CET/);
+  assert.doesNotMatch(text, /Sua Garagem/);
+});
+
+test("WhatsApp troca, vídeo e visita no tom natural", () => {
+  const base = {
+    brand: "Honda",
+    model: "HR-V",
+    version: "EX 1.8 FLEX ONE Automático",
+    yearModel: 2018,
+    price: 89900,
+    path: "/estoque/honda-hr-v-2018-abc",
+    origin: "https://www.suagaragem.net",
+  };
+  const trade = formatVehicleWhatsAppMessage({ ...base, intent: "trade" });
+  assert.match(trade, /quero avaliar uma troca/);
+  assert.match(trade, /por R\$\s*89\.900/);
+  assert.equal(
+    trade.split("\n")[1],
+    "https://www.suagaragem.net/estoque/honda-hr-v-2018-abc",
+  );
+
+  const video = formatVehicleWhatsAppMessage({ ...base, intent: "video" });
+  assert.match(video, /queria um vídeo dele/);
+
+  const visit = formatVehicleWhatsAppMessage({ ...base, intent: "visit" });
+  assert.match(visit, /quero ver ele de perto/);
+});
+
+test("WhatsApp sem preço não inventa “por R$” e sem path não manda URL", () => {
+  const noPrice = formatVehicleWhatsAppMessage({
+    brand: "Hyundai",
+    model: "HB20",
+    yearModel: 2022,
+    price: 0,
+    path: "/estoque/hyundai-hb20-2022",
+    origin: "https://www.suagaragem.net",
+  });
+  assert.match(
+    noPrice,
+    /^Oi! Vi o Hyundai HB20 2022 no site da Garagem e quero saber mais\./,
+  );
+  assert.doesNotMatch(noPrice, /por R\$/);
+
+  const noPath = formatVehicleWhatsAppMessage({
+    brand: "Hyundai",
+    model: "HB20",
+    yearModel: 2022,
+    price: 64900,
+  });
+  assert.match(
+    noPath,
+    /^Oi! Vi o Hyundai HB20 2022 por R\$\s*64\.900 no site da Garagem e quero saber mais\.$/,
+  );
+  assert.doesNotMatch(noPath, /https:\/\//);
+
+  const moto = formatVehicleWhatsAppMessage({
+    brand: "Honda",
+    model: "BIZ 125",
+    yearModel: 2023,
+    price: 14900,
+    isMoto: true,
+    intent: "video",
+  });
+  assert.match(moto, /Vi a Honda BIZ 125 2023 por R\$\s*14\.900/);
+  assert.match(moto, /queria um vídeo dela/);
 });
 
 test("acessórios duplicados colapsam (hífen / caixa)", () => {

@@ -12,7 +12,11 @@ import {
   formatNumberBR,
   formatVehicleLabel,
 } from "@/lib/format";
-import { site } from "@/lib/site";
+import {
+  formatCustomerVehicleWhatsAppText,
+  site,
+  type CustomerWhatsAppVehicleIntent,
+} from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export const MAX_DESTAQUE_BADGES = 3;
@@ -275,12 +279,7 @@ export function buildVehicleFullLabel(input: {
   return collapseWhitespace(`${title}${version ? ` ${version}` : ""} ${input.yearModel}`);
 }
 
-export type VehicleWhatsAppIntent =
-  | "interest"
-  | "video"
-  | "finance"
-  | "visit"
-  | "trade";
+export type VehicleWhatsAppIntent = CustomerWhatsAppVehicleIntent;
 
 export function formatVehicleWhatsAppMessage(input: {
   brand: string;
@@ -288,49 +287,33 @@ export function formatVehicleWhatsAppMessage(input: {
   version?: string | null;
   yearModel: number;
   transmission?: string | null;
-  price: number;
-  path: string;
+  price?: number | null;
+  path?: string;
   isMoto?: boolean;
   intent?: VehicleWhatsAppIntent;
+  /** Ignorado: o pré-preenchido usa o wordmark “Garagem”. */
   siteName?: string;
   origin?: string;
 }) {
-  const article = input.isMoto ? "na" : "no";
-  const article2 = input.isMoto ? "a" : "o";
-  const label = buildVehicleFullLabel(input);
-  const price = formatCurrencyBRL(input.price);
-  const origin = (input.origin ?? site.url).replace(/\/$/, "");
-  const url = `${origin}${input.path.startsWith("/") ? input.path : `/${input.path}`}`;
-  const intent = input.intent ?? "interest";
+  const label = collapseWhitespace(buildVehicleFullLabel(input));
+  const usableLabel = label && !/^\d{4}$/.test(label) ? label : "";
+  const hasPrice =
+    typeof input.price === "number" &&
+    Number.isFinite(input.price) &&
+    input.price > 0;
+  const line = formatCustomerVehicleWhatsAppText({
+    intent: input.intent ?? "interest",
+    label: usableLabel,
+    priceLabel: hasPrice ? formatCurrencyBRL(input.price) : "",
+    isMoto: input.isMoto,
+  });
 
-  const lines: string[] = [];
-  switch (intent) {
-    case "video":
-      lines.push(
-        `Olá! Podem me mandar um vídeo d${article2} ${label} (${price}) que está no site da ${input.siteName ?? site.name}?`,
-      );
-      break;
-    case "finance":
-      lines.push(
-        `Olá! Gostaria de opções de financiamento para ${article2} ${label} (${price}). O consultor calcula a parcela no WhatsApp — sem valor inventado no site. Sujeito a análise de crédito e CET.`,
-      );
-      break;
-    case "visit":
-      lines.push(
-        `Olá! Gostaria de agendar para ver ${article2} ${label} (${price}) de perto.`,
-      );
-      break;
-    case "trade":
-      lines.push(
-        `Olá! Tenho interesse ${article} ${label} (${price}) e gostaria de colocar meu veículo na troca.`,
-      );
-      break;
-    default:
-      lines.push(
-        `Olá! Tenho interesse ${article} ${label} (${price}) que vi no site da ${input.siteName ?? site.name}.`,
-      );
+  const lines = [line];
+  const path = (input.path ?? "").trim();
+  if (path) {
+    const origin = (input.origin ?? site.url).replace(/\/$/, "");
+    lines.push(`${origin}${path.startsWith("/") ? path : `/${path}`}`);
   }
-  lines.push(url);
   return lines.join("\n");
 }
 

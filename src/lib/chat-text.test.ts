@@ -40,6 +40,10 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   assert.equal(financeCta?.label, "Simular parcela");
   assert.match(financeCta?.benefit ?? "", /seu caso/);
   assert.match(financeCta?.href ?? "", /wa\.me\/5527996330706/);
+  assert.match(
+    decodeURIComponent(financeCta?.href ?? ""),
+    /Oi! Vi o site da Garagem e quero simular as parcelas\./,
+  );
 
   const trade =
     "Aceitamos carro ou moto na troca. Avaliação no WhatsApp: https://wa.me/5527996330706";
@@ -52,7 +56,7 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   });
   assert.equal(tradeVehicle?.label, "Avaliar meu usado");
   assert.match(decodeURIComponent(tradeVehicle?.href ?? ""), /Honda BIZ 125 EX 2023/);
-  assert.match(decodeURIComponent(tradeVehicle?.href ?? ""), /veículo na troca/);
+  assert.match(decodeURIComponent(tradeVehicle?.href ?? ""), /avaliar uma troca/);
 
   const financeVehicle = chatWhatsAppCta(finance, {
     label: "Honda BIZ 125 EX 2023",
@@ -86,6 +90,11 @@ test("CTA com preço e path manda R$ e o link do anúncio", () => {
   const decoded = decodeURIComponent(cta?.href ?? "");
   assert.match(decoded, /R\$/);
   assert.match(decoded, /estoque\/hyundai-hb20-2022-xyz/);
+  assert.match(
+    decoded,
+    /Oi! Vi o Hyundai HB20 2022 por R\$\s*64\.900 no site da Garagem e quero saber mais\./,
+  );
+  assert.doesNotMatch(decoded, /Sua Garagem/);
 });
 
 test("vehicleId de follow-up só no esse/dele com um card, nunca no modelo nomeado", () => {

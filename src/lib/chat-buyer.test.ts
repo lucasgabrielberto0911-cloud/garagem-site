@@ -121,7 +121,7 @@ test("lista de espera do chat vira WhatsApp com frase humana", () => {
   const href = chatWaitlistWhatsAppUrl("Tem automático até 40 mil?");
   const decoded = decodeURIComponent(href);
   assert.match(decoded, /wa\.me\/5527996330706\?text=/);
-  assert.match(decoded, /Olá! Quero ser avisado quando chegar: automático até R\$\s*40\.000/);
+  assert.match(decoded, /Oi! Quero ser avisado quando chegar: automático até R\$\s*40\.000/);
   const cta = chatWhatsAppCta(
     `Nessa combinação (automático até R$ 40.000) ainda não tem anúncio agora. ${href}`,
   );
