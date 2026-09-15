@@ -52,9 +52,31 @@ test("detecta resposta cortada no meio da frase", () => {
     looksTruncated("Para o Volkswagen Fox com motor 1.6 flex, a faixa típica de catálogo fica", "STOP"),
     true,
   );
+  assert.equal(looksTruncated("Olha só: automáticos até o limite de R$", "STOP"), true);
+  assert.equal(looksTruncated("Olha só: automáticos até o limite de R$ ", "STOP"), true);
+  assert.equal(looksTruncated("Olha só: automáticos até o limite de R$.", "STOP"), true);
+  assert.equal(
+    closeTruncatedReply("Olha só: automáticos até o limite de R$"),
+    "Olha só: automáticos até o limite de R$",
+  );
+  assert.doesNotMatch(
+    closeTruncatedReply("Olha só: automáticos até o limite de R$."),
+    /R\$\.$/,
+  );
   assert.equal(streamTextNeedsRegen("Ol", "STOP"), true);
   assert.equal(
     streamTextNeedsRegen("Para o Volkswagen Fox com motor 1.6 flex", "STOP"),
+    true,
+  );
+  assert.equal(
+    streamTextNeedsRegen("Olha só: carros até o limite de R$", "STOP"),
+    true,
+  );
+  assert.equal(
+    streamTextNeedsRegen(
+      "Olha só, separei os automáticos que cabem no seu limite de R$",
+      "STOP",
+    ),
     true,
   );
   assert.equal(streamTextNeedsRegen("Beleza, te mostro o estoque.", "STOP"), false);

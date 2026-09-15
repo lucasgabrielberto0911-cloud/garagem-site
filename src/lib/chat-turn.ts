@@ -432,12 +432,21 @@ export async function runChatTurn(input: {
   }
   if (
     !first.functionCall &&
-    parsePriceLimit(input.mensagem) != null &&
-    isIncompleteStockReply(generated)
+    (isIncompleteStockReply(generated) || /R\$\s*\.?$/.test(generated)) &&
+    (parsePriceLimit(input.mensagem) != null || /R\$\s*\.?$/.test(generated))
   ) {
     const fallback = fromStock();
-    emit(fallback);
-    return finish(fallback);
+    if (fallback && !/R\$\s*\.?$/.test(fallback.trim())) {
+      if (!generated || fallback.startsWith(generated)) {
+        emit(generated ? fallback.slice(generated.length) : fallback);
+      }
+      return finish(fallback, false, {
+        finishReason: first.finishReason,
+        truncated: false,
+        retried: first.retried,
+        model: first.model,
+      });
+    }
   }
 
   if (

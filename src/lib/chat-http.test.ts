@@ -9,6 +9,11 @@ import {
   type ChatPostDeps,
 } from "./chat-http";
 import { CHAT_FALLBACK_REPLY, CHAT_WHATSAPP_URL } from "./chat-prompt";
+import {
+  finalChatStreamReply,
+  parseSseChunks,
+  readChatStreamFrame,
+} from "./chat-stream";
 import type { ChatTurnResult } from "./chat-turn";
 
 const VEHICLE_CUID = "cmt0ewzpg0000lc0493fl02h7";
@@ -214,6 +219,44 @@ test("POST stream:true completa o done.reply mesmo se o token veio truncado", as
   assert.equal(done.reply, full);
   assert.doesNotMatch(done.reply, /fica\s+Nenhum desses/);
   assert.match(done.reply, /9–12 km\/l/);
+});
+
+test("POST stream: corte em limite de R$ não fica no done.reply", async () => {
+  const full =
+    "Olha só: automáticos até o limite de R$ 70.000 no estoque agora.";
+  const request = new Request("http://localhost/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    },
+    body: JSON.stringify({ mensagem: "Automático até 70 mil?", stream: true }),
+  });
+  const response = await handleChatPost(
+    request,
+    deps({
+      runTurn: async (input) => {
+        input.onToken?.("Olha só: automáticos até o limite de R$");
+        return emptyResult({ reply: full });
+      },
+    }),
+  );
+  const body = await response.text();
+  assert.match(body, /limite de R\$/);
+  const doneMatch = body.match(/event: done\ndata: ({[\s\S]*?})\n\n/);
+  assert.ok(doneMatch);
+  const done = JSON.parse(doneMatch[1]!) as { reply: string };
+  assert.equal(done.reply, full);
+  assert.match(done.reply, /70\.000/);
+  assert.match(done.reply, /\.$/);
+  const frames = parseSseChunks(body.endsWith("\n\n") ? body : `${body}\n\n`).frames;
+  let emitted = "";
+  for (const frame of frames) {
+    const event = readChatStreamFrame(frame.event, frame.data);
+    if (event?.type === "token") emitted += event.text;
+  }
+  assert.match(emitted, /70\.000/);
+  assert.equal(finalChatStreamReply(emitted, done.reply), full);
 });
 
 test("POST com vehicleId repassa o identificador para o runTurn", async () => {

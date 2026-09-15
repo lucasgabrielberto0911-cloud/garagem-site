@@ -23,7 +23,8 @@ export function looksTruncated(
   const trimmed = text.trim();
   if (!trimmed) return true;
   if (/https?:\/\/\S+$/i.test(trimmed)) return false;
-  if (/R\$\s*[\d.]+$/.test(trimmed)) return false;
+  if (/R\$\s*\.?$/.test(trimmed)) return true;
+  if (/R\$\s*\d[\d.]*$/.test(trimmed)) return false;
   if (/\d[\d.]*\s*km$/i.test(trimmed)) return false;
   if (/[.!?]["”']?$/.test(trimmed)) return false;
   // Frase sem ponto/!/? — inclusive cortes de produção ("Para o Fox com motor 1.6 flex").
@@ -37,6 +38,7 @@ export function streamTextNeedsRegen(
 ) {
   const trimmed = text.trim();
   if (!trimmed) return true;
+  if (/R\$\s*\.?$/.test(trimmed)) return true;
   if (looksTruncated(trimmed, finishReason) && trimmed.length < 96) return true;
   return false;
 }
@@ -227,6 +229,8 @@ export function closeTruncatedReply(text: string): string {
   const trimmed = trimToLastCompleteSentence(text);
   if (!looksTruncated(trimmed)) return trimmed;
   if (!trimmed) return text.trim();
+  // "limite de R$" / "limite de R$." — ponto no fim não completa o valor.
+  if (/R\$\s*\.?$/.test(trimmed)) return trimmed.replace(/\s*\.$/, "").trim();
   if (/[.!?]$/.test(trimmed)) return trimmed;
   return `${trimmed}.`;
 }

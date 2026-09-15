@@ -522,7 +522,8 @@ export function chatVehiclePrice(vehicle: ChatVehicleCard) {
 }
 
 export function chatVehicleVersion(vehicle: ChatVehicleCard) {
-  return vehicle.version ? formatModelName(vehicle.version) : null;
+  const version = shortVersion(vehicle.version, vehicle.model);
+  return version || null;
 }
 
 export function chatVehicleLabel(vehicle: ChatVehicleCard) {

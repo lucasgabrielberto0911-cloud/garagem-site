@@ -105,6 +105,10 @@ test("até 70 mil lista o HB20 e deixa o Compass de fora", () => {
     ),
     false,
   );
+  assert.equal(
+    isIncompleteStockReply("Olha só: automáticos até o limite de R$"),
+    true,
+  );
 });
 
 test("criar_lead só fecha com nome e telefone válidos", () => {
@@ -448,10 +452,42 @@ test("dois carros no mesmo preço não viram meio do preço", () => {
     category: "carro",
   };
   const compared = compareChatStockPicks([i30, palioSame, prismaMid]);
-  assert.match(compared, /I30 é o mais em conta/);
+  assert.match(compared, /I30 e Palio Weekend saem por R\$ 47\.900/);
   assert.match(compared, /automático da lista/);
-  assert.match(compared, /Palio Weekend também está em R\$ 47\.900/);
+  assert.doesNotMatch(compared, /mais em conta/);
+  assert.doesNotMatch(compared, /também está em/);
   assert.doesNotMatch(compared, /meio do preço/);
+});
+
+test("Pulse e HR-V no mesmo preço comparam km e ano, não mais em conta", () => {
+  const pulse: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-pulse-same-price",
+    brand: "Fiat",
+    model: "Pulse",
+    yearModel: 2022,
+    km: 41000,
+    price: 89900,
+    transmission: "Automático",
+    category: "carro",
+  };
+  const hrv: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hrv-same-price",
+    brand: "Honda",
+    model: "HR-V",
+    yearModel: 2018,
+    km: 65000,
+    price: 89900,
+    transmission: "Automático",
+    category: "carro",
+  };
+  const compared = compareChatStockPicks([pulse, hrv]);
+  assert.match(compared, /Os dois estão em R\$ 89\.900/);
+  assert.match(compared, /menos km/);
+  assert.match(compared, /mais novo/);
+  assert.doesNotMatch(compared, /mais em conta/);
+  assert.doesNotMatch(compared, /também está em/);
 });
 
 test("comparação fala Lancer, não LANCER", () => {

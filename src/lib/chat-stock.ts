@@ -954,6 +954,18 @@ export function compareChatStockPicks(
   const lowestKm = vehicles.reduce((best, vehicle) =>
     vehicle.km < best.km ? vehicle : best,
   );
+  const newest = vehicles.reduce((best, vehicle) =>
+    vehicle.yearModel > best.yearModel ? vehicle : best,
+  );
+  const minPrice = cheapest.price;
+  const maxPrice = Math.max(...vehicles.map((vehicle) => vehicle.price));
+  const tiedCheap = vehicles.filter((vehicle) => vehicle.price === minPrice);
+  const uniqueCheap = tiedCheap.length === 1;
+  const allSamePrice = minPrice === maxPrice;
+  const hasKmSpread = vehicles.some((vehicle) => vehicle.km !== lowestKm.km);
+  const hasYearSpread = vehicles.some(
+    (vehicle) => vehicle.yearModel !== newest.yearModel,
+  );
   const autos = vehicles.filter(isAutomaticVehicle);
   const manuals = vehicles.filter(isManualVehicle);
   const mixed = autos.length > 0 && manuals.length > 0;
@@ -963,66 +975,80 @@ export function compareChatStockPicks(
     ? "é o automático da lista — mais conforto no trânsito"
     : "é automático — mais conforto no trânsito";
 
-  const cheap = talkName(cheapest);
-  const picks: string[] = [
-    `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) — um bom começo.`,
-  ];
-  const mentioned = new Set<string>([cheapest.id]);
+  const picks: string[] = [];
+  const mentioned = new Set<string>();
 
-  if (lowestKm.id !== cheapest.id) {
-    const low = talkName(lowestKm);
-    if (mixed && auto?.id === lowestKm.id) {
+  if (allSamePrice) {
+    picks.push(
+      vehicles.length === 2
+        ? `Os dois estão em ${formatChatPrice(minPrice)} — o desempate é km e ano.`
+        : `Estes estão em ${formatChatPrice(minPrice)} — o desempate é km e ano.`,
+    );
+  } else if (uniqueCheap) {
+    const cheap = talkName(cheapest);
+    if (mixed && auto?.id === cheapest.id) {
       picks.push(
-        `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}) e ${autoBit}.`,
+        autoOnly
+          ? `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e o automático da lista — mais conforto no trânsito.`
+          : `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e é automático — mais conforto no trânsito.`,
       );
-      mentioned.add(lowestKm.id);
+      mentioned.add(cheapest.id);
+      if (auto) mentioned.add(auto.id);
     } else {
-      picks.push(`${low.cap} tem menos km (${formatChatKm(lowestKm.km)}).`);
-      mentioned.add(lowestKm.id);
-      if (mixed && auto && !mentioned.has(auto.id)) {
-        picks.push(`${talkName(auto).cap} ${autoBit}.`);
+      picks.push(
+        `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) — um bom começo.`,
+      );
+      mentioned.add(cheapest.id);
+    }
+  } else {
+    picks.push(
+      `${joinPtNames(tiedCheap.map((vehicle) => talkName(vehicle).name))} saem por ${formatChatPrice(minPrice)}.`,
+    );
+  }
+
+  if (hasKmSpread && (allSamePrice || lowestKm.id !== cheapest.id || !uniqueCheap)) {
+    const alreadyKm = picks.some((pick) => /menos km/.test(pick));
+    if (!alreadyKm) {
+      const low = talkName(lowestKm);
+      const alsoNewest =
+        allSamePrice && hasYearSpread && lowestKm.id === newest.id;
+      if (mixed && auto?.id === lowestKm.id && !mentioned.has(auto.id)) {
+        picks.push(
+          alsoNewest
+            ? `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}), é o mais novo (${newest.yearModel}) e ${autoBit}.`
+            : `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}) e ${autoBit}.`,
+        );
+        mentioned.add(lowestKm.id);
         mentioned.add(auto.id);
+      } else {
+        picks.push(
+          alsoNewest
+            ? `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}) e é o mais novo (${newest.yearModel}).`
+            : `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}).`,
+        );
+        mentioned.add(lowestKm.id);
       }
     }
-  } else if (mixed && auto && auto.id !== cheapest.id) {
+  }
+
+  if (mixed && auto && !mentioned.has(auto.id)) {
     picks.push(`${talkName(auto).cap} ${autoBit}.`);
     mentioned.add(auto.id);
   }
 
-  if (mixed && auto?.id === cheapest.id) {
-    picks[0] = autoOnly
-      ? `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e o automático da lista — mais conforto no trânsito.`
-      : `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e é automático — mais conforto no trânsito.`;
+  if (hasYearSpread && !mentioned.has(newest.id)) {
+    picks.push(`${talkName(newest).cap} é o mais novo (${newest.yearModel}).`);
+    mentioned.add(newest.id);
   }
 
-  const leftover = vehicles.filter((vehicle) => !mentioned.has(vehicle.id));
-  const newest = vehicles.reduce((best, vehicle) =>
-    vehicle.yearModel > best.yearModel ? vehicle : best,
-  );
-  const maxPrice = Math.max(...vehicles.map((vehicle) => vehicle.price));
-  const distinctPrices = [...new Set(vehicles.map((vehicle) => vehicle.price))].sort(
-    (a, b) => a - b,
-  );
-  const middlePrice = distinctPrices.length >= 3 ? distinctPrices[1] : null;
-  for (const vehicle of leftover) {
-    const name = talkName(vehicle);
-    if (vehicle.price === cheapest.price) {
+  for (const vehicle of vehicles) {
+    if (mentioned.has(vehicle.id)) continue;
+    if (allSamePrice || vehicle.price === minPrice) continue;
+    if (vehicle.price === maxPrice && vehicle.price > minPrice) {
       picks.push(
-        `${name.cap} também está em ${formatChatPrice(vehicle.price)}.`,
+        `${talkName(vehicle).cap} fica um pouco acima (${formatChatPrice(vehicle.price)}).`,
       );
-    } else if (
-      vehicle.id === newest.id &&
-      vehicles.some((other) => other.yearModel < newest.yearModel)
-    ) {
-      picks.push(`${name.cap} é o mais novo (${vehicle.yearModel}).`);
-    } else if (middlePrice != null && vehicle.price === middlePrice) {
-      picks.push(
-        `${name.cap} fica no meio do preço (${formatChatPrice(vehicle.price)}).`,
-      );
-    } else if (vehicle.price === maxPrice && vehicle.price > cheapest.price) {
-      picks.push(
-        `${name.cap} fica um pouco acima (${formatChatPrice(vehicle.price)}).`,
-      );
+      mentioned.add(vehicle.id);
     }
   }
 
@@ -1240,6 +1266,7 @@ export function enrichChatStockReply(
 export function isIncompleteStockReply(reply: string) {
   const text = reply.trim();
   if (!text) return true;
+  if (/R\$\s*\.?$/.test(text)) return true;
   if (/:\s*$/.test(text)) return true;
   const pricedCars = (text.match(/·\s*R\$\s*\d/g) ?? []).length;
   if (
@@ -1268,10 +1295,13 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
   }
   const picks = matches.slice(0, 3);
   const cheapestId = picks[0]?.id;
+  const minPickPrice = picks[0]?.price;
+  const uniqueCheap =
+    picks.filter((vehicle) => vehicle.price === minPickPrice).length === 1;
   const lowestKmId = [...picks].sort((a, b) => a.km - b.km)[0]?.id;
   const lines = picks.map((vehicle) => {
     const bits: string[] = [];
-    if (vehicle.id === cheapestId) bits.push("mais em conta");
+    if (uniqueCheap && vehicle.id === cheapestId) bits.push("mais em conta");
     if (vehicle.id === lowestKmId) bits.push("menor km");
     if (/automatic/.test(normalize(vehicle.transmission))) bits.push("automático");
     const why = bits.length ? ` — ${bits.join(", ")}` : "";

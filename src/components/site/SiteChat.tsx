@@ -30,6 +30,7 @@ import { chatMobileKeyboardCovered } from "@/lib/chat-mobile-viewport";
 import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
 import {
   drainSseBuffer,
+  finalChatStreamReply,
   parseSseChunks,
   readChatStreamFrame,
 } from "@/lib/chat-stream";
@@ -933,6 +934,7 @@ export function SiteChat() {
         const decoder = new TextDecoder();
         let buffer = "";
         let streamed = false;
+        let streamedText = "";
         let donePayload: {
           reply?: string;
           vehicles?: unknown;
@@ -952,6 +954,7 @@ export function SiteChat() {
             if (!event) continue;
             if (event.type === "token" && event.text) {
               streamed = true;
+              streamedText += event.text;
               setMessages((current) => {
                 const last = current[current.length - 1];
                 if (last?.role === "assistant") {
@@ -974,8 +977,15 @@ export function SiteChat() {
           }
           if (done) break;
         }
+        const doneReply =
+          typeof donePayload?.reply === "string" ? donePayload.reply : "";
         commitAssistant(
-          donePayload ?? { reply: CHAT_FALLBACK_REPLY },
+          {
+            ...(donePayload ?? {}),
+            reply:
+              finalChatStreamReply(streamedText, doneReply) ||
+              CHAT_FALLBACK_REPLY,
+          },
           intent,
           streamed,
         );

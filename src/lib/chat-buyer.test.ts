@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { chatVehicleVersion } from "./chat-cards";
 import { applyChatReplyGuards } from "./chat-polish";
 import { chatTurnMayCreateLead } from "./chat-guard";
 import {
@@ -325,6 +326,21 @@ test("garantia, docs e cartão vs financiamento continuam atalho da loja", async
   assert.doesNotMatch(card.reply, /parcela de R\$/);
 });
 
+test("Gemini cortado em limite de R$ não fica na resposta final", async () => {
+  const result = await runChatTurn({
+    mensagem: "Carros até 70 mil?",
+    historico: [],
+    stock: [hb20, onix],
+    generate: async () => ({
+      text: "Olha só: automáticos até o limite de R$",
+      functionCall: null,
+    }),
+  });
+  assert.match(result.reply, /70\.000|HB20|Onix/);
+  assert.doesNotMatch(result.reply, /limite de R\$$/);
+  assert.doesNotMatch(result.reply, /limite de R\$\.$/);
+});
+
 test("tem biz até 15 mil não mistura carro na waitlist", async () => {
   const result = await runChatTurn({
     mensagem: "tem biz até 15 mil?",
@@ -352,6 +368,29 @@ test("consumo do Fox 1.6 não chama Gemini e não duplica cilindrada", async () 
   assert.match(result.reply, /não foi medido/);
 });
 
+test("card de consumo do Fox Bluemotion não duplica 1.6 na versão", async () => {
+  const foxBlue: ChatVehicleRecord = {
+    ...fox16,
+    id: "c-fox-bluemotion-buyer",
+    model: "FOX 1.6",
+    version: "FOX 1.6 BLUEMOTION 1.6 GII",
+  };
+  const result = await runChatTurn({
+    mensagem: "Qual consumo do Fox 1.6?",
+    historico: [],
+    stock: [foxBlue, hb20],
+    generate: blockedGenerate(),
+  });
+  assert.equal(result.vehicles.length, 1);
+  const card = result.vehicles[0]!;
+  const version = chatVehicleVersion(card);
+  assert.equal(card.title, "Volkswagen Fox 1.6");
+  assert.equal(version, "Bluemotion GII");
+  assert.doesNotMatch(version ?? "", /1\.6/);
+  assert.doesNotMatch(`${card.title} ${version}`, /1\.6.*1\.6/);
+  assert.doesNotMatch(result.reply, /1\.6 1\.6/);
+});
+
 test("criar_lead só entra no payload quando já tem telefone", () => {
   assert.equal(chatTurnMayCreateLead("Carros até 70 mil?"), false);
   assert.equal(chatTurnMayCreateLead("Qual consumo do fox"), false);
@@ -359,4 +398,105 @@ test("criar_lead só entra no payload quando já tem telefone", () => {
     chatTurnMayCreateLead("Meu nome é Ana, telefone (27) 99999-1234"),
     true,
   );
+});
+
+test("Pulse vs HR-V no mesmo preço não inventa mais em conta", async () => {
+  const pulse: ChatVehicleRecord = {
+    id: "c-pulse-buyer",
+    brand: "Fiat",
+    model: "Pulse",
+    version: "Drive",
+    yearModel: 2022,
+    km: 41000,
+    price: 89900,
+    color: "Branco",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+  };
+  const hrv: ChatVehicleRecord = {
+    id: "c-hrv-buyer",
+    brand: "Honda",
+    model: "HR-V",
+    version: "EX",
+    yearModel: 2018,
+    km: 65000,
+    price: 89900,
+    color: "Cinza",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+  };
+  const result = await runChatTurn({
+    mensagem: "Pulse vs HR-V",
+    historico: [],
+    stock: [pulse, hrv, compass],
+    generate: blockedGenerate(),
+  });
+  assert.equal(result.meta?.policy, "compare");
+  assert.equal(result.vehicles.length, 2);
+  assert.match(result.reply, /R\$ 89\.900/);
+  assert.match(result.reply, /menos km/);
+  assert.match(result.reply, /mais novo|desempate é km e ano/);
+  assert.doesNotMatch(result.reply, /mais em conta/);
+  assert.doesNotMatch(result.reply, /também está em R\$ 89\.900/);
+  assert.doesNotMatch(result.reply, /Compass/);
+});
+
+test("ainda tem Pulse na lista confirma o estoque atual", async () => {
+  const pulse: ChatVehicleRecord = {
+    id: "c-pulse-avail",
+    brand: "Fiat",
+    model: "Pulse",
+    version: "Drive",
+    yearModel: 2022,
+    km: 41000,
+    price: 89900,
+    color: "Branco",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+  };
+  const result = await runChatTurn({
+    mensagem: "ainda tem Pulse?",
+    historico: [],
+    stock: [pulse, hb20],
+    generate: blockedGenerate(),
+  });
+  assert.match(result.reply, /ainda está no estoque/);
+  assert.match(result.reply, /Pulse/i);
+  assert.doesNotMatch(result.reply, /já saiu/);
+});
+
+test("HB20 automático até 70 mil lista HB20 e Lancer, não o Compass", async () => {
+  const hb20Auto: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb20-auto-70",
+    transmission: "Automático",
+    price: 64900,
+  };
+  const lancer: ChatVehicleRecord = {
+    id: "c-lancer-auto-70",
+    brand: "Mitsubishi",
+    model: "Lancer",
+    version: "2.0",
+    yearModel: 2014,
+    km: 80000,
+    price: 62900,
+    color: "Preto",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+  };
+  const result = await runChatTurn({
+    mensagem: "HB20 automático até 70 mil",
+    historico: [],
+    stock: [hb20Auto, lancer, compass],
+    generate: blockedGenerate(),
+  });
+  assert.doesNotMatch(result.reply, /Compass/);
+  const models = result.vehicles.map((vehicle) => vehicle.model);
+  assert.ok(models.includes("HB20"));
+  assert.ok(models.includes("Lancer") || /Lancer/i.test(result.reply));
+  assert.ok(result.vehicles.every((vehicle) => vehicle.price <= 70_000));
 });

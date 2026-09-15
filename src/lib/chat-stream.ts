@@ -128,3 +128,18 @@ export function catchUpStreamText(emitted: string, finalReply: string): string {
   if (finalReply.startsWith(emitted)) return finalReply.slice(emitted.length);
   return "";
 }
+
+function hangingPricePrefix(text: string) {
+  return /R\$\s*\.?$/.test(text.trim());
+}
+
+/** `done.reply` vence o rascunho do SSE — o visitante não fica com “limite de R$”. */
+export function finalChatStreamReply(emitted: string, doneReply: string) {
+  const final = doneReply.trim();
+  if (final && !hangingPricePrefix(final)) return final;
+  const streamed = emitted.trim();
+  if (streamed && !hangingPricePrefix(streamed) && streamed.length >= final.length) {
+    return streamed;
+  }
+  return final || streamed;
+}
