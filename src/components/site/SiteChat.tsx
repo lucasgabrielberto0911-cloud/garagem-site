@@ -1036,7 +1036,7 @@ export function SiteChat() {
         <section
           role="dialog"
           aria-labelledby="site-chat-title"
-          aria-label="Chat da Sua Garagem"
+          aria-label="Chat da Garagem"
           className="site-chat-panel pointer-events-auto flex h-[min(680px,calc(100dvh-7.25rem))] w-[min(28rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink shadow-[0_24px_64px_rgba(0,0,0,0.55)]"
           aria-busy={pending}
         >
@@ -1292,7 +1292,7 @@ export function SiteChat() {
                 <button
                   type="button"
                   onClick={resetConversation}
-                  className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-cream/70 transition hover:text-cream"
+                  className="inline-flex min-h-11 shrink-0 items-center rounded-lg px-2 text-[10px] font-semibold uppercase tracking-wide text-cream/80 transition hover:bg-white/5 hover:text-cream"
                 >
                   Nova conversa
                 </button>
@@ -1309,7 +1309,7 @@ export function SiteChat() {
           else openChat("launcher");
         }}
         aria-expanded={open}
-        aria-label={open ? "Fechar chat" : "Abrir chat da Sua Garagem"}
+        aria-label={open ? "Fechar chat" : "Abrir chat da Garagem"}
         className={`site-chat-launcher pointer-events-auto flex h-14 items-center justify-center rounded-full bg-brand text-cream shadow-[0_10px_24px_rgba(232,24,28,0.4)] transition hover:bg-[#c91418] hover:scale-105 active:scale-95 touch-manipulation ${
           open ? "w-14" : "w-14 lg:w-auto lg:gap-2.5 lg:px-4"
         }`}

@@ -223,7 +223,10 @@ export function typicalConsumptionRange(
 }
 
 /** Uma linha pra injetar no estoque do prompt — o modelo copia, não inventa. */
-export function typicalConsumptionHint(vehicle: ConsumptionVehicle) {
+export function typicalConsumptionHint(
+  vehicle: ConsumptionVehicle,
+  opts: { omitLabel?: boolean } = {},
+) {
   const range = typicalConsumptionRange(vehicle);
   if (!range) {
     return "consumo: 1.0 flex costuma gastar menos que 1.8/2.0; este usado não foi medido na loja";
@@ -231,5 +234,7 @@ export function typicalConsumptionHint(vehicle: ConsumptionVehicle) {
   if (range.label === "elétrico") {
     return `elétrico: ${range.city}; este usado não foi medido na loja`;
   }
-  return `${range.label}: faixa típica de catálogo ~${range.city}; este usado não foi medido na loja`;
+  const body = `faixa típica de catálogo ~${range.city}; este usado não foi medido na loja`;
+  if (opts.omitLabel) return body;
+  return `${range.label}: ${body}`;
 }

@@ -1,4 +1,5 @@
 import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
+import { chatTurnMayCreateLead } from "@/lib/chat-guard";
 import {
   looksTruncated,
   mergeContinuation,
@@ -258,8 +259,11 @@ async function generateWithFallback(
   key: string,
 ) {
   let lastError: unknown;
+  const toolFlags = chatTurnMayCreateLead(input.mensagem, input.history)
+    ? [true, false]
+    : [false];
   for (const model of configuredModels()) {
-    for (const withTools of [true, false]) {
+    for (const withTools of toolFlags) {
       try {
         const data = await postGemini(
           buildGenerateBody(input, withTools, model),
@@ -447,8 +451,11 @@ export async function generateChatReplyStream(
   }
 
   let lastError: unknown;
+  const toolFlags = chatTurnMayCreateLead(input.mensagem, input.history)
+    ? [true, false]
+    : [false];
   for (const model of configuredModels()) {
-    for (const withTools of [true, false]) {
+    for (const withTools of toolFlags) {
       try {
         let text = "";
         let functionCall: GeminiFunctionCall | null = null;

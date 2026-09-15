@@ -67,8 +67,13 @@ export function mergeContinuation(partial: string, extra: string): string {
   return `${head}${joiner}${tail}`.replace(/\s+/g, " ").trim();
 }
 
+/** “Fox 1.6 1.6 flex” / “FOX 1.6 1.6” — cilindrada colada duas vezes. */
+export function stripRepeatedDisplacement(text: string): string {
+  return text.replace(/\b(\d+[.,]\d+)\s+\1\b/gi, "$1");
+}
+
 export function polishPortuguese(text: string): string {
-  return text
+  return stripRepeatedDisplacement(text)
     .replace(/\bpelo loja\b/gi, "pela loja")
     .replace(/\bdo loja\b/gi, "da loja")
     .replace(/\bno loja\b/gi, "na loja")
@@ -233,6 +238,7 @@ export function applyChatReplyGuards(
 ): string {
   let next = stripInventedAccessories(text, vehicles);
   next = polishPortuguese(next);
+  next = stripRepeatedDisplacement(next);
   next = ensureWarrantyCopy(next);
   if (opts.truncated || looksTruncated(next)) {
     next = closeTruncatedReply(next);

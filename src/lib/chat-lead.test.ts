@@ -212,17 +212,14 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
     mensagem: "Tem Porsche Cayenne 2024?",
     historico: [],
     stock: [hb20],
-    generate: async ({ systemPrompt }) => {
-      assert.doesNotMatch(systemPrompt, /Cayenne/);
-      return {
-        text: "Esse modelo não está na lista atual. Fala com a gente no WhatsApp: https://wa.me/5527996330706",
-        functionCall: null,
-      };
+    generate: async () => {
+      throw new Error("modelo fora do estoque não deve ir ao Gemini");
     },
   });
   assert.match(missing.reply, /não está na lista atual/i);
   assert.match(missing.reply, /wa\.me\/5527996330706/);
-  assert.match(missing.reply, /HB20/);
+  assert.match(decodeURIComponent(missing.reply), /porsche cayenne/i);
+  assert.equal(missing.vehicles[0]?.id, hb20.id);
 
   const created: Array<{ source: string; name: string; status?: string }> = [];
   const lead = await runChatTurn({

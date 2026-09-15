@@ -3,7 +3,10 @@
  * troca, financiamento, garantia nem estoque — tudo está escrito aqui.
  */
 
-import { typicalConsumptionHint } from "@/lib/chat-consumption";
+import {
+  parseEngineDisplacementLiters,
+  typicalConsumptionHint,
+} from "@/lib/chat-consumption";
 import { site } from "@/lib/site";
 import { shortVersion } from "@/lib/vehicle-display";
 
@@ -124,6 +127,13 @@ export function formatChatPrice(value: number) {
   return `R$ ${value.toLocaleString("pt-BR")}`;
 }
 
+export type ChatStockPromptOpts = {
+  /** Inclui km/l de catálogo — só quando a pergunta é de consumo. */
+  consumption?: boolean;
+  /** Inclui opcionais da ficha — só quando a pergunta é de equipamento. */
+  equipment?: boolean;
+};
+
 function accessoryBits(items?: string[]) {
   if (!items?.length) return "";
   const clean = items
@@ -133,35 +143,78 @@ function accessoryBits(items?: string[]) {
   return clean.length ? ` · ${clean.join(", ")}` : "";
 }
 
-function stockLineLabel(vehicle: ChatStockLine, withExtras = false) {
+function foldLabel(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9.]+/g, " ")
+    .trim();
+}
+
+function engineAlreadyInName(vehicle: ChatStockLine) {
+  const engine = vehicle.engine?.trim();
+  if (!engine) return true;
+  const named = foldLabel(
+    `${vehicle.model} ${shortVersion(vehicle.version, vehicle.model)} ${vehicle.version ?? ""}`,
+  );
+  const liters = parseEngineDisplacementLiters(
+    vehicle.engine,
+    vehicle.version,
+    vehicle.category,
+  );
+  if (liters != null && liters >= 1) {
+    const label = liters.toFixed(1);
+    if (named.includes(foldLabel(label))) return true;
+  }
+  return named.includes(foldLabel(engine));
+}
+
+function stockLineLabel(
+  vehicle: ChatStockLine,
+  withExtras = false,
+  opts: ChatStockPromptOpts = {},
+) {
   const version = shortVersion(vehicle.version, vehicle.model);
   const versionBit = version ? ` ${version}` : "";
   const base = `${vehicle.brand} ${vehicle.model}${versionBit} ${vehicle.year} · ${vehicle.km.toLocaleString("pt-BR")} km · ${formatChatPrice(vehicle.price)}`;
   if (!withExtras) return base;
   const color = vehicle.color?.trim() ? vehicle.color.trim() : "cor não informada";
   const kind = vehicle.category === "moto" ? "moto" : "carro";
-  const engine = vehicle.engine?.trim() ? ` · motor ${vehicle.engine.trim()}` : "";
+  const engine =
+    vehicle.engine?.trim() && !engineAlreadyInName(vehicle)
+      ? ` · motor ${vehicle.engine.trim()}`
+      : "";
   const doors =
     vehicle.doors != null && vehicle.doors > 0
       ? ` · ${vehicle.doors} portas`
       : "";
-  const consumption = typicalConsumptionHint({
-    fuel: vehicle.fuel,
-    engine: vehicle.engine,
-    version: vehicle.version,
-    category: vehicle.category ?? "carro",
-  });
-  return `${base} · ${color} · ${vehicle.transmission} · ${vehicle.fuel} · ${kind}${engine}${doors}${accessoryBits(vehicle.accessories)} · ${consumption}`;
+  const extras = opts.equipment ? accessoryBits(vehicle.accessories) : "";
+  const consumption = opts.consumption
+    ? ` · ${typicalConsumptionHint(
+        {
+          fuel: vehicle.fuel,
+          engine: vehicle.engine,
+          version: vehicle.version,
+          category: vehicle.category ?? "carro",
+        },
+        { omitLabel: engineAlreadyInName(vehicle) || Boolean(vehicle.engine) },
+      )}`
+    : "";
+  return `${base} · ${color} · ${vehicle.transmission} · ${vehicle.fuel} · ${kind}${engine}${doors}${extras}${consumption}`;
 }
 
-export function formatStockForPrompt(vehicles: ChatStockLine[]) {
+export function formatStockForPrompt(
+  vehicles: ChatStockLine[],
+  opts: ChatStockPromptOpts = {},
+) {
   if (vehicles.length === 0) {
     return "ESTOQUE ATUAL (dados reais do banco):\n(nenhum veículo disponível no momento)";
   }
 
   const lines = [...vehicles]
     .sort((a, b) => a.price - b.price)
-    .map((vehicle) => `- ${stockLineLabel(vehicle, true)}`);
+    .map((vehicle) => `- ${stockLineLabel(vehicle, true, opts)}`);
 
   return `ESTOQUE ATUAL (dados reais do banco — use SOMENTE estes veículos, mais baratos primeiro):\n${lines.join("\n")}`;
 }
@@ -202,8 +255,9 @@ export function buildChatSystemPrompt(
   vehicles: ChatStockLine[],
   mensagem = "",
   activeVehicle?: ChatStockLine,
+  opts: ChatStockPromptOpts = {},
 ) {
-  const stock = formatStockForPrompt(vehicles);
+  const stock = formatStockForPrompt(vehicles, opts);
   let activeNotice = "";
   if (activeVehicle) {
     const kind = activeVehicle.category === "moto" ? "moto" : "carro";

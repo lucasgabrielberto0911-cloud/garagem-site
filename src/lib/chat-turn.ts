@@ -39,6 +39,8 @@ import {
   CHAT_TRADE_REPLY,
   CHAT_WARRANTY_REPLY,
   CHAT_DOCS_REPLY,
+  CHAT_COMPARE_ASK_REPLY,
+  CHAT_AVAILABILITY_ASK_REPLY,
   asksAboutConsumption,
   asksAboutEquipment,
   asksAboutKm,
@@ -46,7 +48,9 @@ import {
   asksAboutListedFacts,
   asksAboutNamedGear,
   asksToCompareModels,
+  asksWhichTwoToCompare,
   chatPolicyShortcut,
+  chatPromptStockOpts,
   compareChatStockPicks,
   enrichChatStockReply,
   enrichMissingModelReply,
@@ -60,14 +64,18 @@ import {
   localGarageReply,
   matchFocusedVehicle,
   pickComparedModelVehicles,
+  selectVehiclesForChatPrompt,
+  seeksMissingNamedModel,
+  similarAfterEmptyFilter,
   singleMentionedModelPool,
   toChatStockLine,
-  applyChatStockFilters,
   consumptionReplyLooksBroken,
   emptyFilterReply,
   equipmentReplyLooksBroken,
   formatTransmissionCompareReply,
+  hasChatStockFilter,
   hasConsumptionFigures,
+  missingModelReply,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 
@@ -101,11 +109,6 @@ export async function runChatTurn(input: {
   const activeVehicle = input.vehicleId
     ? input.stock.find((v) => v.id === input.vehicleId)
     : undefined;
-  const systemPrompt = buildChatSystemPrompt(
-    applyChatStockFilters(input.stock, input.mensagem).map(toChatStockLine),
-    input.mensagem,
-    activeVehicle ? toChatStockLine(activeVehicle) : undefined,
-  );
   const generate = input.generate ?? generateChatReply;
   const generateStream = input.generateStream ?? generateChatReplyStream;
   const confirm = input.confirm ?? confirmAfterLead;
@@ -114,11 +117,26 @@ export async function runChatTurn(input: {
     if (text) input.onToken?.(text);
   };
 
+  const systemPromptFor = () => {
+    const promptStock = selectVehiclesForChatPrompt(
+      input.stock,
+      input.mensagem,
+      activeVehicle,
+    );
+    return buildChatSystemPrompt(
+      promptStock.map(toChatStockLine),
+      input.mensagem,
+      activeVehicle ? toChatStockLine(activeVehicle) : undefined,
+      chatPromptStockOpts(input.mensagem),
+    );
+  };
+
   const finish = (
     reply: string,
     leadCreated = false,
     opts: {
       cards?: boolean;
+      forcedVehicles?: ChatVehicleRecord[];
       finishReason?: string | null;
       truncated?: boolean;
       retried?: boolean;
@@ -138,6 +156,9 @@ export async function runChatTurn(input: {
           activeVehicle?.id,
         )
       : [];
+    if (opts.forcedVehicles?.length) {
+      picked = opts.forcedVehicles.slice(0, CHAT_CARD_LIMIT);
+    }
     let text = applyChatReplyGuards(
       reply,
       picked.length ? picked : activeVehicle ? [activeVehicle] : [],
@@ -222,8 +243,13 @@ export async function runChatTurn(input: {
 
   const empty = emptyFilterReply(input.mensagem, input.stock);
   if (empty) {
+    const similar = similarAfterEmptyFilter(input.mensagem, input.stock, 3);
     emit(empty);
-    return finish(empty, false, { policy: "waitlist", cards: false });
+    return finish(empty, false, {
+      policy: "waitlist",
+      forcedVehicles: similar,
+      cards: similar.length > 0,
+    });
   }
 
   const mentionedPool = singleMentionedModelPool(input.stock, input.mensagem);
@@ -246,22 +272,65 @@ export async function runChatTurn(input: {
   ) {
     const reply = compareChatStockPicks(compared, { withLeadin: true });
     emit(reply);
-    return finish(reply, false, { policy: "compare" });
+    return finish(reply, false, {
+      policy: "compare",
+      forcedVehicles: compared.slice(0, 2),
+    });
   }
   if (
-    asksAboutAvailability(input.mensagem) &&
-    !mixedPrice &&
-    isFocusedVehicleFactQuestion(
-      input.mensagem,
-      input.stock,
-      input.vehicleId ?? activeVehicle?.id,
-    )
+    asksWhichTwoToCompare(input.mensagem) &&
+    compared.length < 2 &&
+    !mentionedPool &&
+    !hasChatStockFilter(input.mensagem) &&
+    parsePriceLimit(input.mensagem) == null
   ) {
-    const reply = formatAvailabilityReply(focusedVehicle, {
-      sold: Boolean(input.vehicleId && !focusedVehicle),
+    emit(CHAT_COMPARE_ASK_REPLY);
+    return finish(CHAT_COMPARE_ASK_REPLY, false, {
+      policy: "compare-ask",
+      cards: false,
     });
+  }
+  if (asksAboutAvailability(input.mensagem) && !mixedPrice) {
+    if (
+      isFocusedVehicleFactQuestion(
+        input.mensagem,
+        input.stock,
+        input.vehicleId ?? activeVehicle?.id,
+      )
+    ) {
+      const reply = formatAvailabilityReply(focusedVehicle, {
+        sold: Boolean(input.vehicleId && !focusedVehicle),
+      });
+      emit(reply);
+      return finish(reply, false, { policy: "availability" });
+    }
+    if (seeksMissingNamedModel(input.mensagem, input.stock)) {
+      const reply = missingModelReply(input.mensagem, input.stock);
+      const similar = similarAfterEmptyFilter(input.mensagem, input.stock, 3);
+      emit(reply);
+      return finish(reply, false, {
+        policy: "waitlist",
+        forcedVehicles: similar,
+        cards: similar.length > 0,
+      });
+    }
+    if (!mentionedPool && !focusedVehicle && !input.vehicleId) {
+      emit(CHAT_AVAILABILITY_ASK_REPLY);
+      return finish(CHAT_AVAILABILITY_ASK_REPLY, false, {
+        policy: "availability-ask",
+        cards: false,
+      });
+    }
+  }
+  if (seeksMissingNamedModel(input.mensagem, input.stock)) {
+    const reply = missingModelReply(input.mensagem, input.stock);
+    const similar = similarAfterEmptyFilter(input.mensagem, input.stock, 3);
     emit(reply);
-    return finish(reply, false, { policy: "availability" });
+    return finish(reply, false, {
+      policy: "waitlist",
+      forcedVehicles: similar,
+      cards: similar.length > 0,
+    });
   }
   if (
     focusedVehicle &&
@@ -310,7 +379,7 @@ export async function runChatTurn(input: {
     if (input.onToken && !input.generate) {
       first = await generateStream(
         {
-          systemPrompt,
+          systemPrompt: systemPromptFor(),
           history: input.historico,
           mensagem: input.mensagem,
         },
@@ -318,7 +387,7 @@ export async function runChatTurn(input: {
       );
     } else {
       first = await generate({
-        systemPrompt,
+        systemPrompt: systemPromptFor(),
         history: input.historico,
         mensagem: input.mensagem,
       });
@@ -433,7 +502,7 @@ export async function runChatTurn(input: {
           "Pronto — registrei seu contato. A equipe continua com você no WhatsApp.";
         try {
           const confirmation = await confirm({
-            systemPrompt,
+            systemPrompt: systemPromptFor(),
             history: input.historico,
             mensagem: input.mensagem,
             modelContent: first.raw,

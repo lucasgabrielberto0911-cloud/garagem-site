@@ -78,3 +78,12 @@ export function sanitizeSensitiveText(value: string) {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+/** Só declara criar_lead quando já aparece telefone na conversa — payload menor. */
+export function chatTurnMayCreateLead(
+  mensagem: string,
+  history: Array<{ content: string }> = [],
+) {
+  const blob = `${history.map((turn) => turn.content).join("\n")}\n${mensagem}`;
+  return /(?:\+?55[\s.-]?)?(?:\(?\d{2}\)?[\s.-]*)9?\d{4}[\s.-]?\d{4}/.test(blob);
+}

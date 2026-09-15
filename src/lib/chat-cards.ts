@@ -140,7 +140,7 @@ export function stripChatVehicleListingLines(
     .trim();
 }
 
-const CARD_INTRO_MAX = 1200;
+const CARD_INTRO_MAX = 720;
 const CARD_FILLER =
   /tem o mais em conta|o de menor km|automatico se houver|se quiser esticar|logo acima|qual perfil te serve|qual desses|hatch ou sedan/;
 
