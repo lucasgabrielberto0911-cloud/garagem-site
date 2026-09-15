@@ -304,6 +304,8 @@ const DEALER_PAD_Y_BOTTOM = 0.8;
 const DEALER_EXTRA_LEFT = 0.42;
 const DEALER_DARK_LUMA = 68;
 const DEALER_LETTER_GAP = 56;
+/** Palavra de loja com confiança baixa é reflexo/OCR solto — não é FORTE. */
+const DEALER_MIN_WORD_CONFIDENCE = 68;
 
 function foldLatinUpper(text: string) {
   return text.normalize("NFD").replace(/\p{M}/gu, "").toUpperCase();
@@ -336,6 +338,35 @@ export function textLooksLikeDealerPlate(text: string | undefined) {
 
 function isTightPlateText(text: string) {
   return textLooksLikePlate(text);
+}
+
+/** Portinhola, calota e emblema: quase quadrado/círculo, não placa. */
+export function isUnlikelyPlateGeometry(box: PixelBox) {
+  const aspect = box.width / Math.max(1, box.height);
+  return aspect >= 0.72 && aspect <= 1.28;
+}
+
+function overlapArea(a: PixelBox, b: PixelBox) {
+  const width = Math.max(
+    0,
+    Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left),
+  );
+  const height = Math.max(
+    0,
+    Math.min(a.top + a.height, b.top + b.height) - Math.max(a.top, b.top),
+  );
+  return width * height;
+}
+
+function boxContainsCenter(box: PixelBox, inner: PixelBox) {
+  const x = inner.left + inner.width / 2;
+  const y = inner.top + inner.height / 2;
+  return (
+    x >= box.left &&
+    x < box.left + box.width &&
+    y >= box.top &&
+    y < box.top + box.height
+  );
 }
 
 function boxToPixels(
@@ -427,6 +458,12 @@ function clampToPlateShape(
   imageWidth: number,
   imageHeight: number,
 ): PixelBox {
+  const sourceAspect = box.width / Math.max(1, box.height);
+  // Não inventa faixa de placa a partir de círculo/quadrado (portinhola, calota).
+  if (sourceAspect >= 0.72 && sourceAspect <= 1.28) {
+    return box;
+  }
+
   const maxW = Math.max(24, Math.round(imageWidth * 0.2));
   const maxH = Math.max(14, Math.round(imageHeight * 0.085));
   let { left, top, width, height } = box;
@@ -584,13 +621,12 @@ function piecesFromDetections(
     const text = item.DetectedText?.trim();
     if (!text) continue;
     const confidence = item.Confidence ?? 0;
+    if (textLooksLikeDealerPlate(text) && confidence < DEALER_MIN_WORD_CONFIDENCE) {
+      continue;
+    }
     if (item.Type === "WORD") {
       if (confidence < MIN_PLATE_TEXT_CONFIDENCE) continue;
-      if (
-        confidence < MIN_WORD_CONFIDENCE &&
-        !textLooksLikePlate(text) &&
-        !textLooksLikeDealerPlate(text)
-      ) {
+      if (confidence < MIN_WORD_CONFIDENCE && !textLooksLikePlate(text)) {
         continue;
       }
     }
@@ -727,7 +763,7 @@ function mergeUnionBoxes(boxes: PixelBox[]): PixelBox[] {
   return merged;
 }
 
-function dealerBoxesFromPieces(
+function unpaddedDealerGroups(
   pieces: TextPiece[],
   imageWidth: number,
   imageHeight: number,
@@ -751,10 +787,22 @@ function dealerBoxesFromPieces(
     }
     const united = unionBox(group.map((item) => item.box));
     if (!isPlausibleDealerBox(united, imageWidth, imageHeight)) continue;
-    boxes.push(padDealerBox(united, imageWidth, imageHeight));
+    boxes.push(united);
   }
 
-  return mergeUnionBoxes(boxes);
+  return boxes;
+}
+
+function dealerBoxesFromPieces(
+  pieces: TextPiece[],
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox[] {
+  return mergeUnionBoxes(
+    unpaddedDealerGroups(pieces, imageWidth, imageHeight).map((box) =>
+      padDealerBox(box, imageWidth, imageHeight),
+    ),
+  );
 }
 
 export function dealerPlateBoxesFromText(
@@ -846,6 +894,157 @@ function clusterDealerRuns(runs: DealerRun[]): DealerRun[][] {
   return clusters;
 }
 
+type PatchSignals = {
+  aspect: number;
+  mean: number;
+  stdev: number;
+  darkRatio: number;
+  blackRatio: number;
+  lightRatio: number;
+  whiteRatio: number;
+  coreDark: number;
+  insetLight: number;
+  topFringeLightShare: number;
+};
+
+function measureDealerPatch(
+  data: Buffer,
+  width: number,
+  height: number,
+  channels: number,
+  box: PixelBox,
+): PatchSignals | null {
+  if (box.width < 8 || box.height < 8) return null;
+  if (box.left < 0 || box.top < 0) return null;
+  if (box.left + box.width > width || box.top + box.height > height) return null;
+
+  const aspect = box.width / box.height;
+  let dark = 0;
+  let black = 0;
+  let light = 0;
+  let white = 0;
+  let sum = 0;
+  let sumSq = 0;
+  let count = 0;
+  let coreDark = 0;
+  let coreN = 0;
+  let insetLight = 0;
+  let insetN = 0;
+  let topLight = 0;
+  let lightCount = 0;
+  const topEnd = box.top + Math.max(2, Math.round(box.height * 0.28));
+  const insetX0 = box.left + Math.round(box.width * 0.12);
+  const insetX1 = box.left + box.width - Math.round(box.width * 0.12);
+  const insetY0 = box.top + Math.round(box.height * 0.18);
+  const insetY1 = box.top + box.height - Math.round(box.height * 0.18);
+  const cx = box.left + box.width / 2;
+  const cy = box.top + box.height / 2;
+  for (let y = box.top; y < box.top + box.height; y += 1) {
+    for (let x = box.left; x < box.left + box.width; x += 1) {
+      const offset = (y * width + x) * channels;
+      const luma =
+        0.299 * data[offset] + 0.587 * data[offset + 1] + 0.114 * data[offset + 2];
+      sum += luma;
+      sumSq += luma * luma;
+      count += 1;
+      const isDark = luma < DEALER_DARK_LUMA;
+      if (isDark) dark += 1;
+      if (luma < 48) black += 1;
+      if (luma > 165) {
+        light += 1;
+        lightCount += 1;
+        if (y < topEnd) topLight += 1;
+      }
+      if (luma > 200) white += 1;
+
+      const dx = (x - cx) / (box.width / 2);
+      const dy = (y - cy) / (box.height / 2);
+      if (Math.hypot(dx, dy) < 0.55) {
+        coreN += 1;
+        if (isDark) coreDark += 1;
+      }
+      if (x >= insetX0 && x < insetX1 && y >= insetY0 && y < insetY1) {
+        insetN += 1;
+        if (luma > 165) insetLight += 1;
+      }
+    }
+  }
+  if (count === 0) return null;
+
+  const mean = sum / count;
+  const stdev = Math.sqrt(Math.max(0, sumSq / count - mean * mean));
+  return {
+    aspect,
+    mean,
+    stdev,
+    darkRatio: dark / count,
+    blackRatio: black / count,
+    lightRatio: light / count,
+    whiteRatio: white / count,
+    coreDark: coreDark / Math.max(1, coreN),
+    insetLight: insetLight / Math.max(1, insetN),
+    topFringeLightShare: lightCount ? topLight / lightCount : 0,
+  };
+}
+
+/**
+ * Portinhola, caixa de roda, friso e reflexo: escuro sólido ou tinta clara
+ * sem “furos” de letra no miolo. Placa preta da loja tem texto claro interno.
+ */
+function looksLikeBodyPanelPatch(signals: PatchSignals): boolean {
+  if (
+    signals.aspect >= 0.72 &&
+    signals.aspect <= 1.28 &&
+    signals.mean > 150 &&
+    signals.coreDark < 0.18
+  ) {
+    return true;
+  }
+  if (signals.mean > 170 && signals.darkRatio < 0.1 && signals.coreDark < 0.12) {
+    return true;
+  }
+  if (signals.coreDark >= 0.78 && signals.insetLight < 0.12) return true;
+  if (signals.topFringeLightShare >= 0.55 && signals.insetLight < 0.12) {
+    return true;
+  }
+  return false;
+}
+
+export async function looksLikeBodyPanelFalsePositive(
+  image: Buffer,
+  box: PixelBox,
+): Promise<boolean> {
+  if (isUnlikelyPlateGeometry(box)) return true;
+  try {
+    const extracted = await sharp(image, { failOn: "none" })
+      .extract({
+        left: box.left,
+        top: box.top,
+        width: box.width,
+        height: box.height,
+      })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const signals = measureDealerPatch(
+      extracted.data,
+      extracted.info.width,
+      extracted.info.height,
+      extracted.info.channels,
+      {
+        left: 0,
+        top: 0,
+        width: extracted.info.width,
+        height: extracted.info.height,
+      },
+    );
+    if (!signals) return true;
+    return looksLikeBodyPanelPatch(signals);
+  } catch {
+    return false;
+  }
+}
+
 function scoreBlackDealerPlate(
   data: Buffer,
   width: number,
@@ -859,42 +1058,32 @@ function scoreBlackDealerPlate(
   if (box.left < 0 || box.top < 0) return 0;
   if (box.left + box.width > width || box.top + box.height > height) return 0;
 
-  let dark = 0;
-  let black = 0;
-  let light = 0;
-  let white = 0;
+  const signals = measureDealerPatch(data, width, height, channels, box);
+  if (!signals) return 0;
+  if (looksLikeBodyPanelPatch(signals)) return 0;
+  if (signals.insetLight < 0.1) return 0;
+
   let blueish = 0;
-  let sum = 0;
-  let sumSq = 0;
   let count = 0;
 
   for (let y = box.top; y < box.top + box.height; y += 1) {
     for (let x = box.left; x < box.left + box.width; x += 1) {
       const offset = (y * width + x) * channels;
-      const r = data[offset];
-      const g = data[offset + 1];
-      const b = data[offset + 2];
-      const luma = 0.299 * r + 0.587 * g + 0.114 * b;
-      sum += luma;
-      sumSq += luma * luma;
       count += 1;
-      if (luma < DEALER_DARK_LUMA) dark += 1;
-      if (luma < 48) black += 1;
-      if (luma > 165) light += 1;
-      if (luma > 200) white += 1;
-      if (isMercosulBlue(r, g, b)) blueish += 1;
+      if (isMercosulBlue(data[offset], data[offset + 1], data[offset + 2])) {
+        blueish += 1;
+      }
     }
   }
   if (count === 0) return 0;
 
-  const darkRatio = dark / count;
-  const blackRatio = black / count;
-  const lightRatio = light / count;
-  const whiteRatio = white / count;
+  const darkRatio = signals.darkRatio;
+  const blackRatio = signals.blackRatio;
+  const lightRatio = signals.lightRatio;
+  const whiteRatio = signals.whiteRatio;
   const blueRatio = blueish / count;
-  const mean = sum / count;
-  const variance = Math.max(0, sumSq / count - mean * mean);
-  const stdev = Math.sqrt(variance);
+  const mean = signals.mean;
+  const stdev = signals.stdev;
 
   // Placa Mercosul é branca; faixa azul sozinha não tem texto branco suficiente
   // no mesmo retângulo escuro. Placa preta da loja é bimodal (preto + branco).
@@ -1031,24 +1220,35 @@ export async function dealerBoxesFromImage(
   imageWidth: number,
   imageHeight: number,
 ): Promise<PixelBox[]> {
-  const fromText = dealerBoxesFromPieces(pieces, imageWidth, imageHeight);
-  // Só expande em volta do texto da loja. Varredura larga pega farol/pneu.
-  const regions: PixelBox[] = [];
-  for (let index = 0; index < fromText.length; index += 1) {
-    regions.push(regionAroundBox(fromText[index], imageWidth, imageHeight));
+  // Só com OCR FORTE/AUTOMÓVEIS. Sem texto, o retângulo preto pega friso/roda.
+  const ocrBoxes = unpaddedDealerGroups(pieces, imageWidth, imageHeight);
+  if (ocrBoxes.length === 0) return [];
+
+  const confirmed: PixelBox[] = [];
+  for (let index = 0; index < ocrBoxes.length; index += 1) {
+    const ocr = ocrBoxes[index];
+    const search = regionAroundBox(ocr, imageWidth, imageHeight);
+    const visual = await findBlackDealerPlateBoxes(image, search);
+    const overlapping = visual
+      .filter(
+        (box) =>
+          isPlausibleDealerBox(box, imageWidth, imageHeight) &&
+          (boxesOverlap(box, ocr) || boxContainsCenter(box, ocr)),
+      )
+      .sort((a, b) => overlapArea(b, ocr) - overlapArea(a, ocr) || boxArea(a) - boxArea(b));
+
+    if (overlapping.length > 0) {
+      const paddedOcr = padDealerBox(ocr, imageWidth, imageHeight);
+      confirmed.push(unionBox([overlapping[0], paddedOcr]));
+      continue;
+    }
+
+    const paddedOcr = padDealerBox(ocr, imageWidth, imageHeight);
+    if (await looksLikeBodyPanelFalsePositive(image, paddedOcr)) continue;
+    confirmed.push(paddedOcr);
   }
 
-  const visual: PixelBox[] = [];
-  for (let index = 0; index < regions.length; index += 1) {
-    const found = await findBlackDealerPlateBoxes(image, regions[index]);
-    visual.push(...found);
-  }
-
-  const paddedVisual = visual
-    .filter((box) => isPlausibleDealerBox(box, imageWidth, imageHeight))
-    .map((box) => padDealerBox(box, imageWidth, imageHeight));
-
-  return mergeUnionBoxes([...fromText, ...paddedVisual]);
+  return mergeUnionBoxes(confirmed);
 }
 
 /** Quando dois achados se sobrepõem, fica o menor — a linha gorda não engole a placa. */
@@ -1349,11 +1549,13 @@ function acceptFoundBox(
   imageWidth: number,
   imageHeight: number,
 ): PixelBox | null {
+  if (isUnlikelyPlateGeometry(box)) return null;
   if (!isPlausiblePlateBox(box, imageWidth, imageHeight)) return null;
   if (isPlateShaped(box, imageWidth, imageHeight)) {
     return padBox(box, imageWidth, imageHeight);
   }
   const clamped = clampToPlateShape(box, imageWidth, imageHeight);
+  if (isUnlikelyPlateGeometry(clamped)) return null;
   if (!isPlateShaped(clamped, imageWidth, imageHeight)) return null;
   return padBox(clamped, imageWidth, imageHeight);
 }
@@ -1378,7 +1580,13 @@ async function findPlatesWithoutReadableText(
       imageWidth,
       imageHeight,
     );
-    return mergeOverlappingBoxes(filtered);
+    const merged = mergeOverlappingBoxes(filtered);
+    const confirmed: PixelBox[] = [];
+    for (let index = 0; index < merged.length; index += 1) {
+      if (await looksLikeBodyPanelFalsePositive(bytes, merged[index])) continue;
+      confirmed.push(merged[index]);
+    }
+    return confirmed;
   }
 
   for (let index = 0; index < labels.cars.length; index += 1) {
@@ -1397,7 +1605,13 @@ async function findPlatesWithoutReadableText(
     imageWidth,
     imageHeight,
   );
-  return mergeOverlappingBoxes(filtered);
+  const merged = mergeOverlappingBoxes(filtered);
+  const confirmed: PixelBox[] = [];
+  for (let index = 0; index < merged.length; index += 1) {
+    if (await looksLikeBodyPanelFalsePositive(bytes, merged[index])) continue;
+    confirmed.push(merged[index]);
+  }
+  return confirmed;
 }
 
 export function isHeadlightOrCornerZone(
@@ -1531,12 +1745,12 @@ export async function applyBlurRegions(
     const shortSide = Math.min(box.width, box.height);
     const smallPlate = shortSide < 40;
     const sigma = Math.min(
-      16,
-      Math.max(smallPlate ? 8 : 5, Math.round(shortSide / (smallPlate ? 4 : 6))),
+      40,
+      Math.max(smallPlate ? 20 : 16, Math.round(shortSide / (smallPlate ? 1.6 : 2.4))),
     );
-    const radius = Math.max(2, Math.round(shortSide * (smallPlate ? 0.12 : 0.2)));
-    const feather = smallPlate ? 0.7 : Math.max(1.2, shortSide * 0.07);
-    const inset = smallPlate ? 0 : Math.max(1, Math.round(feather));
+    const radius = Math.max(2, Math.round(shortSide * (smallPlate ? 0.08 : 0.14)));
+    const feather = smallPlate ? 0.25 : Math.max(0.4, shortSide * 0.02);
+    const inset = 0;
     const mask = Buffer.from(
       `<svg width="${box.width}" height="${box.height}" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -1565,6 +1779,7 @@ export async function applyBlurRegions(
         height: box.height,
       })
       .blur(sigma)
+      .blur(Math.max(6, Math.round(sigma * 0.45)))
       .toBuffer();
 
     const masked = await sharp(blurred)
@@ -1641,6 +1856,7 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
     const plateBoxes: PixelBox[] = [];
     for (const box of boxes) {
       if (await looksLikeDarkDisplay(bytes, box)) continue;
+      if (await looksLikeBodyPanelFalsePositive(bytes, box)) continue;
       plateBoxes.push(box);
     }
 
