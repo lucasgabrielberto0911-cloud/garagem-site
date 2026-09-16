@@ -6,6 +6,7 @@ import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { IconClose, IconSearch } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName } from "@/lib/format";
+import { STOCK_SORT_OPTIONS, stockSortLabel } from "@/lib/stock-query";
 import { formatColorLabel } from "@/lib/vehicle-display";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
@@ -68,14 +69,6 @@ const CATEGORY_FILTER_OPTIONS = [
   { value: "", label: "Ambos" },
   { value: "carro", label: "Carro" },
   { value: "moto", label: "Moto" },
-] as const;
-
-const SORT_OPTIONS = [
-  { value: "recentes", label: "Mais recentes" },
-  { value: "menor-preco", label: "Menor preço" },
-  { value: "maior-preco", label: "Maior preço" },
-  { value: "menor-km", label: "Menor KM" },
-  { value: "mais-novo", label: "Ano mais novo" },
 ] as const;
 
 const BUDGET_CHIPS = [
@@ -535,7 +528,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
               onChange={(event) => update({ sort: event.target.value })}
               className={selectClass}
             >
-              {SORT_OPTIONS.map((option) => (
+              {STOCK_SORT_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -724,7 +717,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
             Deslize para ordenar
           </p>
           <div className="chip-scroll -mx-1 px-1">
-            {SORT_OPTIONS.map((option) => (
+            {STOCK_SORT_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 type="button"
@@ -740,6 +733,38 @@ export function StockFilters({ facets }: { facets: Facets }) {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="sticky top-[calc(4.5rem+env(safe-area-inset-top,0px))] z-30 mt-3 flex items-center gap-2 border border-white/10 bg-ink/95 px-3 py-2 backdrop-blur lg:hidden">
+        <button
+          type="button"
+          onClick={() => {
+            setDraft(current);
+            setOpen(true);
+          }}
+          className="inline-flex min-h-11 items-center gap-2 border border-white/15 px-3 font-display text-[11px] font-semibold uppercase tracking-wide text-cream"
+        >
+          <FilterIcon />
+          Filtros
+          {activeFilterCount > 0 ? (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] text-white">
+              {activeFilterCount}
+            </span>
+          ) : null}
+        </button>
+        <p className="min-w-0 flex-1 truncate text-xs text-muted">
+          {stockSortLabel(current.sort)}
+          {hasFilter ? " · filtros ativos" : ""}
+        </p>
+        {hasFilter ? (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="min-h-11 shrink-0 px-2 text-[11px] uppercase tracking-wider text-muted"
+          >
+            Limpar
+          </button>
+        ) : null}
       </div>
 
       {open ? (

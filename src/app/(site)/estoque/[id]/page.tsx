@@ -303,6 +303,11 @@ export default async function VehicleDetailPage({
                     Reservado
                   </span>
                 ) : null}
+                {!sold && vehicle.inspection ? (
+                  <span className="border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+                    {vehicle.inspection}
+                  </span>
+                ) : null}
                 {!sold ? (
                   <FavoriteButton
                     vehicleId={vehicle.id}
@@ -350,9 +355,12 @@ export default async function VehicleDetailPage({
                 />
               ) : null}
 
-              <dl className="grid grid-cols-2 gap-x-3 gap-y-3 border-y border-white/10 py-3.5 text-sm">
+              <dl className="grid grid-cols-2 gap-2 border-y border-white/10 py-3.5 text-sm">
                 {specs.map((spec) => (
-                  <div key={spec.label} className="min-w-0">
+                  <div
+                    key={spec.label}
+                    className="min-w-0 border border-white/10 bg-asphalt/40 px-2.5 py-2"
+                  >
                     <dt className="text-[11px] uppercase tracking-wider text-muted">
                       {spec.label}
                     </dt>
