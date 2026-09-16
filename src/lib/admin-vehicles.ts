@@ -55,6 +55,7 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
   hasVideo: true,
   transmission: true,
   color: true,
+  plate: true,
   photos: {
     orderBy: { order: "asc" as const },
     take: 1,
@@ -86,6 +87,7 @@ export type AdminVehicleListItem = {
   hasVideo: boolean;
   transmission: string;
   color: string | null;
+  plate: string | null;
   photos: Array<{ url: string; thumbnailUrl?: string | null }>;
   photoCount: number;
   costs: Array<{ amount: number }>;

@@ -211,6 +211,12 @@ export function AdminShell({
 
   return (
     <div className="min-h-dvh bg-asphalt text-cream lg:flex">
+      <a
+        href="#painel"
+        className="fixed left-4 top-0 z-[80] -translate-y-full bg-brand px-4 py-3 font-display text-sm font-semibold text-cream outline-none transition focus:translate-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream"
+      >
+        Pular para o conteúdo
+      </a>
       <aside className="hidden w-64 flex-col border-r border-white/10 bg-ink lg:fixed lg:inset-y-0 lg:flex">
         {brand}
         <div className="h-0.5 w-full bg-brand-gradient" aria-hidden="true" />
@@ -295,9 +301,13 @@ export function AdminShell({
       ) : null}
 
       <div className="min-h-dvh flex-1 lg:pl-64">
-        <div className="mx-auto w-full max-w-6xl px-3 pt-4 pb-admin-nav sm:px-6 sm:pt-6 lg:px-8 lg:pt-8">
+        <main
+          id="painel"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-6xl px-3 pt-4 pb-admin-nav outline-none sm:px-6 sm:pt-6 lg:px-8 lg:pt-8"
+        >
           {children}
-        </div>
+        </main>
       </div>
 
       <nav

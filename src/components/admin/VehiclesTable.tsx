@@ -23,18 +23,28 @@ import {
   inputClass,
   listActionCell,
 } from "@/components/admin/ui";
-import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import { formatCurrencyBRL } from "@/lib/format";
 import { expectedMargin, hasCostBasis } from "@/lib/vehicle-ops";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import type { AdminVehicleListItem, VehiclesTab } from "@/lib/admin-vehicles";
 import {
   ADMIN_BULK_MAX,
+  bulkActionsForTab,
+  bulkConfirmDescription,
+  bulkFeaturedLeavingHome,
+  bulkNamePreview,
   bulkStatusLabel,
   bulkUndoStatus,
   canUndoBulkStatus,
+  idsNeedingBulkStatus,
   type AdminBulkStatus,
 } from "@/lib/admin-bulk";
+import {
+  DELETE_CONFIRM_PHRASE,
+  adminListScanLine,
+  deleteRequiresTypedConfirm,
+} from "@/lib/admin-list";
 import { coverSrc } from "@/lib/stock-query";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import {
@@ -191,6 +201,7 @@ export function VehiclesTable({
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkTarget, setBulkTarget] = useState<AdminBulkStatus | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [undoBanner, setUndoBanner] = useState<{ ids: string[] } | null>(null);
 
   const hasMore = items.length < total;
   const allVisibleSelected =
@@ -211,6 +222,19 @@ export function VehiclesTable({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    function onEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (bulkTarget || soldTarget || deleteTarget) return;
+      if (selected.length === 0 && !undoBanner) return;
+      event.preventDefault();
+      setSelected([]);
+      setUndoBanner(null);
+    }
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [bulkTarget, soldTarget, deleteTarget, selected.length, undoBanner]);
 
   const fetchPage = useCallback(
     async (
@@ -444,13 +468,14 @@ export function VehiclesTable({
     if (!bulkTarget || selected.length === 0) return;
     setBulkBusy(true);
     try {
-      const result = await setVehiclesStatus(selected, bulkTarget);
+      const pendingIds = idsNeedingBulkStatus(items, selected, bulkTarget);
+      const result = await setVehiclesStatus(pendingIds, bulkTarget);
       if (!result.ok) {
         toast.error(result.message);
         return;
       }
       const applied = bulkTarget;
-      const appliedIds = [...selected];
+      const appliedIds = result.appliedIds ?? pendingIds;
       toast.success(result.message, {
         duration: canUndoBulkStatus(applied) ? 12_000 : 4000,
         action: canUndoBulkStatus(applied)
@@ -460,6 +485,11 @@ export function VehiclesTable({
             }
           : undefined,
       });
+      if (canUndoBulkStatus(applied)) {
+        setUndoBanner({ ids: appliedIds });
+      } else {
+        setUndoBanner(null);
+      }
       const featuredById = new Map(items.map((item) => [item.id, item.featured]));
       for (const id of appliedIds) {
         applyLocalStatus(id, applied, featuredById.get(id) ?? false);
@@ -488,6 +518,7 @@ export function VehiclesTable({
           ? "Venda desfeita. O veículo voltou para disponível."
           : `${ids.length} veículos voltaram para disponível.`,
       );
+      setUndoBanner(null);
       void fetchPage(1, sort, true);
       router.refresh();
     } catch {
@@ -740,27 +771,66 @@ export function VehiclesTable({
         </div>
       ) : null}
 
-      {selected.length > 0 ? (
-        <div className="sticky top-0 z-10 flex flex-col gap-3 border border-brand/40 bg-ink/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+      {undoBanner ? (
+        <div
+          role="status"
+          className="sticky top-[4.5rem] z-20 flex flex-col gap-3 border border-brand-orange/40 bg-ink/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between lg:top-0"
+        >
           <p className="text-sm text-cream">
-            {selected.length} selecionado(s)
-            <span className="text-muted"> · máx. {ADMIN_BULK_MAX} · só disponível/vendido</span>
+            {undoBanner.ids.length === 1
+              ? "1 veículo marcado como vendido."
+              : `${undoBanner.ids.length} veículos marcados como vendidos.`}
+            <span className="text-muted"> Pode desfazer se foi engano.</span>
           </p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setBulkTarget("disponivel")}
+              onClick={() => void undoBulkSold(undoBanner.ids)}
               className={btn.outline}
             >
-              Marcar disponível
+              Desfazer
             </button>
             <button
               type="button"
-              onClick={() => setBulkTarget("vendido")}
-              className={MARK_SOLD_BTN}
+              onClick={() => setUndoBanner(null)}
+              className="min-h-11 px-3 text-xs uppercase tracking-wider text-muted hover:text-cream"
             >
-              Marcar vendido
+              Fechar
             </button>
+          </div>
+        </div>
+      ) : null}
+
+      {selected.length > 0 ? (
+        <div className="sticky top-[4.5rem] z-20 flex flex-col gap-3 border border-brand/40 bg-ink/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between lg:top-0">
+          <p className="text-sm text-cream">
+            {selected.length} selecionado(s)
+            <span className="text-muted">
+              {" "}
+              · máx. {ADMIN_BULK_MAX} · Esc limpa · só disponível/vendido
+            </span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {bulkActionsForTab(tab).includes("disponivel") &&
+            idsNeedingBulkStatus(items, selected, "disponivel").length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setBulkTarget("disponivel")}
+                className={btn.outline}
+              >
+                Marcar disponível
+              </button>
+            ) : null}
+            {bulkActionsForTab(tab).includes("vendido") &&
+            idsNeedingBulkStatus(items, selected, "vendido").length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setBulkTarget("vendido")}
+                className={MARK_SOLD_BTN}
+              >
+                Marcar vendido
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => setSelected([])}
@@ -816,6 +886,13 @@ export function VehiclesTable({
                 <input
                   type="checkbox"
                   checked={allVisibleSelected}
+                  aria-checked={
+                    allVisibleSelected
+                      ? true
+                      : someVisibleSelected
+                        ? "mixed"
+                        : false
+                  }
                   ref={(element) => {
                     if (element) element.indeterminate = someVisibleSelected;
                   }}
@@ -935,13 +1012,28 @@ export function VehiclesTable({
         open={bulkTarget !== null}
         title={
           bulkTarget
-            ? bulkStatusLabel(bulkTarget, selected.length)
+            ? bulkStatusLabel(
+                bulkTarget,
+                idsNeedingBulkStatus(items, selected, bulkTarget).length,
+              )
             : "Atualizar lote"
         }
         description={
-          bulkTarget === "vendido"
-            ? `Confirmar venda de ${selected.length} veículo(s)? Saem do estoque ativo. As páginas públicas continuam no ar com aviso (sem 404, sem sync de Marketplace).`
-            : `Voltar ${selected.length} veículo(s) para disponível no site?`
+          bulkTarget
+            ? bulkConfirmDescription({
+                status: bulkTarget,
+                count: idsNeedingBulkStatus(items, selected, bulkTarget).length,
+                names: bulkNamePreview(
+                  items,
+                  idsNeedingBulkStatus(items, selected, bulkTarget),
+                ),
+                featuredLeaving: bulkFeaturedLeavingHome(
+                  items,
+                  idsNeedingBulkStatus(items, selected, bulkTarget),
+                  bulkTarget,
+                ),
+              })
+            : "Atualizar lote"
         }
         confirmLabel={
           bulkTarget === "vendido" ? "Marcar como vendidos" : "Marcar disponíveis"
@@ -963,6 +1055,16 @@ export function VehiclesTable({
         confirmLabel="Excluir definitivamente"
         danger
         loading={deleting}
+        typedPhrase={
+          deleteTarget &&
+          deleteRequiresTypedConfirm({
+            photoCount: deleteTarget.photoCount,
+            status: deleteTarget.status,
+          })
+            ? DELETE_CONFIRM_PHRASE
+            : undefined
+        }
+        typedLabel="Digite EXCLUIR para confirmar"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
       />
@@ -1060,12 +1162,15 @@ function VehicleAdminCard({
               {vehicle.version ? ` · ${vehicle.version}` : ""}
             </p>
             <p className="mt-0.5 text-xs text-muted">
-              {vehicle.year}/{vehicle.yearModel} · {formatNumberBR(vehicle.km)} km
+              {adminListScanLine(vehicle)}
               {vehicle.updatedAt
                 ? ` · ${formatRelativeUpdatedAt(vehicle.updatedAt)}`
                 : ""}
             </p>
           </Link>
+          <p className="mt-1.5 font-display text-lg font-bold leading-none text-cream lg:hidden">
+            {formatCurrencyBRL(vehicle.price)}
+          </p>
 
           {ops.tags.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1109,10 +1214,6 @@ function VehicleAdminCard({
               ))}
             </div>
           ) : null}
-
-          <p className="mt-2 font-display text-lg font-bold leading-none text-cream lg:hidden">
-            {formatCurrencyBRL(vehicle.price)}
-          </p>
         </div>
 
         <div className="hidden w-[11.5rem] shrink-0 flex-col items-end gap-3 lg:flex">

@@ -15,7 +15,9 @@ import {
 import { btn } from "@/components/admin/ui";
 import {
   photoBlurBadgeLabel,
+  photoBlurNeedsSave,
   photoBlurProgressLabel,
+  photoBlurRetryIds,
   photoBlurSummaryMessage,
   photoBlurToastKind,
   createPhotoBlurJobs,
@@ -102,8 +104,8 @@ export function VehiclePhotoManager({
   const pendingSkeletons = summary.uploading + summary.queued;
 
   useEffect(() => {
-    onUploadingChange?.(inFlight);
-  }, [inFlight, onUploadingChange]);
+    onUploadingChange?.(inFlight || blurring);
+  }, [inFlight, blurring, onUploadingChange]);
 
   function patchJob(id: string, patch: Partial<LocalPhotoJob>) {
     setJobs((current) =>
@@ -361,7 +363,7 @@ export function VehiclePhotoManager({
             é borracha no servidor na hora do envio
           </p>
           <p className="mt-2 text-[11px] text-muted/80">
-            Espere o envio terminar antes de salvar o anúncio.
+            Espere o envio ou o borrão terminar antes de salvar o anúncio.
           </p>
           <input
             type="file"
@@ -475,7 +477,14 @@ export function VehiclePhotoManager({
               <p className="text-sm text-cream">
                 {photoBlurProgressLabel(blurJobs)}
               </p>
-              <div className="h-1.5 overflow-hidden bg-white/10">
+              <div
+                className="h-1.5 overflow-hidden bg-white/10"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={summarizePhotoBlur(blurJobs).percent}
+                aria-label="Progresso do borrão de placas"
+              >
                 <div
                   className="h-full bg-brand transition-[width]"
                   style={{
@@ -486,22 +495,25 @@ export function VehiclePhotoManager({
                   }}
                 />
               </div>
-              {summarizePhotoBlur(blurJobs).hasFailures && !blurring ? (
+              {photoBlurNeedsSave(blurJobs) && !blurring ? (
+                <p className="border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-sm text-cream">
+                  Placa borracha nestas fotos. <strong>Salve o anúncio</strong>{" "}
+                  para publicar as URLs novas no site.
+                </p>
+              ) : null}
+              {!blurring && photoBlurRetryIds(blurJobs).length > 0 ? (
                 <button
                   type="button"
                   onClick={() =>
                     void reblurPhotos(
                       photos.filter((photo) =>
-                        blurJobs.some(
-                          (job) =>
-                            job.id === photo.id && job.status === "error",
-                        ),
+                        photoBlurRetryIds(blurJobs).includes(photo.id),
                       ),
                     )
                   }
                   className={btn.outline}
                 >
-                  Tentar de novo as que falharam
+                  Tentar de novo as sem placa ou que falharam
                 </button>
               ) : null}
             </div>
@@ -581,35 +593,42 @@ export function VehiclePhotoManager({
                     </span>
                   ) : null}
 
-                  {blurJob ? (
-                    <button
-                      type="button"
-                      disabled={blurring || inFlight || blurJob.status === "working"}
-                      onMouseDown={(event) => event.stopPropagation()}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        if (blurJob.status === "blurred") return;
-                        void reblurPhotos([photo]);
-                      }}
-                      className={`absolute left-1.5 top-8 max-w-[calc(100%-0.75rem)] px-1.5 py-0.5 text-left font-display text-[10px] font-semibold uppercase tracking-wider touch-manipulation disabled:opacity-80 ${
-                        blurJob.status === "blurred"
-                          ? "bg-emerald-500/90 text-asphalt"
-                          : blurJob.status === "error"
-                            ? "bg-brand text-cream"
-                            : blurJob.status === "working"
-                              ? "bg-brand-orange text-asphalt"
-                              : "bg-asphalt/85 text-cream"
-                      }`}
-                      title={
-                        blurJob.status === "error" || blurJob.status === "unchanged"
-                          ? "Tentar borrar esta foto de novo"
-                          : photoBlurBadgeLabel(blurJob.status)
-                      }
-                    >
-                      {photoBlurBadgeLabel(blurJob.status)}
-                    </button>
-                  ) : null}
+                  <button
+                    type="button"
+                    disabled={
+                      blurring ||
+                      inFlight ||
+                      blurJob?.status === "working" ||
+                      blurJob?.status === "blurred"
+                    }
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      if (blurJob?.status === "blurred") return;
+                      void reblurPhotos([photo]);
+                    }}
+                    className={`absolute left-1.5 top-8 max-w-[calc(100%-0.75rem)] px-1.5 py-0.5 text-left font-display text-[10px] font-semibold uppercase tracking-wider touch-manipulation disabled:opacity-80 ${
+                      blurJob?.status === "blurred"
+                        ? "bg-emerald-500/90 text-asphalt"
+                        : blurJob?.status === "error"
+                          ? "bg-brand text-cream"
+                          : blurJob?.status === "working"
+                            ? "bg-brand-orange text-asphalt"
+                            : "bg-asphalt/85 text-cream"
+                    }`}
+                    title={
+                      blurJob?.status === "error" || blurJob?.status === "unchanged"
+                        ? "Tentar borrar esta foto de novo"
+                        : blurJob
+                          ? photoBlurBadgeLabel(blurJob.status)
+                          : "Borrar a placa só nesta foto"
+                    }
+                  >
+                    {blurJob
+                      ? photoBlurBadgeLabel(blurJob.status)
+                      : "Borrar placa"}
+                  </button>
 
                   <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-asphalt/85 px-1.5 py-1.5 backdrop-blur">
                     <div className="flex gap-0.5">

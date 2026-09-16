@@ -11,6 +11,7 @@ import { createPortal } from "react-dom";
 import { VehicleImage } from "@/components/VehicleImage";
 import { IconClose } from "@/components/site/icons";
 import { vehiclePhotoAlt } from "@/lib/format";
+import { handleFocusTrap } from "@/lib/focus-trap";
 import { galleryThumbSrc, type GalleryPhoto } from "@/lib/stock-query";
 
 const MAX_SCALE = 4;
@@ -49,6 +50,7 @@ export function PhotoLightbox({
   const pinchStart = useRef<{ distance: number; scale: number } | null>(null);
   const lastTapAt = useRef(0);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const thumbStripRef = useRef<HTMLDivElement>(null);
 
   const resetZoom = useCallback(() => {
@@ -122,6 +124,7 @@ export function PhotoLightbox({
         go(-1);
       }
       if (event.key === "0") resetZoom();
+      if (dialogRef.current) handleFocusTrap(event, dialogRef.current);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -253,6 +256,7 @@ export function PhotoLightbox({
 
   const content = (
     <div
+      ref={dialogRef}
       className="fixed inset-0 z-[200] flex items-center justify-center p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
