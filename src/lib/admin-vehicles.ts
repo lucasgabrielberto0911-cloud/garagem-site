@@ -62,6 +62,7 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
   },
   costs: { select: { amount: true } },
   sale: { select: { salePrice: true } },
+  _count: { select: { photos: true } },
 } as const;
 
 export type AdminVehicleListItem = {
@@ -86,9 +87,22 @@ export type AdminVehicleListItem = {
   transmission: string;
   color: string | null;
   photos: Array<{ url: string; thumbnailUrl?: string | null }>;
+  photoCount: number;
   costs: Array<{ amount: number }>;
   sale: { salePrice: number } | null;
 };
+
+function toAdminVehicleListItem(
+  row: Omit<AdminVehicleListItem, "photoCount"> & {
+    _count?: { photos: number };
+  },
+): AdminVehicleListItem {
+  const { _count, ...rest } = row;
+  return {
+    ...rest,
+    photoCount: _count?.photos ?? rest.photos.length,
+  };
+}
 
 export const ADMIN_SALE_LIST_INCLUDE = {
   vehicle: {
@@ -190,7 +204,7 @@ export async function getAdminVehiclesPage(options: {
   ]);
 
   return {
-    vehicles: vehicles as AdminVehicleListItem[],
+    vehicles: vehicles.map(toAdminVehicleListItem),
     total,
     page,
     pageSize,

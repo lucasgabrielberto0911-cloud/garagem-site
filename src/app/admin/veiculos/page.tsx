@@ -91,6 +91,8 @@ export default async function VehiclesPage({
         estoqueCount={stats.estoqueCount}
         vendidosCount={stats.vendidosCount}
         featuredCount={stats.featured}
+        availableCount={stats.available}
+        reservedCount={stats.reserved}
         quality={{
           withoutPhotos: stats.withoutPhotos,
           withoutVideo: stats.withoutVideo,
