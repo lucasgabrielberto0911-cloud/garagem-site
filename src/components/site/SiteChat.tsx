@@ -1038,7 +1038,7 @@ export function SiteChat() {
   return (
     <div
       ref={shellRef}
-      className={`site-chat pointer-events-none fixed z-[60] flex flex-col items-end gap-3${
+      className={`site-chat pointer-events-none fixed z-[60] flex flex-col items-end${
         open ? " is-open" : ""
       }`}
     >
@@ -1047,7 +1047,7 @@ export function SiteChat() {
           role="dialog"
           aria-labelledby="site-chat-title"
           aria-label="Chat da Garagem"
-          className="site-chat-panel pointer-events-auto flex h-[min(680px,calc(100dvh-7.25rem))] w-[min(28rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink shadow-[0_24px_64px_rgba(0,0,0,0.55)]"
+          className="site-chat-panel pointer-events-auto flex min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink shadow-[0_24px_64px_rgba(0,0,0,0.55)]"
           aria-busy={pending}
         >
           <header className="relative border-b border-white/10 bg-[#121214] px-3 py-3 sm:px-4">
@@ -1113,7 +1113,7 @@ export function SiteChat() {
               <button
                 type="button"
                 onClick={closeChat}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-white/5 hover:text-cream touch-manipulation"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand text-cream transition hover:bg-[#c91418] touch-manipulation"
                 aria-label="Fechar chat"
               >
                 <IconClose className="h-4 w-4" />
@@ -1347,9 +1347,11 @@ export function SiteChat() {
           else openChat("launcher");
         }}
         aria-expanded={open}
+        aria-hidden={open}
+        tabIndex={open ? -1 : undefined}
         aria-label={open ? "Fechar chat" : "Abrir chat da Garagem"}
-        className={`site-chat-launcher pointer-events-auto flex h-14 items-center justify-center rounded-full bg-brand text-cream shadow-[0_10px_24px_rgba(232,24,28,0.4)] transition hover:bg-[#c91418] hover:scale-105 active:scale-95 touch-manipulation ${
-          open ? "w-14" : "w-14 lg:w-auto lg:gap-2.5 lg:px-4"
+        className={`site-chat-launcher pointer-events-auto h-14 items-center justify-center rounded-full bg-brand text-cream shadow-[0_10px_24px_rgba(232,24,28,0.4)] transition hover:bg-[#c91418] hover:scale-105 active:scale-95 touch-manipulation ${
+          open ? "hidden w-14" : "flex w-14 lg:w-auto lg:gap-2.5 lg:px-4"
         }`}
       >
         {open ? (
