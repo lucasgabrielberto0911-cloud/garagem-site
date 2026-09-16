@@ -49,7 +49,11 @@ import {
   parseVehicleCategory,
   type VehicleCategory,
 } from "@/lib/vehicle-accessories";
-import { kmHint, validateVehicleListing } from "@/lib/admin-vehicle-validate";
+import {
+  descriptionPriceMismatch,
+  kmHint,
+  validateVehicleListing,
+} from "@/lib/admin-vehicle-validate";
 
 type VehicleWithPhotos = Vehicle & { photos: Photo[] };
 
@@ -161,6 +165,8 @@ export function VehicleForm({
   );
   const [engine, setEngine] = useState(vehicle?.engine ?? "");
   const [purchase, setPurchase] = useState("");
+  const [description, setDescription] = useState(vehicle?.description ?? "");
+  const [status, setStatus] = useState(vehicle?.status ?? "disponivel");
 
   const fuelOptions = getFuels(category);
   const transmissionOptions = getTransmissions(category);
@@ -173,6 +179,9 @@ export function VehicleForm({
     transmissionOptions,
   );
   const canFixTransmission = transmissionOptions.includes(transmissionSuggestion);
+  const listedPrice = Number(values.price.replace(/\D/g, "") || 0);
+  const priceMismatch = descriptionPriceMismatch(description, listedPrice);
+  const alreadySold = vehicle?.status === "vendido";
 
   function changeCategory(next: VehicleCategory) {
     if (next === category) return;
@@ -616,15 +625,37 @@ export function VehicleForm({
                 </p>
               ) : null}
             </Field>
-            <Field label="Status">
+            <Field
+              label="Status"
+              hint={
+                alreadySold
+                  ? "Já vendido. Disponível/reservado volta para o estoque ao salvar."
+                  : "Para vender, use o botão “Marcar vendido” — confirma e mantém a página no ar."
+              }
+            >
               <select
                 name="status"
-                defaultValue={vehicle?.status ?? "disponivel"}
+                value={status}
+                onChange={(event) => {
+                  if (event.target.value === "vendido" && !alreadySold) {
+                    toast.message(
+                      "Para vender, use o botão “Marcar vendido”. Assim a página continua no ar.",
+                    );
+                    return;
+                  }
+                  setStatus(event.target.value);
+                }}
                 className={inputClass}
               >
                 {STATUSES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
+                  <option
+                    key={item.value}
+                    value={item.value}
+                    disabled={item.value === "vendido" && !alreadySold}
+                  >
+                    {item.value === "vendido" && !alreadySold
+                      ? "Vendido — use o botão abaixo"
+                      : item.label}
                   </option>
                 ))}
               </select>
@@ -844,6 +875,19 @@ export function VehicleForm({
         ) : null}
 
         <Card title="Descrição">
+          {priceMismatch ? (
+            <div
+              role="status"
+              className="mb-4 border border-brand-orange/40 bg-brand-orange/10 px-3 py-3 text-sm text-cream"
+            >
+              <p className="font-display text-xs font-semibold uppercase tracking-wider text-brand-orange">
+                Preço do texto ≠ preço do anúncio
+              </p>
+              <p className="mt-1 leading-relaxed text-cream/90">
+                {priceMismatch.message}
+              </p>
+            </div>
+          ) : null}
           <Field
             label="Texto do anúncio"
             hint="Conte o estado do veículo, revisões e o que ajuda a vender. Os acessórios ficam na lista acima."
@@ -851,8 +895,11 @@ export function VehicleForm({
             <textarea
               name="description"
               rows={5}
-              defaultValue={vehicle?.description ?? ""}
-              className={`${inputClass} resize-y`}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              className={`${inputClass} resize-y ${
+                priceMismatch ? "border-brand-orange/50" : ""
+              }`}
             />
           </Field>
         </Card>
