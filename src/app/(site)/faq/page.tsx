@@ -42,9 +42,7 @@ export default async function FaqPage() {
             fale com a gente no WhatsApp.
           </p>
           <div className="mt-5 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-            <ChatOpenButton source="faq" variant="outline">
-              Ajuda para escolher
-            </ChatOpenButton>
+            <ChatOpenButton source="faq" variant="outline" />
             <WhatsAppButton
               size="lg"
               trackingLabel="faq"

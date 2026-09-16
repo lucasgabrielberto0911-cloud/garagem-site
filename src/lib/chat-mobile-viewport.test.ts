@@ -3,9 +3,13 @@ import { test } from "node:test";
 import {
   CHAT_LAYOUT,
   chatBoxInsideViewport,
+  chatBoxesOverlap,
+  chatClosedLauncherBox,
+  chatClosedLauncherVisible,
   chatMobileKeyboardCovered,
   chatOpenOccupiedHeight,
   chatOpenPanelBox,
+  chatWhatsAppFloatBox,
 } from "./chat-mobile-viewport";
 
 test("sem teclado o inset é zero e o chat não entra em modo teclado", () => {
@@ -53,7 +57,7 @@ test("legacy desktop: painel + FAB + folga do WhatsApp vaza em janela baixa (pri
   const occupied = chatOpenOccupiedHeight({
     viewportHeight,
     topInset: 0,
-    bottomInset: CHAT_LAYOUT.closedDesktopBottomPx,
+    bottomInset: CHAT_LAYOUT.legacyClosedDesktopBottomPx,
     launcherBelowPanel: true,
     panelReserve: CHAT_LAYOUT.legacyPanelReservePx,
   });
@@ -107,4 +111,94 @@ test("desktop alto: card de 680px, não estica a tela inteira", () => {
   assert.equal(box.height, CHAT_LAYOUT.panelMaxPx);
   assert.equal(box.width, CHAT_LAYOUT.panelWidthPx);
   assert.equal(chatBoxInsideViewport(box, 1440, 900), true);
+});
+
+test("FAB fechado some na ficha e no mobile com chips ou consent", () => {
+  assert.equal(
+    chatClosedLauncherVisible({ desktop: false, ficha: true, chips: false }),
+    false,
+  );
+  assert.equal(
+    chatClosedLauncherVisible({ desktop: true, ficha: true, chips: false }),
+    false,
+  );
+  assert.equal(
+    chatClosedLauncherVisible({ desktop: false, ficha: false, chips: true }),
+    false,
+  );
+  assert.equal(
+    chatClosedLauncherVisible({
+      desktop: false,
+      ficha: false,
+      chips: false,
+      consent: true,
+    }),
+    false,
+  );
+  assert.equal(
+    chatClosedLauncherVisible({ desktop: true, ficha: false, chips: true }),
+    true,
+  );
+});
+
+test("FAB fechado no desktop fica ao lado do WhatsApp, não empilhado no meio", () => {
+  const viewportWidth = 1440;
+  const viewportHeight = 900;
+  const fab = chatClosedLauncherBox({
+    viewportWidth,
+    viewportHeight,
+    desktop: true,
+    ficha: false,
+    chips: false,
+  });
+  assert.ok(fab);
+  const wa = chatWhatsAppFloatBox(viewportWidth, viewportHeight);
+  assert.equal(chatBoxInsideViewport(fab, viewportWidth, viewportHeight), true);
+  assert.equal(fab.bottom, CHAT_LAYOUT.closedDesktopBottomPx);
+  assert.equal(fab.bottom, wa.bottom);
+  assert.ok(fab.right > wa.right);
+  assert.equal(chatBoxesOverlap(fab, wa), false);
+  assert.ok(
+    fab.bottom < CHAT_LAYOUT.legacyClosedDesktopBottomPx,
+    "não usa mais o empilhamento de 6.25rem",
+  );
+});
+
+test("FAB fechado no mobile (sem chips) fica acima da nav, dentro da aba", () => {
+  const viewportWidth = 390;
+  const viewportHeight = 844;
+  const fab = chatClosedLauncherBox({
+    viewportWidth,
+    viewportHeight,
+    desktop: false,
+    ficha: false,
+    chips: false,
+  });
+  assert.ok(fab);
+  assert.equal(chatBoxInsideViewport(fab, viewportWidth, viewportHeight), true);
+  assert.equal(fab.bottom, CHAT_LAYOUT.closedMobileNavBottomPx);
+  assert.ok(fab.bottom < CHAT_LAYOUT.legacyClosedFichaStickyBottomPx);
+});
+
+test("ficha não renderiza caixa do FAB fechado (entrada in-page)", () => {
+  assert.equal(
+    chatClosedLauncherBox({
+      viewportWidth: 390,
+      viewportHeight: 844,
+      desktop: false,
+      ficha: true,
+      chips: false,
+    }),
+    null,
+  );
+  assert.equal(
+    chatClosedLauncherBox({
+      viewportWidth: 1440,
+      viewportHeight: 900,
+      desktop: true,
+      ficha: true,
+      chips: false,
+    }),
+    null,
+  );
 });

@@ -670,26 +670,22 @@ export function StockFilters({ facets }: { facets: Facets }) {
             {stockSortLabel(current.sort)}
             {activeFilterCount > 0 ? " · filtros ativos" : ""}
           </p>
-          <div className="flex shrink-0 items-center gap-2">
-            {hasFilter ? (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="min-h-11 px-2 text-[11px] uppercase tracking-wider text-muted"
-              >
-                Limpar
-              </button>
-            ) : null}
-            <ChatOpenButton
-              source="estoque-filtros"
-              prompt="Quero ajuda para escolher no estoque"
-              size="md"
-              className="min-h-11 border-white/15 px-2.5 text-[10px]"
+          {hasFilter ? (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="min-h-11 shrink-0 px-2 text-[11px] uppercase tracking-wider text-muted"
             >
-              Ajuda
-            </ChatOpenButton>
-          </div>
+              Limpar
+            </button>
+          ) : null}
         </div>
+        <ChatOpenButton
+          source="estoque-filtros"
+          prompt="Quero ajuda para escolher no estoque"
+          size="compact"
+          className="w-full border-white/15"
+        />
       </div>
 
       {open ? (

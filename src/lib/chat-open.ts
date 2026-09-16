@@ -1,5 +1,8 @@
 export const SITE_CHAT_OPEN_EVENT = "garagem:open-chat";
 
+/** Texto visível e aria-label do botão que abre o chat. Nunca “pra”. */
+export const CHAT_HELP_LABEL = "Ajuda para escolher";
+
 export type SiteChatOpenRequest = {
   source: string;
   prompt?: string;

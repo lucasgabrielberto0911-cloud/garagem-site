@@ -293,9 +293,7 @@ export function EstoqueBrowse({
                           : "Quero ajuda para escolher um veículo"
                       }
                       variant="solid"
-                    >
-                      Me ajude a escolher
-                    </ChatOpenButton>
+                    />
                   ) : null}
                   <SiteLeadHit
                     contentName="Avise-me"

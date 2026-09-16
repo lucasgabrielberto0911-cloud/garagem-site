@@ -301,6 +301,17 @@ export default async function VehicleDetailPage({
           <span className="text-cream">{title}</span>
         </nav>
 
+        {!sold ? (
+          <div className="sticky top-[calc(4.5rem+env(safe-area-inset-top,0px))] z-30 mt-3 lg:hidden">
+            <ChatOpenButton
+              source="ficha-header"
+              prompt={`Tenho dúvida sobre o ${title}`}
+              size="compact"
+              className="w-full border-white/20 bg-asphalt/95 backdrop-blur"
+            />
+          </div>
+        ) : null}
+
         {/* Mobile: galeria → ficha → detalhes. Desktop: galeria+detalhes | ficha. */}
         <div className="mt-4 grid gap-5 lg:mt-5 lg:grid-cols-[1.35fr_0.9fr] lg:items-start lg:gap-8">
           <div className="order-1 min-w-0">
@@ -451,13 +462,13 @@ export default async function VehicleDetailPage({
                     trade={whatsapp.trade}
                   />
 
-                  <ChatOpenButton
-                    source="ficha"
-                    prompt={`Tenho dúvida sobre o ${title}`}
-                    className="w-full lg:hidden"
-                  >
-                    Dúvida rápida
-                  </ChatOpenButton>
+                  <div className="hidden lg:block">
+                    <ChatOpenButton
+                      source="ficha"
+                      prompt={`Tenho dúvida sobre o ${title}`}
+                      className="w-full"
+                    />
+                  </div>
 
                   <p className="text-[11px] leading-relaxed text-muted">
                     Financiamento em até 60x e cartão em até 18x. O consultor

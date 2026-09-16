@@ -21,6 +21,7 @@ import {
   type ChatVehicleCard,
 } from "@/lib/chat-cards";
 import {
+  CHAT_HELP_LABEL,
   consumeSiteChatOpenRequest,
   SITE_CHAT_OPEN_EVENT,
   type SiteChatOpenRequest,
@@ -1349,18 +1350,18 @@ export function SiteChat() {
         aria-expanded={open}
         aria-hidden={open}
         tabIndex={open ? -1 : undefined}
-        aria-label={open ? "Fechar chat" : "Abrir chat da Garagem"}
-        className={`site-chat-launcher pointer-events-auto h-14 items-center justify-center rounded-full bg-brand text-cream shadow-[0_10px_24px_rgba(232,24,28,0.4)] transition hover:bg-[#c91418] hover:scale-105 active:scale-95 touch-manipulation ${
-          open ? "hidden w-14" : "flex w-14 lg:w-auto lg:gap-2.5 lg:px-4"
+        aria-label={open ? "Fechar chat" : CHAT_HELP_LABEL}
+        className={`site-chat-launcher pointer-events-auto h-12 items-center justify-center gap-2 rounded-full bg-brand px-3.5 text-cream shadow-[0_10px_24px_rgba(232,24,28,0.4)] transition hover:bg-[#c91418] hover:scale-105 active:scale-95 touch-manipulation sm:h-14 sm:px-4 ${
+          open ? "hidden w-12" : "flex w-auto"
         }`}
       >
         {open ? (
           <IconClose className="h-6 w-6" />
         ) : (
           <>
-            <IconChat className="h-6 w-6" />
-            <span className="hidden font-display text-[13px] font-semibold lg:inline">
-              Ajuda pra escolher
+            <IconChat className="h-5 w-5 sm:h-6 sm:w-6" />
+            <span className="whitespace-nowrap font-display text-[12px] font-semibold sm:text-[13px]">
+              {CHAT_HELP_LABEL}
             </span>
           </>
         )}
