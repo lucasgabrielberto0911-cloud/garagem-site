@@ -371,7 +371,14 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   display: none;
 }
 
-/* Bolha do chatbot: acima da bottom nav no mobile; acima do WhatsApp no desktop. */
+/*
+ * Visual regression (Lucas, ficha Honda CG Start 160):
+ * Aberto, o shell era coluna [painel calc(100dvh-7.25rem)] + [FAB 3.5rem]
+ * com bottom: 6.25rem (folga do WhatsApp). Em iPad/desktop baixo o header
+ * saía da aba e o X vermelho ficava solto abaixo do card.
+ * Aberto: launcher some; fechar vive no header; painel cabe no inset.
+ * Fechado: FAB continua acima da nav / sticky WhatsApp da ficha (#90).
+ */
 .site-chat {
   right: max(1rem, env(safe-area-inset-right, 0px));
   bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
@@ -393,23 +400,27 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   outline-offset: 2px;
 }
 
-/* FAB fechado na ficha: some (WhatsApp sticky é o CTA). Aberto: só a nav. */
+/* FAB fechado na ficha: some (WhatsApp sticky é o CTA). */
 body:has([data-vehicle-mobile-bar]) .site-chat:not(.is-open) {
   bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
 }
 
-body:has(.site-consent) .site-chat {
+body:has(.site-consent) .site-chat:not(.is-open) {
   bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 8.5rem);
 }
 
-body:has([data-vehicle-mobile-bar]):has(.site-consent) .site-chat {
+body:has([data-vehicle-mobile-bar]):has(.site-consent) .site-chat:not(.is-open) {
   bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px) + 7.5rem);
 }
 
 @media (min-width: 1024px) {
-  body:has(.site-consent) .site-chat {
+  body:has(.site-consent) .site-chat:not(.is-open) {
     bottom: 6.25rem;
   }
+}
+
+.site-chat.is-open .site-chat-launcher {
+  display: none;
 }
 
 @media (max-width: 1023px) {
@@ -418,7 +429,10 @@ body:has([data-vehicle-mobile-bar]):has(.site-consent) .site-chat {
     right: max(0.5rem, env(safe-area-inset-right, 0px));
     top: max(0.5rem, env(safe-area-inset-top, 0px));
     bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    width: auto;
     height: auto;
+    max-width: none;
+    overflow: hidden;
     align-items: stretch;
   }
 
@@ -430,13 +444,10 @@ body:has([data-vehicle-mobile-bar]):has(.site-consent) .site-chat {
   .site-chat.is-open .site-chat-panel {
     width: 100%;
     height: 100%;
+    max-height: none;
     min-height: 0;
-    flex: 1;
+    flex: 1 1 auto;
     animation: fadeIn 0.2s ease both;
-  }
-
-  .site-chat.is-open .site-chat-launcher {
-    display: none;
   }
 
   /*
@@ -449,7 +460,33 @@ body:has([data-vehicle-mobile-bar]):has(.site-consent) .site-chat {
   }
 }
 
-/* Chat aberto na ficha: a sticky some; o painel usa só o espaço da nav. */
+@media (min-width: 1024px) {
+  .site-chat.is-open {
+    top: max(1rem, env(safe-area-inset-top, 0px));
+    right: max(1.5rem, env(safe-area-inset-right, 0px));
+    bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+    left: auto;
+    width: min(28rem, calc(100vw - 3rem));
+    max-width: calc(100vw - 3rem);
+    height: auto;
+    align-items: stretch;
+    justify-content: flex-end;
+  }
+
+  .site-chat.is-open .site-chat-panel {
+    width: 100%;
+    height: min(
+      680px,
+      calc(
+        100svh - 2.25rem - env(safe-area-inset-top, 0px) -
+          env(safe-area-inset-bottom, 0px)
+      )
+    );
+    max-height: 100%;
+    min-height: 0;
+    flex: 0 1 auto;
+  }
+}
 
 .site-consent {
   left: max(0.5rem, env(safe-area-inset-left, 0px));
