@@ -66,9 +66,7 @@ export default async function ContatoPage() {
             ou fechamento, o canal é o WhatsApp — online das 8h às 23h.
           </p>
           <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-            <ChatOpenButton source="contato" variant="outline" size="lg">
-              Ajuda para escolher
-            </ChatOpenButton>
+            <ChatOpenButton source="contato" variant="outline" size="lg" />
             <WhatsAppButton
               size="lg"
               trackingLabel="contato"

@@ -118,9 +118,7 @@ export function FavoritesList() {
             source="favoritos-vazio"
             prompt="Quero ajuda para escolher um veículo"
             variant="outline"
-          >
-            Me ajude a escolher
-          </ChatOpenButton>
+          />
         </div>
       </div>
     );

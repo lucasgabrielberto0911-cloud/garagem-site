@@ -14,15 +14,105 @@ export const CHAT_LAYOUT = {
   fabGapPx: 12,
   /** Legacy: `h-[min(680px,calc(100dvh-7.25rem))]`. */
   legacyPanelReservePx: 116,
-  /** FAB fechado no desktop, acima do WhatsApp float (6.25rem). */
-  closedDesktopBottomPx: 100,
+  /** Legacy: FAB empilhado acima do WhatsApp (6.25rem) — meio do conteúdo. */
+  legacyClosedDesktopBottomPx: 100,
+  /** Legacy: FAB na ficha a 8.5rem — meio do conteúdo / fotos. */
+  legacyClosedFichaStickyBottomPx: 136,
+  /** FAB fechado no desktop: mesma baseline do float WhatsApp (1.5rem). */
+  closedDesktopBottomPx: 24,
+  /** `1.5rem + 3.5rem + 0.75rem` — à esquerda do float, não empilhado. */
+  closedDesktopRightPx: 92,
+  closedDesktopWhatsAppInsetPx: 24,
+  closedDesktopFabWidthPx: 220,
   /** FAB fechado no mobile, acima da bottom nav. */
   closedMobileNavBottomPx: 84,
-  /** FAB fechado na ficha, acima da sticky WhatsApp (~8.5rem). */
-  closedFichaStickyBottomPx: 136,
+  closedMobileRightPx: 16,
+  closedMobileFabWidthPx: 200,
   openDesktopInsetPx: { top: 16, right: 24, bottom: 20 },
   openMobileInsetPx: { top: 8, right: 8, bottom: 8 },
 } as const;
+
+export type ChatClosedLauncherContext = {
+  desktop: boolean;
+  /** Página da ficha (`data-vehicle-mobile-bar`). */
+  ficha: boolean;
+  /** Home/estoque mobile com faixa de chips. */
+  chips: boolean;
+  /** Banner de cookies. No mobile some o FAB em vez de subir ao meio. */
+  consent?: boolean;
+};
+
+type ChatBox = {
+  width: number;
+  height: number;
+  top: number;
+  left: number;
+  right: number;
+  bottom: number;
+};
+
+export function chatClosedLauncherVisible(
+  ctx: ChatClosedLauncherContext,
+): boolean {
+  if (ctx.ficha) return false;
+  if (!ctx.desktop && ctx.chips) return false;
+  if (!ctx.desktop && ctx.consent) return false;
+  return true;
+}
+
+export function chatWhatsAppFloatBox(
+  viewportWidth: number,
+  viewportHeight: number,
+): ChatBox {
+  const size = CHAT_LAYOUT.fabPx;
+  const inset = CHAT_LAYOUT.closedDesktopWhatsAppInsetPx;
+  return {
+    width: size,
+    height: size,
+    right: inset,
+    bottom: inset,
+    top: viewportHeight - inset - size,
+    left: viewportWidth - inset - size,
+  };
+}
+
+export function chatClosedLauncherBox({
+  viewportWidth,
+  viewportHeight,
+  ...ctx
+}: ChatClosedLauncherContext & {
+  viewportWidth: number;
+  viewportHeight: number;
+}): ChatBox | null {
+  if (!chatClosedLauncherVisible(ctx)) return null;
+  const width = ctx.desktop
+    ? CHAT_LAYOUT.closedDesktopFabWidthPx
+    : CHAT_LAYOUT.closedMobileFabWidthPx;
+  const height = CHAT_LAYOUT.fabPx;
+  const bottom = ctx.desktop
+    ? CHAT_LAYOUT.closedDesktopBottomPx
+    : CHAT_LAYOUT.closedMobileNavBottomPx;
+  const right = ctx.desktop
+    ? CHAT_LAYOUT.closedDesktopRightPx
+    : CHAT_LAYOUT.closedMobileRightPx;
+  return {
+    width,
+    height,
+    right,
+    bottom,
+    top: viewportHeight - bottom - height,
+    left: viewportWidth - right - width,
+  };
+}
+
+export function chatBoxesOverlap(a: ChatBox, b: ChatBox, gap = 0): boolean {
+  return !(
+    a.left + a.width + gap <= b.left ||
+    b.left + b.width + gap <= a.left ||
+    a.top + a.height + gap <= b.top ||
+    b.top + b.height + gap <= a.top
+  );
+}
 
 export function chatMobileKeyboardCovered({
   innerHeight,

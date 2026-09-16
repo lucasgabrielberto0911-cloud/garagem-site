@@ -155,10 +155,8 @@ export default async function HomePage() {
             <ChatOpenButton
               source="home-hero"
               size="md"
-              className="min-h-11 border-0 px-3 text-[11px] font-medium normal-case tracking-normal text-cream/75 hover:bg-transparent hover:text-cream"
-            >
-              Ajuda pra escolher
-            </ChatOpenButton>
+              className="w-full sm:w-auto"
+            />
           </p>
 
           <div className="hero-search mt-5 flex w-full justify-center sm:mt-6 lg:mt-8">

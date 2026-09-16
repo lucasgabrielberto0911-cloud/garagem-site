@@ -376,18 +376,25 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
  * Aberto, o shell era coluna [painel calc(100dvh-7.25rem)] + [FAB 3.5rem]
  * com bottom: 6.25rem (folga do WhatsApp). Em iPad/desktop baixo o header
  * saía da aba e o X vermelho ficava solto abaixo do card.
- * Aberto: launcher some; fechar vive no header; painel cabe no inset.
- * Fechado: FAB continua acima da nav / sticky WhatsApp da ficha (#90).
+ * Aberto: launcher some; fechar vive no header; painel cabe no inset (#91).
+ *
+ * Fechado: não empilhar o FAB a 6.25rem nem levantá-lo a 8.5rem na ficha —
+ * isso deixava o botão no meio do conteúdo. Desktop: mesma baseline do
+ * float WhatsApp, à esquerda dele. Mobile: canto acima da bottom nav.
  */
-.site-chat {
+.site-chat:not(.is-open) {
+  top: auto;
+  left: auto;
   right: max(1rem, env(safe-area-inset-right, 0px));
   bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
+  width: auto;
+  height: auto;
 }
 
 @media (min-width: 1024px) {
-  .site-chat {
-    right: 1.5rem;
-    bottom: 6.25rem;
+  .site-chat:not(.is-open) {
+    right: calc(1.5rem + 3.5rem + 0.75rem);
+    bottom: 1.5rem;
   }
 
   body:has(.site-chat.is-open) .whatsapp-float {
@@ -398,25 +405,6 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 .site-chat-panel :focus-visible {
   outline: 2px solid rgba(247, 245, 242, 0.28);
   outline-offset: 2px;
-}
-
-/* FAB fechado na ficha: some (WhatsApp sticky é o CTA). */
-body:has([data-vehicle-mobile-bar]) .site-chat:not(.is-open) {
-  bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
-}
-
-body:has(.site-consent) .site-chat:not(.is-open) {
-  bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 8.5rem);
-}
-
-body:has([data-vehicle-mobile-bar]):has(.site-consent) .site-chat:not(.is-open) {
-  bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px) + 7.5rem);
-}
-
-@media (min-width: 1024px) {
-  body:has(.site-consent) .site-chat:not(.is-open) {
-    bottom: 6.25rem;
-  }
 }
 
 .site-chat.is-open .site-chat-launcher {
@@ -516,13 +504,18 @@ body:has([data-install-coach]) .site-chat:not(.is-open) {
 }
 
 /*
- * FAB fechado some onde briga com chips ou a sticky da ficha. O chat
- * abre pelos botões Ajuda / Perguntar no chat / Ajuda pra escolher —
- * sem cobrir Faixa na home nem o WhatsApp da bottom nav no estoque.
+ * FAB fechado some na ficha (sticky WhatsApp + setas da galeria) em
+ * qualquer largura. No mobile, some também com chips (Faixa) e com o
+ * banner de cookies — entrada “Ajuda para escolher” na página, sem o
+ * botão flutuando no meio do conteúdo.
  */
+body:has([data-vehicle-mobile-bar]) .site-chat:not(.is-open) {
+  display: none;
+}
+
 @media (max-width: 1023px) {
-  body:has([data-vehicle-mobile-bar]) .site-chat:not(.is-open),
-  body:has(.chip-scroll) .site-chat:not(.is-open) {
+  body:has(.chip-scroll) .site-chat:not(.is-open),
+  body:has(.site-consent) .site-chat:not(.is-open) {
     display: none;
   }
 }
