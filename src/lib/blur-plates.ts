@@ -396,12 +396,17 @@ function boxToPixels(
 
 function padBox(box: PixelBox, imageWidth: number, imageHeight: number): PixelBox {
   const aspect = box.width / Math.max(1, box.height);
-  const motoLike = aspect <= 1.95;
-  const padX = Math.max(4, Math.round(box.width * PLATE_PAD_X));
-  const padY = Math.max(5, Math.round(box.height * (motoLike ? 0.22 : PLATE_PAD_Y)));
-  const extraTop = motoLike ? Math.max(4, Math.round(box.height * 0.18)) : 0;
+  const compact = aspect <= 1.65;
+  const padX = Math.max(
+    compact ? 2 : 4,
+    Math.round(box.width * (compact ? 0.08 : PLATE_PAD_X)),
+  );
+  const padY = Math.max(
+    compact ? 2 : 5,
+    Math.round(box.height * (compact ? 0.08 : PLATE_PAD_Y)),
+  );
   const left = Math.max(0, box.left - padX);
-  const top = Math.max(0, box.top - padY - extraTop);
+  const top = Math.max(0, box.top - padY);
   const right = Math.min(imageWidth, box.left + box.width + padX);
   const bottom = Math.min(imageHeight, box.top + box.height + padY);
   return { left, top, width: right - left, height: bottom - top };
@@ -1533,12 +1538,11 @@ function plateBoxFromBlueBlob(
     blob.height <= blob.width * 0.85
   ) {
     let height = blob.height;
-    // 3/4 carro: o azul pega só o topo; a placa inteira é mais alta.
+    // Teto curto: o corpo branco é medido em fitMercosulPlateBody, não chutado.
     if (aspect < 1.75) {
-      height = Math.max(height + 10, Math.round(blob.width * 1.25));
+      height = Math.max(height + 8, Math.round(blob.width * 1.05));
     } else if (aspect <= 3.5) {
-      // Moto Mercosul: faixa azul larga e duas linhas de texto abaixo (SGD / 9E87).
-      height = Math.max(height + 8, Math.round(blob.width * 0.9));
+      height = Math.max(height + 6, Math.round(blob.width * 0.75));
     }
     height = Math.min(regionHeight - blob.top, height);
     return { left: blob.left, top: blob.top, width: blob.width, height };
@@ -1555,6 +1559,133 @@ function plateBoxFromBlueBlob(
   }
 
   return null;
+}
+
+function isMercosulPlateRow(
+  data: Buffer,
+  width: number,
+  channels: number,
+  y: number,
+  x0: number,
+  x1: number,
+) {
+  let blue = 0;
+  let light = 0;
+  let sum = 0;
+  let n = 0;
+  for (let x = x0; x < x1; x += 1) {
+    const offset = (y * width + x) * channels;
+    const r = data[offset];
+    const g = data[offset + 1];
+    const b = data[offset + 2];
+    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    sum += luma;
+    n += 1;
+    if (isMercosulBlue(r, g, b)) blue += 1;
+    if (luma > 140) light += 1;
+  }
+  if (n === 0) return false;
+  if (blue / n >= 0.1) return true;
+  return light / n >= 0.28 && sum / n >= 95;
+}
+
+/**
+ * Corta a caixa na transição placa clara → para-lama escuro, em vez de
+ * esticar a faixa azul até 1.25× a largura (borrava o rabo da moto).
+ */
+function fitMercosulPlateBody(
+  data: Buffer,
+  width: number,
+  height: number,
+  channels: number,
+  blob: BlueBlob,
+  shaped: PixelBox,
+): PixelBox {
+  const inset = Math.max(1, Math.round(shaped.width * 0.1));
+  const x0 = Math.max(0, shaped.left + inset);
+  const x1 = Math.min(width, shaped.left + shaped.width - inset);
+  const maxY = Math.min(
+    height - 1,
+    blob.top + Math.max(shaped.height, Math.round(blob.width * 1.15)),
+  );
+  let last = Math.min(height - 1, blob.top + blob.height - 1);
+  let misses = 0;
+  for (let y = blob.top; y <= maxY; y += 1) {
+    if (isMercosulPlateRow(data, width, channels, y, x0, x1)) {
+      last = y;
+      misses = 0;
+      continue;
+    }
+    if (y > blob.top + blob.height) {
+      misses += 1;
+      if (misses >= 2) break;
+    }
+  }
+  const fitted = last - blob.top + 1;
+  const minH = Math.max(blob.height + 6, Math.round(blob.width * 0.55));
+  const maxH = Math.max(minH, Math.round(blob.width * 1.15));
+  const plateH = Math.min(
+    height - blob.top,
+    Math.min(maxH, Math.max(minH, fitted)),
+  );
+
+  const y0 = blob.top;
+  const y1 = Math.min(height, blob.top + plateH);
+  let left = shaped.left;
+  let right = shaped.left + shaped.width - 1;
+  while (
+    left < right &&
+    !isMercosulPlateCol(data, width, channels, left, y0, y1)
+  ) {
+    left += 1;
+  }
+  while (
+    right > left &&
+    !isMercosulPlateCol(data, width, channels, right, y0, y1)
+  ) {
+    right -= 1;
+  }
+  const minW = Math.max(16, Math.round(blob.width * 0.72));
+  let plateW = right - left + 1;
+  if (plateW < minW) {
+    left = shaped.left;
+    plateW = shaped.width;
+  }
+
+  return {
+    left,
+    top: blob.top,
+    width: plateW,
+    height: plateH,
+  };
+}
+
+function isMercosulPlateCol(
+  data: Buffer,
+  width: number,
+  channels: number,
+  x: number,
+  y0: number,
+  y1: number,
+) {
+  let blue = 0;
+  let light = 0;
+  let sum = 0;
+  let n = 0;
+  for (let y = y0; y < y1; y += 1) {
+    const offset = (y * width + x) * channels;
+    const r = data[offset];
+    const g = data[offset + 1];
+    const b = data[offset + 2];
+    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    sum += luma;
+    n += 1;
+    if (isMercosulBlue(r, g, b)) blue += 1;
+    if (luma > 140) light += 1;
+  }
+  if (n === 0) return false;
+  if (blue / n >= 0.08) return true;
+  return light / n >= 0.22 && sum / n >= 90;
 }
 
 export async function findMercosulStripeBoxes(
@@ -1598,15 +1729,23 @@ export async function findMercosulStripeBoxes(
     if (!hasLightPlateBodyBelow(data, width, height, channels, blob)) continue;
     const shaped = plateBoxFromBlueBlob(blob, width, height);
     if (!shaped) continue;
+    const fitted = fitMercosulPlateBody(
+      data,
+      width,
+      height,
+      channels,
+      blob,
+      shaped,
+    );
     // Cromado no corte do para-choque vira blob no topo da região.
-    if (shaped.top <= 2 && shaped.height < 22) continue;
-    if (shaped.width < 16 || shaped.height < 12) continue;
-    if (shaped.width * shaped.height < 280) continue;
+    if (fitted.top <= 2 && fitted.height < 22) continue;
+    if (fitted.width < 16 || fitted.height < 12) continue;
+    if (fitted.width * fitted.height < 280) continue;
     boxes.push({
-      left: region.left + shaped.left,
-      top: region.top + shaped.top,
-      width: shaped.width,
-      height: shaped.height,
+      left: region.left + fitted.left,
+      top: region.top + fitted.top,
+      width: fitted.width,
+      height: fitted.height,
     });
   }
   return boxes;
@@ -1932,13 +2071,18 @@ export async function applyBlurRegions(
 
     const shortSide = Math.min(box.width, box.height);
     const aspect = box.width / Math.max(1, box.height);
-    const smallPlate = shortSide < 48 || aspect <= 1.9;
+    const compact = aspect <= 1.7;
+    const smallPlate = shortSide < 40;
+    const strong = smallPlate || compact;
     const sigma = Math.min(
-      40,
-      Math.max(smallPlate ? 22 : 16, Math.round(shortSide / (smallPlate ? 1.5 : 2.4))),
+      36,
+      Math.max(16, Math.round(shortSide / (strong ? 1.9 : 2.4))),
     );
-    const radius = Math.max(2, Math.round(shortSide * (smallPlate ? 0.08 : 0.14)));
-    const feather = smallPlate ? 0.25 : Math.max(0.4, shortSide * 0.02);
+    const radius = Math.max(
+      1,
+      Math.round(shortSide * (compact ? 0.05 : smallPlate ? 0.08 : 0.14)),
+    );
+    const feather = compact ? 0.15 : smallPlate ? 0.25 : Math.max(0.4, shortSide * 0.02);
     const inset = 0;
     const mask = Buffer.from(
       `<svg width="${box.width}" height="${box.height}" xmlns="http://www.w3.org/2000/svg">

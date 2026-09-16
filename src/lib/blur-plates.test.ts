@@ -678,8 +678,11 @@ test("foto da Biz (traseira): placa Mercosul de moto vira caixa e não é portin
   assert.ok(boxes.length >= 1, `esperava a placa da Biz: ${JSON.stringify(boxes)}`);
   const hit = boxes[0];
   assert.ok(boxOverlaps(hit, core), `caixa ${JSON.stringify(hit)} não cobre SGD 9E87`);
-  assert.ok(hit.width < 120, `width ${hit.width} não deve engolir a moto`);
-  assert.ok(hit.height < 90, `height ${hit.height}`);
+  assert.ok(hit.width <= 56, `width ${hit.width} não deve engolir o para-lama`);
+  assert.ok(hit.height <= 44, `height ${hit.height} grande demais para a placa`);
+  assert.ok(hit.top >= 122, `top ${hit.top} subiu demais acima da faixa azul`);
+  assert.ok(hit.top + hit.height >= 155, `bottom ${hit.top + hit.height} não cobre 9E87`);
+  assert.ok(hit.top + hit.height <= 164);
   assert.equal(await looksLikeMercosulPlatePatch(image, hit), true);
   assert.equal(
     await looksLikeBodyPanelFalsePositive(image, hit),
@@ -699,8 +702,11 @@ test("foto da Biz (3/4): placa Mercosul menor e mais alta também é detectada",
   assert.ok(boxes.length >= 1, `esperava a placa no 3/4: ${JSON.stringify(boxes)}`);
   const hit = boxes[0];
   assert.ok(boxOverlaps(hit, core), `caixa ${JSON.stringify(hit)} não cobre a placa`);
-  assert.ok(hit.width < 120);
-  assert.ok(hit.height < 100);
+  assert.ok(hit.width <= 48, `width ${hit.width}`);
+  assert.ok(hit.height <= 50, `height ${hit.height} não deve cobrir o para-lama`);
+  assert.ok(hit.top >= 98, `top ${hit.top}`);
+  assert.ok(hit.top + hit.height >= 136);
+  assert.ok(hit.top + hit.height <= 150, `bottom ${hit.top + hit.height} desceu no para-lama`);
   assert.equal(await looksLikeMercosulPlatePatch(image, hit), true);
   assert.equal(await looksLikeBodyPanelFalsePositive(image, hit), false);
 });
@@ -748,6 +754,7 @@ test("blur da placa Mercosul da Biz deixa os caracteres ilegíveis", async () =>
   );
   assert.ok(boxes.length >= 1);
   const core = { left: 214, top: 134, width: 28, height: 22 };
+  const above = { left: 214, top: 116, width: 28, height: 8 };
   const beforeBuf = await sharp(image).extract(core).png().toBuffer();
   const blurred = await applyBlurRegions(image, boxes);
   const afterBuf = await sharp(blurred).extract(core).png().toBuffer();
@@ -759,6 +766,54 @@ test("blur da placa Mercosul da Biz deixa os caracteres ilegíveis", async () =>
     (after.channels[0].stdev + after.channels[1].stdev + after.channels[2].stdev) / 3;
   assert.ok(beforeStd > 30, `contraste original baixo demais: ${beforeStd}`);
   assert.ok(afterStd < beforeStd * 0.45, `blur fraco: ${beforeStd} → ${afterStd}`);
+
+  const aboveBefore = await sharp(
+    await sharp(image).extract(above).png().toBuffer(),
+  ).stats();
+  const aboveAfter = await sharp(
+    await sharp(blurred).extract(above).png().toBuffer(),
+  ).stats();
+  const aboveBeforeStd =
+    (aboveBefore.channels[0].stdev +
+      aboveBefore.channels[1].stdev +
+      aboveBefore.channels[2].stdev) /
+    3;
+  const aboveAfterStd =
+    (aboveAfter.channels[0].stdev +
+      aboveAfter.channels[1].stdev +
+      aboveAfter.channels[2].stdev) /
+    3;
+  assert.ok(
+    aboveAfterStd > aboveBeforeStd * 0.7,
+    `blur subiu no para-lama: ${aboveBeforeStd} → ${aboveAfterStd}`,
+  );
+});
+
+test("blur da Biz em 3/4 não come o para-lama abaixo da placa", async () => {
+  const image = await readFile(join(FIXTURES, "moto-mercosul-biz-side.jpg"));
+  const meta = await sharp(image).metadata();
+  const boxes = await findMercosulPlatesInImage(
+    image,
+    meta.width ?? 396,
+    meta.height ?? 164,
+  );
+  assert.ok(boxes.length >= 1);
+  const fender = { left: 222, top: 148, width: 24, height: 10 };
+  const before = await sharp(
+    await sharp(image).extract(fender).png().toBuffer(),
+  ).stats();
+  const blurred = await applyBlurRegions(image, boxes);
+  const after = await sharp(
+    await sharp(blurred).extract(fender).png().toBuffer(),
+  ).stats();
+  const beforeStd =
+    (before.channels[0].stdev + before.channels[1].stdev + before.channels[2].stdev) / 3;
+  const afterStd =
+    (after.channels[0].stdev + after.channels[1].stdev + after.channels[2].stdev) / 3;
+  assert.ok(
+    afterStd > beforeStd * 0.7,
+    `para-lama borrado: ${beforeStd} → ${afterStd}; caixa ${JSON.stringify(boxes[0])}`,
+  );
 });
 
 test("placa no rabo da moto não é descartada como canto de carro", () => {
