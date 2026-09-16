@@ -145,6 +145,22 @@ export type StockPageResult = {
   error?: string;
 };
 
+export const STOCK_SORT_OPTIONS = [
+  { value: "recentes", label: "Mais recentes" },
+  { value: "menor-preco", label: "Menor preço" },
+  { value: "maior-preco", label: "Maior preço" },
+  { value: "menor-km", label: "Menor KM" },
+  { value: "mais-novo", label: "Ano mais novo" },
+] as const;
+
+export type StockSortValue = (typeof STOCK_SORT_OPTIONS)[number]["value"];
+
+export function stockSortLabel(sort?: string | null) {
+  const key = (sort || "recentes").trim();
+  const found = STOCK_SORT_OPTIONS.find((option) => option.value === key);
+  return found?.label ?? "Mais recentes";
+}
+
 function optionalPositiveNumber(value?: string | number) {
   if (typeof value === "number") {
     return Number.isFinite(value) && value > 0 ? value : undefined;

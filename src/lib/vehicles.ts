@@ -16,6 +16,7 @@ import {
 import { colorWhere, formatColorLabel } from "@/lib/vehicle-display";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import { PUBLIC_VEHICLE_CARD_SELECT } from "@/lib/public-stock";
+import { pickRelatedVehicles } from "@/lib/related-vehicles";
 
 export {
   STOCK_PAGE_SIZE,
@@ -337,26 +338,6 @@ export const getVehicleByParam = cache(async (param: string) => {
   );
 });
 
-function relatedScore(
-  item: VehicleCardRecord,
-  brand: string,
-  category: string,
-  price: number,
-) {
-  let score = 0;
-  if (item.brand.localeCompare(brand, "pt-BR", { sensitivity: "accent" }) === 0) {
-    score += 8;
-  }
-  if (category && item.category === category) score += 4;
-  if (price > 0) {
-    const diff = Math.abs(item.price - price) / price;
-    if (diff <= 0.25) score += 3;
-    else if (diff <= 0.4) score += 1;
-  }
-  if (item.featured) score += 1;
-  return score;
-}
-
 async function fetchRelatedVehicles(
   vehicleId: string,
   brand: string,
@@ -370,13 +351,11 @@ async function fetchRelatedVehicles(
     take: 48,
   });
 
-  return [...pool]
-    .sort(
-      (a, b) =>
-        relatedScore(b, brand, category, price) -
-        relatedScore(a, brand, category, price),
-    )
-    .slice(0, take);
+  return pickRelatedVehicles(
+    pool,
+    { id: vehicleId, brand, category, price },
+    take,
+  );
 }
 
 const loadRelatedCached = unstable_cache(
@@ -387,12 +366,12 @@ const loadRelatedCached = unstable_cache(
     category: string,
     price: number,
   ) => fetchRelatedVehicles(vehicleId, brand, take, category, price),
-  ["related-vehicles-v4"],
+  ["related-vehicles-v5"],
   PUBLIC_CACHE,
 );
 
 /**
- * Relacionados: uma consulta ao pool recente, ranqueada por marca/categoria/preço.
+ * Relacionados: faixa de preço primeiro, depois categoria e marca.
  */
 export const getRelatedVehicles = cache(
   (

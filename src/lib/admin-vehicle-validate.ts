@@ -81,3 +81,130 @@ export function kmHint(km: number) {
   if (km > 400_000) return "KM alto — confira se o número está certo.";
   return null;
 }
+
+export type CitedPriceKind = "exact" | "mil";
+
+export type CitedPrice = {
+  amount: number;
+  kind: CitedPriceKind;
+  raw: string;
+};
+
+export type DescriptionPriceMismatch = {
+  listedPrice: number;
+  citedPrices: number[];
+  message: string;
+};
+
+/** Interpreta 89.900 / 89.900,00 / 89900. */
+export function parseBrCurrencyToken(value: string) {
+  const trimmed = value.replace(/R\$/gi, "").replace(/\s+/g, "").trim();
+  if (!trimmed) return null;
+  const withoutCents = trimmed.replace(/,\d{1,2}$/, "");
+  const amount = Number(withoutCents.replace(/\./g, ""));
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return Math.round(amount);
+}
+
+function afterMatch(text: string, index: number, length: number) {
+  return text.slice(index + length, index + length + 12).trimStart();
+}
+
+function isKmContext(text: string, index: number, length: number) {
+  return /^(km|quilometr)/i.test(afterMatch(text, index, length));
+}
+
+const CITED_MIN = 1_000;
+
+/**
+ * Preços citados no texto do anúncio. Só pega R$, “mil” e “reais” —
+ * não trata 32.000 km nem ano 2018 como valor.
+ */
+export function extractCitedPrices(text: string): CitedPrice[] {
+  const found: CitedPrice[] = [];
+  const seen = new Set<string>();
+
+  function push(amount: number, kind: CitedPriceKind, raw: string) {
+    if (amount < CITED_MIN || amount > MAX_LISTING_PRICE) return;
+    const key = `${kind}:${amount}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    found.push({ amount, kind, raw: raw.trim() });
+  }
+
+  const source = text ?? "";
+
+  for (const match of source.matchAll(
+    /R\$\s*(\d{1,3}(?:\.\d{3})+|\d{4,7})(?:,\d{1,2})?/gi,
+  )) {
+    if (match.index == null) continue;
+    if (isKmContext(source, match.index, match[0].length)) continue;
+    const amount = parseBrCurrencyToken(match[0]);
+    if (amount != null) push(amount, "exact", match[0]);
+  }
+
+  for (const match of source.matchAll(/(?:R\$\s*)?(\d{1,3})\s*mil\b/gi)) {
+    if (match.index == null) continue;
+    if (isKmContext(source, match.index, match[0].length)) continue;
+    const thousands = Number(match[1]);
+    if (!Number.isFinite(thousands) || thousands <= 0) continue;
+    push(Math.round(thousands * 1000), "mil", match[0]);
+  }
+
+  for (const match of source.matchAll(/(\d{1,3}(?:\.\d{3})+)\s*reais\b/gi)) {
+    if (match.index == null) continue;
+    if (isKmContext(source, match.index, match[0].length)) continue;
+    const amount = parseBrCurrencyToken(match[1]);
+    if (amount != null) push(amount, "exact", match[0]);
+  }
+
+  return found;
+}
+
+function citedAgreesWithListed(cited: CitedPrice, listedPrice: number) {
+  if (cited.kind === "mil") {
+    return Math.abs(cited.amount - listedPrice) < 1000;
+  }
+  return Math.abs(cited.amount - listedPrice) <= 50;
+}
+
+function formatCitedList(amounts: number[]) {
+  return amounts
+    .map((amount) =>
+      new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+        maximumFractionDigits: 0,
+      }).format(amount),
+    )
+    .join(" e ");
+}
+
+/** Aviso quando o texto ainda cita um preço diferente do campo. */
+export function descriptionPriceMismatch(
+  description: string,
+  listedPrice: number,
+): DescriptionPriceMismatch | null {
+  if (!Number.isFinite(listedPrice) || listedPrice < MIN_LISTING_PRICE) {
+    return null;
+  }
+  if (!(description ?? "").trim()) return null;
+
+  const disagree = extractCitedPrices(description).filter(
+    (cited) => !citedAgreesWithListed(cited, listedPrice),
+  );
+  if (disagree.length === 0) return null;
+
+  const citedPrices = [...new Set(disagree.map((item) => item.amount))];
+  const listed = formatCitedList([listedPrice]);
+  const cited = formatCitedList(citedPrices);
+
+  return {
+    listedPrice,
+    citedPrices,
+    message:
+      citedPrices.length === 1
+        ? `A descrição cita ${cited}, mas o preço do anúncio é ${listed}. Quem lê o texto vê o valor antigo.`
+        : `A descrição cita ${cited}, mas o preço do anúncio é ${listed}. Ajuste o texto antes de publicar.`,
+  };
+}

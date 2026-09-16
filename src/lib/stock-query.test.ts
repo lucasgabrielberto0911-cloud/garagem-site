@@ -6,6 +6,7 @@ import {
   galleryPreviewSrc,
   galleryPreviewSrcSet,
   galleryThumbSrc,
+  stockSortLabel,
   supabaseCardSrc,
   supabaseOriginalSrc,
 } from "./stock-query";
@@ -56,4 +57,12 @@ test("galleryThumbSrc recorta o strip; preview usa o WebP da galeria", () => {
     }) ?? "",
     /480w/,
   );
+});
+
+test("rótulo de ordenação do estoque cai em mais recentes", () => {
+  assert.equal(stockSortLabel("menor-preco"), "Menor preço");
+  assert.equal(stockSortLabel("maior-preco"), "Maior preço");
+  assert.equal(stockSortLabel(""), "Mais recentes");
+  assert.equal(stockSortLabel(undefined), "Mais recentes");
+  assert.equal(stockSortLabel("desconhecido"), "Mais recentes");
 });

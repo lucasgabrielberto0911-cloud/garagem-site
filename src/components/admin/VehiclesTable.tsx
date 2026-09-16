@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useCallback, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { InfiniteSentinel } from "@/components/InfiniteSentinel";
 import { VehicleImage } from "@/components/VehicleImage";
@@ -31,6 +31,8 @@ import type { AdminVehicleListItem, VehiclesTab } from "@/lib/admin-vehicles";
 import {
   ADMIN_BULK_MAX,
   bulkStatusLabel,
+  bulkUndoStatus,
+  canUndoBulkStatus,
   type AdminBulkStatus,
 } from "@/lib/admin-bulk";
 import { coverSrc } from "@/lib/stock-query";
@@ -60,6 +62,7 @@ function hydrateVehicle(row: VehicleRow): VehicleRow {
     ...row,
     createdAt: new Date(row.createdAt),
     updatedAt: row.updatedAt ? new Date(row.updatedAt) : row.createdAt,
+    photoCount: row.photoCount ?? row.photos?.length ?? 0,
   };
 }
 
@@ -138,6 +141,8 @@ export function VehiclesTable({
   estoqueCount: estoqueCountProp,
   vendidosCount: vendidosCountProp,
   featuredCount: featuredCountProp,
+  availableCount: availableCountProp,
+  reservedCount: reservedCountProp,
   quality,
 }: {
   vehicles: VehicleRow[];
@@ -149,6 +154,8 @@ export function VehiclesTable({
   estoqueCount: number;
   vendidosCount: number;
   featuredCount: number;
+  availableCount: number;
+  reservedCount: number;
   quality?: {
     withoutPhotos: number;
     withoutVideo: number;
@@ -169,7 +176,10 @@ export function VehiclesTable({
   const [estoqueCount, setEstoqueCount] = useState(estoqueCountProp);
   const [vendidosCount, setVendidosCount] = useState(vendidosCountProp);
   const [featuredCount, setFeaturedCount] = useState(featuredCountProp);
+  const [availableCount, setAvailableCount] = useState(availableCountProp);
+  const [reservedCount, setReservedCount] = useState(reservedCountProp);
   const [loadingMore, setLoadingMore] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [loadingSort, setLoadingSort] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const loadingRef = useRef(false);
@@ -183,6 +193,24 @@ export function VehiclesTable({
   const [bulkBusy, setBulkBusy] = useState(false);
 
   const hasMore = items.length < total;
+  const allVisibleSelected =
+    items.length > 0 && items.every((item) => selected.includes(item.id));
+  const someVisibleSelected = selected.length > 0 && !allVisibleSelected;
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      const tag = (event.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((event.target as HTMLElement | null)?.isContentEditable) return;
+      event.preventDefault();
+      searchRef.current?.focus();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const fetchPage = useCallback(
     async (
@@ -284,6 +312,19 @@ export function VehiclesTable({
   }
 
   function applyLocalStatus(id: string, nextStatus: string, featured = false) {
+    const current = items.find((item) => item.id === id);
+    const previous = current?.status;
+    if (previous === "disponivel" && nextStatus !== "disponivel") {
+      setAvailableCount((count) => Math.max(0, count - 1));
+    } else if (previous !== "disponivel" && nextStatus === "disponivel") {
+      setAvailableCount((count) => count + 1);
+    }
+    if (previous === "reservado" && nextStatus !== "reservado") {
+      setReservedCount((count) => Math.max(0, count - 1));
+    } else if (previous !== "reservado" && nextStatus === "reservado") {
+      setReservedCount((count) => count + 1);
+    }
+
     if ((tab === "estoque" || tab === "destaques") && nextStatus === "vendido") {
       if (featured) {
         setFeaturedCount((count) => Math.max(0, count - 1));
@@ -375,6 +416,30 @@ export function VehiclesTable({
     });
   }
 
+  function toggleSelectAllVisible() {
+    if (allVisibleSelected) {
+      const visible = new Set(items.map((item) => item.id));
+      setSelected((current) => current.filter((id) => !visible.has(id)));
+      return;
+    }
+    const next: string[] = [];
+    const seen = new Set<string>();
+    for (const id of selected) {
+      seen.add(id);
+      next.push(id);
+    }
+    for (const item of items) {
+      if (seen.has(item.id)) continue;
+      if (next.length >= ADMIN_BULK_MAX) {
+        toast.error(`Selecione no máximo ${ADMIN_BULK_MAX} veículos por vez.`);
+        break;
+      }
+      seen.add(item.id);
+      next.push(item.id);
+    }
+    setSelected(next);
+  }
+
   async function confirmBulkStatus() {
     if (!bulkTarget || selected.length === 0) return;
     setBulkBusy(true);
@@ -384,10 +449,20 @@ export function VehiclesTable({
         toast.error(result.message);
         return;
       }
-      toast.success(result.message);
+      const applied = bulkTarget;
+      const appliedIds = [...selected];
+      toast.success(result.message, {
+        duration: canUndoBulkStatus(applied) ? 12_000 : 4000,
+        action: canUndoBulkStatus(applied)
+          ? {
+              label: "Desfazer",
+              onClick: () => void undoBulkSold(appliedIds),
+            }
+          : undefined,
+      });
       const featuredById = new Map(items.map((item) => [item.id, item.featured]));
-      for (const id of selected) {
-        applyLocalStatus(id, bulkTarget, featuredById.get(id) ?? false);
+      for (const id of appliedIds) {
+        applyLocalStatus(id, applied, featuredById.get(id) ?? false);
       }
       setSelected([]);
       router.refresh();
@@ -396,6 +471,27 @@ export function VehiclesTable({
     } finally {
       setBulkBusy(false);
       setBulkTarget(null);
+    }
+  }
+
+  async function undoBulkSold(ids: string[]) {
+    const revert = bulkUndoStatus("vendido");
+    if (!revert) return;
+    try {
+      const result = await setVehiclesStatus(ids, revert);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(
+        ids.length === 1
+          ? "Venda desfeita. O veículo voltou para disponível."
+          : `${ids.length} veículos voltaram para disponível.`,
+      );
+      void fetchPage(1, sort, true);
+      router.refresh();
+    } catch {
+      toast.error("Não foi possível desfazer o lote.");
     }
   }
 
@@ -509,10 +605,12 @@ export function VehiclesTable({
           }}
         >
           <input
+            ref={searchRef}
             type="search"
             name="q"
             defaultValue={q}
             placeholder="Buscar marca, modelo ou placa…"
+            aria-label="Buscar marca, modelo ou placa"
             className={`${inputClass} min-w-0 flex-1`}
           />
           <button
@@ -579,9 +677,9 @@ export function VehiclesTable({
             <div className={CHIP_SCROLL}>
               {(
                 [
-                  { value: null, label: "Todos" },
-                  { value: "disponivel", label: "Disponível" },
-                  { value: "reservado", label: "Reservado" },
+                  { value: null, label: "Todos", count: estoqueCount },
+                  { value: "disponivel", label: "Disponível", count: availableCount },
+                  { value: "reservado", label: "Reservado", count: reservedCount },
                 ] as const
               ).map((option) => {
                 const active =
@@ -598,6 +696,9 @@ export function VehiclesTable({
                     }`}
                   >
                     {option.label}
+                    <span className="ml-1.5 text-[10px] tabular-nums opacity-80">
+                      {option.count}
+                    </span>
                   </button>
                 );
               })}
@@ -710,6 +811,25 @@ export function VehiclesTable({
                 : "transition-opacity"
             }
           >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <label className="inline-flex min-h-[44px] items-center gap-2 text-sm text-cream">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  ref={(element) => {
+                    if (element) element.indeterminate = someVisibleSelected;
+                  }}
+                  onChange={toggleSelectAllVisible}
+                  className="h-5 w-5 accent-brand"
+                />
+                Selecionar todos desta lista
+              </label>
+              <p className="text-xs text-muted">
+                {selected.length > 0
+                  ? `${selected.length} selecionado(s)`
+                  : `${items.length} visível(is)`}
+              </p>
+            </div>
             {/* Cards iguais no celular e no desktop: hierarquia clara, ações rotuladas. */}
             <ul className="space-y-3">
             {items.map((vehicle) => (
@@ -910,6 +1030,11 @@ function VehicleAdminCard({
               Destaque
             </span>
           ) : null}
+          <span className="absolute bottom-1 right-1 bg-asphalt/85 px-1.5 py-0.5 font-display text-[10px] font-semibold tabular-nums text-cream">
+            {vehicle.photoCount > 0
+              ? `${vehicle.photoCount} foto${vehicle.photoCount === 1 ? "" : "s"}`
+              : "Sem foto"}
+          </span>
         </Link>
 
         <div className="min-w-0 flex-1">

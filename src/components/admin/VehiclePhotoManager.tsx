@@ -14,6 +14,15 @@ import {
 } from "@/components/admin/icons";
 import { btn } from "@/components/admin/ui";
 import {
+  photoBlurBadgeLabel,
+  photoBlurProgressLabel,
+  photoBlurSummaryMessage,
+  photoBlurToastKind,
+  createPhotoBlurJobs,
+  summarizePhotoBlur,
+  type PhotoBlurJobState,
+} from "@/lib/photo-blur-jobs";
+import {
   photoUploadProgressLabel,
   summarizePhotoUploads,
   type PhotoUploadJobState,
@@ -81,6 +90,7 @@ export function VehiclePhotoManager({
 }) {
   const [jobs, setJobs] = useState<LocalPhotoJob[]>([]);
   const [blurring, setBlurring] = useState(false);
+  const [blurJobs, setBlurJobs] = useState<PhotoBlurJobState[]>([]);
   const [fileDragging, setFileDragging] = useState(false);
   const fileDragDepth = useRef(0);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -217,58 +227,86 @@ export function VehiclePhotoManager({
     setRemoveIndex(null);
   }
 
-  async function reblurPlates() {
-    if (photos.length === 0 || blurring) return;
+  async function reblurPhotos(targets: PhotoItem[]) {
+    if (targets.length === 0 || blurring) return;
     setBlurring(true);
+    const results = createPhotoBlurJobs(targets.map((photo) => photo.id));
+    setBlurJobs((current) => {
+      const keep = current.filter(
+        (job) => !targets.some((photo) => photo.id === job.id),
+      );
+      return [...keep, ...results];
+    });
     const next = [...photos];
-    let blurredCount = 0;
 
     try {
-      for (let index = 0; index < next.length; index += 1) {
-        const response = await fetch("/api/upload/reblur", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: next[index].url }),
-        });
-        const data = (await response.json()) as {
-          url?: string;
-          thumbnailUrl?: string | null;
-          blurred?: boolean;
-          error?: string;
-        };
-        if (!response.ok) {
-          throw new Error(data.error || "Falha ao borrar a placa.");
-        }
-        if (data.url) {
-          next[index] = {
-            ...next[index],
-            url: data.url,
-            thumbnailUrl: data.thumbnailUrl ?? next[index].thumbnailUrl,
+      for (let index = 0; index < targets.length; index += 1) {
+        const photo = targets[index];
+        results[index] = { id: photo.id, status: "working" };
+        setBlurJobs((current) =>
+          current.map((job) =>
+            job.id === photo.id ? { ...job, status: "working" } : job,
+          ),
+        );
+
+        const photoIndex = next.findIndex((item) => item.id === photo.id);
+        try {
+          const response = await fetch("/api/upload/reblur", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: photo.url }),
+          });
+          const data = (await response.json()) as {
+            url?: string;
+            thumbnailUrl?: string | null;
+            blurred?: boolean;
+            error?: string;
+          };
+          if (!response.ok) {
+            throw new Error(data.error || "Falha ao borrar a placa.");
+          }
+          if (data.url && photoIndex >= 0) {
+            next[photoIndex] = {
+              ...next[photoIndex],
+              url: data.url,
+              thumbnailUrl: data.thumbnailUrl ?? next[photoIndex].thumbnailUrl,
+            };
+          }
+          results[index] = {
+            id: photo.id,
+            status: data.blurred ? "blurred" : "unchanged",
+          };
+        } catch (error) {
+          results[index] = {
+            id: photo.id,
+            status: "error",
+            error:
+              error instanceof Error
+                ? error.message
+                : "Não foi possível borrar a placa.",
           };
         }
-        if (data.blurred) blurredCount += 1;
+        setBlurJobs((current) =>
+          current.map((job) =>
+            job.id === photo.id ? { ...results[index] } : job,
+          ),
+        );
       }
 
       onChange(next);
-      if (blurredCount === 0) {
-        toast.message(
-          "Não achei placa nessas fotos. Tente uma foto mais de perto da traseira e salve de novo.",
-        );
-      } else {
-        toast.success(
-          `${blurredCount} foto(s) com placa borracha. Salve o anúncio para publicar.`,
-        );
-      }
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível borrar as placas.",
-      );
+      const message = photoBlurSummaryMessage(results);
+      const kind = photoBlurToastKind(results);
+      if (kind === "success") toast.success(message);
+      else if (kind === "error") toast.error(message);
+      else toast.message(message);
     } finally {
       setBlurring(false);
     }
+  }
+
+  function reblurPlates() {
+    return reblurPhotos(photos);
   }
 
   function hasFiles(event: React.DragEvent) {
@@ -420,8 +458,11 @@ export function VehiclePhotoManager({
               disabled={blurring || inFlight}
               onClick={() => void reblurPlates()}
               className={btn.outline}
+              aria-live="polite"
             >
-              {blurring ? "Borrando placas…" : "Borrar placas nestas fotos"}
+              {blurring
+                ? photoBlurProgressLabel(blurJobs) || "Borrando placas…"
+                : "Borrar placas nestas fotos"}
             </button>
             <p className="text-[11px] text-muted">
               Use se a placa da frente ou de trás ainda aparecer. Foto de
@@ -429,10 +470,47 @@ export function VehiclePhotoManager({
               novo a foto original e salve.
             </p>
           </div>
+          {blurJobs.length > 0 ? (
+            <div className="mt-3 space-y-2" aria-live="polite">
+              <p className="text-sm text-cream">
+                {photoBlurProgressLabel(blurJobs)}
+              </p>
+              <div className="h-1.5 overflow-hidden bg-white/10">
+                <div
+                  className="h-full bg-brand transition-[width]"
+                  style={{
+                    width: `${Math.max(
+                      summarizePhotoBlur(blurJobs).percent,
+                      blurring ? 8 : 0,
+                    )}%`,
+                  }}
+                />
+              </div>
+              {summarizePhotoBlur(blurJobs).hasFailures && !blurring ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    void reblurPhotos(
+                      photos.filter((photo) =>
+                        blurJobs.some(
+                          (job) =>
+                            job.id === photo.id && job.status === "error",
+                        ),
+                      ),
+                    )
+                  }
+                  className={btn.outline}
+                >
+                  Tentar de novo as que falharam
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {photos.map((photo, index) => {
               const isDragging = dragIndex === index;
               const isOver = overIndex === index && dragIndex !== index;
+              const blurJob = blurJobs.find((job) => job.id === photo.id);
               return (
                 <li
                   key={photo.id}
@@ -501,6 +579,36 @@ export function VehiclePhotoManager({
                     <span className="absolute right-1.5 top-1.5 bg-brand px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
                       Capa
                     </span>
+                  ) : null}
+
+                  {blurJob ? (
+                    <button
+                      type="button"
+                      disabled={blurring || inFlight || blurJob.status === "working"}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (blurJob.status === "blurred") return;
+                        void reblurPhotos([photo]);
+                      }}
+                      className={`absolute left-1.5 top-8 max-w-[calc(100%-0.75rem)] px-1.5 py-0.5 text-left font-display text-[10px] font-semibold uppercase tracking-wider touch-manipulation disabled:opacity-80 ${
+                        blurJob.status === "blurred"
+                          ? "bg-emerald-500/90 text-asphalt"
+                          : blurJob.status === "error"
+                            ? "bg-brand text-cream"
+                            : blurJob.status === "working"
+                              ? "bg-brand-orange text-asphalt"
+                              : "bg-asphalt/85 text-cream"
+                      }`}
+                      title={
+                        blurJob.status === "error" || blurJob.status === "unchanged"
+                          ? "Tentar borrar esta foto de novo"
+                          : photoBlurBadgeLabel(blurJob.status)
+                      }
+                    >
+                      {photoBlurBadgeLabel(blurJob.status)}
+                    </button>
                   ) : null}
 
                   <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-asphalt/85 px-1.5 py-1.5 backdrop-blur">

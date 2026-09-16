@@ -111,7 +111,22 @@ export type CustomerWhatsAppVehicleIntent =
   | "video"
   | "finance"
   | "visit"
-  | "trade";
+  | "trade"
+  | "similar";
+
+/** Campanhas dos CTAs públicos — Lucas vê no wa.me aberto. */
+export type WhatsAppCampaign = "ficha" | "estoque" | "home" | "chat";
+
+export type WhatsAppTracking = {
+  campaign?: WhatsAppCampaign;
+  content?: string;
+  phoneIndex?: number;
+  /** Sem UTM — compartilhar o anúncio com um amigo, não CTA da loja. */
+  bare?: boolean;
+};
+
+export const WHATSAPP_UTM_SOURCE = "site";
+export const WHATSAPP_UTM_MEDIUM = "whatsapp";
 
 /** Texto natural do cliente no WhatsApp. Sem “por R$” se faltar preço. */
 export function formatCustomerVehicleWhatsAppText(input: {
@@ -140,6 +155,10 @@ export function formatCustomerVehicleWhatsAppText(input: {
       return label
         ? `Oi! ${seen} e quero ver ${input.isMoto ? "ela" : "ele"} de perto.`
         : `Oi! ${seen} e quero conhecer o estoque.`;
+    case "similar":
+      return label
+        ? `Oi! ${seen} e queria ver outros na mesma faixa.`
+        : `Oi! ${seen} e queria ver seminovos na mesma faixa.`;
     default:
       return label
         ? `Oi! ${seen} e quero saber mais.`
@@ -162,6 +181,8 @@ export const WHATSAPP_MESSAGES = {
     formatCustomerVehicleWhatsAppText({ intent: "finance", label, isMoto }),
   vehicleTrade: (label: string, isMoto = false) =>
     formatCustomerVehicleWhatsAppText({ intent: "trade", label, isMoto }),
+  sameBand: (label: string, isMoto = false) =>
+    formatCustomerVehicleWhatsAppText({ intent: "similar", label, isMoto }),
   finance: formatCustomerVehicleWhatsAppText({ intent: "finance" }),
   similarFavorites: `Oi! Ainda não salvei favoritos no site da ${WHATSAPP_BRAND}. Podem me indicar seminovos parecidos?`,
   wanted: (detail?: string) => {
@@ -172,20 +193,97 @@ export const WHATSAPP_MESSAGES = {
   },
 } as const;
 
+export function whatsappCampaignFromPath(pathname: string): WhatsAppCampaign {
+  const path = (pathname || "/").split("?")[0] || "/";
+  if (path.startsWith("/estoque/") && path.length > "/estoque/".length) {
+    return "ficha";
+  }
+  if (path === "/estoque" || path.startsWith("/estoque")) return "estoque";
+  return "home";
+}
+
+export function whatsappCampaignFromLabel(label: string): WhatsAppCampaign {
+  const key = (label || "").toLowerCase();
+  if (key.includes("chat")) return "chat";
+  if (key.includes("ficha")) return "ficha";
+  if (key.includes("home")) return "home";
+  if (
+    key.includes("estoque") ||
+    key.includes("vehicle-card") ||
+    key.includes("avise")
+  ) {
+    return "estoque";
+  }
+  return "home";
+}
+
+export function whatsappContentFromVehicle(input: {
+  id?: string | null;
+  path?: string | null;
+}) {
+  const path = (input.path ?? "").trim();
+  const slug = path.startsWith("/estoque/")
+    ? path.slice("/estoque/".length).split(/[?#]/)[0]
+    : "";
+  return (slug || input.id || "").slice(0, 80);
+}
+
+function resolveWhatsAppTracking(
+  phoneIndexOrTracking?: number | WhatsAppTracking,
+  tracking?: WhatsAppTracking,
+): WhatsAppTracking & { phoneIndex: number } {
+  if (typeof phoneIndexOrTracking === "number") {
+    return { phoneIndex: phoneIndexOrTracking, ...tracking };
+  }
+  if (phoneIndexOrTracking) {
+    return {
+      phoneIndex: phoneIndexOrTracking.phoneIndex ?? 0,
+      ...phoneIndexOrTracking,
+    };
+  }
+  return { phoneIndex: 0, ...tracking };
+}
+
+/** Anexa UTM sem reescrever o `text` já encoded (decodeURIComponent precisa de %20). */
+export function applyWhatsAppUtm(
+  href: string,
+  tracking: WhatsAppTracking = {},
+) {
+  const campaign = tracking.campaign ?? "home";
+  const extra = [
+    `utm_source=${encodeURIComponent(WHATSAPP_UTM_SOURCE)}`,
+    `utm_medium=${encodeURIComponent(WHATSAPP_UTM_MEDIUM)}`,
+    `utm_campaign=${encodeURIComponent(campaign)}`,
+  ];
+  const content = (tracking.content ?? "").trim();
+  if (content) {
+    extra.push(`utm_content=${encodeURIComponent(content.slice(0, 80))}`);
+  }
+  if (/[?&]utm_source=/.test(href)) return href;
+  return href.includes("?") ? `${href}&${extra.join("&")}` : `${href}?${extra.join("&")}`;
+}
+
 /**
  * Monta o link do WhatsApp. Sem número configurado o link cai no wa.me
  * genérico, que ainda abre o app — evita href vazio quebrando a navegação.
+ * UTM entra como query extra para o Lucas ver a origem no chat aberto.
  */
 export function whatsappUrl(
   message: string = WHATSAPP_MESSAGES.general,
-  phoneIndex = 0,
+  phoneIndexOrTracking: number | WhatsAppTracking = 0,
+  tracking?: WhatsAppTracking,
 ) {
-  const digits = (PHONES[phoneIndex]?.digits ?? site.whatsappNumber).replace(
+  const opts = resolveWhatsAppTracking(phoneIndexOrTracking, tracking);
+  const digits = (PHONES[opts.phoneIndex]?.digits ?? site.whatsappNumber).replace(
     /\D/g,
     "",
   );
   const text = encodeURIComponent(message);
-  return digits ? `https://wa.me/${digits}?text=${text}` : `https://wa.me/?text=${text}`;
+  const base = digits
+    ? `https://wa.me/${digits}?text=${text}`
+    : `https://wa.me/?text=${text}`;
+  if (opts.bare) return base;
+  return applyWhatsAppUtm(base, opts);
 }
 
 export function telUrl(phoneIndex = 0) {

@@ -15,6 +15,7 @@ import { formatStockWaitlistQuery } from "@/lib/stock-waitlist";
 import {
   parseStockFilters,
   STOCK_PAGE_SIZE,
+  stockSortLabel,
   type StockPageResult,
 } from "@/lib/stock-query";
 import { stockSearchString } from "@/lib/meta-pixel";
@@ -119,6 +120,7 @@ export function EstoqueBrowseFallback({
               vehicles={vehicles}
               priorityCount={2}
               returnTo="/estoque"
+              whatsappCampaign="estoque"
             />
           </StockReturnCapture>
         ) : (
@@ -245,8 +247,8 @@ export function EstoqueBrowse({
         {loading
           ? "Atualizando o estoque…"
           : filtered
-            ? `${stock.total} ${stock.total === 1 ? "veículo encontrado" : "veículos encontrados"}`
-            : `${stock.total} ${stock.total === 1 ? "veículo no estoque" : "veículos no estoque"} · sem filtros`}
+            ? `${stock.total} ${stock.total === 1 ? "veículo encontrado" : "veículos encontrados"} · ${stockSortLabel(params.sort)}`
+            : `${stock.total} ${stock.total === 1 ? "veículo no estoque" : "veículos no estoque"} · ${stockSortLabel(params.sort)}`}
         {!loading && stock.total > stock.vehicles.length
           ? " · role para ver todos"
           : ""}

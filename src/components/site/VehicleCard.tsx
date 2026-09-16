@@ -10,6 +10,7 @@ import {
   formatVehicleDisplay,
   formatVehicleWhatsAppMessage,
 } from "@/lib/vehicle-display";
+import type { WhatsAppCampaign } from "@/lib/site";
 
 export type VehicleCardData = VehicleCardRecord;
 
@@ -29,11 +30,13 @@ export function VehicleCard({
   priority = false,
   returnTo,
   showDestaque = false,
+  whatsappCampaign,
 }: {
   vehicle: VehicleCardData;
   priority?: boolean;
   returnTo?: string;
   showDestaque?: boolean;
+  whatsappCampaign?: WhatsAppCampaign;
 }) {
   const display = formatVehicleDisplay(vehicle);
   const cover = coverSrc(vehicle.photos);
@@ -168,6 +171,7 @@ export function VehicleCard({
           make={formatBrandName(vehicle.brand)}
           model={formatModelName(vehicle.model)}
           year={vehicle.yearModel}
+          campaign={whatsappCampaign}
         />
       ) : null}
     </article>

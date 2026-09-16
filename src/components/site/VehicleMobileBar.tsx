@@ -39,6 +39,8 @@ export function VehicleMobileBar({
   price,
   sold = false,
   category,
+  soldHref = "/estoque",
+  soldLabel = "Ver estoque",
 }: {
   vehicleId: string;
   contentName: string;
@@ -52,14 +54,18 @@ export function VehicleMobileBar({
   price: number;
   sold?: boolean;
   category?: string;
+  soldHref?: string;
+  soldLabel?: string;
 }) {
   const isMoto = category === "moto";
+  const track = { campaign: "ficha" as const, content: vehicleId };
   const href = whatsappUrl(
     message ?? WHATSAPP_MESSAGES.vehicle(contentName, isMoto),
+    track,
   );
-  const financeHref = financeMessage ? whatsappUrl(financeMessage) : null;
-  const tradeHref = tradeMessage ? whatsappUrl(tradeMessage) : null;
-  const videoHref = videoMessage ? whatsappUrl(videoMessage) : null;
+  const financeHref = financeMessage ? whatsappUrl(financeMessage, track) : null;
+  const tradeHref = tradeMessage ? whatsappUrl(tradeMessage, track) : null;
+  const videoHref = videoMessage ? whatsappUrl(videoMessage, track) : null;
   const secondary = [
     financeHref
       ? { href: financeHref, label: "Simular", tracking: "ficha-finance" }
@@ -90,10 +96,10 @@ export function VehicleMobileBar({
 
           {sold ? (
             <Link
-              href="/estoque"
+              href={soldHref}
               className="inline-flex min-h-[48px] shrink-0 items-center justify-center bg-brand px-5 py-3 font-display text-sm font-semibold text-asphalt touch-manipulation"
             >
-              Ver estoque
+              {soldLabel}
             </Link>
           ) : (
             <VehicleLeadHit

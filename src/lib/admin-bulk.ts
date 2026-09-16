@@ -34,3 +34,19 @@ export function bulkStatusLabel(status: AdminBulkStatus, count: number) {
     ? "Marcar 1 veículo como disponível"
     : `Marcar ${count} veículos como disponíveis`;
 }
+
+/** Desfazer só a venda em lote — volta para disponível, sem inventar reservado. */
+export function canUndoBulkStatus(status: AdminBulkStatus) {
+  return status === "vendido";
+}
+
+export function bulkUndoStatus(status: AdminBulkStatus): AdminBulkStatus | null {
+  return canUndoBulkStatus(status) ? "disponivel" : null;
+}
+
+export function bulkUndoLabel(status: AdminBulkStatus, count: number) {
+  if (!canUndoBulkStatus(status)) return null;
+  return count === 1
+    ? "Desfazer: voltar 1 para disponível"
+    : `Desfazer: voltar ${count} para disponível`;
+}

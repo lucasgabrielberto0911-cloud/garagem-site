@@ -50,7 +50,11 @@ import {
   trackLead,
   trackWhatsAppClick,
 } from "@/lib/meta-pixel";
-import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
+import {
+  WHATSAPP_MESSAGES,
+  whatsappContentFromVehicle,
+  whatsappUrl,
+} from "@/lib/site";
 import {
   getChatVehicleContext,
   subscribeChatVehicleContext,
@@ -71,7 +75,7 @@ const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Oi! Te ajudo a achar o seminovo certo. Me conta o orçamento ou o modelo que você tem em mente.",
+    "Oi! Te ajudo rápido a achar o seminovo. Me conta o orçamento ou o modelo — o detalhe a gente fecha no WhatsApp.",
 };
 
 const SUGGESTIONS = [
@@ -444,11 +448,7 @@ function ChatText({
       : null,
     vehicles,
   );
-  const forceCta =
-    leadCreated || vehicles.length === 1 || Boolean(vehicleContext && vehicles.length <= 1);
-  const cta = chatWhatsAppCta(text, ctaVehicle, {
-    force: forceCta && (Boolean(ctaVehicle) || leadCreated),
-  });
+  const cta = chatWhatsAppCta(text, ctaVehicle, { force: true });
   const showCta = Boolean(cta);
 
   return (
@@ -1069,11 +1069,39 @@ export function SiteChat() {
                     className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#25D366]"
                     aria-hidden="true"
                   />
-                  online · 8h às 23h
+                  dúvida rápida · segue no WhatsApp
                 </p>
               </div>
               <a
-                href={whatsappUrl(WHATSAPP_MESSAGES.help)}
+                href={whatsappUrl(
+                  vehicleContext
+                    ? vehicleContext.brand &&
+                      vehicleContext.model &&
+                      vehicleContext.year
+                      ? formatVehicleWhatsAppMessage({
+                          brand: vehicleContext.brand,
+                          model: vehicleContext.model,
+                          version: vehicleContext.version,
+                          yearModel: vehicleContext.year,
+                          price: vehicleContext.price,
+                          path: vehicleContext.path,
+                          isMoto: vehicleContext.category === "moto",
+                        })
+                      : WHATSAPP_MESSAGES.vehicle(
+                          `${vehicleContext.label}${
+                            vehicleContext.year ? ` ${vehicleContext.year}` : ""
+                          }`.trim(),
+                          vehicleContext.category === "moto",
+                        )
+                    : WHATSAPP_MESSAGES.help,
+                  {
+                    campaign: "chat",
+                    content: whatsappContentFromVehicle({
+                      id: vehicleContext?.id,
+                      path: vehicleContext?.path,
+                    }),
+                  },
+                )}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackWhatsAppClick("chat")}
@@ -1294,9 +1322,9 @@ export function SiteChat() {
               </button>
             </div>
             <p className="mt-2 flex items-center justify-between gap-2 text-[10px] leading-relaxed text-muted">
-              <span className="lg:hidden">Enter envia · WhatsApp se precisar</span>
+              <span className="lg:hidden">Resposta curta · consultor no WhatsApp</span>
               <span className="hidden lg:inline">
-                Enter envia. Ao conversar, podemos te chamar no WhatsApp.
+                Dúvida rápida aqui. Parcela, vídeo e fechamento no WhatsApp.
               </span>
               {started ? (
                 <button

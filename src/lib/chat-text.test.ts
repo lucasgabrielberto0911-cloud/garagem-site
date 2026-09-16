@@ -40,6 +40,9 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   assert.equal(financeCta?.label, "Simular parcela");
   assert.match(financeCta?.benefit ?? "", /seu caso/);
   assert.match(financeCta?.href ?? "", /wa\.me\/5527996330706/);
+  assert.match(financeCta?.href ?? "", /utm_source=site/);
+  assert.match(financeCta?.href ?? "", /utm_medium=whatsapp/);
+  assert.match(financeCta?.href ?? "", /utm_campaign=chat/);
   assert.match(
     decodeURIComponent(financeCta?.href ?? ""),
     /Oi! Vi o site da Garagem e quero simular as parcelas\./,

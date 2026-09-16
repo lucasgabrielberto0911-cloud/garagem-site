@@ -2,7 +2,11 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { IconWhatsApp } from "@/components/site/icons";
 import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
-import { whatsappUrl } from "@/lib/site";
+import {
+  whatsappCampaignFromLabel,
+  whatsappUrl,
+  type WhatsAppCampaign,
+} from "@/lib/site";
 
 /**
  * Larguras de leitura padronizadas do site. Todo conteúdo passa por aqui para
@@ -128,6 +132,8 @@ export function WhatsAppButton({
   variant = "solid",
   className = "",
   trackingLabel = "site",
+  campaign,
+  content,
 }: {
   message?: string;
   children?: ReactNode;
@@ -135,6 +141,8 @@ export function WhatsAppButton({
   variant?: "solid" | "outline";
   className?: string;
   trackingLabel?: string;
+  campaign?: WhatsAppCampaign;
+  content?: string;
 }) {
   const sizing =
     size === "lg"
@@ -147,7 +155,10 @@ export function WhatsAppButton({
 
   return (
     <TrackedWhatsAppLink
-      href={whatsappUrl(message)}
+      href={whatsappUrl(message, {
+        campaign: campaign ?? whatsappCampaignFromLabel(trackingLabel),
+        content,
+      })}
       trackingLabel={trackingLabel}
       className={`inline-flex items-center justify-center gap-2.5 font-display font-semibold uppercase tracking-wide transition touch-manipulation ${sizing} ${look} ${className}`}
     >

@@ -4,8 +4,12 @@ import {
   PHONES,
   WHATSAPP_BRAND,
   WHATSAPP_MESSAGES,
+  applyWhatsAppUtm,
   formatCustomerVehicleWhatsAppText,
   site,
+  whatsappCampaignFromLabel,
+  whatsappCampaignFromPath,
+  whatsappContentFromVehicle,
   whatsappUrl,
 } from "./site";
 
@@ -51,6 +55,10 @@ test("helpers de veículo sem preço caem no fallback sem “por R$”", () => {
     "Oi! Vi a Honda BIZ 125 EX 2023 no site da Garagem e queria um vídeo dela.",
   );
   assert.equal(
+    WHATSAPP_MESSAGES.sameBand("Fiat Pulse 2022"),
+    "Oi! Vi o Fiat Pulse 2022 no site da Garagem e queria ver outros na mesma faixa.",
+  );
+  assert.equal(
     formatCustomerVehicleWhatsAppText({
       intent: "interest",
       label: "",
@@ -66,4 +74,36 @@ test("helpers de veículo sem preço caem no fallback sem “por R$”", () => {
     }),
     /por R\$/,
   );
+});
+
+test("wa.me dos CTAs leva UTM de origem sem alterar o pré-preenchido", () => {
+  const href = whatsappUrl(WHATSAPP_MESSAGES.help, {
+    campaign: "ficha",
+    content: "fiat-pulse-2022-abc",
+  });
+  assert.match(href, /utm_source=site/);
+  assert.match(href, /utm_medium=whatsapp/);
+  assert.match(href, /utm_campaign=ficha/);
+  assert.match(href, /utm_content=fiat-pulse-2022-abc/);
+  assert.match(
+    decodeURIComponent(href),
+    /Oi! Vi o site da Garagem e quero ajuda pra escolher um seminovo\./,
+  );
+  const generic = whatsappUrl();
+  assert.match(generic, /utm_campaign=home/);
+  assert.equal(whatsappCampaignFromPath("/estoque/fiat-pulse-2022-x"), "ficha");
+  assert.equal(whatsappCampaignFromPath("/estoque"), "estoque");
+  assert.equal(whatsappCampaignFromPath("/"), "home");
+  assert.equal(whatsappCampaignFromLabel("ficha-mobile"), "ficha");
+  assert.equal(whatsappCampaignFromLabel("chat-card"), "chat");
+  assert.equal(whatsappCampaignFromLabel("estoque-bar-whatsapp"), "estoque");
+  assert.equal(
+    whatsappContentFromVehicle({
+      id: "cuid123",
+      path: "/estoque/fiat-pulse-2022-abc",
+    }),
+    "fiat-pulse-2022-abc",
+  );
+  const already = applyWhatsAppUtm(href, { campaign: "chat" });
+  assert.equal(already, href);
 });

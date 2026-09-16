@@ -22,6 +22,7 @@ import { formatCurrencyBRL, formatBrandName, formatModelName, formatListedAgo, v
 import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { site } from "@/lib/site";
+import { priceBandHref } from "@/lib/related-vehicles";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
   collapseDuplicateAccessories,
@@ -177,7 +178,17 @@ export default async function VehicleDetailPage({
       isMoto,
       intent: "trade",
     }),
+    sameBand: formatVehicleWhatsAppMessage({
+      ...vehicle,
+      path,
+      isMoto,
+      intent: "similar",
+    }),
   };
+  const sameBandHref = priceBandHref(vehicle.price);
+  const sameBandTitle = isMoto
+    ? "Motos na mesma faixa"
+    : "Carros na mesma faixa";
   const [related, conditions, google] = await Promise.all([
     getRelatedVehicles(
       vehicle.id,
@@ -253,13 +264,21 @@ export default async function VehicleDetailPage({
               Este veículo já foi vendido
             </p>
             <p className="mt-1 text-sm text-muted">
-              A página permanece no ar para quem chegou por um link antigo.{" "}
+              A página permanece no ar para quem chegou por um link antigo. Veja{" "}
+              <Link
+                href="#mesma-faixa"
+                className="font-medium text-brand underline-offset-4 hover:underline"
+              >
+                {sameBandTitle.toLowerCase()}
+              </Link>{" "}
+              ou o{" "}
               <Link
                 href="/estoque"
                 className="font-medium text-brand underline-offset-4 hover:underline"
               >
-                Ver estoque disponível
+                estoque disponível
               </Link>
+              .
             </p>
           </div>
         ) : null}
@@ -301,6 +320,11 @@ export default async function VehicleDetailPage({
                 ) : vehicle.status === "reservado" ? (
                   <span className="bg-brand-orange px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wider text-asphalt">
                     Reservado
+                  </span>
+                ) : null}
+                {!sold && vehicle.inspection ? (
+                  <span className="border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+                    {vehicle.inspection}
                   </span>
                 ) : null}
                 {!sold ? (
@@ -350,9 +374,12 @@ export default async function VehicleDetailPage({
                 />
               ) : null}
 
-              <dl className="grid grid-cols-2 gap-x-3 gap-y-3 border-y border-white/10 py-3.5 text-sm">
+              <dl className="grid grid-cols-2 gap-2 border-y border-white/10 py-3.5 text-sm">
                 {specs.map((spec) => (
-                  <div key={spec.label} className="min-w-0">
+                  <div
+                    key={spec.label}
+                    className="min-w-0 border border-white/10 bg-asphalt/40 px-2.5 py-2"
+                  >
                     <dt className="text-[11px] uppercase tracking-wider text-muted">
                       {spec.label}
                     </dt>
@@ -372,10 +399,10 @@ export default async function VehicleDetailPage({
 
               {sold ? (
                 <Link
-                  href="/estoque"
+                  href={related.length > 0 ? "#mesma-faixa" : "/estoque"}
                   className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-asphalt transition hover:bg-brand-orange"
                 >
-                  Ver estoque disponível
+                  {related.length > 0 ? "Ver na mesma faixa" : "Ver estoque disponível"}
                 </Link>
               ) : (
                 <>
@@ -391,6 +418,8 @@ export default async function VehicleDetailPage({
                       size="lg"
                       className="hidden w-full lg:inline-flex"
                       trackingLabel="ficha"
+                      campaign="ficha"
+                      content={vehicle.id}
                       message={whatsapp.interest}
                     >
                       Tenho interesse
@@ -427,7 +456,7 @@ export default async function VehicleDetailPage({
                     prompt={`Tenho dúvida sobre o ${title}`}
                     className="w-full lg:hidden"
                   >
-                    Perguntar no chat
+                    Dúvida rápida
                   </ChatOpenButton>
 
                   <p className="text-[11px] leading-relaxed text-muted">
@@ -507,23 +536,43 @@ export default async function VehicleDetailPage({
         </div>
 
         {related.length > 0 ? (
-          <section className="mt-10 border-t border-white/5 pt-8 sm:mt-12 sm:pt-10">
+          <section
+            id="mesma-faixa"
+            className="mt-10 scroll-mt-24 border-t border-white/5 pt-8 sm:mt-12 sm:pt-10"
+          >
             <div className="flex flex-wrap items-end justify-between gap-3">
-              <h2 className="font-display text-lg font-bold tracking-tight text-cream sm:text-xl">
-                {sold
-                  ? "Outros seminovos no estoque agora"
-                  : "Seminovos parecidos no estoque"}
-              </h2>
+              <div>
+                <h2 className="font-display text-lg font-bold tracking-tight text-cream sm:text-xl">
+                  {sameBandTitle}
+                </h2>
+                <p className="mt-1 max-w-xl text-sm text-muted">
+                  {sold
+                    ? "Este já foi. Estas opções estão no estoque agora — ficha ou WhatsApp."
+                    : "Se este não fechar, tem outros na mesma faixa. Abra a ficha ou chame no WhatsApp."}
+                </p>
+              </div>
               <Link
-                href="/estoque"
+                href={sameBandHref}
                 className="inline-flex min-h-[44px] items-center gap-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
               >
-                Ver estoque
+                Ver a faixa no estoque
                 <IconArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
             <div className="mt-5">
-              <VehicleGrid vehicles={related} />
+              <VehicleGrid vehicles={related} whatsappCampaign="ficha" />
+            </div>
+            <div className="mt-5">
+              <WhatsAppButton
+                trackingLabel="ficha-mesma-faixa"
+                campaign="ficha"
+                content={vehicle.id}
+                message={whatsapp.sameBand}
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
+                Pedir outros nesta faixa
+              </WhatsAppButton>
             </div>
           </section>
         ) : null}
@@ -542,6 +591,8 @@ export default async function VehicleDetailPage({
         price={vehicle.price}
         sold={sold}
         category={vehicle.category}
+        soldHref={related.length > 0 ? "#mesma-faixa" : "/estoque"}
+        soldLabel={related.length > 0 ? "Ver na mesma faixa" : "Ver estoque"}
       />
     </div>
   );

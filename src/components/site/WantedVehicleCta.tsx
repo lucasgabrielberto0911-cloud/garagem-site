@@ -34,7 +34,9 @@ export function WantedVehicleCta({
     ? `${model || "(modelo que procuro)"}. Faixa de preço: ${budget}`
     : model;
   const searchString = [model, budget].filter(Boolean).join(" · ");
-  const href = whatsappUrl(WHATSAPP_MESSAGES.wanted(detail || undefined));
+  const href = whatsappUrl(WHATSAPP_MESSAGES.wanted(detail || undefined), {
+    campaign: "estoque",
+  });
 
   function openWhatsApp(event?: FormEvent) {
     event?.preventDefault();
