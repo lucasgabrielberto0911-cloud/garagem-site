@@ -10,7 +10,7 @@ import {
   IconWhatsApp,
 } from "@/components/site/icons";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
-import { whatsappUrl } from "@/lib/site";
+import { whatsappCampaignFromPath, whatsappUrl } from "@/lib/site";
 import type { ReactNode } from "react";
 
 const ITEMS = [
@@ -56,7 +56,9 @@ export function MobileBottomNav() {
 
         <li className="flex flex-1">
           <a
-            href={whatsappUrl()}
+            href={whatsappUrl(undefined, {
+              campaign: whatsappCampaignFromPath(pathname),
+            })}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Abrir WhatsApp da Sua Garagem"

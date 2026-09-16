@@ -576,52 +576,21 @@ export function StockFilters({ facets }: { facets: Facets }) {
           ) : null}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 lg:hidden">
-          <button
-            type="button"
-            onClick={() => {
-              setDraft(current);
-              setOpen(true);
-            }}
-            className="relative inline-flex min-h-[44px] items-center gap-2 border border-white/15 px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream"
-          >
-            <FilterIcon />
-            Filtros
-            {activeFilterCount > 0 ? (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] text-white">
-                {activeFilterCount}
-              </span>
-            ) : null}
-          </button>
+      </div>
 
-          {hasFilter ? (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="min-h-[44px] px-2 text-xs uppercase tracking-wider text-muted underline-offset-4 transition hover:text-cream hover:underline"
-            >
-              Limpar
-            </button>
-          ) : null}
-          <ChatOpenButton
-            source="estoque-filtros"
-            prompt="Quero ajuda para escolher no estoque"
-            size="md"
-            className="min-h-[44px] border-white/15 px-3 text-[11px]"
-          >
-            Ajuda
-          </ChatOpenButton>
-        </div>
-
-        <div className="mt-3 space-y-2.5 lg:hidden">
-          <ChipRow label="Faixa">
+      <div className="sticky top-[calc(4.5rem+env(safe-area-inset-top,0px))] z-30 mt-3 space-y-2 border border-white/10 bg-ink/95 px-3 py-2.5 backdrop-blur lg:hidden">
+        <div className="flex items-center gap-2">
+          <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
+            Faixa
+          </p>
+          <div className="chip-scroll chip-scroll-row min-w-0 flex-1 -mx-0.5 px-0.5">
             {BUDGET_CHIPS.map((chip) => {
               const active =
                 (current.minPrice || "") === chip.minPrice &&
                 (current.maxPrice || "") === chip.maxPrice;
               return (
                 <Chip
-                  key={chip.label}
+                  key={`sticky-${chip.label}`}
                   active={active}
                   onClick={() =>
                     update(
@@ -635,44 +604,38 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 </Chip>
               );
             })}
-          </ChipRow>
-          <ChipRow label="Tipo">
-            {CATEGORY_FILTER_OPTIONS.filter((option) => option.value).map((option) => (
-              <Chip
-                key={option.value}
-                active={current.category === option.value}
-                onClick={() =>
-                  update({
-                    category: current.category === option.value ? "" : option.value,
-                  })
-                }
-              >
-                {option.label}
-              </Chip>
-            ))}
-          </ChipRow>
-          {facets.transmissions.length > 0 ? (
-            <ChipRow label="Câmbio">
-              {facets.transmissions.map((item) => (
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(current);
+              setOpen(true);
+            }}
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 border border-white/15 px-2.5 font-display text-[10px] font-semibold uppercase tracking-wide text-cream"
+            aria-label={
+              activeFilterCount > 0
+                ? `Mais filtros, ${activeFilterCount} ativos`
+                : "Mais filtros"
+            }
+          >
+            <FilterIcon />
+            Mais
+            {activeFilterCount > 0 ? (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] text-white">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
+        {facets.brands.length > 0 ? (
+          <div className="flex items-center gap-2">
+            <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
+              Marca
+            </p>
+            <div className="chip-scroll chip-scroll-row min-w-0 flex-1 -mx-0.5 px-0.5">
+              {visibleBrandChips(facets.brands, current.brand).map((item) => (
                 <Chip
-                  key={item}
-                  active={current.transmission === item}
-                  onClick={() =>
-                    update({
-                      transmission: current.transmission === item ? "" : item,
-                    })
-                  }
-                >
-                  {item}
-                </Chip>
-              ))}
-            </ChipRow>
-          ) : null}
-          {facets.brands.length > 0 ? (
-            <ChipRow label="Marca">
-              {facets.brands.slice(0, 8).map((item) => (
-                <Chip
-                  key={item}
+                  key={`sticky-brand-${item}`}
                   active={current.brand === item}
                   onClick={() =>
                     update({
@@ -683,88 +646,50 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   {formatBrandName(item)}
                 </Chip>
               ))}
-            </ChipRow>
-          ) : null}
-        </div>
-
-        {activeFilters.length > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-2 lg:hidden">
-            {activeFilters.map((filter) => (
-              <button
-                key={filter.accessory ? `accessory:${filter.accessory}` : filter.key}
-                type="button"
-                onClick={() =>
-                  update({
-                    [filter.key]:
-                      filter.key === "accessory" && filter.accessory
-                        ? toggleAccessoryValue(current.accessory, filter.accessory)
-                        : "",
-                  })
-                }
-                className="inline-flex min-h-[44px] items-center gap-1.5 border border-brand/50 bg-brand/10 px-2.5 py-1.5 text-left text-[11px] leading-tight text-cream"
-                aria-label={`Remover ${filter.label}`}
-              >
-                <span>{filter.label}</span>
-                <IconClose className="h-3 w-3 shrink-0 text-brand" />
-              </button>
-            ))}
+              {facets.brands.length > 8 ? (
+                <Chip
+                  active={Boolean(
+                    current.brand &&
+                      !visibleBrandChips(facets.brands, current.brand).includes(
+                        current.brand,
+                      ),
+                  )}
+                  onClick={() => {
+                    setDraft(current);
+                    setOpen(true);
+                  }}
+                >
+                  Outras
+                </Chip>
+              ) : null}
+            </div>
           </div>
         ) : null}
-
-        {/* Mobile/tablet: ordenação em faixa horizontal. */}
-        <div className="mt-3 lg:hidden">
-          <p className="mb-1 px-1 text-[10px] uppercase tracking-wider text-muted">
-            Deslize para ordenar
+        <div className="flex items-center justify-between gap-2">
+          <p className="min-w-0 truncate text-[11px] text-muted">
+            {stockSortLabel(current.sort)}
+            {activeFilterCount > 0 ? " · filtros ativos" : ""}
           </p>
-          <div className="chip-scroll -mx-1 px-1">
-            {STOCK_SORT_OPTIONS.map((option) => (
+          <div className="flex shrink-0 items-center gap-2">
+            {hasFilter ? (
               <button
-                key={option.value}
                 type="button"
-                onClick={() => update({ sort: option.value })}
-                className={`min-h-[44px] shrink-0 whitespace-nowrap border px-3.5 text-xs font-medium transition touch-manipulation ${
-                  current.sort === option.value
-                    ? "border-brand bg-brand/10 text-cream"
-                    : "border-white/10 text-muted active:bg-white/5"
-                }`}
+                onClick={clearFilters}
+                className="min-h-11 px-2 text-[11px] uppercase tracking-wider text-muted"
               >
-                {option.label}
+                Limpar
               </button>
-            ))}
+            ) : null}
+            <ChatOpenButton
+              source="estoque-filtros"
+              prompt="Quero ajuda para escolher no estoque"
+              size="md"
+              className="min-h-11 border-white/15 px-2.5 text-[10px]"
+            >
+              Ajuda
+            </ChatOpenButton>
           </div>
         </div>
-      </div>
-
-      <div className="sticky top-[calc(4.5rem+env(safe-area-inset-top,0px))] z-30 mt-3 flex items-center gap-2 border border-white/10 bg-ink/95 px-3 py-2 backdrop-blur lg:hidden">
-        <button
-          type="button"
-          onClick={() => {
-            setDraft(current);
-            setOpen(true);
-          }}
-          className="inline-flex min-h-11 items-center gap-2 border border-white/15 px-3 font-display text-[11px] font-semibold uppercase tracking-wide text-cream"
-        >
-          <FilterIcon />
-          Filtros
-          {activeFilterCount > 0 ? (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] text-white">
-              {activeFilterCount}
-            </span>
-          ) : null}
-        </button>
-        <p className="min-w-0 flex-1 truncate text-xs text-muted">
-          {stockSortLabel(current.sort)}
-          {activeFilterCount > 0 ? " · filtros ativos" : ""}
-        </p>
-        {activeFilterCount > 0 ? (
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="min-h-11 shrink-0 px-2 text-[11px] uppercase tracking-wider text-muted"
-          >
-            Limpar
-          </button>
-        ) : null}
       </div>
 
       {open ? (
@@ -801,6 +726,21 @@ export function StockFilters({ facets }: { facets: Facets }) {
             </div>
 
             <div className="space-y-5 px-5 py-6">
+              <MobileField label="Ordenar">
+                <select
+                  value={draft.sort}
+                  onChange={(event) =>
+                    setDraft({ ...draft, sort: event.target.value })
+                  }
+                  className={selectClass}
+                >
+                  {STOCK_SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </MobileField>
               <MobileField label="Tipo">
                 <select
                   value={draft.category}
@@ -823,7 +763,11 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   className={selectClass}
                 >
                   <option value="">Todas as marcas</option>
-                  {facets.brands.map((item) => <option key={item}>{item}</option>)}
+                  {facets.brands.map((item) => (
+                    <option key={item} value={item}>
+                      {formatBrandName(item)}
+                    </option>
+                  ))}
                 </select>
               </MobileField>
               <MobileField label="Câmbio">
@@ -1028,21 +972,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
   );
 }
 
-function ChipRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="chip-scroll -mx-1 px-1">
-      <span className="shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted">
-        {label}
-      </span>
-      {children}
-    </div>
-  );
+function visibleBrandChips(brands: string[], selected: string) {
+  if (!selected) return brands.slice(0, 8);
+  const rest = brands.filter((item) => item !== selected);
+  return [selected, ...rest].slice(0, 8);
 }
 
 function Chip({

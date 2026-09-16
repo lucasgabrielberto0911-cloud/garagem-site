@@ -15,6 +15,7 @@ import { CHAT_VEHICLE_SELECT } from "./chat-stock";
 test("saudação de ping ajuda a escolher sem jargão de 60x", () => {
   assert.match(CHAT_PING_REPLY, /estoque/);
   assert.match(CHAT_PING_REPLY, /orçamento|modelo/);
+  assert.match(CHAT_PING_REPLY, /WhatsApp/);
   assert.doesNotMatch(CHAT_PING_REPLY, /60x/);
 });
 
@@ -42,7 +43,9 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /faixa típica de catálogo/);
   assert.match(CHAT_SYSTEM_PROMPT, /Fox 1\.6 1\.6/);
   assert.match(CHAT_SYSTEM_PROMPT, /mais em conta se o preço for menor/);
-  assert.match(CHAT_SYSTEM_PROMPT, /2 a 4 frases curtas/);
+  assert.match(CHAT_SYSTEM_PROMPT, /1 a 3 frases curtas/);
+  assert.match(CHAT_SYSTEM_PROMPT, /HANDOFF/);
+  assert.match(CHAT_SYSTEM_PROMPT, /Termine SEMPRE/);
   assert.match(CHAT_SYSTEM_PROMPT, /Não comece com/);
   assert.match(CHAT_SYSTEM_PROMPT, /frase falada de recorte/);
   assert.match(CHAT_SYSTEM_PROMPT, /consultor humano/);

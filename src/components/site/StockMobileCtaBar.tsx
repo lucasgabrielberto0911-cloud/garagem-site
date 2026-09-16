@@ -9,9 +9,13 @@ import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
  * WhatsApp é o CTA principal; Simular e Troca ficam no segundo nível.
  */
 export function StockMobileCtaBar() {
-  const whatsappHref = whatsappUrl(WHATSAPP_MESSAGES.help);
-  const financeHref = whatsappUrl(WHATSAPP_MESSAGES.finance);
-  const tradeHref = whatsappUrl(WHATSAPP_MESSAGES.sell);
+  const whatsappHref = whatsappUrl(WHATSAPP_MESSAGES.help, {
+    campaign: "estoque",
+  });
+  const financeHref = whatsappUrl(WHATSAPP_MESSAGES.finance, {
+    campaign: "estoque",
+  });
+  const tradeHref = whatsappUrl(WHATSAPP_MESSAGES.sell, { campaign: "estoque" });
 
   return (
     <div

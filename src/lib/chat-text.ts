@@ -1,4 +1,9 @@
-import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
+import {
+  WHATSAPP_MESSAGES,
+  applyWhatsAppUtm,
+  whatsappContentFromVehicle,
+  whatsappUrl,
+} from "@/lib/site";
 import {
   formatVehicleWhatsAppMessage,
   shortVersion,
@@ -167,6 +172,16 @@ function chatVehicleWhatsAppText(
   return WHATSAPP_MESSAGES.vehicle(vehicle.label, isMoto);
 }
 
+function chatWhatsAppTrack(vehicle?: ChatWhatsAppVehicle | null) {
+  return {
+    campaign: "chat" as const,
+    content: whatsappContentFromVehicle({
+      id: vehicle?.id,
+      path: vehicle?.path,
+    }),
+  };
+}
+
 export function chatWhatsAppCta(
   text: string,
   vehicle?: ChatWhatsAppVehicle | null,
@@ -174,15 +189,16 @@ export function chatWhatsAppCta(
 ): ChatWhatsAppCta | null {
   if (!opts.force && !/whatsapp|wa\.me/i.test(text)) return null;
   const folded = fold(text);
+  const track = chatWhatsAppTrack(vehicle);
   const fromReply = extractWhatsAppHref(text);
   const waitlistHref =
     fromReply && /[?&]text=/.test(fromReply)
-      ? fromReply
-      : whatsappUrl(WHATSAPP_MESSAGES.wanted());
+      ? applyWhatsAppUtm(fromReply, track)
+      : whatsappUrl(WHATSAPP_MESSAGES.wanted(), track);
 
   if (vehicle?.sold) {
     return {
-      href: whatsappUrl(WHATSAPP_MESSAGES.wanted(vehicle.label)),
+      href: whatsappUrl(WHATSAPP_MESSAGES.wanted(vehicle.label), track),
       label: "Avisar quando chegar",
       benefit: "Consultor procura o modelo pra você",
     };
@@ -190,7 +206,7 @@ export function chatWhatsAppCta(
 
   if (/assuntos da garagem|outros temas/.test(folded)) {
     return {
-      href: whatsappUrl(WHATSAPP_MESSAGES.help),
+      href: whatsappUrl(WHATSAPP_MESSAGES.help, track),
       label: "Falar com a loja",
       benefit: "Consultor humano · das 8h às 23h",
     };
@@ -201,6 +217,7 @@ export function chatWhatsAppCta(
         vehicle
           ? chatVehicleWhatsAppText(vehicle, "finance")
           : WHATSAPP_MESSAGES.finance,
+        track,
       ),
       label: "Simular parcela",
       benefit: "O consultor calcula no seu caso",
@@ -212,6 +229,7 @@ export function chatWhatsAppCta(
         vehicle
           ? chatVehicleWhatsAppText(vehicle, "trade")
           : WHATSAPP_MESSAGES.sell,
+        track,
       ),
       label: "Avaliar meu usado",
       benefit: "Valor da troca com fotos, pelo WhatsApp",
@@ -227,6 +245,7 @@ export function chatWhatsAppCta(
   return {
     href: whatsappUrl(
       vehicle ? chatVehicleWhatsAppText(vehicle, "interest") : WHATSAPP_MESSAGES.help,
+      track,
     ),
     label: "Chamar consultor",
     benefit: "Confirma o modelo · das 8h às 23h",

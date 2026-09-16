@@ -61,7 +61,7 @@ export function ShareVehicle({ title, path, className = "" }: Props) {
         {copied ? "Copiado" : "Copiar link"}
       </button>
       <a
-        href={whatsappUrl(`${text}\n${url}`)}
+        href={whatsappUrl(`${text}\n${url}`, { bare: true })}
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => trackWhatsAppClick("ficha-share")}

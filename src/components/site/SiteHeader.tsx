@@ -19,11 +19,15 @@ import {
   SECONDARY_LINKS,
   site,
   telUrl,
+  whatsappCampaignFromPath,
   whatsappUrl,
 } from "@/lib/site";
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const whatsappHref = whatsappUrl(undefined, {
+    campaign: whatsappCampaignFromPath(pathname || "/"),
+  });
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -108,7 +112,7 @@ export function SiteHeader() {
             <FavoritesLink />
 
             <a
-              href={whatsappUrl()}
+              href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackWhatsAppClick("header")}
@@ -194,7 +198,7 @@ export function SiteHeader() {
 
               <div className="mt-4 space-y-3 border-t border-white/10 pt-5">
                 <a
-                  href={whatsappUrl()}
+                  href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => {

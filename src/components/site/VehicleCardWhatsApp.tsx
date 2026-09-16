@@ -4,7 +4,12 @@ import { VehicleLeadHit } from "@/components/site/VehiclePixel";
 import { IconWhatsApp } from "@/components/site/icons";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
-import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
+import {
+  WHATSAPP_MESSAGES,
+  whatsappCampaignFromLabel,
+  whatsappUrl,
+  type WhatsAppCampaign,
+} from "@/lib/site";
 
 /**
  * Atalho de conversão no card: o interessado fala no WhatsApp sem abrir a ficha.
@@ -21,6 +26,7 @@ export function VehicleCardWhatsApp({
   className = "",
   variant = "bar",
   trackingLabel = "vehicle-card",
+  campaign,
 }: {
   vehicleId: string;
   label: string;
@@ -32,9 +38,14 @@ export function VehicleCardWhatsApp({
   className?: string;
   variant?: "bar" | "icon";
   trackingLabel?: string;
+  campaign?: WhatsAppCampaign;
 }) {
   const icon = variant === "icon";
   const text = message ?? WHATSAPP_MESSAGES.vehicle(label);
+  const href = whatsappUrl(text, {
+    campaign: campaign ?? whatsappCampaignFromLabel(trackingLabel),
+    content: vehicleId,
+  });
   return (
     <VehicleLeadHit
       contentId={vehicleId}
@@ -45,7 +56,7 @@ export function VehicleCardWhatsApp({
       year={year}
     >
       <a
-        href={whatsappUrl(text)}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
         onClick={(event) => {
@@ -53,7 +64,7 @@ export function VehicleCardWhatsApp({
           if (typeof navigator !== "undefined" && !navigator.onLine) {
             event.preventDefault();
             void queueWhatsAppIfOffline({
-              url: whatsappUrl(text),
+              url: href,
               label: trackingLabel,
               vehicleId,
             });

@@ -1394,7 +1394,9 @@ export function formatChatWaitlistQuery(mensagem: string) {
 
 export function chatWaitlistWhatsAppUrl(mensagem: string) {
   const query = formatChatWaitlistQuery(mensagem);
-  return whatsappUrl(WHATSAPP_MESSAGES.wanted(query || undefined));
+  return whatsappUrl(WHATSAPP_MESSAGES.wanted(query || undefined), {
+    campaign: "chat",
+  });
 }
 
 export function matchedChatStock(

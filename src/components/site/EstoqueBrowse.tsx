@@ -120,6 +120,7 @@ export function EstoqueBrowseFallback({
               vehicles={vehicles}
               priorityCount={2}
               returnTo="/estoque"
+              whatsappCampaign="estoque"
             />
           </StockReturnCapture>
         ) : (

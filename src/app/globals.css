@@ -585,6 +585,27 @@ body:has([data-install-coach]) .site-chat:not(.is-open) {
   }
 }
 
+/* Estoque sticky: faixa e marca sempre em faixa horizontal, sem quebrar. */
+.chip-scroll-row {
+  flex-wrap: nowrap !important;
+  justify-content: flex-start !important;
+  overflow-x: auto !important;
+  padding-bottom: 0.35rem !important;
+  scroll-snap-type: x proximity !important;
+  mask-image: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - 1.75rem),
+    transparent 100%
+  ) !important;
+}
+
+.chip-scroll-row::after {
+  display: block !important;
+  content: "";
+  flex: 0 0 1.5rem;
+}
+
 @media (min-width: 1024px) {
   .step-scroll {
     flex-direction: column;
