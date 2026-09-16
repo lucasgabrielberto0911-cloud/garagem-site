@@ -754,9 +754,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
         </button>
         <p className="min-w-0 flex-1 truncate text-xs text-muted">
           {stockSortLabel(current.sort)}
-          {hasFilter ? " · filtros ativos" : ""}
+          {activeFilterCount > 0 ? " · filtros ativos" : ""}
         </p>
-        {hasFilter ? (
+        {activeFilterCount > 0 ? (
           <button
             type="button"
             onClick={clearFilters}
