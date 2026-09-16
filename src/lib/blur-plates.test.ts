@@ -11,10 +11,12 @@ import {
   disambiguateCarPlates,
   extractPlateCandidate,
   findBlackDealerPlateBoxes,
+  findMercosulPlatesInImage,
   findMercosulStripeBoxes,
   isHeadlightOrCornerZone,
   isUnlikelyPlateGeometry,
   looksLikeBodyPanelFalsePositive,
+  looksLikeMercosulPlatePatch,
   plateBoxesFromText,
   textLooksLikeDealerPlate,
   textLooksLikePlate,
@@ -543,6 +545,11 @@ test("fixture da portinhola/caixa de roda: sem placa e sem retângulo de loja", 
   assert.equal(plateBoxesFromText([], width, height).length, 0);
   assert.equal((await dealerBoxesFromImage(image, [], width, height)).length, 0);
   assert.equal((await findMercosulStripeBoxes(image, whole)).length, 0);
+  assert.equal(
+    (await findMercosulPlatesInImage(image, width, height)).length,
+    0,
+    "varredura Mercosul não deve achar placa na portinhola",
+  );
 
   const dealers = await findBlackDealerPlateBoxes(image, whole);
   assert.equal(
@@ -571,6 +578,11 @@ test("fixture da portinhola/caixa de roda: sem placa e sem retângulo de loja", 
     await looksLikeBodyPanelFalsePositive(image, { left: 70, top: 8, width: 70, height: 70 }),
     true,
     "portinhola circular é falso positivo",
+  );
+  assert.equal(
+    await looksLikeMercosulPlatePatch(image, { left: 70, top: 8, width: 70, height: 70 }),
+    false,
+    "portinhola não tem faixa azul Mercosul",
   );
   assert.equal(
     await looksLikeBodyPanelFalsePositive(image, { left: 81, top: 71, width: 112, height: 27 }),
@@ -641,5 +653,137 @@ test("OCR Forte + imagem sintética não apaga a caixa Mercosul", async () => {
     plates[0].left > 160,
     "placa Mercosul/oficial permanece no canto oposto",
   );
+});
+
+function boxOverlaps(
+  hit: { left: number; top: number; width: number; height: number },
+  core: { left: number; top: number; width: number; height: number },
+) {
+  return (
+    hit.left < core.left + core.width &&
+    hit.left + hit.width > core.left &&
+    hit.top < core.top + core.height &&
+    hit.top + hit.height > core.top
+  );
+}
+
+test("foto da Biz (traseira): placa Mercosul de moto vira caixa e não é portinhola", async () => {
+  const image = await readFile(join(FIXTURES, "moto-mercosul-biz-rear.jpg"));
+  const meta = await sharp(image).metadata();
+  const width = meta.width ?? 400;
+  const height = meta.height ?? 164;
+  const core = { left: 212, top: 130, width: 32, height: 26 };
+
+  const boxes = await findMercosulPlatesInImage(image, width, height);
+  assert.ok(boxes.length >= 1, `esperava a placa da Biz: ${JSON.stringify(boxes)}`);
+  const hit = boxes[0];
+  assert.ok(boxOverlaps(hit, core), `caixa ${JSON.stringify(hit)} não cobre SGD 9E87`);
+  assert.ok(hit.width < 120, `width ${hit.width} não deve engolir a moto`);
+  assert.ok(hit.height < 90, `height ${hit.height}`);
+  assert.equal(await looksLikeMercosulPlatePatch(image, hit), true);
+  assert.equal(
+    await looksLikeBodyPanelFalsePositive(image, hit),
+    false,
+    "placa de moto Mercosul não é falso positivo de portinhola",
+  );
+});
+
+test("foto da Biz (3/4): placa Mercosul menor e mais alta também é detectada", async () => {
+  const image = await readFile(join(FIXTURES, "moto-mercosul-biz-side.jpg"));
+  const meta = await sharp(image).metadata();
+  const width = meta.width ?? 396;
+  const height = meta.height ?? 164;
+  const core = { left: 224, top: 108, width: 28, height: 32 };
+
+  const boxes = await findMercosulPlatesInImage(image, width, height);
+  assert.ok(boxes.length >= 1, `esperava a placa no 3/4: ${JSON.stringify(boxes)}`);
+  const hit = boxes[0];
+  assert.ok(boxOverlaps(hit, core), `caixa ${JSON.stringify(hit)} não cobre a placa`);
+  assert.ok(hit.width < 120);
+  assert.ok(hit.height < 100);
+  assert.equal(await looksLikeMercosulPlatePatch(image, hit), true);
+  assert.equal(await looksLikeBodyPanelFalsePositive(image, hit), false);
+});
+
+test("OCR em duas linhas (SGD + 9E87) vira caixa de placa de moto", () => {
+  const boxes = plateBoxesFromText(
+    [
+      {
+        text: "BRASIL",
+        type: "WORD",
+        confidence: 90,
+        box: { left: 218, top: 122, width: 32, height: 8 },
+      },
+      {
+        text: "SGD",
+        type: "WORD",
+        confidence: 88,
+        box: { left: 220, top: 132, width: 28, height: 12 },
+      },
+      {
+        text: "9E87",
+        type: "WORD",
+        confidence: 86,
+        box: { left: 218, top: 144, width: 32, height: 12 },
+      },
+    ],
+    400,
+    164,
+  );
+  assert.equal(boxes.length, 1, `esperava união das duas linhas: ${JSON.stringify(boxes)}`);
+  const hit = boxes[0];
+  assert.ok(hit.left < 220, `left ${hit.left} deve incluir a faixa BRASIL`);
+  assert.ok(hit.top < 132, `top ${hit.top} deve cobrir BRASIL`);
+  assert.ok(hit.top + hit.height > 156, `bottom ${hit.top + hit.height} deve cobrir 9E87`);
+  assert.ok(hit.width < 80);
+});
+
+test("blur da placa Mercosul da Biz deixa os caracteres ilegíveis", async () => {
+  const image = await readFile(join(FIXTURES, "moto-mercosul-biz-rear.jpg"));
+  const meta = await sharp(image).metadata();
+  const boxes = await findMercosulPlatesInImage(
+    image,
+    meta.width ?? 400,
+    meta.height ?? 164,
+  );
+  assert.ok(boxes.length >= 1);
+  const core = { left: 214, top: 134, width: 28, height: 22 };
+  const beforeBuf = await sharp(image).extract(core).png().toBuffer();
+  const blurred = await applyBlurRegions(image, boxes);
+  const afterBuf = await sharp(blurred).extract(core).png().toBuffer();
+  const before = await sharp(beforeBuf).stats();
+  const after = await sharp(afterBuf).stats();
+  const beforeStd =
+    (before.channels[0].stdev + before.channels[1].stdev + before.channels[2].stdev) / 3;
+  const afterStd =
+    (after.channels[0].stdev + after.channels[1].stdev + after.channels[2].stdev) / 3;
+  assert.ok(beforeStd > 30, `contraste original baixo demais: ${beforeStd}`);
+  assert.ok(afterStd < beforeStd * 0.45, `blur fraco: ${beforeStd} → ${afterStd}`);
+});
+
+test("placa no rabo da moto não é descartada como canto de carro", () => {
+  const imgWidth = 400;
+  const imgHeight = 266;
+  const car = { left: 0, top: 0, width: 400, height: 266 };
+  const moto = { left: 280, top: 80, width: 120, height: 160 };
+  const tailPlate = { left: 340, top: 180, width: 36, height: 32 };
+
+  assert.equal(
+    isHeadlightOrCornerZone(tailPlate, car, imgWidth, imgHeight),
+    true,
+    "no envelope de carro a cauda cairia na regra de canto",
+  );
+  const withoutMoto = disambiguateCarPlates([tailPlate], [car], imgWidth, imgHeight);
+  assert.equal(withoutMoto.length, 0);
+
+  const withMoto = disambiguateCarPlates(
+    [tailPlate],
+    [car],
+    imgWidth,
+    imgHeight,
+    [moto],
+  );
+  assert.equal(withMoto.length, 1);
+  assert.equal(withMoto[0].left, 340);
 });
 

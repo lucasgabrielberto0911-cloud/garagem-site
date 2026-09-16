@@ -340,7 +340,9 @@ function isTightPlateText(text: string) {
   return textLooksLikePlate(text);
 }
 
-/** Portinhola, calota e emblema: quase quadrado/círculo, não placa. */
+/** Portinhola, calota e emblema: quase quadrado/círculo, não placa de carro.
+ *  Placa de moto Mercosul (~1.18) cai nesta faixa — o desempate é a faixa azul.
+ */
 export function isUnlikelyPlateGeometry(box: PixelBox) {
   const aspect = box.width / Math.max(1, box.height);
   return aspect >= 0.72 && aspect <= 1.28;
@@ -393,10 +395,13 @@ function boxToPixels(
 }
 
 function padBox(box: PixelBox, imageWidth: number, imageHeight: number): PixelBox {
+  const aspect = box.width / Math.max(1, box.height);
+  const motoLike = aspect <= 1.95;
   const padX = Math.max(4, Math.round(box.width * PLATE_PAD_X));
-  const padY = Math.max(5, Math.round(box.height * PLATE_PAD_Y));
+  const padY = Math.max(5, Math.round(box.height * (motoLike ? 0.22 : PLATE_PAD_Y)));
+  const extraTop = motoLike ? Math.max(4, Math.round(box.height * 0.18)) : 0;
   const left = Math.max(0, box.left - padX);
-  const top = Math.max(0, box.top - padY);
+  const top = Math.max(0, box.top - padY - extraTop);
   const right = Math.min(imageWidth, box.left + box.width + padX);
   const bottom = Math.min(imageHeight, box.top + box.height + padY);
   return { left, top, width: right - left, height: bottom - top };
@@ -427,25 +432,44 @@ function boxesOverlap(a: PixelBox, b: PixelBox) {
   );
 }
 
-function isPlateShaped(box: PixelBox, imageWidth: number, imageHeight: number) {
-  if (box.width < 16 || box.height < 8) return false;
-  const aspect = box.width / box.height;
+function isMotorcyclePlateShaped(
+  box: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+) {
+  const aspect = box.width / Math.max(1, box.height);
+  // Oficial ~200×170mm (aspecto ~1.18). Em 3/4 a placa fica mais alta que larga.
+  if (aspect < 0.62 || aspect > 2.15) return false;
+  if (box.width < 16 || box.height < 12) return false;
+  if (box.width > imageWidth * 0.22) return false;
+  if (box.height > imageHeight * 0.28) return false;
   const areaRatio = boxArea(box) / (imageWidth * imageHeight);
-  if (areaRatio > 0.04) return false;
-  if (box.width > imageWidth * 0.32) return false;
-  if (box.height > imageHeight * 0.12) return false;
-  // Placas são retangulares horizontais: moto ~1.18, carro ~3.08. Rejeita verticais e quadradas.
-  if (aspect < 1.15) return false;
-  if (aspect > 5.5) return false;
+  if (areaRatio > 0.05 || areaRatio < 0.0015) return false;
   return true;
+}
+
+function isPlateShaped(box: PixelBox, imageWidth: number, imageHeight: number) {
+  if (box.width < 14 || box.height < 8) return false;
+  const aspect = box.width / Math.max(1, box.height);
+  const areaRatio = boxArea(box) / (imageWidth * imageHeight);
+  if (areaRatio > 0.05) return false;
+  if (box.width > imageWidth * 0.32) return false;
+  if (aspect >= 1.15 && aspect <= 5.5) {
+    if (box.height <= imageHeight * 0.18) return true;
+    // Placa de moto (duas linhas) é mais alta que a faixa de carro.
+    return aspect <= 2.15 && isMotorcyclePlateShaped(box, imageWidth, imageHeight);
+  }
+  return isMotorcyclePlateShaped(box, imageWidth, imageHeight);
 }
 
 /** Caixa crua grande demais (display do painel) não é placa — nem recortando. */
 function isPlausiblePlateBox(box: PixelBox, imageWidth: number, imageHeight: number) {
+  const aspect = box.width / Math.max(1, box.height);
   const areaRatio = boxArea(box) / (imageWidth * imageHeight);
-  if (areaRatio > 0.045) return false;
+  if (areaRatio > 0.055) return false;
   if (box.width > imageWidth * 0.32) return false;
-  if (box.height > imageHeight * 0.14) return false;
+  const maxHeightRatio = aspect < 1.4 ? 0.3 : 0.18;
+  if (box.height > imageHeight * maxHeightRatio) return false;
   return true;
 }
 
@@ -459,13 +483,17 @@ function clampToPlateShape(
   imageHeight: number,
 ): PixelBox {
   const sourceAspect = box.width / Math.max(1, box.height);
-  // Não inventa faixa de placa a partir de círculo/quadrado (portinhola, calota).
-  if (sourceAspect >= 0.72 && sourceAspect <= 1.28) {
+  // Moto Mercosul (~1:1) e portinhola: não esmaga em faixa de carro.
+  // A 2ª linha da placa de moto (SGD / 9E87) sumiria no recorte.
+  if (sourceAspect >= 0.62 && sourceAspect <= 1.4) {
     return box;
   }
 
   const maxW = Math.max(24, Math.round(imageWidth * 0.2));
-  const maxH = Math.max(14, Math.round(imageHeight * 0.085));
+  const maxH = Math.max(
+    14,
+    Math.round(imageHeight * (sourceAspect <= 2.6 ? 0.14 : 0.085)),
+  );
   let { left, top, width, height } = box;
 
   if (width > maxW) {
@@ -702,8 +730,33 @@ function boxesFromPieces(
   }
 
   return mergeOverlappingBoxes(boxes).map((box) =>
-    padBox(box, imageWidth, imageHeight),
+    padBox(expandWithPlateHeaders(box, pieces), imageWidth, imageHeight),
   );
+}
+
+function isPlateHeaderToken(text: string) {
+  const compact = normalizeToken(text);
+  if (!compact) return false;
+  return compact === "BRASIL" || compact === "BR" || MERCOSUL_UFS.has(compact);
+}
+
+/** Inclui a faixa BRASIL acima da placa de moto (duas linhas). */
+function expandWithPlateHeaders(box: PixelBox, pieces: TextPiece[]): PixelBox {
+  const extras: PixelBox[] = [box];
+  for (const piece of pieces) {
+    if (!isPlateHeaderToken(piece.text)) continue;
+    const header = piece.box;
+    const aligned =
+      header.left < box.left + box.width &&
+      header.left + header.width > box.left;
+    const gap = box.top - (header.top + header.height);
+    const justAbove =
+      gap >= -header.height && gap <= Math.max(14, Math.round(box.height * 0.9));
+    if ((aligned && justAbove) || boxesOverlap(header, box)) {
+      extras.push(header);
+    }
+  }
+  return extras.length === 1 ? box : unionBox(extras);
 }
 
 export function plateBoxesFromText(
@@ -1010,10 +1063,67 @@ function looksLikeBodyPanelPatch(signals: PatchSignals): boolean {
   return false;
 }
 
+/**
+ * Placa Mercosul (carro ou moto): faixa azul + corpo claro. Não é portinhola.
+ */
+export async function looksLikeMercosulPlatePatch(
+  image: Buffer,
+  box: PixelBox,
+): Promise<boolean> {
+  if (box.width < 8 || box.height < 8) return false;
+  try {
+    const extracted = await sharp(image, { failOn: "none" })
+      .extract({
+        left: box.left,
+        top: box.top,
+        width: box.width,
+        height: box.height,
+      })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const { data, info } = extracted;
+    const width = info.width;
+    const height = info.height;
+    const channels = info.channels;
+    const count = width * height;
+    if (count <= 0) return false;
+
+    let blue = 0;
+    let light = 0;
+    const topEnd = Math.max(2, Math.round(height * 0.4));
+    let topBlue = 0;
+    let topN = 0;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const offset = (y * width + x) * channels;
+        const r = data[offset];
+        const g = data[offset + 1];
+        const b = data[offset + 2];
+        if (isMercosulBlue(r, g, b)) blue += 1;
+        const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+        if (luma > 150) light += 1;
+        if (y < topEnd) {
+          topN += 1;
+          if (isMercosulBlue(r, g, b)) topBlue += 1;
+        }
+      }
+    }
+    const lightRatio = light / count;
+    if (lightRatio < 0.1) return false;
+    const blueRatio = blue / count;
+    const topBlueRatio = topBlue / Math.max(1, topN);
+    return blueRatio >= 0.05 || topBlueRatio >= 0.12;
+  } catch {
+    return false;
+  }
+}
+
 export async function looksLikeBodyPanelFalsePositive(
   image: Buffer,
   box: PixelBox,
 ): Promise<boolean> {
+  if (await looksLikeMercosulPlatePatch(image, box)) return false;
   if (isUnlikelyPlateGeometry(box)) return true;
   try {
     const extracted = await sharp(image, { failOn: "none" })
@@ -1423,9 +1533,12 @@ function plateBoxFromBlueBlob(
     blob.height <= blob.width * 0.85
   ) {
     let height = blob.height;
-    // 3/4: o azul pega só o topo; a placa inteira é mais alta.
+    // 3/4 carro: o azul pega só o topo; a placa inteira é mais alta.
     if (aspect < 1.75) {
       height = Math.max(height + 10, Math.round(blob.width * 1.25));
+    } else if (aspect <= 3.5) {
+      // Moto Mercosul: faixa azul larga e duas linhas de texto abaixo (SGD / 9E87).
+      height = Math.max(height + 8, Math.round(blob.width * 0.9));
     }
     height = Math.min(regionHeight - blob.top, height);
     return { left: blob.left, top: blob.top, width: blob.width, height };
@@ -1487,8 +1600,8 @@ export async function findMercosulStripeBoxes(
     if (!shaped) continue;
     // Cromado no corte do para-choque vira blob no topo da região.
     if (shaped.top <= 2 && shaped.height < 22) continue;
-    if (shaped.width < 22 || shaped.height < 12) continue;
-    if (shaped.width * shaped.height < 360) continue;
+    if (shaped.width < 16 || shaped.height < 12) continue;
+    if (shaped.width * shaped.height < 280) continue;
     boxes.push({
       left: region.left + shaped.left,
       top: region.top + shaped.top,
@@ -1507,6 +1620,7 @@ async function detectVehicleLabels(
 ) {
   const cars: PixelBox[] = [];
   const plates: PixelBox[] = [];
+  const motorcycles: PixelBox[] = [];
   try {
     const { DetectLabelsCommand } = await import("@aws-sdk/client-rekognition");
     const response = await client.send(
@@ -1523,7 +1637,8 @@ async function detectVehicleLabels(
       const isPlate = LICENSE_PLATE_LABEL.test(name);
       const isCar =
         /^(car|automobile|vehicle|suv|truck|pickup truck|van)$/i.test(name);
-      if (!isPlate && !isCar) continue;
+      const isMotorcycle = /^(motorcycle|motorbike|scooter|moped)$/i.test(name);
+      if (!isPlate && !isCar && !isMotorcycle) continue;
       const instances = label.Instances ?? [];
       for (let instIndex = 0; instIndex < instances.length; instIndex += 1) {
         const instance = instances[instIndex];
@@ -1536,12 +1651,18 @@ async function detectVehicleLabels(
         if (isCar && boxArea(box) / (imageWidth * imageHeight) >= MIN_CAR_AREA_RATIO) {
           cars.push(box);
         }
+        if (
+          isMotorcycle &&
+          boxArea(box) / (imageWidth * imageHeight) >= 0.05
+        ) {
+          motorcycles.push(box);
+        }
       }
     }
   } catch (error) {
     console.warn("[blur-plates] DetectLabels falhou — segue só o texto:", error);
   }
-  return { cars, plates };
+  return { cars, plates, motorcycles };
 }
 
 function acceptFoundBox(
@@ -1549,15 +1670,67 @@ function acceptFoundBox(
   imageWidth: number,
   imageHeight: number,
 ): PixelBox | null {
-  if (isUnlikelyPlateGeometry(box)) return null;
   if (!isPlausiblePlateBox(box, imageWidth, imageHeight)) return null;
   if (isPlateShaped(box, imageWidth, imageHeight)) {
     return padBox(box, imageWidth, imageHeight);
   }
   const clamped = clampToPlateShape(box, imageWidth, imageHeight);
-  if (isUnlikelyPlateGeometry(clamped)) return null;
   if (!isPlateShaped(clamped, imageWidth, imageHeight)) return null;
   return padBox(clamped, imageWidth, imageHeight);
+}
+
+function motorcyclePlateSearchRegion(
+  moto: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox | null {
+  // Traseira da moto: metade inferior, quase a largura toda (lateral 3/4).
+  const top = Math.max(0, moto.top + Math.round(moto.height * 0.28));
+  const bottom = Math.min(
+    imageHeight,
+    moto.top + moto.height + Math.round(moto.height * 0.16),
+  );
+  const left = Math.max(0, moto.left - Math.round(moto.width * 0.06));
+  const right = Math.min(
+    imageWidth,
+    moto.left + moto.width + Math.round(moto.width * 0.06),
+  );
+  const width = right - left;
+  const height = bottom - top;
+  if (width < 20 || height < 16) return null;
+  return { left, top, width, height };
+}
+
+function lowerFrameSearchRegion(
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox {
+  const top = Math.round(imageHeight * 0.18);
+  return {
+    left: 0,
+    top,
+    width: imageWidth,
+    height: Math.max(16, imageHeight - top),
+  };
+}
+
+/**
+ * Varredura visual da faixa inferior — pega placa de moto mesmo sem label
+ * de carro/moto no Rekognition (caso da Biz no painel).
+ */
+export async function findMercosulPlatesInImage(
+  image: Buffer,
+  imageWidth: number,
+  imageHeight: number,
+): Promise<PixelBox[]> {
+  const region = lowerFrameSearchRegion(imageWidth, imageHeight);
+  const found = await findMercosulStripeBoxes(image, region);
+  const boxes: PixelBox[] = [];
+  for (let index = 0; index < found.length; index += 1) {
+    const accepted = acceptFoundBox(found[index], imageWidth, imageHeight);
+    if (accepted) boxes.push(accepted);
+  }
+  return mergeOverlappingBoxes(boxes);
 }
 
 async function findPlatesWithoutReadableText(
@@ -1569,24 +1742,13 @@ async function findPlatesWithoutReadableText(
   const labels = await detectVehicleLabels(client, bytes, imageWidth, imageHeight);
   const boxes: PixelBox[] = [];
 
-  for (let index = 0; index < labels.plates.length; index += 1) {
-    const accepted = acceptFoundBox(labels.plates[index], imageWidth, imageHeight);
+  const pushAccepted = (box: PixelBox) => {
+    const accepted = acceptFoundBox(box, imageWidth, imageHeight);
     if (accepted) boxes.push(accepted);
-  }
-  if (boxes.length > 0) {
-    const filtered = disambiguateCarPlates(
-      boxes,
-      labels.cars,
-      imageWidth,
-      imageHeight,
-    );
-    const merged = mergeOverlappingBoxes(filtered);
-    const confirmed: PixelBox[] = [];
-    for (let index = 0; index < merged.length; index += 1) {
-      if (await looksLikeBodyPanelFalsePositive(bytes, merged[index])) continue;
-      confirmed.push(merged[index]);
-    }
-    return confirmed;
+  };
+
+  for (let index = 0; index < labels.plates.length; index += 1) {
+    pushAccepted(labels.plates[index]);
   }
 
   for (let index = 0; index < labels.cars.length; index += 1) {
@@ -1594,16 +1756,32 @@ async function findPlatesWithoutReadableText(
     if (!region) continue;
     const found = await findMercosulStripeBoxes(bytes, region);
     for (let boxIndex = 0; boxIndex < found.length; boxIndex += 1) {
-      const accepted = acceptFoundBox(found[boxIndex], imageWidth, imageHeight);
-      if (accepted) boxes.push(accepted);
+      pushAccepted(found[boxIndex]);
     }
   }
+
+  for (let index = 0; index < labels.motorcycles.length; index += 1) {
+    const region = motorcyclePlateSearchRegion(
+      labels.motorcycles[index],
+      imageWidth,
+      imageHeight,
+    );
+    if (!region) continue;
+    const found = await findMercosulStripeBoxes(bytes, region);
+    for (let boxIndex = 0; boxIndex < found.length; boxIndex += 1) {
+      pushAccepted(found[boxIndex]);
+    }
+  }
+
+  const fallback = await findMercosulPlatesInImage(bytes, imageWidth, imageHeight);
+  boxes.push(...fallback);
 
   const filtered = disambiguateCarPlates(
     boxes,
     labels.cars,
     imageWidth,
     imageHeight,
+    labels.motorcycles,
   );
   const merged = mergeOverlappingBoxes(filtered);
   const confirmed: PixelBox[] = [];
@@ -1653,12 +1831,22 @@ export function disambiguateCarPlates(
   cars: PixelBox[],
   imageWidth: number,
   imageHeight: number,
+  motorcycles: PixelBox[] = [],
 ): PixelBox[] {
   if (boxes.length === 0) return [];
 
   const validBoxes: PixelBox[] = [];
   for (const box of boxes) {
+    const parentMoto =
+      motorcycles.find((moto) => boxesOverlap(moto, box)) ?? null;
     const parentCar = cars.find((c) => boxesOverlap(c, box)) ?? null;
+    if (
+      parentMoto &&
+      (!parentCar || overlapArea(parentMoto, box) >= overlapArea(parentCar, box))
+    ) {
+      validBoxes.push(box);
+      continue;
+    }
     if (isHeadlightOrCornerZone(box, parentCar, imageWidth, imageHeight)) {
       continue;
     }
@@ -1743,10 +1931,11 @@ export async function applyBlurRegions(
     if (!box.allowDark && (await looksLikeDarkDisplay(image, box))) continue;
 
     const shortSide = Math.min(box.width, box.height);
-    const smallPlate = shortSide < 40;
+    const aspect = box.width / Math.max(1, box.height);
+    const smallPlate = shortSide < 48 || aspect <= 1.9;
     const sigma = Math.min(
       40,
-      Math.max(smallPlate ? 20 : 16, Math.round(shortSide / (smallPlate ? 1.6 : 2.4))),
+      Math.max(smallPlate ? 22 : 16, Math.round(shortSide / (smallPlate ? 1.5 : 2.4))),
     );
     const radius = Math.max(2, Math.round(shortSide * (smallPlate ? 0.08 : 0.14)));
     const feather = smallPlate ? 0.25 : Math.max(0.4, shortSide * 0.02);
@@ -1804,7 +1993,8 @@ export async function applyBlurRegions(
  * Detecta placas BR via AWS Rekognition DetectText e aplica blur pequeno
  * só na faixa da placa, com borda suave para não tapar o carro.
  * Também borra placa preta promocional de loja (Forte Automóveis), sem
- * alterar o caminho da Mercosul.
+ * alterar o caminho da Mercosul, e placa Mercosul de moto (duas linhas,
+ * aspecto ~1:1) via faixa azul + geometria própria.
  * Em qualquer falha, devolve o buffer original (nunca bloqueia o upload).
  */
 export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
