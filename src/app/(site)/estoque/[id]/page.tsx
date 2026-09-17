@@ -307,7 +307,8 @@ export default async function VehicleDetailPage({
               source="ficha-header"
               prompt={`Tenho dúvida sobre o ${title}`}
               size="compact"
-              className="w-full border-white/20 bg-asphalt/95 backdrop-blur"
+              variant="solid"
+              className="w-full"
             />
           </div>
         ) : null}
@@ -466,6 +467,8 @@ export default async function VehicleDetailPage({
                     <ChatOpenButton
                       source="ficha"
                       prompt={`Tenho dúvida sobre o ${title}`}
+                      size="lg"
+                      variant="solid"
                       className="w-full"
                     />
                   </div>
