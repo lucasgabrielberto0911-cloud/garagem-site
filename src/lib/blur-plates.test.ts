@@ -15,6 +15,7 @@ import {
   findMercosulStripeBoxes,
   isHeadlightOrCornerZone,
   isUnlikelyPlateGeometry,
+  looksLikeAnalogGaugeAround,
   looksLikeBodyPanelFalsePositive,
   looksLikeConfirmedDealerPlate,
   looksLikeMercosulPlatePatch,
@@ -48,6 +49,8 @@ test("emblema da marca na frente não é painel", () => {
   assert.equal(textsLookLikeDashboard(["HONDA", "HR-V"]), false);
   assert.equal(textsLookLikeDashboard(["ABS", "KMH"]), true);
   assert.equal(textsLookLikeDashboard(["ODO", "12", "34", "56"]), true);
+  assert.equal(textsLookLikeDashboard(["PGM-FI", "80", "100", "120"]), true);
+  assert.equal(textLooksLikePlate("PGM1234"), false);
 });
 
 test("texto de placa com confiança de frente (~59%) vira caixa", () => {
@@ -932,6 +935,7 @@ test("foto da Biz (traseira): placa Mercosul de moto vira caixa e não é portin
   assert.ok(hit.top + hit.height >= 155, `bottom ${hit.top + hit.height} não cobre 9E87`);
   assert.ok(hit.top + hit.height <= 164);
   assert.equal(await looksLikeMercosulPlatePatch(image, hit), true);
+  assert.equal(await looksLikeAnalogGaugeAround(image, hit), false);
   assert.equal(
     await looksLikeBodyPanelFalsePositive(image, hit),
     false,
@@ -956,6 +960,7 @@ test("foto da Biz (3/4): placa Mercosul menor e mais alta também é detectada",
   assert.ok(hit.top + hit.height >= 136);
   assert.ok(hit.top + hit.height <= 150, `bottom ${hit.top + hit.height} desceu no para-lama`);
   assert.equal(await looksLikeMercosulPlatePatch(image, hit), true);
+  assert.equal(await looksLikeAnalogGaugeAround(image, hit), false);
   assert.equal(await looksLikeBodyPanelFalsePositive(image, hit), false);
 });
 
@@ -1061,6 +1066,107 @@ test("blur da Biz em 3/4 não come o para-lama abaixo da placa", async () => {
   assert.ok(
     afterStd > beforeStd * 0.7,
     `para-lama borrado: ${beforeStd} → ${afterStd}; caixa ${JSON.stringify(boxes[0])}`,
+  );
+});
+
+test("painel Honda (relógio): fixture não vira Mercosul nem Forte", async () => {
+  const image = await readFile(join(FIXTURES, "honda-moto-cluster-false-box.png"));
+  const meta = await sharp(image).metadata();
+  const width = meta.width ?? 246;
+  const height = meta.height ?? 284;
+  const whole = { left: 0, top: 0, width, height };
+  const formerHit = { left: 0, top: 54, width: 44, height: 30 };
+  const smear = { left: 64, top: 76, width: 69, height: 51 };
+  const gauge = { left: 8, top: 18, width: 140, height: 150 };
+  const visor = { left: 0, top: 56, width: 41, height: 17 };
+
+  assert.equal(plateBoxesFromText([], width, height).length, 0);
+  assert.equal((await dealerBoxesFromImage(image, [], width, height)).length, 0);
+  assert.equal(
+    (await findMercosulStripeBoxes(image, whole)).length,
+    0,
+    "visor/relógio não é faixa Mercosul",
+  );
+  assert.equal(
+    (await findMercosulPlatesInImage(image, width, height)).length,
+    0,
+    "varredura Mercosul no painel deve ser zero",
+  );
+  assert.equal((await findBlackDealerPlateBoxes(image, whole)).length, 0);
+
+  const windows = [whole, formerHit, smear, gauge, visor];
+  for (const region of windows) {
+    const found = await findMercosulStripeBoxes(image, region);
+    assert.equal(
+      found.length,
+      0,
+      `região ${JSON.stringify(region)} não deve ter Mercosul: ${JSON.stringify(found)}`,
+    );
+    const dealers = await findBlackDealerPlateBoxes(image, region);
+    assert.equal(
+      dealers.length,
+      0,
+      `região ${JSON.stringify(region)} não deve ter Forte: ${JSON.stringify(dealers)}`,
+    );
+  }
+
+  assert.equal(await looksLikeAnalogGaugeAround(image, formerHit), true);
+  assert.equal(await looksLikeAnalogGaugeAround(image, smear), true);
+  assert.equal(await looksLikeAnalogGaugeAround(image, gauge), true);
+  assert.equal(await looksLikeMercosulPlatePatch(image, formerHit), false);
+  assert.equal(await looksLikeMercosulPlatePatch(image, smear), false);
+  assert.equal(await looksLikeMercosulPlatePatch(image, gauge), false);
+  assert.equal(await looksLikeBodyPanelFalsePositive(image, formerHit), true);
+  assert.equal(await looksLikeBodyPanelFalsePositive(image, smear), true);
+});
+
+test("OCR do painel Honda (PGM-FI + km/h) não empilha placa", () => {
+  const boxes = plateBoxesFromText(
+    [
+      {
+        text: "HONDA",
+        type: "WORD",
+        confidence: 90,
+        box: { left: 40, top: 200, width: 40, height: 16 },
+      },
+      {
+        text: "PGM-FI",
+        type: "WORD",
+        confidence: 72,
+        box: { left: 70, top: 168, width: 48, height: 12 },
+      },
+      {
+        text: "80",
+        type: "WORD",
+        confidence: 86,
+        box: { left: 44, top: 34, width: 22, height: 16 },
+      },
+      {
+        text: "100",
+        type: "WORD",
+        confidence: 84,
+        box: { left: 78, top: 28, width: 26, height: 16 },
+      },
+      {
+        text: "120",
+        type: "WORD",
+        confidence: 80,
+        box: { left: 104, top: 62, width: 26, height: 16 },
+      },
+      {
+        text: "km/h",
+        type: "WORD",
+        confidence: 68,
+        box: { left: 54, top: 136, width: 28, height: 10 },
+      },
+    ],
+    246,
+    284,
+  );
+  assert.equal(boxes.length, 0, `números do relógio não são placa: ${JSON.stringify(boxes)}`);
+  assert.equal(
+    textsLookLikeDashboard(["HONDA", "PGM-FI", "80", "100", "120", "km/h"]),
+    true,
   );
 });
 
