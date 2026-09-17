@@ -16,6 +16,7 @@ import {
   isHeadlightOrCornerZone,
   isUnlikelyPlateGeometry,
   looksLikeBodyPanelFalsePositive,
+  looksLikeConfirmedDealerPlate,
   looksLikeMercosulPlatePatch,
   plateBoxesFromText,
   textLooksLikeDealerPlate,
@@ -504,11 +505,12 @@ test("foto real da Forte: OCR FORTE expande e cobre logo + AUTOMÓVEIS", async (
   assert.equal(dealers.length, 1);
   const hit = dealers[0];
   assert.ok(hit.left < 215, `left ${hit.left} deve cobrir o logo`);
+  assert.ok(hit.left > 185, `left ${hit.left} não deve comer o para-choque`);
   assert.ok(hit.left + hit.width > 295, `right ${hit.left + hit.width}`);
   assert.ok(hit.top < 458, `top ${hit.top}`);
   assert.ok(hit.top + hit.height > 484, `bottom ${hit.top + hit.height} deve cobrir AUTOMÓVEIS`);
-  assert.ok(hit.width < 220, `width ${hit.width}`);
-  assert.ok(hit.height < 90, `height ${hit.height}`);
+  assert.ok(hit.width < 140, `width ${hit.width} deve ficar justa na plaquinha`);
+  assert.ok(hit.height < 56, `height ${hit.height} não deve pintar a saia`);
 });
 
 test("blur da placa Forte na foto real reduz o contraste do texto", async () => {
@@ -526,7 +528,7 @@ test("blur da placa Forte na foto real reduz o contraste do texto", async () => 
   const afterStd =
     (after.channels[0].stdev + after.channels[1].stdev + after.channels[2].stdev) / 3;
   assert.ok(beforeStd > 35, `contraste original baixo demais: ${beforeStd}`);
-  assert.ok(afterStd < beforeStd * 0.4, `blur fraco: ${beforeStd} → ${afterStd}`);
+  assert.ok(afterStd < beforeStd * 0.32, `blur fraco: ${beforeStd} → ${afterStd}`);
 });
 
 test("círculo/quadrado (portinhola, calota) não vira geometria de placa", () => {
@@ -618,14 +620,272 @@ test("OCR FORTE solto na portinhola não inventa placa de loja no friso", async 
 
 test("placa Forte real não é classificada como painel/friso", async () => {
   const image = await readFile(join(FIXTURES, "forte-black-dealer-plate.jpg"));
+  const plate = { left: 203, top: 452, width: 102, height: 35 };
+  assert.equal(await looksLikeBodyPanelFalsePositive(image, plate), false);
+  assert.equal(await looksLikeConfirmedDealerPlate(image, plate), true);
+});
+
+test("AUTOMÓVEIS sozinho na Forte real ainda acha o retângulo preto", async () => {
+  const image = await readFile(join(FIXTURES, "forte-black-dealer-plate.jpg"));
+  const meta = await sharp(image).metadata();
+  const width = meta.width ?? 1280;
+  const height = meta.height ?? 720;
+  const dealers = await dealerBoxesFromImage(
+    image,
+    [
+      {
+        text: "AUTOMÓVEIS",
+        type: "WORD",
+        confidence: 80,
+        box: { left: 232, top: 478, width: 62, height: 8 },
+      },
+    ],
+    width,
+    height,
+  );
+  assert.equal(dealers.length, 1, `esperava a placa visual: ${JSON.stringify(dealers)}`);
+  const hit = dealers[0];
+  assert.ok(hit.left < 215, `left ${hit.left}`);
+  assert.ok(hit.left + hit.width > 290, `right ${hit.left + hit.width}`);
+  assert.ok(hit.top < 458, `top ${hit.top} deve subir até o FORTE`);
+  assert.ok(hit.top + hit.height > 480, `bottom ${hit.top + hit.height}`);
+  assert.ok(hit.width < 140, `width ${hit.width}`);
+  assert.ok(hit.height > 28, `height ${hit.height} deve cobrir as duas linhas`);
+});
+
+const CIVIC_STRAY = { left: 63, top: 118, width: 89, height: 26 };
+const CIVIC_PLAQUE = { left: 176, top: 148, width: 80, height: 22 };
+const CIVIC_CHROME = { left: 183, top: 115, width: 39, height: 25 };
+
+function boxOverlaps(
+  hit: { left: number; top: number; width: number; height: number },
+  core: { left: number; top: number; width: number; height: number },
+) {
+  return (
+    hit.left < core.left + core.width &&
+    hit.left + hit.width > core.left &&
+    hit.top < core.top + core.height &&
+    hit.top + hit.height > core.top
+  );
+}
+
+async function civicWithSyntheticForte() {
+  const civic = await readFile(join(FIXTURES, "forte-civic-front-false-box.png"));
+  const plate = { left: 172, top: 142, width: 84, height: 28 };
+  const image = await sharp(civic)
+    .composite([
+      {
+        input: await sharp({
+          create: {
+            width: plate.width,
+            height: plate.height,
+            channels: 3,
+            background: { r: 16, g: 16, b: 16 },
+          },
+        })
+          .png()
+          .toBuffer(),
+        left: plate.left,
+        top: plate.top,
+      },
+      {
+        input: await sharp({
+          create: {
+            width: 44,
+            height: 9,
+            channels: 3,
+            background: { r: 236, g: 236, b: 236 },
+          },
+        })
+          .png()
+          .toBuffer(),
+        left: plate.left + 26,
+        top: plate.top + 5,
+      },
+      {
+        input: await sharp({
+          create: {
+            width: 36,
+            height: 5,
+            channels: 3,
+            background: { r: 228, g: 228, b: 228 },
+          },
+        })
+          .png()
+          .toBuffer(),
+        left: plate.left + 30,
+        top: plate.top + 17,
+      },
+    ])
+    .jpeg()
+    .toBuffer();
+  return { image, plate };
+}
+
+test("Civic da Lucas: cromado/farol não vira Mercosul nem placa preta", async () => {
+  const image = await readFile(join(FIXTURES, "forte-civic-front-false-box.png"));
+  const meta = await sharp(image).metadata();
+  const width = meta.width ?? 376;
+  const height = meta.height ?? 187;
+  const whole = { left: 0, top: 0, width, height };
+
   assert.equal(
-    await looksLikeBodyPanelFalsePositive(image, {
-      left: 203,
-      top: 452,
-      width: 102,
-      height: 35,
-    }),
+    (await findMercosulStripeBoxes(image, whole)).length,
+    0,
+    "cromado do para-choque não é faixa Mercosul",
+  );
+  assert.equal((await findMercosulPlatesInImage(image, width, height)).length, 0);
+  assert.equal((await findBlackDealerPlateBoxes(image, whole)).length, 0);
+  assert.equal((await dealerBoxesFromImage(image, [], width, height)).length, 0);
+  assert.equal(await looksLikeMercosulPlatePatch(image, CIVIC_CHROME), false);
+  assert.equal(
+    await looksLikeBodyPanelFalsePositive(image, CIVIC_STRAY),
+    true,
+    "caixa extra no farol/para-choque é falso positivo",
+  );
+  assert.equal(await looksLikeConfirmedDealerPlate(image, CIVIC_STRAY), false);
+  assert.equal(await looksLikeConfirmedDealerPlate(image, CIVIC_PLAQUE), false);
+});
+
+test("Civic da Lucas: OCR FORTE/AUTOMÓVEIS no farol não inventa 2ª caixa", async () => {
+  const image = await readFile(join(FIXTURES, "forte-civic-front-false-box.png"));
+  const meta = await sharp(image).metadata();
+  const width = meta.width ?? 376;
+  const height = meta.height ?? 187;
+
+  const strayForte = await dealerBoxesFromImage(
+    image,
+    [
+      {
+        text: "FORTE",
+        type: "WORD",
+        confidence: 80,
+        box: { left: 96, top: 122, width: 40, height: 12 },
+      },
+    ],
+    width,
+    height,
+  );
+  assert.equal(
+    strayForte.length,
+    0,
+    `FORTE no farol não deve borrar o para-choque: ${JSON.stringify(strayForte)}`,
+  );
+
+  const strayAuto = await dealerBoxesFromImage(
+    image,
+    [
+      {
+        text: "AUTOMÓVEIS",
+        type: "WORD",
+        confidence: 70,
+        box: { left: 96, top: 126, width: 50, height: 8 },
+      },
+    ],
+    width,
+    height,
+  );
+  assert.equal(
+    strayAuto.length,
+    0,
+    `AUTOMÓVEIS no farol não deve virar caixa: ${JSON.stringify(strayAuto)}`,
+  );
+
+  const centerPlusStray = await dealerBoxesFromImage(
+    image,
+    [
+      {
+        text: "FORTE",
+        type: "WORD",
+        confidence: 92,
+        box: { left: 186, top: 150, width: 48, height: 12 },
+      },
+      {
+        text: "AUTOMÓVEIS",
+        type: "WORD",
+        confidence: 74,
+        box: { left: 188, top: 162, width: 52, height: 7 },
+      },
+      {
+        text: "FORTE",
+        type: "WORD",
+        confidence: 72,
+        box: { left: 96, top: 122, width: 40, height: 12 },
+      },
+    ],
+    width,
+    height,
+  );
+  assert.equal(
+    centerPlusStray.length,
+    0,
+    `smear sem letra + farol não viram Forte: ${JSON.stringify(centerPlusStray)}`,
+  );
+  for (const hit of centerPlusStray) {
+    assert.equal(
+      boxOverlaps(hit, CIVIC_STRAY) && !boxOverlaps(hit, CIVIC_PLAQUE),
+      false,
+      `caixa ${JSON.stringify(hit)} pintou o farol`,
+    );
+  }
+});
+
+test("Civic da Lucas: Forte confirmada fica justa na plaquinha, sem a caixa do farol", async () => {
+  const { image, plate } = await civicWithSyntheticForte();
+  const meta = await sharp(image).metadata();
+  const width = meta.width ?? 376;
+  const height = meta.height ?? 187;
+  const dealers = await dealerBoxesFromImage(
+    image,
+    [
+      {
+        text: "FORTE",
+        type: "WORD",
+        confidence: 93,
+        box: { left: plate.left + 26, top: plate.top + 5, width: 44, height: 9 },
+      },
+      {
+        text: "AUTOMÓVEIS",
+        type: "WORD",
+        confidence: 76,
+        box: { left: plate.left + 30, top: plate.top + 17, width: 36, height: 5 },
+      },
+    ],
+    width,
+    height,
+  );
+  assert.equal(dealers.length, 1, `esperava 1 Forte: ${JSON.stringify(dealers)}`);
+  const hit = dealers[0];
+  assert.ok(boxOverlaps(hit, plate), `caixa ${JSON.stringify(hit)} não cobre a plaquinha`);
+  assert.ok(hit.left + 4 >= plate.left - 12, `left ${hit.left} abriu demais`);
+  assert.ok(hit.width < 130, `width ${hit.width} pintou o para-choque`);
+  assert.ok(hit.height < 48, `height ${hit.height}`);
+  assert.equal(
+    boxOverlaps(hit, CIVIC_STRAY),
     false,
+    `caixa justa não pode cobrir o farol: ${JSON.stringify(hit)}`,
+  );
+  assert.equal((await findMercosulStripeBoxes(image, { left: 0, top: 0, width, height })).length, 0);
+
+  const core = {
+    left: plate.left + 16,
+    top: plate.top + 3,
+    width: 58,
+    height: 16,
+  };
+  const beforeBuf = await sharp(image).extract(core).png().toBuffer();
+  const blurred = await applyBlurRegions(image, [{ ...hit, allowDark: true }]);
+  const afterBuf = await sharp(blurred).extract(core).png().toBuffer();
+  const before = await sharp(beforeBuf).stats();
+  const after = await sharp(afterBuf).stats();
+  const beforeContrast =
+    (before.channels[0].stdev + before.channels[1].stdev + before.channels[2].stdev) / 3;
+  const afterContrast =
+    (after.channels[0].stdev + after.channels[1].stdev + after.channels[2].stdev) / 3;
+  assert.ok(beforeContrast > 25, `contraste original baixo: ${beforeContrast}`);
+  assert.ok(
+    afterContrast < beforeContrast * 0.35,
+    `smear fraco na Civic: ${beforeContrast} → ${afterContrast}`,
   );
 });
 
@@ -654,18 +914,6 @@ test("OCR Forte + imagem sintética não apaga a caixa Mercosul", async () => {
     "placa Mercosul/oficial permanece no canto oposto",
   );
 });
-
-function boxOverlaps(
-  hit: { left: number; top: number; width: number; height: number },
-  core: { left: number; top: number; width: number; height: number },
-) {
-  return (
-    hit.left < core.left + core.width &&
-    hit.left + hit.width > core.left &&
-    hit.top < core.top + core.height &&
-    hit.top + hit.height > core.top
-  );
-}
 
 test("foto da Biz (traseira): placa Mercosul de moto vira caixa e não é portinhola", async () => {
   const image = await readFile(join(FIXTURES, "moto-mercosul-biz-rear.jpg"));

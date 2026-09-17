@@ -298,14 +298,20 @@ export function textLooksLikePlate(text: string | undefined) {
  */
 const DEALER_PLATE_BRANDS = ["FORTE", "FORTEAUTOMOVEIS", "FORTEAUTO"] as const;
 const DEALER_PLATE_WORDS = new Set(["FORTE", "AUTOMOVEIS"]);
-const DEALER_PAD_X = 0.4;
-const DEALER_PAD_Y_TOP = 0.35;
-const DEALER_PAD_Y_BOTTOM = 0.8;
-const DEALER_EXTRA_LEFT = 0.42;
+/** Padding curto: a caixa visual + OCR já cobrem logo e AUTOMÓVEIS. */
+const DEALER_PAD_X = 0.16;
+const DEALER_PAD_Y_TOP = 0.2;
+const DEALER_PAD_Y_BOTTOM = 0.45;
+const DEALER_EXTRA_LEFT = 0.28;
+const DEALER_TIGHT_PAD_X = 0.08;
+const DEALER_TIGHT_PAD_Y_TOP = 0.12;
+const DEALER_TIGHT_PAD_Y_BOTTOM = 0.18;
 const DEALER_DARK_LUMA = 68;
 const DEALER_LETTER_GAP = 56;
 /** Palavra de loja com confiança baixa é reflexo/OCR solto — não é FORTE. */
 const DEALER_MIN_WORD_CONFIDENCE = 68;
+/** Letras claras no miolo — para-choque/farol não têm isso. */
+const DEALER_MIN_INSET_LIGHT = 0.08;
 
 function foldLatinUpper(text: string) {
   return text.normalize("NFD").replace(/\p{M}/gu, "").toUpperCase();
@@ -332,6 +338,15 @@ export function textLooksLikeDealerPlate(text: string | undefined) {
   const words = dealerWordsFrom(text);
   for (let index = 0; index < words.length; index += 1) {
     if (DEALER_PLATE_WORDS.has(words[index])) return true;
+  }
+  return false;
+}
+
+function isPrimaryDealerBrand(text: string) {
+  const compact = compactDealerText(text);
+  if (!compact) return false;
+  for (let index = 0; index < DEALER_PLATE_BRANDS.length; index += 1) {
+    if (compact === DEALER_PLATE_BRANDS[index]) return true;
   }
   return false;
 }
@@ -772,15 +787,30 @@ export function plateBoxesFromText(
   return boxesFromPieces(pieces, imageWidth, imageHeight);
 }
 
+function isPlausibleDealerOcrBox(
+  box: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+) {
+  if (box.width < 8 || box.height < 4) return false;
+  const areaRatio = boxArea(box) / (imageWidth * imageHeight);
+  if (areaRatio > 0.08) return false;
+  if (box.width > imageWidth * 0.45) return false;
+  if (box.height > imageHeight * 0.2) return false;
+  return true;
+}
+
 function isPlausibleDealerBox(
   box: PixelBox,
   imageWidth: number,
   imageHeight: number,
 ) {
   if (box.width < 12 || box.height < 6) return false;
+  const aspect = box.width / Math.max(1, box.height);
+  if (aspect < 1.45 || aspect > 7.2) return false;
   const areaRatio = boxArea(box) / (imageWidth * imageHeight);
-  if (areaRatio > 0.08) return false;
-  if (box.width > imageWidth * 0.4) return false;
+  if (areaRatio > 0.09) return false;
+  if (box.width > imageWidth * 0.38) return false;
   if (box.height > imageHeight * 0.18) return false;
   return true;
 }
@@ -790,15 +820,52 @@ function padDealerBox(
   imageWidth: number,
   imageHeight: number,
 ): PixelBox {
-  const padX = Math.max(8, Math.round(box.width * DEALER_PAD_X));
-  const padTop = Math.max(4, Math.round(box.height * DEALER_PAD_Y_TOP));
-  const padBottom = Math.max(8, Math.round(box.height * DEALER_PAD_Y_BOTTOM));
-  const extraLeft = Math.max(10, Math.round(box.width * DEALER_EXTRA_LEFT));
+  const padX = Math.max(6, Math.round(box.width * DEALER_PAD_X));
+  const padTop = Math.max(3, Math.round(box.height * DEALER_PAD_Y_TOP));
+  const padBottom = Math.max(6, Math.round(box.height * DEALER_PAD_Y_BOTTOM));
+  const extraLeft = Math.max(8, Math.round(box.width * DEALER_EXTRA_LEFT));
   const left = Math.max(0, box.left - padX - extraLeft);
   const top = Math.max(0, box.top - padTop);
   const right = Math.min(imageWidth, box.left + box.width + padX);
   const bottom = Math.min(imageHeight, box.top + box.height + padBottom);
   return { left, top, width: right - left, height: bottom - top };
+}
+
+/** Folga curta depois do retângulo preto + OCR — não pinta farol/saia. */
+function padDealerBoxTight(
+  box: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox {
+  const padX = Math.max(3, Math.round(box.width * DEALER_TIGHT_PAD_X));
+  const padTop = Math.max(2, Math.round(box.height * DEALER_TIGHT_PAD_Y_TOP));
+  const padBottom = Math.max(3, Math.round(box.height * DEALER_TIGHT_PAD_Y_BOTTOM));
+  const left = Math.max(0, box.left - padX);
+  const top = Math.max(0, box.top - padTop);
+  const right = Math.min(imageWidth, box.left + box.width + padX);
+  const bottom = Math.min(imageHeight, box.top + box.height + padBottom);
+  return { left, top, width: right - left, height: bottom - top };
+}
+
+/**
+ * O cluster escuro às vezes pega só a linha FORTE. Estica um pouco para baixo
+ * até o aspecto ~3:1 da plaquinha, sem varrer o para-choque inteiro.
+ */
+function completeDealerVisual(
+  box: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox {
+  const aspect = box.width / Math.max(1, box.height);
+  if (aspect <= 3.8) return box;
+  const targetH = Math.min(
+    imageHeight - box.top,
+    Math.max(box.height, Math.round(box.width / 3.0)),
+    Math.round(box.height * 2.2),
+  );
+  const height = Math.max(box.height, targetH);
+  const width = Math.min(box.width, imageWidth - box.left);
+  return { left: box.left, top: box.top, width, height };
 }
 
 function mergeUnionBoxes(boxes: PixelBox[]): PixelBox[] {
@@ -821,15 +888,20 @@ function mergeUnionBoxes(boxes: PixelBox[]): PixelBox[] {
   return merged;
 }
 
+type DealerOcrGroup = {
+  box: PixelBox;
+  hasForte: boolean;
+};
+
 function unpaddedDealerGroups(
   pieces: TextPiece[],
   imageWidth: number,
   imageHeight: number,
-): PixelBox[] {
+): DealerOcrGroup[] {
   const hits = pieces.filter((piece) => textLooksLikeDealerPlate(piece.text));
   if (hits.length === 0) return [];
 
-  const boxes: PixelBox[] = [];
+  const groups: DealerOcrGroup[] = [];
   const used = new Set<number>();
 
   for (let i = 0; i < hits.length; i += 1) {
@@ -844,11 +916,14 @@ function unpaddedDealerGroups(
       }
     }
     const united = unionBox(group.map((item) => item.box));
-    if (!isPlausibleDealerBox(united, imageWidth, imageHeight)) continue;
-    boxes.push(united);
+    if (!isPlausibleDealerOcrBox(united, imageWidth, imageHeight)) continue;
+    groups.push({
+      box: united,
+      hasForte: group.some((item) => isPrimaryDealerBrand(item.text)),
+    });
   }
 
-  return boxes;
+  return groups;
 }
 
 function dealerBoxesFromPieces(
@@ -857,8 +932,8 @@ function dealerBoxesFromPieces(
   imageHeight: number,
 ): PixelBox[] {
   return mergeUnionBoxes(
-    unpaddedDealerGroups(pieces, imageWidth, imageHeight).map((box) =>
-      padDealerBox(box, imageWidth, imageHeight),
+    unpaddedDealerGroups(pieces, imageWidth, imageHeight).map((group) =>
+      padDealerBox(group.box, imageWidth, imageHeight),
     ),
   );
 }
@@ -1065,7 +1140,63 @@ function looksLikeBodyPanelPatch(signals: PatchSignals): boolean {
   if (signals.topFringeLightShare >= 0.55 && signals.insetLight < 0.12) {
     return true;
   }
+  // Para-choque, farol e smears: escuro sem “furos” de letra. A Forte tem
+  // texto claro no miolo; sem isso não é plaquinha de loja.
+  if (
+    signals.insetLight < 0.05 &&
+    signals.lightRatio < 0.05 &&
+    signals.whiteRatio < 0.04
+  ) {
+    return true;
+  }
   return false;
+}
+
+/**
+ * Confirma placa preta de loja: fundo escuro + letras claras no miolo.
+ * Recusa farol, saia e caixa cinza no para-choque.
+ */
+export async function looksLikeConfirmedDealerPlate(
+  image: Buffer,
+  box: PixelBox,
+): Promise<boolean> {
+  if (box.width < 16 || box.height < 8) return false;
+  const aspect = box.width / box.height;
+  if (aspect < 1.55 || aspect > 6.5) return false;
+  try {
+    const extracted = await sharp(image, { failOn: "none" })
+      .extract({
+        left: box.left,
+        top: box.top,
+        width: box.width,
+        height: box.height,
+      })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const signals = measureDealerPatch(
+      extracted.data,
+      extracted.info.width,
+      extracted.info.height,
+      extracted.info.channels,
+      {
+        left: 0,
+        top: 0,
+        width: extracted.info.width,
+        height: extracted.info.height,
+      },
+    );
+    if (!signals) return false;
+    if (looksLikeBodyPanelPatch(signals)) return false;
+    if (signals.insetLight < DEALER_MIN_INSET_LIGHT && signals.lightRatio < 0.08) {
+      return false;
+    }
+    if (signals.darkRatio < 0.18) return false;
+    if (signals.whiteRatio < 0.04 && signals.lightRatio < 0.1) return false;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -1315,18 +1446,66 @@ function regionAroundBox(
   imageWidth: number,
   imageHeight: number,
 ): PixelBox {
-  const width = Math.min(imageWidth, Math.max(96, Math.round(box.width * 3.2)));
-  const height = Math.min(imageHeight, Math.max(56, Math.round(box.height * 3.2)));
+  const width = Math.min(imageWidth, Math.max(96, Math.round(box.width * 2.5)));
+  // AUTOMÓVEIS é a linha de baixo — sobe para achar FORTE e o logo.
+  const height = Math.min(imageHeight, Math.max(72, Math.round(box.height * 4.2)));
   const cx = box.left + box.width / 2;
   const cy = box.top + box.height / 2;
   const left = Math.max(0, Math.round(cx - width / 2));
-  const top = Math.max(0, Math.round(cy - height / 2));
+  const top = Math.max(0, Math.round(cy - height * 0.72));
   return {
     left: Math.min(left, Math.max(0, imageWidth - width)),
     top: Math.min(top, Math.max(0, imageHeight - height)),
     width: Math.min(width, imageWidth - Math.min(left, imageWidth - width)),
     height: Math.min(height, imageHeight - Math.min(top, imageHeight - height)),
   };
+}
+
+/** Corta o retângulo preto para a vizinhança do OCR — evita saia/farol. */
+function clipDealerVisualToOcr(visual: PixelBox, ocr: PixelBox): PixelBox {
+  const aspect = visual.width / Math.max(1, visual.height);
+  const compactEnough =
+    visual.width <= ocr.width * 2.25 &&
+    visual.height <= Math.max(ocr.height * 5.2, Math.round(visual.width / 2.15));
+  if (aspect >= 1.7 && aspect <= 4.6 && compactEnough) {
+    return unionBox([visual, ocr]);
+  }
+  const maxLeft = Math.max(12, Math.round(ocr.width * 0.55));
+  const maxRight = Math.max(8, Math.round(ocr.width * 0.3));
+  const maxTop = Math.max(6, Math.round(ocr.height * 0.7));
+  const maxBottom = Math.max(8, Math.round(ocr.height * 1.6));
+  const left = Math.max(visual.left, ocr.left - maxLeft);
+  const top = Math.max(visual.top, ocr.top - maxTop);
+  const right = Math.min(
+    visual.left + visual.width,
+    ocr.left + ocr.width + maxRight,
+  );
+  const bottom = Math.min(
+    visual.top + visual.height,
+    ocr.top + ocr.height + maxBottom,
+  );
+  return {
+    left,
+    top,
+    width: Math.max(8, right - left),
+    height: Math.max(6, bottom - top),
+  };
+}
+
+function pickBestDealerBoxes(
+  boxes: PixelBox[],
+  imageWidth: number,
+): PixelBox[] {
+  const merged = mergeUnionBoxes(boxes);
+  if (merged.length <= 1) return merged;
+  const centerX = imageWidth / 2;
+  const sorted = [...merged].sort((a, b) => {
+    const aDist = Math.abs(a.left + a.width / 2 - centerX);
+    const bDist = Math.abs(b.left + b.width / 2 - centerX);
+    if (Math.abs(aDist - bDist) > 28) return aDist - bDist;
+    return boxArea(a) - boxArea(b);
+  });
+  return [sorted[0]];
 }
 
 export async function dealerBoxesFromImage(
@@ -1336,34 +1515,75 @@ export async function dealerBoxesFromImage(
   imageHeight: number,
 ): Promise<PixelBox[]> {
   // Só com OCR FORTE/AUTOMÓVEIS. Sem texto, o retângulo preto pega friso/roda.
-  const ocrBoxes = unpaddedDealerGroups(pieces, imageWidth, imageHeight);
-  if (ocrBoxes.length === 0) return [];
+  const ocrGroups = unpaddedDealerGroups(pieces, imageWidth, imageHeight);
+  if (ocrGroups.length === 0) return [];
 
   const confirmed: PixelBox[] = [];
-  for (let index = 0; index < ocrBoxes.length; index += 1) {
-    const ocr = ocrBoxes[index];
+  for (let index = 0; index < ocrGroups.length; index += 1) {
+    const ocr = ocrGroups[index].box;
     const search = regionAroundBox(ocr, imageWidth, imageHeight);
     const visual = await findBlackDealerPlateBoxes(image, search);
     const overlapping = visual
+      .map((box) => completeDealerVisual(box, imageWidth, imageHeight))
       .filter(
         (box) =>
           isPlausibleDealerBox(box, imageWidth, imageHeight) &&
           (boxesOverlap(box, ocr) || boxContainsCenter(box, ocr)),
       )
-      .sort((a, b) => overlapArea(b, ocr) - overlapArea(a, ocr) || boxArea(a) - boxArea(b));
+      .sort(
+        (a, b) =>
+          overlapArea(b, ocr) - overlapArea(a, ocr) || boxArea(a) - boxArea(b),
+      );
 
+    let candidate: PixelBox | null = null;
     if (overlapping.length > 0) {
+      const clipped = clipDealerVisualToOcr(overlapping[0], ocr);
+      candidate = padDealerBoxTight(
+        unionBox([clipped, ocr]),
+        imageWidth,
+        imageHeight,
+      );
+    } else if (ocrGroups[index].hasForte) {
       const paddedOcr = padDealerBox(ocr, imageWidth, imageHeight);
-      confirmed.push(unionBox([overlapping[0], paddedOcr]));
+      const probe =
+        (await looksLikeConfirmedDealerPlate(image, ocr)) ||
+        (await looksLikeConfirmedDealerPlate(image, paddedOcr));
+      if (!probe) continue;
+      if (await looksLikeBodyPanelFalsePositive(image, paddedOcr)) continue;
+      candidate = paddedOcr;
+    } else {
+      // AUTOMÓVEIS sozinho só vale se o retângulo preto estiver debaixo.
       continue;
     }
 
-    const paddedOcr = padDealerBox(ocr, imageWidth, imageHeight);
-    if (await looksLikeBodyPanelFalsePositive(image, paddedOcr)) continue;
-    confirmed.push(paddedOcr);
+    if (!candidate) continue;
+    if (!isPlausibleDealerBox(candidate, imageWidth, imageHeight)) {
+      const fallback = padDealerBoxTight(ocr, imageWidth, imageHeight);
+      if (
+        !isPlausibleDealerBox(fallback, imageWidth, imageHeight) ||
+        !(await looksLikeConfirmedDealerPlate(image, fallback))
+      ) {
+        continue;
+      }
+      candidate = fallback;
+    }
+    if (await looksLikeBodyPanelFalsePositive(image, candidate)) {
+      const fallback = padDealerBoxTight(ocr, imageWidth, imageHeight);
+      if (
+        (await looksLikeBodyPanelFalsePositive(image, fallback)) ||
+        !(await looksLikeConfirmedDealerPlate(image, fallback))
+      ) {
+        continue;
+      }
+      candidate = fallback;
+    }
+    if (!(await looksLikeConfirmedDealerPlate(image, candidate))) {
+      if (overlapping.length === 0) continue;
+    }
+    confirmed.push(candidate);
   }
 
-  return mergeUnionBoxes(confirmed);
+  return pickBestDealerBoxes(confirmed, imageWidth);
 }
 
 /** Quando dois achados se sobrepõem, fica o menor — a linha gorda não engole a placa. */
@@ -1741,12 +1961,15 @@ export async function findMercosulStripeBoxes(
     if (fitted.top <= 2 && fitted.height < 22) continue;
     if (fitted.width < 16 || fitted.height < 12) continue;
     if (fitted.width * fitted.height < 280) continue;
-    boxes.push({
+    const absolute = {
       left: region.left + fitted.left,
       top: region.top + fitted.top,
       width: fitted.width,
       height: fitted.height,
-    });
+    };
+    // Grade/cromado do Civic acende azul, mas não tem corpo branco de placa.
+    if (!(await looksLikeMercosulPlatePatch(image, absolute))) continue;
+    boxes.push(absolute);
   }
   return boxes;
 }
@@ -2069,20 +2292,27 @@ export async function applyBlurRegions(
     if (box.width < 4 || box.height < 4) continue;
     if (!box.allowDark && (await looksLikeDarkDisplay(image, box))) continue;
 
+    const dealer = Boolean(box.allowDark);
     const shortSide = Math.min(box.width, box.height);
     const aspect = box.width / Math.max(1, box.height);
     const compact = aspect <= 1.7;
     const smallPlate = shortSide < 40;
-    const strong = smallPlate || compact;
+    const strong = dealer || smallPlate || compact;
     const sigma = Math.min(
-      36,
-      Math.max(16, Math.round(shortSide / (strong ? 1.9 : 2.4))),
+      dealer ? 42 : 36,
+      Math.max(dealer ? 22 : 16, Math.round(shortSide / (strong ? 1.7 : 2.4))),
     );
     const radius = Math.max(
       1,
-      Math.round(shortSide * (compact ? 0.05 : smallPlate ? 0.08 : 0.14)),
+      Math.round(shortSide * (dealer ? 0.04 : compact ? 0.05 : smallPlate ? 0.08 : 0.14)),
     );
-    const feather = compact ? 0.15 : smallPlate ? 0.25 : Math.max(0.4, shortSide * 0.02);
+    const feather = dealer
+      ? 0.1
+      : compact
+        ? 0.15
+        : smallPlate
+          ? 0.25
+          : Math.max(0.4, shortSide * 0.02);
     const inset = 0;
     const mask = Buffer.from(
       `<svg width="${box.width}" height="${box.height}" xmlns="http://www.w3.org/2000/svg">
@@ -2104,15 +2334,21 @@ export async function applyBlurRegions(
       </svg>`,
     );
 
-    const blurred = await sharp(image, { failOn: "none" })
-      .extract({
-        left: box.left,
-        top: box.top,
-        width: box.width,
-        height: box.height,
-      })
+    let pipeline = sharp(image, { failOn: "none" }).extract({
+      left: box.left,
+      top: box.top,
+      width: box.width,
+      height: box.height,
+    });
+    if (dealer) {
+      const pixelW = Math.max(8, Math.round(box.width / 6));
+      const pixelH = Math.max(6, Math.round(box.height / 6));
+      pipeline = pipeline.resize(pixelW, pixelH).resize(box.width, box.height);
+    }
+    const blurred = await pipeline
       .blur(sigma)
-      .blur(Math.max(6, Math.round(sigma * 0.45)))
+      .blur(Math.max(dealer ? 8 : 6, Math.round(sigma * (dealer ? 0.55 : 0.45))))
+      .modulate(dealer ? { brightness: 0.76 } : { brightness: 1 })
       .toBuffer();
 
     const masked = await sharp(blurred)
@@ -2195,9 +2431,20 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
     }
 
     const dealerBoxes = await dealerBoxesFromImage(bytes, pieces, width, height);
+    const plates: PixelBox[] = [];
+    for (const box of plateBoxes) {
+      if (dealerBoxes.some((dealer) => boxesOverlap(dealer, box))) continue;
+      if (
+        dealerBoxes.length > 0 &&
+        !(await looksLikeMercosulPlatePatch(bytes, box))
+      ) {
+        continue;
+      }
+      plates.push(box);
+    }
 
     const blurBoxes: BlurBox[] = [
-      ...plateBoxes.map((box) => ({ ...box, allowDark: false })),
+      ...plates.map((box) => ({ ...box, allowDark: false })),
       ...dealerBoxes.map((box) => ({ ...box, allowDark: true })),
     ];
 
@@ -2207,7 +2454,7 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
     }
 
     console.info(
-      `[blur-plates] ${plateBoxes.length} placa(s) + ${dealerBoxes.length} placa(s) de loja — aplicando blur.`,
+      `[blur-plates] ${plates.length} placa(s) + ${dealerBoxes.length} placa(s) de loja — aplicando blur.`,
     );
 
     return await applyBlurRegions(bytes, blurBoxes);
