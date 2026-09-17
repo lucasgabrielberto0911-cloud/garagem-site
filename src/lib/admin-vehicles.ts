@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import { isMissingColumnError } from "@/lib/prisma-errors";
 import { staleCutoffDate } from "@/lib/stock-quality";
 import { hasCostBasis, investedTotal } from "@/lib/vehicle-ops";
+import { DEFAULT_VEHICLE_LOCATION_CITY } from "@/lib/vehicle-location";
 
 export const ADMIN_VEHICLES_PAGE_SIZE = 20;
 export const ADMIN_SALES_PAGE_SIZE = 30;
@@ -45,6 +47,7 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
   km: true,
   price: true,
   status: true,
+  locationCity: true,
   featured: true,
   inStoreName: true,
   hasSpareKey: true,
@@ -77,6 +80,7 @@ export type AdminVehicleListItem = {
   km: number;
   price: number;
   status: string;
+  locationCity: string;
   featured: boolean;
   inStoreName: boolean;
   hasSpareKey: boolean;
@@ -102,8 +106,65 @@ function toAdminVehicleListItem(
   const { _count, ...rest } = row;
   return {
     ...rest,
+    locationCity: rest.locationCity || DEFAULT_VEHICLE_LOCATION_CITY,
     photoCount: _count?.photos ?? rest.photos.length,
   };
+}
+
+const ADMIN_VEHICLE_LIST_SELECT_NO_CITY = {
+  id: true,
+  category: true,
+  brand: true,
+  model: true,
+  version: true,
+  year: true,
+  yearModel: true,
+  km: true,
+  price: true,
+  status: true,
+  featured: true,
+  inStoreName: true,
+  hasSpareKey: true,
+  hasManual: true,
+  purchasePrice: true,
+  createdAt: true,
+  updatedAt: true,
+  hasVideo: true,
+  transmission: true,
+  color: true,
+  plate: true,
+  photos: {
+    orderBy: { order: "asc" as const },
+    take: 1,
+    select: { url: true, thumbnailUrl: true },
+  },
+  costs: { select: { amount: true } },
+  sale: { select: { salePrice: true } },
+  _count: { select: { photos: true } },
+} as const;
+
+async function listAdminVehicles(args: {
+  where: NonNullable<Parameters<typeof prisma.vehicle.findMany>[0]>["where"];
+  orderBy: NonNullable<Parameters<typeof prisma.vehicle.findMany>[0]>["orderBy"];
+  skip: number;
+  take: number;
+}) {
+  try {
+    return await prisma.vehicle.findMany({
+      ...args,
+      select: ADMIN_VEHICLE_LIST_SELECT,
+    });
+  } catch (error) {
+    if (!isMissingColumnError(error, "locationCity")) throw error;
+    const rows = await prisma.vehicle.findMany({
+      ...args,
+      select: ADMIN_VEHICLE_LIST_SELECT_NO_CITY,
+    });
+    return rows.map((row) => ({
+      ...row,
+      locationCity: DEFAULT_VEHICLE_LOCATION_CITY,
+    }));
+  }
 }
 
 export const ADMIN_SALE_LIST_INCLUDE = {
@@ -194,11 +255,10 @@ export async function getAdminVehiclesPage(options: {
     ],
   };
 
-  const [total, vehicles] = await Promise.all([
+  const [total, vehicleRows] = await Promise.all([
     prisma.vehicle.count({ where }),
-    prisma.vehicle.findMany({
+    listAdminVehicles({
       where,
-      select: ADMIN_VEHICLE_LIST_SELECT,
       orderBy: listOrderBy(sort, dir),
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -206,7 +266,7 @@ export async function getAdminVehiclesPage(options: {
   ]);
 
   return {
-    vehicles: vehicles.map(toAdminVehicleListItem),
+    vehicles: vehicleRows.map(toAdminVehicleListItem),
     total,
     page,
     pageSize,

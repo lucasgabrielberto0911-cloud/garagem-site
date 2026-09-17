@@ -10,6 +10,7 @@ import {
   formatColorLabel,
   resolveTransmission,
 } from "@/lib/vehicle-display";
+import { catalogAddressCity } from "@/lib/vehicle-location";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export type CatalogFeedVehicle = {
@@ -25,6 +26,7 @@ export type CatalogFeedVehicle = {
   transmission: string;
   color: string | null;
   description: string | null;
+  locationCity?: string | null;
   photos: Array<{ url: string }>;
 };
 
@@ -132,7 +134,7 @@ export function catalogVehicleRow(
     year: String(vehicle.yearModel),
     "mileage.value": String(Math.max(0, Math.round(vehicle.km))),
     "mileage.unit": "KM",
-    "address.city": "Aracruz",
+    "address.city": catalogAddressCity(vehicle.locationCity),
     "address.region": "ES",
     "address.country": "Brazil",
     exterior_color: formatColorLabel(vehicle.color) || "Não informado",

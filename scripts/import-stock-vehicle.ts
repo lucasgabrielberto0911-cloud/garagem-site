@@ -52,6 +52,7 @@ type IntakeVehicle = {
   category: "carro";
   status: "disponivel";
   featured: false;
+  locationCity: "serra" | "linhares";
   engine: string;
   doors: number;
   accessories: string[];
@@ -75,6 +76,7 @@ const INTAKE: IntakeVehicle[] = [
     category: "carro",
     status: "disponivel",
     featured: false,
+    locationCity: "linhares",
     engine: "1.0 8V FlexPower",
     doors: 4,
     accessories: [
@@ -119,6 +121,7 @@ const INTAKE: IntakeVehicle[] = [
     category: "carro",
     status: "disponivel",
     featured: false,
+    locationCity: "serra",
     engine: "1.8 16V Flex",
     doors: 4,
     accessories: [
@@ -234,6 +237,7 @@ function vehicleFields(item: IntakeVehicle) {
     accessories: item.accessories,
     status: item.status,
     featured: item.featured,
+    locationCity: item.locationCity,
   };
 }
 

@@ -27,6 +27,10 @@ import { formatCurrencyBRL } from "@/lib/format";
 import { expectedMargin, hasCostBasis } from "@/lib/vehicle-ops";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath } from "@/lib/vehicle-slug";
+import {
+  isVehicleLocationCity,
+  vehicleLocationLabel,
+} from "@/lib/vehicle-location";
 import type { AdminVehicleListItem, VehiclesTab } from "@/lib/admin-vehicles";
 import {
   ADMIN_BULK_MAX,
@@ -70,6 +74,7 @@ export type { VehiclesTab };
 function hydrateVehicle(row: VehicleRow): VehicleRow {
   return {
     ...row,
+    locationCity: row.locationCity || "linhares",
     createdAt: new Date(row.createdAt),
     updatedAt: row.updatedAt ? new Date(row.updatedAt) : row.createdAt,
     photoCount: row.photoCount ?? row.photos?.length ?? 0,
@@ -111,6 +116,23 @@ function vehicleQualityAlerts(vehicle: VehicleRow) {
   );
   if (conflict) alerts.push(conflict);
   return alerts;
+}
+
+function locationChipClass(city: string) {
+  return city === "serra"
+    ? "border border-sky-400/40 text-sky-300"
+    : "border border-amber-400/40 text-amber-200";
+}
+
+function VehicleLocationChip({ city }: { city: string }) {
+  if (!isVehicleLocationCity(city)) return null;
+  return (
+    <span
+      className={`shrink-0 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${locationChipClass(city)}`}
+    >
+      {vehicleLocationLabel(city)}
+    </span>
+  );
 }
 
 function canMarkAsSold(status: string) {
@@ -1141,7 +1163,7 @@ function VehicleAdminCard({
 
         <div className="min-w-0 flex-1">
           <Link href={`/admin/veiculos/${vehicle.id}`} className="block min-w-0">
-            <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <p className="truncate font-display text-[15px] font-semibold leading-tight text-cream lg:text-base">
                 {title}
               </p>
@@ -1156,6 +1178,7 @@ function VehicleAdminCard({
               >
                 {STATUS_LABEL[vehicle.status] ?? vehicle.status}
               </span>
+              <VehicleLocationChip city={vehicle.locationCity} />
             </div>
             <p className="mt-0.5 truncate text-xs text-muted">
               {vehicleCategoryLabel(vehicle.category)}

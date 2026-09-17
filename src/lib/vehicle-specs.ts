@@ -5,6 +5,10 @@
 
 import { formatNumberBR } from "@/lib/format";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
+import {
+  parseVehicleLocationCity,
+  vehicleLocationLabel,
+} from "@/lib/vehicle-location";
 
 export const SPEC_EMPTY = "Não informado";
 export const SPEC_EMPTY_FEMININE = "Não informada";
@@ -28,6 +32,7 @@ export type VehiclePublicSpecsInput = {
   plateEnd?: string | null;
   warranty?: string | null;
   inspection?: string | null;
+  locationCity?: string | null;
 };
 
 function filled(value: string | null | undefined) {
@@ -77,6 +82,13 @@ export function buildVehiclePublicSpecs(
   }
   if (filled(vehicle.inspection)) {
     rows.push({ label: "Laudo", value: vehicle.inspection!.trim() });
+  }
+  const location = parseVehicleLocationCity(vehicle.locationCity);
+  if (location) {
+    rows.push({
+      label: "Disponível em",
+      value: vehicleLocationLabel(location),
+    });
   }
 
   return rows;

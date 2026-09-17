@@ -19,6 +19,27 @@ const CATALOG_SELECT = {
   transmission: true,
   color: true,
   description: true,
+  locationCity: true,
+  photos: {
+    orderBy: { order: "asc" as const },
+    take: 8,
+    select: { url: true },
+  },
+} as const;
+
+const CATALOG_SELECT_LEGACY = {
+  id: true,
+  category: true,
+  brand: true,
+  model: true,
+  version: true,
+  yearModel: true,
+  km: true,
+  price: true,
+  fuel: true,
+  transmission: true,
+  color: true,
+  description: true,
   photos: {
     orderBy: { order: "asc" as const },
     take: 8,
@@ -35,13 +56,31 @@ async function loadCatalogVehicles() {
       select: CATALOG_SELECT,
     });
   } catch (error) {
+    if (isMissingColumnError(error, "locationCity")) {
+      return prisma.vehicle.findMany({
+        where: { status: "disponivel", historical: false },
+        orderBy: { updatedAt: "desc" },
+        take: 400,
+        select: CATALOG_SELECT_LEGACY,
+      });
+    }
     if (!isMissingColumnError(error, "historical")) throw error;
-    return prisma.vehicle.findMany({
-      where: { status: "disponivel" },
-      orderBy: { updatedAt: "desc" },
-      take: 400,
-      select: CATALOG_SELECT,
-    });
+    try {
+      return await prisma.vehicle.findMany({
+        where: { status: "disponivel" },
+        orderBy: { updatedAt: "desc" },
+        take: 400,
+        select: CATALOG_SELECT,
+      });
+    } catch (inner) {
+      if (!isMissingColumnError(inner, "locationCity")) throw inner;
+      return prisma.vehicle.findMany({
+        where: { status: "disponivel" },
+        orderBy: { updatedAt: "desc" },
+        take: 400,
+        select: CATALOG_SELECT_LEGACY,
+      });
+    }
   }
 }
 

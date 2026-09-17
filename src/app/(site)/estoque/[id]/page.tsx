@@ -214,6 +214,7 @@ export default async function VehicleDetailPage({
     plateEnd: vehicle.plateEnd,
     warranty: vehicle.warranty,
     inspection: vehicle.inspection,
+    locationCity: vehicle.locationCity,
   });
 
   const hasDetails =

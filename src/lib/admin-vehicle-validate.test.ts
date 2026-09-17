@@ -75,3 +75,21 @@ test("aviso quando o texto cita preço diferente do campo", () => {
   assert.equal(descriptionPriceMismatch("", 89900), null);
   assert.equal(descriptionPriceMismatch("R$ 92.000", 0), null);
 });
+
+test("cidade física exige Serra ou Linhares quando o campo vem no form", () => {
+  assert.equal(validateVehicleListing(ok).length, 0);
+  assert.equal(
+    validateVehicleListing({ ...ok, locationCity: "linhares" }).length,
+    0,
+  );
+  assert.equal(
+    validateVehicleListing({ ...ok, locationCity: "serra" }).length,
+    0,
+  );
+  const missing = validateVehicleListing({ ...ok, locationCity: "  " });
+  assert.equal(missing.some((issue) => issue.field === "locationCity"), true);
+  assert.match(
+    vehicleListingError({ ...ok, locationCity: "vitoria" }) ?? "",
+    /Serra ou Linhares/,
+  );
+});

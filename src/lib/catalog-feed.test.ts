@@ -82,3 +82,18 @@ test("HR-V com versão Automático e campo Manual vai AUTOMATIC no feed", () => 
   assert.match(row.title, /Honda HR-V EX 1\.8 Flex ONE 2018/);
   assert.doesNotMatch(row.title, /Manual/);
 });
+
+test("address.city do catálogo vem da cidade física, não de Aracruz chutado", () => {
+  const defaultRow = catalogVehicleRow(sample, "https://www.suagaragem.net");
+  assert.equal(defaultRow?.["address.city"], "Linhares");
+  const serra = catalogVehicleRow(
+    { ...sample, locationCity: "serra" },
+    "https://www.suagaragem.net",
+  );
+  assert.equal(serra?.["address.city"], "Serra");
+  const linhares = catalogVehicleRow(
+    { ...sample, locationCity: "linhares" },
+    "https://www.suagaragem.net",
+  );
+  assert.equal(linhares?.["address.city"], "Linhares");
+});

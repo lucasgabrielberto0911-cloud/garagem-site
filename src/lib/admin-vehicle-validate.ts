@@ -1,5 +1,7 @@
 /** Regras da ficha no painel — vitrine, não ERP. */
 
+import { parseVehicleLocationCity } from "@/lib/vehicle-location";
+
 export const MIN_LISTING_PRICE = 1;
 export const MAX_LISTING_PRICE = 9_999_999;
 export const MIN_KM = 0;
@@ -13,6 +15,7 @@ export type VehicleListingFields = {
   color?: string | null;
   km?: number | null;
   price?: number | null;
+  locationCity?: string | null;
 };
 
 export type VehicleListingIssue = {
@@ -45,6 +48,14 @@ export function validateVehicleListing(
       field: "color",
       message: "Informe a cor (fica vazia no anúncio se faltar).",
     });
+  }
+  if (input.locationCity !== undefined) {
+    if (!parseVehicleLocationCity(input.locationCity)) {
+      issues.push({
+        field: "locationCity",
+        message: "Informe se o veículo está em Serra ou Linhares.",
+      });
+    }
   }
 
   const km = input.km;

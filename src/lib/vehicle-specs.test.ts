@@ -49,4 +49,36 @@ test("ano fabricado/modelo e opcionais só entram quando existem", () => {
   assert.equal(byLabel.Motor?.value, "1.6");
   assert.equal(byLabel.Portas?.value, "4");
   assert.equal(byLabel.Laudo?.value, "Cautelar aprovado");
+  assert.equal(specs.some((row) => row.label === "Disponível em"), false);
+});
+
+test("ficha pública mostra Disponível em só com cidade válida do admin", () => {
+  const serra = buildVehiclePublicSpecs({
+    category: "carro",
+    year: 2019,
+    yearModel: 2019,
+    km: 67000,
+    fuel: "Flex",
+    transmission: "CVT",
+    color: "Cinza",
+    locationCity: "serra",
+  });
+  assert.equal(
+    serra.find((row) => row.label === "Disponível em")?.value,
+    "Serra",
+  );
+
+  const guessed = buildVehiclePublicSpecs({
+    category: "carro",
+    year: 2014,
+    yearModel: 2014,
+    km: 98000,
+    fuel: "Flex",
+    transmission: "Manual",
+    locationCity: "aracruz",
+  });
+  assert.equal(
+    guessed.some((row) => row.label === "Disponível em"),
+    false,
+  );
 });

@@ -12,6 +12,10 @@ import {
 import { normalizeAccessories, parseVehicleCategory } from "@/lib/vehicle-accessories";
 import { vehicleListingError } from "@/lib/admin-vehicle-validate";
 import {
+  DEFAULT_VEHICLE_LOCATION_CITY,
+  parseVehicleLocationCity,
+} from "@/lib/vehicle-location";
+import {
   isAdminBulkStatus,
   normalizeBulkVehicleIds,
 } from "@/lib/admin-bulk";
@@ -94,6 +98,13 @@ function parseVehicleFields(formData: FormData) {
   const hasManual = formData.get("hasManual") === "on";
   const hasVideo =
     formData.get("hasVideo") === "on" || formData.get("hasVideo") === "true";
+  const locationRaw = String(formData.get("locationCity") || "").trim();
+  const locationCity = locationRaw
+    ? parseVehicleLocationCity(locationRaw)
+    : DEFAULT_VEHICLE_LOCATION_CITY;
+  if (!locationCity) {
+    throw new Error("Informe se o veículo está em Serra ou Linhares.");
+  }
 
   if (!brand || !model || !fuel || !transmission) {
     throw new Error("Preencha marca, modelo, combustível e câmbio.");
@@ -109,6 +120,7 @@ function parseVehicleFields(formData: FormData) {
     color,
     km,
     price,
+    locationCity,
   });
   if (listingError) throw new Error(listingError);
 
@@ -174,6 +186,7 @@ function parseVehicleFields(formData: FormData) {
     inspection,
     accessories,
     status,
+    locationCity,
     featured,
     photos,
     purchasePrice,
@@ -246,6 +259,7 @@ export async function createVehicle(
         inspection: data.inspection,
         accessories: data.accessories,
         status: data.status,
+        locationCity: data.locationCity,
         featured: data.featured,
         purchasePrice: data.purchasePrice,
         inStoreName: data.inStoreName,
@@ -332,6 +346,7 @@ export async function updateVehicle(
           inspection: data.inspection,
           accessories: data.accessories,
           status: data.status,
+          locationCity: data.locationCity,
           featured: data.featured,
           hasVideo: data.hasVideo,
           photos: {
@@ -564,6 +579,7 @@ export async function duplicateVehicle(id: string) {
       inspection: source.inspection,
       accessories: source.accessories,
       status: "disponivel",
+      locationCity: source.locationCity,
       featured: false,
       inStoreName: source.inStoreName,
       hasSpareKey: source.hasSpareKey,

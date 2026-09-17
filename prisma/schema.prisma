@@ -45,6 +45,11 @@ model Vehicle {
   /** Itens/acessórios do anúncio (checklist + pontos manuais). */
   accessories  String[] @default([])
   status       String   @default("disponivel")
+  /**
+   * Cidade física do veículo no ES: "serra" | "linhares".
+   * Fonte da verdade do admin — não inferir pelo modelo.
+   */
+  locationCity String   @default("linhares")
   featured     Boolean  @default(false)
   /**
    * Venda registrada fora do estoque do site (ex.: negócio antes do site).
@@ -71,6 +76,7 @@ model Vehicle {
   @@index([status, km])
   @@index([status, featured])
   @@index([status, category])
+  @@index([status, locationCity])
 }
 
 model Photo {
