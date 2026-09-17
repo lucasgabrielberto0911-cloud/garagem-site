@@ -371,12 +371,14 @@ export default async function VehicleDetailPage({
                 )}
               </p>
               {!sold ? <VehicleTrustNotes /> : null}
-              {listedAgo ? (
-                <p className="text-xs text-muted">{listedAgo}</p>
-              ) : null}
-              {vehicle.updatedAt ? (
+              {listedAgo || vehicle.updatedAt ? (
                 <p className="text-xs text-muted">
-                  {formatUpdatedAt(vehicle.updatedAt)}
+                  {[
+                    listedAgo,
+                    vehicle.updatedAt ? formatUpdatedAt(vehicle.updatedAt) : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
               ) : null}
               {!sold ? (

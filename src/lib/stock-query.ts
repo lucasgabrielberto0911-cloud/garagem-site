@@ -117,6 +117,14 @@ export function galleryPreviewSrcSet(photo: GalleryPhoto) {
   return undefined;
 }
 
+/**
+ * Carrega só o slide ativo e os vizinhos. Os `li` continuam no DOM para o
+ * snap; as fotos longe não baixam o WebP de 1280px (cota Hobby / 3G).
+ */
+export function shouldLoadGallerySlide(index: number, active: number) {
+  return Math.abs(index - active) <= 1;
+}
+
 export type StockFilters = {
   q?: string;
   category?: string;

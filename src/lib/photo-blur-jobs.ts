@@ -86,3 +86,14 @@ export function photoBlurToastKind(jobs: PhotoBlurJobState[]) {
   if (summary.hasFailures && summary.unchanged === 0) return "error" as const;
   return "message" as const;
 }
+
+/** Fotos para tentar de novo: falharam ou saíram “sem placa”. */
+export function photoBlurRetryIds(jobs: PhotoBlurJobState[]) {
+  return jobs
+    .filter((job) => job.status === "error" || job.status === "unchanged")
+    .map((job) => job.id);
+}
+
+export function photoBlurNeedsSave(jobs: PhotoBlurJobState[]) {
+  return jobs.some((job) => job.status === "blurred");
+}

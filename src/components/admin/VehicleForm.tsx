@@ -54,6 +54,10 @@ import {
   kmHint,
   validateVehicleListing,
 } from "@/lib/admin-vehicle-validate";
+import {
+  DELETE_CONFIRM_PHRASE,
+  deleteRequiresTypedConfirm,
+} from "@/lib/admin-list";
 
 type VehicleWithPhotos = Vehicle & { photos: Photo[] };
 
@@ -76,7 +80,7 @@ function SubmitButton({
   const blocked = pending || disabled;
   return (
     <button type="submit" disabled={blocked} className={`${btn.primary} w-full sm:w-auto`}>
-      {pending ? "Salvando..." : disabled ? "Enviando fotos..." : label}
+      {pending ? "Salvando..." : disabled ? "Aguarde as fotos..." : label}
     </button>
   );
 }
@@ -316,7 +320,7 @@ export function VehicleForm({
         onSubmit={(event) => {
           if (photosUploading) {
             event.preventDefault();
-            toast.error("Espere o envio das fotos terminar.");
+            toast.error("Espere o envio ou o borrão das fotos terminar.");
             return;
           }
           if (!validate()) {
@@ -965,6 +969,16 @@ export function VehicleForm({
         confirmLabel="Excluir definitivamente"
         danger
         loading={pendingAction}
+        typedPhrase={
+          vehicle &&
+          deleteRequiresTypedConfirm({
+            photoCount: photos.length,
+            status: vehicle.status,
+          })
+            ? DELETE_CONFIRM_PHRASE
+            : undefined
+        }
+        typedLabel="Digite EXCLUIR para confirmar"
         onCancel={() => setConfirmDelete(false)}
         onConfirm={() => {
           setConfirmDelete(false);

@@ -3,7 +3,9 @@ import { test } from "node:test";
 import {
   createPhotoBlurJobs,
   photoBlurBadgeLabel,
+  photoBlurNeedsSave,
   photoBlurProgressLabel,
+  photoBlurRetryIds,
   photoBlurSummaryMessage,
   photoBlurToastKind,
   summarizePhotoBlur,
@@ -55,4 +57,18 @@ test("resumo final distingue placa borracha, sem placa e falha", () => {
     status: "error" as const,
   }));
   assert.equal(photoBlurToastKind(failed), "error");
+});
+
+test("retry cobre falha e sem placa; save só depois de borrar de verdade", () => {
+  const finished: PhotoBlurJobState[] = [
+    { id: "a", status: "blurred" },
+    { id: "b", status: "unchanged" },
+    { id: "c", status: "error" },
+  ];
+  assert.deepEqual(photoBlurRetryIds(finished), ["b", "c"]);
+  assert.equal(photoBlurNeedsSave(finished), true);
+  assert.equal(
+    photoBlurNeedsSave([{ id: "x", status: "unchanged" }]),
+    false,
+  );
 });
