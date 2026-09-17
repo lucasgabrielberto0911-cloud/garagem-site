@@ -308,7 +308,8 @@ export default async function VehicleDetailPage({
               source="ficha-header"
               prompt={`Tenho dúvida sobre o ${title}`}
               size="compact"
-              className="w-full border-white/20 bg-asphalt/95 backdrop-blur"
+              variant="solid"
+              className="w-full"
             />
           </div>
         ) : null}
@@ -371,12 +372,14 @@ export default async function VehicleDetailPage({
                 )}
               </p>
               {!sold ? <VehicleTrustNotes /> : null}
-              {listedAgo ? (
-                <p className="text-xs text-muted">{listedAgo}</p>
-              ) : null}
-              {vehicle.updatedAt ? (
+              {listedAgo || vehicle.updatedAt ? (
                 <p className="text-xs text-muted">
-                  {formatUpdatedAt(vehicle.updatedAt)}
+                  {[
+                    listedAgo,
+                    vehicle.updatedAt ? formatUpdatedAt(vehicle.updatedAt) : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
               ) : null}
               {!sold ? (
@@ -467,6 +470,8 @@ export default async function VehicleDetailPage({
                     <ChatOpenButton
                       source="ficha"
                       prompt={`Tenho dúvida sobre o ${title}`}
+                      size="lg"
+                      variant="solid"
                       className="w-full"
                     />
                   </div>

@@ -6,6 +6,7 @@ import {
   galleryPreviewSrc,
   galleryPreviewSrcSet,
   galleryThumbSrc,
+  shouldLoadGallerySlide,
   stockSortLabel,
   supabaseCardSrc,
   supabaseOriginalSrc,
@@ -57,6 +58,14 @@ test("galleryThumbSrc recorta o strip; preview usa o WebP da galeria", () => {
     }) ?? "",
     /480w/,
   );
+});
+
+test("galeria só baixa o slide ativo e os vizinhos", () => {
+  assert.equal(shouldLoadGallerySlide(0, 0), true);
+  assert.equal(shouldLoadGallerySlide(1, 0), true);
+  assert.equal(shouldLoadGallerySlide(2, 0), false);
+  assert.equal(shouldLoadGallerySlide(9, 10), true);
+  assert.equal(shouldLoadGallerySlide(7, 10), false);
 });
 
 test("rótulo de ordenação do estoque cai em mais recentes", () => {

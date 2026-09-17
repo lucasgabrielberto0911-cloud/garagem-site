@@ -436,7 +436,10 @@ export async function setVehicleStatus(id: string, status: string) {
   return { ok: true, message: "Status atualizado." };
 }
 
-export async function setVehiclesStatus(ids: string[], status: string) {
+export async function setVehiclesStatus(
+  ids: string[],
+  status: string,
+): Promise<{ ok: boolean; message: string; appliedIds?: string[] }> {
   await requireAdmin();
 
   if (!isAdminBulkStatus(status)) {
@@ -451,20 +454,49 @@ export async function setVehiclesStatus(ids: string[], status: string) {
     return { ok: false, message: "Selecione pelo menos um veículo." };
   }
 
-  await prisma.vehicle.updateMany({
+  const rows = await prisma.vehicle.findMany({
     where: { id: { in: unique }, historical: false },
+    select: { id: true, status: true, featured: true },
+  });
+  const appliedIds = rows
+    .filter((row) => row.status !== status)
+    .map((row) => row.id);
+  if (appliedIds.length === 0) {
+    return {
+      ok: false,
+      message:
+        status === "vendido"
+          ? "Esses veículos já estão vendidos."
+          : "Esses veículos já estão disponíveis.",
+    };
+  }
+
+  await prisma.vehicle.updateMany({
+    where: { id: { in: appliedIds } },
     data:
       status === "vendido" ? { status, featured: false } : { status },
   });
 
   revalidatePath("/admin/veiculos");
   revalidatePublicStock();
+  const skipped = unique.length - appliedIds.length;
+  const featuredRemoved =
+    status === "vendido"
+      ? rows.filter((row) => appliedIds.includes(row.id) && row.featured).length
+      : 0;
+  const home =
+    featuredRemoved > 0
+      ? ` ${featuredRemoved} saiu${featuredRemoved === 1 ? "" : "ram"} da home.`
+      : "";
+  const skip =
+    skipped > 0 ? ` ${skipped} já estava${skipped === 1 ? "" : "m"} assim.` : "";
   return {
     ok: true,
+    appliedIds,
     message:
       status === "vendido"
-        ? `${unique.length} veículo(s) marcados como vendidos. A página pública continua no ar.`
-        : `${unique.length} veículo(s) voltaram para disponível.`,
+        ? `${appliedIds.length} veículo(s) marcados como vendidos. A página pública continua no ar.${home}${skip}`
+        : `${appliedIds.length} veículo(s) voltaram para disponível.${skip}`,
   };
 }
 

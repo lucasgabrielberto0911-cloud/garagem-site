@@ -7,6 +7,7 @@ import { IconClose, IconSearch } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName } from "@/lib/format";
 import { STOCK_SORT_OPTIONS, stockSortLabel } from "@/lib/stock-query";
+import { handleFocusTrap } from "@/lib/focus-trap";
 import { formatColorLabel } from "@/lib/vehicle-display";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
@@ -154,7 +155,11 @@ export function StockFilters({ facets }: { facets: Facets }) {
     if (!open) return;
     sheetRef.current?.focus();
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      if (sheetRef.current) handleFocusTrap(event, sheetRef.current);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);

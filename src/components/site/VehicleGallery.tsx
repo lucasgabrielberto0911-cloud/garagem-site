@@ -4,7 +4,22 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
 import { vehiclePhotoAlt } from "@/lib/format";
-import { galleryPreviewSrc, galleryPreviewSrcSet, galleryThumbSrc, type GalleryPhoto } from "@/lib/stock-query";
+import {
+  galleryPreviewSrc,
+  galleryPreviewSrcSet,
+  galleryThumbSrc,
+  shouldLoadGallerySlide,
+  type GalleryPhoto,
+} from "@/lib/stock-query";
+
+function prefersReducedMotion() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
 
 const PhotoLightbox = dynamic(
   () =>
@@ -37,7 +52,10 @@ export function VehicleGallery({
     // scrollIntoView no iOS empurra a página; rolamos só a faixa.
     const left =
       activeBtn.offsetLeft - (strip.clientWidth - activeBtn.clientWidth) / 2;
-    strip.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
+    strip.scrollTo({
+      left: Math.max(0, left),
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
   }, [active]);
 
   useEffect(() => {
@@ -63,7 +81,7 @@ export function VehicleGallery({
     const next = Math.min(Math.max(index, 0), Math.max(total - 1, 0));
     scroller.scrollTo({
       left: next * scroller.clientWidth,
-      behavior: "smooth",
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
     });
     setActive(next);
   }, [total]);
@@ -133,15 +151,22 @@ export function VehicleGallery({
                 >
                   <span className="sr-only">Ampliar</span>
                 </button>
-                <VehicleImage
-                  src={galleryPreviewSrc(photo)}
-                  alt={vehiclePhotoAlt(alt, index, total)}
-                  fill
-                  sizes="(min-width: 1024px) 60vw, 100vw"
-                  srcSet={galleryPreviewSrcSet(photo)}
-                  priority={index === 0}
-                  className="object-cover"
-                />
+                {shouldLoadGallerySlide(index, active) ? (
+                  <VehicleImage
+                    src={galleryPreviewSrc(photo)}
+                    alt={vehiclePhotoAlt(alt, index, total)}
+                    fill
+                    sizes="(min-width: 1024px) 60vw, 100vw"
+                    srcSet={galleryPreviewSrcSet(photo)}
+                    priority={index === 0}
+                    className="object-cover"
+                  />
+                ) : (
+                  <div
+                    className="absolute inset-0 bg-asphalt"
+                    aria-hidden="true"
+                  />
+                )}
               </li>
             );
           })}
@@ -191,9 +216,10 @@ export function VehicleGallery({
                 <button
                   key={photo.id}
                   type="button"
+                  role="tab"
                   onClick={() => goTo(index)}
                   aria-label={`Ver foto ${index + 1} de ${total}`}
-                  aria-current={index === active}
+                  aria-selected={index === active}
                   className={`relative h-14 w-[4.5rem] shrink-0 overflow-hidden border bg-asphalt transition touch-manipulation sm:h-16 sm:w-24 ${
                     index === active
                       ? "border-brand"
