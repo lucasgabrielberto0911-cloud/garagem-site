@@ -114,6 +114,8 @@ const DASHBOARD_TOKENS = new Set([
   "ODOMETRO",
   "NMAX",
   "PCX",
+  "PGMFI",
+  "PGM",
 ]);
 
 /** Prefixo LLL que, sozinho no painel, não é placa (ABS 1234, ECO 1234…). */
@@ -168,6 +170,8 @@ const FALSE_PLATE_PREFIXES = new Set([
   "XEN",
   "VOL",
   "CIB",
+  "PGM",
+  "PGMFI",
 ]);
 
 type PixelBox = {
@@ -674,7 +678,11 @@ function piecesFromDetections(
     }
     if (item.Type === "WORD") {
       if (confidence < MIN_PLATE_TEXT_CONFIDENCE) continue;
-      if (confidence < MIN_WORD_CONFIDENCE && !textLooksLikePlate(text)) {
+      if (
+        confidence < MIN_WORD_CONFIDENCE &&
+        !textLooksLikePlate(text) &&
+        !isDashboardToken(text)
+      ) {
         continue;
       }
     }
@@ -1199,8 +1207,216 @@ export async function looksLikeConfirmedDealerPlate(
   }
 }
 
+type RingStat = { n: number; sum: number; dark: number; light: number };
+
+function emptyRing(): RingStat {
+  return { n: 0, sum: 0, dark: 0, light: 0 };
+}
+
+function analogGaugeSignature(
+  data: Buffer,
+  width: number,
+  height: number,
+  channels: number,
+): boolean {
+  if (width < 24 || height < 24) return false;
+  const cx = width / 2;
+  const cy = height / 2;
+  const rMax = Math.min(width, height) / 2;
+  const hub = emptyRing();
+  const face = emptyRing();
+  const bezel = emptyRing();
+  let midN = 0;
+  let midInside = 0;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * channels;
+      const luma =
+        0.299 * data[offset] + 0.587 * data[offset + 1] + 0.114 * data[offset + 2];
+      const rad = Math.hypot((x - cx) / rMax, (y - cy) / rMax);
+      if (luma > 80 && luma < 200) {
+        midN += 1;
+        if (rad <= 1) midInside += 1;
+      }
+      const ring = rad < 0.35 ? hub : rad < 0.72 ? face : rad < 1.02 ? bezel : null;
+      if (!ring) continue;
+      ring.n += 1;
+      ring.sum += luma;
+      if (luma < 70) ring.dark += 1;
+      if (luma > 150) ring.light += 1;
+    }
+  }
+
+  if (hub.n < 80 || face.n < 160 || bezel.n < 160) return false;
+  const hubMean = hub.sum / hub.n;
+  const faceMean = face.sum / face.n;
+  const bezelMean = bezel.sum / bezel.n;
+  const hubDark = hub.dark / hub.n;
+  const hubLight = hub.light / hub.n;
+  const faceLight = face.light / face.n;
+  const bezelDark = bezel.dark / bezel.n;
+  const midCirc = midInside / Math.max(1, midN);
+  const darkerBezel = bezelMean <= hubMean - 12 || bezelDark >= hubDark + 0.12;
+  return (
+    hubMean >= 125 &&
+    hubDark < 0.08 &&
+    hubLight >= 0.22 &&
+    faceMean >= 88 &&
+    faceLight >= 0.12 &&
+    darkerBezel &&
+    midCirc >= 0.55
+  );
+}
+
+function mercosulGlyphSignature(
+  data: Buffer,
+  width: number,
+  height: number,
+  channels: number,
+): boolean {
+  if (width < 12 || height < 12) return false;
+  const topEnd = Math.max(2, Math.round(height * 0.28));
+  const lowerStart = Math.round(height * 0.45);
+  let topN = 0;
+  let topBlue = 0;
+  let lowerN = 0;
+  let lowerBlue = 0;
+  let lowerDark = 0;
+  let lowerLight = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * channels;
+      const r = data[offset];
+      const g = data[offset + 1];
+      const b = data[offset + 2];
+      const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+      const blue = isMercosulBlue(r, g, b);
+      if (y < topEnd) {
+        topN += 1;
+        if (blue) topBlue += 1;
+      }
+      if (y >= lowerStart) {
+        lowerN += 1;
+        if (blue) lowerBlue += 1;
+        if (luma < 70) lowerDark += 1;
+        if (luma > 150) lowerLight += 1;
+      }
+    }
+  }
+  if (topN === 0 || lowerN === 0) return false;
+  return (
+    topBlue / topN >= 0.08 &&
+    lowerBlue / lowerN < 0.14 &&
+    lowerDark / lowerN >= 0.18 &&
+    lowerLight / lowerN >= 0.2
+  );
+}
+
 /**
- * Placa Mercosul (carro ou moto): faixa azul + corpo claro. Não é portinhola.
+ * Relógio/display de moto ou carro: miolo claro sem letras e aro mais escuro.
+ * Recorte justo de placa Mercosul com caracteres no corpo não casa.
+ */
+export async function looksLikeAnalogGaugeAround(
+  image: Buffer,
+  box: PixelBox,
+): Promise<boolean> {
+  if (box.width < 8 || box.height < 8) return false;
+  try {
+    const local = await sharp(image, { failOn: "none" })
+      .extract({
+        left: box.left,
+        top: box.top,
+        width: box.width,
+        height: box.height,
+      })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    if (
+      mercosulGlyphSignature(
+        local.data,
+        local.info.width,
+        local.info.height,
+        local.info.channels,
+      )
+    ) {
+      return false;
+    }
+
+    if (
+      analogGaugeSignature(
+        local.data,
+        local.info.width,
+        local.info.height,
+        local.info.channels,
+      )
+    ) {
+      return true;
+    }
+
+    const meta = await sharp(image, { failOn: "none" }).metadata();
+    const imageWidth = meta.width ?? 0;
+    const imageHeight = meta.height ?? 0;
+    if (!imageWidth || !imageHeight) return false;
+
+    const scales = [2.1, 3.2];
+    for (let index = 0; index < scales.length; index += 1) {
+      const size = Math.min(
+        Math.max(imageWidth, imageHeight),
+        Math.max(96, Math.round(Math.max(box.width, box.height) * scales[index])),
+      );
+      let cx = box.left + box.width / 2;
+      let cy = box.top + box.height / 2;
+      // Caixa no canto: o relógio fica para dentro do quadro, não para fora.
+      if (box.left <= imageWidth * 0.08) cx += size * 0.22;
+      if (box.left + box.width >= imageWidth * 0.92) cx -= size * 0.22;
+      if (box.top <= imageHeight * 0.08) cy += size * 0.22;
+      if (box.top + box.height >= imageHeight * 0.92) cy -= size * 0.22;
+      const left = Math.max(
+        0,
+        Math.min(Math.round(cx - size / 2), Math.max(0, imageWidth - size)),
+      );
+      const top = Math.max(
+        0,
+        Math.min(Math.round(cy - size / 2), Math.max(0, imageHeight - size)),
+      );
+      const neighborhood = {
+        left,
+        top,
+        width: Math.min(size, imageWidth - left),
+        height: Math.min(size, imageHeight - top),
+      };
+      const extracted = await sharp(image, { failOn: "none" })
+        .extract({
+          left: neighborhood.left,
+          top: neighborhood.top,
+          width: neighborhood.width,
+          height: neighborhood.height,
+        })
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      if (
+        analogGaugeSignature(
+          extracted.data,
+          extracted.info.width,
+          extracted.info.height,
+          extracted.info.channels,
+        )
+      ) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Placa Mercosul (carro ou moto): faixa azul + corpo claro. Não é portinhola
+ * nem relógio/painel com reflexo azulado.
  */
 export async function looksLikeMercosulPlatePatch(
   image: Buffer,
@@ -1249,7 +1465,9 @@ export async function looksLikeMercosulPlatePatch(
     if (lightRatio < 0.1) return false;
     const blueRatio = blue / count;
     const topBlueRatio = topBlue / Math.max(1, topN);
-    return blueRatio >= 0.05 || topBlueRatio >= 0.12;
+    if (!(blueRatio >= 0.05 || topBlueRatio >= 0.12)) return false;
+    if (await looksLikeAnalogGaugeAround(image, box)) return false;
+    return true;
   } catch {
     return false;
   }
@@ -1259,6 +1477,7 @@ export async function looksLikeBodyPanelFalsePositive(
   image: Buffer,
   box: PixelBox,
 ): Promise<boolean> {
+  if (await looksLikeAnalogGaugeAround(image, box)) return true;
   if (await looksLikeMercosulPlatePatch(image, box)) return false;
   if (isUnlikelyPlateGeometry(box)) return true;
   try {
@@ -1968,6 +2187,8 @@ export async function findMercosulStripeBoxes(
       height: fitted.height,
     };
     // Grade/cromado do Civic acende azul, mas não tem corpo branco de placa.
+    // Relógio/painel (Honda PGM-FI) também pinta azul no visor — não é placa.
+    if (await looksLikeAnalogGaugeAround(image, absolute)) continue;
     if (!(await looksLikeMercosulPlatePatch(image, absolute))) continue;
     boxes.push(absolute);
   }
@@ -2290,7 +2511,13 @@ export async function applyBlurRegions(
 
   for (const box of boxes) {
     if (box.width < 4 || box.height < 4) continue;
-    if (!box.allowDark && (await looksLikeDarkDisplay(image, box))) continue;
+    if (
+      !box.allowDark &&
+      ((await looksLikeDarkDisplay(image, box)) ||
+        (await looksLikeAnalogGaugeAround(image, box)))
+    ) {
+      continue;
+    }
 
     const dealer = Boolean(box.allowDark);
     const shortSide = Math.min(box.width, box.height);
@@ -2425,6 +2652,7 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
 
     const plateBoxes: PixelBox[] = [];
     for (const box of boxes) {
+      if (await looksLikeAnalogGaugeAround(bytes, box)) continue;
       if (await looksLikeDarkDisplay(bytes, box)) continue;
       if (await looksLikeBodyPanelFalsePositive(bytes, box)) continue;
       plateBoxes.push(box);
