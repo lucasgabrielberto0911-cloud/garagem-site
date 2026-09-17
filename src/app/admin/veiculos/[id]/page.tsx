@@ -8,6 +8,7 @@ import { daysInStock } from "@/lib/admin-stats";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
+import { vehicleLocationLabel } from "@/lib/vehicle-location";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,9 @@ export default async function EditVehiclePage({
           <>
             <Badge tone="neutral">{vehicleCategoryLabel(vehicle.category)}</Badge>
             <Badge tone={status.tone}>{status.label}</Badge>
+            <Badge tone={vehicle.locationCity === "serra" ? "info" : "success"}>
+              {vehicleLocationLabel(vehicle.locationCity) || "Linhares"}
+            </Badge>
             {vehicle.featured ? <Badge tone="warning">Destaque</Badge> : null}
           </>
         }

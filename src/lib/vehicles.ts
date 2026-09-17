@@ -87,6 +87,37 @@ export const PUBLIC_VEHICLE_DETAIL_SELECT = {
   accessories: true,
   status: true,
   featured: true,
+  locationCity: true,
+  createdAt: true,
+  updatedAt: true,
+  photos: {
+    orderBy: { order: "asc" as const },
+    select: { id: true, url: true, thumbnailUrl: true },
+  },
+} as const;
+
+const PUBLIC_VEHICLE_DETAIL_SELECT_NO_CITY = {
+  id: true,
+  category: true,
+  brand: true,
+  model: true,
+  version: true,
+  year: true,
+  yearModel: true,
+  km: true,
+  price: true,
+  fuel: true,
+  transmission: true,
+  color: true,
+  description: true,
+  engine: true,
+  doors: true,
+  warranty: true,
+  plateEnd: true,
+  inspection: true,
+  accessories: true,
+  status: true,
+  featured: true,
   createdAt: true,
   updatedAt: true,
   photos: {
@@ -167,6 +198,7 @@ export type PublicVehicleDetail = {
   accessories: string[];
   status: string;
   featured: boolean;
+  locationCity?: string | null;
   createdAt: Date;
   updatedAt?: Date;
   photos: Array<{ id: string; url: string; thumbnailUrl?: string | null }>;
@@ -234,6 +266,14 @@ async function findDetailVehicle(
       select: PUBLIC_VEHICLE_DETAIL_SELECT,
     })) as PublicVehicleDetail | null;
   } catch (error) {
+    if (isMissingColumnError(error, "locationCity")) {
+      const row = await prisma.vehicle.findFirst({
+        where: { id, historical: false },
+        select: PUBLIC_VEHICLE_DETAIL_SELECT_NO_CITY,
+      });
+      if (!row) return null;
+      return { ...row, locationCity: null };
+    }
     if (!isMissingColumnError(error, "thumbnailUrl")) throw error;
     const row = await prisma.vehicle.findFirst({
       where: { id, historical: false },
@@ -242,6 +282,7 @@ async function findDetailVehicle(
     if (!row) return null;
     return {
       ...row,
+      locationCity: null,
       photos: row.photos.map((photo) => ({ ...photo, thumbnailUrl: null })),
     };
   }
@@ -318,7 +359,7 @@ export const getVehicleById = cache((id: string) =>
 
 const loadVehicleDetailCached = unstable_cache(
   async (id: string) => findDetailVehicle(id),
-  ["vehicle-detail-v4"],
+  ["vehicle-detail-v5"],
   PUBLIC_CACHE,
 );
 

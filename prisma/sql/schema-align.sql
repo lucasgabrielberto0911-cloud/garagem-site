@@ -18,6 +18,12 @@ ALTER TABLE "Testimonial"
 ALTER TABLE "Photo"
   ADD COLUMN IF NOT EXISTS "thumbnailUrl" TEXT;
 
+-- Cidade física do veículo (Serra | Linhares). Fonte da verdade no admin.
+ALTER TABLE "Vehicle"
+  ADD COLUMN IF NOT EXISTS "locationCity" TEXT NOT NULL DEFAULT 'linhares';
+CREATE INDEX IF NOT EXISTS "Vehicle_status_locationCity_idx"
+  ON "Vehicle"("status", "locationCity");
+
 -- Lead de venda/troca: interesse no estoque, origem, fotos e updatedAt.
 ALTER TABLE "LeadVenda"
   ADD COLUMN IF NOT EXISTS "interestVehicleId" TEXT;
@@ -36,5 +42,6 @@ WHERE table_schema = 'public'
     (table_name = 'Testimonial' AND column_name IN ('rating', 'vehicleLabel', 'photoUrl', 'published', 'order'))
     OR (table_name = 'Photo' AND column_name = 'thumbnailUrl')
     OR (table_name = 'LeadVenda' AND column_name IN ('interestVehicleId', 'source', 'photoUrls', 'updatedAt'))
+    OR (table_name = 'Vehicle' AND column_name = 'locationCity')
   )
 ORDER BY table_name, column_name;

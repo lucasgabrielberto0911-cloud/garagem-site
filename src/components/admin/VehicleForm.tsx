@@ -54,6 +54,13 @@ import {
   kmHint,
   validateVehicleListing,
 } from "@/lib/admin-vehicle-validate";
+import {
+  DEFAULT_VEHICLE_LOCATION_CITY,
+  VEHICLE_LOCATION_CITIES,
+  VEHICLE_LOCATION_HINT,
+  parseVehicleLocationCity,
+  type VehicleLocationCity,
+} from "@/lib/vehicle-location";
 
 type VehicleWithPhotos = Vehicle & { photos: Photo[] };
 
@@ -115,6 +122,11 @@ export function VehicleForm({
   const [customAccessory, setCustomAccessory] = useState("");
   const [category, setCategory] = useState<VehicleCategory>(() =>
     parseVehicleCategory(vehicle?.category),
+  );
+  const [locationCity, setLocationCity] = useState<VehicleLocationCity>(
+    () =>
+      parseVehicleLocationCity(vehicle?.locationCity) ??
+      DEFAULT_VEHICLE_LOCATION_CITY,
   );
   const [fuel, setFuel] = useState(() => {
     const initialCategory = parseVehicleCategory(vehicle?.category);
@@ -270,6 +282,7 @@ export function VehicleForm({
       color: value("color").trim() || color,
       km: km === "" ? null : Number(km),
       price: price === "" ? null : Number(price),
+      locationCity: value("locationCity").trim() || locationCity,
     });
     for (const issue of listingIssues) {
       if (issue.field === "form") continue;
@@ -372,6 +385,48 @@ export function VehicleForm({
               );
             })}
           </div>
+        </Card>
+
+        <Card title="Onde está o veículo">
+          <input type="hidden" name="locationCity" value={locationCity} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            {VEHICLE_LOCATION_CITIES.map((option) => {
+              const selected = locationCity === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    setLocationCity(option.value);
+                    setErrors((current) => {
+                      const next = { ...current };
+                      delete next.locationCity;
+                      return next;
+                    });
+                  }}
+                  className={`border px-4 py-4 text-left transition ${
+                    selected
+                      ? "border-brand bg-brand/10 text-cream"
+                      : "border-white/10 bg-ink text-muted hover:border-white/25 hover:text-cream"
+                  } ${errors.locationCity ? errorBorder : ""}`}
+                >
+                  <span className="font-display text-sm font-semibold uppercase tracking-wide">
+                    {option.label}
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed opacity-80">
+                    Espírito Santo
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {errors.locationCity ? (
+            <p className="mt-2 text-xs text-brand">{errors.locationCity}</p>
+          ) : (
+            <p className="mt-3 text-xs leading-relaxed text-muted">
+              {VEHICLE_LOCATION_HINT}
+            </p>
+          )}
         </Card>
 
         <Card title="Identificação">

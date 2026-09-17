@@ -154,6 +154,7 @@ async function main() {
         ],
         status: "disponivel",
         featured: false,
+        locationCity: "serra",
         photos: {
           create: [{ url: "/branding/placeholder-car.png", order: 0 }],
         },
