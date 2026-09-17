@@ -809,9 +809,9 @@ function isPlausibleDealerBox(
   const aspect = box.width / Math.max(1, box.height);
   if (aspect < 1.45 || aspect > 7.2) return false;
   const areaRatio = boxArea(box) / (imageWidth * imageHeight);
-  if (areaRatio > 0.055) return false;
-  if (box.width > imageWidth * 0.34) return false;
-  if (box.height > imageHeight * 0.14) return false;
+  if (areaRatio > 0.09) return false;
+  if (box.width > imageWidth * 0.38) return false;
+  if (box.height > imageHeight * 0.18) return false;
   return true;
 }
 
@@ -1446,17 +1446,49 @@ function regionAroundBox(
   imageWidth: number,
   imageHeight: number,
 ): PixelBox {
-  const width = Math.min(imageWidth, Math.max(88, Math.round(box.width * 2.4)));
-  const height = Math.min(imageHeight, Math.max(48, Math.round(box.height * 2.6)));
+  const width = Math.min(imageWidth, Math.max(96, Math.round(box.width * 2.5)));
+  // AUTOMÓVEIS é a linha de baixo — sobe para achar FORTE e o logo.
+  const height = Math.min(imageHeight, Math.max(72, Math.round(box.height * 4.2)));
   const cx = box.left + box.width / 2;
   const cy = box.top + box.height / 2;
   const left = Math.max(0, Math.round(cx - width / 2));
-  const top = Math.max(0, Math.round(cy - height / 2));
+  const top = Math.max(0, Math.round(cy - height * 0.72));
   return {
     left: Math.min(left, Math.max(0, imageWidth - width)),
     top: Math.min(top, Math.max(0, imageHeight - height)),
     width: Math.min(width, imageWidth - Math.min(left, imageWidth - width)),
     height: Math.min(height, imageHeight - Math.min(top, imageHeight - height)),
+  };
+}
+
+/** Corta o retângulo preto para a vizinhança do OCR — evita saia/farol. */
+function clipDealerVisualToOcr(visual: PixelBox, ocr: PixelBox): PixelBox {
+  const aspect = visual.width / Math.max(1, visual.height);
+  const compactEnough =
+    visual.width <= ocr.width * 2.25 &&
+    visual.height <= Math.max(ocr.height * 5.2, Math.round(visual.width / 2.15));
+  if (aspect >= 1.7 && aspect <= 4.6 && compactEnough) {
+    return unionBox([visual, ocr]);
+  }
+  const maxLeft = Math.max(12, Math.round(ocr.width * 0.55));
+  const maxRight = Math.max(8, Math.round(ocr.width * 0.3));
+  const maxTop = Math.max(6, Math.round(ocr.height * 0.7));
+  const maxBottom = Math.max(8, Math.round(ocr.height * 1.6));
+  const left = Math.max(visual.left, ocr.left - maxLeft);
+  const top = Math.max(visual.top, ocr.top - maxTop);
+  const right = Math.min(
+    visual.left + visual.width,
+    ocr.left + ocr.width + maxRight,
+  );
+  const bottom = Math.min(
+    visual.top + visual.height,
+    ocr.top + ocr.height + maxBottom,
+  );
+  return {
+    left,
+    top,
+    width: Math.max(8, right - left),
+    height: Math.max(6, bottom - top),
   };
 }
 
@@ -1505,9 +1537,9 @@ export async function dealerBoxesFromImage(
 
     let candidate: PixelBox | null = null;
     if (overlapping.length > 0) {
-      // Retângulo preto + palavras OCR, sem o padding gordo que pintava o farol.
+      const clipped = clipDealerVisualToOcr(overlapping[0], ocr);
       candidate = padDealerBoxTight(
-        unionBox([overlapping[0], ocr]),
+        unionBox([clipped, ocr]),
         imageWidth,
         imageHeight,
       );
@@ -1525,8 +1557,26 @@ export async function dealerBoxesFromImage(
     }
 
     if (!candidate) continue;
-    if (!isPlausibleDealerBox(candidate, imageWidth, imageHeight)) continue;
-    if (await looksLikeBodyPanelFalsePositive(image, candidate)) continue;
+    if (!isPlausibleDealerBox(candidate, imageWidth, imageHeight)) {
+      const fallback = padDealerBoxTight(ocr, imageWidth, imageHeight);
+      if (
+        !isPlausibleDealerBox(fallback, imageWidth, imageHeight) ||
+        !(await looksLikeConfirmedDealerPlate(image, fallback))
+      ) {
+        continue;
+      }
+      candidate = fallback;
+    }
+    if (await looksLikeBodyPanelFalsePositive(image, candidate)) {
+      const fallback = padDealerBoxTight(ocr, imageWidth, imageHeight);
+      if (
+        (await looksLikeBodyPanelFalsePositive(image, fallback)) ||
+        !(await looksLikeConfirmedDealerPlate(image, fallback))
+      ) {
+        continue;
+      }
+      candidate = fallback;
+    }
     if (!(await looksLikeConfirmedDealerPlate(image, candidate))) {
       if (overlapping.length === 0) continue;
     }

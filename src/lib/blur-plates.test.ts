@@ -647,8 +647,10 @@ test("AUTOMÓVEIS sozinho na Forte real ainda acha o retângulo preto", async ()
   const hit = dealers[0];
   assert.ok(hit.left < 215, `left ${hit.left}`);
   assert.ok(hit.left + hit.width > 290, `right ${hit.left + hit.width}`);
+  assert.ok(hit.top < 458, `top ${hit.top} deve subir até o FORTE`);
   assert.ok(hit.top + hit.height > 480, `bottom ${hit.top + hit.height}`);
   assert.ok(hit.width < 140, `width ${hit.width}`);
+  assert.ok(hit.height > 28, `height ${hit.height} deve cobrir as duas linhas`);
 });
 
 const CIVIC_STRAY = { left: 63, top: 118, width: 89, height: 26 };
@@ -866,10 +868,10 @@ test("Civic da Lucas: Forte confirmada fica justa na plaquinha, sem a caixa do f
   assert.equal((await findMercosulStripeBoxes(image, { left: 0, top: 0, width, height })).length, 0);
 
   const core = {
-    left: plate.left + 26,
-    top: plate.top + 5,
-    width: 44,
-    height: 9,
+    left: plate.left + 16,
+    top: plate.top + 3,
+    width: 58,
+    height: 16,
   };
   const beforeBuf = await sharp(image).extract(core).png().toBuffer();
   const blurred = await applyBlurRegions(image, [{ ...hit, allowDark: true }]);
