@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function OfflinePage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6 py-16 text-center">
+    <div className="flex min-h-app-screen flex-col items-center justify-center px-6 py-16 text-center">
       <SiteWordmark size="footer" className="justify-center" />
       <div className="mt-8 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
       <h1 className="mt-6 font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl">

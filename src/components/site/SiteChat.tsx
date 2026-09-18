@@ -27,7 +27,10 @@ import {
   type SiteChatOpenRequest,
 } from "@/lib/chat-open";
 import { chatPageKey } from "@/lib/chat-page";
-import { chatMobileKeyboardCovered } from "@/lib/chat-mobile-viewport";
+import {
+  chatKeyboardShellStyle,
+  chatMobileKeyboardCovered,
+} from "@/lib/chat-mobile-viewport";
 import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
 import {
   drainSseBuffer,
@@ -775,30 +778,53 @@ export function SiteChat() {
     const viewport = window.visualViewport;
     if (!shell || !viewport) return;
 
+    const clearShell = () => {
+      document.body.removeAttribute("data-chat-keyboard");
+      document.body.style.overflow = "";
+      shell.style.top = "";
+      shell.style.height = "";
+      shell.style.bottom = "";
+      shell.style.left = "";
+      shell.style.width = "";
+      shell.style.right = "";
+    };
+
+    let keyboardWasOpen = false;
     const sync = () => {
-      if (window.matchMedia("(min-width: 1024px)").matches) {
-        document.body.removeAttribute("data-chat-keyboard");
-        shell.style.top = "";
-        shell.style.height = "";
-        shell.style.bottom = "";
-        return;
-      }
       const { keyboardOpen } = chatMobileKeyboardCovered({
         innerHeight: window.innerHeight,
         viewportHeight: viewport.height,
         viewportOffsetTop: viewport.offsetTop,
       });
-      if (keyboardOpen) {
-        document.body.setAttribute("data-chat-keyboard", "");
-        shell.style.top = `${Math.max(0, viewport.offsetTop) + 4}px`;
-        shell.style.height = `${Math.max(220, viewport.height - 8)}px`;
-        shell.style.bottom = "auto";
-      } else {
-        document.body.removeAttribute("data-chat-keyboard");
-        shell.style.top = "";
-        shell.style.height = "";
-        shell.style.bottom = "";
+      if (!keyboardOpen) {
+        keyboardWasOpen = false;
+        clearShell();
+        return;
       }
+      document.body.setAttribute("data-chat-keyboard", "");
+      document.body.style.overflow = "hidden";
+      const frame = chatKeyboardShellStyle({
+        viewportHeight: viewport.height,
+        viewportOffsetTop: viewport.offsetTop,
+        viewportWidth: viewport.width,
+        viewportOffsetLeft: viewport.offsetLeft,
+      });
+      shell.style.top = `${frame.top}px`;
+      shell.style.height = `${frame.height}px`;
+      shell.style.bottom = "auto";
+      if (frame.left != null && frame.width != null) {
+        shell.style.left = `${frame.left}px`;
+        shell.style.width = `${frame.width}px`;
+        shell.style.right = "auto";
+      } else {
+        shell.style.left = "";
+        shell.style.width = "";
+        shell.style.right = "";
+      }
+      if (!keyboardWasOpen) {
+        listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+      }
+      keyboardWasOpen = true;
     };
 
     sync();
@@ -807,10 +833,7 @@ export function SiteChat() {
     return () => {
       viewport.removeEventListener("resize", sync);
       viewport.removeEventListener("scroll", sync);
-      document.body.removeAttribute("data-chat-keyboard");
-      shell.style.top = "";
-      shell.style.height = "";
-      shell.style.bottom = "";
+      clearShell();
     };
   }, [open]);
 
@@ -1242,7 +1265,7 @@ export function SiteChat() {
                     type="button"
                     disabled={pending}
                     onClick={() => void send(resolveSuggestionPrompt(suggestion, vehicleContext), "suggestion")}
-                    className="min-h-11 rounded-xl border border-white/15 bg-[#121214] px-3 py-2 text-left text-[12px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15"
+                    className="min-h-11 rounded-xl border border-white/15 bg-[#121214] px-3 py-2 text-left text-[12px] leading-snug text-cream transition hover:border-brand/50 hover:bg-brand/15 active:border-brand/50 active:bg-brand/15"
                   >
                     {suggestion}
                   </button>
@@ -1258,7 +1281,7 @@ export function SiteChat() {
                   key={suggestion}
                   type="button"
                   onClick={() => void send(resolveSuggestionPrompt(suggestion, vehicleContext), "suggestion")}
-                  className="flex items-center justify-center rounded-lg border border-white/15 bg-asphalt px-2 py-1.5 text-center text-[11px] font-medium leading-tight text-cream/90 transition hover:border-brand/40 hover:bg-brand/15 hover:text-cream"
+                  className="flex items-center justify-center rounded-lg border border-white/15 bg-asphalt px-2 py-1.5 text-center text-[11px] font-medium leading-tight text-cream/90 transition hover:border-brand/40 hover:bg-brand/15 hover:text-cream active:border-brand/40 active:bg-brand/15 active:text-cream"
                 >
                   {suggestion}
                 </button>
@@ -1311,7 +1334,7 @@ export function SiteChat() {
                 maxLength={800}
                 rows={1}
                 autoComplete="off"
-                className="min-h-[48px] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-asphalt px-3 py-2.5 text-base text-cream outline-none placeholder:text-muted focus:border-white/25 focus:bg-[#141416] disabled:opacity-60 lg:text-sm"
+                className="min-h-[48px] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-asphalt px-3 py-2.5 text-base text-cream outline-none placeholder:text-muted focus:border-white/25 focus:bg-[#141416] disabled:opacity-60"
               />
               <button
                 type="submit"

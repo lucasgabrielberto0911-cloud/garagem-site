@@ -48,7 +48,7 @@ export default async function EstoquePage() {
           filters={
             <Suspense
               fallback={
-                <div className="h-28 border border-white/10 bg-ink lg:h-[70vh]" />
+                <div className="h-28 border border-white/10 bg-ink lg:h-[70dvh]" />
               }
             >
               <StockFilters facets={facets} />
