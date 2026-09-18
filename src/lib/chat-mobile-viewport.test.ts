@@ -113,7 +113,7 @@ test("desktop alto: card de 680px, não estica a tela inteira", () => {
   assert.equal(chatBoxInsideViewport(box, 1440, 900), true);
 });
 
-test("FAB fechado some na ficha e no mobile com chips ou consent", () => {
+test("FAB fechado some na ficha e no mobile com consent, não com chips", () => {
   assert.equal(
     chatClosedLauncherVisible({ desktop: false, ficha: true, chips: false }),
     false,
@@ -124,7 +124,7 @@ test("FAB fechado some na ficha e no mobile com chips ou consent", () => {
   );
   assert.equal(
     chatClosedLauncherVisible({ desktop: false, ficha: false, chips: true }),
-    false,
+    true,
   );
   assert.equal(
     chatClosedLauncherVisible({
@@ -164,7 +164,7 @@ test("FAB fechado no desktop fica ao lado do WhatsApp, não empilhado no meio", 
   );
 });
 
-test("FAB fechado no mobile (sem chips) fica acima da nav, dentro da aba", () => {
+test("FAB fechado no mobile (com chips) fica acima da nav, dentro da aba", () => {
   const viewportWidth = 390;
   const viewportHeight = 844;
   const fab = chatClosedLauncherBox({
@@ -172,12 +172,43 @@ test("FAB fechado no mobile (sem chips) fica acima da nav, dentro da aba", () =>
     viewportHeight,
     desktop: false,
     ficha: false,
-    chips: false,
+    chips: true,
   });
   assert.ok(fab);
   assert.equal(chatBoxInsideViewport(fab, viewportWidth, viewportHeight), true);
   assert.equal(fab.bottom, CHAT_LAYOUT.closedMobileNavBottomPx);
   assert.ok(fab.bottom < CHAT_LAYOUT.legacyClosedFichaStickyBottomPx);
+});
+
+test("FAB fechado no mobile não cobre o botão verde do WhatsApp na nav", () => {
+  const viewportWidth = 390;
+  const viewportHeight = 844;
+  const fab = chatClosedLauncherBox({
+    viewportWidth,
+    viewportHeight,
+    desktop: false,
+    ficha: false,
+    chips: true,
+  });
+  assert.ok(fab);
+  const waSize = 56;
+  const navHeight = 56;
+  const waProtrusion = 12;
+  const waBottom = navHeight + waProtrusion - waSize;
+  const waLeft = (viewportWidth - waSize) / 2;
+  const wa = {
+    width: waSize,
+    height: waSize,
+    left: waLeft,
+    right: viewportWidth - waLeft - waSize,
+    bottom: waBottom,
+    top: viewportHeight - waBottom - waSize,
+  };
+  assert.equal(chatBoxesOverlap(fab, wa), false);
+  assert.ok(
+    fab.bottom - (wa.bottom + wa.height) >= 8,
+    "folga vertical acima do círculo do WhatsApp",
+  );
 });
 
 test("ficha não renderiza caixa do FAB fechado (entrada in-page)", () => {

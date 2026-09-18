@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { IconClose, IconSearch } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName } from "@/lib/format";
@@ -685,12 +684,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
             </button>
           ) : null}
         </div>
-        <ChatOpenButton
-          source="estoque-filtros"
-          prompt="Quero ajuda para escolher no estoque"
-          size="compact"
-          className="w-full border-white/15"
-        />
       </div>
 
       {open ? (
