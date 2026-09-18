@@ -11,6 +11,7 @@ import {
 } from "@/components/site/icons";
 import { FavoritesLink } from "@/components/site/FavoritesLink";
 import { SiteWordmark } from "@/components/site/SiteWordmark";
+import { usePageWhatsAppHref } from "@/components/site/usePageWhatsAppHref";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import {
   DESKTOP_NAV_LINKS,
@@ -19,15 +20,11 @@ import {
   SECONDARY_LINKS,
   site,
   telUrl,
-  whatsappCampaignFromPath,
-  whatsappUrl,
 } from "@/lib/site";
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const whatsappHref = whatsappUrl(undefined, {
-    campaign: whatsappCampaignFromPath(pathname || "/"),
-  });
+  const whatsappHref = usePageWhatsAppHref();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {

@@ -5,7 +5,10 @@ import {
   WHATSAPP_BRAND,
   WHATSAPP_MESSAGES,
   applyWhatsAppUtm,
+  fichaWhatsAppTracking,
   formatCustomerVehicleWhatsAppText,
+  isVehicleFichaPath,
+  pageWhatsAppTracking,
   site,
   whatsappCampaignFromLabel,
   whatsappCampaignFromPath,
@@ -106,4 +109,62 @@ test("wa.me dos CTAs leva UTM de origem sem alterar o pré-preenchido", () => {
   );
   const already = applyWhatsAppUtm(href, { campaign: "chat" });
   assert.equal(already, href);
+});
+
+test("ficha path e tracking centralizam campanha ficha + utm_content", () => {
+  assert.equal(isVehicleFichaPath("/estoque/honda-civic-exl-2020-abc"), true);
+  assert.equal(isVehicleFichaPath("/estoque/honda-civic-exl-2020-abc/"), true);
+  assert.equal(isVehicleFichaPath("/estoque"), false);
+  assert.equal(isVehicleFichaPath("/estoque/"), false);
+  assert.equal(isVehicleFichaPath("/"), false);
+
+  const fromVehicle = fichaWhatsAppTracking({
+    id: "cuid123",
+    path: "/estoque/honda-civic-exl-2020-abc",
+  });
+  assert.equal(fromVehicle.campaign, "ficha");
+  assert.equal(fromVehicle.content, "honda-civic-exl-2020-abc");
+
+  const href = whatsappUrl(WHATSAPP_MESSAGES.vehicle("Honda Civic EXL 2020"), fromVehicle);
+  assert.match(href, /utm_campaign=ficha/);
+  assert.match(href, /utm_content=honda-civic-exl-2020-abc/);
+  assert.match(decodeURIComponent(href), /Honda Civic EXL 2020/);
+
+  const finance = whatsappUrl(WHATSAPP_MESSAGES.vehicleFinance("Honda Civic EXL 2020"), fromVehicle);
+  assert.match(finance, /utm_campaign=ficha/);
+  assert.match(finance, /utm_content=honda-civic-exl-2020-abc/);
+  assert.match(decodeURIComponent(finance), /simular as parcelas/);
+});
+
+test("header/float na ficha herdam ficha+slug mesmo sem contexto hidratado", () => {
+  const fromPath = pageWhatsAppTracking({
+    pathname: "/estoque/honda-civic-exl-2020-abc?ref=ad",
+  });
+  assert.equal(fromPath.campaign, "ficha");
+  assert.equal(fromPath.content, "honda-civic-exl-2020-abc");
+
+  const fromVehicle = pageWhatsAppTracking({
+    pathname: "/estoque/honda-civic-exl-2020-abc",
+    vehicle: { id: "cuidCivic", path: "/estoque/honda-civic-exl-2020-abc" },
+  });
+  assert.equal(fromVehicle.campaign, "ficha");
+  assert.equal(fromVehicle.content, "honda-civic-exl-2020-abc");
+
+  const home = pageWhatsAppTracking({ pathname: "/" });
+  assert.equal(home.campaign, "home");
+  assert.equal(home.content, undefined);
+
+  const estoque = pageWhatsAppTracking({ pathname: "/estoque" });
+  assert.equal(estoque.campaign, "estoque");
+
+  const leakedOnHome = pageWhatsAppTracking({
+    pathname: "/",
+    vehicle: { id: "cuidCivic", path: "/estoque/honda-civic-exl-2020-abc" },
+  });
+  assert.equal(leakedOnHome.campaign, "home");
+  assert.equal(leakedOnHome.content, undefined);
+
+  const footerGeneric = whatsappUrl();
+  assert.match(footerGeneric, /utm_campaign=home/);
+  assert.doesNotMatch(footerGeneric, /utm_content=/);
 });

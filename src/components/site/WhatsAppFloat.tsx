@@ -1,21 +1,19 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { IconWhatsApp } from "@/components/site/icons";
+import { usePageWhatsAppHref } from "@/components/site/usePageWhatsAppHref";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
-import { whatsappCampaignFromPath, whatsappUrl } from "@/lib/site";
 
 /**
  * Float só no desktop — no mobile o WhatsApp já está na bottom nav.
- * Some na ficha via CSS (`body:has([data-vehicle-mobile-bar])`).
+ * Some na ficha via CSS (`data-ficha-page` / `data-vehicle-mobile-bar`).
+ * Na ficha o href herda o veículo (campanha `ficha` + `utm_content`).
  */
 export function WhatsAppFloat() {
-  const pathname = usePathname() || "/";
+  const href = usePageWhatsAppHref();
   return (
     <a
-      href={whatsappUrl(undefined, {
-        campaign: whatsappCampaignFromPath(pathname),
-      })}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Abrir WhatsApp"
