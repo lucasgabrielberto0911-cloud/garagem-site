@@ -1351,7 +1351,7 @@ export function SiteChat() {
         aria-hidden={open}
         tabIndex={open ? -1 : undefined}
         aria-label={open ? "Fechar chat" : CHAT_HELP_LABEL}
-        className={`site-chat-launcher pointer-events-auto h-12 items-center justify-center gap-2 rounded-full bg-brand px-3.5 text-cream shadow-[0_10px_24px_rgba(232,24,28,0.4)] transition hover:bg-[#c91418] hover:scale-105 active:scale-95 touch-manipulation sm:h-14 sm:px-4 ${
+        className={`site-chat-launcher pointer-events-auto h-11 items-center justify-center gap-1.5 rounded-full bg-brand px-3 text-cream shadow-[0_10px_24px_rgba(232,24,28,0.4)] transition hover:bg-[#c91418] hover:scale-105 active:scale-95 touch-manipulation sm:h-14 sm:gap-2 sm:px-4 ${
           open ? "hidden w-12" : "flex w-auto"
         }`}
       >
@@ -1359,8 +1359,8 @@ export function SiteChat() {
           <IconClose className="h-6 w-6" />
         ) : (
           <>
-            <IconChat className="h-5 w-5 sm:h-6 sm:w-6" />
-            <span className="whitespace-nowrap font-display text-[12px] font-semibold sm:text-[13px]">
+            <IconChat className="h-4 w-4 sm:h-6 sm:w-6" />
+            <span className="whitespace-nowrap font-display text-[11px] font-semibold sm:text-[13px]">
               {CHAT_HELP_LABEL}
             </span>
           </>

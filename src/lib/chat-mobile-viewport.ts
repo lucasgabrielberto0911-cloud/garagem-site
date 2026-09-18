@@ -36,7 +36,10 @@ export type ChatClosedLauncherContext = {
   desktop: boolean;
   /** Página da ficha (`data-vehicle-mobile-bar`). */
   ficha: boolean;
-  /** Home/estoque mobile com faixa de chips. */
+  /**
+   * Home/estoque com faixa de chips (Faixa / Marca). Não esconde o FAB —
+   * a faixa inline no meio da listagem foi removida.
+   */
   chips: boolean;
   /** Banner de cookies. No mobile some o FAB em vez de subir ao meio. */
   consent?: boolean;
@@ -55,7 +58,6 @@ export function chatClosedLauncherVisible(
   ctx: ChatClosedLauncherContext,
 ): boolean {
   if (ctx.ficha) return false;
-  if (!ctx.desktop && ctx.chips) return false;
   if (!ctx.desktop && ctx.consent) return false;
   return true;
 }

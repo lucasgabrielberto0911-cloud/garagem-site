@@ -505,16 +505,18 @@ body:has([data-install-coach]) .site-chat:not(.is-open) {
 
 /*
  * FAB fechado some na ficha (sticky WhatsApp + setas da galeria) em
- * qualquer largura. No mobile, some também com chips (Faixa) e com o
- * banner de cookies — entrada “Ajuda para escolher” na página, sem o
- * botão flutuando no meio do conteúdo.
+ * qualquer largura. No mobile some com o banner de cookies (esquerda)
+ * para não empilhar no meio do conteúdo.
+ *
+ * Chips de Faixa/Marca no estoque NÃO escondem mais o launcher: a
+ * faixa inline “Ajuda para escolher” roubava a grade. O chip flutuante
+ * fica no canto, acima da bottom nav / botão verde do WhatsApp.
  */
 body:has([data-vehicle-mobile-bar]) .site-chat:not(.is-open) {
   display: none;
 }
 
 @media (max-width: 1023px) {
-  body:has(.chip-scroll) .site-chat:not(.is-open),
   body:has(.site-consent) .site-chat:not(.is-open) {
     display: none;
   }
