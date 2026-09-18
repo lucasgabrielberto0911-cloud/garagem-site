@@ -23,13 +23,13 @@ test("o botão do chat usa exatamente “Ajuda para escolher”, sem “pra”",
 
 test("ficha: Ajuda para escolher é vermelho sólido, sem fundo asfalto", () => {
   const blocks = chatOpenBlocks(readSrc("app/(site)/estoque/[id]/page.tsx"));
-  assert.equal(blocks.length, 2);
+  assert.equal(blocks.length, 1);
   for (const block of blocks) {
     assert.match(block, /variant="solid"/);
     assert.doesNotMatch(block, /bg-asphalt/);
   }
   assert.match(blocks.join("\n"), /source="ficha"/);
-  assert.match(blocks.join("\n"), /source="ficha-header"/);
+  assert.doesNotMatch(blocks.join("\n"), /source="ficha-header"/);
 });
 
 test("home não herda o vermelho sólido da ficha", () => {
@@ -52,6 +52,10 @@ test("a ficha continua escondendo o FAB fechado para não cobrir a galeria", () 
   assert.match(
     css,
     /body:has\(\[data-vehicle-mobile-bar\]\) \.site-chat:not\(\.is-open\)/,
+  );
+  assert.match(
+    css,
+    /body:has\(\[data-ficha-page\]\) \.site-chat:not\(\.is-open\)/,
   );
 });
 

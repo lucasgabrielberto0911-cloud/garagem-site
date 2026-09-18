@@ -2,7 +2,10 @@ import { Container } from "@/components/site/ui";
 
 export default function VehicleDetailLoading() {
   return (
-    <div className="animate-fade-in py-10 pb-sticky-bar-safe lg:py-14 lg:pb-14">
+    <div
+      data-ficha-page=""
+      className="animate-fade-in py-10 pb-sticky-bar-safe lg:py-14 lg:pb-14"
+    >
       <Container>
         <div className="skeleton mx-auto h-3 w-48" />
 

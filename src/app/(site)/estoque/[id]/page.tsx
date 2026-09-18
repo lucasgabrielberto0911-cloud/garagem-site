@@ -21,7 +21,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { formatCurrencyBRL, formatBrandName, formatModelName, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
 import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
-import { site } from "@/lib/site";
+import { fichaWhatsAppTracking, site } from "@/lib/site";
 import { priceBandHref } from "@/lib/related-vehicles";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
@@ -140,6 +140,7 @@ export default async function VehicleDetailPage({
   }
 
   const path = vehiclePath(vehicle);
+  const fichaTrack = fichaWhatsAppTracking({ id: vehicle.id, path });
   const sold = vehicle.status === "vendido";
   const isMoto = vehicle.category === "moto";
   const display = formatVehicleDisplay(vehicle);
@@ -222,7 +223,10 @@ export default async function VehicleDetailPage({
   const listedAgo = formatListedAgo(vehicle.createdAt);
 
   return (
-    <div className="py-6 pb-sticky-bar-safe sm:py-8 lg:py-10 lg:pb-10">
+    <div
+      data-ficha-page=""
+      className="py-6 pb-sticky-bar-safe sm:py-8 lg:py-10 lg:pb-10"
+    >
       {!sold ? (
         <VehicleViewContent
           contentId={vehicle.id}
@@ -301,18 +305,6 @@ export default async function VehicleDetailPage({
           <span className="mx-2">/</span>
           <span className="text-cream">{title}</span>
         </nav>
-
-        {!sold ? (
-          <div className="sticky top-[calc(4.5rem+env(safe-area-inset-top,0px))] z-30 mt-3 lg:hidden">
-            <ChatOpenButton
-              source="ficha-header"
-              prompt={`Tenho dúvida sobre o ${title}`}
-              size="compact"
-              variant="solid"
-              className="w-full"
-            />
-          </div>
-        ) : null}
 
         {/* Mobile: galeria → ficha → detalhes. Desktop: galeria+detalhes | ficha. */}
         <div className="mt-4 grid gap-5 lg:mt-5 lg:grid-cols-[1.35fr_0.9fr] lg:items-start lg:gap-8">
@@ -434,7 +426,7 @@ export default async function VehicleDetailPage({
                       className="hidden w-full lg:inline-flex"
                       trackingLabel="ficha"
                       campaign="ficha"
-                      content={vehicle.id}
+                      content={fichaTrack.content}
                       message={whatsapp.interest}
                     >
                       Tenho interesse
@@ -456,6 +448,7 @@ export default async function VehicleDetailPage({
 
                   <VehicleQuickActions
                     contentId={vehicle.id}
+                    contentPath={path}
                     contentName={fullLabel}
                     value={vehicle.price}
                     make={formatBrandName(vehicle.brand)}
@@ -466,15 +459,13 @@ export default async function VehicleDetailPage({
                     trade={whatsapp.trade}
                   />
 
-                  <div className="hidden lg:block">
-                    <ChatOpenButton
-                      source="ficha"
-                      prompt={`Tenho dúvida sobre o ${title}`}
-                      size="lg"
-                      variant="solid"
-                      className="w-full"
-                    />
-                  </div>
+                  <ChatOpenButton
+                    source="ficha"
+                    prompt={`Tenho dúvida sobre o ${title}`}
+                    size="lg"
+                    variant="solid"
+                    className="w-full"
+                  />
 
                   <p className="text-[11px] leading-relaxed text-muted">
                     Financiamento em até 60x e cartão em até 18x. O consultor
@@ -583,7 +574,7 @@ export default async function VehicleDetailPage({
               <WhatsAppButton
                 trackingLabel="ficha-mesma-faixa"
                 campaign="ficha"
-                content={vehicle.id}
+                content={fichaTrack.content}
                 message={whatsapp.sameBand}
                 variant="outline"
                 className="w-full sm:w-auto"
@@ -597,6 +588,7 @@ export default async function VehicleDetailPage({
 
       <VehicleMobileBar
         vehicleId={vehicle.id}
+        vehiclePath={path}
         contentName={fullLabel}
         message={whatsapp.interest}
         videoMessage={whatsapp.video}

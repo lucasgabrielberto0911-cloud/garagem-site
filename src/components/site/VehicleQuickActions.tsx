@@ -1,9 +1,12 @@
 import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
 import { VehicleLeadHit } from "@/components/site/VehiclePixel";
-import { whatsappUrl } from "@/lib/site";
+import { fichaWhatsAppTracking, whatsappUrl } from "@/lib/site";
 
-function fichaHref(message: string, contentId: string) {
-  return whatsappUrl(message, { campaign: "ficha", content: contentId });
+function fichaHref(message: string, contentId: string, contentPath?: string) {
+  return whatsappUrl(
+    message,
+    fichaWhatsAppTracking({ id: contentId, path: contentPath }),
+  );
 }
 
 type Action = {
@@ -14,6 +17,7 @@ type Action = {
 
 export function VehicleQuickActions({
   contentId,
+  contentPath,
   contentName,
   value,
   make,
@@ -22,9 +26,10 @@ export function VehicleQuickActions({
   video,
   finance,
   trade,
-  className = "",
+  className = "hidden lg:grid",
 }: {
   contentId: string;
+  contentPath?: string;
   contentName: string;
   value: number;
   make: string;
@@ -54,7 +59,7 @@ export function VehicleQuickActions({
           year={year}
         >
           <TrackedWhatsAppLink
-            href={fichaHref(action.hrefMessage, contentId)}
+            href={fichaHref(action.hrefMessage, contentId, contentPath)}
             trackingLabel={action.trackingLabel}
             className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-1.5 text-center font-display text-[10px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand sm:text-[11px] lg:min-h-[44px]"
           >

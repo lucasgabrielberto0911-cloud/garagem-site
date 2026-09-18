@@ -193,11 +193,15 @@ export const WHATSAPP_MESSAGES = {
   },
 } as const;
 
+/** Ficha de um anúncio (`/estoque/[slug]`), não a listagem. */
+export function isVehicleFichaPath(pathname: string): boolean {
+  const path = (pathname || "/").split("?")[0]?.replace(/\/+$/, "") || "/";
+  return path.startsWith("/estoque/") && path !== "/estoque";
+}
+
 export function whatsappCampaignFromPath(pathname: string): WhatsAppCampaign {
-  const path = (pathname || "/").split("?")[0] || "/";
-  if (path.startsWith("/estoque/") && path.length > "/estoque/".length) {
-    return "ficha";
-  }
+  if (isVehicleFichaPath(pathname)) return "ficha";
+  const path = (pathname || "/").split("?")[0]?.replace(/\/+$/, "") || "/";
   if (path === "/estoque" || path.startsWith("/estoque")) return "estoque";
   return "home";
 }
@@ -223,9 +227,46 @@ export function whatsappContentFromVehicle(input: {
 }) {
   const path = (input.path ?? "").trim();
   const slug = path.startsWith("/estoque/")
-    ? path.slice("/estoque/".length).split(/[?#]/)[0]
+    ? path.slice("/estoque/".length).split(/[?#]/)[0].replace(/\/+$/, "")
     : "";
   return (slug || input.id || "").slice(0, 80);
+}
+
+export type WhatsAppVehicleRef = {
+  id?: string | null;
+  path?: string | null;
+};
+
+/** UTM dos CTAs da ficha: campanha `ficha` + id/slug em `utm_content`. */
+export function fichaWhatsAppTracking(
+  vehicle: WhatsAppVehicleRef,
+): WhatsAppTracking {
+  return {
+    campaign: "ficha",
+    content: whatsappContentFromVehicle(vehicle),
+  };
+}
+
+/**
+ * Header/float/nav: na ficha usa `ficha` + veículo; no resto, campanha da rota.
+ * CTA genérico de rodapé continua `whatsappUrl()` → `home`.
+ */
+export function pageWhatsAppTracking(input: {
+  pathname?: string | null;
+  vehicle?: WhatsAppVehicleRef | null;
+}): WhatsAppTracking {
+  const pathname = input.pathname || "/";
+  if (!isVehicleFichaPath(pathname)) {
+    return { campaign: whatsappCampaignFromPath(pathname) };
+  }
+  const vehicle = input.vehicle;
+  if (vehicle && (vehicle.id || vehicle.path)) {
+    return fichaWhatsAppTracking({
+      id: vehicle.id,
+      path: vehicle.path || pathname,
+    });
+  }
+  return fichaWhatsAppTracking({ path: pathname });
 }
 
 function resolveWhatsAppTracking(

@@ -101,7 +101,7 @@ body {
   }
 
   .pb-sticky-bar-safe {
-    padding-bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   /* Compensa header fixo + notch (altura alinhada ao SiteHeader). */
@@ -123,6 +123,17 @@ body {
   @media (min-width: 1024px) {
     .pb-site-nav {
       padding-bottom: 0;
+    }
+  }
+
+  /*
+   * Folga para o chip “Ajuda para escolher” não cobrir o último card /
+   * CTA de WhatsApp em estoque, contato e FAQ. Ficha e banner de cookies
+   * já escondem o FAB fechado.
+   */
+  @media (max-width: 1023px) {
+    body:not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])):not(:has(.site-consent)) .pb-site-nav {
+      padding-bottom: calc(4.5rem + 4.25rem + env(safe-area-inset-bottom, 0px));
     }
   }
 
@@ -491,8 +502,9 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   }
 }
 
-body:has([data-vehicle-mobile-bar]) .site-consent {
-  bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
+body:has([data-vehicle-mobile-bar]) .site-consent,
+body:has([data-ficha-page]) .site-consent {
+  bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 body:has(.site-chat.is-open) .site-consent,
@@ -512,7 +524,13 @@ body:has([data-install-coach]) .site-chat:not(.is-open) {
  * faixa inline “Ajuda para escolher” roubava a grade. O chip flutuante
  * fica no canto, acima da bottom nav / botão verde do WhatsApp.
  */
-body:has([data-vehicle-mobile-bar]) .site-chat:not(.is-open) {
+body:has([data-vehicle-mobile-bar]) .site-chat:not(.is-open),
+body:has([data-ficha-page]) .site-chat:not(.is-open) {
+  display: none;
+}
+
+body:has([data-vehicle-mobile-bar]) .whatsapp-float,
+body:has([data-ficha-page]) .whatsapp-float {
   display: none;
 }
 
