@@ -135,6 +135,45 @@ export function chatMobileKeyboardCovered({
 }
 
 /**
+ * Encaixa o shell do chat no visualViewport quando o teclado cobre a aba.
+ * Vale no iPhone e no iPad (inclusive landscape ≥ 1024px) — o breakpoint
+ * desktop não isenta o WebKit de empurrar o composer para trás do teclado.
+ */
+export function chatKeyboardShellStyle({
+  viewportHeight,
+  viewportOffsetTop,
+  viewportWidth,
+  viewportOffsetLeft = 0,
+  paddingPx = 4,
+  minHeightPx = 220,
+}: {
+  viewportHeight: number;
+  viewportOffsetTop: number;
+  viewportWidth?: number;
+  viewportOffsetLeft?: number;
+  paddingPx?: number;
+  minHeightPx?: number;
+}): {
+  top: number;
+  height: number;
+  left: number | null;
+  width: number | null;
+} {
+  const top = Math.max(0, viewportOffsetTop) + paddingPx;
+  const height = Math.max(minHeightPx, viewportHeight - paddingPx * 2);
+  const shiftX = Math.max(0, viewportOffsetLeft);
+  if (shiftX > 0 && viewportWidth != null) {
+    return {
+      top,
+      height,
+      left: shiftX + paddingPx,
+      width: Math.max(200, viewportWidth - paddingPx * 2),
+    };
+  }
+  return { top, height, left: null, width: null };
+}
+
+/**
  * Altura ocupada pelo chat ABERTO, do topo ao fundo do viewport.
  * Com `launcherBelowPanel`, o X vermelho fica solto abaixo do card
  * (bug da ficha no iPad/desktop baixo — print do Lucas).

@@ -60,7 +60,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
           <Link
             key={item.href}
             href={item.href}
-            className="inline-flex min-h-[44px] shrink-0 items-center border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation sm:px-2.5 sm:py-1.5"
+            className="inline-flex min-h-[44px] shrink-0 items-center border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 active:border-brand active:bg-white/5 touch-manipulation sm:px-2.5 sm:py-1.5"
           >
             {item.label}
           </Link>
@@ -79,7 +79,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
             <Link
               key={brand}
               href={`/estoque?brand=${encodeURIComponent(brand)}`}
-              className="inline-flex min-h-[44px] shrink-0 items-center border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation sm:px-2.5 sm:py-1.5"
+              className="inline-flex min-h-[44px] shrink-0 items-center border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 active:border-brand active:bg-white/5 touch-manipulation sm:px-2.5 sm:py-1.5"
             >
               {formatBrandName(brand)}
             </Link>

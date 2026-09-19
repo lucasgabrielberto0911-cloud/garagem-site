@@ -131,7 +131,7 @@ export function VehicleGallery({
       <div className="relative aspect-[16/10] overflow-hidden border border-white/10 bg-ink">
         <ul
           ref={scrollerRef}
-          className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain scrollbar-hide"
+          className="gallery-strip absolute inset-0 flex snap-x snap-mandatory overflow-x-auto scrollbar-hide"
           aria-label={`Fotos de ${alt}`}
         >
           {photos.map((photo, index) => {
@@ -179,7 +179,7 @@ export function VehicleGallery({
               onClick={() => goTo(active - 1)}
               aria-label="Foto anterior"
               disabled={active === 0}
-              className="absolute left-2 top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream backdrop-blur transition touch-manipulation hover:border-brand disabled:opacity-30"
+              className="absolute left-[max(0.5rem,env(safe-area-inset-left,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream backdrop-blur transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-30"
             >
               <Arrow direction="left" />
             </button>
@@ -188,7 +188,7 @@ export function VehicleGallery({
               onClick={() => goTo(active + 1)}
               aria-label="Próxima foto"
               disabled={active === total - 1}
-              className="absolute right-2 top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream backdrop-blur transition touch-manipulation hover:border-brand disabled:opacity-30"
+              className="absolute right-[max(0.5rem,env(safe-area-inset-right,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream backdrop-blur transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-30"
             >
               <Arrow direction="right" />
             </button>
@@ -207,7 +207,7 @@ export function VehicleGallery({
         <>
           <div
             ref={thumbsRef}
-            className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide"
+            className="mt-2 flex gap-2 overflow-x-auto overscroll-x-contain pb-1 scrollbar-hide [-webkit-overflow-scrolling:touch]"
             role="tablist"
             aria-label="Miniaturas"
           >
@@ -223,7 +223,7 @@ export function VehicleGallery({
                   className={`relative h-14 w-[4.5rem] shrink-0 overflow-hidden border bg-asphalt transition touch-manipulation sm:h-16 sm:w-24 ${
                     index === active
                       ? "border-brand"
-                      : "border-white/15 opacity-70 hover:opacity-100"
+                      : "border-white/15 opacity-70 hover:opacity-100 active:opacity-100"
                   }`}
                 >
                   <VehicleImage

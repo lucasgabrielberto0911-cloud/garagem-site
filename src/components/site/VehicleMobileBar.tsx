@@ -116,7 +116,7 @@ export function VehicleMobileBar({
                 aria-expanded={moreOpen}
                 aria-controls={moreId}
                 onClick={() => setMoreOpen((open) => !open)}
-                className="mt-0.5 min-h-8 text-left font-display text-[11px] font-semibold text-muted underline-offset-2 transition hover:text-cream hover:underline touch-manipulation"
+                className="mt-0.5 min-h-8 text-left font-display text-[11px] font-semibold text-muted underline-offset-2 transition hover:text-cream hover:underline active:text-cream active:underline touch-manipulation"
               >
                 Mais opções
               </button>
@@ -170,7 +170,7 @@ export function VehicleMobileBar({
                   setMoreOpen(false);
                   openWhatsApp(event, action.href, action.tracking, vehicleId);
                 }}
-                className="inline-flex min-h-11 items-center justify-center px-1 text-center font-display text-[11px] font-semibold text-cream underline-offset-2 transition hover:underline touch-manipulation"
+                className="inline-flex min-h-11 items-center justify-center px-1 text-center font-display text-[11px] font-semibold text-cream underline-offset-2 transition hover:underline active:underline touch-manipulation"
               >
                 {action.label}
               </a>

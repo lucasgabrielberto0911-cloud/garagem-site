@@ -342,7 +342,7 @@ export function SellForm({
               if (files.length === 0) return;
               void uploadSellPhotos(files);
             }}
-            className="block w-full text-sm text-muted file:mr-3 file:min-h-[40px] file:border-0 file:bg-white/10 file:px-3 file:text-xs file:uppercase file:tracking-wide file:text-cream"
+            className="block w-full text-base text-muted file:mr-3 file:min-h-[40px] file:border-0 file:bg-white/10 file:px-3 file:text-xs file:uppercase file:tracking-wide file:text-cream"
           />
           {photoBusy ? (
             <p className="mt-2 text-xs text-muted">Enviando foto…</p>

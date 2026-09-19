@@ -6,6 +6,7 @@ import {
   chatBoxesOverlap,
   chatClosedLauncherBox,
   chatClosedLauncherVisible,
+  chatKeyboardShellStyle,
   chatMobileKeyboardCovered,
   chatOpenOccupiedHeight,
   chatOpenPanelBox,
@@ -40,6 +41,66 @@ test("offsetTop do visualViewport entra no cálculo (Safari)", () => {
   });
   assert.equal(result.covered, 304);
   assert.equal(result.keyboardOpen, true);
+});
+
+test("shell do teclado cabe no visualViewport (iPhone)", () => {
+  const frame = chatKeyboardShellStyle({
+    viewportHeight: 508,
+    viewportOffsetTop: 0,
+  });
+  assert.equal(frame.top, 4);
+  assert.equal(frame.height, 500);
+  assert.equal(frame.left, null);
+  assert.ok(frame.top + frame.height <= 508);
+});
+
+test("offsetTop do Safari entra no top do shell (teclado + chrome)", () => {
+  const frame = chatKeyboardShellStyle({
+    viewportHeight: 500,
+    viewportOffsetTop: 40,
+  });
+  assert.equal(frame.top, 44);
+  assert.equal(frame.height, 492);
+  assert.ok(frame.top + frame.height <= 40 + 500);
+});
+
+test("iPad landscape (≥1024) também encaixa o composer acima do teclado", () => {
+  const innerHeight = 820;
+  const viewportHeight = 480;
+  const viewportOffsetTop = 36;
+  const covered = chatMobileKeyboardCovered({
+    innerHeight,
+    viewportHeight,
+    viewportOffsetTop,
+  });
+  assert.equal(covered.keyboardOpen, true);
+  const frame = chatKeyboardShellStyle({
+    viewportHeight,
+    viewportOffsetTop,
+    viewportWidth: 1180,
+  });
+  assert.ok(frame.height >= 220);
+  assert.ok(frame.top + frame.height <= viewportOffsetTop + viewportHeight);
+  assert.equal(frame.left, null, "sem offsetLeft o card desktop mantém a largura");
+});
+
+test("offsetLeft do visualViewport (iPad split / pan) desloca o shell", () => {
+  const frame = chatKeyboardShellStyle({
+    viewportHeight: 500,
+    viewportOffsetTop: 20,
+    viewportWidth: 390,
+    viewportOffsetLeft: 24,
+  });
+  assert.equal(frame.left, 28);
+  assert.equal(frame.width, 382);
+});
+
+test("viewport minúsculo não deixa o composer com altura zero", () => {
+  const frame = chatKeyboardShellStyle({
+    viewportHeight: 80,
+    viewportOffsetTop: 0,
+  });
+  assert.equal(frame.height, 220);
 });
 
 test("recorte pequeno da barra do browser não dispara o modo teclado", () => {

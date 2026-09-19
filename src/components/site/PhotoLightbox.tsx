@@ -80,13 +80,16 @@ export function PhotoLightbox({
     const strip = thumbStripRef.current;
     if (!strip) return;
     const activeBtn = strip.children[safeIndex] as HTMLElement | undefined;
-    if (activeBtn?.scrollIntoView) {
-      activeBtn.scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-        block: "nearest",
-      });
-    }
+    if (!activeBtn) return;
+    // scrollIntoView no iOS empurra a página/lightbox; rolamos só a faixa.
+    const left =
+      activeBtn.offsetLeft - (strip.clientWidth - activeBtn.clientWidth) / 2;
+    strip.scrollTo({
+      left: Math.max(0, left),
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
   }, [safeIndex]);
 
   useEffect(() => {
@@ -257,7 +260,7 @@ export function PhotoLightbox({
   const content = (
     <div
       ref={dialogRef}
-      className="fixed inset-0 z-[200] flex items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-[200] flex items-center justify-center overscroll-contain p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -270,7 +273,7 @@ export function PhotoLightbox({
         onClick={onClose}
       />
 
-      <div className="relative z-[1] flex h-[100dvh] w-full max-w-7xl flex-col overflow-hidden bg-black shadow-2xl animate-fade-in-scale sm:h-[min(92dvh,920px)] sm:border sm:border-white/10">
+      <div className="relative z-[1] flex h-[100dvh] w-full max-w-7xl flex-col overflow-hidden bg-black pt-safe shadow-2xl animate-fade-in-scale sm:h-[min(92dvh,920px)] sm:border sm:border-white/10 sm:pt-0">
         <header className="relative z-[2] flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-black/70 px-3 py-2.5 backdrop-blur sm:px-4">
           <div className="min-w-0">
             <p id={titleId} className="truncate text-sm font-medium text-cream">
@@ -347,7 +350,7 @@ export function PhotoLightbox({
                 }}
                 onPointerDown={(event) => event.stopPropagation()}
                 aria-label="Foto anterior"
-                className="absolute left-2 top-1/2 z-[3] flex h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/25 bg-black/55 text-cream backdrop-blur transition hover:border-brand touch-manipulation sm:left-4 sm:h-14 sm:w-14"
+                className="absolute left-[max(0.5rem,env(safe-area-inset-left,0px))] top-1/2 z-[3] flex h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/25 bg-black/55 text-cream backdrop-blur transition hover:border-brand active:border-brand touch-manipulation sm:left-[max(1rem,env(safe-area-inset-left,0px))] sm:h-14 sm:w-14"
               >
                 <Chevron direction="left" />
               </button>
@@ -359,7 +362,7 @@ export function PhotoLightbox({
                 }}
                 onPointerDown={(event) => event.stopPropagation()}
                 aria-label="Próxima foto"
-                className="absolute right-2 top-1/2 z-[3] flex h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/25 bg-black/55 text-cream backdrop-blur transition hover:border-brand touch-manipulation sm:right-4 sm:h-14 sm:w-14"
+                className="absolute right-[max(0.5rem,env(safe-area-inset-right,0px))] top-1/2 z-[3] flex h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/25 bg-black/55 text-cream backdrop-blur transition hover:border-brand active:border-brand touch-manipulation sm:right-[max(1rem,env(safe-area-inset-right,0px))] sm:h-14 sm:w-14"
               >
                 <Chevron direction="right" />
               </button>
@@ -377,7 +380,7 @@ export function PhotoLightbox({
           <div className="relative z-[2] shrink-0 border-t border-white/10 bg-black/80 px-3 py-3 backdrop-blur sm:px-4 pb-safe">
             <div
               ref={thumbStripRef}
-              className="flex gap-2 overflow-x-auto scrollbar-hide"
+              className="flex gap-2 overflow-x-auto overscroll-x-contain scrollbar-hide [-webkit-overflow-scrolling:touch]"
             >
               {photos.map((item, itemIndex) => {
                 return (
@@ -395,7 +398,7 @@ export function PhotoLightbox({
                     className={`relative h-14 w-[4.5rem] shrink-0 overflow-hidden border bg-asphalt transition sm:h-16 sm:w-24 ${
                       itemIndex === safeIndex
                         ? "border-brand opacity-100"
-                        : "border-white/15 opacity-55 hover:opacity-100"
+                        : "border-white/15 opacity-55 hover:opacity-100 active:opacity-100"
                     }`}
                   >
                     <VehicleImage

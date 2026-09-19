@@ -80,8 +80,9 @@ const BUDGET_CHIPS = [
 ] as const;
 
 /**
- * 16px no celular: abaixo disso o Safari do iPhone dá zoom ao focar o campo e
- * o visitante precisa pinçar de volta. No desktop mantém 14px pela densidade.
+ * 16px no celular/iPad: abaixo disso o Safari dá zoom ao focar o campo.
+ * No Mac (pointer fino) `lg:text-sm` mantém 14px; globals.css força 16px
+ * em ponteiro grosso e em iOS/iPadOS (`-webkit-touch-callout`).
  */
 const selectClass =
   "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition touch-manipulation focus:border-brand lg:text-sm";
@@ -321,7 +322,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
       <div
         aria-busy={isPending}
         data-pending={isPending}
-        className={`border border-white/10 bg-ink p-4 transition-opacity sm:p-5 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-6 lg:pr-5 ${
+        className={`border border-white/10 bg-ink p-4 transition-opacity sm:p-5 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-6 lg:pr-5 ${
           isPending ? "opacity-70" : ""
         }`}
       >
@@ -582,7 +583,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
       </div>
 
-      <div className="sticky top-[calc(4.5rem+env(safe-area-inset-top,0px))] z-30 mt-3 space-y-2 border border-white/10 bg-ink/95 px-3 py-2.5 backdrop-blur lg:hidden">
+      <div className="sticky top-[calc(4.5rem+env(safe-area-inset-top,0px))] z-30 mt-3 space-y-2 border border-white/10 bg-ink px-3 py-2.5 lg:hidden">
         <div className="flex items-center gap-2">
           <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
             Faixa
@@ -702,7 +703,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
             aria-labelledby="titulo-filtros"
             className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto overscroll-contain border-t border-white/10 bg-ink animate-slide-up pb-safe focus:outline-none"
           >
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-ink/95 px-5 py-4 backdrop-blur">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-ink px-5 py-4">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-brand">Estoque</p>
                 <h2 id="titulo-filtros" className="font-display text-lg font-semibold text-cream">
@@ -922,7 +923,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </details>
             </div>
 
-            <div className="sticky bottom-0 grid grid-cols-[auto_1fr] gap-3 border-t border-white/10 bg-ink/95 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] backdrop-blur">
+            <div className="sticky bottom-0 grid grid-cols-[auto_1fr] gap-3 border-t border-white/10 bg-ink px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
               <button
                 type="button"
                 onClick={() =>
@@ -1024,7 +1025,7 @@ function AccessoryChips({
               className={`min-h-[44px] border px-3 text-left text-xs transition touch-manipulation ${
                 active
                   ? "border-brand bg-brand/10 text-cream"
-                  : "border-white/10 text-muted hover:border-white/25 hover:text-cream"
+                  : "border-white/10 text-muted hover:border-white/25 hover:text-cream active:border-white/25 active:text-cream"
               }`}
               aria-pressed={active}
             >

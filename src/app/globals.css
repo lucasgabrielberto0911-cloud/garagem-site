@@ -171,6 +171,15 @@ body {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /*
+   * 100vh no iOS/Safari é a large viewport (barra de URL escondida).
+   * dvh acompanha o chrome; vh fica de fallback.
+   */
+  .min-h-app-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
 }
 
 /* === KEYFRAMES === */
@@ -440,6 +449,11 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
     top: 0;
   }
 
+  body[data-chat-keyboard] .site-chat.is-open .site-chat-panel {
+    height: 100%;
+    max-height: none;
+  }
+
   .site-chat.is-open .site-chat-panel {
     width: 100%;
     height: 100%;
@@ -449,10 +463,6 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
     animation: fadeIn 0.2s ease both;
   }
 
-  /*
-   * Safari no iPhone dá zoom em input/textarea com fonte < 16px.
-   * text-base no campo já cobre; isto impede regressão de utilitário.
-   */
   .site-chat-panel textarea,
   .site-chat-panel textarea:focus {
     font-size: 16px;
@@ -484,6 +494,17 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
     max-height: 100%;
     min-height: 0;
     flex: 0 1 auto;
+  }
+
+  /*
+   * iPad landscape usa este card (≥1024). Com teclado, o JS encolhe o
+   * shell ao visualViewport — o painel precisa acompanhar, senão o
+   * composer fica clipado / atrás do teclado.
+   */
+  body[data-chat-keyboard] .site-chat.is-open .site-chat-panel {
+    height: 100%;
+    max-height: none;
+    min-height: 0;
   }
 }
 
@@ -545,10 +566,18 @@ body:has([data-ficha-page]) .whatsapp-float {
   align-items: center;
   gap: 0.5rem;
   overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 0.35rem;
   padding-right: 0.25rem;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - 1.75rem),
+    transparent 100%
+  );
   mask-image: linear-gradient(
     to right,
     #000 0,
@@ -570,10 +599,18 @@ body:has([data-ficha-page]) .whatsapp-float {
   display: flex;
   gap: 0.75rem;
   overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 0.25rem;
   padding-right: 0.25rem;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - 1.75rem),
+    transparent 100%
+  );
   mask-image: linear-gradient(
     to right,
     #000 0,
@@ -605,6 +642,7 @@ body:has([data-ficha-page]) .whatsapp-float {
   }
 
   .chip-scroll {
+    -webkit-mask-image: none;
     mask-image: none;
   }
 }
@@ -614,8 +652,16 @@ body:has([data-ficha-page]) .whatsapp-float {
   flex-wrap: nowrap !important;
   justify-content: flex-start !important;
   overflow-x: auto !important;
+  overflow-y: hidden !important;
   padding-bottom: 0.35rem !important;
   scroll-snap-type: x proximity !important;
+  overscroll-behavior-x: contain;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - 1.75rem),
+    transparent 100%
+  ) !important;
   mask-image: linear-gradient(
     to right,
     #000 0,
@@ -637,6 +683,7 @@ body:has([data-ficha-page]) .whatsapp-float {
     scroll-snap-type: none;
     gap: 1.25rem;
     padding-bottom: 0;
+    -webkit-mask-image: none;
     mask-image: none;
   }
 
@@ -704,9 +751,73 @@ body:has([data-ficha-page]) .whatsapp-float {
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.whatsapp-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+@media (hover: hover) and (pointer: fine) {
+  .whatsapp-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+  }
+}
+
+.whatsapp-btn:active {
+  transform: translateY(0);
+}
+
+/*
+ * iOS/iPadOS Safari dá zoom no foco se input/select/textarea < 16px.
+ * text-base nos formulários públicos cobre o caso feliz; isto impede
+ * regressão (lg:text-sm no iPad landscape, file input, etc.).
+ * Mac Safari (pointer fino, sem touch-callout) não entra — 14px ok.
+ */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="file"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="file"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]),
+textarea {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Autofill do Safari pinta o campo de amarelo/branco — some no tema escuro. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f7f5f2;
+  caret-color: #f7f5f2;
+  box-shadow: 0 0 0 1000px #0d0d0f inset;
+  -webkit-box-shadow: 0 0 0 1000px #0d0d0f inset;
+  transition: background-color 99999s ease-out 0s;
+}
+
+/* Faixa da galeria: swipe horizontal sem empurrar a página (bounce iOS). */
+.gallery-strip {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x;
 }
 
 /* === HERO VERMELHO / PRETO ===
@@ -799,6 +910,7 @@ body:has([data-ficha-page]) .whatsapp-float {
     linear-gradient(rgba(255, 255, 255, 0.11) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.11) 1px, transparent 1px);
   background-size: 64px 64px;
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent 86%);
   mask-image: linear-gradient(to bottom, black, transparent 86%);
 }
 
