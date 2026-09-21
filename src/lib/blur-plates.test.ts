@@ -9,8 +9,11 @@ import {
   dealerBoxesFromImage,
   dealerPlateBoxesFromText,
   disambiguateCarPlates,
+  expandToGrayPlateBox,
   extractPlateCandidate,
   findBlackDealerPlateBoxes,
+  findGrayPlateBoxes,
+  findGrayPlatesInImage,
   findMercosulPlatesInImage,
   findMercosulStripeBoxes,
   isHeadlightOrCornerZone,
@@ -18,6 +21,7 @@ import {
   looksLikeAnalogGaugeAround,
   looksLikeBodyPanelFalsePositive,
   looksLikeConfirmedDealerPlate,
+  looksLikeGrayPlatePatch,
   looksLikeMercosulPlatePatch,
   plateBoxesFromText,
   textLooksLikeDealerPlate,
@@ -550,6 +554,8 @@ test("fixture da portinhola/caixa de roda: sem placa e sem retângulo de loja", 
   assert.equal(plateBoxesFromText([], width, height).length, 0);
   assert.equal((await dealerBoxesFromImage(image, [], width, height)).length, 0);
   assert.equal((await findMercosulStripeBoxes(image, whole)).length, 0);
+  assert.equal((await findGrayPlateBoxes(image, whole)).length, 0);
+  assert.equal((await findGrayPlatesInImage(image, width, height)).length, 0);
   assert.equal(
     (await findMercosulPlatesInImage(image, width, height)).length,
     0,
@@ -738,9 +744,12 @@ test("Civic da Lucas: cromado/farol não vira Mercosul nem placa preta", async (
     "cromado do para-choque não é faixa Mercosul",
   );
   assert.equal((await findMercosulPlatesInImage(image, width, height)).length, 0);
+  assert.equal((await findGrayPlateBoxes(image, whole)).length, 0);
+  assert.equal((await findGrayPlatesInImage(image, width, height)).length, 0);
   assert.equal((await findBlackDealerPlateBoxes(image, whole)).length, 0);
   assert.equal((await dealerBoxesFromImage(image, [], width, height)).length, 0);
   assert.equal(await looksLikeMercosulPlatePatch(image, CIVIC_CHROME), false);
+  assert.equal(await looksLikeGrayPlatePatch(image, CIVIC_CHROME), false);
   assert.equal(
     await looksLikeBodyPanelFalsePositive(image, CIVIC_STRAY),
     true,
@@ -935,6 +944,8 @@ test("foto da Biz (traseira): placa Mercosul de moto vira caixa e não é portin
   assert.ok(hit.top + hit.height >= 155, `bottom ${hit.top + hit.height} não cobre 9E87`);
   assert.ok(hit.top + hit.height <= 164);
   assert.equal(await looksLikeMercosulPlatePatch(image, hit), true);
+  assert.equal(await looksLikeGrayPlatePatch(image, hit), false);
+  assert.equal((await findGrayPlatesInImage(image, width, height)).length, 0);
   assert.equal(await looksLikeAnalogGaugeAround(image, hit), false);
   assert.equal(
     await looksLikeBodyPanelFalsePositive(image, hit),
@@ -1092,6 +1103,8 @@ test("painel Honda (relógio): fixture não vira Mercosul nem Forte", async () =
     0,
     "varredura Mercosul no painel deve ser zero",
   );
+  assert.equal((await findGrayPlateBoxes(image, whole)).length, 0);
+  assert.equal((await findGrayPlatesInImage(image, width, height)).length, 0);
   assert.equal((await findBlackDealerPlateBoxes(image, whole)).length, 0);
 
   const windows = [whole, formerHit, smear, gauge, visor];
@@ -1195,4 +1208,144 @@ test("placa no rabo da moto não é descartada como canto de carro", () => {
   assert.equal(withMoto.length, 1);
   assert.equal(withMoto[0].left, 340);
 });
+
+const GRAY_CIVIC_CORE = { left: 157, top: 142, width: 82, height: 24 };
+
+async function syntheticGrayCarPlate() {
+  const width = 320;
+  const height = 200;
+  const plate = { left: 118, top: 142, width: 84, height: 26 };
+  const svg = Buffer.from(`<svg width="${plate.width}" height="${plate.height}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="${plate.width}" height="${plate.height}" fill="#A8A8A0"/>
+    <rect x="1" y="1" width="${plate.width - 2}" height="${plate.height - 2}" fill="none" stroke="#3F3F3A" stroke-width="1.4"/>
+    <text x="${plate.width / 2}" y="8" text-anchor="middle" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="6" fill="#1A1A1A">VITORIA - ES</text>
+    <text x="${plate.width / 2}" y="22" text-anchor="middle" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-weight="700" font-size="13" fill="#111111">QWE1234</text>
+  </svg>`);
+  const image = await sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: { r: 36, g: 36, b: 38 },
+    },
+  })
+    .composite([{ input: await sharp(svg).png().toBuffer(), left: plate.left, top: plate.top }])
+    .jpeg()
+    .toBuffer();
+  return { width, height, plate, image };
+}
+
+test("placa cinza sintética no para-choque vira caixa e não é Mercosul", async () => {
+  const { plate, image, width, height } = await syntheticGrayCarPlate();
+  const whole = { left: 0, top: 0, width, height };
+  const boxes = await findGrayPlateBoxes(image, whole);
+  assert.ok(boxes.length >= 1, `esperava a placa cinza: ${JSON.stringify(boxes)}`);
+  const hit = boxes[0];
+  assert.ok(boxOverlaps(hit, plate), `caixa ${JSON.stringify(hit)} não cobre ABC/QWE1234`);
+  assert.ok(hit.width < 120, `width ${hit.width} pintou o para-choque`);
+  assert.ok(hit.height < 40, `height ${hit.height}`);
+  assert.equal(await looksLikeGrayPlatePatch(image, hit), true);
+  assert.equal(await looksLikeMercosulPlatePatch(image, hit), false);
+  assert.equal(await looksLikeBodyPanelFalsePositive(image, hit), false);
+  assert.equal((await findMercosulStripeBoxes(image, whole)).length, 0);
+});
+
+test("Civic com placa cinza: detector cobre ABC1234 e o cromado continua limpo", async () => {
+  const image = await readFile(join(FIXTURES, "gray-br-plate-civic.png"));
+  const meta = await sharp(image).metadata();
+  const width = meta.width ?? 376;
+  const height = meta.height ?? 187;
+  const whole = { left: 0, top: 0, width, height };
+
+  const boxes = await findGrayPlatesInImage(image, width, height);
+  assert.ok(boxes.length >= 1, `esperava a placa cinza do Civic: ${JSON.stringify(boxes)}`);
+  const hit = boxes[0];
+  assert.ok(
+    boxOverlaps(hit, GRAY_CIVIC_CORE),
+    `caixa ${JSON.stringify(hit)} não cobre ABC1234`,
+  );
+  assert.ok(hit.left < 160, `left ${hit.left}`);
+  assert.ok(hit.left + hit.width > 230, `right ${hit.left + hit.width}`);
+  assert.ok(hit.top < 146, `top ${hit.top}`);
+  assert.ok(hit.top + hit.height > 160, `bottom ${hit.top + hit.height}`);
+  assert.ok(hit.width < 130, `width ${hit.width} não deve comer o para-choque`);
+  assert.ok(hit.height < 48, `height ${hit.height}`);
+  const headlightCore = { left: 70, top: 80, width: 48, height: 36 };
+  assert.equal(
+    boxOverlaps(hit, headlightCore),
+    false,
+    "não pode pintar o farol",
+  );
+  assert.equal(await looksLikeGrayPlatePatch(image, GRAY_CIVIC_CORE), true);
+  assert.equal(await looksLikeMercosulPlatePatch(image, GRAY_CIVIC_CORE), false);
+  assert.equal(await looksLikeBodyPanelFalsePositive(image, GRAY_CIVIC_CORE), false);
+  assert.equal((await findMercosulStripeBoxes(image, whole)).length, 0);
+  assert.equal((await findMercosulPlatesInImage(image, width, height)).length, 0);
+  assert.equal((await findBlackDealerPlateBoxes(image, whole)).length, 0);
+});
+
+test("semente minúscula na borda direita da placa cinza cobre o retângulo inteiro", async () => {
+  const image = await readFile(join(FIXTURES, "gray-br-plate-civic.png"));
+  const speck = { left: 226, top: 150, width: 12, height: 10 };
+  const grown = await expandToGrayPlateBox(image, speck, 376, 187);
+  assert.ok(
+    boxOverlaps(grown, GRAY_CIVIC_CORE),
+    `expansão ${JSON.stringify(grown)} não cobriu a placa`,
+  );
+  assert.ok(grown.left <= 160, `left ${grown.left} não voltou até o A`);
+  assert.ok(grown.left + grown.width >= 230, `right ${grown.left + grown.width}`);
+  assert.ok(grown.width >= 70, `width ${grown.width}`);
+  assert.ok(grown.width < 120);
+  assert.equal(await looksLikeGrayPlatePatch(image, grown), true);
+  assert.equal(boxOverlaps(grown, CIVIC_STRAY), false);
+});
+
+test("blur da placa cinza do Civic deixa ABC1234 ilegível e o farol nítido", async () => {
+  const image = await readFile(join(FIXTURES, "gray-br-plate-civic.png"));
+  const meta = await sharp(image).metadata();
+  const boxes = await findGrayPlatesInImage(
+    image,
+    meta.width ?? 376,
+    meta.height ?? 187,
+  );
+  assert.ok(boxes.length >= 1);
+  const core = { left: 168, top: 154, width: 56, height: 10 };
+  const headlight = { left: 70, top: 88, width: 36, height: 22 };
+  const beforeBuf = await sharp(image).extract(core).png().toBuffer();
+  const blurred = await applyBlurRegions(image, boxes);
+  const afterBuf = await sharp(blurred).extract(core).png().toBuffer();
+  const before = await sharp(beforeBuf).stats();
+  const after = await sharp(afterBuf).stats();
+  const beforeStd =
+    (before.channels[0].stdev + before.channels[1].stdev + before.channels[2].stdev) / 3;
+  const afterStd =
+    (after.channels[0].stdev + after.channels[1].stdev + after.channels[2].stdev) / 3;
+  assert.ok(beforeStd > 25, `contraste original baixo: ${beforeStd}`);
+  assert.ok(
+    afterStd < beforeStd * 0.45,
+    `blur fraco na placa cinza: ${beforeStd} → ${afterStd}`,
+  );
+
+  const lightBefore = await sharp(
+    await sharp(image).extract(headlight).png().toBuffer(),
+  ).stats();
+  const lightAfter = await sharp(
+    await sharp(blurred).extract(headlight).png().toBuffer(),
+  ).stats();
+  const lightBeforeStd =
+    (lightBefore.channels[0].stdev +
+      lightBefore.channels[1].stdev +
+      lightBefore.channels[2].stdev) /
+    3;
+  const lightAfterStd =
+    (lightAfter.channels[0].stdev +
+      lightAfter.channels[1].stdev +
+      lightAfter.channels[2].stdev) /
+    3;
+  assert.ok(
+    lightAfterStd > lightBeforeStd * 0.7,
+    `blur vazou no farol: ${lightBeforeStd} → ${lightAfterStd}`,
+  );
+});
+
 
