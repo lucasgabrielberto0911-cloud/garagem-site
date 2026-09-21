@@ -4,6 +4,7 @@
  */
 
 import { formatBrandName, formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import { WHATSAPP_MESSAGES, type WhatsAppCampaign } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { formatColorLabel } from "@/lib/vehicle-display";
 
@@ -80,4 +81,35 @@ export function formatStockWaitlistQuery(input: StockWaitlistFilters) {
   if (compact(input.laudo)) bits.push("com laudo");
 
   return bits.join(", ");
+}
+
+export const STOCK_WAITLIST_WHATSAPP_LABEL = "Me avisa no WhatsApp";
+
+export type StockEmptyWhatsAppCta = {
+  campaign: WhatsAppCampaign;
+  trackingLabel: string;
+  message: string;
+  label: string;
+};
+
+/** CTA primário do empty state: WhatsApp com UTM de estoque/filtro, nunca home. */
+export function stockEmptyWhatsAppCta(input: {
+  filtered: boolean;
+  waitlistQuery?: string;
+}): StockEmptyWhatsAppCta {
+  const query = compact(input.waitlistQuery);
+  if (input.filtered) {
+    return {
+      campaign: "filtro",
+      trackingLabel: "estoque-filtro-vazio",
+      message: WHATSAPP_MESSAGES.wanted(query || undefined),
+      label: STOCK_WAITLIST_WHATSAPP_LABEL,
+    };
+  }
+  return {
+    campaign: "estoque",
+    trackingLabel: "estoque-vazio",
+    message: WHATSAPP_MESSAGES.wanted(),
+    label: STOCK_WAITLIST_WHATSAPP_LABEL,
+  };
 }

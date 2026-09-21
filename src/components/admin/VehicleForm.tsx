@@ -51,6 +51,7 @@ import {
 } from "@/lib/vehicle-accessories";
 import {
   descriptionPriceMismatch,
+  descriptionPriceMismatchBlocksSave,
   kmHint,
   validateVehicleListing,
 } from "@/lib/admin-vehicle-validate";
@@ -79,15 +80,21 @@ const initialState: VehicleFormState = {};
 function SubmitButton({
   label,
   disabled,
+  disabledLabel,
 }: {
   label: string;
   disabled?: boolean;
+  disabledLabel?: string;
 }) {
   const { pending } = useFormStatus();
   const blocked = pending || disabled;
   return (
     <button type="submit" disabled={blocked} className={`${btn.primary} w-full sm:w-auto`}>
-      {pending ? "Salvando..." : disabled ? "Aguarde as fotos..." : label}
+      {pending
+        ? "Salvando..."
+        : disabled
+          ? (disabledLabel ?? "Aguarde as fotos...")
+          : label}
     </button>
   );
 }
@@ -197,6 +204,9 @@ export function VehicleForm({
   const canFixTransmission = transmissionOptions.includes(transmissionSuggestion);
   const listedPrice = Number(values.price.replace(/\D/g, "") || 0);
   const priceMismatch = descriptionPriceMismatch(description, listedPrice);
+  const priceSaveBlocked = Boolean(
+    priceMismatch && descriptionPriceMismatchBlocksSave(status),
+  );
   const alreadySold = vehicle?.status === "vendido";
 
   function changeCategory(next: VehicleCategory) {
@@ -293,6 +303,12 @@ export function VehicleForm({
       next[issue.field] = issue.message;
     }
 
+    const listed = price === "" ? 0 : Number(price);
+    const mismatch = descriptionPriceMismatch(value("description"), listed);
+    if (mismatch && descriptionPriceMismatchBlocksSave(value("status") || status)) {
+      next.description = mismatch.blockMessage;
+    }
+
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -334,6 +350,14 @@ export function VehicleForm({
           if (photosUploading) {
             event.preventDefault();
             toast.error("Espere o envio ou o borrão das fotos terminar.");
+            return;
+          }
+          if (priceSaveBlocked) {
+            event.preventDefault();
+            toast.error(
+              priceMismatch?.blockMessage ??
+                "Corrija a descrição ou o preço antes de salvar.",
+            );
             return;
           }
           if (!validate()) {
@@ -936,19 +960,38 @@ export function VehicleForm({
         <Card title="Descrição">
           {priceMismatch ? (
             <div
-              role="status"
-              className="mb-4 border border-brand-orange/40 bg-brand-orange/10 px-3 py-3 text-sm text-cream"
+              role={priceSaveBlocked ? "alert" : "status"}
+              data-testid="description-price-mismatch"
+              className={`mb-4 border px-3 py-3 text-sm text-cream ${
+                priceSaveBlocked
+                  ? "border-brand/50 bg-brand/10"
+                  : "border-brand-orange/40 bg-brand-orange/10"
+              }`}
             >
-              <p className="font-display text-xs font-semibold uppercase tracking-wider text-brand-orange">
-                Preço do texto ≠ preço do anúncio
+              <p
+                className={`font-display text-xs font-semibold uppercase tracking-wider ${
+                  priceSaveBlocked ? "text-brand" : "text-brand-orange"
+                }`}
+              >
+                {priceSaveBlocked
+                  ? "Não dá para salvar assim"
+                  : "Preço do texto ≠ preço do anúncio"}
               </p>
               <p className="mt-1 leading-relaxed text-cream/90">
-                {priceMismatch.message}
+                {priceSaveBlocked
+                  ? priceMismatch.blockMessage
+                  : priceMismatch.message}
+              </p>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                {priceSaveBlocked
+                  ? "Disponível e destaque na home ficam bloqueados até o texto e o preço baterem."
+                  : "Reservado ou vendido ainda salvam. Para voltar ao estoque, o texto e o preço precisam bater."}
               </p>
             </div>
           ) : null}
           <Field
             label="Texto do anúncio"
+            error={errors.description}
             hint="Conte o estado do veículo, revisões e o que ajuda a vender. Os acessórios ficam na lista acima."
           >
             <textarea
@@ -958,7 +1001,7 @@ export function VehicleForm({
               onChange={(event) => setDescription(event.target.value)}
               className={`${inputClass} resize-y ${
                 priceMismatch ? "border-brand-orange/50" : ""
-              }`}
+              } ${errors.description ? errorBorder : ""}`}
             />
           </Field>
         </Card>
@@ -968,7 +1011,14 @@ export function VehicleForm({
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <SubmitButton
               label={mode === "create" ? "Cadastrar veículo" : "Salvar alterações"}
-              disabled={photosUploading}
+              disabled={photosUploading || priceSaveBlocked}
+              disabledLabel={
+                photosUploading
+                  ? "Aguarde as fotos..."
+                  : priceSaveBlocked
+                    ? "Corrija o preço da descrição"
+                    : undefined
+              }
             />
             <Link href="/admin/veiculos" className={`${btn.outline} w-full sm:w-auto`}>
               Voltar

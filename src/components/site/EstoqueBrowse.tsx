@@ -10,8 +10,7 @@ import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { SiteLeadHit, StockSearchPixel } from "@/components/site/VehiclePixel";
 import { WhatsAppButton } from "@/components/site/ui";
-import { WHATSAPP_MESSAGES } from "@/lib/site";
-import { formatStockWaitlistQuery } from "@/lib/stock-waitlist";
+import { formatStockWaitlistQuery, stockEmptyWhatsAppCta } from "@/lib/stock-waitlist";
 import {
   parseStockFilters,
   STOCK_PAGE_SIZE,
@@ -226,6 +225,10 @@ export function EstoqueBrowse({
   const filters = parseStockFilters(params, { page: 1 });
   const searchString = stockSearchString(params);
   const waitlistQuery = formatStockWaitlistQuery(params);
+  const emptyWhatsApp = stockEmptyWhatsAppCta({
+    filtered,
+    waitlistQuery,
+  });
   const resultIds = stock.vehicles.map((vehicle) => vehicle.id);
 
   return (
@@ -279,11 +282,26 @@ export function EstoqueBrowse({
                     ? "Tente novamente em alguns instantes. Se preferir, fale conosco no WhatsApp."
                     : filtered
                       ? waitlistQuery
-                        ? `Não tem ${waitlistQuery} agora. Manda no WhatsApp — a gente avisa quando entrar.`
-                        : "Não tem essa combinação agora. Manda no WhatsApp o que você procura — a gente avisa quando entrar."
+                        ? `Não tem ${waitlistQuery} agora. Me avisa no WhatsApp — a gente chama quando entrar.`
+                        : "Não tem essa combinação agora. Me avisa no WhatsApp o que você procura — a gente chama quando entrar."
                       : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
                 </p>
                 <div className="mt-5 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+                  <SiteLeadHit
+                    contentName="Avise-me"
+                    searchString={
+                      filtered ? searchString || undefined : undefined
+                    }
+                  >
+                    <WhatsAppButton
+                      trackingLabel={emptyWhatsApp.trackingLabel}
+                      campaign={emptyWhatsApp.campaign}
+                      message={emptyWhatsApp.message}
+                      variant="solid"
+                    >
+                      {emptyWhatsApp.label}
+                    </WhatsAppButton>
+                  </SiteLeadHit>
                   {!stock.error ? (
                     <ChatOpenButton
                       source={filtered ? "estoque-filtro-vazio" : "estoque-vazio"}
@@ -292,29 +310,9 @@ export function EstoqueBrowse({
                           ? `Quero ajuda para encontrar: ${searchString}`
                           : "Quero ajuda para escolher um veículo"
                       }
-                      variant="solid"
+                      variant="outline"
                     />
                   ) : null}
-                  <SiteLeadHit
-                    contentName="Avise-me"
-                    searchString={
-                      filtered ? searchString || undefined : undefined
-                    }
-                  >
-                    <WhatsAppButton
-                      trackingLabel={
-                        filtered ? "estoque-filtro-vazio" : "estoque-vazio"
-                      }
-                      message={
-                        filtered
-                          ? WHATSAPP_MESSAGES.wanted(waitlistQuery || undefined)
-                          : WHATSAPP_MESSAGES.wanted()
-                      }
-                      variant={stock.error ? "solid" : "outline"}
-                    >
-                      Quero avisar o que procuro
-                    </WhatsAppButton>
-                  </SiteLeadHit>
                 </div>
               </div>
             }

@@ -10,7 +10,10 @@ import {
   storagePathFromPublicUrl,
 } from "@/lib/supabase";
 import { normalizeAccessories, parseVehicleCategory } from "@/lib/vehicle-accessories";
-import { vehicleListingError } from "@/lib/admin-vehicle-validate";
+import {
+  descriptionPriceSaveError,
+  vehicleListingError,
+} from "@/lib/admin-vehicle-validate";
 import {
   DEFAULT_VEHICLE_LOCATION_CITY,
   parseVehicleLocationCity,
@@ -123,6 +126,13 @@ function parseVehicleFields(formData: FormData) {
     locationCity,
   });
   if (listingError) throw new Error(listingError);
+
+  const priceTextError = descriptionPriceSaveError({
+    description,
+    price,
+    status,
+  });
+  if (priceTextError) throw new Error(priceTextError);
 
   let photos: Array<{ url: string; thumbnailUrl: string | null }> = [];
   const photosRaw = String(formData.get("photoUrls") || "[]");
@@ -426,6 +436,19 @@ export async function setVehicleStatus(id: string, status: string) {
     return { ok: false, message: "Status inválido." };
   }
 
+  if (status === "disponivel") {
+    const current = await prisma.vehicle.findUnique({
+      where: { id },
+      select: { description: true, price: true },
+    });
+    const priceTextError = descriptionPriceSaveError({
+      description: current?.description,
+      price: current?.price ?? 0,
+      status,
+    });
+    if (priceTextError) return { ok: false, message: priceTextError };
+  }
+
   await prisma.vehicle.update({
     where: { id },
     data: status === "vendido" ? { status, featured: false } : { status },
@@ -456,12 +479,42 @@ export async function setVehiclesStatus(
 
   const rows = await prisma.vehicle.findMany({
     where: { id: { in: unique }, historical: false },
-    select: { id: true, status: true, featured: true },
+    select: {
+      id: true,
+      status: true,
+      featured: true,
+      description: true,
+      price: true,
+    },
   });
+  const priceBlockedIds = new Set(
+    status === "disponivel"
+      ? rows
+          .filter((row) =>
+            Boolean(
+              descriptionPriceSaveError({
+                description: row.description,
+                price: row.price,
+                status: "disponivel",
+              }),
+            ),
+          )
+          .map((row) => row.id)
+      : [],
+  );
   const appliedIds = rows
-    .filter((row) => row.status !== status)
+    .filter(
+      (row) => row.status !== status && !priceBlockedIds.has(row.id),
+    )
     .map((row) => row.id);
   if (appliedIds.length === 0) {
+    if (priceBlockedIds.size > 0) {
+      return {
+        ok: false,
+        message:
+          "A descrição cita um R$ diferente do preço. Corrija a descrição ou o preço antes de voltar para disponível.",
+      };
+    }
     return {
       ok: false,
       message:
@@ -479,7 +532,8 @@ export async function setVehiclesStatus(
 
   revalidatePath("/admin/veiculos");
   revalidatePublicStock();
-  const skipped = unique.length - appliedIds.length;
+  const priceBlockedCount = priceBlockedIds.size;
+  const skipped = unique.length - appliedIds.length - priceBlockedCount;
   const featuredRemoved =
     status === "vendido"
       ? rows.filter((row) => appliedIds.includes(row.id) && row.featured).length
@@ -490,13 +544,17 @@ export async function setVehiclesStatus(
       : "";
   const skip =
     skipped > 0 ? ` ${skipped} já estava${skipped === 1 ? "" : "m"} assim.` : "";
+  const priceSkip =
+    priceBlockedCount > 0
+      ? ` ${priceBlockedCount} ficou${priceBlockedCount === 1 ? "" : "ram"} de fora: descrição cita outro preço.`
+      : "";
   return {
     ok: true,
     appliedIds,
     message:
       status === "vendido"
         ? `${appliedIds.length} veículo(s) marcados como vendidos. A página pública continua no ar.${home}${skip}`
-        : `${appliedIds.length} veículo(s) voltaram para disponível.${skip}`,
+        : `${appliedIds.length} veículo(s) voltaram para disponível.${skip}${priceSkip}`,
   };
 }
 
@@ -505,7 +563,7 @@ export async function setVehicleFeatured(id: string, featured: boolean) {
 
   const current = await prisma.vehicle.findUnique({
     where: { id },
-    select: { featured: true, status: true },
+    select: { featured: true, status: true, description: true, price: true },
   });
   if (!current) {
     return { ok: false, message: "Veículo não encontrado." };
@@ -515,6 +573,14 @@ export async function setVehicleFeatured(id: string, featured: boolean) {
       ok: false,
       message: "Só anúncio disponível entra na home. Marque disponível antes.",
     };
+  }
+  if (featured) {
+    const priceTextError = descriptionPriceSaveError({
+      description: current.description,
+      price: current.price,
+      status: current.status,
+    });
+    if (priceTextError) return { ok: false, message: priceTextError };
   }
   if (featured && !current.featured) {
     const featuredCount = await prisma.vehicle.count({

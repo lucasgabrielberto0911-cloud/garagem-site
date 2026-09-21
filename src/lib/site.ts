@@ -115,7 +115,7 @@ export type CustomerWhatsAppVehicleIntent =
   | "similar";
 
 /** Campanhas dos CTAs públicos — Lucas vê no wa.me aberto. */
-export type WhatsAppCampaign = "ficha" | "estoque" | "home" | "chat";
+export type WhatsAppCampaign = "ficha" | "estoque" | "filtro" | "home" | "chat";
 
 export type WhatsAppTracking = {
   campaign?: WhatsAppCampaign;
@@ -211,6 +211,7 @@ export function whatsappCampaignFromLabel(label: string): WhatsAppCampaign {
   if (key.includes("chat")) return "chat";
   if (key.includes("ficha")) return "ficha";
   if (key.includes("home")) return "home";
+  if (key.includes("filtro")) return "filtro";
   if (
     key.includes("estoque") ||
     key.includes("vehicle-card") ||

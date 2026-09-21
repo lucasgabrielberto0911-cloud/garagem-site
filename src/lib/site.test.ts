@@ -100,6 +100,8 @@ test("wa.me dos CTAs leva UTM de origem sem alterar o pré-preenchido", () => {
   assert.equal(whatsappCampaignFromLabel("ficha-mobile"), "ficha");
   assert.equal(whatsappCampaignFromLabel("chat-card"), "chat");
   assert.equal(whatsappCampaignFromLabel("estoque-bar-whatsapp"), "estoque");
+  assert.equal(whatsappCampaignFromLabel("estoque-filtro-vazio"), "filtro");
+  assert.equal(whatsappCampaignFromLabel("filtro-vazio"), "filtro");
   assert.equal(
     whatsappContentFromVehicle({
       id: "cuid123",
