@@ -1,8 +1,8 @@
 /**
  * Cria/atualiza anúncios no banco live e sobe fotos no bucket público
  * `veiculos`, no mesmo pipeline do admin (`/api/upload`):
- * HEIC→JPEG se preciso, blur de placa (Rekognition), galeria WebP 1280
- * e capa 480×300.
+ * HEIC→JPEG se preciso, galeria WebP 1280 e capa 480×300.
+ * Placa não é borracha aqui: no admin, marque Tem placa e use Borrar.
  *
  *   npx tsx scripts/import-stock-vehicle.ts
  *   npx tsx scripts/import-stock-vehicle.ts --dry-run
@@ -17,7 +17,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
-import { blurDetectedPlates } from "../src/lib/blur-plates";
 import {
   cardObjectPath,
   encodeCardImage,
@@ -188,10 +187,9 @@ async function uploadPublicObject(objectPath: string, buffer: Buffer, contentTyp
 
 async function uploadPhotoFile(filePath: string): Promise<IntakePhoto> {
   const raw = await readFile(filePath);
-  const withPlatesBlurred = await blurDetectedPlates(raw);
   const [gallery, card] = await Promise.all([
-    encodeGalleryImage(withPlatesBlurred),
-    encodeCardImage(withPlatesBlurred),
+    encodeGalleryImage(raw),
+    encodeCardImage(raw),
   ]);
 
   const id = `${Date.now()}-${crypto.randomUUID()}`;

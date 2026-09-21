@@ -3,12 +3,17 @@ import { test } from "node:test";
 import {
   createPhotoBlurJobs,
   photoBlurBadgeLabel,
+  photoBlurEmptySelectionMessage,
   photoBlurNeedsSave,
   photoBlurProgressLabel,
   photoBlurRetryIds,
   photoBlurSummaryMessage,
   photoBlurToastKind,
+  photoMarkedHasPlate,
+  photoPlateMarkLabel,
+  photosMarkedHasPlate,
   summarizePhotoBlur,
+  togglePhotoHasPlate,
   type PhotoBlurJobState,
 } from "./photo-blur-jobs";
 
@@ -50,13 +55,32 @@ test("resumo final distingue placa borracha, sem placa e falha", () => {
     status: "unchanged" as const,
   }));
   assert.equal(photoBlurToastKind(none), "message");
-  assert.match(photoBlurSummaryMessage(none), /Não achei placa/);
+  assert.match(photoBlurSummaryMessage(none), /Não achei placa nas fotos marcadas/);
 
   const failed = createPhotoBlurJobs(["z"]).map((job) => ({
     ...job,
     status: "error" as const,
   }));
   assert.equal(photoBlurToastKind(failed), "error");
+});
+
+test("só foto marcada Tem placa entra no blur", () => {
+  const photos = [
+    { id: "dash", url: "/painel.jpg" },
+    { id: "front", url: "/frente.jpg", hasPlate: true },
+    { id: "side", url: "/lado.jpg", hasPlate: false },
+    { id: "rear", url: "/traseira.jpg", hasPlate: true },
+  ];
+  assert.equal(photoMarkedHasPlate(photos[0]), false);
+  assert.deepEqual(
+    photosMarkedHasPlate(photos).map((photo) => photo.id),
+    ["front", "rear"],
+  );
+  assert.equal(photoPlateMarkLabel(false), "Tem placa?");
+  assert.equal(photoPlateMarkLabel(true), "Tem placa");
+  assert.equal(togglePhotoHasPlate(photos[0]).hasPlate, true);
+  assert.equal(togglePhotoHasPlate(photos[1]).hasPlate, false);
+  assert.match(photoBlurEmptySelectionMessage(), /não gastam API/);
 });
 
 test("retry cobre falha e sem placa; save só depois de borrar de verdade", () => {

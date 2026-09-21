@@ -7,6 +7,31 @@ export type PhotoBlurStatus =
   | "unchanged"
   | "error";
 
+/** Foto marcada no admin como “tem placa” — única que pode ir ao detector. */
+export function photoMarkedHasPlate(photo: { hasPlate?: boolean | null }) {
+  return photo.hasPlate === true;
+}
+
+export function photosMarkedHasPlate<T extends { hasPlate?: boolean | null }>(
+  photos: T[],
+): T[] {
+  return photos.filter(photoMarkedHasPlate);
+}
+
+export function togglePhotoHasPlate<T extends { hasPlate?: boolean | null }>(
+  photo: T,
+): T {
+  return { ...photo, hasPlate: !photoMarkedHasPlate(photo) };
+}
+
+export function photoPlateMarkLabel(hasPlate: boolean) {
+  return hasPlate ? "Tem placa" : "Tem placa?";
+}
+
+export function photoBlurEmptySelectionMessage() {
+  return "Marque Tem placa nas fotos da frente ou de trás. Só essas vão ao detector — as outras não gastam API.";
+}
+
 export type PhotoBlurJobState = {
   id: string;
   status: PhotoBlurStatus;
@@ -62,7 +87,7 @@ export function photoBlurSummaryMessage(jobs: PhotoBlurJobState[]) {
   if (summary.blurred === 0) {
     return summary.hasFailures
       ? `Nenhuma placa encontrada. ${summary.failed.length} foto(s) falharam.`
-      : "Não achei placa nessas fotos. Tente uma foto mais de perto da traseira e salve de novo.";
+      : "Não achei placa nas fotos marcadas. Confira o recorte (frente/traseira) e tente de novo.";
   }
   const unchanged =
     summary.unchanged > 0 ? ` ${summary.unchanged} sem placa visível.` : "";
