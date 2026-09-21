@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   descriptionPriceMismatch,
+  descriptionPriceMismatchBlocksSave,
+  descriptionPriceSaveError,
   extractCitedPrices,
   kmHint,
   parseBrCurrencyToken,
@@ -72,8 +77,54 @@ test("aviso quando o texto cita preço diferente do campo", () => {
   assert.deepEqual(mismatch?.citedPrices, [92000]);
   assert.match(mismatch?.message ?? "", /R\$\s*92\.000/);
   assert.match(mismatch?.message ?? "", /R\$\s*89\.900/);
+  assert.match(mismatch?.blockMessage ?? "", /R\$\s*92\.000/);
+  assert.match(mismatch?.blockMessage ?? "", /R\$\s*89\.900/);
+  assert.match(mismatch?.blockMessage ?? "", /antes de salvar/);
   assert.equal(descriptionPriceMismatch("", 89900), null);
   assert.equal(descriptionPriceMismatch("R$ 92.000", 0), null);
+});
+
+test("disponível trava o save; reservado e vendido só avisam", () => {
+  const description = "Anúncio antigo: R$ 92.000 à vista.";
+  assert.equal(descriptionPriceMismatchBlocksSave("disponivel"), true);
+  assert.equal(descriptionPriceMismatchBlocksSave(""), true);
+  assert.equal(descriptionPriceMismatchBlocksSave(undefined), true);
+  assert.equal(descriptionPriceMismatchBlocksSave("reservado"), false);
+  assert.equal(descriptionPriceMismatchBlocksSave("vendido"), false);
+
+  const blocked = descriptionPriceSaveError({
+    description,
+    price: 89900,
+    status: "disponivel",
+  });
+  assert.match(blocked ?? "", /R\$\s*92\.000/);
+  assert.match(blocked ?? "", /R\$\s*89\.900/);
+  assert.match(blocked ?? "", /Corrija a descrição ou o preço antes de salvar/);
+
+  assert.equal(
+    descriptionPriceSaveError({
+      description,
+      price: 89900,
+      status: "reservado",
+    }),
+    null,
+  );
+  assert.equal(
+    descriptionPriceSaveError({
+      description,
+      price: 89900,
+      status: "vendido",
+    }),
+    null,
+  );
+  assert.equal(
+    descriptionPriceSaveError({
+      description: "Carro revisado, R$ 89.900.",
+      price: 89900,
+      status: "disponivel",
+    }),
+    null,
+  );
 });
 
 test("cidade física exige Serra ou Linhares quando o campo vem no form", () => {
@@ -92,4 +143,22 @@ test("cidade física exige Serra ou Linhares quando o campo vem no form", () => 
     vehicleListingError({ ...ok, locationCity: "vitoria" }) ?? "",
     /Serra ou Linhares/,
   );
+});
+
+const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+test("formulário e actions travam disponível com preço divergente no texto", () => {
+  const form = readFileSync(join(srcRoot, "components/admin/VehicleForm.tsx"), "utf8");
+  const actions = readFileSync(join(srcRoot, "app/admin/veiculos/actions.ts"), "utf8");
+
+  assert.match(form, /descriptionPriceMismatchBlocksSave/);
+  assert.match(form, /priceSaveBlocked/);
+  assert.match(form, /blockMessage/);
+  assert.match(form, /Não dá para salvar assim/);
+  assert.match(form, /Corrija o preço da descrição/);
+  assert.match(form, /event\.preventDefault\(\)/);
+  assert.match(form, /disabled=\{photosUploading \|\| priceSaveBlocked\}/);
+
+  assert.match(actions, /descriptionPriceSaveError/);
+  assert.match(actions, /status === "disponivel"/);
 });

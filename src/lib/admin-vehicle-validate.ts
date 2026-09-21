@@ -104,8 +104,14 @@ export type CitedPrice = {
 export type DescriptionPriceMismatch = {
   listedPrice: number;
   citedPrices: number[];
+  /** Aviso (reservado/vendido ainda salvam). */
   message: string;
+  /** Erro duro: disponível/destaque não publicam até bater o preço. */
+  blockMessage: string;
 };
+
+/** Status da vitrine pública — é este que trava o save. */
+export const PUBLIC_LISTING_STATUS = "disponivel";
 
 /** Interpreta 89.900 / 89.900,00 / 89900. */
 export function parseBrCurrencyToken(value: string) {
@@ -191,6 +197,19 @@ function formatCitedList(amounts: number[]) {
     .join(" e ");
 }
 
+function descriptionPriceCoreMessage(cited: string, listed: string) {
+  return `A descrição cita ${cited}, mas o preço do anúncio é ${listed}.`;
+}
+
+/**
+ * Disponível (vitrine / destaque) trava o save. Reservado e vendido só avisam —
+ * não tem rascunho no produto; vendido já saiu do estoque público.
+ */
+export function descriptionPriceMismatchBlocksSave(status?: string | null) {
+  const value = (status ?? PUBLIC_LISTING_STATUS).trim() || PUBLIC_LISTING_STATUS;
+  return value === PUBLIC_LISTING_STATUS;
+}
+
 /** Aviso quando o texto ainda cita um preço diferente do campo. */
 export function descriptionPriceMismatch(
   description: string,
@@ -209,13 +228,24 @@ export function descriptionPriceMismatch(
   const citedPrices = [...new Set(disagree.map((item) => item.amount))];
   const listed = formatCitedList([listedPrice]);
   const cited = formatCitedList(citedPrices);
+  const core = descriptionPriceCoreMessage(cited, listed);
 
   return {
     listedPrice,
     citedPrices,
-    message:
-      citedPrices.length === 1
-        ? `A descrição cita ${cited}, mas o preço do anúncio é ${listed}. Quem lê o texto vê o valor antigo.`
-        : `A descrição cita ${cited}, mas o preço do anúncio é ${listed}. Ajuste o texto antes de publicar.`,
+    message: `${core} Quem lê o texto vê o valor antigo.`,
+    blockMessage: `${core} Corrija a descrição ou o preço antes de salvar.`,
   };
+}
+
+/** Erro de save quando o anúncio iria à vitrine (disponível / destaque). */
+export function descriptionPriceSaveError(input: {
+  description?: string | null;
+  price: number;
+  status?: string | null;
+}) {
+  const mismatch = descriptionPriceMismatch(input.description ?? "", input.price);
+  if (!mismatch) return null;
+  if (!descriptionPriceMismatchBlocksSave(input.status)) return null;
+  return mismatch.blockMessage;
 }
