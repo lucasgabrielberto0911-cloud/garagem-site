@@ -1473,12 +1473,606 @@ export async function looksLikeMercosulPlatePatch(
   }
 }
 
+const GRAY_PLATE_LUMA_MIN = 70;
+const GRAY_PLATE_LUMA_MAX = 232;
+const GRAY_PLATE_CHROMA = 46;
+const GRAY_PLATE_INK = 78;
+const GRAY_LETTER_INK_MAX = 12;
+
+function pixelLuma(r: number, g: number, b: number) {
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
+function pixelChroma(r: number, g: number, b: number) {
+  return Math.max(r, g, b) - Math.min(r, g, b);
+}
+
+/** Fundo cinza-alumínio da placa antiga (sem faixa azul Mercosul). */
+function isGrayPlateTone(r: number, g: number, b: number) {
+  if (isMercosulBlue(r, g, b)) return false;
+  const luma = pixelLuma(r, g, b);
+  return (
+    luma >= GRAY_PLATE_LUMA_MIN &&
+    luma <= GRAY_PLATE_LUMA_MAX &&
+    pixelChroma(r, g, b) <= GRAY_PLATE_CHROMA
+  );
+}
+
+/** Caracteres pretos da placa cinza. */
+function isGrayPlateInk(r: number, g: number, b: number) {
+  return pixelLuma(r, g, b) < GRAY_PLATE_INK && pixelChroma(r, g, b) <= 55;
+}
+
+type GrayPlateSignals = {
+  aspect: number;
+  mean: number;
+  stdev: number;
+  grayRatio: number;
+  inkRatio: number;
+  lightRatio: number;
+  whiteRatio: number;
+  blueRatio: number;
+  satMean: number;
+  insetGray: number;
+  insetInk: number;
+  letterRuns: number;
+};
+
+function measureGrayPlatePatch(
+  data: Buffer,
+  width: number,
+  height: number,
+  channels: number,
+  box: PixelBox,
+): GrayPlateSignals | null {
+  if (box.width < 8 || box.height < 8) return null;
+  if (box.left < 0 || box.top < 0) return null;
+  if (box.left + box.width > width || box.top + box.height > height) return null;
+
+  const aspect = box.width / box.height;
+  const insetX0 = box.left + Math.round(box.width * 0.08);
+  const insetX1 = box.left + box.width - Math.round(box.width * 0.08);
+  const insetY0 = box.top + Math.round(box.height * 0.16);
+  const insetY1 = box.top + box.height - Math.round(box.height * 0.14);
+  const letterY0 = box.top + Math.round(box.height * 0.26);
+  const letterY1 = box.top + box.height - Math.round(box.height * 0.16);
+
+  let sum = 0;
+  let sumSq = 0;
+  let satSum = 0;
+  let count = 0;
+  let gray = 0;
+  let ink = 0;
+  let light = 0;
+  let white = 0;
+  let blue = 0;
+  let insetN = 0;
+  let insetGray = 0;
+  let insetInk = 0;
+  let runRows = 0;
+  let runSum = 0;
+
+  for (let y = box.top; y < box.top + box.height; y += 1) {
+    let inRun = false;
+    let runs = 0;
+    let rowPlate = 0;
+    let rowN = 0;
+    for (let x = box.left; x < box.left + box.width; x += 1) {
+      const offset = (y * width + x) * channels;
+      const r = data[offset];
+      const g = data[offset + 1];
+      const b = data[offset + 2];
+      const luma = pixelLuma(r, g, b);
+      const chroma = pixelChroma(r, g, b);
+      sum += luma;
+      sumSq += luma * luma;
+      satSum += chroma;
+      count += 1;
+      const tone = isGrayPlateTone(r, g, b);
+      const mark = isGrayPlateInk(r, g, b);
+      if (tone) gray += 1;
+      if (mark) ink += 1;
+      if (luma > 165) light += 1;
+      if (luma > 200) white += 1;
+      if (isMercosulBlue(r, g, b)) blue += 1;
+
+      const inset =
+        x >= insetX0 && x < insetX1 && y >= insetY0 && y < insetY1;
+      if (inset) {
+        insetN += 1;
+        if (tone) insetGray += 1;
+        if (mark) insetInk += 1;
+      }
+
+      if (y >= letterY0 && y < letterY1 && x >= insetX0 && x < insetX1) {
+        rowN += 1;
+        if (tone || mark) rowPlate += 1;
+        if (mark) {
+          if (!inRun) {
+            runs += 1;
+            inRun = true;
+          }
+        } else {
+          inRun = false;
+        }
+      }
+    }
+    if (rowN >= 8 && rowPlate / rowN >= 0.48 && runs >= 2) {
+      runRows += 1;
+      runSum += runs;
+    }
+  }
+  if (count === 0) return null;
+
+  const mean = sum / count;
+  return {
+    aspect,
+    mean,
+    stdev: Math.sqrt(Math.max(0, sumSq / count - mean * mean)),
+    grayRatio: gray / count,
+    inkRatio: ink / count,
+    lightRatio: light / count,
+    whiteRatio: white / count,
+    blueRatio: blue / count,
+    satMean: satSum / count,
+    insetGray: insetGray / Math.max(1, insetN),
+    insetInk: insetInk / Math.max(1, insetN),
+    letterRuns: runRows > 0 ? runSum / runRows : 0,
+  };
+}
+
+function grayPlateSignalsPass(signals: GrayPlateSignals): boolean {
+  if (signals.blueRatio >= 0.04) return false;
+  if (signals.mean < 95 || signals.mean > 175) return false;
+  if (signals.stdev < 16 || signals.stdev > 62) return false;
+  if (signals.satMean > 22) return false;
+  if (signals.whiteRatio > 0.12) return false;
+  if (signals.grayRatio < 0.76) return false;
+  if (signals.inkRatio < 0.055 || signals.inkRatio > 0.2) return false;
+  if (signals.insetGray < 0.55) return false;
+  if (signals.insetInk < 0.06 || signals.insetInk > 0.26) return false;
+  if (signals.letterRuns < 5.2 || signals.letterRuns > 18) return false;
+  return signals.aspect >= 2.15 && signals.aspect <= 5.4;
+}
+
+/** Moto cinza antiga (duas linhas). Mais restrita que o carro — evita farol/portinhola. */
+function grayMotoPlateSignalsPass(signals: GrayPlateSignals): boolean {
+  if (signals.aspect < 0.75 || signals.aspect > 1.55) return false;
+  if (signals.blueRatio >= 0.04) return false;
+  if (signals.mean < 100 || signals.mean > 170) return false;
+  if (signals.stdev < 20 || signals.stdev > 58) return false;
+  if (signals.satMean > 18) return false;
+  if (signals.whiteRatio > 0.08) return false;
+  if (signals.grayRatio < 0.72) return false;
+  if (signals.inkRatio < 0.08 || signals.inkRatio > 0.26) return false;
+  if (signals.insetInk < 0.08 || signals.insetInk > 0.24) return false;
+  if (signals.letterRuns < 5.5) return false;
+  return true;
+}
+
+/**
+ * Placa cinza antiga (LLL+NNNN), carro ou moto: fundo alumínio + letras pretas.
+ * Não é Mercosul (faixa azul), Forte (preto + branco) nem tinta lisa.
+ */
+export async function looksLikeGrayPlatePatch(
+  image: Buffer,
+  box: PixelBox,
+): Promise<boolean> {
+  if (box.width < 10 || box.height < 8) return false;
+  try {
+    const extracted = await sharp(image, { failOn: "none" })
+      .extract({
+        left: box.left,
+        top: box.top,
+        width: box.width,
+        height: box.height,
+      })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const signals = measureGrayPlatePatch(
+      extracted.data,
+      extracted.info.width,
+      extracted.info.height,
+      extracted.info.channels,
+      {
+        left: 0,
+        top: 0,
+        width: extracted.info.width,
+        height: extracted.info.height,
+      },
+    );
+    if (
+      !signals ||
+      !(grayPlateSignalsPass(signals) || grayMotoPlateSignalsPass(signals))
+    ) {
+      return false;
+    }
+    if (await looksLikeMercosulPlatePatch(image, box)) return false;
+    if (await looksLikeAnalogGaugeAround(image, box)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+type GrayLetterRow = { y: number; left: number; right: number; runs: number };
+
+function grayLetterRowsFromPatch(
+  data: Buffer,
+  width: number,
+  height: number,
+  channels: number,
+): GrayLetterRow[] {
+  const rows: GrayLetterRow[] = [];
+  const minSpan = Math.max(16, Math.round(width * 0.028));
+  const maxSpan = Math.max(96, Math.min(240, Math.round(width * 0.62)));
+
+  for (let y = 0; y < height; y += 1) {
+    let start = -1;
+    let lastField = -1;
+    let inkRun = 0;
+    let best: GrayLetterRow | null = null;
+    const consider = (end: number) => {
+      if (start < 0 || lastField < start) {
+        start = -1;
+        lastField = -1;
+        inkRun = 0;
+        return;
+      }
+      const left = start;
+      const right = Math.max(lastField, end - 1);
+      const span = right - left + 1;
+      start = -1;
+      lastField = -1;
+      inkRun = 0;
+      if (span < minSpan || span > maxSpan) return;
+      let runs = 0;
+      let inRun = false;
+      let inkN = 0;
+      let fieldN = 0;
+      for (let x = left; x <= right; x += 1) {
+        const offset = (y * width + x) * channels;
+        const r = data[offset];
+        const g = data[offset + 1];
+        const b = data[offset + 2];
+        const mark = isGrayPlateInk(r, g, b);
+        const tone = isGrayPlateTone(r, g, b);
+        if (tone) fieldN += 1;
+        if (mark) {
+          inkN += 1;
+          if (!inRun) {
+            runs += 1;
+            inRun = true;
+          }
+        } else {
+          inRun = false;
+        }
+      }
+      if (runs < 3 || runs > 22) return;
+      if (inkN / span < 0.055 || inkN / span > 0.48) return;
+      if (fieldN / span < 0.42) return;
+      if (!best || span > best.right - best.left + 1) {
+        best = { y, left, right, runs };
+      }
+    };
+
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * channels;
+      const r = data[offset];
+      const g = data[offset + 1];
+      const b = data[offset + 2];
+      const mark = isGrayPlateInk(r, g, b);
+      const tone = isGrayPlateTone(r, g, b);
+      if (tone) {
+        if (start < 0) start = x;
+        lastField = x;
+        inkRun = 0;
+        continue;
+      }
+      if (mark && start >= 0) {
+        inkRun += 1;
+        if (inkRun > GRAY_LETTER_INK_MAX) {
+          consider(lastField + 1);
+        }
+        continue;
+      }
+      if (start >= 0) consider(x);
+    }
+    if (start >= 0) consider(width);
+    if (best) rows.push(best);
+  }
+  return rows;
+}
+
+function clusterGrayLetterRows(rows: GrayLetterRow[]): PixelBox[] {
+  if (rows.length === 0) return [];
+  const boxes: PixelBox[] = [];
+  let group: GrayLetterRow[] = [rows[0]];
+
+  const flush = () => {
+    if (group.length < 4) {
+      group = [];
+      return;
+    }
+    const lefts = group.map((row) => row.left).sort((a, b) => a - b);
+    const rights = group.map((row) => row.right).sort((a, b) => a - b);
+    const left = lefts[Math.floor(lefts.length / 2)];
+    const right = rights[Math.floor(rights.length / 2)];
+    const top = group[0].y;
+    const bottom = group[group.length - 1].y;
+    const width = right - left + 1;
+    const height = bottom - top + 1;
+    const aspect = width / Math.max(1, height);
+    // A faixa de letras sozinha é bem larga; completeGrayPlate recupera o filete.
+    const car = aspect >= 1.7 && aspect <= 22;
+    const moto = aspect >= 0.68 && aspect <= 1.68 && height >= 10;
+    if (width >= 18 && height >= 4 && (car || moto)) {
+      boxes.push({ left, top, width, height });
+    }
+    group = [];
+  };
+
+  for (let index = 1; index < rows.length; index += 1) {
+    const row = rows[index];
+    const prev = group[group.length - 1];
+    const gap = row.y - prev.y;
+    const overlap =
+      Math.min(row.right, prev.right) - Math.max(row.left, prev.left) + 1;
+    const minW = Math.min(row.right - row.left + 1, prev.right - prev.left + 1);
+    const widthClose =
+      Math.abs(row.right - row.left - (prev.right - prev.left)) <=
+      Math.max(16, minW * 0.35);
+    const leftClose = Math.abs(row.left - prev.left) <= 18;
+    if (gap <= 2 && overlap >= minW * 0.55 && widthClose && leftClose) {
+      group.push(row);
+    } else {
+      flush();
+      group = [row];
+    }
+  }
+  flush();
+  return boxes;
+}
+
+function grayPlateRowOk(
+  data: Buffer,
+  width: number,
+  channels: number,
+  y: number,
+  x0: number,
+  x1: number,
+) {
+  let gray = 0;
+  let ink = 0;
+  let n = 0;
+  for (let x = x0; x < x1; x += 1) {
+    const offset = (y * width + x) * channels;
+    const r = data[offset];
+    const g = data[offset + 1];
+    const b = data[offset + 2];
+    n += 1;
+    if (isGrayPlateInk(r, g, b)) ink += 1;
+    else if (isGrayPlateTone(r, g, b)) gray += 1;
+  }
+  if (n === 0) return false;
+  if ((gray + ink) / n < 0.52) return false;
+  if (ink / n > 0.72 && gray / n < 0.12) return false;
+  return true;
+}
+
+function grayPlateColOk(
+  data: Buffer,
+  width: number,
+  channels: number,
+  x: number,
+  y0: number,
+  y1: number,
+) {
+  let gray = 0;
+  let ink = 0;
+  let n = 0;
+  for (let y = y0; y < y1; y += 1) {
+    const offset = (y * width + x) * channels;
+    const r = data[offset];
+    const g = data[offset + 1];
+    const b = data[offset + 2];
+    n += 1;
+    if (isGrayPlateInk(r, g, b)) ink += 1;
+    else if (isGrayPlateTone(r, g, b)) gray += 1;
+  }
+  if (n === 0) return false;
+  if ((gray + ink) / n < 0.48) return false;
+  if (ink / n > 0.74 && gray / n < 0.1) return false;
+  return true;
+}
+
+/** Estica até a borda da placa cinza (cidade em cima, filete). */
+function completeGrayPlate(
+  data: Buffer,
+  width: number,
+  height: number,
+  channels: number,
+  box: PixelBox,
+): PixelBox {
+  let left = box.left;
+  let right = box.left + box.width - 1;
+  let top = box.top;
+  let bottom = box.top + box.height - 1;
+
+  const maxW = Math.min(width, Math.max(box.width + 24, Math.round(box.height * 5.4)));
+  const maxH = Math.min(height, Math.max(box.height + 16, Math.round(box.width * 0.7)));
+
+  while (left > 0 && right - left + 2 <= maxW && grayPlateColOk(data, width, channels, left - 1, top, bottom + 1)) {
+    left -= 1;
+  }
+  while (
+    right + 1 < width &&
+    right - left + 2 <= maxW &&
+    grayPlateColOk(data, width, channels, right + 1, top, bottom + 1)
+  ) {
+    right += 1;
+  }
+  while (top > 0 && bottom - top + 2 <= maxH && grayPlateRowOk(data, width, channels, top - 1, left, right + 1)) {
+    top -= 1;
+  }
+  while (
+    bottom + 1 < height &&
+    bottom - top + 2 <= maxH &&
+    grayPlateRowOk(data, width, channels, bottom + 1, left, right + 1)
+  ) {
+    bottom += 1;
+  }
+
+  return {
+    left,
+    top,
+    width: right - left + 1,
+    height: bottom - top + 1,
+  };
+}
+
+/**
+ * Varredura visual da placa cinza antiga: faixa de letras pretas no alumínio.
+ */
+export async function findGrayPlateBoxes(
+  image: Buffer,
+  region: PixelBox,
+): Promise<PixelBox[]> {
+  let data: Buffer;
+  let width = 0;
+  let height = 0;
+  let channels = 0;
+  try {
+    const extracted = await sharp(image, { failOn: "none" })
+      .extract({
+        left: region.left,
+        top: region.top,
+        width: region.width,
+        height: region.height,
+      })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    data = extracted.data;
+    width = extracted.info.width;
+    height = extracted.info.height;
+    channels = extracted.info.channels;
+  } catch {
+    return [];
+  }
+
+  const clustered = clusterGrayLetterRows(
+    grayLetterRowsFromPatch(data, width, height, channels),
+  );
+  const boxes: PixelBox[] = [];
+  for (let index = 0; index < clustered.length; index += 1) {
+    const fitted = completeGrayPlate(
+      data,
+      width,
+      height,
+      channels,
+      clustered[index],
+    );
+    if (fitted.width < 16 || fitted.height < 8) continue;
+    const fittedAspect = fitted.width / Math.max(1, fitted.height);
+    if (fittedAspect < 2.15 || fittedAspect > 5.4) continue;
+    const signals = measureGrayPlatePatch(data, width, height, channels, fitted);
+    if (!signals || !grayPlateSignalsPass(signals)) continue;
+    const absolute = {
+      left: region.left + fitted.left,
+      top: region.top + fitted.top,
+      width: fitted.width,
+      height: fitted.height,
+    };
+    if (await looksLikeAnalogGaugeAround(image, absolute)) continue;
+    if (await looksLikeMercosulPlatePatch(image, absolute)) continue;
+    if (!(await looksLikeGrayPlatePatch(image, absolute))) continue;
+    boxes.push(absolute);
+  }
+  return mergeOverlappingBoxes(boxes);
+}
+
+function padGrayPlateBox(
+  box: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+): PixelBox {
+  const padX = Math.max(2, Math.round(box.width * 0.06));
+  const padY = Math.max(2, Math.round(box.height * 0.1));
+  const left = Math.max(0, box.left - padX);
+  const top = Math.max(0, box.top - padY);
+  const right = Math.min(imageWidth, box.left + box.width + padX);
+  const bottom = Math.min(imageHeight, box.top + box.height + padY);
+  return { left, top, width: right - left, height: bottom - top };
+}
+
+export async function findGrayPlatesInImage(
+  image: Buffer,
+  imageWidth: number,
+  imageHeight: number,
+): Promise<PixelBox[]> {
+  const region = lowerFrameSearchRegion(imageWidth, imageHeight);
+  const found = await findGrayPlateBoxes(image, region);
+  const boxes: PixelBox[] = [];
+  for (let index = 0; index < found.length; index += 1) {
+    const box = found[index];
+    if (!isPlausiblePlateBox(box, imageWidth, imageHeight)) continue;
+    if (!isPlateShaped(box, imageWidth, imageHeight)) continue;
+    boxes.push(padGrayPlateBox(box, imageWidth, imageHeight));
+  }
+  return mergeOverlappingBoxes(boxes);
+}
+
+/**
+ * Semente minúscula (OCR de um dígito, speck na borda) vira a placa cinza inteira.
+ */
+export async function expandToGrayPlateBox(
+  image: Buffer,
+  box: PixelBox,
+  imageWidth: number,
+  imageHeight: number,
+): Promise<PixelBox> {
+  const padLeft = Math.max(72, Math.round(box.width * 6));
+  const padRight = Math.max(18, Math.round(box.width * 1.4));
+  const padY = Math.max(14, Math.round(box.height * 2.4));
+  const left = Math.max(0, box.left - padLeft);
+  const top = Math.max(0, box.top - padY);
+  const right = Math.min(imageWidth, box.left + box.width + padRight);
+  const bottom = Math.min(imageHeight, box.top + box.height + padY);
+  const search = {
+    left,
+    top,
+    width: right - left,
+    height: bottom - top,
+  };
+  if (search.width < 20 || search.height < 10) return box;
+
+  const found = await findGrayPlateBoxes(image, search);
+  let best: PixelBox | null = null;
+  for (let index = 0; index < found.length; index += 1) {
+    const hit = found[index];
+    if (
+      boxesOverlap(hit, box) ||
+      boxContainsCenter(hit, box) ||
+      boxContainsCenter(box, hit)
+    ) {
+      if (!best || boxArea(hit) > boxArea(best)) best = hit;
+    }
+  }
+  if (best && (await looksLikeGrayPlatePatch(image, best))) {
+    return best;
+  }
+  return box;
+}
+
 export async function looksLikeBodyPanelFalsePositive(
   image: Buffer,
   box: PixelBox,
 ): Promise<boolean> {
   if (await looksLikeAnalogGaugeAround(image, box)) return true;
   if (await looksLikeMercosulPlatePatch(image, box)) return false;
+  if (await looksLikeGrayPlatePatch(image, box)) return false;
   if (isUnlikelyPlateGeometry(box)) return true;
   try {
     const extracted = await sharp(image, { failOn: "none" })
@@ -1869,10 +2463,14 @@ function hasLightPlateBodyBelow(
   channels: number,
   blob: BlueBlob,
 ): boolean {
-  // Placa Mercosul possui corpo branco/cinza claro abaixo da faixa azul.
-  // Faróis e grades pretas têm plástico escuro ou lâmpada.
+  // Só a faixa colada na azul. Uma placa cinza mais abaixo (com vão
+  // de para-choque) não vale como corpo Mercosul.
   const startY = blob.top + blob.height;
-  const sampleHeight = Math.min(Math.max(4, Math.round(blob.height * 1.2)), height - startY);
+  const sampleHeight = Math.min(
+    6,
+    Math.max(3, Math.round(blob.height * 0.45)),
+    height - startY,
+  );
   if (sampleHeight < 3) return true;
 
   let totalLuma = 0;
@@ -2000,6 +2598,29 @@ function plateBoxFromBlueBlob(
   return null;
 }
 
+function isDarkSeparatorRow(
+  data: Buffer,
+  width: number,
+  channels: number,
+  y: number,
+  x0: number,
+  x1: number,
+) {
+  let sum = 0;
+  let light = 0;
+  let n = 0;
+  for (let x = x0; x < x1; x += 1) {
+    const offset = (y * width + x) * channels;
+    const luma =
+      0.299 * data[offset] + 0.587 * data[offset + 1] + 0.114 * data[offset + 2];
+    sum += luma;
+    n += 1;
+    if (luma > 140) light += 1;
+  }
+  if (n === 0) return false;
+  return sum / n < 88 && light / n < 0.16;
+}
+
 function isMercosulPlateRow(
   data: Buffer,
   width: number,
@@ -2056,6 +2677,7 @@ function fitMercosulPlateBody(
       continue;
     }
     if (y > blob.top + blob.height) {
+      if (isDarkSeparatorRow(data, width, channels, y, x0, x1)) break;
       misses += 1;
       if (misses >= 2) break;
     }
@@ -2330,8 +2952,21 @@ async function findPlatesWithoutReadableText(
     if (accepted) boxes.push(accepted);
   };
 
+  const pushGray = (box: PixelBox) => {
+    if (!isPlausiblePlateBox(box, imageWidth, imageHeight)) return;
+    if (!isPlateShaped(box, imageWidth, imageHeight)) return;
+    boxes.push(padGrayPlateBox(box, imageWidth, imageHeight));
+  };
+
   for (let index = 0; index < labels.plates.length; index += 1) {
-    pushAccepted(labels.plates[index]);
+    const grown = await expandToGrayPlateBox(
+      bytes,
+      labels.plates[index],
+      imageWidth,
+      imageHeight,
+    );
+    if (await looksLikeGrayPlatePatch(bytes, grown)) pushGray(grown);
+    else pushAccepted(grown);
   }
 
   for (let index = 0; index < labels.cars.length; index += 1) {
@@ -2340,6 +2975,10 @@ async function findPlatesWithoutReadableText(
     const found = await findMercosulStripeBoxes(bytes, region);
     for (let boxIndex = 0; boxIndex < found.length; boxIndex += 1) {
       pushAccepted(found[boxIndex]);
+    }
+    const gray = await findGrayPlateBoxes(bytes, region);
+    for (let boxIndex = 0; boxIndex < gray.length; boxIndex += 1) {
+      pushGray(gray[boxIndex]);
     }
   }
 
@@ -2354,10 +2993,16 @@ async function findPlatesWithoutReadableText(
     for (let boxIndex = 0; boxIndex < found.length; boxIndex += 1) {
       pushAccepted(found[boxIndex]);
     }
+    const gray = await findGrayPlateBoxes(bytes, region);
+    for (let boxIndex = 0; boxIndex < gray.length; boxIndex += 1) {
+      pushGray(gray[boxIndex]);
+    }
   }
 
   const fallback = await findMercosulPlatesInImage(bytes, imageWidth, imageHeight);
   boxes.push(...fallback);
+  const grayFallback = await findGrayPlatesInImage(bytes, imageWidth, imageHeight);
+  boxes.push(...grayFallback);
 
   const filtered = disambiguateCarPlates(
     boxes,
@@ -2475,6 +3120,20 @@ export function disambiguateCarPlates(
   return [sorted[0]];
 }
 
+async function boxLooksLikeGrayPlate(image: Buffer, box: PixelBox) {
+  if (await looksLikeGrayPlatePatch(image, box)) return true;
+  if (box.width < 24 || box.height < 12) return false;
+  const inset = {
+    left: box.left + Math.round(box.width * 0.1),
+    top: box.top + Math.round(box.height * 0.12),
+    width: Math.max(12, Math.round(box.width * 0.8)),
+    height: Math.max(8, Math.round(box.height * 0.76)),
+  };
+  if (inset.left + inset.width > box.left + box.width) return false;
+  if (inset.top + inset.height > box.top + box.height) return false;
+  return looksLikeGrayPlatePatch(image, inset);
+}
+
 async function looksLikeDarkDisplay(image: Buffer, box: PixelBox) {
   try {
     const { channels } = await sharp(image, { failOn: "none" })
@@ -2513,6 +3172,7 @@ export async function applyBlurRegions(
     if (box.width < 4 || box.height < 4) continue;
     if (
       !box.allowDark &&
+      !(await boxLooksLikeGrayPlate(image, box)) &&
       ((await looksLikeDarkDisplay(image, box)) ||
         (await looksLikeAnalogGaugeAround(image, box)))
     ) {
@@ -2600,8 +3260,9 @@ export async function applyBlurRegions(
  * Detecta placas BR via AWS Rekognition DetectText e aplica blur pequeno
  * só na faixa da placa, com borda suave para não tapar o carro.
  * Também borra placa preta promocional de loja (Forte Automóveis), sem
- * alterar o caminho da Mercosul, e placa Mercosul de moto (duas linhas,
- * aspecto ~1:1) via faixa azul + geometria própria.
+ * alterar o caminho da Mercosul, placa Mercosul de moto (duas linhas,
+ * aspecto ~1:1) via faixa azul + geometria própria, e placa cinza antiga
+ * (LLL+NNNN, fundo alumínio) no para-choque — inclusive semente minúscula.
  * Em qualquer falha, devolve o buffer original (nunca bloqueia o upload).
  */
 export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
@@ -2644,7 +3305,11 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
 
     let boxes = boxesFromPieces(pieces, width, height);
     if (boxes.length > 0) {
-      boxes = disambiguateCarPlates(boxes, [], width, height);
+      const expanded: PixelBox[] = [];
+      for (const box of boxes) {
+        expanded.push(await expandToGrayPlateBox(bytes, box, width, height));
+      }
+      boxes = disambiguateCarPlates(expanded, [], width, height);
     }
     if (boxes.length === 0) {
       boxes = await findPlatesWithoutReadableText(client, bytes, width, height);
@@ -2652,6 +3317,10 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
 
     const plateBoxes: PixelBox[] = [];
     for (const box of boxes) {
+      if (await boxLooksLikeGrayPlate(bytes, box)) {
+        plateBoxes.push(box);
+        continue;
+      }
       if (await looksLikeAnalogGaugeAround(bytes, box)) continue;
       if (await looksLikeDarkDisplay(bytes, box)) continue;
       if (await looksLikeBodyPanelFalsePositive(bytes, box)) continue;
@@ -2664,7 +3333,8 @@ export async function blurDetectedPlates(input: Buffer): Promise<Buffer> {
       if (dealerBoxes.some((dealer) => boxesOverlap(dealer, box))) continue;
       if (
         dealerBoxes.length > 0 &&
-        !(await looksLikeMercosulPlatePatch(bytes, box))
+        !(await looksLikeMercosulPlatePatch(bytes, box)) &&
+        !(await looksLikeGrayPlatePatch(bytes, box))
       ) {
         continue;
       }
