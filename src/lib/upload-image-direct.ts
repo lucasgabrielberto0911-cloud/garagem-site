@@ -24,9 +24,10 @@ export type UploadedPhoto = {
 };
 
 /**
- * Comprime no browser e sobe pela API do servidor (blur de placa via
- * Rekognition + variantes WebP). Se a Vercel recusar por tamanho (413),
- * cai no upload assinado direto ao Storage e gera a miniatura em seguida.
+ * Comprime no browser e sobe pela API do servidor (variantes WebP).
+ * Sem blur automático — placa só depois da marca “tem placa” + reblur.
+ * Se a Vercel recusar por tamanho (413), cai no upload assinado direto
+ * ao Storage e gera a miniatura em seguida.
  */
 export async function uploadImageDirect(file: File): Promise<UploadedPhoto> {
   const prepared = await prepareImageForUpload(file);
@@ -61,7 +62,7 @@ export async function uploadImageDirect(file: File): Promise<UploadedPhoto> {
 
     if (response.status === 413) {
       console.warn(
-        "[upload] /api/upload retornou 413 — usando upload assinado (sem blur nesta foto).",
+        "[upload] /api/upload retornou 413 — usando upload assinado.",
       );
       return uploadViaSignedUrl(prepared);
     }
@@ -143,19 +144,7 @@ async function uploadViaSignedUrl(prepared: File): Promise<UploadedPhoto> {
   }
 
   const thumbnailUrl = await deriveThumbnail(signData.publicUrl);
-  enqueuePlateReblur(signData.publicUrl);
   return { url: signData.publicUrl, thumbnailUrl };
-}
-
-/** 413 pulou o Rekognition — tenta borrar depois, sem travar o upload. */
-function enqueuePlateReblur(url: string) {
-  if (!url) return;
-  void fetch("/api/upload/reblur", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }),
-  }).catch(() => {});
 }
 
 async function putWithCacheControl({

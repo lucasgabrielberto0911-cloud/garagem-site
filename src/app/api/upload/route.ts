@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { blurDetectedPlates } from "@/lib/blur-plates";
 import { cardObjectPath, encodeCardImage, encodeGalleryImage } from "@/lib/image-variants";
 import {
   VEHICLE_PHOTOS_BUCKET,
@@ -164,13 +163,12 @@ export async function POST(request: Request) {
       let gallery: Awaited<ReturnType<typeof encodeGalleryImage>>;
       let card: Awaited<ReturnType<typeof encodeCardImage>>;
       try {
-        // 1) HEIC → JPEG (se preciso), 2) blur de placa na resolução alta,
-        // 3) só então gera galeria 1280 e capa 480×300.
+        // 1) HEIC → JPEG (se preciso), 2) galeria 1280 e capa 480×300.
+        // Blur de placa é opt-in no admin (marca “tem placa” + reblur).
         const processable = await toProcessableBuffer(raw, detected);
-        const withPlatesBlurred = await blurDetectedPlates(processable.buffer);
         [gallery, card] = await Promise.all([
-          encodeGalleryImage(withPlatesBlurred),
-          encodeCardImage(withPlatesBlurred),
+          encodeGalleryImage(processable.buffer),
+          encodeCardImage(processable.buffer),
         ]);
       } catch (error) {
         console.error("Image optimize error:", error);

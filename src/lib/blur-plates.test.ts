@@ -15,8 +15,13 @@ import {
   findMercosulStripeBoxes,
   isHeadlightOrCornerZone,
   isUnlikelyPlateGeometry,
+  expandToClassicGrayPlate,
+  findClassicGrayPlateBoxes,
+  findClassicGrayPlatesInImage,
   looksLikeAnalogGaugeAround,
   looksLikeBodyPanelFalsePositive,
+  looksLikeCabinInterior,
+  looksLikeClassicGrayPlate,
   looksLikeConfirmedDealerPlate,
   looksLikeMercosulPlatePatch,
   plateBoxesFromText,
@@ -1194,5 +1199,231 @@ test("placa no rabo da moto não é descartada como canto de carro", () => {
   );
   assert.equal(withMoto.length, 1);
   assert.equal(withMoto[0].left, 340);
+});
+
+async function paintRect(
+  width: number,
+  height: number,
+  color: { r: number; g: number; b: number },
+) {
+  return sharp({
+    create: { width, height, channels: 3, background: color },
+  })
+    .png()
+    .toBuffer();
+}
+
+async function syntheticGrayPlateScene(kind: "front" | "rear") {
+  const width = 480;
+  const height = 320;
+  const plate =
+    kind === "front"
+      ? { left: 192, top: 228, width: 96, height: 30 }
+      : { left: 188, top: 236, width: 100, height: 31 };
+  const composites: Array<{ input: Buffer; left: number; top: number }> = [
+    {
+      input: await paintRect(width, height, { r: 92, g: 138, b: 72 }),
+      left: 0,
+      top: 0,
+    },
+    {
+      input: await paintRect(220, 70, { r: 176, g: 178, b: 180 }),
+      left: 130,
+      top: 190,
+    },
+    {
+      input: await paintRect(plate.width + 4, plate.height + 4, { r: 28, g: 28, b: 30 }),
+      left: plate.left - 2,
+      top: plate.top - 2,
+    },
+    {
+      input: await paintRect(plate.width, plate.height, { r: 158, g: 162, b: 166 }),
+      left: plate.left,
+      top: plate.top,
+    },
+    {
+      input: await paintRect(plate.width - 10, 4, { r: 150, g: 42, b: 42 }),
+      left: plate.left + 5,
+      top: plate.top + 3,
+    },
+  ];
+  const glyphXs = [8, 20, 32, 50, 62, 74, 86];
+  for (const x of glyphXs) {
+    composites.push({
+      input: await paintRect(8, 13, { r: 20, g: 20, b: 22 }),
+      left: plate.left + x,
+      top: plate.top + 11,
+    });
+  }
+  const image = await sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: { r: 92, g: 138, b: 72 },
+    },
+  })
+    .composite(composites.slice(1))
+    .jpeg({ quality: 92 })
+    .toBuffer();
+  return { image, width, height, plate };
+}
+
+async function syntheticCivicCluster() {
+  const width = 420;
+  const height = 300;
+  const composites: Array<{ input: Buffer; left: number; top: number }> = [
+    { input: await paintRect(width, height, { r: 210, g: 188, b: 154 }), left: 0, top: 0 },
+    { input: await paintRect(118, 118, { r: 28, g: 28, b: 30 }), left: 28, top: 36 },
+    { input: await paintRect(96, 96, { r: 228, g: 228, b: 224 }), left: 39, top: 47 },
+    { input: await paintRect(118, 118, { r: 28, g: 28, b: 30 }), left: 274, top: 36 },
+    { input: await paintRect(96, 96, { r: 228, g: 228, b: 224 }), left: 285, top: 47 },
+    { input: await paintRect(88, 42, { r: 18, g: 22, b: 28 }), left: 166, top: 78 },
+    { input: await paintRect(18, 22, { r: 230, g: 230, b: 235 }), left: 178, top: 88 },
+    { input: await paintRect(18, 22, { r: 230, g: 230, b: 235 }), left: 202, top: 88 },
+    { input: await paintRect(210, 210, { r: 18, g: 18, b: 18 }), left: 105, top: 78 },
+    { input: await paintRect(132, 132, { r: 210, g: 188, b: 154 }), left: 144, top: 117 },
+    { input: await paintRect(46, 46, { r: 196, g: 196, b: 198 }), left: 187, top: 160 },
+  ];
+  const image = await sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: { r: 210, g: 188, b: 154 },
+    },
+  })
+    .composite(composites.slice(1))
+    .jpeg({ quality: 90 })
+    .toBuffer();
+  return {
+    image,
+    width,
+    height,
+    cluster: { left: 166, top: 78, width: 88, height: 42 },
+    wheel: { left: 105, top: 78, width: 210, height: 210 },
+  };
+}
+
+test("placa cinza pré-Mercosul (frente e traseira) vira caixa inteira", async () => {
+  for (const kind of ["front", "rear"] as const) {
+    const { image, width, height, plate } = await syntheticGrayPlateScene(kind);
+    const boxes = await findClassicGrayPlatesInImage(image, width, height);
+    assert.ok(
+      boxes.length >= 1,
+      `${kind}: esperava placa cinza: ${JSON.stringify(boxes)}`,
+    );
+    const hit = boxes[0];
+    assert.ok(
+      hit.left < plate.left + 12 && hit.left + hit.width > plate.left + plate.width - 12,
+      `${kind} não cobre a largura: ${JSON.stringify(hit)}`,
+    );
+    assert.ok(
+      hit.top < plate.top + 10 && hit.top + hit.height > plate.top + plate.height - 8,
+      `${kind} não cobre a altura: ${JSON.stringify(hit)}`,
+    );
+    assert.equal(await looksLikeClassicGrayPlate(image, plate), true);
+    assert.equal(await looksLikeBodyPanelFalsePositive(image, plate), false);
+    assert.equal(await looksLikeMercosulPlatePatch(image, plate), false);
+    assert.equal(await looksLikeAnalogGaugeAround(image, plate), false);
+    assert.equal(await looksLikeCabinInterior(image, width, height), false);
+
+    const core = {
+      left: plate.left + 10,
+      top: plate.top + 10,
+      width: 70,
+      height: 14,
+    };
+    const before = await sharp(
+      await sharp(image).extract(core).png().toBuffer(),
+    ).stats();
+    const blurred = await applyBlurRegions(image, [{ ...hit, allowDark: false }]);
+    const after = await sharp(
+      await sharp(blurred).extract(core).png().toBuffer(),
+    ).stats();
+    const beforeStd =
+      (before.channels[0].stdev + before.channels[1].stdev + before.channels[2].stdev) /
+      3;
+    const afterStd =
+      (after.channels[0].stdev + after.channels[1].stdev + after.channels[2].stdev) / 3;
+    assert.ok(beforeStd > 18, `${kind} contraste baixo: ${beforeStd}`);
+    assert.ok(
+      afterStd < beforeStd * 0.5,
+      `${kind} blur fraco: ${beforeStd} → ${afterStd}`,
+    );
+  }
+});
+
+test("semente minúscula na borda direita expande para a placa cinza inteira", async () => {
+  const { image, width, height, plate } = await syntheticGrayPlateScene("front");
+  const seed = {
+    left: plate.left + plate.width - 8,
+    top: plate.top + 8,
+    width: 7,
+    height: 8,
+  };
+  const hit = await expandToClassicGrayPlate(image, seed, width, height);
+  assert.ok(hit.width > seed.width * 4, `ainda minúscula: ${JSON.stringify(hit)}`);
+  assert.ok(hit.left <= plate.left + 12, `left ${hit.left}`);
+  assert.ok(hit.left + hit.width >= plate.left + plate.width - 8);
+  assert.ok(hit.width > seed.width * 4, `ainda minúscula: ${hit.width}`);
+});
+
+test("cluster/volante do Civic não é placa cinza nem Mercosul", async () => {
+  const { image, width, height, cluster, wheel } = await syntheticCivicCluster();
+  const whole = { left: 0, top: 0, width, height };
+  assert.equal((await findClassicGrayPlateBoxes(image, whole)).length, 0);
+  assert.equal((await findClassicGrayPlatesInImage(image, width, height)).length, 0);
+  assert.equal((await findMercosulPlatesInImage(image, width, height)).length, 0);
+  assert.equal((await findBlackDealerPlateBoxes(image, whole)).length, 0);
+  assert.equal(await looksLikeClassicGrayPlate(image, cluster), false);
+  assert.equal(await looksLikeCabinInterior(image, width, height), true);
+  assert.equal(await looksLikeAnalogGaugeAround(image, cluster), true);
+  assert.equal(await looksLikeAnalogGaugeAround(image, wheel), true);
+  assert.equal(await looksLikeBodyPanelFalsePositive(image, cluster), true);
+});
+
+test("fixtures anteriores não viram placa cinza", async () => {
+  const cases = [
+    "fuel-door-wheel-arch.png",
+    "honda-moto-cluster-false-box.png",
+    "forte-civic-front-false-box.png",
+    "moto-mercosul-biz-rear.jpg",
+    "moto-mercosul-biz-side.jpg",
+  ];
+  for (const name of cases) {
+    const image = await readFile(join(FIXTURES, name));
+    const meta = await sharp(image).metadata();
+    const width = meta.width ?? 1;
+    const height = meta.height ?? 1;
+    const gray = await findClassicGrayPlatesInImage(image, width, height);
+    assert.equal(
+      gray.length,
+      0,
+      `${name} não deve ter placa cinza: ${JSON.stringify(gray)}`,
+    );
+  }
+  const cluster = await readFile(join(FIXTURES, "honda-moto-cluster-false-box.png"));
+  const clusterMeta = await sharp(cluster).metadata();
+  assert.equal(
+    await looksLikeCabinInterior(
+      cluster,
+      clusterMeta.width ?? 246,
+      clusterMeta.height ?? 284,
+    ),
+    false,
+    "relógio de moto isolado não é cabine de carro",
+  );
+  const civic = await readFile(join(FIXTURES, "forte-civic-front-false-box.png"));
+  const civicMeta = await sharp(civic).metadata();
+  assert.equal(
+    await looksLikeCabinInterior(
+      civic,
+      civicMeta.width ?? 376,
+      civicMeta.height ?? 187,
+    ),
+    false,
+    "frente do Civic no estúdio não é cabine",
+  );
 });
 

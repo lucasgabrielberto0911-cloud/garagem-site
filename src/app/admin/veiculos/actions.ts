@@ -134,7 +134,11 @@ function parseVehicleFields(formData: FormData) {
   });
   if (priceTextError) throw new Error(priceTextError);
 
-  let photos: Array<{ url: string; thumbnailUrl: string | null }> = [];
+  let photos: Array<{
+    url: string;
+    thumbnailUrl: string | null;
+    hasPlate: boolean;
+  }> = [];
   const photosRaw = String(formData.get("photoUrls") || "[]");
   try {
     const parsed = JSON.parse(photosRaw) as unknown;
@@ -142,7 +146,7 @@ function parseVehicleFields(formData: FormData) {
       photos = parsed
         .map((item) => {
           if (typeof item === "string" && item) {
-            return { url: item, thumbnailUrl: null };
+            return { url: item, thumbnailUrl: null, hasPlate: false };
           }
           if (
             item &&
@@ -154,12 +158,19 @@ function parseVehicleFields(formData: FormData) {
               typeof (item as { thumbnailUrl?: unknown }).thumbnailUrl === "string"
                 ? (item as { thumbnailUrl: string }).thumbnailUrl
                 : null;
-            return { url, thumbnailUrl };
+            const hasPlate = (item as { hasPlate?: unknown }).hasPlate === true;
+            return { url, thumbnailUrl, hasPlate };
           }
           return null;
         })
-        .filter((item): item is { url: string; thumbnailUrl: string | null } =>
-          Boolean(item),
+        .filter(
+          (
+            item,
+          ): item is {
+            url: string;
+            thumbnailUrl: string | null;
+            hasPlate: boolean;
+          } => Boolean(item),
         );
     }
   } catch {
@@ -280,6 +291,7 @@ export async function createVehicle(
           create: data.photos.map((photo, order) => ({
             url: photo.url,
             thumbnailUrl: photo.thumbnailUrl,
+            hasPlate: photo.hasPlate,
             order,
           })),
         },
@@ -363,6 +375,7 @@ export async function updateVehicle(
             create: data.photos.map((photo, order) => ({
               url: photo.url,
               thumbnailUrl: photo.thumbnailUrl,
+              hasPlate: photo.hasPlate,
               order,
             })),
           },
@@ -654,6 +667,7 @@ export async function duplicateVehicle(id: string) {
         create: photos.map((photo, order) => ({
           url: photo.url,
           thumbnailUrl: photo.thumbnailUrl,
+          hasPlate: "hasPlate" in photo ? Boolean(photo.hasPlate) : false,
           order,
         })),
       },
@@ -670,14 +684,22 @@ function cardObjectDest(galleryPath: string) {
 }
 
 async function duplicateVehiclePhotos(
-  photos: Array<{ url: string; thumbnailUrl: string | null }>,
+  photos: Array<{ url: string; thumbnailUrl: string | null; hasPlate?: boolean }>,
 ) {
-  const copied: Array<{ url: string; thumbnailUrl: string | null }> = [];
+  const copied: Array<{
+    url: string;
+    thumbnailUrl: string | null;
+    hasPlate: boolean;
+  }> = [];
 
   for (const photo of photos) {
     const sourcePath = storagePathFromPublicUrl(photo.url);
     if (!sourcePath) {
-      copied.push({ url: photo.url, thumbnailUrl: photo.thumbnailUrl });
+      copied.push({
+        url: photo.url,
+        thumbnailUrl: photo.thumbnailUrl,
+        hasPlate: Boolean(photo.hasPlate),
+      });
       continue;
     }
 
@@ -686,7 +708,11 @@ async function duplicateVehiclePhotos(
     const newUrl = await copyPublicStorageObject(photo.url, destPath);
 
     if (!newUrl) {
-      copied.push({ url: photo.url, thumbnailUrl: photo.thumbnailUrl });
+      copied.push({
+        url: photo.url,
+        thumbnailUrl: photo.thumbnailUrl,
+        hasPlate: Boolean(photo.hasPlate),
+      });
       continue;
     }
 
@@ -697,7 +723,7 @@ async function duplicateVehiclePhotos(
         cardObjectDest(destPath),
       );
     }
-    copied.push({ url: newUrl, thumbnailUrl });
+    copied.push({ url: newUrl, thumbnailUrl, hasPlate: Boolean(photo.hasPlate) });
   }
 
   return copied;

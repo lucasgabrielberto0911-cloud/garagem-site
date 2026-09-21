@@ -16,8 +16,9 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /**
- * Reprocessa uma foto já enviada para borrar a placa (carros antigos
- * ou fotos que passaram no fallback sem Rekognition).
+ * Reprocessa uma foto já enviada para borrar a placa.
+ * Só aceita fotos que o admin marcou como “tem placa” — sem marca
+ * não chama Rekognition (custo zero).
  */
 export async function POST(request: Request) {
   const session = await getSession();
@@ -43,8 +44,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { url?: string };
+    const body = (await request.json()) as { url?: string; hasPlate?: boolean };
     const url = body.url?.trim() ?? "";
+    if (body.hasPlate !== true) {
+      return NextResponse.json(
+        {
+          error:
+            "Marque a foto como Tem placa para borrar. Fotos sem marca não passam no detector.",
+        },
+        { status: 400 },
+      );
+    }
     if (!storagePathFromPublicUrl(url)) {
       return NextResponse.json(
         { error: "URL de foto inválida." },
