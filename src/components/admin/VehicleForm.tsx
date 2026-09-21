@@ -123,8 +123,6 @@ export function VehicleForm({
         .map((photo) => ({
           url: photo.url,
           thumbnailUrl: photo.thumbnailUrl,
-          hasPlate:
-            "hasPlate" in photo ? Boolean(photo.hasPlate) : false,
         })) ?? [],
     ),
   );
@@ -376,7 +374,6 @@ export function VehicleForm({
             photos.map((photo) => ({
               url: photo.url,
               thumbnailUrl: photo.thumbnailUrl ?? null,
-              hasPlate: Boolean(photo.hasPlate),
             })),
           )}
         />

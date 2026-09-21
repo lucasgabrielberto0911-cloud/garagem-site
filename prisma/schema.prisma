@@ -84,11 +84,6 @@ model Photo {
   url          String
   /** Capa WebP 480×300 para cards. Null = usa `url` até o backfill. */
   thumbnailUrl String?
-  /**
-   * Admin marcou “tem placa”: só essas fotos vão ao detector/blur.
-   * Default false — foto sem marca não gasta Rekognition.
-   */
-  hasPlate     Boolean @default(false)
   order        Int     @default(0)
   vehicleId    String
   vehicle      Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)

@@ -25,7 +25,7 @@ export type UploadedPhoto = {
 
 /**
  * Comprime no browser e sobe pela API do servidor (variantes WebP).
- * Sem blur automático — placa só depois da marca “tem placa” + reblur.
+ * Não borra placa. O admin marca o retângulo depois, na foto já enviada.
  * Se a Vercel recusar por tamanho (413), cai no upload assinado direto
  * ao Storage e gera a miniatura em seguida.
  */

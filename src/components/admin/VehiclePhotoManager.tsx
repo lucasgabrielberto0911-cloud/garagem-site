@@ -12,23 +12,9 @@ import {
   IconStar,
   IconTrash,
 } from "@/components/admin/icons";
+import { PlateBlurEditor } from "@/components/admin/PlateBlurEditor";
 import { btn } from "@/components/admin/ui";
-import {
-  photoBlurBadgeLabel,
-  photoBlurEmptySelectionMessage,
-  photoBlurNeedsSave,
-  photoBlurProgressLabel,
-  photoBlurRetryIds,
-  photoBlurSummaryMessage,
-  photoBlurToastKind,
-  photoMarkedHasPlate,
-  photoPlateMarkLabel,
-  photosMarkedHasPlate,
-  createPhotoBlurJobs,
-  summarizePhotoBlur,
-  togglePhotoHasPlate,
-  type PhotoBlurJobState,
-} from "@/lib/photo-blur-jobs";
+import type { NormalizedRect } from "@/lib/blur-rects";
 import {
   photoUploadProgressLabel,
   summarizePhotoUploads,
@@ -41,8 +27,6 @@ export type PhotoItem = {
   id: string;
   url: string;
   thumbnailUrl?: string | null;
-  /** Opt-in: só foto marcada vai ao detector/blur. Default = não. */
-  hasPlate?: boolean;
 };
 
 const ACCEPT =
@@ -76,14 +60,12 @@ export function photosFromRecords(
   photos: Array<{
     url: string;
     thumbnailUrl?: string | null;
-    hasPlate?: boolean | null;
   }>,
 ): PhotoItem[] {
   return photos.map((photo) => ({
     id: createPhotoId(),
     url: photo.url,
     thumbnailUrl: photo.thumbnailUrl ?? null,
-    hasPlate: Boolean(photo.hasPlate),
   }));
 }
 
@@ -92,7 +74,6 @@ export function photosFromUrls(urls: string[]): PhotoItem[] {
     id: createPhotoId(),
     url,
     thumbnailUrl: null,
-    hasPlate: false,
   }));
 }
 
@@ -113,7 +94,8 @@ export function VehiclePhotoManager({
 }) {
   const [jobs, setJobs] = useState<LocalPhotoJob[]>([]);
   const [blurring, setBlurring] = useState(false);
-  const [blurJobs, setBlurJobs] = useState<PhotoBlurJobState[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [blurredIds, setBlurredIds] = useState<Set<string>>(() => new Set());
   const [fileDragging, setFileDragging] = useState(false);
   const fileDragDepth = useRef(0);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -149,7 +131,6 @@ export function VehiclePhotoManager({
             id: createPhotoId(),
             url: photo.url,
             thumbnailUrl: photo.thumbnailUrl,
-            hasPlate: false,
           });
           patchJob(job.id, { status: "done" });
         } catch (error) {
@@ -251,110 +232,54 @@ export function VehiclePhotoManager({
     setRemoveIndex(null);
   }
 
-  function setPhotoHasPlate(id: string, hasPlate: boolean) {
-    onChange((current) =>
-      current.map((photo) =>
-        photo.id === id ? { ...photo, hasPlate } : photo,
-      ),
-    );
-  }
+  const editingPhoto = photos.find((photo) => photo.id === editingId) ?? null;
 
-  async function reblurPhotos(targets: PhotoItem[]) {
-    const marked = photosMarkedHasPlate(targets);
-    if (marked.length === 0 || blurring) {
-      if (targets.length > 0 && marked.length === 0) {
-        toast.message(photoBlurEmptySelectionMessage());
-      }
-      return;
-    }
+  async function applyPlateBlur(rects: NormalizedRect[]) {
+    if (!editingPhoto || blurring) return;
+    const photoId = editingPhoto.id;
+    const currentUrl = editingPhoto.url;
     setBlurring(true);
-    const results = createPhotoBlurJobs(marked.map((photo) => photo.id));
-    setBlurJobs((current) => {
-      const keep = current.filter(
-        (job) => !marked.some((photo) => photo.id === job.id),
-      );
-      return [...keep, ...results];
-    });
-    const next = [...photos];
-
     try {
-      for (let index = 0; index < marked.length; index += 1) {
-        const photo = marked[index];
-        results[index] = { id: photo.id, status: "working" };
-        setBlurJobs((current) =>
-          current.map((job) =>
-            job.id === photo.id ? { ...job, status: "working" } : job,
-          ),
-        );
-
-        const photoIndex = next.findIndex((item) => item.id === photo.id);
-        try {
-          const response = await fetch("/api/upload/reblur", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: photo.url, hasPlate: true }),
-          });
-          const data = (await response.json()) as {
-            url?: string;
-            thumbnailUrl?: string | null;
-            blurred?: boolean;
-            error?: string;
-          };
-          if (!response.ok) {
-            throw new Error(data.error || "Falha ao borrar a placa.");
-          }
-          if (data.url && photoIndex >= 0) {
-            next[photoIndex] = {
-              ...next[photoIndex],
-              url: data.url,
-              thumbnailUrl: data.thumbnailUrl ?? next[photoIndex].thumbnailUrl,
-            };
-          }
-          results[index] = {
-            id: photo.id,
-            status: data.blurred ? "blurred" : "unchanged",
-          };
-        } catch (error) {
-          results[index] = {
-            id: photo.id,
-            status: "error",
-            error:
-              error instanceof Error
-                ? error.message
-                : "Não foi possível borrar a placa.",
-          };
-        }
-        setBlurJobs((current) =>
-          current.map((job) =>
-            job.id === photo.id ? { ...results[index] } : job,
-          ),
-        );
+      const response = await fetch("/api/upload/blur-region", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: currentUrl, rects }),
+      });
+      const data = (await response.json()) as {
+        url?: string;
+        thumbnailUrl?: string | null;
+        error?: string;
+      };
+      if (!response.ok || !data.url) {
+        throw new Error(data.error || "Não foi possível borrar a região.");
       }
-
-      onChange(next);
-      const message = photoBlurSummaryMessage(results);
-      const kind = photoBlurToastKind(results);
-      if (kind === "success") toast.success(message);
-      else if (kind === "error") toast.error(message);
-      else toast.message(message);
+      onChange((current) =>
+        current.map((photo) =>
+          photo.id === photoId
+            ? {
+                ...photo,
+                url: data.url as string,
+                thumbnailUrl: data.thumbnailUrl ?? photo.thumbnailUrl,
+              }
+            : photo,
+        ),
+      );
+      setBlurredIds((current) => {
+        const next = new Set(current);
+        next.add(photoId);
+        return next;
+      });
+      toast.success("Região borracha. Salve o anúncio para publicar.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível borrar a região.",
+      );
     } finally {
       setBlurring(false);
     }
-  }
-
-  function reblurPlates() {
-    const marked = photosMarkedHasPlate(photos);
-    if (marked.length === 0) {
-      toast.message(photoBlurEmptySelectionMessage());
-      return;
-    }
-    return reblurPhotos(marked);
-  }
-
-  function toggleMark(photo: PhotoItem) {
-    const next = togglePhotoHasPlate(photo);
-    setPhotoHasPlate(photo.id, Boolean(next.hasPlate));
   }
 
   function hasFiles(event: React.DragEvent) {
@@ -405,8 +330,8 @@ export function VehiclePhotoManager({
                 : "Arraste as fotos aqui ou clique para escolher"}
           </p>
           <p className="mt-1 text-xs text-muted">
-            JPG, PNG, WEBP ou GIF · HEIC: exporte como JPG no iPhone · o envio
-            não borra placa (sem custo de detector)
+            JPG, PNG, WEBP ou GIF · HEIC: exporte como JPG no iPhone. A placa
+            se borra depois, no retângulo que você marcar.
           </p>
           <p className="mt-2 text-[11px] text-muted/80">
             Espere o envio ou o borrão terminar antes de salvar o anúncio.
@@ -499,79 +424,19 @@ export function VehiclePhotoManager({
         <>
           <p className="mt-4 text-xs text-muted">
             Arraste as fotos para reorganizar. A primeira é a capa do anúncio.
+            Em <strong>Borrar placa</strong>, marque o retângulo e salve o
+            anúncio.
           </p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              disabled={blurring || inFlight}
-              onClick={() => void reblurPlates()}
-              className={btn.outline}
-              aria-live="polite"
-            >
-              {blurring
-                ? photoBlurProgressLabel(blurJobs) || "Borrando placas…"
-                : photosMarkedHasPlate(photos).length > 0
-                  ? `Borrar ${photosMarkedHasPlate(photos).length} foto(s) com placa`
-                  : "Borrar fotos com placa"}
-            </button>
-            <p className="text-[11px] text-muted">
-              Marque <strong>Tem placa</strong> só na frente/traseira. Painel,
-              lateral sem placa e interior não vão ao detector. Depois do
-              borrão, <strong>salve o anúncio</strong>.
+          {blurredIds.size > 0 && !blurring ? (
+            <p className="mt-3 border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-sm text-cream">
+              Região borracha. <strong>Salve o anúncio</strong> para publicar
+              a foto nova no site.
             </p>
-          </div>
-          {blurJobs.length > 0 ? (
-            <div className="mt-3 space-y-2" aria-live="polite">
-              <p className="text-sm text-cream">
-                {photoBlurProgressLabel(blurJobs)}
-              </p>
-              <div
-                className="h-1.5 overflow-hidden bg-white/10"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={summarizePhotoBlur(blurJobs).percent}
-                aria-label="Progresso do borrão de placas"
-              >
-                <div
-                  className="h-full bg-brand transition-[width]"
-                  style={{
-                    width: `${Math.max(
-                      summarizePhotoBlur(blurJobs).percent,
-                      blurring ? 8 : 0,
-                    )}%`,
-                  }}
-                />
-              </div>
-              {photoBlurNeedsSave(blurJobs) && !blurring ? (
-                <p className="border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-sm text-cream">
-                  Placa borracha nestas fotos. <strong>Salve o anúncio</strong>{" "}
-                  para publicar as URLs novas no site.
-                </p>
-              ) : null}
-              {!blurring && photoBlurRetryIds(blurJobs).length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    void reblurPhotos(
-                      photos.filter((photo) =>
-                        photoBlurRetryIds(blurJobs).includes(photo.id),
-                      ),
-                    )
-                  }
-                  className={btn.outline}
-                >
-                  Tentar de novo as marcadas sem placa ou que falharam
-                </button>
-              ) : null}
-            </div>
           ) : null}
           <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {photos.map((photo, index) => {
               const isDragging = dragIndex === index;
               const isOver = overIndex === index && dragIndex !== index;
-              const blurJob = blurJobs.find((job) => job.id === photo.id);
-              const marked = photoMarkedHasPlate(photo);
               return (
                 <li
                   key={photo.id}
@@ -642,81 +507,25 @@ export function VehiclePhotoManager({
                     </span>
                   ) : null}
 
-                  <div className="absolute left-1.5 top-8 flex max-w-[calc(100%-0.75rem)] flex-col items-start gap-1">
-                    <button
-                      type="button"
-                      aria-pressed={marked}
-                      disabled={blurring || inFlight || blurJob?.status === "working"}
-                      onMouseDown={(event) => event.stopPropagation()}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        toggleMark(photo);
-                      }}
-                      className={`px-1.5 py-0.5 text-left font-display text-[10px] font-semibold uppercase tracking-wider touch-manipulation disabled:opacity-80 ${
-                        marked
-                          ? "bg-emerald-500/90 text-asphalt"
-                          : "bg-asphalt/85 text-cream"
-                      }`}
-                      title={
-                        marked
-                          ? "Esta foto vai ao detector. Clique para desmarcar."
-                          : "Marque se a placa aparece. Sem marca = sem custo de blur."
-                      }
-                    >
-                      {photoPlateMarkLabel(marked)}
-                    </button>
-                    {blurJob ? (
-                      <button
-                        type="button"
-                        disabled={
-                          blurring ||
-                          inFlight ||
-                          blurJob.status === "working" ||
-                          blurJob.status === "blurred" ||
-                          !marked
-                        }
-                        onMouseDown={(event) => event.stopPropagation()}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          if (!marked || blurJob.status === "blurred") return;
-                          void reblurPhotos([photo]);
-                        }}
-                        className={`px-1.5 py-0.5 text-left font-display text-[10px] font-semibold uppercase tracking-wider touch-manipulation disabled:opacity-80 ${
-                          blurJob.status === "blurred"
-                            ? "bg-emerald-500/90 text-asphalt"
-                            : blurJob.status === "error"
-                              ? "bg-brand text-cream"
-                              : blurJob.status === "working"
-                                ? "bg-brand-orange text-asphalt"
-                                : "bg-asphalt/85 text-cream"
-                        }`}
-                        title={
-                          blurJob.status === "error" || blurJob.status === "unchanged"
-                            ? "Tentar borrar esta foto de novo"
-                            : photoBlurBadgeLabel(blurJob.status)
-                        }
-                      >
-                        {photoBlurBadgeLabel(blurJob.status)}
-                      </button>
-                    ) : marked ? (
-                      <button
-                        type="button"
-                        disabled={blurring || inFlight}
-                        onMouseDown={(event) => event.stopPropagation()}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          void reblurPhotos([photo]);
-                        }}
-                        className="bg-asphalt/85 px-1.5 py-0.5 text-left font-display text-[10px] font-semibold uppercase tracking-wider text-cream touch-manipulation disabled:opacity-80"
-                        title="Borrar a placa só nesta foto marcada"
-                      >
-                        Borrar
-                      </button>
-                    ) : null}
-                  </div>
+                  <button
+                    type="button"
+                    disabled={blurring || inFlight}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setEditingId(photo.id);
+                    }}
+                    className="absolute inset-x-1.5 bottom-14 min-h-8 bg-asphalt/90 px-1.5 text-center font-display text-[10px] font-semibold uppercase tracking-wider text-cream touch-manipulation disabled:opacity-80"
+                    title="Marcar a placa com um retângulo e borrar só essa área"
+                  >
+                    {blurring && editingId === photo.id
+                      ? "Borrando…"
+                      : blurredIds.has(photo.id)
+                        ? "Borrar de novo"
+                        : "Borrar placa"}
+                  </button>
 
                   <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-asphalt/85 px-1.5 py-1.5 backdrop-blur">
                     <div className="flex gap-0.5">
@@ -756,6 +565,19 @@ export function VehiclePhotoManager({
           </ul>
         </>
       ) : null}
+
+      <PlateBlurEditor
+        open={editingPhoto !== null}
+        imageUrl={editingPhoto?.url ?? ""}
+        applying={blurring}
+        blurred={editingPhoto ? blurredIds.has(editingPhoto.id) : false}
+        onClose={() => {
+          if (!blurring) setEditingId(null);
+        }}
+        onApply={(rects) => {
+          void applyPlateBlur(rects);
+        }}
+      />
 
       <ConfirmDialog
         open={removeIndex !== null}
