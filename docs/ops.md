@@ -2,7 +2,7 @@
 
 ## Functions Storage e retenção de deploys
 
-No plano Hobby a Vercel conta o armazenamento dos bundles de Functions **por deploy retido** (GB-mês, por região). Bundles grandes (`sharp`, Rekognition no upload) pesam mais em cada revisão antiga que o projeto guarda.
+No plano Hobby a Vercel conta o armazenamento dos bundles de Functions **por deploy retido** (GB-mês, por região). Bundles grandes (`sharp` no upload) pesam mais em cada revisão antiga que o projeto guarda.
 
 A retenção de deploys no Hobby é limitada (hoje, no máximo 30 dias). Os 10 deploys de produção mais recentes e qualquer deploy com alias ativo não são apagados. Não é preciso subir de plano: em **Project → Settings → Security → Deployment Retention** dá para encurtar o prazo dos previews. Menos deploys retidos = menos Functions Storage.
 

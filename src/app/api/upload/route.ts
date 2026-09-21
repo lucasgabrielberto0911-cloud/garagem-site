@@ -164,7 +164,7 @@ export async function POST(request: Request) {
       let card: Awaited<ReturnType<typeof encodeCardImage>>;
       try {
         // 1) HEIC → JPEG (se preciso), 2) galeria 1280 e capa 480×300.
-        // Blur de placa é opt-in no admin (marca “tem placa” + reblur).
+        // A placa só é borracha no admin, no retângulo marcado.
         const processable = await toProcessableBuffer(raw, detected);
         [gallery, card] = await Promise.all([
           encodeGalleryImage(processable.buffer),

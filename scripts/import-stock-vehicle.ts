@@ -2,7 +2,8 @@
  * Cria/atualiza anúncios no banco live e sobe fotos no bucket público
  * `veiculos`, no mesmo pipeline do admin (`/api/upload`):
  * HEIC→JPEG se preciso, galeria WebP 1280 e capa 480×300.
- * Placa não é borracha aqui: no admin, marque Tem placa e use Borrar.
+ * Placa não é borracha aqui. No admin, abra a foto, marque o retângulo
+ * e aplique o borrão.
  *
  *   npx tsx scripts/import-stock-vehicle.ts
  *   npx tsx scripts/import-stock-vehicle.ts --dry-run
