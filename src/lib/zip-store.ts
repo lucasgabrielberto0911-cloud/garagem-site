@@ -1,5 +1,5 @@
 /**
- * ZIP sem compressão (store). Imagens WebP já vêm compactas —
+ * ZIP sem compressão (store). JPEG/WebP já vêm compactados —
  * evita dependência extra só para o acervo do admin.
  */
 

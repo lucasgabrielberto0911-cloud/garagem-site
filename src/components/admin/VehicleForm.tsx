@@ -776,6 +776,11 @@ export function VehicleForm({
             photos={photos}
             onChange={setPhotos}
             onUploadingChange={setPhotosUploading}
+            listing={{
+              brand,
+              model,
+              year: Number(yearModel) || new Date().getFullYear(),
+            }}
           />
           <label className="mt-4 flex cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition hover:border-brand/50">
             <input

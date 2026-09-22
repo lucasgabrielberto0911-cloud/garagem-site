@@ -309,7 +309,11 @@ export default async function VehicleDetailPage({
         {/* Mobile: galeria → ficha → detalhes. Desktop: galeria+detalhes | ficha. */}
         <div className="mt-4 grid gap-5 lg:mt-5 lg:grid-cols-[1.35fr_0.9fr] lg:items-start lg:gap-8">
           <div className="order-1 min-w-0">
-            <VehicleGallery photos={vehicle.photos} alt={galleryAlt} />
+            <VehicleGallery
+              photos={vehicle.photos}
+              alt={galleryAlt}
+              vehicleId={vehicle.id}
+            />
           </div>
 
           <aside className="order-2 lg:sticky lg:top-24 lg:row-span-2">

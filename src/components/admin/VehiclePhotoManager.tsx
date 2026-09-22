@@ -7,6 +7,7 @@ import { VehicleImage } from "@/components/VehicleImage";
 import {
   IconArrowDown,
   IconArrowUp,
+  IconDownload,
   IconGrip,
   IconImage,
   IconStar,
@@ -15,6 +16,11 @@ import {
 import { PlateBlurEditor } from "@/components/admin/PlateBlurEditor";
 import { btn } from "@/components/admin/ui";
 import type { NormalizedRect } from "@/lib/blur-rects";
+import { downloadAttachment } from "@/lib/download-attachment";
+import {
+  adminStorageJpgPath,
+  archivePhotoFilename,
+} from "@/lib/photo-archive";
 import {
   photoUploadProgressLabel,
   summarizePhotoUploads,
@@ -85,12 +91,14 @@ export function VehiclePhotoManager({
   photos,
   onChange,
   onUploadingChange,
+  listing,
 }: {
   photos: PhotoItem[];
   onChange: (
     next: PhotoItem[] | ((current: PhotoItem[]) => PhotoItem[]),
   ) => void;
   onUploadingChange?: (uploading: boolean) => void;
+  listing?: { brand: string; model: string; year: number };
 }) {
   const [jobs, setJobs] = useState<LocalPhotoJob[]>([]);
   const [blurring, setBlurring] = useState(false);
@@ -101,6 +109,7 @@ export function VehiclePhotoManager({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [removeIndex, setRemoveIndex] = useState<number | null>(null);
+  const [downloadId, setDownloadId] = useState<string | null>(null);
 
   const summary = summarizePhotoUploads(jobs);
   const inFlight = summary.uploading > 0 || summary.queued > 0;
@@ -171,6 +180,26 @@ export function VehiclePhotoManager({
             : job,
         ),
       );
+    }
+  }
+
+  async function downloadPhoto(photo: PhotoItem, index: number) {
+    if (downloadId || !photo.url) return;
+    const filename = archivePhotoFilename({
+      brand: listing?.brand ?? "",
+      model: listing?.model ?? "",
+      year: listing?.year && listing.year > 1900 ? listing.year : new Date().getFullYear(),
+      index: index + 1,
+      url: photo.url,
+    });
+    setDownloadId(photo.id);
+    try {
+      await downloadAttachment(adminStorageJpgPath(photo.url, filename), filename);
+      toast.success("JPG baixado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha no download.");
+    } finally {
+      setDownloadId(null);
     }
   }
 
@@ -425,7 +454,9 @@ export function VehiclePhotoManager({
           <p className="mt-4 text-xs text-muted">
             Arraste as fotos para reorganizar. A primeira é a capa do anúncio.
             Em <strong>Borrar placa</strong>, marque o retângulo e salve o
-            anúncio.
+            anúncio. <strong>JPG</strong> baixa a foto em JPEG para o
+            Marketplace e o WhatsApp — no site ela segue em WebP. Segurar a
+            foto também baixa o JPG.
           </p>
           {blurredIds.size > 0 && !blurring ? (
             <p className="mt-3 border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-sm text-cream">
@@ -441,6 +472,12 @@ export function VehiclePhotoManager({
                 <li
                   key={photo.id}
                   draggable
+                  onContextMenu={(event) => {
+                    const target = event.target as HTMLElement | null;
+                    if (target?.closest("button, a")) return;
+                    event.preventDefault();
+                    void downloadPhoto(photo, index);
+                  }}
                   onDragStart={(event) => {
                     // Não inicia reorder se estiver arrastando arquivos do SO.
                     if (hasFiles(event)) return;
@@ -490,7 +527,7 @@ export function VehiclePhotoManager({
                     src={photo.url}
                     alt={`Foto ${index + 1} do veículo`}
                     fill
-                    className="pointer-events-none object-cover"
+                    className="pointer-events-none object-cover [-webkit-touch-callout:none]"
                     sizes="240px"
                   />
 
@@ -507,25 +544,46 @@ export function VehiclePhotoManager({
                     </span>
                   ) : null}
 
-                  <button
-                    type="button"
-                    disabled={blurring || inFlight}
-                    onMouseDown={(event) => event.stopPropagation()}
-                    onPointerDown={(event) => event.stopPropagation()}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setEditingId(photo.id);
-                    }}
-                    className="absolute inset-x-1.5 bottom-14 min-h-8 bg-asphalt/90 px-1.5 text-center font-display text-[10px] font-semibold uppercase tracking-wider text-cream touch-manipulation disabled:opacity-80"
-                    title="Marcar a placa com um retângulo e borrar só essa área"
-                  >
-                    {blurring && editingId === photo.id
-                      ? "Borrando…"
-                      : blurredIds.has(photo.id)
-                        ? "Borrar de novo"
-                        : "Borrar placa"}
-                  </button>
+                  <div className="absolute inset-x-1.5 bottom-14 flex items-stretch gap-1">
+                    <button
+                      type="button"
+                      disabled={blurring || inFlight}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setEditingId(photo.id);
+                      }}
+                      className="min-h-11 flex-1 bg-asphalt/90 px-1.5 text-center font-display text-[10px] font-semibold uppercase tracking-wider text-cream touch-manipulation disabled:opacity-80"
+                      title="Marcar a placa com um retângulo e borrar só essa área"
+                    >
+                      {blurring && editingId === photo.id
+                        ? "Borrando…"
+                        : blurredIds.has(photo.id)
+                          ? "Borrar de novo"
+                          : "Borrar placa"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={downloadId === photo.id}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void downloadPhoto(photo, index);
+                      }}
+                      className="inline-flex h-11 shrink-0 items-center gap-1 bg-asphalt/90 px-2 text-cream touch-manipulation disabled:opacity-60"
+                      title="Baixar JPG para Marketplace e WhatsApp"
+                      aria-label={`Baixar foto ${index + 1} em JPG`}
+                    >
+                      <IconDownload className="h-4 w-4" />
+                      <span className="font-display text-[10px] font-semibold uppercase tracking-wider">
+                        {downloadId === photo.id ? "…" : "JPG"}
+                      </span>
+                    </button>
+                  </div>
 
                   <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-asphalt/85 px-1.5 py-1.5 backdrop-blur">
                     <div className="flex gap-0.5">

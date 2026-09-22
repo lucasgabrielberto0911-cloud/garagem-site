@@ -48,6 +48,8 @@ const nextConfig = {
       "./node_modules/sharp/**",
       "./node_modules/heic-convert/**",
     ],
+    // O download JPG fica em /api/foto-jpg (precisa do sharp). Não mover
+    // essa rota para /api/veiculos — este prefixo exclui o sharp de propósito.
     "/api/veiculos/**": [
       "./node_modules/sharp/**",
       "./node_modules/heic-convert/**",

@@ -1,11 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { toDownloadJpeg } from "@/lib/photo-jpeg";
 import { supabaseOriginalSrc } from "@/lib/stock-query";
 import {
   VEHICLE_PHOTOS_BUCKET,
   getSupabaseAdmin,
   storagePathFromPublicUrl,
 } from "@/lib/supabase";
+
+const MAX_SOURCE_BYTES = 15 * 1024 * 1024;
 
 export type ArchiveFile = {
   bytes: Uint8Array;
@@ -25,31 +28,97 @@ function contentTypeFromName(name: string, fallback = "application/octet-stream"
   return CONTENT_BY_EXT[ext] || fallback;
 }
 
+export function isSafeVehicleStoragePath(storagePath: string) {
+  if (!storagePath || storagePath.length > 512) return false;
+  if (
+    storagePath.startsWith("/") ||
+    storagePath.includes("\\") ||
+    storagePath.includes("..")
+  ) {
+    return false;
+  }
+  return storagePath.split("/").every((part) => part.length > 0 && part !== ".");
+}
+
+/**
+ * Path no bucket `veiculos` a partir da URL pública.
+ * O host da URL é ignorado de propósito: o download usa a service role
+ * neste bucket, nunca um fetch da URL recebida.
+ */
+export function vehiclePhotoStoragePath(url: string): string | null {
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.length > 2048) return null;
+  const withoutHash = trimmed.split("#")[0] ?? "";
+  const withoutQuery = withoutHash.split("?")[0] ?? "";
+  let storagePath: string | null;
+  try {
+    storagePath = storagePathFromPublicUrl(supabaseOriginalSrc(withoutQuery));
+  } catch {
+    return null;
+  }
+  if (!storagePath || !isSafeVehicleStoragePath(storagePath)) return null;
+  return storagePath;
+}
+
+async function encodeDownload(bytes: Uint8Array): Promise<Uint8Array | null> {
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_SOURCE_BYTES) {
+    console.warn("[photo-jpeg] tamanho inválido:", bytes.byteLength);
+    return null;
+  }
+  try {
+    return await toDownloadJpeg(bytes);
+  } catch (error) {
+    console.warn("[photo-jpeg] conversão:", error);
+    return null;
+  }
+}
+
+async function downloadStorageObject(storagePath: string): Promise<Uint8Array | null> {
+  if (!isSafeVehicleStoragePath(storagePath)) return null;
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase.storage
+      .from(VEHICLE_PHOTOS_BUCKET)
+      .download(storagePath);
+    if (error || !data) {
+      if (error) console.warn("[photo-archive] storage download:", error.message);
+      return null;
+    }
+    return new Uint8Array(await data.arrayBuffer());
+  } catch (error) {
+    console.warn("[photo-archive] storage:", error);
+    return null;
+  }
+}
+
+/** JPEG de um objeto do bucket, sem buscar a URL enviada pelo cliente. */
+export async function loadStorageJpeg(storagePath: string): Promise<Uint8Array | null> {
+  const bytes = await downloadStorageObject(storagePath);
+  if (!bytes) return null;
+  return encodeDownload(bytes);
+}
+
 /**
  * Baixa o arquivo da galeria (não a miniatura do card).
  * Prefere o Storage com service role; cai na URL pública ou em /public.
  */
 export async function loadArchiveOriginal(url: string): Promise<ArchiveFile | null> {
-  const original = supabaseOriginalSrc(url).split("#")[0] ?? url;
-  const storagePath = storagePathFromPublicUrl(original);
+  const withoutHash = url.split("#")[0] ?? url;
+  const original = supabaseOriginalSrc(withoutHash).split("?")[0] ?? withoutHash;
+  let storagePath: string | null = null;
+  try {
+    storagePath = storagePathFromPublicUrl(original);
+  } catch {
+    storagePath = null;
+  }
 
-  if (storagePath) {
-    try {
-      const supabase = getSupabaseAdmin();
-      const { data, error } = await supabase.storage
-        .from(VEHICLE_PHOTOS_BUCKET)
-        .download(storagePath);
-      if (!error && data) {
-        return {
-          bytes: new Uint8Array(await data.arrayBuffer()),
-          contentType: data.type || contentTypeFromName(storagePath, "image/webp"),
-        };
-      }
-      if (error) {
-        console.warn("[photo-archive] storage download:", error.message);
-      }
-    } catch (error) {
-      console.warn("[photo-archive] storage:", error);
+  if (storagePath && isSafeVehicleStoragePath(storagePath)) {
+    const bytes = await downloadStorageObject(storagePath);
+    if (bytes) {
+      return {
+        bytes,
+        contentType: contentTypeFromName(storagePath, "image/webp"),
+      };
     }
   }
 
@@ -83,6 +152,13 @@ export async function loadArchiveOriginal(url: string): Promise<ArchiveFile | nu
     console.warn("[photo-archive] fetch:", error);
     return null;
   }
+}
+
+/** Foto da galeria (URL já gravada no banco) convertida para JPEG. */
+export async function loadGalleryJpeg(url: string): Promise<Uint8Array | null> {
+  const file = await loadArchiveOriginal(url);
+  if (!file) return null;
+  return encodeDownload(file.bytes);
 }
 
 export function attachmentHeaders(filename: string, contentType: string) {
