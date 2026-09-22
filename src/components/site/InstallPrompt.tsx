@@ -7,75 +7,109 @@ import { IconClose } from "@/components/site/icons";
 import { trackPwaEvent } from "@/lib/meta-pixel";
 import {
   INSTALL_DISMISS_KEY,
+  INSTALL_SEEN_AT_KEY,
   IOS_TIP_DISMISS_KEY,
   isIosSafariUserAgent,
   isMoneyPagePath,
   isStandaloneDisplay,
-  shouldShowInstallCoach,
+  readInstallPrompt,
+  runInstallPrompt,
+  shouldAutoShowInstallCoach,
   type InstallCoachKind,
 } from "@/lib/pwa-install";
 import { site } from "@/lib/site";
 
-type InstallEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-};
-
 export function InstallPrompt() {
   const pathname = usePathname();
-  const [event, setEvent] = useState<InstallEvent | null>(null);
   const [kind, setKind] = useState<InstallCoachKind>(null);
   const [visible, setVisible] = useState(false);
   const hideOnMoneyPage = isMoneyPagePath(pathname);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const standalone = isStandaloneDisplay(
-      window.matchMedia("(display-mode: standalone)").matches,
-      Boolean(
-        "standalone" in window.navigator &&
-          (window.navigator as Navigator & { standalone?: boolean }).standalone,
-      ),
-    );
-    const ios = isIosSafariUserAgent(
-      window.navigator.userAgent,
-      window.navigator.maxTouchPoints ?? 0,
-    );
+    let timer = 0;
+    let cancelled = false;
 
-    function reveal(next: InstallCoachKind) {
-      if (
-        !shouldShowInstallCoach({
-          dismissed: false,
-          standalone,
-          hideOnMoneyPage,
-        })
-      ) {
+    function standaloneNow() {
+      return isStandaloneDisplay(
+        window.matchMedia("(display-mode: standalone)").matches,
+        Boolean(
+          "standalone" in window.navigator &&
+            (window.navigator as Navigator & { standalone?: boolean }).standalone,
+        ),
+      );
+    }
+
+    function schedule(next: InstallCoachKind) {
+      if (!next || timer) return;
+      const delay = next === "ios" ? 10000 : 12000;
+      timer = window.setTimeout(() => {
+        if (cancelled) return;
+        const dismissKey = next === "ios" ? IOS_TIP_DISMISS_KEY : INSTALL_DISMISS_KEY;
+        let seenAt: number | null = null;
+        try {
+          const raw = window.localStorage.getItem(INSTALL_SEEN_AT_KEY);
+          seenAt = raw ? Number(raw) : null;
+        } catch {
+          seenAt = null;
+        }
+        let dismissed = false;
+        try {
+          dismissed = window.localStorage.getItem(dismissKey) === "1";
+        } catch {
+          dismissed = false;
+        }
+        const mobileSurface = window.matchMedia(
+          "(max-width: 1023px), (pointer: coarse)",
+        ).matches;
+        if (
+          !shouldAutoShowInstallCoach({
+            dismissed,
+            standalone: standaloneNow(),
+            hideOnMoneyPage,
+            mobileSurface,
+            seenAt,
+            now: Date.now(),
+          })
+        ) {
+          return;
+        }
+        if (next === "android" && !readInstallPrompt()) return;
+        try {
+          window.localStorage.setItem(INSTALL_SEEN_AT_KEY, String(Date.now()));
+        } catch {
+          /* ignore */
+        }
+        setKind(next);
+        setVisible(true);
+        trackPwaEvent(next === "ios" ? "PwaIosTipShown" : "PwaInstallPromptShown");
+      }, delay);
+    }
+
+    function consider() {
+      if (cancelled || standaloneNow()) return;
+      const mobileSurface = window.matchMedia(
+        "(max-width: 1023px), (pointer: coarse)",
+      ).matches;
+      if (!mobileSurface) return;
+      const ios = isIosSafariUserAgent(
+        window.navigator.userAgent,
+        window.navigator.maxTouchPoints ?? 0,
+      );
+      if (readInstallPrompt()) {
+        schedule("android");
         return;
       }
-      setKind(next);
-      setVisible(true);
-      trackPwaEvent(next === "ios" ? "PwaIosTipShown" : "PwaInstallPromptShown");
+      if (ios) schedule("ios");
     }
 
-    if (standalone) return;
-
-    function onPrompt(nativeEvent: Event) {
-      nativeEvent.preventDefault();
-      if (window.localStorage.getItem(INSTALL_DISMISS_KEY) === "1") return;
-      setEvent(nativeEvent as InstallEvent);
-      window.setTimeout(() => reveal("android"), 12000);
-    }
-
-    window.addEventListener("beforeinstallprompt", onPrompt);
-
-    let iosTimer = 0;
-    if (ios && window.localStorage.getItem(IOS_TIP_DISMISS_KEY) !== "1") {
-      iosTimer = window.setTimeout(() => reveal("ios"), 10000);
-    }
+    consider();
+    window.addEventListener("garagem:install-change", consider);
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
-      if (iosTimer) window.clearTimeout(iosTimer);
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("garagem:install-change", consider);
     };
   }, [hideOnMoneyPage]);
 
@@ -91,15 +125,9 @@ export function InstallPrompt() {
   }
 
   async function install() {
-    if (!event) return;
-    await event.prompt();
-    const choice = await event.userChoice;
-    if (choice.outcome === "accepted") {
-      window.localStorage.setItem(INSTALL_DISMISS_KEY, "1");
-      trackPwaEvent("PwaInstallAccepted");
-    } else {
-      trackPwaEvent("PwaInstallDismissed");
-    }
+    const outcome = await runInstallPrompt();
+    if (outcome === "accepted") trackPwaEvent("PwaInstallAccepted");
+    if (outcome === "dismissed") trackPwaEvent("PwaInstallDismissed");
     setVisible(false);
   }
 
@@ -129,7 +157,7 @@ export function InstallPrompt() {
           <p className="mt-1 text-xs leading-relaxed text-muted">
             {kind === "ios"
               ? "No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início. Não pedimos de novo se você dispensar."
-              : "Acesse o estoque e seus favoritos direto da tela inicial, sem abrir o navegador."}
+              : "Estoque e favoritos na tela inicial. Se dispensar, este aviso não volta."}
           </p>
         </div>
         <button

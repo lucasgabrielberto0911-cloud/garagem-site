@@ -3,6 +3,7 @@ import { Inter, Sora } from "next/font/google";
 import { AppToaster } from "@/components/Toaster";
 import { BootSplash } from "@/components/site/BootSplash";
 import { PwaRegister } from "@/components/site/PwaRegister";
+import { installCaptureScript } from "@/lib/pwa-install";
 import { site } from "@/lib/site";
 import "./globals.css";
 
@@ -176,11 +177,15 @@ export default function RootLayout({
 
   return (
     <html lang="pt-BR" data-scroll-behavior="smooth">
-      {storageOrigin ? (
-        <head>
+      <head>
+        {storageOrigin ? (
           <link rel="preconnect" href={storageOrigin} crossOrigin="anonymous" />
-        </head>
-      ) : null}
+        ) : null}
+        <script
+          id="garagem-install-capture"
+          dangerouslySetInnerHTML={{ __html: installCaptureScript() }}
+        />
+      </head>
       <body
         className={`${display.variable} ${body.variable} font-body antialiased bg-asphalt text-cream`}
       >

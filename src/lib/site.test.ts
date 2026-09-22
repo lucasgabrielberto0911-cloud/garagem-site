@@ -13,6 +13,7 @@ import {
   whatsappCampaignFromLabel,
   whatsappCampaignFromPath,
   whatsappContentFromVehicle,
+  pwaShortcutWhatsAppUrl,
   whatsappUrl,
 } from "./site";
 
@@ -102,6 +103,13 @@ test("wa.me dos CTAs leva UTM de origem sem alterar o pré-preenchido", () => {
   assert.equal(whatsappCampaignFromLabel("estoque-bar-whatsapp"), "estoque");
   assert.equal(whatsappCampaignFromLabel("estoque-filtro-vazio"), "filtro");
   assert.equal(whatsappCampaignFromLabel("filtro-vazio"), "filtro");
+  assert.equal(whatsappCampaignFromLabel("atalho-pwa"), "pwa");
+  const shortcut = pwaShortcutWhatsAppUrl();
+  assert.match(shortcut, /^https:\/\/wa\.me\/5527996330706\?/);
+  assert.match(shortcut, /utm_source=site/);
+  assert.match(shortcut, /utm_medium=whatsapp/);
+  assert.match(shortcut, /utm_campaign=pwa/);
+  assert.match(shortcut, /utm_content=atalho/);
   assert.equal(
     whatsappContentFromVehicle({
       id: "cuid123",

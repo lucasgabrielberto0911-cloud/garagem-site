@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+import { shouldForceDocumentNavigation } from "@/lib/pwa-install";
+
+const RELOAD_FLAG = "garagem:sw-reload";
 
 function isStandalone() {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
-    // iOS Safari (antes do display-mode)
     Boolean(
       "standalone" in window.navigator &&
         (window.navigator as Navigator & { standalone?: boolean }).standalone,
@@ -16,40 +18,106 @@ function isStandalone() {
 /**
  * No app instalado registra na hora (para pegar o SW novo).
  * No navegador espera o load + idle curto, para não disputar o LCP.
+ * O clique offline vira navegação completa: o App Router pede RSC, e o
+ * HTML em cache só entra num carregamento de documento.
  */
 export function PwaRegister() {
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production") return;
-    if (!("serviceWorker" in navigator)) return;
+    const clearFlag = window.setTimeout(() => {
+      try {
+        sessionStorage.removeItem(RELOAD_FLAG);
+      } catch {
+        /* ignore */
+      }
+    }, 15000);
+
+    function onMessage(event: MessageEvent) {
+      if (event.data?.type !== "GARAGEM_RELOAD") return;
+      try {
+        if (sessionStorage.getItem(RELOAD_FLAG) === "1") return;
+        sessionStorage.setItem(RELOAD_FLAG, "1");
+      } catch {
+        /* ignore */
+      }
+      window.location.reload();
+    }
+
+    function onClick(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      if (anchor.target && anchor.target !== "_self") return;
+      if (anchor.hasAttribute("download")) return;
+      const raw = anchor.getAttribute("href");
+      if (
+        !raw ||
+        raw.startsWith("#") ||
+        raw.startsWith("mailto:") ||
+        raw.startsWith("tel:")
+      ) {
+        return;
+      }
+      let url: URL;
+      try {
+        url = new URL(anchor.href, window.location.href);
+      } catch {
+        return;
+      }
+      if (url.origin !== window.location.origin) return;
+      const connection = (
+        navigator as Navigator & {
+          connection?: { saveData?: boolean; effectiveType?: string };
+        }
+      ).connection;
+      if (
+        !shouldForceDocumentNavigation({
+          online: navigator.onLine,
+          saveData: connection?.saveData,
+          effectiveType: connection?.effectiveType,
+          pathname: url.pathname,
+        })
+      ) {
+        return;
+      }
+      event.preventDefault();
+      // Carregamento completo de propósito: o RSC do App Router não usa o HTML em cache.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- documento offline
+      window.location.assign(`${url.pathname}${url.search}${url.hash}`);
+    }
+
+    const sw = "serviceWorker" in navigator ? navigator.serviceWorker : null;
+    sw?.addEventListener("message", onMessage);
+    document.addEventListener("click", onClick, true);
 
     let idleId = 0;
     let timeoutId = 0;
     let registered = false;
-
-    function onMessage(event: MessageEvent) {
-      if (event.data?.type === "GARAGEM_RELOAD") {
-        window.location.reload();
-      }
-    }
-
-    navigator.serviceWorker.addEventListener("message", onMessage);
+    let removeLoad: (() => void) | null = null;
 
     function register() {
-      if (registered) return;
+      if (registered || !sw || process.env.NODE_ENV !== "production") return;
       registered = true;
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+      sw.register("/sw.js").catch(() => undefined);
     }
 
-    if (isStandalone()) {
-      register();
-    } else if (document.readyState === "complete") {
-      const ric = window.requestIdleCallback;
-      if (typeof ric === "function") {
-        idleId = ric(register, { timeout: 1500 });
-      } else {
-        timeoutId = window.setTimeout(register, 800);
+    function scheduleRegister() {
+      if (process.env.NODE_ENV !== "production" || !sw) return;
+      if (isStandalone()) {
+        register();
+        return;
       }
-    } else {
+      if (document.readyState === "complete") {
+        const ric = window.requestIdleCallback;
+        if (typeof ric === "function") {
+          idleId = ric(register, { timeout: 1500 });
+        } else {
+          timeoutId = window.setTimeout(register, 800);
+        }
+        return;
+      }
       const onLoad = () => {
         const ric = window.requestIdleCallback;
         if (typeof ric === "function") {
@@ -59,11 +127,17 @@ export function PwaRegister() {
         }
       };
       window.addEventListener("load", onLoad, { once: true });
+      removeLoad = () => window.removeEventListener("load", onLoad);
       timeoutId = window.setTimeout(register, 4000);
     }
 
+    scheduleRegister();
+
     return () => {
-      navigator.serviceWorker.removeEventListener("message", onMessage);
+      window.clearTimeout(clearFlag);
+      sw?.removeEventListener("message", onMessage);
+      document.removeEventListener("click", onClick, true);
+      removeLoad?.();
       if (idleId && typeof window.cancelIdleCallback === "function") {
         window.cancelIdleCallback(idleId);
       }

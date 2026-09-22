@@ -115,7 +115,16 @@ export type CustomerWhatsAppVehicleIntent =
   | "similar";
 
 /** Campanhas dos CTAs públicos — Lucas vê no wa.me aberto. */
-export type WhatsAppCampaign = "ficha" | "estoque" | "filtro" | "home" | "chat";
+export type WhatsAppCampaign =
+  | "ficha"
+  | "estoque"
+  | "filtro"
+  | "home"
+  | "chat"
+  | "pwa";
+
+/** Atalho do app instalado. Tem que ser same-origin (o manifesto não aceita wa.me). */
+export const PWA_WHATSAPP_SHORTCUT_PATH = "/atalho/whatsapp";
 
 export type WhatsAppTracking = {
   campaign?: WhatsAppCampaign;
@@ -208,6 +217,7 @@ export function whatsappCampaignFromPath(pathname: string): WhatsAppCampaign {
 
 export function whatsappCampaignFromLabel(label: string): WhatsAppCampaign {
   const key = (label || "").toLowerCase();
+  if (key.includes("pwa") || key.includes("atalho")) return "pwa";
   if (key.includes("chat")) return "chat";
   if (key.includes("ficha")) return "ficha";
   if (key.includes("home")) return "home";
@@ -326,6 +336,14 @@ export function whatsappUrl(
     : `https://wa.me/?text=${text}`;
   if (opts.bare) return base;
   return applyWhatsAppUtm(base, opts);
+}
+
+/** WhatsApp aberto pelo atalho do PWA — mesmo UTM dos CTAs, campanha `pwa`. */
+export function pwaShortcutWhatsAppUrl() {
+  return whatsappUrl(WHATSAPP_MESSAGES.general, {
+    campaign: "pwa",
+    content: "atalho",
+  });
 }
 
 export function telUrl(phoneIndex = 0) {

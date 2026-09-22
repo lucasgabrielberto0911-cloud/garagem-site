@@ -10,6 +10,10 @@ import {
   IconWhatsApp,
 } from "@/components/site/icons";
 import { FavoritesLink } from "@/components/site/FavoritesLink";
+import {
+  InstallAppHeaderButton,
+  InstallAppMenuItem,
+} from "@/components/site/InstallAppButton";
 import { SiteWordmark } from "@/components/site/SiteWordmark";
 import { usePageWhatsAppHref } from "@/components/site/usePageWhatsAppHref";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
@@ -108,6 +112,8 @@ export function SiteHeader() {
 
             <FavoritesLink />
 
+            <InstallAppHeaderButton />
+
             <a
               href={whatsappHref}
               target="_blank"
@@ -192,6 +198,8 @@ export function SiteHeader() {
                   </li>
                 ))}
               </ul>
+
+              <InstallAppMenuItem onClose={() => setOpen(false)} />
 
               <div className="mt-4 space-y-3 border-t border-white/10 pt-5">
                 <a
