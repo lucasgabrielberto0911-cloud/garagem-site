@@ -3,6 +3,8 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { galleryStemFromStoragePath } from "@/lib/photo-master";
+import { deleteUnreferencedMasters } from "@/lib/photo-master-store";
 import { storeCardThumbnail } from "@/lib/photo-thumbnails";
 import { prisma } from "@/lib/prisma";
 import {
@@ -22,6 +24,23 @@ export type CleanupResult = {
 };
 
 const BACKFILL_BATCH = 20;
+
+async function cleanupPrivateMasters(referenced: Set<string>) {
+  try {
+    const stems = new Set<string>();
+    for (const path of referenced) {
+      const stem = galleryStemFromStoragePath(path);
+      if (stem) stems.add(stem);
+    }
+    const removed = await deleteUnreferencedMasters(stems);
+    return removed > 0
+      ? ` ${removed} master(s) privado(s) sem foto no estoque.`
+      : "";
+  } catch (error) {
+    console.warn("[photo-master] cleanup:", error);
+    return "";
+  }
+}
 
 async function requireAdmin() {
   const session = await getSession();
@@ -106,10 +125,12 @@ export async function cleanupOrphanPhotos(): Promise<CleanupResult> {
       offset += limit;
     }
 
+    const masterNote = await cleanupPrivateMasters(referenced);
+
     if (orphans.length === 0) {
       return {
         ok: true,
-        message: `Nenhuma foto órfã. ${checked} arquivo(s) conferido(s).`,
+        message: `Nenhuma foto órfã. ${checked} arquivo(s) conferido(s).${masterNote}`,
         removed: 0,
         checked,
       };
@@ -138,7 +159,7 @@ export async function cleanupOrphanPhotos(): Promise<CleanupResult> {
 
     return {
       ok: true,
-      message: `Removidas ${removed} foto(s) órfã(s) de ${checked} arquivo(s).`,
+      message: `Removidas ${removed} foto(s) órfã(s) de ${checked} arquivo(s).${masterNote}`,
       removed,
       checked,
     };

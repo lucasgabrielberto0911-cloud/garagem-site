@@ -1,8 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
-import { prepareImageForUpload } from "@/lib/prepare-image-upload";
+import {
+  prepareImageForUpload,
+  prepareMasterForUpload,
+} from "@/lib/prepare-image-upload";
 
 type SignResponse = {
   error?: string;
+  id?: string;
   path?: string;
   token?: string;
   signedUrl?: string;
@@ -26,15 +30,25 @@ export type UploadedPhoto = {
 /**
  * Comprime no browser e sobe pela API do servidor (variantes WebP).
  * Não borra placa. O admin marca o retângulo depois, na foto já enviada.
+ * Com `master: true`, também grava um JPEG maior no bucket privado
+ * `documentos` — sem URL pública. O formulário de venda não usa isso.
  * Se a Vercel recusar por tamanho (413), cai no upload assinado direto
  * ao Storage e gera a miniatura em seguida.
  */
-export async function uploadImageDirect(file: File): Promise<UploadedPhoto> {
-  const prepared = await prepareImageForUpload(file);
+export async function uploadImageDirect(
+  file: File,
+  options?: { master?: boolean },
+): Promise<UploadedPhoto> {
+  const [prepared, masterId] = await Promise.all([
+    prepareImageForUpload(file),
+    options?.master ? uploadPrivateMaster(file) : Promise.resolve(null),
+  ]);
 
   try {
     const form = new FormData();
     form.append("file", prepared, prepared.name || "photo.webp");
+    if (options?.master) form.append("storeMaster", "1");
+    if (masterId) form.append("masterId", masterId);
 
     const response = await fetch("/api/upload", {
       method: "POST",
@@ -64,7 +78,7 @@ export async function uploadImageDirect(file: File): Promise<UploadedPhoto> {
       console.warn(
         "[upload] /api/upload retornou 413 — usando upload assinado.",
       );
-      return uploadViaSignedUrl(prepared);
+      return uploadViaSignedUrl(prepared, masterId);
     }
 
     throw new Error(
@@ -93,7 +107,56 @@ async function deriveThumbnail(url: string): Promise<string | null> {
   }
 }
 
-async function uploadViaSignedUrl(prepared: File): Promise<UploadedPhoto> {
+async function uploadPrivateMaster(file: File): Promise<string | null> {
+  try {
+    const prepared = await prepareMasterForUpload(file);
+    if (!prepared) return null;
+
+    const signResponse = await fetch("/api/upload/master/sign", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+    const signRaw = await signResponse.text();
+    let signData: SignResponse = {};
+    try {
+      signData = signRaw ? (JSON.parse(signRaw) as SignResponse) : {};
+    } catch {
+      return null;
+    }
+
+    if (
+      !signResponse.ok ||
+      !signData.id ||
+      !signData.path ||
+      !signData.token ||
+      !signData.signedUrl
+    ) {
+      console.warn(
+        "[upload] master privado:",
+        signData.error || signResponse.status,
+      );
+      return null;
+    }
+
+    const uploaded = await putWithCacheControl({
+      bucket: "documentos",
+      path: signData.path,
+      token: signData.token,
+      signedUrl: signData.signedUrl,
+      prepared,
+      contentType: "image/jpeg",
+    });
+    return uploaded ? signData.id : null;
+  } catch (error) {
+    console.warn("[upload] master privado:", error);
+    return null;
+  }
+}
+
+async function uploadViaSignedUrl(
+  prepared: File,
+  masterId: string | null,
+): Promise<UploadedPhoto> {
   const signResponse = await fetch("/api/upload/sign", {
     method: "POST",
     credentials: "same-origin",
@@ -101,6 +164,7 @@ async function uploadViaSignedUrl(prepared: File): Promise<UploadedPhoto> {
     body: JSON.stringify({
       contentType: prepared.type || "image/webp",
       extension: prepared.name.toLowerCase().endsWith(".jpg") ? "jpg" : "webp",
+      id: masterId ?? undefined,
     }),
   });
 
@@ -132,6 +196,7 @@ async function uploadViaSignedUrl(prepared: File): Promise<UploadedPhoto> {
   const contentType =
     signData.contentType || prepared.type || "application/octet-stream";
   const uploaded = await putWithCacheControl({
+    bucket: "veiculos",
     path: signData.path,
     token: signData.token,
     signedUrl: signData.signedUrl,
@@ -148,12 +213,14 @@ async function uploadViaSignedUrl(prepared: File): Promise<UploadedPhoto> {
 }
 
 async function putWithCacheControl({
+  bucket,
   path,
   token,
   signedUrl,
   prepared,
   contentType,
 }: {
+  bucket: "veiculos" | "documentos";
   path: string;
   token: string;
   signedUrl: string;
@@ -169,7 +236,7 @@ async function putWithCacheControl({
         auth: { persistSession: false, autoRefreshToken: false },
       });
       const { error } = await supabase.storage
-        .from("veiculos")
+        .from(bucket)
         .uploadToSignedUrl(path, token, prepared, {
           contentType,
           cacheControl: "31536000",

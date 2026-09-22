@@ -30,8 +30,8 @@ export function VehiclePhotoArchive({
       await downloadAttachment(zipHref, "fotos.zip");
       toast.success(
         photos.length === 1
-          ? "JPG baixado."
-          : `${photos.length} fotos em JPG baixadas.`,
+          ? "JPG em alta baixado."
+          : `${photos.length} fotos em alta baixadas.`,
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha no download.");
@@ -48,7 +48,7 @@ export function VehiclePhotoArchive({
         `/api/admin/veiculos/${vehicleId}/fotos/${photoId}`,
         `foto-${String(index + 1).padStart(2, "0")}.jpg`,
       );
-      toast.success("JPG baixado.");
+      toast.success("JPG em alta baixado.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha no download.");
     } finally {
@@ -68,7 +68,7 @@ export function VehiclePhotoArchive({
             className={btn.ghost}
           >
             <IconDownload className="h-4 w-4" />
-            {zipPending ? "Preparando…" : "Baixar todas em JPG"}
+            {zipPending ? "Preparando…" : "Baixar todas em alta"}
           </button>
         ) : null
       }
@@ -81,9 +81,10 @@ export function VehiclePhotoArchive({
       ) : (
         <div className="space-y-4">
           <p className="text-sm leading-relaxed text-muted">
-            O site continua em WebP. O botão JPG (e o ZIP) entrega JPEG de
-            qualidade alta para Facebook Marketplace e WhatsApp. É a foto da
-            galeria, até 1280px — não o arquivo cru da câmera.
+            O site público continua leve: WebP na página e JPG da galeria para
+            o visitante. Aqui, Alta e Baixar todas usam a melhor foto guardada
+            — master privado até 3840px nas fotos novas; no estoque antigo, a
+            galeria inteira em JPEG 93, sem reduzir de novo.
           </p>
 
           <button
@@ -95,7 +96,7 @@ export function VehiclePhotoArchive({
             <IconDownload className="h-4 w-4" />
             {zipPending
               ? "Montando ZIP…"
-              : `Baixar ${photos.length} foto${photos.length === 1 ? "" : "s"} em JPG`}
+              : `Baixar ${photos.length} foto${photos.length === 1 ? "" : "s"} em alta`}
           </button>
 
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -130,12 +131,12 @@ export function VehiclePhotoArchive({
                       onClick={() => void handleOne(photo.id, index)}
                       disabled={busy || zipPending}
                       className="inline-flex h-11 items-center gap-1 px-1.5 text-muted transition touch-manipulation hover:text-cream disabled:opacity-60"
-                      title="Baixar JPG para Marketplace e WhatsApp"
-                      aria-label={`Baixar foto ${index + 1} em JPG`}
+                      title="Baixar JPG em alta qualidade"
+                      aria-label={`Baixar foto ${index + 1} em JPG de alta qualidade`}
                     >
                       <IconDownload className="h-4 w-4" />
                       <span className="font-display text-[10px] font-semibold uppercase tracking-wider">
-                        {busy ? "…" : "JPG"}
+                        {busy ? "…" : "Alta"}
                       </span>
                     </button>
                   </div>

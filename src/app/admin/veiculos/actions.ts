@@ -4,6 +4,8 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { privateMasterRefForPublicUrl } from "@/lib/photo-master";
+import { copyPrivateMaster } from "@/lib/photo-master-store";
 import {
   copyPublicStorageObject,
   deleteStoragePublicUrls,
@@ -380,7 +382,9 @@ export async function updateVehicle(
 
     const kept = new Set(data.photos.map((photo) => photo.url));
     const removed = previous.flatMap((photo) =>
-      kept.has(photo.url) ? [] : [photo.url, photo.thumbnailUrl],
+      kept.has(photo.url)
+        ? []
+        : [photo.url, photo.thumbnailUrl, privateMasterRefForPublicUrl(photo.url)],
     );
     if (removed.length > 0) {
       await deleteStoragePublicUrls(removed);
@@ -412,7 +416,11 @@ export async function deleteVehicle(id: string) {
 
   await prisma.vehicle.delete({ where: { id } });
   await deleteStoragePublicUrls([
-    ...(vehicle?.photos.flatMap((photo) => [photo.url, photo.thumbnailUrl]) ?? []),
+    ...(vehicle?.photos.flatMap((photo) => [
+      photo.url,
+      photo.thumbnailUrl,
+      privateMasterRefForPublicUrl(photo.url),
+    ]) ?? []),
     ...(vehicle?.costs.map((cost) => cost.receiptUrl) ?? []),
     ...(vehicle?.documents.map((doc) => doc.fileUrl) ?? []),
   ]);
@@ -706,6 +714,8 @@ async function duplicateVehiclePhotos(
       });
       continue;
     }
+
+    await copyPrivateMaster(sourcePath, destPath);
 
     let thumbnailUrl: string | null = null;
     if (photo.thumbnailUrl) {

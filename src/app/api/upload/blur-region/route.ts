@@ -7,6 +7,15 @@ import {
   encodeCardImage,
   encodeGalleryImage,
 } from "@/lib/image-variants";
+import { encodeMasterJpeg } from "@/lib/photo-jpeg";
+import {
+  createPhotoMasterId,
+  masterObjectPathFromGalleryPath,
+} from "@/lib/photo-master";
+import {
+  downloadPrivateMaster,
+  uploadPrivateMasterBytes,
+} from "@/lib/photo-master-store";
 import {
   VEHICLE_PHOTOS_BUCKET,
   getSupabaseAdmin,
@@ -48,13 +57,24 @@ export async function POST(request: Request) {
 
     const rects = parseBlurRects(body.rects);
     const original = await downloadPhoto(url);
-    const processed = await blurImageRegions(original, rects);
+    const sourcePath = storagePathFromPublicUrl(url);
+    const masterPath = sourcePath
+      ? masterObjectPathFromGalleryPath(sourcePath)
+      : null;
+    const master = masterPath ? await downloadPrivateMaster(masterPath) : null;
+    // Retângulos são normalizados: borrar o master (se existir) mantém a alta
+    // e não deixa a placa nítida no download do admin. O master antigo sai
+    // quando a URL antiga é removida ao salvar o anúncio.
+    const processed = await blurImageRegions(
+      master ? Buffer.from(master) : original,
+      rects,
+    );
     const [gallery, card] = await Promise.all([
       encodeGalleryImage(processed),
       encodeCardImage(processed),
     ]);
 
-    const id = `${Date.now()}-${crypto.randomUUID()}`;
+    const id = createPhotoMasterId();
     const galleryPath = `${id}.${gallery.extension}`;
     const cardPath = cardObjectPath(galleryPath);
     const supabase = getSupabaseAdmin();
@@ -83,6 +103,13 @@ export async function POST(request: Request) {
       .from(VEHICLE_PHOTOS_BUCKET)
       .getPublicUrl(galleryPath);
     const thumb = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(cardPath);
+
+    try {
+      const jpeg = await encodeMasterJpeg(new Uint8Array(processed));
+      await uploadPrivateMasterBytes(id, jpeg);
+    } catch (error) {
+      console.warn("[upload/blur-region] master:", error);
+    }
 
     return NextResponse.json({
       url: data.publicUrl,

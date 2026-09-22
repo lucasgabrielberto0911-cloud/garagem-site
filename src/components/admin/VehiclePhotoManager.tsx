@@ -135,7 +135,7 @@ export function VehiclePhotoManager({
       for (const job of batch) {
         patchJob(job.id, { status: "uploading", error: undefined });
         try {
-          const photo = await uploadImageDirect(job.file);
+          const photo = await uploadImageDirect(job.file, { master: true });
           uploaded.push({
             id: createPhotoId(),
             url: photo.url,
@@ -195,7 +195,7 @@ export function VehiclePhotoManager({
     setDownloadId(photo.id);
     try {
       await downloadAttachment(adminStorageJpgPath(photo.url, filename), filename);
-      toast.success("JPG baixado.");
+      toast.success("JPG em alta baixado.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha no download.");
     } finally {
@@ -454,9 +454,11 @@ export function VehiclePhotoManager({
           <p className="mt-4 text-xs text-muted">
             Arraste as fotos para reorganizar. A primeira é a capa do anúncio.
             Em <strong>Borrar placa</strong>, marque o retângulo e salve o
-            anúncio. <strong>JPG</strong> baixa a foto em JPEG para o
-            Marketplace e o WhatsApp — no site ela segue em WebP. Segurar a
-            foto também baixa o JPG.
+            anúncio. <strong>Alta</strong> baixa o JPG na melhor qualidade
+            guardada: fotos novas usam o original privado (até 3840px); o
+            estoque antigo usa a galeria inteira, sem reduzir de novo. O
+            visitante só baixa a versão leve, e a página continua em WebP.
+            Segurar a foto também baixa o JPG em alta.
           </p>
           {blurredIds.size > 0 && !blurring ? (
             <p className="mt-3 border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-sm text-cream">
@@ -575,12 +577,12 @@ export function VehiclePhotoManager({
                         void downloadPhoto(photo, index);
                       }}
                       className="inline-flex h-11 shrink-0 items-center gap-1 bg-asphalt/90 px-2 text-cream touch-manipulation disabled:opacity-60"
-                      title="Baixar JPG para Marketplace e WhatsApp"
-                      aria-label={`Baixar foto ${index + 1} em JPG`}
+                      title="Baixar JPG em alta qualidade"
+                      aria-label={`Baixar foto ${index + 1} em JPG de alta qualidade`}
                     >
                       <IconDownload className="h-4 w-4" />
                       <span className="font-display text-[10px] font-semibold uppercase tracking-wider">
-                        {downloadId === photo.id ? "…" : "JPG"}
+                        {downloadId === photo.id ? "…" : "Alta"}
                       </span>
                     </button>
                   </div>

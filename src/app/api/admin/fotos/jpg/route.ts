@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { safeJpgDownloadName } from "@/lib/photo-archive";
 import {
   attachmentHeaders,
-  loadStorageJpeg,
+  loadAdminJpeg,
   vehiclePhotoStoragePath,
 } from "@/lib/photo-archive-download";
 
@@ -12,8 +12,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 /**
- * JPG de uma foto da grade do anúncio (o id do banco ainda pode não existir).
- * Só objetos do bucket público de veículos — a URL não é buscada direto.
+ * JPG em alta da grade do anúncio (o id do banco ainda pode não existir).
+ * Prefere o master privado. A URL pública não é buscada como se fosse aberta:
+ * o path tem de ser do bucket de fotos, e a rota exige sessão de admin.
  */
 export async function GET(request: Request) {
   const session = await getSession();
@@ -22,7 +23,8 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const storagePath = vehiclePhotoStoragePath(searchParams.get("url") ?? "");
+  const url = searchParams.get("url") ?? "";
+  const storagePath = vehiclePhotoStoragePath(url);
   if (!storagePath) {
     return NextResponse.json(
       { error: "Só dá para baixar fotos do acervo do anúncio." },
@@ -30,7 +32,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const bytes = await loadStorageJpeg(storagePath);
+  const bytes = await loadAdminJpeg(url);
   if (!bytes) {
     return NextResponse.json(
       { error: "Não foi possível preparar o JPG." },

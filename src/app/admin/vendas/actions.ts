@@ -6,6 +6,7 @@ import type { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { isValidPlate, normalizePlate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { privateMasterRefForPublicUrl } from "@/lib/photo-master";
 import { deleteStoragePublicUrls } from "@/lib/supabase";
 import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
 
@@ -436,7 +437,10 @@ export async function deleteSale(id: string): Promise<SaleActionState> {
         prisma.vehicle.delete({ where: { id: sale.vehicleId } }),
       ]);
       await deleteStoragePublicUrls([
-        ...(files?.photos.map((photo) => photo.url) ?? []),
+        ...(files?.photos.flatMap((photo) => [
+          photo.url,
+          privateMasterRefForPublicUrl(photo.url),
+        ]) ?? []),
         ...(files?.costs.map((cost) => cost.receiptUrl) ?? []),
         ...(files?.documents.map((doc) => doc.fileUrl) ?? []),
       ]);
