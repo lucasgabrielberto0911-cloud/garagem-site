@@ -1,6 +1,12 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { toDownloadJpeg } from "@/lib/photo-jpeg";
+import {
+  ADMIN_JPEG_QUALITY,
+  DOWNLOAD_JPEG_QUALITY,
+  toDownloadJpeg,
+} from "@/lib/photo-jpeg";
+import { masterObjectPathFromGalleryPath } from "@/lib/photo-master";
+import { downloadPrivateMaster } from "@/lib/photo-master-store";
 import { supabaseOriginalSrc } from "@/lib/stock-query";
 import {
   VEHICLE_PHOTOS_BUCKET,
@@ -9,6 +15,7 @@ import {
 } from "@/lib/supabase";
 
 const MAX_SOURCE_BYTES = 15 * 1024 * 1024;
+const MAX_ADMIN_SOURCE_BYTES = 20 * 1024 * 1024;
 
 export type ArchiveFile = {
   bytes: Uint8Array;
@@ -60,13 +67,17 @@ export function vehiclePhotoStoragePath(url: string): string | null {
   return storagePath;
 }
 
-async function encodeDownload(bytes: Uint8Array): Promise<Uint8Array | null> {
-  if (bytes.byteLength === 0 || bytes.byteLength > MAX_SOURCE_BYTES) {
+async function encodeDownload(
+  bytes: Uint8Array,
+  quality: number,
+  maxBytes: number,
+): Promise<Uint8Array | null> {
+  if (bytes.byteLength === 0 || bytes.byteLength > maxBytes) {
     console.warn("[photo-jpeg] tamanho inválido:", bytes.byteLength);
     return null;
   }
   try {
-    return await toDownloadJpeg(bytes);
+    return await toDownloadJpeg(bytes, quality);
   } catch (error) {
     console.warn("[photo-jpeg] conversão:", error);
     return null;
@@ -89,13 +100,6 @@ async function downloadStorageObject(storagePath: string): Promise<Uint8Array | 
     console.warn("[photo-archive] storage:", error);
     return null;
   }
-}
-
-/** JPEG de um objeto do bucket, sem buscar a URL enviada pelo cliente. */
-export async function loadStorageJpeg(storagePath: string): Promise<Uint8Array | null> {
-  const bytes = await downloadStorageObject(storagePath);
-  if (!bytes) return null;
-  return encodeDownload(bytes);
 }
 
 /**
@@ -154,11 +158,38 @@ export async function loadArchiveOriginal(url: string): Promise<ArchiveFile | nu
   }
 }
 
-/** Foto da galeria (URL já gravada no banco) convertida para JPEG. */
+/** JPG leve da ficha: só a WebP da galeria (≤1280), qualidade 90. */
 export async function loadGalleryJpeg(url: string): Promise<Uint8Array | null> {
   const file = await loadArchiveOriginal(url);
   if (!file) return null;
-  return encodeDownload(file.bytes);
+  return encodeDownload(file.bytes, DOWNLOAD_JPEG_QUALITY, MAX_SOURCE_BYTES);
+}
+
+/**
+ * JPG do admin. Prefere o master privado (até 3840, sem URL pública).
+ * Se a foto é antiga e só existe a galeria, usa esses pixels inteiros em JPEG 93
+ * — não reduz de novo para 1280.
+ */
+export async function loadAdminJpeg(url: string): Promise<Uint8Array | null> {
+  const galleryPath = vehiclePhotoStoragePath(url);
+  const masterPath = galleryPath
+    ? masterObjectPathFromGalleryPath(galleryPath)
+    : null;
+  if (masterPath) {
+    const master = await downloadPrivateMaster(masterPath);
+    if (master) {
+      const jpeg = await encodeDownload(
+        master,
+        ADMIN_JPEG_QUALITY,
+        MAX_ADMIN_SOURCE_BYTES,
+      );
+      if (jpeg) return jpeg;
+    }
+  }
+
+  const file = await loadArchiveOriginal(url);
+  if (!file) return null;
+  return encodeDownload(file.bytes, ADMIN_JPEG_QUALITY, MAX_ADMIN_SOURCE_BYTES);
 }
 
 export function attachmentHeaders(filename: string, contentType: string) {

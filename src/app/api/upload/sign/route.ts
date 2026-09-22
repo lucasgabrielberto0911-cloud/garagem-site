@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { isPhotoMasterId } from "@/lib/photo-master";
 import {
   VEHICLE_PHOTOS_BUCKET,
   getSupabaseAdmin,
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       contentType?: string;
       extension?: string;
+      id?: string;
     };
 
     const contentType =
@@ -53,7 +55,11 @@ export async function POST(request: Request) {
           ? "jpg"
           : "webp";
 
-    const path = `${Date.now()}-${crypto.randomUUID()}.${extension}`;
+    const requestedId = typeof body.id === "string" ? body.id : "";
+    const stem = isPhotoMasterId(requestedId)
+      ? requestedId
+      : `${Date.now()}-${crypto.randomUUID()}`;
+    const path = `${stem}.${extension}`;
     const supabase = getSupabaseAdmin();
 
     const { data, error } = await supabase.storage

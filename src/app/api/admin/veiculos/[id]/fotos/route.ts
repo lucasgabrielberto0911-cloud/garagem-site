@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { attachmentHeaders, loadGalleryJpeg } from "@/lib/photo-archive-download";
+import { attachmentHeaders, loadAdminJpeg } from "@/lib/photo-archive-download";
 import {
   archivePhotoFilename,
   archiveZipFilename,
@@ -50,7 +50,7 @@ export async function GET(
   const usedNames = new Set<string>();
 
   for (const [index, photo] of vehicle.photos.entries()) {
-    const bytes = await loadGalleryJpeg(photo.url);
+    const bytes = await loadAdminJpeg(photo.url);
     if (!bytes) continue;
 
     let name = archivePhotoFilename({

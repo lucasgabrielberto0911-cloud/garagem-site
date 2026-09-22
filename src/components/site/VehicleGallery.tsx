@@ -296,8 +296,8 @@ export function VehicleGallery({
         </p>
       )}
       <p className="mt-1 text-xs text-muted">
-        Baixar JPG salva a foto em JPEG para Marketplace e WhatsApp. A página
-        continua em WebP.
+        Baixar JPG salva a versão leve da galeria, em JPEG, para Marketplace e
+        WhatsApp. A página continua em WebP.
       </p>
 
       {zoomOpen ? (

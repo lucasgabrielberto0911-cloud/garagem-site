@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { attachmentHeaders, loadGalleryJpeg } from "@/lib/photo-archive-download";
+import { attachmentHeaders, loadAdminJpeg } from "@/lib/photo-archive-download";
 import { archivePhotoFilename } from "@/lib/photo-archive";
 import { prisma } from "@/lib/prisma";
 
@@ -41,7 +41,7 @@ export async function GET(
     return NextResponse.json({ error: "Foto não encontrada." }, { status: 404 });
   }
 
-  const bytes = await loadGalleryJpeg(photo.url);
+  const bytes = await loadAdminJpeg(photo.url);
   if (!bytes) {
     return NextResponse.json(
       { error: "Não foi possível baixar esta foto." },

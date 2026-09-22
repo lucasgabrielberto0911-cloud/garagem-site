@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { cardObjectPath, encodeCardImage, encodeGalleryImage } from "@/lib/image-variants";
+import { createPhotoMasterId, isPhotoMasterId } from "@/lib/photo-master";
+import { storeFallbackMaster } from "@/lib/photo-master-store";
 import {
   VEHICLE_PHOTOS_BUCKET,
   getSupabaseAdmin,
@@ -138,6 +140,15 @@ export async function POST(request: Request) {
 
     const urls: string[] = [];
     const photos: Array<{ url: string; thumbnailUrl: string | null }> = [];
+    const masterField = formData.get("masterId");
+    const requestedMasterId =
+      files.length === 1 &&
+      typeof masterField === "string" &&
+      isPhotoMasterId(masterField)
+        ? masterField
+        : null;
+    const storeMaster =
+      files.length === 1 && formData.get("storeMaster") === "1";
 
     for (const file of files) {
       if (file.size > MAX_SIZE) {
@@ -162,10 +173,12 @@ export async function POST(request: Request) {
 
       let gallery: Awaited<ReturnType<typeof encodeGalleryImage>>;
       let card: Awaited<ReturnType<typeof encodeCardImage>>;
+      let processable: { buffer: Buffer; detected: Detected };
       try {
         // 1) HEIC → JPEG (se preciso), 2) galeria 1280 e capa 480×300.
         // A placa só é borracha no admin, no retângulo marcado.
-        const processable = await toProcessableBuffer(raw, detected);
+        // O master privado, se veio do browser, não é regravado aqui.
+        processable = await toProcessableBuffer(raw, detected);
         [gallery, card] = await Promise.all([
           encodeGalleryImage(processable.buffer),
           encodeCardImage(processable.buffer),
@@ -183,7 +196,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const id = `${Date.now()}-${crypto.randomUUID()}`;
+      const id = requestedMasterId ?? createPhotoMasterId();
       const galleryPath = `${id}.${gallery.extension}`;
       const cardPath = cardObjectPath(galleryPath);
 
@@ -192,6 +205,9 @@ export async function POST(request: Request) {
           uploadPublicObject(galleryPath, gallery.buffer, gallery.contentType),
           uploadPublicObject(cardPath, card.buffer, card.contentType),
         ]);
+        if (storeMaster && !requestedMasterId) {
+          await storeFallbackMaster(id, new Uint8Array(processable.buffer));
+        }
         urls.push(url);
         photos.push({ url, thumbnailUrl });
       } catch (error) {

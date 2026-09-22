@@ -153,3 +153,47 @@ export async function prepareImageForUpload(file: File): Promise<File> {
     `A foto ${file.name} continua grande demais após comprimir. Tente JPG menor.`,
   );
 }
+
+const MASTER_MAX_EDGE = 3840;
+const MASTER_TARGET_BYTES = 8 * 1024 * 1024;
+const MASTER_HARD_MAX_BYTES = 10 * 1024 * 1024;
+
+/**
+ * JPEG maior só para o admin guardar em bucket privado.
+ * HEIC volta null: o servidor guarda um fallback a partir do arquivo leve.
+ * Não usar no formulário público de venda.
+ */
+export async function prepareMasterForUpload(file: File): Promise<File | null> {
+  if (isHeicLike(file)) return null;
+
+  const name = `${baseName(file.name)}.jpg`;
+  let maxEdge = MASTER_MAX_EDGE;
+  let quality = 0.92;
+  let lastPrepared: File | null = null;
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const canvas = await canvasFromFile(file, maxEdge);
+      const blob = await canvasToBlob(canvas, "image/jpeg", quality);
+      const prepared = new File([blob], name, { type: "image/jpeg" });
+      lastPrepared = prepared;
+      if (prepared.size > 0 && prepared.size <= MASTER_TARGET_BYTES) {
+        return prepared;
+      }
+      quality = Math.max(0.85, quality - 0.03);
+      maxEdge = Math.max(1600, Math.round(maxEdge * 0.8));
+    } catch {
+      return null;
+    }
+  }
+
+  if (
+    lastPrepared &&
+    lastPrepared.size > 0 &&
+    lastPrepared.size <= MASTER_HARD_MAX_BYTES
+  ) {
+    return lastPrepared;
+  }
+
+  return null;
+}
