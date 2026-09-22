@@ -8,9 +8,12 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { toast } from "sonner";
 import { VehicleImage } from "@/components/VehicleImage";
 import { IconClose } from "@/components/site/icons";
+import { downloadAttachment } from "@/lib/download-attachment";
 import { vehiclePhotoAlt } from "@/lib/format";
+import { publicPhotoJpgPath } from "@/lib/photo-archive";
 import { handleFocusTrap } from "@/lib/focus-trap";
 import { galleryThumbSrc, type GalleryPhoto } from "@/lib/stock-query";
 
@@ -27,12 +30,14 @@ type Photo = GalleryPhoto;
 export function PhotoLightbox({
   photos,
   alt,
+  vehicleId,
   index,
   onIndexChange,
   onClose,
 }: {
   photos: Photo[];
   alt: string;
+  vehicleId: string;
   index: number;
   onIndexChange: (index: number) => void;
   onClose: () => void;
@@ -44,6 +49,7 @@ export function PhotoLightbox({
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [hint, setHint] = useState(true);
+  const [downloading, setDownloading] = useState(false);
 
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const offsetStart = useRef({ x: 0, y: 0 });
@@ -132,6 +138,25 @@ export function PhotoLightbox({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [go, onClose, resetZoom]);
+
+  const downloadJpg = useCallback(async () => {
+    const current = photos[safeIndex];
+    if (!current || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadAttachment(
+        publicPhotoJpgPath(vehicleId, current.id),
+        "foto.jpg",
+      );
+      toast.success("JPG baixado.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Não foi possível baixar o JPG.",
+      );
+    } finally {
+      setDownloading(false);
+    }
+  }, [downloading, photos, safeIndex, vehicleId]);
 
   function toggleZoom() {
     if (scale > 1) resetZoom();
@@ -288,6 +313,22 @@ export function PhotoLightbox({
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
+                void downloadJpg();
+              }}
+              disabled={downloading}
+              aria-label="Baixar esta foto em JPG"
+              className="inline-flex h-11 items-center gap-1.5 border border-white/20 px-2.5 font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition hover:border-brand touch-manipulation disabled:opacity-60 sm:px-3"
+            >
+              <DownloadIcon />
+              <span className="sm:hidden">{downloading ? "…" : "JPG"}</span>
+              <span className="hidden sm:inline">
+                {downloading ? "Preparando…" : "Baixar JPG"}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
                 toggleZoom();
               }}
               aria-label={scale > 1 ? "Reduzir zoom" : "Ampliar foto"}
@@ -312,7 +353,11 @@ export function PhotoLightbox({
 
         <div className="relative min-h-0 flex-1 bg-black">
           <div
-            className="absolute inset-0 touch-none select-none"
+            className="absolute inset-0 touch-none select-none [-webkit-touch-callout:none]"
+            onContextMenu={(event) => {
+              event.preventDefault();
+              void downloadJpg();
+            }}
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
@@ -335,7 +380,7 @@ export function PhotoLightbox({
                 sizes="100vw"
                 quality={85}
                 priority
-                className="object-contain"
+                className="pointer-events-none object-contain [-webkit-touch-callout:none]"
               />
             </div>
           </div>
@@ -421,6 +466,24 @@ export function PhotoLightbox({
 
   if (!mounted) return null;
   return createPortal(content, document.body);
+}
+
+function DownloadIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <path d="M12 4v10M8 11l4 4 4-4" />
+      <path d="M4 18v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1" />
+    </svg>
+  );
 }
 
 function ZoomIcon({ zoomed }: { zoomed: boolean }) {

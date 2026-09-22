@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { attachmentHeaders, loadArchiveOriginal } from "@/lib/photo-archive-download";
+import { attachmentHeaders, loadGalleryJpeg } from "@/lib/photo-archive-download";
 import { archivePhotoFilename } from "@/lib/photo-archive";
 import { prisma } from "@/lib/prisma";
 
@@ -41,8 +41,8 @@ export async function GET(
     return NextResponse.json({ error: "Foto não encontrada." }, { status: 404 });
   }
 
-  const file = await loadArchiveOriginal(photo.url);
-  if (!file) {
+  const bytes = await loadGalleryJpeg(photo.url);
+  if (!bytes) {
     return NextResponse.json(
       { error: "Não foi possível baixar esta foto." },
       { status: 502 },
@@ -57,11 +57,11 @@ export async function GET(
     url: photo.url,
   });
 
-  return new NextResponse(Uint8Array.from(file.bytes), {
+  return new NextResponse(Buffer.from(bytes), {
     status: 200,
     headers: {
-      ...attachmentHeaders(filename, file.contentType),
-      "Content-Length": String(file.bytes.byteLength),
+      ...attachmentHeaders(filename, "image/jpeg"),
+      "Content-Length": String(bytes.byteLength),
     },
   });
 }

@@ -127,3 +127,14 @@ export async function checkVenderPhotoRateLimit(key: string) {
     max: VENDER_PHOTO_MAX,
   });
 }
+
+const PHOTO_JPG_WINDOW_MS = 10 * 60 * 1000;
+const PHOTO_JPG_MAX = 60;
+
+/** Conversão WebP→JPEG no download público. Não conta a exibição da ficha. */
+export async function checkPhotoJpgRateLimit(key: string) {
+  return checkDistributedRateLimit(`photo-jpg:${key}`, {
+    windowMs: PHOTO_JPG_WINDOW_MS,
+    max: PHOTO_JPG_MAX,
+  });
+}

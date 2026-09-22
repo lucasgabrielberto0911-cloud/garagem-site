@@ -2,8 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { VehicleImage } from "@/components/VehicleImage";
+import { downloadAttachment } from "@/lib/download-attachment";
 import { vehiclePhotoAlt } from "@/lib/format";
+import { publicPhotoJpgPath } from "@/lib/photo-archive";
 import {
   galleryPreviewSrc,
   galleryPreviewSrcSet,
@@ -34,15 +37,39 @@ const PhotoLightbox = dynamic(
 export function VehicleGallery({
   photos,
   alt,
+  vehicleId,
 }: {
   photos: GalleryPhoto[];
   alt: string;
+  vehicleId: string;
 }) {
   const scrollerRef = useRef<HTMLUListElement>(null);
   const thumbsRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
+  const [downloadId, setDownloadId] = useState<string | null>(null);
   const total = photos.length;
+
+  const downloadJpg = useCallback(
+    async (photoId: string) => {
+      if (downloadId) return;
+      setDownloadId(photoId);
+      try {
+        await downloadAttachment(
+          publicPhotoJpgPath(vehicleId, photoId),
+          "foto.jpg",
+        );
+        toast.success("JPG baixado.");
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Não foi possível baixar o JPG.",
+        );
+      } finally {
+        setDownloadId(null);
+      }
+    },
+    [downloadId, vehicleId],
+  );
 
   useEffect(() => {
     const strip = thumbsRef.current;
@@ -146,8 +173,12 @@ export function VehicleGallery({
                     setActive(index);
                     setZoomOpen(true);
                   }}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    void downloadJpg(photo.id);
+                  }}
                   aria-label={`Ampliar foto ${index + 1} de ${total}`}
-                  className="absolute inset-0 z-[1] cursor-zoom-in"
+                  className="absolute inset-0 z-[1] cursor-zoom-in [-webkit-touch-callout:none]"
                 >
                   <span className="sr-only">Ampliar</span>
                 </button>
@@ -159,7 +190,7 @@ export function VehicleGallery({
                     sizes="(min-width: 1024px) 60vw, 100vw"
                     srcSet={galleryPreviewSrcSet(photo)}
                     priority={index === 0}
-                    className="object-cover"
+                    className="object-cover [-webkit-touch-callout:none]"
                   />
                 ) : (
                   <div
@@ -201,6 +232,20 @@ export function VehicleGallery({
             </span>
           </>
         ) : null}
+
+        <button
+          type="button"
+          onClick={() => {
+            const photo = photos[active];
+            if (photo) void downloadJpg(photo.id);
+          }}
+          disabled={downloadId !== null}
+          className="absolute bottom-2 left-[max(0.5rem,env(safe-area-inset-left,0px))] z-[2] inline-flex h-11 items-center gap-1.5 border border-white/20 bg-asphalt/85 px-3 font-display text-[11px] font-semibold uppercase tracking-wide text-cream backdrop-blur touch-manipulation hover:border-brand disabled:opacity-60"
+          aria-label="Baixar esta foto em JPG"
+        >
+          <DownloadIcon />
+          {downloadId ? "Preparando…" : "Baixar JPG"}
+        </button>
       </div>
 
       {total > 1 ? (
@@ -250,11 +295,16 @@ export function VehicleGallery({
           <span className="hidden lg:inline">Clique na foto para ampliar</span>
         </p>
       )}
+      <p className="mt-1 text-xs text-muted">
+        Baixar JPG salva a foto em JPEG para Marketplace e WhatsApp. A página
+        continua em WebP.
+      </p>
 
       {zoomOpen ? (
         <PhotoLightbox
           photos={photos}
           alt={alt}
+          vehicleId={vehicleId}
           index={active}
           onIndexChange={(next) => {
             setActive(next);
@@ -270,6 +320,24 @@ export function VehicleGallery({
         />
       ) : null}
     </div>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <path d="M12 4v10M8 11l4 4 4-4" />
+      <path d="M4 18v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1" />
+    </svg>
   );
 }
 

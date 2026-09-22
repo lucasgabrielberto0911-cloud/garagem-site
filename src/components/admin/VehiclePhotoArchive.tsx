@@ -3,54 +3,14 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { IconDownload, IconImage } from "@/components/admin/icons";
-import { Card, btn, iconTap } from "@/components/admin/ui";
+import { Card, btn } from "@/components/admin/ui";
+import { downloadAttachment } from "@/lib/download-attachment";
 
 export type ArchivePhotoItem = {
   id: string;
   url: string;
   thumbnailUrl?: string | null;
 };
-
-function filenameFromDisposition(header: string | null, fallback: string) {
-  if (!header) return fallback;
-  const match = header.match(/filename="([^"]+)"/i);
-  return match?.[1] || fallback;
-}
-
-async function downloadFromApi(href: string, fallbackName: string) {
-  const response = await fetch(href, { credentials: "same-origin" });
-  if (!response.ok) {
-    let message = "Não foi possível baixar.";
-    try {
-      const data = (await response.json()) as { error?: string };
-      if (data.error) message = data.error;
-    } catch {
-      // resposta binária ou vazia
-    }
-    throw new Error(message);
-  }
-
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (fallbackName.endsWith(".zip") && (bytes[0] !== 0x50 || bytes[1] !== 0x4b)) {
-    throw new Error("O arquivo baixado não é um ZIP válido. Tente de novo.");
-  }
-  const type = fallbackName.endsWith(".zip")
-    ? "application/zip"
-    : response.headers.get("content-type") || "application/octet-stream";
-  const blob = new Blob([bytes], { type });
-  const name = filenameFromDisposition(
-    response.headers.get("content-disposition"),
-    fallbackName,
-  );
-  const objectUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = objectUrl;
-  link.download = name;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 2_000);
-}
 
 export function VehiclePhotoArchive({
   vehicleId,
@@ -67,11 +27,11 @@ export function VehiclePhotoArchive({
     if (zipPending || photos.length === 0) return;
     setZipPending(true);
     try {
-      await downloadFromApi(zipHref, "fotos.zip");
+      await downloadAttachment(zipHref, "fotos.zip");
       toast.success(
         photos.length === 1
-          ? "Foto baixada."
-          : `${photos.length} fotos da galeria baixadas.`,
+          ? "JPG baixado."
+          : `${photos.length} fotos em JPG baixadas.`,
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha no download.");
@@ -84,10 +44,11 @@ export function VehiclePhotoArchive({
     if (photoPending) return;
     setPhotoPending(photoId);
     try {
-      await downloadFromApi(
+      await downloadAttachment(
         `/api/admin/veiculos/${vehicleId}/fotos/${photoId}`,
-        `foto-${String(index + 1).padStart(2, "0")}.webp`,
+        `foto-${String(index + 1).padStart(2, "0")}.jpg`,
       );
+      toast.success("JPG baixado.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha no download.");
     } finally {
@@ -107,7 +68,7 @@ export function VehiclePhotoArchive({
             className={btn.ghost}
           >
             <IconDownload className="h-4 w-4" />
-            {zipPending ? "Preparando…" : "Baixar todas"}
+            {zipPending ? "Preparando…" : "Baixar todas em JPG"}
           </button>
         ) : null
       }
@@ -120,9 +81,9 @@ export function VehiclePhotoArchive({
       ) : (
         <div className="space-y-4">
           <p className="text-sm leading-relaxed text-muted">
-            As fotos do ZIP são as mesmas da galeria do site (WebP até 1280px),
-            sem o recorte pequeno do card. Não são o arquivo original da câmera
-            — o upload já redimensiona para caber no anúncio.
+            O site continua em WebP. O botão JPG (e o ZIP) entrega JPEG de
+            qualidade alta para Facebook Marketplace e WhatsApp. É a foto da
+            galeria, até 1280px — não o arquivo cru da câmera.
           </p>
 
           <button
@@ -134,7 +95,7 @@ export function VehiclePhotoArchive({
             <IconDownload className="h-4 w-4" />
             {zipPending
               ? "Montando ZIP…"
-              : `Baixar ${photos.length} foto${photos.length === 1 ? "" : "s"} da galeria`}
+              : `Baixar ${photos.length} foto${photos.length === 1 ? "" : "s"} em JPG`}
           </button>
 
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -151,7 +112,12 @@ export function VehiclePhotoArchive({
                     <img
                       src={preview}
                       alt={`Foto ${index + 1}`}
-                      className="h-full w-full object-cover"
+                      draggable={false}
+                      className="h-full w-full object-cover [-webkit-touch-callout:none]"
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        void handleOne(photo.id, index);
+                      }}
                     />
                   </div>
                   <div className="flex items-center justify-between gap-2 px-2 py-1.5">
@@ -163,11 +129,14 @@ export function VehiclePhotoArchive({
                       type="button"
                       onClick={() => void handleOne(photo.id, index)}
                       disabled={busy || zipPending}
-                      className={iconTap}
-                      title="Baixar esta foto da galeria"
-                      aria-label={`Baixar foto ${index + 1} da galeria`}
+                      className="inline-flex h-11 items-center gap-1 px-1.5 text-muted transition touch-manipulation hover:text-cream disabled:opacity-60"
+                      title="Baixar JPG para Marketplace e WhatsApp"
+                      aria-label={`Baixar foto ${index + 1} em JPG`}
                     >
                       <IconDownload className="h-4 w-4" />
+                      <span className="font-display text-[10px] font-semibold uppercase tracking-wider">
+                        {busy ? "…" : "JPG"}
+                      </span>
                     </button>
                   </div>
                 </li>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { attachmentHeaders, loadArchiveOriginal } from "@/lib/photo-archive-download";
+import { attachmentHeaders, loadGalleryJpeg } from "@/lib/photo-archive-download";
 import {
   archivePhotoFilename,
   archiveZipFilename,
@@ -50,8 +50,8 @@ export async function GET(
   const usedNames = new Set<string>();
 
   for (const [index, photo] of vehicle.photos.entries()) {
-    const file = await loadArchiveOriginal(photo.url);
-    if (!file) continue;
+    const bytes = await loadGalleryJpeg(photo.url);
+    if (!bytes) continue;
 
     let name = archivePhotoFilename({
       brand: vehicle.brand,
@@ -64,7 +64,7 @@ export async function GET(
       name = name.replace(/(\.[a-z0-9]+)$/i, `-${photo.id.slice(-6)}$1`);
     }
     usedNames.add(name);
-    entries.push({ name, data: file.bytes });
+    entries.push({ name, data: bytes });
   }
 
   if (entries.length === 0) {
