@@ -17,9 +17,10 @@ export default function OfflinePage() {
         Você está sem conexão
       </h1>
       <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
-        As páginas que você já visitou continuam disponíveis. Pedidos de
-        interesse, o formulário de venda e os favoritos ficam guardados neste
-        aparelho e são enviados quando a internet voltar.
+        A página inicial e a lista do estoque continuam disponíveis. A ficha de
+        cada veículo precisa de internet. Pedidos de interesse, o formulário de
+        venda e os favoritos ficam guardados neste aparelho e são enviados
+        quando a conexão voltar.
       </p>
       <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
         <Link

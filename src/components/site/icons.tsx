@@ -248,6 +248,16 @@ export function IconRefresh({ className }: IconProps) {
   );
 }
 
+export function IconDownload({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 4v10" />
+      <path d="M8 10l4 4 4-4" />
+      <path d="M5 19h14" />
+    </svg>
+  );
+}
+
 export function IconShare({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

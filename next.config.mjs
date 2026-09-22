@@ -92,6 +92,10 @@ const nextConfig = {
         source: "/admin/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
+      {
+        source: "/atalho/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
       { source: "/sw.js", headers: sw },
       {
         source: "/manifest.webmanifest",
