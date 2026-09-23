@@ -172,9 +172,9 @@ body {
     bottom: var(--admin-nav-h);
   }
 
-  /* Âncora abaixo da barra fixa do admin (celular) ou do menu de seções (desktop). */
+  /* Âncora abaixo do notch (celular) ou do menu de seções fixo (desktop). */
   .scroll-mt-admin-form {
-    scroll-margin-top: calc(max(0.75rem, env(safe-area-inset-top, 0px)) + 4.5rem);
+    scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
   }
 
   @media (min-width: 1024px) {

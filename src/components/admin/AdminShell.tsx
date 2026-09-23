@@ -77,6 +77,7 @@ const NAV: NavItem[] = [
 ];
 
 const BOTTOM_NAV = NAV.slice(0, 4);
+const DRAWER_ONLY = [...NAV.slice(4).map((item) => item.href), "/admin/conta"];
 
 export function AdminShell({
   children,
@@ -223,8 +224,16 @@ export function AdminShell({
         {sidebar}
       </aside>
 
-      {/* Barra superior fixa no mobile. */}
-      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-white/10 bg-ink/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))] backdrop-blur lg:hidden">
+      {/*
+        Celular: a barra do topo rola junto (a navegação fica na bottom nav,
+        com "Mais" abrindo o menu). A faixa fixa cobre o notch no PWA, que
+        usa status bar translúcida.
+      */}
+      <div
+        className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[env(safe-area-inset-top,0px)] bg-ink lg:hidden"
+        aria-hidden="true"
+      />
+      <div className="flex items-center justify-between border-b border-white/10 bg-ink px-4 pb-1.5 pt-[max(0.375rem,env(safe-area-inset-top,0px))] lg:hidden">
         <Link href="/admin" className="flex min-h-[44px] items-center gap-2 touch-manipulation">
           <Image
             src="/branding/logo-wordmark.webp"
@@ -237,28 +246,14 @@ export function AdminShell({
             Admin
           </span>
         </Link>
-        <button
-          type="button"
-          aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
-          aria-expanded={menuOpen}
-          aria-controls="admin-mobile-drawer"
-          onClick={() => setMenuOpen((open) => !open)}
-          className="relative flex h-11 w-11 items-center justify-center border border-white/15 text-cream transition touch-manipulation active:bg-white/10"
+        <Link
+          href="/"
+          target="_blank"
+          aria-label="Ver o site"
+          className="flex h-11 w-11 items-center justify-center text-muted transition touch-manipulation active:text-cream"
         >
-          {menuOpen ? (
-            <IconClose className="h-5 w-5" />
-          ) : (
-            <IconMenu className="h-5 w-5" />
-          )}
-          {!menuOpen && newLeads > 0 ? (
-            <span
-              className="absolute -right-1 -top-1 min-w-[18px] bg-brand px-1 text-center font-display text-[10px] font-bold text-cream"
-              aria-hidden="true"
-            >
-              {newLeads}
-            </span>
-          ) : null}
-        </button>
+          <IconExternal className="h-[18px] w-[18px]" />
+        </Link>
       </div>
 
       {menuOpen ? (
@@ -300,7 +295,7 @@ export function AdminShell({
         </div>
       ) : null}
 
-      <div className="min-h-dvh flex-1 lg:pl-64">
+      <div className="min-h-dvh min-w-0 flex-1 lg:pl-64">
         <main
           id="painel"
           tabIndex={-1}
@@ -344,6 +339,23 @@ export function AdminShell({
               </li>
             );
           })}
+          <li className="flex flex-1">
+            <button
+              type="button"
+              aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={menuOpen}
+              aria-controls="admin-mobile-drawer"
+              onClick={() => setMenuOpen((open) => !open)}
+              className={`relative flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 py-2.5 transition touch-manipulation ${
+                menuOpen || DRAWER_ONLY.some((href) => pathname.startsWith(href))
+                  ? "text-cream"
+                  : "text-muted active:text-cream"
+              }`}
+            >
+              {menuOpen ? <IconClose className="h-5 w-5" /> : <IconMenu className="h-5 w-5" />}
+              <span className="text-[10px] font-medium uppercase tracking-wide">Mais</span>
+            </button>
+          </li>
         </ul>
       </nav>
     </div>
