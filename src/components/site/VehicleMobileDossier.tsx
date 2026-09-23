@@ -5,6 +5,7 @@ import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { VehicleLeadHit } from "@/components/site/VehiclePixel";
+import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { WhatsAppButton } from "@/components/site/ui";
@@ -20,12 +21,18 @@ import {
   publicInspectionNote,
 } from "@/lib/vehicle-specs";
 import {
+  publicStoreInspectionText,
   publishedConditionItems,
   type VehicleConditionsContent,
 } from "@/lib/vehicle-conditions";
 import { vehicleLocationLabel } from "@/lib/vehicle-location";
 
-const FOLD_LABELS = new Set(["Ano", "KM", "Câmbio", "Disponível em"]);
+/** Já aparecem na primeira dobra. Cidade volta na grade da Ficha, ao lado de Portas. */
+const FOLD_LABELS = new Set(["Ano", "KM", "Câmbio"]);
+
+function fichaGridLabel(label: string) {
+  return label === "Disponível em" ? "Cidade" : label;
+}
 
 export function VehicleMobileSummary({
   title,
@@ -142,7 +149,7 @@ function DossierBlock({
 }) {
   return (
     <details className="group border-b border-white/10" open={defaultOpen}>
-      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 font-display text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3.5 font-display text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
         <span>{title}</span>
         <span className="text-base font-normal text-muted group-open:hidden" aria-hidden="true">
           +
@@ -151,7 +158,7 @@ function DossierBlock({
           –
         </span>
       </summary>
-      <div className="pb-3.5 text-sm leading-relaxed text-muted">{children}</div>
+      <div className="pb-4 text-sm leading-relaxed text-muted">{children}</div>
     </details>
   );
 }
@@ -207,25 +214,22 @@ export function VehicleMobileBlocks({
   const otherConditions = conditionItems.filter((item) => item !== vistoria);
 
   return (
-    <div className="mt-2 border-t border-white/10 lg:hidden">
+    <div className="mt-3 border-t border-white/10 lg:hidden">
       <DossierBlock title={STORE_INSPECTION_LABEL}>
         {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
           <p className="mb-2 text-cream">{inspectionNote}</p>
         ) : null}
-        <p>
-          {vistoria?.text ??
-            "Antes de entrar no estoque, o seminovo passa pela vistoria da loja: checagem interna de procedência e condição geral. Não é documento oficial de inspeção."}
-        </p>
+        <p className="text-cream/85">{publicStoreInspectionText(vistoria?.text)}</p>
       </DossierBlock>
 
       {extraSpecs.length > 0 ? (
         <DossierBlock title="Ficha">
           {listedLine ? <p className="mb-2 text-xs">{listedLine}</p> : null}
-          <dl className="grid grid-cols-2 gap-px border border-white/15 bg-white/15">
+          <dl className="ficha-spec-grid grid grid-cols-2 gap-px border border-white/15 bg-white/15">
             {extraSpecs.map((spec) => (
               <div key={spec.label} className="min-w-0 bg-asphalt px-2.5 py-2">
                 <dt className="text-[10px] uppercase tracking-wider text-muted">
-                  {spec.label}
+                  {fichaGridLabel(spec.label)}
                 </dt>
                 <dd
                   className={`mt-0.5 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
@@ -241,8 +245,8 @@ export function VehicleMobileBlocks({
       ) : null}
 
       {description ? (
-        <DossierBlock title="Sobre o veículo">
-          <p className="whitespace-pre-line">{description}</p>
+        <DossierBlock title="Sobre o veículo" defaultOpen>
+          <VehicleDescription text={description} />
         </DossierBlock>
       ) : null}
 

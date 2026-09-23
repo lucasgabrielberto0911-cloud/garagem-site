@@ -10,6 +10,7 @@ import {
   VehicleMobileSummary,
 } from "@/components/site/VehicleMobileDossier";
 import { VehicleConditions } from "@/components/site/VehicleConditions";
+import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { StockBackLink } from "@/components/site/StockBackLink";
 import { VehicleLeadHit, VehicleViewContent } from "@/components/site/VehiclePixel";
@@ -233,7 +234,7 @@ export default async function VehicleDetailPage({
   return (
     <div
       data-ficha-page=""
-      className="pb-sticky-bar-safe lg:py-10 lg:pb-10"
+      className="pb-sticky-bar-safe lg:pb-10"
     >
       {!sold ? (
         <VehicleViewContent
@@ -423,14 +424,14 @@ export default async function VehicleDetailPage({
                 />
               ) : null}
 
-              <dl className="grid grid-cols-2 gap-2 border-y border-white/10 py-3.5 text-sm">
+              <dl className="ficha-spec-grid grid grid-cols-2 gap-2 border-y border-white/10 py-3.5 text-sm">
                 {specs.map((spec) => (
                   <div
                     key={spec.label}
                     className="min-w-0 border border-white/10 bg-asphalt/40 px-2.5 py-2"
                   >
                     <dt className="text-[11px] uppercase tracking-wider text-muted">
-                      {spec.label}
+                      {spec.label === "Disponível em" ? "Cidade" : spec.label}
                     </dt>
                     {/* Sem truncate: valores longos da ficha precisam aparecer inteiros. */}
                     <dd
@@ -541,9 +542,10 @@ export default async function VehicleDetailPage({
                   <h2 className="font-display text-base font-semibold text-cream">
                     Sobre o veículo
                   </h2>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted sm:text-[15px]">
-                    {vehicle.description}
-                  </p>
+                  <VehicleDescription
+                    text={vehicle.description}
+                    className="mt-2 text-sm sm:text-[15px]"
+                  />
                 </div>
               ) : null}
 

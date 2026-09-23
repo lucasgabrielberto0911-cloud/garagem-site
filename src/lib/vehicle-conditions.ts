@@ -4,6 +4,41 @@
  * Não inventar documentação, vistoria ou custo que a loja não confirmou.
  */
 
+/**
+ * Texto público da vistoria da loja.
+ * Tom de consultor: o que a loja confere, sem aviso de documento oficial.
+ */
+export const STORE_INSPECTION_BODY =
+  "Antes de anunciar, a gente vistoria cada carro na loja. Confere óleo, fluidos e a condição geral — é assim com todo seminovo do estoque.";
+
+const LEGACY_STORE_INSPECTION =
+  /checagem interna de proced[eê]ncia/i;
+
+/** Frase antiga do anúncio / painel que pedia desculpa por não ser laudo. */
+export function isLegacyStoreInspectionCopy(value: string) {
+  return LEGACY_STORE_INSPECTION.test(value);
+}
+
+/** Tira só a frase de documento oficial. O restante do texto fica. */
+export function withoutInspectionDisclaimer(value: string) {
+  const kept = value
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence && !/documento oficial/i.test(sentence));
+  return kept.join(" ").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Texto da vistoria na ficha pública.
+ * Vazio ou o parágrafo antigo (com ou sem o aviso) vira o texto positivo.
+ * Nota própria do anúncio, sem esse aviso, permanece.
+ */
+export function publicStoreInspectionText(value: string | null | undefined) {
+  const text = (value ?? "").replace(/\s+/g, " ").trim();
+  if (!text || isLegacyStoreInspectionCopy(text)) return STORE_INSPECTION_BODY;
+  return withoutInspectionDisclaimer(text) || STORE_INSPECTION_BODY;
+}
+
 /** Texto oficial da garantia — ficha, FAQ e defaults do painel. */
 export const STORE_WARRANTY = {
   title: "Garantia de 3 meses (motor e câmbio)",
@@ -37,7 +72,7 @@ export const DEFAULT_VEHICLE_CONDITIONS: VehicleConditionsContent = {
     },
     {
       label: "Vistoria da loja",
-      text: "Antes de entrar no estoque, o seminovo passa pela vistoria da loja: checagem interna de procedência e condição geral. Não é documento oficial de inspeção.",
+      text: STORE_INSPECTION_BODY,
     },
     {
       label: "Entrega",

@@ -1,9 +1,18 @@
 import { IconClipboardCheck, IconFileText, IconShieldCheck } from "@/components/site/icons";
 import {
   isPlaceholderCopy,
+  publicStoreInspectionText,
   publishedConditionItems,
+  type ConditionItem,
   type VehicleConditionsContent,
 } from "@/lib/vehicle-conditions";
+
+function conditionText(item: ConditionItem) {
+  if (item.label.toLocaleLowerCase("pt-BR") === "vistoria da loja") {
+    return publicStoreInspectionText(item.text);
+  }
+  return item.text;
+}
 
 const ICONS = [IconShieldCheck, IconFileText, IconClipboardCheck];
 
@@ -42,7 +51,7 @@ export function VehicleConditions({
                   <span className="font-display font-semibold text-cream">
                     {item.label}.{" "}
                   </span>
-                  <span className="text-muted">{item.text}</span>
+                  <span className="text-muted">{conditionText(item)}</span>
                 </span>
               </li>
             );

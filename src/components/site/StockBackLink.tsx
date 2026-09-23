@@ -50,7 +50,7 @@ export function StockBackLink({
   return (
     <Link
       href={target}
-      className="mb-3 inline-flex min-h-[44px] items-center text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
+      className="mb-2 inline-flex items-center py-1 text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
     >
       <span className="mr-2 text-brand" aria-hidden="true">
         ←

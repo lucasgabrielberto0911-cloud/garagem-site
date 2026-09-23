@@ -121,16 +121,22 @@ test("dobra da ficha não cresce quando a barra do navegador volta", () => {
   assert.doesNotMatch(page, /lg:contents/);
 });
 
-test("itens e acessórios começa aberto; vistoria e ficha ficam fechadas", () => {
+test("sobre e itens começam abertos; vistoria e ficha ficam fechadas", () => {
   const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
+  const conditions = readSrc("lib/vehicle-conditions.ts");
   const blocks = [...dossier.matchAll(/<DossierBlock\b([^>]*)>/g)].map(
     (match) => match[1] ?? "",
   );
   const openBlocks = blocks.filter((attrs) => /\bdefaultOpen\b/.test(attrs));
 
-  assert.equal(openBlocks.length, 1);
-  assert.match(openBlocks[0] ?? "", /Itens e acessórios/);
+  assert.equal(openBlocks.length, 2);
+  assert.match(openBlocks[0] ?? "", /Sobre o veículo/);
+  assert.match(openBlocks[1] ?? "", /Itens e acessórios/);
   assert.match(dossier, /<details\b[^>]*\bopen=\{defaultOpen\}/);
+  assert.match(dossier, /publicStoreInspectionText/);
+  assert.doesNotMatch(dossier, /Não é documento oficial/);
+  assert.doesNotMatch(conditions, /Não é documento oficial/);
+  assert.match(conditions, /óleo/);
 
   const vistoria = blocks.find((attrs) => attrs.includes("STORE_INSPECTION_LABEL"));
   const ficha = blocks.find((attrs) => attrs.includes('"Ficha"'));
@@ -140,13 +146,17 @@ test("itens e acessórios começa aberto; vistoria e ficha ficam fechadas", () =
   assert.doesNotMatch(ficha ?? "", /\bdefaultOpen\b/);
 });
 
-test("html mobile deixa a lista de acessórios visível e os outros blocos fechados", () => {
+test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () => {
   const specs: VehicleSpecRow[] = [
-    { label: "Ano", value: "2015/2016" },
-    { label: "KM", value: "103.000" },
+    { label: "Ano", value: "2014/2015" },
+    { label: "KM", value: "106.000" },
     { label: "Câmbio", value: "Automático" },
-    { label: "Disponível em", value: "Linhares" },
+    { label: "Tipo", value: "Carro" },
     { label: "Combustível", value: "Flex" },
+    { label: "Cor", value: "Prata" },
+    { label: "Motor", value: "2.0 FlexOne I-VTEC" },
+    { label: "Portas", value: "4" },
+    { label: "Cidade", value: "Linhares" },
   ];
   const html = renderToStaticMarkup(
     createElement(
@@ -161,10 +171,27 @@ test("html mobile deixa a lista de acessórios visível e os outros blocos fecha
         make: "Honda",
         model: "HR-V",
         vehicleId: "v1",
-        description: "Seminovo revisado.",
+        description: [
+          "🔥 NOVIDADE NO ESTOQUE DA GARAGEM!",
+          "",
+          "Sedã médio automático, motor 2.0 e acabamento LXR.",
+          "",
+          "📊 Quilometragem: 106.000 km",
+        ].join("\n"),
         accessories: ["Ar-condicionado", "Direção elétrica"],
         specs,
-        conditions: DEFAULT_VEHICLE_CONDITIONS,
+        inspection: "Não é documento oficial de inspeção.",
+        conditions: {
+          ...DEFAULT_VEHICLE_CONDITIONS,
+          items: DEFAULT_VEHICLE_CONDITIONS.items.map((item) =>
+            item.label === "Vistoria da loja"
+              ? {
+                  ...item,
+                  text: "Antes de entrar no estoque, o seminovo passa pela vistoria da loja: checagem interna de procedência e condição geral. Não é documento oficial de inspeção.",
+                }
+              : item,
+          ),
+        },
         google: DEFAULT_GOOGLE_REVIEWS,
         prompt: "dúvida",
         quickActions: {
@@ -189,7 +216,7 @@ test("html mobile deixa a lista de acessórios visível e os outros blocos fecha
     [
       ["Vistoria da loja", false],
       ["Ficha", false],
-      ["Sobre o veículo", false],
+      ["Sobre o veículo", true],
       ["Itens e acessórios", true],
       ["Garantia e condições", false],
       ["Vídeo e propostas", false],
@@ -199,6 +226,48 @@ test("html mobile deixa a lista de acessórios visível e os outros blocos fecha
   const accessories = blocks.find((block) => block.title === "Itens e acessórios");
   assert.match(accessories?.body ?? "", /Ar-condicionado/);
   assert.match(accessories?.body ?? "", /Direção elétrica/);
+
+  const about = blocks.find((block) => block.title === "Sobre o veículo");
+  assert.match(about?.body ?? "", /NOVIDADE NO ESTOQUE DA GARAGEM/);
+  assert.match(about?.body ?? "", /106\.000 km/);
+  assert.match(about?.body ?? "", /Sedã médio automático/);
+  assert.match(about?.body ?? "", /<ul/);
+
+  const ficha = blocks.find((block) => block.title === "Ficha");
+  const fichaBody = ficha?.body ?? "";
+  assert.match(fichaBody, /Portas/);
+  assert.match(fichaBody, /Cidade/);
+  assert.match(fichaBody, /Linhares/);
+  assert.ok(
+    fichaBody.indexOf("Portas") < fichaBody.indexOf("Cidade"),
+    "Cidade precisa vir depois de Portas na grade",
+  );
+  assert.doesNotMatch(fichaBody, />Ano</);
+  assert.doesNotMatch(fichaBody, />KM</);
+
+  const vistoria = blocks.find((block) => block.title === "Vistoria da loja");
+  assert.match(vistoria?.body ?? "", /óleo/i);
+  assert.match(vistoria?.body ?? "", /fluidos/i);
+  assert.doesNotMatch(vistoria?.body ?? "", /documento oficial/i);
+  assert.doesNotMatch(html, /documento oficial/i);
+});
+
+test("ficha desktop não soma padding grande sob o header", () => {
+  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const css = readSrc("app/globals.css");
+  const wrapper = page.slice(
+    page.indexOf("data-ficha-page"),
+    page.indexOf("data-ficha-page") + 180,
+  );
+  assert.doesNotMatch(wrapper, /lg:py-/);
+  assert.match(
+    css,
+    /body:has\(\[data-ficha-page\]\) \.pt-site-header \{\s*padding-top: calc\(4\.75rem \+ 1px \+ 0\.75rem\);/,
+  );
+  assert.match(css, /\.ficha-spec-grid > :last-child:nth-child\(odd\)/);
+  const back = readSrc("components/site/StockBackLink.tsx");
+  const textLink = back.slice(back.indexOf('variant === "overlay"'), back.indexOf("Voltar ao estoque"));
+  assert.doesNotMatch(textLink, /min-h-\[44px\]/);
 });
 
 test("chip Ajuda no mobile ganha folga acima da nav fora da ficha", () => {

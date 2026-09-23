@@ -4,7 +4,7 @@ export default function VehicleDetailLoading() {
   return (
     <div
       data-ficha-page=""
-      className="animate-fade-in py-10 pb-sticky-bar-safe lg:py-14 lg:pb-14"
+      className="animate-fade-in pb-sticky-bar-safe lg:pb-10"
     >
       <Container>
         <div className="skeleton mx-auto h-3 w-48" />

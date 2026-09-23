@@ -14,7 +14,10 @@ import {
 } from "@/lib/google-reviews";
 import {
   DEFAULT_VEHICLE_CONDITIONS,
+  STORE_INSPECTION_BODY,
+  isLegacyStoreInspectionCopy,
   isPlaceholderCopy,
+  publicStoreInspectionText,
   publishedConditionItems,
   type ConditionItem,
   type VehicleConditionsContent,
@@ -120,13 +123,12 @@ function mergeConditions(
     const official =
       soundsLikeOfficialReport(item.text) ||
       soundsLikeOfficialReport(item.label);
-    if (official && fallback.label === "Vistoria da loja") {
-      return { label: fallback.label, text: fallback.text };
-    }
-    if (item.label.toLocaleLowerCase("pt-BR") === "vistoria") {
+    if (fallback.label === "Vistoria da loja" || item.label.toLocaleLowerCase("pt-BR") === "vistoria") {
       return {
-        label: fallback.label,
-        text: fallbackIfPlaceholder(item.text, fallback.text),
+        label: "Vistoria da loja",
+        text: official
+          ? STORE_INSPECTION_BODY
+          : publicStoreInspectionText(fallbackIfPlaceholder(item.text, fallback.text)),
       };
     }
     return {
@@ -151,7 +153,9 @@ function mergeFaqItems(items: FaqItem[]): FaqItem[] {
     if (
       fallback &&
       isFaqAnswerReady(fallback.answer) &&
-      soundsLikeOfficialReport(item.answer)
+      (soundsLikeOfficialReport(item.answer) ||
+        /documento oficial/i.test(item.answer) ||
+        isLegacyStoreInspectionCopy(item.answer))
     ) {
       return { ...item, answer: fallback.answer };
     }
@@ -225,7 +229,7 @@ const loadSiteContentCached = unstable_cache(
       return EMPTY_SITE_CONTENT;
     }
   },
-  ["public-site-content-v4"],
+  ["public-site-content-v5"],
   { revalidate: 120, tags: ["site-settings"] },
 );
 

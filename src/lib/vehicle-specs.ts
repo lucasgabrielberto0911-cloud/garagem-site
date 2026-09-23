@@ -6,6 +6,10 @@
 import { formatNumberBR } from "@/lib/format";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
+  isLegacyStoreInspectionCopy,
+  withoutInspectionDisclaimer,
+} from "@/lib/vehicle-conditions";
+import {
   parseVehicleLocationCity,
   vehicleLocationLabel,
 } from "@/lib/vehicle-location";
@@ -25,8 +29,12 @@ const OFFICIAL_INSPECTION = /laudo|cautelar/i;
 export function publicInspectionNote(value: string | null | undefined) {
   const text = (value ?? "").replace(/\s+/g, " ").trim();
   if (!text) return null;
-  if (OFFICIAL_INSPECTION.test(text)) return STORE_INSPECTION_NOTE;
-  return text;
+  if (OFFICIAL_INSPECTION.test(text) || isLegacyStoreInspectionCopy(text)) {
+    return STORE_INSPECTION_NOTE;
+  }
+  const cleaned = withoutInspectionDisclaimer(text);
+  if (!cleaned) return STORE_INSPECTION_NOTE;
+  return cleaned;
 }
 
 export type VehicleSpecRow = {
@@ -90,6 +98,14 @@ export function buildVehiclePublicSpecs(
   if (vehicle.category !== "moto" && vehicle.doors != null && vehicle.doors > 0) {
     rows.push({ label: "Portas", value: String(vehicle.doors) });
   }
+  // Logo depois de Portas: na grade de 2 colunas a cidade ocupa a célula ao lado.
+  const location = parseVehicleLocationCity(vehicle.locationCity);
+  if (location) {
+    rows.push({
+      label: "Cidade",
+      value: vehicleLocationLabel(location),
+    });
+  }
   if (filled(vehicle.plateEnd)) {
     rows.push({ label: "Final placa", value: vehicle.plateEnd!.trim() });
   }
@@ -101,13 +117,6 @@ export function buildVehiclePublicSpecs(
     rows.push({
       label: STORE_INSPECTION_LABEL,
       value: inspectionNote,
-    });
-  }
-  const location = parseVehicleLocationCity(vehicle.locationCity);
-  if (location) {
-    rows.push({
-      label: "Disponível em",
-      value: vehicleLocationLabel(location),
     });
   }
 
