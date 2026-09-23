@@ -1,19 +1,25 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { VehicleImage } from "@/components/VehicleImage";
 import {
+  ActionSheet,
+  ActionSheetButton,
+} from "@/components/admin/ActionSheet";
+import {
   IconArrowDown,
   IconArrowUp,
   IconDownload,
+  IconEye,
   IconGrip,
   IconImage,
+  IconMore,
   IconStar,
   IconTrash,
 } from "@/components/admin/icons";
-import { PlateBlurEditor } from "@/components/admin/PlateBlurEditor";
 import { btn } from "@/components/admin/ui";
 import type { NormalizedRect } from "@/lib/blur-rects";
 import { downloadAttachment } from "@/lib/download-attachment";
@@ -26,6 +32,15 @@ import {
   summarizePhotoUploads,
   type PhotoUploadJobState,
 } from "@/lib/photo-upload-jobs";
+import { coverSrc } from "@/lib/stock-query";
+
+const PlateBlurEditor = dynamic(
+  () =>
+    import("@/components/admin/PlateBlurEditor").then(
+      (module) => module.PlateBlurEditor,
+    ),
+  { ssr: false },
+);
 
 type LocalPhotoJob = PhotoUploadJobState & { file: File };
 
@@ -110,6 +125,7 @@ export function VehiclePhotoManager({
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [removeIndex, setRemoveIndex] = useState<number | null>(null);
   const [downloadId, setDownloadId] = useState<string | null>(null);
+  const [actionsId, setActionsId] = useState<string | null>(null);
 
   const summary = summarizePhotoUploads(jobs);
   const inFlight = summary.uploading > 0 || summary.queued > 0;
@@ -262,6 +278,8 @@ export function VehiclePhotoManager({
   }
 
   const editingPhoto = photos.find((photo) => photo.id === editingId) ?? null;
+  const actionsIndex = photos.findIndex((photo) => photo.id === actionsId);
+  const actionsPhoto = actionsIndex >= 0 ? photos[actionsIndex] : null;
 
   async function applyPlateBlur(rects: NormalizedRect[]) {
     if (!editingPhoto || blurring) return;
@@ -289,7 +307,9 @@ export function VehiclePhotoManager({
             ? {
                 ...photo,
                 url: data.url as string,
-                thumbnailUrl: data.thumbnailUrl ?? photo.thumbnailUrl,
+                // Sem card novo, cai no recorte da foto borrada — nunca no
+                // card antigo, que ainda mostra a placa.
+                thumbnailUrl: data.thumbnailUrl ?? null,
               }
             : photo,
         ),
@@ -343,26 +363,33 @@ export function VehiclePhotoManager({
       }}
     >
       <div
-        className={`relative border border-dashed px-6 py-8 text-center transition ${
+        className={`relative border border-dashed px-4 py-5 text-center transition sm:px-6 sm:py-8 ${
           fileDragging
             ? "border-brand bg-brand/10"
             : "border-white/15 hover:border-brand/50"
         }`}
       >
-        <label className="flex cursor-pointer flex-col items-center justify-center">
-          <IconImage className="h-8 w-8 text-white/25" />
-          <p className="mt-3 text-sm text-cream">
-            {inFlight
-              ? photoUploadProgressLabel(jobs)
-              : fileDragging
-                ? "Solte as fotos para enviar"
-                : "Arraste as fotos aqui ou clique para escolher"}
+        <label className="flex min-h-[44px] cursor-pointer flex-col items-center justify-center touch-manipulation">
+          <IconImage className="h-7 w-7 text-white/25 sm:h-8 sm:w-8" />
+          <p className="mt-2 text-sm text-cream sm:mt-3">
+            {inFlight ? (
+              photoUploadProgressLabel(jobs)
+            ) : fileDragging ? (
+              "Solte as fotos para enviar"
+            ) : (
+              <>
+                <span className="lg:hidden">Toque para adicionar fotos</span>
+                <span className="hidden lg:inline">
+                  Arraste as fotos aqui ou clique para escolher
+                </span>
+              </>
+            )}
           </p>
           <p className="mt-1 text-xs text-muted">
             JPG, PNG, WEBP ou GIF · HEIC: exporte como JPG no iPhone. A placa
             se borra depois, no retângulo que você marcar.
           </p>
-          <p className="mt-2 text-[11px] text-muted/80">
+          <p className="mt-2 hidden text-[11px] text-muted/80 sm:block">
             Espere o envio ou o borrão terminar antes de salvar o anúncio.
           </p>
           <input
@@ -451,15 +478,22 @@ export function VehiclePhotoManager({
         </p>
       ) : photos.length > 0 ? (
         <>
-          <p className="mt-4 text-xs text-muted">
-            Arraste as fotos para reorganizar. A primeira é a capa do anúncio.
-            Em <strong>Borrar placa</strong>, marque o retângulo e salve o
-            anúncio. <strong>Alta</strong> baixa o JPG na melhor qualidade
-            guardada: fotos novas usam o original privado (até 3840px); o
-            estoque antigo usa a galeria inteira, sem reduzir de novo. A página
-            pública continua em WebP e não oferece download. Segurar a foto
-            aqui também baixa o JPG em alta.
-          </p>
+          <details className="mt-4 text-xs text-muted">
+            <summary className="cursor-pointer py-1 touch-manipulation">
+              A 1ª foto é a capa.{" "}
+              <span className="lg:hidden">Toque em ⋯ para mover, baixar ou remover.</span>
+              <span className="hidden lg:inline">Arraste para reorganizar.</span>{" "}
+              <span className="text-cream underline underline-offset-2">Como funciona</span>
+            </summary>
+            <p className="mt-2 leading-relaxed">
+              Em <strong>Borrar placa</strong>, marque o retângulo e salve o
+              anúncio. <strong>Baixar JPG em alta</strong> usa a melhor
+              qualidade guardada: fotos novas usam o original privado (até
+              3840px); o estoque antigo usa a galeria inteira, sem reduzir de
+              novo. A página pública continua em WebP e não oferece download.
+              Segurar a foto aqui também baixa o JPG em alta.
+            </p>
+          </details>
           {blurredIds.size > 0 && !blurring ? (
             <p className="mt-3 border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-sm text-cream">
               Região borracha. <strong>Salve o anúncio</strong> para publicar
@@ -526,7 +560,7 @@ export function VehiclePhotoManager({
                   }`}
                 >
                   <VehicleImage
-                    src={photo.url}
+                    src={coverSrc([photo])}
                     alt={`Foto ${index + 1} do veículo`}
                     fill
                     className="pointer-events-none object-cover [-webkit-touch-callout:none]"
@@ -534,7 +568,7 @@ export function VehiclePhotoManager({
                   />
 
                   <span className="absolute left-1.5 top-1.5 flex items-center gap-1 bg-asphalt/80 px-1.5 py-1 text-cream backdrop-blur">
-                    <IconGrip className="h-3.5 w-3.5 text-muted" />
+                    <IconGrip className="hidden h-3.5 w-3.5 text-muted lg:block" />
                     <span className="font-display text-[10px] font-semibold tabular-nums">
                       {index + 1}
                     </span>
@@ -546,7 +580,40 @@ export function VehiclePhotoManager({
                     </span>
                   ) : null}
 
-                  <div className="absolute inset-x-1.5 bottom-14 flex items-stretch gap-1">
+                  <div className="absolute inset-x-0 bottom-0 flex items-stretch bg-asphalt/85 backdrop-blur lg:hidden">
+                    <button
+                      type="button"
+                      disabled={blurring || inFlight}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setEditingId(photo.id);
+                      }}
+                      className="min-h-11 min-w-0 flex-1 px-1.5 text-center font-display text-[10px] font-semibold uppercase tracking-wider text-cream touch-manipulation disabled:opacity-60"
+                      title="Marcar a placa com um retângulo e borrar só essa área"
+                    >
+                      {blurring && editingId === photo.id
+                        ? "Borrando…"
+                        : blurredIds.has(photo.id)
+                          ? "Borrar de novo"
+                          : "Borrar placa"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setActionsId(photo.id);
+                      }}
+                      aria-label={`Mais ações da foto ${index + 1}`}
+                      aria-haspopup="dialog"
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center border-l border-white/10 text-cream touch-manipulation"
+                    >
+                      <IconMore className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div className="absolute inset-x-1.5 bottom-14 hidden items-stretch gap-1 lg:flex">
                     <button
                       type="button"
                       disabled={blurring || inFlight}
@@ -587,7 +654,7 @@ export function VehiclePhotoManager({
                     </button>
                   </div>
 
-                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-asphalt/85 px-1.5 py-1.5 backdrop-blur">
+                  <div className="absolute inset-x-0 bottom-0 hidden items-center justify-between gap-1 bg-asphalt/85 px-1.5 py-1.5 backdrop-blur lg:flex">
                     <div className="flex gap-0.5">
                       <PhotoAction
                         label="Mover para trás"
@@ -626,18 +693,98 @@ export function VehiclePhotoManager({
         </>
       ) : null}
 
-      <PlateBlurEditor
-        open={editingPhoto !== null}
-        imageUrl={editingPhoto?.url ?? ""}
-        applying={blurring}
-        blurred={editingPhoto ? blurredIds.has(editingPhoto.id) : false}
-        onClose={() => {
-          if (!blurring) setEditingId(null);
-        }}
-        onApply={(rects) => {
-          void applyPlateBlur(rects);
-        }}
-      />
+      <ActionSheet
+        open={actionsPhoto !== null}
+        title={
+          actionsPhoto
+            ? `Foto ${actionsIndex + 1} de ${photos.length}${actionsIndex === 0 ? " · capa" : ""}`
+            : "Foto"
+        }
+        subtitle="Mover segue aberto para ajustar a ordem"
+        media={
+          actionsPhoto ? (
+            <span className="relative block h-12 w-16 shrink-0 overflow-hidden bg-asphalt">
+              <VehicleImage
+                src={coverSrc([actionsPhoto])}
+                alt=""
+                fill
+                sizes="64px"
+                className="object-cover"
+              />
+            </span>
+          ) : null
+        }
+        onClose={() => setActionsId(null)}
+      >
+        {actionsPhoto ? (
+          <>
+            <ActionSheetButton
+              icon={<IconEye className="h-4 w-4" />}
+              label={blurredIds.has(actionsPhoto.id) ? "Borrar de novo" : "Borrar placa"}
+              hint="Marque o retângulo sobre a placa"
+              disabled={blurring || inFlight}
+              onClick={() => {
+                setEditingId(actionsPhoto.id);
+                setActionsId(null);
+              }}
+            />
+            <ActionSheetButton
+              icon={<IconDownload className="h-4 w-4" />}
+              label={downloadId === actionsPhoto.id ? "Baixando…" : "Baixar JPG em alta"}
+              hint="Só no painel · o site segue em WebP"
+              disabled={downloadId !== null}
+              onClick={() => void downloadPhoto(actionsPhoto, actionsIndex)}
+            />
+            <ActionSheetButton
+              icon={<IconStar className="h-4 w-4" />}
+              label="Definir como capa"
+              disabled={actionsIndex === 0}
+              onClick={() => {
+                makeCover(actionsIndex);
+                setActionsId(null);
+              }}
+            />
+            <div className="grid grid-cols-2 border-y border-white/10">
+              <ActionSheetButton
+                icon={<IconArrowUp className="h-4 w-4 -rotate-90" />}
+                label="Para trás"
+                disabled={actionsIndex === 0}
+                onClick={() => movePhoto(actionsIndex, -1)}
+              />
+              <ActionSheetButton
+                icon={<IconArrowDown className="h-4 w-4 -rotate-90" />}
+                label="Para frente"
+                disabled={actionsIndex === photos.length - 1}
+                onClick={() => movePhoto(actionsIndex, 1)}
+              />
+            </div>
+            <ActionSheetButton
+              icon={<IconTrash className="h-4 w-4" />}
+              label="Remover foto"
+              tone="danger"
+              onClick={() => {
+                setRemoveIndex(actionsIndex);
+                setActionsId(null);
+              }}
+            />
+          </>
+        ) : null}
+      </ActionSheet>
+
+      {editingPhoto ? (
+        <PlateBlurEditor
+          open
+          imageUrl={editingPhoto.url}
+          applying={blurring}
+          blurred={blurredIds.has(editingPhoto.id)}
+          onClose={() => {
+            if (!blurring) setEditingId(null);
+          }}
+          onApply={(rects) => {
+            void applyPlateBlur(rects);
+          }}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={removeIndex !== null}
