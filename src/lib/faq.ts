@@ -1,5 +1,8 @@
 import { site } from "@/lib/site";
-import { STORE_WARRANTY } from "@/lib/vehicle-conditions";
+import {
+  STORE_INSPECTION_BODY,
+  STORE_WARRANTY,
+} from "@/lib/vehicle-conditions";
 
 export type FaqCategory =
   | "compra"
@@ -137,8 +140,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     category: "compra",
     question: "O veículo já passou por vistoria?",
-    answer:
-      "Sim. Antes de entrar no estoque, o veículo passa pela vistoria da loja: uma checagem interna de procedência e condição geral. Não emitimos documento oficial de inspeção. Se quiser conferir um ponto específico, peça vídeo ou visita no WhatsApp.",
+    answer: `Sim. ${STORE_INSPECTION_BODY} Se quiser ver um ponto específico, peça vídeo ou visita no WhatsApp.`,
   },
   {
     category: "documentacao",

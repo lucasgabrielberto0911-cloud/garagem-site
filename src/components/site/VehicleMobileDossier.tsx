@@ -5,6 +5,7 @@ import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { VehicleLeadHit } from "@/components/site/VehiclePixel";
+import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { WhatsAppButton } from "@/components/site/ui";
@@ -20,12 +21,18 @@ import {
   publicInspectionNote,
 } from "@/lib/vehicle-specs";
 import {
+  publicStoreInspectionText,
   publishedConditionItems,
   type VehicleConditionsContent,
 } from "@/lib/vehicle-conditions";
 import { vehicleLocationLabel } from "@/lib/vehicle-location";
 
-const FOLD_LABELS = new Set(["Ano", "KM", "Câmbio", "Disponível em"]);
+/** Já aparecem na primeira dobra. Cidade volta na grade da Ficha, ao lado de Portas. */
+const FOLD_LABELS = new Set(["Ano", "KM", "Câmbio"]);
+
+function fichaGridLabel(label: string) {
+  return label === "Disponível em" ? "Cidade" : label;
+}
 
 export function VehicleMobileSummary({
   title,
@@ -69,14 +76,14 @@ export function VehicleMobileSummary({
   ];
 
   return (
-    <div className="ficha-mobile-sheet px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-3 sm:px-6">
-      <h1 className="line-clamp-2 font-display text-xl font-bold leading-tight tracking-tight text-cream">
+    <div className="ficha-mobile-sheet px-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-4 sm:px-6">
+      <h1 className="line-clamp-2 font-display text-[1.35rem] font-bold leading-[1.15] tracking-tight text-cream">
         {title}
       </h1>
       {version ? (
-        <p className="mt-0.5 line-clamp-1 text-xs text-muted">{version}</p>
+        <p className="mt-1 line-clamp-1 text-[13px] leading-snug text-muted">{version}</p>
       ) : null}
-      <p className="mt-1.5 font-display text-[1.7rem] font-bold leading-none tracking-tight text-brand">
+      <p className="mt-2 font-display text-[1.85rem] font-bold leading-none tracking-tight text-brand">
         {sold ? (
           <span className="text-muted line-through decoration-white/30">
             {formatCurrencyBRL(price)}
@@ -85,19 +92,19 @@ export function VehicleMobileSummary({
           formatCurrencyBRL(price)
         )}
       </p>
-      <dl className="mt-3 grid grid-cols-2 gap-px border border-white/15 bg-white/15">
+      <dl className="mt-3.5 grid grid-cols-2 gap-2">
         {facts.map((fact) => (
-          <div key={fact.label} className="min-w-0 bg-asphalt px-3 py-2">
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+          <div key={fact.label} className="min-w-0 border border-white/10 bg-ink px-3 py-2.5">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
               {fact.label}
             </dt>
-            <dd className="mt-0.5 truncate font-display text-[13px] font-semibold text-cream">
+            <dd className="mt-1 truncate font-display text-sm font-semibold text-cream">
               {fact.value}
             </dd>
           </div>
         ))}
       </dl>
-      <div id="ficha-whatsapp" className="mt-3">
+      <div id="ficha-whatsapp" className="mt-3.5">
         {sold ? (
           <Link
             href={soldHref}
@@ -142,16 +149,22 @@ function DossierBlock({
 }) {
   return (
     <details className="group border-b border-white/10" open={defaultOpen}>
-      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 font-display text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-[3.25rem] cursor-pointer list-none items-center justify-between gap-3 py-4 font-display text-[15px] font-semibold tracking-tight text-cream [&::-webkit-details-marker]:hidden">
         <span>{title}</span>
-        <span className="text-base font-normal text-muted group-open:hidden" aria-hidden="true">
-          +
-        </span>
-        <span className="hidden text-base font-normal text-muted group-open:inline" aria-hidden="true">
-          –
+        <span
+          aria-hidden="true"
+          className="text-muted transition-transform duration-200 group-open:rotate-180 group-open:text-brand"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M3.5 6L8 10.5L12.5 6"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+          </svg>
         </span>
       </summary>
-      <div className="pb-3.5 text-sm leading-relaxed text-muted">{children}</div>
+      <div className="pb-5 text-[15px] leading-relaxed text-cream/80">{children}</div>
     </details>
   );
 }
@@ -207,28 +220,29 @@ export function VehicleMobileBlocks({
   const otherConditions = conditionItems.filter((item) => item !== vistoria);
 
   return (
-    <div className="mt-2 border-t border-white/10 lg:hidden">
+    <div className="mt-5 border-t border-white/10 lg:hidden">
       <DossierBlock title={STORE_INSPECTION_LABEL}>
         {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
-          <p className="mb-2 text-cream">{inspectionNote}</p>
+          <p className="mb-3 text-[15px] leading-7 text-cream">{inspectionNote}</p>
         ) : null}
-        <p>
-          {vistoria?.text ??
-            "Antes de entrar no estoque, o seminovo passa pela vistoria da loja: checagem interna de procedência e condição geral. Não é documento oficial de inspeção."}
+        <p className="text-[15px] leading-7 text-cream/90">
+          {publicStoreInspectionText(vistoria?.text)}
         </p>
       </DossierBlock>
 
       {extraSpecs.length > 0 ? (
         <DossierBlock title="Ficha">
-          {listedLine ? <p className="mb-2 text-xs">{listedLine}</p> : null}
-          <dl className="grid grid-cols-2 gap-px border border-white/15 bg-white/15">
+          {listedLine ? (
+            <p className="mb-3 text-xs tracking-wide text-muted">{listedLine}</p>
+          ) : null}
+          <dl className="ficha-spec-grid grid grid-cols-2 gap-2">
             {extraSpecs.map((spec) => (
-              <div key={spec.label} className="min-w-0 bg-asphalt px-2.5 py-2">
-                <dt className="text-[10px] uppercase tracking-wider text-muted">
-                  {spec.label}
+              <div key={spec.label} className="min-w-0 border border-white/10 bg-ink px-3 py-2.5">
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                  {fichaGridLabel(spec.label)}
                 </dt>
                 <dd
-                  className={`mt-0.5 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
+                  className={`mt-1 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
                     spec.empty ? "font-medium text-muted" : "font-semibold text-cream"
                   }`}
                 >
@@ -241,18 +255,18 @@ export function VehicleMobileBlocks({
       ) : null}
 
       {description ? (
-        <DossierBlock title="Sobre o veículo">
-          <p className="whitespace-pre-line">{description}</p>
+        <DossierBlock title="Sobre o veículo" defaultOpen>
+          <VehicleDescription text={description} />
         </DossierBlock>
       ) : null}
 
       {accessories.length > 0 ? (
         <DossierBlock title="Itens e acessórios" defaultOpen>
-          <ul className="space-y-1.5 text-cream/90">
+          <ul className="divide-y divide-white/10 border border-white/10">
             {accessories.map((item) => (
-              <li key={item} className="flex items-start gap-2">
-                <span className="mt-2 h-1 w-1 shrink-0 bg-brand" aria-hidden="true" />
-                <span>{item}</span>
+              <li key={item} className="flex items-center gap-3 px-3 py-2.5 text-cream">
+                <span className="h-1.5 w-1.5 shrink-0 bg-brand" aria-hidden="true" />
+                <span className="text-[15px] leading-snug">{item}</span>
               </li>
             ))}
           </ul>
@@ -263,13 +277,13 @@ export function VehicleMobileBlocks({
         <DossierBlock title="Garantia e condições">
           {conditions.intro ? <p>{conditions.intro}</p> : null}
           {otherConditions.length > 0 ? (
-            <ul className={conditions.intro ? "mt-3 space-y-2.5" : "space-y-2.5"}>
+            <ul className={conditions.intro ? "mt-4 space-y-3" : "space-y-3"}>
               {otherConditions.map((item) => (
-                <li key={item.label}>
-                  <span className="font-display font-semibold text-cream">
-                    {item.label}.{" "}
-                  </span>
-                  {item.text}
+                <li key={item.label} className="border-l-2 border-brand/80 pl-3">
+                  <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-cream">
+                    {item.label}
+                  </p>
+                  <p className="mt-1 text-[15px] leading-relaxed text-cream/80">{item.text}</p>
                 </li>
               ))}
             </ul>

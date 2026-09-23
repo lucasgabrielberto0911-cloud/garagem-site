@@ -113,6 +113,15 @@ body {
     .pt-site-header {
       padding-top: 6.5rem; /* barra 76px + folga para o hero não colar no menu */
     }
+
+    /*
+     * Na ficha o hero não existe. 6.5rem mais o py da página abriam um vão
+     * preto entre o menu e "Voltar aos resultados".
+     * 4.75rem = altura do header no desktop (76px) + 1px da borda.
+     */
+    body:has([data-ficha-page]) .pt-site-header {
+      padding-top: calc(4.75rem + 1px + 0.75rem);
+    }
   }
 
   /* Espaço para a bottom nav no mobile. */
@@ -818,6 +827,11 @@ textarea:-webkit-autofill:focus {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   touch-action: pan-x;
+}
+
+/* Grade da ficha: quantidade ímpar não deixa uma célula vazia ao lado. */
+.ficha-spec-grid > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 /*
