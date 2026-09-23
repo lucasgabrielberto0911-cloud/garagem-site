@@ -23,6 +23,7 @@ import {
   PHONES,
   SECONDARY_LINKS,
   site,
+  headerWordmarkPriority,
   telUrl,
 } from "@/lib/site";
 
@@ -68,7 +69,7 @@ export function SiteHeader() {
           >
             <SiteWordmark
               size="header"
-              priority={pathname !== "/"}
+              priority={headerWordmarkPriority(pathname)}
             />
           </Link>
 

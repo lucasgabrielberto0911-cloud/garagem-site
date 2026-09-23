@@ -92,6 +92,16 @@ test("ficha pública não oferece JPG e chama a checagem de vistoria da loja", (
   assert.match(admin, /Baixar JPG em alta qualidade/);
 });
 
+test("primeira foto da galeria é a única com prioridade alta", () => {
+  const gallery = readSrc("components/site/VehicleGallery.tsx");
+  const header = readSrc("components/site/SiteHeader.tsx");
+  assert.match(gallery, /priority=\{index === 0\}/);
+  assert.match(gallery, /sizes="\(min-width: 1024px\) 60vw, 100vw"/);
+  assert.match(gallery, /sizes="96px"/);
+  assert.match(header, /headerWordmarkPriority\(pathname\)/);
+  assert.doesNotMatch(gallery, /downloadAttachment/);
+});
+
 test("dobra da ficha não cresce quando a barra do navegador volta", () => {
   const css = readSrc("app/globals.css");
   const page = readSrc("app/(site)/estoque/[id]/page.tsx");
