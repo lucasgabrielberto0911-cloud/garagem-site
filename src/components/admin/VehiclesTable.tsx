@@ -8,10 +8,18 @@ import { InfiniteSentinel } from "@/components/InfiniteSentinel";
 import { VehicleImage } from "@/components/VehicleImage";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
+  ActionSheet,
+  ActionSheetButton,
+  ActionSheetLink,
+} from "@/components/admin/ActionSheet";
+import {
+  IconCash,
+  IconCheck,
   IconClipboard,
   IconCopy,
   IconExternal,
   IconImage,
+  IconMore,
   IconPencil,
   IconPlus,
   IconStar,
@@ -94,7 +102,17 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const MARK_SOLD_BTN =
-  "inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 border border-brand-orange/50 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/15 hover:border-brand-orange lg:min-w-[10.75rem] lg:flex-none lg:px-4";
+  "inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 border border-brand-orange/50 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/15 hover:border-brand-orange lg:flex-none lg:px-4";
+
+const SORT_SELECT_OPTIONS = [
+  { value: "recent:desc", label: "Recentes" },
+  { value: "price:asc", label: "Menor preço" },
+  { value: "price:desc", label: "Maior preço" },
+  { value: "km:asc", label: "Menor km" },
+  { value: "km:desc", label: "Maior km" },
+  { value: "year:desc", label: "Mais novo" },
+  { value: "year:asc", label: "Mais antigo" },
+] as const;
 
 const CHIP_SCROLL =
   "flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
@@ -224,6 +242,7 @@ export function VehiclesTable({
   const [bulkTarget, setBulkTarget] = useState<AdminBulkStatus | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [undoBanner, setUndoBanner] = useState<{ ids: string[] } | null>(null);
+  const [actionsTarget, setActionsTarget] = useState<VehicleRow | null>(null);
 
   const hasMore = items.length < total;
   const allVisibleSelected =
@@ -248,7 +267,7 @@ export function VehiclesTable({
   useEffect(() => {
     function onEscape(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
-      if (bulkTarget || soldTarget || deleteTarget) return;
+      if (bulkTarget || soldTarget || deleteTarget || actionsTarget) return;
       if (selected.length === 0 && !undoBanner) return;
       event.preventDefault();
       setSelected([]);
@@ -256,7 +275,7 @@ export function VehiclesTable({
     }
     window.addEventListener("keydown", onEscape);
     return () => window.removeEventListener("keydown", onEscape);
-  }, [bulkTarget, soldTarget, deleteTarget, selected.length, undoBanner]);
+  }, [bulkTarget, soldTarget, deleteTarget, actionsTarget, selected.length, undoBanner]);
 
   const fetchPage = useCallback(
     async (
@@ -548,6 +567,73 @@ export function VehiclesTable({
     }
   }
 
+  function changeStatus(vehicle: VehicleRow, status: string) {
+    runQuickAction(
+      vehicle.id,
+      () => setVehicleStatus(vehicle.id, status),
+      () => applyLocalStatus(vehicle.id, status, vehicle.featured),
+    );
+  }
+
+  function toggleFeatured(vehicle: VehicleRow) {
+    runQuickAction(
+      vehicle.id,
+      () => setVehicleFeatured(vehicle.id, !vehicle.featured),
+      () => {
+        const nextFeatured = !vehicle.featured;
+        setFeaturedCount((count) =>
+          Math.max(0, count + (nextFeatured ? 1 : -1)),
+        );
+        if (tab === "destaques" && !nextFeatured) {
+          removeFromList(vehicle.id, "destaques");
+          return;
+        }
+        setItems((current) =>
+          current.map((item) =>
+            item.id === vehicle.id ? { ...item, featured: nextFeatured } : item,
+          ),
+        );
+      },
+    );
+  }
+
+  function duplicate(vehicle: VehicleRow) {
+    runQuickAction(
+      vehicle.id,
+      () => duplicateVehicle(vehicle.id),
+      () => {
+        void fetchPage(1, sort, true);
+      },
+    );
+  }
+
+  const selectAll = (
+    <>
+      <label className="inline-flex min-h-[44px] shrink-0 items-center gap-2 text-sm text-cream">
+        <input
+          type="checkbox"
+          checked={allVisibleSelected}
+          aria-checked={
+            allVisibleSelected ? true : someVisibleSelected ? "mixed" : false
+          }
+          ref={(element) => {
+            if (element) element.indeterminate = someVisibleSelected;
+          }}
+          onChange={toggleSelectAllVisible}
+          disabled={items.length === 0}
+          className="h-5 w-5 accent-brand"
+        />
+        <span className="sm:hidden">Selecionar todos</span>
+        <span className="hidden sm:inline">Todos</span>
+      </label>
+      <p className="shrink-0 text-xs text-muted">
+        {selected.length > 0
+          ? `${selected.length} selecionado(s)`
+          : `${items.length} de ${total}`}
+      </p>
+    </>
+  );
+
   function sortIcon(key: Exclude<SortKey, "recent">) {
     if (sort.key !== key) return "↕";
     return sort.dir === "asc" ? "↑" : "↓";
@@ -623,11 +709,14 @@ export function VehiclesTable({
       </div>
 
       {tab === "estoque" && quality && quality.withoutPhotos + quality.withoutVideo + quality.stale > 0 ? (
-        <div className="border border-brand-orange/40 bg-brand-orange/10 px-4 py-3 text-sm text-cream">
-          <p className="font-display text-xs font-semibold uppercase tracking-wider text-brand-orange">
-            Avisos do estoque
-          </p>
-          <p className="mt-1 text-sm leading-relaxed text-cream/90">
+        <p
+          role="status"
+          className="flex flex-wrap items-baseline gap-x-2 border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-xs text-cream sm:text-sm"
+        >
+          <span className="font-display text-[11px] font-semibold uppercase tracking-wider text-brand-orange">
+            Avisos
+          </span>
+          <span>
             {[
               quality.withoutPhotos > 0
                 ? `${quality.withoutPhotos} sem foto`
@@ -641,14 +730,17 @@ export function VehiclesTable({
             ]
               .filter(Boolean)
               .join(" · ")}
-            . Marque o vídeo no cadastro quando já existir; anúncio sem foto some do interesse.
-          </p>
-        </div>
+          </span>
+          <span className="hidden min-w-0 truncate text-cream/70 xl:inline">
+            — marque o vídeo no cadastro quando já existir.
+          </span>
+        </p>
       ) : null}
 
-      <div className="border border-white/10 bg-ink/50 p-3 sm:p-4">
+      <div className="border border-white/10 bg-ink/50 p-2 sm:p-3">
         <form
           className="flex items-stretch gap-2"
+          role="search"
           onSubmit={(event) => {
             event.preventDefault();
             const form = event.currentTarget;
@@ -661,103 +753,109 @@ export function VehiclesTable({
             ref={searchRef}
             type="search"
             name="q"
+            enterKeyHint="search"
             defaultValue={q}
-            placeholder="Buscar marca, modelo ou placa…"
+            placeholder="Modelo ou placa"
             aria-label="Buscar marca, modelo ou placa"
             className={`${inputClass} min-w-0 flex-1`}
           />
+          <label className="sr-only" htmlFor="vehicles-sort">
+            Ordenar
+          </label>
+          <select
+            id="vehicles-sort"
+            value={`${sort.key}:${sort.dir}`}
+            onChange={(event) => {
+              const [key, dir] = event.target.value.split(":") as [SortKey, "asc" | "desc"];
+              changeSort({ key, dir });
+            }}
+            className={`${inputClass} w-[8rem] shrink-0 px-2 text-sm sm:w-[10rem] xl:hidden`}
+          >
+            {SORT_SELECT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
           <button
             type="submit"
             disabled={isPending}
-            className={`${btn.outline} shrink-0 px-3 sm:px-4`}
+            className={`${btn.outline} hidden shrink-0 px-4 sm:inline-flex`}
           >
             {isPending ? "..." : "Buscar"}
           </button>
         </form>
 
-        <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
-          <span className="shrink-0 text-[11px] uppercase tracking-wider text-muted">
-            Ordenar
-          </span>
-          <div className={CHIP_SCROLL}>
-            {(
-              [
-                { key: "recent", label: "Recentes" },
-                { key: "price", label: "Preço" },
-                { key: "km", label: "KM" },
-                { key: "year", label: "Ano" },
-              ] as const
-            ).map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                onClick={() =>
-                  option.key === "recent"
-                    ? sort.key === "recent"
-                      ? undefined
-                      : changeSort({ key: "recent", dir: "desc" })
-                    : toggleSort(option.key)
-                }
-                className={`min-h-[44px] shrink-0 px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
-                  sort.key === option.key
-                    ? "bg-brand/15 text-brand"
-                    : "border border-white/10 text-muted hover:text-cream"
-                }`}
-              >
-                {option.label}
-                {sort.key === option.key && option.key !== "recent"
-                  ? ` ${sortIcon(option.key)}`
-                  : ""}
-              </button>
-            ))}
+        {tab === "estoque" || q ? (
+          <div className="mt-2 flex items-center gap-2 sm:mt-3 sm:gap-x-3">
+            <div className="hidden items-center gap-2 border-r border-white/10 pr-3 sm:flex">
+              {selectAll}
+            </div>
+            {tab === "estoque" ? (
+              <div className={`${CHIP_SCROLL} sm:flex-none`} role="group" aria-label="Filtrar por status">
+                {(
+                  [
+                    { value: null, label: "Todos", count: estoqueCount },
+                    { value: "disponivel", label: "Disponível", count: availableCount },
+                    { value: "reservado", label: "Reservado", count: reservedCount },
+                  ] as const
+                ).map((option) => {
+                  const active =
+                    option.value === null ? !status : status === option.value;
+                  return (
+                    <button
+                      key={option.label}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => applyFilters({ status: option.value })}
+                      className={`min-h-[44px] shrink-0 px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
+                        active
+                          ? "bg-brand/15 text-brand"
+                          : "border border-white/10 text-muted hover:text-cream"
+                      }`}
+                    >
+                      {option.label}
+                      <span className="ml-1.5 text-[10px] tabular-nums opacity-80">
+                        {option.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
             {q ? (
               <button
                 type="button"
                 onClick={() => applyFilters({ q: "" })}
                 className="min-h-[44px] shrink-0 px-3 text-xs text-muted underline-offset-4 transition touch-manipulation hover:text-cream hover:underline"
               >
-                Limpar
+                Limpar busca
               </button>
             ) : null}
+            <SortChips
+              sort={sort}
+              onRecent={() =>
+                sort.key === "recent" ? undefined : changeSort({ key: "recent", dir: "desc" })
+              }
+              onToggle={toggleSort}
+              icon={sortIcon}
+            />
           </div>
-        </div>
-
-        {tab === "estoque" ? (
-          <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
-            <span className="shrink-0 text-[11px] uppercase tracking-wider text-muted">
-              Status
-            </span>
-            <div className={CHIP_SCROLL}>
-              {(
-                [
-                  { value: null, label: "Todos", count: estoqueCount },
-                  { value: "disponivel", label: "Disponível", count: availableCount },
-                  { value: "reservado", label: "Reservado", count: reservedCount },
-                ] as const
-              ).map((option) => {
-                const active =
-                  option.value === null ? !status : status === option.value;
-                return (
-                  <button
-                    key={option.label}
-                    type="button"
-                    onClick={() => applyFilters({ status: option.value })}
-                    className={`min-h-[44px] shrink-0 px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
-                      active
-                        ? "bg-brand/15 text-brand"
-                        : "border border-white/10 text-muted hover:text-cream"
-                    }`}
-                  >
-                    {option.label}
-                    <span className="ml-1.5 text-[10px] tabular-nums opacity-80">
-                      {option.count}
-                    </span>
-                  </button>
-                );
-              })}
+        ) : (
+          <div className="mt-3 hidden items-center gap-3 sm:flex">
+            <div className="flex items-center gap-2 border-r border-white/10 pr-3">
+              {selectAll}
             </div>
+            <SortChips
+              sort={sort}
+              onRecent={() =>
+                sort.key === "recent" ? undefined : changeSort({ key: "recent", dir: "desc" })
+              }
+              onToggle={toggleSort}
+              icon={sortIcon}
+            />
           </div>
-        ) : null}
+        )}
       </div>
 
       {tab === "destaques" ? (
@@ -796,7 +894,7 @@ export function VehiclesTable({
       {undoBanner ? (
         <div
           role="status"
-          className="sticky top-[4.5rem] z-20 flex flex-col gap-3 border border-brand-orange/40 bg-ink/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between lg:top-0"
+          className="sticky top-[env(safe-area-inset-top,0px)] z-20 flex flex-col gap-3 border border-brand-orange/40 bg-ink/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between lg:top-0"
         >
           <p className="text-sm text-cream">
             {undoBanner.ids.length === 1
@@ -824,7 +922,7 @@ export function VehiclesTable({
       ) : null}
 
       {selected.length > 0 ? (
-        <div className="sticky top-[4.5rem] z-20 flex flex-col gap-3 border border-brand/40 bg-ink/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between lg:top-0">
+        <div className="sticky top-[env(safe-area-inset-top,0px)] z-20 flex flex-col gap-3 border border-brand/40 bg-ink/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between lg:top-0">
           <p className="text-sm text-cream">
             {selected.length} selecionado(s)
             <span className="text-muted">
@@ -903,34 +1001,13 @@ export function VehiclesTable({
                 : "transition-opacity"
             }
           >
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <label className="inline-flex min-h-[44px] items-center gap-2 text-sm text-cream">
-                <input
-                  type="checkbox"
-                  checked={allVisibleSelected}
-                  aria-checked={
-                    allVisibleSelected
-                      ? true
-                      : someVisibleSelected
-                        ? "mixed"
-                        : false
-                  }
-                  ref={(element) => {
-                    if (element) element.indeterminate = someVisibleSelected;
-                  }}
-                  onChange={toggleSelectAllVisible}
-                  className="h-5 w-5 accent-brand"
-                />
-                Selecionar todos desta lista
-              </label>
-              <p className="text-xs text-muted">
-                {selected.length > 0
-                  ? `${selected.length} selecionado(s)`
-                  : `${items.length} visível(is)`}
-              </p>
-            </div>
+            {selected.length > 0 ? (
+              <div className="mb-2 flex items-center justify-between gap-3 sm:hidden">
+                {selectAll}
+              </div>
+            ) : null}
             {/* Cards iguais no celular e no desktop: hierarquia clara, ações rotuladas. */}
-            <ul className="space-y-3">
+            <ul className="space-y-2 sm:space-y-3">
             {items.map((vehicle) => (
               <VehicleAdminCard
                 key={vehicle.id}
@@ -938,47 +1015,12 @@ export function VehiclesTable({
                 busy={busyId === vehicle.id}
                 selected={selected.includes(vehicle.id)}
                 onToggleSelect={() => toggleSelected(vehicle.id)}
-                onStatus={(status) =>
-                  runQuickAction(
-                    vehicle.id,
-                    () => setVehicleStatus(vehicle.id, status),
-                    () => applyLocalStatus(vehicle.id, status, vehicle.featured),
-                  )
-                }
-                onFeatured={() =>
-                  runQuickAction(
-                    vehicle.id,
-                    () => setVehicleFeatured(vehicle.id, !vehicle.featured),
-                    () => {
-                      const nextFeatured = !vehicle.featured;
-                      setFeaturedCount((count) =>
-                        Math.max(0, count + (nextFeatured ? 1 : -1)),
-                      );
-                      if (tab === "destaques" && !nextFeatured) {
-                        removeFromList(vehicle.id, "destaques");
-                        return;
-                      }
-                      setItems((current) =>
-                        current.map((item) =>
-                          item.id === vehicle.id
-                            ? { ...item, featured: nextFeatured }
-                            : item,
-                        ),
-                      );
-                    },
-                  )
-                }
-                onDuplicate={() =>
-                  runQuickAction(
-                    vehicle.id,
-                    () => duplicateVehicle(vehicle.id),
-                    () => {
-                      void fetchPage(1, sort, true);
-                    },
-                  )
-                }
+                onStatus={(status) => changeStatus(vehicle, status)}
+                onFeatured={() => toggleFeatured(vehicle)}
+                onDuplicate={() => duplicate(vehicle)}
                 onMarkSold={() => setSoldTarget(vehicle)}
                 onDelete={() => setDeleteTarget(vehicle)}
+                onMore={() => setActionsTarget(vehicle)}
               />
             ))}
           </ul>
@@ -1014,6 +1056,43 @@ export function VehiclesTable({
           </div>
         </>
       )}
+
+      <ActionSheet
+        open={actionsTarget !== null}
+        title={actionsTarget ? `${actionsTarget.brand} ${actionsTarget.model}` : "Veículo"}
+        subtitle={
+          actionsTarget
+            ? `${STATUS_LABEL[actionsTarget.status] ?? actionsTarget.status} · ${formatCurrencyBRL(actionsTarget.price)}`
+            : undefined
+        }
+        media={
+          actionsTarget ? (
+            <span className="relative block h-12 w-16 shrink-0 overflow-hidden bg-asphalt">
+              <VehicleImage
+                src={coverSrc(actionsTarget.photos)}
+                alt=""
+                fill
+                sizes="64px"
+                className="object-cover"
+              />
+            </span>
+          ) : null
+        }
+        onClose={() => setActionsTarget(null)}
+      >
+        {actionsTarget ? (
+          <SheetActions
+            vehicle={actionsTarget}
+            busy={busyId === actionsTarget.id}
+            close={() => setActionsTarget(null)}
+            onStatus={(status) => changeStatus(actionsTarget, status)}
+            onFeatured={() => toggleFeatured(actionsTarget)}
+            onDuplicate={() => duplicate(actionsTarget)}
+            onMarkSold={() => setSoldTarget(actionsTarget)}
+            onDelete={() => setDeleteTarget(actionsTarget)}
+          />
+        ) : null}
+      </ActionSheet>
 
       <ConfirmDialog
         open={soldTarget !== null}
@@ -1104,6 +1183,7 @@ function VehicleAdminCard({
   onDuplicate,
   onMarkSold,
   onDelete,
+  onMore,
 }: {
   vehicle: VehicleRow;
   busy: boolean;
@@ -1114,8 +1194,17 @@ function VehicleAdminCard({
   onDuplicate: () => void;
   onMarkSold: () => void;
   onDelete: () => void;
+  onMore: () => void;
 }) {
   const ops = vehicleOpsMeta(vehicle);
+  const alerts = vehicleQualityAlerts(vehicle);
+  // "Sem vídeo" e as tags de operação já aparecem resumidos no topo /
+  // na aba Operação; no celular eles só alongavam cada card.
+  const chips = [
+    ...alerts.map((label) => ({ label, alert: true, mobile: label !== "Sem vídeo" })),
+    ...ops.tags.map((label) => ({ label, alert: false, mobile: false })),
+  ];
+  const hasMobileChips = chips.some((chip) => chip.mobile);
   const title = `${vehicle.brand} ${vehicle.model}`;
 
   function handleStatusChange(next: string) {
@@ -1128,7 +1217,7 @@ function VehicleAdminCard({
 
   return (
     <li className="overflow-hidden border border-white/10 bg-ink/50">
-      <div className="flex gap-3 p-3 lg:gap-4 lg:p-4">
+      <div className="flex gap-3 p-3 lg:gap-4">
         <label className="flex shrink-0 items-start pt-1">
           <span className="sr-only">Selecionar {title}</span>
           <input
@@ -1140,13 +1229,13 @@ function VehicleAdminCard({
         </label>
         <Link
           href={`/admin/veiculos/${vehicle.id}`}
-          className="relative h-[88px] w-[88px] shrink-0 overflow-hidden bg-asphalt lg:h-[104px] lg:w-[148px]"
+          className="relative h-[72px] w-[96px] shrink-0 overflow-hidden bg-asphalt lg:h-[96px] lg:w-[136px]"
         >
           <VehicleImage
             src={coverSrc(vehicle.photos)}
             alt={title}
             fill
-            sizes="(min-width: 1024px) 148px, 88px"
+            sizes="(min-width: 1024px) 136px, 96px"
             className="object-cover"
           />
           {vehicle.featured ? (
@@ -1184,39 +1273,27 @@ function VehicleAdminCard({
               {vehicleCategoryLabel(vehicle.category)}
               {vehicle.version ? ` · ${vehicle.version}` : ""}
             </p>
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="mt-0.5 truncate text-xs text-muted">
               {adminListScanLine(vehicle)}
               {vehicle.updatedAt
                 ? ` · ${formatRelativeUpdatedAt(vehicle.updatedAt)}`
                 : ""}
             </p>
           </Link>
-          <p className="mt-1.5 font-display text-lg font-bold leading-none text-cream lg:hidden">
-            {formatCurrencyBRL(vehicle.price)}
+          <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 lg:hidden">
+            <span className="font-display text-lg font-bold leading-none text-cream">
+              {formatCurrencyBRL(vehicle.price)}
+            </span>
+            {ops.finance ? (
+              <span
+                className={`text-xs ${
+                  ops.finance.value >= 0 ? "text-emerald-300" : "text-brand"
+                }`}
+              >
+                {ops.finance.label} {formatCurrencyBRL(ops.finance.value)}
+              </span>
+            ) : null}
           </p>
-
-          {ops.tags.length > 0 ? (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {ops.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="border border-white/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          ) : null}
-
-          {ops.finance ? (
-            <p
-              className={`mt-2 text-xs lg:hidden ${
-                ops.finance.value >= 0 ? "text-emerald-300" : "text-brand"
-              }`}
-            >
-              {ops.finance.label} {formatCurrencyBRL(ops.finance.value)}
-            </p>
-          ) : null}
 
           {vehicle.status === "vendido" && !vehicle.sale ? (
             <p className="mt-2 text-xs text-muted">
@@ -1225,21 +1302,27 @@ function VehicleAdminCard({
             </p>
           ) : null}
 
-          {vehicleQualityAlerts(vehicle).length > 0 ? (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {vehicleQualityAlerts(vehicle).map((alert) => (
+          {chips.length > 0 ? (
+            <div
+              className={`mt-2 flex-wrap gap-1.5 ${hasMobileChips ? "flex" : "hidden lg:flex"}`}
+            >
+              {chips.map((chip) => (
                 <span
-                  key={alert}
-                  className="border border-brand/40 bg-brand/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-brand"
+                  key={chip.label}
+                  className={`${chip.mobile ? "inline-flex" : "hidden lg:inline-flex"} px-1.5 py-0.5 text-[10px] uppercase tracking-wider ${
+                    chip.alert
+                      ? "border border-brand/40 bg-brand/10 text-brand"
+                      : "border border-white/10 text-muted"
+                  }`}
                 >
-                  {alert}
+                  {chip.label}
                 </span>
               ))}
             </div>
           ) : null}
         </div>
 
-        <div className="hidden w-[11.5rem] shrink-0 flex-col items-end gap-3 lg:flex">
+        <div className="hidden w-[9.5rem] shrink-0 flex-col items-end gap-1.5 lg:flex">
           <p className="font-display text-xl font-bold leading-none text-cream">
             {formatCurrencyBRL(vehicle.price)}
           </p>
@@ -1252,26 +1335,10 @@ function VehicleAdminCard({
               {ops.finance.label} {formatCurrencyBRL(ops.finance.value)}
             </p>
           ) : null}
-          <label className="sr-only" htmlFor={`status-d-${vehicle.id}`}>
-            Status
-          </label>
-          <select
-            id={`status-d-${vehicle.id}`}
-            value={vehicle.status}
-            disabled={busy}
-            onChange={(event) => handleStatusChange(event.target.value)}
-            className={`${inputClass} h-11 disabled:opacity-60`}
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 
-      <div className="border-t border-white/10 px-3 py-2 lg:hidden">
+      <div className="flex items-center gap-2 border-t border-white/10 p-2 lg:hidden">
         <label className="sr-only" htmlFor={`status-m-${vehicle.id}`}>
           Status
         </label>
@@ -1280,7 +1347,7 @@ function VehicleAdminCard({
           value={vehicle.status}
           disabled={busy}
           onChange={(event) => handleStatusChange(event.target.value)}
-          className={`${inputClass} disabled:opacity-60`}
+          className={`${inputClass} min-w-0 flex-1 disabled:opacity-60`}
         >
           {STATUS_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -1288,10 +1355,27 @@ function VehicleAdminCard({
             </option>
           ))}
         </select>
+        <Link
+          href={`/admin/veiculos/${vehicle.id}`}
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 border border-white/15 px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation active:bg-white/10"
+        >
+          <IconPencil className="h-4 w-4" />
+          Editar
+        </Link>
+        <button
+          type="button"
+          onClick={onMore}
+          disabled={busy}
+          aria-label={`Mais ações: ${title}`}
+          aria-haspopup="dialog"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-white/15 text-cream transition touch-manipulation active:bg-white/10 disabled:opacity-50"
+        >
+          <IconMore className="h-5 w-5" />
+        </button>
       </div>
 
-      <div className="border-t border-white/10 lg:flex lg:items-center lg:justify-between lg:gap-3 lg:px-2 lg:py-1.5">
-        <div className="grid grid-cols-5 lg:flex lg:flex-1 lg:flex-wrap">
+      <div className="hidden border-t border-white/10 lg:flex lg:items-center lg:justify-between lg:gap-3 lg:px-2 lg:py-1">
+        <div className="flex flex-1">
           <Link
             href={`/admin/veiculos/${vehicle.id}`}
             className={listActionCell}
@@ -1299,7 +1383,7 @@ function VehicleAdminCard({
             title="Editar anúncio"
           >
             <IconPencil className="h-4 w-4" />
-            Editar
+            <span className="hidden xl:inline">Editar</span>
           </Link>
           <Link
             href={`/admin/veiculos/${vehicle.id}?view=operacao`}
@@ -1308,7 +1392,7 @@ function VehicleAdminCard({
             title="Custos e documentos"
           >
             <IconClipboard className="h-4 w-4" />
-            Operação
+            <span className="hidden xl:inline">Operação</span>
           </Link>
           <Link
             href={vehiclePath(vehicle)}
@@ -1317,20 +1401,21 @@ function VehicleAdminCard({
             aria-label="Ver no site"
           >
             <IconExternal className="h-4 w-4" />
-            Site
+            <span className="hidden xl:inline">Site</span>
           </Link>
           <button
             type="button"
             onClick={onFeatured}
             disabled={busy}
             title={vehicle.featured ? "Remover destaque" : "Colocar em destaque"}
+            aria-label="Destacar na home"
             aria-pressed={vehicle.featured}
             className={`${listActionCell} border-l border-white/10 disabled:opacity-50 ${
               vehicle.featured ? "text-brand hover:text-cream" : ""
             }`}
           >
             <IconStar className="h-4 w-4" filled={vehicle.featured} />
-            Destacar
+            <span className="hidden xl:inline">Destacar</span>
           </button>
           <button
             type="button"
@@ -1341,21 +1426,27 @@ function VehicleAdminCard({
             title="Duplicar anúncio"
           >
             <IconCopy className="h-4 w-4" />
-            Duplicar
+            <span className="hidden xl:inline">Duplicar</span>
           </button>
         </div>
 
-        <div className="flex gap-2 border-t border-white/10 p-3 lg:border-t-0 lg:pr-4">
-          {vehicle.status === "reservado" ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => onStatus("disponivel")}
-              className="inline-flex h-11 min-w-0 flex-1 items-center justify-center border border-emerald-500/40 px-3 font-display text-xs font-semibold uppercase tracking-wide text-emerald-300 disabled:opacity-50 lg:min-w-[9.5rem] lg:flex-none"
-            >
-              Disponível
-            </button>
-          ) : null}
+        <div className="flex items-center gap-2 py-1 pr-1">
+          <label className="sr-only" htmlFor={`status-d-${vehicle.id}`}>
+            Status
+          </label>
+          <select
+            id={`status-d-${vehicle.id}`}
+            value={vehicle.status}
+            disabled={busy}
+            onChange={(event) => handleStatusChange(event.target.value)}
+            className={`${inputClass} h-11 w-[9.5rem] disabled:opacity-60`}
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
           {canMarkAsSold(vehicle.status) ? (
             <button
               type="button"
@@ -1366,14 +1457,7 @@ function VehicleAdminCard({
             >
               Marcar vendido
             </button>
-          ) : (
-            <Link
-              href={`/admin/veiculos/${vehicle.id}`}
-              className="inline-flex h-11 min-w-0 flex-1 items-center justify-center border border-white/15 px-3 text-sm font-semibold text-cream/80 lg:min-w-[9.5rem] lg:flex-none"
-            >
-              Abrir anúncio
-            </Link>
-          )}
+          ) : null}
           <button
             type="button"
             onClick={onDelete}
@@ -1386,5 +1470,136 @@ function VehicleAdminCard({
         </div>
       </div>
     </li>
+  );
+}
+
+function SheetActions({
+  vehicle,
+  busy,
+  close,
+  onStatus,
+  onFeatured,
+  onDuplicate,
+  onMarkSold,
+  onDelete,
+}: {
+  vehicle: VehicleRow;
+  busy: boolean;
+  close: () => void;
+  onStatus: (status: string) => void;
+  onFeatured: () => void;
+  onDuplicate: () => void;
+  onMarkSold: () => void;
+  onDelete: () => void;
+}) {
+  const run = (action: () => void) => () => {
+    close();
+    action();
+  };
+  return (
+    <>
+      <ActionSheetLink
+        href={`/admin/veiculos/${vehicle.id}`}
+        icon={<IconPencil className="h-4 w-4" />}
+        label="Editar anúncio"
+        hint="Preço, status, fotos e ficha"
+        onNavigate={close}
+      />
+      <ActionSheetLink
+        href={`/admin/veiculos/${vehicle.id}?view=operacao`}
+        icon={<IconClipboard className="h-4 w-4" />}
+        label="Operação"
+        hint="Custos e documentos"
+        onNavigate={close}
+      />
+      <ActionSheetLink
+        href={vehiclePath(vehicle)}
+        external
+        icon={<IconExternal className="h-4 w-4" />}
+        label="Ver no site"
+        onNavigate={close}
+      />
+      <ActionSheetButton
+        icon={<IconStar className="h-4 w-4" filled={vehicle.featured} />}
+        label={vehicle.featured ? "Tirar da vitrine" : "Destacar na home"}
+        hint={`Até ${MAX_HOME_FEATURED} destaques`}
+        disabled={busy}
+        onClick={run(onFeatured)}
+      />
+      <ActionSheetButton
+        icon={<IconCopy className="h-4 w-4" />}
+        label="Duplicar anúncio"
+        disabled={busy}
+        onClick={run(onDuplicate)}
+      />
+      {vehicle.status === "reservado" ? (
+        <ActionSheetButton
+          icon={<IconCheck className="h-4 w-4" />}
+          label="Voltar para disponível"
+          disabled={busy}
+          onClick={run(() => onStatus("disponivel"))}
+        />
+      ) : null}
+      {canMarkAsSold(vehicle.status) ? (
+        <ActionSheetButton
+          icon={<IconCash className="h-4 w-4" />}
+          label="Marcar vendido"
+          hint="Sai do estoque; a página continua no site"
+          tone="warning"
+          disabled={busy}
+          onClick={run(onMarkSold)}
+        />
+      ) : null}
+      <ActionSheetButton
+        icon={<IconTrash className="h-4 w-4" />}
+        label="Excluir definitivamente"
+        hint="Só para duplicata ou erro — a página vira 404"
+        tone="danger"
+        onClick={run(onDelete)}
+      />
+    </>
+  );
+}
+
+function SortChips({
+  sort,
+  onRecent,
+  onToggle,
+  icon,
+}: {
+  sort: { key: SortKey; dir: "asc" | "desc" };
+  onRecent: () => void;
+  onToggle: (key: Exclude<SortKey, "recent">) => void;
+  icon: (key: Exclude<SortKey, "recent">) => string;
+}) {
+  return (
+    <div className="hidden items-center gap-2 xl:ml-auto xl:flex" role="group" aria-label="Ordenar">
+      <span className="shrink-0 text-[11px] uppercase tracking-wider text-muted">
+        Ordenar
+      </span>
+      {(
+        [
+          { key: "recent", label: "Recentes" },
+          { key: "price", label: "Preço" },
+          { key: "km", label: "KM" },
+          { key: "year", label: "Ano" },
+        ] as const
+      ).map((option) => (
+        <button
+          key={option.key}
+          type="button"
+          aria-pressed={sort.key === option.key}
+          onClick={() => (option.key === "recent" ? onRecent() : onToggle(option.key))}
+          className={`min-h-[44px] shrink-0 px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
+            sort.key === option.key
+              ? "bg-brand/15 text-brand"
+              : "border border-white/10 text-muted hover:text-cream"
+          }`}
+        >
+          {option.label}
+          {sort.key === option.key && option.key !== "recent" ? ` ${icon(option.key)}` : ""}
+        </button>
+      ))}
+    </div>
   );
 }

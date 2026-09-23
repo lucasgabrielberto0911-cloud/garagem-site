@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+import { ADMIN_DATA_TAG } from "@/lib/admin-cache";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { staleCutoffDate } from "@/lib/stock-quality";
@@ -274,7 +276,7 @@ export async function getAdminVehiclesPage(options: {
   };
 }
 
-export async function getAdminVehicleStats() {
+async function loadAdminVehicleStats() {
   const stockWhere = {
     historical: false,
     status: { in: ["disponivel", "reservado"] },
@@ -339,6 +341,13 @@ export async function getAdminVehicleStats() {
     featured,
   };
 }
+
+/** Contadores do topo da lista: só números, expiram com expireAdminData(). */
+export const getAdminVehicleStats = unstable_cache(
+  loadAdminVehicleStats,
+  ["admin-vehicle-stats-v1"],
+  { revalidate: 60, tags: [ADMIN_DATA_TAG] },
+);
 
 export async function getAdminSalesPage(options?: {
   page?: number;

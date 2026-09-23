@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { expireAdminData } from "@/lib/admin-revalidate";
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
@@ -182,6 +183,7 @@ export async function updateSiteSettings(
   revalidatePath("/sobre");
   revalidatePath("/estoque");
   revalidatePath("/admin");
+  expireAdminData();
   revalidatePath("/admin/site");
 
   return { ok: true, message: "Dados do site atualizados." };

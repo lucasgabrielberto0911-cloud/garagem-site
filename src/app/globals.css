@@ -172,6 +172,17 @@ body {
     bottom: var(--admin-nav-h);
   }
 
+  /* Âncora abaixo do notch (celular) ou do menu de seções fixo (desktop). */
+  .scroll-mt-admin-form {
+    scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  }
+
+  @media (min-width: 1024px) {
+    .scroll-mt-admin-form {
+      scroll-margin-top: 4.5rem;
+    }
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

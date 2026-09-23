@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { expireAdminData } from "@/lib/admin-revalidate";
 import { redirect } from "next/navigation";
 import {
   SESSION_COOKIE,
@@ -67,6 +68,7 @@ export async function updateAdminProfile(
 
   revalidatePath("/admin/conta");
   revalidatePath("/admin");
+  expireAdminData();
   return { ok: true, message: "Dados atualizados." };
 }
 
@@ -111,6 +113,7 @@ export async function changeAdminPassword(
 
   revalidateTag(ADMIN_SEED_PASSWORD_TAG, "max");
   revalidatePath("/admin");
+  expireAdminData();
   revalidatePath("/admin/conta");
   return { ok: true, message: "Senha alterada com sucesso." };
 }

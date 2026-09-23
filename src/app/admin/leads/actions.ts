@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { expireAdminData } from "@/lib/admin-revalidate";
 import { getSession } from "@/lib/auth";
 import { ADMIN_NEW_LEADS_TAG } from "@/lib/admin-cache";
 import { markLeadContatado } from "@/lib/lead-venda";
@@ -29,6 +30,7 @@ export async function updateLeadStatus(
     revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
     revalidatePath("/admin/leads");
     revalidatePath("/admin");
+    expireAdminData();
     return { ok: true, message: "Status atualizado." };
   } catch (error) {
     console.error("[admin/leads] falha ao atualizar status:", error);
@@ -72,6 +74,7 @@ export async function convertLeadToCustomer(
     revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
     revalidatePath("/admin/leads");
     revalidatePath("/admin");
+    expireAdminData();
     revalidatePath("/admin/clientes");
     return { ok: true, message: "Cliente criado a partir do lead." };
   } catch (error) {
@@ -87,6 +90,7 @@ export async function deleteLead(id: string): Promise<LeadActionState> {
     revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
     revalidatePath("/admin/leads");
     revalidatePath("/admin");
+    expireAdminData();
     return { ok: true, message: "Lead removido." };
   } catch (error) {
     console.error("[admin/leads] falha ao remover lead:", error);
