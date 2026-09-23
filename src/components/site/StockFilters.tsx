@@ -583,7 +583,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
       </div>
 
-      <div className="sticky top-[calc(4.5rem+env(safe-area-inset-top,0px))] z-30 mt-3 space-y-2 border border-white/10 bg-ink px-3 py-2.5 lg:hidden">
+      <div className="mt-3 space-y-2 border border-white/10 bg-ink px-3 py-2.5 lg:hidden">
         <div className="flex items-center gap-2">
           <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
             Faixa
