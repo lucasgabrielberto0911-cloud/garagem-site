@@ -92,6 +92,18 @@ test("ficha pública não oferece JPG e chama a checagem de vistoria da loja", (
   assert.match(admin, /Baixar JPG em alta qualidade/);
 });
 
+test("dobra da ficha não cresce quando a barra do navegador volta", () => {
+  const css = readSrc("app/globals.css");
+  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const start = css.indexOf(".ficha-mobile-fold {");
+  const fold = css.slice(start, start + 500);
+  assert.match(fold, /100svh/);
+  assert.match(fold, /overflow-anchor:\s*none/);
+  assert.doesNotMatch(fold, /100dvh/);
+  assert.match(page, /ficha-mobile-fold min-w-0/);
+  assert.doesNotMatch(page, /lg:contents/);
+});
+
 test("chip Ajuda no mobile ganha folga acima da nav fora da ficha", () => {
   const css = readSrc("app/globals.css");
   assert.match(

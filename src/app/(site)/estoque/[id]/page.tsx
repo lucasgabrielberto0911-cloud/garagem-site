@@ -318,8 +318,8 @@ export default async function VehicleDetailPage({
 
         {/* Mobile: primeira dobra. Desktop: galeria | ficha. */}
         <div className="lg:mt-5 lg:grid lg:grid-cols-[1.35fr_0.9fr] lg:items-start lg:gap-8">
-          <div className="ficha-mobile-fold lg:contents">
-            <div className="ficha-mobile-photo relative min-w-0 lg:order-1">
+          <div className="ficha-mobile-fold min-w-0 lg:order-1">
+            <div className="ficha-mobile-photo relative min-w-0">
               <div className="absolute left-3 top-3 z-[3] lg:hidden">
                 <Suspense fallback={null}>
                   <StockBackLink fallbackHref="/estoque" variant="overlay" />

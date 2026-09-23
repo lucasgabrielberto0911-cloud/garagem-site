@@ -823,15 +823,18 @@ textarea:-webkit-autofill:focus {
 /*
  * Primeira dobra da ficha no celular: foto + dados + WhatsApp
  * cabem na altura útil (abaixo do header, acima do fim da tela).
+ * svh não muda quando a barra do navegador some e volta no scroll —
+ * dvh esticava a dobra e deixava um vão no topo ao subir de novo.
  */
 @media (max-width: 1023px) {
   .ficha-mobile-fold {
     display: flex;
     flex-direction: column;
-    height: calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px));
+    height: calc(100svh - 4.5rem - env(safe-area-inset-top, 0px));
     margin-left: -1rem;
     margin-right: -1rem;
     width: calc(100% + 2rem);
+    overflow-anchor: none;
   }
 
   .ficha-mobile-photo {
