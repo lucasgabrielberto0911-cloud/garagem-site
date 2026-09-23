@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { expireAdminData } from "@/lib/admin-revalidate";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
@@ -17,6 +18,7 @@ export type SaleActionState = {
 };
 
 function revalidatePublicStock(vehicleId?: string) {
+  expireAdminData();
   revalidateTag(VEHICLES_PUBLIC_CACHE_TAG, "max");
   revalidatePath("/");
   revalidatePath("/estoque");

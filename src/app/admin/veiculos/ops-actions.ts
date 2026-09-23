@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { expireAdminData } from "@/lib/admin-revalidate";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -27,6 +28,7 @@ function digitsOnly(value: FormDataEntryValue | null) {
 }
 
 function revalidateVehicle(id: string) {
+  expireAdminData();
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
 }

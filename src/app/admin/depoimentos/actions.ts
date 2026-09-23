@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { expireAdminData } from "@/lib/admin-revalidate";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -69,6 +70,7 @@ export async function saveTestimonial(
 
   revalidateTag(TESTIMONIALS_CACHE_TAG, "max");
   revalidatePath("/admin/depoimentos");
+  expireAdminData();
   revalidatePath("/");
   return {
     ok: true,
@@ -82,6 +84,7 @@ export async function setTestimonialPublished(id: string, published: boolean) {
   await prisma.testimonial.update({ where: { id }, data: { published } });
   revalidateTag(TESTIMONIALS_CACHE_TAG, "max");
   revalidatePath("/admin/depoimentos");
+  expireAdminData();
   revalidatePath("/");
   return {
     ok: true,
@@ -97,6 +100,7 @@ export async function deleteTestimonial(
   await prisma.testimonial.delete({ where: { id } });
   revalidateTag(TESTIMONIALS_CACHE_TAG, "max");
   revalidatePath("/admin/depoimentos");
+  expireAdminData();
   revalidatePath("/");
   return { ok: true, message: "Depoimento excluído." };
 }

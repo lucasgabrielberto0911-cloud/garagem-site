@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { expireAdminData } from "@/lib/admin-revalidate";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
@@ -34,6 +35,7 @@ export type VehicleFormState = {
 
 /** Invalida o cache do site público sempre que o estoque muda. */
 function revalidatePublicStock(vehicleId?: string) {
+  expireAdminData();
   revalidateTag(VEHICLES_PUBLIC_CACHE_TAG, "max");
   revalidatePath("/");
   revalidatePath("/estoque");

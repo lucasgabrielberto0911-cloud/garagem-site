@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import bcrypt from "bcryptjs";
 import {
+  ADMIN_DATA_TAG,
   ADMIN_NEW_LEADS_TAG,
   ADMIN_SEED_PASSWORD_TAG,
 } from "@/lib/admin-cache";
@@ -14,7 +15,7 @@ import {
 } from "@/lib/site-settings";
 import { getGoogleReviews } from "@/lib/site-content";
 import { DEFAULT_GOOGLE_REVIEWS, googleReviewsReady } from "@/lib/google-reviews";
-import { staleCutoffDate } from "@/lib/stock-quality";
+import { daysInStock, staleCutoffDate } from "@/lib/stock-quality";
 
 export { daysInStock, STALE_DAYS } from "@/lib/stock-quality";
 
@@ -59,9 +60,13 @@ function startOfMonth() {
   return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
-export type DashboardData = Awaited<ReturnType<typeof getDashboardData>>;
+export type DashboardData = Awaited<ReturnType<typeof loadDashboardData>>;
 
-export async function getDashboardData() {
+/*
+ * Tudo aqui precisa sobreviver ao JSON do cache (sem Date): por isso os
+ * leads e os parados já saem com os campos que a tela usa.
+ */
+async function loadDashboardData() {
   const monthStart = startOfMonth();
   const staleBefore = staleCutoffDate();
 
@@ -121,7 +126,16 @@ export async function getDashboardData() {
       { _sum: { salePrice: null }, _count: { _all: 0 } },
     ),
     safe("lead.groupBy", () => prisma.leadVenda.groupBy({ by: ["status"], _count: { _all: true } }), []),
-    safe("recentLeads", () => prisma.leadVenda.findMany({ orderBy: { createdAt: "desc" }, take: 5 }), []),
+    safe(
+      "recentLeads",
+      () =>
+        prisma.leadVenda.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: { id: true, name: true, phone: true, vehicleInfo: true, status: true },
+        }),
+      [],
+    ),
     safe(
       "recentVehicles",
       () =>
@@ -138,7 +152,7 @@ export async function getDashboardData() {
             photos: {
               orderBy: { order: "asc" },
               take: 1,
-              select: { url: true },
+              select: { url: true, thumbnailUrl: true },
             },
           },
         }),
@@ -235,7 +249,10 @@ export async function getDashboardData() {
     publishedTestimonials,
     recentVehicles,
     alerts: {
-      staleVehicles,
+      staleVehicles: staleVehicles.map(({ createdAt, ...vehicle }) => ({
+        ...vehicle,
+        days: daysInStock(createdAt),
+      })),
       withoutPhotos,
       withoutVideo,
       noFeatured: available > 0 && featured === 0,
@@ -246,3 +263,14 @@ export async function getDashboardData() {
     },
   };
 }
+
+/**
+ * ~15 consultas em série (pooler com connection_limit=1). Cache curto com tag:
+ * as actions do painel chamam expireAdminData() e lead novo do site expira
+ * pela tag do badge.
+ */
+export const getDashboardData = unstable_cache(
+  loadDashboardData,
+  ["admin-dashboard-v2"],
+  { revalidate: 60, tags: [ADMIN_DATA_TAG, ADMIN_NEW_LEADS_TAG] },
+);
