@@ -1,5 +1,9 @@
 # Operação — Vercel Hobby
 
+## Região das Functions
+
+`vercel.json` fixa `"regions": ["gru1"]` (São Paulo), a mesma região do banco no Supabase (`sa-east-1`). Antes as Functions rodavam em `iad1` (EUA) e cada consulta do painel/site atravessava o continente. Se o banco mudar de região, mude aqui junto.
+
 ## Functions Storage e retenção de deploys
 
 No plano Hobby a Vercel conta o armazenamento dos bundles de Functions **por deploy retido** (GB-mês, por região). Bundles grandes (`sharp` no upload) pesam mais em cada revisão antiga que o projeto guarda.
