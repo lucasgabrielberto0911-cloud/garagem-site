@@ -114,7 +114,7 @@ export function VehicleMobileBar({
   return (
     <div
       data-vehicle-mobile-bar=""
-      className={`fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt/95 px-3 pt-2 backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-safe pr-safe transition-transform duration-200 lg:hidden ${
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-white/15 bg-asphalt px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-safe pr-safe transition-transform duration-200 lg:hidden ${
         pinned
           ? "translate-y-0"
           : "pointer-events-none translate-y-full"
@@ -166,7 +166,7 @@ export function VehicleMobileBar({
                 onClick={(event) =>
                   openWhatsApp(event, href, "ficha-mobile", vehicleId)
                 }
-                className="whatsapp-btn inline-flex min-h-[48px] shrink-0 items-center justify-center gap-1.5 px-3 py-3 font-display text-xs font-semibold text-white touch-manipulation sm:px-4 sm:text-sm"
+                className="inline-flex min-h-[48px] shrink-0 items-center justify-center gap-1.5 bg-brand px-3 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream touch-manipulation hover:bg-[#c91418] sm:px-4 sm:text-sm"
               >
                 <IconWhatsApp className="h-4 w-4" />
                 Tenho interesse

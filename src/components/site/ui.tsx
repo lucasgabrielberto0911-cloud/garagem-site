@@ -130,7 +130,6 @@ export function WhatsAppButton({
   children = "Chamar no WhatsApp",
   size = "md",
   variant = "solid",
-  tone = "brand",
   className = "",
   trackingLabel = "site",
   campaign,
@@ -140,8 +139,6 @@ export function WhatsAppButton({
   children?: ReactNode;
   size?: "md" | "lg";
   variant?: "solid" | "outline";
-  /** `whatsapp` usa o verde do botão de conversa, com cantos retos. */
-  tone?: "brand" | "whatsapp";
   className?: string;
   trackingLabel?: string;
   campaign?: WhatsAppCampaign;
@@ -152,11 +149,9 @@ export function WhatsAppButton({
       ? "min-h-[52px] px-7 py-4 text-sm sm:text-base"
       : "min-h-[48px] px-5 py-3 text-xs sm:text-sm";
   const look =
-    tone === "whatsapp"
-      ? "whatsapp-btn border border-[#1ebe57] text-white"
-      : variant === "solid"
-        ? "bg-brand text-cream hover:bg-[#c91418]"
-        : "border border-white/20 text-cream hover:border-brand hover:bg-white/5";
+    variant === "solid"
+      ? "bg-brand text-cream hover:bg-[#c91418]"
+      : "border border-white/20 text-cream hover:border-brand hover:bg-white/5";
 
   return (
     <TrackedWhatsAppLink

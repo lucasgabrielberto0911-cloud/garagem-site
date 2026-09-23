@@ -85,7 +85,7 @@ export function VehicleMobileSummary({
           formatCurrencyBRL(price)
         )}
       </p>
-      <dl className="mt-3 grid grid-cols-2 gap-px border border-white/10 bg-white/10">
+      <dl className="mt-3 grid grid-cols-2 gap-px border border-white/15 bg-white/15">
         {facts.map((fact) => (
           <div key={fact.label} className="min-w-0 bg-asphalt px-3 py-2">
             <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
@@ -101,7 +101,7 @@ export function VehicleMobileSummary({
         {sold ? (
           <Link
             href={soldHref}
-            className="inline-flex min-h-[52px] w-full items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-asphalt"
+            className="inline-flex min-h-[52px] w-full items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-cream"
           >
             {soldLabel}
           </Link>
@@ -116,7 +116,6 @@ export function VehicleMobileSummary({
           >
             <WhatsAppButton
               size="lg"
-              tone="whatsapp"
               className="w-full"
               trackingLabel="ficha"
               campaign="ficha"
@@ -220,7 +219,7 @@ export function VehicleMobileBlocks({
       {extraSpecs.length > 0 ? (
         <DossierBlock title="Ficha">
           {listedLine ? <p className="mb-2 text-xs">{listedLine}</p> : null}
-          <dl className="grid grid-cols-2 gap-px border border-white/10 bg-white/10">
+          <dl className="grid grid-cols-2 gap-px border border-white/15 bg-white/15">
             {extraSpecs.map((spec) => (
               <div key={spec.label} className="min-w-0 bg-asphalt px-2.5 py-2">
                 <dt className="text-[10px] uppercase tracking-wider text-muted">

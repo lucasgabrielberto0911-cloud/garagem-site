@@ -66,6 +66,7 @@ test("ficha pública não oferece JPG e chama a checagem de vistoria da loja", (
   const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
   const filters = readSrc("components/site/StockFilters.tsx");
   const admin = readSrc("components/admin/VehiclePhotoManager.tsx");
+  const bar = readSrc("components/site/VehicleMobileBar.tsx");
 
   for (const file of [gallery, lightbox, page, dossier, filters]) {
     assert.doesNotMatch(file, /Baixar JPG/);
@@ -80,7 +81,10 @@ test("ficha pública não oferece JPG e chama a checagem de vistoria da loja", (
   assert.doesNotMatch(lightbox, /Baixar esta foto/);
   assert.doesNotMatch(lightbox, /toque duas vezes para ampliar/);
   assert.doesNotMatch(lightbox, /Deslize ou use as setas/);
-  assert.match(page, /STORE_INSPECTION_LABEL/);
+  assert.doesNotMatch(dossier, /tone="whatsapp"/);
+  assert.doesNotMatch(dossier, /whatsapp-btn/);
+  assert.doesNotMatch(bar, /whatsapp-btn/);
+  assert.match(bar, /bg-brand/);
   assert.match(dossier, /STORE_INSPECTION_LABEL/);
   assert.match(dossier, /vistoria da loja/i);
   assert.match(filters, /Com vistoria da loja/);
