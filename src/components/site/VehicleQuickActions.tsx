@@ -61,7 +61,7 @@ export function VehicleQuickActions({
           <TrackedWhatsAppLink
             href={fichaHref(action.hrefMessage, contentId, contentPath)}
             trackingLabel={action.trackingLabel}
-            className="inline-flex min-h-[48px] items-center justify-center border border-white/15 px-1.5 text-center font-display text-[10px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand sm:text-[11px] lg:min-h-[44px]"
+            className="inline-flex min-h-[48px] items-center justify-center border border-white/10 bg-ink px-2 text-center font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
           >
             {action.label}
           </TrackedWhatsAppLink>

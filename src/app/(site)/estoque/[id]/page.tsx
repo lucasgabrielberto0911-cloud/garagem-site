@@ -428,7 +428,7 @@ export default async function VehicleDetailPage({
                 {specs.map((spec) => (
                   <div
                     key={spec.label}
-                    className="min-w-0 border border-white/10 bg-asphalt/40 px-2.5 py-2"
+                    className="min-w-0 border border-white/10 bg-asphalt/40 px-3 py-2.5"
                   >
                     <dt className="text-[11px] uppercase tracking-wider text-muted">
                       {spec.label === "Disponível em" ? "Cidade" : spec.label}

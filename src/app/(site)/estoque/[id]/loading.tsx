@@ -23,9 +23,9 @@ export default function VehicleDetailLoading() {
             <div className="skeleton h-8 w-3/4" />
             <div className="skeleton mt-3 h-4 w-1/2" />
             <div className="skeleton mt-6 h-10 w-48" />
-            <div className="mt-6 grid w-full grid-cols-2 gap-px border border-white/10 bg-white/10">
+            <div className="mt-6 grid w-full grid-cols-2 gap-2">
               {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="bg-asphalt px-4 py-3">
+                <div key={index} className="border border-white/10 bg-asphalt px-4 py-3">
                   <div className="skeleton mx-auto h-2.5 w-16" />
                   <div className="skeleton mx-auto mt-2 h-4 w-24" />
                 </div>

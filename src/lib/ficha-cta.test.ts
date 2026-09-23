@@ -250,6 +250,7 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
   assert.match(vistoria?.body ?? "", /fluidos/i);
   assert.doesNotMatch(vistoria?.body ?? "", /documento oficial/i);
   assert.doesNotMatch(html, /documento oficial/i);
+  assert.doesNotMatch(readSrc("components/site/VehicleMobileDossier.tsx"), /gap-px/);
 });
 
 test("ficha desktop não soma padding grande sob o header", () => {
