@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useFormState, useFormStatus } from "react-dom";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 import type { Photo, Vehicle } from "@prisma/client";
 import {
@@ -111,14 +116,15 @@ function sectionAnchor(id: VehicleFormSectionId) {
 
 function SubmitButton({
   label,
+  pending,
   disabled,
   disabledLabel,
 }: {
   label: string;
+  pending: boolean;
   disabled?: boolean;
   disabledLabel?: string;
 }) {
-  const { pending } = useFormStatus();
   const blocked = pending || disabled;
   return (
     <button type="submit" disabled={blocked} className={`${btn.primary} w-full sm:w-auto`}>
@@ -145,7 +151,7 @@ export function VehicleForm({
   );
 
   const action = mode === "create" ? createVehicle : boundUpdate;
-  const [state, formAction] = useFormState(action, initialState);
+  const [state, formAction, saving] = useActionState(action, initialState);
 
   const [photos, setPhotos] = useState<PhotoItem[]>(() =>
     photosFromRecords(
@@ -465,17 +471,19 @@ export function VehicleForm({
 
       <form
         id="vehicle-form"
-        action={formAction}
         noValidate
         onSubmit={(event) => {
+          // Dispara a action na mão: com <form action>, o React 19 reseta o
+          // form ao terminar e o select de status volta a mostrar o valor
+          // antigo — o próximo "Salvar" regravaria o status errado.
+          event.preventDefault();
+          if (saving) return;
           if (photosUploading) {
-            event.preventDefault();
             toast.error("Espere o envio ou o borrão das fotos terminar.");
             revealSections(["fotos"]);
             return;
           }
           if (priceSaveBlocked) {
-            event.preventDefault();
             toast.error(
               priceMismatch?.blockMessage ??
                 "Corrija a descrição ou o preço antes de salvar.",
@@ -484,9 +492,11 @@ export function VehicleForm({
             return;
           }
           if (!validate()) {
-            event.preventDefault();
             toast.error("Corrija os campos destacados.");
+            return;
           }
+          const data = new FormData(event.currentTarget);
+          startTransition(() => formAction(data));
         }}
         className="space-y-3 sm:space-y-4"
       >
@@ -1212,6 +1222,7 @@ export function VehicleForm({
           <div className="flex items-center gap-2 sm:flex-wrap">
             <div className="min-w-0 flex-1 sm:flex-none">
               <SubmitButton
+                pending={saving}
                 label={mode === "create" ? "Cadastrar veículo" : "Salvar alterações"}
                 disabled={photosUploading || priceSaveBlocked}
                 disabledLabel={
