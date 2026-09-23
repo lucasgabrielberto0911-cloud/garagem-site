@@ -172,6 +172,17 @@ body {
     bottom: var(--admin-nav-h);
   }
 
+  /* Âncora abaixo da barra fixa do admin (celular) ou do menu de seções (desktop). */
+  .scroll-mt-admin-form {
+    scroll-margin-top: calc(max(0.75rem, env(safe-area-inset-top, 0px)) + 4.5rem);
+  }
+
+  @media (min-width: 1024px) {
+    .scroll-mt-admin-form {
+      scroll-margin-top: 4.5rem;
+    }
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
