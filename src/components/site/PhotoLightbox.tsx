@@ -43,7 +43,6 @@ export function PhotoLightbox({
   const [mounted, setMounted] = useState(false);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [hint, setHint] = useState(true);
 
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const offsetStart = useRef({ x: 0, y: 0 });
@@ -105,11 +104,6 @@ export function PhotoLightbox({
       document.body.style.overflow = previousOverflow;
       document.body.style.paddingRight = previousPadding;
     };
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setHint(false), 2800);
-    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -367,12 +361,6 @@ export function PhotoLightbox({
                 <Chevron direction="right" />
               </button>
             </>
-          ) : null}
-
-          {hint ? (
-            <p className="pointer-events-none absolute inset-x-0 bottom-3 z-[3] text-center text-[11px] uppercase tracking-wider text-cream/55">
-              Deslize ou use as setas · toque duas vezes para ampliar
-            </p>
           ) : null}
         </div>
 
