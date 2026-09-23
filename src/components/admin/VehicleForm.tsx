@@ -620,13 +620,8 @@ export function VehicleForm({
             .filter(Boolean)
             .join(" · ")}
         >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label="Preço (R$)"
-              required
-              error={errors.price}
-              hint="Valor anunciado no site."
-            >
+          <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-4">
+            <Field label="Preço (R$)" required error={errors.price}>
               <input
                 name="priceDisplay"
                 inputMode="numeric"
@@ -654,14 +649,7 @@ export function VehicleForm({
                 </p>
               ) : null}
             </Field>
-            <Field
-              label="Status"
-              hint={
-                alreadySold
-                  ? "Já vendido. Disponível/reservado volta para o estoque ao salvar."
-                  : "Para vender, use “Marcar vendido” — confirma e mantém a página no ar."
-              }
-            >
+            <Field label="Status">
               <select
                 name="status"
                 value={status}
@@ -689,11 +677,16 @@ export function VehicleForm({
                 ))}
               </select>
             </Field>
+            <p className="col-span-2 -mt-2 text-xs leading-relaxed text-muted">
+              {alreadySold
+                ? "Já vendido. Disponível/reservado volta para o estoque ao salvar."
+                : "Para vender, use “Marcar vendido” — a página continua no ar."}
+            </p>
 
             {priceMismatch ? (
               <div
                 role={priceSaveBlocked ? "alert" : "status"}
-                className={`flex flex-col gap-2 border px-3 py-2.5 text-sm text-cream sm:col-span-2 sm:flex-row sm:items-center sm:justify-between ${
+                className={`col-span-2 flex flex-col gap-2 border px-3 py-2.5 text-sm text-cream sm:flex-row sm:items-center sm:justify-between ${
                   priceSaveBlocked
                     ? "border-brand/50 bg-brand/10"
                     : "border-brand-orange/40 bg-brand-orange/10"
@@ -714,7 +707,7 @@ export function VehicleForm({
               </div>
             ) : null}
 
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
                 Onde está o veículo
               </span>
@@ -764,7 +757,7 @@ export function VehicleForm({
               )}
             </div>
 
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
                 Vitrine
               </span>
@@ -779,8 +772,7 @@ export function VehicleForm({
                 Destaque na home
               </label>
               <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                Até 8 na vitrine. Só o que você marcar aparece — a home não
-                escolhe carro sozinha. Precisa estar disponível.
+                Até 8 na home, só disponível. A home não escolhe carro sozinha.
               </p>
             </div>
           </div>
