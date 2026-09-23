@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { VehiclesTable } from "@/components/admin/VehiclesTable";
 import { IconPlus } from "@/components/admin/icons";
-import { AdminPageHeader, StatCard, adminStatGrid, btn } from "@/components/admin/ui";
+import { AdminPageHeader, btn } from "@/components/admin/ui";
 import {
   getAdminVehicleStats,
   getAdminVehiclesPage,
@@ -44,51 +44,42 @@ export default async function VehiclesPage({
     getAdminVehiclesPage({ q, tab, status, page: 1 }),
   ]);
 
+  // As abas e os chips de status já mostram as contagens; aqui só o que
+  // não aparece em outro lugar: o valor do estoque.
+  const stockSummary = (
+    <>
+      Estoque {formatCurrencyBRL(stats.stockValue)}
+      {stats.available > 0
+        ? ` · média ${formatCurrencyBRL(stats.stockValue / stats.available)}`
+        : ""}
+      {stats.withCostBasis > 0 ? (
+        <span className="hidden sm:inline">
+          {` · investido ${formatCurrencyBRL(stats.invested)}`}
+        </span>
+      ) : null}
+    </>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-5">
       <AdminPageHeader
         title="Veículos"
+        mobileActions="inline"
         subtitle={
           tab === "vendidos"
             ? `${list.total} vendido(s) na visualização atual`
             : tab === "destaques"
               ? `${list.total} destaque(s) na home (máx. 8)`
-              : `${list.total} veículo(s) em estoque na visualização atual`
+              : stockSummary
         }
         actions={
           <Link href="/admin/veiculos/novo" className={btn.primary}>
             <IconPlus className="h-4 w-4" />
-            Novo veículo
+            <span className="sm:hidden">Novo</span>
+            <span className="hidden sm:inline">Novo veículo</span>
           </Link>
         }
       />
-
-      <p className="text-xs text-muted sm:hidden">
-        Estoque disponível{" "}
-        <span className="font-semibold text-cream">
-          {formatCurrencyBRL(stats.stockValue)}
-        </span>
-        {stats.available > 0
-          ? ` · média ${formatCurrencyBRL(stats.stockValue / stats.available)}`
-          : ""}
-      </p>
-
-      <section className={`hidden sm:grid ${adminStatGrid}`}>
-        <StatCard label="Disponíveis" value={stats.available} />
-        <StatCard label="Reservados" value={stats.reserved} tone="warning" />
-        <StatCard label="Vendidos" value={stats.vendidosCount} />
-        <StatCard
-          label="Valor do estoque"
-          value={formatCurrencyBRL(stats.stockValue)}
-          hint={
-            stats.available > 0
-              ? tab === "estoque" && stats.withCostBasis > 0
-                ? `Média ${formatCurrencyBRL(stats.stockValue / stats.available)} · investido ${formatCurrencyBRL(stats.invested)}`
-                : `Média ${formatCurrencyBRL(stats.stockValue / stats.available)}`
-              : "Somente disponíveis"
-          }
-        />
-      </section>
 
       <VehiclesTable
         key={`${tab}:${q}:${status ?? ""}`}

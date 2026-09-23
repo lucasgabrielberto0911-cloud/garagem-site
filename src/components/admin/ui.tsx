@@ -36,18 +36,37 @@ export const mobileActionCell =
 export const listActionCell =
   `${mobileActionCell} lg:min-h-[44px] lg:w-auto lg:flex-row lg:gap-1.5 lg:px-3.5 lg:text-[11px]`;
 
+const HEADER_ACTIONS = {
+  stack:
+    "flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end [&>a]:w-full [&>button]:w-full sm:[&>a]:w-auto sm:[&>button]:w-auto",
+  row: "flex w-full items-center gap-2 sm:w-auto sm:justify-end [&>*]:min-w-0 [&>*]:flex-1 sm:[&>*]:flex-none",
+  inline: "flex shrink-0 items-center gap-2",
+} as const;
+
+/**
+ * `mobileActions`: "stack" empilha botões de largura total no celular;
+ * "row" põe lado a lado; "inline" deixa na mesma linha do título.
+ */
 export function AdminPageHeader({
   title,
   subtitle,
   actions,
+  mobileActions = "stack",
 }: {
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   actions?: ReactNode;
+  mobileActions?: keyof typeof HEADER_ACTIONS;
 }) {
   return (
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
+    <header
+      className={
+        mobileActions === "inline"
+          ? "flex items-end justify-between gap-3"
+          : "flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4"
+      }
+    >
+      <div className="min-w-0">
         <div className="mb-2 h-1 w-16 bg-brand-gradient" aria-hidden="true" />
         <h1 className="font-display text-xl font-bold tracking-tight text-cream sm:text-3xl">
           {title}
@@ -57,9 +76,7 @@ export function AdminPageHeader({
         ) : null}
       </div>
       {actions ? (
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end [&>a]:w-full [&>button]:w-full sm:[&>a]:w-auto sm:[&>button]:w-auto">
-          {actions}
-        </div>
+        <div className={HEADER_ACTIONS[mobileActions]}>{actions}</div>
       ) : null}
     </header>
   );
