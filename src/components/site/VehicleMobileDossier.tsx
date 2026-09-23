@@ -134,12 +134,14 @@ export function VehicleMobileSummary({
 function DossierBlock({
   title,
   children,
+  defaultOpen = false,
 }: {
   title: string;
   children: ReactNode;
+  defaultOpen?: boolean;
 }) {
   return (
-    <details className="group border-b border-white/10">
+    <details className="group border-b border-white/10" open={defaultOpen}>
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 font-display text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
         <span>{title}</span>
         <span className="text-base font-normal text-muted group-open:hidden" aria-hidden="true">
@@ -245,7 +247,7 @@ export function VehicleMobileBlocks({
       ) : null}
 
       {accessories.length > 0 ? (
-        <DossierBlock title="Itens e acessórios">
+        <DossierBlock title="Itens e acessórios" defaultOpen>
           <ul className="space-y-1.5 text-cream/90">
             {accessories.map((item) => (
               <li key={item} className="flex items-start gap-2">

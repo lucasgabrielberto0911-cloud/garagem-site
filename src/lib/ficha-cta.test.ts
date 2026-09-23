@@ -1,8 +1,15 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { VehicleMobileBlocks } from "@/components/site/VehicleMobileDossier";
+import { FavoritesProvider } from "@/lib/favorites";
+import { DEFAULT_GOOGLE_REVIEWS } from "@/lib/google-reviews";
+import { DEFAULT_VEHICLE_CONDITIONS } from "@/lib/vehicle-conditions";
+import type { VehicleSpecRow } from "@/lib/vehicle-specs";
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -112,6 +119,86 @@ test("dobra da ficha não cresce quando a barra do navegador volta", () => {
   assert.doesNotMatch(fold, /100dvh/);
   assert.match(page, /ficha-mobile-fold min-w-0/);
   assert.doesNotMatch(page, /lg:contents/);
+});
+
+test("itens e acessórios começa aberto; vistoria e ficha ficam fechadas", () => {
+  const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
+  const blocks = [...dossier.matchAll(/<DossierBlock\b([^>]*)>/g)].map(
+    (match) => match[1] ?? "",
+  );
+  const openBlocks = blocks.filter((attrs) => /\bdefaultOpen\b/.test(attrs));
+
+  assert.equal(openBlocks.length, 1);
+  assert.match(openBlocks[0] ?? "", /Itens e acessórios/);
+  assert.match(dossier, /<details\b[^>]*\bopen=\{defaultOpen\}/);
+
+  const vistoria = blocks.find((attrs) => attrs.includes("STORE_INSPECTION_LABEL"));
+  const ficha = blocks.find((attrs) => attrs.includes('"Ficha"'));
+  assert.ok(vistoria);
+  assert.doesNotMatch(vistoria ?? "", /\bdefaultOpen\b/);
+  assert.ok(ficha);
+  assert.doesNotMatch(ficha ?? "", /\bdefaultOpen\b/);
+});
+
+test("html mobile deixa a lista de acessórios visível e os outros blocos fechados", () => {
+  const specs: VehicleSpecRow[] = [
+    { label: "Ano", value: "2015/2016" },
+    { label: "KM", value: "103.000" },
+    { label: "Câmbio", value: "Automático" },
+    { label: "Disponível em", value: "Linhares" },
+    { label: "Combustível", value: "Flex" },
+  ];
+  const html = renderToStaticMarkup(
+    createElement(
+      FavoritesProvider,
+      null,
+      createElement(VehicleMobileBlocks, {
+        fullLabel: "Honda HR-V",
+        path: "/estoque/hrv",
+        sold: false,
+        price: 84900,
+        yearModel: 2016,
+        make: "Honda",
+        model: "HR-V",
+        vehicleId: "v1",
+        description: "Seminovo revisado.",
+        accessories: ["Ar-condicionado", "Direção elétrica"],
+        specs,
+        conditions: DEFAULT_VEHICLE_CONDITIONS,
+        google: DEFAULT_GOOGLE_REVIEWS,
+        prompt: "dúvida",
+        quickActions: {
+          contentPath: "/estoque/hrv",
+          video: "video",
+          finance: "finance",
+          trade: "trade",
+        },
+      }),
+    ),
+  );
+  const blocks = [...html.matchAll(/<details([^>]*)>([\s\S]*?)<\/details>/g)].map(
+    (match) => ({
+      open: /\sopen=""/.test(match[1] ?? ""),
+      title: match[2]?.match(/<span>([^<]+)<\/span>/)?.[1] ?? "",
+      body: match[2] ?? "",
+    }),
+  );
+
+  assert.deepEqual(
+    blocks.map((block) => [block.title, block.open]),
+    [
+      ["Vistoria da loja", false],
+      ["Ficha", false],
+      ["Sobre o veículo", false],
+      ["Itens e acessórios", true],
+      ["Garantia e condições", false],
+      ["Vídeo e propostas", false],
+      ["Atendimento", false],
+    ],
+  );
+  const accessories = blocks.find((block) => block.title === "Itens e acessórios");
+  assert.match(accessories?.body ?? "", /Ar-condicionado/);
+  assert.match(accessories?.body ?? "", /Direção elétrica/);
 });
 
 test("chip Ajuda no mobile ganha folga acima da nav fora da ficha", () => {
