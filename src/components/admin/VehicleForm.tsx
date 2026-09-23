@@ -25,6 +25,7 @@ import {
   ActionSheetLink,
 } from "@/components/admin/ActionSheet";
 import { FormSection } from "@/components/admin/FormSection";
+import { useUnsavedChangesWarning } from "@/components/admin/useUnsavedChangesWarning";
 import {
   IconCash,
   IconExternal,
@@ -170,9 +171,19 @@ export function VehicleForm({
     ),
   );
   const [photosUploading, setPhotosUploading] = useState(false);
-  const [accessories, setAccessories] = useState<string[]>(() =>
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChangesWarning(dirty);
+  const changePhotos: typeof setPhotos = (next) => {
+    setPhotos(next);
+    setDirty(true);
+  };
+  const [accessories, setAccessoriesState] = useState<string[]>(() =>
     normalizeAccessories(vehicle?.accessories ?? []),
   );
+  const setAccessories: typeof setAccessoriesState = (next) => {
+    setAccessoriesState(next);
+    setDirty(true);
+  };
   const [consigned, setConsigned] = useState(vehicle?.consigned ?? false);
   const [customAccessory, setCustomAccessory] = useState("");
   const [category, setCategory] = useState<VehicleCategory>(() =>
@@ -238,7 +249,10 @@ export function VehicleForm({
 
   useEffect(() => {
     if (state.error) toast.error(state.error);
-    if (state.success) toast.success("Veículo atualizado com sucesso.");
+    if (state.success) {
+      setDirty(false);
+      toast.success("Veículo atualizado com sucesso.");
+    }
   }, [state]);
 
   const [values, setValues] = useState({
@@ -287,6 +301,7 @@ export function VehicleForm({
 
   function changeCategory(next: VehicleCategory) {
     if (next === category) return;
+    setDirty(true);
     setCategory(next);
     setAccessories((current) => filterAccessoriesForCategory(current, next));
     const nextFuels = getFuels(next);
@@ -302,6 +317,7 @@ export function VehicleForm({
   }
 
   function applyFipeSelection(payload: FipeApplyPayload) {
+    setDirty(true);
     if (payload.brand) setBrand(payload.brand);
     if (payload.model) setModel(payload.model);
     if (payload.version) setVersion(payload.version);
@@ -478,6 +494,7 @@ export function VehicleForm({
       <form
         id="vehicle-form"
         noValidate
+        onChange={() => setDirty(true)}
         onSubmit={(event) => {
           // Dispara a action na mão: com <form action>, o React 19 reseta o
           // form ao terminar e o select de status volta a mostrar o valor
@@ -731,6 +748,7 @@ export function VehicleForm({
                       type="button"
                       aria-pressed={selected}
                       onClick={() => {
+                        if (option.value !== locationCity) setDirty(true);
                         setLocationCity(option.value);
                         setErrors((current) => {
                           const next = { ...current };
@@ -827,7 +845,7 @@ export function VehicleForm({
         >
           <VehiclePhotoManager
             photos={photos}
-            onChange={setPhotos}
+            onChange={changePhotos}
             onUploadingChange={setPhotosUploading}
             listing={{
               brand,
@@ -1276,6 +1294,15 @@ export function VehicleForm({
             >
               Voltar
             </Link>
+            {dirty && !saving ? (
+              <span
+                className="hidden text-xs text-brand-orange sm:inline"
+                aria-live="polite"
+                data-testid="unsaved-changes"
+              >
+                Alterações não salvas
+              </span>
+            ) : null}
 
             {mode === "edit" && vehicle ? (
               <>
