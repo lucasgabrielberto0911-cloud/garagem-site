@@ -70,7 +70,14 @@ test("ficha pública não oferece JPG e chama a checagem de vistoria da loja", (
   for (const file of [gallery, lightbox, page, dossier, filters]) {
     assert.doesNotMatch(file, /Baixar JPG/);
     assert.doesNotMatch(file, /publicPhotoJpgPath/);
+    assert.doesNotMatch(file, /versão leve/);
+    assert.doesNotMatch(file, /salva a versão/);
+    assert.doesNotMatch(file, /para Marketplace/);
   }
+  assert.doesNotMatch(gallery, /WebP/);
+  assert.doesNotMatch(gallery, /clique para ampliar/);
+  assert.doesNotMatch(gallery, /Toque na foto para ampliar/);
+  assert.doesNotMatch(lightbox, /Baixar esta foto/);
   assert.match(page, /STORE_INSPECTION_LABEL/);
   assert.match(dossier, /STORE_INSPECTION_LABEL/);
   assert.match(dossier, /vistoria da loja/i);

@@ -207,48 +207,39 @@ export function VehicleGallery({
       </div>
 
       {total > 1 ? (
-        <>
-          <div
-            ref={thumbsRef}
-            className="mt-2 hidden gap-2 overflow-x-auto overscroll-x-contain pb-1 scrollbar-hide [-webkit-overflow-scrolling:touch] lg:flex"
-            role="tablist"
-            aria-label="Miniaturas"
-          >
-            {photos.map((photo, index) => {
-              return (
-                <button
-                  key={photo.id}
-                  type="button"
-                  role="tab"
-                  onClick={() => goTo(index)}
-                  aria-label={`Ver foto ${index + 1} de ${total}`}
-                  aria-selected={index === active}
-                  className={`relative h-14 w-[4.5rem] shrink-0 overflow-hidden border bg-asphalt transition touch-manipulation sm:h-16 sm:w-24 ${
-                    index === active
-                      ? "border-brand"
-                      : "border-white/15 opacity-70 hover:opacity-100 active:opacity-100"
-                  }`}
-                >
-                  <VehicleImage
-                    src={galleryThumbSrc(photo)}
-                    alt={vehiclePhotoAlt(alt, index, total)}
-                    fill
-                    sizes="96px"
-                    className="object-cover"
-                  />
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-1.5 hidden text-xs text-muted lg:block">
-            Use as setas, o teclado ou as miniaturas · clique para ampliar
-          </p>
-        </>
-      ) : (
-        <p className="mt-1.5 hidden text-xs text-muted lg:block">
-          Clique na foto para ampliar
-        </p>
-      )}
+        <div
+          ref={thumbsRef}
+          className="mt-2 hidden gap-2 overflow-x-auto overscroll-x-contain pb-1 scrollbar-hide [-webkit-overflow-scrolling:touch] lg:flex"
+          role="tablist"
+          aria-label="Miniaturas"
+        >
+          {photos.map((photo, index) => {
+            return (
+              <button
+                key={photo.id}
+                type="button"
+                role="tab"
+                onClick={() => goTo(index)}
+                aria-label={`Ver foto ${index + 1} de ${total}`}
+                aria-selected={index === active}
+                className={`relative h-14 w-[4.5rem] shrink-0 overflow-hidden border bg-asphalt transition touch-manipulation sm:h-16 sm:w-24 ${
+                  index === active
+                    ? "border-brand"
+                    : "border-white/15 opacity-70 hover:opacity-100 active:opacity-100"
+                }`}
+              >
+                <VehicleImage
+                  src={galleryThumbSrc(photo)}
+                  alt={vehiclePhotoAlt(alt, index, total)}
+                  fill
+                  sizes="96px"
+                  className="object-cover"
+                />
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       {zoomOpen ? (
         <PhotoLightbox
