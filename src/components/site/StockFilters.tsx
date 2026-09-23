@@ -243,7 +243,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     });
   }
   if (current.laudo) {
-    activeFilters.push({ key: "laudo", label: "Com laudo" });
+    activeFilters.push({ key: "laudo", label: "Com vistoria da loja" });
   }
   if (current.minPrice) {
     activeFilters.push({
@@ -446,7 +446,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 }
                 className="h-4 w-4 accent-brand"
               />
-              Com laudo
+              Com vistoria da loja
             </label>
             <DesktopField label="Preço mínimo" htmlFor="desktop-preco-min">
               <select
@@ -860,7 +860,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   }
                   className="h-4 w-4 accent-brand"
                 />
-                Com laudo
+                Com vistoria da loja
               </label>
               <MobileField label="Preço mínimo">
                 <select

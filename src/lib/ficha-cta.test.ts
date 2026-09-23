@@ -59,6 +59,26 @@ test("header e float na ficha herdam o veículo; o rodapé genérico fica home",
   assert.doesNotMatch(footer, /usePageWhatsAppHref/);
 });
 
+test("ficha pública não oferece JPG e chama a checagem de vistoria da loja", () => {
+  const gallery = readSrc("components/site/VehicleGallery.tsx");
+  const lightbox = readSrc("components/site/PhotoLightbox.tsx");
+  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
+  const filters = readSrc("components/site/StockFilters.tsx");
+  const admin = readSrc("components/admin/VehiclePhotoManager.tsx");
+
+  for (const file of [gallery, lightbox, page, dossier, filters]) {
+    assert.doesNotMatch(file, /Baixar JPG/);
+    assert.doesNotMatch(file, /publicPhotoJpgPath/);
+  }
+  assert.match(page, /STORE_INSPECTION_LABEL/);
+  assert.match(dossier, /STORE_INSPECTION_LABEL/);
+  assert.match(dossier, /vistoria da loja/i);
+  assert.match(filters, /Com vistoria da loja/);
+  assert.doesNotMatch(filters, /Com laudo/);
+  assert.match(admin, /Baixar JPG em alta qualidade/);
+});
+
 test("chip Ajuda no mobile ganha folga acima da nav fora da ficha", () => {
   const css = readSrc("app/globals.css");
   assert.match(

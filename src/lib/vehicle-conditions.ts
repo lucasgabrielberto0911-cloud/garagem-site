@@ -36,8 +36,8 @@ export const DEFAULT_VEHICLE_CONDITIONS: VehicleConditionsContent = {
       text: "Combinamos a transferência pelo WhatsApp. Custos de Detran, despachante e deslocamento variam por caso — não há taxa fixa no site. Confirme com o consultor antes de fechar.",
     },
     {
-      label: "Vistoria",
-      text: "Todo seminovo passa por checagem de procedência e condição geral antes do anúncio. Laudo cautelar só aparece na ficha quando constar no campo Laudo.",
+      label: "Vistoria da loja",
+      text: "Antes de entrar no estoque, o seminovo passa pela vistoria da loja: checagem interna de procedência e condição geral. Não é documento oficial de inspeção.",
     },
     {
       label: "Entrega",

@@ -5,6 +5,10 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
+import {
+  VehicleMobileBlocks,
+  VehicleMobileSummary,
+} from "@/components/site/VehicleMobileDossier";
 import { VehicleConditions } from "@/components/site/VehicleConditions";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { StockBackLink } from "@/components/site/StockBackLink";
@@ -19,7 +23,11 @@ import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { JsonLd } from "@/components/JsonLd";
 import { formatCurrencyBRL, formatBrandName, formatModelName, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
-import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
+import {
+  buildVehiclePublicSpecs,
+  STORE_INSPECTION_LABEL,
+} from "@/lib/vehicle-specs";
+import { vehicleLocationLabel } from "@/lib/vehicle-location";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
 import { priceBandHref } from "@/lib/related-vehicles";
@@ -225,7 +233,7 @@ export default async function VehicleDetailPage({
   return (
     <div
       data-ficha-page=""
-      className="py-6 pb-sticky-bar-safe sm:py-8 lg:py-10 lg:pb-10"
+      className="pb-sticky-bar-safe lg:py-10 lg:pb-10"
     >
       {!sold ? (
         <VehicleViewContent
@@ -288,35 +296,65 @@ export default async function VehicleDetailPage({
           </div>
         ) : null}
 
-        <Suspense fallback={null}>
-          <StockBackLink />
-        </Suspense>
-        <nav
-          aria-label="Você está aqui"
-          className="text-xs text-muted sm:text-center"
-        >
-          <Link href="/" className="transition hover:text-cream">
-            Início
-          </Link>
-          <span className="mx-2">/</span>
-          <Link href="/estoque" className="transition hover:text-cream">
-            Estoque
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-cream">{title}</span>
-        </nav>
+        <div className="hidden lg:block">
+          <Suspense fallback={null}>
+            <StockBackLink />
+          </Suspense>
+          <nav
+            aria-label="Você está aqui"
+            className="text-xs text-muted sm:text-center"
+          >
+            <Link href="/" className="transition hover:text-cream">
+              Início
+            </Link>
+            <span className="mx-2">/</span>
+            <Link href="/estoque" className="transition hover:text-cream">
+              Estoque
+            </Link>
+            <span className="mx-2">/</span>
+            <span className="text-cream">{title}</span>
+          </nav>
+        </div>
 
-        {/* Mobile: galeria → ficha → detalhes. Desktop: galeria+detalhes | ficha. */}
-        <div className="mt-4 grid gap-5 lg:mt-5 lg:grid-cols-[1.35fr_0.9fr] lg:items-start lg:gap-8">
-          <div className="order-1 min-w-0">
-            <VehicleGallery
-              photos={vehicle.photos}
-              alt={galleryAlt}
-              vehicleId={vehicle.id}
-            />
+        {/* Mobile: primeira dobra. Desktop: galeria | ficha. */}
+        <div className="lg:mt-5 lg:grid lg:grid-cols-[1.35fr_0.9fr] lg:items-start lg:gap-8">
+          <div className="ficha-mobile-fold lg:contents">
+            <div className="ficha-mobile-photo relative min-w-0 lg:order-1">
+              <div className="absolute left-3 top-3 z-[3] lg:hidden">
+                <Suspense fallback={null}>
+                  <StockBackLink fallbackHref="/estoque" variant="overlay" />
+                </Suspense>
+              </div>
+              <VehicleGallery photos={vehicle.photos} alt={galleryAlt} />
+            </div>
+            <div className="shrink-0 lg:hidden">
+              <VehicleMobileSummary
+                title={title}
+                version={display.version}
+                price={vehicle.price}
+                sold={sold}
+                year={vehicle.year}
+                yearModel={vehicle.yearModel}
+                km={vehicle.km}
+                transmission={display.transmission}
+                city={vehicleLocationLabel(vehicle.locationCity)}
+                soldHref={related.length > 0 ? "#mesma-faixa" : "/estoque"}
+                soldLabel={
+                  related.length > 0 ? "Ver na mesma faixa" : "Ver estoque disponível"
+                }
+                whatsapp={{
+                  contentId: vehicle.id,
+                  contentName: fullLabel,
+                  make: formatBrandName(vehicle.brand),
+                  model: formatModelName(vehicle.model),
+                  message: whatsapp.interest,
+                  trackingContent: fichaTrack.content,
+                }}
+              />
+            </div>
           </div>
 
-          <aside className="order-2 lg:sticky lg:top-24 lg:row-span-2">
+          <aside className="order-2 hidden lg:sticky lg:top-24 lg:row-span-2 lg:block">
             <div className="space-y-4 border border-white/10 bg-ink p-4 sm:p-6">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-display text-[11px] font-semibold uppercase tracking-wider text-brand">
@@ -333,7 +371,7 @@ export default async function VehicleDetailPage({
                 ) : null}
                 {!sold && vehicle.inspection ? (
                   <span className="border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
-                    {vehicle.inspection}
+                    {STORE_INSPECTION_LABEL}
                   </span>
                 ) : null}
                 {!sold ? (
@@ -394,7 +432,7 @@ export default async function VehicleDetailPage({
                     <dt className="text-[11px] uppercase tracking-wider text-muted">
                       {spec.label}
                     </dt>
-                    {/* Sem truncate: valores como "Cautelar aprovado" precisam aparecer inteiros. */}
+                    {/* Sem truncate: valores longos da ficha precisam aparecer inteiros. */}
                     <dd
                       className={`mt-0.5 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
                         spec.empty
@@ -436,19 +474,6 @@ export default async function VehicleDetailPage({
                       Tenho interesse
                     </WhatsAppButton>
                   </VehicleLeadHit>
-
-                  {!sold ? (
-                    <FavoriteButton
-                      vehicleId={vehicle.id}
-                      label={fullLabel}
-                      value={vehicle.price}
-                      make={formatBrandName(vehicle.brand)}
-                      model={formatModelName(vehicle.model)}
-                      year={vehicle.yearModel}
-                      variant="full"
-                      className="w-full lg:hidden"
-                    />
-                  ) : null}
 
                   <VehicleQuickActions
                     contentId={vehicle.id}
@@ -510,7 +535,7 @@ export default async function VehicleDetailPage({
           </aside>
 
           {hasDetails ? (
-            <section className="order-3 border-t border-white/10 pt-5 lg:col-start-1">
+            <section className="order-3 hidden border-t border-white/10 pt-5 lg:col-start-1 lg:block">
               {vehicle.description ? (
                 <div>
                   <h2 className="font-display text-base font-semibold text-cream">
@@ -546,6 +571,42 @@ export default async function VehicleDetailPage({
             </section>
           ) : null}
         </div>
+
+        <VehicleMobileBlocks
+          fullLabel={fullLabel}
+          path={path}
+          sold={sold}
+          price={vehicle.price}
+          yearModel={vehicle.yearModel}
+          make={formatBrandName(vehicle.brand)}
+          model={formatModelName(vehicle.model)}
+          vehicleId={vehicle.id}
+          description={vehicle.description}
+          accessories={accessories}
+          specs={specs}
+          inspection={vehicle.inspection}
+          conditions={conditions}
+          listedLine={
+            [
+              listedAgo,
+              vehicle.updatedAt ? formatUpdatedAt(vehicle.updatedAt) : "",
+            ]
+              .filter(Boolean)
+              .join(" · ") || undefined
+          }
+          google={google}
+          prompt={`Tenho dúvida sobre o ${title}`}
+          quickActions={
+            sold
+              ? undefined
+              : {
+                  contentPath: path,
+                  video: whatsapp.video,
+                  finance: whatsapp.finance,
+                  trade: whatsapp.trade,
+                }
+          }
+        />
 
         {related.length > 0 ? (
           <section

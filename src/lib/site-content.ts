@@ -89,6 +89,25 @@ function fallbackIfPlaceholder(value: string, fallback: string) {
   return trimmed;
 }
 
+/** Texto antigo do painel que apresentava a checagem interna como documento oficial. */
+function soundsLikeOfficialReport(text: string) {
+  return /laudo|cautelar/i.test(text);
+}
+
+function conditionFallback(item: ConditionItem) {
+  const label = item.label.toLocaleLowerCase("pt-BR");
+  const direct = DEFAULT_VEHICLE_CONDITIONS.items.find(
+    (defaultItem) => defaultItem.label.toLocaleLowerCase("pt-BR") === label,
+  );
+  if (direct) return direct;
+  if (label === "vistoria" || soundsLikeOfficialReport(item.label)) {
+    return DEFAULT_VEHICLE_CONDITIONS.items.find(
+      (defaultItem) => defaultItem.label === "Vistoria da loja",
+    );
+  }
+  return undefined;
+}
+
 function mergeConditions(
   title: string | null | undefined,
   intro: string | null | undefined,
@@ -96,12 +115,20 @@ function mergeConditions(
 ): VehicleConditionsContent {
   const items = parseConditionItems(raw);
   const mergedItems = (items ?? DEFAULT_VEHICLE_CONDITIONS.items).map((item) => {
-    const fallback = DEFAULT_VEHICLE_CONDITIONS.items.find(
-      (defaultItem) =>
-        defaultItem.label.toLocaleLowerCase("pt-BR") ===
-        item.label.toLocaleLowerCase("pt-BR"),
-    );
+    const fallback = conditionFallback(item);
     if (!fallback || isPlaceholderCopy(fallback.text)) return item;
+    const official =
+      soundsLikeOfficialReport(item.text) ||
+      soundsLikeOfficialReport(item.label);
+    if (official && fallback.label === "Vistoria da loja") {
+      return { label: fallback.label, text: fallback.text };
+    }
+    if (item.label.toLocaleLowerCase("pt-BR") === "vistoria") {
+      return {
+        label: fallback.label,
+        text: fallbackIfPlaceholder(item.text, fallback.text),
+      };
+    }
     return {
       ...item,
       text: fallbackIfPlaceholder(item.text, fallback.text),
@@ -118,10 +145,17 @@ function mergeConditions(
 /** Se o painel ainda tiver PREENCHER, usa o texto-base já preenchido (ex.: garantia). */
 function mergeFaqItems(items: FaqItem[]): FaqItem[] {
   return items.map((item) => {
-    if (isFaqAnswerReady(item.answer)) return item;
     const fallback = FAQ_ITEMS.find(
       (defaultItem) => defaultItem.question === item.question,
     );
+    if (
+      fallback &&
+      isFaqAnswerReady(fallback.answer) &&
+      soundsLikeOfficialReport(item.answer)
+    ) {
+      return { ...item, answer: fallback.answer };
+    }
+    if (isFaqAnswerReady(item.answer)) return item;
     if (fallback && isFaqAnswerReady(fallback.answer)) {
       return { ...item, answer: fallback.answer };
     }
@@ -191,7 +225,7 @@ const loadSiteContentCached = unstable_cache(
       return EMPTY_SITE_CONTENT;
     }
   },
-  ["public-site-content-v3"],
+  ["public-site-content-v4"],
   { revalidate: 120, tags: ["site-settings"] },
 );
 

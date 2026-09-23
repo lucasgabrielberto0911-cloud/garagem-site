@@ -456,9 +456,9 @@ export function VehiclePhotoManager({
             Em <strong>Borrar placa</strong>, marque o retângulo e salve o
             anúncio. <strong>Alta</strong> baixa o JPG na melhor qualidade
             guardada: fotos novas usam o original privado (até 3840px); o
-            estoque antigo usa a galeria inteira, sem reduzir de novo. O
-            visitante só baixa a versão leve, e a página continua em WebP.
-            Segurar a foto também baixa o JPG em alta.
+            estoque antigo usa a galeria inteira, sem reduzir de novo. A página
+            pública continua em WebP e não oferece download. Segurar a foto
+            aqui também baixa o JPG em alta.
           </p>
           {blurredIds.size > 0 && !blurring ? (
             <p className="mt-3 border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-sm text-cream">

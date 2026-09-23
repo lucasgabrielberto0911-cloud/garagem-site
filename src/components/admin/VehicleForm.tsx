@@ -659,14 +659,14 @@ export function VehicleForm({
               />
             </Field>
             <Field
-              label="Laudo / vistoria"
-              hint="Ex.: Cautelar aprovado"
+              label="Vistoria da loja"
+              hint="Se preenchido, a ficha mostra a checagem interna da loja. Não é documento oficial."
               className="sm:col-span-2 lg:col-span-1"
             >
               <input
                 name="inspection"
                 defaultValue={vehicle?.inspection ?? ""}
-                placeholder="Ex.: Laudo cautelar aprovado"
+                placeholder="Ex.: Concluída"
                 className={inputClass}
               />
             </Field>

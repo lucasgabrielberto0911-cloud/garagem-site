@@ -78,7 +78,7 @@ export function formatStockWaitlistQuery(input: StockWaitlistFilters) {
 
   const accessory = compact(input.accessory);
   if (accessory) bits.push(accessory);
-  if (compact(input.laudo)) bits.push("com laudo");
+  if (compact(input.laudo)) bits.push("com vistoria da loja");
 
   return bits.join(", ");
 }

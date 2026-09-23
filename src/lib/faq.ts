@@ -138,7 +138,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: "compra",
     question: "O veículo já passou por vistoria?",
     answer:
-      "Sim: procedência e condição geral são checadas antes do anúncio. Laudo cautelar só entra na ficha quando estiver informado no campo Laudo. Se quiser conferir um ponto específico, peça vídeo ou visita no WhatsApp.",
+      "Sim. Antes de entrar no estoque, o veículo passa pela vistoria da loja: uma checagem interna de procedência e condição geral. Não emitimos documento oficial de inspeção. Se quiser conferir um ponto específico, peça vídeo ou visita no WhatsApp.",
   },
   {
     category: "documentacao",

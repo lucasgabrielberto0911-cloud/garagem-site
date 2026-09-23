@@ -820,6 +820,53 @@ textarea:-webkit-autofill:focus {
   touch-action: pan-x;
 }
 
+/*
+ * Primeira dobra da ficha no celular: foto + dados + WhatsApp
+ * cabem na altura útil (abaixo do header, acima do fim da tela).
+ */
+@media (max-width: 1023px) {
+  .ficha-mobile-fold {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px));
+    margin-left: -1rem;
+    margin-right: -1rem;
+    width: calc(100% + 2rem);
+  }
+
+  .ficha-mobile-photo {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .ficha-mobile-photo .gallery-root {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  .ficha-mobile-photo .gallery-frame {
+    aspect-ratio: auto;
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  .ficha-mobile-sheet {
+    flex: 0 0 auto;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .ficha-mobile-fold {
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+    width: calc(100% + 3rem);
+  }
+}
+
 /* === HERO VERMELHO / PRETO ===
  * Somente gradientes e transforms: sem imagem pesada e sem JS por frame.
  */

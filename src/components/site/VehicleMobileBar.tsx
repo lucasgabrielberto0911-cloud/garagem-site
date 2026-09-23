@@ -67,6 +67,7 @@ export function VehicleMobileBar({
   const isMoto = category === "moto";
   const moreId = useId();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [pinned, setPinned] = useState(false);
   const track = fichaWhatsAppTracking({ id: vehicleId, path: vehiclePath });
   const href = whatsappUrl(
     message ?? WHATSAPP_MESSAGES.vehicle(contentName, isMoto),
@@ -88,6 +89,20 @@ export function VehicleMobileBar({
   ].filter(Boolean) as Array<{ href: string; label: string; tracking: string }>;
 
   useEffect(() => {
+    const foldCta = document.getElementById("ficha-whatsapp");
+    if (!foldCta) {
+      setPinned(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setPinned(!entry.isIntersecting),
+      { threshold: 0.45 },
+    );
+    observer.observe(foldCta);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     if (!moreOpen) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") setMoreOpen(false);
@@ -99,7 +114,12 @@ export function VehicleMobileBar({
   return (
     <div
       data-vehicle-mobile-bar=""
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt/95 px-3 pt-2 backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-safe pr-safe lg:hidden"
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt/95 px-3 pt-2 backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-safe pr-safe transition-transform duration-200 lg:hidden ${
+        pinned
+          ? "translate-y-0"
+          : "pointer-events-none translate-y-full"
+      }`}
+      inert={pinned ? undefined : true}
     >
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center gap-3">
