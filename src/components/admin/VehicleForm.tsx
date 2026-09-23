@@ -45,6 +45,11 @@ import {
   formatPlateDisplay,
 } from "@/lib/format";
 import { plateEndFromPlate } from "@/lib/plate-lookup";
+import {
+  CONSIGNED_HINT,
+  CONSIGNED_LABEL,
+  CONSIGNED_NO_COSTS_NOTE,
+} from "@/lib/vehicle-ops";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
   suggestedTransmission,
@@ -168,6 +173,7 @@ export function VehicleForm({
   const [accessories, setAccessories] = useState<string[]>(() =>
     normalizeAccessories(vehicle?.accessories ?? []),
   );
+  const [consigned, setConsigned] = useState(vehicle?.consigned ?? false);
   const [customAccessory, setCustomAccessory] = useState("");
   const [category, setCategory] = useState<VehicleCategory>(() =>
     parseVehicleCategory(vehicle?.category),
@@ -616,6 +622,7 @@ export function VehicleForm({
             values.price ? `R$ ${values.price}` : "Sem preço",
             statusLabel,
             cityLabel,
+            consigned ? CONSIGNED_LABEL : "",
           ]
             .filter(Boolean)
             .join(" · ")}
@@ -773,6 +780,30 @@ export function VehicleForm({
               </label>
               <p className="mt-1.5 text-xs leading-relaxed text-muted">
                 Até 8 na home, só disponível. A home não escolhe carro sozinha.
+              </p>
+            </div>
+
+            <div className="col-span-2 sm:col-span-1">
+              <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
+                Interno · não aparece no site
+              </span>
+              <label
+                className={`flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 border px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50 ${
+                  consigned ? "border-sky-400/50 bg-sky-400/10" : "border-white/10 bg-ink"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  name="consigned"
+                  checked={consigned}
+                  onChange={(event) => setConsigned(event.target.checked)}
+                  className="h-5 w-5 accent-brand"
+                  data-testid="consigned-checkbox"
+                />
+                {CONSIGNED_LABEL}
+              </label>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                {CONSIGNED_HINT}
               </p>
             </div>
           </div>
@@ -1166,31 +1197,44 @@ export function VehicleForm({
         {mode === "create" ? (
           <FormSection
             {...sectionProps("operacao")}
-            summary="Opcional · não aparece no site"
+            summary={
+              consigned
+                ? `${CONSIGNED_LABEL} · sem compra nem custos`
+                : "Opcional · não aparece no site"
+            }
             action={
               <span className="text-[11px] text-muted">Não aparece no site</span>
             }
           >
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="Preço de compra"
-                hint="Opcional. Custos extras entram depois, na aba Operação."
-              >
-                <input
-                  name="purchasePrice"
-                  inputMode="numeric"
-                  value={purchase}
-                  onChange={(event) =>
-                    setPurchase(
-                      formatNumberBR(
-                        Number(event.target.value.replace(/\D/g, "") || 0),
-                      ),
-                    )
-                  }
-                  placeholder="0"
-                  className={inputClass}
-                />
-              </Field>
+              {consigned ? (
+                <p
+                  className="border border-sky-400/40 bg-sky-400/10 px-3 py-2.5 text-sm leading-relaxed text-cream"
+                  data-testid="consigned-no-costs-note"
+                >
+                  {CONSIGNED_NO_COSTS_NOTE}
+                </p>
+              ) : (
+                <Field
+                  label="Preço de compra"
+                  hint="Opcional. Custos extras entram depois, na aba Operação."
+                >
+                  <input
+                    name="purchasePrice"
+                    inputMode="numeric"
+                    value={purchase}
+                    onChange={(event) =>
+                      setPurchase(
+                        formatNumberBR(
+                          Number(event.target.value.replace(/\D/g, "") || 0),
+                        ),
+                      )
+                    }
+                    placeholder="0"
+                    className={inputClass}
+                  />
+                </Field>
+              )}
               <div className="grid gap-2 sm:grid-cols-1">
                 <label className="flex min-h-[44px] items-center gap-2 text-sm text-cream">
                   <input type="checkbox" name="inStoreName" className="h-4 w-4 accent-brand" />

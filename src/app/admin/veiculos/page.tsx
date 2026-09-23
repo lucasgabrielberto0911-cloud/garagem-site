@@ -49,9 +49,14 @@ export default async function VehiclesPage({
   const stockSummary = (
     <>
       Estoque {formatCurrencyBRL(stats.stockValue)}
-      {stats.available > 0
-        ? ` · média ${formatCurrencyBRL(stats.stockValue / stats.available)}`
+      {stats.ownedAvailable > 0
+        ? ` · média ${formatCurrencyBRL(stats.stockValue / stats.ownedAvailable)}`
         : ""}
+      {stats.consignedAvailable > 0 ? (
+        <span className="hidden sm:inline">
+          {` · ${stats.consignedAvailable} consignado(s) fora`}
+        </span>
+      ) : null}
       {stats.withCostBasis > 0 ? (
         <span className="hidden sm:inline">
           {` · investido ${formatCurrencyBRL(stats.invested)}`}

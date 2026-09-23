@@ -9,6 +9,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehicleLocationLabel } from "@/lib/vehicle-location";
+import { CONSIGNED_LABEL } from "@/lib/vehicle-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ export default async function EditVehiclePage({
               {vehicleLocationLabel(vehicle.locationCity) || "Linhares"}
             </Badge>
             {vehicle.featured ? <Badge tone="warning">Destaque</Badge> : null}
+            {vehicle.consigned ? <Badge tone="info">{CONSIGNED_LABEL}</Badge> : null}
           </>
         }
       />
@@ -93,7 +95,7 @@ export default async function EditVehiclePage({
         <TabLink
           href={`/admin/veiculos/${vehicle.id}?view=operacao`}
           active={view === "operacao"}
-          mark={!vehicle.purchasePrice}
+          mark={!vehicle.purchasePrice && !vehicle.consigned}
         >
           Operação
         </TabLink>
@@ -106,6 +108,7 @@ export default async function EditVehiclePage({
             price: vehicle.price,
             salePrice: vehicle.sale?.salePrice ?? null,
             purchasePrice: vehicle.purchasePrice,
+            consigned: vehicle.consigned,
             inStoreName: vehicle.inStoreName,
             hasSpareKey: vehicle.hasSpareKey,
             hasManual: vehicle.hasManual,

@@ -62,6 +62,12 @@ model Vehicle {
   hasManual    Boolean  @default(false)
   /** Preço de aquisição — nunca exibir no site. */
   purchasePrice Float?
+  /**
+   * Carro de terceiro vendido pela loja (uso interno do admin — nunca exibir
+   * no site). Fica na vitrine normalmente, mas compra e custos não entram no
+   * valor do estoque nem no lucro.
+   */
+  consigned    Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   photos       Photo[]

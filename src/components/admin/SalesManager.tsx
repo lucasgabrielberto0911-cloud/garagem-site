@@ -25,6 +25,7 @@ import {
   formatPlateInput,
 } from "@/lib/format";
 import {
+  CONSIGNED_LABEL,
   expectedMargin,
   hasCostBasis,
   investedTotal,
@@ -54,6 +55,7 @@ export type SaleRow = {
     plate: string | null;
     historical: boolean;
     purchasePrice: number | null;
+    consigned: boolean;
     costs: Array<{ amount: number }>;
   };
   customer: { id: string; name: string; phone: string } | null;
@@ -68,6 +70,7 @@ export type SellableVehicle = {
   price: number;
   status: string;
   purchasePrice: number | null;
+  consigned: boolean;
   costs: Array<{ amount: number }>;
 };
 
@@ -81,13 +84,14 @@ function formatDate(date: Date) {
 
 function saleFinance(
   salePrice: number,
-  purchasePrice: number | null,
-  costs: Array<{ amount: number }>,
+  vehicle: Pick<SaleRow["vehicle"], "purchasePrice" | "costs" | "consigned">,
 ) {
-  if (!hasCostBasis(purchasePrice, costs)) return null;
-  const margin = expectedMargin(salePrice, purchasePrice, costs);
+  const { purchasePrice, costs } = vehicle;
+  const options = { consigned: vehicle.consigned };
+  if (!hasCostBasis(purchasePrice, costs, options)) return null;
+  const margin = expectedMargin(salePrice, purchasePrice, costs, options);
   return {
-    invested: investedTotal(purchasePrice, costs),
+    invested: investedTotal(purchasePrice, costs, options),
     margin,
   };
 }
@@ -140,16 +144,12 @@ function exportSalesCsv(sales: SaleRow[]) {
     sale.customer?.phone ? formatPhoneBR(sale.customer.phone) : "",
     sale.paymentMethod,
     String(sale.salePrice),
-    hasCostBasis(sale.vehicle.purchasePrice, sale.vehicle.costs)
-      ? String(
-          expectedMargin(
-            sale.salePrice,
-            sale.vehicle.purchasePrice,
-            sale.vehicle.costs,
-          ),
-        )
-      : "",
-    sale.vehicle.historical ? "Histórica" : "Estoque",
+    String(saleFinance(sale.salePrice, sale.vehicle)?.margin ?? ""),
+    sale.vehicle.historical
+      ? "Histórica"
+      : sale.vehicle.consigned
+        ? CONSIGNED_LABEL
+        : "Estoque",
     (sale.notes ?? "").replace(/\s+/g, " "),
   ]);
 
@@ -288,18 +288,10 @@ export function SalesManager({
   const liveSalePrice = Number(price.replace(/\D/g, "")) || 0;
   const liveFinance = !isHistorical
     ? selectedVehicle
-      ? saleFinance(
-          liveSalePrice || selectedVehicle.price,
-          selectedVehicle.purchasePrice,
-          selectedVehicle.costs,
-        )
+      ? saleFinance(liveSalePrice || selectedVehicle.price, selectedVehicle)
       : null
     : editingSale
-      ? saleFinance(
-          liveSalePrice || editingSale.salePrice,
-          editingSale.vehicle.purchasePrice,
-          editingSale.vehicle.costs,
-        )
+      ? saleFinance(liveSalePrice || editingSale.salePrice, editingSale.vehicle)
       : null;
 
   async function loadVehicleOptions(query: string) {
@@ -365,6 +357,7 @@ export function SalesManager({
             price: sale.salePrice,
             status: "vendido",
             purchasePrice: sale.vehicle.purchasePrice,
+            consigned: sale.vehicle.consigned,
             costs: sale.vehicle.costs ?? [],
           },
     );
@@ -566,7 +559,9 @@ export function SalesManager({
                 hint={
                   liveFinance
                     ? `Investido ${formatCurrencyBRL(liveFinance.invested)} · ${liveFinance.margin >= 0 ? "lucro" : "prejuízo"} ${formatCurrencyBRL(liveFinance.margin)}`
-                    : isHistorical
+                    : !isHistorical && selectedVehicle?.consigned
+                      ? `${CONSIGNED_LABEL}: sem custo da loja, lucro N/A.`
+                      : isHistorical
                       ? "Valor pelo qual o veículo foi vendido."
                       : "Preenchido com o preço do anúncio; ajuste se houve desconto."
                 }
@@ -822,11 +817,7 @@ export function SalesManager({
           <ul className="space-y-3 lg:hidden">
             {filteredSales.map((sale) => {
               const wa = customerPhoneDigits(sale.customer);
-              const finance = saleFinance(
-                sale.salePrice,
-                sale.vehicle.purchasePrice,
-                sale.vehicle.costs,
-              );
+              const finance = saleFinance(sale.salePrice, sale.vehicle);
               return (
                 <li key={sale.id} className="overflow-hidden border border-white/10 bg-ink/50">
                   <div className="flex items-start justify-between gap-3 p-4 pb-3">
@@ -884,6 +875,9 @@ export function SalesManager({
                       <Badge tone="success">{sale.paymentMethod}</Badge>
                       {sale.vehicle.historical ? (
                         <Badge tone="neutral">Histórica</Badge>
+                      ) : null}
+                      {sale.vehicle.consigned ? (
+                        <Badge tone="info">{CONSIGNED_LABEL}</Badge>
                       ) : null}
                     </div>
                   </div>
@@ -945,11 +939,7 @@ export function SalesManager({
               <tbody>
                 {filteredSales.map((sale) => {
                   const wa = customerPhoneDigits(sale.customer);
-                  const finance = saleFinance(
-                    sale.salePrice,
-                    sale.vehicle.purchasePrice,
-                    sale.vehicle.costs,
-                  );
+                  const finance = saleFinance(sale.salePrice, sale.vehicle);
                   return (
                     <tr
                       key={sale.id}
@@ -979,6 +969,7 @@ export function SalesManager({
                             ? ` · ${formatPlateDisplay(sale.vehicle.plate)}`
                             : ""}
                           {sale.vehicle.historical ? " · Histórica" : ""}
+                          {sale.vehicle.consigned ? ` · ${CONSIGNED_LABEL}` : ""}
                         </p>
                       </td>
                       <td className="px-4 py-3">
