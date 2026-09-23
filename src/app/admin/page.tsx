@@ -130,10 +130,11 @@ export default async function AdminDashboardPage() {
   ];
 
   return (
-    <div className="space-y-5 sm:space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       <AdminPageHeader
         title="Dashboard"
-        subtitle={`Olá, ${session.email}. Aqui está o resumo da loja hoje.`}
+        subtitle="Resumo da loja hoje."
+        mobileActions="row"
         actions={
           <>
             <Link href="/admin/veiculos/novo" className={btn.primary}>
@@ -141,7 +142,8 @@ export default async function AdminDashboardPage() {
               Novo veículo
             </Link>
             <Link href="/admin/vendas" className={btn.outline}>
-              Registrar venda
+              <span className="sm:hidden">Venda</span>
+              <span className="hidden sm:inline">Registrar venda</span>
             </Link>
           </>
         }
@@ -264,8 +266,8 @@ export default async function AdminDashboardPage() {
               </ul>
               {leads.recent.length > 0 ? (
                 <ul className="mt-3 divide-y divide-white/10 border-t border-white/10">
-                  {leads.recent.map((lead) => (
-                    <li key={lead.id}>
+                  {leads.recent.map((lead, index) => (
+                    <li key={lead.id} className={index >= 3 ? "hidden sm:block" : undefined}>
                       <Link
                         href="/admin/leads"
                         className="flex min-h-[56px] items-center justify-between gap-3 py-3 touch-manipulation last:pb-0"
@@ -294,6 +296,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       <Card
+        className="hidden sm:block"
         title="Últimos veículos cadastrados"
         action={
           <Link
@@ -370,12 +373,12 @@ function AlertRow({ alert }: { alert: DashboardAlert }) {
     <li>
       <Link
         href={alert.href}
-        className="flex min-h-[52px] gap-3 border border-white/10 px-3 py-2.5 transition touch-manipulation hover:border-brand/50"
+        className="flex min-h-[48px] items-center gap-3 border border-white/10 px-3 py-2.5 transition touch-manipulation hover:border-brand/50 sm:items-start"
       >
         <span className={`mt-0.5 shrink-0 ${color}`}>{ALERT_ICON[alert.icon]}</span>
         <span className="min-w-0">
           <span className="block text-sm font-medium text-cream">{alert.title}</span>
-          <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+          <span className="mt-0.5 hidden text-xs leading-relaxed text-muted sm:block">
             {alert.description}
           </span>
         </span>
