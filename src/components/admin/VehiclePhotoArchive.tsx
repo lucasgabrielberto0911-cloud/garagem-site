@@ -81,8 +81,8 @@ export function VehiclePhotoArchive({
       ) : (
         <div className="space-y-4">
           <p className="text-sm leading-relaxed text-muted">
-            O site público continua leve: WebP na página e JPG da galeria para
-            o visitante. Aqui, Alta e Baixar todas usam a melhor foto guardada
+            O site público mostra as fotos em WebP e não oferece download.
+            Aqui, Alta e Baixar todas usam a melhor foto guardada
             — master privado até 3840px nas fotos novas; no estoque antigo, a
             galeria inteira em JPEG 93, sem reduzir de novo.
           </p>

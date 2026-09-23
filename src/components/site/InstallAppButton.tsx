@@ -68,7 +68,7 @@ async function installFromControl() {
   return outcome;
 }
 
-/** Desktop: só aparece quando o Chrome oferece instalação. Sem banner. */
+/** Celular: só aparece quando o Chrome oferece instalação. No desktop some. */
 export function InstallAppHeaderButton() {
   const kind = useInstallOffer();
   if (kind !== "android") return null;
@@ -77,10 +77,11 @@ export function InstallAppHeaderButton() {
     <button
       type="button"
       onClick={() => void installFromControl()}
-      className="hidden h-11 items-center gap-2 whitespace-nowrap border border-white/15 px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand lg:inline-flex"
+      aria-label="Instalar app"
+      className="inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 border border-white/15 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand touch-manipulation sm:w-auto sm:px-3 lg:hidden"
     >
       <IconDownload className="h-4 w-4" />
-      Instalar app
+      <span className="hidden sm:inline">Instalar app</span>
     </button>
   );
 }

@@ -59,6 +59,61 @@ test("header e float na ficha herdam o veículo; o rodapé genérico fica home",
   assert.doesNotMatch(footer, /usePageWhatsAppHref/);
 });
 
+test("ficha pública não oferece JPG e chama a checagem de vistoria da loja", () => {
+  const gallery = readSrc("components/site/VehicleGallery.tsx");
+  const lightbox = readSrc("components/site/PhotoLightbox.tsx");
+  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
+  const filters = readSrc("components/site/StockFilters.tsx");
+  const admin = readSrc("components/admin/VehiclePhotoManager.tsx");
+  const bar = readSrc("components/site/VehicleMobileBar.tsx");
+
+  for (const file of [gallery, lightbox, page, dossier, filters]) {
+    assert.doesNotMatch(file, /Baixar JPG/);
+    assert.doesNotMatch(file, /publicPhotoJpgPath/);
+    assert.doesNotMatch(file, /versão leve/);
+    assert.doesNotMatch(file, /salva a versão/);
+    assert.doesNotMatch(file, /para Marketplace/);
+  }
+  assert.doesNotMatch(gallery, /WebP/);
+  assert.doesNotMatch(gallery, /clique para ampliar/);
+  assert.doesNotMatch(gallery, /Toque na foto para ampliar/);
+  assert.doesNotMatch(lightbox, /Baixar esta foto/);
+  assert.doesNotMatch(lightbox, /toque duas vezes para ampliar/);
+  assert.doesNotMatch(lightbox, /Deslize ou use as setas/);
+  assert.doesNotMatch(dossier, /tone="whatsapp"/);
+  assert.doesNotMatch(dossier, /whatsapp-btn/);
+  assert.doesNotMatch(bar, /whatsapp-btn/);
+  assert.match(bar, /bg-brand/);
+  assert.match(dossier, /STORE_INSPECTION_LABEL/);
+  assert.match(dossier, /vistoria da loja/i);
+  assert.match(filters, /Com vistoria da loja/);
+  assert.doesNotMatch(filters, /Com laudo/);
+  assert.match(admin, /Baixar JPG em alta qualidade/);
+});
+
+test("primeira foto da galeria é a única com prioridade alta", () => {
+  const gallery = readSrc("components/site/VehicleGallery.tsx");
+  const header = readSrc("components/site/SiteHeader.tsx");
+  assert.match(gallery, /priority=\{index === 0\}/);
+  assert.match(gallery, /sizes="\(min-width: 1024px\) 60vw, 100vw"/);
+  assert.match(gallery, /sizes="96px"/);
+  assert.match(header, /headerWordmarkPriority\(pathname\)/);
+  assert.doesNotMatch(gallery, /downloadAttachment/);
+});
+
+test("dobra da ficha não cresce quando a barra do navegador volta", () => {
+  const css = readSrc("app/globals.css");
+  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const start = css.indexOf(".ficha-mobile-fold {");
+  const fold = css.slice(start, start + 500);
+  assert.match(fold, /100svh/);
+  assert.match(fold, /overflow-anchor:\s*none/);
+  assert.doesNotMatch(fold, /100dvh/);
+  assert.match(page, /ficha-mobile-fold min-w-0/);
+  assert.doesNotMatch(page, /lg:contents/);
+});
+
 test("chip Ajuda no mobile ganha folga acima da nav fora da ficha", () => {
   const css = readSrc("app/globals.css");
   assert.match(

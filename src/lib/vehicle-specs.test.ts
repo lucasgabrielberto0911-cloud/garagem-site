@@ -48,8 +48,29 @@ test("ano fabricado/modelo e opcionais só entram quando existem", () => {
   assert.equal(byLabel.Câmbio?.empty, true);
   assert.equal(byLabel.Motor?.value, "1.6");
   assert.equal(byLabel.Portas?.value, "4");
-  assert.equal(byLabel.Laudo?.value, "Cautelar aprovado");
+  assert.equal(
+    byLabel["Vistoria da loja"]?.value,
+    "Checagem interna, antes do estoque",
+  );
+  assert.equal(specs.some((row) => row.value === "Cautelar aprovado"), false);
   assert.equal(specs.some((row) => row.label === "Disponível em"), false);
+});
+
+test("nota da vistoria preserva texto do anúncio que não parece documento oficial", () => {
+  const specs = buildVehiclePublicSpecs({
+    category: "carro",
+    year: 2018,
+    yearModel: 2019,
+    km: 40000,
+    fuel: "Flex",
+    transmission: "Manual",
+    color: "Branco",
+    inspection: "Lataria revisada na loja",
+  });
+  assert.equal(
+    specs.find((row) => row.label === "Vistoria da loja")?.value,
+    "Lataria revisada na loja",
+  );
 });
 
 test("ficha pública mostra Disponível em só com cidade válida do admin", () => {

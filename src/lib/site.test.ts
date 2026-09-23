@@ -7,6 +7,7 @@ import {
   applyWhatsAppUtm,
   fichaWhatsAppTracking,
   formatCustomerVehicleWhatsAppText,
+  headerWordmarkPriority,
   isVehicleFichaPath,
   pageWhatsAppTracking,
   site,
@@ -127,6 +128,11 @@ test("ficha path e tracking centralizam campanha ficha + utm_content", () => {
   assert.equal(isVehicleFichaPath("/estoque"), false);
   assert.equal(isVehicleFichaPath("/estoque/"), false);
   assert.equal(isVehicleFichaPath("/"), false);
+  assert.equal(headerWordmarkPriority("/"), false);
+  assert.equal(headerWordmarkPriority("/estoque/honda-hr-v"), false);
+  assert.equal(headerWordmarkPriority("/estoque/honda-hr-v/"), false);
+  assert.equal(headerWordmarkPriority("/estoque"), true);
+  assert.equal(headerWordmarkPriority("/contato"), true);
 
   const fromVehicle = fichaWhatsAppTracking({
     id: "cuid123",

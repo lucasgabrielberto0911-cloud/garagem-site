@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   INSTALL_COOLDOWN_MS,
   INSTALL_DISMISS_KEY,
@@ -131,4 +134,15 @@ test("offline força documento; 4G no desktop não", () => {
   assert.equal(PWA_START_URL.includes("utm_source=pwa"), true);
   assert.match(installCaptureScript(), new RegExp(INSTALL_DISMISS_KEY));
   assert.match(installCaptureScript(), /beforeinstallprompt/);
+});
+
+test("Instalar app do header só existe no celular", () => {
+  const button = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../components/site/InstallAppButton.tsx"),
+    "utf8",
+  );
+  const headerFn = button.slice(button.indexOf("export function InstallAppHeaderButton"));
+  assert.match(headerFn, /lg:hidden/);
+  assert.doesNotMatch(headerFn, /lg:inline-flex/);
+  assert.match(headerFn, /aria-label="Instalar app"/);
 });

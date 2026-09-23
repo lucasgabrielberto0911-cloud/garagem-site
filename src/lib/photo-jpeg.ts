@@ -2,8 +2,8 @@ import sharp from "sharp";
 import { ADMIN_JPEG_QUALITY } from "@/lib/photo-master";
 
 /**
- * JPEG leve da ficha pública. A galeria no site continua WebP;
- * este valor só entra no "Baixar JPG" do visitante (foto já ≤1280).
+ * JPEG da galeria (foto já ≤1280). A página pública continua em WebP.
+ * Download de foto fica só no painel admin.
  */
 export const DOWNLOAD_JPEG_QUALITY = 90;
 

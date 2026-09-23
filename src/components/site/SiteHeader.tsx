@@ -23,6 +23,7 @@ import {
   PHONES,
   SECONDARY_LINKS,
   site,
+  headerWordmarkPriority,
   telUrl,
 } from "@/lib/site";
 
@@ -68,7 +69,7 @@ export function SiteHeader() {
           >
             <SiteWordmark
               size="header"
-              priority={pathname !== "/"}
+              priority={headerWordmarkPriority(pathname)}
             />
           </Link>
 
@@ -119,7 +120,7 @@ export function SiteHeader() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackWhatsAppClick("header")}
-              className="hidden h-11 items-center gap-2 bg-brand px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex xl:px-4 xl:text-sm"
+              className="hidden h-11 shrink-0 items-center gap-2 bg-brand px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex xl:px-4 xl:text-sm"
             >
               <IconWhatsApp className="h-4 w-4" />
               WhatsApp

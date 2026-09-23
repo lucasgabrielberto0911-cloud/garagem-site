@@ -1,6 +1,6 @@
 /**
  * Ficha pública: campos centrais sempre visíveis, sem buraco feio
- * quando cor/motor/laudo não foram preenchidos.
+ * quando cor, motor ou vistoria da loja não foram preenchidos.
  */
 
 import { formatNumberBR } from "@/lib/format";
@@ -12,6 +12,22 @@ import {
 
 export const SPEC_EMPTY = "Não informado";
 export const SPEC_EMPTY_FEMININE = "Não informada";
+
+/** Nome único da checagem interna na ficha, no filtro e no selo. */
+export const STORE_INSPECTION_LABEL = "Vistoria da loja";
+
+/** Substitui só o texto que parece documento oficial. O restante do anúncio permanece. */
+export const STORE_INSPECTION_NOTE = "Checagem interna, antes do estoque";
+
+const OFFICIAL_INSPECTION = /laudo|cautelar/i;
+
+/** Nota pública da vistoria. Null se o campo estiver vazio. */
+export function publicInspectionNote(value: string | null | undefined) {
+  const text = (value ?? "").replace(/\s+/g, " ").trim();
+  if (!text) return null;
+  if (OFFICIAL_INSPECTION.test(text)) return STORE_INSPECTION_NOTE;
+  return text;
+}
 
 export type VehicleSpecRow = {
   label: string;
@@ -80,8 +96,12 @@ export function buildVehiclePublicSpecs(
   if (filled(vehicle.warranty)) {
     rows.push({ label: "Garantia", value: vehicle.warranty!.trim() });
   }
-  if (filled(vehicle.inspection)) {
-    rows.push({ label: "Laudo", value: vehicle.inspection!.trim() });
+  const inspectionNote = publicInspectionNote(vehicle.inspection);
+  if (inspectionNote) {
+    rows.push({
+      label: STORE_INSPECTION_LABEL,
+      value: inspectionNote,
+    });
   }
   const location = parseVehicleLocationCity(vehicle.locationCity);
   if (location) {

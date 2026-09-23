@@ -208,6 +208,17 @@ export function isVehicleFichaPath(pathname: string): boolean {
   return path.startsWith("/estoque/") && path !== "/estoque";
 }
 
+/**
+ * O logo do header só pede alta prioridade fora da home e da ficha.
+ * Na home o wordmark do hero já é a imagem prioritária; na ficha a
+ * primeira foto da galeria é o LCP e não deve disputar banda.
+ */
+export function headerWordmarkPriority(pathname: string): boolean {
+  if (isVehicleFichaPath(pathname)) return false;
+  const path = (pathname || "/").split("?")[0]?.replace(/\/+$/, "") || "/";
+  return path !== "/";
+}
+
 export function whatsappCampaignFromPath(pathname: string): WhatsAppCampaign {
   if (isVehicleFichaPath(pathname)) return "ficha";
   const path = (pathname || "/").split("?")[0]?.replace(/\/+$/, "") || "/";
