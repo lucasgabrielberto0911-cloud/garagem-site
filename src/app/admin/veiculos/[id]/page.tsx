@@ -35,31 +35,33 @@ export default async function EditVehiclePage({
   const view: EditView =
     viewParam === "operacao" ? "operacao" : "anuncio";
 
-  const vehicle = await prisma.vehicle.findUnique({
-    where: { id },
-    include: {
-      photos: { orderBy: { order: "asc" } },
-      sale: { select: { salePrice: true } },
-    },
-  });
+  // Custos e documentos só na aba Operação — e em paralelo com o veículo,
+  // sem esperar a primeira consulta.
+  const [vehicle, costs, documents] = await Promise.all([
+    prisma.vehicle.findUnique({
+      where: { id },
+      include: {
+        photos: { orderBy: { order: "asc" } },
+        sale: { select: { salePrice: true } },
+      },
+    }),
+    view === "operacao"
+      ? prisma.vehicleCost.findMany({
+          where: { vehicleId: id },
+          orderBy: { incurredAt: "desc" },
+        })
+      : Promise.resolve([]),
+    view === "operacao"
+      ? prisma.vehicleDocument.findMany({
+          where: { vehicleId: id },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
+  ]);
 
   if (!vehicle) {
     notFound();
   }
-
-  const [costs, documents] =
-    view === "operacao"
-      ? await Promise.all([
-          prisma.vehicleCost.findMany({
-            where: { vehicleId: vehicle.id },
-            orderBy: { incurredAt: "desc" },
-          }),
-          prisma.vehicleDocument.findMany({
-            where: { vehicleId: vehicle.id },
-            orderBy: { createdAt: "desc" },
-          }),
-        ])
-      : [[], []];
 
   const status = STATUS_LABEL[vehicle.status] ?? {
     label: vehicle.status,

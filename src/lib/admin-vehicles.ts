@@ -7,9 +7,10 @@ import { investedTotal } from "@/lib/vehicle-ops";
 import { DEFAULT_VEHICLE_LOCATION_CITY } from "@/lib/vehicle-location";
 
 export const ADMIN_VEHICLES_PAGE_SIZE = 20;
-export const ADMIN_SALES_PAGE_SIZE = 30;
-export const ADMIN_CUSTOMERS_PAGE_SIZE = 40;
-export const ADMIN_LEADS_PAGE_SIZE = 40;
+/** Primeira dobra leve no celular; o resto vem por paginação / rolagem. */
+export const ADMIN_SALES_PAGE_SIZE = 20;
+export const ADMIN_CUSTOMERS_PAGE_SIZE = 20;
+export const ADMIN_LEADS_PAGE_SIZE = 20;
 
 export type SalesPeriod = "all" | "month" | "30" | "90" | "year";
 
