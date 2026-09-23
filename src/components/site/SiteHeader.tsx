@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   IconClose,
   IconMenu,
@@ -31,10 +31,45 @@ export function SiteHeader() {
   const pathname = usePathname();
   const whatsappHref = usePageWhatsAppHref();
   const [open, setOpen] = useState(false);
+  // Entrada extra no histórico enquanto o menu está aberto: o "voltar" do
+  // celular fecha o menu em vez de sair da página (ex.: ficha do veículo).
+  const menuHistoryEntry = useRef(false);
+  const onVehiclePage = /^\/estoque\/[^/]+/.test(pathname);
+
+  const openMenu = useCallback(() => {
+    window.history.pushState({ siteNavMenu: true }, "");
+    menuHistoryEntry.current = true;
+    setOpen(true);
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    setOpen(false);
+    if (menuHistoryEntry.current) {
+      menuHistoryEntry.current = false;
+      window.history.back();
+    }
+  }, []);
+
+  // Links do menu usam `replace`, que substitui a entrada extra do histórico.
+  const closeMenuForNavigation = useCallback(() => {
+    menuHistoryEntry.current = false;
+    setOpen(false);
+  }, []);
 
   useEffect(() => {
+    menuHistoryEntry.current = false;
     setOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPopState() {
+      menuHistoryEntry.current = false;
+      setOpen(false);
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [open]);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -52,11 +87,11 @@ export function SiteHeader() {
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") closeMenu();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
+  }, [open, closeMenu]);
 
   return (
     <>
@@ -128,7 +163,7 @@ export function SiteHeader() {
 
             <button
               type="button"
-              onClick={() => setOpen((value) => !value)}
+              onClick={() => (open ? closeMenu() : openMenu())}
               aria-expanded={open}
               aria-controls="menu-mobile"
               aria-label={open ? "Fechar menu" : "Abrir menu"}
@@ -150,17 +185,25 @@ export function SiteHeader() {
             role="button"
             tabIndex={0}
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
+            onClick={closeMenu}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
-                setOpen(false);
+                closeMenu();
               }
             }}
             aria-label="Fechar menu"
           />
           <div className="relative mt-[calc(4.5rem+env(safe-area-inset-top,0px))] h-[calc(100dvh-4.5rem-env(safe-area-inset-top,0px))] overflow-y-auto overscroll-contain border-t border-white/10 bg-asphalt animate-slide-up pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
             <nav className="px-5 py-4" aria-label="Menu mobile">
+              <button
+                type="button"
+                onClick={closeMenu}
+                className="mb-3 flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-white/15 px-4 py-3 font-display text-base font-semibold text-cream transition active:bg-white/5 touch-manipulation"
+              >
+                <IconClose className="h-5 w-5" />
+                {onVehiclePage ? "Fechar e voltar ao anúncio" : "Fechar"}
+              </button>
               <ul className="space-y-1">
                 {NAV_LINKS.map((link) => {
                   const active =
@@ -171,7 +214,8 @@ export function SiteHeader() {
                     <li key={link.href}>
                       <Link
                         href={link.href}
-                        onClick={() => setOpen(false)}
+                        replace
+                        onClick={closeMenuForNavigation}
                         aria-current={active ? "page" : undefined}
                         className={`flex min-h-[52px] items-center justify-center px-4 py-4 font-display text-base font-semibold transition touch-manipulation ${
                           active
@@ -191,7 +235,8 @@ export function SiteHeader() {
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      onClick={() => setOpen(false)}
+                      replace
+                      onClick={closeMenuForNavigation}
                       className="inline-flex min-h-[36px] items-center text-sm text-muted transition active:text-cream"
                     >
                       {link.label}
@@ -200,7 +245,7 @@ export function SiteHeader() {
                 ))}
               </ul>
 
-              <InstallAppMenuItem onClose={() => setOpen(false)} />
+              <InstallAppMenuItem onClose={closeMenu} />
 
               <div className="mt-4 space-y-3 border-t border-white/10 pt-5">
                 <a
@@ -209,7 +254,7 @@ export function SiteHeader() {
                   rel="noopener noreferrer"
                   onClick={() => {
                     trackWhatsAppClick("header-menu");
-                    setOpen(false);
+                    closeMenu();
                   }}
                   className="whatsapp-btn flex min-h-[52px] w-full items-center justify-center gap-2.5 px-4 py-4 font-display text-base font-semibold text-white touch-manipulation"
                 >
@@ -220,7 +265,7 @@ export function SiteHeader() {
                   <a
                     key={phone.digits}
                     href={telUrl(index)}
-                    onClick={() => setOpen(false)}
+                    onClick={closeMenu}
                     className={
                       phone.kind === "whatsapp"
                         ? "flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/50 px-4 py-4 font-display text-base font-semibold text-brand touch-manipulation"
