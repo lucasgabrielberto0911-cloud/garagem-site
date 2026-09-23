@@ -8,10 +8,18 @@ import { InfiniteSentinel } from "@/components/InfiniteSentinel";
 import { VehicleImage } from "@/components/VehicleImage";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
+  ActionSheet,
+  ActionSheetButton,
+  ActionSheetLink,
+} from "@/components/admin/ActionSheet";
+import {
+  IconCash,
+  IconCheck,
   IconClipboard,
   IconCopy,
   IconExternal,
   IconImage,
+  IconMore,
   IconPencil,
   IconPlus,
   IconStar,
@@ -224,6 +232,7 @@ export function VehiclesTable({
   const [bulkTarget, setBulkTarget] = useState<AdminBulkStatus | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [undoBanner, setUndoBanner] = useState<{ ids: string[] } | null>(null);
+  const [actionsTarget, setActionsTarget] = useState<VehicleRow | null>(null);
 
   const hasMore = items.length < total;
   const allVisibleSelected =
@@ -248,7 +257,7 @@ export function VehiclesTable({
   useEffect(() => {
     function onEscape(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
-      if (bulkTarget || soldTarget || deleteTarget) return;
+      if (bulkTarget || soldTarget || deleteTarget || actionsTarget) return;
       if (selected.length === 0 && !undoBanner) return;
       event.preventDefault();
       setSelected([]);
@@ -256,7 +265,7 @@ export function VehiclesTable({
     }
     window.addEventListener("keydown", onEscape);
     return () => window.removeEventListener("keydown", onEscape);
-  }, [bulkTarget, soldTarget, deleteTarget, selected.length, undoBanner]);
+  }, [bulkTarget, soldTarget, deleteTarget, actionsTarget, selected.length, undoBanner]);
 
   const fetchPage = useCallback(
     async (
@@ -548,6 +557,46 @@ export function VehiclesTable({
     }
   }
 
+  function changeStatus(vehicle: VehicleRow, status: string) {
+    runQuickAction(
+      vehicle.id,
+      () => setVehicleStatus(vehicle.id, status),
+      () => applyLocalStatus(vehicle.id, status, vehicle.featured),
+    );
+  }
+
+  function toggleFeatured(vehicle: VehicleRow) {
+    runQuickAction(
+      vehicle.id,
+      () => setVehicleFeatured(vehicle.id, !vehicle.featured),
+      () => {
+        const nextFeatured = !vehicle.featured;
+        setFeaturedCount((count) =>
+          Math.max(0, count + (nextFeatured ? 1 : -1)),
+        );
+        if (tab === "destaques" && !nextFeatured) {
+          removeFromList(vehicle.id, "destaques");
+          return;
+        }
+        setItems((current) =>
+          current.map((item) =>
+            item.id === vehicle.id ? { ...item, featured: nextFeatured } : item,
+          ),
+        );
+      },
+    );
+  }
+
+  function duplicate(vehicle: VehicleRow) {
+    runQuickAction(
+      vehicle.id,
+      () => duplicateVehicle(vehicle.id),
+      () => {
+        void fetchPage(1, sort, true);
+      },
+    );
+  }
+
   function sortIcon(key: Exclude<SortKey, "recent">) {
     if (sort.key !== key) return "↕";
     return sort.dir === "asc" ? "↑" : "↓";
@@ -641,7 +690,9 @@ export function VehiclesTable({
             ]
               .filter(Boolean)
               .join(" · ")}
-            . Marque o vídeo no cadastro quando já existir; anúncio sem foto some do interesse.
+            <span className="hidden sm:inline">
+              . Marque o vídeo no cadastro quando já existir; anúncio sem foto some do interesse.
+            </span>
           </p>
         </div>
       ) : null}
@@ -938,47 +989,12 @@ export function VehiclesTable({
                 busy={busyId === vehicle.id}
                 selected={selected.includes(vehicle.id)}
                 onToggleSelect={() => toggleSelected(vehicle.id)}
-                onStatus={(status) =>
-                  runQuickAction(
-                    vehicle.id,
-                    () => setVehicleStatus(vehicle.id, status),
-                    () => applyLocalStatus(vehicle.id, status, vehicle.featured),
-                  )
-                }
-                onFeatured={() =>
-                  runQuickAction(
-                    vehicle.id,
-                    () => setVehicleFeatured(vehicle.id, !vehicle.featured),
-                    () => {
-                      const nextFeatured = !vehicle.featured;
-                      setFeaturedCount((count) =>
-                        Math.max(0, count + (nextFeatured ? 1 : -1)),
-                      );
-                      if (tab === "destaques" && !nextFeatured) {
-                        removeFromList(vehicle.id, "destaques");
-                        return;
-                      }
-                      setItems((current) =>
-                        current.map((item) =>
-                          item.id === vehicle.id
-                            ? { ...item, featured: nextFeatured }
-                            : item,
-                        ),
-                      );
-                    },
-                  )
-                }
-                onDuplicate={() =>
-                  runQuickAction(
-                    vehicle.id,
-                    () => duplicateVehicle(vehicle.id),
-                    () => {
-                      void fetchPage(1, sort, true);
-                    },
-                  )
-                }
+                onStatus={(status) => changeStatus(vehicle, status)}
+                onFeatured={() => toggleFeatured(vehicle)}
+                onDuplicate={() => duplicate(vehicle)}
                 onMarkSold={() => setSoldTarget(vehicle)}
                 onDelete={() => setDeleteTarget(vehicle)}
+                onMore={() => setActionsTarget(vehicle)}
               />
             ))}
           </ul>
@@ -1014,6 +1030,43 @@ export function VehiclesTable({
           </div>
         </>
       )}
+
+      <ActionSheet
+        open={actionsTarget !== null}
+        title={actionsTarget ? `${actionsTarget.brand} ${actionsTarget.model}` : "Veículo"}
+        subtitle={
+          actionsTarget
+            ? `${STATUS_LABEL[actionsTarget.status] ?? actionsTarget.status} · ${formatCurrencyBRL(actionsTarget.price)}`
+            : undefined
+        }
+        media={
+          actionsTarget ? (
+            <span className="relative block h-12 w-16 shrink-0 overflow-hidden bg-asphalt">
+              <VehicleImage
+                src={coverSrc(actionsTarget.photos)}
+                alt=""
+                fill
+                sizes="64px"
+                className="object-cover"
+              />
+            </span>
+          ) : null
+        }
+        onClose={() => setActionsTarget(null)}
+      >
+        {actionsTarget ? (
+          <SheetActions
+            vehicle={actionsTarget}
+            busy={busyId === actionsTarget.id}
+            close={() => setActionsTarget(null)}
+            onStatus={(status) => changeStatus(actionsTarget, status)}
+            onFeatured={() => toggleFeatured(actionsTarget)}
+            onDuplicate={() => duplicate(actionsTarget)}
+            onMarkSold={() => setSoldTarget(actionsTarget)}
+            onDelete={() => setDeleteTarget(actionsTarget)}
+          />
+        ) : null}
+      </ActionSheet>
 
       <ConfirmDialog
         open={soldTarget !== null}
@@ -1104,6 +1157,7 @@ function VehicleAdminCard({
   onDuplicate,
   onMarkSold,
   onDelete,
+  onMore,
 }: {
   vehicle: VehicleRow;
   busy: boolean;
@@ -1114,8 +1168,10 @@ function VehicleAdminCard({
   onDuplicate: () => void;
   onMarkSold: () => void;
   onDelete: () => void;
+  onMore: () => void;
 }) {
   const ops = vehicleOpsMeta(vehicle);
+  const alerts = vehicleQualityAlerts(vehicle);
   const title = `${vehicle.brand} ${vehicle.model}`;
 
   function handleStatusChange(next: string) {
@@ -1225,9 +1281,9 @@ function VehicleAdminCard({
             </p>
           ) : null}
 
-          {vehicleQualityAlerts(vehicle).length > 0 ? (
+          {alerts.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {vehicleQualityAlerts(vehicle).map((alert) => (
+              {alerts.map((alert) => (
                 <span
                   key={alert}
                   className="border border-brand/40 bg-brand/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-brand"
@@ -1271,7 +1327,7 @@ function VehicleAdminCard({
         </div>
       </div>
 
-      <div className="border-t border-white/10 px-3 py-2 lg:hidden">
+      <div className="flex items-center gap-2 border-t border-white/10 p-2 lg:hidden">
         <label className="sr-only" htmlFor={`status-m-${vehicle.id}`}>
           Status
         </label>
@@ -1280,7 +1336,7 @@ function VehicleAdminCard({
           value={vehicle.status}
           disabled={busy}
           onChange={(event) => handleStatusChange(event.target.value)}
-          className={`${inputClass} disabled:opacity-60`}
+          className={`${inputClass} min-w-0 flex-1 disabled:opacity-60`}
         >
           {STATUS_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -1288,10 +1344,27 @@ function VehicleAdminCard({
             </option>
           ))}
         </select>
+        <Link
+          href={`/admin/veiculos/${vehicle.id}`}
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 border border-white/15 px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation active:bg-white/10"
+        >
+          <IconPencil className="h-4 w-4" />
+          Editar
+        </Link>
+        <button
+          type="button"
+          onClick={onMore}
+          disabled={busy}
+          aria-label={`Mais ações: ${title}`}
+          aria-haspopup="dialog"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-white/15 text-cream transition touch-manipulation active:bg-white/10 disabled:opacity-50"
+        >
+          <IconMore className="h-5 w-5" />
+        </button>
       </div>
 
-      <div className="border-t border-white/10 lg:flex lg:items-center lg:justify-between lg:gap-3 lg:px-2 lg:py-1.5">
-        <div className="grid grid-cols-5 lg:flex lg:flex-1 lg:flex-wrap">
+      <div className="hidden border-t border-white/10 lg:flex lg:items-center lg:justify-between lg:gap-3 lg:px-2 lg:py-1.5">
+        <div className="flex flex-1 flex-wrap">
           <Link
             href={`/admin/veiculos/${vehicle.id}`}
             className={listActionCell}
@@ -1386,5 +1459,93 @@ function VehicleAdminCard({
         </div>
       </div>
     </li>
+  );
+}
+
+function SheetActions({
+  vehicle,
+  busy,
+  close,
+  onStatus,
+  onFeatured,
+  onDuplicate,
+  onMarkSold,
+  onDelete,
+}: {
+  vehicle: VehicleRow;
+  busy: boolean;
+  close: () => void;
+  onStatus: (status: string) => void;
+  onFeatured: () => void;
+  onDuplicate: () => void;
+  onMarkSold: () => void;
+  onDelete: () => void;
+}) {
+  const run = (action: () => void) => () => {
+    close();
+    action();
+  };
+  return (
+    <>
+      <ActionSheetLink
+        href={`/admin/veiculos/${vehicle.id}`}
+        icon={<IconPencil className="h-4 w-4" />}
+        label="Editar anúncio"
+        hint="Preço, status, fotos e ficha"
+        onNavigate={close}
+      />
+      <ActionSheetLink
+        href={`/admin/veiculos/${vehicle.id}?view=operacao`}
+        icon={<IconClipboard className="h-4 w-4" />}
+        label="Operação"
+        hint="Custos e documentos"
+        onNavigate={close}
+      />
+      <ActionSheetLink
+        href={vehiclePath(vehicle)}
+        external
+        icon={<IconExternal className="h-4 w-4" />}
+        label="Ver no site"
+        onNavigate={close}
+      />
+      <ActionSheetButton
+        icon={<IconStar className="h-4 w-4" filled={vehicle.featured} />}
+        label={vehicle.featured ? "Tirar da vitrine" : "Destacar na home"}
+        hint={`Até ${MAX_HOME_FEATURED} destaques`}
+        disabled={busy}
+        onClick={run(onFeatured)}
+      />
+      <ActionSheetButton
+        icon={<IconCopy className="h-4 w-4" />}
+        label="Duplicar anúncio"
+        disabled={busy}
+        onClick={run(onDuplicate)}
+      />
+      {vehicle.status === "reservado" ? (
+        <ActionSheetButton
+          icon={<IconCheck className="h-4 w-4" />}
+          label="Voltar para disponível"
+          disabled={busy}
+          onClick={run(() => onStatus("disponivel"))}
+        />
+      ) : null}
+      {canMarkAsSold(vehicle.status) ? (
+        <ActionSheetButton
+          icon={<IconCash className="h-4 w-4" />}
+          label="Marcar vendido"
+          hint="Sai do estoque; a página continua no site"
+          tone="warning"
+          disabled={busy}
+          onClick={run(onMarkSold)}
+        />
+      ) : null}
+      <ActionSheetButton
+        icon={<IconTrash className="h-4 w-4" />}
+        label="Excluir definitivamente"
+        hint="Só para duplicata ou erro — a página vira 404"
+        tone="danger"
+        onClick={run(onDelete)}
+      />
+    </>
   );
 }

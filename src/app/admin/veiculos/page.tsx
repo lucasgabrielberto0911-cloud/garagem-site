@@ -63,7 +63,17 @@ export default async function VehiclesPage({
         }
       />
 
-      <section className={adminStatGrid}>
+      <p className="text-xs text-muted sm:hidden">
+        Estoque disponível{" "}
+        <span className="font-semibold text-cream">
+          {formatCurrencyBRL(stats.stockValue)}
+        </span>
+        {stats.available > 0
+          ? ` · média ${formatCurrencyBRL(stats.stockValue / stats.available)}`
+          : ""}
+      </p>
+
+      <section className={`hidden sm:grid ${adminStatGrid}`}>
         <StatCard label="Disponíveis" value={stats.available} />
         <StatCard label="Reservados" value={stats.reserved} tone="warning" />
         <StatCard label="Vendidos" value={stats.vendidosCount} />
