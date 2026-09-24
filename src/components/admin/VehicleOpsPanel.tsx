@@ -28,6 +28,8 @@ import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { adminFileViewHref } from "@/lib/supabase";
 import { uploadAdminFile } from "@/lib/upload-admin-file";
 import {
+  CONSIGNED_LABEL,
+  CONSIGNED_NO_COSTS_NOTE,
   VEHICLE_COST_KINDS,
   VEHICLE_DOC_KINDS,
   costListTitle,
@@ -47,6 +49,7 @@ export type VehicleOpsVehicle = {
   price: number;
   salePrice: number | null;
   purchasePrice: number | null;
+  consigned: boolean;
   inStoreName: boolean;
   hasSpareKey: boolean;
   hasManual: boolean;
@@ -350,215 +353,239 @@ export function VehicleOpsPanel({
         </div>
       </Card>
 
-      <Card title="Compra e margem">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,16rem)_1fr] lg:items-end">
-          <Field
-            label="Preço de compra"
-            hint="Salva ao sair do campo. Não aparece no site."
-          >
-            <input
-              inputMode="numeric"
-              value={purchase}
-              onChange={(event) => {
-                const next = formatNumberBR(
-                  Number(event.target.value.replace(/\D/g, "") || 0),
-                );
-                setPurchase(next);
-                draftRef.current = { ...draftRef.current, purchase: next };
-              }}
-              onBlur={() => persistOps({ purchase })}
-              placeholder="0"
-              className={inputClass}
-            />
-          </Field>
-          <div className="grid grid-cols-3 gap-3">
-            <MiniStat
-              label="Investido"
-              value={hasBasis ? formatCurrencyBRL(invested) : "—"}
-            />
-            <MiniStat
-              label={sold ? "Vendido" : "Anunciado"}
-              value={formatCurrencyBRL(referencePrice)}
-            />
-            <MiniStat
-              label={sold ? "Lucro" : "Margem"}
-              value={hasBasis ? formatCurrencyBRL(margin) : "—"}
-              tone={!hasBasis ? "muted" : margin >= 0 ? "good" : "bad"}
-            />
+      {vehicle.consigned ? (
+        <Card title={CONSIGNED_LABEL}>
+          <div data-testid="consigned-ops-note" className="space-y-2">
+            <p className="text-sm leading-relaxed text-cream">
+              {CONSIGNED_NO_COSTS_NOTE}
+            </p>
+            <p className="text-xs leading-relaxed text-muted">
+              {sold ? "Vendido por" : "Anunciado por"}{" "}
+              <span className="text-cream">{formatCurrencyBRL(referencePrice)}</span>
+              {" · lucro N/A. Para mudar, desmarque “Consignado” na aba Anúncio."}
+            </p>
+            {costs.length > 0 ? (
+              <p className="text-xs leading-relaxed text-muted">
+                {costs.length === 1
+                  ? "1 custo lançado antes continua guardado, fora das contas."
+                  : `${costs.length} custos lançados antes continuam guardados, fora das contas.`}
+              </p>
+            ) : null}
           </div>
-        </div>
-      </Card>
-
-      <Card
-        title={extras > 0 ? `Custos · ${formatCurrencyBRL(extras)}` : "Custos"}
-        action={
-          <button
-            type="button"
-            onClick={() => setShowCostForm((open) => !open)}
-            className={btn.ghost}
-          >
-            <IconPlus className="h-4 w-4" />
-            {showCostForm ? "Fechar" : "Adicionar"}
-          </button>
-        }
-      >
-        {showCostForm ? (
-          <form
-            onSubmit={handleAddCost}
-            onDragOver={(event) => {
-              if (Array.from(event.dataTransfer.types).includes("Files")) {
-                event.preventDefault();
-              }
-            }}
-            onDrop={(event) => {
-              if (!Array.from(event.dataTransfer.types).includes("Files")) return;
-              event.preventDefault();
-              const file = event.dataTransfer.files?.[0];
-              if (file) void onReceiptChange(file);
-            }}
-            className="mb-5 grid gap-3 border border-white/10 bg-asphalt/40 p-4 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            <Field label="Tipo" required>
-              <select
-                name="kind"
-                className={inputClass}
-                value={costKind}
-                onChange={(event) =>
-                  setCostKind(event.target.value as VehicleCostKind)
-                }
-              >
-                {VEHICLE_COST_KINDS.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Valor" required>
-              <input
-                name="amount"
-                inputMode="numeric"
-                value={costAmount}
-                onChange={(event) =>
-                  setCostAmount(
-                    formatNumberBR(
-                      Number(event.target.value.replace(/\D/g, "") || 0),
-                    ),
-                  )
-                }
-                placeholder="0"
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Data">
-              <input
-                type="date"
-                name="incurredAt"
-                defaultValue={todayInput()}
-                className={inputClass}
-              />
-            </Field>
-            {isOtherKind(costKind) ? (
+        </Card>
+      ) : (
+        <>
+          <Card title="Compra e margem">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,16rem)_1fr] lg:items-end">
               <Field
-                label="Nome do custo"
-                hint="Ex.: IPVA, chaveiro."
-                required
+                label="Preço de compra"
+                hint="Salva ao sair do campo. Não aparece no site."
               >
                 <input
-                  name="description"
-                  placeholder="Como deve aparecer na lista"
+                  inputMode="numeric"
+                  value={purchase}
+                  onChange={(event) => {
+                    const next = formatNumberBR(
+                      Number(event.target.value.replace(/\D/g, "") || 0),
+                    );
+                    setPurchase(next);
+                    draftRef.current = { ...draftRef.current, purchase: next };
+                  }}
+                  onBlur={() => persistOps({ purchase })}
+                  placeholder="0"
                   className={inputClass}
-                  autoComplete="off"
-                  required
                 />
               </Field>
-            ) : (
-              <Field label="Observação">
-                <input
-                  name="description"
-                  placeholder="Opcional"
-                  className={inputClass}
-                  autoComplete="off"
+              <div className="grid grid-cols-3 gap-3">
+                <MiniStat
+                  label="Investido"
+                  value={hasBasis ? formatCurrencyBRL(invested) : "—"}
                 />
-              </Field>
-            )}
-            <div className="sm:col-span-2 lg:col-span-3">
-              <AdminFileDrop
-                label="Comprovante"
-                hint="Opcional — PDF ou imagem. Arraste ou clique."
-                fileName={costReceipt?.name}
-                uploading={uploadingCost}
-                disabled={itemPending}
-                onFile={(file) => void onReceiptChange(file)}
-                onClear={() => setCostReceipt(null)}
-              />
+                <MiniStat
+                  label={sold ? "Vendido" : "Anunciado"}
+                  value={formatCurrencyBRL(referencePrice)}
+                />
+                <MiniStat
+                  label={sold ? "Lucro" : "Margem"}
+                  value={hasBasis ? formatCurrencyBRL(margin) : "—"}
+                  tone={!hasBasis ? "muted" : margin >= 0 ? "good" : "bad"}
+                />
+              </div>
             </div>
-            <div className="flex items-end">
-              <button
-                type="submit"
-                disabled={itemPending || uploadingCost}
-                className={btn.primary}
-              >
-                Registrar custo
-              </button>
-            </div>
-          </form>
-        ) : null}
+          </Card>
 
-        {costs.length === 0 ? (
-          <p className="text-sm text-muted">
-            Nenhum custo extra. A compra fica no campo acima; aqui entram
-            despachante, estética, laudo etc.
-          </p>
-        ) : (
-          <ul className="divide-y divide-white/10">
-            {costs.map((cost) => (
-              <li
-                key={cost.id}
-                className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0"
+          <Card
+            title={extras > 0 ? `Custos · ${formatCurrencyBRL(extras)}` : "Custos"}
+            action={
+              <button
+                type="button"
+                onClick={() => setShowCostForm((open) => !open)}
+                className={btn.ghost}
               >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-cream">
-                    {costListTitle(cost.kind, cost.description)}
-                  </p>
-                  <p className="text-xs text-muted">
-                    {formatDate(cost.incurredAt)}
-                    {cost.receiptUrl ? " · com comprovante" : ""}
-                  </p>
-                </div>
-                <p className="font-display text-sm font-semibold text-cream">
-                  {formatCurrencyBRL(cost.amount)}
-                </p>
-                {cost.receiptUrl ? (
-                  <a
-                    href={adminFileViewHref(cost.receiptUrl)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={iconTap}
-                    title={cost.receiptName || "Comprovante"}
-                  >
-                    <IconDownload className="h-4 w-4" />
-                  </a>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPendingDelete({
-                      type: "cost",
-                      id: cost.id,
-                      label: costListTitle(cost.kind, cost.description),
-                    })
+                <IconPlus className="h-4 w-4" />
+                {showCostForm ? "Fechar" : "Adicionar"}
+              </button>
+            }
+          >
+            {showCostForm ? (
+              <form
+                onSubmit={handleAddCost}
+                onDragOver={(event) => {
+                  if (Array.from(event.dataTransfer.types).includes("Files")) {
+                    event.preventDefault();
                   }
-                  className={`${iconTap} text-brand hover:text-cream`}
-                  aria-label="Remover custo"
-                >
-                  <IconTrash className="h-4 w-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+                }}
+                onDrop={(event) => {
+                  if (!Array.from(event.dataTransfer.types).includes("Files")) return;
+                  event.preventDefault();
+                  const file = event.dataTransfer.files?.[0];
+                  if (file) void onReceiptChange(file);
+                }}
+                className="mb-5 grid gap-3 border border-white/10 bg-asphalt/40 p-4 sm:grid-cols-2 lg:grid-cols-4"
+              >
+                <Field label="Tipo" required>
+                  <select
+                    name="kind"
+                    className={inputClass}
+                    value={costKind}
+                    onChange={(event) =>
+                      setCostKind(event.target.value as VehicleCostKind)
+                    }
+                  >
+                    {VEHICLE_COST_KINDS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Valor" required>
+                  <input
+                    name="amount"
+                    inputMode="numeric"
+                    value={costAmount}
+                    onChange={(event) =>
+                      setCostAmount(
+                        formatNumberBR(
+                          Number(event.target.value.replace(/\D/g, "") || 0),
+                        ),
+                      )
+                    }
+                    placeholder="0"
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="Data">
+                  <input
+                    type="date"
+                    name="incurredAt"
+                    defaultValue={todayInput()}
+                    className={inputClass}
+                  />
+                </Field>
+                {isOtherKind(costKind) ? (
+                  <Field
+                    label="Nome do custo"
+                    hint="Ex.: IPVA, chaveiro."
+                    required
+                  >
+                    <input
+                      name="description"
+                      placeholder="Como deve aparecer na lista"
+                      className={inputClass}
+                      autoComplete="off"
+                      required
+                    />
+                  </Field>
+                ) : (
+                  <Field label="Observação">
+                    <input
+                      name="description"
+                      placeholder="Opcional"
+                      className={inputClass}
+                      autoComplete="off"
+                    />
+                  </Field>
+                )}
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <AdminFileDrop
+                    label="Comprovante"
+                    hint="Opcional — PDF ou imagem. Arraste ou clique."
+                    fileName={costReceipt?.name}
+                    uploading={uploadingCost}
+                    disabled={itemPending}
+                    onFile={(file) => void onReceiptChange(file)}
+                    onClear={() => setCostReceipt(null)}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    disabled={itemPending || uploadingCost}
+                    className={btn.primary}
+                  >
+                    Registrar custo
+                  </button>
+                </div>
+              </form>
+            ) : null}
+
+            {costs.length === 0 ? (
+              <p className="text-sm text-muted">
+                Nenhum custo extra. A compra fica no campo acima; aqui entram
+                despachante, estética, laudo etc.
+              </p>
+            ) : (
+              <ul className="divide-y divide-white/10">
+                {costs.map((cost) => (
+                  <li
+                    key={cost.id}
+                    className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-cream">
+                        {costListTitle(cost.kind, cost.description)}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {formatDate(cost.incurredAt)}
+                        {cost.receiptUrl ? " · com comprovante" : ""}
+                      </p>
+                    </div>
+                    <p className="font-display text-sm font-semibold text-cream">
+                      {formatCurrencyBRL(cost.amount)}
+                    </p>
+                    {cost.receiptUrl ? (
+                      <a
+                        href={adminFileViewHref(cost.receiptUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={iconTap}
+                        title={cost.receiptName || "Comprovante"}
+                      >
+                        <IconDownload className="h-4 w-4" />
+                      </a>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPendingDelete({
+                          type: "cost",
+                          id: cost.id,
+                          label: costListTitle(cost.kind, cost.description),
+                        })
+                      }
+                      className={`${iconTap} text-brand hover:text-cream`}
+                      aria-label="Remover custo"
+                    >
+                      <IconTrash className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </>
+      )}
 
       <Card
         title={

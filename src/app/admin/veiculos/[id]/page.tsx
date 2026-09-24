@@ -9,6 +9,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehicleLocationLabel } from "@/lib/vehicle-location";
+import { CONSIGNED_LABEL } from "@/lib/vehicle-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -34,31 +35,33 @@ export default async function EditVehiclePage({
   const view: EditView =
     viewParam === "operacao" ? "operacao" : "anuncio";
 
-  const vehicle = await prisma.vehicle.findUnique({
-    where: { id },
-    include: {
-      photos: { orderBy: { order: "asc" } },
-      sale: { select: { salePrice: true } },
-    },
-  });
+  // Custos e documentos só na aba Operação — e em paralelo com o veículo,
+  // sem esperar a primeira consulta.
+  const [vehicle, costs, documents] = await Promise.all([
+    prisma.vehicle.findUnique({
+      where: { id },
+      include: {
+        photos: { orderBy: { order: "asc" } },
+        sale: { select: { salePrice: true } },
+      },
+    }),
+    view === "operacao"
+      ? prisma.vehicleCost.findMany({
+          where: { vehicleId: id },
+          orderBy: { incurredAt: "desc" },
+        })
+      : Promise.resolve([]),
+    view === "operacao"
+      ? prisma.vehicleDocument.findMany({
+          where: { vehicleId: id },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
+  ]);
 
   if (!vehicle) {
     notFound();
   }
-
-  const [costs, documents] =
-    view === "operacao"
-      ? await Promise.all([
-          prisma.vehicleCost.findMany({
-            where: { vehicleId: vehicle.id },
-            orderBy: { incurredAt: "desc" },
-          }),
-          prisma.vehicleDocument.findMany({
-            where: { vehicleId: vehicle.id },
-            orderBy: { createdAt: "desc" },
-          }),
-        ])
-      : [[], []];
 
   const status = STATUS_LABEL[vehicle.status] ?? {
     label: vehicle.status,
@@ -79,6 +82,7 @@ export default async function EditVehiclePage({
               {vehicleLocationLabel(vehicle.locationCity) || "Linhares"}
             </Badge>
             {vehicle.featured ? <Badge tone="warning">Destaque</Badge> : null}
+            {vehicle.consigned ? <Badge tone="info">{CONSIGNED_LABEL}</Badge> : null}
           </>
         }
       />
@@ -93,7 +97,7 @@ export default async function EditVehiclePage({
         <TabLink
           href={`/admin/veiculos/${vehicle.id}?view=operacao`}
           active={view === "operacao"}
-          mark={!vehicle.purchasePrice}
+          mark={!vehicle.purchasePrice && !vehicle.consigned}
         >
           Operação
         </TabLink>
@@ -106,6 +110,7 @@ export default async function EditVehiclePage({
             price: vehicle.price,
             salePrice: vehicle.sale?.salePrice ?? null,
             purchasePrice: vehicle.purchasePrice,
+            consigned: vehicle.consigned,
             inStoreName: vehicle.inStoreName,
             hasSpareKey: vehicle.hasSpareKey,
             hasManual: vehicle.hasManual,

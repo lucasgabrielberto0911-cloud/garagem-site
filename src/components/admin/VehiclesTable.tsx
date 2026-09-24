@@ -32,7 +32,11 @@ import {
   listActionCell,
 } from "@/components/admin/ui";
 import { formatCurrencyBRL } from "@/lib/format";
-import { expectedMargin, hasCostBasis } from "@/lib/vehicle-ops";
+import {
+  CONSIGNED_LABEL,
+  expectedMargin,
+  hasCostBasis,
+} from "@/lib/vehicle-ops";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
@@ -158,14 +162,15 @@ function canMarkAsSold(status: string) {
 }
 
 function vehicleOpsMeta(vehicle: VehicleRow) {
-  const costs = vehicle.costs ?? [];
+  const costs = vehicle.costsTotal ?? 0;
+  const options = { consigned: vehicle.consigned };
   const tags = [
     vehicle.inStoreName ? "Loja" : null,
     vehicle.hasSpareKey ? "Chave reserva" : null,
     vehicle.hasManual ? "Manual" : null,
   ].filter((item): item is string => Boolean(item));
 
-  if (!hasCostBasis(vehicle.purchasePrice, costs)) {
+  if (!hasCostBasis(vehicle.purchasePrice, costs, options)) {
     return { tags, finance: null as { label: string; value: number } | null };
   }
 
@@ -174,9 +179,20 @@ function vehicleOpsMeta(vehicle: VehicleRow) {
     tags,
     finance: {
       label: vehicle.sale ? "Lucro" : "Margem",
-      value: expectedMargin(reference, vehicle.purchasePrice, costs),
+      value: expectedMargin(reference, vehicle.purchasePrice, costs, options),
     },
   };
+}
+
+function ConsignedChip() {
+  return (
+    <span
+      className="shrink-0 border border-sky-400/40 bg-sky-400/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-200"
+      data-testid="consigned-badge"
+    >
+      {CONSIGNED_LABEL}
+    </span>
+  );
 }
 
 type SortKey = "recent" | "year" | "km" | "price";
@@ -1268,6 +1284,7 @@ function VehicleAdminCard({
                 {STATUS_LABEL[vehicle.status] ?? vehicle.status}
               </span>
               <VehicleLocationChip city={vehicle.locationCity} />
+              {vehicle.consigned ? <ConsignedChip /> : null}
             </div>
             <p className="mt-0.5 truncate text-xs text-muted">
               {vehicleCategoryLabel(vehicle.category)}

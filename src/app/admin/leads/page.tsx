@@ -39,14 +39,16 @@ export default async function LeadsPage({
     ...searchWhere,
   };
 
-  const [leads, groups, total] = await Promise.all([
+  const filtered = valid || Boolean(q);
+  const [leads, groups, filteredTotal] = await Promise.all([
     findLeadVendas({
       where,
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
     prisma.leadVenda.groupBy({ by: ["status"], _count: { _all: true } }),
-    prisma.leadVenda.count({ where }),
+    // Sem filtro, o total já sai do groupBy.
+    filtered ? prisma.leadVenda.count({ where }) : Promise.resolve(null),
   ]);
 
   const counts: Record<string, number> & { total: number } = {
@@ -58,6 +60,7 @@ export default async function LeadsPage({
     ),
     total: groups.reduce((sum, group) => sum + group._count._all, 0),
   };
+  const total = filteredTotal ?? counts.total;
 
   return (
     <div className="space-y-6">

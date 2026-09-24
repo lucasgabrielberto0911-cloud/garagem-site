@@ -6,12 +6,28 @@ import {
   isPublicStockVehicle,
 } from "./public-stock";
 import { isRetiredStockSlug, retiredRedirectSources } from "./retired-listings";
+import { CHAT_VEHICLE_SELECT } from "./chat-stock";
+import { PUBLIC_VEHICLE_DETAIL_SELECT, PUBLIC_VEHICLE_OMIT } from "./vehicles";
 
 test("card público traz miniatura sem campos de admin", () => {
   assert.equal(PUBLIC_VEHICLE_CARD_SELECT.photos.select.thumbnailUrl, true);
   assert.equal("plate" in PUBLIC_VEHICLE_CARD_SELECT, false);
   assert.equal("fipePrice" in PUBLIC_VEHICLE_CARD_SELECT, false);
   assert.equal("purchasePrice" in PUBLIC_VEHICLE_CARD_SELECT, false);
+});
+
+test("nenhum select público carrega campo interno (consignado, compra, placa, FIPE)", () => {
+  const publicSelects = {
+    card: PUBLIC_VEHICLE_CARD_SELECT,
+    ficha: PUBLIC_VEHICLE_DETAIL_SELECT,
+    chat: CHAT_VEHICLE_SELECT,
+  };
+  for (const [name, select] of Object.entries(publicSelects)) {
+    for (const field of Object.keys(PUBLIC_VEHICLE_OMIT)) {
+      assert.equal(field in select, false, `${name} expõe ${field}`);
+    }
+  }
+  assert.equal(PUBLIC_VEHICLE_OMIT.consigned, true);
 });
 
 test("sitemap só inclui estoque disponível e não histórico", () => {
