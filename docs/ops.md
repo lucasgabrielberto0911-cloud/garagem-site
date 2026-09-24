@@ -21,9 +21,11 @@ Feed ao vivo, só `status=disponivel`, gerado na hora e cacheado na CDN (`s-maxa
 - Tirar consignados: `?consigned=0` (o padrão inclui)
 - `vehicle_id` = id do Vehicle = `content_ids` do Pixel (`content_type=vehicle`)
 - Fotos WebP saem como JPEG em `/api/catalog-jpg/...` (a Meta pede JPEG ou PNG)
-- Pixel: `NEXT_PUBLIC_META_PIXEL_ID` (produção documentada em `.env.example`)
+- Pixel do site (produção): **`2242212449873818`** (`NEXT_PUBLIC_META_PIXEL_ID`). É este ID que precisa ser ligado ao catálogo no Commerce Manager (o aviso "origem do evento do parceiro está ausente" é o catálogo sem esse pixel). Dataset citado no `.env.example`: `1722250562674449`.
+- `fbevents.js` carrega com `afterInteractive` (não no idle). Quem recusou cookies ("só o essencial") não carrega o pixel. Clique de anúncio (`fbclid` ou `utm_source=meta`) carrega mesmo antes do aceite.
+- Campanha atual otimiza **AddToCart**. O site não tem carrinho: o WhatsApp da ficha dispara `AddToCart` e `Lead`, os dois com `content_ids` = id do veículo e `content_type=vehicle`. Mantenha a otimização em **AddToCart** nessa campanha (trocar o evento no meio zera o aprendizado). Campanha nova pode otimizar `Lead`, que é o sinal mais fiel do WhatsApp.
 
-No Commerce Manager, substitua o upload manual por essa URL, mantenha o catálogo **Garagem - Estoque de Veículos** no vertical Veículos e confira se o dataset do anúncio é o mesmo Pixel do site.
+No Commerce Manager, substitua o upload manual por essa URL, mantenha o catálogo **Garagem - Estoque de Veículos** no vertical Veículos e em **Fontes de eventos** conecte o pixel `2242212449873818`.
 
 ## Image Optimization
 

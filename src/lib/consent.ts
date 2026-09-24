@@ -32,3 +32,19 @@ export function writeStoredConsent(choice: ConsentChoice) {
 export function hasMarketingConsent(choice = readStoredConsent()) {
   return choice === "accepted";
 }
+
+/**
+ * Pixel da Meta: aceite explícito, ou clique de anúncio (fbclid / utm meta)
+ * enquanto a pessoa ainda não escolheu "só o essencial".
+ * Quem recusou não carrega o script.
+ */
+export function shouldLoadMetaPixel(
+  choice: ConsentChoice | null,
+  search = "",
+) {
+  if (choice === "essential") return false;
+  if (choice === "accepted") return true;
+  const query = search.startsWith("?") ? search.slice(1) : search;
+  return /(?:^|&)fbclid=/.test(query) ||
+    /(?:^|&)utm_source=(?:meta|facebook|fb|ig|instagram)(?:&|$)/i.test(query);
+}

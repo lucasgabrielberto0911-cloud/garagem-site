@@ -282,6 +282,16 @@ export function trackViewContent(params: CatalogEventParams) {
   fireGtag("view_item", gtagItemParams(payload));
 }
 
+/**
+ * Interesse forte na ficha. A campanha Advantage+ atual otimiza AddToCart
+ * (não existe carrinho no site — o clique no WhatsApp é o equivalente).
+ */
+export function trackAddToCart(params: CatalogEventParams) {
+  const payload = buildCatalogPayload(params);
+  fire("AddToCart", payload);
+  fireGtag("add_to_cart", gtagItemParams(payload));
+}
+
 /** WhatsApp / interesse na ficha — sinal de Lead do catálogo (não Contact). */
 export function trackLead(params: CatalogEventParams) {
   const payload = buildCatalogPayload(params);

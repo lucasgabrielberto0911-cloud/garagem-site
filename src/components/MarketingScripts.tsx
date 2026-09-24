@@ -7,16 +7,24 @@ import {
   CONSENT_EVENT,
   hasMarketingConsent,
   readStoredConsent,
+  shouldLoadMetaPixel,
   type ConsentChoice,
 } from "@/lib/consent";
 
-/** Pixel e GA só depois do consentimento de marketing. */
+/**
+ * GA só com aceite. O Pixel também sobe no clique de anúncio (fbclid / utm
+ * meta) se a pessoa ainda não recusou, e o fbevents entra afterInteractive.
+ */
 export function MarketingScripts() {
-  const [allowed, setAllowed] = useState(false);
+  const [analytics, setAnalytics] = useState(false);
+  const [pixel, setPixel] = useState(false);
 
   useEffect(() => {
     function sync(next?: ConsentChoice | null) {
-      setAllowed(hasMarketingConsent(next ?? readStoredConsent()));
+      const choice = next ?? readStoredConsent();
+      const search = window.location.search;
+      setAnalytics(hasMarketingConsent(choice));
+      setPixel(shouldLoadMetaPixel(choice, search));
     }
     sync();
     function onConsent(event: Event) {
@@ -26,11 +34,11 @@ export function MarketingScripts() {
     return () => window.removeEventListener(CONSENT_EVENT, onConsent);
   }, []);
 
-  if (!allowed) return null;
+  if (!pixel && !analytics) return null;
   return (
     <>
-      <MetaPixel />
-      <GoogleAnalytics />
+      {pixel ? <MetaPixel /> : null}
+      {analytics ? <GoogleAnalytics /> : null}
     </>
   );
 }

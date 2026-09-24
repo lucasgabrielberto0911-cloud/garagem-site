@@ -7,6 +7,7 @@ import {
   buildCatalogPayload,
   classifyChatIntent,
   stockSearchString,
+  trackAddToCart,
   trackAddToWishlist,
   trackChatEvent,
   trackLead,
@@ -145,6 +146,11 @@ test("ViewContent / Lead / Search / AddToWishlist go through fbq with the CUID",
     value: 82900,
   });
   trackLead({ content_ids: [VEHICLE_CUID], value: 82900 });
+  trackAddToCart({
+    content_ids: [VEHICLE_CUID],
+    value: 82900,
+    currency: "BRL",
+  });
   trackSearch({ content_ids: [VEHICLE_CUID], search_string: "hb20" });
   trackAddToWishlist({ content_ids: [VEHICLE_CUID] });
 
@@ -152,9 +158,20 @@ test("ViewContent / Lead / Search / AddToWishlist go through fbq with the CUID",
   assert.deepEqual(names, [
     "ViewContent",
     "Lead",
+    "AddToCart",
     "Search",
     "AddToWishlist",
   ]);
+  const cart = calls[2]?.[2] as {
+    content_ids: string[];
+    content_type: string;
+    value: number;
+    currency: string;
+  };
+  assert.deepEqual(cart.content_ids, [VEHICLE_CUID]);
+  assert.equal(cart.content_type, "vehicle");
+  assert.equal(cart.value, 82900);
+  assert.equal(cart.currency, "BRL");
   for (const call of calls) {
     const payload = call[2] as { content_ids: string[]; content_type: string };
     assert.deepEqual(payload.content_ids, [VEHICLE_CUID]);
@@ -163,7 +180,7 @@ test("ViewContent / Lead / Search / AddToWishlist go through fbq with the CUID",
 
   assert.deepEqual(
     gtagCalls.map((call) => call[1]),
-    ["view_item", "generate_lead", "search", "add_to_wishlist"],
+    ["view_item", "generate_lead", "add_to_cart", "search", "add_to_wishlist"],
   );
 });
 

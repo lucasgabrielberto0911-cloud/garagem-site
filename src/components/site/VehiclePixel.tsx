@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import {
+  trackAddToCart,
   trackLead,
   trackSearch,
   trackVehicleView,
@@ -115,7 +116,10 @@ export function VehicleViewContent({
   return null;
 }
 
-/** Dispara Lead no clique do WhatsApp/interesse, sem atrasar o app (sem preventDefault). */
+/**
+ * WhatsApp da ficha: Lead (catálogo) e AddToCart (otimização da campanha atual).
+ * Não usa preventDefault — o wa.me abre na hora. vehicle_view / whatsapp_click seguem no link.
+ */
 export function VehicleLeadHit({
   children,
   ...props
@@ -125,7 +129,9 @@ export function VehicleLeadHit({
       className="contents"
       onClickCapture={() => {
         if (!props.contentId) return;
-        trackLead(catalogParams(props));
+        const params = catalogParams(props);
+        trackLead(params);
+        trackAddToCart(params);
       }}
     >
       {children}
