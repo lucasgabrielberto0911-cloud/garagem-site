@@ -27,8 +27,9 @@ export function CookieConsent() {
       className="site-consent pointer-events-auto fixed z-[55] flex flex-col gap-2 border border-white/15 bg-ink/95 px-2.5 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur sm:px-3 sm:py-3"
     >
       <p className="text-[11px] leading-snug text-cream/90 sm:text-[12px]">
-        Cookies de medição (Google e Meta) só entram com o seu ok. O site, o
-        assistente e o WhatsApp funcionam no essencial.{" "}
+        Google Analytics só entra com o seu ok. Se você chegou por um anúncio,
+        a visita é medida para o anúncio funcionar. O site, o assistente e o
+        WhatsApp funcionam no essencial.{" "}
         <Link
           href="/privacidade"
           className="underline decoration-white/40 underline-offset-2 hover:text-brand"

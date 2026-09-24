@@ -43,6 +43,7 @@ import {
   formatVehicleWhatsAppMessage,
 } from "@/lib/vehicle-display";
 import { isRetiredStockSlug } from "@/lib/retired-listings";
+import { catalogPixelAutoFields } from "@/lib/catalog-feed";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
 import { getVehicleConditions, getGoogleReviews } from "@/lib/site-content";
 import {
@@ -240,6 +241,15 @@ export default async function VehicleDetailPage({
   const updatedLabel = vehicle.updatedAt
     ? formatUpdatedAt(vehicle.updatedAt)
     : "";
+  const auto = catalogPixelAutoFields(vehicle);
+  const autoHit = {
+    stateOfVehicle: auto.state_of_vehicle,
+    exteriorColor: auto.exterior_color,
+    transmission: auto.transmission,
+    bodyStyle: auto.body_style,
+    fuelType: auto.fuel_type,
+    postalCode: auto.postal_code,
+  };
 
   return (
     <div
@@ -255,6 +265,7 @@ export default async function VehicleDetailPage({
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}
         catalog={!sold}
+        {...autoHit}
       />
       <VehicleChatContext
         vehicle={{
@@ -361,6 +372,7 @@ export default async function VehicleDetailPage({
                   model: formatModelName(vehicle.model),
                   message: whatsapp.interest,
                   trackingContent: fichaTrack.content,
+                  ...autoHit,
                 }}
               />
             </div>
@@ -476,6 +488,7 @@ export default async function VehicleDetailPage({
                     make={formatBrandName(vehicle.brand)}
                     model={formatModelName(vehicle.model)}
                     year={vehicle.yearModel}
+                    {...autoHit}
                   >
                     <WhatsAppButton
                       size="lg"
@@ -500,6 +513,7 @@ export default async function VehicleDetailPage({
                     make={formatBrandName(vehicle.brand)}
                     model={formatModelName(vehicle.model)}
                     year={vehicle.yearModel}
+                    {...autoHit}
                     video={whatsapp.video}
                     finance={whatsapp.finance}
                     trade={whatsapp.trade}
@@ -622,6 +636,7 @@ export default async function VehicleDetailPage({
               ? undefined
               : {
                   contentPath: path,
+                  ...autoHit,
                   video: whatsapp.video,
                   finance: whatsapp.finance,
                   trade: whatsapp.trade,
@@ -687,6 +702,12 @@ export default async function VehicleDetailPage({
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}
         price={vehicle.price}
+        stateOfVehicle={autoHit.stateOfVehicle}
+        exteriorColor={autoHit.exteriorColor}
+        catalogTransmission={autoHit.transmission}
+        bodyStyle={autoHit.bodyStyle}
+        fuelType={autoHit.fuelType}
+        postalCode={autoHit.postalCode}
         sold={sold}
         category={vehicle.category}
         soldHref={related.length > 0 ? "#mesma-faixa" : "/estoque"}

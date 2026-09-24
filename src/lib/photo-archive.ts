@@ -50,6 +50,15 @@ export function publicPhotoJpgPath(vehicleId: string, photoId: string) {
   return `/api/foto-jpg/${encodeURIComponent(vehicleId)}/${encodeURIComponent(photoId)}`;
 }
 
+/**
+ * JPEG cacheável para o catálogo da Meta.
+ * O download da ficha (`/api/foto-jpg`) é anexo e tem rate limit — o crawler
+ * do catálogo não pode depender disso.
+ */
+export function catalogPhotoJpgPath(vehicleId: string, photoId: string) {
+  return `/api/catalog-jpg/${encodeURIComponent(vehicleId)}/${encodeURIComponent(photoId)}`;
+}
+
 /** JPG de uma foto já no Storage, a partir da grade do anúncio. */
 export function adminStorageJpgPath(url: string, filename: string) {
   const params = new URLSearchParams({

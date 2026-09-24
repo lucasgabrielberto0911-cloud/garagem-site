@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import {
+  trackAddToCart,
   trackLead,
   trackSearch,
   trackVehicleView,
@@ -17,6 +18,12 @@ type VehicleHitProps = {
   make?: string;
   model?: string;
   year?: number;
+  stateOfVehicle?: string;
+  exteriorColor?: string;
+  transmission?: string;
+  bodyStyle?: string;
+  fuelType?: string;
+  postalCode?: string;
 };
 
 function catalogParams({
@@ -26,6 +33,12 @@ function catalogParams({
   make,
   model,
   year,
+  stateOfVehicle,
+  exteriorColor,
+  transmission,
+  bodyStyle,
+  fuelType,
+  postalCode,
 }: VehicleHitProps): CatalogEventParams {
   return {
     content_ids: [contentId],
@@ -34,6 +47,12 @@ function catalogParams({
     make,
     model,
     year,
+    state_of_vehicle: stateOfVehicle,
+    exterior_color: exteriorColor,
+    transmission,
+    body_style: bodyStyle,
+    fuel_type: fuelType,
+    postal_code: postalCode,
   };
 }
 
@@ -41,21 +60,66 @@ export function VehicleViewContent({
   catalog = true,
   ...props
 }: VehicleHitProps & { catalog?: boolean }) {
-  const { contentId, contentName, slug, value, make, model, year } = props;
+  const {
+    contentId,
+    contentName,
+    slug,
+    value,
+    make,
+    model,
+    year,
+    stateOfVehicle,
+    exteriorColor,
+    transmission,
+    bodyStyle,
+    fuelType,
+    postalCode,
+  } = props;
 
   useEffect(() => {
     if (!contentId) return;
     trackVehicleView({ vehicleId: contentId, slug });
     if (!catalog) return;
     trackViewContent(
-      catalogParams({ contentId, contentName, value, make, model, year }),
+      catalogParams({
+        contentId,
+        contentName,
+        value,
+        make,
+        model,
+        year,
+        stateOfVehicle,
+        exteriorColor,
+        transmission,
+        bodyStyle,
+        fuelType,
+        postalCode,
+      }),
     );
-  }, [catalog, contentId, contentName, slug, value, make, model, year]);
+  }, [
+    catalog,
+    contentId,
+    contentName,
+    slug,
+    value,
+    make,
+    model,
+    year,
+    stateOfVehicle,
+    exteriorColor,
+    transmission,
+    bodyStyle,
+    fuelType,
+    postalCode,
+  ]);
 
   return null;
 }
 
-/** Dispara Lead no clique do WhatsApp/interesse, sem atrasar o app (sem preventDefault). */
+/**
+ * WhatsApp da ficha: Lead (catálogo) e AddToCart (otimização da campanha atual).
+ * Não usa preventDefault — o wa.me abre na hora. vehicle_view / whatsapp_click seguem no link.
+ */
 export function VehicleLeadHit({
   children,
   ...props
@@ -65,7 +129,9 @@ export function VehicleLeadHit({
       className="contents"
       onClickCapture={() => {
         if (!props.contentId) return;
-        trackLead(catalogParams(props));
+        const params = catalogParams(props);
+        trackLead(params);
+        trackAddToCart(params);
       }}
     >
       {children}

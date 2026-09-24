@@ -45,6 +45,12 @@ export function VehicleMobileBar({
   model,
   year,
   price,
+  stateOfVehicle,
+  exteriorColor,
+  catalogTransmission,
+  bodyStyle,
+  fuelType,
+  postalCode,
   sold = false,
   category,
   soldHref = "/estoque",
@@ -62,6 +68,12 @@ export function VehicleMobileBar({
   model: string;
   year: number;
   price: number;
+  stateOfVehicle?: string;
+  exteriorColor?: string;
+  catalogTransmission?: string;
+  bodyStyle?: string;
+  fuelType?: string;
+  postalCode?: string;
   sold?: boolean;
   category?: string;
   soldHref?: string;
@@ -161,6 +173,12 @@ export function VehicleMobileBar({
               make={brand}
               model={model}
               year={year}
+              stateOfVehicle={stateOfVehicle}
+              exteriorColor={exteriorColor}
+              transmission={catalogTransmission}
+              bodyStyle={bodyStyle}
+              fuelType={fuelType}
+              postalCode={postalCode}
             >
               <a
                 href={href}
@@ -184,8 +202,22 @@ export function VehicleMobileBar({
             className="mt-2 grid grid-cols-3 gap-1.5 border-t border-white/10 pt-2"
           >
             {secondary.map((action) => (
-              <a
+              <VehicleLeadHit
                 key={action.tracking}
+                contentId={vehicleId}
+                contentName={contentName}
+                value={price}
+                make={brand}
+                model={model}
+                year={year}
+                stateOfVehicle={stateOfVehicle}
+                exteriorColor={exteriorColor}
+                transmission={catalogTransmission}
+                bodyStyle={bodyStyle}
+                fuelType={fuelType}
+                postalCode={postalCode}
+              >
+              <a
                 href={action.href}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -203,6 +235,7 @@ export function VehicleMobileBar({
               >
                 {action.label}
               </a>
+              </VehicleLeadHit>
             ))}
           </div>
         ) : null}

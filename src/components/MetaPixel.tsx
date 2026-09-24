@@ -9,7 +9,6 @@ function pixelId() {
 
 function stubScript(id: string) {
   // Stub oficial do Pixel: enfileira init/PageView/eventos antes do fbevents.js.
-  // Não baixa o script pesado aqui — isso fica no next/script afterInteractive.
   return `
     !function(f){if(f.fbq)return;var n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -21,8 +20,10 @@ function stubScript(id: string) {
 }
 
 /**
- * Um único Pixel: stub imediato (fila) + fbevents.js async.
- * ViewContent/Lead/Search não se perdem se o React disparar antes do download.
+ * Um único Pixel: stub imediato (fila) + fbevents.js depois da hidratação.
+ * `afterInteractive`, não no idle da página. O idle esperava o load e o
+ * PageView da campanha não chegava (clique no anúncio sem visualização).
+ * O GA4 continua adiado.
  */
 export function MetaPixel() {
   const id = pixelId();
@@ -37,7 +38,7 @@ export function MetaPixel() {
       <Script
         id="meta-pixel-fbevents"
         src="https://connect.facebook.net/en_US/fbevents.js"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
       />
       <noscript
         dangerouslySetInnerHTML={{

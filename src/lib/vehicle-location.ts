@@ -57,7 +57,30 @@ export function vehicleLocationLabel(value: unknown) {
   return "";
 }
 
-/** Cidade no feed da Meta — nunca mais chutar Aracruz. */
+/** Cidade no feed da Meta — nunca mais chutar Aracruz nem Vitória. */
 export function catalogAddressCity(value: unknown) {
   return vehicleLocationLabel(resolveVehicleLocationCity(value));
+}
+
+/** Centro aproximado usado no catálogo (o CSV manual já usava estes pontos). */
+const CATALOG_PLACES: Record<
+  VehicleLocationCity,
+  { city: string; postalCode: string; latitude: number; longitude: number }
+> = {
+  linhares: {
+    city: "Linhares",
+    postalCode: "29900-000",
+    latitude: -19.3911,
+    longitude: -40.0722,
+  },
+  serra: {
+    city: "Serra",
+    postalCode: "29160-000",
+    latitude: -20.1286,
+    longitude: -40.3076,
+  },
+};
+
+export function catalogPlace(value: unknown) {
+  return CATALOG_PLACES[resolveVehicleLocationCity(value)];
 }

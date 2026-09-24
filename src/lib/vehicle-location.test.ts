@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   DEFAULT_VEHICLE_LOCATION_CITY,
   catalogAddressCity,
+  catalogPlace,
   isVehicleLocationCity,
   parseVehicleLocationCity,
   resolveVehicleLocationCity,
@@ -36,4 +37,7 @@ test("rótulos em português e cidade do catálogo Meta", () => {
   assert.equal(vehicleLocationLabel("aracruz"), "");
   assert.equal(catalogAddressCity("serra"), "Serra");
   assert.equal(catalogAddressCity("linhares"), "Linhares");
+  assert.equal(catalogPlace("serra").city, "Serra");
+  assert.equal(catalogPlace("vitoria").city, "Linhares");
+  assert.notEqual(catalogPlace(undefined).city, "Vitória");
 });
