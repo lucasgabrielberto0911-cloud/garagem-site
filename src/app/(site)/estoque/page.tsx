@@ -13,7 +13,7 @@ import { buildPageMetadata, itemListJsonLd } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { getStockFacets, getStockPage } from "@/lib/vehicles";
 
-export const revalidate = 120;
+export const revalidate = 600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Estoque | ${site.name}`,

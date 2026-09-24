@@ -28,8 +28,6 @@ const STATIC_ROUTES: {
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
-
   let vehicles: {
     id: string;
     brand: string;
@@ -47,7 +45,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...STATIC_ROUTES.map((route) => ({
       url: absoluteUrl(route.path),
-      lastModified: now,
       changeFrequency: route.changeFrequency,
       priority: route.priority,
     })),

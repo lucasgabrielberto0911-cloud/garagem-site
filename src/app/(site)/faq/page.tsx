@@ -8,7 +8,7 @@ import { buildPageMetadata, faqJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getPublishedFaq } from "@/lib/site-content";
 
-export const revalidate = 120;
+export const revalidate = 600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Dúvidas frequentes | ${site.name}`,

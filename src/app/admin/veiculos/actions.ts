@@ -1,7 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
-import { expireAdminData } from "@/lib/admin-revalidate";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
@@ -26,23 +25,15 @@ import {
   normalizeBulkVehicleIds,
 } from "@/lib/admin-bulk";
 import { canEnableFeatured, featuredCapMessage } from "@/lib/featured";
-import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
+import {
+  revalidatePublicStock,
+  revalidatePublicStockMany,
+} from "@/lib/public-stock-revalidate";
 
 export type VehicleFormState = {
   error?: string;
   success?: boolean;
 };
-
-/** Invalida o cache do site público sempre que o estoque muda. */
-function revalidatePublicStock(vehicleId?: string) {
-  expireAdminData();
-  revalidateTag(VEHICLES_PUBLIC_CACHE_TAG, "max");
-  revalidatePath("/");
-  revalidatePath("/estoque");
-  revalidatePath("/sitemap.xml");
-  revalidatePath("/estoque/[id]", "page");
-  if (vehicleId) revalidatePath(`/estoque/${vehicleId}`);
-}
 
 function requireNumber(value: FormDataEntryValue | null, label: string) {
   const parsed = Number(value);
@@ -305,7 +296,7 @@ export async function createVehicle(
     });
 
     revalidatePath("/admin/veiculos");
-    revalidatePublicStock(vehicle.id);
+    await revalidatePublicStock(vehicle);
     redirect(`/admin/veiculos/${vehicle.id}`);
   } catch (error) {
     if (
@@ -333,6 +324,17 @@ export async function updateVehicle(
   try {
     const data = parseVehicleFields(formData);
     await assertCanFeature({ vehicleId: id, featured: data.featured });
+
+    const previousVehicle = await prisma.vehicle.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        brand: true,
+        model: true,
+        version: true,
+        yearModel: true,
+      },
+    });
 
     let previous: Array<{ url: string; thumbnailUrl: string | null }> = [];
     try {
@@ -401,7 +403,16 @@ export async function updateVehicle(
 
     revalidatePath("/admin/veiculos");
     revalidatePath(`/admin/veiculos/${id}`);
-    revalidatePublicStock(id);
+    await revalidatePublicStock(
+      {
+        id,
+        brand: data.brand,
+        model: data.model,
+        version: data.version,
+        yearModel: data.yearModel,
+      },
+      previousVehicle,
+    );
     return { success: true };
   } catch (error) {
     console.error(error);
@@ -435,7 +446,17 @@ export async function deleteVehicle(id: string) {
   ]);
 
   revalidatePath("/admin/veiculos");
-  revalidatePublicStock(id);
+  await revalidatePublicStock(
+    vehicle
+      ? {
+          id: vehicle.id,
+          brand: vehicle.brand,
+          model: vehicle.model,
+          version: vehicle.version,
+          yearModel: vehicle.yearModel,
+        }
+      : null,
+  );
   redirect("/admin/veiculos");
 }
 
@@ -449,7 +470,7 @@ export async function markVehicleAsSold(id: string) {
 
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
-  revalidatePublicStock(id);
+  await revalidatePublicStock(id);
 }
 
 const VEHICLE_STATUSES = ["disponivel", "reservado", "vendido"] as const;
@@ -480,7 +501,7 @@ export async function setVehicleStatus(id: string, status: string) {
   });
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
-  revalidatePublicStock(id);
+  await revalidatePublicStock(id);
   return { ok: true, message: "Status atualizado." };
 }
 
@@ -556,7 +577,7 @@ export async function setVehiclesStatus(
   });
 
   revalidatePath("/admin/veiculos");
-  revalidatePublicStock();
+  await revalidatePublicStockMany(appliedIds);
   const priceBlockedCount = priceBlockedIds.size;
   const skipped = unique.length - appliedIds.length - priceBlockedCount;
   const featuredRemoved =
@@ -619,7 +640,7 @@ export async function setVehicleFeatured(id: string, featured: boolean) {
   await prisma.vehicle.update({ where: { id }, data: { featured } });
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
-  revalidatePublicStock(id);
+  await revalidatePublicStock(id);
   return {
     ok: true,
     message: featured
@@ -687,7 +708,7 @@ export async function duplicateVehicle(id: string) {
   });
 
   revalidatePath("/admin/veiculos");
-  revalidatePublicStock(copy.id);
+  await revalidatePublicStock(copy);
   return { ok: true as const, message: "Cópia criada.", id: copy.id };
 }
 

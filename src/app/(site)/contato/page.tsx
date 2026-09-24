@@ -26,7 +26,7 @@ import {
 } from "@/lib/site";
 import { getPublicSite } from "@/lib/site-settings";
 
-export const revalidate = 60;
+export const revalidate = 600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Contato | ${site.name}`,

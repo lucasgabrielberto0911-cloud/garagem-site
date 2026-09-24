@@ -21,7 +21,7 @@ import { getSiteContent } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 import { getSiteStats } from "@/lib/vehicles";
 
-export const revalidate = 60;
+export const revalidate = 600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Sobre a ${site.name}`,

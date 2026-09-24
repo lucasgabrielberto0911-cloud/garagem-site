@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { revalidateAllPublicFichas } from "@/lib/public-stock-revalidate";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { galleryStemFromStoragePath } from "@/lib/photo-master";
@@ -13,7 +14,6 @@ import {
   hasSupabaseServiceRole,
   storagePathFromPublicUrl,
 } from "@/lib/supabase";
-import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
 
 export type CleanupResult = {
   ok: boolean;
@@ -228,10 +228,7 @@ export async function backfillMissingThumbnails(): Promise<CleanupResult> {
       where: { OR: [{ thumbnailUrl: null }, { thumbnailUrl: "" }] },
     });
 
-    revalidateTag(VEHICLES_PUBLIC_CACHE_TAG, "max");
-    revalidatePath("/");
-    revalidatePath("/estoque");
-    revalidatePath("/estoque/[id]", "page");
+    revalidateAllPublicFichas();
     revalidatePath("/admin/site");
 
     const extra =

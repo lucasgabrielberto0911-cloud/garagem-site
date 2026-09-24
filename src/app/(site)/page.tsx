@@ -40,7 +40,7 @@ import {
 } from "@/lib/vehicles";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 
-export const revalidate = 60;
+export const revalidate = 600;
 
 export const metadata = buildPageMetadata({
   title: `${site.name} | Seminovos com procedência no ${site.state}`,

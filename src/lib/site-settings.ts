@@ -115,7 +115,8 @@ const loadPublicSiteCached = unstable_cache(
     }
   },
   ["public-site-settings-v2"],
-  { revalidate: 120, tags: ["site-settings"] },
+  // 3600: o layout público usa este cache. Um valor menor puxa o ISR de todas as rotas.
+  { revalidate: 3600, tags: ["site-settings"] },
 );
 
 /**

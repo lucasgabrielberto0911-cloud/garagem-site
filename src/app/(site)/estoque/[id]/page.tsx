@@ -23,7 +23,8 @@ import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { JsonLd } from "@/components/JsonLd";
-import { formatCurrencyBRL, formatBrandName, formatModelName, formatListedAgo, vehicleSeoDescription } from "@/lib/format";
+import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
+import { ListedAgo } from "@/components/site/ListedAgo";
 import {
   buildVehiclePublicSpecs,
   STORE_INSPECTION_LABEL,
@@ -48,7 +49,7 @@ import {
   getVehicleByParam,
 } from "@/lib/vehicles";
 
-export const revalidate = 60;
+export const revalidate = 600;
 export const dynamicParams = true;
 
 export async function generateStaticParams() {
@@ -229,7 +230,9 @@ export default async function VehicleDetailPage({
 
   const hasDetails =
     Boolean(vehicle.description) || accessories.length > 0;
-  const listedAgo = formatListedAgo(vehicle.createdAt);
+  const updatedLabel = vehicle.updatedAt
+    ? formatUpdatedAt(vehicle.updatedAt)
+    : "";
 
   return (
     <div
@@ -407,14 +410,16 @@ export default async function VehicleDetailPage({
                 )}
               </p>
               {!sold ? <VehicleTrustNotes /> : null}
-              {listedAgo || vehicle.updatedAt ? (
+              {vehicle.createdAt || updatedLabel ? (
                 <p className="text-xs text-muted">
-                  {[
-                    listedAgo,
-                    vehicle.updatedAt ? formatUpdatedAt(vehicle.updatedAt) : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+                  <ListedAgo
+                    listedAt={
+                      vehicle.createdAt
+                        ? new Date(vehicle.createdAt).toISOString()
+                        : null
+                    }
+                    updatedLabel={updatedLabel}
+                  />
                 </p>
               ) : null}
               {!sold ? (
@@ -589,12 +594,14 @@ export default async function VehicleDetailPage({
           inspection={vehicle.inspection}
           conditions={conditions}
           listedLine={
-            [
-              listedAgo,
-              vehicle.updatedAt ? formatUpdatedAt(vehicle.updatedAt) : "",
-            ]
-              .filter(Boolean)
-              .join(" · ") || undefined
+            <ListedAgo
+              listedAt={
+                vehicle.createdAt
+                  ? new Date(vehicle.createdAt).toISOString()
+                  : null
+              }
+              updatedLabel={updatedLabel}
+            />
           }
           google={google}
           prompt={`Tenho dúvida sobre o ${title}`}
