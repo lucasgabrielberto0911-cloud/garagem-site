@@ -18,7 +18,6 @@ function revalidateSharedPublicStock(expireAdmin = true) {
   revalidatePath("/");
   revalidatePath("/estoque");
   revalidatePath("/sitemap.xml");
-  revalidatePath("/catalog/meta.csv");
 }
 
 function revalidateSlug(vehicle: VehiclePathInput, seen: Set<string>) {
@@ -30,7 +29,8 @@ function revalidateSlug(vehicle: VehiclePathInput, seen: Set<string>) {
 
 /**
  * Uma unidade (criar, editar, status, venda): tag pública, home, listagem,
- * sitemap, feed da Meta e só o slug canônico daquela ficha.
+ * sitemap e só o slug canônico daquela ficha.
+ * O CSV da Meta fica no cache da CDN (s-maxage), sem revalidatePath.
  * Não chama `revalidatePath("/estoque/[id]", "page")` — isso regrava todas as fichas.
  * `previous` cobre a URL antiga quando marca/modelo/ano mudam o slug.
  */

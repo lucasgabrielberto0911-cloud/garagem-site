@@ -15,6 +15,13 @@ export type CatalogEventParams = {
   model?: string;
   year?: string | number;
   search_string?: string;
+  /** Recomendados em Automotive Inventory Ads (ViewContent / Lead). */
+  state_of_vehicle?: string;
+  exterior_color?: string;
+  transmission?: string;
+  body_style?: string;
+  fuel_type?: string;
+  postal_code?: string;
 };
 
 export type CatalogEventPayload = {
@@ -30,6 +37,12 @@ export type CatalogEventPayload = {
   year?: string;
   search_string?: string;
   country?: string;
+  state_of_vehicle?: string;
+  exterior_color?: string;
+  transmission?: string;
+  body_style?: string;
+  fuel_type?: string;
+  postal_code?: string;
 };
 
 type Fbq = {
@@ -136,6 +149,19 @@ export function buildCatalogPayload(
 
   const search = compactString(params.search_string);
   if (search) payload.search_string = search;
+
+  const stateOfVehicle = compactString(params.state_of_vehicle);
+  if (stateOfVehicle) payload.state_of_vehicle = stateOfVehicle;
+  const exterior = compactString(params.exterior_color);
+  if (exterior) payload.exterior_color = exterior;
+  const transmission = compactString(params.transmission);
+  if (transmission) payload.transmission = transmission;
+  const bodyStyle = compactString(params.body_style);
+  if (bodyStyle) payload.body_style = bodyStyle;
+  const fuelType = compactString(params.fuel_type);
+  if (fuelType) payload.fuel_type = fuelType;
+  const postal = compactString(params.postal_code);
+  if (postal) payload.postal_code = postal;
 
   return payload;
 }

@@ -24,6 +24,12 @@ export function VehicleQuickActions({
   make,
   model,
   year,
+  stateOfVehicle,
+  exteriorColor,
+  transmission,
+  bodyStyle,
+  fuelType,
+  postalCode,
   video,
   finance,
   trade,
@@ -37,6 +43,12 @@ export function VehicleQuickActions({
   make: string;
   model: string;
   year: number;
+  stateOfVehicle?: string;
+  exteriorColor?: string;
+  transmission?: string;
+  bodyStyle?: string;
+  fuelType?: string;
+  postalCode?: string;
   video: string;
   finance: string;
   trade: string;
@@ -59,6 +71,12 @@ export function VehicleQuickActions({
           make={make}
           model={model}
           year={year}
+          stateOfVehicle={stateOfVehicle}
+          exteriorColor={exteriorColor}
+          transmission={transmission}
+          bodyStyle={bodyStyle}
+          fuelType={fuelType}
+          postalCode={postalCode}
         >
           <TrackedWhatsAppLink
             href={fichaHref(action.hrefMessage, contentId, contentPath)}

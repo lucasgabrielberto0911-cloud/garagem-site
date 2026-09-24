@@ -42,6 +42,26 @@ test("content_ids uses the Prisma CUID, not the URL slug", () => {
   assert.equal(payload.make, "Hyundai");
   assert.equal(payload.model, "HB20");
   assert.equal(payload.year, "2024");
+  assert.equal(payload.state_of_vehicle, undefined);
+
+  const withAuto = buildCatalogPayload({
+    content_ids: [VEHICLE_CUID],
+    value: 82900,
+    state_of_vehicle: "Used",
+    exterior_color: "Branco",
+    transmission: "automatic",
+    body_style: "hatchback",
+    fuel_type: "flex",
+    postal_code: "29900-000",
+  });
+  assert.equal(withAuto.content_type, "vehicle");
+  assert.deepEqual(withAuto.content_ids, [VEHICLE_CUID]);
+  assert.equal(withAuto.currency, "BRL");
+  assert.equal(withAuto.state_of_vehicle, "Used");
+  assert.equal(withAuto.body_style, "hatchback");
+  assert.equal(withAuto.fuel_type, "flex");
+  assert.equal(withAuto.postal_code, "29900-000");
+
   assert.deepEqual(payload.contents, [
     { id: VEHICLE_CUID, quantity: 1, item_price: 82900 },
   ]);

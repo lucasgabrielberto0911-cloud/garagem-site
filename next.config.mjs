@@ -54,6 +54,14 @@ const nextConfig = {
       "./node_modules/sharp/**",
       "./node_modules/heic-convert/**",
     ],
+    "/api/meta/**": [
+      "./node_modules/sharp/**",
+      "./node_modules/heic-convert/**",
+    ],
+    "/catalog/**": [
+      "./node_modules/sharp/**",
+      "./node_modules/heic-convert/**",
+    ],
     "/api/health/**": [
       "./node_modules/sharp/**",
       "./node_modules/heic-convert/**",

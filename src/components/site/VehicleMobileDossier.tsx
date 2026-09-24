@@ -67,6 +67,12 @@ export function VehicleMobileSummary({
     model: string;
     message: string;
     trackingContent?: string;
+    stateOfVehicle?: string;
+    exteriorColor?: string;
+    transmission?: string;
+    bodyStyle?: string;
+    fuelType?: string;
+    postalCode?: string;
   };
 }) {
   const facts = [
@@ -121,6 +127,12 @@ export function VehicleMobileSummary({
             make={whatsapp.make}
             model={whatsapp.model}
             year={yearModel}
+            stateOfVehicle={whatsapp.stateOfVehicle}
+            exteriorColor={whatsapp.exteriorColor}
+            transmission={whatsapp.transmission}
+            bodyStyle={whatsapp.bodyStyle}
+            fuelType={whatsapp.fuelType}
+            postalCode={whatsapp.postalCode}
           >
             <WhatsAppButton
               size="lg"
@@ -212,6 +224,12 @@ export function VehicleMobileBlocks({
     video: string;
     finance: string;
     trade: string;
+    stateOfVehicle?: string;
+    exteriorColor?: string;
+    transmission?: string;
+    bodyStyle?: string;
+    fuelType?: string;
+    postalCode?: string;
   };
 }) {
   const extraSpecs = specs.filter((row) => !FOLD_LABELS.has(row.label));
@@ -310,6 +328,12 @@ export function VehicleMobileBlocks({
               make={make}
               model={model}
               year={yearModel}
+              stateOfVehicle={quickActions.stateOfVehicle}
+              exteriorColor={quickActions.exteriorColor}
+              transmission={quickActions.transmission}
+              bodyStyle={quickActions.bodyStyle}
+              fuelType={quickActions.fuelType}
+              postalCode={quickActions.postalCode}
               video={quickActions.video}
               finance={quickActions.finance}
               trade={quickActions.trade}
