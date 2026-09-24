@@ -55,28 +55,49 @@ export function isDocKind(value: string): value is VehicleDocKind {
   return VEHICLE_DOC_KINDS.some((item) => item.value === value);
 }
 
-export function extrasTotal(costs: Array<{ amount: number }>) {
+/** Linhas de custo ou a soma já feita no banco (listas do painel). */
+export type VehicleCostsInput = Array<{ amount: number }> | number;
+
+/**
+ * Consignado não usa compra nem custos da loja: fica fora do investido e o
+ * lucro vira N/A. As linhas antigas continuam no banco, só não somam.
+ */
+export type VehicleCostOptions = { consigned?: boolean | null };
+
+export const CONSIGNED_LABEL = "Consignado";
+export const CONSIGNED_HINT =
+  "Não entra em custos nem no valor do estoque. Não aparece no site para o cliente.";
+export const CONSIGNED_NO_COSTS_NOTE =
+  "Consignado não usa custos da loja. Compra e custos ficam fora do investido e do lucro.";
+
+export function extrasTotal(costs: VehicleCostsInput) {
+  if (typeof costs === "number") return Number.isFinite(costs) ? costs : 0;
   return costs.reduce((sum, item) => sum + (item.amount || 0), 0);
 }
 
 export function investedTotal(
   purchasePrice: number | null | undefined,
-  costs: Array<{ amount: number }>,
+  costs: VehicleCostsInput,
+  options?: VehicleCostOptions,
 ) {
+  if (options?.consigned) return 0;
   return (purchasePrice ?? 0) + extrasTotal(costs);
 }
 
 export function hasCostBasis(
   purchasePrice: number | null | undefined,
-  costs: Array<{ amount: number }>,
+  costs: VehicleCostsInput,
+  options?: VehicleCostOptions,
 ) {
+  if (options?.consigned) return false;
   return (purchasePrice != null && purchasePrice > 0) || extrasTotal(costs) > 0;
 }
 
 export function expectedMargin(
   salePrice: number,
   purchasePrice: number | null | undefined,
-  costs: Array<{ amount: number }>,
+  costs: VehicleCostsInput,
+  options?: VehicleCostOptions,
 ) {
-  return salePrice - investedTotal(purchasePrice, costs);
+  return salePrice - investedTotal(purchasePrice, costs, options);
 }

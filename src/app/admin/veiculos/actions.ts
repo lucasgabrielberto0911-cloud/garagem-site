@@ -95,7 +95,11 @@ function parseVehicleFields(formData: FormData) {
     ? requireNumber(formData.get("doors"), "Portas")
     : null;
 
-  const purchaseRaw = String(formData.get("purchasePrice") || "").replace(/\D/g, "");
+  const consigned =
+    formData.get("consigned") === "on" || formData.get("consigned") === "true";
+  const purchaseRaw = consigned
+    ? ""
+    : String(formData.get("purchasePrice") || "").replace(/\D/g, "");
   const purchasePrice = purchaseRaw ? Number(purchaseRaw) : null;
   if (purchasePrice != null && (!Number.isFinite(purchasePrice) || purchasePrice < 0)) {
     throw new Error("Preço de compra inválido.");
@@ -212,6 +216,7 @@ function parseVehicleFields(formData: FormData) {
     featured,
     photos,
     purchasePrice,
+    consigned,
     inStoreName,
     hasSpareKey,
     hasManual,
@@ -284,6 +289,7 @@ export async function createVehicle(
         locationCity: data.locationCity,
         featured: data.featured,
         purchasePrice: data.purchasePrice,
+        consigned: data.consigned,
         inStoreName: data.inStoreName,
         hasSpareKey: data.hasSpareKey,
         hasManual: data.hasManual,
@@ -371,6 +377,7 @@ export async function updateVehicle(
           locationCity: data.locationCity,
           featured: data.featured,
           hasVideo: data.hasVideo,
+          consigned: data.consigned,
           photos: {
             create: data.photos.map((photo, order) => ({
               url: photo.url,
@@ -665,6 +672,7 @@ export async function duplicateVehicle(id: string) {
       status: "disponivel",
       locationCity: source.locationCity,
       featured: false,
+      consigned: source.consigned,
       inStoreName: source.inStoreName,
       hasSpareKey: source.hasSpareKey,
       hasManual: source.hasManual,

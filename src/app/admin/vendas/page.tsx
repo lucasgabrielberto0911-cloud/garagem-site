@@ -5,7 +5,7 @@ import { getAdminSalesPage, parseSalesPeriod } from "@/lib/admin-vehicles";
 import { getSession } from "@/lib/auth";
 import { formatCurrencyBRL } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
-import { expectedMargin, hasCostBasis } from "@/lib/vehicle-ops";
+import { expectedMargin } from "@/lib/vehicle-ops";
 
 export const dynamic = "force-dynamic";
 
@@ -26,47 +26,48 @@ export default async function VendasPage({
   const { period: periodParam } = await searchParams;
   const period = parseSalesPeriod(periodParam);
 
-  const [list, totals, monthTotals, profitRows] = await Promise.all([
-    getAdminSalesPage({ page: 1, period }),
-    prisma.sale.aggregate({ _sum: { salePrice: true }, _count: { _all: true } }),
-    prisma.sale.aggregate({
-      where: { saleDate: { gte: monthStart } },
-      _sum: { salePrice: true },
-      _count: { _all: true },
-    }),
-    prisma.sale.findMany({
-      where: {
-        OR: [
-          { vehicle: { purchasePrice: { gt: 0 } } },
-          { vehicle: { costs: { some: {} } } },
-        ],
-      },
-      select: {
-        salePrice: true,
-        vehicle: {
-          select: {
-            purchasePrice: true,
-            costs: { select: { amount: true } },
-          },
-        },
-      },
-    }),
-  ]);
+  // Lucro somado no banco: só vendas de carro próprio com compra ou custo.
+  // Consignado fica fora (lucro N/A), mas a venda conta no faturamento.
+  const withCostBasis = {
+    sale: { isNot: null },
+    consigned: false,
+    OR: [
+      { purchasePrice: { gt: 0 } },
+      { costs: { some: { amount: { gt: 0 } } } },
+    ],
+  };
+
+  const [list, totals, monthTotals, profitSales, profitPurchases, profitCosts] =
+    await Promise.all([
+      getAdminSalesPage({ page: 1, period }),
+      prisma.sale.aggregate({ _sum: { salePrice: true }, _count: { _all: true } }),
+      prisma.sale.aggregate({
+        where: { saleDate: { gte: monthStart } },
+        _sum: { salePrice: true },
+        _count: { _all: true },
+      }),
+      prisma.sale.aggregate({
+        where: { vehicle: withCostBasis },
+        _sum: { salePrice: true },
+        _count: { _all: true },
+      }),
+      prisma.vehicle.aggregate({
+        where: withCostBasis,
+        _sum: { purchasePrice: true },
+      }),
+      prisma.vehicleCost.aggregate({
+        where: { vehicle: withCostBasis },
+        _sum: { amount: true },
+      }),
+    ]);
 
   const revenue = totals._sum.salePrice ?? 0;
   const count = totals._count._all;
-  const knownProfitSales = profitRows.filter((sale) =>
-    hasCostBasis(sale.vehicle.purchasePrice, sale.vehicle.costs),
-  );
-  const knownProfit = knownProfitSales.reduce(
-    (sum, sale) =>
-      sum +
-      expectedMargin(
-        sale.salePrice,
-        sale.vehicle.purchasePrice,
-        sale.vehicle.costs,
-      ),
-    0,
+  const knownProfitCount = profitSales._count._all;
+  const knownProfit = expectedMargin(
+    profitSales._sum.salePrice ?? 0,
+    profitPurchases._sum.purchasePrice,
+    profitCosts._sum.amount ?? 0,
   );
 
   return (
@@ -82,8 +83,8 @@ export default async function VendasPage({
           label="Faturamento total"
           value={formatCurrencyBRL(revenue)}
           hint={
-            knownProfitSales.length > 0
-              ? `Lucro ${formatCurrencyBRL(knownProfit)} em ${knownProfitSales.length} venda(s) com custo`
+            knownProfitCount > 0
+              ? `Lucro ${formatCurrencyBRL(knownProfit)} em ${knownProfitCount} venda(s) com custo`
               : undefined
           }
           tone={revenue > 0 ? "success" : "default"}

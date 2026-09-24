@@ -83,7 +83,7 @@ async function loadDashboardData() {
   const [
     vehicleGroups,
     featured,
-    availableAggregate,
+    availableByConsigned,
     salesAggregate,
     monthSales,
     leadGroups,
@@ -101,14 +101,15 @@ async function loadDashboardData() {
     safe("vehicle.groupBy", () => prisma.vehicle.groupBy({ by: ["status"], _count: { _all: true } }), []),
     safe("featured", () => prisma.vehicle.count({ where: { status: "disponivel", featured: true } }), 0),
     safe(
-      "availableAggregate",
+      "availableByConsigned",
       () =>
-        prisma.vehicle.aggregate({
+        prisma.vehicle.groupBy({
+          by: ["consigned"],
           where: { status: "disponivel" },
-          _sum: { price: true },
-          _avg: { price: true, km: true },
+          _sum: { price: true, km: true },
+          _count: { _all: true },
         }),
-      { _sum: { price: null }, _avg: { price: null, km: null } },
+      [],
     ),
     safe(
       "salesAggregate",
@@ -213,6 +214,18 @@ async function loadDashboardData() {
   ) as Record<LeadStatus, number>;
 
   const available = byStatus("disponivel");
+  // Consignado fica na vitrine (entra no KM médio), mas não no valor do estoque.
+  const owned = availableByConsigned.find((group) => !group.consigned);
+  const ownedAvailable = owned?._count._all ?? 0;
+  const stockValue = owned?._sum.price ?? 0;
+  const availableCount = availableByConsigned.reduce(
+    (sum, group) => sum + group._count._all,
+    0,
+  );
+  const availableKm = availableByConsigned.reduce(
+    (sum, group) => sum + (group._sum.km ?? 0),
+    0,
+  );
   const siteDefaults = (await import("@/lib/site")).site;
   const siteForPlaceholders = publicSite ?? {
     ...siteDefaults,
@@ -226,9 +239,11 @@ async function loadDashboardData() {
       reserved: byStatus("reservado"),
       sold: byStatus("vendido"),
       featured,
-      stockValue: availableAggregate._sum.price ?? 0,
-      averagePrice: availableAggregate._avg.price ?? 0,
-      averageKm: availableAggregate._avg.km ?? 0,
+      stockValue,
+      ownedAvailable,
+      consignedAvailable: availableCount - ownedAvailable,
+      averagePrice: ownedAvailable > 0 ? stockValue / ownedAvailable : 0,
+      averageKm: availableCount > 0 ? availableKm / availableCount : 0,
     },
     sales: {
       count: salesAggregate._count._all,
@@ -271,6 +286,6 @@ async function loadDashboardData() {
  */
 export const getDashboardData = unstable_cache(
   loadDashboardData,
-  ["admin-dashboard-v2"],
+  ["admin-dashboard-v3"],
   { revalidate: 60, tags: [ADMIN_DATA_TAG, ADMIN_NEW_LEADS_TAG] },
 );

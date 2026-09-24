@@ -76,9 +76,18 @@ export default async function AdminDashboardPage() {
       label="Valor do estoque"
       value={formatCurrencyBRL(vehicles.stockValue)}
       hint={
-        vehicles.available > 0
-          ? `Média ${formatCurrencyBRL(vehicles.averagePrice)}`
-          : "Nenhum veículo disponível"
+        [
+          vehicles.ownedAvailable > 0
+            ? `Média ${formatCurrencyBRL(vehicles.averagePrice)}`
+            : vehicles.available > 0
+              ? ""
+              : "Nenhum veículo disponível",
+          vehicles.consignedAvailable > 0
+            ? `${vehicles.consignedAvailable} consignado(s) fora`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" · ") || undefined
       }
     />,
     <StatCard

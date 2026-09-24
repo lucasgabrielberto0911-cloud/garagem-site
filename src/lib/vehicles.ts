@@ -174,6 +174,7 @@ export const PUBLIC_VEHICLE_OMIT = {
   hasSpareKey: true,
   hasManual: true,
   purchasePrice: true,
+  consigned: true,
 } as const;
 
 export type PublicVehicleDetail = {

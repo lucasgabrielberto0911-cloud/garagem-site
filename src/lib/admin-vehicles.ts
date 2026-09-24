@@ -3,13 +3,14 @@ import { ADMIN_DATA_TAG } from "@/lib/admin-cache";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { staleCutoffDate } from "@/lib/stock-quality";
-import { hasCostBasis, investedTotal } from "@/lib/vehicle-ops";
+import { investedTotal } from "@/lib/vehicle-ops";
 import { DEFAULT_VEHICLE_LOCATION_CITY } from "@/lib/vehicle-location";
 
 export const ADMIN_VEHICLES_PAGE_SIZE = 20;
-export const ADMIN_SALES_PAGE_SIZE = 30;
-export const ADMIN_CUSTOMERS_PAGE_SIZE = 40;
-export const ADMIN_LEADS_PAGE_SIZE = 40;
+/** Primeira dobra leve no celular; o resto vem por paginação / rolagem. */
+export const ADMIN_SALES_PAGE_SIZE = 20;
+export const ADMIN_CUSTOMERS_PAGE_SIZE = 20;
+export const ADMIN_LEADS_PAGE_SIZE = 20;
 
 export type SalesPeriod = "all" | "month" | "30" | "90" | "year";
 
@@ -55,6 +56,7 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
   hasSpareKey: true,
   hasManual: true,
   purchasePrice: true,
+  consigned: true,
   createdAt: true,
   updatedAt: true,
   hasVideo: true,
@@ -66,7 +68,6 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
     take: 1,
     select: { url: true, thumbnailUrl: true },
   },
-  costs: { select: { amount: true } },
   sale: { select: { salePrice: true } },
   _count: { select: { photos: true } },
 } as const;
@@ -88,6 +89,7 @@ export type AdminVehicleListItem = {
   hasSpareKey: boolean;
   hasManual: boolean;
   purchasePrice: number | null;
+  consigned: boolean;
   createdAt: Date;
   updatedAt?: Date | string | null;
   hasVideo: boolean;
@@ -96,21 +98,35 @@ export type AdminVehicleListItem = {
   plate: string | null;
   photos: Array<{ url: string; thumbnailUrl?: string | null }>;
   photoCount: number;
-  costs: Array<{ amount: number }>;
+  /** Soma dos custos extras (a lista não carrega as linhas de custo). */
+  costsTotal: number;
   sale: { salePrice: number } | null;
 };
 
 function toAdminVehicleListItem(
-  row: Omit<AdminVehicleListItem, "photoCount"> & {
+  row: Omit<AdminVehicleListItem, "photoCount" | "costsTotal"> & {
     _count?: { photos: number };
   },
+  costsTotal: number,
 ): AdminVehicleListItem {
   const { _count, ...rest } = row;
   return {
     ...rest,
     locationCity: rest.locationCity || DEFAULT_VEHICLE_LOCATION_CITY,
     photoCount: _count?.photos ?? rest.photos.length,
+    costsTotal,
   };
+}
+
+/** Soma dos custos por veículo — uma linha por carro em vez de cada custo. */
+async function costsTotalByVehicle(vehicleIds: string[]) {
+  if (vehicleIds.length === 0) return new Map<string, number>();
+  const groups = await prisma.vehicleCost.groupBy({
+    by: ["vehicleId"],
+    where: { vehicleId: { in: vehicleIds } },
+    _sum: { amount: true },
+  });
+  return new Map(groups.map((group) => [group.vehicleId, group._sum.amount ?? 0]));
 }
 
 const ADMIN_VEHICLE_LIST_SELECT_NO_CITY = {
@@ -129,6 +145,7 @@ const ADMIN_VEHICLE_LIST_SELECT_NO_CITY = {
   hasSpareKey: true,
   hasManual: true,
   purchasePrice: true,
+  consigned: true,
   createdAt: true,
   updatedAt: true,
   hasVideo: true,
@@ -140,7 +157,6 @@ const ADMIN_VEHICLE_LIST_SELECT_NO_CITY = {
     take: 1,
     select: { url: true, thumbnailUrl: true },
   },
-  costs: { select: { amount: true } },
   sale: { select: { salePrice: true } },
   _count: { select: { photos: true } },
 } as const;
@@ -179,6 +195,7 @@ export const ADMIN_SALE_LIST_INCLUDE = {
       plate: true,
       historical: true,
       purchasePrice: true,
+      consigned: true,
       costs: { select: { amount: true } },
     },
   },
@@ -266,9 +283,14 @@ export async function getAdminVehiclesPage(options: {
       take: pageSize,
     }),
   ]);
+  const costs = await costsTotalByVehicle(
+    vehicleRows.filter((row) => !row.consigned).map((row) => row.id),
+  );
 
   return {
-    vehicles: vehicleRows.map(toAdminVehicleListItem),
+    vehicles: vehicleRows.map((row) =>
+      toAdminVehicleListItem(row, costs.get(row.id) ?? 0),
+    ),
     total,
     page,
     pageSize,
@@ -276,26 +298,51 @@ export async function getAdminVehiclesPage(options: {
   };
 }
 
+/** Estoque próprio: consignado fica na vitrine, mas fora do valor e do investido. */
+export const OWNED_AVAILABLE_WHERE = {
+  status: "disponivel",
+  historical: false,
+  consigned: false,
+} as const;
+
 async function loadAdminVehicleStats() {
   const stockWhere = {
     historical: false,
     status: { in: ["disponivel", "reservado"] },
   };
 
-  const [groups, stockValue, availableRows, withoutPhotos, withoutVideo, stale, featured] =
-    await Promise.all([
+  const [
+    groups,
+    stockValue,
+    extraCosts,
+    withCostBasis,
+    withoutPhotos,
+    withoutVideo,
+    stale,
+    featured,
+  ] = await Promise.all([
     prisma.vehicle.groupBy({
       by: ["status"],
       where: { historical: false },
       _count: { _all: true },
     }),
     prisma.vehicle.aggregate({
-      where: { status: "disponivel", historical: false },
-      _sum: { price: true },
+      where: OWNED_AVAILABLE_WHERE,
+      _sum: { price: true, purchasePrice: true },
+      _count: { _all: true },
     }),
-    prisma.vehicle.findMany({
-      where: { status: "disponivel", historical: false },
-      select: { purchasePrice: true, costs: { select: { amount: true } } },
+    prisma.vehicleCost.aggregate({
+      where: { vehicle: OWNED_AVAILABLE_WHERE },
+      _sum: { amount: true },
+    }),
+    prisma.vehicle.count({
+      where: {
+        ...OWNED_AVAILABLE_WHERE,
+        OR: [
+          { purchasePrice: { gt: 0 } },
+          { costs: { some: { amount: { gt: 0 } } } },
+        ],
+      },
     }),
     prisma.vehicle.count({
       where: { ...stockWhere, photos: { none: {} } },
@@ -318,13 +365,10 @@ async function loadAdminVehicleStats() {
   const count = (value: string) =>
     groups.find((group) => group.status === value)?._count._all ?? 0;
 
-  const invested = availableRows.reduce(
-    (sum, item) => sum + investedTotal(item.purchasePrice, item.costs),
-    0,
+  const invested = investedTotal(
+    stockValue._sum.purchasePrice,
+    extraCosts._sum.amount ?? 0,
   );
-  const withCostBasis = availableRows.filter((item) =>
-    hasCostBasis(item.purchasePrice, item.costs),
-  ).length;
 
   return {
     available: count("disponivel"),
@@ -333,6 +377,8 @@ async function loadAdminVehicleStats() {
     estoqueCount: count("disponivel") + count("reservado"),
     vendidosCount: count("vendido"),
     stockValue: stockValue._sum.price ?? 0,
+    ownedAvailable: stockValue._count._all,
+    consignedAvailable: Math.max(count("disponivel") - stockValue._count._all, 0),
     invested,
     withCostBasis,
     withoutPhotos,
@@ -345,7 +391,7 @@ async function loadAdminVehicleStats() {
 /** Contadores do topo da lista: só números, expiram com expireAdminData(). */
 export const getAdminVehicleStats = unstable_cache(
   loadAdminVehicleStats,
-  ["admin-vehicle-stats-v1"],
+  ["admin-vehicle-stats-v2"],
   { revalidate: 60, tags: [ADMIN_DATA_TAG] },
 );
 
@@ -391,6 +437,7 @@ export const SELLABLE_VEHICLE_SELECT = {
   price: true,
   status: true,
   purchasePrice: true,
+  consigned: true,
   costs: { select: { amount: true } },
 } as const;
 
@@ -403,6 +450,7 @@ export type SellableVehicleRecord = {
   price: number;
   status: string;
   purchasePrice: number | null;
+  consigned: boolean;
   costs: Array<{ amount: number }>;
 };
 
