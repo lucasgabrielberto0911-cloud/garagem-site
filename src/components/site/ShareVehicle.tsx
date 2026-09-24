@@ -4,18 +4,19 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { IconWhatsApp } from "@/components/site/icons";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
-import { site, whatsappUrl } from "@/lib/site";
+import { site, whatsappContentFromVehicle, whatsappUrl } from "@/lib/site";
 
 type Props = {
   title: string;
   path: string;
+  vehicleId?: string;
   className?: string;
 };
 
 /**
  * Compartilhar anúncio: copiar link, WhatsApp e atalho Instagram (copia + abre).
  */
-export function ShareVehicle({ title, path, className = "" }: Props) {
+export function ShareVehicle({ title, path, vehicleId, className = "" }: Props) {
   const [copied, setCopied] = useState(false);
   const url =
     typeof window !== "undefined"
@@ -64,7 +65,12 @@ export function ShareVehicle({ title, path, className = "" }: Props) {
         href={whatsappUrl(`${text}\n${url}`, { bare: true })}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => trackWhatsAppClick("ficha-share")}
+        onClick={() =>
+          trackWhatsAppClick("ficha-share", {
+            vehicleId,
+            slug: whatsappContentFromVehicle({ id: vehicleId, path }),
+          })
+        }
         className="inline-flex min-h-[44px] items-center gap-1.5 border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
       >
         <IconWhatsApp className="h-3.5 w-3.5" />

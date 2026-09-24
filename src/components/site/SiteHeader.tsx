@@ -15,7 +15,7 @@ import {
   InstallAppMenuItem,
 } from "@/components/site/InstallAppButton";
 import { SiteWordmark } from "@/components/site/SiteWordmark";
-import { usePageWhatsAppHref } from "@/components/site/usePageWhatsAppHref";
+import { usePageWhatsAppTarget } from "@/components/site/usePageWhatsAppHref";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import {
   DESKTOP_NAV_LINKS,
@@ -29,7 +29,12 @@ import {
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const whatsappHref = usePageWhatsAppHref();
+  const whatsapp = usePageWhatsAppTarget();
+  const whatsappHref = whatsapp.href;
+  const whatsappRef = {
+    vehicleId: whatsapp.vehicleId,
+    slug: whatsapp.slug,
+  };
   const [open, setOpen] = useState(false);
   // Entrada extra no histórico enquanto o menu está aberto: o "voltar" do
   // celular fecha o menu em vez de sair da página (ex.: ficha do veículo).
@@ -154,7 +159,7 @@ export function SiteHeader() {
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackWhatsAppClick("header")}
+              onClick={() => trackWhatsAppClick("header", whatsappRef)}
               className="hidden h-11 shrink-0 items-center gap-2 bg-brand px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex xl:px-4 xl:text-sm"
             >
               <IconWhatsApp className="h-4 w-4" />
@@ -253,7 +258,7 @@ export function SiteHeader() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => {
-                    trackWhatsAppClick("header-menu");
+                    trackWhatsAppClick("header-menu", whatsappRef);
                     closeMenu();
                   }}
                   className="whatsapp-btn flex min-h-[52px] w-full items-center justify-center gap-2.5 px-4 py-4 font-display text-base font-semibold text-white touch-manipulation"

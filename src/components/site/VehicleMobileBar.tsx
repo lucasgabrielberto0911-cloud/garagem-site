@@ -18,8 +18,9 @@ function openWhatsApp(
   href: string,
   label: string,
   vehicleId: string,
+  slug?: string,
 ) {
-  trackWhatsAppClick(label);
+  trackWhatsAppClick(label, { vehicleId, slug });
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     event.preventDefault();
     void queueWhatsAppIfOffline({
@@ -33,6 +34,7 @@ function openWhatsApp(
 /** Barra fixa no mobile: um CTA primário; Simular/Troca/Vídeo em “Mais opções”. */
 export function VehicleMobileBar({
   vehicleId,
+  vehicleSlug,
   vehiclePath,
   contentName,
   message,
@@ -49,6 +51,7 @@ export function VehicleMobileBar({
   soldLabel = "Ver estoque",
 }: {
   vehicleId: string;
+  vehicleSlug?: string;
   vehiclePath?: string;
   contentName: string;
   message?: string;
@@ -164,7 +167,7 @@ export function VehicleMobileBar({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(event) =>
-                  openWhatsApp(event, href, "ficha-mobile", vehicleId)
+                  openWhatsApp(event, href, "ficha-mobile", vehicleId, vehicleSlug)
                 }
                 className="inline-flex min-h-[48px] shrink-0 items-center justify-center gap-1.5 bg-brand px-3 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream touch-manipulation hover:bg-[#c91418] sm:px-4 sm:text-sm"
               >
@@ -188,7 +191,13 @@ export function VehicleMobileBar({
                 rel="noopener noreferrer"
                 onClick={(event) => {
                   setMoreOpen(false);
-                  openWhatsApp(event, action.href, action.tracking, vehicleId);
+                  openWhatsApp(
+                    event,
+                    action.href,
+                    action.tracking,
+                    vehicleId,
+                    vehicleSlug,
+                  );
                 }}
                 className="inline-flex min-h-11 items-center justify-center px-1 text-center font-display text-[11px] font-semibold text-cream underline-offset-2 transition hover:underline active:underline touch-manipulation"
               >

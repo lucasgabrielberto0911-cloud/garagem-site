@@ -60,8 +60,8 @@ test("header e float na ficha herdam o veículo; o rodapé genérico fica home",
   const float = readSrc("components/site/WhatsAppFloat.tsx");
   const footer = readSrc("components/site/SiteFooter.tsx");
 
-  assert.match(header, /usePageWhatsAppHref/);
-  assert.match(float, /usePageWhatsAppHref/);
+  assert.match(header, /usePageWhatsAppTarget/);
+  assert.match(float, /usePageWhatsAppTarget/);
   assert.match(footer, /whatsappUrl\(\)/);
   assert.doesNotMatch(footer, /usePageWhatsAppHref/);
 });
@@ -103,6 +103,8 @@ test("primeira foto da galeria é a única com prioridade alta", () => {
   const gallery = readSrc("components/site/VehicleGallery.tsx");
   const header = readSrc("components/site/SiteHeader.tsx");
   assert.match(gallery, /priority=\{index === 0\}/);
+  assert.match(gallery, /index === active \|\|/);
+  assert.match(gallery, /showThumbs/);
   assert.match(gallery, /sizes="\(min-width: 1024px\) 60vw, 100vw"/);
   assert.match(gallery, /sizes="96px"/);
   assert.match(header, /headerWordmarkPriority\(pathname\)/);

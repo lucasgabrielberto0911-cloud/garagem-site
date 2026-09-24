@@ -17,6 +17,7 @@ type Action = {
 
 export function VehicleQuickActions({
   contentId,
+  contentSlug,
   contentPath,
   contentName,
   value,
@@ -29,6 +30,7 @@ export function VehicleQuickActions({
   className = "hidden lg:grid",
 }: {
   contentId: string;
+  contentSlug?: string;
   contentPath?: string;
   contentName: string;
   value: number;
@@ -61,6 +63,8 @@ export function VehicleQuickActions({
           <TrackedWhatsAppLink
             href={fichaHref(action.hrefMessage, contentId, contentPath)}
             trackingLabel={action.trackingLabel}
+            vehicleId={contentId}
+            slug={contentSlug}
             className="inline-flex min-h-[48px] items-center justify-center border border-white/10 bg-ink px-2 text-center font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"
           >
             {action.label}

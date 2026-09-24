@@ -140,8 +140,62 @@ export function buildCatalogPayload(
   return payload;
 }
 
+const PAGE_UTM_KEYS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+] as const;
+
+export type VehicleFunnelRef = {
+  vehicleId?: string;
+  slug?: string;
+};
+
+/** UTM da URL atual. Não lê o texto do WhatsApp. */
+export function readPageUtm(search?: string) {
+  const raw =
+    search ??
+    (typeof window === "undefined" ? "" : window.location?.search || "");
+  let params: URLSearchParams;
+  try {
+    params = new URLSearchParams(raw.startsWith("?") ? raw.slice(1) : raw);
+  } catch {
+    return {};
+  }
+  const utm: Record<string, string> = {};
+  for (const key of PAGE_UTM_KEYS) {
+    const value = compactString(params.get(key) ?? undefined)?.slice(0, 80);
+    if (value) utm[key] = value;
+  }
+  return utm;
+}
+
+export function vehicleFunnelParams(ref?: VehicleFunnelRef) {
+  const params: Record<string, string> = {};
+  const vehicleId = compactString(ref?.vehicleId)?.slice(0, 80);
+  const slug = compactString(ref?.slug)?.slice(0, 120);
+  if (vehicleId) params.vehicle_id = vehicleId;
+  if (slug) params.slug = slug;
+  return { ...params, ...readPageUtm() };
+}
+
+function ensureGtagQueue() {
+  if (typeof window === "undefined") return;
+  window.dataLayer = window.dataLayer || [];
+  if (typeof window.gtag === "function") return;
+  // Mesmo stub do snippet do GA4: o script oficial drena o dataLayer depois.
+  window.gtag = function gtag() {
+    // gtag.js só consome o objeto Arguments do snippet oficial, não um array.
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer?.push(arguments);
+  };
+}
+
 function getGtag() {
   if (typeof window === "undefined") return undefined;
+  ensureGtagQueue();
   return window.gtag;
 }
 
@@ -261,14 +315,30 @@ export function trackPwaEvent(
   });
 }
 
-/** Clique em WhatsApp (float, favoritos, hero) — Meta custom + GA4. */
-export function trackWhatsAppClick(label: string) {
+/**
+ * Vista da ficha. Convive com `view_item` / ViewContent do catálogo.
+ * Payload: vehicle_id, slug e UTM da página quando existirem.
+ */
+export function trackVehicleView(ref: VehicleFunnelRef) {
   if (typeof window === "undefined") return;
+  const params = vehicleFunnelParams(ref);
+  if (!params.vehicle_id) return;
   const fbq = getFbq();
-  if (fbq) fbq("trackCustom", "WhatsAppClick", { label });
+  if (fbq) fbq("trackCustom", "vehicle_view", params);
+  fireGtag("vehicle_view", params);
+}
+
+/** Clique em WhatsApp (float, favoritos, hero, ficha) — Meta custom + GA4. */
+export function trackWhatsAppClick(label: string, ref?: VehicleFunnelRef) {
+  if (typeof window === "undefined") return;
+  const funnel = vehicleFunnelParams(ref);
+  const custom: Record<string, string> = { label, ...funnel };
+  const fbq = getFbq();
+  if (fbq) fbq("trackCustom", "WhatsAppClick", custom);
   fireGtag("whatsapp_click", {
     event_category: "engagement",
     event_label: label,
+    ...funnel,
   });
 }
 

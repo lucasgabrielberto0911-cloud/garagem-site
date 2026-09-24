@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { preload } from "react-dom";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
@@ -33,6 +34,7 @@ import { vehicleLocationLabel } from "@/lib/vehicle-location";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
 import { priceBandHref } from "@/lib/related-vehicles";
+import { galleryPreviewSrc, galleryPreviewSrcSet } from "@/lib/stock-query";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
   collapseDuplicateAccessories,
@@ -150,6 +152,11 @@ export default async function VehicleDetailPage({
   }
 
   const path = vehiclePath(vehicle);
+  const hero = vehicle.photos[0];
+  const heroSrc = hero ? galleryPreviewSrc(hero) : "";
+  if (heroSrc && !galleryPreviewSrcSet(hero)) {
+    preload(heroSrc, { as: "image", fetchPriority: "high" });
+  }
   const fichaTrack = fichaWhatsAppTracking({ id: vehicle.id, path });
   const sold = vehicle.status === "vendido";
   const isMoto = vehicle.category === "moto";
@@ -239,16 +246,16 @@ export default async function VehicleDetailPage({
       data-ficha-page=""
       className="pb-sticky-bar-safe lg:pb-10"
     >
-      {!sold ? (
-        <VehicleViewContent
-          contentId={vehicle.id}
-          contentName={fullLabel}
-          value={vehicle.price}
-          make={formatBrandName(vehicle.brand)}
-          model={formatModelName(vehicle.model)}
-          year={vehicle.yearModel}
-        />
-      ) : null}
+      <VehicleViewContent
+        contentId={vehicle.id}
+        contentName={fullLabel}
+        slug={canonicalSlug}
+        value={vehicle.price}
+        make={formatBrandName(vehicle.brand)}
+        model={formatModelName(vehicle.model)}
+        year={vehicle.yearModel}
+        catalog={!sold}
+      />
       <VehicleChatContext
         vehicle={{
           id: vehicle.id,
@@ -349,6 +356,7 @@ export default async function VehicleDetailPage({
                 whatsapp={{
                   contentId: vehicle.id,
                   contentName: fullLabel,
+                  slug: canonicalSlug,
                   make: formatBrandName(vehicle.brand),
                   model: formatModelName(vehicle.model),
                   message: whatsapp.interest,
@@ -475,6 +483,8 @@ export default async function VehicleDetailPage({
                       trackingLabel="ficha"
                       campaign="ficha"
                       content={fichaTrack.content}
+                      vehicleId={vehicle.id}
+                      slug={canonicalSlug}
                       message={whatsapp.interest}
                     >
                       Tenho interesse
@@ -483,6 +493,7 @@ export default async function VehicleDetailPage({
 
                   <VehicleQuickActions
                     contentId={vehicle.id}
+                    contentSlug={canonicalSlug}
                     contentPath={path}
                     contentName={fullLabel}
                     value={vehicle.price}
@@ -529,6 +540,7 @@ export default async function VehicleDetailPage({
               <ShareVehicle
                 title={fullLabel}
                 path={path}
+                vehicleId={vehicle.id}
                 className="border-t border-white/10 pt-3"
               />
 
@@ -649,6 +661,8 @@ export default async function VehicleDetailPage({
                 trackingLabel="ficha-mesma-faixa"
                 campaign="ficha"
                 content={fichaTrack.content}
+                vehicleId={vehicle.id}
+                slug={canonicalSlug}
                 message={whatsapp.sameBand}
                 variant="outline"
                 className="w-full sm:w-auto"
@@ -662,6 +676,7 @@ export default async function VehicleDetailPage({
 
       <VehicleMobileBar
         vehicleId={vehicle.id}
+        vehicleSlug={canonicalSlug}
         vehiclePath={path}
         contentName={fullLabel}
         message={whatsapp.interest}
