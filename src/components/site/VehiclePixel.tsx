@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import {
   trackLead,
   trackSearch,
+  trackVehicleView,
   trackViewContent,
   type CatalogEventParams,
 } from "@/lib/meta-pixel";
@@ -11,6 +12,7 @@ import {
 type VehicleHitProps = {
   contentId: string;
   contentName: string;
+  slug?: string;
   value?: number;
   make?: string;
   model?: string;
@@ -35,15 +37,20 @@ function catalogParams({
   };
 }
 
-export function VehicleViewContent(props: VehicleHitProps) {
-  const { contentId, contentName, value, make, model, year } = props;
+export function VehicleViewContent({
+  catalog = true,
+  ...props
+}: VehicleHitProps & { catalog?: boolean }) {
+  const { contentId, contentName, slug, value, make, model, year } = props;
 
   useEffect(() => {
     if (!contentId) return;
+    trackVehicleView({ vehicleId: contentId, slug });
+    if (!catalog) return;
     trackViewContent(
       catalogParams({ contentId, contentName, value, make, model, year }),
     );
-  }, [contentId, contentName, value, make, model, year]);
+  }, [catalog, contentId, contentName, slug, value, make, model, year]);
 
   return null;
 }

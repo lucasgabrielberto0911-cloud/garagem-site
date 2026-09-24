@@ -25,7 +25,7 @@ import {
   publishedConditionItems,
   type VehicleConditionsContent,
 } from "@/lib/vehicle-conditions";
-import { vehicleLocationLabel } from "@/lib/vehicle-location";
+import { whatsappContentFromVehicle } from "@/lib/site";
 
 /** Já aparecem na primeira dobra. Cidade volta na grade da Ficha, ao lado de Portas. */
 const FOLD_LABELS = new Set(["Ano", "KM", "Câmbio"]);
@@ -62,6 +62,7 @@ export function VehicleMobileSummary({
   whatsapp: {
     contentId: string;
     contentName: string;
+    slug?: string;
     make: string;
     model: string;
     message: string;
@@ -127,6 +128,8 @@ export function VehicleMobileSummary({
               trackingLabel="ficha"
               campaign="ficha"
               content={whatsapp.trackingContent}
+              vehicleId={whatsapp.contentId}
+              slug={whatsapp.slug}
               message={whatsapp.message}
             >
               Tenho interesse
@@ -300,6 +303,7 @@ export function VehicleMobileBlocks({
           <div className="mt-3">
             <VehicleQuickActions
               contentId={vehicleId}
+              contentSlug={whatsappContentFromVehicle({ id: vehicleId, path })}
               contentPath={quickActions.contentPath}
               contentName={fullLabel}
               value={price}
@@ -357,6 +361,7 @@ export function VehicleMobileBlocks({
         <ShareVehicle
           title={fullLabel}
           path={path}
+          vehicleId={vehicleId}
           className="mt-3 border-t border-white/10 pt-3"
         />
       </DossierBlock>

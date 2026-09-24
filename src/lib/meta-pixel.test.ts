@@ -12,8 +12,10 @@ import {
   trackLead,
   trackPwaEvent,
   trackSearch,
+  trackVehicleView,
   trackViewContent,
   trackWhatsAppClick,
+  vehicleFunnelParams,
 } from "./meta-pixel";
 
 const VEHICLE_CUID = "cmt0ewzpg0000lc0493fl02h7";
@@ -155,6 +157,35 @@ test("WhatsAppClick vai para Meta custom e GA4", () => {
     "whatsapp_click",
     { event_category: "engagement", event_label: "float" },
   ]);
+});
+
+test("vehicle_view e whatsapp_click levam o mesmo veículo e a UTM da página", () => {
+  const { calls, gtagCalls } = installFbq();
+  (globalThis as { window: Window & { location?: { search: string } } }).window.location =
+    { search: "?utm_source=instagram&utm_campaign=stories&utm_content=bio" };
+  const ref = { vehicleId: VEHICLE_CUID, slug: SLUG };
+
+  assert.equal(vehicleFunnelParams(ref).vehicle_id, VEHICLE_CUID);
+  assert.equal(vehicleFunnelParams(ref).utm_source, "instagram");
+  assert.equal(vehicleFunnelParams({}).utm_campaign, "stories");
+
+  trackVehicleView({ vehicleId: "  ", slug: SLUG });
+  trackVehicleView(ref);
+  trackWhatsAppClick("ficha-mobile", ref);
+
+  assert.equal(calls[0]?.[1], "vehicle_view");
+  assert.equal(calls[1]?.[1], "WhatsAppClick");
+  const view = calls[0]?.[2] as Record<string, string>;
+  const click = gtagCalls[1]?.[2] as Record<string, string>;
+  assert.equal(view.vehicle_id, VEHICLE_CUID);
+  assert.equal(view.slug, SLUG);
+  assert.equal(view.utm_source, "instagram");
+  assert.equal(click.vehicle_id, VEHICLE_CUID);
+  assert.equal(click.slug, SLUG);
+  assert.equal(click.event_label, "ficha-mobile");
+  assert.equal(click.utm_campaign, "stories");
+  assert.equal(gtagCalls[0]?.[1], "vehicle_view");
+  assert.equal(gtagCalls[1]?.[1], "whatsapp_click");
 });
 
 test("evento do chat guarda só categorias, contagem e IDs públicos", () => {

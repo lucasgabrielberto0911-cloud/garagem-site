@@ -199,6 +199,18 @@ function ChatLogo({ size = "md" }: { size?: "sm" | "md" }) {
   );
 }
 
+function chatFunnelRef() {
+  const vehicle = getChatVehicleContext();
+  if (!vehicle?.id) return undefined;
+  return {
+    vehicleId: vehicle.id,
+    slug: whatsappContentFromVehicle({
+      id: vehicle.id,
+      path: vehicle.path,
+    }),
+  };
+}
+
 function ChatWhatsAppButton({
   href,
   label,
@@ -215,7 +227,7 @@ function ChatWhatsAppButton({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={() => trackWhatsAppClick("chat")}
+      onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
       className={`whatsapp-btn flex w-full min-h-[52px] items-center gap-3 overflow-hidden rounded-xl px-3 py-2 text-left text-cream ${className}`}
     >
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-black/20">
@@ -1128,7 +1140,7 @@ export function SiteChat() {
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => trackWhatsAppClick("chat")}
+                onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
                 className="whatsapp-btn flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-white touch-manipulation"
                 aria-label="Falar com um vendedor no WhatsApp"
               >

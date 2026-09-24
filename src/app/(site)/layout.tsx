@@ -8,7 +8,7 @@ import { ScrollProgress } from "@/components/site/ScrollProgress";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { OfflineLeadFlush } from "@/components/site/OfflineLeadFlush";
-import { SiteChat } from "@/components/site/SiteChat";
+import { DeferredSiteChat } from "@/components/site/DeferredSiteChat";
 import { WhatsAppFloat } from "@/components/site/WhatsAppFloat";
 import { FavoritesProvider } from "@/lib/favorites";
 import { localBusinessJsonLd } from "@/lib/seo";
@@ -50,7 +50,7 @@ export default function SiteLayout({
         <div className="pb-site-nav lg:hidden" aria-hidden="true" />
         <MobileBottomNav />
         <WhatsAppFloat />
-        <SiteChat />
+        <DeferredSiteChat />
         <OfflineLeadFlush />
       </div>
     </FavoritesProvider>

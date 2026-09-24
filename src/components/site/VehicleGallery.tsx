@@ -42,8 +42,36 @@ export function VehicleGallery({
   const scrollerRef = useRef<HTMLUListElement>(null);
   const thumbsRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
+  const [neighbors, setNeighbors] = useState(false);
+  const [showThumbs, setShowThumbs] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
   const total = photos.length;
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer = 0;
+    const arm = () => {
+      if (!cancelled) setNeighbors(true);
+    };
+    const onLoad = () => {
+      timer = window.setTimeout(arm, 1200);
+    };
+    if (document.readyState === "complete") onLoad();
+    else window.addEventListener("load", onLoad, { once: true });
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("load", onLoad);
+    };
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setShowThumbs(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     const strip = thumbsRef.current;
@@ -57,7 +85,7 @@ export function VehicleGallery({
       left: Math.max(0, left),
       behavior: prefersReducedMotion() ? "auto" : "smooth",
     });
-  }, [active]);
+  }, [active, showThumbs]);
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -154,7 +182,8 @@ export function VehicleGallery({
                 >
                   <span className="sr-only">Ampliar</span>
                 </button>
-                {shouldLoadGallerySlide(index, active) ? (
+                {index === active ||
+                (neighbors && shouldLoadGallerySlide(index, active)) ? (
                   <VehicleImage
                     src={galleryPreviewSrc(photo)}
                     alt={vehiclePhotoAlt(alt, index, total)}
@@ -206,7 +235,7 @@ export function VehicleGallery({
         ) : null}
       </div>
 
-      {total > 1 ? (
+      {total > 1 && showThumbs ? (
         <div
           ref={thumbsRef}
           className="mt-2 hidden gap-2 overflow-x-auto overscroll-x-contain pb-1 scrollbar-hide [-webkit-overflow-scrolling:touch] lg:flex"

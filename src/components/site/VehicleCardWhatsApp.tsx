@@ -60,7 +60,7 @@ export function VehicleCardWhatsApp({
         target="_blank"
         rel="noopener noreferrer"
         onClick={(event) => {
-          trackWhatsAppClick(trackingLabel);
+          trackWhatsAppClick(trackingLabel, { vehicleId });
           if (typeof navigator !== "undefined" && !navigator.onLine) {
             event.preventDefault();
             void queueWhatsAppIfOffline({
