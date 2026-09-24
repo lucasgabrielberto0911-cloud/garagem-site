@@ -230,7 +230,8 @@ const loadSiteContentCached = unstable_cache(
     }
   },
   ["public-site-content-v5"],
-  { revalidate: 120, tags: ["site-settings"] },
+  // Mesmo piso do site-settings: FAQ, avaliações e condições entram no layout.
+  { revalidate: 3600, tags: ["site-settings"] },
 );
 
 export const getSiteContent = cache(async (): Promise<SiteContent> => {

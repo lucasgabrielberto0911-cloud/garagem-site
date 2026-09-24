@@ -12,7 +12,7 @@ import { site } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import { getVehicleById } from "@/lib/vehicles";
 
-export const revalidate = 120;
+export const revalidate = 600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Vender ou trocar seu veículo | ${site.name}`,

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { site } from "@/lib/site";
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
 const CATALOG_SELECT = {
   id: true,
@@ -92,7 +92,7 @@ export async function GET() {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=86400",
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
         "Content-Disposition": 'inline; filename="garagem-estoque-meta.csv"',
       },
     });

@@ -1,7 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
-import { expireAdminData } from "@/lib/admin-revalidate";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
@@ -9,22 +8,13 @@ import { isValidPlate, normalizePlate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { privateMasterRefForPublicUrl } from "@/lib/photo-master";
 import { deleteStoragePublicUrls } from "@/lib/supabase";
-import { VEHICLES_PUBLIC_CACHE_TAG } from "@/lib/vehicles";
+import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 
 export type SaleActionState = {
   ok: boolean;
   message: string;
   fieldErrors?: Record<string, string>;
 };
-
-function revalidatePublicStock(vehicleId?: string) {
-  expireAdminData();
-  revalidateTag(VEHICLES_PUBLIC_CACHE_TAG, "max");
-  revalidatePath("/");
-  revalidatePath("/estoque");
-  revalidatePath("/estoque/[id]", "page");
-  if (vehicleId) revalidatePath(`/estoque/${vehicleId}`);
-}
 
 async function requireAdmin() {
   const session = await getSession();
@@ -158,12 +148,12 @@ function parseSaleForm(formData: FormData): ParsedSaleForm {
   };
 }
 
-function revalidateSales(vehicleId?: string) {
+async function revalidateSales(vehicleId?: string) {
   revalidatePath("/admin/vendas");
   revalidatePath("/admin/veiculos");
   revalidatePath("/admin");
   revalidatePath("/admin/clientes");
-  revalidatePublicStock(vehicleId);
+  await revalidatePublicStock(vehicleId);
 }
 
 export async function createSale(formData: FormData): Promise<SaleActionState> {
@@ -277,7 +267,7 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
     return { ok: false, message: "Não foi possível registrar a venda." };
   }
 
-  revalidateSales(createdVehicleId);
+  await revalidateSales(createdVehicleId);
   return { ok: true, message: "Venda registrada." };
 }
 
@@ -404,9 +394,9 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
     return { ok: false, message: "Não foi possível atualizar a venda." };
   }
 
-  revalidateSales(existing.vehicleId);
+  await revalidateSales(existing.vehicleId);
   if (!isHistorical && vehicleId && vehicleId !== existing.vehicleId) {
-    revalidatePublicStock(vehicleId);
+    await revalidatePublicStock(vehicleId);
   }
   return { ok: true, message: "Venda atualizada." };
 }
@@ -460,7 +450,7 @@ export async function deleteSale(id: string): Promise<SaleActionState> {
     return { ok: false, message: "Não foi possível cancelar a venda." };
   }
 
-  revalidateSales(sale.vehicleId);
+  await revalidateSales(sale.vehicleId);
   return {
     ok: true,
     message: sale.vehicle.historical

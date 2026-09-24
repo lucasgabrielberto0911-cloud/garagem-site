@@ -201,7 +201,7 @@ export function VehicleMobileBlocks({
   specs: VehicleSpecRow[];
   inspection?: string | null;
   conditions: VehicleConditionsContent;
-  listedLine?: string;
+  listedLine?: ReactNode;
   google: GoogleReviews;
   prompt: string;
   quickActions?: {
