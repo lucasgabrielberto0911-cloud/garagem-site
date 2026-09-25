@@ -9,7 +9,7 @@ function read(rel: string) {
 
 test("service worker não cacheia ficha e não toma a aba no meio do deploy", () => {
   const sw = read("public/sw.js");
-  assert.match(sw, /const VERSION = "garagem-v8"/);
+  assert.match(sw, /const VERSION = "garagem-v9"/);
   assert.match(sw, /const NETWORK_TIMEOUT_MS = 2500/);
   assert.match(sw, /function isVehicleDetailPath/);
   assert.match(sw, /path !== "\/estoque"/);

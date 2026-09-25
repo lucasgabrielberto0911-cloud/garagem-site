@@ -1,5 +1,5 @@
 /*
- * Service worker do site público da Sua Garagem (garagem-v8).
+ * Service worker do site público da Sua Garagem (garagem-v9).
  *
  * HTML de navegação: rede com prazo de 2,5s; se falhar ou demorar, o cache.
  * Assim o desktop em rede boa recebe a página nova, e a home/estoque abrem
@@ -18,7 +18,7 @@
  * `/?utm_source=pwa` e `/` compartilham a mesma entrada de cache.
  * Regras de rota espelham `src/lib/pwa-page-key.ts`.
  */
-const VERSION = "garagem-v8";
+const VERSION = "garagem-v9";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const PAGE_CACHE = `${VERSION}-pages`;
