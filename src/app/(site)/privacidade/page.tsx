@@ -129,11 +129,14 @@ export default function PrivacidadePage() {
               sua escolha de consentimento de cookies.
             </p>
             <p>
-              Cookies e scripts de medição (Google Analytics e Meta Pixel) só são
-              carregados se você aceitar. A base legal dessa medição é o
-              consentimento. Sem o aceite, o site, o assistente e o WhatsApp
-              continuam funcionando com o essencial. Vercel Analytics e Speed
-              Insights medem desempenho técnico, sem o conteúdo da conversa.
+              O Google Analytics só é carregado se você aceitar. A base legal
+              dessa medição é o consentimento. O Meta Pixel carrega com esse
+              aceite e também quando a visita vem de um anúncio, para o
+              anúncio funcionar — mesmo se a escolha salva for só o essencial.
+              Em uma visita comum, sem anúncio e sem aceite, o pixel não entra.
+              Sem o aceite, o site, o assistente e o WhatsApp continuam
+              funcionando. Vercel Analytics e Speed Insights medem desempenho
+              técnico, sem o conteúdo da conversa.
             </p>
             <p>
               O chat não grava o texto da conversa em analytics nem no
