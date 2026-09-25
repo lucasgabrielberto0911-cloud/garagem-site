@@ -12,8 +12,9 @@ import {
 } from "@/lib/consent";
 
 /**
- * GA só com aceite. O Pixel também sobe no clique de anúncio (fbclid / utm
- * meta) se a pessoa ainda não recusou, e o fbevents entra afterInteractive.
+ * GA só com aceite. O Pixel sobe no aceite e no clique de anúncio (fbclid /
+ * utm meta|facebook|fb|ig|instagram), mesmo com "só o essencial". O fbevents
+ * entra afterInteractive.
  */
 export function MarketingScripts() {
   const [analytics, setAnalytics] = useState(false);

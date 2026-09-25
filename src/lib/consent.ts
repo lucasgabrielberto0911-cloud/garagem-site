@@ -34,15 +34,16 @@ export function hasMarketingConsent(choice = readStoredConsent()) {
 }
 
 /**
- * Pixel da Meta: aceite explícito, ou clique de anúncio (fbclid / utm meta)
- * enquanto a pessoa ainda não escolheu "só o essencial".
- * Quem recusou não carrega o script.
+ * Pixel da Meta: aceite explícito, ou visita de anúncio (fbclid, ou
+ * utm_source meta|facebook|fb|ig|instagram). O clique de anúncio carrega o
+ * pixel mesmo com "só o essencial" — a atribuição do anúncio precisa do
+ * script. Visita orgânica sem aceite não carrega. Google Analytics continua
+ * só em hasMarketingConsent.
  */
 export function shouldLoadMetaPixel(
   choice: ConsentChoice | null,
   search = "",
 ) {
-  if (choice === "essential") return false;
   if (choice === "accepted") return true;
   const query = search.startsWith("?") ? search.slice(1) : search;
   return /(?:^|&)fbclid=/.test(query) ||

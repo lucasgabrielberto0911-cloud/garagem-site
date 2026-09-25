@@ -23,9 +23,14 @@ test("sem window não lê consentimento", () => {
   assert.equal(readStoredConsent(), null);
 });
 
-test("pixel sobe no aceite ou no clique de anúncio, e não sobe se recusou", () => {
+test("pixel sobe no aceite e no anúncio, mesmo com só o essencial", () => {
   assert.equal(shouldLoadMetaPixel("accepted", ""), true);
-  assert.equal(shouldLoadMetaPixel("essential", "?fbclid=abc"), false);
+  assert.equal(shouldLoadMetaPixel("essential", "?fbclid=abc"), true);
+  assert.equal(shouldLoadMetaPixel("essential", "?utm_source=facebook"), true);
+  assert.equal(shouldLoadMetaPixel("essential", "?utm_source=Facebook"), true);
+  assert.equal(shouldLoadMetaPixel("essential", "?utm_source=IG"), true);
+  assert.equal(shouldLoadMetaPixel("essential", ""), false);
+  assert.equal(shouldLoadMetaPixel("essential", "?utm_source=google"), false);
   assert.equal(shouldLoadMetaPixel(null, ""), false);
   assert.equal(shouldLoadMetaPixel(null, "?fbclid=IwAR"), true);
   assert.equal(

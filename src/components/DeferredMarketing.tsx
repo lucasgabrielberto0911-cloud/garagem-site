@@ -5,7 +5,8 @@ import { useEffect, useState, type ReactNode } from "react";
 /**
  * Extras e telemetria técnica só baixam depois da primeira interação
  * ou de um idle longo — o import estático puxava esses chunks no LCP.
- * Google Analytics e Meta Pixel ficam em MarketingScripts, após consentimento.
+ * Google Analytics e Meta Pixel ficam em MarketingScripts (GA no aceite;
+ * Pixel no aceite ou no clique de anúncio).
  */
 export function DeferredMarketing() {
   const [slot, setSlot] = useState<ReactNode>(null);
