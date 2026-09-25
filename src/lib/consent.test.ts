@@ -49,4 +49,6 @@ test("fbevents sobe afterInteractive, não no idle", () => {
   assert.match(source, /strategy="afterInteractive"/);
   assert.doesNotMatch(source, /lazyOnload/);
   assert.match(source, /fbq\('track', 'PageView'\)/);
+  assert.match(source, /document\.createElement\("script"\)/);
+  assert.match(source, /script\.text = stubScript/);
 });
