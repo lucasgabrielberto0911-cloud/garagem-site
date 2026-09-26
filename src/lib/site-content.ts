@@ -15,7 +15,9 @@ import {
 import {
   DEFAULT_VEHICLE_CONDITIONS,
   STORE_INSPECTION_BODY,
+  STORE_WARRANTY,
   isLegacyStoreInspectionCopy,
+  isLegacyStoreWarrantyCopy,
   isPlaceholderCopy,
   publicStoreInspectionText,
   publishedConditionItems,
@@ -111,7 +113,7 @@ function conditionFallback(item: ConditionItem) {
   return undefined;
 }
 
-function mergeConditions(
+export function mergeConditions(
   title: string | null | undefined,
   intro: string | null | undefined,
   raw: unknown,
@@ -137,27 +139,34 @@ function mergeConditions(
     };
   });
 
+  const introText = isLegacyStoreWarrantyCopy(intro) ? "" : (intro ?? "");
+
   return {
     title: fallbackIfPlaceholder(title ?? "", DEFAULT_VEHICLE_CONDITIONS.title),
-    intro: fallbackIfPlaceholder(intro ?? "", DEFAULT_VEHICLE_CONDITIONS.intro),
+    intro: fallbackIfPlaceholder(introText, DEFAULT_VEHICLE_CONDITIONS.intro),
     items: mergedItems,
   };
 }
 
 /** Se o painel ainda tiver PREENCHER, usa o texto-base já preenchido (ex.: garantia). */
-function mergeFaqItems(items: FaqItem[]): FaqItem[] {
+export function mergeFaqItems(items: FaqItem[]): FaqItem[] {
   return items.map((item) => {
     const fallback = FAQ_ITEMS.find(
       (defaultItem) => defaultItem.question === item.question,
     );
+    const legacyWarranty = isLegacyStoreWarrantyCopy(item.answer);
     if (
       fallback &&
       isFaqAnswerReady(fallback.answer) &&
-      (soundsLikeOfficialReport(item.answer) ||
+      (legacyWarranty ||
+        soundsLikeOfficialReport(item.answer) ||
         /documento oficial/i.test(item.answer) ||
         isLegacyStoreInspectionCopy(item.answer))
     ) {
       return { ...item, answer: fallback.answer };
+    }
+    if (legacyWarranty) {
+      return { ...item, answer: STORE_WARRANTY.body };
     }
     if (isFaqAnswerReady(item.answer)) return item;
     if (fallback && isFaqAnswerReady(fallback.answer)) {
@@ -229,7 +238,7 @@ const loadSiteContentCached = unstable_cache(
       return EMPTY_SITE_CONTENT;
     }
   },
-  ["public-site-content-v5"],
+  ["public-site-content-v6"],
   // Mesmo piso do site-settings: FAQ, avaliações e condições entram no layout.
   { revalidate: 3600, tags: ["site-settings"] },
 );
