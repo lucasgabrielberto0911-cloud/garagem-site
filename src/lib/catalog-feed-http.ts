@@ -34,6 +34,7 @@ const CATALOG_SELECT = {
   transmission: true,
   color: true,
   description: true,
+  engine: true,
   locationCity: true,
   photos: PHOTO_SELECT,
 } as const;
@@ -51,6 +52,7 @@ const CATALOG_SELECT_LEGACY = {
   transmission: true,
   color: true,
   description: true,
+  engine: true,
   photos: PHOTO_SELECT,
 } as const;
 

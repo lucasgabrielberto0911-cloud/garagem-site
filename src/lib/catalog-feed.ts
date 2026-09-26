@@ -13,6 +13,7 @@ import { site } from "@/lib/site";
 import {
   buildVehicleFullLabel,
   formatColorLabel,
+  inferGearFromText,
   resolveTransmission,
 } from "@/lib/vehicle-display";
 import { catalogPlace } from "@/lib/vehicle-location";
@@ -33,6 +34,8 @@ export type CatalogFeedVehicle = {
   transmission: string;
   color: string | null;
   description: string | null;
+  /** Motor / cilindrada — entra no combustível quando a versão não traz Flex. */
+  engine?: string | null;
   locationCity?: string | null;
   photos: CatalogFeedPhoto[];
 };
@@ -78,8 +81,11 @@ export const META_CSV_COLUMNS = [
 
 export type CatalogCsvColumn = (typeof META_CSV_COLUMNS)[number];
 
-/** Mesmo dealer_id do CSV que já está no catálogo "Garagem - Estoque de Veículos". */
-export const CATALOG_DEALER_ID = "SUAGARAMEM";
+/**
+ * Dealer no catálogo Meta "Garagem - Estoque de Veículos".
+ * O feed antigo saía como SUAGARAMEM (G faltando).
+ */
+export const CATALOG_DEALER_ID = "SUAGARAGEM";
 
 export const CATALOG_UTM = {
   utm_source: "meta",
@@ -125,6 +131,138 @@ export function mapCatalogFuel(value: string) {
 
 export function mapPixelFuel(value: string) {
   return mapCatalogFuel(value).toLowerCase();
+}
+
+function foldCatalogText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Flex, FlexPower, FlexOne, FlexStart ou TB Flex — não casa “flexible”. */
+const FLEX_SIGNAL = /\bflex(?:power|one|start)?\b|\btb\s*flex\b/;
+
+function hasFlexSignal(value: string) {
+  return FLEX_SIGNAL.test(foldCatalogText(value));
+}
+
+/**
+ * Linha “Câmbio:” / “Combustível:” da descrição do anúncio.
+ * Aceita negrito de WhatsApp (`*Câmbio:*`) e para no próximo emoji.
+ */
+function extractCatalogFact(
+  description: string | null | undefined,
+  label: string,
+) {
+  if (!description) return "";
+  const pattern = new RegExp(
+    `[*_]*${label}[*_]*\\s*:\\s*(.+?)(?=\\s*(?:[*_]*\\p{Extended_Pictographic}|\\n|$))`,
+    "iu",
+  );
+  return (
+    description
+      .match(pattern)?.[1]
+      ?.replace(/[*_]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim() ?? ""
+  );
+}
+
+function catalogGearIsAutomatic(value: string) {
+  const kind = inferGearFromText(value);
+  return (
+    kind === "cvt" ||
+    kind === "automatico" ||
+    kind === "automatizado" ||
+    kind === "semi"
+  );
+}
+
+/**
+ * Câmbio do feed. CVT e automático viram Automatic (enum da Meta).
+ * “CVT (automático) com modo manual sequencial” não é câmbio manual:
+ * a linha de câmbio da descrição ganha do campo quando ela cita CVT/automático.
+ * Versão FIPE × campo continua em `resolveTransmission`.
+ */
+export function resolveCatalogTransmission(input: {
+  version?: string | null;
+  transmission?: string | null;
+  description?: string | null;
+}) {
+  const cambio = extractCatalogFact(input.description, "C[aâ]mbio");
+  if (cambio && catalogGearIsAutomatic(cambio)) return "Automatic";
+
+  const resolved = resolveTransmission(input.version, input.transmission);
+  return mapCatalogTransmission(resolved || input.transmission || "");
+}
+
+/**
+ * CG 160 e Biz 110/110i são só gasolina. Biz 125 Flex não entra aqui.
+ */
+function isGasolineOnlyMoto(model: string, version: string, engine: string) {
+  const text = foldCatalogText(`${model} ${version} ${engine}`);
+  if (hasFlexSignal(text)) return false;
+  if (/\bcg\b/.test(text) && /\b160(?!\d)/.test(text)) return true;
+  if (/\bbiz\b/.test(text) && /\b110(?!\d)/.test(text)) return true;
+  return false;
+}
+
+/**
+ * Combustível do feed.
+ * Carro: Flex / FlexPower / TB Flex na versão, no motor ou na linha
+ * “Combustível” vencem um campo Gasolina (HB20S 1.0 TB Flex).
+ * Moto: não sai FLEX só porque o campo está Flex — CG/Biz a gasolina
+ * (descrição ou modelo) ficam GASOLINE. Biz 125 Flex continua FLEX.
+ */
+export function resolveCatalogFuel(input: {
+  category?: string | null;
+  fuel?: string | null;
+  model?: string | null;
+  version?: string | null;
+  engine?: string | null;
+  description?: string | null;
+}) {
+  const fuel = input.fuel ?? "";
+  const mapped = mapCatalogFuel(fuel);
+  if (mapped === "DIESEL" || mapped === "ELECTRIC" || mapped === "HYBRID") {
+    return mapped;
+  }
+
+  const model = input.model ?? "";
+  const version = input.version ?? "";
+  const engine = input.engine ?? "";
+  const spec = `${model} ${version} ${engine}`;
+  const combustivel = extractCatalogFact(input.description, "Combust[ií]vel");
+  const flexInSpec = hasFlexSignal(spec);
+  const flexInLine = hasFlexSignal(combustivel);
+  const gasolineOnlyLine =
+    /\bgasolina\b/.test(foldCatalogText(combustivel)) && !flexInLine;
+  const moto = (input.category ?? "carro").toLowerCase() === "moto";
+
+  if (moto) {
+    if ((gasolineOnlyLine || isGasolineOnlyMoto(model, version, engine)) && !flexInSpec) {
+      return "GASOLINE";
+    }
+    if (flexInSpec || flexInLine) return "FLEX";
+    return mapped;
+  }
+
+  if (flexInSpec || flexInLine) return "FLEX";
+  return mapped;
+}
+
+/**
+ * Tira nota interna de confirmação da descrição pública do catálogo.
+ * Ex.: “(confirmar ano…)”, “(confirmar se é 2022/2023 ou 2023/2023)”.
+ */
+export function stripCatalogConfirmationNotes(value: string) {
+  const flat = value.replace(/\s+/g, " ").trim();
+  return flat
+    .replace(/\s*[([][^[\]()]*\bconfirmar\b[^[\]()]*[)\]]/gi, " ")
+    .replace(/ {2,}/g, " ")
+    .replace(/\s+([,.;:])/g, "$1")
+    .trim();
 }
 
 const BODY_RULES: Array<{ style: string; pattern: RegExp }> = [
@@ -207,8 +345,8 @@ function catalogTitle(vehicle: CatalogFeedVehicle) {
 }
 
 function catalogDescription(vehicle: CatalogFeedVehicle) {
-  const custom = vehicle.description?.replace(/\s+/g, " ").trim();
-  if (custom && custom.length >= 20) return custom.slice(0, 5000);
+  const custom = stripCatalogConfirmationNotes(vehicle.description ?? "");
+  if (custom.length >= 20) return custom.slice(0, 5000);
   return vehicleSeoDescription({
     brand: vehicle.brand,
     model: vehicle.model,
@@ -255,7 +393,6 @@ export function catalogVehicleRow(
     link.searchParams.set(key, value);
   }
 
-  const gear = resolveTransmission(vehicle.version, vehicle.transmission);
   const row: Record<string, string> = {
     vehicle_id: vehicle.id,
     title: catalogTitle(vehicle),
@@ -267,8 +404,8 @@ export function catalogVehicleRow(
     "mileage.value": String(Math.max(0, Math.round(vehicle.km))),
     "mileage.unit": "KM",
     body_style: mapCatalogBodyStyle(vehicle.category, vehicle.model, vehicle.version),
-    transmission: mapCatalogTransmission(gear),
-    fuel_type: mapCatalogFuel(vehicle.fuel),
+    transmission: resolveCatalogTransmission(vehicle),
+    fuel_type: resolveCatalogFuel(vehicle),
     price: formatCatalogPrice(vehicle.price),
     exterior_color: formatColorLabel(vehicle.color) || "Não informado",
     state_of_vehicle: "Used",
@@ -316,15 +453,16 @@ export function catalogPixelAutoFields(vehicle: {
   transmission: string;
   color?: string | null;
   locationCity?: string | null;
+  description?: string | null;
+  engine?: string | null;
 }) {
-  const gear = resolveTransmission(vehicle.version, vehicle.transmission);
   const place = catalogPlace(vehicle.locationCity);
   return {
     state_of_vehicle: "Used" as const,
     exterior_color: formatColorLabel(vehicle.color) || undefined,
-    transmission: mapPixelTransmission(gear),
+    transmission: mapPixelTransmission(resolveCatalogTransmission(vehicle)),
     body_style: mapPixelBodyStyle(vehicle.category, vehicle.model, vehicle.version),
-    fuel_type: mapPixelFuel(vehicle.fuel),
+    fuel_type: resolveCatalogFuel(vehicle).toLowerCase(),
     postal_code: place.postalCode,
   };
 }
