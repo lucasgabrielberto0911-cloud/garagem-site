@@ -19,6 +19,7 @@ import { Container, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
+import { VehicleDossierChips } from "@/components/site/VehicleDossierChips";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
@@ -410,6 +411,11 @@ export default async function VehicleDetailPage({
                   />
                 ) : null}
               </div>
+              <VehicleDossierChips
+                hasSpareKey={vehicle.hasSpareKey}
+                hasManual={vehicle.hasManual}
+                hasVideo={vehicle.hasVideo}
+              />
 
               <div>
                 <h1 className="font-display text-[1.65rem] font-bold leading-tight tracking-tight text-cream sm:text-2xl sm:text-[1.75rem]">
@@ -618,6 +624,9 @@ export default async function VehicleDetailPage({
           accessories={accessories}
           specs={specs}
           inspection={vehicle.inspection}
+          hasSpareKey={vehicle.hasSpareKey}
+          hasManual={vehicle.hasManual}
+          hasVideo={vehicle.hasVideo}
           conditions={conditions}
           listedLine={
             <ListedAgo

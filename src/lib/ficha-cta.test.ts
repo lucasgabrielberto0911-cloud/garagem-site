@@ -246,6 +246,9 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
   );
   assert.doesNotMatch(fichaBody, />Ano</);
   assert.doesNotMatch(fichaBody, />KM</);
+  assert.doesNotMatch(html, /Chave reserva/);
+  assert.doesNotMatch(html, /Manual do proprietário/);
+  assert.doesNotMatch(html, /Vídeo sob pedido/);
 
   const vistoria = blocks.find((block) => block.title === "Vistoria da loja");
   assert.match(vistoria?.body ?? "", /óleo/i);
@@ -253,6 +256,62 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
   assert.doesNotMatch(vistoria?.body ?? "", /documento oficial/i);
   assert.doesNotMatch(html, /documento oficial/i);
   assert.doesNotMatch(readSrc("components/site/VehicleMobileDossier.tsx"), /gap-px/);
+});
+
+test("dossiê e o aside mostram chave, manual e vídeo só quando marcados", () => {
+  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
+  assert.match(page, /VehicleDossierChips/);
+  assert.match(page, /hasSpareKey=\{vehicle\.hasSpareKey\}/);
+  assert.match(page, /hasManual=\{vehicle\.hasManual\}/);
+  assert.match(page, /hasVideo=\{vehicle\.hasVideo\}/);
+  assert.match(dossier, /VehicleDossierChips/);
+  assert.doesNotMatch(page, /VehicleDocument/);
+  assert.doesNotMatch(dossier, /VehicleDocument/);
+
+  const specs: VehicleSpecRow[] = [{ label: "Combustível", value: "Flex" }];
+  function markup(flags: {
+    hasSpareKey?: boolean;
+    hasManual?: boolean;
+    hasVideo?: boolean;
+  }) {
+    return renderToStaticMarkup(
+      createElement(
+        FavoritesProvider,
+        null,
+        createElement(VehicleMobileBlocks, {
+          fullLabel: "Honda HR-V",
+          path: "/estoque/hrv",
+          sold: false,
+          price: 84900,
+          yearModel: 2016,
+          make: "Honda",
+          model: "HR-V",
+          vehicleId: "v1",
+          accessories: [],
+          specs,
+          conditions: DEFAULT_VEHICLE_CONDITIONS,
+          google: DEFAULT_GOOGLE_REVIEWS,
+          prompt: "dúvida",
+          ...flags,
+        }),
+      ),
+    );
+  }
+
+  const marked = markup({ hasSpareKey: true, hasManual: true, hasVideo: true });
+  const keyAt = marked.indexOf("Chave reserva");
+  const manualAt = marked.indexOf("Manual do proprietário");
+  const videoAt = marked.indexOf("Vídeo sob pedido");
+  assert.ok(keyAt >= 0 && keyAt < manualAt && manualAt < videoAt);
+  assert.ok(keyAt < marked.indexOf("<details"));
+
+  const manualOnly = markup({ hasManual: true });
+  assert.match(manualOnly, /Manual do proprietário/);
+  assert.doesNotMatch(manualOnly, /Chave reserva/);
+  assert.doesNotMatch(manualOnly, /Vídeo sob pedido/);
+
+  assert.doesNotMatch(markup({}), /Chave reserva|Manual do proprietário|Vídeo sob pedido/);
 });
 
 test("ficha desktop não soma padding grande sob o header", () => {

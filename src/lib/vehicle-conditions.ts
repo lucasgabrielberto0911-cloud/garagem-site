@@ -1,7 +1,8 @@
 /**
  * Bloco único da ficha do veículo (perto do CTA).
- * Garantia: texto oficial da loja. O restante ainda se edita em Admin → Site.
- * Não inventar documentação, vistoria ou custo que a loja não confirmou.
+ * Garantia: texto oficial da loja — cobertura comercial de motor e câmbio.
+ * O restante ainda se edita em Admin → Site.
+ * Não inventar documentação, vistoria, direito do CDC ou custo que a loja não confirmou.
  */
 
 /**
@@ -42,10 +43,19 @@ export function publicStoreInspectionText(value: string | null | undefined) {
 /** Texto oficial da garantia — ficha, FAQ e defaults do painel. */
 export const STORE_WARRANTY = {
   title: "Garantia de 3 meses (motor e câmbio)",
-  summary: "3 meses de cobertura para motor e câmbio em todos os nossos seminovos.",
+  summary:
+    "Garantia comercial de 3 meses para motor e câmbio em todos os seminovos.",
   body:
-    "Na Sua Garagem, todo veículo passa por uma revisão completa antes de chegar até você. Por isso, oferecemos 3 meses de garantia em todos os nossos seminovos, com cobertura para os itens que mais pesam no bolso: motor e câmbio. Desgaste natural, mau uso e itens de manutenção (pneus, pastilhas, filtros) ficam de fora — em dúvida, pergunte no WhatsApp.",
+    "Todo seminovo passa por checagem na loja antes do anúncio. A loja oferece garantia comercial de 3 meses para motor e câmbio. Desgaste natural, mau uso e itens de manutenção (pneus, pastilhas, filtros) ficam de fora. Detalhes do seu caso: WhatsApp.",
 } as const;
+
+/** Parágrafo antigo que amarrava a garantia a uma “revisão completa”. */
+const LEGACY_STORE_WARRANTY =
+  /revis[aã]o completa antes de chegar at[eé] voc[eê]/i;
+
+export function isLegacyStoreWarrantyCopy(value: string | null | undefined) {
+  return LEGACY_STORE_WARRANTY.test((value ?? "").replace(/\s+/g, " "));
+}
 
 export type ConditionItem = {
   label: string;
@@ -80,7 +90,7 @@ export const DEFAULT_VEHICLE_CONDITIONS: VehicleConditionsContent = {
     },
     {
       label: "O que a garantia não cobre",
-      text: "A cobertura de 3 meses é de motor e câmbio. Desgaste natural, mau uso e peças de manutenção (pneus, pastilhas, filtros etc.) ficam de fora.",
+      text: "A garantia comercial de 3 meses cobre motor e câmbio. Desgaste natural, mau uso e peças de manutenção (pneus, pastilhas, filtros etc.) ficam de fora.",
     },
   ],
 };
