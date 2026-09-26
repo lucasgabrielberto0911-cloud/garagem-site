@@ -15,17 +15,17 @@ export const SERVICE_CITIES = [
     slug: "aracruz",
     name: "Aracruz",
     metaDescription:
-      "Seminovos com procedência para quem vive em Aracruz e no litoral norte do ES. Estoque no site, vídeo pelo WhatsApp e atendimento online da Sua Garagem, todos os dias das 8h às 23h.",
-    lead: "Quem está em Aracruz — no Centro, no Coqueiral, na Barra do Riacho ou no entorno do polo industrial — escolhe o seminovo no site e fecha pelo WhatsApp, sem precisar ir à capital só para ver ficha.",
+      "Seminovos em Aracruz, no litoral norte do ES. Ficha, fotos e preço no site da Sua Garagem; vídeo no WhatsApp quando você pedir. Atendimento das 8h às 23h.",
+    lead: "No Centro, no Coqueiral, na Barra do Riacho ou perto do polo industrial, você não precisa ir até a capital só para ler a ficha de um seminovo. Fotos e preço já estão no site da Sua Garagem. O que faltar, você pergunta no WhatsApp.",
     paragraphs: [
-      "Aracruz concentra rotina de trabalho, escola e deslocamento no litoral norte. A Sua Garagem atende esse ritmo no digital: estoque atualizado, fotos e ficha no anúncio, vídeo do carro quando você pede e conversa direta no WhatsApp até a documentação.",
-      "Se o seu dia a dia passa pela ES-010, pelo complexo industrial ou pela praia, a gente resolve a triagem à distância. Combinamos visita, entrega ou retirada quando o negócio já estiver claro — todos os dias, das 8h às 23h.",
+      "Se o seu caminho é a ES-010, o polo ou a praia, a comparação fica no celular: ficha, fotos e preço no anúncio. O vídeo do carro a gente manda quando você pedir — no horário em que estiver livre.",
+      "O WhatsApp fica aberto todos os dias, das 8h às 23h. Troca e documentação entram nessa conversa, sem compromisso de fechar. Visita, entrega ou retirada a gente marca só depois que a proposta estiver clara.",
     ],
     bullets: [
-      "Estoque com fotos e ficha para triar em Aracruz, sem deslocamento cego",
-      "Vídeo e dúvidas pelo WhatsApp no horário em que você está livre",
-      "Avaliação do seu usado para venda ou troca",
-      `Canal oficial: WhatsApp ${PHONES[0].label}`,
+      "Ficha, fotos e preço no anúncio, para comparar sem sair de Aracruz",
+      "Vídeo do carro quando você pedir, no seu horário",
+      "Troca e documentação na mesma conversa, sem compromisso",
+      `WhatsApp ${PHONES[0].label} · todos os dias, 8h–23h`,
     ],
     faqs: [
       {
@@ -49,16 +49,16 @@ export const SERVICE_CITIES = [
     slug: "vitoria",
     name: "Vitória",
     metaDescription:
-      "Seminovos em Vitória (ES) com procedência verificada. A Sua Garagem atende a capital no digital: estoque no site, WhatsApp das 8h às 23h, troca e orientação de financiamento.",
-    lead: "Em Vitória o tempo some entre trabalho, ponte e trânsito. A Sua Garagem deixa a escolha do seminovo no site e a conversa no WhatsApp — para quem está na Praia do Canto, Jardim da Penha, Enseada ou Camburi.",
+      "Seminovos em Vitória (ES): Praia do Canto, Jardim da Penha, Enseada e Camburi. Compare ficha e preço no site da Sua Garagem e fale no WhatsApp, das 8h às 23h.",
+    lead: "Entre o trabalho e a ponte, sobra pouco tempo. Na Praia do Canto, no Jardim da Penha, na Enseada ou em Camburi, você olha o seminovo no site da Sua Garagem e chama no WhatsApp quando der.",
     paragraphs: [
-      "A capital pede praticidade: você compara anúncios no celular, pede o vídeo do motor e do câmbio e negocia sem furar o expediente. A Sua Garagem é loja digital, com atendimento humano do primeiro recado até a transferência.",
-      "Atendemos quem mora na ilha e quem cruza a Terceira Ponte ou a Segunda Ponte todo dia. Horário contínuo, das 8h às 23h, inclusive fim de semana — o estoque gira, então o caminho mais rápido é filtrar no site e chamar no WhatsApp.",
+      "No celular estão a ficha, as fotos e o preço. Peça o vídeo do que quiser conferir — motor, câmbio, um detalhe da lataria. A Sua Garagem é loja digital: tem gente do outro lado, do primeiro recado até a documentação, e ninguém empurra a decisão.",
+      "Se você mora na ilha ou cruza a Terceira Ponte e a Segunda Ponte todo dia, o horário ajuda: das 8h às 23h, inclusive no fim de semana. Troca, orientação de financiamento e documentação ficam nessa conversa. O encontro só entra quando a proposta estiver clara.",
     ],
     bullets: [
-      "Filtros de preço, ano e câmbio para achar o carro no ritmo da capital",
-      "Vídeo e procedência antes de você sair de casa",
-      "Troca e financiamento explicados sem enrolação",
+      "Filtro de preço, ano e câmbio para achar o carro na hora que der",
+      "Vídeo e ficha antes de você sair de casa",
+      "Troca e financiamento explicados na conversa, com calma",
       `WhatsApp oficial ${PHONES[0].label} · todos os dias, 8h–23h`,
     ],
     faqs: [
@@ -83,17 +83,17 @@ export const SERVICE_CITIES = [
     slug: "linhares",
     name: "Linhares",
     metaDescription:
-      "Seminovos para Linhares e norte do ES, com procedência e atendimento online da Sua Garagem. Veja o estoque, peça vídeo no WhatsApp e feche sem viajar à toa.",
-    lead: "De Linhares à capital são horas na BR-101. Por isso a Sua Garagem mostra o seminovo no site e no WhatsApp antes de você sair — para quem está no Centro, no Araçá, no Interlagos ou no interior do município.",
+      "Seminovos em Linhares e no norte do ES. Antes da BR-101, veja ficha, fotos e preço no site da Sua Garagem e peça o vídeo no WhatsApp — das 8h às 23h.",
+    lead: "De Linhares à capital são horas na BR-101. No Centro, no Araçá, no Interlagos ou no interior, você vê o seminovo no site da Sua Garagem e tira a dúvida no WhatsApp antes de sair.",
     paragraphs: [
-      "Linhares é polo do norte capixaba: Rio Doce, estrada, trabalho no campo e na indústria. A Sua Garagem atende essa distância no digital. Você vê ficha, quilometragem e fotos, pede vídeo e só combina o encontro quando o negócio estiver alinhado.",
-      "O atendimento roda todos os dias, das 8h às 23h. Troca, financiamento e documentação entram na mesma conversa — sem pressão de balcão e sem inventar loja física na cidade.",
+      "Se o caminho passa pelo Rio Doce ou pela estrada, faz diferença decidir com o carro na tela. No anúncio estão a ficha, a quilometragem, as fotos e o preço. Se você pedir o vídeo, a gente mostra o que der para mostrar.",
+      "Você fala com a gente todos os dias, das 8h às 23h. Troca e documentação entram na mesma conversa, sem pressa. Não temos loja em Linhares: visita, entrega ou retirada a gente combina com a proposta já clara.",
     ],
     bullets: [
-      "Triagem completa no site para quem está longe da Grande Vitória",
-      "Vídeo do veículo antes de qualquer deslocamento",
-      "Avaliação do usado para venda ou troca",
-      `WhatsApp ${PHONES[0].label} — resposta no horário estendido`,
+      "Ficha, km e preço no site, para você decidir ainda em Linhares",
+      "Vídeo do carro antes de pegar a BR-101",
+      "Troca e documentação alinhadas com você na conversa",
+      `WhatsApp ${PHONES[0].label} — das 8h às 23h, todos os dias`,
     ],
     faqs: [
       {
@@ -117,16 +117,16 @@ export const SERVICE_CITIES = [
     slug: "serra",
     name: "Serra",
     metaDescription:
-      "Seminovos em Serra (ES) — Laranjeiras, Carapina, Barcelona e região. Estoque da Sua Garagem no site, vídeo no WhatsApp e atendimento online todos os dias, das 8h às 23h.",
-    lead: "Serra é a cidade mais populosa do Espírito Santo. Quem vive em Laranjeiras, Barcelona, Carapina, Novo Horizonte ou no entorno do Civit escolhe o seminovo no site da Sua Garagem e fecha pelo WhatsApp, no fim do expediente.",
+      "Seminovos em Serra (ES): Laranjeiras, Carapina, Barcelona e região do Civit. Ficha e preço no site da Sua Garagem; vídeo no WhatsApp, das 8h às 23h.",
+    lead: "Em Laranjeiras, Barcelona, Carapina, Novo Horizonte ou perto do Civit, você começa pelo site. A Sua Garagem mostra o seminovo com foto, ano, km e preço; o WhatsApp entra quando você quiser falar.",
     paragraphs: [
-      "Na Serra o dia a dia é deslocamento: BR-101, shopping, colégio e o corredor industrial. A Sua Garagem não pede que você perca uma tarde em showroom. O estoque está no site — com foto, ano, km e preço — e o consultor manda vídeo do carro pelo WhatsApp quando você pedir.",
-      "Atendemos a Grande Vitória a partir do digital, todos os dias das 8h às 23h. Troca do usado, orientação de financiamento e documentação entram na mesma conversa. Sem ponto físico obrigatório: combinamos visita ou entrega só depois que a proposta estiver clara.",
+      "O dia na Serra passa na BR-101, no shopping, no colégio ou no corredor industrial. Dá para filtrar à noite, quando o trânsito já baixou: foto, ano, km e preço no anúncio. O vídeo do carro chega no WhatsApp, se você pedir.",
+      "A gente atende todos os dias, das 8h às 23h. Troca do usado, orientação de financiamento e documentação ficam na mesma conversa. Não tem ponto físico obrigatório: visita ou entrega só quando preço e condições já estiverem alinhados.",
     ],
     bullets: [
-      "Estoque para filtrar à noite, depois do trânsito da Serra",
-      "Vídeo e procedência antes de sair de Laranjeiras ou Carapina",
-      "Avaliação para venda ou troca do seu usado",
+      "Foto, ano, km e preço para filtrar depois do trânsito da Serra",
+      "Vídeo no WhatsApp antes de sair de Laranjeiras ou de Carapina",
+      "Avaliação do usado para venda ou troca, sem compromisso",
       `WhatsApp oficial ${PHONES[0].label}`,
     ],
     faqs: [
@@ -151,17 +151,17 @@ export const SERVICE_CITIES = [
     slug: "vila-velha",
     name: "Vila Velha",
     metaDescription:
-      "Seminovos em Vila Velha (ES) — Praia da Costa, Itapoã e Centro. A Sua Garagem atende pelo site e WhatsApp, com procedência, troca e horário das 8h às 23h.",
-    lead: "Vila Velha mistura praia, Centro Histórico e o vai-e-vem da Terceira Ponte. A Sua Garagem atende quem está na Praia da Costa, em Itapoã, no Ibes ou no Coqueiral de Itaparica com estoque no site e conversa no WhatsApp.",
+      "Seminovos em Vila Velha (ES), da Praia da Costa ao Centro. Fotos, ficha e preço no site da Sua Garagem. Peça o vídeo no WhatsApp — todos os dias, das 8h às 23h.",
+    lead: "Na Praia da Costa, em Itapoã, no Ibes ou no Coqueiral de Itaparica, você escolhe o seminovo sem cruzar a Terceira Ponte só para ler anúncio. A ficha está no site da Sua Garagem; a conversa, no WhatsApp.",
     paragraphs: [
-      "É a cidade mais antiga do Estado e uma das que mais se desloca para Vitória. Em vez de perder o sábado em loja, você compara seminovos no celular — preço à vista, câmbio, km — e pede o vídeo do carro que passou no filtro. A Sua Garagem responde todos os dias, das 8h às 23h.",
-      "Compra, venda e troca entram no mesmo atendimento digital. Não inventamos showroom na orla: o combinado de visita ou entrega acontece só quando a proposta já estiver alinhada, com documentação acompanhada até a transferência.",
+      "Compare no celular o que pesa na decisão: preço, câmbio, km e fotos. Se um carro fizer sentido, peça o vídeo. A gente responde todos os dias, das 8h às 23h, e você não precisa decidir na mesma hora.",
+      "Compra, venda e troca ficam nesse atendimento. Não temos loja na orla. Quando a proposta já estiver alinhada, a gente combina visita ou entrega e acompanha a documentação até a transferência.",
     ],
     bullets: [
-      "Ficha e fotos para escolher entre um banho de mar e o expediente",
-      "Vídeo do seminovo antes de cruzar a Terceira Ponte à toa",
-      "Troca do usado e orientação de financiamento",
-      `WhatsApp ${PHONES[0].label} · loja digital, atendimento humano`,
+      "Preço, câmbio e fotos para você comparar com calma",
+      "Vídeo do seminovo antes de cruzar a Terceira Ponte",
+      "Troca do usado e orientação de financiamento na conversa",
+      `WhatsApp ${PHONES[0].label} · atendimento das 8h às 23h`,
     ],
     faqs: [
       {
@@ -185,17 +185,17 @@ export const SERVICE_CITIES = [
     slug: "guarapari",
     name: "Guarapari",
     metaDescription:
-      "Seminovos em Guarapari (ES) — Muquiçaba, Praia do Morro e Centro. Estoque da Sua Garagem no site, vídeo no WhatsApp e atendimento online todos os dias, das 8h às 23h.",
-    lead: "Guarapari mistura temporada, orla e o vai-e-vem da ES-060. A Sua Garagem atende quem está na Praia do Morro, em Meaípe, no Centro ou na Muquiçaba com estoque no site e conversa no WhatsApp.",
+      "Seminovos em Guarapari (ES): Praia do Morro, Meaípe e Muquiçaba. Ficha e preço no site da Sua Garagem; vídeo no WhatsApp quando você pedir, das 8h às 23h.",
+    lead: "Na Praia do Morro, em Meaípe, no Centro ou na Muquiçaba, você vê o seminovo no site da Sua Garagem. Se quiser falar, mesmo com a ES-060 cheia, chama no WhatsApp.",
     paragraphs: [
-      "Na alta temporada o trânsito da orla come o sábado. Em vez de sair às cegas, você compara seminovos no celular — preço, câmbio, km — e pede o vídeo do carro que passou no filtro. A Sua Garagem responde todos os dias, das 8h às 23h.",
-      "Somos loja digital: não inventamos showroom na Praia do Morro. Compra, venda e troca entram na mesma conversa. Visita, entrega ou retirada só depois que a proposta estiver alinhada.",
+      "Na temporada, o sábado some no trânsito da orla. No celular você olha preço, câmbio, km e fotos e pede o vídeo do carro que passou no seu filtro. A gente responde todos os dias, das 8h às 23h.",
+      "A Sua Garagem é loja digital: não temos ponto na Praia do Morro. Compra, venda e troca entram na mesma conversa. Visita, entrega ou retirada ficam para quando você já tiver visto o carro com calma e a proposta fizer sentido.",
     ],
     bullets: [
-      "Ficha e fotos para escolher sem perder o fim de semana na orla",
-      "Vídeo do seminovo antes de pegar a ES-060 à toa",
-      "Avaliação do usado para venda ou troca",
-      `WhatsApp ${PHONES[0].label} · loja digital, atendimento humano`,
+      "Ficha e fotos no site, para olhar com calma mesmo na temporada",
+      "Vídeo do seminovo antes de você pegar a ES-060",
+      "Seu usado avaliado para venda ou troca, quando você quiser",
+      `WhatsApp ${PHONES[0].label} · das 8h às 23h`,
     ],
     faqs: [
       {
@@ -219,17 +219,17 @@ export const SERVICE_CITIES = [
     slug: "cachoeiro-de-itapemirim",
     name: "Cachoeiro de Itapemirim",
     metaDescription:
-      "Seminovos para Cachoeiro de Itapemirim e sul do ES. Veja o estoque da Sua Garagem no site, peça vídeo no WhatsApp e feche sem viajar à toa — atendimento das 8h às 23h.",
-    lead: "De Cachoeiro à Grande Vitória são horas na BR-101. Por isso a Sua Garagem mostra o seminovo no site e no WhatsApp antes de você sair — Centro, Independência, Recanto ou distrito.",
+      "Seminovos em Cachoeiro de Itapemirim, no sul do ES. Ficha, fotos e preço no site da Sua Garagem; vídeo no WhatsApp antes da BR-101. Atendimento das 8h às 23h.",
+    lead: "Até a Grande Vitória são horas de estrada. No Centro, na Independência, no Recanto ou num distrito de Cachoeiro, você vê o seminovo no site da Sua Garagem e tira a dúvida no WhatsApp antes de viajar.",
     paragraphs: [
-      "Cachoeiro é polo do sul capixaba: mármore, comércio e estrada. A Sua Garagem atende essa distância no digital. Você vê ficha, quilometragem e fotos, pede vídeo e só combina o encontro quando o negócio estiver alinhado.",
-      "O atendimento roda todos os dias, das 8h às 23h. Troca, financiamento e documentação entram na mesma conversa — sem inventar loja física na cidade e sem pressão de balcão.",
+      "Você já sabe a distância: comércio, mármore e muita BR-101. Por isso a ficha, a quilometragem, as fotos e o preço ficam no anúncio. Se você pedir o vídeo, a gente manda antes da viagem.",
+      "A gente atende todos os dias, das 8h às 23h. Troca e documentação ficam na mesma conversa, sem empurrar a decisão. Não temos loja em Cachoeiro: visita, entrega ou retirada a gente combina depois da proposta.",
     ],
     bullets: [
-      "Triagem completa no site para quem está no sul do Estado",
-      "Vídeo do veículo antes de qualquer deslocamento longo",
-      "Avaliação do usado para venda ou troca",
-      `WhatsApp ${PHONES[0].label} — resposta no horário estendido`,
+      "Ficha, fotos e preço para comparar antes da viagem",
+      "Vídeo pedido por você, antes de ir até a Grande Vitória",
+      "Seu usado na troca, e a documentação explicada na conversa",
+      `WhatsApp ${PHONES[0].label} · resposta das 8h às 23h`,
     ],
     faqs: [
       {
@@ -253,17 +253,17 @@ export const SERVICE_CITIES = [
     slug: "colatina",
     name: "Colatina",
     metaDescription:
-      "Seminovos para Colatina e noroeste do ES. Estoque da Sua Garagem no site, vídeo pelo WhatsApp e atendimento online todos os dias, das 8h às 23h.",
-    lead: "Colatina concentra o noroeste capixaba. Quem está no Centro, no São Silvano, na Honório Fraga ou no entorno do Rio Doce escolhe o seminovo no site da Sua Garagem e fecha pelo WhatsApp.",
+      "Seminovos em Colatina, no noroeste do ES. Ficha, fotos e preço no site da Sua Garagem. Vídeo no WhatsApp quando você pedir — das 8h às 23h.",
+    lead: "Se você está no Centro, no São Silvano, na Honório Fraga ou perto do Rio Doce, dá para escolher o seminovo com calma. A ficha, as fotos e o preço estão no site da Sua Garagem; no WhatsApp a gente combina o resto, sem pressão para fechar na hora.",
     paragraphs: [
-      "A distância até a Grande Vitória pede triagem boa. A Sua Garagem deixa ficha, fotos e preço no site e manda vídeo do motor e do câmbio quando você pede — sem deslocamento cego.",
-      "Atendemos todos os dias, das 8h às 23h. Troca do usado e orientação de documentação entram na mesma conversa. Sem ponto físico obrigatório: combinamos o encontro só depois que a proposta estiver clara.",
+      "Colatina fica longe da Grande Vitória, então vale ver o carro direito antes da estrada. No site você confere ficha, fotos e preço. Se quiser mais detalhe, peça um vídeo — do motor, do câmbio ou do ponto que você quiser olhar.",
+      "A gente atende todos os dias, das 8h às 23h. Troca e documentação entram nessa conversa. Não tem ponto físico obrigatório: o encontro a gente marca só depois que a proposta estiver clara.",
     ],
     bullets: [
-      "Estoque para filtrar à noite, no ritmo de Colatina",
-      "Vídeo e procedência antes de pegar a estrada",
-      "Avaliação para venda ou troca do seu usado",
-      `WhatsApp oficial ${PHONES[0].label}`,
+      "Estoque no site para você olhar à noite, com calma",
+      "Vídeo do carro quando você pedir, antes da estrada",
+      "Avaliação para venda ou troca do seu usado, sem compromisso",
+      `WhatsApp oficial ${PHONES[0].label} · das 8h às 23h`,
     ],
     faqs: [
       {
@@ -287,17 +287,17 @@ export const SERVICE_CITIES = [
     slug: "cariacica",
     name: "Cariacica",
     metaDescription:
-      "Seminovos em Cariacica (ES) — Campo Grande, Porto de Santana e Itacibá. Estoque da Sua Garagem no site, WhatsApp das 8h às 23h, troca e orientação de financiamento.",
-    lead: "Cariacica é corredor da Grande Vitória: Campo Grande, Flexal, Itacibá e o porto. A Sua Garagem deixa a escolha do seminovo no site e a conversa no WhatsApp, no fim do expediente.",
+      "Seminovos em Cariacica (ES): Campo Grande, Itacibá e Porto de Santana. Foto, km e preço no site da Sua Garagem. Chame no WhatsApp das 8h às 23h.",
+    lead: "Em Campo Grande, no Flexal, em Itacibá ou perto do porto, o seminovo está no site da Sua Garagem. Você pode deixar a conversa do WhatsApp para o fim do expediente — a gente responde até as 23h.",
     paragraphs: [
-      "O dia a dia aqui é deslocamento — BR-101, shopping, colégio. A Sua Garagem não pede que você perca uma tarde em showroom. O estoque está no site, com foto, ano, km e preço, e o consultor manda vídeo pelo WhatsApp.",
-      "Atendemos a Grande Vitória a partir do digital, todos os dias das 8h às 23h. Troca, financiamento e documentação entram na mesma conversa. Combinamos visita ou entrega só depois que a proposta estiver clara.",
+      "De Campo Grande ao porto, sobra pouco tempo para ir a uma loja. No anúncio tem foto, ano, km e preço — você começa por aí. O vídeo chega no WhatsApp quando você pedir.",
+      "Troca, orientação de financiamento e documentação entram na mesma conversa, todos os dias das 8h às 23h, sem pressão para decidir na hora. Visita ou entrega a gente combina quando a proposta já fizer sentido para você.",
     ],
     bullets: [
-      "Filtros de preço e câmbio para achar o carro depois do trânsito",
+      "Filtro de preço e câmbio para olhar depois que o trânsito baixar",
       "Vídeo antes de sair de Campo Grande ou do Porto de Santana",
-      "Avaliação do usado para venda ou troca",
-      `WhatsApp ${PHONES[0].label} · todos os dias, 8h–23h`,
+      "Dá para avaliar o usado na troca, sem compromisso de fechar",
+      `No WhatsApp ${PHONES[0].label}, das 8h às 23h`,
     ],
     faqs: [
       {
@@ -321,16 +321,16 @@ export const SERVICE_CITIES = [
     slug: "viana",
     name: "Viana",
     metaDescription:
-      "Seminovos em Viana (ES) — Centro, Marcílio de Noronha e região. A Sua Garagem atende pelo site e WhatsApp, com procedência, troca e horário das 8h às 23h.",
-    lead: "Viana fica no eixo da BR-262, entre Cariacica e o interior. Quem mora no Centro, em Marcílio de Noronha ou no Universal escolhe o seminovo no site da Sua Garagem e fecha pelo WhatsApp.",
+      "Seminovos em Viana (ES), no eixo da BR-262. Ficha, fotos e preço no site da Sua Garagem — Centro e Marcílio de Noronha. WhatsApp das 8h às 23h.",
+    lead: "Viana fica na BR-262, no meio do caminho. Se você mora no Centro, em Marcílio de Noronha ou no Universal, o seminovo está no site da Sua Garagem — troca, dúvida ou visita a gente combina no WhatsApp.",
     paragraphs: [
-      "O município cresce no entorno da Grande Vitória e pede praticidade: comparar anúncio no celular, pedir vídeo e negociar sem furar o expediente. A Sua Garagem é loja digital, com atendimento humano do primeiro recado até a transferência.",
-      "Compra, venda e troca entram no mesmo canal. Não inventamos ponto físico na cidade: visita ou entrega só quando a proposta já estiver alinhada — todos os dias, das 8h às 23h.",
+      "Dá para comparar ficha, fotos e preço no celular, pedir o vídeo e conversar sem furar o expediente. A Sua Garagem é loja digital: tem gente atendendo, do primeiro recado até a documentação.",
+      "Compra, venda e troca ficam no mesmo canal, todos os dias das 8h às 23h. Não temos ponto físico em Viana. A visita ou a entrega só acontece quando a proposta já estiver alinhada.",
     ],
     bullets: [
-      "Estoque no site para triar sem deslocamento cego",
+      "Ficha, fotos e preço no site, para decidir sem sair de Viana",
       "Vídeo do seminovo antes de pegar a BR-262",
-      "Troca do usado e orientação de financiamento",
+      "Troca e financiamento explicados na conversa, sem pressão",
       `WhatsApp oficial ${PHONES[0].label}`,
     ],
     faqs: [
