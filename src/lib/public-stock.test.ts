@@ -28,6 +28,39 @@ test("nenhum select público carrega campo interno (consignado, compra, placa, F
     }
   }
   assert.equal(PUBLIC_VEHICLE_OMIT.consigned, true);
+  assert.equal(PUBLIC_VEHICLE_OMIT.fipePrice, true);
+  assert.equal(PUBLIC_VEHICLE_OMIT.plate, true);
+  assert.equal(PUBLIC_VEHICLE_OMIT.purchasePrice, true);
+  assert.equal(PUBLIC_VEHICLE_OMIT.inStoreName, true);
+});
+
+test("ficha pública inclui chave, manual e vídeo e esconde documentos", () => {
+  assert.equal(PUBLIC_VEHICLE_DETAIL_SELECT.hasSpareKey, true);
+  assert.equal(PUBLIC_VEHICLE_DETAIL_SELECT.hasManual, true);
+  assert.equal(PUBLIC_VEHICLE_DETAIL_SELECT.hasVideo, true);
+  assert.equal("hasSpareKey" in PUBLIC_VEHICLE_OMIT, false);
+  assert.equal("hasManual" in PUBLIC_VEHICLE_OMIT, false);
+
+  for (const field of [
+    "documents",
+    "costs",
+    "sale",
+    "fipePrice",
+    "plate",
+    "purchasePrice",
+    "inStoreName",
+    "consigned",
+  ]) {
+    assert.equal(field in PUBLIC_VEHICLE_DETAIL_SELECT, false, `ficha expõe ${field}`);
+  }
+
+  assert.equal("hasSpareKey" in PUBLIC_VEHICLE_CARD_SELECT, false);
+  assert.equal("hasManual" in PUBLIC_VEHICLE_CARD_SELECT, false);
+  assert.equal("hasVideo" in PUBLIC_VEHICLE_CARD_SELECT, false);
+  assert.equal("hasSpareKey" in CHAT_VEHICLE_SELECT, false);
+  assert.equal("hasManual" in CHAT_VEHICLE_SELECT, false);
+  assert.equal("hasVideo" in CHAT_VEHICLE_SELECT, false);
+  assert.equal("documents" in CHAT_VEHICLE_SELECT, false);
 });
 
 test("sitemap só inclui estoque disponível e não histórico", () => {

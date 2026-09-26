@@ -7,6 +7,7 @@ import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { VehicleLeadHit } from "@/components/site/VehiclePixel";
 import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
+import { VehicleDossierChips } from "@/components/site/VehicleDossierChips";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { WhatsAppButton } from "@/components/site/ui";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
@@ -197,6 +198,9 @@ export function VehicleMobileBlocks({
   accessories,
   specs,
   inspection,
+  hasSpareKey,
+  hasManual,
+  hasVideo,
   conditions,
   listedLine,
   google,
@@ -215,6 +219,9 @@ export function VehicleMobileBlocks({
   accessories: string[];
   specs: VehicleSpecRow[];
   inspection?: string | null;
+  hasSpareKey?: boolean | null;
+  hasManual?: boolean | null;
+  hasVideo?: boolean | null;
   conditions: VehicleConditionsContent;
   listedLine?: ReactNode;
   google: GoogleReviews;
@@ -242,6 +249,12 @@ export function VehicleMobileBlocks({
 
   return (
     <div className="mt-5 border-t border-white/10 lg:hidden">
+      <VehicleDossierChips
+        hasSpareKey={hasSpareKey}
+        hasManual={hasManual}
+        hasVideo={hasVideo}
+        className="border-b border-white/10 py-4"
+      />
       <DossierBlock title={STORE_INSPECTION_LABEL}>
         {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
           <p className="mb-3 text-[15px] leading-7 text-cream">{inspectionNote}</p>

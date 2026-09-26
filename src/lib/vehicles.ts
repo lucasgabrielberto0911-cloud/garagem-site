@@ -85,6 +85,9 @@ export const PUBLIC_VEHICLE_DETAIL_SELECT = {
   plateEnd: true,
   inspection: true,
   accessories: true,
+  hasSpareKey: true,
+  hasManual: true,
+  hasVideo: true,
   status: true,
   featured: true,
   locationCity: true,
@@ -116,6 +119,9 @@ const PUBLIC_VEHICLE_DETAIL_SELECT_NO_CITY = {
   plateEnd: true,
   inspection: true,
   accessories: true,
+  hasSpareKey: true,
+  hasManual: true,
+  hasVideo: true,
   status: true,
   featured: true,
   createdAt: true,
@@ -146,6 +152,9 @@ const PUBLIC_VEHICLE_DETAIL_SELECT_LEGACY = {
   plateEnd: true,
   inspection: true,
   accessories: true,
+  hasSpareKey: true,
+  hasManual: true,
+  hasVideo: true,
   status: true,
   featured: true,
   createdAt: true,
@@ -171,8 +180,6 @@ export const PUBLIC_VEHICLE_OMIT = {
   fipePrice: true,
   plate: true,
   inStoreName: true,
-  hasSpareKey: true,
-  hasManual: true,
   purchasePrice: true,
   consigned: true,
 } as const;
@@ -197,6 +204,9 @@ export type PublicVehicleDetail = {
   plateEnd: string | null;
   inspection: string | null;
   accessories: string[];
+  hasSpareKey: boolean;
+  hasManual: boolean;
+  hasVideo: boolean;
   status: string;
   featured: boolean;
   locationCity?: string | null;
@@ -360,7 +370,7 @@ export const getVehicleById = cache((id: string) =>
 
 const loadVehicleDetailCached = unstable_cache(
   async (id: string) => findDetailVehicle(id),
-  ["vehicle-detail-v5"],
+  ["vehicle-detail-v6"],
   PUBLIC_CACHE,
 );
 
