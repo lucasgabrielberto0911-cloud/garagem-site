@@ -101,7 +101,6 @@ export default async function VehiclesPage({
         reservedCount={stats.reserved}
         quality={{
           withoutPhotos: stats.withoutPhotos,
-          withoutVideo: stats.withoutVideo,
           stale: stats.stale,
           staleDays: STALE_DAYS,
         }}

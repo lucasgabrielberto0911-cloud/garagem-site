@@ -1,10 +1,30 @@
 import Link from "next/link";
+import nextDynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
-import { VehicleForm } from "@/components/admin/VehicleForm";
-import { VehicleOpsPanel } from "@/components/admin/VehicleOpsPanel";
+function PanelChunkLoading() {
+  return (
+    <div className="space-y-3" aria-hidden="true">
+      <div className="skeleton h-[52px] w-full" />
+      <div className="skeleton h-40 w-full" />
+      <div className="skeleton h-[52px] w-full" />
+    </div>
+  );
+}
+
+const VehicleForm = nextDynamic(
+  () => import("@/components/admin/VehicleForm").then((mod) => mod.VehicleForm),
+  { loading: () => <PanelChunkLoading /> },
+);
+
+const VehicleOpsPanel = nextDynamic(
+  () =>
+    import("@/components/admin/VehicleOpsPanel").then((mod) => mod.VehicleOpsPanel),
+  { loading: () => <PanelChunkLoading /> },
+);
 import { AdminPageHeader, Badge } from "@/components/admin/ui";
 import { daysInStock } from "@/lib/admin-stats";
+import { editListingGapLine } from "@/lib/stock-quality";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
@@ -41,8 +61,20 @@ export default async function EditVehiclePage({
     prisma.vehicle.findUnique({
       where: { id },
       include: {
-        photos: { orderBy: { order: "asc" } },
-        sale: { select: { salePrice: true } },
+        photos: {
+          orderBy: { order: "asc" },
+          select: {
+            id: true,
+            url: true,
+            thumbnailUrl: true,
+            order: true,
+            vehicleId: true,
+          },
+        },
+        // Preço de venda só entra na aba Operação.
+        ...(view === "operacao"
+          ? { sale: { select: { salePrice: true } } }
+          : {}),
       },
     }),
     view === "operacao"
@@ -68,12 +100,26 @@ export default async function EditVehiclePage({
     tone: "neutral" as const,
   };
   const days = daysInStock(vehicle.createdAt);
+  const gapLine = editListingGapLine({
+    status: vehicle.status,
+    color: vehicle.color,
+    photoCount: vehicle.photos.length,
+    price: vehicle.price,
+    hasVideo: vehicle.hasVideo,
+    version: vehicle.version,
+    transmission: vehicle.transmission,
+  });
 
   return (
     <div className="space-y-6">
       <AdminPageHeader
         title={`${vehicle.brand} ${vehicle.model}`}
-        subtitle={`No estoque há ${days} dia(s) · ${vehicle.photos.length} foto(s)`}
+        subtitle={
+          <>
+            {`No estoque há ${days} dia(s) · ${vehicle.photos.length} foto(s)`}
+            {gapLine ? <span className="mt-1 block">{gapLine}</span> : null}
+          </>
+        }
         actions={
           <>
             <Badge tone="neutral">{vehicleCategoryLabel(vehicle.category)}</Badge>

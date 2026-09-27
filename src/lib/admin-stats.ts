@@ -91,7 +91,6 @@ async function loadDashboardData() {
     recentVehicles,
     staleVehicles,
     withoutPhotos,
-    withoutVideo,
     customers,
     publishedTestimonials,
     usingSeedPassword,
@@ -181,21 +180,6 @@ async function loadDashboardData() {
         }),
       [],
     ),
-    safe(
-      "withoutVideo",
-      () =>
-        prisma.vehicle.findMany({
-          where: {
-            status: { not: "vendido" },
-            historical: false,
-            hasVideo: false,
-          },
-          orderBy: { createdAt: "desc" },
-          take: 5,
-          select: { id: true, brand: true, model: true },
-        }),
-      [],
-    ),
     safe("customers", () => prisma.customer.count(), 0),
     safe("testimonials", () => prisma.testimonial.count({ where: { published: true } }), 0),
     getUsingSeedPassword(),
@@ -269,7 +253,6 @@ async function loadDashboardData() {
         days: daysInStock(createdAt),
       })),
       withoutPhotos,
-      withoutVideo,
       noFeatured: available > 0 && featured === 0,
       noTestimonials: publishedTestimonials === 0,
       noGoogleReviews: !googleReviewsReady(googleReviews),
@@ -280,12 +263,12 @@ async function loadDashboardData() {
 }
 
 /**
- * ~15 consultas em série (pooler com connection_limit=1). Cache curto com tag:
+ * Consultas em série no pooler (connection_limit=1). Cache curto com tag:
  * as actions do painel chamam expireAdminData() e lead novo do site expira
- * pela tag do badge.
+ * pela tag do badge. Vídeo não entra: não vale uma leitura só para avisar.
  */
 export const getDashboardData = unstable_cache(
   loadDashboardData,
-  ["admin-dashboard-v3"],
+  ["admin-dashboard-v4"],
   { revalidate: 60, tags: [ADMIN_DATA_TAG, ADMIN_NEW_LEADS_TAG] },
 );

@@ -67,7 +67,7 @@ import {
   daysInStock,
   formatRelativeUpdatedAt,
   isStaleListing,
-  listingGapBadges,
+  stockListQuietNote,
   transmissionConflictAlert,
 } from "@/lib/stock-quality";
 import {
@@ -121,36 +121,19 @@ const SORT_SELECT_OPTIONS = [
 const CHIP_SCROLL =
   "flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
-function vehicleQualityAlerts(vehicle: VehicleRow) {
-  if (vehicle.status === "vendido") return [];
-  const alerts = listingGapBadges({
-    color: vehicle.color,
-    photos: vehicle.photos,
-    price: vehicle.price,
-  });
-  if (!vehicle.hasVideo) alerts.push("Sem vídeo");
-  if (isStaleListing(vehicle.createdAt, vehicle.status)) {
-    alerts.push(`Parado há ${daysInStock(vehicle.createdAt)} dias`);
-  }
-  const conflict = transmissionConflictAlert(
-    vehicle.version,
-    vehicle.transmission,
-  );
-  if (conflict) alerts.push(conflict);
-  return alerts;
-}
-
-function locationChipClass(city: string) {
-  return city === "serra"
-    ? "border border-sky-400/40 text-sky-300"
-    : "border border-amber-400/40 text-amber-200";
-}
+const STATUS_DOT: Record<string, string> = {
+  disponivel: "bg-emerald-400",
+  reservado: "bg-brand-orange",
+  vendido: "bg-white/35",
+};
 
 function VehicleLocationChip({ city }: { city: string }) {
   if (!isVehicleLocationCity(city)) return null;
   return (
     <span
-      className={`shrink-0 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${locationChipClass(city)}`}
+      className={`shrink-0 text-xs ${
+        city === "serra" ? "text-sky-300" : "text-amber-200/90"
+      }`}
     >
       {vehicleLocationLabel(city)}
     </span>
@@ -187,7 +170,7 @@ function vehicleOpsMeta(vehicle: VehicleRow) {
 function ConsignedChip() {
   return (
     <span
-      className="shrink-0 border border-sky-400/40 bg-sky-400/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-200"
+      className="shrink-0 bg-sky-400/10 px-1.5 py-0.5 text-[11px] font-medium text-sky-200"
       data-testid="consigned-badge"
     >
       {CONSIGNED_LABEL}
@@ -224,7 +207,6 @@ export function VehiclesTable({
   reservedCount: number;
   quality?: {
     withoutPhotos: number;
-    withoutVideo: number;
     stale: number;
     staleDays: number;
   };
@@ -431,6 +413,7 @@ export function VehiclesTable({
     id: string,
     action: () => Promise<{ ok: boolean; message: string }>,
     onOk?: () => void,
+    options?: { refresh?: boolean },
   ) {
     setBusyId(id);
     startTransition(async () => {
@@ -439,7 +422,9 @@ export function VehiclesTable({
         if (result.ok) {
           toast.success(result.message);
           onOk?.();
-          router.refresh();
+          // Destaque só muda a estrela e o contador local. Recarregar a página
+          // aqui repetia a lista e os números sem alterar o que está na tela.
+          if (options?.refresh !== false) router.refresh();
         } else {
           toast.error(result.message);
         }
@@ -610,6 +595,7 @@ export function VehiclesTable({
           ),
         );
       },
+      { refresh: false },
     );
   }
 
@@ -655,8 +641,17 @@ export function VehiclesTable({
     return sort.dir === "asc" ? "↑" : "↓";
   }
 
+  const stockNote =
+    tab === "estoque" && quality
+      ? stockListQuietNote({
+          withoutPhotos: quality.withoutPhotos,
+          stale: quality.stale,
+          staleDays: quality.staleDays,
+        })
+      : null;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div
         role="tablist"
         aria-label="Separar estoque e vendidos"
@@ -724,33 +719,8 @@ export function VehiclesTable({
         </button>
       </div>
 
-      {tab === "estoque" && quality && quality.withoutPhotos + quality.withoutVideo + quality.stale > 0 ? (
-        <p
-          role="status"
-          className="flex flex-wrap items-baseline gap-x-2 border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-xs text-cream sm:text-sm"
-        >
-          <span className="font-display text-[11px] font-semibold uppercase tracking-wider text-brand-orange">
-            Avisos
-          </span>
-          <span>
-            {[
-              quality.withoutPhotos > 0
-                ? `${quality.withoutPhotos} sem foto`
-                : null,
-              quality.withoutVideo > 0
-                ? `${quality.withoutVideo} sem vídeo`
-                : null,
-              quality.stale > 0
-                ? `${quality.stale} parado${quality.stale === 1 ? "" : "s"} há mais de ${quality.staleDays} dias`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </span>
-          <span className="hidden min-w-0 truncate text-cream/70 xl:inline">
-            — marque o vídeo no cadastro quando já existir.
-          </span>
-        </p>
+      {stockNote ? (
+        <p className="text-xs leading-relaxed text-muted">{stockNote}</p>
       ) : null}
 
       <div className="border border-white/10 bg-ink/50 p-2 sm:p-3">
@@ -875,11 +845,11 @@ export function VehiclesTable({
       </div>
 
       {tab === "destaques" ? (
-        <div className="border border-brand/30 bg-brand/10 px-4 py-3 text-sm text-cream">
-          <p className="font-display text-xs font-semibold uppercase tracking-wider text-brand">
+        <div className="border border-white/10 bg-ink/40 px-4 py-3 text-sm">
+          <p className="font-display text-xs font-semibold uppercase tracking-wider text-cream">
             Home · {featuredCount}/{MAX_HOME_FEATURED} destaques
           </p>
-          <p className="mt-1 text-sm leading-relaxed text-cream/90">
+          <p className="mt-1 text-sm leading-relaxed text-muted">
             Só o que está marcado aparece na vitrine. Ordem: cadastro mais
             recente primeiro. Teto de {MAX_HOME_FEATURED} para não bagunçar a
             home.{" "}
@@ -1023,7 +993,7 @@ export function VehiclesTable({
               </div>
             ) : null}
             {/* Cards iguais no celular e no desktop: hierarquia clara, ações rotuladas. */}
-            <ul className="space-y-2 sm:space-y-3">
+            <ul className="space-y-2">
             {items.map((vehicle) => (
               <VehicleAdminCard
                 key={vehicle.id}
@@ -1213,15 +1183,13 @@ function VehicleAdminCard({
   onMore: () => void;
 }) {
   const ops = vehicleOpsMeta(vehicle);
-  const alerts = vehicleQualityAlerts(vehicle);
-  // "Sem vídeo" e as tags de operação já aparecem resumidos no topo /
-  // na aba Operação; no celular eles só alongavam cada card.
-  const chips = [
-    ...alerts.map((label) => ({ label, alert: true, mobile: label !== "Sem vídeo" })),
-    ...ops.tags.map((label) => ({ label, alert: false, mobile: false })),
-  ];
-  const hasMobileChips = chips.some((chip) => chip.mobile);
+  const stale = isStaleListing(vehicle.createdAt, vehicle.status);
+  const gearNote =
+    vehicle.status === "vendido"
+      ? null
+      : transmissionConflictAlert(vehicle.version, vehicle.transmission);
   const title = `${vehicle.brand} ${vehicle.model}`;
+  const missingPrice = !(vehicle.price > 0);
 
   function handleStatusChange(next: string) {
     if (next === "vendido") {
@@ -1259,7 +1227,7 @@ function VehicleAdminCard({
               Destaque
             </span>
           ) : null}
-          <span className="absolute bottom-1 right-1 bg-asphalt/85 px-1.5 py-0.5 font-display text-[10px] font-semibold tabular-nums text-cream">
+          <span className="absolute bottom-1 right-1 bg-black/55 px-1.5 py-0.5 text-[10px] tabular-nums text-cream/80">
             {vehicle.photoCount > 0
               ? `${vehicle.photoCount} foto${vehicle.photoCount === 1 ? "" : "s"}`
               : "Sem foto"}
@@ -1268,19 +1236,15 @@ function VehicleAdminCard({
 
         <div className="min-w-0 flex-1">
           <Link href={`/admin/veiculos/${vehicle.id}`} className="block min-w-0">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               <p className="truncate font-display text-[15px] font-semibold leading-tight text-cream lg:text-base">
                 {title}
               </p>
-              <span
-                className={`shrink-0 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                  vehicle.status === "disponivel"
-                    ? "border border-emerald-500/30 text-emerald-300"
-                    : vehicle.status === "reservado"
-                      ? "border border-brand-orange/40 text-brand-orange"
-                      : "border border-white/15 text-muted"
-                }`}
-              >
+              <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-muted">
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[vehicle.status] ?? "bg-white/35"}`}
+                  aria-hidden="true"
+                />
                 {STATUS_LABEL[vehicle.status] ?? vehicle.status}
               </span>
               <VehicleLocationChip city={vehicle.locationCity} />
@@ -1295,12 +1259,20 @@ function VehicleAdminCard({
               {vehicle.updatedAt
                 ? ` · ${formatRelativeUpdatedAt(vehicle.updatedAt)}`
                 : ""}
+              {stale ? ` · ${daysInStock(vehicle.createdAt)} dias no estoque` : ""}
             </p>
+            {gearNote ? (
+              <p className="mt-1 truncate text-xs text-muted">{gearNote}</p>
+            ) : null}
           </Link>
           <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 lg:hidden">
-            <span className="font-display text-lg font-bold leading-none text-cream">
-              {formatCurrencyBRL(vehicle.price)}
-            </span>
+            {missingPrice ? (
+              <span className="text-sm font-medium text-muted">Sem preço</span>
+            ) : (
+              <span className="font-display text-lg font-bold leading-none text-cream">
+                {formatCurrencyBRL(vehicle.price)}
+              </span>
+            )}
             {ops.finance ? (
               <span
                 className={`text-xs ${
@@ -1319,30 +1291,21 @@ function VehicleAdminCard({
             </p>
           ) : null}
 
-          {chips.length > 0 ? (
-            <div
-              className={`mt-2 flex-wrap gap-1.5 ${hasMobileChips ? "flex" : "hidden lg:flex"}`}
-            >
-              {chips.map((chip) => (
-                <span
-                  key={chip.label}
-                  className={`${chip.mobile ? "inline-flex" : "hidden lg:inline-flex"} px-1.5 py-0.5 text-[10px] uppercase tracking-wider ${
-                    chip.alert
-                      ? "border border-brand/40 bg-brand/10 text-brand"
-                      : "border border-white/10 text-muted"
-                  }`}
-                >
-                  {chip.label}
-                </span>
-              ))}
-            </div>
+          {ops.tags.length > 0 ? (
+            <p className="mt-1 hidden truncate text-[11px] text-muted lg:block">
+              {ops.tags.join(" · ")}
+            </p>
           ) : null}
         </div>
 
         <div className="hidden w-[9.5rem] shrink-0 flex-col items-end gap-1.5 lg:flex">
-          <p className="font-display text-xl font-bold leading-none text-cream">
-            {formatCurrencyBRL(vehicle.price)}
-          </p>
+          {missingPrice ? (
+            <p className="text-sm font-medium text-muted">Sem preço</p>
+          ) : (
+            <p className="font-display text-xl font-bold leading-none text-cream">
+              {formatCurrencyBRL(vehicle.price)}
+            </p>
+          )}
           {ops.finance ? (
             <p
               className={`text-xs ${
