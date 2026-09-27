@@ -862,9 +862,9 @@ export function VehicleForm({
             />
             Já temos vídeo deste veículo
           </label>
-          <p className="mt-2 text-xs text-muted">
-            Não sobe o vídeo no site — só tira o aviso “sem vídeo” no estoque.
-            O visitante continua pedindo pelo WhatsApp.
+          <p className="mt-2 text-xs leading-relaxed text-muted">
+            Não publica o vídeo no site. O visitante continua pedindo pelo
+            WhatsApp. A marcação fica só neste cadastro.
           </p>
         </FormSection>
 

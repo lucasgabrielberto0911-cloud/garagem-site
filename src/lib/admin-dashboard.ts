@@ -20,7 +20,6 @@ export type DashboardAlertsInput = {
   noFeatured: boolean;
   staleVehicles: Array<VehicleRef & { days: number }>;
   staleDays: number;
-  withoutVideo: VehicleRef[];
   placeholders: string[];
   noTestimonials: boolean;
   noGoogleReviews: boolean;
@@ -79,22 +78,6 @@ export function buildDashboardAlerts(input: DashboardAlertsInput): DashboardAler
       title: `${vehicle.brand} ${vehicle.model} há ${vehicle.days} dias no estoque`,
       description: `Parado há mais de ${input.staleDays} dias. Vale revisar preço ou fotos.`,
       href: `/admin/veiculos/${vehicle.id}`,
-    });
-  }
-
-  if (input.withoutVideo.length > 0) {
-    const [first] = input.withoutVideo;
-    list.push({
-      key: "no-video",
-      tone: "neutral",
-      icon: "alert",
-      title:
-        input.withoutVideo.length === 1
-          ? `${first.brand} ${first.model} sem vídeo`
-          : `${input.withoutVideo.length}+ anúncios sem vídeo`,
-      description:
-        "Marque no cadastro quando já tiver vídeo. O site continua com “Pedir vídeo” no WhatsApp.",
-      href: "/admin/veiculos",
     });
   }
 

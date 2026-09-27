@@ -59,7 +59,6 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
   consigned: true,
   createdAt: true,
   updatedAt: true,
-  hasVideo: true,
   transmission: true,
   color: true,
   plate: true,
@@ -69,6 +68,7 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
     select: { url: true, thumbnailUrl: true },
   },
   sale: { select: { salePrice: true } },
+  costs: { select: { amount: true } },
   _count: { select: { photos: true } },
 } as const;
 
@@ -92,7 +92,6 @@ export type AdminVehicleListItem = {
   consigned: boolean;
   createdAt: Date;
   updatedAt?: Date | string | null;
-  hasVideo: boolean;
   transmission: string;
   color: string | null;
   plate: string | null;
@@ -106,27 +105,19 @@ export type AdminVehicleListItem = {
 function toAdminVehicleListItem(
   row: Omit<AdminVehicleListItem, "photoCount" | "costsTotal"> & {
     _count?: { photos: number };
+    costs?: Array<{ amount: number }>;
   },
-  costsTotal: number,
 ): AdminVehicleListItem {
-  const { _count, ...rest } = row;
+  const { _count, costs, ...rest } = row;
   return {
     ...rest,
     locationCity: rest.locationCity || DEFAULT_VEHICLE_LOCATION_CITY,
     photoCount: _count?.photos ?? rest.photos.length,
-    costsTotal,
+    // Consignado não soma custo da loja — igual à consulta antiga, que pulava esses ids.
+    costsTotal: rest.consigned
+      ? 0
+      : (costs ?? []).reduce((sum, cost) => sum + (cost.amount || 0), 0),
   };
-}
-
-/** Soma dos custos por veículo — uma linha por carro em vez de cada custo. */
-async function costsTotalByVehicle(vehicleIds: string[]) {
-  if (vehicleIds.length === 0) return new Map<string, number>();
-  const groups = await prisma.vehicleCost.groupBy({
-    by: ["vehicleId"],
-    where: { vehicleId: { in: vehicleIds } },
-    _sum: { amount: true },
-  });
-  return new Map(groups.map((group) => [group.vehicleId, group._sum.amount ?? 0]));
 }
 
 const ADMIN_VEHICLE_LIST_SELECT_NO_CITY = {
@@ -148,7 +139,6 @@ const ADMIN_VEHICLE_LIST_SELECT_NO_CITY = {
   consigned: true,
   createdAt: true,
   updatedAt: true,
-  hasVideo: true,
   transmission: true,
   color: true,
   plate: true,
@@ -158,6 +148,7 @@ const ADMIN_VEHICLE_LIST_SELECT_NO_CITY = {
     select: { url: true, thumbnailUrl: true },
   },
   sale: { select: { salePrice: true } },
+  costs: { select: { amount: true } },
   _count: { select: { photos: true } },
 } as const;
 
@@ -283,14 +274,9 @@ export async function getAdminVehiclesPage(options: {
       take: pageSize,
     }),
   ]);
-  const costs = await costsTotalByVehicle(
-    vehicleRows.filter((row) => !row.consigned).map((row) => row.id),
-  );
 
   return {
-    vehicles: vehicleRows.map((row) =>
-      toAdminVehicleListItem(row, costs.get(row.id) ?? 0),
-    ),
+    vehicles: vehicleRows.map((row) => toAdminVehicleListItem(row)),
     total,
     page,
     pageSize,
@@ -305,93 +291,218 @@ export const OWNED_AVAILABLE_WHERE = {
   consigned: false,
 } as const;
 
-async function loadAdminVehicleStats() {
+export type AdminVehicleStats = {
+  available: number;
+  reserved: number;
+  sold: number;
+  estoqueCount: number;
+  vendidosCount: number;
+  stockValue: number;
+  ownedAvailable: number;
+  consignedAvailable: number;
+  invested: number;
+  withCostBasis: number;
+  withoutPhotos: number;
+  stale: number;
+  featured: number;
+};
+
+export type AdminVehicleStatsRow = {
+  available?: unknown;
+  reserved?: unknown;
+  sold?: unknown;
+  featured?: unknown;
+  stale?: unknown;
+  withoutPhotos?: unknown;
+  stockValue?: unknown;
+  purchaseSum?: unknown;
+  ownedAvailable?: unknown;
+  withCostBasis?: unknown;
+  extraCosts?: unknown;
+};
+
+function statNum(value: unknown) {
+  if (typeof value === "bigint") return Number(value);
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+/** Uma linha do SQL único dos contadores → o mesmo formato da tela. */
+export function mapAdminVehicleStatsRow(
+  row?: AdminVehicleStatsRow | null,
+): AdminVehicleStats {
+  const available = statNum(row?.available);
+  const reserved = statNum(row?.reserved);
+  const ownedAvailable = statNum(row?.ownedAvailable);
+  return {
+    available,
+    reserved,
+    sold: statNum(row?.sold),
+    estoqueCount: available + reserved,
+    vendidosCount: statNum(row?.sold),
+    stockValue: statNum(row?.stockValue),
+    ownedAvailable,
+    consignedAvailable: Math.max(available - ownedAvailable, 0),
+    invested: investedTotal(statNum(row?.purchaseSum), statNum(row?.extraCosts)),
+    withCostBasis: statNum(row?.withCostBasis),
+    withoutPhotos: statNum(row?.withoutPhotos),
+    stale: statNum(row?.stale),
+    featured: statNum(row?.featured),
+  };
+}
+
+function isStatsSchemaDrift(error: unknown) {
+  if (isMissingColumnError(error)) return true;
+  const message = error instanceof Error ? error.message : "";
+  return /42703|column .+ does not exist/i.test(message);
+}
+
+/**
+ * Uma ida ao banco no lugar de várias contagens.
+ * Vídeo não entra: a lista não mostra mais esse aviso.
+ * Consignado continua fora do valor e do investido.
+ */
+async function loadAdminVehicleStatsSql(): Promise<AdminVehicleStats> {
+  const staleBefore = staleCutoffDate();
+  const rows = await prisma.$queryRaw<AdminVehicleStatsRow[]>`
+    SELECT
+      count(*) FILTER (WHERE v.status = 'disponivel')::int AS "available",
+      count(*) FILTER (WHERE v.status = 'reservado')::int AS "reserved",
+      count(*) FILTER (WHERE v.status = 'vendido')::int AS "sold",
+      count(*) FILTER (WHERE v.status = 'disponivel' AND v.featured)::int AS "featured",
+      count(*) FILTER (
+        WHERE v.status = 'disponivel' AND v."createdAt" < ${staleBefore}
+      )::int AS "stale",
+      count(*) FILTER (
+        WHERE v.status IN ('disponivel', 'reservado')
+          AND NOT EXISTS (
+            SELECT 1 FROM "Photo" p WHERE p."vehicleId" = v.id
+          )
+      )::int AS "withoutPhotos",
+      coalesce(sum(v.price) FILTER (
+        WHERE v.status = 'disponivel' AND v.consigned = false
+      ), 0) AS "stockValue",
+      coalesce(sum(v."purchasePrice") FILTER (
+        WHERE v.status = 'disponivel' AND v.consigned = false
+      ), 0) AS "purchaseSum",
+      count(*) FILTER (
+        WHERE v.status = 'disponivel' AND v.consigned = false
+      )::int AS "ownedAvailable",
+      count(*) FILTER (
+        WHERE v.status = 'disponivel'
+          AND v.consigned = false
+          AND (
+            v."purchasePrice" > 0
+            OR EXISTS (
+              SELECT 1 FROM "VehicleCost" c
+              WHERE c."vehicleId" = v.id AND c.amount > 0
+            )
+          )
+      )::int AS "withCostBasis",
+      (
+        SELECT coalesce(sum(c.amount), 0)
+        FROM "VehicleCost" c
+        INNER JOIN "Vehicle" owned ON owned.id = c."vehicleId"
+        WHERE owned.historical = false
+          AND owned.status = 'disponivel'
+          AND owned.consigned = false
+      ) AS "extraCosts"
+    FROM "Vehicle" v
+    WHERE v.historical = false
+  `;
+  return mapAdminVehicleStatsRow(rows[0]);
+}
+
+/** Plano B se uma coluna nova ainda não existir no banco. */
+async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
   const stockWhere = {
     historical: false,
     status: { in: ["disponivel", "reservado"] },
   };
 
-  const [
-    groups,
-    stockValue,
-    extraCosts,
-    withCostBasis,
-    withoutPhotos,
-    withoutVideo,
-    stale,
-    featured,
-  ] = await Promise.all([
-    prisma.vehicle.groupBy({
-      by: ["status"],
-      where: { historical: false },
-      _count: { _all: true },
-    }),
-    prisma.vehicle.aggregate({
-      where: OWNED_AVAILABLE_WHERE,
-      _sum: { price: true, purchasePrice: true },
-      _count: { _all: true },
-    }),
-    prisma.vehicleCost.aggregate({
-      where: { vehicle: OWNED_AVAILABLE_WHERE },
-      _sum: { amount: true },
-    }),
-    prisma.vehicle.count({
-      where: {
-        ...OWNED_AVAILABLE_WHERE,
-        OR: [
-          { purchasePrice: { gt: 0 } },
-          { costs: { some: { amount: { gt: 0 } } } },
-        ],
-      },
-    }),
-    prisma.vehicle.count({
-      where: { ...stockWhere, photos: { none: {} } },
-    }),
-    prisma.vehicle.count({
-      where: { ...stockWhere, hasVideo: false },
-    }),
-    prisma.vehicle.count({
-      where: {
-        historical: false,
-        status: "disponivel",
-        createdAt: { lt: staleCutoffDate() },
-      },
-    }),
-    prisma.vehicle.count({
-      where: { historical: false, status: "disponivel", featured: true },
-    }),
-  ]);
+  const [groups, stockValue, extraCosts, withCostBasis, withoutPhotos, stale, featured] =
+    await Promise.all([
+      prisma.vehicle.groupBy({
+        by: ["status"],
+        where: { historical: false },
+        _count: { _all: true },
+      }),
+      prisma.vehicle.aggregate({
+        where: OWNED_AVAILABLE_WHERE,
+        _sum: { price: true, purchasePrice: true },
+        _count: { _all: true },
+      }),
+      prisma.vehicleCost.aggregate({
+        where: { vehicle: OWNED_AVAILABLE_WHERE },
+        _sum: { amount: true },
+      }),
+      prisma.vehicle.count({
+        where: {
+          ...OWNED_AVAILABLE_WHERE,
+          OR: [
+            { purchasePrice: { gt: 0 } },
+            { costs: { some: { amount: { gt: 0 } } } },
+          ],
+        },
+      }),
+      prisma.vehicle.count({
+        where: { ...stockWhere, photos: { none: {} } },
+      }),
+      prisma.vehicle.count({
+        where: {
+          historical: false,
+          status: "disponivel",
+          createdAt: { lt: staleCutoffDate() },
+        },
+      }),
+      prisma.vehicle.count({
+        where: { historical: false, status: "disponivel", featured: true },
+      }),
+    ]);
 
   const count = (value: string) =>
     groups.find((group) => group.status === value)?._count._all ?? 0;
-
-  const invested = investedTotal(
-    stockValue._sum.purchasePrice,
-    extraCosts._sum.amount ?? 0,
-  );
+  const available = count("disponivel");
+  const ownedAvailable = stockValue._count._all;
 
   return {
-    available: count("disponivel"),
+    available,
     reserved: count("reservado"),
     sold: count("vendido"),
-    estoqueCount: count("disponivel") + count("reservado"),
+    estoqueCount: available + count("reservado"),
     vendidosCount: count("vendido"),
     stockValue: stockValue._sum.price ?? 0,
-    ownedAvailable: stockValue._count._all,
-    consignedAvailable: Math.max(count("disponivel") - stockValue._count._all, 0),
-    invested,
+    ownedAvailable,
+    consignedAvailable: Math.max(available - ownedAvailable, 0),
+    invested: investedTotal(stockValue._sum.purchasePrice, extraCosts._sum.amount ?? 0),
     withCostBasis,
     withoutPhotos,
-    withoutVideo,
     stale,
     featured,
   };
 }
 
+async function loadAdminVehicleStats() {
+  try {
+    return await loadAdminVehicleStatsSql();
+  } catch (error) {
+    if (!isStatsSchemaDrift(error)) throw error;
+    console.error(
+      "[admin-vehicles] contadores em SQL único indisponíveis, usando consultas separadas:",
+      error,
+    );
+    return loadAdminVehicleStatsQueries();
+  }
+}
+
 /** Contadores do topo da lista: só números, expiram com expireAdminData(). */
 export const getAdminVehicleStats = unstable_cache(
   loadAdminVehicleStats,
-  ["admin-vehicle-stats-v2"],
+  ["admin-vehicle-stats-v3"],
   { revalidate: 60, tags: [ADMIN_DATA_TAG] },
 );
 

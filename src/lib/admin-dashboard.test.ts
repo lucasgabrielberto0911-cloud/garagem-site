@@ -13,7 +13,6 @@ const empty: DashboardAlertsInput = {
   noFeatured: false,
   staleVehicles: [],
   staleDays: 45,
-  withoutVideo: [],
   placeholders: [],
   noTestimonials: false,
   noGoogleReviews: false,
@@ -49,21 +48,21 @@ test("senha e anúncio sem foto vêm antes de ajuste de cadastro da loja", () =>
   assert.match(alerts[3].description, /45 dias/);
 });
 
-test("vídeo agrupa num aviso só", () => {
-  const one = buildDashboardAlerts({
+test("pendências não listam vídeo", () => {
+  const alerts = buildDashboardAlerts({
     ...empty,
-    withoutVideo: [{ id: "v1", brand: "Honda", model: "Fit" }],
+    withoutPhotos: [{ id: "p1", brand: "VW", model: "Gol" }],
+    staleVehicles: [{ id: "s1", brand: "Fiat", model: "Uno", days: 90 }],
+    noFeatured: true,
   });
-  assert.equal(one[0].title, "Honda Fit sem vídeo");
-  const many = buildDashboardAlerts({
-    ...empty,
-    withoutVideo: [
-      { id: "v1", brand: "Honda", model: "Fit" },
-      { id: "v2", brand: "Honda", model: "City" },
-    ],
-  });
-  assert.equal(many.length, 1);
-  assert.equal(many[0].title, "2+ anúncios sem vídeo");
+  assert.equal(
+    alerts.some((alert) => /vídeo/i.test(`${alert.title} ${alert.description}`)),
+    false,
+  );
+  assert.deepEqual(
+    alerts.map((alert) => alert.key),
+    ["no-photo-p1", "no-featured", "stale-s1"],
+  );
 });
 
 test("celular mostra as primeiras pendências e guarda o resto", () => {

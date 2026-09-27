@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { isMissingColumnError } from "@/lib/prisma-errors";
 import { getSession } from "@/lib/auth";
 import { privateMasterRefForPublicUrl } from "@/lib/photo-master";
 import { copyPrivateMaster } from "@/lib/photo-master-store";
@@ -314,6 +315,25 @@ export async function createVehicle(
   }
 }
 
+async function loadPreviousPhotoUrls(vehicleId: string) {
+  try {
+    return await prisma.photo.findMany({
+      where: { vehicleId },
+      select: { url: true, thumbnailUrl: true },
+    });
+  } catch (error) {
+    if (!isMissingColumnError(error, "thumbnailUrl")) throw error;
+    const legacy = await prisma.photo.findMany({
+      where: { vehicleId },
+      select: { url: true },
+    });
+    return legacy.map((photo) => ({
+      url: photo.url,
+      thumbnailUrl: null as string | null,
+    }));
+  }
+}
+
 export async function updateVehicle(
   id: string,
   _prev: VehicleFormState,
@@ -325,30 +345,19 @@ export async function updateVehicle(
     const data = parseVehicleFields(formData);
     await assertCanFeature({ vehicleId: id, featured: data.featured });
 
-    const previousVehicle = await prisma.vehicle.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        brand: true,
-        model: true,
-        version: true,
-        yearModel: true,
-      },
-    });
-
-    let previous: Array<{ url: string; thumbnailUrl: string | null }> = [];
-    try {
-      previous = await prisma.photo.findMany({
-        where: { vehicleId: id },
-        select: { url: true, thumbnailUrl: true },
-      });
-    } catch {
-      const legacy = await prisma.photo.findMany({
-        where: { vehicleId: id },
-        select: { url: true },
-      });
-      previous = legacy.map((photo) => ({ ...photo, thumbnailUrl: null }));
-    }
+    const [previousVehicle, previous] = await Promise.all([
+      prisma.vehicle.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          brand: true,
+          model: true,
+          version: true,
+          yearModel: true,
+        },
+      }),
+      loadPreviousPhotoUrls(id),
+    ]);
 
     await prisma.$transaction([
       prisma.photo.deleteMany({ where: { vehicleId: id } }),

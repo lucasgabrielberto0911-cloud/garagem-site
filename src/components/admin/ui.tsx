@@ -72,7 +72,7 @@ export function AdminPageHeader({
           {title}
         </h1>
         {subtitle ? (
-          <p className="mt-1.5 text-sm text-muted">{subtitle}</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">{subtitle}</p>
         ) : null}
       </div>
       {actions ? (

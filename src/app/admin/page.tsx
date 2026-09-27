@@ -139,7 +139,7 @@ export default async function AdminDashboardPage() {
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-8">
+    <div className="space-y-5 sm:space-y-6">
       <AdminPageHeader
         title="Dashboard"
         subtitle="Resumo da loja hoje."
