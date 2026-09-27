@@ -29,7 +29,6 @@ import {
   EmptyState,
   btn,
   inputClass,
-  listActionCell,
 } from "@/components/admin/ui";
 import { formatCurrencyBRL } from "@/lib/format";
 import {
@@ -37,12 +36,7 @@ import {
   expectedMargin,
   hasCostBasis,
 } from "@/lib/vehicle-ops";
-import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehiclePath } from "@/lib/vehicle-slug";
-import {
-  isVehicleLocationCity,
-  vehicleLocationLabel,
-} from "@/lib/vehicle-location";
 import type { AdminVehicleListItem, VehiclesTab } from "@/lib/admin-vehicles";
 import {
   ADMIN_BULK_MAX,
@@ -57,19 +51,17 @@ import {
   type AdminBulkStatus,
 } from "@/lib/admin-bulk";
 import {
+  ADMIN_CARD_OVERFLOW_ACTIONS,
   DELETE_CONFIRM_PHRASE,
-  adminListScanLine,
+  adminCardMetaLine,
+  adminCardOverflowStatuses,
+  adminCardShowsSoldAction,
   deleteRequiresTypedConfirm,
+  type AdminCardOverflowAction,
 } from "@/lib/admin-list";
 import { coverSrc } from "@/lib/stock-query";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
-import {
-  daysInStock,
-  formatRelativeUpdatedAt,
-  isStaleListing,
-  stockListQuietNote,
-  transmissionConflictAlert,
-} from "@/lib/stock-quality";
+import { stockListQuietNote } from "@/lib/stock-quality";
 import {
   deleteVehicle,
   duplicateVehicle,
@@ -93,12 +85,6 @@ function hydrateVehicle(row: VehicleRow): VehicleRow {
   };
 }
 
-const STATUS_OPTIONS = [
-  { value: "disponivel", label: "Disponível" },
-  { value: "reservado", label: "Reservado" },
-  { value: "vendido", label: "Vendido" },
-] as const;
-
 const STATUS_LABEL: Record<string, string> = {
   disponivel: "Disponível",
   reservado: "Reservado",
@@ -106,7 +92,10 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const MARK_SOLD_BTN =
-  "inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 border border-brand-orange/50 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/15 hover:border-brand-orange lg:flex-none lg:px-4";
+  "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 border border-brand-orange/50 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition touch-manipulation hover:border-brand-orange hover:bg-brand-orange/15";
+
+const FILTER_PILL =
+  "inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-[11px] font-semibold uppercase tracking-wide transition touch-manipulation";
 
 const SORT_SELECT_OPTIONS = [
   { value: "recent:desc", label: "Recentes" },
@@ -127,43 +116,14 @@ const STATUS_DOT: Record<string, string> = {
   vendido: "bg-white/35",
 };
 
-function VehicleLocationChip({ city }: { city: string }) {
-  if (!isVehicleLocationCity(city)) return null;
-  return (
-    <span
-      className={`shrink-0 text-xs ${
-        city === "serra" ? "text-sky-300" : "text-amber-200/90"
-      }`}
-    >
-      {vehicleLocationLabel(city)}
-    </span>
-  );
-}
-
-function canMarkAsSold(status: string) {
-  return status === "disponivel" || status === "reservado";
-}
-
-function vehicleOpsMeta(vehicle: VehicleRow) {
+function vehicleFinance(vehicle: VehicleRow) {
   const costs = vehicle.costsTotal ?? 0;
   const options = { consigned: vehicle.consigned };
-  const tags = [
-    vehicle.inStoreName ? "Loja" : null,
-    vehicle.hasSpareKey ? "Chave reserva" : null,
-    vehicle.hasManual ? "Manual" : null,
-  ].filter((item): item is string => Boolean(item));
-
-  if (!hasCostBasis(vehicle.purchasePrice, costs, options)) {
-    return { tags, finance: null as { label: string; value: number } | null };
-  }
-
+  if (!hasCostBasis(vehicle.purchasePrice, costs, options)) return null;
   const reference = vehicle.sale?.salePrice ?? vehicle.price;
   return {
-    tags,
-    finance: {
-      label: vehicle.sale ? "Lucro" : "Margem",
-      value: expectedMargin(reference, vehicle.purchasePrice, costs, options),
-    },
+    label: vehicle.sale ? "Lucro" : "Margem",
+    value: expectedMargin(reference, vehicle.purchasePrice, costs, options),
   };
 }
 
@@ -354,14 +314,6 @@ export function VehiclesTable({
   function changeSort(next: { key: SortKey; dir: "asc" | "desc" }) {
     setSort(next);
     void fetchPage(1, next, true);
-  }
-
-  function toggleSort(key: Exclude<SortKey, "recent">) {
-    changeSort(
-      sort.key === key
-        ? { key, dir: sort.dir === "asc" ? "desc" : "asc" }
-        : { key, dir: "asc" },
-    );
   }
 
   function removeFromList(id: string, fromTab: VehiclesTab) {
@@ -636,11 +588,6 @@ export function VehiclesTable({
     </>
   );
 
-  function sortIcon(key: Exclude<SortKey, "recent">) {
-    if (sort.key !== key) return "↕";
-    return sort.dir === "asc" ? "↑" : "↓";
-  }
-
   const stockNote =
     tab === "estoque" && quality
       ? stockListQuietNote({
@@ -745,6 +692,62 @@ export function VehiclesTable({
             aria-label="Buscar marca, modelo ou placa"
             className={`${inputClass} min-w-0 flex-1`}
           />
+          <button
+            type="submit"
+            disabled={isPending}
+            className={`${btn.outline} hidden shrink-0 px-4 sm:inline-flex`}
+          >
+            {isPending ? "..." : "Buscar"}
+          </button>
+        </form>
+
+        <div className="mt-2 flex items-center gap-2">
+          <div className="hidden shrink-0 items-center gap-2 border-r border-white/10 pr-3 sm:flex">
+            {selectAll}
+          </div>
+          {tab === "estoque" ? (
+            <div className={CHIP_SCROLL} role="group" aria-label="Filtrar por status">
+              {(
+                [
+                  { value: null, label: "Todos", count: estoqueCount },
+                  { value: "disponivel", label: "Disponível", count: availableCount },
+                  { value: "reservado", label: "Reservado", count: reservedCount },
+                ] as const
+              ).map((option) => {
+                const active =
+                  option.value === null ? !status : status === option.value;
+                return (
+                  <button
+                    key={option.label}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => applyFilters({ status: option.value })}
+                    className={`${FILTER_PILL} ${
+                      active
+                        ? "bg-brand/15 text-brand"
+                        : "text-muted hover:bg-white/5 hover:text-cream"
+                    }`}
+                  >
+                    {option.label}
+                    <span className="ml-1.5 text-[10px] tabular-nums opacity-70">
+                      {option.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
+          {q ? (
+            <button
+              type="button"
+              onClick={() => applyFilters({ q: "" })}
+              className="min-h-11 shrink-0 px-2 text-xs text-muted underline-offset-4 transition touch-manipulation hover:text-cream hover:underline"
+            >
+              Limpar busca
+            </button>
+          ) : null}
           <label className="sr-only" htmlFor="vehicles-sort">
             Ordenar
           </label>
@@ -755,7 +758,8 @@ export function VehiclesTable({
               const [key, dir] = event.target.value.split(":") as [SortKey, "asc" | "desc"];
               changeSort({ key, dir });
             }}
-            className={`${inputClass} w-[8rem] shrink-0 px-2 text-sm sm:w-[10rem] xl:hidden`}
+            aria-label="Ordenar"
+            className="h-11 w-[8.25rem] shrink-0 border border-white/10 bg-transparent px-2 text-xs text-cream outline-none focus:border-brand sm:w-[10.5rem] sm:text-sm"
           >
             {SORT_SELECT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -763,85 +767,7 @@ export function VehiclesTable({
               </option>
             ))}
           </select>
-          <button
-            type="submit"
-            disabled={isPending}
-            className={`${btn.outline} hidden shrink-0 px-4 sm:inline-flex`}
-          >
-            {isPending ? "..." : "Buscar"}
-          </button>
-        </form>
-
-        {tab === "estoque" || q ? (
-          <div className="mt-2 flex items-center gap-2 sm:mt-3 sm:gap-x-3">
-            <div className="hidden items-center gap-2 border-r border-white/10 pr-3 sm:flex">
-              {selectAll}
-            </div>
-            {tab === "estoque" ? (
-              <div className={`${CHIP_SCROLL} sm:flex-none`} role="group" aria-label="Filtrar por status">
-                {(
-                  [
-                    { value: null, label: "Todos", count: estoqueCount },
-                    { value: "disponivel", label: "Disponível", count: availableCount },
-                    { value: "reservado", label: "Reservado", count: reservedCount },
-                  ] as const
-                ).map((option) => {
-                  const active =
-                    option.value === null ? !status : status === option.value;
-                  return (
-                    <button
-                      key={option.label}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => applyFilters({ status: option.value })}
-                      className={`min-h-[44px] shrink-0 px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
-                        active
-                          ? "bg-brand/15 text-brand"
-                          : "border border-white/10 text-muted hover:text-cream"
-                      }`}
-                    >
-                      {option.label}
-                      <span className="ml-1.5 text-[10px] tabular-nums opacity-80">
-                        {option.count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-            {q ? (
-              <button
-                type="button"
-                onClick={() => applyFilters({ q: "" })}
-                className="min-h-[44px] shrink-0 px-3 text-xs text-muted underline-offset-4 transition touch-manipulation hover:text-cream hover:underline"
-              >
-                Limpar busca
-              </button>
-            ) : null}
-            <SortChips
-              sort={sort}
-              onRecent={() =>
-                sort.key === "recent" ? undefined : changeSort({ key: "recent", dir: "desc" })
-              }
-              onToggle={toggleSort}
-              icon={sortIcon}
-            />
-          </div>
-        ) : (
-          <div className="mt-3 hidden items-center gap-3 sm:flex">
-            <div className="flex items-center gap-2 border-r border-white/10 pr-3">
-              {selectAll}
-            </div>
-            <SortChips
-              sort={sort}
-              onRecent={() =>
-                sort.key === "recent" ? undefined : changeSort({ key: "recent", dir: "desc" })
-              }
-              onToggle={toggleSort}
-              icon={sortIcon}
-            />
-          </div>
-        )}
+        </div>
       </div>
 
       {tab === "destaques" ? (
@@ -992,7 +918,6 @@ export function VehiclesTable({
                 {selectAll}
               </div>
             ) : null}
-            {/* Cards iguais no celular e no desktop: hierarquia clara, ações rotuladas. */}
             <ul className="space-y-2">
             {items.map((vehicle) => (
               <VehicleAdminCard
@@ -1001,11 +926,7 @@ export function VehiclesTable({
                 busy={busyId === vehicle.id}
                 selected={selected.includes(vehicle.id)}
                 onToggleSelect={() => toggleSelected(vehicle.id)}
-                onStatus={(status) => changeStatus(vehicle, status)}
-                onFeatured={() => toggleFeatured(vehicle)}
-                onDuplicate={() => duplicate(vehicle)}
                 onMarkSold={() => setSoldTarget(vehicle)}
-                onDelete={() => setDeleteTarget(vehicle)}
                 onMore={() => setActionsTarget(vehicle)}
               />
             ))}
@@ -1164,40 +1085,21 @@ function VehicleAdminCard({
   busy,
   selected,
   onToggleSelect,
-  onStatus,
-  onFeatured,
-  onDuplicate,
   onMarkSold,
-  onDelete,
   onMore,
 }: {
   vehicle: VehicleRow;
   busy: boolean;
   selected: boolean;
   onToggleSelect: () => void;
-  onStatus: (status: string) => void;
-  onFeatured: () => void;
-  onDuplicate: () => void;
   onMarkSold: () => void;
-  onDelete: () => void;
   onMore: () => void;
 }) {
-  const ops = vehicleOpsMeta(vehicle);
-  const stale = isStaleListing(vehicle.createdAt, vehicle.status);
-  const gearNote =
-    vehicle.status === "vendido"
-      ? null
-      : transmissionConflictAlert(vehicle.version, vehicle.transmission);
+  const finance = vehicleFinance(vehicle);
   const title = `${vehicle.brand} ${vehicle.model}`;
   const missingPrice = !(vehicle.price > 0);
-
-  function handleStatusChange(next: string) {
-    if (next === "vendido") {
-      onMarkSold();
-      return;
-    }
-    onStatus(next);
-  }
+  const meta = adminCardMetaLine(vehicle);
+  const showSold = adminCardShowsSoldAction(vehicle.status);
 
   return (
     <li className="overflow-hidden border border-white/10 bg-ink/50">
@@ -1213,241 +1115,96 @@ function VehicleAdminCard({
         </label>
         <Link
           href={`/admin/veiculos/${vehicle.id}`}
-          className="relative h-[72px] w-[96px] shrink-0 overflow-hidden bg-asphalt lg:h-[96px] lg:w-[136px]"
+          className="flex min-w-0 flex-1 gap-3 outline-none focus-visible:ring-2 focus-visible:ring-brand lg:gap-4"
         >
-          <VehicleImage
-            src={coverSrc(vehicle.photos)}
-            alt={title}
-            fill
-            sizes="(min-width: 1024px) 136px, 96px"
-            className="object-cover"
-          />
-          {vehicle.featured ? (
-            <span className="absolute left-1 top-1 bg-brand px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-cream">
-              Destaque
+          <span className="relative h-[72px] w-[96px] shrink-0 overflow-hidden bg-asphalt lg:h-[96px] lg:w-[136px]">
+            <VehicleImage
+              src={coverSrc(vehicle.photos)}
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 136px, 96px"
+              className="object-cover"
+            />
+            {vehicle.featured ? (
+              <span className="absolute left-1 top-1 bg-brand px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-cream">
+                Destaque
+              </span>
+            ) : null}
+            <span className="absolute bottom-1 right-1 bg-black/55 px-1.5 py-0.5 text-[10px] tabular-nums text-cream/70">
+              {vehicle.photoCount > 0
+                ? `${vehicle.photoCount} foto${vehicle.photoCount === 1 ? "" : "s"}`
+                : "Sem foto"}
             </span>
-          ) : null}
-          <span className="absolute bottom-1 right-1 bg-black/55 px-1.5 py-0.5 text-[10px] tabular-nums text-cream/80">
-            {vehicle.photoCount > 0
-              ? `${vehicle.photoCount} foto${vehicle.photoCount === 1 ? "" : "s"}`
-              : "Sem foto"}
+          </span>
+
+          <span className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+            <span className="min-w-0">
+              <span className="block truncate font-display text-base font-semibold leading-tight text-cream">
+                {title}
+              </span>
+              <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[vehicle.status] ?? "bg-white/35"}`}
+                    aria-hidden="true"
+                  />
+                  {STATUS_LABEL[vehicle.status] ?? vehicle.status}
+                </span>
+                {vehicle.consigned ? <ConsignedChip /> : null}
+              </span>
+              <span className="mt-1 block truncate text-xs text-muted">{meta}</span>
+            </span>
+            <span className="shrink-0 sm:text-right">
+              {missingPrice ? (
+                <span className="text-sm font-medium text-muted">Sem preço</span>
+              ) : (
+                <span className="block font-display text-lg font-bold leading-none text-cream sm:text-xl">
+                  {formatCurrencyBRL(vehicle.price)}
+                </span>
+              )}
+              {finance ? (
+                <span
+                  className={`mt-1 block text-xs ${
+                    finance.value >= 0 ? "text-emerald-300" : "text-brand"
+                  }`}
+                >
+                  {finance.label} {formatCurrencyBRL(finance.value)}
+                </span>
+              ) : null}
+            </span>
           </span>
         </Link>
-
-        <div className="min-w-0 flex-1">
-          <Link href={`/admin/veiculos/${vehicle.id}`} className="block min-w-0">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <p className="truncate font-display text-[15px] font-semibold leading-tight text-cream lg:text-base">
-                {title}
-              </p>
-              <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-muted">
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[vehicle.status] ?? "bg-white/35"}`}
-                  aria-hidden="true"
-                />
-                {STATUS_LABEL[vehicle.status] ?? vehicle.status}
-              </span>
-              <VehicleLocationChip city={vehicle.locationCity} />
-              {vehicle.consigned ? <ConsignedChip /> : null}
-            </div>
-            <p className="mt-0.5 truncate text-xs text-muted">
-              {vehicleCategoryLabel(vehicle.category)}
-              {vehicle.version ? ` · ${vehicle.version}` : ""}
-            </p>
-            <p className="mt-0.5 truncate text-xs text-muted">
-              {adminListScanLine(vehicle)}
-              {vehicle.updatedAt
-                ? ` · ${formatRelativeUpdatedAt(vehicle.updatedAt)}`
-                : ""}
-              {stale ? ` · ${daysInStock(vehicle.createdAt)} dias no estoque` : ""}
-            </p>
-            {gearNote ? (
-              <p className="mt-1 truncate text-xs text-muted">{gearNote}</p>
-            ) : null}
-          </Link>
-          <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 lg:hidden">
-            {missingPrice ? (
-              <span className="text-sm font-medium text-muted">Sem preço</span>
-            ) : (
-              <span className="font-display text-lg font-bold leading-none text-cream">
-                {formatCurrencyBRL(vehicle.price)}
-              </span>
-            )}
-            {ops.finance ? (
-              <span
-                className={`text-xs ${
-                  ops.finance.value >= 0 ? "text-emerald-300" : "text-brand"
-                }`}
-              >
-                {ops.finance.label} {formatCurrencyBRL(ops.finance.value)}
-              </span>
-            ) : null}
-          </p>
-
-          {vehicle.status === "vendido" && !vehicle.sale ? (
-            <p className="mt-2 text-xs text-muted">
-              Sem venda registrada — a página continua no site; valor e cliente
-              entram em Vendas.
-            </p>
-          ) : null}
-
-          {ops.tags.length > 0 ? (
-            <p className="mt-1 hidden truncate text-[11px] text-muted lg:block">
-              {ops.tags.join(" · ")}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="hidden w-[9.5rem] shrink-0 flex-col items-end gap-1.5 lg:flex">
-          {missingPrice ? (
-            <p className="text-sm font-medium text-muted">Sem preço</p>
-          ) : (
-            <p className="font-display text-xl font-bold leading-none text-cream">
-              {formatCurrencyBRL(vehicle.price)}
-            </p>
-          )}
-          {ops.finance ? (
-            <p
-              className={`text-xs ${
-                ops.finance.value >= 0 ? "text-emerald-300" : "text-brand"
-              }`}
-            >
-              {ops.finance.label} {formatCurrencyBRL(ops.finance.value)}
-            </p>
-          ) : null}
-        </div>
       </div>
 
-      <div className="flex items-center gap-2 border-t border-white/10 p-2 lg:hidden">
-        <label className="sr-only" htmlFor={`status-m-${vehicle.id}`}>
-          Status
-        </label>
-        <select
-          id={`status-m-${vehicle.id}`}
-          value={vehicle.status}
-          disabled={busy}
-          onChange={(event) => handleStatusChange(event.target.value)}
-          className={`${inputClass} min-w-0 flex-1 disabled:opacity-60`}
-        >
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+      <div className="flex flex-wrap items-center gap-1 border-t border-white/10 px-1.5 py-1">
         <Link
           href={`/admin/veiculos/${vehicle.id}`}
-          className="inline-flex h-11 shrink-0 items-center gap-1.5 border border-white/15 px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation active:bg-white/10"
+          className="inline-flex h-11 items-center gap-1.5 px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-white/5"
         >
           <IconPencil className="h-4 w-4" />
           Editar
         </Link>
+        {showSold ? (
+          <button
+            type="button"
+            onClick={onMarkSold}
+            className={MARK_SOLD_BTN}
+            aria-label="Marcar como vendido"
+            title="Marcar como vendido — sai do estoque; a página permanece no site"
+          >
+            Marcar vendido
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onMore}
           disabled={busy}
           aria-label={`Mais ações: ${title}`}
           aria-haspopup="dialog"
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-white/15 text-cream transition touch-manipulation active:bg-white/10 disabled:opacity-50"
+          className="ml-auto inline-flex h-11 w-11 items-center justify-center text-muted transition touch-manipulation hover:bg-white/5 hover:text-cream disabled:opacity-50"
         >
           <IconMore className="h-5 w-5" />
         </button>
-      </div>
-
-      <div className="hidden border-t border-white/10 lg:flex lg:items-center lg:justify-between lg:gap-3 lg:px-2 lg:py-1">
-        <div className="flex flex-1">
-          <Link
-            href={`/admin/veiculos/${vehicle.id}`}
-            className={listActionCell}
-            aria-label="Editar anúncio"
-            title="Editar anúncio"
-          >
-            <IconPencil className="h-4 w-4" />
-            <span className="hidden xl:inline">Editar</span>
-          </Link>
-          <Link
-            href={`/admin/veiculos/${vehicle.id}?view=operacao`}
-            className={`${listActionCell} border-l border-white/10`}
-            aria-label="Operação"
-            title="Custos e documentos"
-          >
-            <IconClipboard className="h-4 w-4" />
-            <span className="hidden xl:inline">Operação</span>
-          </Link>
-          <Link
-            href={vehiclePath(vehicle)}
-            target="_blank"
-            className={`${listActionCell} border-l border-white/10`}
-            aria-label="Ver no site"
-          >
-            <IconExternal className="h-4 w-4" />
-            <span className="hidden xl:inline">Site</span>
-          </Link>
-          <button
-            type="button"
-            onClick={onFeatured}
-            disabled={busy}
-            title={vehicle.featured ? "Remover destaque" : "Colocar em destaque"}
-            aria-label="Destacar na home"
-            aria-pressed={vehicle.featured}
-            className={`${listActionCell} border-l border-white/10 disabled:opacity-50 ${
-              vehicle.featured ? "text-brand hover:text-cream" : ""
-            }`}
-          >
-            <IconStar className="h-4 w-4" filled={vehicle.featured} />
-            <span className="hidden xl:inline">Destacar</span>
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onDuplicate}
-            className={`${listActionCell} border-l border-white/10 disabled:opacity-50`}
-            aria-label="Duplicar"
-            title="Duplicar anúncio"
-          >
-            <IconCopy className="h-4 w-4" />
-            <span className="hidden xl:inline">Duplicar</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2 py-1 pr-1">
-          <label className="sr-only" htmlFor={`status-d-${vehicle.id}`}>
-            Status
-          </label>
-          <select
-            id={`status-d-${vehicle.id}`}
-            value={vehicle.status}
-            disabled={busy}
-            onChange={(event) => handleStatusChange(event.target.value)}
-            className={`${inputClass} h-11 w-[9.5rem] disabled:opacity-60`}
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          {canMarkAsSold(vehicle.status) ? (
-            <button
-              type="button"
-              onClick={onMarkSold}
-              className={MARK_SOLD_BTN}
-              aria-label="Marcar como vendido"
-              title="Marcar como vendido — sai do estoque; a página permanece no site"
-            >
-              Marcar vendido
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={onDelete}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-white/10 text-brand"
-            aria-label="Excluir definitivamente"
-            title="Apaga do banco (404) — só para duplicata/erro"
-          >
-            <IconTrash className="h-4 w-4" />
-          </button>
-        </div>
       </div>
     </li>
   );
@@ -1476,51 +1233,42 @@ function SheetActions({
     close();
     action();
   };
+  const beforeDelete = ADMIN_CARD_OVERFLOW_ACTIONS.filter(
+    (action) => action !== "excluir",
+  );
+
   return (
     <>
       <ActionSheetLink
         href={`/admin/veiculos/${vehicle.id}`}
         icon={<IconPencil className="h-4 w-4" />}
         label="Editar anúncio"
-        hint="Preço, status, fotos e ficha"
+        hint="Preço, fotos e ficha"
         onNavigate={close}
       />
-      <ActionSheetLink
-        href={`/admin/veiculos/${vehicle.id}?view=operacao`}
-        icon={<IconClipboard className="h-4 w-4" />}
-        label="Operação"
-        hint="Custos e documentos"
-        onNavigate={close}
-      />
-      <ActionSheetLink
-        href={vehiclePath(vehicle)}
-        external
-        icon={<IconExternal className="h-4 w-4" />}
-        label="Ver no site"
-        onNavigate={close}
-      />
-      <ActionSheetButton
-        icon={<IconStar className="h-4 w-4" filled={vehicle.featured} />}
-        label={vehicle.featured ? "Tirar da vitrine" : "Destacar na home"}
-        hint={`Até ${MAX_HOME_FEATURED} destaques`}
-        disabled={busy}
-        onClick={run(onFeatured)}
-      />
-      <ActionSheetButton
-        icon={<IconCopy className="h-4 w-4" />}
-        label="Duplicar anúncio"
-        disabled={busy}
-        onClick={run(onDuplicate)}
-      />
-      {vehicle.status === "reservado" ? (
-        <ActionSheetButton
-          icon={<IconCheck className="h-4 w-4" />}
-          label="Voltar para disponível"
-          disabled={busy}
-          onClick={run(() => onStatus("disponivel"))}
+      {beforeDelete.map((action) => (
+        <OverflowAction
+          key={action}
+          action={action}
+          vehicle={vehicle}
+          busy={busy}
+          close={close}
+          run={run}
+          onFeatured={onFeatured}
+          onDuplicate={onDuplicate}
+          onDelete={onDelete}
         />
-      ) : null}
-      {canMarkAsSold(vehicle.status) ? (
+      ))}
+      {adminCardOverflowStatuses(vehicle.status).map((option) => (
+        <ActionSheetButton
+          key={option.value}
+          icon={<IconCheck className="h-4 w-4" />}
+          label={option.label}
+          disabled={busy}
+          onClick={run(() => onStatus(option.value))}
+        />
+      ))}
+      {adminCardShowsSoldAction(vehicle.status) ? (
         <ActionSheetButton
           icon={<IconCash className="h-4 w-4" />}
           label="Marcar vendido"
@@ -1530,56 +1278,89 @@ function SheetActions({
           onClick={run(onMarkSold)}
         />
       ) : null}
-      <ActionSheetButton
-        icon={<IconTrash className="h-4 w-4" />}
-        label="Excluir definitivamente"
-        hint="Só para duplicata ou erro — a página vira 404"
-        tone="danger"
-        onClick={run(onDelete)}
+      <OverflowAction
+        action="excluir"
+        vehicle={vehicle}
+        busy={busy}
+        close={close}
+        run={run}
+        onFeatured={onFeatured}
+        onDuplicate={onDuplicate}
+        onDelete={onDelete}
       />
     </>
   );
 }
 
-function SortChips({
-  sort,
-  onRecent,
-  onToggle,
-  icon,
+function OverflowAction({
+  action,
+  vehicle,
+  busy,
+  close,
+  run,
+  onFeatured,
+  onDuplicate,
+  onDelete,
 }: {
-  sort: { key: SortKey; dir: "asc" | "desc" };
-  onRecent: () => void;
-  onToggle: (key: Exclude<SortKey, "recent">) => void;
-  icon: (key: Exclude<SortKey, "recent">) => string;
+  action: AdminCardOverflowAction;
+  vehicle: VehicleRow;
+  busy: boolean;
+  close: () => void;
+  run: (action: () => void) => () => void;
+  onFeatured: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
 }) {
+  if (action === "operacao") {
+    return (
+      <ActionSheetLink
+        href={`/admin/veiculos/${vehicle.id}?view=operacao`}
+        icon={<IconClipboard className="h-4 w-4" />}
+        label="Operação"
+        hint="Custos, documentos, chave e manual"
+        onNavigate={close}
+      />
+    );
+  }
+  if (action === "site") {
+    return (
+      <ActionSheetLink
+        href={vehiclePath(vehicle)}
+        external
+        icon={<IconExternal className="h-4 w-4" />}
+        label="Ver no site"
+        onNavigate={close}
+      />
+    );
+  }
+  if (action === "destacar") {
+    return (
+      <ActionSheetButton
+        icon={<IconStar className="h-4 w-4" filled={vehicle.featured} />}
+        label={vehicle.featured ? "Tirar da vitrine" : "Destacar na home"}
+        hint={`Até ${MAX_HOME_FEATURED} destaques`}
+        disabled={busy}
+        onClick={run(onFeatured)}
+      />
+    );
+  }
+  if (action === "duplicar") {
+    return (
+      <ActionSheetButton
+        icon={<IconCopy className="h-4 w-4" />}
+        label="Duplicar anúncio"
+        disabled={busy}
+        onClick={run(onDuplicate)}
+      />
+    );
+  }
   return (
-    <div className="hidden items-center gap-2 xl:ml-auto xl:flex" role="group" aria-label="Ordenar">
-      <span className="shrink-0 text-[11px] uppercase tracking-wider text-muted">
-        Ordenar
-      </span>
-      {(
-        [
-          { key: "recent", label: "Recentes" },
-          { key: "price", label: "Preço" },
-          { key: "km", label: "KM" },
-          { key: "year", label: "Ano" },
-        ] as const
-      ).map((option) => (
-        <button
-          key={option.key}
-          type="button"
-          aria-pressed={sort.key === option.key}
-          onClick={() => (option.key === "recent" ? onRecent() : onToggle(option.key))}
-          className={`min-h-[44px] shrink-0 px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
-            sort.key === option.key
-              ? "bg-brand/15 text-brand"
-              : "border border-white/10 text-muted hover:text-cream"
-          }`}
-        >
-          {option.label}
-          {sort.key === option.key && option.key !== "recent" ? ` ${icon(option.key)}` : ""}
-        </button>
-      ))}
-    </div>
+    <ActionSheetButton
+      icon={<IconTrash className="h-4 w-4" />}
+      label="Excluir definitivamente"
+      hint="Só para duplicata ou erro — a página vira 404"
+      tone="danger"
+      onClick={run(onDelete)}
+    />
   );
 }
