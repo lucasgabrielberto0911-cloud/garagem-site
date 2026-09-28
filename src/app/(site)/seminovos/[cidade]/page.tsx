@@ -12,6 +12,7 @@ import {
   WhatsAppButton,
 } from "@/components/site/ui";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
+import { publicCityStockLink } from "@/lib/vehicle-location";
 import {
   SERVICE_CITIES,
   breadcrumbJsonLd,
@@ -56,6 +57,7 @@ export default async function SeminovosCidadePage({
   if (!city) notFound();
 
   const path = `/seminovos/${city.slug}`;
+  const stockLink = publicCityStockLink(city.slug);
   const nearby = otherServiceCities(city.slug);
   const faqs = city.faqs.map((item) => ({
     question: item.question,
@@ -140,19 +142,21 @@ export default async function SeminovosCidadePage({
                 Estoque disponível agora
               </h2>
               <p className="mt-1.5 text-sm text-muted">
-                O mesmo estoque da loja digital — atendemos {city.name} pelo
-                WhatsApp.
+                {stockLink.place
+                  ? `Estes estão em ${stockLink.place}. O filtro do estoque já abre nessa cidade — a lista completa continua no site.`
+                  : `O estoque é o da loja digital. Os veículos estão em Linhares ou na Serra. Atendemos ${city.name} pelo WhatsApp.`}
               </p>
             </div>
-            <ButtonLink href="/estoque" variant="outline" className="sm:shrink-0">
-              Ver todos em {city.name}
+            <ButtonLink href={stockLink.href} variant="outline" className="sm:shrink-0">
+              {stockLink.label}
             </ButtonLink>
           </div>
           <div className="mt-6">
             {featured.length === 0 ? (
               <p className="border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-center text-sm text-muted">
-                Estoque sendo montado. Chame no WhatsApp e diga o que você
-                procura em {city.name}.
+                {stockLink.place
+                  ? `Neste momento não tem veículo em ${stockLink.place}. O estoque completo continua no site — ou chama no WhatsApp e diz o que você procura.`
+                  : `Estoque sendo montado. Chame no WhatsApp e diga o que você procura em ${city.name}.`}
               </p>
             ) : (
               <VehicleGrid

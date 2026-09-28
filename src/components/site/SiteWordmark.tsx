@@ -12,7 +12,7 @@ const SIZE: Record<
     height: 50,
   },
   hero: {
-    img: "h-auto w-[min(78vw,280px)] sm:w-[min(58vw,360px)] lg:w-[380px]",
+    img: "h-auto w-[min(64vw,220px)] sm:w-[min(58vw,360px)] lg:w-[380px]",
     width: 887,
     height: 160,
   },

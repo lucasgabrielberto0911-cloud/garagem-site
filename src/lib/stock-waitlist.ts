@@ -7,6 +7,7 @@ import { formatBrandName, formatCurrencyBRL, formatNumberBR } from "@/lib/format
 import { WHATSAPP_MESSAGES, type WhatsAppCampaign } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { formatColorLabel } from "@/lib/vehicle-display";
+import { vehicleLocationLabel } from "@/lib/vehicle-location";
 
 export type StockWaitlistFilters = {
   q?: string;
@@ -22,6 +23,7 @@ export type StockWaitlistFilters = {
   minYear?: string;
   maxYear?: string;
   maxKm?: string;
+  city?: string;
 };
 
 function compact(value?: string) {
@@ -42,7 +44,10 @@ export function formatStockWaitlistQuery(input: StockWaitlistFilters) {
 
   const bits: string[] = [];
   const brand = compact(input.brand);
-  if (brand) bits.push(formatBrandName(brand));
+  const city = vehicleLocationLabel(input.city);
+  if (brand && city) bits.push(`${formatBrandName(brand)} em ${city}`);
+  else if (brand) bits.push(formatBrandName(brand));
+  else if (city) bits.push(`em ${city}`);
   const category = compact(input.category);
   if (category) bits.push(vehicleCategoryLabel(category).toLocaleLowerCase("pt-BR"));
   const transmission = compact(input.transmission);

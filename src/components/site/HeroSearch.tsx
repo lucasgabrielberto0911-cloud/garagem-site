@@ -17,7 +17,7 @@ const BUDGET_LINKS = [
  */
 export function HeroSearch({ brands = [] }: { brands?: string[] }) {
   return (
-    <div className="mx-auto w-full max-w-xl pb-16 lg:max-w-2xl lg:pb-0">
+    <div className="mx-auto w-full max-w-xl lg:max-w-2xl">
       <form
         action="/estoque"
         method="get"
@@ -28,7 +28,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
             trackSearch({ content_ids: [], search_string: search });
           }
         }}
-        className="flex flex-col gap-2 border border-white/15 bg-asphalt/85 p-2 backdrop-blur-md transition focus-within:border-brand/60 sm:flex-row"
+        className="flex flex-col gap-2 border border-white/15 bg-asphalt/95 p-2 transition focus-within:border-brand/60 sm:flex-row sm:bg-asphalt/85 sm:backdrop-blur-md"
         role="search"
       >
         <label htmlFor="hero-busca" className="sr-only">

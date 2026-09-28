@@ -95,6 +95,10 @@ test("stockSearchString prefers q and otherwise joins filters", () => {
     stockSearchString({ brand: "Hyundai", minYear: "2020" }),
     "marca:Hyundai ano_min:2020",
   );
+  assert.equal(
+    stockSearchString({ brand: "Honda", city: "serra" }),
+    "marca:Honda cidade:serra",
+  );
 });
 
 test("Lead without catalog ids keeps content_name for CTAs do site", () => {

@@ -24,6 +24,11 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
   assert.ok(chat > page.indexOf('id="destaques"'));
   assert.match(page.slice(chat, chat + 220), /variant="outline"/);
   assert.match(page.slice(chat, chat + 220), /source="home-final"/);
+  assert.match(hero, /hidden w-full max-w-2xl sm:mt-8 sm:block/);
+  assert.doesNotMatch(readSrc("components/site/HeroSearch.tsx"), /pb-16/);
+  const afterStock = page.slice(page.indexOf("Ver todos os veículos"));
+  assert.match(afterStock, /sm:hidden/);
+  assert.match(afterStock, /<StatsBar/);
 });
 
 test("favoritos: lista no WhatsApp com id, e vazio aponta estoque", () => {
@@ -36,4 +41,6 @@ test("favoritos: lista no WhatsApp com id, e vazio aponta estoque", () => {
   assert.match(list, /trackingLabel="favoritos-vazio"/);
   assert.match(readSrc("lib/favorites.ts"), /garagem:favoritos/);
   assert.match(readSrc("components/site/FavoriteButton.tsx"), /href="\/favoritos"/);
+  assert.match(list, /vehicleLocationLabel/);
+  assert.match(list, /Cidade/);
 });

@@ -13,6 +13,7 @@ import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/for
 import { trackLead } from "@/lib/meta-pixel";
 import { favoritesListWhatsApp, WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
+import { vehicleLocationLabel } from "@/lib/vehicle-location";
 
 export function FavoritesList() {
   const { ids, ready, clear } = useFavorites();
@@ -199,6 +200,11 @@ export function FavoritesList() {
                 },
                 { label: "Câmbio", value: (v: VehicleCardData) => v.transmission },
                 { label: "Combustível", value: (v: VehicleCardData) => v.fuel },
+                {
+                  label: "Cidade",
+                  value: (v: VehicleCardData) =>
+                    vehicleLocationLabel(v.locationCity) || "—",
+                },
               ].map((row) => (
                 <tr key={row.label}>
                   <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-muted">
@@ -253,6 +259,12 @@ export function FavoritesList() {
                     <div className="flex justify-between gap-3">
                       <dt className="text-muted">Combustível</dt>
                       <dd className="text-right text-cream">{vehicle.fuel}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted">Cidade</dt>
+                      <dd className="text-right text-cream">
+                        {vehicleLocationLabel(vehicle.locationCity) || "—"}
+                      </dd>
                     </div>
                   </dl>
                 </li>

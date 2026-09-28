@@ -5,7 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { VehicleMobileBlocks } from "@/components/site/VehicleMobileDossier";
+import { VehicleMobileBlocks, VehicleMobileSummary } from "@/components/site/VehicleMobileDossier";
 import { FavoritesProvider } from "@/lib/favorites";
 import { DEFAULT_GOOGLE_REVIEWS } from "@/lib/google-reviews";
 import { DEFAULT_VEHICLE_CONDITIONS } from "@/lib/vehicle-conditions";
@@ -324,6 +324,36 @@ test("dossiê e o aside mostram chave, manual e vídeo só quando marcados", () 
   assert.doesNotMatch(manualOnly, /Vídeo sob pedido/);
 
   assert.doesNotMatch(markup({}), /Chave reserva|Manual do proprietário|Vídeo sob pedido/);
+});
+
+test("final da placa só aparece na dobra quando o anúncio tem", () => {
+  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
+  assert.match(page, /plateEnd=\{vehicle\.plateEnd\}/);
+  assert.match(dossier, /Final da placa/);
+
+  const props = {
+    title: "Civic",
+    price: 89900,
+    sold: false,
+    year: 2020,
+    yearModel: 2021,
+    km: 42000,
+    transmission: "Automático",
+    city: "Serra",
+  };
+  const withPlate = renderToStaticMarkup(
+    createElement(VehicleMobileSummary, { ...props, plateEnd: "  7  " }),
+  );
+  assert.match(withPlate, /Final da placa/);
+  assert.match(withPlate, />7</);
+  assert.doesNotMatch(withPlate, /Não informad/);
+
+  const without = renderToStaticMarkup(
+    createElement(VehicleMobileSummary, { ...props, plateEnd: "   " }),
+  );
+  assert.doesNotMatch(without, /Final da placa/);
+  assert.match(without, /Serra/);
 });
 
 test("ficha desktop não soma padding grande sob o header", () => {
