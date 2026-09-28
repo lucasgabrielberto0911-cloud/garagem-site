@@ -33,6 +33,7 @@ export type EstoqueSearchParams = {
   minYear?: string;
   maxYear?: string;
   maxKm?: string;
+  city?: string;
   sort?: string;
   page?: string;
 };
@@ -51,6 +52,7 @@ const FILTER_KEYS = [
   "minYear",
   "maxYear",
   "maxKm",
+  "city",
 ] as const;
 
 function paramsToRecord(params: URLSearchParams): EstoqueSearchParams {
@@ -87,6 +89,7 @@ function stockQuery(params: EstoqueSearchParams) {
     minYear: params.minYear,
     maxYear: params.maxYear,
     maxKm: params.maxKm,
+    city: params.city,
     sort: params.sort,
   };
 }

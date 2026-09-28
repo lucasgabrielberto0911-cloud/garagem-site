@@ -31,6 +31,11 @@ test("filtros viram frase natural para o WhatsApp", () => {
     /moto, de R\$\s*15\.000 a R\$\s*25\.000/,
   );
   assert.equal(formatStockWaitlistQuery({}), "");
+  assert.match(
+    formatStockWaitlistQuery({ brand: "Hyundai", city: "linhares" }),
+    /Hyundai em Linhares/,
+  );
+  assert.equal(formatStockWaitlistQuery({ city: "vitoria" }), "");
 });
 
 test("filtro vazio manda para o WhatsApp com campanha filtro, não home", () => {

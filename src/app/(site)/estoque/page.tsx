@@ -45,7 +45,7 @@ export default async function EstoquePage() {
         <PageHeader
           eyebrow="Estoque"
           title="Veículos disponíveis"
-          description="Vistoria e procedência em cada anúncio. Filtre por preço, câmbio ou marca — se esvaziar, a gente avisa no WhatsApp."
+          description="Vistoria e procedência em cada anúncio. Filtre por preço, cidade ou marca — se esvaziar, a gente avisa no WhatsApp."
         />
 
         <StockBrowseShell

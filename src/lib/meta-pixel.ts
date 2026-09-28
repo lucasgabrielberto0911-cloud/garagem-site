@@ -465,6 +465,7 @@ export function stockSearchString(input: {
   minYear?: string;
   maxYear?: string;
   maxKm?: string;
+  city?: string;
 }) {
   const query = compactString(input.q);
   if (query) return query;
@@ -486,5 +487,6 @@ export function stockSearchString(input: {
   push("ano_min", input.minYear);
   push("ano_max", input.maxYear);
   push("km_max", input.maxKm);
+  push("cidade", input.city);
   return parts.join(" ");
 }

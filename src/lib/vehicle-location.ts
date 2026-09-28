@@ -57,6 +57,24 @@ export function vehicleLocationLabel(value: unknown) {
   return "";
 }
 
+/**
+ * CTA do estoque a partir de uma landing de cidade.
+ * Só Linhares e Serra filtram: é onde o veículo está. As outras páginas
+ * atendem o comprador, mas o carro não está “em” Vitória ou Guarapari.
+ */
+export function publicCityStockLink(slug: string) {
+  const city = parseVehicleLocationCity(slug);
+  if (!city) {
+    return { href: "/estoque", label: "Ver o estoque", place: "" };
+  }
+  const place = vehicleLocationLabel(city);
+  return {
+    href: `/estoque?city=${city}`,
+    label: `Ver os que estão em ${place}`,
+    place,
+  };
+}
+
 /** Cidade no feed da Meta — nunca mais chutar Aracruz nem Vitória. */
 export function catalogAddressCity(value: unknown) {
   return vehicleLocationLabel(resolveVehicleLocationCity(value));

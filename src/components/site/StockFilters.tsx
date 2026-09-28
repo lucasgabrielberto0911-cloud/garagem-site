@@ -9,6 +9,11 @@ import { STOCK_SORT_OPTIONS, stockSortLabel } from "@/lib/stock-query";
 import { handleFocusTrap } from "@/lib/focus-trap";
 import { formatColorLabel } from "@/lib/vehicle-display";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
+import {
+  VEHICLE_LOCATION_CITIES,
+  parseVehicleLocationCity,
+  vehicleLocationLabel,
+} from "@/lib/vehicle-location";
 
 export type Facets = {
   categories?: string[];
@@ -34,6 +39,7 @@ type FilterValues = {
   minYear: string;
   maxYear: string;
   maxKm: string;
+  city: string;
   sort: string;
 };
 
@@ -137,6 +143,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     minYear: params.get("minYear") ?? "",
     maxYear: params.get("maxYear") ?? "",
     maxKm: params.get("maxKm") ?? "",
+    city: parseVehicleLocationCity(params.get("city")) ?? "",
     sort: params.get("sort") ?? "recentes",
   };
   const [draft, setDraft] = useState(current);
@@ -188,6 +195,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     current.minYear,
     current.maxYear,
     current.maxKm,
+    current.city,
   ].filter(Boolean).length;
 
   /** Só os campos que existem dentro do painel do celular (a busca fica fora). */
@@ -204,6 +212,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     draft.minYear,
     draft.maxYear,
     draft.maxKm,
+    draft.city,
   ].filter(Boolean).length;
 
   const activeFilters: ActiveFilter[] = [];
@@ -212,6 +221,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
     activeFilters.push({
       key: "category",
       label: `Tipo: ${vehicleCategoryLabel(current.category)}`,
+    });
+  }
+  if (current.city) {
+    activeFilters.push({
+      key: "city",
+      label: `Cidade: ${vehicleLocationLabel(current.city) || current.city}`,
     });
   }
   if (current.brand) {
@@ -313,6 +328,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
       minYear: "",
       maxYear: "",
       maxKm: "",
+      city: "",
       sort: "recentes",
     });
   }
@@ -382,6 +398,21 @@ export function StockFilters({ facets }: { facets: Facets }) {
               >
                 {CATEGORY_FILTER_OPTIONS.map((option) => (
                   <option key={option.value || "ambos"} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </DesktopField>
+            <DesktopField label="Onde o veículo está" htmlFor="desktop-cidade">
+              <select
+                id="desktop-cidade"
+                value={current.city}
+                onChange={(event) => update({ city: event.target.value })}
+                className={selectClass}
+              >
+                <option value="">Linhares e Serra</option>
+                {VEHICLE_LOCATION_CITIES.map((option) => (
+                  <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
@@ -586,6 +617,26 @@ export function StockFilters({ facets }: { facets: Facets }) {
       <div className="mt-3 space-y-2 border border-white/10 bg-ink px-3 py-2.5 lg:hidden">
         <div className="flex items-center gap-2">
           <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
+            Cidade
+          </p>
+          <div className="flex min-w-0 flex-1 gap-1.5">
+            {VEHICLE_LOCATION_CITIES.map((option) => (
+              <Chip
+                key={`sticky-city-${option.value}`}
+                active={current.city === option.value}
+                onClick={() =>
+                  update({
+                    city: current.city === option.value ? "" : option.value,
+                  })
+                }
+              >
+                {option.label}
+              </Chip>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
             Faixa
           </p>
           <div className="chip-scroll chip-scroll-row min-w-0 flex-1 -mx-0.5 px-0.5">
@@ -754,6 +805,27 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   ))}
                 </select>
               </MobileField>
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
+                  Onde o veículo está
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {VEHICLE_LOCATION_CITIES.map((option) => (
+                    <Chip
+                      key={`sheet-city-${option.value}`}
+                      active={draft.city === option.value}
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          city: draft.city === option.value ? "" : option.value,
+                        })
+                      }
+                    >
+                      {option.label}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
               <MobileField label="Marca">
                 <select
                   value={draft.brand}
@@ -944,6 +1016,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                     minYear: "",
                     maxYear: "",
                     maxKm: "",
+                    city: "",
                   })
                 }
                 className="min-h-[52px] border border-white/15 px-5 font-display text-xs font-semibold uppercase tracking-wide text-muted"

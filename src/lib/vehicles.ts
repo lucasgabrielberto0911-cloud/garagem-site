@@ -9,6 +9,7 @@ import { cleanTestimonialField } from "@/lib/testimonials-clean";
 import { pickCityShowcase } from "@/lib/city-showcase";
 import {
   STOCK_PAGE_SIZE,
+  stockCityFilter,
   type StockFilters,
   type StockPageResult,
   type VehicleCardRecord,
@@ -290,7 +291,7 @@ async function fetchCityShowcaseVehicles(
   take: number,
 ): Promise<VehicleCardRecord[]> {
   const pool = await findCardVehicles({
-    where: { status: "disponivel" },
+    where: { status: "disponivel", ...stockCityFilter(slug) },
     orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
     take: 40,
   });
@@ -299,7 +300,7 @@ async function fetchCityShowcaseVehicles(
 
 const loadCityShowcaseCached = unstable_cache(
   async (slug: string, take: number) => fetchCityShowcaseVehicles(slug, take),
-  ["city-showcase-v2"],
+  ["city-showcase-v3"],
   PUBLIC_CACHE,
 );
 
@@ -471,6 +472,7 @@ function buildStockWhere(filters: StockFilters) {
     ...priceFilter,
     ...yearFilter,
     ...(filters.maxKm ? { km: { lte: filters.maxKm } } : {}),
+    ...stockCityFilter(filters.city),
     ...(and.length ? { AND: and } : {}),
   };
 }
@@ -498,6 +500,7 @@ function stockQueryKey(filters: StockFilters) {
     minYear: filters.minYear ?? 0,
     maxYear: filters.maxYear ?? 0,
     maxKm: filters.maxKm ?? 0,
+    city: filters.city ?? "",
     sort: filters.sort ?? "recentes",
     page,
     pageSize,
@@ -544,7 +547,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v8"],
+  ["stock-page-v9"],
   PUBLIC_CACHE,
 );
 

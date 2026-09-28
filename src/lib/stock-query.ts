@@ -1,3 +1,5 @@
+import { parseVehicleLocationCity } from "@/lib/vehicle-location";
+
 /** Tipos e parsers do estoque — seguro para o bundle do cliente. */
 
 /** 8 no celular = 4 linhas; lotes menores descem mais rápido na rolagem. */
@@ -147,6 +149,8 @@ export type StockFilters = {
   minYear?: number;
   maxYear?: number;
   maxKm?: number;
+  /** Só `linhares` ou `serra` — onde o veículo está. */
+  city?: string;
   sort?: string;
   page?: number;
   pageSize?: number;
@@ -170,6 +174,12 @@ export const STOCK_SORT_OPTIONS = [
 ] as const;
 
 export type StockSortValue = (typeof STOCK_SORT_OPTIONS)[number]["value"];
+
+/** Where parcial. Cidade de atendimento (Vitória, Aracruz…) não filtra. */
+export function stockCityFilter(value?: string | null) {
+  const city = parseVehicleLocationCity(value);
+  return city ? { locationCity: city } : {};
+}
 
 export function stockSortLabel(sort?: string | null) {
   const key = (sort || "recentes").trim();
@@ -240,6 +250,7 @@ export function parseStockFilters(
     minYear: optionalPositiveNumber(pickParam(input, "minYear")),
     maxYear: optionalPositiveNumber(pickParam(input, "maxYear")),
     maxKm: optionalPositiveNumber(pickParam(input, "maxKm")),
+    city: parseVehicleLocationCity(pickParam(input, "city")) ?? undefined,
     sort: pickParam(input, "sort"),
     page: options?.page ?? Math.max(1, Number(pickParam(input, "page")) || 1),
     pageSize: optionalPositiveNumber(pickParam(input, "pageSize")),
