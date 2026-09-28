@@ -16,6 +16,7 @@ import {
 import { colorWhere, formatColorLabel } from "@/lib/vehicle-display";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import { queryPublicVehicleCards } from "@/lib/public-vehicle-cards";
+import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
 import { pickRelatedVehicles } from "@/lib/related-vehicles";
 
 export {
@@ -560,6 +561,57 @@ export function getStockVehicles(filters: StockFilters) {
     [] as VehicleCardRecord[],
   );
 }
+
+const STOCK_CATALOG_SELECT = {
+  id: true,
+  brand: true,
+  model: true,
+  version: true,
+  yearModel: true,
+  price: true,
+} as const;
+
+export type StockCatalogLink = {
+  id: string;
+  brand: string;
+  model: string;
+  version: string | null;
+  yearModel: number;
+  price: number;
+};
+
+/**
+ * Todas as fichas disponíveis, na ordem da listagem (mais recentes).
+ * A grade visível continua em lotes de 8; este índice entra no HTML
+ * para o crawler abrir cada anúncio sem rodar o scroll infinito.
+ */
+async function loadStockCatalogLinks(): Promise<StockCatalogLink[]> {
+  const orderBy = { createdAt: "desc" as const };
+  try {
+    return await prisma.vehicle.findMany({
+      where: PUBLIC_SITEMAP_VEHICLE_WHERE,
+      select: STOCK_CATALOG_SELECT,
+      orderBy,
+    });
+  } catch (error) {
+    if (!isMissingColumnError(error, "historical")) throw error;
+    return prisma.vehicle.findMany({
+      where: { status: "disponivel" },
+      select: STOCK_CATALOG_SELECT,
+      orderBy,
+    });
+  }
+}
+
+const loadStockCatalogCached = unstable_cache(
+  loadStockCatalogLinks,
+  ["stock-catalog-links-v1"],
+  PUBLIC_CACHE,
+);
+
+export const getStockCatalogLinks = cache(() =>
+  safeQuery("índice do estoque", () => loadStockCatalogCached(), [] as StockCatalogLink[]),
+);
 
 export const getStockPage = cache(
   (filters: StockFilters): Promise<StockPageResult> =>
