@@ -449,6 +449,29 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   outline-offset: 2px;
 }
 
+/* O anel de foco do campo fica na moldura do composer (focus-within). */
+.site-chat-panel textarea:focus-visible {
+  outline: none;
+}
+
+.site-chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+.site-chat-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.site-chat-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.site-chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .site-chat.is-open .site-chat-launcher {
   display: none;
 }
@@ -730,7 +753,7 @@ body:has([data-ficha-page]) .whatsapp-float {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: #8a8a8e;
+  background: #a1a1a8;
   animation: site-chat-typing 1.1s infinite ease-in-out;
 }
 
