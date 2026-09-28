@@ -118,6 +118,10 @@ test("lista de espera do chat vira WhatsApp com frase humana", () => {
     formatChatWaitlistQuery("Tem automático até 40 mil?"),
     "automático até R$ 40.000",
   );
+  assert.equal(
+    formatChatWaitlistQuery("Automatico Forte, no maximo de 109 mil"),
+    "forte automático até R$ 109.000",
+  );
   const href = chatWaitlistWhatsAppUrl("Tem automático até 40 mil?");
   const decoded = decodeURIComponent(href);
   assert.match(decoded, /wa\.me\/5527996330706\?text=/);
@@ -499,4 +503,177 @@ test("HB20 automático até 70 mil lista HB20 e Lancer, não o Compass", async (
   assert.ok(models.includes("HB20"));
   assert.ok(models.includes("Lancer") || /Lancer/i.test(result.reply));
   assert.ok(result.vehicles.every((vehicle) => vehicle.price <= 70_000));
+});
+
+test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () => {
+  const hb10: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb20-forte",
+    version: "Vision 1.0",
+    yearModel: 2018,
+    km: 110000,
+    price: 55900,
+    transmission: "Automático",
+    engine: "1.0",
+  };
+  const onix16: ChatVehicleRecord = {
+    ...onix,
+    id: "c-onix-forte",
+    version: "LT 1.6",
+    yearModel: 2016,
+    km: 90000,
+    price: 58900,
+    transmission: "Automático",
+    engine: "1.6",
+  };
+  const lancer: ChatVehicleRecord = {
+    id: "c-lancer-forte",
+    brand: "Mitsubishi",
+    model: "Lancer",
+    version: "2.0",
+    yearModel: 2014,
+    km: 80000,
+    price: 62900,
+    color: "Prata",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+    engine: "2.0",
+  };
+  const civic: ChatVehicleRecord = {
+    id: "c-civic-forte",
+    brand: "Honda",
+    model: "Civic",
+    version: "LXR 2.0",
+    yearModel: 2014,
+    km: 95000,
+    price: 74900,
+    color: "Preto",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+    engine: "2.0",
+  };
+  const corolla: ChatVehicleRecord = {
+    id: "c-corolla-forte",
+    brand: "Toyota",
+    model: "Corolla",
+    version: "XEi 2.0",
+    yearModel: 2015,
+    km: 70000,
+    price: 98900,
+    color: "Branco",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+    engine: "2.0",
+  };
+  const nivus: ChatVehicleRecord = {
+    id: "c-nivus-forte",
+    brand: "Volkswagen",
+    model: "Nivus",
+    version: "Comfort 200 TSI",
+    yearModel: 2021,
+    km: 40000,
+    price: 99900,
+    color: "Cinza",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+    engine: "1.0 TSI",
+  };
+  const golManual: ChatVehicleRecord = {
+    id: "c-gol-manual-forte",
+    brand: "Volkswagen",
+    model: "Gol",
+    version: "2.0",
+    yearModel: 2013,
+    km: 99000,
+    price: 42000,
+    color: "Prata",
+    transmission: "Manual",
+    fuel: "Flex",
+    category: "carro",
+    engine: "2.0",
+  };
+  const creta: ChatVehicleRecord = {
+    id: "c-creta-caro-forte",
+    brand: "Hyundai",
+    model: "Creta",
+    version: "2.0",
+    yearModel: 2020,
+    km: 45000,
+    price: 119900,
+    color: "Branco",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+    engine: "2.0",
+  };
+  const stock = [hb10, onix16, lancer, civic, corolla, nivus, golManual, creta];
+  const mensagem = "Automatico Forte, no maximo de 109 mil";
+  const picked = selectVehiclesForChatPrompt(stock, mensagem);
+  assert.deepEqual(
+    picked.slice(0, 3).map((vehicle) => vehicle.id),
+    [lancer.id, civic.id, corolla.id],
+  );
+  assert.ok(picked.every((vehicle) => /autom[aá]tic/i.test(vehicle.transmission)));
+  assert.ok(picked.every((vehicle) => vehicle.price <= 109_000));
+  assert.ok(
+    picked.findIndex((vehicle) => vehicle.id === nivus.id) >
+      picked.findIndex((vehicle) => vehicle.id === corolla.id),
+  );
+  assert.ok(
+    picked.findIndex((vehicle) => vehicle.id === hb10.id) >
+      picked.findIndex((vehicle) => vehicle.id === onix16.id),
+  );
+
+  const result = await runChatTurn({
+    mensagem,
+    historico: [],
+    stock,
+    generate: async ({ systemPrompt }) => {
+      const filter = systemPrompt.split("FILTRO DO VISITANTE:").pop() ?? "";
+      assert.match(filter, /motor mais forte/);
+      assert.doesNotMatch(filter, /mais em conta/);
+      assert.ok(filter.search(/Lancer/i) < filter.search(/Civic/i));
+      assert.ok(filter.search(/Civic/i) < filter.search(/Corolla/i));
+      return {
+        text: "O HB20 é o mais em conta (R$ 55.900) — um bom começo. O Lancer tem menos km. O Civic fica um pouco acima.",
+        functionCall: null,
+      };
+    },
+  });
+  assert.deepEqual(
+    result.vehicles.map((vehicle) => vehicle.id),
+    [lancer.id, civic.id, corolla.id],
+  );
+  assert.match(result.reply, /automáticos mais fortes até R\$ 109\.000/);
+  assert.match(result.reply, /Lancer, Civic e Corolla são os mais fortes da lista/);
+  assert.match(result.reply, /motor 2\.0/);
+  assert.match(result.reply, /80 mil km/);
+  assert.match(result.reply, /62\.900/);
+  assert.doesNotMatch(result.reply, /mais em conta/);
+  assert.doesNotMatch(result.reply, /\b\d+\s*cv\b/i);
+  const forteAt = result.reply.search(/mais fortes/);
+  const hbAt = result.reply.search(/HB20/);
+  assert.ok(forteAt >= 0);
+  if (hbAt >= 0) assert.ok(forteAt < hbAt);
+
+  const cheap = await runChatTurn({
+    mensagem: "automatico barato ate 109 mil",
+    historico: [],
+    stock,
+    generate: async ({ systemPrompt }) => {
+      assert.match(systemPrompt, /mais baratos primeiro/);
+      assert.doesNotMatch(systemPrompt, /mais fortes primeiro/);
+      return {
+        text: "Temos ótimas opções até R$ 109 mil no momento:",
+        functionCall: null,
+      };
+    },
+  });
+  assert.equal(cheap.vehicles[0]?.id, hb10.id);
+  assert.match(cheap.reply, /mais em conta/);
+  assert.doesNotMatch(cheap.reply, /mais fortes/);
 });

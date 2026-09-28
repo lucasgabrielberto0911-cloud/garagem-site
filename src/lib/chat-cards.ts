@@ -5,7 +5,7 @@ import {
   formatModelName,
   formatVehicleLabel,
 } from "@/lib/format";
-import { parseCheapIntent, parsePriceLimit } from "@/lib/chat-prompt";
+import { parseCheapIntent, parsePriceLimit, isPowerQuery, rankByPower } from "@/lib/chat-prompt";
 import { coverSrc } from "@/lib/stock-query";
 import { shortVersion } from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
@@ -21,6 +21,7 @@ import {
   parseVehicleCategoryFilter,
   pickComparedModelVehicles,
   resolveChatCategory,
+  singleMentionedModelPool,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 
@@ -373,6 +374,16 @@ export function selectChatVehicles(
       matchFocusedVehicle(mensagem, pool, preferredVehicleId) ??
       matchFocusedVehicle(reply, pool, preferredVehicleId);
     if (focused) return [focused];
+  }
+  if (isPowerQuery(mensagem)) {
+    const budget = parsePriceLimit(mensagem);
+    const priced =
+      budget == null
+        ? pool
+        : pool.filter((vehicle) => vehicle.price <= budget);
+    const namedPool = singleMentionedModelPool(priced, mensagem);
+    const ranked = rankByPower(namedPool ?? priced, mensagem);
+    if (ranked.length > 0) return ranked.slice(0, limit);
   }
   const mentioned = matchVehiclesInReply(
     reply,

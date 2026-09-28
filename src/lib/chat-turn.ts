@@ -18,6 +18,7 @@ import {
   CHAT_PING_REPLY,
   CHAT_WHATSAPP_URL,
   buildChatSystemPrompt,
+  isPowerQuery,
   parsePriceLimit,
 } from "@/lib/chat-prompt";
 import { applyChatReplyGuards, looksTruncated } from "@/lib/chat-polish";
@@ -173,7 +174,7 @@ export async function runChatTurn(input: {
     }
     const enriched =
       picked.length > 0
-        ? enrichChatStockReply(text, picked, input.mensagem)
+        ? enrichChatStockReply(text, picked, input.mensagem, input.stock)
         : text;
     let guarded = applyChatReplyGuards(enriched, picked, {
       truncated: opts.truncated,
@@ -270,7 +271,10 @@ export async function runChatTurn(input: {
     !asksAboutConsumption(input.mensagem) &&
     !asksAboutEquipment(input.mensagem)
   ) {
-    const reply = compareChatStockPicks(compared, { withLeadin: true });
+    const reply = compareChatStockPicks(compared, {
+      withLeadin: true,
+      power: isPowerQuery(input.mensagem),
+    });
     emit(reply);
     return finish(reply, false, {
       policy: "compare",
