@@ -5,7 +5,13 @@ import {
   formatModelName,
   formatVehicleLabel,
 } from "@/lib/format";
-import { parseCheapIntent, parsePriceLimit, isPowerQuery, rankByPower } from "@/lib/chat-prompt";
+import {
+  parseCheapIntent,
+  parsePriceLimit,
+  parseBodyStyleFilter,
+  chatRankMode,
+  rankChatVehicles,
+} from "@/lib/chat-prompt";
 import { coverSrc } from "@/lib/stock-query";
 import { shortVersion } from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
@@ -31,7 +37,7 @@ const CHAT_BRANDS =
   "honda|hyundai|fiat|chevrolet|ford|jeep|toyota|volkswagen|vw|renault|nissan|mitsubishi|bmw|mercedes|peugeot|citroen|kia|byd|caoa|chery|yamaha|kawasaki";
 
 const BUDGET_QUERY_NOISE =
-  /^(quais|qual|tem|temos|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|abaixo|menos|maximo|orcamento|faixa|preco|valor|carros|carro|veiculos|veiculo|seminovos|opcoes|opcao|automatico|automatica|manual|cvt|hatch|sedan|suv|mil|k|\d+)$/;
+  /^(quais|qual|tem|temos|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|abaixo|menos|maximo|orcamento|faixa|preco|valor|carros|carro|veiculos|veiculo|seminovos|opcoes|opcao|automatico|automatica|manual|cvt|hatch|sedan|suv|pickup|picape|perua|mil|k|forte|familia|economico|primeiro|cidade|app|aplicativo|\d+)$/;
 
 export type ChatVehicleCard = {
   id: string;
@@ -375,14 +381,23 @@ export function selectChatVehicles(
       matchFocusedVehicle(reply, pool, preferredVehicleId);
     if (focused) return [focused];
   }
-  if (isPowerQuery(mensagem)) {
+  const mode = chatRankMode(mensagem);
+  const guided =
+    mode === "power" ||
+    mode === "family" ||
+    mode === "starter" ||
+    mode === "economy";
+  if (guided || parseBodyStyleFilter(mensagem)) {
     const budget = parsePriceLimit(mensagem);
     const priced =
       budget == null
         ? pool
         : pool.filter((vehicle) => vehicle.price <= budget);
     const namedPool = singleMentionedModelPool(priced, mensagem);
-    const ranked = rankByPower(namedPool ?? priced, mensagem);
+    const rows = namedPool ?? priced;
+    const ranked = guided
+      ? rankChatVehicles(rows, mensagem)
+      : [...rows].sort((a, b) => a.price - b.price);
     if (ranked.length > 0) return ranked.slice(0, limit);
   }
   const mentioned = matchVehiclesInReply(

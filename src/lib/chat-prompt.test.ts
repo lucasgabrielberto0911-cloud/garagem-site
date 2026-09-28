@@ -10,9 +10,15 @@ import {
   isPowerQuery,
   parseCheapIntent,
   parseMinDisplacementLiters,
+  chatRankMode,
+  parseBodyStyleFilter,
+  parseEconomyIntent,
+  parseFamilyIntent,
   parsePowerIntent,
   parsePriceLimit,
+  parseStarterIntent,
   rankByPower,
+  rankChatVehicles,
   stockSelectHasForbiddenField,
 } from "./chat-prompt";
 import { CHAT_VEHICLE_SELECT } from "./chat-stock";
@@ -371,4 +377,79 @@ test("prompt de automático forte lista 2.0 antes do 1.0 e não pede o mais bara
   assert.match(cheap, /FILTRO DO VISITANTE: até R\$ 109\.000/);
   const cheapFilter = cheap.split("FILTRO DO VISITANTE:").pop() ?? "";
   assert.ok(cheapFilter.indexOf("55.900") < cheapFilter.indexOf("62.900"));
+});
+
+test("intenções de família, primeiro carro, econômico e carroceria", () => {
+  assert.equal(parseFamilyIntent("carro para família, espaçoso, 4 portas"), true);
+  assert.equal(parseFamilyIntent("tem espaço no banco?"), false);
+  assert.equal(parseStarterIntent("primeiro carro para a cidade"), true);
+  assert.equal(parseStarterIntent("uber até 60 mil"), true);
+  assert.equal(parseStarterIntent("moro em Vitória"), false);
+  assert.equal(parseStarterIntent("chama no whatsapp"), false);
+  assert.equal(parseEconomyIntent("carro econômico até 70 mil"), true);
+  assert.equal(parseEconomyIntent("qual o consumo?"), false);
+  assert.equal(parseBodyStyleFilter("tem suv automático"), "suv");
+  assert.equal(parseBodyStyleFilter("quero um hatch"), "hatch");
+  assert.equal(parseBodyStyleFilter("sedan ou picape"), "pickup");
+  assert.equal(chatRankMode("suv forte até 90 mil"), "power");
+  assert.equal(chatRankMode("família até 90 mil"), "family");
+  assert.equal(chatRankMode("primeiro carro até 60 mil"), "starter");
+  assert.equal(chatRankMode("econômico até 70 mil"), "economy");
+  assert.equal(chatRankMode("barato e forte"), "cheap");
+  assert.equal(chatRankMode("até 80 mil"), "price");
+});
+
+test("ranking segue a intenção dominante sem inventar dado", () => {
+  const hb = {
+    model: "HB20",
+    version: "1.0",
+    engine: "1.0",
+    price: 55_900,
+    km: 40_000,
+    category: "carro",
+    doors: 4,
+  };
+  const civic = {
+    model: "Civic",
+    version: "LXR 2.0",
+    engine: "2.0",
+    price: 50_000,
+    km: 80_000,
+    category: "carro",
+    doors: 4,
+  };
+  const onix = {
+    model: "Onix",
+    version: "1.0",
+    engine: "1.0",
+    price: 80_000,
+    km: 20_000,
+    category: "carro",
+    doors: 4,
+  };
+  const compass = {
+    model: "Compass",
+    version: "Longitude",
+    engine: "2.0",
+    price: 120_000,
+    km: 30_000,
+    category: "carro",
+    doors: 4,
+  };
+  assert.deepEqual(
+    rankChatVehicles([civic, hb, onix], "carro econômico").map((row) => row.model),
+    ["HB20", "Onix", "Civic"],
+  );
+  assert.equal(
+    rankChatVehicles([civic, hb], "primeiro carro")[0]?.model,
+    "HB20",
+  );
+  assert.equal(
+    rankChatVehicles([onix, civic], "primeiro carro")[0]?.model,
+    "Civic",
+  );
+  assert.equal(
+    rankChatVehicles([hb, civic, compass], "carro para família")[0]?.model,
+    "Compass",
+  );
 });

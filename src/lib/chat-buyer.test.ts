@@ -8,12 +8,14 @@ import {
   CHAT_COMPARE_ASK_REPLY,
   CHAT_PROMPT_STOCK_LIMIT,
   asksAboutAvailability,
+  asksAboutConsumption,
   chatWaitlistWhatsAppUrl,
   formatChatWaitlistQuery,
   formatFocusedConsumptionReply,
   isEditDistanceAtMostOne,
   matchInterestVehicle,
   parseVehicleCategoryFilter,
+  scopeChatMessage,
   selectVehiclesForChatPrompt,
   seeksMissingNamedModel,
   type ChatVehicleRecord,
@@ -676,4 +678,220 @@ test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () 
   assert.equal(cheap.vehicles[0]?.id, hb10.id);
   assert.match(cheap.reply, /mais em conta/);
   assert.doesNotMatch(cheap.reply, /mais fortes/);
+});
+
+test("segunda mensagem herda automático e teto e Nova conversa limpa", async () => {
+  const line = (
+    id: string,
+    brand: string,
+    model: string,
+    version: string,
+    engine: string,
+    price: number,
+    transmission: string,
+    km = 50_000,
+  ): ChatVehicleRecord => ({
+    id,
+    brand,
+    model,
+    version,
+    yearModel: 2016,
+    km,
+    price,
+    color: "Prata",
+    transmission,
+    fuel: "Flex",
+    category: "carro",
+    engine,
+  });
+  const stock = [
+    line("hb", "Hyundai", "HB20", "1.0", "1.0", 55_900, "Automático", 110_000),
+    line("lancer", "Mitsubishi", "Lancer", "2.0", "2.0", 62_900, "Automático", 80_000),
+    line("civic", "Honda", "Civic", "LXR 2.0", "2.0", 74_900, "Automático", 90_000),
+    line("corolla", "Toyota", "Corolla", "XEi 2.0", "2.0", 98_900, "Automático", 70_000),
+    line("gol", "Volkswagen", "Gol", "2.0", "2.0", 42_000, "Manual"),
+    line("creta", "Hyundai", "Creta", "2.0", "2.0", 119_900, "Automático"),
+  ];
+  const scoped = scopeChatMessage(
+    "quero mais forte",
+    [{ role: "user", content: "automático até 100 mil" }],
+    stock,
+  );
+  assert.match(scoped, /100 mil/);
+  assert.match(scoped, /automático/i);
+  assert.match(scoped, /forte/);
+
+  const result = await runChatTurn({
+    mensagem: "quero mais forte",
+    historico: [
+      { role: "user", content: "automático até 100 mil" },
+      { role: "assistant", content: "Olha os automáticos até R$ 100.000." },
+    ],
+    stock,
+    generate: async ({ systemPrompt, mensagem }) => {
+      assert.equal(mensagem, "quero mais forte");
+      assert.match(systemPrompt, /100\.000/);
+      assert.match(systemPrompt, /motor mais forte/);
+      assert.match(systemPrompt, /Não pergunte de novo/);
+      return { text: "Separei algumas opções.", functionCall: null };
+    },
+  });
+  assert.deepEqual(
+    result.vehicles.map((vehicle) => vehicle.id),
+    ["lancer", "civic", "corolla"],
+  );
+  assert.ok(result.vehicles.every((vehicle) => vehicle.price <= 100_000));
+  assert.ok(
+    result.vehicles.every((vehicle) => /autom/i.test(vehicle.transmission ?? "")),
+  );
+  assert.doesNotMatch(result.reply, /orçamento ou o câmbio|automático ou manual/i);
+  assert.match(result.reply, /automáticos mais fortes até R\$ 100\.000/);
+  assert.match(result.reply, /motor 2\.0/);
+
+  const fresh = scopeChatMessage("quero mais forte", [], stock);
+  assert.equal(fresh, "quero mais forte");
+  const opened = await runChatTurn({
+    mensagem: "quero mais forte",
+    historico: [],
+    stock,
+    generate: async ({ systemPrompt }) => {
+      assert.doesNotMatch(systemPrompt, /100\.000/);
+      return { text: "Separei algumas opções.", functionCall: null };
+    },
+  });
+  assert.ok(opened.vehicles.some((vehicle) => vehicle.id === "gol"));
+});
+
+test("família, primeiro carro, econômico e SUV filtram o estoque real", async () => {
+  assert.equal(asksAboutConsumption("ele é economico?"), true);
+  assert.equal(asksAboutConsumption("carro econômico até 70 mil"), false);
+  const stock: ChatVehicleRecord[] = [
+    {
+      id: "hb",
+      brand: "Hyundai",
+      model: "HB20",
+      version: "Vision 1.0",
+      yearModel: 2020,
+      km: 40_000,
+      price: 45_000,
+      color: "Prata",
+      transmission: "Manual",
+      fuel: "Flex",
+      category: "carro",
+      engine: "1.0",
+      doors: 4,
+    },
+    {
+      id: "civic",
+      brand: "Honda",
+      model: "Civic",
+      version: "LXR",
+      yearModel: 2015,
+      km: 90_000,
+      price: 40_000,
+      color: "Preto",
+      transmission: "Automático",
+      fuel: "Flex",
+      category: "carro",
+      engine: "2.0",
+      doors: null,
+    },
+    {
+      id: "onix",
+      brand: "Chevrolet",
+      model: "Onix",
+      version: "LT 1.0",
+      yearModel: 2019,
+      km: 30_000,
+      price: 80_000,
+      color: "Branco",
+      transmission: "Manual",
+      fuel: "Flex",
+      category: "carro",
+      engine: "1.0",
+      doors: 4,
+    },
+    {
+      id: "compass",
+      brand: "Jeep",
+      model: "Compass",
+      version: "Longitude",
+      yearModel: 2021,
+      km: 50_000,
+      price: 119_000,
+      color: "Branco",
+      transmission: "Automático",
+      fuel: "Flex",
+      category: "carro",
+      engine: "2.0",
+      doors: 4,
+    },
+    {
+      id: "biz",
+      brand: "Honda",
+      model: "BIZ 125",
+      version: "EX",
+      yearModel: 2022,
+      km: 10_000,
+      price: 16_000,
+      color: "Vermelha",
+      transmission: "Manual",
+      fuel: "Flex",
+      category: "moto",
+      engine: "125",
+    },
+  ];
+  const generate = async () => ({
+    text: "Separei algumas opções.",
+    functionCall: null,
+  });
+
+  const family = await runChatTurn({
+    mensagem: "carro para família até 130 mil",
+    historico: [],
+    stock,
+    generate,
+  });
+  assert.equal(family.vehicles[0]?.id, "compass");
+  assert.match(family.reply, /4 portas/);
+  assert.match(family.reply, /SUV/);
+  assert.doesNotMatch(family.reply, /litros de porta-malas|porta-malas de \d/i);
+  assert.doesNotMatch(family.reply, /Civic[^\n]*4 portas/);
+
+  const starter = await runChatTurn({
+    mensagem: "primeiro carro até 90 mil",
+    historico: [],
+    stock,
+    generate,
+  });
+  assert.equal(starter.vehicles[0]?.model, "HB20");
+  assert.doesNotMatch(starter.reply, /manutenção de|custo de manutenção/i);
+  assert.ok(starter.vehicles.every((vehicle) => vehicle.category !== "moto"));
+
+  const economy = await runChatTurn({
+    mensagem: "carro econômico até 70 mil",
+    historico: [],
+    stock,
+    generate,
+  });
+  assert.equal(economy.vehicles[0]?.id, "hb");
+  assert.doesNotMatch(economy.reply, /km\/l/);
+  assert.match(economy.reply, /motor 1\.0/);
+  assert.ok(economy.vehicles.every((vehicle) => vehicle.price <= 70_000));
+
+  const suv = selectVehiclesForChatPrompt(stock, "suv automático até 130 mil");
+  assert.deepEqual(
+    suv.map((vehicle) => vehicle.id),
+    ["compass"],
+  );
+
+  const fact = await runChatTurn({
+    mensagem: "o hb20 é econômico?",
+    historico: [{ role: "user", content: "automático até 100 mil" }],
+    stock,
+    generate,
+  });
+  assert.equal(fact.meta?.policy, "stock-fact");
+  assert.equal(fact.vehicles.length, 1);
+  assert.equal(fact.vehicles[0]?.id, "hb");
 });
