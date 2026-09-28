@@ -45,6 +45,7 @@ export function VehicleMobileSummary({
   km,
   transmission,
   city,
+  plateEnd,
 }: {
   title: string;
   version?: string | null;
@@ -55,6 +56,7 @@ export function VehicleMobileSummary({
   km: number;
   transmission: string;
   city: string;
+  plateEnd?: string | null;
 }) {
   const facts = [
     { label: "Ano", value: formatVehicleYearRange(year, yearModel) },
@@ -62,6 +64,7 @@ export function VehicleMobileSummary({
     { label: "Câmbio", value: transmission.trim() || SPEC_EMPTY },
     { label: "Cidade", value: city.trim() || SPEC_EMPTY_FEMININE },
   ];
+  const plate = (plateEnd ?? "").replace(/\s+/g, " ").trim();
 
   return (
     <div className="ficha-mobile-sheet px-4 pb-3 pt-3 sm:px-6">
@@ -92,6 +95,14 @@ export function VehicleMobileSummary({
           </div>
         ))}
       </dl>
+      {plate ? (
+        <p className="mt-2 text-[13px] leading-snug text-cream">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+            Final da placa{" "}
+          </span>
+          <span className="font-display font-semibold">{plate}</span>
+        </p>
+      ) : null}
     </div>
   );
 }

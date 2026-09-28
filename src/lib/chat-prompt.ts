@@ -3,6 +3,7 @@
  * troca, financiamento, garantia nem estoque — tudo está escrito aqui.
  */
 
+import { mapCatalogBodyStyle } from "@/lib/catalog-feed";
 import {
   parseEngineDisplacementLiters,
   typicalConsumptionHint,
@@ -73,6 +74,12 @@ COMO AJUDAR DE VERDADE:
 - Ao listar, escolha no máximo 3 opções que façam sentido — não despeje o estoque inteiro. Se o visitante pedir barato / baratinho / mais em conta, prefira os mais baratos do modelo pedido e NÃO cite irmão mais caro sem necessidade. O site vira cada linha em mini-anúncio com foto e já mostra atalhos (financiar, troca). Formato da lista, um por linha:
 Marca Modelo ano · km · R$ preço
 Antes da lista: 1 frase falada de recorte (Olha só, carros até R$ 70.000 no estoque agora / Automáticos até R$ 80.000). Não comece com “Separei N” nem “Temos três ótimas opções”. DEPOIS da lista: 1 ou 2 frases comparando SOMENTE esses mesmos carros, com dados da linha de estoque. Termine com o WhatsApp. Só diga que um está mais em conta se o preço for menor de fato — se empatar, compare km, ano e câmbio, nunca invente desconto. Diga quem tem menos km, quem é automático e o que isso muda no dia a dia. Só diga que um carro “é o automático da lista” ou “o único automático” se nenhum outro da mesma lista for automático. NÃO mencione consumo de combustível espontaneamente. Frases completas, faladas, sem telegrama e sem emoji.
+- Motor forte: forte, motorizado, motor forte, potente, pegada, torque, esportivo, 1.8+ ou 2.0 não é pedido de mais barato. No câmbio e no teto de preço, prefira maior cilindrada ou motor nomeado que esteja escrito na ficha (TSI, turbo, THP). Não invente cv, potência nem número de torque. Os 3 da lista são os mais fortes; um 1.0 ou 1.6 de motor menor só entra como observação curta, nunca em primeiro. Depois da lista, 1 ou 2 frases: qual dos 3 é o mais forte, com motor/cilindrada, km, preço e câmbio reais. Só diga “mais em conta” se a pessoa também pediu barato ou em conta.
+- Família, espaçoso, 4 portas ou porta-malas: no câmbio e no teto, prefira sedan, SUV, perua ou mais portas quando isso estiver na ficha. Só diga o número de portas se ele estiver na linha. Não invente litros de porta-malas.
+- Primeiro carro, uso na cidade ou aplicativo: prefira o menor preço e hatch compacto quando a carroceria estiver na ficha. Não invente custo de manutenção.
+- Econômico, quando não for pergunta de consumo daquele carro: prefira menor cilindrada e, no empate, o menor preço. Não cite km/l nessa lista.
+- SUV, sedan, hatch, picape ou perua: fique nessa carroceria. Moto só se a pessoa pedir moto.
+- Se o recorte já tiver orçamento, câmbio, carroceria ou intenção ditos nesta conversa, não pergunte de novo. Use o que já foi dito.
 - Consumo / média / km/l: NUNCA mencione consumo espontaneamente. O consumo só deve ser informado SE o visitante perguntar especificamente sobre o consumo, gasto de combustível, quanto faz por litro ou se o veículo é econômico. Quando ele perguntar de consumo, use SOMENTE o texto “consumo típico” já escrito na linha do estoque. Se a linha tiver gasolina e álcool, cite as duas faixas. NUNCA invente outro número, NUNCA invente cv, potência, torque ou INMETRO, NUNCA diga que a loja mediu este usado, NUNCA apresente a faixa como garantia. Fale como faixa típica de catálogo / média da motorização. Não repita a cilindrada se o modelo já tiver (nunca “Fox 1.6 1.6”). Complete a frase com os km/l ANTES do aviso de que o usado não foi medido na loja — nunca junte o aviso no lugar da faixa (“fica Nenhum desses…”). Se não houver km/l na linha, diga isso com clareza; não complete “fica” com o disclaimer.
 - Não descreva a foto, não use markdown, não cite carro fora dessas 3 linhas e não pergunte hatch, sedan, “qual desses” nem “qual perfil” depois da lista (os atalhos do site já existem).
 - Se perguntarem “qual o melhor”, compare 2 ou 3 da lista só com dados reais (preço, ano, km, câmbio, combustível, motor, acessórios da linha). Sem inventar opcional.
@@ -133,6 +140,9 @@ export type ChatStockPromptOpts = {
   consumption?: boolean;
   /** Inclui opcionais da ficha — só quando a pergunta é de equipamento. */
   equipment?: boolean;
+  /** power/família/primeiro carro/econômico mudam a ordem. O padrão continua o preço. */
+  rank?: "price" | "power" | "family" | "starter" | "economy";
+  powerQuery?: string;
 };
 
 function accessoryBits(items?: string[]) {
@@ -213,11 +223,26 @@ export function formatStockForPrompt(
     return "ESTOQUE ATUAL (dados reais do banco):\n(nenhum veículo disponível no momento)";
   }
 
-  const lines = [...vehicles]
-    .sort((a, b) => a.price - b.price)
-    .map((vehicle) => `- ${stockLineLabel(vehicle, true, opts)}`);
+  const rank = opts.rank ?? "price";
+  const ordered =
+    rank === "price"
+      ? [...vehicles].sort((a, b) => a.price - b.price)
+      : rankChatVehicles(vehicles, opts.powerQuery ?? "");
+  const lines = ordered.map(
+    (vehicle) => `- ${stockLineLabel(vehicle, true, opts)}`,
+  );
+  const orderLabel =
+    rank === "power"
+      ? "mais fortes primeiro"
+      : rank === "family"
+        ? "mais espaço primeiro"
+        : rank === "starter"
+          ? "primeiro carro primeiro"
+          : rank === "economy"
+            ? "menor motor primeiro"
+            : "mais baratos primeiro";
 
-  return `ESTOQUE ATUAL (dados reais do banco — use SOMENTE estes veículos, mais baratos primeiro):\n${lines.join("\n")}`;
+  return `ESTOQUE ATUAL (dados reais do banco — use SOMENTE estes veículos, ${orderLabel}):\n${lines.join("\n")}`;
 }
 
 export function parseCheapIntent(mensagem: string): boolean {
@@ -252,13 +277,408 @@ export function parsePriceLimit(mensagem: string): number | null {
   return Math.round(amount);
 }
 
+function foldIntent(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+const POWER_WORD =
+  /\b(fortes?|motorizad[oa]s?|potentes?|pegada|torque|esportiv[oa]s?)\b/;
+
+const STRONG_ENGINE_BADGE =
+  /\b(tsi|tfsi|thp|tjet|t-jet|t jet|turbo|biturbo|ecoboost|gti|gsi|v6|v8)\b/i;
+
+export type PowerRankable = {
+  model: string;
+  version?: string | null;
+  engine?: string | null;
+  category?: string | null;
+  price: number;
+  km: number;
+};
+
+/** Piso de cilindrada pedido: "1.8+", "2.0", "acima de 1.6". 1.0/1.6 soltos não contam. */
+export function parseMinDisplacementLiters(mensagem: string): number | null {
+  const text = foldIntent(mensagem);
+  const plus = text.match(/\b(\d)[.,](\d)\s*\+/);
+  if (plus) {
+    const value = Number(`${plus[1]}.${plus[2]}`);
+    if (value >= 1.4 && value <= 6) return value;
+  }
+  const above = text.match(
+    /\b(?:acima de|a partir de|no minimo(?: de)?|pelo menos)\s+(\d)[.,](\d)\b/,
+  );
+  if (above) {
+    const value = Number(`${above[1]}.${above[2]}`);
+    if (value >= 1.4 && value <= 6) return value;
+  }
+  const found: number[] = [];
+  for (const match of text.matchAll(/\b(\d)[.,](\d)\b/g)) {
+    const value = Number(`${match[1]}.${match[2]}`);
+    if (value >= 1.8 && value <= 6) found.push(value);
+  }
+  if (found.length === 0) return null;
+  return Math.max(...found);
+}
+
+/** Forte / motorizado / 2.0 — não é pedido de carro barato. */
+export function parsePowerIntent(mensagem: string): boolean {
+  const text = foldIntent(mensagem);
+  if (POWER_WORD.test(text)) return true;
+  if (/\bmotor forte\b/.test(text)) return true;
+  return parseMinDisplacementLiters(mensagem) != null;
+}
+
+/** Forte sem “barato/em conta” — o ranking não pode cair no mais barato. */
+export function isPowerQuery(mensagem: string) {
+  return parsePowerIntent(mensagem) && !parseCheapIntent(mensagem);
+}
+
+export type ChatBodyStyle = "suv" | "sedan" | "hatch" | "pickup" | "wagon";
+
+export type ChatRankMode =
+  | "power"
+  | "family"
+  | "starter"
+  | "economy"
+  | "cheap"
+  | "price"
+  | "default";
+
+/** Família / espaçoso / 4 portas. “espaço” solto não conta. */
+export function parseFamilyIntent(mensagem: string) {
+  return /\b(familia|familiar|familias|espacos[oa]s?|porta[- ]malas|4 portas|quatro portas|7 lugares)\b/.test(
+    foldIntent(mensagem),
+  );
+}
+
+/** Primeiro carro, cidade ou app. Nome de cidade solto e “whatsapp” não contam. */
+export function parseStarterIntent(mensagem: string) {
+  return /\b(primeiro carro|primeiro veiculo|primeira moto|carro de cidade|uso na cidade|para a cidade|pra cidade|uber|para app|pro app|para o app|aplicativo)\b/.test(
+    foldIntent(mensagem),
+  );
+}
+
+/** Lista econômica. “consumo” e “é econômico?” continuam pergunta de ficha. */
+export function parseEconomyIntent(mensagem: string) {
+  return /\b(economico|economica|mais economico|mais economica)\b/.test(
+    foldIntent(mensagem),
+  );
+}
+
+/** SUV / sedan / hatch / picape / perua. A última citada ganha. */
+export function parseBodyStyleFilter(mensagem: string): ChatBodyStyle | null {
+  const text = foldIntent(mensagem);
+  const rules: Array<[ChatBodyStyle, RegExp]> = [
+    ["suv", /\b(suvs?|crossovers?)\b/],
+    ["sedan", /\bsedans?\b/],
+    ["hatch", /\bhatch(?:back|es)?\b/],
+    ["pickup", /\b(pickups?|picapes?|caminhonetes?)\b/],
+    ["wagon", /\b(peruas?|wagons?)\b/],
+  ];
+  let found: { style: ChatBodyStyle; index: number } | null = null;
+  for (const [style, pattern] of rules) {
+    const match = pattern.exec(text);
+    if (!match) continue;
+    if (!found || match.index >= found.index) found = { style, index: match.index };
+  }
+  return found?.style ?? null;
+}
+
+/** Intenção que ordena o top 3. Barato ganha de forte. Carroceria é filtro, não rank. */
+export function chatRankMode(mensagem: string): ChatRankMode {
+  if (isPowerQuery(mensagem)) return "power";
+  if (parseFamilyIntent(mensagem) && !parseCheapIntent(mensagem)) return "family";
+  if (parseStarterIntent(mensagem) && !parseCheapIntent(mensagem)) return "starter";
+  if (parseEconomyIntent(mensagem) && !parseCheapIntent(mensagem)) return "economy";
+  if (parseCheapIntent(mensagem)) return "cheap";
+  if (parsePriceLimit(mensagem) != null) return "price";
+  return "default";
+}
+
+export type IntentRankable = PowerRankable & {
+  doors?: number | null;
+};
+
+export function vehicleBodyStyle(vehicle: {
+  category?: string | null;
+  model: string;
+  version?: string | null;
+}): ChatBodyStyle | null {
+  switch (
+    mapCatalogBodyStyle(
+      vehicle.category ?? "carro",
+      vehicle.model,
+      vehicle.version ?? null,
+    )
+  ) {
+    case "SUV":
+      return "suv";
+    case "SEDAN":
+      return "sedan";
+    case "HATCHBACK":
+      return "hatch";
+    case "PICKUP":
+      return "pickup";
+    case "WAGON":
+      return "wagon";
+    default:
+      return null;
+  }
+}
+
+export function engineDisplacementLiters(vehicle: PowerRankable): number | null {
+  return parseEngineDisplacementLiters(
+    vehicle.engine,
+    `${vehicle.version ?? ""} ${vehicle.model}`,
+    vehicle.category,
+  );
+}
+
+export function hasNamedStrongEngine(vehicle: PowerRankable) {
+  const blob = `${vehicle.engine ?? ""} ${vehicle.version ?? ""} ${vehicle.model}`;
+  return STRONG_ENGINE_BADGE.test(blob);
+}
+
+function namedEngineBadge(vehicle: PowerRankable) {
+  const blob = `${vehicle.engine ?? ""} ${vehicle.version ?? ""} ${vehicle.model}`;
+  return blob.match(STRONG_ENGINE_BADGE)?.[1] ?? null;
+}
+
+/** Texto da ficha. Sem cv inventado. */
+export function stockEngineLabel(vehicle: PowerRankable): string | null {
+  const engine = vehicle.engine?.trim().replace(/^motor\s+/i, "");
+  if (engine) return engine;
+  const liters = engineDisplacementLiters(vehicle);
+  const badge = namedEngineBadge(vehicle);
+  if (liters == null && !badge) return null;
+  if (liters == null) return badge;
+  const base =
+    liters >= 1 ? liters.toFixed(1) : `${Math.round(liters * 1000)}cc`;
+  return badge ? `${base} ${badge}` : base;
+}
+
+/** meets floor, tier, liters, named badge. Maior é mais forte. */
+export function powerRankTuple(
+  vehicle: PowerRankable,
+  floor: number | null,
+): [number, number, number, number] {
+  const liters = engineDisplacementLiters(vehicle);
+  const named = hasNamedStrongEngine(vehicle) ? 1 : 0;
+  const moto = (vehicle.category ?? "carro") === "moto";
+  const meets =
+    floor == null || (liters != null && liters + 1e-9 >= floor - 0.051) ? 1 : 0;
+  if (moto) return [meets, liters ?? 0, named, 0];
+  let tier = 0;
+  if (liters != null && liters >= 1.8) tier = 3;
+  else if (named) tier = 2;
+  else if (liters != null && liters >= 1.5) tier = 1;
+  return [meets, tier, liters ?? 0, named];
+}
+
+export function powerRankKey(vehicle: PowerRankable, floor: number | null = null) {
+  return powerRankTuple(vehicle, floor).join(":");
+}
+
+export function comparePowerRank<T extends PowerRankable>(
+  a: T,
+  b: T,
+  floor: number | null,
+) {
+  const left = powerRankTuple(a, floor);
+  const right = powerRankTuple(b, floor);
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) return right[index]! - left[index]!;
+  }
+  if (a.price !== b.price) return a.price - b.price;
+  return a.km - b.km;
+}
+
+export function rankByPower<T extends PowerRankable>(rows: T[], mensagem = "") {
+  const floor = parseMinDisplacementLiters(mensagem);
+  return [...rows].sort((a, b) => comparePowerRank(a, b, floor));
+}
+
+function familyScore(vehicle: IntentRankable) {
+  let score = 0;
+  if (vehicle.doors != null && vehicle.doors >= 4) score += 4;
+  else if (vehicle.doors != null && vehicle.doors > 0 && vehicle.doors <= 2) {
+    score -= 2;
+  }
+  const body = vehicleBodyStyle(vehicle);
+  if (body === "wagon" || body === "suv") score += 3;
+  else if (body === "sedan") score += 2;
+  if (/\b7 lugares\b/.test(foldIntent(`${vehicle.version ?? ""} ${vehicle.model}`))) {
+    score += 3;
+  }
+  return score;
+}
+
+function rankByFamily<T extends IntentRankable>(rows: T[]) {
+  return [...rows].sort((a, b) => {
+    const score = familyScore(b) - familyScore(a);
+    if (score !== 0) return score;
+    if (a.price !== b.price) return a.price - b.price;
+    return a.km - b.km;
+  });
+}
+
+/** Dentro de 1,25× o mais barato, hatch e motor menor. Fora da faixa, o preço ganha. */
+function rankByStarter<T extends IntentRankable>(rows: T[]) {
+  if (rows.length === 0) return [];
+  const cheapest = Math.min(...rows.map((row) => row.price));
+  const band = cheapest * 1.25;
+  return [...rows].sort((a, b) => {
+    const aIn = a.price <= band ? 0 : 1;
+    const bIn = b.price <= band ? 0 : 1;
+    if (aIn !== bIn) return aIn - bIn;
+    if (aIn === 0) {
+      const aHatch = vehicleBodyStyle(a) === "hatch" ? 0 : 1;
+      const bHatch = vehicleBodyStyle(b) === "hatch" ? 0 : 1;
+      if (aHatch !== bHatch) return aHatch - bHatch;
+      const aLiters = engineDisplacementLiters(a) ?? 99;
+      const bLiters = engineDisplacementLiters(b) ?? 99;
+      if (aLiters !== bLiters) return aLiters - bLiters;
+    }
+    if (a.price !== b.price) return a.price - b.price;
+    return a.km - b.km;
+  });
+}
+
+function rankByEconomy<T extends IntentRankable>(rows: T[]) {
+  return [...rows].sort((a, b) => {
+    const aLiters = engineDisplacementLiters(a);
+    const bLiters = engineDisplacementLiters(b);
+    const aMissing = aLiters == null ? 1 : 0;
+    const bMissing = bLiters == null ? 1 : 0;
+    if (aMissing !== bMissing) return aMissing - bMissing;
+    if (aLiters != null && bLiters != null && aLiters !== bLiters) {
+      return aLiters - bLiters;
+    }
+    if (a.price !== b.price) return a.price - b.price;
+    return a.km - b.km;
+  });
+}
+
+export function rankChatVehicles<T extends IntentRankable>(
+  rows: T[],
+  mensagem: string,
+) {
+  const mode = chatRankMode(mensagem);
+  if (mode === "power") return rankByPower(rows, mensagem);
+  if (mode === "family") return rankByFamily(rows);
+  if (mode === "starter") return rankByStarter(rows);
+  if (mode === "economy") return rankByEconomy(rows);
+  return [...rows].sort((a, b) => a.price - b.price || a.km - b.km);
+}
+
+function poolForIntent(vehicles: ChatStockLine[], mensagem: string) {
+  const limit = parsePriceLimit(mensagem);
+  let pool =
+    limit == null
+      ? vehicles
+      : vehicles.filter((vehicle) => vehicle.price <= limit);
+  const style = parseBodyStyleFilter(mensagem);
+  if (style) pool = pool.filter((vehicle) => vehicleBodyStyle(vehicle) === style);
+  return pool;
+}
+
+function powerFilterNote(vehicles: ChatStockLine[], mensagem: string) {
+  const limit = parsePriceLimit(mensagem);
+  const floor = parseMinDisplacementLiters(mensagem);
+  const priced = poolForIntent(vehicles, mensagem);
+  const ranked = rankByPower(priced, mensagem);
+  const heroes = ranked.slice(0, 3);
+  const heroSet = new Set(heroes);
+  const weaker = [...ranked]
+    .filter((vehicle) => !heroSet.has(vehicle))
+    .filter((vehicle) => {
+      const liters = engineDisplacementLiters(vehicle);
+      if (hasNamedStrongEngine(vehicle)) return false;
+      return liters == null || liters < 1.8;
+    })
+    .sort((a, b) => a.price - b.price || a.km - b.km)[0];
+  const ceiling = limit != null ? ` até ${formatChatPrice(limit)}` : "";
+  const floorBit = floor != null ? `, a partir de ${floor.toFixed(1)}` : "";
+  if (heroes.length === 0) {
+    return `\n\nFILTRO DO VISITANTE: quer motor mais forte${floorBit}${ceiling}. Nenhum veículo nesta faixa — diga isso com clareza e ofereça o WhatsApp.`;
+  }
+  const aside = weaker
+    ? `\nObservação curta, nunca como destaque: ${stockLineLabel(weaker)} tem motor menor e preço mais baixo. Só cite se ajudar, sem abrir por ele.`
+    : "";
+  return `\n\nFILTRO DO VISITANTE: quer motor mais forte${floorBit}${ceiling}. Entre os que cabem no câmbio e no orçamento, estes são os mais fortes (maior cilindrada ou motor nomeado na ficha, como TSI ou turbo). Liste no máximo estes 3, nesta ordem, um por linha. Não trate como pedido de mais barato e não abra pelo mais barato. Depois da lista, diga qual é o mais forte entre estes 3 com motor/cilindrada da ficha, km e preço — sem inventar cv ou potência:\n${heroes
+    .map((vehicle) => stockLineLabel(vehicle, true))
+    .join("\n")}${aside}`;
+}
+
+function rankedFilterNote(vehicles: ChatStockLine[], mensagem: string) {
+  const mode = chatRankMode(mensagem);
+  const pool = poolForIntent(vehicles, mensagem);
+  const ranked = rankChatVehicles(pool, mensagem).slice(0, 3);
+  const limit = parsePriceLimit(mensagem);
+  const style = parseBodyStyleFilter(mensagem);
+  const ceiling = limit != null ? ` até ${formatChatPrice(limit)}` : "";
+  const styleBit = style
+    ? ` carroceria ${style === "wagon" ? "perua" : style}`
+    : "";
+  const rule =
+    mode === "family"
+      ? "Família: prefira mais portas, sedan, SUV ou perua só quando a ficha disser. Não invente litros de porta-malas. Só diga o número de portas se estiver na linha."
+      : mode === "starter"
+        ? "Primeiro carro, cidade ou app: prefira menor preço e hatch compacto quando a carroceria estiver na ficha. Não invente custo de manutenção."
+        : "Econômico: prefira menor cilindrada e depois o preço. Não cite km/l nesta lista.";
+  if (ranked.length === 0) {
+    return `\n\nFILTRO DO VISITANTE:${styleBit}${ceiling}. Nenhum veículo nesta faixa — diga isso com clareza e ofereça o WhatsApp. ${rule}`;
+  }
+  return `\n\nFILTRO DO VISITANTE:${styleBit}${ceiling}. ${rule} Liste no máximo estes 3, nesta ordem, um por linha. Depois, 1 ou 2 frases comparando só estes com motor, km, preço e câmbio da linha:\n${ranked
+    .map((vehicle) => stockLineLabel(vehicle, true))
+    .join("\n")}`;
+}
+
+function sessionMemoryNote(mensagem: string) {
+  const bits: string[] = [];
+  const limit = parsePriceLimit(mensagem);
+  if (limit != null) bits.push(`orçamento até ${formatChatPrice(limit)}`);
+  const text = foldIntent(mensagem);
+  const auto = /\b(automatico|automatica|cvt)\b/.test(text);
+  const manual = /\bmanual(?:is)?\b/.test(text);
+  if (auto && !manual) bits.push("câmbio automático");
+  else if (manual && !auto) bits.push("câmbio manual");
+  const style = parseBodyStyleFilter(mensagem);
+  if (style) bits.push(`carroceria ${style === "wagon" ? "perua" : style}`);
+  const mode = chatRankMode(mensagem);
+  if (mode === "power") bits.push("intenção de motor mais forte");
+  else if (mode === "family") bits.push("intenção de família");
+  else if (mode === "starter") bits.push("intenção de primeiro carro");
+  else if (mode === "economy") bits.push("intenção de carro econômico");
+  else if (mode === "cheap") bits.push("intenção de mais em conta");
+  if (bits.length === 0) return "";
+  return `\n\nMEMÓRIA DESTA CONVERSA: ${bits.join("; ")}. Não pergunte de novo o que já está neste recorte.`;
+}
+
 export function buildChatSystemPrompt(
   vehicles: ChatStockLine[],
   mensagem = "",
   activeVehicle?: ChatStockLine,
   opts: ChatStockPromptOpts = {},
 ) {
-  const stock = formatStockForPrompt(vehicles, opts);
+  const cheap = parseCheapIntent(mensagem);
+  const mode = chatRankMode(mensagem);
+  const power = mode === "power";
+  const stock = formatStockForPrompt(vehicles, {
+    ...opts,
+    rank:
+      mode === "power" ||
+      mode === "family" ||
+      mode === "starter" ||
+      mode === "economy"
+        ? mode
+        : "price",
+    powerQuery: mensagem,
+  });
+  const memory = sessionMemoryNote(mensagem);
   let activeNotice = "";
   if (activeVehicle) {
     const kind = activeVehicle.category === "moto" ? "moto" : "carro";
@@ -266,10 +686,15 @@ export function buildChatSystemPrompt(
 - ${stockLineLabel(activeVehicle, true)}
 REGRA DE DESAMBIGUAÇÃO: O visitante está atualmente na página deste veículo (${activeVehicle.brand} ${activeVehicle.model} ${activeVehicle.year}). Se ele perguntar sobre este veículo, disser "este ${kind}", perguntar de garantia, troca, financiamento ou pedir mais informações sobre ele, refira-se ESTRITAMENTE a esta unidade específica (${activeVehicle.brand} ${activeVehicle.model} ${activeVehicle.year}, R$ ${activeVehicle.price.toLocaleString("pt-BR")}, ${activeVehicle.km.toLocaleString("pt-BR")} km). NÃO confunda com outras unidades do mesmo modelo e NÃO cite outra unidade de ${activeVehicle.model} sem que o visitante peça explicitamente para comparar. Se a pergunta for FIPE, tabela FIPE ou assunto fora da loja, IGNORE este veículo da tela.`;
   }
-  const cheap = parseCheapIntent(mensagem);
   const limit = parsePriceLimit(mensagem);
+  if (power) {
+    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${powerFilterNote(vehicles, mensagem)}${memory}`;
+  }
+  if (mode === "family" || mode === "starter" || mode === "economy") {
+    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${rankedFilterNote(vehicles, mensagem)}${memory}`;
+  }
   if (limit == null && !cheap) {
-    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}`;
+    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${memory}`;
   }
   if (limit == null && cheap) {
     const sorted = [...vehicles].sort((a, b) => a.price - b.price);
@@ -283,12 +708,16 @@ REGRA DE DESAMBIGUAÇÃO: O visitante está atualmente na página deste veículo
           .map((vehicle) => stockLineLabel(vehicle, true))
           .join("\n")}`
       : `\n\nFILTRO DO VISITANTE: quer opção mais em conta. Diga o que há de mais barato na lista e não empurre os caros.`;
-    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${extra}`;
+    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${extra}${memory}`;
   }
   if (limit == null) {
-    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}`;
+    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${memory}`;
   }
-  const sorted = [...vehicles].sort((a, b) => a.price - b.price);
+  const style = parseBodyStyleFilter(mensagem);
+  const bodyPool = style
+    ? vehicles.filter((vehicle) => vehicleBodyStyle(vehicle) === style)
+    : vehicles;
+  const sorted = [...bodyPool].sort((a, b) => a.price - b.price);
   const matches = sorted.filter((vehicle) => vehicle.price <= limit).slice(0, 8);
   const above = sorted.filter((vehicle) => vehicle.price > limit).slice(0, 3);
   const extra =
@@ -307,7 +736,7 @@ REGRA DE DESAMBIGUAÇÃO: O visitante está atualmente na página deste veículo
                 .join(" | ")}`
             : ""
         }`;
-  return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${extra}`;
+  return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${extra}${memory}`;
 }
 
 export function stockSelectHasForbiddenField(

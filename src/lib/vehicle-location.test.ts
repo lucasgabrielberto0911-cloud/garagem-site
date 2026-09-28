@@ -6,6 +6,7 @@ import {
   catalogPlace,
   isVehicleLocationCity,
   parseVehicleLocationCity,
+  publicCityStockLink,
   resolveVehicleLocationCity,
   vehicleLocationLabel,
 } from "./vehicle-location";
@@ -29,6 +30,23 @@ test("parseia só Serra ou Linhares — não chuta pelo modelo nem por outra cid
   assert.equal(isVehicleLocationCity("serra"), true);
   assert.equal(isVehicleLocationCity("linhares"), true);
   assert.equal(isVehicleLocationCity("aracruz"), false);
+});
+
+test("landing só filtra o estoque quando o carro está na cidade", () => {
+  assert.deepEqual(publicCityStockLink("linhares"), {
+    href: "/estoque?city=linhares",
+    label: "Ver os que estão em Linhares",
+    place: "Linhares",
+  });
+  assert.deepEqual(publicCityStockLink("serra"), {
+    href: "/estoque?city=serra",
+    label: "Ver os que estão em Serra",
+    place: "Serra",
+  });
+  assert.equal(publicCityStockLink("vila-velha").href, "/estoque");
+  assert.equal(publicCityStockLink("vitoria").label, "Ver o estoque");
+  assert.equal(publicCityStockLink("vitoria").place, "");
+  assert.doesNotMatch(publicCityStockLink("guarapari").label, /Guarapari/);
 });
 
 test("rótulos em português e cidade do catálogo Meta", () => {

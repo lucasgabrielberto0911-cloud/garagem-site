@@ -41,13 +41,17 @@ import {
   readChatStreamFrame,
 } from "@/lib/chat-stream";
 import {
+  chatHeaderWhatsAppMessage,
+  chatSessionHints,
   chatWhatsAppCta,
   displayChatText,
+  formatChatHandoffMessage,
   lastShownChatVehicles,
   lastSingleChatVehicleId,
   resolveChatRequestVehicleId,
   resolveChatWhatsAppVehicle,
   splitChatLinks,
+  type ChatHandoffContext,
 } from "@/lib/chat-text";
 import { formatVehicleWhatsAppMessage } from "@/lib/vehicle-display";
 import {
@@ -247,23 +251,42 @@ function ChatWhatsAppButton({
 function ChatVehicleMini({
   vehicle,
   onVehicleClick,
+  handoff,
 }: {
   vehicle: ChatVehicleCard;
   onVehicleClick?: (vehicle: ChatVehicleCard) => void;
+  handoff?: ChatHandoffContext;
 }) {
   const version = chatVehicleVersion(vehicle);
   const photo = vehicle.photo || VEHICLE_PLACEHOLDER;
   const label = chatVehicleLabel(vehicle);
   const meta = chatVehicleMeta(vehicle);
-  const whatsappMessage = formatVehicleWhatsAppMessage({
-    brand: vehicle.brand,
-    model: vehicle.model,
-    version: vehicle.version,
-    yearModel: vehicle.year,
-    price: vehicle.price,
-    path: vehicle.href,
-    isMoto: vehicle.category === "moto",
-  });
+  const sessionContext =
+    handoff?.priceLimit != null || handoff?.transmission != null;
+  const whatsappMessage = sessionContext
+    ? formatChatHandoffMessage({
+        vehicles: [
+          {
+            brand: vehicle.brand,
+            model: vehicle.model,
+            version: vehicle.version,
+            year: vehicle.year,
+            label,
+            category: vehicle.category,
+          },
+        ],
+        priceLimit: handoff?.priceLimit,
+        transmission: handoff?.transmission,
+      })
+    : formatVehicleWhatsAppMessage({
+        brand: vehicle.brand,
+        model: vehicle.model,
+        version: vehicle.version,
+        yearModel: vehicle.year,
+        price: vehicle.price,
+        path: vehicle.href,
+        isMoto: vehicle.category === "moto",
+      });
 
   return (
     <article className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#17171B] transition-colors hover:border-white/[0.16]">
@@ -436,6 +459,7 @@ function ChatText({
   onVehicleClick,
   onStockExplore,
   vehicleContext,
+  handoff,
 }: {
   text: string;
   vehicles?: ChatVehicleCard[];
@@ -447,6 +471,7 @@ function ChatText({
   onVehicleClick?: (vehicle: ChatVehicleCard) => void;
   onStockExplore?: () => void;
   vehicleContext?: ChatVehicleContext | null;
+  handoff?: ChatHandoffContext;
 }) {
   const source =
     vehicles.length > 0 ? polishChatReplyWithCards(text, vehicles) : text;
@@ -469,7 +494,24 @@ function ChatText({
     vehicles,
   );
   const cta = showWhatsApp
-    ? chatWhatsAppCta(text, ctaVehicle, { force: true })
+    ? chatWhatsAppCta(text, ctaVehicle, {
+        force: true,
+        handoff: {
+          vehicles:
+            vehicles.length > 0
+              ? vehicles.map((vehicle) => ({
+                  brand: vehicle.brand,
+                  model: vehicle.model,
+                  version: vehicle.version,
+                  year: vehicle.year,
+                  label: vehicle.title,
+                  category: vehicle.category,
+                }))
+              : handoff?.vehicles,
+          priceLimit: handoff?.priceLimit,
+          transmission: handoff?.transmission,
+        },
+      })
     : null;
 
   return (
@@ -494,6 +536,7 @@ function ChatText({
               key={vehicle.id}
               vehicle={vehicle}
               onVehicleClick={onVehicleClick}
+              handoff={handoff}
             />
           ))}
         </div>
@@ -1054,6 +1097,13 @@ export function SiteChat() {
   }
 
   const started = messages.length > 1;
+  const sessionHints = chatSessionHints(messages);
+  const lastChatCards = [...messages]
+    .reverse()
+    .find(
+      (message) =>
+        message.role === "assistant" && (message.vehicles?.length ?? 0) > 0,
+    )?.vehicles;
   const showSuggestions = !started && !pending;
   const canSend = !pending && !sendingRef.current && draft.trim().length >= 2;
   const lastIsAssistant = messages[messages.length - 1]?.role === "assistant";
@@ -1061,6 +1111,7 @@ export function SiteChat() {
 
   function resetConversation() {
     if (pending || sendingRef.current) return;
+    // Nova conversa zera o histórico local. O próximo POST vai sem orçamento, câmbio ou intenção.
     keepFocusRef.current = false;
     messageCountRef.current = 0;
     lastIntentRef.current = "other";
@@ -1109,31 +1160,36 @@ export function SiteChat() {
               <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
               <a
                 href={whatsappUrl(
-                  vehicleContext
-                    ? vehicleContext.brand &&
-                      vehicleContext.model &&
-                      vehicleContext.year
-                      ? formatVehicleWhatsAppMessage({
-                          brand: vehicleContext.brand,
-                          model: vehicleContext.model,
-                          version: vehicleContext.version,
-                          yearModel: vehicleContext.year,
-                          price: vehicleContext.price,
-                          path: vehicleContext.path,
-                          isMoto: vehicleContext.category === "moto",
-                        })
-                      : WHATSAPP_MESSAGES.vehicle(
-                          `${vehicleContext.label}${
-                            vehicleContext.year ? ` ${vehicleContext.year}` : ""
-                          }`.trim(),
-                          vehicleContext.category === "moto",
-                        )
-                    : WHATSAPP_MESSAGES.help,
+                  chatHeaderWhatsAppMessage({
+                    cards: lastChatCards,
+                    pageMessage: vehicleContext
+                      ? vehicleContext.brand &&
+                        vehicleContext.model &&
+                        vehicleContext.year
+                        ? formatVehicleWhatsAppMessage({
+                            brand: vehicleContext.brand,
+                            model: vehicleContext.model,
+                            version: vehicleContext.version,
+                            yearModel: vehicleContext.year,
+                            price: vehicleContext.price,
+                            path: vehicleContext.path,
+                            isMoto: vehicleContext.category === "moto",
+                          })
+                        : WHATSAPP_MESSAGES.vehicle(
+                            `${vehicleContext.label}${
+                              vehicleContext.year ? ` ${vehicleContext.year}` : ""
+                            }`.trim(),
+                            vehicleContext.category === "moto",
+                          )
+                      : null,
+                    priceLimit: sessionHints.priceLimit,
+                    transmission: sessionHints.transmission,
+                  }),
                   {
                     campaign: "chat",
                     content: whatsappContentFromVehicle({
-                      id: vehicleContext?.id,
-                      path: vehicleContext?.path,
+                      id: lastChatCards?.[0]?.id ?? vehicleContext?.id,
+                      path: lastChatCards?.[0]?.href ?? vehicleContext?.path,
                     }),
                   },
                 )}
@@ -1258,6 +1314,7 @@ export function SiteChat() {
                         message_count: messageCountRef.current,
                       });
                     }}
+                    handoff={sessionHints}
                   />
                 </AssistantRow>
               );

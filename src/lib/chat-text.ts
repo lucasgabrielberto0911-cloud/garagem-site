@@ -1,4 +1,6 @@
+import { formatChatPrice, parsePriceLimit } from "@/lib/chat-prompt";
 import {
+  WHATSAPP_BRAND,
   WHATSAPP_MESSAGES,
   applyWhatsAppUtm,
   whatsappContentFromVehicle,
@@ -182,10 +184,111 @@ function chatWhatsAppTrack(vehicle?: ChatWhatsAppVehicle | null) {
   };
 }
 
+export type ChatHandoffVehicle = {
+  brand?: string;
+  model?: string;
+  version?: string | null;
+  year?: number;
+  label?: string;
+  category?: string;
+};
+
+export type ChatHandoffContext = {
+  vehicles?: ChatHandoffVehicle[];
+  priceLimit?: number | null;
+  transmission?: "automatico" | "manual" | null;
+};
+
+function handoffVehicleLabel(vehicle: ChatHandoffVehicle) {
+  const version = shortVersion(vehicle.version, vehicle.model ?? "");
+  const base = [vehicle.brand, vehicle.model].filter(Boolean).join(" ").trim();
+  const withVersion =
+    version && base && !base.toLowerCase().includes(version.toLowerCase())
+      ? `${base} ${version}`
+      : base;
+  return (withVersion || vehicle.label || "").replace(/\s+/g, " ").trim();
+}
+
+/** Pré-preenche o WhatsApp só com veículos recebidos e o recorte da sessão. */
+export function formatChatHandoffMessage(input: ChatHandoffContext = {}) {
+  const labels = (input.vehicles ?? [])
+    .map(handoffVehicleLabel)
+    .filter(Boolean)
+    .slice(0, 3);
+  if (labels.length === 0) return WHATSAPP_MESSAGES.help;
+  const names =
+    labels.length === 1
+      ? labels[0]!
+      : labels.length === 2
+        ? `${labels[0]} e ${labels[1]}`
+        : `${labels.slice(0, -1).join(", ")} e ${labels[labels.length - 1]}`;
+  const moto =
+    (input.vehicles ?? []).length > 0 &&
+    (input.vehicles ?? [])
+      .slice(0, labels.length)
+      .every((vehicle) => vehicle.category === "moto");
+  const article = moto ? "a" : "o";
+  const gear =
+    input.transmission === "automatico"
+      ? labels.length > 1
+        ? "automáticos"
+        : "automático"
+      : input.transmission === "manual"
+        ? labels.length > 1
+          ? "manuais"
+          : "manual"
+        : "";
+  const budget =
+    input.priceLimit != null && input.priceLimit > 0
+      ? `até ${formatChatPrice(input.priceLimit)}`
+      : "";
+  const context = [gear, budget].filter(Boolean).join(" ");
+  const contextBit = context ? ` ${context}` : "";
+  return `Oi! Vi ${article} ${names}${contextBit} no site da ${WHATSAPP_BRAND} e quero saber mais.`;
+}
+
+/** Orçamento e câmbio ditos pelo visitante. Não lê a resposta do assistente. */
+export function chatSessionHints(
+  messages: Array<{ role: string; content: string }>,
+) {
+  let priceLimit: number | null = null;
+  let transmission: "automatico" | "manual" | null = null;
+  for (const message of messages) {
+    if (message.role !== "user") continue;
+    const price = parsePriceLimit(message.content);
+    if (price != null) priceLimit = price;
+    const text = fold(message.content);
+    const auto = /\b(automatico|automatica|cvt)\b/.test(text);
+    const manual = /\bmanual(?:is)?\b/.test(text);
+    if (auto && !manual) transmission = "automatico";
+    else if (manual && !auto) transmission = "manual";
+  }
+  return { priceLimit, transmission };
+}
+
+export function chatHeaderWhatsAppMessage(input: {
+  cards?: ChatHandoffVehicle[];
+  pageMessage?: string | null;
+  priceLimit?: number | null;
+  transmission?: "automatico" | "manual" | null;
+}) {
+  const cards = (input.cards ?? []).filter(
+    (vehicle) => vehicle.model || vehicle.label || vehicle.brand,
+  );
+  if (cards.length > 0) {
+    return formatChatHandoffMessage({
+      vehicles: cards,
+      priceLimit: input.priceLimit,
+      transmission: input.transmission,
+    });
+  }
+  return input.pageMessage?.trim() || WHATSAPP_MESSAGES.help;
+}
+
 export function chatWhatsAppCta(
   text: string,
   vehicle?: ChatWhatsAppVehicle | null,
-  opts: { force?: boolean } = {},
+  opts: { force?: boolean; handoff?: ChatHandoffContext } = {},
 ): ChatWhatsAppCta | null {
   if (!opts.force && !/whatsapp|wa\.me/i.test(text)) return null;
   const folded = fold(text);
@@ -242,9 +345,25 @@ export function chatWhatsAppCta(
       benefit: "Consultor procura o modelo pra você",
     };
   }
+  const handoffVehicles = opts.handoff?.vehicles?.filter(
+    (item) => item.model || item.label || item.brand,
+  );
+  const handoffReady =
+    (handoffVehicles?.length ?? 0) > 0 &&
+    (opts.handoff?.priceLimit != null ||
+      opts.handoff?.transmission != null ||
+      (handoffVehicles?.length ?? 0) > 1);
   return {
     href: whatsappUrl(
-      vehicle ? chatVehicleWhatsAppText(vehicle, "interest") : WHATSAPP_MESSAGES.help,
+      handoffReady
+        ? formatChatHandoffMessage({
+            vehicles: handoffVehicles,
+            priceLimit: opts.handoff?.priceLimit,
+            transmission: opts.handoff?.transmission,
+          })
+        : vehicle
+          ? chatVehicleWhatsAppText(vehicle, "interest")
+          : WHATSAPP_MESSAGES.help,
       track,
     ),
     label: "Chamar consultor",

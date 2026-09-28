@@ -18,6 +18,8 @@ import {
   CHAT_PING_REPLY,
   CHAT_WHATSAPP_URL,
   buildChatSystemPrompt,
+  chatRankMode,
+  isPowerQuery,
   parsePriceLimit,
 } from "@/lib/chat-prompt";
 import { applyChatReplyGuards, looksTruncated } from "@/lib/chat-polish";
@@ -64,6 +66,7 @@ import {
   localGarageReply,
   matchFocusedVehicle,
   pickComparedModelVehicles,
+  scopeChatMessage,
   selectVehiclesForChatPrompt,
   seeksMissingNamedModel,
   similarAfterEmptyFilter,
@@ -113,6 +116,12 @@ export async function runChatTurn(input: {
   const generateStream = input.generateStream ?? generateChatReplyStream;
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
+  const visitorMessage = input.mensagem;
+  const scopedMessage = scopeChatMessage(
+    visitorMessage,
+    input.historico,
+    input.stock,
+  );
   const emit = (text: string) => {
     if (text) input.onToken?.(text);
   };
@@ -120,14 +129,14 @@ export async function runChatTurn(input: {
   const systemPromptFor = () => {
     const promptStock = selectVehiclesForChatPrompt(
       input.stock,
-      input.mensagem,
+      scopedMessage,
       activeVehicle,
     );
     return buildChatSystemPrompt(
       promptStock.map(toChatStockLine),
-      input.mensagem,
+      scopedMessage,
       activeVehicle ? toChatStockLine(activeVehicle) : undefined,
-      chatPromptStockOpts(input.mensagem),
+      chatPromptStockOpts(scopedMessage),
     );
   };
 
@@ -150,7 +159,7 @@ export async function runChatTurn(input: {
     let picked = allowCards
       ? selectChatVehicles(
           reply,
-          input.mensagem,
+          scopedMessage,
           input.stock,
           CHAT_CARD_LIMIT,
           activeVehicle?.id,
@@ -165,7 +174,7 @@ export async function runChatTurn(input: {
       { truncated: opts.truncated },
     );
     if (allowCards && picked.length === 0) {
-      const missing = enrichMissingModelReply(text, input.mensagem, input.stock);
+      const missing = enrichMissingModelReply(text, scopedMessage, input.stock);
       text = missing.reply;
       if (missing.vehicles.length > 0) {
         picked = missing.vehicles.slice(0, CHAT_CARD_LIMIT);
@@ -173,7 +182,7 @@ export async function runChatTurn(input: {
     }
     const enriched =
       picked.length > 0
-        ? enrichChatStockReply(text, picked, input.mensagem)
+        ? enrichChatStockReply(text, picked, scopedMessage, input.stock)
         : text;
     let guarded = applyChatReplyGuards(enriched, picked, {
       truncated: opts.truncated,
@@ -190,7 +199,7 @@ export async function runChatTurn(input: {
       leadCreated,
       vehicles,
       stockHref: allowCards
-        ? chatStockExploreHref(input.mensagem, input.stock, vehicles.length)
+        ? chatStockExploreHref(scopedMessage, input.stock, vehicles.length)
         : null,
       meta: {
         finishReason: opts.finishReason ?? null,
@@ -204,17 +213,17 @@ export async function runChatTurn(input: {
     };
   };
 
-  if (isOffScopeMessage(input.mensagem)) {
+  if (isOffScopeMessage(scopedMessage)) {
     const reply = offScopeReply(input.historico);
     emit(reply);
     return finish(reply, false, { cards: false, offScope: true });
   }
-  if (isFipeQuestion(input.mensagem)) {
+  if (isFipeQuestion(scopedMessage)) {
     emit(CHAT_FIPE_REPLY);
     return finish(CHAT_FIPE_REPLY, false, { cards: false, fipe: true });
   }
 
-  const policy = chatPolicyShortcut(input.mensagem);
+  const policy = chatPolicyShortcut(scopedMessage);
   if (policy === "card") {
     emit(CHAT_CARD_REPLY);
     return finish(CHAT_CARD_REPLY, false, { policy });
@@ -236,14 +245,14 @@ export async function runChatTurn(input: {
     return finish(CHAT_DOCS_REPLY, false, { policy });
   }
   if (policy === "gear") {
-    const reply = formatTransmissionCompareReply(input.stock, input.mensagem);
+    const reply = formatTransmissionCompareReply(input.stock, scopedMessage);
     emit(reply);
     return finish(reply, false, { policy });
   }
 
-  const empty = emptyFilterReply(input.mensagem, input.stock);
+  const empty = emptyFilterReply(scopedMessage, input.stock);
   if (empty) {
-    const similar = similarAfterEmptyFilter(input.mensagem, input.stock, 3);
+    const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
     emit(empty);
     return finish(empty, false, {
       policy: "waitlist",
@@ -252,25 +261,29 @@ export async function runChatTurn(input: {
     });
   }
 
-  const mentionedPool = singleMentionedModelPool(input.stock, input.mensagem);
-  const compared = pickComparedModelVehicles(input.stock, input.mensagem);
+  const mentionedPool = singleMentionedModelPool(input.stock, scopedMessage);
+  const compared = pickComparedModelVehicles(input.stock, scopedMessage);
   const focusedVehicle =
-    matchFocusedVehicle(input.mensagem, input.stock, activeVehicle?.id) ??
+    matchFocusedVehicle(scopedMessage, input.stock, activeVehicle?.id) ??
     (!mentionedPool &&
-    (asksAboutConsumption(input.mensagem) ||
-      asksAboutEquipment(input.mensagem) ||
-      asksAboutKm(input.mensagem) ||
-      asksAboutAvailability(input.mensagem))
+    (asksAboutConsumption(scopedMessage) ||
+      asksAboutEquipment(scopedMessage) ||
+      asksAboutKm(scopedMessage) ||
+      asksAboutAvailability(scopedMessage))
       ? activeVehicle
       : undefined);
-  const mixedPrice = asksAboutListedFacts(input.mensagem);
+  const mixedPrice = asksAboutListedFacts(scopedMessage);
   if (
     compared.length >= 2 &&
-    asksToCompareModels(input.mensagem) &&
-    !asksAboutConsumption(input.mensagem) &&
-    !asksAboutEquipment(input.mensagem)
+    asksToCompareModels(scopedMessage) &&
+    !asksAboutConsumption(scopedMessage) &&
+    !asksAboutEquipment(scopedMessage)
   ) {
-    const reply = compareChatStockPicks(compared, { withLeadin: true });
+    const reply = compareChatStockPicks(compared, {
+      withLeadin: true,
+      power: isPowerQuery(scopedMessage),
+      intent: chatRankMode(scopedMessage),
+    });
     emit(reply);
     return finish(reply, false, {
       policy: "compare",
@@ -278,11 +291,11 @@ export async function runChatTurn(input: {
     });
   }
   if (
-    asksWhichTwoToCompare(input.mensagem) &&
+    asksWhichTwoToCompare(scopedMessage) &&
     compared.length < 2 &&
     !mentionedPool &&
-    !hasChatStockFilter(input.mensagem) &&
-    parsePriceLimit(input.mensagem) == null
+    !hasChatStockFilter(scopedMessage) &&
+    parsePriceLimit(scopedMessage) == null
   ) {
     emit(CHAT_COMPARE_ASK_REPLY);
     return finish(CHAT_COMPARE_ASK_REPLY, false, {
@@ -291,14 +304,14 @@ export async function runChatTurn(input: {
     });
   }
   if (
-    asksToCompareModels(input.mensagem) &&
+    asksToCompareModels(scopedMessage) &&
     compared.length < 2 &&
-    !asksWhichTwoToCompare(input.mensagem) &&
-    !asksAboutConsumption(input.mensagem) &&
-    !asksAboutEquipment(input.mensagem)
+    !asksWhichTwoToCompare(scopedMessage) &&
+    !asksAboutConsumption(scopedMessage) &&
+    !asksAboutEquipment(scopedMessage)
   ) {
-    const reply = missingModelReply(input.mensagem, input.stock);
-    const similar = similarAfterEmptyFilter(input.mensagem, input.stock, 3);
+    const reply = missingModelReply(scopedMessage, input.stock);
+    const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
     emit(reply);
     return finish(reply, false, {
       policy: "waitlist",
@@ -306,10 +319,10 @@ export async function runChatTurn(input: {
       cards: similar.length > 0,
     });
   }
-  if (asksAboutAvailability(input.mensagem) && !mixedPrice) {
+  if (asksAboutAvailability(scopedMessage) && !mixedPrice) {
     if (
       isFocusedVehicleFactQuestion(
-        input.mensagem,
+        scopedMessage,
         input.stock,
         input.vehicleId ?? activeVehicle?.id,
       )
@@ -320,9 +333,9 @@ export async function runChatTurn(input: {
       emit(reply);
       return finish(reply, false, { policy: "availability" });
     }
-    if (seeksMissingNamedModel(input.mensagem, input.stock)) {
-      const reply = missingModelReply(input.mensagem, input.stock);
-      const similar = similarAfterEmptyFilter(input.mensagem, input.stock, 3);
+    if (seeksMissingNamedModel(scopedMessage, input.stock)) {
+      const reply = missingModelReply(scopedMessage, input.stock);
+      const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
       emit(reply);
       return finish(reply, false, {
         policy: "waitlist",
@@ -338,9 +351,9 @@ export async function runChatTurn(input: {
       });
     }
   }
-  if (seeksMissingNamedModel(input.mensagem, input.stock)) {
-    const reply = missingModelReply(input.mensagem, input.stock);
-    const similar = similarAfterEmptyFilter(input.mensagem, input.stock, 3);
+  if (seeksMissingNamedModel(scopedMessage, input.stock)) {
+    const reply = missingModelReply(scopedMessage, input.stock);
+    const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
     emit(reply);
     return finish(reply, false, {
       policy: "waitlist",
@@ -352,20 +365,20 @@ export async function runChatTurn(input: {
     focusedVehicle &&
     !mixedPrice &&
     isFocusedVehicleFactQuestion(
-      input.mensagem,
+      scopedMessage,
       input.stock,
       activeVehicle?.id,
     ) &&
-    (asksAboutConsumption(input.mensagem) ||
-      asksAboutEquipment(input.mensagem) ||
-      asksAboutNamedGear(input.mensagem) ||
-      asksAboutKm(input.mensagem))
+    (asksAboutConsumption(scopedMessage) ||
+      asksAboutEquipment(scopedMessage) ||
+      asksAboutNamedGear(scopedMessage) ||
+      asksAboutKm(scopedMessage))
   ) {
-    const reply = asksAboutConsumption(input.mensagem)
+    const reply = asksAboutConsumption(scopedMessage)
       ? formatFocusedConsumptionReply(focusedVehicle)
-      : asksAboutKm(input.mensagem)
+      : asksAboutKm(scopedMessage)
         ? formatFocusedKmReply(focusedVehicle)
-        : formatFocusedEquipmentReply(focusedVehicle, input.mensagem);
+        : formatFocusedEquipmentReply(focusedVehicle, scopedMessage);
     emit(reply);
     return finish(reply, false, { policy: "stock-fact" });
   }
@@ -373,7 +386,7 @@ export async function runChatTurn(input: {
     focusedVehicle &&
     !mixedPrice &&
     !mentionedPool &&
-    asksAboutConsumption(input.mensagem) &&
+    asksAboutConsumption(scopedMessage) &&
     activeVehicle &&
     focusedVehicle.id === activeVehicle.id
   ) {
@@ -383,9 +396,9 @@ export async function runChatTurn(input: {
   }
 
   const fromStock = () => {
-    if (isChatPing(input.mensagem)) return CHAT_PING_REPLY;
+    if (isChatPing(scopedMessage)) return CHAT_PING_REPLY;
     return (
-      localGarageReply(input.mensagem, input.stock, activeVehicle) ??
+      localGarageReply(scopedMessage, input.stock, activeVehicle) ??
       CHAT_FALLBACK_REPLY
     );
   };
@@ -397,7 +410,7 @@ export async function runChatTurn(input: {
         {
           systemPrompt: systemPromptFor(),
           history: input.historico,
-          mensagem: input.mensagem,
+          mensagem: visitorMessage,
         },
         { onToken: input.onToken },
       );
@@ -405,7 +418,7 @@ export async function runChatTurn(input: {
       first = await generate({
         systemPrompt: systemPromptFor(),
         history: input.historico,
-        mensagem: input.mensagem,
+        mensagem: visitorMessage,
       });
       if (first.text && !first.functionCall) emit(first.text);
     }
@@ -426,14 +439,14 @@ export async function runChatTurn(input: {
       model: first.model,
     });
   }
-  if (!first.functionCall && isChatPing(input.mensagem) && looksLikeOffScopeRedirect(generated)) {
+  if (!first.functionCall && isChatPing(scopedMessage) && looksLikeOffScopeRedirect(generated)) {
     emit(CHAT_PING_REPLY);
     return finish(CHAT_PING_REPLY);
   }
   if (
     !first.functionCall &&
     (isIncompleteStockReply(generated) || /R\$\s*\.?$/.test(generated)) &&
-    (parsePriceLimit(input.mensagem) != null || /R\$\s*\.?$/.test(generated))
+    (parsePriceLimit(scopedMessage) != null || /R\$\s*\.?$/.test(generated))
   ) {
     const fallback = fromStock();
     if (fallback && !/R\$\s*\.?$/.test(fallback.trim())) {
@@ -451,11 +464,11 @@ export async function runChatTurn(input: {
 
   if (
     !first.functionCall &&
-    asksAboutConsumption(input.mensagem) &&
+    asksAboutConsumption(scopedMessage) &&
     !hasConsumptionFigures(generated)
   ) {
     const local = localGarageReply(
-      input.mensagem,
+      scopedMessage,
       input.stock,
       activeVehicle,
     );
@@ -463,7 +476,7 @@ export async function runChatTurn(input: {
       consumptionReplyLooksBroken(generated) ||
       looksTruncated(generated, first.finishReason);
     const inferred =
-      matchFocusedVehicle(input.mensagem, input.stock, activeVehicle?.id) ??
+      matchFocusedVehicle(scopedMessage, input.stock, activeVehicle?.id) ??
       (generated
         ? matchFocusedVehicle(generated, input.stock, activeVehicle?.id)
         : undefined) ??
@@ -471,7 +484,7 @@ export async function runChatTurn(input: {
     const catalog =
       local && hasConsumptionFigures(local)
         ? local
-        : inferred && !asksAboutListedFacts(input.mensagem)
+        : inferred && !asksAboutListedFacts(scopedMessage)
           ? formatFocusedConsumptionReply(inferred)
           : local;
     if (catalog && (hasConsumptionFigures(catalog) || broken || !generated)) {
@@ -490,21 +503,21 @@ export async function runChatTurn(input: {
 
   if (
     !first.functionCall &&
-    (asksAboutEquipment(input.mensagem) ||
-      asksAboutNamedGear(input.mensagem) ||
-      asksAboutKm(input.mensagem))
+    (asksAboutEquipment(scopedMessage) ||
+      asksAboutNamedGear(scopedMessage) ||
+      asksAboutKm(scopedMessage))
   ) {
     const inferred =
-      matchFocusedVehicle(input.mensagem, input.stock, activeVehicle?.id) ??
+      matchFocusedVehicle(scopedMessage, input.stock, activeVehicle?.id) ??
       activeVehicle;
     const broken =
       equipmentReplyLooksBroken(generated) ||
       looksTruncated(generated, first.finishReason);
-    const kmOnly = asksAboutKm(input.mensagem) && !mixedPrice;
+    const kmOnly = asksAboutKm(scopedMessage) && !mixedPrice;
     if (inferred && (broken || kmOnly)) {
       const catalog = kmOnly
         ? formatFocusedKmReply(inferred)
-        : formatFocusedEquipmentReply(inferred, input.mensagem);
+        : formatFocusedEquipmentReply(inferred, scopedMessage);
       if (!generated || catalog.startsWith(generated)) {
         emit(generated ? catalog.slice(generated.length) : catalog);
       }
@@ -529,7 +542,7 @@ export async function runChatTurn(input: {
           const confirmation = await confirm({
             systemPrompt: systemPromptFor(),
             history: input.historico,
-            mensagem: input.mensagem,
+            mensagem: visitorMessage,
             modelContent: first.raw,
             functionName: "criar_lead",
             functionResult: { ok: true, leadId: created.id },

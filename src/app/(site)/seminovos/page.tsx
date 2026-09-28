@@ -43,7 +43,7 @@ export default async function SeminovosHubPage() {
         <PageHeader
           eyebrow={`${site.state} · loja digital`}
           title="Seminovos no Espírito Santo"
-          description="A Sua Garagem atende o Estado pelo site e WhatsApp — sem ponto físico obrigatório. Escolha a cidade para ver o estoque com texto local, ou vá direto aos anúncios."
+          description="A Sua Garagem atende o Estado pelo site e WhatsApp — sem ponto físico obrigatório. Escolha a cidade para ver como a gente atende aí, ou vá direto aos anúncios."
         />
 
         <nav aria-label="Você está aqui" className="mt-4 text-xs text-muted">

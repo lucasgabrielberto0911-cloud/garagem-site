@@ -6,7 +6,9 @@ import {
   galleryPreviewSrc,
   galleryPreviewSrcSet,
   galleryThumbSrc,
+  parseStockFilters,
   shouldLoadGallerySlide,
+  stockCityFilter,
   stockSortLabel,
   supabaseCardSrc,
   supabaseOriginalSrc,
@@ -66,6 +68,16 @@ test("galeria só baixa o slide ativo e os vizinhos", () => {
   assert.equal(shouldLoadGallerySlide(2, 0), false);
   assert.equal(shouldLoadGallerySlide(9, 10), true);
   assert.equal(shouldLoadGallerySlide(7, 10), false);
+});
+
+test("filtro de cidade só aceita onde o veículo está", () => {
+  assert.deepEqual(stockCityFilter("linhares"), { locationCity: "linhares" });
+  assert.deepEqual(stockCityFilter("Serra"), { locationCity: "serra" });
+  assert.deepEqual(stockCityFilter("vitoria"), {});
+  assert.deepEqual(stockCityFilter(""), {});
+  assert.equal(parseStockFilters({ city: "linhares" }).city, "linhares");
+  assert.equal(parseStockFilters({ city: "Vila Velha" }).city, undefined);
+  assert.equal(parseStockFilters({}).city, undefined);
 });
 
 test("rótulo de ordenação do estoque cai em mais recentes", () => {

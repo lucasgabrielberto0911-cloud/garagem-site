@@ -384,6 +384,7 @@ export default async function VehicleDetailPage({
                 km={vehicle.km}
                 transmission={display.transmission}
                 city={vehicleLocationLabel(vehicle.locationCity)}
+                plateEnd={vehicle.plateEnd}
               />
             </div>
           </div>
