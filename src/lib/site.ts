@@ -120,6 +120,7 @@ export type WhatsAppCampaign =
   | "estoque"
   | "filtro"
   | "home"
+  | "favoritos"
   | "chat"
   | "pwa";
 
@@ -223,6 +224,7 @@ export function whatsappCampaignFromPath(pathname: string): WhatsAppCampaign {
   if (isVehicleFichaPath(pathname)) return "ficha";
   const path = (pathname || "/").split("?")[0]?.replace(/\/+$/, "") || "/";
   if (path === "/estoque" || path.startsWith("/estoque")) return "estoque";
+  if (path === "/favoritos") return "favoritos";
   return "home";
 }
 
@@ -232,6 +234,7 @@ export function whatsappCampaignFromLabel(label: string): WhatsAppCampaign {
   if (key.includes("chat")) return "chat";
   if (key.includes("ficha")) return "ficha";
   if (key.includes("home")) return "home";
+  if (key.includes("favorit")) return "favoritos";
   if (key.includes("filtro")) return "filtro";
   if (
     key.includes("estoque") ||
@@ -241,6 +244,49 @@ export function whatsappCampaignFromLabel(label: string): WhatsAppCampaign {
     return "estoque";
   }
   return "home";
+}
+
+export type FavoritesWhatsAppVehicle = {
+  id: string;
+  path?: string | null;
+  label: string;
+};
+
+const FAVORITES_WHATSAPP_CAP = 4;
+
+/**
+ * Lista salva → WhatsApp. O recado leva modelo e ano.
+ * `vehicle_id` do pixel é o salvo por último (entra no topo da lista).
+ * `utm_content` junta os slugs, no máximo 80 caracteres.
+ */
+export function favoritesListWhatsApp(vehicles: FavoritesWhatsAppVehicle[]) {
+  const rows = vehicles.filter((vehicle) => vehicle.id || vehicle.label);
+  const labels = rows
+    .map((vehicle) => vehicle.label.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  const shown = labels.slice(0, FAVORITES_WHATSAPP_CAP);
+  const extra = labels.length - shown.length;
+  const message = labels.length
+    ? `Oi! Separei no site da ${WHATSAPP_BRAND}: ${shown.join(", ")}${
+        extra > 0 ? ` e mais ${extra}` : ""
+      }. Pode me passar as condições?`
+    : WHATSAPP_MESSAGES.similarFavorites;
+  const slugs = rows
+    .map((vehicle) =>
+      whatsappContentFromVehicle({ id: vehicle.id, path: vehicle.path }),
+    )
+    .filter(Boolean);
+  const primary = rows[0];
+  const slug = primary
+    ? whatsappContentFromVehicle({ id: primary.id, path: primary.path })
+    : "";
+  return {
+    message,
+    campaign: "favoritos" as const,
+    content: slugs.join(",").slice(0, 80) || undefined,
+    vehicleId: primary?.id || undefined,
+    slug: slug || undefined,
+  };
 }
 
 export function whatsappContentFromVehicle(input: {

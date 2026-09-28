@@ -1,0 +1,39 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+
+const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+function readSrc(rel: string) {
+  return readFileSync(join(srcRoot, rel), "utf8");
+}
+
+test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
+  const page = readSrc("app/(site)/page.tsx");
+  const hero = page.slice(page.indexOf("hero-red-black"), page.indexOf('id="destaques"'));
+  assert.match(hero, /trackingLabel="home-hero"/);
+  assert.match(hero, /Falar no WhatsApp/);
+  assert.match(hero, /href="\/estoque"/);
+  assert.match(hero, /Checagem de condição antes de entrar no estoque/);
+  assert.doesNotMatch(hero, /ChatOpenButton/);
+  assert.doesNotMatch(hero, /assistente/);
+  assert.match(page, /preload\(HERO_WORDMARK/);
+  const chat = page.indexOf("<ChatOpenButton");
+  assert.ok(chat > page.indexOf('id="destaques"'));
+  assert.match(page.slice(chat, chat + 220), /variant="outline"/);
+  assert.match(page.slice(chat, chat + 220), /source="home-final"/);
+});
+
+test("favoritos: lista no WhatsApp com id, e vazio aponta estoque", () => {
+  const list = readSrc("components/site/FavoritesList.tsx");
+  assert.match(list, /favoritesListWhatsApp/);
+  assert.match(list, /vehicleId=\{pack\.vehicleId\}/);
+  assert.match(list, /trackingLabel="favoritos-lista"/);
+  assert.match(list, /whatsappCampaign="favoritos"/);
+  assert.match(list, /href="\/estoque"/);
+  assert.match(list, /trackingLabel="favoritos-vazio"/);
+  assert.match(readSrc("lib/favorites.ts"), /garagem:favoritos/);
+  assert.match(readSrc("components/site/FavoriteButton.tsx"), /href="\/favoritos"/);
+});

@@ -53,7 +53,11 @@ export function FavoriteButton({
       toast.success(
         added ? `${label} salvo nos favoritos` : `${label} removido dos favoritos`,
         added
-          ? undefined
+          ? {
+              action: (
+                <a href="/favoritos">Ver lista</a>
+              ),
+            }
           : {
               action: {
                 label: "Desfazer",
