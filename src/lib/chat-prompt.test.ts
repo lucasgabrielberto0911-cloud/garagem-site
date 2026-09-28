@@ -7,7 +7,18 @@ import {
   CHAT_WHATSAPP_URL,
   buildChatSystemPrompt,
   formatStockForPrompt,
+  isPowerQuery,
   parseCheapIntent,
+  parseMinDisplacementLiters,
+  chatRankMode,
+  parseBodyStyleFilter,
+  parseEconomyIntent,
+  parseFamilyIntent,
+  parsePowerIntent,
+  parsePriceLimit,
+  parseStarterIntent,
+  rankByPower,
+  rankChatVehicles,
   stockSelectHasForbiddenField,
 } from "./chat-prompt";
 import { CHAT_VEHICLE_SELECT } from "./chat-stock";
@@ -58,6 +69,9 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /KM, câmbio e equipamentos/);
   assert.match(CHAT_SYSTEM_PROMPT, /Esse carro ainda tem/);
   assert.match(CHAT_SYSTEM_PROMPT, /Comparar dois modelos/);
+  assert.match(CHAT_SYSTEM_PROMPT, /Motor forte/);
+  assert.match(CHAT_SYSTEM_PROMPT, /pegada/);
+  assert.match(CHAT_SYSTEM_PROMPT, /1\.8\+/);
   assert.equal(CHAT_WHATSAPP_URL, "https://wa.me/5527996330706");
   assert.match(CHAT_SYSTEM_PROMPT, /https:\/\/wa\.me\/5527996330706/);
   assert.match(CHAT_SYSTEM_PROMPT, /ESCOPO RESTRITO/);
@@ -235,4 +249,207 @@ test("prompt com activeVehicle injeta contexto e regra de desambiguação", () =
   assert.match(prompt, /REGRA DE DESAMBIGUAÇÃO/);
   assert.match(prompt, /refira-se ESTRITAMENTE a esta unidade específica/);
   assert.match(prompt, /NÃO confunda com outras unidades do mesmo modelo/);
+});
+
+test("intenção forte reconhece apelidos e não vira pedido barato", () => {
+  for (const sample of [
+    "quero um carro forte",
+    "motorizado",
+    "motor forte",
+    "potente",
+    "com pegada",
+    "bastante torque",
+    "esportivo",
+    "1.8+",
+    "um 2.0",
+    "acima de 1.8",
+    "Automatico Forte, no maximo de 109 mil",
+  ]) {
+    assert.equal(parsePowerIntent(sample), true, sample);
+  }
+  assert.equal(parseCheapIntent("Automatico Forte, no maximo de 109 mil"), false);
+  assert.equal(parsePriceLimit("Automatico Forte, no maximo de 109 mil"), 109_000);
+  assert.equal(parseMinDisplacementLiters("quero um 2.0"), 2);
+  assert.equal(parseMinDisplacementLiters("1.8+"), 1.8);
+  assert.equal(parseMinDisplacementLiters("acima de 1.6"), 1.6);
+  assert.equal(parseMinDisplacementLiters("HB20 1.0"), null);
+  assert.equal(parsePowerIntent("HB20 1.0"), false);
+  assert.equal(parsePowerIntent("automático até 80 mil"), false);
+  assert.equal(parsePowerIntent("hb20 automatico baratinho"), false);
+  assert.equal(parsePowerIntent("conforto no transito"), false);
+  assert.equal(isPowerQuery("forte e barato até 80 mil"), false);
+  assert.equal(parseCheapIntent("forte e barato até 80 mil"), true);
+});
+
+test("rankByPower coloca 2.0 e TSI na frente de 1.0 e 1.6", () => {
+  const hb = {
+    model: "HB20",
+    version: "1.0",
+    engine: "1.0",
+    price: 55900,
+    km: 110000,
+    category: "carro",
+  };
+  const onix = {
+    model: "Onix",
+    version: "1.6",
+    engine: "1.6",
+    price: 58900,
+    km: 90000,
+    category: "carro",
+  };
+  const nivus = {
+    model: "Nivus",
+    version: "200 TSI",
+    engine: "1.0 TSI",
+    price: 99900,
+    km: 40000,
+    category: "carro",
+  };
+  const lancer = {
+    model: "Lancer",
+    version: "2.0",
+    engine: "2.0",
+    price: 62900,
+    km: 80000,
+    category: "carro",
+  };
+  const ranked = rankByPower([hb, onix, nivus, lancer], "carro forte");
+  assert.deepEqual(
+    ranked.map((vehicle) => vehicle.model),
+    ["Lancer", "Nivus", "Onix", "HB20"],
+  );
+  const byDisplacement = rankByPower([nivus, hb, lancer], "quero 2.0");
+  assert.equal(byDisplacement[0]?.model, "Lancer");
+  assert.ok(
+    byDisplacement.findIndex((vehicle) => vehicle.model === "Lancer") <
+      byDisplacement.findIndex((vehicle) => vehicle.model === "Nivus"),
+  );
+});
+
+test("prompt de automático forte lista 2.0 antes do 1.0 e não pede o mais barato", () => {
+  const line = (
+    brand: string,
+    model: string,
+    version: string,
+    engine: string,
+    price: number,
+    km: number,
+  ) => ({
+    brand,
+    model,
+    version,
+    year: 2014,
+    km,
+    price,
+    color: "Prata",
+    transmission: "Automático",
+    fuel: "Flex",
+    engine,
+    category: "carro",
+  });
+  const vehicles = [
+    line("Hyundai", "HB20", "Vision 1.0", "1.0", 55900, 110000),
+    line("Chevrolet", "Onix", "LT 1.6", "1.6", 58900, 90000),
+    line("Mitsubishi", "Lancer", "2.0", "2.0", 62900, 80000),
+    line("Honda", "Civic", "LXR 2.0", "2.0", 74900, 95000),
+    line("Toyota", "Corolla", "XEi 2.0", "2.0", 98900, 70000),
+  ];
+  const forte = buildChatSystemPrompt(
+    vehicles,
+    "Automatico Forte, no maximo de 109 mil",
+  );
+  assert.match(forte, /mais fortes primeiro/);
+  const filter = forte.split("FILTRO DO VISITANTE:").pop() ?? "";
+  assert.match(filter, /motor mais forte/);
+  assert.match(filter, /não abra pelo mais barato/i);
+  assert.doesNotMatch(filter, /mais em conta/);
+  const lancer = filter.search(/Lancer/i);
+  const civic = filter.search(/Civic/i);
+  const corolla = filter.search(/Corolla/i);
+  const hb = filter.search(/HB20/i);
+  assert.ok(lancer >= 0 && civic > lancer && corolla > civic);
+  assert.ok(hb < 0 || hb > corolla);
+
+  const cheap = buildChatSystemPrompt(vehicles, "automatico barato ate 109 mil");
+  assert.match(cheap, /mais baratos primeiro/);
+  assert.doesNotMatch(cheap, /mais fortes primeiro/);
+  assert.match(cheap, /FILTRO DO VISITANTE: até R\$ 109\.000/);
+  const cheapFilter = cheap.split("FILTRO DO VISITANTE:").pop() ?? "";
+  assert.ok(cheapFilter.indexOf("55.900") < cheapFilter.indexOf("62.900"));
+});
+
+test("intenções de família, primeiro carro, econômico e carroceria", () => {
+  assert.equal(parseFamilyIntent("carro para família, espaçoso, 4 portas"), true);
+  assert.equal(parseFamilyIntent("tem espaço no banco?"), false);
+  assert.equal(parseStarterIntent("primeiro carro para a cidade"), true);
+  assert.equal(parseStarterIntent("uber até 60 mil"), true);
+  assert.equal(parseStarterIntent("moro em Vitória"), false);
+  assert.equal(parseStarterIntent("chama no whatsapp"), false);
+  assert.equal(parseEconomyIntent("carro econômico até 70 mil"), true);
+  assert.equal(parseEconomyIntent("qual o consumo?"), false);
+  assert.equal(parseBodyStyleFilter("tem suv automático"), "suv");
+  assert.equal(parseBodyStyleFilter("quero um hatch"), "hatch");
+  assert.equal(parseBodyStyleFilter("sedan ou picape"), "pickup");
+  assert.equal(chatRankMode("suv forte até 90 mil"), "power");
+  assert.equal(chatRankMode("família até 90 mil"), "family");
+  assert.equal(chatRankMode("primeiro carro até 60 mil"), "starter");
+  assert.equal(chatRankMode("econômico até 70 mil"), "economy");
+  assert.equal(chatRankMode("barato e forte"), "cheap");
+  assert.equal(chatRankMode("até 80 mil"), "price");
+});
+
+test("ranking segue a intenção dominante sem inventar dado", () => {
+  const hb = {
+    model: "HB20",
+    version: "1.0",
+    engine: "1.0",
+    price: 55_900,
+    km: 40_000,
+    category: "carro",
+    doors: 4,
+  };
+  const civic = {
+    model: "Civic",
+    version: "LXR 2.0",
+    engine: "2.0",
+    price: 50_000,
+    km: 80_000,
+    category: "carro",
+    doors: 4,
+  };
+  const onix = {
+    model: "Onix",
+    version: "1.0",
+    engine: "1.0",
+    price: 80_000,
+    km: 20_000,
+    category: "carro",
+    doors: 4,
+  };
+  const compass = {
+    model: "Compass",
+    version: "Longitude",
+    engine: "2.0",
+    price: 120_000,
+    km: 30_000,
+    category: "carro",
+    doors: 4,
+  };
+  assert.deepEqual(
+    rankChatVehicles([civic, hb, onix], "carro econômico").map((row) => row.model),
+    ["HB20", "Onix", "Civic"],
+  );
+  assert.equal(
+    rankChatVehicles([civic, hb], "primeiro carro")[0]?.model,
+    "HB20",
+  );
+  assert.equal(
+    rankChatVehicles([onix, civic], "primeiro carro")[0]?.model,
+    "Civic",
+  );
+  assert.equal(
+    rankChatVehicles([hb, civic, compass], "carro para família")[0]?.model,
+    "Compass",
+  );
 });

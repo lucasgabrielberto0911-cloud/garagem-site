@@ -9,13 +9,29 @@ import {
 import { shortVersion } from "@/lib/vehicle-display";
 import {
   CHAT_WHATSAPP_URL,
+  chatRankMode,
+  engineDisplacementLiters,
   formatChatPrice,
+  hasNamedStrongEngine,
+  isPowerQuery,
+  parseBodyStyleFilter,
   parseCheapIntent,
+  parseEconomyIntent,
+  parseFamilyIntent,
   parsePriceLimit,
+  parseStarterIntent,
+  powerRankKey,
+  rankByPower,
+  rankChatVehicles,
+  stockEngineLabel,
+  vehicleBodyStyle,
+  type ChatRankMode,
   type ChatStockLine,
   type ChatStockPromptOpts,
 } from "@/lib/chat-prompt";
+import { isChatPing, isFipeQuestion, isOffScopeMessage } from "@/lib/chat-guard";
 import { isAnaphoricVehicleFollowUp } from "@/lib/chat-text";
+import type { ChatTurn } from "@/lib/chat-gemini";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 
 /** Teto da carga atual. Se o estoque chegar aqui, consultar pela pergunta — não só aumentar o take. */
@@ -176,7 +192,7 @@ export function parseVehicleCategoryFilter(
   const wantsMoto =
     /\b(moto|motos|motocicleta|motoca|scooter)\b/.test(folded) ||
     MOTO_NAME_HINT.test(folded);
-  const wantsCar = /\b(carro|carros|hatch|sedan|suv|pickup|caminhonete)\b/.test(
+  const wantsCar = /\b(carro|carros|hatch|sedan|suv|pickup|picape|caminhonete|perua|wagon)\b/.test(
     folded,
   );
   if (wantsMoto && !wantsCar) return "moto";
@@ -233,8 +249,15 @@ export function hasChatStockFilter(mensagem: string) {
   return (
     parseTransmissionFilter(mensagem) != null ||
     parsePriceLimit(mensagem) != null ||
-    parseVehicleCategoryFilter(mensagem) != null
+    parseVehicleCategoryFilter(mensagem) != null ||
+    parseBodyStyleFilter(mensagem) != null
   );
+}
+
+function filterStockByBody(stock: ChatVehicleRecord[], mensagem: string) {
+  const style = parseBodyStyleFilter(mensagem);
+  if (!style) return stock;
+  return stock.filter((vehicle) => vehicleBodyStyle(vehicle) === style);
 }
 
 function filterStockByPrice(stock: ChatVehicleRecord[], mensagem: string) {
@@ -251,6 +274,9 @@ export function applyChatStockFilters(
     filterStockByCategory(stock, mensagem),
     mensagem,
   );
+  if (parseBodyStyleFilter(mensagem)) {
+    next = filterStockByBody(next, mensagem);
+  }
   if (parseCheapIntent(mensagem)) {
     const modelPool = singleMentionedModelPool(next, mensagem);
     if (modelPool) next = modelPool;
@@ -269,6 +295,11 @@ export function relaxChatStockFilters(
   stock: ChatVehicleRecord[],
   mensagem: string,
 ) {
+  const withGear = filterStockByPrice(
+    filterStockByTransmission(filterStockByCategory(stock, mensagem), mensagem),
+    mensagem,
+  );
+  if (parseBodyStyleFilter(mensagem) && withGear.length > 0) return withGear;
   const withoutGear = filterStockByPrice(
     filterStockByCategory(stock, mensagem),
     mensagem,
@@ -441,13 +472,35 @@ export function selectVehiclesForChatPrompt(
   limit = CHAT_PROMPT_STOCK_LIMIT,
 ): ChatVehicleRecord[] {
   if (stock.length === 0) return [];
+  const mode = chatRankMode(mensagem);
+  const guided =
+    mode === "power" ||
+    mode === "family" ||
+    mode === "starter" ||
+    mode === "economy";
+  const narrow = (rows: ChatVehicleRecord[]) => {
+    let next = rows;
+    const geared = filterStockByTransmission(next, mensagem);
+    if (parseTransmissionFilter(mensagem) && geared.length > 0) next = geared;
+    const styled = filterStockByBody(next, mensagem);
+    if (parseBodyStyleFilter(mensagem) && styled.length > 0) next = styled;
+    const cap = parsePriceLimit(mensagem);
+    if (cap != null) {
+      const priced = next.filter((vehicle) => vehicle.price <= cap);
+      if (priced.length > 0) next = priced;
+    }
+    return guided ? rankChatVehicles(next, mensagem) : next;
+  };
   const compared = pickComparedModelVehicles(stock, mensagem);
   if (compared.length >= 2) {
-    return uniqueChatVehicles([activeVehicle, ...compared], limit);
+    const rows = guided ? narrow(compared) : compared;
+    return uniqueChatVehicles([activeVehicle, ...rows], limit);
   }
   const mentioned = mentionedModelGroups(stock, mensagem);
   if (mentioned.size > 0) {
-    const rows = [...mentioned.values()].flat();
+    const rows = guided
+      ? narrow([...mentioned.values()].flat())
+      : [...mentioned.values()].flat();
     return uniqueChatVehicles([activeVehicle, ...rows], limit);
   }
   const focused = matchFocusedVehicle(mensagem, stock, activeVehicle?.id);
@@ -463,8 +516,9 @@ export function selectVehiclesForChatPrompt(
   }
   const filtered = matchedChatStock(mensagem, stock);
   const pool = filtered.length > 0 ? filtered : stock;
-  const sorted =
-    parsePriceLimit(mensagem) != null || parseCheapIntent(mensagem)
+  const sorted = guided
+    ? rankChatVehicles(pool, mensagem)
+    : parsePriceLimit(mensagem) != null || parseCheapIntent(mensagem)
       ? [...pool].sort((a, b) => a.price - b.price)
       : pool;
   return uniqueChatVehicles([activeVehicle, ...sorted], limit);
@@ -546,7 +600,7 @@ export function matchInterestVehicle(
 }
 
 const GENERIC_STOCK_TOKEN =
-  /^(tem|vende|vendem|estoque|carro|carros|modelo|marca|ano|seminovo|preco|valor|qual|quanto|quais|ate|mil)$/;
+  /^(tem|vende|vendem|estoque|carro|carros|modelo|marca|ano|seminovo|preco|valor|qual|quanto|quais|ate|mil|forte|fortes|motorizado|motorizada|potente|potentes|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
 
 export function formatVehicleLine(vehicle: ChatVehicleRecord) {
   const version = shortVersion(vehicle.version, vehicle.model);
@@ -781,9 +835,18 @@ function formatConsumptionCompare(vehicles: ChatVehicleRecord[]) {
 /** Identifica se o visitante perguntou especificamente sobre consumo / economia de combustível. */
 export function asksAboutConsumption(mensagem: string): boolean {
   const folded = normalize(mensagem);
-  return /\b(consumo|km\s*l|kml|quanto faz|beb\w*|economico|economica|economia|gasta|gasto|litros?|autonomia)\b/.test(
-    folded,
-  );
+  if (
+    /\b(consumo|km\s*l|kml|quanto faz|beb\w*|gasta|gasto|litros?|autonomia)\b/.test(
+      folded,
+    )
+  ) {
+    return true;
+  }
+  if (!/\b(economico|economica|economia)\b/.test(folded)) return false;
+  if (/\b(e|eh)\s+econom/.test(folded)) return true;
+  if (parsePriceLimit(mensagem) != null) return false;
+  if (/\b(quero|procuro|mostrar|mostra|opcao|opcoes)\b/.test(folded)) return false;
+  return true;
 }
 
 export function asksAboutEquipment(mensagem: string): boolean {
@@ -933,12 +996,241 @@ export function isFocusedVehicleFactQuestion(
   return matchFocusedVehicle(mensagem, stock, preferredVehicleId) != null;
 }
 
+function describePowerRow(vehicle: ChatVehicleRecord, motor: string | null) {
+  const named = talkName(vehicle);
+  if (motor) {
+    return `${named.cap} está com motor ${motor}, ${formatChatKm(vehicle.km)}, ${formatChatPrice(vehicle.price)}.`;
+  }
+  return `${named.cap} sai por ${formatChatPrice(vehicle.price)}, com ${formatChatKm(vehicle.km)}.`;
+}
+
+function gearWord(vehicles: ChatVehicleRecord[]) {
+  if (vehicles.length === 0) return null;
+  if (vehicles.every(isAutomaticVehicle)) {
+    return vehicles.length > 1 ? "automáticos" : "automático";
+  }
+  if (vehicles.every(isManualVehicle)) {
+    return vehicles.length > 1 ? "manuais" : "manual";
+  }
+  return null;
+}
+
+function joinClauses(clauses: string[]) {
+  if (clauses.length <= 1) return clauses[0] ?? "";
+  if (clauses.length === 2) return `${clauses[0]} e ${clauses[1]}`;
+  return `${clauses.slice(0, -1).join(", ")} e ${clauses[clauses.length - 1]}`;
+}
+
+/** Compara os escolhidos pelo motor da ficha. Sem cv inventado e sem “mais em conta”. */
+function formatPowerCompare(vehicles: ChatVehicleRecord[]) {
+  const ranked = rankByPower(vehicles, "");
+  const rows = ranked.map((vehicle) => ({
+    vehicle,
+    motor: stockEngineLabel(vehicle),
+    key: powerRankKey(vehicle),
+  }));
+  const anyMotor = rows.some((row) => row.motor);
+  if (!anyMotor) {
+    const bits = joinClauses(
+      rows.map((row) => {
+        const named = talkName(row.vehicle);
+        return `${named.labeled} tem ${formatChatKm(row.vehicle.km)} e sai por ${formatChatPrice(row.vehicle.price)}`;
+      }),
+    );
+    return `A ficha não traz cilindrada destes, então não invento qual é o mais forte. ${bits}.`;
+  }
+
+  const topKey = rows[0]!.key;
+  const tied = rows.filter((row) => row.key === topKey);
+  const rest = rows.filter((row) => row.key !== topKey);
+  const moto = rows.every((row) => (row.vehicle.category ?? "carro") === "moto");
+  const plural = moto ? "as" : "os";
+
+  if (tied.length >= 2) {
+    const motors = [...new Set(tied.map((row) => row.motor).filter(Boolean))];
+    const subject = joinPtNames(tied.map((row) => talkName(row.vehicle).name));
+    const shared = motors.length === 1 ? motors[0] : null;
+    const gear = gearWord(tied.map((row) => row.vehicle));
+    const who = moto
+      ? tied.length === 2
+        ? "as duas"
+        : "todas"
+      : tied.length === 2
+        ? "os dois"
+        : "todos";
+    const motorBit = shared
+      ? gear
+        ? `${who} ${gear} com motor ${shared}`
+        : `${who} com motor ${shared}`
+      : null;
+    const lead = motorBit
+      ? `${subject} são ${plural} mais fortes da lista — ${motorBit}`
+      : `${subject} são ${plural} mais fortes da lista`;
+    const details = joinClauses(
+      tied.map((row) => {
+        const named = talkName(row.vehicle);
+        const motorExtra = !shared && row.motor ? ` com motor ${row.motor}` : "";
+        return `${named.labeled} tem ${formatChatKm(row.vehicle.km)}${motorExtra} e sai por ${formatChatPrice(row.vehicle.price)}`;
+      }),
+    );
+    const others = rest.length
+      ? ` ${joinClauses(rest.map((row) => describePowerRow(row.vehicle, row.motor).replace(/\.$/, "")))}.`
+      : "";
+    return `${lead}: ${details}.${others}`;
+  }
+
+  const hero = rows[0]!;
+  const heroName = talkName(hero.vehicle);
+  const gender = (hero.vehicle.category ?? "carro") === "moto" ? "a" : "o";
+  const gear = gearWord([hero.vehicle]);
+  const lead = hero.motor
+    ? `${heroName.cap} é ${gender} mais forte da lista — motor ${hero.motor}${gear ? `, ${gear}` : ""}, ${formatChatKm(hero.vehicle.km)}, ${formatChatPrice(hero.vehicle.price)}.`
+    : `${heroName.cap} entra na frente neste recorte — ${formatChatKm(hero.vehicle.km)}, ${formatChatPrice(hero.vehicle.price)}.`;
+  if (rows.length === 1) return lead;
+  const others = joinClauses(
+    rows.slice(1).map((row) => {
+      const named = talkName(row.vehicle);
+      const motor = row.motor ? `motor ${row.motor}, ` : "";
+      return `${named.labeled} tem ${motor}${formatChatKm(row.vehicle.km)} e sai por ${formatChatPrice(row.vehicle.price)}`;
+    }),
+  );
+  return `${lead} ${others.charAt(0).toUpperCase()}${others.slice(1)}.`;
+}
+
+const BODY_SPOKEN: Record<string, string> = {
+  suv: "SUV",
+  sedan: "sedan",
+  hatch: "hatch",
+  pickup: "picape",
+  wagon: "perua",
+};
+
+function formatFamilyCompare(vehicles: ChatVehicleRecord[]) {
+  const ranked = rankChatVehicles(vehicles, "carro para família");
+  const top = ranked[0];
+  if (!top) return "";
+  const anyDoors = vehicles.some((vehicle) => vehicle.doors != null && vehicle.doors > 0);
+  const anyBody = vehicles.some((vehicle) => vehicleBodyStyle(vehicle));
+  if (!anyDoors && !anyBody) {
+    const prices = joinClauses(
+      ranked.map(
+        (vehicle) =>
+          `${talkName(vehicle).cap} sai por ${formatChatPrice(vehicle.price)}`,
+      ),
+    );
+    return `A ficha não traz portas destes, então não invento porta-malas. ${prices}.`;
+  }
+  const topBody = vehicleBodyStyle(top);
+  const facts: string[] = [];
+  if (topBody) facts.push(BODY_SPOKEN[topBody] ?? topBody);
+  if (top.doors != null && top.doors > 0) facts.push(`${top.doors} portas`);
+  const gear = gearWord([top]);
+  if (gear) facts.push(gear);
+  const motor = stockEngineLabel(top);
+  if (motor) facts.push(`motor ${motor}`);
+  const factBit = facts.length ? ` — ${facts.join(", ")}` : "";
+  const lead = `${talkName(top).cap} é o mais espaçoso da lista${factBit}, ${formatChatKm(top.km)}, ${formatChatPrice(top.price)}.`;
+  const rest = ranked.slice(1);
+  if (rest.length === 0) return lead;
+  const others = joinClauses(
+    rest.map((vehicle) => {
+      const bits: string[] = [];
+      const body = vehicleBodyStyle(vehicle);
+      if (body) bits.push(BODY_SPOKEN[body] ?? body);
+      if (vehicle.doors != null && vehicle.doors > 0) {
+        bits.push(`${vehicle.doors} portas`);
+      }
+      const extra = bits.length ? ` (${bits.join(", ")})` : "";
+      return `${talkName(vehicle).labeled} sai por ${formatChatPrice(vehicle.price)}${extra}`;
+    }),
+  );
+  return `${lead} ${others.charAt(0).toUpperCase()}${others.slice(1)}.`;
+}
+
+function formatStarterCompare(vehicles: ChatVehicleRecord[]) {
+  const ranked = rankChatVehicles(vehicles, "primeiro carro");
+  const top = ranked[0];
+  if (!top) return "";
+  const body = vehicleBodyStyle(top);
+  const gear = gearWord([top]);
+  const motor = stockEngineLabel(top);
+  const hints = [
+    body ? (BODY_SPOKEN[body] ?? body) : null,
+    gear,
+    motor ? `motor ${motor}` : null,
+  ].filter(Boolean);
+  const hint = hints.length ? `, ${hints.join(", ")}` : "";
+  const lead = `Para primeiro carro, ${talkName(top).labeled} sai por ${formatChatPrice(top.price)}${hint}, com ${formatChatKm(top.km)}.`;
+  const rest = ranked.slice(1);
+  if (rest.length === 0) return lead;
+  const others = joinClauses(
+    rest.map(
+      (vehicle) =>
+        `${talkName(vehicle).labeled} fica em ${formatChatPrice(vehicle.price)}`,
+    ),
+  );
+  return `${lead} ${others.charAt(0).toUpperCase()}${others.slice(1)}.`;
+}
+
+function formatEconomyCompare(vehicles: ChatVehicleRecord[]) {
+  const ranked = rankChatVehicles(vehicles, "carro econômico");
+  const top = ranked[0];
+  if (!top) return "";
+  const motor = stockEngineLabel(top);
+  const gear = gearWord([top]);
+  const motorBit = motor ? `motor ${motor}` : "a ficha não traz cilindrada";
+  const gearBit = gear ? `, ${gear}` : "";
+  const lead = `${talkName(top).cap} é o de motor menor da lista — ${motorBit}${gearBit}, ${formatChatKm(top.km)}, ${formatChatPrice(top.price)}.`;
+  const rest = ranked.slice(1);
+  if (rest.length === 0) return lead;
+  const others = joinClauses(
+    rest.map((vehicle) => {
+      const label = stockEngineLabel(vehicle);
+      return label
+        ? `${talkName(vehicle).labeled} tem motor ${label} e sai por ${formatChatPrice(vehicle.price)}`
+        : `${talkName(vehicle).labeled} sai por ${formatChatPrice(vehicle.price)}`;
+    }),
+  );
+  return `${lead} ${others.charAt(0).toUpperCase()}${others.slice(1)}.`;
+}
+
 /** Compara os 2–3 anúncios da tela com dados reais. Consumo só se solicitado. */
 export function compareChatStockPicks(
   vehicles: ChatVehicleRecord[],
-  opts: { withLeadin?: boolean; includeConsumption?: boolean } = {},
+  opts: {
+    withLeadin?: boolean;
+    includeConsumption?: boolean;
+    power?: boolean;
+    intent?: ChatRankMode;
+  } = {},
 ) {
   if (vehicles.length === 0) return "";
+  const intent = opts.intent ?? (opts.power ? "power" : "default");
+  if ((intent === "power" || opts.power) && vehicles.length >= 2) {
+    const body = opts.includeConsumption
+      ? `${formatPowerCompare(vehicles)}\n\n${formatConsumptionCompare(vehicles)}`
+      : formatPowerCompare(vehicles);
+    if (opts.withLeadin === false) return body;
+    return `Vou te ajudar a escolher.\n\n${body}`;
+  }
+  if (
+    (intent === "family" || intent === "starter" || intent === "economy") &&
+    vehicles.length >= 2
+  ) {
+    const body =
+      intent === "family"
+        ? formatFamilyCompare(vehicles)
+        : intent === "starter"
+          ? formatStarterCompare(vehicles)
+          : formatEconomyCompare(vehicles);
+    const withConsumption =
+      opts.includeConsumption && body
+        ? `${body}\n\n${formatConsumptionCompare(vehicles)}`
+        : body;
+    if (!withConsumption) return "";
+    if (opts.withLeadin === false) return withConsumption;
+    return `Vou te ajudar a escolher.\n\n${withConsumption}`;
+  }
   if (vehicles.length === 1) {
     const vehicle = vehicles[0]!;
     const base = `Achei no estoque: ${talkName(vehicle).cap} ${vehicle.yearModel}, ${vehicle.transmission}, ${formatChatKm(vehicle.km)}, ${formatChatPrice(vehicle.price)}.`;
@@ -1129,6 +1421,83 @@ export function chatFilterIntro(mensagem: string) {
   const gear = parseTransmissionFilter(mensagem);
   const category = parseVehicleCategoryFilter(mensagem);
   const ceiling = budget != null ? `até ${formatChatPrice(budget)}` : "";
+  const power = isPowerQuery(mensagem);
+  const mode = chatRankMode(mensagem);
+  const body = parseBodyStyleFilter(mensagem);
+  const bodyLabel =
+    body === "suv"
+      ? "SUVs"
+      : body === "sedan"
+        ? "sedans"
+        : body === "hatch"
+          ? "hatches"
+          : body === "pickup"
+            ? "picapes"
+            : body === "wagon"
+              ? "peruas"
+              : "";
+  const intentLabel =
+    mode === "family"
+      ? "mais espaçosos"
+      : mode === "starter"
+        ? "para primeiro carro"
+        : mode === "economy"
+          ? "de motor menor"
+          : "";
+
+  if (power && bodyLabel && gear === "automatico" && ceiling) {
+    return `Olha só: ${bodyLabel} automáticos mais fortes ${ceiling} no estoque agora.`;
+  }
+  if (!power && intentLabel && gear === "automatico" && ceiling) {
+    return bodyLabel
+      ? `Olha só: ${bodyLabel} automáticos ${intentLabel} ${ceiling} no estoque agora.`
+      : `Olha só: automáticos ${intentLabel} ${ceiling} no estoque agora.`;
+  }
+  if (!power && mode === "starter" && ceiling && gear !== "automatico") {
+    const gearLabel = gear === "manual" ? "manuais " : "";
+    return bodyLabel
+      ? `Olha só: ${bodyLabel} ${gearLabel}para primeiro carro ${ceiling} no estoque agora.`
+      : `Olha só: ${gearLabel}para primeiro carro, ${ceiling} no estoque agora.`;
+  }
+  if (!power && intentLabel && ceiling) {
+    return bodyLabel
+      ? `Olha só: ${bodyLabel} ${intentLabel} ${ceiling} no estoque agora.`
+      : `Olha só: os ${intentLabel} ${ceiling} no estoque agora.`;
+  }
+  if (!power && bodyLabel && gear === "automatico" && ceiling) {
+    return `Olha só: ${bodyLabel} automáticos ${ceiling} no estoque agora.`;
+  }
+  if (!power && bodyLabel && ceiling) {
+    return `Olha só: ${bodyLabel} ${ceiling} no estoque agora.`;
+  }
+  if (!power && mode === "starter") {
+    return "Olha só: opções para primeiro carro no estoque agora.";
+  }
+  if (!power && intentLabel) {
+    return `Olha só: os ${intentLabel} do estoque agora.`;
+  }
+  if (!power && bodyLabel) {
+    return `Olha só: ${bodyLabel} do estoque agora.`;
+  }
+
+  if (power && gear === "automatico" && ceiling) {
+    return category === "moto"
+      ? `Olha só: motos automáticas mais fortes ${ceiling} no estoque agora.`
+      : `Olha só: automáticos mais fortes ${ceiling} no estoque agora.`;
+  }
+  if (power && gear === "manual" && ceiling) {
+    return `Olha só: manuais mais fortes ${ceiling} no estoque agora.`;
+  }
+  if (power && category === "moto" && ceiling) {
+    return `Olha só: motos mais fortes ${ceiling} no estoque agora.`;
+  }
+  if (power && ceiling) {
+    return `Olha só: os mais fortes ${ceiling} no estoque agora.`;
+  }
+  if (power && gear === "automatico") {
+    return "Olha só: automáticos mais fortes do estoque agora.";
+  }
+  if (power) return "Olha só: os mais fortes do estoque agora.";
 
   if (gear === "automatico" && ceiling) {
     return category === "moto"
@@ -1152,11 +1521,34 @@ export function chatFilterIntro(mensagem: string) {
   return "";
 }
 
+function powerAsideSentence(
+  heroes: ChatVehicleRecord[],
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+) {
+  if (!isPowerQuery(mensagem)) return "";
+  const heroIds = new Set(heroes.map((vehicle) => vehicle.id));
+  const aside = matchedChatStock(mensagem, stock)
+    .filter((vehicle) => !heroIds.has(vehicle.id))
+    .filter((vehicle) => (vehicle.category ?? "carro") !== "moto")
+    .filter((vehicle) => {
+      const liters = engineDisplacementLiters(vehicle);
+      if (hasNamedStrongEngine(vehicle)) return false;
+      return liters == null || liters < 1.8;
+    })
+    .sort((a, b) => a.price - b.price || a.km - b.km)[0];
+  if (!aside) return "";
+  const motor = stockEngineLabel(aside);
+  const motorBit = motor ? `motor ${motor}` : "motor menor";
+  return ` Se quiser só gastar menos, ${talkName(aside).labeled} tem ${motorBit} e sai por ${formatChatPrice(aside.price)}.`;
+}
+
 /** Comparação sempre dos cards na tela — o modelo não pode falar de outro carro. */
 export function enrichChatStockReply(
   reply: string,
   vehicles: ChatVehicleRecord[],
   mensagem = "",
+  stock: ChatVehicleRecord[] = vehicles,
 ) {
   if (vehicles.length === 0) return reply;
   if (
@@ -1220,13 +1612,22 @@ export function enrichChatStockReply(
     }
   }
   if (vehicles.length >= 2) {
-    const intro = chatListIntro(reply) || chatFilterIntro(mensagem);
+    const mode = chatRankMode(mensagem);
+    const power = mode === "power";
+    const guided =
+      power || mode === "family" || mode === "starter" || mode === "economy";
+    const intro = guided
+      ? chatFilterIntro(mensagem) || chatListIntro(reply)
+      : chatListIntro(reply) || chatFilterIntro(mensagem);
     const compare = compareChatStockPicks(vehicles, {
       withLeadin: !intro,
       includeConsumption: wantsConsumption,
+      power,
+      intent: mode,
     });
     if (!compare) return reply;
-    return intro ? `${intro.trim()}\n\n${compare}` : compare;
+    const aside = power ? powerAsideSentence(vehicles, mensagem, stock) : "";
+    return intro ? `${intro.trim()}\n\n${compare}${aside}` : `${compare}${aside}`;
   }
   if (replyAlreadyCompares(reply, vehicles)) {
     if (
@@ -1283,9 +1684,20 @@ export function isIncompleteStockReply(reply: string) {
 export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) {
   const limit = parsePriceLimit(mensagem);
   if (limit == null) return null;
-  const matches = applyChatStockFilters(stock, mensagem)
-    .filter((vehicle) => vehicle.price <= limit)
-    .sort((a, b) => a.price - b.price);
+  const mode = chatRankMode(mensagem);
+  const power = mode === "power";
+  const guided =
+    power || mode === "family" || mode === "starter" || mode === "economy";
+  let matches = applyChatStockFilters(stock, mensagem).filter(
+    (vehicle) => vehicle.price <= limit,
+  );
+  if (guided) {
+    const mentioned = singleMentionedModelPool(matches, mensagem);
+    if (mentioned) matches = mentioned;
+    matches = rankChatVehicles(matches, mensagem);
+  } else {
+    matches.sort((a, b) => a.price - b.price);
+  }
   const ceiling = `R$ ${limit.toLocaleString("pt-BR")}`;
   if (matches.length === 0) {
     return (
@@ -1294,21 +1706,100 @@ export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) 
     );
   }
   const picks = matches.slice(0, 3);
-  const cheapestId = picks[0]?.id;
-  const minPickPrice = picks[0]?.price;
+  const cheapestId = [...picks].sort((a, b) => a.price - b.price)[0]?.id;
+  const minPickPrice = [...picks].sort((a, b) => a.price - b.price)[0]?.price;
   const uniqueCheap =
     picks.filter((vehicle) => vehicle.price === minPickPrice).length === 1;
   const lowestKmId = [...picks].sort((a, b) => a.km - b.km)[0]?.id;
+  const strongestId = picks[0]?.id;
   const lines = picks.map((vehicle) => {
     const bits: string[] = [];
-    if (uniqueCheap && vehicle.id === cheapestId) bits.push("mais em conta");
+    if (power && vehicle.id === strongestId && stockEngineLabel(vehicle)) {
+      bits.push("mais forte");
+    } else if (mode === "family" && vehicle.id === strongestId) {
+      bits.push("mais espaço");
+    } else if (mode === "starter" && vehicle.id === strongestId) {
+      bits.push("para começar");
+    } else if (
+      mode === "economy" &&
+      vehicle.id === strongestId &&
+      stockEngineLabel(vehicle)
+    ) {
+      bits.push("menor motor");
+    } else if (!guided && uniqueCheap && vehicle.id === cheapestId) {
+      bits.push("mais em conta");
+    }
     if (vehicle.id === lowestKmId) bits.push("menor km");
     if (/automatic/.test(normalize(vehicle.transmission))) bits.push("automático");
     const why = bits.length ? ` — ${bits.join(", ")}` : "";
     return `${formatVehicleLine(vehicle)}${why}`;
   });
   const wantsConsumption = asksAboutConsumption(mensagem);
-  return `Beleza — até ${ceiling}, estes aqui fazem sentido pra começar.\n${lines.join("\n")}\n\n${compareChatStockPicks(picks, { withLeadin: false, includeConsumption: wantsConsumption })}`;
+  const lead = power
+    ? `Beleza — até ${ceiling}, estes são os mais fortes que cabem agora.`
+    : mode === "family"
+      ? `Beleza — até ${ceiling}, estes são os mais espaçosos que cabem agora.`
+      : mode === "starter"
+        ? `Beleza — até ${ceiling}, estes servem para um primeiro carro.`
+        : mode === "economy"
+          ? `Beleza — até ${ceiling}, estes são os de motor menor que cabem agora.`
+          : `Beleza — até ${ceiling}, estes aqui fazem sentido pra começar.`;
+  return `${lead}\n${lines.join("\n")}\n\n${compareChatStockPicks(picks, { withLeadin: false, includeConsumption: wantsConsumption, power, intent: mode })}`;
+}
+
+export function listStockByPower(mensagem: string, stock: ChatVehicleRecord[]) {
+  if (!isPowerQuery(mensagem) || parsePriceLimit(mensagem) != null) return null;
+  if (singleMentionedModelPool(stock, mensagem)) return null;
+  const matches = rankByPower(applyChatStockFilters(stock, mensagem), mensagem);
+  if (matches.length === 0) return null;
+  const picks = matches.slice(0, 3);
+  const lines = picks.map((vehicle) => formatVehicleLine(vehicle));
+  const wantsConsumption = asksAboutConsumption(mensagem);
+  return `Beleza — estes são os mais fortes que achei agora.\n${lines.join("\n")}\n\n${compareChatStockPicks(picks, { withLeadin: false, includeConsumption: wantsConsumption, power: true })}`;
+}
+
+export function listStockByIntent(mensagem: string, stock: ChatVehicleRecord[]) {
+  const mode = chatRankMode(mensagem);
+  if (mode !== "family" && mode !== "starter" && mode !== "economy") return null;
+  if (parsePriceLimit(mensagem) != null) return null;
+  if (singleMentionedModelPool(stock, mensagem)) return null;
+  const matches = rankChatVehicles(
+    applyChatStockFilters(stock, mensagem),
+    mensagem,
+  );
+  if (matches.length === 0) return null;
+  const picks = matches.slice(0, 3);
+  const lines = picks.map((vehicle) => formatVehicleLine(vehicle));
+  const lead =
+    mode === "family"
+      ? "Beleza — estes são os mais espaçosos que achei agora."
+      : mode === "starter"
+        ? "Beleza — estes servem para um primeiro carro."
+        : "Beleza — estes são os de motor menor que achei agora.";
+  return `${lead}\n${lines.join("\n")}\n\n${compareChatStockPicks(picks, { withLeadin: false, intent: mode })}`;
+}
+
+export function listStockByBody(mensagem: string, stock: ChatVehicleRecord[]) {
+  if (!parseBodyStyleFilter(mensagem)) return null;
+  if (parsePriceLimit(mensagem) != null) return null;
+  const mode = chatRankMode(mensagem);
+  if (
+    mode === "power" ||
+    mode === "family" ||
+    mode === "starter" ||
+    mode === "economy" ||
+    mode === "cheap"
+  ) {
+    return null;
+  }
+  if (singleMentionedModelPool(stock, mensagem)) return null;
+  const matches = [...applyChatStockFilters(stock, mensagem)].sort(
+    (a, b) => a.price - b.price,
+  );
+  if (matches.length === 0) return null;
+  const picks = matches.slice(0, 3);
+  const lines = picks.map((vehicle) => formatVehicleLine(vehicle));
+  return `Beleza — olha o que tem nessa carroceria agora.\n${lines.join("\n")}\n\n${compareChatStockPicks(picks, { withLeadin: false })}`;
 }
 
 export function listStockByCheap(mensagem: string, stock: ChatVehicleRecord[]) {
@@ -1356,7 +1847,10 @@ export function similarAfterEmptyFilter(
 }
 
 const WAITLIST_STOP =
-  /^(tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|chegou|chegar|sim|nao|mais|barato|baratinho)$/;
+  /^(tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares)$/;
+
+const INTENT_SEEK_NOISE =
+  /^(forte|fortes|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
 
 function waitlistInterestBits(mensagem: string) {
   return normalize(mensagem)
@@ -1389,7 +1883,129 @@ export function formatChatWaitlistQuery(mensagem: string) {
   if (gear === "manual" && !named.includes("manual")) bits.push("manual");
   if (limit != null) bits.push(`até ${formatChatPrice(limit)}`);
   if (parseCheapIntent(mensagem) && limit == null) bits.push("mais em conta");
+  if (isPowerQuery(mensagem) && !bits.some((bit) => /\bforte\b/.test(bit))) {
+    bits.push("forte");
+  }
+  if (parseFamilyIntent(mensagem) && !bits.some((bit) => /famil/.test(bit))) {
+    bits.push("família");
+  }
+  if (parseStarterIntent(mensagem) && !bits.some((bit) => /primeiro/.test(bit))) {
+    bits.push("primeiro carro");
+  }
+  if (parseEconomyIntent(mensagem) && !bits.some((bit) => /econom/.test(bit))) {
+    bits.push("econômico");
+  }
+  const body = parseBodyStyleFilter(mensagem);
+  if (body && !bits.some((bit) => bit.includes(body === "wagon" ? "perua" : body))) {
+    bits.push(body === "wagon" ? "perua" : body);
+  }
   return bits.join(" ").replace(/\s+/g, " ").trim();
+}
+
+function explicitRank(mensagem: string): ChatRankMode | null {
+  const mode = chatRankMode(mensagem);
+  if (mode === "price" || mode === "default") return null;
+  return mode;
+}
+
+function skipsChatMemory(mensagem: string) {
+  if (!mensagem.trim()) return true;
+  if (isOffScopeMessage(mensagem) || isFipeQuestion(mensagem) || isChatPing(mensagem)) {
+    return true;
+  }
+  if (chatPolicyShortcut(mensagem)) return true;
+  if (
+    asksAboutKm(mensagem) ||
+    asksAboutEquipment(mensagem) ||
+    asksAboutAvailability(mensagem) ||
+    asksAboutNamedGear(mensagem) ||
+    asksAboutConsumption(mensagem)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+const RANK_WORD: Partial<Record<ChatRankMode, string>> = {
+  power: "forte",
+  family: "família",
+  starter: "primeiro carro",
+  economy: "econômico",
+  cheap: "barato",
+};
+
+/**
+ * Junta orçamento, câmbio, intenção e modelo já ditos pelo visitante.
+ * Histórico vazio (Nova conversa) não herda nada. Não lê o texto do assistente.
+ */
+export function scopeChatMessage(
+  mensagem: string,
+  historico: Array<Pick<ChatTurn, "role" | "content">>,
+  stock: ChatVehicleRecord[],
+) {
+  const current = mensagem.trim();
+  if (skipsChatMemory(current)) return current;
+  const prior = historico
+    .filter((turn) => turn.role === "user" && turn.content.trim())
+    .map((turn) => turn.content.trim());
+  if (prior.length === 0) return current;
+
+  let price: number | null = null;
+  let gear: "automatico" | "manual" | null = null;
+  let body: ReturnType<typeof parseBodyStyleFilter> = null;
+  let category: "carro" | "moto" | null = null;
+  let rank: ChatRankMode | null = null;
+  const modelNames: string[] = [];
+
+  for (const text of prior) {
+    const nextPrice = parsePriceLimit(text);
+    if (nextPrice != null) price = nextPrice;
+    const nextGear = parseTransmissionFilter(text);
+    if (nextGear) gear = nextGear;
+    const nextBody = parseBodyStyleFilter(text);
+    if (nextBody) body = nextBody;
+    const nextCategory = parseVehicleCategoryFilter(text);
+    if (nextCategory) category = nextCategory;
+    const nextRank = explicitRank(text);
+    if (nextRank) rank = nextRank;
+    const groups = mentionedModelGroups(stock, text);
+    if (groups.size > 0) {
+      modelNames.length = 0;
+      for (const group of groups.values()) {
+        const name = group[0]?.model;
+        if (name && !modelNames.includes(name)) modelNames.push(name);
+      }
+    }
+  }
+
+  const append: string[] = [];
+  if (parsePriceLimit(current) == null && price != null) {
+    append.push(`até ${Math.round(price / 1000)} mil`);
+  }
+  if (parseTransmissionFilter(current) == null && gear) {
+    append.push(gear === "automatico" ? "automático" : "manual");
+  }
+  if (parseBodyStyleFilter(current) == null && body) {
+    append.push(body === "wagon" ? "perua" : body);
+  }
+  if (parseVehicleCategoryFilter(current) == null && category) {
+    append.push(category);
+  }
+  const currentRank = explicitRank(current);
+  if (currentRank == null && rank) {
+    const word = RANK_WORD[rank];
+    if (word) append.push(word);
+  }
+  const currentModels = mentionedModelGroups(stock, current);
+  if (
+    currentModels.size === 0 &&
+    parseBodyStyleFilter(current) == null &&
+    modelNames.length > 0
+  ) {
+    append.push(modelNames.slice(0, 3).join(" "));
+  }
+  if (append.length === 0) return current;
+  return `${current} ${append.join(" ")}`.replace(/\s+/g, " ").trim();
 }
 
 export function chatWaitlistWhatsAppUrl(mensagem: string) {
@@ -1607,7 +2223,9 @@ export function seeksMissingNamedModel(
   if (parsePriceLimit(mensagem) != null && waitlistInterestBits(mensagem).length === 0) {
     return false;
   }
-  const tokens = waitlistInterestBits(mensagem);
+  const tokens = waitlistInterestBits(mensagem).filter(
+    (token) => !INTENT_SEEK_NOISE.test(token),
+  );
   if (tokens.length === 0) return false;
   if (!NAMED_STOCK_SEEK.test(folded)) return false;
   if (singleMentionedModelPool(stock, mensagem)) return false;
@@ -1645,6 +2263,12 @@ export function localGarageReply(
   if (byBudget) return byBudget;
   const byCheap = listStockByCheap(mensagem, stock);
   if (byCheap) return byCheap;
+  const byPower = listStockByPower(mensagem, stock);
+  if (byPower) return byPower;
+  const byIntent = listStockByIntent(mensagem, stock);
+  if (byIntent) return byIntent;
+  const byBody = listStockByBody(mensagem, stock);
+  if (byBody) return byBody;
   if (/\bgarantia\b/.test(text)) {
     return CHAT_WARRANTY_REPLY;
   }

@@ -1,13 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  chatSessionHints,
   chatWhatsAppCta,
   displayChatText,
+  formatChatHandoffMessage,
   lastShownChatVehicles,
   lastSingleChatVehicleId,
   resolveChatRequestVehicleId,
   splitChatLinks,
 } from "./chat-text";
+import { whatsappUrl } from "./site";
 
 test("transforma o wa.me em link com rótulo WhatsApp", () => {
   const parts = splitChatLinks(
@@ -171,5 +174,63 @@ test("nomeia o Fox dos cards mostrados e não pega outro anúncio da lista", () 
     }),
     "c-fox-1",
   );
+});
+
+test("handoff do chat leva modelo, câmbio e teto reais, com UTM", () => {
+  const text = formatChatHandoffMessage({
+    vehicles: [
+      {
+        brand: "Mitsubishi",
+        model: "Lancer",
+        version: "2.0",
+        category: "carro",
+      },
+    ],
+    priceLimit: 109_000,
+    transmission: "automatico",
+  });
+  assert.match(
+    text,
+    /Oi! Vi o Mitsubishi Lancer 2\.0 automático até R\$\s*109\.000 no site da Garagem e quero saber mais\./,
+  );
+  assert.equal(formatChatHandoffMessage({}), "Oi! Vi o site da Garagem e quero ajuda pra escolher um seminovo.");
+  const href = whatsappUrl(text, { campaign: "chat" });
+  assert.match(href, /utm_source=site/);
+  assert.match(href, /utm_medium=whatsapp/);
+  assert.match(href, /utm_campaign=chat/);
+  assert.match(decodeURIComponent(href), /Mitsubishi Lancer 2\.0/);
+
+  const hints = chatSessionHints([
+    { role: "assistant", content: "Olha o HB20 por R$ 55.900." },
+    { role: "user", content: "automático até 100 mil" },
+    { role: "user", content: "quero mais forte" },
+  ]);
+  assert.equal(hints.priceLimit, 100_000);
+  assert.equal(hints.transmission, "automatico");
+
+  const cta = chatWhatsAppCta(
+    "Chama no WhatsApp: https://wa.me/5527996330706",
+    {
+      label: "Mitsubishi Lancer 2.0",
+      brand: "Mitsubishi",
+      model: "Lancer",
+      version: "2.0",
+      year: 2014,
+      price: 62_900,
+      path: "/estoque/lancer",
+    },
+    {
+      handoff: {
+        vehicles: [
+          { brand: "Mitsubishi", model: "Lancer", version: "2.0" },
+        ],
+        priceLimit: 109_000,
+        transmission: "automatico",
+      },
+    },
+  );
+  assert.match(decodeURIComponent(cta?.href ?? ""), /Lancer 2\.0 automático até R\$\s*109\.000/);
+  assert.match(cta?.href ?? "", /utm_campaign=chat/);
+  assert.doesNotMatch(decodeURIComponent(cta?.href ?? ""), /Creta|inventad/);
 });
 
