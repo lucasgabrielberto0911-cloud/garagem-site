@@ -286,7 +286,8 @@ export function EstoqueBrowse({
                         : "Não tem essa combinação agora. Me avisa no WhatsApp o que você procura — a gente chama quando entrar."
                       : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
                 </p>
-                <div className="mt-5 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+                <div className="mt-5 flex flex-col items-center gap-3">
+                  <div className="flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:items-center">
                   <SiteLeadHit
                     contentName="Avise-me"
                     searchString={
@@ -313,6 +314,12 @@ export function EstoqueBrowse({
                       variant="outline"
                     />
                   ) : null}
+                  </div>
+                  <p className="max-w-md text-[11px] leading-relaxed text-muted">
+                    {filtered
+                      ? "Abre o WhatsApp com o que você filtrou, para avisar quando chegar."
+                      : "Abre o WhatsApp para você dizer o que procura."}
+                  </p>
                 </div>
               </div>
             }

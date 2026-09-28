@@ -30,6 +30,9 @@ test("CTAs da ficha passam pelo helper ficha — não reutilizam home", () => {
   assert.match(bar, /fichaWhatsAppTracking/);
   assert.match(bar, /Tenho interesse/);
   assert.match(bar, /Mais opções/);
+  assert.match(bar, /no WhatsApp/);
+  assert.doesNotMatch(bar, /IntersectionObserver/);
+  assert.doesNotMatch(bar, /translate-y-full/);
   assert.doesNotMatch(bar, /campaign:\s*"home"/);
 
   assert.match(actions, /fichaWhatsAppTracking/);
@@ -43,7 +46,11 @@ test("Ajuda na ficha é in-page, sem sticky no topo e sem FAB duplicado", () => 
   assert.doesNotMatch(page, /sticky[\s\S]{0,200}ChatOpenButton/);
   assert.doesNotMatch(page, /source="ficha-header"/);
   assert.match(page, /source="ficha"/);
-  assert.match(page, /variant="solid"/);
+  assert.match(page, /variant="outline"/);
+  assert.ok(
+    page.indexOf("<WhatsAppButton") < page.indexOf("<ChatOpenButton"),
+    "WhatsApp precisa vir antes do chat na ficha",
+  );
 
   assert.match(
     css,
@@ -105,7 +112,11 @@ test("primeira foto da galeria é a única com prioridade alta", () => {
   assert.match(gallery, /priority=\{index === 0\}/);
   assert.match(gallery, /index === active \|\|/);
   assert.match(gallery, /showThumbs/);
-  assert.match(gallery, /sizes="\(min-width: 1024px\) 60vw, 100vw"/);
+  assert.match(gallery, /GALLERY_HERO_SIZES/);
+  assert.match(
+    readSrc("lib/stock-query.ts"),
+    /GALLERY_HERO_SIZES =\s*\n\s*"\(min-width: 1280px\) 740px, \(min-width: 1024px\) 58vw, 100vw"/,
+  );
   assert.match(gallery, /sizes="96px"/);
   assert.match(header, /headerWordmarkPriority\(pathname\)/);
   assert.doesNotMatch(gallery, /downloadAttachment/);
@@ -117,6 +128,7 @@ test("dobra da ficha não cresce quando a barra do navegador volta", () => {
   const start = css.indexOf(".ficha-mobile-fold {");
   const fold = css.slice(start, start + 500);
   assert.match(fold, /100svh/);
+  assert.match(fold, /--ficha-sticky-bar/);
   assert.match(fold, /overflow-anchor:\s*none/);
   assert.doesNotMatch(fold, /100dvh/);
   assert.match(page, /ficha-mobile-fold min-w-0/);

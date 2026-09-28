@@ -20,6 +20,7 @@ import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { VehicleDossierChips } from "@/components/site/VehicleDossierChips";
+import { VehiclePurchaseFacts } from "@/components/site/VehiclePurchaseFacts";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
@@ -35,7 +36,12 @@ import { vehicleLocationLabel } from "@/lib/vehicle-location";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
 import { priceBandHref } from "@/lib/related-vehicles";
-import { galleryPreviewSrc, galleryPreviewSrcSet } from "@/lib/stock-query";
+import {
+  GALLERY_HERO_SIZES,
+  galleryPreviewSrc,
+  galleryPreviewSrcSet,
+} from "@/lib/stock-query";
+import { publicDossierChips, publicPurchaseFacts } from "@/lib/vehicle-dossier";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
   collapseDuplicateAccessories,
@@ -156,8 +162,14 @@ export default async function VehicleDetailPage({
   const path = vehiclePath(vehicle);
   const hero = vehicle.photos[0];
   const heroSrc = hero ? galleryPreviewSrc(hero) : "";
-  if (heroSrc && !galleryPreviewSrcSet(hero)) {
-    preload(heroSrc, { as: "image", fetchPriority: "high" });
+  const heroSet = hero ? galleryPreviewSrcSet(hero) : undefined;
+  if (heroSrc) {
+    preload(heroSrc, {
+      as: "image",
+      fetchPriority: "high",
+      imageSrcSet: heroSet,
+      imageSizes: heroSet ? GALLERY_HERO_SIZES : undefined,
+    });
   }
   const fichaTrack = fichaWhatsAppTracking({ id: vehicle.id, path });
   const sold = vehicle.status === "vendido";
@@ -239,6 +251,17 @@ export default async function VehicleDetailPage({
 
   const hasDetails =
     Boolean(vehicle.description) || accessories.length > 0;
+  const dossierChips = publicDossierChips({
+    hasSpareKey: vehicle.hasSpareKey,
+    hasManual: vehicle.hasManual,
+    hasVideo: vehicle.hasVideo,
+  });
+  const purchaseFacts = publicPurchaseFacts({
+    inspection: vehicle.inspection,
+    warranty: vehicle.warranty,
+    accessories,
+  });
+  const showConfirmed = dossierChips.length > 0 || purchaseFacts.length > 0;
   const updatedLabel = vehicle.updatedAt
     ? formatUpdatedAt(vehicle.updatedAt)
     : "";
@@ -361,20 +384,6 @@ export default async function VehicleDetailPage({
                 km={vehicle.km}
                 transmission={display.transmission}
                 city={vehicleLocationLabel(vehicle.locationCity)}
-                soldHref={related.length > 0 ? "#mesma-faixa" : "/estoque"}
-                soldLabel={
-                  related.length > 0 ? "Ver na mesma faixa" : "Ver estoque disponível"
-                }
-                whatsapp={{
-                  contentId: vehicle.id,
-                  contentName: fullLabel,
-                  slug: canonicalSlug,
-                  make: formatBrandName(vehicle.brand),
-                  model: formatModelName(vehicle.model),
-                  message: whatsapp.interest,
-                  trackingContent: fichaTrack.content,
-                  ...autoHit,
-                }}
               />
             </div>
           </div>
@@ -411,12 +420,6 @@ export default async function VehicleDetailPage({
                   />
                 ) : null}
               </div>
-              <VehicleDossierChips
-                hasSpareKey={vehicle.hasSpareKey}
-                hasManual={vehicle.hasManual}
-                hasVideo={vehicle.hasVideo}
-              />
-
               <div>
                 <h1 className="font-display text-[1.65rem] font-bold leading-tight tracking-tight text-cream sm:text-2xl sm:text-[1.75rem]">
                   {title}
@@ -436,47 +439,29 @@ export default async function VehicleDetailPage({
                 )}
               </p>
               {!sold ? <VehicleTrustNotes /> : null}
-              {vehicle.createdAt || updatedLabel ? (
-                <p className="text-xs text-muted">
-                  <ListedAgo
-                    listedAt={
-                      vehicle.createdAt
-                        ? new Date(vehicle.createdAt).toISOString()
-                        : null
-                    }
-                    updatedLabel={updatedLabel}
+              {showConfirmed ? (
+                <div className="space-y-2">
+                  <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                    Confirmado neste anúncio
+                  </p>
+                  <VehicleDossierChips
+                    hasSpareKey={vehicle.hasSpareKey}
+                    hasManual={vehicle.hasManual}
+                    hasVideo={vehicle.hasVideo}
                   />
-                </p>
-              ) : null}
-              {!sold ? (
-                <GoogleReviewsBadge
-                  reviews={google}
-                  className="mt-0 border-white/10"
+                  <VehiclePurchaseFacts
+                    inspection={vehicle.inspection}
+                    warranty={vehicle.warranty}
+                    accessories={accessories}
+                  />
+                </div>
+              ) : (
+                <VehicleDossierChips
+                  hasSpareKey={vehicle.hasSpareKey}
+                  hasManual={vehicle.hasManual}
+                  hasVideo={vehicle.hasVideo}
                 />
-              ) : null}
-
-              <dl className="ficha-spec-grid grid grid-cols-2 gap-2 border-y border-white/10 py-3.5 text-sm">
-                {specs.map((spec) => (
-                  <div
-                    key={spec.label}
-                    className="min-w-0 border border-white/10 bg-asphalt/40 px-3 py-2.5"
-                  >
-                    <dt className="text-[11px] uppercase tracking-wider text-muted">
-                      {spec.label === "Disponível em" ? "Cidade" : spec.label}
-                    </dt>
-                    {/* Sem truncate: valores longos da ficha precisam aparecer inteiros. */}
-                    <dd
-                      className={`mt-0.5 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
-                        spec.empty
-                          ? "font-medium text-muted"
-                          : "font-semibold text-cream"
-                      }`}
-                    >
-                      {spec.value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
+              )}
 
               {sold ? (
                 <Link
@@ -509,6 +494,9 @@ export default async function VehicleDetailPage({
                       Tenho interesse
                     </WhatsAppButton>
                   </VehicleLeadHit>
+                  <p className="text-[11px] leading-relaxed text-muted">
+                    Abre o WhatsApp com este anúncio — modelo, ano e preço.
+                  </p>
 
                   <VehicleQuickActions
                     contentId={vehicle.id}
@@ -524,21 +512,72 @@ export default async function VehicleDetailPage({
                     finance={whatsapp.finance}
                     trade={whatsapp.trade}
                   />
+                  <p className="-mt-2 text-[11px] leading-relaxed text-muted">
+                    Simular, troca e vídeo também abrem o WhatsApp deste veículo.
+                  </p>
 
                   <ChatOpenButton
                     source="ficha"
                     prompt={`Tenho dúvida sobre o ${title}`}
-                    size="lg"
-                    variant="solid"
+                    size="md"
+                    variant="outline"
                     className="w-full"
                   />
+                  <p className="text-[11px] leading-relaxed text-muted">
+                    Dúvida breve no site. Preço, visita e proposta seguem no WhatsApp.
+                  </p>
+                </>
+              )}
 
+              <dl className="ficha-spec-grid grid grid-cols-2 gap-2 border-y border-white/10 py-3.5 text-sm">
+                {specs.map((spec) => (
+                  <div
+                    key={spec.label}
+                    className="min-w-0 border border-white/10 bg-asphalt/40 px-3 py-2.5"
+                  >
+                    <dt className="text-[11px] uppercase tracking-wider text-muted">
+                      {spec.label === "Disponível em" ? "Cidade" : spec.label}
+                    </dt>
+                    {/* Sem truncate: valores longos da ficha precisam aparecer inteiros. */}
+                    <dd
+                      className={`mt-0.5 font-display text-sm leading-snug [overflow-wrap:anywhere] ${
+                        spec.empty
+                          ? "font-medium text-muted"
+                          : "font-semibold text-cream"
+                      }`}
+                    >
+                      {spec.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+
+              {vehicle.createdAt || updatedLabel ? (
+                <p className="text-xs text-muted">
+                  <ListedAgo
+                    listedAt={
+                      vehicle.createdAt
+                        ? new Date(vehicle.createdAt).toISOString()
+                        : null
+                    }
+                    updatedLabel={updatedLabel}
+                  />
+                </p>
+              ) : null}
+              {!sold ? (
+                <GoogleReviewsBadge
+                  reviews={google}
+                  className="mt-0 border-white/10"
+                />
+              ) : null}
+
+              {!sold ? (
+                <>
                   <p className="text-[11px] leading-relaxed text-muted">
                     Financiamento em até 60x e cartão em até 18x. O consultor
                     calcula a parcela no WhatsApp — o site não publica valor de
                     parcela. Sujeito a análise de crédito e CET.
                   </p>
-
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
                     <Link
                       href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
@@ -548,7 +587,7 @@ export default async function VehicleDetailPage({
                     </Link>
                   </div>
                 </>
-              )}
+              ) : null}
 
               {!sold ? (
                 <VehicleConditions
@@ -624,6 +663,7 @@ export default async function VehicleDetailPage({
           accessories={accessories}
           specs={specs}
           inspection={vehicle.inspection}
+          warranty={vehicle.warranty}
           hasSpareKey={vehicle.hasSpareKey}
           hasManual={vehicle.hasManual}
           hasVideo={vehicle.hasVideo}

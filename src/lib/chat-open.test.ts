@@ -21,15 +21,19 @@ test("o botão do chat usa exatamente “Ajuda para escolher”, sem “pra”",
   assert.match(CHAT_HELP_LABEL, /\bpara\b/);
 });
 
-test("ficha: Ajuda para escolher é vermelho sólido, sem fundo asfalto", () => {
-  const blocks = chatOpenBlocks(readSrc("app/(site)/estoque/[id]/page.tsx"));
+test("ficha: Ajuda para escolher fica abaixo do WhatsApp, em contorno", () => {
+  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const blocks = chatOpenBlocks(page);
   assert.equal(blocks.length, 1);
   for (const block of blocks) {
-    assert.match(block, /variant="solid"/);
+    assert.match(block, /variant="outline"/);
+    assert.doesNotMatch(block, /variant="solid"/);
     assert.doesNotMatch(block, /bg-asphalt/);
   }
   assert.match(blocks.join("\n"), /source="ficha"/);
   assert.doesNotMatch(blocks.join("\n"), /source="ficha-header"/);
+  assert.ok(page.indexOf("<WhatsAppButton") < page.indexOf("<ChatOpenButton"));
+  assert.ok(page.indexOf("<VehicleQuickActions") < page.indexOf("<ChatOpenButton"));
 });
 
 test("home não herda o vermelho sólido da ficha", () => {

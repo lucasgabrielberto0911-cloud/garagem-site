@@ -18,6 +18,8 @@
     #ffc72c 100%
   );
   --admin-nav-h: 0px;
+  /* Barra fixa da ficha. A primeira dobra desconta esta altura para a foto não ficar embaixo. */
+  --ficha-sticky-bar: calc(5.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 @media (max-width: 1023px) {
@@ -101,7 +103,7 @@ body {
   }
 
   .pb-sticky-bar-safe {
-    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--ficha-sticky-bar) + 0.75rem);
   }
 
   /* Compensa header fixo + notch (altura alinhada ao SiteHeader). */
@@ -846,8 +848,8 @@ textarea:-webkit-autofill:focus {
 }
 
 /*
- * Primeira dobra da ficha no celular: foto + dados + WhatsApp
- * cabem na altura útil (abaixo do header, acima do fim da tela).
+ * Primeira dobra da ficha no celular: foto + dados cabem na altura útil
+ * (abaixo do header, acima da barra fixa de WhatsApp).
  * svh não muda quando a barra do navegador some e volta no scroll —
  * dvh esticava a dobra e deixava um vão no topo ao subir de novo.
  */
@@ -855,7 +857,9 @@ textarea:-webkit-autofill:focus {
   .ficha-mobile-fold {
     display: flex;
     flex-direction: column;
-    height: calc(100svh - 4.5rem - env(safe-area-inset-top, 0px));
+    height: calc(
+      100svh - 4.5rem - env(safe-area-inset-top, 0px) - var(--ficha-sticky-bar)
+    );
     margin-left: -1rem;
     margin-right: -1rem;
     width: calc(100% + 2rem);
@@ -866,7 +870,7 @@ textarea:-webkit-autofill:focus {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    min-height: 0;
+    min-height: 8rem;
   }
 
   .ficha-mobile-photo .gallery-root {

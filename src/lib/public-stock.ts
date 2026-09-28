@@ -38,6 +38,7 @@ export const PUBLIC_VEHICLE_CARD_SELECT = {
   status: true,
   featured: true,
   color: true,
+  locationCity: true,
   updatedAt: true,
   photos: {
     orderBy: { order: "asc" as const },

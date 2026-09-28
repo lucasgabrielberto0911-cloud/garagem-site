@@ -617,14 +617,16 @@ export function StockFilters({ facets }: { facets: Facets }) {
               setOpen(true);
             }}
             className="inline-flex min-h-11 shrink-0 items-center gap-1.5 border border-white/15 px-2.5 font-display text-[10px] font-semibold uppercase tracking-wide text-cream"
+            aria-expanded={open}
+            aria-controls="painel-filtros"
             aria-label={
               activeFilterCount > 0
-                ? `Mais filtros, ${activeFilterCount} ativos`
-                : "Mais filtros"
+                ? `Abrir filtros, ${activeFilterCount} ativos`
+                : "Abrir filtros"
             }
           >
             <FilterIcon />
-            Mais
+            Filtros
             {activeFilterCount > 0 ? (
               <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] text-white">
                 {activeFilterCount}
@@ -700,6 +702,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
             tabIndex={-1}
             role="dialog"
             aria-modal="true"
+            id="painel-filtros"
             aria-labelledby="titulo-filtros"
             className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto overscroll-contain border-t border-white/10 bg-ink animate-slide-up pb-safe focus:outline-none"
           >
@@ -713,10 +716,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex h-11 w-11 items-center justify-center border border-white/15 text-cream"
-                aria-label="Fechar"
+                className="inline-flex min-h-11 items-center gap-1.5 border border-white/15 px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream"
               >
-                <IconClose className="h-5 w-5" />
+                <IconClose className="h-4 w-4" />
+                Fechar
               </button>
             </div>
 
