@@ -1081,7 +1081,8 @@ textarea:-webkit-autofill:focus {
 
 @media (max-width: 1023px) {
   .hero-red-orb {
-    filter: blur(40px);
+    /* Sem blur largo no celular: o gradiente já some na borda e o filtro pesava o scroll. */
+    filter: none;
     animation: none;
     will-change: auto;
   }

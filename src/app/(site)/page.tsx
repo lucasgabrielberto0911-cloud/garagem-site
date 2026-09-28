@@ -124,7 +124,7 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="flex flex-col items-center justify-center py-5 text-center sm:py-10 lg:py-12">
+        <Container className="flex flex-col items-center justify-center py-4 text-center sm:py-10 lg:py-12">
           <div className="hero-brand">
             <SiteWordmark size="hero" priority className="mx-auto" />
           </div>
@@ -137,7 +137,7 @@ export default async function HomePage() {
               Seminovos com procedência em {site.region}. Estoque no site,
               conversa no WhatsApp — das 8h às 23h.
             </p>
-            <ul className="mx-auto mt-4 flex max-w-lg flex-col gap-1.5 text-sm leading-snug text-cream sm:text-base">
+            <ul className="mx-auto mt-4 hidden max-w-lg flex-col gap-1.5 text-sm leading-snug text-cream sm:flex sm:text-base">
               <li>Checagem de condição antes de entrar no estoque.</li>
               <li>Procedência conferida. Documentação alinhada na transferência.</li>
             </ul>
@@ -170,7 +170,7 @@ export default async function HomePage() {
             <HeroSearch brands={brands} />
           </div>
 
-          <div className="hero-stats mx-auto mt-5 w-full max-w-2xl sm:mt-8 lg:mt-8">
+          <div className="hero-stats mx-auto mt-5 hidden w-full max-w-2xl sm:mt-8 sm:block lg:mt-8">
             <Suspense fallback={<StatsBarSkeleton />}>
               <StatsBar />
             </Suspense>
@@ -225,6 +225,12 @@ export default async function HomePage() {
             Ver todos os veículos
             <IconArrowRight className="h-4 w-4" />
           </Link>
+        </div>
+
+        <div className="mx-auto mt-8 w-full max-w-2xl sm:hidden">
+          <Suspense fallback={<StatsBarSkeleton />}>
+            <StatsBar />
+          </Suspense>
         </div>
 
         <div className="mt-8">
