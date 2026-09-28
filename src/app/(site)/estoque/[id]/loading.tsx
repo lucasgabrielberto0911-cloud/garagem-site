@@ -11,18 +11,27 @@ export default function VehicleDetailLoading() {
           <div className="ficha-mobile-photo">
             <div className="gallery-frame skeleton min-h-[9rem] flex-1 border border-white/10" />
           </div>
-          <div className="ficha-mobile-sheet px-4 pb-4 pt-4">
-            <div className="skeleton h-7 w-4/5" />
-            <div className="skeleton mt-2 h-8 w-36" />
-            <div className="mt-3.5 grid grid-cols-2 gap-2">
+          <div className="ficha-mobile-sheet px-4 pb-3 pt-3">
+            <div className="skeleton h-6 w-4/5" />
+            <div className="skeleton mt-2 h-7 w-36" />
+            <div className="mt-2.5 grid grid-cols-2 gap-1.5">
               {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="border border-white/10 bg-ink px-3 py-2.5">
-                  <div className="skeleton h-2.5 w-10" />
-                  <div className="skeleton mt-2 h-4 w-16" />
+                <div key={index} className="border border-white/10 bg-ink px-2.5 py-2">
+                  <div className="skeleton h-2 w-10" />
+                  <div className="skeleton mt-1 h-3.5 w-16" />
                 </div>
               ))}
             </div>
-            <div className="skeleton mt-3.5 h-[52px] w-full" />
+          </div>
+        </div>
+        <div
+          data-vehicle-mobile-bar=""
+          aria-hidden="true"
+          className="fixed inset-x-0 bottom-0 z-40 box-border min-h-[var(--ficha-sticky-bar)] border-t border-white/15 bg-asphalt px-3 pt-2 lg:hidden"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="skeleton h-8 w-28" />
+            <div className="skeleton h-12 w-36" />
           </div>
         </div>
 

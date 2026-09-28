@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
 import { vehiclePhotoAlt } from "@/lib/format";
 import {
+  GALLERY_HERO_SIZES,
   galleryPreviewSrc,
   galleryPreviewSrcSet,
   galleryThumbSrc,
@@ -149,7 +150,7 @@ export function VehicleGallery({
             src={null}
             alt={alt}
             fill
-            sizes="(min-width: 1024px) 60vw, 100vw"
+            sizes={GALLERY_HERO_SIZES}
             className="object-cover"
           />
         </div>
@@ -188,7 +189,7 @@ export function VehicleGallery({
                     src={galleryPreviewSrc(photo)}
                     alt={vehiclePhotoAlt(alt, index, total)}
                     fill
-                    sizes="(min-width: 1024px) 60vw, 100vw"
+                    sizes={GALLERY_HERO_SIZES}
                     srcSet={galleryPreviewSrcSet(photo)}
                     priority={index === 0}
                     className="object-cover [-webkit-touch-callout:none]"

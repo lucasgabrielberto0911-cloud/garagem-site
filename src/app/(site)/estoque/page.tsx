@@ -5,13 +5,15 @@ import {
   EstoqueBrowse,
   EstoqueBrowseFallback,
 } from "@/components/site/EstoqueBrowse";
+import { StockCatalogGate } from "@/components/site/StockCatalogGate";
+import { StockCatalogLinks } from "@/components/site/StockCatalogLinks";
 import { StockFilters } from "@/components/site/StockFilters";
 import { StockBrowseShell } from "@/components/site/StockPending";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader } from "@/components/site/ui";
 import { buildPageMetadata, itemListJsonLd } from "@/lib/seo";
 import { site } from "@/lib/site";
-import { getStockFacets, getStockPage } from "@/lib/vehicles";
+import { getStockCatalogLinks, getStockFacets, getStockPage } from "@/lib/vehicles";
 
 export const revalidate = 600;
 
@@ -22,16 +24,18 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function EstoquePage() {
-  const [stock, facets] = await Promise.all([
+  const [stock, facets, catalog] = await Promise.all([
     getStockPage({ page: 1 }),
     getStockFacets(),
+    getStockCatalogLinks(),
   ]);
+  const listed = catalog.length > 0 ? catalog : stock.vehicles;
 
   return (
     <div className="py-10 lg:py-12">
-      {stock.vehicles.length > 0 ? (
+      {listed.length > 0 ? (
         <JsonLd
-          data={itemListJsonLd(stock.vehicles, {
+          data={itemListJsonLd(listed, {
             name: `Estoque — ${site.name}`,
             path: "/estoque",
           })}
@@ -60,6 +64,12 @@ export default async function EstoquePage() {
             </Suspense>
           }
         />
+
+        <Suspense fallback={<StockCatalogLinks vehicles={catalog} />}>
+          <StockCatalogGate>
+            <StockCatalogLinks vehicles={catalog} />
+          </StockCatalogGate>
+        </Suspense>
 
         <div className="mt-10">
           <WantedVehicleCta description="Não achou no filtro? Diz o modelo e a faixa — a gente avisa no WhatsApp, das 8h às 23h, quando entrar." />

@@ -46,7 +46,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
         </div>
         <button
           type="submit"
-          className="min-h-[48px] bg-brand px-6 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] touch-manipulation"
+          className="min-h-[52px] bg-brand px-6 py-3 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] touch-manipulation"
         >
           Buscar
         </button>
@@ -67,9 +67,6 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
         ))}
       </div>
 
-      <p className="mt-1.5 text-center text-[10px] uppercase tracking-wider text-muted sm:hidden">
-        Deslize as faixas
-      </p>
       {brands.length > 0 ? (
         <div className="chip-scroll mt-2 -mx-1 px-1">
           <span className="shrink-0 text-xs uppercase tracking-wider text-muted">

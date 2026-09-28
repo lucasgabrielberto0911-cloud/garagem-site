@@ -118,6 +118,7 @@ export type FavoriteSnapshot = {
   status: string;
   featured: boolean;
   color?: string | null;
+  locationCity?: string | null;
   updatedAt?: string | null;
   photos: Array<{ url: string; thumbnailUrl?: string | null }>;
 };

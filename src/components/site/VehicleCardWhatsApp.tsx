@@ -7,6 +7,7 @@ import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
 import {
   WHATSAPP_MESSAGES,
   whatsappCampaignFromLabel,
+  whatsappContentFromVehicle,
   whatsappUrl,
   type WhatsAppCampaign,
 } from "@/lib/site";
@@ -23,6 +24,7 @@ export function VehicleCardWhatsApp({
   make,
   model,
   year,
+  path,
   className = "",
   variant = "bar",
   trackingLabel = "vehicle-card",
@@ -35,6 +37,7 @@ export function VehicleCardWhatsApp({
   make: string;
   model: string;
   year: number;
+  path?: string;
   className?: string;
   variant?: "bar" | "icon";
   trackingLabel?: string;
@@ -42,9 +45,10 @@ export function VehicleCardWhatsApp({
 }) {
   const icon = variant === "icon";
   const text = message ?? WHATSAPP_MESSAGES.vehicle(label);
+  const content = whatsappContentFromVehicle({ id: vehicleId, path });
   const href = whatsappUrl(text, {
     campaign: campaign ?? whatsappCampaignFromLabel(trackingLabel),
-    content: vehicleId,
+    content,
   });
   return (
     <VehicleLeadHit
@@ -60,7 +64,7 @@ export function VehicleCardWhatsApp({
         target="_blank"
         rel="noopener noreferrer"
         onClick={(event) => {
-          trackWhatsAppClick(trackingLabel, { vehicleId });
+          trackWhatsAppClick(trackingLabel, { vehicleId, slug: content });
           if (typeof navigator !== "undefined" && !navigator.onLine) {
             event.preventDefault();
             void queueWhatsAppIfOffline({

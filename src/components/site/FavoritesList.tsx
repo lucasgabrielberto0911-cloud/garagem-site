@@ -6,12 +6,12 @@ import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import type { VehicleCardData } from "@/components/site/VehicleCard";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
-import { WhatsAppButton } from "@/components/site/ui";
+import { ButtonLink, WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
 import { snapshotsForIds, writeFavoriteSnapshot } from "@/lib/offline-queue";
 import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
 import { trackLead } from "@/lib/meta-pixel";
-import { WHATSAPP_BRAND, WHATSAPP_MESSAGES } from "@/lib/site";
+import { favoritesListWhatsApp, WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export function FavoritesList() {
@@ -83,8 +83,22 @@ export function FavoritesList() {
           Não conseguimos carregar seus favoritos
         </p>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-          Verifique sua conexão e tente de novo.
+          A lista continua salva neste aparelho. Verifique a conexão ou siga
+          pelo estoque e pelo WhatsApp.
         </p>
+        <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+          <ButtonLink href="/estoque" size="lg" className="w-full sm:w-auto">
+            Ver estoque
+          </ButtonLink>
+          <WhatsAppButton
+            className="w-full sm:w-auto"
+            size="lg"
+            trackingLabel="favoritos-vazio"
+            message={WHATSAPP_MESSAGES.similarFavorites}
+          >
+            Falar no WhatsApp
+          </WhatsAppButton>
+        </div>
       </div>
     );
   }
@@ -96,36 +110,43 @@ export function FavoritesList() {
           Você ainda não salvou nenhum veículo
         </p>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-          Toque no coração dos veículos que te interessam e eles ficam guardados
-          aqui, neste aparelho. Sem lista ainda? Pede no WhatsApp um seminovo
-          parecido com o que você procura.
+          No estoque, toque no coração. O veículo fica guardado neste aparelho,
+          sem cadastro.
         </p>
-        <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-          <Link
-            href="/estoque"
-            className="inline-flex min-h-[48px] items-center justify-center bg-brand px-6 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:text-sm"
-          >
+        <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <ButtonLink href="/estoque" size="lg" className="w-full sm:w-auto">
             Ver estoque
-          </Link>
+          </ButtonLink>
           <WhatsAppButton
+            className="w-full sm:w-auto"
+            size="lg"
             trackingLabel="favoritos-vazio"
             message={WHATSAPP_MESSAGES.similarFavorites}
             variant="solid"
           >
-            Pedir carros parecidos
+            Pedir no WhatsApp
           </WhatsAppButton>
           <ChatOpenButton
             source="favoritos-vazio"
             prompt="Quero ajuda para escolher um veículo"
             variant="outline"
+            className="w-full sm:w-auto"
           />
         </div>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
+          O estoque abre a lista. O WhatsApp abre para você dizer o que procura.
+        </p>
       </div>
     );
   }
 
-  const missing = ids.length - vehicles.length;
-  const compare = vehicles.slice(0, 4);
+  const ordered = [...vehicles].sort((a, b) => {
+    const ai = ids.indexOf(a.id);
+    const bi = ids.indexOf(b.id);
+    return (ai < 0 ? ids.length : ai) - (bi < 0 ? ids.length : bi);
+  });
+  const missing = ids.length - ordered.length;
+  const compare = ordered.slice(0, 4);
 
   return (
     <div>
@@ -242,40 +263,57 @@ export function FavoritesList() {
       ) : null}
 
       <div className="mt-6">
-        <VehicleGrid vehicles={vehicles} />
+        <VehicleGrid
+          vehicles={ordered}
+          returnTo="/favoritos"
+          whatsappCampaign="favoritos"
+        />
       </div>
 
-      <div className="mx-auto mt-12 max-w-2xl border border-brand/40 bg-ink p-8 text-center">
+      <div className="mx-auto mt-12 max-w-2xl border border-brand/40 bg-ink p-6 text-center sm:p-8">
         <p className="font-display text-base font-semibold text-cream">
           Quer condições para um desses?
         </p>
         <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-muted">
-          Manda a lista no WhatsApp que a gente monta a proposta com as opções de
-          pagamento e avaliação do seu usado.
+          Abre o WhatsApp com os veículos que você salvou — modelo e ano. A
+          proposta de pagamento e a avaliação do seu usado seguem por lá.
         </p>
         <span
           className="contents"
           onClickCapture={() => {
             trackLead({
-              content_ids: vehicles.map((vehicle) => vehicle.id),
+              content_ids: ordered.map((vehicle) => vehicle.id),
               content_name: "Favoritos",
             });
           }}
         >
-          <WhatsAppButton
-            className="mt-5"
-            size="lg"
-            trackingLabel="favoritos-lista"
-            message={`Oi! Separei alguns veículos no site da ${WHATSAPP_BRAND}: ${vehicles
-              .map((vehicle) =>
-                formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel),
-              )
-              .join(", ")}. Pode me passar as condições?`}
-          >
-            Enviar minha lista
-          </WhatsAppButton>
+          <FavoritesListWhatsApp vehicles={ordered} />
         </span>
       </div>
     </div>
+  );
+}
+
+function FavoritesListWhatsApp({ vehicles }: { vehicles: VehicleCardData[] }) {
+  const pack = favoritesListWhatsApp(
+    vehicles.map((vehicle) => ({
+      id: vehicle.id,
+      path: vehiclePath(vehicle),
+      label: formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel),
+    })),
+  );
+  return (
+    <WhatsAppButton
+      className="mt-5 w-full sm:w-auto"
+      size="lg"
+      trackingLabel="favoritos-lista"
+      campaign={pack.campaign}
+      content={pack.content}
+      vehicleId={pack.vehicleId}
+      slug={pack.slug}
+      message={pack.message}
+    >
+      Enviar minha lista no WhatsApp
+    </WhatsAppButton>
   );
 }

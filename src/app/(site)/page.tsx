@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { preload } from "react-dom";
 import { JsonLd } from "@/components/JsonLd";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { SiteWordmark } from "@/components/site/SiteWordmark";
@@ -52,22 +53,26 @@ export const metadata = buildPageMetadata({
 const REASONS = [
   {
     Icon: IconClipboardCheck,
-    title: "Vistoria completa",
-    text: "Todo veículo passa por checagem de procedência e condição geral antes de entrar no estoque. Você sabe o que está comprando, com informação clara.",
+    title: "Vistoria da loja",
+    text: "Olhamos a condição geral antes de anunciar. O que vimos, contamos no atendimento.",
   },
   {
     Icon: IconShieldCheck,
-    title: "Procedência verificada",
-    text: "Histórico, débitos e restrições consultados com cuidado. Nada de surpresa depois da transferência — a documentação sai alinhada.",
+    title: "Procedência conferida",
+    text: "Histórico, débitos e restrições a gente consulta antes. A documentação sai alinhada na transferência.",
   },
   {
     Icon: IconHandshake,
     title: "Negociação clara",
-    text: "Preço no anúncio, sem enrolação. Avaliamos seu usado e explicamos financiamento em até 60x e cartão em até 18x — a parcela o consultor calcula no WhatsApp.",
+    text: "O preço está no anúncio. Financiamento em até 60x e cartão em até 18x — a parcela o consultor calcula no WhatsApp.",
   },
 ] as const;
 
+const HERO_WORDMARK = "/branding/logo-wordmark.webp";
+
 export default async function HomePage() {
+  preload(HERO_WORDMARK, { as: "image", fetchPriority: "high" });
+
   const [featured, brands, testimonials, publicSite, siteContent, faqItems] =
     await Promise.all([
     getFeaturedVehicles(MAX_HOME_FEATURED),
@@ -119,47 +124,49 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="flex flex-col items-center justify-center py-6 text-center sm:py-10 lg:py-14">
+        <Container className="flex flex-col items-center justify-center py-5 text-center sm:py-10 lg:py-12">
           <div className="hero-brand">
             <SiteWordmark size="hero" priority className="mx-auto" />
           </div>
 
-          <div className="hero-text mt-4 sm:mt-6 lg:mt-8">
-            <h1 className="mx-auto max-w-3xl font-display text-[1.65rem] font-bold leading-[1.15] tracking-tight text-cream sm:text-4xl lg:text-[2.75rem]">
+          <div className="hero-text mt-4 sm:mt-5 lg:mt-6">
+            <h1 className="mx-auto max-w-3xl font-display text-[1.85rem] font-bold leading-[1.12] tracking-tight text-cream sm:text-4xl lg:text-[2.75rem]">
               Encontre seu <span className="text-brand">próximo seminovo</span>
             </h1>
-            <div
-              className="mx-auto mt-3 h-1 w-16 bg-brand-gradient sm:mt-4 sm:w-20 lg:mt-5"
-              aria-hidden="true"
-            />
-            <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-cream/80 sm:mt-4 sm:text-base lg:mt-5">
-              Seminovos com procedência em {site.region} e região. Veja o
-              estoque, chame no WhatsApp ou peça uma ajuda rápida no assistente
-              — atendimento online todos os dias, das 8h às 23h.
+            <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-cream/85 sm:text-lg">
+              Seminovos com procedência em {site.region}. Estoque no site,
+              conversa no WhatsApp — das 8h às 23h.
             </p>
+            <ul className="mx-auto mt-4 flex max-w-lg flex-col gap-1.5 text-sm leading-snug text-cream sm:text-base">
+              <li>Checagem de condição antes de entrar no estoque.</li>
+              <li>Procedência conferida. Documentação alinhada na transferência.</li>
+            </ul>
           </div>
 
-          <ActionRow className="hero-cta mt-5 w-full sm:mt-6 lg:mt-7 sm:w-auto">
-            <ButtonLink href="/estoque" size="lg">
-              Ver estoque
-            </ButtonLink>
+          <ActionRow className="hero-cta mt-5 w-full sm:mt-6 sm:w-auto">
             <WhatsAppButton
               size="lg"
+              className="w-full sm:min-w-[16rem] sm:w-auto"
               trackingLabel="home-hero"
               message={WHATSAPP_MESSAGES.help}
             >
               Falar no WhatsApp
             </WhatsAppButton>
+            <ButtonLink
+              href="/estoque"
+              size="lg"
+              variant="outline"
+              className="w-full sm:min-w-[16rem] sm:w-auto"
+            >
+              Ver estoque
+            </ButtonLink>
           </ActionRow>
-          <p className="hero-cta mt-3">
-            <ChatOpenButton
-              source="home-hero"
-              size="md"
-              className="w-full sm:w-auto"
-            />
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-cream/75">
+            O WhatsApp abre para você dizer o que procura. No estoque, preço,
+            ano e km estão no anúncio.
           </p>
 
-          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6 lg:mt-8">
+          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6">
             <HeroSearch brands={brands} />
           </div>
 
@@ -234,8 +241,8 @@ export default async function HomePage() {
       <Section className="border-t border-white/5 bg-ink/40">
         <SectionHeading
           eyebrow="Diferenciais"
-          title={`Por que escolher a ${site.name}`}
-          description="Comprar seminovo não precisa ser aposta. Três compromissos com todo cliente."
+          title={`Por que a ${site.name}`}
+          description="Três coisas que a gente faz em todo seminovo, antes de você fechar."
         />
         <ul className="mx-auto mt-12 grid gap-5 lg:grid-cols-3">
           {REASONS.map(({ Icon, title, text }) => (
@@ -382,21 +389,32 @@ export default async function HomePage() {
           aria-hidden="true"
         />
         <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-          Compare no estoque ou no assistente. O consultor calcula a parcela no
-          WhatsApp — o site não publica valor de parcela.
+          O consultor calcula a parcela no WhatsApp. O site não publica valor
+          de parcela.
         </p>
         <ActionRow className="mt-9">
           <WhatsAppButton
             size="lg"
+            className="w-full sm:w-auto"
             trackingLabel="home-final"
             message={WHATSAPP_MESSAGES.visit}
           >
             Falar com um consultor
           </WhatsAppButton>
-          <ButtonLink href="/estoque" size="lg" variant="outline">
+          <ButtonLink href="/estoque" size="lg" variant="outline" className="w-full sm:w-auto">
             Continuar no estoque
           </ButtonLink>
         </ActionRow>
+        <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted">
+          Dúvida breve no site. Preço, visita e proposta seguem no WhatsApp.
+        </p>
+        <div className="mt-3 flex justify-center">
+          <ChatOpenButton
+            source="home-final"
+            variant="outline"
+            className="w-full sm:w-auto"
+          />
+        </div>
       </Section>
     </>
   );

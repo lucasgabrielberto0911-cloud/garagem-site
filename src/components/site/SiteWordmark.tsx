@@ -12,9 +12,9 @@ const SIZE: Record<
     height: 50,
   },
   hero: {
-    img: "h-auto w-[min(70vw,260px)] sm:w-[min(58vw,360px)] lg:w-[380px]",
-    width: 480,
-    height: 86,
+    img: "h-auto w-[min(78vw,280px)] sm:w-[min(58vw,360px)] lg:w-[380px]",
+    width: 887,
+    height: 160,
   },
   footer: {
     img: "h-11 w-auto sm:h-12",
@@ -53,7 +53,7 @@ export function SiteWordmark({
         alt=""
         width={look.width}
         height={look.height}
-        decoding="async"
+        decoding={priority ? "sync" : "async"}
         fetchPriority={priority ? "high" : "low"}
         className={look.img}
       />

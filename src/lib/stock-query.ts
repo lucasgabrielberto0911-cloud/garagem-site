@@ -19,9 +19,17 @@ export type VehicleCardRecord = {
   status: string;
   featured: boolean;
   color?: string | null;
+  locationCity?: string | null;
   updatedAt?: Date | string | null;
   photos: VehicleCardPhoto[];
 };
+
+/**
+ * LCP da ficha: no desktop a coluna é ~740px (não 60vw de um monitor largo).
+ * No celular a foto é full-bleed.
+ */
+export const GALLERY_HERO_SIZES =
+  "(min-width: 1280px) 740px, (min-width: 1024px) 58vw, 100vw";
 
 const SUPABASE_OBJECT_PUBLIC = "/storage/v1/object/public/";
 const SUPABASE_RENDER_PUBLIC = "/storage/v1/render/image/public/";

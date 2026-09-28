@@ -4,12 +4,11 @@ import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
-import { VehicleLeadHit } from "@/components/site/VehiclePixel";
 import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleDossierChips } from "@/components/site/VehicleDossierChips";
+import { VehiclePurchaseFacts } from "@/components/site/VehiclePurchaseFacts";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
-import { WhatsAppButton } from "@/components/site/ui";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import type { GoogleReviews } from "@/lib/google-reviews";
 import {
@@ -26,6 +25,7 @@ import {
   publishedConditionItems,
   type VehicleConditionsContent,
 } from "@/lib/vehicle-conditions";
+import { publicDossierChips, publicPurchaseFacts } from "@/lib/vehicle-dossier";
 import { whatsappContentFromVehicle } from "@/lib/site";
 
 /** Já aparecem na primeira dobra. Cidade volta na grade da Ficha, ao lado de Portas. */
@@ -45,9 +45,6 @@ export function VehicleMobileSummary({
   km,
   transmission,
   city,
-  soldHref,
-  soldLabel,
-  whatsapp,
 }: {
   title: string;
   version?: string | null;
@@ -58,23 +55,6 @@ export function VehicleMobileSummary({
   km: number;
   transmission: string;
   city: string;
-  soldHref: string;
-  soldLabel: string;
-  whatsapp: {
-    contentId: string;
-    contentName: string;
-    slug?: string;
-    make: string;
-    model: string;
-    message: string;
-    trackingContent?: string;
-    stateOfVehicle?: string;
-    exteriorColor?: string;
-    transmission?: string;
-    bodyStyle?: string;
-    fuelType?: string;
-    postalCode?: string;
-  };
 }) {
   const facts = [
     { label: "Ano", value: formatVehicleYearRange(year, yearModel) },
@@ -84,14 +64,14 @@ export function VehicleMobileSummary({
   ];
 
   return (
-    <div className="ficha-mobile-sheet px-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-4 sm:px-6">
-      <h1 className="line-clamp-2 font-display text-[1.35rem] font-bold leading-[1.15] tracking-tight text-cream">
+    <div className="ficha-mobile-sheet px-4 pb-3 pt-3 sm:px-6">
+      <h1 className="line-clamp-2 font-display text-[1.25rem] font-bold leading-[1.15] tracking-tight text-cream">
         {title}
       </h1>
       {version ? (
-        <p className="mt-1 line-clamp-1 text-[13px] leading-snug text-muted">{version}</p>
+        <p className="mt-0.5 line-clamp-1 text-[13px] leading-snug text-muted">{version}</p>
       ) : null}
-      <p className="mt-2 font-display text-[1.85rem] font-bold leading-none tracking-tight text-brand">
+      <p className="mt-1.5 font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand">
         {sold ? (
           <span className="text-muted line-through decoration-white/30">
             {formatCurrencyBRL(price)}
@@ -100,56 +80,18 @@ export function VehicleMobileSummary({
           formatCurrencyBRL(price)
         )}
       </p>
-      <dl className="mt-3.5 grid grid-cols-2 gap-2">
+      <dl className="mt-2.5 grid grid-cols-2 gap-1.5">
         {facts.map((fact) => (
-          <div key={fact.label} className="min-w-0 border border-white/10 bg-ink px-3 py-2.5">
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+          <div key={fact.label} className="min-w-0 border border-white/10 bg-ink px-2.5 py-2">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
               {fact.label}
             </dt>
-            <dd className="mt-1 truncate font-display text-sm font-semibold text-cream">
+            <dd className="mt-0.5 font-display text-[13px] font-semibold leading-tight text-cream">
               {fact.value}
             </dd>
           </div>
         ))}
       </dl>
-      <div id="ficha-whatsapp" className="mt-3.5">
-        {sold ? (
-          <Link
-            href={soldHref}
-            className="inline-flex min-h-[52px] w-full items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-cream"
-          >
-            {soldLabel}
-          </Link>
-        ) : (
-          <VehicleLeadHit
-            contentId={whatsapp.contentId}
-            contentName={whatsapp.contentName}
-            value={price}
-            make={whatsapp.make}
-            model={whatsapp.model}
-            year={yearModel}
-            stateOfVehicle={whatsapp.stateOfVehicle}
-            exteriorColor={whatsapp.exteriorColor}
-            transmission={whatsapp.transmission}
-            bodyStyle={whatsapp.bodyStyle}
-            fuelType={whatsapp.fuelType}
-            postalCode={whatsapp.postalCode}
-          >
-            <WhatsAppButton
-              size="lg"
-              className="w-full"
-              trackingLabel="ficha"
-              campaign="ficha"
-              content={whatsapp.trackingContent}
-              vehicleId={whatsapp.contentId}
-              slug={whatsapp.slug}
-              message={whatsapp.message}
-            >
-              Tenho interesse
-            </WhatsAppButton>
-          </VehicleLeadHit>
-        )}
-      </div>
     </div>
   );
 }
@@ -198,6 +140,7 @@ export function VehicleMobileBlocks({
   accessories,
   specs,
   inspection,
+  warranty,
   hasSpareKey,
   hasManual,
   hasVideo,
@@ -219,6 +162,7 @@ export function VehicleMobileBlocks({
   accessories: string[];
   specs: VehicleSpecRow[];
   inspection?: string | null;
+  warranty?: string | null;
   hasSpareKey?: boolean | null;
   hasManual?: boolean | null;
   hasVideo?: boolean | null;
@@ -240,6 +184,13 @@ export function VehicleMobileBlocks({
   };
 }) {
   const extraSpecs = specs.filter((row) => !FOLD_LABELS.has(row.label));
+  const dossierChips = publicDossierChips({ hasSpareKey, hasManual, hasVideo });
+  const purchaseFacts = publicPurchaseFacts({
+    inspection,
+    warranty,
+    accessories,
+  });
+  const showConfirmed = dossierChips.length > 0 || purchaseFacts.length > 0;
   const inspectionNote = publicInspectionNote(inspection);
   const conditionItems = publishedConditionItems(conditions.items);
   const vistoria = conditionItems.find(
@@ -249,12 +200,24 @@ export function VehicleMobileBlocks({
 
   return (
     <div className="mt-5 border-t border-white/10 lg:hidden">
-      <VehicleDossierChips
-        hasSpareKey={hasSpareKey}
-        hasManual={hasManual}
-        hasVideo={hasVideo}
-        className="border-b border-white/10 py-4"
-      />
+      {showConfirmed ? (
+        <div className="border-b border-white/10 py-4">
+          <p className="mb-2 font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+            Confirmado neste anúncio
+          </p>
+          <VehicleDossierChips
+            hasSpareKey={hasSpareKey}
+            hasManual={hasManual}
+            hasVideo={hasVideo}
+          />
+          <VehiclePurchaseFacts
+            inspection={inspection}
+            warranty={warranty}
+            accessories={accessories}
+            className={dossierChips.length > 0 ? "mt-3" : ""}
+          />
+        </div>
+      ) : null}
       <DossierBlock title={STORE_INSPECTION_LABEL}>
         {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
           <p className="mb-3 text-[15px] leading-7 text-cream">{inspectionNote}</p>
@@ -353,6 +316,19 @@ export function VehicleMobileBlocks({
               className="grid"
             />
           </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-muted">
+            Cada opção abre o WhatsApp deste veículo.
+          </p>
+          <ChatOpenButton
+            source="ficha"
+            prompt={prompt}
+            size="md"
+            variant="outline"
+            className="mt-3 w-full"
+          />
+          <p className="mt-2 text-[11px] leading-relaxed text-muted">
+            Dúvida breve no site. Preço, visita e proposta seguem no WhatsApp.
+          </p>
         </DossierBlock>
       ) : null}
 
@@ -370,15 +346,6 @@ export function VehicleMobileBlocks({
             model={model}
             year={yearModel}
             variant="full"
-            className="mb-3 w-full"
-          />
-        ) : null}
-        {!sold ? (
-          <ChatOpenButton
-            source="ficha"
-            prompt={prompt}
-            size="lg"
-            variant="solid"
             className="mb-3 w-full"
           />
         ) : null}

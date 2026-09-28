@@ -3,7 +3,8 @@ import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { RememberVehicleSnapshot } from "@/components/site/RememberVehicleSnapshot";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
-import { formatCurrencyBRL, formatBrandName, formatModelName } from "@/lib/format";
+import { formatCurrencyBRL, formatBrandName, formatModelName, formatNumberBR } from "@/lib/format";
+import { vehicleLocationLabel } from "@/lib/vehicle-location";
 import { coverSrc, coverSrcSet, type VehicleCardRecord } from "@/lib/stock-query";
 import {
   formatUpdatedAt,
@@ -74,6 +75,7 @@ export function VehicleCard({
           status: vehicle.status,
           featured: vehicle.featured,
           color: vehicle.color,
+          locationCity: vehicle.locationCity ?? null,
           updatedAt:
             vehicle.updatedAt instanceof Date
               ? vehicle.updatedAt.toISOString()
@@ -136,17 +138,20 @@ export function VehicleCard({
 
         <div className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2">
           <div className="min-w-0">
-            <h3 className="truncate font-display text-[15px] font-semibold leading-snug text-cream sm:text-sm">
+            <h3 className="line-clamp-2 font-display text-[15px] font-semibold leading-snug text-cream sm:text-sm">
               {display.title}
             </h3>
             {display.version ? (
-              <p className="mt-0.5 truncate text-xs text-muted">
+              <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted">
                 {display.version}
               </p>
             ) : null}
-            <p className="mt-1 truncate text-xs text-muted">
-              {display.metaParts.join(" · ")}
-            </p>
+            <CardFacts
+              year={vehicle.yearModel}
+              km={vehicle.km}
+              transmission={display.transmission}
+              city={vehicleLocationLabel(vehicle.locationCity)}
+            />
             {updated ? (
               <p className="mt-0.5 truncate text-[10px] text-muted/90">{updated}</p>
             ) : null}
@@ -171,9 +176,44 @@ export function VehicleCard({
           make={formatBrandName(vehicle.brand)}
           model={formatModelName(vehicle.model)}
           year={vehicle.yearModel}
+          path={href}
           campaign={whatsappCampaign}
         />
       ) : null}
     </article>
+  );
+}
+
+function CardFacts({
+  year,
+  km,
+  transmission,
+  city,
+}: {
+  year: number;
+  km: number;
+  transmission: string;
+  city: string;
+}) {
+  const facts = [
+    { label: "Ano", value: year ? String(year) : "—" },
+    { label: "Km", value: `${formatNumberBR(km)} km` },
+    { label: "Câmbio", value: transmission || "—" },
+    ...(city ? [{ label: "Cidade", value: city }] : []),
+  ];
+
+  return (
+    <dl className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1">
+      {facts.map((fact) => (
+        <div key={fact.label} className="min-w-0">
+          <dt className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">
+            {fact.label}
+          </dt>
+          <dd className="font-display text-[12px] font-semibold leading-tight text-cream [overflow-wrap:anywhere]">
+            {fact.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }

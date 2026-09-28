@@ -15,7 +15,8 @@ import {
 } from "@/lib/stock-query";
 import { colorWhere, formatColorLabel } from "@/lib/vehicle-display";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
-import { PUBLIC_VEHICLE_CARD_SELECT } from "@/lib/public-stock";
+import { queryPublicVehicleCards } from "@/lib/public-vehicle-cards";
+import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
 import { pickRelatedVehicles } from "@/lib/related-vehicles";
 
 export {
@@ -41,28 +42,6 @@ const PUBLIC_CACHE: { revalidate: number; tags: string[] } = {
   revalidate: 600,
   tags: [VEHICLES_PUBLIC_CACHE_TAG],
 };
-
-const PUBLIC_VEHICLE_CARD_SELECT_LEGACY = {
-  id: true,
-  category: true,
-  brand: true,
-  model: true,
-  version: true,
-  yearModel: true,
-  km: true,
-  price: true,
-  transmission: true,
-  fuel: true,
-  status: true,
-  featured: true,
-  color: true,
-  updatedAt: true,
-  photos: {
-    orderBy: { order: "asc" as const },
-    take: 1,
-    select: { url: true },
-  },
-} as const;
 
 /** Anúncio público: sem FIPE, placa, compra, custos ou documentos. */
 export const PUBLIC_VEHICLE_DETAIL_SELECT = {
@@ -250,22 +229,7 @@ function dataIsObject(value: unknown): value is Record<string, unknown> {
 async function findCardVehicles(
   args: Omit<Parameters<typeof prisma.vehicle.findMany>[0], "select">,
 ): Promise<VehicleCardRecord[]> {
-  try {
-    return (await prisma.vehicle.findMany({
-      ...args,
-      select: PUBLIC_VEHICLE_CARD_SELECT,
-    })) as VehicleCardRecord[];
-  } catch (error) {
-    if (!isMissingColumnError(error, "thumbnailUrl")) throw error;
-    const rows = await prisma.vehicle.findMany({
-      ...args,
-      select: PUBLIC_VEHICLE_CARD_SELECT_LEGACY,
-    });
-    return rows.map((row) => ({
-      ...row,
-      photos: row.photos.map((photo) => ({ ...photo, thumbnailUrl: null })),
-    }));
-  }
+  return queryPublicVehicleCards(args);
 }
 
 async function findDetailVehicle(
@@ -309,7 +273,7 @@ async function fetchFeaturedVehicles(take: number): Promise<VehicleCardRecord[]>
 
 const loadFeaturedCached = unstable_cache(
   async (take: number) => fetchFeaturedVehicles(take),
-  ["featured-vehicles-v5"],
+  ["featured-vehicles-v6"],
   PUBLIC_CACHE,
 );
 
@@ -335,7 +299,7 @@ async function fetchCityShowcaseVehicles(
 
 const loadCityShowcaseCached = unstable_cache(
   async (slug: string, take: number) => fetchCityShowcaseVehicles(slug, take),
-  ["city-showcase-v1"],
+  ["city-showcase-v2"],
   PUBLIC_CACHE,
 );
 
@@ -418,7 +382,7 @@ const loadRelatedCached = unstable_cache(
     category: string,
     price: number,
   ) => fetchRelatedVehicles(vehicleId, brand, take, category, price),
-  ["related-vehicles-v5"],
+  ["related-vehicles-v6"],
   PUBLIC_CACHE,
 );
 
@@ -580,7 +544,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v7"],
+  ["stock-page-v8"],
   PUBLIC_CACHE,
 );
 
@@ -597,6 +561,57 @@ export function getStockVehicles(filters: StockFilters) {
     [] as VehicleCardRecord[],
   );
 }
+
+const STOCK_CATALOG_SELECT = {
+  id: true,
+  brand: true,
+  model: true,
+  version: true,
+  yearModel: true,
+  price: true,
+} as const;
+
+export type StockCatalogLink = {
+  id: string;
+  brand: string;
+  model: string;
+  version: string | null;
+  yearModel: number;
+  price: number;
+};
+
+/**
+ * Todas as fichas disponíveis, na ordem da listagem (mais recentes).
+ * A grade visível continua em lotes de 8; este índice entra no HTML
+ * para o crawler abrir cada anúncio sem rodar o scroll infinito.
+ */
+async function loadStockCatalogLinks(): Promise<StockCatalogLink[]> {
+  const orderBy = { createdAt: "desc" as const };
+  try {
+    return await prisma.vehicle.findMany({
+      where: PUBLIC_SITEMAP_VEHICLE_WHERE,
+      select: STOCK_CATALOG_SELECT,
+      orderBy,
+    });
+  } catch (error) {
+    if (!isMissingColumnError(error, "historical")) throw error;
+    return prisma.vehicle.findMany({
+      where: { status: "disponivel" },
+      select: STOCK_CATALOG_SELECT,
+      orderBy,
+    });
+  }
+}
+
+const loadStockCatalogCached = unstable_cache(
+  loadStockCatalogLinks,
+  ["stock-catalog-links-v1"],
+  PUBLIC_CACHE,
+);
+
+export const getStockCatalogLinks = cache(() =>
+  safeQuery("índice do estoque", () => loadStockCatalogCached(), [] as StockCatalogLink[]),
+);
 
 export const getStockPage = cache(
   (filters: StockFilters): Promise<StockPageResult> =>

@@ -13,6 +13,7 @@ type Action = {
   trackingLabel: string;
   hrefMessage: string;
   label: string;
+  ariaLabel: string;
 };
 
 export function VehicleQuickActions({
@@ -55,9 +56,24 @@ export function VehicleQuickActions({
   className?: string;
 }) {
   const actions: Action[] = [
-    { trackingLabel: "ficha-finance", hrefMessage: finance, label: "Simular" },
-    { trackingLabel: "ficha-trade", hrefMessage: trade, label: "Troca" },
-    { trackingLabel: "ficha-video", hrefMessage: video, label: "Vídeo" },
+    {
+      trackingLabel: "ficha-finance",
+      hrefMessage: finance,
+      label: "Simular",
+      ariaLabel: "Simular parcelas deste veículo no WhatsApp",
+    },
+    {
+      trackingLabel: "ficha-trade",
+      hrefMessage: trade,
+      label: "Troca",
+      ariaLabel: "Avaliar uma troca deste veículo no WhatsApp",
+    },
+    {
+      trackingLabel: "ficha-video",
+      hrefMessage: video,
+      label: "Vídeo",
+      ariaLabel: "Pedir vídeo deste veículo no WhatsApp",
+    },
   ];
 
   return (
@@ -81,6 +97,7 @@ export function VehicleQuickActions({
           <TrackedWhatsAppLink
             href={fichaHref(action.hrefMessage, contentId, contentPath)}
             trackingLabel={action.trackingLabel}
+            ariaLabel={action.ariaLabel}
             vehicleId={contentId}
             slug={contentSlug}
             className="inline-flex min-h-[48px] items-center justify-center border border-white/10 bg-ink px-2 text-center font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-cream transition touch-manipulation hover:border-brand lg:min-h-[44px]"

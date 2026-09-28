@@ -5,6 +5,7 @@ import {
   WHATSAPP_BRAND,
   WHATSAPP_MESSAGES,
   applyWhatsAppUtm,
+  favoritesListWhatsApp,
   fichaWhatsAppTracking,
   formatCustomerVehicleWhatsAppText,
   headerWordmarkPriority,
@@ -105,6 +106,9 @@ test("wa.me dos CTAs leva UTM de origem sem alterar o pré-preenchido", () => {
   assert.equal(whatsappCampaignFromLabel("estoque-filtro-vazio"), "filtro");
   assert.equal(whatsappCampaignFromLabel("filtro-vazio"), "filtro");
   assert.equal(whatsappCampaignFromLabel("atalho-pwa"), "pwa");
+  assert.equal(whatsappCampaignFromLabel("favoritos-lista"), "favoritos");
+  assert.equal(whatsappCampaignFromLabel("favoritos-vazio"), "favoritos");
+  assert.equal(whatsappCampaignFromPath("/favoritos"), "favoritos");
   const shortcut = pwaShortcutWhatsAppUrl();
   assert.match(shortcut, /^https:\/\/wa\.me\/5527996330706\?/);
   assert.match(shortcut, /utm_source=site/);
@@ -183,4 +187,49 @@ test("header/float na ficha herdam ficha+slug mesmo sem contexto hidratado", () 
   const footerGeneric = whatsappUrl();
   assert.match(footerGeneric, /utm_campaign=home/);
   assert.doesNotMatch(footerGeneric, /utm_content=/);
+});
+
+test("lista de favoritos leva modelo, ano, slug e o id do salvo por último", () => {
+  const pack = favoritesListWhatsApp([
+    {
+      id: "cuidNovo",
+      path: "/estoque/fiat-pulse-2022-abc",
+      label: "Fiat Pulse 2022",
+    },
+    {
+      id: "cuidVelho",
+      path: "/estoque/honda-civic-2020-xyz",
+      label: "Honda Civic 2020",
+    },
+  ]);
+  assert.equal(pack.campaign, "favoritos");
+  assert.equal(pack.vehicleId, "cuidNovo");
+  assert.equal(pack.slug, "fiat-pulse-2022-abc");
+  assert.equal(pack.content, "fiat-pulse-2022-abc,honda-civic-2020-xyz");
+  assert.match(pack.message, /Fiat Pulse 2022, Honda Civic 2020/);
+  assert.doesNotMatch(pack.message, /e mais/);
+
+  const href = whatsappUrl(pack.message, {
+    campaign: pack.campaign,
+    content: pack.content,
+  });
+  assert.match(href, /utm_campaign=favoritos/);
+  assert.match(href, /utm_content=fiat-pulse-2022-abc%2Chonda-civic-2020-xyz/);
+  assert.match(decodeURIComponent(href), /Pode me passar as condições\?/);
+
+  const many = favoritesListWhatsApp(
+    [1, 2, 3, 4, 5].map((n) => ({
+      id: `id${n}`,
+      path: `/estoque/carro-${n}`,
+      label: `Carro ${n}`,
+    })),
+  );
+  assert.match(many.message, /Carro 1, Carro 2, Carro 3, Carro 4 e mais 1/);
+  assert.doesNotMatch(many.message, /Carro 5/);
+  assert.ok((many.content ?? "").length <= 80);
+
+  const empty = favoritesListWhatsApp([]);
+  assert.equal(empty.message, WHATSAPP_MESSAGES.similarFavorites);
+  assert.equal(empty.vehicleId, undefined);
+  assert.equal(empty.content, undefined);
 });

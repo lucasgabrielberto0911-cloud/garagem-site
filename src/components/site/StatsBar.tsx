@@ -48,7 +48,7 @@ function Stat({
           {EMPTY_LABEL}
         </dd>
       )}
-      <dt className="mt-1 text-[10px] uppercase tracking-wider text-muted sm:mt-1.5 sm:text-xs">
+      <dt className="mt-1 text-xs uppercase tracking-wider text-muted sm:mt-1.5">
         {label}
       </dt>
     </div>

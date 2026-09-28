@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { PUBLIC_VEHICLE_CARD_SELECT } from "@/lib/public-stock";
+import { queryPublicVehicleCards } from "@/lib/public-vehicle-cards";
 
 const MAX_IDS = 60;
 
@@ -21,9 +20,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const vehicles = await prisma.vehicle.findMany({
+    const vehicles = await queryPublicVehicleCards({
       where: { id: { in: ids }, status: { not: "vendido" } },
-      select: PUBLIC_VEHICLE_CARD_SELECT,
     });
 
     const order = new Map(ids.map((id, index) => [id, index]));
