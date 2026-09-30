@@ -27,11 +27,20 @@ export type VehicleCardRecord = {
 };
 
 /**
- * LCP da ficha: no desktop a coluna é ~740px (não 60vw de um monitor largo).
- * No celular a foto é full-bleed.
+ * LCP da ficha. O container é max-w-7xl com px-8; a coluna da foto é
+ * 1.35 / 2.25 do miolo (menos o gap-8). No xl isso dá 710px, não 60vw
+ * de um monitor largo. No celular a foto é full-bleed.
  */
 export const GALLERY_HERO_SIZES =
-  "(min-width: 1280px) 740px, (min-width: 1024px) 58vw, 100vw";
+  "(min-width: 1280px) 710px, (min-width: 1024px) calc((100vw - 96px) * 0.6), 100vw";
+
+/**
+ * Card dentro do mesmo container: 2 colunas, 3 no lg, 4 no xl da home.
+ * No estoque o lg tem sidebar, então o card é menor — esta medida é o
+ * teto da home, para o celular não pedir a foto do desktop.
+ */
+export const CARD_SIZES =
+  "(min-width: 1280px) 292px, (min-width: 1024px) calc((100vw - 96px) / 3), (min-width: 640px) calc((100vw - 64px) / 2), calc((100vw - 44px) / 2)";
 
 const SUPABASE_OBJECT_PUBLIC = "/storage/v1/object/public/";
 const SUPABASE_RENDER_PUBLIC = "/storage/v1/render/image/public/";
@@ -39,36 +48,67 @@ const SUPABASE_RENDER_PUBLIC = "/storage/v1/render/image/public/";
 /** Mesmas medidas do card WebP gerado no upload (image-variants). */
 const CARD_RENDER_WIDTH = 480;
 const CARD_RENDER_HEIGHT = 300;
+/** Retina: 3x no celular e 2x no desktop da home (~584px). */
+const CARD_SHARP_WIDTHS = [720, 960] as const;
+/** WebP 75: nítido em cima do arquivo da galeria, sem o peso do q80. */
+const CARD_SHARP_QUALITY = "75";
 const GALLERY_THUMB_WIDTH = 240;
 const GALLERY_THUMB_HEIGHT = 150;
+/**
+ * Lado maior gravado no upload (image-variants GALLERY_MAX_EDGE).
+ * Fica aqui para o bundle do cliente não importar o sharp.
+ */
+export const GALLERY_FILE_WIDTH = 1280;
+/** Celular 2x e desktop 1x da ficha cabem aqui; o 1280 fica para o resto. */
+const HERO_NARROW_WIDTH = 800;
+const HERO_NARROW_QUALITY = "80";
+/** JPG/PNG antigo: teto público. O WebP da galeria não é reencodado. */
+const HERO_CAP_WIDTH = 1200;
+const HERO_CAP_QUALITY = "80";
 
 type TransformResize = "cover" | "contain";
 
+function cardFrameHeight(width: number) {
+  return Math.round((width * CARD_RENDER_HEIGHT) / CARD_RENDER_WIDTH);
+}
+
+function canTransform(url: string) {
+  return url.includes(SUPABASE_OBJECT_PUBLIC) && !url.includes(SUPABASE_RENDER_PUBLIC);
+}
+
+function isCardDerivative(url: string) {
+  return /-card\.webp(?:[?#]|$)/i.test(url);
+}
+
+/** WebP já limitado no upload. Reencodar só amacia e não ganha detalhe. */
+function isOptimizedGalleryWebp(url: string) {
+  return /\.webp(?:[?#]|$)/i.test(url) && !isCardDerivative(url);
+}
+
 /**
  * Recorte leve via Image Transformations do Storage.
+ * `format=webp`: sem isso o render devolve JPEG, mais pesado e menos nítido.
  * Sem thumbnailUrl no banco, o card baixava o original (~100–200 KB).
  */
 export function supabaseTransformSrc(
   url: string,
   width: number,
-  height: number,
+  height?: number,
   resize: TransformResize = "cover",
   quality = "65",
 ) {
-  if (!url.includes(SUPABASE_OBJECT_PUBLIC) || url.includes(SUPABASE_RENDER_PUBLIC)) {
-    return url;
-  }
+  if (!canTransform(url)) return url;
   const hashIndex = url.indexOf("#");
   const hash = hashIndex === -1 ? "" : url.slice(hashIndex);
   const withoutHash = hashIndex === -1 ? url : url.slice(0, hashIndex);
   const path = withoutHash.split("?")[0];
   const render = path.replace(SUPABASE_OBJECT_PUBLIC, SUPABASE_RENDER_PUBLIC);
-  const params = new URLSearchParams({
-    width: String(width),
-    height: String(height),
-    resize,
-    quality,
-  });
+  const params = new URLSearchParams();
+  params.set("width", String(width));
+  if (height != null && height > 0) params.set("height", String(height));
+  params.set("resize", resize);
+  params.set("quality", quality);
+  params.set("format", "webp");
   return `${render}?${params.toString()}${hash}`;
 }
 
@@ -93,15 +133,32 @@ export function coverSrc(photos: VehicleCardPhoto[] | undefined) {
   return photo.url ? supabaseCardSrc(photo.url) : undefined;
 }
 
+/**
+ * 480 da miniatura no celular 2x; 720 e 960 WebP quando a tela pede mais.
+ * A miniatura sozinha esticava no 3x e no desktop.
+ */
 export function coverSrcSet(photos: VehicleCardPhoto[] | undefined) {
   const photo = photos?.[0];
-  if (!photo?.url || photo.thumbnailUrl) return undefined;
-  if (!photo.url.includes(SUPABASE_OBJECT_PUBLIC)) return undefined;
-  const small = supabaseCardSrc(photo.url, CARD_RENDER_WIDTH, CARD_RENDER_HEIGHT);
-  return `${small} ${CARD_RENDER_WIDTH}w`;
+  if (!photo?.url || !canTransform(photo.url) || isCardDerivative(photo.url)) {
+    return undefined;
+  }
+  const small = photo.thumbnailUrl
+    ? `${photo.thumbnailUrl} ${CARD_RENDER_WIDTH}w`
+    : `${supabaseCardSrc(photo.url)} ${CARD_RENDER_WIDTH}w`;
+  const sharp = CARD_SHARP_WIDTHS.map((width) => {
+    const src = supabaseTransformSrc(
+      photo.url,
+      width,
+      cardFrameHeight(width),
+      "cover",
+      CARD_SHARP_QUALITY,
+    );
+    return `${src} ${width}w`;
+  });
+  return [small, ...sharp].join(", ");
 }
 
-/** Foto da galeria do anúncio: miniatura no strip, preview no slide, original no zoom. */
+/** Foto da galeria do anúncio: miniatura no strip, preview no slide. */
 export type GalleryPhoto = {
   id: string;
   url: string;
@@ -115,16 +172,36 @@ export function galleryThumbSrc(photo: GalleryPhoto) {
     : photo.url;
 }
 
-/** Slide da ficha: WebP da galeria (já no upload, ~1280px) — sem recorte extra. */
+/**
+ * Arquivo largo da ficha. O WebP do upload (≤1280) segue direto — um
+ * segundo encode não fica mais nítido. JPG/PNG antigo vira WebP a 1200px,
+ * para o original da câmera não ser o src padrão.
+ */
 export function galleryPreviewSrc(photo: GalleryPhoto) {
-  return photo.url;
+  const url = photo.url;
+  if (!canTransform(url) || isOptimizedGalleryWebp(url)) return url;
+  return supabaseTransformSrc(url, HERO_CAP_WIDTH, undefined, "contain", HERO_CAP_QUALITY);
 }
 
+/**
+ * 800px no celular 2x e no desktop 1x; o arquivo da galeria (1280) quando
+ * a tela é maior. A miniatura 480 do card não entra: é outro recorte e
+ * fica mole na foto grande.
+ */
 export function galleryPreviewSrcSet(photo: GalleryPhoto) {
-  if (photo.thumbnailUrl) {
-    return `${photo.thumbnailUrl} ${CARD_RENDER_WIDTH}w, ${photo.url} 1280w`;
-  }
-  return undefined;
+  const url = photo.url;
+  if (!url || !canTransform(url) || isCardDerivative(url)) return undefined;
+  const narrow = supabaseTransformSrc(
+    url,
+    HERO_NARROW_WIDTH,
+    undefined,
+    "contain",
+    HERO_NARROW_QUALITY,
+  );
+  const wide = galleryPreviewSrc(photo);
+  const wideW = wide === url ? GALLERY_FILE_WIDTH : HERO_CAP_WIDTH;
+  if (narrow === wide) return undefined;
+  return `${narrow} ${HERO_NARROW_WIDTH}w, ${wide} ${wideW}w`;
 }
 
 /**
