@@ -19,8 +19,6 @@ import { Container, WhatsAppButton } from "@/components/site/ui";
 import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
-import { VehicleDossierChips } from "@/components/site/VehicleDossierChips";
-import { VehiclePurchaseFacts } from "@/components/site/VehiclePurchaseFacts";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
@@ -39,7 +37,6 @@ import {
   galleryPreviewSrc,
   galleryPreviewSrcSet,
 } from "@/lib/stock-query";
-import { publicDossierChips, publicPurchaseFacts } from "@/lib/vehicle-dossier";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
   collapseDuplicateAccessories,
@@ -249,17 +246,6 @@ export default async function VehicleDetailPage({
 
   const hasDetails =
     Boolean(vehicle.description) || accessories.length > 0;
-  const dossierChips = publicDossierChips({
-    hasSpareKey: vehicle.hasSpareKey,
-    hasManual: vehicle.hasManual,
-    hasVideo: vehicle.hasVideo,
-  });
-  const purchaseFacts = publicPurchaseFacts({
-    inspection: vehicle.inspection,
-    warranty: vehicle.warranty,
-    accessories,
-  });
-  const showConfirmed = dossierChips.length > 0 || purchaseFacts.length > 0;
   const updatedLabel = vehicle.updatedAt
     ? formatUpdatedAt(vehicle.updatedAt)
     : "";
@@ -437,29 +423,6 @@ export default async function VehicleDetailPage({
                 <VehicleInspectionBadge inspection={vehicle.inspection} />
               ) : null}
               {!sold ? <VehicleTrustNotes /> : null}
-              {showConfirmed ? (
-                <div className="space-y-2">
-                  <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-                    Confirmado neste anúncio
-                  </p>
-                  <VehicleDossierChips
-                    hasSpareKey={vehicle.hasSpareKey}
-                    hasManual={vehicle.hasManual}
-                    hasVideo={vehicle.hasVideo}
-                  />
-                  <VehiclePurchaseFacts
-                    inspection={vehicle.inspection}
-                    warranty={vehicle.warranty}
-                    accessories={accessories}
-                  />
-                </div>
-              ) : (
-                <VehicleDossierChips
-                  hasSpareKey={vehicle.hasSpareKey}
-                  hasManual={vehicle.hasManual}
-                  hasVideo={vehicle.hasVideo}
-                />
-              )}
 
               {sold ? (
                 <Link
@@ -661,10 +624,6 @@ export default async function VehicleDetailPage({
           accessories={accessories}
           specs={specs}
           inspection={vehicle.inspection}
-          warranty={vehicle.warranty}
-          hasSpareKey={vehicle.hasSpareKey}
-          hasManual={vehicle.hasManual}
-          hasVideo={vehicle.hasVideo}
           conditions={conditions}
           listedLine={
             <ListedAgo

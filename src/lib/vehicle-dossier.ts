@@ -1,6 +1,6 @@
 import { publicInspectionNote } from "@/lib/vehicle-specs";
 
-/** Selos do dossiê público. Só entram na ficha quando o admin marcou o item. */
+/** Rótulos de chave reserva, manual e vídeo. */
 export const DOSSIER_CHIP_LABELS = {
   hasSpareKey: "Chave reserva",
   hasManual: "Manual do proprietário",
@@ -13,7 +13,7 @@ export type PublicDossierFlags = {
   hasVideo?: boolean | null;
 };
 
-/** Chips da ficha, na ordem do anúncio. Falso, nulo ou ausente não aparece. */
+/** Chips na ordem do anúncio. Falso, nulo ou ausente não entra. */
 export function publicDossierChips(flags: PublicDossierFlags): string[] {
   const chips: string[] = [];
   if (flags.hasSpareKey) chips.push(DOSSIER_CHIP_LABELS.hasSpareKey);
@@ -35,8 +35,8 @@ function cleanLine(value: string | null | undefined) {
 }
 
 /**
- * Fatos do anúncio que a loja preencheu. Vazio, falso ou genérico de loja
- * não entra — pneu e equipamento só se estiverem nos acessórios.
+ * Fatos do anúncio que a loja preencheu. Vazio ou genérico de loja não entra.
+ * Pneu só se estiver escrito nos acessórios.
  */
 export function publicPurchaseFacts(input: {
   inspection?: string | null;
@@ -67,17 +67,6 @@ export function publicPurchaseFacts(input: {
   const tires = accessories.filter((item) => TIRE_ACCESSORY.test(item));
   for (const tire of tires) {
     facts.push({ id: `tire:${tire.toLocaleLowerCase("pt-BR")}`, label: tire });
-  }
-
-  const equipment = accessories.filter((item) => !TIRE_ACCESSORY.test(item));
-  if (equipment.length > 0) {
-    const shown = equipment.slice(0, 3);
-    const extra = equipment.length - shown.length;
-    facts.push({
-      id: "equipment",
-      label: "Equipamentos",
-      detail: extra > 0 ? `${shown.join(", ")} e mais ${extra}` : shown.join(", "),
-    });
   }
 
   return facts;

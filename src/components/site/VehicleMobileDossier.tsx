@@ -6,8 +6,6 @@ import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
-import { VehicleDossierChips } from "@/components/site/VehicleDossierChips";
-import { VehiclePurchaseFacts } from "@/components/site/VehiclePurchaseFacts";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
@@ -26,7 +24,6 @@ import {
   publishedConditionItems,
   type VehicleConditionsContent,
 } from "@/lib/vehicle-conditions";
-import { publicDossierChips, publicPurchaseFacts } from "@/lib/vehicle-dossier";
 import { whatsappContentFromVehicle } from "@/lib/site";
 
 /** Já aparecem na primeira dobra. Cidade volta na grade da Ficha, ao lado de Portas. */
@@ -157,10 +154,6 @@ export function VehicleMobileBlocks({
   accessories,
   specs,
   inspection,
-  warranty,
-  hasSpareKey,
-  hasManual,
-  hasVideo,
   conditions,
   listedLine,
   google,
@@ -179,10 +172,6 @@ export function VehicleMobileBlocks({
   accessories: string[];
   specs: VehicleSpecRow[];
   inspection?: string | null;
-  warranty?: string | null;
-  hasSpareKey?: boolean | null;
-  hasManual?: boolean | null;
-  hasVideo?: boolean | null;
   conditions: VehicleConditionsContent;
   listedLine?: ReactNode;
   google: GoogleReviews;
@@ -201,13 +190,6 @@ export function VehicleMobileBlocks({
   };
 }) {
   const extraSpecs = specs.filter((row) => !FOLD_LABELS.has(row.label));
-  const dossierChips = publicDossierChips({ hasSpareKey, hasManual, hasVideo });
-  const purchaseFacts = publicPurchaseFacts({
-    inspection,
-    warranty,
-    accessories,
-  });
-  const showConfirmed = dossierChips.length > 0 || purchaseFacts.length > 0;
   const inspectionNote = publicInspectionNote(inspection);
   const conditionItems = publishedConditionItems(conditions.items);
   const vistoria = conditionItems.find(
@@ -217,24 +199,6 @@ export function VehicleMobileBlocks({
 
   return (
     <div className="mt-5 border-t border-white/10 lg:hidden">
-      {showConfirmed ? (
-        <div className="border-b border-white/10 py-4">
-          <p className="mb-2 font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-            Confirmado neste anúncio
-          </p>
-          <VehicleDossierChips
-            hasSpareKey={hasSpareKey}
-            hasManual={hasManual}
-            hasVideo={hasVideo}
-          />
-          <VehiclePurchaseFacts
-            inspection={inspection}
-            warranty={warranty}
-            accessories={accessories}
-            className={dossierChips.length > 0 ? "mt-3" : ""}
-          />
-        </div>
-      ) : null}
       <DossierBlock title={STORE_INSPECTION_LABEL}>
         {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
           <p className="mb-3 text-[15px] leading-7 text-cream">{inspectionNote}</p>
