@@ -212,7 +212,7 @@ test("lista de estoque esconde o WhatsApp do card; home e favoritos continuam", 
   assert.match(list, /HideStockCardInterest/);
   assert.match(browse, /HideStockCardInterest/);
   assert.match(card, /StockVehicleLink/);
-  assert.match(card, /\{!sold \? \(/);
+  assert.match(card, /\{!sold && showWhatsApp \? \(/);
   assert.match(button, /useHideStockCardInterest/);
   assert.match(button, /if \(hideOnStockList && !chat\) return null/);
 
