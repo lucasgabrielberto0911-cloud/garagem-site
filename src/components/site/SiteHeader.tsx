@@ -271,17 +271,10 @@ export function SiteHeader() {
                     key={phone.digits}
                     href={telUrl(index)}
                     onClick={closeMenu}
-                    className={
-                      phone.kind === "whatsapp"
-                        ? "flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/50 px-4 py-4 font-display text-base font-semibold text-brand touch-manipulation"
-                        : "flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2 text-sm text-cream/80 touch-manipulation"
-                    }
+                    className="flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/50 px-4 py-4 font-display text-base font-semibold text-brand touch-manipulation"
                   >
                     <IconPhone className="h-5 w-5" />
-                    <span>
-                      {phone.kind === "alternate" ? `${phone.note}: ` : null}
-                      {phone.label}
-                    </span>
+                    <span>{phone.label}</span>
                   </a>
                 ))}
               </div>
