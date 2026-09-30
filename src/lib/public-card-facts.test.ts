@@ -194,6 +194,8 @@ test("card público não ganha selo de consignado nem laudo", () => {
 
   const source = readSrc("components/site/VehicleCard.tsx");
   assert.match(source, /publicCardFacts/);
+  assert.match(source, /whitespace-nowrap/);
+  assert.doesNotMatch(source, /overflow-wrap:anywhere/);
   assert.doesNotMatch(source, /Consignado/);
   assert.doesNotMatch(source, /"—"/);
   assert.doesNotMatch(source, /laudo|Cautelar|inspection/i);

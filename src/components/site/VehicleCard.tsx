@@ -192,15 +192,18 @@ function CardFacts({ facts }: { facts: PublicCardFact[] }) {
   if (facts.length === 0) return null;
 
   return (
-    <dl className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1">
-      {facts.map((fact) => (
-        <div key={fact.label} className="min-w-0">
-          <dt className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">
-            {fact.label}
-          </dt>
-          <dd className="font-display text-[12px] font-semibold leading-tight text-cream [overflow-wrap:anywhere]">
+    <dl className="mt-1.5 flex flex-wrap gap-y-0.5">
+      {facts.map((fact, index) => (
+        <div key={fact.label} className="flex items-baseline whitespace-nowrap">
+          <dt className="sr-only">{fact.label}</dt>
+          <dd className="font-display text-[12px] font-semibold leading-tight text-cream">
             {fact.value}
           </dd>
+          {index < facts.length - 1 ? (
+            <span className="px-1.5 text-muted" aria-hidden="true">
+              ·
+            </span>
+          ) : null}
         </div>
       ))}
     </dl>
