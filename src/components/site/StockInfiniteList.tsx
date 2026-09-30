@@ -10,6 +10,7 @@ import {
 } from "react";
 import { InfiniteSentinel } from "@/components/InfiniteSentinel";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
+import { HideStockCardInterest } from "@/components/site/HideStockCardInterest";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { StockReturnCapture } from "@/components/site/StockReturnCapture";
 import type { VehicleCardRecord } from "@/lib/stock-query";
@@ -146,12 +147,14 @@ export function StockInfiniteList({
   return (
     <>
       <StockReturnCapture returnTo={returnTo}>
-        <MemoVehicleGrid
-          vehicles={vehicles}
-          returnTo={returnTo}
-          priorityCount={2}
-          whatsappCampaign="estoque"
-        />
+        <HideStockCardInterest>
+          <MemoVehicleGrid
+            vehicles={vehicles}
+            returnTo={returnTo}
+            priorityCount={2}
+            whatsappCampaign="estoque"
+          />
+        </HideStockCardInterest>
       </StockReturnCapture>
 
       {hasMore ? (

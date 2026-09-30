@@ -7,6 +7,7 @@ import { SiteErrorNotice } from "@/components/site/SiteErrorNotice";
 import { StockInfiniteList } from "@/components/site/StockInfiniteList";
 import { StockReturnCapture } from "@/components/site/StockReturnCapture";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
+import { HideStockCardInterest } from "@/components/site/HideStockCardInterest";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { SiteLeadHit, StockSearchPixel } from "@/components/site/VehiclePixel";
 import { WhatsAppButton } from "@/components/site/ui";
@@ -118,12 +119,14 @@ export function EstoqueBrowseFallback({
       <div className="mt-4">
         {vehicles.length > 0 ? (
           <StockReturnCapture returnTo="/estoque">
-            <VehicleGrid
-              vehicles={vehicles}
-              priorityCount={2}
-              returnTo="/estoque"
-              whatsappCampaign="estoque"
-            />
+            <HideStockCardInterest>
+              <VehicleGrid
+                vehicles={vehicles}
+                priorityCount={2}
+                returnTo="/estoque"
+                whatsappCampaign="estoque"
+              />
+            </HideStockCardInterest>
           </StockReturnCapture>
         ) : (
           <VehicleCardSkeletonGrid count={6} />
