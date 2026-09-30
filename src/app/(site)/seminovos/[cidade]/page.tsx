@@ -57,13 +57,13 @@ export default async function SeminovosCidadePage({
   if (!city) notFound();
 
   const path = `/seminovos/${city.slug}`;
-  const stock = cityPageStockCopy(city.slug, city.name);
+  const stock = cityPageStockCopy(city.name);
   const nearby = otherServiceCities(city.slug);
   const faqs = city.faqs.map((item) => ({
     question: item.question,
     answer: item.answer,
   }));
-  const featured = await getCityShowcaseVehicles(city.slug, 8);
+  const featured = await getCityShowcaseVehicles();
 
   return (
     <div className="py-12 lg:py-16">
@@ -108,26 +108,6 @@ export default async function SeminovosCidadePage({
               <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
                 {stock.intro}
               </p>
-              {stock.linkSerra ? (
-                <p className="mt-2 text-sm">
-                  <Link
-                    href="/seminovos/serra"
-                    className="text-cream underline-offset-4 hover:underline"
-                  >
-                    Ver os carros que estão na Serra
-                  </Link>
-                </p>
-              ) : null}
-              {stock.linkLinhares ? (
-                <p className="mt-2 text-sm">
-                  <Link
-                    href="/seminovos/linhares"
-                    className="text-cream underline-offset-4 hover:underline"
-                  >
-                    Ver o estoque de Linhares
-                  </Link>
-                </p>
-              ) : null}
             </div>
             <ButtonLink href={stock.stockHref} variant="outline" className="sm:shrink-0">
               {stock.stockLabel}

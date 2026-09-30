@@ -3,80 +3,61 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import {
-  cityPageStockCopy,
-  cityShowcaseOffset,
-  cityShowcaseStockCity,
-  pickCityShowcase,
-  rotateItems,
-} from "./city-showcase";
+import { cityPageStockCopy } from "./city-showcase";
 
-test("cidades diferentes começam o recorte em pontos diferentes", () => {
-  const items = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-  const serra = pickCityShowcase(items, "serra", 8);
-  const vitoria = pickCityShowcase(items, "vitoria", 8);
-  assert.equal(serra.length, 8);
-  assert.equal(vitoria.length, 8);
-  assert.notDeepEqual(serra, vitoria);
-  assert.deepEqual(rotateItems([1, 2, 3], 1), [2, 3, 1]);
-  assert.equal(cityShowcaseOffset("serra", 10) !== cityShowcaseOffset("vitoria", 10), true);
+const CITIES = [
+  ["colatina", "Colatina"],
+  ["serra", "Serra"],
+  ["aracruz", "Aracruz"],
+  ["linhares", "Linhares"],
+  ["vitoria", "Vitória"],
+] as const;
+
+test("toda landing descreve o estoque inteiro, sem recorte por cidade", () => {
+  const hrefs = new Set<string>();
+  const headings = new Set<string>();
+  for (const [, name] of CITIES) {
+    const copy = cityPageStockCopy(name);
+    hrefs.add(copy.stockHref);
+    headings.add(copy.heading);
+    assert.equal(copy.stockHref, "/estoque");
+    assert.equal(copy.stockLabel, "Ver o estoque");
+    assert.match(copy.intro, /mesma do estoque/i);
+    assert.match(copy.intro, /ficha/i);
+    assert.match(copy.intro, new RegExp(name));
+    assert.match(copy.whatsappMessage, /vídeo/i);
+    assert.match(copy.whatsappMessage, /visita/i);
+    assert.match(copy.whatsappMessage, new RegExp(name));
+    assert.match(copy.empty, /não tem veículo disponível/i);
+    assert.doesNotMatch(copy.intro, /só entram|não entram nesta lista|maior parte do estoque está em Linhares/i);
+    assert.doesNotMatch(copy.stockHref, /city=/);
+    assert.doesNotMatch(copy.empty, /Linhares|Serra|Aracruz/);
+    assert.doesNotMatch(`${copy.intro} ${copy.empty}`, /Mobi|Palio|Civic|Biz/);
+  }
+  assert.equal(hrefs.size, 1);
+  assert.equal(headings.size, 1);
 });
 
-test("Serra lista só Serra; as outras cidades usam Linhares, nunca Aracruz", () => {
-  assert.equal(cityShowcaseStockCity("serra"), "serra");
-  assert.equal(cityShowcaseStockCity("Serra"), "serra");
-  assert.equal(cityShowcaseStockCity("linhares"), "linhares");
-  assert.equal(cityShowcaseStockCity("colatina"), "linhares");
-  assert.equal(cityShowcaseStockCity("vitoria"), "linhares");
-  assert.equal(cityShowcaseStockCity("aracruz"), "linhares");
-  assert.notEqual(cityShowcaseStockCity("aracruz"), "aracruz");
-});
-
-test("a landing leva a um anúncio real e o WhatsApp é vídeo ou visita", () => {
-  const colatina = cityPageStockCopy("colatina", "Colatina");
-  assert.equal(colatina.stockCity, "linhares");
-  assert.equal(colatina.stockHref, "/estoque?city=linhares");
-  assert.match(colatina.intro, /Linhares/);
-  assert.match(colatina.intro, /ficha/i);
-  assert.match(colatina.whatsappMessage, /vídeo/i);
-  assert.match(colatina.whatsappMessage, /visita/i);
-  assert.match(colatina.whatsappMessage, /Colatina/);
-  assert.equal(colatina.linkSerra, true);
-  assert.doesNotMatch(colatina.intro, /Aracruz/);
-  assert.doesNotMatch(colatina.intro, /Mobi|Palio|Civic|Biz/);
-  assert.match(colatina.empty, /não tem veículo disponível em Linhares/i);
-
-  const aracruz = cityPageStockCopy("aracruz", "Aracruz");
-  assert.equal(aracruz.stockCity, "linhares");
-  assert.equal(aracruz.stockHref, "/estoque?city=linhares");
-  assert.match(aracruz.intro, /Linhares/);
-  assert.doesNotMatch(aracruz.intro, /estão em Aracruz|cidade é Aracruz/);
-
-  const serra = cityPageStockCopy("serra", "Serra");
-  assert.equal(serra.stockCity, "serra");
-  assert.equal(serra.stockHref, "/estoque?city=serra");
-  assert.match(serra.intro, /Serra/);
-  assert.match(serra.intro, /ficha/i);
-  assert.match(serra.whatsappMessage, /vídeo|visita/i);
-  assert.equal(serra.linkLinhares, true);
-  assert.equal(serra.linkSerra, false);
-  assert.doesNotMatch(serra.intro, /Linhares/);
-
+test("a página e a consulta trazem o estoque disponível inteiro", () => {
   const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
   const page = readFileSync(
     join(srcRoot, "app/(site)/seminovos/[cidade]/page.tsx"),
     "utf8",
   );
   const vehicles = readFileSync(join(srcRoot, "lib/vehicles.ts"), "utf8");
-  assert.match(page, /getCityShowcaseVehicles/);
+  assert.match(page, /getCityShowcaseVehicles\(\)/);
   assert.match(page, /cityPageStockCopy/);
   assert.match(page, /showWhatsApp=\{false\}/);
   assert.match(page, /Pedir vídeo ou visita/);
-  assert.doesNotMatch(page, /Estou em \$\{city\.name\}/);
-  assert.match(vehicles, /cityShowcaseStockCity\(slug\)/);
-  assert.match(vehicles, /locationCity/);
-  assert.doesNotMatch(
-    vehicles.slice(vehicles.indexOf("async function fetchCityShowcaseVehicles")),
-    /stockCityFilter\(slug\)/,
+  assert.match(page, /stock\.stockHref/);
+  assert.doesNotMatch(page, /city=serra|city=linhares|linkSerra|linkLinhares/);
+  assert.doesNotMatch(page, /estão em \$\{city\.name\}/);
+
+  const showcase = vehicles.slice(
+    vehicles.indexOf("async function fetchCityShowcaseVehicles"),
+    vehicles.indexOf("const loadCityShowcaseCached"),
   );
+  assert.match(showcase, /status: "disponivel"/);
+  assert.match(showcase, /createdAt: "desc"/);
+  assert.doesNotMatch(showcase, /locationCity|cityShowcaseStockCity|stockCityFilter|pickCityShowcase|take:/);
 });

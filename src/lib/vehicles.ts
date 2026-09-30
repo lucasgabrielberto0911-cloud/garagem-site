@@ -6,7 +6,6 @@ import { brandKey, formatBrandName } from "@/lib/format";
 import { extractVehicleIdFromParam, vehicleSlug } from "@/lib/vehicle-slug";
 import { SEED_TESTIMONIALS } from "@/lib/testimonials-seed";
 import { cleanTestimonialField } from "@/lib/testimonials-clean";
-import { cityShowcaseStockCity, pickCityShowcase } from "@/lib/city-showcase";
 import {
   STOCK_PAGE_SIZE,
   stockCityFilter,
@@ -286,30 +285,25 @@ export const getFeaturedVehicles = cache((take = MAX_HOME_FEATURED) =>
   ),
 );
 
-async function fetchCityShowcaseVehicles(
-  slug: string,
-  take: number,
-): Promise<VehicleCardRecord[]> {
-  const locationCity = cityShowcaseStockCity(slug);
-  const pool = await findCardVehicles({
-    where: { status: "disponivel", locationCity },
-    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
-    take: 40,
+/** Mesmo conjunto do /estoque sem filtro: todos os disponíveis, mais recentes primeiro. */
+async function fetchCityShowcaseVehicles(): Promise<VehicleCardRecord[]> {
+  return findCardVehicles({
+    where: { status: "disponivel" },
+    orderBy: { createdAt: "desc" },
   });
-  return pickCityShowcase(pool, slug, take);
 }
 
 const loadCityShowcaseCached = unstable_cache(
-  async (slug: string, take: number) => fetchCityShowcaseVehicles(slug, take),
-  ["city-showcase-v4"],
+  async () => fetchCityShowcaseVehicles(),
+  ["city-showcase-v5"],
   PUBLIC_CACHE,
 );
 
-/** Serra lista só Serra. As outras cidades mostram o estoque de Linhares. */
-export const getCityShowcaseVehicles = cache((slug: string, take = 8) =>
+/** Landing de cidade: estoque disponível inteiro, sem recorte por cidade. */
+export const getCityShowcaseVehicles = cache(() =>
   safeQuery(
-    `vitrine ${slug}`,
-    () => loadCityShowcaseCached(slug, take),
+    "vitrine da cidade",
+    () => loadCityShowcaseCached(),
     [] as VehicleCardRecord[],
   ),
 );

@@ -59,9 +59,8 @@ export default async function SeminovosHubPage() {
             Cidades atendidas
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-            A maior parte dos carros está em Linhares. A página da Serra mostra
-            só os que estão na Serra. Nas outras cidades, a lista é a de
-            Linhares — cada anúncio abre a ficha.
+            Cada página é o atendimento naquela cidade. A lista de carros é o
+            estoque inteiro do site — os mesmos anúncios, cada um com a ficha.
           </p>
           <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {SERVICE_CITIES.map((city) => (
@@ -89,8 +88,8 @@ export default async function SeminovosHubPage() {
                 Em destaque agora
               </h2>
               <p className="mt-1.5 text-sm text-muted">
-                Destaques do estoque disponível agora. Na página de cada cidade,
-                Linhares e Serra não se misturam.
+                Destaques do estoque disponível agora. Na página de cada cidade
+                a lista é o estoque inteiro, não um recorte por cidade.
               </p>
             </div>
             <ButtonLink href="/estoque" variant="outline" className="sm:shrink-0">
