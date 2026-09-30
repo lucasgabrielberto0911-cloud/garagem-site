@@ -30,11 +30,18 @@ test("cidade do veículo entra no filtro, na API e no chip mobile", () => {
 
 test("landing de cidade não promete estoque local onde o carro não está", () => {
   const page = readSrc("app/(site)/seminovos/[cidade]/page.tsx");
-  assert.match(page, /publicCityStockLink/);
+  assert.match(page, /cityPageStockCopy/);
   assert.doesNotMatch(page, /Ver todos em/);
-  assert.match(page, /stockLink\.href/);
-  assert.match(page, /Linhares ou na Serra/);
-  assert.match(readSrc("lib/vehicles.ts"), /stockCityFilter\(slug\)/);
+  assert.match(page, /stock\.stockHref/);
+  assert.match(page, /showWhatsApp=\{false\}/);
+  assert.doesNotMatch(page, /estão em \$\{city\.name\}/);
+  const vehicles = readSrc("lib/vehicles.ts");
+  const showcase = vehicles.slice(
+    vehicles.indexOf("async function fetchCityShowcaseVehicles"),
+    vehicles.indexOf("const loadCityShowcaseCached"),
+  );
+  assert.match(showcase, /cityShowcaseStockCity\(slug\)/);
+  assert.doesNotMatch(showcase, /stockCityFilter\(slug\)/);
 });
 
 test("hero mobile não gasta blur largo nem empurra o estoque com padding morto", () => {

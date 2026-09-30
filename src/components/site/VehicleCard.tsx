@@ -32,12 +32,14 @@ export function VehicleCard({
   returnTo,
   showDestaque = false,
   whatsappCampaign,
+  showWhatsApp = true,
 }: {
   vehicle: VehicleCardData;
   priority?: boolean;
   returnTo?: string;
   showDestaque?: boolean;
   whatsappCampaign?: WhatsAppCampaign;
+  showWhatsApp?: boolean;
 }) {
   const display = formatVehicleDisplay(vehicle);
   const cover = coverSrc(vehicle.photos);
@@ -167,7 +169,7 @@ export function VehicleCard({
           </div>
         </div>
       </StockVehicleLink>
-      {!sold ? (
+      {!sold && showWhatsApp ? (
         <VehicleCardWhatsApp
           vehicleId={vehicle.id}
           label={display.fullLabel}

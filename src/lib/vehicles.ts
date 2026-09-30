@@ -6,7 +6,7 @@ import { brandKey, formatBrandName } from "@/lib/format";
 import { extractVehicleIdFromParam, vehicleSlug } from "@/lib/vehicle-slug";
 import { SEED_TESTIMONIALS } from "@/lib/testimonials-seed";
 import { cleanTestimonialField } from "@/lib/testimonials-clean";
-import { pickCityShowcase } from "@/lib/city-showcase";
+import { cityShowcaseStockCity, pickCityShowcase } from "@/lib/city-showcase";
 import {
   STOCK_PAGE_SIZE,
   stockCityFilter,
@@ -290,8 +290,9 @@ async function fetchCityShowcaseVehicles(
   slug: string,
   take: number,
 ): Promise<VehicleCardRecord[]> {
+  const locationCity = cityShowcaseStockCity(slug);
   const pool = await findCardVehicles({
-    where: { status: "disponivel", ...stockCityFilter(slug) },
+    where: { status: "disponivel", locationCity },
     orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
     take: 40,
   });
@@ -300,11 +301,11 @@ async function fetchCityShowcaseVehicles(
 
 const loadCityShowcaseCached = unstable_cache(
   async (slug: string, take: number) => fetchCityShowcaseVehicles(slug, take),
-  ["city-showcase-v3"],
+  ["city-showcase-v4"],
   PUBLIC_CACHE,
 );
 
-/** Recorte do estoque real — cada cidade começa em um ponto diferente da lista. */
+/** Serra lista só Serra. As outras cidades mostram o estoque de Linhares. */
 export const getCityShowcaseVehicles = cache((slug: string, take = 8) =>
   safeQuery(
     `vitrine ${slug}`,

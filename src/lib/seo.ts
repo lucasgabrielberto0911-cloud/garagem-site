@@ -16,6 +16,10 @@ import {
   type SiteConfig,
 } from "@/lib/site";
 import {
+  DEFAULT_VEHICLE_LOCATION_CITY,
+  vehicleLocationLabel,
+} from "@/lib/vehicle-location";
+import {
   buildVehicleFullLabel,
   formatVehicleDisplay,
 } from "@/lib/vehicle-display";
@@ -196,7 +200,7 @@ export function localBusinessJsonLd(
     address: {
       "@type": "PostalAddress",
       ...(street ? { streetAddress: street } : {}),
-      addressLocality: "Aracruz",
+      addressLocality: vehicleLocationLabel(DEFAULT_VEHICLE_LOCATION_CITY),
       addressRegion: config.stateCode,
       addressCountry: "BR",
     },
