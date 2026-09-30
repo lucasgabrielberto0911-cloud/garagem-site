@@ -48,12 +48,14 @@ test("dossiê de compra só lista o que o anúncio tem", () => {
   });
   assert.deepEqual(
     facts.map((fact) => fact.label),
-    ["Vistoria da loja", "Garantia", "Pneus novos", "Equipamentos"],
+    ["Vistoria da loja", "Garantia", "Pneus novos"],
   );
   assert.equal(facts[0]?.detail, "Lataria revisada na loja.");
   assert.equal(facts[1]?.detail, "3 meses");
-  assert.match(facts[3]?.detail ?? "", /Ar-condicionado, ABS, Bluetooth e mais 1/);
-  assert.doesNotMatch(facts[3]?.detail ?? "", /Pneus novos/);
+  const rendered = JSON.stringify(facts);
+  assert.doesNotMatch(rendered, /Equipamentos/);
+  assert.doesNotMatch(rendered, /e mais/);
+  assert.doesNotMatch(rendered, /Ar-condicionado/);
 });
 
 test("vistoria mostra o texto do anúncio e tira o aviso de documento oficial", () => {

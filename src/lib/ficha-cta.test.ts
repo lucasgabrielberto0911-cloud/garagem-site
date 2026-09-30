@@ -262,6 +262,9 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
   assert.doesNotMatch(html, /Chave reserva/);
   assert.doesNotMatch(html, /Manual do proprietário/);
   assert.doesNotMatch(html, /Vídeo sob pedido/);
+  assert.doesNotMatch(html, /Confirmado neste anúncio/i);
+  assert.doesNotMatch(html, /Equipamentos/);
+  assert.doesNotMatch(html, /e mais \d/);
 
   const vistoria = blocks.find((block) => block.title === "Vistoria da loja");
   assert.match(vistoria?.body ?? "", /óleo/i);
@@ -271,60 +274,76 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
   assert.doesNotMatch(readSrc("components/site/VehicleMobileDossier.tsx"), /gap-px/);
 });
 
-test("dossiê e o aside mostram chave, manual e vídeo só quando marcados", () => {
+test("ficha pública não mostra confirmado neste anúncio nem equipamentos", () => {
   const page = readSrc("app/(site)/estoque/[id]/page.tsx");
   const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
-  assert.match(page, /VehicleDossierChips/);
-  assert.match(page, /hasSpareKey=\{vehicle\.hasSpareKey\}/);
-  assert.match(page, /hasManual=\{vehicle\.hasManual\}/);
-  assert.match(page, /hasVideo=\{vehicle\.hasVideo\}/);
-  assert.match(dossier, /VehicleDossierChips/);
+  assert.doesNotMatch(page, /Confirmado neste anúncio/i);
+  assert.doesNotMatch(dossier, /Confirmado neste anúncio/i);
+  assert.doesNotMatch(page, /VehicleDossierChips/);
+  assert.doesNotMatch(dossier, /VehicleDossierChips/);
+  assert.doesNotMatch(page, /VehiclePurchaseFacts/);
+  assert.doesNotMatch(dossier, /VehiclePurchaseFacts/);
+  assert.doesNotMatch(page, /Equipamentos/);
+  assert.doesNotMatch(dossier, /Equipamentos/);
+  assert.doesNotMatch(page, /e mais \$\{/);
   assert.doesNotMatch(page, /VehicleDocument/);
   assert.doesNotMatch(dossier, /VehicleDocument/);
+  assert.doesNotMatch(page, /Consignado/);
+  assert.doesNotMatch(dossier, /Consignado/);
+  assert.match(page, /VehicleTrustNotes/);
+  assert.match(page, /VehicleInspectionBadge/);
+  assert.match(page, /Tenho interesse/);
+  assert.match(page, /Abre o WhatsApp com este anúncio — modelo, ano e preço\./);
+  assert.match(dossier, /VehicleTrustNotes/);
 
-  const specs: VehicleSpecRow[] = [{ label: "Combustível", value: "Flex" }];
-  function markup(flags: {
-    hasSpareKey?: boolean;
-    hasManual?: boolean;
-    hasVideo?: boolean;
-  }) {
-    return renderToStaticMarkup(
-      createElement(
-        FavoritesProvider,
-        null,
-        createElement(VehicleMobileBlocks, {
-          fullLabel: "Honda HR-V",
-          path: "/estoque/hrv",
-          sold: false,
-          price: 84900,
-          yearModel: 2016,
-          make: "Honda",
-          model: "HR-V",
-          vehicleId: "v1",
-          accessories: [],
-          specs,
-          conditions: DEFAULT_VEHICLE_CONDITIONS,
-          google: DEFAULT_GOOGLE_REVIEWS,
-          prompt: "dúvida",
-          ...flags,
-        }),
-      ),
-    );
-  }
+  const trustAt = page.indexOf("<VehicleTrustNotes");
+  const interestAt = page.indexOf("Tenho interesse");
+  assert.ok(trustAt >= 0 && interestAt > trustAt);
 
-  const marked = markup({ hasSpareKey: true, hasManual: true, hasVideo: true });
-  const keyAt = marked.indexOf("Chave reserva");
-  const manualAt = marked.indexOf("Manual do proprietário");
-  const videoAt = marked.indexOf("Vídeo sob pedido");
-  assert.ok(keyAt >= 0 && keyAt < manualAt && manualAt < videoAt);
-  assert.ok(keyAt < marked.indexOf("<details"));
+  const html = renderToStaticMarkup(
+    createElement(
+      FavoritesProvider,
+      null,
+      createElement(VehicleMobileBlocks, {
+        fullLabel: "Renault Sandero",
+        path: "/estoque/sandero",
+        sold: false,
+        price: 54900,
+        yearModel: 2018,
+        make: "Renault",
+        model: "Sandero",
+        vehicleId: "v1",
+        accessories: [
+          "Ar-condicionado",
+          "Direção hidráulica",
+          "Media Nav 7",
+          "Bluetooth",
+          "USB",
+        ],
+        specs: [{ label: "Combustível", value: "Flex" }],
+        inspection: "Cautelar aprovado",
+        conditions: DEFAULT_VEHICLE_CONDITIONS,
+        google: DEFAULT_GOOGLE_REVIEWS,
+        prompt: "dúvida",
+      }),
+    ),
+  );
 
-  const manualOnly = markup({ hasManual: true });
-  assert.match(manualOnly, /Manual do proprietário/);
-  assert.doesNotMatch(manualOnly, /Chave reserva/);
-  assert.doesNotMatch(manualOnly, /Vídeo sob pedido/);
-
-  assert.doesNotMatch(markup({}), /Chave reserva|Manual do proprietário|Vídeo sob pedido/);
+  assert.doesNotMatch(html, /Confirmado neste anúncio/i);
+  assert.doesNotMatch(html, /Chave reserva/);
+  assert.doesNotMatch(html, /Manual do proprietário/);
+  assert.doesNotMatch(html, /Vídeo sob pedido/);
+  assert.doesNotMatch(html, /Equipamentos/);
+  assert.doesNotMatch(html, /e mais \d/);
+  assert.match(html, /Garantia de 3 meses/);
+  assert.match(html, /Procedência verificada/);
+  assert.match(html, /Atendimento online 8h–23h/);
+  assert.match(html, /Cautelar aprovado/);
+  assert.doesNotMatch(html, /Consignado/);
+  const items = html.match(/<details([^>]*)>([\s\S]*?)<\/details>/g) ?? [];
+  const accessories = items.find((block) => block.includes("Itens e acessórios")) ?? "";
+  assert.match(accessories, /Ar-condicionado/);
+  assert.match(accessories, /Direção hidráulica/);
 });
 
 test("final da placa só aparece na dobra quando o anúncio tem", () => {
