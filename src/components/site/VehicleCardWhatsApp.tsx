@@ -1,5 +1,6 @@
 "use client";
 
+import { useHideStockCardInterest } from "@/components/site/HideStockCardInterest";
 import { VehicleLeadHit } from "@/components/site/VehiclePixel";
 import { IconWhatsApp } from "@/components/site/icons";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
@@ -43,7 +44,9 @@ export function VehicleCardWhatsApp({
   trackingLabel?: string;
   campaign?: WhatsAppCampaign;
 }) {
+  const hideOnStockList = useHideStockCardInterest();
   const chat = variant === "chat";
+  if (hideOnStockList && !chat) return null;
   const text = message ?? WHATSAPP_MESSAGES.vehicle(label);
   const content = whatsappContentFromVehicle({ id: vehicleId, path });
   const href = whatsappUrl(text, {

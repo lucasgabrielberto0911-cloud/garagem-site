@@ -3,8 +3,8 @@ import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { RememberVehicleSnapshot } from "@/components/site/RememberVehicleSnapshot";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
-import { formatCurrencyBRL, formatBrandName, formatModelName, formatNumberBR } from "@/lib/format";
-import { vehicleLocationLabel } from "@/lib/vehicle-location";
+import { formatBrandName, formatModelName } from "@/lib/format";
+import { publicCardFacts, type PublicCardFact } from "@/lib/public-card-facts";
 import { coverSrc, coverSrcSet, type VehicleCardRecord } from "@/lib/stock-query";
 import {
   formatUpdatedAt,
@@ -40,6 +40,7 @@ export function VehicleCard({
   whatsappCampaign?: WhatsAppCampaign;
 }) {
   const display = formatVehicleDisplay(vehicle);
+  const card = publicCardFacts(vehicle);
   const cover = coverSrc(vehicle.photos);
   const coverSet = coverSrcSet(vehicle.photos);
   const badge = STATUS_BADGE[vehicle.status];
@@ -96,7 +97,11 @@ export function VehicleCard({
       <StockVehicleLink
         href={href}
         returnTo={returnTo}
-        ariaLabel={`${display.titleWithYear} — ${formatCurrencyBRL(vehicle.price)}`}
+        ariaLabel={
+          card.priceLabel
+            ? `${display.titleWithYear} — ${card.priceLabel}`
+            : display.titleWithYear
+        }
       >
         <div className="relative aspect-[16/10] overflow-hidden bg-asphalt">
           <VehicleImage
@@ -138,29 +143,28 @@ export function VehicleCard({
 
         <div className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2">
           <div className="min-w-0">
-            <h3 className="line-clamp-2 font-display text-[15px] font-semibold leading-snug text-cream sm:text-sm">
-              {display.title}
-            </h3>
-            {display.version ? (
+            {card.title ? (
+              <h3 className="line-clamp-2 font-display text-[15px] font-semibold leading-snug text-cream sm:text-sm">
+                {card.title}
+              </h3>
+            ) : null}
+            {card.version ? (
               <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted">
-                {display.version}
+                {card.version}
               </p>
             ) : null}
-            <CardFacts
-              year={vehicle.yearModel}
-              km={vehicle.km}
-              transmission={display.transmission}
-              city={vehicleLocationLabel(vehicle.locationCity)}
-            />
+            <CardFacts facts={card.facts} />
             {updated ? (
               <p className="mt-0.5 truncate text-[10px] text-muted/90">{updated}</p>
             ) : null}
           </div>
 
           <div className="mt-auto flex flex-col gap-1.5 border-t border-white/10 pt-2 sm:flex-row sm:items-end sm:justify-between sm:gap-2 sm:pt-2.5">
-            <p className="font-display text-lg font-bold leading-none text-cream sm:text-base">
-              {formatCurrencyBRL(vehicle.price)}
-            </p>
+            {card.priceLabel ? (
+              <p className="font-display text-lg font-bold leading-none text-cream sm:text-base">
+                {card.priceLabel}
+              </p>
+            ) : null}
             <span className="inline-flex min-h-11 shrink-0 items-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream/80 transition group-hover:text-cream">
               Ver ficha
             </span>
@@ -184,23 +188,8 @@ export function VehicleCard({
   );
 }
 
-function CardFacts({
-  year,
-  km,
-  transmission,
-  city,
-}: {
-  year: number;
-  km: number;
-  transmission: string;
-  city: string;
-}) {
-  const facts = [
-    { label: "Ano", value: year ? String(year) : "—" },
-    { label: "Km", value: `${formatNumberBR(km)} km` },
-    { label: "Câmbio", value: transmission || "—" },
-    ...(city ? [{ label: "Cidade", value: city }] : []),
-  ];
+function CardFacts({ facts }: { facts: PublicCardFact[] }) {
+  if (facts.length === 0) return null;
 
   return (
     <dl className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1">
