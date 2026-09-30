@@ -56,12 +56,14 @@ test("dossiê de compra só lista o que o anúncio tem", () => {
   assert.doesNotMatch(facts[3]?.detail ?? "", /Pneus novos/);
 });
 
-test("vistoria com texto de documento oficial vira a nota curta, sem inventar laudo", () => {
+test("vistoria mostra o texto do anúncio e tira o aviso de documento oficial", () => {
   const facts = publicPurchaseFacts({
     inspection: "Cautelar aprovado. Não é documento oficial de inspeção.",
   });
   assert.equal(facts.length, 1);
   assert.equal(facts[0]?.label, "Vistoria da loja");
+  assert.equal(facts[0]?.detail, "Cautelar aprovado.");
   assert.doesNotMatch(facts[0]?.detail ?? "", /documento oficial/i);
-  assert.doesNotMatch(facts[0]?.detail ?? "", /laudo/i);
+  assert.deepEqual(publicPurchaseFacts({ inspection: "   " }), []);
+  assert.deepEqual(publicPurchaseFacts({ inspection: null }), []);
 });

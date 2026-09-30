@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   hasPublishablePrice,
+  localBusinessJsonLd,
   pageCanonicalPath,
   vehicleAvailabilityUrl,
   vehicleJsonLd,
@@ -52,4 +53,14 @@ test("JSON-LD do anúncio traz preço, km e disponibilidade sem FIPE", () => {
   const soldOffers = (sold as { offers: Record<string, unknown> }).offers;
   assert.equal(soldOffers.availability, vehicleAvailabilityUrl("vendido"));
   assert.equal("price" in soldOffers, false);
+});
+
+test("a loja não usa Aracruz como cidade padrão e publica um telefone só", () => {
+  const data = localBusinessJsonLd() as {
+    address: { addressLocality: string };
+    telephone: string[];
+  };
+  assert.equal(data.address.addressLocality, "Linhares");
+  assert.notEqual(data.address.addressLocality, "Aracruz");
+  assert.deepEqual(data.telephone, ["+5527996330706"]);
 });

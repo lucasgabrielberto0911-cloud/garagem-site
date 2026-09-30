@@ -1,22 +1,25 @@
-/** Offset estável para cada cidade não repetir o mesmo recorte de 8 carros. */
-export function cityShowcaseOffset(slug: string, length: number) {
-  if (length <= 0) return 0;
-  let hash = 0;
-  for (const char of slug) {
-    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  }
-  return hash % length;
-}
+export type CityPageStockCopy = {
+  heading: string;
+  intro: string;
+  empty: string;
+  stockHref: string;
+  stockLabel: string;
+  whatsappMessage: string;
+};
 
-export function rotateItems<T>(items: T[], offset: number) {
-  if (items.length === 0) return items;
-  const start = ((offset % items.length) + items.length) % items.length;
-  if (start === 0) return items.slice();
-  return [...items.slice(start), ...items.slice(0, start)];
-}
-
-export function pickCityShowcase<T>(items: T[], slug: string, take: number) {
-  if (items.length === 0 || take <= 0) return [];
-  const rotated = rotateItems(items, cityShowcaseOffset(slug, items.length));
-  return rotated.slice(0, Math.min(take, rotated.length));
+/**
+ * Texto da landing. A lista é o estoque inteiro — a cidade é o atendimento,
+ * não um filtro por onde o carro está.
+ */
+export function cityPageStockCopy(cityName: string): CityPageStockCopy {
+  const name = cityName.trim() || "sua cidade";
+  return {
+    heading: "Estoque disponível agora",
+    intro: `A lista é a mesma do estoque do site: foto, preço e ficha de cada anúncio disponível. Quem está em ${name} vê os mesmos carros. O WhatsApp pede vídeo ou visita — a escolha começa na ficha.`,
+    empty:
+      "Neste momento não tem veículo disponível no estoque. A página não inventa carro.",
+    stockHref: "/estoque",
+    stockLabel: "Ver o estoque",
+    whatsappMessage: `Oi! Vi o site da Garagem e quero um vídeo ou combinar uma visita. Estou em ${name}.`,
+  };
 }

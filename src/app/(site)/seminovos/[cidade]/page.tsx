@@ -11,8 +11,8 @@ import {
   PageHeader,
   WhatsAppButton,
 } from "@/components/site/ui";
-import { WHATSAPP_MESSAGES, site } from "@/lib/site";
-import { publicCityStockLink } from "@/lib/vehicle-location";
+import { site } from "@/lib/site";
+import { cityPageStockCopy } from "@/lib/city-showcase";
 import {
   SERVICE_CITIES,
   breadcrumbJsonLd,
@@ -57,13 +57,13 @@ export default async function SeminovosCidadePage({
   if (!city) notFound();
 
   const path = `/seminovos/${city.slug}`;
-  const stockLink = publicCityStockLink(city.slug);
+  const stock = cityPageStockCopy(city.name);
   const nearby = otherServiceCities(city.slug);
   const faqs = city.faqs.map((item) => ({
     question: item.question,
     answer: item.answer,
   }));
-  const featured = await getCityShowcaseVehicles(city.slug, 8);
+  const featured = await getCityShowcaseVehicles();
 
   return (
     <div className="py-12 lg:py-16">
@@ -99,7 +99,37 @@ export default async function SeminovosCidadePage({
           <span className="text-cream">{city.name}</span>
         </nav>
 
-        <section className="mt-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <section className="mt-10">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="font-display text-xl font-semibold text-cream">
+                {stock.heading}
+              </h2>
+              <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
+                {stock.intro}
+              </p>
+            </div>
+            <ButtonLink href={stock.stockHref} variant="outline" className="sm:shrink-0">
+              {stock.stockLabel}
+            </ButtonLink>
+          </div>
+          <div className="mt-6">
+            {featured.length === 0 ? (
+              <p className="border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-center text-sm leading-relaxed text-muted">
+                {stock.empty}
+              </p>
+            ) : (
+              <VehicleGrid
+                vehicles={featured}
+                priorityCount={2}
+                returnTo={path}
+                showWhatsApp={false}
+              />
+            )}
+          </div>
+        </section>
+
+        <section className="mt-12 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-5 text-sm leading-relaxed text-muted">
             {city.paragraphs.map((text) => (
               <p key={text.slice(0, 40)}>{text}</p>
@@ -113,19 +143,20 @@ export default async function SeminovosCidadePage({
 
           <aside className="border border-white/10 bg-ink p-5 sm:p-6">
             <p className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
-              Fale com a Sua Garagem
+              Vídeo ou visita
             </p>
             <p className="mt-2 text-sm text-muted">
-              Conte o que você procura em {city.name} — modelo, faixa de preço
-              ou troca — que a gente responde pelo WhatsApp.
+              A ficha tem a foto, o preço e o que o anúncio confirma. Se quiser
+              um vídeo ou combinar uma visita em {city.name}, chama no WhatsApp
+              da loja — {site.whatsappLabel}.
             </p>
             <div className="mt-5 flex flex-col gap-3">
               <SiteLeadHit contentName={`Seminovos ${city.name}`}>
                 <WhatsAppButton
                   trackingLabel="seminovos"
-                  message={`${WHATSAPP_MESSAGES.general} Estou em ${city.name}.`}
+                  message={stock.whatsappMessage}
                 >
-                  Chamar no WhatsApp
+                  Pedir vídeo ou visita
                 </WhatsAppButton>
               </SiteLeadHit>
               <ButtonLink href="/estoque" variant="outline">
@@ -133,39 +164,6 @@ export default async function SeminovosCidadePage({
               </ButtonLink>
             </div>
           </aside>
-        </section>
-
-        <section className="mt-12">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="font-display text-xl font-semibold text-cream">
-                Estoque disponível agora
-              </h2>
-              <p className="mt-1.5 text-sm text-muted">
-                {stockLink.place
-                  ? `Estes estão em ${stockLink.place}. O filtro do estoque já abre nessa cidade — a lista completa continua no site.`
-                  : `O estoque é o da loja digital. Os veículos estão em Linhares ou na Serra. Atendemos ${city.name} pelo WhatsApp.`}
-              </p>
-            </div>
-            <ButtonLink href={stockLink.href} variant="outline" className="sm:shrink-0">
-              {stockLink.label}
-            </ButtonLink>
-          </div>
-          <div className="mt-6">
-            {featured.length === 0 ? (
-              <p className="border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-center text-sm text-muted">
-                {stockLink.place
-                  ? `Neste momento não tem veículo em ${stockLink.place}. O estoque completo continua no site — ou chama no WhatsApp e diz o que você procura.`
-                  : `Estoque sendo montado. Chame no WhatsApp e diga o que você procura em ${city.name}.`}
-              </p>
-            ) : (
-              <VehicleGrid
-                vehicles={featured}
-                priorityCount={2}
-                returnTo={path}
-              />
-            )}
-          </div>
         </section>
 
         <section className="mt-12">
