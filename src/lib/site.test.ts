@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   PHONES,
   WHATSAPP_BRAND,
@@ -12,6 +15,7 @@ import {
   isVehicleFichaPath,
   pageWhatsAppTracking,
   site,
+  telUrl,
   whatsappCampaignFromLabel,
   whatsappCampaignFromPath,
   whatsappContentFromVehicle,
@@ -21,8 +25,13 @@ import {
 
 test("WhatsApp oficial continua no número da loja", () => {
   assert.equal(site.whatsappNumber, "5527996330706");
+  assert.equal(PHONES.length, 1);
   assert.equal(PHONES[0].digits, "5527996330706");
+  assert.equal(PHONES[0].label, "(27) 99633-0706");
   assert.match(whatsappUrl(), /^https:\/\/wa\.me\/5527996330706\?text=/);
+  assert.match(whatsappUrl("Oi", 1), /^https:\/\/wa\.me\/5527996330706\?text=/);
+  assert.equal(telUrl(0), "tel:+5527996330706");
+  assert.equal(telUrl(1), "tel:+5527996330706");
 });
 
 test("CTA genérico do topo e da home no tom natural", () => {
@@ -232,4 +241,36 @@ test("lista de favoritos leva modelo, ano, slug e o id do salvo por último", ()
   assert.equal(empty.message, WHATSAPP_MESSAGES.similarFavorites);
   assert.equal(empty.vehicleId, undefined);
   assert.equal(empty.content, undefined);
+});
+
+function listSourceFiles(dir: string, out: string[] = []) {
+  let names: string[] = [];
+  try {
+    names = readdirSync(dir);
+  } catch {
+    return out;
+  }
+  for (const name of names) {
+    if (name === "node_modules" || name === ".next" || name === ".git") continue;
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) listSourceFiles(path, out);
+    else if (/\.(ts|tsx|js|txt|md|json|html)$/.test(name) && !/\.test\.tsx?$/.test(name)) {
+      out.push(path);
+    }
+  }
+  return out;
+}
+
+test("contato público não publica o número que ficou só no Instagram", () => {
+  const strayDigits = ["5527999", "566161"].join("");
+  const strayLabel = ["99956", "6161"].join("-");
+  const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
+  const hits: string[] = [];
+  for (const dir of ["src", "public", "docs"]) {
+    for (const file of listSourceFiles(join(root, dir))) {
+      const text = readFileSync(file, "utf8");
+      if (text.includes(strayDigits) || text.includes(strayLabel)) hits.push(file);
+    }
+  }
+  assert.deepEqual(hits, []);
 });

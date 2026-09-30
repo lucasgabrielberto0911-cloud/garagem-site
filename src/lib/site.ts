@@ -4,18 +4,13 @@
  * Região, e-mail, endereço e horários podem ser sobrescritos em /admin/site.
  * Telefones ficam em formato internacional (55 + DDD + número) para o WhatsApp.
  */
+/** Um único WhatsApp público. O site não publica telefone alternativo. */
 export const PHONES = [
   {
     label: "(27) 99633-0706",
     digits: "5527996330706",
     kind: "whatsapp",
     note: "WhatsApp",
-  },
-  {
-    label: "(27) 99956-6161",
-    digits: "5527999566161",
-    kind: "alternate",
-    note: "Telefone alternativo",
   },
 ] as const;
 
@@ -373,9 +368,10 @@ export function applyWhatsAppUtm(
 }
 
 /**
- * Monta o link do WhatsApp. Sem número configurado o link cai no wa.me
- * genérico, que ainda abre o app — evita href vazio quebrando a navegação.
+ * Monta o link do WhatsApp oficial (99633-0706).
+ * Sem número configurado o link cai no wa.me genérico, que ainda abre o app.
  * UTM entra como query extra para o Lucas ver a origem no chat aberto.
+ * `phoneIndex` antigo não troca o destino: o site tem um número só.
  */
 export function whatsappUrl(
   message: string = WHATSAPP_MESSAGES.general,
@@ -383,10 +379,8 @@ export function whatsappUrl(
   tracking?: WhatsAppTracking,
 ) {
   const opts = resolveWhatsAppTracking(phoneIndexOrTracking, tracking);
-  const digits = (PHONES[opts.phoneIndex]?.digits ?? site.whatsappNumber).replace(
-    /\D/g,
-    "",
-  );
+  const digits = site.whatsappNumber.replace(/\D/g, "");
+  void opts.phoneIndex;
   const text = encodeURIComponent(message);
   const base = digits
     ? `https://wa.me/${digits}?text=${text}`
@@ -403,11 +397,10 @@ export function pwaShortcutWhatsAppUrl() {
   });
 }
 
+/** Liga no mesmo WhatsApp oficial. O índice não escolhe outro número. */
 export function telUrl(phoneIndex = 0) {
-  const digits = (PHONES[phoneIndex]?.digits ?? site.whatsappNumber).replace(
-    /\D/g,
-    "",
-  );
+  void phoneIndex;
+  const digits = site.whatsappNumber.replace(/\D/g, "");
   return digits ? `tel:+${digits}` : "tel:";
 }
 

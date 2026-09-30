@@ -20,21 +20,34 @@ export const SPEC_EMPTY_FEMININE = "Não informada";
 /** Nome único da checagem interna na ficha, no filtro e no selo. */
 export const STORE_INSPECTION_LABEL = "Vistoria da loja";
 
-/** Substitui só o texto que parece documento oficial. O restante do anúncio permanece. */
+/**
+ * Parágrafo genérico antigo da loja. Não é o texto de um anúncio
+ * (ex.: "Cautelar aprovado") e não vira selo.
+ */
 export const STORE_INSPECTION_NOTE = "Checagem interna, antes do estoque";
 
-const OFFICIAL_INSPECTION = /laudo|cautelar/i;
-
-/** Nota pública da vistoria. Null se o campo estiver vazio. */
+/**
+ * Texto da vistoria neste anúncio.
+ * Vazio fica null. O parágrafo genérico antigo vira a nota curta da loja.
+ * "Cautelar aprovado" e qualquer nota própria permanecem — só sai a frase
+ * de documento oficial, sem inventar laudo.
+ */
 export function publicInspectionNote(value: string | null | undefined) {
   const text = (value ?? "").replace(/\s+/g, " ").trim();
   if (!text) return null;
-  if (OFFICIAL_INSPECTION.test(text) || isLegacyStoreInspectionCopy(text)) {
-    return STORE_INSPECTION_NOTE;
-  }
+  if (isLegacyStoreInspectionCopy(text)) return STORE_INSPECTION_NOTE;
   const cleaned = withoutInspectionDisclaimer(text);
-  if (!cleaned) return STORE_INSPECTION_NOTE;
-  return cleaned;
+  return cleaned || null;
+}
+
+/**
+ * Selo visível da ficha. Só o texto deste anúncio.
+ * Campo vazio, aviso solto ou o parágrafo genérico da loja não geram selo.
+ */
+export function publicInspectionBadge(value: string | null | undefined) {
+  const note = publicInspectionNote(value);
+  if (!note || note === STORE_INSPECTION_NOTE) return null;
+  return note;
 }
 
 export type VehicleSpecRow = {

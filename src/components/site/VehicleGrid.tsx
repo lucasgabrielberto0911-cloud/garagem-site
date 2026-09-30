@@ -26,6 +26,7 @@ export function VehicleGrid({
   desktopCols = 3,
   destaqueLimit = 3,
   whatsappCampaign,
+  showWhatsApp = true,
 }: {
   vehicles: VehicleCardData[];
   /** Quantos cards iniciais recebem `priority` (LCP). */
@@ -37,6 +38,8 @@ export function VehicleGrid({
   /** 0 = nenhum selo Destaque (ex.: bloco que já é “destaques”). */
   destaqueLimit?: number;
   whatsappCampaign?: WhatsAppCampaign;
+  /** Landing de cidade leva à ficha; o WhatsApp da página é vídeo ou visita. */
+  showWhatsApp?: boolean;
 }) {
   const destaqueIds = featuredBadgeIds(vehicles, destaqueLimit);
   return (
@@ -51,6 +54,7 @@ export function VehicleGrid({
             returnTo={returnTo}
             showDestaque={destaqueIds.has(vehicle.id)}
             whatsappCampaign={whatsappCampaign}
+            showWhatsApp={showWhatsApp}
           />
         </div>
       ))}

@@ -8,6 +8,7 @@ import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleDossierChips } from "@/components/site/VehicleDossierChips";
 import { VehiclePurchaseFacts } from "@/components/site/VehiclePurchaseFacts";
+import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import type { GoogleReviews } from "@/lib/google-reviews";
@@ -46,6 +47,7 @@ export function VehicleMobileSummary({
   transmission,
   city,
   plateEnd,
+  inspection,
 }: {
   title: string;
   version?: string | null;
@@ -57,6 +59,7 @@ export function VehicleMobileSummary({
   transmission: string;
   city: string;
   plateEnd?: string | null;
+  inspection?: string | null;
 }) {
   const facts = [
     { label: "Ano", value: formatVehicleYearRange(year, yearModel) },
@@ -83,6 +86,9 @@ export function VehicleMobileSummary({
           formatCurrencyBRL(price)
         )}
       </p>
+      {!sold ? (
+        <VehicleInspectionBadge inspection={inspection} className="mt-2.5" />
+      ) : null}
       <dl className="mt-2.5 grid grid-cols-2 gap-1.5">
         {facts.map((fact) => (
           <div key={fact.label} className="min-w-0 border border-white/10 bg-ink px-2.5 py-2">
