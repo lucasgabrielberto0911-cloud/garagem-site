@@ -6,6 +6,7 @@ import {
   STORE_INSPECTION_NOTE,
   buildVehiclePublicSpecs,
   formatVehicleYearRange,
+  publicInspectionBadge,
   publicInspectionNote,
 } from "./vehicle-specs";
 
@@ -50,11 +51,8 @@ test("ano fabricado/modelo e opcionais só entram quando existem", () => {
   assert.equal(byLabel.Câmbio?.empty, true);
   assert.equal(byLabel.Motor?.value, "1.6");
   assert.equal(byLabel.Portas?.value, "4");
-  assert.equal(
-    byLabel["Vistoria da loja"]?.value,
-    "Checagem interna, antes do estoque",
-  );
-  assert.equal(specs.some((row) => row.value === "Cautelar aprovado"), false);
+  assert.equal(byLabel["Vistoria da loja"]?.value, "Cautelar aprovado");
+  assert.equal(publicInspectionBadge("Cautelar aprovado"), "Cautelar aprovado");
   assert.equal(specs.some((row) => row.label === "Cidade"), false);
 });
 
@@ -138,5 +136,41 @@ test("nota pública da vistoria não leva aviso de documento oficial", () => {
     ),
     STORE_INSPECTION_NOTE,
   );
-  assert.equal(publicInspectionNote("Cautelar aprovado"), STORE_INSPECTION_NOTE);
+  assert.equal(publicInspectionNote("Cautelar aprovado"), "Cautelar aprovado");
+  assert.equal(
+    publicInspectionNote("Cautelar aprovado. Não é documento oficial de inspeção."),
+    "Cautelar aprovado.",
+  );
+});
+
+test("selo da ficha mostra o texto salvo e some quando a vistoria está vazia", () => {
+  assert.equal(publicInspectionBadge("Cautelar aprovado"), "Cautelar aprovado");
+  assert.equal(
+    publicInspectionBadge("  Cautelar aprovado. Não é documento oficial de inspeção.  "),
+    "Cautelar aprovado.",
+  );
+  assert.equal(publicInspectionBadge("Lataria revisada na loja"), "Lataria revisada na loja");
+  assert.equal(publicInspectionBadge(null), null);
+  assert.equal(publicInspectionBadge(""), null);
+  assert.equal(publicInspectionBadge("   "), null);
+  assert.equal(publicInspectionBadge("Não é documento oficial de inspeção."), null);
+  assert.equal(
+    publicInspectionBadge(
+      "Antes de entrar no estoque, o seminovo passa pela vistoria da loja: checagem interna de procedência e condição geral.",
+    ),
+    null,
+  );
+  assert.equal(
+    buildVehiclePublicSpecs({
+      category: "carro",
+      year: 2015,
+      yearModel: 2015,
+      km: 80000,
+      fuel: "Flex",
+      transmission: "Automático",
+      color: "Prata",
+      inspection: "   ",
+    }).some((row) => row.label === "Vistoria da loja"),
+    false,
+  );
 });

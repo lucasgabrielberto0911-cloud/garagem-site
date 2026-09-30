@@ -21,6 +21,7 @@ import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { VehicleDossierChips } from "@/components/site/VehicleDossierChips";
 import { VehiclePurchaseFacts } from "@/components/site/VehiclePurchaseFacts";
+import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
@@ -28,10 +29,7 @@ import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { JsonLd } from "@/components/JsonLd";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
-import {
-  buildVehiclePublicSpecs,
-  STORE_INSPECTION_LABEL,
-} from "@/lib/vehicle-specs";
+import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
 import { vehicleLocationLabel } from "@/lib/vehicle-location";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
@@ -385,6 +383,7 @@ export default async function VehicleDetailPage({
                 transmission={display.transmission}
                 city={vehicleLocationLabel(vehicle.locationCity)}
                 plateEnd={vehicle.plateEnd}
+                inspection={sold ? null : vehicle.inspection}
               />
             </div>
           </div>
@@ -402,11 +401,6 @@ export default async function VehicleDetailPage({
                 ) : vehicle.status === "reservado" ? (
                   <span className="bg-brand-orange px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wider text-asphalt">
                     Reservado
-                  </span>
-                ) : null}
-                {!sold && vehicle.inspection ? (
-                  <span className="border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-display text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
-                    {STORE_INSPECTION_LABEL}
                   </span>
                 ) : null}
                 {!sold ? (
@@ -439,6 +433,9 @@ export default async function VehicleDetailPage({
                   formatCurrencyBRL(vehicle.price)
                 )}
               </p>
+              {!sold ? (
+                <VehicleInspectionBadge inspection={vehicle.inspection} />
+              ) : null}
               {!sold ? <VehicleTrustNotes /> : null}
               {showConfirmed ? (
                 <div className="space-y-2">

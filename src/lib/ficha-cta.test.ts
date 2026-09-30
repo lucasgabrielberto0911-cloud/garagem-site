@@ -5,6 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
 import { VehicleMobileBlocks, VehicleMobileSummary } from "@/components/site/VehicleMobileDossier";
 import { FavoritesProvider } from "@/lib/favorites";
 import { DEFAULT_GOOGLE_REVIEWS } from "@/lib/google-reviews";
@@ -354,6 +355,80 @@ test("final da placa só aparece na dobra quando o anúncio tem", () => {
   );
   assert.doesNotMatch(without, /Final da placa/);
   assert.match(without, /Serra/);
+});
+
+test("selo da vistoria aparece perto do preço e some sem texto", () => {
+  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const summary = readSrc("components/site/VehicleMobileDossier.tsx");
+  assert.match(page, /VehicleInspectionBadge/);
+  assert.match(page, /inspection=\{vehicle\.inspection\}/);
+  assert.match(page, /inspection=\{sold \? null : vehicle\.inspection\}/);
+  assert.match(summary, /VehicleInspectionBadge/);
+  assert.doesNotMatch(page, /Consignado/);
+  assert.doesNotMatch(summary, /Consignado/);
+
+  const props = {
+    title: "Honda Civic LXR 2.0",
+    price: 89900,
+    sold: false,
+    year: 2014,
+    yearModel: 2015,
+    km: 106000,
+    transmission: "Automático",
+    city: "Linhares",
+  };
+  const withBadge = renderToStaticMarkup(
+    createElement(VehicleMobileSummary, {
+      ...props,
+      inspection: "Cautelar aprovado",
+    }),
+  );
+  const badgeAt = withBadge.indexOf("data-inspection-badge");
+  const priceAt = withBadge.indexOf("R$");
+  const specsAt = withBadge.indexOf(">Ano<");
+  assert.ok(badgeAt > priceAt, "o selo fica depois do preço");
+  assert.ok(badgeAt < specsAt, "o selo fica antes da grade de ano e km");
+  assert.match(withBadge, /Cautelar aprovado/);
+  assert.doesNotMatch(withBadge, /Consignado/);
+
+  const empty = renderToStaticMarkup(
+    createElement(VehicleMobileSummary, { ...props, inspection: "   " }),
+  );
+  assert.doesNotMatch(empty, /data-inspection-badge/);
+  assert.doesNotMatch(empty, /Cautelar aprovado/);
+  assert.doesNotMatch(empty, /Checagem interna/);
+
+  const missing = renderToStaticMarkup(
+    createElement(VehicleMobileSummary, props),
+  );
+  assert.doesNotMatch(missing, /data-inspection-badge/);
+
+  const sold = renderToStaticMarkup(
+    createElement(VehicleMobileSummary, {
+      ...props,
+      sold: true,
+      inspection: "Cautelar aprovado",
+    }),
+  );
+  assert.doesNotMatch(sold, /data-inspection-badge/);
+
+  const desktop = renderToStaticMarkup(
+    createElement(VehicleInspectionBadge, { inspection: "Cautelar aprovado" }),
+  );
+  assert.match(desktop, /data-inspection-badge/);
+  assert.match(desktop, /Cautelar aprovado/);
+  assert.equal(
+    renderToStaticMarkup(
+      createElement(VehicleInspectionBadge, { inspection: null }),
+    ),
+    "",
+  );
+  assert.equal(
+    renderToStaticMarkup(
+      createElement(VehicleInspectionBadge, { inspection: "" }),
+    ),
+    "",
+  );
 });
 
 test("ficha desktop não soma padding grande sob o header", () => {
