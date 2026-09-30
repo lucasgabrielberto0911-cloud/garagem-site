@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { GALLERY_MAX_EDGE } from "./image-variants";
 import {
+  CARD_SIZES,
+  GALLERY_FILE_WIDTH,
+  GALLERY_HERO_SIZES,
   coverSrc,
   coverSrcSet,
   galleryPreviewSrc,
@@ -17,12 +24,13 @@ import {
 const ORIGINAL =
   "https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/foto.webp";
 
-test("supabaseCardSrc recorta o original do Storage", () => {
+test("supabaseCardSrc recorta o original do Storage em WebP", () => {
   const src = supabaseCardSrc(ORIGINAL);
   assert.match(src, /\/storage\/v1\/render\/image\/public\/veiculos\/foto\.webp\?/);
   assert.match(src, /width=480/);
   assert.match(src, /height=300/);
   assert.match(src, /resize=cover/);
+  assert.match(src, /format=webp/);
   assert.equal(src.includes("/object/public/"), false);
 });
 
@@ -32,34 +40,108 @@ test("supabaseOriginalSrc devolve o arquivo se o recorte falhar", () => {
   assert.equal(supabaseOriginalSrc(ORIGINAL), ORIGINAL);
 });
 
+function pickWidth(srcSet: string, slotPx: number) {
+  const widths = [...srcSet.matchAll(/ (\d+)w/g)].map((match) => Number(match[1]));
+  const sorted = [...widths].sort((a, b) => a - b);
+  return sorted.find((width) => width >= slotPx) ?? sorted[sorted.length - 1];
+}
+
 test("coverSrc usa thumbnail quando existe e recorte quando não", () => {
   assert.equal(
     coverSrc([{ url: ORIGINAL, thumbnailUrl: "https://cdn.example/card.webp" }]),
     "https://cdn.example/card.webp",
   );
   assert.equal(coverSrc([{ url: ORIGINAL, thumbnailUrl: null }]), supabaseCardSrc(ORIGINAL));
-  assert.equal(coverSrcSet([{ url: ORIGINAL, thumbnailUrl: "https://cdn.example/card.webp" }]), undefined);
-  assert.match(coverSrcSet([{ url: ORIGINAL }]) ?? "", /480w/);
-  assert.doesNotMatch(coverSrcSet([{ url: ORIGINAL }]) ?? "", /720w/);
+  const withThumb = coverSrcSet([
+    { url: ORIGINAL, thumbnailUrl: "https://cdn.example/card.webp" },
+  ]);
+  assert.match(withThumb ?? "", /cdn\.example\/card\.webp 480w/);
+  assert.match(withThumb ?? "", /720w/);
+  assert.match(withThumb ?? "", /960w/);
+  assert.equal(withThumb?.includes(ORIGINAL), false);
+  const bare = coverSrcSet([{ url: ORIGINAL }]) ?? "";
+  assert.match(bare, /480w/);
+  assert.match(bare, /width=720&height=450/);
+  assert.match(bare, /width=960&height=600/);
+  assert.match(bare, /quality=75/);
+  assert.match(bare, /format=webp/);
+  assert.equal(bare.includes(`${ORIGINAL} `), false);
+  assert.equal(pickWidth(bare, 346), 480);
+  assert.equal(pickWidth(bare, 519), 720);
+  assert.equal(pickWidth(bare, 584), 720);
+  assert.equal(pickWidth(bare, 936), 960);
 });
 
-test("galleryThumbSrc recorta o strip; preview usa o WebP da galeria", () => {
-  const photo = { id: "1", url: ORIGINAL, thumbnailUrl: null };
+test("galleryThumbSrc recorta o strip; o hero não usa a miniatura do card", () => {
+  const photo = { id: "1", url: ORIGINAL, thumbnailUrl: null as string | null };
   assert.match(galleryThumbSrc(photo), /width=240/);
+  assert.match(galleryThumbSrc(photo), /format=webp/);
   assert.equal(galleryPreviewSrc(photo), ORIGINAL);
-  assert.equal(galleryPreviewSrcSet(photo), undefined);
+  const set = galleryPreviewSrcSet(photo) ?? "";
+  assert.match(set, /width=800/);
+  assert.match(set, /quality=80/);
+  assert.match(set, /format=webp/);
+  assert.match(set, /800w/);
+  assert.match(set, new RegExp(`${ORIGINAL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} 1280w`));
+  assert.doesNotMatch(set, /height=/);
+  assert.equal(pickWidth(set, 780), 800);
+  assert.equal(pickWidth(set, 1170), 1280);
+  assert.equal(pickWidth(set, 1420), 1280);
   assert.equal(
     galleryThumbSrc({ id: "1", url: ORIGINAL, thumbnailUrl: "https://cdn.example/card.webp" }),
     "https://cdn.example/card.webp",
   );
-  assert.match(
-    galleryPreviewSrcSet({
-      id: "1",
-      url: ORIGINAL,
-      thumbnailUrl: "https://cdn.example/card.webp",
-    }) ?? "",
-    /480w/,
+  const withThumb = galleryPreviewSrcSet({
+    id: "1",
+    url: ORIGINAL,
+    thumbnailUrl: "https://cdn.example/card.webp",
+  }) ?? "";
+  assert.equal(withThumb.includes("cdn.example/card.webp"), false);
+  assert.doesNotMatch(withThumb, /480w/);
+});
+
+test("JPG antigo da ficha vira WebP a 1200 e não o arquivo cru", () => {
+  const jpeg = ORIGINAL.replace(".webp", ".jpg");
+  const photo = { id: "1", url: jpeg, thumbnailUrl: null as string | null };
+  const src = galleryPreviewSrc(photo);
+  assert.match(src, /\/render\/image\/public\//);
+  assert.match(src, /width=1200/);
+  assert.match(src, /quality=80/);
+  assert.match(src, /format=webp/);
+  assert.equal(src.includes("/object/public/"), false);
+  const set = galleryPreviewSrcSet(photo) ?? "";
+  assert.match(set, /800w/);
+  assert.match(set, /1200w/);
+  assert.equal(set.includes(jpeg), false);
+});
+
+test("medidas públicas batem com o layout e com o upload", () => {
+  assert.equal(GALLERY_FILE_WIDTH, GALLERY_MAX_EDGE);
+  assert.equal(
+    GALLERY_HERO_SIZES,
+    "(min-width: 1280px) 710px, (min-width: 1024px) calc((100vw - 96px) * 0.6), 100vw",
   );
+  assert.equal(
+    CARD_SIZES,
+    "(min-width: 1280px) 292px, (min-width: 1024px) calc((100vw - 96px) / 3), (min-width: 640px) calc((100vw - 64px) / 2), calc((100vw - 44px) / 2)",
+  );
+  const card = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../components/site/VehicleCard.tsx"),
+    "utf8",
+  );
+  assert.match(card, /CARD_SIZES/);
+  assert.doesNotMatch(card, /25vw/);
+  const gallery = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../components/site/VehicleGallery.tsx"),
+    "utf8",
+  );
+  assert.match(gallery, /priority=\{index === 0\}/);
+  const image = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../components/NativeRemoteFillImage.tsx"),
+    "utf8",
+  );
+  assert.match(image, /loading=\{priority \? "eager" : "lazy"\}/);
+  assert.match(image, /fetchPriority=\{priority \? "high" : "low"\}/);
 });
 
 test("galeria só baixa o slide ativo e os vizinhos", () => {

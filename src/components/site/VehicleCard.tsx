@@ -5,7 +5,12 @@ import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import { publicCardFacts, type PublicCardFact } from "@/lib/public-card-facts";
-import { coverSrc, coverSrcSet, type VehicleCardRecord } from "@/lib/stock-query";
+import {
+  CARD_SIZES,
+  coverSrc,
+  coverSrcSet,
+  type VehicleCardRecord,
+} from "@/lib/stock-query";
 import {
   formatUpdatedAt,
   formatVehicleDisplay,
@@ -19,9 +24,6 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   reservado: { label: "Reservado", className: "bg-brand-orange text-asphalt" },
   vendido: { label: "Vendido", className: "bg-white/15 text-cream" },
 };
-
-const CARD_SIZES =
-  "(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, 50vw";
 
 /**
  * Card de servidor: só o favorito e o link hidratam no cliente.
