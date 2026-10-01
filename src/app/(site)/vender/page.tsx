@@ -2,11 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SellForm } from "@/components/site/SellForm";
 import { Container, PageHeader } from "@/components/site/ui";
-import {
-  IconClipboardCheck,
-  IconHandshake,
-  IconShieldCheck,
-} from "@/components/site/icons";
 import { buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
@@ -22,18 +17,15 @@ export const metadata: Metadata = buildPageMetadata({
 
 const STEPS = [
   {
-    Icon: IconClipboardCheck,
-    title: "1. Você manda os dados",
+    title: "Você manda os dados",
     text: "Preencha o formulário com as informações do veículo. Leva menos de dois minutos.",
   },
   {
-    Icon: IconShieldCheck,
-    title: "2. A gente avalia",
+    title: "A gente avalia",
     text: "Consultamos tabela, histórico e estado de conservação para chegar a um valor justo.",
   },
   {
-    Icon: IconHandshake,
-    title: "3. Fechamos o negócio",
+    title: "Fechamos o negócio",
     text: "Proposta na mão, você decide: venda direta ou troca por um veículo do nosso estoque.",
   },
 ] as const;
@@ -53,7 +45,7 @@ export default async function VenderPage({
       : "");
 
   return (
-    <div className="py-12 lg:py-16">
+    <div className="py-8 lg:py-12">
       <Container>
         <PageHeader
           eyebrow="Vender / Trocar"
@@ -62,55 +54,58 @@ export default async function VenderPage({
         />
 
         {interestLabel ? (
-          <div className="mt-6 border border-brand/30 bg-ink px-5 py-4 text-center text-sm text-cream lg:text-left">
-            Interesse na troca por:{" "}
-            <strong className="font-display">{interestLabel}</strong>
-            {interestVehicle ? (
-              <>
-                {" · "}
-                <Link
-                  href={vehiclePath(interestVehicle)}
-                  className="text-brand underline-offset-4 hover:underline"
-                >
-                  Ver anúncio
-                </Link>
-              </>
-            ) : null}
+          <div className="mt-5 border border-brand/30 bg-ink px-4 py-3 text-left text-sm text-cream">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+              Interesse na troca
+            </p>
+            <p className="mt-1 font-display font-semibold">
+              {interestLabel}
+              {interestVehicle ? (
+                <>
+                  {" · "}
+                  <Link
+                    href={vehiclePath(interestVehicle)}
+                    className="text-brand underline-offset-4 hover:underline"
+                  >
+                    Ver anúncio
+                  </Link>
+                </>
+              ) : null}
+            </p>
           </div>
         ) : null}
 
-        <div className="mt-10 lg:mt-12 lg:grid lg:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] lg:items-start lg:gap-10 xl:gap-14">
+        <div className="mt-6 lg:mt-10 lg:grid lg:grid-cols-[minmax(260px,300px)_minmax(0,1fr)] lg:items-start lg:gap-10 xl:gap-14">
           <aside className="lg:sticky lg:top-24">
-            <ul className="step-scroll lg:flex-col">
-              {STEPS.map(({ Icon, title, text }) => (
+            <h2 className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
+              Como funciona
+            </h2>
+            <ol className="mt-3 grid gap-1.5">
+              {STEPS.map(({ title, text }, index) => (
                 <li
                   key={title}
-                  className="flex w-[72%] max-w-xs shrink-0 flex-col items-center border border-white/10 bg-ink/60 p-5 text-center sm:p-6 lg:w-auto lg:max-w-none lg:items-start lg:p-6 lg:text-left"
+                  className="flex gap-3 border border-white/10 bg-ink px-3.5 py-3"
                 >
-                  <Icon className="h-7 w-7 text-brand" />
-                  <h2 className="mt-4 font-display text-sm font-semibold uppercase tracking-wide text-cream">
-                    {title}
-                  </h2>
-                  <p className="mt-2.5 text-sm leading-relaxed text-muted">
-                    {text}
-                  </p>
+                  <span className="font-display text-sm font-bold leading-5 text-brand">
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="font-display text-sm font-semibold text-cream">
+                      {title}
+                    </h3>
+                    <p className="mt-1 text-sm leading-snug text-muted">{text}</p>
+                  </div>
                 </li>
               ))}
-            </ul>
-            <p className="mt-2 text-center text-[11px] text-muted lg:hidden">
-              Deslize para ver os passos
-            </p>
+            </ol>
           </aside>
 
-          <section className="mt-10 lg:mt-0">
-            <h2 className="text-center font-display text-xl font-bold tracking-tight text-cream sm:text-2xl lg:text-left">
+          <section className="mt-6 lg:mt-0">
+            <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
               Dados do seu veículo
             </h2>
-            <div
-              className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient lg:mx-0"
-              aria-hidden="true"
-            />
-            <div className="mt-8">
+            <div className="mt-3 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
+            <div className="mt-4">
               <SellForm
                 interestVehicleId={interestVehicle?.id}
                 interestNote={

@@ -1,19 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
-import {
-  Container,
-  PageHeader,
-  WhatsAppButton,
-} from "@/components/site/ui";
-import {
-  IconClock,
-  IconInstagram,
-  IconMail,
-  IconMapPin,
-  IconPhone,
-  IconWhatsApp,
-} from "@/components/site/icons";
+import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { buildPageMetadata } from "@/lib/seo";
 import {
   PHONES,
@@ -22,7 +10,6 @@ import {
   isPhysicalAddress,
   site,
   telUrl,
-  whatsappUrl,
 } from "@/lib/site";
 import { getPublicSite } from "@/lib/site-settings";
 
@@ -39,9 +26,19 @@ export default async function ContatoPage() {
   const physical = isPhysicalAddress(publicSite.address);
   const emailReady = !publicSite.email.includes("[");
   const emailCopy = emailChannelCopy(publicSite.email);
+  const phone = PHONES[0];
+  const sunday = publicSite.hoursSunday || publicSite.hoursWeekdays;
+  const hourRows = [
+    { label: "Segunda a sexta", value: publicSite.hoursWeekdays },
+    { label: "Sábado", value: publicSite.hoursSaturday },
+    { label: "Domingo e feriados", value: sunday },
+  ];
+  const sameHours = hourRows.every(
+    (row) => row.value.trim() === hourRows[0]?.value.trim(),
+  );
 
   return (
-    <div className="py-12 lg:py-16">
+    <div className="py-8 lg:py-12">
       <Container size="narrow">
         <PageHeader
           eyebrow="Contato"
@@ -49,111 +46,117 @@ export default async function ContatoPage() {
           description={`Somos loja digital e atendemos ${publicSite.region} e região — todos os dias, das 8h às 23h. Compare o estoque no assistente; simule e feche no WhatsApp.`}
         />
 
-        {/* Canal dominante */}
-        <div className="relative mt-10 overflow-hidden border border-[#25D366]/40 bg-ink p-7 text-center sm:mt-12 sm:p-10">
-          <div
-            className="absolute inset-x-0 top-0 h-1 bg-[#25D366]"
-            aria-hidden="true"
-          />
-          <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366]/15 text-[#25D366]">
-            <IconWhatsApp className="h-8 w-8" />
-          </span>
-          <h2 className="mt-4 font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
-            WhatsApp — resposta mais rápida
-          </h2>
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-muted sm:text-base">
-            O assistente compara o estoque no site. Para vídeo, parcela, troca
-            ou fechamento, o canal é o WhatsApp — online das 8h às 23h.
-          </p>
-          <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-            <ChatOpenButton source="contato" variant="outline" size="lg" />
-            <WhatsAppButton
-              size="lg"
-              trackingLabel="contato"
-              message={WHATSAPP_MESSAGES.visit}
+        <section
+          aria-labelledby="contato-whatsapp"
+          className="mt-6 overflow-hidden border border-white/10 bg-ink sm:mt-8"
+        >
+          <div className="h-1 bg-brand" aria-hidden="true" />
+          <div className="p-4 sm:p-6">
+            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
+              Canal da loja
+            </p>
+            <h2
+              id="contato-whatsapp"
+              className="mt-2 font-display text-xl font-bold tracking-tight text-cream sm:text-2xl"
             >
-              Chamar no WhatsApp
-            </WhatsAppButton>
-          </div>
-          <p className="mt-4 text-xs text-muted">{PHONES[0]?.label}</p>
-        </div>
+              WhatsApp — resposta mais rápida
+            </h2>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
+              O assistente compara o estoque no site. Para vídeo, parcela, troca
+              ou fechamento, o canal é o WhatsApp — online das 8h às 23h.
+            </p>
 
-        <h2 className="mt-12 text-center font-display text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+            {phone ? (
+              <a
+                href={telUrl()}
+                className="mt-4 flex min-h-[64px] items-center justify-between gap-3 border border-white/10 bg-asphalt px-3.5 py-3 touch-manipulation transition hover:border-brand"
+              >
+                <span className="min-w-0">
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                    Telefone
+                  </span>
+                  <span className="mt-1 block font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand sm:text-3xl">
+                    {phone.label}
+                  </span>
+                </span>
+                <span className="shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-cream/80">
+                  Ligar
+                </span>
+              </a>
+            ) : null}
+
+            <div className="mt-3 flex flex-col gap-3">
+              <WhatsAppButton
+                size="lg"
+                className="w-full"
+                trackingLabel="contato"
+                message={WHATSAPP_MESSAGES.visit}
+              >
+                Chamar no WhatsApp
+              </WhatsAppButton>
+              <ChatOpenButton
+                source="contato"
+                variant="outline"
+                size="lg"
+                className="w-full"
+              />
+            </div>
+          </div>
+        </section>
+
+        <h2 className="mt-8 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
           Outros canais
         </h2>
-
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          {PHONES.map((phone, index) => (
-            <InfoCard
-              key={phone.digits}
-              Icon={IconPhone}
-              label={phone.note}
-              value={phone.label}
-              href={phone.kind === "whatsapp" ? whatsappUrl() : telUrl(index)}
-              hrefLabel={phone.kind === "whatsapp" ? "Chamar no WhatsApp" : "Ligar agora"}
-            />
-          ))}
-          <InfoCard
-            Icon={IconInstagram}
-            label="Instagram"
-            value={publicSite.instagram}
-            href={publicSite.instagramUrl}
-            hrefLabel="Ver perfil"
-            external
-          />
-          <InfoCard
-            Icon={IconMail}
-            label={emailCopy.label}
-            value={publicSite.email}
-            href={
-              emailReady
-                ? `mailto:${publicSite.email}`
-                : whatsappUrl(WHATSAPP_MESSAGES.general)
-            }
-            hrefLabel={emailReady ? emailCopy.hrefLabel : "Chamar no WhatsApp"}
-            external={!emailReady}
-          />
-          <InfoCard
-            Icon={IconMapPin}
+        <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
+          <Channel
             label={physical ? "Endereço" : "Atendimento"}
-            value={publicSite.address}
-            href={physical ? undefined : whatsappUrl(WHATSAPP_MESSAGES.visit)}
-            hrefLabel={physical ? undefined : "Falar com a gente"}
-            external={!physical}
-          />
-          <div className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center sm:col-span-2">
-            <IconClock className="h-6 w-6 shrink-0 text-brand" />
-            <h3 className="mt-3 font-display text-sm font-semibold uppercase tracking-wider text-cream">
-              Horário de atendimento online
-            </h3>
-            <p className="mt-3 text-sm text-muted">{publicSite.hours}</p>
-            <dl className="mx-auto mt-5 w-full max-w-md space-y-2 text-sm">
-              <HourRow label="Segunda a sexta" value={publicSite.hoursWeekdays} />
-              <HourRow label="Sábado" value={publicSite.hoursSaturday} />
-              <HourRow
-                label="Domingo e feriados"
-                value={publicSite.hoursSunday || publicSite.hoursWeekdays}
-              />
-            </dl>
-          </div>
+            className="sm:col-span-2"
+          >
+            <p className="font-display font-semibold">{publicSite.address}</p>
+            {physical ? null : (
+              <p className="mt-2 text-sm font-normal leading-relaxed text-muted">
+                Não temos showroom físico. Você escolhe no site, tira dúvidas e
+                pede vídeo pelo WhatsApp, e combinamos visita ao veículo, entrega
+                ou retirada. Atendimento online todos os dias, das 8h às 23h, em{" "}
+                {publicSite.region} e região.
+              </p>
+            )}
+          </Channel>
+          <Channel
+            label="Instagram"
+            href={publicSite.instagramUrl}
+            external
+          >
+            <p className="font-display font-semibold">{publicSite.instagram}</p>
+          </Channel>
+          <Channel
+            label={emailCopy.label}
+            href={emailReady ? `mailto:${publicSite.email}` : undefined}
+          >
+            <p className="break-all font-display font-semibold">
+              {publicSite.email}
+            </p>
+            <p className="mt-1 text-xs font-normal leading-relaxed text-muted">
+              {emailCopy.hint}
+            </p>
+          </Channel>
+          <Channel label="Horário" className="sm:col-span-2">
+            {sameHours ? (
+              <p className="font-display font-semibold">{publicSite.hours}</p>
+            ) : (
+              <dl className="space-y-1.5">
+                {hourRows.map((row) => (
+                  <div key={row.label} className="flex justify-between gap-4">
+                    <dt className="font-normal text-muted">{row.label}</dt>
+                    <dd className="font-display font-semibold">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </Channel>
         </div>
 
-        {!physical ? (
-          <div className="mt-8 border border-dashed border-white/15 bg-ink/40 px-6 py-10 text-center">
-            <IconMapPin className="mx-auto h-8 w-8 text-brand/70" />
-            <p className="mt-4 font-display text-base font-semibold text-cream">
-              Loja 100% digital
-            </p>
-            <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-muted">
-              Não temos showroom físico. Você escolhe no site, tira dúvidas e
-              pede vídeo pelo WhatsApp, e combinamos visita ao veículo, entrega
-              ou retirada. Atendimento online todos os dias, das 8h às 23h, em{" "}
-              {publicSite.region} e região.
-            </p>
-          </div>
-        ) : null}
-
-        <p className="mt-8 text-center text-xs leading-relaxed text-muted">
+        <p className="mt-6 text-xs leading-relaxed text-muted">
           {publicSite.legalName} — CNPJ {publicSite.cnpj}
         </p>
       </Container>
@@ -161,48 +164,42 @@ export default async function ContatoPage() {
   );
 }
 
-function HourRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-muted">{label}</dt>
-      <dd className="text-cream">{value}</dd>
-    </div>
-  );
-}
-
-function InfoCard({
-  Icon,
+function Channel({
   label,
-  value,
   href,
-  hrefLabel,
   external = false,
+  className = "",
+  children,
 }: {
-  Icon: (props: { className?: string }) => ReactNode;
   label: string;
-  value: string;
   href?: string;
-  hrefLabel?: string;
   external?: boolean;
+  className?: string;
+  children: ReactNode;
 }) {
-  return (
-    <div className="flex flex-col items-center border border-white/10 bg-ink p-5 text-center sm:p-6">
-      <Icon className="h-6 w-6 shrink-0 text-brand" />
-      <h3 className="mt-3 font-display text-sm font-semibold uppercase tracking-wider text-cream">
+  const classNames = `block min-h-[52px] border border-white/10 bg-ink px-3 py-3 text-left text-sm leading-snug text-cream touch-manipulation ${
+    href ? "transition hover:border-brand" : ""
+  } ${className}`;
+  const body = (
+    <>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
         {label}
-      </h3>
-      <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{value}</p>
-      {href && hrefLabel ? (
-        <a
-          href={href}
-          {...(external
-            ? { target: "_blank", rel: "noopener noreferrer" }
-            : {})}
-          className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center border border-white/20 px-4 font-display text-xs font-semibold uppercase tracking-wider text-cream/90 transition hover:border-brand hover:bg-brand/10 touch-manipulation"
-        >
-          {hrefLabel}
-        </a>
-      ) : null}
-    </div>
+      </p>
+      <div className="mt-1">{children}</div>
+    </>
+  );
+
+  if (!href) {
+    return <div className={classNames}>{body}</div>;
+  }
+
+  return (
+    <a
+      href={href}
+      className={classNames}
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+    >
+      {body}
+    </a>
   );
 }
