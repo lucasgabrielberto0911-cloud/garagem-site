@@ -455,6 +455,7 @@ export function stockSearchString(input: {
   q?: string;
   category?: string;
   brand?: string;
+  model?: string;
   transmission?: string;
   fuel?: string;
   color?: string;
@@ -476,6 +477,7 @@ export function stockSearchString(input: {
     if (text) parts.push(`${label}:${text}`);
   };
   push("marca", input.brand);
+  push("modelo", input.model);
   push("tipo", input.category);
   push("cambio", input.transmission);
   push("combustivel", input.fuel);

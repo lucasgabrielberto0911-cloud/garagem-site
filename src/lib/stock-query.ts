@@ -216,6 +216,8 @@ export type StockFilters = {
   q?: string;
   category?: string;
   brand?: string;
+  /** Modelo do anúncio — o campo `model`, não a versão. */
+  model?: string;
   transmission?: string;
   fuel?: string;
   color?: string;
@@ -233,6 +235,25 @@ export type StockFilters = {
   pageSize?: number;
 };
 
+/** Parâmetros que estreitam a lista. Ordenação fica de fora. */
+export const STOCK_FILTER_KEYS = [
+  "q",
+  "category",
+  "brand",
+  "model",
+  "transmission",
+  "fuel",
+  "color",
+  "accessory",
+  "laudo",
+  "minPrice",
+  "maxPrice",
+  "minYear",
+  "maxYear",
+  "maxKm",
+  "city",
+] as const;
+
 export type StockPageResult = {
   vehicles: VehicleCardRecord[];
   total: number;
@@ -248,6 +269,7 @@ export const STOCK_SORT_OPTIONS = [
   { value: "maior-preco", label: "Maior preço" },
   { value: "menor-km", label: "Menor KM" },
   { value: "mais-novo", label: "Ano mais novo" },
+  { value: "nome", label: "Nome (A–Z)" },
 ] as const;
 
 export type StockSortValue = (typeof STOCK_SORT_OPTIONS)[number]["value"];
@@ -262,6 +284,103 @@ export function stockSortLabel(sort?: string | null) {
   const key = (sort || "recentes").trim();
   const found = STOCK_SORT_OPTIONS.find((option) => option.value === key);
   return found?.label ?? "Mais recentes";
+}
+
+/** Ordenação fora do padrão: a lista precisa da consulta, não do HTML recente. */
+export function isActiveStockSort(sort?: string | null) {
+  const key = (sort ?? "").trim();
+  if (!key || key === "recentes") return false;
+  return STOCK_SORT_OPTIONS.some((option) => option.value === key);
+}
+
+/**
+ * Marca, modelo, ano, preço, km (e os outros filtros já existentes) ou uma
+ * ordem que não seja “mais recentes”. A página sem query continua estática.
+ */
+export function stockViewNeedsFetch(
+  input: Partial<Record<(typeof STOCK_FILTER_KEYS)[number] | "sort", string | undefined>>,
+) {
+  if (STOCK_FILTER_KEYS.some((key) => Boolean(input[key]))) return true;
+  return isActiveStockSort(input.sort);
+}
+
+export type StockOrderBy =
+  | Record<string, "asc" | "desc">
+  | Array<Record<string, "asc" | "desc">>;
+
+/** Preço, km, ano e nome. O restante cai em mais recentes. */
+export function stockOrderBy(sort?: string | null): StockOrderBy {
+  switch ((sort ?? "recentes").trim()) {
+    case "menor-preco":
+      return { price: "asc" };
+    case "maior-preco":
+      return { price: "desc" };
+    case "menor-km":
+      return { km: "asc" };
+    case "mais-novo":
+      return { yearModel: "desc" };
+    case "nome":
+      return [{ brand: "asc" }, { model: "asc" }];
+    default:
+      return { createdAt: "desc" };
+  }
+}
+
+export type StockModelOption = {
+  brand: string;
+  model: string;
+};
+
+function foldLabel(value: string) {
+  return value.trim().toLocaleLowerCase("pt-BR");
+}
+
+/** Modelos do estoque. Com marca, só os daquela marca. */
+export function modelsForBrand(
+  models: readonly StockModelOption[] | undefined,
+  brand?: string | null,
+) {
+  const selected = foldLabel(brand ?? "");
+  const names: string[] = [];
+  const seen = new Set<string>();
+  for (const item of models ?? []) {
+    const name = item.model?.trim();
+    if (!name) continue;
+    if (selected && foldLabel(item.brand ?? "") !== selected) continue;
+    const key = foldLabel(name);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    names.push(name);
+  }
+  names.sort((a, b) => a.localeCompare(b, "pt-BR"));
+  return names;
+}
+
+/** Opções do select, mantendo um modelo da URL que saiu do estoque. */
+export function modelFilterOptions(
+  models: readonly StockModelOption[] | undefined,
+  brand: string | undefined,
+  selected: string | undefined,
+) {
+  const options = modelsForBrand(models, brand);
+  const current = (selected ?? "").trim();
+  if (!current) return options;
+  const exists = options.some((name) => foldLabel(name) === foldLabel(current));
+  return exists ? options : [current, ...options];
+}
+
+/** Trocar a marca solta o modelo quando ele não pertence à marca nova. */
+export function modelAfterBrandChange(
+  models: readonly StockModelOption[] | undefined,
+  brand: string,
+  model: string,
+) {
+  const current = model.trim();
+  if (!current) return "";
+  const match = modelsForBrand(models, brand).find(
+    (name) => foldLabel(name) === foldLabel(current),
+  );
+  return match ?? "";
 }
 
 function optionalPositiveNumber(value?: string | number) {
@@ -317,6 +436,7 @@ export function parseStockFilters(
     q: pickParam(input, "q"),
     category: pickParam(input, "category"),
     brand: pickParam(input, "brand"),
+    model: pickParam(input, "model"),
     transmission: pickParam(input, "transmission"),
     fuel: pickParam(input, "fuel"),
     color: pickParam(input, "color"),
