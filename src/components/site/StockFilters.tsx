@@ -13,7 +13,12 @@ import {
   type StockModelOption,
 } from "@/lib/stock-query";
 import { handleFocusTrap } from "@/lib/focus-trap";
-import { formatColorLabel } from "@/lib/vehicle-display";
+import {
+  formatColorLabel,
+  transmissionFilterLabel,
+  transmissionFilterOptions,
+  transmissionFilterParam,
+} from "@/lib/vehicle-display";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
   VEHICLE_LOCATION_CITIES,
@@ -255,7 +260,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
   if (current.transmission) {
     activeFilters.push({
       key: "transmission",
-      label: `Câmbio: ${current.transmission}`,
+      label: `Câmbio: ${transmissionFilterLabel(current.transmission)}`,
     });
   }
   if (current.fuel) {
@@ -303,8 +308,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
   }
 
   function navigate(values: FilterValues) {
+    const normalized: FilterValues = {
+      ...values,
+      transmission: transmissionFilterParam(values.transmission),
+    };
     const next = new URLSearchParams();
-    Object.entries(values).forEach(([key, value]) => {
+    Object.entries(normalized).forEach(([key, value]) => {
       if (value && !(key === "sort" && value === "recentes")) {
         next.set(key, String(value));
       }
@@ -350,6 +359,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
       sort: "recentes",
     });
   }
+
+  const gearOptions = transmissionFilterOptions(
+    facets.transmissions,
+    current.transmission,
+  );
+  const gearValue = transmissionFilterParam(current.transmission);
 
   return (
     <>
@@ -477,9 +492,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
             <FilterSelect
               label="Câmbio"
               id="desktop-cambio"
-              value={current.transmission}
+              value={gearValue}
               onChange={(value) => update({ transmission: value })}
-              options={facets.transmissions}
+              options={gearOptions}
               emptyLabel="Todos os câmbios"
             />
             <FilterSelect
@@ -790,6 +805,28 @@ export function StockFilters({ facets }: { facets: Facets }) {
             </div>
           </div>
         ) : null}
+        {gearOptions.length > 0 ? (
+          <div className="flex items-center gap-2">
+            <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
+              Câmbio
+            </p>
+            <div className="chip-scroll chip-scroll-row min-w-0 flex-1 -mx-0.5 px-0.5">
+              {gearOptions.map((item) => (
+                <Chip
+                  key={`sticky-gear-${item.value}`}
+                  active={gearValue === item.value}
+                  onClick={() =>
+                    update({
+                      transmission: gearValue === item.value ? "" : item.value,
+                    })
+                  }
+                >
+                  {item.label}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div className="flex items-center justify-between gap-2">
           <p className="min-w-0 truncate text-[11px] text-muted">
             {stockSortLabel(current.sort)}
@@ -933,12 +970,21 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </MobileField>
               <MobileField label="Câmbio">
                 <select
-                  value={draft.transmission}
-                  onChange={(event) => setDraft({ ...draft, transmission: event.target.value })}
+                  value={transmissionFilterParam(draft.transmission)}
+                  onChange={(event) =>
+                    setDraft({ ...draft, transmission: event.target.value })
+                  }
                   className={selectClass}
                 >
                   <option value="">Todos os câmbios</option>
-                  {facets.transmissions.map((item) => <option key={item}>{item}</option>)}
+                  {transmissionFilterOptions(
+                    facets.transmissions,
+                    draft.transmission,
+                  ).map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
                 </select>
               </MobileField>
               <div>
@@ -1221,6 +1267,12 @@ function AccessoryChips({
   );
 }
 
+type FilterChoice = string | { value: string; label: string };
+
+function asFilterChoice(option: FilterChoice) {
+  return typeof option === "string" ? { value: option, label: option } : option;
+}
+
 function FilterSelect({
   label,
   id,
@@ -1233,7 +1285,7 @@ function FilterSelect({
   id: string;
   value: string;
   onChange: (value: string) => void;
-  options: string[];
+  options: readonly FilterChoice[];
   emptyLabel: string;
 }) {
   return (
@@ -1245,9 +1297,14 @@ function FilterSelect({
         className={selectClass}
       >
         <option value="">{emptyLabel}</option>
-        {options.map((item) => (
-          <option key={item} value={item}>{item}</option>
-        ))}
+        {options.map((option) => {
+          const item = asFilterChoice(option);
+          return (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          );
+        })}
       </select>
     </DesktopField>
   );

@@ -11,7 +11,10 @@ import {
 } from "@/lib/format";
 import { WHATSAPP_MESSAGES, type WhatsAppCampaign } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
-import { formatColorLabel } from "@/lib/vehicle-display";
+import {
+  formatColorLabel,
+  transmissionFilterLabel,
+} from "@/lib/vehicle-display";
 import { vehicleLocationLabel } from "@/lib/vehicle-location";
 
 export type StockWaitlistFilters = {
@@ -60,7 +63,7 @@ export function formatStockWaitlistQuery(input: StockWaitlistFilters) {
   else if (city) bits.push(`em ${city}`);
   const category = compact(input.category);
   if (category) bits.push(vehicleCategoryLabel(category).toLocaleLowerCase("pt-BR"));
-  const transmission = compact(input.transmission);
+  const transmission = transmissionFilterLabel(input.transmission);
   if (transmission) bits.push(transmission.toLocaleLowerCase("pt-BR"));
   const fuel = compact(input.fuel);
   if (fuel) bits.push(fuel.toLocaleLowerCase("pt-BR"));

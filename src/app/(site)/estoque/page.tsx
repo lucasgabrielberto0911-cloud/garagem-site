@@ -44,7 +44,7 @@ export default async function EstoquePage() {
         <PageHeader
           eyebrow="Estoque"
           title="Veículos disponíveis"
-          description="Vistoria e procedência em cada anúncio. Filtre por marca, modelo, ano, preço ou km e ordene a lista. Se não achar o modelo, deixa o pedido no formulário."
+          description="Vistoria e procedência em cada anúncio. Filtre por marca, modelo, ano, preço, km ou câmbio e ordene a lista. Se não achar o modelo, deixa o pedido no formulário."
         />
 
         <StockBrowseShell
