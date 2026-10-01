@@ -407,6 +407,20 @@ export function StockFilters({ facets }: { facets: Facets }) {
           </div>
 
           <div className="mt-5 space-y-4">
+            <DesktopField label="Ordenar resultados" htmlFor="estoque-ordem">
+              <select
+                id="estoque-ordem"
+                value={current.sort}
+                onChange={(event) => update({ sort: event.target.value })}
+                className={selectClass}
+              >
+                {STOCK_SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </DesktopField>
             <DesktopField label="Tipo" htmlFor="desktop-tipo">
               <select
                 id="desktop-tipo"
@@ -586,25 +600,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </select>
             </DesktopField>
           </div>
-
-          <DesktopField
-            label="Ordenar resultados"
-            htmlFor="estoque-ordem"
-            className="mt-5 border-t border-white/10 pt-5"
-          >
-            <select
-              id="estoque-ordem"
-              value={current.sort}
-              onChange={(event) => update({ sort: event.target.value })}
-              className={selectClass}
-            >
-              {STOCK_SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </DesktopField>
 
           {activeFilters.length > 0 ? (
             <div className="mt-5 border-t border-white/10 pt-5">
