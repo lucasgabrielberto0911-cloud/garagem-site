@@ -22,9 +22,12 @@ test("cidade do veículo entra no filtro, na API e no chip mobile", () => {
   assert.match(filters, /VEHICLE_LOCATION_CITIES/);
   assert.match(filters, /sticky-city-/);
   assert.match(filters, /Onde o veículo está/);
-  assert.match(browse, /"city"/);
+  const stockQuery = readSrc("lib/stock-query.ts");
+  assert.match(stockQuery, /"city"/);
+  assert.match(browse, /STOCK_FILTER_KEYS/);
+  assert.match(browse, /city: params\.city/);
   assert.match(where, /stockCityFilter\(filters\.city\)/);
-  assert.match(vehicles, /stock-page-v9/);
+  assert.match(vehicles, /stock-page-v10/);
   assert.doesNotMatch(filters, /Vitória/);
 });
 

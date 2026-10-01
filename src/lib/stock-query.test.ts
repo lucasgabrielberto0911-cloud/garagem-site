@@ -13,10 +13,16 @@ import {
   galleryPreviewSrc,
   galleryPreviewSrcSet,
   galleryThumbSrc,
+  isActiveStockSort,
+  modelAfterBrandChange,
+  modelFilterOptions,
+  modelsForBrand,
   parseStockFilters,
   shouldLoadGallerySlide,
   stockCityFilter,
+  stockOrderBy,
   stockSortLabel,
+  stockViewNeedsFetch,
   supabaseCardSrc,
   supabaseOriginalSrc,
 } from "./stock-query";
@@ -165,7 +171,67 @@ test("filtro de cidade só aceita onde o veículo está", () => {
 test("rótulo de ordenação do estoque cai em mais recentes", () => {
   assert.equal(stockSortLabel("menor-preco"), "Menor preço");
   assert.equal(stockSortLabel("maior-preco"), "Maior preço");
+  assert.equal(stockSortLabel("nome"), "Nome (A–Z)");
   assert.equal(stockSortLabel(""), "Mais recentes");
   assert.equal(stockSortLabel(undefined), "Mais recentes");
   assert.equal(stockSortLabel("desconhecido"), "Mais recentes");
+});
+
+test("ordenação do estoque usa preço, km, ano e nome", () => {
+  assert.deepEqual(stockOrderBy("menor-preco"), { price: "asc" });
+  assert.deepEqual(stockOrderBy("maior-preco"), { price: "desc" });
+  assert.deepEqual(stockOrderBy("menor-km"), { km: "asc" });
+  assert.deepEqual(stockOrderBy("mais-novo"), { yearModel: "desc" });
+  assert.deepEqual(stockOrderBy("nome"), [{ brand: "asc" }, { model: "asc" }]);
+  assert.deepEqual(stockOrderBy("luxo"), { createdAt: "desc" });
+  assert.deepEqual(stockOrderBy(undefined), { createdAt: "desc" });
+  assert.equal(isActiveStockSort("nome"), true);
+  assert.equal(isActiveStockSort("recentes"), false);
+  assert.equal(isActiveStockSort("luxo"), false);
+});
+
+test("modelo entra na URL e a ordenação sozinha também busca a lista", () => {
+  assert.equal(parseStockFilters({ model: "Civic", brand: "Honda" }).model, "Civic");
+  assert.equal(parseStockFilters({}).model, undefined);
+  assert.equal(
+    stockViewNeedsFetch({ model: "Civic" }),
+    true,
+  );
+  assert.equal(stockViewNeedsFetch({ sort: "nome" }), true);
+  assert.equal(stockViewNeedsFetch({ sort: "menor-preco" }), true);
+  assert.equal(stockViewNeedsFetch({ sort: "recentes" }), false);
+  assert.equal(stockViewNeedsFetch({}), false);
+
+  const filters = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../components/site/StockFilters.tsx"),
+    "utf8",
+  );
+  const browse = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../components/site/EstoqueBrowse.tsx"),
+    "utf8",
+  );
+  const vehicles = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../lib/vehicles.ts"),
+    "utf8",
+  );
+  assert.match(filters, /Todos os modelos/);
+  assert.match(filters, /desktop-modelo/);
+  assert.match(browse, /stockViewNeedsFetch/);
+  assert.match(vehicles, /stockOrderBy\(filters\.sort\)/);
+  assert.match(vehicles, /model: \{/);
+  assert.doesNotMatch(filters, /blindagem|Blindado|Consignado|Confirmado neste/i);
+  assert.doesNotMatch(browse, /99633|9\d{4}-\d{4}/);
+});
+
+test("modelo acompanha a marca escolhida", () => {
+  const models = [
+    { brand: "Honda", model: "Civic" },
+    { brand: "Honda", model: "HR-V" },
+    { brand: "Fiat", model: "Mobi" },
+  ];
+  assert.deepEqual(modelsForBrand(models, "Honda"), ["Civic", "HR-V"]);
+  assert.deepEqual(modelsForBrand(models, ""), ["Civic", "HR-V", "Mobi"]);
+  assert.deepEqual(modelAfterBrandChange(models, "Fiat", "Civic"), "");
+  assert.equal(modelAfterBrandChange(models, "honda", "civic"), "Civic");
+  assert.deepEqual(modelFilterOptions(models, "Fiat", "Civic"), ["Civic", "Mobi"]);
 });

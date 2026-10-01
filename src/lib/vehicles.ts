@@ -2,14 +2,16 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
-import { brandKey, formatBrandName } from "@/lib/format";
+import { brandKey, formatBrandName, formatModelName } from "@/lib/format";
 import { extractVehicleIdFromParam, vehicleSlug } from "@/lib/vehicle-slug";
 import { SEED_TESTIMONIALS } from "@/lib/testimonials-seed";
 import { cleanTestimonialField } from "@/lib/testimonials-clean";
 import {
   STOCK_PAGE_SIZE,
   stockCityFilter,
+  stockOrderBy,
   type StockFilters,
+  type StockModelOption,
   type StockPageResult,
   type VehicleCardRecord,
 } from "@/lib/stock-query";
@@ -407,14 +409,6 @@ export const getRelatedVehicles = cache(
     ),
 );
 
-const SORT_MAP: Record<string, { [key: string]: "asc" | "desc" }> = {
-  recentes: { createdAt: "desc" },
-  "menor-preco": { price: "asc" },
-  "maior-preco": { price: "desc" },
-  "menor-km": { km: "asc" },
-  "mais-novo": { yearModel: "desc" },
-};
-
 function buildStockWhere(filters: StockFilters) {
   const terms = (filters.q ?? "").trim().split(/\s+/).filter(Boolean);
   const priceFilter =
@@ -458,6 +452,14 @@ function buildStockWhere(filters: StockFilters) {
     ...(filters.brand
       ? { brand: { equals: filters.brand, mode: "insensitive" as const } }
       : {}),
+    ...((filters.model ?? "").trim()
+      ? {
+          model: {
+            equals: (filters.model ?? "").trim(),
+            mode: "insensitive" as const,
+          },
+        }
+      : {}),
     ...(filters.transmission ? { transmission: filters.transmission } : {}),
     ...(filters.fuel ? { fuel: filters.fuel } : {}),
     ...colorWhere(filters.color),
@@ -482,6 +484,7 @@ function stockQueryKey(filters: StockFilters) {
     q: (filters.q ?? "").trim(),
     category: filters.category ?? "",
     brand: filters.brand ?? "",
+    model: (filters.model ?? "").trim().toLocaleLowerCase("pt-BR"),
     transmission: filters.transmission ?? "",
     fuel: filters.fuel ?? "",
     color: (filters.color ?? "").trim().toLocaleLowerCase("pt-BR"),
@@ -509,7 +512,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
   );
   const page = Math.max(filters.page ?? 1, 1);
   const where = buildStockWhere(filters);
-  const orderBy = SORT_MAP[filters.sort ?? "recentes"] ?? SORT_MAP.recentes;
+  const orderBy = stockOrderBy(filters.sort);
 
   const vehicles = await findCardVehicles({
     where,
@@ -542,7 +545,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v9"],
+  ["stock-page-v10"],
   PUBLIC_CACHE,
 );
 
@@ -629,6 +632,7 @@ export const getStockPage = cache(
 type StockFacets = {
   categories: string[];
   brands: string[];
+  models: StockModelOption[];
   transmissions: string[];
   fuels: string[];
   colors: string[];
@@ -639,6 +643,7 @@ type StockFacets = {
 const EMPTY_FACETS: StockFacets = {
   categories: [],
   brands: [],
+  models: [],
   transmissions: [],
   fuels: [],
   colors: [],
@@ -650,7 +655,7 @@ const loadStockFacetsCached = unstable_cache(
   async (): Promise<StockFacets> => {
     const available = { status: "disponivel" as const };
 
-    const [categories, brands, transmissions, fuels, colors, years, accessoryRows] =
+    const [categories, brands, modelRows, transmissions, fuels, colors, years, accessoryRows] =
       await Promise.all([
       prisma.vehicle.groupBy({
         by: ["category"],
@@ -661,6 +666,11 @@ const loadStockFacetsCached = unstable_cache(
         by: ["brand"],
         where: available,
         orderBy: { brand: "asc" },
+      }),
+      prisma.vehicle.groupBy({
+        by: ["brand", "model"],
+        where: available,
+        orderBy: [{ brand: "asc" }, { model: "asc" }],
       }),
       prisma.vehicle.groupBy({
         by: ["transmission"],
@@ -714,11 +724,24 @@ const loadStockFacetsCached = unstable_cache(
       }
     }
 
+    const modelsByKey = new Map<string, StockModelOption>();
+    for (const row of modelRows) {
+      const brand = formatBrandName(row.brand ?? "");
+      const model = formatModelName(row.model ?? "");
+      if (!brand || !model) continue;
+      const key = `${brandKey(brand)}|${brandKey(model)}`;
+      if (!modelsByKey.has(key)) modelsByKey.set(key, { brand, model });
+    }
+
     return {
       categories: unique(categories.map((row) => row.category)),
       brands: Array.from(brandsByKey.values()).sort((a, b) =>
         a.localeCompare(b, "pt-BR"),
       ),
+      models: Array.from(modelsByKey.values()).sort((a, b) => {
+        const byBrand = a.brand.localeCompare(b.brand, "pt-BR");
+        return byBrand !== 0 ? byBrand : a.model.localeCompare(b.model, "pt-BR");
+      }),
       transmissions: unique(transmissions.map((row) => row.transmission)),
       fuels: unique(fuels.map((row) => row.fuel)),
       colors: unique(
@@ -732,7 +755,7 @@ const loadStockFacetsCached = unstable_cache(
       years: years.map((row) => row.yearModel),
     };
   },
-  ["stock-facets-v5"],
+  ["stock-facets-v6"],
   PUBLIC_CACHE,
 );
 

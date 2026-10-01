@@ -164,6 +164,11 @@ test("estoque e ficha têm o formulário; a cidade continua com o estoque inteir
 
   assert.match(browse, /<MissingModelForm/);
   assert.match(browse, /stockEmptyWhatsAppCta/);
+  assert.match(browse, /shown\.vehicles\.length === 0/);
+  assert.match(
+    browse,
+    /initialModel=\{params\.q\?\.trim\(\) \|\| params\.model\?\.trim\(\) \|\| ""\}/,
+  );
   const listAt = browse.indexOf("<StockInfiniteList");
   const formAt = browse.indexOf("<MissingModelForm");
   assert.ok(listAt > 0 && formAt > listAt);

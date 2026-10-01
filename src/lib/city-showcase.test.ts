@@ -46,10 +46,15 @@ test("a página e a consulta trazem o estoque disponível inteiro", () => {
   );
   const vehicles = readFileSync(join(srcRoot, "lib/vehicles.ts"), "utf8");
   assert.match(page, /getCityShowcaseVehicles\(\)/);
+  assert.match(page, /const featured = await getCityShowcaseVehicles\(\)/);
+  assert.match(page, /vehicles=\{featured\}/);
   assert.match(page, /cityPageStockCopy/);
   assert.match(page, /showWhatsApp=\{false\}/);
   assert.match(page, /Pedir vídeo ou visita/);
   assert.match(page, /stock\.stockHref/);
+  assert.doesNotMatch(page, /^["']use client["']/m);
+  assert.doesNotMatch(page, /useSearchParams|EstoqueBrowse|\/api\/estoque|VehicleCardSkeleton/);
+  assert.doesNotMatch(page, /searchParams/);
   assert.doesNotMatch(page, /city=serra|city=linhares|linkSerra|linkLinhares/);
   assert.doesNotMatch(page, /estão em \$\{city\.name\}/);
 
@@ -60,4 +65,5 @@ test("a página e a consulta trazem o estoque disponível inteiro", () => {
   assert.match(showcase, /status: "disponivel"/);
   assert.match(showcase, /createdAt: "desc"/);
   assert.doesNotMatch(showcase, /locationCity|cityShowcaseStockCity|stockCityFilter|pickCityShowcase|take:/);
+  assert.doesNotMatch(showcase, /consigned|Consignado/);
 });
