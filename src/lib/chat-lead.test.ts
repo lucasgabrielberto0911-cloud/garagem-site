@@ -66,6 +66,29 @@ test("recorte da pergunta vira frase falada", () => {
   assert.equal(chatFilterIntro("eae"), "");
 });
 
+test("abertura de automático forte muda com o teto e não repete a regra", () => {
+  const at109 = chatFilterIntro("automático forte até 109 mil");
+  const at100 = chatFilterIntro("automático forte até 100 mil");
+  const suv = chatFilterIntro("suv automático forte até 90 mil");
+  const manual = chatFilterIntro("manual forte até 80 mil");
+  assert.equal(
+    at109,
+    "Automático até R$ 109.000: o motor maior vem primeiro, e o preço a gente compara entre eles.",
+  );
+  assert.equal(
+    at100,
+    "Até R$ 100.000 no automático, eu começo por quem tem o motor maior.",
+  );
+  assert.notEqual(at109, at100);
+  assert.match(suv, /90\.000/);
+  assert.match(suv, /motor maior/);
+  assert.match(manual, /80\.000/);
+  assert.match(manual, /motor maior/);
+  for (const line of [at109, at100, suv, manual]) {
+    assert.doesNotMatch(line, /eu olho o motor maior antes do preço/);
+  }
+});
+
 test("casa interesse com o carro do estoque e ignora texto frouxo", () => {
   assert.equal(matchInterestVehicle("hyundai hb20 2022", [hb20])?.id, hb20.id);
   assert.equal(matchInterestVehicle("porsche cayenne turbo", [hb20]), null);

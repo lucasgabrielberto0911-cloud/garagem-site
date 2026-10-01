@@ -664,8 +664,9 @@ test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () 
   );
   assert.match(
     result.reply,
-    /No automático até R\$ 109\.000, eu olho o motor maior antes do preço/,
+    /Automático até R\$ 109\.000: o motor maior vem primeiro, e o preço a gente compara entre eles\./,
   );
+  assert.doesNotMatch(result.reply, /eu olho o motor maior antes do preço/);
   assert.match(result.reply, /Lancer, Civic e Corolla cabem neste recorte com motor 2\.0/);
   assert.match(result.reply, /80 mil km/);
   assert.match(result.reply, /62\.900/);
@@ -728,9 +729,9 @@ test("resposta honesta do modelo que abre pelo 2.0 é mantida", async () => {
     generate: async () => ({ text: honest, functionCall: null }),
   });
   assert.equal(result.vehicles[0]?.id, lancer.id);
-  assert.match(result.reply, /O Lancer 2\.0 sai por R\$ 62\.900/);
+  assert.match(result.reply, /^O Lancer 2\.0 sai por R\$ 62\.900/);
   assert.ok(result.reply.indexOf("Lancer") < result.reply.indexOf("HB20"));
-  assert.doesNotMatch(result.reply, /motor maior antes do preço/);
+  assert.doesNotMatch(result.reply, /eu olho o motor maior antes do preço/);
   assert.equal(chatWhatsAppCta(result.reply), null);
 });
 
@@ -875,8 +876,9 @@ test("segunda mensagem herda automático e teto e Nova conversa limpa", async ()
   assert.doesNotMatch(result.reply, /orçamento ou o câmbio|automático ou manual/i);
   assert.match(
     result.reply,
-    /No automático até R\$ 100\.000, eu olho o motor maior antes do preço/,
+    /Até R\$ 100\.000 no automático, eu começo por quem tem o motor maior\./,
   );
+  assert.doesNotMatch(result.reply, /eu olho o motor maior antes do preço/);
   assert.match(result.reply, /motor 2\.0|com motor 2\.0/);
 
   const fewerKm = await runChatTurn({

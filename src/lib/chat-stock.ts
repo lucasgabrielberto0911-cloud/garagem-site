@@ -1410,6 +1410,15 @@ function chatListIntro(reply: string) {
   return /[.!?]$/.test(first) ? first : `${first}.`;
 }
 
+/** Mesma pergunta, mesma frase. Orçamentos diferentes não repetem o mesmo jeito de falar. */
+function spokenVariant(seed: number, lines: readonly string[]) {
+  return lines[Math.abs(Math.trunc(seed)) % lines.length] ?? lines[0]!;
+}
+
+function powerBudgetSeed(budget: number) {
+  return Math.floor(budget / 1000);
+}
+
 /** Recorte da pergunta quando o modelo começa com “Separei 3 / ótimas opções”. */
 export function chatFilterIntro(mensagem: string) {
   const budget = parsePriceLimit(mensagem);
@@ -1440,8 +1449,12 @@ export function chatFilterIntro(mensagem: string) {
           ? "de motor menor"
           : "";
 
-  if (power && bodyLabel && gear === "automatico" && ceiling) {
-    return `Nos ${bodyLabel} automáticos ${ceiling}, eu olho o motor maior antes do preço.`;
+  if (power && bodyLabel && gear === "automatico" && budget != null) {
+    const price = formatChatPrice(budget);
+    return spokenVariant(powerBudgetSeed(budget), [
+      `${bodyLabel} automáticos até ${price}: eu começo pelo motor maior.`,
+      `Até ${price}, nos ${bodyLabel} automáticos, o motor maior sai na frente.`,
+    ]);
   }
   if (!power && intentLabel && gear === "automatico" && ceiling) {
     return bodyLabel
@@ -1475,24 +1488,54 @@ export function chatFilterIntro(mensagem: string) {
     return `Olha só: ${bodyLabel} do estoque agora.`;
   }
 
-  if (power && gear === "automatico" && ceiling) {
-    return category === "moto"
-      ? `Nas motos automáticas ${ceiling}, eu olho o motor maior antes do preço.`
-      : `No automático ${ceiling}, eu olho o motor maior antes do preço.`;
+  if (power && gear === "automatico" && budget != null) {
+    const price = formatChatPrice(budget);
+    if (category === "moto") {
+      return spokenVariant(powerBudgetSeed(budget), [
+        `Nas motos automáticas até ${price}, eu começo pela cilindrada maior.`,
+        `Até ${price} nas automáticas, a cilindrada maior vem primeiro.`,
+      ]);
+    }
+    return spokenVariant(powerBudgetSeed(budget), [
+      `Até ${price} no automático, eu começo por quem tem o motor maior.`,
+      `Automático até ${price}: o motor maior vem primeiro, e o preço a gente compara entre eles.`,
+      `Pra automático até ${price}, eu iria primeiro no de motor maior.`,
+      `Nesse automático até ${price}, deixo na frente o de motor maior.`,
+    ]);
   }
-  if (power && gear === "manual" && ceiling) {
-    return `No manual ${ceiling}, eu olho o motor maior antes do preço.`;
+  if (power && gear === "manual" && budget != null) {
+    const price = formatChatPrice(budget);
+    return spokenVariant(powerBudgetSeed(budget), [
+      `No manual até ${price}, eu começo pelo motor maior.`,
+      `Até ${price} no manual, o motor maior entra na frente.`,
+    ]);
   }
-  if (power && category === "moto" && ceiling) {
-    return `Nas motos ${ceiling}, eu olho o motor maior antes do preço.`;
+  if (power && category === "moto" && budget != null) {
+    const price = formatChatPrice(budget);
+    return spokenVariant(powerBudgetSeed(budget), [
+      `Nas motos até ${price}, eu começo pela cilindrada maior.`,
+      `Até ${price}, nas motos, a cilindrada maior vem primeiro.`,
+    ]);
   }
-  if (power && ceiling) {
-    return `Até este teto, eu olho o motor maior antes do preço.`;
+  if (power && budget != null) {
+    const price = formatChatPrice(budget);
+    return spokenVariant(powerBudgetSeed(budget), [
+      `Até ${price}, eu começo pelo motor maior.`,
+      `Nesse teto de ${price}, o motor maior vem primeiro.`,
+    ]);
   }
   if (power && gear === "automatico") {
-    return "Nos automáticos do estoque, eu olho o motor maior antes do preço.";
+    return spokenVariant(mensagem.length, [
+      "Nos automáticos, eu começo pelo motor maior.",
+      "Se for automático, o de motor maior sai na frente.",
+    ]);
   }
-  if (power) return "Eu olho o motor maior antes do preço.";
+  if (power) {
+    return spokenVariant(mensagem.length, [
+      "Eu começo pelo motor maior, e o preço a gente vê entre eles.",
+      "O motor maior vem primeiro; o preço entra na comparação.",
+    ]);
+  }
 
   if (gear === "automatico" && ceiling) {
     return category === "moto"
