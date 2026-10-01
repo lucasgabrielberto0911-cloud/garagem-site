@@ -32,6 +32,7 @@ export function CookieConsent() {
         WhatsApp funcionam no essencial.{" "}
         <Link
           href="/privacidade"
+          prefetch={false}
           className="underline decoration-white/40 underline-offset-2 hover:text-brand"
         >
           Privacidade

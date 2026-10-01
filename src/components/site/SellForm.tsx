@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition, Children, cloneElement, isValidElement } from "react";
-import { toast } from "sonner";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import { WhatsAppButton } from "@/components/site/ui";
 import { createSellLead } from "@/app/(site)/vender/actions";
 import { formatNumberBR, formatPhoneBR, formatPlateInput } from "@/lib/format";
@@ -60,7 +60,7 @@ export function SellForm({
       }
       setPhotoUrls((current) => [...current, ...uploaded].slice(0, MAX_PHOTOS));
     } catch (error) {
-      toast.error(
+      notifyError(
         error instanceof Error
           ? error.message
           : "Não foi possível enviar a foto. Tente de novo.",
@@ -110,7 +110,7 @@ export function SellForm({
           ),
         });
         trackPwaEvent("PwaOfflineQueued", { kind: "sell" });
-        toast.success(
+        notifySuccess(
           "Sem conexão. Guardamos a avaliação e enviamos quando a internet voltar.",
         );
         setSent(true);
@@ -127,7 +127,7 @@ export function SellForm({
             content_ids: [],
             content_name: "Vender/Trocar",
           });
-          toast.success(result.message);
+          notifySuccess(result.message);
           setSent(true);
           setPhone("");
           setKm("");
@@ -135,7 +135,7 @@ export function SellForm({
           setPhotoUrls([]);
           formRef.current?.reset();
         } else {
-          toast.error(result.message);
+          notifyError(result.message);
           const first = Object.keys(fieldErrors)[0];
           if (first) {
             window.requestAnimationFrame(() => {
@@ -157,13 +157,13 @@ export function SellForm({
             ),
           });
           trackPwaEvent("PwaOfflineQueued", { kind: "sell" });
-          toast.success(
+          notifySuccess(
             "Sem conexão. Guardamos a avaliação e enviamos quando a internet voltar.",
           );
           setSent(true);
           return;
         }
-        toast.error("Não foi possível enviar agora. Tente de novo.");
+        notifyError("Não foi possível enviar agora. Tente de novo.");
       }
     });
   }

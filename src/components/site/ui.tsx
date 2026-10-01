@@ -199,6 +199,7 @@ export function ButtonLink({
   return (
     <Link
       href={href}
+      prefetch={false}
       className={`inline-flex items-center justify-center gap-2.5 font-display font-semibold uppercase tracking-wide transition touch-manipulation ${sizing} ${look} ${className}`}
     >
       {children}

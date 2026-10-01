@@ -151,7 +151,7 @@ test("o formulário público pede consentimento antes de enviar e não é WhatsA
   assert.match(source, /WANTED_LEAD_SUCCESS/);
   assert.match(WANTED_LEAD_SUCCESS, /Recebemos o modelo que você pediu/);
   assert.match(source, /Não foi possível enviar agora/);
-  assert.match(source, /toast\.error\(result\.message\)/);
+  assert.match(source, /notifyError\(result\.message\)/);
   assert.doesNotMatch(source, /WhatsAppButton|wa\.me|99633|setTimeout|Confirmado neste anúncio/);
 });
 

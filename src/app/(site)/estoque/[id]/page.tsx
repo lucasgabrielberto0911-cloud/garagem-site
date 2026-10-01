@@ -320,6 +320,7 @@ export default async function VehicleDetailPage({
               ou o{" "}
               <Link
                 href="/estoque"
+                prefetch={false}
                 className="font-medium text-brand underline-offset-4 hover:underline"
               >
                 estoque disponível
@@ -337,11 +338,11 @@ export default async function VehicleDetailPage({
             aria-label="Você está aqui"
             className="text-xs text-muted sm:text-center"
           >
-            <Link href="/" className="transition hover:text-cream">
+            <Link href="/" prefetch={false} className="transition hover:text-cream">
               Início
             </Link>
             <span className="mx-2">/</span>
-            <Link href="/estoque" className="transition hover:text-cream">
+            <Link href="/estoque" prefetch={false} className="transition hover:text-cream">
               Estoque
             </Link>
             <span className="mx-2">/</span>
@@ -437,6 +438,7 @@ export default async function VehicleDetailPage({
               {sold ? (
                 <Link
                   href={related.length > 0 ? "#mesma-faixa" : "/estoque"}
+                  prefetch={false}
                   className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-asphalt transition hover:bg-brand-orange"
                 >
                   {related.length > 0 ? "Ver na mesma faixa" : "Ver estoque disponível"}
@@ -555,6 +557,7 @@ export default async function VehicleDetailPage({
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
                     <Link
                       href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
+                      prefetch={false}
                       className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline"
                     >
                       Ou preencha a avaliação do seu usado
@@ -684,6 +687,7 @@ export default async function VehicleDetailPage({
               </div>
               <Link
                 href={sameBandHref}
+                prefetch={false}
                 className="inline-flex min-h-[44px] items-center gap-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
               >
                 Ver a faixa no estoque

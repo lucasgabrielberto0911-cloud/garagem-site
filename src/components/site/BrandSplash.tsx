@@ -19,7 +19,7 @@ export function BrandSplash({
         <span className="brand-splash-orb brand-splash-orb-1" />
         <span className="brand-splash-orb brand-splash-orb-2" />
       </div>
-      <SiteWordmark size="splash" priority={!compact} />
+      <SiteWordmark size="splash" priority={false} />
       <div className="brand-splash-bar" aria-hidden="true" />
       {label ? <p className="brand-splash-copy">{label}</p> : null}
     </div>

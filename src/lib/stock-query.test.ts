@@ -73,6 +73,8 @@ test("coverSrc usa thumbnail quando existe e recorte quando não", () => {
   assert.match(bare, /format=webp/);
   assert.equal(bare.includes(`${ORIGINAL} `), false);
   assert.equal(pickWidth(bare, 346), 480);
+  assert.equal(pickWidth(bare, ((390 - 44) / 3) * 3), 480);
+  assert.equal(pickWidth(bare, ((430 - 44) / 3) * 3), 480);
   assert.equal(pickWidth(bare, 519), 720);
   assert.equal(pickWidth(bare, 584), 720);
   assert.equal(pickWidth(bare, 936), 960);
@@ -90,6 +92,8 @@ test("galleryThumbSrc recorta o strip; o hero não usa a miniatura do card", () 
   assert.match(set, /800w/);
   assert.match(set, new RegExp(`${ORIGINAL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} 1280w`));
   assert.doesNotMatch(set, /height=/);
+  assert.equal(pickWidth(set, 390 * 0.6 * 3), 800);
+  assert.equal(pickWidth(set, 430 * 0.6 * 3), 800);
   assert.equal(pickWidth(set, 780), 800);
   assert.equal(pickWidth(set, 1170), 1280);
   assert.equal(pickWidth(set, 1420), 1280);
@@ -125,11 +129,11 @@ test("medidas públicas batem com o layout e com o upload", () => {
   assert.equal(GALLERY_FILE_WIDTH, GALLERY_MAX_EDGE);
   assert.equal(
     GALLERY_HERO_SIZES,
-    "(min-width: 1280px) 710px, (min-width: 1024px) calc((100vw - 96px) * 0.6), 100vw",
+    "(min-width: 1280px) 710px, (min-width: 1024px) calc((100vw - 96px) * 0.6), (min-width: 640px) 100vw, 60vw",
   );
   assert.equal(
     CARD_SIZES,
-    "(min-width: 1280px) 292px, (min-width: 1024px) calc((100vw - 96px) / 3), (min-width: 640px) calc((100vw - 64px) / 2), calc((100vw - 44px) / 2)",
+    "(min-width: 1280px) 292px, (min-width: 1024px) calc((100vw - 96px) / 3), (min-width: 640px) calc((100vw - 64px) / 2), calc((100vw - 44px) / 3)",
   );
   const card = readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), "../components/site/VehicleCard.tsx"),

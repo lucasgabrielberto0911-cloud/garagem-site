@@ -1,4 +1,4 @@
-import { toast } from "sonner";
+import { notifySuccess } from "@/lib/notify";
 import { trackPwaEvent } from "@/lib/meta-pixel";
 import { enqueueIntent, isLikelyNetworkFailure } from "@/lib/offline-queue";
 
@@ -16,6 +16,6 @@ export async function queueWhatsAppIfOffline(input: {
     vehicleId: input.vehicleId,
   });
   trackPwaEvent("PwaOfflineQueued", { kind: "whatsapp" });
-  toast.success("Sem conexão. Guardamos o recado e abrimos o WhatsApp quando voltar.");
+  notifySuccess("Sem conexão. Guardamos o recado e abrimos o WhatsApp quando voltar.");
   return true;
 }

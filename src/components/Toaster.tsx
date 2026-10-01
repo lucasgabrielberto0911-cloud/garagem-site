@@ -1,20 +1,38 @@
 "use client";
 
-import { Toaster as Sonner } from "sonner";
+import { useEffect, useState, type ComponentType } from "react";
+import { usePathname } from "next/navigation";
+import { subscribeToasterRequest } from "@/lib/notify";
 
+/**
+ * O sonner fica fora do JS da primeira pintura. No site público ele
+ * entra no primeiro aviso. No painel entra junto com a página.
+ */
 export function AppToaster() {
-  return (
-    <Sonner
-      theme="dark"
-      position="top-center"
-      offset="max(0.75rem, env(safe-area-inset-top, 0px))"
-      toastOptions={{
-        style: {
-          background: "#17171A",
-          border: "1px solid rgba(255,255,255,0.1)",
-          color: "#F7F5F2",
-        },
-      }}
-    />
-  );
+  const pathname = usePathname();
+  const [Toaster, setToaster] = useState<ComponentType | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let started = false;
+
+    function load() {
+      if (started) return;
+      started = true;
+      void import("@/components/SonnerToaster").then((mod) => {
+        if (!cancelled) setToaster(() => mod.SonnerToaster);
+      });
+    }
+
+    const unsubscribe = subscribeToasterRequest(load);
+    if (pathname.startsWith("/admin")) load();
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [pathname]);
+
+  if (!Toaster) return null;
+  return <Toaster />;
 }
