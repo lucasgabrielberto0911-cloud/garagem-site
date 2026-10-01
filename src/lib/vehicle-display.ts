@@ -191,8 +191,8 @@ export function suggestedTransmission(
 
 /**
  * Slug da query `transmission` no estoque.
- * `automatico` e `Automático` são o mesmo filtro; CVT, automatizado e
- * semi-automático não entram em automático.
+ * Automático inclui CVT — nesta loja o Corolla CVT é o que o comprador
+ * chama de automático. Manual, semi-automático e automatizado ficam de fora.
  */
 const TRANSMISSION_STORED: Record<GearKind, readonly string[]> = {
   automatico: ["Automático", "Automatico", "Automática", "Automatica"],
@@ -241,13 +241,21 @@ export function transmissionFilterLabel(value?: string | null) {
   return formatTransmissionLabel(trimmed) || trimmed;
 }
 
+/** Grafias que o filtro encontra. Automático também pega CVT. */
+function storedTransmissionValues(kind: GearKind) {
+  if (kind === "automatico") {
+    return [...TRANSMISSION_STORED.automatico, ...TRANSMISSION_STORED.cvt];
+  }
+  return TRANSMISSION_STORED[kind];
+}
+
 /** Grafias gravadas que o slug (ou o rótulo) deve encontrar. */
 export function transmissionFilterValues(selected?: string | null) {
   const trimmed = collapseWhitespace(selected ?? "");
   if (!trimmed) return [];
   const kind = stockGearKind(trimmed);
   if (!kind) return [trimmed];
-  const values = new Set<string>(TRANSMISSION_STORED[kind]);
+  const values = new Set<string>(storedTransmissionValues(kind));
   const folded = foldToken(trimmed);
   const covered = [...values].some((item) => foldToken(item) === folded);
   if (!covered && folded !== kind) values.add(trimmed);

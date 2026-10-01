@@ -167,16 +167,29 @@ test("filtro de câmbio aceita o slug da URL e o rótulo gravado", () => {
   const automatic = transmissionFilterValues("automatico");
   assert.ok(automatic.includes("Automático"));
   assert.ok(automatic.includes("Automatico"));
-  assert.equal(automatic.some((item) => /manual|cvt|semi/i.test(item)), false);
+  assert.ok(automatic.includes("CVT"));
+  assert.equal(automatic.some((item) => /manual|semi/i.test(item)), false);
+  assert.equal(automatic.includes("Automatizado"), false);
 
   const where = transmissionWhere("automatico") as {
     OR?: Array<{ transmission: { equals: string } }>;
   };
   const equals = (where.OR ?? []).map((item) => item.transmission.equals);
   assert.ok(equals.includes("Automático"));
+  assert.ok(equals.includes("CVT"));
   assert.equal(equals.includes("Manual"), false);
-  assert.equal(equals.includes("CVT"), false);
   assert.equal(equals.includes("Semi-automático"), false);
+  assert.equal(equals.includes("Automatizado"), false);
+
+  const cvtOnly = transmissionWhere("cvt") as {
+    transmission?: { equals: string };
+    OR?: Array<{ transmission: { equals: string } }>;
+  };
+  const cvtEquals = cvtOnly.OR
+    ? cvtOnly.OR.map((item) => item.transmission.equals)
+    : [cvtOnly.transmission?.equals];
+  assert.ok(cvtEquals.includes("CVT"));
+  assert.equal(cvtEquals.includes("Automático"), false);
 
   const manual = transmissionWhere("Manual") as {
     OR?: Array<{ transmission: { equals: string } }>;

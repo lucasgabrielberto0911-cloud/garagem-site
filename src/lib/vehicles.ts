@@ -550,7 +550,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v11"],
+  ["stock-page-v12"],
   PUBLIC_CACHE,
 );
 
