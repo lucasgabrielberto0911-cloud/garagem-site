@@ -3,10 +3,12 @@ import Link from "next/link";
 import { preload } from "react-dom";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
+import { FichaSectionNav } from "@/components/site/FichaSectionNav";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
 import {
+  hasMobileFichaSpecs,
   VehicleMobileBlocks,
   VehicleMobileSummary,
 } from "@/components/site/VehicleMobileDossier";
@@ -347,10 +349,16 @@ export default async function VehicleDetailPage({
           </nav>
         </div>
 
+        <FichaSectionNav hasDetails={hasDetails} />
+
         {/* Mobile: primeira dobra. Desktop: galeria | ficha. */}
         <div className="lg:mt-5 lg:grid lg:grid-cols-[1.35fr_0.9fr] lg:items-start lg:gap-8">
           <div className="ficha-mobile-fold min-w-0 lg:order-1">
-            <div className="ficha-mobile-photo relative min-w-0">
+            <div
+              id="fotos"
+              data-ficha-section="fotos"
+              className="ficha-jump-target ficha-mobile-photo relative min-w-0"
+            >
               <div className="absolute left-3 top-3 z-[3] lg:hidden">
                 <Suspense fallback={null}>
                   <StockBackLink fallbackHref="/estoque" variant="overlay" />
@@ -371,11 +379,12 @@ export default async function VehicleDetailPage({
                 city={vehicleLocationLabel(vehicle.locationCity)}
                 plateEnd={vehicle.plateEnd}
                 inspection={sold ? null : vehicle.inspection}
+                specAnchor={!hasMobileFichaSpecs(specs)}
               />
             </div>
           </div>
 
-          <aside className="order-2 hidden lg:sticky lg:top-24 lg:row-span-2 lg:block">
+          <aside className="ficha-aside order-2 hidden lg:sticky lg:z-20 lg:row-span-2 lg:block">
             <div className="space-y-4 border border-white/10 bg-ink p-4 sm:p-6">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-display text-[11px] font-semibold uppercase tracking-wider text-brand">
@@ -491,7 +500,10 @@ export default async function VehicleDetailPage({
                 </>
               )}
 
-              <dl className="ficha-spec-grid grid grid-cols-2 gap-2 border-y border-white/10 py-3.5 text-sm">
+              <dl
+                data-ficha-section="especificacoes"
+                className="ficha-jump-target ficha-spec-grid grid grid-cols-2 gap-2 border-y border-white/10 py-3.5 text-sm"
+              >
                 {specs.map((spec) => (
                   <div
                     key={spec.label}
@@ -574,7 +586,10 @@ export default async function VehicleDetailPage({
           </aside>
 
           {hasDetails ? (
-            <section className="order-3 hidden border-t border-white/10 pt-5 lg:col-start-1 lg:block">
+            <section
+              data-ficha-section="detalhes"
+              className="ficha-jump-target order-3 hidden border-t border-white/10 pt-5 lg:col-start-1 lg:block"
+            >
               {vehicle.description ? (
                 <div>
                   <h2 className="font-display text-base font-semibold text-cream">

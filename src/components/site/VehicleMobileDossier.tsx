@@ -29,6 +29,11 @@ import { whatsappContentFromVehicle } from "@/lib/site";
 /** Já aparecem na primeira dobra. Cidade volta na grade da Ficha, ao lado de Portas. */
 const FOLD_LABELS = new Set(["Ano", "KM", "Câmbio"]);
 
+/** A âncora Especificações cai na grade completa quando ela existe. */
+export function hasMobileFichaSpecs(specs: VehicleSpecRow[]) {
+  return specs.some((row) => !FOLD_LABELS.has(row.label));
+}
+
 function fichaGridLabel(label: string) {
   return label === "Disponível em" ? "Cidade" : label;
 }
@@ -45,6 +50,7 @@ export function VehicleMobileSummary({
   city,
   plateEnd,
   inspection,
+  specAnchor = false,
 }: {
   title: string;
   version?: string | null;
@@ -57,6 +63,8 @@ export function VehicleMobileSummary({
   city: string;
   plateEnd?: string | null;
   inspection?: string | null;
+  /** Quando a grade completa não existe, a âncora aponta para estes fatos. */
+  specAnchor?: boolean;
 }) {
   const facts = [
     { label: "Ano", value: formatVehicleYearRange(year, yearModel) },
@@ -86,7 +94,11 @@ export function VehicleMobileSummary({
       {!sold ? (
         <VehicleInspectionBadge inspection={inspection} className="mt-2.5" />
       ) : null}
-      <dl className="mt-2.5 grid grid-cols-2 gap-1.5">
+      <dl
+        className={`mt-2.5 grid grid-cols-2 gap-1.5${specAnchor ? " ficha-jump-target" : ""}`}
+        id={specAnchor ? "especificacoes" : undefined}
+        data-ficha-section={specAnchor ? "especificacoes" : undefined}
+      >
         {facts.map((fact) => (
           <div key={fact.label} className="min-w-0 border border-white/10 bg-ink px-2.5 py-2">
             <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
@@ -114,13 +126,20 @@ function DossierBlock({
   title,
   children,
   defaultOpen = false,
+  section,
 }: {
   title: string;
   children: ReactNode;
   defaultOpen?: boolean;
+  section?: "especificacoes" | "detalhes";
 }) {
   return (
-    <details className="group border-b border-white/10" open={defaultOpen}>
+    <details
+      className={`group border-b border-white/10${section ? " ficha-jump-target" : ""}`}
+      open={defaultOpen}
+      id={section}
+      data-ficha-section={section}
+    >
       <summary className="flex min-h-[3.25rem] cursor-pointer list-none items-center justify-between gap-3 py-4 font-display text-[15px] font-semibold tracking-tight text-cream [&::-webkit-details-marker]:hidden">
         <span>{title}</span>
         <span
@@ -209,7 +228,7 @@ export function VehicleMobileBlocks({
       </DossierBlock>
 
       {extraSpecs.length > 0 ? (
-        <DossierBlock title="Ficha">
+        <DossierBlock title="Ficha" section="especificacoes">
           {listedLine ? (
             <p className="mb-3 text-xs tracking-wide text-muted">{listedLine}</p>
           ) : null}
@@ -233,13 +252,17 @@ export function VehicleMobileBlocks({
       ) : null}
 
       {description ? (
-        <DossierBlock title="Sobre o veículo" defaultOpen>
+        <DossierBlock title="Sobre o veículo" defaultOpen section="detalhes">
           <VehicleDescription text={description} />
         </DossierBlock>
       ) : null}
 
       {accessories.length > 0 ? (
-        <DossierBlock title="Itens e acessórios" defaultOpen>
+        <DossierBlock
+          title="Itens e acessórios"
+          defaultOpen
+          section={description ? undefined : "detalhes"}
+        >
           <ul className="divide-y divide-white/10 border border-white/10">
             {accessories.map((item) => (
               <li key={item} className="flex items-center gap-3 px-3 py-2.5 text-cream">

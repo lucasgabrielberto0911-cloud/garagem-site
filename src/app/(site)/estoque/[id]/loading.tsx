@@ -7,6 +7,16 @@ export default function VehicleDetailLoading() {
       className="animate-fade-in pb-sticky-bar-safe lg:pb-10"
     >
       <Container>
+        <div
+          className="ficha-section-nav -mx-4 border-b border-white/10 sm:-mx-6 lg:mx-0 lg:mt-4"
+          aria-hidden="true"
+        >
+          <div className="flex min-h-11 items-center justify-around px-3">
+            <div className="skeleton h-3 w-12" />
+            <div className="skeleton h-3 w-24" />
+            <div className="skeleton h-3 w-16" />
+          </div>
+        </div>
         <div className="ficha-mobile-fold lg:hidden">
           <div className="ficha-mobile-photo">
             <div className="gallery-frame skeleton min-h-[9rem] flex-1 border border-white/10" />

@@ -12,7 +12,11 @@ import { VehicleImage } from "@/components/VehicleImage";
 import { IconClose } from "@/components/site/icons";
 import { vehiclePhotoAlt } from "@/lib/format";
 import { handleFocusTrap } from "@/lib/focus-trap";
-import { galleryThumbSrc, type GalleryPhoto } from "@/lib/stock-query";
+import {
+  galleryPreviewSrc,
+  galleryThumbSrc,
+  type GalleryPhoto,
+} from "@/lib/stock-query";
 
 const MAX_SCALE = 4;
 const ZOOM_STEP = 2.4;
@@ -323,11 +327,10 @@ export function PhotoLightbox({
               }}
             >
               <VehicleImage
-                src={photo?.url}
+                src={photo ? galleryPreviewSrc(photo) : null}
                 alt={vehiclePhotoAlt(alt, safeIndex, total)}
                 fill
                 sizes="100vw"
-                quality={85}
                 priority
                 className="pointer-events-none object-contain [-webkit-touch-callout:none]"
               />
