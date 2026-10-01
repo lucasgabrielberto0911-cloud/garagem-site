@@ -44,12 +44,17 @@ export function buildLeadWebhookBody(payload: LeadNotifyPayload) {
 }
 
 export function buildLeadNotifyEmail(payload: LeadNotifyPayload) {
+  const wanted = payload.source === "nao-encontrou";
   const lines = [
-    "Novo lead de venda/troca no site da Sua Garagem.",
+    wanted
+      ? "Pedido no site: a pessoa não encontrou o modelo e deixou o que procura."
+      : "Novo lead de venda/troca no site da Sua Garagem.",
     "",
     `Nome: ${payload.name}`,
     `Telefone: ${payload.phone}`,
-    `Veículo: ${payload.vehicleInfo}`,
+    wanted
+      ? `Modelo pedido: ${payload.vehicleInfo}`
+      : `Veículo: ${payload.vehicleInfo}`,
     payload.plate ? `Placa: ${payload.plate}` : null,
     payload.km != null ? `KM: ${payload.km}` : null,
     payload.source ? `Origem: ${payload.source}` : null,
@@ -61,7 +66,9 @@ export function buildLeadNotifyEmail(payload: LeadNotifyPayload) {
   ].filter((line): line is string => line != null);
 
   return {
-    subject: `Lead: ${payload.vehicleInfo} — ${payload.name}`,
+    subject: wanted
+      ? `Modelo pedido: ${payload.vehicleInfo} — ${payload.name}`
+      : `Lead: ${payload.vehicleInfo} — ${payload.name}`,
     text: lines.join("\n"),
   };
 }

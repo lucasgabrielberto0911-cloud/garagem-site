@@ -9,7 +9,6 @@ import { StockCatalogGate } from "@/components/site/StockCatalogGate";
 import { StockCatalogLinks } from "@/components/site/StockCatalogLinks";
 import { StockFilters } from "@/components/site/StockFilters";
 import { StockBrowseShell } from "@/components/site/StockPending";
-import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader } from "@/components/site/ui";
 import { buildPageMetadata, itemListJsonLd } from "@/lib/seo";
 import { site } from "@/lib/site";
@@ -45,7 +44,7 @@ export default async function EstoquePage() {
         <PageHeader
           eyebrow="Estoque"
           title="Veículos disponíveis"
-          description="Vistoria e procedência em cada anúncio. Filtre por marca, modelo, ano, preço ou km e ordene a lista — se esvaziar, a gente avisa no WhatsApp."
+          description="Vistoria e procedência em cada anúncio. Filtre por marca, modelo, ano, preço ou km e ordene a lista. Se não achar o modelo, deixa o pedido no formulário."
         />
 
         <StockBrowseShell
@@ -71,9 +70,6 @@ export default async function EstoquePage() {
           </StockCatalogGate>
         </Suspense>
 
-        <div className="mt-10">
-          <WantedVehicleCta description="Não achou no filtro? Diz o modelo e a faixa — a gente avisa no WhatsApp, das 8h às 23h, quando entrar." />
-        </div>
       </Container>
     </div>
   );

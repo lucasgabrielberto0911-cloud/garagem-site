@@ -19,9 +19,11 @@ import {
   LEAD_STATUSES,
   LEAD_STATUS_LABEL as STATUS_LABEL,
   LEAD_STATUS_STYLE as STATUS_STYLE,
+  WANTED_LEAD_SOURCE,
   buildLeadWhatsAppUrl,
   type LeadStatus,
 } from "@/lib/leads";
+import { emailFromLeadNotes } from "@/lib/wanted-lead";
 import {
   convertLeadToCustomer,
   deleteLead,
@@ -92,6 +94,7 @@ export function LeadsTable({
   leads,
   status,
   query = "",
+  origem = "",
   counts,
   page = 1,
   pageSize = 40,
@@ -100,6 +103,7 @@ export function LeadsTable({
   leads: LeadVenda[];
   status: string;
   query?: string;
+  origem?: string;
   counts: Record<string, number> & { total: number };
   page?: number;
   pageSize?: number;
@@ -115,13 +119,20 @@ export function LeadsTable({
   const totalCount = total ?? leads.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  function goTo(next: { status?: string; page?: number; q?: string }) {
+  function goTo(next: {
+    status?: string;
+    page?: number;
+    q?: string;
+    origem?: string;
+  }) {
     const params = new URLSearchParams();
     const nextStatus = next.status ?? status;
     const nextQuery = next.q ?? query;
+    const nextOrigem = next.origem === undefined ? origem : next.origem;
     const nextPage = next.page ?? 1;
     if (nextStatus) params.set("status", nextStatus);
     if (nextQuery.trim()) params.set("q", nextQuery.trim());
+    if (nextOrigem) params.set("origem", nextOrigem);
     if (nextPage > 1) params.set("page", String(nextPage));
     startTransition(() => {
       router.push(
@@ -180,7 +191,7 @@ export function LeadsTable({
   return (
     <div className="space-y-4">
       <div className="border border-white/10 bg-ink/50 p-3 sm:p-4">
-        <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex flex-wrap gap-2">
           <FilterChip
             label={`Todos (${counts.total})`}
             active={!status}
@@ -196,6 +207,19 @@ export function LeadsTable({
               onClick={() => goTo({ status: value, q: query, page: 1 })}
             />
           ))}
+          <FilterChip
+            label="Não encontrou"
+            active={origem === WANTED_LEAD_SOURCE}
+            disabled={isPending}
+            onClick={() =>
+              goTo({
+                status,
+                q: query,
+                page: 1,
+                origem: origem === WANTED_LEAD_SOURCE ? "" : WANTED_LEAD_SOURCE,
+              })
+            }
+          />
         </div>
 
         <div className="mt-3 flex flex-col gap-2 border-t border-white/10 pt-3 sm:flex-row sm:items-center">
@@ -238,14 +262,18 @@ export function LeadsTable({
           title={
             query
               ? "Nenhum lead para essa busca"
-              : status
-                ? "Nenhum lead com esse status"
-                : "Nenhum lead recebido ainda"
+              : origem === WANTED_LEAD_SOURCE
+                ? "Nenhum pedido de modelo ainda"
+                : status
+                  ? "Nenhum lead com esse status"
+                  : "Nenhum lead recebido ainda"
           }
           description={
             query
-              ? "Tente outro nome, telefone, placa ou veículo."
-              : "Os pedidos de avaliação enviados pelo formulário da página Vender/Trocar aparecem aqui."
+              ? "Tente outro nome, telefone, placa, e-mail ou modelo."
+              : origem === WANTED_LEAD_SOURCE
+                ? "Quando alguém não achar o modelo no estoque ou na ficha e enviar o formulário, o pedido aparece aqui."
+                : "Os pedidos de avaliação da página Vender/Trocar e os de quem não encontrou o modelo aparecem aqui."
           }
         />
       ) : (
@@ -276,26 +304,44 @@ export function LeadsTable({
                     <span className="rounded border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-cream/80">
                       Avaliação
                     </span>
+                  ) : lead.source === WANTED_LEAD_SOURCE ? (
+                    <span className="rounded border border-brand/40 bg-brand/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand">
+                      Não encontrou
+                    </span>
                   ) : lead.source ? (
                     <span className="rounded border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted">
                       {lead.source}
                     </span>
                   ) : null}
                 </div>
+                {lead.source === WANTED_LEAD_SOURCE ? (
+                  <p className="mt-1 text-sm text-cream">
+                    Modelo pedido:{" "}
+                    <span className="font-medium">{lead.vehicleInfo}</span>
+                  </p>
+                ) : (
+                  <>
+                    <p className="mt-1 text-sm text-muted">
+                      {lead.vehicleInfo}
+                      {lead.km !== null ? ` · ${formatNumberBR(lead.km)} km` : ""}
+                    </p>
+                    <p className="mt-1 text-sm text-cream">
+                      Placa:{" "}
+                      <span className="font-display font-semibold tracking-wide">
+                        {lead.plate
+                          ? formatPlateDisplay(lead.plate)
+                          : "Não informada"}
+                      </span>
+                    </p>
+                  </>
+                )}
                 <p className="mt-1 text-sm text-muted">
-                  {lead.vehicleInfo}
-                  {lead.km !== null ? ` · ${formatNumberBR(lead.km)} km` : ""}
-                </p>
-                <p className="mt-1 text-sm text-cream">
-                  Placa:{" "}
-                  <span className="font-display font-semibold tracking-wide">
-                    {lead.plate
-                      ? formatPlateDisplay(lead.plate)
-                      : "Não informada"}
-                  </span>
-                </p>
-                <p className="mt-1 text-sm text-muted">
-                  {formatPhoneBR(lead.phone)} · {formatDateTime(lead.createdAt)}
+                  {formatPhoneBR(lead.phone)}
+                  {emailFromLeadNotes(lead.notes)
+                    ? ` · ${emailFromLeadNotes(lead.notes)}`
+                    : ""}
+                  {" · "}
+                  {formatDateTime(lead.createdAt)}
                 </p>
                 {lead.source || lead.interestVehicleId ? (
                   <p className="mt-1 text-xs text-muted">
@@ -307,7 +353,9 @@ export function LeadsTable({
                             ? "Chatbot do site"
                             : lead.source === "vender"
                               ? "Formulário de avaliação"
-                              : lead.source}
+                              : lead.source === WANTED_LEAD_SOURCE
+                                ? "Formulário — não encontrou o modelo"
+                                : lead.source}
                         </strong>
                       </span>
                     ) : null}
@@ -317,7 +365,9 @@ export function LeadsTable({
                         href={`/estoque/${lead.interestVehicleId}`}
                         className="text-cream underline-offset-2 hover:underline"
                       >
-                        Interesse no estoque
+                        {lead.source === WANTED_LEAD_SOURCE
+                          ? "Anúncio que estava aberto"
+                          : "Interesse no estoque"}
                       </a>
                     ) : null}
                   </p>

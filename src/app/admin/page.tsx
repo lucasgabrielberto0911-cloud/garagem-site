@@ -244,8 +244,8 @@ export default async function AdminDashboardPage() {
         >
           {leads.total === 0 ? (
             <p className="text-sm text-muted">
-              Nenhum lead ainda. Os pedidos de avaliação enviados na página
-              Vender/Trocar aparecem aqui.
+              Nenhum lead ainda. Os pedidos de avaliação da página Vender/Trocar
+              e os de quem não encontrou o modelo aparecem aqui.
             </p>
           ) : (
             <>

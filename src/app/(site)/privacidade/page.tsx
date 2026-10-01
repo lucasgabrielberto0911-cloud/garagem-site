@@ -37,9 +37,11 @@ export default function PrivacidadePage() {
                 <strong className="text-cream">Dados que você envia:</strong>{" "}
                 nome, telefone e informações do veículo (marca, modelo, ano,
                 quilometragem e observações) quando você preenche o formulário de
-                avaliação da página Vender/Trocar. No assistente, nome e telefone
-                só entram se você pedir contato — o texto da conversa não vai
-                para analytics.
+                avaliação da página Vender/Trocar. No estoque e na ficha, se você
+                não encontrou o modelo, o formulário pede o modelo, seu nome,
+                e-mail, telefone e, se quiser, faixas de ano, preço e
+                quilometragem. No assistente, nome e telefone só entram se você
+                pedir contato — o texto da conversa não vai para analytics.
               </Item>
               <Item>
                 <strong className="text-cream">Dados de navegação:</strong>{" "}
@@ -63,6 +65,10 @@ export default function PrivacidadePage() {
           <Block title="3. Para que usamos os dados">
             <ul className="space-y-2">
               <Item>Responder ao seu contato e avaliar seu veículo.</Item>
+              <Item>
+                Avisar quando entrar um modelo que você pediu e não estava no
+                estoque.
+              </Item>
               <Item>
                 Apresentar propostas de compra, venda, troca e opções de
                 financiamento.

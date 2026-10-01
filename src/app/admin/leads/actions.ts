@@ -5,7 +5,8 @@ import { expireAdminData } from "@/lib/admin-revalidate";
 import { getSession } from "@/lib/auth";
 import { ADMIN_NEW_LEADS_TAG } from "@/lib/admin-cache";
 import { markLeadContatado } from "@/lib/lead-venda";
-import { isLeadStatus } from "@/lib/leads";
+import { WANTED_LEAD_SOURCE, isLeadStatus } from "@/lib/leads";
+import { emailFromLeadNotes } from "@/lib/wanted-lead";
 import { prisma } from "@/lib/prisma";
 
 export type LeadActionState = { ok: boolean; message: string };
@@ -60,13 +61,19 @@ export async function convertLeadToCustomer(
       };
     }
 
+    const wanted = lead.source === WANTED_LEAD_SOURCE;
     await prisma.customer.create({
       data: {
         name: lead.name,
         phone,
-        notes: `Lead de venda/troca: ${lead.vehicleInfo}${
-          lead.plate ? ` · placa ${lead.plate}` : ""
-        }${lead.notes ? ` — ${lead.notes}` : ""}`,
+        email: emailFromLeadNotes(lead.notes),
+        notes: wanted
+          ? `Pedido de modelo: ${lead.vehicleInfo}${
+              lead.notes ? ` — ${lead.notes}` : ""
+            }`
+          : `Lead de venda/troca: ${lead.vehicleInfo}${
+              lead.plate ? ` · placa ${lead.plate}` : ""
+            }${lead.notes ? ` — ${lead.notes}` : ""}`,
       },
     });
 

@@ -1,3 +1,6 @@
+/** Pedido de quem não achou o modelo no estoque ou na ficha. Mesma tabela dos outros leads. */
+export const WANTED_LEAD_SOURCE = "nao-encontrou";
+
 export const LEAD_STATUSES = [
   "novo",
   "contatado",
@@ -45,6 +48,10 @@ export function buildLeadWhatsAppUrl(lead: {
   if (lead.source === "chatbot-site") {
     const topic = lead.vehicleInfo ? ` sobre o ${lead.vehicleInfo}` : "";
     text = `Olá, ${firstName}! Aqui é da Garagem. Você conversou com nosso assistente virtual no site${topic}. Como posso te ajudar?`;
+  } else if (lead.source === WANTED_LEAD_SOURCE) {
+    const model = lead.vehicleInfo?.trim();
+    const about = model ? ` quando chegar um ${model}` : "";
+    text = `Olá, ${firstName}! Aqui é da Garagem. Você pediu para ser avisado${about}. Posso te ajudar?`;
   } else {
     const plateClean = (lead.plate ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
     const plateLabel = plateClean ? ` (placa ${plateClean})` : "";
