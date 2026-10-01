@@ -20,6 +20,8 @@
   --admin-nav-h: 0px;
   /* Barra fixa da ficha. A primeira dobra desconta esta altura para a foto não ficar embaixo. */
   --ficha-sticky-bar: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  /* Âncoras Fotos / Especificações / Detalhes. A dobra do celular desconta esta faixa. */
+  --ficha-section-nav: 2.75rem;
 }
 
 @media (max-width: 1023px) {
@@ -858,6 +860,33 @@ textarea:-webkit-autofill:focus {
   transition: background-color 99999s ease-out 0s;
 }
 
+/* Âncoras da ficha, logo abaixo do header fixo. */
+.ficha-section-nav {
+  position: sticky;
+  top: calc(4.5rem + env(safe-area-inset-top, 0px));
+  z-index: 30;
+}
+
+.ficha-jump-target {
+  scroll-margin-top: calc(
+    4.5rem + env(safe-area-inset-top, 0px) + var(--ficha-section-nav) + 0.5rem
+  );
+}
+
+@media (min-width: 1024px) {
+  .ficha-section-nav {
+    top: calc(4.75rem + 1px);
+  }
+
+  .ficha-aside {
+    top: calc(4.75rem + 1px + var(--ficha-section-nav) + 0.75rem);
+  }
+
+  .ficha-jump-target {
+    scroll-margin-top: calc(4.75rem + 1px + var(--ficha-section-nav) + 0.75rem);
+  }
+}
+
 /* Faixa da galeria: swipe horizontal sem empurrar a página (bounce iOS). */
 .gallery-strip {
   -webkit-overflow-scrolling: touch;
@@ -881,7 +910,7 @@ textarea:-webkit-autofill:focus {
     display: flex;
     flex-direction: column;
     height: calc(
-      100svh - 4.5rem - env(safe-area-inset-top, 0px) - var(--ficha-sticky-bar)
+      100svh - 4.5rem - env(safe-area-inset-top, 0px) - var(--ficha-sticky-bar) - var(--ficha-section-nav)
     );
     margin-left: -1rem;
     margin-right: -1rem;

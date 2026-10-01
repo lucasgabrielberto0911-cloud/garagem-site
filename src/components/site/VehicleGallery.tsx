@@ -205,6 +205,13 @@ export function VehicleGallery({
           })}
         </ul>
 
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-2 left-[max(0.5rem,env(safe-area-inset-left,0px))] z-[2] flex h-8 w-8 items-center justify-center border border-white/20 bg-asphalt/80 text-cream backdrop-blur"
+        >
+          <ExpandIcon />
+        </span>
+
         {total > 1 ? (
           <>
             <button
@@ -290,6 +297,25 @@ export function VehicleGallery({
         />
       ) : null}
     </div>
+  );
+}
+
+function ExpandIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <path d="M9 4H4v5" />
+      <path d="M15 4h5v5" />
+      <path d="M9 20H4v-5" />
+      <path d="M15 20h5v-5" />
+    </svg>
   );
 }
 
