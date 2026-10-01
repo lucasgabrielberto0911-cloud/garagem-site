@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useEffect,
   useRef,
   useState,
   useTransition,
@@ -9,7 +8,6 @@ import {
   cloneElement,
   isValidElement,
   type ReactNode,
-  type RefObject,
 } from "react";
 import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/site/ui";
@@ -37,7 +35,6 @@ export function SellForm({
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [outcome, setOutcome] = useState<null | "sent" | "queued">(null);
-  const outcomeHeadingRef = useRef<HTMLHeadingElement>(null);
   const [phone, setPhone] = useState("");
   const [km, setKm] = useState("");
   const [plate, setPlate] = useState("");
@@ -179,19 +176,8 @@ export function SellForm({
     });
   }
 
-  useEffect(() => {
-    if (!outcome) return;
-    outcomeHeadingRef.current?.focus();
-  }, [outcome]);
-
   if (outcome) {
-    return (
-      <AfterSend
-        mode={outcome}
-        headingRef={outcomeHeadingRef}
-        onAnother={() => setOutcome(null)}
-      />
-    );
+    return <AfterSend mode={outcome} onAnother={() => setOutcome(null)} />;
   }
 
   return (
@@ -435,11 +421,9 @@ export function SellForm({
 
 function AfterSend({
   mode,
-  headingRef,
   onAnother,
 }: {
   mode: "sent" | "queued";
-  headingRef: RefObject<HTMLHeadingElement | null>;
   onAnother: () => void;
 }) {
   return (
@@ -449,11 +433,7 @@ function AfterSend({
         <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
           {mode === "queued" ? "Sem conexão" : "Pedido recebido"}
         </p>
-        <h2
-          ref={headingRef}
-          tabIndex={-1}
-          className="mt-2 font-display text-xl font-bold tracking-tight text-cream outline-none"
-        >
+        <h2 className="mt-2 font-display text-xl font-bold tracking-tight text-cream">
           {mode === "queued" ? "Avaliação guardada neste aparelho" : "Solicitação enviada"}
         </h2>
         {mode === "queued" ? (

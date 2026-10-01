@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
 import { buildPageMetadata } from "@/lib/seo";
 import {
@@ -85,7 +84,7 @@ export default async function ContatoPage() {
               </a>
             ) : null}
 
-            <div className="mt-3 flex flex-col gap-3">
+            <div className="mt-3">
               <WhatsAppButton
                 size="lg"
                 className="w-full"
@@ -94,12 +93,6 @@ export default async function ContatoPage() {
               >
                 Chamar no WhatsApp
               </WhatsAppButton>
-              <ChatOpenButton
-                source="contato"
-                variant="outline"
-                size="lg"
-                className="w-full"
-              />
             </div>
           </div>
         </section>
