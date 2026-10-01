@@ -146,6 +146,27 @@ body {
     body:not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])):not(:has(.site-consent)) .pb-site-nav {
       padding-bottom: calc(4.5rem + 4.25rem + env(safe-area-inset-bottom, 0px));
     }
+
+    /*
+     * Contato e vender: o chip “Ajuda para escolher” (h-11) fica 0.75rem
+     * acima da bottom nav. O fim da página sobe essa pilha inteira, com
+     * 1.5rem de leitura, para o telefone do rodapé não parar embaixo do chip.
+     */
+    body:has([data-clear-fab]):not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])):not(:has(.site-consent)) .pb-site-nav {
+      padding-bottom: calc(4.5rem + 0.75rem + 2.75rem + 1.5rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  /*
+   * Primeira dobra de contato/vender no celular: o miolo termina acima do
+   * chip e da bottom nav. O que vem depois começa fora da tela.
+   */
+  @media (max-width: 1023px) {
+    .clear-fab-screen {
+      box-sizing: border-box;
+      min-height: calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px));
+      padding-bottom: calc(4.5rem + 0.75rem + 2.75rem + 1rem + env(safe-area-inset-bottom, 0px));
+    }
   }
 
   /* Banner de cookies no rodapé: folga para CTAs do fim da página. */

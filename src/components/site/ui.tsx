@@ -99,12 +99,15 @@ export function PageHeader({
   title,
   description,
   headingAs = "h1",
+  compact = false,
 }: {
   eyebrow: string;
   title: string;
   description?: string;
   /** Use `p` no loading.tsx para não duplicar H1 com a página. */
   headingAs?: "h1" | "p";
+  /** Título e texto mais curtos no celular, para caber acima do chip de ajuda. */
+  compact?: boolean;
 }) {
   const Heading = headingAs;
   return (
@@ -112,12 +115,23 @@ export function PageHeader({
       <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
         {eyebrow}
       </p>
-      <Heading className="mt-2 font-display text-3xl font-bold tracking-tight text-cream sm:text-4xl">
+      <Heading
+        className={`mt-2 font-display font-bold tracking-tight text-cream sm:text-4xl ${
+          compact ? "text-2xl" : "text-3xl"
+        }`}
+      >
         {title}
       </Heading>
-      <div className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
+      <div
+        className={`mx-auto h-0.5 w-16 bg-brand-gradient ${compact ? "mt-3" : "mt-4"}`}
+        aria-hidden="true"
+      />
       {description ? (
-        <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
+        <p
+          className={`mx-auto max-w-2xl text-muted sm:mt-5 sm:text-base sm:leading-relaxed ${
+            compact ? "mt-3 text-sm leading-snug" : "mt-5 text-sm leading-relaxed sm:text-base"
+          }`}
+        >
           {description}
         </p>
       ) : null}

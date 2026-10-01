@@ -16,6 +16,7 @@ import { formatNumberBR, formatPhoneBR, formatPlateInput } from "@/lib/format";
 import { prepareImageForUpload } from "@/lib/prepare-image-upload";
 import { trackLead, trackPwaEvent } from "@/lib/meta-pixel";
 import { enqueueIntent, isLikelyNetworkFailure } from "@/lib/offline-queue";
+import { sellReceivedLine } from "@/lib/sell-receipt";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { SiteLeadHit } from "@/components/site/VehiclePixel";
 
@@ -35,6 +36,7 @@ export function SellForm({
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [outcome, setOutcome] = useState<null | "sent" | "queued">(null);
+  const [sentPhotoCount, setSentPhotoCount] = useState(0);
   const [phone, setPhone] = useState("");
   const [km, setKm] = useState("");
   const [plate, setPlate] = useState("");
@@ -136,6 +138,7 @@ export function SellForm({
             content_name: "Vender/Trocar",
           });
           toast.success(result.message);
+          setSentPhotoCount(photoUrls.length);
           setOutcome("sent");
           setPhone("");
           setKm("");
@@ -177,7 +180,16 @@ export function SellForm({
   }
 
   if (outcome) {
-    return <AfterSend mode={outcome} onAnother={() => setOutcome(null)} />;
+    return (
+      <AfterSend
+        mode={outcome}
+        photoCount={sentPhotoCount}
+        onAnother={() => {
+          setSentPhotoCount(0);
+          setOutcome(null);
+        }}
+      />
+    );
   }
 
   return (
@@ -421,9 +433,11 @@ export function SellForm({
 
 function AfterSend({
   mode,
+  photoCount,
   onAnother,
 }: {
   mode: "sent" | "queued";
+  photoCount: number;
   onAnother: () => void;
 }) {
   return (
@@ -446,7 +460,7 @@ function AfterSend({
               <span className="font-display font-semibold text-cream">
                 Recebemos os dados do veículo.
               </span>{" "}
-              Marca, modelo, ano, placa, km e as fotos que você mandou.
+              {sellReceivedLine(photoCount)}
             </li>
             <li className="border border-white/10 bg-asphalt px-3.5 py-3 text-sm leading-snug text-muted">
               <span className="font-display font-semibold text-cream">

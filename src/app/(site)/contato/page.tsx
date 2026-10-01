@@ -37,67 +37,90 @@ export default async function ContatoPage() {
   );
 
   return (
-    <div className="py-8 lg:py-12">
-      <Container size="narrow">
-        <PageHeader
-          eyebrow="Contato"
-          title={`Fale com a ${publicSite.name}`}
-          description={`Somos loja digital e atendemos ${publicSite.region} e região — todos os dias, das 8h às 23h. Compare o estoque no assistente; simule e feche no WhatsApp.`}
-        />
+    <div data-clear-fab="">
+      <div className="clear-fab-screen lg:py-12">
+        <Container size="narrow" className="pt-5 lg:pt-0">
+          <PageHeader
+            compact
+            eyebrow="Contato"
+            title={`Fale com a ${publicSite.name}`}
+            description={`Somos loja digital e atendemos ${publicSite.region} e região — todos os dias, das 8h às 23h. Compare o estoque no assistente; simule e feche no WhatsApp.`}
+          />
 
-        <section
-          aria-labelledby="contato-whatsapp"
-          className="mt-6 overflow-hidden border border-white/10 bg-ink sm:mt-8"
-        >
-          <div className="h-1 bg-brand" aria-hidden="true" />
-          <div className="p-4 sm:p-6">
-            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
-              Canal da loja
-            </p>
-            <h2
-              id="contato-whatsapp"
-              className="mt-2 font-display text-xl font-bold tracking-tight text-cream sm:text-2xl"
-            >
-              WhatsApp — resposta mais rápida
-            </h2>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-              O assistente compara o estoque no site. Para vídeo, parcela, troca
-              ou fechamento, o canal é o WhatsApp — online das 8h às 23h.
-            </p>
-
-            {phone ? (
-              <a
-                href={telUrl()}
-                className="mt-4 flex min-h-[64px] items-center justify-between gap-3 border border-white/10 bg-asphalt px-3.5 py-3 touch-manipulation transition hover:border-brand"
+          <section
+            aria-labelledby="contato-whatsapp"
+            className="mt-4 overflow-hidden border border-white/10 bg-ink sm:mt-8"
+          >
+            <div className="h-1 bg-brand" aria-hidden="true" />
+            <div className="p-3.5 sm:p-6">
+              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
+                Canal da loja
+              </p>
+              <h2
+                id="contato-whatsapp"
+                className="mt-1 font-display text-lg font-bold tracking-tight text-cream sm:mt-2 sm:text-2xl"
               >
-                <span className="min-w-0">
-                  <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-                    Telefone
-                  </span>
-                  <span className="mt-1 block font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand sm:text-3xl">
-                    {phone.label}
-                  </span>
-                </span>
-                <span className="shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-cream/80">
-                  Ligar
-                </span>
-              </a>
-            ) : null}
+                WhatsApp — resposta mais rápida
+              </h2>
+              <p className="mt-1.5 max-w-xl text-sm leading-snug text-muted sm:text-base sm:leading-relaxed">
+                Para vídeo, parcela, troca ou fechamento, o canal é o WhatsApp.
+              </p>
 
-            <div className="mt-3">
-              <WhatsAppButton
-                size="lg"
-                className="w-full"
-                trackingLabel="contato"
-                message={WHATSAPP_MESSAGES.visit}
-              >
-                Chamar no WhatsApp
-              </WhatsAppButton>
+              {phone ? (
+                <a
+                  href={telUrl()}
+                  className="mt-3 flex min-h-[56px] items-center justify-between gap-3 border border-white/10 bg-asphalt px-3.5 py-2.5 touch-manipulation transition hover:border-brand"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                      Telefone
+                    </span>
+                    <span className="mt-1 block font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand sm:text-3xl">
+                      {phone.label}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-display text-[11px] font-semibold uppercase tracking-wide text-cream/80">
+                    Ligar
+                  </span>
+                </a>
+              ) : null}
+
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <div className="border border-white/10 bg-asphalt px-3.5 py-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                    Horário
+                  </p>
+                  <p className="mt-0.5 font-display text-sm font-semibold leading-snug text-cream">
+                    {publicSite.hours}
+                  </p>
+                </div>
+                <div className="border border-white/10 bg-asphalt px-3.5 py-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                    {physical ? "Endereço" : "Atendimento"}
+                  </p>
+                  <p className="mt-0.5 font-display text-sm font-semibold leading-snug text-cream">
+                    {publicSite.address}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <WhatsAppButton
+                  size="lg"
+                  className="w-full"
+                  trackingLabel="contato"
+                  message={WHATSAPP_MESSAGES.visit}
+                >
+                  Chamar no WhatsApp
+                </WhatsAppButton>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </Container>
+      </div>
 
-        <h2 className="mt-8 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+      <Container size="narrow" className="mt-6 pb-8 lg:mt-0 lg:pb-12">
+        <h2 className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
           Outros canais
         </h2>
         <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
