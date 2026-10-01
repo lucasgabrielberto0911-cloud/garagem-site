@@ -123,18 +123,19 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="py-4 sm:py-6 lg:py-7">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+        <Container className="py-2.5 sm:py-6 lg:py-7">
+          <div className="flex flex-col gap-2.5 sm:gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
             <div className="hero-text min-w-0 max-w-2xl">
-              <div className="hero-brand">
+              <div className="hero-brand hidden sm:block">
                 <SiteWordmark size="hero" priority />
               </div>
-              <h1 className="mt-3 font-display text-[1.65rem] font-semibold leading-[1.08] tracking-tight text-cream sm:text-4xl lg:text-[2.4rem]">
-                Seminovos com <span className="text-brand">procedência</span>
+              <h1 className="font-display text-[1.0625rem] font-semibold leading-snug tracking-tight text-cream sm:mt-3 sm:text-3xl sm:leading-[1.12] lg:text-[2rem]">
+                Seminovos com procedência em {site.region}.
               </h1>
-              <p className="mt-2 max-w-xl text-sm leading-snug text-cream/85 sm:text-base">
-                Em {publicSite.region}. Checagem de condição antes de entrar no estoque.
-              </p>
+              <ul className="mt-3 hidden max-w-lg flex-col gap-1.5 text-sm leading-snug text-cream sm:flex sm:text-base">
+                <li>Checagem de condição antes de entrar no estoque.</li>
+                <li>Procedência conferida. Documentação alinhada na transferência.</li>
+              </ul>
             </div>
 
             <div className="hero-cta w-full shrink-0 sm:max-w-xs lg:max-w-sm lg:text-right">
@@ -146,14 +147,14 @@ export default async function HomePage() {
               >
                 Falar no WhatsApp
               </WhatsAppButton>
-              <p className="mt-2 flex flex-wrap items-center gap-x-2 text-sm leading-snug text-cream/80 lg:justify-end">
+              <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-sm leading-none text-cream/80 lg:justify-end">
                 <span className="font-medium text-cream">{site.whatsappLabel}</span>
                 <span className="text-cream/35" aria-hidden="true">
                   ·
                 </span>
                 <Link
                   href="/estoque"
-                  className="inline-flex min-h-11 items-center font-display text-xs font-semibold uppercase tracking-wide text-cream hover:text-brand"
+                  className="font-display text-xs font-semibold uppercase tracking-wide text-cream hover:text-brand"
                 >
                   Ver estoque
                 </Link>
@@ -170,18 +171,25 @@ export default async function HomePage() {
       </section>
 
       {/* 2. ESTOQUE — busca e anúncios reais, logo abaixo da loja */}
-      <Section id="destaques" spacing="snug" className="border-t border-white/5">
-        <SectionHeading
-          eyebrow="Estoque"
-          title="Veículos em destaque"
-          description="Seleção da loja — no máximo 8 anúncios. O estoque muda rápido."
-        />
+      <Section id="destaques" spacing="none" className="border-t border-white/5 py-3 sm:py-6 lg:py-9">
+        <div className="flex flex-col">
+        <div>
+          <p className="hidden font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand sm:block">
+            Estoque
+          </p>
+          <h2 className="font-display text-lg font-semibold leading-tight tracking-tight text-cream sm:mt-0.5 sm:text-2xl">
+            Veículos em destaque
+          </h2>
+          <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-muted sm:block">
+            Seleção da loja — no máximo 8 anúncios. O estoque muda rápido.
+          </p>
+        </div>
 
-        <div className="hero-search mt-4">
+        <div className="hero-search mt-3 max-sm:order-3 sm:mt-4">
           <HeroSearch brands={brands} />
         </div>
 
-        <div className="mt-4">
+        <div className="mt-2 max-sm:order-2 sm:mt-4">
           {featured.length === 0 ? (
             <div className="max-w-2xl border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-left">
               <p className="font-display text-lg font-semibold text-cream">
@@ -212,7 +220,7 @@ export default async function HomePage() {
           )}
         </div>
 
-        <div className="mt-5">
+        <div className="mt-5 max-sm:order-4">
           <Link
             href="/estoque"
             className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
@@ -222,14 +230,15 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <div className="mt-5 w-full max-w-2xl sm:hidden">
+        <div className="mt-5 w-full max-w-2xl max-sm:order-5 sm:hidden">
           <Suspense fallback={<StatsBarSkeleton />}>
             <StatsBar />
           </Suspense>
         </div>
 
-        <div className="mt-5">
+        <div className="mt-5 max-sm:order-6">
           <WantedVehicleCta />
+        </div>
         </div>
       </Section>
 

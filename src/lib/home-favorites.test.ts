@@ -29,7 +29,8 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
   const afterStock = page.slice(page.indexOf("Ver todos os veículos"));
   assert.match(afterStock, /sm:hidden/);
   assert.match(afterStock, /<StatsBar/);
-  assert.match(hero, /Seminovos com/);
+  assert.match(hero, /Seminovos com procedência em \{site\.region\}\./);
+  assert.doesNotMatch(hero, /publicSite\.region/);
   assert.match(page, /\(27\) 99633-0706|whatsappLabel/);
   assert.doesNotMatch(page, /99956/);
 });
