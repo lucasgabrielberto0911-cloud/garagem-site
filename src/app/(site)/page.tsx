@@ -32,6 +32,7 @@ import {
 } from "@/components/site/icons";
 import { buildPageMetadata, itemListJsonLd, localBusinessJsonLd, websiteJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
+import { googleReviewsReady } from "@/lib/google-reviews";
 import { getPublishedFaq, getSiteContent } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 import {
@@ -111,66 +112,56 @@ export default async function HomePage() {
         />
       ) : null}
 
-      {/* 1. HERO — compacto no desktop para o estoque aparecer cedo */}
+      {/* 1. HERO — o que a loja é, e o único WhatsApp */}
       <section className="hero-red-black relative isolate overflow-hidden">
         <div className="hero-color-field" aria-hidden="true">
           <span className="hero-red-orb hero-red-orb-1" />
           <span className="hero-red-orb hero-red-orb-2" />
-          <span className="hero-grid" />
-          <span className="hero-noise" />
         </div>
         <div
-          className="absolute inset-x-0 bottom-0 -z-10 h-28 bg-gradient-to-t from-asphalt to-transparent"
+          className="absolute inset-x-0 bottom-0 -z-10 h-16 bg-gradient-to-t from-asphalt to-transparent"
           aria-hidden="true"
         />
 
-        <Container className="flex flex-col items-center justify-center py-4 text-center sm:py-10 lg:py-12">
-          <div className="hero-brand">
-            <SiteWordmark size="hero" priority className="mx-auto" />
+        <Container className="py-4 sm:py-6 lg:py-7">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+            <div className="hero-text min-w-0 max-w-2xl">
+              <div className="hero-brand">
+                <SiteWordmark size="hero" priority />
+              </div>
+              <h1 className="mt-3 font-display text-[1.65rem] font-semibold leading-[1.08] tracking-tight text-cream sm:text-4xl lg:text-[2.4rem]">
+                Seminovos com <span className="text-brand">procedência</span>
+              </h1>
+              <p className="mt-2 max-w-xl text-sm leading-snug text-cream/85 sm:text-base">
+                Em {publicSite.region}. Checagem de condição antes de entrar no estoque.
+              </p>
+            </div>
+
+            <div className="hero-cta w-full shrink-0 sm:max-w-xs lg:max-w-sm lg:text-right">
+              <WhatsAppButton
+                size="lg"
+                className="w-full"
+                trackingLabel="home-hero"
+                message={WHATSAPP_MESSAGES.help}
+              >
+                Falar no WhatsApp
+              </WhatsAppButton>
+              <p className="mt-2 flex flex-wrap items-center gap-x-2 text-sm leading-snug text-cream/80 lg:justify-end">
+                <span className="font-medium text-cream">{site.whatsappLabel}</span>
+                <span className="text-cream/35" aria-hidden="true">
+                  ·
+                </span>
+                <Link
+                  href="/estoque"
+                  className="inline-flex min-h-11 items-center font-display text-xs font-semibold uppercase tracking-wide text-cream hover:text-brand"
+                >
+                  Ver estoque
+                </Link>
+              </p>
+            </div>
           </div>
 
-          <div className="hero-text mt-4 sm:mt-5 lg:mt-6">
-            <h1 className="mx-auto max-w-3xl font-display text-[1.85rem] font-bold leading-[1.12] tracking-tight text-cream sm:text-4xl lg:text-[2.75rem]">
-              Encontre seu <span className="text-brand">próximo seminovo</span>
-            </h1>
-            <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-cream/85 sm:text-lg">
-              Seminovos com procedência em {site.region}. Estoque no site,
-              conversa no WhatsApp — das 8h às 23h.
-            </p>
-            <ul className="mx-auto mt-4 hidden max-w-lg flex-col gap-1.5 text-sm leading-snug text-cream sm:flex sm:text-base">
-              <li>Checagem de condição antes de entrar no estoque.</li>
-              <li>Procedência conferida. Documentação alinhada na transferência.</li>
-            </ul>
-          </div>
-
-          <ActionRow className="hero-cta mt-5 w-full sm:mt-6 sm:w-auto">
-            <WhatsAppButton
-              size="lg"
-              className="w-full sm:min-w-[16rem] sm:w-auto"
-              trackingLabel="home-hero"
-              message={WHATSAPP_MESSAGES.help}
-            >
-              Falar no WhatsApp
-            </WhatsAppButton>
-            <ButtonLink
-              href="/estoque"
-              size="lg"
-              variant="outline"
-              className="w-full sm:min-w-[16rem] sm:w-auto"
-            >
-              Ver estoque
-            </ButtonLink>
-          </ActionRow>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-cream/75">
-            O WhatsApp abre para você dizer o que procura. No estoque, preço,
-            ano e km estão no anúncio.
-          </p>
-
-          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6">
-            <HeroSearch brands={brands} />
-          </div>
-
-          <div className="hero-stats mx-auto mt-5 hidden w-full max-w-2xl sm:mt-8 sm:block lg:mt-8">
+          <div className="hero-stats mx-auto mt-4 hidden w-full max-w-2xl sm:mt-8 sm:block lg:mx-0">
             <Suspense fallback={<StatsBarSkeleton />}>
               <StatsBar />
             </Suspense>
@@ -178,27 +169,31 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      {/* 2. ESTOQUE CEDO — logo após o hero */}
-      <Section id="destaques" spacing="tight" className="border-t border-white/5">
+      {/* 2. ESTOQUE — busca e anúncios reais, logo abaixo da loja */}
+      <Section id="destaques" spacing="snug" className="border-t border-white/5">
         <SectionHeading
           eyebrow="Estoque"
           title="Veículos em destaque"
           description="Seleção da loja — no máximo 8 anúncios. O estoque muda rápido."
         />
 
-        <div className="mt-8">
+        <div className="hero-search mt-4">
+          <HeroSearch brands={brands} />
+        </div>
+
+        <div className="mt-4">
           {featured.length === 0 ? (
-            <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-10 text-center">
+            <div className="max-w-2xl border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-left">
               <p className="font-display text-lg font-semibold text-cream">
                 Estoque sendo montado
               </p>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+              <p className="mt-2 max-w-md text-sm leading-snug text-muted">
                 Estamos selecionando os próximos veículos. Diga o que você
                 procura — buscamos para você.
               </p>
               <SiteLeadHit contentName="Avise-me">
                 <WhatsAppButton
-                  className="mt-5"
+                  className="mt-4"
                   trackingLabel="home-wanted"
                   message={WHATSAPP_MESSAGES.wanted()}
                 >
@@ -217,7 +212,7 @@ export default async function HomePage() {
           )}
         </div>
 
-        <div className="mt-7 text-center">
+        <div className="mt-5">
           <Link
             href="/estoque"
             className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
@@ -227,126 +222,137 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <div className="mx-auto mt-8 w-full max-w-2xl sm:hidden">
+        <div className="mt-5 w-full max-w-2xl sm:hidden">
           <Suspense fallback={<StatsBarSkeleton />}>
             <StatsBar />
           </Suspense>
         </div>
 
-        <div className="mt-8">
+        <div className="mt-5">
           <WantedVehicleCta />
         </div>
       </Section>
 
       {/* 3. SELOS DE CONFIANÇA */}
-      <Section spacing="tight" className="border-t border-white/5">
-        <TrustBadges />
+      <Section spacing="snug" className="border-t border-white/5">
+        <TrustBadges compact />
       </Section>
 
       {/* 4. POR QUE ESCOLHER A GARAGEM */}
-      <Section className="border-t border-white/5 bg-ink/40">
+      <Section spacing="snug" className="border-t border-white/5 bg-ink/40">
         <SectionHeading
           eyebrow="Diferenciais"
           title={`Por que a ${site.name}`}
           description="Três coisas que a gente faz em todo seminovo, antes de você fechar."
         />
-        <ul className="mx-auto mt-12 grid gap-5 lg:grid-cols-3">
+        <ul className="mt-5 grid gap-3 lg:grid-cols-3">
           {REASONS.map(({ Icon, title, text }) => (
             <li
               key={title}
-              className="card-lift flex h-full flex-col items-center border border-white/10 bg-asphalt p-7 text-center"
+              className="flex h-full gap-3 border border-white/10 bg-asphalt p-4 text-left"
             >
-              <span className="inline-flex h-12 w-12 items-center justify-center bg-brand/10">
-                <Icon className="h-6 w-6 text-brand" />
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center bg-brand/10">
+                <Icon className="h-5 w-5 text-brand" />
               </span>
-              <h3 className="mt-5 font-display text-lg font-semibold text-cream">
-                {title}
-              </h3>
-              <p className="mt-3 text-sm leading-relaxed text-muted">{text}</p>
+              <div className="min-w-0">
+                <h3 className="font-display text-base font-semibold text-cream">
+                  {title}
+                </h3>
+                <p className="mt-1 text-sm leading-snug text-muted">{text}</p>
+              </div>
             </li>
           ))}
         </ul>
       </Section>
 
       {/* 5. DEPOIMENTOS */}
-      <Section className="border-t border-white/5">
+      <Section spacing="snug" className="border-t border-white/5">
         <SectionHeading
           eyebrow="Depoimentos"
           title="Quem compra, indica"
           description="Depoimentos enviados à loja. Não substituem avaliações do Google."
         />
-        <div className="flex justify-center">
-          <GoogleReviewsBadge reviews={siteContent.google} className="mt-5" />
-        </div>
-        <div className="mt-12">
+        {googleReviewsReady(siteContent.google) ? (
+          <div className="mt-4">
+            <GoogleReviewsBadge reviews={siteContent.google} />
+          </div>
+        ) : null}
+        <div className="mt-4">
           <Testimonials items={testimonials} />
         </div>
       </Section>
 
-      {/* 6. ATENDIMENTO */}
-      <Section className="border-t border-white/5 bg-ink/40" size="narrow">
+      {/* 6. ATENDIMENTO — um número, horário e modalidade reais */}
+      <Section spacing="snug" className="border-t border-white/5 bg-ink/40" size="narrow">
         <SectionHeading
           eyebrow="Atendimento"
-          title={`Atendemos ${publicSite.region} e região`}
-          description={`Loja 100% digital em ${publicSite.region}, ${publicSite.state}. Escolha no site, peça vídeo pelo WhatsApp e combine visita, entrega ou retirada — online das 8h às 23h.`}
+          title={`Loja digital no ${publicSite.state}`}
+          description={`Atendemos ${publicSite.region}. Escolha no site, peça vídeo pelo WhatsApp e combine visita, entrega ou retirada.`}
         />
 
-        <dl className="mx-auto mt-10 grid max-w-3xl gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-2">
-          <div className="flex flex-col items-center bg-asphalt px-6 py-7 text-center">
-            <IconMapPin className="h-6 w-6 text-brand" />
-            <dt className="mt-3 font-display text-sm font-semibold text-cream">
+        <dl className="mt-5 grid gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-3">
+          <div className="bg-asphalt px-4 py-3.5">
+            <dt className="font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
+              WhatsApp
+            </dt>
+            <dd className="mt-1 font-display text-base font-semibold text-cream">
+              {site.whatsappLabel}
+            </dd>
+          </div>
+          <div className="bg-asphalt px-4 py-3.5">
+            <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
+              <IconClock className="h-3.5 w-3.5 text-brand" />
+              Horário
+            </dt>
+            <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.hours}</dd>
+          </div>
+          <div className="bg-asphalt px-4 py-3.5">
+            <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
+              <IconMapPin className="h-3.5 w-3.5 text-brand" />
               Modalidade
             </dt>
-            <dd className="mt-1 text-sm text-muted">{publicSite.address}</dd>
-          </div>
-          <div className="flex flex-col items-center bg-asphalt px-6 py-7 text-center">
-            <IconClock className="h-6 w-6 text-brand" />
-            <dt className="mt-3 font-display text-sm font-semibold text-cream">
-              Horário online
-            </dt>
-            <dd className="mt-1 text-sm text-muted">{publicSite.hours}</dd>
+            <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.address}</dd>
           </div>
         </dl>
 
-        <ActionRow className="mt-8">
-          <ButtonLink href="/contato" size="lg">
-            Ver canais de contato
-          </ButtonLink>
+        <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <Link
+            href="/contato"
+            className="font-display text-xs font-semibold uppercase tracking-wide text-brand hover:text-brand-orange"
+          >
+            Canais de contato
+          </Link>
           <a
             href={site.instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-[52px] items-center justify-center gap-2.5 border border-white/20 px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-white/5 sm:text-base"
+            className="inline-flex items-center gap-1.5 text-cream/80 transition hover:text-cream"
           >
-            <IconInstagram className="h-5 w-5" />
+            <IconInstagram className="h-4 w-4" />
             {site.instagram}
           </a>
-        </ActionRow>
+        </p>
       </Section>
 
       {/* 7. VENDER OU TROCAR */}
-      <Section className="border-t border-white/5" size="narrow">
-        <div className="relative overflow-hidden border border-white/10 bg-ink text-center">
+      <Section spacing="snug" className="border-t border-white/5" size="narrow">
+        <div className="relative overflow-hidden border border-white/10 bg-ink">
           <div
-            className="absolute inset-x-0 top-0 h-1 bg-brand-gradient"
+            className="absolute inset-x-0 top-0 h-0.5 bg-brand"
             aria-hidden="true"
           />
-          <div className="px-6 py-12 sm:px-10">
-            <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
+          <div className="px-5 py-6 sm:px-7 sm:py-7">
+            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
               Avaliação sem compromisso
             </p>
-            <h2 className="mt-3 font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl">
+            <h2 className="mt-1 font-display text-xl font-semibold tracking-tight text-cream sm:text-2xl">
               Vender ou trocar seu veículo
             </h2>
-            <div
-              className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient"
-              aria-hidden="true"
-            />
-            <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
+            <p className="mt-2 max-w-xl text-sm leading-snug text-muted">
               Compramos seu usado e aceitamos na troca. Manda os dados que a
               gente avalia e faz uma proposta justa.
             </p>
-            <ActionRow className="mt-8">
+            <ActionRow className="mt-5 sm:justify-start">
               <SiteLeadHit contentName="Vender/Trocar">
                 <WhatsAppButton
                   size="lg"
@@ -365,15 +371,15 @@ export default async function HomePage() {
       </Section>
 
       {/* 8. DÚVIDAS */}
-      <Section className="border-t border-white/5 bg-ink/40" size="narrow">
+      <Section spacing="snug" className="border-t border-white/5 bg-ink/40" size="narrow">
         <SectionHeading
           eyebrow="Dúvidas frequentes"
           title="Antes de fechar negócio"
           description="As perguntas que mais recebemos sobre compra, troca e documentação."
         />
-        <div className="mt-12">
+        <div className="mt-4">
           <FaqAccordion items={faqItems.slice(0, 5)} />
-          <div className="mt-6 text-center">
+          <div className="mt-4">
             <Link
               href="/faq"
               className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
@@ -385,20 +391,16 @@ export default async function HomePage() {
         </div>
       </Section>
 
-      {/* 9. CTA FINAL — intenção distinta do hero */}
-      <Section className="border-t border-white/5 bg-ink/40 text-center" size="narrow">
-        <h2 className="mx-auto max-w-2xl font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl">
+      {/* 9. CTA FINAL — mesmo número, chat só em contorno */}
+      <Section spacing="snug" className="border-t border-white/5" size="narrow">
+        <h2 className="max-w-xl font-display text-xl font-semibold tracking-tight text-cream sm:text-2xl">
           Ainda em dúvida sobre o próximo passo?
         </h2>
-        <div
-          className="mx-auto mt-5 h-0.5 w-16 bg-brand-gradient"
-          aria-hidden="true"
-        />
-        <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-          O consultor calcula a parcela no WhatsApp. O site não publica valor
-          de parcela.
+        <p className="mt-2 max-w-xl text-sm leading-snug text-muted">
+          O consultor calcula a parcela no WhatsApp {site.whatsappLabel}. O
+          site não publica valor de parcela.
         </p>
-        <ActionRow className="mt-9">
+        <ActionRow className="mt-4 sm:justify-start">
           <WhatsAppButton
             size="lg"
             className="w-full sm:w-auto"
@@ -411,10 +413,10 @@ export default async function HomePage() {
             Continuar no estoque
           </ButtonLink>
         </ActionRow>
-        <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted">
+        <p className="mt-3 max-w-xl text-sm leading-snug text-muted">
           Dúvida breve no site. Preço, visita e proposta seguem no WhatsApp.
         </p>
-        <div className="mt-3 flex justify-center">
+        <div className="mt-3">
           <ChatOpenButton
             source="home-final"
             variant="outline"
