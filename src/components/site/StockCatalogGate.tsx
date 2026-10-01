@@ -3,26 +3,12 @@
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
-const FILTER_KEYS = [
-  "q",
-  "category",
-  "brand",
-  "transmission",
-  "fuel",
-  "color",
-  "accessory",
-  "laudo",
-  "minPrice",
-  "maxPrice",
-  "minYear",
-  "maxYear",
-  "maxKm",
-] as const;
+import { STOCK_FILTER_KEYS } from "@/lib/stock-query";
 
 /** Some com filtro ativo. No HTML de /estoque, sem query, a lista fica. */
 export function StockCatalogGate({ children }: { children: ReactNode }) {
   const params = useSearchParams();
-  const filtered = FILTER_KEYS.some((key) => Boolean(params.get(key)));
+  const filtered = STOCK_FILTER_KEYS.some((key) => Boolean(params.get(key)));
   if (filtered) return null;
   return children;
 }

@@ -14,51 +14,21 @@ import { WhatsAppButton } from "@/components/site/ui";
 import { formatStockWaitlistQuery, stockEmptyWhatsAppCta } from "@/lib/stock-waitlist";
 import {
   parseStockFilters,
+  STOCK_FILTER_KEYS,
   STOCK_PAGE_SIZE,
   stockSortLabel,
+  stockViewNeedsFetch,
   type StockPageResult,
 } from "@/lib/stock-query";
 import { stockSearchString } from "@/lib/meta-pixel";
 
-export type EstoqueSearchParams = {
-  q?: string;
-  category?: string;
-  brand?: string;
-  transmission?: string;
-  fuel?: string;
-  color?: string;
-  accessory?: string;
-  laudo?: string;
-  minPrice?: string;
-  maxPrice?: string;
-  minYear?: string;
-  maxYear?: string;
-  maxKm?: string;
-  city?: string;
-  sort?: string;
-  page?: string;
-};
-
-const FILTER_KEYS = [
-  "q",
-  "category",
-  "brand",
-  "transmission",
-  "fuel",
-  "color",
-  "accessory",
-  "laudo",
-  "minPrice",
-  "maxPrice",
-  "minYear",
-  "maxYear",
-  "maxKm",
-  "city",
-] as const;
+export type EstoqueSearchParams = Partial<
+  Record<(typeof STOCK_FILTER_KEYS)[number] | "sort" | "page", string>
+>;
 
 function paramsToRecord(params: URLSearchParams): EstoqueSearchParams {
   const record: EstoqueSearchParams = {};
-  for (const key of [...FILTER_KEYS, "sort"] as const) {
+  for (const key of [...STOCK_FILTER_KEYS, "sort"] as const) {
     const value = params.get(key);
     if (value) record[key] = value;
   }
@@ -80,6 +50,7 @@ function stockQuery(params: EstoqueSearchParams) {
     q: params.q,
     category: params.category,
     brand: params.brand,
+    model: params.model,
     transmission: params.transmission,
     fuel: params.fuel,
     color: params.color,
@@ -96,7 +67,7 @@ function stockQuery(params: EstoqueSearchParams) {
 }
 
 function hasActiveFilters(params: EstoqueSearchParams) {
-  return FILTER_KEYS.some((key) => Boolean(params[key]));
+  return STOCK_FILTER_KEYS.some((key) => Boolean(params[key]));
 }
 
 export function EstoqueBrowseFallback({
@@ -151,13 +122,23 @@ export function EstoqueBrowse({
     [searchParams],
   );
   const filtered = hasActiveFilters(params);
+  const remote = stockViewNeedsFetch(params);
   const filterKey = JSON.stringify(stockQuery(params));
   const [stock, setStock] = useState<StockPageResult>(initialStock);
-  const [loading, setLoading] = useState(filtered);
+  const [loading, setLoading] = useState(remote);
+  const requestKey = remote ? filterKey : "";
+  const [requestKeySeen, setRequestKeySeen] = useState(requestKey);
+  // A troca de URL precisa esconder a lista anterior no mesmo render.
+  // Senão a grade infinita guarda os carros do filtro antigo ao limpar.
+  if (requestKeySeen !== requestKey) {
+    setRequestKeySeen(requestKey);
+    setLoading(remote);
+  }
+  const shown = remote ? stock : initialStock;
   const requestId = useRef(0);
 
   useEffect(() => {
-    if (!filtered) {
+    if (!remote) {
       setStock(initialStock);
       setLoading(false);
       return;
@@ -210,7 +191,7 @@ export function EstoqueBrowse({
       });
 
     return () => controller.abort();
-  }, [filterKey, filtered, initialStock, params]);
+  }, [filterKey, remote, initialStock, params]);
 
   useEffect(() => {
     try {
@@ -235,7 +216,7 @@ export function EstoqueBrowse({
     filtered,
     waitlistQuery,
   });
-  const resultIds = stock.vehicles.map((vehicle) => vehicle.id);
+  const resultIds = shown.vehicles.map((vehicle) => vehicle.id);
 
   return (
     <>
@@ -246,7 +227,7 @@ export function EstoqueBrowse({
           contentIds={resultIds}
         />
       ) : null}
-      {stock.error ? (
+      {shown.error ? (
         <div className="mt-6">
           <SiteErrorNotice message="O estoque pode estar incompleto por uma falha temporária de conexão. Atualize a página em instantes." />
         </div>
@@ -256,9 +237,9 @@ export function EstoqueBrowse({
         {loading
           ? "Atualizando o estoque…"
           : filtered
-            ? `${stock.total} ${stock.total === 1 ? "veículo encontrado" : "veículos encontrados"} · ${stockSortLabel(params.sort)}`
-            : `${stock.total} ${stock.total === 1 ? "veículo no estoque" : "veículos no estoque"} · ${stockSortLabel(params.sort)}`}
-        {!loading && stock.total > stock.vehicles.length
+            ? `${shown.total} ${shown.total === 1 ? "veículo encontrado" : "veículos encontrados"} · ${stockSortLabel(params.sort)}`
+            : `${shown.total} ${shown.total === 1 ? "veículo no estoque" : "veículos no estoque"} · ${stockSortLabel(params.sort)}`}
+        {!loading && shown.total > shown.vehicles.length
           ? " · role para ver todos"
           : ""}
       </p>
@@ -269,22 +250,22 @@ export function EstoqueBrowse({
         ) : (
           <StockInfiniteList
             key={filterKey}
-            initialVehicles={stock.vehicles}
-            total={stock.total}
-            pageSize={stock.pageSize ?? filters.pageSize ?? STOCK_PAGE_SIZE}
+            initialVehicles={shown.vehicles}
+            total={shown.total}
+            pageSize={shown.pageSize ?? filters.pageSize ?? STOCK_PAGE_SIZE}
             query={query}
             returnTo={returnTo}
             empty={
               <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-12 text-center">
                 <p className="font-display text-lg font-semibold text-cream">
-                  {stock.error
+                  {shown.error
                     ? "Não foi possível carregar o estoque"
                     : filtered
                       ? "Nenhum veículo com esses filtros"
                       : "Estoque sendo montado"}
                 </p>
                 <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-                  {stock.error
+                  {shown.error
                     ? "Tente novamente em alguns instantes. Se preferir, fale conosco no WhatsApp."
                     : filtered
                       ? waitlistQuery
@@ -309,7 +290,7 @@ export function EstoqueBrowse({
                       {emptyWhatsApp.label}
                     </WhatsAppButton>
                   </SiteLeadHit>
-                  {!stock.error ? (
+                  {!shown.error ? (
                     <ChatOpenButton
                       source={filtered ? "estoque-filtro-vazio" : "estoque-vazio"}
                       prompt={

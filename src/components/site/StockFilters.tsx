@@ -4,8 +4,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { IconClose, IconSearch } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
-import { formatBrandName } from "@/lib/format";
-import { STOCK_SORT_OPTIONS, stockSortLabel } from "@/lib/stock-query";
+import { formatBrandName, formatModelName } from "@/lib/format";
+import {
+  modelAfterBrandChange,
+  modelFilterOptions,
+  STOCK_SORT_OPTIONS,
+  stockSortLabel,
+  type StockModelOption,
+} from "@/lib/stock-query";
 import { handleFocusTrap } from "@/lib/focus-trap";
 import { formatColorLabel } from "@/lib/vehicle-display";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
@@ -18,6 +24,7 @@ import {
 export type Facets = {
   categories?: string[];
   brands: string[];
+  models?: StockModelOption[];
   transmissions: string[];
   fuels: string[];
   colors?: string[];
@@ -29,6 +36,7 @@ type FilterValues = {
   q: string;
   category: string;
   brand: string;
+  model: string;
   transmission: string;
   fuel: string;
   color: string;
@@ -133,6 +141,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     q: params.get("q") ?? "",
     category: params.get("category") ?? "",
     brand: params.get("brand") ?? "",
+    model: params.get("model") ?? "",
     transmission: params.get("transmission") ?? "",
     fuel: params.get("fuel") ?? "",
     color: params.get("color") ?? "",
@@ -185,6 +194,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     current.q,
     current.category,
     current.brand,
+    current.model,
     current.transmission,
     current.fuel,
     current.color,
@@ -202,6 +212,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const draftFilterCount = [
     draft.category,
     draft.brand,
+    draft.model,
     draft.transmission,
     draft.fuel,
     draft.color,
@@ -233,6 +244,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
     activeFilters.push({
       key: "brand",
       label: `Marca: ${formatBrandName(current.brand)}`,
+    });
+  }
+  if (current.model) {
+    activeFilters.push({
+      key: "model",
+      label: `Modelo: ${formatModelName(current.model)}`,
     });
   }
   if (current.transmission) {
@@ -318,6 +335,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
       q: "",
       category: "",
       brand: "",
+      model: "",
       transmission: "",
       fuel: "",
       color: "",
@@ -389,6 +407,20 @@ export function StockFilters({ facets }: { facets: Facets }) {
           </div>
 
           <div className="mt-5 space-y-4">
+            <DesktopField label="Ordenar resultados" htmlFor="estoque-ordem">
+              <select
+                id="estoque-ordem"
+                value={current.sort}
+                onChange={(event) => update({ sort: event.target.value })}
+                className={selectClass}
+              >
+                {STOCK_SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </DesktopField>
             <DesktopField label="Tipo" htmlFor="desktop-tipo">
               <select
                 id="desktop-tipo"
@@ -422,9 +454,25 @@ export function StockFilters({ facets }: { facets: Facets }) {
               label="Marca"
               id="desktop-marca"
               value={current.brand}
-              onChange={(value) => update({ brand: value })}
+              onChange={(value) =>
+                update({
+                  brand: value,
+                  model: modelAfterBrandChange(facets.models, value, current.model),
+                })
+              }
               options={facets.brands}
               emptyLabel="Todas as marcas"
+            />
+            <FilterSelect
+              label="Modelo"
+              id="desktop-modelo"
+              value={selectedOption(
+                modelFilterOptions(facets.models, current.brand, current.model),
+                current.model,
+              )}
+              onChange={(value) => update({ model: value })}
+              options={modelFilterOptions(facets.models, current.brand, current.model)}
+              emptyLabel="Todos os modelos"
             />
             <FilterSelect
               label="Câmbio"
@@ -553,25 +601,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
             </DesktopField>
           </div>
 
-          <DesktopField
-            label="Ordenar resultados"
-            htmlFor="estoque-ordem"
-            className="mt-5 border-t border-white/10 pt-5"
-          >
-            <select
-              id="estoque-ordem"
-              value={current.sort}
-              onChange={(event) => update({ sort: event.target.value })}
-              className={selectClass}
-            >
-              {STOCK_SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </DesktopField>
-
           {activeFilters.length > 0 ? (
             <div className="mt-5 border-t border-white/10 pt-5">
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
@@ -695,11 +724,13 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 <Chip
                   key={`sticky-brand-${item}`}
                   active={current.brand === item}
-                  onClick={() =>
+                  onClick={() => {
+                    const brand = current.brand === item ? "" : item;
                     update({
-                      brand: current.brand === item ? "" : item,
-                    })
-                  }
+                      brand,
+                      model: modelAfterBrandChange(facets.models, brand, current.model),
+                    });
+                  }}
                 >
                   {formatBrandName(item)}
                 </Chip>
@@ -720,6 +751,42 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   Outras
                 </Chip>
               ) : null}
+            </div>
+          </div>
+        ) : null}
+        {current.brand &&
+        modelFilterOptions(facets.models, current.brand, current.model).length > 0 ? (
+          <div className="flex items-center gap-2">
+            <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
+              Modelo
+            </p>
+            <div className="chip-scroll chip-scroll-row min-w-0 flex-1 -mx-0.5 px-0.5">
+              {visibleBrandChips(
+                modelFilterOptions(facets.models, current.brand, current.model),
+                selectedOption(
+                  modelFilterOptions(facets.models, current.brand, current.model),
+                  current.model,
+                ),
+              ).map((item) => (
+                <Chip
+                  key={`sticky-model-${item}`}
+                  active={
+                    current.model.toLocaleLowerCase("pt-BR") ===
+                    item.toLocaleLowerCase("pt-BR")
+                  }
+                  onClick={() =>
+                    update({
+                      model:
+                        current.model.toLocaleLowerCase("pt-BR") ===
+                        item.toLocaleLowerCase("pt-BR")
+                          ? ""
+                          : item,
+                    })
+                  }
+                >
+                  {formatModelName(item)}
+                </Chip>
+              ))}
             </div>
           </div>
         ) : null}
@@ -829,13 +896,37 @@ export function StockFilters({ facets }: { facets: Facets }) {
               <MobileField label="Marca">
                 <select
                   value={draft.brand}
-                  onChange={(event) => setDraft({ ...draft, brand: event.target.value })}
+                  onChange={(event) => {
+                    const brand = event.target.value;
+                    setDraft({
+                      ...draft,
+                      brand,
+                      model: modelAfterBrandChange(facets.models, brand, draft.model),
+                    });
+                  }}
                   className={selectClass}
                 >
                   <option value="">Todas as marcas</option>
                   {facets.brands.map((item) => (
                     <option key={item} value={item}>
                       {formatBrandName(item)}
+                    </option>
+                  ))}
+                </select>
+              </MobileField>
+              <MobileField label="Modelo">
+                <select
+                  value={selectedOption(
+                    modelFilterOptions(facets.models, draft.brand, draft.model),
+                    draft.model,
+                  )}
+                  onChange={(event) => setDraft({ ...draft, model: event.target.value })}
+                  className={selectClass}
+                >
+                  <option value="">Todos os modelos</option>
+                  {modelFilterOptions(facets.models, draft.brand, draft.model).map((item) => (
+                    <option key={item} value={item}>
+                      {formatModelName(item)}
                     </option>
                   ))}
                 </select>
@@ -1006,6 +1097,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                     ...draft,
                     category: "",
                     brand: "",
+                    model: "",
                     transmission: "",
                     fuel: "",
                     color: "",
@@ -1041,6 +1133,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
       ) : null}
     </>
   );
+}
+
+function selectedOption(options: string[], value: string) {
+  const key = value.trim().toLocaleLowerCase("pt-BR");
+  if (!key) return "";
+  return options.find((item) => item.toLocaleLowerCase("pt-BR") === key) ?? value;
 }
 
 function visibleBrandChips(brands: string[], selected: string) {

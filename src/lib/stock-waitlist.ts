@@ -3,7 +3,12 @@
  * O pixel continua usando stockSearchString (chave estável).
  */
 
-import { formatBrandName, formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import {
+  formatBrandName,
+  formatCurrencyBRL,
+  formatModelName,
+  formatNumberBR,
+} from "@/lib/format";
 import { WHATSAPP_MESSAGES, type WhatsAppCampaign } from "@/lib/site";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { formatColorLabel } from "@/lib/vehicle-display";
@@ -13,6 +18,7 @@ export type StockWaitlistFilters = {
   q?: string;
   category?: string;
   brand?: string;
+  model?: string;
   transmission?: string;
   fuel?: string;
   color?: string;
@@ -44,9 +50,13 @@ export function formatStockWaitlistQuery(input: StockWaitlistFilters) {
 
   const bits: string[] = [];
   const brand = compact(input.brand);
+  const model = compact(input.model);
   const city = vehicleLocationLabel(input.city);
-  if (brand && city) bits.push(`${formatBrandName(brand)} em ${city}`);
-  else if (brand) bits.push(formatBrandName(brand));
+  const vehicle = [brand ? formatBrandName(brand) : "", model ? formatModelName(model) : ""]
+    .filter(Boolean)
+    .join(" ");
+  if (vehicle && city) bits.push(`${vehicle} em ${city}`);
+  else if (vehicle) bits.push(vehicle);
   else if (city) bits.push(`em ${city}`);
   const category = compact(input.category);
   if (category) bits.push(vehicleCategoryLabel(category).toLocaleLowerCase("pt-BR"));

@@ -96,6 +96,10 @@ test("stockSearchString prefers q and otherwise joins filters", () => {
     "marca:Hyundai ano_min:2020",
   );
   assert.equal(
+    stockSearchString({ brand: "Honda", model: "Civic", maxKm: "80000" }),
+    "marca:Honda modelo:Civic km_max:80000",
+  );
+  assert.equal(
     stockSearchString({ brand: "Honda", city: "serra" }),
     "marca:Honda cidade:serra",
   );
