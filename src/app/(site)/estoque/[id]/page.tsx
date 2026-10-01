@@ -24,6 +24,7 @@ import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
+import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { JsonLd } from "@/components/JsonLd";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
@@ -693,6 +694,21 @@ export default async function VehicleDetailPage({
             </div>
           </section>
         ) : null}
+
+        <div className="mt-10 sm:mt-12">
+          <MissingModelForm
+            idPrefix="ficha"
+            sourcePage="ficha"
+            contextLabel={fullLabel}
+            pagePath={path}
+            interestVehicleId={vehicle.id}
+            description={
+              sold
+                ? `O ${title} já foi. Se você procura outro, deixa o modelo aqui.`
+                : `Se o ${title} não é o que você procura, deixa o modelo aqui.`
+            }
+          />
+        </div>
       </Container>
 
       <VehicleMobileBar

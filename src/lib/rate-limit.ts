@@ -118,6 +118,16 @@ export async function checkSellLeadRateLimit(key: string) {
   });
 }
 
+const WANTED_LEAD_WINDOW_MS = 60 * 60 * 1000;
+const WANTED_LEAD_MAX = 5;
+
+export async function checkWantedLeadRateLimit(key: string) {
+  return checkDistributedRateLimit(`wanted-lead:${key}`, {
+    windowMs: WANTED_LEAD_WINDOW_MS,
+    max: WANTED_LEAD_MAX,
+  });
+}
+
 const VENDER_PHOTO_WINDOW_MS = 15 * 60 * 1000;
 const VENDER_PHOTO_MAX = 8;
 

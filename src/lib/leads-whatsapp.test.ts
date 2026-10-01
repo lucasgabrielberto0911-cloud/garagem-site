@@ -32,6 +32,20 @@ test("buildLeadWhatsAppUrl gera abordagem de avaliação para lead do formulári
   assert.match(text, /Recebemos sua solicitação de avaliação do Toyota Corolla 2018 \(placa ABC1D23\)/);
 });
 
+test("buildLeadWhatsAppUrl aborda quem pediu um modelo que não estava no estoque", () => {
+  const url = buildLeadWhatsAppUrl({
+    name: "Ana Paula",
+    phone: "27988887766",
+    vehicleInfo: "Corolla XEi",
+    source: "nao-encontrou",
+  });
+
+  const text = decodeURIComponent(url.split("?text=")[1] ?? "");
+  assert.match(text, /Olá, Ana!/);
+  assert.match(text, /quando chegar um Corolla XEi/);
+  assert.doesNotMatch(text, /avaliação/);
+});
+
 test("buildLeadWhatsAppUrl lida com telefone que já tem 55 e nome simples", () => {
   const url = buildLeadWhatsAppUrl({
     name: "Lucas",

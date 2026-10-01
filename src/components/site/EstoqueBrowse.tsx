@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
+import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { SiteErrorNotice } from "@/components/site/SiteErrorNotice";
 import { StockInfiniteList } from "@/components/site/StockInfiniteList";
 import { StockReturnCapture } from "@/components/site/StockReturnCapture";
@@ -331,6 +332,29 @@ export function EstoqueBrowse({
             }
           />
         )}
+      </div>
+
+      <div className="mt-10">
+        <MissingModelForm
+          key={filterKey}
+          idPrefix="estoque"
+          sourcePage="estoque"
+          contextLabel={filtered ? waitlistQuery : ""}
+          pagePath={returnTo}
+          initialModel={params.q?.trim() ?? ""}
+          initialYearMin={params.minYear ?? ""}
+          initialYearMax={params.maxYear ?? ""}
+          initialPriceMin={params.minPrice ?? ""}
+          initialPriceMax={params.maxPrice ?? ""}
+          initialKmMax={params.maxKm ?? ""}
+          description={
+            !loading && stock.vehicles.length === 0
+              ? filtered && waitlistQuery
+                ? `Não tem ${waitlistQuery} agora. Deixa o modelo e seu contato — a loja guarda o pedido.`
+                : "Deixa o modelo que você procura. A loja guarda o pedido e te chama quando aparecer."
+              : "Se o modelo não está na lista, deixa o que você procura. A loja guarda o pedido."
+          }
+        />
       </div>
     </>
   );

@@ -32,6 +32,20 @@ test("webhook e e-mail descrevem o lead sem inventar valor", () => {
   assert.match(email.text, /Quer trocar/);
 });
 
+test("e-mail de modelo pedido não fala de venda/troca", () => {
+  const email = buildLeadNotifyEmail({
+    name: "Ana Paula",
+    phone: "27988887766",
+    vehicleInfo: "Corolla XEi",
+    notes: "E-mail: ana@exemplo.com\nModelo pedido: Corolla XEi",
+    source: "nao-encontrou",
+  });
+  assert.match(email.subject, /Modelo pedido: Corolla XEi — Ana Paula/);
+  assert.match(email.text, /não encontrou o modelo/);
+  assert.match(email.text, /ana@exemplo.com/);
+  assert.doesNotMatch(email.text, /venda\/troca/);
+});
+
 test("alerta fica desligado sem webhook nem Resend", () => {
   const webhook = process.env.LEAD_WEBHOOK_URL;
   const key = process.env.RESEND_API_KEY;

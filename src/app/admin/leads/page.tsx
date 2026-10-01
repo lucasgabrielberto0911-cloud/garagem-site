@@ -3,7 +3,7 @@ import { LeadsTable } from "@/components/admin/LeadsTable";
 import { AdminPageHeader } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
 import { findLeadVendas } from "@/lib/lead-venda";
-import { LEAD_STATUSES, isLeadStatus } from "@/lib/leads";
+import { LEAD_STATUSES, WANTED_LEAD_SOURCE, isLeadStatus } from "@/lib/leads";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_LEADS_PAGE_SIZE } from "@/lib/admin-vehicles";
 
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; page?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; page?: string; q?: string; origem?: string }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
@@ -21,6 +21,7 @@ export default async function LeadsPage({
   const status = (query.status ?? "").trim();
   const valid = isLeadStatus(status);
   const q = (query.q ?? "").trim();
+  const origem = query.origem === WANTED_LEAD_SOURCE ? WANTED_LEAD_SOURCE : "";
   const page = Math.max(1, Number(query.page) || 1);
   const pageSize = ADMIN_LEADS_PAGE_SIZE;
   const digits = q.replace(/\D/g, "");
@@ -29,6 +30,7 @@ export default async function LeadsPage({
         OR: [
           { name: { contains: q, mode: "insensitive" as const } },
           { vehicleInfo: { contains: q, mode: "insensitive" as const } },
+          { notes: { contains: q, mode: "insensitive" as const } },
           { plate: { contains: q.replace(/[^a-zA-Z0-9]/g, ""), mode: "insensitive" as const } },
           ...(digits ? [{ phone: { contains: digits } }] : []),
         ],
@@ -36,17 +38,22 @@ export default async function LeadsPage({
     : {};
   const where = {
     ...(valid ? { status } : {}),
+    ...(origem ? { source: origem } : {}),
     ...searchWhere,
   };
 
-  const filtered = valid || Boolean(q);
+  const filtered = valid || Boolean(q) || Boolean(origem);
   const [leads, groups, filteredTotal] = await Promise.all([
     findLeadVendas({
       where,
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
-    prisma.leadVenda.groupBy({ by: ["status"], _count: { _all: true } }),
+    prisma.leadVenda.groupBy({
+      by: ["status"],
+      where: origem ? { source: origem } : undefined,
+      _count: { _all: true },
+    }),
     // Sem filtro, o total já sai do groupBy.
     filtered ? prisma.leadVenda.count({ where }) : Promise.resolve(null),
   ]);
@@ -82,6 +89,7 @@ export default async function LeadsPage({
         leads={leads}
         status={valid ? status : ""}
         query={q}
+        origem={origem}
         counts={counts}
         page={page}
         pageSize={pageSize}
