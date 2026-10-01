@@ -1043,40 +1043,35 @@ function formatPowerCompare(vehicles: ChatVehicleRecord[]) {
   const topKey = rows[0]!.key;
   const tied = rows.filter((row) => row.key === topKey);
   const rest = rows.filter((row) => row.key !== topKey);
-  const moto = rows.every((row) => (row.vehicle.category ?? "carro") === "moto");
-  const plural = moto ? "as" : "os";
 
   if (tied.length >= 2) {
     const motors = [...new Set(tied.map((row) => row.motor).filter(Boolean))];
-    const subject = joinPtNames(tied.map((row) => talkName(row.vehicle).name));
+    const names = joinPtNames(tied.map((row) => talkName(row.vehicle).name));
     const shared = motors.length === 1 ? motors[0] : null;
     const gear = gearWord(tied.map((row) => row.vehicle));
-    const who = moto
-      ? tied.length === 2
-        ? "as duas"
-        : "todas"
-      : tied.length === 2
-        ? "os dois"
-        : "todos";
-    const motorBit = shared
-      ? gear
-        ? `${who} ${gear} com motor ${shared}`
-        : `${who} com motor ${shared}`
-      : null;
-    const lead = motorBit
-      ? `${subject} são ${plural} mais fortes da lista — ${motorBit}`
-      : `${subject} são ${plural} mais fortes da lista`;
-    const details = joinClauses(
-      tied.map((row) => {
-        const named = talkName(row.vehicle);
-        const motorExtra = !shared && row.motor ? ` com motor ${row.motor}` : "";
-        return `${named.labeled} tem ${formatChatKm(row.vehicle.km)}${motorExtra} e sai por ${formatChatPrice(row.vehicle.price)}`;
-      }),
-    );
+    const gearBit = gear ? `, todos ${gear}` : "";
+    const open = shared
+      ? `${names} cabem neste recorte com motor ${shared}${gearBit}.`
+      : `${names} empatam no motor mais forte deste recorte${gearBit}.`;
+    const details = tied.map((row) => {
+      const named = talkName(row.vehicle);
+      const motorExtra = !shared && row.motor ? `, motor ${row.motor}` : "";
+      return `${named.cap} sai por ${formatChatPrice(row.vehicle.price)}, com ${formatChatKm(row.vehicle.km)}${motorExtra}.`;
+    });
+    const cheapest = [...tied].sort(
+      (a, b) => a.vehicle.price - b.vehicle.price || a.vehicle.km - b.vehicle.km,
+    )[0]!;
+    const lowestKm = [...tied].sort(
+      (a, b) => a.vehicle.km - b.vehicle.km || a.vehicle.price - b.vehicle.price,
+    )[0]!;
+    const tradeoff =
+      cheapest.vehicle.id === lowestKm.vehicle.id
+        ? ` ${talkName(cheapest.vehicle).cap} junta o menor preço e a menor quilometragem deste motor.`
+        : ` O menor preço neste motor é ${talkName(cheapest.vehicle).labeled}. Quem tem menos km no grupo é ${talkName(lowestKm.vehicle).labeled}.`;
     const others = rest.length
       ? ` ${joinClauses(rest.map((row) => describePowerRow(row.vehicle, row.motor).replace(/\.$/, "")))}.`
       : "";
-    return `${lead}: ${details}.${others}`;
+    return `${open} ${details.join(" ")}${tradeoff}${others}`;
   }
 
   const hero = rows[0]!;
@@ -1446,7 +1441,7 @@ export function chatFilterIntro(mensagem: string) {
           : "";
 
   if (power && bodyLabel && gear === "automatico" && ceiling) {
-    return `Olha só: ${bodyLabel} automáticos mais fortes ${ceiling} no estoque agora.`;
+    return `Nos ${bodyLabel} automáticos ${ceiling}, eu olho o motor maior antes do preço.`;
   }
   if (!power && intentLabel && gear === "automatico" && ceiling) {
     return bodyLabel
@@ -1482,22 +1477,22 @@ export function chatFilterIntro(mensagem: string) {
 
   if (power && gear === "automatico" && ceiling) {
     return category === "moto"
-      ? `Olha só: motos automáticas mais fortes ${ceiling} no estoque agora.`
-      : `Olha só: automáticos mais fortes ${ceiling} no estoque agora.`;
+      ? `Nas motos automáticas ${ceiling}, eu olho o motor maior antes do preço.`
+      : `No automático ${ceiling}, eu olho o motor maior antes do preço.`;
   }
   if (power && gear === "manual" && ceiling) {
-    return `Olha só: manuais mais fortes ${ceiling} no estoque agora.`;
+    return `No manual ${ceiling}, eu olho o motor maior antes do preço.`;
   }
   if (power && category === "moto" && ceiling) {
-    return `Olha só: motos mais fortes ${ceiling} no estoque agora.`;
+    return `Nas motos ${ceiling}, eu olho o motor maior antes do preço.`;
   }
   if (power && ceiling) {
-    return `Olha só: os mais fortes ${ceiling} no estoque agora.`;
+    return `Até este teto, eu olho o motor maior antes do preço.`;
   }
   if (power && gear === "automatico") {
-    return "Olha só: automáticos mais fortes do estoque agora.";
+    return "Nos automáticos do estoque, eu olho o motor maior antes do preço.";
   }
-  if (power) return "Olha só: os mais fortes do estoque agora.";
+  if (power) return "Eu olho o motor maior antes do preço.";
 
   if (gear === "automatico" && ceiling) {
     return category === "moto"
@@ -1540,7 +1535,54 @@ function powerAsideSentence(
   if (!aside) return "";
   const motor = stockEngineLabel(aside);
   const motorBit = motor ? `motor ${motor}` : "motor menor";
-  return ` Se quiser só gastar menos, ${talkName(aside).labeled} tem ${motorBit} e sai por ${formatChatPrice(aside.price)}.`;
+  const floor = Math.min(...heroes.map((vehicle) => vehicle.price));
+  const lead = [...heroes].sort(
+    (a, b) => a.price - b.price || a.km - b.km,
+  )[0]!;
+  const named = talkName(aside);
+  if (aside.price < floor) {
+    return ` Se a prioridade virar só o preço, ${named.labeled} tem ${motorBit} e sai por ${formatChatPrice(aside.price)}, abaixo do ${talkName(lead).name}.`;
+  }
+  return ` ${named.cap} tem ${motorBit} e sai por ${formatChatPrice(aside.price)}. Não fica mais barato que ${talkName(lead).labeled} e o motor é menor, então eu não começaria por ele.`;
+}
+
+function replyMentionsModel(reply: string, model: string) {
+  const needle = normalize(model);
+  if (needle.length < 2) return -1;
+  return foldReply(reply).indexOf(needle);
+}
+
+/** Resposta do modelo que já abre pelo motor maior, com preço real e sem handoff. */
+function powerReplyIsUsable(reply: string, vehicles: ChatVehicleRecord[]) {
+  const trimmed = reply.trim();
+  if (!trimmed || looksTruncatedReply(trimmed) || isIncompleteStockReply(trimmed)) {
+    return false;
+  }
+  if (/^beleza\b/i.test(trimmed) || /mais fortes que cabem/i.test(trimmed)) {
+    return false;
+  }
+  if (/whatsapp|wa\.me/i.test(trimmed)) return false;
+  if (/mais em conta/i.test(trimmed)) return false;
+  const ficha = vehicles
+    .map((vehicle) => `${vehicle.engine ?? ""} ${vehicle.version ?? ""}`)
+    .join(" ");
+  for (const match of trimmed.matchAll(/\b(\d+)\s*cv\b/gi)) {
+    const token = match[1];
+    if (!new RegExp(`\\b${token}\\s*cv\\b`, "i").test(ficha)) return false;
+  }
+  const ranked = rankByPower(vehicles, "");
+  const top = ranked[0];
+  if (!top) return false;
+  const topAt = replyMentionsModel(trimmed, top.model);
+  if (topAt < 0) return false;
+  const topKey = powerRankKey(top);
+  for (const vehicle of ranked) {
+    if (powerRankKey(vehicle) === topKey) continue;
+    const at = replyMentionsModel(trimmed, vehicle.model);
+    if (at >= 0 && at < topAt) return false;
+  }
+  const price = Math.round(top.price).toLocaleString("pt-BR");
+  return trimmed.includes(price) || trimmed.includes(String(Math.round(top.price)));
 }
 
 /** Comparação sempre dos cards na tela — o modelo não pode falar de outro carro. */
@@ -1614,6 +1656,19 @@ export function enrichChatStockReply(
   if (vehicles.length >= 2) {
     const mode = chatRankMode(mensagem);
     const power = mode === "power";
+    const mentionsShown = vehicles.some(
+      (vehicle) => replyMentionsModel(reply, vehicle.model) >= 0,
+    );
+    if (
+      looksLikeShortlistFollowUp(mensagem) &&
+      mentionsShown &&
+      !/whatsapp|wa\.me/i.test(reply)
+    ) {
+      return reply.trim();
+    }
+    if (power && powerReplyIsUsable(reply, vehicles)) {
+      return reply.trim();
+    }
     const guided =
       power || mode === "family" || mode === "starter" || mode === "economy";
     const intro = guided
@@ -1908,12 +1963,20 @@ function explicitRank(mensagem: string): ChatRankMode | null {
   return mode;
 }
 
+/** “e o de menos km?” — continua no recorte, não zera a sessão. */
+export function looksLikeShortlistFollowUp(mensagem: string) {
+  return /\b(entre esses|entre estes|desses|deles|qual deles|qual eu levo|qual voce levaria|o de menos km|qual tem menos km|quem tem menos km|qual o mais novo|qual e o mais novo|o mais novo deles)\b/.test(
+    normalize(mensagem),
+  );
+}
+
 function skipsChatMemory(mensagem: string) {
   if (!mensagem.trim()) return true;
   if (isOffScopeMessage(mensagem) || isFipeQuestion(mensagem) || isChatPing(mensagem)) {
     return true;
   }
   if (chatPolicyShortcut(mensagem)) return true;
+  if (looksLikeShortlistFollowUp(mensagem)) return false;
   if (
     asksAboutKm(mensagem) ||
     asksAboutEquipment(mensagem) ||
@@ -2006,6 +2069,66 @@ export function scopeChatMessage(
   }
   if (append.length === 0) return current;
   return `${current} ${append.join(" ")}`.replace(/\s+/g, " ").trim();
+}
+
+/** Continua no recorte já dito: menos km, mais novo ou qual levar. Sem WhatsApp. */
+export function formatShortlistFollowUp(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+): string | null {
+  if (!looksLikeShortlistFollowUp(mensagem)) return null;
+  const pool = matchedChatStock(mensagem, stock);
+  if (pool.length === 0) return null;
+  const ranked = rankChatVehicles(pool, mensagem).slice(0, 3);
+  const folded = normalize(mensagem);
+  const lowestKm = [...ranked].sort(
+    (a, b) => a.km - b.km || a.price - b.price,
+  )[0];
+  const newest = [...ranked].sort(
+    (a, b) => b.yearModel - a.yearModel || a.km - b.km,
+  )[0];
+  if (!lowestKm || !newest) return null;
+
+  if (/menos km|menor km/.test(folded)) {
+    const others = ranked.filter((vehicle) => vehicle.id !== lowestKm.id);
+    const motor = stockEngineLabel(lowestKm);
+    const motorBit = motor ? `, motor ${motor}` : "";
+    const otherBit = others.length
+      ? ` ${joinClauses(
+          others.map(
+            (vehicle) =>
+              `${talkName(vehicle).cap} está com ${formatChatKm(vehicle.km)}`,
+          ),
+        )}.`
+      : "";
+    return `Entre os que separei, ${talkName(lowestKm).labeled} tem menos km: ${formatChatKm(lowestKm.km)}${motorBit}, ${formatChatPrice(lowestKm.price)}.${otherBit}`;
+  }
+
+  if (/mais novo/.test(folded)) {
+    const motor = stockEngineLabel(newest);
+    const motorBit = motor ? `, motor ${motor}` : "";
+    return `Entre os que separei, ${talkName(newest).labeled} é o mais novo: ${newest.yearModel}${motorBit}, ${formatChatKm(newest.km)}, ${formatChatPrice(newest.price)}.`;
+  }
+
+  const top = ranked[0];
+  if (!top) return null;
+  const motor = stockEngineLabel(top);
+  const mode = chatRankMode(mensagem);
+  const reason =
+    mode === "power"
+      ? "É o motor maior que cabe neste recorte."
+      : mode === "family"
+        ? "É o mais espaçoso deste recorte."
+        : mode === "starter"
+          ? "É o que eu usaria para começar neste recorte."
+          : mode === "economy"
+            ? "É o de motor menor deste recorte."
+            : "É o que eu abriria neste recorte.";
+  const kmNote =
+    mode === "power" && lowestKm.id !== top.id
+      ? ` ${talkName(lowestKm).cap} tem menos km (${formatChatKm(lowestKm.km)}), se a rodagem pesar mais.`
+      : "";
+  return `Eu levaria ${talkName(top).labeled}${motor ? `, motor ${motor}` : ""}, ${formatChatKm(top.km)}, ${formatChatPrice(top.price)}. ${reason}${kmNote}`;
 }
 
 export function chatWaitlistWhatsAppUrl(mensagem: string) {

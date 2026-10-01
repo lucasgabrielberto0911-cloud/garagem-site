@@ -63,6 +63,7 @@ import {
   isIncompleteStockReply,
   isFocusedVehicleFactQuestion,
   looksLikeMissingModelReply,
+  looksLikeShortlistFollowUp,
   localGarageReply,
   matchFocusedVehicle,
   pickComparedModelVehicles,
@@ -75,6 +76,7 @@ import {
   consumptionReplyLooksBroken,
   emptyFilterReply,
   equipmentReplyLooksBroken,
+  formatShortlistFollowUp,
   formatTransmissionCompareReply,
   hasChatStockFilter,
   hasConsumptionFigures,
@@ -259,6 +261,17 @@ export async function runChatTurn(input: {
       forcedVehicles: similar,
       cards: similar.length > 0,
     });
+  }
+
+  if (
+    input.historico.some((turn) => turn.role === "user" && turn.content.trim()) &&
+    looksLikeShortlistFollowUp(visitorMessage)
+  ) {
+    const follow = formatShortlistFollowUp(scopedMessage, input.stock);
+    if (follow) {
+      emit(follow);
+      return finish(follow, false, { policy: "shortlist" });
+    }
   }
 
   const mentionedPool = singleMentionedModelPool(input.stock, scopedMessage);

@@ -330,6 +330,18 @@ test("garantia, docs e cartão vs financiamento continuam atalho da loja", async
   assert.match(card.reply, /18 vezes/);
   assert.match(card.reply, /60 vezes/);
   assert.doesNotMatch(card.reply, /parcela de R\$/);
+
+  const finance = await runChatTurn({
+    mensagem: "Como funciona o financiamento?",
+    historico: [],
+    stock: [hb20],
+    generate: blockedGenerate(),
+  });
+  assert.match(finance.reply, /wa\.me\/5527996330706/);
+  assert.doesNotMatch(finance.reply, /99956|566161|5527999566161/);
+  const cta = chatWhatsAppCta(finance.reply);
+  assert.match(cta?.href ?? "", /5527996330706/);
+  assert.doesNotMatch(cta?.href ?? "", /99956|566161|5527999566161/);
 });
 
 test("Gemini cortado em limite de R$ não fica na resposta final", async () => {
@@ -650,17 +662,21 @@ test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () 
     result.vehicles.map((vehicle) => vehicle.id),
     [lancer.id, civic.id, corolla.id],
   );
-  assert.match(result.reply, /automáticos mais fortes até R\$ 109\.000/);
-  assert.match(result.reply, /Lancer, Civic e Corolla são os mais fortes da lista/);
-  assert.match(result.reply, /motor 2\.0/);
+  assert.match(
+    result.reply,
+    /No automático até R\$ 109\.000, eu olho o motor maior antes do preço/,
+  );
+  assert.match(result.reply, /Lancer, Civic e Corolla cabem neste recorte com motor 2\.0/);
   assert.match(result.reply, /80 mil km/);
   assert.match(result.reply, /62\.900/);
   assert.doesNotMatch(result.reply, /mais em conta/);
   assert.doesNotMatch(result.reply, /\b\d+\s*cv\b/i);
-  const forteAt = result.reply.search(/mais fortes/);
+  assert.doesNotMatch(result.reply, /wa\.me|whatsapp/i);
+  assert.equal(chatWhatsAppCta(result.reply), null);
+  const lancerAt = result.reply.search(/Lancer/);
   const hbAt = result.reply.search(/HB20/);
-  assert.ok(forteAt >= 0);
-  if (hbAt >= 0) assert.ok(forteAt < hbAt);
+  assert.ok(lancerAt >= 0);
+  if (hbAt >= 0) assert.ok(lancerAt < hbAt);
 
   const cheap = await runChatTurn({
     mensagem: "automatico barato ate 109 mil",
@@ -678,6 +694,118 @@ test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () 
   assert.equal(cheap.vehicles[0]?.id, hb10.id);
   assert.match(cheap.reply, /mais em conta/);
   assert.doesNotMatch(cheap.reply, /mais fortes/);
+});
+
+test("resposta honesta do modelo que abre pelo 2.0 é mantida", async () => {
+  const hb10: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb-honest",
+    version: "1.0",
+    price: 55_900,
+    transmission: "Automático",
+    engine: "1.0",
+  };
+  const lancer: ChatVehicleRecord = {
+    id: "c-lancer-honest",
+    brand: "Mitsubishi",
+    model: "Lancer",
+    version: "2.0",
+    yearModel: 2014,
+    km: 80_000,
+    price: 62_900,
+    color: "Prata",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+    engine: "2.0",
+  };
+  const honest =
+    "O Lancer 2.0 sai por R$ 62.900, com 80 mil km. O HB20 1.0 custa menos, mas o motor é outro.";
+  const result = await runChatTurn({
+    mensagem: "automático forte até 109 mil",
+    historico: [],
+    stock: [hb10, lancer],
+    generate: async () => ({ text: honest, functionCall: null }),
+  });
+  assert.equal(result.vehicles[0]?.id, lancer.id);
+  assert.match(result.reply, /O Lancer 2\.0 sai por R\$ 62\.900/);
+  assert.ok(result.reply.indexOf("Lancer") < result.reply.indexOf("HB20"));
+  assert.doesNotMatch(result.reply, /motor maior antes do preço/);
+  assert.equal(chatWhatsAppCta(result.reply), null);
+});
+
+test("2.0 mais barato não manda começar pelo 1.0", async () => {
+  const hb: ChatVehicleRecord = {
+    ...hb20,
+    id: "c-hb-caro",
+    version: "Premium 1.6",
+    yearModel: 2018,
+    km: 127_000,
+    price: 55_900,
+    transmission: "Automático",
+    engine: "1.6",
+  };
+  const duster: ChatVehicleRecord = {
+    id: "c-duster-barato",
+    brand: "Renault",
+    model: "Duster",
+    version: "Dynamique 2.0",
+    yearModel: 2014,
+    km: 101_000,
+    price: 54_900,
+    color: "Prata",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+    engine: "2.0",
+  };
+  const lancer: ChatVehicleRecord = {
+    id: "c-lancer-meio",
+    brand: "Mitsubishi",
+    model: "Lancer",
+    version: "2.0",
+    yearModel: 2014,
+    km: 80_000,
+    price: 62_900,
+    color: "Cinza",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+    engine: "2.0",
+  };
+  const civic: ChatVehicleRecord = {
+    id: "c-civic-meio",
+    brand: "Honda",
+    model: "Civic",
+    version: "LXR 2.0",
+    yearModel: 2015,
+    km: 106_000,
+    price: 74_900,
+    color: "Prata",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+    engine: "2.0",
+  };
+  const result = await runChatTurn({
+    mensagem: "automático forte até 109 mil",
+    historico: [],
+    stock: [hb, duster, lancer, civic],
+    generate: async () => ({
+      text: "O HB20 é um bom começo para gastar menos.",
+      functionCall: null,
+    }),
+  });
+  assert.deepEqual(
+    result.vehicles.map((vehicle) => vehicle.id),
+    [duster.id, lancer.id, civic.id],
+  );
+  assert.ok(result.reply.indexOf("Duster") < result.reply.indexOf("HB20"));
+  assert.match(result.reply, /Não fica mais barato/);
+  assert.match(result.reply, /não começaria por ele/);
+  assert.doesNotMatch(result.reply, /gastar menos|mais em conta|prioridade virar só o preço/i);
+  assert.equal(chatWhatsAppCta(result.reply), null);
+  assert.doesNotMatch(result.reply, /99956|566161|5527999566161/);
 });
 
 test("segunda mensagem herda automático e teto e Nova conversa limpa", async () => {
@@ -745,8 +873,56 @@ test("segunda mensagem herda automático e teto e Nova conversa limpa", async ()
     result.vehicles.every((vehicle) => /autom/i.test(vehicle.transmission ?? "")),
   );
   assert.doesNotMatch(result.reply, /orçamento ou o câmbio|automático ou manual/i);
-  assert.match(result.reply, /automáticos mais fortes até R\$ 100\.000/);
-  assert.match(result.reply, /motor 2\.0/);
+  assert.match(
+    result.reply,
+    /No automático até R\$ 100\.000, eu olho o motor maior antes do preço/,
+  );
+  assert.match(result.reply, /motor 2\.0|com motor 2\.0/);
+
+  const fewerKm = await runChatTurn({
+    mensagem: "e o de menos km?",
+    historico: [
+      { role: "user", content: "automático forte até 100 mil" },
+      { role: "assistant", content: "Separei os 2.0." },
+    ],
+    stock,
+    generate: blockedGenerate(),
+  });
+  assert.match(fewerKm.reply, /Corolla/);
+  assert.match(fewerKm.reply, /70 mil km/);
+  assert.doesNotMatch(fewerKm.reply, /HB20|Gol|Creta/);
+  assert.doesNotMatch(fewerKm.reply, /wa\.me|whatsapp/i);
+  assert.ok(
+    fewerKm.vehicles.every((vehicle) =>
+      ["lancer", "civic", "corolla"].includes(vehicle.id),
+    ),
+  );
+
+  const pick = await runChatTurn({
+    mensagem: "qual eu levo?",
+    historico: [
+      { role: "user", content: "automático forte até 100 mil" },
+      { role: "assistant", content: "Separei os 2.0." },
+    ],
+    stock,
+    generate: blockedGenerate(),
+  });
+  assert.match(pick.reply, /Eu levaria o Lancer/);
+  assert.match(pick.reply, /motor maior/);
+  assert.match(pick.reply, /62\.900/);
+  assert.doesNotMatch(pick.reply, /HB20|Gol/);
+  assert.equal(chatWhatsAppCta(pick.reply), null);
+
+  const freshKm = await runChatTurn({
+    mensagem: "e o de menos km?",
+    historico: [],
+    stock,
+    generate: async ({ systemPrompt }) => {
+      assert.doesNotMatch(systemPrompt, /100\.000/);
+      return { text: "De qual deles?", functionCall: null };
+    },
+  });
+  assert.match(freshKm.reply, /De qual deles/);
 
   const fresh = scopeChatMessage("quero mais forte", [], stock);
   assert.equal(fresh, "quero mais forte");
