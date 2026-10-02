@@ -8,6 +8,7 @@ import {
 import { StockCatalogGate } from "@/components/site/StockCatalogGate";
 import { StockCatalogLinks } from "@/components/site/StockCatalogLinks";
 import { StockFilters } from "@/components/site/StockFilters";
+import { StockFiltersSkeleton } from "@/components/site/StockFiltersSkeleton";
 import { StockBrowseShell } from "@/components/site/StockPending";
 import { Container, PageHeader } from "@/components/site/ui";
 import { buildPageMetadata, itemListJsonLd } from "@/lib/seo";
@@ -50,9 +51,7 @@ export default async function EstoquePage() {
         <StockBrowseShell
           filters={
             <Suspense
-              fallback={
-                <div className="h-28 border border-white/10 bg-ink lg:h-[70dvh]" />
-              }
+              fallback={<StockFiltersSkeleton facets={facets} />}
             >
               <StockFilters facets={facets} />
             </Suspense>

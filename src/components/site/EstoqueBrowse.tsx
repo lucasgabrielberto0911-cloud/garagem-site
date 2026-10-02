@@ -106,10 +106,14 @@ export function EstoqueBrowseFallback({
         className="stock-count mb-2 mt-3 text-left text-sm font-medium text-cream lg:mb-0 lg:mt-0 lg:text-xs lg:font-normal lg:uppercase lg:tracking-wider lg:text-muted"
       >
         {vehicles.length > 0
-          ? `${total} ${total === 1 ? "veículo no estoque" : "veículos no estoque"} · sem filtros${
-              total > vehicles.length ? " · role para ver todos" : ""
-            }`
+          ? `${total} ${total === 1 ? "veículo no estoque" : "veículos no estoque"}`
           : "Atualizando o estoque…"}
+        {vehicles.length > 0 ? (
+          <span className="hidden lg:inline">
+            {` · ${stockSortLabel("recentes")}`}
+            {total > vehicles.length ? " · role para ver todos" : ""}
+          </span>
+        ) : null}
       </p>
       <div className="mt-1 lg:mt-4">
         {vehicles.length > 0 ? (
