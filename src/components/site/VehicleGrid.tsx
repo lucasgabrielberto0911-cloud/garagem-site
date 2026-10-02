@@ -44,14 +44,14 @@ export function VehicleGrid({
   const tight = stock && vehicles.length > 1;
   return (
     <div
-      className={`grid ${
+      className={`grid ${stock ? "stock-card-grid" : ""} ${
         tight
           ? "-mx-2 w-[calc(100%+1rem)] gap-2 sm:mx-0 sm:w-full sm:gap-4"
           : "mx-auto w-full gap-3 sm:gap-4"
       } ${layoutForCount(vehicles.length, desktopCols)}`}
     >
       {vehicles.map((vehicle, index) => (
-        <div key={vehicle.id} className="h-full min-w-0 w-full">
+        <div key={vehicle.id} className={`h-full min-w-0 w-full ${stock ? "stock-card-grid-item" : ""}`}>
           <VehicleCard
             vehicle={vehicle}
             priority={index < priorityCount}

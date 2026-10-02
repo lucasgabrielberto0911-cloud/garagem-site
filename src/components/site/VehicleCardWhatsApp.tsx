@@ -30,6 +30,7 @@ export function VehicleCardWhatsApp({
   variant = "bar",
   trackingLabel = "vehicle-card",
   campaign,
+  showOnStockList = false,
 }: {
   vehicleId: string;
   label: string;
@@ -43,10 +44,12 @@ export function VehicleCardWhatsApp({
   variant?: "bar" | "chat";
   trackingLabel?: string;
   campaign?: WhatsAppCampaign;
+  /** O novo card mobile reutiliza a barra original mesmo dentro do estoque. */
+  showOnStockList?: boolean;
 }) {
   const hideOnStockList = useHideStockCardInterest();
   const chat = variant === "chat";
-  if (hideOnStockList && !chat) return null;
+  if (hideOnStockList && !chat && !showOnStockList) return null;
   const text = message ?? WHATSAPP_MESSAGES.vehicle(label);
   const content = whatsappContentFromVehicle({ id: vehicleId, path });
   const href = whatsappUrl(text, {

@@ -219,7 +219,7 @@ test("card público não ganha selo de consignado nem laudo", () => {
   assert.doesNotMatch(source, /laudo|Cautelar|inspection/i);
 });
 
-test("o card não tem WhatsApp nem data de atualização; o chat continua", () => {
+test("o card padrão segue sem WhatsApp ou data; o estoque mobile permite interesse", () => {
   const list = readSrc("components/site/StockInfiniteList.tsx");
   const browse = readSrc("components/site/EstoqueBrowse.tsx");
   const home = readSrc("app/(site)/page.tsx");
@@ -241,7 +241,7 @@ test("o card não tem WhatsApp nem data de atualização; o chat continua", () =
   assert.doesNotMatch(card, /formatUpdatedAt/);
   assert.doesNotMatch(card, /Atualizado em/);
   assert.match(button, /useHideStockCardInterest/);
-  assert.match(button, /if \(hideOnStockList && !chat\) return null/);
+  assert.match(button, /if \(hideOnStockList && !chat && !showOnStockList\) return null/);
 
   assert.doesNotMatch(home, /HideStockCardInterest/);
   assert.doesNotMatch(favorites, /HideStockCardInterest/);
@@ -281,7 +281,7 @@ test("chip longo ganha reticências no fim da palavra", () => {
   assert.doesNotMatch(clipChipText("Dynamique 2.0 Tech Road 2", 68), /Roa|2\.0/);
 });
 
-test("o card do estoque leva à ficha e não mostra Tenho interesse", () => {
+test("o card padrão leva à ficha e não mostra Tenho interesse", () => {
   const vehicle = sampleVehicle();
   const onStock = renderToStaticMarkup(
     createElement(
@@ -337,6 +337,40 @@ test("o card do estoque leva à ficha e não mostra Tenho interesse", () => {
   assert.doesNotMatch(elsewhere, /Tenho interesse/);
   assert.doesNotMatch(elsewhere, /wa\.me/);
   assert.doesNotMatch(elsewhere, /Atualizado/);
+});
+
+test("estoque mobile mantém versão e ano completos e restaura interesse no WhatsApp oficial", () => {
+  const html = renderToStaticMarkup(
+    createElement(
+      FavoritesProvider,
+      null,
+      createElement(
+        HideStockCardInterest,
+        null,
+        createElement(VehicleCard, {
+          vehicle: sampleVehicle({
+            model: "Civic",
+            version: "LXR 2.0 FlexOne",
+            yearModel: 2015,
+            km: 106000,
+            price: 74900,
+          }),
+          largePhoto: true,
+        }),
+      ),
+    ),
+  );
+  const mobile = html.slice(html.indexOf('class="stock-mobile-details"'));
+  assert.match(mobile, />LXR 2\.0 FlexOne</);
+  assert.match(mobile, />2015</);
+  assert.match(mobile, /106\.000 km/);
+  assert.match(mobile, /Automático/);
+  assert.match(mobile, /Linhares/);
+  assert.match(mobile, /R\$\s*74\.900/);
+  assert.match(mobile, /href="https:\/\/wa\.me\/5527996330706\?/);
+  assert.match(mobile, />Tenho interesse<\/a>/);
+  assert.ok(mobile.indexOf("Ver ficha") < mobile.indexOf("Tenho interesse"));
+  assert.doesNotMatch(mobile, /…|Atualizado em|99956/);
 });
 
 test("fato ausente não aparece no HTML do card", () => {
