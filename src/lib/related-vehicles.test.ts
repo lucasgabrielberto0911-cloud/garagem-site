@@ -294,14 +294,16 @@ test("o bloco mostra foto, nome, ano, km e preço, e some se não houver opção
   assert.match(html, /href="\/estoque\/hyundai-hb20s-comfort-plus-2024-cmud192iz0000l6041ewv0ki6"/);
   assert.match(html, /wa\.me\/5527996330706/);
   assert.doesNotMatch(html, /99956|5527999566161/);
-  assert.doesNotMatch(html, /Tenho interesse/);
+  assert.match(html, /Tenho interesse/);
   assert.doesNotMatch(html, /Equipamentos/);
   assert.doesNotMatch(html, /Confirmado neste anúncio/i);
   assert.doesNotMatch(html, /Consignado/i);
 
   const article = html.slice(html.indexOf("<article"), html.indexOf("</article>"));
   assert.match(article, /Hyundai HB20S/);
-  assert.doesNotMatch(article, /wa\.me|Tenho interesse/);
+  assert.match(article, /wa\.me\/5527996330706/);
+  assert.match(article, /Tenho interesse/);
+  assert.doesNotMatch(article, /Ver ficha/);
 
   const empty = renderToStaticMarkup(
     createElement(SimilarVehicles, {
@@ -326,7 +328,7 @@ test("o bloco mostra foto, nome, ano, km e preço, e some se não houver opção
     ),
   );
   assert.match(missingKm, /Hyundai HB20S/);
-  assert.doesNotMatch(missingKm, /km/);
+  assert.doesNotMatch(missingKm, />Km<|[\d.]+ km</);
   assert.doesNotMatch(missingKm, />2024</);
   assert.doesNotMatch(missingKm, /R\$/);
 });
@@ -352,7 +354,7 @@ test("a ficha mantém âncoras, filtros e o formulário, e as cidades o estoque 
     page.indexOf("<MissingModelForm") < page.indexOf("<SimilarVehicles"),
   );
   assert.doesNotMatch(similar, /showWhatsApp|whatsappCampaign/);
-  assert.doesNotMatch(readSrc("components/site/VehicleCard.tsx"), /VehicleCardWhatsApp|Tenho interesse/);
+  assert.match(readSrc("components/site/VehicleCard.tsx"), /VehicleCardWhatsApp/);
   assert.doesNotMatch(similar, /setTimeout|Equipamentos|Confirmado neste anúncio|99956/i);
   assert.doesNotMatch(page, /Confirmado neste anúncio|Equipamentos|99956/);
 

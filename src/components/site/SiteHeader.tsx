@@ -10,10 +10,8 @@ import {
   IconWhatsApp,
 } from "@/components/site/icons";
 import { FavoritesLink } from "@/components/site/FavoritesLink";
-import {
-  InstallAppHeaderButton,
-  InstallAppMenuItem,
-} from "@/components/site/InstallAppButton";
+import { ChatOpenButton } from "@/components/site/ChatOpenButton";
+import { InstallAppHeaderButton, InstallAppMenuItem } from "@/components/site/InstallAppButton";
 import { SiteWordmark } from "@/components/site/SiteWordmark";
 import { usePageWhatsAppTarget } from "@/components/site/usePageWhatsAppHref";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
@@ -100,12 +98,12 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-asphalt/98 pt-safe backdrop-blur-md pl-safe pr-safe">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-asphalt/[0.98] pt-safe backdrop-blur-md pl-safe pr-safe">
         <div className="mx-auto flex h-[72px] w-full max-w-[90rem] items-center gap-3 px-3 sm:gap-5 sm:px-6 lg:h-[76px] lg:gap-8 lg:px-8 xl:gap-10">
           <Link
             href="/"
             prefetch={false}
-            className="flex shrink-0 items-center focus-visible:outline-offset-4"
+            className="site-header-brand flex shrink-0 items-center focus-visible:outline-offset-4"
             aria-label={`${site.name} — página inicial`}
           >
             <SiteWordmark
@@ -155,7 +153,7 @@ export function SiteHeader() {
 
             <FavoritesLink />
 
-            <InstallAppHeaderButton />
+            <div className="hidden sm:contents"><InstallAppHeaderButton /></div>
 
             <a
               href={whatsappHref}
@@ -182,6 +180,14 @@ export function SiteHeader() {
                 <IconMenu className="h-5 w-5" />
               )}
             </button>
+            <ChatOpenButton
+              source="header-mobile"
+              size="compact"
+              variant="solid"
+              className="mobile-header-help h-11 w-11 shrink-0 rounded-full !px-0 [&_svg]:h-5 [&_svg]:w-5"
+            >
+              {null}
+            </ChatOpenButton>
           </div>
         </div>
       </header>

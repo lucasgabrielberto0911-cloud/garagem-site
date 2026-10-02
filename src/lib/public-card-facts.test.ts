@@ -6,7 +6,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { HideStockCardInterest } from "@/components/site/HideStockCardInterest";
-import { clipChipText, VehicleCard } from "@/components/site/VehicleCard";
+import { VehicleCard } from "@/components/site/VehicleCard";
+import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import { FavoritesProvider } from "@/lib/favorites";
 import { publicCardFacts } from "@/lib/public-card-facts";
@@ -193,61 +194,7 @@ test("card público não ganha selo de consignado nem laudo", () => {
   assert.doesNotMatch(text, /laudo|cautelar|vistoria/i);
 
   const source = readSrc("components/site/VehicleCard.tsx");
-  const css = readSrc("app/globals.css");
-  const factCss = css.slice(
-    css.indexOf(".vehicle-card-facts {"),
-    css.indexOf(".card-open-label {"),
-  );
-  assert.match(source, /publicCardFacts/);
-  assert.match(source, /vehicle-card-fact/);
-  assert.match(factCss, /overflow-wrap:\s*normal/);
-  assert.match(factCss, /word-break:\s*normal/);
-  assert.match(factCss, /grid-template-rows:\s*1rem 1rem/);
-  assert.match(factCss, /vehicle-card-fact-line-main/);
-  assert.match(factCss, /vehicle-card-fact-line-sub/);
-  assert.match(factCss, /white-space:\s*nowrap/);
-  assert.match(factCss, /height:\s*1rem/);
-  assert.match(factCss, /background:\s*transparent/);
-  assert.match(source, /vehicle-card-fact-line-main/);
-  assert.match(source, /vehicle-card-title/);
-  assert.doesNotMatch(factCss, /-webkit-line-clamp|flex-wrap:\s*wrap/);
-  assert.doesNotMatch(factCss, /8\.75rem|2\.125rem|height:\s*1\.5rem/);
-  assert.doesNotMatch(factCss, /anywhere|break-all|break-word/);
-  assert.doesNotMatch(source, /overflow-wrap:anywhere/);
-  assert.doesNotMatch(source, /Consignado/);
-  assert.doesNotMatch(source, /"—"/);
-  assert.doesNotMatch(source, /laudo|Cautelar|inspection/i);
-});
-
-test("o card padrão segue sem WhatsApp ou data; o estoque mobile permite interesse", () => {
-  const list = readSrc("components/site/StockInfiniteList.tsx");
-  const browse = readSrc("components/site/EstoqueBrowse.tsx");
-  const home = readSrc("app/(site)/page.tsx");
-  const favorites = readSrc("components/site/FavoritesList.tsx");
-  const card = readSrc("components/site/VehicleCard.tsx");
-  const button = readSrc("components/site/VehicleCardWhatsApp.tsx");
-
-  assert.match(list, /HideStockCardInterest/);
-  assert.match(browse, /HideStockCardInterest/);
-  assert.match(card, /StockVehicleLink/);
-  assert.match(card, /card-open-label/);
-  assert.match(card, /text-brand/);
-  assert.match(card, /appearance="ghost"/);
-  assert.match(card, /size="sm"/);
-  assert.match(card, /vehicle-card-fact/);
-  assert.match(card, /label: "Versão"/);
-  assert.doesNotMatch(card, /mt-auto/);
-  assert.doesNotMatch(card, /VehicleCardWhatsApp/);
-  assert.doesNotMatch(card, /formatUpdatedAt/);
-  assert.doesNotMatch(card, /Atualizado em/);
-  assert.match(button, /useHideStockCardInterest/);
-  assert.match(button, /if \(hideOnStockList && !chat && !showOnStockList\) return null/);
-
-  assert.doesNotMatch(home, /HideStockCardInterest/);
-  assert.doesNotMatch(favorites, /HideStockCardInterest/);
-  assert.match(home, /<VehicleGrid/);
-  assert.match(favorites, /<VehicleGrid/);
-  assert.match(favorites, /Enviar minha lista no WhatsApp/);
+  assert.doesNotMatch(source, /Consignado|laudo|Cautelar|inspection/i);
 });
 
 function sampleVehicle(overrides: Record<string, unknown> = {}) {
@@ -272,105 +219,60 @@ function sampleVehicle(overrides: Record<string, unknown> = {}) {
   };
 }
 
-test("chip longo ganha reticências no fim da palavra", () => {
-  assert.equal(clipChipText("Automático"), "Automático");
-  assert.equal(clipChipText("Semi-automático"), "Semi-automático");
-  assert.equal(clipChipText("101.000 km"), "101.000 km");
-  assert.equal(clipChipText("Dynamique 2.0 Tech Road 2", 68), "Dynamique…");
-  assert.equal(clipChipText("Comfort Plus", 68), "Comfort Plus");
-  assert.doesNotMatch(clipChipText("Dynamique 2.0 Tech Road 2", 68), /Roa|2\.0/);
+function renderCard(overrides: Record<string, unknown> = {}, onStock = false) {
+  const card = createElement(VehicleCard, { vehicle: sampleVehicle(overrides) });
+  return renderToStaticMarkup(createElement(
+    FavoritesProvider,
+    null,
+    onStock ? createElement(HideStockCardInterest, null, card) : card,
+  ));
+}
+
+test("o card completo tem um link para a ficha e uma ação separada para o WhatsApp", () => {
+  const html = renderCard();
+  const main = html.match(/<a[^>]*data-stock-card[^>]*>([\s\S]*?)<\/a>/)?.[1];
+  assert.ok(main);
+  assert.match(main, /data-vehicle-photo/);
+  assert.match(main, />Honda</);
+  assert.match(main, />HR-V</);
+  assert.match(main, /EXL 1\.8 Flexone/);
+  assert.match(main, />2016</);
+  assert.match(main, /103\.000 km/);
+  assert.match(main, /Automático/);
+  assert.match(main, /Linhares/);
+  assert.match(main, /R\$\s*84\.900/);
+  assert.match(html, /href="\/estoque\/honda-hr-v/);
+  assert.doesNotMatch(main, /Tenho interesse|<button|wa\.me/);
+  assert.match(html, /href="https:\/\/wa\.me\/5527996330706\?/);
+  assert.match(html, />Tenho interesse<\/a>/);
+  assert.doesNotMatch(html, /Ver ficha|Atualizado|Consignado|99956/);
 });
 
-test("o card padrão leva à ficha e não mostra Tenho interesse", () => {
-  const vehicle = sampleVehicle();
-  const onStock = renderToStaticMarkup(
-    createElement(
-      FavoritesProvider,
-      null,
-      createElement(
-        HideStockCardInterest,
-        null,
-        createElement(VehicleCard, { vehicle }),
-      ),
-    ),
-  );
-  assert.match(onStock, /Honda HR-V/);
-  assert.match(onStock, /EXL 1\.8 Flexone/);
-  assert.match(onStock, /R\$\s*84\.900/);
-  assert.match(onStock, />2016</);
-  assert.match(onStock, /103\.000 km/);
-  assert.match(onStock, /Automático/);
-  assert.match(onStock, /Linhares/);
-  assert.match(onStock, /\/estoque\/honda-hr-v/);
-  assert.match(onStock, /Ver ficha/);
-  assert.match(onStock, /card-open-label/);
-  assert.match(onStock, /vehicle-card-fact/);
-  assert.match(onStock, /text-brand/);
-  assert.match(onStock, /h-11 w-11/);
-  const facts = onStock.slice(
-    onStock.indexOf("vehicle-card-facts"),
-    onStock.indexOf("vehicle-card-price"),
-  );
-  assert.match(facts, /EXL 1\.8 Flexone/);
-  assert.match(facts, />2016</);
-  assert.match(facts, /103\.000 km/);
-  assert.match(facts, /Automático/);
-  assert.match(facts, /Linhares/);
-  assert.doesNotMatch(onStock, /Tenho interesse/);
-  assert.doesNotMatch(onStock, /Consignado/);
-  assert.doesNotMatch(onStock, /wa\.me/);
-  assert.doesNotMatch(onStock, /Atualizado/);
-
-  const elsewhere = renderToStaticMarkup(
-    createElement(
-      FavoritesProvider,
-      null,
-      createElement(VehicleCard, {
-        vehicle: sampleVehicle({ updatedAt: "2026-03-01T12:00:00.000Z", featured: true }),
-        showDestaque: true,
-      }),
-    ),
-  );
-  assert.match(elsewhere, /Honda HR-V/);
-  assert.match(elsewhere, /Ver ficha/);
-  assert.match(elsewhere, /Destaque/);
-  assert.doesNotMatch(elsewhere, /Tenho interesse/);
-  assert.doesNotMatch(elsewhere, /wa\.me/);
-  assert.doesNotMatch(elsewhere, /Atualizado/);
+test("versão integral e WhatsApp permanecem iguais no estoque e nas outras listas", () => {
+  const vehicle = { model: "Duster", version: "Dynamique 2.0 16V Tech Road 2", yearModel: 2014 };
+  const stock = renderCard(vehicle, true);
+  const standard = renderCard(vehicle);
+  assert.equal(stock, standard);
+  assert.match(stock, />Dynamique 2\.0 16V Tech Road 2</);
+  assert.match(stock, />2014</);
+  assert.match(stock, />Tenho interesse<\/a>/);
+  assert.doesNotMatch(stock, /…|Ver ficha|Atualizado em/);
 });
 
-test("estoque mobile mantém versão e ano completos e restaura interesse no WhatsApp oficial", () => {
-  const html = renderToStaticMarkup(
-    createElement(
-      FavoritesProvider,
-      null,
-      createElement(
-        HideStockCardInterest,
-        null,
-        createElement(VehicleCard, {
-          vehicle: sampleVehicle({
-            model: "Civic",
-            version: "LXR 2.0 FlexOne",
-            yearModel: 2015,
-            km: 106000,
-            price: 74900,
-          }),
-          largePhoto: true,
-        }),
-      ),
-    ),
+test("VehicleGrid entrega o mesmo anúncio em todas as listas, sem uma variante para o estoque", () => {
+  const renderGrid = (photoLayout: "default" | "stock") => renderToStaticMarkup(
+    createElement(FavoritesProvider, null, createElement(VehicleGrid, {
+      vehicles: [sampleVehicle()], photoLayout,
+    })),
   );
-  const mobile = html.slice(html.indexOf('class="stock-mobile-details"'));
-  assert.match(mobile, />LXR 2\.0 FlexOne</);
-  assert.match(mobile, />2015</);
-  assert.match(mobile, /106\.000 km/);
-  assert.match(mobile, /Automático/);
-  assert.match(mobile, /Linhares/);
-  assert.match(mobile, /R\$\s*74\.900/);
-  assert.match(mobile, /href="https:\/\/wa\.me\/5527996330706\?/);
-  assert.match(mobile, />Tenho interesse<\/a>/);
-  assert.ok(mobile.indexOf("Ver ficha") < mobile.indexOf("Tenho interesse"));
-  assert.doesNotMatch(mobile, /…|Atualizado em|99956/);
+  assert.equal(renderGrid("default"), renderGrid("stock"));
+  assert.match(renderGrid("default"), /grid-cols-2/);
+  for (const source of [
+    "app/(site)/page.tsx",
+    "components/site/StockInfiniteList.tsx",
+    "components/site/FavoritesList.tsx",
+    "components/site/SimilarVehicles.tsx",
+  ]) assert.match(readSrc(source), /VehicleGrid/);
 });
 
 test("fato ausente não aparece no HTML do card", () => {
@@ -404,63 +306,12 @@ test("fato ausente não aparece no HTML do card", () => {
   assert.doesNotMatch(html, /Linhares|Aracruz|Serra/);
 });
 
-test("o card não mostra Atualizado em, o preço tem glow suave e o coração fica no canto da foto", () => {
-  const html = renderToStaticMarkup(
-    createElement(
-      FavoritesProvider,
-      null,
-      createElement(VehicleCard, {
-        vehicle: sampleVehicle({ updatedAt: "2026-10-01T12:00:00.000Z" }),
-        largePhoto: true,
-      }),
-    ),
-  );
-  assert.match(html, /text-brand/);
-  assert.match(html, /R\$\s*84\.900/);
-  assert.match(html, /aspect-\[4\/3\]/);
-  assert.match(html, />2016</);
-  assert.match(html, /103\.000 km/);
-  assert.match(html, /Automático/);
-  assert.match(html, /Linhares/);
-  assert.doesNotMatch(html, /Atualizado/);
-  assert.doesNotMatch(html, /bg-asphalt\/70/);
+test("o coração é independente do link e o anúncio não mostra data de atualização", () => {
+  const html = renderCard({ updatedAt: "2026-10-01T12:00:00.000Z" });
   assert.match(html, /vehicle-card-favorite/);
-  assert.match(html, /card-open-label/);
-  const photo = html.indexOf("data-vehicle-photo");
-  const body = html.indexOf("data-vehicle-body");
-  const heart = html.indexOf("nos favoritos");
-  assert.ok(photo >= 0 && heart > photo && body > heart);
-  const css = readSrc("app/globals.css");
-  const priceCss = css.slice(
-    css.indexOf(".vehicle-card-price {"),
-    css.indexOf(".vehicle-card-favorite {"),
-  );
-  assert.match(priceCss, /text-shadow/);
-  assert.doesNotMatch(priceCss, /0 0 (?:40|48|60|80)px/);
-  const buttonCss = css.slice(css.indexOf(".card-open-label {"), css.indexOf(".card-open-label {") + 500);
-  assert.match(buttonCss, /border:\s*1px solid/);
-  assert.match(buttonCss, /width:\s*100%/);
-  assert.match(buttonCss, /justify-content:\s*center/);
-
-  const card = readSrc("components/site/VehicleCard.tsx");
-  const grid = readSrc("components/site/VehicleGrid.tsx");
-  const home = readSrc("app/(site)/page.tsx");
-  const stock = readSrc("components/site/StockInfiniteList.tsx");
-  const similar = readSrc("app/(site)/estoque/[id]/page.tsx");
-  assert.doesNotMatch(card, /formatUpdatedAt/);
-  assert.doesNotMatch(card, /absolute right-1\.5 top-1\.5/);
-  assert.match(grid, /largePhoto=\{stock\}/);
-  assert.match(grid, /return "grid-cols-2 lg:grid-cols-3"/);
-  assert.doesNotMatch(grid, /grid-cols-1 sm:grid-cols-2/);
-  assert.match(grid, /-mx-2 w-\[calc\(100%\+1rem\)\] gap-2 sm:mx-0 sm:w-full sm:gap-4/);
-  assert.match(grid, /mx-auto w-full gap-3 sm:gap-4/);
-  assert.match(
-    readSrc("components/site/VehicleCardSkeleton.tsx"),
-    /largePhoto\s*\?\s*"-mx-2 w-\[calc\(100%\+1rem\)\] gap-2 sm:mx-0 sm:w-full sm:gap-4"/,
-  );
-  assert.match(stock, /photoLayout="stock"/);
-  assert.doesNotMatch(home, /photoLayout="stock"/);
-  assert.doesNotMatch(similar, /photoLayout="stock"/);
+  assert.match(html, /nos favoritos/);
+  assert.match(html, /aspect-\[4\/3\]/);
+  assert.doesNotMatch(html, /Atualizado/);
 });
 
 test("o chat continua com WhatsApp mesmo dentro da lista", () => {

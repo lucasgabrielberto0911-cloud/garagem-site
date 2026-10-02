@@ -502,168 +502,157 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   height: auto;
 }
 
-/* O card completo do estoque usa linhas compartilhadas apenas no celular. */
-.stock-mobile-details {
-  display: none;
+/* Card único: linhas compartilhadas dão o mesmo ritmo aos anúncios do par. */
+.listing-card-grid {
+  width: 100%;
+  margin-inline: 0;
+  column-gap: 0.75rem;
+  row-gap: 0.875rem;
 }
+.listing-card-item,
+.listing-card-item .listing-card {
+  display: grid;
+  grid-row: span 8;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  min-width: 0;
+}
+.listing-card-item .listing-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.875rem;
+  background: #18181b;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.16);
+}
+.listing-card .listing-card-main {
+  display: grid;
+  height: auto;
+  grid-row: span 7;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  min-width: 0;
+  color: var(--cream);
+}
+.listing-card-photo { width: 100%; }
+.listing-card-shade {
+  position: absolute;
+  inset: 50% 0 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.3));
+}
+.listing-card-badges {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.listing-card-badges span {
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.2rem;
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.listing-card-name { padding: 0.75rem 0.625rem 0.25rem; }
+.listing-card-brand {
+  margin: 0 0 0.2rem;
+  color: #c1c1c8;
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.listing-card-title {
+  margin: 0;
+  font-size: clamp(1rem, 4.5vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.listing-card-version {
+  padding: 0 0.625rem 0.625rem;
+  color: #d1d1d7;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+.listing-card-version p { margin: 0; }
+.listing-card-title,
+.listing-card-version,
+.listing-card-fact dd {
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+.listing-card-year-km {
+  display: grid;
+  grid-template-columns: minmax(0, 0.65fr) minmax(0, 1.35fr);
+  gap: 0.25rem;
+  margin: 0 0.625rem 0.25rem;
+}
+.listing-card-fact { margin: 0; min-width: 0; }
+.listing-card-fact dd {
+  margin: 0;
+  padding: 0.3rem 0.35rem;
+  border-radius: 0.25rem;
+  background: rgba(255, 255, 255, 0.055);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.listing-card-transmission { margin: 0 0.625rem 0.375rem; }
+.listing-card-city { margin: 0 0.625rem 0.125rem; }
+.listing-card-city dd {
+  padding: 0.1rem 0;
+  background: none;
+  font-size: 0.625rem;
+  color: #bcbcc4;
+}
+.listing-card-price-row {
+  display: flex;
+  align-items: flex-end;
+  padding: 0.625rem 0.625rem 0.875rem;
+}
+.listing-card-price {
+  margin: 0;
+  font-size: clamp(1.2rem, 5.9vw, 1.7rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 6px rgba(232, 24, 28, 0.25), 0 0 12px rgba(232, 24, 28, 0.1);
+}
+/* WhatsApp continua em uma faixa própria, fora do link da ficha. */
+.listing-card .listing-card-interest a[aria-label^="Tenho interesse"] {
+  min-height: 44px;
+  padding: 0.625rem 0.375rem;
+  line-height: 1.4;
+  border-top-color: rgba(37, 211, 102, 0.18);
+  background: #14231b;
+  font-size: 0.625rem;
+  letter-spacing: 0.02em;
+}
+.listing-card .listing-card-interest a:hover { background: #1a3424; }
 
+/* No celular, ajuda fica no cabeçalho e deixa as duas margens dos cards livres. */
+.mobile-header-help { display: none; }
 @media (max-width: 1023px) {
-  /* A faixa lateral mantém o chat fora das fotos, fatos, preços e botões. */
-  body:has([data-stock-page]) main,
-  body:has([data-stock-page]) footer {
-    padding-right: calc(3.5rem + env(safe-area-inset-right, 0px));
-  }
-
-  body:has([data-stock-page]) .site-chat:not(.is-open) {
-    right: calc(0.375rem + env(safe-area-inset-right, 0px));
-  }
-
-  body:has([data-stock-page]) .site-chat:not(.is-open) .site-chat-launcher {
-    width: 2.75rem;
-    height: 2.75rem;
-    padding: 0;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 6px rgba(0, 0, 0, 0.35);
-  }
-
-  body:has([data-stock-page]) .site-chat:not(.is-open) .site-chat-launcher span {
-    display: none;
-  }
-
-  .stock-page .stock-next-vehicle {
-    max-width: 100%;
-  }
-
-  .stock-card-grid-item,
-  .stock-card-grid-item .vehicle-card-stock {
-    display: grid;
-    grid-row: span 9;
-    grid-template-rows: subgrid;
-    row-gap: 0;
-  }
-
-  .stock-card-grid-item .vehicle-card-stock {
-    border-radius: 0.875rem;
-    border-color: rgba(255, 255, 255, 0.1);
-    background: linear-gradient(160deg, #202023, #151517 70%);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    content-visibility: visible;
-    contain-intrinsic-size: none;
-    container-type: normal;
-  }
-
-  .vehicle-card-stock > [data-stock-card] {
-    bottom: auto;
-    height: auto;
-    aspect-ratio: 4 / 3;
-  }
-
-  .vehicle-card-stock [data-vehicle-photo] {
-    aspect-ratio: 4 / 3;
-  }
-
-  .vehicle-card-stock [data-vehicle-body] {
-    display: none;
-  }
-
-  .stock-mobile-details,
-  .stock-mobile-facts {
-    display: contents;
-  }
-
-  .stock-mobile-title {
-    margin: 0;
-    padding: 0.625rem 0.5rem 0.5rem;
-    font-size: clamp(0.875rem, 4vw, 1.1rem);
-    font-weight: 700;
-    line-height: 1.3;
-    color: var(--cream);
-    overflow-wrap: normal;
-    word-break: normal;
-    hyphens: none;
-  }
-
-  .stock-mobile-fact-row {
-    display: grid;
-    margin: 0 0.5rem 0.25rem;
-    min-width: 0;
-  }
-
-  .stock-mobile-year-km {
-    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
-    gap: 0.25rem;
-  }
-
-  .stock-mobile-fact {
-    display: flex;
-    align-items: center;
-    min-width: 0;
-    padding: 0.3rem 0.375rem;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    border-radius: 0.25rem;
-    background: rgba(255, 255, 255, 0.035);
-  }
-
-  .stock-mobile-fact dd {
-    margin: 0;
-    font-size: 0.625rem;
-    font-weight: 500;
-    line-height: 1.4;
-    color: #dedee2;
-    white-space: normal;
-    overflow-wrap: normal;
-    word-break: normal;
-    hyphens: none;
-  }
-
-  .stock-mobile-version .stock-mobile-fact {
-    border-color: rgba(255, 255, 255, 0.16);
-  }
-
-  .stock-mobile-version dd {
-    font-weight: 600;
-    color: var(--cream);
-  }
-
-  .stock-mobile-price-row {
-    padding: 0.625rem 0.5rem;
-  }
-
-  .stock-mobile-price {
-    margin: 0;
-    font-size: clamp(1.125rem, 5.5vw, 1.625rem);
-    font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: -0.04em;
-    color: var(--brand);
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-    text-shadow: 0 0 6px rgba(232, 24, 28, 0.35), 0 0 12px rgba(232, 24, 28, 0.12);
-  }
-
-  .stock-mobile-view {
-    display: flex;
-    height: auto;
-    min-height: 44px;
-    margin: 0 0.5rem 0.5rem;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    border-radius: 0.375rem;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--cream);
-    background: rgba(255, 255, 255, 0.025);
-  }
-
-  /* Restaura as medidas originais, acima da antiga regra que comprimia o CTA. */
-  .vehicle-card-stock .stock-mobile-interest a[aria-label^="Tenho interesse"] {
-    min-height: 44px;
-    padding-top: 0;
-    padding-bottom: 0;
-    line-height: 1.5;
-  }
+  .mobile-header-help { display: inline-flex; }
+  .site-header-brand img { max-width: min(40vw, 160px); }
+  .site-chat:not(.is-open) { display: none; }
+  .stock-next-vehicle { max-width: 100%; }
+  .listing-card-grid { column-gap: 0.625rem; }
+}
+@media (min-width: 1024px) {
+  .listing-card-name { padding-inline: 1rem; }
+  .listing-card-version { padding-inline: 1rem; }
+  .listing-card-year-km,
+  .listing-card-transmission,
+  .listing-card-city { margin-inline: 1rem; }
+  .listing-card-price-row { padding-inline: 1rem; }
 }
 
 @media (min-width: 1024px) {
@@ -1031,16 +1020,6 @@ body:has([data-ficha-page]) .whatsapp-float {
   text-transform: uppercase;
   color: #f7f5f2;
   touch-action: manipulation;
-}
-
-.vehicle-card-stock {
-  contain-intrinsic-size: auto 360px;
-}
-
-@media (min-width: 640px) {
-  .vehicle-card-stock {
-    contain-intrinsic-size: auto 280px;
-  }
 }
 
 .chip-scroll {
@@ -1503,21 +1482,6 @@ textarea:-webkit-autofill:focus {
     box-shadow 0.2s ease;
 }
 
-/* Cards fora da tela não pintam — a rolagem do estoque no celular não trava. */
-.vehicle-card {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 400px;
-  container-type: inline-size;
-}
-
-/* Preço acompanha a largura do card. O glow é curto e fraco — só destaca, sem neon. */
-.vehicle-card-price {
-  font-size: clamp(1.15rem, 13cqw, 1.7rem);
-  text-shadow:
-    0 0 6px rgba(232, 24, 28, 0.5),
-    0 0 12px rgba(232, 24, 28, 0.24);
-}
-
 /* Coração no canto da foto: ícone pequeno, alvo de 44px, fora do miolo do carro. */
 .vehicle-card-favorite {
   position: absolute;
@@ -1542,98 +1506,11 @@ textarea:-webkit-autofill:focus {
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9));
 }
 
-/* Nome numa linha só, para os dois cards da grade começarem os chips juntos. */
-.vehicle-card-title {
-  height: 1.25em;
-  overflow: hidden;
-  line-height: 1.25;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-/*
- * Duas linhas fixas. Versão, ano e cidade na primeira; km e câmbio na
- * segunda. O lugar não muda de um card para o outro.
- */
-.vehicle-card-facts {
-  display: grid;
-  grid-template-rows: 1rem 1rem;
-  row-gap: 0.125rem;
-  height: calc(2rem + 0.125rem);
-  margin-top: 0.2rem;
-}
-
-.vehicle-card-fact-line {
-  display: grid;
-  column-gap: 0.125rem;
-  height: 1rem;
-  min-width: 0;
-}
-
-.vehicle-card-fact-line-main {
-  grid-template-columns: minmax(0, 1fr) 1.9rem 2.9rem;
-}
-
-.vehicle-card-fact-line-sub {
-  grid-template-columns: 4.15rem 5.6rem;
-  justify-content: start;
-}
-
-.vehicle-card-fact {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: 100%;
-  height: 1rem;
-  min-width: 0;
-  margin: 0;
-  padding: 0 0.12rem;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: transparent;
-}
-
-.vehicle-card-fact dd {
-  overflow: hidden;
-  max-width: 100%;
-  margin: 0;
-  font-family: var(--font-display), sans-serif;
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--cream);
-  text-align: center;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow-wrap: normal;
-  word-break: normal;
-  hyphens: none;
-}
-
-.card-open-label {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  margin-top: 0.375rem;
-  padding: 0.3rem 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: transparent;
-  line-height: 1.2;
-  text-align: center;
-}
-
 @media (hover: hover) and (pointer: fine) {
   .card-lift:hover {
     transform: translateY(-4px);
     border-color: rgba(232, 24, 28, 0.45);
     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
-  }
-
-  .group:hover .card-open-label {
-    border-color: rgba(255, 255, 255, 0.5);
-    color: var(--cream);
   }
 }
 
@@ -1826,10 +1703,8 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
 }
 
 /*
- * Celular estreito: o chip “Ajuda para escolher” fica no canto direito,
- * em cima da segunda coluna. Cada faixa de altura só encolhe o miolo o
- * bastante para foto, preço, filtro e telefone nascerem acima do chip
- * e da barra. Desktop (lg) e o próprio chip não mudam.
+ * Celular estreito: compacta o topo e os filtros para o estoque aparecer cedo.
+ * A ajuda no cabeçalho mantém as duas colunas livres durante a rolagem.
  */
 @media (max-width: 639px) and (max-height: 900px) {
   .stock-page {
@@ -1978,7 +1853,7 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
   }
 }
 
-/* Folga extra: o contador some e o preço / Ver ficha ficam mais baixos no card. */
+/* Filtros mais curtos antes dos anúncios no celular. */
 @media (max-width: 639px) {
   .stock-shell {
     margin-top: 0.25rem;
@@ -1986,19 +1861,6 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
 
   .stock-count {
     display: none;
-  }
-
-  .vehicle-card .card-open-label,
-  .vehicle-card span.uppercase.tracking-wide {
-    min-height: 0;
-    line-height: 1.15;
-  }
-
-  .vehicle-card a[aria-label^="Tenho interesse"] {
-    min-height: 0;
-    padding-top: 0.2rem;
-    padding-bottom: 0.2rem;
-    line-height: 1.15;
   }
 
   .hero-search .chip-scroll {
@@ -2031,18 +1893,6 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
     margin-top: 0;
     font-size: 1.05rem;
     line-height: 1.15;
-  }
-}
-
-@media (max-width: 639px) and (min-height: 701px) {
-  .vehicle-card > a > div:not([class*="aspect-"]) {
-    padding: 0.45rem 0.65rem 0.2rem;
-    gap: 0.2rem;
-  }
-
-  .vehicle-card > a > div:not([class*="aspect-"]) > div:last-child {
-    padding-top: 0.3rem;
-    gap: 0.1rem;
   }
 }
 
