@@ -26,6 +26,7 @@ import {
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export {
+  CITIES_DIRECTORY_PATH,
   SERVICE_CITIES,
   getServiceCity,
   otherServiceCities,

@@ -19,7 +19,7 @@ import {
   telUrl,
   whatsappUrl,
 } from "@/lib/site";
-import { SERVICE_CITIES } from "@/lib/seo";
+import { CITIES_DIRECTORY_PATH } from "@/lib/seo";
 import { getGoogleReviews } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 
@@ -108,26 +108,12 @@ export async function SiteFooter() {
             <h2 className="mt-8 font-display text-sm font-semibold uppercase tracking-wider text-cream">
               Cidades
             </h2>
-            <ul className="mt-4 space-y-1">
-              <li>
-                <Link
-                  href="/seminovos"
-                  className="inline-flex min-h-[36px] items-center text-sm text-muted transition hover:text-cream"
-                >
-                  Todas as cidades
-                </Link>
-              </li>
-              {SERVICE_CITIES.map((city) => (
-                <li key={city.slug}>
-                  <Link
-                    href={`/seminovos/${city.slug}`}
-                    className="inline-flex min-h-[36px] items-center text-sm text-muted transition hover:text-cream"
-                  >
-                    Seminovos em {city.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <Link
+              href={CITIES_DIRECTORY_PATH}
+              className="mt-4 inline-flex min-h-11 items-center justify-center border border-white/15 px-4 text-sm text-cream transition hover:border-brand"
+            >
+              Ver cidades
+            </Link>
           </div>
 
           <div className="hidden sm:block">
@@ -192,7 +178,7 @@ export async function SiteFooter() {
           </div>
         </div>
 
-        {/* Mobile: contato essencial + cidades (SEO e atalho) */}
+        {/* Mobile: contato essencial + atalho para a lista de cidades */}
         <div className="mt-8 space-y-3 text-center sm:hidden">
           {PHONES.map((phone, index) => (
             <a
@@ -211,31 +197,12 @@ export async function SiteFooter() {
             <IconMail className="h-4 w-4 text-brand" />
             {site.email}
           </a>
-          <nav aria-label="Cidades atendidas" className="pt-2">
-            <p className="mb-2 text-[11px] uppercase tracking-wider text-muted">
-              Cidades
-            </p>
-            <ul className="flex flex-wrap justify-center gap-2">
-              <li>
-                <Link
-                  href="/seminovos"
-                  className="inline-flex min-h-[44px] items-center border border-brand/40 bg-asphalt/50 px-3 text-xs uppercase tracking-wider text-cream touch-manipulation"
-                >
-                  Todas
-                </Link>
-              </li>
-              {SERVICE_CITIES.map((city) => (
-                <li key={city.slug}>
-                  <Link
-                    href={`/seminovos/${city.slug}`}
-                    className="inline-flex min-h-[44px] items-center border border-white/10 bg-asphalt/50 px-3 text-xs uppercase tracking-wider text-cream touch-manipulation"
-                  >
-                    {city.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          <Link
+            href={CITIES_DIRECTORY_PATH}
+            className="flex min-h-[48px] items-center justify-center border border-white/10 bg-asphalt/50 text-sm text-cream touch-manipulation"
+          >
+            Ver cidades
+          </Link>
           <p className="pt-1 text-xs text-muted">{site.hours}</p>
         </div>
 

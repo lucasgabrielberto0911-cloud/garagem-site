@@ -10,6 +10,9 @@ export type ServiceCity = {
   faqs: readonly { question: string; answer: string }[];
 };
 
+/** Índice público só com os botões das cidades. O rodapé aponta para cá. */
+export const CITIES_DIRECTORY_PATH = "/cidades";
+
 export const SERVICE_CITIES = [
   {
     slug: "aracruz",
