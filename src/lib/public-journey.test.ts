@@ -79,6 +79,26 @@ test("filtros do estoque no celular alinham rótulo, chips e Filtros sem máscar
   assert.match(readSrc("lib/site.ts"), /label: "\(27\) 99633-0706"/);
 });
 
+test("estoque no celular não trava o body nem esconde a bottom nav", () => {
+  const css = readSrc("app/globals.css");
+  const layout = readSrc("app/(site)/layout.tsx");
+  const shell = layout.slice(layout.indexOf("site-shell"), layout.indexOf("</FavoritesProvider>"));
+  assert.match(shell, /MobileBottomNav/);
+  assert.match(shell, /pb-site-nav/);
+  assert.doesNotMatch(
+    css,
+    /body:has\(\[data-stock-page\]\)[\s\S]{0,240}overflow:\s*hidden/,
+  );
+  assert.doesNotMatch(css, /body:has\(\[data-stock-page\]\) \.site-shell/);
+  assert.doesNotMatch(
+    css,
+    /body:has\(\[data-stock-page\]\) \.pb-site-nav[\s\S]{0,80}display:\s*none/,
+  );
+  assert.match(css, /\.pb-site-nav\s*\{[^}]*padding-bottom:/);
+  assert.match(readSrc("components/site/VehicleGrid.tsx"), /grid-cols-2/);
+  assert.match(readSrc("components/site/MobileBottomNav.tsx"), /fixed inset-x-0 bottom-0/);
+});
+
 test("hero mobile não gasta blur largo nem empurra o estoque com padding morto", () => {
   const css = readSrc("app/globals.css");
   const marker = css.indexOf("Sem blur largo no celular");

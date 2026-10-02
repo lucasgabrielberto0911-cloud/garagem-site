@@ -156,28 +156,13 @@ body {
   }
 
   /*
-   * No estoque do celular a lista rola acima da bottom nav e do chip
-   * “Ajuda para escolher”. Foto, nome, preço e Ver ficha não passam por baixo.
+   * Estoque no celular rola a janela, como o resto do site. A bottom nav
+   * é position:fixed e fica dentro de .site-shell. Travar a altura do body
+   * e fazer o shell rolar mais baixo que a tela esconde a barra no iPhone
+   * (o fixed passa a ser do shell) e deixa a faixa preta. A lista passa
+   * por baixo da barra; .pb-site-nav segue no fluxo para o fim chegar
+   * acima dela. Não esconder a nav para abrir espaço.
    */
-  @media (max-width: 1023px) {
-    body:has([data-stock-page]) {
-      height: 100dvh;
-      overflow: hidden;
-    }
-
-    body:has([data-stock-page]) .site-shell {
-      height: calc(100dvh - 8.25rem - env(safe-area-inset-bottom, 0px));
-      min-height: 0;
-      overflow-x: hidden;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    body:has([data-stock-page]) .pb-site-nav {
-      display: none;
-    }
-  }
 
   /*
    * Folga para o chip “Ajuda para escolher” não cobrir foto, preço,
