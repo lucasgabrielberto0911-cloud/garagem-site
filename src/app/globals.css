@@ -1312,21 +1312,118 @@ textarea:-webkit-autofill:focus {
   container-type: inline-size;
 }
 
-/* Preço acompanha a largura do card: dois por linha no celular, maior no desktop. */
+/* Preço acompanha a largura do card. O glow é curto e fraco — só destaca, sem neon. */
 .vehicle-card-price {
   font-size: clamp(1.15rem, 13cqw, 1.7rem);
+  text-shadow:
+    0 0 6px rgba(232, 24, 28, 0.5),
+    0 0 12px rgba(232, 24, 28, 0.24);
 }
 
-@container (max-width: 200px) {
-  .vehicle-card-version {
-    font-size: 11px;
-  }
+/* Coração no canto da foto: ícone pequeno, alvo de 44px, fora do miolo do carro. */
+.vehicle-card-favorite {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 20;
 }
 
-@container (max-width: 168px) {
-  .vehicle-card-facts {
-    font-size: 11px;
-  }
+.vehicle-card-favorite button::before {
+  content: "";
+  position: absolute;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  background: rgba(13, 13, 15, 0.55);
+  pointer-events: none;
+}
+
+.vehicle-card-favorite svg {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9));
+}
+
+/* Nome numa linha só, para os dois cards da grade começarem os chips juntos. */
+.vehicle-card-title {
+  height: 1.25em;
+  overflow: hidden;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/*
+ * Duas linhas fixas. Versão, ano e cidade na primeira; km e câmbio na
+ * segunda. O lugar não muda de um card para o outro.
+ */
+.vehicle-card-facts {
+  display: grid;
+  grid-template-rows: 1rem 1rem;
+  row-gap: 0.125rem;
+  height: calc(2rem + 0.125rem);
+  margin-top: 0.2rem;
+}
+
+.vehicle-card-fact-line {
+  display: grid;
+  column-gap: 0.125rem;
+  height: 1rem;
+  min-width: 0;
+}
+
+.vehicle-card-fact-line-main {
+  grid-template-columns: minmax(0, 1fr) 1.9rem 2.9rem;
+}
+
+.vehicle-card-fact-line-sub {
+  grid-template-columns: 4.15rem 5.6rem;
+  justify-content: start;
+}
+
+.vehicle-card-fact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0 0.12rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: transparent;
+}
+
+.vehicle-card-fact dd {
+  overflow: hidden;
+  max-width: 100%;
+  margin: 0;
+  font-family: var(--font-display), sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--cream);
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.card-open-label {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin-top: 0.375rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  line-height: 1.2;
+  text-align: center;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1334,6 +1431,11 @@ textarea:-webkit-autofill:focus {
     transform: translateY(-4px);
     border-color: rgba(232, 24, 28, 0.45);
     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
+  }
+
+  .group:hover .card-open-label {
+    border-color: rgba(255, 255, 255, 0.5);
+    color: var(--cream);
   }
 }
 

@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { HideStockCardInterest } from "@/components/site/HideStockCardInterest";
-import { VehicleCard } from "@/components/site/VehicleCard";
+import { clipChipText, VehicleCard } from "@/components/site/VehicleCard";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import { FavoritesProvider } from "@/lib/favorites";
 import { publicCardFacts } from "@/lib/public-card-facts";
@@ -193,8 +193,26 @@ test("card público não ganha selo de consignado nem laudo", () => {
   assert.doesNotMatch(text, /laudo|cautelar|vistoria/i);
 
   const source = readSrc("components/site/VehicleCard.tsx");
+  const css = readSrc("app/globals.css");
+  const factCss = css.slice(
+    css.indexOf(".vehicle-card-facts {"),
+    css.indexOf(".card-open-label {"),
+  );
   assert.match(source, /publicCardFacts/);
-  assert.match(source, /whitespace-nowrap/);
+  assert.match(source, /vehicle-card-fact/);
+  assert.match(factCss, /overflow-wrap:\s*normal/);
+  assert.match(factCss, /word-break:\s*normal/);
+  assert.match(factCss, /grid-template-rows:\s*1rem 1rem/);
+  assert.match(factCss, /vehicle-card-fact-line-main/);
+  assert.match(factCss, /vehicle-card-fact-line-sub/);
+  assert.match(factCss, /white-space:\s*nowrap/);
+  assert.match(factCss, /height:\s*1rem/);
+  assert.match(factCss, /background:\s*transparent/);
+  assert.match(source, /vehicle-card-fact-line-main/);
+  assert.match(source, /vehicle-card-title/);
+  assert.doesNotMatch(factCss, /-webkit-line-clamp|flex-wrap:\s*wrap/);
+  assert.doesNotMatch(factCss, /8\.75rem|2\.125rem|height:\s*1\.5rem/);
+  assert.doesNotMatch(factCss, /anywhere|break-all|break-word/);
   assert.doesNotMatch(source, /overflow-wrap:anywhere/);
   assert.doesNotMatch(source, /Consignado/);
   assert.doesNotMatch(source, /"—"/);
@@ -212,11 +230,13 @@ test("o card não tem WhatsApp nem data de atualização; o chat continua", () =
   assert.match(list, /HideStockCardInterest/);
   assert.match(browse, /HideStockCardInterest/);
   assert.match(card, /StockVehicleLink/);
-  assert.match(card, /justify-center/);
+  assert.match(card, /card-open-label/);
   assert.match(card, /text-brand/);
   assert.match(card, /appearance="ghost"/);
-  assert.match(card, /\["Ano", "Km"\]/);
-  assert.match(card, /\["Câmbio", "Cidade"\]/);
+  assert.match(card, /size="sm"/);
+  assert.match(card, /vehicle-card-fact/);
+  assert.match(card, /label: "Versão"/);
+  assert.doesNotMatch(card, /mt-auto/);
   assert.doesNotMatch(card, /VehicleCardWhatsApp/);
   assert.doesNotMatch(card, /formatUpdatedAt/);
   assert.doesNotMatch(card, /Atualizado em/);
@@ -252,6 +272,15 @@ function sampleVehicle(overrides: Record<string, unknown> = {}) {
   };
 }
 
+test("chip longo ganha reticências no fim da palavra", () => {
+  assert.equal(clipChipText("Automático"), "Automático");
+  assert.equal(clipChipText("Semi-automático"), "Semi-automático");
+  assert.equal(clipChipText("101.000 km"), "101.000 km");
+  assert.equal(clipChipText("Dynamique 2.0 Tech Road 2", 68), "Dynamique…");
+  assert.equal(clipChipText("Comfort Plus", 68), "Comfort Plus");
+  assert.doesNotMatch(clipChipText("Dynamique 2.0 Tech Road 2", 68), /Roa|2\.0/);
+});
+
 test("o card do estoque leva à ficha e não mostra Tenho interesse", () => {
   const vehicle = sampleVehicle();
   const onStock = renderToStaticMarkup(
@@ -274,9 +303,19 @@ test("o card do estoque leva à ficha e não mostra Tenho interesse", () => {
   assert.match(onStock, /Linhares/);
   assert.match(onStock, /\/estoque\/honda-hr-v/);
   assert.match(onStock, /Ver ficha/);
-  assert.match(onStock, /justify-center/);
+  assert.match(onStock, /card-open-label/);
+  assert.match(onStock, /vehicle-card-fact/);
   assert.match(onStock, /text-brand/);
   assert.match(onStock, /h-11 w-11/);
+  const facts = onStock.slice(
+    onStock.indexOf("vehicle-card-facts"),
+    onStock.indexOf("vehicle-card-price"),
+  );
+  assert.match(facts, /EXL 1\.8 Flexone/);
+  assert.match(facts, />2016</);
+  assert.match(facts, /103\.000 km/);
+  assert.match(facts, /Automático/);
+  assert.match(facts, /Linhares/);
   assert.doesNotMatch(onStock, /Tenho interesse/);
   assert.doesNotMatch(onStock, /Consignado/);
   assert.doesNotMatch(onStock, /wa\.me/);
@@ -331,7 +370,7 @@ test("fato ausente não aparece no HTML do card", () => {
   assert.doesNotMatch(html, /Linhares|Aracruz|Serra/);
 });
 
-test("o card não mostra Atualizado em, o preço é vermelho e o coração fica fora da foto", () => {
+test("o card não mostra Atualizado em, o preço tem glow suave e o coração fica no canto da foto", () => {
   const html = renderToStaticMarkup(
     createElement(
       FavoritesProvider,
@@ -351,10 +390,23 @@ test("o card não mostra Atualizado em, o preço é vermelho e o coração fica 
   assert.match(html, /Linhares/);
   assert.doesNotMatch(html, /Atualizado/);
   assert.doesNotMatch(html, /bg-asphalt\/70/);
+  assert.match(html, /vehicle-card-favorite/);
+  assert.match(html, /card-open-label/);
   const photo = html.indexOf("data-vehicle-photo");
   const body = html.indexOf("data-vehicle-body");
   const heart = html.indexOf("nos favoritos");
-  assert.ok(photo >= 0 && body > photo && heart > body);
+  assert.ok(photo >= 0 && heart > photo && body > heart);
+  const css = readSrc("app/globals.css");
+  const priceCss = css.slice(
+    css.indexOf(".vehicle-card-price {"),
+    css.indexOf(".vehicle-card-favorite {"),
+  );
+  assert.match(priceCss, /text-shadow/);
+  assert.doesNotMatch(priceCss, /0 0 (?:40|48|60|80)px/);
+  const buttonCss = css.slice(css.indexOf(".card-open-label {"), css.indexOf(".card-open-label {") + 500);
+  assert.match(buttonCss, /border:\s*1px solid/);
+  assert.match(buttonCss, /width:\s*100%/);
+  assert.match(buttonCss, /justify-content:\s*center/);
 
   const card = readSrc("components/site/VehicleCard.tsx");
   const grid = readSrc("components/site/VehicleGrid.tsx");

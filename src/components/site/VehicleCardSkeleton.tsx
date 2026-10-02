@@ -6,19 +6,21 @@ export function VehicleCardSkeleton({ largePhoto = false }: { largePhoto?: boole
           largePhoto ? "aspect-[4/3] sm:aspect-[16/10]" : "aspect-[16/10]"
         }`}
       />
-      <div className="px-2.5 pb-1 sm:px-3">
-        <div className="flex h-11 items-center justify-between">
-          <div className="skeleton h-4 w-16" />
-          <div className="skeleton h-4 w-4" />
+      <div className="px-2.5 pb-2 pt-1.5 sm:px-3">
+        <div className="skeleton h-5 w-3/4" />
+        <div className="mt-1 grid h-[calc(2rem+0.125rem)] grid-rows-2 gap-0.5">
+          <div className="grid grid-cols-[minmax(0,1fr)_1.9rem_2.9rem] gap-0.5">
+            <div className="border border-white/15" />
+            <div className="border border-white/15" />
+            <div className="border border-white/15" />
+          </div>
+          <div className="grid grid-cols-[4.15rem_5.6rem] justify-start gap-0.5">
+            <div className="border border-white/15" />
+            <div className="border border-white/15" />
+          </div>
         </div>
-        <div className="skeleton h-4 w-3/4" />
-        <div className="skeleton mt-1.5 h-3 w-full" />
-        <div className="skeleton mt-1 h-3 w-2/3" />
-        <div className="skeleton mt-1 h-3 w-4/5" />
-        <div className="mt-3 border-t border-white/10 pt-2">
-          <div className="skeleton h-7 w-28" />
-          <div className="skeleton mx-auto mt-3 h-3 w-16" />
-        </div>
+        <div className="skeleton mt-1.5 h-6 w-24" />
+        <div className="mt-1.5 h-7 w-full border border-white/20" />
       </div>
     </div>
   );
