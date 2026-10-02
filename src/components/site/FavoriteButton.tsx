@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import { useFavorites } from "@/lib/favorites";
 import { trackAddToWishlist, trackPwaEvent } from "@/lib/meta-pixel";
 import { enqueueIntent } from "@/lib/offline-queue";
@@ -50,7 +50,7 @@ export function FavoriteButton({
       }
       setPulse(true);
       window.setTimeout(() => setPulse(false), 320);
-      toast.success(
+      notifySuccess(
         added ? `${label} salvo nos favoritos` : `${label} removido dos favoritos`,
         added
           ? {
@@ -66,7 +66,7 @@ export function FavoriteButton({
             },
       );
     } catch {
-      toast.error("Não foi possível atualizar os favoritos neste aparelho.", {
+      notifyError("Não foi possível atualizar os favoritos neste aparelho.", {
         action: {
           label: "Tentar de novo",
           onClick: () => applyToggle(),
@@ -107,17 +107,13 @@ export function FavoriteButton({
       onClick={onClick}
       aria-pressed={active}
       aria-label={active ? `Remover ${label} dos favoritos` : `Salvar ${label} nos favoritos`}
-        className={`flex items-center justify-center border backdrop-blur transition touch-manipulation ${
-        compact ? "h-11 w-11" : "h-11 w-11"
-      } ${
-        active
-          ? "border-brand bg-brand/20 text-brand"
-          : "border-white/20 bg-asphalt/70 text-cream hover:border-brand"
+      className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center bg-transparent transition touch-manipulation ${
+        active ? "text-brand" : "text-cream/90 hover:text-brand"
       } ${className}`}
     >
       <Heart
         filled={active}
-        className={`${compact ? "h-3.5 w-3.5" : "h-[18px] w-[18px]"} ${
+        className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} ${
           pulse ? "animate-fade-in-scale" : ""
         }`}
       />

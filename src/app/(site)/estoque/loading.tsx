@@ -4,7 +4,7 @@ import { Container, PageHeader } from "@/components/site/ui";
 /** Primeiro paint com título real — evita FCP só de blocos cinza. */
 export default function EstoqueLoading() {
   return (
-    <div className="py-10 lg:py-12">
+    <div data-stock-page="" className="stock-page py-4 lg:py-12">
       <Container>
         <PageHeader
           eyebrow="Estoque"
@@ -12,7 +12,7 @@ export default function EstoqueLoading() {
           description="Vistoria e procedência em cada anúncio. Use os filtros para achar o seu."
           headingAs="p"
         />
-        <div className="mt-8 lg:grid lg:grid-cols-[minmax(300px,340px)_minmax(0,1fr)] lg:items-start lg:gap-8">
+        <div className="mt-5 lg:mt-8 lg:grid lg:grid-cols-[minmax(300px,340px)_minmax(0,1fr)] lg:items-start lg:gap-8">
           <div className="h-28 border border-white/10 bg-ink lg:h-[70vh]" />
           <div>
             <EstoqueBrowseFallback />

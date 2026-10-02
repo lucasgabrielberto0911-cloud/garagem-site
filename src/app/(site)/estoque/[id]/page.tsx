@@ -4,8 +4,8 @@ import { preload } from "react-dom";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import { FichaSectionNav } from "@/components/site/FichaSectionNav";
+import { SimilarVehicles } from "@/components/site/SimilarVehicles";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
-import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
 import {
   hasMobileFichaSpecs,
@@ -18,7 +18,6 @@ import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { StockBackLink } from "@/components/site/StockBackLink";
 import { VehicleLeadHit, VehicleViewContent } from "@/components/site/VehiclePixel";
 import { Container, WhatsAppButton } from "@/components/site/ui";
-import { IconArrowRight } from "@/components/site/icons";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
@@ -226,6 +225,7 @@ export default async function VehicleDetailPage({
       4,
       vehicle.category,
       vehicle.price,
+      display.transmission,
     ),
     getVehicleConditions(),
     getGoogleReviews(),
@@ -320,6 +320,7 @@ export default async function VehicleDetailPage({
               ou o{" "}
               <Link
                 href="/estoque"
+                prefetch={false}
                 className="font-medium text-brand underline-offset-4 hover:underline"
               >
                 estoque disponível
@@ -337,11 +338,11 @@ export default async function VehicleDetailPage({
             aria-label="Você está aqui"
             className="text-xs text-muted sm:text-center"
           >
-            <Link href="/" className="transition hover:text-cream">
+            <Link href="/" prefetch={false} className="transition hover:text-cream">
               Início
             </Link>
             <span className="mx-2">/</span>
-            <Link href="/estoque" className="transition hover:text-cream">
+            <Link href="/estoque" prefetch={false} className="transition hover:text-cream">
               Estoque
             </Link>
             <span className="mx-2">/</span>
@@ -437,6 +438,7 @@ export default async function VehicleDetailPage({
               {sold ? (
                 <Link
                   href={related.length > 0 ? "#mesma-faixa" : "/estoque"}
+                  prefetch={false}
                   className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-asphalt transition hover:bg-brand-orange"
                 >
                   {related.length > 0 ? "Ver na mesma faixa" : "Ver estoque disponível"}
@@ -555,6 +557,7 @@ export default async function VehicleDetailPage({
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
                     <Link
                       href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
+                      prefetch={false}
                       className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline"
                     >
                       Ou preencha a avaliação do seu usado
@@ -666,50 +669,6 @@ export default async function VehicleDetailPage({
           }
         />
 
-        {related.length > 0 ? (
-          <section
-            id="mesma-faixa"
-            className="mt-10 scroll-mt-24 border-t border-white/5 pt-8 sm:mt-12 sm:pt-10"
-          >
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="font-display text-lg font-bold tracking-tight text-cream sm:text-xl">
-                  {sameBandTitle}
-                </h2>
-                <p className="mt-1 max-w-xl text-sm text-muted">
-                  {sold
-                    ? "Este já foi. Estas opções estão no estoque agora — ficha ou WhatsApp."
-                    : "Se este não fechar, tem outros na mesma faixa. Abra a ficha ou chame no WhatsApp."}
-                </p>
-              </div>
-              <Link
-                href={sameBandHref}
-                className="inline-flex min-h-[44px] items-center gap-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
-              >
-                Ver a faixa no estoque
-                <IconArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-            <div className="mt-5">
-              <VehicleGrid vehicles={related} whatsappCampaign="ficha" />
-            </div>
-            <div className="mt-5">
-              <WhatsAppButton
-                trackingLabel="ficha-mesma-faixa"
-                campaign="ficha"
-                content={fichaTrack.content}
-                vehicleId={vehicle.id}
-                slug={canonicalSlug}
-                message={whatsapp.sameBand}
-                variant="outline"
-                className="w-full sm:w-auto"
-              >
-                Pedir outros nesta faixa
-              </WhatsAppButton>
-            </div>
-          </section>
-        ) : null}
-
         <div className="mt-10 sm:mt-12">
           <MissingModelForm
             idPrefix="ficha"
@@ -724,6 +683,24 @@ export default async function VehicleDetailPage({
             }
           />
         </div>
+
+        <SimilarVehicles
+          vehicles={related}
+          title={sameBandTitle}
+          description={
+            sold
+              ? "Este já foi. Estas opções estão no estoque agora — abra a ficha."
+              : "Se este não fechar, estes estão na mesma faixa. Abra a ficha."
+          }
+          stockHref={sameBandHref}
+          whatsapp={{
+            message: whatsapp.sameBand,
+            trackingLabel: "ficha-mesma-faixa",
+            content: fichaTrack.content,
+            vehicleId: vehicle.id,
+            slug: canonicalSlug,
+          }}
+        />
       </Container>
 
       <VehicleMobileBar

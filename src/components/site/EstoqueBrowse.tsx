@@ -12,6 +12,7 @@ import { HideStockCardInterest } from "@/components/site/HideStockCardInterest";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { SiteLeadHit, StockSearchPixel } from "@/components/site/VehiclePixel";
 import { WhatsAppButton } from "@/components/site/ui";
+import { restoreStockScroll } from "@/lib/stock-return";
 import { formatStockWaitlistQuery, stockEmptyWhatsAppCta } from "@/lib/stock-waitlist";
 import {
   parseStockFilters,
@@ -81,14 +82,14 @@ export function EstoqueBrowseFallback({
 
   return (
     <>
-      <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
+      <p className="stock-count mt-1 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
         {vehicles.length > 0
           ? `${total} ${total === 1 ? "veículo no estoque" : "veículos no estoque"} · sem filtros${
               total > vehicles.length ? " · role para ver todos" : ""
             }`
           : "Atualizando o estoque…"}
       </p>
-      <div className="mt-4">
+      <div className="mt-1 lg:mt-4">
         {vehicles.length > 0 ? (
           <StockReturnCapture returnTo="/estoque">
             <HideStockCardInterest>
@@ -97,11 +98,12 @@ export function EstoqueBrowseFallback({
                 priorityCount={2}
                 returnTo="/estoque"
                 whatsappCampaign="estoque"
+                photoLayout="stock"
               />
             </HideStockCardInterest>
           </StockReturnCapture>
         ) : (
-          <VehicleCardSkeletonGrid count={6} />
+          <VehicleCardSkeletonGrid count={6} largePhoto />
         )}
       </div>
     </>
@@ -195,17 +197,7 @@ export function EstoqueBrowse({
   }, [filterKey, remote, initialStock, params]);
 
   useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem("garagem:estoque-scroll");
-      if (!saved) return;
-      sessionStorage.removeItem("garagem:estoque-scroll");
-      const top = Number(saved);
-      if (Number.isFinite(top) && top > 0) {
-        window.requestAnimationFrame(() => window.scrollTo(0, top));
-      }
-    } catch {
-      // private mode
-    }
+    restoreStockScroll();
   }, []);
 
   const returnTo = buildReturnTo(params);
@@ -234,7 +226,7 @@ export function EstoqueBrowse({
         </div>
       ) : null}
 
-      <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
+      <p className="stock-count mt-1 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
         {loading
           ? "Atualizando o estoque…"
           : filtered
@@ -245,9 +237,9 @@ export function EstoqueBrowse({
           : ""}
       </p>
 
-      <div className="mt-4" data-estoque-list="" aria-live="polite">
+      <div className="mt-1 lg:mt-4" data-estoque-list="" aria-live="polite">
         {loading ? (
-          <VehicleCardSkeletonGrid count={6} />
+          <VehicleCardSkeletonGrid count={6} largePhoto />
         ) : (
           <StockInfiniteList
             key={filterKey}

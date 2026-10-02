@@ -9,11 +9,13 @@ export function StockVehicleLink({
   href,
   ariaLabel,
   children,
+  className = "",
 }: {
   href: string;
   returnTo?: string;
   ariaLabel: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <Link
@@ -21,7 +23,10 @@ export function StockVehicleLink({
       prefetch={false}
       data-stock-card=""
       aria-label={ariaLabel}
-      className="flex h-full flex-col outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt"
+      className={
+        className ||
+        "flex h-full flex-col outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt"
+      }
     >
       {children}
     </Link>

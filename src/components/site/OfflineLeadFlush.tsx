@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { toast } from "sonner";
+import { notify, notifySuccess } from "@/lib/notify";
 import { createSellLead } from "@/app/(site)/vender/actions";
 import { trackPwaEvent } from "@/lib/meta-pixel";
 import {
@@ -42,7 +42,7 @@ async function flushQueue() {
       if (result.ok) {
         await deleteIntent(item.id);
         trackPwaEvent("PwaOfflineFlushed", { kind: "sell" });
-        toast.success("Enviamos o pedido de avaliação que ficou guardado.");
+        notifySuccess("Enviamos o pedido de avaliação que ficou guardado.");
       }
     } catch {
       break;
@@ -56,13 +56,13 @@ async function flushQueue() {
     await deleteIntent(first.id);
     trackPwaEvent("PwaOfflineFlushed", { kind: "whatsapp" });
     const remaining = whatsapp.length - 1;
-    toast.success(
+    notifySuccess(
       remaining > 0
         ? `Abrimos o WhatsApp. Ainda há ${remaining} recado(s) na fila.`
         : "Abrimos o WhatsApp com o recado que ficou guardado.",
     );
   } else {
-    toast("Há um recado de interesse pronto. Toque para abrir o WhatsApp.", {
+    notify("Há um recado de interesse pronto. Toque para abrir o WhatsApp.", {
       action: {
         label: "Abrir",
         onClick: () => {

@@ -361,6 +361,7 @@ export function VehicleMobileBlocks({
         {!sold ? (
           <Link
             href={`/vender?interesse=${vehicleId}&label=${encodeURIComponent(fullLabel)}`}
+            prefetch={false}
             className="mt-3 inline-flex min-h-11 items-center text-sm text-muted underline-offset-4 hover:text-cream hover:underline"
           >
             Ou preencha a avaliação do seu usado

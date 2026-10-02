@@ -40,6 +40,11 @@ test("filtros viram frase natural para o WhatsApp", () => {
     /Honda Civic, até R\$\s*80\.000/,
   );
   assert.equal(formatStockWaitlistQuery({ city: "vitoria" }), "");
+  assert.match(
+    formatStockWaitlistQuery({ transmission: "automatico" }),
+    /^automático$/,
+  );
+  assert.match(formatStockWaitlistQuery({ transmission: "manual" }), /^manual$/);
 });
 
 test("filtro vazio manda para o WhatsApp com campanha filtro, não home", () => {

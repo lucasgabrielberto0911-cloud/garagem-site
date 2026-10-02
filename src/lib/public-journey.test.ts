@@ -27,7 +27,7 @@ test("cidade do veículo entra no filtro, na API e no chip mobile", () => {
   assert.match(browse, /STOCK_FILTER_KEYS/);
   assert.match(browse, /city: params\.city/);
   assert.match(where, /stockCityFilter\(filters\.city\)/);
-  assert.match(vehicles, /stock-page-v10/);
+  assert.match(vehicles, /stock-page-v12/);
   assert.doesNotMatch(filters, /Vitória/);
 });
 
@@ -46,6 +46,36 @@ test("landing de cidade lista o estoque inteiro e não filtra pela cidade", () =
   );
   assert.match(showcase, /status: "disponivel"/);
   assert.doesNotMatch(showcase, /locationCity|stockCityFilter|pickCityShowcase/);
+});
+
+test("filtros do estoque no celular alinham rótulo, chips e Filtros sem máscara", () => {
+  const filters = readSrc("components/site/StockFilters.tsx");
+  const css = readSrc("app/globals.css");
+  const barStart = filters.indexOf("data-stock-filters");
+  const barEnd = filters.indexOf('id="painel-filtros"');
+  assert.ok(barStart > 0 && barEnd > barStart);
+  const bar = filters.slice(barStart, barEnd);
+  assert.match(bar, /MobileChipRow label="Cidade"/);
+  assert.match(bar, /MobileChipRow label="Faixa"/);
+  assert.match(bar, /label="Marca"/);
+  const faixa = bar.slice(bar.indexOf('label="Faixa"'), bar.indexOf('label="Marca"'));
+  assert.doesNotMatch(faixa, /stock-chip-action/);
+  assert.match(bar, /stock-chip-action/);
+  assert.match(bar, /Filtros/);
+  assert.doesNotMatch(bar, /chip-scroll/);
+  assert.match(readSrc("lib/stock-chip-track.ts"), /chipTrackInsets/);
+  assert.match(filters, /Até 30 mil/);
+  assert.match(filters, /Até 50 mil/);
+  assert.match(filters, /50 a 80 mil/);
+  assert.match(filters, /80 a 120 mil/);
+  assert.match(filters, /Acima de 120 mil/);
+  assert.match(css, /\.stock-chip-row\s*\{[^}]*align-items:\s*center/);
+  assert.match(css, /\.stock-chip-row\s*\{[^}]*height:\s*2\.75rem/);
+  assert.match(css, /\.stock-chip-action\s*\{[^}]*height:\s*2\.75rem/);
+  const track = css.slice(css.indexOf(".stock-chip-track {"), css.indexOf(".stock-chip-action"));
+  assert.doesNotMatch(track, /mask-image/);
+  assert.doesNotMatch(filters, /Confirmado neste anúncio/);
+  assert.match(readSrc("lib/site.ts"), /label: "\(27\) 99633-0706"/);
 });
 
 test("hero mobile não gasta blur largo nem empurra o estoque com padding morto", () => {

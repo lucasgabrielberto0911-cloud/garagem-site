@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import { IconWhatsApp } from "@/components/site/icons";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { site, whatsappContentFromVehicle, whatsappUrl } from "@/lib/site";
@@ -28,10 +28,10 @@ export function ShareVehicle({ title, path, vehicleId, className = "" }: Props) 
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      toast.success("Link copiado");
+      notifySuccess("Link copiado");
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Não foi possível copiar o link");
+      notifyError("Não foi possível copiar o link");
     }
   }
 

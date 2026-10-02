@@ -41,6 +41,8 @@ export function Container({
 const SPACING = {
   default: "py-14 lg:py-24",
   tight: "py-8 lg:py-16",
+  /** Home: menos vão entre loja, estoque e atendimento. */
+  snug: "py-6 lg:py-9",
   none: "",
 } as const;
 
@@ -68,24 +70,31 @@ export function SectionHeading({
   eyebrow,
   title,
   description,
+  compact = false,
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
+  /** No celular, título curto — a descrição volta no desktop. */
+  compact?: boolean;
 }) {
   return (
-    <div className="text-center">
+    <div className="text-left">
       {eyebrow ? (
-        <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
+        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
           {eyebrow}
         </p>
       ) : null}
-      <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl lg:text-4xl">
+      <h2 className="mt-1 font-display text-xl font-semibold leading-tight tracking-tight text-cream sm:text-2xl">
         {title}
       </h2>
-      <div className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
+      <div className="mt-2 h-px w-8 bg-brand" aria-hidden="true" />
       {description ? (
-        <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
+        <p
+          className={`max-w-2xl text-sm leading-snug text-muted ${
+            compact ? "mt-2 hidden lg:block" : "mt-2"
+          }`}
+        >
           {description}
         </p>
       ) : null}
@@ -99,12 +108,15 @@ export function PageHeader({
   title,
   description,
   headingAs = "h1",
+  compact = false,
 }: {
   eyebrow: string;
   title: string;
   description?: string;
   /** Use `p` no loading.tsx para não duplicar H1 com a página. */
   headingAs?: "h1" | "p";
+  /** Título e texto mais curtos no celular, para caber acima do chip de ajuda. */
+  compact?: boolean;
 }) {
   const Heading = headingAs;
   return (
@@ -112,12 +124,16 @@ export function PageHeader({
       <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
         {eyebrow}
       </p>
-      <Heading className="mt-2 font-display text-3xl font-bold tracking-tight text-cream sm:text-4xl">
+      <Heading
+        className={`mt-1.5 font-display font-bold leading-tight tracking-tight text-cream sm:text-4xl lg:mt-2 ${
+          compact ? "text-2xl" : "text-3xl"
+        }`}
+      >
         {title}
       </Heading>
-      <div className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
+      <div className="mx-auto mt-2.5 h-0.5 w-16 bg-brand-gradient lg:mt-4" aria-hidden="true" />
       {description ? (
-        <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-snug text-muted sm:text-base lg:mt-5 lg:leading-relaxed">
           {description}
         </p>
       ) : null}
@@ -199,6 +215,7 @@ export function ButtonLink({
   return (
     <Link
       href={href}
+      prefetch={false}
       className={`inline-flex items-center justify-center gap-2.5 font-display font-semibold uppercase tracking-wide transition touch-manipulation ${sizing} ${look} ${className}`}
     >
       {children}

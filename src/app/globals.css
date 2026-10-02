@@ -22,6 +22,22 @@
   --ficha-sticky-bar: calc(5.75rem + env(safe-area-inset-bottom, 0px));
   /* Âncoras Fotos / Especificações / Detalhes. A dobra do celular desconta esta faixa. */
   --ficha-section-nav: 2.75rem;
+  /*
+   * Chip “Ajuda para escolher” fechado no celular: h-11 (2.75rem),
+   * acima da bottom nav (4.5rem) com 0.75rem de folga. De sm até o
+   * desktop o botão é h-14.
+   */
+  --help-bubble-h: 2.75rem;
+  --help-bubble-gap: 0.75rem;
+  --site-bottom-nav: 4.5rem;
+  /* Respiro entre o conteúdo e o chip — foto, preço, chip de filtro e telefone. */
+  --help-bubble-clear: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --help-bubble-h: 3.5rem;
+  }
 }
 
 @media (max-width: 1023px) {
@@ -140,13 +156,61 @@ body {
   }
 
   /*
-   * Folga para o chip “Ajuda para escolher” não cobrir o último card /
-   * CTA de WhatsApp em estoque, contato e FAQ. Ficha e banner de cookies
-   * já escondem o FAB fechado.
+   * No estoque do celular a lista rola acima da bottom nav e do chip
+   * “Ajuda para escolher”. Foto, nome, preço e Ver ficha não passam por baixo.
+   */
+  @media (max-width: 1023px) {
+    body:has([data-stock-page]) {
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    body:has([data-stock-page]) .site-shell {
+      height: calc(100dvh - 8.25rem - env(safe-area-inset-bottom, 0px));
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    body:has([data-stock-page]) .pb-site-nav {
+      display: none;
+    }
+  }
+
+  /*
+   * Folga para o chip “Ajuda para escolher” não cobrir foto, preço,
+   * Ver ficha, filtro ou telefone no fim da rolagem. A barra de baixo entra
+   * na conta. Ficha e banner de cookies já escondem o FAB fechado.
    */
   @media (max-width: 1023px) {
     body:not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])):not(:has(.site-consent)) .pb-site-nav {
-      padding-bottom: calc(4.5rem + 4.25rem + env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(
+        var(--site-bottom-nav) + var(--help-bubble-gap) + var(--help-bubble-h) +
+          var(--help-bubble-clear) + env(safe-area-inset-bottom, 0px)
+      );
+    }
+
+    /*
+     * Contato e vender: o chip “Ajuda para escolher” (h-11) fica 0.75rem
+     * acima da bottom nav. O fim da página sobe essa pilha inteira, com
+     * 1.5rem de leitura, para o telefone do rodapé não parar embaixo do chip.
+     */
+    body:has([data-clear-fab]):not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])):not(:has(.site-consent)) .pb-site-nav {
+      padding-bottom: calc(4.5rem + 0.75rem + 2.75rem + 1.5rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  /*
+   * Primeira dobra de contato/vender no celular: o miolo termina acima do
+   * chip e da bottom nav. O que vem depois começa fora da tela.
+   */
+  @media (max-width: 1023px) {
+    .clear-fab-screen {
+      box-sizing: border-box;
+      min-height: calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px));
+      padding-bottom: calc(4.5rem + 0.75rem + 2.75rem + 1rem + env(safe-area-inset-bottom, 0px));
     }
   }
 
@@ -345,6 +409,24 @@ body {
 /* Hero staggered entrance */
 .hero-brand {
   animation: fadeInScale 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Wordmark do hero menor que o splash — o header já carrega a marca. */
+.hero-brand img {
+  width: min(40vw, 132px);
+  height: auto;
+}
+
+@media (min-width: 640px) {
+  .hero-brand img {
+    width: 168px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-brand img {
+    width: 196px;
+  }
 }
 
 .hero-text {
@@ -608,6 +690,92 @@ body:has([data-ficha-page]) .whatsapp-float {
   }
 }
 
+.stock-chip-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stock-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+}
+
+.stock-chip-label {
+  display: flex;
+  align-items: center;
+  flex: 0 0 2.875rem;
+  height: 2.75rem;
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #b4b4ba;
+}
+
+.stock-chip-track {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 2.75rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+
+.stock-chip-track > * {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.stock-chip-track > button {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.stock-chip-action {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  flex: 0 0 auto;
+  height: 2.75rem;
+  margin: 0;
+  padding: 0 0.625rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #17171a;
+  font-family: var(--font-display), sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #f7f5f2;
+  touch-action: manipulation;
+}
+
+.vehicle-card-stock {
+  contain-intrinsic-size: auto 360px;
+}
+
+@media (min-width: 640px) {
+  .vehicle-card-stock {
+    contain-intrinsic-size: auto 280px;
+  }
+}
+
 .chip-scroll {
   display: flex;
   align-items: center;
@@ -642,39 +810,6 @@ body:has([data-ficha-page]) .whatsapp-float {
   flex: 0 0 2.25rem;
 }
 
-.step-scroll {
-  display: flex;
-  gap: 0.75rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 0.25rem;
-  padding-right: 0.25rem;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
-  -webkit-mask-image: linear-gradient(
-    to right,
-    #000 0,
-    #000 calc(100% - 1.75rem),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    #000 0,
-    #000 calc(100% - 1.75rem),
-    transparent 100%
-  );
-}
-
-.step-scroll::after {
-  content: "";
-  flex: 0 0 2rem;
-}
-
-.step-scroll > * {
-  scroll-snap-align: start;
-}
-
 @media (min-width: 640px) {
   .chip-scroll {
     flex-wrap: wrap;
@@ -682,6 +817,11 @@ body:has([data-ficha-page]) .whatsapp-float {
     justify-content: center;
     padding-bottom: 0;
     scroll-snap-type: none;
+  }
+
+  /* Home: a faixa segue o título do estoque, alinhada à esquerda. */
+  .chip-scroll.hero-chips {
+    justify-content: flex-start;
   }
 
   .chip-scroll::after {
@@ -721,22 +861,6 @@ body:has([data-ficha-page]) .whatsapp-float {
   display: block !important;
   content: "";
   flex: 0 0 1.5rem;
-}
-
-@media (min-width: 1024px) {
-  .step-scroll {
-    flex-direction: column;
-    overflow: visible;
-    scroll-snap-type: none;
-    gap: 1.25rem;
-    padding-bottom: 0;
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
-
-  .step-scroll::after {
-    display: none;
-  }
 }
 
 .site-chat-panel {
@@ -971,7 +1095,7 @@ textarea:-webkit-autofill:focus {
   position: absolute;
   border-radius: 9999px;
   filter: blur(56px);
-  opacity: 0.85;
+  opacity: 0.42;
   backface-visibility: hidden;
 }
 
@@ -1312,6 +1436,227 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+/*
+ * Celular estreito: o chip “Ajuda para escolher” fica no canto direito,
+ * em cima da segunda coluna. Cada faixa de altura só encolhe o miolo o
+ * bastante para foto, preço, filtro e telefone nascerem acima do chip
+ * e da barra. Desktop (lg) e o próprio chip não mudam.
+ */
+@media (max-width: 639px) and (max-height: 900px) {
+  .stock-page {
+    padding-top: 0.25rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .stock-page header > p:last-child {
+    display: none;
+  }
+
+  .stock-page header h1,
+  .stock-page header > p.font-display.text-3xl {
+    margin-top: 0.25rem;
+    font-size: 1.65rem;
+    line-height: 1.1;
+  }
+
+  .stock-page header > div {
+    margin-top: 0.5rem;
+  }
+
+  .stock-mobile-filters {
+    margin-top: 0.25rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    row-gap: 0.25rem;
+  }
+
+  .hero-red-black > .mx-auto {
+    padding-top: 0.25rem;
+    padding-bottom: 0;
+  }
+
+  .hero-brand img {
+    width: min(40vw, 148px);
+  }
+
+  .hero-text {
+    margin-top: 0.25rem;
+  }
+
+  .hero-lead,
+  .hero-help {
+    display: none;
+  }
+
+  .hero-cta,
+  .hero-search {
+    margin-top: 0.5rem;
+  }
+
+  .hero-search form {
+    padding: 0.35rem;
+  }
+
+  .hero-search input {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+  }
+
+  .hero-search .chip-scroll {
+    margin-top: 0.25rem;
+  }
+
+  #destaques {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  #destaques h2 {
+    margin-top: 0;
+    font-size: 1.15rem;
+  }
+
+  #destaques .mt-3 {
+    margin-top: 0.25rem;
+  }
+}
+
+@media (max-width: 639px) and (min-height: 901px) {
+  .hero-help {
+    display: none;
+  }
+
+  .hero-lead {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .hero-red-black > .mx-auto {
+    padding-top: 0.5rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .hero-text,
+  .hero-cta,
+  .hero-search {
+    margin-top: 0.5rem;
+  }
+
+  .hero-search .chip-scroll {
+    margin-top: 0.35rem;
+  }
+
+  #destaques {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .contact-page {
+    padding-top: 1rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .contact-hero {
+    margin-top: 0.75rem;
+    padding: 1rem;
+  }
+
+  .contact-hero h2 {
+    margin-top: 0.5rem;
+  }
+
+  .contact-hero > p {
+    margin-top: 0.5rem;
+  }
+
+  .contact-hero > div {
+    margin-top: 0.75rem;
+  }
+
+  .contact-more {
+    margin-top: 0.75rem;
+  }
+
+  .contact-channel-grid {
+    margin-top: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .contact-channel-grid > div {
+    padding: 0.75rem;
+  }
+}
+
+/* Folga extra: o contador some e o preço / Ver ficha ficam mais baixos no card. */
+@media (max-width: 639px) {
+  .stock-shell {
+    margin-top: 0.25rem;
+  }
+
+  .stock-count {
+    display: none;
+  }
+
+  .vehicle-card .card-open-label,
+  .vehicle-card span.uppercase.tracking-wide {
+    min-height: 0;
+    line-height: 1.15;
+  }
+
+  .vehicle-card a[aria-label^="Tenho interesse"] {
+    min-height: 0;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    line-height: 1.15;
+  }
+
+  .hero-search .chip-scroll {
+    gap: 0.35rem;
+    -webkit-mask-image: none;
+    mask-image: none;
+    padding-bottom: 0;
+    scrollbar-width: none;
+  }
+
+  .hero-search .chip-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hero-search .chip-scroll::after {
+    display: none;
+  }
+
+  #destaques {
+    padding-top: 0.25rem;
+    padding-bottom: 0.5rem;
+  }
+
+  #destaques > div > .text-center > p,
+  #destaques > div > .text-center > div {
+    display: none;
+  }
+
+  #destaques h2 {
+    margin-top: 0;
+    font-size: 1.05rem;
+    line-height: 1.15;
+  }
+}
+
+@media (max-width: 639px) and (min-height: 701px) {
+  .vehicle-card > a > div:not([class*="aspect-"]) {
+    padding: 0.45rem 0.65rem 0.2rem;
+    gap: 0.2rem;
+  }
+
+  .vehicle-card > a > div:not([class*="aspect-"]) > div:last-child {
+    padding-top: 0.3rem;
+    gap: 0.1rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

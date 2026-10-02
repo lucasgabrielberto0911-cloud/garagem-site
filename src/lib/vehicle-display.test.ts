@@ -18,6 +18,11 @@ import {
   shortVersion,
   suggestedTransmission,
   transmissionConflictAlert,
+  transmissionFilterLabel,
+  transmissionFilterOptions,
+  transmissionFilterParam,
+  transmissionFilterValues,
+  transmissionWhere,
 } from "./vehicle-display";
 
 test("aplica acento em Automatico / AUTOMATICO", () => {
@@ -145,6 +150,70 @@ test("Prisma FIPE junk e Fastback Automatico viram versão curta", () => {
     "Audace T200",
   );
   assert.equal(formatTransmissionLabel("Automatico"), "Automático");
+});
+
+test("filtro de câmbio aceita o slug da URL e o rótulo gravado", () => {
+  assert.equal(transmissionFilterParam("automatico"), "automatico");
+  assert.equal(transmissionFilterParam("Automático"), "automatico");
+  assert.equal(transmissionFilterParam("AUTOMATICA"), "automatico");
+  assert.equal(transmissionFilterParam("manual"), "manual");
+  assert.equal(transmissionFilterParam("Manual"), "manual");
+  assert.equal(transmissionFilterParam("CVT"), "cvt");
+  assert.equal(transmissionFilterParam("Semi-automático"), "semi");
+  assert.equal(transmissionFilterParam("  "), "");
+  assert.equal(transmissionFilterLabel("automatico"), "Automático");
+  assert.equal(transmissionFilterLabel("manual"), "Manual");
+
+  const automatic = transmissionFilterValues("automatico");
+  assert.ok(automatic.includes("Automático"));
+  assert.ok(automatic.includes("Automatico"));
+  assert.ok(automatic.includes("CVT"));
+  assert.equal(automatic.some((item) => /manual|semi/i.test(item)), false);
+  assert.equal(automatic.includes("Automatizado"), false);
+
+  const where = transmissionWhere("automatico") as {
+    OR?: Array<{ transmission: { equals: string } }>;
+  };
+  const equals = (where.OR ?? []).map((item) => item.transmission.equals);
+  assert.ok(equals.includes("Automático"));
+  assert.ok(equals.includes("CVT"));
+  assert.equal(equals.includes("Manual"), false);
+  assert.equal(equals.includes("Semi-automático"), false);
+  assert.equal(equals.includes("Automatizado"), false);
+
+  const cvtOnly = transmissionWhere("cvt") as {
+    transmission?: { equals: string };
+    OR?: Array<{ transmission: { equals: string } }>;
+  };
+  const cvtEquals = cvtOnly.OR
+    ? cvtOnly.OR.map((item) => item.transmission.equals)
+    : [cvtOnly.transmission?.equals];
+  assert.ok(cvtEquals.includes("CVT"));
+  assert.equal(cvtEquals.includes("Automático"), false);
+
+  const manual = transmissionWhere("Manual") as {
+    OR?: Array<{ transmission: { equals: string } }>;
+  };
+  const manualEquals = (manual.OR ?? []).map((item) => item.transmission.equals);
+  assert.ok(manualEquals.includes("Manual"));
+  assert.equal(manualEquals.some((item) => /autom/i.test(item)), false);
+
+  assert.deepEqual(transmissionWhere(""), {});
+  assert.deepEqual(transmissionWhere(null), {});
+  assert.deepEqual(transmissionWhere("   "), {});
+
+  const options = transmissionFilterOptions(
+    ["Automático", "Automatico", "Manual", "CVT"],
+    "automatico",
+  );
+  assert.deepEqual(
+    options.map((item) => item.value),
+    ["automatico", "manual", "cvt"],
+  );
+  assert.equal(options[0]?.label, "Automático");
+  const kept = transmissionFilterOptions(["Manual"], "automatico");
+  assert.equal(kept[0]?.value, "automatico");
+  assert.equal(kept.some((item) => item.value === "manual"), true);
 });
 
 test("câmbio alinhado não dispara alerta", () => {

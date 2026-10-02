@@ -31,7 +31,7 @@ export default async function EstoquePage() {
   const listed = catalog.length > 0 ? catalog : stock.vehicles;
 
   return (
-    <div className="py-10 lg:py-12">
+    <div data-stock-page="" className="stock-page py-4 lg:py-12">
       {listed.length > 0 ? (
         <JsonLd
           data={itemListJsonLd(listed, {
@@ -44,7 +44,7 @@ export default async function EstoquePage() {
         <PageHeader
           eyebrow="Estoque"
           title="Veículos disponíveis"
-          description="Vistoria e procedência em cada anúncio. Filtre por marca, modelo, ano, preço ou km e ordene a lista. Se não achar o modelo, deixa o pedido no formulário."
+          description="Vistoria e procedência em cada anúncio. Filtre por marca, modelo, ano, preço, km ou câmbio e ordene a lista. Se não achar o modelo, deixa o pedido no formulário."
         />
 
         <StockBrowseShell

@@ -56,7 +56,9 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /mais em conta se o preço for menor/);
   assert.match(CHAT_SYSTEM_PROMPT, /1 a 3 frases curtas/);
   assert.match(CHAT_SYSTEM_PROMPT, /HANDOFF/);
-  assert.match(CHAT_SYSTEM_PROMPT, /Termine SEMPRE/);
+  assert.match(CHAT_SYSTEM_PROMPT, /WhatsApp só quando um humano/);
+  assert.doesNotMatch(CHAT_SYSTEM_PROMPT, /Termine SEMPRE/);
+  assert.match(CHAT_SYSTEM_PROMPT, /Comparar o estoque não leva link/);
   assert.match(CHAT_SYSTEM_PROMPT, /Não comece com/);
   assert.match(CHAT_SYSTEM_PROMPT, /frase falada de recorte/);
   assert.match(CHAT_SYSTEM_PROMPT, /consultor humano/);
@@ -321,6 +323,28 @@ test("rankByPower coloca 2.0 e TSI na frente de 1.0 e 1.6", () => {
   );
   const byDisplacement = rankByPower([nivus, hb, lancer], "quero 2.0");
   assert.equal(byDisplacement[0]?.model, "Lancer");
+  const cheapSmall = {
+    model: "Mobi",
+    version: "1.0",
+    engine: "1.0",
+    price: 39_900,
+    km: 20_000,
+    category: "carro",
+  };
+  const larger = {
+    model: "Corolla",
+    version: "2.0",
+    engine: "2.0",
+    price: 109_000,
+    km: 80_000,
+    category: "carro",
+  };
+  const byEngineThenPrice = rankByPower(
+    [cheapSmall, larger],
+    "automático forte até 109 mil",
+  );
+  assert.equal(byEngineThenPrice[0]?.model, "Corolla");
+  assert.ok((byEngineThenPrice[0]?.price ?? 0) > (byEngineThenPrice[1]?.price ?? 0));
   assert.ok(
     byDisplacement.findIndex((vehicle) => vehicle.model === "Lancer") <
       byDisplacement.findIndex((vehicle) => vehicle.model === "Nivus"),

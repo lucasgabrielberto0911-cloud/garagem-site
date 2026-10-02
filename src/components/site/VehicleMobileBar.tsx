@@ -210,6 +210,7 @@ export function VehicleMobileBar({
           {sold ? (
             <Link
               href={soldHref}
+              prefetch={false}
               className="inline-flex min-h-12 shrink-0 items-center justify-center bg-brand px-5 py-3 font-display text-sm font-semibold text-asphalt touch-manipulation"
             >
               {soldLabel}

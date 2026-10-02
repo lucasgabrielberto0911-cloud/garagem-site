@@ -97,6 +97,7 @@ function NavItem({
     <li className="flex flex-1">
       <Link
         href={href}
+        prefetch={false}
         aria-current={active ? "page" : undefined}
         className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 py-2.5 transition touch-manipulation ${
           active ? "text-cream" : "text-muted active:text-cream"

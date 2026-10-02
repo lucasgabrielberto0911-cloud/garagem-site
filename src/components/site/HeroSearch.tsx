@@ -15,9 +15,15 @@ const BUDGET_LINKS = [
 /**
  * Formulário nativo GET — busca no estoque sem esperar hidratação.
  */
-export function HeroSearch({ brands = [] }: { brands?: string[] }) {
+export function HeroSearch({
+  brands = [],
+  className = "",
+}: {
+  brands?: string[];
+  className?: string;
+}) {
   return (
-    <div className="mx-auto w-full max-w-xl lg:max-w-2xl">
+    <div className={`w-full ${className}`.trim()}>
       <form
         action="/estoque"
         method="get"
@@ -28,39 +34,40 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
             trackSearch({ content_ids: [], search_string: search });
           }
         }}
-        className="flex flex-col gap-2 border border-white/15 bg-asphalt/95 p-2 transition focus-within:border-brand/60 sm:flex-row sm:bg-asphalt/85 sm:backdrop-blur-md"
+        className="flex flex-row items-stretch gap-2 border border-white/15 bg-asphalt/95 p-1.5 transition focus-within:border-brand/60 sm:bg-asphalt/85 sm:backdrop-blur-md"
         role="search"
       >
         <label htmlFor="hero-busca" className="sr-only">
           Buscar por marca ou modelo
         </label>
-        <div className="flex flex-1 items-center gap-2 px-3">
-          <IconSearch className="h-4 w-4 shrink-0 text-muted" />
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 sm:gap-2 sm:px-2.5">
+          <IconSearch className="hidden h-4 w-4 shrink-0 text-muted sm:block" />
           <input
             id="hero-busca"
             type="search"
             name="q"
             placeholder="Busque por marca ou modelo"
-            className="w-full bg-transparent py-3.5 text-base text-cream placeholder:text-muted focus:outline-none"
+            className="w-full min-w-0 bg-transparent py-2 text-base text-cream placeholder:text-muted focus:outline-none sm:py-3.5"
           />
         </div>
         <button
           type="submit"
-          className="min-h-[52px] bg-brand px-6 py-3 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] touch-manipulation"
+          className="min-h-11 shrink-0 bg-brand px-2 font-display text-xs font-semibold uppercase tracking-normal text-cream transition hover:bg-[#c91418] touch-manipulation sm:min-h-[52px] sm:px-5 sm:text-sm sm:tracking-wide"
         >
           Buscar
         </button>
       </form>
 
-      <div className="chip-scroll mt-3 -mx-1 px-1">
-        <span className="shrink-0 text-xs uppercase tracking-wider text-muted">
+      <div className="chip-scroll hero-chips -mx-4 mt-2 px-4 sm:mx-0 sm:mt-3 sm:px-1">
+        <span className="sr-only sm:not-sr-only sm:shrink-0 sm:text-xs sm:uppercase sm:tracking-wider sm:text-muted">
           Faixa:
         </span>
         {BUDGET_LINKS.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="inline-flex min-h-[44px] shrink-0 items-center border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 active:border-brand active:bg-white/5 touch-manipulation sm:px-2.5 sm:py-1.5"
+            prefetch={false}
+            className="inline-flex min-h-[44px] shrink-0 items-center border border-white/15 px-2 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 active:border-brand active:bg-white/5 touch-manipulation sm:px-2.5 sm:py-1.5"
           >
             {item.label}
           </Link>
@@ -68,15 +75,16 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
       </div>
 
       {brands.length > 0 ? (
-        <div className="chip-scroll mt-2 -mx-1 px-1">
-          <span className="shrink-0 text-xs uppercase tracking-wider text-muted">
+        <div className="chip-scroll hero-chips -mx-4 mt-1.5 px-4 sm:mx-0 sm:mt-2 sm:px-1">
+          <span className="sr-only sm:not-sr-only sm:shrink-0 sm:text-xs sm:uppercase sm:tracking-wider sm:text-muted">
             Marcas:
           </span>
           {brands.slice(0, 5).map((brand) => (
             <Link
               key={brand}
               href={`/estoque?brand=${encodeURIComponent(brand)}`}
-              className="inline-flex min-h-[44px] shrink-0 items-center border border-white/15 px-3 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 active:border-brand active:bg-white/5 touch-manipulation sm:px-2.5 sm:py-1.5"
+              prefetch={false}
+              className="inline-flex min-h-[44px] shrink-0 items-center border border-white/15 px-2 py-2 text-xs text-cream transition hover:border-brand hover:bg-white/5 active:border-brand active:bg-white/5 touch-manipulation sm:px-2.5 sm:py-1.5"
             >
               {formatBrandName(brand)}
             </Link>
