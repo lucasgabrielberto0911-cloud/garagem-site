@@ -47,9 +47,14 @@ export function VehicleGrid({
 }) {
   const destaqueIds = featuredBadgeIds(vehicles, destaqueLimit);
   const stock = photoLayout === "stock";
+  const tight = stock && vehicles.length > 1;
   return (
     <div
-      className={`mx-auto grid w-full gap-3 sm:gap-4 ${layoutForCount(vehicles.length, desktopCols)}`}
+      className={`grid ${
+        tight
+          ? "-mx-2 w-[calc(100%+1rem)] gap-2 sm:mx-0 sm:w-full sm:gap-4"
+          : "mx-auto w-full gap-3 sm:gap-4"
+      } ${layoutForCount(vehicles.length, desktopCols)}`}
     >
       {vehicles.map((vehicle, index) => (
         <div key={vehicle.id} className="h-full min-w-0 w-full">

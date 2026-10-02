@@ -36,7 +36,11 @@ export function VehicleCardSkeletonGrid({
 }) {
   return (
     <div
-      className="mx-auto grid w-full grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3"
+      className={`grid grid-cols-2 lg:grid-cols-3 ${
+        largePhoto
+          ? "-mx-2 w-[calc(100%+1rem)] gap-2 sm:mx-0 sm:w-full sm:gap-4"
+          : "mx-auto w-full gap-3 sm:gap-4"
+      }`}
     >
       {Array.from({ length: count }).map((_, index) => (
         <VehicleCardSkeleton key={index} largePhoto={largePhoto} />
