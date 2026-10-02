@@ -9,7 +9,6 @@ import {
   modelAfterBrandChange,
   modelFilterOptions,
   STOCK_SORT_OPTIONS,
-  stockSortLabel,
   type StockModelOption,
 } from "@/lib/stock-query";
 import { handleFocusTrap } from "@/lib/focus-trap";
@@ -783,11 +782,34 @@ export function StockFilters({ facets }: { facets: Facets }) {
             ))}
           </MobileChipRow>
         ) : null}
-        <div className="flex h-11 items-center gap-2">
-          <p className="min-w-0 flex-1 truncate text-[11px] text-muted">
-            {stockSortLabel(current.sort)}
-            {activeFilterCount > 0 ? " · filtros ativos" : ""}
-          </p>
+        <div className="mt-2 grid grid-cols-1 items-center gap-2 min-[360px]:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="relative min-w-0">
+            <label htmlFor="estoque-ordem-mobile" className="sr-only">
+              Ordenar resultados
+            </label>
+            <select
+              id="estoque-ordem-mobile"
+              value={current.sort}
+              onChange={(event) => update({ sort: event.target.value })}
+              className="min-h-11 w-full appearance-none rounded-none border border-white/15 bg-asphalt py-2 pl-2.5 pr-7 text-base text-cream outline-none transition focus:border-brand"
+            >
+              {STOCK_SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+              aria-hidden="true"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </div>
           <button
             type="button"
             onClick={() => {
@@ -815,9 +837,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
             <button
               type="button"
               onClick={clearFilters}
-              className="min-h-11 shrink-0 px-2 text-[11px] uppercase tracking-wider text-muted"
+              className="col-span-full min-h-11 justify-self-end px-2 text-[11px] uppercase tracking-wider text-muted"
             >
-              Limpar
+              Limpar filtros
             </button>
           ) : null}
         </div>
