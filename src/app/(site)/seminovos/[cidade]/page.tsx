@@ -14,12 +14,12 @@ import {
 import { site } from "@/lib/site";
 import { cityPageStockCopy } from "@/lib/city-showcase";
 import {
+  CITIES_DIRECTORY_PATH,
   SERVICE_CITIES,
   breadcrumbJsonLd,
   buildPageMetadata,
   faqJsonLd,
   getServiceCity,
-  otherServiceCities,
   serviceCityJsonLd,
 } from "@/lib/seo";
 import { getCityShowcaseVehicles } from "@/lib/vehicles";
@@ -58,7 +58,6 @@ export default async function SeminovosCidadePage({
 
   const path = `/seminovos/${city.slug}`;
   const stock = cityPageStockCopy(city.name);
-  const nearby = otherServiceCities(city.slug);
   const faqs = city.faqs.map((item) => ({
     question: item.question,
     answer: item.answer,
@@ -123,7 +122,6 @@ export default async function SeminovosCidadePage({
                 vehicles={featured}
                 priorityCount={2}
                 returnTo={path}
-                showWhatsApp={false}
               />
             )}
           </div>
@@ -187,28 +185,11 @@ export default async function SeminovosCidadePage({
           </div>
         </section>
 
-        <section className="mt-12">
-          <h2 className="font-display text-xl font-semibold text-cream">
-            Outras cidades
-          </h2>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link
-              href="/seminovos"
-              className="border border-brand/40 px-3 py-2 text-xs uppercase tracking-wider text-cream transition hover:border-brand hover:bg-brand/10"
-            >
-              Todas as cidades
-            </Link>
-            {nearby.map((item) => (
-              <Link
-                key={item.slug}
-                href={`/seminovos/${item.slug}`}
-                className="border border-white/15 px-3 py-2 text-xs uppercase tracking-wider text-muted transition hover:border-brand hover:text-cream"
-              >
-                Seminovos em {item.name}
-              </Link>
-            ))}
-          </div>
-        </section>
+        <div className="mt-12 flex justify-center">
+          <ButtonLink href={CITIES_DIRECTORY_PATH} variant="outline">
+            Ver cidades
+          </ButtonLink>
+        </div>
 
         <div className="mt-12">
           <ActionRow>

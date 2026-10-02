@@ -2,7 +2,11 @@ import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
-import { SERVICE_CITIES, absoluteUrl } from "@/lib/seo";
+import {
+  CITIES_DIRECTORY_PATH,
+  SERVICE_CITIES,
+  absoluteUrl,
+} from "@/lib/seo";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 export const revalidate = 300;
@@ -14,12 +18,14 @@ const STATIC_ROUTES: {
 }[] = [
   { path: "/", changeFrequency: "daily", priority: 1 },
   { path: "/estoque", changeFrequency: "daily", priority: 0.9 },
+  { path: "/pedido", changeFrequency: "monthly", priority: 0.4 },
   { path: "/vender", changeFrequency: "monthly", priority: 0.8 },
   { path: "/sobre", changeFrequency: "yearly", priority: 0.5 },
   { path: "/contato", changeFrequency: "yearly", priority: 0.6 },
   { path: "/faq", changeFrequency: "monthly", priority: 0.5 },
   { path: "/privacidade", changeFrequency: "yearly", priority: 0.3 },
   { path: "/seminovos", changeFrequency: "weekly", priority: 0.75 },
+  { path: CITIES_DIRECTORY_PATH, changeFrequency: "monthly", priority: 0.65 },
   ...SERVICE_CITIES.map((city) => ({
     path: `/seminovos/${city.slug}`,
     changeFrequency: "monthly" as const,

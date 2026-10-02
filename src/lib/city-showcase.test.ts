@@ -49,7 +49,7 @@ test("a página e a consulta trazem o estoque disponível inteiro", () => {
   assert.match(page, /const featured = await getCityShowcaseVehicles\(\)/);
   assert.match(page, /vehicles=\{featured\}/);
   assert.match(page, /cityPageStockCopy/);
-  assert.match(page, /showWhatsApp=\{false\}/);
+  assert.doesNotMatch(page, /showWhatsApp/);
   assert.match(page, /Pedir vídeo ou visita/);
   assert.match(page, /stock\.stockHref/);
   assert.doesNotMatch(page, /^["']use client["']/m);

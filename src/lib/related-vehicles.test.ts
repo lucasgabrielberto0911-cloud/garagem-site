@@ -351,7 +351,8 @@ test("a ficha mantém âncoras, filtros e o formulário, e as cidades o estoque 
   assert.ok(
     page.indexOf("<MissingModelForm") < page.indexOf("<SimilarVehicles"),
   );
-  assert.match(similar, /showWhatsApp=\{false\}/);
+  assert.doesNotMatch(similar, /showWhatsApp|whatsappCampaign/);
+  assert.doesNotMatch(readSrc("components/site/VehicleCard.tsx"), /VehicleCardWhatsApp|Tenho interesse/);
   assert.doesNotMatch(similar, /setTimeout|Equipamentos|Confirmado neste anúncio|99956/i);
   assert.doesNotMatch(page, /Confirmado neste anúncio|Equipamentos|99956/);
 

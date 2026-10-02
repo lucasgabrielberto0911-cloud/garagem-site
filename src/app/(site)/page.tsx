@@ -55,12 +55,12 @@ const REASONS = [
   {
     Icon: IconClipboardCheck,
     title: "Vistoria da loja",
-    text: "Olhamos a condição geral antes de anunciar. O que vimos, contamos no atendimento.",
+    text: "A gente revisa cada veículo antes de anunciar. O que a gente viu, conta pra você no atendimento.",
   },
   {
     Icon: IconShieldCheck,
-    title: "Procedência conferida",
-    text: "Histórico, débitos e restrições a gente consulta antes. A documentação sai alinhada na transferência.",
+    title: "Documentação pronta",
+    text: "A gente olha o histórico, os débitos e as restrições antes. A documentação vai 100% preparada, pra você ter mais tranquilidade.",
   },
   {
     Icon: IconHandshake,
@@ -126,19 +126,19 @@ export default async function HomePage() {
         <Container className="py-2.5 sm:py-6 lg:py-7">
           <div className="flex flex-col gap-2.5 sm:gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
             <div className="hero-text min-w-0 max-w-2xl">
-              <div className="hero-brand hidden sm:block">
+              <div className="hero-brand">
                 <SiteWordmark size="hero" priority />
               </div>
-              <h1 className="font-display text-[1.0625rem] font-semibold leading-snug tracking-tight text-cream sm:mt-3 sm:text-3xl sm:leading-[1.12] lg:text-[2rem]">
+              <h1 className="mt-2 font-display text-[1.0625rem] font-semibold leading-snug tracking-tight text-cream sm:mt-3 sm:text-3xl sm:leading-[1.12] lg:text-[2rem]">
                 Seminovos com procedência em {site.region}.
               </h1>
               <ul className="mt-3 hidden max-w-lg flex-col gap-1.5 text-sm leading-snug text-cream sm:flex sm:text-base">
-                <li>Checagem de condição antes de entrar no estoque.</li>
-                <li>Procedência conferida. Documentação alinhada na transferência.</li>
+                <li>A gente revisa cada veículo, e ele sai com garantia.</li>
+                <li>A documentação vai 100% preparada, pra você ter mais tranquilidade.</li>
               </ul>
             </div>
 
-            <div className="hero-cta w-full shrink-0 sm:max-w-xs lg:max-w-sm lg:text-right">
+            <div className="hero-cta flex w-full shrink-0 flex-col gap-2.5 sm:max-w-xs lg:max-w-sm">
               <WhatsAppButton
                 size="lg"
                 className="w-full"
@@ -147,17 +147,11 @@ export default async function HomePage() {
               >
                 Falar no WhatsApp
               </WhatsAppButton>
-              <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-sm leading-none text-cream/80 lg:justify-end">
-                <span className="font-medium text-cream">{site.whatsappLabel}</span>
-                <span className="text-cream/35" aria-hidden="true">
-                  ·
-                </span>
-                <Link
-                  href="/estoque"
-                  className="font-display text-xs font-semibold uppercase tracking-wide text-cream hover:text-brand"
-                >
-                  Ver estoque
-                </Link>
+              <ButtonLink href="/estoque" size="lg" className="w-full">
+                Ver estoque
+              </ButtonLink>
+              <p className="text-center text-sm font-medium leading-none text-cream">
+                {site.whatsappLabel}
               </p>
             </div>
           </div>
@@ -215,7 +209,6 @@ export default async function HomePage() {
               priorityCount={2}
               desktopCols={4}
               destaqueLimit={0}
-              whatsappCampaign="home"
             />
           )}
         </div>
@@ -300,48 +293,50 @@ export default async function HomePage() {
           description={`Atendemos ${publicSite.region}. Escolha no site, peça vídeo pelo WhatsApp e combine visita, entrega ou retirada.`}
         />
 
-        <dl className="mt-5 grid gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-3">
-          <div className="bg-asphalt px-4 py-3.5">
-            <dt className="font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
-              WhatsApp
-            </dt>
-            <dd className="mt-1 font-display text-base font-semibold text-cream">
-              {site.whatsappLabel}
-            </dd>
-          </div>
-          <div className="bg-asphalt px-4 py-3.5">
-            <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
-              <IconClock className="h-3.5 w-3.5 text-brand" />
-              Horário
-            </dt>
-            <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.hours}</dd>
-          </div>
-          <div className="bg-asphalt px-4 py-3.5">
-            <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
-              <IconMapPin className="h-3.5 w-3.5 text-brand" />
-              Modalidade
-            </dt>
-            <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.address}</dd>
-          </div>
-        </dl>
-
-        <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-          <Link
-            href="/contato"
-            className="font-display text-xs font-semibold uppercase tracking-wide text-brand hover:text-brand-orange"
-          >
-            Canais de contato
-          </Link>
+        <div className="mt-5 overflow-hidden border border-white/10 bg-white/10">
+          <dl className="grid gap-px sm:grid-cols-3">
+            <div className="bg-asphalt px-4 py-3.5">
+              <dt className="font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
+                WhatsApp
+              </dt>
+              <dd className="mt-1 font-display text-base font-semibold text-cream">
+                {site.whatsappLabel}
+              </dd>
+            </div>
+            <div className="bg-asphalt px-4 py-3.5">
+              <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
+                <IconClock className="h-3.5 w-3.5 text-brand" />
+                Horário
+              </dt>
+              <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.hours}</dd>
+            </div>
+            <div className="bg-asphalt px-4 py-3.5">
+              <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
+                <IconMapPin className="h-3.5 w-3.5 text-brand" />
+                Modalidade
+              </dt>
+              <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.address}</dd>
+            </div>
+          </dl>
           <a
-            href={site.instagramUrl}
+            href={`https://www.instagram.com/${site.instagram.replace(/^@/, "")}/`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-cream/80 transition hover:text-cream"
+            aria-label={`${site.instagram} no Instagram, abre em nova aba`}
+            className="group mt-px flex min-h-14 items-center gap-3.5 bg-asphalt px-4 text-cream transition hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand touch-manipulation"
           >
-            <IconInstagram className="h-4 w-4" />
-            {site.instagram}
+            <span
+              aria-hidden="true"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[radial-gradient(circle_at_30%_110%,#fdf497_0%,#fd5949_45%,#d6249f_62%,#285AEB_90%)] text-white"
+            >
+              <IconInstagram className="h-5 w-5" />
+            </span>
+            <span className="font-display text-xl font-semibold tracking-tight">
+              {site.instagram}
+            </span>
+            <IconArrowRight className="ml-auto h-4 w-4 shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-cream" />
           </a>
-        </p>
+        </div>
       </Section>
 
       {/* 7. VENDER OU TROCAR */}

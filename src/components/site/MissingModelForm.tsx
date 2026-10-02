@@ -35,6 +35,7 @@ export function MissingModelForm({
   idPrefix,
   sourcePage,
   title = "Não encontrou o modelo?",
+  titleAs = "h2",
   description = "Deixa o modelo que você procura. A loja guarda o pedido e te chama quando aparecer.",
   contextLabel = "",
   pagePath = "",
@@ -50,6 +51,7 @@ export function MissingModelForm({
   idPrefix: string;
   sourcePage: WantedLeadPage;
   title?: string;
+  titleAs?: "h1" | "h2";
   description?: string;
   contextLabel?: string;
   pagePath?: string;
@@ -71,6 +73,7 @@ export function MissingModelForm({
   const [priceMax, setPriceMax] = useState(() => digitsToGrouped(initialPriceMax));
   const [kmMin, setKmMin] = useState(() => digitsToGrouped(initialKmMin));
   const [kmMax, setKmMax] = useState(() => digitsToGrouped(initialKmMax));
+  const TitleTag = titleAs;
 
   const ids = {
     model: `${idPrefix}-modelo`,
@@ -146,9 +149,9 @@ export function MissingModelForm({
         className="border border-brand/40 bg-ink p-6 text-center sm:p-8"
         aria-live="polite"
       >
-        <h2 className="font-display text-xl font-bold text-cream">
+        <TitleTag className="font-display text-xl font-bold text-cream">
           Pedido recebido
-        </h2>
+        </TitleTag>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
           {WANTED_LEAD_SUCCESS}
         </p>
@@ -168,9 +171,9 @@ export function MissingModelForm({
       data-missing-model-form=""
       className="border border-white/10 bg-ink p-5 sm:p-7"
     >
-      <h2 className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
+      <TitleTag className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
         {title}
-      </h2>
+      </TitleTag>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
         {description}
       </p>

@@ -201,7 +201,7 @@ test("card público não ganha selo de consignado nem laudo", () => {
   assert.doesNotMatch(source, /laudo|Cautelar|inspection/i);
 });
 
-test("lista de estoque esconde o WhatsApp do card; home e favoritos continuam", () => {
+test("o card não tem WhatsApp nem data de atualização; o chat continua", () => {
   const list = readSrc("components/site/StockInfiniteList.tsx");
   const browse = readSrc("components/site/EstoqueBrowse.tsx");
   const home = readSrc("app/(site)/page.tsx");
@@ -212,7 +212,14 @@ test("lista de estoque esconde o WhatsApp do card; home e favoritos continuam", 
   assert.match(list, /HideStockCardInterest/);
   assert.match(browse, /HideStockCardInterest/);
   assert.match(card, /StockVehicleLink/);
-  assert.match(card, /\{!sold && showWhatsApp \? \(/);
+  assert.match(card, /justify-center/);
+  assert.match(card, /text-brand/);
+  assert.match(card, /appearance="ghost"/);
+  assert.match(card, /\["Ano", "Km"\]/);
+  assert.match(card, /\["Câmbio", "Cidade"\]/);
+  assert.doesNotMatch(card, /VehicleCardWhatsApp/);
+  assert.doesNotMatch(card, /formatUpdatedAt/);
+  assert.doesNotMatch(card, /Atualizado em/);
   assert.match(button, /useHideStockCardInterest/);
   assert.match(button, /if \(hideOnStockList && !chat\) return null/);
 
@@ -220,6 +227,7 @@ test("lista de estoque esconde o WhatsApp do card; home e favoritos continuam", 
   assert.doesNotMatch(favorites, /HideStockCardInterest/);
   assert.match(home, /<VehicleGrid/);
   assert.match(favorites, /<VehicleGrid/);
+  assert.match(favorites, /Enviar minha lista no WhatsApp/);
 });
 
 function sampleVehicle(overrides: Record<string, unknown> = {}) {
@@ -266,18 +274,30 @@ test("o card do estoque leva à ficha e não mostra Tenho interesse", () => {
   assert.match(onStock, /Linhares/);
   assert.match(onStock, /\/estoque\/honda-hr-v/);
   assert.match(onStock, /Ver ficha/);
+  assert.match(onStock, /justify-center/);
+  assert.match(onStock, /text-brand/);
+  assert.match(onStock, /h-11 w-11/);
   assert.doesNotMatch(onStock, /Tenho interesse/);
   assert.doesNotMatch(onStock, /Consignado/);
   assert.doesNotMatch(onStock, /wa\.me/);
+  assert.doesNotMatch(onStock, /Atualizado/);
 
   const elsewhere = renderToStaticMarkup(
     createElement(
       FavoritesProvider,
       null,
-      createElement(VehicleCard, { vehicle }),
+      createElement(VehicleCard, {
+        vehicle: sampleVehicle({ updatedAt: "2026-03-01T12:00:00.000Z", featured: true }),
+        showDestaque: true,
+      }),
     ),
   );
-  assert.match(elsewhere, /Tenho interesse/);
+  assert.match(elsewhere, /Honda HR-V/);
+  assert.match(elsewhere, /Ver ficha/);
+  assert.match(elsewhere, /Destaque/);
+  assert.doesNotMatch(elsewhere, /Tenho interesse/);
+  assert.doesNotMatch(elsewhere, /wa\.me/);
+  assert.doesNotMatch(elsewhere, /Atualizado/);
 });
 
 test("fato ausente não aparece no HTML do card", () => {

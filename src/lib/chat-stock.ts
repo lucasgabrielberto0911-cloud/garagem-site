@@ -2271,7 +2271,7 @@ export const CHAT_TRADE_REPLY =
   `Aceitamos sim — carro ou moto entram na conta. Manda umas fotos no WhatsApp que o consultor avalia e já encaixa no negócio com você. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_WARRANTY_REPLY =
-  `Fica tranquilo: todos os seminovos saem com garantia de 3 meses de motor e câmbio. Procedência conferida antes de entrar no estoque. Se quiser o detalhe no seu caso, o consultor confirma no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
+  `Fica tranquilo: a gente revisa cada seminovo, e ele sai com garantia de 3 meses de motor e câmbio. A documentação vai 100% preparada, pra você ter mais tranquilidade. Se quiser o detalhe no seu caso, o consultor confirma no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_DOCS_REPLY =
   `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;

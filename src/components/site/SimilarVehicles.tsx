@@ -53,7 +53,7 @@ export function SimilarVehicles({
         </Link>
       </div>
       <div className="mt-5">
-        <VehicleGrid vehicles={vehicles} showWhatsApp={false} />
+        <VehicleGrid vehicles={vehicles} />
       </div>
       {whatsapp ? (
         <div className="mt-5">
