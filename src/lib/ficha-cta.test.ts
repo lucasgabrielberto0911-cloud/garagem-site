@@ -468,10 +468,17 @@ test("ficha desktop não soma padding grande sob o header", () => {
   assert.doesNotMatch(textLink, /min-h-\[44px\]/);
 });
 
-test("chip Ajuda no mobile ganha folga acima da nav fora da ficha", () => {
+test("chip Ajuda no mobile ganha folga acima da nav e do próprio chip", () => {
   const css = readSrc("app/globals.css");
+  assert.match(css, /--help-bubble-h:\s*2\.75rem/);
+  assert.match(css, /--help-bubble-clear:\s*1\.25rem/);
   assert.match(
     css,
     /body:not\(:has\(\[data-ficha-page\]\)\):not\(:has\(\[data-vehicle-mobile-bar\]\)\):not\(:has\(\.site-consent\)\) \.pb-site-nav/,
   );
+  assert.match(
+    css,
+    /padding-bottom:\s*calc\(\s*var\(--site-bottom-nav\)\s*\+\s*var\(--help-bubble-gap\)\s*\+\s*var\(--help-bubble-h\)\s*\+\s*var\(--help-bubble-clear\)/,
+  );
+  assert.doesNotMatch(css, /4\.5rem \+ 4\.25rem/);
 });

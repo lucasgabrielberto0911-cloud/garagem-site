@@ -23,7 +23,7 @@ export function SimilarVehicles({
   whatsapp?: {
     message: string;
     trackingLabel: string;
-    content: string;
+    content?: string;
     vehicleId: string;
     slug: string;
   };

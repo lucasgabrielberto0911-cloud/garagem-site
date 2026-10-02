@@ -82,14 +82,14 @@ export function EstoqueBrowseFallback({
 
   return (
     <>
-      <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
+      <p className="stock-count mt-1 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
         {vehicles.length > 0
           ? `${total} ${total === 1 ? "veículo no estoque" : "veículos no estoque"} · sem filtros${
               total > vehicles.length ? " · role para ver todos" : ""
             }`
           : "Atualizando o estoque…"}
       </p>
-      <div className="mt-4">
+      <div className="mt-1 lg:mt-4">
         {vehicles.length > 0 ? (
           <StockReturnCapture returnTo="/estoque">
             <HideStockCardInterest>
@@ -226,7 +226,7 @@ export function EstoqueBrowse({
         </div>
       ) : null}
 
-      <p className="mt-5 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
+      <p className="stock-count mt-1 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
         {loading
           ? "Atualizando o estoque…"
           : filtered
@@ -237,7 +237,7 @@ export function EstoqueBrowse({
           : ""}
       </p>
 
-      <div className="mt-4" data-estoque-list="" aria-live="polite">
+      <div className="mt-1 lg:mt-4" data-estoque-list="" aria-live="polite">
         {loading ? (
           <VehicleCardSkeletonGrid count={6} largePhoto />
         ) : (

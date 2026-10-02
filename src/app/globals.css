@@ -22,6 +22,22 @@
   --ficha-sticky-bar: calc(5.75rem + env(safe-area-inset-bottom, 0px));
   /* Âncoras Fotos / Especificações / Detalhes. A dobra do celular desconta esta faixa. */
   --ficha-section-nav: 2.75rem;
+  /*
+   * Chip “Ajuda para escolher” fechado no celular: h-11 (2.75rem),
+   * acima da bottom nav (4.5rem) com 0.75rem de folga. De sm até o
+   * desktop o botão é h-14.
+   */
+  --help-bubble-h: 2.75rem;
+  --help-bubble-gap: 0.75rem;
+  --site-bottom-nav: 4.5rem;
+  /* Respiro entre o conteúdo e o chip — foto, preço, chip de filtro e telefone. */
+  --help-bubble-clear: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --help-bubble-h: 3.5rem;
+  }
 }
 
 @media (max-width: 1023px) {
@@ -141,7 +157,7 @@ body {
 
   /*
    * No estoque do celular a lista rola acima da bottom nav e do chip
-   * “Ajuda para escolher”. Foto, nome e preço não passam por baixo deles.
+   * “Ajuda para escolher”. Foto, nome, preço e Ver ficha não passam por baixo.
    */
   @media (max-width: 1023px) {
     body:has([data-stock-page]) {
@@ -164,13 +180,16 @@ body {
   }
 
   /*
-   * Folga para o chip “Ajuda para escolher” não cobrir o último card /
-   * CTA de WhatsApp em estoque, contato e FAQ. Ficha e banner de cookies
-   * já escondem o FAB fechado.
+   * Folga para o chip “Ajuda para escolher” não cobrir foto, preço,
+   * Ver ficha, filtro ou telefone no fim da rolagem. A barra de baixo entra
+   * na conta. Ficha e banner de cookies já escondem o FAB fechado.
    */
   @media (max-width: 1023px) {
     body:not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])):not(:has(.site-consent)) .pb-site-nav {
-      padding-bottom: calc(4.5rem + 4.25rem + env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(
+        var(--site-bottom-nav) + var(--help-bubble-gap) + var(--help-bubble-h) +
+          var(--help-bubble-clear) + env(safe-area-inset-bottom, 0px)
+      );
     }
 
     /*
@@ -1417,6 +1436,227 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+/*
+ * Celular estreito: o chip “Ajuda para escolher” fica no canto direito,
+ * em cima da segunda coluna. Cada faixa de altura só encolhe o miolo o
+ * bastante para foto, preço, filtro e telefone nascerem acima do chip
+ * e da barra. Desktop (lg) e o próprio chip não mudam.
+ */
+@media (max-width: 639px) and (max-height: 900px) {
+  .stock-page {
+    padding-top: 0.25rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .stock-page header > p:last-child {
+    display: none;
+  }
+
+  .stock-page header h1,
+  .stock-page header > p.font-display.text-3xl {
+    margin-top: 0.25rem;
+    font-size: 1.65rem;
+    line-height: 1.1;
+  }
+
+  .stock-page header > div {
+    margin-top: 0.5rem;
+  }
+
+  .stock-mobile-filters {
+    margin-top: 0.25rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    row-gap: 0.25rem;
+  }
+
+  .hero-red-black > .mx-auto {
+    padding-top: 0.25rem;
+    padding-bottom: 0;
+  }
+
+  .hero-brand img {
+    width: min(40vw, 148px);
+  }
+
+  .hero-text {
+    margin-top: 0.25rem;
+  }
+
+  .hero-lead,
+  .hero-help {
+    display: none;
+  }
+
+  .hero-cta,
+  .hero-search {
+    margin-top: 0.5rem;
+  }
+
+  .hero-search form {
+    padding: 0.35rem;
+  }
+
+  .hero-search input {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+  }
+
+  .hero-search .chip-scroll {
+    margin-top: 0.25rem;
+  }
+
+  #destaques {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  #destaques h2 {
+    margin-top: 0;
+    font-size: 1.15rem;
+  }
+
+  #destaques .mt-3 {
+    margin-top: 0.25rem;
+  }
+}
+
+@media (max-width: 639px) and (min-height: 901px) {
+  .hero-help {
+    display: none;
+  }
+
+  .hero-lead {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .hero-red-black > .mx-auto {
+    padding-top: 0.5rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .hero-text,
+  .hero-cta,
+  .hero-search {
+    margin-top: 0.5rem;
+  }
+
+  .hero-search .chip-scroll {
+    margin-top: 0.35rem;
+  }
+
+  #destaques {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .contact-page {
+    padding-top: 1rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .contact-hero {
+    margin-top: 0.75rem;
+    padding: 1rem;
+  }
+
+  .contact-hero h2 {
+    margin-top: 0.5rem;
+  }
+
+  .contact-hero > p {
+    margin-top: 0.5rem;
+  }
+
+  .contact-hero > div {
+    margin-top: 0.75rem;
+  }
+
+  .contact-more {
+    margin-top: 0.75rem;
+  }
+
+  .contact-channel-grid {
+    margin-top: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .contact-channel-grid > div {
+    padding: 0.75rem;
+  }
+}
+
+/* Folga extra: o contador some e o preço / Ver ficha ficam mais baixos no card. */
+@media (max-width: 639px) {
+  .stock-shell {
+    margin-top: 0.25rem;
+  }
+
+  .stock-count {
+    display: none;
+  }
+
+  .vehicle-card .card-open-label,
+  .vehicle-card span.uppercase.tracking-wide {
+    min-height: 0;
+    line-height: 1.15;
+  }
+
+  .vehicle-card a[aria-label^="Tenho interesse"] {
+    min-height: 0;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    line-height: 1.15;
+  }
+
+  .hero-search .chip-scroll {
+    gap: 0.35rem;
+    -webkit-mask-image: none;
+    mask-image: none;
+    padding-bottom: 0;
+    scrollbar-width: none;
+  }
+
+  .hero-search .chip-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hero-search .chip-scroll::after {
+    display: none;
+  }
+
+  #destaques {
+    padding-top: 0.25rem;
+    padding-bottom: 0.5rem;
+  }
+
+  #destaques > div > .text-center > p,
+  #destaques > div > .text-center > div {
+    display: none;
+  }
+
+  #destaques h2 {
+    margin-top: 0;
+    font-size: 1.05rem;
+    line-height: 1.15;
+  }
+}
+
+@media (max-width: 639px) and (min-height: 701px) {
+  .vehicle-card > a > div:not([class*="aspect-"]) {
+    padding: 0.45rem 0.65rem 0.2rem;
+    gap: 0.2rem;
+  }
+
+  .vehicle-card > a > div:not([class*="aspect-"]) > div:last-child {
+    padding-top: 0.3rem;
+    gap: 0.1rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

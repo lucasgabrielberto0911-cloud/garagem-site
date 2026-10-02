@@ -70,10 +70,13 @@ export function SectionHeading({
   eyebrow,
   title,
   description,
+  compact = false,
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
+  /** No celular, título curto — a descrição volta no desktop. */
+  compact?: boolean;
 }) {
   return (
     <div className="text-left">
@@ -82,12 +85,16 @@ export function SectionHeading({
           {eyebrow}
         </p>
       ) : null}
-      <h2 className="mt-1 font-display text-xl font-semibold tracking-tight text-cream sm:text-2xl">
+      <h2 className="mt-1 font-display text-xl font-semibold leading-tight tracking-tight text-cream sm:text-2xl">
         {title}
       </h2>
       <div className="mt-2 h-px w-8 bg-brand" aria-hidden="true" />
       {description ? (
-        <p className="mt-2 max-w-2xl text-sm leading-snug text-muted">
+        <p
+          className={`max-w-2xl text-sm leading-snug text-muted ${
+            compact ? "mt-2 hidden lg:block" : "mt-2"
+          }`}
+        >
           {description}
         </p>
       ) : null}
@@ -118,22 +125,15 @@ export function PageHeader({
         {eyebrow}
       </p>
       <Heading
-        className={`mt-2 font-display font-bold tracking-tight text-cream sm:text-4xl ${
+        className={`mt-1.5 font-display font-bold leading-tight tracking-tight text-cream sm:text-4xl lg:mt-2 ${
           compact ? "text-2xl" : "text-3xl"
         }`}
       >
         {title}
       </Heading>
-      <div
-        className={`mx-auto h-0.5 w-16 bg-brand-gradient ${compact ? "mt-3" : "mt-4"}`}
-        aria-hidden="true"
-      />
+      <div className="mx-auto mt-2.5 h-0.5 w-16 bg-brand-gradient lg:mt-4" aria-hidden="true" />
       {description ? (
-        <p
-          className={`mx-auto max-w-2xl text-muted sm:mt-5 sm:text-base sm:leading-relaxed ${
-            compact ? "mt-3 text-sm leading-snug" : "mt-5 text-sm leading-relaxed sm:text-base"
-          }`}
-        >
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-snug text-muted sm:text-base lg:mt-5 lg:leading-relaxed">
           {description}
         </p>
       ) : null}

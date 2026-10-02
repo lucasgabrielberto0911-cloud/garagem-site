@@ -153,7 +153,7 @@ export function VehicleCard({
                 {card.priceLabel}
               </p>
             ) : null}
-            <span className="inline-flex min-h-11 shrink-0 items-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream/80 transition group-hover:text-cream">
+            <span className="card-open-label inline-flex min-h-11 shrink-0 items-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream/80 transition group-hover:text-cream">
               Ver ficha
             </span>
           </div>
