@@ -12,7 +12,6 @@ import { HideStockCardInterest } from "@/components/site/HideStockCardInterest";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { SiteLeadHit, StockSearchPixel } from "@/components/site/VehiclePixel";
 import { WhatsAppButton } from "@/components/site/ui";
-import { restoreStockScroll } from "@/lib/stock-return";
 import { formatStockWaitlistQuery, stockEmptyWhatsAppCta } from "@/lib/stock-waitlist";
 import {
   parseStockFilters,
@@ -221,10 +220,6 @@ export function EstoqueBrowse({
 
     return () => controller.abort();
   }, [filterKey, remote, initialStock, params]);
-
-  useEffect(() => {
-    restoreStockScroll();
-  }, []);
 
   const returnTo = buildReturnTo(params);
   const query = useMemo(() => stockQuery(params), [params]);

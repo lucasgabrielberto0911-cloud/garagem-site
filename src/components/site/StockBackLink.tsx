@@ -40,6 +40,7 @@ export function StockBackLink({
       <Link
         href={target}
         prefetch={false}
+        scroll={href ? false : undefined}
         aria-label={href ? "Voltar aos resultados" : "Voltar ao estoque"}
         className="inline-flex h-10 w-10 items-center justify-center border border-white/15 bg-asphalt text-lg leading-none text-cream"
       >
@@ -52,6 +53,7 @@ export function StockBackLink({
     <Link
       href={target}
       prefetch={false}
+      scroll={href ? false : undefined}
       className="mb-2 inline-flex items-center py-1 text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
     >
       <span className="mr-2 text-brand" aria-hidden="true">

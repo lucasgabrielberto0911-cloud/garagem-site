@@ -14,6 +14,7 @@ import { HideStockCardInterest } from "@/components/site/HideStockCardInterest";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { StockReturnCapture } from "@/components/site/StockReturnCapture";
 import type { VehicleCardRecord } from "@/lib/stock-query";
+import { clearStockPosition, readStockPosition, restoreStockPosition, type StockPosition } from "@/lib/stock-return";
 
 type StockQuery = Record<string, string | undefined>;
 
@@ -58,7 +59,10 @@ export function StockInfiniteList({
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [position, setPosition] = useState<StockPosition | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
+  const requestGenerationRef = useRef(0);
   const bufferRef = useRef<{ page: number; vehicles: VehicleCardRecord[] } | null>(
     null,
   );
@@ -69,6 +73,38 @@ export function StockInfiniteList({
   queryRef.current = query;
 
   const hasMore = vehicles.length < total;
+  const returnPage = position ? Math.min(position.page, Math.max(1, Math.ceil(total / pageSize))) : 1;
+
+  useEffect(() => {
+    const saved = readStockPosition(returnTo);
+    if (!saved) clearStockPosition();
+    setPosition(saved);
+    setLoading(false);
+  }, [returnTo]);
+
+  useEffect(() => {
+    if (!position) return;
+    const root = document.documentElement;
+    const anchoring = root.style.overflowAnchor;
+    root.style.overflowAnchor = "none";
+    const cancel = () => {
+      clearStockPosition(position);
+      setPosition(null);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, button, a, [contenteditable]")) return;
+      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) cancel();
+    };
+    window.addEventListener("touchmove", cancel, { passive: true });
+    window.addEventListener("wheel", cancel, { passive: true });
+    window.addEventListener("keydown", onKey);
+    return () => {
+      root.style.overflowAnchor = anchoring;
+      window.removeEventListener("touchmove", cancel);
+      window.removeEventListener("wheel", cancel);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [position]);
 
   const loadPage = useCallback(
     async (targetPage: number) => {
@@ -102,19 +138,26 @@ export function StockInfiniteList({
   );
 
   useEffect(() => {
-    if (!hasMore) return;
+    if (!hasMore || position) return;
     void loadPage(page + 1).catch(() => {
       /* o sentinel tenta de novo se a pré-carga falhar */
     });
-  }, [hasMore, loadPage, page]);
+  }, [hasMore, loadPage, page, position]);
 
   useEffect(() => {
-    return () => abortRef.current?.abort();
+    return () => {
+      requestGenerationRef.current += 1;
+      abortRef.current?.abort();
+      inflightRef.current = null;
+      inflightPageRef.current = 0;
+      loadingRef.current = false;
+    };
   }, []);
 
   const loadMore = useCallback(async () => {
     if (loadingRef.current || !hasMore) return;
     loadingRef.current = true;
+    const generation = requestGenerationRef.current;
     setFailed(false);
 
     const nextPage = page + 1;
@@ -127,6 +170,7 @@ export function StockInfiniteList({
         setLoading(true);
         incoming = await loadPage(nextPage);
       }
+      if (generation !== requestGenerationRef.current) return;
       bufferRef.current = null;
       setVehicles((current) => {
         const seen = new Set(current.map((item) => item.id));
@@ -134,19 +178,38 @@ export function StockInfiniteList({
       });
       setPage(nextPage);
     } catch (error) {
-      if ((error as { name?: string }).name === "AbortError") return;
+      if (generation !== requestGenerationRef.current || (error as { name?: string }).name === "AbortError") return;
       setFailed(true);
     } finally {
-      loadingRef.current = false;
-      setLoading(false);
+      if (generation === requestGenerationRef.current) {
+        loadingRef.current = false;
+        setLoading(false);
+      }
     }
   }, [hasMore, loadPage, page]);
+
+  useEffect(() => {
+    if (position && page < returnPage && hasMore && !failed && !loading) void loadMore();
+  }, [position, page, returnPage, hasMore, failed, loading, loadMore]);
+
+  useEffect(() => {
+    if (!position || (page < returnPage && hasMore)) return;
+    const finish = () => {
+      clearStockPosition(position);
+      setPosition(null);
+    };
+    if (!listRef.current) {
+      finish();
+      return;
+    }
+    return restoreStockPosition(position, listRef.current, finish);
+  }, [position, page, returnPage, hasMore]);
 
   if (initialVehicles.length === 0) return <>{empty}</>;
 
   return (
     <>
-      <StockReturnCapture returnTo={returnTo}>
+      <StockReturnCapture returnTo={returnTo} page={page} containerRef={listRef}>
         <HideStockCardInterest>
           <MemoVehicleGrid
             vehicles={vehicles}
@@ -160,7 +223,7 @@ export function StockInfiniteList({
       {hasMore ? (
         <InfiniteSentinel
           onVisible={loadMore}
-          disabled={loading || failed}
+          disabled={loading || failed || Boolean(position)}
           rootMargin="320px 0px"
         >
           {loading ? (
