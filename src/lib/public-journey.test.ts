@@ -27,7 +27,7 @@ test("cidade do veículo entra no filtro, na API e no chip mobile", () => {
   assert.match(browse, /STOCK_FILTER_KEYS/);
   assert.match(browse, /city: params\.city/);
   assert.match(where, /stockCityFilter\(filters\.city\)/);
-  assert.match(vehicles, /stock-page-v10/);
+  assert.match(vehicles, /stock-page-v12/);
   assert.doesNotMatch(filters, /Vitória/);
 });
 

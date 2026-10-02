@@ -189,6 +189,127 @@ export function suggestedTransmission(
   return match ?? resolved;
 }
 
+/**
+ * Slug da query `transmission` no estoque.
+ * Automático inclui CVT — nesta loja o Corolla CVT é o que o comprador
+ * chama de automático. Manual, semi-automático e automatizado ficam de fora.
+ */
+const TRANSMISSION_STORED: Record<GearKind, readonly string[]> = {
+  automatico: ["Automático", "Automatico", "Automática", "Automatica"],
+  manual: ["Manual", "Mecânico", "Mecanico", "Mecânica", "Mecanica"],
+  cvt: ["CVT"],
+  automatizado: ["Automatizado"],
+  semi: [
+    "Semi-automático",
+    "Semi-automatico",
+    "Semiautomático",
+    "Semiautomatico",
+  ],
+};
+
+function stockGearKind(value: string): GearKind | null {
+  const inferred = inferGearFromText(value);
+  if (inferred) return inferred;
+  const exact = foldToken(value);
+  if (exact === "automatica" || exact === "automatico" || exact === "automatic") {
+    return "automatico";
+  }
+  if (exact === "mecanica" || exact === "mecanico") return "manual";
+  if (
+    exact === "semi" ||
+    exact === "semiautomatico" ||
+    exact === "semi automatico"
+  ) {
+    return "semi";
+  }
+  return null;
+}
+
+/** Valor estável na URL: `automatico`, `manual`, `cvt`… */
+export function transmissionFilterParam(value?: string | null) {
+  const trimmed = collapseWhitespace(value ?? "");
+  if (!trimmed) return "";
+  return stockGearKind(trimmed) ?? trimmed;
+}
+
+/** Rótulo do chip e do WhatsApp. O slug vira “Automático”. */
+export function transmissionFilterLabel(value?: string | null) {
+  const trimmed = collapseWhitespace(value ?? "");
+  if (!trimmed) return "";
+  const kind = stockGearKind(trimmed);
+  if (kind) return GEAR_LABEL[kind];
+  return formatTransmissionLabel(trimmed) || trimmed;
+}
+
+/** Grafias que o filtro encontra. Automático também pega CVT. */
+function storedTransmissionValues(kind: GearKind) {
+  if (kind === "automatico") {
+    return [...TRANSMISSION_STORED.automatico, ...TRANSMISSION_STORED.cvt];
+  }
+  return TRANSMISSION_STORED[kind];
+}
+
+/** Grafias gravadas que o slug (ou o rótulo) deve encontrar. */
+export function transmissionFilterValues(selected?: string | null) {
+  const trimmed = collapseWhitespace(selected ?? "");
+  if (!trimmed) return [];
+  const kind = stockGearKind(trimmed);
+  if (!kind) return [trimmed];
+  const values = new Set<string>(storedTransmissionValues(kind));
+  const folded = foldToken(trimmed);
+  const covered = [...values].some((item) => foldToken(item) === folded);
+  if (!covered && folded !== kind) values.add(trimmed);
+  return [...values];
+}
+
+/** Where de câmbio. Vazio quando o visitante não filtrou. */
+export function transmissionWhere(selected?: string | null) {
+  const values = transmissionFilterValues(selected);
+  if (values.length === 0) return {};
+  if (values.length === 1) {
+    return {
+      transmission: { equals: values[0], mode: "insensitive" as const },
+    };
+  }
+  return {
+    OR: values.map((item) => ({
+      transmission: { equals: item, mode: "insensitive" as const },
+    })),
+  };
+}
+
+export type TransmissionFilterOption = {
+  value: string;
+  label: string;
+};
+
+/** Opções do select: uma por tipo, com o slug na URL. */
+export function transmissionFilterOptions(
+  values: readonly string[] | undefined,
+  selected?: string | null,
+) {
+  const options: TransmissionFilterOption[] = [];
+  const seen = new Set<string>();
+
+  function push(raw: string, front = false) {
+    const value = transmissionFilterParam(raw);
+    if (!value) return;
+    const key = foldToken(value);
+    if (seen.has(key)) return;
+    seen.add(key);
+    const option = {
+      value,
+      label: transmissionFilterLabel(raw) || raw,
+    };
+    if (front) options.unshift(option);
+    else options.push(option);
+  }
+
+  for (const raw of values ?? []) push(raw);
+  if (selected) push(selected, true);
+  return options;
+}
+
 const FIPE_JUNK = [
   /\bsed\.?/gi,
   /\bhatch\.?/gi,

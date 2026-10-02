@@ -216,9 +216,23 @@ test("modelo entra na URL e a ordenação sozinha também busca a lista", () => 
   );
   assert.match(filters, /Todos os modelos/);
   assert.match(filters, /desktop-modelo/);
+  assert.match(filters, /transmissionFilterParam/);
+  assert.match(filters, /desktop-cambio/);
+  assert.match(filters, /sticky-gear-/);
   assert.match(browse, /stockViewNeedsFetch/);
   assert.match(vehicles, /stockOrderBy\(filters\.sort\)/);
   assert.match(vehicles, /model: \{/);
+  const where = vehicles.slice(
+    vehicles.indexOf("function buildStockWhere"),
+    vehicles.indexOf("function stockQueryKey"),
+  );
+  assert.match(where, /transmissionWhere\(filters\.transmission\)/);
+  assert.match(where, /and\.push\(gear\)/);
+  assert.doesNotMatch(where, /transmission: filters\.transmission/);
+  assert.match(vehicles, /stock-page-v12/);
+  assert.equal(parseStockFilters({ transmission: "automatico" }).transmission, "automatico");
+  assert.equal(stockViewNeedsFetch({ transmission: "automatico" }), true);
+  assert.equal(stockViewNeedsFetch({ transmission: "manual" }), true);
   assert.doesNotMatch(filters, /blindagem|Blindado|Consignado|Confirmado neste/i);
   assert.doesNotMatch(browse, /99633|9\d{4}-\d{4}/);
 });

@@ -15,7 +15,11 @@ import {
   type StockPageResult,
   type VehicleCardRecord,
 } from "@/lib/stock-query";
-import { colorWhere, formatColorLabel } from "@/lib/vehicle-display";
+import {
+  colorWhere,
+  formatColorLabel,
+  transmissionWhere,
+} from "@/lib/vehicle-display";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import { queryPublicVehicleCards } from "@/lib/public-vehicle-cards";
 import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
@@ -484,6 +488,8 @@ function buildStockWhere(filters: StockFilters) {
       })),
     );
   }
+  const gear = transmissionWhere(filters.transmission);
+  if (Object.keys(gear).length > 0) and.push(gear);
 
   return {
     status: "disponivel" as const,
@@ -499,7 +505,6 @@ function buildStockWhere(filters: StockFilters) {
           },
         }
       : {}),
-    ...(filters.transmission ? { transmission: filters.transmission } : {}),
     ...(filters.fuel ? { fuel: filters.fuel } : {}),
     ...colorWhere(filters.color),
     ...(filters.accessories && filters.accessories.length > 0
@@ -584,7 +589,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v10"],
+  ["stock-page-v12"],
   PUBLIC_CACHE,
 );
 
