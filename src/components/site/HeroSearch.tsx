@@ -15,9 +15,15 @@ const BUDGET_LINKS = [
 /**
  * Formulário nativo GET — busca no estoque sem esperar hidratação.
  */
-export function HeroSearch({ brands = [] }: { brands?: string[] }) {
+export function HeroSearch({
+  brands = [],
+  className = "",
+}: {
+  brands?: string[];
+  className?: string;
+}) {
   return (
-    <div className="mx-auto w-full max-w-xl lg:max-w-2xl">
+    <div className={`w-full ${className}`.trim()}>
       <form
         action="/estoque"
         method="get"
@@ -28,31 +34,31 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
             trackSearch({ content_ids: [], search_string: search });
           }
         }}
-        className="flex flex-col gap-2 border border-white/15 bg-asphalt/95 p-2 transition focus-within:border-brand/60 sm:flex-row sm:bg-asphalt/85 sm:backdrop-blur-md"
+        className="flex flex-row items-stretch gap-2 border border-white/15 bg-asphalt p-1.5 transition focus-within:border-brand/60"
         role="search"
       >
         <label htmlFor="hero-busca" className="sr-only">
           Buscar por marca ou modelo
         </label>
-        <div className="flex flex-1 items-center gap-2 px-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-2.5">
           <IconSearch className="h-4 w-4 shrink-0 text-muted" />
           <input
             id="hero-busca"
             type="search"
             name="q"
-            placeholder="Busque por marca ou modelo"
-            className="w-full bg-transparent py-3.5 text-base text-cream placeholder:text-muted focus:outline-none"
+            placeholder="Marca ou modelo"
+            className="w-full bg-transparent py-2 text-base text-cream placeholder:text-muted focus:outline-none"
           />
         </div>
         <button
           type="submit"
-          className="min-h-[52px] bg-brand px-6 py-3 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] touch-manipulation"
+          className="min-h-11 shrink-0 bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] touch-manipulation sm:px-5 sm:text-sm"
         >
           Buscar
         </button>
       </form>
 
-      <div className="chip-scroll mt-3 -mx-1 px-1">
+      <div className="chip-scroll hero-chips mt-3 -mx-1 px-1">
         <span className="shrink-0 text-xs uppercase tracking-wider text-muted">
           Faixa:
         </span>
@@ -69,7 +75,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
       </div>
 
       {brands.length > 0 ? (
-        <div className="chip-scroll mt-2 -mx-1 px-1">
+        <div className="chip-scroll hero-chips mt-2 -mx-1 px-1">
           <span className="shrink-0 text-xs uppercase tracking-wider text-muted">
             Marcas:
           </span>

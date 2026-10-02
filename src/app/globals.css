@@ -368,6 +368,24 @@ body {
   animation: fadeInScale 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Wordmark do hero menor que o splash — o header já carrega a marca. */
+.hero-brand img {
+  width: min(40vw, 132px);
+  height: auto;
+}
+
+@media (min-width: 640px) {
+  .hero-brand img {
+    width: 168px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-brand img {
+    width: 196px;
+  }
+}
+
 .hero-text {
   animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.06s both;
 }
@@ -672,6 +690,11 @@ body:has([data-ficha-page]) .whatsapp-float {
     scroll-snap-type: none;
   }
 
+  /* Home: a faixa segue o título do estoque, alinhada à esquerda. */
+  .chip-scroll.hero-chips {
+    justify-content: flex-start;
+  }
+
   .chip-scroll::after {
     display: none;
   }
@@ -943,7 +966,7 @@ textarea:-webkit-autofill:focus {
   position: absolute;
   border-radius: 9999px;
   filter: blur(56px);
-  opacity: 0.85;
+  opacity: 0.42;
   backface-visibility: hidden;
 }
 

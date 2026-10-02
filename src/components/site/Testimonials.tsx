@@ -27,7 +27,7 @@ function formatTestimonialDate(value: Date | string | null | undefined) {
 function StarRow({ rating }: { rating: number }) {
   const safe = Math.min(5, Math.max(1, Math.round(rating)));
   return (
-    <p className="mt-3 flex justify-center gap-0.5 text-brand" aria-label={`${safe} de 5`}>
+    <p className="mt-2 flex gap-0.5 text-brand" aria-label={`${safe} de 5`}>
       {([1, 2, 3, 4, 5] as const).map((star) => (
         <IconStar
           key={star}
@@ -69,7 +69,7 @@ export function Testimonials({ items }: { items: TestimonialItem[] }) {
     items.length === 1 ? "max-w-md" : items.length === 2 ? "max-w-3xl" : "";
 
   return (
-    <ul className={`mx-auto grid gap-5 sm:grid-cols-2 lg:grid-cols-3 ${width}`}>
+    <ul className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 ${width}`}>
       {items.map((item) => {
         const cleanName = cleanTestimonialField(item.name) ?? item.name;
         const cleanVehicleLabel = cleanTestimonialField(item.vehicleLabel);
@@ -83,14 +83,14 @@ export function Testimonials({ items }: { items: TestimonialItem[] }) {
         return (
           <li
             key={item.id}
-            className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center"
+            className="flex flex-col border border-white/10 bg-ink p-4 text-left sm:p-5"
           >
             <IconQuote className="h-6 w-6 text-brand/60" />
             <StarRow rating={item.rating} />
-            <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-cream/90">
+            <blockquote className="mt-3 flex-1 text-sm leading-snug text-cream/90">
               {cleanMessage}
             </blockquote>
-            <div className="mt-6 flex w-full items-center justify-center gap-3 border-t border-white/10 pt-5">
+            <div className="mt-4 flex w-full items-center gap-3 border-t border-white/10 pt-3">
               <Avatar name={cleanName} photoUrl={item.photoUrl} />
               <div className="min-w-0">
                 <p className="truncate font-display text-sm font-semibold text-cream">
