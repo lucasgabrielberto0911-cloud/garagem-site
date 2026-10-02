@@ -15,65 +15,105 @@ import { favoritesListWhatsApp, WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import { vehicleLocationLabel } from "@/lib/vehicle-location";
 
+type FavoritesResult = {
+  key: string;
+  vehicles: VehicleCardData[];
+  status: "loading" | "fresh" | "cached" | "failed";
+  refreshing: boolean;
+};
+
+const retryClass =
+  "inline-flex min-h-12 w-full items-center justify-center border border-white/20 px-5 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand disabled:opacity-60 sm:w-auto";
+
 export function FavoritesList() {
   const { ids, ready, clear } = useFavorites();
-  const [vehicles, setVehicles] = useState<VehicleCardData[] | null>(null);
-  const [failed, setFailed] = useState(false);
-
+  const [result, setResult] = useState<FavoritesResult>({
+    key: "", vehicles: [], status: "loading", refreshing: false,
+  });
+  const [attempt, setAttempt] = useState(0);
   const key = ids.join(",");
+  const retry = () => setAttempt((current) => current + 1);
 
   useEffect(() => {
-    if (!ready) return;
-
-    if (!key) {
-      setVehicles([]);
-      return;
-    }
-
+    if (!ready || !key) return;
+    const controller = new AbortController();
     let active = true;
-    setFailed(false);
-
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
     const cached = snapshotsForIds(key.split(",")) as VehicleCardData[];
-    if (typeof navigator !== "undefined" && !navigator.onLine && cached.length > 0) {
-      setVehicles(cached);
-    }
 
-    fetch(`/api/veiculos?ids=${encodeURIComponent(key)}`)
+    setResult((current) => {
+      if (current.key === key && current.status !== "loading") {
+        return { ...current, refreshing: true };
+      }
+      return {
+        key,
+        vehicles: !navigator.onLine ? cached : [],
+        status: !navigator.onLine && cached.length > 0 ? "cached" : "loading",
+        refreshing: true,
+      };
+    });
+
+    fetch(`/api/veiculos?ids=${encodeURIComponent(key)}`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
       .then(async (response) => {
         if (!response.ok) throw new Error(`favoritos ${response.status}`);
         return response.json();
       })
       .then((data) => {
         if (!active) return;
-        const next = (data.vehicles ?? []) as VehicleCardData[];
-        setVehicles(next);
+        if (!Array.isArray(data.vehicles)) throw new Error("Resposta inválida de favoritos");
+        const next = data.vehicles as VehicleCardData[];
+        setResult({ key, vehicles: next, status: "fresh", refreshing: false });
         for (const vehicle of next) {
-          writeFavoriteSnapshot({
-            ...vehicle,
-            updatedAt:
-              vehicle.updatedAt instanceof Date
+          try {
+            writeFavoriteSnapshot({
+              ...vehicle,
+              updatedAt: vehicle.updatedAt instanceof Date
                 ? vehicle.updatedAt.toISOString()
                 : vehicle.updatedAt ?? null,
-          });
+            });
+          } catch {
+            // Falha ao guardar uma cópia não invalida o estoque que acabou de chegar.
+          }
         }
       })
       .catch(() => {
         if (!active) return;
-        if (cached.length > 0) {
-          setVehicles(cached);
-          setFailed(false);
-          return;
-        }
-        setFailed(true);
-        setVehicles([]);
-      });
+        setResult((current) => {
+          const fallback = current.key === key && current.vehicles.length > 0
+            ? current.vehicles : cached;
+          return {
+            key, vehicles: fallback,
+            status: fallback.length > 0 ? "cached" : "failed",
+            refreshing: false,
+          };
+        });
+      })
+      .finally(() => window.clearTimeout(timeout));
 
     return () => {
       active = false;
+      window.clearTimeout(timeout);
+      controller.abort();
     };
+  }, [key, ready, attempt]);
+
+  useEffect(() => {
+    if (!ready || !key) return;
+    const refresh = () => setAttempt((current) => current + 1);
+    window.addEventListener("online", refresh);
+    return () => window.removeEventListener("online", refresh);
   }, [key, ready]);
 
-  if (!ready || vehicles === null) {
+  const current = result.key === key ? result : null;
+  const vehicles = key ? current?.vehicles ?? [] : [];
+  const cached = Boolean(key && current?.status === "cached");
+  const failed = Boolean(key && current?.status === "failed");
+  const refreshing = Boolean(key && current?.refreshing);
+
+  if (!ready || (key && (!current || current.status === "loading"))) {
     return <VehicleCardSkeletonGrid count={4} />;
   }
 
@@ -84,10 +124,13 @@ export function FavoritesList() {
           Não conseguimos carregar seus favoritos
         </p>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-          A lista continua salva neste aparelho. Verifique a conexão ou siga
-          pelo estoque e pelo WhatsApp.
+          Seus favoritos continuam salvos neste aparelho. Tente carregar de
+          novo ou chame a gente no WhatsApp para procurar outras opções.
         </p>
-        <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+        <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <button type="button" onClick={retry} disabled={refreshing} aria-busy={refreshing} className={retryClass}>
+            {refreshing ? "Carregando…" : "Tentar de novo"}
+          </button>
           <ButtonLink href="/estoque" size="lg" className="w-full sm:w-auto">
             Ver estoque
           </ButtonLink>
@@ -108,11 +151,12 @@ export function FavoritesList() {
     return (
       <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-16 text-center">
         <p className="font-display text-lg font-semibold text-cream">
-          Você ainda não salvou nenhum veículo
+          {key ? "Seus veículos salvos não estão disponíveis agora" : "Você ainda não salvou nenhum veículo"}
         </p>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-          No estoque, toque no coração. O veículo fica guardado neste aparelho,
-          sem cadastro.
+          {key
+            ? "Eles não aparecem no estoque atual. Seus favoritos continuam guardados neste aparelho. Veja outras opções ou peça ajuda para encontrar um parecido."
+            : "No estoque, toque no coração. O veículo fica guardado neste aparelho, sem cadastro."}
         </p>
         <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <ButtonLink href="/estoque" size="lg" className="w-full sm:w-auto">
@@ -151,11 +195,27 @@ export function FavoritesList() {
 
   return (
     <div>
+      {cached ? (
+        <div className="mb-6 border border-brand/30 bg-ink p-4 sm:flex sm:items-center sm:justify-between sm:gap-6">
+          <div role="status">
+            <p className="font-display text-sm font-semibold text-cream">Seus favoritos estão aqui</p>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              Não conseguimos atualizar agora. Você está vendo uma cópia salva
+              neste aparelho; preço e disponibilidade precisam ser conferidos.
+            </p>
+          </div>
+          <button type="button" onClick={retry} disabled={refreshing} aria-busy={refreshing} className={`${retryClass} mt-3 shrink-0 sm:mt-0`}>
+            {refreshing ? "Atualizando…" : "Tentar de novo"}
+          </button>
+        </div>
+      ) : null}
       <div className="flex flex-col items-center gap-2">
         <p className="text-xs uppercase tracking-wider text-muted">
           {vehicles.length} {vehicles.length === 1 ? "veículo salvo" : "veículos salvos"}
           {missing > 0
-            ? ` · ${missing} ${missing === 1 ? "saiu" : "saíram"} do estoque`
+            ? cached
+              ? ` · ${missing} ${missing === 1 ? "ainda não carregado" : "ainda não carregados"}`
+              : ` · ${missing} ${missing === 1 ? "indisponível agora" : "indisponíveis agora"}`
             : ""}
         </p>
         <button
