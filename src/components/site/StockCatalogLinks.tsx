@@ -5,8 +5,9 @@ import type { StockCatalogLink } from "@/lib/vehicles";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 /**
- * Índice no HTML inicial. A grade segue em lotes; cada ficha disponível
- * também aparece aqui como link, sem foto extra.
+ * Índice no HTML inicial de /estoque. A grade visível segue em lotes;
+ * cada ficha entra aqui como link para o crawler e o leitor de tela.
+ * Fora da vista: não compete com os cards.
  */
 export function StockCatalogLinks({
   vehicles,
@@ -16,15 +17,13 @@ export function StockCatalogLinks({
   if (vehicles.length === 0) return null;
 
   return (
-    <nav aria-label="Todos os anúncios" className="mt-10 border-t border-white/10 pt-8">
-      <h2 className="font-display text-lg font-semibold text-cream">
-        Todos os anúncios
-      </h2>
-      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+    <nav aria-label="Todos os anúncios" className="stock-catalog-index">
+      <h2>Todos os anúncios</h2>
+      <p>
         A grade carrega aos poucos. Aqui está cada seminovo disponível, para
         abrir a ficha direto — preço, ano e km.
       </p>
-      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+      <ul>
         {vehicles.map((vehicle) => {
           const label = formatVehicleLabel(
             vehicle.brand,
@@ -36,14 +35,9 @@ export function StockCatalogLinks({
             : "";
           return (
             <li key={vehicle.id}>
-              <Link
-                href={vehiclePath(vehicle)}
-                className="flex min-h-11 items-baseline justify-between gap-3 border border-white/10 bg-ink/40 px-3 py-2 text-sm text-cream transition hover:border-brand"
-              >
-                <span className="min-w-0">{label}</span>
-                {price ? (
-                  <span className="shrink-0 font-display font-semibold">{price}</span>
-                ) : null}
+              <Link href={vehiclePath(vehicle)} tabIndex={-1}>
+                {label}
+                {price ? <span> {price}</span> : null}
               </Link>
             </li>
           );

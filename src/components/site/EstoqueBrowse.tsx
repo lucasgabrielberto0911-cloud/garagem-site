@@ -1,9 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
-import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { SiteErrorNotice } from "@/components/site/SiteErrorNotice";
 import { StockInfiniteList } from "@/components/site/StockInfiniteList";
 import { StockReturnCapture } from "@/components/site/StockReturnCapture";
@@ -22,6 +22,11 @@ import {
   type StockPageResult,
 } from "@/lib/stock-query";
 import { stockSearchString } from "@/lib/meta-pixel";
+import {
+  WANTED_VEHICLE_BUTTON_LABEL,
+  WANTED_VEHICLE_PATH,
+  wantedVehicleHref,
+} from "@/lib/wanted-vehicle-page";
 
 export type EstoqueSearchParams = Partial<
   Record<(typeof STOCK_FILTER_KEYS)[number] | "sort" | "page", string>
@@ -71,6 +76,19 @@ function hasActiveFilters(params: EstoqueSearchParams) {
   return STOCK_FILTER_KEYS.some((key) => Boolean(params[key]));
 }
 
+function NextVehicleLink({ href }: { href: string }) {
+  return (
+    <div className="stock-next-vehicle">
+      <Link
+        href={href}
+        className="inline-flex min-h-[52px] max-w-full items-center justify-center border border-white/20 bg-ink px-5 py-3 text-center font-display text-sm font-semibold leading-snug text-cream transition hover:border-brand hover:bg-white/5"
+      >
+        {WANTED_VEHICLE_BUTTON_LABEL}
+      </Link>
+    </div>
+  );
+}
+
 export function EstoqueBrowseFallback({
   stock,
 }: {
@@ -104,6 +122,7 @@ export function EstoqueBrowseFallback({
           <VehicleCardSkeletonGrid count={6} />
         )}
       </div>
+      <NextVehicleLink href={WANTED_VEHICLE_PATH} />
     </>
   );
 }
@@ -315,28 +334,11 @@ export function EstoqueBrowse({
         )}
       </div>
 
-      <div className="mt-10">
-        <MissingModelForm
-          key={filterKey}
-          idPrefix="estoque"
-          sourcePage="estoque"
-          contextLabel={filtered ? waitlistQuery : ""}
-          pagePath={returnTo}
-          initialModel={params.q?.trim() || params.model?.trim() || ""}
-          initialYearMin={params.minYear ?? ""}
-          initialYearMax={params.maxYear ?? ""}
-          initialPriceMin={params.minPrice ?? ""}
-          initialPriceMax={params.maxPrice ?? ""}
-          initialKmMax={params.maxKm ?? ""}
-          description={
-            !loading && shown.vehicles.length === 0
-              ? filtered && waitlistQuery
-                ? `Não tem ${waitlistQuery} agora. Deixa o modelo e seu contato — a loja guarda o pedido.`
-                : "Deixa o modelo que você procura. A loja guarda o pedido e te chama quando aparecer."
-              : "Se o modelo não está na lista, deixa o que você procura. A loja guarda o pedido."
-          }
-        />
-      </div>
+      <NextVehicleLink
+        href={wantedVehicleHref(params, {
+          empty: !loading && shown.vehicles.length === 0,
+        })}
+      />
     </>
   );
 }

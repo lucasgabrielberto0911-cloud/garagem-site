@@ -155,23 +155,32 @@ test("o formulário público pede consentimento antes de enviar e não é WhatsA
   assert.doesNotMatch(source, /WhatsAppButton|wa\.me|99633|setTimeout|Confirmado neste anúncio/);
 });
 
-test("estoque e ficha têm o formulário; a cidade continua com o estoque inteiro", () => {
+test("estoque abre o pedido em outra página; a ficha mantém o formulário", () => {
   const browse = readSrc("components/site/EstoqueBrowse.tsx");
   const stock = readSrc("app/(site)/estoque/page.tsx");
   const ficha = readSrc("app/(site)/estoque/[id]/page.tsx");
   const city = readSrc("app/(site)/seminovos/[cidade]/page.tsx");
   const form = readSrc("components/site/MissingModelForm.tsx");
+  const pedido = readSrc("app/(site)/pedido/page.tsx");
+  const copy = readSrc("lib/wanted-vehicle-page.ts");
 
-  assert.match(browse, /<MissingModelForm/);
+  assert.doesNotMatch(browse, /MissingModelForm/);
+  assert.match(browse, /WANTED_VEHICLE_BUTTON_LABEL/);
+  assert.match(browse, /wantedVehicleHref/);
   assert.match(browse, /stockEmptyWhatsAppCta/);
   assert.match(browse, /shown\.vehicles\.length === 0/);
-  assert.match(
-    browse,
-    /initialModel=\{params\.q\?\.trim\(\) \|\| params\.model\?\.trim\(\) \|\| ""\}/,
-  );
-  const listAt = browse.indexOf("<StockInfiniteList");
-  const formAt = browse.indexOf("<MissingModelForm");
-  assert.ok(listAt > 0 && formAt > listAt);
+  assert.match(copy, /Não achou seu próximo veículo\?/);
+  const browseBody = browse.slice(browse.indexOf("export function EstoqueBrowse({"));
+  const listAt = browseBody.indexOf("<StockInfiniteList");
+  const buttonAt = browseBody.indexOf("<NextVehicleLink");
+  assert.ok(listAt > 0 && buttonAt > listAt);
+
+  assert.match(pedido, /<MissingModelForm/);
+  assert.match(pedido, /sourcePage="estoque"/);
+  assert.match(pedido, /wantedVehicleFormCopy/);
+  assert.match(form, /createWantedLead/);
+  assert.match(copy, /initialModel: params\.q\?\.trim\(\) \|\| params\.model\?\.trim\(\) \|\| ""/);
+  assert.doesNotMatch(stock, /<MissingModelForm/);
 
   assert.match(ficha, /<MissingModelForm/);
   assert.ok(ficha.indexOf("</aside>") < ficha.indexOf("<MissingModelForm"));
