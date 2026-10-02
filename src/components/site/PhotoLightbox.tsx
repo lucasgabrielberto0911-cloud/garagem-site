@@ -93,9 +93,14 @@ export function PhotoLightbox({
         ? "auto"
         : "smooth",
     });
-  }, [safeIndex]);
+  }, [safeIndex, mounted]);
 
   useEffect(() => {
+    if (!mounted) return;
+    const previousFocus =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     const previousOverflow = document.body.style.overflow;
     const previousPadding = document.body.style.paddingRight;
     const scrollbar = window.innerWidth - document.documentElement.clientWidth;
@@ -103,12 +108,13 @@ export function PhotoLightbox({
     if (scrollbar > 0) {
       document.body.style.paddingRight = `${scrollbar}px`;
     }
-    closeBtnRef.current?.focus();
+    closeBtnRef.current?.focus({ preventScroll: true });
     return () => {
       document.body.style.overflow = previousOverflow;
       document.body.style.paddingRight = previousPadding;
+      previousFocus?.focus({ preventScroll: true });
     };
-  }, []);
+  }, [mounted]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
