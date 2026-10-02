@@ -85,7 +85,7 @@ const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Oi! Te ajudo rápido a achar o seminovo. Me conta o orçamento ou o modelo — o detalhe a gente fecha no WhatsApp.",
+    "Oi! Me conta o orçamento, o câmbio ou o modelo que eu comparo o que está no estoque.",
 };
 
 const SUGGESTIONS = [
@@ -495,7 +495,6 @@ function ChatText({
   );
   const cta = showWhatsApp
     ? chatWhatsAppCta(text, ctaVehicle, {
-        force: true,
         handoff: {
           vehicles:
             vehicles.length > 0
