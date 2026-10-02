@@ -703,12 +703,28 @@ body:has([data-ficha-page]) .whatsapp-float {
 }
 
 /*
- * Página do pedido: o formulário termina antes do balão e do WhatsApp.
- * No celular o balão vira só o ícone, para o campo “Até” caber ao lado.
+ * Página do pedido: “Voltar ao estoque” e o formulário ficam no meio.
+ * No celular a página rola normal. O fim do formulário sobe a bottom nav,
+ * o WhatsApp e o balão, com 2rem de folga, para o Enviar pedido aparecer
+ * inteiro. No desktop a coluna tem a mesma folga dos dois lados, maior
+ * que o balão e o WhatsApp. Abaixo de 1200px o balão vira só o ícone —
+ * com o texto, a coluna central ficaria estreita demais para o e-mail
+ * e o “Até”.
  */
 .wanted-vehicle-page {
-  padding-right: 5.25rem;
-  padding-bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(
+    var(--site-bottom-nav) + var(--help-bubble-gap) + var(--help-bubble-h) + 2rem +
+      env(safe-area-inset-bottom, 0px)
+  );
+}
+
+.wanted-vehicle-sheet {
+  box-sizing: border-box;
+  width: min(
+    40rem,
+    calc(100% - 2 * max(1rem, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)))
+  );
+  margin-inline: auto;
 }
 
 @media (max-width: 1023px) {
@@ -731,10 +747,43 @@ body:has([data-ficha-page]) .whatsapp-float {
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (max-width: 1199px) {
+  body:has([data-wanted-vehicle-page]) .site-chat:not(.is-open) .site-chat-launcher span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  body:has([data-wanted-vehicle-page]) .site-chat:not(.is-open) .site-chat-launcher {
+    width: 3.5rem;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
   .wanted-vehicle-page {
-    padding-right: 20rem;
+    --wanted-side-clear: 11rem;
     padding-bottom: 7rem;
+  }
+
+  .wanted-vehicle-sheet {
+    width: min(48rem, calc(100% - 2 * var(--wanted-side-clear)));
+  }
+}
+
+@media (min-width: 1200px) {
+  .wanted-vehicle-page {
+    --wanted-side-clear: 21rem;
+    padding-bottom: 7rem;
+  }
+
+  .wanted-vehicle-sheet {
+    width: min(48rem, calc(100% - 2 * var(--wanted-side-clear)));
   }
 }
 
