@@ -19,7 +19,7 @@ import { colorWhere, formatColorLabel } from "@/lib/vehicle-display";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import { queryPublicVehicleCards } from "@/lib/public-vehicle-cards";
 import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
-import { pickRelatedVehicles } from "@/lib/related-vehicles";
+import { pickRelatedVehicles, priceBandRange } from "@/lib/related-vehicles";
 
 export {
   STOCK_PAGE_SIZE,
@@ -352,22 +352,49 @@ export const getVehicleByParam = cache(async (param: string) => {
   );
 });
 
+async function findRelatedCardPool(where: {
+  status: "disponivel";
+  historical: false;
+  id: { not: string };
+  price: { gte: number; lte: number };
+  category?: string;
+}) {
+  try {
+    return await findCardVehicles({
+      where: { ...where, consigned: false },
+      orderBy: { price: "asc" },
+    });
+  } catch (error) {
+    if (!isMissingColumnError(error, "consigned")) throw error;
+    return findCardVehicles({
+      where,
+      orderBy: { price: "asc" },
+    });
+  }
+}
+
 async function fetchRelatedVehicles(
   vehicleId: string,
   brand: string,
   take: number,
   category: string,
   price: number,
+  transmission: string,
 ): Promise<VehicleCardRecord[]> {
-  const pool = await findCardVehicles({
-    where: { status: "disponivel", id: { not: vehicleId } },
-    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
-    take: 48,
+  const { min, max } = priceBandRange(price);
+  if (max <= 0) return [];
+
+  const pool = await findRelatedCardPool({
+    status: "disponivel",
+    historical: false,
+    id: { not: vehicleId },
+    price: { gte: min, lte: max },
+    ...(category ? { category } : {}),
   });
 
   return pickRelatedVehicles(
     pool,
-    { id: vehicleId, brand, category, price },
+    { id: vehicleId, brand, category, price, transmission },
     take,
   );
 }
@@ -379,13 +406,23 @@ const loadRelatedCached = unstable_cache(
     take: number,
     category: string,
     price: number,
-  ) => fetchRelatedVehicles(vehicleId, brand, take, category, price),
-  ["related-vehicles-v6"],
+    transmission: string,
+  ) =>
+    fetchRelatedVehicles(
+      vehicleId,
+      brand,
+      take,
+      category,
+      price,
+      transmission,
+    ),
+  ["related-vehicles-v7"],
   PUBLIC_CACHE,
 );
 
 /**
- * Relacionados: faixa de preço primeiro, depois categoria e marca.
+ * Relacionados: mesmo tipo, perto no preço, com marca ou câmbio na frente
+ * quando isso ainda enche o lote.
  */
 export const getRelatedVehicles = cache(
   (
@@ -394,6 +431,7 @@ export const getRelatedVehicles = cache(
     take = 4,
     category?: string,
     price?: number,
+    transmission?: string,
   ) =>
     safeQuery(
       "veículos relacionados",
@@ -404,6 +442,7 @@ export const getRelatedVehicles = cache(
           take,
           category ?? "",
           price && price > 0 ? price : 0,
+          transmission ?? "",
         ),
       [] as VehicleCardRecord[],
     ),
