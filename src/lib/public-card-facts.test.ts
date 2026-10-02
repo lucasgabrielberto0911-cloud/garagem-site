@@ -202,11 +202,13 @@ test("card público não ganha selo de consignado nem laudo", () => {
   assert.match(source, /vehicle-card-fact/);
   assert.match(factCss, /overflow-wrap:\s*normal/);
   assert.match(factCss, /word-break:\s*normal/);
-  assert.match(factCss, /-webkit-line-clamp:\s*2/);
-  assert.match(factCss, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
-  assert.match(factCss, /height:\s*1\.5rem/);
+  assert.match(factCss, /display:\s*flex/);
+  assert.match(factCss, /flex-wrap:\s*wrap/);
+  assert.match(factCss, /white-space:\s*nowrap/);
+  assert.match(factCss, /height:\s*1rem/);
   assert.match(factCss, /background:\s*transparent/);
-  assert.doesNotMatch(factCss, /8\.75rem|2\.125rem/);
+  assert.doesNotMatch(factCss, /-webkit-line-clamp|grid-template-columns/);
+  assert.doesNotMatch(factCss, /8\.75rem|2\.125rem|1\.5rem/);
   assert.doesNotMatch(factCss, /anywhere|break-all|break-word/);
   assert.doesNotMatch(source, /overflow-wrap:anywhere/);
   assert.doesNotMatch(source, /Consignado/);

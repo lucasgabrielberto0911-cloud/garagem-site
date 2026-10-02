@@ -1345,45 +1345,42 @@ textarea:-webkit-autofill:focus {
 }
 
 /*
- * Fatos em chips baixos, sempre duas colunas. O texto quebra na palavra
- * ou ganha reticências no fim dela — não corta “Automático” no meio.
+ * Chips de uma linha, na largura do texto. Entram lado a lado e só
+ * descem quando a linha enche. Reticências ficam no fim da palavra.
  */
 .vehicle-card-facts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.2rem;
-  margin-top: 0.3rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem;
+  margin-top: 0.2rem;
 }
 
 .vehicle-card-fact {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  height: 1.5rem;
-  min-width: 0;
+  height: 1rem;
+  max-width: 100%;
   margin: 0;
-  padding: 0 0.2rem;
+  padding: 0 0.15rem;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: transparent;
-  text-align: center;
 }
 
 .vehicle-card-fact dd {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
   overflow: hidden;
-  width: 100%;
   max-width: 100%;
   margin: 0;
   font-family: var(--font-display), sans-serif;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 1;
   color: var(--cream);
   text-align: center;
-  white-space: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
