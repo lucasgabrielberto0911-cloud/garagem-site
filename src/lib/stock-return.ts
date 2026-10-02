@@ -1,7 +1,7 @@
 export const STOCK_RETURN_KEY = "garagem:estoque-volta";
 export const STOCK_SCROLL_KEY = "garagem:estoque-scroll";
 
-/** No celular o estoque rola dentro do shell; no desktop, a janela. */
+/** A listagem rola a janela. Se [data-stock-scroll] for o scrollport, usa ele. */
 export function stockScrollRoot() {
   if (typeof document === "undefined") return null;
   const shell = document.querySelector("[data-stock-scroll]");
