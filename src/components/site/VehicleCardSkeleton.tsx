@@ -6,23 +6,23 @@ export function VehicleCardSkeleton({ largePhoto = false }: { largePhoto?: boole
           largePhoto ? "aspect-[4/3] sm:aspect-[16/10]" : "aspect-[16/10]"
         }`}
       />
-      <div className="space-y-2 p-3">
+      <div className="space-y-2 px-2.5 pb-2 pt-2.5 sm:px-3.5 sm:pt-3">
         <div className="skeleton h-4 w-3/4" />
         <div className="skeleton h-3 w-1/2" />
-        <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+        <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1.5">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index}>
-              <div className="skeleton h-2 w-8" />
-              <div className="skeleton mt-1 h-3 w-12" />
-            </div>
+            <div key={index} className="skeleton h-3 w-16" />
           ))}
         </div>
-        <div className="flex items-center justify-between border-t border-white/10 pt-2.5">
-          <div className="skeleton h-5 w-24" />
-          <div className="skeleton h-3 w-16" />
+        <div className="border-t border-white/10 pt-2.5">
+          <div className="skeleton h-7 w-28" />
+          <div className="mt-2 flex items-center justify-between">
+            <div className="skeleton h-3 w-16" />
+            <div className="skeleton h-11 w-11" />
+          </div>
         </div>
       </div>
-      <div className="skeleton h-11 w-full" />
+      {largePhoto ? null : <div className="skeleton h-11 w-full" />}
     </div>
   );
 }

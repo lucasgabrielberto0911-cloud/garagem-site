@@ -323,6 +323,10 @@ test("o card não mostra Atualizado em, o preço é vermelho e o coração fica 
     ),
   );
   assert.match(html, /text-brand/);
+  assert.match(html, /text-2xl/);
+  assert.match(html, /sm:text-3xl/);
+  assert.match(html, /grid-cols-2/);
+  assert.match(html, /h-11 w-11/);
   assert.match(html, /R\$\s*84\.900/);
   assert.match(html, /aspect-\[4\/3\]/);
   assert.match(html, />2016</);
@@ -331,12 +335,19 @@ test("o card não mostra Atualizado em, o preço é vermelho e o coração fica 
   assert.match(html, /Linhares/);
   assert.doesNotMatch(html, /Atualizado/);
   assert.doesNotMatch(html, /bg-asphalt\/70/);
+  assert.doesNotMatch(html, /·/);
   const photo = html.indexOf("data-vehicle-photo");
   const body = html.indexOf("data-vehicle-body");
+  const title = html.indexOf(">Honda HR-V<", body);
+  const footer = html.indexOf("data-card-footer");
   const heart = html.indexOf("nos favoritos");
-  assert.ok(photo >= 0 && body > photo && heart > body);
+  assert.ok(photo >= 0 && body > photo && title > body);
+  assert.ok(footer > title && heart > footer);
 
   const card = readSrc("components/site/VehicleCard.tsx");
+  assert.match(card, /data-card-footer[\s\S]*FavoriteButton/);
+  assert.doesNotMatch(card, /flex flex-wrap gap-y-0\.5/);
+  assert.doesNotMatch(card, /text-lg font-bold/);
   const grid = readSrc("components/site/VehicleGrid.tsx");
   const home = readSrc("app/(site)/page.tsx");
   const stock = readSrc("components/site/StockInfiniteList.tsx");

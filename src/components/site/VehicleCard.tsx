@@ -110,63 +110,68 @@ export function VehicleCard({
         />
       </div>
 
-      <div className="flex flex-1 items-start gap-1 p-3 sm:gap-2" data-vehicle-body="">
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:gap-2">
-          {showDestaque || badge || !cover ? (
-            <div className="flex flex-wrap gap-1">
-              {showDestaque ? (
-                <span className="bg-brand px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
-                  Destaque
-                </span>
-              ) : null}
-              {badge ? (
-                <span
-                  className={`px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider ${badge.className}`}
-                >
-                  {badge.label}
-                </span>
-              ) : null}
-              {!cover ? (
-                <span className="bg-white/15 px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
-                  Sem foto
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-          <div className="min-w-0">
-            {card.title ? (
-              <h3 className="line-clamp-2 font-display text-[15px] font-semibold leading-snug text-cream sm:text-sm">
-                {card.title}
-              </h3>
+      <div
+        className="flex min-w-0 flex-1 flex-col px-2 pb-2 pt-2.5 min-[360px]:px-2.5 sm:px-3.5 sm:pb-2.5 sm:pt-3"
+        data-vehicle-body=""
+      >
+        {showDestaque || badge || !cover ? (
+          <div className="mb-1.5 flex flex-wrap gap-1">
+            {showDestaque ? (
+              <span className="bg-brand px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
+                Destaque
+              </span>
             ) : null}
-            {card.version ? (
-              <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted">
-                {card.version}
-              </p>
+            {badge ? (
+              <span
+                className={`px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider ${badge.className}`}
+              >
+                {badge.label}
+              </span>
             ) : null}
-            <CardFacts facts={card.facts} />
+            {!cover ? (
+              <span className="bg-white/15 px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
+                Sem foto
+              </span>
+            ) : null}
           </div>
+        ) : null}
+        <div className="min-w-0">
+          {card.title ? (
+            <h3 className="line-clamp-2 font-display text-[15px] font-semibold leading-snug text-cream sm:text-base">
+              {card.title}
+            </h3>
+          ) : null}
+          {card.version ? (
+            <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-muted sm:text-[13px]">
+              {card.version}
+            </p>
+          ) : null}
+          <CardFacts facts={card.facts} />
+        </div>
 
-          <div className="mt-auto flex flex-col gap-1.5 border-t border-white/10 pt-2 sm:flex-row sm:items-end sm:justify-between sm:gap-2 sm:pt-2.5">
+        <div className="mt-auto pt-3" data-card-footer="">
+          <div className="border-t border-white/10 pt-2.5">
             {card.priceLabel ? (
-              <p className="font-display text-lg font-bold leading-none text-brand sm:text-base">
+              <p className="font-display text-2xl font-bold leading-none tracking-tight text-brand tabular-nums sm:text-3xl">
                 {card.priceLabel}
               </p>
             ) : null}
-            <span className="card-open-label inline-flex min-h-11 shrink-0 items-center font-display text-[11px] font-semibold uppercase tracking-wide text-cream/80 transition group-hover:text-cream">
-              Ver ficha
-            </span>
+            <div className="mt-1 flex items-center justify-between gap-1">
+              <span className="card-open-label inline-flex min-w-0 items-center font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/80 transition group-hover:text-cream sm:text-xs">
+                Ver ficha
+              </span>
+              <FavoriteButton
+                vehicleId={vehicle.id}
+                label={display.titleWithYear}
+                value={vehicle.price}
+                make={formatBrandName(vehicle.brand)}
+                model={formatModelName(vehicle.model)}
+                year={vehicle.yearModel}
+                className="relative z-10 -mb-1 -mr-1.5 shrink-0"
+              />
+            </div>
           </div>
         </div>
-        <FavoriteButton
-          vehicleId={vehicle.id}
-          label={display.titleWithYear}
-          value={vehicle.price}
-          make={formatBrandName(vehicle.brand)}
-          model={formatModelName(vehicle.model)}
-          year={vehicle.yearModel}
-          className="relative z-10 shrink-0"
-        />
       </div>
       <StockVehicleLink
         href={href}
@@ -203,18 +208,13 @@ function CardFacts({ facts }: { facts: PublicCardFact[] }) {
   if (facts.length === 0) return null;
 
   return (
-    <dl className="mt-1.5 flex flex-wrap gap-y-0.5">
-      {facts.map((fact, index) => (
-        <div key={fact.label} className="flex items-baseline whitespace-nowrap">
+    <dl className="mt-2 grid grid-cols-2 gap-x-1.5 gap-y-1 min-[360px]:gap-x-2">
+      {facts.map((fact) => (
+        <div key={fact.label} className="min-w-0">
           <dt className="sr-only">{fact.label}</dt>
-          <dd className="font-display text-[12px] font-semibold leading-tight text-cream">
+          <dd className="truncate whitespace-nowrap font-display text-[10px] font-semibold leading-tight tracking-tight text-cream min-[360px]:text-[11px] sm:text-[13px] sm:tracking-normal">
             {fact.value}
           </dd>
-          {index < facts.length - 1 ? (
-            <span className="px-1.5 text-muted" aria-hidden="true">
-              ·
-            </span>
-          ) : null}
         </div>
       ))}
     </dl>
