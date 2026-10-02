@@ -100,7 +100,11 @@ export function EstoqueBrowseFallback({
 
   return (
     <>
-      <p className="stock-count mt-1 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
+      <p
+        role="status"
+        aria-atomic="true"
+        className="stock-count mb-2 mt-3 text-left text-sm font-medium text-cream lg:mb-0 lg:mt-0 lg:text-xs lg:font-normal lg:uppercase lg:tracking-wider lg:text-muted"
+      >
         {vehicles.length > 0
           ? `${total} ${total === 1 ? "veículo no estoque" : "veículos no estoque"} · sem filtros${
               total > vehicles.length ? " · role para ver todos" : ""
@@ -244,15 +248,24 @@ export function EstoqueBrowse({
         </div>
       ) : null}
 
-      <p className="stock-count mt-1 text-center text-xs uppercase tracking-wider text-muted lg:mt-0 lg:text-left">
+      <p
+        role="status"
+        aria-atomic="true"
+        className="stock-count mb-2 mt-3 text-left text-sm font-medium text-cream lg:mb-0 lg:mt-0 lg:text-xs lg:font-normal lg:uppercase lg:tracking-wider lg:text-muted"
+      >
         {loading
           ? "Atualizando o estoque…"
-          : filtered
-            ? `${shown.total} ${shown.total === 1 ? "veículo encontrado" : "veículos encontrados"} · ${stockSortLabel(params.sort)}`
-            : `${shown.total} ${shown.total === 1 ? "veículo no estoque" : "veículos no estoque"} · ${stockSortLabel(params.sort)}`}
-        {!loading && shown.total > shown.vehicles.length
-          ? " · role para ver todos"
-          : ""}
+          : shown.error
+            ? "Estoque indisponível no momento"
+            : filtered
+              ? `${shown.total} ${shown.total === 1 ? "veículo encontrado" : "veículos encontrados"}`
+              : `${shown.total} ${shown.total === 1 ? "veículo no estoque" : "veículos no estoque"}`}
+        {!loading && !shown.error ? (
+          <span className="hidden lg:inline">
+            {` · ${stockSortLabel(params.sort)}`}
+            {shown.total > shown.vehicles.length ? " · role para ver todos" : ""}
+          </span>
+        ) : null}
       </p>
 
       <div className="mt-1 lg:mt-4" data-estoque-list="" aria-live="polite">
@@ -267,7 +280,7 @@ export function EstoqueBrowse({
             query={query}
             returnTo={returnTo}
             empty={
-              <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-12 text-center">
+              <div data-stock-empty="" className="mx-auto max-w-2xl rounded-xl border border-white/15 bg-ink px-4 py-6 text-center sm:px-6 sm:py-10">
                 <p className="font-display text-lg font-semibold text-cream">
                   {shown.error
                     ? "Não foi possível carregar o estoque"
@@ -279,11 +292,17 @@ export function EstoqueBrowse({
                   {shown.error
                     ? "Tente novamente em alguns instantes. Se preferir, fale conosco no WhatsApp."
                     : filtered
-                      ? waitlistQuery
-                        ? `Não tem ${waitlistQuery} agora. Me avisa no WhatsApp — a gente chama quando entrar.`
-                        : "Não tem essa combinação agora. Me avisa no WhatsApp o que você procura — a gente chama quando entrar."
+                      ? "Você pode retirar um filtro ou ver todos os veículos. Se preferir, conta pra gente o que você procura no WhatsApp."
                       : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
                 </p>
+                {filtered && !shown.error ? (
+                  <Link
+                    href="/estoque"
+                    className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-md border border-white/25 px-4 py-3 text-sm font-semibold text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:w-auto"
+                  >
+                    Ver todos os veículos
+                  </Link>
+                ) : null}
                 <div className="mt-5 flex flex-col items-center gap-3">
                   <div className="flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:items-center">
                   <SiteLeadHit
