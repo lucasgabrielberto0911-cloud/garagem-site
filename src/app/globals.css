@@ -1849,10 +1849,6 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
     margin-top: 0.25rem;
   }
 
-  .stock-count {
-    display: none;
-  }
-
   .hero-search .chip-scroll {
     gap: 0.35rem;
     -webkit-mask-image: none;

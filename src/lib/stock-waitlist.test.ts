@@ -84,7 +84,7 @@ test("empty state do estoque: WhatsApp primário, Ajuda secundária, UTM certo",
   assert.match(browse, /stockEmptyWhatsAppCta/);
   assert.match(browse, /campaign=\{emptyWhatsApp\.campaign\}/);
   assert.match(browse, /variant="solid"/);
-  assert.match(browse, /Me avisa no WhatsApp/);
+  assert.match(browse, /\{emptyWhatsApp\.label\}/);
   assert.match(browse, /ChatOpenButton/);
   assert.match(browse, /variant="outline"/);
 

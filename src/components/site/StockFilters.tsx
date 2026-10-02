@@ -195,24 +195,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const hasFilter = Object.entries(current).some(
     ([key, value]) => value && !(key === "sort" && value === "recentes"),
   );
-  const activeFilterCount = [
-    current.q,
-    current.category,
-    current.brand,
-    current.model,
-    current.transmission,
-    current.fuel,
-    current.color,
-    current.accessory,
-    current.laudo,
-    current.minPrice,
-    current.maxPrice,
-    current.minYear,
-    current.maxYear,
-    current.maxKm,
-    current.city,
-  ].filter(Boolean).length;
-
   /** Só os campos que existem dentro do painel do celular (a busca fica fora). */
   const draftFilterCount = [
     draft.category,
@@ -304,6 +286,21 @@ export function StockFilters({ facets }: { facets: Facets }) {
     activeFilters.push({
       key: "maxKm",
       label: `Até ${formatCompactNumber(current.maxKm)} km`,
+    });
+  }
+
+  const activeFilterCount = activeFilters.length;
+
+  function removeFilter(filter: ActiveFilter) {
+    if (filter.key === "brand") {
+      update({ brand: "", model: "" });
+      return;
+    }
+    update({
+      [filter.key]:
+        filter.key === "accessory" && filter.accessory
+          ? toggleAccessoryValue(current.accessory, filter.accessory)
+          : "",
     });
   }
 
@@ -621,27 +618,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
                 Filtros ativos
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {activeFilters.map((filter) => (
-                  <button
-                    key={filter.accessory ? `accessory:${filter.accessory}` : filter.key}
-                    type="button"
-                    onClick={() =>
-                      update({
-                        [filter.key]:
-                          filter.key === "accessory" && filter.accessory
-                            ? toggleAccessoryValue(current.accessory, filter.accessory)
-                            : "",
-                      })
-                    }
-                    className="inline-flex min-h-[44px] items-center gap-1.5 border border-brand/50 bg-brand/10 px-2.5 py-1.5 text-left text-[11px] leading-tight text-cream transition hover:border-brand"
-                    aria-label={`Remover ${filter.label}`}
-                  >
-                    <span>{filter.label}</span>
-                    <IconClose className="h-3 w-3 shrink-0 text-brand" />
-                  </button>
-                ))}
-              </div>
+              <ActiveFilterChips filters={activeFilters} onRemove={removeFilter} />
             </div>
           ) : null}
 
@@ -833,16 +810,39 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </span>
             ) : null}
           </button>
-          {hasFilter ? (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="col-span-full min-h-11 justify-self-end px-2 text-[11px] uppercase tracking-wider text-muted"
-            >
-              Limpar filtros
-            </button>
-          ) : null}
         </div>
+        {activeFilters.length > 0 ? (
+          <section
+            aria-label="Filtros ativos"
+            data-stock-active-filters=""
+            className="mt-1 border-t border-white/10 pt-2"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-cream">
+                Sua busca{" "}
+                <span className="text-muted">
+                  · {activeFilterCount} {activeFilterCount === 1 ? "filtro" : "filtros"}
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="min-h-11 shrink-0 px-2 text-xs text-muted underline decoration-white/30 underline-offset-4 transition hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+              >
+                Limpar filtros
+              </button>
+            </div>
+            <ActiveFilterChips filters={activeFilters} onRemove={removeFilter} />
+          </section>
+        ) : hasFilter ? (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="min-h-11 self-end px-2 text-xs text-muted underline underline-offset-4"
+          >
+            Limpar filtros
+          </button>
+        ) : null}
       </div>
 
       {open ? (
@@ -1179,6 +1179,31 @@ export function StockFilters({ facets }: { facets: Facets }) {
         </div>
       ) : null}
     </>
+  );
+}
+
+function ActiveFilterChips({
+  filters,
+  onRemove,
+}: {
+  filters: ActiveFilter[];
+  onRemove: (filter: ActiveFilter) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 lg:mt-3">
+      {filters.map((filter) => (
+        <button
+          key={filter.accessory ? `accessory:${filter.accessory}` : filter.key}
+          type="button"
+          onClick={() => onRemove(filter)}
+          className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-md border border-brand/40 bg-brand/10 px-3 py-2 text-left text-xs leading-relaxed text-cream transition hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand lg:rounded-none lg:px-2.5 lg:py-1.5 lg:text-[11px] lg:leading-tight"
+          aria-label={`Remover ${filter.label}`}
+        >
+          <span className="min-w-0 whitespace-normal [overflow-wrap:anywhere]">{filter.label}</span>
+          <IconClose className="h-3.5 w-3.5 shrink-0 text-brand" />
+        </button>
+      ))}
+    </div>
   );
 }
 
