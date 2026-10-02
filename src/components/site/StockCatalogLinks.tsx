@@ -38,6 +38,7 @@ export function StockCatalogLinks({
             <li key={vehicle.id}>
               <Link
                 href={vehiclePath(vehicle)}
+                prefetch={false}
                 className="flex min-h-11 items-baseline justify-between gap-3 border border-white/10 bg-ink/40 px-3 py-2 text-sm text-cream transition hover:border-brand"
               >
                 <span className="min-w-0">{label}</span>

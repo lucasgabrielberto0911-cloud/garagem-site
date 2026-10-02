@@ -80,6 +80,7 @@ export async function SiteFooter() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
+                    prefetch={false}
                     className="inline-flex min-h-[36px] items-center text-sm text-muted transition hover:text-cream"
                   >
                     {link.label}
@@ -98,6 +99,7 @@ export async function SiteFooter() {
                 <li key={service.label}>
                   <Link
                     href={service.href}
+                    prefetch={false}
                     className="inline-flex min-h-[36px] items-center text-sm text-muted transition hover:text-cream"
                   >
                     {service.label}
@@ -112,6 +114,7 @@ export async function SiteFooter() {
               <li>
                 <Link
                   href="/seminovos"
+                  prefetch={false}
                   className="inline-flex min-h-[36px] items-center text-sm text-muted transition hover:text-cream"
                 >
                   Todas as cidades
@@ -121,6 +124,7 @@ export async function SiteFooter() {
                 <li key={city.slug}>
                   <Link
                     href={`/seminovos/${city.slug}`}
+                    prefetch={false}
                     className="inline-flex min-h-[36px] items-center text-sm text-muted transition hover:text-cream"
                   >
                     Seminovos em {city.name}
@@ -219,6 +223,7 @@ export async function SiteFooter() {
               <li>
                 <Link
                   href="/seminovos"
+                  prefetch={false}
                   className="inline-flex min-h-[44px] items-center border border-brand/40 bg-asphalt/50 px-3 text-xs uppercase tracking-wider text-cream touch-manipulation"
                 >
                   Todas
@@ -228,6 +233,7 @@ export async function SiteFooter() {
                 <li key={city.slug}>
                   <Link
                     href={`/seminovos/${city.slug}`}
+                    prefetch={false}
                     className="inline-flex min-h-[44px] items-center border border-white/10 bg-asphalt/50 px-3 text-xs uppercase tracking-wider text-cream touch-manipulation"
                   >
                     {city.name}
@@ -251,10 +257,10 @@ export async function SiteFooter() {
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-            <Link href="/privacidade" className="transition hover:text-cream">
+            <Link href="/privacidade" prefetch={false} className="transition hover:text-cream">
               Privacidade
             </Link>
-            <Link href="/faq" className="transition hover:text-cream">
+            <Link href="/faq" prefetch={false} className="transition hover:text-cream">
               Dúvidas
             </Link>
           </div>

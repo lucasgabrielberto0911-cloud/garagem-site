@@ -104,6 +104,7 @@ export function SiteHeader() {
         <div className="mx-auto flex h-[72px] w-full max-w-[90rem] items-center gap-3 px-3 sm:gap-5 sm:px-6 lg:h-[76px] lg:gap-8 lg:px-8 xl:gap-10">
           <Link
             href="/"
+            prefetch={false}
             className="flex shrink-0 items-center focus-visible:outline-offset-4"
             aria-label={`${site.name} — página inicial`}
           >
@@ -123,6 +124,7 @@ export function SiteHeader() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={false}
                   aria-current={active ? "page" : undefined}
                   className={`group relative shrink-0 whitespace-nowrap px-2.5 py-2.5 font-display text-[13px] font-semibold tracking-wide transition xl:px-3.5 xl:text-[14px] ${
                     active ? "text-cream" : "text-cream/70 hover:text-cream"
@@ -219,6 +221,7 @@ export function SiteHeader() {
                     <li key={link.href}>
                       <Link
                         href={link.href}
+                        prefetch={false}
                         replace
                         onClick={closeMenuForNavigation}
                         aria-current={active ? "page" : undefined}
@@ -240,6 +243,7 @@ export function SiteHeader() {
                   <li key={link.href}>
                     <Link
                       href={link.href}
+                      prefetch={false}
                       replace
                       onClick={closeMenuForNavigation}
                       className="inline-flex min-h-[36px] items-center text-sm text-muted transition active:text-cream"

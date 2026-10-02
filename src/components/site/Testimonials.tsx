@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { WhatsAppButton } from "@/components/site/ui";
 import { IconQuote, IconStar } from "@/components/site/icons";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
@@ -128,17 +127,16 @@ function Avatar({
 }) {
   if (photoUrl) {
     return (
-      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-asphalt">
-        <Image
-          src={photoUrl}
-          alt={name}
-          fill
-          sizes="40px"
-          quality={60}
-          unoptimized={/^https?:\/\//i.test(photoUrl)}
-          className="object-cover"
-        />
-      </div>
+      // eslint-disable-next-line @next/next/no-img-element -- avatar remoto, sem /_next/image
+      <img
+        src={photoUrl}
+        alt={name}
+        width={40}
+        height={40}
+        loading="lazy"
+        decoding="async"
+        className="h-10 w-10 shrink-0 rounded-full bg-asphalt object-cover"
+      />
     );
   }
 

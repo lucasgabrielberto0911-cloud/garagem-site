@@ -220,6 +220,7 @@ export default async function HomePage() {
         <div className="mt-7 text-center">
           <Link
             href="/estoque"
+            prefetch={false}
             className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
           >
             Ver todos os veículos
@@ -376,6 +377,7 @@ export default async function HomePage() {
           <div className="mt-6 text-center">
             <Link
               href="/faq"
+              prefetch={false}
               className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
             >
               Ver todas as dúvidas

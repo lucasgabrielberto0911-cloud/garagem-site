@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import { useFavorites } from "@/lib/favorites";
 import { trackAddToWishlist, trackPwaEvent } from "@/lib/meta-pixel";
 import { enqueueIntent } from "@/lib/offline-queue";
@@ -50,7 +50,7 @@ export function FavoriteButton({
       }
       setPulse(true);
       window.setTimeout(() => setPulse(false), 320);
-      toast.success(
+      notifySuccess(
         added ? `${label} salvo nos favoritos` : `${label} removido dos favoritos`,
         added
           ? {
@@ -66,7 +66,7 @@ export function FavoriteButton({
             },
       );
     } catch {
-      toast.error("Não foi possível atualizar os favoritos neste aparelho.", {
+      notifyError("Não foi possível atualizar os favoritos neste aparelho.", {
         action: {
           label: "Tentar de novo",
           onClick: () => applyToggle(),

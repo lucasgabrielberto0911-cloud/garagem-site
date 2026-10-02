@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import { createWantedLead } from "@/app/(site)/estoque/wanted-actions";
 import { formatNumberBR, formatPhoneBR } from "@/lib/format";
 import { trackLead } from "@/lib/meta-pixel";
@@ -122,19 +122,19 @@ export function MissingModelForm({
             content_name: "Não encontrou o modelo",
             search_string: parsed.lead?.model,
           });
-          toast.success(result.message);
+          notifySuccess(result.message);
           setSent(true);
           return;
         }
         const fieldErrors = result.fieldErrors ?? {};
         setErrors(fieldErrors);
         setFormError(result.message);
-        toast.error(result.message);
+        notifyError(result.message);
         focusField(Object.keys(fieldErrors)[0] ?? "");
       } catch {
         const message = "Não foi possível enviar agora. Tente de novo.";
         setFormError(message);
-        toast.error(message);
+        notifyError(message);
       }
     });
   }
@@ -415,6 +415,7 @@ export function MissingModelForm({
             </label>{" "}
             <Link
               href="/privacidade"
+              prefetch={false}
               className="text-xs text-cream underline decoration-white/30 underline-offset-2 hover:text-brand"
             >
               Política de privacidade

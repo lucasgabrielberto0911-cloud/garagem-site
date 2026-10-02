@@ -29,18 +29,23 @@ export type VehicleCardRecord = {
 /**
  * LCP da ficha. O container é max-w-7xl com px-8; a coluna da foto é
  * 1.35 / 2.25 do miolo (menos o gap-8). No xl isso dá 710px, não 60vw
- * de um monitor largo. No celular a foto é full-bleed.
+ * de um monitor largo. A foto continua full-bleed no celular; o slot
+ * abaixo de 640px é 60vw para o DPR 3 cair no WebP 800 já existente,
+ * e não no arquivo 1280.
  */
 export const GALLERY_HERO_SIZES =
-  "(min-width: 1280px) 710px, (min-width: 1024px) calc((100vw - 96px) * 0.6), 100vw";
+  "(min-width: 1280px) 710px, (min-width: 1024px) calc((100vw - 96px) * 0.6), (min-width: 640px) 100vw, 60vw";
 
 /**
  * Card dentro do mesmo container: 2 colunas, 3 no lg, 4 no xl da home.
  * No estoque o lg tem sidebar, então o card é menor — esta medida é o
  * teto da home, para o celular não pedir a foto do desktop.
+ * A coluna no celular tem ~173px. Com DPR 3 o browser pediria 720.
+ * O último termo usa /3 (~115px de slot) para esse 3x cair no WebP 480
+ * gravado no upload. De 640px para cima seguem 720 e 960.
  */
 export const CARD_SIZES =
-  "(min-width: 1280px) 292px, (min-width: 1024px) calc((100vw - 96px) / 3), (min-width: 640px) calc((100vw - 64px) / 2), calc((100vw - 44px) / 2)";
+  "(min-width: 1280px) 292px, (min-width: 1024px) calc((100vw - 96px) / 3), (min-width: 640px) calc((100vw - 64px) / 2), calc((100vw - 44px) / 3)";
 
 const SUPABASE_OBJECT_PUBLIC = "/storage/v1/object/public/";
 const SUPABASE_RENDER_PUBLIC = "/storage/v1/render/image/public/";

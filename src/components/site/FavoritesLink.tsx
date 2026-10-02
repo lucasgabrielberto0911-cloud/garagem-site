@@ -13,6 +13,7 @@ export function FavoritesLink({ className = "" }: { className?: string }) {
   return (
     <Link
       href="/favoritos"
+      prefetch={false}
       aria-label={label}
       className={`relative inline-flex h-11 w-11 items-center justify-center gap-2 border border-white/15 text-cream transition hover:border-brand active:bg-white/10 touch-manipulation focus-visible:border-brand 2xl:w-auto 2xl:px-3 ${className}`}
     >
