@@ -150,7 +150,7 @@ export default async function HomePage() {
               <ButtonLink href="/estoque" size="lg" className="w-full">
                 Ver estoque
               </ButtonLink>
-              <p className="text-sm font-medium leading-none text-cream lg:text-right">
+              <p className="text-center text-sm font-medium leading-none text-cream">
                 {site.whatsappLabel}
               </p>
             </div>
