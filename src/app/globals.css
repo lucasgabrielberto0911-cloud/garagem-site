@@ -709,7 +709,7 @@ body:has([data-ficha-page]) .whatsapp-float {
 }
 
 .vehicle-card-stock {
-  contain-intrinsic-size: auto 520px;
+  contain-intrinsic-size: auto 360px;
 }
 
 @media (min-width: 640px) {

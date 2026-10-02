@@ -344,6 +344,12 @@ test("o card não mostra Atualizado em, o preço é vermelho e o coração fica 
   assert.doesNotMatch(card, /formatUpdatedAt/);
   assert.doesNotMatch(card, /absolute right-1\.5 top-1\.5/);
   assert.match(grid, /largePhoto=\{stock\}/);
+  assert.match(grid, /return "grid-cols-2 lg:grid-cols-3"/);
+  assert.doesNotMatch(grid, /grid-cols-1 sm:grid-cols-2/);
+  assert.match(
+    readSrc("components/site/VehicleCardSkeleton.tsx"),
+    /grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3/,
+  );
   assert.match(stock, /photoLayout="stock"/);
   assert.doesNotMatch(home, /photoLayout="stock"/);
   assert.doesNotMatch(similar, /photoLayout="stock"/);

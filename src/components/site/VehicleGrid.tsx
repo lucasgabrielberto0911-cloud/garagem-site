@@ -5,16 +5,9 @@ import type { WhatsAppCampaign } from "@/lib/site";
 /**
  * Grade: 2 por linha no mobile (1 fica espaçoso demais), 3 no desktop.
  * Destaques da home usam 4 colunas no xl — o estoque fica em 3 por causa do filtro.
+ * No estoque a foto usa 4:3 no celular, o maior retângulo que cabe em duas colunas.
  */
-function layoutForCount(count: number, desktopCols: 3 | 4, stock: boolean) {
-  if (stock) {
-    if (count <= 1) return "grid-cols-1 sm:max-w-sm";
-    if (count === 2) return "grid-cols-1 sm:max-w-2xl sm:grid-cols-2";
-    if (desktopCols === 4) {
-      return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
-    }
-    return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
-  }
+function layoutForCount(count: number, desktopCols: 3 | 4) {
   if (count <= 1) {
     return "max-w-sm grid-cols-1";
   }
@@ -49,14 +42,14 @@ export function VehicleGrid({
   whatsappCampaign?: WhatsAppCampaign;
   /** Landing de cidade leva à ficha; o WhatsApp da página é vídeo ou visita. */
   showWhatsApp?: boolean;
-  /** No celular, o estoque usa uma coluna para a foto ficar maior. */
+  /** No celular, o estoque mantém 2 colunas e aumenta a foto para 4:3. */
   photoLayout?: "default" | "stock";
 }) {
   const destaqueIds = featuredBadgeIds(vehicles, destaqueLimit);
   const stock = photoLayout === "stock";
   return (
     <div
-      className={`mx-auto grid w-full gap-3 sm:gap-4 ${layoutForCount(vehicles.length, desktopCols, stock)}`}
+      className={`mx-auto grid w-full gap-3 sm:gap-4 ${layoutForCount(vehicles.length, desktopCols)}`}
     >
       {vehicles.map((vehicle, index) => (
         <div key={vehicle.id} className="h-full min-w-0 w-full">

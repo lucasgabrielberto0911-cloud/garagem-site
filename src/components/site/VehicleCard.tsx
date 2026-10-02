@@ -42,7 +42,7 @@ export function VehicleCard({
   showDestaque?: boolean;
   whatsappCampaign?: WhatsAppCampaign;
   showWhatsApp?: boolean;
-  /** Foto maior no celular — só a grade do estoque. */
+  /** Foto 4:3 no celular — o maior retângulo nas duas colunas do estoque. */
   largePhoto?: boolean;
 }) {
   const display = formatVehicleDisplay(vehicle);
