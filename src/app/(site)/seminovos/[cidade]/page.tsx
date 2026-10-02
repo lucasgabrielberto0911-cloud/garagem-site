@@ -123,7 +123,6 @@ export default async function SeminovosCidadePage({
                 vehicles={featured}
                 priorityCount={2}
                 returnTo={path}
-                showWhatsApp={false}
               />
             )}
           </div>

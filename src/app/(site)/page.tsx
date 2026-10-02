@@ -212,7 +212,6 @@ export default async function HomePage() {
               priorityCount={2}
               desktopCols={4}
               destaqueLimit={0}
-              whatsappCampaign="home"
             />
           )}
         </div>

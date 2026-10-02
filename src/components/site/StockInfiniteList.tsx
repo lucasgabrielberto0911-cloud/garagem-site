@@ -152,7 +152,6 @@ export function StockInfiniteList({
             vehicles={vehicles}
             returnTo={returnTo}
             priorityCount={2}
-            whatsappCampaign="estoque"
           />
         </HideStockCardInterest>
       </StockReturnCapture>

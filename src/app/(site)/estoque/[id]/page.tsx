@@ -691,7 +691,7 @@ export default async function VehicleDetailPage({
               </Link>
             </div>
             <div className="mt-5">
-              <VehicleGrid vehicles={related} whatsappCampaign="ficha" />
+              <VehicleGrid vehicles={related} />
             </div>
             <div className="mt-5">
               <WhatsAppButton

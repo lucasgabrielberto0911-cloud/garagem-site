@@ -278,7 +278,6 @@ export function FavoritesList() {
         <VehicleGrid
           vehicles={ordered}
           returnTo="/favoritos"
-          whatsappCampaign="favoritos"
         />
       </div>
 

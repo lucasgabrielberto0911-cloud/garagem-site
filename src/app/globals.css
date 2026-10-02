@@ -1115,7 +1115,25 @@ textarea:-webkit-autofill:focus {
 /* Cards fora da tela não pintam — a rolagem do estoque no celular não trava. */
 .vehicle-card {
   content-visibility: auto;
-  contain-intrinsic-size: auto 280px;
+  contain-intrinsic-size: auto 400px;
+  container-type: inline-size;
+}
+
+/* Preço acompanha a largura do card: dois por linha no celular, maior no desktop. */
+.vehicle-card-price {
+  font-size: clamp(1.15rem, 13cqw, 1.7rem);
+}
+
+@container (max-width: 200px) {
+  .vehicle-card-version {
+    font-size: 11px;
+  }
+}
+
+@container (max-width: 168px) {
+  .vehicle-card-facts {
+    font-size: 11px;
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {

@@ -4,8 +4,9 @@ import { createContext, useContext, type ReactNode } from "react";
 
 /**
  * Na lista de estoque o card inteiro abre a ficha.
- * O atalho de WhatsApp do card fica de fora — a conversa continua na ficha,
- * na home e nos favoritos.
+ * O card não tem mais atalho de WhatsApp. Este contexto ainda esconde a
+ * variante “barra” se algum botão antigo for renderizado dentro da lista.
+ * O chat continua com o próprio botão.
  */
 const HideStockCardInterestContext = createContext(false);
 

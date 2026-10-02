@@ -36,7 +36,8 @@ test("favoritos: lista no WhatsApp com id, e vazio aponta estoque", () => {
   assert.match(list, /favoritesListWhatsApp/);
   assert.match(list, /vehicleId=\{pack\.vehicleId\}/);
   assert.match(list, /trackingLabel="favoritos-lista"/);
-  assert.match(list, /whatsappCampaign="favoritos"/);
+  assert.match(list, /Enviar minha lista no WhatsApp/);
+  assert.doesNotMatch(list, /whatsappCampaign=/);
   assert.match(list, /href="\/estoque"/);
   assert.match(list, /trackingLabel="favoritos-vazio"/);
   assert.match(readSrc("lib/favorites.ts"), /garagem:favoritos/);

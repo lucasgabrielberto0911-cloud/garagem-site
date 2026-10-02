@@ -36,7 +36,8 @@ test("landing de cidade lista o estoque inteiro e não filtra pela cidade", () =
   assert.match(page, /cityPageStockCopy/);
   assert.doesNotMatch(page, /Ver todos em/);
   assert.match(page, /stock\.stockHref/);
-  assert.match(page, /showWhatsApp=\{false\}/);
+  assert.doesNotMatch(page, /showWhatsApp/);
+  assert.match(page, /Pedir vídeo ou visita/);
   assert.doesNotMatch(page, /estão em \$\{city\.name\}/);
   assert.doesNotMatch(page, /city=serra|city=linhares/);
   const vehicles = readSrc("lib/vehicles.ts");

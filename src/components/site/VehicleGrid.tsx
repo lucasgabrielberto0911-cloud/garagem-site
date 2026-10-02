@@ -1,6 +1,5 @@
 import { VehicleCard, type VehicleCardData } from "@/components/site/VehicleCard";
 import { featuredBadgeIds } from "@/lib/vehicle-display";
-import type { WhatsAppCampaign } from "@/lib/site";
 
 /**
  * Grade: 2 por linha no mobile (1 fica espaçoso demais), 3 no desktop.
@@ -25,8 +24,6 @@ export function VehicleGrid({
   returnTo,
   desktopCols = 3,
   destaqueLimit = 3,
-  whatsappCampaign,
-  showWhatsApp = true,
 }: {
   vehicles: VehicleCardData[];
   /** Quantos cards iniciais recebem `priority` (LCP). */
@@ -37,9 +34,6 @@ export function VehicleGrid({
   desktopCols?: 3 | 4;
   /** 0 = nenhum selo Destaque (ex.: bloco que já é “destaques”). */
   destaqueLimit?: number;
-  whatsappCampaign?: WhatsAppCampaign;
-  /** Landing de cidade leva à ficha; o WhatsApp da página é vídeo ou visita. */
-  showWhatsApp?: boolean;
 }) {
   const destaqueIds = featuredBadgeIds(vehicles, destaqueLimit);
   return (
@@ -53,8 +47,6 @@ export function VehicleGrid({
             priority={index < priorityCount}
             returnTo={returnTo}
             showDestaque={destaqueIds.has(vehicle.id)}
-            whatsappCampaign={whatsappCampaign}
-            showWhatsApp={showWhatsApp}
           />
         </div>
       ))}
