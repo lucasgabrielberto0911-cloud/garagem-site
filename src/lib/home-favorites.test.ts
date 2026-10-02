@@ -15,7 +15,11 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
   const hero = page.slice(page.indexOf("hero-red-black"), page.indexOf('id="destaques"'));
   assert.match(hero, /trackingLabel="home-hero"/);
   assert.match(hero, /Falar no WhatsApp/);
-  assert.match(hero, /href="\/estoque"/);
+  assert.match(hero, /<ButtonLink href="\/estoque" size="lg"/);
+  assert.match(hero, /hero-cta flex w-full shrink-0 flex-col/);
+  assert.doesNotMatch(hero, /hero-brand hidden/);
+  assert.match(hero, /site\.whatsappLabel/);
+  assert.doesNotMatch(hero, /text-xs[\s\S]{0,40}Ver estoque/);
   assert.match(hero, /Checagem de condição antes de entrar no estoque/);
   assert.doesNotMatch(hero, /ChatOpenButton/);
   assert.doesNotMatch(hero, /assistente/);

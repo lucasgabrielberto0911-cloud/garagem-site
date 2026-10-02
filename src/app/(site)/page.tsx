@@ -126,10 +126,10 @@ export default async function HomePage() {
         <Container className="py-2.5 sm:py-6 lg:py-7">
           <div className="flex flex-col gap-2.5 sm:gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
             <div className="hero-text min-w-0 max-w-2xl">
-              <div className="hero-brand hidden sm:block">
+              <div className="hero-brand">
                 <SiteWordmark size="hero" priority />
               </div>
-              <h1 className="font-display text-[1.0625rem] font-semibold leading-snug tracking-tight text-cream sm:mt-3 sm:text-3xl sm:leading-[1.12] lg:text-[2rem]">
+              <h1 className="mt-2 font-display text-[1.0625rem] font-semibold leading-snug tracking-tight text-cream sm:mt-3 sm:text-3xl sm:leading-[1.12] lg:text-[2rem]">
                 Seminovos com procedência em {site.region}.
               </h1>
               <ul className="mt-3 hidden max-w-lg flex-col gap-1.5 text-sm leading-snug text-cream sm:flex sm:text-base">
@@ -138,7 +138,7 @@ export default async function HomePage() {
               </ul>
             </div>
 
-            <div className="hero-cta w-full shrink-0 sm:max-w-xs lg:max-w-sm lg:text-right">
+            <div className="hero-cta flex w-full shrink-0 flex-col gap-2.5 sm:max-w-xs lg:max-w-sm">
               <WhatsAppButton
                 size="lg"
                 className="w-full"
@@ -147,17 +147,11 @@ export default async function HomePage() {
               >
                 Falar no WhatsApp
               </WhatsAppButton>
-              <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-sm leading-none text-cream/80 lg:justify-end">
-                <span className="font-medium text-cream">{site.whatsappLabel}</span>
-                <span className="text-cream/35" aria-hidden="true">
-                  ·
-                </span>
-                <Link
-                  href="/estoque"
-                  className="font-display text-xs font-semibold uppercase tracking-wide text-cream hover:text-brand"
-                >
-                  Ver estoque
-                </Link>
+              <ButtonLink href="/estoque" size="lg" className="w-full">
+                Ver estoque
+              </ButtonLink>
+              <p className="text-sm font-medium leading-none text-cream lg:text-right">
+                {site.whatsappLabel}
               </p>
             </div>
           </div>
