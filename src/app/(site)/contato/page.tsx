@@ -41,7 +41,7 @@ export default async function ContatoPage() {
   const emailCopy = emailChannelCopy(publicSite.email);
 
   return (
-    <div className="py-12 lg:py-16">
+    <div className="contact-page py-8 lg:py-16">
       <Container size="narrow">
         <PageHeader
           eyebrow="Contato"
@@ -50,7 +50,7 @@ export default async function ContatoPage() {
         />
 
         {/* Canal dominante */}
-        <div className="relative mt-10 overflow-hidden border border-[#25D366]/40 bg-ink p-7 text-center sm:mt-12 sm:p-10">
+        <div className="contact-hero relative mt-6 overflow-hidden border border-[#25D366]/40 bg-ink p-5 text-center sm:mt-12 sm:p-10">
           <div
             className="absolute inset-x-0 top-0 h-1 bg-[#25D366]"
             aria-hidden="true"
@@ -75,14 +75,14 @@ export default async function ContatoPage() {
               Chamar no WhatsApp
             </WhatsAppButton>
           </div>
-          <p className="mt-4 text-xs text-muted">{PHONES[0]?.label}</p>
+          <p className="mt-3 text-sm font-medium text-cream">{PHONES[0]?.label}</p>
         </div>
 
-        <h2 className="mt-12 text-center font-display text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+        <h2 className="contact-more mt-12 text-center font-display text-sm font-semibold uppercase tracking-[0.18em] text-muted">
           Outros canais
         </h2>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="contact-channel-grid mt-5 grid gap-4 sm:grid-cols-2">
           {PHONES.map((phone, index) => (
             <InfoCard
               key={phone.digits}

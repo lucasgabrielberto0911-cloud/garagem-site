@@ -124,16 +124,16 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="flex flex-col items-center justify-center py-4 text-center sm:py-10 lg:py-12">
+        <Container className="flex flex-col items-center justify-center py-3 text-center sm:py-10 lg:py-12">
           <div className="hero-brand">
             <SiteWordmark size="hero" priority className="mx-auto" />
           </div>
 
-          <div className="hero-text mt-4 sm:mt-5 lg:mt-6">
-            <h1 className="mx-auto max-w-3xl font-display text-[1.85rem] font-bold leading-[1.12] tracking-tight text-cream sm:text-4xl lg:text-[2.75rem]">
+          <div className="hero-text mt-2 sm:mt-5 lg:mt-6">
+            <h1 className="mx-auto max-w-3xl font-display text-[1.65rem] font-bold leading-[1.08] tracking-tight text-cream sm:text-4xl sm:leading-[1.12] lg:text-[2.75rem]">
               Encontre seu <span className="text-brand">próximo seminovo</span>
             </h1>
-            <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-cream/85 sm:text-lg">
+            <p className="hero-lead mx-auto mt-2 max-w-xl text-sm leading-snug text-cream/85 sm:mt-3 sm:text-lg sm:leading-relaxed">
               Seminovos com procedência em {site.region}. Estoque no site,
               conversa no WhatsApp — das 8h às 23h.
             </p>
@@ -143,10 +143,10 @@ export default async function HomePage() {
             </ul>
           </div>
 
-          <ActionRow className="hero-cta mt-5 w-full sm:mt-6 sm:w-auto">
+          <div className="hero-cta mt-3 grid w-full grid-cols-2 gap-2 sm:mt-6 sm:flex sm:w-auto sm:justify-center sm:gap-3">
             <WhatsAppButton
               size="lg"
-              className="w-full sm:min-w-[16rem] sm:w-auto"
+              className="w-full max-sm:min-h-11 max-sm:px-2 max-sm:py-2 max-sm:text-[11px] sm:min-w-[16rem] sm:w-auto"
               trackingLabel="home-hero"
               message={WHATSAPP_MESSAGES.help}
             >
@@ -156,17 +156,17 @@ export default async function HomePage() {
               href="/estoque"
               size="lg"
               variant="outline"
-              className="w-full sm:min-w-[16rem] sm:w-auto"
+              className="w-full max-sm:min-h-11 max-sm:px-2 max-sm:py-2 max-sm:text-[11px] sm:min-w-[16rem] sm:w-auto"
             >
               Ver estoque
             </ButtonLink>
-          </ActionRow>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-cream/75">
+          </div>
+          <p className="hero-help mx-auto mt-2 max-w-md text-sm leading-snug text-cream/75 sm:mt-3 sm:leading-relaxed">
             O WhatsApp abre para você dizer o que procura. No estoque, preço,
             ano e km estão no anúncio.
           </p>
 
-          <div className="hero-search mt-5 flex w-full justify-center sm:mt-6">
+          <div className="hero-search mt-3 flex w-full justify-center sm:mt-6">
             <HeroSearch brands={brands} />
           </div>
 
@@ -179,14 +179,15 @@ export default async function HomePage() {
       </section>
 
       {/* 2. ESTOQUE CEDO — logo após o hero */}
-      <Section id="destaques" spacing="tight" className="border-t border-white/5">
+      <Section id="destaques" spacing="none" className="border-t border-white/5 py-3 lg:py-16">
         <SectionHeading
+          compact
           eyebrow="Estoque"
           title="Veículos em destaque"
           description="Seleção da loja — no máximo 8 anúncios. O estoque muda rápido."
         />
 
-        <div className="mt-8">
+        <div className="mt-3 lg:mt-8">
           {featured.length === 0 ? (
             <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-10 text-center">
               <p className="font-display text-lg font-semibold text-cream">

@@ -68,10 +68,13 @@ export function SectionHeading({
   eyebrow,
   title,
   description,
+  compact = false,
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
+  /** No celular, título curto — a descrição volta no desktop. */
+  compact?: boolean;
 }) {
   return (
     <div className="text-center">
@@ -80,12 +83,25 @@ export function SectionHeading({
           {eyebrow}
         </p>
       ) : null}
-      <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl lg:text-4xl">
+      <h2
+        className={`font-display font-bold tracking-tight text-cream ${
+          compact
+            ? "mt-1 text-xl leading-tight lg:mt-2 lg:text-4xl"
+            : "mt-2 text-2xl sm:text-3xl lg:text-4xl"
+        }`}
+      >
         {title}
       </h2>
-      <div className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
+      <div
+        className={`mx-auto h-0.5 w-16 bg-brand-gradient ${compact ? "mt-2 lg:mt-4" : "mt-4"}`}
+        aria-hidden="true"
+      />
       {description ? (
-        <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
+        <p
+          className={`mx-auto max-w-2xl text-sm leading-relaxed text-muted sm:text-base ${
+            compact ? "mt-3 hidden lg:block" : "mt-5"
+          }`}
+        >
           {description}
         </p>
       ) : null}
@@ -112,12 +128,12 @@ export function PageHeader({
       <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
         {eyebrow}
       </p>
-      <Heading className="mt-2 font-display text-3xl font-bold tracking-tight text-cream sm:text-4xl">
+      <Heading className="mt-1.5 font-display text-3xl font-bold leading-tight tracking-tight text-cream sm:text-4xl lg:mt-2">
         {title}
       </Heading>
-      <div className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
+      <div className="mx-auto mt-2.5 h-0.5 w-16 bg-brand-gradient lg:mt-4" aria-hidden="true" />
       {description ? (
-        <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-snug text-muted sm:text-base lg:mt-5 lg:leading-relaxed">
           {description}
         </p>
       ) : null}

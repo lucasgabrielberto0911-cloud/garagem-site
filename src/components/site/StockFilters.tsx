@@ -643,7 +643,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
       </div>
 
-      <div className="mt-3 space-y-2 border border-white/10 bg-ink px-3 py-2.5 lg:hidden">
+      <div className="stock-mobile-filters mt-2 space-y-1.5 border border-white/10 bg-ink px-3 py-2 lg:hidden">
         <div className="flex items-center gap-2">
           <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
             Cidade

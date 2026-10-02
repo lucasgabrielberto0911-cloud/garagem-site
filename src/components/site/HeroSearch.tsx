@@ -28,7 +28,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
             trackSearch({ content_ids: [], search_string: search });
           }
         }}
-        className="flex flex-col gap-2 border border-white/15 bg-asphalt/95 p-2 transition focus-within:border-brand/60 sm:flex-row sm:bg-asphalt/85 sm:backdrop-blur-md"
+        className="flex flex-row gap-2 border border-white/15 bg-asphalt/95 p-2 transition focus-within:border-brand/60 sm:bg-asphalt/85 sm:backdrop-blur-md"
         role="search"
       >
         <label htmlFor="hero-busca" className="sr-only">
@@ -46,13 +46,13 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
         </div>
         <button
           type="submit"
-          className="min-h-[52px] bg-brand px-6 py-3 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] touch-manipulation"
+          className="min-h-11 shrink-0 bg-brand px-3.5 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] touch-manipulation sm:min-h-[52px] sm:px-6 sm:text-sm"
         >
           Buscar
         </button>
       </form>
 
-      <div className="chip-scroll mt-3 -mx-1 px-1">
+      <div className="chip-scroll mt-2 -mx-1 px-1 sm:mt-3">
         <span className="shrink-0 text-xs uppercase tracking-wider text-muted">
           Faixa:
         </span>
@@ -68,7 +68,7 @@ export function HeroSearch({ brands = [] }: { brands?: string[] }) {
       </div>
 
       {brands.length > 0 ? (
-        <div className="chip-scroll mt-2 -mx-1 px-1">
+        <div className="chip-scroll mt-1.5 -mx-1 px-1 sm:mt-2">
           <span className="shrink-0 text-xs uppercase tracking-wider text-muted">
             Marcas:
           </span>
