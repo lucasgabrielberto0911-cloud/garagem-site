@@ -3,11 +3,7 @@ import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { RememberVehicleSnapshot } from "@/components/site/RememberVehicleSnapshot";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { formatBrandName, formatModelName } from "@/lib/format";
-import {
-  publicCardFacts,
-  type PublicCardFact,
-  type PublicCardFactLabel,
-} from "@/lib/public-card-facts";
+import { publicCardFacts, type PublicCardFact } from "@/lib/public-card-facts";
 import {
   CARD_SIZES,
   coverSrc,
@@ -22,12 +18,6 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   reservado: { label: "Reservado", className: "bg-brand-orange text-asphalt" },
   vendido: { label: "Vendido", className: "bg-white/15 text-cream" },
 };
-
-/** Ano com km na primeira linha; câmbio com cidade na segunda. Não quebra no meio. */
-const FACT_ROWS: PublicCardFactLabel[][] = [
-  ["Ano", "Km"],
-  ["Câmbio", "Cidade"],
-];
 
 /**
  * Card de servidor: só o favorito e o link hidratam no cliente.
@@ -59,12 +49,12 @@ export function VehicleCard({
     : display.titleWithYear;
 
   const photoClass = largePhoto
-    ? "relative col-start-1 row-start-1 aspect-[4/3] overflow-hidden bg-asphalt sm:aspect-[16/10]"
-    : "relative col-start-1 row-start-1 aspect-[16/10] overflow-hidden bg-asphalt";
+    ? "relative aspect-[4/3] overflow-hidden bg-asphalt sm:aspect-[16/10]"
+    : "relative aspect-[16/10] overflow-hidden bg-asphalt";
 
   return (
     <article
-      className={`vehicle-card card-lift group relative grid h-full grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden border border-white/10 bg-ink touch-manipulation focus-within:ring-2 focus-within:ring-inset focus-within:ring-brand ${
+      className={`vehicle-card card-lift group relative flex h-full flex-col overflow-hidden border border-white/10 bg-ink touch-manipulation focus-within:ring-2 focus-within:ring-inset focus-within:ring-brand ${
         largePhoto ? "vehicle-card-stock" : ""
       }`}
     >
@@ -134,17 +124,7 @@ export function VehicleCard({
         </div>
       </div>
 
-      <div
-        className="pointer-events-none relative z-20 col-start-1 row-start-2 flex h-11 items-center justify-between gap-2 px-2.5 sm:px-3"
-        data-vehicle-body=""
-      >
-        <div className="flex min-w-0 items-center">
-          {showDestaque ? (
-            <span className="bg-brand px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
-              Destaque
-            </span>
-          ) : null}
-        </div>
+      <div className="vehicle-card-favorite">
         <FavoriteButton
           vehicleId={vehicle.id}
           label={display.titleWithYear}
@@ -153,32 +133,36 @@ export function VehicleCard({
           model={formatModelName(vehicle.model)}
           year={vehicle.yearModel}
           appearance="ghost"
+          size="sm"
           className="pointer-events-auto"
         />
       </div>
 
-      <div className="col-start-1 row-start-3 flex min-h-0 flex-col px-2.5 pb-1 sm:px-3 sm:pb-1.5">
+      <div
+        className="flex flex-1 flex-col px-2.5 pb-2 pt-1.5 sm:px-3 sm:pb-2.5 sm:pt-2"
+        data-vehicle-body=""
+      >
+        {showDestaque ? (
+          <span className="mb-1 self-start bg-brand px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
+            Destaque
+          </span>
+        ) : null}
         <div className="min-w-0">
           {card.title ? (
             <h3 className="line-clamp-2 font-display text-[15px] font-semibold leading-tight text-cream sm:text-base">
               {card.title}
             </h3>
           ) : null}
-          {card.version ? (
-            <p className="vehicle-card-version mt-0.5 line-clamp-2 text-pretty text-[12px] leading-snug text-muted sm:text-[13px]">
-              {card.version}
-            </p>
-          ) : null}
-          <CardFacts facts={card.facts} />
+          <CardFacts version={card.version} facts={card.facts} />
         </div>
 
-        <div className="mt-auto border-t border-white/10 pt-2">
+        <div className="mt-1.5">
           {card.priceLabel ? (
             <p className="vehicle-card-price font-display font-bold leading-none tracking-tight text-brand tabular-nums">
               {card.priceLabel}
             </p>
           ) : null}
-          <span className="flex min-h-11 w-full items-center justify-center text-center font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-cream/80 transition group-hover:text-cream">
+          <span className="card-open-label font-display text-[11px] font-semibold uppercase tracking-wide text-cream/85 transition group-hover:text-cream">
             Ver ficha
           </span>
         </div>
@@ -187,37 +171,25 @@ export function VehicleCard({
   );
 }
 
-function CardFacts({ facts }: { facts: PublicCardFact[] }) {
-  if (facts.length === 0) return null;
-
-  const byLabel = new Map(facts.map((fact) => [fact.label, fact]));
-  const rows = FACT_ROWS.map((labels) =>
-    labels.flatMap((label) => {
-      const fact = byLabel.get(label);
-      return fact ? [fact] : [];
-    }),
-  ).filter((row) => row.length > 0);
+function CardFacts({
+  version,
+  facts,
+}: {
+  version: string;
+  facts: PublicCardFact[];
+}) {
+  const items = [
+    ...(version ? [{ label: "Versão", value: version }] : []),
+    ...facts,
+  ];
+  if (items.length === 0) return null;
 
   return (
-    <dl className="mt-1.5 space-y-0.5">
-      {rows.map((row) => (
-        <div
-          key={row.map((fact) => fact.label).join("-")}
-          className="flex min-w-0 flex-nowrap items-baseline overflow-hidden"
-        >
-          {row.map((fact, index) => (
-            <div key={fact.label} className="flex items-baseline whitespace-nowrap">
-              <dt className="sr-only">{fact.label}</dt>
-              <dd className="vehicle-card-facts text-[12px] font-medium leading-4 text-cream sm:text-[13px]">
-                {fact.value}
-              </dd>
-              {index < row.length - 1 ? (
-                <span className="px-1 text-muted" aria-hidden="true">
-                  ·
-                </span>
-              ) : null}
-            </div>
-          ))}
+    <dl className="vehicle-card-facts">
+      {items.map((fact) => (
+        <div key={fact.label} className="vehicle-card-fact">
+          <dt className="sr-only">{fact.label}</dt>
+          <dd>{fact.value}</dd>
         </div>
       ))}
     </dl>

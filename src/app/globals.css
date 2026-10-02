@@ -1312,21 +1312,81 @@ textarea:-webkit-autofill:focus {
   container-type: inline-size;
 }
 
-/* Preço acompanha a largura do card: dois por linha no celular, maior no desktop. */
+/* Preço acompanha a largura do card. O glow é curto e fraco — só destaca, sem neon. */
 .vehicle-card-price {
   font-size: clamp(1.15rem, 13cqw, 1.7rem);
+  text-shadow:
+    0 0 8px rgba(232, 24, 28, 0.3),
+    0 0 14px rgba(232, 24, 28, 0.12);
 }
 
-@container (max-width: 200px) {
-  .vehicle-card-version {
-    font-size: 11px;
-  }
+/* Coração no canto da foto: ícone pequeno, alvo de 44px, fora do miolo do carro. */
+.vehicle-card-favorite {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 20;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.85));
 }
 
-@container (max-width: 168px) {
-  .vehicle-card-facts {
-    font-size: 11px;
-  }
+/*
+ * Fatos em retângulos iguais. O texto quebra dentro da caixa ou ganha
+ * reticências no fim da palavra — não corta “Automático” no meio.
+ */
+.vehicle-card-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin-top: 0.375rem;
+}
+
+.vehicle-card-fact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 2.125rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0.125rem 0.3rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.07);
+  text-align: center;
+}
+
+.vehicle-card-fact dd {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(8px, 5cqw, 12px);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--cream);
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+  text-wrap: balance;
+}
+
+.card-open-label {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin-top: 0.375rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  line-height: 1.2;
+  text-align: center;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1334,6 +1394,11 @@ textarea:-webkit-autofill:focus {
     transform: translateY(-4px);
     border-color: rgba(232, 24, 28, 0.45);
     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
+  }
+
+  .group:hover .card-open-label {
+    border-color: rgba(255, 255, 255, 0.5);
+    color: var(--cream);
   }
 }
 
