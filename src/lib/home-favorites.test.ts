@@ -35,6 +35,37 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
   assert.doesNotMatch(page, /99956/);
 });
 
+test("home: Instagram no atendimento é atalho, sem rótulo de canais", () => {
+  const page = readSrc("app/(site)/page.tsx");
+  const start = page.indexOf("6. ATENDIMENTO");
+  const end = page.indexOf("7. VENDER OU TROCAR");
+  assert.ok(start > 0 && end > start);
+  const block = page.slice(start, end);
+  assert.doesNotMatch(page, /Canais de contato/i);
+  assert.doesNotMatch(block, /Canais de contato/i);
+  assert.match(
+    block,
+    /https:\/\/www\.instagram\.com\/\$\{site\.instagram\.replace\(\/\^@\/, ""\)\}\//,
+  );
+  assert.match(block, /target="_blank"/);
+  assert.match(block, /rel="noopener noreferrer"/);
+  assert.match(block, /\{site\.instagram\}/);
+  assert.match(block, /IconInstagram/);
+  assert.match(block, /min-h-14/);
+  assert.match(block, /whatsappLabel/);
+  assert.match(block, /Loja digital no \$\{publicSite\.state\}/);
+  assert.match(
+    block,
+    /Atendemos \$\{publicSite\.region\}\. Escolha no site, peça vídeo pelo WhatsApp e combine visita, entrega ou retirada\./,
+  );
+  assert.match(block, />\s*WhatsApp\s*</);
+  assert.match(block, />\s*Horário\s*</);
+  assert.match(block, />\s*Modalidade\s*</);
+  assert.doesNotMatch(block, /99956/);
+  assert.doesNotMatch(block, /Checagem de condição/);
+  assert.match(readSrc("lib/site.ts"), /instagram: "@suagaragem1"/);
+});
+
 test("favoritos: lista no WhatsApp com id, e vazio aponta estoque", () => {
   const list = readSrc("components/site/FavoritesList.tsx");
   assert.match(list, /favoritesListWhatsApp/);

@@ -300,48 +300,50 @@ export default async function HomePage() {
           description={`Atendemos ${publicSite.region}. Escolha no site, peça vídeo pelo WhatsApp e combine visita, entrega ou retirada.`}
         />
 
-        <dl className="mt-5 grid gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-3">
-          <div className="bg-asphalt px-4 py-3.5">
-            <dt className="font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
-              WhatsApp
-            </dt>
-            <dd className="mt-1 font-display text-base font-semibold text-cream">
-              {site.whatsappLabel}
-            </dd>
-          </div>
-          <div className="bg-asphalt px-4 py-3.5">
-            <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
-              <IconClock className="h-3.5 w-3.5 text-brand" />
-              Horário
-            </dt>
-            <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.hours}</dd>
-          </div>
-          <div className="bg-asphalt px-4 py-3.5">
-            <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
-              <IconMapPin className="h-3.5 w-3.5 text-brand" />
-              Modalidade
-            </dt>
-            <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.address}</dd>
-          </div>
-        </dl>
-
-        <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-          <Link
-            href="/contato"
-            className="font-display text-xs font-semibold uppercase tracking-wide text-brand hover:text-brand-orange"
-          >
-            Canais de contato
-          </Link>
+        <div className="mt-5 overflow-hidden border border-white/10 bg-white/10">
+          <dl className="grid gap-px sm:grid-cols-3">
+            <div className="bg-asphalt px-4 py-3.5">
+              <dt className="font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
+                WhatsApp
+              </dt>
+              <dd className="mt-1 font-display text-base font-semibold text-cream">
+                {site.whatsappLabel}
+              </dd>
+            </div>
+            <div className="bg-asphalt px-4 py-3.5">
+              <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
+                <IconClock className="h-3.5 w-3.5 text-brand" />
+                Horário
+              </dt>
+              <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.hours}</dd>
+            </div>
+            <div className="bg-asphalt px-4 py-3.5">
+              <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
+                <IconMapPin className="h-3.5 w-3.5 text-brand" />
+                Modalidade
+              </dt>
+              <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.address}</dd>
+            </div>
+          </dl>
           <a
-            href={site.instagramUrl}
+            href={`https://www.instagram.com/${site.instagram.replace(/^@/, "")}/`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-cream/80 transition hover:text-cream"
+            aria-label={`${site.instagram} no Instagram, abre em nova aba`}
+            className="group mt-px flex min-h-14 items-center gap-3.5 bg-asphalt px-4 text-cream transition hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand touch-manipulation"
           >
-            <IconInstagram className="h-4 w-4" />
-            {site.instagram}
+            <span
+              aria-hidden="true"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[radial-gradient(circle_at_30%_110%,#fdf497_0%,#fd5949_45%,#d6249f_62%,#285AEB_90%)] text-white"
+            >
+              <IconInstagram className="h-5 w-5" />
+            </span>
+            <span className="font-display text-xl font-semibold tracking-tight">
+              {site.instagram}
+            </span>
+            <IconArrowRight className="ml-auto h-4 w-4 shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-cream" />
           </a>
-        </p>
+        </div>
       </Section>
 
       {/* 7. VENDER OU TROCAR */}
