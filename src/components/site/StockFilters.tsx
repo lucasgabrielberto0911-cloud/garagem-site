@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { IconClose, IconSearch } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName, formatModelName } from "@/lib/format";
@@ -13,6 +13,7 @@ import {
   type StockModelOption,
 } from "@/lib/stock-query";
 import { handleFocusTrap } from "@/lib/focus-trap";
+import { chipTrackInsets } from "@/lib/stock-chip-track";
 import { formatColorLabel } from "@/lib/vehicle-display";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
@@ -643,60 +644,125 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
       </div>
 
-      <div className="mt-3 space-y-2 border border-white/10 bg-ink px-3 py-2.5 lg:hidden">
-        <div className="flex items-center gap-2">
-          <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
-            Cidade
-          </p>
-          <div className="flex min-w-0 flex-1 gap-1.5">
-            {VEHICLE_LOCATION_CITIES.map((option) => (
+      <div
+        data-stock-filters=""
+        className="stock-chip-bar mt-3 border border-white/10 bg-ink px-3 py-2.5 lg:hidden"
+      >
+        <MobileChipRow label="Cidade">
+          {VEHICLE_LOCATION_CITIES.map((option) => (
+            <Chip
+              key={`sticky-city-${option.value}`}
+              active={current.city === option.value}
+              onClick={() =>
+                update({
+                  city: current.city === option.value ? "" : option.value,
+                })
+              }
+            >
+              {option.label}
+            </Chip>
+          ))}
+        </MobileChipRow>
+        <MobileChipRow label="Faixa">
+          {BUDGET_CHIPS.map((chip) => {
+            const active =
+              (current.minPrice || "") === chip.minPrice &&
+              (current.maxPrice || "") === chip.maxPrice;
+            return (
               <Chip
-                key={`sticky-city-${option.value}`}
-                active={current.city === option.value}
+                key={`sticky-${chip.label}`}
+                active={active}
+                onClick={() =>
+                  update(
+                    active
+                      ? { minPrice: "", maxPrice: "" }
+                      : { minPrice: chip.minPrice, maxPrice: chip.maxPrice },
+                  )
+                }
+              >
+                {chip.label}
+              </Chip>
+            );
+          })}
+        </MobileChipRow>
+        {facets.brands.length > 0 ? (
+          <MobileChipRow label="Marca">
+            {visibleBrandChips(facets.brands, current.brand).map((item) => (
+              <Chip
+                key={`sticky-brand-${item}`}
+                active={current.brand === item}
+                onClick={() => {
+                  const brand = current.brand === item ? "" : item;
+                  update({
+                    brand,
+                    model: modelAfterBrandChange(facets.models, brand, current.model),
+                  });
+                }}
+              >
+                {formatBrandName(item)}
+              </Chip>
+            ))}
+            {facets.brands.length > 8 ? (
+              <Chip
+                active={Boolean(
+                  current.brand &&
+                    !visibleBrandChips(facets.brands, current.brand).includes(
+                      current.brand,
+                    ),
+                )}
+                onClick={() => {
+                  setDraft(current);
+                  setOpen(true);
+                }}
+              >
+                Outras
+              </Chip>
+            ) : null}
+          </MobileChipRow>
+        ) : null}
+        {current.brand &&
+        modelFilterOptions(facets.models, current.brand, current.model).length > 0 ? (
+          <MobileChipRow label="Modelo">
+            {visibleBrandChips(
+              modelFilterOptions(facets.models, current.brand, current.model),
+              selectedOption(
+                modelFilterOptions(facets.models, current.brand, current.model),
+                current.model,
+              ),
+            ).map((item) => (
+              <Chip
+                key={`sticky-model-${item}`}
+                active={
+                  current.model.toLocaleLowerCase("pt-BR") ===
+                  item.toLocaleLowerCase("pt-BR")
+                }
                 onClick={() =>
                   update({
-                    city: current.city === option.value ? "" : option.value,
+                    model:
+                      current.model.toLocaleLowerCase("pt-BR") ===
+                      item.toLocaleLowerCase("pt-BR")
+                        ? ""
+                        : item,
                   })
                 }
               >
-                {option.label}
+                {formatModelName(item)}
               </Chip>
             ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
-            Faixa
+          </MobileChipRow>
+        ) : null}
+        <div className="flex h-11 items-center gap-2">
+          <p className="min-w-0 flex-1 truncate text-[11px] text-muted">
+            {stockSortLabel(current.sort)}
+            {activeFilterCount > 0 ? " · filtros ativos" : ""}
           </p>
-          <div className="chip-scroll chip-scroll-row min-w-0 flex-1 -mx-0.5 px-0.5">
-            {BUDGET_CHIPS.map((chip) => {
-              const active =
-                (current.minPrice || "") === chip.minPrice &&
-                (current.maxPrice || "") === chip.maxPrice;
-              return (
-                <Chip
-                  key={`sticky-${chip.label}`}
-                  active={active}
-                  onClick={() =>
-                    update(
-                      active
-                        ? { minPrice: "", maxPrice: "" }
-                        : { minPrice: chip.minPrice, maxPrice: chip.maxPrice },
-                    )
-                  }
-                >
-                  {chip.label}
-                </Chip>
-              );
-            })}
-          </div>
           <button
             type="button"
             onClick={() => {
               setDraft(current);
               setOpen(true);
             }}
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 border border-white/15 px-2.5 font-display text-[10px] font-semibold uppercase tracking-wide text-cream"
+            className="stock-chip-action"
             aria-expanded={open}
             aria-controls="painel-filtros"
             aria-label={
@@ -713,88 +779,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </span>
             ) : null}
           </button>
-        </div>
-        {facets.brands.length > 0 ? (
-          <div className="flex items-center gap-2">
-            <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
-              Marca
-            </p>
-            <div className="chip-scroll chip-scroll-row min-w-0 flex-1 -mx-0.5 px-0.5">
-              {visibleBrandChips(facets.brands, current.brand).map((item) => (
-                <Chip
-                  key={`sticky-brand-${item}`}
-                  active={current.brand === item}
-                  onClick={() => {
-                    const brand = current.brand === item ? "" : item;
-                    update({
-                      brand,
-                      model: modelAfterBrandChange(facets.models, brand, current.model),
-                    });
-                  }}
-                >
-                  {formatBrandName(item)}
-                </Chip>
-              ))}
-              {facets.brands.length > 8 ? (
-                <Chip
-                  active={Boolean(
-                    current.brand &&
-                      !visibleBrandChips(facets.brands, current.brand).includes(
-                        current.brand,
-                      ),
-                  )}
-                  onClick={() => {
-                    setDraft(current);
-                    setOpen(true);
-                  }}
-                >
-                  Outras
-                </Chip>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-        {current.brand &&
-        modelFilterOptions(facets.models, current.brand, current.model).length > 0 ? (
-          <div className="flex items-center gap-2">
-            <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">
-              Modelo
-            </p>
-            <div className="chip-scroll chip-scroll-row min-w-0 flex-1 -mx-0.5 px-0.5">
-              {visibleBrandChips(
-                modelFilterOptions(facets.models, current.brand, current.model),
-                selectedOption(
-                  modelFilterOptions(facets.models, current.brand, current.model),
-                  current.model,
-                ),
-              ).map((item) => (
-                <Chip
-                  key={`sticky-model-${item}`}
-                  active={
-                    current.model.toLocaleLowerCase("pt-BR") ===
-                    item.toLocaleLowerCase("pt-BR")
-                  }
-                  onClick={() =>
-                    update({
-                      model:
-                        current.model.toLocaleLowerCase("pt-BR") ===
-                        item.toLocaleLowerCase("pt-BR")
-                          ? ""
-                          : item,
-                    })
-                  }
-                >
-                  {formatModelName(item)}
-                </Chip>
-              ))}
-            </div>
-          </div>
-        ) : null}
-        <div className="flex items-center justify-between gap-2">
-          <p className="min-w-0 truncate text-[11px] text-muted">
-            {stockSortLabel(current.sort)}
-            {activeFilterCount > 0 ? " · filtros ativos" : ""}
-          </p>
           {hasFilter ? (
             <button
               type="button"
@@ -1147,6 +1131,77 @@ function visibleBrandChips(brands: string[], selected: string) {
   return [selected, ...rest].slice(0, 8);
 }
 
+function MobileChipRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const fit = () => {
+      const view = track.getBoundingClientRect();
+      const chips = [...track.querySelectorAll<HTMLButtonElement>("button")];
+      const { insetLeft, insetRight, hidden } = chipTrackInsets(
+        { left: view.left, right: view.right },
+        chips.map((chip) => {
+          const box = chip.getBoundingClientRect();
+          return { left: box.left, right: box.right };
+        }),
+      );
+      track.style.clipPath =
+        insetLeft > 0 || insetRight > 0
+          ? `inset(0px ${Math.ceil(insetRight)}px 0px ${Math.ceil(insetLeft)}px)`
+          : "";
+      chips.forEach((chip, index) => {
+        if (hidden[index]) {
+          chip.setAttribute("aria-hidden", "true");
+          chip.tabIndex = -1;
+        } else {
+          chip.removeAttribute("aria-hidden");
+          chip.removeAttribute("tabindex");
+        }
+      });
+    };
+
+    let cancelled = false;
+    const apply = () => {
+      if (!cancelled) fit();
+    };
+
+    apply();
+    const resize = new ResizeObserver(apply);
+    resize.observe(track);
+    const mutations = new MutationObserver(apply);
+    mutations.observe(track, { childList: true });
+    track.addEventListener("scroll", apply, { passive: true });
+    window.addEventListener("resize", apply);
+    void document.fonts?.ready.then(apply);
+
+    return () => {
+      cancelled = true;
+      resize.disconnect();
+      mutations.disconnect();
+      track.removeEventListener("scroll", apply);
+      window.removeEventListener("resize", apply);
+    };
+  }, []);
+
+  return (
+    <div className="stock-chip-row">
+      <p className="stock-chip-label">{label}</p>
+      <div ref={trackRef} className="stock-chip-track scrollbar-hide">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function Chip({
   active,
   onClick,
@@ -1161,7 +1216,7 @@ function Chip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`min-h-[44px] shrink-0 whitespace-nowrap border px-3.5 text-xs font-medium transition touch-manipulation ${
+      className={`inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap border px-3 text-xs font-medium leading-none transition touch-manipulation ${
         active
           ? "border-brand bg-brand/10 text-cream"
           : "border-white/10 text-muted active:bg-white/5"
