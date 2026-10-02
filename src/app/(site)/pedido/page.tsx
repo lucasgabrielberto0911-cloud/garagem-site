@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MissingModelForm } from "@/components/site/MissingModelForm";
-import { Container } from "@/components/site/ui";
 import { buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { STOCK_FILTER_KEYS } from "@/lib/stock-query";
@@ -40,7 +39,7 @@ export default async function PedidoPage({
 
   return (
     <div className="wanted-vehicle-page py-12 lg:py-16" data-wanted-vehicle-page="">
-      <Container>
+      <div className="wanted-vehicle-sheet">
         <Link
           href={copy.pagePath}
           className="inline-flex items-center py-1 text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
@@ -66,7 +65,7 @@ export default async function PedidoPage({
             description={copy.description}
           />
         </div>
-      </Container>
+      </div>
     </div>
   );
 }

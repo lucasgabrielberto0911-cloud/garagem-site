@@ -718,12 +718,20 @@ body:has([data-ficha-page]) .whatsapp-float {
 }
 
 /*
- * Página do pedido: o formulário termina antes do balão e do WhatsApp.
- * No celular o balão vira só o ícone, para o campo “Até” caber ao lado.
+ * Página do pedido: “Voltar ao estoque” e o formulário ficam no meio.
+ * A coluna tem a mesma folga dos dois lados — maior que o balão
+ * (ícone no celular; texto + WhatsApp no desktop) — para nenhum campo
+ * passar por baixo. No celular o balão vira só o ícone.
  */
 .wanted-vehicle-page {
-  padding-right: 5.25rem;
+  --wanted-side-clear: calc(5.25rem + env(safe-area-inset-right, 0px));
   padding-bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.wanted-vehicle-sheet {
+  box-sizing: border-box;
+  width: min(36rem, calc(100% - 2 * var(--wanted-side-clear)));
+  margin-inline: auto;
 }
 
 @media (max-width: 1023px) {
@@ -748,8 +756,12 @@ body:has([data-ficha-page]) .whatsapp-float {
 
 @media (min-width: 1024px) {
   .wanted-vehicle-page {
-    padding-right: 20rem;
+    --wanted-side-clear: 21rem;
     padding-bottom: 7rem;
+  }
+
+  .wanted-vehicle-sheet {
+    width: min(48rem, calc(100% - 2 * var(--wanted-side-clear)));
   }
 }
 

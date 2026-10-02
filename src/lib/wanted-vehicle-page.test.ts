@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   WANTED_VEHICLE_BUTTON_LABEL,
@@ -38,6 +39,22 @@ test("a página do pedido reaproveita o modelo e devolve o caminho do estoque", 
   assert.match(copy.contextLabel, /HB20/);
   assert.match(copy.description, /Não tem HB20 agora/);
   assert.doesNotMatch(copy.pagePath, /sem=/);
+});
+
+test("voltar e o formulário ficam no meio, fora do balão", () => {
+  const page = readFileSync("src/app/(site)/pedido/page.tsx", "utf8");
+  const css = readFileSync("src/app/globals.css", "utf8");
+  const backAt = page.indexOf("Voltar ao estoque");
+  const formAt = page.indexOf("<MissingModelForm");
+  const sheetAt = page.indexOf('className="wanted-vehicle-sheet"');
+  assert.ok(sheetAt > 0 && sheetAt < backAt && backAt < formAt);
+  assert.match(css, /\.wanted-vehicle-sheet\s*\{[^}]*margin-inline:\s*auto/);
+  assert.match(css, /calc\(100% - 2 \* var\(--wanted-side-clear\)\)/);
+  assert.doesNotMatch(css, /\.wanted-vehicle-page\s*\{[^}]*padding-right/);
+  assert.match(
+    css,
+    /body:has\(\[data-wanted-vehicle-page\]\) \.site-chat:not\(\.is-open\) \.site-chat-launcher \{[^}]*width:\s*3\.5rem/,
+  );
 });
 
 test("pedido com carros na lista usa o texto de quem não achou na grade", () => {
