@@ -1344,27 +1344,53 @@ textarea:-webkit-autofill:focus {
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9));
 }
 
+/* Nome numa linha só, para os dois cards da grade começarem os chips juntos. */
+.vehicle-card-title {
+  height: 1.25em;
+  overflow: hidden;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /*
- * Chips de uma linha, na largura do texto. Entram lado a lado e só
- * descem quando a linha enche. Reticências ficam no fim da palavra.
+ * Duas linhas fixas. Versão, ano e cidade na primeira; km e câmbio na
+ * segunda. O lugar não muda de um card para o outro.
  */
 .vehicle-card-facts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.125rem;
+  display: grid;
+  grid-template-rows: 1rem 1rem;
+  row-gap: 0.125rem;
+  height: calc(2rem + 0.125rem);
   margin-top: 0.2rem;
 }
 
+.vehicle-card-fact-line {
+  display: grid;
+  column-gap: 0.125rem;
+  height: 1rem;
+  min-width: 0;
+}
+
+.vehicle-card-fact-line-main {
+  grid-template-columns: minmax(0, 1fr) 1.9rem 2.9rem;
+}
+
+.vehicle-card-fact-line-sub {
+  grid-template-columns: 4.15rem 5.6rem;
+  justify-content: start;
+}
+
 .vehicle-card-fact {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  width: 100%;
   height: 1rem;
-  max-width: 100%;
+  min-width: 0;
   margin: 0;
-  padding: 0 0.15rem;
+  padding: 0 0.12rem;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: transparent;
 }

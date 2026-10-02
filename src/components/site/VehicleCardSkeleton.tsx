@@ -7,11 +7,17 @@ export function VehicleCardSkeleton({ largePhoto = false }: { largePhoto?: boole
         }`}
       />
       <div className="px-2.5 pb-2 pt-1.5 sm:px-3">
-        <div className="skeleton h-4 w-3/4" />
-        <div className="mt-1 flex flex-wrap gap-0.5">
-          {["w-16", "w-8", "w-14", "w-14", "w-10"].map((width, index) => (
-            <div key={index} className={`h-4 border border-white/15 ${width}`} />
-          ))}
+        <div className="skeleton h-5 w-3/4" />
+        <div className="mt-1 grid h-[calc(2rem+0.125rem)] grid-rows-2 gap-0.5">
+          <div className="grid grid-cols-[minmax(0,1fr)_1.9rem_2.9rem] gap-0.5">
+            <div className="border border-white/15" />
+            <div className="border border-white/15" />
+            <div className="border border-white/15" />
+          </div>
+          <div className="grid grid-cols-[4.15rem_5.6rem] justify-start gap-0.5">
+            <div className="border border-white/15" />
+            <div className="border border-white/15" />
+          </div>
         </div>
         <div className="skeleton mt-1.5 h-6 w-24" />
         <div className="mt-1.5 h-7 w-full border border-white/20" />

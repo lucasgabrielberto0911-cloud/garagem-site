@@ -122,6 +122,11 @@ export function VehicleCard({
             </span>
           ) : null}
         </div>
+        {showDestaque ? (
+          <span className="absolute bottom-1.5 left-2 bg-brand px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
+            Destaque
+          </span>
+        ) : null}
       </div>
 
       <div className="vehicle-card-favorite">
@@ -142,17 +147,10 @@ export function VehicleCard({
         className="flex flex-1 flex-col px-2.5 pb-2 pt-1.5 sm:px-3 sm:pb-2.5 sm:pt-2"
         data-vehicle-body=""
       >
-        {showDestaque ? (
-          <span className="mb-1 self-start bg-brand px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
-            Destaque
-          </span>
-        ) : null}
         <div className="min-w-0">
-          {card.title ? (
-            <h3 className="line-clamp-2 font-display text-[15px] font-semibold leading-tight text-cream sm:text-base">
-              {card.title}
-            </h3>
-          ) : null}
+          <h3 className="vehicle-card-title font-display text-[15px] font-semibold text-cream sm:text-base">
+            {card.title}
+          </h3>
           <CardFacts version={card.version} facts={card.facts} />
         </div>
 
@@ -171,15 +169,76 @@ export function VehicleCard({
   );
 }
 
-/** Cabe num chip baixo. Reticências só depois de uma palavra inteira. */
-export function clipChipText(value: string, max = 20) {
+/** Largura em px da Sora 600 a 9px. Reticências só cabem depois da palavra. */
+const GLYPH_PX: Record<string, number> = {
+  " ": 2.05, ".": 2.36, ",": 2.36, "-": 4.54, "/": 3.1, "…": 7.25,
+  "0": 6.69, "1": 3.78, "2": 5.56, "3": 5.53, "4": 5.78,
+  "5": 5.61, "6": 5.93, "7": 5.17, "8": 5.73, "9": 5.93,
+  A: 6.8, B: 6.12, C: 7.16, D: 7.12, E: 5.4, F: 5.04, G: 7.48, H: 7.24, I: 2.83,
+  J: 5.76, K: 6.1, L: 4.9, M: 8.28, N: 7.64, O: 7.79, P: 5.76, Q: 7.79, R: 6.3,
+  S: 6.2, T: 5.35, U: 7.1, V: 6.37, W: 9.39, X: 6.26, Y: 5.87, Z: 5.89,
+  a: 5.17, b: 6.2, c: 5.45, d: 6.2, e: 5.51, f: 3.41, g: 6.08, h: 5.76, i: 2.77,
+  j: 2.85, k: 5.16, l: 2.57, m: 8.71, n: 5.76, o: 6.08, p: 6.2, q: 6.2, r: 3.69,
+  s: 4.82, t: 3.83, u: 5.65, v: 5.03, w: 7.63, x: 5.04, y: 4.92, z: 4.39,
+  á: 5.17, à: 5.17, â: 5.17, ã: 5.17, é: 5.51, ê: 5.51, í: 2.77,
+  ó: 6.08, ô: 6.08, õ: 6.08, ú: 5.65, ç: 5.45,
+  Á: 6.8, À: 6.8, Â: 6.8, Ã: 6.8, É: 5.4, Ê: 5.4, Í: 2.83,
+  Ó: 7.79, Ô: 7.79, Õ: 7.79, Ú: 7.1, Ç: 7.16,
+};
+
+function textWidth(value: string) {
+  let width = 0;
+  for (const char of value) width += GLYPH_PX[char] ?? 5.4;
+  return width;
+}
+
+/** Cabe no chip. Reticências só depois de uma palavra inteira. */
+export function clipChipText(value: string, maxPx = 82) {
   const text = value.replace(/\s+/g, " ").trim();
-  if (text.length <= max) return text;
-  const slice = text.slice(0, max + 1);
-  const lastSpace = slice.lastIndexOf(" ");
-  if (lastSpace <= 0) return text;
-  const clipped = text.slice(0, lastSpace).replace(/[\s.,/-]+$/u, "");
-  return clipped ? `${clipped}…` : text;
+  if (textWidth(text) <= maxPx) return text;
+  const words = text.split(" ");
+  let kept = "";
+  for (const word of words) {
+    const next = kept ? `${kept} ${word}` : word;
+    if (textWidth(`${next}…`) > maxPx) break;
+    kept = next;
+  }
+  if (!kept) return text;
+  return `${kept}…`;
+}
+
+const CHIP_PX = {
+  versao: 68,
+  ano: 24,
+  cidade: 40,
+  km: 58,
+  cambio: 82,
+} as const;
+
+function FactChip({
+  fact,
+  maxPx,
+}: {
+  fact?: { label: string; value: string };
+  maxPx: number;
+}) {
+  if (!fact?.value) return <div className="vehicle-card-slot" aria-hidden="true" />;
+  const visible = clipChipText(fact.value, maxPx);
+  return (
+    <div className="vehicle-card-fact">
+      <dt className="sr-only">{fact.label}</dt>
+      <dd title={fact.value}>
+        {visible === fact.value ? (
+          fact.value
+        ) : (
+          <>
+            <span className="sr-only">{fact.value}</span>
+            <span aria-hidden="true">{visible}</span>
+          </>
+        )}
+      </dd>
+    </div>
+  );
 }
 
 function CardFacts({
@@ -189,32 +248,21 @@ function CardFacts({
   version: string;
   facts: PublicCardFact[];
 }) {
-  const items = [
-    ...(version ? [{ label: "Versão", value: version }] : []),
-    ...facts,
-  ];
-  if (items.length === 0) return null;
-
+  const byLabel = new Map(facts.map((fact) => [fact.label, fact]));
   return (
     <dl className="vehicle-card-facts">
-      {items.map((fact) => {
-        const visible = clipChipText(fact.value);
-        return (
-          <div key={fact.label} className="vehicle-card-fact">
-            <dt className="sr-only">{fact.label}</dt>
-            <dd title={fact.value}>
-              {visible === fact.value ? (
-                fact.value
-              ) : (
-                <>
-                  <span className="sr-only">{fact.value}</span>
-                  <span aria-hidden="true">{visible}</span>
-                </>
-              )}
-            </dd>
-          </div>
-        );
-      })}
+      <div className="vehicle-card-fact-line vehicle-card-fact-line-main">
+        <FactChip
+          fact={version ? { label: "Versão", value: version } : undefined}
+          maxPx={CHIP_PX.versao}
+        />
+        <FactChip fact={byLabel.get("Ano")} maxPx={CHIP_PX.ano} />
+        <FactChip fact={byLabel.get("Cidade")} maxPx={CHIP_PX.cidade} />
+      </div>
+      <div className="vehicle-card-fact-line vehicle-card-fact-line-sub">
+        <FactChip fact={byLabel.get("Km")} maxPx={CHIP_PX.km} />
+        <FactChip fact={byLabel.get("Câmbio")} maxPx={CHIP_PX.cambio} />
+      </div>
     </dl>
   );
 }

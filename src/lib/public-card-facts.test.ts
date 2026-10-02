@@ -202,13 +202,16 @@ test("card público não ganha selo de consignado nem laudo", () => {
   assert.match(source, /vehicle-card-fact/);
   assert.match(factCss, /overflow-wrap:\s*normal/);
   assert.match(factCss, /word-break:\s*normal/);
-  assert.match(factCss, /display:\s*flex/);
-  assert.match(factCss, /flex-wrap:\s*wrap/);
+  assert.match(factCss, /grid-template-rows:\s*1rem 1rem/);
+  assert.match(factCss, /vehicle-card-fact-line-main/);
+  assert.match(factCss, /vehicle-card-fact-line-sub/);
   assert.match(factCss, /white-space:\s*nowrap/);
   assert.match(factCss, /height:\s*1rem/);
   assert.match(factCss, /background:\s*transparent/);
-  assert.doesNotMatch(factCss, /-webkit-line-clamp|grid-template-columns/);
-  assert.doesNotMatch(factCss, /8\.75rem|2\.125rem|1\.5rem/);
+  assert.match(source, /vehicle-card-fact-line-main/);
+  assert.match(source, /vehicle-card-title/);
+  assert.doesNotMatch(factCss, /-webkit-line-clamp|flex-wrap:\s*wrap/);
+  assert.doesNotMatch(factCss, /8\.75rem|2\.125rem|height:\s*1\.5rem/);
   assert.doesNotMatch(factCss, /anywhere|break-all|break-word/);
   assert.doesNotMatch(source, /overflow-wrap:anywhere/);
   assert.doesNotMatch(source, /Consignado/);
@@ -273,8 +276,9 @@ test("chip longo ganha reticências no fim da palavra", () => {
   assert.equal(clipChipText("Automático"), "Automático");
   assert.equal(clipChipText("Semi-automático"), "Semi-automático");
   assert.equal(clipChipText("101.000 km"), "101.000 km");
-  assert.equal(clipChipText("Dynamique 2.0 Tech Road 2"), "Dynamique 2.0 Tech…");
-  assert.doesNotMatch(clipChipText("Dynamique 2.0 Tech Road 2"), /Roa|Tech R/);
+  assert.equal(clipChipText("Dynamique 2.0 Tech Road 2", 68), "Dynamique…");
+  assert.equal(clipChipText("Comfort Plus", 68), "Comfort Plus");
+  assert.doesNotMatch(clipChipText("Dynamique 2.0 Tech Road 2", 68), /Roa|2\.0/);
 });
 
 test("o card do estoque leva à ficha e não mostra Tenho interesse", () => {
