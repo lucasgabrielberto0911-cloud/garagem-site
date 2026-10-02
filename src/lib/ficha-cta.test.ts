@@ -336,7 +336,8 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
   assert.doesNotMatch(html, /Equipamentos/);
   assert.doesNotMatch(html, /e mais \d/);
   assert.match(html, /Garantia de 3 meses/);
-  assert.match(html, /Procedência verificada/);
+  assert.match(html, /Documentação pronta/);
+  assert.doesNotMatch(html, /Procedência verificada/);
   assert.match(html, /Atendimento online 8h–23h/);
   assert.match(html, /Cautelar aprovado/);
   assert.doesNotMatch(html, /Consignado/);

@@ -18,7 +18,7 @@ export const revalidate = 600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Estoque | ${site.name}`,
-  description: `Veículos seminovos disponíveis na ${site.name} — Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Procedência verificada e vistoria completa.`,
+  description: `Veículos seminovos disponíveis na ${site.name} — Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Revisados, com garantia e documentação preparada.`,
   path: "/estoque",
 });
 
@@ -44,7 +44,7 @@ export default async function EstoquePage() {
         <PageHeader
           eyebrow="Estoque"
           title="Veículos disponíveis"
-          description="Vistoria e procedência em cada anúncio. Filtre por marca, modelo, ano, preço ou km e ordene a lista. Se não achar o modelo, deixa o pedido no formulário."
+          description="Cada veículo é revisado e sai com garantia. A documentação vai preparada pra você. Filtre por marca, modelo, ano, preço ou km e ordene a lista. Se não achar o modelo, deixa o pedido no formulário."
         />
 
         <StockBrowseShell

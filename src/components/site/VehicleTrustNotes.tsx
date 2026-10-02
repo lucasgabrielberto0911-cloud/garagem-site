@@ -11,7 +11,7 @@ const NOTES = [
   },
   {
     Icon: IconClipboardCheck,
-    label: "Procedência verificada",
+    label: "Documentação pronta",
   },
   {
     Icon: IconClock,
@@ -19,7 +19,7 @@ const NOTES = [
   },
 ] as const;
 
-/** Confiança ao lado do preço — garantia, procedência e horário reais da loja. */
+/** Confiança ao lado do preço — garantia, documentação e horário reais da loja. */
 export function VehicleTrustNotes({ className = "" }: { className?: string }) {
   return (
     <ul

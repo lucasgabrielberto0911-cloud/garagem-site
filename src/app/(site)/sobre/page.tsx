@@ -33,7 +33,7 @@ const DIFERENCIAIS = [
   {
     Icon: IconClipboardCheck,
     title: "Qualidade antes do anúncio",
-    text: "Cada veículo passa por checagem de procedência, quilometragem e condição geral antes de entrar no estoque. Se algo importa para a decisão, a gente informa com clareza — sem surpresa na hora de fechar.",
+    text: "A gente revisa cada veículo — quilometragem e condição geral — antes de anunciar. Se algo importa pra sua decisão, a gente fala com clareza, sem surpresa na hora de fechar.",
   },
   {
     Icon: IconShieldCheck,

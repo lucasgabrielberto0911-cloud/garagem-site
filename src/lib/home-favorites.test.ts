@@ -16,7 +16,11 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
   assert.match(hero, /trackingLabel="home-hero"/);
   assert.match(hero, /Falar no WhatsApp/);
   assert.match(hero, /href="\/estoque"/);
-  assert.match(hero, /Checagem de condição antes de entrar no estoque/);
+  assert.match(hero, /A gente revisa cada veículo, e ele sai com garantia/);
+  assert.match(hero, /A documentação vai 100% preparada, pra você ter mais tranquilidade/);
+  assert.doesNotMatch(page, /Checagem de condição antes de entrar no estoque/);
+  assert.doesNotMatch(page, /Procedência conferida/);
+  assert.doesNotMatch(page, /alinhada na transferência/);
   assert.doesNotMatch(hero, /ChatOpenButton/);
   assert.doesNotMatch(hero, /assistente/);
   assert.match(page, /preload\(HERO_WORDMARK/);

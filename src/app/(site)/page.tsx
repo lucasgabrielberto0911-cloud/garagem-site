@@ -54,12 +54,12 @@ const REASONS = [
   {
     Icon: IconClipboardCheck,
     title: "Vistoria da loja",
-    text: "Olhamos a condição geral antes de anunciar. O que vimos, contamos no atendimento.",
+    text: "A gente revisa cada veículo antes de anunciar. O que a gente viu, conta pra você no atendimento.",
   },
   {
     Icon: IconShieldCheck,
-    title: "Procedência conferida",
-    text: "Histórico, débitos e restrições a gente consulta antes. A documentação sai alinhada na transferência.",
+    title: "Documentação pronta",
+    text: "A gente olha o histórico, os débitos e as restrições antes. A documentação vai 100% preparada, pra você ter mais tranquilidade.",
   },
   {
     Icon: IconHandshake,
@@ -134,12 +134,12 @@ export default async function HomePage() {
               Encontre seu <span className="text-brand">próximo seminovo</span>
             </h1>
             <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-cream/85 sm:text-lg">
-              Seminovos com procedência em {site.region}. Estoque no site,
-              conversa no WhatsApp — das 8h às 23h.
+              Seminovos em {site.region}. Você vê o estoque no site e fala com
+              a gente no WhatsApp — das 8h às 23h.
             </p>
             <ul className="mx-auto mt-4 hidden max-w-lg flex-col gap-1.5 text-sm leading-snug text-cream sm:flex sm:text-base">
-              <li>Checagem de condição antes de entrar no estoque.</li>
-              <li>Procedência conferida. Documentação alinhada na transferência.</li>
+              <li>A gente revisa cada veículo, e ele sai com garantia.</li>
+              <li>A documentação vai 100% preparada, pra você ter mais tranquilidade.</li>
             </ul>
           </div>
 
