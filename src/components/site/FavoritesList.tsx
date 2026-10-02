@@ -221,11 +221,21 @@ export function FavoritesList() {
           </table>
           </div>
 
-          <div className="-mx-4 mt-8 overflow-x-auto px-4 lg:hidden">
-            <p className="mb-3 text-xs uppercase tracking-wider text-muted">
-              Comparar os {compare.length} primeiros
-            </p>
-            <ul className="flex snap-x snap-mandatory gap-3 pb-2">
+          <details className="group mt-6 lg:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 border border-white/15 bg-ink px-4 py-3 font-display text-xs font-semibold text-cream transition hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
+              <span>Comparar os {compare.length} primeiros</span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                className="h-4 w-4 shrink-0 text-brand transition-transform group-open:rotate-180"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </summary>
+            <ul className="-mx-4 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
               {compare.map((vehicle) => (
                 <li
                   key={vehicle.id}
@@ -270,7 +280,7 @@ export function FavoritesList() {
                 </li>
               ))}
             </ul>
-          </div>
+          </details>
         </>
       ) : null}
 
