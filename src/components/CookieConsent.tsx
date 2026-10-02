@@ -27,9 +27,8 @@ export function CookieConsent() {
       className="site-consent pointer-events-auto fixed z-[55] flex flex-col gap-2 border border-white/15 bg-ink/95 px-2.5 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur sm:px-3 sm:py-3"
     >
       <p className="text-[11px] leading-snug text-cream/90 sm:text-[12px]">
-        Google Analytics só entra com o seu ok. Se você chegou por um anúncio,
-        a visita é medida para o anúncio funcionar. O site, o assistente e o
-        WhatsApp funcionam no essencial.{" "}
+        Google Analytics só com seu aceite. Visitas vindas de anúncios são
+        medidas.{" "}
         <Link
           href="/privacidade"
           prefetch={false}
@@ -38,14 +37,14 @@ export function CookieConsent() {
           Privacidade
         </Link>
       </p>
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => {
             writeStoredConsent("accepted");
             setChoice("accepted");
           }}
-          className="inline-flex min-h-11 items-center bg-brand px-3 font-display text-[11px] font-semibold uppercase tracking-wide text-cream"
+          className="inline-flex min-h-11 items-center justify-center bg-brand px-2 text-center font-display text-[11px] font-semibold uppercase leading-tight tracking-wide text-cream"
         >
           Aceitar
         </button>
@@ -55,7 +54,7 @@ export function CookieConsent() {
             writeStoredConsent("essential");
             setChoice("essential");
           }}
-          className="inline-flex min-h-11 items-center border border-white/20 px-3 font-display text-[11px] font-semibold uppercase tracking-wide text-cream"
+          className="inline-flex min-h-11 items-center justify-center border border-white/20 px-2 text-center font-display text-[11px] font-semibold uppercase leading-tight tracking-wide text-cream"
         >
           Só o essencial
         </button>

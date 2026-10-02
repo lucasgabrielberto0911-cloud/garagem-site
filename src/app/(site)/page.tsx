@@ -54,7 +54,7 @@ export const metadata = buildPageMetadata({
 const REASONS = [
   {
     Icon: IconClipboardCheck,
-    title: "Vistoria da loja",
+    title: "Revisão com garantia",
     text: "A gente revisa cada veículo antes de anunciar. O que a gente viu, conta pra você no atendimento.",
   },
   {
