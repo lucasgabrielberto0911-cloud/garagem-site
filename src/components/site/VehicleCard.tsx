@@ -2,6 +2,7 @@ import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { RememberVehicleSnapshot } from "@/components/site/RememberVehicleSnapshot";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
+import { StockMobileCardDetails } from "@/components/site/StockMobileCardDetails";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import { publicCardFacts, type PublicCardFact } from "@/lib/public-card-facts";
 import {
@@ -22,7 +23,7 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 /**
  * Card de servidor: só o favorito e o link hidratam no cliente.
  * O mesmo card entra na home, no estoque, nos favoritos e na faixa da ficha.
- * Sem atalho de WhatsApp — a conversa fica na ficha e no chat.
+ * O estoque mobile tem detalhes completos e o atalho de interesse original.
  */
 export function VehicleCard({
   vehicle,
@@ -165,6 +166,8 @@ export function VehicleCard({
           </span>
         </div>
       </div>
+
+      {largePhoto ? <StockMobileCardDetails vehicle={vehicle} returnTo={returnTo} /> : null}
     </article>
   );
 }
