@@ -35,18 +35,6 @@ export function ShareVehicle({ title, path, vehicleId, className = "" }: Props) 
     }
   }
 
-  async function nativeShare() {
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({ title: text, text, url });
-        return;
-      } catch {
-        /* usuário cancelou ou indisponível */
-      }
-    }
-    await copyLink();
-  }
-
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       <span className="sr-only">Compartilhar anúncio</span>
@@ -55,7 +43,7 @@ export function ShareVehicle({ title, path, vehicleId, className = "" }: Props) 
       </span>
       <button
         type="button"
-        onClick={nativeShare}
+        onClick={copyLink}
         aria-label="Copiar link do anúncio"
         className="inline-flex min-h-[44px] items-center border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
       >
@@ -76,16 +64,15 @@ export function ShareVehicle({ title, path, vehicleId, className = "" }: Props) 
         <IconWhatsApp className="h-3.5 w-3.5" />
         WhatsApp
       </a>
-      <button
-        type="button"
-        onClick={async () => {
-          await copyLink();
-          window.open(site.instagramUrl, "_blank", "noopener,noreferrer");
-        }}
+      <a
+        href={site.instagramUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={copyLink}
         className="inline-flex min-h-[44px] items-center border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
       >
         Instagram
-      </button>
+      </a>
     </div>
   );
 }
