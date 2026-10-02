@@ -12,6 +12,7 @@ import { VehicleImage } from "@/components/VehicleImage";
 import { IconClose } from "@/components/site/icons";
 import { vehiclePhotoAlt } from "@/lib/format";
 import { handleFocusTrap } from "@/lib/focus-trap";
+import { clampPhotoOffset } from "@/lib/photo-zoom";
 import {
   galleryPreviewSrc,
   galleryThumbSrc,
@@ -55,6 +56,7 @@ export function PhotoLightbox({
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const thumbStripRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
 
   const resetZoom = useCallback(() => {
     setScale(1);
@@ -142,13 +144,35 @@ export function PhotoLightbox({
     else setScale(ZOOM_STEP);
   }
 
-  function clampOffset(next: { x: number; y: number }, currentScale: number) {
-    const limit = 280 * (currentScale - 1);
-    return {
-      x: Math.max(-limit, Math.min(limit, next.x)),
-      y: Math.max(-limit, Math.min(limit, next.y)),
+  const clampOffset = useCallback((next: { x: number; y: number }, currentScale: number) => {
+    const viewport = viewportRef.current;
+    const image = viewport?.querySelector("img");
+    return clampPhotoOffset(next, {
+      width: viewport?.clientWidth ?? 0,
+      height: viewport?.clientHeight ?? 0,
+      imageWidth: image?.naturalWidth ?? 0,
+      imageHeight: image?.naturalHeight ?? 0,
+      scale: currentScale,
+    });
+  }, []);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!mounted || !viewport) return;
+    const fit = () => {
+      setOffset((current) => {
+        const next = clampOffset(current, scale);
+        return next.x === current.x && next.y === current.y ? current : next;
+      });
     };
-  }
+    const observer = new ResizeObserver(fit);
+    observer.observe(viewport);
+    window.addEventListener("resize", fit);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", fit);
+    };
+  }, [mounted, scale, clampOffset]);
 
   function onTouchStart(event: React.TouchEvent) {
     if (event.touches.length === 2) {
@@ -180,7 +204,7 @@ export function PhotoLightbox({
         ),
       );
       setScale(next);
-      if (next === 1) setOffset({ x: 0, y: 0 });
+      setOffset((current) => clampOffset(current, next));
       return;
     }
 
@@ -316,6 +340,7 @@ export function PhotoLightbox({
 
         <div className="relative min-h-0 flex-1 bg-black">
           <div
+            ref={viewportRef}
             className="absolute inset-0 touch-none select-none [-webkit-touch-callout:none]"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
