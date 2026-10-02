@@ -71,7 +71,7 @@ export function StockResultsPending({ children }: { children: ReactNode }) {
                 Atualizando estoque…
               </span>
             </div>
-            <VehicleCardSkeletonGrid count={6} />
+            <VehicleCardSkeletonGrid count={6} largePhoto />
           </div>
         </div>
       ) : null}

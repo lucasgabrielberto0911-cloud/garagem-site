@@ -28,7 +28,7 @@ export default function SiteLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <FavoritesProvider>
-      <div className="flex min-h-app-screen flex-col">
+      <div className="site-shell flex min-h-app-screen flex-col" data-stock-scroll="">
         <MarketingScripts />
         <DeferredMarketing />
         <CookieConsent />

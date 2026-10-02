@@ -311,6 +311,44 @@ test("fato ausente não aparece no HTML do card", () => {
   assert.doesNotMatch(html, /Linhares|Aracruz|Serra/);
 });
 
+test("o card não mostra Atualizado em, o preço é vermelho e o coração fica fora da foto", () => {
+  const html = renderToStaticMarkup(
+    createElement(
+      FavoritesProvider,
+      null,
+      createElement(VehicleCard, {
+        vehicle: sampleVehicle({ updatedAt: "2026-10-01T12:00:00.000Z" }),
+        largePhoto: true,
+      }),
+    ),
+  );
+  assert.match(html, /text-brand/);
+  assert.match(html, /R\$\s*84\.900/);
+  assert.match(html, /aspect-\[4\/3\]/);
+  assert.match(html, />2016</);
+  assert.match(html, /103\.000 km/);
+  assert.match(html, /Automático/);
+  assert.match(html, /Linhares/);
+  assert.doesNotMatch(html, /Atualizado/);
+  assert.doesNotMatch(html, /bg-asphalt\/70/);
+  const photo = html.indexOf("data-vehicle-photo");
+  const body = html.indexOf("data-vehicle-body");
+  const heart = html.indexOf("nos favoritos");
+  assert.ok(photo >= 0 && body > photo && heart > body);
+
+  const card = readSrc("components/site/VehicleCard.tsx");
+  const grid = readSrc("components/site/VehicleGrid.tsx");
+  const home = readSrc("app/(site)/page.tsx");
+  const stock = readSrc("components/site/StockInfiniteList.tsx");
+  const similar = readSrc("app/(site)/estoque/[id]/page.tsx");
+  assert.doesNotMatch(card, /formatUpdatedAt/);
+  assert.doesNotMatch(card, /absolute right-1\.5 top-1\.5/);
+  assert.match(grid, /largePhoto=\{stock\}/);
+  assert.match(stock, /photoLayout="stock"/);
+  assert.doesNotMatch(home, /photoLayout="stock"/);
+  assert.doesNotMatch(similar, /photoLayout="stock"/);
+});
+
 test("o chat continua com WhatsApp mesmo dentro da lista", () => {
   const html = renderToStaticMarkup(
     createElement(

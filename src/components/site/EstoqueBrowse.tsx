@@ -12,6 +12,7 @@ import { HideStockCardInterest } from "@/components/site/HideStockCardInterest";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { SiteLeadHit, StockSearchPixel } from "@/components/site/VehiclePixel";
 import { WhatsAppButton } from "@/components/site/ui";
+import { restoreStockScroll } from "@/lib/stock-return";
 import { formatStockWaitlistQuery, stockEmptyWhatsAppCta } from "@/lib/stock-waitlist";
 import {
   parseStockFilters,
@@ -97,11 +98,12 @@ export function EstoqueBrowseFallback({
                 priorityCount={2}
                 returnTo="/estoque"
                 whatsappCampaign="estoque"
+                photoLayout="stock"
               />
             </HideStockCardInterest>
           </StockReturnCapture>
         ) : (
-          <VehicleCardSkeletonGrid count={6} />
+          <VehicleCardSkeletonGrid count={6} largePhoto />
         )}
       </div>
     </>
@@ -195,17 +197,7 @@ export function EstoqueBrowse({
   }, [filterKey, remote, initialStock, params]);
 
   useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem("garagem:estoque-scroll");
-      if (!saved) return;
-      sessionStorage.removeItem("garagem:estoque-scroll");
-      const top = Number(saved);
-      if (Number.isFinite(top) && top > 0) {
-        window.requestAnimationFrame(() => window.scrollTo(0, top));
-      }
-    } catch {
-      // private mode
-    }
+    restoreStockScroll();
   }, []);
 
   const returnTo = buildReturnTo(params);
@@ -247,7 +239,7 @@ export function EstoqueBrowse({
 
       <div className="mt-4" data-estoque-list="" aria-live="polite">
         {loading ? (
-          <VehicleCardSkeletonGrid count={6} />
+          <VehicleCardSkeletonGrid count={6} largePhoto />
         ) : (
           <StockInfiniteList
             key={filterKey}

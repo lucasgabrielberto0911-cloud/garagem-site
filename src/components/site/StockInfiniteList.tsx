@@ -153,6 +153,7 @@ export function StockInfiniteList({
             returnTo={returnTo}
             priorityCount={2}
             whatsappCampaign="estoque"
+            photoLayout="stock"
           />
         </HideStockCardInterest>
       </StockReturnCapture>
@@ -172,7 +173,7 @@ export function StockInfiniteList({
                 />
                 Carregando mais veículos…
               </p>
-              <VehicleCardSkeletonGrid count={2} />
+              <VehicleCardSkeletonGrid count={2} largePhoto />
             </div>
           ) : failed ? (
             <button

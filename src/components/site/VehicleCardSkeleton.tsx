@@ -1,7 +1,11 @@
-export function VehicleCardSkeleton() {
+export function VehicleCardSkeleton({ largePhoto = false }: { largePhoto?: boolean }) {
   return (
     <div className="overflow-hidden border border-white/10 bg-ink">
-      <div className="skeleton aspect-[16/10] w-full" />
+      <div
+        className={`skeleton w-full ${
+          largePhoto ? "aspect-[4/3] sm:aspect-[16/10]" : "aspect-[16/10]"
+        }`}
+      />
       <div className="space-y-2 p-3">
         <div className="skeleton h-4 w-3/4" />
         <div className="skeleton h-3 w-1/2" />
@@ -23,11 +27,23 @@ export function VehicleCardSkeleton() {
   );
 }
 
-export function VehicleCardSkeletonGrid({ count = 8 }: { count?: number }) {
+export function VehicleCardSkeletonGrid({
+  count = 8,
+  largePhoto = false,
+}: {
+  count?: number;
+  largePhoto?: boolean;
+}) {
   return (
-    <div className="mx-auto grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
+    <div
+      className={`mx-auto grid w-full gap-3 sm:gap-4 ${
+        largePhoto
+          ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+          : "grid-cols-2 lg:grid-cols-3"
+      }`}
+    >
       {Array.from({ length: count }).map((_, index) => (
-        <VehicleCardSkeleton key={index} />
+        <VehicleCardSkeleton key={index} largePhoto={largePhoto} />
       ))}
     </div>
   );

@@ -12,7 +12,6 @@ import {
   type VehicleCardRecord,
 } from "@/lib/stock-query";
 import {
-  formatUpdatedAt,
   formatVehicleDisplay,
   formatVehicleWhatsAppMessage,
 } from "@/lib/vehicle-display";
@@ -35,6 +34,7 @@ export function VehicleCard({
   showDestaque = false,
   whatsappCampaign,
   showWhatsApp = true,
+  largePhoto = false,
 }: {
   vehicle: VehicleCardData;
   priority?: boolean;
@@ -42,6 +42,8 @@ export function VehicleCard({
   showDestaque?: boolean;
   whatsappCampaign?: WhatsAppCampaign;
   showWhatsApp?: boolean;
+  /** Foto maior no celular — só a grade do estoque. */
+  largePhoto?: boolean;
 }) {
   const display = formatVehicleDisplay(vehicle);
   const card = publicCardFacts(vehicle);
@@ -50,8 +52,6 @@ export function VehicleCard({
   const badge = STATUS_BADGE[vehicle.status];
   const href = display.path;
   const sold = vehicle.status === "vendido";
-  const updated =
-    vehicle.updatedAt != null ? formatUpdatedAt(vehicle.updatedAt) : "";
   const whatsappMessage = formatVehicleWhatsAppMessage({
     brand: vehicle.brand,
     model: vehicle.model,
@@ -63,8 +63,16 @@ export function VehicleCard({
     isMoto: vehicle.category === "moto",
   });
 
+  const photoClass = largePhoto
+    ? "relative aspect-[4/3] overflow-hidden bg-asphalt sm:aspect-[16/10]"
+    : "relative aspect-[16/10] overflow-hidden bg-asphalt";
+
   return (
-    <article className="vehicle-card card-lift group relative flex h-full flex-col overflow-hidden border border-white/10 bg-ink touch-manipulation">
+    <article
+      className={`vehicle-card card-lift group relative flex h-full flex-col overflow-hidden border border-white/10 bg-ink touch-manipulation ${
+        largePhoto ? "vehicle-card-stock" : ""
+      }`}
+    >
       <RememberVehicleSnapshot
         vehicle={{
           id: vehicle.id,
@@ -88,64 +96,43 @@ export function VehicleCard({
           photos: vehicle.photos,
         }}
       />
-      <FavoriteButton
-        vehicleId={vehicle.id}
-        label={display.titleWithYear}
-        value={vehicle.price}
-        make={formatBrandName(vehicle.brand)}
-        model={formatModelName(vehicle.model)}
-        year={vehicle.yearModel}
-        className="absolute right-1.5 top-1.5 z-20"
-      />
+      <div className={photoClass} data-vehicle-photo="">
+        <VehicleImage
+          src={cover}
+          alt={display.titleWithYear}
+          fill
+          width={480}
+          height={300}
+          sizes={CARD_SIZES}
+          srcSet={coverSet}
+          priority={priority}
+          className="object-cover"
+        />
+      </div>
 
-      <StockVehicleLink
-        href={href}
-        returnTo={returnTo}
-        ariaLabel={
-          card.priceLabel
-            ? `${display.titleWithYear} — ${card.priceLabel}`
-            : display.titleWithYear
-        }
-      >
-        <div className="relative aspect-[16/10] overflow-hidden bg-asphalt">
-          <VehicleImage
-            src={cover}
-            alt={display.titleWithYear}
-            fill
-            width={480}
-            height={300}
-            sizes={CARD_SIZES}
-            srcSet={coverSet}
-            priority={priority}
-            className="object-cover"
-          />
-          <div
-            className="absolute inset-0 bg-gradient-to-t from-asphalt/70 via-transparent to-transparent"
-            aria-hidden="true"
-          />
-
-          <div className="absolute left-2 top-2 flex flex-wrap gap-1">
-            {showDestaque ? (
-              <span className="bg-brand px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
-                Destaque
-              </span>
-            ) : null}
-            {badge ? (
-              <span
-                className={`px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider ${badge.className}`}
-              >
-                {badge.label}
-              </span>
-            ) : null}
-            {!cover ? (
-              <span className="bg-white/15 px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
-                Sem foto
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2">
+      <div className="flex flex-1 items-start gap-1 p-3 sm:gap-2" data-vehicle-body="">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:gap-2">
+          {showDestaque || badge || !cover ? (
+            <div className="flex flex-wrap gap-1">
+              {showDestaque ? (
+                <span className="bg-brand px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
+                  Destaque
+                </span>
+              ) : null}
+              {badge ? (
+                <span
+                  className={`px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider ${badge.className}`}
+                >
+                  {badge.label}
+                </span>
+              ) : null}
+              {!cover ? (
+                <span className="bg-white/15 px-1.5 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
+                  Sem foto
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           <div className="min-w-0">
             {card.title ? (
               <h3 className="line-clamp-2 font-display text-[15px] font-semibold leading-snug text-cream sm:text-sm">
@@ -158,14 +145,11 @@ export function VehicleCard({
               </p>
             ) : null}
             <CardFacts facts={card.facts} />
-            {updated ? (
-              <p className="mt-0.5 truncate text-[10px] text-muted/90">{updated}</p>
-            ) : null}
           </div>
 
           <div className="mt-auto flex flex-col gap-1.5 border-t border-white/10 pt-2 sm:flex-row sm:items-end sm:justify-between sm:gap-2 sm:pt-2.5">
             {card.priceLabel ? (
-              <p className="font-display text-lg font-bold leading-none text-cream sm:text-base">
+              <p className="font-display text-lg font-bold leading-none text-brand sm:text-base">
                 {card.priceLabel}
               </p>
             ) : null}
@@ -174,19 +158,42 @@ export function VehicleCard({
             </span>
           </div>
         </div>
-      </StockVehicleLink>
-      {!sold && showWhatsApp ? (
-        <VehicleCardWhatsApp
+        <FavoriteButton
           vehicleId={vehicle.id}
-          label={display.fullLabel}
-          message={whatsappMessage}
+          label={display.titleWithYear}
           value={vehicle.price}
           make={formatBrandName(vehicle.brand)}
           model={formatModelName(vehicle.model)}
           year={vehicle.yearModel}
-          path={href}
-          campaign={whatsappCampaign}
+          className="relative z-10 shrink-0"
         />
+      </div>
+      <StockVehicleLink
+        href={href}
+        returnTo={returnTo}
+        ariaLabel={
+          card.priceLabel
+            ? `${display.titleWithYear} — ${card.priceLabel}`
+            : display.titleWithYear
+        }
+        className="absolute inset-0 z-[1] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+      >
+        <span className="sr-only">{display.titleWithYear}</span>
+      </StockVehicleLink>
+      {!sold && showWhatsApp ? (
+        <div className="relative z-10">
+          <VehicleCardWhatsApp
+            vehicleId={vehicle.id}
+            label={display.fullLabel}
+            message={whatsappMessage}
+            value={vehicle.price}
+            make={formatBrandName(vehicle.brand)}
+            model={formatModelName(vehicle.model)}
+            year={vehicle.yearModel}
+            path={href}
+            campaign={whatsappCampaign}
+          />
+        </div>
       ) : null}
     </article>
   );
