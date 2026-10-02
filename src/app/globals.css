@@ -140,6 +140,30 @@ body {
   }
 
   /*
+   * No estoque do celular a lista rola acima da bottom nav e do chip
+   * “Ajuda para escolher”. Foto, nome e preço não passam por baixo deles.
+   */
+  @media (max-width: 1023px) {
+    body:has([data-stock-page]) {
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    body:has([data-stock-page]) .site-shell {
+      height: calc(100dvh - 8.25rem - env(safe-area-inset-bottom, 0px));
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    body:has([data-stock-page]) .pb-site-nav {
+      display: none;
+    }
+  }
+
+  /*
    * Folga para o chip “Ajuda para escolher” não cobrir o último card /
    * CTA de WhatsApp em estoque, contato e FAQ. Ficha e banner de cookies
    * já escondem o FAB fechado.
@@ -644,6 +668,92 @@ body:has([data-ficha-page]) .whatsapp-float {
 @media (max-width: 1023px) {
   body:has(.site-consent) .site-chat:not(.is-open) {
     display: none;
+  }
+}
+
+.stock-chip-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stock-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+}
+
+.stock-chip-label {
+  display: flex;
+  align-items: center;
+  flex: 0 0 2.875rem;
+  height: 2.75rem;
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #b4b4ba;
+}
+
+.stock-chip-track {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 2.75rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+
+.stock-chip-track > * {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.stock-chip-track > button {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.stock-chip-action {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  flex: 0 0 auto;
+  height: 2.75rem;
+  margin: 0;
+  padding: 0 0.625rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #17171a;
+  font-family: var(--font-display), sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #f7f5f2;
+  touch-action: manipulation;
+}
+
+.vehicle-card-stock {
+  contain-intrinsic-size: auto 360px;
+}
+
+@media (min-width: 640px) {
+  .vehicle-card-stock {
+    contain-intrinsic-size: auto 280px;
   }
 }
 

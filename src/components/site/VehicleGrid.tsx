@@ -5,6 +5,7 @@ import type { WhatsAppCampaign } from "@/lib/site";
 /**
  * Grade: 2 por linha no mobile (1 fica espaçoso demais), 3 no desktop.
  * Destaques da home usam 4 colunas no xl — o estoque fica em 3 por causa do filtro.
+ * No estoque a foto usa 4:3 no celular, o maior retângulo que cabe em duas colunas.
  */
 function layoutForCount(count: number, desktopCols: 3 | 4) {
   if (count <= 1) {
@@ -27,6 +28,7 @@ export function VehicleGrid({
   destaqueLimit = 3,
   whatsappCampaign,
   showWhatsApp = true,
+  photoLayout = "default",
 }: {
   vehicles: VehicleCardData[];
   /** Quantos cards iniciais recebem `priority` (LCP). */
@@ -40,11 +42,19 @@ export function VehicleGrid({
   whatsappCampaign?: WhatsAppCampaign;
   /** Landing de cidade leva à ficha; o WhatsApp da página é vídeo ou visita. */
   showWhatsApp?: boolean;
+  /** No celular, o estoque mantém 2 colunas e aumenta a foto para 4:3. */
+  photoLayout?: "default" | "stock";
 }) {
   const destaqueIds = featuredBadgeIds(vehicles, destaqueLimit);
+  const stock = photoLayout === "stock";
+  const tight = stock && vehicles.length > 1;
   return (
     <div
-      className={`mx-auto grid w-full gap-3 sm:gap-4 ${layoutForCount(vehicles.length, desktopCols)}`}
+      className={`grid ${
+        tight
+          ? "-mx-2 w-[calc(100%+1rem)] gap-2 sm:mx-0 sm:w-full sm:gap-4"
+          : "mx-auto w-full gap-3 sm:gap-4"
+      } ${layoutForCount(vehicles.length, desktopCols)}`}
     >
       {vehicles.map((vehicle, index) => (
         <div key={vehicle.id} className="h-full min-w-0 w-full">
@@ -55,6 +65,7 @@ export function VehicleGrid({
             showDestaque={destaqueIds.has(vehicle.id)}
             whatsappCampaign={whatsappCampaign}
             showWhatsApp={showWhatsApp}
+            largePhoto={stock}
           />
         </div>
       ))}
