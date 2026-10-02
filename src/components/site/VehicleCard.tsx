@@ -171,6 +171,17 @@ export function VehicleCard({
   );
 }
 
+/** Cabe num chip baixo. Reticências só depois de uma palavra inteira. */
+export function clipChipText(value: string, max = 20) {
+  const text = value.replace(/\s+/g, " ").trim();
+  if (text.length <= max) return text;
+  const slice = text.slice(0, max + 1);
+  const lastSpace = slice.lastIndexOf(" ");
+  if (lastSpace <= 0) return text;
+  const clipped = text.slice(0, lastSpace).replace(/[\s.,/-]+$/u, "");
+  return clipped ? `${clipped}…` : text;
+}
+
 function CardFacts({
   version,
   facts,
@@ -186,12 +197,24 @@ function CardFacts({
 
   return (
     <dl className="vehicle-card-facts">
-      {items.map((fact) => (
-        <div key={fact.label} className="vehicle-card-fact">
-          <dt className="sr-only">{fact.label}</dt>
-          <dd>{fact.value}</dd>
-        </div>
-      ))}
+      {items.map((fact) => {
+        const visible = clipChipText(fact.value);
+        return (
+          <div key={fact.label} className="vehicle-card-fact">
+            <dt className="sr-only">{fact.label}</dt>
+            <dd title={fact.value}>
+              {visible === fact.value ? (
+                fact.value
+              ) : (
+                <>
+                  <span className="sr-only">{fact.value}</span>
+                  <span aria-hidden="true">{visible}</span>
+                </>
+              )}
+            </dd>
+          </div>
+        );
+      })}
     </dl>
   );
 }

@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { HideStockCardInterest } from "@/components/site/HideStockCardInterest";
-import { VehicleCard } from "@/components/site/VehicleCard";
+import { clipChipText, VehicleCard } from "@/components/site/VehicleCard";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import { FavoritesProvider } from "@/lib/favorites";
 import { publicCardFacts } from "@/lib/public-card-facts";
@@ -203,6 +203,10 @@ test("card público não ganha selo de consignado nem laudo", () => {
   assert.match(factCss, /overflow-wrap:\s*normal/);
   assert.match(factCss, /word-break:\s*normal/);
   assert.match(factCss, /-webkit-line-clamp:\s*2/);
+  assert.match(factCss, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(factCss, /height:\s*1\.5rem/);
+  assert.match(factCss, /background:\s*transparent/);
+  assert.doesNotMatch(factCss, /8\.75rem|2\.125rem/);
   assert.doesNotMatch(factCss, /anywhere|break-all|break-word/);
   assert.doesNotMatch(source, /overflow-wrap:anywhere/);
   assert.doesNotMatch(source, /Consignado/);
@@ -262,6 +266,14 @@ function sampleVehicle(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+test("chip longo ganha reticências no fim da palavra", () => {
+  assert.equal(clipChipText("Automático"), "Automático");
+  assert.equal(clipChipText("Semi-automático"), "Semi-automático");
+  assert.equal(clipChipText("101.000 km"), "101.000 km");
+  assert.equal(clipChipText("Dynamique 2.0 Tech Road 2"), "Dynamique 2.0 Tech…");
+  assert.doesNotMatch(clipChipText("Dynamique 2.0 Tech Road 2"), /Roa|Tech R/);
+});
 
 test("o card do estoque leva à ficha e não mostra Tenho interesse", () => {
   const vehicle = sampleVehicle();

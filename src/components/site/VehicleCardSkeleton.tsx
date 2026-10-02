@@ -10,7 +10,7 @@ export function VehicleCardSkeleton({ largePhoto = false }: { largePhoto?: boole
         <div className="skeleton h-4 w-3/4" />
         <div className="mt-1.5 grid grid-cols-2 gap-1">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-[2.125rem] border border-white/10 bg-white/[0.04]" />
+            <div key={index} className="h-6 border border-white/15" />
           ))}
         </div>
         <div className="skeleton mt-1.5 h-6 w-24" />
