@@ -123,16 +123,16 @@ export default async function HomePage() {
           aria-hidden="true"
         />
 
-        <Container className="py-2.5 sm:py-6 lg:py-7">
+        <Container className="py-4 sm:py-6 lg:py-7">
           <div className="flex flex-col gap-2.5 sm:gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
             <div className="hero-text min-w-0 max-w-2xl">
               <div className="hero-brand">
                 <SiteWordmark size="hero" priority />
               </div>
-              <h1 className="mt-2 font-display text-[1.0625rem] font-semibold leading-snug tracking-tight text-cream sm:mt-3 sm:text-3xl sm:leading-[1.12] lg:text-[2rem]">
+              <h1 className="mt-3 font-display text-lg font-semibold leading-snug tracking-tight text-cream sm:mt-3 sm:text-3xl sm:leading-[1.12] lg:text-[2rem]">
                 Seminovos com procedência em {site.region}.
               </h1>
-              <ul className="mt-3 hidden max-w-lg flex-col gap-1.5 text-sm leading-snug text-cream sm:flex sm:text-base">
+              <ul className="mt-3 flex max-w-lg flex-col gap-2 border-l-2 border-brand/60 pl-3 text-sm leading-snug text-cream sm:gap-1.5 sm:border-0 sm:pl-0 sm:text-base">
                 <li>A gente revisa cada veículo, e ele sai com garantia.</li>
                 <li>A documentação vai 100% preparada, pra você ter mais tranquilidade.</li>
               </ul>

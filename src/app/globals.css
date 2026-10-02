@@ -1734,11 +1734,6 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
     row-gap: 0.25rem;
   }
 
-  .hero-red-black > .mx-auto {
-    padding-top: 0.25rem;
-    padding-bottom: 0;
-  }
-
   .hero-brand img {
     width: min(40vw, 148px);
   }
@@ -1795,11 +1790,6 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-  }
-
-  .hero-red-black > .mx-auto {
-    padding-top: 0.5rem;
-    padding-bottom: 0.25rem;
   }
 
   .hero-text,
