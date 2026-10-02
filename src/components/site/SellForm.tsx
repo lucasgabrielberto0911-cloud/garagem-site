@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useRef,
   useState,
   useTransition,
@@ -8,8 +9,10 @@ import {
   cloneElement,
   isValidElement,
   type ReactNode,
+  type Ref,
 } from "react";
 import { notifyError, notifySuccess } from "@/lib/notify";
+import { focusFormFeedback, useFormViewport } from "@/lib/form-feedback";
 import { WhatsAppButton } from "@/components/site/ui";
 import { createSellLead } from "@/app/(site)/vender/actions";
 import { formatNumberBR, formatPhoneBR, formatPlateInput } from "@/lib/format";
@@ -33,7 +36,21 @@ export function SellForm({
   interestVehicleId?: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const receiptRef = useRef<HTMLDivElement>(null);
+  useFormViewport(formRef);
   const [isPending, startTransition] = useTransition();
+  const [ready, setReady] = useState(false);
+  const [focusTarget, setFocusTarget] = useState<string | null>(null);
+
+  useEffect(() => setReady(true), []);
+  useEffect(() => {
+    if (isPending || !focusTarget) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(focusTarget)?.focus();
+      setFocusTarget(null);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isPending, focusTarget]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [outcome, setOutcome] = useState<null | "sent" | "queued">(null);
   const [sentPhotoCount, setSentPhotoCount] = useState(0);
@@ -42,15 +59,45 @@ export function SellForm({
   const [plate, setPlate] = useState("");
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [photoError, setPhotoError] = useState("");
+
+  useEffect(() => {
+    if (outcome) return focusFormFeedback(receiptRef.current);
+  }, [outcome]);
+
+  async function queueOffline(data: FormData) {
+    const fields: Record<string, string> = {};
+    for (const [key, value] of data.entries()) {
+      if (typeof value === "string") fields[key] = value;
+    }
+    try {
+      await enqueueIntent({
+        type: "sell",
+        fields,
+        photoUrls: (data.getAll("photoUrls") as string[]).filter(
+          (item) => typeof item === "string",
+        ),
+      });
+      trackPwaEvent("PwaOfflineQueued", { kind: "sell" });
+      notifySuccess("Sem conexão. Guardamos a avaliação e enviamos quando a internet voltar.");
+      setOutcome("queued");
+    } catch {
+      const message = "Não conseguimos guardar a avaliação neste aparelho. Seus dados continuam no formulário. Tente de novo quando a conexão voltar ou chame no WhatsApp.";
+      setFormError(message);
+      notifyError(message);
+    }
+  }
 
   async function uploadSellPhotos(files: File[]) {
     const remaining = MAX_PHOTOS - photoUrls.length;
     const picked = files.slice(0, remaining);
     if (picked.length === 0) return;
 
+    if (photoBusy || isPending) return;
     setPhotoBusy(true);
+    setPhotoError("");
     try {
-      const uploaded: string[] = [];
       for (const file of picked) {
         const prepared = await prepareImageForUpload(file);
         const body = new FormData();
@@ -66,15 +113,13 @@ export function SellForm({
         if (!response.ok || !data.url) {
           throw new Error(data.error || "Falha ao enviar a foto.");
         }
-        uploaded.push(data.url);
+        const url = data.url;
+        setPhotoUrls((current) => [...current, url].slice(0, MAX_PHOTOS));
       }
-      setPhotoUrls((current) => [...current, ...uploaded].slice(0, MAX_PHOTOS));
     } catch (error) {
-      notifyError(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível enviar a foto. Tente de novo.",
-      );
+      const message = error instanceof Error ? error.message : "Não foi possível enviar a foto. Tente de novo.";
+      setPhotoError(`${message} As fotos já adicionadas continuam no pedido.`);
+      notifyError(message);
     } finally {
       setPhotoBusy(false);
     }
@@ -82,6 +127,8 @@ export function SellForm({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isPending || photoBusy) return;
+    setFormError("");
     const data = new FormData(event.currentTarget);
     const nextErrors: Record<string, string> = {};
     const name = String(data.get("name") ?? "").trim();
@@ -99,31 +146,14 @@ export function SellForm({
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       const first = Object.keys(nextErrors)[0];
-      window.requestAnimationFrame(() => {
-        document.getElementById(first)?.focus();
-      });
+      setFocusTarget(first);
       return;
     }
 
     startTransition(async () => {
       const online = typeof navigator === "undefined" ? true : navigator.onLine;
       if (!online) {
-        const fields: Record<string, string> = {};
-        for (const [key, value] of data.entries()) {
-          if (typeof value === "string") fields[key] = value;
-        }
-        await enqueueIntent({
-          type: "sell",
-          fields,
-          photoUrls: (data.getAll("photoUrls") as string[]).filter(
-            (item) => typeof item === "string",
-          ),
-        });
-        trackPwaEvent("PwaOfflineQueued", { kind: "sell" });
-        notifySuccess(
-          "Sem conexão. Guardamos a avaliação e enviamos quando a internet voltar.",
-        );
-        setOutcome("queued");
+        await queueOffline(data);
         return;
       }
 
@@ -146,35 +176,21 @@ export function SellForm({
           setPhotoUrls([]);
           formRef.current?.reset();
         } else {
+          setFormError(result.message);
           notifyError(result.message);
           const first = Object.keys(fieldErrors)[0];
           if (first) {
-            window.requestAnimationFrame(() => {
-              document.getElementById(first)?.focus();
-            });
+            setFocusTarget(first);
           }
         }
       } catch (error) {
         if (isLikelyNetworkFailure(error, navigator.onLine)) {
-          const fields: Record<string, string> = {};
-          for (const [key, value] of data.entries()) {
-            if (typeof value === "string") fields[key] = value;
-          }
-          await enqueueIntent({
-            type: "sell",
-            fields,
-            photoUrls: (data.getAll("photoUrls") as string[]).filter(
-              (item) => typeof item === "string",
-            ),
-          });
-          trackPwaEvent("PwaOfflineQueued", { kind: "sell" });
-          notifySuccess(
-            "Sem conexão. Guardamos a avaliação e enviamos quando a internet voltar.",
-          );
-          setOutcome("queued");
+          await queueOffline(data);
           return;
         }
-        notifyError("Não foi possível enviar agora. Tente de novo.");
+        const message = "Não foi possível enviar agora. Seus dados continuam no formulário. Tente de novo.";
+        setFormError(message);
+        notifyError(message);
       }
     });
   }
@@ -182,11 +198,20 @@ export function SellForm({
   if (outcome) {
     return (
       <AfterSend
+        containerRef={receiptRef}
         mode={outcome}
         photoCount={sentPhotoCount}
         onAnother={() => {
           setSentPhotoCount(0);
+          setPhone("");
+          setKm("");
+          setPlate("");
+          setPhotoUrls([]);
+          setErrors({});
+          setFormError("");
+          setPhotoError("");
           setOutcome(null);
+          setFocusTarget("name");
         }}
       />
     );
@@ -199,255 +224,261 @@ export function SellForm({
       noValidate
       className="relative flex flex-col gap-3"
     >
-      {/* Honeypot anti-spam — oculto de leitores de tela e usuários. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0"
-      >
-        <label htmlFor="website">Website</label>
-        <input
-          id="website"
-          name="website"
-          type="text"
-          tabIndex={-1}
-          autoComplete="off"
-        />
-      </div>
-
-      <FormBlock title="Seus dados" hint="Nome e telefone para o retorno.">
-        <Field label="Seu nome" error={errors.name} htmlFor="name">
+      <fieldset disabled={isPending} className="flex min-w-0 flex-col gap-3">
+        {/* Honeypot anti-spam — oculto de leitores de tela e usuários. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0"
+        >
+          <label htmlFor="website">Website</label>
           <input
-            id="name"
-            name="name"
-            required
-            autoComplete="name"
-            placeholder="Nome completo"
-            className={inputClass}
-          />
-        </Field>
-
-        <Field label="Telefone / WhatsApp" error={errors.phone} htmlFor="phone">
-          <input
-            id="phone"
-            name="phone"
-            required
-            inputMode="tel"
-            autoComplete="tel"
-            value={phone}
-            onChange={(event) => setPhone(formatPhoneBR(event.target.value))}
-            placeholder="(00) 00000-0000"
-            className={inputClass}
-          />
-        </Field>
-      </FormBlock>
-
-      <FormBlock title="O veículo" hint="Marca, modelo, ano e placa são obrigatórios.">
-        <Field label="Marca do veículo" error={errors.brand} htmlFor="brand">
-          <input
-            id="brand"
-            name="brand"
-            required
-            placeholder="Ex.: Volkswagen"
-            className={inputClass}
-          />
-        </Field>
-
-        <Field label="Modelo" error={errors.model} htmlFor="model">
-          <input
-            id="model"
-            name="model"
-            required
-            placeholder="Ex.: Golf GTI"
-            className={inputClass}
-          />
-        </Field>
-
-        <Field label="Ano" error={errors.year} htmlFor="year">
-          <input
-            id="year"
-            name="year"
-            required
-            inputMode="numeric"
-            maxLength={4}
-            placeholder="Ex.: 2021"
-            className={inputClass}
-          />
-        </Field>
-
-        <Field label="Placa do veículo" error={errors.plate} htmlFor="plate">
-          <input
-            id="plate"
-            name="plate"
-            required
+            id="website"
+            name="website"
+            type="text"
+            tabIndex={-1}
             autoComplete="off"
-            spellCheck={false}
-            value={plate}
-            onChange={(event) => setPlate(formatPlateInput(event.target.value))}
-            placeholder="ABC-1234 ou ABC1D23"
-            className={`${inputClass} uppercase`}
-            aria-describedby="plate-hint"
           />
-          <p id="plate-hint" className="mt-1.5 text-[11px] text-muted">
-            Aceita placa antiga (ABC-1234) ou Mercosul (ABC1D23).
-          </p>
-        </Field>
+        </div>
 
-        <Field label="Quilometragem" error={errors.km} htmlFor="km" optional>
-          <input
-            id="km"
-            name="km"
-            inputMode="numeric"
-            value={km}
-            onChange={(event) => {
-              const digits = event.target.value.replace(/\D/g, "");
-              setKm(digits ? formatNumberBR(Number(digits)) : "");
-            }}
-            placeholder="Ex.: 45.000"
-            className={inputClass}
-          />
-        </Field>
-      </FormBlock>
-
-      <FormBlock title="Fotos e observações">
-        <div className="lg:col-span-2">
-          <Field label="Observações" error={errors.notes} htmlFor="notes" optional>
-            <textarea
-              id="notes"
-              name="notes"
-              rows={4}
-              defaultValue={interestNote ?? ""}
-              placeholder="Conte o estado do veículo, itens opcionais, se há débitos, se quer vender ou trocar..."
-              className={`${inputClass} resize-y`}
+        <FormBlock title="Seus dados" hint="Nome e telefone para o retorno.">
+          <Field label="Seu nome" error={errors.name} htmlFor="name">
+            <input
+              id="name"
+              name="name"
+              required
+              autoComplete="name"
+              placeholder="Nome completo"
+              className={inputClass}
             />
           </Field>
-        </div>
 
-        <div className="lg:col-span-2">
-          <label htmlFor="photos" className="block">
-            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-              Fotos do seu veículo{" "}
-              <span className="normal-case font-normal">(opcional, até {MAX_PHOTOS})</span>
-            </span>
-            <span id="photos-hint" className="mb-3 block text-[11px] font-normal normal-case leading-relaxed tracking-normal text-muted">
-              Ajudam na avaliação. Não precisa ser profissional — celular serve.
-              Ficam só no pedido, sem ir para o site.
-            </span>
-            <span
-              className={`flex min-h-[52px] items-center justify-center border border-dashed border-white/20 px-4 text-center font-display text-xs font-semibold uppercase tracking-wide text-cream touch-manipulation ${
-                photoBusy || photoUrls.length >= MAX_PHOTOS
-                  ? "opacity-60"
-                  : "hover:border-brand"
-              }`}
-            >
-              {photoBusy
-                ? "Enviando foto…"
-                : photoUrls.length >= MAX_PHOTOS
-                  ? `Limite de ${MAX_PHOTOS} fotos`
-                  : "Escolher fotos"}
-            </span>
-          </label>
-          <input
-            id="photos"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            multiple
-            disabled={photoBusy || photoUrls.length >= MAX_PHOTOS}
-            aria-describedby="photos-hint"
-            onChange={(event) => {
-              const files = Array.from(event.target.files ?? []);
-              event.target.value = "";
-              if (files.length === 0) return;
-              void uploadSellPhotos(files);
-            }}
-            className="sr-only"
-          />
-          {photoUrls.length > 0 ? (
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {photoUrls.map((url, index) => (
-                <li
-                  key={url}
-                  className="flex min-h-11 items-center gap-2 border border-white/10 px-2.5 text-xs text-cream"
-                >
-                  Foto {index + 1}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPhotoUrls((current) =>
-                        current.filter((item) => item !== url),
-                      )
-                    }
-                    className="min-h-11 px-1 text-muted underline-offset-2 hover:text-cream hover:underline"
+          <Field label="Telefone / WhatsApp" error={errors.phone} htmlFor="phone">
+            <input
+              id="phone"
+              name="phone"
+              required
+              inputMode="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={(event) => setPhone(formatPhoneBR(event.target.value))}
+              placeholder="(00) 00000-0000"
+              className={inputClass}
+            />
+          </Field>
+        </FormBlock>
+
+        <FormBlock title="O veículo" hint="Marca, modelo, ano e placa são obrigatórios.">
+          <Field label="Marca do veículo" error={errors.brand} htmlFor="brand">
+            <input
+              id="brand"
+              name="brand"
+              required
+              placeholder="Ex.: Volkswagen"
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="Modelo" error={errors.model} htmlFor="model">
+            <input
+              id="model"
+              name="model"
+              required
+              placeholder="Ex.: Golf GTI"
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="Ano" error={errors.year} htmlFor="year">
+            <input
+              id="year"
+              name="year"
+              required
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="Ex.: 2021"
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="Placa do veículo" error={errors.plate} htmlFor="plate">
+            <input
+              id="plate"
+              name="plate"
+              required
+              autoComplete="off"
+              spellCheck={false}
+              value={plate}
+              onChange={(event) => setPlate(formatPlateInput(event.target.value))}
+              placeholder="ABC-1234 ou ABC1D23"
+              className={`${inputClass} uppercase`}
+              aria-describedby="plate-hint"
+            />
+            <p id="plate-hint" className="mt-1.5 text-[11px] text-muted">
+              Aceita placa antiga (ABC-1234) ou Mercosul (ABC1D23).
+            </p>
+          </Field>
+
+          <Field label="Quilometragem" error={errors.km} htmlFor="km" optional>
+            <input
+              id="km"
+              name="km"
+              inputMode="numeric"
+              value={km}
+              onChange={(event) => {
+                const digits = event.target.value.replace(/\D/g, "");
+                setKm(digits ? formatNumberBR(Number(digits)) : "");
+              }}
+              placeholder="Ex.: 45.000"
+              className={inputClass}
+            />
+          </Field>
+        </FormBlock>
+
+        <FormBlock title="Fotos e observações">
+          <div className="lg:col-span-2">
+            <Field label="Observações" error={errors.notes} htmlFor="notes" optional>
+              <textarea
+                id="notes"
+                name="notes"
+                rows={4}
+                defaultValue={interestNote ?? ""}
+                placeholder="Conte o estado do veículo, itens opcionais, se há débitos, se quer vender ou trocar..."
+                className={`${inputClass} resize-y`}
+              />
+            </Field>
+          </div>
+
+          <div className="lg:col-span-2">
+            <label htmlFor="photos" className="block">
+              <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                Fotos do seu veículo{" "}
+                <span className="normal-case font-normal">(opcional, até {MAX_PHOTOS})</span>
+              </span>
+              <span id="photos-hint" className="mb-3 block text-[11px] font-normal normal-case leading-relaxed tracking-normal text-muted">
+                Ajudam na avaliação. Não precisa ser profissional — celular serve.
+                Ficam só no pedido, sem ir para o site.
+              </span>
+              <span
+                className={`flex min-h-[52px] items-center justify-center border border-dashed border-white/20 px-4 text-center font-display text-xs font-semibold uppercase tracking-wide text-cream touch-manipulation ${
+                  photoBusy || photoUrls.length >= MAX_PHOTOS
+                    ? "opacity-60"
+                    : "hover:border-brand"
+                }`}
+              >
+                {photoBusy
+                  ? "Enviando foto…"
+                  : photoUrls.length >= MAX_PHOTOS
+                    ? `Limite de ${MAX_PHOTOS} fotos`
+                    : "Escolher fotos"}
+              </span>
+            </label>
+            <input
+              id="photos"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              disabled={photoBusy || photoUrls.length >= MAX_PHOTOS}
+              aria-describedby="photos-hint"
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []);
+                event.target.value = "";
+                if (files.length === 0) return;
+                void uploadSellPhotos(files);
+              }}
+              className="sr-only"
+            />
+            {photoError ? <p className="mt-3 text-sm leading-relaxed text-brand" role="alert">{photoError}</p> : null}
+            {photoUrls.length > 0 ? (
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {photoUrls.map((url, index) => (
+                  <li
+                    key={url}
+                    className="flex min-h-11 items-center gap-2 border border-white/10 px-2.5 text-xs text-cream"
                   >
-                    Remover
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {photoUrls.map((url) => (
-            <input key={url} type="hidden" name="photoUrls" value={url} />
-          ))}
-        </div>
-      </FormBlock>
+                    Foto {index + 1}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPhotoUrls((current) =>
+                          current.filter((item) => item !== url),
+                        )
+                      }
+                      className="min-h-11 px-1 text-muted underline-offset-2 hover:text-cream hover:underline"
+                    >
+                      Remover
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {photoUrls.map((url) => (
+              <input key={url} type="hidden" name="photoUrls" value={url} />
+            ))}
+          </div>
+        </FormBlock>
 
-      {interestVehicleId ? (
-        <input type="hidden" name="interestVehicleId" value={interestVehicleId} />
-      ) : null}
-      <input type="hidden" name="source" value="vender" />
+        {interestVehicleId ? (
+          <input type="hidden" name="interestVehicleId" value={interestVehicleId} />
+        ) : null}
+        <input type="hidden" name="source" value="vender" />
 
-      <div className="border border-white/10 bg-ink p-4 sm:p-5">
-        <p className="text-sm leading-relaxed text-muted">
-          Depois do envio, avaliamos tabela, histórico e conservação e
-          retornamos no telefone informado, das 8h às 23h. Sem taxa e sem
-          compromisso.
-        </p>
-        <div className="mt-4 flex flex-col gap-3">
-          <button
-            type="submit"
-            disabled={isPending || photoBusy}
-            aria-busy={isPending}
-            className="min-h-[52px] w-full bg-brand px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 touch-manipulation"
-          >
-            {isPending ? "Enviando..." : "Solicitar avaliação"}
-          </button>
-          <SiteLeadHit contentName="Vender/Trocar">
-            <WhatsAppButton
-              size="lg"
-              variant="outline"
-              className="w-full"
-              trackingLabel="vender"
-              message={WHATSAPP_MESSAGES.sell}
+        <div className="border border-white/10 bg-ink p-4 sm:p-5">
+          <p className="text-sm leading-relaxed text-muted">
+            Depois do envio, avaliamos tabela, histórico e conservação e
+            retornamos no telefone informado, das 8h às 23h. Sem taxa e sem
+            compromisso.
+          </p>
+          {formError ? <p className="mt-4 text-sm leading-relaxed text-brand" role="alert">{formError}</p> : null}
+          <div className="mt-4 flex flex-col gap-3">
+            <button
+              type="submit"
+              disabled={!ready || isPending || photoBusy}
+              aria-busy={isPending}
+              className="min-h-[52px] w-full bg-brand px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 touch-manipulation"
             >
-              Prefiro chamar no WhatsApp
-            </WhatsAppButton>
-          </SiteLeadHit>
+              {isPending ? "Enviando..." : "Solicitar avaliação"}
+            </button>
+            <SiteLeadHit contentName="Vender/Trocar">
+              <WhatsAppButton
+                size="lg"
+                variant="outline"
+                className="w-full"
+                trackingLabel="vender"
+                message={WHATSAPP_MESSAGES.sell}
+              >
+                Prefiro chamar no WhatsApp
+              </WhatsAppButton>
+            </SiteLeadHit>
+          </div>
+          <p className="mt-4 text-xs leading-relaxed text-muted">
+            Seus dados são usados apenas para o contato da avaliação. Não enviamos
+            spam nem compartilhamos com terceiros.
+          </p>
         </div>
-        <p className="mt-4 text-xs leading-relaxed text-muted">
-          Seus dados são usados apenas para o contato da avaliação. Não enviamos
-          spam nem compartilhamos com terceiros.
-        </p>
-      </div>
+      </fieldset>
     </form>
   );
 }
 
 function AfterSend({
+  containerRef,
   mode,
   photoCount,
   onAnother,
 }: {
+  containerRef: Ref<HTMLDivElement>;
   mode: "sent" | "queued";
   photoCount: number;
   onAnother: () => void;
 }) {
   return (
-    <div className="overflow-hidden border border-brand/40 bg-ink" aria-live="polite">
+    <div ref={containerRef} tabIndex={-1} aria-labelledby="sell-form-receipt-heading" className="scroll-mt-24 overflow-hidden border border-brand/40 bg-ink outline-none" aria-live="polite">
       <div className="h-1 bg-brand" aria-hidden="true" />
       <div className="p-4 sm:p-6">
         <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
           {mode === "queued" ? "Sem conexão" : "Pedido recebido"}
         </p>
-        <h2 className="mt-2 font-display text-xl font-bold tracking-tight text-cream">
+        <h2 id="sell-form-receipt-heading" className="mt-2 font-display text-xl font-bold tracking-tight text-cream">
           {mode === "queued" ? "Avaliação guardada neste aparelho" : "Solicitação enviada"}
         </h2>
         {mode === "queued" ? (
