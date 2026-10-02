@@ -50,7 +50,14 @@ test("voltar e o formulário ficam no meio, fora do balão", () => {
   assert.ok(sheetAt > 0 && sheetAt < backAt && backAt < formAt);
   assert.match(css, /\.wanted-vehicle-sheet\s*\{[^}]*margin-inline:\s*auto/);
   assert.match(css, /calc\(100% - 2 \* var\(--wanted-side-clear\)\)/);
-  assert.match(css, /body:has\(\[data-wanted-vehicle-page\]\) \.site-shell/);
+  assert.match(
+    css,
+    /var\(--site-bottom-nav\)\s*\+\s*var\(--help-bubble-gap\)\s*\+\s*var\(--help-bubble-h\)\s*\+\s*2rem/,
+  );
+  assert.doesNotMatch(
+    css,
+    /body:has\(\[data-wanted-vehicle-page\]\)\s*\{[^}]*overflow:\s*hidden/,
+  );
   assert.doesNotMatch(css, /\.wanted-vehicle-page\s*\{[^}]*padding-right/);
   assert.match(
     css,

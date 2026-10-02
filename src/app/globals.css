@@ -719,14 +719,18 @@ body:has([data-ficha-page]) .whatsapp-float {
 
 /*
  * Página do pedido: “Voltar ao estoque” e o formulário ficam no meio.
- * No celular a página rola acima da bottom nav, do WhatsApp e do balão,
- * então a coluna pode ir quase até as bordas sem campo passar por baixo.
- * No desktop a coluna tem a mesma folga dos dois lados, maior que o balão
- * e o WhatsApp. Abaixo de 1200px o balão vira só o ícone — com o texto,
- * a coluna central ficaria estreita demais para o e-mail e o “Até”.
+ * No celular a página rola normal. O fim do formulário sobe a bottom nav,
+ * o WhatsApp e o balão, com 2rem de folga, para o Enviar pedido aparecer
+ * inteiro. No desktop a coluna tem a mesma folga dos dois lados, maior
+ * que o balão e o WhatsApp. Abaixo de 1200px o balão vira só o ícone —
+ * com o texto, a coluna central ficaria estreita demais para o e-mail
+ * e o “Até”.
  */
 .wanted-vehicle-page {
-  padding-bottom: 2.5rem;
+  padding-bottom: calc(
+    var(--site-bottom-nav) + var(--help-bubble-gap) + var(--help-bubble-h) + 2rem +
+      env(safe-area-inset-bottom, 0px)
+  );
 }
 
 .wanted-vehicle-sheet {
@@ -739,24 +743,6 @@ body:has([data-ficha-page]) .whatsapp-float {
 }
 
 @media (max-width: 1023px) {
-  body:has([data-wanted-vehicle-page]) {
-    height: 100dvh;
-    overflow: hidden;
-  }
-
-  body:has([data-wanted-vehicle-page]) .site-shell {
-    height: calc(100dvh - 9.25rem - env(safe-area-inset-bottom, 0px));
-    min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  body:has([data-wanted-vehicle-page]) .pb-site-nav {
-    display: none;
-  }
-
   body:has([data-wanted-vehicle-page]) .site-chat:not(.is-open) .site-chat-launcher span {
     position: absolute;
     width: 1px;
@@ -773,12 +759,6 @@ body:has([data-ficha-page]) .whatsapp-float {
     width: 3.5rem;
     padding-left: 0;
     padding-right: 0;
-  }
-}
-
-@media (min-width: 640px) and (max-width: 1023px) {
-  body:has([data-wanted-vehicle-page]) .site-shell {
-    height: calc(100dvh - 10.25rem - env(safe-area-inset-bottom, 0px));
   }
 }
 
