@@ -6,8 +6,8 @@ import { WhatsAppButton } from "@/components/site/ui";
 
 /**
  * Outros disponíveis no fim da ficha.
- * O card usa a foto, o nome, o ano, a km e o preço que o estoque já mostra,
- * e abre a ficha. O WhatsApp do card fica de fora — a página já tem o da loja.
+ * A mesma peça do estoque e da home: o anúncio abre a ficha e a faixa
+ * de interesse abre o WhatsApp do veículo.
  */
 export function SimilarVehicles({
   vehicles,
