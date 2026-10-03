@@ -1,12 +1,12 @@
 "use server";
 
+import { withAdminStorageLock } from "@/lib/admin-storage-lock";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { parseFaqItems } from "@/lib/faq";
-import { prisma } from "@/lib/prisma";
 import { parseConditionItems, parseFounderPhotoUrl } from "@/lib/site-content";
 
 export type SiteSettingsState = {
@@ -82,7 +82,8 @@ export async function updateSiteSettings(
   if (region.length < 2) fieldErrors.region = "Informe a cidade ou região.";
   if (email && !email.includes("@")) fieldErrors.email = "E-mail inválido.";
   if (address.length < 5) {
-    fieldErrors.address = "Informe o endereço ou a modalidade (ex.: loja digital).";
+    fieldErrors.address =
+      "Informe o endereço ou a modalidade (ex.: loja digital).";
   }
   if (hours.length < 2) fieldErrors.hours = "Informe o horário resumido.";
   if (hoursWeekdays.length < 2) {
@@ -105,11 +106,7 @@ export async function updateSiteSettings(
   ) {
     fieldErrors.googleProfileUrl = "Cole a URL completa do perfil no Google.";
   }
-  if (
-    (googleRating ?? 0) > 0 &&
-    googleReviewCount > 0 &&
-    !googleProfileUrl
-  ) {
+  if ((googleRating ?? 0) > 0 && googleReviewCount > 0 && !googleProfileUrl) {
     fieldErrors.googleProfileUrl =
       "Cole o link do Google Meu Negócio para o selo aparecer.";
   }
@@ -148,18 +145,22 @@ export async function updateSiteSettings(
 
   try {
     try {
-      await prisma.siteSettings.upsert({
-        where: { id: "default" },
-        create: { id: "default", ...payload },
-        update: payload,
-      });
+      await withAdminStorageLock((tx) =>
+        tx.siteSettings.upsert({
+          where: { id: "default" },
+          create: { id: "default", ...payload },
+          update: payload,
+        }),
+      );
     } catch {
       const { founderPhotoUrl: photoUrl, ...legacy } = payload;
-      await prisma.siteSettings.upsert({
-        where: { id: "default" },
-        create: { id: "default", ...legacy },
-        update: legacy,
-      });
+      await withAdminStorageLock((tx) =>
+        tx.siteSettings.upsert({
+          where: { id: "default" },
+          create: { id: "default", ...legacy },
+          update: legacy,
+        }),
+      );
       if (photoUrl) {
         return {
           ok: false,

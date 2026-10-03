@@ -11,6 +11,9 @@ export type SearchSelectItem = { id: string; label: string };
  */
 export function SearchSelect<T extends SearchSelectItem>({
   name,
+  id,
+  "aria-describedby": describedBy,
+  "aria-invalid": invalid,
   value,
   selectedLabel,
   onChange,
@@ -22,10 +25,13 @@ export function SearchSelect<T extends SearchSelectItem>({
   disabled = false,
 }: {
   name: string;
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
   value: string;
   selectedLabel: string;
   onChange: (id: string, item: T | null) => void;
-  loadOptions: (query: string) => Promise<T[]>;
+  loadOptions: (query: string, signal?: AbortSignal) => Promise<T[]>;
   placeholder: string;
   emptyText?: string;
   noneOption?: SearchSelectItem;
@@ -43,6 +49,8 @@ export function SearchSelect<T extends SearchSelectItem>({
   const [loading, setLoading] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const requestId = useRef(0);
+  const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   const closedLabel =
     selectedLabel ||
@@ -54,23 +62,32 @@ export function SearchSelect<T extends SearchSelectItem>({
 
   useEffect(() => {
     if (!enabled || !open || disabled) return;
+    const id = ++requestId.current;
+    const controller = new AbortController();
+    setOptions([]);
+    setError(false);
+    setLoading(true);
     const handle = window.setTimeout(async () => {
-      const id = ++requestId.current;
       setLoading(true);
       try {
-        const items = await loadRef.current(query);
-        if (id !== requestId.current) return;
+        const items = await loadRef.current(query, controller.signal);
+        if (controller.signal.aborted || id !== requestId.current) return;
         setOptions(items);
         setHighlight(0);
       } catch {
-        if (id !== requestId.current) return;
+        if (controller.signal.aborted || id !== requestId.current) return;
         setOptions([]);
+        setError(true);
       } finally {
-        if (id === requestId.current) setLoading(false);
+        if (!controller.signal.aborted && id === requestId.current)
+          setLoading(false);
       }
     }, 280);
-    return () => window.clearTimeout(handle);
-  }, [query, open, enabled, disabled]);
+    return () => {
+      controller.abort();
+      window.clearTimeout(handle);
+    };
+  }, [query, open, enabled, disabled, retry]);
 
   useEffect(() => {
     if (!open) return;
@@ -86,6 +103,13 @@ export function SearchSelect<T extends SearchSelectItem>({
   const rows: SearchSelectItem[] = noneOption
     ? [noneOption, ...options]
     : options;
+
+  useEffect(() => {
+    if (open)
+      document
+        .getElementById(`${listId}-${highlight}`)
+        ?.scrollIntoView({ block: "nearest" });
+  }, [highlight, open, listId]);
 
   function choose(id: string) {
     if (noneOption && id === noneOption.id) {
@@ -107,7 +131,9 @@ export function SearchSelect<T extends SearchSelectItem>({
         setOpen(true);
         return;
       }
-      setHighlight((current) => Math.min(current + 1, Math.max(rows.length - 1, 0)));
+      setHighlight((current) =>
+        Math.min(current + 1, Math.max(rows.length - 1, 0)),
+      );
       return;
     }
     if (event.key === "ArrowUp") {
@@ -125,11 +151,19 @@ export function SearchSelect<T extends SearchSelectItem>({
     <div ref={rootRef} className="relative">
       <input type="hidden" name={name} value={value} />
       <input
+        id={id}
+        aria-describedby={describedBy}
+        aria-invalid={invalid}
         type="text"
         role="combobox"
         aria-expanded={open}
         aria-controls={listId}
         aria-autocomplete="list"
+        aria-activedescendant={
+          open && !loading && !error && rows[highlight]
+            ? `${listId}-${highlight}`
+            : undefined
+        }
         autoComplete="off"
         disabled={disabled}
         placeholder={placeholder}
@@ -150,13 +184,29 @@ export function SearchSelect<T extends SearchSelectItem>({
           role="listbox"
           className="absolute z-30 mt-1 max-h-64 w-full overflow-auto border border-white/15 bg-ink shadow-xl"
         >
-          {loading && options.length === 0 && !noneOption ? (
+          {error ? (
+            <li role="presentation" className="p-3 text-sm">
+              <p role="alert">A busca falhou. Confira a conexão.</p>
+              <button
+                type="button"
+                className="mt-2 min-h-11 text-brand"
+                onClick={() => setRetry((r) => r + 1)}
+              >
+                Tentar novamente
+              </button>
+            </li>
+          ) : loading && options.length === 0 && !noneOption ? (
             <li className="px-3 py-3 text-sm text-muted">Buscando…</li>
           ) : rows.length === 0 ? (
             <li className="px-3 py-3 text-sm text-muted">{emptyText}</li>
           ) : (
             rows.map((item, index) => (
-              <li key={item.id} role="option" aria-selected={item.id === value}>
+              <li
+                id={`${listId}-${index}`}
+                key={item.id}
+                role="option"
+                aria-selected={item.id === value}
+              >
                 <button
                   type="button"
                   onMouseEnter={() => setHighlight(index)}

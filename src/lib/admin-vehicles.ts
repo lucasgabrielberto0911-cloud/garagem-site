@@ -1,3 +1,6 @@
+import { customerSearchWhere } from "@/lib/admin-customer-search";
+import { businessPeriodStart } from "@/lib/admin-date";
+import { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { ADMIN_DATA_TAG } from "@/lib/admin-cache";
 import { prisma } from "@/lib/prisma";
@@ -15,7 +18,12 @@ export const ADMIN_LEADS_PAGE_SIZE = 20;
 export type SalesPeriod = "all" | "month" | "30" | "90" | "year";
 
 export function parseSalesPeriod(value?: string | null): SalesPeriod {
-  if (value === "month" || value === "30" || value === "90" || value === "year") {
+  if (
+    value === "month" ||
+    value === "30" ||
+    value === "90" ||
+    value === "year"
+  ) {
     return value;
   }
   return "all";
@@ -25,10 +33,10 @@ export function salesPeriodWhere(period: SalesPeriod) {
   if (period === "all") return {};
   const now = new Date();
   if (period === "month") {
-    return { saleDate: { gte: new Date(now.getFullYear(), now.getMonth(), 1) } };
+    return { saleDate: { gte: businessPeriodStart("month", now) } };
   }
   if (period === "year") {
-    return { saleDate: { gte: new Date(now.getFullYear(), 0, 1) } };
+    return { saleDate: { gte: businessPeriodStart("year", now) } };
   }
   const days = Number(period);
   return {
@@ -154,7 +162,9 @@ const ADMIN_VEHICLE_LIST_SELECT_NO_CITY = {
 
 async function listAdminVehicles(args: {
   where: NonNullable<Parameters<typeof prisma.vehicle.findMany>[0]>["where"];
-  orderBy: NonNullable<Parameters<typeof prisma.vehicle.findMany>[0]>["orderBy"];
+  orderBy: NonNullable<
+    Parameters<typeof prisma.vehicle.findMany>[0]
+  >["orderBy"];
   skip: number;
   take: number;
 }) {
@@ -222,8 +232,15 @@ function listOrderBy(sort: AdminVehiclesSort, dir: "asc" | "desc") {
   return { createdAt: dir };
 }
 
-export function parseAdminVehiclesSort(value?: string | null): AdminVehiclesSort {
-  if (value === "year" || value === "km" || value === "price" || value === "recent") {
+export function parseAdminVehiclesSort(
+  value?: string | null,
+): AdminVehiclesSort {
+  if (
+    value === "year" ||
+    value === "km" ||
+    value === "price" ||
+    value === "recent"
+  ) {
     return value;
   }
   return "recent";
@@ -258,11 +275,7 @@ export async function getAdminVehiclesPage(options: {
       ? { status: options.status }
       : tabStatusFilter(options.tab);
   const where = {
-    AND: [
-      { historical: false },
-      statusFilter,
-      searchWhere(options.q ?? ""),
-    ],
+    AND: [{ historical: false }, statusFilter, searchWhere(options.q ?? "")],
   };
 
   const [total, vehicleRows] = await Promise.all([
@@ -347,7 +360,10 @@ export function mapAdminVehicleStatsRow(
     stockValue: statNum(row?.stockValue),
     ownedAvailable,
     consignedAvailable: Math.max(available - ownedAvailable, 0),
-    invested: investedTotal(statNum(row?.purchaseSum), statNum(row?.extraCosts)),
+    invested: investedTotal(
+      statNum(row?.purchaseSum),
+      statNum(row?.extraCosts),
+    ),
     withCostBasis: statNum(row?.withCostBasis),
     withoutPhotos: statNum(row?.withoutPhotos),
     stale: statNum(row?.stale),
@@ -395,13 +411,7 @@ async function loadAdminVehicleStatsSql(): Promise<AdminVehicleStats> {
       count(*) FILTER (
         WHERE v.status = 'disponivel'
           AND v.consigned = false
-          AND (
-            v."purchasePrice" > 0
-            OR EXISTS (
-              SELECT 1 FROM "VehicleCost" c
-              WHERE c."vehicleId" = v.id AND c.amount > 0
-            )
-          )
+          AND v."purchasePrice" > 0
       )::int AS "withCostBasis",
       (
         SELECT coalesce(sum(c.amount), 0)
@@ -424,45 +434,49 @@ async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
     status: { in: ["disponivel", "reservado"] },
   };
 
-  const [groups, stockValue, extraCosts, withCostBasis, withoutPhotos, stale, featured] =
-    await Promise.all([
-      prisma.vehicle.groupBy({
-        by: ["status"],
-        where: { historical: false },
-        _count: { _all: true },
-      }),
-      prisma.vehicle.aggregate({
-        where: OWNED_AVAILABLE_WHERE,
-        _sum: { price: true, purchasePrice: true },
-        _count: { _all: true },
-      }),
-      prisma.vehicleCost.aggregate({
-        where: { vehicle: OWNED_AVAILABLE_WHERE },
-        _sum: { amount: true },
-      }),
-      prisma.vehicle.count({
-        where: {
-          ...OWNED_AVAILABLE_WHERE,
-          OR: [
-            { purchasePrice: { gt: 0 } },
-            { costs: { some: { amount: { gt: 0 } } } },
-          ],
-        },
-      }),
-      prisma.vehicle.count({
-        where: { ...stockWhere, photos: { none: {} } },
-      }),
-      prisma.vehicle.count({
-        where: {
-          historical: false,
-          status: "disponivel",
-          createdAt: { lt: staleCutoffDate() },
-        },
-      }),
-      prisma.vehicle.count({
-        where: { historical: false, status: "disponivel", featured: true },
-      }),
-    ]);
+  const [
+    groups,
+    stockValue,
+    extraCosts,
+    withCostBasis,
+    withoutPhotos,
+    stale,
+    featured,
+  ] = await Promise.all([
+    prisma.vehicle.groupBy({
+      by: ["status"],
+      where: { historical: false },
+      _count: { _all: true },
+    }),
+    prisma.vehicle.aggregate({
+      where: OWNED_AVAILABLE_WHERE,
+      _sum: { price: true, purchasePrice: true },
+      _count: { _all: true },
+    }),
+    prisma.vehicleCost.aggregate({
+      where: { vehicle: OWNED_AVAILABLE_WHERE },
+      _sum: { amount: true },
+    }),
+    prisma.vehicle.count({
+      where: {
+        ...OWNED_AVAILABLE_WHERE,
+        purchasePrice: { gt: 0 },
+      },
+    }),
+    prisma.vehicle.count({
+      where: { ...stockWhere, photos: { none: {} } },
+    }),
+    prisma.vehicle.count({
+      where: {
+        historical: false,
+        status: "disponivel",
+        createdAt: { lt: staleCutoffDate() },
+      },
+    }),
+    prisma.vehicle.count({
+      where: { historical: false, status: "disponivel", featured: true },
+    }),
+  ]);
 
   const count = (value: string) =>
     groups.find((group) => group.status === value)?._count._all ?? 0;
@@ -478,7 +492,10 @@ async function loadAdminVehicleStatsQueries(): Promise<AdminVehicleStats> {
     stockValue: stockValue._sum.price ?? 0,
     ownedAvailable,
     consignedAvailable: Math.max(available - ownedAvailable, 0),
-    invested: investedTotal(stockValue._sum.purchasePrice, extraCosts._sum.amount ?? 0),
+    invested: investedTotal(
+      stockValue._sum.purchasePrice,
+      extraCosts._sum.amount ?? 0,
+    ),
     withCostBasis,
     withoutPhotos,
     stale,
@@ -591,17 +608,7 @@ export type CustomerSearchRecord = {
 export async function searchCustomers(options?: { q?: string; take?: number }) {
   const take = Math.min(Math.max(options?.take ?? 20, 1), 50);
   const term = (options?.q ?? "").trim();
-  const digits = term.replace(/\D/g, "");
-  const where = term
-    ? {
-        OR: [
-          { name: { contains: term, mode: "insensitive" as const } },
-          { phone: { contains: digits || term, mode: "insensitive" as const } },
-          { email: { contains: term, mode: "insensitive" as const } },
-          { cpf: { contains: digits || term, mode: "insensitive" as const } },
-        ],
-      }
-    : {};
+  const where = customerSearchWhere(term);
 
   return prisma.customer.findMany({
     where,
@@ -609,4 +616,32 @@ export async function searchCustomers(options?: { q?: string; take?: number }) {
     take,
     select: { id: true, name: true, phone: true },
   }) as Promise<CustomerSearchRecord[]>;
+}
+
+export async function getAdminSalesTotals(period: SalesPeriod) {
+  const where = salesPeriodWhere(period);
+  const start = "saleDate" in where ? where.saleDate?.gte : null;
+  const filter = start
+    ? Prisma.sql`WHERE s."saleDate" >= ${start}`
+    : Prisma.empty;
+  const [row] = await prisma.$queryRaw<
+    Array<{
+      count: number;
+      revenue: number;
+      profit: number;
+      profitCount: number;
+      incomplete: number;
+      reviewCount: number;
+    }>
+  >(Prisma.sql`
+    SELECT count(*)::int AS "count", coalesce(sum(round(s."salePrice"::numeric, 2)),0)::float8 AS "revenue",
+      coalesce(sum(CASE WHEN v.consigned = false AND v."purchasePrice" > 0
+        THEN round(s."salePrice"::numeric,2) - round(v."purchasePrice"::numeric,2) - coalesce(c.total,0) ELSE 0 END),0)::float8 AS "profit",
+      count(*) FILTER (WHERE v.consigned = false AND v."purchasePrice" > 0)::int AS "profitCount",
+      count(*) FILTER (WHERE v.consigned = false AND (v."purchasePrice" IS NULL OR v."purchasePrice" <= 0))::int AS "incomplete",
+      count(*) FILTER (WHERE s."salePrice" < 1000)::int AS "reviewCount"
+    FROM "Sale" s JOIN "Vehicle" v ON v.id = s."vehicleId"
+    LEFT JOIN LATERAL (SELECT sum(round(amount::numeric,2)) AS total FROM "VehicleCost" WHERE "vehicleId" = v.id) c ON true
+    ${filter}`);
+  return row;
 }

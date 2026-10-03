@@ -45,6 +45,7 @@ export function PlateBlurEditor({
   const [frame, setFrame] = useState<Frame | null>(null);
   const [rects, setRects] = useState<NormalizedRect[]>([]);
   const [draft, setDraft] = useState<NormalizedRect | null>(null);
+  const [zoom, setZoom] = useState(1);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -59,7 +60,8 @@ export function PlateBlurEditor({
   }, [imageUrl]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !mounted) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const panel = panelRef.current;
@@ -77,9 +79,10 @@ export function PlateBlurEditor({
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = previous;
+      previousFocus?.focus();
       window.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, mounted]);
 
   useEffect(() => {
     if (!open) return;
@@ -206,74 +209,101 @@ export function PlateBlurEditor({
           </button>
         </header>
 
-        <div ref={stageRef} className="relative min-h-0 flex-1 bg-black">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a caixa do retângulo precisa do tamanho real da foto */}
-          <img
-            ref={imageRef}
-            src={imageUrl}
-            alt="Foto para marcar a placa"
-            draggable={false}
-            onLoad={() => {
-              setFailed(false);
-              measure();
-            }}
-            onError={() => setFailed(true)}
-            className="absolute inset-0 h-full w-full object-contain select-none"
+        <div className="flex items-center gap-3 border-b border-white/10 px-4 py-2">
+          <label className="text-sm" htmlFor="blur-zoom">
+            Ampliar foto
+          </label>
+          <input
+            id="blur-zoom"
+            aria-label="Ampliar foto"
+            type="range"
+            min="1"
+            max="3"
+            step="0.25"
+            value={zoom}
+            disabled={applying}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="min-h-11 min-w-0 flex-1 accent-brand"
           />
-          {frame ? (
-            <div
-              ref={overlayRef}
-              className="absolute touch-none"
-              style={{
-                left: frame.left,
-                top: frame.top,
-                width: frame.width,
-                height: frame.height,
-              }}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={finishDrag}
-              onPointerCancel={finishDrag}
-            >
-              <span className="sr-only">
-                Arraste para marcar a região da placa
-              </span>
-              {rects.map((rect, index) => (
-                <div
-                  key={`${rect.x}-${rect.y}-${rect.width}-${rect.height}-${index}`}
-                  className="absolute border-2 border-brand bg-brand/35"
-                  style={{
-                    left: `${rect.x * 100}%`,
-                    top: `${rect.y * 100}%`,
-                    width: `${rect.width * 100}%`,
-                    height: `${rect.height * 100}%`,
-                  }}
-                >
-                  <span className="absolute left-0 top-0 bg-brand px-1 font-display text-[10px] font-semibold text-cream">
-                    {index + 1}
-                  </span>
-                </div>
-              ))}
-              {draft && draft.width > 0 && draft.height > 0 ? (
-                <div
-                  className="absolute border-2 border-dashed border-cream bg-white/20"
-                  style={{
-                    left: `${draft.x * 100}%`,
-                    top: `${draft.y * 100}%`,
-                    width: `${draft.width * 100}%`,
-                    height: `${draft.height * 100}%`,
-                  }}
-                />
-              ) : null}
-            </div>
-          ) : null}
-          {failed ? (
-            <p className="absolute inset-x-0 bottom-3 px-4 text-center text-sm text-cream">
-              Não foi possível abrir esta foto.
-            </p>
-          ) : null}
+          <span className="text-xs">{zoom}×</span>
         </div>
-
+        <div className="relative min-h-0 flex-1 overflow-auto bg-black">
+          <div
+            ref={stageRef}
+            className="relative bg-black"
+            style={{
+              width: `${zoom * 100}%`,
+              height: `${zoom * 100}%`,
+              minHeight: "100%",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- a caixa do retângulo precisa do tamanho real da foto */}
+            <img
+              ref={imageRef}
+              src={imageUrl}
+              alt="Foto para marcar a placa"
+              draggable={false}
+              onLoad={() => {
+                setFailed(false);
+                measure();
+              }}
+              onError={() => setFailed(true)}
+              className="absolute inset-0 h-full w-full object-contain select-none"
+            />
+            {frame ? (
+              <div
+                ref={overlayRef}
+                className="absolute touch-none"
+                style={{
+                  left: frame.left,
+                  top: frame.top,
+                  width: frame.width,
+                  height: frame.height,
+                }}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={finishDrag}
+                onPointerCancel={finishDrag}
+              >
+                <span className="sr-only">
+                  Arraste para marcar a região da placa
+                </span>
+                {rects.map((rect, index) => (
+                  <div
+                    key={`${rect.x}-${rect.y}-${rect.width}-${rect.height}-${index}`}
+                    className="absolute border-2 border-brand bg-brand/35"
+                    style={{
+                      left: `${rect.x * 100}%`,
+                      top: `${rect.y * 100}%`,
+                      width: `${rect.width * 100}%`,
+                      height: `${rect.height * 100}%`,
+                    }}
+                  >
+                    <span className="absolute left-0 top-0 bg-brand px-1 font-display text-[10px] font-semibold text-cream">
+                      {index + 1}
+                    </span>
+                  </div>
+                ))}
+                {draft && draft.width > 0 && draft.height > 0 ? (
+                  <div
+                    className="absolute border-2 border-dashed border-cream bg-white/20"
+                    style={{
+                      left: `${draft.x * 100}%`,
+                      top: `${draft.y * 100}%`,
+                      width: `${draft.width * 100}%`,
+                      height: `${draft.height * 100}%`,
+                    }}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+            {failed ? (
+              <p className="absolute inset-x-0 bottom-3 px-4 text-center text-sm text-cream">
+                Não foi possível abrir esta foto.
+              </p>
+            ) : null}
+          </div>
+        </div>
         <footer className="space-y-3 border-t border-white/10 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           {blurred ? (
             <p className="border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-sm text-cream">

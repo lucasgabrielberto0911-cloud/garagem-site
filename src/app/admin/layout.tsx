@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { getNewLeadsBadgeCount } from "@/lib/admin-stats";
-import { getSession } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Painel | Sua Garagem",
@@ -14,12 +12,5 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
-  const newLeads = session ? await getNewLeadsBadgeCount() : 0;
-
-  return (
-    <AdminShell newLeads={newLeads}>
-      {children}
-    </AdminShell>
-  );
+  return <AdminShell>{children}</AdminShell>;
 }

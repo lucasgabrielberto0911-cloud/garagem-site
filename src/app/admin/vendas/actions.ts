@@ -1,5 +1,10 @@
 "use server";
 
+import { lockCustomerIdentity } from "@/lib/admin-customer-lock";
+import { recordAdminAudit } from "@/lib/admin-audit";
+import { parseMoneyBR } from "@/lib/admin-money";
+import { businessDay } from "@/lib/admin-date";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
@@ -7,7 +12,7 @@ import { getSession } from "@/lib/auth";
 import { isValidPlate, normalizePlate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { privateMasterRefForPublicUrl } from "@/lib/photo-master";
-import { deleteStoragePublicUrls } from "@/lib/supabase";
+import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
 import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 
 export type SaleActionState = {
@@ -43,6 +48,13 @@ async function resolveCustomerId(
 
   if (!customerName && customerPhone.length < 10) return null;
 
+  if (customerPhone) {
+    await lockCustomerIdentity(tx, customerPhone);
+    const existing = await tx.customer.findFirst({
+      where: { phone: customerPhone },
+    });
+    if (existing) throw new Error("DUPLICATE_CUSTOMER");
+  }
   return (
     await tx.customer.create({
       data: {
@@ -87,7 +99,7 @@ function parseSaleForm(formData: FormData): ParsedSaleForm {
   const customerPhone = digitsOnly(formData.get("customerPhone"));
   const paymentMethodRaw = String(formData.get("paymentMethod") || "").trim();
   const notes = String(formData.get("notes") || "").trim() || null;
-  const salePrice = Number(digitsOnly(formData.get("salePrice")));
+  const salePrice = parseMoneyBR(formData.get("salePrice")) ?? 0;
   const saleDateRaw = String(formData.get("saleDate") || "").trim();
 
   const fieldErrors: Record<string, string> = {};
@@ -104,7 +116,7 @@ function parseSaleForm(formData: FormData): ParsedSaleForm {
     }
     if (
       yearModel !== undefined &&
-      (!Number.isFinite(yearModel) ||
+      (!Number.isInteger(yearModel) ||
         yearModel < 1950 ||
         yearModel > new Date().getFullYear() + 1)
     ) {
@@ -119,13 +131,12 @@ function parseSaleForm(formData: FormData): ParsedSaleForm {
     fieldErrors.customerPhone = "Telefone incompleto.";
   }
 
-  const paymentMethod =
-    paymentMethodRaw || (isHistorical ? "Histórico" : "");
+  const paymentMethod = paymentMethodRaw || (isHistorical ? "Histórico" : "");
   if (!paymentMethod) {
     fieldErrors.paymentMethod = "Escolha a forma de pagamento.";
   }
 
-  const saleDate = saleDateRaw ? new Date(`${saleDateRaw}T12:00:00`) : new Date();
+  const saleDate = saleDateRaw ? businessDay(saleDateRaw) : new Date();
   if (Number.isNaN(saleDate.getTime())) {
     fieldErrors.saleDate = "Data inválida.";
   }
@@ -157,7 +168,7 @@ async function revalidateSales(vehicleId?: string) {
 }
 
 export async function createSale(formData: FormData): Promise<SaleActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsed = parseSaleForm(formData);
   const {
@@ -218,7 +229,7 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
           customerPhone,
         });
 
-        await tx.sale.create({
+        const registered = await tx.sale.create({
           data: {
             vehicleId: vehicle.id,
             customerId: finalCustomerId,
@@ -228,9 +239,18 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
             notes,
           },
         });
+        await recordAdminAudit(
+          tx,
+          session.adminId,
+          registered.id,
+          "sale.create",
+          { salePrice: registered.salePrice, vehicleId: registered.vehicleId },
+        );
       });
     } else {
-      const existingSale = await prisma.sale.findUnique({ where: { vehicleId } });
+      const existingSale = await prisma.sale.findUnique({
+        where: { vehicleId },
+      });
       if (existingSale) {
         return {
           ok: false,
@@ -245,7 +265,7 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
           customerPhone,
         });
 
-        await tx.sale.create({
+        const registered = await tx.sale.create({
           data: {
             vehicleId,
             customerId: finalCustomerId,
@@ -255,14 +275,28 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
             notes,
           },
         });
+        await recordAdminAudit(
+          tx,
+          session.adminId,
+          registered.id,
+          "sale.create",
+          { salePrice: registered.salePrice, vehicleId: registered.vehicleId },
+        );
 
         await tx.vehicle.update({
           where: { id: vehicleId },
-          data: { status: "vendido" },
+          data: { status: "vendido", featured: false },
         });
       });
     }
   } catch (error) {
+    if (error instanceof Error && error.message === "DUPLICATE_CUSTOMER")
+      return {
+        ok: false,
+        message:
+          "Já existe cliente com esse telefone. Escolha o cadastro no campo Cliente antes de registrar.",
+        fieldErrors: { customerPhone: "Cliente já cadastrado." },
+      };
     console.error(error);
     return { ok: false, message: "Não foi possível registrar a venda." };
   }
@@ -272,7 +306,7 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
 }
 
 export async function updateSale(formData: FormData): Promise<SaleActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const saleId = String(formData.get("saleId") || "").trim();
   if (!saleId) return { ok: false, message: "Venda não encontrada." };
@@ -312,6 +346,16 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
     };
   }
 
+  const expectedUpdatedAt = String(formData.get("expectedUpdatedAt") || "");
+  if (
+    !expectedUpdatedAt ||
+    expectedUpdatedAt !== existing.updatedAt.toISOString()
+  )
+    return {
+      ok: false,
+      message:
+        "Esta venda mudou em outro acesso. Seus campos foram mantidos; recarregue e confira antes de salvar.",
+    };
   try {
     await prisma.$transaction(async (tx) => {
       const finalCustomerId = await resolveCustomerId(tx, {
@@ -339,7 +383,7 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
         });
 
         await tx.sale.update({
-          where: { id: saleId },
+          where: { id: saleId, updatedAt: existing.updatedAt },
           data: {
             customerId: finalCustomerId,
             salePrice,
@@ -347,6 +391,10 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
             saleDate,
             notes,
           },
+        });
+        await recordAdminAudit(tx, session.adminId, saleId, "sale.update", {
+          salePrice: { before: existing.salePrice, after: salePrice },
+          vehicleId: existing.vehicleId,
         });
         return;
       }
@@ -366,12 +414,12 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
         });
         await tx.vehicle.update({
           where: { id: nextVehicleId },
-          data: { status: "vendido" },
+          data: { status: "vendido", featured: false },
         });
       }
 
       await tx.sale.update({
-        where: { id: saleId },
+        where: { id: saleId, updatedAt: existing.updatedAt },
         data: {
           vehicleId: nextVehicleId,
           customerId: finalCustomerId,
@@ -381,8 +429,19 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
           notes,
         },
       });
+      await recordAdminAudit(tx, session.adminId, saleId, "sale.update", {
+        salePrice: { before: existing.salePrice, after: salePrice },
+        vehicleId: nextVehicleId,
+      });
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "DUPLICATE_CUSTOMER")
+      return {
+        ok: false,
+        message:
+          "Já existe cliente com esse telefone. Escolha o cadastro no campo Cliente.",
+        fieldErrors: { customerPhone: "Cliente já cadastrado." },
+      };
     if (error instanceof Error && error.message === "VEHICLE_ALREADY_SOLD") {
       return {
         ok: false,
@@ -405,14 +464,23 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
  * Cancelar a venda: veículo do estoque volta a disponível; registro histórico
  * é removido junto com o veículo stub (não entra na vitrine).
  */
-export async function deleteSale(id: string): Promise<SaleActionState> {
-  await requireAdmin();
+export async function deleteSale(
+  id: string,
+  expectedUpdatedAt: string,
+): Promise<SaleActionState> {
+  const session = await requireAdmin();
 
   const sale = await prisma.sale.findUnique({
     where: { id },
     include: { vehicle: { select: { id: true, historical: true } } },
   });
   if (!sale) return { ok: false, message: "Venda não encontrada." };
+  if (expectedUpdatedAt !== sale.updatedAt.toISOString())
+    return {
+      ok: false,
+      message:
+        "Esta venda foi alterada em outra tela. Recarregue e confira antes de cancelar.",
+    };
 
   try {
     if (sale.vehicle.historical) {
@@ -424,11 +492,16 @@ export async function deleteSale(id: string): Promise<SaleActionState> {
           documents: { select: { fileUrl: true } },
         },
       });
-      await prisma.$transaction([
-        prisma.sale.delete({ where: { id } }),
-        prisma.vehicle.delete({ where: { id: sale.vehicleId } }),
-      ]);
-      await deleteStoragePublicUrls([
+      await prisma.$transaction(async (tx) => {
+        await tx.sale.delete({ where: { id, updatedAt: sale.updatedAt } });
+        await tx.vehicle.delete({ where: { id: sale.vehicleId } });
+        await recordAdminAudit(tx, session.adminId, id, "sale.cancel", {
+          vehicleId: sale.vehicleId,
+          salePrice: sale.salePrice,
+          historical: true,
+        });
+      });
+      await deleteUnusedAdminFiles([
         ...(files?.photos.flatMap((photo) => [
           photo.url,
           privateMasterRefForPublicUrl(photo.url),
@@ -437,13 +510,18 @@ export async function deleteSale(id: string): Promise<SaleActionState> {
         ...(files?.documents.map((doc) => doc.fileUrl) ?? []),
       ]);
     } else {
-      await prisma.$transaction([
-        prisma.sale.delete({ where: { id } }),
-        prisma.vehicle.update({
+      await prisma.$transaction(async (tx) => {
+        await tx.sale.delete({ where: { id, updatedAt: sale.updatedAt } });
+        await tx.vehicle.update({
           where: { id: sale.vehicleId },
           data: { status: "disponivel" },
-        }),
-      ]);
+        });
+        await recordAdminAudit(tx, session.adminId, id, "sale.cancel", {
+          vehicleId: sale.vehicleId,
+          salePrice: sale.salePrice,
+          historical: false,
+        });
+      });
     }
   } catch (error) {
     console.error(error);

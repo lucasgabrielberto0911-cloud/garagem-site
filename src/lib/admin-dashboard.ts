@@ -32,7 +32,9 @@ export const DASHBOARD_ALERTS_VISIBLE = 4;
  * Primeiro o que trava venda (senha, anúncio sem foto, vitrine vazia),
  * depois estoque parado, e por último ajustes de cadastro da loja.
  */
-export function buildDashboardAlerts(input: DashboardAlertsInput): DashboardAlert[] {
+export function buildDashboardAlerts(
+  input: DashboardAlertsInput,
+): DashboardAlert[] {
   const list: DashboardAlert[] = [];
 
   if (input.usingSeedPassword) {
@@ -99,7 +101,7 @@ export function buildDashboardAlerts(input: DashboardAlertsInput): DashboardAler
       icon: "quote",
       title: "Nenhum depoimento publicado",
       description:
-        "A home ainda usa depoimentos de exemplo. Publique os reais em Depoimentos.",
+        "A home mostra “Depoimentos em atualização”. Publique somente relatos reais em Depoimentos.",
       href: "/admin/depoimentos",
     });
   }
@@ -119,7 +121,10 @@ export function buildDashboardAlerts(input: DashboardAlertsInput): DashboardAler
   return list;
 }
 
-export function splitDashboardAlerts<T>(list: T[], visible = DASHBOARD_ALERTS_VISIBLE) {
+export function splitDashboardAlerts<T>(
+  list: T[],
+  visible = DASHBOARD_ALERTS_VISIBLE,
+) {
   const limit = Math.max(0, visible);
   return { head: list.slice(0, limit), rest: list.slice(limit) };
 }

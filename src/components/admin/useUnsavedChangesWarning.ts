@@ -3,11 +3,12 @@
 import { useEffect } from "react";
 
 export const UNSAVED_CHANGES_MESSAGE =
-  "Você tem alterações não salvas neste anúncio. Sair mesmo assim?";
+  "Você tem alterações não salvas. Sair mesmo assim?";
 
 function isInternalNavigation(anchor: HTMLAnchorElement, event: MouseEvent) {
   if (event.defaultPrevented || event.button !== 0) return false;
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+    return false;
   if (anchor.target && anchor.target !== "_self") return false;
   if (anchor.hasAttribute("download")) return false;
   const href = anchor.getAttribute("href");
@@ -15,7 +16,8 @@ function isInternalNavigation(anchor: HTMLAnchorElement, event: MouseEvent) {
   const url = new URL(anchor.href, window.location.href);
   if (url.origin !== window.location.origin) return false;
   return (
-    url.pathname !== window.location.pathname || url.search !== window.location.search
+    url.pathname !== window.location.pathname ||
+    url.search !== window.location.search
   );
 }
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { IconChevronDown } from "@/components/admin/icons";
 
 /**
  * Kit de UI do painel. Centraliza espaçamento, bordas e estados para que todas
@@ -11,18 +12,17 @@ export const inputClass =
 
 export const btn = {
   primary:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 bg-brand px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 bg-brand px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-cream transition touch-manipulation hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60",
   outline:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-cream transition touch-manipulation hover:border-brand disabled:cursor-not-allowed disabled:opacity-60",
   ghost:
     "inline-flex min-h-[44px] items-center justify-center gap-2 px-3 py-2 text-xs text-muted transition touch-manipulation hover:text-cream disabled:opacity-60",
   danger:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/50 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-brand transition touch-manipulation hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/50 px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-brand transition touch-manipulation hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60",
 } as const;
 
 /** Grade de métricas: 2 colunas no celular, 4 no desktop. */
-export const adminStatGrid =
-  "grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4";
+export const adminStatGrid = "grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4";
 
 /** Toque de 44px para ícones no celular. */
 export const iconTap =
@@ -33,8 +33,7 @@ export const mobileActionCell =
   "flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 px-1 text-center text-[10px] font-semibold uppercase tracking-wide text-muted transition touch-manipulation hover:text-cream";
 
 /** Igual ao celular, mas vira botão horizontal no desktop. */
-export const listActionCell =
-  `${mobileActionCell} lg:min-h-[44px] lg:w-auto lg:flex-row lg:gap-1.5 lg:px-3.5 lg:text-[11px]`;
+export const listActionCell = `${mobileActionCell} lg:min-h-[44px] lg:w-auto lg:flex-row lg:gap-1.5 lg:px-3.5 lg:text-[11px]`;
 
 const HEADER_ACTIONS = {
   stack:
@@ -72,7 +71,9 @@ export function AdminPageHeader({
           {title}
         </h1>
         {subtitle ? (
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">{subtitle}</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            {subtitle}
+          </p>
         ) : null}
       </div>
       {actions ? (
@@ -87,12 +88,24 @@ export function Card({
   className = "",
   title,
   action,
+  collapsed = false,
 }: {
+  collapsed?: boolean;
   children: ReactNode;
   className?: string;
   title?: string;
   action?: ReactNode;
 }) {
+  if (collapsed && title)
+    return (
+      <details className={`border border-white/10 bg-ink/50 ${className}`}>
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-display text-base font-semibold text-cream [&::-webkit-details-marker]:hidden">
+          {title}
+          <IconChevronDown className="h-4 w-4 shrink-0" />
+        </summary>
+        <div className="border-t border-white/10 p-4 sm:p-5">{children}</div>
+      </details>
+    );
   return (
     <section className={`border border-white/10 bg-ink/50 ${className}`}>
       {title ? (
@@ -131,15 +144,15 @@ export function StatCard({
 
   const content = (
     <>
-      <p className="text-[11px] uppercase tracking-wider text-muted">{label}</p>
+      <p className="text-xs font-medium text-muted">{label}</p>
       <p
         title={String(value)}
-        className={`mt-2 font-display font-bold leading-[1.15] tracking-tight tabular-nums whitespace-nowrap ${tokens.value} [font-size:clamp(0.92rem,10.5cqi,1.65rem)]`}
+        className={`mt-2 font-display font-bold leading-[1.15] tracking-tight tabular-nums break-words ${tokens.value} [font-size:clamp(0.92rem,10.5cqi,1.65rem)]`}
       >
         {value}
       </p>
       {hint ? (
-        <p className="mt-1 truncate text-xs text-muted" title={hint}>
+        <p className="mt-1 text-xs leading-relaxed text-muted" title={hint}>
           {hint}
         </p>
       ) : null}
@@ -219,38 +232,7 @@ export function EmptyState({
   );
 }
 
-export function Field({
-  label,
-  hint,
-  error,
-  required = false,
-  children,
-  className = "",
-  as: Wrapper = "label",
-}: {
-  label: string;
-  hint?: string;
-  error?: string;
-  required?: boolean;
-  children: ReactNode;
-  className?: string;
-  /** Use `div` when o campo tem botões internos (combobox). */
-  as?: "label" | "div";
-}) {
-  return (
-    <Wrapper className={`block text-sm ${className}`}>
-      <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
-        {label}
-        {required ? <span className="ml-1 text-brand">*</span> : null}
-      </span>
-      {children}
-      {error ? <p className="mt-1.5 text-xs text-brand">{error}</p> : null}
-      {!error && hint ? (
-        <p className="mt-1.5 text-xs text-muted">{hint}</p>
-      ) : null}
-    </Wrapper>
-  );
-}
+export { Field } from "@/components/admin/Field";
 
 /** Skeleton simples reaproveitado nas telas de loading do admin. */
 export function AdminSkeleton({ className = "" }: { className?: string }) {

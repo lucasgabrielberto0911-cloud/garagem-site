@@ -152,6 +152,7 @@ model Sale {
   saleDate      DateTime  @default(now())
   notes         String?
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
 }
 
 model Admin {
@@ -171,6 +172,9 @@ model LeadVenda {
   km                Int?
   notes             String?
   status            String   @default("novo")
+  nextAction        String?
+  nextActionAt      DateTime?
+  activities        LeadActivity[]
   /** Anúncio do estoque que originou o interesse (`/vender?interesse=`). */
   interestVehicleId String?
   /** Origem do formulário — hoje `vender`. */
@@ -237,4 +241,43 @@ model SiteSettings {
   /** Foto original do sócio na página Sobre. URL pública do Storage, ou vazia. */
   founderPhotoUrl String?
   updatedAt      DateTime @updatedAt
+}
+
+/** Rascunhos privados; nunca entram em Vehicle nem na vitrine. */
+model AdminDraft {
+  id String @id @default(cuid())
+  adminId String
+  key String
+  payload Json
+  photoUrls String[] @default([])
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+  @@unique([adminId, key])
+  @@index([expiresAt])
+}
+/** Histórico interno sem senhas, documentos ou dados de contato. */
+model AdminAudit {
+  id String @id @default(cuid())
+  adminId String
+  entityId String
+  action String
+  changes Json
+  createdAt DateTime @default(now())
+  @@index([entityId, createdAt])
+  @@index([createdAt])
+}
+/** Contador compartilhado de tentativas; a chave não contém e-mail/IP legíveis. */
+model AdminLoginAttempt {
+  key String @id
+  count Int @default(1)
+  expiresAt DateTime
+}
+model LeadActivity {
+  id String @id @default(cuid())
+  leadId String
+  lead LeadVenda @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  adminId String
+  note String
+  createdAt DateTime @default(now())
+  @@index([leadId, createdAt])
 }

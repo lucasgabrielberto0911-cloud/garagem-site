@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { AccountForms } from "@/components/admin/AccountForms";
+import { AdminAuditHistory } from "@/components/admin/AdminAuditHistory";
 import { AdminPageHeader } from "@/components/admin/ui";
 import { WEAK_ADMIN_PASSWORDS } from "@/lib/admin-security";
 import { getSession } from "@/lib/auth";
@@ -38,6 +39,7 @@ export default async function ContaPage() {
         email={admin.email}
         usingSeedPassword={usingSeedPassword}
       />
+      <AdminAuditHistory />
     </div>
   );
 }

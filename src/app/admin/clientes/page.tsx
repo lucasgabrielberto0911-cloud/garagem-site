@@ -1,3 +1,4 @@
+import { customerSearchWhere } from "@/lib/admin-customer-search";
 import { redirect } from "next/navigation";
 import { CustomersManager } from "@/components/admin/CustomersManager";
 import { AdminPageHeader, StatCard } from "@/components/admin/ui";
@@ -20,46 +21,40 @@ export default async function ClientesPage({
   const q = (query.q || "").trim();
   const page = Math.max(1, Number(query.page) || 1);
   const pageSize = ADMIN_CUSTOMERS_PAGE_SIZE;
-  const where = q
-    ? {
-        OR: [
-          { name: { contains: q, mode: "insensitive" as const } },
-          { phone: { contains: q.replace(/\D/g, ""), mode: "insensitive" as const } },
-          { email: { contains: q, mode: "insensitive" as const } },
-          { cpf: { contains: q.replace(/\D/g, ""), mode: "insensitive" as const } },
-        ],
-      }
-    : {};
+  const where = customerSearchWhere(q);
 
-  const [customers, filteredTotal, globalTotal, buyersCount, revenueAgg] = await Promise.all([
-    prisma.customer.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        cpf: true,
-        email: true,
-        address: true,
-        notes: true,
-        createdAt: true,
-      },
-    }),
-    prisma.customer.count({ where }),
-    q ? prisma.customer.count() : Promise.resolve(0),
-    prisma.customer.count({ where: { sales: { some: {} } } }),
-    prisma.sale.aggregate({ _sum: { salePrice: true } }),
-  ]);
+  const [customers, filteredTotal, globalTotal, buyersCount, revenueAgg] =
+    await Promise.all([
+      prisma.customer.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          cpf: true,
+          email: true,
+          address: true,
+          notes: true,
+          createdAt: true,
+        },
+      }),
+      prisma.customer.count({ where }),
+      q ? prisma.customer.count() : Promise.resolve(0),
+      prisma.customer.count({ where: { sales: { some: {} } } }),
+      prisma.sale.aggregate({ _sum: { salePrice: true } }),
+    ]);
 
   const saleGroups =
     customers.length === 0
       ? []
       : await prisma.sale.groupBy({
           by: ["customerId"],
-          where: { customerId: { in: customers.map((customer) => customer.id) } },
+          where: {
+            customerId: { in: customers.map((customer) => customer.id) },
+          },
           _sum: { salePrice: true },
           _max: { saleDate: true },
           _count: { _all: true },
@@ -100,7 +95,11 @@ export default async function ClientesPage({
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <StatCard label="Clientes cadastrados" value={registeredCount} />
-        <StatCard label="Já compraram" value={buyersCount} tone={buyersCount > 0 ? "success" : "default"} />
+        <StatCard
+          label="Já compraram"
+          value={buyersCount}
+          tone={buyersCount > 0 ? "success" : "default"}
+        />
         <StatCard
           label="Receita por clientes"
           value={formatCurrencyBRL(revenue)}

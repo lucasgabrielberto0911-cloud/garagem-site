@@ -3,6 +3,11 @@
  * UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN existem.
  * Sem essas vars (Hobby / um pod) o contador local ainda reduz abuso básico.
  */
+import {
+  checkSharedLoginLimit,
+  clearSharedLoginLimit,
+} from "@/lib/admin-login-limit";
+
 type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
@@ -40,8 +45,7 @@ export function isUpstashConfigured(
   env: Record<string, string | undefined> = process.env,
 ) {
   return Boolean(
-    env.UPSTASH_REDIS_REST_URL?.trim() &&
-      env.UPSTASH_REDIS_REST_TOKEN?.trim(),
+    env.UPSTASH_REDIS_REST_URL?.trim() && env.UPSTASH_REDIS_REST_TOKEN?.trim(),
   );
 }
 
@@ -62,7 +66,7 @@ async function checkUpstashRateLimit(
     },
     body: JSON.stringify([
       ["INCR", key],
-      ["EXPIRE", key, ttlSec],
+      ["EXPIRE", key, ttlSec, "NX"],
     ]),
     signal: AbortSignal.timeout(2_500),
   });
@@ -94,18 +98,23 @@ export async function checkDistributedRateLimit(
   return checkRateLimit(key, options);
 }
 
-const LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_MAX = 8;
-
-export function checkLoginRateLimit(key: string) {
-  return checkRateLimit(`login:${key}`, {
-    windowMs: LOGIN_WINDOW_MS,
-    max: LOGIN_MAX,
-  });
+export async function checkLoginRateLimit(key: string) {
+  try {
+    return await checkSharedLoginLimit(key);
+  } catch (error) {
+    console.error("[login-limit] Contador compartilhado indisponível:", error);
+    return checkDistributedRateLimit(`login:${key}`, {
+      windowMs: 900000,
+      max: 8,
+    });
+  }
 }
-
-export function clearLoginRateLimit(key: string) {
-  clearRateLimit(`login:${key}`);
+export async function clearLoginRateLimit(key: string) {
+  try {
+    await clearSharedLoginLimit(key);
+  } catch {
+    clearRateLimit(`login:${key}`);
+  }
 }
 
 const SELL_LEAD_WINDOW_MS = 60 * 60 * 1000;

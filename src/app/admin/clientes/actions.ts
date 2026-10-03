@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { lockCustomerIdentity } from "@/lib/admin-customer-lock";
 import { prisma } from "@/lib/prisma";
 
 export type CustomerActionState = {
@@ -47,18 +48,35 @@ export async function saveCustomer(
   }
 
   try {
-    if (id) {
-      await prisma.customer.update({ where: { id }, data });
-    } else {
-      await prisma.customer.create({ data });
-    }
+    await prisma.$transaction(async (tx) => {
+      await lockCustomerIdentity(tx, data.phone, data.cpf);
+      const duplicate = await tx.customer.findFirst({
+        where: {
+          id: { not: id || "" },
+          OR: [{ phone: data.phone }, ...(data.cpf ? [{ cpf: data.cpf }] : [])],
+        },
+      });
+      if (duplicate) throw new Error("DUPLICATE_CUSTOMER");
+      if (id) await tx.customer.update({ where: { id }, data });
+      else await tx.customer.create({ data });
+    });
   } catch (error) {
+    if (error instanceof Error && error.message === "DUPLICATE_CUSTOMER")
+      return {
+        ok: false,
+        message:
+          "Já existe cliente com esse telefone ou CPF. Abra o cadastro existente para conferir, sem duplicar.",
+        fieldErrors: { phone: "Telefone ou CPF já cadastrado." },
+      };
     console.error(error);
     return { ok: false, message: "Não foi possível salvar o cliente." };
   }
 
   revalidatePath("/admin/clientes");
-  return { ok: true, message: id ? "Cliente atualizado." : "Cliente cadastrado." };
+  return {
+    ok: true,
+    message: id ? "Cliente atualizado." : "Cliente cadastrado.",
+  };
 }
 
 export async function deleteCustomer(id: string): Promise<CustomerActionState> {

@@ -4,7 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { getSession } from "@/lib/auth";
 import { ADMIN_NEW_LEADS_TAG } from "@/lib/admin-cache";
-import { markLeadContatado } from "@/lib/lead-venda";
+import { lockCustomerIdentity } from "@/lib/admin-customer-lock";
 import { WANTED_LEAD_SOURCE, isLeadStatus } from "@/lib/leads";
 import { emailFromLeadNotes } from "@/lib/wanted-lead";
 import { prisma } from "@/lib/prisma";
@@ -53,31 +53,31 @@ export async function convertLeadToCustomer(
     if (!lead) return { ok: false, message: "Lead não encontrado." };
 
     const phone = lead.phone.replace(/\D/g, "");
-    const existing = await prisma.customer.findFirst({ where: { phone } });
-    if (existing) {
+    if (phone.length < 10)
       return {
         ok: false,
-        message: `${existing.name} já está no cadastro de clientes.`,
+        message: "Confira o telefone do contato antes de criar o cliente.",
       };
-    }
-
-    const wanted = lead.source === WANTED_LEAD_SOURCE;
-    await prisma.customer.create({
-      data: {
-        name: lead.name,
-        phone,
-        email: emailFromLeadNotes(lead.notes),
-        notes: wanted
-          ? `Pedido de modelo: ${lead.vehicleInfo}${
-              lead.notes ? ` — ${lead.notes}` : ""
-            }`
-          : `Lead de venda/troca: ${lead.vehicleInfo}${
-              lead.plate ? ` · placa ${lead.plate}` : ""
-            }${lead.notes ? ` — ${lead.notes}` : ""}`,
-      },
+    await prisma.$transaction(async (tx) => {
+      await lockCustomerIdentity(tx, phone);
+      const existing = await tx.customer.findFirst({ where: { phone } });
+      if (existing) throw new Error("DUPLICATE_CUSTOMER");
+      const wanted = lead.source === WANTED_LEAD_SOURCE;
+      await tx.customer.create({
+        data: {
+          name: lead.name,
+          phone,
+          email: emailFromLeadNotes(lead.notes),
+          notes: wanted
+            ? `Pedido de modelo: ${lead.vehicleInfo}${lead.notes ? ` — ${lead.notes}` : ""}`
+            : `Lead de venda/troca: ${lead.vehicleInfo}${lead.plate ? ` · placa ${lead.plate}` : ""}${lead.notes ? ` — ${lead.notes}` : ""}`,
+        },
+      });
+      await tx.leadVenda.update({
+        where: { id },
+        data: { status: "contatado" },
+      });
     });
-
-    await markLeadContatado(id);
     revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
     revalidatePath("/admin/leads");
     revalidatePath("/admin");
@@ -85,6 +85,12 @@ export async function convertLeadToCustomer(
     revalidatePath("/admin/clientes");
     return { ok: true, message: "Cliente criado a partir do lead." };
   } catch (error) {
+    if (error instanceof Error && error.message === "DUPLICATE_CUSTOMER")
+      return {
+        ok: false,
+        message:
+          "Já existe cliente com esse telefone. Confira o cadastro existente, sem duplicar.",
+      };
     console.error("[admin/leads] falha ao converter lead:", error);
     return { ok: false, message: "Não foi possível criar o cliente." };
   }

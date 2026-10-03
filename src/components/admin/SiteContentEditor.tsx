@@ -22,28 +22,43 @@ const textareaClass = `${inputClass} min-h-[96px] resize-y`;
 export function SiteContentEditor({
   initial,
   errors = {},
+  onUploadingChange,
+  onDirty,
 }: {
   initial: SiteContent;
   errors?: Record<string, string>;
+  onUploadingChange?: (uploading: boolean) => void;
+  onDirty?: () => void;
 }) {
-  const [faqItems, setFaqItems] = useState<FaqItem[]>(() =>
+  const [faqItems, setFaqItemsState] = useState<FaqItem[]>(() =>
     initial.faqItems.map((item) => ({ ...item })),
   );
-  const [conditionItems, setConditionItems] = useState<ConditionItem[]>(() =>
-    initial.conditions.items.map((item) => ({ ...item })),
+  const [conditionItems, setConditionItemsState] = useState<ConditionItem[]>(
+    () => initial.conditions.items.map((item) => ({ ...item })),
   );
   const [founderPhotoUrl, setFounderPhotoUrl] = useState(
     initial.founderPhotoUrl ?? "",
   );
   const [uploadingFounder, setUploadingFounder] = useState(false);
 
+  const setFaqItems: typeof setFaqItemsState = (next) => {
+    onDirty?.();
+    setFaqItemsState(next);
+  };
+  const setConditionItems: typeof setConditionItemsState = (next) => {
+    onDirty?.();
+    setConditionItemsState(next);
+  };
+
   async function uploadFounderPhoto(file: File | undefined) {
     if (!file) return;
     setUploadingFounder(true);
+    onUploadingChange?.(true);
     try {
       const { uploadImageDirect } = await import("@/lib/upload-image-direct");
       const photo = await uploadImageDirect(file);
       setFounderPhotoUrl(photo.url);
+      onDirty?.();
       toast.success("Foto do Elias enviada. Clique em salvar.");
     } catch (error) {
       toast.error(
@@ -51,6 +66,7 @@ export function SiteContentEditor({
       );
     } finally {
       setUploadingFounder(false);
+      onUploadingChange?.(false);
     }
   }
 
@@ -64,7 +80,7 @@ export function SiteContentEditor({
       />
       <input type="hidden" name="founderPhotoUrl" value={founderPhotoUrl} />
 
-      <Card title="Foto do Elias na página Sobre">
+      <Card collapsed title="Foto do Elias na página Sobre">
         <p className="mb-4 text-sm leading-relaxed text-muted">
           Use a foto original dele, com o fundo já removido. O site não gera
           retrato — só exibe o arquivo que você enviar.
@@ -104,7 +120,10 @@ export function SiteContentEditor({
             <button
               type="button"
               className={btn.ghost}
-              onClick={() => setFounderPhotoUrl("")}
+              onClick={() => {
+                setFounderPhotoUrl("");
+                onDirty?.();
+              }}
             >
               Remover foto
             </button>
@@ -115,13 +134,17 @@ export function SiteContentEditor({
         ) : null}
       </Card>
 
-      <Card title="Google Meu Negócio">
+      <Card collapsed title="Google Meu Negócio">
         <p className="mb-4 text-sm leading-relaxed text-muted">
           O selo na home só aparece com nota, quantidade e o link do perfil. Sem
           isso, o site não inventa avaliação.
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Nota" hint="De 0 a 5. Ex.: 4,8" error={errors.googleRating}>
+          <Field
+            label="Nota"
+            hint="De 0 a 5. Ex.: 4,8"
+            error={errors.googleRating}
+          >
             <input
               name="googleRating"
               inputMode="decimal"
@@ -165,6 +188,7 @@ export function SiteContentEditor({
       </Card>
 
       <Card
+        collapsed
         title="Dúvidas frequentes"
         action={
           <span className="text-xs text-muted">
@@ -174,12 +198,15 @@ export function SiteContentEditor({
         }
       >
         <p className="mb-4 text-sm leading-relaxed text-muted">
-          Respostas com a palavra PREENCHER ficam só no painel, fora do site.
-          A home usa as 5 primeiras já prontas.
+          Respostas com a palavra PREENCHER ficam só no painel, fora do site. A
+          home usa as 5 primeiras já prontas.
         </p>
         <div className="space-y-4">
           {faqItems.map((item, index) => (
-            <div key={`${item.question}-${index}`} className="border border-white/10 p-3">
+            <div
+              key={`${item.question}-${index}`}
+              className="border border-white/10 p-3"
+            >
               <div className="grid gap-3 sm:grid-cols-[10rem_1fr_auto]">
                 <Field label="Categoria">
                   <select
@@ -243,7 +270,7 @@ export function SiteContentEditor({
                         rowIndex === index
                           ? { ...row, answer: event.target.value }
                           : row,
-                      )
+                      ),
                     )
                   }
                   className={textareaClass}
@@ -266,10 +293,10 @@ export function SiteContentEditor({
         </button>
       </Card>
 
-      <Card title="Condições na ficha do veículo">
+      <Card collapsed title="Condições na ficha do veículo">
         <p className="mb-4 text-sm leading-relaxed text-muted">
-          Texto ao lado do WhatsApp no anúncio. Itens com PREENCHER não
-          aparecem para o visitante.
+          Texto ao lado do WhatsApp no anúncio. Itens com PREENCHER não aparecem
+          para o visitante.
         </p>
         <div className="grid gap-4">
           <Field label="Título">
@@ -292,7 +319,10 @@ export function SiteContentEditor({
         </div>
         <div className="mt-4 space-y-3">
           {conditionItems.map((item, index) => (
-            <div key={`${item.label}-${index}`} className="grid gap-3 sm:grid-cols-[12rem_1fr_auto]">
+            <div
+              key={`${item.label}-${index}`}
+              className="grid gap-3 sm:grid-cols-[12rem_1fr_auto]"
+            >
               <Field label="Item">
                 <input
                   value={item.label}
@@ -302,7 +332,7 @@ export function SiteContentEditor({
                         rowIndex === index
                           ? { ...row, label: event.target.value }
                           : row,
-                      )
+                      ),
                     )
                   }
                   className={inputClass}
@@ -317,7 +347,7 @@ export function SiteContentEditor({
                         rowIndex === index
                           ? { ...row, text: event.target.value }
                           : row,
-                      )
+                      ),
                     )
                   }
                   className={inputClass}

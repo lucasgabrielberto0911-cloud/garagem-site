@@ -2,6 +2,7 @@ type FileUploadResponse = {
   error?: string;
   url?: string;
   name?: string;
+  signedUrl?: string;
 };
 
 /**
@@ -14,16 +15,19 @@ export async function uploadAdminFile(
   url: string;
   name: string;
 }> {
-  const form = new FormData();
-  form.append("file", file);
-  if (vehicleId) form.append("vehicleId", vehicleId);
-
-  const response = await fetch("/api/admin/files", {
+  if (file.size > 12 * 1024 * 1024)
+    throw new Error("Arquivo muito grande. Máximo 12 MB.");
+  const response = await fetch("/api/admin/files/sign", {
     method: "POST",
     credentials: "same-origin",
-    body: form,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      vehicleId,
+    }),
   });
-
   const raw = await response.text();
   let data: FileUploadResponse = {};
   try {
@@ -36,5 +40,15 @@ export async function uploadAdminFile(
     throw new Error(data.error || `Falha no upload (${response.status}).`);
   }
 
+  if (!data.signedUrl)
+    throw new Error("Resposta inválida ao preparar o arquivo.");
+  const upload = await fetch(data.signedUrl, {
+    method: "PUT",
+    headers: { "Content-Type": file.type, "x-upsert": "false" },
+    body: file,
+    signal: AbortSignal.timeout(120000),
+  });
+  if (!upload.ok)
+    throw new Error("Não foi possível enviar o arquivo. Tente novamente.");
   return { url: data.url, name: data.name || file.name };
 }

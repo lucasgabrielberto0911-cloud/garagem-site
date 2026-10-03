@@ -1,8 +1,15 @@
 "use client";
+import { formatAdminMoney as formatCurrencyBRL } from "@/lib/admin-money";
 
+import { moneyInput, moneyTyping, parseMoneyBR } from "@/lib/admin-money";
+import { adminDate, localDateInput } from "@/lib/admin-date";
+import { exportAdminCsv } from "@/lib/admin-export-client";
 import Link from "next/link";
+import { useUnsavedChangesWarning } from "@/components/admin/useUnsavedChangesWarning";
+import { adminMutation } from "@/lib/admin-mutation";
+import { focusAdminError } from "@/lib/admin-form-focus";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { InfiniteSentinel } from "@/components/InfiniteSentinel";
@@ -14,12 +21,18 @@ import {
   IconTrash,
 } from "@/components/admin/icons";
 import { IconWhatsApp } from "@/components/site/icons";
-import { Badge, Card, EmptyState, Field, btn, inputClass, mobileActionCell } from "@/components/admin/ui";
+import {
+  Badge,
+  Card,
+  EmptyState,
+  Field,
+  btn,
+  inputClass,
+  mobileActionCell,
+} from "@/components/admin/ui";
 import { SearchSelect } from "@/components/admin/SearchSelect";
 import { createSale, deleteSale, updateSale } from "@/app/admin/vendas/actions";
 import {
-  formatCurrencyBRL,
-  formatNumberBR,
   formatPhoneBR,
   formatPlateDisplay,
   formatPlateInput,
@@ -43,6 +56,7 @@ export const PAYMENT_METHODS = [
 
 export type SaleRow = {
   id: string;
+  updatedAt: Date;
   salePrice: number;
   paymentMethod: string;
   saleDate: Date;
@@ -79,7 +93,7 @@ export type CustomerOption = { id: string; name: string; phone: string };
 type SaleSource = "estoque" | "historica";
 
 function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(date);
+  return adminDate(new Date(date));
 }
 
 function saleFinance(
@@ -121,59 +135,12 @@ function customerOptionLabel(customer: CustomerOption) {
   return `${customer.name} · ${formatPhoneBR(customer.phone)}`;
 }
 
-function exportSalesCsv(sales: SaleRow[]) {
-  const header = [
-    "Data",
-    "Veículo",
-    "Ano",
-    "Placa",
-    "Cliente",
-    "Telefone",
-    "Pagamento",
-    "Valor",
-    "Lucro",
-    "Tipo",
-    "Observações",
-  ];
-  const rows = sales.map((sale) => [
-    formatDate(sale.saleDate),
-    `${sale.vehicle.brand} ${sale.vehicle.model}`,
-    String(sale.vehicle.yearModel),
-    sale.vehicle.plate ? formatPlateDisplay(sale.vehicle.plate) : "",
-    sale.customer?.name ?? "",
-    sale.customer?.phone ? formatPhoneBR(sale.customer.phone) : "",
-    sale.paymentMethod,
-    String(sale.salePrice),
-    String(saleFinance(sale.salePrice, sale.vehicle)?.margin ?? ""),
-    sale.vehicle.historical
-      ? "Histórica"
-      : sale.vehicle.consigned
-        ? CONSIGNED_LABEL
-        : "Estoque",
-    (sale.notes ?? "").replace(/\s+/g, " "),
-  ]);
-
-  const csv = [header, ...rows]
-    .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(";"))
-    .join("\n");
-
-  const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `vendas-garagem-${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 function todayInputValue() {
   return dateInputFrom(new Date());
 }
 
 function dateInputFrom(date: Date) {
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
+  return localDateInput(date);
 }
 
 function customerPhoneDigits(customer: SaleRow["customer"]) {
@@ -192,25 +159,31 @@ export function SalesManager({
   salesTotal,
   pageSize,
   period,
+  periodRevenue,
+  initialVehicle,
 }: {
   sales: SaleRow[];
   salesTotal: number;
   pageSize: number;
   period: Period;
+  periodRevenue: number;
+  initialVehicle?: SellableVehicle | null;
 }) {
   const router = useRouter();
+  const [exporting, setExporting] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [rows, setRows] = useState(() => sales.map(hydrateSale));
   const [total, setTotal] = useState(salesTotal);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const loadingRef = useRef(false);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(initialVehicle));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [source, setSource] = useState<SaleSource>("estoque");
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [vehicleId, setVehicleId] = useState("");
+  const [vehicleId, setVehicleId] = useState(initialVehicle?.id || "");
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
   const [yearModel, setYearModel] = useState("");
@@ -224,7 +197,7 @@ export function SalesManager({
   const [notes, setNotes] = useState("");
   const [cancelTarget, setCancelTarget] = useState<SaleRow | null>(null);
   const [pickedVehicle, setPickedVehicle] = useState<SellableVehicle | null>(
-    null,
+    initialVehicle ?? null,
   );
   const [pickedCustomer, setPickedCustomer] = useState<CustomerOption | null>(
     null,
@@ -234,8 +207,10 @@ export function SalesManager({
   const isHistorical = source === "historica";
   const isNewCustomer = customerId === "" || customerId === "novo";
   const editingSale = isEditing
-    ? rows.find((sale) => sale.id === editingId) ?? null
+    ? (rows.find((sale) => sale.id === editingId) ?? null)
     : null;
+
+  useUnsavedChangesWarning(dirty && open);
 
   const selectedVehicle = pickedVehicle;
 
@@ -280,12 +255,9 @@ export function SalesManager({
     setPage(1);
   }, [sales, salesTotal]);
 
-  const periodTotal = useMemo(
-    () => filteredSales.reduce((sum, sale) => sum + sale.salePrice, 0),
-    [filteredSales],
-  );
+  const periodTotal = periodRevenue;
 
-  const liveSalePrice = Number(price.replace(/\D/g, "")) || 0;
+  const liveSalePrice = parseMoneyBR(price) || 0;
   const liveFinance = !isHistorical
     ? selectedVehicle
       ? saleFinance(liveSalePrice || selectedVehicle.price, selectedVehicle)
@@ -294,11 +266,13 @@ export function SalesManager({
       ? saleFinance(liveSalePrice || editingSale.salePrice, editingSale.vehicle)
       : null;
 
-  async function loadVehicleOptions(query: string) {
+  async function loadVehicleOptions(query: string, signal?: AbortSignal) {
     const params = new URLSearchParams();
     if (query.trim()) params.set("q", query.trim());
     params.set("take", "20");
-    const response = await fetch(`/api/admin/vendas/veiculos?${params}`);
+    const response = await fetch(`/api/admin/vendas/veiculos?${params}`, {
+      signal,
+    });
     if (!response.ok) throw new Error("fetch");
     const data = (await response.json()) as { vehicles?: SellableVehicle[] };
     return (data.vehicles ?? []).map((vehicle) => ({
@@ -307,11 +281,11 @@ export function SalesManager({
     }));
   }
 
-  async function loadCustomerOptions(query: string) {
+  async function loadCustomerOptions(query: string, signal?: AbortSignal) {
     const params = new URLSearchParams();
     if (query.trim()) params.set("q", query.trim());
     params.set("take", "20");
-    const response = await fetch(`/api/admin/clientes?${params}`);
+    const response = await fetch(`/api/admin/clientes?${params}`, { signal });
     if (!response.ok) throw new Error("fetch");
     const data = (await response.json()) as { customers?: CustomerOption[] };
     return (data.customers ?? []).map((customer) => ({
@@ -341,6 +315,13 @@ export function SalesManager({
   }
 
   function startEdit(sale: SaleRow) {
+    if (
+      dirty &&
+      open &&
+      !window.confirm("Descartar as alterações desta venda?")
+    )
+      return;
+    setDirty(false);
     setOpen(true);
     setEditingId(sale.id);
     setSource(sale.vehicle.historical ? "historica" : "estoque");
@@ -366,10 +347,8 @@ export function SalesManager({
     setYearModel(
       sale.vehicle.yearModel > 0 ? String(sale.vehicle.yearModel) : "",
     );
-    setPlate(
-      sale.vehicle.plate ? formatPlateDisplay(sale.vehicle.plate) : "",
-    );
-    setPrice(formatNumberBR(Math.round(sale.salePrice)));
+    setPlate(sale.vehicle.plate ? formatPlateDisplay(sale.vehicle.plate) : "");
+    setPrice(moneyInput(sale.salePrice));
     setCustomerId(sale.customer?.id ?? "novo");
     setPickedCustomer(sale.customer);
     setCustomerName(
@@ -377,9 +356,7 @@ export function SalesManager({
         ? sale.customer.name
         : "",
     );
-    setPhone(
-      sale.customer?.phone ? formatPhoneBR(sale.customer.phone) : "",
-    );
+    setPhone(sale.customer?.phone ? formatPhoneBR(sale.customer.phone) : "");
     setPaymentMethod(sale.paymentMethod);
     setSaleDate(dateInputFrom(new Date(sale.saleDate)));
     setNotes(sale.notes ?? "");
@@ -388,17 +365,34 @@ export function SalesManager({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isPending) return;
+    const amount = parseMoneyBR(price);
+    if (amount == null || amount <= 0) {
+      setErrors({
+        salePrice: "Informe o valor em reais, por exemplo 35.000,50.",
+      });
+      return;
+    }
+    if (
+      !window.confirm(
+        `${isEditing ? "Salvar" : "Registrar"} venda de ${isHistorical ? `${brand} ${model}` : selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "veículo selecionado"} por ${formatCurrencyBRL(amount)}?${amount < 1000 ? "\nValor abaixo de R$ 1.000: confira se é o valor completo da venda." : ""}`,
+      )
+    )
+      return;
     const formData = new FormData(event.currentTarget);
     const form = event.currentTarget;
 
     startTransition(async () => {
       const result = isEditing
-        ? await updateSale(formData)
-        : await createSale(formData);
+        ? await adminMutation(() => updateSale(formData))
+        : await adminMutation(() => createSale(formData));
       setErrors(result.fieldErrors ?? {});
+      const first = Object.keys(result.fieldErrors ?? {})[0];
+      if (first) focusAdminError(form, first);
 
       if (result.ok) {
         toast.success(result.message);
+        setDirty(false);
         form.reset();
         resetForm();
         setOpen(false);
@@ -413,7 +407,9 @@ export function SalesManager({
     if (!cancelTarget) return;
     const target = cancelTarget;
     startTransition(async () => {
-      const result = await deleteSale(target.id);
+      const result = await adminMutation(() =>
+        deleteSale(target.id, new Date(target.updatedAt).toISOString()),
+      );
       if (result.ok) {
         toast.success(result.message);
         router.refresh();
@@ -428,300 +424,328 @@ export function SalesManager({
     <div className="space-y-5">
       {open ? (
         <Card title={isEditing ? "Editar venda" : "Registrar venda"}>
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            <input type="hidden" name="source" value={source} />
-            {isEditing ? (
-              <input type="hidden" name="saleId" value={editingId} />
-            ) : null}
-
-            {!isEditing ? (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSource("estoque");
-                    setErrors({});
-                  }}
-                  className={source === "estoque" ? btn.primary : btn.outline}
-                >
-                  Do estoque
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSource("historica");
-                    setVehicleId("");
-                    if (!paymentMethod) setPaymentMethod("Histórico");
-                    setErrors({});
-                  }}
-                  className={source === "historica" ? btn.primary : btn.outline}
-                >
-                  Venda histórica
-                </button>
-              </div>
-            ) : (
-              <p className="text-xs uppercase tracking-wider text-muted">
-                {isHistorical ? "Venda histórica" : "Venda do estoque"}
-              </p>
-            )}
-            <p className="text-xs text-muted">
-              {isHistorical
-                ? "Para negócios feitos antes do site: informe carro, placa e valor. Cliente é opcional."
-                : "Liga a venda a um veículo do estoque. Cliente é opcional."}
-            </p>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {isHistorical ? (
+          <form
+            onSubmit={handleSubmit}
+            onChange={() => setDirty(true)}
+            className="space-y-4"
+            noValidate
+          >
+            <fieldset disabled={isPending} className="min-w-0 space-y-4">
+              <input type="hidden" name="source" value={source} />
+              {isEditing ? (
                 <>
-                  <Field label="Marca" required error={errors.brand}>
-                    <input
-                      name="brand"
-                      value={brand}
-                      onChange={(event) => setBrand(event.target.value)}
-                      placeholder="Ex.: Volkswagen"
-                      className={inputClass}
-                      autoComplete="off"
-                    />
-                  </Field>
-                  <Field label="Modelo" required error={errors.model}>
-                    <input
-                      name="model"
-                      value={model}
-                      onChange={(event) => setModel(event.target.value)}
-                      placeholder="Ex.: Gol"
-                      className={inputClass}
-                      autoComplete="off"
-                    />
-                  </Field>
-                  <Field
-                    label="Placa"
-                    required
-                    error={errors.plate}
-                    hint="Uso interno — não aparece no site."
-                  >
-                    <input
-                      name="plate"
-                      value={plate}
-                      onChange={(event) =>
-                        setPlate(formatPlateInput(event.target.value))
-                      }
-                      placeholder="ABC1D23"
-                      className={inputClass}
-                      autoComplete="off"
-                    />
-                  </Field>
-                  <Field label="Ano modelo" error={errors.yearModel}>
-                    <input
-                      name="yearModel"
-                      inputMode="numeric"
-                      value={yearModel}
-                      onChange={(event) => setYearModel(event.target.value)}
-                      placeholder="Ex.: 2019"
-                      className={inputClass}
-                    />
-                  </Field>
+                  <input type="hidden" name="saleId" value={editingId} />
+                  <input
+                    type="hidden"
+                    name="expectedUpdatedAt"
+                    value={
+                      editingSale
+                        ? new Date(editingSale.updatedAt).toISOString()
+                        : ""
+                    }
+                  />
                 </>
+              ) : null}
+
+              {!isEditing ? (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSource("estoque");
+                      setErrors({});
+                    }}
+                    className={source === "estoque" ? btn.primary : btn.outline}
+                  >
+                    Do estoque
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSource("historica");
+                      setVehicleId("");
+                      if (!paymentMethod) setPaymentMethod("Histórico");
+                      setErrors({});
+                    }}
+                    className={
+                      source === "historica" ? btn.primary : btn.outline
+                    }
+                  >
+                    Venda histórica
+                  </button>
+                </div>
               ) : (
+                <p className="text-xs uppercase tracking-wider text-muted">
+                  {isHistorical ? "Venda histórica" : "Venda do estoque"}
+                </p>
+              )}
+              <p className="text-xs text-muted">
+                {isHistorical
+                  ? "Para negócios feitos antes do site: informe carro, placa e valor. Cliente é opcional."
+                  : "Liga a venda a um veículo do estoque. Cliente é opcional."}
+              </p>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {isHistorical ? (
+                  <>
+                    <Field label="Marca" required error={errors.brand}>
+                      <input
+                        name="brand"
+                        value={brand}
+                        onChange={(event) => setBrand(event.target.value)}
+                        placeholder="Ex.: Volkswagen"
+                        className={inputClass}
+                        autoComplete="off"
+                      />
+                    </Field>
+                    <Field label="Modelo" required error={errors.model}>
+                      <input
+                        name="model"
+                        value={model}
+                        onChange={(event) => setModel(event.target.value)}
+                        placeholder="Ex.: Gol"
+                        className={inputClass}
+                        autoComplete="off"
+                      />
+                    </Field>
+                    <Field
+                      label="Placa"
+                      required
+                      error={errors.plate}
+                      hint="Uso interno — não aparece no site."
+                    >
+                      <input
+                        name="plate"
+                        value={plate}
+                        onChange={(event) =>
+                          setPlate(formatPlateInput(event.target.value))
+                        }
+                        placeholder="ABC1D23"
+                        className={inputClass}
+                        autoComplete="off"
+                      />
+                    </Field>
+                    <Field label="Ano modelo" error={errors.yearModel}>
+                      <input
+                        name="yearModel"
+                        inputMode="numeric"
+                        value={yearModel}
+                        onChange={(event) => setYearModel(event.target.value)}
+                        placeholder="Ex.: 2019"
+                        className={inputClass}
+                      />
+                    </Field>
+                  </>
+                ) : (
+                  <Field
+                    label="Veículo vendido"
+                    required
+                    error={errors.vehicleId}
+                    className="sm:col-span-2"
+                    as="div"
+                  >
+                    <SearchSelect
+                      name="vehicleId"
+                      value={vehicleId}
+                      selectedLabel={
+                        pickedVehicle ? vehicleOptionLabel(pickedVehicle) : ""
+                      }
+                      enabled={open && !isHistorical}
+                      placeholder="Busque por marca, modelo ou placa"
+                      emptyText="Nenhum veículo sem venda"
+                      loadOptions={loadVehicleOptions}
+                      onChange={(id, item) => {
+                        setVehicleId(id);
+                        if (item) {
+                          setDirty(true);
+                          setPickedVehicle(item);
+                          setPrice(moneyInput(item.price));
+                        } else {
+                          setPickedVehicle(null);
+                        }
+                      }}
+                    />
+                  </Field>
+                )}
+
                 <Field
-                  label="Veículo vendido"
+                  label="Valor da venda (R$)"
                   required
-                  error={errors.vehicleId}
-                  className="sm:col-span-2"
+                  error={errors.salePrice}
+                  hint={
+                    liveFinance
+                      ? `Investido ${formatCurrencyBRL(liveFinance.invested)} · ${liveFinance.margin >= 0 ? "lucro" : "prejuízo"} ${formatCurrencyBRL(liveFinance.margin)}`
+                      : !isHistorical && selectedVehicle?.consigned
+                        ? `${CONSIGNED_LABEL}: sem custo da loja, lucro N/A.`
+                        : isHistorical
+                          ? "Valor pelo qual o veículo foi vendido."
+                          : "Preenchido com o preço do anúncio; ajuste se houve desconto."
+                  }
+                >
+                  <input
+                    name="salePrice"
+                    inputMode="decimal"
+                    value={price}
+                    onChange={(event) =>
+                      setPrice(moneyTyping(event.target.value))
+                    }
+                    placeholder="0"
+                    className={inputClass}
+                  />
+                </Field>
+
+                <Field
+                  label="Cliente"
+                  hint="Opcional — busque pelo nome ou deixe em sem cliente."
                   as="div"
                 >
                   <SearchSelect
-                    name="vehicleId"
-                    value={vehicleId}
+                    name="customerId"
+                    value={customerId}
                     selectedLabel={
-                      pickedVehicle ? vehicleOptionLabel(pickedVehicle) : ""
+                      pickedCustomer ? customerOptionLabel(pickedCustomer) : ""
                     }
-                    enabled={open && !isHistorical}
-                    placeholder="Busque por marca, modelo ou placa"
-                    emptyText="Nenhum veículo sem venda"
-                    loadOptions={loadVehicleOptions}
+                    enabled={open}
+                    placeholder="Busque por nome, telefone ou CPF"
+                    emptyText="Nenhum cliente encontrado"
+                    noneOption={NEW_CUSTOMER_OPTION}
+                    loadOptions={loadCustomerOptions}
                     onChange={(id, item) => {
-                      setVehicleId(id);
+                      setCustomerId(id);
+                      setDirty(true);
+                      setPickedCustomer(item);
                       if (item) {
-                        setPickedVehicle(item);
-                        setPrice(formatNumberBR(Math.round(item.price)));
+                        setCustomerName(
+                          item.name !== "Não informado" ? item.name : "",
+                        );
+                        setPhone(item.phone ? formatPhoneBR(item.phone) : "");
                       } else {
-                        setPickedVehicle(null);
+                        setCustomerName("");
+                        setPhone("");
                       }
                     }}
                   />
                 </Field>
-              )}
 
-              <Field
-                label="Valor da venda (R$)"
-                required
-                error={errors.salePrice}
-                hint={
-                  liveFinance
-                    ? `Investido ${formatCurrencyBRL(liveFinance.invested)} · ${liveFinance.margin >= 0 ? "lucro" : "prejuízo"} ${formatCurrencyBRL(liveFinance.margin)}`
-                    : !isHistorical && selectedVehicle?.consigned
-                      ? `${CONSIGNED_LABEL}: sem custo da loja, lucro N/A.`
-                      : isHistorical
-                      ? "Valor pelo qual o veículo foi vendido."
-                      : "Preenchido com o preço do anúncio; ajuste se houve desconto."
-                }
-              >
-                <input
-                  name="salePrice"
-                  inputMode="numeric"
-                  value={price}
-                  onChange={(event) =>
-                    setPrice(
-                      formatNumberBR(
-                        Number(event.target.value.replace(/\D/g, "") || 0),
-                      ),
-                    )
+                <Field
+                  label="Forma de pagamento"
+                  required={!isHistorical}
+                  error={errors.paymentMethod}
+                  hint={
+                    isHistorical
+                      ? "Opcional — se vazio, fica como Histórico."
+                      : undefined
                   }
-                  placeholder="0"
-                  className={inputClass}
-                />
-              </Field>
-
-              <Field
-                label="Cliente"
-                hint="Opcional — busque pelo nome ou deixe em sem cliente."
-                as="div"
-              >
-                <SearchSelect
-                  name="customerId"
-                  value={customerId}
-                  selectedLabel={
-                    pickedCustomer ? customerOptionLabel(pickedCustomer) : ""
-                  }
-                  enabled={open}
-                  placeholder="Busque por nome, telefone ou CPF"
-                  emptyText="Nenhum cliente encontrado"
-                  noneOption={NEW_CUSTOMER_OPTION}
-                  loadOptions={loadCustomerOptions}
-                  onChange={(id, item) => {
-                    setCustomerId(id);
-                    setPickedCustomer(item);
-                    if (item) {
-                      setCustomerName(
-                        item.name !== "Não informado" ? item.name : "",
-                      );
-                      setPhone(
-                        item.phone ? formatPhoneBR(item.phone) : "",
-                      );
-                    } else {
-                      setCustomerName("");
-                      setPhone("");
-                    }
-                  }}
-                />
-              </Field>
-
-              <Field
-                label="Forma de pagamento"
-                required={!isHistorical}
-                error={errors.paymentMethod}
-                hint={
-                  isHistorical
-                    ? "Opcional — se vazio, fica como Histórico."
-                    : undefined
-                }
-              >
-                <select
-                  key={`payment-${source}-${editingId ?? "new"}`}
-                  name="paymentMethod"
-                  className={inputClass}
-                  value={paymentMethod}
-                  onChange={(event) => setPaymentMethod(event.target.value)}
                 >
-                  <option value="">
-                    {isHistorical ? "Histórico (padrão)" : "Selecione"}
-                  </option>
-                  {PAYMENT_METHODS.map((method) => (
-                    <option key={method} value={method}>
-                      {method}
-                    </option>
-                  ))}
-                  {paymentMethod &&
-                  !(PAYMENT_METHODS as readonly string[]).includes(
-                    paymentMethod,
-                  ) ? (
-                    <option value={paymentMethod}>{paymentMethod}</option>
-                  ) : null}
-                </select>
-              </Field>
-
-              {isNewCustomer ? (
-                <>
-                  <Field label="Nome do cliente" error={errors.customerName}>
-                    <input
-                      name="customerName"
-                      value={customerName}
-                      onChange={(event) => setCustomerName(event.target.value)}
-                      placeholder="Opcional"
-                      className={inputClass}
-                    />
-                  </Field>
-                  <Field
-                    label="Telefone do cliente"
-                    error={errors.customerPhone}
+                  <select
+                    key={`payment-${source}-${editingId ?? "new"}`}
+                    name="paymentMethod"
+                    className={inputClass}
+                    value={paymentMethod}
+                    onChange={(event) => setPaymentMethod(event.target.value)}
                   >
-                    <input
-                      name="customerPhone"
-                      inputMode="tel"
-                      value={phone}
-                      onChange={(event) =>
-                        setPhone(formatPhoneBR(event.target.value))
-                      }
-                      placeholder="Opcional"
-                      className={inputClass}
-                    />
-                  </Field>
-                </>
-              ) : null}
+                    <option value="">
+                      {isHistorical ? "Histórico (padrão)" : "Selecione"}
+                    </option>
+                    {PAYMENT_METHODS.map((method) => (
+                      <option key={method} value={method}>
+                        {method}
+                      </option>
+                    ))}
+                    {paymentMethod &&
+                    !(PAYMENT_METHODS as readonly string[]).includes(
+                      paymentMethod,
+                    ) ? (
+                      <option value={paymentMethod}>{paymentMethod}</option>
+                    ) : null}
+                  </select>
+                </Field>
 
-              <Field label="Data da venda" error={errors.saleDate}>
-                <input
-                  type="date"
-                  name="saleDate"
-                  value={saleDate}
-                  onChange={(event) => setSaleDate(event.target.value)}
-                  className={inputClass}
+                {isNewCustomer ? (
+                  <>
+                    <Field label="Nome do cliente" error={errors.customerName}>
+                      <input
+                        name="customerName"
+                        value={customerName}
+                        onChange={(event) =>
+                          setCustomerName(event.target.value)
+                        }
+                        placeholder="Opcional"
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field
+                      label="Telefone do cliente"
+                      error={errors.customerPhone}
+                    >
+                      <input
+                        name="customerPhone"
+                        inputMode="tel"
+                        value={phone}
+                        onChange={(event) =>
+                          setPhone(formatPhoneBR(event.target.value))
+                        }
+                        placeholder="Opcional"
+                        className={inputClass}
+                      />
+                    </Field>
+                  </>
+                ) : null}
+
+                <Field label="Data da venda" error={errors.saleDate}>
+                  <input
+                    type="date"
+                    name="saleDate"
+                    value={saleDate}
+                    onChange={(event) => setSaleDate(event.target.value)}
+                    className={inputClass}
+                  />
+                </Field>
+              </div>
+
+              <Field label="Observações">
+                <textarea
+                  name="notes"
+                  rows={3}
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Detalhes da negociação, entrada, troca, prazos..."
+                  className={`${inputClass} resize-y`}
                 />
               </Field>
-            </div>
 
-            <Field label="Observações">
-              <textarea
-                name="notes"
-                rows={3}
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder="Detalhes da negociação, entrada, troca, prazos..."
-                className={`${inputClass} resize-y`}
-              />
-            </Field>
-
-            <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4">
-              <button type="submit" disabled={isPending} className={btn.primary}>
-                {isPending
-                  ? isEditing
-                    ? "Salvando..."
-                    : "Registrando..."
-                  : isEditing
-                    ? "Salvar alterações"
-                    : "Registrar venda"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  resetForm();
-                }}
-                className={btn.outline}
-              >
-                Cancelar
-              </button>
-            </div>
+              <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4">
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className={btn.primary}
+                >
+                  {isPending
+                    ? isEditing
+                      ? "Salvando..."
+                      : "Registrando..."
+                    : isEditing
+                      ? "Salvar alterações"
+                      : "Registrar venda"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      dirty &&
+                      !window.confirm("Descartar as alterações desta venda?")
+                    )
+                      return;
+                    setDirty(false);
+                    setOpen(false);
+                    resetForm();
+                  }}
+                  className={btn.outline}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </fieldset>
           </form>
         </Card>
       ) : (
@@ -735,76 +759,81 @@ export function SalesManager({
             Registrar venda
           </button>
 
-          {rows.length > 0 ? (
-            <>
-              <select
-                value={period}
-                onChange={(event) => {
-                  const next = event.target.value as Period;
-                  const params = new URLSearchParams();
-                  if (next !== "all") params.set("period", next);
-                  router.push(
-                    params.toString()
-                      ? `/admin/vendas?${params.toString()}`
-                      : "/admin/vendas",
+          <>
+            <select
+              value={period}
+              onChange={(event) => {
+                const next = event.target.value as Period;
+                const params = new URLSearchParams();
+                if (next !== "all") params.set("period", next);
+                router.push(
+                  params.toString()
+                    ? `/admin/vendas?${params.toString()}`
+                    : "/admin/vendas",
+                );
+              }}
+              className={`${inputClass} sm:w-48`}
+              aria-label="Filtrar por período"
+            >
+              {PERIODS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-muted">
+              {total} venda(s)
+              {period !== "all" ? ` · ${formatCurrencyBRL(periodTotal)}` : ""}
+            </span>
+            <button
+              type="button"
+              onClick={async () => {
+                setExporting(true);
+                try {
+                  await exportAdminCsv(
+                    `/api/admin/export?type=sales&period=${period}`,
+                    `vendas-garagem-${localDateInput()}.csv`,
                   );
-                }}
-                className={`${inputClass} sm:w-48`}
-                aria-label="Filtrar por período"
-              >
-                {PERIODS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <span className="text-xs text-muted">
-                {filteredSales.length}
-                {period === "all" && total > rows.length
-                  ? ` de ${total}`
-                  : ""}{" "}
-                venda(s)
-                {period !== "all"
-                  ? ` · ${formatCurrencyBRL(periodTotal)}`
-                  : ""}
-              </span>
-              <button
-                type="button"
-                onClick={async () => {
-                  let source = rows;
-                  if (hasMore) {
-                    try {
-                      const response = await fetch(
-                        `/api/admin/vendas?page=1&pageSize=500&period=${period}`,
-                      );
-                      if (response.ok) {
-                        const data = (await response.json()) as {
-                          sales?: SaleRow[];
-                        };
-                        source = (data.sales ?? []).map(hydrateSale);
-                      }
-                    } catch {
-                      toast.error("Exportando só as vendas já carregadas.");
-                    }
-                  }
-                  exportSalesCsv(source);
-                }}
-                disabled={filteredSales.length === 0}
-                className={`${btn.outline} w-full sm:ml-auto sm:w-auto`}
-              >
-                <IconDownload className="h-4 w-4" />
-                Exportar CSV
-              </button>
-            </>
-          ) : null}
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Falha na exportação.",
+                  );
+                } finally {
+                  setExporting(false);
+                }
+              }}
+              disabled={total === 0 || exporting}
+              className={`${btn.outline} w-full sm:ml-auto sm:w-auto`}
+            >
+              <IconDownload className="h-4 w-4" />
+              {exporting ? "Preparando CSV…" : "Exportar todo o filtro"}
+            </button>
+          </>
         </div>
       )}
 
       {rows.length === 0 ? (
         <EmptyState
           icon={<IconCash className="h-12 w-12" />}
-          title="Nenhuma venda registrada"
-          description="Registre vendas do estoque ou históricas (antes do site) para acompanhar faturamento."
+          title={
+            period === "all"
+              ? "Nenhuma venda registrada"
+              : "Nenhuma venda neste período"
+          }
+          description={
+            period === "all"
+              ? "Registre vendas do estoque ou históricas para acompanhar faturamento."
+              : "Troque o período ou volte ao histórico completo."
+          }
+          action={
+            period !== "all" ? (
+              <Link href="/admin/vendas" className={btn.outline}>
+                Ver todo o período
+              </Link>
+            ) : undefined
+          }
         />
       ) : filteredSales.length === 0 ? (
         <EmptyState
@@ -819,7 +848,10 @@ export function SalesManager({
               const wa = customerPhoneDigits(sale.customer);
               const finance = saleFinance(sale.salePrice, sale.vehicle);
               return (
-                <li key={sale.id} className="overflow-hidden border border-white/10 bg-ink/50">
+                <li
+                  key={sale.id}
+                  className="overflow-hidden border border-white/10 bg-ink/50"
+                >
                   <div className="flex items-start justify-between gap-3 p-4 pb-3">
                     <div className="min-w-0">
                       {sale.vehicle.historical ? (
@@ -851,7 +883,9 @@ export function SalesManager({
                       {finance ? (
                         <p
                           className={`text-[11px] ${
-                            finance.margin >= 0 ? "text-emerald-300" : "text-brand"
+                            finance.margin >= 0
+                              ? "text-emerald-300"
+                              : "text-brand"
                           }`}
                         >
                           {formatCurrencyBRL(finance.margin)}
@@ -969,7 +1003,9 @@ export function SalesManager({
                             ? ` · ${formatPlateDisplay(sale.vehicle.plate)}`
                             : ""}
                           {sale.vehicle.historical ? " · Histórica" : ""}
-                          {sale.vehicle.consigned ? ` · ${CONSIGNED_LABEL}` : ""}
+                          {sale.vehicle.consigned
+                            ? ` · ${CONSIGNED_LABEL}`
+                            : ""}
                         </p>
                       </td>
                       <td className="px-4 py-3">
@@ -1049,7 +1085,10 @@ export function SalesManager({
             </table>
           </div>
           {hasMore ? (
-            <InfiniteSentinel onVisible={() => void loadMoreSales()} disabled={loadingMore || loadError}>
+            <InfiniteSentinel
+              onVisible={() => void loadMoreSales()}
+              disabled={loadingMore || loadError}
+            >
               {loadingMore ? (
                 <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
                   <span

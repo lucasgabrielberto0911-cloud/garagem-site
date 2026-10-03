@@ -1,18 +1,20 @@
 "use server";
 
+import { withAdminStorageLock } from "@/lib/admin-storage-lock";
 import { revalidatePath } from "next/cache";
 import { revalidateAllPublicFichas } from "@/lib/public-stock-revalidate";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { galleryStemFromStoragePath } from "@/lib/photo-master";
-import { deleteUnreferencedMasters } from "@/lib/photo-master-store";
+import { PHOTO_MASTER_PREFIX } from "@/lib/photo-master";
+import { adminFileReferences } from "@/lib/admin-file-references";
+import { isCleanupCandidate } from "@/lib/admin-cleanup";
 import { storeCardThumbnail } from "@/lib/photo-thumbnails";
 import { prisma } from "@/lib/prisma";
 import {
   VEHICLE_PHOTOS_BUCKET,
+  VEHICLE_DOCS_BUCKET,
   getSupabaseAdmin,
   hasSupabaseServiceRole,
-  storagePathFromPublicUrl,
 } from "@/lib/supabase";
 
 export type CleanupResult = {
@@ -21,26 +23,10 @@ export type CleanupResult = {
   removed?: number;
   checked?: number;
   remaining?: number;
+  candidates?: string[];
 };
 
 const BACKFILL_BATCH = 20;
-
-async function cleanupPrivateMasters(referenced: Set<string>) {
-  try {
-    const stems = new Set<string>();
-    for (const path of referenced) {
-      const stem = galleryStemFromStoragePath(path);
-      if (stem) stems.add(stem);
-    }
-    const removed = await deleteUnreferencedMasters(stems);
-    return removed > 0
-      ? ` ${removed} master(s) privado(s) sem foto no estoque.`
-      : "";
-  } catch (error) {
-    console.warn("[photo-master] cleanup:", error);
-    return "";
-  }
-}
 
 async function requireAdmin() {
   const session = await getSession();
@@ -49,10 +35,11 @@ async function requireAdmin() {
 }
 
 /**
- * Remove do Storage arquivos que não estão referenciados em Photo.
- * Útil após edições que trocam/removem fotos sem apagar o blob.
+ * Confere vínculos de todas as áreas e prepara prévia antes da remoção.
  */
-export async function cleanupOrphanPhotos(): Promise<CleanupResult> {
+export async function cleanupOrphanPhotos(
+  confirmed?: string[],
+): Promise<CleanupResult> {
   await requireAdmin();
 
   if (!hasSupabaseServiceRole()) {
@@ -64,105 +51,127 @@ export async function cleanupOrphanPhotos(): Promise<CleanupResult> {
   }
 
   try {
-    const supabase = getSupabaseAdmin();
-    const photos = await prisma.photo.findMany({
-      select: { url: true, thumbnailUrl: true },
-    }).catch(async (error) => {
-      console.warn("[storage] cleanup: thumbnailUrl ainda não existe.", error);
-      const legacy = await prisma.photo.findMany({ select: { url: true } });
-      return legacy.map((photo) => ({ ...photo, thumbnailUrl: null as string | null }));
-    });
-    let extraUrls: Array<string | null | undefined> = [];
-    try {
-      const [costs, documents] = await Promise.all([
-        prisma.vehicleCost.findMany({ select: { receiptUrl: true } }),
-        prisma.vehicleDocument.findMany({ select: { fileUrl: true } }),
-      ]);
-      extraUrls = [
-        ...costs.map((cost) => cost.receiptUrl),
-        ...documents.map((doc) => doc.fileUrl),
-      ];
-    } catch (error) {
-      console.warn("[storage] cleanup: tabelas de operação ainda não existem.", error);
-    }
-    const referenced = new Set(
-      [
-        ...photos.flatMap((photo) => [photo.url, photo.thumbnailUrl]),
-        ...extraUrls,
-      ]
-        .map((url) => (url ? storagePathFromPublicUrl(url) : null))
-        .filter((path): path is string => Boolean(path)),
-    );
+    return await withAdminStorageLock(async (tx) => {
+      const supabase = getSupabaseAdmin();
+      const { publicPaths, privatePaths } = await adminFileReferences(tx);
+      const orphans: string[] = [];
+      let offset = 0;
+      const limit = 100;
+      let checked = 0;
 
-    const orphans: string[] = [];
-    let offset = 0;
-    const limit = 100;
-    let checked = 0;
+      for (let page = 0; page < 50; page += 1) {
+        const { data, error } = await supabase.storage
+          .from(VEHICLE_PHOTOS_BUCKET)
+          .list("", {
+            limit,
+            offset,
+            sortBy: { column: "name", order: "asc" },
+          });
 
-    for (let page = 0; page < 50; page += 1) {
-      const { data, error } = await supabase.storage
-        .from(VEHICLE_PHOTOS_BUCKET)
-        .list("", { limit, offset, sortBy: { column: "name", order: "asc" } });
-
-      if (error) {
-        return { ok: false, message: error.message || "Falha ao listar Storage." };
-      }
-      if (!data || data.length === 0) break;
-
-      for (const item of data) {
-        if (!item.name || item.name.endsWith("/")) continue;
-        // Pasta de comprovantes/documentos — não entra na limpeza de fotos.
-        if (item.name === "docs") continue;
-        // Ignora "pastas" sem id/metadata de arquivo.
-        if (item.id === null && !item.metadata) continue;
-        checked += 1;
-        if (!referenced.has(item.name)) {
-          orphans.push(item.name);
+        if (error) {
+          return {
+            ok: false,
+            message: error.message || "Falha ao listar Storage.",
+          };
         }
+        if (!data || data.length === 0) break;
+
+        for (const item of data) {
+          if (!item.name || item.name.endsWith("/")) continue;
+          // Pasta de comprovantes/documentos — não entra na limpeza de fotos.
+          if (item.name === "docs") continue;
+          // Ignora "pastas" sem id/metadata de arquivo.
+          if (item.id === null && !item.metadata) continue;
+          checked += 1;
+          if (isCleanupCandidate(item, publicPaths)) {
+            orphans.push(`${VEHICLE_PHOTOS_BUCKET}/${item.name}`);
+          }
+        }
+
+        if (data.length < limit) break;
+        offset += limit;
       }
 
-      if (data.length < limit) break;
-      offset += limit;
-    }
+      // Masters privados recebem a mesma prévia e proteção, mesmo sem galeria órfã.
+      for (let page = 0; page < 50; page += 1) {
+        const { data, error } = await supabase.storage
+          .from(VEHICLE_DOCS_BUCKET)
+          .list(PHOTO_MASTER_PREFIX.replace(/\/$/, ""), {
+            limit,
+            offset: page * limit,
+            sortBy: { column: "name", order: "asc" },
+          });
+        if (error)
+          return {
+            ok: false,
+            message:
+              "Não foi possível conferir os originais privados. Nenhum arquivo foi removido.",
+          };
+        if (!data?.length) break;
+        for (const item of data) {
+          if (
+            !item.name ||
+            !/\.jpg$/i.test(item.name) ||
+            (item.id === null && !item.metadata)
+          )
+            continue;
+          checked++;
+          const path = `${PHOTO_MASTER_PREFIX}${item.name}`;
+          if (isCleanupCandidate({ ...item, name: path }, privatePaths))
+            orphans.push(`${VEHICLE_DOCS_BUCKET}/${path}`);
+        }
+        if (data.length < limit) break;
+      }
 
-    const masterNote = await cleanupPrivateMasters(referenced);
-
-    if (orphans.length === 0) {
-      return {
-        ok: true,
-        message: `Nenhuma foto órfã. ${checked} arquivo(s) conferido(s).${masterNote}`,
-        removed: 0,
-        checked,
-      };
-    }
-
-    let removed = 0;
-    for (let index = 0; index < orphans.length; index += 50) {
-      const batch = orphans.slice(index, index + 50);
-      const { error } = await supabase.storage
-        .from(VEHICLE_PHOTOS_BUCKET)
-        .remove(batch);
-      if (error) {
-        console.error("[storage] limpeza parcial:", error);
+      if (!confirmed)
         return {
-          ok: false,
-          message: `Removidas ${removed} de ${orphans.length}. Erro: ${error.message}`,
-          removed,
+          ok: true,
+          message: `${orphans.length} arquivo(s) antigos sem vínculo. Fotos enviadas nas últimas 48 horas ficam protegidas.`,
+          checked,
+          candidates: orphans,
+        };
+      // Aceita apenas itens da prévia que continuam candidatos após reler todas as referências.
+      const approved = new Set(confirmed.slice(0, 5000));
+      const eligible = orphans.filter((path) => approved.has(path));
+
+      if (eligible.length === 0) {
+        return {
+          ok: true,
+          message: `Nenhum arquivo aprovado continua sem vínculo. ${checked} arquivo(s) conferido(s).`,
+          removed: 0,
           checked,
         };
       }
-      removed += batch.length;
-    }
 
-    revalidatePath("/admin/veiculos");
-    revalidatePath("/admin/site");
+      let removed = 0;
+      for (const bucket of [VEHICLE_PHOTOS_BUCKET, VEHICLE_DOCS_BUCKET]) {
+        const paths = eligible
+          .filter((path) => path.startsWith(`${bucket}/`))
+          .map((path) => path.slice(bucket.length + 1));
+        for (let index = 0; index < paths.length; index += 50) {
+          const batch = paths.slice(index, index + 50);
+          const { error } = await supabase.storage.from(bucket).remove(batch);
+          if (error)
+            return {
+              ok: false,
+              message: `Limpeza interrompida: ${removed} arquivo(s) removido(s). Tente uma nova prévia.`,
+              removed,
+              checked,
+            };
+          removed += batch.length;
+        }
+      }
 
-    return {
-      ok: true,
-      message: `Removidas ${removed} foto(s) órfã(s) de ${checked} arquivo(s).${masterNote}`,
-      removed,
-      checked,
-    };
+      revalidatePath("/admin/veiculos");
+      revalidatePath("/admin/site");
+
+      return {
+        ok: true,
+        message: `Removidos ${removed} arquivo(s) antigos sem vínculo de ${checked} conferidos.`,
+        removed,
+        checked,
+      };
+    });
   } catch (error) {
     console.error("[storage] cleanup:", error);
     return {

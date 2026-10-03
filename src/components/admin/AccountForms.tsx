@@ -1,5 +1,7 @@
 "use client";
 
+import { adminMutation } from "@/lib/admin-mutation";
+import { useUnsavedChangesWarning } from "@/components/admin/useUnsavedChangesWarning";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -19,18 +21,26 @@ export function AccountForms({
   usingSeedPassword: boolean;
 }) {
   const router = useRouter();
+  const [profileDirty, setProfileDirty] = useState(false);
+  const [passwordDirty, setPasswordDirty] = useState(false);
+  useUnsavedChangesWarning(profileDirty || passwordDirty);
   const [isPending, startTransition] = useTransition();
-  const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
-  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
+  const [profileErrors, setProfileErrors] = useState<Record<string, string>>(
+    {},
+  );
+  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>(
+    {},
+  );
 
   function submitProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const result = await updateAdminProfile(formData);
+      const result = await adminMutation(() => updateAdminProfile(formData));
       setProfileErrors(result.fieldErrors ?? {});
       if (result.ok) {
+        setProfileDirty(false);
         toast.success(result.message);
         router.refresh();
       } else {
@@ -45,9 +55,10 @@ export function AccountForms({
     const formData = new FormData(form);
 
     startTransition(async () => {
-      const result = await changeAdminPassword(formData);
+      const result = await adminMutation(() => changeAdminPassword(formData));
       setPasswordErrors(result.fieldErrors ?? {});
       if (result.ok) {
+        setPasswordDirty(false);
         toast.success(result.message);
         form.reset();
         router.refresh();
@@ -60,34 +71,45 @@ export function AccountForms({
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card title="Meus dados">
-        <form onSubmit={submitProfile} className="space-y-4" noValidate>
-          <Field label="Nome" required error={profileErrors.name}>
-            <input
-              name="name"
-              defaultValue={name}
-              className={inputClass}
-              placeholder="Seu nome"
-            />
-          </Field>
-          <Field
-            label="E-mail de acesso"
-            required
-            error={profileErrors.email}
-            hint="É com este e-mail que você entra no painel."
-          >
-            <input
-              name="email"
-              type="email"
-              defaultValue={email}
-              className={inputClass}
-              placeholder="voce@email.com"
-            />
-          </Field>
-          <div className="border-t border-white/10 pt-4">
-            <button type="submit" disabled={isPending} className={btn.primary}>
-              {isPending ? "Salvando..." : "Salvar dados"}
-            </button>
-          </div>
+        <form
+          onSubmit={submitProfile}
+          onChange={() => setProfileDirty(true)}
+          className="space-y-4"
+          noValidate
+        >
+          <fieldset disabled={isPending} className="min-w-0 space-y-4">
+            <Field label="Nome" required error={profileErrors.name}>
+              <input
+                name="name"
+                defaultValue={name}
+                className={inputClass}
+                placeholder="Seu nome"
+              />
+            </Field>
+            <Field
+              label="E-mail de acesso"
+              required
+              error={profileErrors.email}
+              hint="É com este e-mail que você entra no painel."
+            >
+              <input
+                name="email"
+                type="email"
+                defaultValue={email}
+                className={inputClass}
+                placeholder="voce@email.com"
+              />
+            </Field>
+            <div className="border-t border-white/10 pt-4">
+              <button
+                type="submit"
+                disabled={isPending}
+                className={btn.primary}
+              >
+                {isPending ? "Salvando..." : "Salvar dados"}
+              </button>
+            </div>
+          </fieldset>
         </form>
       </Card>
 
@@ -99,48 +121,63 @@ export function AccountForms({
           </p>
         ) : null}
 
-        <form onSubmit={submitPassword} className="space-y-4" noValidate>
-          <Field label="Senha atual" required error={passwordErrors.currentPassword}>
-            <input
-              name="currentPassword"
-              type="password"
-              autoComplete="current-password"
-              className={inputClass}
-              placeholder="••••••••"
-            />
-          </Field>
-          <Field
-            label="Nova senha"
-            required
-            error={passwordErrors.newPassword}
-            hint="Mínimo de 8 caracteres."
-          >
-            <input
-              name="newPassword"
-              type="password"
-              autoComplete="new-password"
-              className={inputClass}
-              placeholder="••••••••"
-            />
-          </Field>
-          <Field
-            label="Confirmar nova senha"
-            required
-            error={passwordErrors.confirmPassword}
-          >
-            <input
-              name="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              className={inputClass}
-              placeholder="••••••••"
-            />
-          </Field>
-          <div className="border-t border-white/10 pt-4">
-            <button type="submit" disabled={isPending} className={btn.primary}>
-              {isPending ? "Alterando..." : "Alterar senha"}
-            </button>
-          </div>
+        <form
+          onSubmit={submitPassword}
+          onChange={() => setPasswordDirty(true)}
+          className="space-y-4"
+          noValidate
+        >
+          <fieldset disabled={isPending} className="min-w-0 space-y-4">
+            <Field
+              label="Senha atual"
+              required
+              error={passwordErrors.currentPassword}
+            >
+              <input
+                name="currentPassword"
+                type="password"
+                autoComplete="current-password"
+                className={inputClass}
+                placeholder="••••••••"
+              />
+            </Field>
+            <Field
+              label="Nova senha"
+              required
+              error={passwordErrors.newPassword}
+              hint="Mínimo de 8 caracteres."
+            >
+              <input
+                name="newPassword"
+                type="password"
+                autoComplete="new-password"
+                className={inputClass}
+                placeholder="••••••••"
+              />
+            </Field>
+            <Field
+              label="Confirmar nova senha"
+              required
+              error={passwordErrors.confirmPassword}
+            >
+              <input
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                className={inputClass}
+                placeholder="••••••••"
+              />
+            </Field>
+            <div className="border-t border-white/10 pt-4">
+              <button
+                type="submit"
+                disabled={isPending}
+                className={btn.primary}
+              >
+                {isPending ? "Alterando..." : "Alterar senha"}
+              </button>
+            </div>
+          </fieldset>
         </form>
       </Card>
     </div>

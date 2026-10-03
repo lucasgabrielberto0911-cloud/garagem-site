@@ -1,5 +1,9 @@
 "use client";
 
+import { LeadFollowUp } from "@/components/admin/LeadFollowUp";
+import { adminMutation } from "@/lib/admin-mutation";
+import { exportAdminCsv } from "@/lib/admin-export-client";
+import { localDateInput } from "@/lib/admin-date";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -49,48 +53,8 @@ function formatDateTime(value: Date) {
   });
 }
 
-function exportCsv(leads: LeadVenda[]) {
-  const header = [
-    "Nome",
-    "Telefone",
-    "Veículo",
-    "Placa",
-    "KM",
-    "Status",
-    "Origem",
-    "Interesse",
-    "Fotos",
-    "Observações",
-    "Data",
-  ];
-  const rows = leads.map((lead) => [
-    lead.name,
-    formatPhoneBR(lead.phone),
-    lead.vehicleInfo,
-    lead.plate ? formatPlateDisplay(lead.plate) : "",
-    lead.km !== null ? String(lead.km) : "",
-    STATUS_LABEL[lead.status as LeadStatus] ?? lead.status,
-    lead.source ?? "",
-    lead.interestVehicleId ?? "",
-    String(lead.photoUrls?.length ?? 0),
-    (lead.notes ?? "").replace(/\s+/g, " "),
-    formatDateTime(lead.createdAt),
-  ]);
-
-  const csv = [header, ...rows]
-    .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(";"))
-    .join("\n");
-
-  const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `leads-garagem-${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 export function LeadsTable({
+  leadId,
   leads,
   status,
   query = "",
@@ -100,6 +64,7 @@ export function LeadsTable({
   pageSize = 40,
   total,
 }: {
+  leadId?: string;
   leads: LeadVenda[];
   status: string;
   query?: string;
@@ -110,6 +75,7 @@ export function LeadsTable({
   total?: number;
 }) {
   const router = useRouter();
+  const [exporting, setExporting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LeadVenda | null>(null);
@@ -136,14 +102,16 @@ export function LeadsTable({
     if (nextPage > 1) params.set("page", String(nextPage));
     startTransition(() => {
       router.push(
-        params.toString() ? `/admin/leads?${params.toString()}` : "/admin/leads",
+        params.toString()
+          ? `/admin/leads?${params.toString()}`
+          : "/admin/leads",
       );
     });
   }
 
   async function changeStatus(lead: LeadVenda, value: string) {
     setSavingId(lead.id);
-    const result = await updateLeadStatus(lead.id, value);
+    const result = await adminMutation(() => updateLeadStatus(lead.id, value));
     setSavingId(null);
     if (result.ok) {
       toast.success(result.message);
@@ -155,7 +123,7 @@ export function LeadsTable({
 
   async function convert(lead: LeadVenda) {
     setSavingId(lead.id);
-    const result = await convertLeadToCustomer(lead.id);
+    const result = await adminMutation(() => convertLeadToCustomer(lead.id));
     setSavingId(null);
     if (result.ok) {
       toast.success(result.message);
@@ -177,7 +145,7 @@ export function LeadsTable({
   async function confirmDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    const result = await deleteLead(deleteTarget.id);
+    const result = await adminMutation(() => deleteLead(deleteTarget.id));
     setDeleting(false);
     setDeleteTarget(null);
     if (result.ok) {
@@ -190,6 +158,18 @@ export function LeadsTable({
 
   return (
     <div className="space-y-4">
+      {leadId ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-brand/30 p-3 text-sm">
+          <span>Atendimento selecionado pela visão geral</span>
+          <button
+            type="button"
+            className={btn.outline}
+            onClick={() => goTo({ status: "", q: "", origem: "", page: 1 })}
+          >
+            Ver todos os contatos
+          </button>
+        </div>
+      ) : null}
       <div className="border border-white/10 bg-ink/50 p-3 sm:p-4">
         <div className="flex flex-wrap gap-2">
           <FilterChip
@@ -246,12 +226,35 @@ export function LeadsTable({
           </span>
           <button
             type="button"
-            onClick={() => exportCsv(leads)}
-            disabled={leads.length === 0}
+            onClick={async () => {
+              setExporting(true);
+              try {
+                const params = new URLSearchParams({
+                  type: "leads",
+                  status,
+                  q: query,
+                  origem,
+                });
+                if (leadId) params.set("lead", leadId);
+                await exportAdminCsv(
+                  `/api/admin/export?${params}`,
+                  `leads-garagem-${localDateInput()}.csv`,
+                );
+              } catch (error) {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "Falha na exportação.",
+                );
+              } finally {
+                setExporting(false);
+              }
+            }}
+            disabled={totalCount === 0 || exporting}
             className={`${btn.outline} w-full sm:ml-auto sm:w-auto`}
           >
             <IconDownload className="h-4 w-4" />
-            Exportar CSV
+            {exporting ? "Preparando CSV…" : "Exportar todo o filtro"}
           </button>
         </div>
       </div>
@@ -280,6 +283,7 @@ export function LeadsTable({
         <ul className="space-y-3">
           {leads.map((lead) => (
             <li
+              id={`lead-${lead.id}`}
               key={lead.id}
               className="border border-white/10 bg-ink/50 p-4 sm:p-5"
             >
@@ -323,7 +327,9 @@ export function LeadsTable({
                   <>
                     <p className="mt-1 text-sm text-muted">
                       {lead.vehicleInfo}
-                      {lead.km !== null ? ` · ${formatNumberBR(lead.km)} km` : ""}
+                      {lead.km !== null
+                        ? ` · ${formatNumberBR(lead.km)} km`
+                        : ""}
                     </p>
                     <p className="mt-1 text-sm text-cream">
                       Placa:{" "}
@@ -470,6 +476,12 @@ export function LeadsTable({
                   </ul>
                 </div>
               ) : null}
+
+              <LeadFollowUp
+                id={lead.id}
+                nextAction={lead.nextAction}
+                nextActionAt={lead.nextActionAt}
+              />
 
               {lead.notes ? (
                 <p className="mt-3 whitespace-pre-line border-t border-white/10 pt-3 text-sm leading-relaxed text-muted">

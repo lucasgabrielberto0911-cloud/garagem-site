@@ -1,14 +1,12 @@
 "use client";
 
+import { photoQueueStorage } from "@/lib/admin-photo-queue-store";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { VehicleImage } from "@/components/VehicleImage";
-import {
-  ActionSheet,
-  ActionSheetButton,
-} from "@/components/admin/ActionSheet";
+import { ActionSheet, ActionSheetButton } from "@/components/admin/ActionSheet";
 import {
   IconArrowDown,
   IconArrowUp,
@@ -23,10 +21,7 @@ import {
 import { btn } from "@/components/admin/ui";
 import type { NormalizedRect } from "@/lib/blur-rects";
 import { downloadAttachment } from "@/lib/download-attachment";
-import {
-  adminStorageJpgPath,
-  archivePhotoFilename,
-} from "@/lib/photo-archive";
+import { adminStorageJpgPath, archivePhotoFilename } from "@/lib/photo-archive";
 import {
   photoUploadProgressLabel,
   summarizePhotoUploads,
@@ -42,7 +37,7 @@ const PlateBlurEditor = dynamic(
   { ssr: false },
 );
 
-type LocalPhotoJob = PhotoUploadJobState & { file: File };
+type LocalPhotoJob = PhotoUploadJobState & { file: File; photo?: PhotoItem };
 
 export type PhotoItem = {
   id: string;
@@ -104,11 +99,13 @@ export function photosFromUrls(urls: string[]): PhotoItem[] {
  */
 export function VehiclePhotoManager({
   photos,
+  queueKey,
   onChange,
   onUploadingChange,
   listing,
 }: {
   photos: PhotoItem[];
+  queueKey: string;
   onChange: (
     next: PhotoItem[] | ((current: PhotoItem[]) => PhotoItem[]),
   ) => void;
@@ -116,6 +113,79 @@ export function VehiclePhotoManager({
   listing?: { brand: string; model: string; year: number };
 }) {
   const [jobs, setJobs] = useState<LocalPhotoJob[]>([]);
+  const waiting = useRef<LocalPhotoJob[]>([]);
+  const running = useRef(false);
+  const mounted = useRef(true);
+  const [queueReady, setQueueReady] = useState(false);
+  const storageWarning = useRef(false);
+  const changeRef = useRef(onChange);
+  changeRef.current = onChange;
+  useEffect(() => {
+    mounted.current = true;
+    photoQueueStorage(queueKey)
+      .then((saved) => {
+        if (!mounted.current) return;
+        if (saved?.jobs?.length) {
+          const recovered = saved.jobs as LocalPhotoJob[];
+          setJobs(
+            recovered.map((job) =>
+              job.status === "done"
+                ? job
+                : {
+                    ...job,
+                    status: "error",
+                    error:
+                      "Envio interrompido. Toque em Reenviar para retomar.",
+                  },
+            ),
+          );
+          const successes = recovered.flatMap((job) =>
+            job.photo ? [job.photo] : [],
+          );
+          if (successes.length)
+            changeRef.current((current) => {
+              const urls = new Set(current.map((p) => p.url));
+              return [...current, ...successes.filter((p) => !urls.has(p.url))];
+            });
+        }
+        setQueueReady(true);
+      })
+      .catch(() => {
+        if (mounted.current) {
+          setQueueReady(true);
+          toast.error(
+            "Não foi possível guardar a fila neste navegador. Mantenha a tela aberta durante os envios.",
+          );
+        }
+      });
+    return () => {
+      mounted.current = false;
+    };
+  }, [queueKey]);
+  useEffect(() => {
+    if (!queueReady) return;
+    // Não conserva os originais de envios concluídos nem ressuscita fotos removidas.
+    const currentPhotos = new Map(photos.map((photo) => [photo.id, photo]));
+    const recoverable = jobs
+      .filter((job) => job.status !== "done" || currentPhotos.has(job.id))
+      .map((job) =>
+        job.status === "done"
+          ? {
+              ...job,
+              file: new File([], job.name),
+              photo: currentPhotos.get(job.id),
+            }
+          : job,
+      );
+    void photoQueueStorage(queueKey, recoverable).catch(() => {
+      if (!storageWarning.current) {
+        storageWarning.current = true;
+        toast.error(
+          "Não foi possível guardar a fila neste aparelho. Guarde o rascunho e mantenha a tela aberta durante os envios.",
+        );
+      }
+    });
+  }, [jobs, photos, queueReady, queueKey]);
   const [blurring, setBlurring] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [blurredIds, setBlurredIds] = useState<Set<string>>(() => new Set());
@@ -142,61 +212,68 @@ export function VehiclePhotoManager({
   }
 
   async function runJobs(batch: LocalPhotoJob[]) {
-    if (batch.length === 0) return;
-
-    const uploaded: PhotoItem[] = [];
+    waiting.current.push(...batch);
+    if (running.current) return;
+    running.current = true;
     try {
       const { uploadImageDirect } = await import("@/lib/upload-image-direct");
-
-      for (const job of batch) {
+      // Uma imagem por vez limita memória de decodificação em aparelhos modestos.
+      while (waiting.current.length && mounted.current) {
+        const job = waiting.current.shift()!;
         patchJob(job.id, { status: "uploading", error: undefined });
         try {
-          const photo = await uploadImageDirect(job.file, { master: true });
-          uploaded.push({
-            id: createPhotoId(),
-            url: photo.url,
-            thumbnailUrl: photo.thumbnailUrl,
+          const result = await uploadImageDirect(job.file, {
+            master: true,
+            id: job.id,
           });
-          patchJob(job.id, { status: "done" });
+          const photo = { id: job.id, ...result };
+          changeRef.current((current) =>
+            current.some((p) => p.url === photo.url)
+              ? current
+              : [...current, photo],
+          );
+          patchJob(job.id, { status: "done", photo });
         } catch (error) {
           const message =
             error instanceof Error
               ? error.message
-              : `Falha no upload de ${job.name}.`;
+              : `Falha ao enviar ${job.name}.`;
           patchJob(job.id, { status: "error", error: message });
           toast.error(message);
         }
       }
-
-      if (uploaded.length > 0) {
-        onChange((current) => [...current, ...uploaded]);
-        toast.success(`${uploaded.length} foto(s) enviada(s).`);
-      } else if (batch.length > 0) {
-        toast.error("Nenhuma foto foi enviada.");
-      }
     } catch (error) {
-      console.error(error);
-      toast.error(
+      const message =
         error instanceof Error
           ? error.message
-          : "Erro inesperado no upload.",
-      );
+          : "Não foi possível iniciar o envio.";
       setJobs((current) =>
         current.map((job) =>
-          batch.some((item) => item.id === job.id) &&
-          job.status !== "done"
-            ? {
-                ...job,
-                status: "error" as const,
-                error:
-                  error instanceof Error
-                    ? error.message
-                    : "Erro inesperado no upload.",
-              }
+          job.status === "queued"
+            ? { ...job, status: "error", error: message }
             : job,
         ),
       );
+      waiting.current = [];
+    } finally {
+      running.current = false;
     }
+  }
+
+  function cancelWaiting() {
+    const ids = new Set(waiting.current.map((job) => job.id));
+    waiting.current = [];
+    setJobs((current) =>
+      current.map((job) =>
+        ids.has(job.id)
+          ? {
+              ...job,
+              status: "error",
+              error: "Envio pausado. Reenvie quando quiser.",
+            }
+          : job,
+      ),
+    );
   }
 
   async function downloadPhoto(photo: PhotoItem, index: number) {
@@ -204,16 +281,24 @@ export function VehiclePhotoManager({
     const filename = archivePhotoFilename({
       brand: listing?.brand ?? "",
       model: listing?.model ?? "",
-      year: listing?.year && listing.year > 1900 ? listing.year : new Date().getFullYear(),
+      year:
+        listing?.year && listing.year > 1900
+          ? listing.year
+          : new Date().getFullYear(),
       index: index + 1,
       url: photo.url,
     });
     setDownloadId(photo.id);
     try {
-      await downloadAttachment(adminStorageJpgPath(photo.url, filename), filename);
+      await downloadAttachment(
+        adminStorageJpgPath(photo.url, filename),
+        filename,
+      );
       toast.success("JPG em alta baixado.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha no download.");
+      toast.error(
+        error instanceof Error ? error.message : "Falha no download.",
+      );
     } finally {
       setDownloadId(null);
     }
@@ -229,12 +314,12 @@ export function VehiclePhotoManager({
     }
 
     const nextJobs: LocalPhotoJob[] = list.map((file) => ({
-      id: createPhotoId(),
+      id: `${Date.now()}-${crypto.randomUUID()}`,
       name: file.name,
       status: "queued",
       file,
     }));
-    setJobs(nextJobs);
+    setJobs((current) => [...current, ...nextJobs]);
     await runJobs(nextJobs);
   }
 
@@ -247,7 +332,9 @@ export function VehiclePhotoManager({
           : job,
       ),
     );
-    await runJobs(failed.map((job) => ({ ...job, status: "queued", error: undefined })));
+    await runJobs(
+      failed.map((job) => ({ ...job, status: "queued", error: undefined })),
+    );
   }
 
   function reorder(from: number, to: number) {
@@ -386,8 +473,8 @@ export function VehiclePhotoManager({
             )}
           </p>
           <p className="mt-1 text-xs text-muted">
-            JPG, PNG, WEBP ou GIF · HEIC: exporte como JPG no iPhone. A placa
-            se borra depois, no retângulo que você marcar.
+            JPG, PNG, WEBP, GIF ou HEIC de até 3 MB. A foto aparece assim que o
+            envio termina. A placa é borrada somente na área que você marcar.
           </p>
           <p className="mt-2 hidden text-[11px] text-muted/80 sm:block">
             Espere o envio ou o borrão terminar antes de salvar o anúncio.
@@ -397,7 +484,7 @@ export function VehiclePhotoManager({
             accept={ACCEPT}
             multiple
             className="hidden"
-            disabled={inFlight}
+            disabled={!queueReady}
             onChange={(event) => {
               void uploadFiles(event.target.files);
               event.target.value = "";
@@ -424,6 +511,11 @@ export function VehiclePhotoManager({
               </button>
             ) : null}
           </div>
+          {summary.queued > 0 ? (
+            <button type="button" onClick={cancelWaiting} className={btn.ghost}>
+              Pausar fotos na fila
+            </button>
+          ) : null}
           <div className="h-1.5 overflow-hidden bg-white/10">
             <div
               className="h-full bg-brand transition-[width]"
@@ -439,7 +531,7 @@ export function VehiclePhotoManager({
                   key={job.id}
                   className="flex items-center justify-between gap-2"
                 >
-                  <span className="min-w-0 truncate text-brand">
+                  <span className="min-w-0 text-brand leading-relaxed">
                     {job.name}
                     {job.error ? ` — ${job.error}` : ""}
                   </span>
@@ -481,9 +573,15 @@ export function VehiclePhotoManager({
           <details className="mt-4 text-xs text-muted">
             <summary className="cursor-pointer py-1 touch-manipulation">
               A 1ª foto é a capa.{" "}
-              <span className="lg:hidden">Toque em ⋯ para mover, baixar ou remover.</span>
-              <span className="hidden lg:inline">Arraste para reorganizar.</span>{" "}
-              <span className="text-cream underline underline-offset-2">Como funciona</span>
+              <span className="lg:hidden">
+                Toque em ⋯ para mover, baixar ou remover.
+              </span>
+              <span className="hidden lg:inline">
+                Arraste para reorganizar.
+              </span>{" "}
+              <span className="text-cream underline underline-offset-2">
+                Como funciona
+              </span>
             </summary>
             <p className="mt-2 leading-relaxed">
               Em <strong>Borrar placa</strong>, marque o retângulo e salve o
@@ -496,8 +594,8 @@ export function VehiclePhotoManager({
           </details>
           {blurredIds.size > 0 && !blurring ? (
             <p className="mt-3 border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-sm text-cream">
-              Região borracha. <strong>Salve o anúncio</strong> para publicar
-              a foto nova no site.
+              Região borracha. <strong>Salve o anúncio</strong> para publicar a
+              foto nova no site.
             </p>
           ) : null}
           <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -720,7 +818,11 @@ export function VehiclePhotoManager({
           <>
             <ActionSheetButton
               icon={<IconEye className="h-4 w-4" />}
-              label={blurredIds.has(actionsPhoto.id) ? "Borrar de novo" : "Borrar placa"}
+              label={
+                blurredIds.has(actionsPhoto.id)
+                  ? "Borrar de novo"
+                  : "Borrar placa"
+              }
               hint="Marque o retângulo sobre a placa"
               disabled={blurring || inFlight}
               onClick={() => {
@@ -730,7 +832,11 @@ export function VehiclePhotoManager({
             />
             <ActionSheetButton
               icon={<IconDownload className="h-4 w-4" />}
-              label={downloadId === actionsPhoto.id ? "Baixando…" : "Baixar JPG em alta"}
+              label={
+                downloadId === actionsPhoto.id
+                  ? "Baixando…"
+                  : "Baixar JPG em alta"
+              }
               hint="Só no painel · o site segue em WebP"
               disabled={downloadId !== null}
               onClick={() => void downloadPhoto(actionsPhoto, actionsIndex)}
