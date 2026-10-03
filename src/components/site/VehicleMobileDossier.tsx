@@ -76,11 +76,11 @@ export function VehicleMobileSummary({
 
   return (
     <div className="ficha-mobile-sheet px-4 pb-3 pt-3 sm:px-6">
-      <h1 className="line-clamp-2 font-display text-[1.25rem] font-bold leading-[1.15] tracking-tight text-cream">
+      <h1 className="break-normal whitespace-normal font-display text-[1.25rem] font-bold leading-snug tracking-tight text-cream">
         {title}
       </h1>
       {version ? (
-        <p className="mt-0.5 line-clamp-1 text-[13px] leading-snug text-muted">{version}</p>
+        <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-muted">{version}</p>
       ) : null}
       <p className="mt-1.5 font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand">
         {sold ? (
