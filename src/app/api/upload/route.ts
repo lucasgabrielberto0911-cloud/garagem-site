@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { cardObjectPath, encodeCardImage, encodeGalleryImage } from "@/lib/image-variants";
+import {
+  cardObjectPath,
+  encodeCardImage,
+  encodeGalleryImage,
+} from "@/lib/image-variants";
 import { createPhotoMasterId, isPhotoMasterId } from "@/lib/photo-master";
 import { storeFallbackMaster } from "@/lib/photo-master-store";
 import {
@@ -14,10 +18,16 @@ export const maxDuration = 60;
 
 const MAX_SIZE = 15 * 1024 * 1024;
 
-type Detected = "image/jpeg" | "image/png" | "image/webp" | "image/gif" | "image/heic";
+type Detected =
+  "image/jpeg" | "image/png" | "image/webp" | "image/gif" | "image/heic";
 
 function detectMime(buffer: Buffer): Detected | null {
-  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+  if (
+    buffer.length >= 3 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff
+  ) {
     return "image/jpeg";
   }
   if (
@@ -50,7 +60,9 @@ function isHeicBuffer(buffer: Buffer): boolean {
   const boxSize = buffer.readUInt32BE(0);
   const end = Math.min(
     buffer.length,
-    boxSize >= 8 && boxSize <= buffer.length ? boxSize : Math.min(buffer.length, 64),
+    boxSize >= 8 && boxSize <= buffer.length
+      ? boxSize
+      : Math.min(buffer.length, 64),
   );
   const brands = buffer.toString("ascii", 8, end).toLowerCase();
   return /heic|heix|hevc|hevx|heim|heis|mif1|msf1/.test(brands);
@@ -82,8 +94,10 @@ async function uploadPublicObject(
       upsert: false,
       cacheControl: "31536000",
     });
-  if (error) throw error;
-  const { data } = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(path);
+  if (error && !/already exists|duplicate/i.test(error.message)) throw error;
+  const { data } = supabase.storage
+    .from(VEHICLE_PHOTOS_BUCKET)
+    .getPublicUrl(path);
   return data.publicUrl;
 }
 
@@ -117,7 +131,9 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const files = formData
       .getAll("files")
-      .filter((value): value is File => value instanceof File && value.size > 0);
+      .filter(
+        (value): value is File => value instanceof File && value.size > 0,
+      );
 
     const single = formData.get("file");
     if (single instanceof File && single.size > 0) {
@@ -196,7 +212,10 @@ export async function POST(request: Request) {
         );
       }
 
-      const id = requestedMasterId ?? createPhotoMasterId();
+      const uploadId = String(formData.get("uploadId") || "");
+      const id =
+        requestedMasterId ??
+        (isPhotoMasterId(uploadId) ? uploadId : createPhotoMasterId());
       const galleryPath = `${id}.${gallery.extension}`;
       const cardPath = cardObjectPath(galleryPath);
 
@@ -233,12 +252,18 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Upload route error:", error);
     const message =
-      error instanceof Error && /Body exceeded|Entity Too Large|413/i.test(error.message)
+      error instanceof Error &&
+      /Body exceeded|Entity Too Large|413/i.test(error.message)
         ? "Arquivo grande demais para o servidor. O admin agora envia direto ao Storage — atualize a página e tente de novo com JPG."
         : "Erro ao processar upload.";
     return NextResponse.json(
       { error: message },
-      { status: error instanceof Error && /413|Too Large/i.test(error.message) ? 413 : 500 },
+      {
+        status:
+          error instanceof Error && /413|Too Large/i.test(error.message)
+            ? 413
+            : 500,
+      },
     );
   }
 }

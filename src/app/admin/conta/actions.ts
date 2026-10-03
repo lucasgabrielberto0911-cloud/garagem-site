@@ -84,9 +84,11 @@ export async function changeAdminPassword(
   const fieldErrors: Record<string, string> = {};
   if (!current) fieldErrors.currentPassword = "Informe a senha atual.";
   if (next.length < 8) {
-    fieldErrors.newPassword = "A nova senha precisa de pelo menos 8 caracteres.";
+    fieldErrors.newPassword =
+      "A nova senha precisa de pelo menos 8 caracteres.";
   }
-  if (next !== confirm) fieldErrors.confirmPassword = "As senhas não coincidem.";
+  if (next !== confirm)
+    fieldErrors.confirmPassword = "As senhas não coincidem.";
 
   if (Object.keys(fieldErrors).length > 0) {
     return { ok: false, message: "Corrija os campos destacados.", fieldErrors };
@@ -111,6 +113,8 @@ export async function changeAdminPassword(
     data: { passwordHash: await bcrypt.hash(next, 10) },
   });
 
+  const token = await createSessionToken(admin.id, admin.email);
+  (await cookies()).set(SESSION_COOKIE, token, sessionCookieOptions());
   revalidateTag(ADMIN_SEED_PASSWORD_TAG, "max");
   revalidatePath("/admin");
   expireAdminData();

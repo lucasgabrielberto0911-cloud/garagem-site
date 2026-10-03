@@ -1,9 +1,11 @@
 "use client";
 
+import { handleFocusTrap } from "@/lib/focus-trap";
+import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   IconCash,
   IconDashboard,
@@ -81,34 +83,54 @@ const DRAWER_ONLY = [...NAV.slice(4).map((item) => item.href), "/admin/conta"];
 
 export function AdminShell({
   children,
-  newLeads = 0,
+  newLeads: initialLeads = 0,
 }: {
   children: React.ReactNode;
   newLeads?: number;
 }) {
+  const [newLeads, setNewLeads] = useState(initialLeads);
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    if (pathname !== "/admin/login")
+      fetch("/api/admin/badge", { signal: controller.signal })
+        .then(async (response) => {
+          if (response.ok) {
+            const data = await response.json();
+            if (typeof data.count === "number") setNewLeads(data.count);
+          }
+        })
+        .catch(() => {});
+    return () => controller.abort();
+  }, [pathname]);
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [menuOpen]);
-
-  useEffect(() => {
     if (!menuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+    const drawer = drawerRef.current;
+    drawer
+      ?.querySelector<HTMLElement>("button[aria-label='Fechar menu']")
+      ?.focus();
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") setMenuOpen(false);
+      if (drawer) handleFocusTrap(event, drawer);
     }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+      previousFocus?.focus();
+    };
   }, [menuOpen]);
 
   if (pathname === "/admin/login") {
@@ -118,9 +140,12 @@ export function AdminShell({
   async function handleLogout() {
     setLoggingOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("logout");
       router.push("/admin/login");
       router.refresh();
+    } catch {
+      toast.error("Não foi possível sair. Tente novamente.");
     } finally {
       setLoggingOut(false);
     }
@@ -128,7 +153,10 @@ export function AdminShell({
 
   const sidebar = (
     <>
-      <nav className="flex flex-1 flex-col gap-1 p-3" aria-label="Menu do painel">
+      <nav
+        className="flex flex-1 flex-col gap-1 p-3"
+        aria-label="Menu do painel"
+      >
         {NAV.map(({ href, label, Icon, badgeKey, match }) => {
           const active = match(pathname);
           const badge = badgeKey === "leads" && newLeads > 0 ? newLeads : null;
@@ -234,7 +262,10 @@ export function AdminShell({
         aria-hidden="true"
       />
       <div className="flex items-center justify-between border-b border-white/10 bg-ink px-4 pb-1.5 pt-[max(0.375rem,env(safe-area-inset-top,0px))] lg:hidden">
-        <Link href="/admin" className="flex min-h-[44px] items-center gap-2 touch-manipulation">
+        <Link
+          href="/admin"
+          className="flex min-h-[44px] items-center gap-2 touch-manipulation"
+        >
           <Image
             src="/branding/logo-wordmark.webp"
             alt="Sua Garagem"
@@ -258,6 +289,7 @@ export function AdminShell({
 
       {menuOpen ? (
         <div
+          ref={drawerRef}
           id="admin-mobile-drawer"
           className="fixed inset-0 z-50 lg:hidden"
           role="dialog"
@@ -271,7 +303,10 @@ export function AdminShell({
           />
           <aside className="relative flex h-dvh w-[min(78%,20rem)] flex-col overflow-y-auto overscroll-contain border-r border-white/10 bg-ink pb-safe animate-slide-in-left">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
-              <Link href="/admin" className="flex min-h-[44px] items-center gap-2.5">
+              <Link
+                href="/admin"
+                className="flex min-h-[44px] items-center gap-2.5"
+              >
                 <Image
                   src="/branding/logo-wordmark.webp"
                   alt="Sua Garagem"
@@ -289,7 +324,10 @@ export function AdminShell({
                 <IconClose className="h-5 w-5" />
               </button>
             </div>
-            <div className="h-0.5 w-full bg-brand-gradient" aria-hidden="true" />
+            <div
+              className="h-0.5 w-full bg-brand-gradient"
+              aria-hidden="true"
+            />
             {sidebar}
           </aside>
         </div>
@@ -312,7 +350,8 @@ export function AdminShell({
         <ul className="mx-auto flex max-w-lg items-stretch pb-safe">
           {BOTTOM_NAV.map(({ href, label, Icon, badgeKey, match }) => {
             const active = match(pathname);
-            const badge = badgeKey === "leads" && newLeads > 0 ? newLeads : null;
+            const badge =
+              badgeKey === "leads" && newLeads > 0 ? newLeads : null;
             return (
               <li key={href} className="flex flex-1">
                 <Link
@@ -347,13 +386,20 @@ export function AdminShell({
               aria-controls="admin-mobile-drawer"
               onClick={() => setMenuOpen((open) => !open)}
               className={`relative flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 py-2.5 transition touch-manipulation ${
-                menuOpen || DRAWER_ONLY.some((href) => pathname.startsWith(href))
+                menuOpen ||
+                DRAWER_ONLY.some((href) => pathname.startsWith(href))
                   ? "text-cream"
                   : "text-muted active:text-cream"
               }`}
             >
-              {menuOpen ? <IconClose className="h-5 w-5" /> : <IconMenu className="h-5 w-5" />}
-              <span className="text-[10px] font-medium uppercase tracking-wide">Mais</span>
+              {menuOpen ? (
+                <IconClose className="h-5 w-5" />
+              ) : (
+                <IconMenu className="h-5 w-5" />
+              )}
+              <span className="text-[10px] font-medium uppercase tracking-wide">
+                Mais
+              </span>
             </button>
           </li>
         </ul>

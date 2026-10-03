@@ -1,3 +1,4 @@
+import { businessPeriodStart, localDateInput } from "@/lib/admin-date";
 import { unstable_cache } from "next/cache";
 import bcrypt from "bcryptjs";
 import {
@@ -14,7 +15,10 @@ import {
   listPlaceholderLabels,
 } from "@/lib/site-settings";
 import { getGoogleReviews } from "@/lib/site-content";
-import { DEFAULT_GOOGLE_REVIEWS, googleReviewsReady } from "@/lib/google-reviews";
+import {
+  DEFAULT_GOOGLE_REVIEWS,
+  googleReviewsReady,
+} from "@/lib/google-reviews";
 import { daysInStock, staleCutoffDate } from "@/lib/stock-quality";
 
 export { daysInStock, STALE_DAYS } from "@/lib/stock-quality";
@@ -25,7 +29,7 @@ export const getNewLeadsBadgeCount = unstable_cache(
     try {
       return await prisma.leadVenda.count({ where: { status: "novo" } });
     } catch {
-      return 0;
+      return null;
     }
   },
   ["admin-new-leads-badge"],
@@ -48,7 +52,7 @@ export const getUsingSeedPassword = unstable_cache(
       );
       return matches.some(Boolean);
     } catch {
-      return false;
+      return null;
     }
   },
   ["admin-seed-password"],
@@ -56,8 +60,7 @@ export const getUsingSeedPassword = unstable_cache(
 );
 
 function startOfMonth() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1);
+  return businessPeriodStart("month");
 }
 
 export type DashboardData = Awaited<ReturnType<typeof loadDashboardData>>;
@@ -67,6 +70,7 @@ export type DashboardData = Awaited<ReturnType<typeof loadDashboardData>>;
  * leads e os parados já saem com os campos que a tela usa.
  */
 async function loadDashboardData() {
+  const failures: string[] = [];
   const monthStart = startOfMonth();
   const staleBefore = staleCutoffDate();
 
@@ -75,6 +79,7 @@ async function loadDashboardData() {
     try {
       return await fn();
     } catch (error) {
+      failures.push(label);
       console.error(`[dashboard] ${label}:`, error);
       return fallback;
     }
@@ -89,16 +94,35 @@ async function loadDashboardData() {
     leadGroups,
     recentLeads,
     recentVehicles,
+    pendingCounts,
+    monthlySales,
+    saleGaps,
+    dueLeads,
     staleVehicles,
     withoutPhotos,
-    customers,
     publishedTestimonials,
     usingSeedPassword,
     publicSite,
     googleReviews,
   ] = await Promise.all([
-    safe("vehicle.groupBy", () => prisma.vehicle.groupBy({ by: ["status"], _count: { _all: true } }), []),
-    safe("featured", () => prisma.vehicle.count({ where: { status: "disponivel", featured: true } }), 0),
+    safe(
+      "vehicle.groupBy",
+      () =>
+        prisma.vehicle.groupBy({
+          where: { historical: false },
+          by: ["status"],
+          _count: { _all: true },
+        }),
+      [],
+    ),
+    safe(
+      "featured",
+      () =>
+        prisma.vehicle.count({
+          where: { status: "disponivel", featured: true },
+        }),
+      0,
+    ),
     safe(
       "availableByConsigned",
       () =>
@@ -112,7 +136,11 @@ async function loadDashboardData() {
     ),
     safe(
       "salesAggregate",
-      () => prisma.sale.aggregate({ _sum: { salePrice: true }, _count: { _all: true } }),
+      () =>
+        prisma.sale.aggregate({
+          _sum: { salePrice: true },
+          _count: { _all: true },
+        }),
       { _sum: { salePrice: null }, _count: { _all: 0 } },
     ),
     safe(
@@ -125,14 +153,25 @@ async function loadDashboardData() {
         }),
       { _sum: { salePrice: null }, _count: { _all: 0 } },
     ),
-    safe("lead.groupBy", () => prisma.leadVenda.groupBy({ by: ["status"], _count: { _all: true } }), []),
+    safe(
+      "lead.groupBy",
+      () =>
+        prisma.leadVenda.groupBy({ by: ["status"], _count: { _all: true } }),
+      [],
+    ),
     safe(
       "recentLeads",
       () =>
         prisma.leadVenda.findMany({
           orderBy: { createdAt: "desc" },
           take: 5,
-          select: { id: true, name: true, phone: true, vehicleInfo: true, status: true },
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            vehicleInfo: true,
+            status: true,
+          },
         }),
       [],
     ),
@@ -140,6 +179,7 @@ async function loadDashboardData() {
       "recentVehicles",
       () =>
         prisma.vehicle.findMany({
+          where: { historical: false },
           orderBy: { createdAt: "desc" },
           take: 5,
           select: {
@@ -155,6 +195,92 @@ async function loadDashboardData() {
               select: { url: true, thumbnailUrl: true },
             },
           },
+        }),
+      [],
+    ),
+    safe(
+      "pendingCounts",
+      async () => {
+        const [withoutPhotos, stale, missingSales] = await Promise.all([
+          prisma.vehicle.count({
+            where: {
+              historical: false,
+              status: { in: ["disponivel", "reservado"] },
+              photos: { none: {} },
+            },
+          }),
+          prisma.vehicle.count({
+            where: {
+              historical: false,
+              status: "disponivel",
+              createdAt: { lt: staleBefore },
+            },
+          }),
+          prisma.vehicle.count({
+            where: { historical: false, status: "vendido", sale: null },
+          }),
+        ]);
+        return { withoutPhotos, stale, missingSales };
+      },
+      null as {
+        withoutPhotos: number;
+        stale: number;
+        missingSales: number;
+      } | null,
+    ),
+    safe(
+      "monthlySales",
+      async () => {
+        const start = businessPeriodStart("month");
+        start.setUTCMonth(start.getUTCMonth() - 5);
+        // Prisma DateTime é timestamp sem fuso; os valores gravados representam UTC.
+        const rows = await prisma.$queryRaw<
+          Array<{ key: string; revenue: number; count: number }>
+        >`
+        SELECT to_char("saleDate" AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM') AS key,
+          SUM(round("salePrice"::numeric, 2))::double precision AS revenue, COUNT(*)::int AS count
+        FROM "Sale" WHERE "saleDate" >= ${start} GROUP BY 1`;
+        const months = Array.from({ length: 6 }, (_, i) => {
+          const date = new Date(start);
+          date.setUTCMonth(start.getUTCMonth() + i);
+          return {
+            key: localDateInput(date).slice(0, 7),
+            revenue: 0,
+            count: 0,
+          };
+        });
+        for (const row of rows) {
+          const month = months.find((m) => m.key === row.key);
+          if (month) {
+            month.revenue = row.revenue;
+            month.count = row.count;
+          }
+        }
+        return months;
+      },
+      [] as Array<{ key: string; revenue: number; count: number }>,
+    ),
+    safe(
+      "saleGaps",
+      () =>
+        prisma.vehicle.findMany({
+          where: { status: "vendido", historical: false, sale: null },
+          take: 5,
+          select: { id: true, brand: true, model: true },
+        }),
+      [],
+    ),
+    safe(
+      "dueLeads",
+      () =>
+        prisma.leadVenda.findMany({
+          where: {
+            nextActionAt: { lte: new Date() },
+            status: { notIn: ["fechado", "perdido"] },
+          },
+          orderBy: { nextActionAt: "asc" },
+          take: 5,
+          select: { id: true, name: true, nextAction: true },
         }),
       [],
     ),
@@ -180,10 +306,26 @@ async function loadDashboardData() {
         }),
       [],
     ),
-    safe("customers", () => prisma.customer.count(), 0),
-    safe("testimonials", () => prisma.testimonial.count({ where: { published: true } }), 0),
-    getUsingSeedPassword(),
-    safe("publicSite", () => getPublicSite(), null as Awaited<ReturnType<typeof getPublicSite>> | null),
+    safe(
+      "testimonials",
+      () => prisma.testimonial.count({ where: { published: true } }),
+      0,
+    ),
+    safe(
+      "usingSeedPassword",
+      async () => {
+        const value = await getUsingSeedPassword();
+        if (value === null)
+          throw new Error("Não foi possível conferir os acessos.");
+        return value;
+      },
+      false,
+    ),
+    safe(
+      "publicSite",
+      () => getPublicSite(),
+      null as Awaited<ReturnType<typeof getPublicSite>> | null,
+    ),
     safe("googleReviews", () => getGoogleReviews(), DEFAULT_GOOGLE_REVIEWS),
   ]);
 
@@ -217,6 +359,12 @@ async function loadDashboardData() {
   };
 
   return {
+    failures,
+    updatedAt: new Date().toISOString(),
+    pendingCounts,
+    monthlySales,
+    saleGaps,
+    dueLeads,
     vehicles: {
       total: vehicleGroups.reduce((sum, group) => sum + group._count._all, 0),
       available,
@@ -244,7 +392,6 @@ async function loadDashboardData() {
       total: leadGroups.reduce((sum, group) => sum + group._count._all, 0),
       recent: recentLeads,
     },
-    customers,
     publishedTestimonials,
     recentVehicles,
     alerts: {
@@ -269,6 +416,6 @@ async function loadDashboardData() {
  */
 export const getDashboardData = unstable_cache(
   loadDashboardData,
-  ["admin-dashboard-v4"],
+  ["admin-dashboard-v5"],
   { revalidate: 60, tags: [ADMIN_DATA_TAG, ADMIN_NEW_LEADS_TAG] },
 );

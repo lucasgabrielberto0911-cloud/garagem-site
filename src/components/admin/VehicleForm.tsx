@@ -1,5 +1,14 @@
 "use client";
 
+import { photoQueueStorage } from "@/lib/admin-photo-queue-store";
+import { vehicleFieldErrors } from "@/lib/admin-vehicle-fields";
+import { adminMutation } from "@/lib/admin-mutation";
+import { focusAdminError } from "@/lib/admin-form-focus";
+import { moneyInput, moneyTyping, parseMoneyBR } from "@/lib/admin-money";
+import {
+  VehicleDraftToolbar,
+  type VehicleDraftPayload,
+} from "@/components/admin/VehicleDraftToolbar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -39,7 +48,10 @@ import {
   photosFromRecords,
   type PhotoItem,
 } from "@/components/admin/VehiclePhotoManager";
-import { FipeLookup, type FipeApplyPayload } from "@/components/admin/FipeLookup";
+import {
+  FipeLookup,
+  type FipeApplyPayload,
+} from "@/components/admin/FipeLookup";
 import {
   formatCurrencyBRL,
   formatNumberBR,
@@ -133,7 +145,11 @@ function SubmitButton({
 }) {
   const blocked = pending || disabled;
   return (
-    <button type="submit" disabled={blocked} className={`${btn.primary} w-full sm:w-auto`}>
+    <button
+      type="submit"
+      disabled={blocked}
+      className={`${btn.primary} w-full sm:w-auto`}
+    >
       {pending
         ? "Salvando..."
         : disabled
@@ -146,9 +162,11 @@ function SubmitButton({
 export function VehicleForm({
   vehicle,
   mode,
+  adminId,
 }: {
   vehicle?: VehicleWithPhotos;
   mode: "create" | "edit";
+  adminId: string;
 }) {
   const router = useRouter();
   const boundUpdate = useMemo(
@@ -156,7 +174,10 @@ export function VehicleForm({
     [vehicle],
   );
 
-  const action = mode === "create" ? createVehicle : boundUpdate;
+  const action = (prev: VehicleFormState, data: FormData) =>
+    adminMutation(() =>
+      (mode === "create" ? createVehicle : boundUpdate)(prev, data),
+    );
   const [state, formAction, saving] = useActionState(action, initialState);
 
   const [photos, setPhotos] = useState<PhotoItem[]>(() =>
@@ -171,8 +192,40 @@ export function VehicleForm({
     ),
   );
   const [photosUploading, setPhotosUploading] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedChangesWarning(dirty);
+  useEffect(() => {
+    if (!dirty || !photos.length) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void fetch("/api/admin/drafts", {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: `vehicle:${vehicle?.id ?? "new"}`,
+          reserve: true,
+          photoUrls: photos.flatMap((photo) =>
+            [photo.url, photo.thumbnailUrl].filter(Boolean),
+          ),
+        }),
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error("reserve");
+        })
+        .catch(() => {
+          if (!controller.signal.aborted)
+            toast.error(
+              "Não foi possível proteger as fotos do rascunho. Mantenha esta tela aberta e tente Guardar rascunho.",
+            );
+        });
+    }, 400);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [photos, dirty, vehicle?.id]);
   const changePhotos: typeof setPhotos = (next) => {
     setPhotos(next);
     setDirty(true);
@@ -221,7 +274,7 @@ export function VehicleForm({
         initialOpenSections(mode, {
           descriptionNeedsAttention: Boolean(
             vehicle?.description &&
-              descriptionPriceMismatch(vehicle.description, vehicle.price),
+            descriptionPriceMismatch(vehicle.description, vehicle.price),
           ),
         }),
       ),
@@ -241,22 +294,36 @@ export function VehicleForm({
     setOpenSections((current) => new Set([...current, ...ids]));
     if (!scrollTo) return;
     requestAnimationFrame(() => {
-      document
-        .getElementById(sectionAnchor(scrollTo))
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById(sectionAnchor(scrollTo))?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "start",
+      });
     });
   }
 
   useEffect(() => {
-    if (state.error) toast.error(state.error);
-    if (state.success) {
-      setDirty(false);
-      toast.success("Veículo atualizado com sucesso.");
+    if (state.error) {
+      toast.error(state.error);
+      if (state.fieldErrors) {
+        setErrors(state.fieldErrors);
+        revealSections(sectionsWithErrors(state.fieldErrors));
+      }
     }
-  }, [state]);
+    if (state.success) {
+      void photoQueueStorage(`${adminId}:${vehicle?.id ?? "new"}`, null);
+      void fetch(`/api/admin/drafts?key=vehicle:${vehicle?.id ?? "new"}`, {
+        method: "DELETE",
+      });
+      setDirty(false);
+      toast.success("Anúncio salvo com sucesso.");
+    }
+    if (state.success && state.id) router.push(`/admin/veiculos/${state.id}`);
+  }, [state, vehicle?.id, adminId, router]);
 
   const [values, setValues] = useState({
-    price: vehicle?.price != null ? formatNumberBR(vehicle.price) : "",
+    price: vehicle?.price != null ? moneyInput(vehicle.price) : "",
     km: vehicle?.km != null ? formatNumberBR(vehicle.km) : "",
   });
   const [brand, setBrand] = useState(vehicle?.brand ?? "");
@@ -264,10 +331,10 @@ export function VehicleForm({
   const [version, setVersion] = useState(vehicle?.version ?? "");
   const [color, setColor] = useState(vehicle?.color ?? "");
   const [year, setYear] = useState(
-    String(vehicle?.year ?? new Date().getFullYear()),
+    vehicle?.year != null ? String(vehicle.year) : "",
   );
   const [yearModel, setYearModel] = useState(
-    String(vehicle?.yearModel ?? new Date().getFullYear()),
+    vehicle?.yearModel != null ? String(vehicle.yearModel) : "",
   );
   const [plate, setPlate] = useState(
     vehicle?.plate ? formatPlateDisplay(vehicle.plate) : "",
@@ -291,8 +358,10 @@ export function VehicleForm({
     transmission,
     transmissionOptions,
   );
-  const canFixTransmission = transmissionOptions.includes(transmissionSuggestion);
-  const listedPrice = Number(values.price.replace(/\D/g, "") || 0);
+  const canFixTransmission = transmissionOptions.includes(
+    transmissionSuggestion,
+  );
+  const listedPrice = parseMoneyBR(values.price) ?? 0;
   const priceMismatch = descriptionPriceMismatch(description, listedPrice);
   const priceSaveBlocked = Boolean(
     priceMismatch && descriptionPriceMismatchBlocksSave(status),
@@ -310,13 +379,18 @@ export function VehicleForm({
       nextFuels.includes(current) ? current : defaultFuel(next),
     );
     setTransmission((current) =>
-      nextTransmissions.includes(current)
-        ? current
-        : defaultTransmission(next),
+      nextTransmissions.includes(current) ? current : defaultTransmission(next),
     );
   }
 
   function applyFipeSelection(payload: FipeApplyPayload) {
+    if (
+      (brand || model || version) &&
+      !window.confirm(
+        "Aplicar os dados consultados? Marca, modelo, versão e ano preenchidos podem ser substituídos. Confira a sugestão antes de salvar.",
+      )
+    )
+      return;
     setDirty(true);
     if (payload.brand) setBrand(payload.brand);
     if (payload.model) setModel(payload.model);
@@ -366,7 +440,7 @@ export function VehicleForm({
     const year = value("year");
     const yearModel = value("yearModel");
     const km = value("kmDisplay").replace(/\D/g, "");
-    const price = value("priceDisplay").replace(/\D/g, "");
+    const price = parseMoneyBR(value("priceDisplay"));
     const currentYear = new Date().getFullYear();
 
     if (!year || Number(year) < 1950 || Number(year) > currentYear + 1) {
@@ -387,7 +461,7 @@ export function VehicleForm({
       transmission,
       color: value("color").trim() || color,
       km: km === "" ? null : Number(km),
-      price: price === "" ? null : Number(price),
+      price,
       locationCity: value("locationCity").trim() || locationCity,
     });
     for (const issue of listingIssues) {
@@ -395,9 +469,12 @@ export function VehicleForm({
       next[issue.field] = issue.message;
     }
 
-    const listed = price === "" ? 0 : Number(price);
+    const listed = price ?? 0;
     const mismatch = descriptionPriceMismatch(value("description"), listed);
-    if (mismatch && descriptionPriceMismatchBlocksSave(value("status") || status)) {
+    if (
+      mismatch &&
+      descriptionPriceMismatchBlocksSave(value("status") || status)
+    ) {
       next.description = mismatch.blockMessage;
     }
 
@@ -405,13 +482,36 @@ export function VehicleForm({
     // conseguiria focar o balão de erro nativo.
     for (const element of Array.from(form.elements)) {
       const control = element as HTMLInputElement;
-      if (!control.name || !control.willValidate || control.validity.valid) continue;
+      if (!control.name || !control.willValidate || control.validity.valid)
+        continue;
       if (!sectionForField(control.name) || next[control.name]) continue;
       next[control.name] = control.validationMessage || "Valor inválido.";
     }
 
+    Object.assign(
+      next,
+      vehicleFieldErrors({
+        year: Number(year),
+        yearModel: Number(yearModel),
+        km: Number(km),
+        status,
+        doors: value("doors") ? Number(value("doors")) : null,
+      }),
+    );
     setErrors(next);
     revealSections(sectionsWithErrors(next));
+    const first = Object.keys(next)[0];
+    if (first)
+      requestAnimationFrame(() =>
+        focusAdminError(
+          form,
+          first === "price"
+            ? "priceDisplay"
+            : first === "km"
+              ? "kmDisplay"
+              : first,
+        ),
+      );
     return Object.keys(next).length === 0;
   }
 
@@ -446,7 +546,8 @@ export function VehicleForm({
   const errorSections = new Map<VehicleFormSectionId, number>();
   for (const [field, message] of Object.entries(errors)) {
     const section = message ? sectionForField(field) : null;
-    if (section) errorSections.set(section, (errorSections.get(section) ?? 0) + 1);
+    if (section)
+      errorSections.set(section, (errorSections.get(section) ?? 0) + 1);
   }
   const sectionProps = (id: VehicleFormSectionId) => ({
     id: sectionAnchor(id),
@@ -454,6 +555,22 @@ export function VehicleForm({
     open: openSections.has(id),
     onToggle: () => toggleSection(id),
     errorCount: errorSections.get(id) ?? 0,
+    nextLabel:
+      mode === "create"
+        ? sections[sections.findIndex((section) => section.id === id) + 1]
+            ?.label
+        : undefined,
+    onNext:
+      mode === "create"
+        ? () => {
+            const next =
+              sections[sections.findIndex((section) => section.id === id) + 1];
+            if (next) {
+              setOpenSections(new Set([next.id]));
+              revealSections([next.id]);
+            }
+          }
+        : undefined,
   });
   const statusLabel =
     STATUSES.find((item) => item.value === status)?.label ?? status;
@@ -483,7 +600,10 @@ export function VehicleForm({
               >
                 {section.nav}
                 {count > 0 ? (
-                  <span className="h-1.5 w-1.5 bg-brand" aria-label="com erro" />
+                  <span
+                    className="h-1.5 w-1.5 bg-brand"
+                    aria-label="com erro"
+                  />
                 ) : null}
               </button>
             );
@@ -491,6 +611,136 @@ export function VehicleForm({
         </div>
       </nav>
 
+      <section
+        className="border-l-2 border-brand bg-ink/50 p-4"
+        aria-label="Conferência do anúncio"
+      >
+        <p className="font-display text-lg font-semibold text-cream">
+          {`${brand} ${model}`.trim() || "Seu próximo anúncio"}
+        </p>
+        <p className="mt-1 text-sm leading-relaxed text-muted">
+          {[
+            version,
+            year && yearModel ? `${year}/${yearModel}` : "Ano a preencher",
+            values.km ? `${values.km} km` : "KM a preencher",
+            transmission,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+        <p className="mt-2 font-display text-xl font-bold text-brand">
+          {listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}
+        </p>
+        <p className="mt-2 text-xs text-muted">
+          {photos.length} foto(s) ·{" "}
+          {Object.keys(errors).length
+            ? "Corrija os campos destacados antes de publicar."
+            : "Confira os dados, a capa e o preço antes de salvar."}
+        </p>
+      </section>
+      <VehicleDraftToolbar
+        draftKey={`vehicle:${vehicle?.id ?? "new"}`}
+        disabled={saving || photosUploading}
+        onSavingChange={setDraftSaving}
+        snapshot={() => {
+          const form = document.getElementById(
+            "vehicle-form",
+          ) as HTMLFormElement;
+          return {
+            fields: Object.fromEntries(new FormData(form)),
+            photos,
+            brand,
+            model,
+            version,
+            color,
+            year,
+            yearModel,
+            plate,
+            plateEnd,
+            fipePrice,
+            engine,
+            purchase,
+            description,
+            status,
+            values,
+            category,
+            locationCity,
+            fuel,
+            transmission,
+            accessories,
+            consigned,
+          };
+        }}
+        restore={(draft: VehicleDraftPayload) => {
+          const text = (key: string) =>
+            typeof draft[key] === "string" ? (draft[key] as string) : "";
+          setBrand(text("brand"));
+          setModel(text("model"));
+          setVersion(text("version"));
+          setColor(text("color"));
+          setYear(text("year"));
+          setYearModel(text("yearModel"));
+          setPlate(text("plate"));
+          setPlateEnd(text("plateEnd"));
+          setEngine(text("engine"));
+          setPurchase(text("purchase"));
+          setDescription(text("description"));
+          setStatus(
+            ["disponivel", "reservado", "vendido"].includes(text("status"))
+              ? text("status")
+              : "disponivel",
+          );
+          setCategory(parseVehicleCategory(text("category")));
+          setLocationCity(
+            parseVehicleLocationCity(text("locationCity")) ??
+              DEFAULT_VEHICLE_LOCATION_CITY,
+          );
+          setFuel(text("fuel"));
+          setTransmission(text("transmission"));
+          setConsigned(Boolean(draft.consigned));
+          setFipePrice(
+            typeof draft.fipePrice === "number" ? draft.fipePrice : null,
+          );
+          if (draft.values && typeof draft.values === "object")
+            setValues(draft.values as typeof values);
+          if (Array.isArray(draft.photos))
+            setPhotos(draft.photos as PhotoItem[]);
+          if (Array.isArray(draft.accessories))
+            setAccessoriesState(normalizeAccessories(draft.accessories));
+          const fields = draft.fields as Record<string, string> | undefined;
+          if (fields)
+            requestAnimationFrame(() => {
+              const form = document.getElementById(
+                "vehicle-form",
+              ) as HTMLFormElement;
+              for (const key of [
+                "doors",
+                "warranty",
+                "inspection",
+                "featured",
+                "hasVideo",
+                "inStoreName",
+                "hasSpareKey",
+                "hasManual",
+              ]) {
+                const element = form.elements.namedItem(key);
+                if (
+                  element instanceof HTMLInputElement ||
+                  element instanceof HTMLSelectElement
+                ) {
+                  if (
+                    element instanceof HTMLInputElement &&
+                    element.type === "checkbox"
+                  )
+                    element.checked = fields[key] === "on";
+                  else element.value = fields[key] || "";
+                }
+              }
+            });
+          setDirty(true);
+          setErrors({});
+        }}
+      />
       <form
         id="vehicle-form"
         noValidate
@@ -521,839 +771,896 @@ export function VehicleForm({
           const data = new FormData(event.currentTarget);
           startTransition(() => formAction(data));
         }}
-        className="space-y-3 sm:space-y-4"
+        className="space-y-3 pb-28 sm:space-y-4 lg:pb-0"
       >
-        <input
-          type="hidden"
-          name="photoUrls"
-          value={JSON.stringify(
-            photos.map((photo) => ({
-              url: photo.url,
-              thumbnailUrl: photo.thumbnailUrl ?? null,
-            })),
-          )}
-        />
-        <input
-          type="hidden"
-          name="accessories"
-          value={JSON.stringify(accessories)}
-        />
-        <input type="hidden" name="price" value={values.price.replace(/\D/g, "")} />
-        <input type="hidden" name="km" value={values.km.replace(/\D/g, "")} />
-        <input type="hidden" name="category" value={category} />
-        <input type="hidden" name="locationCity" value={locationCity} />
-
-        <FormSection
-          {...sectionProps("identificacao")}
-          summary={`${isMoto ? "Moto" : "Carro"} · ${identitySummary({
-            brand,
-            model,
-            version,
-            color,
-            plate,
-          })}`}
+        <fieldset
+          disabled={saving || draftSaving}
+          className="min-w-0 space-y-3 sm:space-y-4"
         >
-          <div className="mb-5">
-            <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
-              Tipo do anúncio
-            </span>
-            <div className="flex gap-2" role="group" aria-label="Tipo do anúncio">
-              {VEHICLE_CATEGORIES.map((option) => {
-                const selected = category === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => changeCategory(option.value)}
-                    title={
-                      option.value === "moto"
-                        ? "Checklist e opções de moto (ABS, bauleto, painel digital…)."
-                        : "Checklist e opções de carro (multimídia, ar, bancos…)."
-                    }
-                    className={`${SEGMENT} ${selected ? SEGMENT_ON : SEGMENT_OFF}`}
-                  >
-                    <span className="font-display text-sm font-semibold uppercase tracking-wide">
-                      {option.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <FipeLookup
-            category={category}
-            plate={plate}
-            onPlateChange={handlePlateChange}
-            initialFipePrice={vehicle?.fipePrice}
-            onApply={applyFipeSelection}
+          <input
+            type="hidden"
+            name="expectedUpdatedAt"
+            value={state.updatedAt ?? vehicle?.updatedAt.toISOString() ?? ""}
           />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Marca" required error={errors.brand}>
-              <input
-                name="brand"
-                value={brand}
-                onChange={(event) => setBrand(event.target.value)}
-                placeholder={isMoto ? "Ex.: Honda" : "Ex.: Volkswagen"}
-                className={`${inputClass} ${errors.brand ? errorBorder : ""}`}
-              />
-            </Field>
-            <Field label="Modelo" required error={errors.model}>
-              <input
-                name="model"
-                value={model}
-                onChange={(event) => setModel(event.target.value)}
-                placeholder={isMoto ? "Ex.: CB 500F" : "Ex.: Golf"}
-                className={`${inputClass} ${errors.model ? errorBorder : ""}`}
-              />
-            </Field>
-            <Field label={isMoto ? "Versão / cilindrada" : "Versão"}>
-              <input
-                name="version"
-                value={version}
-                onChange={(event) => setVersion(event.target.value)}
-                placeholder={isMoto ? "Ex.: ABS 2023" : "Ex.: GTI 2.0 TSI"}
-                className={inputClass}
-              />
-            </Field>
-            <Field
-              label="Cor"
-              required
-              error={errors.color}
-              hint="Fica vazia no anúncio se faltar."
-            >
-              <input
-                name="color"
-                value={color}
-                onChange={(event) => setColor(event.target.value)}
-                placeholder="Ex.: Prata"
-                className={`${inputClass} ${errors.color ? errorBorder : ""}`}
-              />
-            </Field>
-          </div>
-        </FormSection>
+          <input
+            type="hidden"
+            name="photoUrls"
+            value={JSON.stringify(
+              photos.map((photo) => ({
+                url: photo.url,
+                thumbnailUrl: photo.thumbnailUrl ?? null,
+              })),
+            )}
+          />
+          <input
+            type="hidden"
+            name="accessories"
+            value={JSON.stringify(accessories)}
+          />
+          <input
+            type="hidden"
+            name="price"
+            value={parseMoneyBR(values.price) ?? ""}
+          />
+          <input type="hidden" name="km" value={values.km.replace(/\D/g, "")} />
+          <input type="hidden" name="category" value={category} />
+          <input type="hidden" name="locationCity" value={locationCity} />
 
-        <FormSection
-          {...sectionProps("essencial")}
-          summary={[
-            values.price ? `R$ ${values.price}` : "Sem preço",
-            statusLabel,
-            cityLabel,
-            consigned ? CONSIGNED_LABEL : "",
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        >
-          <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-4">
-            <Field label="Preço (R$)" required error={errors.price}>
-              <input
-                name="priceDisplay"
-                inputMode="numeric"
-                value={values.price}
-                onChange={(event) =>
-                  setValues((current) => ({
-                    ...current,
-                    price: formatNumberBR(
-                      Number(event.target.value.replace(/\D/g, "") || 0),
-                    ),
-                  }))
-                }
-                placeholder="0"
-                className={`${inputClass} font-display text-lg font-semibold ${errors.price ? errorBorder : ""}`}
-              />
-              {fipePrice != null && fipePrice > 0 ? (
-                <p
-                  className="mt-2 text-xs text-muted"
-                  data-testid="fipe-price-reference"
-                >
-                  Referência FIPE:{" "}
-                  <span className="font-medium text-cream">
-                    {formatCurrencyBRL(fipePrice)}
-                  </span>
-                </p>
-              ) : null}
-            </Field>
-            <Field label="Status">
-              <select
-                name="status"
-                value={status}
-                onChange={(event) => {
-                  if (event.target.value === "vendido" && !alreadySold) {
-                    toast.message(
-                      "Para vender, use o botão “Marcar vendido”. Assim a página continua no ar.",
-                    );
-                    return;
-                  }
-                  setStatus(event.target.value);
-                }}
-                className={inputClass}
-              >
-                {STATUSES.map((item) => (
-                  <option
-                    key={item.value}
-                    value={item.value}
-                    disabled={item.value === "vendido" && !alreadySold}
-                  >
-                    {item.value === "vendido" && !alreadySold
-                      ? "Vendido — use “Marcar vendido”"
-                      : item.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <p className="col-span-2 -mt-2 text-xs leading-relaxed text-muted">
-              {alreadySold
-                ? "Já vendido. Disponível/reservado volta para o estoque ao salvar."
-                : "Para vender, use “Marcar vendido” — a página continua no ar."}
-            </p>
-
-            {priceMismatch ? (
-              <div
-                role={priceSaveBlocked ? "alert" : "status"}
-                className={`col-span-2 flex flex-col gap-2 border px-3 py-2.5 text-sm text-cream sm:flex-row sm:items-center sm:justify-between ${
-                  priceSaveBlocked
-                    ? "border-brand/50 bg-brand/10"
-                    : "border-brand-orange/40 bg-brand-orange/10"
-                }`}
-              >
-                <p className="leading-relaxed">
-                  {priceSaveBlocked
-                    ? "O preço do texto da descrição não bate com este preço — não dá para salvar assim."
-                    : "O preço do texto da descrição é diferente deste preço."}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => revealSections(["descricao"])}
-                  className={`${btn.outline} shrink-0`}
-                >
-                  Ver descrição
-                </button>
-              </div>
-            ) : null}
-
-            <div className="col-span-2 sm:col-span-1">
+          <FormSection
+            {...sectionProps("identificacao")}
+            summary={`${isMoto ? "Moto" : "Carro"} · ${identitySummary({
+              brand,
+              model,
+              version,
+              color,
+              plate,
+            })}`}
+          >
+            <div className="mb-5">
               <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
-                Onde está o veículo
+                Tipo do anúncio
               </span>
               <div
                 className="flex gap-2"
                 role="group"
-                aria-label="Onde está o veículo"
+                aria-label="Tipo do anúncio"
               >
-                {VEHICLE_LOCATION_CITIES.map((option) => {
-                  const selected = locationCity === option.value;
+                {VEHICLE_CATEGORIES.map((option) => {
+                  const selected = category === option.value;
                   return (
                     <button
                       key={option.value}
                       type="button"
                       aria-pressed={selected}
-                      onClick={() => {
-                        if (option.value !== locationCity) setDirty(true);
-                        setLocationCity(option.value);
-                        setErrors((current) => {
-                          const next = { ...current };
-                          delete next.locationCity;
-                          return next;
-                        });
-                      }}
-                      className={`${SEGMENT} ${selected ? SEGMENT_ON : SEGMENT_OFF} ${
-                        errors.locationCity ? errorBorder : ""
-                      }`}
+                      onClick={() => changeCategory(option.value)}
+                      title={
+                        option.value === "moto"
+                          ? "Checklist e opções de moto (ABS, bauleto, painel digital…)."
+                          : "Checklist e opções de carro (multimídia, ar, bancos…)."
+                      }
+                      className={`${SEGMENT} ${selected ? SEGMENT_ON : SEGMENT_OFF}`}
                     >
                       <span className="font-display text-sm font-semibold uppercase tracking-wide">
                         {option.label}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-wider opacity-70">
-                        ES
                       </span>
                     </button>
                   );
                 })}
               </div>
-              {errors.locationCity ? (
-                <p className="mt-1.5 text-xs text-brand">{errors.locationCity}</p>
-              ) : (
-                <details className="mt-1.5 text-xs text-muted">
-                  <summary className="cursor-pointer py-1 touch-manipulation">
-                    Para que serve?
-                  </summary>
-                  <p className="mt-1 leading-relaxed">{VEHICLE_LOCATION_HINT}</p>
-                </details>
-              )}
             </div>
-
-            <div className="col-span-2 sm:col-span-1">
-              <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
-                Vitrine
-              </span>
-              <label className="flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50">
-                <input
-                  type="checkbox"
-                  name="featured"
-                  defaultChecked={vehicle?.featured ?? false}
-                  className="h-5 w-5 accent-brand"
-                />
-                <IconStar className="h-4 w-4 text-brand-yellow" />
-                Destaque na home
-              </label>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                Até 8 na home, só disponível. A home não escolhe carro sozinha.
-              </p>
-            </div>
-
-            <div className="col-span-2 sm:col-span-1">
-              <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
-                Interno · não aparece no site
-              </span>
-              <label
-                className={`flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 border px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50 ${
-                  consigned ? "border-sky-400/50 bg-sky-400/10" : "border-white/10 bg-ink"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  name="consigned"
-                  checked={consigned}
-                  onChange={(event) => setConsigned(event.target.checked)}
-                  className="h-5 w-5 accent-brand"
-                  data-testid="consigned-checkbox"
-                />
-                {CONSIGNED_LABEL}
-              </label>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                {CONSIGNED_HINT}
-              </p>
-            </div>
-          </div>
-        </FormSection>
-
-        <FormSection
-          {...sectionProps("fotos")}
-          title={`Fotos e vídeo${photos.length > 0 ? ` (${photos.length})` : ""}`}
-          summary={
-            photos.length > 0
-              ? `${photos.length} foto${photos.length === 1 ? "" : "s"} · 1ª é a capa`
-              : "Nenhuma foto ainda"
-          }
-          action={
-            photos.length > 0 ? (
-              <span className="text-xs text-muted">
-                Arraste para reordenar · 1ª = capa
-              </span>
-            ) : null
-          }
-        >
-          <VehiclePhotoManager
-            photos={photos}
-            onChange={changePhotos}
-            onUploadingChange={setPhotosUploading}
-            listing={{
-              brand,
-              model,
-              year: Number(yearModel) || new Date().getFullYear(),
-            }}
-          />
-          <label className="mt-4 flex min-h-[44px] cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50">
-            <input
-              type="checkbox"
-              name="hasVideo"
-              defaultChecked={vehicle?.hasVideo ?? false}
-              className="h-5 w-5 accent-brand"
+            <FipeLookup
+              category={category}
+              plate={plate}
+              onPlateChange={handlePlateChange}
+              initialFipePrice={vehicle?.fipePrice}
+              onApply={applyFipeSelection}
             />
-            Já temos vídeo deste veículo
-          </label>
-          <p className="mt-2 text-xs leading-relaxed text-muted">
-            Não publica o vídeo no site. O visitante continua pedindo pelo
-            WhatsApp. A marcação fica só neste cadastro.
-          </p>
-        </FormSection>
-
-        <FormSection
-          {...sectionProps("ficha")}
-          summary={fichaSummary({ year, yearModel, km: values.km, transmission, fuel })}
-        >
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Ano de fabricação" required error={errors.year}>
-              <input
-                name="year"
-                type="number"
-                inputMode="numeric"
-                value={year}
-                onChange={(event) => setYear(event.target.value)}
-                className={`${inputClass} ${errors.year ? errorBorder : ""}`}
-              />
-            </Field>
-            <Field label="Ano modelo" required error={errors.yearModel}>
-              <input
-                name="yearModel"
-                type="number"
-                inputMode="numeric"
-                value={yearModel}
-                onChange={(event) => setYearModel(event.target.value)}
-                className={`${inputClass} ${errors.yearModel ? errorBorder : ""}`}
-              />
-            </Field>
-            <Field
-              label="Quilometragem"
-              required
-              error={errors.km}
-              hint={
-                kmHint(Number(values.km.replace(/\D/g, "") || Number.NaN)) ??
-                undefined
-              }
-            >
-              <input
-                name="kmDisplay"
-                inputMode="numeric"
-                value={values.km}
-                onChange={(event) =>
-                  setValues((current) => ({
-                    ...current,
-                    km: formatNumberBR(
-                      Number(event.target.value.replace(/\D/g, "") || 0),
-                    ),
-                  }))
-                }
-                placeholder="0"
-                className={`${inputClass} ${errors.km ? errorBorder : ""}`}
-              />
-            </Field>
-            <Field label="Combustível" error={errors.fuel}>
-              <select
-                name="fuel"
-                value={fuel}
-                onChange={(event) => setFuel(event.target.value)}
-                className={inputClass}
-                required
-              >
-                {fuelOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field
-              label={isMoto ? "Câmbio / transmissão" : "Câmbio"}
-              error={errors.transmission}
-            >
-              <select
-                name="transmission"
-                value={transmission}
-                onChange={(event) => setTransmission(event.target.value)}
-                className={inputClass}
-                required
-              >
-                {transmissionOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              {transmissionAlert ? (
-                <p className="mt-2 text-xs leading-relaxed text-brand-orange">
-                  {transmissionAlert}. O site público mostra{" "}
-                  {transmissionSuggestion}.
-                  {canFixTransmission ? (
-                    <>
-                      {" "}
-                      <button
-                        type="button"
-                        className="underline underline-offset-2"
-                        onClick={() => setTransmission(transmissionSuggestion)}
-                      >
-                        Corrigir câmbio
-                      </button>
-                    </>
-                  ) : null}
-                </p>
-              ) : null}
-            </Field>
-            <Field
-              label={isMoto ? "Motor / cilindrada" : "Motor"}
-              hint={isMoto ? "Ex.: 500cc" : "Ex.: 1.0 TSI"}
-            >
-              <input
-                name="engine"
-                value={engine}
-                onChange={(event) => setEngine(event.target.value)}
-                placeholder={isMoto ? "Ex.: 500cc" : "Ex.: 2.0 Flex"}
-                className={inputClass}
-              />
-            </Field>
-            {!isMoto ? (
-              <Field label="Portas" error={errors.doors}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Marca" required error={errors.brand}>
                 <input
-                  name="doors"
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  max={6}
-                  defaultValue={vehicle?.doors ?? ""}
-                  placeholder="Ex.: 4"
-                  className={`${inputClass} ${errors.doors ? errorBorder : ""}`}
+                  name="brand"
+                  value={brand}
+                  onChange={(event) => setBrand(event.target.value)}
+                  placeholder={isMoto ? "Ex.: Honda" : "Ex.: Volkswagen"}
+                  className={`${inputClass} ${errors.brand ? errorBorder : ""}`}
                 />
               </Field>
-            ) : (
-              <input type="hidden" name="doors" value="" />
-            )}
-          </div>
-
-          <h3 className="mb-3 mt-6 border-t border-white/10 pt-5 font-display text-xs font-semibold uppercase tracking-wider text-muted">
-            Procedência e garantia
-          </h3>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Final da placa" hint="Ex.: 1 ou 2/3 — visível no site">
-              <input
-                name="plateEnd"
-                value={plateEnd}
-                onChange={(event) => setPlateEnd(event.target.value)}
-                placeholder="Ex.: 7"
-                className={inputClass}
-              />
-            </Field>
-            <Field
-              label="Garantia"
-              hint="A loja já anuncia 3 meses (motor e câmbio) no site. Preencha só se este carro for diferente."
-            >
-              <input
-                name="warranty"
-                defaultValue={vehicle?.warranty ?? ""}
-                placeholder="Ex.: 3 meses — motor e câmbio"
-                className={inputClass}
-              />
-            </Field>
-            <Field
-              label="Vistoria da loja"
-              hint="Se preenchido, a ficha mostra a checagem interna da loja. Não é documento oficial."
-              className="sm:col-span-2 lg:col-span-1"
-            >
-              <input
-                name="inspection"
-                defaultValue={vehicle?.inspection ?? ""}
-                placeholder="Ex.: Concluída"
-                className={inputClass}
-              />
-            </Field>
-          </div>
-        </FormSection>
-
-        <FormSection
-          {...sectionProps("descricao")}
-          summary={
-            priceMismatch
-              ? "Preço do texto ≠ preço do anúncio"
-              : descriptionSummary(description)
-          }
-        >
-          {priceMismatch ? (
-            <div
-              role={priceSaveBlocked ? "alert" : "status"}
-              data-testid="description-price-mismatch"
-              className={`mb-4 border px-3 py-3 text-sm text-cream ${
-                priceSaveBlocked
-                  ? "border-brand/50 bg-brand/10"
-                  : "border-brand-orange/40 bg-brand-orange/10"
-              }`}
-            >
-              <p
-                className={`font-display text-xs font-semibold uppercase tracking-wider ${
-                  priceSaveBlocked ? "text-brand" : "text-brand-orange"
-                }`}
+              <Field label="Modelo" required error={errors.model}>
+                <input
+                  name="model"
+                  value={model}
+                  onChange={(event) => setModel(event.target.value)}
+                  placeholder={isMoto ? "Ex.: CB 500F" : "Ex.: Golf"}
+                  className={`${inputClass} ${errors.model ? errorBorder : ""}`}
+                />
+              </Field>
+              <Field label={isMoto ? "Versão / cilindrada" : "Versão"}>
+                <input
+                  name="version"
+                  value={version}
+                  onChange={(event) => setVersion(event.target.value)}
+                  placeholder={isMoto ? "Ex.: ABS 2023" : "Ex.: GTI 2.0 TSI"}
+                  className={inputClass}
+                />
+              </Field>
+              <Field
+                label="Cor"
+                required
+                error={errors.color}
+                hint="Fica vazia no anúncio se faltar."
               >
-                {priceSaveBlocked
-                  ? "Não dá para salvar assim"
-                  : "Preço do texto ≠ preço do anúncio"}
-              </p>
-              <p className="mt-1 leading-relaxed text-cream/90">
-                {priceSaveBlocked
-                  ? priceMismatch.blockMessage
-                  : priceMismatch.message}
-              </p>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                {priceSaveBlocked
-                  ? "Disponível e destaque na home ficam bloqueados até o texto e o preço baterem."
-                  : "Reservado ou vendido ainda salvam. Para voltar ao estoque, o texto e o preço precisam bater."}
-              </p>
+                <input
+                  name="color"
+                  value={color}
+                  onChange={(event) => setColor(event.target.value)}
+                  placeholder="Ex.: Prata"
+                  className={`${inputClass} ${errors.color ? errorBorder : ""}`}
+                />
+              </Field>
             </div>
-          ) : null}
-          <Field
-            label="Texto do anúncio"
-            error={errors.description}
-            hint="Conte o estado do veículo, revisões e o que ajuda a vender. Os acessórios ficam na lista de itens."
+          </FormSection>
+
+          <FormSection
+            {...sectionProps("essencial")}
+            summary={[
+              values.price ? `R$ ${values.price}` : "Sem preço",
+              statusLabel,
+              cityLabel,
+              consigned ? CONSIGNED_LABEL : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           >
-            <textarea
-              name="description"
-              rows={5}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              className={`${inputClass} resize-y ${
-                priceMismatch ? "border-brand-orange/50" : ""
-              } ${errors.description ? errorBorder : ""}`}
-            />
-          </Field>
-        </FormSection>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-4">
+              <Field label="Preço (R$)" required error={errors.price}>
+                <input
+                  name="priceDisplay"
+                  inputMode="decimal"
+                  value={values.price}
+                  onChange={(event) =>
+                    setValues((current) => ({
+                      ...current,
+                      price: moneyTyping(event.target.value),
+                    }))
+                  }
+                  onBlur={() => {
+                    const amount = parseMoneyBR(values.price);
+                    if (amount != null)
+                      setValues((current) => ({
+                        ...current,
+                        price: moneyInput(amount),
+                      }));
+                  }}
+                  placeholder="0"
+                  className={`${inputClass} font-display text-lg font-semibold ${errors.price ? errorBorder : ""}`}
+                />
+                {fipePrice != null && fipePrice > 0 ? (
+                  <p
+                    className="mt-2 text-xs text-muted"
+                    data-testid="fipe-price-reference"
+                  >
+                    Referência FIPE:{" "}
+                    <span className="font-medium text-cream">
+                      {formatCurrencyBRL(fipePrice)}
+                    </span>
+                  </p>
+                ) : null}
+              </Field>
+              <Field label="Status">
+                <select
+                  name="status"
+                  value={status}
+                  onChange={(event) => {
+                    if (event.target.value === "vendido" && !alreadySold) {
+                      toast.message(
+                        "Para vender, use o botão “Marcar vendido”. Assim a página continua no ar.",
+                      );
+                      return;
+                    }
+                    setStatus(event.target.value);
+                  }}
+                  className={inputClass}
+                >
+                  {STATUSES.map((item) => (
+                    <option
+                      key={item.value}
+                      value={item.value}
+                      disabled={item.value === "vendido" && !alreadySold}
+                    >
+                      {item.value === "vendido" && !alreadySold
+                        ? "Vendido — use “Marcar vendido”"
+                        : item.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <p className="col-span-2 -mt-2 text-xs leading-relaxed text-muted">
+                {alreadySold
+                  ? "Já vendido. Disponível/reservado volta para o estoque ao salvar."
+                  : "Para vender, use “Marcar vendido” — a página continua no ar."}
+              </p>
 
-        <FormSection
-          {...sectionProps("itens")}
-          title={`Acessórios e itens · ${isMoto ? "moto" : "carro"}${
-            accessories.length > 0 ? ` (${accessories.length})` : ""
-          }`}
-          summary={accessoriesSummary(accessories)}
-        >
-          <p className="mb-4 text-xs leading-relaxed text-muted">
-            Opções prontas para {isMoto ? "moto" : "carro"}. Você também pode
-            escrever pontos manuais — tudo vira lista no anúncio.
-          </p>
+              {priceMismatch ? (
+                <div
+                  role={priceSaveBlocked ? "alert" : "status"}
+                  className={`col-span-2 flex flex-col gap-2 border px-3 py-2.5 text-sm text-cream sm:flex-row sm:items-center sm:justify-between ${
+                    priceSaveBlocked
+                      ? "border-brand/50 bg-brand/10"
+                      : "border-brand-orange/40 bg-brand-orange/10"
+                  }`}
+                >
+                  <p className="leading-relaxed">
+                    {priceSaveBlocked
+                      ? "O preço do texto da descrição não bate com este preço — não dá para salvar assim."
+                      : "O preço do texto da descrição é diferente deste preço."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => revealSections(["descricao"])}
+                    className={`${btn.outline} shrink-0`}
+                  >
+                    Ver descrição
+                  </button>
+                </div>
+              ) : null}
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {accessoryPresets.map((preset) => {
-              const checked = accessories.some(
-                (item) =>
-                  item.toLocaleLowerCase("pt-BR") ===
-                  preset.toLocaleLowerCase("pt-BR"),
-              );
-              return (
+              <div className="col-span-2 sm:col-span-1">
+                <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
+                  Onde está o veículo
+                </span>
+                <div
+                  className="flex gap-2"
+                  role="group"
+                  aria-label="Onde está o veículo"
+                >
+                  {VEHICLE_LOCATION_CITIES.map((option) => {
+                    const selected = locationCity === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => {
+                          if (option.value !== locationCity) setDirty(true);
+                          setLocationCity(option.value);
+                          setErrors((current) => {
+                            const next = { ...current };
+                            delete next.locationCity;
+                            return next;
+                          });
+                        }}
+                        className={`${SEGMENT} ${selected ? SEGMENT_ON : SEGMENT_OFF} ${
+                          errors.locationCity ? errorBorder : ""
+                        }`}
+                      >
+                        <span className="font-display text-sm font-semibold uppercase tracking-wide">
+                          {option.label}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-wider opacity-70">
+                          ES
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.locationCity ? (
+                  <p className="mt-1.5 text-xs text-brand">
+                    {errors.locationCity}
+                  </p>
+                ) : (
+                  <details className="mt-1.5 text-xs text-muted">
+                    <summary className="cursor-pointer py-1 touch-manipulation">
+                      Para que serve?
+                    </summary>
+                    <p className="mt-1 leading-relaxed">
+                      {VEHICLE_LOCATION_HINT}
+                    </p>
+                  </details>
+                )}
+              </div>
+
+              <div className="col-span-2 sm:col-span-1">
+                <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
+                  Vitrine
+                </span>
+                <label className="flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50">
+                  <input
+                    type="checkbox"
+                    name="featured"
+                    defaultChecked={vehicle?.featured ?? false}
+                    className="h-5 w-5 accent-brand"
+                  />
+                  <IconStar className="h-4 w-4 text-brand-yellow" />
+                  Destaque na home
+                </label>
+                <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                  Até 8 na home, só disponível. A home não escolhe carro
+                  sozinha.
+                </p>
+              </div>
+
+              <div className="col-span-2 sm:col-span-1">
+                <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
+                  Interno · não aparece no site
+                </span>
                 <label
-                  key={preset}
-                  className={`flex min-h-[44px] cursor-pointer items-center gap-2.5 border px-3 py-2.5 text-sm transition touch-manipulation ${
-                    checked
-                      ? "border-brand/50 bg-brand/10 text-cream"
-                      : "border-white/10 bg-ink text-muted hover:border-white/25 hover:text-cream"
+                  className={`flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 border px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50 ${
+                    consigned
+                      ? "border-sky-400/50 bg-sky-400/10"
+                      : "border-white/10 bg-ink"
                   }`}
                 >
                   <input
                     type="checkbox"
-                    checked={checked}
-                    onChange={() => {
-                      setAccessories((current) => {
-                        if (checked) {
-                          return current.filter(
-                            (item) =>
-                              item.toLocaleLowerCase("pt-BR") !==
-                              preset.toLocaleLowerCase("pt-BR"),
-                          );
-                        }
-                        return normalizeAccessories([...current, preset]);
-                      });
-                    }}
-                    className="h-4 w-4 accent-brand"
+                    name="consigned"
+                    checked={consigned}
+                    onChange={(event) => setConsigned(event.target.checked)}
+                    className="h-5 w-5 accent-brand"
+                    data-testid="consigned-checkbox"
                   />
-                  {preset}
+                  {CONSIGNED_LABEL}
                 </label>
-              );
-            })}
-          </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                  {CONSIGNED_HINT}
+                </p>
+              </div>
+            </div>
+          </FormSection>
 
-          <div className="mt-5 border-t border-white/10 pt-5">
-            <Field
-              label="Ponto manual"
-              hint="Ex.: único dono, revisões na concessionária, pneus novos."
-            >
-              <div className="flex flex-col gap-2 sm:flex-row">
+          <FormSection
+            {...sectionProps("fotos")}
+            title={`Fotos e vídeo${photos.length > 0 ? ` (${photos.length})` : ""}`}
+            summary={
+              photos.length > 0
+                ? `${photos.length} foto${photos.length === 1 ? "" : "s"} · 1ª é a capa`
+                : "Nenhuma foto ainda"
+            }
+            action={
+              photos.length > 0 ? (
+                <span className="text-xs text-muted">
+                  Arraste para reordenar · 1ª = capa
+                </span>
+              ) : null
+            }
+          >
+            <VehiclePhotoManager
+              queueKey={`${adminId}:${vehicle?.id ?? "new"}`}
+              photos={photos}
+              onChange={changePhotos}
+              onUploadingChange={setPhotosUploading}
+              listing={{
+                brand,
+                model,
+                year: Number(yearModel) || new Date().getFullYear(),
+              }}
+            />
+            <label className="mt-4 flex min-h-[44px] cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50">
+              <input
+                type="checkbox"
+                name="hasVideo"
+                defaultChecked={vehicle?.hasVideo ?? false}
+                className="h-5 w-5 accent-brand"
+              />
+              Já temos vídeo deste veículo
+            </label>
+            <p className="mt-2 text-xs leading-relaxed text-muted">
+              Não publica o vídeo no site. O visitante continua pedindo pelo
+              WhatsApp. A marcação fica só neste cadastro.
+            </p>
+          </FormSection>
+
+          <FormSection
+            {...sectionProps("ficha")}
+            summary={fichaSummary({
+              year,
+              yearModel,
+              km: values.km,
+              transmission,
+              fuel,
+            })}
+          >
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="Ano de fabricação" required error={errors.year}>
                 <input
-                  value={customAccessory}
-                  onChange={(event) => setCustomAccessory(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
+                  name="year"
+                  type="number"
+                  inputMode="numeric"
+                  value={year}
+                  onChange={(event) => setYear(event.target.value)}
+                  className={`${inputClass} ${errors.year ? errorBorder : ""}`}
+                />
+              </Field>
+              <Field label="Ano modelo" required error={errors.yearModel}>
+                <input
+                  name="yearModel"
+                  type="number"
+                  inputMode="numeric"
+                  value={yearModel}
+                  onChange={(event) => setYearModel(event.target.value)}
+                  className={`${inputClass} ${errors.yearModel ? errorBorder : ""}`}
+                />
+              </Field>
+              <Field
+                label="Quilometragem"
+                required
+                error={errors.km}
+                hint={
+                  kmHint(Number(values.km.replace(/\D/g, "") || Number.NaN)) ??
+                  undefined
+                }
+              >
+                <input
+                  name="kmDisplay"
+                  inputMode="numeric"
+                  value={values.km}
+                  onChange={(event) =>
+                    setValues((current) => ({
+                      ...current,
+                      km: formatNumberBR(
+                        Number(event.target.value.replace(/\D/g, "") || 0),
+                      ),
+                    }))
+                  }
+                  placeholder="0"
+                  className={`${inputClass} ${errors.km ? errorBorder : ""}`}
+                />
+              </Field>
+              <Field label="Combustível" error={errors.fuel}>
+                <select
+                  name="fuel"
+                  value={fuel}
+                  onChange={(event) => setFuel(event.target.value)}
+                  className={inputClass}
+                  required
+                >
+                  {fuelOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field
+                label={isMoto ? "Câmbio / transmissão" : "Câmbio"}
+                error={errors.transmission}
+              >
+                <select
+                  name="transmission"
+                  value={transmission}
+                  onChange={(event) => setTransmission(event.target.value)}
+                  className={inputClass}
+                  required
+                >
+                  {transmissionOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                {transmissionAlert ? (
+                  <p className="mt-2 text-xs leading-relaxed text-brand-orange">
+                    {transmissionAlert}. O site público mostra{" "}
+                    {transmissionSuggestion}.
+                    {canFixTransmission ? (
+                      <>
+                        {" "}
+                        <button
+                          type="button"
+                          className="underline underline-offset-2"
+                          onClick={() =>
+                            setTransmission(transmissionSuggestion)
+                          }
+                        >
+                          Corrigir câmbio
+                        </button>
+                      </>
+                    ) : null}
+                  </p>
+                ) : null}
+              </Field>
+              <Field
+                label={isMoto ? "Motor / cilindrada" : "Motor"}
+                hint={isMoto ? "Ex.: 500cc" : "Ex.: 1.0 TSI"}
+              >
+                <input
+                  name="engine"
+                  value={engine}
+                  onChange={(event) => setEngine(event.target.value)}
+                  placeholder={isMoto ? "Ex.: 500cc" : "Ex.: 2.0 Flex"}
+                  className={inputClass}
+                />
+              </Field>
+              {!isMoto ? (
+                <Field label="Portas" error={errors.doors}>
+                  <input
+                    name="doors"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={6}
+                    defaultValue={vehicle?.doors ?? ""}
+                    placeholder="Ex.: 4"
+                    className={`${inputClass} ${errors.doors ? errorBorder : ""}`}
+                  />
+                </Field>
+              ) : (
+                <input type="hidden" name="doors" value="" />
+              )}
+            </div>
+
+            <h3 className="mb-3 mt-6 border-t border-white/10 pt-5 font-display text-xs font-semibold uppercase tracking-wider text-muted">
+              Procedência e garantia
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field
+                label="Final da placa"
+                hint="Ex.: 1 ou 2/3 — visível no site"
+              >
+                <input
+                  name="plateEnd"
+                  value={plateEnd}
+                  onChange={(event) => setPlateEnd(event.target.value)}
+                  placeholder="Ex.: 7"
+                  className={inputClass}
+                />
+              </Field>
+              <Field
+                label="Garantia"
+                hint="A loja já anuncia 3 meses (motor e câmbio) no site. Preencha só se este carro for diferente."
+              >
+                <input
+                  name="warranty"
+                  defaultValue={vehicle?.warranty ?? ""}
+                  placeholder="Ex.: 3 meses — motor e câmbio"
+                  className={inputClass}
+                />
+              </Field>
+              <Field
+                label="Vistoria da loja"
+                hint="Se preenchido, a ficha mostra a checagem interna da loja. Não é documento oficial."
+                className="sm:col-span-2 lg:col-span-1"
+              >
+                <input
+                  name="inspection"
+                  defaultValue={vehicle?.inspection ?? ""}
+                  placeholder="Ex.: Concluída"
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+          </FormSection>
+
+          <FormSection
+            {...sectionProps("descricao")}
+            summary={
+              priceMismatch
+                ? "Preço do texto ≠ preço do anúncio"
+                : descriptionSummary(description)
+            }
+          >
+            {priceMismatch ? (
+              <div
+                role={priceSaveBlocked ? "alert" : "status"}
+                data-testid="description-price-mismatch"
+                className={`mb-4 border px-3 py-3 text-sm text-cream ${
+                  priceSaveBlocked
+                    ? "border-brand/50 bg-brand/10"
+                    : "border-brand-orange/40 bg-brand-orange/10"
+                }`}
+              >
+                <p
+                  className={`font-display text-xs font-semibold uppercase tracking-wider ${
+                    priceSaveBlocked ? "text-brand" : "text-brand-orange"
+                  }`}
+                >
+                  {priceSaveBlocked
+                    ? "Não dá para salvar assim"
+                    : "Preço do texto ≠ preço do anúncio"}
+                </p>
+                <p className="mt-1 leading-relaxed text-cream/90">
+                  {priceSaveBlocked
+                    ? priceMismatch.blockMessage
+                    : priceMismatch.message}
+                </p>
+                <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                  {priceSaveBlocked
+                    ? "Disponível e destaque na home ficam bloqueados até o texto e o preço baterem."
+                    : "Reservado ou vendido ainda salvam. Para voltar ao estoque, o texto e o preço precisam bater."}
+                </p>
+              </div>
+            ) : null}
+            <Field
+              label="Texto do anúncio"
+              error={errors.description}
+              hint="Conte o estado do veículo, revisões e o que ajuda a vender. Os acessórios ficam na lista de itens."
+            >
+              <textarea
+                name="description"
+                rows={5}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                className={`${inputClass} resize-y ${
+                  priceMismatch ? "border-brand-orange/50" : ""
+                } ${errors.description ? errorBorder : ""}`}
+              />
+            </Field>
+          </FormSection>
+
+          <FormSection
+            {...sectionProps("itens")}
+            title={`Acessórios e itens · ${isMoto ? "moto" : "carro"}${
+              accessories.length > 0 ? ` (${accessories.length})` : ""
+            }`}
+            summary={accessoriesSummary(accessories)}
+          >
+            <p className="mb-4 text-xs leading-relaxed text-muted">
+              Opções prontas para {isMoto ? "moto" : "carro"}. Você também pode
+              escrever pontos manuais — tudo vira lista no anúncio.
+            </p>
+
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {accessoryPresets.map((preset) => {
+                const checked = accessories.some(
+                  (item) =>
+                    item.toLocaleLowerCase("pt-BR") ===
+                    preset.toLocaleLowerCase("pt-BR"),
+                );
+                return (
+                  <label
+                    key={preset}
+                    className={`flex min-h-[44px] cursor-pointer items-center gap-2.5 border px-3 py-2.5 text-sm transition touch-manipulation ${
+                      checked
+                        ? "border-brand/50 bg-brand/10 text-cream"
+                        : "border-white/10 bg-ink text-muted hover:border-white/25 hover:text-cream"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => {
+                        setAccessories((current) => {
+                          if (checked) {
+                            return current.filter(
+                              (item) =>
+                                item.toLocaleLowerCase("pt-BR") !==
+                                preset.toLocaleLowerCase("pt-BR"),
+                            );
+                          }
+                          return normalizeAccessories([...current, preset]);
+                        });
+                      }}
+                      className="h-4 w-4 accent-brand"
+                    />
+                    {preset}
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 border-t border-white/10 pt-5">
+              <Field
+                label="Ponto manual"
+                hint="Ex.: único dono, revisões na concessionária, pneus novos."
+              >
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={customAccessory}
+                    onChange={(event) => setCustomAccessory(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        const value = customAccessory.trim();
+                        if (!value) return;
+                        setAccessories((current) =>
+                          normalizeAccessories([...current, value]),
+                        );
+                        setCustomAccessory("");
+                      }
+                    }}
+                    placeholder="Digite e pressione Enter ou clique em Adicionar"
+                    className={inputClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
                       const value = customAccessory.trim();
                       if (!value) return;
                       setAccessories((current) =>
                         normalizeAccessories([...current, value]),
                       );
                       setCustomAccessory("");
-                    }
-                  }}
-                  placeholder="Digite e pressione Enter ou clique em Adicionar"
-                  className={inputClass}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const value = customAccessory.trim();
-                    if (!value) return;
-                    setAccessories((current) =>
-                      normalizeAccessories([...current, value]),
-                    );
-                    setCustomAccessory("");
-                  }}
-                  className={`${btn.outline} shrink-0`}
-                >
-                  Adicionar
-                </button>
-              </div>
-            </Field>
-
-            {accessories.length > 0 ? (
-              <ul className="mt-4 flex flex-wrap gap-2">
-                {accessories.map((item) => (
-                  <li
-                    key={item}
-                    className="inline-flex items-center gap-1 border border-white/15 bg-ink pl-2.5 text-xs text-cream"
+                    }}
+                    className={`${btn.outline} shrink-0`}
                   >
-                    <span>{item}</span>
-                    <button
-                      type="button"
-                      aria-label={`Remover ${item}`}
-                      onClick={() =>
-                        setAccessories((current) =>
-                          current.filter((entry) => entry !== item),
-                        )
-                      }
-                      className="inline-flex h-9 w-9 items-center justify-center text-base text-muted transition touch-manipulation hover:text-brand"
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        </FormSection>
-
-        {mode === "create" ? (
-          <FormSection
-            {...sectionProps("operacao")}
-            summary={
-              consigned
-                ? `${CONSIGNED_LABEL} · sem compra nem custos`
-                : "Opcional · não aparece no site"
-            }
-            action={
-              <span className="text-[11px] text-muted">Não aparece no site</span>
-            }
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              {consigned ? (
-                <p
-                  className="border border-sky-400/40 bg-sky-400/10 px-3 py-2.5 text-sm leading-relaxed text-cream"
-                  data-testid="consigned-no-costs-note"
-                >
-                  {CONSIGNED_NO_COSTS_NOTE}
-                </p>
-              ) : (
-                <Field
-                  label="Preço de compra"
-                  hint="Opcional. Custos extras entram depois, na aba Operação."
-                >
-                  <input
-                    name="purchasePrice"
-                    inputMode="numeric"
-                    value={purchase}
-                    onChange={(event) =>
-                      setPurchase(
-                        formatNumberBR(
-                          Number(event.target.value.replace(/\D/g, "") || 0),
-                        ),
-                      )
-                    }
-                    placeholder="0"
-                    className={inputClass}
-                  />
-                </Field>
-              )}
-              <div className="grid gap-2 sm:grid-cols-1">
-                <label className="flex min-h-[44px] items-center gap-2 text-sm text-cream">
-                  <input type="checkbox" name="inStoreName" className="h-4 w-4 accent-brand" />
-                  Documento em nome da loja
-                </label>
-                <label className="flex min-h-[44px] items-center gap-2 text-sm text-cream">
-                  <input type="checkbox" name="hasSpareKey" className="h-4 w-4 accent-brand" />
-                  Chave reserva
-                </label>
-                <label className="flex min-h-[44px] items-center gap-2 text-sm text-cream">
-                  <input type="checkbox" name="hasManual" className="h-4 w-4 accent-brand" />
-                  Manual
-                </label>
-              </div>
-            </div>
-          </FormSection>
-        ) : null}
-
-        {/* Barra de ações fixa: salvar sempre ao alcance, sem rolar a página. */}
-        <div className="sticky bottom-admin-nav z-20 -mx-3 border-t border-white/10 bg-asphalt/95 px-3 py-2.5 backdrop-blur sm:-mx-6 sm:px-6 sm:py-3 lg:-mx-8 lg:px-8">
-          <div className="flex items-center gap-2 sm:flex-wrap">
-            <div className="min-w-0 flex-1 sm:flex-none">
-              <SubmitButton
-                pending={saving}
-                label={mode === "create" ? "Cadastrar veículo" : "Salvar alterações"}
-                disabled={photosUploading || priceSaveBlocked}
-                disabledLabel={
-                  photosUploading
-                    ? "Aguarde as fotos..."
-                    : priceSaveBlocked
-                      ? "Corrija o preço da descrição"
-                      : undefined
-                }
-              />
-            </div>
-            <Link
-              href="/admin/veiculos"
-              className={`${btn.outline} ${mode === "edit" ? "hidden sm:inline-flex" : ""}`}
-            >
-              Voltar
-            </Link>
-            {dirty && !saving ? (
-              <span
-                className="hidden text-xs text-brand-orange sm:inline"
-                aria-live="polite"
-                data-testid="unsaved-changes"
-              >
-                Alterações não salvas
-              </span>
-            ) : null}
-
-            {mode === "edit" && vehicle ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setMoreOpen(true)}
-                  aria-label="Mais ações do anúncio"
-                  aria-haspopup="dialog"
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-white/15 text-cream transition touch-manipulation active:bg-white/10 sm:hidden"
-                >
-                  <IconMore className="h-5 w-5" />
-                </button>
-                <div className="hidden sm:contents">
-                  <Link
-                    href={vehiclePath(vehicle)}
-                    target="_blank"
-                    className={btn.ghost}
-                  >
-                    <IconExternal className="h-4 w-4" />
-                    Ver no site
-                  </Link>
-                  {vehicle.status !== "vendido" ? (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmSold(true)}
-                      disabled={pendingAction}
-                      className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand-orange/50 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/10 disabled:opacity-60"
-                      title="Tira do estoque, mas mantém a página no site (SEO)"
-                    >
-                      Marcar vendido
-                    </button>
-                  ) : (
-                    <span className="inline-flex min-h-[44px] items-center justify-center font-display text-xs font-semibold uppercase tracking-wide text-muted">
-                      Já vendido
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(true)}
-                    disabled={pendingAction}
-                    className={btn.danger}
-                    title="Apaga o registro e a página — use só em duplicata/erro"
-                  >
-                    <IconTrash className="h-4 w-4" />
-                    Excluir
+                    Adicionar
                   </button>
                 </div>
-              </>
-            ) : null}
+              </Field>
+
+              {accessories.length > 0 ? (
+                <ul className="mt-4 flex flex-wrap gap-2">
+                  {accessories.map((item) => (
+                    <li
+                      key={item}
+                      className="inline-flex items-center gap-1 border border-white/15 bg-ink pl-2.5 text-xs text-cream"
+                    >
+                      <span>{item}</span>
+                      <button
+                        type="button"
+                        aria-label={`Remover ${item}`}
+                        onClick={() =>
+                          setAccessories((current) =>
+                            current.filter((entry) => entry !== item),
+                          )
+                        }
+                        className="inline-flex h-9 w-9 items-center justify-center text-base text-muted transition touch-manipulation hover:text-brand"
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          </FormSection>
+
+          {mode === "create" ? (
+            <FormSection
+              {...sectionProps("operacao")}
+              summary={
+                consigned
+                  ? `${CONSIGNED_LABEL} · sem compra nem custos`
+                  : "Opcional · não aparece no site"
+              }
+              action={
+                <span className="text-[11px] text-muted">
+                  Não aparece no site
+                </span>
+              }
+            >
+              <div className="grid gap-4 sm:grid-cols-2">
+                {consigned ? (
+                  <p
+                    className="border border-sky-400/40 bg-sky-400/10 px-3 py-2.5 text-sm leading-relaxed text-cream"
+                    data-testid="consigned-no-costs-note"
+                  >
+                    {CONSIGNED_NO_COSTS_NOTE}
+                  </p>
+                ) : (
+                  <Field
+                    label="Preço de compra"
+                    hint="Opcional. Custos extras entram depois, na aba Operação."
+                  >
+                    <input
+                      name="purchasePrice"
+                      inputMode="decimal"
+                      value={purchase}
+                      onChange={(event) =>
+                        setPurchase(moneyTyping(event.target.value))
+                      }
+                      placeholder="0"
+                      className={inputClass}
+                    />
+                  </Field>
+                )}
+                <div className="grid gap-2 sm:grid-cols-1">
+                  <label className="flex min-h-[44px] items-center gap-2 text-sm text-cream">
+                    <input
+                      type="checkbox"
+                      name="inStoreName"
+                      className="h-4 w-4 accent-brand"
+                    />
+                    Documento em nome da loja
+                  </label>
+                  <label className="flex min-h-[44px] items-center gap-2 text-sm text-cream">
+                    <input
+                      type="checkbox"
+                      name="hasSpareKey"
+                      className="h-4 w-4 accent-brand"
+                    />
+                    Chave reserva
+                  </label>
+                  <label className="flex min-h-[44px] items-center gap-2 text-sm text-cream">
+                    <input
+                      type="checkbox"
+                      name="hasManual"
+                      className="h-4 w-4 accent-brand"
+                    />
+                    Manual
+                  </label>
+                </div>
+              </div>
+            </FormSection>
+          ) : null}
+
+          {/* Barra de ações fixa: salvar sempre ao alcance, sem rolar a página. */}
+          <div className="fixed inset-x-0 bottom-admin-nav z-20 border-t border-white/10 bg-asphalt/95 px-3 py-2.5 backdrop-blur sm:px-6 sm:py-3 lg:sticky lg:inset-x-auto lg:-mx-8 lg:px-8">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="min-w-0 flex-1 sm:flex-none">
+                <SubmitButton
+                  pending={saving}
+                  label={
+                    mode === "create"
+                      ? "Cadastrar veículo"
+                      : "Salvar alterações"
+                  }
+                  disabled={photosUploading || priceSaveBlocked}
+                  disabledLabel={
+                    photosUploading
+                      ? "Aguarde as fotos..."
+                      : priceSaveBlocked
+                        ? "Corrija o preço da descrição"
+                        : undefined
+                  }
+                />
+              </div>
+              <Link
+                href="/admin/veiculos"
+                className={`${btn.outline} ${mode === "edit" ? "hidden sm:inline-flex" : ""}`}
+              >
+                Voltar
+              </Link>
+              {dirty && !saving ? (
+                <span
+                  className="text-xs text-brand-orange"
+                  aria-live="polite"
+                  data-testid="unsaved-changes"
+                >
+                  Alterações não salvas
+                </span>
+              ) : null}
+
+              {mode === "edit" && vehicle ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setMoreOpen(true)}
+                    aria-label="Mais ações do anúncio"
+                    aria-haspopup="dialog"
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-white/15 text-cream transition touch-manipulation active:bg-white/10 sm:hidden"
+                  >
+                    <IconMore className="h-5 w-5" />
+                  </button>
+                  <div className="hidden sm:contents">
+                    <Link
+                      href={vehiclePath(vehicle)}
+                      target="_blank"
+                      className={btn.ghost}
+                    >
+                      <IconExternal className="h-4 w-4" />
+                      Ver no site
+                    </Link>
+                    {vehicle.status !== "vendido" ? (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmSold(true)}
+                        disabled={pendingAction}
+                        className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand-orange/50 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/10 disabled:opacity-60"
+                        title="Tira do estoque, mas mantém a página no site (SEO)"
+                      >
+                        Marcar vendido
+                      </button>
+                    ) : (
+                      <span className="inline-flex min-h-[44px] items-center justify-center font-display text-xs font-semibold uppercase tracking-wide text-muted">
+                        Já vendido
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(true)}
+                      disabled={pendingAction}
+                      className={btn.danger}
+                      title="Apaga o registro e a página — use só em duplicata/erro"
+                    >
+                      <IconTrash className="h-4 w-4" />
+                      Excluir
+                    </button>
+                  </div>
+                </>
+              ) : null}
+            </div>
           </div>
-        </div>
+        </fieldset>
       </form>
 
       {mode === "edit" && vehicle ? (

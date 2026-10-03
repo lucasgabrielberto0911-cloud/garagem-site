@@ -15,7 +15,7 @@ export default async function NewVehiclePage() {
         title="Novo veículo"
         subtitle="Preencha o anúncio e as fotos. Custos e documentos ficam na aba Operação depois de salvar."
       />
-      <VehicleForm mode="create" />
+      <VehicleForm mode="create" adminId={session.adminId} />
     </div>
   );
 }

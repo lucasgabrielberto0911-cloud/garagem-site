@@ -27,7 +27,14 @@ test("lista do painel manda a soma dos custos em vez das linhas", () => {
   assert.equal(extrasTotal(2000), 2000);
   assert.equal(extrasTotal(Number.NaN), 0);
   assert.equal(investedTotal(40000, 2000), 42000);
-  assert.equal(hasCostBasis(null, 2000), true);
+  assert.equal(hasCostBasis(null, 2000), false);
   assert.equal(hasCostBasis(null, 0), false);
   assert.equal(expectedMargin(50000, null, 2000, { consigned: false }), 48000);
+});
+
+test("centavos somam precisamente; extras não completam aquisição ausente", () => {
+  assert.equal(extrasTotal([{ amount: 0.1 }, { amount: 0.2 }]), 0.3);
+  assert.equal(investedTotal(100.5, [{ amount: 25.35 }]), 125.85);
+  assert.equal(expectedMargin(200.05, 100.5, [{ amount: 25.35 }]), 74.2);
+  assert.equal(hasCostBasis(null, [{ amount: 10000 }]), false);
 });

@@ -1,74 +1,55 @@
+import { formatAdminMoney as formatCurrencyBRL } from "@/lib/admin-money";
 import { redirect } from "next/navigation";
 import { SalesManager } from "@/components/admin/SalesManager";
-import { AdminPageHeader, StatCard, adminStatGrid } from "@/components/admin/ui";
-import { getAdminSalesPage, parseSalesPeriod } from "@/lib/admin-vehicles";
+import {
+  AdminPageHeader,
+  StatCard,
+  adminStatGrid,
+} from "@/components/admin/ui";
+import {
+  getAdminSalesPage,
+  getAdminSalesTotals,
+  parseSalesPeriod,
+} from "@/lib/admin-vehicles";
 import { getSession } from "@/lib/auth";
-import { formatCurrencyBRL } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
-import { expectedMargin } from "@/lib/vehicle-ops";
+import { SELLABLE_VEHICLE_SELECT } from "@/lib/admin-vehicles";
 
 export const dynamic = "force-dynamic";
-
-function startOfMonth() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1);
-}
 
 export default async function VendasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; vehicle?: string }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const monthStart = startOfMonth();
-  const { period: periodParam } = await searchParams;
+  const { period: periodParam, vehicle: vehicleId } = await searchParams;
   const period = parseSalesPeriod(periodParam);
 
-  // Lucro somado no banco: só vendas de carro próprio com compra ou custo.
-  // Consignado fica fora (lucro N/A), mas a venda conta no faturamento.
-  const withCostBasis = {
-    sale: { isNot: null },
-    consigned: false,
-    OR: [
-      { purchasePrice: { gt: 0 } },
-      { costs: { some: { amount: { gt: 0 } } } },
-    ],
-  };
-
-  const [list, totals, monthTotals, profitSales, profitPurchases, profitCosts] =
-    await Promise.all([
-      getAdminSalesPage({ page: 1, period }),
-      prisma.sale.aggregate({ _sum: { salePrice: true }, _count: { _all: true } }),
-      prisma.sale.aggregate({
-        where: { saleDate: { gte: monthStart } },
-        _sum: { salePrice: true },
-        _count: { _all: true },
-      }),
-      prisma.sale.aggregate({
-        where: { vehicle: withCostBasis },
-        _sum: { salePrice: true },
-        _count: { _all: true },
-      }),
-      prisma.vehicle.aggregate({
-        where: withCostBasis,
-        _sum: { purchasePrice: true },
-      }),
-      prisma.vehicleCost.aggregate({
-        where: { vehicle: withCostBasis },
-        _sum: { amount: true },
-      }),
-    ]);
-
-  const revenue = totals._sum.salePrice ?? 0;
-  const count = totals._count._all;
-  const knownProfitCount = profitSales._count._all;
-  const knownProfit = expectedMargin(
-    profitSales._sum.salePrice ?? 0,
-    profitPurchases._sum.purchasePrice,
-    profitCosts._sum.amount ?? 0,
-  );
+  const [list, totals] = await Promise.all([
+    getAdminSalesPage({ page: 1, period }),
+    getAdminSalesTotals(period),
+  ]);
+  const initialVehicle = vehicleId
+    ? await prisma.vehicle.findFirst({
+        where: { id: vehicleId, sale: null, historical: false },
+        select: SELLABLE_VEHICLE_SELECT,
+      })
+    : null;
+  const revenue = totals.revenue;
+  const count = totals.count;
+  const knownProfit = totals.profit;
+  const knownProfitCount = totals.profitCount;
+  const label =
+    period === "all"
+      ? "Todo o período"
+      : period === "month"
+        ? "Mês atual"
+        : period === "year"
+          ? "Ano atual"
+          : `Últimos ${period} dias`;
 
   return (
     <div className="space-y-6">
@@ -77,14 +58,18 @@ export default async function VendasPage({
         subtitle="Registre e edite vendas do estoque ou históricas. Cliente é opcional — basta carro, placa e valor nas históricas."
       />
 
+      <p className="text-sm text-muted">
+        Indicadores e lista: {label}. Consignados contam no faturamento, sem
+        apuração de lucro.
+      </p>
       <section className={adminStatGrid}>
         <StatCard label="Vendas registradas" value={count} />
         <StatCard
-          label="Faturamento total"
+          label="Faturamento no período"
           value={formatCurrencyBRL(revenue)}
           hint={
             knownProfitCount > 0
-              ? `Lucro ${formatCurrencyBRL(knownProfit)} em ${knownProfitCount} venda(s) com custo`
+              ? `Lucro ${formatCurrencyBRL(knownProfit)} em ${knownProfitCount} venda(s) com compra informada`
               : undefined
           }
           tone={revenue > 0 ? "success" : "default"}
@@ -94,22 +79,29 @@ export default async function VendasPage({
           value={count > 0 ? formatCurrencyBRL(revenue / count) : "—"}
         />
         <StatCard
-          label="No mês atual"
-          value={monthTotals._count._all}
-          hint={
-            monthTotals._count._all > 0
-              ? formatCurrencyBRL(monthTotals._sum.salePrice ?? 0)
-              : "Nenhuma venda ainda"
-          }
+          label="Lucro apurado"
+          value={knownProfitCount ? formatCurrencyBRL(knownProfit) : "—"}
+          hint={`${knownProfitCount} venda(s) com base completa · ${totals.incomplete} sem compra informada`}
         />
       </section>
 
+      {totals.reviewCount > 0 ? (
+        <p
+          role="status"
+          className="border border-brand-orange/30 bg-brand-orange/10 p-4 text-sm"
+        >
+          {totals.reviewCount} venda(s) abaixo de R$ 1.000 neste período.
+          Confira os lançamentos; nenhum valor foi alterado automaticamente.
+        </p>
+      ) : null}
       <SalesManager
         key={period}
         sales={list.sales}
         salesTotal={list.total}
         pageSize={list.pageSize}
         period={period}
+        periodRevenue={revenue}
+        initialVehicle={initialVehicle}
       />
     </div>
   );

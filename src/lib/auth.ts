@@ -1,4 +1,6 @@
 import { cache } from "react";
+import { prisma } from "@/lib/prisma";
+import { sessionFingerprint } from "@/lib/admin-session-fingerprint";
 import { cookies } from "next/headers";
 import type { JWTPayload } from "jose";
 import { signToken, verifyToken } from "@/lib/jwt";
@@ -12,7 +14,20 @@ export type SessionPayload = JWTPayload & {
 };
 
 export async function createSessionToken(adminId: string, email: string) {
-  return signToken({ adminId, email }, "7d");
+  const admin = await prisma.admin.findUnique({
+    where: { id: adminId },
+    select: { passwordHash: true, email: true },
+  });
+  if (!admin || admin.email !== email)
+    throw new Error("Acesso não encontrado.");
+  return signToken(
+    {
+      adminId,
+      email,
+      fingerprint: sessionFingerprint(admin.passwordHash, admin.email),
+    },
+    "7d",
+  );
 }
 
 export async function readSessionToken(token: string) {
@@ -35,7 +50,19 @@ export const getSession = cache(async () => {
   if (!token) return null;
 
   try {
-    return await readSessionToken(token);
+    const session = await readSessionToken(token);
+    if (typeof session.adminId !== "string") return null;
+    const admin = await prisma.admin.findUnique({
+      where: { id: session.adminId },
+      select: { passwordHash: true, email: true },
+    });
+    if (
+      !admin ||
+      session.fingerprint !==
+        sessionFingerprint(admin.passwordHash, admin.email)
+    )
+      return null;
+    return session;
   } catch {
     return null;
   }

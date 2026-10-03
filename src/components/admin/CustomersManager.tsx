@@ -1,10 +1,18 @@
 "use client";
 
+import { useUnsavedChangesWarning } from "@/components/admin/useUnsavedChangesWarning";
+import { adminMutation } from "@/lib/admin-mutation";
+import { focusAdminError } from "@/lib/admin-form-focus";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { IconPencil, IconPlus, IconTrash, IconUsers } from "@/components/admin/icons";
+import {
+  IconPencil,
+  IconPlus,
+  IconTrash,
+  IconUsers,
+} from "@/components/admin/icons";
 import { IconPhone, IconWhatsApp } from "@/components/site/icons";
 import {
   Badge,
@@ -60,6 +68,7 @@ export function CustomersManager({
   total?: number;
 }) {
   const router = useRouter();
+  const [dirty, setDirty] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [term, setTerm] = useState(query);
   const [form, setForm] = useState<typeof emptyForm | null>(null);
@@ -75,17 +84,27 @@ export function CustomersManager({
     if (nextPage > 1) params.set("page", String(nextPage));
     startTransition(() => {
       router.push(
-        params.toString() ? `/admin/clientes?${params.toString()}` : "/admin/clientes",
+        params.toString()
+          ? `/admin/clientes?${params.toString()}`
+          : "/admin/clientes",
       );
     });
   }
 
+  useUnsavedChangesWarning(dirty && Boolean(form));
+
   function openCreate() {
+    if (dirty && !window.confirm("Descartar as alterações deste cliente?"))
+      return;
+    setDirty(false);
     setErrors({});
     setForm({ ...emptyForm });
   }
 
   function openEdit(customer: CustomerRow) {
+    if (dirty && !window.confirm("Descartar as alterações deste cliente?"))
+      return;
+    setDirty(false);
     setErrors({});
     setForm({
       id: customer.id,
@@ -103,11 +122,19 @@ export function CustomersManager({
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const result = await saveCustomer(formData);
+      const result = await adminMutation(() => saveCustomer(formData));
       setErrors(result.fieldErrors ?? {});
+      const first = Object.keys(result.fieldErrors ?? {})[0];
+      if (first)
+        focusAdminError(
+          document.activeElement?.closest("form") ??
+            document.querySelector("form")!,
+          first,
+        );
 
       if (result.ok) {
         toast.success(result.message);
+        setDirty(false);
         setForm(null);
         router.refresh();
       } else {
@@ -120,7 +147,7 @@ export function CustomersManager({
     if (!deleteTarget) return;
     const target = deleteTarget;
     startTransition(async () => {
-      const result = await deleteCustomer(target.id);
+      const result = await adminMutation(() => deleteCustomer(target.id));
       if (result.ok) {
         toast.success(result.message);
         router.refresh();
@@ -135,109 +162,140 @@ export function CustomersManager({
     <div className="space-y-5">
       {form ? (
         <Card title={form.id ? "Editar cliente" : "Novo cliente"}>
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            <input type="hidden" name="id" value={form.id} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nome" required error={errors.name}>
-                <input
-                  name="name"
-                  value={form.name}
-                  onChange={(event) =>
-                    setForm((current) =>
-                      current ? { ...current, name: event.target.value } : current,
-                    )
-                  }
-                  placeholder="Nome completo"
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Telefone / WhatsApp" required error={errors.phone}>
-                <input
-                  name="phone"
-                  inputMode="tel"
-                  value={form.phone}
-                  onChange={(event) =>
-                    setForm((current) =>
-                      current
-                        ? { ...current, phone: formatPhoneBR(event.target.value) }
-                        : current,
-                    )
-                  }
-                  placeholder="(00) 00000-0000"
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="CPF" error={errors.cpf}>
-                <input
-                  name="cpf"
-                  inputMode="numeric"
-                  value={form.cpf}
-                  onChange={(event) =>
-                    setForm((current) =>
-                      current
-                        ? { ...current, cpf: formatCpfBR(event.target.value) }
-                        : current,
-                    )
-                  }
-                  placeholder="000.000.000-00"
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="E-mail" error={errors.email}>
-                <input
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={(event) =>
-                    setForm((current) =>
-                      current ? { ...current, email: event.target.value } : current,
-                    )
-                  }
-                  placeholder="cliente@email.com"
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Endereço" className="sm:col-span-2">
-                <input
-                  name="address"
-                  value={form.address}
-                  onChange={(event) =>
-                    setForm((current) =>
-                      current ? { ...current, address: event.target.value } : current,
-                    )
-                  }
-                  placeholder="Rua, número, bairro, cidade"
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Observações" className="sm:col-span-2">
-                <textarea
-                  name="notes"
-                  rows={3}
-                  value={form.notes}
-                  onChange={(event) =>
-                    setForm((current) =>
-                      current ? { ...current, notes: event.target.value } : current,
-                    )
-                  }
-                  placeholder="Preferências, veículo procurado, histórico de contato..."
-                  className={`${inputClass} resize-y`}
-                />
-              </Field>
-            </div>
+          <form
+            onSubmit={handleSubmit}
+            onChange={() => setDirty(true)}
+            className="space-y-4"
+            noValidate
+          >
+            <fieldset disabled={isPending} className="min-w-0 space-y-4">
+              <input type="hidden" name="id" value={form.id} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Nome" required error={errors.name}>
+                  <input
+                    name="name"
+                    value={form.name}
+                    onChange={(event) =>
+                      setForm((current) =>
+                        current
+                          ? { ...current, name: event.target.value }
+                          : current,
+                      )
+                    }
+                    placeholder="Nome completo"
+                    className={inputClass}
+                  />
+                </Field>
+                <Field
+                  label="Telefone / WhatsApp"
+                  required
+                  error={errors.phone}
+                >
+                  <input
+                    name="phone"
+                    inputMode="tel"
+                    value={form.phone}
+                    onChange={(event) =>
+                      setForm((current) =>
+                        current
+                          ? {
+                              ...current,
+                              phone: formatPhoneBR(event.target.value),
+                            }
+                          : current,
+                      )
+                    }
+                    placeholder="(00) 00000-0000"
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="CPF" error={errors.cpf}>
+                  <input
+                    name="cpf"
+                    inputMode="numeric"
+                    value={form.cpf}
+                    onChange={(event) =>
+                      setForm((current) =>
+                        current
+                          ? { ...current, cpf: formatCpfBR(event.target.value) }
+                          : current,
+                      )
+                    }
+                    placeholder="000.000.000-00"
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="E-mail" error={errors.email}>
+                  <input
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={(event) =>
+                      setForm((current) =>
+                        current
+                          ? { ...current, email: event.target.value }
+                          : current,
+                      )
+                    }
+                    placeholder="cliente@email.com"
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="Endereço" className="sm:col-span-2">
+                  <input
+                    name="address"
+                    value={form.address}
+                    onChange={(event) =>
+                      setForm((current) =>
+                        current
+                          ? { ...current, address: event.target.value }
+                          : current,
+                      )
+                    }
+                    placeholder="Rua, número, bairro, cidade"
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="Observações" className="sm:col-span-2">
+                  <textarea
+                    name="notes"
+                    rows={3}
+                    value={form.notes}
+                    onChange={(event) =>
+                      setForm((current) =>
+                        current
+                          ? { ...current, notes: event.target.value }
+                          : current,
+                      )
+                    }
+                    placeholder="Preferências, veículo procurado, histórico de contato..."
+                    className={`${inputClass} resize-y`}
+                  />
+                </Field>
+              </div>
 
-            <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4">
-              <button type="submit" disabled={isPending} className={btn.primary}>
-                {isPending ? "Salvando..." : form.id ? "Salvar" : "Cadastrar"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setForm(null)}
-                className={btn.outline}
-              >
-                Cancelar
-              </button>
-            </div>
+              <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4">
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className={btn.primary}
+                >
+                  {isPending ? "Salvando..." : form.id ? "Salvar" : "Cadastrar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (dirty && !window.confirm("Descartar as alterações?"))
+                      return;
+                    setDirty(false);
+                    setForm(null);
+                  }}
+                  className={btn.outline}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </fieldset>
           </form>
         </Card>
       ) : (
@@ -269,9 +327,7 @@ export function CustomersManager({
             Novo cliente
           </button>
           {query || totalCount > customers.length ? (
-            <span className="text-xs text-muted">
-              {totalCount} cliente(s)
-            </span>
+            <span className="text-xs text-muted">{totalCount} cliente(s)</span>
           ) : null}
         </div>
       )}
@@ -279,7 +335,9 @@ export function CustomersManager({
       {customers.length === 0 ? (
         <EmptyState
           icon={<IconUsers className="h-12 w-12" />}
-          title={query ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+          title={
+            query ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"
+          }
           description={
             query
               ? "Tente outro nome, telefone ou e-mail."
@@ -287,10 +345,14 @@ export function CustomersManager({
           }
           action={
             query ? undefined : (
-            <button type="button" onClick={openCreate} className={btn.primary}>
-              <IconPlus className="h-4 w-4" />
-              Cadastrar cliente
-            </button>
+              <button
+                type="button"
+                onClick={openCreate}
+                className={btn.primary}
+              >
+                <IconPlus className="h-4 w-4" />
+                Cadastrar cliente
+              </button>
             )
           }
         />
@@ -319,7 +381,8 @@ export function CustomersManager({
                   </div>
                   {customer.purchases > 0 ? (
                     <Badge tone="success">
-                      {customer.purchases} compra{customer.purchases > 1 ? "s" : ""}
+                      {customer.purchases} compra
+                      {customer.purchases > 1 ? "s" : ""}
                     </Badge>
                   ) : (
                     <Badge>Sem compras</Badge>

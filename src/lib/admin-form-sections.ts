@@ -26,7 +26,12 @@ export const VEHICLE_FORM_SECTIONS: ReadonlyArray<{
   { id: "ficha", label: "Ficha técnica", nav: "Ficha" },
   { id: "descricao", label: "Descrição", nav: "Descrição" },
   { id: "itens", label: "Acessórios e itens", nav: "Itens" },
-  { id: "operacao", label: "Operação interna", nav: "Operação", createOnly: true },
+  {
+    id: "operacao",
+    label: "Operação interna",
+    nav: "Operação",
+    createOnly: true,
+  },
 ];
 
 export function vehicleFormSections(mode: VehicleFormMode) {
@@ -82,7 +87,7 @@ export function sectionsWithErrors(
 }
 
 /**
- * Cadastro novo abre tudo (tem que preencher). Edição abre só o que costuma
+ * Cadastro novo abre identificação e avança por etapas. Edição abre o que costuma
  * mudar — preço/status e fotos — e o que precisa de atenção.
  */
 export function initialOpenSections(
@@ -90,9 +95,7 @@ export function initialOpenSections(
   options: { descriptionNeedsAttention?: boolean; photoCount?: number } = {},
 ): VehicleFormSectionId[] {
   if (mode === "create") {
-    return vehicleFormSections("create")
-      .map((section) => section.id)
-      .filter((id) => id !== "operacao");
+    return ["identificacao"];
   }
   const open: VehicleFormSectionId[] = ["essencial", "fotos"];
   if (options.descriptionNeedsAttention) open.push("descricao");
@@ -114,7 +117,10 @@ export function identitySummary(input: {
   plate?: string | null;
 }) {
   const name = compact([`${input.brand} ${input.model}`.trim()]);
-  return compact([name, input.version, input.color, input.plate]) || "Preencher marca e modelo";
+  return (
+    compact([name, input.version, input.color, input.plate]) ||
+    "Preencher marca e modelo"
+  );
 }
 
 export function fichaSummary(input: {
@@ -124,9 +130,12 @@ export function fichaSummary(input: {
   transmission?: string | null;
   fuel?: string | null;
 }) {
-  const years = input.year && input.yearModel ? `${input.year}/${input.yearModel}` : "";
+  const years =
+    input.year && input.yearModel ? `${input.year}/${input.yearModel}` : "";
   const km = input.km ? `${input.km} km` : "";
-  return compact([years, km, input.transmission, input.fuel]) || "Ano, km, câmbio";
+  return (
+    compact([years, km, input.transmission, input.fuel]) || "Ano, km, câmbio"
+  );
 }
 
 export function descriptionSummary(text: string, max = 70) {

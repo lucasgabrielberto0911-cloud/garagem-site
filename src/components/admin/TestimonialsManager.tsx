@@ -1,6 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import { useUnsavedChangesWarning } from "@/components/admin/useUnsavedChangesWarning";
+import { adminMutation } from "@/lib/admin-mutation";
+import { focusAdminError } from "@/lib/admin-form-focus";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -43,18 +46,35 @@ const emptyForm = {
 
 export function TestimonialsManager({ items }: { items: Testimonial[] }) {
   const router = useRouter();
+  const [dirty, setDirty] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState<typeof emptyForm | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<Testimonial | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  useUnsavedChangesWarning(dirty && Boolean(form));
+
   function openCreate() {
+    if (
+      uploading ||
+      isPending ||
+      (dirty && !window.confirm("Descartar as alterações deste depoimento?"))
+    )
+      return;
+    setDirty(false);
     setErrors({});
     setForm({ ...emptyForm });
   }
 
   function openEdit(item: Testimonial) {
+    if (
+      uploading ||
+      isPending ||
+      (dirty && !window.confirm("Descartar as alterações deste depoimento?"))
+    )
+      return;
+    setDirty(false);
     setErrors({});
     setForm({
       id: item.id,
@@ -70,7 +90,8 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
   }
 
   async function uploadPhoto(file: File | undefined) {
-    if (!file) return;
+    if (!file || uploading || isPending) return;
+    setDirty(true);
     setUploading(true);
     try {
       const { uploadImageDirect } = await import("@/lib/upload-image-direct");
@@ -90,13 +111,22 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (uploading || isPending) return;
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const result = await saveTestimonial(formData);
+      const result = await adminMutation(() => saveTestimonial(formData));
       setErrors(result.fieldErrors ?? {});
+      const first = Object.keys(result.fieldErrors ?? {})[0];
+      if (first)
+        focusAdminError(
+          document.activeElement?.closest("form") ??
+            document.querySelector("form")!,
+          first,
+        );
       if (result.ok) {
         toast.success(result.message);
+        setDirty(false);
         setForm(null);
         router.refresh();
       } else {
@@ -107,9 +137,13 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
 
   function togglePublished(item: Testimonial) {
     startTransition(async () => {
-      const result = await setTestimonialPublished(item.id, !item.published);
-      toast.success(result.message);
-      router.refresh();
+      const result = await adminMutation(() =>
+        setTestimonialPublished(item.id, !item.published),
+      );
+      if (result.ok) {
+        toast.success(result.message);
+        router.refresh();
+      } else toast.error(result.message);
     });
   }
 
@@ -117,7 +151,7 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
     if (!deleteTarget) return;
     const target = deleteTarget;
     startTransition(async () => {
-      const result = await deleteTestimonial(target.id);
+      const result = await adminMutation(() => deleteTestimonial(target.id));
       if (result.ok) {
         toast.success(result.message);
         router.refresh();
@@ -132,191 +166,224 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
     <div className="space-y-5">
       {form ? (
         <Card title={form.id ? "Editar depoimento" : "Novo depoimento"}>
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            <input type="hidden" name="id" value={form.id} />
-            <input type="hidden" name="photoUrl" value={form.photoUrl} />
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nome do cliente" required error={errors.name}>
-                <input
-                  name="name"
-                  value={form.name}
-                  onChange={(event) =>
-                    setForm((current) =>
-                      current ? { ...current, name: event.target.value } : current,
-                    )
-                  }
-                  placeholder="Ex.: Marcos A."
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Cidade">
-                <input
-                  name="city"
-                  value={form.city}
-                  onChange={(event) =>
-                    setForm((current) =>
-                      current ? { ...current, city: event.target.value } : current,
-                    )
-                  }
-                  placeholder="Ex.: Vitória - ES"
-                  className={inputClass}
-                />
-              </Field>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Veículo (opcional)" hint="Ex.: Onix 2021">
-                <input
-                  name="vehicleLabel"
-                  value={form.vehicleLabel}
-                  onChange={(event) =>
-                    setForm((current) =>
-                      current
-                        ? { ...current, vehicleLabel: event.target.value }
-                        : current,
-                    )
-                  }
-                  placeholder="Modelo que a pessoa comprou"
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Nota" hint="De 1 a 5.">
-                <select
-                  name="rating"
-                  value={form.rating}
-                  onChange={(event) =>
-                    setForm((current) =>
-                      current ? { ...current, rating: event.target.value } : current,
-                    )
-                  }
-                  className={inputClass}
-                >
-                  <option value="5">5</option>
-                  <option value="4">4</option>
-                  <option value="3">3</option>
-                  <option value="2">2</option>
-                  <option value="1">1</option>
-                </select>
-              </Field>
-            </div>
-
-            <Field
-              label="Depoimento"
-              required
-              error={errors.message}
-              hint="Use as palavras do cliente. Publique apenas avaliações reais."
+          <form
+            onSubmit={handleSubmit}
+            onChange={() => setDirty(true)}
+            className="space-y-4"
+            noValidate
+          >
+            <fieldset
+              disabled={isPending || uploading}
+              className="min-w-0 space-y-4"
             >
-              <textarea
-                name="message"
-                rows={4}
-                value={form.message}
-                onChange={(event) =>
-                  setForm((current) =>
-                    current ? { ...current, message: event.target.value } : current,
-                  )
-                }
-                className={`${inputClass} resize-y`}
-              />
-            </Field>
+              <input type="hidden" name="id" value={form.id} />
+              <input type="hidden" name="photoUrl" value={form.photoUrl} />
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Ordem" hint="Menor número aparece primeiro.">
-                <input
-                  name="order"
-                  type="number"
-                  value={form.order}
-                  onChange={(event) =>
-                    setForm((current) =>
-                      current ? { ...current, order: event.target.value } : current,
-                    )
-                  }
-                  className={inputClass}
-                />
-              </Field>
-
-              <Field label="Foto (opcional)">
-                <label className="flex cursor-pointer items-center justify-center border border-white/10 bg-ink px-3 py-2.5 text-xs text-cream transition hover:border-brand/50">
-                  {uploading
-                    ? "Enviando..."
-                    : form.photoUrl
-                      ? "Trocar foto"
-                      : "Escolher foto"}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Nome do cliente" required error={errors.name}>
                   <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    disabled={uploading}
-                    onChange={(event) => {
-                      void uploadPhoto(event.target.files?.[0]);
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-              </Field>
-
-              <div className="flex items-end">
-                <label className="flex w-full cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition hover:border-brand/50">
-                  <input
-                    type="checkbox"
-                    name="published"
-                    checked={form.published}
+                    name="name"
+                    value={form.name}
                     onChange={(event) =>
                       setForm((current) =>
                         current
-                          ? { ...current, published: event.target.checked }
+                          ? { ...current, name: event.target.value }
                           : current,
                       )
                     }
-                    className="h-4 w-4 accent-brand"
+                    placeholder="Ex.: Marcos A."
+                    className={inputClass}
                   />
-                  Publicado no site
-                </label>
+                </Field>
+                <Field label="Cidade">
+                  <input
+                    name="city"
+                    value={form.city}
+                    onChange={(event) =>
+                      setForm((current) =>
+                        current
+                          ? { ...current, city: event.target.value }
+                          : current,
+                      )
+                    }
+                    placeholder="Ex.: Vitória - ES"
+                    className={inputClass}
+                  />
+                </Field>
               </div>
-            </div>
 
-            {form.photoUrl ? (
-              <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 overflow-hidden rounded-full bg-asphalt">
-                  <Image
-                    src={form.photoUrl}
-                    alt="Foto do cliente"
-                    fill
-                    sizes="48px"
-                    unoptimized
-                    className="object-cover"
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Veículo (opcional)" hint="Ex.: Onix 2021">
+                  <input
+                    name="vehicleLabel"
+                    value={form.vehicleLabel}
+                    onChange={(event) =>
+                      setForm((current) =>
+                        current
+                          ? { ...current, vehicleLabel: event.target.value }
+                          : current,
+                      )
+                    }
+                    placeholder="Modelo que a pessoa comprou"
+                    className={inputClass}
                   />
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
+                </Field>
+                <Field label="Nota" hint="De 1 a 5.">
+                  <select
+                    name="rating"
+                    value={form.rating}
+                    onChange={(event) =>
+                      setForm((current) =>
+                        current
+                          ? { ...current, rating: event.target.value }
+                          : current,
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="5">5</option>
+                    <option value="4">4</option>
+                    <option value="3">3</option>
+                    <option value="2">2</option>
+                    <option value="1">1</option>
+                  </select>
+                </Field>
+              </div>
+
+              <Field
+                label="Depoimento"
+                required
+                error={errors.message}
+                hint="Use as palavras do cliente. Publique apenas avaliações reais."
+              >
+                <textarea
+                  name="message"
+                  rows={4}
+                  value={form.message}
+                  onChange={(event) =>
                     setForm((current) =>
-                      current ? { ...current, photoUrl: "" } : current,
+                      current
+                        ? { ...current, message: event.target.value }
+                        : current,
                     )
                   }
-                  className="text-xs text-brand underline-offset-4 hover:underline"
+                  className={`${inputClass} resize-y`}
+                />
+              </Field>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="Ordem" hint="Menor número aparece primeiro.">
+                  <input
+                    name="order"
+                    type="number"
+                    value={form.order}
+                    onChange={(event) =>
+                      setForm((current) =>
+                        current
+                          ? { ...current, order: event.target.value }
+                          : current,
+                      )
+                    }
+                    className={inputClass}
+                  />
+                </Field>
+
+                <Field label="Foto (opcional)">
+                  <label className="flex cursor-pointer items-center justify-center border border-white/10 bg-ink px-3 py-2.5 text-xs text-cream transition hover:border-brand/50">
+                    {uploading
+                      ? "Enviando..."
+                      : form.photoUrl
+                        ? "Trocar foto"
+                        : "Escolher foto"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      disabled={uploading}
+                      onChange={(event) => {
+                        void uploadPhoto(event.target.files?.[0]);
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+                </Field>
+
+                <div className="flex items-end">
+                  <label className="flex w-full cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition hover:border-brand/50">
+                    <input
+                      type="checkbox"
+                      name="published"
+                      checked={form.published}
+                      onChange={(event) =>
+                        setForm((current) =>
+                          current
+                            ? { ...current, published: event.target.checked }
+                            : current,
+                        )
+                      }
+                      className="h-4 w-4 accent-brand"
+                    />
+                    Publicado no site
+                  </label>
+                </div>
+              </div>
+
+              {form.photoUrl ? (
+                <div className="flex items-center gap-3">
+                  <div className="relative h-12 w-12 overflow-hidden rounded-full bg-asphalt">
+                    <Image
+                      src={form.photoUrl}
+                      alt="Foto do cliente"
+                      fill
+                      sizes="48px"
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((current) =>
+                        current ? { ...current, photoUrl: "" } : current,
+                      )
+                    }
+                    className="text-xs text-brand underline-offset-4 hover:underline"
+                  >
+                    Remover foto
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4">
+                <button
+                  type="submit"
+                  disabled={isPending || uploading}
+                  className={btn.primary}
                 >
-                  Remover foto
+                  {isPending ? "Salvando..." : form.id ? "Salvar" : "Publicar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (dirty && !window.confirm("Descartar as alterações?"))
+                      return;
+                    setDirty(false);
+                    setForm(null);
+                  }}
+                  className={btn.outline}
+                >
+                  Cancelar
                 </button>
               </div>
-            ) : null}
-
-            <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4">
-              <button type="submit" disabled={isPending} className={btn.primary}>
-                {isPending ? "Salvando..." : form.id ? "Salvar" : "Publicar"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setForm(null)}
-                className={btn.outline}
-              >
-                Cancelar
-              </button>
-            </div>
+            </fieldset>
           </form>
         </Card>
       ) : (
-        <button type="button" onClick={openCreate} className={`${btn.primary} w-full sm:w-auto`}>
+        <button
+          type="button"
+          onClick={openCreate}
+          className={`${btn.primary} w-full sm:w-auto`}
+        >
           <IconPlus className="h-4 w-4" />
           Novo depoimento
         </button>
@@ -364,8 +431,8 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                       {cleanTestimonialField(item.city) ?? "Sem cidade"}
                       {cleanTestimonialField(item.vehicleLabel)
                         ? ` · ${cleanTestimonialField(item.vehicleLabel)}`
-                        : ""} · nota{" "}
-                      {item.rating ?? 5} · ordem {item.order}
+                        : ""}{" "}
+                      · nota {item.rating ?? 5} · ordem {item.order}
                     </p>
                   </div>
                 </div>
@@ -382,7 +449,7 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                 <button
                   type="button"
                   onClick={() => togglePublished(item)}
-                  disabled={isPending}
+                  disabled={isPending || uploading}
                   className={`${mobileActionCell} disabled:opacity-50`}
                 >
                   <IconEye className="h-4 w-4" />

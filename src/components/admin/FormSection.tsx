@@ -16,6 +16,8 @@ export function FormSection({
   action,
   errorCount = 0,
   children,
+  nextLabel,
+  onNext,
 }: {
   id: string;
   title: string;
@@ -25,6 +27,8 @@ export function FormSection({
   action?: ReactNode;
   errorCount?: number;
   children: ReactNode;
+  nextLabel?: string;
+  onNext?: () => void;
 }) {
   const contentId = useId();
 
@@ -56,7 +60,7 @@ export function FormSection({
                 ) : null}
               </span>
               {!open && summary ? (
-                <span className="mt-0.5 block truncate text-xs text-muted">
+                <span className="mt-0.5 block text-xs leading-relaxed text-muted">
                   {summary}
                 </span>
               ) : null}
@@ -69,7 +73,9 @@ export function FormSection({
           </button>
         </h2>
         {open && action ? (
-          <div className="hidden items-center pr-4 sm:flex sm:pr-5">{action}</div>
+          <div className="hidden items-center pr-4 sm:flex sm:pr-5">
+            {action}
+          </div>
         ) : null}
       </div>
       <div
@@ -78,6 +84,15 @@ export function FormSection({
         className="border-t border-white/10 p-4 sm:p-5"
       >
         {children}
+        {nextLabel && onNext ? (
+          <button
+            type="button"
+            onClick={onNext}
+            className="mt-5 min-h-11 w-full border border-white/15 px-4 py-2 text-sm font-semibold text-cream hover:border-brand"
+          >
+            Continuar: {nextLabel}
+          </button>
+        ) : null}
       </div>
     </section>
   );

@@ -1,3 +1,4 @@
+import { withAdminStorageLock } from "@/lib/admin-storage-lock";
 import type { LeadVenda, Prisma } from "@prisma/client";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { prisma } from "@/lib/prisma";
@@ -29,10 +30,22 @@ function withLeadDefaults(
     | "status"
     | "createdAt"
   > &
-    Partial<Pick<LeadVenda, "interestVehicleId" | "source" | "photoUrls" | "updatedAt">>,
+    Partial<
+      Pick<
+        LeadVenda,
+        | "interestVehicleId"
+        | "source"
+        | "photoUrls"
+        | "updatedAt"
+        | "nextAction"
+        | "nextActionAt"
+      >
+    >,
 ): LeadVenda {
   return {
     ...row,
+    nextAction: row.nextAction ?? null,
+    nextActionAt: row.nextActionAt ?? null,
     interestVehicleId: row.interestVehicleId ?? null,
     source: row.source ?? null,
     photoUrls: row.photoUrls ?? [],
@@ -52,22 +65,26 @@ export async function createLeadVenda(data: {
   photoUrls: string[];
 }) {
   try {
-    return await prisma.leadVenda.create({
-      data: {
-        name: data.name,
-        phone: data.phone,
-        vehicleInfo: data.vehicleInfo,
-        plate: data.plate,
-        km: data.km,
-        notes: data.notes,
-        interestVehicleId: data.interestVehicleId,
-        source: data.source,
-        photoUrls: data.photoUrls,
-      },
-    });
+    return await withAdminStorageLock((tx) =>
+      tx.leadVenda.create({
+        select: { id: true },
+        data: {
+          name: data.name,
+          phone: data.phone,
+          vehicleInfo: data.vehicleInfo,
+          plate: data.plate,
+          km: data.km,
+          notes: data.notes,
+          interestVehicleId: data.interestVehicleId,
+          source: data.source,
+          photoUrls: data.photoUrls,
+        },
+      }),
+    );
   } catch (error) {
     if (!isMissingColumnError(error)) throw error;
     return prisma.leadVenda.create({
+      select: { id: true },
       data: {
         name: data.name,
         phone: data.phone,

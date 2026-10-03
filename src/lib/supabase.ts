@@ -2,23 +2,15 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Cliente privilegiado só para o servidor (upload/delete no Storage).
- * Prefere a service role; cai na anon key se ela ainda não estiver configurada,
- * para não quebrar ambientes antigos — mas o .env.example já pede a service role.
+ * Exige service role. A chave pública nunca autoriza alterações internas.
  */
 export function getSupabaseAdmin(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const key = serviceKey || anonKey;
+  const key = serviceKey;
 
   if (!url || !key) {
     throw new Error("Supabase env vars are not configured");
-  }
-
-  if (!serviceKey && process.env.NODE_ENV === "production") {
-    console.warn(
-      "[supabase] SUPABASE_SERVICE_ROLE_KEY ausente — uploads usam a anon key.",
-    );
   }
 
   return createClient(url, key, {
@@ -37,7 +29,12 @@ export const PRIVATE_FILE_PREFIX = "private://documentos/";
 
 export type StoredFileRef =
   | { kind: "private"; bucket: typeof VEHICLE_DOCS_BUCKET; path: string }
-  | { kind: "public"; bucket: typeof VEHICLE_PHOTOS_BUCKET; path: string; url: string };
+  | {
+      kind: "public";
+      bucket: typeof VEHICLE_PHOTOS_BUCKET;
+      path: string;
+      url: string;
+    };
 
 function publicMarker(bucket: string) {
   return `/storage/v1/object/public/${bucket}/`;
@@ -51,7 +48,9 @@ export function storagePathFromPublicUrl(url: string): string | null {
   return decodeURIComponent(url.slice(index + marker.length));
 }
 
-export function parseStoredFileRef(value: string | null | undefined): StoredFileRef | null {
+export function parseStoredFileRef(
+  value: string | null | undefined,
+): StoredFileRef | null {
   const raw = (value ?? "").trim();
   if (!raw) return null;
 
@@ -80,7 +79,8 @@ export function adminFileViewHref(stored: string) {
 
 export async function ensurePrivateDocsBucket() {
   const supabase = getSupabaseAdmin();
-  const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+  const { data: buckets, error: listError } =
+    await supabase.storage.listBuckets();
   if (listError) {
     console.error("[storage] listBuckets:", listError);
   }
@@ -106,7 +106,9 @@ export async function ensurePrivateDocsBucket() {
   }
 }
 
-export async function deleteStorageFiles(urls: Array<string | null | undefined>) {
+export async function deleteStorageFiles(
+  urls: Array<string | null | undefined>,
+) {
   const grouped = new Map<string, string[]>();
 
   for (const value of urls) {

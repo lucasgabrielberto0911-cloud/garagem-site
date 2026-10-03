@@ -1,11 +1,17 @@
 "use server";
 
+import { withAdminStorageLock } from "@/lib/admin-storage-lock";
+import { recordAdminAudit } from "@/lib/admin-audit";
+import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
+import { parseMoneyBR } from "@/lib/admin-money";
+import { businessDay } from "@/lib/admin-date";
+
 import { revalidatePath } from "next/cache";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { deleteStoragePublicUrls, isInternalAdminFileUrl } from "@/lib/supabase";
+import { isInternalAdminFileUrl } from "@/lib/supabase";
 import {
   docKindLabel,
   isCostKind,
@@ -21,10 +27,7 @@ export type OpsActionState = {
 async function requireAdmin() {
   const session = await getSession();
   if (!session) redirect("/admin/login");
-}
-
-function digitsOnly(value: FormDataEntryValue | null) {
-  return String(value ?? "").replace(/\D/g, "");
+  return session;
 }
 
 function revalidateVehicle(id: string) {
@@ -37,23 +40,47 @@ export async function updateVehicleOps(
   vehicleId: string,
   formData: FormData,
 ): Promise<OpsActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
-  const purchaseRaw = digitsOnly(formData.get("purchasePrice"));
-  const purchasePrice = purchaseRaw ? Number(purchaseRaw) : null;
-  if (purchasePrice != null && (!Number.isFinite(purchasePrice) || purchasePrice < 0)) {
+  const purchaseRaw = String(formData.get("purchasePrice") || "").trim();
+  const purchasePrice = parseMoneyBR(purchaseRaw);
+  if (purchaseRaw && purchasePrice == null)
+    return { ok: false, message: "Preço de compra inválido. Use 1.000,50." };
+  if (
+    purchasePrice != null &&
+    (!Number.isFinite(purchasePrice) || purchasePrice < 0)
+  ) {
     return { ok: false, message: "Preço de compra inválido." };
   }
 
   try {
-    await prisma.vehicle.update({
-      where: { id: vehicleId },
-      data: {
-        inStoreName: formData.get("inStoreName") === "on",
-        hasSpareKey: formData.get("hasSpareKey") === "on",
-        hasManual: formData.get("hasManual") === "on",
-        purchasePrice,
-      },
+    await prisma.$transaction(async (tx) => {
+      const previous = await tx.vehicle.findUniqueOrThrow({
+        where: { id: vehicleId },
+        select: { purchasePrice: true },
+      });
+      await tx.vehicle.update({
+        where: { id: vehicleId },
+        data: {
+          inStoreName: formData.get("inStoreName") === "on",
+          hasSpareKey: formData.get("hasSpareKey") === "on",
+          hasManual: formData.get("hasManual") === "on",
+          purchasePrice,
+        },
+      });
+      if (previous.purchasePrice !== purchasePrice)
+        await recordAdminAudit(
+          tx,
+          session.adminId,
+          vehicleId,
+          "vehicle.purchase",
+          {
+            purchasePrice: {
+              before: previous.purchasePrice,
+              after: purchasePrice,
+            },
+          },
+        );
     });
   } catch (error) {
     console.error(error);
@@ -72,7 +99,7 @@ export async function addVehicleCost(
 
   const kind = String(formData.get("kind") || "").trim();
   const description = String(formData.get("description") || "").trim();
-  const amount = Number(digitsOnly(formData.get("amount")));
+  const amount = parseMoneyBR(formData.get("amount"));
   const dateRaw = String(formData.get("incurredAt") || "").trim();
   const receiptUrl = String(formData.get("receiptUrl") || "").trim() || null;
   const receiptName = String(formData.get("receiptName") || "").trim() || null;
@@ -90,23 +117,25 @@ export async function addVehicleCost(
     return { ok: false, message: "Informe o valor do custo." };
   }
 
-  const incurredAt = dateRaw ? new Date(`${dateRaw}T12:00:00`) : new Date();
+  const incurredAt = dateRaw ? businessDay(dateRaw) : new Date();
   if (Number.isNaN(incurredAt.getTime())) {
     return { ok: false, message: "Data inválida." };
   }
 
   try {
-    await prisma.vehicleCost.create({
-      data: {
-        vehicleId,
-        kind,
-        description,
-        amount,
-        incurredAt,
-        receiptUrl,
-        receiptName,
-      },
-    });
+    await withAdminStorageLock((tx) =>
+      tx.vehicleCost.create({
+        data: {
+          vehicleId,
+          kind,
+          description,
+          amount,
+          incurredAt,
+          receiptUrl,
+          receiptName,
+        },
+      }),
+    );
   } catch (error) {
     console.error(error);
     return { ok: false, message: "Não foi possível registrar o custo." };
@@ -129,7 +158,7 @@ export async function deleteVehicleCost(
     });
     if (!existing) return { ok: false, message: "Custo não encontrado." };
     await prisma.vehicleCost.delete({ where: { id: costId } });
-    await deleteStoragePublicUrls([existing.receiptUrl]);
+    await deleteUnusedAdminFiles([existing.receiptUrl]);
   } catch (error) {
     console.error(error);
     return { ok: false, message: "Não foi possível remover o custo." };
@@ -165,16 +194,18 @@ export async function addVehicleDocument(
   }
 
   try {
-    await prisma.vehicleDocument.create({
-      data: {
-        vehicleId,
-        kind,
-        title: title || docKindLabel(kind),
-        fileUrl,
-        fileName,
-        notes,
-      },
-    });
+    await withAdminStorageLock((tx) =>
+      tx.vehicleDocument.create({
+        data: {
+          vehicleId,
+          kind,
+          title: title || docKindLabel(kind),
+          fileUrl,
+          fileName,
+          notes,
+        },
+      }),
+    );
   } catch (error) {
     console.error(error);
     return { ok: false, message: "Não foi possível salvar o documento." };
@@ -197,7 +228,7 @@ export async function deleteVehicleDocument(
     });
     if (!existing) return { ok: false, message: "Documento não encontrado." };
     await prisma.vehicleDocument.delete({ where: { id: documentId } });
-    await deleteStoragePublicUrls([existing.fileUrl]);
+    await deleteUnusedAdminFiles([existing.fileUrl]);
   } catch (error) {
     console.error(error);
     return { ok: false, message: "Não foi possível remover o documento." };

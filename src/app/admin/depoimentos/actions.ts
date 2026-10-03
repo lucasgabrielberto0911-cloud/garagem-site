@@ -1,5 +1,6 @@
 "use server";
 
+import { withAdminStorageLock } from "@/lib/admin-storage-lock";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { redirect } from "next/navigation";
@@ -55,13 +56,24 @@ export async function saveTestimonial(
     return { ok: false, message: "Corrija os campos destacados.", fieldErrors };
   }
 
-  const data = { name, city, message, photoUrl, vehicleLabel, published, order, rating };
+  const data = {
+    name,
+    city,
+    message,
+    photoUrl,
+    vehicleLabel,
+    published,
+    order,
+    rating,
+  };
 
   try {
     if (id) {
-      await prisma.testimonial.update({ where: { id }, data });
+      await withAdminStorageLock((tx) =>
+        tx.testimonial.update({ where: { id }, data }),
+      );
     } else {
-      await prisma.testimonial.create({ data });
+      await withAdminStorageLock((tx) => tx.testimonial.create({ data }));
     }
   } catch (error) {
     console.error(error);
@@ -88,7 +100,9 @@ export async function setTestimonialPublished(id: string, published: boolean) {
   revalidatePath("/");
   return {
     ok: true,
-    message: published ? "Depoimento publicado." : "Depoimento ocultado do site.",
+    message: published
+      ? "Depoimento publicado."
+      : "Depoimento ocultado do site.",
   };
 }
 

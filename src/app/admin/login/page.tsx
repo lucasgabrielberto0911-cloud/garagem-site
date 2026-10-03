@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { IconEye } from "@/components/admin/icons";
 import { site } from "@/lib/site";
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -88,17 +90,28 @@ export default function AdminLoginPage() {
           <h1 className="mt-6 font-display text-3xl font-bold tracking-tight text-cream">
             Painel Admin
           </h1>
-          <div className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
+          <div
+            className="mx-auto mt-4 h-0.5 w-16 bg-brand-gradient"
+            aria-hidden="true"
+          />
           <p className="mt-4 text-sm text-muted">
             Entre com suas credenciais para gerenciar o estoque.
           </p>
         </div>
 
         <form
+          method="post"
+          action="/api/auth/login"
           onSubmit={handleSubmit}
           autoComplete="on"
           className="border border-white/10 bg-ink/60 p-6 backdrop-blur-sm sm:p-8"
         >
+          <noscript>
+            <p role="alert" className="mb-4 text-sm text-cream">
+              Ative o JavaScript e recarregue para entrar no painel com
+              segurança.
+            </p>
+          </noscript>
           <div className="space-y-5">
             <div>
               <label
@@ -163,7 +176,7 @@ export default function AdminLoginPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !ready}
             className="mt-6 min-h-[48px] w-full bg-brand py-3.5 font-display text-base font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Entrando..." : "Entrar"}

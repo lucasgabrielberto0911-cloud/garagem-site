@@ -1,3 +1,6 @@
+import { Suspense } from "react";
+import { DashboardRefresh } from "@/components/admin/DashboardRefresh";
+import { adminDate } from "@/lib/admin-date";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
@@ -45,10 +48,46 @@ export default async function AdminDashboardPage() {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-4" role="status">
+          <p className="text-sm text-muted">Carregando visão geral…</p>
+          <div className="skeleton h-40" />
+          <div className="skeleton h-64" />
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
+  );
+}
+async function DashboardContent() {
   const data = await getDashboardData();
   const { vehicles, sales, leads, alerts } = data;
 
-  const alertList = buildDashboardAlerts({ ...alerts, staleDays: STALE_DAYS });
+  const alertList = data.failures.length
+    ? []
+    : buildDashboardAlerts({ ...alerts, staleDays: STALE_DAYS });
+  for (const vehicle of data.saleGaps)
+    alertList.unshift({
+      key: `sale-gap-${vehicle.id}`,
+      tone: "warning",
+      icon: "alert",
+      title: `${vehicle.brand} ${vehicle.model}: venda não registrada`,
+      description:
+        "Marcar vendido tira o anúncio do estoque. Registre a venda separadamente para contabilizar o faturamento.",
+      href: `/admin/vendas?vehicle=${vehicle.id}`,
+    });
+  for (const lead of data.dueLeads)
+    alertList.unshift({
+      key: `due-${lead.id}`,
+      tone: "warning",
+      icon: "alert",
+      title: `Retomar atendimento: ${lead.name}`,
+      description: lead.nextAction || "Próximo contato agendado.",
+      href: `/admin/leads?lead=${lead.id}`,
+    });
   const { head: alertHead, rest: alertRest } = splitDashboardAlerts(alertList);
 
   const leadsCard = (
@@ -100,7 +139,7 @@ export default async function AdminDashboardPage() {
           : "Nenhuma venda registrada"
       }
       tone={sales.monthCount > 0 ? "success" : "default"}
-      href="/admin/vendas"
+      href="/admin/vendas?period=month"
     />,
     <StatCard
       key="revenue"
@@ -158,48 +197,121 @@ export default async function AdminDashboardPage() {
         }
       />
 
-      {/* Celular: 2 números que pedem ação; o resto fica em “Mais números”. */}
-      <section className="space-y-3 lg:hidden" aria-label="Números da loja">
-        <div className={adminStatGrid}>
-          {leadsCard}
-          {availableCard}
-        </div>
-        <details className="group border border-white/10 bg-ink/50">
-          <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm text-cream touch-manipulation [&::-webkit-details-marker]:hidden">
-            <span className="font-display text-xs font-semibold uppercase tracking-wider">
-              Mais números
-            </span>
-            <span className="flex items-center gap-2 text-xs text-muted">
-              Estoque, vendas, ticket
-              <IconChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
-            </span>
-          </summary>
-          <div className={`${adminStatGrid} border-t border-white/10 p-3`}>
-            {secondaryCards}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-muted">
+          Atualizado em{" "}
+          {adminDate(new Date(data.updatedAt), {
+            dateStyle: "short",
+            timeStyle: "short",
+          })}
+        </p>
+        <DashboardRefresh />
+      </div>
+      {data.failures.length > 0 ? (
+        <p
+          role="alert"
+          className="border border-brand-orange/40 bg-brand-orange/10 p-4 text-sm"
+        >
+          Parte dos dados está indisponível. Os indicadores não são mostrados
+          como zero. Tente atualizar; os atalhos continuam disponíveis.
+        </p>
+      ) : null}
+      {data.failures.length === 0 ? (
+        <>
+          {/* Celular: 2 números que pedem ação; o resto fica em “Mais números”. */}
+          <section className="space-y-3 lg:hidden" aria-label="Números da loja">
+            <div className={adminStatGrid}>
+              {leadsCard}
+              {availableCard}
+            </div>
+            <details className="group border border-white/10 bg-ink/50">
+              <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm text-cream touch-manipulation [&::-webkit-details-marker]:hidden">
+                <span className="font-display text-xs font-semibold uppercase tracking-wider">
+                  Mais números
+                </span>
+                <span className="flex items-center gap-2 text-xs text-muted">
+                  Estoque, vendas, ticket
+                  <IconChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+                </span>
+              </summary>
+              <div className={`${adminStatGrid} border-t border-white/10 p-3`}>
+                {secondaryCards}
+              </div>
+            </details>
+          </section>
+
+          <section
+            className="hidden space-y-4 lg:block"
+            aria-label="Números da loja"
+          >
+            <div className={adminStatGrid}>
+              {availableCard}
+              {secondaryCards[0]}
+              {leadsCard}
+              {secondaryCards[1]}
+            </div>
+            <div className={adminStatGrid}>{secondaryCards.slice(2)}</div>
+          </section>
+        </>
+      ) : null}
+      {data.pendingCounts ? (
+        <p className="text-sm leading-relaxed text-muted">
+          Pendências do estoque: {data.pendingCounts.withoutPhotos} sem foto ·{" "}
+          {data.pendingCounts.stale} parados há mais de {STALE_DAYS} dias ·{" "}
+          {data.pendingCounts.missingSales} vendidos sem registro financeiro.
+          Abaixo aparece uma amostra com acesso direto.
+        </p>
+      ) : null}
+      <Card collapsed title="Vendas nos últimos seis meses">
+        {data.failures.includes("monthlySales") ? (
+          <p role="status" className="text-sm text-muted">
+            Evolução indisponível. Tente atualizar.
+          </p>
+        ) : (
+          <div
+            className="space-y-3"
+            role="img"
+            aria-label="Faturamento mensal dos últimos seis meses, somente vendas registradas"
+          >
+            {data.monthlySales.map((month) => (
+              <div key={month.key} className="space-y-1">
+                <div className="flex flex-wrap justify-between gap-2 text-sm">
+                  <span>
+                    {month.key.slice(5)}/{month.key.slice(0, 4)} · {month.count}{" "}
+                    venda(s)
+                  </span>
+                  <span className="tabular-nums">
+                    {formatCurrencyBRL(month.revenue)}
+                  </span>
+                </div>
+                <div className="h-2 bg-white/10">
+                  <div
+                    className="h-2 bg-brand"
+                    style={{
+                      width: `${(month.revenue / Math.max(1, ...data.monthlySales.map((m) => m.revenue))) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-        </details>
-      </section>
-
-      <section className="hidden space-y-4 lg:block" aria-label="Números da loja">
-        <div className={adminStatGrid}>
-          {availableCard}
-          {secondaryCards[0]}
-          {leadsCard}
-          {secondaryCards[1]}
-        </div>
-        <div className={adminStatGrid}>{secondaryCards.slice(2)}</div>
-      </section>
-
+        )}
+      </Card>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card
           title={`Pendências${alertList.length > 0 ? ` (${alertList.length})` : ""}`}
           action={
-            alertList.length === 0 ? (
+            alertList.length === 0 && data.failures.length === 0 ? (
               <Badge tone="success">Tudo em ordem</Badge>
             ) : null
           }
         >
-          {alertList.length === 0 ? (
+          {data.failures.length > 0 && alertList.length === 0 ? (
+            <p className="text-sm text-muted">
+              Não foi possível conferir todas as pendências. Atualize os dados
+              para tentar novamente.
+            </p>
+          ) : alertList.length === 0 ? (
             <p className="text-sm text-muted">
               Nenhuma pendência: estoque com fotos, destaques definidos e dados
               da loja preenchidos.
@@ -217,7 +329,9 @@ export default async function AdminDashboardPage() {
                     <span className="group-open:hidden">
                       Ver mais {alertRest.length}
                     </span>
-                    <span className="hidden group-open:inline">Mostrar menos</span>
+                    <span className="hidden group-open:inline">
+                      Mostrar menos
+                    </span>
                     <IconChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
                   </summary>
                   <ul className="mt-2.5 space-y-2.5 text-sm">
@@ -242,7 +356,13 @@ export default async function AdminDashboardPage() {
             </Link>
           }
         >
-          {leads.total === 0 ? (
+          {data.failures.includes("lead.groupBy") ||
+          data.failures.includes("recentLeads") ? (
+            <p role="status" className="text-sm text-muted">
+              Não foi possível consultar os contatos. Tente atualizar ou abra
+              Ver todos.
+            </p>
+          ) : leads.total === 0 ? (
             <p className="text-sm text-muted">
               Nenhum lead ainda. Os pedidos de avaliação da página Vender/Trocar
               e os de quem não encontrou o modelo aparecem aqui.
@@ -276,7 +396,10 @@ export default async function AdminDashboardPage() {
               {leads.recent.length > 0 ? (
                 <ul className="mt-3 divide-y divide-white/10 border-t border-white/10">
                   {leads.recent.map((lead, index) => (
-                    <li key={lead.id} className={index >= 3 ? "hidden sm:block" : undefined}>
+                    <li
+                      key={lead.id}
+                      className={index >= 3 ? "hidden sm:block" : undefined}
+                    >
                       <Link
                         href="/admin/leads"
                         className="flex min-h-[56px] items-center justify-between gap-3 py-3 touch-manipulation last:pb-0"
@@ -289,7 +412,9 @@ export default async function AdminDashboardPage() {
                             {formatPhoneBR(lead.phone)} · {lead.vehicleInfo}
                           </p>
                         </div>
-                        <Badge tone={lead.status === "novo" ? "brand" : "neutral"}>
+                        <Badge
+                          tone={lead.status === "novo" ? "brand" : "neutral"}
+                        >
                           {LEAD_STATUS_LABEL[
                             lead.status as keyof typeof LEAD_STATUS_LABEL
                           ] ?? lead.status}
@@ -316,7 +441,12 @@ export default async function AdminDashboardPage() {
           </Link>
         }
       >
-        {data.recentVehicles.length === 0 ? (
+        {data.failures.includes("recentVehicles") ? (
+          <p role="status" className="text-sm text-muted">
+            Não foi possível consultar os veículos recentes. Abra Gerenciar ou
+            tente atualizar.
+          </p>
+        ) : data.recentVehicles.length === 0 ? (
           <EmptyState
             title="Nenhum veículo cadastrado"
             description="Cadastre o primeiro veículo para o estoque aparecer no site."
@@ -384,9 +514,13 @@ function AlertRow({ alert }: { alert: DashboardAlert }) {
         href={alert.href}
         className="flex min-h-[48px] items-center gap-3 border border-white/10 px-3 py-2.5 transition touch-manipulation hover:border-brand/50 sm:items-start"
       >
-        <span className={`mt-0.5 shrink-0 ${color}`}>{ALERT_ICON[alert.icon]}</span>
+        <span className={`mt-0.5 shrink-0 ${color}`}>
+          {ALERT_ICON[alert.icon]}
+        </span>
         <span className="min-w-0">
-          <span className="block text-sm font-medium text-cream">{alert.title}</span>
+          <span className="block text-sm font-medium text-cream">
+            {alert.title}
+          </span>
           <span className="mt-0.5 hidden text-xs leading-relaxed text-muted sm:block">
             {alert.description}
           </span>

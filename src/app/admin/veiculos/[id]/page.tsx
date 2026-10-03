@@ -19,7 +19,9 @@ const VehicleForm = nextDynamic(
 
 const VehicleOpsPanel = nextDynamic(
   () =>
-    import("@/components/admin/VehicleOpsPanel").then((mod) => mod.VehicleOpsPanel),
+    import("@/components/admin/VehicleOpsPanel").then(
+      (mod) => mod.VehicleOpsPanel,
+    ),
   { loading: () => <PanelChunkLoading /> },
 );
 import { AdminPageHeader, Badge } from "@/components/admin/ui";
@@ -33,7 +35,10 @@ import { CONSIGNED_LABEL } from "@/lib/vehicle-ops";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_LABEL: Record<string, { label: string; tone: "brand" | "warning" | "neutral" }> = {
+const STATUS_LABEL: Record<
+  string,
+  { label: string; tone: "brand" | "warning" | "neutral" }
+> = {
   disponivel: { label: "Disponível", tone: "brand" },
   reservado: { label: "Reservado", tone: "warning" },
   vendido: { label: "Vendido", tone: "neutral" },
@@ -51,9 +56,11 @@ export default async function EditVehiclePage({
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const [{ id }, { view: viewParam }] = await Promise.all([params, searchParams]);
-  const view: EditView =
-    viewParam === "operacao" ? "operacao" : "anuncio";
+  const [{ id }, { view: viewParam }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
+  const view: EditView = viewParam === "operacao" ? "operacao" : "anuncio";
 
   // Custos e documentos só na aba Operação — e em paralelo com o veículo,
   // sem esperar a primeira consulta.
@@ -122,13 +129,17 @@ export default async function EditVehiclePage({
         }
         actions={
           <>
-            <Badge tone="neutral">{vehicleCategoryLabel(vehicle.category)}</Badge>
+            <Badge tone="neutral">
+              {vehicleCategoryLabel(vehicle.category)}
+            </Badge>
             <Badge tone={status.tone}>{status.label}</Badge>
             <Badge tone={vehicle.locationCity === "serra" ? "info" : "success"}>
               {vehicleLocationLabel(vehicle.locationCity) || "Linhares"}
             </Badge>
             {vehicle.featured ? <Badge tone="warning">Destaque</Badge> : null}
-            {vehicle.consigned ? <Badge tone="info">{CONSIGNED_LABEL}</Badge> : null}
+            {vehicle.consigned ? (
+              <Badge tone="info">{CONSIGNED_LABEL}</Badge>
+            ) : null}
           </>
         }
       />
@@ -170,7 +181,7 @@ export default async function EditVehiclePage({
           documents={documents}
         />
       ) : (
-        <VehicleForm mode="edit" vehicle={vehicle} />
+        <VehicleForm mode="edit" vehicle={vehicle} adminId={session.adminId} />
       )}
     </div>
   );

@@ -1,5 +1,11 @@
 "use server";
 
+import { withAdminStorageLock } from "@/lib/admin-storage-lock";
+import { parseMoneyBR } from "@/lib/admin-money";
+import { vehicleFieldErrors } from "@/lib/admin-vehicle-fields";
+import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
+import { recordAdminAudit } from "@/lib/admin-audit";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -9,10 +15,12 @@ import { privateMasterRefForPublicUrl } from "@/lib/photo-master";
 import { copyPrivateMaster } from "@/lib/photo-master-store";
 import {
   copyPublicStorageObject,
-  deleteStoragePublicUrls,
   storagePathFromPublicUrl,
 } from "@/lib/supabase";
-import { normalizeAccessories, parseVehicleCategory } from "@/lib/vehicle-accessories";
+import {
+  normalizeAccessories,
+  parseVehicleCategory,
+} from "@/lib/vehicle-accessories";
 import {
   descriptionPriceSaveError,
   vehicleListingError,
@@ -21,10 +29,7 @@ import {
   DEFAULT_VEHICLE_LOCATION_CITY,
   parseVehicleLocationCity,
 } from "@/lib/vehicle-location";
-import {
-  isAdminBulkStatus,
-  normalizeBulkVehicleIds,
-} from "@/lib/admin-bulk";
+import { isAdminBulkStatus, normalizeBulkVehicleIds } from "@/lib/admin-bulk";
 import { canEnableFeatured, featuredCapMessage } from "@/lib/featured";
 import {
   revalidatePublicStock,
@@ -34,6 +39,9 @@ import {
 export type VehicleFormState = {
   error?: string;
   success?: boolean;
+  updatedAt?: string;
+  id?: string;
+  fieldErrors?: Record<string, string>;
 };
 
 function requireNumber(value: FormDataEntryValue | null, label: string) {
@@ -45,7 +53,9 @@ function requireNumber(value: FormDataEntryValue | null, label: string) {
 }
 
 function parseVehicleFields(formData: FormData) {
-  const category = parseVehicleCategory(String(formData.get("category") || "carro"));
+  const category = parseVehicleCategory(
+    String(formData.get("category") || "carro"),
+  );
   const brand = String(formData.get("brand") || "").trim();
   const model = String(formData.get("model") || "").trim();
   const version = String(formData.get("version") || "").trim() || null;
@@ -57,7 +67,10 @@ function parseVehicleFields(formData: FormData) {
   const warranty = String(formData.get("warranty") || "").trim() || null;
   const plateRaw = String(formData.get("plate") || "").trim();
   const plate = plateRaw
-    ? plateRaw.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 7)
+    ? plateRaw
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .toUpperCase()
+        .slice(0, 7)
     : null;
   const plateEnd = String(formData.get("plateEnd") || "").trim() || null;
   const inspection = String(formData.get("inspection") || "").trim() || null;
@@ -65,7 +78,9 @@ function parseVehicleFields(formData: FormData) {
   const featuredRequested =
     formData.get("featured") === "on" || formData.get("featured") === "true";
   if (featuredRequested && status === "reservado") {
-    throw new Error("Só anúncio disponível entra na home. Marque disponível antes.");
+    throw new Error(
+      "Só anúncio disponível entra na home. Marque disponível antes.",
+    );
   }
   const featured = featuredRequested && status === "disponivel";
   const year = requireNumber(formData.get("year"), "Ano");
@@ -91,9 +106,14 @@ function parseVehicleFields(formData: FormData) {
     formData.get("consigned") === "on" || formData.get("consigned") === "true";
   const purchaseRaw = consigned
     ? ""
-    : String(formData.get("purchasePrice") || "").replace(/\D/g, "");
-  const purchasePrice = purchaseRaw ? Number(purchaseRaw) : null;
-  if (purchasePrice != null && (!Number.isFinite(purchasePrice) || purchasePrice < 0)) {
+    : String(formData.get("purchasePrice") || "").trim();
+  const purchasePrice = parseMoneyBR(purchaseRaw);
+  if (purchaseRaw && purchasePrice == null)
+    throw new Error("Preço de compra inválido.");
+  if (
+    purchasePrice != null &&
+    (!Number.isFinite(purchasePrice) || purchasePrice < 0)
+  ) {
     throw new Error("Preço de compra inválido.");
   }
   const inStoreName = formData.get("inStoreName") === "on";
@@ -112,9 +132,17 @@ function parseVehicleFields(formData: FormData) {
   if (!brand || !model || !fuel || !transmission) {
     throw new Error("Preencha marca, modelo, combustível e câmbio.");
   }
-  if (doors !== null && (doors < 0 || doors > 6)) {
-    throw new Error("Portas inválidas.");
-  }
+  const fieldErrors = vehicleFieldErrors({
+    year,
+    yearModel,
+    km,
+    status,
+    doors,
+  });
+  if (Object.keys(fieldErrors).length)
+    throw Object.assign(new Error(Object.values(fieldErrors)[0]), {
+      fieldErrors,
+    });
   const listingError = vehicleListingError({
     brand,
     model,
@@ -154,7 +182,8 @@ function parseVehicleFields(formData: FormData) {
           ) {
             const url = (item as { url: string }).url;
             const thumbnailUrl =
-              typeof (item as { thumbnailUrl?: unknown }).thumbnailUrl === "string"
+              typeof (item as { thumbnailUrl?: unknown }).thumbnailUrl ===
+              "string"
                 ? (item as { thumbnailUrl: string }).thumbnailUrl
                 : null;
             return { url, thumbnailUrl };
@@ -216,7 +245,10 @@ function parseVehicleFields(formData: FormData) {
   };
 }
 
-async function assertCanFeature(opts: { vehicleId?: string; featured: boolean }) {
+async function assertCanFeature(opts: {
+  vehicleId?: string;
+  featured: boolean;
+}) {
   if (!opts.featured) return;
   const current = opts.vehicleId
     ? await prisma.vehicle.findUnique({
@@ -249,56 +281,70 @@ export async function createVehicle(
   _prev: VehicleFormState,
   formData: FormData,
 ): Promise<VehicleFormState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   try {
     const data = parseVehicleFields(formData);
     await assertCanFeature({ featured: data.featured });
 
-    const vehicle = await prisma.vehicle.create({
-      data: {
-        category: data.category,
-        brand: data.brand,
-        model: data.model,
-        version: data.version,
-        year: data.year,
-        yearModel: data.yearModel,
-        km: data.km,
-        price: data.price,
-        fipePrice: data.fipePrice,
-        fuel: data.fuel,
-        transmission: data.transmission,
-        color: data.color,
-        description: data.description,
-        engine: data.engine,
-        doors: data.doors,
-        warranty: data.warranty,
-        plate: data.plate,
-        plateEnd: data.plateEnd,
-        inspection: data.inspection,
-        accessories: data.accessories,
-        status: data.status,
-        locationCity: data.locationCity,
-        featured: data.featured,
-        purchasePrice: data.purchasePrice,
-        consigned: data.consigned,
-        inStoreName: data.inStoreName,
-        hasSpareKey: data.hasSpareKey,
-        hasManual: data.hasManual,
-        hasVideo: data.hasVideo,
-        photos: {
-          create: data.photos.map((photo, order) => ({
-            url: photo.url,
-            thumbnailUrl: photo.thumbnailUrl,
-            order,
-          })),
+    const vehicle = await withAdminStorageLock(async (tx) => {
+      const created = await tx.vehicle.create({
+        data: {
+          category: data.category,
+          brand: data.brand,
+          model: data.model,
+          version: data.version,
+          year: data.year,
+          yearModel: data.yearModel,
+          km: data.km,
+          price: data.price,
+          fipePrice: data.fipePrice,
+          fuel: data.fuel,
+          transmission: data.transmission,
+          color: data.color,
+          description: data.description,
+          engine: data.engine,
+          doors: data.doors,
+          warranty: data.warranty,
+          plate: data.plate,
+          plateEnd: data.plateEnd,
+          inspection: data.inspection,
+          accessories: data.accessories,
+          status: data.status,
+          locationCity: data.locationCity,
+          featured: data.featured,
+          purchasePrice: data.purchasePrice,
+          consigned: data.consigned,
+          inStoreName: data.inStoreName,
+          hasSpareKey: data.hasSpareKey,
+          hasManual: data.hasManual,
+          hasVideo: data.hasVideo,
+          photos: {
+            create: data.photos.map((photo, order) => ({
+              url: photo.url,
+              thumbnailUrl: photo.thumbnailUrl,
+              order,
+            })),
+          },
         },
-      },
+      });
+      await recordAdminAudit(
+        tx,
+        session.adminId,
+        created.id,
+        "vehicle.create",
+        { price: created.price, status: created.status },
+      );
+      return created;
     });
 
     revalidatePath("/admin/veiculos");
     await revalidatePublicStock(vehicle);
-    redirect(`/admin/veiculos/${vehicle.id}`);
+    return {
+      success: true,
+      id: vehicle.id,
+      updatedAt: vehicle.updatedAt.toISOString(),
+    };
   } catch (error) {
     if (
       typeof error === "object" &&
@@ -311,6 +357,8 @@ export async function createVehicle(
     console.error(error);
     return {
       error: error instanceof Error ? error.message : "Erro ao criar veículo.",
+      fieldErrors: (error as { fieldErrors?: Record<string, string> })
+        .fieldErrors,
     };
   }
 }
@@ -339,7 +387,7 @@ export async function updateVehicle(
   _prev: VehicleFormState,
   formData: FormData,
 ): Promise<VehicleFormState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   try {
     const data = parseVehicleFields(formData);
@@ -359,10 +407,16 @@ export async function updateVehicle(
       loadPreviousPhotoUrls(id),
     ]);
 
-    await prisma.$transaction([
-      prisma.photo.deleteMany({ where: { vehicleId: id } }),
-      prisma.vehicle.update({
-        where: { id },
+    const updated = await withAdminStorageLock(async (tx) => {
+      const current = await tx.vehicle.findUniqueOrThrow({ where: { id } });
+      const expected = String(formData.get("expectedUpdatedAt") || "");
+      if (!expected || current.updatedAt.toISOString() !== expected)
+        throw new Error(
+          "Este anúncio mudou em outro acesso. Seus campos foram mantidos. Guarde um rascunho e recarregue para comparar antes de salvar.",
+        );
+      // A condição também protege contra uma alteração concorrente após a leitura.
+      const saved = await tx.vehicle.update({
+        where: { id, updatedAt: current.updatedAt },
         data: {
           category: data.category,
           brand: data.brand,
@@ -390,6 +444,7 @@ export async function updateVehicle(
           hasVideo: data.hasVideo,
           consigned: data.consigned,
           photos: {
+            deleteMany: {},
             create: data.photos.map((photo, order) => ({
               url: photo.url,
               thumbnailUrl: photo.thumbnailUrl,
@@ -397,17 +452,26 @@ export async function updateVehicle(
             })),
           },
         },
-      }),
-    ]);
+      });
+      await recordAdminAudit(tx, session.adminId, id, "vehicle.update", {
+        price: { before: current.price, after: saved.price },
+        status: { before: current.status, after: saved.status },
+      });
+      return saved;
+    });
 
     const kept = new Set(data.photos.map((photo) => photo.url));
     const removed = previous.flatMap((photo) =>
       kept.has(photo.url)
         ? []
-        : [photo.url, photo.thumbnailUrl, privateMasterRefForPublicUrl(photo.url)],
+        : [
+            photo.url,
+            photo.thumbnailUrl,
+            privateMasterRefForPublicUrl(photo.url),
+          ],
     );
     if (removed.length > 0) {
-      await deleteStoragePublicUrls(removed);
+      await deleteUnusedAdminFiles(removed);
     }
 
     revalidatePath("/admin/veiculos");
@@ -422,11 +486,14 @@ export async function updateVehicle(
       },
       previousVehicle,
     );
-    return { success: true };
+    return { success: true, updatedAt: updated.updatedAt.toISOString() };
   } catch (error) {
     console.error(error);
     return {
-      error: error instanceof Error ? error.message : "Erro ao atualizar veículo.",
+      error:
+        error instanceof Error ? error.message : "Erro ao atualizar veículo.",
+      fieldErrors: (error as { fieldErrors?: Record<string, string> })
+        .fieldErrors,
     };
   }
 }
@@ -444,7 +511,7 @@ export async function deleteVehicle(id: string) {
   });
 
   await prisma.vehicle.delete({ where: { id } });
-  await deleteStoragePublicUrls([
+  await deleteUnusedAdminFiles([
     ...(vehicle?.photos.flatMap((photo) => [
       photo.url,
       photo.thumbnailUrl,
@@ -470,11 +537,20 @@ export async function deleteVehicle(id: string) {
 }
 
 export async function markVehicleAsSold(id: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
-  await prisma.vehicle.update({
-    where: { id },
-    data: { status: "vendido", featured: false },
+  await prisma.$transaction(async (tx) => {
+    const previous = await tx.vehicle.findUniqueOrThrow({
+      where: { id },
+      select: { status: true },
+    });
+    await tx.vehicle.update({
+      where: { id },
+      data: { status: "vendido", featured: false },
+    });
+    await recordAdminAudit(tx, session.adminId, id, "vehicle.status", {
+      status: { before: previous.status, after: "vendido" },
+    });
   });
 
   revalidatePath("/admin/veiculos");
@@ -485,7 +561,7 @@ export async function markVehicleAsSold(id: string) {
 const VEHICLE_STATUSES = ["disponivel", "reservado", "vendido"] as const;
 
 export async function setVehicleStatus(id: string, status: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   if (!(VEHICLE_STATUSES as readonly string[]).includes(status)) {
     return { ok: false, message: "Status inválido." };
@@ -504,9 +580,18 @@ export async function setVehicleStatus(id: string, status: string) {
     if (priceTextError) return { ok: false, message: priceTextError };
   }
 
-  await prisma.vehicle.update({
-    where: { id },
-    data: status === "vendido" ? { status, featured: false } : { status },
+  await prisma.$transaction(async (tx) => {
+    const previous = await tx.vehicle.findUniqueOrThrow({
+      where: { id },
+      select: { status: true },
+    });
+    await tx.vehicle.update({
+      where: { id },
+      data: status === "vendido" ? { status, featured: false } : { status },
+    });
+    await recordAdminAudit(tx, session.adminId, id, "vehicle.status", {
+      status: { before: previous.status, after: status },
+    });
   });
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
@@ -518,7 +603,7 @@ export async function setVehiclesStatus(
   ids: string[],
   status: string,
 ): Promise<{ ok: boolean; message: string; appliedIds?: string[] }> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   if (!isAdminBulkStatus(status)) {
     return {
@@ -558,9 +643,7 @@ export async function setVehiclesStatus(
       : [],
   );
   const appliedIds = rows
-    .filter(
-      (row) => row.status !== status && !priceBlockedIds.has(row.id),
-    )
+    .filter((row) => row.status !== status && !priceBlockedIds.has(row.id))
     .map((row) => row.id);
   if (appliedIds.length === 0) {
     if (priceBlockedIds.size > 0) {
@@ -579,10 +662,20 @@ export async function setVehiclesStatus(
     };
   }
 
-  await prisma.vehicle.updateMany({
-    where: { id: { in: appliedIds } },
-    data:
-      status === "vendido" ? { status, featured: false } : { status },
+  await prisma.$transaction(async (tx) => {
+    const previous = await tx.vehicle.findMany({
+      where: { id: { in: appliedIds } },
+      select: { id: true, status: true },
+    });
+    await tx.vehicle.updateMany({
+      where: { id: { in: appliedIds } },
+      data: status === "vendido" ? { status, featured: false } : { status },
+    });
+    for (const row of previous)
+      await recordAdminAudit(tx, session.adminId, row.id, "vehicle.status", {
+        status: { before: row.status, after: status },
+        batch: true,
+      });
   });
 
   revalidatePath("/admin/veiculos");
@@ -598,7 +691,9 @@ export async function setVehiclesStatus(
       ? ` ${featuredRemoved} saiu${featuredRemoved === 1 ? "" : "ram"} da home.`
       : "";
   const skip =
-    skipped > 0 ? ` ${skipped} já estava${skipped === 1 ? "" : "m"} assim.` : "";
+    skipped > 0
+      ? ` ${skipped} já estava${skipped === 1 ? "" : "m"} assim.`
+      : "";
   const priceSkip =
     priceBlockedCount > 0
       ? ` ${priceBlockedCount} ficou${priceBlockedCount === 1 ? "" : "ram"} de fora: descrição cita outro preço.`

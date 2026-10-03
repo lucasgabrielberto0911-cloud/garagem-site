@@ -1,5 +1,10 @@
 "use client";
 
+import { OrderedSave } from "@/lib/ordered-save";
+import { adminMutation } from "@/lib/admin-mutation";
+import { moneyInput, moneyTyping, parseMoneyBR } from "@/lib/admin-money";
+import { localDateInput, adminDate } from "@/lib/admin-date";
+import { useUnsavedChangesWarning } from "@/components/admin/useUnsavedChangesWarning";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -23,8 +28,15 @@ import {
   VehiclePhotoArchive,
   type ArchivePhotoItem,
 } from "@/components/admin/VehiclePhotoArchive";
-import { Badge, Card, Field, btn, iconTap, inputClass } from "@/components/admin/ui";
-import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import {
+  Badge,
+  Card,
+  Field,
+  btn,
+  iconTap,
+  inputClass,
+} from "@/components/admin/ui";
+import { formatAdminMoney as formatCurrencyBRL } from "@/lib/admin-money";
 import { adminFileViewHref } from "@/lib/supabase";
 import { uploadAdminFile } from "@/lib/upload-admin-file";
 import {
@@ -63,12 +75,11 @@ type OpsDraft = {
 };
 
 function todayInput() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return localDateInput();
 }
 
 function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(date);
+  return adminDate(new Date(date));
 }
 
 function Toggle({
@@ -94,7 +105,9 @@ function Toggle({
     >
       <span
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border ${
-          checked ? "border-brand bg-brand text-cream" : "border-white/20 text-transparent"
+          checked
+            ? "border-brand bg-brand text-cream"
+            : "border-white/20 text-transparent"
         }`}
       >
         <IconCheck className="h-3 w-3" />
@@ -121,39 +134,40 @@ export function VehicleOpsPanel({
   documents: VehicleDocument[];
 }) {
   const router = useRouter();
-  const [opsPending, startOpsTransition] = useTransition();
+  const [opsPending, setOpsPending] = useState(false);
+  const [opsDirty, setOpsDirty] = useState(false);
+  const mounted = useRef(true);
   const [itemPending, startItemTransition] = useTransition();
   const [opsNote, setOpsNote] = useState("Salva ao tocar");
-  const saveTimer = useRef<number>(0);
+  const saver = useRef<OrderedSave<OpsDraft> | null>(null);
   const [inStoreName, setInStoreName] = useState(vehicle.inStoreName);
   const [hasSpareKey, setHasSpareKey] = useState(vehicle.hasSpareKey);
   const [hasManual, setHasManual] = useState(vehicle.hasManual);
   const [purchase, setPurchase] = useState(
-    vehicle.purchasePrice != null
-      ? formatNumberBR(Math.round(vehicle.purchasePrice))
-      : "",
+    vehicle.purchasePrice != null ? moneyInput(vehicle.purchasePrice) : "",
   );
   const draftRef = useRef<OpsDraft>({
     inStoreName: vehicle.inStoreName,
     hasSpareKey: vehicle.hasSpareKey,
     hasManual: vehicle.hasManual,
     purchase:
-      vehicle.purchasePrice != null
-        ? formatNumberBR(Math.round(vehicle.purchasePrice))
-        : "",
+      vehicle.purchasePrice != null ? moneyInput(vehicle.purchasePrice) : "",
   });
 
   const [showCostForm, setShowCostForm] = useState(false);
   const [costKind, setCostKind] = useState<VehicleCostKind>("despachante");
   const [costAmount, setCostAmount] = useState("");
-  const [costReceipt, setCostReceipt] = useState<{ url: string; name: string } | null>(
-    null,
-  );
+  const [costReceipt, setCostReceipt] = useState<{
+    url: string;
+    name: string;
+  } | null>(null);
   const [uploadingCost, setUploadingCost] = useState(false);
 
   const [showDocForm, setShowDocForm] = useState(false);
   const [docKind, setDocKind] = useState<VehicleDocKind>("crlv");
-  const [docFile, setDocFile] = useState<{ url: string; name: string } | null>(null);
+  const [docFile, setDocFile] = useState<{ url: string; name: string } | null>(
+    null,
+  );
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<
     | { type: "cost"; id: string; label: string }
@@ -161,34 +175,51 @@ export function VehicleOpsPanel({
     | null
   >(null);
 
+  useUnsavedChangesWarning(
+    opsDirty ||
+      uploadingCost ||
+      uploadingDoc ||
+      (showCostForm && Boolean(costAmount || costReceipt)) ||
+      (showDocForm && Boolean(docFile)),
+  );
   useEffect(() => {
-    return () => window.clearTimeout(saveTimer.current);
-  }, []);
-
-  useEffect(() => {
-    const next: OpsDraft = {
-      inStoreName: vehicle.inStoreName,
-      hasSpareKey: vehicle.hasSpareKey,
-      hasManual: vehicle.hasManual,
-      purchase:
-        vehicle.purchasePrice != null
-          ? formatNumberBR(Math.round(vehicle.purchasePrice))
-          : "",
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
     };
-    draftRef.current = next;
-    setInStoreName(next.inStoreName);
-    setHasSpareKey(next.hasSpareKey);
-    setHasManual(next.hasManual);
-    setPurchase(next.purchase);
-  }, [
-    vehicle.inStoreName,
-    vehicle.hasSpareKey,
-    vehicle.hasManual,
-    vehicle.purchasePrice,
-  ]);
+  }, []);
+  if (!saver.current)
+    saver.current = new OrderedSave(
+      async (next) => {
+        const formData = new FormData();
+        formData.set("inStoreName", next.inStoreName ? "on" : "off");
+        formData.set("hasSpareKey", next.hasSpareKey ? "on" : "off");
+        formData.set("hasManual", next.hasManual ? "on" : "off");
+        formData.set("purchasePrice", next.purchase);
+        const result = await adminMutation(() =>
+          updateVehicleOps(vehicle.id, formData),
+        );
+        if (!result.ok) {
+          if (mounted.current) toast.error(result.message);
+          throw new Error(result.message);
+        }
+      },
+      (state) => {
+        if (!mounted.current) return;
+        setOpsPending(state === "pending");
+        setOpsDirty(state !== "saved");
+        setOpsNote(
+          state === "pending"
+            ? "Salvando…"
+            : state === "saved"
+              ? "Salvo"
+              : "Falha — tentar novamente",
+        );
+        if (state === "saved") router.refresh();
+      },
+    );
 
-  const livePurchaseRaw = purchase.replace(/\D/g, "");
-  const livePurchase = livePurchaseRaw ? Number(livePurchaseRaw) : null;
+  const livePurchase = parseMoneyBR(purchase);
   const referencePrice = vehicle.salePrice ?? vehicle.price;
   const invested = investedTotal(livePurchase, costs);
   const margin = expectedMargin(referencePrice, livePurchase, costs);
@@ -209,32 +240,18 @@ export function VehicleOpsPanel({
     setPurchase(next.purchase);
     setOpsNote("Salvando…");
 
-    window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => {
-      const formData = new FormData();
-      formData.set("inStoreName", next.inStoreName ? "on" : "off");
-      formData.set("hasSpareKey", next.hasSpareKey ? "on" : "off");
-      formData.set("hasManual", next.hasManual ? "on" : "off");
-      formData.set("purchasePrice", next.purchase);
-
-      startOpsTransition(async () => {
-        const result = await updateVehicleOps(vehicle.id, formData);
-        if (result.ok) {
-          setOpsNote("Salvo");
-          refresh();
-        } else {
-          setOpsNote("Erro ao salvar");
-          toast.error(result.message);
-        }
-      });
-    }, 600);
+    setOpsDirty(true);
+    saver.current?.enqueue(next);
   }
 
   function handleAddCost(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
-    if (isOtherKind(costKind) && !String(formData.get("description") || "").trim()) {
+    if (
+      isOtherKind(costKind) &&
+      !String(formData.get("description") || "").trim()
+    ) {
       toast.error("Informe o nome do custo.");
       return;
     }
@@ -243,7 +260,9 @@ export function VehicleOpsPanel({
       formData.set("receiptName", costReceipt.name);
     }
     startItemTransition(async () => {
-      const result = await addVehicleCost(vehicle.id, formData);
+      const result = await adminMutation(() =>
+        addVehicleCost(vehicle.id, formData),
+      );
       if (result.ok) {
         toast.success(result.message);
         form.reset();
@@ -273,7 +292,9 @@ export function VehicleOpsPanel({
     formData.set("fileUrl", docFile.url);
     formData.set("fileName", docFile.name);
     startItemTransition(async () => {
-      const result = await addVehicleDocument(vehicle.id, formData);
+      const result = await adminMutation(() =>
+        addVehicleDocument(vehicle.id, formData),
+      );
       if (result.ok) {
         toast.success(result.message);
         form.reset();
@@ -288,6 +309,7 @@ export function VehicleOpsPanel({
   }
 
   async function onReceiptChange(file: File | undefined) {
+    if (uploadingCost || itemPending) return;
     if (!file) {
       setCostReceipt(null);
       return;
@@ -296,7 +318,9 @@ export function VehicleOpsPanel({
     try {
       setCostReceipt(await uploadAdminFile(file, vehicle.id));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha no comprovante.");
+      toast.error(
+        error instanceof Error ? error.message : "Falha no comprovante.",
+      );
       setCostReceipt(null);
     } finally {
       setUploadingCost(false);
@@ -304,6 +328,7 @@ export function VehicleOpsPanel({
   }
 
   async function onDocFileChange(file: File | undefined) {
+    if (uploadingDoc || itemPending) return;
     if (!file) {
       setDocFile(null);
       return;
@@ -312,7 +337,9 @@ export function VehicleOpsPanel({
     try {
       setDocFile(await uploadAdminFile(file, vehicle.id));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha no documento.");
+      toast.error(
+        error instanceof Error ? error.message : "Falha no documento.",
+      );
       setDocFile(null);
     } finally {
       setUploadingDoc(false);
@@ -321,7 +348,27 @@ export function VehicleOpsPanel({
 
   return (
     <div className="space-y-5">
-      <VehiclePhotoArchive vehicleId={vehicle.id} photos={photos} />
+      <nav className="flex flex-wrap gap-2" aria-label="Áreas da operação">
+        <a className={btn.outline} href="#financas">
+          Compra e custos
+        </a>
+        <a className={btn.outline} href="#documentos">
+          Documentos
+        </a>
+        <a className={btn.outline} href="#acervo">
+          Fotos em alta
+        </a>
+      </nav>
+      {opsDirty && !opsPending ? (
+        <button
+          type="button"
+          className={btn.outline}
+          onClick={() => saver.current?.retry()}
+        >
+          Tentar salvar novamente
+        </button>
+      ) : null}
+      <div id="financas" className="scroll-mt-4" />
 
       <Card
         title="Checklist interno"
@@ -361,8 +408,12 @@ export function VehicleOpsPanel({
             </p>
             <p className="text-xs leading-relaxed text-muted">
               {sold ? "Vendido por" : "Anunciado por"}{" "}
-              <span className="text-cream">{formatCurrencyBRL(referencePrice)}</span>
-              {" · lucro N/A. Para mudar, desmarque “Consignado” na aba Anúncio."}
+              <span className="text-cream">
+                {formatCurrencyBRL(referencePrice)}
+              </span>
+              {
+                " · lucro N/A. Para mudar, desmarque “Consignado” na aba Anúncio."
+              }
             </p>
             {costs.length > 0 ? (
               <p className="text-xs leading-relaxed text-muted">
@@ -376,27 +427,32 @@ export function VehicleOpsPanel({
       ) : (
         <>
           <Card title="Compra e margem">
+            {!hasBasis ? (
+              <p className="mb-4 text-sm text-brand-orange">
+                Informe a compra para apurar a margem. Custos extras sozinhos
+                não representam o investimento completo.
+              </p>
+            ) : null}
             <div className="grid gap-4 lg:grid-cols-[minmax(0,16rem)_1fr] lg:items-end">
               <Field
                 label="Preço de compra"
-                hint="Salva ao sair do campo. Não aparece no site."
+                hint="Salva automaticamente. Não aparece no site."
               >
                 <input
-                  inputMode="numeric"
+                  inputMode="decimal"
                   value={purchase}
-                  onChange={(event) => {
-                    const next = formatNumberBR(
-                      Number(event.target.value.replace(/\D/g, "") || 0),
-                    );
-                    setPurchase(next);
-                    draftRef.current = { ...draftRef.current, purchase: next };
+                  onChange={(event) =>
+                    persistOps({ purchase: moneyTyping(event.target.value) })
+                  }
+                  onBlur={() => {
+                    if (parseMoneyBR(purchase) != null)
+                      setPurchase(moneyInput(parseMoneyBR(purchase)));
                   }}
-                  onBlur={() => persistOps({ purchase })}
                   placeholder="0"
                   className={inputClass}
                 />
               </Field>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid gap-3 min-[440px]:grid-cols-3">
                 <MiniStat
                   label="Investido"
                   value={hasBasis ? formatCurrencyBRL(invested) : "—"}
@@ -415,7 +471,9 @@ export function VehicleOpsPanel({
           </Card>
 
           <Card
-            title={extras > 0 ? `Custos · ${formatCurrencyBRL(extras)}` : "Custos"}
+            title={
+              extras > 0 ? `Custos · ${formatCurrencyBRL(extras)}` : "Custos"
+            }
             action={
               <button
                 type="button"
@@ -436,97 +494,103 @@ export function VehicleOpsPanel({
                   }
                 }}
                 onDrop={(event) => {
-                  if (!Array.from(event.dataTransfer.types).includes("Files")) return;
+                  if (!Array.from(event.dataTransfer.types).includes("Files"))
+                    return;
                   event.preventDefault();
                   const file = event.dataTransfer.files?.[0];
                   if (file) void onReceiptChange(file);
                 }}
-                className="mb-5 grid gap-3 border border-white/10 bg-asphalt/40 p-4 sm:grid-cols-2 lg:grid-cols-4"
+                className="mb-5 border border-white/10 bg-asphalt/40 p-4"
               >
-                <Field label="Tipo" required>
-                  <select
-                    name="kind"
-                    className={inputClass}
-                    value={costKind}
-                    onChange={(event) =>
-                      setCostKind(event.target.value as VehicleCostKind)
-                    }
-                  >
-                    {VEHICLE_COST_KINDS.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Valor" required>
-                  <input
-                    name="amount"
-                    inputMode="numeric"
-                    value={costAmount}
-                    onChange={(event) =>
-                      setCostAmount(
-                        formatNumberBR(
-                          Number(event.target.value.replace(/\D/g, "") || 0),
-                        ),
-                      )
-                    }
-                    placeholder="0"
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Data">
-                  <input
-                    type="date"
-                    name="incurredAt"
-                    defaultValue={todayInput()}
-                    className={inputClass}
-                  />
-                </Field>
-                {isOtherKind(costKind) ? (
-                  <Field
-                    label="Nome do custo"
-                    hint="Ex.: IPVA, chaveiro."
-                    required
-                  >
-                    <input
-                      name="description"
-                      placeholder="Como deve aparecer na lista"
+                <fieldset
+                  disabled={itemPending}
+                  className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                >
+                  <Field label="Tipo" required>
+                    <select
+                      name="kind"
                       className={inputClass}
-                      autoComplete="off"
+                      value={costKind}
+                      onChange={(event) =>
+                        setCostKind(event.target.value as VehicleCostKind)
+                      }
+                    >
+                      {VEHICLE_COST_KINDS.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Valor" required>
+                    <input
+                      name="amount"
+                      inputMode="decimal"
+                      value={costAmount}
+                      onChange={(event) =>
+                        setCostAmount(moneyTyping(event.target.value))
+                      }
+                      onBlur={() => {
+                        if (parseMoneyBR(costAmount) != null)
+                          setCostAmount(moneyInput(parseMoneyBR(costAmount)));
+                      }}
+                      placeholder="0"
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Data">
+                    <input
+                      type="date"
+                      name="incurredAt"
+                      defaultValue={todayInput()}
+                      className={inputClass}
+                    />
+                  </Field>
+                  {isOtherKind(costKind) ? (
+                    <Field
+                      label="Nome do custo"
+                      hint="Ex.: IPVA, chaveiro."
                       required
+                    >
+                      <input
+                        name="description"
+                        placeholder="Como deve aparecer na lista"
+                        className={inputClass}
+                        autoComplete="off"
+                        required
+                      />
+                    </Field>
+                  ) : (
+                    <Field label="Observação">
+                      <input
+                        name="description"
+                        placeholder="Opcional"
+                        className={inputClass}
+                        autoComplete="off"
+                      />
+                    </Field>
+                  )}
+                  <div className="sm:col-span-2 lg:col-span-3">
+                    <AdminFileDrop
+                      label="Comprovante"
+                      hint="Opcional — PDF ou imagem. Arraste ou clique."
+                      fileName={costReceipt?.name}
+                      uploading={uploadingCost}
+                      disabled={itemPending}
+                      onFile={(file) => void onReceiptChange(file)}
+                      onClear={() => setCostReceipt(null)}
                     />
-                  </Field>
-                ) : (
-                  <Field label="Observação">
-                    <input
-                      name="description"
-                      placeholder="Opcional"
-                      className={inputClass}
-                      autoComplete="off"
-                    />
-                  </Field>
-                )}
-                <div className="sm:col-span-2 lg:col-span-3">
-                  <AdminFileDrop
-                    label="Comprovante"
-                    hint="Opcional — PDF ou imagem. Arraste ou clique."
-                    fileName={costReceipt?.name}
-                    uploading={uploadingCost}
-                    disabled={itemPending}
-                    onFile={(file) => void onReceiptChange(file)}
-                    onClear={() => setCostReceipt(null)}
-                  />
-                </div>
-                <div className="flex items-end">
-                  <button
-                    type="submit"
-                    disabled={itemPending || uploadingCost}
-                    className={btn.primary}
-                  >
-                    Registrar custo
-                  </button>
-                </div>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="submit"
+                      disabled={itemPending || uploadingCost}
+                      className={btn.primary}
+                    >
+                      Registrar custo
+                    </button>
+                  </div>
+                </fieldset>
               </form>
             ) : null}
 
@@ -587,6 +651,7 @@ export function VehicleOpsPanel({
         </>
       )}
 
+      <div id="documentos" className="scroll-mt-4" />
       <Card
         title={
           documents.length > 0
@@ -613,89 +678,96 @@ export function VehicleOpsPanel({
               }
             }}
             onDrop={(event) => {
-              if (!Array.from(event.dataTransfer.types).includes("Files")) return;
+              if (!Array.from(event.dataTransfer.types).includes("Files"))
+                return;
               event.preventDefault();
               const file = event.dataTransfer.files?.[0];
               if (file) void onDocFileChange(file);
             }}
-            className="mb-5 grid gap-3 border border-white/10 bg-asphalt/40 p-4 sm:grid-cols-2"
+            className="mb-5 border border-white/10 bg-asphalt/40 p-4"
           >
-            <Field label="Tipo" required>
-              <select
-                name="kind"
-                className={inputClass}
-                value={docKind}
-                onChange={(event) =>
-                  setDocKind(event.target.value as VehicleDocKind)
-                }
-              >
-                {VEHICLE_DOC_KINDS.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            {isOtherKind(docKind) ? (
-              <Field
-                label="Nome do documento"
-                hint="Ex.: contrato, boleto, termo de garantia."
-                required
-              >
-                <input
-                  name="title"
-                  placeholder="Como deve aparecer na lista"
+            <fieldset
+              disabled={itemPending}
+              className="grid min-w-0 gap-3 sm:grid-cols-2"
+            >
+              <Field label="Tipo" required>
+                <select
+                  name="kind"
                   className={inputClass}
-                  autoComplete="off"
+                  value={docKind}
+                  onChange={(event) =>
+                    setDocKind(event.target.value as VehicleDocKind)
+                  }
+                >
+                  {VEHICLE_DOC_KINDS.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {isOtherKind(docKind) ? (
+                <Field
+                  label="Nome do documento"
+                  hint="Ex.: contrato, boleto, termo de garantia."
                   required
+                >
+                  <input
+                    name="title"
+                    placeholder="Como deve aparecer na lista"
+                    className={inputClass}
+                    autoComplete="off"
+                    required
+                  />
+                </Field>
+              ) : (
+                <Field label="Nome" hint="Opcional">
+                  <input
+                    name="title"
+                    placeholder="Ex.: CRLV 2026"
+                    className={inputClass}
+                    autoComplete="off"
+                  />
+                </Field>
+              )}
+              <div className="sm:col-span-2">
+                <AdminFileDrop
+                  label="Arquivo"
+                  hint="PDF ou imagem. Arraste ou clique."
+                  required
+                  fileName={docFile?.name}
+                  uploading={uploadingDoc}
+                  disabled={itemPending}
+                  onFile={(file) => void onDocFileChange(file)}
+                  onClear={() => setDocFile(null)}
                 />
-              </Field>
-            ) : (
-              <Field label="Nome" hint="Opcional">
-                <input
-                  name="title"
-                  placeholder="Ex.: CRLV 2026"
-                  className={inputClass}
-                  autoComplete="off"
-                />
-              </Field>
-            )}
-            <div className="sm:col-span-2">
-              <AdminFileDrop
-                label="Arquivo"
-                hint="PDF ou imagem. Arraste ou clique."
-                required
-                fileName={docFile?.name}
-                uploading={uploadingDoc}
-                disabled={itemPending}
-                onFile={(file) => void onDocFileChange(file)}
-                onClear={() => setDocFile(null)}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Field label="Observação">
-                <input
-                  name="notes"
-                  placeholder="Opcional"
-                  className={inputClass}
-                />
-              </Field>
-            </div>
-            <div>
-              <button
-                type="submit"
-                disabled={itemPending || uploadingDoc}
-                className={btn.primary}
-              >
-                Salvar documento
-              </button>
-            </div>
+              </div>
+              <div className="sm:col-span-2">
+                <Field label="Observação">
+                  <input
+                    name="notes"
+                    placeholder="Opcional"
+                    className={inputClass}
+                  />
+                </Field>
+              </div>
+              <div>
+                <button
+                  type="submit"
+                  disabled={itemPending || uploadingDoc}
+                  className={btn.primary}
+                >
+                  Salvar documento
+                </button>
+              </div>
+            </fieldset>
           </form>
         ) : null}
 
         {documents.length === 0 ? (
           <p className="text-sm text-muted">
-            Nenhum arquivo ainda. CRLV, recibo, laudo e afins ficam só no painel.
+            Nenhum arquivo ainda. CRLV, recibo, laudo e afins ficam só no
+            painel.
           </p>
         ) : (
           <ul className="divide-y divide-white/10">
@@ -750,6 +822,17 @@ export function VehicleOpsPanel({
         )}
       </Card>
 
+      <details
+        id="acervo"
+        className="scroll-mt-4 border border-white/10 bg-ink/50"
+      >
+        <summary className="min-h-12 cursor-pointer p-4 font-display text-base font-semibold">
+          Fotos em alta · {photos.length}
+        </summary>
+        <div className="border-t border-white/10 p-4">
+          <VehiclePhotoArchive vehicleId={vehicle.id} photos={photos} />
+        </div>
+      </details>
       <ConfirmDialog
         open={pendingDelete != null}
         title={
@@ -771,8 +854,12 @@ export function VehicleOpsPanel({
           startItemTransition(async () => {
             const result =
               target.type === "cost"
-                ? await deleteVehicleCost(vehicle.id, target.id)
-                : await deleteVehicleDocument(vehicle.id, target.id);
+                ? await adminMutation(() =>
+                    deleteVehicleCost(vehicle.id, target.id),
+                  )
+                : await adminMutation(() =>
+                    deleteVehicleDocument(vehicle.id, target.id),
+                  );
             if (result.ok) {
               toast.success(result.message);
               setPendingDelete(null);
@@ -803,11 +890,11 @@ function MiniStat({
         ? "text-brand"
         : "text-cream";
   return (
-    <div className="min-w-0 overflow-hidden [container-type:inline-size] border border-white/10 px-3 py-2.5">
+    <div className="flex min-w-0 items-center justify-between gap-3 border border-white/10 px-3 py-2.5 min-[440px]:block">
       <p className="text-[10px] uppercase tracking-wider text-muted">{label}</p>
       <p
         title={value}
-        className={`mt-1 truncate font-display font-semibold tabular-nums ${color} [font-size:clamp(0.7rem,11cqi,0.875rem)]`}
+        className={`break-words font-display text-sm font-semibold tabular-nums min-[440px]:mt-1 ${color}`}
       >
         {value}
       </p>

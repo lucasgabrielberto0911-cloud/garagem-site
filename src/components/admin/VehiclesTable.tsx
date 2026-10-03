@@ -25,11 +25,7 @@ import {
   IconStar,
   IconTrash,
 } from "@/components/admin/icons";
-import {
-  EmptyState,
-  btn,
-  inputClass,
-} from "@/components/admin/ui";
+import { EmptyState, btn, inputClass } from "@/components/admin/ui";
 import { formatCurrencyBRL } from "@/lib/format";
 import {
   CONSIGNED_LABEL,
@@ -233,7 +229,14 @@ export function VehiclesTable({
     }
     window.addEventListener("keydown", onEscape);
     return () => window.removeEventListener("keydown", onEscape);
-  }, [bulkTarget, soldTarget, deleteTarget, actionsTarget, selected.length, undoBanner]);
+  }, [
+    bulkTarget,
+    soldTarget,
+    deleteTarget,
+    actionsTarget,
+    selected.length,
+    undoBanner,
+  ]);
 
   const fetchPage = useCallback(
     async (
@@ -256,7 +259,9 @@ export function VehiclesTable({
         search.set("dir", nextSort.dir);
         search.set("page", String(nextPage));
         search.set("pageSize", String(pageSize));
-        const response = await fetch(`/api/admin/veiculos?${search.toString()}`);
+        const response = await fetch(
+          `/api/admin/veiculos?${search.toString()}`,
+        );
         if (!response.ok) throw new Error("fetch");
         const data = (await response.json()) as {
           vehicles?: VehicleRow[];
@@ -297,10 +302,7 @@ export function VehiclesTable({
       if (nextQ) search.set("q", nextQ);
       if (nextTab === "vendidos") search.set("tab", "vendidos");
       if (nextTab === "destaques") search.set("tab", "destaques");
-      const nextStatus =
-        params.status === undefined
-          ? status
-          : params.status;
+      const nextStatus = params.status === undefined ? status : params.status;
       if (nextStatus && nextTab === "estoque") {
         search.set("status", nextStatus);
       }
@@ -340,7 +342,10 @@ export function VehiclesTable({
       setReservedCount((count) => count + 1);
     }
 
-    if ((tab === "estoque" || tab === "destaques") && nextStatus === "vendido") {
+    if (
+      (tab === "estoque" || tab === "destaques") &&
+      nextStatus === "vendido"
+    ) {
       if (featured) {
         setFeaturedCount((count) => Math.max(0, count - 1));
       }
@@ -357,7 +362,9 @@ export function VehiclesTable({
       return;
     }
     setItems((rows) =>
-      rows.map((item) => (item.id === id ? { ...item, status: nextStatus } : item)),
+      rows.map((item) =>
+        item.id === id ? { ...item, status: nextStatus } : item,
+      ),
     );
   }
 
@@ -412,7 +419,9 @@ export function VehiclesTable({
     setMarkingSold(true);
     try {
       await markVehicleAsSold(soldTarget.id);
-      toast.success("Veículo movido para a aba Vendidos. A página permanece no site.");
+      toast.success(
+        "Veículo movido para a aba Vendidos. A página permanece no site.",
+      );
       applyLocalStatus(soldTarget.id, "vendido", soldTarget.featured);
       router.refresh();
     } catch {
@@ -484,7 +493,9 @@ export function VehiclesTable({
       } else {
         setUndoBanner(null);
       }
-      const featuredById = new Map(items.map((item) => [item.id, item.featured]));
+      const featuredById = new Map(
+        items.map((item) => [item.id, item.featured]),
+      );
       for (const id of appliedIds) {
         applyLocalStatus(id, applied, featuredById.get(id) ?? false);
       }
@@ -618,7 +629,9 @@ export function VehiclesTable({
           Em estoque
           <span
             className={`px-1.5 py-0.5 text-[10px] ${
-              tab === "estoque" ? "bg-brand/20 text-brand" : "bg-white/10 text-muted"
+              tab === "estoque"
+                ? "bg-brand/20 text-brand"
+                : "bg-white/10 text-muted"
             }`}
           >
             {estoqueCount}
@@ -638,7 +651,9 @@ export function VehiclesTable({
           Destaques
           <span
             className={`px-1.5 py-0.5 text-[10px] ${
-              tab === "destaques" ? "bg-brand/20 text-brand" : "bg-white/10 text-muted"
+              tab === "destaques"
+                ? "bg-brand/20 text-brand"
+                : "bg-white/10 text-muted"
             }`}
           >
             {featuredCount}/{MAX_HOME_FEATURED}
@@ -658,7 +673,9 @@ export function VehiclesTable({
           Vendidos
           <span
             className={`px-1.5 py-0.5 text-[10px] ${
-              tab === "vendidos" ? "bg-brand/20 text-brand" : "bg-white/10 text-muted"
+              tab === "vendidos"
+                ? "bg-brand/20 text-brand"
+                : "bg-white/10 text-muted"
             }`}
           >
             {vendidosCount}
@@ -706,12 +723,24 @@ export function VehiclesTable({
             {selectAll}
           </div>
           {tab === "estoque" ? (
-            <div className={CHIP_SCROLL} role="group" aria-label="Filtrar por status">
+            <div
+              className={CHIP_SCROLL}
+              role="group"
+              aria-label="Filtrar por status"
+            >
               {(
                 [
                   { value: null, label: "Todos", count: estoqueCount },
-                  { value: "disponivel", label: "Disponível", count: availableCount },
-                  { value: "reservado", label: "Reservado", count: reservedCount },
+                  {
+                    value: "disponivel",
+                    label: "Disponível",
+                    count: availableCount,
+                  },
+                  {
+                    value: "reservado",
+                    label: "Reservado",
+                    count: reservedCount,
+                  },
                 ] as const
               ).map((option) => {
                 const active =
@@ -755,7 +784,10 @@ export function VehiclesTable({
             id="vehicles-sort"
             value={`${sort.key}:${sort.dir}`}
             onChange={(event) => {
-              const [key, dir] = event.target.value.split(":") as [SortKey, "asc" | "desc"];
+              const [key, dir] = event.target.value.split(":") as [
+                SortKey,
+                "asc" | "desc",
+              ];
               changeSort({ key, dir });
             }}
             aria-label="Ordenar"
@@ -919,18 +951,18 @@ export function VehiclesTable({
               </div>
             ) : null}
             <ul className="space-y-2">
-            {items.map((vehicle) => (
-              <VehicleAdminCard
-                key={vehicle.id}
-                vehicle={vehicle}
-                busy={busyId === vehicle.id}
-                selected={selected.includes(vehicle.id)}
-                onToggleSelect={() => toggleSelected(vehicle.id)}
-                onMarkSold={() => setSoldTarget(vehicle)}
-                onMore={() => setActionsTarget(vehicle)}
-              />
-            ))}
-          </ul>
+              {items.map((vehicle) => (
+                <VehicleAdminCard
+                  key={vehicle.id}
+                  vehicle={vehicle}
+                  busy={busyId === vehicle.id}
+                  selected={selected.includes(vehicle.id)}
+                  onToggleSelect={() => toggleSelected(vehicle.id)}
+                  onMarkSold={() => setSoldTarget(vehicle)}
+                  onMore={() => setActionsTarget(vehicle)}
+                />
+              ))}
+            </ul>
           </div>
           <div className="flex flex-col items-center gap-2 text-sm text-muted">
             <span>
@@ -966,7 +998,11 @@ export function VehiclesTable({
 
       <ActionSheet
         open={actionsTarget !== null}
-        title={actionsTarget ? `${actionsTarget.brand} ${actionsTarget.model}` : "Veículo"}
+        title={
+          actionsTarget
+            ? `${actionsTarget.brand} ${actionsTarget.model}`
+            : "Veículo"
+        }
         subtitle={
           actionsTarget
             ? `${STATUS_LABEL[actionsTarget.status] ?? actionsTarget.status} · ${formatCurrencyBRL(actionsTarget.price)}`
@@ -1044,7 +1080,9 @@ export function VehiclesTable({
             : "Atualizar lote"
         }
         confirmLabel={
-          bulkTarget === "vendido" ? "Marcar como vendidos" : "Marcar disponíveis"
+          bulkTarget === "vendido"
+            ? "Marcar como vendidos"
+            : "Marcar disponíveis"
         }
         danger={bulkTarget === "vendido"}
         loading={bulkBusy}
@@ -1139,7 +1177,7 @@ function VehicleAdminCard({
 
           <span className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
             <span className="min-w-0">
-              <span className="block truncate font-display text-base font-semibold leading-tight text-cream">
+              <span className="block font-display text-base font-semibold leading-tight text-cream">
                 {title}
               </span>
               <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -1152,11 +1190,15 @@ function VehicleAdminCard({
                 </span>
                 {vehicle.consigned ? <ConsignedChip /> : null}
               </span>
-              <span className="mt-1 block truncate text-xs text-muted">{meta}</span>
+              <span className="mt-1 block text-xs leading-relaxed text-muted">
+                {meta}
+              </span>
             </span>
             <span className="shrink-0 sm:text-right">
               {missingPrice ? (
-                <span className="text-sm font-medium text-muted">Sem preço</span>
+                <span className="text-sm font-medium text-muted">
+                  Sem preço
+                </span>
               ) : (
                 <span className="block font-display text-lg font-bold leading-none text-cream sm:text-xl">
                   {formatCurrencyBRL(vehicle.price)}

@@ -27,7 +27,7 @@ test("edição abre só preço/status e fotos; cadastro novo abre o que precisa 
   );
   const create = initialOpenSections("create");
   assert.ok(create.includes("identificacao"));
-  assert.ok(create.includes("ficha"));
+  assert.deepEqual(create, ["identificacao"]);
   assert.ok(!create.includes("operacao"));
 });
 
@@ -57,7 +57,10 @@ test("resumos das seções fechadas cabem numa linha", () => {
     }),
     "Volkswagen Golf · GTI · Preto · ABC-1D23",
   );
-  assert.equal(identitySummary({ brand: "", model: "" }), "Preencher marca e modelo");
+  assert.equal(
+    identitySummary({ brand: "", model: "" }),
+    "Preencher marca e modelo",
+  );
   assert.equal(
     fichaSummary({
       year: "2020",

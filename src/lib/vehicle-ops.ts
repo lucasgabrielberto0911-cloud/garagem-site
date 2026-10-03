@@ -1,3 +1,5 @@
+import { moneySum, moneyDifference } from "@/lib/admin-money";
+
 export const VEHICLE_COST_KINDS = [
   { value: "despachante", label: "Despachante" },
   { value: "documentacao", label: "Documentação" },
@@ -72,7 +74,7 @@ export const CONSIGNED_NO_COSTS_NOTE =
 
 export function extrasTotal(costs: VehicleCostsInput) {
   if (typeof costs === "number") return Number.isFinite(costs) ? costs : 0;
-  return costs.reduce((sum, item) => sum + (item.amount || 0), 0);
+  return moneySum(costs.map((item) => item.amount || 0));
 }
 
 export function investedTotal(
@@ -81,7 +83,7 @@ export function investedTotal(
   options?: VehicleCostOptions,
 ) {
   if (options?.consigned) return 0;
-  return (purchasePrice ?? 0) + extrasTotal(costs);
+  return moneySum([purchasePrice ?? 0, extrasTotal(costs)]);
 }
 
 export function hasCostBasis(
@@ -90,7 +92,7 @@ export function hasCostBasis(
   options?: VehicleCostOptions,
 ) {
   if (options?.consigned) return false;
-  return (purchasePrice != null && purchasePrice > 0) || extrasTotal(costs) > 0;
+  return purchasePrice != null && purchasePrice > 0;
 }
 
 export function expectedMargin(
@@ -99,5 +101,8 @@ export function expectedMargin(
   costs: VehicleCostsInput,
   options?: VehicleCostOptions,
 ) {
-  return salePrice - investedTotal(purchasePrice, costs, options);
+  return moneyDifference(
+    salePrice,
+    investedTotal(purchasePrice, costs, options),
+  );
 }

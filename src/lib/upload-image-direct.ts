@@ -37,18 +37,27 @@ export type UploadedPhoto = {
  */
 export async function uploadImageDirect(
   file: File,
-  options?: { master?: boolean },
+  options?: { master?: boolean; id?: string },
 ): Promise<UploadedPhoto> {
-  const [prepared, masterId] = await Promise.all([
-    prepareImageForUpload(file),
-    options?.master ? uploadPrivateMaster(file) : Promise.resolve(null),
-  ]);
+  const heic =
+    /\.(heic|heif)$/i.test(file.name) || /image\/hei[cf]/i.test(file.type);
+  if (heic && file.size > 3 * 1024 * 1024)
+    throw new Error(
+      "HEIC acima de 3 MB. Exporte esta foto como JPG para enviar com segurança.",
+    );
+  const prepared = heic ? file : await prepareImageForUpload(file);
+  // Evita decodificar simultaneamente a versão pública e o original no celular.
+  const masterId =
+    options?.master && !heic
+      ? await uploadPrivateMaster(file, options.id)
+      : null;
 
   try {
     const form = new FormData();
     form.append("file", prepared, prepared.name || "photo.webp");
     if (options?.master) form.append("storeMaster", "1");
     if (masterId) form.append("masterId", masterId);
+    if (options?.id) form.append("uploadId", options.id);
 
     const response = await fetch("/api/upload", {
       method: "POST",
@@ -69,7 +78,8 @@ export async function uploadImageDirect(
       if (url) {
         return {
           url,
-          thumbnailUrl: data.photos?.[0]?.thumbnailUrl ?? data.thumbnailUrl ?? null,
+          thumbnailUrl:
+            data.photos?.[0]?.thumbnailUrl ?? data.thumbnailUrl ?? null,
         };
       }
     }
@@ -78,7 +88,11 @@ export async function uploadImageDirect(
       console.warn(
         "[upload] /api/upload retornou 413 — usando upload assinado.",
       );
-      return uploadViaSignedUrl(prepared, masterId);
+      if (heic)
+        throw new Error(
+          "O servidor recusou o tamanho do HEIC. Exporte como JPG e tente novamente.",
+        );
+      return uploadViaSignedUrl(prepared, masterId ?? options?.id ?? null);
     }
 
     throw new Error(
@@ -107,7 +121,10 @@ async function deriveThumbnail(url: string): Promise<string | null> {
   }
 }
 
-async function uploadPrivateMaster(file: File): Promise<string | null> {
+async function uploadPrivateMaster(
+  file: File,
+  id?: string,
+): Promise<string | null> {
   try {
     const prepared = await prepareMasterForUpload(file);
     if (!prepared) return null;
@@ -115,6 +132,8 @@ async function uploadPrivateMaster(file: File): Promise<string | null> {
     const signResponse = await fetch("/api/upload/master/sign", {
       method: "POST",
       credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
     });
     const signRaw = await signResponse.text();
     let signData: SignResponse = {};
@@ -188,8 +207,7 @@ async function uploadViaSignedUrl(
     !signData.token
   ) {
     throw new Error(
-      signData.error ||
-        `Falha ao preparar upload (${signResponse.status}).`,
+      signData.error || `Falha ao preparar upload (${signResponse.status}).`,
     );
   }
 
@@ -243,7 +261,11 @@ async function putWithCacheControl({
           upsert: false,
         });
       if (!error) return true;
-      console.warn("[upload] uploadToSignedUrl falhou, tentando PUT:", error.message);
+      if (/already exists|duplicate/i.test(error.message)) return true;
+      console.warn(
+        "[upload] uploadToSignedUrl falhou, tentando PUT:",
+        error.message,
+      );
     } catch (error) {
       console.warn("[upload] uploadToSignedUrl indisponível:", error);
     }
@@ -261,6 +283,11 @@ async function putWithCacheControl({
 
   if (!put.ok) {
     const detail = await put.text().catch(() => "");
+    if (
+      [400, 409].includes(put.status) &&
+      /already exists|duplicate/i.test(detail)
+    )
+      return true;
     console.error("Direct storage upload failed:", put.status, detail);
     throw new Error(
       put.status === 413
