@@ -165,7 +165,11 @@ test("galeria só baixa o slide ativo e os vizinhos", () => {
 test("filtro de cidade só aceita onde o veículo está", () => {
   assert.deepEqual(stockCityFilter("linhares"), { locationCity: "linhares" });
   assert.deepEqual(stockCityFilter("Serra"), { locationCity: "serra" });
-  assert.deepEqual(stockCityFilter("vitoria"), {});
+  assert.deepEqual(stockCityFilter("Vitória"), { locationCity: "vitoria" });
+  assert.deepEqual(stockCityFilter("aracruz"), { locationCity: "aracruz" });
+  assert.deepEqual(stockCityFilter("guarapari"), {});
+  assert.equal(parseStockFilters({ city: "Vitória" }).city, "vitoria");
+  assert.equal(parseStockFilters({ city: "aracruz" }).city, "aracruz");
   assert.deepEqual(stockCityFilter(""), {});
   assert.equal(parseStockFilters({ city: "linhares" }).city, "linhares");
   assert.equal(parseStockFilters({ city: "Vila Velha" }).city, undefined);

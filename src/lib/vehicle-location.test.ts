@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   DEFAULT_VEHICLE_LOCATION_CITY,
+  VEHICLE_LOCATION_CITIES,
   catalogAddressCity,
   catalogPlace,
   isVehicleLocationCity,
@@ -11,51 +12,52 @@ import {
   vehicleLocationLabel,
 } from "./vehicle-location";
 
-test("default de cadastro novo é Linhares, no padrão do schema", () => {
+test("cadastros antigos conservam Linhares como fallback", () => {
   assert.equal(DEFAULT_VEHICLE_LOCATION_CITY, "linhares");
-  assert.equal(resolveVehicleLocationCity(null), "linhares");
-  assert.equal(resolveVehicleLocationCity(""), "linhares");
-  assert.equal(resolveVehicleLocationCity("vitória"), "linhares");
-  assert.equal(catalogAddressCity(undefined), "Linhares");
+  for (const value of [null, undefined, "", "Guarapari"]) {
+    assert.equal(resolveVehicleLocationCity(value), "linhares");
+    assert.equal(catalogAddressCity(value), "Linhares");
+  }
 });
 
-test("parseia só Serra ou Linhares — não chuta pelo modelo nem por outra cidade", () => {
-  assert.equal(parseVehicleLocationCity("serra"), "serra");
-  assert.equal(parseVehicleLocationCity("Linhares"), "linhares");
-  assert.equal(parseVehicleLocationCity("SERRA"), "serra");
-  assert.equal(parseVehicleLocationCity("  linhares  "), "linhares");
-  assert.equal(parseVehicleLocationCity("vitoria"), null);
-  assert.equal(parseVehicleLocationCity("aracruz"), null);
-  assert.equal(parseVehicleLocationCity("Civic EXL"), null);
-  assert.equal(isVehicleLocationCity("serra"), true);
-  assert.equal(isVehicleLocationCity("linhares"), true);
-  assert.equal(isVehicleLocationCity("aracruz"), false);
+test("as quatro cidades aceitam espaços, caixa e acento, sem inferir pelo modelo", () => {
+  assert.equal(VEHICLE_LOCATION_CITIES.length, 4);
+  for (const { value, label } of VEHICLE_LOCATION_CITIES) {
+    assert.equal(isVehicleLocationCity(value), true);
+    assert.equal(parseVehicleLocationCity(value), value);
+    assert.equal(parseVehicleLocationCity(`  ${label.toUpperCase()}  `), value);
+    assert.equal(resolveVehicleLocationCity(label), value);
+    assert.equal(vehicleLocationLabel(value), label);
+  }
+  assert.equal(parseVehicleLocationCity("Vitoria"), "vitoria");
+  for (const value of ["Guarapari", "Civic EXL", "", null, {}, 1]) {
+    assert.equal(parseVehicleLocationCity(value), null);
+    assert.equal(isVehicleLocationCity(value), false);
+    assert.equal(vehicleLocationLabel(value), "");
+  }
+  assert.equal(isVehicleLocationCity("Vitória"), false);
 });
 
-test("landing só filtra o estoque quando o carro está na cidade", () => {
-  assert.deepEqual(publicCityStockLink("linhares"), {
-    href: "/estoque?city=linhares",
-    label: "Ver os que estão em Linhares",
-    place: "Linhares",
-  });
-  assert.deepEqual(publicCityStockLink("serra"), {
-    href: "/estoque?city=serra",
-    label: "Ver os que estão em Serra",
-    place: "Serra",
-  });
+test("links filtram as quatro cidades físicas, sem confundir região atendida", () => {
+  for (const { value, label } of VEHICLE_LOCATION_CITIES) {
+    assert.deepEqual(publicCityStockLink(value), {
+      href: `/estoque?city=${value}`,
+      label: `Ver os que estão em ${label}`,
+      place: label,
+    });
+  }
   assert.equal(publicCityStockLink("vila-velha").href, "/estoque");
-  assert.equal(publicCityStockLink("vitoria").label, "Ver o estoque");
-  assert.equal(publicCityStockLink("vitoria").place, "");
-  assert.doesNotMatch(publicCityStockLink("guarapari").label, /Guarapari/);
+  assert.equal(publicCityStockLink("guarapari").place, "");
 });
 
-test("rótulos em português e cidade do catálogo Meta", () => {
-  assert.equal(vehicleLocationLabel("serra"), "Serra");
-  assert.equal(vehicleLocationLabel("linhares"), "Linhares");
-  assert.equal(vehicleLocationLabel("aracruz"), "");
-  assert.equal(catalogAddressCity("serra"), "Serra");
-  assert.equal(catalogAddressCity("linhares"), "Linhares");
-  assert.equal(catalogPlace("serra").city, "Serra");
-  assert.equal(catalogPlace("vitoria").city, "Linhares");
-  assert.notEqual(catalogPlace(undefined).city, "Vitória");
+test("catálogo mantém a cidade salva, inclusive Vitória e Aracruz", () => {
+  for (const { value, label } of VEHICLE_LOCATION_CITIES) {
+    assert.equal(catalogAddressCity(value), label);
+    assert.equal(catalogPlace(value).city, label);
+    assert.match(catalogPlace(value).postalCode, /^\d{5}-\d{3}$/);
+    assert.ok(catalogPlace(value).latitude < -19);
+    assert.ok(catalogPlace(value).longitude < -40);
+  }
+  assert.equal(catalogPlace("linhares").postalCode, "29900-000");
+  assert.equal(catalogPlace("serra").postalCode, "29160-000");
 });

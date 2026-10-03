@@ -85,6 +85,21 @@ test("ficha pública mostra Cidade só com cidade válida do admin", () => {
     locationCity: "serra",
   });
   assert.equal(serra.find((row) => row.label === "Cidade")?.value, "Serra");
+  for (const [locationCity, label] of [
+    ["vitoria", "Vitória"],
+    ["aracruz", "Aracruz"],
+  ]) {
+    const rows = buildVehiclePublicSpecs({
+      category: "carro",
+      year: 2020,
+      yearModel: 2020,
+      km: 20000,
+      fuel: "Flex",
+      transmission: "Manual",
+      locationCity,
+    });
+    assert.equal(rows.find((row) => row.label === "Cidade")?.value, label);
+  }
 
   const guessed = buildVehiclePublicSpecs({
     category: "carro",
@@ -93,7 +108,7 @@ test("ficha pública mostra Cidade só com cidade válida do admin", () => {
     km: 98000,
     fuel: "Flex",
     transmission: "Manual",
-    locationCity: "aracruz",
+    locationCity: "guarapari",
   });
   assert.equal(
     guessed.some((row) => row.label === "Cidade"),

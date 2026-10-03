@@ -233,7 +233,7 @@ export type StockFilters = {
   minYear?: number;
   maxYear?: number;
   maxKm?: number;
-  /** Só `linhares` ou `serra` — onde o veículo está. */
+  /** Cidade física do veículo, entre as opções do admin. */
   city?: string;
   sort?: string;
   page?: number;
@@ -279,7 +279,7 @@ export const STOCK_SORT_OPTIONS = [
 
 export type StockSortValue = (typeof STOCK_SORT_OPTIONS)[number]["value"];
 
-/** Where parcial. Cidade de atendimento (Vitória, Aracruz…) não filtra. */
+/** Where parcial pela localização do veículo, não pela região atendida. */
 export function stockCityFilter(value?: string | null) {
   const city = parseVehicleLocationCity(value);
   return city ? { locationCity: city } : {};

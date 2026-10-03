@@ -39,7 +39,8 @@ test("filtros viram frase natural para o WhatsApp", () => {
     formatStockWaitlistQuery({ brand: "Honda", model: "civic", maxPrice: "80000" }),
     /Honda Civic, até R\$\s*80\.000/,
   );
-  assert.equal(formatStockWaitlistQuery({ city: "vitoria" }), "");
+  assert.equal(formatStockWaitlistQuery({ city: "vitoria" }), "em Vitória");
+  assert.equal(formatStockWaitlistQuery({ city: "aracruz" }), "em Aracruz");
   assert.match(
     formatStockWaitlistQuery({ transmission: "automatico" }),
     /^automático$/,

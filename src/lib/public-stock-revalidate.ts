@@ -1,4 +1,4 @@
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { prisma } from "@/lib/prisma";
 import { vehiclePath, type VehiclePathInput } from "@/lib/vehicle-slug";
@@ -12,9 +12,15 @@ const SLUG_SELECT = {
   yearModel: true,
 } as const;
 
-function revalidateSharedPublicStock(expireAdmin = true) {
+function revalidateSharedPublicStock(expireAdmin = true, immediate = false) {
   if (expireAdmin) expireAdminData();
-  revalidateTag(VEHICLES_PUBLIC_CACHE_TAG, "max");
+  // Somente Server Actions podem pedir leitura imediata após a alteração.
+  if (immediate) {
+    updateTag(VEHICLES_PUBLIC_CACHE_TAG);
+    revalidatePath("/api/estoque");
+  } else {
+    revalidateTag(VEHICLES_PUBLIC_CACHE_TAG, "max");
+  }
   revalidatePath("/");
   revalidatePath("/estoque");
   revalidatePath("/sitemap.xml");
@@ -37,8 +43,9 @@ function revalidateSlug(vehicle: VehiclePathInput, seen: Set<string>) {
 export async function revalidatePublicStock(
   vehicle?: VehiclePathInput | string | null,
   previous?: VehiclePathInput | null,
+  options: { immediate?: boolean } = {},
 ) {
-  revalidateSharedPublicStock();
+  revalidateSharedPublicStock(true, options.immediate);
   const seen = new Set<string>();
   if (previous?.id) revalidateSlug(previous, seen);
 

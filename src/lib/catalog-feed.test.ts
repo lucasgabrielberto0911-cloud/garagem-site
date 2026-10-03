@@ -159,6 +159,21 @@ test("endereço, CEP e coordenadas vêm da cidade do carro", () => {
   assert.match(serra?.address ?? "", /"city":"Serra"/);
 });
 
+test("catálogo e pixel preservam Vitória e Aracruz escolhidas no admin", () => {
+  for (const [locationCity, label, postalCode] of [
+    ["vitoria", "Vitória", "29015-000"],
+    ["aracruz", "Aracruz", "29190-022"],
+  ]) {
+    const vehicle = { ...sample, locationCity };
+    const row = catalogVehicleRow(vehicle, "https://www.suagaragem.net");
+    assert.ok(row);
+    assert.equal(JSON.parse(row.address).city, label);
+    assert.equal(row.postal_code, postalCode);
+    assert.equal(catalogPixelAutoFields(vehicle).postal_code, postalCode);
+    assert.doesNotMatch(row.address, /Linhares|Serra/);
+  }
+});
+
 test("consignado entra no feed salvo parâmetro explícito", () => {
   assert.equal(includeConsignedInFeed(null), true);
   assert.equal(includeConsignedInFeed(""), true);

@@ -1009,7 +1009,7 @@ export function VehicleForm({
                   Onde está o veículo
                 </span>
                 <div
-                  className="flex gap-2"
+                  className="grid grid-cols-2 gap-2"
                   role="group"
                   aria-label="Onde está o veículo"
                 >
