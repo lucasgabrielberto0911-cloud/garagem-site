@@ -454,7 +454,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 onChange={(event) => update({ city: event.target.value })}
                 className={selectClass}
               >
-                <option value="">Linhares e Serra</option>
+                <option value="">Todas as cidades</option>
                 {VEHICLE_LOCATION_CITIES.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}

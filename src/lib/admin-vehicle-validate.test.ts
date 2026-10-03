@@ -127,7 +127,7 @@ test("disponível trava o save; reservado e vendido só avisam", () => {
   );
 });
 
-test("cidade física exige Serra ou Linhares quando o campo vem no form", () => {
+test("cidade física exige uma cidade válida quando o campo vem no form", () => {
   assert.equal(validateVehicleListing(ok).length, 0);
   assert.equal(
     validateVehicleListing({ ...ok, locationCity: "linhares" }).length,
@@ -140,8 +140,8 @@ test("cidade física exige Serra ou Linhares quando o campo vem no form", () => 
   const missing = validateVehicleListing({ ...ok, locationCity: "  " });
   assert.equal(missing.some((issue) => issue.field === "locationCity"), true);
   assert.match(
-    vehicleListingError({ ...ok, locationCity: "vitoria" }) ?? "",
-    /Serra ou Linhares/,
+    vehicleListingError({ ...ok, locationCity: "guarapari" }) ?? "",
+    /Selecione a cidade/,
   );
 });
 
@@ -161,4 +161,18 @@ test("formulário e actions travam disponível com preço divergente no texto", 
 
   assert.match(actions, /descriptionPriceSaveError/);
   assert.match(actions, /status === "disponivel"/);
+});
+
+test("cadastro aceita as quatro cidades e recusa localidades fora da lista", () => {
+  for (const locationCity of ["linhares", "serra", "vitoria", "Vitória", "aracruz"]) {
+    assert.deepEqual(validateVehicleListing({ ...ok, locationCity }), []);
+  }
+  for (const locationCity of ["", "guarapari", "vila-velha"]) {
+    assert.equal(
+      validateVehicleListing({ ...ok, locationCity }).some(
+        (issue) => issue.field === "locationCity",
+      ),
+      true,
+    );
+  }
 });

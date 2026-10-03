@@ -100,7 +100,7 @@ test("fato vazio some do card e não vira traço, zero ou cidade padrão", () =>
     yearModel: 2023,
     km: 450,
     transmission: "Manual",
-    locationCity: "Vitória",
+    locationCity: "guarapari",
     price: Number.NaN,
   });
   assert.equal(partial.version, "");
@@ -289,7 +289,7 @@ test("fato ausente não aparece no HTML do card", () => {
             yearModel: 0,
             km: null,
             transmission: "",
-            locationCity: "aracruz",
+            locationCity: null,
             price: 0,
           }),
         }),
@@ -332,4 +332,16 @@ test("o chat continua com WhatsApp mesmo dentro da lista", () => {
   );
   assert.match(html, /WhatsApp/);
   assert.match(html, /wa\.me/);
+});
+
+test("card mostra Vitória e Aracruz conforme a cidade salva, sem mudar os fatos", () => {
+  for (const [locationCity, label] of [
+    ["vitoria", "Vitória"],
+    ["aracruz", "Aracruz"],
+  ]) {
+    const card = publicCardFacts({ ...hrv, locationCity });
+    assert.equal(card.facts.find((fact) => fact.label === "Cidade")?.value, label);
+    assert.equal(card.priceLabel, publicCardFacts(hrv).priceLabel);
+    assert.equal(card.version, publicCardFacts(hrv).version);
+  }
 });

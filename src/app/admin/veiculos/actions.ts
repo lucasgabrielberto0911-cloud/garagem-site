@@ -126,7 +126,7 @@ function parseVehicleFields(formData: FormData) {
     ? parseVehicleLocationCity(locationRaw)
     : DEFAULT_VEHICLE_LOCATION_CITY;
   if (!locationCity) {
-    throw new Error("Informe se o veículo está em Serra ou Linhares.");
+    throw new Error("Selecione a cidade onde o veículo está.");
   }
 
   if (!brand || !model || !fuel || !transmission) {
@@ -402,6 +402,7 @@ export async function updateVehicle(
           model: true,
           version: true,
           yearModel: true,
+          locationCity: true,
         },
       }),
       loadPreviousPhotoUrls(id),
@@ -485,6 +486,7 @@ export async function updateVehicle(
         yearModel: data.yearModel,
       },
       previousVehicle,
+      { immediate: previousVehicle?.locationCity !== data.locationCity },
     );
     return { success: true, updatedAt: updated.updatedAt.toISOString() };
   } catch (error) {

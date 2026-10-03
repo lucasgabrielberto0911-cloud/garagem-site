@@ -1,11 +1,13 @@
 /**
  * Cidade física do veículo no ES. Fonte da verdade: o campo do admin.
- * Não inferir Serra/Linhares pelo modelo.
+ * Não inferir a cidade pelo modelo.
  */
 
 export const VEHICLE_LOCATION_CITIES = [
   { value: "linhares", label: "Linhares" },
   { value: "serra", label: "Serra" },
+  { value: "vitoria", label: "Vitória" },
+  { value: "aracruz", label: "Aracruz" },
 ] as const;
 
 export type VehicleLocationCity =
@@ -15,11 +17,10 @@ export type VehicleLocationCity =
 export const DEFAULT_VEHICLE_LOCATION_CITY: VehicleLocationCity = "linhares";
 
 /**
- * Texto de ajuda do painel. Heurística atual (pode mudar) — NÃO usar no código
- * para classificar anúncio.
+ * O admin informa a localização real; modelo e região atendida não a definem.
  */
 export const VEHICLE_LOCATION_HINT =
-  "Onde o veículo está hoje, no Espírito Santo. Marketplace e o time usam este campo — não o modelo. Serra hoje costuma incluir Start 160s, BIZ 125, Civic EXL, Corolla Altis, Mobi e Palio Weekend, mas a fonte da verdade é o que você marcar aqui.";
+  "Escolha a cidade onde o veículo está hoje. Essa informação aparece no anúncio, nos filtros do estoque e no Marketplace. A região atendida pela loja não muda a localização do veículo.";
 
 function normalizeLocationToken(value: unknown) {
   return String(value ?? "")
@@ -32,17 +33,15 @@ function normalizeLocationToken(value: unknown) {
 export function isVehicleLocationCity(
   value: unknown,
 ): value is VehicleLocationCity {
-  return value === "serra" || value === "linhares";
+  return VEHICLE_LOCATION_CITIES.some((city) => city.value === value);
 }
 
-/** Aceita só serra | linhares (com acento/caixa). Null se vazio ou inválido. */
+/** Aceita as cidades cadastradas, com acento/caixa. Null se vazio ou inválido. */
 export function parseVehicleLocationCity(
   value: unknown,
 ): VehicleLocationCity | null {
   const token = normalizeLocationToken(value);
-  if (token === "serra") return "serra";
-  if (token === "linhares") return "linhares";
-  return null;
+  return isVehicleLocationCity(token) ? token : null;
 }
 
 /** Fallback do schema para leitura (catálogo, chip, ficha). */
@@ -52,15 +51,14 @@ export function resolveVehicleLocationCity(value: unknown): VehicleLocationCity 
 
 export function vehicleLocationLabel(value: unknown) {
   const city = parseVehicleLocationCity(value);
-  if (city === "serra") return "Serra";
-  if (city === "linhares") return "Linhares";
-  return "";
+  return (
+    VEHICLE_LOCATION_CITIES.find((option) => option.value === city)?.label ?? ""
+  );
 }
 
 /**
  * CTA do estoque a partir de uma landing de cidade.
- * Só Linhares e Serra filtram: é onde o veículo está. As outras páginas
- * atendem o comprador, mas o carro não está “em” Vitória ou Guarapari.
+ * Filtra apenas cidades aceitas como localização física do veículo.
  */
 export function publicCityStockLink(slug: string) {
   const city = parseVehicleLocationCity(slug);
@@ -75,12 +73,16 @@ export function publicCityStockLink(slug: string) {
   };
 }
 
-/** Cidade no feed da Meta — nunca mais chutar Aracruz nem Vitória. */
+/** Cidade no feed da Meta, conforme a localização salva no admin. */
 export function catalogAddressCity(value: unknown) {
   return vehicleLocationLabel(resolveVehicleLocationCity(value));
 }
 
-/** Centro aproximado usado no catálogo (o CSV manual já usava estes pontos). */
+/**
+ * Centros municipais e CEPs centrais de referência; não são endereços da loja.
+ * Coordenadas novas: github.com/kelvins/municipios-brasileiros/blob/main/csv/municipios.csv
+ * CEPs novos conferidos em viacep.com.br/ws/29015000/json/ e /ws/29190022/json/.
+ */
 const CATALOG_PLACES: Record<
   VehicleLocationCity,
   { city: string; postalCode: string; latitude: number; longitude: number }
@@ -90,6 +92,18 @@ const CATALOG_PLACES: Record<
     postalCode: "29900-000",
     latitude: -19.3911,
     longitude: -40.0722,
+  },
+  vitoria: {
+    city: "Vitória",
+    postalCode: "29015-000",
+    latitude: -20.3155,
+    longitude: -40.3128,
+  },
+  aracruz: {
+    city: "Aracruz",
+    postalCode: "29190-022",
+    latitude: -19.82,
+    longitude: -40.2764,
   },
   serra: {
     city: "Serra",

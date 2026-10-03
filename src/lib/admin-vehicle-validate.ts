@@ -53,7 +53,7 @@ export function validateVehicleListing(
     if (!parseVehicleLocationCity(input.locationCity)) {
       issues.push({
         field: "locationCity",
-        message: "Informe se o veículo está em Serra ou Linhares.",
+        message: "Selecione a cidade onde o veículo está.",
       });
     }
   }

@@ -1,4 +1,4 @@
--- Cidade física do veículo (Serra | Linhares) para Marketplace e o painel.
+-- Cidade física do veículo no ES para Marketplace e o painel.
 -- Cole no SQL Editor do Supabase (SQL Editor → New query → Run).
 -- Idempotente: pode rodar mais de uma vez. NÃO use `prisma db push` no build.
 

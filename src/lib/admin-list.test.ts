@@ -38,7 +38,7 @@ test("card da lista: ano, km, câmbio e cidade numa linha", () => {
       transmission: "",
       locationCity: "vitoria",
     }),
-    "2020/2020 · 1.000 km",
+    "2020/2020 · 1.000 km · Vitória",
   );
 });
 
