@@ -1282,8 +1282,9 @@ textarea:-webkit-autofill:focus {
 }
 
 /*
- * Primeira dobra da ficha no celular: foto + dados cabem na altura útil
- * (abaixo do header, acima da barra fixa de WhatsApp).
+ * Primeira dobra da ficha no celular: foto + dados ocupam a altura útil
+ * (abaixo do header, acima da barra fixa de WhatsApp). Conteúdo longo
+ * pode aumentar a área, sem invadir a seção seguinte.
  * svh não muda quando a barra do navegador some e volta no scroll —
  * dvh esticava a dobra e deixava um vão no topo ao subir de novo.
  */
@@ -1291,7 +1292,7 @@ textarea:-webkit-autofill:focus {
   .ficha-mobile-fold {
     display: flex;
     flex-direction: column;
-    height: calc(
+    min-height: calc(
       100svh - 4.5rem - env(safe-area-inset-top, 0px) - var(--ficha-sticky-bar) - var(--ficha-section-nav)
     );
     margin-left: -1rem;
