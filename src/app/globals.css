@@ -167,7 +167,8 @@ body {
   /*
    * Folga para o chip “Ajuda para escolher” não cobrir foto, preço,
    * Ver ficha, filtro ou telefone no fim da rolagem. A barra de baixo entra
-   * na conta. Ficha e banner de cookies já escondem o FAB fechado.
+   * na conta. A ficha já esconde o FAB fechado. No mobile, a ajuda está
+   * no cabeçalho e o aviso de cookies rola com o conteúdo.
    */
   @media (max-width: 1023px) {
     body:not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])):not(:has(.site-consent)) .pb-site-nav {
@@ -199,9 +200,12 @@ body {
     }
   }
 
-  /* Banner de cookies no rodapé: folga para CTAs do fim da página. */
-  body:has(.site-consent) .pb-site-nav {
-    padding-bottom: calc(4.5rem + 9.25rem + env(safe-area-inset-bottom, 0px));
+  /* O aviso inline mantém só a folga normal para a ajuda e a bottom nav. */
+  body:has(.site-consent):not(:has([data-ficha-page])):not(:has([data-vehicle-mobile-bar])) .pb-site-nav {
+    padding-bottom: calc(
+      var(--site-bottom-nav) + var(--help-bubble-gap) + var(--help-bubble-h) +
+        var(--help-bubble-clear) + env(safe-area-inset-bottom, 0px)
+    );
   }
 
   @media (min-width: 1024px) {
@@ -776,10 +780,24 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 }
 
 .site-consent {
+  position: fixed;
+  z-index: 55;
   left: max(0.5rem, env(safe-area-inset-left, 0px));
   right: auto;
   bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
   max-width: min(16.5rem, calc(100vw - 6.25rem));
+}
+
+/* No celular o aviso ocupa seu espaço, sem cobrir anúncio nem barra fixa. */
+@media (max-width: 1023px) {
+  .site-consent {
+    position: static;
+    z-index: auto;
+    max-width: none;
+    margin: 0.5rem max(0.75rem, env(safe-area-inset-right, 0px)) 0.75rem
+      max(0.75rem, env(safe-area-inset-left, 0px));
+    box-shadow: none;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -805,8 +823,8 @@ body:has([data-install-coach]) .site-chat:not(.is-open) {
 
 /*
  * FAB fechado some na ficha (sticky WhatsApp + setas da galeria) em
- * qualquer largura. No mobile some com o banner de cookies (esquerda)
- * para não empilhar no meio do conteúdo.
+ * qualquer largura. No mobile, a ajuda fica no canto do cabeçalho
+ * e o aviso de cookies rola com o conteúdo.
  *
  * Chips de Faixa/Marca no estoque NÃO escondem mais o launcher: a
  * faixa inline “Ajuda para escolher” roubava a grade. O chip flutuante
@@ -937,12 +955,6 @@ body:has([data-ficha-page]) .whatsapp-float {
 
   .wanted-vehicle-sheet {
     width: min(48rem, calc(100% - 2 * var(--wanted-side-clear)));
-  }
-}
-
-@media (max-width: 1023px) {
-  body:has(.site-consent) .site-chat:not(.is-open) {
-    display: none;
   }
 }
 

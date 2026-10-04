@@ -31,7 +31,6 @@ export default function SiteLayout({
       <div className="site-shell flex min-h-app-screen flex-col" data-stock-scroll="">
         <MarketingScripts />
         <DeferredMarketing />
-        <CookieConsent />
         <Suspense fallback={null}>
           <SiteJsonLd />
         </Suspense>
@@ -44,6 +43,7 @@ export default function SiteLayout({
           Pular para o conteúdo
         </a>
         <main id="conteudo" tabIndex={-1} className="flex-1 pt-site-header outline-none">
+          <CookieConsent />
           {children}
         </main>
         <SiteFooter />
