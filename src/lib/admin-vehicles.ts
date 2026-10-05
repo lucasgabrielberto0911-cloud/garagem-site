@@ -1,4 +1,5 @@
 import { customerSearchWhere } from "@/lib/admin-customer-search";
+import { salesSearchWhere } from "@/lib/admin-sales-search";
 import { businessPeriodStart } from "@/lib/admin-date";
 import { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
@@ -527,6 +528,7 @@ export async function getAdminSalesPage(options?: {
   page?: number;
   pageSize?: number;
   period?: SalesPeriod;
+  q?: string;
 }) {
   const pageSize = Math.min(
     Math.max(options?.pageSize ?? ADMIN_SALES_PAGE_SIZE, 1),
@@ -534,13 +536,13 @@ export async function getAdminSalesPage(options?: {
   );
   const page = Math.max(options?.page ?? 1, 1);
   const period = options?.period ?? "all";
-  const where = salesPeriodWhere(period);
+  const where = { AND: [salesPeriodWhere(period), salesSearchWhere(options?.q)] };
 
   const [total, sales] = await Promise.all([
     prisma.sale.count({ where }),
     prisma.sale.findMany({
       where,
-      orderBy: { saleDate: "desc" },
+      orderBy: [{ saleDate: "desc" }, { id: "asc" }],
       include: ADMIN_SALE_LIST_INCLUDE,
       skip: (page - 1) * pageSize,
       take: pageSize,
