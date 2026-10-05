@@ -60,11 +60,6 @@ async function canvasFromFile(
     bitmap.close();
     return canvas;
   } catch {
-    if (isHeicLike(file)) {
-      throw new Error(
-        "HEIC não pode ser comprimido aqui. Exporte como JPG (iPhone: Formatos → Mais Compatível) e envie de novo.",
-      );
-    }
     const image = await loadImageFromBlob(file);
     const canvas = document.createElement("canvas");
     const scale = Math.min(1, maxEdge / Math.max(image.width, image.height));

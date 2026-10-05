@@ -157,7 +157,7 @@ test("formulário e actions travam disponível com preço divergente no texto", 
   assert.match(form, /Não dá para salvar assim/);
   assert.match(form, /Corrija o preço da descrição/);
   assert.match(form, /event\.preventDefault\(\)/);
-  assert.match(form, /disabled=\{photosUploading \|\| priceSaveBlocked\}/);
+  assert.match(form, /disabled=\{photosUploading \|\| priceSaveBlocked(?: \|\| draftSaving)?\}/);
 
   assert.match(actions, /descriptionPriceSaveError/);
   assert.match(actions, /status === "disponivel"/);

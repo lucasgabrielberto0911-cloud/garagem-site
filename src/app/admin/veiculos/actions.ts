@@ -26,7 +26,6 @@ import {
   vehicleListingError,
 } from "@/lib/admin-vehicle-validate";
 import {
-  DEFAULT_VEHICLE_LOCATION_CITY,
   parseVehicleLocationCity,
 } from "@/lib/vehicle-location";
 import { isAdminBulkStatus, normalizeBulkVehicleIds } from "@/lib/admin-bulk";
@@ -122,11 +121,11 @@ function parseVehicleFields(formData: FormData) {
   const hasVideo =
     formData.get("hasVideo") === "on" || formData.get("hasVideo") === "true";
   const locationRaw = String(formData.get("locationCity") || "").trim();
-  const locationCity = locationRaw
-    ? parseVehicleLocationCity(locationRaw)
-    : DEFAULT_VEHICLE_LOCATION_CITY;
+  const locationCity = parseVehicleLocationCity(locationRaw);
   if (!locationCity) {
-    throw new Error("Selecione a cidade onde o veículo está.");
+    throw Object.assign(new Error("Selecione a cidade onde o veículo está."), {
+      fieldErrors: { locationCity: "Selecione a cidade onde o veículo está." },
+    });
   }
 
   if (!brand || !model || !fuel || !transmission) {

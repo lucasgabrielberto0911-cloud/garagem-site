@@ -308,7 +308,7 @@ export function VehiclePhotoManager({
     const selected = files ? Array.from(files) : [];
     const invalidType = selected.filter((file) => !isImageFile(file));
     if (invalidType.length > 0) {
-      toast.error("Envie apenas imagens JPG, PNG, WEBP, GIF ou HEIC.");
+      toast.error("Envie apenas imagens JPG, PNG, WEBP, GIF, HEIC ou HEIF.");
     }
     const list = selected.filter(isImageFile);
     if (list.length === 0) {
@@ -521,6 +521,12 @@ export function VehiclePhotoManager({
           ) : null}
           <div className="h-1.5 overflow-hidden bg-white/10">
             <div
+              role="progressbar"
+              aria-label="Progresso do envio das fotos"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={summary.percent}
+              aria-valuetext={photoUploadProgressLabel(jobs)}
               className="h-full bg-brand transition-[width]"
               style={{
                 width: `${Math.max(summary.percent, inFlight ? 8 : 0)}%`,

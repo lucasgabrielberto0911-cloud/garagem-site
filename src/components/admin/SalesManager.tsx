@@ -1,5 +1,6 @@
 "use client";
 import { formatAdminMoney as formatCurrencyBRL } from "@/lib/admin-money";
+import { normalizeSalesQuery } from "@/lib/admin-sales-search";
 
 import { moneyInput, moneyTyping, parseMoneyBR } from "@/lib/admin-money";
 import { adminDate, localDateInput } from "@/lib/admin-date";
@@ -160,6 +161,7 @@ export function SalesManager({
   pageSize,
   period,
   periodRevenue,
+  query = "",
   initialVehicle,
 }: {
   sales: SaleRow[];
@@ -167,10 +169,12 @@ export function SalesManager({
   pageSize: number;
   period: Period;
   periodRevenue: number;
+  query?: string;
   initialVehicle?: SellableVehicle | null;
 }) {
   const router = useRouter();
   const [exporting, setExporting] = useState(false);
+  const [term, setTerm] = useState(query);
   const [dirty, setDirty] = useState(false);
   const [rows, setRows] = useState(() => sales.map(hydrateSale));
   const [total, setTotal] = useState(salesTotal);
@@ -226,7 +230,7 @@ export function SalesManager({
     try {
       const nextPage = page + 1;
       const response = await fetch(
-        `/api/admin/vendas?page=${nextPage}&pageSize=${pageSize}&period=${period}`,
+        `/api/admin/vendas?page=${nextPage}&pageSize=${pageSize}&period=${period}&q=${encodeURIComponent(query)}`,
       );
       if (!response.ok) throw new Error("fetch");
       const data = (await response.json()) as {
@@ -766,6 +770,7 @@ export function SalesManager({
                 const next = event.target.value as Period;
                 const params = new URLSearchParams();
                 if (next !== "all") params.set("period", next);
+                if (query) params.set("q", query);
                 router.push(
                   params.toString()
                     ? `/admin/vendas?${params.toString()}`
@@ -782,8 +787,8 @@ export function SalesManager({
               ))}
             </select>
             <span className="text-xs text-muted">
-              {total} venda(s)
-              {period !== "all" ? ` · ${formatCurrencyBRL(periodTotal)}` : ""}
+              {total} {query ? "venda(s) encontrada(s)" : "venda(s)"}
+              {period !== "all" && !query ? ` · ${formatCurrencyBRL(periodTotal)}` : ""}
             </span>
             <button
               type="button"
@@ -791,7 +796,7 @@ export function SalesManager({
                 setExporting(true);
                 try {
                   await exportAdminCsv(
-                    `/api/admin/export?type=sales&period=${period}`,
+                    `/api/admin/export?type=sales&period=${period}&q=${encodeURIComponent(query)}`,
                     `vendas-garagem-${localDateInput()}.csv`,
                   );
                 } catch (error) {
@@ -814,22 +819,40 @@ export function SalesManager({
         </div>
       )}
 
+      {!open ? (
+        <form className="space-y-2 border border-white/10 bg-ink/50 p-3 sm:p-4" onSubmit={event => {
+          event.preventDefault();
+          const params = new URLSearchParams();
+          if (period !== "all") params.set("period", period);
+          const next = normalizeSalesQuery(term);
+          if (next) params.set("q", next);
+          router.push(params.size ? `/admin/vendas?${params}` : "/admin/vendas");
+        }}>
+          <label htmlFor="sales-search" className="block text-sm font-semibold">Buscar venda</label>
+          <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+            <input id="sales-search" name="q" type="search" maxLength={120} value={term} onChange={event => setTerm(event.target.value)} placeholder="Cliente, carro ou placa" className={`${inputClass} min-w-0 flex-1 basis-full sm:basis-auto`} />
+            <button type="submit" className={`${btn.outline} flex-1 sm:flex-none`}>Buscar</button>
+            {query ? <Link href={period === "all" ? "/admin/vendas" : `/admin/vendas?period=${period}`} className={`${btn.ghost} flex-1 sm:flex-none`}>Limpar busca</Link> : null}
+          </div>
+        </form>
+      ) : null}
+
       {rows.length === 0 ? (
         <EmptyState
           icon={<IconCash className="h-12 w-12" />}
           title={
-            period === "all"
+            query ? "Nenhuma venda encontrada" : period === "all"
               ? "Nenhuma venda registrada"
               : "Nenhuma venda neste período"
           }
           description={
-            period === "all"
+            query ? "Tente outro cliente, carro ou placa, ou ajuste o período." : period === "all"
               ? "Registre vendas do estoque ou históricas para acompanhar faturamento."
               : "Troque o período ou volte ao histórico completo."
           }
           action={
             period !== "all" ? (
-              <Link href="/admin/vendas" className={btn.outline}>
+              <Link href={query ? `/admin/vendas?q=${encodeURIComponent(query)}` : "/admin/vendas"} className={btn.outline}>
                 Ver todo o período
               </Link>
             ) : undefined

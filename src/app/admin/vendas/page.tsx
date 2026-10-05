@@ -13,6 +13,7 @@ import {
 } from "@/lib/admin-vehicles";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { normalizeSalesQuery } from "@/lib/admin-sales-search";
 import { SELLABLE_VEHICLE_SELECT } from "@/lib/admin-vehicles";
 
 export const dynamic = "force-dynamic";
@@ -20,16 +21,17 @@ export const dynamic = "force-dynamic";
 export default async function VendasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; vehicle?: string }>;
+  searchParams: Promise<{ period?: string; vehicle?: string; q?: string }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const { period: periodParam, vehicle: vehicleId } = await searchParams;
+  const { period: periodParam, vehicle: vehicleId, q } = await searchParams;
+  const query = normalizeSalesQuery(q);
   const period = parseSalesPeriod(periodParam);
 
   const [list, totals] = await Promise.all([
-    getAdminSalesPage({ page: 1, period }),
+    getAdminSalesPage({ page: 1, period, q: query }),
     getAdminSalesTotals(period),
   ]);
   const initialVehicle = vehicleId
@@ -59,7 +61,7 @@ export default async function VendasPage({
       />
 
       <p className="text-sm text-muted">
-        Indicadores e lista: {label}. Consignados contam no faturamento, sem
+        Indicadores: {label}.{query ? " A busca filtra a lista e a exportação; os indicadores mostram todo o período." : ""} Consignados contam no faturamento, sem
         apuração de lucro.
       </p>
       <section className={adminStatGrid}>
@@ -95,7 +97,8 @@ export default async function VendasPage({
         </p>
       ) : null}
       <SalesManager
-        key={period}
+        key={`${period}:${query}`}
+        query={query}
         sales={list.sales}
         salesTotal={list.total}
         pageSize={list.pageSize}

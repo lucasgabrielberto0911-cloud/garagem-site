@@ -3,6 +3,7 @@ import { withAdminStorageLock } from "@/lib/admin-storage-lock";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { draftVersionMatches } from "@/lib/admin-draft-version";
 const headers = { "Cache-Control": "private, no-store" };
 function validKey(key: string) {
   return /^[a-zA-Z0-9:_-]{1,100}$/.test(key);
@@ -54,7 +55,8 @@ export async function POST(request: Request) {
       { status: 413, headers },
     );
   try {
-    const { key, payload, photoUrls, reserve } = JSON.parse(raw);
+    const body = JSON.parse(raw);
+    const { key, payload, photoUrls, reserve, expectedUpdatedAt } = body;
     if (
       typeof key !== "string" ||
       !validKey(key) ||
@@ -65,15 +67,19 @@ export async function POST(request: Request) {
       photoUrls.some((p: unknown) => typeof p !== "string")
     )
       return NextResponse.json({}, { status: 400, headers });
-    await withAdminStorageLock(async (tx) => {
+    const result = await withAdminStorageLock(async (tx) => {
       const expiresAt = new Date(Date.now() + 30 * 86400000);
       await tx.adminDraft.deleteMany({
         where: { adminId: session.adminId, expiresAt: { lte: new Date() } },
       });
       const where = { adminId_key: { adminId: session.adminId, key } };
-      const existing = reserve
-        ? await tx.adminDraft.findUnique({ where })
-        : null;
+      const existing = await tx.adminDraft.findUnique({ where });
+      // Reservar fotos cria uma linha vazia, que ainda não representa campos salvos.
+      const hasPayload = Boolean((existing?.payload as { fields?: unknown } | undefined)?.fields);
+      if (!reserve && Object.hasOwn(body, "expectedUpdatedAt") &&
+          !draftVersionMatches(expectedUpdatedAt, hasPayload ? existing!.updatedAt : null)) {
+        return { conflict: true as const, updatedAt: hasPayload ? existing!.updatedAt.toISOString() : null };
+      }
       const stored = existing?.payload as
         { photos?: Array<{ url?: string; thumbnailUrl?: string }> } | undefined;
       const savedUrls = Array.isArray(stored?.photos)
@@ -84,7 +90,7 @@ export async function POST(request: Request) {
           )
         : [];
       const protectedUrls = [...new Set([...savedUrls, ...photoUrls])];
-      await tx.adminDraft.upsert({
+      const saved = await tx.adminDraft.upsert({
         where,
         create: {
           adminId: session.adminId,
@@ -97,10 +103,13 @@ export async function POST(request: Request) {
           ...(reserve ? {} : { payload }),
           photoUrls: protectedUrls,
           expiresAt,
+          ...(existing ? { updatedAt: reserve ? existing.updatedAt : new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) } : {}),
         },
       });
+      return { conflict: false as const, updatedAt: saved.updatedAt.toISOString() };
     });
-    return NextResponse.json({ ok: true }, { headers });
+    if (result.conflict) return NextResponse.json({ error: "Este rascunho mudou em outro acesso. Seus campos continuam nesta tela.", updatedAt: result.updatedAt }, { status: 409, headers });
+    return NextResponse.json({ ok: true, updatedAt: result.updatedAt }, { headers });
   } catch {
     return NextResponse.json(
       { error: "Não foi possível guardar o rascunho." },

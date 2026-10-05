@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
       page,
       pageSize,
       period: parseSalesPeriod(params.get("period")),
+      q: params.get("q") ?? "",
     });
     return NextResponse.json(result, {
       headers: { "Cache-Control": "private, no-store" },
