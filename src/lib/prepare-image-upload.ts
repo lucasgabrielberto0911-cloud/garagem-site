@@ -115,10 +115,29 @@ export async function prepareImageForUpload(file: File): Promise<File> {
   let quality = useWebp ? 0.7 : 0.72;
   let lastError: Error | null = null;
   let lastPrepared: File | null = null;
+  let source = file;
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      const canvas = await canvasFromFile(file, maxEdge);
+      let canvas: HTMLCanvasElement;
+      try {
+        canvas = await canvasFromFile(source, maxEdge);
+      } catch (error) {
+        if (source !== file || !isHeicLike(file)) throw error;
+        // Loaded only when the browser cannot decode an iPhone photo natively.
+        const { default: convertHeic } = await import("heic2any");
+        const converted = await convertHeic({
+          blob: file,
+          toType: "image/jpeg",
+          quality: 0.92,
+        });
+        const jpeg = Array.isArray(converted) ? converted[0] : converted;
+        if (!jpeg) throw new Error("Não foi possível converter a foto HEIC.");
+        source = new File([jpeg], `${baseName(file.name)}.jpg`, {
+          type: "image/jpeg",
+        });
+        canvas = await canvasFromFile(source, maxEdge);
+      }
       const blob = await canvasToBlob(canvas, mime, quality);
       const prepared = new File([blob], name, { type: mime });
       lastPrepared = prepared;

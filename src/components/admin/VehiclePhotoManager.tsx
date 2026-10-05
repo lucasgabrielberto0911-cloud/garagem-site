@@ -28,7 +28,6 @@ import {
   type PhotoUploadJobState,
 } from "@/lib/photo-upload-jobs";
 import { coverSrc } from "@/lib/stock-query";
-import { isOversizedHeic } from "@/lib/admin-photo-validation";
 
 const PlateBlurEditor = dynamic(
   () =>
@@ -308,25 +307,10 @@ export function VehiclePhotoManager({
   async function uploadFiles(files: FileList | File[] | null) {
     const selected = files ? Array.from(files) : [];
     const invalidType = selected.filter((file) => !isImageFile(file));
-    const oversized = selected.filter(
-      (file) => isImageFile(file) && isOversizedHeic(file),
-    );
     if (invalidType.length > 0) {
       toast.error("Envie apenas imagens JPG, PNG, WEBP, GIF ou HEIC.");
     }
-    if (oversized.length > 0) {
-      const names = oversized
-        .slice(0, 2)
-        .map((file) => file.name)
-        .join(", ");
-      const extra = oversized.length > 2 ? ` e mais ${oversized.length - 2}` : "";
-      toast.error(
-        `${names}${extra}: HEIC acima de 3 MB. Exporte como JPG e envie novamente.`,
-      );
-    }
-    const list = selected.filter(
-      (file) => isImageFile(file) && !isOversizedHeic(file),
-    );
+    const list = selected.filter(isImageFile);
     if (list.length === 0) {
       return;
     }
@@ -491,8 +475,8 @@ export function VehiclePhotoManager({
             )}
           </p>
           <p className="mt-1 text-xs text-muted">
-            JPG, PNG, WEBP e GIF são comprimidos automaticamente. HEIC ou HEIF:
-            até 3 MB. A foto aparece assim que o
+            JPG, PNG, WEBP, GIF, HEIC e HEIF. As fotos são preparadas
+            automaticamente para envio. A foto aparece assim que o
             envio termina. A placa é borrada somente na área que você marcar.
           </p>
           <p className="mt-2 hidden text-[11px] text-muted/80 sm:block">
