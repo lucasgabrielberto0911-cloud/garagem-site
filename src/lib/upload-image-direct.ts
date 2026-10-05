@@ -41,11 +41,7 @@ export async function uploadImageDirect(
 ): Promise<UploadedPhoto> {
   const heic =
     /\.(heic|heif)$/i.test(file.name) || /image\/hei[cf]/i.test(file.type);
-  if (heic && file.size > 3 * 1024 * 1024)
-    throw new Error(
-      "HEIC acima de 3 MB. Exporte esta foto como JPG para enviar com segurança.",
-    );
-  const prepared = heic ? file : await prepareImageForUpload(file);
+  const prepared = await prepareImageForUpload(file);
   // Evita decodificar simultaneamente a versão pública e o original no celular.
   const masterId =
     options?.master && !heic
@@ -88,10 +84,6 @@ export async function uploadImageDirect(
       console.warn(
         "[upload] /api/upload retornou 413 — usando upload assinado.",
       );
-      if (heic)
-        throw new Error(
-          "O servidor recusou o tamanho do HEIC. Exporte como JPG e tente novamente.",
-        );
       return uploadViaSignedUrl(prepared, masterId ?? options?.id ?? null);
     }
 

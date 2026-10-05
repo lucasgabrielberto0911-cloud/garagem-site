@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
       q: params.get("q") ?? "",
       tab: resolveTab(params.get("tab")),
       status: params.get("status") ?? undefined,
+      pending: params.get("pendencia") ?? undefined,
       page,
       pageSize,
       sort,

@@ -305,11 +305,13 @@ export function VehiclePhotoManager({
   }
 
   async function uploadFiles(files: FileList | File[] | null) {
-    const list = (files ? Array.from(files) : []).filter(isImageFile);
+    const selected = files ? Array.from(files) : [];
+    const invalidType = selected.filter((file) => !isImageFile(file));
+    if (invalidType.length > 0) {
+      toast.error("Envie apenas imagens JPG, PNG, WEBP, GIF, HEIC ou HEIF.");
+    }
+    const list = selected.filter(isImageFile);
     if (list.length === 0) {
-      if (files && files.length > 0) {
-        toast.error("Envie apenas imagens JPG, PNG, WEBP, GIF ou HEIC.");
-      }
       return;
     }
 
@@ -473,7 +475,8 @@ export function VehiclePhotoManager({
             )}
           </p>
           <p className="mt-1 text-xs text-muted">
-            JPG, PNG, WEBP, GIF ou HEIC de até 3 MB. A foto aparece assim que o
+            JPG, PNG, WEBP, GIF, HEIC e HEIF. As fotos são preparadas
+            automaticamente para envio. A foto aparece assim que o
             envio termina. A placa é borrada somente na área que você marcar.
           </p>
           <p className="mt-2 hidden text-[11px] text-muted/80 sm:block">

@@ -348,12 +348,20 @@ async function DashboardContent() {
         <Card
           title="Leads"
           action={
-            <Link
-              href="/admin/leads"
-              className="inline-flex min-h-[44px] items-center text-xs text-brand hover:underline"
-            >
-              Ver todos
-            </Link>
+            <div className="flex gap-3">
+              <Link
+                href="/admin/agenda"
+                className="inline-flex min-h-[44px] items-center text-xs text-brand hover:underline"
+              >
+                Agenda
+              </Link>
+              <Link
+                href="/admin/leads"
+                className="inline-flex min-h-[44px] items-center text-xs text-brand hover:underline"
+              >
+                Ver todos
+              </Link>
+            </div>
           }
         >
           {data.failures.includes("lead.groupBy") ||
