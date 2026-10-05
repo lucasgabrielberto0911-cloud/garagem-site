@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { handleFocusTrap } from "@/lib/focus-trap";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -88,6 +89,7 @@ export function AdminShell({
   children: React.ReactNode;
   newLeads?: number;
 }) {
+  const [costWarnings, setCostWarnings] = useState<number | null>(null);
   const [newLeads, setNewLeads] = useState(initialLeads);
   const pathname = usePathname();
   const router = useRouter();
@@ -103,6 +105,7 @@ export function AdminShell({
           if (response.ok) {
             const data = await response.json();
             if (typeof data.count === "number") setNewLeads(data.count);
+            setCostWarnings(typeof data.costWarnings === "number" ? data.costWarnings : null);
           }
         })
         .catch(() => {});
@@ -277,6 +280,7 @@ export function AdminShell({
             Admin
           </span>
         </Link>
+        <div className="flex shrink-0 items-center">
         <Link
           href="/"
           target="_blank"
@@ -285,6 +289,8 @@ export function AdminShell({
         >
           <IconExternal className="h-[18px] w-[18px]" />
         </Link>
+          <AdminNotifications count={costWarnings} onCount={setCostWarnings} />
+        </div>
       </div>
 
       {menuOpen ? (
@@ -334,10 +340,13 @@ export function AdminShell({
       ) : null}
 
       <div className="min-h-dvh min-w-0 flex-1 lg:pl-64">
+        <div className="mx-auto hidden max-w-6xl justify-end px-8 pt-3 lg:flex">
+          <AdminNotifications count={costWarnings} onCount={setCostWarnings} />
+        </div>
         <main
           id="painel"
           tabIndex={-1}
-          className="mx-auto w-full max-w-6xl px-3 pt-4 pb-admin-nav outline-none sm:px-6 sm:pt-6 lg:px-8 lg:pt-8"
+          className="mx-auto w-full max-w-6xl px-3 pt-4 pb-admin-nav outline-none sm:px-6 sm:pt-6 lg:px-8 lg:pt-2"
         >
           {children}
         </main>
