@@ -638,6 +638,9 @@ export function VehicleForm({
       </VehicleFormPreview>
       <VehicleDraftToolbar
         draftKey={`vehicle:${vehicle?.id ?? "new"}`}
+        storageKey={`garagem:vehicle-draft:${adminId}:${vehicle?.id ?? "new"}`}
+        enabled={dirty && !saving && !state.success}
+        published={Boolean(state.success)}
         disabled={saving || photosUploading}
         onSavingChange={setDraftSaving}
         snapshot={() => {
@@ -748,7 +751,7 @@ export function VehicleForm({
           // form ao terminar e o select de status volta a mostrar o valor
           // antigo — o próximo "Salvar" regravaria o status errado.
           event.preventDefault();
-          if (saving) return;
+          if (saving || draftSaving) return;
           if (photosUploading) {
             toast.error("Espere o envio ou o borrão das fotos terminar.");
             revealSections(["fotos"]);
@@ -772,7 +775,7 @@ export function VehicleForm({
         className="space-y-3 pb-28 sm:space-y-4 lg:pb-0"
       >
         <fieldset
-          disabled={saving || draftSaving}
+          disabled={saving}
           className="min-w-0 space-y-3 sm:space-y-4"
         >
           <input
@@ -1582,7 +1585,7 @@ export function VehicleForm({
                       ? "Cadastrar veículo"
                       : "Salvar alterações"
                   }
-                  disabled={photosUploading || priceSaveBlocked}
+                  disabled={photosUploading || priceSaveBlocked || draftSaving}
                   disabledLabel={
                     photosUploading
                       ? "Aguarde as fotos..."
