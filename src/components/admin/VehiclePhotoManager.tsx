@@ -522,7 +522,8 @@ export function VehiclePhotoManager({
               aria-label="Progresso do envio das fotos"
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-valuenow={Math.max(summary.percent, inFlight ? 8 : 0)}
+              aria-valuenow={summary.percent}
+              aria-valuetext={photoUploadProgressLabel(jobs)}
               className="h-full bg-brand transition-[width]"
               style={{
                 width: `${Math.max(summary.percent, inFlight ? 8 : 0)}%`,
