@@ -81,11 +81,12 @@ export function VehicleDraftToolbar({
     }
   }
   return (
-    <div className="space-y-3 border border-white/10 bg-ink/50 p-4">
-      <p className="text-sm leading-relaxed text-muted">
+    <div className="space-y-2 border border-white/10 bg-ink/50 p-3 sm:space-y-3 sm:p-4">
+      <p className="hidden text-sm leading-relaxed text-muted sm:block">
         Você pode guardar o trabalho incompleto e retomá-lo depois. O rascunho
         fica privado; só salvar o anúncio atualiza a vitrine.
       </p>
+      <p className="text-xs text-muted sm:hidden">Rascunho privado · não publica o anúncio</p>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

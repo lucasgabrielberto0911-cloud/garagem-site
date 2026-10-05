@@ -1,6 +1,7 @@
 "use client";
 
 import { photoQueueStorage } from "@/lib/admin-photo-queue-store";
+import { VehicleFormPreview } from "@/components/admin/VehicleFormPreview";
 import { vehicleFieldErrors } from "@/lib/admin-vehicle-fields";
 import { adminMutation } from "@/lib/admin-mutation";
 import { focusAdminError } from "@/lib/admin-form-focus";
@@ -611,10 +612,7 @@ export function VehicleForm({
         </div>
       </nav>
 
-      <section
-        className="border-l-2 border-brand bg-ink/50 p-4"
-        aria-label="Conferência do anúncio"
-      >
+      <VehicleFormPreview price={listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}>
         <p className="font-display text-lg font-semibold text-cream">
           {`${brand} ${model}`.trim() || "Seu próximo anúncio"}
         </p>
@@ -637,7 +635,7 @@ export function VehicleForm({
             ? "Corrija os campos destacados antes de publicar."
             : "Confira os dados, a capa e o preço antes de salvar."}
         </p>
-      </section>
+      </VehicleFormPreview>
       <VehicleDraftToolbar
         draftKey={`vehicle:${vehicle?.id ?? "new"}`}
         disabled={saving || photosUploading}
