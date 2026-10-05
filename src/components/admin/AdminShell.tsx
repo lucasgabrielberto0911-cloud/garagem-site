@@ -59,6 +59,12 @@ const NAV: NavItem[] = [
     match: (pathname) => pathname.startsWith("/admin/vendas"),
   },
   {
+    href: "/admin/agenda",
+    label: "Agenda",
+    Icon: IconInbox,
+    match: (pathname) => pathname.startsWith("/admin/agenda"),
+  },
+  {
     href: "/admin/clientes",
     label: "Clientes",
     Icon: IconUsers,

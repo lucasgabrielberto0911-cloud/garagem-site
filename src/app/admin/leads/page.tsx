@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { leadSearchWhere } from "@/lib/admin-lead-search";
 import { redirect } from "next/navigation";
 import { LeadsTable } from "@/components/admin/LeadsTable";
-import { AdminPageHeader } from "@/components/admin/ui";
+import { AdminPageHeader, btn } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
 import { findLeadVendas } from "@/lib/lead-venda";
 import { LEAD_STATUSES, WANTED_LEAD_SOURCE, isLeadStatus } from "@/lib/leads";
@@ -67,6 +68,7 @@ export default async function LeadsPage({
     <div className="space-y-6">
       <AdminPageHeader
         title="Leads de venda"
+        actions={<Link href="/admin/agenda" className={btn.outline}>Ver agenda</Link>}
         subtitle={[
           counts.novo > 0
             ? `${counts.total} lead(s) no total · ${counts.novo} aguardando contato`
