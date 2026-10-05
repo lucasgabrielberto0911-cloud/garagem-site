@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { IconClose, IconSearch } from "@/components/site/icons";
+import { IconClose, IconSearch, IconShare } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import {
@@ -71,6 +71,49 @@ function splitAccessories(value: string) {
 
 function joinAccessories(items: string[]) {
   return items.join(",");
+}
+
+function ShareSearchButton({ className = "" }: { className?: string }) {
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
+
+  async function share() {
+    const url = window.location.href;
+    const finish = (next: "copied" | "failed") => {
+      setStatus(next);
+      window.setTimeout(() => setStatus("idle"), 2400);
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Busca de veículos — Sua Garagem",
+          text: "Veja esta busca de seminovos na Sua Garagem.",
+          url,
+        });
+        finish("copied");
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      finish("copied");
+    } catch {
+      finish("failed");
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void share()}
+      className={`inline-flex min-h-11 items-center justify-center gap-1.5 border border-white/15 px-3 text-xs font-semibold text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand ${className}`}
+      aria-label="Compartilhar esta busca de veículos"
+    >
+      <IconShare className="h-4 w-4" />
+      {status === "copied"
+        ? "Busca compartilhada"
+        : status === "failed"
+          ? "Não foi possível compartilhar"
+          : "Compartilhar busca"}
+    </button>
+  );
 }
 
 function toggleAccessoryValue(current: string, name: string) {
@@ -615,9 +658,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
           {activeFilters.length > 0 ? (
             <div className="mt-5 border-t border-white/10 pt-5">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
-                Filtros ativos
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+                  Filtros ativos
+                </p>
+                <ShareSearchButton />
+              </div>
               <ActiveFilterChips filters={activeFilters} onRemove={removeFilter} />
             </div>
           ) : null}
@@ -824,13 +870,16 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   · {activeFilterCount} {activeFilterCount === 1 ? "filtro" : "filtros"}
                 </span>
               </p>
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="min-h-11 shrink-0 px-2 text-xs text-muted underline decoration-white/30 underline-offset-4 transition hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
-              >
-                Limpar filtros
-              </button>
+              <div className="flex shrink-0 items-center gap-1">
+                <ShareSearchButton className="px-2" />
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="min-h-11 px-2 text-xs text-muted underline decoration-white/30 underline-offset-4 transition hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+                >
+                  Limpar filtros
+                </button>
+              </div>
             </div>
             <ActiveFilterChips filters={activeFilters} onRemove={removeFilter} />
           </section>
