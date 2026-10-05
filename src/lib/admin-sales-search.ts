@@ -10,7 +10,8 @@ export function salesSearchWhere(value?: string | null): Prisma.SaleWhereInput {
   if (!query) return {};
   return {
     AND: query.split(" ").map(word => {
-      const contains = { contains: word, mode: "insensitive" as const };
+      // Prisma usa LIKE: os caracteres digitados devem ser buscados literalmente.
+      const contains = { contains: word.replace(/[\\%_]/g, "\\$&"), mode: "insensitive" as const };
       const plate = word.replace(/[^a-zA-Z0-9]/g, "");
       return { OR: [
         { customer: { is: { name: contains } } },
