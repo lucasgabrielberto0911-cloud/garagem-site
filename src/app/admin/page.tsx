@@ -401,7 +401,7 @@ async function DashboardContent() {
                       className={index >= 3 ? "hidden sm:block" : undefined}
                     >
                       <Link
-                        href="/admin/leads"
+                        href={`/admin/leads?lead=${encodeURIComponent(lead.id)}`}
                         className="flex min-h-[56px] items-center justify-between gap-3 py-3 touch-manipulation last:pb-0"
                       >
                         <div className="min-w-0">
