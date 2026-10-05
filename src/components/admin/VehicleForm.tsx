@@ -70,6 +70,7 @@ import {
 } from "@/lib/vehicle-display";
 import {
   VEHICLE_CATEGORIES,
+  defaultFuel,
   filterAccessoriesForCategory,
   getAccessoryPresets,
   getFuels,
@@ -243,7 +244,9 @@ export function VehicleForm({
     () =>
       parseVehicleLocationCity(vehicle?.locationCity) ?? "",
   );
-  const [fuel, setFuel] = useState(vehicle?.fuel ?? "");
+  const [fuel, setFuel] = useState(
+    () => vehicle?.fuel ?? defaultFuel(parseVehicleCategory(vehicle?.category)),
+  );
   const [transmission, setTransmission] = useState(vehicle?.transmission ?? "");
   const [pendingAction, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -358,7 +361,7 @@ export function VehicleForm({
     const nextFuels = getFuels(next);
     const nextTransmissions = getTransmissions(next);
     setFuel((current) =>
-      nextFuels.includes(current) ? current : "",
+      nextFuels.includes(current) ? current : defaultFuel(next),
     );
     setTransmission((current) =>
       nextTransmissions.includes(current) ? current : "",
@@ -1191,7 +1194,7 @@ export function VehicleForm({
                   className={`${inputClass} ${errors.km ? errorBorder : ""}`}
                 />
               </Field>
-              <Field label="Combustível" required error={errors.fuel}>
+              <Field label="Combustível" error={errors.fuel}>
                 <select
                   name="fuel"
                   value={fuel}
@@ -1199,7 +1202,6 @@ export function VehicleForm({
                   className={inputClass}
                   required
                 >
-                  <option value="">Selecione o combustível</option>
                   {fuel && !fuelOptions.includes(fuel) ? (
                     <option value={fuel}>{fuel}</option>
                   ) : null}
