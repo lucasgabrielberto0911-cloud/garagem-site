@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin-vehicles";
 import { expectedMargin, hasCostBasis } from "@/lib/vehicle-ops";
 import { leadSearchWhere } from "@/lib/admin-lead-search";
+import { salesSearchWhere } from "@/lib/admin-sales-search";
 const headers = { "Cache-Control": "private, no-store" };
 export async function GET(request: Request) {
   if (!(await getSession()))
@@ -23,9 +24,10 @@ export async function GET(request: Request) {
     const result = await prisma.$transaction(
       async (tx) => {
         if (params.get("type") === "sales") {
-          const where = salesPeriodWhere(
-            parseSalesPeriod(params.get("period")),
-          );
+          const where = { AND: [
+            salesPeriodWhere(parseSalesPeriod(params.get("period"))),
+            salesSearchWhere(params.get("q")),
+          ] };
           const count = await tx.sale.count({ where });
           if (count > 10000) throw new Error("LIMIT");
           const rows: unknown[][] = [

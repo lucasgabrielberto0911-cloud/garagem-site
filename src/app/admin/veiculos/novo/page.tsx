@@ -10,10 +10,13 @@ export default async function NewVehiclePage() {
   if (!session) redirect("/admin/login");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       <AdminPageHeader
         title="Novo veículo"
-        subtitle="Preencha o anúncio e as fotos. Custos e documentos ficam na aba Operação depois de salvar."
+        subtitle={<>
+          Preencha o anúncio e as fotos.
+          <span className="hidden sm:inline"> Custos e documentos ficam na aba Operação depois de salvar.</span>
+        </>}
       />
       <VehicleForm mode="create" adminId={session.adminId} />
     </div>

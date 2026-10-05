@@ -1,6 +1,7 @@
 "use client";
 
 import { photoQueueStorage } from "@/lib/admin-photo-queue-store";
+import { VehicleFormPreview } from "@/components/admin/VehicleFormPreview";
 import { vehicleFieldErrors } from "@/lib/admin-vehicle-fields";
 import { adminMutation } from "@/lib/admin-mutation";
 import { focusAdminError } from "@/lib/admin-form-focus";
@@ -71,7 +72,6 @@ import {
 import {
   VEHICLE_CATEGORIES,
   defaultFuel,
-  defaultTransmission,
   filterAccessoriesForCategory,
   getAccessoryPresets,
   getFuels,
@@ -87,7 +87,6 @@ import {
   validateVehicleListing,
 } from "@/lib/admin-vehicle-validate";
 import {
-  DEFAULT_VEHICLE_LOCATION_CITY,
   VEHICLE_LOCATION_CITIES,
   VEHICLE_LOCATION_HINT,
   parseVehicleLocationCity,
@@ -242,27 +241,14 @@ export function VehicleForm({
   const [category, setCategory] = useState<VehicleCategory>(() =>
     parseVehicleCategory(vehicle?.category),
   );
-  const [locationCity, setLocationCity] = useState<VehicleLocationCity>(
+  const [locationCity, setLocationCity] = useState<VehicleLocationCity | "">(
     () =>
-      parseVehicleLocationCity(vehicle?.locationCity) ??
-      DEFAULT_VEHICLE_LOCATION_CITY,
+      parseVehicleLocationCity(vehicle?.locationCity) ?? "",
   );
-  const [fuel, setFuel] = useState(() => {
-    const initialCategory = parseVehicleCategory(vehicle?.category);
-    const options = getFuels(initialCategory);
-    const current = vehicle?.fuel;
-    return current && options.includes(current)
-      ? current
-      : defaultFuel(initialCategory);
-  });
-  const [transmission, setTransmission] = useState(() => {
-    const initialCategory = parseVehicleCategory(vehicle?.category);
-    const options = getTransmissions(initialCategory);
-    const current = vehicle?.transmission;
-    return current && options.includes(current)
-      ? current
-      : defaultTransmission(initialCategory);
-  });
+  const [fuel, setFuel] = useState(
+    () => vehicle?.fuel ?? defaultFuel(parseVehicleCategory(vehicle?.category)),
+  );
+  const [transmission, setTransmission] = useState(vehicle?.transmission ?? "");
   const [pendingAction, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmSold, setConfirmSold] = useState(false);
@@ -379,7 +365,7 @@ export function VehicleForm({
       nextFuels.includes(current) ? current : defaultFuel(next),
     );
     setTransmission((current) =>
-      nextTransmissions.includes(current) ? current : defaultTransmission(next),
+      nextTransmissions.includes(current) ? current : "",
     );
   }
 
@@ -611,10 +597,7 @@ export function VehicleForm({
         </div>
       </nav>
 
-      <section
-        className="border-l-2 border-brand bg-ink/50 p-4"
-        aria-label="Conferência do anúncio"
-      >
+      <VehicleFormPreview price={listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}>
         <p className="font-display text-lg font-semibold text-cream">
           {`${brand} ${model}`.trim() || "Seu próximo anúncio"}
         </p>
@@ -637,9 +620,12 @@ export function VehicleForm({
             ? "Corrija os campos destacados antes de publicar."
             : "Confira os dados, a capa e o preço antes de salvar."}
         </p>
-      </section>
+      </VehicleFormPreview>
       <VehicleDraftToolbar
         draftKey={`vehicle:${vehicle?.id ?? "new"}`}
+        storageKey={`garagem:vehicle-draft:${adminId}:${vehicle?.id ?? "new"}`}
+        enabled={dirty && !saving && !state.success}
+        published={Boolean(state.success)}
         disabled={saving || photosUploading}
         onSavingChange={setDraftSaving}
         snapshot={() => {
@@ -692,8 +678,7 @@ export function VehicleForm({
           );
           setCategory(parseVehicleCategory(text("category")));
           setLocationCity(
-            parseVehicleLocationCity(text("locationCity")) ??
-              DEFAULT_VEHICLE_LOCATION_CITY,
+            parseVehicleLocationCity(text("locationCity")) ?? "",
           );
           setFuel(text("fuel"));
           setTransmission(text("transmission"));
@@ -750,7 +735,7 @@ export function VehicleForm({
           // form ao terminar e o select de status volta a mostrar o valor
           // antigo — o próximo "Salvar" regravaria o status errado.
           event.preventDefault();
-          if (saving) return;
+          if (saving || draftSaving) return;
           if (photosUploading) {
             toast.error("Espere o envio ou o borrão das fotos terminar.");
             revealSections(["fotos"]);
@@ -774,7 +759,7 @@ export function VehicleForm({
         className="space-y-3 pb-28 sm:space-y-4 lg:pb-0"
       >
         <fieldset
-          disabled={saving || draftSaving}
+          disabled={saving}
           className="min-w-0 space-y-3 sm:space-y-4"
         >
           <input
@@ -1006,7 +991,7 @@ export function VehicleForm({
 
               <div className="col-span-2 sm:col-span-1">
                 <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
-                  Onde está o veículo
+                  Onde está o veículo *
                 </span>
                 <div
                   className="grid grid-cols-2 gap-2"
@@ -1043,6 +1028,11 @@ export function VehicleForm({
                     );
                   })}
                 </div>
+                {!locationCity && !errors.locationCity ? (
+                  <p className="mt-1.5 text-xs text-muted">
+                    Selecione a cidade onde o veículo está.
+                  </p>
+                ) : null}
                 {errors.locationCity ? (
                   <p className="mt-1.5 text-xs text-brand">
                     {errors.locationCity}
@@ -1213,6 +1203,9 @@ export function VehicleForm({
                   className={inputClass}
                   required
                 >
+                  {fuel && !fuelOptions.includes(fuel) ? (
+                    <option value={fuel}>{fuel}</option>
+                  ) : null}
                   {fuelOptions.map((option) => (
                     <option key={option} value={option}>
                       {option}
@@ -1222,6 +1215,7 @@ export function VehicleForm({
               </Field>
               <Field
                 label={isMoto ? "Câmbio / transmissão" : "Câmbio"}
+                required
                 error={errors.transmission}
               >
                 <select
@@ -1231,6 +1225,10 @@ export function VehicleForm({
                   className={inputClass}
                   required
                 >
+                  <option value="">Selecione o câmbio</option>
+                  {transmission && !transmissionOptions.includes(transmission) ? (
+                    <option value={transmission}>{transmission}</option>
+                  ) : null}
                   {transmissionOptions.map((option) => (
                     <option key={option} value={option}>
                       {option}
@@ -1584,7 +1582,7 @@ export function VehicleForm({
                       ? "Cadastrar veículo"
                       : "Salvar alterações"
                   }
-                  disabled={photosUploading || priceSaveBlocked}
+                  disabled={photosUploading || priceSaveBlocked || draftSaving}
                   disabledLabel={
                     photosUploading
                       ? "Aguarde as fotos..."
