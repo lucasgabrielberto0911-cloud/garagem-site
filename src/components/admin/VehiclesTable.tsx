@@ -57,6 +57,7 @@ import {
 } from "@/lib/admin-list";
 import { coverSrc } from "@/lib/stock-query";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
+import type { StockPending } from "@/lib/admin-stock-pending";
 import { stockListQuietNote } from "@/lib/stock-quality";
 import {
   deleteVehicle,
@@ -143,6 +144,7 @@ export function VehiclesTable({
   q,
   tab,
   status,
+  pending = "",
   estoqueCount: estoqueCountProp,
   vendidosCount: vendidosCountProp,
   featuredCount: featuredCountProp,
@@ -156,6 +158,7 @@ export function VehiclesTable({
   q: string;
   tab: VehiclesTab;
   status?: string;
+  pending?: StockPending;
   estoqueCount: number;
   vendidosCount: number;
   featuredCount: number;
@@ -255,6 +258,7 @@ export function VehiclesTable({
         if (tab === "vendidos") search.set("tab", "vendidos");
         if (tab === "destaques") search.set("tab", "destaques");
         if (status && tab === "estoque") search.set("status", status);
+        if (pending && tab === "estoque") search.set("pendencia", pending);
         search.set("sort", nextSort.key);
         search.set("dir", nextSort.dir);
         search.set("page", String(nextPage));
@@ -291,11 +295,11 @@ export function VehiclesTable({
         setLoadingSort(false);
       }
     },
-    [pageSize, q, tab, status],
+    [pageSize, q, tab, status, pending],
   );
 
   const applyFilters = useCallback(
-    (params: { q?: string; tab?: VehiclesTab; status?: string | null }) => {
+    (params: { q?: string; tab?: VehiclesTab; status?: string | null; pending?: StockPending }) => {
       const search = new URLSearchParams();
       const nextQ = params.q ?? q;
       const nextTab = params.tab ?? tab;
@@ -306,11 +310,13 @@ export function VehiclesTable({
       if (nextStatus && nextTab === "estoque") {
         search.set("status", nextStatus);
       }
+      const nextPending = params.pending ?? pending;
+      if (nextPending && nextTab === "estoque") search.set("pendencia", nextPending);
       startTransition(() => {
         router.push(search.toString() ? `${pathname}?${search}` : pathname);
       });
     },
-    [q, tab, status, router, pathname],
+    [q, tab, status, pending, router, pathname],
   );
 
   function changeSort(next: { key: SortKey; dir: "asc" | "desc" }) {
@@ -619,7 +625,7 @@ export function VehiclesTable({
           type="button"
           role="tab"
           aria-selected={tab === "estoque"}
-          onClick={() => applyFilters({ tab: "estoque", status: null })}
+          onClick={() => applyFilters({ tab: "estoque", status: null, pending: "" })}
           className={`inline-flex min-h-[48px] items-center justify-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation lg:justify-start lg:px-4 ${
             tab === "estoque"
               ? "border-b-2 border-brand text-cream"
@@ -750,7 +756,7 @@ export function VehiclesTable({
                     key={option.label}
                     type="button"
                     aria-pressed={active}
-                    onClick={() => applyFilters({ status: option.value })}
+                    onClick={() => applyFilters({ status: option.value, ...(option.value === "reservado" && pending === "antigos" ? { pending: "" as const } : {}) })}
                     className={`${FILTER_PILL} ${
                       active
                         ? "bg-brand/15 text-brand"
@@ -801,6 +807,21 @@ export function VehiclesTable({
           </select>
         </div>
       </div>
+
+      {tab === "estoque" ? <div className="space-y-2">
+        <div role="group" aria-label="Pendências do estoque" className="grid grid-cols-3 gap-2">
+          {([
+            { value: "", label: "Sem filtro" },
+            { value: "sem-fotos", label: "Sem fotos" },
+            { value: "antigos", label: "60+ dias" },
+          ] as const).map((option) => <button key={option.value} type="button" aria-pressed={pending === option.value}
+            disabled={isPending} onClick={() => applyFilters({ pending: option.value, ...(option.value === "antigos" ? { status: null } : {}) })}
+            className={`min-h-11 rounded-lg border px-2 py-2 text-xs transition ${pending === option.value ? "border-brand/40 bg-brand/10 text-cream" : "border-white/10 text-muted hover:text-cream"} disabled:opacity-60`}>
+            {option.label}
+          </button>)}
+        </div>
+        {pending ? <p role="status" className="text-xs leading-relaxed text-muted">{total} veículo(s) {pending === "sem-fotos" ? "sem fotos" : "disponível(is) há mais de 60 dias"}. Abra Editar para revisar o anúncio.</p> : null}
+      </div> : null}
 
       {tab === "destaques" ? (
         <div className="border border-white/10 bg-ink/40 px-4 py-3 text-sm">

@@ -1,3 +1,4 @@
+import { parseStockPending } from "@/lib/admin-stock-pending";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { VehiclesTable } from "@/components/admin/VehiclesTable";
@@ -23,7 +24,7 @@ function resolveTab(raw?: string): VehiclesTab {
 export default async function VehiclesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tab?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; tab?: string; status?: string; pendencia?: string }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
@@ -39,9 +40,11 @@ export default async function VehiclesPage({
       (query.status === "vendido" ? "vendidos" : undefined),
   );
 
+  const pending = tab === "estoque" ? parseStockPending(query.pendencia) : "";
+
   const [stats, list] = await Promise.all([
     getAdminVehicleStats(),
-    getAdminVehiclesPage({ q, tab, status, page: 1 }),
+    getAdminVehiclesPage({ q, tab, status, pending, page: 1 }),
   ]);
 
   // As abas e os chips de status já mostram as contagens; aqui só o que
@@ -87,13 +90,14 @@ export default async function VehiclesPage({
       />
 
       <VehiclesTable
-        key={`${tab}:${q}:${status ?? ""}`}
+        key={`${tab}:${q}:${status ?? ""}:${pending}`}
         vehicles={list.vehicles}
         initialTotal={list.total}
         pageSize={list.pageSize}
         q={q}
         tab={tab}
         status={status}
+        pending={pending}
         estoqueCount={stats.estoqueCount}
         vendidosCount={stats.vendidosCount}
         featuredCount={stats.featured}

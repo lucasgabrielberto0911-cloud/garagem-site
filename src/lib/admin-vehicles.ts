@@ -1,3 +1,4 @@
+import { parseStockPending, stockPendingWhere } from "@/lib/admin-stock-pending";
 import { customerSearchWhere } from "@/lib/admin-customer-search";
 import { salesSearchWhere } from "@/lib/admin-sales-search";
 import { businessPeriodStart } from "@/lib/admin-date";
@@ -259,6 +260,7 @@ export async function getAdminVehiclesPage(options: {
   q?: string;
   tab: VehiclesTab;
   status?: string;
+  pending?: string;
   page?: number;
   pageSize?: number;
   sort?: AdminVehiclesSort;
@@ -276,14 +278,16 @@ export async function getAdminVehiclesPage(options: {
       ? { status: options.status }
       : tabStatusFilter(options.tab);
   const where = {
-    AND: [{ historical: false }, statusFilter, searchWhere(options.q ?? "")],
+    AND: [{ historical: false }, statusFilter, searchWhere(options.q ?? ""),
+      options.tab === "estoque" ? stockPendingWhere(parseStockPending(options.pending)) : {},
+    ],
   };
 
   const [total, vehicleRows] = await Promise.all([
     prisma.vehicle.count({ where }),
     listAdminVehicles({
       where,
-      orderBy: listOrderBy(sort, dir),
+      orderBy: [listOrderBy(sort, dir), { id: "asc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
