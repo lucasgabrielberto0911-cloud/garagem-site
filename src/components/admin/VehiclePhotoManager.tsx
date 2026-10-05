@@ -47,6 +47,7 @@ export type PhotoItem = {
 
 const ACCEPT =
   "image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif";
+const MAX_PHOTO_UPLOAD_BYTES = 3 * 1024 * 1024;
 
 function isImageFile(file: File) {
   if (file.type) {
@@ -305,11 +306,28 @@ export function VehiclePhotoManager({
   }
 
   async function uploadFiles(files: FileList | File[] | null) {
-    const list = (files ? Array.from(files) : []).filter(isImageFile);
+    const selected = files ? Array.from(files) : [];
+    const invalidType = selected.filter((file) => !isImageFile(file));
+    const oversized = selected.filter(
+      (file) => isImageFile(file) && file.size > MAX_PHOTO_UPLOAD_BYTES,
+    );
+    if (invalidType.length > 0) {
+      toast.error("Envie apenas imagens JPG, PNG, WEBP, GIF ou HEIC.");
+    }
+    if (oversized.length > 0) {
+      const names = oversized
+        .slice(0, 2)
+        .map((file) => file.name)
+        .join(", ");
+      const extra = oversized.length > 2 ? ` e mais ${oversized.length - 2}` : "";
+      toast.error(
+        `${names}${extra} passam de 3 MB. Reduza o tamanho e tente novamente.`,
+      );
+    }
+    const list = selected.filter(
+      (file) => isImageFile(file) && file.size <= MAX_PHOTO_UPLOAD_BYTES,
+    );
     if (list.length === 0) {
-      if (files && files.length > 0) {
-        toast.error("Envie apenas imagens JPG, PNG, WEBP, GIF ou HEIC.");
-      }
       return;
     }
 
