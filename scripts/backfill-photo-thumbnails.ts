@@ -1,5 +1,5 @@
 /**
- * Gera miniaturas 480×300 WebP para fotos que ainda não têm thumbnailUrl.
+ * Gera miniaturas 480×360 WebP para fotos que ainda não têm thumbnailUrl.
  *
  *   npx tsx scripts/backfill-photo-thumbnails.ts --dry-run
  *   npx tsx scripts/backfill-photo-thumbnails.ts --limit=20

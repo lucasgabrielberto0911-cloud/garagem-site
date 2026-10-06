@@ -10,6 +10,7 @@ import {
   GALLERY_HERO_SIZES,
   coverSrc,
   coverSrcSet,
+  coverMobileSrcSet,
   galleryPreviewSrc,
   galleryPreviewSrcSet,
   galleryThumbSrc,
@@ -34,7 +35,7 @@ test("supabaseCardSrc recorta o original do Storage em WebP", () => {
   const src = supabaseCardSrc(ORIGINAL);
   assert.match(src, /\/storage\/v1\/render\/image\/public\/veiculos\/foto\.webp\?/);
   assert.match(src, /width=480/);
-  assert.match(src, /height=300/);
+  assert.match(src, /height=360/);
   assert.match(src, /resize=cover/);
   assert.match(src, /format=webp/);
   assert.equal(src.includes("/object/public/"), false);
@@ -67,17 +68,27 @@ test("coverSrc usa thumbnail quando existe e recorte quando não", () => {
   assert.equal(withThumb?.includes(ORIGINAL), false);
   const bare = coverSrcSet([{ url: ORIGINAL }]) ?? "";
   assert.match(bare, /480w/);
-  assert.match(bare, /width=720&height=450/);
-  assert.match(bare, /width=960&height=600/);
+  assert.match(bare, /width=720&height=540/);
+  assert.match(bare, /width=960&height=720/);
   assert.match(bare, /quality=75/);
   assert.match(bare, /format=webp/);
   assert.equal(bare.includes(`${ORIGINAL} `), false);
   assert.equal(pickWidth(bare, 346), 480);
-  assert.equal(pickWidth(bare, ((390 - 44) / 3) * 3), 480);
-  assert.equal(pickWidth(bare, ((430 - 44) / 3) * 3), 480);
+  assert.equal(pickWidth(bare, ((390 - 44) / 2) * 3), 720);
+  assert.equal(pickWidth(bare, ((430 - 44) / 2) * 3), 720);
   assert.equal(pickWidth(bare, 519), 720);
   assert.equal(pickWidth(bare, 584), 720);
   assert.equal(pickWidth(bare, 936), 960);
+});
+
+test("capa móvel usa a galeria 4:3, sem esticar o recorte antigo nem baixar versão desktop", () => {
+  const mobile = coverMobileSrcSet([{ url: ORIGINAL, thumbnailUrl: "https://cdn.example/old-card.webp" }]) ?? "";
+  assert.match(mobile, /width=480&height=360&resize=cover&quality=74/);
+  assert.equal(pickWidth(mobile, ((430 - 44) / 2) * 3), 480);
+  assert.doesNotMatch(mobile, /old-card|720w|960w/);
+  assert.equal(coverMobileSrcSet([{ url: "https://cdn.example/foto.jpg" }]), undefined);
+  assert.equal(coverMobileSrcSet([{ url: ORIGINAL.replace(".webp", "-card.webp") }]), undefined);
+  assert.equal(coverMobileSrcSet([]), undefined);
 });
 
 test("galleryThumbSrc recorta o strip; o hero não usa a miniatura do card", () => {
@@ -133,7 +144,7 @@ test("medidas públicas batem com o layout e com o upload", () => {
   );
   assert.equal(
     CARD_SIZES,
-    "(min-width: 1280px) 292px, (min-width: 1024px) calc((100vw - 96px) / 3), (min-width: 640px) calc((100vw - 64px) / 2), calc((100vw - 44px) / 3)",
+    "(min-width: 1280px) 292px, (min-width: 1024px) calc((100vw - 96px) / 3), (min-width: 640px) calc((100vw - 64px) / 2), calc((100vw - 44px) / 2)",
   );
   const card = readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), "../components/site/VehicleCard.tsx"),

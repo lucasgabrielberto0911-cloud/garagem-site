@@ -13,6 +13,7 @@ export function NativeRemoteFillImage({
   height,
   sizes,
   srcSet,
+  mobileSrcSet,
   className,
   priority,
 }: {
@@ -22,10 +23,11 @@ export function NativeRemoteFillImage({
   height: number;
   sizes?: string;
   srcSet?: string;
+  mobileSrcSet?: string;
   className?: string;
   priority?: boolean;
 }) {
-  return (
+  const image = (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
@@ -45,9 +47,17 @@ export function NativeRemoteFillImage({
         const fallback = supabaseOriginalSrc(image.currentSrc || image.src);
         if (!fallback || fallback === image.src) return;
         image.dataset.fallbackUsed = "1";
+        // Sem isto o <picture> insistiria no recorte que acabou de falhar.
+        image.closest("picture")?.querySelectorAll("source").forEach((source) => source.removeAttribute("srcset"));
         image.srcset = "";
         image.src = fallback;
       }}
     />
   );
+  return mobileSrcSet ? (
+    <picture className="contents">
+      <source media="(max-width: 639px)" srcSet={mobileSrcSet} sizes={sizes} />
+      {image}
+    </picture>
+  ) : image;
 }

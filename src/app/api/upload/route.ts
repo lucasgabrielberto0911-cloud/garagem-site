@@ -191,7 +191,7 @@ export async function POST(request: Request) {
       let card: Awaited<ReturnType<typeof encodeCardImage>>;
       let processable: { buffer: Buffer; detected: Detected };
       try {
-        // 1) HEIC → JPEG (se preciso), 2) galeria 1280 e capa 480×300.
+        // 1) HEIC → JPEG (se preciso), 2) galeria 1280 e capa 480×360.
         // A placa só é borracha no admin, no retângulo marcado.
         // O master privado, se veio do browser, não é regravado aqui.
         processable = await toProcessableBuffer(raw, detected);

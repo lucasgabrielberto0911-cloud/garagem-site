@@ -88,7 +88,7 @@ model Vehicle {
 model Photo {
   id           String  @id @default(cuid())
   url          String
-  /** Capa WebP 480×300 para cards. Null = usa `url` até o backfill. */
+  /** Capa WebP 480×360 para cards. Null = usa `url` até o backfill. */
   thumbnailUrl String?
   order        Int     @default(0)
   vehicleId    String
