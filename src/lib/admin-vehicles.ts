@@ -529,6 +529,7 @@ export const getAdminVehicleStats = unstable_cache(
 );
 
 export async function getAdminSalesPage(options?: {
+  id?: string;
   page?: number;
   pageSize?: number;
   period?: SalesPeriod;
@@ -540,7 +541,7 @@ export async function getAdminSalesPage(options?: {
   );
   const page = Math.max(options?.page ?? 1, 1);
   const period = options?.period ?? "all";
-  const where = { AND: [salesPeriodWhere(period), salesSearchWhere(options?.q)] };
+  const where = { AND: [salesPeriodWhere(period), salesSearchWhere(options?.q), ...(options?.id ? [{ id: options.id }] : [])] };
 
   const [total, sales] = await Promise.all([
     prisma.sale.count({ where }),

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSearch } from "@/components/admin/AdminSearch";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { handleFocusTrap } from "@/lib/focus-trap";
 import { toast } from "sonner";
@@ -287,11 +288,12 @@ export function AdminShell({
           </span>
         </Link>
         <div className="flex shrink-0 items-center">
+          <AdminSearch />
         <Link
           href="/"
           target="_blank"
           aria-label="Ver o site"
-          className="flex h-11 w-11 items-center justify-center text-muted transition touch-manipulation active:text-cream"
+          className="hidden h-11 w-11 items-center justify-center text-muted transition touch-manipulation active:text-cream min-[380px]:flex"
         >
           <IconExternal className="h-[18px] w-[18px]" />
         </Link>
@@ -347,6 +349,7 @@ export function AdminShell({
 
       <div className="min-h-dvh min-w-0 flex-1 lg:pl-64">
         <div className="mx-auto hidden max-w-6xl justify-end px-8 pt-3 lg:flex">
+          <AdminSearch />
           <AdminNotifications count={costWarnings} onCount={setCostWarnings} />
         </div>
         <main

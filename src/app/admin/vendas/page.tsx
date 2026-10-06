@@ -1,4 +1,5 @@
 import { formatAdminMoney as formatCurrencyBRL } from "@/lib/admin-money";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SalesManager } from "@/components/admin/SalesManager";
 import {
@@ -21,17 +22,21 @@ export const dynamic = "force-dynamic";
 export default async function VendasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; vehicle?: string; q?: string }>;
+  searchParams: Promise<{ period?: string | string[]; vehicle?: string | string[]; q?: string | string[]; venda?: string | string[] }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const { period: periodParam, vehicle: vehicleId, q } = await searchParams;
-  const query = normalizeSalesQuery(q);
+  const params = await searchParams;
+  const first = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
+  const periodParam = first(params.period);
+  const vehicleId = first(params.vehicle);
+  const saleId = first(params.venda);
+  const query = normalizeSalesQuery(first(params.q));
   const period = parseSalesPeriod(periodParam);
 
   const [list, totals] = await Promise.all([
-    getAdminSalesPage({ page: 1, period, q: query }),
+    getAdminSalesPage({ page: 1, period, q: query, id: saleId }),
     getAdminSalesTotals(period),
   ]);
   const initialVehicle = vehicleId
@@ -96,8 +101,9 @@ export default async function VendasPage({
           Confira os lançamentos; nenhum valor foi alterado automaticamente.
         </p>
       ) : null}
+      {saleId ? <Link href="/admin/vendas" className="inline-flex min-h-11 items-center text-sm underline underline-offset-4">Voltar a todas as vendas</Link> : null}
       <SalesManager
-        key={`${period}:${query}`}
+        key={`${period}:${query}:${saleId ?? ""}`}
         query={query}
         sales={list.sales}
         salesTotal={list.total}
