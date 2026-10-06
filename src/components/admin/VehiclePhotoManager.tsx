@@ -37,6 +37,8 @@ const PlateBlurEditor = dynamic(
   { ssr: false },
 );
 
+const PhotoRotationEditor = dynamic(() => import("./PhotoRotationEditor"), { ssr: false });
+
 type LocalPhotoJob = PhotoUploadJobState & { file: File; photo?: PhotoItem };
 
 export type PhotoItem = {
@@ -186,6 +188,8 @@ export function VehiclePhotoManager({
       }
     });
   }, [jobs, photos, queueReady, queueKey]);
+  const [rotationId, setRotationId] = useState<string | null>(null);
+  const [rotating, setRotating] = useState(false);
   const [blurring, setBlurring] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [blurredIds, setBlurredIds] = useState<Set<string>>(() => new Set());
@@ -202,8 +206,8 @@ export function VehiclePhotoManager({
   const pendingSkeletons = summary.uploading + summary.queued;
 
   useEffect(() => {
-    onUploadingChange?.(inFlight || blurring);
-  }, [inFlight, blurring, onUploadingChange]);
+    onUploadingChange?.(inFlight || blurring || rotating);
+  }, [inFlight, blurring, rotating, onUploadingChange]);
 
   function patchJob(id: string, patch: Partial<LocalPhotoJob>) {
     setJobs((current) =>
@@ -418,6 +422,22 @@ export function VehiclePhotoManager({
     } finally {
       setBlurring(false);
     }
+  }
+
+  const rotationPhoto = photos.find(photo => photo.id === rotationId) ?? null;
+  async function applyRotation(operation: { degrees: number } | { restore: true }) {
+    if (!rotationPhoto || rotating) return;
+    const { id, url } = rotationPhoto;
+    setRotating(true);
+    try {
+      const response = await fetch("/api/upload/rotate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url, ...operation }) });
+      const result = await response.json();
+      if (!response.ok || typeof result.url !== "string") throw new Error(result.error || "Não foi possível girar a foto.");
+      onChange(current => current.map(photo => photo.id === id && photo.url === url ? { ...photo, url: result.url, thumbnailUrl: result.thumbnailUrl ?? null } : photo));
+      setRotationId(null);
+      toast.success("Foto ajustada. Salve o anúncio para publicar.");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível girar a foto."); }
+    finally { setRotating(false); }
   }
 
   function hasFiles(event: React.DragEvent) {
@@ -690,7 +710,7 @@ export function VehiclePhotoManager({
                   <div className="absolute inset-x-0 bottom-0 flex items-stretch bg-asphalt/85 backdrop-blur lg:hidden">
                     <button
                       type="button"
-                      disabled={blurring || inFlight}
+                      disabled={blurring || inFlight || rotating}
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -720,10 +740,11 @@ export function VehiclePhotoManager({
                     </button>
                   </div>
 
+                  <button type="button" disabled={blurring || inFlight || rotating} onClick={() => setRotationId(photo.id)} className="absolute right-1.5 top-8 hidden min-h-11 items-center bg-asphalt/90 px-2 text-xs text-cream disabled:opacity-50 lg:flex">Girar foto</button>
                   <div className="absolute inset-x-1.5 bottom-14 hidden items-stretch gap-1 lg:flex">
                     <button
                       type="button"
-                      disabled={blurring || inFlight}
+                      disabled={blurring || inFlight || rotating}
                       onMouseDown={(event) => event.stopPropagation()}
                       onPointerDown={(event) => event.stopPropagation()}
                       onClick={(event) => {
@@ -833,11 +854,18 @@ export function VehiclePhotoManager({
                   : "Borrar placa"
               }
               hint="Marque o retângulo sobre a placa"
-              disabled={blurring || inFlight}
+              disabled={blurring || inFlight || rotating}
               onClick={() => {
                 setEditingId(actionsPhoto.id);
                 setActionsId(null);
               }}
+            />
+            <ActionSheetButton
+              icon={<IconImage className="h-4 w-4" />}
+              label="Girar foto"
+              hint="Confira o giro e recupere a versão anterior"
+              disabled={blurring || inFlight || rotating}
+              onClick={() => { setRotationId(actionsPhoto.id); setActionsId(null); }}
             />
             <ActionSheetButton
               icon={<IconDownload className="h-4 w-4" />}
@@ -885,6 +913,8 @@ export function VehiclePhotoManager({
           </>
         ) : null}
       </ActionSheet>
+
+      {rotationPhoto ? <PhotoRotationEditor key={rotationPhoto.url} url={rotationPhoto.url} applying={rotating} onClose={() => { if (!rotating) setRotationId(null); }} onApply={operation => { void applyRotation(operation); }} /> : null}
 
       {editingPhoto ? (
         <PlateBlurEditor
