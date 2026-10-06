@@ -383,9 +383,50 @@ export default async function VehicleDetailPage({
                 specAnchor={!hasMobileFichaSpecs(specs)}
               />
             </div>
+
+            {hasDetails ? (
+              <section
+                data-ficha-section="detalhes"
+                className="ficha-jump-target hidden border-t border-white/10 pt-5 lg:mt-6 lg:block"
+              >
+                {vehicle.description ? (
+                  <div>
+                    <h2 className="font-display text-base font-semibold text-cream">
+                      Sobre o veículo
+                    </h2>
+                    <VehicleDescription
+                      text={vehicle.description}
+                      className="mt-2 text-sm sm:text-[15px]"
+                    />
+                  </div>
+                ) : null}
+
+                {accessories.length > 0 ? (
+                  <div className={vehicle.description ? "mt-5" : undefined}>
+                    <h2 className="font-display text-base font-semibold text-cream">
+                      Itens e acessórios
+                    </h2>
+                    <ul className="mt-3 columns-1 gap-x-8 text-sm text-cream/90 sm:columns-2">
+                      {accessories.map((item) => (
+                        <li
+                          key={item}
+                          className="mb-1.5 flex break-inside-avoid items-start gap-2"
+                        >
+                          <span
+                            className="mt-2 h-1 w-1 shrink-0 bg-brand"
+                            aria-hidden="true"
+                          />
+                          <span className="leading-snug">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
           </div>
 
-          <aside className="ficha-aside order-2 hidden lg:sticky lg:z-20 lg:row-span-2 lg:block">
+          <aside className="ficha-aside order-2 hidden lg:sticky lg:z-20 lg:block">
             <div className="space-y-4 border border-white/10 bg-ink p-4 sm:p-6">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-display text-[11px] font-semibold uppercase tracking-wider text-brand">
@@ -587,47 +628,6 @@ export default async function VehicleDetailPage({
               </p>
             </div>
           </aside>
-
-          {hasDetails ? (
-            <section
-              data-ficha-section="detalhes"
-              className="ficha-jump-target order-3 hidden border-t border-white/10 pt-5 lg:col-start-1 lg:block"
-            >
-              {vehicle.description ? (
-                <div>
-                  <h2 className="font-display text-base font-semibold text-cream">
-                    Sobre o veículo
-                  </h2>
-                  <VehicleDescription
-                    text={vehicle.description}
-                    className="mt-2 text-sm sm:text-[15px]"
-                  />
-                </div>
-              ) : null}
-
-              {accessories.length > 0 ? (
-                <div className={vehicle.description ? "mt-5" : undefined}>
-                  <h2 className="font-display text-base font-semibold text-cream">
-                    Itens e acessórios
-                  </h2>
-                  <ul className="mt-3 columns-1 gap-x-8 text-sm text-cream/90 sm:columns-2">
-                    {accessories.map((item) => (
-                      <li
-                        key={item}
-                        className="mb-1.5 flex break-inside-avoid items-start gap-2"
-                      >
-                        <span
-                          className="mt-2 h-1 w-1 shrink-0 bg-brand"
-                          aria-hidden="true"
-                        />
-                        <span className="leading-snug">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </section>
-          ) : null}
         </div>
 
         <VehicleMobileBlocks
