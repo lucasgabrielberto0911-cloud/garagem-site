@@ -38,6 +38,7 @@ const PlateBlurEditor = dynamic(
 );
 
 const PhotoRotationEditor = dynamic(() => import("./PhotoRotationEditor"), { ssr: false });
+const CoverPhotoGuide = dynamic(() => import("./CoverPhotoGuide").then(module => module.CoverPhotoGuide));
 
 type LocalPhotoJob = PhotoUploadJobState & { file: File; photo?: PhotoItem };
 
@@ -599,6 +600,7 @@ export function VehiclePhotoManager({
         </p>
       ) : photos.length > 0 ? (
         <>
+          <CoverPhotoGuide photos={photos} disabled={inFlight || blurring || rotating} onCover={makeCover} />
           <details className="mt-4 text-xs text-muted">
             <summary className="cursor-pointer py-1 touch-manipulation">
               A 1ª foto é a capa.{" "}
