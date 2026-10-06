@@ -9,6 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { VehicleImage } from "@/components/VehicleImage";
+import { ZoomDetailImage } from "./ZoomDetailImage";
 import { IconClose } from "@/components/site/icons";
 import { vehiclePhotoAlt } from "@/lib/format";
 import { handleFocusTrap } from "@/lib/focus-trap";
@@ -365,6 +366,7 @@ export function PhotoLightbox({
                 priority
                 className="pointer-events-none object-contain [-webkit-touch-callout:none]"
               />
+              {photo ? <ZoomDetailImage photoId={photo.id} zoomed={scale > 1} alt={vehiclePhotoAlt(alt, safeIndex, total)} /> : null}
             </div>
           </div>
 
