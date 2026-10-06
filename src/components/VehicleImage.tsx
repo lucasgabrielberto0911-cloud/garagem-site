@@ -12,6 +12,7 @@ export function VehicleImage({
   className = "",
   priority = false,
   srcSet,
+  mobileSrcSet,
 }: {
   src?: string | null;
   alt: string;
@@ -20,6 +21,7 @@ export function VehicleImage({
   height?: number;
   sizes?: string;
   srcSet?: string;
+  mobileSrcSet?: string;
   className?: string;
   /**
    * Aceito por compatibilidade. As fotos públicas já são WebP
@@ -44,6 +46,7 @@ export function VehicleImage({
         height={height ?? 300}
         sizes={sizes}
         srcSet={srcSet}
+        mobileSrcSet={mobileSrcSet}
         className={className}
         priority={priority}
       />

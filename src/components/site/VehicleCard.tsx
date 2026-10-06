@@ -9,6 +9,7 @@ import {
   CARD_SIZES,
   coverSrc,
   coverSrcSet,
+  coverMobileSrcSet,
   type VehicleCardRecord,
 } from "@/lib/stock-query";
 import {
@@ -83,6 +84,7 @@ export function VehicleCard({
           <VehicleImage
             src={cover}
             srcSet={coverSrcSet(vehicle.photos)}
+            mobileSrcSet={coverMobileSrcSet(vehicle.photos)}
             alt={display.titleWithYear}
             fill
             width={480}

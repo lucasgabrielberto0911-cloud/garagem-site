@@ -40,20 +40,19 @@ export const GALLERY_HERO_SIZES =
  * Card dentro do mesmo container: 2 colunas, 3 no lg, 4 no xl da home.
  * No estoque o lg tem sidebar, então o card é menor — esta medida é o
  * teto da home, para o celular não pedir a foto do desktop.
- * A coluna no celular tem ~173px. Com DPR 3 o browser pediria 720.
- * O último termo usa /3 (~115px de slot) para esse 3x cair no WebP 480
- * gravado no upload. De 640px para cima seguem 720 e 960.
+ * A coluna no celular tem ~173px. O slot corresponde à largura real;
+ * o <picture> limita a capa móvel a 480px para evitar arquivos de desktop.
  */
 export const CARD_SIZES =
-  "(min-width: 1280px) 292px, (min-width: 1024px) calc((100vw - 96px) / 3), (min-width: 640px) calc((100vw - 64px) / 2), calc((100vw - 44px) / 3)";
+  "(min-width: 1280px) 292px, (min-width: 1024px) calc((100vw - 96px) / 3), (min-width: 640px) calc((100vw - 64px) / 2), calc((100vw - 44px) / 2)";
 
 const SUPABASE_OBJECT_PUBLIC = "/storage/v1/object/public/";
 const SUPABASE_RENDER_PUBLIC = "/storage/v1/render/image/public/";
 
 /** Mesmas medidas do card WebP gerado no upload (image-variants). */
 const CARD_RENDER_WIDTH = 480;
-const CARD_RENDER_HEIGHT = 300;
-/** Retina: 3x no celular e 2x no desktop da home (~584px). */
+const CARD_RENDER_HEIGHT = 360;
+/** Retina no desktop; o celular usa a capa 4:3 limitada a 480px. */
 const CARD_SHARP_WIDTHS = [720, 960] as const;
 /** WebP 75: nítido em cima do arquivo da galeria, sem o peso do q80. */
 const CARD_SHARP_QUALITY = "75";
@@ -139,7 +138,18 @@ export function coverSrc(photos: VehicleCardPhoto[] | undefined) {
 }
 
 /**
- * 480 da miniatura no celular 2x; 720 e 960 WebP quando a tela pede mais.
+ * A miniatura antiga é 8:5: recortá-la de novo no card 4:3 perde enquadramento
+ * e pixels úteis. Deriva direto da galeria, sem trocar arquivos do acervo.
+ * Um único tamanho móvel evita baixar a versão 720/960 numa tela 3x.
+ */
+export function coverMobileSrcSet(photos: VehicleCardPhoto[] | undefined) {
+  const photo = photos?.[0];
+  if (!photo?.url || !canTransform(photo.url) || isCardDerivative(photo.url)) return undefined;
+  return `${supabaseTransformSrc(photo.url, CARD_RENDER_WIDTH, CARD_RENDER_HEIGHT, "cover", "74")} ${CARD_RENDER_WIDTH}w`;
+}
+
+/**
+ * 480 da miniatura; 720 e 960 WebP para slots maiores do desktop/tablet.
  * A miniatura sozinha esticava no 3x e no desktop.
  */
 export function coverSrcSet(photos: VehicleCardPhoto[] | undefined) {

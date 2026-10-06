@@ -107,7 +107,8 @@ export async function prepareImageForUpload(file: File): Promise<File> {
   const name = `${baseName(file.name)}${ext}`;
 
   let maxEdge = MAX_EDGE_START;
-  let quality = useWebp ? 0.7 : 0.72;
+  // Preserva detalhes antes do encode final no servidor, sem mudar o teto de pixels.
+  let quality = useWebp ? 0.84 : 0.86;
   let lastError: Error | null = null;
   let lastPrepared: File | null = null;
   let source = file;

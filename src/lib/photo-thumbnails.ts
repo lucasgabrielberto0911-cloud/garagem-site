@@ -11,7 +11,7 @@ export type StoreCardThumbnailResult =
   | { ok: false; error: string };
 
 /**
- * Gera o WebP 480×300 e grava no Storage ao lado da foto original.
+ * Gera o WebP 480×360 e grava no Storage ao lado da foto original.
  */
 export async function storeCardThumbnail(
   publicUrl: string,
