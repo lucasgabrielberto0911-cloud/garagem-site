@@ -518,7 +518,7 @@ export async function deleteVehicle(id: string) {
       photo.url,
       photo.thumbnailUrl,
       privateMasterRefForPublicUrl(photo.url),
-            privatePreviousRefForPublicUrl(photo.url),
+      privatePreviousRefForPublicUrl(photo.url),
     ]) ?? []),
     ...(vehicle?.costs.map((cost) => cost.receiptUrl) ?? []),
     ...(vehicle?.documents.map((doc) => doc.fileUrl) ?? []),

@@ -505,7 +505,7 @@ export async function deleteSale(
         ...(files?.photos.flatMap((photo) => [
           photo.url,
           privateMasterRefForPublicUrl(photo.url),
-            privatePreviousRefForPublicUrl(photo.url),
+          privatePreviousRefForPublicUrl(photo.url),
         ]) ?? []),
         ...(files?.costs.map((cost) => cost.receiptUrl) ?? []),
         ...(files?.documents.map((doc) => doc.fileUrl) ?? []),
