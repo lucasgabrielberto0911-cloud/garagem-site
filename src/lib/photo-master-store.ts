@@ -3,6 +3,7 @@ import {
   masterObjectPathFromGalleryPath,
   masterObjectPathFromId,
   PHOTO_MASTER_PREFIX,
+  previousObjectPathFromGalleryPath,
 } from "@/lib/photo-master";
 import {
   VEHICLE_DOCS_BUCKET,
@@ -90,18 +91,15 @@ export async function copyPrivateMaster(
   sourceGalleryPath: string,
   destGalleryPath: string,
 ) {
-  const from = masterObjectPathFromGalleryPath(sourceGalleryPath);
-  const to = masterObjectPathFromGalleryPath(destGalleryPath);
-  if (!from || !to || from === to) return;
-  try {
-    const supabase = getSupabaseAdmin();
-    const { error } = await supabase.storage
-      .from(VEHICLE_DOCS_BUCKET)
-      .copy(from, to);
-    if (error && !/not found|does not exist|404/i.test(error.message)) {
-      console.warn("[photo-master] copy:", error.message);
-    }
-  } catch (error) {
-    console.warn("[photo-master] copy:", error);
-  }
+  const pairs = [
+    [masterObjectPathFromGalleryPath(sourceGalleryPath), masterObjectPathFromGalleryPath(destGalleryPath)],
+    [previousObjectPathFromGalleryPath(sourceGalleryPath), previousObjectPathFromGalleryPath(destGalleryPath)],
+  ];
+  await Promise.all(pairs.map(async ([from, to]) => {
+    if (!from || !to || from === to) return;
+    try {
+      const { error } = await getSupabaseAdmin().storage.from(VEHICLE_DOCS_BUCKET).copy(from, to);
+      if (error && !/not found|does not exist|404/i.test(error.message)) console.warn("[photo-master] copy:", error.message);
+    } catch (error) { console.warn("[photo-master] copy:", error); }
+  }));
 }

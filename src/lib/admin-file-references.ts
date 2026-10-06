@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { withAdminStorageLock } from "@/lib/admin-storage-lock";
-import { masterObjectPathFromGalleryPath } from "@/lib/photo-master";
+import { masterObjectPathFromGalleryPath, previousObjectPathFromGalleryPath } from "@/lib/photo-master";
 import { deleteStoragePublicUrls, parseStoredFileRef } from "@/lib/supabase";
 
 /** Falha de qualquer consulta bloqueia a exclusão; nunca considera o banco vazio. */
@@ -37,6 +37,8 @@ export async function adminFileReferences(tx: Prisma.TransactionClient) {
       publicPaths.add(ref.path);
       const master = masterObjectPathFromGalleryPath(ref.path);
       if (master) privatePaths.add(master);
+      const previous = previousObjectPathFromGalleryPath(ref.path);
+      if (previous) privatePaths.add(previous);
     }
   }
   return { publicPaths, privatePaths };

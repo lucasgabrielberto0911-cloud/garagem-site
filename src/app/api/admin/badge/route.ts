@@ -3,14 +3,18 @@ import { getSession } from "@/lib/auth";
 import { getNewLeadsBadgeCount } from "@/lib/admin-stats";
 import { prisma } from "@/lib/prisma";
 import { MISSING_SALE_COST_WHERE } from "@/lib/admin-cost-warnings";
+import { agendaWhere } from "@/lib/admin-agenda";
 export async function GET() {
   if (!(await getSession())) return NextResponse.json({}, { status: 401 });
-  const [count, costWarnings] = await Promise.all([
+  const now = new Date();
+  const [count, costWarnings, today, overdue] = await Promise.all([
     getNewLeadsBadgeCount(),
     prisma.sale.count({ where: MISSING_SALE_COST_WHERE }).catch(() => null),
+    prisma.leadVenda.count({ where: agendaWhere("hoje", now) }).catch(() => null),
+    prisma.leadVenda.count({ where: agendaWhere("atrasados", now) }).catch(() => null),
   ]);
   return NextResponse.json(
-    { count, costWarnings },
+    { count, costWarnings, notifications: costWarnings === null || today === null || overdue === null ? null : costWarnings + today + overdue },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }

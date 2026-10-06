@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSearch } from "@/components/admin/AdminSearch";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { handleFocusTrap } from "@/lib/focus-trap";
 import { toast } from "sonner";
@@ -111,7 +112,7 @@ export function AdminShell({
           if (response.ok) {
             const data = await response.json();
             if (typeof data.count === "number") setNewLeads(data.count);
-            setCostWarnings(typeof data.costWarnings === "number" ? data.costWarnings : null);
+            setCostWarnings(typeof data.notifications === "number" ? data.notifications : null);
           }
         })
         .catch(() => {});
@@ -172,6 +173,7 @@ export function AdminShell({
 
           return (
             <Link
+              prefetch={false}
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
@@ -199,6 +201,7 @@ export function AdminShell({
 
       <div className="space-y-1 border-t border-white/10 p-3">
         <Link
+          prefetch={false}
           href="/admin/conta"
           className={`flex min-h-[48px] items-center gap-3 px-3 py-2.5 text-sm transition touch-manipulation ${
             pathname.startsWith("/admin/conta")
@@ -210,6 +213,7 @@ export function AdminShell({
           Minha conta
         </Link>
         <Link
+          prefetch={false}
           href="/"
           target="_blank"
           className="flex min-h-[48px] items-center gap-3 px-3 py-2.5 text-sm text-muted transition touch-manipulation hover:bg-white/5 hover:text-cream"
@@ -232,7 +236,7 @@ export function AdminShell({
 
   const brand = (
     <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
-      <Link href="/admin" className="flex items-center gap-2.5">
+      <Link prefetch={false} href="/admin" className="flex items-center gap-2.5">
         <Image
           src="/branding/logo-wordmark.webp"
           alt="Sua Garagem"
@@ -272,6 +276,7 @@ export function AdminShell({
       />
       <div className="flex items-center justify-between border-b border-white/10 bg-ink px-4 pb-1.5 pt-[max(0.375rem,env(safe-area-inset-top,0px))] lg:hidden">
         <Link
+          prefetch={false}
           href="/admin"
           className="flex min-h-[44px] items-center gap-2 touch-manipulation"
         >
@@ -287,11 +292,13 @@ export function AdminShell({
           </span>
         </Link>
         <div className="flex shrink-0 items-center">
+          <AdminSearch />
         <Link
+          prefetch={false}
           href="/"
           target="_blank"
           aria-label="Ver o site"
-          className="flex h-11 w-11 items-center justify-center text-muted transition touch-manipulation active:text-cream"
+          className="hidden h-11 w-11 items-center justify-center text-muted transition touch-manipulation active:text-cream min-[380px]:flex"
         >
           <IconExternal className="h-[18px] w-[18px]" />
         </Link>
@@ -316,6 +323,7 @@ export function AdminShell({
           <aside className="relative flex h-dvh w-[min(78%,20rem)] flex-col overflow-y-auto overscroll-contain border-r border-white/10 bg-ink pb-safe animate-slide-in-left">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
               <Link
+                prefetch={false}
                 href="/admin"
                 className="flex min-h-[44px] items-center gap-2.5"
               >
@@ -347,6 +355,7 @@ export function AdminShell({
 
       <div className="min-h-dvh min-w-0 flex-1 lg:pl-64">
         <div className="mx-auto hidden max-w-6xl justify-end px-8 pt-3 lg:flex">
+          <AdminSearch />
           <AdminNotifications count={costWarnings} onCount={setCostWarnings} />
         </div>
         <main
@@ -370,6 +379,7 @@ export function AdminShell({
             return (
               <li key={href} className="flex flex-1">
                 <Link
+                  prefetch={false}
                   href={href}
                   aria-current={active ? "page" : undefined}
                   className={`relative flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 py-2.5 transition touch-manipulation ${

@@ -33,7 +33,7 @@ import {
   deleteLead,
   updateLeadStatus,
 } from "@/app/admin/leads/actions";
-import { adminFileViewHref } from "@/lib/supabase";
+import { adminFileViewHref } from "@/lib/storage-file-ref";
 
 /** Troque aqui se mudar o serviço de consulta de placa. */
 const CONSULTA_PLACA_URL_BASE = "https://placafipe.com/placa/";

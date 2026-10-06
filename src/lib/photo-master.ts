@@ -1,4 +1,4 @@
-import { privateFileRef, storagePathFromPublicUrl } from "@/lib/supabase";
+import { privateFileRef, storagePathFromPublicUrl } from "@/lib/storage-file-ref";
 import { supabaseOriginalSrc } from "@/lib/stock-query";
 
 /**
@@ -62,4 +62,14 @@ export function privateMasterRefForPublicUrl(url: string | null | undefined) {
   const master = masterObjectPathFromGalleryPath(galleryPath);
   if (!master) return null;
   return privateFileRef(master);
+}
+
+/** Uma versão anterior por foto, privada e vinculada à galeria atual. */
+export function previousObjectPathFromGalleryPath(galleryPath: string): string | null {
+  const stem = galleryStemFromStoragePath(galleryPath);
+  return stem ? `${PHOTO_MASTER_PREFIX}${stem}-previous.jpg` : null;
+}
+export function privatePreviousRefForPublicUrl(url: string | null | undefined) {
+  const master = privateMasterRefForPublicUrl(url);
+  return master ? master.replace(/\.jpg$/, "-previous.jpg") : null;
 }

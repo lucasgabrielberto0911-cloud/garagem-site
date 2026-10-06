@@ -1,4 +1,5 @@
 import { customerSearchWhere } from "@/lib/admin-customer-search";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CustomersManager } from "@/components/admin/CustomersManager";
 import { AdminPageHeader, StatCard } from "@/components/admin/ui";
@@ -12,16 +13,20 @@ export const dynamic = "force-dynamic";
 export default async function ClientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string | string[]; page?: string | string[]; cliente?: string | string[] }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
   const query = await searchParams;
-  const q = (query.q || "").trim();
-  const page = Math.max(1, Number(query.page) || 1);
+  const first = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
+  const q = (first(query.q) || "").trim();
+  const pageInput = Number(first(query.page));
+  const page = Number.isFinite(pageInput) ? Math.max(1, Math.trunc(pageInput)) : 1;
   const pageSize = ADMIN_CUSTOMERS_PAGE_SIZE;
-  const where = customerSearchWhere(q);
+  const selected = first(query.cliente);
+  const filtered = Boolean(q || selected);
+  const where = { AND: [customerSearchWhere(q), ...(selected ? [{ id: selected }] : [])] };
 
   const [customers, filteredTotal, globalTotal, buyersCount, revenueAgg] =
     await Promise.all([
@@ -42,7 +47,7 @@ export default async function ClientesPage({
         },
       }),
       prisma.customer.count({ where }),
-      q ? prisma.customer.count() : Promise.resolve(0),
+      filtered ? prisma.customer.count() : Promise.resolve(0),
       prisma.customer.count({ where: { sales: { some: {} } } }),
       prisma.sale.aggregate({ _sum: { salePrice: true } }),
     ]);
@@ -83,7 +88,7 @@ export default async function ClientesPage({
     };
   });
 
-  const registeredCount = q ? globalTotal : filteredTotal;
+  const registeredCount = filtered ? globalTotal : filteredTotal;
   const revenue = revenueAgg._sum.salePrice ?? 0;
 
   return (
@@ -107,6 +112,7 @@ export default async function ClientesPage({
         />
       </section>
 
+      {selected ? <Link href="/admin/clientes" className="inline-flex min-h-11 items-center text-sm underline underline-offset-4">Voltar a todos os clientes</Link> : null}
       <CustomersManager
         customers={rows}
         query={q}

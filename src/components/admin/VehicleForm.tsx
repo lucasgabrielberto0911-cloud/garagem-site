@@ -1593,6 +1593,7 @@ export function VehicleForm({
                 />
               </div>
               <Link
+                prefetch={false}
                 href="/admin/veiculos"
                 className={`${btn.outline} ${mode === "edit" ? "hidden sm:inline-flex" : ""}`}
               >
@@ -1621,6 +1622,7 @@ export function VehicleForm({
                   </button>
                   <div className="hidden sm:contents">
                     <Link
+                      prefetch={false}
                       href={vehiclePath(vehicle)}
                       target="_blank"
                       className={btn.ghost}

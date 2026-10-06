@@ -11,7 +11,7 @@ import type { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { isValidPlate, normalizePlate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
-import { privateMasterRefForPublicUrl } from "@/lib/photo-master";
+import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/lib/photo-master";
 import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
 import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 
@@ -505,6 +505,7 @@ export async function deleteSale(
         ...(files?.photos.flatMap((photo) => [
           photo.url,
           privateMasterRefForPublicUrl(photo.url),
+          privatePreviousRefForPublicUrl(photo.url),
         ]) ?? []),
         ...(files?.costs.map((cost) => cost.receiptUrl) ?? []),
         ...(files?.documents.map((doc) => doc.fileUrl) ?? []),

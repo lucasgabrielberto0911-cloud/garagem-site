@@ -200,6 +200,7 @@ function TabLink({
 }) {
   return (
     <Link
+          prefetch={false}
       href={href}
       className={`-mb-px inline-flex min-h-[48px] items-center justify-center gap-2 border-b-2 px-3 py-2.5 font-display text-xs font-semibold uppercase tracking-wider transition touch-manipulation sm:px-4 ${
         active

@@ -11,7 +11,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { getSession } from "@/lib/auth";
-import { privateMasterRefForPublicUrl } from "@/lib/photo-master";
+import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/lib/photo-master";
 import { copyPrivateMaster } from "@/lib/photo-master-store";
 import {
   copyPublicStorageObject,
@@ -468,6 +468,7 @@ export async function updateVehicle(
             photo.url,
             photo.thumbnailUrl,
             privateMasterRefForPublicUrl(photo.url),
+            privatePreviousRefForPublicUrl(photo.url),
           ],
     );
     if (removed.length > 0) {
@@ -517,6 +518,7 @@ export async function deleteVehicle(id: string) {
       photo.url,
       photo.thumbnailUrl,
       privateMasterRefForPublicUrl(photo.url),
+      privatePreviousRefForPublicUrl(photo.url),
     ]) ?? []),
     ...(vehicle?.costs.map((cost) => cost.receiptUrl) ?? []),
     ...(vehicle?.documents.map((doc) => doc.fileUrl) ?? []),
