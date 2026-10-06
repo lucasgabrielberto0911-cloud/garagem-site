@@ -31,6 +31,9 @@ test("WhatsApp abre para o cliente, com fatos e ficha reais, sem enviar sozinho"
   assert.match(decodeURIComponent(href!), /R\$\s*60\.000/);
   assert.match(decodeURIComponent(href!), /https:\/\/www\.suagaragem\.net\/estoque\/honda-civic/);
   assert.equal(matchWhatsApp({ ...lead, phone: "" }, car), null);
+  assert.ok(matchWhatsApp({ ...lead, phone: "(55) 99123-4567" }, car)?.startsWith("https://wa.me/5555991234567?"));
+  assert.ok(matchWhatsApp({ ...lead, phone: "+55 (27) 91234-5678" }, car)?.startsWith("https://wa.me/5527912345678?"));
+  assert.equal(matchWhatsApp({ ...lead, phone: "+1 555 123 4567" }, car), null);
   assert.doesNotMatch(decodeURIComponent(matchWhatsApp(lead, { ...car, price: 0 })!), /por R\$/);
   assert.equal(wantedStockMatch({ ...lead, notes: "Preço: até R$ 65.000" }, { ...car, price: 0 }), null);
 });

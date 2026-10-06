@@ -53,7 +53,8 @@ export function wantedStockMatch(lead: MatchLead, vehicle: MatchVehicle): string
 
 export function matchWhatsApp(lead: MatchLead, vehicle: MatchVehicle) {
   const digits = lead.phone.replace(/\D/g, "");
-  const phone = digits.startsWith("55") ? digits : "55" + digits;
+  const hasCountryCode = lead.phone.trim().startsWith("+") || digits.length > 11;
+  const phone = hasCountryCode ? digits : "55" + digits;
   if (!/^55\d{10,11}$/.test(phone)) return null;
   const firstName = lead.name.trim().split(/\s+/)[0] || "";
   const label = [vehicle.brand, vehicle.model, vehicle.version, vehicle.yearModel].filter(Boolean).join(" ");
