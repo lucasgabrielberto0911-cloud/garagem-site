@@ -1,19 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import type { VehicleCardData } from "@/components/site/VehicleCard";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
+import { FavoritesComparison } from "./FavoritesComparison";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { ButtonLink, WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
 import { snapshotsForIds, writeFavoriteSnapshot } from "@/lib/offline-queue";
-import { formatCurrencyBRL, formatNumberBR, formatVehicleLabel } from "@/lib/format";
+import { formatVehicleLabel } from "@/lib/format";
 import { trackLead } from "@/lib/meta-pixel";
 import { favoritesListWhatsApp, WHATSAPP_MESSAGES } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
-import { vehicleLocationLabel } from "@/lib/vehicle-location";
 
 type FavoritesResult = {
   key: string;
@@ -191,7 +190,6 @@ export function FavoritesList() {
     return (ai < 0 ? ids.length : ai) - (bi < 0 ? ids.length : bi);
   });
   const missing = ids.length - ordered.length;
-  const compare = ordered.slice(0, 4);
 
   return (
     <div>
@@ -231,118 +229,7 @@ export function FavoritesList() {
         </button>
       </div>
 
-      {compare.length >= 2 ? (
-        <>
-          <div className="mt-8 hidden overflow-x-auto border border-white/10 lg:block">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="bg-ink text-xs uppercase tracking-wider text-muted">
-              <tr>
-                <th className="px-4 py-3 font-medium">Comparar</th>
-                {compare.map((vehicle) => (
-                  <th key={vehicle.id} className="px-4 py-3 font-display text-cream normal-case tracking-normal">
-                    <Link href={vehiclePath(vehicle)} className="hover:text-brand">
-                      {formatVehicleLabel(vehicle.brand, vehicle.model)}
-                    </Link>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/10 bg-asphalt/40">
-              {[
-                {
-                  label: "Preço",
-                  value: (v: VehicleCardData) => formatCurrencyBRL(v.price),
-                },
-                { label: "Ano", value: (v: VehicleCardData) => String(v.yearModel) },
-                {
-                  label: "KM",
-                  value: (v: VehicleCardData) => `${formatNumberBR(v.km)} km`,
-                },
-                { label: "Câmbio", value: (v: VehicleCardData) => v.transmission },
-                { label: "Combustível", value: (v: VehicleCardData) => v.fuel },
-                {
-                  label: "Cidade",
-                  value: (v: VehicleCardData) =>
-                    vehicleLocationLabel(v.locationCity) || "—",
-                },
-              ].map((row) => (
-                <tr key={row.label}>
-                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-muted">
-                    {row.label}
-                  </th>
-                  {compare.map((vehicle) => (
-                    <td key={vehicle.id} className="px-4 py-3 text-cream">
-                      {row.value(vehicle)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-
-          <details className="group mt-6 lg:hidden">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 border border-white/15 bg-ink px-4 py-3 font-display text-xs font-semibold text-cream transition hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
-              <span>Comparar os {compare.length} primeiros</span>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                className="h-4 w-4 shrink-0 text-brand transition-transform group-open:rotate-180"
-                aria-hidden="true"
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </summary>
-            <ul className="-mx-4 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
-              {compare.map((vehicle) => (
-                <li
-                  key={vehicle.id}
-                  className="w-[min(78vw,18rem)] shrink-0 snap-start border border-white/10 bg-ink p-4"
-                >
-                  <Link
-                    href={vehiclePath(vehicle)}
-                    className="block font-display text-sm font-semibold text-cream"
-                  >
-                    {formatVehicleLabel(vehicle.brand, vehicle.model)}
-                  </Link>
-                  <dl className="mt-3 space-y-1.5 text-sm">
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-muted">Preço</dt>
-                      <dd className="font-display font-semibold text-cream">
-                        {formatCurrencyBRL(vehicle.price)}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-muted">Ano</dt>
-                      <dd className="text-cream">{vehicle.yearModel}</dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-muted">KM</dt>
-                      <dd className="text-cream">{formatNumberBR(vehicle.km)}</dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-muted">Câmbio</dt>
-                      <dd className="text-right text-cream">{vehicle.transmission}</dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-muted">Combustível</dt>
-                      <dd className="text-right text-cream">{vehicle.fuel}</dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-muted">Cidade</dt>
-                      <dd className="text-right text-cream">
-                        {vehicleLocationLabel(vehicle.locationCity) || "—"}
-                      </dd>
-                    </div>
-                  </dl>
-                </li>
-              ))}
-            </ul>
-          </details>
-        </>
-      ) : null}
+      <FavoritesComparison vehicles={ordered} />
 
       <div className="mt-6">
         <VehicleGrid
