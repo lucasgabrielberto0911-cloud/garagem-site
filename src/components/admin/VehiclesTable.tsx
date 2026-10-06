@@ -833,6 +833,7 @@ export function VehiclesTable({
             recente primeiro. Teto de {MAX_HOME_FEATURED} para não bagunçar a
             home.{" "}
             <Link
+              prefetch={false}
               href="/"
               target="_blank"
               className="font-medium text-brand underline-offset-4 hover:underline"
@@ -950,7 +951,7 @@ export function VehiclesTable({
           }
           action={
             tab === "estoque" ? (
-              <Link href="/admin/veiculos/novo" className={btn.primary}>
+              <Link prefetch={false} href="/admin/veiculos/novo" className={btn.primary}>
                 <IconPlus className="h-4 w-4" />
                 {q ? "Cadastrar veículo" : "Cadastrar o primeiro"}
               </Link>
@@ -1173,6 +1174,7 @@ function VehicleAdminCard({
           />
         </label>
         <Link
+          prefetch={false}
           href={`/admin/veiculos/${vehicle.id}`}
           className="flex min-w-0 flex-1 gap-3 outline-none focus-visible:ring-2 focus-visible:ring-brand lg:gap-4"
         >
@@ -1241,6 +1243,7 @@ function VehicleAdminCard({
 
       <div className="flex flex-wrap items-center gap-1 border-t border-white/10 px-1.5 py-1">
         <Link
+          prefetch={false}
           href={`/admin/veiculos/${vehicle.id}`}
           className="inline-flex h-11 items-center gap-1.5 px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-white/5"
         >

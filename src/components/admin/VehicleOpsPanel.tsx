@@ -37,7 +37,7 @@ import {
   inputClass,
 } from "@/components/admin/ui";
 import { formatAdminMoney as formatCurrencyBRL } from "@/lib/admin-money";
-import { adminFileViewHref } from "@/lib/supabase";
+import { adminFileViewHref } from "@/lib/storage-file-ref";
 import { uploadAdminFile } from "@/lib/upload-admin-file";
 import {
   CONSIGNED_LABEL,

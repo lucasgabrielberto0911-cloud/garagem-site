@@ -172,6 +172,7 @@ export function AdminShell({
 
           return (
             <Link
+              prefetch={false}
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
@@ -199,6 +200,7 @@ export function AdminShell({
 
       <div className="space-y-1 border-t border-white/10 p-3">
         <Link
+          prefetch={false}
           href="/admin/conta"
           className={`flex min-h-[48px] items-center gap-3 px-3 py-2.5 text-sm transition touch-manipulation ${
             pathname.startsWith("/admin/conta")
@@ -210,6 +212,7 @@ export function AdminShell({
           Minha conta
         </Link>
         <Link
+          prefetch={false}
           href="/"
           target="_blank"
           className="flex min-h-[48px] items-center gap-3 px-3 py-2.5 text-sm text-muted transition touch-manipulation hover:bg-white/5 hover:text-cream"
@@ -232,7 +235,7 @@ export function AdminShell({
 
   const brand = (
     <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
-      <Link href="/admin" className="flex items-center gap-2.5">
+      <Link prefetch={false} href="/admin" className="flex items-center gap-2.5">
         <Image
           src="/branding/logo-wordmark.webp"
           alt="Sua Garagem"
@@ -272,6 +275,7 @@ export function AdminShell({
       />
       <div className="flex items-center justify-between border-b border-white/10 bg-ink px-4 pb-1.5 pt-[max(0.375rem,env(safe-area-inset-top,0px))] lg:hidden">
         <Link
+          prefetch={false}
           href="/admin"
           className="flex min-h-[44px] items-center gap-2 touch-manipulation"
         >
@@ -288,6 +292,7 @@ export function AdminShell({
         </Link>
         <div className="flex shrink-0 items-center">
         <Link
+          prefetch={false}
           href="/"
           target="_blank"
           aria-label="Ver o site"
@@ -316,6 +321,7 @@ export function AdminShell({
           <aside className="relative flex h-dvh w-[min(78%,20rem)] flex-col overflow-y-auto overscroll-contain border-r border-white/10 bg-ink pb-safe animate-slide-in-left">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
               <Link
+                prefetch={false}
                 href="/admin"
                 className="flex min-h-[44px] items-center gap-2.5"
               >
@@ -370,6 +376,7 @@ export function AdminShell({
             return (
               <li key={href} className="flex flex-1">
                 <Link
+                  prefetch={false}
                   href={href}
                   aria-current={active ? "page" : undefined}
                   className={`relative flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 py-2.5 transition touch-manipulation ${

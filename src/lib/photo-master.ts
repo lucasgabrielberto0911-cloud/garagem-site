@@ -1,4 +1,4 @@
-import { privateFileRef, storagePathFromPublicUrl } from "@/lib/supabase";
+import { privateFileRef, storagePathFromPublicUrl } from "@/lib/storage-file-ref";
 import { supabaseOriginalSrc } from "@/lib/stock-query";
 
 /**
