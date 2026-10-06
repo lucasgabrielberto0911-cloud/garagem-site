@@ -111,7 +111,7 @@ export function AdminShell({
           if (response.ok) {
             const data = await response.json();
             if (typeof data.count === "number") setNewLeads(data.count);
-            setCostWarnings(typeof data.costWarnings === "number" ? data.costWarnings : null);
+            setCostWarnings(typeof data.notifications === "number" ? data.notifications : null);
           }
         })
         .catch(() => {});

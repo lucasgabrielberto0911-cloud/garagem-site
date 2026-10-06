@@ -7,13 +7,14 @@ import { usePathname } from "next/navigation";
 import { IconClose } from "@/components/site/icons";
 import { btn } from "@/components/admin/ui";
 import { handleFocusTrap } from "@/lib/focus-trap";
-import type { CostWarningsResult } from "@/lib/admin-cost-warnings";
+import { NOTICE_KINDS, type NoticeKind, type NoticesResult } from "@/lib/admin-notifications";
 
 export function AdminNotifications({ count, onCount }: { count: number | null; onCount: (count: number) => void }) {
   const [open, setOpen] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [kind, setKind] = useState<NoticeKind>("hoje");
   const [page, setPage] = useState(1);
-  const [data, setData] = useState<CostWarningsResult | null>(null);
+  const [data, setData] = useState<NoticesResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -45,18 +46,18 @@ export function AdminNotifications({ count, onCount }: { count: number | null; o
     const controller = new AbortController();
     setLoading(true);
     setError(false);
-    fetch(`/api/admin/avisos?page=${page}`, { signal: controller.signal, cache: "no-store" })
+    fetch(`/api/admin/avisos?tipo=${kind}&page=${page}`, { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("avisos");
-        const result = await response.json() as CostWarningsResult;
+        const result = await response.json() as NoticesResult;
         if (controller.signal.aborted) return;
         setData(result);
-        onCount(result.total);
+        onCount(result.counts.hoje + result.counts.atrasados + result.counts.vendas);
       })
       .catch(() => { if (!controller.signal.aborted) setError(true); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [open, page, retry, onCount]);
+  }, [open, kind, page, retry, onCount]);
 
   return <>
     <button ref={buttonRef} type="button" aria-label={count && count > 0 ? `Avisos: ${count} pendências` : "Avisos"}
@@ -76,12 +77,21 @@ export function AdminNotifications({ count, onCount }: { count: number | null; o
           <button type="button" aria-label="Fechar avisos" onClick={close} className="flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-white/5 hover:text-cream"><IconClose className="h-5 w-5" /></button>
         </div>
         <div className="min-h-0 overflow-y-auto overscroll-contain p-4" aria-busy={loading}>
-          <p className="mb-4 text-sm leading-relaxed text-muted">Vendas sem preço de compra informado. Complete a operação para calcular o lucro.</p>
-          {loading ? <p role="status" className="py-6 text-sm text-muted">Carregando avisos…</p> : error ? <div role="alert" className="space-y-3 text-sm"><p>Não foi possível carregar os avisos.</p><button type="button" className={btn.outline} onClick={() => setRetry((value) => value + 1)}>Tentar novamente</button></div> : data?.items.length === 0 ? <p role="status" className="py-6 text-sm text-muted">Nenhuma venda com essa pendência.</p> : <ul className="space-y-2">
-            {data?.items.map(({ id, vehicle }) => <li key={id}><Link onClick={close} href={`/admin/veiculos/${encodeURIComponent(vehicle.id)}?view=operacao`} className="block rounded-lg border border-white/10 p-3 transition hover:border-white/25 hover:bg-white/5">
-              <p className="break-words text-sm font-semibold">{vehicle.brand} {vehicle.model} · {vehicle.yearModel}</p>
-              {vehicle.plate ? <p className="mt-1 text-xs text-muted">{vehicle.plate}</p> : null}
-              <p className="mt-2 text-xs text-muted">Preço de compra não informado</p><span className="mt-2 block text-xs text-cream underline underline-offset-4">Completar operação</span>
+          <div className="mb-4 grid grid-cols-3 gap-1" role="group" aria-label="Tipo de aviso">
+            {NOTICE_KINDS.map(({ value, label }) => <button key={value} type="button" aria-pressed={kind === value}
+              onClick={() => { setKind(value); setPage(1); setData(null); }}
+              className={`min-h-11 rounded-lg px-1 text-xs font-semibold transition ${kind === value ? "bg-brand text-cream" : "border border-white/10 text-muted hover:bg-white/5"}`}>
+              {label}{data ? ` (${data.counts[value]})` : ""}
+            </button>)}
+          </div>
+          <p className="mb-3 text-sm leading-relaxed text-muted">{kind === "vendas" ? "Complete o preço de compra para calcular o lucro." : kind === "atrasados" ? "Retornos de dias anteriores que ainda estão em aberto." : "Seus retornos programados para hoje."}</p>
+          {kind !== "vendas" ? <Link onClick={close} href={`/admin/agenda?periodo=${kind}`} className="mb-4 inline-flex min-h-11 items-center text-sm text-cream underline underline-offset-4">Abrir agenda</Link> : null}
+          {loading ? <p role="status" className="py-6 text-sm text-muted">Carregando avisos…</p> : error ? <div role="alert" className="space-y-3 text-sm"><p>Não foi possível carregar os avisos.</p><button type="button" className={btn.outline} onClick={() => setRetry((value) => value + 1)}>Tentar novamente</button></div> : data?.items.length === 0 ? <p role="status" className="py-6 text-sm text-muted">{kind === "vendas" ? "Nenhuma venda com essa pendência." : "Nenhum retorno neste período."}</p> : <ul className="space-y-2">
+            {data?.items.map((item) => <li key={item.id}><Link onClick={close} href={item.href} className="block rounded-lg border border-white/10 p-3 transition hover:border-white/25 hover:bg-white/5">
+              <p className="break-words text-sm font-semibold">{item.title}</p>
+              {item.at ? <p className="mt-1 text-xs text-muted">{new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }).format(new Date(item.at))}</p> : null}
+              <p className="mt-2 break-words text-xs leading-relaxed text-muted">{item.detail}</p>
+              <span className="mt-2 block text-xs text-cream underline underline-offset-4">{kind === "vendas" ? "Completar operação" : "Abrir atendimento"}</span>
             </Link></li>)}
           </ul>}
         </div>
