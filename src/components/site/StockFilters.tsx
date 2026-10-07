@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { cloneElement, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { IconClose, IconSearch, IconShare } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName, formatModelName } from "@/lib/format";
@@ -12,6 +12,7 @@ import {
   type StockModelOption,
 } from "@/lib/stock-query";
 import { handleFocusTrap } from "@/lib/focus-trap";
+import { stockRangeError } from "@/lib/stock-range-validation";
 import { chipTrackInsets } from "@/lib/stock-chip-track";
 import {
   formatColorLabel,
@@ -184,6 +185,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const { isPending, startTransition } = useStockPendingOptional();
   const [open, setOpen] = useState(false);
   const sheetRef = useRef<HTMLElement>(null);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
 
   const current: FilterValues = {
     q: params.get("q") ?? "",
@@ -217,6 +219,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
   useEffect(() => {
     if (!open) return;
+    const filterButton = filterButtonRef.current;
+    const trigger = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : filterButtonRef.current;
     sheetRef.current?.focus();
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -226,7 +232,11 @@ export function StockFilters({ facets }: { facets: Facets }) {
       if (sheetRef.current) handleFocusTrap(event, sheetRef.current);
     }
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (trigger?.isConnected && trigger !== document.body) trigger.focus({ preventScroll: true });
+      else filterButton?.focus({ preventScroll: true });
+    };
   }, [open]);
 
   useEffect(() => {
@@ -332,6 +342,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     });
   }
 
+  const rangeError = stockRangeError(draft);
   const activeFilterCount = activeFilters.length;
 
   function removeFilter(filter: ActiveFilter) {
@@ -685,21 +696,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
         data-stock-filters=""
         className="stock-chip-bar mt-3 border border-white/10 bg-ink px-3 py-2.5 lg:hidden"
       >
-        <MobileChipRow label="Cidade">
-          {VEHICLE_LOCATION_CITIES.map((option) => (
-            <Chip
-              key={`sticky-city-${option.value}`}
-              active={current.city === option.value}
-              onClick={() =>
-                update({
-                  city: current.city === option.value ? "" : option.value,
-                })
-              }
-            >
-              {option.label}
-            </Chip>
-          ))}
-        </MobileChipRow>
         <MobileChipRow label="Faixa">
           {BUDGET_CHIPS.map((chip) => {
             const active =
@@ -839,6 +835,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
               setDraft(current);
               setOpen(true);
             }}
+            ref={filterButtonRef}
             className="stock-chip-action"
             aria-expanded={open}
             aria-controls="painel-filtros"
@@ -863,14 +860,14 @@ export function StockFilters({ facets }: { facets: Facets }) {
             data-stock-active-filters=""
             className="mt-1 border-t border-white/10 pt-2"
           >
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
               <p className="text-xs font-medium text-cream">
                 Sua busca{" "}
                 <span className="text-muted">
                   · {activeFilterCount} {activeFilterCount === 1 ? "filtro" : "filtros"}
                 </span>
               </p>
-              <div className="flex shrink-0 items-center gap-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-1">
                 <ShareSearchButton className="px-2" />
                 <button
                   type="button"
@@ -909,9 +906,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
             aria-modal="true"
             id="painel-filtros"
             aria-labelledby="titulo-filtros"
-            className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto overscroll-contain border-t border-white/10 bg-ink animate-slide-up pb-safe focus:outline-none"
+            className="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col overflow-hidden border-t border-white/10 bg-ink animate-slide-up focus:outline-none"
           >
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-ink px-5 py-4">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-ink px-4 py-3 sm:px-5">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-brand">Estoque</p>
                 <h2 id="titulo-filtros" className="font-display text-lg font-semibold text-cream">
@@ -928,57 +925,42 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </button>
             </div>
 
-            <div className="space-y-5 px-5 py-6">
-              <MobileField label="Ordenar">
-                <select
-                  value={draft.sort}
-                  onChange={(event) =>
-                    setDraft({ ...draft, sort: event.target.value })
-                  }
-                  className={selectClass}
-                >
-                  {STOCK_SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </MobileField>
-              <MobileField label="Tipo">
-                <select
-                  value={draft.category}
-                  onChange={(event) =>
-                    setDraft({ ...draft, category: event.target.value })
-                  }
-                  className={selectClass}
-                >
-                  {CATEGORY_FILTER_OPTIONS.map((option) => (
-                    <option key={option.value || "ambos"} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </MobileField>
-              <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
-                  Onde o veículo está
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {VEHICLE_LOCATION_CITIES.map((option) => (
-                    <Chip
-                      key={`sheet-city-${option.value}`}
-                      active={draft.city === option.value}
-                      onClick={() =>
-                        setDraft({
-                          ...draft,
-                          city: draft.city === option.value ? "" : option.value,
-                        })
-                      }
-                    >
-                      {option.label}
-                    </Chip>
-                  ))}
-                </div>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-5 sm:px-5">
+              <div className="grid grid-cols-2 gap-3">
+                <MobileField label="Tipo">
+                  <select
+                    value={draft.category}
+                    onChange={(event) =>
+                      setDraft({ ...draft, category: event.target.value })
+                    }
+                    className={selectClass}
+                  >
+                    {CATEGORY_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value || "ambos"} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </MobileField>
+                <MobileField label="Câmbio">
+                  <select
+                    value={transmissionFilterParam(draft.transmission)}
+                    onChange={(event) =>
+                      setDraft({ ...draft, transmission: event.target.value })
+                    }
+                    className={selectClass}
+                  >
+                    <option value="">Qualquer</option>
+                    {transmissionFilterOptions(
+                      facets.transmissions,
+                      draft.transmission,
+                    ).map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </MobileField>
               </div>
               <MobileField label="Marca">
                 <select
@@ -1018,30 +1000,11 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   ))}
                 </select>
               </MobileField>
-              <MobileField label="Câmbio">
-                <select
-                  value={transmissionFilterParam(draft.transmission)}
-                  onChange={(event) =>
-                    setDraft({ ...draft, transmission: event.target.value })
-                  }
-                  className={selectClass}
-                >
-                  <option value="">Todos os câmbios</option>
-                  {transmissionFilterOptions(
-                    facets.transmissions,
-                    draft.transmission,
-                  ).map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </MobileField>
               <div>
                 <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
                   Faixa de preço
                 </p>
-                <div className="chip-scroll -mx-1 px-1">
+                <div className="flex flex-wrap gap-2">
                   {BUDGET_CHIPS.map((chip) => {
                     const active =
                       (draft.minPrice || "") === chip.minPrice &&
@@ -1064,112 +1027,22 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   })}
                 </div>
               </div>
-              <details className="border border-white/10 bg-asphalt/30 px-3.5 py-1">
-                <summary className="flex min-h-[48px] cursor-pointer list-none items-center font-display text-xs font-semibold uppercase tracking-wider text-cream [&::-webkit-details-marker]:hidden">
-                  Mais opções
-                  <span className="ml-auto text-[10px] font-medium normal-case tracking-wide text-muted">
-                    combustível, ano, km
-                  </span>
-                </summary>
-                <div className="space-y-5 pb-4 pt-1">
-              <MobileField label="Combustível">
-                <select
-                  value={draft.fuel}
-                  onChange={(event) => setDraft({ ...draft, fuel: event.target.value })}
-                  className={selectClass}
-                >
-                  <option value="">Todos os combustíveis</option>
-                  {facets.fuels.map((item) => <option key={item}>{item}</option>)}
-                </select>
-              </MobileField>
-              {(facets.colors ?? []).length > 0 ? (
-                <MobileField label="Cor">
-                  <select
-                    value={draft.color}
-                    onChange={(event) => setDraft({ ...draft, color: event.target.value })}
-                    className={selectClass}
-                  >
-                    <option value="">Todas as cores</option>
-                    {(facets.colors ?? []).map((item) => (
-                      <option key={item}>{item}</option>
-                    ))}
-                  </select>
+              <div className="grid grid-cols-2 gap-3">
+                <MobileField label="Preço mínimo">
+                  <RangeSelect value={draft.minPrice} options={MIN_PRICE_OPTIONS} fallbackLabel={(value) => `R$ ${formatCompactNumber(value)}`} emptyLabel="Sem mínimo" onChange={(value) => setDraft({ ...draft, minPrice: value })} />
                 </MobileField>
-              ) : null}
-              {(facets.accessories ?? []).length > 0 ? (
-                <div>
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
-                    Acessórios
-                  </p>
-                  <AccessoryChips
-                    options={facets.accessories ?? []}
-                    value={draft.accessory}
-                    onToggle={(name) =>
-                      setDraft({
-                        ...draft,
-                        accessory: toggleAccessoryValue(draft.accessory, name),
-                      })
-                    }
-                  />
-                </div>
-              ) : null}
-              <label className="flex min-h-[48px] cursor-pointer items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 text-sm text-cream">
-                <input
-                  type="checkbox"
-                  checked={Boolean(draft.laudo)}
-                  onChange={(event) =>
-                    setDraft({ ...draft, laudo: event.target.checked ? "1" : "" })
-                  }
-                  className="h-4 w-4 accent-brand"
-                />
-                Com vistoria da loja
-              </label>
-              <MobileField label="Preço mínimo">
-                <select
-                  value={draft.minPrice}
-                  onChange={(event) => setDraft({ ...draft, minPrice: event.target.value })}
-                  className={selectClass}
-                >
-                  {MIN_PRICE_OPTIONS.map((option) => (
-                    <option key={option.value || "min"} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </MobileField>
-              <MobileField label="Preço máximo">
-                <select
-                  value={draft.maxPrice}
-                  onChange={(event) => setDraft({ ...draft, maxPrice: event.target.value })}
-                  className={selectClass}
-                >
-                  {MAX_PRICE_OPTIONS.map((option) => (
-                    <option key={option.value || "max"} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </MobileField>
-              <MobileField label="Ano mínimo">
-                <select
-                  value={draft.minYear}
-                  onChange={(event) => setDraft({ ...draft, minYear: event.target.value })}
-                  className={selectClass}
-                >
-                  <option value="">Qualquer</option>
-                  {facets.years.map((year) => (
-                    <option key={`m-min-${year}`} value={year}>{year}</option>
-                  ))}
-                </select>
-              </MobileField>
-              <MobileField label="Ano máximo">
-                <select
-                  value={draft.maxYear}
-                  onChange={(event) => setDraft({ ...draft, maxYear: event.target.value })}
-                  className={selectClass}
-                >
-                  <option value="">Qualquer</option>
-                  {facets.years.map((year) => (
-                    <option key={`m-max-${year}`} value={year}>{year}</option>
-                  ))}
-                </select>
-              </MobileField>
+                <MobileField label="Preço máximo">
+                  <RangeSelect value={draft.maxPrice} options={MAX_PRICE_OPTIONS} fallbackLabel={(value) => `R$ ${formatCompactNumber(value)}`} emptyLabel="Sem máximo" onChange={(value) => setDraft({ ...draft, maxPrice: value })} />
+                </MobileField>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <MobileField label="Ano mínimo">
+                  <RangeSelect value={draft.minYear} options={facets.years.map(year => ({ value: String(year), label: String(year) }))} fallbackLabel={(value) => value} emptyLabel="Qualquer" onChange={(value) => setDraft({ ...draft, minYear: value })} />
+                </MobileField>
+                <MobileField label="Ano máximo">
+                  <RangeSelect value={draft.maxYear} options={facets.years.map(year => ({ value: String(year), label: String(year) }))} fallbackLabel={(value) => value} emptyLabel="Qualquer" onChange={(value) => setDraft({ ...draft, maxYear: value })} />
+                </MobileField>
+              </div>
               <MobileField label="Quilometragem máxima">
                 <select
                   value={draft.maxKm}
@@ -1181,48 +1054,146 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   ))}
                 </select>
               </MobileField>
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
+                  Onde o veículo está
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {VEHICLE_LOCATION_CITIES.map((option) => (
+                    <Chip
+                      key={`sheet-city-${option.value}`}
+                      active={draft.city === option.value}
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          city: draft.city === option.value ? "" : option.value,
+                        })
+                      }
+                    >
+                      {option.label}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+              <details className="border border-white/10 bg-asphalt/30 px-3.5 py-1">
+                <summary className="flex min-h-[48px] cursor-pointer list-none items-center font-display text-xs font-semibold uppercase tracking-wider text-cream [&::-webkit-details-marker]:hidden">
+                  Mais opções
+                  <span className="ml-auto text-[10px] font-medium normal-case tracking-wide text-muted">
+                    cor e combustível
+                  </span>
+                </summary>
+                <div className="space-y-5 pb-4 pt-1">
+                  <MobileField label="Ordenar">
+                    <select
+                      value={draft.sort}
+                      onChange={(event) =>
+                        setDraft({ ...draft, sort: event.target.value })
+                      }
+                      className={selectClass}
+                    >
+                      {STOCK_SORT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </MobileField>
+                  <MobileField label="Combustível">
+                    <select
+                      value={draft.fuel}
+                      onChange={(event) => setDraft({ ...draft, fuel: event.target.value })}
+                      className={selectClass}
+                    >
+                      <option value="">Todos os combustíveis</option>
+                      {facets.fuels.map((item) => <option key={item}>{item}</option>)}
+                    </select>
+                  </MobileField>
+                  {(facets.colors ?? []).length > 0 ? (
+                    <MobileField label="Cor">
+                      <select
+                        value={draft.color}
+                        onChange={(event) => setDraft({ ...draft, color: event.target.value })}
+                        className={selectClass}
+                      >
+                        <option value="">Todas as cores</option>
+                        {(facets.colors ?? []).map((item) => (
+                          <option key={item}>{item}</option>
+                        ))}
+                      </select>
+                    </MobileField>
+                  ) : null}
+                  {(facets.accessories ?? []).length > 0 ? (
+                    <div>
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
+                        Acessórios
+                      </p>
+                      <AccessoryChips
+                        options={facets.accessories ?? []}
+                        value={draft.accessory}
+                        onToggle={(name) =>
+                          setDraft({
+                            ...draft,
+                            accessory: toggleAccessoryValue(draft.accessory, name),
+                          })
+                        }
+                      />
+                    </div>
+                  ) : null}
+                  <label className="flex min-h-[48px] cursor-pointer items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 text-sm text-cream">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(draft.laudo)}
+                      onChange={(event) =>
+                        setDraft({ ...draft, laudo: event.target.checked ? "1" : "" })
+                      }
+                      className="h-4 w-4 accent-brand"
+                    />
+                    Com vistoria da loja
+                  </label>
                 </div>
               </details>
             </div>
-
-            <div className="sticky bottom-0 grid grid-cols-[auto_1fr] gap-3 border-t border-white/10 bg-ink px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
-              <button
-                type="button"
-                onClick={() =>
-                  setDraft({
-                    ...draft,
-                    category: "",
-                    brand: "",
-                    model: "",
-                    transmission: "",
-                    fuel: "",
-                    color: "",
-                    accessory: "",
-                    laudo: "",
-                    minPrice: "",
-                    maxPrice: "",
-                    minYear: "",
-                    maxYear: "",
-                    maxKm: "",
-                    city: "",
-                  })
-                }
-                className="min-h-[52px] border border-white/15 px-5 font-display text-xs font-semibold uppercase tracking-wide text-muted"
-              >
-                Limpar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  navigate(draft);
-                }}
-                className="min-h-[52px] bg-brand px-5 font-display text-xs font-semibold uppercase tracking-wide text-white"
-              >
-                {draftFilterCount > 0
-                  ? `Aplicar filtros (${draftFilterCount})`
-                  : "Aplicar filtros"}
-              </button>
+            <div className="shrink-0 border-t border-white/10 bg-ink px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:px-5">
+              {rangeError ? <p role="alert" className="mb-2 text-sm text-brand">{rangeError}</p> : draftFilterCount > 0 ? <p role="status" className="mb-2 text-xs text-muted">{draftFilterCount} {draftFilterCount === 1 ? "filtro selecionado" : "filtros selecionados"}</p> : null}
+              <div className="grid grid-cols-[auto_1fr] gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDraft({
+                      ...draft,
+                      category: "",
+                      brand: "",
+                      model: "",
+                      transmission: "",
+                      fuel: "",
+                      color: "",
+                      accessory: "",
+                      laudo: "",
+                      minPrice: "",
+                      maxPrice: "",
+                      minYear: "",
+                      maxYear: "",
+                      maxKm: "",
+                      city: "",
+                    })
+                  }
+                  className="min-h-[52px] border border-white/15 px-5 font-display text-xs font-semibold uppercase tracking-wide text-muted"
+                >
+                  Limpar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (rangeError) return;
+                    setOpen(false);
+                    navigate(draft);
+                  }}
+                  disabled={Boolean(rangeError)}
+                  className="min-h-[52px] bg-brand px-3 font-display text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-50"
+                >
+                  Ver veículos
+                </button>
+              </div>
             </div>
           </section>
         </div>
@@ -1481,14 +1452,33 @@ function DesktopField({
 }
 
 function MobileField({ label, children }: { label: string; children: ReactNode }) {
+  const id = useId();
   return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted">
+    <div>
+      <label htmlFor={id} className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted">
         {label}
-      </span>
-      {children}
-    </label>
+      </label>
+      {isValidElement<{ id?: string }>(children) ? cloneElement(children, { id }) : children}
+    </div>
   );
+}
+
+function RangeSelect({ id, value, options, fallbackLabel, emptyLabel, onChange }: {
+  id?: string;
+  value: string;
+  options: readonly { value: string; label: string }[];
+  fallbackLabel: (value: string) => string;
+  emptyLabel: string;
+  onChange: (value: string) => void;
+}) {
+  const choices = options.filter(option => option.value);
+  if (value && !choices.some(option => option.value === value)) {
+    choices.push({ value, label: fallbackLabel(value) });
+  }
+  return <select id={id} value={value} onChange={event => onChange(event.target.value)} className={selectClass + " !px-2.5"}>
+    <option value="">{emptyLabel}</option>
+    {choices.map(option => <option key={option.value} value={option.value}>{fallbackLabel(option.value)}</option>)}
+  </select>;
 }
 
 function formatCompactNumber(value: string) {

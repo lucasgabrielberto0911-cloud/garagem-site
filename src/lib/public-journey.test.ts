@@ -10,7 +10,7 @@ function readSrc(rel: string) {
   return readFileSync(join(srcRoot, rel), "utf8");
 }
 
-test("cidade do veículo entra no filtro, na API e no chip mobile", () => {
+test("cidade do veículo entra no filtro, na API e no painel mobile", () => {
   const filters = readSrc("components/site/StockFilters.tsx");
   const browse = readSrc("components/site/EstoqueBrowse.tsx");
   const vehicles = readSrc("lib/vehicles.ts");
@@ -20,7 +20,7 @@ test("cidade do veículo entra no filtro, na API e no chip mobile", () => {
   );
 
   assert.match(filters, /VEHICLE_LOCATION_CITIES/);
-  assert.match(filters, /sticky-city-/);
+  assert.match(filters, /sheet-city-/);
   assert.match(filters, /Onde o veículo está/);
   const stockQuery = readSrc("lib/stock-query.ts");
   assert.match(stockQuery, /"city"/);
@@ -56,7 +56,7 @@ test("filtros do estoque no celular alinham rótulo, chips e Filtros sem máscar
   const barEnd = filters.indexOf('id="painel-filtros"');
   assert.ok(barStart > 0 && barEnd > barStart);
   const bar = filters.slice(barStart, barEnd);
-  assert.match(bar, /MobileChipRow label="Cidade"/);
+  assert.match(filters.slice(barEnd), /Onde o veículo está/);
   assert.match(bar, /MobileChipRow label="Faixa"/);
   assert.match(bar, /label="Marca"/);
   const faixa = bar.slice(bar.indexOf('label="Faixa"'), bar.indexOf('label="Marca"'));
