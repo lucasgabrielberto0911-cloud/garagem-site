@@ -1,5 +1,6 @@
 "use client";
 
+import { useSpeculativeLoading } from "./useSpeculativeLoading";
 import {
   memo,
   useCallback,
@@ -61,6 +62,7 @@ export function StockInfiniteList({
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const speculativeLoading = useSpeculativeLoading();
   const [position, setPosition] = useState<StockPosition | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
@@ -140,11 +142,11 @@ export function StockInfiniteList({
   );
 
   useEffect(() => {
-    if (paused || !hasMore || position) return;
+    if (paused || !speculativeLoading || !hasMore || position) return;
     void loadPage(page + 1).catch(() => {
       /* o sentinel tenta de novo se a pré-carga falhar */
     });
-  }, [paused, hasMore, loadPage, page, position]);
+  }, [paused, speculativeLoading, hasMore, loadPage, page, position]);
 
   useEffect(() => {
     return () => {
@@ -226,7 +228,7 @@ export function StockInfiniteList({
         <InfiniteSentinel
           onVisible={loadMore}
           disabled={paused || loading || failed || Boolean(position)}
-          rootMargin="320px 0px"
+          rootMargin={speculativeLoading ? "320px 0px" : "0px"}
         >
           {loading ? (
             <div aria-live="polite">

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
+import { useSpeculativeLoading } from "./useSpeculativeLoading";
 import { vehiclePhotoAlt } from "@/lib/format";
 import {
   GALLERY_HERO_SIZES,
@@ -47,8 +48,10 @@ export function VehicleGallery({
   const [showThumbs, setShowThumbs] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
   const total = photos.length;
+  const speculativeLoading = useSpeculativeLoading();
 
   useEffect(() => {
+    if (!speculativeLoading) return;
     let cancelled = false;
     let timer = 0;
     const arm = () => {
@@ -64,7 +67,7 @@ export function VehicleGallery({
       if (timer) window.clearTimeout(timer);
       window.removeEventListener("load", onLoad);
     };
-  }, []);
+  }, [speculativeLoading]);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -184,7 +187,7 @@ export function VehicleGallery({
                   <span className="sr-only">Ampliar</span>
                 </button>
                 {index === active ||
-                (neighbors && shouldLoadGallerySlide(index, active)) ? (
+                (speculativeLoading && neighbors && shouldLoadGallerySlide(index, active)) ? (
                   <VehicleImage
                     src={galleryPreviewSrc(photo)}
                     alt={vehiclePhotoAlt(alt, index, total)}
