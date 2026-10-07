@@ -278,6 +278,7 @@ export type StockPageResult = {
   page: number;
   pageSize: number;
   totalPages: number;
+  suggestions?: { query: string; count: number }[];
   error?: string;
 };
 

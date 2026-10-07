@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { stockSearchWhere } from "@/lib/stock-search";
+import { stockSearchSuggestions, stockSearchWhere } from "@/lib/stock-search";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { brandKey, formatBrandName, formatModelName } from "@/lib/format";
 import { extractVehicleIdFromParam, vehicleSlug } from "@/lib/vehicle-slug";
@@ -453,7 +453,7 @@ export const getRelatedVehicles = cache(
     ),
 );
 
-function buildStockWhere(filters: StockFilters, catalog: { brand: string; model: string }[] = []) {
+function buildStockWhere(filters: StockFilters, catalog: { brand: string; model: string; version?: string | null }[] = []) {
   const priceFilter =
     filters.minPrice || filters.maxPrice
       ? {
@@ -482,7 +482,7 @@ function buildStockWhere(filters: StockFilters, catalog: { brand: string; model:
   if (Object.keys(gear).length > 0) and.push(gear);
 
   return {
-    status: "disponivel" as const,
+    ...PUBLIC_SITEMAP_VEHICLE_WHERE,
     ...(filters.category ? { category: filters.category } : {}),
     ...(filters.brand
       ? { brand: { equals: filters.brand, mode: "insensitive" as const } }
@@ -541,10 +541,10 @@ function stockQueryKey(filters: StockFilters) {
 
 const loadStockSearchCatalog = unstable_cache(
   () => prisma.vehicle.findMany({
-    where: { status: "disponivel" }, distinct: ["brand", "model"],
-    select: { brand: true, model: true },
+    where: PUBLIC_SITEMAP_VEHICLE_WHERE, distinct: ["brand", "model", "version"],
+    select: { brand: true, model: true, version: true },
   }),
-  ["stock-search-catalog-v1"], PUBLIC_CACHE,
+  ["stock-search-catalog-v2"], PUBLIC_CACHE,
 );
 
 async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
@@ -576,6 +576,12 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
   }
 
   const total = await prisma.vehicle.count({ where });
+  // Só após resultado vazio. Cada sugestão é conferida com TODOS os filtros atuais.
+  const suggestions = total === 0 && filters.q?.trim()
+    ? (await Promise.all(stockSearchSuggestions(filters.q, catalog).map(async query => ({
+        query, count: await prisma.vehicle.count({ where: buildStockWhere({ ...filters, q: query }, catalog) }),
+      })))).filter(item => item.count > 0)
+    : [];
 
   return {
     vehicles,
@@ -583,12 +589,13 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
     page,
     pageSize,
     totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    ...(suggestions.length ? { suggestions } : {}),
   };
 }
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v13"],
+  ["stock-page-v14"],
   PUBLIC_CACHE,
 );
 
