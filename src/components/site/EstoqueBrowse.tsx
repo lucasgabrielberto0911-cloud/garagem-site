@@ -337,6 +337,14 @@ export function EstoqueBrowse({
                       : "Abre o WhatsApp para você dizer o que procura."}
                   </p>
                 </div>
+                {filtered && params.q ? (
+                  <Link
+                    href={buildReturnTo({ ...params, q: undefined })}
+                    className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-white/25 px-4 py-3 text-sm font-semibold text-cream transition hover:border-brand sm:w-auto"
+                  >
+                    Retirar só o texto da busca
+                  </Link>
+                ) : null}
               </div>
             }
           />

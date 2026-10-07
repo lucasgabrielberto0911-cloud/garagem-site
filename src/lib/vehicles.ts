@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { stockSearchWhere } from "@/lib/stock-search";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { brandKey, formatBrandName, formatModelName } from "@/lib/format";
 import { extractVehicleIdFromParam, vehicleSlug } from "@/lib/vehicle-slug";
@@ -452,8 +453,7 @@ export const getRelatedVehicles = cache(
     ),
 );
 
-function buildStockWhere(filters: StockFilters) {
-  const terms = (filters.q ?? "").trim().split(/\s+/).filter(Boolean);
+function buildStockWhere(filters: StockFilters, catalog: { brand: string; model: string }[] = []) {
   const priceFilter =
     filters.minPrice || filters.maxPrice
       ? {
@@ -477,17 +477,7 @@ function buildStockWhere(filters: StockFilters) {
   if (filters.hasInspection) {
     and.push({ inspection: { not: null } }, { inspection: { not: "" } });
   }
-  if (terms.length) {
-    and.push(
-      ...terms.map((term) => ({
-        OR: [
-          { brand: { contains: term, mode: "insensitive" as const } },
-          { model: { contains: term, mode: "insensitive" as const } },
-          { version: { contains: term, mode: "insensitive" as const } },
-        ],
-      })),
-    );
-  }
+  and.push(...stockSearchWhere(filters.q ?? "", catalog));
   const gear = transmissionWhere(filters.transmission);
   if (Object.keys(gear).length > 0) and.push(gear);
 
@@ -549,13 +539,22 @@ function stockQueryKey(filters: StockFilters) {
   });
 }
 
+const loadStockSearchCatalog = unstable_cache(
+  () => prisma.vehicle.findMany({
+    where: { status: "disponivel" }, distinct: ["brand", "model"],
+    select: { brand: true, model: true },
+  }),
+  ["stock-search-catalog-v1"], PUBLIC_CACHE,
+);
+
 async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
   const pageSize = Math.min(
     Math.max(filters.pageSize ?? STOCK_PAGE_SIZE, 1),
     48,
   );
   const page = Math.max(filters.page ?? 1, 1);
-  const where = buildStockWhere(filters);
+  const catalog = filters.q?.trim() ? await loadStockSearchCatalog() : [];
+  const where = buildStockWhere(filters, catalog);
   const orderBy = stockOrderBy(filters.sort);
 
   const vehicles = await findCardVehicles({
@@ -589,7 +588,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v12"],
+  ["stock-page-v13"],
   PUBLIC_CACHE,
 );
 
