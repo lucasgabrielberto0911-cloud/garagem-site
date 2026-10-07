@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { publicPhotoSrc } from "@/lib/public-photo-url";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
@@ -41,6 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     version: string | null;
     yearModel: number;
     updatedAt: Date;
+    photos: { url: string }[];
   }[] = [];
   try {
     vehicles = await loadPublicSitemapVehicles();
@@ -59,6 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: vehicle.updatedAt,
       changeFrequency: "weekly" as const,
       priority: 0.7,
+      images: vehicle.photos.map(photo => absoluteUrl(publicPhotoSrc(photo.url))),
     })),
   ];
 }
@@ -71,6 +74,7 @@ async function loadPublicSitemapVehicles() {
     version: true,
     yearModel: true,
     updatedAt: true,
+    photos: { select: { url: true }, orderBy: { order: "asc" as const } },
   } as const;
 
   try {

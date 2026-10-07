@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
 import type { VehicleCardData } from "./VehicleCard";
 import { WhatsAppButton } from "./ui";
@@ -11,10 +11,16 @@ import { publicCardFacts } from "@/lib/public-card-facts";
 import { formatVehicleWhatsAppMessage } from "@/lib/vehicle-display";
 import { vehicleLocationLabel } from "@/lib/vehicle-location";
 import { vehiclePath } from "@/lib/vehicle-slug";
-import { comparisonSelection, toggleComparison } from "@/lib/favorites-comparison";
+import { comparisonSelection, toggleComparison, readComparisonSession, writeComparisonSession } from "@/lib/favorites-comparison";
 
 export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] }) {
+  const [open, setOpen] = useState(false);
+  const [ready, setReady] = useState(false);
   const [chosen, setChosen] = useState<string[] | null>(null);
+  useEffect(() => {
+    const saved = readComparisonSession();
+    setChosen(saved.chosen); setOpen(saved.open); setReady(true);
+  }, []);
   const ids = comparisonSelection(vehicles.map(vehicle => vehicle.id), chosen);
   const selected = ids.flatMap(id => vehicles.filter(vehicle => vehicle.id === id));
   if (vehicles.length < 2) return null;
@@ -27,7 +33,11 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
     { label: "Cidade", value: v => vehicleLocationLabel(v.locationCity) || "—" },
   ];
   return (
-    <details className="group mt-6 rounded-xl border border-white/15 bg-ink">
+    <details open={open} onToggle={event => {
+      if (!ready) return;
+      const next = event.currentTarget.open; setOpen(next);
+      writeComparisonSession({ chosen: chosen === null ? null : ids, open: next });
+    }} className="group mt-6 rounded-xl border border-white/15 bg-ink">
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-display text-sm font-semibold text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
         Comparar favoritos
         <span className="text-xs font-normal text-muted">{ids.length} selecionados <span aria-hidden="true" className="ml-2 inline-block transition-transform group-open:rotate-180">⌄</span></span>
@@ -39,18 +49,18 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
           {vehicles.map(vehicle => {
             const checked = ids.includes(vehicle.id);
             return <label key={vehicle.id} className={"flex min-h-11 min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs leading-relaxed " + (checked ? "border-brand/60 bg-brand/10 text-cream" : "border-white/15 text-muted")}>
-              <input type="checkbox" checked={checked} disabled={!checked && ids.length >= 3} onChange={() => setChosen(toggleComparison(ids, vehicle.id))} className="h-4 w-4 shrink-0 accent-[#ed1018]" />
+              <input type="checkbox" checked={checked} disabled={!checked && ids.length >= 3} onChange={() => { const next = toggleComparison(ids, vehicle.id); setChosen(next); writeComparisonSession({ chosen: next, open }); }} className="h-4 w-4 shrink-0 accent-[#ed1018]" />
               <span>{formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel)}{vehicle.version ? " · " + vehicle.version : ""}</span>
             </label>;
           })}
         </fieldset>
         <p role="status" className="mt-3 text-xs leading-relaxed text-muted">{ids.length < 2 ? "Selecione mais um veículo para comparar." : ids.length === 3 ? "Para trocar uma opção, desmarque um veículo. Deslize a comparação para ver os três." : "Dois selecionados. Você pode adicionar mais um ou trocar as opções."}</p>
-        {selected.length >= 2 ? <div className="mt-4 overflow-x-auto overscroll-x-contain rounded-lg border border-white/10" tabIndex={0} aria-label="Tabela de comparação dos veículos selecionados">
+        {selected.length >= 2 ? <div className="mt-4 max-h-[70dvh] overflow-auto overscroll-contain rounded-lg border border-white/10" tabIndex={0} aria-label="Tabela de comparação dos veículos selecionados">
           <table className="w-full table-fixed border-collapse text-left" style={selected.length === 3 ? { minWidth: "28rem" } : undefined}>
             <caption className="sr-only">Comparação por preço, versão, ano, quilometragem, câmbio e cidade</caption>
-            <thead>
+            <thead className="sticky top-0 z-20 bg-ink">
               <tr className="align-top">
-                <th scope="col" className="w-12 px-1 py-3 text-[10px] font-medium text-muted sm:w-20 sm:px-2">Veículo</th>
+                <th scope="col" className="sticky left-0 z-30 w-12 bg-ink px-1 py-3 text-[10px] font-medium text-muted sm:w-20 sm:px-2">Veículo</th>
                 {selected.map(vehicle => <th key={vehicle.id} scope="col" className="border-l border-white/10 p-2 font-normal">
                   <Link href={vehiclePath(vehicle)} className="block rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
                     <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-asphalt"><VehicleImage src={coverSrc(vehicle.photos?.slice(0, 1).map(photo => ({ url: photo.url })))} alt={formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel)} fill sizes="180px" className="object-cover" /></div>
@@ -61,11 +71,11 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
             </thead>
             <tbody>
               {rows.map(row => <tr key={row.label} className="border-t border-white/10 align-top">
-                <th scope="row" className="px-1 py-3 text-[10px] font-medium text-muted sm:px-2 sm:text-xs">{row.label}</th>
+                <th scope="row" className="sticky left-0 z-10 bg-ink px-1 py-3 text-[10px] font-medium text-muted sm:px-2 sm:text-xs">{row.label}</th>
                 {selected.map(vehicle => <td key={vehicle.id} className={"border-l border-white/10 px-2 py-3 leading-relaxed " + (row.label === "Preço" ? "font-display text-sm font-semibold text-brand sm:text-lg" : "text-xs text-cream sm:text-sm")}>{row.value(vehicle)}</td>)}
               </tr>)}
               <tr className="border-t border-white/10 align-top">
-                <th scope="row" className="px-1 py-3 text-[10px] font-medium text-muted sm:px-2">Contato</th>
+                <th scope="row" className="sticky left-0 z-10 bg-ink px-1 py-3 text-[10px] font-medium text-muted sm:px-2">Contato</th>
                 {selected.map(vehicle => <td key={vehicle.id} className="border-l border-white/10 p-2">
                   <WhatsAppButton message={formatVehicleWhatsAppMessage(vehicle)} trackingLabel="comparacao-favoritos" vehicleId={vehicle.id} variant="outline" className="!h-14 !min-h-14 w-full !gap-1 !py-2 !whitespace-normal !border-emerald-500/30 bg-[#11231a] !px-1 !text-[10px] !tracking-normal hover:!bg-[#183225] [&_svg]:shrink-0 [&_svg]:!h-3.5 [&_svg]:!w-3.5 [&_svg]:text-[#25d366] sm:!text-xs"><span className="min-w-0 text-center">Tenho interesse</span></WhatsAppButton>
                   <Link href={vehiclePath(vehicle)} className="mt-1 flex min-h-11 items-center justify-center text-xs text-cream underline underline-offset-4">Abrir anúncio</Link>
