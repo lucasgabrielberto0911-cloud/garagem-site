@@ -11,6 +11,7 @@ import { StatsBar, StatsBarSkeleton } from "@/components/site/StatsBar";
 import { Testimonials } from "@/components/site/Testimonials";
 import { TrustBadges } from "@/components/site/TrustBadges";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
+import { RecentlyViewedVehicles } from "@/components/site/RecentlyViewedVehicles";
 import { SiteLeadHit } from "@/components/site/VehiclePixel";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import {
@@ -235,6 +236,8 @@ export default async function HomePage() {
         </div>
         </div>
       </Section>
+
+      <Container><RecentlyViewedVehicles /></Container>
 
       {/* 3. SELOS DE CONFIANÇA */}
       <Section spacing="snug" className="border-t border-white/5">

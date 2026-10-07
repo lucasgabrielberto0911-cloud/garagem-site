@@ -1,5 +1,6 @@
 "use client";
 
+import { useSpeculativeLoading } from "./useSpeculativeLoading";
 import {
   memo,
   useCallback,
@@ -13,6 +14,7 @@ import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
 import { HideStockCardInterest } from "@/components/site/HideStockCardInterest";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { StockReturnCapture } from "@/components/site/StockReturnCapture";
+import { requestJson } from "@/lib/request-json";
 import type { VehicleCardRecord } from "@/lib/stock-query";
 import { clearStockPosition, readStockPosition, restoreStockPosition, type StockPosition } from "@/lib/stock-return";
 
@@ -29,13 +31,12 @@ function buildEstoqueUrl(query: StockQuery, page: number, pageSize: number) {
 }
 
 async function fetchStockVehicles(url: string, signal?: AbortSignal) {
-  const response = await fetch(url, {
+  const data = await requestJson<{ vehicles?: VehicleCardRecord[]; error?: string }>(url, {
     headers: { Accept: "application/json" },
     signal,
   });
-  if (!response.ok) throw new Error("Falha ao carregar o estoque");
-  const data = (await response.json()) as { vehicles?: VehicleCardRecord[] };
-  return data.vehicles ?? [];
+  if (data.error || !Array.isArray(data.vehicles)) throw new Error("Resposta inválida do estoque");
+  return data.vehicles;
 }
 
 const MemoVehicleGrid = memo(VehicleGrid);
@@ -61,6 +62,7 @@ export function StockInfiniteList({
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const speculativeLoading = useSpeculativeLoading();
   const [position, setPosition] = useState<StockPosition | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
@@ -140,11 +142,11 @@ export function StockInfiniteList({
   );
 
   useEffect(() => {
-    if (paused || !hasMore || position) return;
+    if (paused || !speculativeLoading || !hasMore || position) return;
     void loadPage(page + 1).catch(() => {
       /* o sentinel tenta de novo se a pré-carga falhar */
     });
-  }, [paused, hasMore, loadPage, page, position]);
+  }, [paused, speculativeLoading, hasMore, loadPage, page, position]);
 
   useEffect(() => {
     return () => {
@@ -226,7 +228,7 @@ export function StockInfiniteList({
         <InfiniteSentinel
           onVisible={loadMore}
           disabled={paused || loading || failed || Boolean(position)}
-          rootMargin="320px 0px"
+          rootMargin={speculativeLoading ? "320px 0px" : "0px"}
         >
           {loading ? (
             <div aria-live="polite">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { requestJson } from "@/lib/request-json";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { StockInfiniteList } from "@/components/site/StockInfiniteList";
 import { StockReturnCapture } from "@/components/site/StockReturnCapture";
@@ -189,12 +190,10 @@ export function EstoqueBrowse({
     query.set("page", "1");
     query.set("pageSize", String(STOCK_PAGE_SIZE));
 
-    fetch(`/api/estoque?${query.toString()}`, {
+    requestJson<StockPageResult>(`/api/estoque?${query.toString()}`, {
       headers: { Accept: "application/json" }, signal: controller.signal,
     })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Falha ao carregar o estoque");
-        const data = await response.json() as StockPageResult;
+      .then((data) => {
         if (data.error || !Array.isArray(data.vehicles) || !Number.isFinite(data.total)) {
           throw new Error("Resposta inválida do estoque");
         }
