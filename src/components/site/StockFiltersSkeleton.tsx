@@ -3,7 +3,6 @@ import type { Facets } from "@/components/site/StockFilters";
 /** Reserve o espaço dos filtros antes da hidratação, sem empurrar os anúncios. */
 export function StockFiltersSkeleton({ facets }: { facets?: Facets }) {
   const rows = [
-    "Cidade",
     "Faixa",
     ...(!facets || facets.brands.length > 0 ? ["Marca"] : []),
     ...(!facets || facets.transmissions.length > 0 ? ["Câmbio"] : []),
