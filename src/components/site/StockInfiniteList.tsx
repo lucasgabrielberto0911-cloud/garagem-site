@@ -47,6 +47,7 @@ export function StockInfiniteList({
   query,
   returnTo,
   empty,
+  paused = false,
 }: {
   initialVehicles: VehicleCardRecord[];
   total: number;
@@ -54,6 +55,7 @@ export function StockInfiniteList({
   query: StockQuery;
   returnTo: string;
   empty: ReactNode;
+  paused?: boolean;
 }) {
   const [vehicles, setVehicles] = useState(initialVehicles);
   const [page, setPage] = useState(1);
@@ -138,11 +140,11 @@ export function StockInfiniteList({
   );
 
   useEffect(() => {
-    if (!hasMore || position) return;
+    if (paused || !hasMore || position) return;
     void loadPage(page + 1).catch(() => {
       /* o sentinel tenta de novo se a pré-carga falhar */
     });
-  }, [hasMore, loadPage, page, position]);
+  }, [paused, hasMore, loadPage, page, position]);
 
   useEffect(() => {
     return () => {
@@ -155,7 +157,7 @@ export function StockInfiniteList({
   }, []);
 
   const loadMore = useCallback(async () => {
-    if (loadingRef.current || !hasMore) return;
+    if (paused || loadingRef.current || !hasMore) return;
     loadingRef.current = true;
     const generation = requestGenerationRef.current;
     setFailed(false);
@@ -186,7 +188,7 @@ export function StockInfiniteList({
         setLoading(false);
       }
     }
-  }, [hasMore, loadPage, page]);
+  }, [paused, hasMore, loadPage, page]);
 
   useEffect(() => {
     if (position && page < returnPage && hasMore && !failed && !loading) void loadMore();
@@ -223,7 +225,7 @@ export function StockInfiniteList({
       {hasMore ? (
         <InfiniteSentinel
           onVisible={loadMore}
-          disabled={loading || failed || Boolean(position)}
+          disabled={paused || loading || failed || Boolean(position)}
           rootMargin="320px 0px"
         >
           {loading ? (

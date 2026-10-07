@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
-import { SiteErrorNotice } from "@/components/site/SiteErrorNotice";
 import { StockInfiniteList } from "@/components/site/StockInfiniteList";
 import { StockReturnCapture } from "@/components/site/StockReturnCapture";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
@@ -152,29 +151,36 @@ export function EstoqueBrowse({
   const filtered = hasActiveFilters(params);
   const remote = stockViewNeedsFetch(params);
   const filterKey = JSON.stringify(stockQuery(params));
-  const [stock, setStock] = useState<StockPageResult>(initialStock);
-  const [loading, setLoading] = useState(remote);
-  const requestKey = remote ? filterKey : "";
-  const [requestKeySeen, setRequestKeySeen] = useState(requestKey);
-  // A troca de URL precisa esconder a lista anterior no mesmo render.
-  // Senão a grade infinita guarda os carros do filtro antigo ao limpar.
-  if (requestKeySeen !== requestKey) {
-    setRequestKeySeen(requestKey);
-    setLoading(remote);
-  }
-  const shown = remote ? stock : initialStock;
+  const [attempt, setAttempt] = useState(0);
+  const needsFetch = remote || attempt > 0 || Boolean(initialStock.error);
+  const initialKey = JSON.stringify(stockQuery({}));
+  const [result, setResult] = useState({
+    key: initialKey, stock: initialStock, params: {} as EstoqueSearchParams, version: 0,
+  });
+  const [request, setRequest] = useState({
+    key: filterKey, attempt: 0, loading: needsFetch, error: "",
+  });
+  const loading = needsFetch && (
+    request.key !== filterKey || request.attempt !== attempt || request.loading
+  );
+  const error = !loading && needsFetch && request.key === filterKey ? request.error : "";
+  const shownResult = needsFetch ? result : {
+    key: initialKey, stock: initialStock, params: {} as EstoqueSearchParams, version: 0,
+  };
+  const shown = shownResult.stock;
+  const previousResults = (loading || Boolean(error)) && shown.vehicles.length > 0;
   const requestId = useRef(0);
 
   useEffect(() => {
-    if (!remote) {
-      setStock(initialStock);
-      setLoading(false);
+    const id = ++requestId.current;
+    if (!needsFetch) {
+      setResult(current => current.key === initialKey && current.stock === initialStock ? current : {
+        key: initialKey, stock: initialStock, params: {}, version: 0,
+      });
       return;
     }
-
-    const id = ++requestId.current;
     const controller = new AbortController();
-    setLoading(true);
+    setRequest({ key: filterKey, attempt, loading: true, error: "" });
 
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(stockQuery(params))) {
@@ -184,45 +190,34 @@ export function EstoqueBrowse({
     query.set("pageSize", String(STOCK_PAGE_SIZE));
 
     fetch(`/api/estoque?${query.toString()}`, {
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
+      headers: { Accept: "application/json" }, signal: controller.signal,
     })
       .then(async (response) => {
-        const data = (await response.json()) as Partial<StockPageResult> & {
-          vehicles?: StockPageResult["vehicles"];
-          error?: string;
-        };
-        if (id !== requestId.current) return;
-        setStock({
-          vehicles: data.vehicles ?? [],
-          total: data.total ?? 0,
-          page: data.page ?? 1,
-          pageSize: data.pageSize ?? STOCK_PAGE_SIZE,
-          totalPages: data.totalPages ?? 1,
-          error: data.error,
-        });
-      })
-      .catch((error: unknown) => {
+        if (!response.ok) throw new Error("Falha ao carregar o estoque");
+        const data = await response.json() as StockPageResult;
+        if (data.error || !Array.isArray(data.vehicles) || !Number.isFinite(data.total)) {
+          throw new Error("Resposta inválida do estoque");
+        }
         if (controller.signal.aborted || id !== requestId.current) return;
-        console.error("[estoque] falha ao filtrar:", error);
-        setStock({
-          vehicles: [],
-          total: 0,
-          page: 1,
-          pageSize: STOCK_PAGE_SIZE,
-          totalPages: 1,
-          error: "Não foi possível carregar o estoque.",
-        });
+        setResult(current => ({
+          key: filterKey, params, version: current.version + 1,
+          stock: {
+            vehicles: data.vehicles, total: data.total, page: data.page ?? 1,
+            pageSize: data.pageSize ?? STOCK_PAGE_SIZE, totalPages: data.totalPages ?? 1,
+          },
+        }));
+        setRequest({ key: filterKey, attempt, loading: false, error: "" });
       })
-      .finally(() => {
-        if (id === requestId.current) setLoading(false);
+      .catch(() => {
+        if (controller.signal.aborted || id !== requestId.current) return;
+        // Uma falha não apaga o último conjunto nem vira resultado vazio.
+        setRequest({ key: filterKey, attempt, loading: false, error: "Não foi possível atualizar a busca." });
       });
 
     return () => controller.abort();
-  }, [filterKey, remote, initialStock, params]);
+  }, [filterKey, needsFetch, attempt, params, initialKey, initialStock]);
 
-  const returnTo = buildReturnTo(params);
-  const query = useMemo(() => stockQuery(params), [params]);
+  const shownQuery = useMemo(() => stockQuery(shownResult.params), [shownResult.params]);
   const filters = parseStockFilters(params, { page: 1 });
   const searchString = stockSearchString(params);
   const waitlistQuery = formatStockWaitlistQuery(params);
@@ -234,16 +229,20 @@ export function EstoqueBrowse({
 
   return (
     <>
-      {!loading && filtered && searchString ? (
+      {!loading && !error && filtered && searchString ? (
         <StockSearchPixel
           active
           searchString={searchString}
           contentIds={resultIds}
         />
       ) : null}
-      {shown.error ? (
-        <div className="mt-6">
-          <SiteErrorNotice message="O estoque pode estar incompleto por uma falha temporária de conexão. Atualize a página em instantes." />
+      {error ? (
+        <div className="mt-4 border border-brand-orange/40 bg-brand-orange/10 px-4 py-3" role="alert">
+          <p className="text-sm text-cream">Não conseguimos atualizar sua busca agora. Seus filtros foram mantidos.</p>
+          <button type="button" onClick={() => setAttempt(current => current + 1)}
+            className="mt-3 min-h-11 border border-white/25 px-4 text-sm font-semibold text-cream transition hover:border-brand">
+            Tentar novamente
+          </button>
         </div>
       ) : null}
 
@@ -254,12 +253,12 @@ export function EstoqueBrowse({
       >
         {loading
           ? "Atualizando o estoque…"
-          : shown.error
-            ? "Estoque indisponível no momento"
+          : error
+            ? "Não foi possível atualizar a busca"
             : filtered
               ? `${shown.total} ${shown.total === 1 ? "veículo encontrado" : "veículos encontrados"}`
               : `${shown.total} ${shown.total === 1 ? "veículo no estoque" : "veículos no estoque"}`}
-        {!loading && !shown.error ? (
+        {!loading && !error ? (
           <span className="hidden lg:inline">
             {` · ${stockSortLabel(params.sort)}`}
             {shown.total > shown.vehicles.length ? " · role para ver todos" : ""}
@@ -267,34 +266,40 @@ export function EstoqueBrowse({
         ) : null}
       </p>
 
-      <div className="mt-1 lg:mt-4" data-estoque-list="" aria-live="polite">
-        {loading ? (
+      {previousResults ? (
+        <p className="mb-3 text-xs leading-relaxed text-muted" data-stock-previous-results="">
+          {loading ? "Você está vendo os anúncios já carregados enquanto a busca atualiza." : "Os anúncios abaixo são da última lista carregada. Tente novamente para aplicar sua busca."}
+        </p>
+      ) : null}
+      <div className="mt-1 lg:mt-4" data-estoque-list="" aria-live="polite" aria-busy={loading}>
+        {loading && shown.vehicles.length === 0 ? (
           <VehicleCardSkeletonGrid count={6} largePhoto />
         ) : (
           <StockInfiniteList
-            key={filterKey}
+            key={`${shownResult.key}:${shownResult.version}`}
             initialVehicles={shown.vehicles}
             total={shown.total}
             pageSize={shown.pageSize ?? filters.pageSize ?? STOCK_PAGE_SIZE}
-            query={query}
-            returnTo={returnTo}
+            query={shownQuery}
+            returnTo={buildReturnTo(shownResult.params)}
+            paused={loading || Boolean(error)}
             empty={
               <div data-stock-empty="" className="mx-auto max-w-2xl rounded-xl border border-white/15 bg-ink px-4 py-6 text-center sm:px-6 sm:py-10">
                 <p className="font-display text-lg font-semibold text-cream">
-                  {shown.error
+                  {error
                     ? "Não foi possível carregar o estoque"
                     : filtered
                       ? "Nenhum veículo com esses filtros"
                       : "Estoque sendo montado"}
                 </p>
                 <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-                  {shown.error
+                  {error
                     ? "Tente novamente em alguns instantes. Se preferir, fale conosco no WhatsApp."
                     : filtered
                       ? "Você pode retirar um filtro ou ver todos os veículos. Se preferir, conta pra gente o que você procura no WhatsApp."
                       : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
                 </p>
-                {filtered && !shown.error ? (
+                {filtered && !error ? (
                   <Link
                     href="/estoque"
                     className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-md border border-white/25 px-4 py-3 text-sm font-semibold text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:w-auto"
@@ -319,7 +324,7 @@ export function EstoqueBrowse({
                       {emptyWhatsApp.label}
                     </WhatsAppButton>
                   </SiteLeadHit>
-                  {!shown.error ? (
+                  {!error ? (
                     <ChatOpenButton
                       source={filtered ? "estoque-filtro-vazio" : "estoque-vazio"}
                       prompt={

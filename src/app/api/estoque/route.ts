@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
       pageSize: filters.pageSize ?? STOCK_PAGE_SIZE,
     });
 
+    if (result.error) throw new Error("Consulta do estoque indisponível");
+
     return NextResponse.json(
       {
         vehicles: result.vehicles,
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
         hasMore: false,
         error: "Não foi possível carregar o estoque.",
       },
-      { status: 500 },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
     );
   }
 }
