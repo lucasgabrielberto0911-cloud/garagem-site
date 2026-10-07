@@ -8,6 +8,7 @@ import {
 import { StockCatalogGate } from "@/components/site/StockCatalogGate";
 import { StockCatalogLinks } from "@/components/site/StockCatalogLinks";
 import { StockFilters } from "@/components/site/StockFilters";
+import { RecentlyViewedVehicles } from "@/components/site/RecentlyViewedVehicles";
 import { StockFiltersSkeleton } from "@/components/site/StockFiltersSkeleton";
 import { StockBrowseShell } from "@/components/site/StockPending";
 import { Container, PageHeader } from "@/components/site/ui";
@@ -47,6 +48,8 @@ export default async function EstoquePage() {
           title="Veículos disponíveis"
           description="Cada veículo é revisado e sai com garantia. A documentação vai preparada pra você. Filtre por marca, modelo, ano, preço, km ou câmbio e ordene a lista. Se não achar o modelo, peça o que você procura."
         />
+
+        <RecentlyViewedVehicles />
 
         <StockBrowseShell
           filters={

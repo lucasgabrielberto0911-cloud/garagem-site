@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { RememberRecentVehicle } from "@/components/site/RememberRecentVehicle";
 import { preload } from "react-dom";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -267,6 +268,7 @@ export default async function VehicleDetailPage({
       data-ficha-page=""
       className="pb-sticky-bar-safe lg:pb-10"
     >
+      {!sold ? <RememberRecentVehicle id={vehicle.id} /> : null}
       <VehicleViewContent
         contentId={vehicle.id}
         contentName={fullLabel}
