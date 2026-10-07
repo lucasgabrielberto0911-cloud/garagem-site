@@ -1,4 +1,5 @@
 import { NativeRemoteFillImage } from "@/components/NativeRemoteFillImage";
+import { publicPhotoSrc, publicPhotoSrcSet } from "@/lib/public-photo-url";
 
 export const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 
@@ -38,7 +39,7 @@ export function VehicleImage({
    */
   quality?: number;
 }) {
-  const finalSrc = src || VEHICLE_PLACEHOLDER;
+  const finalSrc = publicPhotoSrc(src || VEHICLE_PLACEHOLDER);
 
   if (fill) {
     return (
@@ -48,8 +49,8 @@ export function VehicleImage({
         width={width ?? 480}
         height={height ?? 300}
         sizes={sizes}
-        srcSet={srcSet}
-        mobileSrcSet={mobileSrcSet}
+        srcSet={publicPhotoSrcSet(srcSet)}
+        mobileSrcSet={publicPhotoSrcSet(mobileSrcSet)}
         className={className}
         priority={priority}
         recoverable={recoverable}

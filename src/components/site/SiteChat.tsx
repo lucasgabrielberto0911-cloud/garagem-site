@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { publicPhotoSrc } from "@/lib/public-photo-url";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
@@ -294,7 +295,7 @@ function ChatVehicleMini({
         <span className="relative h-[5.25rem] w-28 shrink-0 overflow-hidden rounded-xl bg-asphalt">
           {/* eslint-disable-next-line @next/next/no-img-element -- capa remota, sem cota /_next/image */}
           <img
-            src={photo}
+            src={publicPhotoSrc(photo)}
             alt=""
             width={224}
             height={168}

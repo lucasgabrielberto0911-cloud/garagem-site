@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { publicPhotoSrc, publicPhotoSrcSet } from "@/lib/public-photo-url";
 import Link from "next/link";
 import { RememberRecentVehicle } from "@/components/site/RememberRecentVehicle";
 import { preload } from "react-dom";
@@ -98,7 +99,7 @@ export async function generateMetadata({
     siteName: site.name,
   });
   const rawCover = vehicle.photos[0]?.url;
-  const cover = rawCover ?? null;
+  const cover = rawCover ? absoluteUrl(publicPhotoSrc(rawCover)) : null;
   const path = vehiclePath(vehicle);
 
   return {
@@ -159,8 +160,8 @@ export default async function VehicleDetailPage({
 
   const path = vehiclePath(vehicle);
   const hero = vehicle.photos[0];
-  const heroSrc = hero ? galleryPreviewSrc(hero) : "";
-  const heroSet = hero ? galleryPreviewSrcSet(hero) : undefined;
+  const heroSrc = hero ? publicPhotoSrc(galleryPreviewSrc(hero)) : "";
+  const heroSet = hero ? publicPhotoSrcSet(galleryPreviewSrcSet(hero)) : undefined;
   if (heroSrc) {
     preload(heroSrc, {
       as: "image",

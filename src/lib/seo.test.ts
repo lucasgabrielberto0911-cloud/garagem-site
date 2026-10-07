@@ -64,3 +64,11 @@ test("a loja não usa Aracruz como cidade padrão e publica um telefone só", ()
   assert.notEqual(data.address.addressLocality, "Aracruz");
   assert.deepEqual(data.telephone, ["+5527996330706"]);
 });
+
+test("Google recebe fotos públicas no domínio canônico e mantém imagens externas", () => {
+  const data = vehicleJsonLd({ ...hb20, photos: [
+    { url: "https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/car.webp" },
+    { url: "https://cdn.example/hb20.webp" },
+  ] }) as { image: string[] };
+  assert.deepEqual(data.image, ["https://www.suagaragem.net/fotos/v1/original/car.webp", "https://cdn.example/hb20.webp"]);
+});

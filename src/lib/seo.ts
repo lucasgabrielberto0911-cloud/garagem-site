@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { publicPhotoSrc } from "@/lib/public-photo-url";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import {
   publicGoogleUrl,
@@ -389,7 +390,7 @@ export function vehicleJsonLd(vehicle: {
     ...(vehicle.doors != null && vehicle.doors > 0
       ? { numberOfDoors: vehicle.doors }
       : {}),
-    image: vehicle.photos.map((photo) => photo.url).filter(Boolean),
+    image: vehicle.photos.map((photo) => photo.url ? absoluteUrl(publicPhotoSrc(photo.url)) : "").filter(Boolean),
     url: absoluteUrl(path),
     mileageFromOdometer: {
       "@type": "QuantitativeValue",

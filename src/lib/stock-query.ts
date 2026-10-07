@@ -1,4 +1,5 @@
 import { parseVehicleLocationCity } from "@/lib/vehicle-location";
+import { publicPhotoOriginal } from "@/lib/public-photo-url";
 
 /** Tipos e parsers do estoque — seguro para o bundle do cliente. */
 
@@ -126,6 +127,8 @@ export function supabaseCardSrc(
 
 /** Se o recorte falhar, o <img> volta ao arquivo original. */
 export function supabaseOriginalSrc(url: string) {
+  const ownOriginal = publicPhotoOriginal(url);
+  if (ownOriginal) return ownOriginal;
   if (!url.includes(SUPABASE_RENDER_PUBLIC)) return url;
   return url.split("?")[0].replace(SUPABASE_RENDER_PUBLIC, SUPABASE_OBJECT_PUBLIC);
 }
