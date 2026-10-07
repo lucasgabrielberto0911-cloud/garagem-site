@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import type { VehicleCardData } from "@/components/site/VehicleCard";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
+import { UnavailableFavorites } from "./UnavailableFavorites";
+import { unavailableFavoriteIds } from "@/lib/unavailable-favorites";
 import { FavoritesComparison } from "./FavoritesComparison";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { ButtonLink, WhatsAppButton } from "@/components/site/ui";
@@ -25,7 +27,7 @@ const retryClass =
   "inline-flex min-h-12 w-full items-center justify-center border border-white/20 px-5 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand disabled:opacity-60 sm:w-auto";
 
 export function FavoritesList() {
-  const { ids, ready, clear } = useFavorites();
+  const { ids, ready, clear, remove } = useFavorites();
   const [result, setResult] = useState<FavoritesResult>({
     key: "", vehicles: [], status: "loading", refreshing: false,
   });
@@ -105,6 +107,7 @@ export function FavoritesList() {
   const cached = Boolean(key && current?.status === "cached");
   const failed = Boolean(key && current?.status === "failed");
   const refreshing = Boolean(key && current?.refreshing);
+  const unavailable = unavailableFavoriteIds(ids, vehicles.map(vehicle => vehicle.id), current?.status === "fresh" && !refreshing);
 
   if (!ready || (key && (!current || current.status === "loading"))) {
     return <VehicleCardSkeletonGrid count={4} />;
@@ -142,6 +145,7 @@ export function FavoritesList() {
 
   if (vehicles.length === 0) {
     return (
+      <><UnavailableFavorites ids={unavailable} remove={remove} />
       <div className="mx-auto max-w-2xl border border-dashed border-white/15 bg-ink/40 px-6 py-16 text-center">
         <p className="font-display text-lg font-semibold text-cream">
           {key ? "Seus veículos salvos não estão disponíveis agora" : "Você ainda não salvou nenhum veículo"}
@@ -174,7 +178,7 @@ export function FavoritesList() {
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
           O estoque abre a lista. O WhatsApp abre para você dizer o que procura.
         </p>
-      </div>
+      </div></>
     );
   }
 
@@ -223,6 +227,7 @@ export function FavoritesList() {
         </button>
       </div>
 
+      <UnavailableFavorites ids={unavailable} remove={remove} />
       <FavoritesComparison vehicles={ordered} />
 
       <div className="mt-6">
