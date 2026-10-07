@@ -2,77 +2,52 @@
 
 import { useState } from "react";
 import { notifyError, notifySuccess } from "@/lib/notify";
-import { IconWhatsApp } from "@/components/site/icons";
-import { trackWhatsAppClick } from "@/lib/meta-pixel";
-import { site, whatsappContentFromVehicle, whatsappUrl } from "@/lib/site";
+import { canonicalVehicleShareUrl, shareVehicleLink } from "@/lib/vehicle-share";
+import { site } from "@/lib/site";
 
-type Props = {
-  title: string;
-  path: string;
-  vehicleId?: string;
-  className?: string;
-};
+type Props = { title: string; path: string; vehicleId?: string; className?: string };
+const buttonClass = "inline-flex min-h-[44px] items-center justify-center border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation disabled:opacity-60";
 
-/**
- * Compartilhar anúncio: copiar link, WhatsApp e atalho Instagram (copia + abre).
- */
-export function ShareVehicle({ title, path, vehicleId, className = "" }: Props) {
-  const [copied, setCopied] = useState(false);
-  const url =
-    typeof window !== "undefined"
-      ? `${window.location.origin}${path}`
-      : `${site.url}${path}`;
-  const text = `${title} — disponível na ${site.name}`;
+export function ShareVehicle({ title, path, className = "" }: Props) {
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  // O link compartilhado é sempre o anúncio público, mesmo em uma prévia.
+  const url = canonicalVehicleShareUrl(site.url, path);
+  const copied = copiedUrl === url;
 
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(url);
-      setCopied(true);
+      setCopiedUrl(url);
       notifySuccess("Link copiado");
-      window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      notifyError("Não foi possível copiar o link");
+      notifyError("Não foi possível copiar o link. Tente novamente.");
     }
+  }
+
+  async function share() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const outcome = await shareVehicleLink(navigator, { title, text: `${title} — ${site.name}`, url });
+      if (outcome === "copied") {
+        setCopiedUrl(url);
+        notifySuccess("Link copiado para você compartilhar");
+      }
+    } catch {
+      notifyError("Não foi possível compartilhar. Você pode usar Copiar link.");
+    } finally { setBusy(false); }
   }
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      <span className="sr-only">Compartilhar anúncio</span>
-      <span className="text-xs uppercase tracking-wider text-muted" aria-hidden="true">
-        Compartilhar
-      </span>
-      <button
-        type="button"
-        onClick={copyLink}
-        aria-label="Copiar link do anúncio"
-        className="inline-flex min-h-[44px] items-center border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
-      >
-        {copied ? "Copiado" : "Copiar link"}
+      <button type="button" onClick={() => void share()} disabled={busy} aria-busy={busy}
+        className={buttonClass + " border-white/25"}>
+        Compartilhar anúncio
       </button>
-      <a
-        href={whatsappUrl(`${text}\n${url}`, { bare: true })}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={() =>
-          trackWhatsAppClick("ficha-share", {
-            vehicleId,
-            slug: whatsappContentFromVehicle({ id: vehicleId, path }),
-          })
-        }
-        className="inline-flex min-h-[44px] items-center gap-1.5 border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
-      >
-        <IconWhatsApp className="h-3.5 w-3.5" />
-        WhatsApp
-      </a>
-      <a
-        href={site.instagramUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={copyLink}
-        className="inline-flex min-h-[44px] items-center border border-white/15 px-3 text-xs font-medium text-cream transition hover:border-brand touch-manipulation"
-      >
-        Instagram
-      </a>
+      <button type="button" onClick={() => void copyLink()} aria-label="Copiar link do anúncio" className={buttonClass}>
+        {copied ? "Link copiado" : "Copiar link"}
+      </button>
     </div>
   );
 }
