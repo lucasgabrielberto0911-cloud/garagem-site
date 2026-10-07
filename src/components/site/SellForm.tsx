@@ -17,6 +17,7 @@ import { WhatsAppButton } from "@/components/site/ui";
 import { createSellLead } from "@/app/(site)/vender/actions";
 import { formatNumberBR, formatPhoneBR, formatPlateInput } from "@/lib/format";
 import { SellPhotoUpload } from "./SellPhotoUpload";
+import { useSellDraft } from "./useSellDraft";
 import { trackLead, trackPwaEvent } from "@/lib/meta-pixel";
 import { enqueueIntent, isLikelyNetworkFailure } from "@/lib/offline-queue";
 import { sellReceivedLine } from "@/lib/sell-receipt";
@@ -58,6 +59,7 @@ export function SellForm({
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [formError, setFormError] = useState("");
+  const draft = useSellDraft(formRef, outcome === null, setPhone, setKm, setPlate);
 
   useEffect(() => {
     if (outcome) return focusFormFeedback(receiptRef.current);
@@ -181,10 +183,23 @@ export function SellForm({
     <form
       ref={formRef}
       onSubmit={handleSubmit}
+      onChange={draft.remember}
       noValidate
       className="relative flex flex-col gap-3"
     >
       <fieldset disabled={isPending} className="flex min-w-0 flex-col gap-3">
+        {draft.saved || draft.failed ? (
+          <div className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-2.5" data-sell-draft="">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p role="status" className="text-xs leading-relaxed text-muted">
+                {draft.failure === "erase" ? "Não conseguimos apagar o rascunho guardado neste navegador." : draft.failed ? "Não conseguimos guardar o preenchimento neste navegador." : draft.restored ? "Seu preenchimento foi recuperado." : "Preenchimento guardado nesta aba."}
+              </p>
+              <button type="button" onClick={() => { draft.discard(); setErrors({}); setFormError(""); }}
+                className="min-h-11 text-xs text-cream underline decoration-white/30 underline-offset-4">Apagar preenchimento</button>
+            </div>
+            {!draft.failed ? <p className="text-[11px] leading-relaxed text-muted">Até fechar a aba, por até 24 horas. Ao voltar, selecione as fotos novamente.</p> : null}
+          </div>
+        ) : null}
         {/* Honeypot anti-spam — oculto de leitores de tela e usuários. */}
         <div
           aria-hidden="true"
