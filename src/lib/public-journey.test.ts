@@ -27,7 +27,7 @@ test("cidade do veículo entra no filtro, na API e no painel mobile", () => {
   assert.match(browse, /STOCK_FILTER_KEYS/);
   assert.match(browse, /city: params\.city/);
   assert.match(where, /stockCityFilter\(filters\.city\)/);
-  assert.match(vehicles, /stock-page-v13/);
+  assert.match(vehicles, /stock-page-v14/);
   assert.doesNotMatch(filters, /Vitória/);
 });
 

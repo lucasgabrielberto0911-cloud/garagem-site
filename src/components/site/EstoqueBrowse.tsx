@@ -203,6 +203,7 @@ export function EstoqueBrowse({
           stock: {
             vehicles: data.vehicles, total: data.total, page: data.page ?? 1,
             pageSize: data.pageSize ?? STOCK_PAGE_SIZE, totalPages: data.totalPages ?? 1,
+            suggestions: data.suggestions,
           },
         }));
         setRequest({ key: filterKey, attempt, loading: false, error: "" });
@@ -284,20 +285,37 @@ export function EstoqueBrowse({
             paused={loading || Boolean(error)}
             empty={
               <div data-stock-empty="" className="mx-auto max-w-2xl rounded-xl border border-white/15 bg-ink px-4 py-6 text-center sm:px-6 sm:py-10">
-                <p className="font-display text-lg font-semibold text-cream">
+                <p className="font-display text-lg font-semibold text-cream [overflow-wrap:anywhere]">
                   {error
                     ? "Não foi possível carregar o estoque"
                     : filtered
-                      ? "Nenhum veículo com esses filtros"
+                      ? shown.suggestions?.length && params.q ? `Não encontramos “${params.q}”.` : "Nenhum veículo com esses filtros"
                       : "Estoque sendo montado"}
                 </p>
                 <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
                   {error
                     ? "Tente novamente em alguns instantes. Se preferir, fale conosco no WhatsApp."
                     : filtered
-                      ? "Você pode retirar um filtro ou ver todos os veículos. Se preferir, conta pra gente o que você procura no WhatsApp."
+                      ? shown.suggestions?.length ? "Pode ter sido só a escrita do nome. Experimente uma opção abaixo, mantendo os seus filtros." : "Você pode retirar um filtro ou ver todos os veículos. Se preferir, conta pra gente o que você procura no WhatsApp."
                       : "Estamos selecionando os próximos veículos. Diga o que você procura que buscamos para você."}
                 </p>
+                {!loading && !error && shown.suggestions?.length ? (
+                  <div className="mt-5 border-y border-white/10 py-4" data-stock-search-suggestions="">
+                    <p className="text-sm font-semibold text-cream">Você quis dizer?</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted">Os outros filtros continuam iguais.</p>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+                      {shown.suggestions.map(suggestion => (
+                        <Link key={suggestion.query}
+                          href={buildReturnTo({ ...params, q: suggestion.query })}
+                          prefetch={false}
+                          className="flex min-h-12 items-center justify-between gap-3 rounded-md border border-brand/40 bg-brand/10 px-4 py-3 text-left text-sm text-cream transition hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                          <span className="min-w-0 whitespace-normal [overflow-wrap:normal]">{suggestion.query}</span>
+                          <span className="shrink-0 text-xs text-muted">{suggestion.count} {suggestion.count === 1 ? "veículo" : "veículos"}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 {filtered && !error ? (
                   <Link
                     href="/estoque"

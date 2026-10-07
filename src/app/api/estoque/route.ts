@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
         page: result.page,
         pageSize: result.pageSize,
         hasMore: result.page * result.pageSize < result.total,
+        ...(result.suggestions?.length ? { suggestions: result.suggestions } : {}),
       },
       {
         headers: {
