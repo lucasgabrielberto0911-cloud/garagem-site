@@ -368,6 +368,11 @@ export function StockFilters({ facets }: { facets: Facets }) {
         window.matchMedia("(min-width: 1024px)").matches
       ) {
         router.replace(href);
+      } else if (window.location.pathname === "/estoque") {
+        // A lista já busca a API ao mudar a URL; não refaça o payload da página.
+        if (href !== window.location.pathname + window.location.search) {
+          window.history.pushState(null, "", href);
+        }
       } else {
         router.push(href);
       }

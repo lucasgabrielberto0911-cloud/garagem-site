@@ -8,7 +8,7 @@ import { FavoritesComparison } from "./FavoritesComparison";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { ButtonLink, WhatsAppButton } from "@/components/site/ui";
 import { useFavorites } from "@/lib/favorites";
-import { snapshotsForIds, writeFavoriteSnapshot } from "@/lib/offline-queue";
+import { snapshotsForIds, writeFavoriteSnapshots } from "@/lib/offline-queue";
 import { formatVehicleLabel } from "@/lib/format";
 import { trackLead } from "@/lib/meta-pixel";
 import { favoritesListWhatsApp, WHATSAPP_MESSAGES } from "@/lib/site";
@@ -65,18 +65,12 @@ export function FavoritesList() {
         if (!Array.isArray(data.vehicles)) throw new Error("Resposta inválida de favoritos");
         const next = data.vehicles as VehicleCardData[];
         setResult({ key, vehicles: next, status: "fresh", refreshing: false });
-        for (const vehicle of next) {
-          try {
-            writeFavoriteSnapshot({
-              ...vehicle,
-              updatedAt: vehicle.updatedAt instanceof Date
-                ? vehicle.updatedAt.toISOString()
-                : vehicle.updatedAt ?? null,
-            });
-          } catch {
-            // Falha ao guardar uma cópia não invalida o estoque que acabou de chegar.
-          }
-        }
+        writeFavoriteSnapshots(next.map((vehicle) => ({
+          ...vehicle,
+          updatedAt: vehicle.updatedAt instanceof Date
+            ? vehicle.updatedAt.toISOString()
+            : vehicle.updatedAt ?? null,
+        })));
       })
       .catch(() => {
         if (!active) return;

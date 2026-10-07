@@ -148,20 +148,27 @@ export function readFavoriteSnapshots(): Record<string, FavoriteSnapshot> {
   }
 }
 
-export function writeFavoriteSnapshot(vehicle: FavoriteSnapshot) {
+/** Uma leitura/gravação para o conjunto de cards, sem bloquear cada anúncio. */
+export function writeFavoriteSnapshots(vehicles: readonly FavoriteSnapshot[]) {
+  if (vehicles.length === 0) return;
   const storage = favoriteStorage();
   if (!storage) return;
-  const current = readFavoriteSnapshots();
-  current[vehicle.id] = {
-    ...vehicle,
-    updatedAt:
-      typeof vehicle.updatedAt === "string"
-        ? vehicle.updatedAt
-        : vehicle.updatedAt
-          ? String(vehicle.updatedAt)
-          : null,
-  };
-  storage.setItem(FAVORITE_SNAPSHOT_KEY, JSON.stringify(current));
+  try {
+    const current = readFavoriteSnapshots();
+    for (const vehicle of vehicles) {
+      current[vehicle.id] = {
+        ...vehicle,
+        updatedAt: vehicle.updatedAt == null ? null : String(vehicle.updatedAt),
+      };
+    }
+    storage.setItem(FAVORITE_SNAPSHOT_KEY, JSON.stringify(current));
+  } catch {
+    // Sem espaço/permissão para o cache offline, o anúncio segue utilizável.
+  }
+}
+
+export function writeFavoriteSnapshot(vehicle: FavoriteSnapshot) {
+  writeFavoriteSnapshots([vehicle]);
 }
 
 export function snapshotsForIds(ids: string[]): FavoriteSnapshot[] {
