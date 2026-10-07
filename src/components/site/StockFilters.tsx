@@ -27,6 +27,8 @@ import {
   vehicleLocationLabel,
 } from "@/lib/vehicle-location";
 
+import { ShareStockSearch } from "./ShareStockSearch";
+
 export type Facets = {
   categories?: string[];
   brands: string[];
@@ -75,46 +77,7 @@ function joinAccessories(items: string[]) {
 }
 
 function ShareSearchButton({ className = "" }: { className?: string }) {
-  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
-
-  async function share() {
-    const url = window.location.href;
-    const finish = (next: "copied" | "failed") => {
-      setStatus(next);
-      window.setTimeout(() => setStatus("idle"), 2400);
-    };
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "Busca de veículos — Sua Garagem",
-          text: "Veja esta busca de seminovos na Sua Garagem.",
-          url,
-        });
-        finish("copied");
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      finish("copied");
-    } catch {
-      finish("failed");
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => void share()}
-      className={`inline-flex min-h-11 items-center justify-center gap-1.5 border border-white/15 px-3 text-xs font-semibold text-cream transition hover:border-brand hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand ${className}`}
-      aria-label="Compartilhar esta busca de veículos"
-    >
-      <IconShare className="h-4 w-4" />
-      {status === "copied"
-        ? "Busca compartilhada"
-        : status === "failed"
-          ? "Não foi possível compartilhar"
-          : "Compartilhar busca"}
-    </button>
-  );
+  return <ShareStockSearch className={className} icon={<IconShare className="h-4 w-4" />} />;
 }
 
 function toggleAccessoryValue(current: string, name: string) {
