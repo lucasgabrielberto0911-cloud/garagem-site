@@ -11,7 +11,7 @@ function readSrc(rel: string) {
 }
 
 test("cidade do veículo entra no filtro, na API e no painel mobile", () => {
-  const filters = readSrc("components/site/StockFilters.tsx");
+  const filters = readSrc("components/site/StockFilters.tsx") + readSrc("components/site/StockFilterFields.tsx") + readSrc("components/site/StockFilterControls.tsx");
   const browse = readSrc("components/site/EstoqueBrowse.tsx");
   const vehicles = readSrc("lib/vehicles.ts");
   const where = vehicles.slice(
@@ -50,7 +50,7 @@ test("landing de cidade lista o estoque inteiro e não filtra pela cidade", () =
 });
 
 test("filtros do estoque no celular alinham rótulo, chips e Filtros sem máscara", () => {
-  const filters = readSrc("components/site/StockFilters.tsx");
+  const filters = readSrc("components/site/StockFilters.tsx") + readSrc("components/site/StockFilterFields.tsx") + readSrc("components/site/StockFilterControls.tsx");
   const css = readSrc("app/globals.css");
   const barStart = filters.indexOf("data-stock-filters");
   const barEnd = filters.indexOf('id="painel-filtros"');
