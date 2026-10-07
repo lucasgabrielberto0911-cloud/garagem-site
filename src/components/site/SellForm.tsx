@@ -16,14 +16,12 @@ import { focusFormFeedback, useFormViewport } from "@/lib/form-feedback";
 import { WhatsAppButton } from "@/components/site/ui";
 import { createSellLead } from "@/app/(site)/vender/actions";
 import { formatNumberBR, formatPhoneBR, formatPlateInput } from "@/lib/format";
-import { prepareImageForUpload } from "@/lib/prepare-image-upload";
+import { SellPhotoUpload } from "./SellPhotoUpload";
 import { trackLead, trackPwaEvent } from "@/lib/meta-pixel";
 import { enqueueIntent, isLikelyNetworkFailure } from "@/lib/offline-queue";
 import { sellReceivedLine } from "@/lib/sell-receipt";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { SiteLeadHit } from "@/components/site/VehiclePixel";
-
-const MAX_PHOTOS = 3;
 
 const inputClass =
   "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition touch-manipulation placeholder:text-muted focus:border-brand";
@@ -60,7 +58,6 @@ export function SellForm({
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [formError, setFormError] = useState("");
-  const [photoError, setPhotoError] = useState("");
 
   useEffect(() => {
     if (outcome) return focusFormFeedback(receiptRef.current);
@@ -86,42 +83,6 @@ export function SellForm({
       const message = "Não conseguimos guardar a avaliação neste aparelho. Seus dados continuam no formulário. Tente de novo quando a conexão voltar ou chame no WhatsApp.";
       setFormError(message);
       notifyError(message);
-    }
-  }
-
-  async function uploadSellPhotos(files: File[]) {
-    const remaining = MAX_PHOTOS - photoUrls.length;
-    const picked = files.slice(0, remaining);
-    if (picked.length === 0) return;
-
-    if (photoBusy || isPending) return;
-    setPhotoBusy(true);
-    setPhotoError("");
-    try {
-      for (const file of picked) {
-        const prepared = await prepareImageForUpload(file);
-        const body = new FormData();
-        body.append("file", prepared, prepared.name || "foto.webp");
-        const response = await fetch("/api/vender/photos", {
-          method: "POST",
-          body,
-        });
-        const data = (await response.json().catch(() => ({}))) as {
-          url?: string;
-          error?: string;
-        };
-        if (!response.ok || !data.url) {
-          throw new Error(data.error || "Falha ao enviar a foto.");
-        }
-        const url = data.url;
-        setPhotoUrls((current) => [...current, url].slice(0, MAX_PHOTOS));
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Não foi possível enviar a foto. Tente de novo.";
-      setPhotoError(`${message} As fotos já adicionadas continuam no pedido.`);
-      notifyError(message);
-    } finally {
-      setPhotoBusy(false);
     }
   }
 
@@ -209,7 +170,6 @@ export function SellForm({
           setPhotoUrls([]);
           setErrors({});
           setFormError("");
-          setPhotoError("");
           setOutcome(null);
           setFocusTarget("name");
         }}
@@ -349,71 +309,7 @@ export function SellForm({
           </div>
 
           <div className="lg:col-span-2">
-            <label htmlFor="photos" className="block">
-              <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-                Fotos do seu veículo{" "}
-                <span className="normal-case font-normal">(opcional, até {MAX_PHOTOS})</span>
-              </span>
-              <span id="photos-hint" className="mb-3 block text-[11px] font-normal normal-case leading-relaxed tracking-normal text-muted">
-                Ajudam na avaliação. Não precisa ser profissional — celular serve.
-                Ficam só no pedido, sem ir para o site.
-              </span>
-              <span
-                className={`flex min-h-[52px] items-center justify-center border border-dashed border-white/20 px-4 text-center font-display text-xs font-semibold uppercase tracking-wide text-cream touch-manipulation ${
-                  photoBusy || photoUrls.length >= MAX_PHOTOS
-                    ? "opacity-60"
-                    : "hover:border-brand"
-                }`}
-              >
-                {photoBusy
-                  ? "Enviando foto…"
-                  : photoUrls.length >= MAX_PHOTOS
-                    ? `Limite de ${MAX_PHOTOS} fotos`
-                    : "Escolher fotos"}
-              </span>
-            </label>
-            <input
-              id="photos"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              disabled={photoBusy || photoUrls.length >= MAX_PHOTOS}
-              aria-describedby="photos-hint"
-              onChange={(event) => {
-                const files = Array.from(event.target.files ?? []);
-                event.target.value = "";
-                if (files.length === 0) return;
-                void uploadSellPhotos(files);
-              }}
-              className="sr-only"
-            />
-            {photoError ? <p className="mt-3 text-sm leading-relaxed text-brand" role="alert">{photoError}</p> : null}
-            {photoUrls.length > 0 ? (
-              <ul className="mt-3 flex flex-wrap gap-2">
-                {photoUrls.map((url, index) => (
-                  <li
-                    key={url}
-                    className="flex min-h-11 items-center gap-2 border border-white/10 px-2.5 text-xs text-cream"
-                  >
-                    Foto {index + 1}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setPhotoUrls((current) =>
-                          current.filter((item) => item !== url),
-                        )
-                      }
-                      className="min-h-11 px-1 text-muted underline-offset-2 hover:text-cream hover:underline"
-                    >
-                      Remover
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {photoUrls.map((url) => (
-              <input key={url} type="hidden" name="photoUrls" value={url} />
-            ))}
+            <SellPhotoUpload disabled={isPending} onBusyChange={setPhotoBusy} onUrlsChange={setPhotoUrls} />
           </div>
         </FormBlock>
 
