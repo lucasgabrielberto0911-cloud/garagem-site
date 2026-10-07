@@ -364,6 +364,7 @@ export function PhotoLightbox({
                 fill
                 sizes="100vw"
                 priority
+                recoverable
                 className="pointer-events-none object-contain [-webkit-touch-callout:none]"
               />
               {photo ? <ZoomDetailImage photoId={photo.id} zoomed={scale > 1} alt={vehiclePhotoAlt(alt, safeIndex, total)} /> : null}

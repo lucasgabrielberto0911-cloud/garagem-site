@@ -13,6 +13,7 @@ export function VehicleImage({
   priority = false,
   srcSet,
   mobileSrcSet,
+  recoverable = false,
 }: {
   src?: string | null;
   alt: string;
@@ -22,6 +23,8 @@ export function VehicleImage({
   sizes?: string;
   srcSet?: string;
   mobileSrcSet?: string;
+  /** Galeria pública: recupera falhas sem colocar botão dentro de um link de card. */
+  recoverable?: boolean;
   className?: string;
   /**
    * Aceito por compatibilidade. As fotos públicas já são WebP
@@ -49,6 +52,7 @@ export function VehicleImage({
         mobileSrcSet={mobileSrcSet}
         className={className}
         priority={priority}
+        recoverable={recoverable}
       />
     );
   }

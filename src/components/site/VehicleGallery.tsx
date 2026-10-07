@@ -191,6 +191,7 @@ export function VehicleGallery({
                     fill
                     sizes={GALLERY_HERO_SIZES}
                     srcSet={galleryPreviewSrcSet(photo)}
+                    recoverable
                     priority={index === 0}
                     className="object-cover [-webkit-touch-callout:none]"
                   />

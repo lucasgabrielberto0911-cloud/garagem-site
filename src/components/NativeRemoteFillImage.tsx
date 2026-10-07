@@ -1,6 +1,7 @@
 "use client";
 
 import { supabaseOriginalSrc } from "@/lib/stock-query";
+import { RecoverableVehicleImage } from "@/components/RecoverableVehicleImage";
 
 /**
  * Capa remota sem o wrapper do next/image.
@@ -16,6 +17,7 @@ export function NativeRemoteFillImage({
   mobileSrcSet,
   className,
   priority,
+  recoverable = false,
 }: {
   src: string;
   alt: string;
@@ -26,7 +28,9 @@ export function NativeRemoteFillImage({
   mobileSrcSet?: string;
   className?: string;
   priority?: boolean;
+  recoverable?: boolean;
 }) {
+  if (recoverable) return <RecoverableVehicleImage key={src} src={src} alt={alt} width={width} height={height} sizes={sizes} srcSet={srcSet} mobileSrcSet={mobileSrcSet} className={className} priority={priority} />;
   const image = (
     // eslint-disable-next-line @next/next/no-img-element
     <img
