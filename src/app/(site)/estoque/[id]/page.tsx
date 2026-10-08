@@ -1,3 +1,4 @@
+import { publicVehicleDescription } from "@/lib/public-vehicle-description";
 import type { Metadata } from "next";
 import { publicPhotoSrc, publicPhotoSrcSet } from "@/lib/public-photo-url";
 import Link from "next/link";
@@ -172,6 +173,7 @@ export default async function VehicleDetailPage({
   }
   const fichaTrack = fichaWhatsAppTracking({ id: vehicle.id, path });
   const sold = vehicle.status === "vendido";
+  const description = publicVehicleDescription(vehicle.description, sold);
   const isMoto = vehicle.category === "moto";
   const display = formatVehicleDisplay(vehicle);
   const title = display.title;
@@ -250,7 +252,7 @@ export default async function VehicleDetailPage({
   });
 
   const hasDetails =
-    Boolean(vehicle.description) || accessories.length > 0;
+    Boolean(description) || accessories.length > 0;
   const updatedLabel = vehicle.updatedAt
     ? formatUpdatedAt(vehicle.updatedAt)
     : "";
@@ -274,7 +276,7 @@ export default async function VehicleDetailPage({
         contentId={vehicle.id}
         contentName={fullLabel}
         slug={canonicalSlug}
-        value={vehicle.price}
+        value={sold ? undefined : vehicle.price}
         make={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}
@@ -289,7 +291,7 @@ export default async function VehicleDetailPage({
           model: formatModelName(vehicle.model),
           version: vehicle.version,
           year: vehicle.yearModel,
-          price: vehicle.price,
+          price: sold ? undefined : vehicle.price,
           path,
           category: vehicle.category,
           sold: sold,
@@ -374,7 +376,7 @@ export default async function VehicleDetailPage({
               <VehicleMobileSummary
                 title={title}
                 version={display.version}
-                price={vehicle.price}
+                price={sold ? 0 : vehicle.price}
                 sold={sold}
                 year={vehicle.year}
                 yearModel={vehicle.yearModel}
@@ -392,20 +394,20 @@ export default async function VehicleDetailPage({
                 data-ficha-section="detalhes"
                 className="ficha-jump-target hidden border-t border-white/10 pt-5 lg:mt-6 lg:block"
               >
-                {vehicle.description ? (
+                {description ? (
                   <div>
                     <h2 className="font-display text-base font-semibold text-cream">
                       Sobre o veículo
                     </h2>
                     <VehicleDescription
-                      text={vehicle.description}
+                      text={description}
                       className="mt-2 text-sm sm:text-[15px]"
                     />
                   </div>
                 ) : null}
 
                 {accessories.length > 0 ? (
-                  <div className={vehicle.description ? "mt-5" : undefined}>
+                  <div className={description ? "mt-5" : undefined}>
                     <h2 className="font-display text-base font-semibold text-cream">
                       Itens e acessórios
                     </h2>
@@ -448,7 +450,7 @@ export default async function VehicleDetailPage({
                   <FavoriteButton
                     vehicleId={vehicle.id}
                     label={fullLabel}
-                    value={vehicle.price}
+                    value={sold ? undefined : vehicle.price}
                     make={formatBrandName(vehicle.brand)}
                     model={formatModelName(vehicle.model)}
                     year={vehicle.yearModel}
@@ -467,9 +469,7 @@ export default async function VehicleDetailPage({
 
               <p className="font-display text-3xl font-bold leading-none text-cream">
                 {sold ? (
-                  <span className="text-muted line-through decoration-white/30">
-                    {formatCurrencyBRL(vehicle.price)}
-                  </span>
+                  <span className="text-base text-muted">Já vendido</span>
                 ) : (
                   formatCurrencyBRL(vehicle.price)
                 )}
@@ -492,7 +492,7 @@ export default async function VehicleDetailPage({
                   <VehicleLeadHit
                     contentId={vehicle.id}
                     contentName={fullLabel}
-                    value={vehicle.price}
+                    value={sold ? undefined : vehicle.price}
                     make={formatBrandName(vehicle.brand)}
                     model={formatModelName(vehicle.model)}
                     year={vehicle.yearModel}
@@ -520,7 +520,7 @@ export default async function VehicleDetailPage({
                     contentSlug={canonicalSlug}
                     contentPath={path}
                     contentName={fullLabel}
-                    value={vehicle.price}
+                    value={sold ? 0 : vehicle.price}
                     make={formatBrandName(vehicle.brand)}
                     model={formatModelName(vehicle.model)}
                     year={vehicle.yearModel}
@@ -637,12 +637,12 @@ export default async function VehicleDetailPage({
           fullLabel={fullLabel}
           path={path}
           sold={sold}
-          price={vehicle.price}
+          price={sold ? 0 : vehicle.price}
           yearModel={vehicle.yearModel}
           make={formatBrandName(vehicle.brand)}
           model={formatModelName(vehicle.model)}
           vehicleId={vehicle.id}
-          description={vehicle.description}
+          description={description}
           accessories={accessories}
           specs={specs}
           inspection={vehicle.inspection}
@@ -718,7 +718,7 @@ export default async function VehicleDetailPage({
         brand={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}
-        price={vehicle.price}
+        price={sold ? 0 : vehicle.price}
         stateOfVehicle={autoHit.stateOfVehicle}
         exteriorColor={autoHit.exteriorColor}
         catalogTransmission={autoHit.transmission}

@@ -49,7 +49,7 @@ test("JSON-LD do anúncio traz preço, km e disponibilidade sem FIPE", () => {
   assert.doesNotMatch(JSON.stringify(data), /fipe/i);
   assert.equal(hasPublishablePrice(0), false);
 
-  const sold = vehicleJsonLd({ ...hb20, status: "vendido", price: 0 });
+  const sold = vehicleJsonLd({ ...hb20, status: "vendido", price: 64900 });
   const soldOffers = (sold as { offers: Record<string, unknown> }).offers;
   assert.equal(soldOffers.availability, vehicleAvailabilityUrl("vendido"));
   assert.equal("price" in soldOffers, false);

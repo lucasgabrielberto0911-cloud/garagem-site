@@ -84,9 +84,7 @@ export function VehicleMobileSummary({
       ) : null}
       <p className="mt-1.5 font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand">
         {sold ? (
-          <span className="text-muted line-through decoration-white/30">
-            {formatCurrencyBRL(price)}
-          </span>
+          <span className="text-base text-muted">Já vendido</span>
         ) : (
           formatCurrencyBRL(price)
         )}
