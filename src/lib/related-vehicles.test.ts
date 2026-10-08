@@ -334,7 +334,7 @@ test("o bloco mostra foto, nome, ano, km e preço, e some se não houver opção
 });
 
 test("a ficha mantém âncoras, filtros e o formulário, e as cidades o estoque inteiro", () => {
-  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const similar = readSrc("components/site/SimilarVehicles.tsx");
   const filters = readSrc("components/site/StockFilters.tsx");
   const form = readSrc("components/site/MissingModelForm.tsx");

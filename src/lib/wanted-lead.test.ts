@@ -158,7 +158,7 @@ test("o formulário público pede consentimento antes de enviar e não é WhatsA
 test("estoque abre o pedido em outra página; a ficha mantém o formulário", () => {
   const browse = readSrc("components/site/EstoqueBrowse.tsx");
   const stock = readSrc("app/(site)/estoque/page.tsx");
-  const ficha = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const ficha = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const city = readSrc("app/(site)/seminovos/[cidade]/page.tsx");
   const form = readSrc("components/site/MissingModelForm.tsx");
   const pedido = readSrc("app/(site)/pedido/page.tsx");

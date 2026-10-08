@@ -86,7 +86,7 @@ test("âncoras da ficha são fotos, especificações e detalhes", () => {
 });
 
 test("a ficha marca fotos, especificações e o texto, e abre a foto grande em WebP", () => {
-  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const gallery = readSrc("components/site/VehicleGallery.tsx");
   const lightbox = readSrc("components/site/PhotoLightbox.tsx");
   const css = readSrc("app/globals.css");

@@ -22,7 +22,7 @@ test("o botão do chat usa exatamente “Ajuda para escolher”, sem “pra”",
 });
 
 test("ficha: Ajuda para escolher fica abaixo do WhatsApp, em contorno", () => {
-  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const blocks = chatOpenBlocks(page);
   assert.equal(blocks.length, 1);
   for (const block of blocks) {
