@@ -1,3 +1,4 @@
+import { consentBootstrapScript } from "@/lib/consent";
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
 import { AppToaster } from "@/components/Toaster";
@@ -176,8 +177,9 @@ export default function RootLayout({
   const storageOrigin = supabaseOrigin();
 
   return (
-    <html lang="pt-BR" data-scroll-behavior="smooth">
+    <html lang="pt-BR" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
+        <script id="garagem-consent-bootstrap" dangerouslySetInnerHTML={{ __html: consentBootstrapScript() }} />
         {storageOrigin ? (
           <link rel="preconnect" href={storageOrigin} crossOrigin="anonymous" />
         ) : null}

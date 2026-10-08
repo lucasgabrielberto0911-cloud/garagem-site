@@ -1,6 +1,11 @@
 export const CONSENT_STORAGE_KEY = "garagem_consent";
 export const CONSENT_EVENT = "garagem:consent";
 
+/** Executa no head, antes da primeira pintura e sem depender da hidratação. */
+export function consentBootstrapScript() {
+  return `(()=>{try{const c=localStorage.getItem("${CONSENT_STORAGE_KEY}");if(c==="accepted"||c==="essential")document.documentElement.dataset.consent=c}catch{}})()`;
+}
+
 export type ConsentChoice = "accepted" | "essential";
 
 export function isConsentChoice(value: unknown): value is ConsentChoice {
@@ -24,6 +29,7 @@ export function writeStoredConsent(choice: ConsentChoice) {
   } catch {
     /* modo privado / storage cheio */
   }
+  if (typeof document !== "undefined") document.documentElement.dataset.consent = choice;
   window.dispatchEvent(
     new CustomEvent<ConsentChoice>(CONSENT_EVENT, { detail: choice }),
   );

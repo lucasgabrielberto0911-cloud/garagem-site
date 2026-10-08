@@ -19,7 +19,7 @@ function readSrc(rel: string) {
 }
 
 test("CTAs da ficha passam pelo helper ficha — não reutilizam home", () => {
-  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const bar = readSrc("components/site/VehicleMobileBar.tsx");
   const actions = readSrc("components/site/VehicleQuickActions.tsx");
 
@@ -41,7 +41,7 @@ test("CTAs da ficha passam pelo helper ficha — não reutilizam home", () => {
 });
 
 test("Ajuda na ficha é in-page, sem sticky no topo e sem FAB duplicado", () => {
-  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const css = readSrc("app/globals.css");
 
   assert.doesNotMatch(page, /sticky[\s\S]{0,200}ChatOpenButton/);
@@ -77,7 +77,7 @@ test("header e float na ficha herdam o veículo; o rodapé genérico fica home",
 test("ficha pública não oferece JPG e chama a checagem de vistoria da loja", () => {
   const gallery = readSrc("components/site/VehicleGallery.tsx");
   const lightbox = readSrc("components/site/PhotoLightbox.tsx");
-  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
   const filters = readSrc("components/site/StockFilters.tsx");
   const admin = readSrc("components/admin/VehiclePhotoManager.tsx");
@@ -125,7 +125,7 @@ test("primeira foto da galeria é a única com prioridade alta", () => {
 
 test("dobra da ficha não cresce quando a barra do navegador volta", () => {
   const css = readSrc("app/globals.css");
-  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const start = css.indexOf(".ficha-mobile-fold {");
   const fold = css.slice(start, start + 500);
   assert.match(fold, /100svh/);
@@ -275,7 +275,7 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
 });
 
 test("ficha pública não mostra confirmado neste anúncio nem equipamentos", () => {
-  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
   assert.doesNotMatch(page, /Confirmado neste anúncio/i);
   assert.doesNotMatch(dossier, /Confirmado neste anúncio/i);
@@ -348,7 +348,7 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
 });
 
 test("final da placa só aparece na dobra quando o anúncio tem", () => {
-  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const dossier = readSrc("components/site/VehicleMobileDossier.tsx");
   assert.match(page, /plateEnd=\{vehicle\.plateEnd\}/);
   assert.match(dossier, /Final da placa/);
@@ -378,7 +378,7 @@ test("final da placa só aparece na dobra quando o anúncio tem", () => {
 });
 
 test("selo da vistoria aparece perto do preço e some sem texto", () => {
-  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const summary = readSrc("components/site/VehicleMobileDossier.tsx");
   assert.match(page, /VehicleInspectionBadge/);
   assert.match(page, /inspection=\{vehicle\.inspection\}/);
@@ -452,7 +452,7 @@ test("selo da vistoria aparece perto do preço e some sem texto", () => {
 });
 
 test("ficha desktop não soma padding grande sob o header", () => {
-  const page = readSrc("app/(site)/estoque/[id]/page.tsx");
+  const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const css = readSrc("app/globals.css");
   const wrapper = page.slice(
     page.indexOf("data-ficha-page"),

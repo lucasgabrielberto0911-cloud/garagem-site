@@ -1,3 +1,4 @@
+import { publicVehicleDescription } from "./public-vehicle-description";
 import type { Metadata } from "next";
 import { publicPhotoSrc } from "@/lib/public-photo-url";
 import { formatBrandName, formatModelName } from "@/lib/format";
@@ -352,8 +353,9 @@ export function vehicleJsonLd(vehicle: {
   const display = formatVehicleDisplay(vehicle);
   const name = display.fullLabel;
   const path = display.path;
-  const priceOk = hasPublishablePrice(vehicle.price);
+  const priceOk = vehicle.status !== "vendido" && hasPublishablePrice(vehicle.price);
   const availability = vehicleAvailabilityUrl(vehicle.status);
+  const description = publicVehicleDescription(vehicle.description, vehicle.status === "vendido");
 
   const offers: Record<string, unknown> = {
     "@type": "Offer",
@@ -378,7 +380,7 @@ export function vehicleJsonLd(vehicle: {
     vehicleModelDate: String(vehicle.yearModel),
     productionDate: String(vehicle.year),
     ...(display.color ? { color: display.color } : {}),
-    ...(vehicle.description ? { description: vehicle.description } : {}),
+    ...(description ? { description } : {}),
     ...(vehicle.engine?.trim()
       ? {
           vehicleEngine: {

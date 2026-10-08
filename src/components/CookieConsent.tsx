@@ -15,10 +15,12 @@ export function CookieConsent() {
   );
 
   useEffect(() => {
-    setChoice(readStoredConsent());
+    const stored = readStoredConsent();
+    document.documentElement.dataset.consent = stored ?? "pending";
+    setChoice(stored);
   }, []);
 
-  if (choice === "pending" || choice) return null;
+  if (choice && choice !== "pending") return null;
 
   return (
     <div
@@ -65,7 +67,9 @@ export function CookieConsent() {
         </button>
       </div>
       <span className="sr-only">
-        {hasMarketingConsent() ? "Medição liberada" : "Medição bloqueada"}
+        {hasMarketingConsent(choice === "pending" ? null : choice)
+          ? "Medição liberada"
+          : "Medição bloqueada"}
       </span>
     </div>
   );

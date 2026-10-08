@@ -1942,3 +1942,9 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
     transition: none !important;
   }
 }
+
+/* Escolha já salva: o head marca antes da pintura; não há aviso tardio nem espaço vazio. */
+html[data-consent="accepted"] .site-consent,
+html[data-consent="essential"] .site-consent {
+  display: none;
+}
