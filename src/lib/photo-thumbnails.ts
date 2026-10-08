@@ -45,9 +45,9 @@ export async function storeCardThumbnail(
     if (galleryPreviewObjectPath(candidate)) {
       const contentType = extension === "webp" ? "image/webp" : "image/jpeg";
       const { error } = await supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(candidate, original, {
-        contentType, cacheControl: "31536000", upsert: true,
+        contentType, cacheControl: "31536000", upsert: false,
       });
-      if (!error) {
+      if (!error || /already exists|duplicate/i.test(error.message)) {
         galleryPath = candidate;
         galleryUrl = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(candidate).data.publicUrl;
       } else {

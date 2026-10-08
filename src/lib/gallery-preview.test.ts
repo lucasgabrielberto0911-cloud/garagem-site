@@ -70,6 +70,9 @@ test("Storage SDK prepara antes de publicar, tolera falhas e remove derivados; f
     const body = Buffer.concat(chunks);
     if (req.method === "DELETE") { removed.push(...JSON.parse(body.toString()).prefixes); res.setHeader("Content-Type", "application/json"); res.end("[]"); return; }
     if (rejectPreview && route.endsWith("-preview.webp")) { res.writeHead(500, { "Content-Type": "application/json" }); res.end('{"message":"preview indisponível"}'); return; }
+    if (objects.has(route) && req.headers["x-upsert"] !== "true") {
+      res.writeHead(409, { "Content-Type": "application/json" }); res.end('{"message":"The resource already exists"}'); return;
+    }
     objects.set(route, body);
     assert.equal(req.headers["cache-control"], "max-age=31536000");
     res.setHeader("Content-Type", "application/json"); res.end('{"Key":"veiculos/photo.webp"}');
@@ -80,6 +83,7 @@ test("Storage SDK prepara antes de publicar, tolera falhas e remove derivados; f
   process.env.NEXT_PUBLIC_SUPABASE_URL = `http://127.0.0.1:${address.port}`;
   process.env.SUPABASE_SERVICE_ROLE_KEY = "local-test-only";
   try {
+    assert.equal(await prepareGalleryUploadPath(id, { buffer: original, extension: "webp" }), path);
     assert.equal(await prepareGalleryUploadPath(id, { buffer: original, extension: "webp" }), path);
     const preview = objects.get(`/storage/v1/object/veiculos/${id}-g800-preview.webp`)!;
     assert.equal((await sharp(preview).metadata()).width, 800);

@@ -9,9 +9,9 @@ export async function prepareGalleryUploadPath(id: string, gallery: { buffer: Bu
     const preview = await encodeGalleryPreview(gallery.buffer);
     const { error } = await getSupabaseAdmin().storage.from(VEHICLE_PHOTOS_BUCKET)
       .upload(galleryPreviewObjectPath(path)!, preview.buffer, {
-        contentType: preview.contentType, cacheControl: "31536000", upsert: true,
+        contentType: preview.contentType, cacheControl: "31536000", upsert: false,
       });
-    if (!error) return path;
+    if (!error || /already exists|duplicate/i.test(error.message)) return path;
   } catch { /* O upload da foto continua funcionando sem a otimização. */ }
   return `${id}.${gallery.extension}`;
 }
