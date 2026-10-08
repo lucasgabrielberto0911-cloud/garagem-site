@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ChatTurn } from "@/lib/chat-gemini";
 import { logChatTurn } from "@/lib/chat-metrics";
-import {
-  CHAT_FALLBACK_REPLY,
-  CHAT_WHATSAPP_URL,
-} from "@/lib/chat-prompt";
+import { CHAT_FALLBACK_REPLY, CHAT_WHATSAPP_URL } from "@/lib/chat-prompt";
 import {
   applyChatSessionCookie,
   checkChatRateLimit,
@@ -42,9 +39,10 @@ function json(
   session: { id: string; fresh: boolean },
   payload: Record<string, unknown>,
   status = 200,
+  headers?: HeadersInit,
 ) {
   return applyChatSessionCookie(
-    NextResponse.json(payload, { status }),
+    NextResponse.json(payload, { status, headers }),
     session,
   );
 }
@@ -112,12 +110,13 @@ export async function handleChatPost(
       return json(
         session,
         {
-          reply: `Você mandou várias mensagens seguidas. Chama a gente no WhatsApp que um consultor te atende agora: ${CHAT_WHATSAPP_URL}`,
+          reply: `Você chegou ao limite de mensagens do assistente por hoje. Chama a gente no WhatsApp que um consultor te atende agora: ${CHAT_WHATSAPP_URL}`,
           leadCreated: false,
           vehicles: [],
           stockHref: null,
         },
         429,
+        { "Retry-After": String(Math.max(1, limited.retryAfterSec ?? 60)) },
       );
     }
 
@@ -153,10 +152,28 @@ export async function handleChatPost(
       stock = await deps.loadStock();
     } catch (error) {
       console.error("[chat] estoque:", error);
+      return json(
+        session,
+        {
+          reply: `Não consegui consultar o estoque agora. Você pode tentar novamente ou falar com um consultor no WhatsApp: ${CHAT_WHATSAPP_URL}`,
+          code: "stock_unavailable",
+          leadCreated: false,
+          vehicles: [],
+          stockHref: null,
+        },
+        503,
+        { "Retry-After": "30" },
+      );
     }
 
     const stream = wantsChatStream(request, body);
     const started = Date.now();
+    const lifetime = new AbortController();
+    const signal = AbortSignal.any([
+      request.signal,
+      lifetime.signal,
+      AbortSignal.timeout(40_000),
+    ]);
 
     if (!stream) {
       const result = await deps.runTurn({
@@ -164,6 +181,7 @@ export async function handleChatPost(
         historico,
         stock,
         vehicleId,
+        signal,
       });
       logChatTurn({
         ms: Date.now() - started,
@@ -182,60 +200,80 @@ export async function handleChatPost(
     }
 
     const encoder = new TextEncoder();
+    let closed = false;
     const readable = new ReadableStream<Uint8Array>({
-      async start(controller) {
+      cancel() {
+        closed = true;
+        lifetime.abort();
+      },
+      start(controller) {
         const send = (event: string, data: unknown) => {
-          controller.enqueue(encoder.encode(encodeSse(event, data)));
+          if (!closed && !request.signal.aborted) {
+            controller.enqueue(encoder.encode(encodeSse(event, data)));
+          }
         };
-        try {
-          let emitted = "";
-          const result = await deps.runTurn({
-            mensagem,
-            historico,
-            stock,
-            vehicleId,
-            onToken: (text) => {
-              emitted += text;
-              send("token", { text });
-            },
-          });
-          logChatTurn({
-            ms: Date.now() - started,
-            finishReason: result.meta?.finishReason,
-            truncated: result.meta?.truncated,
-            retried: result.meta?.retried,
-            offScope: result.meta?.offScope,
-            fipe: result.meta?.fipe,
-            policy: result.meta?.policy,
-            streamed: true,
-            leadCreated: result.leadCreated,
-            cards: result.vehicles.length,
-            model: result.meta?.model,
-          });
-          const catchUp = catchUpStreamText(emitted, result.reply);
-          if (catchUp) send("token", { text: catchUp });
-          send("done", publicResult(result));
-        } catch (error) {
-          console.error("[chat] stream:", error);
-          send("error", {
-            reply: CHAT_FALLBACK_REPLY,
-            leadCreated: false,
-            vehicles: [],
-            stockHref: null,
-          });
-        } finally {
-          controller.close();
-        }
+        void (async () => {
+          try {
+            let emitted = "";
+            const result = await deps.runTurn({
+              mensagem,
+              historico,
+              stock,
+              vehicleId,
+              signal,
+              onToken: (text) => {
+                emitted += text;
+                send("token", { text });
+              },
+            });
+            logChatTurn({
+              ms: Date.now() - started,
+              finishReason: result.meta?.finishReason,
+              truncated: result.meta?.truncated,
+              retried: result.meta?.retried,
+              offScope: result.meta?.offScope,
+              fipe: result.meta?.fipe,
+              policy: result.meta?.policy,
+              streamed: true,
+              leadCreated: result.leadCreated,
+              cards: result.vehicles.length,
+              model: result.meta?.model,
+            });
+            const catchUp = catchUpStreamText(emitted, result.reply);
+            if (catchUp) send("token", { text: catchUp });
+            send("done", publicResult(result));
+          } catch (error) {
+            if (!closed && !request.signal.aborted)
+              console.error("[chat] stream:", error);
+            send("error", {
+              reply: CHAT_FALLBACK_REPLY,
+              leadCreated: false,
+              vehicles: [],
+              stockHref: null,
+            });
+          } finally {
+            if (!closed) {
+              closed = true;
+              controller.close();
+            }
+          }
+        })();
       },
     });
     return sseResponse(session, readable);
   } catch (error) {
     console.error("[chat]", error);
-    return json(session, {
-      reply: CHAT_FALLBACK_REPLY,
-      leadCreated: false,
-      vehicles: [],
-      stockHref: null,
-    });
+    return json(
+      session,
+      {
+        reply: CHAT_FALLBACK_REPLY,
+        code: "chat_unavailable",
+        leadCreated: false,
+        vehicles: [],
+        stockHref: null,
+      },
+      503,
+      { "Retry-After": "30" },
+    );
   }
 }

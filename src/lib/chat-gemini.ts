@@ -37,14 +37,18 @@ export const CRIAR_LEAD_DECLARATION = {
   parameters: {
     type: "object",
     properties: {
-      nome: { type: "string", description: "Nome completo dito pelo visitante." },
+      nome: {
+        type: "string",
+        description: "Nome completo dito pelo visitante.",
+      },
       telefone: {
         type: "string",
         description: "Telefone/WhatsApp com DDD dito pelo visitante.",
       },
       veiculo_interesse: {
         type: "string",
-        description: "Veículo da lista de estoque que a pessoa quer, se houver.",
+        description:
+          "Veículo da lista de estoque que a pessoa quer, se houver.",
       },
       mensagem: {
         type: "string",
@@ -153,10 +157,14 @@ export function historyToGeminiContents(history: ChatTurn[], mensagem: string) {
   return contents;
 }
 
-export function extractGeminiText(data: unknown, opts: { trim?: boolean } = {}) {
+export function extractGeminiText(
+  data: unknown,
+  opts: { trim?: boolean } = {},
+) {
   if (!data || typeof data !== "object") return "";
-  const candidates = (data as { candidates?: Array<{ content?: GeminiContent }> })
-    .candidates;
+  const candidates = (
+    data as { candidates?: Array<{ content?: GeminiContent }> }
+  ).candidates;
   const parts = candidates?.[0]?.content?.parts ?? [];
   const text = parts
     .map((part) => (typeof part.text === "string" ? part.text : ""))
@@ -181,10 +189,13 @@ export type GeminiGenerateResult = {
   model?: string;
 };
 
-export function extractGeminiFunctionCall(data: unknown): GeminiFunctionCall | null {
+export function extractGeminiFunctionCall(
+  data: unknown,
+): GeminiFunctionCall | null {
   if (!data || typeof data !== "object") return null;
-  const candidates = (data as { candidates?: Array<{ content?: GeminiContent }> })
-    .candidates;
+  const candidates = (
+    data as { candidates?: Array<{ content?: GeminiContent }> }
+  ).candidates;
   const parts = candidates?.[0]?.content?.parts ?? [];
   for (const part of parts) {
     const name = part.functionCall?.name?.trim();
@@ -201,7 +212,12 @@ function endpoint(model: string, stream = false) {
     : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 }
 
-async function postGemini(body: unknown, key: string, model: string) {
+async function postGemini(
+  body: unknown,
+  key: string,
+  model: string,
+  signal?: AbortSignal,
+) {
   const response = await fetch(endpoint(model), {
     method: "POST",
     headers: {
@@ -209,9 +225,14 @@ async function postGemini(body: unknown, key: string, model: string) {
       "x-goog-api-key": key,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(20_000),
+    signal: signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(20_000)])
+      : AbortSignal.timeout(20_000),
   });
-  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const data = (await response.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >;
   if (!response.ok) {
     const message =
       typeof data.error === "object" && data.error && "message" in data.error
@@ -231,6 +252,7 @@ function buildGenerateBody(
     systemPrompt: string;
     history: ChatTurn[];
     mensagem: string;
+    signal?: AbortSignal;
   },
   withTools: boolean,
   model: string,
@@ -255,6 +277,7 @@ async function generateWithFallback(
     systemPrompt: string;
     history: ChatTurn[];
     mensagem: string;
+    signal?: AbortSignal;
   },
   key: string,
 ) {
@@ -263,16 +286,19 @@ async function generateWithFallback(
     ? [true, false]
     : [false];
   for (const model of configuredModels()) {
+    input.signal?.throwIfAborted();
     for (const withTools of toolFlags) {
       try {
         const data = await postGemini(
           buildGenerateBody(input, withTools, model),
           key,
           model,
+          input.signal,
         );
         console.info("[chat] gemini:model", model);
         return { data, model };
       } catch (error) {
+        input.signal?.throwIfAborted();
         lastError = error;
         const status = (error as { status?: number }).status;
         if (status === 401 || status === 403) throw error;
@@ -288,6 +314,7 @@ async function continueTruncatedReply(
     systemPrompt: string;
     history: ChatTurn[];
     mensagem: string;
+    signal?: AbortSignal;
   },
   partial: string,
   key: string,
@@ -315,6 +342,7 @@ async function continueTruncatedReply(
     },
     key,
     model,
+    input.signal,
   );
   return extractGeminiText(data);
 }
@@ -337,7 +365,9 @@ export async function generateChatReply(input: {
   systemPrompt: string;
   history: ChatTurn[];
   mensagem: string;
+  signal?: AbortSignal;
 }): Promise<GeminiGenerateResult> {
+  input.signal?.throwIfAborted();
   const key = geminiApiKey();
   if (!key) {
     console.error("[chat] gemini: missing_key");
@@ -378,12 +408,19 @@ export async function generateChatReply(input: {
   } catch (error) {
     const status = (error as { status?: number }).status;
     const message = error instanceof Error ? error.message : "gemini failed";
-    console.error("[chat] gemini:", status ?? "err", redactGeminiError(message));
+    console.error(
+      "[chat] gemini:",
+      status ?? "err",
+      redactGeminiError(message),
+    );
     throw error;
   }
 }
 
-function parseSseJsonFrames(buffer: string): { frames: unknown[]; rest: string } {
+function parseSseJsonFrames(buffer: string): {
+  frames: unknown[];
+  rest: string;
+} {
   return parseJsonSseFrames(buffer);
 }
 
@@ -391,6 +428,7 @@ async function* streamGemini(
   body: unknown,
   key: string,
   model: string,
+  signal?: AbortSignal,
 ): AsyncGenerator<unknown> {
   const response = await fetch(endpoint(model, true), {
     method: "POST",
@@ -399,7 +437,9 @@ async function* streamGemini(
       "x-goog-api-key": key,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(25_000),
+    signal: signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(25_000)])
+      : AbortSignal.timeout(25_000),
   });
   if (!response.ok) {
     const data = (await response.json().catch(() => ({}))) as Record<
@@ -441,9 +481,11 @@ export async function generateChatReplyStream(
     systemPrompt: string;
     history: ChatTurn[];
     mensagem: string;
+    signal?: AbortSignal;
   },
   opts: { onToken?: (delta: string) => void } = {},
 ): Promise<GeminiGenerateResult> {
+  input.signal?.throwIfAborted();
   const key = geminiApiKey();
   if (!key) {
     console.error("[chat] gemini: missing_key");
@@ -455,6 +497,7 @@ export async function generateChatReplyStream(
     ? [true, false]
     : [false];
   for (const model of configuredModels()) {
+    input.signal?.throwIfAborted();
     for (const withTools of toolFlags) {
       try {
         let text = "";
@@ -465,6 +508,7 @@ export async function generateChatReplyStream(
           buildGenerateBody(input, withTools, model),
           key,
           model,
+          input.signal,
         )) {
           lastRaw = frame;
           const delta = extractGeminiText(frame, { trim: false });
@@ -546,6 +590,7 @@ export async function generateChatReplyStream(
           model,
         };
       } catch (error) {
+        input.signal?.throwIfAborted();
         lastError = error;
         const status = (error as { status?: number }).status;
         if (status === 401 || status === 403) throw error;
@@ -569,18 +614,23 @@ export async function confirmAfterLead(input: {
   systemPrompt: string;
   history: ChatTurn[];
   mensagem: string;
+  signal?: AbortSignal;
   modelContent: unknown;
   functionName: string;
   functionResult: Record<string, unknown>;
 }) {
+  input.signal?.throwIfAborted();
   const key = geminiApiKey();
   if (!key) return CHAT_FALLBACK_REPLY;
 
   const contents = historyToGeminiContents(input.history, input.mensagem);
   const modelParts =
     input.modelContent && typeof input.modelContent === "object"
-      ? (input.modelContent as { candidates?: Array<{ content?: GeminiContent }> })
-          .candidates?.[0]?.content
+      ? (
+          input.modelContent as {
+            candidates?: Array<{ content?: GeminiContent }>;
+          }
+        ).candidates?.[0]?.content
       : null;
   if (modelParts) contents.push(modelParts);
   contents.push({
@@ -608,6 +658,7 @@ export async function confirmAfterLead(input: {
     },
     key,
     configuredModels()[0] ?? CHAT_GEMINI_MODEL,
+    input.signal,
   );
   return extractGeminiText(data);
 }

@@ -416,7 +416,7 @@ test("comparação fala dos cards na tela, não de um Onix que o modelo inventou
     engine: "1.6",
   };
   const result = await runChatTurn({
-    mensagem: "Quais carros até 70 mil?",
+    mensagem: "Preciso de um carro até 70 mil, o que você sugere?",
     historico: [],
     stock: [palio, prismaJoy, hb20Auto],
     generate: async () => ({

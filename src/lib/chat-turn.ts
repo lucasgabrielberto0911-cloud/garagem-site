@@ -1,5 +1,6 @@
 import {
   CHAT_CARD_LIMIT,
+  isBareBudgetQuery,
   chatStockExploreHref,
   selectChatVehicles,
   toChatVehicleCard,
@@ -110,7 +111,9 @@ export async function runChatTurn(input: {
   confirm?: typeof confirmAfterLead;
   createLead?: typeof createChatLead;
   onToken?: (delta: string) => void;
+  signal?: AbortSignal;
 }): Promise<ChatTurnResult> {
+  input.signal?.throwIfAborted();
   const activeVehicle = input.vehicleId
     ? input.stock.find((v) => v.id === input.vehicleId)
     : undefined;
@@ -264,7 +267,9 @@ export async function runChatTurn(input: {
   }
 
   if (
-    input.historico.some((turn) => turn.role === "user" && turn.content.trim()) &&
+    input.historico.some(
+      (turn) => turn.role === "user" && turn.content.trim(),
+    ) &&
     looksLikeShortlistFollowUp(visitorMessage)
   ) {
     const follow = formatShortlistFollowUp(scopedMessage, input.stock);
@@ -416,6 +421,27 @@ export async function runChatTurn(input: {
     );
   };
 
+  // These questions need only current inventory, not an extra model request.
+  const greeting =
+    /^(oi+|ol[aá]|bom dia|boa tarde|boa noite|opa|tudo bem)[!.?\s]*$/i.test(
+      visitorMessage.trim(),
+    );
+  if (
+    (greeting && input.historico.length === 0) ||
+    (chatRankMode(scopedMessage) === "price" &&
+      isBareBudgetQuery(scopedMessage))
+  ) {
+    const local = greeting
+      ? CHAT_PING_REPLY
+      : localGarageReply(scopedMessage, input.stock, activeVehicle);
+    if (local) {
+      emit(local);
+      return finish(local, false, {
+        policy: greeting ? "greeting" : "stock-local",
+      });
+    }
+  }
+
   let first: GeminiGenerateResult;
   try {
     if (input.onToken && !input.generate) {
@@ -424,6 +450,7 @@ export async function runChatTurn(input: {
           systemPrompt: systemPromptFor(),
           history: input.historico,
           mensagem: visitorMessage,
+          signal: input.signal,
         },
         { onToken: input.onToken },
       );
@@ -432,17 +459,22 @@ export async function runChatTurn(input: {
         systemPrompt: systemPromptFor(),
         history: input.historico,
         mensagem: visitorMessage,
+        signal: input.signal,
       });
       if (first.text && !first.functionCall) emit(first.text);
     }
   } catch {
+    input.signal?.throwIfAborted();
     const fallback = fromStock();
     emit(fallback);
     return finish(fallback);
   }
 
   const generated = first.text?.trim() ?? "";
-  if (!first.functionCall && (!generated || generated === CHAT_FALLBACK_REPLY)) {
+  if (
+    !first.functionCall &&
+    (!generated || generated === CHAT_FALLBACK_REPLY)
+  ) {
     const fallback = fromStock();
     emit(fallback);
     return finish(fallback, false, {
@@ -452,7 +484,11 @@ export async function runChatTurn(input: {
       model: first.model,
     });
   }
-  if (!first.functionCall && isChatPing(scopedMessage) && looksLikeOffScopeRedirect(generated)) {
+  if (
+    !first.functionCall &&
+    isChatPing(scopedMessage) &&
+    looksLikeOffScopeRedirect(generated)
+  ) {
     emit(CHAT_PING_REPLY);
     return finish(CHAT_PING_REPLY);
   }
@@ -480,11 +516,7 @@ export async function runChatTurn(input: {
     asksAboutConsumption(scopedMessage) &&
     !hasConsumptionFigures(generated)
   ) {
-    const local = localGarageReply(
-      scopedMessage,
-      input.stock,
-      activeVehicle,
-    );
+    const local = localGarageReply(scopedMessage, input.stock, activeVehicle);
     const broken =
       consumptionReplyLooksBroken(generated) ||
       looksTruncated(generated, first.finishReason);
@@ -548,6 +580,7 @@ export async function runChatTurn(input: {
     const args = parseCriarLeadArgs(first.functionCall.args);
     if (leadArgsAreComplete(args) && args) {
       try {
+        input.signal?.throwIfAborted();
         const created = await createLead(args, input.stock);
         let reply =
           "Pronto — registrei seu contato. A equipe continua com você no WhatsApp.";
@@ -556,6 +589,7 @@ export async function runChatTurn(input: {
             systemPrompt: systemPromptFor(),
             history: input.historico,
             mensagem: visitorMessage,
+            signal: input.signal,
             modelContent: first.raw,
             functionName: "criar_lead",
             functionResult: { ok: true, leadId: created.id },
