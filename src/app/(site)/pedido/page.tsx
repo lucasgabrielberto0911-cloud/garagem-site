@@ -51,7 +51,9 @@ export default async function PedidoPage({
         </Link>
         <div className="mt-6">
           <MissingModelForm
+            key={JSON.stringify([copy.initialModel, copy.initialYearMin, copy.initialYearMax, copy.initialPriceMin, copy.initialPriceMax, copy.initialKmMax])}
             idPrefix="pedido"
+            rememberDraft
             sourcePage="estoque"
             titleAs="h1"
             contextLabel={copy.contextLabel}
