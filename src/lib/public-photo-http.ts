@@ -1,4 +1,4 @@
-import { publicPhotoUpstream } from "./public-photo-url";
+import { publicPhotoPreviewFallback, publicPhotoUpstream } from "./public-photo-url";
 
 const noCache = { "Cache-Control": "no-store" };
 
@@ -7,13 +7,19 @@ export async function servePublicPhoto(request: Request, parts: string[], fetche
   const upstream = publicPhotoUpstream(parts);
   if (!upstream || new URL(request.url).search) return new Response(null, { status: 404, headers: noCache });
   try {
-    const response = await fetcher(upstream, {
+    const options: RequestInit = {
       method: request.method === "HEAD" ? "HEAD" : "GET",
       redirect: "error",
       cache: "no-store",
       signal: AbortSignal.timeout(30_000),
       headers: { Accept: "image/webp,image/jpeg,image/png,image/gif" },
-    });
+    };
+    let response = await fetcher(upstream, options);
+    const fallback = publicPhotoPreviewFallback(parts);
+    if ([400, 404].includes(response.status) && fallback) {
+      await response.body?.cancel();
+      response = await fetcher(fallback, options);
+    }
     const type = response.headers.get("content-type")?.split(";")[0].trim();
     if (response.status !== 200 || !type || !["image/webp", "image/jpeg", "image/png", "image/gif"].includes(type)) {
       await response.body?.cancel();

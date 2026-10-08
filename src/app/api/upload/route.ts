@@ -1,3 +1,4 @@
+import { prepareGalleryUploadPath } from "@/lib/gallery-preview-store";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import {
@@ -216,7 +217,7 @@ export async function POST(request: Request) {
       const id =
         requestedMasterId ??
         (isPhotoMasterId(uploadId) ? uploadId : createPhotoMasterId());
-      const galleryPath = `${id}.${gallery.extension}`;
+      const galleryPath = await prepareGalleryUploadPath(id, gallery);
       const cardPath = cardObjectPath(galleryPath);
 
       try {

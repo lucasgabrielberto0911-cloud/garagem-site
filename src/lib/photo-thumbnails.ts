@@ -1,3 +1,5 @@
+import { prepareGalleryUploadPath } from "./gallery-preview-store";
+import { galleryPreviewObjectPath } from "./gallery-preview-path";
 import { cardObjectPath, encodeCardImage } from "@/lib/image-variants";
 import {
   VEHICLE_PHOTOS_BUCKET,
@@ -7,7 +9,7 @@ import {
 } from "@/lib/supabase";
 
 export type StoreCardThumbnailResult =
-  | { ok: true; thumbnailUrl: string }
+  | { ok: true; thumbnailUrl: string | null; url?: string }
   | { ok: false; error: string };
 
 /**
@@ -15,6 +17,7 @@ export type StoreCardThumbnailResult =
  */
 export async function storeCardThumbnail(
   publicUrl: string,
+  options?: { prepareGallery: boolean },
 ): Promise<StoreCardThumbnailResult> {
   if (!hasSupabaseServiceRole()) {
     return { ok: false, error: "Falta SUPABASE_SERVICE_ROLE_KEY." };
@@ -32,8 +35,27 @@ export async function storeCardThumbnail(
 
   const original = Buffer.from(await imageResponse.arrayBuffer());
   const card = await encodeCardImage(original);
-  const cardPath = cardObjectPath(path);
   const supabase = getSupabaseAdmin();
+  let galleryPath = path;
+  let galleryUrl = publicUrl;
+  // Só o fallback assinado pede a cópia: backfill/admin mantêm URLs cadastradas.
+  if (options?.prepareGallery && !galleryPreviewObjectPath(path) && /^[0-9a-z-]{8,80}\.(webp|jpe?g)$/i.test(path)) {
+    const extension = path.split(".").at(-1)!;
+    const candidate = await prepareGalleryUploadPath(path.slice(0, -(extension.length + 1)), { buffer: original, extension });
+    if (galleryPreviewObjectPath(candidate)) {
+      const contentType = extension === "webp" ? "image/webp" : "image/jpeg";
+      const { error } = await supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(candidate, original, {
+        contentType, cacheControl: "31536000", upsert: true,
+      });
+      if (!error) {
+        galleryPath = candidate;
+        galleryUrl = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(candidate).data.publicUrl;
+      } else {
+        await supabase.storage.from(VEHICLE_PHOTOS_BUCKET).remove([galleryPreviewObjectPath(candidate)!]);
+      }
+    }
+  }
+  const cardPath = cardObjectPath(galleryPath);
 
   const { error } = await supabase.storage
     .from(VEHICLE_PHOTOS_BUCKET)
@@ -44,6 +66,8 @@ export async function storeCardThumbnail(
     });
 
   if (error) {
+    // A galeria pronta ainda é válida quando somente a capa falha.
+    if (galleryUrl !== publicUrl) return { ok: true, url: galleryUrl, thumbnailUrl: null };
     return { ok: false, error: error.message || "Falha ao salvar a miniatura." };
   }
 
@@ -51,5 +75,5 @@ export async function storeCardThumbnail(
     .from(VEHICLE_PHOTOS_BUCKET)
     .getPublicUrl(cardPath);
 
-  return { ok: true, thumbnailUrl: data.publicUrl };
+  return { ok: true, thumbnailUrl: data.publicUrl, url: galleryUrl };
 }

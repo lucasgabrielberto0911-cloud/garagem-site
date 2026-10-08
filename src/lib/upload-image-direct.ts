@@ -97,19 +97,19 @@ export async function uploadImageDirect(
   }
 }
 
-async function deriveThumbnail(url: string): Promise<string | null> {
+async function deriveThumbnail(url: string): Promise<UploadedPhoto> {
   try {
     const response = await fetch("/api/upload/variants", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url, prepareGallery: true }),
     });
-    if (!response.ok) return null;
-    const data = (await response.json()) as { thumbnailUrl?: string };
-    return data.thumbnailUrl ?? null;
+    if (!response.ok) return { url, thumbnailUrl: null };
+    const data = (await response.json()) as { url?: string; thumbnailUrl?: string | null };
+    return { url: data.url ?? url, thumbnailUrl: data.thumbnailUrl ?? null };
   } catch {
-    return null;
+    return { url, thumbnailUrl: null };
   }
 }
 
@@ -218,8 +218,7 @@ async function uploadViaSignedUrl(
     throw new Error("Falha no Storage. Tente de novo.");
   }
 
-  const thumbnailUrl = await deriveThumbnail(signData.publicUrl);
-  return { url: signData.publicUrl, thumbnailUrl };
+  return deriveThumbnail(signData.publicUrl);
 }
 
 async function putWithCacheControl({

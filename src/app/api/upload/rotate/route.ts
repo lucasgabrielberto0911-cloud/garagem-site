@@ -1,3 +1,5 @@
+import { galleryPreviewObjectPath } from "@/lib/gallery-preview-path";
+import { prepareGalleryUploadPath } from "@/lib/gallery-preview-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createPhotoMasterId, galleryStemFromStoragePath, masterObjectPathFromGalleryPath, previousObjectPathFromGalleryPath } from "@/lib/photo-master";
@@ -68,7 +70,7 @@ export async function POST(request: Request) {
     const [gallery, card, master, backup] = await Promise.all([
       encodeGalleryImage(processed), encodeCardImage(processed), restore ? toDownloadJpeg(processed) : encodeMasterJpeg(processed), toDownloadJpeg(current),
     ]);
-    id = createPhotoMasterId(); galleryPath = `${id}.${gallery.extension}`; cardPath = cardObjectPath(galleryPath);
+    id = createPhotoMasterId(); galleryPath = await prepareGalleryUploadPath(id, gallery); cardPath = cardObjectPath(galleryPath);
     // Só retorna a nova foto se as duas versões privadas estiverem guardadas.
     const originals = await Promise.all([uploadPrivateMasterBytes(id, master), uploadPrivateMasterBytes(`${id}-previous`, backup)]);
     if (originals.some(ok => !ok)) throw new Error("backup");
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
     if (id) {
       const storage = getSupabaseAdmin().storage;
       await Promise.allSettled([
-        storage.from(VEHICLE_PHOTOS_BUCKET).remove([galleryPath, cardPath].filter((path): path is string => Boolean(path))),
+        storage.from(VEHICLE_PHOTOS_BUCKET).remove([galleryPath, cardPath, galleryPath ? galleryPreviewObjectPath(galleryPath) : null].filter((path): path is string => Boolean(path))),
         storage.from(VEHICLE_DOCS_BUCKET).remove([`${id}.webp`].flatMap(path => [masterObjectPathFromGalleryPath(path), previousObjectPathFromGalleryPath(path)]).filter((path): path is string => Boolean(path))),
       ]);
     }
