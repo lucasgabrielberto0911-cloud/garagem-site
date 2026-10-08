@@ -15,10 +15,12 @@ export function CookieConsent() {
   );
 
   useEffect(() => {
-    setChoice(readStoredConsent());
+    const stored = readStoredConsent();
+    document.documentElement.dataset.consent = stored ?? "pending";
+    setChoice(stored);
   }, []);
 
-  if (choice === "pending" || choice) return null;
+  if (choice && choice !== "pending") return null;
 
   return (
     <div
