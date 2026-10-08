@@ -100,7 +100,10 @@ test("até 70 mil lista o HB20 e deixa o Compass de fora", () => {
   assert.equal(parsePriceLimit("orcamento 80 mil"), 80_000);
   assert.equal(parsePriceLimit("Aceita cartão de crédito até 18x?"), null);
   assert.equal(parsePriceLimit("financia em até 60 vezes"), null);
-  const listed = listStockByBudget("Quais carros temos ate 70 mil?", [hb20, compass]);
+  const listed = listStockByBudget("Quais carros temos ate 70 mil?", [
+    hb20,
+    compass,
+  ]);
   assert.match(listed ?? "", /HB20/);
   assert.match(listed ?? "", /64\.900/);
   assert.doesNotMatch(listed ?? "", /Compass/);
@@ -297,7 +300,7 @@ test("lista vazia do modelo é preenchida com o estoque até o valor", async () 
   assert.equal(result.vehicles[0]?.id, hb20.id);
 });
 
-test("resposta seca do modelo ganha comparação e consumo do estoque", async () => {
+test("comparação com consumo usa anúncios atuais e pesquisa com fontes", async () => {
   const palio: ChatVehicleRecord = {
     id: "c-palio-2016",
     brand: "Fiat",
@@ -368,9 +371,11 @@ Hyundai HB20 Comfort 1.0 2015 · 127.000 km · R$ 55.900`,
   });
   assert.match(result.reply, /70\.000/);
   assert.match(result.reply, /mais em conta/);
-  assert.match(result.reply, /Prisma e HB20/);
+  assert.match(result.reply, /Prisma/);
+  assert.match(result.reply, /HB20/);
   assert.match(result.reply, /Prisma é o mais novo/);
-  assert.match(result.reply, /consumo|catálogo|11–14/);
+  assert.doesNotMatch(result.reply, /11–14|km\/l/);
+  assert.equal(result.research?.unavailable, true);
   assert.match(result.reply, /automático/);
   assert.match(result.reply, /\n\n/);
   assert.equal(result.vehicles.length, 3);
@@ -614,7 +619,8 @@ test("Gemini fora do ar ainda responde o estoque e o financiamento", async () =>
   });
   assert.match(stock.reply, /64\.900/);
   assert.match(stock.reply, /68\.450/);
-  assert.match(stock.reply, /consumo|catálogo|1\.0 flex/);
+  assert.match(stock.reply, /dados técnicos do modelo/);
+  assert.equal(stock.research?.unavailable, true);
   assert.equal(stock.leadCreated, false);
 
   const finance = await runChatTurn({
@@ -677,10 +683,13 @@ test("pergunta de troca de seminovo não injeta catálogo duplicado", async () =
     }),
   });
   assert.doesNotMatch(result.reply, /Achei (?:ele )?no estoque/);
-  assert.match(result.reply, /Com certeza, a gente aceita veículo na troca sim/);
+  assert.match(
+    result.reply,
+    /Com certeza, a gente aceita veículo na troca sim/,
+  );
 });
 
-test("consumo do Fox responde km/l sem colar o disclaimer no fica", async () => {
+test("consumo do Fox sem fonte confirmada não publica estimativa em km/l", async () => {
   const fox: ChatVehicleRecord = {
     ...hb20,
     id: "c-fox-consumo",
@@ -709,14 +718,14 @@ test("consumo do Fox responde km/l sem colar o disclaimer no fica", async () => 
     },
   });
   assert.equal(called, false);
-  assert.match(result.reply, /9–12 km\/l/);
-  assert.match(result.reply, /álcool|alcool/i);
+  assert.doesNotMatch(result.reply, /\d+.*km\/l/);
+  assert.equal(result.research?.unavailable, true);
   assert.doesNotMatch(result.reply, /fica\s+Nenhum desses/);
   assert.equal(result.vehicles.length, 1);
   assert.equal(result.vehicles[0]?.id, fox.id);
 });
 
-test("consumo do Fox sem vehicleId no stream não chama Gemini e completa km/l", async () => {
+test("consumo no stream preserva a unidade e exige fonte técnica", async () => {
   const fox: ChatVehicleRecord = {
     ...hb20,
     id: "c-fox-home-stream",
@@ -743,8 +752,8 @@ test("consumo do Fox sem vehicleId no stream não chama Gemini e completa km/l",
     },
   });
   assert.equal(streamed, false);
-  assert.match(result.reply, /9–12 km\/l/);
-  assert.match(tokens.join(""), /9–12 km\/l/);
+  assert.equal(result.research?.unavailable, true);
+  assert.doesNotMatch(tokens.join(""), /\d+.*km\/l/);
   assert.doesNotMatch(result.reply, /fica\s+Nenhum desses/);
   assert.equal(result.vehicles[0]?.id, fox.id);
 });
@@ -779,7 +788,7 @@ Nenhum desses usados foi medido na loja.`,
     }),
   });
   assert.match(result.reply, /Premium|1\.6/);
-  assert.match(result.reply, /9–12 km\/l/);
+  assert.equal(result.research?.unavailable, true);
   assert.doesNotMatch(result.reply, /Evolution 1\.0/);
   assert.equal(result.vehicles.length, 1);
   assert.equal(result.vehicles[0]?.id, premium.id);
@@ -810,11 +819,11 @@ test("consumo dele com vehicleId do card único não chama o modelo", async () =
     },
   });
   assert.equal(called, false);
-  assert.match(result.reply, /9–12 km\/l/);
+  assert.equal(result.research?.unavailable, true);
   assert.equal(result.vehicles[0]?.id, fox.id);
 });
 
-test("fragmento do Gemini sem km/l vira faixa de catálogo do Fox citado", async () => {
+test("consumo sem modelo identificado pede versão e ano, sem faixa estimada", async () => {
   const fox: ChatVehicleRecord = {
     ...hb20,
     id: "c-fox-gemini-stub",
@@ -833,9 +842,10 @@ test("fragmento do Gemini sem km/l vira faixa de catálogo do Fox citado", async
       functionCall: null,
     }),
   });
-  assert.match(result.reply, /9–12 km\/l/);
+  assert.doesNotMatch(result.reply, /9–12 km\/l/);
   assert.doesNotMatch(result.reply, /fica\s+Nenhum desses/);
-  assert.equal(result.vehicles[0]?.id, fox.id);
+  assert.match(result.reply, /Qual modelo, versão e ano/);
+  assert.equal(result.vehicles.length, 0);
 });
 
 test("Fox tem ar-condicionado responde a ficha da unidade", async () => {
@@ -924,10 +934,10 @@ test("HB20 ou Onix compara duas unidades reais", async () => {
   assert.equal(called, false);
   assert.equal(result.meta?.policy, "compare");
   assert.equal(result.vehicles.length, 2);
-  assert.deepEqual(
-    result.vehicles.map((vehicle) => vehicle.model).sort(),
-    ["HB20", "Onix"],
-  );
+  assert.deepEqual(result.vehicles.map((vehicle) => vehicle.model).sort(), [
+    "HB20",
+    "Onix",
+  ]);
   assert.match(result.reply, /mais em conta|estoque/i);
 });
 

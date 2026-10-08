@@ -45,6 +45,7 @@ import {
 } from "@/lib/chat-mobile-viewport";
 import { CHAT_FALLBACK_REPLY } from "@/lib/chat-prompt";
 import { requestChatReply, ChatRequestError } from "@/lib/chat-client-request";
+import { readChatResearch } from "@/lib/chat-research-data";
 import {
   chatHeaderWhatsAppMessage,
   chatSessionHints,
@@ -383,6 +384,79 @@ function ChatBubbleBody({ text }: { text: string }) {
   );
 }
 
+function ChatResearchDetails({
+  research,
+}: {
+  research: import("@/lib/chat-research-data").ChatResearch;
+}) {
+  return (
+    <section
+      aria-label="Pesquisa técnica e fontes"
+      className="space-y-3 rounded-xl border border-white/15 bg-white/[0.025] p-3.5 text-[13px] leading-relaxed text-cream/90"
+    >
+      <p className="font-semibold text-cream">Pesquisa técnica do modelo</p>
+      <p className="text-[12px] text-cream/60">
+        Dados externos da versão e do ano. Não descrevem o estado nem os
+        equipamentos desta unidade.
+      </p>
+      {research.comparison ? (
+        <div className="rounded-lg bg-white/[0.04] p-3">
+          <p>{research.comparison.text}</p>
+          {research.comparison.sources.map((source) => (
+            <a
+              key={source.href}
+              href={source.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 block min-h-11 text-[12px] underline [overflow-wrap:anywhere]"
+            >
+              Fonte: {source.title} ↗
+            </a>
+          ))}
+        </div>
+      ) : null}
+      {research.unavailable ? (
+        <p>
+          Não consegui confirmar uma fonte técnica exata agora. Os dados do
+          anúncio continuam acima; você pode refinar o modelo ou confirmar com o
+          consultor.
+        </p>
+      ) : (
+        research.paragraphs.map((paragraph, index) => (
+          <div key={index} className="space-y-2">
+            <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+              {paragraph.text}
+            </p>
+            <ul className="space-y-1">
+              {paragraph.sources.map((source) => (
+                <li key={source.href}>
+                  <a
+                    href={source.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block min-h-11 rounded-lg border border-white/10 px-3 py-2 text-[12px] text-cream/75 underline underline-offset-2 [overflow-wrap:anywhere]"
+                  >
+                    Fonte: {source.title} ↗
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      )}
+      {research.suggestionsHtml ? (
+        <iframe
+          title="Sugestões da pesquisa Google"
+          sandbox="allow-popups allow-popups-to-escape-sandbox"
+          referrerPolicy="no-referrer"
+          srcDoc={research.suggestionsHtml}
+          className="h-28 w-full rounded-lg border-0 bg-white"
+        />
+      ) : null}
+    </section>
+  );
+}
+
 function ChatText({
   text,
   vehicles = [],
@@ -395,6 +469,7 @@ function ChatText({
   onStockExplore,
   vehicleContext,
   handoff,
+  research,
 }: {
   text: string;
   vehicles?: ChatVehicleCard[];
@@ -407,6 +482,7 @@ function ChatText({
   onStockExplore?: () => void;
   vehicleContext?: ChatVehicleContext | null;
   handoff?: ChatHandoffContext;
+  research?: import("@/lib/chat-research-data").ChatResearch;
 }) {
   const source =
     vehicles.length > 0 ? polishChatReplyWithCards(text, vehicles) : text;
@@ -486,6 +562,7 @@ function ChatText({
           <IconArrowRight className="h-4 w-4 shrink-0 text-cream/60 transition group-hover:translate-x-0.5 group-hover:text-cream" />
         </Link>
       ) : null}
+      {research ? <ChatResearchDetails research={research} /> : null}
       {cta ? (
         <ChatWhatsAppButton
           href={cta.href}
@@ -899,6 +976,7 @@ export function SiteChat() {
       vehicles?: unknown;
       stockHref?: unknown;
       leadCreated?: unknown;
+      research?: unknown;
     },
     intent: string,
     replaceLastAssistant: boolean,
@@ -937,6 +1015,7 @@ export function SiteChat() {
       vehicles,
       stockHref,
       leadCreated,
+      research: readChatResearch(data.research),
     };
     setMessages((current) => {
       if (
@@ -1267,6 +1346,7 @@ export function SiteChat() {
                       vehicles={message.vehicles}
                       stockHref={message.stockHref}
                       leadCreated={message.leadCreated}
+                      research={message.research}
                       showWhatsApp={latest && !pending}
                       vehicleContext={vehicleContext}
                       followups={

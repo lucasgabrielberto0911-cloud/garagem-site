@@ -3,6 +3,7 @@ export type ChatStreamDone = {
   leadCreated: boolean;
   vehicles: unknown[];
   stockHref: string | null;
+  research?: unknown;
 };
 
 export type ChatStreamEvent =
@@ -116,6 +117,7 @@ export function readChatStreamFrame(
     leadCreated: row.leadCreated === true,
     vehicles: Array.isArray(row.vehicles) ? row.vehicles : [],
     stockHref,
+    ...(row.research ? { research: row.research } : {}),
   };
   if (event === "done") return { type: "done", ...payload };
   if (event === "error") return { type: "error", ...payload };

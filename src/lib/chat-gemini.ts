@@ -247,6 +247,29 @@ async function postGemini(
   return data;
 }
 
+/** A single grounded call, with no lead tool or ungrounded model fallback. */
+export async function generateGroundedResearch(
+  prompt: string,
+  signal?: AbortSignal,
+) {
+  signal?.throwIfAborted();
+  const key = geminiApiKey();
+  if (!key) throw new Error("Pesquisa técnica indisponível");
+  const model =
+    configuredModels().find((name) => name.startsWith("gemini-2.5-")) ??
+    CHAT_GEMINI_MODEL;
+  return postGemini(
+    {
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: generationConfig(2048, 0.1, model),
+    },
+    key,
+    model,
+    signal,
+  );
+}
+
 function buildGenerateBody(
   input: {
     systemPrompt: string;

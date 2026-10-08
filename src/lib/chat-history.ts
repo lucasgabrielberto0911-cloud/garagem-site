@@ -1,4 +1,5 @@
 import type { ChatVehicleCard } from "@/lib/chat-cards";
+import type { ChatResearch } from "@/lib/chat-research-data";
 
 export type ChatMessage = {
   role: "user" | "assistant";
@@ -6,6 +7,7 @@ export type ChatMessage = {
   vehicles?: ChatVehicleCard[];
   stockHref?: string | null;
   leadCreated?: boolean;
+  research?: ChatResearch;
 };
 
 export function readVehicleCards(raw: unknown): ChatVehicleCard[] {
