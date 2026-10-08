@@ -452,3 +452,23 @@ test("qualquer câmbio com força mantém orçamento e não vira aula de transmi
   assert.ok(result.vehicles.every((v) => v.price <= 80000));
   assert.ok(result.vehicles.some((v) => v.transmission === "Manual"));
 });
+
+test("pergunta técnica junto com financiamento mantém pesquisa com fontes", async () => {
+  for (const mensagem of [
+    "qual automático mais forte para financiar?",
+    "qual o consumo do Civic para financiar?",
+  ]) {
+    const result = await runChatTurn({
+      mensagem,
+      historico: [],
+      stock,
+      research: noResearch,
+      generate: async () => {
+        throw new Error("não responder por estimativa");
+      },
+    });
+    assert.equal(result.research?.unavailable, true);
+    assert.doesNotMatch(result.reply, /\d.*(?:km\/l|cv)/);
+    assert.ok(result.vehicles.length > 0);
+  }
+});

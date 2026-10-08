@@ -158,7 +158,7 @@ export async function runChatTurn(input: {
       promptStock.map(toChatStockLine),
       scopedMessage,
       activeVehicle ? toChatStockLine(activeVehicle) : undefined,
-      chatPromptStockOpts(scopedMessage),
+      { ...chatPromptStockOpts(scopedMessage), consumption: false },
     );
   };
 
@@ -203,7 +203,7 @@ export async function runChatTurn(input: {
       }
     }
     const enriched =
-      picked.length > 0
+      picked.length > 0 && !requestsTechnical
         ? enrichChatStockReply(text, picked, scopedMessage, input.stock)
         : text;
     let guarded = applyChatReplyGuards(enriched, picked, {
@@ -342,7 +342,7 @@ export async function runChatTurn(input: {
   if (
     selection &&
     !mayCreateLead &&
-    !humanAction &&
+    (!humanAction || requestsTechnical) &&
     !(
       asksAboutAvailability(visitorMessage) &&
       isAnaphoricVehicleFollowUp(visitorMessage)
@@ -399,7 +399,7 @@ export async function runChatTurn(input: {
     emit(reply);
     return finish(reply, false, { policy: "inventory-empty", cards: false });
   }
-  if (requestsTechnical && !mayCreateLead && !humanAction && !selection) {
+  if (requestsTechnical && !mayCreateLead) {
     const named = singleMentionedModelPool(input.stock, visitorMessage);
     const subject =
       (named
@@ -556,6 +556,8 @@ export async function runChatTurn(input: {
 
   const fromStock = () => {
     if (isChatPing(scopedMessage)) return CHAT_PING_REPLY;
+    if (requestsTechnical)
+      return `Não consegui confirmar a pesquisa técnica agora. Os dados do anúncio continuam no site; o consultor pode ajudar no WhatsApp: ${CHAT_WHATSAPP_URL}`;
     return (
       localGarageReply(scopedMessage, input.stock, activeVehicle) ??
       CHAT_FALLBACK_REPLY
@@ -655,6 +657,7 @@ export async function runChatTurn(input: {
 
   if (
     !first.functionCall &&
+    !requestsTechnical &&
     asksAboutConsumption(scopedMessage) &&
     !hasConsumptionFigures(generated)
   ) {
