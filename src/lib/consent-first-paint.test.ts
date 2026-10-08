@@ -8,6 +8,20 @@ import { consentBootstrapScript } from "./consent";
 test("aviso já existe no HTML inicial, antes da hidratação", () => {
   assert.match(renderToStaticMarkup(createElement(CookieConsent)), /Consentimento de cookies/);
 });
+test("primeiro render é igual mesmo com aceite salvo no navegador", () => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const server = renderToStaticMarkup(createElement(CookieConsent));
+  try {
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: { localStorage: { getItem: () => "accepted" } },
+    });
+    assert.equal(renderToStaticMarkup(createElement(CookieConsent)), server);
+  } finally {
+    if (original) Object.defineProperty(globalThis, "window", original);
+    else Reflect.deleteProperty(globalThis, "window");
+  }
+});
 test("escolha válida é reconhecida antes da pintura e armazenamento bloqueado não libera consentimento", () => {
   for (const saved of ["accepted", "essential", "invalid", null]) {
     const dataset: Record<string,string> = {};

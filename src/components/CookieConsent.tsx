@@ -67,7 +67,9 @@ export function CookieConsent() {
         </button>
       </div>
       <span className="sr-only">
-        {hasMarketingConsent() ? "Medição liberada" : "Medição bloqueada"}
+        {hasMarketingConsent(choice === "pending" ? null : choice)
+          ? "Medição liberada"
+          : "Medição bloqueada"}
       </span>
     </div>
   );
