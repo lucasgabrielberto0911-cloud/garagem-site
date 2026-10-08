@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { comparisonDifference, differentComparisonText, type ComparisonMetric } from "@/lib/comparison-differences";
 import { useEffect, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
 import type { VehicleCardData } from "./VehicleCard";
@@ -24,11 +25,11 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
   const ids = comparisonSelection(vehicles.map(vehicle => vehicle.id), chosen);
   const selected = ids.flatMap(id => vehicles.filter(vehicle => vehicle.id === id));
   if (vehicles.length < 2) return null;
-  const rows: { label: string; value: (v: VehicleCardData) => string }[] = [
-    { label: "Preço", value: v => publicCardFacts(v).priceLabel.replace(/[\u00a0\u202f]/g, " ") || "Consulte" },
+  const rows: { label: string; metric?: ComparisonMetric; value: (v: VehicleCardData) => string }[] = [
+    { label: "Preço", metric: "price", value: v => publicCardFacts(v).priceLabel.replace(/[\u00a0\u202f]/g, " ") || "Consulte" },
     { label: "Versão", value: v => v.version?.trim() || "—" },
-    { label: "Ano", value: v => String(v.yearModel) },
-    { label: "Km", value: v => formatNumberBR(v.km) + " km" },
+    { label: "Ano", metric: "yearModel", value: v => String(v.yearModel) },
+    { label: "Km", metric: "km", value: v => formatNumberBR(v.km) + " km" },
     { label: "Câmbio", value: v => publicCardFacts(v).facts.find(fact => fact.label === "Câmbio")?.value || "—" },
     { label: "Cidade", value: v => vehicleLocationLabel(v.locationCity) || "—" },
   ];
@@ -55,6 +56,7 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
           })}
         </fieldset>
         <p role="status" className="mt-3 text-xs leading-relaxed text-muted">{ids.length < 2 ? "Selecione mais um veículo para comparar." : ids.length === 3 ? "Para trocar uma opção, desmarque um veículo. Deslize a comparação para ver os três." : "Dois selecionados. Você pode adicionar mais um ou trocar as opções."}</p>
+        {selected.length >= 2 ? <p className="mt-2 text-xs leading-relaxed text-muted">Diferenças em relação ao {formatVehicleLabel(selected[0].brand, selected[0].model)} da primeira coluna. Os campos diferentes têm um fundo mais claro.</p> : null}
         {selected.length >= 2 ? <div className="mt-4 max-h-[70dvh] overflow-auto overscroll-contain rounded-lg border border-white/10" tabIndex={0} aria-label="Tabela de comparação dos veículos selecionados">
           <table className="w-full table-fixed border-collapse text-left" style={selected.length === 3 ? { minWidth: "28rem" } : undefined}>
             <caption className="sr-only">Comparação por preço, versão, ano, quilometragem, câmbio e cidade</caption>
@@ -72,7 +74,14 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
             <tbody>
               {rows.map(row => <tr key={row.label} className="border-t border-white/10 align-top">
                 <th scope="row" className="sticky left-0 z-10 bg-ink px-1 py-3 text-[10px] font-medium text-muted sm:px-2 sm:text-xs">{row.label}</th>
-                {selected.map(vehicle => <td key={vehicle.id} className={"border-l border-white/10 px-2 py-3 leading-relaxed " + (row.label === "Preço" ? "font-display text-sm font-semibold text-brand sm:text-lg" : "text-xs text-cream sm:text-sm")}>{row.value(vehicle)}</td>)}
+                {selected.map((vehicle, index) => {
+                  const note = index > 0 && row.metric ? comparisonDifference(row.metric, vehicle[row.metric], selected[0][row.metric]) : null;
+                  const differs = index > 0 && (row.metric ? Boolean(note) : differentComparisonText(row.value(vehicle), row.value(selected[0])));
+                  return <td key={vehicle.id} data-comparison-difference={differs ? "" : undefined} className={"border-l border-white/10 px-2 py-3 leading-relaxed " + (differs ? "bg-white/[0.045] " : "") + (row.label === "Preço" ? "font-display text-sm font-semibold text-brand sm:text-lg" : "text-xs text-cream sm:text-sm")}>
+                    {row.value(vehicle)}
+                    {note ? <span className="mt-1 block font-sans text-[10px] font-normal leading-relaxed text-muted sm:text-xs">{note}</span> : null}
+                  </td>;
+                })}
               </tr>)}
               <tr className="border-t border-white/10 align-top">
                 <th scope="row" className="sticky left-0 z-10 bg-ink px-1 py-3 text-[10px] font-medium text-muted sm:px-2">Contato</th>
