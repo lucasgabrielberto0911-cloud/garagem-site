@@ -14,7 +14,7 @@ import { shortVersion } from "@/lib/vehicle-display";
 export const CHAT_WHATSAPP_URL = `https://wa.me/${site.whatsappNumber}`;
 
 export const CHAT_FALLBACK_REPLY =
-  `Deu um soluço aqui do meu lado. Sem estresse: chama no WhatsApp que um consultor te atende — ${CHAT_WHATSAPP_URL}`;
+  `Não consegui concluir sua resposta agora. Um consultor continua com você no WhatsApp: ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_OFF_SCOPE_REPLY =
   `Essa parte eu deixo com o consultor, mas nos assuntos da Garagem eu te ajudo sim: estoque, compra, venda, troca, financiamento e garantia. Se for outra coisa, chama no WhatsApp: ${CHAT_WHATSAPP_URL}`;
@@ -94,7 +94,7 @@ Antes da lista: 1 frase falada de recorte (Olha só, carros até R$ 70.000 no es
 
 Quando o visitante pedir carros por preço (até 70 mil, abaixo de 80 mil, etc.), liste no máximo 3 veículos REAIS da lista, um por linha, neste formato:
 Marca Modelo ano · km · R$ preço
-Antes da lista, uma frase. Depois da lista, a comparação (1 ou 2 frases) com dados reais de preço, km e câmbio, e o WhatsApp. Nunca escreva “temos opções” e pare. Não cite modelo extra fora dessas linhas. Se não houver carro na faixa, diga isso e ofereça outra faixa ou o WhatsApp.
+Antes da lista, uma frase. Depois da lista, a comparação (1 ou 2 frases) com dados reais de preço, km e câmbio. O WhatsApp aparece quando o visitante pedir ajuda de um consultor, conforme a regra acima. Nunca escreva “temos opções” e pare. Não cite modelo extra fora dessas linhas. Se não houver carro na faixa, diga isso e ofereça outra faixa ou o WhatsApp.
 
 Quando o visitante demonstrar interesse real de compra E fornecer nome e telefone de contato, chame a função criar_lead. Não invente telefone nem nome. Só chame a função se os dois dados tiverem sido ditos pelo visitante.
 
