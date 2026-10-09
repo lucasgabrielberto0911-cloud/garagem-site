@@ -312,7 +312,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
       <div
         aria-busy={isPending}
         data-pending={isPending}
-        className={`border border-white/10 bg-ink p-4 transition-opacity sm:p-5 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-6 lg:pr-5 ${
+        className={`border-0 bg-transparent p-0 transition-opacity lg:border lg:border-white/10 lg:bg-ink lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-6 lg:pr-5 ${
           isPending ? "opacity-70" : ""
         }`}
       >
@@ -327,7 +327,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           className="mx-auto flex max-w-2xl gap-2 lg:flex-col lg:gap-3"
           role="search"
         >
-          <div className="flex min-h-[48px] flex-1 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand lg:min-h-[52px]">
+          <div className="flex min-h-11 flex-1 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand lg:min-h-[52px]">
             <IconSearch className="h-4 w-4 shrink-0 text-muted" />
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
@@ -339,14 +339,14 @@ export function StockFilters({ facets }: { facets: Facets }) {
               defaultValue={current.q}
               key={current.q}
               placeholder="Marca, modelo ou versão"
-              className="w-full min-w-0 bg-transparent py-3 text-base text-cream placeholder:text-muted focus:outline-none"
+              className="w-full min-w-0 bg-transparent py-2 text-base lg:py-3 text-cream placeholder:text-muted focus:outline-none"
             />
           </div>
           <button
             type="submit"
             disabled={isPending}
             aria-label="Buscar"
-            className="min-h-[48px] bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 sm:px-6 lg:min-h-[52px] lg:w-full"
+            className="min-h-11 bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 sm:px-6 lg:min-h-[52px] lg:w-full"
           >
             <span className="hidden sm:inline">{isPending ? "Buscando..." : "Buscar"}</span>
             <IconSearch className="h-5 w-5 sm:hidden" />
@@ -569,7 +569,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
       <div
         data-stock-filters=""
-        className="stock-chip-bar mt-3 border border-white/10 bg-ink px-3 py-2.5 lg:hidden"
+        className="stock-chip-bar mt-2 border border-white/10 bg-ink px-2.5 py-2 lg:hidden"
       >
         <MobileChipRow label="Faixa">
           {BUDGET_CHIPS.map((chip) => {
@@ -593,41 +593,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
             );
           })}
         </MobileChipRow>
-        {facets.brands.length > 0 ? (
-          <MobileChipRow label="Marca">
-            {visibleBrandChips(facets.brands, current.brand).map((item) => (
-              <Chip
-                key={`sticky-brand-${item}`}
-                active={current.brand === item}
-                onClick={() => {
-                  const brand = current.brand === item ? "" : item;
-                  update({
-                    brand,
-                    model: modelAfterBrandChange(facets.models, brand, current.model),
-                  });
-                }}
-              >
-                {formatBrandName(item)}
-              </Chip>
-            ))}
-            {facets.brands.length > 8 ? (
-              <Chip
-                active={Boolean(
-                  current.brand &&
-                    !visibleBrandChips(facets.brands, current.brand).includes(
-                      current.brand,
-                    ),
-                )}
-                onClick={() => {
-                  setDraft(current);
-                  setOpen(true);
-                }}
-              >
-                Outras
-              </Chip>
-            ) : null}
-          </MobileChipRow>
-        ) : null}
         {current.brand &&
         modelFilterOptions(facets.models, current.brand, current.model).length > 0 ? (
           <MobileChipRow label="Modelo">
