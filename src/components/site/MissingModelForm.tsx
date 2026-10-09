@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useWantedDraft } from "./useWantedDraft";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { focusFormFeedback, useFormViewport } from "@/lib/form-feedback";
@@ -48,6 +49,8 @@ export function MissingModelForm({
   initialPriceMax = "",
   initialKmMin = "",
   initialKmMax = "",
+  rememberDraft = false,
+  draftContextKey = "",
 }: {
   idPrefix: string;
   sourcePage: WantedLeadPage;
@@ -64,6 +67,8 @@ export function MissingModelForm({
   initialPriceMax?: string;
   initialKmMin?: string;
   initialKmMax?: string;
+  rememberDraft?: boolean;
+  draftContextKey?: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [ready, setReady] = useState(false);
@@ -90,6 +95,12 @@ export function MissingModelForm({
   const [kmMin, setKmMin] = useState(() => digitsToGrouped(initialKmMin));
   const [kmMax, setKmMax] = useState(() => digitsToGrouped(initialKmMax));
   const TitleTag = titleAs;
+  const draftContext = JSON.stringify([initialModel, initialYearMin, initialYearMax, initialPriceMin, initialPriceMax, initialKmMin, initialKmMax, draftContextKey, interestVehicleId]);
+  const draft = useWantedDraft(formRef, rememberDraft && !sent, draftContext, fields => {
+    setPhone(formatPhoneBR(fields.phone));
+    setPriceMin(digitsToGrouped(fields.priceMin)); setPriceMax(digitsToGrouped(fields.priceMax));
+    setKmMin(digitsToGrouped(fields.kmMin)); setKmMax(digitsToGrouped(fields.kmMax));
+  });
 
   useEffect(() => {
     if (sent) return focusFormFeedback(receiptRef.current);
@@ -127,6 +138,7 @@ export function MissingModelForm({
       return;
     }
     if (parsed.ignored) {
+      if (rememberDraft) draft.clear();
       setErrors({});
       setFormError("");
       setSent(true);
@@ -139,6 +151,7 @@ export function MissingModelForm({
       try {
         const result = await createWantedLead(data);
         if (result.ok) {
+          if (rememberDraft) draft.clear();
           trackLead({
             content_ids: [],
             content_name: "Não encontrou o modelo",
@@ -210,7 +223,9 @@ export function MissingModelForm({
         {description}
       </p>
 
-      <form ref={formRef} className="relative mt-5" noValidate onSubmit={handleSubmit}>
+      <form ref={formRef} className="relative mt-5" noValidate onSubmit={handleSubmit}
+        onInput={rememberDraft ? draft.remember : undefined}
+        onChange={rememberDraft ? draft.remember : undefined}>
         <fieldset disabled={isPending} className="min-w-0">
           <div
             aria-hidden="true"
@@ -481,6 +496,14 @@ export function MissingModelForm({
             {isPending ? "Enviando…" : "Enviar pedido"}
           </button>
         </fieldset>
+        {rememberDraft && (draft.saved || draft.restored || draft.failed) ? (
+          <div data-wanted-draft="" className="mt-4 flex flex-wrap items-center justify-between gap-2 border border-white/10 bg-asphalt px-3 py-2 text-xs text-muted">
+            <p role="status">{draft.failed ? "Não foi possível guardar o rascunho nesta aba. Você pode continuar preenchendo e enviar." : draft.restored ? "Seu preenchimento foi recuperado." : "Rascunho guardado nesta aba."}</p>
+            <button type="button" disabled={isPending} onClick={() => {
+              draft.discard(); setErrors({}); setFormError(""); focusField("model");
+            }} className="min-h-11 shrink-0 text-cream underline underline-offset-4">Apagar preenchimento</button>
+          </div>
+        ) : null}
       </form>
     </section>
   );

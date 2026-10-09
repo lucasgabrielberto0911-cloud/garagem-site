@@ -6,6 +6,7 @@ import { site } from "@/lib/site";
 import { STOCK_FILTER_KEYS } from "@/lib/stock-query";
 import {
   wantedVehicleFormCopy,
+  wantedVehicleDraftContext,
   type WantedVehicleQuery,
 } from "@/lib/wanted-vehicle-page";
 
@@ -36,6 +37,7 @@ export default async function PedidoPage({
     if (value) params[key] = value;
   }
   const copy = wantedVehicleFormCopy(params);
+  const draftContext = wantedVehicleDraftContext(params);
 
   return (
     <div className="wanted-vehicle-page py-12 lg:py-16" data-wanted-vehicle-page="">
@@ -51,7 +53,10 @@ export default async function PedidoPage({
         </Link>
         <div className="mt-6">
           <MissingModelForm
+            key={draftContext}
             idPrefix="pedido"
+            rememberDraft
+            draftContextKey={draftContext}
             sourcePage="estoque"
             titleAs="h1"
             contextLabel={copy.contextLabel}
