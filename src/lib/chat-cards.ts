@@ -16,6 +16,11 @@ import { coverSrc } from "@/lib/stock-query";
 import { shortVersion } from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
+  parseChatSearchRanges,
+  parseChatSearchCity,
+  chatSearchOrder,
+} from "@/lib/chat-search-filters";
+import {
   applyChatStockFilters,
   asksAboutAvailability,
   asksAboutConsumption,
@@ -258,7 +263,12 @@ function bestMatchForSnippet(
   let bestScore = 0;
   for (const vehicle of stock) {
     if (seen.has(vehicle.id)) continue;
-    const score = scoreVehicleInText(vehicle, folded, snippet, preferredVehicleId);
+    const score = scoreVehicleInText(
+      vehicle,
+      folded,
+      snippet,
+      preferredVehicleId,
+    );
     if (score > bestScore) {
       best = vehicle;
       bestScore = score;
@@ -298,7 +308,12 @@ export function matchVehiclesInReply(
   const ranked = stock
     .map((vehicle) => ({
       vehicle,
-      score: scoreVehicleInText(vehicle, foldedReply, reply, preferredVehicleId),
+      score: scoreVehicleInText(
+        vehicle,
+        foldedReply,
+        reply,
+        preferredVehicleId,
+      ),
     }))
     .filter((item) => item.score >= 5)
     .sort((a, b) => b.score - a.score);
@@ -371,7 +386,9 @@ export function selectChatVehicles(
     const focused = matchFocusedVehicle(mensagem, pool, preferredVehicleId);
     if (focused) return [focused];
     if (asksAboutAvailability(mensagem) && preferredVehicleId) {
-      const preferred = pool.find((vehicle) => vehicle.id === preferredVehicleId);
+      const preferred = pool.find(
+        (vehicle) => vehicle.id === preferredVehicleId,
+      );
       if (preferred) return [preferred];
     }
   }
@@ -421,7 +438,9 @@ export function selectChatVehicles(
   if (budget == null) return mentioned.slice(0, limit);
 
   const inBudget = inBudgetStock(pool, budget);
-  const mentionedInBudget = mentioned.filter((vehicle) => vehicle.price <= budget);
+  const mentionedInBudget = mentioned.filter(
+    (vehicle) => vehicle.price <= budget,
+  );
 
   if (mentionedInBudget.length > 0 && !isBareBudgetQuery(mensagem)) {
     return fillBudgetCards(mentionedInBudget, inBudget, limit);
@@ -454,8 +473,38 @@ export function chatStockExploreHref(
     return null;
   }
   const params = new URLSearchParams();
+  const named = singleMentionedModelPool(stock, mensagem);
+  if (named?.length) {
+    params.set("model", named[0]!.model);
+    const words = new Set(fold(mensagem).split(/[^a-z0-9]+/));
+    const versionTerms = [
+      ...new Set(
+        named.flatMap((v) => fold(v.version ?? "").split(/[^a-z0-9]+/)),
+      ),
+    ].filter(
+      (word) =>
+        word.length >= 3 &&
+        words.has(word) &&
+        !/^(flex|flexone|automatico|automatica|manual|completo|completa)$/.test(
+          word,
+        ),
+    );
+    if (versionTerms.length) params.set("q", versionTerms.join(" "));
+  }
+  const brands = [...new Set(stock.map((v) => v.brand))].filter(
+    (brand) =>
+      fold(mensagem).includes(fold(brand)) ||
+      (fold(brand) === "volkswagen" && /\bvw\b/.test(fold(mensagem))),
+  );
+  if (brands.length === 1) params.set("brand", brands[0]!);
   if (budget != null) params.set("maxPrice", String(budget));
   if (category) params.set("category", category);
+  for (const [key, value] of Object.entries(parseChatSearchRanges(mensagem)))
+    params.set(key, String(value));
+  const city = parseChatSearchCity(mensagem);
+  if (city) params.set("city", city);
+  const order = chatSearchOrder(mensagem);
+  if (order) params.set("sort", order === "km" ? "menor-km" : "mais-novo");
   const gear = parseTransmissionFilter(mensagem);
   if (gear === "automatico") {
     const label = priced.find((vehicle) =>
