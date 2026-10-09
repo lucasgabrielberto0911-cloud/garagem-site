@@ -347,17 +347,14 @@ function ChatBubbleBody({ text }: { text: string }) {
         const parts = splitChatLinks(block).filter(
           (part) => part.type !== "link" || !/wa\.me\//i.test(part.href),
         );
-        const consumo =
-          /consumo|catálogo|catalogo|km\/l|não foi medido|nao foi medido/i.test(
-            block,
-          );
+        const evidenceNote = /não foi medido|nao foi medido/i.test(block);
         return (
           <p
             key={`p-${index}`}
             className={`whitespace-pre-wrap text-pretty ${
               index > 0 ? "mt-2.5 " : ""
             }${
-              consumo
+              evidenceNote
                 ? "text-[13px] leading-[1.5] text-cream/70"
                 : "text-[14px] leading-[1.55] text-cream/95"
             }`}
@@ -386,18 +383,19 @@ function ChatBubbleBody({ text }: { text: string }) {
 
 function ChatResearchDetails({
   research,
+  answerText,
 }: {
   research: import("@/lib/chat-research-data").ChatResearch;
+  answerText?: string;
 }) {
   return (
     <section
       aria-label="Pesquisa técnica e fontes"
       className="space-y-3 rounded-xl border border-white/15 bg-white/[0.025] p-3.5 text-[13px] leading-relaxed text-cream/90"
     >
-      <p className="font-semibold text-cream">Pesquisa técnica do modelo</p>
+      <p className="font-semibold text-cream">Dados técnicos e fontes</p>
       <p className="text-[12px] text-cream/60">
-        Dados externos da versão e do ano. Não descrevem o estado nem os
-        equipamentos desta unidade.
+        Referência do modelo, da versão e do ano.
       </p>
       {research.comparison ? (
         <div className="rounded-lg bg-white/[0.04] p-3">
@@ -417,16 +415,15 @@ function ChatResearchDetails({
       ) : null}
       {research.unavailable ? (
         <p>
-          Não consegui confirmar uma fonte técnica exata agora. Os dados do
-          anúncio continuam acima; você pode refinar o modelo ou confirmar com o
-          consultor.
+          A pesquisa não trouxe uma fonte exata desta versão agora. Você pode
+          continuar a dúvida com o consultor no WhatsApp.
         </p>
       ) : (
         research.paragraphs.map((paragraph, index) => (
           <div key={index} className="space-y-2">
-            <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+            {!answerText?.includes(paragraph.text) ? <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
               {paragraph.text}
-            </p>
+            </p> : null}
             <ul className="space-y-1">
               {paragraph.sources.map((source) => (
                 <li key={source.href}>
@@ -527,6 +524,7 @@ function ChatText({
   return (
     <>
       {visible ? <ChatBubbleBody text={visible} /> : null}
+      {research ? <ChatResearchDetails research={research} answerText={source} /> : null}
       {leadCreated ? (
         <div
           role="status"
@@ -562,7 +560,6 @@ function ChatText({
           <IconArrowRight className="h-4 w-4 shrink-0 text-cream/60 transition group-hover:translate-x-0.5 group-hover:text-cream" />
         </Link>
       ) : null}
-      {research ? <ChatResearchDetails research={research} /> : null}
       {cta ? (
         <ChatWhatsAppButton
           href={cta.href}

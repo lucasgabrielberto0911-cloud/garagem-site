@@ -1,3 +1,5 @@
+import { DUSTER_CATALOG_SOURCE } from "./chat-technical-reference";
+
 export type ChatResearchSource = { title: string; href: string };
 export type ChatResearch = {
   paragraphs: Array<{ text: string; sources: ChatResearchSource[] }>;
@@ -27,6 +29,7 @@ const SOURCE_HOSTS = [
   "motor1.com",
   "carrosnaweb.com.br",
   "icarros.com.br",
+  "autopapo.com.br",
   "vertexaisearch.cloud.google.com",
 ];
 
@@ -37,7 +40,7 @@ export function safeResearchUrl(raw: unknown): string | null {
     if (url.protocol !== "https:" || url.username || url.password || url.port)
       return null;
     if (
-      !SOURCE_HOSTS.some(
+      url.href !== DUSTER_CATALOG_SOURCE && !SOURCE_HOSTS.some(
         (host) => url.hostname === host || url.hostname.endsWith(`.${host}`),
       )
     )
