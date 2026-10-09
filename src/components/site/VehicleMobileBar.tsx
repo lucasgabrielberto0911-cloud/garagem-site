@@ -200,9 +200,9 @@ export function VehicleMobileBar({
                 aria-expanded={moreOpen}
                 aria-controls={moreId}
                 onClick={() => setMoreOpen((open) => !open)}
-                className="mt-0.5 min-h-8 text-left font-display text-[11px] font-semibold text-muted underline-offset-2 transition hover:text-cream hover:underline active:text-cream active:underline touch-manipulation"
+                className="mt-0.5 min-h-11 text-left font-display text-[11px] font-semibold text-muted underline-offset-2 transition hover:text-cream hover:underline active:text-cream active:underline touch-manipulation"
               >
-                {moreOpen ? "Fechar opções" : "Mais opções"}
+                {moreOpen ? "Fechar opções" : "Simular / troca / vídeo"}
               </button>
             ) : null}
           </div>

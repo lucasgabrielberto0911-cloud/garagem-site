@@ -8,6 +8,7 @@ import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
+import type { DescriptionSummaryFacts } from "@/lib/vehicle-description";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import type { GoogleReviews } from "@/lib/google-reviews";
 import {
@@ -160,6 +161,7 @@ export function VehicleMobileBlocks({
   model,
   vehicleId,
   description,
+  summaryFacts,
   accessories,
   specs,
   inspection,
@@ -178,6 +180,7 @@ export function VehicleMobileBlocks({
   model: string;
   vehicleId: string;
   description?: string | null;
+  summaryFacts?: DescriptionSummaryFacts;
   accessories: string[];
   specs: VehicleSpecRow[];
   inspection?: string | null;
@@ -241,9 +244,27 @@ export function VehicleMobileBlocks({
         </DossierBlock>
       ) : null}
 
+      {conditions.intro || otherConditions.length > 0 ? (
+        <DossierBlock title="Garantia de 3 meses: motor e câmbio">
+          {conditions.intro ? <p>{conditions.intro}</p> : null}
+          {otherConditions.length > 0 ? (
+            <ul className={conditions.intro ? "mt-4 space-y-3" : "space-y-3"}>
+              {otherConditions.map((item) => (
+                <li key={item.label} className="border-l-2 border-brand/80 pl-3">
+                  <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-cream">
+                    {item.label}
+                  </p>
+                  <p className="mt-1 text-[15px] leading-relaxed text-cream/80">{item.text}</p>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </DossierBlock>
+      ) : null}
+
       {description ? (
         <DossierBlock title="Sobre o veículo" defaultOpen section="detalhes">
-          <VehicleDescription text={description} />
+          <VehicleDescription text={description} summaryFacts={summaryFacts} />
         </DossierBlock>
       ) : null}
 
@@ -261,24 +282,6 @@ export function VehicleMobileBlocks({
               </li>
             ))}
           </ul>
-        </DossierBlock>
-      ) : null}
-
-      {conditions.intro || otherConditions.length > 0 ? (
-        <DossierBlock title="Garantia e condições">
-          {conditions.intro ? <p>{conditions.intro}</p> : null}
-          {otherConditions.length > 0 ? (
-            <ul className={conditions.intro ? "mt-4 space-y-3" : "space-y-3"}>
-              {otherConditions.map((item) => (
-                <li key={item.label} className="border-l-2 border-brand/80 pl-3">
-                  <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-cream">
-                    {item.label}
-                  </p>
-                  <p className="mt-1 text-[15px] leading-relaxed text-cream/80">{item.text}</p>
-                </li>
-              ))}
-            </ul>
-          ) : null}
         </DossierBlock>
       ) : null}
 
