@@ -4,7 +4,7 @@ export function readyGalleryPath(id: string, extension = "webp") {
 }
 
 export function galleryPreviewObjectPath(path: string): string | null {
-  return /-g800\.(?:webp|jpe?g)$/i.test(path)
-    ? path.replace(/\.(?:webp|jpe?g)$/i, "-preview.webp")
+  return /-g800\.(?:webp|jpe?g|png)$/i.test(path)
+    ? path.replace(/\.(?:webp|jpe?g|png)$/i, "-preview.webp")
     : null;
 }

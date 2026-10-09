@@ -17,7 +17,8 @@
     "db:studio": "prisma studio",
     "photos:backfill": "tsx scripts/backfill-photo-thumbnails.ts",
     "docs:migrate": "tsx scripts/migrate-private-docs.ts",
-    "stock:import": "tsx scripts/import-stock-vehicle.ts"
+    "stock:import": "tsx scripts/import-stock-vehicle.ts",
+    "photos:gallery-backfill": "tsx scripts/backfill-gallery-previews.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

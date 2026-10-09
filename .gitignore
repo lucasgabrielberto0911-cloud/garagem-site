@@ -43,3 +43,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# relatórios locais de preparação de fotos
+/artifacts/gallery-preview-*.jsonl
