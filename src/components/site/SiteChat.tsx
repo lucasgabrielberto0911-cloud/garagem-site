@@ -388,67 +388,45 @@ function ChatResearchDetails({
   research: import("@/lib/chat-research-data").ChatResearch;
   answerText?: string;
 }) {
+  // The answer already explains an unavailable search. Avoid repeating a
+  // second empty panel before the ad and pushing the contact below the fold.
+  if (research.unavailable) return null;
+  const sources = [...new Map([
+    ...(research.comparison?.sources ?? []),
+    ...research.paragraphs.flatMap(paragraph => paragraph.sources),
+  ].map(source => [source.href, source])).values()];
+  const extraParagraphs = research.paragraphs.filter(paragraph => !answerText?.includes(paragraph.text));
   return (
     <section
       aria-label="Pesquisa técnica e fontes"
-      className="space-y-3 rounded-xl border border-white/15 bg-white/[0.025] p-3.5 text-[13px] leading-relaxed text-cream/90"
+      className="space-y-2 rounded-xl border border-white/10 bg-white/[0.025] px-3.5 text-[13px] leading-relaxed text-cream/90"
     >
-      <p className="font-semibold text-cream">Dados técnicos e fontes</p>
-      <p className="text-[12px] text-cream/60">
-        Referência do modelo, da versão e do ano.
-      </p>
-      {research.comparison ? (
-        <div className="rounded-lg bg-white/[0.04] p-3">
-          <p>{research.comparison.text}</p>
-          {research.comparison.sources.map((source) => (
-            <a
-              key={source.href}
-              href={source.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 block min-h-11 text-[12px] underline [overflow-wrap:anywhere]"
-            >
-              Fonte: {source.title} ↗
-            </a>
-          ))}
-        </div>
+      {research.comparison && !answerText?.includes(research.comparison.text) ? (
+        <p className="pt-3">{research.comparison.text}</p>
       ) : null}
-      {research.unavailable ? (
-        <p>
-          A pesquisa não trouxe uma fonte exata desta versão agora. Você pode
-          continuar a dúvida com o consultor no WhatsApp.
-        </p>
-      ) : (
-        research.paragraphs.map((paragraph, index) => (
-          <div key={index} className="space-y-2">
-            {!answerText?.includes(paragraph.text) ? <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
-              {paragraph.text}
-            </p> : null}
-            <ul className="space-y-1">
-              {paragraph.sources.map((source) => (
-                <li key={source.href}>
-                  <a
-                    href={source.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block min-h-11 rounded-lg border border-white/10 px-3 py-2 text-[12px] text-cream/75 underline underline-offset-2 [overflow-wrap:anywhere]"
-                  >
-                    Fonte: {source.title} ↗
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))
-      )}
+      <details>
+        <summary className="min-h-11 cursor-pointer py-3 font-semibold text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+          Dados e fontes ({sources.length})
+        </summary>
+        <p className="mb-2 text-[12px] text-cream/60">Dados do modelo, da versão e do ano.</p>
+        {extraParagraphs.map((paragraph, index) => (
+          <p key={index} className="mb-3 whitespace-pre-wrap [overflow-wrap:anywhere]">{paragraph.text}</p>
+        ))}
+        <ul className="space-y-1 pb-3">
+          {sources.map(source => (
+            <li key={source.href}>
+              <a href={source.href} target="_blank" rel="noopener noreferrer"
+                className="block min-h-11 rounded-lg border border-white/10 px-3 py-2 text-[12px] text-cream/85 underline underline-offset-2 [overflow-wrap:anywhere]">
+                {source.title} ↗
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
       {research.suggestionsHtml ? (
-        <iframe
-          title="Sugestões da pesquisa Google"
-          sandbox="allow-popups allow-popups-to-escape-sandbox"
-          referrerPolicy="no-referrer"
-          srcDoc={research.suggestionsHtml}
-          className="h-28 w-full rounded-lg border-0 bg-white"
-        />
+        <iframe title="Sugestões da pesquisa Google" sandbox="allow-popups allow-popups-to-escape-sandbox"
+          referrerPolicy="no-referrer" srcDoc={research.suggestionsHtml}
+          className="mb-3 h-28 w-full rounded-lg border-0 bg-white" />
       ) : null}
     </section>
   );
@@ -1302,7 +1280,7 @@ export function SiteChat() {
 
           <div
             ref={listRef}
-            className="site-chat-scroll flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-5"
+            className="site-chat-scroll min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-5"
             onScroll={(event) => {
               const node = event.currentTarget;
               const nearBottom =
@@ -1465,7 +1443,7 @@ export function SiteChat() {
                 : "Assistente aberto"}
           </p>
           {showLatest ? (
-            <div className="flex justify-center border-t border-white/[0.06] py-1">
+            <div className="flex shrink-0 justify-center border-t border-white/[0.06] py-1">
               <button
                 type="button"
                 className="min-h-11 rounded-full px-4 text-[12px] font-semibold text-cream"
@@ -1500,6 +1478,7 @@ export function SiteChat() {
           ) : null}
 
           <form
+            data-chat-composer=""
             className="shrink-0 border-t border-white/[0.07] bg-[#141417] px-3 pb-2 pt-3"
             onSubmit={(event) => {
               event.preventDefault();
