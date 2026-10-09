@@ -92,7 +92,6 @@ function ComparisonTable({ selected, rows }: { selected: VehicleCardData[]; rows
       <div ref={tableRef} id={tableId} role="region" className="mt-3 overflow-x-auto rounded-lg border border-white/10" tabIndex={0} aria-label="Tabela de comparação dos veículos selecionados">
           <table className="w-full table-fixed border-collapse text-left" style={selected.length === 3 ? { minWidth: "28rem" } : undefined}>
             <caption className="sr-only">Comparação por preço, versão, ano, quilometragem e câmbio</caption>
-            <caption className="sr-only">Comparação por preço, versão, ano, quilometragem e câmbio</caption>
             <thead className="bg-ink">
               <tr className="align-top">
                 <th scope="col" className="sticky left-0 z-30 w-12 bg-ink px-1 py-3 text-[10px] font-medium text-muted sm:w-20 sm:px-2">Veículo</th>
