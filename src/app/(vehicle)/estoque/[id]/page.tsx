@@ -45,6 +45,7 @@ import {
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
   collapseDuplicateAccessories,
+  collapseWhitespace,
   formatUpdatedAt,
   formatVehicleDisplay,
   formatVehicleWhatsAppMessage,
@@ -375,7 +376,7 @@ export default async function VehicleDetailPage({
             <div className="shrink-0 lg:hidden">
               <VehicleMobileSummary
                 title={title}
-                version={display.version}
+                version={collapseWhitespace(vehicle.version ?? "")}
                 price={sold ? 0 : vehicle.price}
                 sold={sold}
                 year={vehicle.year}
@@ -401,6 +402,7 @@ export default async function VehicleDetailPage({
                     </h2>
                     <VehicleDescription
                       text={description}
+                      summaryFacts={vehicle}
                       className="mt-2 text-sm sm:text-[15px]"
                     />
                   </div>
@@ -462,8 +464,8 @@ export default async function VehicleDetailPage({
                 <h1 className="font-display text-[1.65rem] font-bold leading-tight tracking-tight text-cream sm:text-2xl sm:text-[1.75rem]">
                   {title}
                 </h1>
-                {display.version ? (
-                  <p className="mt-1 text-sm text-muted">{display.version}</p>
+                {vehicle.version?.trim() ? (
+                  <p className="mt-1 text-sm text-muted">{collapseWhitespace(vehicle.version ?? "")}</p>
                 ) : null}
               </div>
 
@@ -643,6 +645,7 @@ export default async function VehicleDetailPage({
           model={formatModelName(vehicle.model)}
           vehicleId={vehicle.id}
           description={description}
+          summaryFacts={vehicle}
           accessories={accessories}
           specs={specs}
           inspection={vehicle.inspection}

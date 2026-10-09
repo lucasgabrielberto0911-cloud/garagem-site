@@ -1,5 +1,7 @@
 import {
   parseVehicleDescription,
+  withoutRepeatedDescriptionFacts,
+  type DescriptionSummaryFacts,
   type DescriptionFact,
 } from "@/lib/vehicle-description";
 
@@ -83,11 +85,13 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
 export function VehicleDescription({
   text,
   className = "",
+  summaryFacts,
 }: {
   text: string;
   className?: string;
+  summaryFacts?: DescriptionSummaryFacts;
 }) {
-  const segments = parseVehicleDescription(text);
+  const segments = withoutRepeatedDescriptionFacts(parseVehicleDescription(text), summaryFacts);
   if (segments.length === 0) return null;
 
   if (

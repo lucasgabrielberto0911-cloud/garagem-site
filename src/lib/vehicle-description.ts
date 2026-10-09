@@ -12,6 +12,38 @@ export type DescriptionSegment =
   | { kind: "prose"; text: string }
   | { kind: "facts"; lines: DescriptionFact[] };
 
+export type DescriptionSummaryFacts = {
+  price: number;
+  km: number;
+  year: number;
+  yearModel: number;
+};
+
+/** Omite somente fatos rotulados idênticos ao resumo; preserva prosa e ressalvas. */
+export function withoutRepeatedDescriptionFacts(
+  segments: DescriptionSegment[],
+  summary?: DescriptionSummaryFacts,
+): DescriptionSegment[] {
+  if (!summary) return segments;
+  const known = summary;
+  function repeated(text: string) {
+    const price = text.match(/^(?:valor|preço)\s*:\s*R\s*\$\s*(\d+(?:\.\d{3})*(?:,\d{2})?)\s*$/i);
+    if (price) return Number(price[1].replaceAll(".", "").replace(",", ".")) === known.price;
+    const km = text.match(/^(?:quilometragem|km)\s*:\s*(\d+(?:\.\d{3})*)\s*km\s*$/i);
+    if (km) return Number(km[1].replaceAll(".", "")) === known.km;
+    const year = text.match(/^ano\s*:\s*(\d{4})(?:\s*\/\s*(\d{4}))?\s*$/i);
+    if (year) return year[2]
+      ? Number(year[1]) === known.year && Number(year[2]) === known.yearModel
+      : Number(year[1]) === known.yearModel;
+    return false;
+  }
+  return segments.flatMap<DescriptionSegment>((segment) => {
+    if (segment.kind === "prose") return [segment];
+    const lines = segment.lines.filter((line) => !repeated(line.text));
+    return lines.length ? [{ kind: "facts" as const, lines }] : [];
+  });
+}
+
 const FACT_LINE =
   /^(\p{Extended_Pictographic}\uFE0F?(?:\u200D\p{Extended_Pictographic}\uFE0F?)*)\s+(\S[\s\S]*)$/u;
 
