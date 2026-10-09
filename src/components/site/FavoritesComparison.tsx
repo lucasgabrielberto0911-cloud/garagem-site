@@ -73,7 +73,7 @@ function ComparisonTable({ selected, rows }: { selected: VehicleCardData[]; rows
     const column = columns?.[index + 1];
     if (!viewport || !column || !columns?.[0]) return;
     const left = viewport.scrollLeft + column.getBoundingClientRect().left
-      - viewport.getBoundingClientRect().left - columns[0].getBoundingClientRect().width;
+      - viewport.getBoundingClientRect().left - viewport.clientLeft - columns[0].getBoundingClientRect().width;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     viewport.scrollTo({ left: Math.max(0, left), behavior: reduced ? "auto" : "smooth" });
   }
