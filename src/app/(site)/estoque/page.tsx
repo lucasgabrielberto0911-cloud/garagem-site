@@ -33,7 +33,7 @@ export default async function EstoquePage() {
   const listed = catalog.length > 0 ? catalog : stock.vehicles;
 
   return (
-    <div data-stock-page="" className="stock-page py-4 lg:py-12">
+    <div data-stock-page="" className="stock-page stock-compact-opening py-4 lg:py-12">
       {listed.length > 0 ? (
         <JsonLd
           data={itemListJsonLd(listed, {

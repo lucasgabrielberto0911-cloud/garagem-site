@@ -5,7 +5,7 @@ import { Container, PageHeader } from "@/components/site/ui";
 /** Primeiro paint com título real — evita FCP só de blocos cinza. */
 export default function EstoqueLoading() {
   return (
-    <div data-stock-page="" className="stock-page py-4 lg:py-12">
+    <div data-stock-page="" className="stock-page stock-compact-opening py-4 lg:py-12">
       <Container>
         <PageHeader
           eyebrow="Estoque"

@@ -4,7 +4,6 @@ import type { Facets } from "@/components/site/StockFilters";
 export function StockFiltersSkeleton({ facets }: { facets?: Facets }) {
   const rows = [
     "Faixa",
-    ...(!facets || facets.brands.length > 0 ? ["Marca"] : []),
     ...(!facets || facets.transmissions.length > 0 ? ["Câmbio"] : []),
   ];
 
@@ -12,16 +11,16 @@ export function StockFiltersSkeleton({ facets }: { facets?: Facets }) {
     <div role="status" aria-label="Carregando filtros">
       <div
         aria-hidden="true"
-        className="border border-white/10 bg-ink p-4 sm:p-5 lg:h-[70dvh] lg:p-6"
+        className="border-0 bg-transparent p-0 lg:border lg:border-white/10 lg:bg-ink lg:h-[70dvh] lg:p-6"
       >
         <div className="mx-auto flex max-w-2xl gap-2 lg:flex-col lg:gap-3">
-          <div className="h-12 flex-1 border border-white/10 bg-asphalt lg:flex-none" />
-          <div className="h-12 w-[52px] bg-brand/20 sm:w-[96px] lg:w-full" />
+          <div className="h-11 flex-1 lg:h-[52px] border border-white/10 bg-asphalt lg:flex-none" />
+          <div className="h-11 w-[52px] lg:h-[52px] bg-brand/20 sm:w-[96px] lg:w-full" />
         </div>
       </div>
       <div
         aria-hidden="true"
-        className="stock-chip-bar mt-3 border border-white/10 bg-ink px-3 py-2.5 lg:hidden"
+        className="stock-chip-bar mt-2 border border-white/10 bg-ink px-2.5 py-2 lg:hidden"
       >
         {rows.map((label) => (
           <div key={label} className="stock-chip-row">
