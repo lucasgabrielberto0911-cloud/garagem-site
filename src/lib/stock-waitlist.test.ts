@@ -33,14 +33,14 @@ test("filtros viram frase natural para o WhatsApp", () => {
   assert.equal(formatStockWaitlistQuery({}), "");
   assert.match(
     formatStockWaitlistQuery({ brand: "Hyundai", city: "linhares" }),
-    /Hyundai em Linhares/,
+    /^Hyundai$/,
   );
   assert.match(
     formatStockWaitlistQuery({ brand: "Honda", model: "civic", maxPrice: "80000" }),
     /Honda Civic, até R\$\s*80\.000/,
   );
-  assert.equal(formatStockWaitlistQuery({ city: "vitoria" }), "em Vitória");
-  assert.equal(formatStockWaitlistQuery({ city: "aracruz" }), "em Aracruz");
+  assert.equal(formatStockWaitlistQuery({ city: "vitoria" }), "");
+  assert.equal(formatStockWaitlistQuery({ city: "aracruz" }), "");
   assert.match(
     formatStockWaitlistQuery({ transmission: "automatico" }),
     /^automático$/,

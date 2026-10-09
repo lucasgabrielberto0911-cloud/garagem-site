@@ -6,7 +6,6 @@ import { CATEGORY_FILTER_OPTIONS, BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPT
 import { modelAfterBrandChange, modelFilterOptions, STOCK_SORT_OPTIONS } from "@/lib/stock-query";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import { transmissionFilterOptions, transmissionFilterParam } from "@/lib/vehicle-display";
-import { VEHICLE_LOCATION_CITIES } from "@/lib/vehicle-location";
 import { stockRangeError } from "@/lib/stock-range-validation";
 
 export type StockFilterFieldsProps = {
@@ -29,7 +28,6 @@ export function StockFilterFields({ facets, draft, setDraft, onApply }: StockFil
     draft.minYear,
     draft.maxYear,
     draft.maxKm,
-    draft.city,
   ].filter(Boolean).length;
 
   return (
@@ -163,27 +161,6 @@ export function StockFilterFields({ facets, draft, setDraft, onApply }: StockFil
                   ))}
                 </select>
               </MobileField>
-              <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
-                  Onde o veículo está
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {VEHICLE_LOCATION_CITIES.map((option) => (
-                    <Chip
-                      key={`sheet-city-${option.value}`}
-                      active={draft.city === option.value}
-                      onClick={() =>
-                        setDraft({
-                          ...draft,
-                          city: draft.city === option.value ? "" : option.value,
-                        })
-                      }
-                    >
-                      {option.label}
-                    </Chip>
-                  ))}
-                </div>
-              </div>
               <details className="border border-white/10 bg-asphalt/30 px-3.5 py-1">
                 <summary className="flex min-h-[48px] cursor-pointer list-none items-center font-display text-xs font-semibold uppercase tracking-wider text-cream [&::-webkit-details-marker]:hidden">
                   Mais opções
@@ -283,7 +260,6 @@ export function StockFilterFields({ facets, draft, setDraft, onApply }: StockFil
                       minYear: "",
                       maxYear: "",
                       maxKm: "",
-                      city: "",
                     })
                   }
                   className="min-h-[52px] border border-white/15 px-5 font-display text-xs font-semibold uppercase tracking-wide text-muted"

@@ -10,7 +10,7 @@ function readSrc(rel: string) {
   return readFileSync(join(srcRoot, rel), "utf8");
 }
 
-test("cidade do veículo entra no filtro, na API e no painel mobile", () => {
+test("cidade do veículo fica fora dos filtros e consultas públicos", () => {
   const filters = readSrc("components/site/StockFilters.tsx") + readSrc("components/site/StockFilterFields.tsx") + readSrc("components/site/StockFilterControls.tsx");
   const browse = readSrc("components/site/EstoqueBrowse.tsx");
   const vehicles = readSrc("lib/vehicles.ts");
@@ -19,15 +19,15 @@ test("cidade do veículo entra no filtro, na API e no painel mobile", () => {
     vehicles.indexOf("function stockQueryKey"),
   );
 
-  assert.match(filters, /VEHICLE_LOCATION_CITIES/);
-  assert.match(filters, /sheet-city-/);
-  assert.match(filters, /Onde o veículo está/);
+  assert.doesNotMatch(filters, /VEHICLE_LOCATION_CITIES/);
+  assert.doesNotMatch(filters, /sheet-city-/);
+  assert.doesNotMatch(filters, /Onde o veículo está/);
   const stockQuery = readSrc("lib/stock-query.ts");
-  assert.match(stockQuery, /"city"/);
+  assert.doesNotMatch(stockQuery, /"city",/);
   assert.match(browse, /STOCK_FILTER_KEYS/);
-  assert.match(browse, /city: params\.city/);
+  assert.doesNotMatch(browse, /city: params\.city/);
   assert.match(where, /stockCityFilter\(filters\.city\)/);
-  assert.match(vehicles, /stock-page-v14/);
+  assert.match(vehicles, /stock-page-v15/);
   assert.doesNotMatch(filters, /Vitória/);
 });
 
@@ -56,10 +56,10 @@ test("filtros do estoque no celular alinham rótulo, chips e Filtros sem máscar
   const barEnd = filters.indexOf('id="painel-filtros"');
   assert.ok(barStart > 0 && barEnd > barStart);
   const bar = filters.slice(barStart, barEnd);
-  assert.match(filters.slice(barEnd), /Onde o veículo está/);
+  assert.doesNotMatch(filters.slice(barEnd), /Onde o veículo está/);
   assert.match(bar, /MobileChipRow label="Faixa"/);
-  assert.match(bar, /label="Marca"/);
-  const faixa = bar.slice(bar.indexOf('label="Faixa"'), bar.indexOf('label="Marca"'));
+  assert.doesNotMatch(bar, /label="Marca"/);
+  const faixa = bar.slice(bar.indexOf('label="Faixa"'), bar.indexOf('label="Câmbio"'));
   assert.doesNotMatch(faixa, /stock-chip-action/);
   assert.match(bar, /stock-chip-action/);
   assert.match(bar, /Filtros/);

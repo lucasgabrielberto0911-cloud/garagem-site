@@ -15,7 +15,6 @@ import {
   formatColorLabel,
   transmissionFilterLabel,
 } from "@/lib/vehicle-display";
-import { vehicleLocationLabel } from "@/lib/vehicle-location";
 
 export type StockWaitlistFilters = {
   q?: string;
@@ -54,13 +53,10 @@ export function formatStockWaitlistQuery(input: StockWaitlistFilters) {
   const bits: string[] = [];
   const brand = compact(input.brand);
   const model = compact(input.model);
-  const city = vehicleLocationLabel(input.city);
   const vehicle = [brand ? formatBrandName(brand) : "", model ? formatModelName(model) : ""]
     .filter(Boolean)
     .join(" ");
-  if (vehicle && city) bits.push(`${vehicle} em ${city}`);
-  else if (vehicle) bits.push(vehicle);
-  else if (city) bits.push(`em ${city}`);
+  if (vehicle) bits.push(vehicle);
   const category = compact(input.category);
   if (category) bits.push(vehicleCategoryLabel(category).toLocaleLowerCase("pt-BR"));
   const transmission = transmissionFilterLabel(input.transmission);

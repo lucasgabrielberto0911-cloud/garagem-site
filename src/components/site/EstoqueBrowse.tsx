@@ -67,7 +67,6 @@ function stockQuery(params: EstoqueSearchParams) {
     minYear: params.minYear,
     maxYear: params.maxYear,
     maxKm: params.maxKm,
-    city: params.city,
     sort: params.sort,
   };
 }

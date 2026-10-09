@@ -76,40 +76,6 @@ export const PUBLIC_VEHICLE_DETAIL_SELECT = {
   hasVideo: true,
   status: true,
   featured: true,
-  locationCity: true,
-  createdAt: true,
-  updatedAt: true,
-  photos: {
-    orderBy: { order: "asc" as const },
-    select: { id: true, url: true, thumbnailUrl: true },
-  },
-} as const;
-
-const PUBLIC_VEHICLE_DETAIL_SELECT_NO_CITY = {
-  id: true,
-  category: true,
-  brand: true,
-  model: true,
-  version: true,
-  year: true,
-  yearModel: true,
-  km: true,
-  price: true,
-  fuel: true,
-  transmission: true,
-  color: true,
-  description: true,
-  engine: true,
-  doors: true,
-  warranty: true,
-  plateEnd: true,
-  inspection: true,
-  accessories: true,
-  hasSpareKey: true,
-  hasManual: true,
-  hasVideo: true,
-  status: true,
-  featured: true,
   createdAt: true,
   updatedAt: true,
   photos: {
@@ -248,14 +214,6 @@ async function findDetailVehicle(
       select: PUBLIC_VEHICLE_DETAIL_SELECT,
     })) as PublicVehicleDetail | null;
   } catch (error) {
-    if (isMissingColumnError(error, "locationCity")) {
-      const row = await prisma.vehicle.findFirst({
-        where: { id, historical: false },
-        select: PUBLIC_VEHICLE_DETAIL_SELECT_NO_CITY,
-      });
-      if (!row) return null;
-      return { ...row, locationCity: null };
-    }
     if (!isMissingColumnError(error, "thumbnailUrl")) throw error;
     const row = await prisma.vehicle.findFirst({
       where: { id, historical: false },
@@ -264,7 +222,6 @@ async function findDetailVehicle(
     if (!row) return null;
     return {
       ...row,
-      locationCity: null,
       photos: row.photos.map((photo) => ({ ...photo, thumbnailUrl: null })),
     };
   }
@@ -280,7 +237,7 @@ async function fetchFeaturedVehicles(take: number): Promise<VehicleCardRecord[]>
 
 const loadFeaturedCached = unstable_cache(
   async (take: number) => fetchFeaturedVehicles(take),
-  ["featured-vehicles-v6"],
+  ["featured-vehicles-v7"],
   PUBLIC_CACHE,
 );
 
@@ -302,7 +259,7 @@ async function fetchCityShowcaseVehicles(): Promise<VehicleCardRecord[]> {
 
 const loadCityShowcaseCached = unstable_cache(
   async () => fetchCityShowcaseVehicles(),
-  ["city-showcase-v5"],
+  ["city-showcase-v6"],
   PUBLIC_CACHE,
 );
 
@@ -337,7 +294,7 @@ export const getVehicleById = cache((id: string) =>
 
 const loadVehicleDetailCached = unstable_cache(
   async (id: string) => findDetailVehicle(id),
-  ["vehicle-detail-v6"],
+  ["vehicle-detail-v7"],
   PUBLIC_CACHE,
 );
 
@@ -421,7 +378,7 @@ const loadRelatedCached = unstable_cache(
       price,
       transmission,
     ),
-  ["related-vehicles-v7"],
+  ["related-vehicles-v8"],
   PUBLIC_CACHE,
 );
 
@@ -595,7 +552,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v14"],
+  ["stock-page-v15"],
   PUBLIC_CACHE,
 );
 

@@ -1,4 +1,3 @@
-import { parseVehicleLocationCity } from "@/lib/vehicle-location";
 import { publicPhotoOriginal } from "@/lib/public-photo-url";
 
 /** Tipos e parsers do estoque — seguro para o bundle do cliente. */
@@ -269,7 +268,6 @@ export const STOCK_FILTER_KEYS = [
   "minYear",
   "maxYear",
   "maxKm",
-  "city",
 ] as const;
 
 export type StockPageResult = {
@@ -293,10 +291,10 @@ export const STOCK_SORT_OPTIONS = [
 
 export type StockSortValue = (typeof STOCK_SORT_OPTIONS)[number]["value"];
 
-/** Where parcial pela localização do veículo, não pela região atendida. */
+/** Compatibilidade com chamadas antigas: cidade não restringe o estoque público. */
 export function stockCityFilter(value?: string | null) {
-  const city = parseVehicleLocationCity(value);
-  return city ? { locationCity: city } : {};
+  void value;
+  return {};
 }
 
 export function stockSortLabel(sort?: string | null) {
@@ -466,7 +464,6 @@ export function parseStockFilters(
     minYear: optionalPositiveNumber(pickParam(input, "minYear")),
     maxYear: optionalPositiveNumber(pickParam(input, "maxYear")),
     maxKm: optionalPositiveNumber(pickParam(input, "maxKm")),
-    city: parseVehicleLocationCity(pickParam(input, "city")) ?? undefined,
     sort: pickParam(input, "sort"),
     page: options?.page ?? Math.max(1, Number(pickParam(input, "page")) || 1),
     pageSize: optionalPositiveNumber(pickParam(input, "pageSize")),

@@ -21,11 +21,6 @@ import {
   transmissionFilterParam,
 } from "@/lib/vehicle-display";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
-import {
-  VEHICLE_LOCATION_CITIES,
-  parseVehicleLocationCity,
-  vehicleLocationLabel,
-} from "@/lib/vehicle-location";
 
 import { ShareStockSearch } from "./ShareStockSearch";
 
@@ -55,7 +50,6 @@ export type FilterValues = {
   minYear: string;
   maxYear: string;
   maxKm: string;
-  city: string;
   sort: string;
 };
 
@@ -92,7 +86,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
     minYear: params.get("minYear") ?? "",
     maxYear: params.get("maxYear") ?? "",
     maxKm: params.get("maxKm") ?? "",
-    city: parseVehicleLocationCity(params.get("city")) ?? "",
     sort: params.get("sort") ?? "recentes",
   };
   const [draft, setDraft] = useState(current);
@@ -172,12 +165,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
     activeFilters.push({
       key: "category",
       label: `Tipo: ${vehicleCategoryLabel(current.category)}`,
-    });
-  }
-  if (current.city) {
-    activeFilters.push({
-      key: "city",
-      label: `Cidade: ${vehicleLocationLabel(current.city) || current.city}`,
     });
   }
   if (current.brand) {
@@ -310,7 +297,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
       minYear: "",
       maxYear: "",
       maxKm: "",
-      city: "",
       sort: "recentes",
     });
   }
@@ -326,7 +312,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
       <div
         aria-busy={isPending}
         data-pending={isPending}
-        className={`border border-white/10 bg-ink p-4 transition-opacity sm:p-5 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-6 lg:pr-5 ${
+        className={`border-0 bg-transparent p-0 transition-opacity lg:border lg:border-white/10 lg:bg-ink lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-6 lg:pr-5 ${
           isPending ? "opacity-70" : ""
         }`}
       >
@@ -341,7 +327,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           className="mx-auto flex max-w-2xl gap-2 lg:flex-col lg:gap-3"
           role="search"
         >
-          <div className="flex min-h-[48px] flex-1 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand lg:min-h-[52px]">
+          <div className="flex min-h-11 flex-1 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand lg:min-h-[52px]">
             <IconSearch className="h-4 w-4 shrink-0 text-muted" />
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
@@ -353,14 +339,14 @@ export function StockFilters({ facets }: { facets: Facets }) {
               defaultValue={current.q}
               key={current.q}
               placeholder="Marca, modelo ou versão"
-              className="w-full min-w-0 bg-transparent py-3 text-base text-cream placeholder:text-muted focus:outline-none"
+              className="w-full min-w-0 bg-transparent py-2 text-base lg:py-3 text-cream placeholder:text-muted focus:outline-none"
             />
           </div>
           <button
             type="submit"
             disabled={isPending}
             aria-label="Buscar"
-            className="min-h-[48px] bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 sm:px-6 lg:min-h-[52px] lg:w-full"
+            className="min-h-11 bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 sm:px-6 lg:min-h-[52px] lg:w-full"
           >
             <span className="hidden sm:inline">{isPending ? "Buscando..." : "Buscar"}</span>
             <IconSearch className="h-5 w-5 sm:hidden" />
@@ -400,21 +386,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
               >
                 {CATEGORY_FILTER_OPTIONS.map((option) => (
                   <option key={option.value || "ambos"} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </DesktopField>
-            <DesktopField label="Onde o veículo está" htmlFor="desktop-cidade">
-              <select
-                id="desktop-cidade"
-                value={current.city}
-                onChange={(event) => update({ city: event.target.value })}
-                className={selectClass}
-              >
-                <option value="">Todas as cidades</option>
-                {VEHICLE_LOCATION_CITIES.map((option) => (
-                  <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
@@ -598,7 +569,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
       <div
         data-stock-filters=""
-        className="stock-chip-bar mt-3 border border-white/10 bg-ink px-3 py-2.5 lg:hidden"
+        className="stock-chip-bar mt-2 border border-white/10 bg-ink px-2.5 py-2 lg:hidden"
       >
         <MobileChipRow label="Faixa">
           {BUDGET_CHIPS.map((chip) => {
@@ -622,41 +593,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
             );
           })}
         </MobileChipRow>
-        {facets.brands.length > 0 ? (
-          <MobileChipRow label="Marca">
-            {visibleBrandChips(facets.brands, current.brand).map((item) => (
-              <Chip
-                key={`sticky-brand-${item}`}
-                active={current.brand === item}
-                onClick={() => {
-                  const brand = current.brand === item ? "" : item;
-                  update({
-                    brand,
-                    model: modelAfterBrandChange(facets.models, brand, current.model),
-                  });
-                }}
-              >
-                {formatBrandName(item)}
-              </Chip>
-            ))}
-            {facets.brands.length > 8 ? (
-              <Chip
-                active={Boolean(
-                  current.brand &&
-                    !visibleBrandChips(facets.brands, current.brand).includes(
-                      current.brand,
-                    ),
-                )}
-                onClick={() => {
-                  setDraft(current);
-                  setOpen(true);
-                }}
-              >
-                Outras
-              </Chip>
-            ) : null}
-          </MobileChipRow>
-        ) : null}
         {current.brand &&
         modelFilterOptions(facets.models, current.brand, current.model).length > 0 ? (
           <MobileChipRow label="Modelo">

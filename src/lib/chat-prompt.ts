@@ -10,11 +10,12 @@ import {
 } from "@/lib/chat-consumption";
 import { site } from "@/lib/site";
 import { shortVersion } from "@/lib/vehicle-display";
+import { withoutChatMetrics } from "@/lib/chat-search-filters";
 
 export const CHAT_WHATSAPP_URL = `https://wa.me/${site.whatsappNumber}`;
 
 export const CHAT_FALLBACK_REPLY =
-  `Deu um soluço aqui do meu lado. Sem estresse: chama no WhatsApp que um consultor te atende — ${CHAT_WHATSAPP_URL}`;
+  `Não consegui concluir sua resposta agora. Um consultor continua com você no WhatsApp: ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_OFF_SCOPE_REPLY =
   `Essa parte eu deixo com o consultor, mas nos assuntos da Garagem eu te ajudo sim: estoque, compra, venda, troca, financiamento e garantia. Se for outra coisa, chama no WhatsApp: ${CHAT_WHATSAPP_URL}`;
@@ -68,19 +69,20 @@ Nunca começar com “não posso”, “não monto” ou “não cubro”. Quand
 Cumprimento informal (oi, eae, eai, blz, teste, opa) é conversa da loja: cumprimente com calor, ofereça ajuda rápida para escolher no estoque e já deixe o WhatsApp como próximo passo. Só fale de financiamento ou troca se a pessoa pedir — e aí explique em português simples (parcelar o carro, dar o usado na conta), sem “60x” solto. NÃO recuse um oi.
 
 COMO AJUDAR DE VERDADE:
+- A cidade física de cada veículo é informação interna do admin. Não mostre, confirme, deduza nem filtre anúncios por essa cidade. Onde a loja atende é diferente; para combinar onde ver uma unidade, encaminhe ao WhatsApp oficial.
 - HANDOFF: chame o WhatsApp só quando um humano destrava o próximo passo (parcela, troca, vídeo, visita, lista de espera, ou se pedirem o consultor). Uma comparação do estoque termina na escolha, sem link. Se houver veículo na tela e a pessoa for falar com o consultor, o site monta a mensagem natural “Oi! Vi o {carro}…”.
 - Seu trabalho é ser consultor de verdade: ajudar a ESCOLHER um carro do estoque comparando as opções reais (preço, km, ano, câmbio, motor), não só listar nem responder seco. Se não puder calcular parcela ou inventar um dado, explique o próximo passo com calma (consultor no WhatsApp), como quem ajuda — nunca como quem trava a conversa.
 - Se faltar orçamento, tipo (hatch/sedan/SUV), câmbio ou se tem veículo na troca, faça UMA pergunta objetiva. Sem questionário. Se o visitante já deu orçamento ou pediu automático/manual, NÃO pergunte hatch/sedan.
 - Ao listar, escolha no máximo 3 opções que façam sentido — não despeje o estoque inteiro. Se o visitante pedir barato / baratinho / mais em conta, prefira os mais baratos do modelo pedido e NÃO cite irmão mais caro sem necessidade. O site vira cada linha em mini-anúncio com foto e já mostra atalhos (financiar, troca). Formato da lista, um por linha:
 Marca Modelo ano · km · R$ preço
 Antes da lista: 1 frase falada de recorte (Olha só, carros até R$ 70.000 no estoque agora / Automáticos até R$ 80.000). Não comece com “Separei N” nem “Temos três ótimas opções”. DEPOIS da lista: 1 ou 2 frases comparando SOMENTE esses mesmos carros, com dados da linha de estoque. Não cole o link do WhatsApp nesta lista. Só diga que um está mais em conta se o preço for menor de fato — se empatar, compare km, ano e câmbio, nunca invente desconto. Diga quem tem menos km, quem é automático e o que isso muda no dia a dia. Só diga que um carro “é o automático da lista” ou “o único automático” se nenhum outro da mesma lista for automático. NÃO mencione consumo de combustível espontaneamente. Frases completas, faladas, sem telegrama e sem emoji.
-- Motor forte: forte, motorizado, motor forte, potente, pegada, torque, esportivo, 1.8+ ou 2.0 não é pedido de mais barato. No câmbio e no teto de preço, ordene por porte do motor e cilindrada, e só depois pelo preço. Prefira maior cilindrada ou motor nomeado que esteja escrito na ficha (TSI, turbo, THP). Não invente cv, potência nem número de torque. Os 3 da lista são os de motor maior; um 1.0 ou 1.6 de motor menor só entra como observação curta, nunca em primeiro. Se esse motor menor custar mais que o líder, não diga que ele serve para gastar menos. Depois da lista, 1 ou 2 frases: qual dos 3 é o de motor maior, com motor/cilindrada, km, preço e câmbio reais, e o que muda de km e preço entre os empatados. Só diga “mais em conta” se a pessoa também pediu barato ou em conta.
+- Motor forte: mantenha câmbio e teto de preço. Motor/cilindrada escritos no anúncio servem para organizar candidatos, nunca para provar potência: um turbo menor pode superar um aspirado maior. Não afirme que um é mais potente, mais forte ou empata em potência sem fonte técnica da versão e do ano. Compare km, preço, ano e câmbio reais. Potência e torque só aparecem na pesquisa técnica com fontes, nunca por memória ou dedução da cilindrada.
 - Família, espaçoso, 4 portas ou porta-malas: no câmbio e no teto, prefira sedan, SUV, perua ou mais portas quando isso estiver na ficha. Só diga o número de portas se ele estiver na linha. Não invente litros de porta-malas.
 - Primeiro carro, uso na cidade ou aplicativo: prefira o menor preço e hatch compacto quando a carroceria estiver na ficha. Não invente custo de manutenção.
 - Econômico, quando não for pergunta de consumo daquele carro: prefira menor cilindrada e, no empate, o menor preço. Não cite km/l nessa lista.
 - SUV, sedan, hatch, picape ou perua: fique nessa carroceria. Moto só se a pessoa pedir moto.
 - Se o recorte já tiver orçamento, câmbio, carroceria ou intenção ditos nesta conversa, não pergunte de novo. Use o que já foi dito.
-- Consumo / média / km/l: NUNCA mencione consumo espontaneamente. O consumo só deve ser informado SE o visitante perguntar especificamente sobre o consumo, gasto de combustível, quanto faz por litro ou se o veículo é econômico. Quando ele perguntar de consumo, use SOMENTE o texto “consumo típico” já escrito na linha do estoque. Se a linha tiver gasolina e álcool, cite as duas faixas. NUNCA invente outro número, NUNCA invente cv, potência, torque ou INMETRO, NUNCA diga que a loja mediu este usado, NUNCA apresente a faixa como garantia. Fale como faixa típica de catálogo / média da motorização. Não repita a cilindrada se o modelo já tiver (nunca “Fox 1.6 1.6”). Complete a frase com os km/l ANTES do aviso de que o usado não foi medido na loja — nunca junte o aviso no lugar da faixa (“fica Nenhum desses…”). Se não houver km/l na linha, diga isso com clareza; não complete “fica” com o disclaimer.
+- Consumo / média / km/l: NUNCA mencione consumo espontaneamente. Não estime km/l pela cilindrada, motor ou combustível. Só publique números na pesquisa técnica citada da versão e do ano, com combustível e cidade/estrada identificados. Sem fonte exata, explique que falta confirmação. Dados de catálogo nunca garantem o consumo de uma unidade usada.
 - Não descreva a foto, não use markdown, não cite carro fora dessas 3 linhas e não pergunte hatch, sedan, “qual desses” nem “qual perfil” depois da lista (os atalhos do site já existem).
 - Se perguntarem “qual o melhor”, compare 2 ou 3 da lista só com dados reais (preço, ano, km, câmbio, combustível, motor, acessórios da linha). Sem inventar opcional.
 - Acessórios, motor e cor: só o que estiver na linha do estoque. Se não estiver escrito, não invente ar digital, multimídia, couro, teto, sensor, cor ou motorização.
@@ -94,7 +96,7 @@ Antes da lista: 1 frase falada de recorte (Olha só, carros até R$ 70.000 no es
 
 Quando o visitante pedir carros por preço (até 70 mil, abaixo de 80 mil, etc.), liste no máximo 3 veículos REAIS da lista, um por linha, neste formato:
 Marca Modelo ano · km · R$ preço
-Antes da lista, uma frase. Depois da lista, a comparação (1 ou 2 frases) com dados reais de preço, km e câmbio, e o WhatsApp. Nunca escreva “temos opções” e pare. Não cite modelo extra fora dessas linhas. Se não houver carro na faixa, diga isso e ofereça outra faixa ou o WhatsApp.
+Antes da lista, uma frase. Depois da lista, a comparação (1 ou 2 frases) com dados reais de preço, km e câmbio. O WhatsApp aparece quando o visitante pedir ajuda de um consultor, conforme a regra acima. Nunca escreva “temos opções” e pare. Não cite modelo extra fora dessas linhas. Se não houver carro na faixa, diga isso e ofereça outra faixa ou o WhatsApp.
 
 Quando o visitante demonstrar interesse real de compra E fornecer nome e telefone de contato, chame a função criar_lead. Não invente telefone nem nome. Só chame a função se os dois dados tiverem sido ditos pelo visitante.
 
@@ -256,7 +258,7 @@ export function parseCheapIntent(mensagem: string): boolean {
 }
 
 export function parsePriceLimit(mensagem: string): number | null {
-  const text = mensagem
+  const text = withoutChatMetrics(mensagem)
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -268,7 +270,11 @@ export function parsePriceLimit(mensagem: string): number | null {
   const match =
     text.match(
       /(?:ate|abaixo de|menos de|no maximo|maximo|por ate|de ate|ate uns|em torno de|orcamento de|orcamento|faixa de)\s+(\d+)\s*(mil|k)?/,
-    ) ?? text.match(/(\d+)\s*(mil|k)\b/);
+    ) ??
+    text.match(
+      /(?:entre|de)\s+\d+\s*(?:mil|k)?\s+(?:e|a)\s+(\d+)\s*(mil|k)?\b/,
+    ) ??
+    text.match(/(\d+)\s*(mil|k)\b/);
   if (!match) return null;
   let amount = Number(match[1]);
   if (!Number.isFinite(amount) || amount <= 0) return null;
@@ -336,16 +342,29 @@ export function isPowerQuery(mensagem: string) {
   return parsePowerIntent(mensagem) && !parseCheapIntent(mensagem);
 }
 
+/** A search/comparison is not a question about one vehicle's equipment. */
+export function isChatSelectionQuery(mensagem: string) {
+  const text = foldIntent(mensagem);
+  return (
+    /\b(fortes?|potentes?|motorizad[oa]s?)\b/.test(text) ||
+    /\b(quais|qual)\s+(?:(?:o|os|a|as)\s+)?(automatic[oa]s?|manuais|suvs?|carros|motos)\b/.test(
+      text,
+    ) ||
+    /\b(mostrar|ver|buscar|procurar)\s+(?:(?:o|os|a|as)\s+)?(automatic[oa]s?|manuais|suvs?|carros|motos)\b/.test(
+      text,
+    ) ||
+    /\b(mais forte|mais fortes|mais potente|mais potentes|mais barato|mais barata|mais baratos|mais baratas|mais em conta|menor preco|menos km|menor km|mais novo|mais nova|mais novos|mais novas|mais economico|mais economica|mais espacoso|mais espacosa|compar\w*|qual dos|qual desses|qual destes|entre esses|entre estes)\b/.test(
+      text,
+    ) ||
+    (/\b(quero|procuro|busco|qual|quais|tem|opcoes)\b/.test(text) &&
+      /\b(forte|fortes|potente|potentes|familia|primeiro carro)\b/.test(text))
+  );
+}
+
 export type ChatBodyStyle = "suv" | "sedan" | "hatch" | "pickup" | "wagon";
 
 export type ChatRankMode =
-  | "power"
-  | "family"
-  | "starter"
-  | "economy"
-  | "cheap"
-  | "price"
-  | "default";
+  "power" | "family" | "starter" | "economy" | "cheap" | "price" | "default";
 
 /** Família / espaçoso / 4 portas. “espaço” solto não conta. */
 export function parseFamilyIntent(mensagem: string) {
@@ -429,7 +448,9 @@ export function vehicleBodyStyle(vehicle: {
   }
 }
 
-export function engineDisplacementLiters(vehicle: PowerRankable): number | null {
+export function engineDisplacementLiters(
+  vehicle: PowerRankable,
+): number | null {
   return parseEngineDisplacementLiters(
     vehicle.engine,
     `${vehicle.version ?? ""} ${vehicle.model}`,
@@ -478,7 +499,10 @@ export function powerRankTuple(
   return [meets, tier, liters ?? 0, named];
 }
 
-export function powerRankKey(vehicle: PowerRankable, floor: number | null = null) {
+export function powerRankKey(
+  vehicle: PowerRankable,
+  floor: number | null = null,
+) {
   return powerRankTuple(vehicle, floor).join(":");
 }
 
@@ -511,7 +535,11 @@ function familyScore(vehicle: IntentRankable) {
   const body = vehicleBodyStyle(vehicle);
   if (body === "wagon" || body === "suv") score += 3;
   else if (body === "sedan") score += 2;
-  if (/\b7 lugares\b/.test(foldIntent(`${vehicle.version ?? ""} ${vehicle.model}`))) {
+  if (
+    /\b7 lugares\b/.test(
+      foldIntent(`${vehicle.version ?? ""} ${vehicle.model}`),
+    )
+  ) {
     score += 3;
   }
   return score;
