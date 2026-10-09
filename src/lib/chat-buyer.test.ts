@@ -1096,7 +1096,9 @@ test("família, primeiro carro, econômico e SUV filtram o estoque real", async 
   });
   assert.equal(economy.vehicles[0]?.id, "hb");
   assert.doesNotMatch(economy.reply, /km\/l/);
-  assert.match(economy.reply, /motor 1\.0/);
+  assert.match(economy.reply, /HB20 Vision 1\.0/);
+  assert.match(economy.reply, /Motor menor, sozinho, não confirma/);
+  assert.doesNotMatch(economy.reply, /é o de motor menor|mais econômico da lista/);
   assert.ok(economy.vehicles.every((vehicle) => vehicle.price <= 70_000));
 
   const suv = selectVehiclesForChatPrompt(stock, "suv automático até 130 mil");
