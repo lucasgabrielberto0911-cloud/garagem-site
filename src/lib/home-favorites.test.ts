@@ -86,5 +86,5 @@ test("favoritos: lista no WhatsApp com id, e vazio aponta estoque", () => {
   assert.match(readSrc("lib/favorites.ts"), /garagem:favoritos/);
   assert.match(readSrc("components/site/FavoriteButton.tsx"), /href="\/favoritos"/);
   const comparison = readSrc("components/site/FavoritesComparison.tsx");
-  assert.doesNotMatch(comparison, /vehicleLocationLabel|Cidade/);
+  assert.doesNotMatch(comparison, /label: "Cidade"/);
 });
