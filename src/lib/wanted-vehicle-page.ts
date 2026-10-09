@@ -14,6 +14,11 @@ export type WantedVehicleQuery = Partial<
   Record<(typeof STOCK_FILTER_KEYS)[number] | "sem", string>
 >;
 
+/** Stable filter identity; order and presentation copy cannot merge two searches. */
+export function wantedVehicleDraftContext(params: WantedVehicleQuery) {
+  return JSON.stringify(STOCK_FILTER_KEYS.map(key => [key, params[key]?.trim() ?? ""]));
+}
+
 export function wantedVehicleHref(
   params: WantedVehicleQuery,
   options?: { empty?: boolean },
