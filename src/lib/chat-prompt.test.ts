@@ -34,7 +34,10 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /assistente virtual da Garagem/);
   assert.match(CHAT_SYSTEM_PROMPT, /há mais de 20 anos/);
   assert.match(CHAT_SYSTEM_PROMPT, /mais de 1\.000 carros vendidos/);
-  assert.match(CHAT_SYSTEM_PROMPT, /Aracruz, Vitória, Linhares, Serra, Vila Velha/);
+  assert.match(
+    CHAT_SYSTEM_PROMPT,
+    /Aracruz, Vitória, Linhares, Serra, Vila Velha/,
+  );
   assert.match(CHAT_SYSTEM_PROMPT, /troca \(carro ou moto\)/);
   assert.match(CHAT_SYSTEM_PROMPT, /financia em até 60x/);
   assert.match(CHAT_SYSTEM_PROMPT, /cartão de crédito em até 18x/);
@@ -51,8 +54,8 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /COMO AJUDAR DE VERDADE/);
   assert.match(CHAT_SYSTEM_PROMPT, /mini-anúncio com foto/);
   assert.match(CHAT_SYSTEM_PROMPT, /não pergunte hatch/);
-  assert.match(CHAT_SYSTEM_PROMPT, /faixa típica de catálogo/);
-  assert.match(CHAT_SYSTEM_PROMPT, /Fox 1\.6 1\.6/);
+  assert.match(CHAT_SYSTEM_PROMPT, /Não estime km\/l/);
+  assert.match(CHAT_SYSTEM_PROMPT, /versão e do ano/);
   assert.match(CHAT_SYSTEM_PROMPT, /mais em conta se o preço for menor/);
   assert.match(CHAT_SYSTEM_PROMPT, /1 a 3 frases curtas/);
   assert.match(CHAT_SYSTEM_PROMPT, /HANDOFF/);
@@ -64,7 +67,10 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /consultor humano/);
   assert.match(CHAT_SYSTEM_PROMPT, /um pouco animado/);
   assert.match(CHAT_SYSTEM_PROMPT, /Nunca começar com “não posso”/);
-  assert.match(CHAT_SYSTEM_PROMPT, /NUNCA invente outro número/);
+  assert.match(
+    CHAT_SYSTEM_PROMPT,
+    /Só publique números na pesquisa técnica citada/,
+  );
   assert.match(CHAT_SYSTEM_PROMPT, /ESCOLHER um carro/);
   assert.match(CHAT_SYSTEM_PROMPT, /consultor monta a simulação/);
   assert.match(CHAT_SYSTEM_PROMPT, /NUNCA invente banco/);
@@ -72,8 +78,8 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /Esse carro ainda tem/);
   assert.match(CHAT_SYSTEM_PROMPT, /Comparar dois modelos/);
   assert.match(CHAT_SYSTEM_PROMPT, /Motor forte/);
-  assert.match(CHAT_SYSTEM_PROMPT, /pegada/);
-  assert.match(CHAT_SYSTEM_PROMPT, /1\.8\+/);
+  assert.match(CHAT_SYSTEM_PROMPT, /nunca para provar potência/);
+  assert.match(CHAT_SYSTEM_PROMPT, /sem fonte técnica da versão e do ano/);
   assert.equal(CHAT_WHATSAPP_URL, "https://wa.me/5527996330706");
   assert.match(CHAT_SYSTEM_PROMPT, /https:\/\/wa\.me\/5527996330706/);
   assert.match(CHAT_SYSTEM_PROMPT, /ESCOPO RESTRITO/);
@@ -203,7 +209,10 @@ test("resposta fixa de FIPE não cita carro nem preço", () => {
 
 test("prompt proíbe falar de consumo espontaneamente", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /NUNCA mencione consumo espontaneamente/);
-  assert.match(CHAT_SYSTEM_PROMPT, /NÃO mencione consumo de combustível espontaneamente/);
+  assert.match(
+    CHAT_SYSTEM_PROMPT,
+    /NÃO mencione consumo de combustível espontaneamente/,
+  );
 });
 
 test("prompt com activeVehicle injeta contexto e regra de desambiguação", () => {
@@ -269,8 +278,14 @@ test("intenção forte reconhece apelidos e não vira pedido barato", () => {
   ]) {
     assert.equal(parsePowerIntent(sample), true, sample);
   }
-  assert.equal(parseCheapIntent("Automatico Forte, no maximo de 109 mil"), false);
-  assert.equal(parsePriceLimit("Automatico Forte, no maximo de 109 mil"), 109_000);
+  assert.equal(
+    parseCheapIntent("Automatico Forte, no maximo de 109 mil"),
+    false,
+  );
+  assert.equal(
+    parsePriceLimit("Automatico Forte, no maximo de 109 mil"),
+    109_000,
+  );
   assert.equal(parseMinDisplacementLiters("quero um 2.0"), 2);
   assert.equal(parseMinDisplacementLiters("1.8+"), 1.8);
   assert.equal(parseMinDisplacementLiters("acima de 1.6"), 1.6);
@@ -344,7 +359,9 @@ test("rankByPower coloca 2.0 e TSI na frente de 1.0 e 1.6", () => {
     "automático forte até 109 mil",
   );
   assert.equal(byEngineThenPrice[0]?.model, "Corolla");
-  assert.ok((byEngineThenPrice[0]?.price ?? 0) > (byEngineThenPrice[1]?.price ?? 0));
+  assert.ok(
+    (byEngineThenPrice[0]?.price ?? 0) > (byEngineThenPrice[1]?.price ?? 0),
+  );
   assert.ok(
     byDisplacement.findIndex((vehicle) => vehicle.model === "Lancer") <
       byDisplacement.findIndex((vehicle) => vehicle.model === "Nivus"),
@@ -395,7 +412,10 @@ test("prompt de automático forte lista 2.0 antes do 1.0 e não pede o mais bara
   assert.ok(lancer >= 0 && civic > lancer && corolla > civic);
   assert.ok(hb < 0 || hb > corolla);
 
-  const cheap = buildChatSystemPrompt(vehicles, "automatico barato ate 109 mil");
+  const cheap = buildChatSystemPrompt(
+    vehicles,
+    "automatico barato ate 109 mil",
+  );
   assert.match(cheap, /mais baratos primeiro/);
   assert.doesNotMatch(cheap, /mais fortes primeiro/);
   assert.match(cheap, /FILTRO DO VISITANTE: até R\$ 109\.000/);
@@ -404,7 +424,10 @@ test("prompt de automático forte lista 2.0 antes do 1.0 e não pede o mais bara
 });
 
 test("intenções de família, primeiro carro, econômico e carroceria", () => {
-  assert.equal(parseFamilyIntent("carro para família, espaçoso, 4 portas"), true);
+  assert.equal(
+    parseFamilyIntent("carro para família, espaçoso, 4 portas"),
+    true,
+  );
   assert.equal(parseFamilyIntent("tem espaço no banco?"), false);
   assert.equal(parseStarterIntent("primeiro carro para a cidade"), true);
   assert.equal(parseStarterIntent("uber até 60 mil"), true);
@@ -461,7 +484,9 @@ test("ranking segue a intenção dominante sem inventar dado", () => {
     doors: 4,
   };
   assert.deepEqual(
-    rankChatVehicles([civic, hb, onix], "carro econômico").map((row) => row.model),
+    rankChatVehicles([civic, hb, onix], "carro econômico").map(
+      (row) => row.model,
+    ),
     ["HB20", "Onix", "Civic"],
   );
   assert.equal(
