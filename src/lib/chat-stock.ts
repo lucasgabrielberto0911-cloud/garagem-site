@@ -1986,7 +1986,7 @@ export function similarAfterEmptyFilter(
 }
 
 const WAITLIST_STOP =
-  /^(tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares)$/;
+  /^(tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares)$/;
 
 const INTENT_SEEK_NOISE =
   /^(forte|fortes|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;

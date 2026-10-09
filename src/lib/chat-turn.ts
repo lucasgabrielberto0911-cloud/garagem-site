@@ -136,6 +136,9 @@ export async function runChatTurn(input: {
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
   const visitorMessage = input.mensagem;
+  const roadUse = /\b(estrada|rodovias?|viagens?|viajar|ultrapassagens?|retomadas?)\b/i.test(
+    visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+  );
   const requestsTechnical =
     asksForTechnicalResearch(visitorMessage) ||
     asksAboutConsumption(visitorMessage);
@@ -304,6 +307,7 @@ export async function runChatTurn(input: {
   if (
     !mayCreateLead &&
     !requestsTechnical &&
+    !roadUse &&
     input.historico.some(
       (turn) => turn.role === "user" && turn.content.trim(),
     ) &&
@@ -342,6 +346,7 @@ export async function runChatTurn(input: {
   const mixedPrice = asksAboutListedFacts(scopedMessage);
   const selection =
     isChatSelectionQuery(scopedMessage) ||
+    roadUse ||
     Object.keys(parseChatSearchRanges(scopedMessage)).length > 0 ||
     (hasChatStockFilter(scopedMessage) &&
       !isFocusedVehicleFactQuestion(
@@ -362,13 +367,24 @@ export async function runChatTurn(input: {
   ) {
     const found = searchChatInventory(scopedMessage, input.stock);
     if (found) {
-      emit(found.reply);
-      const result = finish(found.reply, false, {
+      let inventoryReply = found.reply;
+      if (roadUse || (requestsTechnical && chatResearchTopic(visitorMessage) === "consumo")) {
+        const evidence = compareChatStockPicks(found.picks, {
+          withLeadin: false,
+          intent: "default",
+        });
+        const guidance = roadUse
+          ? "Para estrada, você prioriza conforto, consumo ou desempenho? Posso conferir os dados técnicos das versões com fontes."
+          : "Para comparar consumo, vou conferir a versão e o ano, com combustível e percurso informados na fonte. Motor menor, sozinho, não confirma qual gasta menos.";
+        inventoryReply = `${found.reply.split("\n")[0]}\n${found.picks.map(formatVehicleLine).join("\n")}\n\n${evidence} ${guidance}`;
+      }
+      emit(inventoryReply);
+      const result = finish(inventoryReply, false, {
         policy: "inventory-search",
         forcedVehicles: found.picks,
       });
       // Preserve exact inventory prose: enrichment must not turn a search into a gear fact.
-      result.reply = found.reply;
+      result.reply = inventoryReply;
       result.stockHref = chatStockExploreHref(
         scopedMessage,
         found.candidates,

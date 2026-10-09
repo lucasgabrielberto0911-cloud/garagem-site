@@ -19,7 +19,7 @@ export type ChatSearchRanges = {
   minPrice?: number;
 };
 
-function amount(value: string, unit?: string) {
+export function parseChatNumberAmount(value: string, unit?: string) {
   const n = Number(value.replace(/\.(?=\d{3}(?:\D|$))/g, "").replace(",", "."));
   return n * (unit ? 1000 : 1);
 }
@@ -50,7 +50,7 @@ export function parseChatSearchRanges(value: string): ChatSearchRanges {
     /\b(?:ate|menos de|no maximo|maximo(?: de)?|abaixo de)\s+([\d.,]+)\s*(mil|k)?\s*(?:km|quilometros?)\b/,
   );
   if (km) {
-    const n = amount(km[1]!, km[2]);
+    const n = parseChatNumberAmount(km[1]!, km[2]);
     if (n >= 0 && n <= 2_000_000) ranges.maxKm = n;
   }
   const price =
@@ -61,7 +61,7 @@ export function parseChatSearchRanges(value: string): ChatSearchRanges {
       /\b(?:entre|de)\s+(?:r\$\s*)?([\d.,]+)\s*(mil|k)?\s+(?:a|ate|e)\s+(?:r\$\s*)?[\d.,]+/,
     );
   if (price) {
-    let n = amount(price[1]!, price[2]);
+    let n = parseChatNumberAmount(price[1]!, price[2]);
     if (n < 1000) n *= 1000;
     if (n >= 8000 && n <= 2_000_000) ranges.minPrice = n;
   }

@@ -382,7 +382,7 @@ export function chatWhatsAppCta(
 /** “esse / dele” — aponta pro card único da tela, não pra um modelo nomeado. */
 export function isAnaphoricVehicleFollowUp(mensagem: string): boolean {
   const folded = fold(mensagem);
-  return /\b(esse|essa|esses|essas|este|esta|estes|estas|isso|isto|ele|ela|dele|dela|desse|dessa|deste|desta|nele|nela)\b/.test(
+  return /\b(esse|essa|esses|essas|este|esta|estes|estas|isso|isto|ele|ela|dele|dela|deles|delas|desse|dessa|desses|dessas|deste|desta|destes|destas|nele|nela|entre os dois|entre as duas|entre os tres|entre as tres)\b/.test(
     folded,
   );
 }
