@@ -93,7 +93,7 @@ export function MissingModelForm({
   const [kmMin, setKmMin] = useState(() => digitsToGrouped(initialKmMin));
   const [kmMax, setKmMax] = useState(() => digitsToGrouped(initialKmMax));
   const TitleTag = titleAs;
-  const draftContext = JSON.stringify([initialModel, initialYearMin, initialYearMax, initialPriceMin, initialPriceMax, initialKmMin, initialKmMax]);
+  const draftContext = JSON.stringify([initialModel, initialYearMin, initialYearMax, initialPriceMin, initialPriceMax, initialKmMin, initialKmMax, contextLabel, interestVehicleId]);
   const draft = useWantedDraft(formRef, rememberDraft && !sent, draftContext, fields => {
     setPhone(formatPhoneBR(fields.phone));
     setPriceMin(digitsToGrouped(fields.priceMin)); setPriceMax(digitsToGrouped(fields.priceMax));

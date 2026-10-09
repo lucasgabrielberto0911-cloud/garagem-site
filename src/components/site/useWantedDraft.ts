@@ -44,7 +44,11 @@ export function useWantedDraft(formRef: RefObject<HTMLFormElement | null>, activ
         restoreRef.current(fields);
         pending.current = serializeWantedDraft(fields, context);
         setSaved(true); setRestored(true);
-      } else sessionStorage.removeItem(WANTED_DRAFT_KEY);
+      } else {
+        pending.current = null;
+        setSaved(false); setRestored(false);
+        sessionStorage.removeItem(WANTED_DRAFT_KEY);
+      }
     } catch { /* Preenchimento e envio continuam disponíveis. */ }
     const flush = () => { if (timer.current) clearTimeout(timer.current); persist(); };
     window.addEventListener("pagehide", flush);
