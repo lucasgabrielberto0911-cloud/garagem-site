@@ -10,7 +10,7 @@ import {
 } from "@/lib/chat-consumption";
 import { site } from "@/lib/site";
 import { shortVersion } from "@/lib/vehicle-display";
-import { withoutChatMetrics } from "@/lib/chat-search-filters";
+import { parseChatNumberAmount, withoutChatMetrics } from "@/lib/chat-search-filters";
 
 export const CHAT_WHATSAPP_URL = `https://wa.me/${site.whatsappNumber}`;
 
@@ -263,22 +263,20 @@ export function parsePriceLimit(mensagem: string): number | null {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/r\$/g, " ")
-    .replace(/\./g, "")
-    .replace(/,/g, "")
-    .replace(/\b\d+\s*(?:x|vezes)\b/g, " ")
+    .replace(/\b\d[\d.,]*\s*(?:x|vezes)\b/g, " ")
     .replace(/(\d)(mil|k)\b/g, "$1 $2");
   const match =
     text.match(
-      /(?:ate|abaixo de|menos de|no maximo|maximo|por ate|de ate|ate uns|em torno de|orcamento de|orcamento|faixa de)\s+(\d+)\s*(mil|k)?/,
+      /(?:ate|abaixo de|menos de|no maximo|maximo|por ate|de ate|ate uns|em torno de|orcamento de|orcamento|faixa de)\s+(\d[\d.,]*)\s*(mil|k)?/,
     ) ??
     text.match(
-      /(?:entre|de)\s+\d+\s*(?:mil|k)?\s+(?:e|a)\s+(\d+)\s*(mil|k)?\b/,
+      /(?:entre|de)\s+\d[\d.,]*\s*(?:mil|k)?\s+(?:e|a)\s+(\d[\d.,]*)\s*(mil|k)?\b/,
     ) ??
-    text.match(/(\d+)\s*(mil|k)\b/);
+    text.match(/(\d[\d.,]*)\s*(mil|k)\b/);
   if (!match) return null;
-  let amount = Number(match[1]);
+  let amount = parseChatNumberAmount(match[1], match[2]);
   if (!Number.isFinite(amount) || amount <= 0) return null;
-  if (match[2] === "mil" || match[2] === "k" || amount < 1000) amount *= 1000;
+  if (!match[2] && amount < 1000) amount *= 1000;
   if (amount < 8000 || amount > 2_000_000) return null;
   return Math.round(amount);
 }

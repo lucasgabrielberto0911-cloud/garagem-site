@@ -11,7 +11,7 @@ export function asksForTechnicalResearch(message: string) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-  return /\b(potencia|potentes?|fortes?|torque|cavalos|cv|consumo|quanto (?:faz|gasta)|por litro|km\/l|ficha tecnica|dados tecnicos|pesquis\w*|porta[ -]malas|0 a 100)\b/.test(
+  return /\b(potencia|potentes?|fortes?|torque|cavalos|cv|consumo|economicos?|economicas?|economia de combustivel|quanto (?:faz|gasta)|por litro|km\/l|ficha tecnica|dados tecnicos|pesquis\w*|porta[ -]malas|0 a 100)\b/.test(
     text,
   );
 }
@@ -69,6 +69,8 @@ export function parseGroundedResearch(
       sources: ChatResearch["paragraphs"][number]["sources"];
     }
   >();
+  const documentedPowers = new Map<string, number>();
+  const conflictingIds = new Set<string>();
   const fold = (value: string) =>
     value
       .toLowerCase()
@@ -124,13 +126,27 @@ export function parseGroundedResearch(
         const powers = [...text.matchAll(/\b(\d{2,3}(?:[.,]\d)?)\s*cv\b/gi)]
           .map((m) => Number(m[1]!.replace(",", ".")))
           .filter((n) => n > 5 && n < 1500);
-        if (powers.length)
-          for (const vehicle of identified)
-            powerRows.set(vehicle.id, {
-              vehicle,
-              power: Math.max(...powers),
-              sources,
-            });
+        // A cited CV value needs an unambiguous fuel. Never assign a combined
+        // 150/155 cv label or a torque fuel to the wrong catalogue power.
+        const fuels = [...new Set(fold(text).match(/\b(?:etanol|gasolina|diesel|eletrico)\b/g) ?? [])];
+        const paired = [...fold(text).matchAll(/\b(\d{2,3}(?:[.,]\d)?)\s*cv\s*(?:(?:com|no|na|a|de)\s+)?(etanol|gasolina|diesel|eletrico)\b/g)]
+          .map(match => ({ fuel: match[2]!, power: Number(match[1]!.replace(",", ".")) }));
+        const ambiguousRange = /\d{2,3}\s*[/–-]\s*\d{2,3}\s*cv/i.test(text);
+        const entries = ambiguousRange ? [] : paired.length === powers.length
+          ? paired
+          : powers.length === 1 && fuels.length === 1
+            ? [{ fuel: fuels[0]!, power: powers[0]! }]
+            : [];
+        for (const { fuel, power } of entries) {
+          for (const vehicle of identified) {
+            const key = `${vehicle.id}:${fuel}`;
+            const earlier = documentedPowers.get(key);
+            if (earlier != null && earlier !== power) conflictingIds.add(vehicle.id);
+            documentedPowers.set(key, power);
+            const previous = powerRows.get(vehicle.id);
+            if (!previous || power >= previous.power) powerRows.set(vehicle.id, { vehicle, power, sources });
+          }
+        }
       }
     }
     if (paragraphs.length >= 16) break;
@@ -138,12 +154,18 @@ export function parseGroundedResearch(
   // Google's search suggestions accompany grounded results, isolated in a sandboxed frame.
   const suggestionsHtml = metadata?.searchEntryPoint?.renderedContent;
   if (!suggestionsHtml || suggestionsHtml.length > 30_000) return unavailable;
+  for (const id of conflictingIds) powerRows.delete(id);
   const ranked = [...powerRows.values()].sort((a, b) => b.power - a.power);
   const top = ranked[0];
   const tied = top ? ranked.filter((row) => row.power === top.power) : [];
   const complete = powerRows.size === totalCandidates;
   const comparison =
-    top && totalCandidates > 1
+    conflictingIds.size > 0
+      ? {
+          text: "Encontrei valores de potência divergentes para a mesma versão, ano e combustível nas fontes consultadas. Vou deixar os dados e as fontes abaixo, sem apontar um vencedor até esclarecer essa diferença.",
+          sources: paragraphs.flatMap(row => row.sources).slice(0, 3),
+        }
+      : top && totalCandidates > 1
       ? {
           text:
             ranked.length === 1 && !complete

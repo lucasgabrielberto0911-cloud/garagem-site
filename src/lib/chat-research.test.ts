@@ -267,3 +267,28 @@ test("evento com fontes longas e sugestões chega inteiro, mantendo limite de tr
     ),
   );
 });
+
+test("fontes divergentes para o mesmo combustível não elegem um vencedor", () => {
+  const data = fixture();
+  data.candidates[0]!.groundingMetadata.groundingSupports.push({ segment: { text: supported.replace("155 cv", "150 cv") }, groundingChunkIndices: [0] });
+  const result = parseGroundedResearch(data, [civic]);
+  assert.equal(result.powerOrder, undefined);
+  assert.match(result.comparison!.text, /divergentes/);
+  assert.equal(result.paragraphs.length, 2);
+});
+
+test("potência de outro combustível não apaga a maior documentada nem vira conflito", () => {
+  const data = fixture();
+  data.candidates[0]!.groundingMetadata.groundingSupports.push({ segment: { text: supported.replace("155 cv", "150 cv").replace("etanol", "gasolina") }, groundingChunkIndices: [0] });
+  const result = parseGroundedResearch(data, [civic]);
+  assert.deepEqual(result.powerOrder, [civic.id]);
+  assert.equal(result.comparison, undefined);
+});
+
+test("rótulo combinado sem combustível por valor não cria ranking e conflito parcial é detectado", () => {
+  assert.equal(parseGroundedResearch(fixture(supported.replace("155 cv com etanol", "150/155 cv (gasolina/etanol)")), [civic]).powerOrder, undefined);
+  const data = fixture(supported.replace("155 cv com etanol", "155 cv com etanol e 150 cv com gasolina"));
+  data.candidates[0]!.groundingMetadata.groundingSupports.push({ segment: { text: supported.replace("155 cv", "160 cv") }, groundingChunkIndices: [0] });
+  assert.equal(parseGroundedResearch(data, [civic]).powerOrder, undefined);
+  assert.match(parseGroundedResearch(data, [civic]).comparison!.text, /divergentes/);
+});
