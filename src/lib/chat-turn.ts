@@ -94,6 +94,8 @@ import {
   asksForTechnicalResearch,
   chatResearchTopic,
   researchChatVehicles,
+  resolveTechnicalFollowUp,
+  requestedResearchFuel,
 } from "@/lib/chat-research";
 import type { ChatResearch } from "@/lib/chat-research-data";
 import { parseEngineDisplacementLiters } from "@/lib/chat-consumption";
@@ -159,7 +161,7 @@ export async function runChatTurn(input: {
   const generateStream = input.generateStream ?? generateChatReplyStream;
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
-  const visitorMessage = input.mensagem;
+  const visitorMessage = resolveTechnicalFollowUp(input.mensagem, input.historico, input.stock);
   const roadUse = /\b(estrada|rodovias?|viagens?|viajar|ultrapassagens?|retomadas?)\b/i.test(
     visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
   );
@@ -413,7 +415,7 @@ export async function runChatTurn(input: {
           : "Para comparar consumo, vou conferir a versão e o ano, com combustível e percurso informados na fonte. Motor menor, sozinho, não confirma qual gasta menos.";
         inventoryReply = `${found.reply.split("\n")[0]}\n${found.picks.map(formatVehicleLine).join("\n")}\n\n${evidence} ${guidance}`;
       }
-      emit(inventoryReply);
+      if (!requestsTechnical) emit(inventoryReply);
       const result = finish(inventoryReply, false, {
         policy: "inventory-search",
         forcedVehicles: found.picks,
@@ -430,8 +432,15 @@ export async function runChatTurn(input: {
           found.candidates,
           input.signal,
           chatResearchTopic(visitorMessage),
+          requestedResearchFuel(visitorMessage),
         );
         result.research = research;
+        if (research.comparison?.text) {
+          result.reply = research.comparison.text;
+        } else if (research.paragraphs.length) {
+          result.reply = research.paragraphs.map(paragraph => paragraph.text).join("\n\n");
+          if (found.candidates.length > 1) result.reply += "\n\nAinda não tenho dados documentados de todas as versões para concluir a comparação.";
+        }
         if (
           isPowerQuery(visitorMessage) &&
           !research.unavailable &&
@@ -448,10 +457,14 @@ export async function runChatTurn(input: {
           ) {
             const picks = verified.slice(0, CHAT_CARD_LIMIT);
             result.vehicles = picks.map(toChatVehicleCard);
-            result.reply = `${found.reply.split("\n")[0]}\n${picks.map(formatVehicleLine).join("\n")}\n\nA ordem considera a potência de catálogo confirmada nas fontes abaixo. Compare também combustível, preço e km; isso não mede o desempenho ou o estado de cada unidade.`;
+            result.reply = research.comparison?.text ?? research.paragraphs.map(paragraph => paragraph.text).join("\n\n");
+            if (!result.reply.includes("potência de catálogo confirmada")) result.reply += "\n\nCards ordenados por potência de catálogo confirmada nas fontes.";
           }
         }
       }
+      // Technical prose is emitted after checking the evidence, not as a false
+      // provisional ranking while the research request is still pending.
+      if (requestsTechnical) emit(result.reply);
       return result;
     }
     const reply =
@@ -489,11 +502,11 @@ export async function runChatTurn(input: {
             ? focusedVehicle
             : undefined));
     if (subject) {
-      const research = await (input.research ?? researchChatVehicles)([subject], input.signal, chatResearchTopic(visitorMessage));
+      const research = await (input.research ?? researchChatVehicles)([subject], input.signal, chatResearchTopic(visitorMessage), requestedResearchFuel(visitorMessage));
       const topic = chatResearchTopic(visitorMessage);
       const unavailableTopic = topic === "potência" ? "a potência" : topic === "torque" ? "o torque" : topic === "consumo" ? "o consumo" : "os dados técnicos";
       const technicalReply = !research.unavailable && research.paragraphs.length
-        ? research.paragraphs[0]!.text
+        ? research.paragraphs.map(paragraph => paragraph.text).join("\n\n")
         : `Ainda não consegui confirmar ${unavailableTopic} dessa versão (${subject.model} ${subject.version ?? ""} ${subject.yearModel}) em uma fonte exata. São dados técnicos do modelo; o consultor pode conferir isso com você no WhatsApp.`;
       const reply = asksAboutListedFacts(visitorMessage) || asksAboutKm(visitorMessage)
         ? `${formatVehicleLine(subject)}\n\n${technicalReply}`

@@ -247,7 +247,9 @@ async function postGemini(
   return data;
 }
 
-/** A single grounded call, with no lead tool or ungrounded model fallback. */
+/** Grounded calls only. A rejected/retired endpoint can try one already
+ * configured 2.5 model; auth, quota and server errors never fan out calls.
+ */
 export async function generateGroundedResearch(
   prompt: string,
   signal?: AbortSignal,
@@ -255,19 +257,29 @@ export async function generateGroundedResearch(
   signal?.throwIfAborted();
   const key = geminiApiKey();
   if (!key) throw new Error("Pesquisa técnica indisponível");
-  const model =
-    configuredModels().find((name) => name.startsWith("gemini-2.5-")) ??
-    CHAT_GEMINI_MODEL;
-  return postGemini(
-    {
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      tools: [{ google_search: {} }],
-      generationConfig: generationConfig(2048, 0.1, model),
-    },
-    key,
-    model,
-    signal,
-  );
+  const models = configuredModels().filter(name => name.startsWith("gemini-2.5-")).slice(0, 2);
+  let lastError: unknown;
+  for (const model of models.length ? models : [CHAT_GEMINI_MODEL]) {
+    signal?.throwIfAborted();
+    try {
+      return await postGemini(
+        {
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          tools: [{ google_search: {} }],
+          generationConfig: generationConfig(2048, 0.1, model),
+        },
+        key,
+        model,
+        signal,
+      );
+    } catch (error) {
+      signal?.throwIfAborted();
+      lastError = error;
+      const status = (error as {status?: number}).status;
+      if (status !== 400 && status !== 404) throw error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Pesquisa técnica indisponível");
 }
 
 function buildGenerateBody(

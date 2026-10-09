@@ -101,11 +101,11 @@ test("consulta externa usa identidade pública e Google Search; não reenvia pre
       assert.deepEqual(body.tools, [{ google_search: {} }]);
       const prompt = body.contents[0].parts[0].text;
       assert.match(prompt, /LXR 2.0 FlexOne/);
-      assert.match(prompt, /2015/);
+      assert.match(prompt, /2016/);
       assert.doesNotMatch(prompt, /74900|106000|test-civic/);
-      return Response.json(fixture());
+      return Response.json(fixture(supported.replace("2015", "2016")));
     }) as typeof fetch;
-    assert.equal((await researchChatVehicles([civic])).paragraphs.length, 1);
+    assert.equal((await researchChatVehicles([{ ...civic, yearModel: 2016 }])).paragraphs.length, 1);
     assert.equal(calls, 1);
     const aborted = new AbortController();
     aborted.abort();
@@ -116,7 +116,7 @@ test("consulta externa usa identidade pública e Google Search; não reenvia pre
       return new Response("{}", { status: 429 });
     }) as typeof fetch;
     assert.equal(
-      (await researchChatVehicles([{ ...civic, yearModel: 2016 }])).unavailable,
+      (await researchChatVehicles([{ ...civic, yearModel: 2018 }])).unavailable,
       true,
     );
     assert.equal(calls, 2);

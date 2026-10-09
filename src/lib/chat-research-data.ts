@@ -1,4 +1,4 @@
-import { DUSTER_CATALOG_SOURCE } from "./chat-technical-reference";
+import { DUSTER_CATALOG_SOURCE, CIVIC_2015_CATALOG_SOURCE } from "./chat-technical-reference";
 
 export type ChatResearchSource = { title: string; href: string };
 export type ChatResearch = {
@@ -40,7 +40,7 @@ export function safeResearchUrl(raw: unknown): string | null {
     if (url.protocol !== "https:" || url.username || url.password || url.port)
       return null;
     if (
-      url.href !== DUSTER_CATALOG_SOURCE && !SOURCE_HOSTS.some(
+      ![DUSTER_CATALOG_SOURCE, CIVIC_2015_CATALOG_SOURCE].includes(url.href) && !SOURCE_HOSTS.some(
         (host) => url.hostname === host || url.hostname.endsWith(`.${host}`),
       )
     )
