@@ -401,12 +401,19 @@ export async function runChatTurn(input: {
   }
   if (requestsTechnical && !mayCreateLead) {
     const named = singleMentionedModelPool(input.stock, visitorMessage);
-    const subject =
-      (named
-        ? matchFocusedVehicle(visitorMessage, named, activeVehicle?.id)
-        : null) ??
-      activeVehicle ??
-      (isAnaphoricVehicleFollowUp(visitorMessage) ? focusedVehicle : undefined);
+    // A named model outside the stock must not silently become the open ficha.
+    const explicitSubject =
+      /\b(?:do|da|sobre(?: o| a)?|pesquis\w*)\s+(?!(?:motor|carro|veiculo|modelo|anuncio|consumo|cambio|torque|potencia|combustivel|porta|desempenho|ficha|esse|essa|este|esta)\b)[a-z0-9]/i.test(
+        visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+      );
+    const subject = named
+      ? matchFocusedVehicle(visitorMessage, named, activeVehicle?.id)
+      : explicitSubject || seeksMissingNamedModel(visitorMessage, input.stock)
+        ? undefined
+        : (activeVehicle ??
+          (isAnaphoricVehicleFollowUp(visitorMessage)
+            ? focusedVehicle
+            : undefined));
     if (subject) {
       const reply = `${subject.brand} ${subject.model} ${subject.version ?? ""} ${subject.yearModel}: ${subject.km.toLocaleString("pt-BR")} km, ${subject.transmission}, R$ ${subject.price.toLocaleString("pt-BR")}. Vou separar os dados deste anúncio dos dados técnicos do modelo.`;
       emit(reply);

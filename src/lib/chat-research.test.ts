@@ -137,6 +137,61 @@ test("potência parcial não vira vencedor de todo o estoque e cache mantém rec
   assert.equal(partial.powerOrder, undefined);
 });
 
+test("potências de um parágrafo comparativo não são atribuídas ao primeiro modelo", () => {
+  const duster = {
+    ...civic,
+    id: "duster",
+    brand: "Renault",
+    model: "Duster",
+    version: "Dynamique 2.0",
+    yearModel: 2014,
+  };
+  for (const text of [
+    "Duster Dynamique 2.0 2014: potência de 143 cv com etanol; Civic LXR 2.0 FlexOne 2015: potência de 155 cv com etanol.",
+    "Duster Dynamique 2.0 2014: potência de 143 cv com etanol, contra os 155 cv do Civic.",
+  ]) {
+    const result = parseGroundedResearch(fixture(text), [duster, civic]);
+    assert.equal(result.paragraphs.length, 1);
+    assert.equal(result.powerOrder, undefined);
+    assert.equal(result.comparison, undefined);
+  }
+});
+
+test("unidades da mesma versão compartilham potência de catálogo sem trocar seus IDs", () => {
+  const second = { ...civic, id: "second-civic", km: 120000, price: 70000 };
+  const result = parseGroundedResearch(fixture(), [civic, second]);
+  assert.deepEqual(result.powerOrder, [civic.id, second.id]);
+});
+
+test("cache de pesquisa não retorna IDs de anúncios substituídos", async () => {
+  const fetchBefore = globalThis.fetch;
+  const keyBefore = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "fixture-local";
+  let calls = 0;
+  try {
+    globalThis.fetch = (async () => {
+      calls++;
+      return Response.json(fixture(supported.replace("2015", "2017")));
+    }) as typeof fetch;
+    const first = { ...civic, yearModel: 2017, id: "old-unit" };
+    const second = { ...first, id: "replacement-unit" };
+    assert.deepEqual((await researchChatVehicles([first])).powerOrder, [
+      first.id,
+    ]);
+    assert.deepEqual((await researchChatVehicles([second])).powerOrder, [
+      second.id,
+    ]);
+    assert.deepEqual((await researchChatVehicles([second])).powerOrder, [
+      second.id,
+    ]);
+    assert.equal(calls, 2);
+  } finally {
+    globalThis.fetch = fetchBefore;
+    if (keyBefore === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = keyBefore;
+  }
+});
+
 test("pesquisa atravessa o streaming mas não revive como dado técnico no histórico", async () => {
   const { requestChatReply } = await import("./chat-client-request");
   const { encodeSse } = await import("./chat-stream");

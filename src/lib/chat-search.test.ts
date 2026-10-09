@@ -472,3 +472,21 @@ test("pergunta técnica junto com financiamento mantém pesquisa com fontes", as
     assert.ok(result.vehicles.length > 0);
   }
 });
+
+test("modelo ausente citado na pergunta técnica não vira pesquisa do carro da ficha aberta", async () => {
+  let researchCalls = 0;
+  const result = await runChatTurn({
+    mensagem: "qual a potência do Corolla?",
+    historico: [],
+    stock,
+    vehicleId: "civic",
+    research: async () => {
+      researchCalls++;
+      return noResearch();
+    },
+  });
+  assert.equal(researchCalls, 0);
+  assert.equal(result.vehicles.length, 0);
+  assert.match(result.reply, /modelo, versão e ano/);
+  assert.doesNotMatch(result.reply, /Civic/);
+});
