@@ -1,6 +1,6 @@
 # Percursos públicos no navegador
 
-O CI verifica a versão de produção do Next, com PostgreSQL local, em 320, 390, 430 e 1440 px. Cobre busca com erro de digitação, card/ficha/retorno, favoritos/comparação/WhatsApp, cookies novos e já aceitos, 404, redirecionamento e ficha vendida sem preço. Erros de JS e de hidratação falham os testes.
+O CI verifica a versão de produção do Next, com PostgreSQL local, em 320, 390, 430 e 1440 px. Cobre busca com erro de digitação, card/ficha/retorno, favoritos/comparação de três veículos/WhatsApp, cookies novos e já aceitos, 404, redirecionamento e ficha vendida sem preço. Erros de JS e de hidratação falham os testes. A cidade dos veículos fica ausente da API e da comparação; a terceira coluna e seu contato continuam acessíveis no celular.
 
 As amostras de Civic, Duster e HR-V são um retrato público de 08/10/2026; o registro vendido é uma **simulação local**. As fotos são substituídas por um arquivo local para o CI não depender do Storage. Estes testes não medem velocidade/qualidade de fotos: isso exige a conferência visual e de rede no preview.
 

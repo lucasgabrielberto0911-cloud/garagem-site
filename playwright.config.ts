@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test";
 if (process.env.E2E_TEST !== "1") throw new Error("Use E2E_TEST=1 com o banco local de testes.");
 const database = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/");
 if (!["127.0.0.1", "localhost", "[::1]"].includes(database.hostname) || !["/ci", "/garagem_e2e"].includes(database.pathname)) throw new Error("Browser E2E aceita apenas o banco local dedicado.");
-if (process.env.LEAD_WEBHOOK_URL || process.env.RESEND_API_KEY) throw new Error("Desligue notificações externas no E2E.");
+if (process.env.LEAD_WEBHOOK_URL || process.env.RESEND_API_KEY || process.env.LEAD_NOTIFY_TO || process.env.LEAD_NOTIFY_EMAIL) throw new Error("Desligue notificações externas no E2E.");
 
 export default defineConfig({
   testDir: "./e2e",
@@ -31,7 +31,7 @@ export default defineConfig({
   webServer: {
     command: "npm run start -- --hostname 127.0.0.1 --port 3362",
     url: "http://127.0.0.1:3362",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 60_000,
   },
 });

@@ -60,14 +60,38 @@ test("card, ficha, voltar, favoritos e WhatsApp oficial", async ({ page }, info)
   const card = cards.filter({ has: page.getByRole("heading", { name: "Civic", exact: true }) });
   await expect(card).toContainText("LXR 2.0 FlexOne"); await expect(card).toContainText("2015"); await expect(card).toContainText("74.900");
   await expect(card.locator(".listing-card-interest a")).toHaveAttribute("href", /^https:\/\/wa\.me\/5527996330706\?/);
+  await expect(card).not.toContainText(/Linhares|Serra|Aracruz|Vitória/);
+  const payload = await (await page.request.get("/api/estoque?city=serra")).json();
+  expect(JSON.stringify(payload)).not.toContain("locationCity");
   await card.getByRole("button", { name: /^Salvar/ }).click();
   await card.locator("[data-stock-card]").click(); await expect(page).toHaveURL(new RegExp(civic.id));
   await page.getByRole("link", { name: "Voltar aos resultados" }).click(); await expect(page).toHaveURL(/sort=menor-preco/);
   const duster = page.locator("article.listing-card").filter({ has: page.getByRole("heading", { name: "Duster", exact: true }) });
   await duster.getByRole("button", { name: /^Salvar/ }).click();
-  await page.goto("/favoritos"); await expect(page.locator("article.listing-card")).toHaveCount(2);
+  const hrv = page.locator("article.listing-card").filter({ has: page.getByRole("heading", { name: "HR-V", exact: true }) });
+  await hrv.getByRole("button", { name: /^Salvar/ }).click();
+  await page.goto("/favoritos"); await expect(page.locator("article.listing-card")).toHaveCount(3);
   await page.getByText("Comparar favoritos", { exact: false }).click();
+  const checks = page.locator("fieldset input[type=checkbox]");
+  await expect(checks).toHaveCount(3);
+  if (!(await checks.last().isChecked())) await checks.last().check();
   await expect(page.getByRole("table")).toBeVisible(); await expect(page.getByRole("table")).toContainText("LXR 2.0 FlexOne");
+  await expect(page.getByRole("table")).not.toContainText("Cidade");
+  if (info.project.name.startsWith("mobile")) {
+    const region = page.getByRole("region", { name: "Tabela de comparação dos veículos selecionados" });
+    await page.getByRole("group", { name: "Ver colunas da comparação" }).getByRole("button").last().click();
+    await expect.poll(async () => {
+      const last = await region.locator("thead th").last().boundingBox();
+      const box = await region.boundingBox();
+      return last!.x + last!.width - box!.x - box!.width;
+    }).toBeLessThanOrEqual(2);
+    const contact = region.getByRole("link", { name: "Tenho interesse", exact: true }).last();
+    await contact.scrollIntoViewIfNeeded();
+    const contactBox = await contact.boundingBox();
+    const navBox = await page.locator("[data-mobile-bottom-nav]").boundingBox();
+    expect(contactBox!.y + contactBox!.height).toBeLessThanOrEqual(navBox!.y);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const wa = page.getByRole("table").getByRole("link", { name: "Tenho interesse", exact: true });
   await expect(wa.first()).toHaveAttribute("href", /^https:\/\/wa\.me\/5527996330706\?/);
 });
