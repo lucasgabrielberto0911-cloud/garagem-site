@@ -12,6 +12,7 @@ const user = (content: string): ChatTurn => ({ role: "user", content });
 const comparing = [user("compare o Civic e o Duster")];
 
 const cases = [
+  { question: "e o consumo desses dois?", history: comparing, ids: ["civic", "duster"], topic: "consumo" },
   { question: "qual desses é o mais potente?", history: comparing, ids: ["civic", "duster"], topic: "potência e torque" },
   { question: "qual deles é o mais forte?", history: comparing, ids: ["civic", "duster"], topic: "potência e torque" },
   { question: "entre os dois qual é o mais econômico?", history: comparing, ids: ["civic", "duster"], topic: "consumo" },

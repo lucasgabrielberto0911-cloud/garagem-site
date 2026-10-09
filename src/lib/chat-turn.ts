@@ -346,6 +346,7 @@ export async function runChatTurn(input: {
   const mixedPrice = asksAboutListedFacts(scopedMessage);
   const selection =
     isChatSelectionQuery(scopedMessage) ||
+    (requestsTechnical && compared.length >= 2) ||
     roadUse ||
     Object.keys(parseChatSearchRanges(scopedMessage)).length > 0 ||
     (hasChatStockFilter(scopedMessage) &&
