@@ -1,0 +1,59 @@
+[
+  {
+    "id": "cmubrhzwf0000l304geveibp1",
+    "brand": "Honda",
+    "model": "Civic",
+    "version": "LXR 2.0 FlexOne",
+    "yearModel": 2015,
+    "km": 106000,
+    "price": 74900,
+    "transmission": "Automático",
+    "fuel": "Flex",
+    "color": "Prata",
+    "locationCity": "linhares",
+    "photos": [
+      {
+        "url": "https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/1790028541547-df27c432-7b16-4456-8b26-48cdfb54e167.webp",
+        "thumbnailUrl": "https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/1790028541547-df27c432-7b16-4456-8b26-48cdfb54e167-card.webp"
+      }
+    ]
+  },
+  {
+    "id": "cmuobm8ka0000jg04pe8ybs5n",
+    "brand": "Renault",
+    "model": "Duster",
+    "version": "Dynamique 2.0 16V Tech Road 2",
+    "yearModel": 2014,
+    "km": 101000,
+    "price": 54900,
+    "transmission": "Automático",
+    "fuel": "Flex",
+    "color": "Prata",
+    "locationCity": "linhares",
+    "photos": [
+      {
+        "url": "https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/1790785425727-d3b916e1-a4e9-4482-b9aa-95b4ab3a6d8d.webp",
+        "thumbnailUrl": "https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/1790785425727-d3b916e1-a4e9-4482-b9aa-95b4ab3a6d8d-card.webp"
+      }
+    ]
+  },
+  {
+    "id": "cmud192iz0000l6041ewv0ki6",
+    "brand": "Honda",
+    "model": "HR-V",
+    "version": "EXL 1.8 Flexone",
+    "yearModel": 2016,
+    "km": 103000,
+    "price": 84900,
+    "transmission": "Automático",
+    "fuel": "Flex",
+    "color": "Prata",
+    "locationCity": "linhares",
+    "photos": [
+      {
+        "url": "https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/1790102943150-bd2e8636-29f2-4ba3-8cf1-65920e219250.webp",
+        "thumbnailUrl": "https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/1790102943150-bd2e8636-29f2-4ba3-8cf1-65920e219250-card.webp"
+      }
+    ]
+  }
+]

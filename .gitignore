@@ -43,3 +43,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Playwright (screenshots/traces are CI artifacts)
+/playwright-report/
+/test-results/
