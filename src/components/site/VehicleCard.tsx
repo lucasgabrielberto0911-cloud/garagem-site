@@ -66,7 +66,6 @@ export function VehicleCard({
           status: vehicle.status,
           featured: vehicle.featured,
           color: vehicle.color,
-          locationCity: vehicle.locationCity ?? null,
           updatedAt:
             vehicle.updatedAt instanceof Date
               ? vehicle.updatedAt.toISOString()
@@ -113,9 +112,6 @@ export function VehicleCard({
         </div>
         <div className="listing-card-transmission">
           <Fact fact={facts.get("Câmbio")} />
-        </div>
-        <div className="listing-card-city">
-          <Fact fact={facts.get("Cidade")} />
         </div>
         <div className="listing-card-price-row">
           {card.priceLabel ? <p className="listing-card-price font-display text-brand">{card.priceLabel}</p> : null}

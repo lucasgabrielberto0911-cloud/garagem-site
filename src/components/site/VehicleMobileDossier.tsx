@@ -12,7 +12,6 @@ import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import type { GoogleReviews } from "@/lib/google-reviews";
 import {
   SPEC_EMPTY,
-  SPEC_EMPTY_FEMININE,
   STORE_INSPECTION_LABEL,
   STORE_INSPECTION_NOTE,
   type VehicleSpecRow,
@@ -26,16 +25,12 @@ import {
 } from "@/lib/vehicle-conditions";
 import { whatsappContentFromVehicle } from "@/lib/site";
 
-/** Já aparecem na primeira dobra. Cidade volta na grade da Ficha, ao lado de Portas. */
+/** Já aparecem na primeira dobra. */
 const FOLD_LABELS = new Set(["Ano", "KM", "Câmbio"]);
 
 /** A âncora Especificações cai na grade completa quando ela existe. */
 export function hasMobileFichaSpecs(specs: VehicleSpecRow[]) {
   return specs.some((row) => !FOLD_LABELS.has(row.label));
-}
-
-function fichaGridLabel(label: string) {
-  return label === "Disponível em" ? "Cidade" : label;
 }
 
 export function VehicleMobileSummary({
@@ -47,7 +42,6 @@ export function VehicleMobileSummary({
   yearModel,
   km,
   transmission,
-  city,
   plateEnd,
   inspection,
   specAnchor = false,
@@ -60,7 +54,6 @@ export function VehicleMobileSummary({
   yearModel: number;
   km: number;
   transmission: string;
-  city: string;
   plateEnd?: string | null;
   inspection?: string | null;
   /** Quando a grade completa não existe, a âncora aponta para estes fatos. */
@@ -70,7 +63,6 @@ export function VehicleMobileSummary({
     { label: "Ano", value: formatVehicleYearRange(year, yearModel) },
     { label: "Km", value: formatNumberBR(km) },
     { label: "Câmbio", value: transmission.trim() || SPEC_EMPTY },
-    { label: "Cidade", value: city.trim() || SPEC_EMPTY_FEMININE },
   ];
   const plate = (plateEnd ?? "").replace(/\s+/g, " ").trim();
 
@@ -98,7 +90,7 @@ export function VehicleMobileSummary({
         data-ficha-section={specAnchor ? "especificacoes" : undefined}
       >
         {facts.map((fact) => (
-          <div key={fact.label} className="min-w-0 border border-white/10 bg-ink px-2.5 py-2">
+          <div key={fact.label} className={`min-w-0 border border-white/10 bg-ink px-2.5 py-2${fact.label === "Câmbio" ? " col-span-2" : ""}`}>
             <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
               {fact.label}
             </dt>
@@ -234,7 +226,7 @@ export function VehicleMobileBlocks({
             {extraSpecs.map((spec) => (
               <div key={spec.label} className="min-w-0 border border-white/10 bg-ink px-3 py-2.5">
                 <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-                  {fichaGridLabel(spec.label)}
+                  {spec.label}
                 </dt>
                 <dd
                   className={`mt-1 font-display text-sm leading-snug [overflow-wrap:anywhere] ${

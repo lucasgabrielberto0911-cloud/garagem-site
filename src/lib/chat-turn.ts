@@ -246,6 +246,16 @@ export async function runChatTurn(input: {
   }
 
   const mayCreateLead = chatTurnMayCreateLead(visitorMessage, input.historico);
+  if (
+    !mayCreateLead &&
+    /\b(?:onde (?:fica|esta|estao|posso ver).{0,24}(?:carro|moto|veiculo|unidade)|(?:cidade|localizacao) (?:do|da|desse|dessa|deste|desta) (?:carro|moto|veiculo|unidade))\b/i.test(
+      visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+    )
+  ) {
+    const reply = `Para combinar onde ver esse veículo, fale com o consultor no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    emit(reply);
+    return finish(reply, false, { cards: false, policy: "vehicle-location-private" });
+  }
   const humanAction =
     /\b(troca\w*|troco|financi\w*|parcela\w*|vender|anunciar|visita|video|consultor|whatsapp)\b/i.test(
       visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),

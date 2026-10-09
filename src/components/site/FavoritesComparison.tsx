@@ -9,7 +9,6 @@ import { coverSrc } from "@/lib/stock-query";
 import { formatNumberBR, formatVehicleLabel } from "@/lib/format";
 import { publicCardFacts } from "@/lib/public-card-facts";
 import { formatVehicleWhatsAppMessage } from "@/lib/vehicle-display";
-import { vehicleLocationLabel } from "@/lib/vehicle-location";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import { comparisonSelection, toggleComparison, readComparisonSession, writeComparisonSession } from "@/lib/favorites-comparison";
 
@@ -30,7 +29,6 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
     { label: "Ano", value: v => String(v.yearModel) },
     { label: "Km", value: v => formatNumberBR(v.km) + " km" },
     { label: "Câmbio", value: v => publicCardFacts(v).facts.find(fact => fact.label === "Câmbio")?.value || "—" },
-    { label: "Cidade", value: v => vehicleLocationLabel(v.locationCity) || "—" },
   ];
   return (
     <details open={open} onToggle={event => {
@@ -57,7 +55,7 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
         <p role="status" className="mt-3 text-xs leading-relaxed text-muted">{ids.length < 2 ? "Selecione mais um veículo para comparar." : ids.length === 3 ? "Para trocar uma opção, desmarque um veículo. Deslize a comparação para ver os três." : "Dois selecionados. Você pode adicionar mais um ou trocar as opções."}</p>
         {selected.length >= 2 ? <div className="mt-4 max-h-[70dvh] overflow-auto overscroll-contain rounded-lg border border-white/10" tabIndex={0} aria-label="Tabela de comparação dos veículos selecionados">
           <table className="w-full table-fixed border-collapse text-left" style={selected.length === 3 ? { minWidth: "28rem" } : undefined}>
-            <caption className="sr-only">Comparação por preço, versão, ano, quilometragem, câmbio e cidade</caption>
+            <caption className="sr-only">Comparação por preço, versão, ano, quilometragem e câmbio</caption>
             <thead className="sticky top-0 z-20 bg-ink">
               <tr className="align-top">
                 <th scope="col" className="sticky left-0 z-30 w-12 bg-ink px-1 py-3 text-[10px] font-medium text-muted sm:w-20 sm:px-2">Veículo</th>

@@ -173,18 +173,11 @@ test("galeria só baixa o slide ativo e os vizinhos", () => {
   assert.equal(shouldLoadGallerySlide(7, 10), false);
 });
 
-test("filtro de cidade só aceita onde o veículo está", () => {
-  assert.deepEqual(stockCityFilter("linhares"), { locationCity: "linhares" });
-  assert.deepEqual(stockCityFilter("Serra"), { locationCity: "serra" });
-  assert.deepEqual(stockCityFilter("Vitória"), { locationCity: "vitoria" });
-  assert.deepEqual(stockCityFilter("aracruz"), { locationCity: "aracruz" });
-  assert.deepEqual(stockCityFilter("guarapari"), {});
-  assert.equal(parseStockFilters({ city: "Vitória" }).city, "vitoria");
-  assert.equal(parseStockFilters({ city: "aracruz" }).city, "aracruz");
-  assert.deepEqual(stockCityFilter(""), {});
-  assert.equal(parseStockFilters({ city: "linhares" }).city, "linhares");
-  assert.equal(parseStockFilters({ city: "Vila Velha" }).city, undefined);
-  assert.equal(parseStockFilters({}).city, undefined);
+test("URLs antigas com cidade não restringem o estoque público", () => {
+  for (const city of ["linhares", "Serra", "Vitória", "aracruz", "guarapari", ""]) {
+    assert.deepEqual(stockCityFilter(city), {});
+    assert.equal(parseStockFilters({ city }).city, undefined);
+  }
 });
 
 test("rótulo de ordenação do estoque cai em mais recentes", () => {

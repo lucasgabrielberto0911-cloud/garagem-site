@@ -246,7 +246,7 @@ test("pesquisa não desvia cadastro de contato para resposta determinística", a
   assert.equal(result.leadCreated, true);
 });
 
-test("cidade e intervalos continuam no caminho para o estoque", () => {
+test("cidade interna não filtra nem aparece no caminho público do estoque", () => {
   const located = stock.map((v, i) => ({
     ...v,
     locationCity: i % 2 ? "serra" : "aracruz",
@@ -255,7 +255,8 @@ test("cidade e intervalos continuam no caminho para o estoque", () => {
     "carro automático em Aracruz a partir de 2015 até 110 mil km",
     located,
   );
-  assert.equal(found, null);
+  assert.ok(found);
+  assert.doesNotMatch(found.reply, /Aracruz|Serra/);
   const href = chatStockExploreHref(
     "carro automático em Serra, a partir de 2015, até 110 mil km",
     located,
@@ -263,7 +264,7 @@ test("cidade e intervalos continuam no caminho para o estoque", () => {
   );
   assert.ok(href);
   const query = new URL(href!, "https://www.suagaragem.net").searchParams;
-  assert.equal(query.get("city"), "serra");
+  assert.equal(query.get("city"), null);
   assert.equal(query.get("minYear"), "2015");
   assert.equal(query.get("maxKm"), "110000");
 });

@@ -11,7 +11,7 @@ import { PUBLIC_VEHICLE_DETAIL_SELECT, PUBLIC_VEHICLE_OMIT } from "./vehicles";
 
 test("card público traz miniatura sem campos de admin", () => {
   assert.equal(PUBLIC_VEHICLE_CARD_SELECT.photos.select.thumbnailUrl, true);
-  assert.equal(PUBLIC_VEHICLE_CARD_SELECT.locationCity, true);
+  assert.equal("locationCity" in PUBLIC_VEHICLE_CARD_SELECT, false);
   assert.equal("plate" in PUBLIC_VEHICLE_CARD_SELECT, false);
   assert.equal("fipePrice" in PUBLIC_VEHICLE_CARD_SELECT, false);
   assert.equal("purchasePrice" in PUBLIC_VEHICLE_CARD_SELECT, false);

@@ -374,7 +374,7 @@ test("final da placa só aparece na dobra quando o anúncio tem", () => {
     createElement(VehicleMobileSummary, { ...props, plateEnd: "   " }),
   );
   assert.doesNotMatch(without, /Final da placa/);
-  assert.match(without, /Serra/);
+  assert.doesNotMatch(without, /Serra|Cidade/);
 });
 
 test("selo da vistoria aparece perto do preço e some sem texto", () => {

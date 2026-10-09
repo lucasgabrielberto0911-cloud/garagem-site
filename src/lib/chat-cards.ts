@@ -17,7 +17,6 @@ import { shortVersion } from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import {
   parseChatSearchRanges,
-  parseChatSearchCity,
   chatSearchOrder,
 } from "@/lib/chat-search-filters";
 import {
@@ -501,8 +500,6 @@ export function chatStockExploreHref(
   if (category) params.set("category", category);
   for (const [key, value] of Object.entries(parseChatSearchRanges(mensagem)))
     params.set(key, String(value));
-  const city = parseChatSearchCity(mensagem);
-  if (city) params.set("city", city);
   const order = chatSearchOrder(mensagem);
   if (order) params.set("sort", order === "km" ? "menor-km" : "mais-novo");
   const gear = parseTransmissionFilter(mensagem);

@@ -33,7 +33,6 @@ import { JsonLd } from "@/components/JsonLd";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
 import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
-import { vehicleLocationLabel } from "@/lib/vehicle-location";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
 import { priceBandHref } from "@/lib/related-vehicles";
@@ -248,7 +247,6 @@ export default async function VehicleDetailPage({
     plateEnd: vehicle.plateEnd,
     warranty: vehicle.warranty,
     inspection: vehicle.inspection,
-    locationCity: vehicle.locationCity,
   });
 
   const hasDetails =
@@ -382,7 +380,6 @@ export default async function VehicleDetailPage({
                 yearModel={vehicle.yearModel}
                 km={vehicle.km}
                 transmission={display.transmission}
-                city={vehicleLocationLabel(vehicle.locationCity)}
                 plateEnd={vehicle.plateEnd}
                 inspection={sold ? null : vehicle.inspection}
                 specAnchor={!hasMobileFichaSpecs(specs)}

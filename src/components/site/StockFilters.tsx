@@ -21,11 +21,6 @@ import {
   transmissionFilterParam,
 } from "@/lib/vehicle-display";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
-import {
-  VEHICLE_LOCATION_CITIES,
-  parseVehicleLocationCity,
-  vehicleLocationLabel,
-} from "@/lib/vehicle-location";
 
 import { ShareStockSearch } from "./ShareStockSearch";
 
@@ -55,7 +50,6 @@ export type FilterValues = {
   minYear: string;
   maxYear: string;
   maxKm: string;
-  city: string;
   sort: string;
 };
 
@@ -92,7 +86,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
     minYear: params.get("minYear") ?? "",
     maxYear: params.get("maxYear") ?? "",
     maxKm: params.get("maxKm") ?? "",
-    city: parseVehicleLocationCity(params.get("city")) ?? "",
     sort: params.get("sort") ?? "recentes",
   };
   const [draft, setDraft] = useState(current);
@@ -172,12 +165,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
     activeFilters.push({
       key: "category",
       label: `Tipo: ${vehicleCategoryLabel(current.category)}`,
-    });
-  }
-  if (current.city) {
-    activeFilters.push({
-      key: "city",
-      label: `Cidade: ${vehicleLocationLabel(current.city) || current.city}`,
     });
   }
   if (current.brand) {
@@ -310,7 +297,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
       minYear: "",
       maxYear: "",
       maxKm: "",
-      city: "",
       sort: "recentes",
     });
   }
@@ -400,21 +386,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
               >
                 {CATEGORY_FILTER_OPTIONS.map((option) => (
                   <option key={option.value || "ambos"} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </DesktopField>
-            <DesktopField label="Onde o veículo está" htmlFor="desktop-cidade">
-              <select
-                id="desktop-cidade"
-                value={current.city}
-                onChange={(event) => update({ city: event.target.value })}
-                className={selectClass}
-              >
-                <option value="">Todas as cidades</option>
-                {VEHICLE_LOCATION_CITIES.map((option) => (
-                  <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}

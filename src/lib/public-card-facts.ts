@@ -1,6 +1,5 @@
 import { formatCurrencyBRL, formatKmBR, formatVehicleLabel } from "@/lib/format";
 import { resolveTransmission, shortVersion } from "@/lib/vehicle-display";
-import { vehicleLocationLabel } from "@/lib/vehicle-location";
 
 /**
  * Fatos de compra no card público.
@@ -63,8 +62,6 @@ export function publicCardFacts(input: PublicCardFactsInput): PublicCardFacts {
   const gear = resolveTransmission(input.version, input.transmission);
   if (gear) facts.push({ label: "Câmbio", value: gear });
 
-  const city = vehicleLocationLabel(input.locationCity);
-  if (city) facts.push({ label: "Cidade", value: city });
 
   return { title, version, priceLabel, facts };
 }

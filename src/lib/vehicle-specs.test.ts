@@ -73,7 +73,7 @@ test("nota da vistoria preserva texto do anúncio que não parece documento ofic
   );
 });
 
-test("ficha pública mostra Cidade só com cidade válida do admin", () => {
+test("ficha pública não mostra a cidade interna do admin", () => {
   const serra = buildVehiclePublicSpecs({
     category: "carro",
     year: 2019,
@@ -84,8 +84,8 @@ test("ficha pública mostra Cidade só com cidade válida do admin", () => {
     color: "Cinza",
     locationCity: "serra",
   });
-  assert.equal(serra.find((row) => row.label === "Cidade")?.value, "Serra");
-  for (const [locationCity, label] of [
+  assert.equal(serra.find((row) => row.label === "Cidade"), undefined);
+  for (const [locationCity] of [
     ["vitoria", "Vitória"],
     ["aracruz", "Aracruz"],
   ]) {
@@ -98,7 +98,7 @@ test("ficha pública mostra Cidade só com cidade válida do admin", () => {
       transmission: "Manual",
       locationCity,
     });
-    assert.equal(rows.find((row) => row.label === "Cidade")?.value, label);
+    assert.equal(rows.find((row) => row.label === "Cidade"), undefined);
   }
 
   const guessed = buildVehiclePublicSpecs({
@@ -116,7 +116,7 @@ test("ficha pública mostra Cidade só com cidade válida do admin", () => {
   );
 });
 
-test("cidade entra na grade logo depois de portas", () => {
+test("cidade não deixa célula vazia na grade pública", () => {
   const specs = buildVehiclePublicSpecs({
     category: "carro",
     year: 2014,
@@ -133,9 +133,8 @@ test("cidade entra na grade logo depois de portas", () => {
   const extra = specs.filter((row) => !fold.has(row.label));
   const portas = extra.findIndex((row) => row.label === "Portas");
   assert.ok(portas >= 0);
-  assert.equal(extra[portas + 1]?.label, "Cidade");
-  assert.equal(extra[portas + 1]?.value, "Linhares");
-  assert.equal(extra.length % 2, 0);
+  assert.equal(extra.some(row => row.label === "Cidade"), false);
+  assert.equal(extra.some(row => row.value === "Linhares"), false);
 });
 
 test("nota pública da vistoria não leva aviso de documento oficial", () => {

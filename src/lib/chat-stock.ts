@@ -41,7 +41,6 @@ import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 import {
   parseChatSearchRanges,
   chatSearchOrder,
-  parseChatSearchCity,
   chatSearchResets,
 } from "@/lib/chat-search-filters";
 
@@ -74,7 +73,6 @@ export const CHAT_VEHICLE_SELECT = {
   transmission: true,
   fuel: true,
   category: true,
-  locationCity: true,
   engine: true,
   doors: true,
   accessories: true,
@@ -266,7 +264,6 @@ export function hasChatStockFilter(mensagem: string) {
     parseTransmissionFilter(mensagem) != null ||
     parsePriceLimit(mensagem) != null ||
     parseVehicleCategoryFilter(mensagem) != null ||
-    parseChatSearchCity(mensagem) != null ||
     Object.keys(parseChatSearchRanges(mensagem)).length > 0 ||
     parseBodyStyleFilter(mensagem) != null
   );
@@ -306,10 +303,8 @@ export function applyChatStockFilters(
     }
   }
   const ranges = parseChatSearchRanges(mensagem);
-  const city = parseChatSearchCity(mensagem);
   next = next.filter(
     (vehicle) =>
-      (city == null || vehicle.locationCity === city) &&
       (ranges.minYear == null || vehicle.yearModel >= ranges.minYear) &&
       (ranges.maxYear == null || vehicle.yearModel <= ranges.maxYear) &&
       (ranges.maxKm == null || vehicle.km <= ranges.maxKm) &&
@@ -2107,7 +2102,6 @@ export function scopeChatMessage(
   let gear: "automatico" | "manual" | null = null;
   let body: ReturnType<typeof parseBodyStyleFilter> = null;
   let category: "carro" | "moto" | null = null;
-  let city: ReturnType<typeof parseChatSearchCity> = null;
   let rank: ChatRankMode | null = null;
   const rememberedRanges: ReturnType<typeof parseChatSearchRanges> = {};
   const modelNames: string[] = [];
@@ -2119,7 +2113,6 @@ export function scopeChatMessage(
       delete rememberedRanges.minPrice;
     }
     if (resets.gear) gear = null;
-    if (resets.city) city = null;
     if (resets.year) {
       delete rememberedRanges.minYear;
       delete rememberedRanges.maxYear;
@@ -2134,8 +2127,6 @@ export function scopeChatMessage(
     if (nextBody) body = nextBody;
     const nextCategory = parseVehicleCategoryFilter(text);
     if (nextCategory) category = nextCategory;
-    const nextCity = parseChatSearchCity(text);
-    if (nextCity) city = nextCity;
     const nextRank = explicitRank(text);
     if (nextRank) rank = nextRank;
     const groups = mentionedModelGroups(stock, text);
@@ -2153,7 +2144,6 @@ export function scopeChatMessage(
   const {
     price: clearPrice,
     gear: clearGear,
-    city: clearCity,
     year: clearYear,
     km: clearKm,
   } = chatSearchResets(current);
@@ -2173,8 +2163,6 @@ export function scopeChatMessage(
   if (parseVehicleCategoryFilter(current) == null && category) {
     append.push(category);
   }
-  if (!clearCity && parseChatSearchCity(current) == null && city)
-    append.push(`em ${city}`);
   const currentRank = explicitRank(current);
   if (currentRank == null && rank) {
     const word = RANK_WORD[rank];
@@ -2338,7 +2326,6 @@ export function searchChatInventory(
   const gear = parseTransmissionFilter(message);
   const ranges = parseChatSearchRanges(message);
   const category = resolveChatCategory(message);
-  const city = parseChatSearchCity(message);
   const recorte = [
     category === "moto"
       ? "motos"
@@ -2359,7 +2346,6 @@ export function searchChatInventory(
     ranges.maxKm != null
       ? `até ${ranges.maxKm.toLocaleString("pt-BR")} km`
       : null,
-    city ? `em ${city}` : null,
   ]
     .filter(Boolean)
     .join(", ")

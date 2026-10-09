@@ -29,14 +29,14 @@ const hrv = {
   price: 84900,
 };
 
-test("card completo mostra título curto, preço, ano, km, câmbio e cidade", () => {
+test("card completo mostra título curto, preço, ano, km e câmbio sem cidade", () => {
   const card = publicCardFacts(hrv);
   assert.equal(card.title, "Honda HR-V");
   assert.equal(card.version, "EXL 1.8 Flexone");
   assert.equal(card.priceLabel.replace(/\u00a0/g, " "), "R$ 84.900");
   assert.deepEqual(
     card.facts.map((fact) => `${fact.label}: ${fact.value}`),
-    ["Ano: 2016", "Km: 103.000 km", "Câmbio: Automático", "Cidade: Linhares"],
+    ["Ano: 2016", "Km: 103.000 km", "Câmbio: Automático"],
   );
   assert.equal(card.facts.some((fact) => fact.value === "—"), false);
 });
@@ -239,7 +239,7 @@ test("o card completo tem um link para a ficha e uma ação separada para o What
   assert.match(main, />2016</);
   assert.match(main, /103\.000 km/);
   assert.match(main, /Automático/);
-  assert.match(main, /Linhares/);
+  assert.doesNotMatch(main, /Linhares|Cidade/);
   assert.match(main, /R\$\s*84\.900/);
   assert.match(html, /href="\/estoque\/honda-hr-v/);
   assert.doesNotMatch(main, /Tenho interesse|<button|wa\.me/);
@@ -334,13 +334,13 @@ test("o chat continua com WhatsApp mesmo dentro da lista", () => {
   assert.match(html, /wa\.me/);
 });
 
-test("card mostra Vitória e Aracruz conforme a cidade salva, sem mudar os fatos", () => {
-  for (const [locationCity, label] of [
+test("card não exibe a cidade salva no admin, sem mudar os outros fatos", () => {
+  for (const [locationCity] of [
     ["vitoria", "Vitória"],
     ["aracruz", "Aracruz"],
   ]) {
     const card = publicCardFacts({ ...hrv, locationCity });
-    assert.equal(card.facts.find((fact) => fact.label === "Cidade")?.value, label);
+    assert.equal(card.facts.find((fact) => fact.label === "Cidade"), undefined);
     assert.equal(card.priceLabel, publicCardFacts(hrv).priceLabel);
     assert.equal(card.version, publicCardFacts(hrv).version);
   }
