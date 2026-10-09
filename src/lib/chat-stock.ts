@@ -2105,6 +2105,7 @@ export function scopeChatMessage(
   let rank: ChatRankMode | null = null;
   const rememberedRanges: ReturnType<typeof parseChatSearchRanges> = {};
   const modelNames: string[] = [];
+  let technicalIdentity = false;
 
   for (const text of prior) {
     const resets = chatSearchResets(text);
@@ -2118,7 +2119,17 @@ export function scopeChatMessage(
       delete rememberedRanges.maxYear;
     }
     if (resets.km) delete rememberedRanges.maxKm;
-    Object.assign(rememberedRanges, parseChatSearchRanges(text));
+    const folded = normalize(text);
+    const directTechnical = /\b(cvs?|cavalos|potencia|torque|consumo|ficha tecnica)\b/.test(folded) &&
+      mentionedModelGroups(stock, text).size > 0 && !isChatSelectionQuery(text);
+    const yearChoice: boolean = technicalIdentity && /^(?:o |a |ano |de )?(?:19|20)\d{2}[?!., ]*$/.test(folded);
+    const ranges = parseChatSearchRanges(text);
+    if (directTechnical || yearChoice) {
+      delete ranges.minYear;
+      delete ranges.maxYear;
+    }
+    technicalIdentity = directTechnical || yearChoice;
+    Object.assign(rememberedRanges, ranges);
     const nextPrice = parsePriceLimit(text);
     if (nextPrice != null) price = nextPrice;
     const nextGear = parseTransmissionFilter(text);
@@ -2169,6 +2180,9 @@ export function scopeChatMessage(
     if (word) append.push(word);
   }
   const currentModels = mentionedModelGroups(stock, current);
+  const freshInventory = /\b(?:agora|na verdade)\b/.test(foldedCurrent) &&
+    parseTransmissionFilter(current) != null && parsePriceLimit(current) != null &&
+    !isAnaphoricVehicleFollowUp(current);
   const currentRanges = parseChatSearchRanges(current);
   if (
     !clearYear &&
@@ -2192,6 +2206,7 @@ export function scopeChatMessage(
     append.push(`a partir de R$ ${rememberedRanges.minPrice}`);
   if (
     currentModels.size === 0 &&
+    !freshInventory &&
     !stock.some((v) => foldedCurrent.includes(normalize(v.brand))) &&
     (parseVehicleCategoryFilter(current) == null ||
       parseVehicleCategoryFilter(current) === category) &&
