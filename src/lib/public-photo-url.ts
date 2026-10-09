@@ -1,4 +1,5 @@
 /** URLs de apresentação. Banco, uploads e admin mantêm as URLs do Storage. */
+import { galleryPreviewObjectPath } from "./gallery-preview-path";
 export const PHOTO_STORAGE_ORIGIN = "https://vesmqhyxautgtvgccweo.supabase.co";
 export const PUBLIC_PHOTO_PREFIX = "/fotos/v1/";
 const OBJECT_PREFIX = "/storage/v1/object/public/veiculos/";
@@ -69,5 +70,14 @@ export function publicPhotoUpstream(parts: string[]) {
   if (version !== "v1" || !validPublicPhotoKey(key)) return null;
   if (variant === "original") return PHOTO_STORAGE_ORIGIN + OBJECT_PREFIX + key.join("/");
   if (!Object.hasOwn(PUBLIC_PHOTO_VARIANTS, variant)) return null;
+  const preview = variant === "800-contain-q80" ? galleryPreviewObjectPath(key.join("/")) : null;
+  if (preview) return PHOTO_STORAGE_ORIGIN + OBJECT_PREFIX + preview;
+  return PHOTO_STORAGE_ORIGIN + RENDER_PREFIX + key.join("/") + "?" + PUBLIC_PHOTO_VARIANTS[variant];
+}
+
+/** Só usado se um preview versionado estiver indisponível. URLs antigas não fazem tentativa extra. */
+export function publicPhotoPreviewFallback(parts: string[]) {
+  const [version, variant, ...key] = parts;
+  if (version !== "v1" || variant !== "800-contain-q80" || !validPublicPhotoKey(key) || !galleryPreviewObjectPath(key.join("/"))) return null;
   return PHOTO_STORAGE_ORIGIN + RENDER_PREFIX + key.join("/") + "?" + PUBLIC_PHOTO_VARIANTS[variant];
 }

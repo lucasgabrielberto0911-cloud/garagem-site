@@ -1,3 +1,4 @@
+import { prepareGalleryUploadPath } from "../src/lib/gallery-preview-store";
 /**
  * Cria/atualiza anúncios no banco live e sobe fotos no bucket público
  * `veiculos`, no mesmo pipeline do admin (`/api/upload`):
@@ -194,7 +195,7 @@ async function uploadPhotoFile(filePath: string): Promise<IntakePhoto> {
   ]);
 
   const id = `${Date.now()}-${crypto.randomUUID()}`;
-  const galleryPath = `${id}.${gallery.extension}`;
+  const galleryPath = await prepareGalleryUploadPath(id, gallery);
   const cardPath = cardObjectPath(galleryPath);
   const [url, thumbnailUrl] = await Promise.all([
     uploadPublicObject(galleryPath, gallery.buffer, gallery.contentType),
