@@ -108,6 +108,26 @@ test("busca tolerante encontra o Civic e mantém ordenação", async ({ page }) 
   await expect(page.locator("article.listing-card")).toContainText("Civic");
 });
 
+test("pergunta de potência responde o dado com fontes antes do card e WhatsApp oficial", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
+  await page.goto("/estoque");
+  await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Sua Garagem", exact: true });
+  await dialog.locator("textarea").fill("quantos cv tem a duster?");
+  await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
+  await expect(dialog).toHaveAttribute("aria-busy", "false");
+  const answer = dialog.locator('[data-chat-latest="1"]');
+  await expect(answer).toContainText("142 cv com etanol e 138 cv com gasolina");
+  await expect(answer).not.toContainText("qual é o mais potente");
+  await expect(answer.locator("[data-chat-vehicle]")).toHaveCount(1);
+  const sources = answer.getByRole("region", { name: "Pesquisa técnica e fontes" });
+  await expect(sources).toContainText("Renault");
+  await expect(sources).toContainText("AutoPapo");
+  expect(await sources.evaluate(element => Boolean(element.compareDocumentPosition(element.parentElement!.querySelector("[data-chat-vehicle]")!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+  await expect(answer.getByRole("link", { name: /^Tenho interesse/ })).toHaveAttribute("href", /^https:\/\/wa\.me\/5527996330706\?/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test("cookies na primeira visita e nas visitas com aceite salvo, sem hidratação quebrada", async ({ page }) => {
   await page.goto(path);
   await expect(page.getByRole("dialog", { name: "Consentimento de cookies" })).toBeVisible();

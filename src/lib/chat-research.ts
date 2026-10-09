@@ -1,5 +1,6 @@
 import type { ChatVehicleRecord } from "@/lib/chat-stock";
 import { generateGroundedResearch } from "@/lib/chat-gemini";
+import { technicalReference } from "./chat-technical-reference";
 import {
   readChatResearch,
   safeResearchUrl,
@@ -30,8 +31,10 @@ export function chatResearchTopic(message: string) {
     return "consumo";
   if (/porta[ -]malas/.test(text)) return "porta-malas";
   if (/0 a 100/.test(text)) return "aceleração";
-  if (/potencia|potente|forte|cavalos|cv|torque/.test(text))
-    return "potência e torque";
+  const power = /potencia|potente|forte|cavalos|\bcv\b/.test(text);
+  if (power && /torque/.test(text)) return "potência e torque";
+  if (/torque/.test(text)) return "torque";
+  if (power) return "potência";
   return "ficha técnica";
 }
 type ResearchTopic = ReturnType<typeof chatResearchTopic>;
@@ -48,6 +51,7 @@ export function parseGroundedResearch(
 ): GroundedChatResearch {
   const data = raw as {
     candidates?: Array<{
+      content?: { parts?: Array<{ text?: string }> };
       groundingMetadata?: {
         groundingChunks?: Array<{ web?: { uri?: string; title?: string } }>;
         groundingSupports?: Array<{
@@ -59,6 +63,7 @@ export function parseGroundedResearch(
     }>;
   };
   const metadata = data?.candidates?.[0]?.groundingMetadata;
+  const responseText = data?.candidates?.[0]?.content?.parts?.map(part => part.text ?? "").join("") ?? "";
   const chunks = metadata?.groundingChunks ?? [];
   const paragraphs: ChatResearch["paragraphs"] = [];
   const powerRows = new Map<
@@ -79,9 +84,28 @@ export function parseGroundedResearch(
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
   for (const support of metadata?.groundingSupports ?? []) {
-    const text = support.segment?.text?.trim();
+    let text = support.segment?.text?.trim();
     if (!text || text.length > 1000 || paragraphs.some((p) => p.text === text))
       continue;
+    // Citations often cover a sentence rather than its model/year heading.
+    // Only use the same paragraph or its immediately preceding short heading;
+    // never inherit identity across another paragraph, version or model.
+    const occurrence = responseText.indexOf(text);
+    if (occurrence >= 0 && responseText.indexOf(text, occurrence + text.length) < 0) {
+      const before = responseText.slice(0, occurrence);
+      const boundary = before.lastIndexOf("\n\n");
+      const paragraphStart = boundary < 0 ? 0 : boundary + 2;
+      const prefix = responseText.slice(Math.max(0, paragraphStart), occurrence).trim();
+      const heading = prefix || before.slice(0, Math.max(0, paragraphStart - 2)).split("\n\n").at(-1)?.trim();
+      if (heading && heading.length <= 180 && !/\bcv\b|\bkm\/l\b|\d[\d.,]*\s*(?:cv|hp|cavalos|kgfm|n[ .]?m|litros?|rpm)\b/i.test(heading)) {
+        const withHeading = `${heading.replace(/[*#]/g, "")} ${text}`;
+        const matching = vehicles.filter(v => fold(`${v.model} ${v.version ?? ""} ${v.yearModel}`).split(" ").every(token => fold(heading).split(" ").includes(token)));
+        const mentionedModels = new Set(vehicles.filter(v => ` ${fold(withHeading)} `.includes(` ${fold(v.model)} `)).map(v => fold(v.model)));
+        const years = withHeading.match(/\b(?:19|20)\d{2}\b/g) ?? [];
+        if (matching.length && mentionedModels.size === 1 && years.every(year => matching.some(v => String(v.yearModel) === year))) text = withHeading;
+      }
+    }
+    if (paragraphs.some(paragraph => paragraph.text === text)) continue;
     // Each claim must identify the requested model, version and year, not a different generation.
     const identified = vehicles.filter((v) => {
       const normalized = fold(text);
@@ -193,6 +217,12 @@ export async function researchChatVehicles(
   signal?.throwIfAborted();
   const selected = vehicles.slice(0, 16);
   if (!selected.length) return unavailable;
+  const references = selected.map(vehicle => technicalReference(vehicle, topic));
+  if (references.every(Boolean) && vehicles.length === selected.length) {
+    return { paragraphs: references.flatMap(reference => reference!.paragraphs),
+      ...(selected.length === 1 && (topic === "potência" || topic === "potência e torque")
+        ? { powerOrder: [selected[0]!.id] } : {}) };
+  }
   // No visitor text, history, phone, name, prices or private vehicle data goes to web search.
   const identities = selected.map((v) => ({
     marca: v.brand,
@@ -216,6 +246,11 @@ export async function researchChatVehicles(
       selected,
       vehicles.length,
     );
+    const reviewed = references.flatMap(reference => reference?.paragraphs ?? []);
+    if (result.unavailable) {
+      console.warn("[chat] pesquisa sem correspondência citada exata", { candidates: selected.length });
+      if (reviewed.length) return { paragraphs: reviewed };
+    }
     if (!result.unavailable) {
       if (researchCache.size >= 64)
         researchCache.delete(researchCache.keys().next().value!);
@@ -225,8 +260,12 @@ export async function researchChatVehicles(
       });
     }
     return result;
-  } catch {
+  } catch (error) {
     signal?.throwIfAborted();
-    return unavailable;
+    // Codes only: no key, prompt, visitor data or provider response in logs.
+    const status = error && typeof error === "object" && "status" in error ? error.status : undefined;
+    console.warn("[chat] pesquisa técnica indisponível", { status: typeof status === "number" ? status : undefined });
+    const reviewed = references.flatMap(reference => reference?.paragraphs ?? []);
+    return reviewed.length ? { paragraphs: reviewed } : unavailable;
   }
 }

@@ -344,8 +344,13 @@ export async function runChatTurn(input: {
       ? activeVehicle
       : undefined);
   const mixedPrice = asksAboutListedFacts(scopedMessage);
+  const directTechnical = requestsTechnical && compared.length === 0 &&
+    !isChatSelectionQuery(visitorMessage) && !roadUse &&
+    parsePriceLimit(visitorMessage) == null &&
+    Object.keys(parseChatSearchRanges(visitorMessage)).length === 0 &&
+    Boolean(mentionedPool || activeVehicle || isAnaphoricVehicleFollowUp(visitorMessage));
   const selection =
-    isChatSelectionQuery(scopedMessage) ||
+    !directTechnical && (isChatSelectionQuery(scopedMessage) ||
     (requestsTechnical && compared.length >= 2) ||
     roadUse ||
     Object.keys(parseChatSearchRanges(scopedMessage)).length > 0 ||
@@ -354,7 +359,7 @@ export async function runChatTurn(input: {
         visitorMessage,
         input.stock,
         input.vehicleId,
-      ));
+      )));
   if (
     selection &&
     !mayCreateLead &&
@@ -427,14 +432,21 @@ export async function runChatTurn(input: {
     return finish(reply, false, { policy: "inventory-empty", cards: false });
   }
   if (requestsTechnical && !mayCreateLead) {
-    const named = singleMentionedModelPool(input.stock, visitorMessage);
+    const named = singleMentionedModelPool(input.stock, visitorMessage) ??
+      (isAnaphoricVehicleFollowUp(visitorMessage) ? mentionedPool : null);
     // A named model outside the stock must not silently become the open ficha.
     const explicitSubject =
       /\b(?:do|da|sobre(?: o| a)?|pesquis\w*)\s+(?!(?:motor|carro|veiculo|modelo|anuncio|consumo|cambio|torque|potencia|combustivel|porta|desempenho|ficha|esse|essa|este|esta)\b)[a-z0-9]/i.test(
         visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
       );
+    const candidates = named ? searchChatInventory(visitorMessage, named)?.candidates ?? named : [];
+    if (candidates.length > 1 && !candidates.some(vehicle => vehicle.id === activeVehicle?.id)) {
+      const reply = `Tenho mais de uma versão desse modelo no estoque: ${candidates.map(vehicle => `${vehicle.model} ${vehicle.version ?? ""} ${vehicle.yearModel}`).join("; ")}. De qual delas você quer saber?`;
+      emit(reply);
+      return finish(reply, false, { policy: "technical-version-ask", forcedVehicles: candidates });
+    }
     const subject = named
-      ? matchFocusedVehicle(visitorMessage, named, activeVehicle?.id)
+      ? candidates.find(vehicle => vehicle.id === activeVehicle?.id) ?? candidates[0]
       : explicitSubject || seeksMissingNamedModel(visitorMessage, input.stock)
         ? undefined
         : (activeVehicle ??
@@ -442,18 +454,22 @@ export async function runChatTurn(input: {
             ? focusedVehicle
             : undefined));
     if (subject) {
-      const reply = `${subject.brand} ${subject.model} ${subject.version ?? ""} ${subject.yearModel}: ${subject.km.toLocaleString("pt-BR")} km, ${subject.transmission}, R$ ${subject.price.toLocaleString("pt-BR")}. Vou separar os dados deste anúncio dos dados técnicos do modelo.`;
+      const research = await (input.research ?? researchChatVehicles)([subject], input.signal, chatResearchTopic(visitorMessage));
+      const topic = chatResearchTopic(visitorMessage);
+      const unavailableTopic = topic === "potência" ? "a potência" : topic === "torque" ? "o torque" : topic === "consumo" ? "o consumo" : "os dados técnicos";
+      const technicalReply = !research.unavailable && research.paragraphs.length
+        ? research.paragraphs[0]!.text
+        : `Ainda não consegui confirmar ${unavailableTopic} dessa versão (${subject.model} ${subject.version ?? ""} ${subject.yearModel}) em uma fonte exata. São dados técnicos do modelo; o consultor pode conferir isso com você no WhatsApp.`;
+      const reply = asksAboutListedFacts(visitorMessage) || asksAboutKm(visitorMessage)
+        ? `${formatVehicleLine(subject)}\n\n${technicalReply}`
+        : technicalReply;
       emit(reply);
       const result = finish(reply, false, {
         policy: "technical-research",
         forcedVehicles: [subject],
       });
       result.reply = reply;
-      result.research = await (input.research ?? researchChatVehicles)(
-        [subject],
-        input.signal,
-        chatResearchTopic(visitorMessage),
-      );
+      result.research = research;
       return result;
     }
     const reply =
