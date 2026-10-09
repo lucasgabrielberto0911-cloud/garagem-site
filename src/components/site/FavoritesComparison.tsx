@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { comparisonDifference, differentComparisonText, type ComparisonMetric } from "@/lib/comparison-differences";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
 import type { VehicleCardData } from "./VehicleCard";
 import { WhatsAppButton } from "./ui";
@@ -10,7 +10,6 @@ import { coverSrc } from "@/lib/stock-query";
 import { formatNumberBR, formatVehicleLabel } from "@/lib/format";
 import { publicCardFacts } from "@/lib/public-card-facts";
 import { formatVehicleWhatsAppMessage } from "@/lib/vehicle-display";
-import { vehicleLocationLabel } from "@/lib/vehicle-location";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import { comparisonSelection, toggleComparison, readComparisonSession, writeComparisonSession } from "@/lib/favorites-comparison";
 
@@ -31,7 +30,6 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
     { label: "Ano", metric: "yearModel", value: v => String(v.yearModel) },
     { label: "Km", metric: "km", value: v => formatNumberBR(v.km) + " km" },
     { label: "Câmbio", value: v => publicCardFacts(v).facts.find(fact => fact.label === "Câmbio")?.value || "—" },
-    { label: "Cidade", value: v => vehicleLocationLabel(v.locationCity) || "—" },
   ];
   return (
     <details open={open} onToggle={event => {
@@ -57,15 +55,49 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
         </fieldset>
         <p role="status" className="mt-3 text-xs leading-relaxed text-muted">{ids.length < 2 ? "Selecione mais um veículo para comparar." : ids.length === 3 ? "Para trocar uma opção, desmarque um veículo. Deslize a comparação para ver os três." : "Dois selecionados. Você pode adicionar mais um ou trocar as opções."}</p>
         {selected.length >= 2 ? <p className="mt-2 text-xs leading-relaxed text-muted">Diferenças em relação ao {formatVehicleLabel(selected[0].brand, selected[0].model)} da primeira coluna. Os campos diferentes têm um fundo mais claro.</p> : null}
-        {selected.length >= 2 ? <div className="mt-4 max-h-[70dvh] overflow-auto overscroll-contain rounded-lg border border-white/10" tabIndex={0} aria-label="Tabela de comparação dos veículos selecionados">
+        {selected.length >= 2 ? <ComparisonTable selected={selected} rows={rows} /> : null}
+      </div>
+    </details>
+  );
+}
+
+
+type ComparisonRow = { label: string; metric?: ComparisonMetric; value: (vehicle: VehicleCardData) => string };
+
+function ComparisonTable({ selected, rows }: { selected: VehicleCardData[]; rows: ComparisonRow[] }) {
+  const tableRef = useRef<HTMLDivElement>(null);
+  const tableId = useId();
+  function showColumn(index: number) {
+    const viewport = tableRef.current;
+    const columns = viewport?.querySelectorAll<HTMLElement>("thead th");
+    const column = columns?.[index + 1];
+    if (!viewport || !column || !columns?.[0]) return;
+    const left = viewport.scrollLeft + column.getBoundingClientRect().left
+      - viewport.getBoundingClientRect().left - columns[0].getBoundingClientRect().width;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    viewport.scrollTo({ left: Math.max(0, left), behavior: reduced ? "auto" : "smooth" });
+  }
+  return <>
+    {selected.length === 3 ? <div className="mt-3 lg:hidden">
+      <p className="text-xs leading-relaxed text-muted">Toque para ver a coluna de cada veículo. Você também pode deslizar a tabela.</p>
+      <div className="mt-2 grid grid-cols-3 gap-2" role="group" aria-label="Ver colunas da comparação">
+        {selected.map((vehicle, index) => <button key={vehicle.id} type="button"
+          aria-controls={tableId} aria-label={`Mostrar ${formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel)}${vehicle.version ? " · " + vehicle.version : ""} na comparação`}
+          onClick={() => showColumn(index)}
+          className="min-h-11 min-w-0 rounded-md border border-white/20 px-2 py-2 text-xs leading-relaxed text-cream transition hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+          {formatVehicleLabel(vehicle.brand, vehicle.model)}
+        </button>)}
+      </div>
+    </div> : null}
+      <div ref={tableRef} id={tableId} role="region" className="mt-3 overflow-x-auto rounded-lg border border-white/10" tabIndex={0} aria-label="Tabela de comparação dos veículos selecionados">
           <table className="w-full table-fixed border-collapse text-left" style={selected.length === 3 ? { minWidth: "28rem" } : undefined}>
-            <caption className="sr-only">Comparação por preço, versão, ano, quilometragem, câmbio e cidade</caption>
-            <thead className="sticky top-0 z-20 bg-ink">
+            <caption className="sr-only">Comparação por preço, versão, ano, quilometragem e câmbio</caption>
+            <thead className="bg-ink">
               <tr className="align-top">
                 <th scope="col" className="sticky left-0 z-30 w-12 bg-ink px-1 py-3 text-[10px] font-medium text-muted sm:w-20 sm:px-2">Veículo</th>
                 {selected.map(vehicle => <th key={vehicle.id} scope="col" className="border-l border-white/10 p-2 font-normal">
                   <Link href={vehiclePath(vehicle)} className="block rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
-                    <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-asphalt"><VehicleImage src={coverSrc(vehicle.photos?.slice(0, 1).map(photo => ({ url: photo.url })))} alt={formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel)} fill sizes="180px" className="object-cover" /></div>
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-asphalt"><VehicleImage src={coverSrc(vehicle.photos)} alt={formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel)} fill sizes="180px" className="object-cover" /></div>
                     <span className="mt-2 block text-xs font-semibold leading-relaxed text-cream sm:text-sm">{formatVehicleLabel(vehicle.brand, vehicle.model)}</span>
                   </Link>
                 </th>)}
@@ -92,8 +124,6 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
               </tr>
             </tbody>
           </table>
-        </div> : null}
       </div>
-    </details>
-  );
+  </>;
 }
