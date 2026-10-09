@@ -10,6 +10,7 @@ import {
 import { catchUpStreamText, encodeSse } from "@/lib/chat-stream";
 import { loadChatStock, type ChatVehicleRecord } from "@/lib/chat-stock";
 import { runChatTurn, type ChatTurnResult } from "@/lib/chat-turn";
+import { readChatResearch } from "@/lib/chat-research-data";
 import type { RateLimitResult } from "@/lib/rate-limit";
 
 export const CHAT_MAX_MESSAGE = 800;
@@ -53,6 +54,7 @@ function publicResult(result: ChatTurnResult) {
     leadCreated: result.leadCreated,
     vehicles: result.vehicles,
     stockHref: result.stockHref,
+    ...(result.research ? { research: readChatResearch(result.research) } : {}),
   };
 }
 

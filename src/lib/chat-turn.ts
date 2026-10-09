@@ -21,6 +21,7 @@ import {
   buildChatSystemPrompt,
   chatRankMode,
   isPowerQuery,
+  isChatSelectionQuery,
   parsePriceLimit,
 } from "@/lib/chat-prompt";
 import { applyChatReplyGuards, looksTruncated } from "@/lib/chat-polish";
@@ -61,6 +62,7 @@ import {
   formatFocusedConsumptionReply,
   formatFocusedEquipmentReply,
   formatFocusedKmReply,
+  formatVehicleLine,
   isIncompleteStockReply,
   isFocusedVehicleFactQuestion,
   looksLikeMissingModelReply,
@@ -69,6 +71,7 @@ import {
   matchFocusedVehicle,
   pickComparedModelVehicles,
   scopeChatMessage,
+  searchChatInventory,
   selectVehiclesForChatPrompt,
   seeksMissingNamedModel,
   similarAfterEmptyFilter,
@@ -84,12 +87,22 @@ import {
   missingModelReply,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
+import { chatTurnMayCreateLead } from "@/lib/chat-guard";
+import { parseChatSearchRanges } from "@/lib/chat-search-filters";
+import { isAnaphoricVehicleFollowUp } from "@/lib/chat-text";
+import {
+  asksForTechnicalResearch,
+  chatResearchTopic,
+  researchChatVehicles,
+} from "@/lib/chat-research";
+import type { ChatResearch } from "@/lib/chat-research-data";
 
 export type ChatTurnResult = {
   reply: string;
   leadCreated: boolean;
   vehicles: ChatVehicleCard[];
   stockHref: string | null;
+  research?: ChatResearch;
   meta?: {
     finishReason?: string | null;
     truncated?: boolean;
@@ -112,6 +125,7 @@ export async function runChatTurn(input: {
   createLead?: typeof createChatLead;
   onToken?: (delta: string) => void;
   signal?: AbortSignal;
+  research?: typeof researchChatVehicles;
 }): Promise<ChatTurnResult> {
   input.signal?.throwIfAborted();
   const activeVehicle = input.vehicleId
@@ -122,6 +136,9 @@ export async function runChatTurn(input: {
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
   const visitorMessage = input.mensagem;
+  const requestsTechnical =
+    asksForTechnicalResearch(visitorMessage) ||
+    asksAboutConsumption(visitorMessage);
   const scopedMessage = scopeChatMessage(
     visitorMessage,
     input.historico,
@@ -141,7 +158,7 @@ export async function runChatTurn(input: {
       promptStock.map(toChatStockLine),
       scopedMessage,
       activeVehicle ? toChatStockLine(activeVehicle) : undefined,
-      chatPromptStockOpts(scopedMessage),
+      { ...chatPromptStockOpts(scopedMessage), consumption: false },
     );
   };
 
@@ -186,7 +203,7 @@ export async function runChatTurn(input: {
       }
     }
     const enriched =
-      picked.length > 0
+      picked.length > 0 && !requestsTechnical
         ? enrichChatStockReply(text, picked, scopedMessage, input.stock)
         : text;
     let guarded = applyChatReplyGuards(enriched, picked, {
@@ -228,7 +245,12 @@ export async function runChatTurn(input: {
     return finish(CHAT_FIPE_REPLY, false, { cards: false, fipe: true });
   }
 
-  const policy = chatPolicyShortcut(scopedMessage);
+  const mayCreateLead = chatTurnMayCreateLead(visitorMessage, input.historico);
+  const humanAction =
+    /\b(troca\w*|troco|financi\w*|parcela\w*|vender|anunciar|visita|video|consultor|whatsapp)\b/i.test(
+      visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+    );
+  const policy = mayCreateLead ? null : chatPolicyShortcut(scopedMessage);
   if (policy === "card") {
     emit(CHAT_CARD_REPLY);
     return finish(CHAT_CARD_REPLY, false, { policy });
@@ -255,7 +277,10 @@ export async function runChatTurn(input: {
     return finish(reply, false, { policy });
   }
 
-  const empty = emptyFilterReply(scopedMessage, input.stock);
+  const empty =
+    mayCreateLead || humanAction
+      ? null
+      : emptyFilterReply(scopedMessage, input.stock);
   if (empty) {
     const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
     emit(empty);
@@ -267,6 +292,8 @@ export async function runChatTurn(input: {
   }
 
   if (
+    !mayCreateLead &&
+    !requestsTechnical &&
     input.historico.some(
       (turn) => turn.role === "user" && turn.content.trim(),
     ) &&
@@ -277,6 +304,18 @@ export async function runChatTurn(input: {
       emit(follow);
       return finish(follow, false, { policy: "shortlist" });
     }
+  }
+  if (
+    !mayCreateLead &&
+    looksLikeShortlistFollowUp(visitorMessage) &&
+    !input.historico.some((turn) => turn.role === "user") &&
+    !hasChatStockFilter(visitorMessage) &&
+    !input.vehicleId
+  ) {
+    const reply =
+      "De qual deles você quer saber? Me diga os modelos que quer comparar, ou comece pelo orçamento.";
+    emit(reply);
+    return finish(reply, false, { policy: "compare-ask", cards: false });
   }
 
   const mentionedPool = singleMentionedModelPool(input.stock, scopedMessage);
@@ -291,7 +330,112 @@ export async function runChatTurn(input: {
       ? activeVehicle
       : undefined);
   const mixedPrice = asksAboutListedFacts(scopedMessage);
+  const selection =
+    isChatSelectionQuery(scopedMessage) ||
+    Object.keys(parseChatSearchRanges(scopedMessage)).length > 0 ||
+    (hasChatStockFilter(scopedMessage) &&
+      !isFocusedVehicleFactQuestion(
+        visitorMessage,
+        input.stock,
+        input.vehicleId,
+      ));
   if (
+    selection &&
+    !mayCreateLead &&
+    (!humanAction || requestsTechnical) &&
+    !(
+      asksAboutAvailability(visitorMessage) &&
+      isAnaphoricVehicleFollowUp(visitorMessage)
+    ) &&
+    !asksAboutEquipment(visitorMessage) &&
+    !seeksMissingNamedModel(scopedMessage, input.stock)
+  ) {
+    const found = searchChatInventory(scopedMessage, input.stock);
+    if (found) {
+      emit(found.reply);
+      const result = finish(found.reply, false, {
+        policy: "inventory-search",
+        forcedVehicles: found.picks,
+      });
+      // Preserve exact inventory prose: enrichment must not turn a search into a gear fact.
+      result.reply = found.reply;
+      result.stockHref = chatStockExploreHref(
+        scopedMessage,
+        found.candidates,
+        result.vehicles.length,
+      );
+      if (requestsTechnical) {
+        const research = await (input.research ?? researchChatVehicles)(
+          found.candidates,
+          input.signal,
+          chatResearchTopic(visitorMessage),
+        );
+        result.research = research;
+        if (
+          isPowerQuery(visitorMessage) &&
+          !research.unavailable &&
+          research.paragraphs.length > 0 &&
+          research.powerOrder?.length === found.candidates.length
+        ) {
+          const byId = new Map(found.candidates.map((v) => [v.id, v]));
+          const verified = research.powerOrder.flatMap((id) =>
+            byId.get(id) ? [byId.get(id)!] : [],
+          );
+          if (
+            verified.length === found.candidates.length &&
+            new Set(research.powerOrder).size === verified.length
+          ) {
+            const picks = verified.slice(0, CHAT_CARD_LIMIT);
+            result.vehicles = picks.map(toChatVehicleCard);
+            result.reply = `${found.reply.split("\n")[0]}\n${picks.map(formatVehicleLine).join("\n")}\n\nA ordem considera a potência de catálogo confirmada nas fontes abaixo. Compare também combustível, preço e km; isso não mede o desempenho ou o estado de cada unidade.`;
+          }
+        }
+      }
+      return result;
+    }
+    const reply =
+      "Não achei um anúncio que reúna esses critérios agora. Você pode mudar o recorte ou falar com um consultor no WhatsApp: " +
+      CHAT_WHATSAPP_URL;
+    emit(reply);
+    return finish(reply, false, { policy: "inventory-empty", cards: false });
+  }
+  if (requestsTechnical && !mayCreateLead) {
+    const named = singleMentionedModelPool(input.stock, visitorMessage);
+    // A named model outside the stock must not silently become the open ficha.
+    const explicitSubject =
+      /\b(?:do|da|sobre(?: o| a)?|pesquis\w*)\s+(?!(?:motor|carro|veiculo|modelo|anuncio|consumo|cambio|torque|potencia|combustivel|porta|desempenho|ficha|esse|essa|este|esta)\b)[a-z0-9]/i.test(
+        visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+      );
+    const subject = named
+      ? matchFocusedVehicle(visitorMessage, named, activeVehicle?.id)
+      : explicitSubject || seeksMissingNamedModel(visitorMessage, input.stock)
+        ? undefined
+        : (activeVehicle ??
+          (isAnaphoricVehicleFollowUp(visitorMessage)
+            ? focusedVehicle
+            : undefined));
+    if (subject) {
+      const reply = `${subject.brand} ${subject.model} ${subject.version ?? ""} ${subject.yearModel}: ${subject.km.toLocaleString("pt-BR")} km, ${subject.transmission}, R$ ${subject.price.toLocaleString("pt-BR")}. Vou separar os dados deste anúncio dos dados técnicos do modelo.`;
+      emit(reply);
+      const result = finish(reply, false, {
+        policy: "technical-research",
+        forcedVehicles: [subject],
+      });
+      result.reply = reply;
+      result.research = await (input.research ?? researchChatVehicles)(
+        [subject],
+        input.signal,
+        chatResearchTopic(visitorMessage),
+      );
+      return result;
+    }
+    const reply =
+      "Qual modelo, versão e ano você quer pesquisar? Posso conferir os dados técnicos com fontes e comparar com os anúncios disponíveis.";
+    emit(reply);
+    return finish(reply, false, { policy: "technical-ask", cards: false });
+  }
+  if (
+    !mayCreateLead &&
     compared.length >= 2 &&
     asksToCompareModels(scopedMessage) &&
     !asksAboutConsumption(scopedMessage) &&
@@ -309,6 +453,7 @@ export async function runChatTurn(input: {
     });
   }
   if (
+    !mayCreateLead &&
     asksWhichTwoToCompare(scopedMessage) &&
     compared.length < 2 &&
     !mentionedPool &&
@@ -322,6 +467,7 @@ export async function runChatTurn(input: {
     });
   }
   if (
+    !mayCreateLead &&
     asksToCompareModels(scopedMessage) &&
     compared.length < 2 &&
     !asksWhichTwoToCompare(scopedMessage) &&
@@ -337,7 +483,7 @@ export async function runChatTurn(input: {
       cards: similar.length > 0,
     });
   }
-  if (asksAboutAvailability(scopedMessage) && !mixedPrice) {
+  if (!mayCreateLead && asksAboutAvailability(scopedMessage) && !mixedPrice) {
     if (
       isFocusedVehicleFactQuestion(
         scopedMessage,
@@ -369,7 +515,7 @@ export async function runChatTurn(input: {
       });
     }
   }
-  if (seeksMissingNamedModel(scopedMessage, input.stock)) {
+  if (!mayCreateLead && seeksMissingNamedModel(scopedMessage, input.stock)) {
     const reply = missingModelReply(scopedMessage, input.stock);
     const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
     emit(reply);
@@ -380,6 +526,7 @@ export async function runChatTurn(input: {
     });
   }
   if (
+    !mayCreateLead &&
     focusedVehicle &&
     !mixedPrice &&
     isFocusedVehicleFactQuestion(
@@ -401,6 +548,7 @@ export async function runChatTurn(input: {
     return finish(reply, false, { policy: "stock-fact" });
   }
   if (
+    !mayCreateLead &&
     focusedVehicle &&
     !mixedPrice &&
     !mentionedPool &&
@@ -415,6 +563,8 @@ export async function runChatTurn(input: {
 
   const fromStock = () => {
     if (isChatPing(scopedMessage)) return CHAT_PING_REPLY;
+    if (requestsTechnical)
+      return `Não consegui confirmar a pesquisa técnica agora. Os dados do anúncio continuam no site; o consultor pode ajudar no WhatsApp: ${CHAT_WHATSAPP_URL}`;
     return (
       localGarageReply(scopedMessage, input.stock, activeVehicle) ??
       CHAT_FALLBACK_REPLY
@@ -427,9 +577,10 @@ export async function runChatTurn(input: {
       visitorMessage.trim(),
     );
   if (
-    (greeting && input.historico.length === 0) ||
-    (chatRankMode(scopedMessage) === "price" &&
-      isBareBudgetQuery(scopedMessage))
+    !mayCreateLead &&
+    ((greeting && input.historico.length === 0) ||
+      (chatRankMode(scopedMessage) === "price" &&
+        isBareBudgetQuery(scopedMessage)))
   ) {
     const local = greeting
       ? CHAT_PING_REPLY
@@ -513,6 +664,7 @@ export async function runChatTurn(input: {
 
   if (
     !first.functionCall &&
+    !requestsTechnical &&
     asksAboutConsumption(scopedMessage) &&
     !hasConsumptionFigures(generated)
   ) {

@@ -127,13 +127,19 @@ test("lista de espera do chat vira WhatsApp com frase humana", () => {
   const href = chatWaitlistWhatsAppUrl("Tem automático até 40 mil?");
   const decoded = decodeURIComponent(href);
   assert.match(decoded, /wa\.me\/5527996330706\?text=/);
-  assert.match(decoded, /Oi! Quero ser avisado quando chegar: automático até R\$\s*40\.000/);
+  assert.match(
+    decoded,
+    /Oi! Quero ser avisado quando chegar: automático até R\$\s*40\.000/,
+  );
   const cta = chatWhatsAppCta(
     `Nessa combinação (automático até R$ 40.000) ainda não tem anúncio agora. ${href}`,
   );
   assert.equal(cta?.label, "Avisar quando chegar");
   assert.equal(extractWhatsAppHref(`chama: ${href}`), href);
-  assert.match(decodeURIComponent(cta?.href ?? ""), /automático até R\$\s*40\.000/);
+  assert.match(
+    decodeURIComponent(cta?.href ?? ""),
+    /automático até R\$\s*40\.000/,
+  );
 });
 
 test("Fox 1.6 1.6 não aparece no template, no prompt nem na guarda", () => {
@@ -187,10 +193,10 @@ test("HB20 vs Onix compara só os dois e deixa o Compass de fora", async () => {
   });
   assert.equal(result.meta?.policy, "compare");
   assert.equal(result.vehicles.length, 2);
-  assert.deepEqual(
-    result.vehicles.map((vehicle) => vehicle.model).sort(),
-    ["HB20", "Onix"],
-  );
+  assert.deepEqual(result.vehicles.map((vehicle) => vehicle.model).sort(), [
+    "HB20",
+    "Onix",
+  ]);
   assert.doesNotMatch(result.reply, /Compass/);
   assert.doesNotMatch(result.reply, /BIZ|Civic/);
 });
@@ -298,7 +304,10 @@ test("automático até 80 mil vazio aponta WhatsApp com o recorte", async () => 
     generate: blockedGenerate(),
   });
   assert.equal(result.meta?.policy, "waitlist");
-  assert.match(decodeURIComponent(result.reply), /automático até R\$\s*80\.000/);
+  assert.match(
+    decodeURIComponent(result.reply),
+    /automático até R\$\s*80\.000/,
+  );
   assert.doesNotMatch(result.reply, /mais em conta/);
 });
 
@@ -372,18 +381,19 @@ test("tem biz até 15 mil não mistura carro na waitlist", async () => {
   assert.doesNotMatch(result.reply, /HB20|Onix|Compass/);
 });
 
-test("consumo do Fox 1.6 não chama Gemini e não duplica cilindrada", async () => {
+test("consumo do Fox 1.6 exige fonte técnica e não duplica cilindrada", async () => {
   const result = await runChatTurn({
     mensagem: "Qual consumo do Fox 1.6?",
     historico: [],
     stock: [fox16, hb20],
     generate: blockedGenerate(),
   });
-  assert.equal(result.meta?.policy, "stock-fact");
+  assert.equal(result.meta?.policy, "technical-research");
   assert.match(result.reply, /Fox 1\.6/);
-  assert.match(result.reply, /km\/l/);
+  assert.equal(result.research?.unavailable, true);
+  assert.doesNotMatch(result.reply, /\d+.*km\/l/);
   assert.doesNotMatch(result.reply, /1\.6 1\.6/);
-  assert.match(result.reply, /não foi medido/);
+  assert.match(result.reply, /dados técnicos do modelo/);
 });
 
 test("card de consumo do Fox Bluemotion não duplica 1.6 na versão", async () => {
@@ -486,7 +496,7 @@ test("ainda tem Pulse na lista confirma o estoque atual", async () => {
   assert.doesNotMatch(result.reply, /já saiu/);
 });
 
-test("HB20 automático até 70 mil lista HB20 e Lancer, não o Compass", async () => {
+test("HB20 automático até 70 mil mantém só o modelo pedido", async () => {
   const hb20Auto: ChatVehicleRecord = {
     ...hb20,
     id: "c-hb20-auto-70",
@@ -515,7 +525,7 @@ test("HB20 automático até 70 mil lista HB20 e Lancer, não o Compass", async (
   assert.doesNotMatch(result.reply, /Compass/);
   const models = result.vehicles.map((vehicle) => vehicle.model);
   assert.ok(models.includes("HB20"));
-  assert.ok(models.includes("Lancer") || /Lancer/i.test(result.reply));
+  assert.deepEqual(models, ["HB20"]);
   assert.ok(result.vehicles.every((vehicle) => vehicle.price <= 70_000));
 });
 
@@ -631,7 +641,9 @@ test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () 
     picked.slice(0, 3).map((vehicle) => vehicle.id),
     [lancer.id, civic.id, corolla.id],
   );
-  assert.ok(picked.every((vehicle) => /autom[aá]tic/i.test(vehicle.transmission)));
+  assert.ok(
+    picked.every((vehicle) => /autom[aá]tic/i.test(vehicle.transmission)),
+  );
   assert.ok(picked.every((vehicle) => vehicle.price <= 109_000));
   assert.ok(
     picked.findIndex((vehicle) => vehicle.id === nivus.id) >
@@ -662,12 +674,11 @@ test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () 
     result.vehicles.map((vehicle) => vehicle.id),
     [lancer.id, civic.id, corolla.id],
   );
-  assert.match(
-    result.reply,
-    /Automático até R\$ 109\.000: o motor maior vem primeiro, e o preço a gente compara entre eles\./,
-  );
+  assert.match(result.reply, /automáticos.*109\.000/i);
   assert.doesNotMatch(result.reply, /eu olho o motor maior antes do preço/);
-  assert.match(result.reply, /Lancer, Civic e Corolla cabem neste recorte com motor 2\.0/);
+  assert.match(result.reply, /Lancer: motor 2\.0/);
+  assert.match(result.reply, /Civic: motor 2\.0/);
+  assert.match(result.reply, /Corolla: motor 2\.0/);
   assert.match(result.reply, /80 mil km/);
   assert.match(result.reply, /62\.900/);
   assert.doesNotMatch(result.reply, /mais em conta/);
@@ -697,7 +708,7 @@ test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () 
   assert.doesNotMatch(cheap.reply, /mais fortes/);
 });
 
-test("resposta honesta do modelo que abre pelo 2.0 é mantida", async () => {
+test("busca por motor usa dados reais em vez de depender da frase do modelo", async () => {
   const hb10: ChatVehicleRecord = {
     ...hb20,
     id: "c-hb-honest",
@@ -729,7 +740,7 @@ test("resposta honesta do modelo que abre pelo 2.0 é mantida", async () => {
     generate: async () => ({ text: honest, functionCall: null }),
   });
   assert.equal(result.vehicles[0]?.id, lancer.id);
-  assert.match(result.reply, /^O Lancer 2\.0 sai por R\$ 62\.900/);
+  assert.match(result.reply, /Lancer.*62\.900/);
   assert.ok(result.reply.indexOf("Lancer") < result.reply.indexOf("HB20"));
   assert.doesNotMatch(result.reply, /eu olho o motor maior antes do preço/);
   assert.equal(chatWhatsAppCta(result.reply), null);
@@ -801,10 +812,12 @@ test("2.0 mais barato não manda começar pelo 1.0", async () => {
     result.vehicles.map((vehicle) => vehicle.id),
     [duster.id, lancer.id, civic.id],
   );
-  assert.ok(result.reply.indexOf("Duster") < result.reply.indexOf("HB20"));
-  assert.match(result.reply, /Não fica mais barato/);
-  assert.match(result.reply, /não começaria por ele/);
-  assert.doesNotMatch(result.reply, /gastar menos|mais em conta|prioridade virar só o preço/i);
+  assert.doesNotMatch(result.reply, /HB20/);
+  assert.match(result.reply, /cilindrada sozinha não confirma/);
+  assert.doesNotMatch(
+    result.reply,
+    /gastar menos|mais em conta|prioridade virar só o preço/i,
+  );
   assert.equal(chatWhatsAppCta(result.reply), null);
   assert.doesNotMatch(result.reply, /99956|566161|5527999566161/);
 });
@@ -835,9 +848,36 @@ test("segunda mensagem herda automático e teto e Nova conversa limpa", async ()
   });
   const stock = [
     line("hb", "Hyundai", "HB20", "1.0", "1.0", 55_900, "Automático", 110_000),
-    line("lancer", "Mitsubishi", "Lancer", "2.0", "2.0", 62_900, "Automático", 80_000),
-    line("civic", "Honda", "Civic", "LXR 2.0", "2.0", 74_900, "Automático", 90_000),
-    line("corolla", "Toyota", "Corolla", "XEi 2.0", "2.0", 98_900, "Automático", 70_000),
+    line(
+      "lancer",
+      "Mitsubishi",
+      "Lancer",
+      "2.0",
+      "2.0",
+      62_900,
+      "Automático",
+      80_000,
+    ),
+    line(
+      "civic",
+      "Honda",
+      "Civic",
+      "LXR 2.0",
+      "2.0",
+      74_900,
+      "Automático",
+      90_000,
+    ),
+    line(
+      "corolla",
+      "Toyota",
+      "Corolla",
+      "XEi 2.0",
+      "2.0",
+      98_900,
+      "Automático",
+      70_000,
+    ),
     line("gol", "Volkswagen", "Gol", "2.0", "2.0", 42_000, "Manual"),
     line("creta", "Hyundai", "Creta", "2.0", "2.0", 119_900, "Automático"),
   ];
@@ -871,13 +911,15 @@ test("segunda mensagem herda automático e teto e Nova conversa limpa", async ()
   );
   assert.ok(result.vehicles.every((vehicle) => vehicle.price <= 100_000));
   assert.ok(
-    result.vehicles.every((vehicle) => /autom/i.test(vehicle.transmission ?? "")),
+    result.vehicles.every((vehicle) =>
+      /autom/i.test(vehicle.transmission ?? ""),
+    ),
   );
-  assert.doesNotMatch(result.reply, /orçamento ou o câmbio|automático ou manual/i);
-  assert.match(
+  assert.doesNotMatch(
     result.reply,
-    /Até R\$ 100\.000 no automático, eu começo por quem tem o motor maior\./,
+    /orçamento ou o câmbio|automático ou manual/i,
   );
+  assert.match(result.reply, /automáticos.*100\.000/i);
   assert.doesNotMatch(result.reply, /eu olho o motor maior antes do preço/);
   assert.match(result.reply, /motor 2\.0|com motor 2\.0/);
 
@@ -1069,7 +1111,9 @@ test("família, primeiro carro, econômico e SUV filtram o estoque real", async 
     stock,
     generate,
   });
-  assert.equal(fact.meta?.policy, "stock-fact");
+  assert.equal(fact.meta?.policy, "technical-research");
+  assert.equal(fact.research?.unavailable, true);
+  assert.doesNotMatch(fact.reply, /\d+.*km\/l/);
   assert.equal(fact.vehicles.length, 1);
   assert.equal(fact.vehicles[0]?.id, "hb");
 });

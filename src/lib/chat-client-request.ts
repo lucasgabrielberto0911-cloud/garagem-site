@@ -11,6 +11,7 @@ export type ChatReplyPayload = {
   vehicles?: unknown;
   stockHref?: unknown;
   leadCreated?: unknown;
+  research?: unknown;
 };
 
 export class ChatRequestError extends Error {}
@@ -56,7 +57,8 @@ export async function requestChatReply(
       buffer += done
         ? decoder.decode()
         : decoder.decode(value, { stream: true });
-      if (buffer.length > 64_000)
+      // A cited result includes bounded source URLs and Google's search suggestions.
+      if (buffer.length > 256_000)
         throw new ChatRequestError(CHAT_FALLBACK_REPLY);
       const parsed = done
         ? { frames: drainSseBuffer(buffer), rest: "" }
