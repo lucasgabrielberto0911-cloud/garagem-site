@@ -126,6 +126,19 @@ test("pergunta de potência responde o dado com fontes antes do card e WhatsApp 
   expect(await sources.evaluate(element => Boolean(element.compareDocumentPosition(element.parentElement!.querySelector("[data-chat-vehicle]")!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
   await expect(answer.getByRole("link", { name: /^Tenho interesse/ })).toHaveAttribute("href", /^https:\/\/wa\.me\/5527996330706\?/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await dialog.getByRole("button", { name: "Nova conversa", exact: true }).click();
+  await dialog.locator("textarea").fill("quantos cv tem a Duster ano 2014?");
+  await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
+  await expect(dialog).toHaveAttribute("aria-busy", "false");
+  await expect(dialog.locator('[data-chat-latest="1"]')).toContainText("142 cv com etanol e 138 cv com gasolina");
+  await dialog.getByRole("button", { name: "Nova conversa", exact: true }).click();
+  await dialog.locator("textarea").fill("quantos cv tem a Duster 1.6?");
+  await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
+  await expect(dialog).toHaveAttribute("aria-busy", "false");
+  const mismatched = dialog.locator('[data-chat-latest="1"]');
+  await expect(mismatched).toContainText("versão e o ano completos");
+  await expect(mismatched).not.toContainText(/142 cv|138 cv/);
+  await expect(mismatched.locator("[data-chat-vehicle]")).toHaveCount(0);
 });
 
 test("cookies na primeira visita e nas visitas com aceite salvo, sem hidratação quebrada", async ({ page }) => {

@@ -96,6 +96,30 @@ import {
   researchChatVehicles,
 } from "@/lib/chat-research";
 import type { ChatResearch } from "@/lib/chat-research-data";
+import { parseEngineDisplacementLiters } from "@/lib/chat-consumption";
+
+function technicalYears(message: string) {
+  // Brazilian manufacture/model pairs identify the model year, not two versions.
+  const modelYear = technicalLookupMessage(message);
+  return [...new Set(modelYear.match(/\b(?:19|20)\d{2}\b/g) ?? [])].map(Number);
+}
+
+function technicalLookupMessage(message: string) {
+  // An acceleration measurement is not a budget of 100 thousand reais.
+  return message.replace(/\b((?:19|20)\d{2})\s*\/\s*((?:19|20)\d{2})\b/g, "$2")
+    .replace(/\b0\s+a\s+100(?:\s*km\s*\/\s*h)?\b(?!\s*(?:mil|k)\b)/gi, " ");
+}
+
+function technicalCandidates(message: string, pool: ChatVehicleRecord[]) {
+  let candidates = searchChatInventory(technicalLookupMessage(message), pool)?.candidates ?? [];
+  const years = technicalYears(message);
+  if (years.length) candidates = candidates.filter(vehicle => years.includes(vehicle.yearModel));
+  // A bare number in a question can be CV or 0–100, never infer motorcycle cc.
+  const displacement = parseEngineDisplacementLiters(message, null);
+  if (displacement != null) candidates = candidates.filter(vehicle =>
+    parseEngineDisplacementLiters(vehicle.engine, vehicle.version, vehicle.category) === displacement);
+  return candidates;
+}
 
 export type ChatTurnResult = {
   reply: string;
@@ -147,6 +171,18 @@ export async function runChatTurn(input: {
     input.historico,
     input.stock,
   );
+  const mentionedPool = singleMentionedModelPool(input.stock, scopedMessage);
+  const compared = pickComparedModelVehicles(input.stock, scopedMessage);
+  const requestedRanges = parseChatSearchRanges(visitorMessage);
+  const exactTechnicalYear = technicalYears(visitorMessage).length === 1 &&
+    !/\b(?:a partir de|desde|ate|minimo|maximo|em diante|pra cima|entre)\b/i.test(
+      visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+  const hasTechnicalSearchRange = requestedRanges.minPrice != null || requestedRanges.maxKm != null ||
+    (!exactTechnicalYear && (requestedRanges.minYear != null || requestedRanges.maxYear != null));
+  const directTechnical = requestsTechnical && compared.length === 0 &&
+    !isChatSelectionQuery(visitorMessage) && !roadUse &&
+    parsePriceLimit(technicalLookupMessage(visitorMessage)) == null && !hasTechnicalSearchRange &&
+    Boolean(mentionedPool || activeVehicle || isAnaphoricVehicleFollowUp(visitorMessage));
   const emit = (text: string) => {
     if (text) input.onToken?.(text);
   };
@@ -291,7 +327,7 @@ export async function runChatTurn(input: {
   }
 
   const empty =
-    mayCreateLead || humanAction
+    mayCreateLead || humanAction || directTechnical
       ? null
       : emptyFilterReply(scopedMessage, input.stock);
   if (empty) {
@@ -332,8 +368,6 @@ export async function runChatTurn(input: {
     return finish(reply, false, { policy: "compare-ask", cards: false });
   }
 
-  const mentionedPool = singleMentionedModelPool(input.stock, scopedMessage);
-  const compared = pickComparedModelVehicles(input.stock, scopedMessage);
   const focusedVehicle =
     matchFocusedVehicle(scopedMessage, input.stock, activeVehicle?.id) ??
     (!mentionedPool &&
@@ -344,11 +378,6 @@ export async function runChatTurn(input: {
       ? activeVehicle
       : undefined);
   const mixedPrice = asksAboutListedFacts(scopedMessage);
-  const directTechnical = requestsTechnical && compared.length === 0 &&
-    !isChatSelectionQuery(visitorMessage) && !roadUse &&
-    parsePriceLimit(visitorMessage) == null &&
-    Object.keys(parseChatSearchRanges(visitorMessage)).length === 0 &&
-    Boolean(mentionedPool || activeVehicle || isAnaphoricVehicleFollowUp(visitorMessage));
   const selection =
     !directTechnical && (isChatSelectionQuery(scopedMessage) ||
     (requestsTechnical && compared.length >= 2) ||
@@ -439,8 +468,14 @@ export async function runChatTurn(input: {
       /\b(?:do|da|sobre(?: o| a)?|pesquis\w*)\s+(?!(?:motor|carro|veiculo|modelo|anuncio|consumo|cambio|torque|potencia|combustivel|porta|desempenho|ficha|esse|essa|este|esta)\b)[a-z0-9]/i.test(
         visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
       );
-    const candidates = named ? searchChatInventory(visitorMessage, named)?.candidates ?? named : [];
-    if (candidates.length > 1 && !candidates.some(vehicle => vehicle.id === activeVehicle?.id)) {
+    const candidates = named ? technicalCandidates(visitorMessage, named) :
+      activeVehicle ? technicalCandidates(visitorMessage, [activeVehicle]) : [];
+    if ((named || activeVehicle) && candidates.length === 0) {
+      const reply = "Não encontrei no estoque uma unidade desse modelo com o ano e a motorização que você informou. Para pesquisar essa versão sem misturar os dados, me diga o modelo, a versão e o ano completos.";
+      emit(reply);
+      return finish(reply, false, { policy: "technical-identity-ask", cards: false });
+    }
+    if (candidates.length > 1 && (technicalYears(visitorMessage).length > 1 || !candidates.some(vehicle => vehicle.id === activeVehicle?.id))) {
       const reply = `Tenho mais de uma versão desse modelo no estoque: ${candidates.map(vehicle => `${vehicle.model} ${vehicle.version ?? ""} ${vehicle.yearModel}`).join("; ")}. De qual delas você quer saber?`;
       emit(reply);
       return finish(reply, false, { policy: "technical-version-ask", forcedVehicles: candidates });
@@ -449,7 +484,7 @@ export async function runChatTurn(input: {
       ? candidates.find(vehicle => vehicle.id === activeVehicle?.id) ?? candidates[0]
       : explicitSubject || seeksMissingNamedModel(visitorMessage, input.stock)
         ? undefined
-        : (activeVehicle ??
+        : (candidates[0] ??
           (isAnaphoricVehicleFollowUp(visitorMessage)
             ? focusedVehicle
             : undefined));
