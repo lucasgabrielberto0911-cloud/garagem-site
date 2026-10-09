@@ -47,3 +47,5 @@ next-env.d.ts
 # Playwright (screenshots/traces are CI artifacts)
 /playwright-report/
 /test-results/
+# relatórios locais de preparação de fotos
+/artifacts/gallery-preview-*.jsonl

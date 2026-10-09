@@ -19,7 +19,8 @@
     "docs:migrate": "tsx scripts/migrate-private-docs.ts",
     "stock:import": "tsx scripts/import-stock-vehicle.ts",
     "e2e:seed": "tsx e2e/seed.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "photos:gallery-backfill": "tsx scripts/backfill-gallery-previews.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
