@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /**
- * Gera a miniatura 480×300 a partir de uma foto já no Storage (fallback
+ * Gera a miniatura 480×360 a partir de uma foto já no Storage (fallback
  * do upload assinado, quando /api/upload estoura o limite da Vercel).
  */
 export async function POST(request: Request) {
@@ -24,15 +24,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { url?: string };
+    const body = (await request.json()) as { url?: string; prepareGallery?: boolean };
     const url = body.url?.trim() ?? "";
-    const result = await storeCardThumbnail(url);
+    const result = await storeCardThumbnail(url, { prepareGallery: body.prepareGallery === true });
     if (!result.ok) {
       const status = result.error.includes("inválida") ? 400 : 500;
       return NextResponse.json({ error: result.error }, { status });
     }
 
-    return NextResponse.json({ url, thumbnailUrl: result.thumbnailUrl });
+    return NextResponse.json({ url: result.url ?? url, thumbnailUrl: result.thumbnailUrl });
   } catch (error) {
     console.error("[upload/variants]", error);
     return NextResponse.json(

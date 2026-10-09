@@ -19,7 +19,7 @@
   );
   --admin-nav-h: 0px;
   /* Barra fixa da ficha. A primeira dobra desconta esta altura para a foto não ficar embaixo. */
-  --ficha-sticky-bar: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  --ficha-sticky-bar: calc(6rem + env(safe-area-inset-bottom, 0px));
   /* Âncoras Fotos / Especificações / Detalhes. A dobra do celular desconta esta faixa. */
   --ficha-section-nav: 2.75rem;
   /*
@@ -1947,4 +1947,17 @@ html.garagem-splash-on:not(.garagem-booted) .garagem-boot {
 html[data-consent="accepted"] .site-consent,
 html[data-consent="essential"] .site-consent {
   display: none;
+}
+
+/* Abertura do estoque: controles de 44 px e mais anúncio na primeira tela. */
+@media (max-width: 1023px) {
+  .stock-compact-opening header > p:first-child { display: none; }
+  .stock-compact-opening header h1,
+  .stock-compact-opening header > p.font-display.text-3xl {
+    margin-top: 0;
+    font-size: 1.35rem;
+    line-height: 1.2;
+  }
+  .stock-compact-opening header > div { margin-top: 0.375rem; }
+  .stock-compact-opening header > p:last-child:not(:first-child):not(.font-display) { display: none; }
 }

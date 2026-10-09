@@ -30,7 +30,7 @@ test("CTAs da ficha passam pelo helper ficha — não reutilizam home", () => {
 
   assert.match(bar, /fichaWhatsAppTracking/);
   assert.match(bar, /Tenho interesse/);
-  assert.match(bar, /Mais opções/);
+  assert.match(bar, /Simular \/ troca \/ vídeo/);
   assert.match(bar, /no WhatsApp/);
   assert.doesNotMatch(bar, /IntersectionObserver/);
   assert.doesNotMatch(bar, /translate-y-full/);
@@ -231,9 +231,9 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
     [
       ["Vistoria da loja", false],
       ["Ficha", false],
+      ["Garantia de 3 meses: motor e câmbio", false],
       ["Sobre o veículo", true],
       ["Itens e acessórios", true],
-      ["Garantia e condições", false],
       ["Vídeo e propostas", false],
       ["Atendimento", false],
     ],
@@ -374,7 +374,7 @@ test("final da placa só aparece na dobra quando o anúncio tem", () => {
     createElement(VehicleMobileSummary, { ...props, plateEnd: "   " }),
   );
   assert.doesNotMatch(without, /Final da placa/);
-  assert.match(without, /Serra/);
+  assert.doesNotMatch(without, /Serra|Cidade/);
 });
 
 test("selo da vistoria aparece perto do preço e some sem texto", () => {

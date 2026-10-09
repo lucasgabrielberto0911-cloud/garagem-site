@@ -81,7 +81,10 @@ test("POST no limite devolve 429 e aponta WhatsApp oficial", async () => {
   const payload = await response.json();
   assert.equal(response.status, 429);
   assert.equal(payload.leadCreated, false);
-  assert.match(payload.reply, new RegExp(CHAT_WHATSAPP_URL.replace(/\//g, "\\/")));
+  assert.match(
+    payload.reply,
+    new RegExp(CHAT_WHATSAPP_URL.replace(/\//g, "\\/")),
+  );
 });
 
 test("sessão nova grava cookie httpOnly", async () => {
@@ -179,7 +182,10 @@ test("POST com stream devolve SSE e o JSON final no done", async () => {
       },
     }),
   );
-  assert.match(response.headers.get("content-type") ?? "", /text\/event-stream/);
+  assert.match(
+    response.headers.get("content-type") ?? "",
+    /text\/event-stream/,
+  );
   const body = await response.text();
   assert.match(body, /event: token/);
   assert.match(body, /Olha só/);
@@ -249,7 +255,9 @@ test("POST stream: corte em limite de R$ não fica no done.reply", async () => {
   assert.equal(done.reply, full);
   assert.match(done.reply, /70\.000/);
   assert.match(done.reply, /\.$/);
-  const frames = parseSseChunks(body.endsWith("\n\n") ? body : `${body}\n\n`).frames;
+  const frames = parseSseChunks(
+    body.endsWith("\n\n") ? body : `${body}\n\n`,
+  ).frames;
   let emitted = "";
   for (const frame of frames) {
     const event = readChatStreamFrame(frame.event, frame.data);
@@ -271,4 +279,76 @@ test("POST com vehicleId repassa o identificador para o runTurn", async () => {
     },
   );
   assert.equal(passedVehicleId, "c-hb20-2021");
+});
+
+test("estoque indisponível devolve 503; não diz que está vazio nem consulta o modelo", async () => {
+  let ran = false;
+  const response = await post(
+    { mensagem: "Tem Civic?" },
+    {
+      loadStock: async () => {
+        throw new Error("database unavailable");
+      },
+      runTurn: async () => {
+        ran = true;
+        return emptyResult();
+      },
+    },
+  );
+  const payload = await response.json();
+  assert.equal(response.status, 503);
+  assert.equal(payload.code, "stock_unavailable");
+  assert.match(payload.reply, /Não consegui consultar/);
+  assert.doesNotMatch(payload.reply, /vendido|não tem|não está na lista/);
+  assert.equal(ran, false);
+  assert.equal(response.headers.get("retry-after"), "30");
+});
+
+test("limite diário informa quando pode tentar de novo", async () => {
+  const response = await post(
+    { mensagem: "Tem Civic?" },
+    { checkLimit: async () => ({ ok: false, retryAfterSec: 600 }) },
+  );
+  assert.equal(response.headers.get("retry-after"), "600");
+  assert.match((await response.json()).reply, /por hoje/);
+});
+
+test("fechar um stream aborta o turno e não escreve em um controller já fechado", async () => {
+  let received: AbortSignal | undefined;
+  let resolveDone!: () => void;
+  const finished = new Promise<void>((resolve) => {
+    resolveDone = resolve;
+  });
+  const response = await post(
+    { mensagem: "Tem Civic?", stream: true },
+    {
+      runTurn: async (input) => {
+        received = input.signal;
+        await new Promise<void>((resolve) =>
+          input.signal?.addEventListener("abort", () => resolve(), {
+            once: true,
+          }),
+        );
+        input.onToken?.("tardio");
+        resolveDone();
+        return emptyResult();
+      },
+    },
+  );
+  await response.body?.cancel();
+  await finished;
+  assert.equal(received?.aborted, true);
+});
+
+test("falha interna devolve 503 em vez de parecer uma consulta concluída", async () => {
+  const response = await post(
+    { mensagem: "Tem Civic?" },
+    {
+      runTurn: async () => {
+        throw new Error("provider unavailable");
+      },
+    },
+  );
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).code, "chat_unavailable");
 });

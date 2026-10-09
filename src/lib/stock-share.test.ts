@@ -8,7 +8,7 @@ test("busca compartilhada mantém filtros, acentos e ordem no domínio oficial",
   assert.equal(url.origin, "https://www.suagaragem.net");
   assert.equal(url.pathname, "/estoque");
   assert.equal(url.searchParams.get("q"), "Citroën 2015");
-  assert.equal(url.searchParams.get("city"), "serra");
+  assert.equal(url.searchParams.get("city"), null);
   assert.equal(url.searchParams.get("maxPrice"), "80000");
   assert.equal(url.searchParams.get("sort"), "menor-preco");
   assert.equal(url.searchParams.has("page"), false);

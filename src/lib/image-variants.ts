@@ -42,6 +42,16 @@ export async function encodeCardImage(buffer: Buffer): Promise<EncodedImage> {
   return { buffer: optimized, contentType: "image/webp", extension: "webp" };
 }
 
+/** Mesmos 800 px / q80 do render móvel, preservando proporção e orientação. */
+export async function encodeGalleryPreview(buffer: Buffer): Promise<EncodedImage> {
+  const optimized = await sharp(buffer, { failOn: "none" })
+    .rotate()
+    .resize({ width: 800, withoutEnlargement: true })
+    .webp({ quality: 80, effort: 6 })
+    .toBuffer();
+  return { buffer: optimized, contentType: "image/webp", extension: "webp" };
+}
+
 export function cardObjectPath(galleryPath: string) {
   return galleryPath.replace(/(\.[a-z0-9]+)?$/i, "-card.webp");
 }

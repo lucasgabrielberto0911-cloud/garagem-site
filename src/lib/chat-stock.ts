@@ -14,6 +14,7 @@ import {
   formatChatPrice,
   hasNamedStrongEngine,
   isPowerQuery,
+  isChatSelectionQuery,
   parseBodyStyleFilter,
   parseCheapIntent,
   parseEconomyIntent,
@@ -29,12 +30,21 @@ import {
   type ChatStockLine,
   type ChatStockPromptOpts,
 } from "@/lib/chat-prompt";
-import { isChatPing, isFipeQuestion, isOffScopeMessage } from "@/lib/chat-guard";
+import {
+  isChatPing,
+  isFipeQuestion,
+  isOffScopeMessage,
+} from "@/lib/chat-guard";
 import { isAnaphoricVehicleFollowUp } from "@/lib/chat-text";
 import type { ChatTurn } from "@/lib/chat-gemini";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
+import {
+  parseChatSearchRanges,
+  chatSearchOrder,
+  chatSearchResets,
+} from "@/lib/chat-search-filters";
 
-/** Teto da carga atual. Se o estoque chegar aqui, consultar pela pergunta — não só aumentar o take. */
+/** Batch size. Search reads every available listing; only a shortlist goes to the model. */
 export const CHAT_STOCK_TAKE = 80;
 
 /** Linhas no prompt do Gemini — Hobby Functions / payload enxuto. */
@@ -85,6 +95,7 @@ export type ChatVehicleRecord = {
   transmission: string;
   fuel: string;
   category?: string;
+  locationCity?: string | null;
   engine?: string | null;
   doors?: number | null;
   accessories?: string[];
@@ -109,33 +120,31 @@ export function toChatStockLine(vehicle: ChatVehicleRecord): ChatStockLine {
   };
 }
 
-function noteChatStockCap(rows: ChatVehicleRecord[]) {
-  if (chatStockAtCap(rows.length)) {
-    console.warn(
-      `[chat] estoque no teto de ${CHAT_STOCK_TAKE} anúncios — migrar para consulta orientada pela pergunta`,
-    );
-  }
-  return rows;
-}
-
 export async function loadChatStock(): Promise<ChatVehicleRecord[]> {
+  const read = async (historical: boolean) => {
+    const rows: ChatVehicleRecord[] = [];
+    let cursor: string | undefined;
+    while (true) {
+      const page = await prisma.vehicle.findMany({
+        where: {
+          status: "disponivel",
+          ...(historical ? { historical: false } : {}),
+        },
+        orderBy: { id: "asc" },
+        take: CHAT_STOCK_TAKE,
+        select: CHAT_VEHICLE_SELECT,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      });
+      rows.push(...page);
+      if (page.length < CHAT_STOCK_TAKE) return rows;
+      cursor = page[page.length - 1]!.id;
+    }
+  };
   try {
-    const rows = await prisma.vehicle.findMany({
-      where: { status: "disponivel", historical: false },
-      orderBy: { updatedAt: "desc" },
-      take: CHAT_STOCK_TAKE,
-      select: CHAT_VEHICLE_SELECT,
-    });
-    return noteChatStockCap(rows);
+    return await read(true);
   } catch (error) {
     if (!isMissingColumnError(error, "historical")) throw error;
-    const rows = await prisma.vehicle.findMany({
-      where: { status: "disponivel" },
-      orderBy: { updatedAt: "desc" },
-      take: CHAT_STOCK_TAKE,
-      select: CHAT_VEHICLE_SELECT,
-    });
-    return noteChatStockCap(rows);
+    return read(false);
   }
 }
 
@@ -202,8 +211,12 @@ export function parseVehicleCategoryFilter(
 
 /** Na faixa de preço, o padrão da loja é carro — moto só se o visitante pedir. */
 export function resolveChatCategory(mensagem: string): "carro" | "moto" | null {
-  return parseVehicleCategoryFilter(mensagem) ??
-    (parsePriceLimit(mensagem) != null ? "carro" : null);
+  return (
+    parseVehicleCategoryFilter(mensagem) ??
+    (parsePriceLimit(mensagem) != null || isChatSelectionQuery(mensagem)
+      ? "carro"
+      : null)
+  );
 }
 
 export function filterStockByCategory(
@@ -212,9 +225,7 @@ export function filterStockByCategory(
 ) {
   const category = resolveChatCategory(mensagem);
   if (!category) return stock;
-  return stock.filter(
-    (vehicle) => (vehicle.category ?? "carro") === category,
-  );
+  return stock.filter((vehicle) => (vehicle.category ?? "carro") === category);
 }
 
 export function foldedTransmission(value: string) {
@@ -225,8 +236,11 @@ export function parseTransmissionFilter(
   mensagem: string,
 ): "automatico" | "manual" | null {
   const folded = normalize(mensagem);
-  const auto = /\b(automatico|automatica|cvt)\b/.test(folded);
-  const manual = /\bmanual(?:is)?\b/.test(folded);
+  const auto =
+    /\b(automatic[oa]s?|automatic|automtico|automtatico|autmatico|autimatico|cvt)\b/.test(
+      folded,
+    );
+  const manual = /\b(manual|manuais)\b/.test(folded);
   if (auto && !manual) return "automatico";
   if (manual && !auto) return "manual";
   return null;
@@ -250,6 +264,7 @@ export function hasChatStockFilter(mensagem: string) {
     parseTransmissionFilter(mensagem) != null ||
     parsePriceLimit(mensagem) != null ||
     parseVehicleCategoryFilter(mensagem) != null ||
+    Object.keys(parseChatSearchRanges(mensagem)).length > 0 ||
     parseBodyStyleFilter(mensagem) != null
   );
 }
@@ -287,6 +302,14 @@ export function applyChatStockFilters(
       }
     }
   }
+  const ranges = parseChatSearchRanges(mensagem);
+  next = next.filter(
+    (vehicle) =>
+      (ranges.minYear == null || vehicle.yearModel >= ranges.minYear) &&
+      (ranges.maxYear == null || vehicle.yearModel <= ranges.maxYear) &&
+      (ranges.maxKm == null || vehicle.km <= ranges.maxKm) &&
+      (ranges.minPrice == null || vehicle.price >= ranges.minPrice),
+  );
   return next;
 }
 
@@ -716,7 +739,11 @@ export function formatFocusedEquipmentReply(
     .map((item) => item.trim())
     .filter((item) => item.length >= 2);
 
-  if (/ar condicionado|arcondicionado|\btem ar\b|\bar[- ]condicionado\b/.test(folded)) {
+  if (
+    /ar condicionado|arcondicionado|\btem ar\b|\bar[- ]condicionado\b/.test(
+      folded,
+    )
+  ) {
     const has = items.some((item) => {
       const key = normalize(item).replace(/\s+/g, "");
       return (
@@ -858,6 +885,7 @@ export function asksAboutEquipment(mensagem: string): boolean {
 
 export function asksAboutNamedGear(mensagem: string): boolean {
   const folded = normalize(mensagem);
+  if (isChatSelectionQuery(mensagem)) return false;
   if (
     /\b(tem|e|eh|possui)\s+(automatico|automatica|manual|cvt)\b/.test(folded)
   ) {
@@ -915,9 +943,7 @@ export function asksAboutAvailability(mensagem: string): boolean {
 export function asksToCompareModels(mensagem: string): boolean {
   const folded = normalize(mensagem);
   if (
-    /\b(compar|vs|versus|qual dos dois|qual o melhor|melhor que)\b/.test(
-      folded,
-    )
+    /\b(compar|vs|versus|qual dos dois|qual o melhor|melhor que)\b/.test(folded)
   ) {
     return true;
   }
@@ -977,6 +1003,7 @@ export function isFocusedVehicleFactQuestion(
   stock: ChatVehicleRecord[] = [],
   preferredVehicleId?: string,
 ): boolean {
+  if (isChatSelectionQuery(mensagem)) return false;
   const consumption = asksAboutConsumption(mensagem);
   const equipment = asksAboutEquipment(mensagem);
   const geared = asksAboutNamedGear(mensagem);
@@ -993,6 +1020,12 @@ export function isFocusedVehicleFactQuestion(
     return Boolean(preferredVehicleId && availability);
   }
   if (availability && preferredVehicleId && !mentioned) return true;
+  if (
+    !mentioned &&
+    !preferredVehicleId &&
+    !isAnaphoricVehicleFollowUp(mensagem)
+  )
+    return false;
   return matchFocusedVehicle(mensagem, stock, preferredVehicleId) != null;
 }
 
@@ -1104,7 +1137,9 @@ function formatFamilyCompare(vehicles: ChatVehicleRecord[]) {
   const ranked = rankChatVehicles(vehicles, "carro para família");
   const top = ranked[0];
   if (!top) return "";
-  const anyDoors = vehicles.some((vehicle) => vehicle.doors != null && vehicle.doors > 0);
+  const anyDoors = vehicles.some(
+    (vehicle) => vehicle.doors != null && vehicle.doors > 0,
+  );
   const anyBody = vehicles.some((vehicle) => vehicleBodyStyle(vehicle));
   if (!anyDoors && !anyBody) {
     const prices = joinClauses(
@@ -1579,9 +1614,7 @@ function powerAsideSentence(
   const motor = stockEngineLabel(aside);
   const motorBit = motor ? `motor ${motor}` : "motor menor";
   const floor = Math.min(...heroes.map((vehicle) => vehicle.price));
-  const lead = [...heroes].sort(
-    (a, b) => a.price - b.price || a.km - b.km,
-  )[0]!;
+  const lead = [...heroes].sort((a, b) => a.price - b.price || a.km - b.km)[0]!;
   const named = talkName(aside);
   if (aside.price < floor) {
     return ` Se a prioridade virar só o preço, ${named.labeled} tem ${motorBit} e sai por ${formatChatPrice(aside.price)}, abaixo do ${talkName(lead).name}.`;
@@ -1625,7 +1658,9 @@ function powerReplyIsUsable(reply: string, vehicles: ChatVehicleRecord[]) {
     if (at >= 0 && at < topAt) return false;
   }
   const price = Math.round(top.price).toLocaleString("pt-BR");
-  return trimmed.includes(price) || trimmed.includes(String(Math.round(top.price)));
+  return (
+    trimmed.includes(price) || trimmed.includes(String(Math.round(top.price)))
+  );
 }
 
 /** Comparação sempre dos cards na tela — o modelo não pode falar de outro carro. */
@@ -1779,7 +1814,10 @@ export function isIncompleteStockReply(reply: string) {
   return false;
 }
 
-export function listStockByBudget(mensagem: string, stock: ChatVehicleRecord[]) {
+export function listStockByBudget(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+) {
   const limit = parsePriceLimit(mensagem);
   if (limit == null) return null;
   const mode = chatRankMode(mensagem);
@@ -1856,7 +1894,10 @@ export function listStockByPower(mensagem: string, stock: ChatVehicleRecord[]) {
   return `Beleza — estes são os mais fortes que achei agora.\n${lines.join("\n")}\n\n${compareChatStockPicks(picks, { withLeadin: false, includeConsumption: wantsConsumption, power: true })}`;
 }
 
-export function listStockByIntent(mensagem: string, stock: ChatVehicleRecord[]) {
+export function listStockByIntent(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+) {
   const mode = chatRankMode(mensagem);
   if (mode !== "family" && mode !== "starter" && mode !== "economy") return null;
   if (parsePriceLimit(mensagem) != null) return null;
@@ -2018,6 +2059,7 @@ function skipsChatMemory(mensagem: string) {
   if (isOffScopeMessage(mensagem) || isFipeQuestion(mensagem) || isChatPing(mensagem)) {
     return true;
   }
+  if (isChatSelectionQuery(mensagem)) return false;
   if (chatPolicyShortcut(mensagem)) return true;
   if (looksLikeShortlistFollowUp(mensagem)) return false;
   if (
@@ -2061,9 +2103,22 @@ export function scopeChatMessage(
   let body: ReturnType<typeof parseBodyStyleFilter> = null;
   let category: "carro" | "moto" | null = null;
   let rank: ChatRankMode | null = null;
+  const rememberedRanges: ReturnType<typeof parseChatSearchRanges> = {};
   const modelNames: string[] = [];
 
   for (const text of prior) {
+    const resets = chatSearchResets(text);
+    if (resets.price) {
+      price = null;
+      delete rememberedRanges.minPrice;
+    }
+    if (resets.gear) gear = null;
+    if (resets.year) {
+      delete rememberedRanges.minYear;
+      delete rememberedRanges.maxYear;
+    }
+    if (resets.km) delete rememberedRanges.maxKm;
+    Object.assign(rememberedRanges, parseChatSearchRanges(text));
     const nextPrice = parsePriceLimit(text);
     if (nextPrice != null) price = nextPrice;
     const nextGear = parseTransmissionFilter(text);
@@ -2085,10 +2140,21 @@ export function scopeChatMessage(
   }
 
   const append: string[] = [];
-  if (parsePriceLimit(current) == null && price != null) {
-    append.push(`até ${Math.round(price / 1000)} mil`);
+  const foldedCurrent = normalize(current);
+  const {
+    price: clearPrice,
+    gear: clearGear,
+    year: clearYear,
+    km: clearKm,
+  } = chatSearchResets(current);
+  if (!clearPrice && parsePriceLimit(current) == null && price != null) {
+    append.push(
+      price % 1000 === 0
+        ? `até ${price / 1000} mil`
+        : `até ${formatChatPrice(price)}`,
+    );
   }
-  if (parseTransmissionFilter(current) == null && gear) {
+  if (!clearGear && parseTransmissionFilter(current) == null && gear) {
     append.push(gear === "automatico" ? "automático" : "manual");
   }
   if (parseBodyStyleFilter(current) == null && body) {
@@ -2103,9 +2169,34 @@ export function scopeChatMessage(
     if (word) append.push(word);
   }
   const currentModels = mentionedModelGroups(stock, current);
+  const currentRanges = parseChatSearchRanges(current);
+  if (
+    !clearYear &&
+    currentRanges.minYear == null &&
+    rememberedRanges.minYear != null
+  )
+    append.push(`a partir de ${rememberedRanges.minYear}`);
+  if (
+    !clearYear &&
+    currentRanges.maxYear == null &&
+    rememberedRanges.maxYear != null
+  )
+    append.push(`até ${rememberedRanges.maxYear}`);
+  if (!clearKm && currentRanges.maxKm == null && rememberedRanges.maxKm != null)
+    append.push(`até ${rememberedRanges.maxKm} km`);
+  if (
+    !clearPrice &&
+    currentRanges.minPrice == null &&
+    rememberedRanges.minPrice != null
+  )
+    append.push(`a partir de R$ ${rememberedRanges.minPrice}`);
   if (
     currentModels.size === 0 &&
+    !stock.some((v) => foldedCurrent.includes(normalize(v.brand))) &&
+    (parseVehicleCategoryFilter(current) == null ||
+      parseVehicleCategoryFilter(current) === category) &&
     parseBodyStyleFilter(current) == null &&
+    (!isChatSelectionQuery(current) || isAnaphoricVehicleFollowUp(current)) &&
     modelNames.length > 0
   ) {
     append.push(modelNames.slice(0, 3).join(" "));
@@ -2181,10 +2272,115 @@ export function chatWaitlistWhatsAppUrl(mensagem: string) {
   });
 }
 
-export function matchedChatStock(
-  mensagem: string,
+/** Actual inventory search, with deterministic filters before prose generation. */
+export function searchChatInventory(
+  message: string,
   stock: ChatVehicleRecord[],
 ) {
+  let pool = matchedChatStock(message, stock);
+  const named = mentionedModelGroups(stock, message);
+  if (named.size) {
+    const ids = new Set([...named.values()].flat().map((v) => v.id));
+    pool = pool.filter((v) => ids.has(v.id));
+    const wanted = new Set(normalize(message).split(" "));
+    const markers = new Set(
+      [...named.values()]
+        .flat()
+        .flatMap((v) => normalize(v.version ?? "").split(" "))
+        .filter(
+          (token) =>
+            token.length >= 3 &&
+            !/^(flex|flexone|automatico|automatica|manual|completo|completa)$/.test(
+              token,
+            ) &&
+            wanted.has(token),
+        ),
+    );
+    if (markers.size)
+      pool = pool.filter((v) =>
+        [...markers].every((marker) =>
+          normalize(v.version ?? "")
+            .split(" ")
+            .includes(marker),
+        ),
+      );
+  }
+  const brands = [...new Set(stock.map((v) => normalize(v.brand)))].filter(
+    (brand) =>
+      normalize(message).includes(brand) ||
+      (brand === "volkswagen" && /\bvw\b/.test(normalize(message))),
+  );
+  if (brands.length)
+    pool = pool.filter((v) => brands.includes(normalize(v.brand)));
+  const order = chatSearchOrder(message);
+  const ranked =
+    order === "km"
+      ? [...pool].sort((a, b) => a.km - b.km || a.price - b.price)
+      : order === "year"
+        ? [...pool].sort((a, b) => b.yearModel - a.yearModel || a.km - b.km)
+        : rankChatVehicles(pool, message);
+  const picks = ranked.slice(0, 3);
+  if (!picks.length) return null;
+  const power = isPowerQuery(message);
+  const price = parsePriceLimit(message);
+  const gear = parseTransmissionFilter(message);
+  const ranges = parseChatSearchRanges(message);
+  const category = resolveChatCategory(message);
+  const recorte = [
+    category === "moto"
+      ? "motos"
+      : category === "carro"
+        ? "carros"
+        : "veículos",
+    gear === "automatico"
+      ? "automáticos"
+      : gear === "manual"
+        ? "manuais"
+        : null,
+    price != null ? `até ${formatChatPrice(price)}` : null,
+    ranges.minPrice != null
+      ? `a partir de ${formatChatPrice(ranges.minPrice)}`
+      : null,
+    ranges.minYear != null ? `ano a partir de ${ranges.minYear}` : null,
+    ranges.maxYear != null ? `ano até ${ranges.maxYear}` : null,
+    ranges.maxKm != null
+      ? `até ${ranges.maxKm.toLocaleString("pt-BR")} km`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(", ")
+    .replace("carros,", "carros")
+    .replace("motos,", "motos");
+  const count = `No estoque: ${recorte}. Achei ${pool.length} ${pool.length === 1 ? "anúncio" : "anúncios"}.`;
+  const reasons = power
+    ? picks
+        .map(
+          (v) =>
+            `${talkName(v).cap}: ${stockEngineLabel(v) ? `motor ${stockEngineLabel(v)}, ` : ""}${v.transmission}, ${formatChatKm(v.km)} e ${formatChatPrice(v.price)}.`,
+        )
+        .join(" ")
+    : compareChatStockPicks(picks, {
+        withLeadin: false,
+        intent:
+          /compar/i.test(message) && chatRankMode(message) === "starter"
+            ? "default"
+            : chatRankMode(message),
+      });
+  const caveat = power
+    ? " Para dizer qual é o mais potente, preciso de potência documentada da versão e do ano; cilindrada sozinha não confirma isso."
+    : order === "km"
+      ? " A ordem é da menor para a maior quilometragem."
+      : order === "year"
+        ? " A ordem é do ano mais recente para o mais antigo."
+        : "";
+  return {
+    picks,
+    candidates: ranked,
+    reply: `${count}\n${picks.map(formatVehicleLine).join("\n")}\n\n${reasons}${caveat}`,
+  };
+}
+
+export function matchedChatStock(mensagem: string, stock: ChatVehicleRecord[]) {
   const filtered = applyChatStockFilters(stock, mensagem);
   const limit = parsePriceLimit(mensagem);
   if (limit == null) return filtered;
@@ -2368,7 +2564,8 @@ export function chatPolicyShortcut(
   ) {
     return "docs";
   }
-  if (asksAboutTransmissionCompare(mensagem)) return "gear";
+  if (asksAboutTransmissionCompare(mensagem) && !isChatSelectionQuery(mensagem))
+    return "gear";
   return null;
 }
 
@@ -2481,7 +2678,9 @@ export function localGarageReply(
   if (looksLikeVehicle && stock.length > 0) {
     const sample = stock
       .slice(0, 3)
-      .map((vehicle) => `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel}`)
+      .map(
+        (vehicle) => `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel}`,
+      )
       .join("; ");
     return `No estoque agora tem, entre outros: ${sample}. Me diz marca ou modelo que eu afino pra você.`;
   }

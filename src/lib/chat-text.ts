@@ -1,4 +1,8 @@
-import { formatChatPrice, parsePriceLimit } from "@/lib/chat-prompt";
+import {
+  formatChatPrice,
+  isChatSelectionQuery,
+  parsePriceLimit,
+} from "@/lib/chat-prompt";
 import {
   WHATSAPP_BRAND,
   WHATSAPP_MESSAGES,
@@ -338,7 +342,11 @@ export function chatWhatsAppCta(
       benefit: "Valor da troca com fotos, pelo WhatsApp",
     };
   }
-  if (/nao esta na lista|nao tem anuncio|nessa combinacao|quando chegar/.test(folded)) {
+  if (
+    /nao esta na lista|nao tem anuncio|nessa combinacao|quando chegar/.test(
+      folded,
+    )
+  ) {
     return {
       href: waitlistHref,
       label: "Avisar quando chegar",
@@ -439,6 +447,13 @@ export function resolveChatRequestVehicleId(opts: {
   shownCards?: ChatShownVehicle[];
 }): string | undefined {
   const named = namedShownChatVehicleId(opts.mensagem, opts.shownCards ?? []);
+  // A ficha aberta supplies context for facts, not a restriction on a new search.
+  if (
+    isChatSelectionQuery(opts.mensagem) &&
+    !isAnaphoricVehicleFollowUp(opts.mensagem)
+  ) {
+    return named;
+  }
   if (opts.pageVehicleId) {
     if (named && named !== opts.pageVehicleId) return named;
     return opts.pageVehicleId;

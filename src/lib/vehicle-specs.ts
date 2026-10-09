@@ -9,10 +9,6 @@ import {
   isLegacyStoreInspectionCopy,
   withoutInspectionDisclaimer,
 } from "@/lib/vehicle-conditions";
-import {
-  parseVehicleLocationCity,
-  vehicleLocationLabel,
-} from "@/lib/vehicle-location";
 
 export const SPEC_EMPTY = "Não informado";
 export const SPEC_EMPTY_FEMININE = "Não informada";
@@ -110,14 +106,6 @@ export function buildVehiclePublicSpecs(
   }
   if (vehicle.category !== "moto" && vehicle.doors != null && vehicle.doors > 0) {
     rows.push({ label: "Portas", value: String(vehicle.doors) });
-  }
-  // Logo depois de Portas: na grade de 2 colunas a cidade ocupa a célula ao lado.
-  const location = parseVehicleLocationCity(vehicle.locationCity);
-  if (location) {
-    rows.push({
-      label: "Cidade",
-      value: vehicleLocationLabel(location),
-    });
   }
   if (filled(vehicle.plateEnd)) {
     rows.push({ label: "Final placa", value: vehicle.plateEnd!.trim() });
