@@ -14,7 +14,7 @@ import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { InstallAppHeaderButton, InstallAppMenuItem } from "@/components/site/InstallAppButton";
 import { SiteWordmark } from "@/components/site/SiteWordmark";
 import { usePageWhatsAppTarget } from "@/components/site/usePageWhatsAppHref";
-import { trackWhatsAppClick } from "@/lib/meta-pixel";
+import { trackCatalogWhatsAppClick, trackWhatsAppClick } from "@/lib/meta-pixel";
 import {
   DESKTOP_NAV_LINKS,
   NAV_LINKS,
@@ -159,7 +159,10 @@ export function SiteHeader() {
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackWhatsAppClick("header", whatsappRef)}
+              onClick={() => {
+                trackWhatsAppClick("header", whatsappRef);
+                trackCatalogWhatsAppClick(whatsapp.catalogParams);
+              }}
               className="hidden h-11 shrink-0 items-center gap-2 bg-brand px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex xl:px-4 xl:text-sm"
             >
               <IconWhatsApp className="h-4 w-4" />
@@ -269,6 +272,7 @@ export function SiteHeader() {
                   rel="noopener noreferrer"
                   onClick={() => {
                     trackWhatsAppClick("header-menu", whatsappRef);
+                    trackCatalogWhatsAppClick(whatsapp.catalogParams);
                     closeMenu();
                   }}
                   className="whatsapp-btn flex min-h-[52px] w-full items-center justify-center gap-2.5 px-4 py-4 font-display text-base font-semibold text-white touch-manipulation"
