@@ -34,7 +34,7 @@ export function TrackedWhatsAppLink({
         trackWhatsAppClick(trackingLabel, funnel);
         if (typeof navigator !== "undefined" && !navigator.onLine) {
           event.preventDefault();
-          void queueWhatsAppIfOffline({ url: href, label: trackingLabel });
+          void queueWhatsAppIfOffline({ url: event.currentTarget.href, label: trackingLabel });
         }
       }}
       className={className}

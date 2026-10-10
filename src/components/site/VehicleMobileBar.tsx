@@ -24,7 +24,7 @@ function openWhatsApp(
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     event.preventDefault();
     void queueWhatsAppIfOffline({
-      url: href,
+      url: event.currentTarget.href || href,
       label,
       vehicleId,
     });
