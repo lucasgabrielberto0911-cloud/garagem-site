@@ -1,3 +1,4 @@
+import { isFramedCardUrl } from "@/lib/cover-frame";
 import { publicPhotoOriginal } from "@/lib/public-photo-url";
 
 /** Tipos e parsers do estoque — seguro para o bundle do cliente. */
@@ -81,7 +82,16 @@ function canTransform(url: string) {
 }
 
 function isCardDerivative(url: string) {
-  return /-card\.webp(?:[?#]|$)/i.test(url);
+  return /-card(?:-x\d+y\d+z\d+)?\.webp(?:[?#]|$)/i.test(url);
+}
+
+/**
+ * Capa que o admin enquadrou à mão. Os recortes ao vivo (720/960 e o do
+ * celular) são sempre centralizados e desfariam a escolha: o card usa só o
+ * arquivo 480×360 gravado, em qualquer tela.
+ */
+function hasFramedCover(photos: VehicleCardPhoto[] | undefined) {
+  return isFramedCardUrl(photos?.[0]?.thumbnailUrl);
 }
 
 /** WebP já limitado no upload. Reencodar só amacia e não ganha detalhe. */
@@ -146,6 +156,7 @@ export function coverSrc(photos: VehicleCardPhoto[] | undefined) {
  * atrasou a capa em cerca de 1–2 s no primeiro acesso.
  */
 export function coverMobileSrcSet(photos: VehicleCardPhoto[] | undefined) {
+  if (hasFramedCover(photos)) return undefined;
   const photo = photos?.[0];
   if (!photo?.url || isCardDerivative(photo.url)) return undefined;
   if (photo.thumbnailUrl) return `${photo.thumbnailUrl} ${CARD_RENDER_WIDTH}w`;
@@ -158,6 +169,7 @@ export function coverMobileSrcSet(photos: VehicleCardPhoto[] | undefined) {
  * A miniatura sozinha esticava no 3x e no desktop.
  */
 export function coverSrcSet(photos: VehicleCardPhoto[] | undefined) {
+  if (hasFramedCover(photos)) return undefined;
   const photo = photos?.[0];
   if (!photo?.url || !canTransform(photo.url) || isCardDerivative(photo.url)) {
     return undefined;

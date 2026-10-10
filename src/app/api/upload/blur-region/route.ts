@@ -3,9 +3,11 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { blurImageRegions } from "@/lib/blur-region";
 import { BlurRectError, parseBlurRects } from "@/lib/blur-rects";
+import { coverFrameFromCardUrl, framedCardObjectPath } from "@/lib/cover-frame";
 import {
   cardObjectPath,
   encodeCardImage,
+  encodeFramedCardImage,
   encodeGalleryImage,
 } from "@/lib/image-variants";
 import { encodeMasterJpeg } from "@/lib/photo-jpeg";
@@ -47,7 +49,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { url?: unknown; rects?: unknown };
+    const body = (await request.json()) as {
+      url?: unknown;
+      rects?: unknown;
+      thumbnailUrl?: unknown;
+    };
     const url = typeof body.url === "string" ? body.url.trim() : "";
     if (!isOwnPhotoUrl(url)) {
       return NextResponse.json(
@@ -70,14 +76,20 @@ export async function POST(request: Request) {
       master ? Buffer.from(master) : original,
       rects,
     );
+    // Borrar não muda a geometria: a capa enquadrada no admin continua enquadrada.
+    const frame = coverFrameFromCardUrl(
+      typeof body.thumbnailUrl === "string" ? body.thumbnailUrl : null,
+    );
     const [gallery, card] = await Promise.all([
       encodeGalleryImage(processed),
-      encodeCardImage(processed),
+      frame ? encodeFramedCardImage(processed, frame) : encodeCardImage(processed),
     ]);
 
     const id = createPhotoMasterId();
     const galleryPath = await prepareGalleryUploadPath(id, gallery);
-    const cardPath = cardObjectPath(galleryPath);
+    const cardPath = frame
+      ? framedCardObjectPath(galleryPath, frame)
+      : cardObjectPath(galleryPath);
     const supabase = getSupabaseAdmin();
 
     const [galleryUpload, cardUpload] = await Promise.all([
