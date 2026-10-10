@@ -1,3 +1,4 @@
+import { isCardVariantPath } from "@/lib/cover-frame";
 import { privateFileRef, storagePathFromPublicUrl } from "@/lib/storage-file-ref";
 import { supabaseOriginalSrc } from "@/lib/stock-query";
 
@@ -30,7 +31,7 @@ export function galleryStemFromStoragePath(storagePath: string): string | null {
     return null;
   }
   const base = storagePath.split("/").pop() ?? "";
-  if (!base || /-(?:card(?:-x\d+y\d+z\d+)?|preview)\.webp$/i.test(base)) return null;
+  if (!base || isCardVariantPath(base) || /-preview\.webp$/i.test(base)) return null;
   const stem = base.replace(/\.[a-z0-9]{2,5}$/i, "").replace(/-g800$/i, "");
   if (!stem || !/^[0-9a-z-]{8,80}$/i.test(stem)) return null;
   return stem;

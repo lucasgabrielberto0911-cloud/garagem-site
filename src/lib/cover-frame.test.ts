@@ -10,6 +10,10 @@ import {
   coverFrameFromCardUrl,
   coverFrameSourcePath,
   coverFrameSuffix,
+  hasHdCardUrl,
+  hdCardCompanion,
+  isCardVariantPath,
+  wantsHdCard,
   cropToCss,
   cropToFractions,
   framedCardObjectPath,
@@ -21,8 +25,10 @@ import {
   zoomCoverFrame,
 } from "./cover-frame";
 import { coverMobileSrcSet, coverSrc, coverSrcSet } from "./stock-query";
+import { uploadFramedCard } from "./framed-card-store";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { galleryStemFromStoragePath } from "./photo-master";
-import { CARD_HEIGHT, CARD_WIDTH, encodeFramedCardImage } from "./image-variants";
+import { CARD_HEIGHT, CARD_WIDTH, encodeFramedCardImage, encodeFramedCardSet } from "./image-variants";
 
 const STEM = "1720000000000-12345678-1234-4234-8234-123456789012-g800";
 const BASE = "https://x.supabase.co/storage/v1/object/public/veiculos";
@@ -181,17 +187,139 @@ test("encodeFramedCardImage usa a foto já girada pela orientação EXIF", async
   assert.ok((await averageColor(bottom.buffer))[2] > 200, "base da foto girada é azul");
 });
 
-test("card público usa só o arquivo enquadrado, sem recortes ao vivo centralizados", () => {
+test("capa enquadrada antiga (só 480) segue sem srcset, no celular e no desktop", () => {
   const original = `${BASE}/${STEM}.webp`;
   const framed = `${BASE}/${STEM}-card-x120y880z175.webp`;
   const photos = [{ url: original, thumbnailUrl: framed }];
   assert.equal(coverSrc(photos), framed);
-  // sem srcset: o <img> fica só com o src (a miniatura 480×360 gravada), no celular e no desktop
   assert.equal(coverSrcSet(photos), undefined);
-  assert.equal(coverMobileSrcSet(photos), undefined);
+  // o <picture> do celular fica no 480 gravado, nunca no recorte ao vivo centralizado
+  assert.equal(coverMobileSrcSet(photos), `${framed} 480w`);
   // a miniatura automática continua com os recortes de sempre no desktop
   const automatic = [{ url: original, thumbnailUrl: `${BASE}/${STEM}-card.webp` }];
   assert.match(coverSrcSet(automatic) ?? "", /720w/);
+});
+
+test("capa enquadrada com par 960 usa os dois arquivos gravados; o celular fica no 480", () => {
+  const original = `${BASE}/${STEM}.webp`;
+  const framed = `${BASE}/${STEM}-card-x120y880z175-hd.webp`;
+  const hd = `${BASE}/${STEM}-card-x120y880z175-hd960.webp`;
+  const photos = [{ url: original, thumbnailUrl: framed }];
+  assert.equal(coverSrc(photos), framed);
+  assert.equal(coverSrcSet(photos), `${framed} 480w, ${hd} 960w`);
+  assert.equal(coverMobileSrcSet(photos), `${framed} 480w`);
+  assert.doesNotMatch(coverSrcSet(photos) ?? "", /render\/image/);
+});
+
+test("nomes -hd: o 480 promete o 960, que só existe com o sufixo", () => {
+  const path = framedCardObjectPath(`${STEM}.webp`, { x: 10, y: 20, zoom: 130 }, true);
+  assert.equal(path, `${STEM}-card-x10y20z130-hd.webp`);
+  assert.equal(hdCardCompanion(path), `${STEM}-card-x10y20z130-hd960.webp`);
+  assert.equal(hdCardCompanion(`${BASE}/${path}?v=1#x`), `${BASE}/${STEM}-card-x10y20z130-hd960.webp?v=1#x`);
+  assert.deepEqual(coverFrameFromCardUrl(`${BASE}/${path}`), { x: 10, y: 20, zoom: 130 });
+  assert.equal(hasHdCardUrl(path), true);
+  // enquadrada antiga, automática e o próprio 960 não têm par
+  for (const none of [`${STEM}-card-x10y20z130.webp`, `${STEM}-card.webp`, `${STEM}.webp`, `${STEM}-card-x10y20z130-hd960.webp`, "", null, undefined]) {
+    assert.equal(hdCardCompanion(none), null, String(none));
+    assert.equal(hasHdCardUrl(none), false, String(none));
+  }
+  // o 960 nunca é lido como enquadramento de miniatura (não vai para o banco)
+  assert.equal(coverFrameFromCardUrl(`${STEM}-card-x10y20z130-hd960.webp`), null);
+});
+
+test("todas as variantes -card são reconhecidas e nenhuma é foto-fonte", () => {
+  for (const name of ["-card.webp", "-card-x1y2z100.webp", "-card-x1y2z100-hd.webp", "-card-x1y2z100-hd960.webp"]) {
+    assert.equal(isCardVariantPath(`${STEM}${name}`), true, name);
+    assert.equal(isCardVariantPath(`${BASE}/${STEM}${name}?v=1`), true, name);
+    assert.equal(coverFrameSourcePath(`${STEM}${name}`), null, name);
+    assert.equal(galleryStemFromStoragePath(`${STEM}${name}`), null, name);
+  }
+  assert.equal(isCardVariantPath(`${STEM}.webp`), false);
+});
+
+test("cópia do anúncio mantém o -hd só quando o par foi copiado", () => {
+  const source = `${BASE}/${STEM}-card-x300y700z150-hd.webp`;
+  assert.equal(cardObjectPathLike(source, "novo.webp"), "novo-card-x300y700z150-hd.webp");
+  assert.equal(cardObjectPathLike(source, "novo.webp", false), "novo-card-x300y700z150.webp");
+  // origem sem par: nunca ganha -hd
+  assert.equal(cardObjectPathLike(`${BASE}/${STEM}-card-x300y700z150.webp`, "novo.webp", true), "novo-card-x300y700z150.webp");
+  assert.equal(hdCardCompanion(cardObjectPathLike(source, "novo.webp")), "novo-card-x300y700z150-hd960.webp");
+});
+
+test("recorte pequeno demais não gera o 960", () => {
+  assert.equal(wantsHdCard(coverCropRect(1280, 960, DEFAULT_COVER_FRAME)), true); // 1280
+  assert.equal(wantsHdCard(coverCropRect(1280, 720, DEFAULT_COVER_FRAME)), true); // 960
+  assert.equal(wantsHdCard(coverCropRect(1280, 960, { ...DEFAULT_COVER_FRAME, zoom: 175 })), true); // 731
+  assert.equal(wantsHdCard(coverCropRect(1280, 960, { ...DEFAULT_COVER_FRAME, zoom: 200 })), false); // 640
+  // o mesmo zoom no original de 3840 px ainda tem resolução de sobra
+  assert.equal(wantsHdCard(coverCropRect(3840, 2880, { ...DEFAULT_COVER_FRAME, zoom: 300 })), true); // 1280
+});
+
+async function stripedPhoto(width: number, height: number) {
+  const blue = await sharp({ create: { width: width / 2, height, channels: 3, background: "#0000ff" } }).png().toBuffer();
+  return sharp({ create: { width, height, channels: 3, background: "#ff0000" } }).composite([{ input: blue, left: width / 2, top: 0 }]).png().toBuffer();
+}
+
+test("encodeFramedCardSet: 480 e 960 saem da mesma janela", async () => {
+  const photo = await stripedPhoto(1280, 720);
+  const { card, hd } = await encodeFramedCardSet(photo, { x: 1000, y: 500, zoom: 100 });
+  assert.ok(hd, "janela de 960 px na foto-fonte ganha o par");
+  const [cardMeta, hdMeta] = await Promise.all([sharp(card.buffer).metadata(), sharp(hd.buffer).metadata()]);
+  assert.deepEqual([cardMeta.width, cardMeta.height, hdMeta.width, hdMeta.height], [CARD_WIDTH, CARD_HEIGHT, 960, 720]);
+  assert.equal(hdMeta.format, "webp");
+  assert.ok((await averageColor(card.buffer))[2] > 150 && (await averageColor(hd.buffer))[2] > 150, "ambos são a metade azul");
+  // o 480 é idêntico ao que encodeFramedCardImage sempre gerou
+  assert.deepEqual(card.buffer, (await encodeFramedCardImage(photo, { x: 1000, y: 500, zoom: 100 })).buffer);
+});
+
+test("encodeFramedCardSet: foto-fonte pequena não ganha 960 inventado", async () => {
+  const photo = await stripedPhoto(640, 480);
+  const { card, hd } = await encodeFramedCardSet(photo, { x: 500, y: 500, zoom: 100 });
+  assert.equal(hd, null);
+  assert.deepEqual([(await sharp(card.buffer).metadata()).width], [CARD_WIDTH]);
+});
+
+function fakeStorage(failing: (path: string) => string | null) {
+  const saved: string[] = [];
+  const client = {
+    storage: { from: () => ({ upload: async (path: string) => {
+      const message = failing(path);
+      if (message) return { error: new Error(message) };
+      saved.push(path);
+      return { error: null };
+    } }) },
+  } as unknown as SupabaseClient;
+  return { client, saved };
+}
+const frame = { x: 250, y: 750, zoom: 120 };
+const webp = { buffer: Buffer.from("x"), contentType: "image/webp" as const, extension: "webp" as const };
+
+test("uploadFramedCard grava o 960 e o 480 com -hd", async () => {
+  const { client, saved } = fakeStorage(() => null);
+  const result = await uploadFramedCard(client, `${STEM}.webp`, frame, { card: webp, hd: webp });
+  assert.equal(result.error, null);
+  assert.equal(result.path, `${STEM}-card-x250y750z120-hd.webp`);
+  assert.deepEqual(saved, [`${STEM}-card-x250y750z120-hd960.webp`, `${STEM}-card-x250y750z120-hd.webp`]);
+});
+
+test("uploadFramedCard sem 960, ou com o 960 falhando, cai no 480 sem -hd (nunca um -hd sem par)", async () => {
+  const noHd = fakeStorage(() => null);
+  assert.equal((await uploadFramedCard(noHd.client, `${STEM}.webp`, frame, { card: webp, hd: null })).path, `${STEM}-card-x250y750z120.webp`);
+  const failing = fakeStorage(path => (path.endsWith("-hd960.webp") ? "boom" : null));
+  const result = await uploadFramedCard(failing.client, `${STEM}.webp`, frame, { card: webp, hd: webp });
+  assert.equal(result.error, null);
+  assert.equal(result.path, `${STEM}-card-x250y750z120.webp`);
+  assert.deepEqual(failing.saved, [`${STEM}-card-x250y750z120.webp`]);
+});
+
+test("uploadFramedCard aceita arquivo já existente e devolve a falha do 480", async () => {
+  const exists = fakeStorage(() => "The resource already exists");
+  const ok = await uploadFramedCard(exists.client, `${STEM}.webp`, frame, { card: webp, hd: webp });
+  assert.equal(ok.error, null);
+  assert.equal(ok.path, `${STEM}-card-x250y750z120-hd.webp`);
+  const broken = fakeStorage(path => (path.endsWith("-hd.webp") ? "sem espaço" : null));
+  const failed = await uploadFramedCard(broken.client, `${STEM}.webp`, frame, { card: webp, hd: webp });
+  assert.match(failed.error?.message ?? "", /sem espaço/);
 });
 
 test("miniatura enquadrada não é tomada por foto de galeria nem tem original privado", () => {

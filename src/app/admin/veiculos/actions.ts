@@ -13,7 +13,7 @@ import { isMissingColumnError } from "@/lib/prisma-errors";
 import { getSession } from "@/lib/auth";
 import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/lib/photo-master";
 import { copyPrivateMaster } from "@/lib/photo-master-store";
-import { cardObjectPathLike } from "@/lib/cover-frame";
+import { cardObjectPathLike, hdCardCompanion } from "@/lib/cover-frame";
 import { replacedThumbnails } from "@/lib/vehicle-photo-files";
 import {
   copyPublicStorageObject,
@@ -857,9 +857,18 @@ async function duplicateVehiclePhotos(
 
     let thumbnailUrl: string | null = null;
     if (photo.thumbnailUrl) {
+      // Capa enquadrada com par 960×720: o par vai junto. Se ele não copiar, o
+      // 480 sai no nome sem `-hd`, para a cópia nunca prometer um arquivo ausente.
+      const hdSource = hdCardCompanion(photo.thumbnailUrl);
+      const hdCopied = hdSource
+        ? await copyPublicStorageObject(
+            hdSource,
+            hdCardCompanion(cardObjectPathLike(photo.thumbnailUrl, destPath))!,
+          )
+        : null;
       thumbnailUrl = await copyPublicStorageObject(
         photo.thumbnailUrl,
-        cardObjectPathLike(photo.thumbnailUrl, destPath),
+        cardObjectPathLike(photo.thumbnailUrl, destPath, Boolean(hdCopied)),
       );
     }
     copied.push({ url: newUrl, thumbnailUrl });

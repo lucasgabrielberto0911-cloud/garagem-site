@@ -129,16 +129,37 @@ function positionFor(left: number, slack: number, previous: number) {
 
 // --- nomes de arquivo ------------------------------------------------------
 
-const FRAME_SUFFIX = /-card-x(\d{1,4})y(\d{1,4})z(\d{3})\.webp$/i;
+/**
+ * Capa enquadrada grava dois arquivos com o mesmo recorte:
+ *   `<foto>-card-x500y500z100-hd.webp`    480×360, o `thumbnailUrl` no banco
+ *   `<foto>-card-x500y500z100-hd960.webp` 960×720, só para telas largas/densas
+ * O `-hd` no nome do 480 é a garantia de que o 960 existe, então não há coluna
+ * nova nem requisição às cegas. Capas antigas (`…z100.webp`, sem `-hd`) têm só
+ * o 480 e continuam valendo.
+ */
+export const COVER_HD_WIDTH = 960;
+export const COVER_HD_HEIGHT = 720;
+/** Recorte menor que isto (em px da foto) não ganha nitidez ao ir para 960. */
+export const COVER_HD_MIN_CROP_WIDTH = 720;
 
-export function coverFrameSuffix(frame: CoverFrame) {
+const FRAME_SUFFIX = /-card-x(\d{1,4})y(\d{1,4})z(\d{3})(-hd)?\.webp$/i;
+const HD_SUFFIX = /-hd\.webp$/i;
+/** Qualquer miniatura `-card` (automática, enquadrada, com ou sem 960). */
+const CARD_FILE = /-card(?:-x\d{1,4}y\d{1,4}z\d{3}(?:-hd(?:960)?)?)?\.webp$/i;
+
+/** O recorte de `rect` (px da foto) justifica gerar também o 960×720? */
+export function wantsHdCard(rect: CropRect) {
+  return rect.width >= COVER_HD_MIN_CROP_WIDTH;
+}
+
+export function coverFrameSuffix(frame: CoverFrame, hd = false) {
   const safe = normalizeCoverFrame(frame);
-  return `-card-x${safe.x}y${safe.y}z${safe.zoom}.webp`;
+  return `-card-x${safe.x}y${safe.y}z${safe.zoom}${hd ? "-hd" : ""}.webp`;
 }
 
 /** Caminho da miniatura enquadrada, ao lado da galeria. Cada enquadramento tem seu nome. */
-export function framedCardObjectPath(galleryPath: string, frame: CoverFrame) {
-  return galleryPath.replace(/(\.[a-z0-9]+)?$/i, coverFrameSuffix(frame));
+export function framedCardObjectPath(galleryPath: string, frame: CoverFrame, hd = false) {
+  return galleryPath.replace(/(\.[a-z0-9]+)?$/i, coverFrameSuffix(frame, hd));
 }
 
 /** Enquadramento gravado no nome da miniatura, ou null para a miniatura automática. */
@@ -156,13 +177,35 @@ export function isFramedCardUrl(url: string | null | undefined) {
   return coverFrameFromCardUrl(url) !== null;
 }
 
+/** A miniatura enquadrada tem o par 960×720 gravado junto? */
+export function hasHdCardUrl(url: string | null | undefined) {
+  return isFramedCardUrl(url) && HD_SUFFIX.test((url ?? "").split(/[?#]/)[0]);
+}
+
+/**
+ * Par 960×720 de uma miniatura `-hd` (caminho ou URL, query e hash preservados).
+ * Null para capa automática ou enquadrada antiga: aí só existe o 480.
+ */
+export function hdCardCompanion(urlOrPath: string | null | undefined) {
+  if (!hasHdCardUrl(urlOrPath)) return null;
+  return urlOrPath!.replace(/-hd\.webp(?=[?#]|$)/i, "-hd960.webp");
+}
+
+/** Qualquer variante `-card` da galeria (caminho ou URL): não é uma foto-fonte. */
+export function isCardVariantPath(urlOrPath: string) {
+  return CARD_FILE.test(urlOrPath.split(/[?#]/)[0] ?? "");
+}
+
 /**
  * Mesmo enquadramento para a cópia de um anúncio: o novo `<foto>-card…` herda o
  * sufixo da miniatura de origem. Sem enquadramento, devolve o `-card.webp` padrão.
+ * `hd=false` quando o 960 não pôde ser copiado: o 480 vai para o nome sem `-hd`.
  */
-export function cardObjectPathLike(sourceThumbnailUrl: string | null | undefined, galleryPath: string) {
+export function cardObjectPathLike(sourceThumbnailUrl: string | null | undefined, galleryPath: string, hd = true) {
   const frame = coverFrameFromCardUrl(sourceThumbnailUrl);
-  return frame ? framedCardObjectPath(galleryPath, frame) : galleryPath.replace(/(\.[a-z0-9]+)?$/i, "-card.webp");
+  return frame
+    ? framedCardObjectPath(galleryPath, frame, hd && hasHdCardUrl(sourceThumbnailUrl))
+    : galleryPath.replace(/(\.[a-z0-9]+)?$/i, "-card.webp");
 }
 
 /**
@@ -172,6 +215,6 @@ export function cardObjectPathLike(sourceThumbnailUrl: string | null | undefined
 export function coverFrameSourcePath(path: string | null | undefined) {
   if (!path || path.includes("..") || path.includes("/") || path.includes("\\")) return null;
   if (!/^[0-9A-Za-z][0-9A-Za-z_.-]{0,150}\.(?:webp|jpe?g|png)$/i.test(path)) return null;
-  if (/-(?:card|preview)(?:-x\d+y\d+z\d+)?\.webp$/i.test(path)) return null;
+  if (isCardVariantPath(path) || /-preview\.webp$/i.test(path)) return null;
   return path;
 }

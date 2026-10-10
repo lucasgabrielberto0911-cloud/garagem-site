@@ -3,11 +3,12 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { blurImageRegions } from "@/lib/blur-region";
 import { BlurRectError, parseBlurRects } from "@/lib/blur-rects";
-import { coverFrameFromCardUrl, framedCardObjectPath } from "@/lib/cover-frame";
+import { coverFrameFromCardUrl } from "@/lib/cover-frame";
+import { uploadFramedCard } from "@/lib/framed-card-store";
 import {
   cardObjectPath,
   encodeCardImage,
-  encodeFramedCardImage,
+  encodeFramedCardSet,
   encodeGalleryImage,
 } from "@/lib/image-variants";
 import { encodeMasterJpeg } from "@/lib/photo-jpeg";
@@ -80,29 +81,30 @@ export async function POST(request: Request) {
     const frame = coverFrameFromCardUrl(
       typeof body.thumbnailUrl === "string" ? body.thumbnailUrl : null,
     );
-    const [gallery, card] = await Promise.all([
+    const [gallery, card, framedSet] = await Promise.all([
       encodeGalleryImage(processed),
-      frame ? encodeFramedCardImage(processed, frame) : encodeCardImage(processed),
+      frame ? null : encodeCardImage(processed),
+      frame ? encodeFramedCardSet(processed, frame) : null,
     ]);
 
     const id = createPhotoMasterId();
     const galleryPath = await prepareGalleryUploadPath(id, gallery);
-    const cardPath = frame
-      ? framedCardObjectPath(galleryPath, frame)
-      : cardObjectPath(galleryPath);
     const supabase = getSupabaseAdmin();
 
+    // Com enquadramento, a capa sai de novo no mesmo recorte (480 e, se couber, 960).
     const [galleryUpload, cardUpload] = await Promise.all([
       supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(galleryPath, gallery.buffer, {
         contentType: gallery.contentType,
         upsert: false,
         cacheControl: "31536000",
       }),
-      supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(cardPath, card.buffer, {
-        contentType: card.contentType,
-        upsert: false,
-        cacheControl: "31536000",
-      }),
+      frame && framedSet
+        ? uploadFramedCard(supabase, galleryPath, frame, framedSet)
+        : supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(cardObjectPath(galleryPath), card!.buffer, {
+            contentType: card!.contentType,
+            upsert: false,
+            cacheControl: "31536000",
+          }).then(({ error }) => ({ path: cardObjectPath(galleryPath), error })),
     ]);
 
     if (galleryUpload.error) {
@@ -115,7 +117,7 @@ export async function POST(request: Request) {
     const { data } = supabase.storage
       .from(VEHICLE_PHOTOS_BUCKET)
       .getPublicUrl(galleryPath);
-    const thumb = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(cardPath);
+    const thumb = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(cardUpload.path);
 
     try {
       const jpeg = await encodeMasterJpeg(new Uint8Array(processed));

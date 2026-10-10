@@ -27,3 +27,14 @@ test("falha de consulta não trata os arquivos como órfãos", async () => {
   tx.photo.findMany = async () => { throw new Error("banco indisponível"); };
   await assert.rejects(adminFileReferences(tx), /banco indisponível/);
 });
+
+test("capa enquadrada com par 960 protege o par contra a limpeza de órfãos", async () => {
+  const stem = "1720000000000-12345678-1234-4234-8234-123456789012";
+  const base = "https://example.supabase.co/storage/v1/object/public/veiculos";
+  const withHd = await adminFileReferences(fixture([{ url: `${base}/${stem}.webp`, thumbnailUrl: `${base}/${stem}-card-x10y20z130-hd.webp` }]));
+  assert.ok(withHd.publicPaths.has(`${stem}-card-x10y20z130-hd.webp`));
+  assert.ok(withHd.publicPaths.has(`${stem}-card-x10y20z130-hd960.webp`));
+  const legacy = await adminFileReferences(fixture([{ url: `${base}/${stem}.webp`, thumbnailUrl: `${base}/${stem}-card-x10y20z130.webp` }]));
+  assert.ok(legacy.publicPaths.has(`${stem}-card-x10y20z130.webp`));
+  assert.ok(!legacy.publicPaths.has(`${stem}-card-x10y20z130-hd960.webp`));
+});

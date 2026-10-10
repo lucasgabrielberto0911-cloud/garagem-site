@@ -20,7 +20,7 @@ import {
 } from "@/components/admin/icons";
 import { btn } from "@/components/admin/ui";
 import type { NormalizedRect } from "@/lib/blur-rects";
-import type { CoverFrame } from "@/lib/cover-frame";
+import { isFramedCardUrl, type CoverFrame } from "@/lib/cover-frame";
 import { downloadAttachment } from "@/lib/download-attachment";
 import { adminStorageJpgPath, archivePhotoFilename } from "@/lib/photo-archive";
 import {
@@ -102,6 +102,13 @@ export function photosFromUrls(urls: string[]): PhotoItem[] {
  * Upload por arrastar/clicar + reorganização das fotos por drag-and-drop
  * (setas e “capa” ficam como atalho no desktop/mobile).
  */
+/** Aviso discreto quando a nova miniatura perdeu o enquadramento escolhido (girar, ou borrar sem capa nova). */
+function resetFrameNotice(before: string | null | undefined, after: string | null | undefined) {
+  return isFramedCardUrl(before) && !isFramedCardUrl(after)
+    ? { description: "O enquadramento da capa voltou ao automático. Se quiser, ajuste de novo em “Capa no card”." }
+    : undefined;
+}
+
 export function VehiclePhotoManager({
   photos,
   queueKey,
@@ -421,7 +428,7 @@ export function VehiclePhotoManager({
         next.add(photoId);
         return next;
       });
-      toast.success("Região borracha. Salve o anúncio para publicar.");
+      toast.success("Região borracha. Salve o anúncio para publicar.", resetFrameNotice(editingPhoto.thumbnailUrl, data.thumbnailUrl));
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -444,7 +451,7 @@ export function VehiclePhotoManager({
       if (!response.ok || typeof result.url !== "string") throw new Error(result.error || "Não foi possível girar a foto.");
       onChange(current => current.map(photo => photo.id === id && photo.url === url ? { ...photo, url: result.url, thumbnailUrl: result.thumbnailUrl ?? null } : photo));
       setRotationId(null);
-      toast.success("Foto ajustada. Salve o anúncio para publicar.");
+      toast.success("Foto ajustada. Salve o anúncio para publicar.", resetFrameNotice(rotationPhoto.thumbnailUrl, result.thumbnailUrl));
     } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível girar a foto."); }
     finally { setRotating(false); }
   }
