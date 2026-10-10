@@ -60,6 +60,7 @@ import {
   type ChatHandoffContext,
 } from "@/lib/chat-text";
 import { formatVehicleWhatsAppMessage } from "@/lib/vehicle-display";
+import { pageWhatsAppMessage } from "@/lib/whatsapp-cta";
 import {
   classifyChatIntent,
   trackChatEvent,
@@ -67,7 +68,6 @@ import {
   trackWhatsAppClick,
 } from "@/lib/meta-pixel";
 import {
-  WHATSAPP_MESSAGES,
   whatsappContentFromVehicle,
   whatsappUrl,
 } from "@/lib/site";
@@ -1125,24 +1125,7 @@ export function SiteChat() {
   const headerWhatsAppHref = whatsappUrl(
     chatHeaderWhatsAppMessage({
       cards: lastChatCards,
-      pageMessage: vehicleContext
-        ? vehicleContext.brand && vehicleContext.model && vehicleContext.year
-          ? formatVehicleWhatsAppMessage({
-              brand: vehicleContext.brand,
-              model: vehicleContext.model,
-              version: vehicleContext.version,
-              yearModel: vehicleContext.year,
-              price: vehicleContext.price,
-              path: vehicleContext.path,
-              isMoto: vehicleContext.category === "moto",
-            })
-          : WHATSAPP_MESSAGES.vehicle(
-              `${vehicleContext.label}${
-                vehicleContext.year ? ` ${vehicleContext.year}` : ""
-              }`.trim(),
-              vehicleContext.category === "moto",
-            )
-        : null,
+      pageMessage: vehicleContext ? pageWhatsAppMessage(vehicleContext) : null,
       priceLimit: sessionHints.priceLimit,
       transmission: sessionHints.transmission,
     }),

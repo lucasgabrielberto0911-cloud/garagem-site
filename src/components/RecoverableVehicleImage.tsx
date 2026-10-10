@@ -35,7 +35,7 @@ export function RecoverableVehicleImage({ src, alt, width, height, sizes, srcSet
     // eslint-disable-next-line @next/next/no-img-element -- mantém as variantes públicas existentes
     <img ref={imageRef} key={state.attempt} src={state.original ?? src} srcSet={state.original ? undefined : srcSet}
       sizes={!state.original && srcSet ? sizes : undefined} alt={alt} width={width} height={height}
-      loading={priority || state.attempt > 0 ? "eager" : "lazy"} decoding="async" fetchPriority={priority ? "high" : "low"}
+      loading={priority || state.attempt > 0 ? "eager" : "lazy"} decoding={priority ? "sync" : "async"} fetchPriority={priority ? "high" : "low"}
       draggable={false} className={`absolute inset-0 h-full w-full ${className ?? ""}`}
       onLoad={() => setState(current => current.retrying ? { ...current, retrying: false } : current)}
       onError={event => failedImage(event.currentTarget)} />

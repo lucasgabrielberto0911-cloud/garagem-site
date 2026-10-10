@@ -37,7 +37,7 @@ test("ficha: Ajuda para escolher fica abaixo do WhatsApp, em contorno", () => {
 });
 
 test("home não herda o vermelho sólido da ficha", () => {
-  const home = chatOpenBlocks(readSrc("app/(site)/page.tsx"));
+  const home = chatOpenBlocks(readSrc("app/(catalog)/page.tsx"));
   assert.ok(home.length >= 1);
   for (const block of home) {
     assert.doesNotMatch(block, /variant="solid"/);

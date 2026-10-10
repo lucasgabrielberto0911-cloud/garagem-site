@@ -156,7 +156,7 @@ test("especificações e detalhes apontam para o que o anúncio já tem", () => 
 
 test("filtros do estoque e o estoque inteiro das cidades ficam como estão", () => {
   const filters = readSrc("components/site/StockFilters.tsx");
-  const stock = readSrc("app/(site)/estoque/page.tsx");
+  const stock = readSrc("app/(catalog)/estoque/page.tsx");
   const city = readSrc("app/(site)/seminovos/[cidade]/page.tsx");
   const vehicles = readSrc("lib/vehicles.ts");
   const form = readSrc("components/site/MissingModelForm.tsx");

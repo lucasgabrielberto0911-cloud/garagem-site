@@ -14,7 +14,7 @@ function readSrc(rel: string) {
 }
 
 test("estoque SSR lista cada ficha e a grade segue em lotes de 8", () => {
-  const page = readSrc("app/(site)/estoque/page.tsx");
+  const page = readSrc("app/(catalog)/estoque/page.tsx");
   assert.match(page, /getStockPage\(\{\s*page:\s*1\s*\}\)/);
   assert.doesNotMatch(page, /getStockPage\(\{[^}]*pageSize/);
   assert.match(page, /getStockCatalogLinks\(\)/);

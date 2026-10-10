@@ -1,5 +1,6 @@
 import { NativeRemoteFillImage } from "@/components/NativeRemoteFillImage";
 import { publicPhotoSrc, publicPhotoSrcSet } from "@/lib/public-photo-url";
+import { preload } from "react-dom";
 
 export const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 
@@ -40,6 +41,21 @@ export function VehicleImage({
   quality?: number;
 }) {
   const finalSrc = publicPhotoSrc(src || VEHICLE_PLACEHOLDER);
+  const finalSet = publicPhotoSrcSet(srcSet);
+  const mobileSet = publicPhotoSrcSet(mobileSrcSet);
+
+  // Match the <picture> selection: never preload a desktop derivative on a
+  // phone. Only the already-prioritized first photos get a resource hint.
+  if (priority) {
+    const options = { as: "image" as const, fetchPriority: "high" as const,
+      imageSizes: finalSet || mobileSet ? sizes : undefined };
+    if (mobileSet) {
+      preload(finalSrc, { ...options, imageSrcSet: mobileSet, media: "(max-width: 639px)" });
+      preload(finalSrc, { ...options, imageSrcSet: finalSet, media: "(min-width: 640px)" });
+    } else {
+      preload(finalSrc, { ...options, imageSrcSet: finalSet });
+    }
+  }
 
   if (fill) {
     return (
@@ -49,8 +65,8 @@ export function VehicleImage({
         width={width ?? 480}
         height={height ?? 300}
         sizes={sizes}
-        srcSet={publicPhotoSrcSet(srcSet)}
-        mobileSrcSet={publicPhotoSrcSet(mobileSrcSet)}
+        srcSet={finalSet}
+        mobileSrcSet={mobileSet}
         className={className}
         priority={priority}
         recoverable={recoverable}
@@ -67,7 +83,7 @@ export function VehicleImage({
       height={height ?? 120}
       className={className}
       loading={priority ? "eager" : "lazy"}
-      decoding="async"
+      decoding={priority ? "sync" : "async"}
       fetchPriority={priority ? "high" : "low"}
     />
   );

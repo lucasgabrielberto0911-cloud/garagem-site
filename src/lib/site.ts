@@ -139,10 +139,16 @@ export function formatCustomerVehicleWhatsAppText(input: {
   label?: string | null;
   priceLabel?: string | null;
   isMoto?: boolean;
+  sold?: boolean;
 }) {
   const label = (input.label ?? "").replace(/\s+/g, " ").trim();
   const priceLabel = (input.priceLabel ?? "").replace(/\s+/g, " ").trim();
   const article = input.isMoto ? "a" : "o";
+  if (input.sold) {
+    return label
+      ? `Oi! Vi que ${article} ${label} já foi ${input.isMoto ? "vendida" : "vendido"} no site da ${WHATSAPP_BRAND} e quero ver opções parecidas no estoque.`
+      : `Oi! Vi um anúncio já vendido no site da ${WHATSAPP_BRAND} e quero ver opções parecidas no estoque.`;
+  }
   const seen = label
     ? priceLabel
       ? `Vi ${article} ${label} por ${priceLabel} no site da ${WHATSAPP_BRAND}`

@@ -409,6 +409,7 @@ export function formatVehicleWhatsAppMessage(input: {
   yearModel: number;
   transmission?: string | null;
   price?: number | null;
+  status?: string;
   path?: string;
   isMoto?: boolean;
   intent?: VehicleWhatsAppIntent;
@@ -420,7 +421,7 @@ export function formatVehicleWhatsAppMessage(input: {
   const usableLabel = label && !/^\d{4}$/.test(label) ? label : "";
   const price = input.price;
   const priceLabel =
-    typeof price === "number" && Number.isFinite(price) && price > 0
+    input.status !== "vendido" && typeof price === "number" && Number.isFinite(price) && price > 0
       ? formatCurrencyBRL(price)
       : "";
   const line = formatCustomerVehicleWhatsAppText({
@@ -428,6 +429,7 @@ export function formatVehicleWhatsAppMessage(input: {
     label: usableLabel,
     priceLabel,
     isMoto: input.isMoto,
+    sold: input.status === "vendido",
   });
 
   const lines = [line];

@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { JsonLd } from "@/components/JsonLd";
-import {
-  EstoqueBrowse,
-  EstoqueBrowseFallback,
-} from "@/components/site/EstoqueBrowse";
+import { EstoqueBrowse } from "@/components/site/EstoqueBrowse";
 import { StockCatalogGate } from "@/components/site/StockCatalogGate";
 import { StockCatalogLinks } from "@/components/site/StockCatalogLinks";
 import { StockFilters } from "@/components/site/StockFilters";
@@ -59,11 +56,7 @@ export default async function EstoquePage() {
               <StockFilters facets={facets} />
             </Suspense>
           }
-          results={
-            <Suspense fallback={<EstoqueBrowseFallback stock={stock} />}>
-              <EstoqueBrowse initialStock={stock} />
-            </Suspense>
-          }
+          results={<EstoqueBrowse initialStock={stock} />}
         />
 
         <Suspense fallback={<StockCatalogLinks vehicles={catalog} />}>
