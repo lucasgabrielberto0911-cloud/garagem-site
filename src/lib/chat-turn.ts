@@ -170,11 +170,14 @@ export async function runChatTurn(input: {
   const roadUse = /\b(estrada|rodovias?|viagens?|viajar|ultrapassagens?|retomadas?)\b/i.test(
     visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
   );
-  const scopedMessage = scopeChatMessage(
-    visitorMessage,
-    input.historico,
-    input.stock,
-  );
+  // "Kicks ou HR-V, qual você indica?": comparação por perfil entre dois modelos nomeados.
+  // Usa só a mensagem do visitante: um "até 70 mil" de turnos anteriores não vira filtro aqui.
+  const namedComparison =
+    pickComparedModelVehicles(input.stock, visitorMessage).length >= 2 &&
+    parsePriceLimit(visitorMessage) == null;
+  const scopedMessage = namedComparison
+    ? visitorMessage
+    : scopeChatMessage(visitorMessage, input.historico, input.stock);
   const mentionedPool = singleMentionedModelPool(input.stock, scopedMessage);
   const compared = pickComparedModelVehicles(input.stock, scopedMessage);
   // Visitante falando do carro DELE na troca: nada de responder km/ano do anúncio.
@@ -404,7 +407,11 @@ export async function runChatTurn(input: {
 
   // Troca do carro do visitante e perguntas técnicas vão direto para a conversa:
   // nenhum atalho de estoque (km, consumo, busca, lista de espera) pode atropelar a pergunta.
-  const skipShortcuts = tradeTurn || expertTurn;
+  // Pedido de indicação entre dois modelos nomeados vai ao modelo (perfil de cada carro).
+  const recommendTurn =
+    namedComparison &&
+    /\b(indica|indicaria|recomenda|recomendaria|sugere|compensa|vale mais|melhor pra|melhor para|qual (?:e|é) melhor|qual o melhor)\b/i.test(visitorMessage);
+  const skipShortcuts = tradeTurn || expertTurn || recommendTurn;
 
   const empty =
     mayCreateLead || humanAction || skipShortcuts
@@ -459,8 +466,20 @@ export async function runChatTurn(input: {
       ? activeVehicle
       : undefined);
   const mixedPrice = asksAboutListedFacts(scopedMessage);
-  // "Kicks ou HR-V, qual você indica?": comparação por perfil (modelo), não busca com filtros somados.
-  const namedComparison = compared.length >= 2 && parsePriceLimit(scopedMessage) == null;
+  // Opcional do carro em tela ("e airbag e ABS, tem?"): responde pela ficha da unidade.
+  const otherModel = singleMentionedModelPool(input.stock, visitorMessage);
+  if (
+    unitEquipmentTurn &&
+    activeVehicle &&
+    !mayCreateLead &&
+    !humanAction &&
+    !namedComparison &&
+    (!otherModel || otherModel.some((vehicle) => vehicle.id === activeVehicle.id))
+  ) {
+    const reply = formatFocusedEquipmentReply(activeVehicle, visitorMessage);
+    emit(reply);
+    return finish(reply, false, { policy: "stock-fact", forcedVehicles: [activeVehicle] });
+  }
   const selection =
     !skipShortcuts && !namedComparison && (isChatSelectionQuery(scopedMessage) ||
     roadUse ||
@@ -728,7 +747,7 @@ export async function runChatTurn(input: {
       ...result,
       text: (() => {
         const scope = expertPlan?.subject.vehicles ?? (activeVehicle ? [activeVehicle] : promptStock);
-        const guarded = guardSalesTone(guardLlmReply(result.text, input.stock, scope, research?.paragraphs.map(paragraph => paragraph.text).join(" ")), visitorMessage);
+        const guarded = (guardSalesTone(guardLlmReply(result.text, input.stock, scope, research?.paragraphs.map(paragraph => paragraph.text).join(" ")), visitorMessage) ?? "").replace(/checagem (?:rigorosa|completa|minuciosa|criteriosa)(?: na loja)?/gi, "checagem na loja");
         return guarded && guarded !== CHAT_FALLBACK_REPLY && expertPlan?.stockRanking && !guarded.includes(expertPlan.stockRanking)
           ? `${guarded} ${expertPlan.stockRanking}` : guarded;
       })(),
