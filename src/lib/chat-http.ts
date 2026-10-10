@@ -197,6 +197,7 @@ export async function handleChatPost(
         leadCreated: result.leadCreated,
         cards: result.vehicles.length,
         model: result.meta?.model,
+        calls: result.meta?.calls,
       });
       return json(session, publicResult(result));
     }
@@ -240,6 +241,7 @@ export async function handleChatPost(
               leadCreated: result.leadCreated,
               cards: result.vehicles.length,
               model: result.meta?.model,
+              calls: result.meta?.calls,
             });
             const catchUp = catchUpStreamText(emitted, result.reply);
             if (catchUp) send("token", { text: catchUp });

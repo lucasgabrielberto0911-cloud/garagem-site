@@ -8,21 +8,31 @@ import {
 } from "@/lib/chat-polish";
 import { drainJsonSseBuffer, parseJsonSseFrames } from "@/lib/chat-stream";
 
-/** Mais barato e rápido para chat de loja. Flash entra só se o Lite falhar. */
-export const CHAT_GEMINI_MODEL = "gemini-2.5-flash-lite";
+/** Padrão do chat: Gemini 3.5 Flash-Lite (GA), barato e rápido. Muda por GEMINI_MODEL. */
+export const CHAT_GEMINI_MODEL = "gemini-3.5-flash-lite";
 
-/** Um pouco mais solto que o padrão seco — ainda profissional. */
+/** Se a chave não tiver acesso ao 3.5 (404/403 de modelo), o chat segue neste. */
+export const CHAT_GEMINI_FALLBACK_MODEL = "gemini-2.5-flash-lite";
+
+/** Só vale para 2.x. Nos Gemini 3.x a temperatura fica no padrão (1.0): a doc avisa que mexer piora. */
 export const CHAT_GEMINI_TEMPERATURE = 0.7;
+
+/**
+ * Nível de raciocínio dos Gemini 3.x. `minimal` é o padrão do 3.5 Flash-Lite e o
+ * que mantém a latência de chat; perguntas técnicas sobem para `low` (ver chat-turn).
+ */
+export type ChatThinkingLevel = "minimal" | "low" | "medium" | "high";
+export const CHAT_GEMINI_THINKING_LEVEL: ChatThinkingLevel = "minimal";
+export const CHAT_GEMINI_EXPERT_THINKING_LEVEL: ChatThinkingLevel = "low";
 
 /** Cabe lista + comparação sem cortar frase no meio. */
 export const CHAT_GEMINI_MAX_OUTPUT_TOKENS = 2048;
 export const CHAT_GEMINI_RETRY_OUTPUT_TOKENS = 3072;
 
 export const CHAT_GEMINI_MODELS = [
-  "gemini-2.5-flash-lite",
+  CHAT_GEMINI_MODEL,
+  CHAT_GEMINI_FALLBACK_MODEL,
   "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-flash-latest",
 ] as const;
 
 export type ChatTurn = {
@@ -62,6 +72,9 @@ export const CRIAR_LEAD_DECLARATION = {
 
 type GeminiPart = {
   text?: string;
+  thought?: boolean;
+  /** Gemini 3.x: assinatura de raciocínio. Volta exatamente como veio, na mesma parte. */
+  thoughtSignature?: string;
   functionCall?: { name?: string; args?: unknown };
   functionResponse?: { name: string; response: Record<string, unknown> };
 };
@@ -107,14 +120,18 @@ export function redactGeminiError(text: string) {
     .slice(0, 200);
 }
 
-function isCheapChatModel(model: string) {
+export function isCheapChatModel(model: string) {
   const id = model.toLowerCase();
   if (/\bpro\b/.test(id)) return false;
   return /flash-lite|flash-latest|gemini-2\.[05]-flash$/.test(id);
 }
 
-function configuredModels() {
-  const preferred = process.env.GEMINI_MODEL?.trim();
+function isGemini3(model: string) {
+  return /^(?:models\/)?gemini-3/i.test(model);
+}
+
+export function configuredModels(env: Record<string, string | undefined> = process.env) {
+  const preferred = env.GEMINI_MODEL?.trim().replace(/^models\//, "");
   if (!preferred) return [...CHAT_GEMINI_MODELS];
   if (isCheapChatModel(preferred)) {
     return [...new Set([preferred, ...CHAT_GEMINI_MODELS])];
@@ -127,17 +144,54 @@ export function chatGeminiModels() {
   return configuredModels();
 }
 
-function generationConfig(
+/** Modelo que respondeu 404/403 (sem acesso ou aposentado): pula por um tempo e poupa a ida e volta. */
+const MODEL_DOWN_MS = 10 * 60 * 1000;
+const modelDownUntil = new Map<string, number>();
+
+export function markChatModelDown(model: string, now = Date.now()) {
+  modelDownUntil.set(model, now + MODEL_DOWN_MS);
+}
+
+export function resetChatModelHealth() {
+  modelDownUntil.clear();
+}
+
+function modelsToTry() {
+  const all = configuredModels();
+  const now = Date.now();
+  const up = all.filter((model) => (modelDownUntil.get(model) ?? 0) <= now);
+  return up.length ? up : all;
+}
+
+/** 404 = modelo inexistente/aposentado; 403 = chave sem acesso a este modelo. */
+function isModelUnavailable(status: number | undefined) {
+  return status === 404 || status === 403;
+}
+
+export function chatThinkingLevel(
+  env: Record<string, string | undefined> = process.env,
+): ChatThinkingLevel {
+  const raw = env.GEMINI_THINKING_LEVEL?.trim().toLowerCase();
+  return raw === "minimal" || raw === "low" || raw === "medium" || raw === "high"
+    ? raw
+    : CHAT_GEMINI_THINKING_LEVEL;
+}
+
+export function generationConfig(
   maxOutputTokens: number,
   temperature: number,
   model = CHAT_GEMINI_MODEL,
+  thinkingLevel: ChatThinkingLevel = chatThinkingLevel(),
 ) {
-  const config: Record<string, unknown> = {
-    temperature,
-    maxOutputTokens,
-  };
-  // Flash-Lite já vem sem thinking; no Flash 2.5/3 isso evita token extra de raciocínio.
-  if (/gemini-(2\.5|3)/.test(model)) {
+  const config: Record<string, unknown> = { maxOutputTokens };
+  if (isGemini3(model)) {
+    // 3.x: thinkingLevel no lugar de thinkingBudget, e sem temperature (padrão 1.0).
+    config.thinkingConfig = { thinkingLevel };
+    return config;
+  }
+  config.temperature = temperature;
+  // 2.5 Flash/Flash-Lite: evita token extra de raciocínio.
+  if (/gemini-2\.5/.test(model)) {
     config.thinkingConfig = { thinkingBudget: 0 };
   }
   return config;
@@ -167,7 +221,7 @@ export function extractGeminiText(
   ).candidates;
   const parts = candidates?.[0]?.content?.parts ?? [];
   const text = parts
-    .map((part) => (typeof part.text === "string" ? part.text : ""))
+    .map((part) => (typeof part.text === "string" && !part.thought ? part.text : ""))
     .join("");
   return opts.trim === false ? text : text.trim();
 }
@@ -187,7 +241,47 @@ export type GeminiGenerateResult = {
   truncated?: boolean;
   retried?: boolean;
   model?: string;
+  /** Pedidos feitos ao Gemini nesta resposta (1 = sem repetição). */
+  calls?: number;
 };
+
+export type ChatGenerateInput = {
+  systemPrompt: string;
+  history: ChatTurn[];
+  mensagem: string;
+  signal?: AbortSignal;
+  /** Perguntas técnicas pedem um pouco mais de raciocínio nos Gemini 3.x. */
+  thinkingLevel?: ChatThinkingLevel;
+};
+
+/**
+ * Junta as partes de todos os quadros do stream na ordem. Preserva a parte do
+ * functionCall com a sua thoughtSignature, que o Gemini 3.x exige de volta.
+ */
+export function collectGeminiParts(frames: unknown[]): GeminiPart[] {
+  const parts: GeminiPart[] = [];
+  for (const frame of frames) {
+    const content = (
+      frame as { candidates?: Array<{ content?: GeminiContent }> } | null
+    )?.candidates?.[0]?.content;
+    for (const part of content?.parts ?? []) {
+      if (part && typeof part === "object") parts.push(part);
+    }
+  }
+  return parts;
+}
+
+/** Resposta completa do modelo no formato de `generateContent`, montada a partir do stream. */
+export function geminiRawFromParts(parts: GeminiPart[], finishReason: string | null) {
+  return {
+    candidates: [
+      {
+        content: { role: "model", parts },
+        ...(finishReason ? { finishReason } : {}),
+      },
+    ],
+  };
+}
 
 export function extractGeminiFunctionCall(
   data: unknown,
@@ -257,7 +351,7 @@ export async function generateGroundedResearch(
   signal?.throwIfAborted();
   const key = geminiApiKey();
   if (!key) throw new Error("Pesquisa técnica indisponível");
-  const models = configuredModels().filter(name => name.startsWith("gemini-2.5-")).slice(0, 2);
+  const models = configuredModels().filter(name => /^gemini-(?:2\.5|3)/.test(name)).slice(0, 2);
   let lastError: unknown;
   for (const model of models.length ? models : [CHAT_GEMINI_MODEL]) {
     signal?.throwIfAborted();
@@ -266,7 +360,7 @@ export async function generateGroundedResearch(
         {
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           tools: [{ google_search: {} }],
-          generationConfig: generationConfig(2048, 0.1, model),
+          generationConfig: generationConfig(2048, 0.1, model, "low"),
         },
         key,
         model,
@@ -283,12 +377,7 @@ export async function generateGroundedResearch(
 }
 
 function buildGenerateBody(
-  input: {
-    systemPrompt: string;
-    history: ChatTurn[];
-    mensagem: string;
-    signal?: AbortSignal;
-  },
+  input: ChatGenerateInput,
   withTools: boolean,
   model: string,
   maxOutputTokens = CHAT_GEMINI_MAX_OUTPUT_TOKENS,
@@ -303,27 +392,32 @@ function buildGenerateBody(
       maxOutputTokens,
       CHAT_GEMINI_TEMPERATURE,
       model,
+      input.thinkingLevel,
     ),
   };
 }
 
-async function generateWithFallback(
-  input: {
-    systemPrompt: string;
-    history: ChatTurn[];
-    mensagem: string;
-    signal?: AbortSignal;
-  },
-  key: string,
-) {
+function logModelFallback(model: string, error: unknown) {
+  const status = (error as { status?: number }).status;
+  console.warn("[chat] gemini:model_unavailable", {
+    model,
+    status: typeof status === "number" ? status : undefined,
+    message: redactGeminiError(error instanceof Error ? error.message : "err"),
+  });
+}
+
+async function generateWithFallback(input: ChatGenerateInput, key: string) {
   let lastError: unknown;
+  let calls = 0;
   const toolFlags = chatTurnMayCreateLead(input.mensagem, input.history)
     ? [true, false]
     : [false];
-  for (const model of configuredModels()) {
+  const models = modelsToTry();
+  for (const [index, model] of models.entries()) {
     input.signal?.throwIfAborted();
     for (const withTools of toolFlags) {
       try {
+        calls += 1;
         const data = await postGemini(
           buildGenerateBody(input, withTools, model),
           key,
@@ -331,13 +425,20 @@ async function generateWithFallback(
           input.signal,
         );
         console.info("[chat] gemini:model", model);
-        return { data, model };
+        return { data, model, calls };
       } catch (error) {
         input.signal?.throwIfAborted();
         lastError = error;
         const status = (error as { status?: number }).status;
-        if (status === 401 || status === 403) throw error;
-        if (status !== 400 && status !== 404) throw error;
+        if (status === 401) throw error;
+        if (isModelUnavailable(status)) {
+          // Sem acesso a este modelo (ou aposentado): lembra e passa ao próximo.
+          markChatModelDown(model);
+          logModelFallback(model, error);
+          if (index === models.length - 1) throw error;
+          break;
+        }
+        if (status !== 400) throw error;
       }
     }
   }
@@ -345,12 +446,7 @@ async function generateWithFallback(
 }
 
 async function continueTruncatedReply(
-  input: {
-    systemPrompt: string;
-    history: ChatTurn[];
-    mensagem: string;
-    signal?: AbortSignal;
-  },
+  input: ChatGenerateInput,
   partial: string,
   key: string,
   model: string,
@@ -373,6 +469,7 @@ async function continueTruncatedReply(
         CHAT_GEMINI_RETRY_OUTPUT_TOKENS,
         0.3,
         model,
+        input.thinkingLevel,
       ),
     },
     key,
@@ -396,12 +493,9 @@ function finalizeGeneratedText(
   };
 }
 
-export async function generateChatReply(input: {
-  systemPrompt: string;
-  history: ChatTurn[];
-  mensagem: string;
-  signal?: AbortSignal;
-}): Promise<GeminiGenerateResult> {
+export async function generateChatReply(
+  input: ChatGenerateInput,
+): Promise<GeminiGenerateResult> {
   input.signal?.throwIfAborted();
   const key = geminiApiKey();
   if (!key) {
@@ -410,13 +504,15 @@ export async function generateChatReply(input: {
   }
 
   try {
-    const { data, model } = await generateWithFallback(input, key);
+    const { data, model, calls: firstCalls } = await generateWithFallback(input, key);
+    let calls = firstCalls;
     let text = extractGeminiText(data);
     const functionCall = extractGeminiFunctionCall(data);
     let finishReason = extractGeminiFinishReason(data);
     let retried = false;
     if (!functionCall && looksTruncated(text, finishReason)) {
       try {
+        calls += 1;
         const extra = await continueTruncatedReply(input, text, key, model);
         if (extra) {
           text = mergeContinuation(text, extra);
@@ -439,6 +535,7 @@ export async function generateChatReply(input: {
       truncated: closed.truncated,
       retried: closed.retried,
       model,
+      calls,
     };
   } catch (error) {
     const status = (error as { status?: number }).status;
@@ -512,12 +609,7 @@ async function* streamGemini(
 }
 
 export async function generateChatReplyStream(
-  input: {
-    systemPrompt: string;
-    history: ChatTurn[];
-    mensagem: string;
-    signal?: AbortSignal;
-  },
+  input: ChatGenerateInput,
   opts: { onToken?: (delta: string) => void } = {},
 ): Promise<GeminiGenerateResult> {
   input.signal?.throwIfAborted();
@@ -528,24 +620,27 @@ export async function generateChatReplyStream(
   }
 
   let lastError: unknown;
+  let calls = 0;
   const toolFlags = chatTurnMayCreateLead(input.mensagem, input.history)
     ? [true, false]
     : [false];
-  for (const model of configuredModels()) {
+  const models = modelsToTry();
+  for (const [index, model] of models.entries()) {
     input.signal?.throwIfAborted();
     for (const withTools of toolFlags) {
       try {
         let text = "";
         let functionCall: GeminiFunctionCall | null = null;
         let finishReason: string | null = null;
-        let lastRaw: unknown;
+        const frames: unknown[] = [];
+        calls += 1;
         for await (const frame of streamGemini(
           buildGenerateBody(input, withTools, model),
           key,
           model,
           input.signal,
         )) {
-          lastRaw = frame;
+          frames.push(frame);
           const delta = extractGeminiText(frame, { trim: false });
           const call = extractGeminiFunctionCall(frame);
           finishReason = extractGeminiFinishReason(frame) ?? finishReason;
@@ -556,17 +651,20 @@ export async function generateChatReplyStream(
           }
         }
         console.info("[chat] gemini:model", model);
+        // Todas as partes (com a thoughtSignature do functionCall) para devolver ao modelo.
+        const raw = geminiRawFromParts(collectGeminiParts(frames), finishReason);
         let retried = false;
         const regen = !functionCall && streamTextNeedsRegen(text, finishReason);
         if (regen) {
           try {
             const full = await generateChatReply(input);
+            calls += full.calls ?? 1;
             if (full.text && full.text.trim().length >= text.trim().length) {
               const piece = full.text.startsWith(text)
                 ? full.text.slice(text.length)
                 : "";
               if (piece) opts.onToken?.(piece);
-              return { ...full, retried: true };
+              return { ...full, retried: true, calls };
             }
           } catch (error) {
             console.info(
@@ -577,6 +675,7 @@ export async function generateChatReplyStream(
         }
         if (!functionCall && looksTruncated(text, finishReason)) {
           try {
+            calls += 1;
             const extra = await continueTruncatedReply(input, text, key, model);
             if (extra) {
               const merged = mergeContinuation(text, extra);
@@ -596,12 +695,13 @@ export async function generateChatReplyStream(
         if (!functionCall && looksTruncated(text, finishReason) && !regen) {
           try {
             const full = await generateChatReply(input);
+            calls += full.calls ?? 1;
             if (full.text && full.text.trim().length > text.trim().length) {
               const piece = full.text.startsWith(text)
                 ? full.text.slice(text.length)
                 : "";
               if (piece) opts.onToken?.(piece);
-              return { ...full, retried: true };
+              return { ...full, retried: true, calls };
             }
           } catch (error) {
             console.info(
@@ -618,18 +718,25 @@ export async function generateChatReplyStream(
         return {
           text: closed.text,
           functionCall,
-          raw: lastRaw,
+          raw,
           finishReason,
           truncated: closed.truncated,
           retried: closed.retried,
           model,
+          calls,
         };
       } catch (error) {
         input.signal?.throwIfAborted();
         lastError = error;
         const status = (error as { status?: number }).status;
-        if (status === 401 || status === 403) throw error;
-        if (status !== 400 && status !== 404) break;
+        if (status === 401) throw error;
+        if (isModelUnavailable(status)) {
+          markChatModelDown(model);
+          logModelFallback(model, error);
+          if (index === models.length - 1) throw error;
+          break;
+        }
+        if (status !== 400) break;
       }
     }
   }
@@ -639,7 +746,7 @@ export async function generateChatReplyStream(
     if (fallback.text && !fallback.functionCall) {
       opts.onToken?.(fallback.text);
     }
-    return fallback;
+    return { ...fallback, calls: calls + (fallback.calls ?? 1) };
   } catch {
     throw lastError instanceof Error ? lastError : new Error("gemini failed");
   }
@@ -650,14 +757,18 @@ export async function confirmAfterLead(input: {
   history: ChatTurn[];
   mensagem: string;
   signal?: AbortSignal;
+  /** Resposta completa do modelo com o functionCall (e a thoughtSignature, no Gemini 3.x). */
   modelContent: unknown;
   functionName: string;
   functionResult: Record<string, unknown>;
+  /** Modelo que gerou o functionCall: a assinatura só vale para ele. */
+  model?: string;
 }) {
   input.signal?.throwIfAborted();
   const key = geminiApiKey();
   if (!key) return CHAT_FALLBACK_REPLY;
 
+  const model = input.model ?? configuredModels()[0] ?? CHAT_GEMINI_MODEL;
   const contents = historyToGeminiContents(input.history, input.mensagem);
   const modelParts =
     input.modelContent && typeof input.modelContent === "object"
@@ -667,7 +778,7 @@ export async function confirmAfterLead(input: {
           }
         ).candidates?.[0]?.content
       : null;
-  if (modelParts) contents.push(modelParts);
+  if (modelParts) contents.push({ role: "model", ...modelParts });
   contents.push({
     role: "user",
     parts: [
@@ -685,14 +796,10 @@ export async function confirmAfterLead(input: {
       system_instruction: { parts: [{ text: input.systemPrompt }] },
       contents,
       tools: [{ function_declarations: [CRIAR_LEAD_DECLARATION] }],
-      generationConfig: generationConfig(
-        280,
-        0.3,
-        configuredModels()[0] ?? CHAT_GEMINI_MODEL,
-      ),
+      generationConfig: generationConfig(280, 0.3, model, "minimal"),
     },
     key,
-    configuredModels()[0] ?? CHAT_GEMINI_MODEL,
+    model,
     input.signal,
   );
   return extractGeminiText(data);
