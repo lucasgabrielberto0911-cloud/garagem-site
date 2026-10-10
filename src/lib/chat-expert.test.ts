@@ -80,7 +80,7 @@ test("Lucas 2: qual o mais forte? depois dos HB20 usa as fichas dos carros mostr
   assert.equal(result.reply, reply);
   assert.equal(result.meta?.policy, "expert");
   assert.equal(result.meta?.model, "gemini-3.5-flash-lite");
-  assert.equal(thinking, "low", "pergunta técnica pede um pouco mais de raciocínio");
+  assert.equal(thinking, "minimal", "raciocínio mínimo também nas perguntas técnicas");
   // O prompt leva as três fichas e as regras do modo especialista; nada de lista do estoque pedida.
   assert.match(prompt, /MODO ESPECIALISTA/);
   assert.match(prompt, /FICHAS TÉCNICAS DE REFERÊNCIA/);

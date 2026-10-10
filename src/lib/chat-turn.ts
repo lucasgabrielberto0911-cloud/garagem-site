@@ -701,7 +701,7 @@ export async function runChatTurn(input: {
       history: input.historico,
       mensagem: visitorMessage,
       signal: input.signal,
-      // Pergunta técnica pede um pouco mais de raciocínio (Gemini 3.x); o resto fica no mínimo.
+      // Raciocínio mínimo também nas técnicas: em `low` o 3.5 Flash-Lite devolveu resposta vazia.
       ...(expertTurn ? { thinkingLevel: CHAT_GEMINI_EXPERT_THINKING_LEVEL } : {}),
     };
     if (input.onToken && !input.generate) {
