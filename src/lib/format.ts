@@ -126,14 +126,16 @@ export function vehicleSeoDescription(input: {
   transmission: string;
   sold?: boolean;
   siteName?: string;
+  /** Região de atendimento (nunca a cidade individual do carro). */
+  location?: string;
 }) {
   const brand = formatBrandName(input.brand);
   const model = formatModelName(input.model);
-  const siteName = input.siteName ?? "Sua Garagem";
+  const siteName = input.siteName ?? "Garagem";
 
   const text = input.sold
     ? `Este ${brand} ${model} já foi vendido. Confira outras opções disponíveis no estoque da ${siteName}.`
-    : `${brand} ${model} ${input.year} à venda por ${formatCurrencyBRL(input.price)}. ${formatNumberBR(input.km)} km, câmbio ${input.transmission}. Confira fotos e condições de pagamento na ${siteName}.`;
+    : `${brand} ${model} ${input.year} à venda${input.location ? ` em ${input.location}` : ""} por ${formatCurrencyBRL(input.price)}. ${formatNumberBR(input.km)} km, câmbio ${input.transmission}. Confira fotos e condições de pagamento na ${siteName}.`;
 
   let clean = text.replace(/\s+/g, " ").trim();
   if (clean.length < 120) {

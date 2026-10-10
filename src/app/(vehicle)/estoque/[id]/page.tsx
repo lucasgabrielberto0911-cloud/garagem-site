@@ -30,6 +30,7 @@ import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { JsonLd } from "@/components/JsonLd";
+import { VEHICLE_SEO_LOCATION, vehicleSeoTitle } from "@/lib/vehicle-seo";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
 import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
@@ -86,9 +87,14 @@ export async function generateMetadata({
   const sold = vehicle.status === "vendido";
   const display = formatVehicleDisplay(vehicle);
   const label = display.titleWithYear;
-  const title = sold
-    ? `${label} (vendido) | ${site.name}`
-    : `${label} | ${site.name}`;
+  const title = vehicleSeoTitle({
+    brand: vehicle.brand,
+    model: vehicle.model,
+    version: vehicle.version,
+    yearModel: vehicle.yearModel,
+    sold,
+    siteName: site.name,
+  });
   const description = vehicleSeoDescription({
     brand: vehicle.brand,
     model: vehicle.model,
@@ -98,6 +104,7 @@ export async function generateMetadata({
     transmission: display.transmission,
     sold,
     siteName: site.name,
+    location: VEHICLE_SEO_LOCATION,
   });
   const rawCover = vehicle.photos[0]?.url;
   const cover = rawCover ? absoluteUrl(publicPhotoSrc(rawCover)) : null;
@@ -279,7 +286,7 @@ export default async function VehicleDetailPage({
         make={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}
-        catalog={!sold}
+        catalog={vehicle.status === "disponivel"}
         {...autoHit}
       />
       <VehicleChatContext

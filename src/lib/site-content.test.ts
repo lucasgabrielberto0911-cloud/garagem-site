@@ -4,7 +4,7 @@ import { mergeConditions, mergeFaqItems } from "./site-content";
 import { STORE_WARRANTY } from "./vehicle-conditions";
 
 const LEGACY_WARRANTY =
-  "Na Sua Garagem, todo veículo passa por uma revisão completa antes de chegar até você. Por isso, oferecemos 3 meses de garantia em todos os nossos seminovos.";
+  "Na Garagem, todo veículo passa por uma revisão completa antes de chegar até você. Por isso, oferecemos 3 meses de garantia em todos os nossos seminovos.";
 
 test("override do painel substitui a garantia; texto antigo volta ao comercial", () => {
   const customIntro = "A cobertura deste lote é combinada no WhatsApp, sem prazo genérico.";

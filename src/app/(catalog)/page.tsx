@@ -48,7 +48,7 @@ export const revalidate = 600;
 export const metadata = buildPageMetadata({
   title: `${site.name} | Seminovos com procedência no ${site.state}`,
   description:
-    "Seminovos com procedência verificada em Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Compra, venda, troca e financiamento na Sua Garagem.",
+    "Seminovos com procedência verificada em Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Compra, venda, troca e financiamento na Garagem.",
   path: "/",
 });
 

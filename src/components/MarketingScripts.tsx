@@ -7,6 +7,7 @@ import {
   CONSENT_EVENT,
   hasMarketingConsent,
   readStoredConsent,
+  rememberAdVisit,
   shouldLoadMetaPixel,
   type ConsentChoice,
 } from "@/lib/consent";
@@ -25,7 +26,7 @@ export function MarketingScripts() {
       const choice = next ?? readStoredConsent();
       const search = window.location.search;
       setAnalytics(hasMarketingConsent(choice));
-      setPixel(shouldLoadMetaPixel(choice, search));
+      setPixel(shouldLoadMetaPixel(choice, search, rememberAdVisit(search)));
     }
     sync();
     function onConsent(event: Event) {

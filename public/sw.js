@@ -1,5 +1,5 @@
 /*
- * Service worker do site público da Sua Garagem (garagem-v10).
+ * Service worker do site público da Garagem (garagem-v10).
  *
  * HTML de navegação: rede com prazo de 2,5s; se falhar ou demorar, o cache.
  * Assim o desktop em rede boa recebe a página nova, e a home/estoque abrem

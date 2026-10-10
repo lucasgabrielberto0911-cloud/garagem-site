@@ -15,7 +15,7 @@ export const revalidate = 3600;
 export const metadata: Metadata = buildPageMetadata({
   title: `Cidades | ${site.name}`,
   description:
-    "Escolha a cidade para abrir a página de seminovos da Sua Garagem no Espírito Santo.",
+    "Escolha a cidade para abrir a página de seminovos da Garagem no Espírito Santo.",
   path: CITIES_DIRECTORY_PATH,
 });
 

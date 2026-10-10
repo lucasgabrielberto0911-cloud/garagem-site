@@ -81,7 +81,7 @@ export function parseFaqItems(raw: unknown): FaqItem[] | null {
 export const FAQ_ITEMS: FaqItem[] = [
   {
     category: "compra",
-    question: "Como funciona a compra de um veículo na Sua Garagem?",
+    question: "Como funciona a compra de um veículo na Garagem?",
     answer:
       "Você escolhe o veículo no site, chama no WhatsApp e a gente tira as dúvidas — com fotos extras, vídeo e detalhes do veículo. Depois do aceite, alinhamos pagamento e os próximos passos da documentação. Somos loja digital, com atendimento humano do início ao fim.",
   },

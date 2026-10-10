@@ -39,19 +39,48 @@ export function hasMarketingConsent(choice = readStoredConsent()) {
   return choice === "accepted";
 }
 
+const AD_VISIT_STORAGE_KEY = "garagem_ad_visit";
+
+/** Clique de anúncio da Meta: fbclid ou utm_source meta|facebook|fb|ig|instagram. */
+export function isAdVisitSearch(search = "") {
+  const query = search.startsWith("?") ? search.slice(1) : search;
+  return (
+    /(?:^|&)fbclid=/.test(query) ||
+    /(?:^|&)utm_source=(?:meta|facebook|fb|ig|instagram)(?:&|$)/i.test(query)
+  );
+}
+
+/**
+ * O fbclid/UTM só existe na URL de entrada: um 308 de slug, a troca de grupo de
+ * rotas (estoque → ficha remonta o layout) ou um reload o perdem. Guarda a
+ * visita de anúncio na aba (sessionStorage, some ao fechar) para o Pixel seguir
+ * ligado até o clique no WhatsApp.
+ */
+export function rememberAdVisit(search = "") {
+  if (typeof window === "undefined") return false;
+  try {
+    if (isAdVisitSearch(search)) {
+      window.sessionStorage.setItem(AD_VISIT_STORAGE_KEY, "1");
+      return true;
+    }
+    return window.sessionStorage.getItem(AD_VISIT_STORAGE_KEY) === "1";
+  } catch {
+    return isAdVisitSearch(search);
+  }
+}
+
 /**
  * Pixel da Meta: aceite explícito, ou visita de anúncio (fbclid, ou
- * utm_source meta|facebook|fb|ig|instagram). O clique de anúncio carrega o
- * pixel mesmo com "só o essencial" — a atribuição do anúncio precisa do
- * script. Visita orgânica sem aceite não carrega. Google Analytics continua
- * só em hasMarketingConsent.
+ * utm_source meta|facebook|fb|ig|instagram), lembrada na aba. O clique de
+ * anúncio carrega o pixel mesmo com "só o essencial" — a atribuição do
+ * anúncio precisa do script. Visita orgânica sem aceite não carrega. Google
+ * Analytics continua só em hasMarketingConsent.
  */
 export function shouldLoadMetaPixel(
   choice: ConsentChoice | null,
   search = "",
+  adVisit = false,
 ) {
   if (choice === "accepted") return true;
-  const query = search.startsWith("?") ? search.slice(1) : search;
-  return /(?:^|&)fbclid=/.test(query) ||
-    /(?:^|&)utm_source=(?:meta|facebook|fb|ig|instagram)(?:&|$)/i.test(query);
+  return adVisit || isAdVisitSearch(search);
 }

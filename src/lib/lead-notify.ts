@@ -48,7 +48,7 @@ export function buildLeadNotifyEmail(payload: LeadNotifyPayload) {
   const lines = [
     wanted
       ? "Pedido no site: a pessoa não encontrou o modelo e deixou o que procura."
-      : "Novo lead de venda/troca no site da Sua Garagem.",
+      : "Novo lead de venda/troca no site da Garagem.",
     "",
     `Nome: ${payload.name}`,
     `Telefone: ${payload.phone}`,

@@ -27,7 +27,7 @@ const body = Inter({
 });
 
 const description =
-  "Seminovos com procedência verificada em Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Compra, venda, troca e financiamento na Sua Garagem.";
+  "Seminovos com procedência verificada em Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Compra, venda, troca e financiamento na Garagem.";
 
 function supabaseOrigin() {
   const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
