@@ -21,16 +21,20 @@ export function VehicleGrid({
   const cols = desktopCols === 4 ? "lg:grid-cols-3 xl:grid-cols-4" : "lg:grid-cols-3";
   return (
     <div className={`listing-card-grid grid grid-cols-2 ${cols}`}>
-      {vehicles.map((vehicle, index) => (
-        <div key={vehicle.id} className="listing-card-item min-w-0">
-          <VehicleCard
-            vehicle={vehicle}
-            priority={index < priorityCount}
-            returnTo={returnTo}
-            showDestaque={destaqueIds.has(vehicle.id)}
-          />
-        </div>
-      ))}
+      {vehicles.map((vehicle, index) => {
+        const high = index === 0 && priorityCount > 0;
+        return (
+          <div key={vehicle.id} className="listing-card-item min-w-0">
+            <VehicleCard
+              vehicle={vehicle}
+              priority={high}
+              eager={!high && index < priorityCount}
+              returnTo={returnTo}
+              showDestaque={destaqueIds.has(vehicle.id)}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

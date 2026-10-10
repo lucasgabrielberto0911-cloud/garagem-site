@@ -73,7 +73,9 @@ const REASONS = [
 const HERO_WORDMARK = "/branding/logo-wordmark.webp";
 
 export default async function HomePage() {
-  preload(HERO_WORDMARK, { as: "image", fetchPriority: "high" });
+  // O LCP no celular é a foto do carro, não o wordmark. Prioridade baixa
+  // para o logo não dividir a rede lenta com a capa.
+  preload(HERO_WORDMARK, { as: "image", fetchPriority: "low" });
 
   const [featured, brands, testimonials, publicSite, siteContent, faqItems] =
     await Promise.all([
@@ -128,7 +130,7 @@ export default async function HomePage() {
           <div className="flex flex-col gap-2.5 sm:gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
             <div className="hero-text min-w-0 max-w-2xl">
               <div className="hero-brand">
-                <SiteWordmark size="hero" priority />
+                <SiteWordmark size="hero" />
               </div>
               <h1 className="mt-3 font-display text-lg font-semibold leading-snug tracking-tight text-cream sm:mt-3 sm:text-3xl sm:leading-[1.12] lg:text-[2rem]">
                 Seminovos com procedência em {site.region}.

@@ -4,9 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabaseOriginalSrc } from "@/lib/stock-query";
 
 /** O retry pertence à galeria, fora de links de cards e de botões de miniatura. */
-export function RecoverableVehicleImage({ src, alt, width, height, sizes, srcSet, mobileSrcSet, className, priority }: {
+export function RecoverableVehicleImage({ src, alt, width, height, sizes, srcSet, mobileSrcSet, className, priority, eager = false, decoding }: {
   src: string; alt: string; width: number; height: number; sizes?: string;
-  srcSet?: string; mobileSrcSet?: string; className?: string; priority?: boolean;
+  srcSet?: string; mobileSrcSet?: string; className?: string; priority?: boolean; eager?: boolean;
+  decoding?: "sync" | "async" | "auto";
 }) {
   const [state, setState] = useState({ original: null as string | null, failed: false, attempt: 0, retrying: false });
   const imageRef = useRef<HTMLImageElement>(null);
@@ -35,7 +36,7 @@ export function RecoverableVehicleImage({ src, alt, width, height, sizes, srcSet
     // eslint-disable-next-line @next/next/no-img-element -- mantém as variantes públicas existentes
     <img ref={imageRef} key={state.attempt} src={state.original ?? src} srcSet={state.original ? undefined : srcSet}
       sizes={!state.original && srcSet ? sizes : undefined} alt={alt} width={width} height={height}
-      loading={priority || state.attempt > 0 ? "eager" : "lazy"} decoding={priority ? "sync" : "async"} fetchPriority={priority ? "high" : "low"}
+      loading={priority || eager || state.attempt > 0 ? "eager" : "lazy"} decoding={decoding ?? (priority ? "sync" : "async")} fetchPriority={priority ? "high" : eager ? "auto" : "low"}
       draggable={false} className={`absolute inset-0 h-full w-full ${className ?? ""}`}
       onLoad={() => setState(current => current.retrying ? { ...current, retrying: false } : current)}
       onError={event => failedImage(event.currentTarget)} />
