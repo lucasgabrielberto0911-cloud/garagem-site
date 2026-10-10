@@ -29,8 +29,8 @@ const SIZE: Record<
 };
 
 /**
- * Wordmark visível: só o logo Garagem. O nome comercial "Sua Garagem"
- * fica em aria-label, titles e metadados — sem prefixo "SUA" no chrome.
+ * Wordmark visível: só o logo Garagem. O nome comercial
+ * "Garagem" fica em aria-label, titles e metadados.
  */
 export function SiteWordmark({
   size = "header",

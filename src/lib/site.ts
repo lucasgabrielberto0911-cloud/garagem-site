@@ -15,7 +15,7 @@ export const PHONES = [
 ] as const;
 
 export const site = {
-  name: "Sua Garagem",
+  name: "Garagem",
   legalName: "Garagem Motorcycle Ltda",
   cnpj: "47.740.076/0001-17",
   url: "https://www.suagaragem.net",

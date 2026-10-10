@@ -62,7 +62,7 @@ test("vehicle_id do feed é o Prisma CUID e a URL leva UTM do catálogo", () => 
   assert.equal(CATALOG_DEALER_ID, "SUAGARAGEM");
   assert.equal(row.dealer_id, "SUAGARAGEM");
   assert.notEqual(row.dealer_id, "SUAGARAMEM");
-  assert.equal(row.dealer_name, "Sua Garagem");
+  assert.equal(row.dealer_name, "Garagem");
   assert.match(row["image[0].url"], /\/api\/catalog-jpg\/.+\/photoaaaaaaaaaaaaaaaaaa$/);
   assert.equal(row["image[1].url"], "https://cdn.example/b.jpg");
   assert.equal(row["image[2].url"], "");
