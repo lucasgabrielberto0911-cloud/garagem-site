@@ -34,10 +34,10 @@
     "heic-convert": "^2.1.0",
     "heic2any": "0.0.4",
     "jose": "^6.2.10",
-    "next": "16.3.4",
+    "next": "16.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "sonner": "^2.0.8"
   },
   "devDependencies": {
@@ -50,7 +50,7 @@
     "autoprefixer": "^10.5.4",
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^9.39.5",
-    "eslint-config-next": "16.3.4",
+    "eslint-config-next": "16.4.0",
     "postcss": "^8",
     "prisma": "^6.19.3",
     "tailwindcss": "^3.4.1",

@@ -38,6 +38,7 @@ jobs:
       - run: npx prisma generate
       - run: npx prisma db push --skip-generate
       - run: npm run e2e:seed
+      - run: npm audit --omit=dev --audit-level=critical
       - run: npm test
       - run: npm run lint
       - run: npm run build
