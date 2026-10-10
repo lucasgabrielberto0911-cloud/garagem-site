@@ -47,7 +47,7 @@ export function MobileBottomNav() {
     <nav
       data-mobile-bottom-nav=""
       aria-label="Navegação rápida"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt/95 shadow-[0_-8px_30px_rgba(0,0,0,0.35)] pl-safe pr-safe lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-asphalt shadow-[0_-8px_30px_rgba(0,0,0,0.35)] pl-safe pr-safe lg:hidden"
     >
       <ul className="mx-auto flex max-w-lg items-stretch pb-safe">
         {ITEMS.slice(0, 2).map((item) => (
