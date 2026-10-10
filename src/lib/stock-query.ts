@@ -1,3 +1,4 @@
+import { COVER_HD_WIDTH, hdCardCompanion, isCardVariantPath, isFramedCardUrl } from "@/lib/cover-frame";
 import { publicPhotoOriginal } from "@/lib/public-photo-url";
 
 /** Tipos e parsers do estoque — seguro para o bundle do cliente. */
@@ -81,7 +82,17 @@ function canTransform(url: string) {
 }
 
 function isCardDerivative(url: string) {
-  return /-card\.webp(?:[?#]|$)/i.test(url);
+  return isCardVariantPath(url);
+}
+
+/**
+ * Capa que o admin enquadrou à mão. Os recortes ao vivo (720/960 e o do
+ * celular) são sempre centralizados e desfariam a escolha: o card usa só os
+ * arquivos gravados com o recorte escolhido (480×360 e, quando há, 960×720).
+ */
+function framedCoverThumbnail(photos: VehicleCardPhoto[] | undefined) {
+  const thumbnail = photos?.[0]?.thumbnailUrl;
+  return thumbnail && isFramedCardUrl(thumbnail) ? thumbnail : null;
 }
 
 /** WebP já limitado no upload. Reencodar só amacia e não ganha detalhe. */
@@ -146,6 +157,9 @@ export function coverSrc(photos: VehicleCardPhoto[] | undefined) {
  * atrasou a capa em cerca de 1–2 s no primeiro acesso.
  */
 export function coverMobileSrcSet(photos: VehicleCardPhoto[] | undefined) {
+  // O celular fica no 480 mesmo com o 960 gravado: mesmo peso e LCP de antes.
+  const framed = framedCoverThumbnail(photos);
+  if (framed) return `${framed} ${CARD_RENDER_WIDTH}w`;
   const photo = photos?.[0];
   if (!photo?.url || isCardDerivative(photo.url)) return undefined;
   if (photo.thumbnailUrl) return `${photo.thumbnailUrl} ${CARD_RENDER_WIDTH}w`;
@@ -155,9 +169,16 @@ export function coverMobileSrcSet(photos: VehicleCardPhoto[] | undefined) {
 
 /**
  * 480 da miniatura; 720 e 960 WebP para slots maiores do desktop/tablet.
- * A miniatura sozinha esticava no 3x e no desktop.
+ * A miniatura sozinha esticava no 3x e no desktop. Na capa enquadrada o 960
+ * é o arquivo gravado junto, com o mesmo recorte (nada de recorte ao vivo).
  */
 export function coverSrcSet(photos: VehicleCardPhoto[] | undefined) {
+  const framed = framedCoverThumbnail(photos);
+  if (framed) {
+    // Capa enquadrada antiga só tem o 480: sem srcset, usa o `src`.
+    const hd = hdCardCompanion(framed);
+    return hd ? `${framed} ${CARD_RENDER_WIDTH}w, ${hd} ${COVER_HD_WIDTH}w` : undefined;
+  }
   const photo = photos?.[0];
   if (!photo?.url || !canTransform(photo.url) || isCardDerivative(photo.url)) {
     return undefined;

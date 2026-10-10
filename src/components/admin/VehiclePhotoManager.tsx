@@ -20,6 +20,7 @@ import {
 } from "@/components/admin/icons";
 import { btn } from "@/components/admin/ui";
 import type { NormalizedRect } from "@/lib/blur-rects";
+import { isFramedCardUrl, type CoverFrame } from "@/lib/cover-frame";
 import { downloadAttachment } from "@/lib/download-attachment";
 import { adminStorageJpgPath, archivePhotoFilename } from "@/lib/photo-archive";
 import {
@@ -38,6 +39,7 @@ const PlateBlurEditor = dynamic(
 );
 
 const PhotoRotationEditor = dynamic(() => import("./PhotoRotationEditor"), { ssr: false });
+const CoverFrameEditor = dynamic(() => import("./CoverFrameEditor"), { ssr: false });
 const CoverPhotoGuide = dynamic(() => import("./CoverPhotoGuide").then(module => module.CoverPhotoGuide));
 
 type LocalPhotoJob = PhotoUploadJobState & { file: File; photo?: PhotoItem };
@@ -100,6 +102,13 @@ export function photosFromUrls(urls: string[]): PhotoItem[] {
  * Upload por arrastar/clicar + reorganização das fotos por drag-and-drop
  * (setas e “capa” ficam como atalho no desktop/mobile).
  */
+/** Aviso discreto quando a nova miniatura perdeu o enquadramento escolhido (girar, ou borrar sem capa nova). */
+function resetFrameNotice(before: string | null | undefined, after: string | null | undefined) {
+  return isFramedCardUrl(before) && !isFramedCardUrl(after)
+    ? { description: "O enquadramento da capa voltou ao automático. Se quiser, ajuste de novo em “Capa no card”." }
+    : undefined;
+}
+
 export function VehiclePhotoManager({
   photos,
   queueKey,
@@ -192,6 +201,8 @@ export function VehiclePhotoManager({
   const [rotationId, setRotationId] = useState<string | null>(null);
   const [rotating, setRotating] = useState(false);
   const [blurring, setBlurring] = useState(false);
+  const [framingOpen, setFramingOpen] = useState(false);
+  const [framing, setFraming] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [blurredIds, setBlurredIds] = useState<Set<string>>(() => new Set());
   const [fileDragging, setFileDragging] = useState(false);
@@ -207,8 +218,8 @@ export function VehiclePhotoManager({
   const pendingSkeletons = summary.uploading + summary.queued;
 
   useEffect(() => {
-    onUploadingChange?.(inFlight || blurring || rotating);
-  }, [inFlight, blurring, rotating, onUploadingChange]);
+    onUploadingChange?.(inFlight || blurring || rotating || framing);
+  }, [inFlight, blurring, rotating, framing, onUploadingChange]);
 
   function patchJob(id: string, patch: Partial<LocalPhotoJob>) {
     setJobs((current) =>
@@ -385,7 +396,11 @@ export function VehiclePhotoManager({
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: currentUrl, rects }),
+        body: JSON.stringify({
+          url: currentUrl,
+          rects,
+          thumbnailUrl: editingPhoto.thumbnailUrl ?? null,
+        }),
       });
       const data = (await response.json()) as {
         url?: string;
@@ -413,7 +428,7 @@ export function VehiclePhotoManager({
         next.add(photoId);
         return next;
       });
-      toast.success("Região borracha. Salve o anúncio para publicar.");
+      toast.success("Região borracha. Salve o anúncio para publicar.", resetFrameNotice(editingPhoto.thumbnailUrl, data.thumbnailUrl));
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -436,9 +451,30 @@ export function VehiclePhotoManager({
       if (!response.ok || typeof result.url !== "string") throw new Error(result.error || "Não foi possível girar a foto.");
       onChange(current => current.map(photo => photo.id === id && photo.url === url ? { ...photo, url: result.url, thumbnailUrl: result.thumbnailUrl ?? null } : photo));
       setRotationId(null);
-      toast.success("Foto ajustada. Salve o anúncio para publicar.");
+      toast.success("Foto ajustada. Salve o anúncio para publicar.", resetFrameNotice(rotationPhoto.thumbnailUrl, result.thumbnailUrl));
     } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível girar a foto."); }
     finally { setRotating(false); }
+  }
+
+  const coverPhoto = photos[0] ?? null;
+  async function applyCoverFrame(frame: CoverFrame) {
+    if (!coverPhoto || framing) return;
+    const { id, url } = coverPhoto;
+    setFraming(true);
+    try {
+      const response = await fetch("/api/upload/cover-frame", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, frame }),
+      });
+      const result = await response.json();
+      if (!response.ok || typeof result.thumbnailUrl !== "string") throw new Error(result.error || "Não foi possível salvar o enquadramento.");
+      onChange(current => current.map(photo => photo.id === id && photo.url === url ? { ...photo, thumbnailUrl: result.thumbnailUrl } : photo));
+      setFramingOpen(false);
+      toast.success("Capa enquadrada. Salve o anúncio para publicar.");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível salvar o enquadramento."); }
+    finally { setFraming(false); }
   }
 
   function hasFiles(event: React.DragEvent) {
@@ -600,7 +636,7 @@ export function VehiclePhotoManager({
         </p>
       ) : photos.length > 0 ? (
         <>
-          <CoverPhotoGuide photos={photos} disabled={inFlight || blurring || rotating} onCover={makeCover} />
+          <CoverPhotoGuide photos={photos} disabled={inFlight || blurring || rotating || framing} onCover={makeCover} onFrame={() => setFramingOpen(true)} />
           <details className="mt-4 text-xs text-muted">
             <summary className="cursor-pointer py-1 touch-manipulation">
               A 1ª foto é a capa.{" "}
@@ -916,6 +952,7 @@ export function VehiclePhotoManager({
         ) : null}
       </ActionSheet>
 
+      {framingOpen && coverPhoto ? <CoverFrameEditor key={`${coverPhoto.id}:${coverPhoto.url}`} url={coverPhoto.url} thumbnailUrl={coverPhoto.thumbnailUrl} applying={framing} onClose={() => { if (!framing) setFramingOpen(false); }} onApply={frame => { void applyCoverFrame(frame); }} /> : null}
       {rotationPhoto ? <PhotoRotationEditor key={rotationPhoto.url} url={rotationPhoto.url} applying={rotating} onClose={() => { if (!rotating) setRotationId(null); }} onApply={operation => { void applyRotation(operation); }} /> : null}
 
       {editingPhoto ? (

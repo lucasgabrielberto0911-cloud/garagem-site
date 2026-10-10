@@ -13,6 +13,8 @@ import { isMissingColumnError } from "@/lib/prisma-errors";
 import { getSession } from "@/lib/auth";
 import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/lib/photo-master";
 import { copyPrivateMaster } from "@/lib/photo-master-store";
+import { cardObjectPathLike, hdCardCompanion } from "@/lib/cover-frame";
+import { replacedThumbnails } from "@/lib/vehicle-photo-files";
 import {
   copyPublicStorageObject,
   storagePathFromPublicUrl,
@@ -471,6 +473,8 @@ export async function updateVehicle(
             privatePreviousRefForPublicUrl(photo.url),
           ],
     );
+    // Capa reenquadrada: a miniatura antiga da mesma foto também sai.
+    removed.push(...replacedThumbnails(previous, data.photos));
     if (removed.length > 0) {
       await deleteUnusedAdminFiles(removed);
     }
@@ -819,10 +823,6 @@ export async function duplicateVehicle(id: string) {
   return { ok: true as const, message: "Cópia criada.", id: copy.id };
 }
 
-function cardObjectDest(galleryPath: string) {
-  return galleryPath.replace(/(\.[a-z0-9]+)?$/i, "-card.webp");
-}
-
 async function duplicateVehiclePhotos(
   photos: Array<{ url: string; thumbnailUrl: string | null }>,
 ) {
@@ -857,9 +857,18 @@ async function duplicateVehiclePhotos(
 
     let thumbnailUrl: string | null = null;
     if (photo.thumbnailUrl) {
+      // Capa enquadrada com par 960×720: o par vai junto. Se ele não copiar, o
+      // 480 sai no nome sem `-hd`, para a cópia nunca prometer um arquivo ausente.
+      const hdSource = hdCardCompanion(photo.thumbnailUrl);
+      const hdCopied = hdSource
+        ? await copyPublicStorageObject(
+            hdSource,
+            hdCardCompanion(cardObjectPathLike(photo.thumbnailUrl, destPath))!,
+          )
+        : null;
       thumbnailUrl = await copyPublicStorageObject(
         photo.thumbnailUrl,
-        cardObjectDest(destPath),
+        cardObjectPathLike(photo.thumbnailUrl, destPath, Boolean(hdCopied)),
       );
     }
     copied.push({ url: newUrl, thumbnailUrl });
