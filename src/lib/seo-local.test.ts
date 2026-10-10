@@ -57,6 +57,10 @@ test("intro do /estoque fica visível no celular, só compacta", () => {
   const rule = /\.stock-compact-opening header > p:last-child:not\(:first-child\):not\(\.font-display\) \{([^}]*)\}/.exec(css);
   assert.ok(rule, "regra da intro no celular");
   assert.doesNotMatch(rule[1], /display:\s*none/);
+  // Nenhuma regra do estoque pode esconder a intro (p:last-child do cabeçalho).
+  for (const m of css.matchAll(/([^{}]*header > p:last-child[^{]*)\{([^}]*)\}/g)) {
+    if (/stock-(page|compact-opening)/.test(m[1])) assert.doesNotMatch(m[2], /display:\s*none/, m[1].trim());
+  }
   const estoque = readSrc("app/(catalog)/estoque/page.tsx");
   assert.match(estoque, /description=\{`Seminovos revisados e com garantia em \$\{SEO_LOCAL_LOCATION\}/);
 });
