@@ -142,7 +142,7 @@ export function VehicleMobileBar({
   return (
     <div
       data-vehicle-mobile-bar=""
-      className="fixed inset-x-0 bottom-0 z-40 box-border min-h-[var(--ficha-sticky-bar)] border-t border-white/15 bg-asphalt px-3 pt-2 pb-[env(safe-area-inset-bottom,0px)] pl-safe pr-safe lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 box-border min-h-[var(--ficha-sticky-bar)] border-t border-white/15 bg-asphalt px-3 pt-2 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pl-safe pr-safe lg:hidden"
     >
       <div className="relative mx-auto max-w-6xl">
         {!sold && moreOpen && secondary.length > 0 ? (
@@ -220,7 +220,7 @@ export function VehicleMobileBar({
               {soldLabel}
             </Link>
           ) : (
-            <div className="flex shrink-0 flex-col items-stretch gap-0.5">
+            <div className="flex shrink-0 flex-col items-stretch gap-1">
               <VehicleLeadHit
                 contentId={vehicleId}
                 contentName={contentName}
