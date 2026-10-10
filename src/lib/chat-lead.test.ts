@@ -12,6 +12,7 @@ import {
 import { parsePriceLimit } from "./chat-prompt";
 import {
   CHAT_GEMINI_MODEL,
+  CHAT_GEMINI_FALLBACK_MODEL,
   CHAT_GEMINI_TEMPERATURE,
   chatGeminiModels,
   extractGeminiFinishReason,
@@ -150,16 +151,24 @@ test("criar_lead só fecha com nome e telefone válidos", () => {
   );
 });
 
-test("usa Gemini Flash-Lite primeiro, o modelo mais barato da fila", () => {
-  assert.equal(CHAT_GEMINI_MODEL, "gemini-2.5-flash-lite");
+test("usa o Gemini 3.5 Flash-Lite por padrão e o 2.5 Flash-Lite de reserva", () => {
+  assert.equal(CHAT_GEMINI_MODEL, "gemini-3.5-flash-lite");
+  assert.equal(CHAT_GEMINI_FALLBACK_MODEL, "gemini-2.5-flash-lite");
+  // A temperatura 0,7 vale só para o 2.x; nos Gemini 3.x o pedido não leva temperature.
   assert.equal(CHAT_GEMINI_TEMPERATURE, 0.7);
   const prev = process.env.GEMINI_MODEL;
   delete process.env.GEMINI_MODEL;
   try {
-    assert.equal(chatGeminiModels()[0], "gemini-2.5-flash-lite");
+    assert.equal(chatGeminiModels()[0], "gemini-3.5-flash-lite");
+    assert.equal(chatGeminiModels()[1], "gemini-2.5-flash-lite");
     process.env.GEMINI_MODEL = "gemini-2.5-pro";
-    assert.equal(chatGeminiModels()[0], "gemini-2.5-flash-lite");
+    assert.equal(chatGeminiModels()[0], "gemini-3.5-flash-lite");
     assert.equal(chatGeminiModels().includes("gemini-2.5-pro"), true);
+    assert.equal(chatGeminiModels().at(-1), "gemini-2.5-pro");
+    // O env pode apontar para outro modelo barato e ele passa a ser o primeiro.
+    process.env.GEMINI_MODEL = "gemini-2.5-flash-lite";
+    assert.equal(chatGeminiModels()[0], "gemini-2.5-flash-lite");
+    assert.equal(chatGeminiModels().filter((m) => m === "gemini-2.5-flash-lite").length, 1);
   } finally {
     if (prev === undefined) delete process.env.GEMINI_MODEL;
     else process.env.GEMINI_MODEL = prev;
@@ -375,7 +384,6 @@ Hyundai HB20 Comfort 1.0 2015 · 127.000 km · R$ 55.900`,
   assert.match(result.reply, /HB20/);
   assert.match(result.reply, /Prisma é o mais novo/);
   assert.doesNotMatch(result.reply, /11–14|km\/l/);
-  assert.equal(result.research?.unavailable, true);
   assert.match(result.reply, /automático/);
   assert.match(result.reply, /\n\n/);
   assert.equal(result.vehicles.length, 3);
@@ -619,8 +627,8 @@ test("Gemini fora do ar ainda responde o estoque e o financiamento", async () =>
   });
   assert.match(stock.reply, /64\.900/);
   assert.match(stock.reply, /68\.450/);
-  assert.match(stock.reply, /dados técnicos do modelo/);
-  assert.equal(stock.research?.unavailable, true);
+  assert.match(stock.reply, /Pelo Inmetro, o HB20 1\.0 faz cerca de 9,8 km\/l na cidade/);
+  assert.doesNotMatch(stock.reply, /Achei|No estoque:/);
   assert.equal(stock.leadCreated, false);
 
   const finance = await runChatTurn({
@@ -689,53 +697,57 @@ test("pergunta de troca de seminovo não injeta catálogo duplicado", async () =
   );
 });
 
-test("consumo do Fox sem fonte confirmada não publica estimativa em km/l", async () => {
-  const fox: ChatVehicleRecord = {
-    ...hb20,
-    id: "c-fox-consumo",
-    brand: "Volkswagen",
-    model: "Fox",
-    version: "Trend 1.6",
-    yearModel: 2014,
-    km: 98000,
-    price: 38900,
-    transmission: "Manual",
-    engine: "1.6",
-    category: "carro",
-    fuel: "Flex",
-  };
-  let called = false;
+const foxFixture = (id: string, extra: Partial<ChatVehicleRecord> = {}): ChatVehicleRecord => ({
+  ...hb20,
+  id,
+  brand: "Volkswagen",
+  model: "Fox",
+  version: "Trend 1.6",
+  yearModel: 2014,
+  km: 98000,
+  price: 38900,
+  transmission: "Manual",
+  engine: "1.6",
+  category: "carro",
+  fuel: "Flex",
+  ...extra,
+});
+
+test("consumo do Fox, sem ficha na base, vai ao modelo com aviso e sem estimativa da cilindrada", async () => {
+  const fox = foxFixture("c-fox-consumo");
+  let prompt = "";
   const result = await runChatTurn({
     mensagem: "Qual consumo do fox",
     historico: [],
     stock: [fox],
-    generate: async () => {
-      called = true;
+    generate: async ({ systemPrompt }) => {
+      prompt = systemPrompt;
       return {
-        text: "Para o Volkswagen Fox 1.6, a faixa típica de catálogo fica",
+        text: "Do Fox 1.6 eu não tenho o consumo de fábrica aqui com segurança; o consultor confere com você no WhatsApp.",
         functionCall: null,
       };
     },
   });
-  assert.equal(called, false);
+  assert.match(prompt, /Sem ficha na base: Volkswagen Fox Trend 1\.6 2014/);
+  assert.doesNotMatch(prompt, /FICHAS TÉCNICAS DE REFERÊNCIA/);
   assert.doesNotMatch(result.reply, /\d+.*km\/l/);
-  assert.equal(result.research?.unavailable, true);
-  assert.doesNotMatch(result.reply, /fica\s+Nenhum desses/);
   assert.equal(result.vehicles.length, 1);
   assert.equal(result.vehicles[0]?.id, fox.id);
+  // Se o modelo de linguagem cair, a reserva também não inventa número.
+  const offline = await runChatTurn({
+    mensagem: "Qual consumo do fox",
+    historico: [],
+    stock: [fox],
+    generate: async () => {
+      throw new Error("quota");
+    },
+  });
+  assert.match(offline.reply, /Fox 2014 eu não tenho esse dado de fábrica/);
+  assert.doesNotMatch(offline.reply, /\d+.*km\/l/);
 });
 
-test("consumo no stream preserva a unidade e exige fonte técnica", async () => {
-  const fox: ChatVehicleRecord = {
-    ...hb20,
-    id: "c-fox-home-stream",
-    brand: "Volkswagen",
-    model: "Fox",
-    version: "Trend 1.6",
-    engine: "1.6",
-    category: "carro",
-    fuel: "Flex",
-  };
+test("consumo no stream usa o modelo, preserva a unidade e não publica km/l inventado", async () => {
+  const fox = foxFixture("c-fox-home-stream", { km: 100000 });
   let streamed = false;
   const tokens: string[] = [];
   const result = await runChatTurn({
@@ -743,18 +755,19 @@ test("consumo no stream preserva a unidade e exige fonte técnica", async () => 
     historico: [],
     stock: [fox],
     onToken: (text) => tokens.push(text),
-    generateStream: async () => {
+    generateStream: async (_input, opts) => {
       streamed = true;
+      opts?.onToken?.("Do Fox 1.6 eu não tenho o número de fábrica aqui. ");
+      opts?.onToken?.("O consultor confirma no WhatsApp.");
       return {
-        text: "Para o Volkswagen Fox com motor 1.6 flex",
+        text: "Do Fox 1.6 eu não tenho o número de fábrica aqui. O consultor confirma no WhatsApp.",
         functionCall: null,
       };
     },
   });
-  assert.equal(streamed, false);
-  assert.equal(result.research?.unavailable, true);
-  assert.doesNotMatch(tokens.join(""), /\d+.*km\/l/);
-  assert.doesNotMatch(result.reply, /fica\s+Nenhum desses/);
+  assert.equal(streamed, true);
+  assert.equal(tokens.join(""), result.reply);
+  assert.doesNotMatch(result.reply, /\d+.*km\/l/);
   assert.equal(result.vehicles[0]?.id, fox.id);
 });
 
@@ -779,73 +792,64 @@ test("consumo do HB20 Premium foca o Premium e não a shortlist", async () => {
     mensagem: "Qual consumo do HB20 Premium",
     historico: [],
     stock: [evolution, premium],
-    generate: async () => ({
-      text: `Separei duas opções:
-Hyundai HB20 Evolution 1.0 2022 · 68.450 km · R$ 64.900
-Hyundai HB20 Premium 1.6 2015 · 110.000 km · R$ 55.900
-Nenhum desses usados foi medido na loja.`,
-      functionCall: null,
-    }),
+    generate: async () => {
+      throw new Error("a ficha responde sozinha");
+    },
   });
-  assert.match(result.reply, /Premium|1\.6/);
-  assert.equal(result.research?.unavailable, true);
-  assert.doesNotMatch(result.reply, /Evolution 1\.0/);
+  assert.match(result.reply, /Pelo Inmetro, o HB20 1\.6 faz cerca de 7 km\/l na cidade e 8,3 km\/l na estrada com etanol/);
+  assert.doesNotMatch(result.reply, /Evolution 1\.0|9,8 km\/l/);
   assert.equal(result.vehicles.length, 1);
   assert.equal(result.vehicles[0]?.id, premium.id);
 });
 
-test("consumo dele com vehicleId do card único não chama o modelo", async () => {
-  const fox: ChatVehicleRecord = {
-    ...hb20,
-    id: "c-fox-anaphora",
-    brand: "Volkswagen",
-    model: "Fox",
-    version: "Trend 1.6",
-    engine: "1.6",
-    fuel: "Flex",
-  };
+test("consumo dele com vehicleId do card único usa o modelo e não repete o card", async () => {
+  const fox = foxFixture("c-fox-anaphora");
   let called = false;
+  let prompt = "";
   const result = await runChatTurn({
     mensagem: "qual o consumo dele?",
     historico: [],
     stock: [fox],
     vehicleId: fox.id,
-    generate: async () => {
+    generate: async ({ systemPrompt }) => {
       called = true;
+      prompt = systemPrompt;
       return {
-        text: "Para o Volkswagen Fox com motor 1.6 flex",
+        text: "Esse eu não tenho o consumo de fábrica aqui; o consultor confere no WhatsApp.",
         functionCall: null,
       };
     },
   });
-  assert.equal(called, false);
-  assert.equal(result.research?.unavailable, true);
-  assert.equal(result.vehicles[0]?.id, fox.id);
+  assert.equal(called, true);
+  assert.match(prompt, /Sem ficha na base: Volkswagen Fox/);
+  assert.equal(result.vehicles.length, 0, "o carro aberto na tela não vira card repetido");
 });
 
-test("consumo sem modelo identificado pede versão e ano, sem faixa estimada", async () => {
-  const fox: ChatVehicleRecord = {
-    ...hb20,
-    id: "c-fox-gemini-stub",
-    brand: "Volkswagen",
-    model: "Fox",
-    version: "Trend 1.6",
-    engine: "1.6",
-    fuel: "Flex",
-  };
-  const result = await runChatTurn({
+test("consumo sem modelo identificado pergunta de qual carro, sem faixa estimada", async () => {
+  const fox = foxFixture("c-fox-gemini-stub");
+  let prompt = "";
+  const asked = await runChatTurn({
     mensagem: "qual o consumo?",
     historico: [],
     stock: [fox],
-    generate: async () => ({
-      text: "Para o Volkswagen Fox com motor 1.6 flex",
-      functionCall: null,
-    }),
+    generate: async ({ systemPrompt }) => {
+      prompt = systemPrompt;
+      return { text: "De qual carro você quer saber o consumo?", functionCall: null };
+    },
   });
-  assert.doesNotMatch(result.reply, /9–12 km\/l/);
-  assert.doesNotMatch(result.reply, /fica\s+Nenhum desses/);
-  assert.match(result.reply, /Qual modelo, versão e ano/);
-  assert.equal(result.vehicles.length, 0);
+  assert.match(prompt, /A pergunta não diz de qual carro/);
+  assert.equal(asked.vehicles.length, 0);
+  const offline = await runChatTurn({
+    mensagem: "qual o consumo?",
+    historico: [],
+    stock: [fox],
+    generate: async () => {
+      throw new Error("quota");
+    },
+  });
+  assert.doesNotMatch(offline.reply, /9–12 km\/l|\d+.*km\/l/);
+  assert.match(offline.reply, /De qual carro você quer saber/);
+  assert.equal(offline.vehicles.length, 0);
 });
 
 test("Fox tem ar-condicionado responde a ficha da unidade", async () => {

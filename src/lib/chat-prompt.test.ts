@@ -67,10 +67,7 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /consultor humano/);
   assert.match(CHAT_SYSTEM_PROMPT, /um pouco animado/);
   assert.match(CHAT_SYSTEM_PROMPT, /Nunca começar com “não posso”/);
-  assert.match(
-    CHAT_SYSTEM_PROMPT,
-    /Só publique números na pesquisa técnica citada/,
-  );
+  assert.match(CHAT_SYSTEM_PROMPT, /responda com a ficha técnica do modelo/);
   assert.match(CHAT_SYSTEM_PROMPT, /ESCOLHER um carro/);
   assert.match(CHAT_SYSTEM_PROMPT, /consultor monta a simulação/);
   assert.match(CHAT_SYSTEM_PROMPT, /NUNCA invente banco/);
@@ -207,12 +204,16 @@ test("resposta fixa de FIPE não cita carro nem preço", () => {
   assert.doesNotMatch(CHAT_FIPE_REPLY, /Etios|Corolla|R\$/);
 });
 
-test("prompt proíbe falar de consumo espontaneamente", () => {
-  assert.match(CHAT_SYSTEM_PROMPT, /NUNCA mencione consumo espontaneamente/);
+test("prompt só fala de consumo quando perguntam e nunca o da unidade usada", () => {
+  assert.match(CHAT_SYSTEM_PROMPT, /não mencione consumo espontaneamente numa lista/);
   assert.match(
     CHAT_SYSTEM_PROMPT,
     /NÃO mencione consumo de combustível espontaneamente/,
   );
+  assert.match(CHAT_SYSTEM_PROMPT, /nunca garante o consumo de uma unidade usada/);
+  // Dado de fábrica do modelo pode; afirmação sobre a unidade, não.
+  assert.match(CHAT_SYSTEM_PROMPT, /sem afirmar nada sobre o estado, o histórico ou os equipamentos da unidade/);
+  assert.match(CHAT_SYSTEM_PROMPT, /cv e torque só com número das FICHAS TÉCNICAS/);
 });
 
 test("prompt com activeVehicle injeta contexto e regra de desambiguação", () => {

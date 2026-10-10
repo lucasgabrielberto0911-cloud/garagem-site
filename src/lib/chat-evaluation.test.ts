@@ -12,10 +12,6 @@ const user = (content: string): ChatTurn => ({ role: "user", content });
 const comparing = [user("compare o Civic e o Duster")];
 
 const cases = [
-  { question: "e o consumo desses dois?", history: comparing, ids: ["civic", "duster"], topic: "consumo" },
-  { question: "qual desses é o mais potente?", history: comparing, ids: ["civic", "duster"], topic: "potência" },
-  { question: "qual deles é o mais forte?", history: comparing, ids: ["civic", "duster"], topic: "potência" },
-  { question: "entre os dois qual é o mais econômico?", history: comparing, ids: ["civic", "duster"], topic: "consumo" },
   { question: "qual desses vale mais para estrada?", history: [user("automáticos até 60 mil")], ids: ["duster", "hb"], road: true },
   { question: "na verdade agora quero um manual", history: [user("automáticos até 60 mil")], ids: ["manual"] },
   { question: "automático até 59,9 mil", history: [], ids: ["duster", "hb"], budget: 59900 },
@@ -24,28 +20,44 @@ const cases = [
 ] as const;
 for (const scenario of cases) test(`avaliação de escolha: ${scenario.question}`, async () => {
   let generated = 0;
-  const queries: Array<{ ids: string[]; topic: string | undefined }> = [];
   const streamed: string[] = [];
   const result = await runChatTurn({
     onToken: delta => streamed.push(delta),
     mensagem: scenario.question, historico: [...scenario.history], stock, vehicleId: "hb",
     generate: async () => { generated++; return { text: "Sim — o HB20 é Automático." }; },
-    research: async (vehicles, _signal, topic) => { queries.push({ ids: vehicles.map(vehicle => vehicle.id).sort(), topic }); return { paragraphs: [], unavailable: true }; },
   });
   assert.equal(generated, 0);
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id).sort(), [...scenario.ids].sort());
   assert.doesNotMatch(result.reply, /Sim.*HB20|verdade manual|é o mais forte|\d+\s*cv/);
   if ("budget" in scenario) assert.ok(result.vehicles.every(vehicle => vehicle.price <= scenario.budget));
-  if ("topic" in scenario) assert.deepEqual(queries, [{ ids: [...scenario.ids].sort(), topic: scenario.topic }]);
   if ("road" in scenario) {
     assert.match(result.reply, /prioriza conforto, consumo ou desempenho/);
     assert.doesNotMatch(result.reply, /Eu levaria|mais seguro|mais confortável|melhor para estrada/i);
   }
-  if ("topic" in scenario && scenario.topic === "consumo") {
-    assert.match(result.reply, /sozinho, não confirma/);
-    assert.doesNotMatch(result.reply, /é o de motor menor|\d+\s*km\/l/);
-    assert.doesNotMatch(streamed.join(""), /é o de motor menor/);
-  }
+});
+
+// Pergunta técnica sobre os carros da conversa: o modelo de linguagem responde com o contexto certo.
+const expertCases = [
+  { question: "e o consumo desses dois?", reply: "Os dois andam parecido na cidade; o Civic costuma ser um pouco mais econômico na estrada.", ids: ["civic", "duster"] },
+  { question: "qual desses é o mais potente?", reply: "O Civic é o mais forte dos dois.", ids: ["civic"] },
+  { question: "qual deles é o mais forte?", reply: "Dos dois, o Civic leva em potência.", ids: ["civic"] },
+  { question: "entre os dois qual é o mais econômico?", reply: "O Civic costuma gastar menos que o Duster.", ids: ["civic", "duster"] },
+] as const;
+for (const scenario of expertCases) test(`avaliação de escolha (especialista): ${scenario.question}`, async () => {
+  let prompt = "";
+  const streamed: string[] = [];
+  const result = await runChatTurn({
+    onToken: delta => streamed.push(delta),
+    mensagem: scenario.question, historico: [...comparing], stock, vehicleId: "hb",
+    generate: async ({ systemPrompt }) => { prompt = systemPrompt; return { text: scenario.reply, functionCall: null }; },
+  });
+  assert.equal(result.meta?.policy, "expert");
+  assert.match(prompt, /MODO ESPECIALISTA/);
+  assert.match(prompt, /Civic/);
+  assert.match(prompt, /Duster/);
+  assert.equal(result.reply, scenario.reply);
+  assert.deepEqual(result.vehicles.map(vehicle => vehicle.id).sort(), [...scenario.ids].sort());
+  assert.doesNotMatch(result.reply, /No estoque:|Achei \d/);
 });
 
 test("orçamento com decimal e separador de milhar não aumenta dez vezes", () => {

@@ -1,7 +1,7 @@
 import {test,expect} from "@playwright/test";
 import {readFileSync} from "node:fs";
 
-test("fontes compactas, mensagem visível e viewport de teclado",async({page},info)=>{
+test("resposta técnica curta, mensagem visível e viewport de teclado",async({page},info)=>{
   await page.addInitScript(()=>localStorage.setItem("garagem_consent","essential"));
   await page.route("**/fotos/**",route=>route.fulfill({contentType:"image/png",body:readFileSync("public/branding/placeholder-car.png")}));
   await page.goto("/estoque");
@@ -11,14 +11,7 @@ test("fontes compactas, mensagem visível e viewport de teclado",async({page},in
   await dialog.getByRole("button",{name:"Enviar",exact:true}).click();
   await expect(dialog).toHaveAttribute("aria-busy","false");
   const answer=dialog.locator('[data-chat-latest="1"]');
-  await expect(answer).toContainText("142 cv com etanol e 138 cv com gasolina");
-  const sources=answer.getByRole("region",{name:"Pesquisa técnica e fontes"});
-  const details=sources.locator("details");
-  await expect(details).not.toHaveAttribute("open","");
-  await details.locator("summary").click();
-  await expect(sources.getByRole("link",{name:/Renault/})).toBeVisible();
-  await expect(sources.getByRole("link",{name:/AutoPapo/})).toBeVisible();
-  await details.locator("summary").click();
+  await expect(answer).toContainText("142 cv no etanol e 138 cv na gasolina");
   await dialog.locator("textarea").focus();
   if(info.project.name.startsWith("mobile")){
     // Chromium does not open an OS keyboard. Simulate only its visual viewport
