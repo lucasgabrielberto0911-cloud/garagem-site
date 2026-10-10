@@ -46,7 +46,7 @@ export function NativeRemoteFillImage({
       height={height}
       loading={priority || eager ? "eager" : "lazy"}
       decoding={decoding ?? (priority ? "sync" : "async")}
-      fetchPriority={priority ? "high" : eager ? "auto" : "low"}
+      fetchPriority={priority ? "high" : "low"}
       draggable={false}
       className={`absolute inset-0 h-full w-full ${className ?? ""}`}
       onError={(event) => {
