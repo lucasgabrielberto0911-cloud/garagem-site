@@ -34,8 +34,8 @@ export function PurchaseLeadForm({ vehicles, lead }: { vehicles: LeadVehicleOpti
       finally { setPending(false); }
     }}>
       {lead ? <input type="hidden" name="id" value={lead.id} /> : null}
-      <Field label="Nome" required><input disabled={pending} name="name" required maxLength={120} defaultValue={lead?.name} autoComplete="off" className={inputClass} /></Field>
-      <Field label="WhatsApp" required><input disabled={pending} name="phone" type="tel" required maxLength={22} defaultValue={lead?.phone} placeholder="DDD + número" className={inputClass} /></Field>
+      <Field label="Nome"><input disabled={pending} name="name" maxLength={120} defaultValue={lead?.name} autoComplete="off" className={inputClass} /></Field>
+      <Field label="WhatsApp" hint="Opcional se tiver o nome"><input disabled={pending} name="phone" type="tel" inputMode="tel" maxLength={22} defaultValue={lead?.phone} placeholder="DDD + número" className={inputClass} /></Field>
       <Field label="Carro de interesse"><select disabled={pending} name="vehicle" defaultValue={lead?.interestVehicleId || ""} className={inputClass}>
         <option value="">Ainda escolhendo</option>{vehicles.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
       </select></Field>

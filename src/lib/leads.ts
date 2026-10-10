@@ -73,6 +73,14 @@ export function buildLeadWhatsAppUrl(lead: {
   return `https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`;
 }
 
+/** Conversa registrada só com telefone (ou só com nome) ainda aparece com rótulo legível. */
+export function leadDisplayName(lead: { name: string; phone?: string | null }) {
+  return lead.name.trim() || "Sem nome";
+}
+export function leadHasPhone(lead: { phone: string }) {
+  return lead.phone.replace(/\D/g, "").length >= 10;
+}
+
 export function isLeadSource(value: string) {
   return ["vender", "chatbot-site", WANTED_LEAD_SOURCE].includes(value) ||
     (value.startsWith("whatsapp:") && isLeadOrigin(value.slice("whatsapp:".length)));

@@ -31,16 +31,37 @@ export function classifyLeadOrigin(search: string, referrer: string, siteOrigin:
     return fallback === "direto" ? "outros" : fallback;
   } catch { return "desconhecida"; }
 }
-const ORIGIN_SUFFIX: Partial<Record<LeadOrigin, string>> = {
-  google: "vim pelo Google", instagram: "vim pelo Instagram", facebook: "vim pelo Facebook",
-  marketplace: "vim pelo Facebook Marketplace", olx: "vim pela OLX", direto: "acessei o site diretamente",
-  indicacao: "vim por indicação", outros: "vim por outro site",
+/**
+ * Frase curta que o cliente "diz" no fim da mensagem. Acesso direto, origem
+ * desconhecida ou sem consentimento não acrescentam nada.
+ */
+const ORIGIN_SENTENCE: Partial<Record<LeadOrigin, string>> = {
+  google: "Vim pelo Google.", instagram: "Vim pelo Instagram.", facebook: "Vim pelo Facebook.",
+  marketplace: "Vim pelo Marketplace do Facebook.", olx: "Vim pela OLX.",
+  indicacao: "Vim por indicação.", outros: "Vim por outro site.",
 };
+/** Formato antigo entre parênteses, removido se ainda estiver num link já aberto. */
+const LEGACY_SUFFIX = /\s\((?:vim pel[oa] [^()]+|vim por [^()]+|acessei o site diretamente)\)$/;
+const KNOWN_SENTENCES = Object.values(ORIGIN_SENTENCE);
+function stripOrigin(line: string) {
+  for (const sentence of KNOWN_SENTENCES) {
+    if (line.endsWith(` ${sentence}`)) return line.slice(0, -(sentence.length + 1));
+  }
+  return line.replace(LEGACY_SUFFIX, "");
+}
+/**
+ * Acrescenta a origem na frase do cliente, antes da linha com o link da ficha
+ * (o link continua sozinho na última linha para o WhatsApp gerar a prévia).
+ */
 export function withWhatsAppOrigin(text: string, origin?: LeadOrigin | null) {
-  const clean = text.replace(/ \(\w[^()]*\)$/, match =>
-    Object.values(ORIGIN_SUFFIX).some(suffix => match === ` (${suffix})`) ? "" : match);
-  const suffix = origin ? ORIGIN_SUFFIX[origin] : undefined;
-  return suffix ? `${clean} (${suffix})` : clean;
+  const lines = text.split("\n").map(stripOrigin);
+  const sentence = origin ? ORIGIN_SENTENCE[origin] : undefined;
+  if (sentence) {
+    const linkLine = lines.findIndex(line => /^https?:\/\//.test(line.trim()));
+    const target = linkLine > 0 ? linkLine - 1 : lines.length - 1;
+    lines[target] = lines[target] ? `${lines[target]} ${sentence}` : sentence;
+  }
+  return lines.join("\n");
 }
 export function applyWhatsAppOrigin(href: string, origin?: LeadOrigin | null) {
   try {

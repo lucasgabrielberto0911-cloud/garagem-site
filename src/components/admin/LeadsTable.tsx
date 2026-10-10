@@ -29,6 +29,8 @@ import {
   WANTED_LEAD_SOURCE,
   buildLeadWhatsAppUrl,
   type LeadStatus,
+  leadDisplayName,
+  leadHasPhone,
 } from "@/lib/leads";
 import { emailFromLeadNotes } from "@/lib/wanted-lead";
 import {
@@ -302,7 +304,7 @@ export function LeadsTable({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-display text-base font-semibold text-cream">
-                    {lead.name}
+                    {leadDisplayName(lead)}
                   </p>
                   <span
                     className={`px-2 py-0.5 text-[10px] uppercase tracking-wider ${
@@ -354,7 +356,7 @@ export function LeadsTable({
                   </>
                 )}
                 <p className="mt-1 text-sm text-muted">
-                  {formatPhoneBR(lead.phone)}
+                  {leadHasPhone(lead) ? formatPhoneBR(lead.phone) : "Sem telefone"}
                   {emailFromLeadNotes(lead.notes)
                     ? ` · ${emailFromLeadNotes(lead.notes)}`
                     : ""}
@@ -429,6 +431,7 @@ export function LeadsTable({
                       </button>
                     </>
                   ) : null}
+                  {leadHasPhone(lead) ? <>
                   <a
                     href={whatsappLink(lead)}
                     target="_blank"
@@ -445,6 +448,7 @@ export function LeadsTable({
                     <IconPhone className="h-4 w-4" />
                     Ligar
                   </a>
+                  </> : null}
                   <button
                     type="button"
                     onClick={() => convert(lead)}

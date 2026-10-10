@@ -137,7 +137,8 @@ export async function savePurchaseLead(form: FormData): Promise<LeadActionState>
     const interestVehicleId = value("vehicle") || null;
     const nextAction = value("nextAction");
     const nextActionAt = value("date") ? businessDay(value("date")) : null;
-    if (!name || name.length > 120 || !/^\d{10,13}$/.test(phone) || !isLeadOrigin(origin) ||
+    if (!name && !phone) return { ok: false, message: "Informe o nome ou o telefone." };
+    if (name.length > 120 || (phone && !/^\d{10,13}$/.test(phone)) || !isLeadOrigin(origin) ||
       !(PURCHASE_STATUSES as readonly string[]).includes(status) || nextAction.length > 300 ||
       (nextActionAt && (!nextAction || Number.isNaN(nextActionAt.getTime())))) {
       return { ok: false, message: "Confira nome, telefone, origem e próxima ação/data." };

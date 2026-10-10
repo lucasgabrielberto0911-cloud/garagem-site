@@ -22,11 +22,22 @@ test("mensagem tem origem humana dentro de text, é idempotente e permite remove
   const text = "Oi! Vi o Honda Civic 2020 no site da Garagem.";
   assert.equal(withWhatsAppOrigin(text), text);
   const href = whatsappUrl(text, { campaign: "ficha", origin: "instagram" });
-  assert.equal(new URL(href).searchParams.get("text"), `${text} (vim pelo Instagram)`);
+  assert.equal(new URL(href).searchParams.get("text"), `${text} Vim pelo Instagram.`);
   assert.equal(applyWhatsAppOrigin(href, "instagram"), href);
   assert.equal(new URL(applyWhatsAppOrigin(href, null)).searchParams.get("text"), text);
   assert.equal(withWhatsAppOrigin(text, "desconhecida"), text);
-  assert.match(withWhatsAppOrigin(text, "olx"), /vim pela OLX/);
+  assert.match(withWhatsAppOrigin(text, "olx"), /Vim pela OLX\.$/);
+  // Acesso direto (sem UTM nem referrer) não acrescenta nada.
+  assert.equal(withWhatsAppOrigin(text, "direto"), text);
+  assert.equal(new URL(whatsappUrl(text, { campaign: "ficha", origin: "direto" })).searchParams.get("text"), text);
+  // Link da ficha fica sozinho na última linha; a origem vai na frase.
+  const withLink = `${text}\nhttps://www.suagaragem.net/estoque/civic`;
+  assert.equal(withWhatsAppOrigin(withLink, "instagram"), `${text} Vim pelo Instagram.\nhttps://www.suagaragem.net/estoque/civic`);
+  assert.equal(withWhatsAppOrigin(withWhatsAppOrigin(withLink, "instagram"), "google"), `${text} Vim pelo Google.\nhttps://www.suagaragem.net/estoque/civic`);
+  assert.equal(withWhatsAppOrigin(withWhatsAppOrigin(withLink, "instagram"), null), withLink);
+  // Formato antigo entre parênteses é limpo.
+  assert.equal(withWhatsAppOrigin(`${text} (acessei o site diretamente)`, "direto"), text);
+  assert.equal(withWhatsAppOrigin(`${text} (vim pelo Instagram)`, "olx"), `${text} Vim pela OLX.`);
   assert.equal(applyWhatsAppOrigin("https://example.com/?text=Oi", "google"), "https://example.com/?text=Oi");
   assert.equal(new URL(whatsappUrl(text, { bare: true, origin: "google" })).searchParams.get("text"), text);
 });

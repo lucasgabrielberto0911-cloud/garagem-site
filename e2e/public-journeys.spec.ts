@@ -166,12 +166,12 @@ test("primeira origem consentida acompanha a navegação e some ao revogar", asy
     anchor.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true }));
     return new URL(anchor.href).searchParams.get("text");
   });
-  expect(await enrich()).toMatch(/Civic[\s\S]*\(vim pelo Instagram\)/);
+  expect(await enrich()).toMatch(/Civic[^\n]*Vim pelo Instagram\./);
   await page.evaluate(() => {
     localStorage.setItem("garagem_consent", "essential");
     window.dispatchEvent(new CustomEvent("garagem:consent", { detail: "essential" }));
   });
-  expect(await enrich()).not.toContain("vim pelo Instagram");
+  expect(await enrich()).not.toContain("Vim pelo Instagram");
   expect(await page.evaluate(() => sessionStorage.getItem("garagem_primeira_origem"))).toBeNull();
 });
 
@@ -184,6 +184,6 @@ test("sem consentimento, origem não fica na aba nem na mensagem", async ({ page
     element.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true }));
     return new URL((element as HTMLAnchorElement).href).searchParams.get("text");
   });
-  expect(message).not.toContain("vim pelo Instagram");
+  expect(message).not.toContain("Vim pelo Instagram");
   expect(await page.evaluate(() => sessionStorage.getItem("garagem_primeira_origem"))).toBeNull();
 });
