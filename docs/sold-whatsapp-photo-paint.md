@@ -72,3 +72,7 @@ As medições são um comparativo controlado local, não uma promessa de LCP em
 produção. O estoque local tem três anúncios e a ficha tem uma foto; a ficha
 pública tem mais fotos. É necessário conferir a prévia da Vercel com o estoque
 real e, após um merge autorizado, acompanhar os dados reais de navegação.
+
+A prévia da Vercel foi gerada, mas exige autenticação. A conexão disponível
+negou acesso ao projeto/equipe com HTTP 403. Não foi possível validar o estoque
+real nessa prévia; os prints e números acima pertencem ao build local.

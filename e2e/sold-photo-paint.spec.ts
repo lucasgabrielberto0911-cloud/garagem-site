@@ -24,13 +24,16 @@ test("ficha vendida: WhatsApp convida para similares sem o preço antigo",async(
     expect(url.searchParams.get("text")).not.toMatch(/R\$|74[.,]?900|simular|vídeo/);
   }
   expect(new URL((await similar.getAttribute("href"))!).searchParams.get("text")).toMatch(/opções parecidas no estoque/);
-  await page.getByRole("button",{name:"Ajuda para escolher",exact:true}).first().click();
-  const chat=page.getByRole("dialog",{name:"Sua Garagem",exact:true});
-  const chatContact=chat.getByRole("link",{name:"Falar com um vendedor no WhatsApp",exact:true});
-  const chatMessage=new URL((await chatContact.getAttribute("href"))!).searchParams.get("text");
-  expect(chatMessage).toMatch(/já foi vendido.*opções parecidas no estoque/);
-  expect(chatMessage).not.toMatch(/R\$|74[.,]?900/);
-  await chat.getByRole("button",{name:"Fechar chat",exact:true}).click();
+  // A ficha vendida oferece a ajuda no cabeçalho mobile; no desktop, só WhatsApp.
+  if(page.viewportSize()!.width<1024){
+    await page.getByRole("button",{name:"Ajuda para escolher",exact:true}).first().click();
+    const chat=page.getByRole("dialog",{name:"Sua Garagem",exact:true});
+    const chatContact=chat.getByRole("link",{name:"Falar com um vendedor no WhatsApp",exact:true});
+    const chatMessage=new URL((await chatContact.getAttribute("href"))!).searchParams.get("text");
+    expect(chatMessage).toMatch(/já foi vendido.*opções parecidas no estoque/);
+    expect(chatMessage).not.toMatch(/R\$|74[.,]?900/);
+    await chat.getByRole("button",{name:"Fechar chat",exact:true}).click();
+  }
   await page.goto(vehiclePath(available));
   const interest=page.locator('[data-ficha-page] aside').getByRole("link",{name:"Tenho interesse",exact:true,includeHidden:true});
   expect(new URL((await interest.getAttribute("href"))!).searchParams.get("text")).toMatch(/por R\$\s*74\.900/);
