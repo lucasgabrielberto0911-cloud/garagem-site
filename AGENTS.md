@@ -32,7 +32,7 @@ Regras:
 1. **1 tarefa = 1 branch = 1 PR rascunho.** Não junte assuntos diferentes no mesmo PR.
 2. **Prefixo de branch por agente:** `claude/<tema>`, `codex/<tema>` (só relatórios), `cursor/<tema>`. Use temas curtos em kebab-case, por exemplo `claude/ficha-jsonld-veiculo`.
 3. **Sempre abrir como Draft PR.** O título fica em português e o corpo diz o que mudou, por quê, como foi validado (comandos e telas) e o que falta.
-4. **Merge só com o ok explícito do Lucas.** Nenhum agente faz merge, force-push em `main`, rebase de branch alheia ou fecha PR de outro agente.
+4. **Merge fica com o Grok Bot (coordenador).** Em 2026-10-10 o Lucas autorizou: o Grok Bot revisa CI e preview e faz o squash-merge. Os outros agentes **sempre** abrem Draft PR e **nunca** fazem merge, force-push em `main`, rebase de branch alheia ou fecham PR de outro agente.
 5. **Não trabalhar na mesma área ao mesmo tempo.** Áreas: `ficha`, `estoque`, `home`, `admin`, `chat`, `seo`, `api/meta`, `infra`. Antes de começar, confira os PRs abertos (`gh pr list`). Se já houver um PR aberto na mesma área, avise o coordenador em vez de começar.
 6. Quadro de tarefas: Issues do GitHub com labels `agente:claude`, `agente:codex`, `agente:cursor` e `area:<área>`. Pegue só issues com a sua label.
 7. **Produção é intocável:** não rode `prisma db push`, migrações, seeds ou scripts (`scripts/*.ts`) contra o banco real. Também não altere variáveis de ambiente na Vercel. Teste com banco local/isolado (igual ao CI).
