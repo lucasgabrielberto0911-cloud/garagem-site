@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
           orderBy: [{ nextActionAt: "asc" }, { id: "asc" }],
           select: { id: true, name: true, vehicleInfo: true, nextAction: true, nextActionAt: true },
         })).map((lead) => ({
-          id: lead.id, title: lead.name,
+          id: lead.id, title: lead.name.trim() || "Sem nome",
           detail: [lead.nextAction, lead.vehicleInfo].filter(Boolean).join(" · "),
           at: lead.nextActionAt?.toISOString(),
           href: `/admin/leads?lead=${encodeURIComponent(lead.id)}`,
