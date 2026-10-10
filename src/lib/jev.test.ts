@@ -164,3 +164,41 @@ test("jevChoice só aceita opções esperadas", () => {
   assert.equal(jevChoice(answers("a", "alta"), "i", ["a", "b"] as const), null);
   assert.equal(jevChoice({}, "i", ["a"] as const), null);
 });
+
+test("loga o sucesso só com status e latência, nunca chave, estado ou texto", async () => {
+  const infos: unknown[][] = [];
+  const realInfo = console.info;
+  console.info = (...args: unknown[]) => {
+    infos.push(args);
+  };
+  try {
+    const answers = await askJev({
+      state: { conversa: "texto sigiloso do visitante" },
+      questions: QUESTIONS,
+      apiKey: KEY,
+      fetcher: async () =>
+        json({ answers: { temperatura: { type: "score", score: 1, confidence: 1 } } }),
+    });
+    assert.ok(answers?.temperatura);
+    assert.equal(infos.length, 1);
+    assert.equal(infos[0]![0], "[jev] ok");
+    const detail = infos[0]![1] as { status: number; ms: number };
+    assert.equal(detail.status, 200);
+    assert.equal(typeof detail.ms, "number");
+    assert.ok(detail.ms >= 0);
+    assert.deepEqual(Object.keys(detail).sort(), ["ms", "status"]);
+    assert.doesNotMatch(JSON.stringify(infos), new RegExp(`${KEY}|sigiloso`));
+    // Falha continua em warn, sem log de sucesso.
+    infos.length = 0;
+    const failed = await askJev({
+      state: "x",
+      questions: QUESTIONS,
+      apiKey: KEY,
+      fetcher: async () => json({}, 500),
+    });
+    assert.equal(failed, null);
+    assert.equal(infos.length, 0);
+  } finally {
+    console.info = realInfo;
+  }
+});

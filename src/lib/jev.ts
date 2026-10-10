@@ -39,6 +39,7 @@ export async function askJev(input: {
   const fetcher = input.fetcher ?? fetch;
   const timeout = AbortSignal.timeout(input.timeoutMs ?? JEV_TIMEOUT_MS);
   const signal = input.signal ? AbortSignal.any([input.signal, timeout]) : timeout;
+  const started = Date.now();
   try {
     const response = await fetcher(JEV_ENDPOINT, {
       method: "POST",
@@ -63,6 +64,8 @@ export async function askJev(input: {
       console.warn("[jev] falha: resposta fora do formato");
       return null;
     }
+    // Só status e latência: nada de chave, estado ou texto da conversa.
+    console.info("[jev] ok", { status: response.status, ms: Date.now() - started });
     return answers as JevAnswers;
   } catch (error) {
     // Só o tipo do erro: nada de mensagem, cabeçalho ou corpo no log.
