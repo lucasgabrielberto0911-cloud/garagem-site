@@ -38,3 +38,33 @@ test("resposta técnica curta, mensagem visível e viewport de teclado",async({p
   }).toBe(true);
   expect(await dialog.evaluate(element=>element.scrollWidth<=element.clientWidth)).toBe(true);
 });
+
+
+test("fontes ficam em uma linha recolhida sem painel ou sugestões abaixo da resposta", async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
+  await page.route("**/api/chat", route => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({
+      reply: "O Civic LXR 2.0 2015 tem 155 cv com etanol e 150 cv com gasolina.",
+      vehicles: [],
+      research: {
+        paragraphs: [{ text: "Texto de evidência para o contexto, sem repetir na tela.", sources: [{ title: "Honda — catálogo", href: "https://www.honda.com.br/automoveis" }] }],
+        suggestionsHtml: "<div>Sugestões da pesquisa</div>",
+      },
+    }),
+  }));
+  await page.goto("/estoque");
+  await page.getByRole("button", {name: "Ajuda para escolher", exact: true}).first().click();
+  const dialog = page.getByRole("dialog", {name: "Garagem", exact: true});
+  await dialog.locator("textarea").fill("pesquise a potência do Civic");
+  await dialog.getByRole("button", {name: "Enviar", exact: true}).click();
+  const answer = dialog.locator('[data-chat-latest="1"]');
+  await expect(answer).toContainText("155 cv");
+  await expect(answer.getByText("Fontes dos dados do modelo", {exact: true})).toBeVisible();
+  await expect(answer.locator("details")).not.toHaveAttribute("open");
+  await expect(answer.locator("iframe")).toHaveCount(0);
+  await expect(answer).not.toContainText("Texto de evidência");
+  await answer.locator("summary").click();
+  await expect(answer.getByRole("link", {name: /Honda — catálogo/})).toBeVisible();
+  expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+});

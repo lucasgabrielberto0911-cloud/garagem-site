@@ -4,7 +4,7 @@ const nextConfig = {
   reactCompiler: true,
   compiler: {
     removeConsole: {
-      exclude: ["error", "warn"],
+      exclude: ["error", "warn", "info"],
     },
   },
   images: {

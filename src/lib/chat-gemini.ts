@@ -354,8 +354,8 @@ async function postGemini(
   return data;
 }
 
-/** Grounded calls only. A rejected/retired endpoint can try one already
- * configured 2.5 model; auth, quota and server errors never fan out calls.
+/** Grounding: 3.5 primeiro, 2.5 como reserva apenas para endpoint rejeitado.
+ * Prazo de 4 s por modelo; autenticação, cota e erro de servidor encerram a pesquisa.
  */
 export async function generateGroundedResearch(
   prompt: string,
@@ -364,21 +364,21 @@ export async function generateGroundedResearch(
   signal?.throwIfAborted();
   const key = geminiApiKey();
   if (!key) throw new Error("Pesquisa técnica indisponível");
-  const models = configuredModels().filter(name => /^gemini-(?:2\.5|3)/.test(name)).slice(0, 2);
+  const models = [CHAT_GEMINI_MODEL, CHAT_GEMINI_FALLBACK_MODEL];
   let lastError: unknown;
-  for (const model of models.length ? models : [CHAT_GEMINI_MODEL]) {
+  for (const model of models) {
     signal?.throwIfAborted();
     try {
       return await postGemini(
         {
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           tools: [{ google_search: {} }],
-          generationConfig: generationConfig(2048, 0.1, model, "low"),
+          generationConfig: generationConfig(1200, 0.1, model, "minimal"),
         },
         key,
         model,
         signal,
-        20_000,
+        4_000,
       );
     } catch (error) {
       signal?.throwIfAborted();
@@ -491,7 +491,6 @@ async function runGeminiModel(
         finishReason = finishReason ?? "INTERRUPTED";
       }
       if (!functionCall && !text.trim()) throw new EmptyReplyError(model);
-      console.info("[chat] gemini:model", model);
       // Todas as partes (com a thoughtSignature do functionCall) para devolver ao modelo.
       const raw = geminiRawFromParts(collectGeminiParts(frames), finishReason);
       let retried = false;
@@ -511,7 +510,7 @@ async function runGeminiModel(
           input.signal?.throwIfAborted();
           console.info(
             "[chat] gemini:continuation_failed",
-            redactGeminiError(error instanceof Error ? error.message : "err"),
+            { status: (error as { status?: number }).status ?? null },
           );
         }
       }
@@ -560,7 +559,6 @@ async function runOpenRouter(
   if (!reply.functionCall && !reply.text) throw new EmptyReplyError(reply.model);
   const closed = finalizeGeneratedText(reply.text, reply.finishReason, false);
   if (closed.text && !reply.functionCall) opts.onToken?.(closed.text);
-  console.info("[chat] gemini:model", reply.model);
   return {
     text: closed.text,
     functionCall: reply.functionCall,

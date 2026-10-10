@@ -7,6 +7,7 @@ import {
   typicalConsumptionRange,
 } from "@/lib/chat-consumption";
 import { shortVersion } from "@/lib/vehicle-display";
+import { officialWarrantyDetail } from "@/lib/chat-warranty";
 import {
   CHAT_WHATSAPP_URL,
   chatRankMode,
@@ -748,15 +749,34 @@ export function formatFocusedConsumptionReply(vehicle: ChatVehicleRecord) {
   return `Para ${subject}, a faixa típica de catálogo fica ${gas} na cidade. ${MEASURED_DISCLAIMER}`;
 }
 
+/** Descarta fragmentos de importação; preserva rótulos completos sem despejar descrições longas. */
+export function normalizeChatAccessories(items: string[]) {
+  return [...new Set(items.map(value => value.replace(/\s+/g, " ").trim())
+    .filter(value => value.length >= 2 && !/^(?:nas? |nos? |dianteiros? |traseiros? |completo$|completa$|com |e )/i.test(value))
+    .map(value => value.replace(/\s+(?:com função|com funcao|com sistema|nas? \d|nos? \d).*$/i, "")))];
+}
+
 export function formatFocusedEquipmentReply(
   vehicle: ChatVehicleRecord,
   mensagem: string,
 ) {
   const folded = normalize(mensagem);
   const named = talkName(vehicle);
-  const items = (vehicle.accessories ?? [])
-    .map((item) => item.trim())
-    .filter((item) => item.length >= 2);
+  const items = normalizeChatAccessories(vehicle.accessories ?? []);
+  const requested = [
+    ["central multimídia", /multimidia|central|carplay|android auto/, /multimidia|carplay|android auto/],
+    ["teto solar", /teto solar/, /teto solar/],
+    ["airbags", /airbags?/, /airbags?/],
+    ["freios ABS", /\babs\b/, /\babs\b/],
+    ["controle de estabilidade", /controle de estabilidade|\besp\b/, /controle de estabilidade|\besp\b/],
+    ["câmera de ré", /camera/, /camera/],
+  ] as const;
+  const item = requested.find(([, question]) => question.test(folded));
+  if (item) {
+    const has = items.some(value => item[2].test(normalize(value)));
+    const extras = items.filter(value => !item[2].test(normalize(value))).slice(0, 3);
+    return `${has ? `Sim, na ficha desse ${named.name} consta ${item[0]}` : `Na ficha desse ${named.name} não consta ${item[0]}`}.${extras.length ? ` Os itens cadastrados incluem ${extras.join(", ")}.` : ""} O vendedor confirma pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  }
 
   if (
     /ar condicionado|arcondicionado|\btem ar\b|\bar[- ]condicionado\b/.test(
@@ -2146,7 +2166,7 @@ export function scopeChatMessage(
     }
     if (resets.km) delete rememberedRanges.maxKm;
     const folded = normalize(text);
-    const directTechnical = /\b(cvs?|cavalos|potencia|torque|consumo|ficha tecnica)\b/.test(folded) &&
+    const directTechnical = /\b(cvs?|cavalos|potencia|torque|consumo|ficha tecnica|marchas?|0 a 100|autonomia|aceleracao)\b/.test(folded) &&
       mentionedModelGroups(stock, text).size > 0 && !isChatSelectionQuery(text);
     const yearChoice: boolean = technicalIdentity && /^(?:o |a |ano |de )?(?:19|20)\d{2}[?!., ]*$/.test(folded);
     const ranges = parseChatSearchRanges(text);
@@ -2552,7 +2572,7 @@ export const CHAT_TRADE_REPLY =
   `Aceitamos sim — carro ou moto entram na conta. Manda umas fotos no WhatsApp que o consultor avalia e já encaixa no negócio com você. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_WARRANTY_REPLY =
-  `Fica tranquilo: a gente revisa cada seminovo, e ele sai com garantia de 3 meses de motor e câmbio. A documentação vai 100% preparada, pra você ter mais tranquilidade. Se quiser o detalhe no seu caso, o consultor confirma no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
+  `${officialWarrantyDetail()} Se quiser o detalhe no seu caso, o consultor confirma no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_DOCS_REPLY =
   `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;

@@ -178,7 +178,7 @@ test("resposta direta: cv do HB20 1.6 como o vendedor falaria", () => {
   const reply = directSpecReply(["potencia"], [entry("hyundai-hb20-1.6-at", "HB20 1.6")], "quantos cv tem o hb20 1.6?");
   assert.equal(
     reply,
-    "O HB20 1.6 tem cerca de 128 cv no etanol e 122 cv na gasolina. São números de fábrica dessa versão; podem variar um pouco na prática.",
+    "O HB20 1.6 tem cerca de 128 cv no etanol e 122 cv na gasolina. São números de referência dessa versão; podem variar um pouco na prática.",
   );
 });
 
@@ -226,11 +226,11 @@ test("resposta direta: vários carros em frases separadas e nada de chute fora d
 
 test("reserva sem o modelo de linguagem cobre segurança, manutenção e dimensões", () => {
   const hb = entry("hyundai-hb20-1.6-at", "HB20 1.6");
-  assert.match(fallbackSpecReply(["seguranca"], [hb], "tem abs?")!, /airbags frontais, freios ABS e ISOFIX.*consultor confirma/);
+  assert.match(fallbackSpecReply(["seguranca"], [hb], "tem abs?")!, /equipamentos de segurança.*vendedor confirma/);
   assert.match(fallbackSpecReply(["manutencao"], [hb], "manutenção")!, /Gamma.*Isso vale para o modelo; o estado desta unidade/);
   assert.match(fallbackSpecReply(["dimensoes"], [hb], "dimensões")!, /3\.900 mm de comprimento, 1\.680 mm de largura e 1\.470 mm de altura, com 2\.500 mm entre-eixos/);
   const gol = fallbackSpecReply(["seguranca"], [entry("vw-gol-1.0-g5", "Gol 1.0")], "airbag")!;
-  assert.match(gol, /airbags e ABS eram opcionais/);
+  assert.match(gol, /equipamentos de segurança.*dependem da versão e do ano/);
   assert.doesNotMatch(gol, /traz/);
 });
 

@@ -335,7 +335,7 @@ test("garantia, docs e cartão vs financiamento continuam atalho da loja", async
     stock: [hb20],
     generate: blockedGenerate(),
   });
-  assert.match(warranty.reply, /3 meses de motor e câmbio/);
+  assert.match(warranty.reply, /garantia comercial de 3 meses para motor e câmbio/);
   assert.match(warranty.reply, /8h às 23h/);
 
   const docs = await runChatTurn({

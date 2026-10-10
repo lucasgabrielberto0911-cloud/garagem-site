@@ -106,7 +106,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1137,
     seguranca: "versão EXL de referência: airbags frontais, laterais e de cortina, freios ABS, ISOFIX e câmera de ré",
     manutencao:
-      "motor 1.5 simples e conhecido, com peças acessíveis; no CVT o ponto de atenção é manter o fluido específico do câmbio em dia, conforme o manual",
+      "motor 1.5 simples e conhecido, com peças acessíveis",
   },
   {
     id: "vw-gol-1.0-g5",
@@ -135,7 +135,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 934,
     seguranca: "nessa geração, airbags e ABS eram opcionais: depende de como a unidade saiu de fábrica, e o consultor confirma",
     manutencao:
-      "mecânica simples e muito difundida, peças baratas e fáceis de achar; vale atenção à correia dentada e ao estado de suspensão e buchas pela idade do carro",
+      "mecânica simples e muito difundida, peças baratas e fáceis de achar",
   },
   {
     id: "ford-ka-sedan-1.5-at",
@@ -163,7 +163,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1115,
     seguranca: "airbags frontais, freios ABS, ISOFIX e cintos de três pontos",
     manutencao:
-      "câmbio automático convencional de 6 marchas, que costuma ser considerado robusto quando o óleo é trocado no prazo; motor de 3 cilindros pede seguir o plano de revisão do manual",
+      "câmbio automático convencional de 6 marchas, que costuma ser considerado robusto quando o óleo é trocado no prazo",
   },
   {
     id: "renault-duster-2.0-at",
@@ -191,7 +191,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1294,
     seguranca: "airbags frontais e freios ABS",
     manutencao:
-      "motor 2.0 conhecido e resistente; o ponto de atenção costuma ser o câmbio automático de 4 marchas, então vale conferir as revisões e o comportamento nas trocas na avaliação. O consumo é alto para a categoria",
+      "motor 2.0 conhecido e resistente",
   },
   {
     id: "honda-hrv-1.8-cvt",
@@ -219,7 +219,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1276,
     seguranca: "versão EXL de referência: airbags frontais e laterais, ABS, controle de estabilidade e de tração, ISOFIX e freio de estacionamento elétrico",
     manutencao:
-      "motor 1.8 conhecido e durável; no CVT vale manter o fluido específico em dia. Peças de Honda custam um pouco acima da média",
+      "motor 1.8 conhecido e durável",
     aprox: true,
   },
   {
@@ -238,6 +238,8 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     torqueRpm: "4.800 rpm",
     cambio: "automático convencional (conversor de torque) de 5 marchas",
     marchas: 5,
+    // Referência de ficha, não medição desta unidade; testes de pista podem variar.
+    // https://autopapo.com.br/honda/civic-lxr-20-ivtec-flex-aut-2015/
     zeroACem: 10.9,
     vmax: 190,
     cidade: { etanol: 6.4, gasolina: 9.7 },
@@ -248,7 +250,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1294,
     seguranca: "airbags frontais, freios ABS, ISOFIX e cintos de três pontos",
     manutencao:
-      "motor 2.0 muito conhecido e durável, com peças e mão de obra fáceis; câmbio automático de 5 marchas convencional, sem grandes pontos fracos conhecidos quando as revisões estão em dia",
+      "motor 2.0 muito conhecido e durável, com peças e mão de obra fáceis",
     aprox: true,
   },
   {
@@ -265,6 +267,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     cv: { etanol: 155, gasolina: 150 },
     torque: { etanol: 19.5, gasolina: 19.3 },
     cambio: "CVT (variação contínua, sem marchas fixas)",
+    // https://autopapo.com.br/honda/civic-exl-20-cvt-2020/
     zeroACem: 10.9,
     vmax: 195,
     cidade: { etanol: 7.2, gasolina: 10.5 },
@@ -275,7 +278,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1291,
     seguranca: "versão EXL de referência: airbags frontais, laterais e de cortina, ABS, controle de estabilidade e de tração, ISOFIX e freio de estacionamento elétrico",
     manutencao:
-      "motor 2.0 muito conhecido e durável; no CVT vale manter o fluido específico em dia. Peças de Honda custam um pouco acima da média, mas a mecânica é bem testada",
+      "motor 2.0 muito conhecido e durável",
     aprox: true,
   },
   {
@@ -303,7 +306,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 961,
     seguranca: "airbags frontais, freios ABS, controle de estabilidade e de tração e ISOFIX",
     manutencao:
-      "mecânica Fire simples, com peças baratas e fáceis; vale seguir a troca da correia dentada conforme o manual. É um carro pequeno e leve, bom para cidade",
+      "mecânica Fire simples, com peças baratas e fáceis",
     aprox: true,
   },
   {
@@ -332,7 +335,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 970,
     seguranca: "na época, airbag e ABS eram opcionais: muitas unidades não têm, e o consultor confirma",
     manutencao:
-      "mecânica Fire simples e das mais baratas de manter, com peças em todo lugar; pela idade, vale olhar correia dentada, suspensão e borrachas",
+      "mecânica Fire simples e das mais baratas de manter, com peças em todo lugar",
     aprox: true,
   },
   {
@@ -361,7 +364,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1235,
     seguranca: "airbags frontais e freios ABS",
     manutencao:
-      "motor 1.8 E.torQ com peças acessíveis; por ser a versão Adventure, de suspensão elevada, vale olhar buchas e amortecedores",
+      "motor 1.8 E.torQ com peças acessíveis",
   },
   {
     id: "fiat-palio-weekend-adventure-1.8-dualogic",
@@ -389,7 +392,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1242,
     seguranca: "airbags frontais e freios ABS",
     manutencao:
-      "o Dualogic é um câmbio automatizado de embreagem a seco: as trocas são mais lentas que num automático comum e embreagem e atuador pedem atenção, então vale conferir as revisões na avaliação",
+      "mecânica Fiat conhecida, com boa oferta de peças e oficinas familiarizadas com o modelo",
   },
   {
     id: "toyota-corolla-altis-2.0",
@@ -417,7 +420,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1335,
     seguranca: "airbags frontais, laterais e de cortina, ABS, controle de estabilidade e de tração e ISOFIX",
     manutencao:
-      "fama de durabilidade e boa revenda; a revisão em rede autorizada custa um pouco mais que a média, e no CVT vale manter o fluido específico em dia",
+      "fama de durabilidade e boa revenda",
   },
   {
     id: "hyundai-hb20s-1.0-tgdi",
@@ -446,7 +449,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1137,
     seguranca: "airbags frontais, laterais e de cortina, ABS, controle de estabilidade e de tração e ISOFIX",
     manutencao:
-      "motor turbo de injeção direta pede óleo da especificação certa e revisões em dia; o comando do motor é por corrente (não tem correia dentada para trocar); câmbio automático convencional de 6 marchas",
+      "motor turbo de injeção direta com bom desempenho e mecânica difundida; comando por corrente",
     aprox: true,
   },
   {
@@ -476,7 +479,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1027,
     seguranca: "airbags frontais, freios ABS e ISOFIX",
     manutencao:
-      "motor 1.6 Gamma conhecido e com peças acessíveis; o câmbio automático de 4 marchas pede o óleo do câmbio em dia, e vale olhar a suspensão pela idade do carro",
+      "motor 1.6 Gamma conhecido e com peças acessíveis",
   },
   {
     id: "hyundai-hb20-1.0",
@@ -505,7 +508,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 989,
     seguranca: "airbags frontais, freios ABS, controle de estabilidade e de tração e ISOFIX",
     manutencao:
-      "motor 1.0 de 3 cilindros simples e econômico de manter, com peças acessíveis; é o mais em conta de rodar da família HB20",
+      "motor 1.0 de 3 cilindros simples e econômico de manter, com peças acessíveis",
   },
   {
     id: "nissan-kicks-1.6-cvt",
@@ -521,8 +524,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     cv: { etanol: 114, gasolina: 114 },
     torque: { etanol: 15.5, gasolina: 15.5 },
     torqueRpm: "4.000 rpm",
-    cambio: "CVT (variação contínua, sem marchas fixas); a ficha de referência cita 6 marchas simuladas",
-    marchas: 6,
+    cambio: "CVT (variação contínua, sem marchas fixas)",
     zeroACem: 12,
     vmax: 175,
     cidade: { etanol: 7.7, gasolina: 11.4 },
@@ -533,7 +535,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1142,
     seguranca: "airbags frontais, laterais e de cortina, ABS e controle de estabilidade",
     manutencao:
-      "motor 1.6 simples e durável; o ponto de atenção costuma ser o fluido do câmbio CVT, que pede troca periódica conforme o manual",
+      "motor 1.6 simples e durável",
   },
   {
     id: "mitsubishi-lancer-2.0-cvt",
@@ -561,7 +563,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1360,
     seguranca: "airbags frontais e freios ABS",
     manutencao:
-      "motor 2.0 robusto; peças e rede de serviço da Mitsubishi são menores e mais caras que as das marcas populares, e no CVT vale manter o fluido específico em dia",
+      "motor 2.0 MIVEC robusto e conhecido",
     aprox: true,
   },
   {
@@ -590,7 +592,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 1199,
     seguranca: "airbags frontais, laterais e de cortina, ABS, controle de estabilidade e de tração e ISOFIX",
     manutencao:
-      "motor turbo de injeção direta pede óleo da especificação certa e revisões em dia; câmbio automático convencional de 6 marchas, sem fama de problemas quando bem cuidado",
+      "motor turbo de injeção direta com bom desempenho e mecânica difundida",
   },
   {
     id: "honda-biz-110i",
@@ -614,7 +616,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 97,
     seguranca: "sistema de freio combinado (CBS); sem ABS de série nessa categoria",
     manutencao:
-      "uma das motos mais simples e baratas de manter do mercado, com peças em qualquer lugar; o básico é óleo, corrente e freios em dia",
+      "uma das motos mais simples e baratas de manter do mercado, com peças em qualquer lugar",
     aprox: true,
   },
   {
@@ -639,7 +641,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     peso: 97,
     seguranca: "sistema de freio combinado (CBS); sem ABS de série nessa categoria",
     manutencao:
-      "mecânica simples e barata de manter, com peças em qualquer lugar; o básico é óleo, corrente e freios em dia",
+      "mecânica simples e barata de manter, com peças em qualquer lugar",
     aprox: true,
   },
   {
@@ -660,7 +662,7 @@ export const VEHICLE_SPECS: VehicleSpec[] = [
     marchas: 5,
     seguranca: "versão básica com freio a tambor; as demais, disco na frente",
     manutencao:
-      "uma das motos mais difundidas do país: peças baratas e fáceis, mecânica simples; o básico é óleo, corrente e freios em dia",
+      "uma das motos mais difundidas do país: peças baratas e fáceis, mecânica simples",
     aprox: true,
   },
 ];
@@ -805,7 +807,7 @@ export function formatSpecForPrompt(spec: VehicleSpec, forLabel?: string) {
     );
   if (spec.peso) body.push(`peso: ${num(spec.peso)} kg`);
   if (body.length) lines.push(`  ${body.join("; ")}`);
-  lines.push(`  Segurança de série (referência): ${spec.seguranca}`);
+  lines.push(`  Equipamentos da base genérica (exigem confirmação da versão e ano exatos): ${spec.seguranca}`);
   lines.push(`  Manutenção típica do modelo: ${spec.manutencao}`);
   return lines.join("\n");
 }
@@ -846,10 +848,12 @@ export type SpecTopic =
   | "manutencao"
   | "motor"
   | "ficha"
+  | "pontosfortes"
   | "ranking"
   | "comparacao";
 
 const TOPIC_RULES: Array<[SpecTopic, RegExp]> = [
+  ["pontosfortes", /\b(pontos? positivos?|pontos? fortes?|vantagens?|vale a pena|e bom|eh bom)\b/],
   ["potencia", /\b(cv|cvs|cavalos?|potencia|potencias|hp|potente|potentes|cavalaria)\b/],
   ["torque", /\b(torque|kgfm|kgf m)\b/],
   [
@@ -866,7 +870,7 @@ const TOPIC_RULES: Array<[SpecTopic, RegExp]> = [
   ],
   [
     "cambio",
-    /\b(quantas marchas|numero de marchas|marchas tem|marchas o|tipo de cambio|que tipo de cambio|qual cambio|que cambio|qual o cambio|qual e o cambio|cvt|dct|dualogic|automatizado|conversor de torque|e cvt|cambio e|cambio tem)\b/,
+    /\b(marchas?|numero de marchas|marchas tem|marchas o|tipo de cambio|que tipo de cambio|qual cambio|que cambio|qual o cambio|qual e o cambio|cvt|dct|dualogic|automatizado|conversor de torque|e cvt|cambio e|cambio tem)\b/,
   ],
   ["portamalas", /\b(porta malas|portamalas|bagageiro|mala do carro)\b/],
   [
@@ -1002,15 +1006,10 @@ function autonomySentence(entry: NamedSpec) {
   return `Com o tanque cheio (${tank}), ${spec.artigo} ${entry.nome} faz, ${parts.join("; ")}. É uma conta teórica (tanque × consumo do Inmetro); no dia a dia varia com trânsito e jeito de dirigir.`;
 }
 
-const CLOSING = "São números de fábrica dessa versão; podem variar um pouco na prática.";
+const CLOSING = "São números de referência dessa versão; podem variar um pouco na prática.";
 
 function safetySentence(entry: NamedSpec) {
-  const { seguranca } = entry.spec;
-  // Gol e Palio antigos: a ficha já é uma frase ("airbags e ABS eram opcionais…").
-  if (/^(nessa geração|na época)/.test(seguranca)) {
-    return `${capital(subjectName(entry))}: ${seguranca}.`;
-  }
-  return `De série, ${entry.spec.artigo} ${entry.nome} traz (referência da versão): ${seguranca}. O que esta unidade tem de fato, o consultor confirma.`;
+  return `Os equipamentos de segurança do ${entry.nome} dependem da versão e do ano. O vendedor confirma os itens desta unidade pela ficha e no WhatsApp.`;
 }
 
 function maintenanceSentence(entry: NamedSpec) {
@@ -1078,6 +1077,14 @@ function buildSpecReply(
   if (asked.length === 0 || entries.length === 0 || entries.length > 3) return null;
   if (asked.some((topic) => !allowed.includes(topic))) return null;
   if (topics.includes("comparacao") && entries.length > 1) return null;
+  if (asked.length === 1 && asked[0] === "aceleracao" && entries.length > 1 &&
+      entries.every(entry => entry.spec.zeroACem != null) &&
+      Math.max(...entries.map(entry => entry.spec.zeroACem!)) - Math.min(...entries.map(entry => entry.spec.zeroACem!)) <= 0.3) {
+    const names = entries.map(entry => entry.nome).join(" e o ");
+    const values = [...new Set(entries.map(entry => entry.spec.zeroACem!))].sort((a, b) => a - b).map(num);
+    const time = values.length === 1 ? values[0] : `${values[0]} a ${values.at(-1)}`;
+    return `O ${names} ficam perto de ${time} segundos no 0 a 100 km/h, como referência das versões. O câmbio é ${entries.map(entry => `${entry.spec.cambio} no ${entry.nome}`).join(" e ")}. Na prática, combustível e condições do teste mudam o resultado.`;
+  }
   const wantsGears = /\bmarchas?\b/.test(FOLD(message));
   const sentences: string[] = [];
   for (const entry of entries) {

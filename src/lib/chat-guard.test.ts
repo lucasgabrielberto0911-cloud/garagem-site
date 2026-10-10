@@ -192,7 +192,7 @@ test("atalho de garantia cita motor e câmbio", async () => {
   });
   assert.equal(called, 0);
   assert.equal(result.reply, CHAT_WARRANTY_REPLY);
-  assert.match(result.reply, /3 meses de motor e câmbio/);
+  assert.match(result.reply, /garantia comercial de 3 meses para motor e câmbio/);
 });
 
 test("atalhos de financiar e troca não pedem modelo de novo", async () => {

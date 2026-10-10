@@ -33,15 +33,29 @@ const UNIT_CLAIMS: RegExp[] = [
   /\b(?:todo|toda|tudo|pintura|motor|lataria|pecas|interior)\s+original\b|\boriginal\s+de\s+fabrica|\bsem\s+retoques?\b|\bsem\s+repintura/,
   /\brevisad[oa]s?\b|\brevisoes?\s+(?:em\s+dia|feitas?|realizadas?|na\s+concessionaria|completas?)|\brevisao\s+(?:feita|completa|em\s+dia|realizada)|\bmanutencao\s+(?:em\s+dia|toda\s+feita|completa)|\bhistorico\s+de\s+(?:manutencao|revisoes)/,
   /\bconferencia\s+de\s+qualidade|\bpassou\s+por\s+(?:uma\s+)?(?:inspecao|vistoria|checklist|conferencia|revisao|avaliacao)|\binspecionad[oa]s?\b|\bvistoriad[oa]s?\b|\bcheck-?up\b/,
-  /\bgarantia\s+(?:de\s+fabrica|estendida|de\s+procedencia|total|integral)|\bprocedencia\s+(?:e\s+|eh\s+)?(?:garantida|comprovada|confirmada|conhecida)/,
+  /\b(?:correia|corrente|pneus?|bateria|freios?|pastilhas?|embreagem|suspensao|oleo|filtros?)\s+(?:dentada\s+)?(?:ja\s+)?(?:foi|foram|esta|estao|sao|e)?\s*(?:trocad[oa]s?|nov[oa]s?|substituid[oa]s?|recem)\b/,
+  /\b(?:pneus?|bateria|correia)\s+(?:nov[oa]s?|recem[- ]trocad\w+)/,
+  /\bgarantia\b[^.!?]{0,60}\b(?:tudo|todas as pecas|cobertura completa)\b/,
+  /\bgarantia\s+(?:de\s+fabrica|estendida|de\s+procedencia|total|integral|de\s+tudo)|\bprocedencia\s+(?:e\s+|eh\s+)?(?:garantida|comprovada|confirmada|conhecida)/,
 ];
+
+/** Garantia com prazo diferente de "3 meses" (a oficial é de 3 meses para motor e câmbio). */
+const WARRANTY_TERM = /\bgarantia\b[^.!?]{0,40}?\b(\d+)\s*(dias?|mes(?:es)?|anos?)\b|\b(\d+)\s*(dias?|mes(?:es)?|anos?)\s+de\s+garantia/;
+
+function wrongWarrantyTerm(folded: string) {
+  const match = WARRANTY_TERM.exec(folded);
+  if (!match) return false;
+  const amount = Number(match[1] ?? match[3]);
+  const unit = (match[2] ?? match[4] ?? "").replace(/s$/, "");
+  return !(amount === 3 && /^mes/.test(unit));
+}
 
 /** A frase já diz que não sabe ou que confirma depois: não é afirmação. */
 const UNIT_HEDGE =
   /\bnao\s+(?:tenho|consta|constam|sei|posso\s+(?:afirmar|garantir|confirmar))|\bnao\s+(?:tem|ha)\s+(?:essa|esse|esta|este)\s+(?:informacao|dado)|\bpreciso\s+confirmar|\bconfirmo\s+com|\bconsultor\s+(?:confirma|verifica|te\s+passa\s+isso)|\bvale\s+(?:pedir|perguntar|conferir)|\bo\s+ideal\s+e\s+(?:pedir|conferir|perguntar)|\bpergunte|\bpeca\s+(?:ao|pro)\s+consultor|\bsem\s+essa\s+informacao/;
 
 function splitSentences(text: string): string[] {
-  return text.match(/[^.!?\n]+(?:[.!?]+["”')\]]*|$)|\n+/g) ?? [text];
+  return text.split(/(?<=[.!?])(?=\s)|(?<=\n)/);
 }
 
 /** Troca a(s) frase(s) que afirmam algo da unidade pela frase segura, uma única vez. */
@@ -50,12 +64,56 @@ export function guardUnitClaims(text: string): string {
   let replaced = false;
   const parts = splitSentences(text).map((sentence) => {
     const folded = fold(sentence);
-    if (!UNIT_CLAIMS.some((pattern) => pattern.test(folded))) return sentence;
+    if (!UNIT_CLAIMS.some((pattern) => pattern.test(folded)) && !wrongWarrantyTerm(folded)) return sentence;
     if (UNIT_HEDGE.test(folded)) return sentence;
     if (replaced) return "";
     replaced = true;
     const lead = /^\s*/.exec(sentence)?.[0] ?? "";
     return `${lead}${UNIT_CLAIM_REPLACEMENT}`;
+  });
+  if (!replaced) return text;
+  return parts.join("").replace(/[ \t]{2,}/g, " ").replace(/\s+\n/g, "\n").trim();
+}
+
+export const EQUIPMENT_REPLACEMENT =
+  "Esse item eu não consigo afirmar para este carro: o vendedor confirma pelas fotos ou no WhatsApp.";
+
+/** Segurança: dado de ficha do modelo pode aparecer; afirmar como fato da unidade não. */
+const SAFETY_TERMS =
+  /\bairbags?\b|\babs\b|\bebd\b|controle de estabilidade|\besp\b|controle de tracao|\bisofix\b|cinto de seguranca/;
+
+/** Opcionais e conforto: só com o item cadastrado nos acessórios do carro. */
+const EQUIPMENT_TERMS =
+  /multimidia|bluetooth|ar[- ]condicionado|ar digital|direcao (?:hidraulica|eletrica)|vidros? eletricos?|travas? eletricas?|\balarme\b|sensor(?:es)? de (?:estacionamento|re|chuva|crepuscular)|camera de re|bancos? (?:de couro|eletricos?)|\bcouro\b|teto solar|piloto automatico|rodas? de liga|farois? de led|farol de neblina|neblina|retrovisores? eletricos?|carplay|android auto|keyless|partida (?:por botao|sem chave)|volante multifuncional|computador de bordo|entrada usb/;
+
+const MODEL_LEVEL_HEDGE =
+  /\bcostuma(?:m)?\b|\bgeralmente\b|\bem geral\b|\bnormalmente\b|\btipicamente\b|\bpode(?:m)? (?:vir|ter|variar)\b|\bdependendo\b|\bdepende\b|\bnao (?:tem|possui|consta|vem|sei|tenho|posso)\b|\bsem esse item\b|\bpreciso confirmar|\bse (?:tiver|houver)\b/;
+
+/** Só permite equipamento cadastrado para o sujeito da frase, sem misturar unidades. */
+export function guardEquipmentClaims(text: string, vehicles: ChatVehicleRecord[] = [], verifiedSeries = ""): string {
+  if (!text.trim()) return text;
+  let replaced = false;
+  const parts = splitSentences(text).map((sentence) => {
+    const folded = fold(sentence);
+    if (MODEL_LEVEL_HEDGE.test(folded)) return sentence;
+    const words = ` ${folded.replace(/[^a-z0-9]+/g, " ")} `;
+    const named = vehicles.filter(vehicle => words.includes(` ${fold(vehicle.model).replace(/[^a-z0-9]+/g, " ")} `));
+    const subjects = named.length ? named : vehicles;
+    const flagged = [...folded.matchAll(new RegExp(`${SAFETY_TERMS.source}|${EQUIPMENT_TERMS.source}`, "g"))].some(
+      (match) => {
+        const term = match[0]!;
+        const registered = subjects.length > 0 && subjects.every(vehicle =>
+          fold((vehicle.accessories ?? []).join(" | ")).replace(/[- ]/g, "").includes(term.replace(/[- ]/g, "")));
+        const documented = subjects.length === 1 && fold(verifiedSeries).split(/(?<=[.!?])\s+/).some(claim =>
+          claim.includes(term) && /\bde serie\b/.test(claim) && claim.includes(fold(subjects[0]!.model)) &&
+          claim.includes(String(subjects[0]!.yearModel)));
+        return !registered && !documented;
+      },
+    );
+    if (!flagged) return sentence;
+    if (replaced) return "";
+    replaced = true;
+    return `${/^\s*/.exec(sentence)?.[0] ?? ""}${EQUIPMENT_REPLACEMENT}`;
   });
   if (!replaced) return text;
   return parts.join("").replace(/[ \t]{2,}/g, " ").replace(/\s+\n/g, "\n").trim();
@@ -129,7 +187,18 @@ export function fixVehicleBrands(text: string, stock: ChatVehicleRecord[] = []):
   });
 }
 
+/** Evita críticas espontâneas; uma pergunta direta recebe resposta honesta do especialista. */
+export function guardSalesTone(text: string, message: string) {
+  if (/\b(bebe|gasta muito|consumo alto|problema|defeito|ponto fraco|pontos fracos|desvantagen|desvantagens)\b/.test(fold(message))) return text;
+  return splitSentences(text).filter(sentence => !/\bpontos? de atencao\b|\bproblemas? cronicos?\b|\bvale (?:dar|olhar|conferir|checar)\b|\bpecas.*(?:mais caras|acima da media)\b/.test(fold(sentence))).join("").trim();
+}
+
 /** Tudo que se aplica ao texto do modelo de linguagem antes de chegar ao visitante. */
-export function guardLlmReply(text: string, stock: ChatVehicleRecord[] = []): string {
-  return guardUnitClaims(fixVehicleBrands(text, stock));
+export function guardLlmReply(
+  text: string,
+  stock: ChatVehicleRecord[] = [],
+  scope: ChatVehicleRecord[] = [],
+  verifiedSeries = "",
+): string {
+  return guardEquipmentClaims(guardUnitClaims(fixVehicleBrands(text, stock)), scope, verifiedSeries);
 }

@@ -46,7 +46,7 @@ test("Lucas 1: quantos cv tem o hb20 1.6? responde o cv primeiro, sem prefixo ro
   });
   assert.equal(
     result.reply,
-    "O HB20 1.6 tem cerca de 128 cv no etanol e 122 cv na gasolina. São números de fábrica dessa versão; podem variar um pouco na prática.",
+    "O HB20 1.6 tem cerca de 128 cv no etanol e 122 cv na gasolina. São números de referência dessa versão; podem variar um pouco na prática.",
   );
   assert.equal(result.meta?.policy, "spec-direct");
   assert.doesNotMatch(result.reply, robotic);
@@ -77,7 +77,8 @@ test("Lucas 2: qual o mais forte? depois dos HB20 usa as fichas dos carros mostr
       return { text: reply, functionCall: null, model: "gemini-3.5-flash-lite", calls: 1 };
     },
   });
-  assert.equal(result.reply, reply);
+  assert.ok(result.reply.startsWith(reply));
+  assert.match(result.reply, /No estoque inteiro.*Civic/);
   assert.equal(result.meta?.policy, "expert");
   assert.equal(result.meta?.model, "gemini-3.5-flash-lite");
   assert.equal(thinking, "minimal", "raciocínio mínimo também nas perguntas técnicas");
@@ -93,7 +94,7 @@ test("Lucas 2: qual o mais forte? depois dos HB20 usa as fichas dos carros mostr
   assert.match(prompt, /Para “qual o mais forte\?”: olhe potência E torque juntos/);
   assert.match(prompt, /Depende do que você chama de forte/);
   assert.doesNotMatch(prompt, /FILTRO DO VISITANTE|cilindrada sozinha/);
-  assert.doesNotMatch(prompt, /Civic|Corolla|Kicks/, "só os carros da conversa entram nas fichas");
+  assert.match(prompt, /TODO o estoque.*Civic/);
   assert.doesNotMatch(result.reply, robotic);
   // Cards só dos carros citados na resposta.
   assert.deepEqual(result.vehicles.map((vehicle) => vehicle.id).sort(), ["hb16", "hb20s"]);
@@ -115,8 +116,8 @@ test("Lucas 2 sem o modelo de linguagem: ranking determinístico pelas fichas, c
 test("0 a 100 do Civic responde os dois Civic do estoque, cada um com o seu ano", async () => {
   const result = await runChatTurn({ mensagem: "0 a 100 do Civic", historico: [], stock, generate: noModel });
   assert.equal(result.meta?.policy, "spec-direct");
-  assert.match(result.reply, /Civic 2\.0 2015 faz o 0 a 100 km\/h em cerca de 10,9 segundos/);
-  assert.match(result.reply, /Civic 2\.0 2020 faz o 0 a 100 km\/h em cerca de 10,9 segundos/);
+  assert.match(result.reply, /Civic 2\.0 2015 e o Civic 2\.0 2020 ficam perto de 10,9 segundos/);
+  assert.match(result.reply, /5 marchas.*2015.*CVT.*2020/);
   assert.doesNotMatch(result.reply, /R\$|74\.900|126\.900/);
   assert.deepEqual(result.vehicles.map((vehicle) => vehicle.id).sort(), ["civic15", "civic20"]);
 });
@@ -204,7 +205,7 @@ test("pergunta técnica não vaza preço de vendido, cidade da loja nem inventa 
   });
   assert.doesNotMatch(prompt, /Colatina|locationCity|cidade do veículo:/);
   assert.match(prompt, /Manutenção típica do modelo: motor 1\.6 Gamma/);
-  assert.match(prompt, /Manutenção e pontos de atenção são sempre do MODELO, nunca desta unidade/);
+  assert.match(prompt, /NÃO traga pontos de atenção, defeitos ou críticas espontaneamente/);
   const direct = await runChatTurn({ mensagem: "quantos cv tem o hb20 1.6?", historico: [], stock, generate: noModel });
   assert.doesNotMatch(JSON.stringify(direct), /Colatina|locationCity/);
 });
@@ -297,11 +298,11 @@ test("falha do modelo de linguagem: resposta de reserva honesta, sem prefixo rob
     stock,
     generate: async () => ({ text: CHAT_FALLBACK_REPLY, functionCall: null }),
   });
-  assert.match(result.reply, /airbags e ABS eram opcionais/);
+  assert.match(result.reply, /equipamentos de segurança.*dependem da versão e do ano/);
   assert.doesNotMatch(result.reply, robotic);
 });
 
-test("segurança de série do modelo não é apagada pelo filtro de equipamentos inventados", async () => {
+test("segurança de base genérica não comprova equipamento da unidade", async () => {
   const result = await runChatTurn({
     mensagem: "o hb20 1.6 tem abs e airbag?",
     historico: [],
@@ -311,7 +312,8 @@ test("segurança de série do modelo não é apagada pelo filtro de equipamentos
       functionCall: null,
     }),
   });
-  assert.match(result.reply, /ABS e airbags frontais/);
+  assert.match(result.reply, /não consigo afirmar/);
+  assert.doesNotMatch(result.reply, /Premium 1\./);
 });
 
 test("decisão: lista com filtro continua busca; pergunta de ficha e comparação com contexto vão ao especialista", () => {
@@ -325,7 +327,7 @@ test("decisão: lista com filtro continua busca; pergunta de ficha e comparaçã
   assert.equal(wantsExpertAnswer(ctx("quais automáticos mais potentes?")), false);
   assert.equal(wantsExpertAnswer(ctx("quero mais forte", { recorte: "quero mais forte automático até 100 mil" })), false);
   assert.equal(wantsExpertAnswer(ctx("carros até 70 mil")), false);
-  assert.equal(wantsExpertAnswer(ctx("Civic vs Corolla")), false, "dois do estoque seguem na comparação de anúncios");
+  assert.equal(wantsExpertAnswer(ctx("Civic vs Corolla")), true, "dois modelos com fichas permitem comparar os perfis no especialista");
   assert.equal(wantsExpertAnswer(ctx("compara o hb20 com o onix")), true);
   assert.equal(wantsExpertAnswer(ctx("qual o melhor?")), false);
 });

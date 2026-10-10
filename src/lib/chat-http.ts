@@ -49,12 +49,13 @@ function json(
 }
 
 function publicResult(result: ChatTurnResult) {
+  const research = readChatResearch(result.research);
   return {
     reply: result.reply,
     leadCreated: result.leadCreated,
     vehicles: result.vehicles,
     stockHref: result.stockHref,
-    ...(result.research ? { research: readChatResearch(result.research) } : {}),
+    ...(research ? { research } : {}),
   };
 }
 

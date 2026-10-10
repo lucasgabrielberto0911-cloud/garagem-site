@@ -70,7 +70,7 @@ test("comparação entre dois modelos sem o modelo de linguagem fala o vencedor 
   assert.equal(result.meta?.policy, "expert");
   assert.match(result.reply, /Civic.*155 cv.*mais forte/);
   assert.match(result.reply, /Duster.*142 cv/);
-  assert.doesNotMatch(result.reply, /Achei|No estoque/);
+  assert.doesNotMatch(result.reply, /Achei|No estoque:/);
 });
 
 test("falha externa repetida tem cache curto, sem uma segunda chamada", async () => {
@@ -101,7 +101,7 @@ test("grounding tenta o Gemini 3.5 primeiro e só cai no 2.5 se o endpoint for r
       if(status===400||status===404){await generateGroundedResearch("identidade pública");assert.equal(urls.length,2);assert.match(urls[0]!,/gemini-3\.5-flash-lite:/);assert.match(urls[1]!,/gemini-2\.5-flash-lite:/);}
       else{await assert.rejects(generateGroundedResearch("identidade pública"));assert.equal(urls.length,1);}
       // Gemini 3.x: thinkingLevel e sem temperature.
-      assert.deepEqual(firstBody.generationConfig.thinkingConfig,{thinkingLevel:"low"});
+      assert.deepEqual(firstBody.generationConfig.thinkingConfig,{thinkingLevel:"minimal"});
       assert.equal("temperature" in firstBody.generationConfig,false);
     }
     const controller=new AbortController();controller.abort();

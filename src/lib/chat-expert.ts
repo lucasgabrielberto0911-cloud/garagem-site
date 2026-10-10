@@ -33,6 +33,7 @@ import {
   formatSpecCompact,
   formatSpecForPrompt,
   rankingSpecReply,
+  rankSpecs,
   specCriterionFromMessage,
   type NamedSpec,
   type SpecTopic,
@@ -278,16 +279,32 @@ export function namedSpecsFor(vehicles: ChatVehicleRecord[], extraSpecs: Vehicle
   return { entries, missing };
 }
 
+/** “E o City?” mantém só o assunto técnico imediatamente anterior, sem filtros de busca. */
+export function expertQuestion(ctx: ExpertContext) {
+  if (mentionedModelPools(ctx.stock, ctx.mensagem).length >= 2 && /\s+x\s+/i.test(ctx.mensagem)) return `comparação ${ctx.mensagem}`;
+  if (detectSpecTopics(ctx.mensagem).length || !/^\s*e (?:o|a) .{2,45}[?!., ]*$/i.test(ctx.mensagem)) return ctx.mensagem;
+  if (!mentionedModelPools(ctx.stock, ctx.mensagem).length) return ctx.mensagem;
+  const previous = ctx.historico.filter(turn => turn.role === "user").at(-1)?.content;
+  if (!previous) return ctx.mensagem;
+  const topics = detectSpecTopics(previous);
+  const labels: Partial<Record<SpecTopic, string>> = {
+    cambio: "quantas marchas", consumo: "consumo", autonomia: "autonomia", potencia: "potência",
+    torque: "torque", aceleracao: "0 a 100", portamalas: "porta-malas", manutencao: "manutenção",
+  };
+  return `${topics.map(topic => labels[topic] ?? "").filter(Boolean).join(" e ")} ${ctx.mensagem}`.trim();
+}
+
 export type ExpertPlan = {
   topics: SpecTopic[];
   subject: ExpertSubject;
   entries: ExpertEntry[];
   missing: ChatVehicleRecord[];
+  stockRanking?: string;
 };
 
 /**
  * “Qual o mais forte?” com um carro só (ou nenhum) na conversa compara a
- * família dele no estoque; sem carro nenhum, compara o estoque do prompt.
+ * família dele no estoque; sem carro nenhum, compara todo o estoque disponível de carros.
  */
 function widenForComparison(ctx: ExpertContext, subject: ExpertSubject): ExpertSubject {
   if (subject.vehicles.length >= 2) return subject;
@@ -298,13 +315,14 @@ function widenForComparison(ctx: ExpertContext, subject: ExpertSubject): ExpertS
       ).flat()
     : [];
   if (family.length >= 2) return { vehicles: dedupeById(family), source: "context" };
-  const pool = ctx.promptStock?.length ? ctx.promptStock : ctx.stock.slice(0, 16);
+  const pool = ctx.stock.filter(vehicle => vehicle.category !== "moto");
   return { vehicles: pool, source: "stock" };
 }
 
 export function planExpertTurn(ctx: ExpertContext): ExpertPlan {
-  const topics = detectSpecTopics(ctx.mensagem);
-  let subject = expertSubject(ctx);
+  const question = expertQuestion(ctx);
+  const topics = detectSpecTopics(question);
+  let subject = expertSubject({ ...ctx, mensagem: question });
   if (
     (topics.includes("ranking") || topics.includes("comparacao")) &&
     subject.source !== "named" &&
@@ -313,7 +331,21 @@ export function planExpertTurn(ctx: ExpertContext): ExpertPlan {
     subject = widenForComparison(ctx, subject);
   }
   const { entries, missing } = namedSpecsFor(subject.vehicles, subject.specs);
-  return { topics, subject, entries, missing };
+  const criterion = specCriterionFromMessage(question);
+  const whole = namedSpecsFor(ctx.stock.filter(vehicle => vehicle.category !== "moto"));
+  const global = criterion && topics.includes("ranking") ? rankSpecs(criterion === "forca" ? "potencia" : criterion, whole.entries)[0] : undefined;
+  const values = global ? {
+    economia: [`${global.spec.cidade?.gasolina ?? global.spec.consumoMoto} km/l na cidade, na gasolina`, "em economia"],
+    aceleracao: [`0 a 100 em cerca de ${global.spec.zeroACem} s`, "em aceleração"],
+    espaco: [`${global.spec.portaMalas} litros de porta-malas`, "em espaço de porta-malas"],
+    torque: [`${Math.max(global.spec.torque.etanol ?? 0, global.spec.torque.gasolina ?? 0)} kgfm`, "em torque"],
+    potencia: [`${Math.max(global.spec.cv.etanol ?? 0, global.spec.cv.gasolina ?? 0)} cv${global.spec.cv.etanol != null ? " com etanol" : " na gasolina"}`, "em potência"],
+  } : undefined;
+  const summary = values && criterion ? values[criterion === "forca" ? "potencia" : criterion] : undefined;
+  const stockRanking = global && summary && !summary[0]!.includes("undefined")
+    ? `No estoque inteiro, o destaque ${summary[1]} é o ${global.nome}: ${summary[0]!.replace(/(\d)\.(\d)/g, "$1,$2")}.${whole.missing.length ? " Entre os modelos com dados de referência disponíveis." : ""}`
+    : undefined;
+  return { topics, subject, entries, missing, stockRanking };
 }
 
 /** Pedido de lista (“quais automáticos…”, “até 70 mil”): continua sendo busca no estoque. */
@@ -337,15 +369,16 @@ function isListRequest(message: string) {
  * “esse”/“qual o mais forte?” na conversa e perguntas de ficha entram aqui.
  */
 export function wantsExpertAnswer(ctx: ExpertContext) {
-  const topics = detectSpecTopics(ctx.mensagem);
+  const topics = detectSpecTopics(expertQuestion(ctx));
   if (topics.length === 0) return false;
   const named = mentionedModelPools(ctx.stock, ctx.mensagem);
-  // “A vs B”: com os dois no estoque segue a comparação de anúncios; com um fora (Onix), é pergunta de especialista.
+  // Com duas fichas conhecidas, compara perfis; sem ficha, conserva a comparação dos anúncios.
   if (topics.every((topic) => topic === "comparacao")) {
-    return named.length === 1 || outsideModelCandidates(ctx.mensagem, ctx.stock).length > 0;
+    return (named.length >= 2 && named.flat().every(vehicle => findVehicleSpec(vehicle))) || named.length === 1 || outsideModelCandidates(ctx.mensagem, ctx.stock).length > 0;
   }
   if (named.length > 0) return true;
-  return !isListRequest(ctx.recorte ?? ctx.mensagem);
+  if (/\b(manual ou automatico|automatico ou manual)\b/.test(fold(ctx.mensagem))) return false;
+  return !isListRequest(ctx.mensagem);
 }
 
 /** A pergunta também quer preço ou km do anúncio (“preço, km e consumo?”). */
@@ -357,6 +390,13 @@ export function asksListingFacts(message: string) {
 /** Resposta direta, sem o modelo de linguagem, quando a base cobre a pergunta. */
 export function expertDirectReply(plan: ExpertPlan, message: string) {
   if (plan.entries.length === 0) return null;
+  if (/\b(bebe muito|consumo alto)\b/.test(fold(message)) && plan.entries.length === 1) {
+    const entry = plan.entries[0]!;
+    const city = entry.spec.cidade?.gasolina;
+    const road = entry.spec.estrada?.gasolina;
+    if (city && road) return `Para um ${entry.nome}, a referência na gasolina é cerca de ${String(city).replace(".", ",")} km/l na cidade e ${String(road).replace(".", ",")} km/l na estrada; no trânsito pesado pode gastar mais. O ponto forte é ${entry.spec.manutencao}. Se a prioridade for economia, posso comparar outras opções do estoque; o vendedor confirma os detalhes no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  }
+  if (/\b(problema|defeito|ponto fraco)\b/.test(fold(message))) return null;
   // Algum carro citado sem ficha: o modelo de linguagem completa com cautela.
   if (plan.missing.length > 0) return null;
   return directSpecReply(plan.topics, plan.entries, message);
@@ -376,7 +416,7 @@ export function buildExpertPromptBlock(plan: ExpertPlan) {
     "- Avise de leve, uma vez só, que pode variar (etanol ou gasolina, versão, ano, jeito de dirigir). Consumo é de teste; na rua muda com trânsito e estado do carro. Autonomia é teórica (tanque × consumo): use o valor já calculado na ficha, sem refazer a conta.",
   );
   lines.push(
-    "- NUNCA afirme nada sobre a UNIDADE do estoque: estado, revisões, histórico, dono, laudo, garantia além da política da loja, ou equipamento que não esteja na linha do estoque. Dado de fábrica do modelo pode; “esta unidade tem…” só com o que está na linha do estoque. Estado e histórico: consultor. Manutenção e pontos de atenção são sempre do MODELO, nunca desta unidade. Nunca diga que a unidade tem laudo, garantia de fábrica, revisões feitas, “original”, dono único, ausência de batida/sinistro nem que passou por “conferência de qualidade”: esse dado não está no anúncio e o consultor confirma. Marca sempre a dos dados (o HB20 é Hyundai, o City é Honda).",
+    "- NUNCA afirme nada sobre a UNIDADE do estoque: estado, revisões, histórico, dono, laudo, garantia além da política da loja, ou equipamento que não esteja na linha do estoque. Equipamentos da base genérica não comprovam versão e ano exatos; só dados cadastrados ou pesquisa exata confirmada permitem afirmá-los; “esta unidade tem…” só com o que está na linha do estoque. Estado e histórico: consultor. Manutenção: destaque mecânica conhecida e oferta de peças. NÃO traga pontos de atenção, defeitos ou críticas espontaneamente. Só responda a uma crítica quando o visitante perguntar diretamente, com tato e sem mentir. Nunca diga que a unidade tem laudo, garantia de fábrica, revisões feitas, “original”, dono único, ausência de batida/sinistro nem que passou por “conferência de qualidade”: esse dado não está no anúncio e o consultor confirma. Marca sempre a dos dados (o HB20 é Hyundai, o City é Honda).",
   );
   lines.push(
     "- Comparação (“qual o mais forte / que gasta menos / mais espaçoso?”): compare os carros da conversa (os que acabaram de aparecer) usando os números das fichas, aponte quem ganha e por qual critério, e diga a nuance quando houver (ex.: um tem mais cv, o outro mais torque em baixa). Sem inventar critério. Para modelo que não está no estoque (ex.: Onix), compare com o que você conhece dele e diga que no momento não temos esse no estoque.",
@@ -393,6 +433,7 @@ export function buildExpertPromptBlock(plan: ExpertPlan) {
       );
     }
   }
+  if (plan.stockRanking) lines.push(`- Além do recorte da conversa, mencione em uma linha este resultado calculado com TODO o estoque: ${plan.stockRanking}`);
   const sheets = plan.entries;
   const sheetLines = sheets.map((entry) =>
     sheets.length > FULL_SHEET_LIMIT
@@ -502,9 +543,22 @@ export function expertFallbackReply(plan: ExpertPlan, message: string) {
   const direct = expertDirectReply(plan, message) ?? (plan.missing.length === 0 ? fallbackSpecReply(plan.topics, plan.entries, message) : null);
   if (direct) return direct;
   const criterion = specCriterionFromMessage(message);
+  if (criterion && plan.entries.length === 1 && plan.stockRanking) {
+    const local = directSpecReply([criterion === "economia" ? "consumo" : criterion === "aceleracao" ? "aceleracao" : "potencia"], plan.entries, message);
+    if (local) return `${local} ${plan.stockRanking}`;
+  }
   if (criterion && plan.entries.length >= 2) {
     const ranked = rankingSpecReply(criterion, plan.entries);
-    if (ranked) return ranked;
+    if (ranked) return `${ranked}${plan.stockRanking && plan.subject.source !== "stock" ? ` ${plan.stockRanking}` : ""}`;
+  }
+  if (plan.subject.vehicles.length && !plan.subject.outside?.length && plan.entries.length && (plan.topics.includes("pontosfortes") || plan.topics.includes("comparacao"))) {
+    return plan.entries.slice(0, 2).map(entry => {
+      const spec = entry.spec;
+      const year = entry.vehicle ? ` ${entry.vehicle.yearModel}` : "";
+      const km = entry.vehicle ? ` (${entry.vehicle.km.toLocaleString("pt-BR")} km na ficha)` : "";
+      const city = spec.cidade?.gasolina;
+      return `O ${entry.nome}${year}${km} é uma boa escolha para quem busca ${city && city >= 11 ? "economia no dia a dia" : "conforto e espaço"}: ${spec.manutencao}${/CVT/.test(spec.cambio) ? ", com a suavidade do câmbio CVT" : ""}${spec.portaMalas ? ` e porta-malas de referência de ${spec.portaMalas} litros` : ""}.`;
+    }).join(" ");
   }
   if (plan.subject.unmatched?.length) {
     const list = plan.subject.unmatched

@@ -381,54 +381,35 @@ function ChatBubbleBody({ text }: { text: string }) {
   );
 }
 
-function ChatResearchDetails({
-  research,
-  answerText,
-}: {
+function ChatResearchDetails({ research }: {
   research: import("@/lib/chat-research-data").ChatResearch;
-  answerText?: string;
 }) {
-  // The answer already explains an unavailable search. Avoid repeating a
-  // second empty panel before the ad and pushing the contact below the fold.
   if (research.unavailable) return null;
   const sources = [...new Map([
     ...(research.comparison?.sources ?? []),
     ...research.paragraphs.flatMap(paragraph => paragraph.sources),
   ].map(source => [source.href, source])).values()];
-  const extraParagraphs = research.paragraphs.filter(paragraph => !answerText?.includes(paragraph.text));
+  if (!sources.length && !research.suggestionsHtml) return null;
   return (
-    <section
-      aria-label="Pesquisa técnica e fontes"
-      className="space-y-2 rounded-xl border border-white/10 bg-white/[0.025] px-3.5 text-[13px] leading-relaxed text-cream/90"
-    >
-      {research.comparison && !answerText?.includes(research.comparison.text) ? (
-        <p className="pt-3">{research.comparison.text}</p>
-      ) : null}
-      <details>
-        <summary className="min-h-11 cursor-pointer py-3 font-semibold text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
-          Dados e fontes ({sources.length})
-        </summary>
-        <p className="mb-2 text-[12px] text-cream/60">Dados do modelo, da versão e do ano.</p>
-        {extraParagraphs.map((paragraph, index) => (
-          <p key={index} className="mb-3 whitespace-pre-wrap [overflow-wrap:anywhere]">{paragraph.text}</p>
+    <details className="text-[12px] text-cream/60">
+      <summary className="cursor-pointer py-2 focus-visible:outline focus-visible:outline-2">
+        Fontes dos dados do modelo
+      </summary>
+      <ul className="space-y-1 [overflow-wrap:anywhere]">
+        {sources.map(source => (
+          <li key={source.href}>
+            <a href={source.href} target="_blank" rel="noopener noreferrer"
+              className="block py-2 underline underline-offset-2">{source.title} ↗</a>
+          </li>
         ))}
-        <ul className="space-y-1 pb-3">
-          {sources.map(source => (
-            <li key={source.href}>
-              <a href={source.href} target="_blank" rel="noopener noreferrer"
-                className="block min-h-11 rounded-lg border border-white/10 px-3 py-2 text-[12px] text-cream/85 underline underline-offset-2 [overflow-wrap:anywhere]">
-                {source.title} ↗
-              </a>
-            </li>
-          ))}
-        </ul>
-      </details>
+      </ul>
+      {/* Sugestões do Google Search: exigidas pelos termos do grounding; ficam dentro do recolhível. */}
       {research.suggestionsHtml ? (
         <iframe title="Sugestões da pesquisa Google" sandbox="allow-popups allow-popups-to-escape-sandbox"
           referrerPolicy="no-referrer" srcDoc={research.suggestionsHtml}
-          className="mb-3 h-28 w-full rounded-lg border-0 bg-white" />
+          className="mb-2 h-28 w-full rounded-lg border-0 bg-white" />
       ) : null}
-    </section>
+    </details>
   );
 }
 
@@ -502,7 +483,7 @@ function ChatText({
   return (
     <>
       {visible ? <ChatBubbleBody text={visible} /> : null}
-      {research ? <ChatResearchDetails research={research} answerText={source} /> : null}
+      {research ? <ChatResearchDetails research={research} /> : null}
       {leadCreated ? (
         <div
           role="status"
