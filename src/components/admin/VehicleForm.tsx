@@ -1,6 +1,7 @@
 "use client";
 
 import { photoQueueStorage } from "@/lib/admin-photo-queue-store";
+import { ListingQualityCard } from "@/components/admin/ListingQualityCard";
 import { VehicleFormPreview } from "@/components/admin/VehicleFormPreview";
 import { vehicleFieldErrors } from "@/lib/admin-vehicle-fields";
 import { adminMutation } from "@/lib/admin-mutation";
@@ -596,6 +597,28 @@ export function VehicleForm({
           })}
         </div>
       </nav>
+
+      <ListingQualityCard
+        draft={{
+          brand,
+          model,
+          version,
+          year,
+          yearModel,
+          km: values.km,
+          transmission,
+          fuel,
+          color,
+          price: listedPrice > 0 ? listedPrice : null,
+          description,
+          accessories,
+          photoCount: photos.length,
+          status,
+          category,
+        }}
+        coverUrl={photos[0]?.url ?? ""}
+        onJump={(section) => revealSections([section])}
+      />
 
       <VehicleFormPreview price={listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}>
         <p className="font-display text-lg font-semibold text-cream">
