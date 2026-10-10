@@ -49,7 +49,7 @@ POLÍTICA DA LOJA (use para responder com desenvoltura; não invente fora disso)
 - Diferença automático vs manual: conforto no trânsito versus controle da marcha; compare só unidades reais do estoque, sem inventar qual “é melhor”.
 - Área: Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES.
 
-REGRA CRÍTICA: o assistente só pode falar sobre veículos que estejam na lista de estoque fornecida no contexto (injetada pela API, dados reais do banco). NUNCA inventar equipamento, opcional, ou preço que não esteja explicitamente nos dados fornecidos. A Garagem vende carros e motos seminovos. Se o visitante estiver perguntando ou olhando uma moto (ex: Biz, CG, scooter), refira-se a ela como moto ou veículo, nunca como carro. Ao citar veículos, use sempre apenas a Marca e o Modelo simples (ex.: "Honda Biz 125", "Hyundai i30", "Fiat Palio"), sem despejar siglas técnicas nem versões longas (como "EX 125 FLEX", "Sed. Joy/LS 1.0") na conversa.
+REGRA CRÍTICA: o assistente só pode falar sobre veículos que estejam na lista de estoque fornecida no contexto (injetada pela API, dados reais do banco). NUNCA inventar equipamento, opcional, ou preço que não esteja explicitamente nos dados fornecidos. Única exceção: dados de fábrica do MODELO (potência, torque, consumo do Inmetro, porta-malas, câmbio, segurança de série, pontos de atenção do modelo) podem ser informados como dado típico do modelo, a partir das FICHAS TÉCNICAS do contexto ou de conhecimento seguro, sempre sem afirmar nada sobre o estado, o histórico ou os equipamentos da unidade. A Garagem vende carros e motos seminovos. Se o visitante estiver perguntando ou olhando uma moto (ex: Biz, CG, scooter), refira-se a ela como moto ou veículo, nunca como carro. Ao citar veículos, use sempre apenas a Marca e o Modelo simples (ex.: "Honda Biz 125", "Hyundai i30", "Fiat Palio"), sem despejar siglas técnicas nem versões longas (como "EX 125 FLEX", "Sed. Joy/LS 1.0") na conversa.
 
 Se a pergunta for sobre um carro que não está na lista atual, ou se o assistente não tiver certeza da resposta, dizer isso claramente, sugerir até 3 alternativas reais da lista (se houver) e oferecer o WhatsApp para lista de espera: ${CHAT_WHATSAPP_URL}
 
@@ -76,13 +76,13 @@ COMO AJUDAR DE VERDADE:
 - Ao listar, escolha no máximo 3 opções que façam sentido — não despeje o estoque inteiro. Se o visitante pedir barato / baratinho / mais em conta, prefira os mais baratos do modelo pedido e NÃO cite irmão mais caro sem necessidade. O site vira cada linha em mini-anúncio com foto e já mostra atalhos (financiar, troca). Formato da lista, um por linha:
 Marca Modelo ano · km · R$ preço
 Antes da lista: 1 frase falada de recorte (Olha só, carros até R$ 70.000 no estoque agora / Automáticos até R$ 80.000). Não comece com “Separei N” nem “Temos três ótimas opções”. DEPOIS da lista: 1 ou 2 frases comparando SOMENTE esses mesmos carros, com dados da linha de estoque. Não cole o link do WhatsApp nesta lista. Só diga que um está mais em conta se o preço for menor de fato — se empatar, compare km, ano e câmbio, nunca invente desconto. Diga quem tem menos km, quem é automático e o que isso muda no dia a dia. Só diga que um carro “é o automático da lista” ou “o único automático” se nenhum outro da mesma lista for automático. NÃO mencione consumo de combustível espontaneamente. Frases completas, faladas, sem telegrama e sem emoji.
-- Motor forte: mantenha câmbio e teto de preço. Motor/cilindrada escritos no anúncio servem para organizar candidatos, nunca para provar potência: um turbo menor pode superar um aspirado maior. Não afirme que um é mais potente, mais forte ou empata em potência sem fonte técnica da versão e do ano. Compare km, preço, ano e câmbio reais. Potência e torque só aparecem na pesquisa técnica com fontes, nunca por memória ou dedução da cilindrada.
-- Família, espaçoso, 4 portas ou porta-malas: no câmbio e no teto, prefira sedan, SUV, perua ou mais portas quando isso estiver na ficha. Só diga o número de portas se ele estiver na linha. Não invente litros de porta-malas.
+- Motor forte: mantenha câmbio e teto de preço. Motor/cilindrada escritos no anúncio servem para organizar candidatos, nunca para provar potência: um turbo menor pode superar um aspirado maior. Não afirme que um é mais potente, mais forte ou empata em potência sem fonte técnica da versão e do ano. Compare km, preço, ano e câmbio reais. Não deduza potência pela cilindrada: cv e torque só com número das FICHAS TÉCNICAS do contexto ou de conhecimento seguro do modelo.
+- Família, espaçoso, 4 portas ou porta-malas: no câmbio e no teto, prefira sedan, SUV, perua ou mais portas quando isso estiver na ficha. Só diga o número de portas se ele estiver na linha. Litros de porta-malas só da ficha técnica do contexto; sem ficha, não invente.
 - Primeiro carro, uso na cidade ou aplicativo: prefira o menor preço e hatch compacto quando a carroceria estiver na ficha. Não invente custo de manutenção.
 - Econômico, quando não for pergunta de consumo daquele carro: prefira menor cilindrada e, no empate, o menor preço. Não cite km/l nessa lista.
 - SUV, sedan, hatch, picape ou perua: fique nessa carroceria. Moto só se a pessoa pedir moto.
 - Se o recorte já tiver orçamento, câmbio, carroceria ou intenção ditos nesta conversa, não pergunte de novo. Use o que já foi dito.
-- Consumo / média / km/l: NUNCA mencione consumo espontaneamente. Não estime km/l pela cilindrada, motor ou combustível. Só publique números na pesquisa técnica citada da versão e do ano, com combustível e cidade/estrada identificados. Sem fonte exata, explique que falta confirmação. Dados de catálogo nunca garantem o consumo de uma unidade usada.
+- Consumo / média / km/l / autonomia: não mencione consumo espontaneamente numa lista. Quando perguntarem, responda com a ficha técnica do modelo (Inmetro), com combustível e cidade/estrada, avisando de leve que varia. Não estime km/l pela cilindrada. Dado de catálogo nunca garante o consumo de uma unidade usada.
 - Não descreva a foto, não use markdown, não cite carro fora dessas 3 linhas e não pergunte hatch, sedan, “qual desses” nem “qual perfil” depois da lista (os atalhos do site já existem).
 - Se perguntarem “qual o melhor”, compare 2 ou 3 da lista só com dados reais (preço, ano, km, câmbio, combustível, motor, acessórios da linha). Sem inventar opcional.
 - Acessórios, motor e cor: só o que estiver na linha do estoque. Se não estiver escrito, não invente ar digital, multimídia, couro, teto, sensor, cor ou motorização.
@@ -138,6 +138,10 @@ export function formatChatPrice(value: number) {
 }
 
 export type ChatStockPromptOpts = {
+  /** Bloco do modo especialista (regras + fichas). Troca as notas de filtro e de memória. */
+  expertBlock?: string;
+  /** Nota fixa da rodada (ex.: o visitante quer dar o carro dele na troca). */
+  turnNote?: string;
   /** Inclui km/l de catálogo — só quando a pergunta é de consumo. */
   consumption?: boolean;
   /** Inclui opcionais da ficha — só quando a pergunta é de equipamento. */
@@ -714,6 +718,12 @@ export function buildChatSystemPrompt(
 REGRA DE DESAMBIGUAÇÃO: O visitante está atualmente na página deste veículo (${activeVehicle.brand} ${activeVehicle.model} ${activeVehicle.year}). Se ele perguntar sobre este veículo, disser "este ${kind}", perguntar de garantia, troca, financiamento ou pedir mais informações sobre ele, refira-se ESTRITAMENTE a esta unidade específica (${activeVehicle.brand} ${activeVehicle.model} ${activeVehicle.year}, R$ ${activeVehicle.price.toLocaleString("pt-BR")}, ${activeVehicle.km.toLocaleString("pt-BR")} km). NÃO confunda com outras unidades do mesmo modelo e NÃO cite outra unidade de ${activeVehicle.model} sem que o visitante peça explicitamente para comparar. Se a pergunta for FIPE, tabela FIPE ou assunto fora da loja, IGNORE este veículo da tela.`;
   }
   const limit = parsePriceLimit(mensagem);
+  if (opts.expertBlock) {
+    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${opts.expertBlock}`;
+  }
+  if (opts.turnNote) {
+    return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}\n\n${opts.turnNote}`;
+  }
   if (power) {
     return `${CHAT_SYSTEM_PROMPT}\n\n${stock}${activeNotice}${powerFilterNote(vehicles, mensagem)}${memory}`;
   }

@@ -43,6 +43,12 @@ import {
   chatSearchOrder,
   chatSearchResets,
 } from "@/lib/chat-search-filters";
+import {
+  findVehicleSpec,
+  specCityKmL,
+  specMaxCv,
+  specPowerText,
+} from "@/lib/chat-specs";
 
 /** Batch size. Search reads every available listing; only a shortlist goes to the model. */
 export const CHAT_STOCK_TAKE = 80;
@@ -646,6 +652,19 @@ function formatChatKm(km: number) {
   return `${km.toLocaleString("pt-BR")} km`;
 }
 
+/** "Automático" → "automática" para moto; câmbio sem gênero (CVT, manual) fica como está. */
+function spokenTransmission(vehicle: ChatVehicleRecord) {
+  const text = (vehicle.transmission ?? "").trim().toLowerCase();
+  if (!text) return "";
+  return (vehicle.category ?? "carro") === "moto" ? text.replace(/o$/, "a") : text;
+}
+
+/** Um anúncio em frase falada, sem o prefixo de busca. */
+function spokenListing(vehicle: ChatVehicleRecord) {
+  const gear = spokenTransmission(vehicle);
+  return `${talkName(vehicle).cap} ${vehicle.yearModel} está com ${formatChatKm(vehicle.km)}${gear ? `, é ${gear}` : ""} e sai por ${formatChatPrice(vehicle.price)}.`;
+}
+
 function isAutomaticVehicle(vehicle: ChatVehicleRecord) {
   return /automatic|cvt/.test(normalize(vehicle.transmission ?? ""));
 }
@@ -925,6 +944,10 @@ export function asksAboutTransmissionCompare(mensagem: string): boolean {
 
 export function asksAboutKm(mensagem: string): boolean {
   const folded = normalize(mensagem);
+  // “Tenho um Gol com 120 mil km” informa o km do carro dele; não pergunta o do anúncio.
+  if (/\b(tenho|tinha|meu|minha|meus|minhas|possuo)\b/.test(folded) && /\d/.test(folded)) {
+    return false;
+  }
   if (asksAboutConsumption(mensagem)) return false;
   if (asksAboutListedFacts(mensagem)) return false;
   return /\b(km|quilometragem|rodado|rodagem|quanto tem de km|quantos km)\b/.test(
@@ -1263,7 +1286,7 @@ export function compareChatStockPicks(
   }
   if (vehicles.length === 1) {
     const vehicle = vehicles[0]!;
-    const base = `Achei no estoque: ${talkName(vehicle).cap} ${vehicle.yearModel}, ${vehicle.transmission}, ${formatChatKm(vehicle.km)}, ${formatChatPrice(vehicle.price)}.`;
+    const base = spokenListing(vehicle);
     if (opts.includeConsumption) {
       return `${base}\n\n${formatFocusedConsumptionReply(vehicle)}`;
     }
@@ -1669,6 +1692,8 @@ export function enrichChatStockReply(
   vehicles: ChatVehicleRecord[],
   mensagem = "",
   stock: ChatVehicleRecord[] = vehicles,
+  /** Falso em conversa que não é busca: nada de anexar comparação do estoque. */
+  allowCompare = true,
 ) {
   if (vehicles.length === 0) return reply;
   if (
@@ -1731,6 +1756,7 @@ export function enrichChatStockReply(
       return formatAvailabilityReply(focused);
     }
   }
+  if (!allowCompare) return reply;
   if (vehicles.length >= 2) {
     const mode = chatRankMode(mensagem);
     const power = mode === "power";
@@ -2328,12 +2354,32 @@ export function searchChatInventory(
   if (brands.length)
     pool = pool.filter((v) => brands.includes(normalize(v.brand)));
   const order = chatSearchOrder(message);
+  const bySpec = (rows: ChatVehicleRecord[]) => {
+    // Com ficha de todos, "mais forte" vira cv de catálogo (um turbo 1.0 pode passar um 1.6).
+    const specs = rows.map((v) => findVehicleSpec(v));
+    if (rows.length < 2 || specs.some((spec) => !spec)) return null;
+    return rows
+      .map((v, index) => ({ v, cv: specMaxCv(specs[index]!) }))
+      .sort((a, b) => b.cv - a.cv || a.v.price - b.v.price)
+      .map((item) => item.v);
+  };
+  const byEconomy = (rows: ChatVehicleRecord[]) => {
+    // Com ficha de todos, "econômico" vira km/l do Inmetro, não só o tamanho do motor.
+    const specs = rows.map((v) => findVehicleSpec(v));
+    if (rows.length < 2 || specs.some((spec) => !spec || specCityKmL(spec) == null)) return null;
+    return rows
+      .map((v, index) => ({ v, kml: specCityKmL(specs[index]!)! }))
+      .sort((a, b) => b.kml - a.kml || a.v.price - b.v.price)
+      .map((item) => item.v);
+  };
   const ranked =
     order === "km"
       ? [...pool].sort((a, b) => a.km - b.km || a.price - b.price)
       : order === "year"
         ? [...pool].sort((a, b) => b.yearModel - a.yearModel || a.km - b.km)
-        : rankChatVehicles(pool, message);
+        : (isPowerQuery(message) ? bySpec(pool) : null) ??
+          (chatRankMode(message) === "economy" ? byEconomy(pool) : null) ??
+          rankChatVehicles(pool, message);
   const picks = ranked.slice(0, 3);
   if (!picks.length) return null;
   const power = isPowerQuery(message);
@@ -2365,14 +2411,34 @@ export function searchChatInventory(
     .filter(Boolean)
     .join(", ")
     .replace("carros,", "carros")
-    .replace("motos,", "motos");
-  const count = `No estoque: ${recorte}. Achei ${pool.length} ${pool.length === 1 ? "anúncio" : "anúncios"}.`;
-  const reasons = power
+    .replace("motos,", "motos")
+    .replace("veículos,", "veículos");
+  const subject = recorte === "veículos" ? "no estoque agora" : `de ${recorte}`;
+  const more =
+    pool.length > picks.length
+      ? ` (são ${pool.length}, separei os ${picks.length} que mais combinam)`
+      : "";
+  const lead = `Olha o que tenho ${subject}${more}:`;
+  const specs = picks.map((v) => ({ v, spec: findVehicleSpec(v) }));
+  const withPower = power ? specs.every((item) => item.spec) : false;
+  const economySpecs =
+    !power && chatRankMode(message) === "economy"
+      ? picks.map((v) => ({ v, spec: findVehicleSpec(v) }))
+      : [];
+  const economyOk =
+    economySpecs.length > 1 && economySpecs.every((item) => item.spec && specCityKmL(item.spec) != null);
+  const reasons = economyOk
+    ? `${economySpecs
+        .map(({ v, spec }) => `${talkName(v).cap} faz cerca de ${String(specCityKmL(spec!)).replace(".", ",")} km/l na cidade (Inmetro, na gasolina), ${spokenTransmission(v)}, ${formatChatKm(v.km)} e ${formatChatPrice(v.price)}.`)
+        .join(" ")}`
+    : power
     ? picks
-        .map(
-          (v) =>
-            `${talkName(v).cap}: ${stockEngineLabel(v) ? `motor ${stockEngineLabel(v)}, ` : ""}${v.transmission}, ${formatChatKm(v.km)} e ${formatChatPrice(v.price)}.`,
-        )
+        .map((v) => {
+          const spec = specs.find((item) => item.v.id === v.id)?.spec;
+          const cv = spec ? specPowerText(spec) : null;
+          const motor = stockEngineLabel(v);
+          return `${talkName(v).cap}: ${motor ? `motor ${motor}, ` : ""}${cv ? `cerca de ${cv}, ` : ""}${v.transmission}, ${formatChatKm(v.km)} e ${formatChatPrice(v.price)}.`;
+        })
         .join(" ")
     : compareChatStockPicks(picks, {
         withLeadin: false,
@@ -2381,8 +2447,12 @@ export function searchChatInventory(
             ? "default"
             : chatRankMode(message),
       });
-  const caveat = power
-    ? " Para dizer qual é o mais potente, preciso de potência documentada da versão e do ano; cilindrada sozinha não confirma isso."
+  const caveat = economyOk
+    ? " Consumo de teste do Inmetro; na rua varia com trânsito e jeito de dirigir."
+    : power
+    ? withPower
+      ? " Os cv são de fábrica e variam um pouco com o combustível."
+      : " Se quiser os cv de cada um, me diz qual deles que eu passo os números de fábrica."
     : order === "km"
       ? " A ordem é da menor para a maior quilometragem."
       : order === "year"
@@ -2391,7 +2461,7 @@ export function searchChatInventory(
   return {
     picks,
     candidates: ranked,
-    reply: `${count}\n${picks.map(formatVehicleLine).join("\n")}\n\n${reasons}${caveat}`,
+    reply: `${lead}\n${picks.map(formatVehicleLine).join("\n")}\n\n${reasons}${caveat}`,
   };
 }
 
@@ -2587,7 +2657,7 @@ export function chatPolicyShortcut(
 const NAMED_STOCK_SEEK =
   /\b(tem|vende|procuro|quero|ainda|estoque|chegou|modelo)\b/;
 const POLICY_SEEK =
-  /\b(financi|parcela|cartao|troca|garantia|document|horario|whatsapp|atendimento|transferenc|despachante|detran)\b/;
+  /\b(financi\w*|parcel\w*|cartao|troca\w*|garantia|document\w*|horario|whatsapp|atendimento|transferenc\w*|despachante|detran|entrada)\b/;
 
 /** “tem civic?” sem civic no estoque — waitlist, sem despejar o inventário. */
 export function seeksMissingNamedModel(
@@ -2671,14 +2741,14 @@ export function localGarageReply(
     if (asksAboutConsumption(mensagem)) {
       const consumption = formatFocusedConsumptionReply(match);
       if (asksAboutListedFacts(mensagem) || /\bkm\b/.test(text)) {
-        return `Achei no estoque: ${match.brand} ${match.model} ${match.yearModel}, ${match.km.toLocaleString("pt-BR")} km, ${formatChatPrice(match.price)}, ${match.transmission}.\n\n${consumption}`;
+        return `${spokenListing(match)}\n\n${consumption}`;
       }
       return consumption;
     }
     if (asksAboutEquipment(mensagem) || asksAboutNamedGear(mensagem)) {
       return formatFocusedEquipmentReply(match, mensagem);
     }
-    return `Achei no estoque: ${match.brand} ${match.model} ${match.yearModel}, ${match.km.toLocaleString("pt-BR")} km, ${formatChatPrice(match.price)}, ${match.transmission}.`;
+    return spokenListing(match);
   }
 
   const looksLikeVehicle = /\b(tem|vende|estoque|carro|modelo|marca|km)\b/.test(
@@ -2697,7 +2767,7 @@ export function localGarageReply(
         (vehicle) => `${vehicle.brand} ${vehicle.model} ${vehicle.yearModel}`,
       )
       .join("; ");
-    return `No estoque agora tem, entre outros: ${sample}. Me diz marca ou modelo que eu afino pra você.`;
+    return `Por aqui tem, por exemplo: ${sample}. Me diz marca ou modelo que eu afino pra você.`;
   }
   return null;
 }
