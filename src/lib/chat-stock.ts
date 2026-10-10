@@ -771,11 +771,31 @@ export function formatFocusedEquipmentReply(
     ["controle de estabilidade", /controle de estabilidade|\besp\b/, /controle de estabilidade|\besp\b/],
     ["câmera de ré", /camera/, /camera/],
   ] as const;
-  const item = requested.find(([, question]) => question.test(folded));
-  if (item) {
-    const has = items.some(value => item[2].test(normalize(value)));
-    const extras = items.filter(value => !item[2].test(normalize(value))).slice(0, 3);
-    return `${has ? `Sim, na ficha desse ${named.name} consta ${item[0]}` : `Na ficha desse ${named.name} não consta ${item[0]}`}.${extras.length ? ` Os itens cadastrados incluem ${extras.join(", ")}.` : ""} O vendedor confirma pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  const asked = requested.filter(([, question]) => question.test(folded));
+  if (asked.length) {
+    const listed = (names: string[]) =>
+      names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} e ${names.at(-1)}`;
+    const present = asked.filter(([, , data]) => items.some(value => data.test(normalize(value)))).map(([label]) => label);
+    const absent = asked.filter(([label]) => !present.includes(label)).map(([label]) => label);
+    const extras = items
+      .filter(value => !asked.some(([, , data]) => data.test(normalize(value))))
+      .slice(0, 3);
+    const parts: string[] = [];
+    if (present.length) parts.push(`Sim, na ficha desse ${named.name} consta ${listed(present)}.`);
+    if (absent.length) {
+      parts.push(
+        present.length
+          ? `${listed(absent).replace(/^./, c => c.toUpperCase())} não aparece${absent.length > 1 ? "m" : ""} na ficha.`
+          : `Na ficha desse ${named.name} não consta ${listed(absent)}.`,
+      );
+      if (extras.length) parts.push(`Os itens cadastrados incluem ${extras.join(", ")}.`);
+    }
+    parts.push(
+      absent.length
+        ? `Pra não te passar informação errada, o vendedor confirma pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`
+        : `Qualquer detalhe, o vendedor mostra nas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`,
+    );
+    return parts.join(" ");
   }
 
   if (

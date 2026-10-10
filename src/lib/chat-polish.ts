@@ -187,9 +187,14 @@ function accessoryAllowed(key: string, allowed: Set<string>): boolean {
     if (key === "ar condicionado" && item === "arcondicionado") return true;
     if (key === "multimidia" && item.includes("multimidia")) return true;
     if (item === key.replace(/\s/g, "")) return true;
+    // Item cadastrado mais longo cobre o termo ("ar condicionado digital" → "ar condicionado").
+    if (` ${item.replace(/[^a-z0-9]+/g, " ")} `.includes(` ${key.replace(/[^a-z0-9]+/g, " ")} `)) return true;
   }
   return false;
 }
+
+/** Frase que nega o item ("não consta teto solar") não afirma nada: não pode perder o nome do item. */
+const NEGATED_ACCESSORY = /\b(?:nao|sem)\b/;
 
 function tidyAccessoryGaps(text: string): string {
   return text
@@ -226,17 +231,22 @@ export function stripInventedAccessories(
     }
     return tidyAccessoryGaps(next);
   }
-  let next = text;
-  for (const item of patterns) {
-    if (!item.re.test(next)) {
+  const sentences = text.split(/(?<=[.!?])(?=\s)/);
+  const cleaned = sentences.map((sentence) => {
+    if (NEGATED_ACCESSORY.test(fold(sentence))) return sentence;
+    let next = sentence;
+    for (const item of patterns) {
+      if (!item.re.test(next)) {
+        item.re.lastIndex = 0;
+        continue;
+      }
       item.re.lastIndex = 0;
-      continue;
+      if (accessoryAllowed(item.key, allowed)) continue;
+      next = next.replace(item.re, "");
     }
-    item.re.lastIndex = 0;
-    if (accessoryAllowed(item.key, allowed)) continue;
-    next = next.replace(item.re, "");
-  }
-  return tidyAccessoryGaps(next);
+    return next;
+  });
+  return tidyAccessoryGaps(cleaned.join(""));
 }
 
 export function closeTruncatedReply(text: string): string {

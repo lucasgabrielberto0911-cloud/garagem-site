@@ -180,8 +180,11 @@ export async function runChatTurn(input: {
   // Visitante falando do carro DELE na troca: nada de responder km/ano do anúncio.
   const tradeTurn = isTradeInMessage(visitorMessage);
   // Pergunta técnica sobre modelo(s): responde primeiro, com a base de fichas.
+  // Equipamento do carro em tela é dado da ficha da unidade, não da pesquisa do modelo.
+  const unitEquipmentTurn = Boolean(activeVehicle) && asksAboutEquipment(visitorMessage);
   const expertTurn =
     !tradeTurn &&
+    !unitEquipmentTurn &&
     wantsExpertAnswer({
       mensagem: visitorMessage,
       recorte: scopedMessage,
@@ -456,8 +459,10 @@ export async function runChatTurn(input: {
       ? activeVehicle
       : undefined);
   const mixedPrice = asksAboutListedFacts(scopedMessage);
+  // "Kicks ou HR-V, qual você indica?": comparação por perfil (modelo), não busca com filtros somados.
+  const namedComparison = compared.length >= 2 && parsePriceLimit(scopedMessage) == null;
   const selection =
-    !skipShortcuts && (isChatSelectionQuery(scopedMessage) ||
+    !skipShortcuts && !namedComparison && (isChatSelectionQuery(scopedMessage) ||
     roadUse ||
     Object.keys(parseChatSearchRanges(scopedMessage)).length > 0 ||
     (hasChatStockFilter(scopedMessage) &&
@@ -510,6 +515,8 @@ export async function runChatTurn(input: {
     !skipShortcuts &&
     compared.length >= 2 &&
     asksToCompareModels(scopedMessage) &&
+    // Pedido de indicação ("qual você indica?") vai ao modelo: perfil de cada carro, tom de vendedor.
+    !/\b(indica|indicaria|recomenda|recomendaria|sugere|compensa|vale mais|melhor pra|melhor para|qual (?:e|é) melhor|qual o melhor)\b/i.test(visitorMessage) &&
     !asksAboutConsumption(scopedMessage) &&
     !asksAboutEquipment(scopedMessage)
   ) {
