@@ -89,6 +89,9 @@ test("Lucas 2: qual o mais forte? depois dos HB20 usa as fichas dos carros mostr
   assert.match(prompt, /120 cv, tanto no etanol quanto na gasolina; torque: 17,5 kgfm/);
   assert.match(prompt, /80 cv no etanol e 75 cv na gasolina/);
   assert.match(prompt, /NUNCA afirme nada sobre a UNIDADE do estoque/);
+  // "Qual o mais forte?": o prompt leva a resposta-base com potência E torque juntos.
+  assert.match(prompt, /Para “qual o mais forte\?”: olhe potência E torque juntos/);
+  assert.match(prompt, /Depende do que você chama de forte/);
   assert.doesNotMatch(prompt, /FILTRO DO VISITANTE|cilindrada sozinha/);
   assert.doesNotMatch(prompt, /Civic|Corolla|Kicks/, "só os carros da conversa entram nas fichas");
   assert.doesNotMatch(result.reply, robotic);
@@ -103,8 +106,8 @@ test("Lucas 2 sem o modelo de linguagem: ranking determinístico pelas fichas, c
     stock,
     generate: noModel,
   });
-  assert.match(result.reply, /^Entre esses, o HB20 1\.6 \(128 cv no etanol e 122 cv na gasolina\) é o mais forte em potência\./);
-  assert.match(result.reply, /Em torque, porém, o HB20S 1\.0 turbo leva: 17,5 kgfm contra 16,5 kgfm/);
+  assert.match(result.reply, /^Depende do que você chama de forte\. Em potência máxima, o HB20 1\.6 leva: 128 cv no etanol e 122 cv na gasolina/);
+  assert.match(result.reply, /O HB20S 1\.0 turbo tem 120 cv, só um pouco menos, e entrega 17,5 kgfm a 1\.500 rpm, bem mais cedo/);
   assert.doesNotMatch(result.reply, robotic);
   assert.doesNotMatch(result.reply, /cilindrada sozinha|preciso de potência documentada/);
 });
@@ -347,4 +350,29 @@ test("sujeito da pergunta: nomeado > tela > conversa; ano e motor sem estoque n�
   assert.deepEqual(expertSubject(ctx("esse hb20 é bom?", { activeVehicle: hb10 })).vehicles.map((x) => x.id), ["hb10"]);
   assert.deepEqual(outsideModelCandidates("compara o hb20 com o onix", stock), ["onix"]);
   assert.deepEqual(outsideModelCandidates("qual a potência do motor e do câmbio do hb20", stock), []);
+});
+
+test("texto do modelo: marca corrigida e nada de laudo/revisão/original da unidade chega ao visitante", async () => {
+  let prompt = "";
+  const result = await runChatTurn({
+    mensagem: "o corolla é bom de manutenção?",
+    historico: [],
+    stock,
+    generate: async (input) => {
+      prompt = input.systemPrompt;
+      return {
+        text: "O Honda Corolla é um carro de manutenção tranquila. Esse aqui tem laudo cautelar aprovado e revisões em dia. Quer ver as fotos?",
+        functionCall: null,
+        model: "gemini-3.5-flash-lite",
+        calls: 1,
+      };
+    },
+  });
+  assert.match(result.reply, /^O Toyota Corolla é um carro de manutenção tranquila\./);
+  assert.doesNotMatch(result.reply, /Honda Corolla|laudo cautelar aprovado|revisões em dia/);
+  assert.match(result.reply, /o consultor confirma com a loja pelo WhatsApp/);
+  assert.match(result.reply, /Quer ver as fotos\?$/);
+  // As regras também vão no prompt, para o modelo nem tentar.
+  assert.match(prompt, /AFIRMAÇÕES PROIBIDAS SOBRE A UNIDADE/);
+  assert.match(prompt, /MARCA CORRETA/);
 });

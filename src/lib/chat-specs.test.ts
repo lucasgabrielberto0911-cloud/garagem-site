@@ -236,10 +236,22 @@ test("reserva sem o modelo de linguagem cobre segurança, manutenção e dimens�
 
 test("ranking: o mais forte em cv, com a nuance do torque do turbo", () => {
   const entries = [entry("hyundai-hb20s-1.0-tgdi", "HB20S 1.0 turbo"), entry("hyundai-hb20-1.6-at", "HB20 1.6"), entry("hyundai-hb20-1.0", "HB20 1.0")];
-  assert.equal(specCriterionFromMessage("qual o mais forte?"), "potencia");
-  const power = rankingSpecReply("potencia", entries)!;
-  assert.match(power, /^Entre esses, o HB20 1\.6 \(128 cv no etanol e 122 cv na gasolina\) é o mais forte em potência\./);
-  assert.match(power, /Em torque, porém, o HB20S 1\.0 turbo leva: 17,5 kgfm contra 16,5 kgfm\./);
+  assert.equal(specCriterionFromMessage("qual o mais forte?"), "forca");
+  assert.equal(specCriterionFromMessage("qual o mais potente?"), "potencia");
+  const power = rankingSpecReply("forca", entries)!;
+  // Potência e torque juntos, sem contradição: o 1.6 leva em cv, o turbo entrega o torque bem mais cedo.
+  assert.match(power, /^Depende do que você chama de forte\. Em potência máxima, o HB20 1\.6 leva: 128 cv no etanol e 122 cv na gasolina, mas o torque dele \(16,5 kgfm no etanol e 16 kgfm na gasolina\) só aparece em giro alto, a 5\.000 rpm\./);
+  assert.match(power, /O HB20S 1\.0 turbo tem 120 cv, só um pouco menos, e entrega 17,5 kgfm a 1\.500 rpm, bem mais cedo: é o que responde melhor em retomada e ultrapassagem\./);
+  assert.match(power, /Já o HB20 1\.0 tem 80 cv no etanol e 75 cv na gasolina\./);
+  assert.match(power, /Resumindo: potência de pico, HB20 1\.6; força logo ao pisar no acelerador, HB20S 1\.0 turbo\./);
+  assert.doesNotMatch(power, /é o mais forte|mais fraco/);
+  // "Mais potente" pergunta só potência: resposta direta, com a nuance do torque no fim.
+  const potente = rankingSpecReply("potencia", entries)!;
+  assert.match(potente, /^Entre esses, o HB20 1\.6 \(128 cv no etanol e 122 cv na gasolina\) é o mais forte em potência\./);
+  assert.match(potente, /Em torque, porém, o HB20S 1\.0 turbo leva: 17,5 kgfm contra 16,5 kgfm\./);
+  // Quando o mesmo carro lidera cv e torque, a resposta é direta.
+  const same = rankingSpecReply("forca", [entry("hyundai-hb20s-1.0-tgdi", "HB20S 1.0 turbo"), entry("hyundai-hb20-1.0", "HB20 1.0")])!;
+  assert.match(same, /^Entre esses, o HB20S 1\.0 turbo \(120 cv/);
   assert.equal(specCriterionFromMessage("qual gasta menos?"), "economia");
   const economy = rankingSpecReply("economia", entries)!;
   assert.match(economy, /o HB20 1\.0 \(cerca de 13,1 km\/l na cidade, na gasolina\) é o mais econômico/);
@@ -253,4 +265,28 @@ test("nenhuma ficha cita preço, cidade ou fala da unidade usada", () => {
     assert.doesNotMatch(formatSpecForPrompt(spec), forbidden, spec.id);
     assert.doesNotMatch(`${spec.seguranca} ${spec.manutencao}`, /revisões feitas|único dono|laudo|garantia de fábrica da unidade/i, spec.id);
   }
+});
+
+test("números de referência do coordenador: HB20 1.6, HB20S TGDI, Kicks, City e HB20 1.0", () => {
+  const byId = (id: string) => VEHICLE_SPECS.find((spec) => spec.id === id)!;
+  const hb16 = byId("hyundai-hb20-1.6-at");
+  assert.deepEqual(hb16.cv, { etanol: 128, gasolina: 122 });
+  assert.deepEqual(hb16.torque, { etanol: 16.5, gasolina: 16 });
+  assert.equal(hb16.torqueRpm, "5.000 rpm");
+  const tgdi = byId("hyundai-hb20s-1.0-tgdi");
+  assert.deepEqual(tgdi.cv, { etanol: 120, gasolina: 120 });
+  assert.deepEqual(tgdi.torque, { etanol: 17.5, gasolina: 17.5 });
+  assert.equal(tgdi.zeroACem, 10.7);
+  assert.equal(tgdi.marchas, 6);
+  assert.equal(tgdi.portaMalas, 475);
+  assert.equal(tgdi.tanque, 50);
+  assert.match(tgdi.manutencao, /corrente/);
+  const kicks = byId("nissan-kicks-1.6-cvt");
+  assert.deepEqual(kicks.cidade, { etanol: 7.7, gasolina: 11.4 });
+  assert.deepEqual(kicks.estrada, { etanol: 9.4, gasolina: 13.7 });
+  assert.equal(kicks.tanque, 41);
+  const city = byId("honda-city-1.5-cvt");
+  assert.match(city.cambio, /7 marchas/);
+  assert.match(city.cambio, /borboletas/);
+  assert.equal(byId("hyundai-hb20-1.0").cv.etanol, 80);
 });

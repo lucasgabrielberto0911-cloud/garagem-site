@@ -376,7 +376,7 @@ export function buildExpertPromptBlock(plan: ExpertPlan) {
     "- Avise de leve, uma vez só, que pode variar (etanol ou gasolina, versão, ano, jeito de dirigir). Consumo é de teste; na rua muda com trânsito e estado do carro. Autonomia é teórica (tanque × consumo): use o valor já calculado na ficha, sem refazer a conta.",
   );
   lines.push(
-    "- NUNCA afirme nada sobre a UNIDADE do estoque: estado, revisões, histórico, dono, laudo, garantia além da política da loja, ou equipamento que não esteja na linha do estoque. Dado de fábrica do modelo pode; “esta unidade tem…” só com o que está na linha do estoque. Estado e histórico: consultor. Manutenção e pontos de atenção são sempre do MODELO, nunca desta unidade.",
+    "- NUNCA afirme nada sobre a UNIDADE do estoque: estado, revisões, histórico, dono, laudo, garantia além da política da loja, ou equipamento que não esteja na linha do estoque. Dado de fábrica do modelo pode; “esta unidade tem…” só com o que está na linha do estoque. Estado e histórico: consultor. Manutenção e pontos de atenção são sempre do MODELO, nunca desta unidade. Nunca diga que a unidade tem laudo, garantia de fábrica, revisões feitas, “original”, dono único, ausência de batida/sinistro nem que passou por “conferência de qualidade”: esse dado não está no anúncio e o consultor confirma. Marca sempre a dos dados (o HB20 é Hyundai, o City é Honda).",
   );
   lines.push(
     "- Comparação (“qual o mais forte / que gasta menos / mais espaçoso?”): compare os carros da conversa (os que acabaram de aparecer) usando os números das fichas, aponte quem ganha e por qual critério, e diga a nuance quando houver (ex.: um tem mais cv, o outro mais torque em baixa). Sem inventar critério. Para modelo que não está no estoque (ex.: Onix), compare com o que você conhece dele e diga que no momento não temos esse no estoque.",
@@ -384,6 +384,15 @@ export function buildExpertPromptBlock(plan: ExpertPlan) {
   lines.push(
     "- Não despeje a lista do estoque nem repita preço e km se a pergunta não pediu. Nunca mostre preço de carro vendido nem a cidade do veículo. Só convide para o consultor/WhatsApp quando ajudar de verdade.",
   );
+  if (plan.entries.length >= 2 && plan.topics.some((topic) => topic === "potencia" || topic === "torque")) {
+    // "Qual o mais forte?": potência e torque juntos, já montado a partir das fichas, para não se contradizer.
+    const brief = rankingSpecReply("forca", plan.entries);
+    if (brief) {
+      lines.push(
+        "- Para “qual o mais forte?”: olhe potência E torque juntos e não se contradiga (não chame um de mais forte e depois de mais fraco). Se quem tem mais cv não tem mais torque, diga que depende: um leva em potência de pico, o outro entrega o torque mais cedo. Resposta-base montada das fichas (reescreva com suas palavras, mantendo os números): " + brief,
+      );
+    }
+  }
   const sheets = plan.entries;
   const sheetLines = sheets.map((entry) =>
     sheets.length > FULL_SHEET_LIMIT

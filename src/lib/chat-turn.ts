@@ -24,6 +24,7 @@ import {
   isChatSelectionQuery,
   parsePriceLimit,
 } from "@/lib/chat-prompt";
+import { guardLlmReply } from "@/lib/chat-claims";
 import { applyChatReplyGuards, looksTruncated } from "@/lib/chat-polish";
 import {
   CHAT_GEMINI_EXPERT_THINKING_LEVEL,
@@ -704,10 +705,15 @@ export async function runChatTurn(input: {
       // Raciocínio mínimo também nas técnicas: em `low` o 3.5 Flash-Lite devolveu resposta vazia.
       ...(expertTurn ? { thinkingLevel: CHAT_GEMINI_EXPERT_THINKING_LEVEL } : {}),
     };
+    // Texto do modelo: sem afirmar laudo/revisão/batida da unidade e com a marca certa do modelo.
+    const guardReply = (result: GeminiGenerateResult): GeminiGenerateResult => ({
+      ...result,
+      text: guardLlmReply(result.text, input.stock),
+    });
     if (input.onToken && !input.generate) {
-      first = await generateStream(request, { onToken: input.onToken });
+      first = guardReply(await generateStream(request, { onToken: input.onToken }));
     } else {
-      first = await generate(request);
+      first = guardReply(await generate(request));
       if (first.text && !first.functionCall) emit(first.text);
     }
   } catch {
