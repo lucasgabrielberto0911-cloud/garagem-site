@@ -20,6 +20,11 @@ npm run test:e2e  # Playwright (precisa do banco local com seed: npm run e2e:see
 ```
 O PR só sai de rascunho com `test`, `lint` e `build` passando. Mexeu em tela pública? Rode ou ajuste o e2e correspondente.
 
+### Economia de tokens (vale para todos os agentes)
+- Leia só o trecho necessário: `rg -n "termo" caminho` para achar e `sed -n 'início,fimp' arquivo` para ler. Não use `cat` em arquivo inteiro nem vários `cat` numa chamada só.
+- Filtre a saída de build, lint e teste: por exemplo, `npm run build 2>&1 | tail -40` ou `npm test 2>&1 | grep -E -A5 "fail|Error" | head -80`. Só abra o log inteiro se o trecho não bastar.
+- Não leia `package-lock.json`, `*.zip`, `branding/`, `.next/` nem `node_modules/`.
+
 ## Divisão de trabalho e coordenação
 | Agente | Papel | Pode escrever código? |
 |---|---|---|
