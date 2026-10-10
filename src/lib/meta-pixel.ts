@@ -272,6 +272,28 @@ function fire(event: string, payload?: CatalogEventPayload) {
   window.setTimeout(tick, TRACK_RETRY_MS);
 }
 
+/**
+ * trackCustom também espera o stub do fbq (o Pixel sobe depois do efeito de
+ * consentimento); antes o evento era descartado se o clique vinha primeiro.
+ */
+function fireCustom(event: string, payload: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  const run = () => {
+    const fbq = getFbq();
+    if (!fbq) return false;
+    fbq("trackCustom", event, payload);
+    return true;
+  };
+  if (run()) return;
+  const started = Date.now();
+  const tick = () => {
+    if (run()) return;
+    if (Date.now() - started > TRACK_RETRY_BUDGET_MS) return;
+    window.setTimeout(tick, TRACK_RETRY_MS);
+  };
+  window.setTimeout(tick, TRACK_RETRY_MS);
+}
+
 export function trackPageView() {
   fire("PageView");
 }
@@ -359,8 +381,7 @@ export function trackVehicleView(ref: VehicleFunnelRef) {
   if (typeof window === "undefined") return;
   const params = vehicleFunnelParams(ref);
   if (!params.vehicle_id) return;
-  const fbq = getFbq();
-  if (fbq) fbq("trackCustom", "vehicle_view", params);
+  fireCustom("vehicle_view", params);
   fireGtag("vehicle_view", params);
 }
 
@@ -369,8 +390,7 @@ export function trackWhatsAppClick(label: string, ref?: VehicleFunnelRef) {
   if (typeof window === "undefined") return;
   const funnel = vehicleFunnelParams(ref);
   const custom: Record<string, string> = { label, ...funnel };
-  const fbq = getFbq();
-  if (fbq) fbq("trackCustom", "WhatsAppClick", custom);
+  fireCustom("WhatsAppClick", custom);
   fireGtag("whatsapp_click", {
     event_category: "engagement",
     event_label: label,

@@ -279,7 +279,7 @@ export default async function VehicleDetailPage({
         make={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}
-        catalog={!sold}
+        catalog={vehicle.status === "disponivel"}
         {...autoHit}
       />
       <VehicleChatContext
