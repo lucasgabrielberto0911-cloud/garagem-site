@@ -321,6 +321,35 @@ export function trackLead(params: CatalogEventParams) {
   fireGtag("generate_lead", gtagItemParams(payload));
 }
 
+/** Dados do veículo da ficha (contexto do chat) no formato de evento de catálogo. */
+export function catalogParamsFromChatVehicle(vehicle: {
+  id: string;
+  label: string;
+  brand: string;
+  model: string;
+  year?: number;
+  price?: number;
+}): CatalogEventParams {
+  return {
+    content_ids: [vehicle.id],
+    content_name: vehicle.label,
+    value: vehicle.price,
+    make: vehicle.brand,
+    model: vehicle.model,
+    year: vehicle.year,
+  };
+}
+
+/**
+ * Clique de WhatsApp fora dos CTAs da ficha (cabeçalho, float) com veículo
+ * aberto: mesmo Lead + AddToCart do catálogo. Sem veículo não dispara nada.
+ */
+export function trackCatalogWhatsAppClick(params?: CatalogEventParams) {
+  if (!params || params.content_ids.length === 0) return;
+  trackLead(params);
+  trackAddToCart(params);
+}
+
 /** @deprecated Use trackLead — Commerce Manager casa Lead, não Contact. */
 export function trackContact(params: CatalogEventParams) {
   trackLead(params);

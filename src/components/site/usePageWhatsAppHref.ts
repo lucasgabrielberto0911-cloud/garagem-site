@@ -6,6 +6,7 @@ import {
   getChatVehicleContext,
   subscribeChatVehicleContext,
 } from "@/lib/chat-vehicle-context";
+import { catalogParamsFromChatVehicle } from "@/lib/meta-pixel";
 import { whatsappContentFromVehicle } from "@/lib/site";
 import { pageWhatsAppHref } from "@/lib/whatsapp-cta";
 
@@ -22,6 +23,11 @@ export function usePageWhatsAppTarget(message?: string) {
   return {
     href: pageWhatsAppHref({ pathname, vehicle, message }),
     vehicleId: vehicle?.id,
+    /** Params de catálogo (Lead/AddToCart); vendido não entra no catálogo. */
+    catalogParams:
+      vehicle && !vehicle.sold
+        ? catalogParamsFromChatVehicle(vehicle)
+        : undefined,
     slug: vehicle
       ? whatsappContentFromVehicle({ id: vehicle.id, path: vehicle.path || pathname })
       : undefined,
