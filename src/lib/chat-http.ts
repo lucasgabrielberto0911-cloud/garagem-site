@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import type { ChatTurn } from "@/lib/chat-gemini";
 import { logChatTurn } from "@/lib/chat-metrics";
 import { CHAT_FALLBACK_REPLY, CHAT_WHATSAPP_URL } from "@/lib/chat-prompt";
+import { clientIp } from "@/lib/client-ip";
 import {
   applyChatSessionCookie,
+  checkChatIpRateLimit,
   checkChatRateLimit,
   getOrCreateChatSession,
 } from "@/lib/chat-session";
@@ -23,6 +25,8 @@ export function chatHealthPayload() {
 export type ChatPostDeps = {
   getSession: () => Promise<{ id: string; fresh: boolean }>;
   checkLimit: (sessionId: string) => Promise<RateLimitResult>;
+  /** Limite por IP: quem apaga o cookie não ganha mensagens novas. */
+  checkIpLimit?: (ip: string) => Promise<RateLimitResult>;
   loadStock: () => Promise<ChatVehicleRecord[]>;
   runTurn: (
     input: Parameters<typeof runChatTurn>[0],
@@ -32,6 +36,7 @@ export type ChatPostDeps = {
 export const defaultChatPostDeps: ChatPostDeps = {
   getSession: getOrCreateChatSession,
   checkLimit: checkChatRateLimit,
+  checkIpLimit: checkChatIpRateLimit,
   loadStock: loadChatStock,
   runTurn: runChatTurn,
 };
@@ -107,7 +112,11 @@ export async function handleChatPost(
   let session = { id: "anon", fresh: false };
   try {
     session = await deps.getSession();
-    const limited = await deps.checkLimit(session.id);
+    const ip = clientIp(request.headers);
+    let limited = await deps.checkLimit(session.id);
+    if (limited.ok && ip && deps.checkIpLimit) {
+      limited = await deps.checkIpLimit(ip);
+    }
     if (!limited.ok) {
       return json(
         session,

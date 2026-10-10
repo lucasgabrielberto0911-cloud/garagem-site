@@ -352,3 +352,39 @@ test("falha interna devolve 503 em vez de parecer uma consulta concluída", asyn
   assert.equal(response.status, 503);
   assert.equal((await response.json()).code, "chat_unavailable");
 });
+
+test("limite por IP vale mesmo com cookie novo e não roda sem IP", async () => {
+  const seen: string[] = [];
+  const blocked = await handleChatPost(
+    new Request("http://localhost/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-forwarded-for": "203.0.113.9, 10.0.0.1",
+      },
+      body: JSON.stringify({ mensagem: "Carros até 70 mil?" }),
+    }),
+    deps({
+      getSession: async () => ({ id: "cookie-novo", fresh: true }),
+      checkIpLimit: async (ip) => {
+        seen.push(ip);
+        return { ok: false, retryAfterSec: 3600 };
+      },
+    }),
+  );
+  assert.equal(blocked.status, 429);
+  assert.deepEqual(seen, ["203.0.113.9"]);
+
+  let ipChecked = false;
+  const semIp = await post(
+    { mensagem: "Carros até 70 mil?" },
+    {
+      checkIpLimit: async () => {
+        ipChecked = true;
+        return { ok: false };
+      },
+    },
+  );
+  assert.equal(semIp.status, 200);
+  assert.equal(ipChecked, false);
+});

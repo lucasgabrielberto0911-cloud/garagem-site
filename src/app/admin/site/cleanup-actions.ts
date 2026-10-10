@@ -123,6 +123,33 @@ export async function cleanupOrphanPhotos(
         if (data.length < limit) break;
       }
 
+      // Fotos do formulário Vender que ninguém anexou a um pedido (a pessoa
+      // desistiu antes de enviar). Mesma regra: 48 horas e sem vínculo.
+      for (let page = 0; page < 50; page += 1) {
+        const { data, error } = await supabase.storage
+          .from(VEHICLE_DOCS_BUCKET)
+          .list("vender", {
+            limit,
+            offset: page * limit,
+            sortBy: { column: "name", order: "asc" },
+          });
+        if (error)
+          return {
+            ok: false,
+            message:
+              "Não foi possível conferir as fotos do formulário Vender. Nenhum arquivo foi removido.",
+          };
+        if (!data?.length) break;
+        for (const item of data) {
+          if (!item.name || (item.id === null && !item.metadata)) continue;
+          checked++;
+          const path = `vender/${item.name}`;
+          if (isCleanupCandidate({ ...item, name: path }, privatePaths))
+            orphans.push(`${VEHICLE_DOCS_BUCKET}/${path}`);
+        }
+        if (data.length < limit) break;
+      }
+
       if (!confirmed)
         return {
           ok: true,

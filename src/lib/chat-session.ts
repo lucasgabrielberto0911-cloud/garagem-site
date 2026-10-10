@@ -45,3 +45,14 @@ export async function checkChatRateLimit(sessionId: string) {
     max: CHAT_SESSION_MAX_MESSAGES,
   });
 }
+
+const CHAT_IP_WINDOW_MS = 24 * 60 * 60 * 1000;
+/** Folga para várias pessoas no mesmo IP (rede móvel, loja); barra quem apaga o cookie. */
+export const CHAT_IP_MAX_MESSAGES = 120;
+
+export async function checkChatIpRateLimit(ip: string) {
+  return checkDistributedRateLimit(`chat-ip:${ip}`, {
+    windowMs: CHAT_IP_WINDOW_MS,
+    max: CHAT_IP_MAX_MESSAGES,
+  });
+}
