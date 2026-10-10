@@ -10,14 +10,15 @@ import { StockFiltersSkeleton } from "@/components/site/StockFiltersSkeleton";
 import { StockBrowseShell } from "@/components/site/StockPending";
 import { Container, PageHeader } from "@/components/site/ui";
 import { buildPageMetadata, itemListJsonLd } from "@/lib/seo";
+import { ESTOQUE_SEO_TITLE, SEO_LOCAL_LOCATION } from "@/lib/seo-local";
 import { site } from "@/lib/site";
 import { getStockCatalogLinks, getStockFacets, getStockPage } from "@/lib/vehicles";
 
 export const revalidate = 600;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: `Estoque | ${site.name}`,
-  description: `Veículos seminovos disponíveis na ${site.name} — Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Revisados, com garantia e documentação preparada.`,
+  title: ESTOQUE_SEO_TITLE,
+  description: `Carros e motos seminovos da ${site.name} para quem compra em ${SEO_LOCAL_LOCATION} e região. Revisados, com garantia e documentação preparada.`,
   path: "/estoque",
 });
 
@@ -43,7 +44,7 @@ export default async function EstoquePage() {
         <PageHeader
           eyebrow="Estoque"
           title="Veículos disponíveis"
-          description="Cada veículo é revisado e sai com garantia. A documentação vai preparada pra você. Filtre por marca, modelo, ano, preço, km ou câmbio e ordene a lista. Se não achar o modelo, peça o que você procura."
+          description={`Compre, troque ou financie seu seminovo em ${SEO_LOCAL_LOCATION}: cada veículo é revisado, sai com garantia e a documentação vai preparada. Para ver o carro, peça o vídeo no WhatsApp ou combine visita com hora marcada.`}
         />
 
         <RecentlyViewedVehicles />

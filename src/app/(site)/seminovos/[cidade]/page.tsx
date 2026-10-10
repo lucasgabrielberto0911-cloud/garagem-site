@@ -164,6 +164,29 @@ export default async function SeminovosCidadePage({
           </aside>
         </section>
 
+        {city.steps ? (
+          <section className="mt-12">
+            <h2 className="font-display text-xl font-semibold text-cream">
+              Como funciona o atendimento em {city.name}
+            </h2>
+            <ol className="mt-5 grid gap-3 sm:grid-cols-2">
+              {city.steps.map((step, index) => (
+                <li key={step.title} className="border border-white/10 bg-ink p-5">
+                  <span className="font-display text-sm font-semibold text-brand">
+                    {index + 1}
+                  </span>
+                  <p className="mt-1 font-display text-sm font-semibold text-cream">
+                    {step.title}
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">
+                    {step.text}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </section>
+        ) : null}
+
         <section className="mt-12">
           <h2 className="font-display text-xl font-semibold text-cream">
             Dúvidas rápidas — {city.name}
