@@ -140,13 +140,16 @@ export function coverSrc(photos: VehicleCardPhoto[] | undefined) {
 }
 
 /**
- * A miniatura antiga é 8:5: recortá-la de novo no card 4:3 perde enquadramento
- * e pixels úteis. Deriva direto da galeria, sem trocar arquivos do acervo.
- * Um único tamanho móvel evita baixar a versão 720/960 numa tela 3x.
+ * Um único 480w no celular, para a tela 3x não pedir o recorte 720/960.
+ * A miniatura já gravada no upload sai do Storage. O recorte ao vivo
+ * (Image Transformations) passa por uma função fria e, medido no ar,
+ * atrasou a capa em cerca de 1–2 s no primeiro acesso.
  */
 export function coverMobileSrcSet(photos: VehicleCardPhoto[] | undefined) {
   const photo = photos?.[0];
-  if (!photo?.url || !canTransform(photo.url) || isCardDerivative(photo.url)) return undefined;
+  if (!photo?.url || isCardDerivative(photo.url)) return undefined;
+  if (photo.thumbnailUrl) return `${photo.thumbnailUrl} ${CARD_RENDER_WIDTH}w`;
+  if (!canTransform(photo.url)) return undefined;
   return `${supabaseTransformSrc(photo.url, CARD_RENDER_WIDTH, CARD_RENDER_HEIGHT, "cover", "74")} ${CARD_RENDER_WIDTH}w`;
 }
 
@@ -198,6 +201,16 @@ export function galleryPreviewSrc(photo: GalleryPhoto) {
   const url = photo.url;
   if (!canTransform(url) || isOptimizedGalleryWebp(url)) return url;
   return supabaseTransformSrc(url, HERO_CAP_WIDTH, undefined, "contain", HERO_CAP_QUALITY);
+}
+
+/**
+ * `src` da ficha. O srcset ainda oferece o arquivo de 1280 em telas grandes;
+ * se o navegador ignorar o srcset, o padrão é o WebP de 800, não o original.
+ */
+export function galleryLcpSrc(photo: GalleryPhoto) {
+  const url = photo.url;
+  if (!url || !canTransform(url) || isCardDerivative(url)) return galleryPreviewSrc(photo);
+  return supabaseTransformSrc(url, HERO_NARROW_WIDTH, undefined, "contain", HERO_NARROW_QUALITY);
 }
 
 /**

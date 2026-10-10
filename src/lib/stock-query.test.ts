@@ -11,6 +11,7 @@ import {
   coverSrc,
   coverSrcSet,
   coverMobileSrcSet,
+  galleryLcpSrc,
   galleryPreviewSrc,
   galleryPreviewSrcSet,
   galleryThumbSrc,
@@ -81,11 +82,15 @@ test("coverSrc usa thumbnail quando existe e recorte quando não", () => {
   assert.equal(pickWidth(bare, 936), 960);
 });
 
-test("capa móvel usa a galeria 4:3, sem esticar o recorte antigo nem baixar versão desktop", () => {
+test("capa móvel usa a miniatura estática e só recorta ao vivo quando ela não existe", () => {
   const mobile = coverMobileSrcSet([{ url: ORIGINAL, thumbnailUrl: "https://cdn.example/old-card.webp" }]) ?? "";
-  assert.match(mobile, /width=480&height=360&resize=cover&quality=74/);
+  assert.equal(mobile, "https://cdn.example/old-card.webp 480w");
   assert.equal(pickWidth(mobile, ((430 - 44) / 2) * 3), 480);
-  assert.doesNotMatch(mobile, /old-card|720w|960w/);
+  assert.doesNotMatch(mobile, /720w|960w|width=/);
+  const generated = coverMobileSrcSet([{ url: ORIGINAL }]) ?? "";
+  assert.match(generated, /width=480&height=360&resize=cover&quality=74/);
+  assert.equal(pickWidth(generated, ((430 - 44) / 2) * 3), 480);
+  assert.doesNotMatch(generated, /720w|960w/);
   assert.equal(coverMobileSrcSet([{ url: "https://cdn.example/foto.jpg" }]), undefined);
   assert.equal(coverMobileSrcSet([{ url: ORIGINAL.replace(".webp", "-card.webp") }]), undefined);
   assert.equal(coverMobileSrcSet([]), undefined);
@@ -96,6 +101,11 @@ test("galleryThumbSrc recorta o strip; o hero não usa a miniatura do card", () 
   assert.match(galleryThumbSrc(photo), /width=240/);
   assert.match(galleryThumbSrc(photo), /format=webp/);
   assert.equal(galleryPreviewSrc(photo), ORIGINAL);
+  const lcp = galleryLcpSrc(photo);
+  assert.match(lcp, /width=800/);
+  assert.match(lcp, /resize=contain/);
+  assert.match(lcp, /quality=80/);
+  assert.equal(lcp.includes("/object/public/"), false);
   const set = galleryPreviewSrcSet(photo) ?? "";
   assert.match(set, /width=800/);
   assert.match(set, /quality=80/);
@@ -161,8 +171,8 @@ test("medidas públicas batem com o layout e com o upload", () => {
     join(dirname(fileURLToPath(import.meta.url)), "../components/NativeRemoteFillImage.tsx"),
     "utf8",
   );
-  assert.match(image, /loading=\{priority \? "eager" : "lazy"\}/);
-  assert.match(image, /fetchPriority=\{priority \? "high" : "low"\}/);
+  assert.match(image, /loading=\{priority \|\| eager \? "eager" : "lazy"\}/);
+  assert.match(image, /fetchPriority=\{priority \? "high" : eager \? "auto" : "low"\}/);
 });
 
 test("galeria só baixa o slide ativo e os vizinhos", () => {
