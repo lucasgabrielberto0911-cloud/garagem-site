@@ -99,6 +99,14 @@ import {
 } from "@/lib/chat-research";
 import type { ChatResearch } from "@/lib/chat-research-data";
 import { parseEngineDisplacementLiters } from "@/lib/chat-consumption";
+import {
+  CHAT_READING_LEAD_WAIT_MS,
+  CHAT_READING_STEER_WAIT_MS,
+  chatReadingHint,
+  readChatIntent,
+  readingWithin,
+  type ReadChatIntent,
+} from "@/lib/chat-jev";
 
 function technicalYears(message: string) {
   // Brazilian manufacture/model pairs identify the model year, not two versions.
@@ -152,6 +160,7 @@ export async function runChatTurn(input: {
   onToken?: (delta: string) => void;
   signal?: AbortSignal;
   research?: typeof researchChatVehicles;
+  readIntent?: ReadChatIntent;
 }): Promise<ChatTurnResult> {
   input.signal?.throwIfAborted();
   const activeVehicle = input.vehicleId
@@ -189,6 +198,9 @@ export async function runChatTurn(input: {
     if (text) input.onToken?.(text);
   };
 
+  // Leitura do Jev (intenção e temperatura). Só orienta o tom; nunca bloqueia.
+  let readingHint = "";
+
   const systemPromptFor = () => {
     const promptStock = selectVehiclesForChatPrompt(
       input.stock,
@@ -200,7 +212,7 @@ export async function runChatTurn(input: {
       scopedMessage,
       activeVehicle ? toChatStockLine(activeVehicle) : undefined,
       { ...chatPromptStockOpts(scopedMessage), consumption: false },
-    );
+    ) + readingHint;
   };
 
   const finish = (
@@ -684,6 +696,24 @@ export async function runChatTurn(input: {
     }
   }
 
+  // Uma chamada ao Jev por rodada, em paralelo à geração. Para orientar a
+  // resposta espera no máximo CHAT_READING_STEER_WAIT_MS; passou disso, segue
+  // sem a leitura (que ainda serve à nota do lead).
+  const readIntent = input.readIntent ?? readChatIntent;
+  const reading = Promise.resolve()
+    .then(() =>
+      readIntent({
+        mensagem: visitorMessage,
+        historico: input.historico,
+        vehicle: activeVehicle,
+        signal: input.signal,
+      }),
+    )
+    .catch(() => null);
+  readingHint = chatReadingHint(
+    await readingWithin(reading, CHAT_READING_STEER_WAIT_MS),
+  );
+
   let first: GeminiGenerateResult;
   try {
     if (input.onToken && !input.generate) {
@@ -824,7 +854,9 @@ export async function runChatTurn(input: {
     if (leadArgsAreComplete(args) && args) {
       try {
         input.signal?.throwIfAborted();
-        const created = await createLead(args, input.stock);
+        const created = await createLead(args, input.stock, {
+          reading: await readingWithin(reading, CHAT_READING_LEAD_WAIT_MS),
+        });
         let reply =
           "Pronto — registrei seu contato. A equipe continua com você no WhatsApp.";
         try {

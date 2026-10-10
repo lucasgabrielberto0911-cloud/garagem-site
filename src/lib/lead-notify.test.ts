@@ -61,3 +61,23 @@ test("alerta fica desligado sem webhook nem Resend", () => {
     if (email) process.env.LEAD_NOTIFY_EMAIL = email;
   }
 });
+
+test("leitura do assistente aparece no alerta da equipe, só quando existe", () => {
+  const withReading = {
+    name: "Ana Souza",
+    phone: "27988887777",
+    vehicleInfo: "Hyundai HB20 2022",
+    notes: "Quer o HB20",
+    reading: "Quente · quer financiar",
+    source: "chatbot-site",
+  };
+  const email = buildLeadNotifyEmail(withReading);
+  assert.match(email.subject, /^Lead \(Quente · quer financiar\): Hyundai HB20 2022 — Ana Souza$/);
+  assert.match(email.text, /Leitura: Quente · quer financiar/);
+  assert.equal(buildLeadWebhookBody(withReading).lead.reading, "Quente · quer financiar");
+
+  const plain = buildLeadNotifyEmail({ ...withReading, reading: undefined });
+  assert.equal(plain.subject, "Lead: Hyundai HB20 2022 — Ana Souza");
+  assert.doesNotMatch(plain.text, /Leitura|undefined|null/);
+  assert.equal(buildLeadWebhookBody({ ...withReading, reading: null }).lead.reading, null);
+});
