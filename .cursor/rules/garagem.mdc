@@ -3,7 +3,7 @@ description: Regras do repo garagem-site para o Cursor (resumo do AGENTS.md)
 alwaysApply: true
 ---
 - Leia e siga o `AGENTS.md` na raiz. Ele é a fonte da verdade.
-- Branch `cursor/<tema>`, 1 tarefa = 1 Draft PR. Merge só com o ok do Lucas.
+- Branch `cursor/<tema>`, 1 tarefa = 1 Draft PR. Nunca faça merge: o Grok Bot (coordenador) revisa CI/preview e mergeia.
 - Antes de começar, rode `gh pr list` e não mexa em uma área que já tenha PR aberto de outro agente.
 - Marca "Garagem" (nunca nova ocorrência visível de "Sua Garagem"). Use os tokens `asphalt`, `cream` e `brand`. O gradiente fica só como detalhe.
 - Vendido = sem preço. Cidade só no admin. Chips pequenos nos cards.
