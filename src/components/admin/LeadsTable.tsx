@@ -1,4 +1,7 @@
 "use client";
+import { PurchaseLeadForm, type LeadVehicleOption } from "@/components/admin/PurchaseLeadForm";
+import { ORIGIN_LABELS, purchaseSourceLabel } from "@/lib/lead-origin";
+import { PURCHASE_STATUSES, PURCHASE_STATUS_LABEL } from "@/lib/lead-funnel";
 
 import { LeadFollowUp } from "@/components/admin/LeadFollowUp";
 import { adminMutation } from "@/lib/admin-mutation";
@@ -26,6 +29,8 @@ import {
   WANTED_LEAD_SOURCE,
   buildLeadWhatsAppUrl,
   type LeadStatus,
+  leadDisplayName,
+  leadHasPhone,
 } from "@/lib/leads";
 import { emailFromLeadNotes } from "@/lib/wanted-lead";
 import {
@@ -55,6 +60,7 @@ function formatDateTime(value: Date) {
 
 export function LeadsTable({
   leadId,
+  vehicles,
   leads,
   status,
   query = "",
@@ -65,6 +71,7 @@ export function LeadsTable({
   total,
 }: {
   leadId?: string;
+  vehicles: LeadVehicleOption[];
   leads: LeadVenda[];
   status: string;
   query?: string;
@@ -259,6 +266,13 @@ export function LeadsTable({
         </div>
       </div>
 
+      <label className="block text-sm">Filtrar origem
+        <select className={`${inputClass} mt-1`} value={origem} onChange={event => goTo({ origem: event.target.value })} disabled={isPending}>
+          <option value="">Todas as origens</option>
+          <option value="vender">Avaliação</option><option value="chatbot-site">Chatbot do site</option><option value="nao-encontrou">Não encontrou</option>
+          {Object.entries(ORIGIN_LABELS).map(([key, label]) => <option key={key} value={`whatsapp:${key}`}>Compra · {label}</option>)}
+        </select>
+      </label>
       {leads.length === 0 ? (
         <EmptyState
           icon={<IconInbox className="h-12 w-12" />}
@@ -290,7 +304,7 @@ export function LeadsTable({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-display text-base font-semibold text-cream">
-                    {lead.name}
+                    {leadDisplayName(lead)}
                   </p>
                   <span
                     className={`px-2 py-0.5 text-[10px] uppercase tracking-wider ${
@@ -298,7 +312,7 @@ export function LeadsTable({
                       "bg-white/10 text-muted"
                     }`}
                   >
-                    {STATUS_LABEL[lead.status as LeadStatus] ?? lead.status}
+                    {lead.source?.startsWith("whatsapp:") ? PURCHASE_STATUS_LABEL[lead.status as keyof typeof PURCHASE_STATUS_LABEL] || STATUS_LABEL[lead.status as LeadStatus] || lead.status : STATUS_LABEL[lead.status as LeadStatus] ?? lead.status}
                   </span>
                   {lead.source === "chatbot-site" ? (
                     <span className="rounded border border-brand/40 bg-brand/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand">
@@ -314,7 +328,7 @@ export function LeadsTable({
                     </span>
                   ) : lead.source ? (
                     <span className="rounded border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted">
-                      {lead.source}
+                      {purchaseSourceLabel(lead.source)}
                     </span>
                   ) : null}
                 </div>
@@ -342,7 +356,7 @@ export function LeadsTable({
                   </>
                 )}
                 <p className="mt-1 text-sm text-muted">
-                  {formatPhoneBR(lead.phone)}
+                  {leadHasPhone(lead) ? formatPhoneBR(lead.phone) : "Sem telefone"}
                   {emailFromLeadNotes(lead.notes)
                     ? ` · ${emailFromLeadNotes(lead.notes)}`
                     : ""}
@@ -361,7 +375,7 @@ export function LeadsTable({
                               ? "Formulário de avaliação"
                               : lead.source === WANTED_LEAD_SOURCE
                                 ? "Formulário — não encontrou o modelo"
-                                : lead.source}
+                                : purchaseSourceLabel(lead.source)}
                         </strong>
                       </span>
                     ) : null}
@@ -391,9 +405,9 @@ export function LeadsTable({
                   onChange={(event) => changeStatus(lead, event.target.value)}
                   className={`${inputClass} bg-asphalt disabled:opacity-60`}
                 >
-                  {LEAD_STATUSES.map((value) => (
+                  {(lead.source?.startsWith("whatsapp:") ? PURCHASE_STATUSES : LEAD_STATUSES).map((value) => (
                     <option key={value} value={value}>
-                      {STATUS_LABEL[value]}
+                      {lead.source?.startsWith("whatsapp:") ? PURCHASE_STATUS_LABEL[value as keyof typeof PURCHASE_STATUS_LABEL] || STATUS_LABEL[value] : STATUS_LABEL[value]}
                     </option>
                   ))}
                 </select>
@@ -417,6 +431,7 @@ export function LeadsTable({
                       </button>
                     </>
                   ) : null}
+                  {leadHasPhone(lead) ? <>
                   <a
                     href={whatsappLink(lead)}
                     target="_blank"
@@ -433,6 +448,7 @@ export function LeadsTable({
                     <IconPhone className="h-4 w-4" />
                     Ligar
                   </a>
+                  </> : null}
                   <button
                     type="button"
                     onClick={() => convert(lead)}
@@ -477,6 +493,7 @@ export function LeadsTable({
                 </div>
               ) : null}
 
+              {lead.source?.startsWith("whatsapp:") ? <PurchaseLeadForm key={`${lead.id}-${new Date(lead.updatedAt).getTime()}`} vehicles={vehicles} lead={lead} /> : null}
               <LeadFollowUp
                 id={lead.id}
                 nextAction={lead.nextAction}

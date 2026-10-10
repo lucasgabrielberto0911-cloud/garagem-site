@@ -39,6 +39,9 @@ const HEAT_LEVELS = [
   "quente: quer fechar, ver o carro, financiar ou falar com o consultor",
 ];
 
+/** A leitura do chat não pode atrasar a resposta: prazo menor que o do admin. */
+export const CHAT_READING_TIMEOUT_MS = 2_500;
+
 export const CHAT_READING_QUESTIONS: Record<string, JevQuestion> = {
   temperatura: {
     type: "score",
@@ -192,12 +195,11 @@ export async function readChatIntent(input: {
 }): Promise<ChatReading | null> {
   try {
     if (!shouldReadChat(input.mensagem)) return null;
-    const answers = await askJev({
-      state: buildReadingState(input),
-      questions: CHAT_READING_QUESTIONS,
+    const answers = await askJev(buildReadingState(input), CHAT_READING_QUESTIONS, {
       signal: input.signal,
-      fetcher: input.fetcher,
+      fetchImpl: input.fetcher,
       apiKey: input.apiKey,
+      timeoutMs: CHAT_READING_TIMEOUT_MS,
     });
     return parseChatReading(answers);
   } catch {

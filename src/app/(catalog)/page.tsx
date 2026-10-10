@@ -42,13 +42,13 @@ import {
   getTestimonials,
 } from "@/lib/vehicles";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
+import { HOME_SEO_TITLE, SEO_LOCAL_LOCATION } from "@/lib/seo-local";
 
 export const revalidate = 600;
 
 export const metadata = buildPageMetadata({
-  title: `${site.name} | Seminovos com procedência no ${site.state}`,
-  description:
-    "Seminovos com procedência verificada em Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Compra, venda, troca e financiamento na Garagem.",
+  title: HOME_SEO_TITLE,
+  description: `Seminovos com procedência em ${SEO_LOCAL_LOCATION} e região. Escolha no site, peça vídeo no WhatsApp e marque visita. Troca e financiamento na Garagem.`,
   path: "/",
 });
 
@@ -133,7 +133,7 @@ export default async function HomePage() {
                 <SiteWordmark size="hero" />
               </div>
               <h1 className="mt-3 font-display text-lg font-semibold leading-snug tracking-tight text-cream sm:mt-3 sm:text-3xl sm:leading-[1.12] lg:text-[2rem]">
-                Seminovos com procedência em {site.region}.
+                Seminovos com procedência em {SEO_LOCAL_LOCATION}.
               </h1>
               <ul className="mt-3 flex max-w-lg flex-col gap-2 border-l-2 border-brand/60 pl-3 text-sm leading-snug text-cream sm:gap-1.5 sm:border-0 sm:pl-0 sm:text-base">
                 <li>A gente revisa cada veículo, e ele sai com garantia.</li>

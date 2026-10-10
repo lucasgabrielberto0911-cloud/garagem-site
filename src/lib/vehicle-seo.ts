@@ -1,14 +1,15 @@
 import { formatVehicleLabel } from "@/lib/format";
+import { SEO_LOCAL_LOCATION } from "@/lib/seo-local";
 import { shortVersion } from "@/lib/vehicle-display";
 import { site } from "@/lib/site";
 
 /**
- * Região usada nos títulos de busca local das fichas. É a região de atendimento
- * da loja (base em Linhares/ES), e não a cidade individual do carro: a cidade
- * do veículo só aparece no admin (PR #219) e os carros podem estar em outras
+ * Região usada nos títulos de busca local das fichas (vem de `seo-local`, o
+ * ponto único da região). Não é a cidade individual do carro: a cidade do
+ * veículo só aparece no admin (PR #219) e os carros podem estar em outras
  * cidades (consignados).
  */
-export const VEHICLE_SEO_LOCATION = `Linhares/${site.stateCode}`;
+export const VEHICLE_SEO_LOCATION = SEO_LOCAL_LOCATION;
 
 /** O Google corta títulos por volta de 60 caracteres. */
 export const VEHICLE_SEO_TITLE_MAX = 60;

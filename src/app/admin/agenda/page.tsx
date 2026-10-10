@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { adminDate } from "@/lib/admin-date";
 import { AGENDA_PERIODS, agendaWhere, parseAgendaPeriod } from "@/lib/admin-agenda";
 import { leadSearchWhere } from "@/lib/admin-lead-search";
-import { buildLeadWhatsAppUrl } from "@/lib/leads";
+import { buildLeadWhatsAppUrl, leadDisplayName, leadHasPhone } from "@/lib/leads";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 20;
@@ -64,14 +64,14 @@ export default async function AgendaPage({ searchParams }: {
     </div> : <div className="grid gap-3 lg:grid-cols-2">
       {leads.map((lead) => <article key={lead.id} className="min-w-0 space-y-3 rounded-lg border border-white/10 bg-ink/50 p-4">
         <div className="flex items-start justify-between gap-3">
-          <h2 className="min-w-0 break-words font-display text-lg font-semibold">{lead.name}</h2>
+          <h2 className="min-w-0 break-words font-display text-lg font-semibold">{leadDisplayName(lead)}</h2>
           <time dateTime={lead.nextActionAt!.toISOString()} className={`shrink-0 text-xs ${period === "atrasados" ? "text-brand-orange" : "text-muted"}`}>{adminDate(lead.nextActionAt!)}</time>
         </div>
         <p className="break-words text-sm text-muted">{lead.vehicleInfo}</p>
         <p className="break-words text-sm">{lead.nextAction || "Retomar atendimento"}</p>
         <div className="grid grid-cols-2 gap-2">
           <Link href={`/admin/leads?lead=${encodeURIComponent(lead.id)}`} className={btn.outline}>Abrir lead</Link>
-          <a href={buildLeadWhatsAppUrl(lead)} target="_blank" rel="noopener noreferrer" className={btn.outline}>WhatsApp</a>
+          {leadHasPhone(lead) ? <a href={buildLeadWhatsAppUrl(lead)} target="_blank" rel="noopener noreferrer" className={btn.outline}>WhatsApp</a> : <span className="self-center text-xs text-muted">Sem telefone</span>}
         </div>
         <LeadFollowUp id={lead.id} nextAction={lead.nextAction} nextActionAt={lead.nextActionAt} />
       </article>)}

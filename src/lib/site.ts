@@ -1,3 +1,4 @@
+import { applyWhatsAppOrigin, type LeadOrigin } from "./lead-origin";
 /**
  * Dados de contato e institucionais do site público.
  *
@@ -109,7 +110,7 @@ export type CustomerWhatsAppVehicleIntent =
   | "trade"
   | "similar";
 
-/** Campanhas dos CTAs públicos — Lucas vê no wa.me aberto. */
+/** Campanhas internas dos CTAs públicos; não representam a origem do visitante. */
 export type WhatsAppCampaign =
   | "ficha"
   | "estoque"
@@ -128,6 +129,8 @@ export type WhatsAppTracking = {
   phoneIndex?: number;
   /** Sem UTM — compartilhar o anúncio com um amigo, não CTA da loja. */
   bare?: boolean;
+  /** Categoria consentida, sem UTMs livres. */
+  origin?: LeadOrigin | null;
 };
 
 export const WHATSAPP_UTM_SOURCE = "site";
@@ -359,6 +362,7 @@ export function applyWhatsAppUtm(
   href: string,
   tracking: WhatsAppTracking = {},
 ) {
+  if (tracking.origin !== undefined) href = applyWhatsAppOrigin(href, tracking.origin);
   const campaign = tracking.campaign ?? "home";
   const extra = [
     `utm_source=${encodeURIComponent(WHATSAPP_UTM_SOURCE)}`,
@@ -376,7 +380,7 @@ export function applyWhatsAppUtm(
 /**
  * Monta o link do WhatsApp oficial (99633-0706).
  * Sem número configurado o link cai no wa.me genérico, que ainda abre o app.
- * UTM entra como query extra para o Lucas ver a origem no chat aberto.
+ * Origem consentida entra no texto; UTMs externas identificam apenas o CTA.
  * `phoneIndex` antigo não troca o destino: o site tem um número só.
  */
 export function whatsappUrl(

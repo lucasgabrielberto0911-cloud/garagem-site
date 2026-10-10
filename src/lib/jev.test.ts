@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
-import { JEV_ENDPOINT, JEV_MODEL, askJev, jevChoice, jevConfigured, jevScore } from "./jev";
+import {
+  JEV_ENDPOINT,
+  JEV_MODEL,
+  askJev,
+  jevChoice,
+  jevConfigured,
+  jevScore,
+  type JevQuestion,
+} from "./jev";
 
 const KEY = "chave-secreta-de-teste-123";
 const QUESTIONS = {
@@ -31,10 +39,8 @@ function json(body: unknown, status = 200) {
 test("sem JEV_API_KEY não chama a API e devolve null", async () => {
   delete process.env.JEV_API_KEY;
   let calls = 0;
-  const result = await askJev({
-    state: "x",
-    questions: QUESTIONS,
-    fetcher: async () => {
+  const result = await askJev("x", QUESTIONS, {
+    fetchImpl: async () => {
       calls += 1;
       return json({});
     },
@@ -48,13 +54,13 @@ test("sem JEV_API_KEY não chama a API e devolve null", async () => {
 
 test("manda modelo, estado e todas as perguntas num único pedido", async () => {
   const seen: Array<{ url: string; init: RequestInit }> = [];
-  const answers = await askJev({
-    state: { oi: 1 },
-    questions: QUESTIONS,
+  const answers = await askJev({ oi: 1 }, QUESTIONS, {
     apiKey: KEY,
-    fetcher: async (url, init) => {
+    fetchImpl: async (url, init) => {
       seen.push({ url: String(url), init: init ?? {} });
-      return json({ answers: { temperatura: { type: "score", score: 1, confidence: 1 } } });
+      return json({
+        answers: { temperatura: { type: "score", score: 1, confidence: 1 } },
+      });
     },
   });
   assert.ok(answers?.temperatura);
@@ -69,11 +75,9 @@ test("manda modelo, estado e todas as perguntas num único pedido", async () => 
 });
 
 test("erro HTTP devolve null e o log não traz a chave", async () => {
-  const result = await askJev({
-    state: "x",
-    questions: QUESTIONS,
+  const result = await askJev("x", QUESTIONS, {
     apiKey: KEY,
-    fetcher: async () => json({ detail: `Bearer ${KEY} inválida` }, 401),
+    fetchImpl: async () => json({ detail: `Bearer ${KEY} inválida` }, 401),
   });
   assert.equal(result, null);
   assert.ok(warnings.length > 0);
@@ -81,11 +85,9 @@ test("erro HTTP devolve null e o log não traz a chave", async () => {
 });
 
 test("falha de rede devolve null sem vazar a mensagem do erro", async () => {
-  const result = await askJev({
-    state: "x",
-    questions: QUESTIONS,
+  const result = await askJev("x", QUESTIONS, {
     apiKey: KEY,
-    fetcher: async () => {
+    fetchImpl: async () => {
       throw new Error(`falhou com ${KEY}`);
     },
   });
@@ -95,12 +97,10 @@ test("falha de rede devolve null sem vazar a mensagem do erro", async () => {
 
 test("timeout aborta o pedido e devolve null", async () => {
   const started = Date.now();
-  const result = await askJev({
-    state: "x",
-    questions: QUESTIONS,
+  const result = await askJev("x", QUESTIONS, {
     apiKey: KEY,
     timeoutMs: 30,
-    fetcher: (_url, init) =>
+    fetchImpl: (_url, init) =>
       new Promise<Response>((_resolve, reject) => {
         // O timer do AbortSignal.timeout não segura o event loop do teste.
         const hold = setTimeout(() => undefined, 5_000);
@@ -124,11 +124,9 @@ test("resposta malformada devolve null", async () => {
     () => json(null),
   ];
   for (const make of cases) {
-    const result = await askJev({
-      state: "x",
-      questions: QUESTIONS,
+    const result = await askJev("x", QUESTIONS, {
       apiKey: KEY,
-      fetcher: async () => make(),
+      fetchImpl: async () => make(),
     });
     assert.equal(result, null);
   }
@@ -146,7 +144,10 @@ test("jevScore normaliza o índice da escala para 0–1 e rejeita lixo", () => {
   assert.equal(jevScore(ok(Number.NaN), "t", 3), null);
   assert.equal(jevScore(ok(1, 7), "t", 3), null);
   assert.equal(jevScore(ok(1, null), "t", 3), null);
-  assert.equal(jevScore({ t: { type: "choice", choice: "a", confidence: 1 } }, "t", 3), null);
+  assert.equal(
+    jevScore({ t: { type: "choice", choice: "a", confidence: 1 } }, "t", 3),
+    null,
+  );
   assert.equal(jevScore({}, "t", 3), null);
   assert.equal(jevScore(ok(1), "t", 1), null);
 });
@@ -172,13 +173,19 @@ test("loga o sucesso só com status e latência, nunca chave, estado ou texto", 
     infos.push(args);
   };
   try {
-    const answers = await askJev({
-      state: { conversa: "texto sigiloso do visitante" },
-      questions: QUESTIONS,
-      apiKey: KEY,
-      fetcher: async () =>
-        json({ answers: { temperatura: { type: "score", score: 1, confidence: 1 } } }),
-    });
+    const answers = await askJev(
+      { conversa: "texto sigiloso do visitante" },
+      QUESTIONS,
+      {
+        apiKey: KEY,
+        fetchImpl: async () =>
+          json({
+            answers: {
+              temperatura: { type: "score", score: 1, confidence: 1 },
+            },
+          }),
+      },
+    );
     assert.ok(answers?.temperatura);
     assert.equal(infos.length, 1);
     assert.equal(infos[0]![0], "[jev] ok");
@@ -190,15 +197,122 @@ test("loga o sucesso só com status e latência, nunca chave, estado ou texto", 
     assert.doesNotMatch(JSON.stringify(infos), new RegExp(`${KEY}|sigiloso`));
     // Falha continua em warn, sem log de sucesso.
     infos.length = 0;
-    const failed = await askJev({
-      state: "x",
-      questions: QUESTIONS,
+    const failed = await askJev("x", QUESTIONS, {
       apiKey: KEY,
-      fetcher: async () => json({}, 500),
+      fetchImpl: async () => json({}, 500),
     });
     assert.equal(failed, null);
     assert.equal(infos.length, 0);
   } finally {
     console.info = realInfo;
   }
+});
+
+// Forma de chamada do admin (PR #238): estado em texto e opções nomeadas.
+
+const adminQuestions: Record<string, JevQuestion> = {
+  legenda: {
+    type: "score",
+    instructions: "Avalie a legenda.",
+    criteria: ["fraco", "ok", "bom", "ótimo"],
+  },
+  foco: {
+    type: "choice",
+    instructions: "O que melhorar?",
+    criteria: { legenda: "texto", nada: "ok" },
+  },
+};
+
+function withKey(value: string | undefined, run: () => Promise<void>) {
+  const previous = process.env.JEV_API_KEY;
+  if (value === undefined) delete process.env.JEV_API_KEY;
+  else process.env.JEV_API_KEY = value;
+  return run().finally(() => {
+    if (previous === undefined) delete process.env.JEV_API_KEY;
+    else process.env.JEV_API_KEY = previous;
+  });
+}
+
+test("sem JEV_API_KEY não chama a rede e não devolve nota", async () => {
+  await withKey(undefined, async () => {
+    let called = false;
+    const result = await askJev("anúncio", adminQuestions, {
+      fetchImpl: async () => {
+        called = true;
+        throw new Error("não deveria chamar");
+      },
+    });
+    assert.equal(result, null);
+    assert.equal(called, false);
+  });
+});
+
+test("chave vazia também não chama a rede", async () => {
+  let called = false;
+  const result = await askJev("anúncio", adminQuestions, {
+    apiKey: "   ",
+    fetchImpl: async () => {
+      called = true;
+      throw new Error("não deveria chamar");
+    },
+  });
+  assert.equal(result, null);
+  assert.equal(called, false);
+});
+
+test("falha da API devolve null e não propaga o erro", async () => {
+  const rejected = await askJev("anúncio", adminQuestions, {
+    apiKey: "segredo-teste",
+    fetchImpl: async () => {
+      throw new Error("rede caiu");
+    },
+  });
+  assert.equal(rejected, null);
+
+  const http = await askJev("anúncio", adminQuestions, {
+    apiKey: "segredo-teste",
+    fetchImpl: async () => new Response("falhou", { status: 503 }),
+  });
+  assert.equal(http, null);
+
+  const broken = await askJev("anúncio", adminQuestions, {
+    apiKey: "segredo-teste",
+    fetchImpl: async () =>
+      new Response("não é json", {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      }),
+  });
+  assert.equal(broken, null);
+});
+
+test("resposta válida devolve as decisões e não manda a chave no corpo", async () => {
+  let seenUrl = "";
+  let seenAuth = "";
+  let seenBody = "";
+  const result = await askJev("Honda Civic, legenda curta", adminQuestions, {
+    apiKey: "segredo-teste",
+    fetchImpl: async (url, init) => {
+      seenUrl = String(url);
+      seenAuth = new Headers(init?.headers).get("Authorization") ?? "";
+      seenBody = String(init?.body ?? "");
+      return Response.json({
+        answers: {
+          legenda: { score: 1.9, confidence: 0.77 },
+          foco: { choice: "legenda" },
+        },
+        usage: { input_tokens: 10, output_tokens: 2 },
+      });
+    },
+  });
+
+  assert.equal(seenUrl, JEV_ENDPOINT);
+  assert.equal(seenAuth, "Bearer segredo-teste");
+  assert.equal(seenBody.includes("segredo-teste"), false);
+  const body = JSON.parse(seenBody) as { model: string; questions: object };
+  assert.equal(body.model, JEV_MODEL);
+  assert.equal("legenda" in body.questions, true);
+  assert.equal("foco" in body.questions, true);
+  assert.equal(result?.legenda && typeof result.legenda, "object");
+  assert.deepEqual((result?.legenda as { score: number }).score, 1.9);
 });

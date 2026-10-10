@@ -5,6 +5,7 @@ import {
   SERVICE_CITIES,
   getServiceCity,
   otherServiceCities,
+  type ServiceCity,
 } from "./service-cities";
 
 const EXPECTED = [
@@ -115,6 +116,33 @@ test("tom de consultor: fala com você, cita o lugar e evita anúncio frio", () 
   assert.match(colatina.paragraphs[1], /proposta estiver clara/);
   assert.doesNotMatch(colatina.paragraphs.join(" "), /deslocamento cego/);
   assert.doesNotMatch(colatina.bullets.join(" "), /ritmo de Colatina/);
+});
+
+test("Linhares explica o atendimento real, sem prometer loja física", () => {
+  const linhares = getServiceCity("linhares");
+  assert.ok(linhares);
+  assert.ok(linhares.steps);
+  assert.equal(linhares.steps.length, 4);
+
+  const steps = linhares.steps.map((step) => `${step.title} ${step.text}`).join(" ");
+  assert.match(steps, /WhatsApp/);
+  assert.match(steps, /vídeo/);
+  assert.match(steps, /hora marcada em Linhares/);
+  assert.match(steps, /Troca/);
+  assert.match(steps, /financiamento/);
+  assert.match(steps, /Filtre o estoque/);
+  assert.doesNotMatch(steps, /showroom|endereço|ponto físico|nossa loja/i);
+
+  // Texto "sem ponto físico" já existente não pode sumir nem virar loja.
+  assert.match(linhares.paragraphs[1], /Não temos loja em Linhares/);
+  assert.doesNotMatch(linhares.metaDescription, /loja em|showroom|endereço/i);
+
+  assert.match(linhares.faqs.map((item) => item.answer).join(" "), /até 60x/);
+  assert.match(linhares.faqs.map((item) => item.answer).join(" "), /até 18x/);
+
+  for (const city of SERVICE_CITIES) {
+    if (city.slug !== "linhares") assert.equal((city as ServiceCity).steps, undefined, city.slug);
+  }
 });
 
 function escapeRegExp(value: string) {
