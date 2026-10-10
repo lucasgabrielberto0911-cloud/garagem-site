@@ -6,7 +6,7 @@ test("Civic: pergunta técnica, continuidade do torque e nova busca", async ({pa
   await page.route("**/fotos/**", route=>route.fulfill({contentType:"image/png",body:readFileSync("public/branding/placeholder-car.png")}));
   await page.goto("/estoque");
   await page.getByRole("button",{name:"Ajuda para escolher",exact:true}).first().click();
-  const dialog=page.getByRole("dialog",{name:"Sua Garagem",exact:true});
+  const dialog=page.getByRole("dialog",{name:"Garagem",exact:true});
   async function send(question:string){
     await dialog.locator("textarea").fill(question);
     await dialog.getByRole("button",{name:"Enviar",exact:true}).click();
@@ -32,7 +32,7 @@ test("Civic e Duster: comparação por combustível com resposta antes dos cards
   await page.route("**/fotos/**",route=>route.fulfill({contentType:"image/png",body:readFileSync("public/branding/placeholder-car.png")}));
   await page.goto("/estoque");
   await page.getByRole("button",{name:"Ajuda para escolher",exact:true}).first().click();
-  const dialog=page.getByRole("dialog",{name:"Sua Garagem",exact:true});
+  const dialog=page.getByRole("dialog",{name:"Garagem",exact:true});
   await dialog.locator("textarea").fill("entre Civic e Duster, qual é o mais potente?");
   await dialog.getByRole("button",{name:"Enviar",exact:true}).click();
   await expect(dialog).toHaveAttribute("aria-busy","false");

@@ -239,7 +239,7 @@ export function AdminShell({
       <Link prefetch={false} href="/admin" className="flex items-center gap-2.5">
         <Image
           src="/branding/logo-wordmark.webp"
-          alt="Sua Garagem"
+          alt="Garagem"
           width={160}
           height={29}
           className="h-7 w-auto"
@@ -282,7 +282,7 @@ export function AdminShell({
         >
           <Image
             src="/branding/logo-wordmark.webp"
-            alt="Sua Garagem"
+            alt="Garagem"
             width={140}
             height={25}
             className="h-6 w-auto"
@@ -329,7 +329,7 @@ export function AdminShell({
               >
                 <Image
                   src="/branding/logo-wordmark.webp"
-                  alt="Sua Garagem"
+                  alt="Garagem"
                   width={160}
                   height={29}
                   className="h-7 w-auto"

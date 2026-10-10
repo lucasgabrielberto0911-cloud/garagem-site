@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Entrar | Sua Garagem",
+  title: "Entrar | Garagem",
   robots: { index: false, follow: false, nocache: true },
   alternates: { canonical: "/admin/login" },
 };

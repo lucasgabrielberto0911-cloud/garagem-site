@@ -43,7 +43,7 @@ test("garantia comercial cobre motor e câmbio, sem revisão completa", () => {
   );
   assert.equal(
     isLegacyStoreWarrantyCopy(
-      "Na Sua Garagem, todo veículo passa por uma revisão completa antes de chegar até você.",
+      "Na Garagem, todo veículo passa por uma revisão completa antes de chegar até você.",
     ),
     true,
   );
