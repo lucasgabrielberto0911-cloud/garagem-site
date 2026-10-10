@@ -51,3 +51,12 @@ test("home e estoque usam a região centralizada, sem repetir Linhares/ES", () =
   assert.match(estoque, /title: ESTOQUE_SEO_TITLE/);
   assert.doesNotMatch(estoque, /title: `Estoque \|/);
 });
+
+test("intro do /estoque fica visível no celular, só compacta", () => {
+  const css = readSrc("app/globals.css");
+  const rule = /\.stock-compact-opening header > p:last-child:not\(:first-child\):not\(\.font-display\) \{([^}]*)\}/.exec(css);
+  assert.ok(rule, "regra da intro no celular");
+  assert.doesNotMatch(rule[1], /display:\s*none/);
+  const estoque = readSrc("app/(catalog)/estoque/page.tsx");
+  assert.match(estoque, /description=\{`Seminovos revisados e com garantia em \$\{SEO_LOCAL_LOCATION\}/);
+});

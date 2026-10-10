@@ -44,7 +44,7 @@ export default async function EstoquePage() {
         <PageHeader
           eyebrow="Estoque"
           title="Veículos disponíveis"
-          description={`Compre, troque ou financie seu seminovo em ${SEO_LOCAL_LOCATION}: cada veículo é revisado, sai com garantia e a documentação vai preparada. Para ver o carro, peça o vídeo no WhatsApp ou combine visita com hora marcada.`}
+          description={`Seminovos revisados e com garantia em ${SEO_LOCAL_LOCATION}. Troca, financiamento e vídeo do carro pelo WhatsApp.`}
         />
 
         <RecentlyViewedVehicles />
