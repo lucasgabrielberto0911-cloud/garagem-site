@@ -268,7 +268,7 @@ test("VehicleGrid entrega o mesmo anúncio em todas as listas, sem uma variante 
   assert.equal(renderGrid("default"), renderGrid("stock"));
   assert.match(renderGrid("default"), /grid-cols-2/);
   for (const source of [
-    "app/(site)/page.tsx",
+    "app/(catalog)/page.tsx",
     "components/site/StockInfiniteList.tsx",
     "components/site/FavoritesList.tsx",
     "components/site/SimilarVehicles.tsx",

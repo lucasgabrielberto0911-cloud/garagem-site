@@ -295,6 +295,23 @@ test("WhatsApp troca, vídeo e visita no tom natural", () => {
   assert.match(visit, /quero ver ele de perto/);
 });
 
+test("vendido não leva preço em nenhuma intenção de WhatsApp", () => {
+  const base = { brand: "Fiat", model: "Pulse", version: "Drive", yearModel: 2022,
+    price: 89900, status: "vendido", path: "/estoque/fiat-pulse-drive-2022-sold" };
+  for (const intent of ["interest", "similar", "finance", "trade", "video", "visit"] as const) {
+    const message = formatVehicleWhatsAppMessage({ ...base, intent });
+    assert.match(message, /Fiat Pulse Drive 2022 já foi vendido/);
+    assert.match(message, /opções parecidas no estoque/);
+    assert.doesNotMatch(message, /R\$|89[.,]?900|parcelas|troca|vídeo|mesma faixa/);
+    assert.equal(message.split("\n")[1], `https://www.suagaragem.net${base.path}`);
+  }
+  const available = formatVehicleWhatsAppMessage({ ...base, status: "disponivel", intent: "finance" });
+  assert.match(available, /por R\$\s*89\.900.*simular as parcelas/);
+  const reserved = formatVehicleWhatsAppMessage({ ...base, status: "reservado" });
+  assert.match(reserved, /por R\$\s*89\.900.*quero saber mais/);
+  assert.match(formatVehicleWhatsAppMessage({ ...base, brand: "Honda", model: "Biz", isMoto: true }), /já foi vendida/);
+});
+
 test("WhatsApp sem preço não inventa “por R$” e sem path não manda URL", () => {
   const noPrice = formatVehicleWhatsAppMessage({
     brand: "Hyundai",

@@ -21,10 +21,9 @@ test("mensagem do chrome na ficha fala do carro, não o recado genérico", () =>
   assert.match(text, /quero saber mais/);
   assert.doesNotMatch(text, /gostaria de mais informações/);
   assert.equal(pageWhatsAppMessage(null), WHATSAPP_MESSAGES.general);
-  assert.equal(
-    pageWhatsAppMessage({ ...civic, sold: true }),
-    WHATSAPP_MESSAGES.general,
-  );
+  const sold = pageWhatsAppMessage({ ...civic, sold: true });
+  assert.match(sold, /já foi vendido.*opções parecidas no estoque/);
+  assert.doesNotMatch(sold, /R\$|89\.900|simular|vídeo/);
 });
 
 test("href do chrome na ficha leva campaign ficha e utm_content do slug", () => {
@@ -57,4 +56,14 @@ test("href do chrome na ficha leva campaign ficha e utm_content do slug", () => 
   assert.match(leaked, /utm_campaign=home/);
   assert.doesNotMatch(leaked, /utm_content=/);
   assert.match(decodeURIComponent(leaked), /gostaria de mais informações/);
+});
+
+test("header, barra e float da ficha vendida não recebem o preço antigo", () => {
+  const href = pageWhatsAppHref({ pathname: civic.path, vehicle: { ...civic, sold: true } });
+  const url = new URL(href);
+  assert.equal(url.origin + url.pathname, "https://wa.me/5527996330706");
+  const text = url.searchParams.get("text")!;
+  assert.match(text, /já foi vendido.*opções parecidas no estoque/);
+  assert.doesNotMatch(text, /R\$|89\.900/);
+  assert.match(pageWhatsAppMessage({ ...civic, brand: undefined, model: undefined, sold: true }), /opções parecidas no estoque/);
 });

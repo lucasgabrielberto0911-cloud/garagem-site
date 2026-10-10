@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { requestJson } from "@/lib/request-json";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { StockInfiniteList } from "@/components/site/StockInfiniteList";
@@ -39,6 +39,14 @@ function paramsToRecord(params: URLSearchParams): EstoqueSearchParams {
     if (value) record[key] = value;
   }
   return record;
+}
+
+/** Keep URL-dependent hydration away from the server-rendered first photos. */
+function StockQueryObserver({ onChange }: { onChange: (search: string) => void }) {
+  const params = useSearchParams();
+  const search = params.toString();
+  useEffect(() => { onChange(search); }, [search, onChange]);
+  return null;
 }
 
 function buildReturnTo(params: EstoqueSearchParams) {
@@ -143,10 +151,10 @@ export function EstoqueBrowse({
 }: {
   initialStock: StockPageResult;
 }) {
-  const searchParams = useSearchParams();
+  const [search, setSearch] = useState("");
   const params = useMemo(
-    () => paramsToRecord(searchParams),
-    [searchParams],
+    () => paramsToRecord(new URLSearchParams(search)),
+    [search],
   );
   const filtered = hasActiveFilters(params);
   const remote = stockViewNeedsFetch(params);
@@ -228,6 +236,9 @@ export function EstoqueBrowse({
 
   return (
     <>
+      <Suspense fallback={null}>
+        <StockQueryObserver onChange={setSearch} />
+      </Suspense>
       {!loading && !error && filtered && searchString ? (
         <StockSearchPixel
           active

@@ -11,7 +11,7 @@ function readSrc(rel: string) {
 }
 
 test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
-  const page = readSrc("app/(site)/page.tsx");
+  const page = readSrc("app/(catalog)/page.tsx");
   const hero = page.slice(page.indexOf("hero-red-black"), page.indexOf('id="destaques"'));
   assert.match(hero, /trackingLabel="home-hero"/);
   assert.match(hero, /Falar no WhatsApp/);
@@ -44,7 +44,7 @@ test("home: WhatsApp e estoque no hero, chat só no fim e em contorno", () => {
 });
 
 test("home: Instagram no atendimento é atalho, sem rótulo de canais", () => {
-  const page = readSrc("app/(site)/page.tsx");
+  const page = readSrc("app/(catalog)/page.tsx");
   const start = page.indexOf("6. ATENDIMENTO");
   const end = page.indexOf("7. VENDER OU TROCAR");
   assert.ok(start > 0 && end > start);
