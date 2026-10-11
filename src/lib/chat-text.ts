@@ -85,7 +85,7 @@ export function displayChatText(text: string) {
         return "";
       }
       return trimmed
-        .replace(/\bwhatsapp\s*:\s*$/i, "WhatsApp")
+        .replace(/\bwhatsapp\s*:\s*$/i, "WhatsApp.")
         // Sem a URL, "é só chamar lá em" ficaria pendurado: fecha a frase (o botão vem logo abaixo).
         .replace(/\s+(?:l[aá]\s+)?(?:em|no|pelo|aqui|neste link|nesse link)\s*[:.]?$/i, ".");
     })

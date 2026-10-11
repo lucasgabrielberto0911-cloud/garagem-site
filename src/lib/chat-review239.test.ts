@@ -103,3 +103,11 @@ test("link do WhatsApp no meio da frase leva o conector junto", async () => {
     "A avaliação a gente alinha com o consultor no WhatsApp, é só chamar que ele te ajuda com tudo.",
   );
 });
+
+test("frase que termina em 'WhatsApp: <link>' fecha com ponto", async () => {
+  const { displayChatText } = await import("@/lib/chat-text");
+  assert.equal(
+    displayChatText("Pra não te passar informação errada, o vendedor confirma pelas fotos ou no WhatsApp: https://wa.me/5527996330706"),
+    "Pra não te passar informação errada, o vendedor confirma pelas fotos ou no WhatsApp.",
+  );
+});
