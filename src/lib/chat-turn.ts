@@ -61,6 +61,9 @@ import {
   CHAT_ORIGIN_REPLY,
   CHAT_KEYS_REPLY,
   CHAT_SOCIAL_REPLY,
+  CHAT_PCD_REPLY,
+  CHAT_RECALL_REPLY,
+  CHAT_HOURS_REPLY,
   CHAT_CONTACT_REPLY,
   CHAT_ZERO_REPLY,
   newestChatVehicles,
@@ -560,6 +563,20 @@ export async function runChatTurn(input: {
       : CHAT_ORIGIN_REPLY;
     emit(reply);
     return finish(reply, false, { policy, cards: false });
+  }
+  if (policy === "pcd" || policy === "recall" || policy === "hours") {
+    const reply = { pcd: CHAT_PCD_REPLY, recall: CHAT_RECALL_REPLY, hours: CHAT_HOURS_REPLY }[policy];
+    // PCD: mostra os automáticos (os mais bem colocados).
+    const autos = policy === "pcd"
+      ? input.stock
+        .filter((vehicle) => (vehicle.category ?? "carro") !== "moto" && /autom[aá]tic|cvt/i.test(vehicle.transmission ?? "") && !/semi/i.test(vehicle.transmission ?? ""))
+        .sort((a, b) => b.yearModel - a.yearModel || a.km - b.km)
+        .slice(0, 3)
+      : [];
+    emit(reply);
+    const result = finish(reply, false, { policy, forcedVehicles: autos, cards: autos.length > 0 });
+    result.reply = reply;
+    return result;
   }
   if (policy === "social" || policy === "contact") {
     const reply = policy === "social" ? CHAT_SOCIAL_REPLY : CHAT_CONTACT_REPLY;
