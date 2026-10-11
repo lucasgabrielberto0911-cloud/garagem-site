@@ -351,7 +351,7 @@ test("comparação com consumo usa anúncios atuais e pesquisa com fontes", asyn
   const compared = compareChatStockPicks([palio, prismaJoy, hb20Auto], {
     includeConsumption: true,
   });
-  assert.match(compared, /^No geral, o HB20 leva vantagem:\n• /);
+  assert.match(compared, /^São ótimas escolhas, cada um tem seu ponto forte:\n• /);
   assert.match(compared, /• Palio Weekend [^\n]* — mais em conta/);
   assert.match(compared, /• Prisma [^\n]* — mais novo/);
   assert.match(compared, /• HB20 [^\n]* — [^\n]*automático/);
@@ -518,7 +518,7 @@ test("Pulse e HR-V no mesmo preço comparam km e ano, não mais em conta", () =>
     category: "carro",
   };
   const compared = compareChatStockPicks([pulse, hrv]);
-  assert.match(compared, /^Os dois estão no mesmo preço; o desempate é km e ano:/);
+  assert.match(compared, /^Os dois são ótimas escolhas, cada um tem seu ponto forte:/);
   assert.match(compared, /menos km/);
   assert.match(compared, /mais novo/);
   assert.doesNotMatch(compared, /mais em conta/);

@@ -435,8 +435,8 @@ function messageMentionsModel(mensagem: string, model: string) {
   return false;
 }
 
-function mentionedModelGroups(stock: ChatVehicleRecord[], mensagem: string) {
-  const models = new Map<string, ChatVehicleRecord[]>();
+function mentionedModelGroups<T extends { model: string }>(stock: T[], mensagem: string) {
+  const models = new Map<string, T[]>();
   const foldedMsg = normalize(mensagem);
   for (const vehicle of stock) {
     if (!messageMentionsModel(mensagem, vehicle.model)) continue;
@@ -469,10 +469,10 @@ function mentionedModelGroups(stock: ChatVehicleRecord[], mensagem: string) {
 }
 
 /** Um único modelo citado (ex.: “hb20 baratinho”) — não mistura irmão de outra família. */
-export function singleMentionedModelPool(
-  stock: ChatVehicleRecord[],
+export function singleMentionedModelPool<T extends { model: string }>(
+  stock: T[],
   mensagem: string,
-): ChatVehicleRecord[] | null {
+): T[] | null {
   const models = mentionedModelGroups(stock, mensagem);
   if (models.size !== 1) return null;
   return [...models.values()][0] ?? null;
@@ -494,7 +494,7 @@ function pickFromModelGroup(group: ChatVehicleRecord[]) {
 export function pickComparedModelVehicles(
   stock: ChatVehicleRecord[],
   mensagem: string,
-  limit = 2,
+  limit = 3,
 ): ChatVehicleRecord[] {
   const groups = mentionedModelPools(stock, mensagem);
   if (groups.length < 2) return [];
@@ -1941,12 +1941,7 @@ export function compareChatStockPicks(
     const gear = isAutomaticVehicle(vehicle) ? "automático" : null;
     list.push([body ? BODY_SPOKEN[body] ?? body : null, motor ? `motor ${motor}` : null, gear].filter(Boolean).join(", ") || "boa opção também");
   }
-  const leader = vehicles.find((vehicle) => (traits.get(vehicle.id)?.length ?? 0) >= 2);
-  const lead = allSamePrice
-    ? `${vehicles.length === 2 ? "Os dois estão" : "Estão"} no mesmo preço; o desempate é km e ano:`
-    : leader
-      ? `No geral, ${talkName(leader).labeled} leva vantagem:`
-      : "Cada um tem seu ponto forte:";
+  const lead = `${vehicles.length === 2 ? "Os dois são" : "São"} ótimas escolhas, cada um tem seu ponto forte:`;
   const list = formatRankList(
     lead,
     vehicles.map((vehicle) => ({ name: rankLineName(vehicle), value: traits.get(vehicle.id)!.slice(0, 2).join(" e ") })),
@@ -1955,10 +1950,6 @@ export function compareChatStockPicks(
     ? `${list}\n\n${formatConsumptionCompare(vehicles)}`
     : list;
   if (opts.withLeadin === false) return body;
-  // "Kicks ou HR-V?": direto na lista, sem "Vou te ajudar a escolher".
-  if (vehicles.length === 2 && !opts.includeConsumption) {
-    return `${body}\n\nQuer que eu compare consumo, espaço ou itens da ficha?`;
-  }
   return body;
 }
 
@@ -3234,10 +3225,10 @@ export function enrichMissingModelReply(
 }
 
 export const CHAT_FINANCE_REPLY =
-  `Dá sim — são duas formas diferentes: financiamento em até 60 vezes, e cartão de crédito em até 18 vezes. Não misturamos os prazos e não inventamos taxa nem valor de parcela. O usado também pode entrar na conta. A condição certinha o consultor monta no WhatsApp com o modelo que você escolher, bem no seu caso. ${CHAT_WHATSAPP_URL}`;
+  `Dá sim — financiamento em até 60 vezes ou cartão de crédito em até 18 vezes. O consultor simula as condições para você no WhatsApp, com o carro que escolher. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_CARD_REPLY =
-  `Dá sim — no cartão de crédito a gente parcela em até 18 vezes. Isso é diferente do financiamento, que vai em até 60 vezes. Não inventamos taxa nem valor de parcela; o consultor confirma a melhor forma no WhatsApp, no seu caso. O usado também pode entrar na conta. ${CHAT_WHATSAPP_URL}`;
+  `Dá sim — no cartão de crédito a gente parcela em até 18 vezes; no financiamento, em até 60 vezes. O consultor confirma as condições para você no WhatsApp. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_TRADE_REPLY =
   `Aceitamos sim — carro ou moto entram na conta. Manda umas fotos no WhatsApp que o consultor avalia e já encaixa no negócio com você. ${CHAT_WHATSAPP_URL}`;

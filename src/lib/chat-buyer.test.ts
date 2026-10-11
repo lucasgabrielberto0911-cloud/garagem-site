@@ -480,7 +480,7 @@ test("Pulse vs HR-V no mesmo preço não inventa mais em conta", async () => {
   });
   assert.equal(result.meta?.policy, "compare");
   assert.equal(result.vehicles.length, 2);
-  assert.match(result.reply, /mesmo preço/);
+  assert.match(result.reply, /^Os dois são ótimas escolhas/);
   assert.match(result.reply, /menos km/);
   assert.match(result.reply, /mais novo|desempate é km e ano/);
   assert.doesNotMatch(result.reply, /mais em conta/);

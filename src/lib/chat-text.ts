@@ -330,6 +330,15 @@ export function chatCtaIntent(userText: string): ChatCtaIntent {
   return "question";
 }
 
+/** Após escolher “o Civic” numa pergunta de mídia, o assunto vem da resposta confirmada. */
+export function chatReplyCtaIntent(text: string, userText: string): ChatCtaIntent {
+  const intent = chatCtaIntent(userText);
+  if (intent === "question" && /^o consultor manda (?:mais fotos|um video) do /.test(fold(text))) {
+    return /^o consultor manda um video/.test(fold(text)) ? "video" : "photos";
+  }
+  return intent;
+}
+
 const CTA_TOPICS: Array<[RegExp, string]> = [
   [/\bmotor|\bpotencia|\bcv\b|\bturbo|\bcilindrada|\btorque/, "motor"],
   [/\bcambio|\bmarchas?\b|\bautomatic|\bmanual\b|\bcvt\b/, "câmbio"],
@@ -366,7 +375,7 @@ export function chatWhatsAppCta(
   if (!opts.force && !/whatsapp|wa\.me/i.test(text)) return null;
   const folded = fold(text);
   const hasUser = typeof opts.userText === "string" && opts.userText.trim() !== "";
-  const userIntent = hasUser ? chatCtaIntent(opts.userText ?? "") : null;
+  const userIntent = hasUser ? chatReplyCtaIntent(text, opts.userText ?? "") : null;
   // Sem a pergunta (chamadas antigas), cai no texto da resposta.
   const wants = (intent: "finance" | "trade", replyRe: RegExp) =>
     hasUser ? userIntent === intent : replyRe.test(folded);
@@ -392,6 +401,14 @@ export function chatWhatsAppCta(
       href: whatsappUrl(WHATSAPP_MESSAGES.help, track),
       label: "Falar com a loja",
       benefit: "Consultor humano · das 8h às 23h",
+    };
+  }
+  // Cards abaixo são alternativas disponíveis; o aviso continua sobre o modelo vendido.
+  if (/ja foi vendido/.test(folded)) {
+    return {
+      href: waitlistHref,
+      label: "Avisar quando chegar",
+      benefit: "Consultor procura o modelo pra você",
     };
   }
   if (wants("finance", /financi|parcela|60x|simul|cartao|18 vez/)) {
@@ -573,6 +590,6 @@ export function resolveChatRequestVehicleId(opts: {
   }
   if (named) return named;
   if (!opts.lastSingleCardId) return undefined;
-  if (!isAnaphoricVehicleFollowUp(opts.mensagem)) return undefined;
+  if (!isAnaphoricVehicleFollowUp(opts.mensagem) && !["photos", "video"].includes(chatCtaIntent(opts.mensagem) ?? "")) return undefined;
   return opts.lastSingleCardId;
 }

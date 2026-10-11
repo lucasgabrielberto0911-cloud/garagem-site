@@ -10,7 +10,9 @@ import {
   getOrCreateChatSession,
 } from "@/lib/chat-session";
 import { catchUpStreamText, encodeSse } from "@/lib/chat-stream";
-import { loadChatStock, type ChatVehicleRecord } from "@/lib/chat-stock";
+import type { ChatVehicleRecord } from "@/lib/chat-stock";
+import { loadCachedChatStock, loadCachedChatSoldStock } from "@/lib/chat-stock-cache";
+import type { ChatSoldVehicle } from "@/lib/chat-sold";
 import { runChatTurn, type ChatTurnResult } from "@/lib/chat-turn";
 import { readChatResearch } from "@/lib/chat-research-data";
 import type { RateLimitResult } from "@/lib/rate-limit";
@@ -28,6 +30,7 @@ export type ChatPostDeps = {
   /** Limite por IP: quem apaga o cookie não ganha mensagens novas. */
   checkIpLimit?: (ip: string) => Promise<RateLimitResult>;
   loadStock: () => Promise<ChatVehicleRecord[]>;
+  loadSoldStock?: () => Promise<ChatSoldVehicle[]>;
   runTurn: (
     input: Parameters<typeof runChatTurn>[0],
   ) => Promise<ChatTurnResult>;
@@ -37,7 +40,8 @@ export const defaultChatPostDeps: ChatPostDeps = {
   getSession: getOrCreateChatSession,
   checkLimit: checkChatRateLimit,
   checkIpLimit: checkChatIpRateLimit,
-  loadStock: loadChatStock,
+  loadStock: loadCachedChatStock,
+  loadSoldStock: loadCachedChatSoldStock,
   runTurn: runChatTurn,
 };
 
@@ -136,6 +140,7 @@ export async function handleChatPost(
       mensagem?: unknown;
       historico?: unknown;
       vehicleId?: unknown;
+      previousVehicleIds?: unknown;
       stream?: unknown;
     };
     const vehicleId =
@@ -159,9 +164,20 @@ export async function handleChatPost(
     }
 
     const historico = readChatTurns(body.historico);
+    // Só IDs: nomes, preços e status enviados pelo cliente nunca são fonte de verdade.
+    const previousVehicleIds = Array.isArray(body.previousVehicleIds)
+      ? [...new Set(body.previousVehicleIds.filter((id): id is string => typeof id === "string" && id.length > 0 && id.length <= 100))].slice(0, 3)
+      : [];
     let stock: ChatVehicleRecord[] = [];
+    let soldStock: ChatSoldVehicle[] = [];
     try {
-      stock = await deps.loadStock();
+      [stock, soldStock] = await Promise.all([
+        deps.loadStock(),
+        deps.loadSoldStock?.().catch(() => {
+          console.error("[chat] histórico de vendidos indisponível");
+          return [];
+        }) ?? Promise.resolve([]),
+      ]);
     } catch (error) {
       console.error("[chat] estoque:", error);
       return json(
@@ -192,6 +208,8 @@ export async function handleChatPost(
         mensagem,
         historico,
         stock,
+        soldStock,
+        previousVehicleIds,
         vehicleId,
         signal,
       });
@@ -232,6 +250,8 @@ export async function handleChatPost(
               mensagem,
               historico,
               stock,
+              soldStock,
+              previousVehicleIds,
               vehicleId,
               signal,
               onToken: (text) => {

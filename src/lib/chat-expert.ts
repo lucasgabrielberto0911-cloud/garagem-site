@@ -1,3 +1,4 @@
+import { neutralChatComparison } from "@/lib/chat-comparison";
 /**
  * Modo especialista do assistente: perguntas técnicas sobre modelos (cv,
  * torque, consumo, autonomia, câmbio, porta-malas, segurança, manutenção…)
@@ -440,17 +441,19 @@ export function buildExpertPromptBlock(plan: ExpertPlan) {
     "- NUNCA afirme nada sobre a UNIDADE do estoque: estado, revisões, histórico, dono, laudo, garantia além da política da loja, ou equipamento que não esteja na linha do estoque. Equipamentos da base genérica não comprovam versão e ano exatos; só dados cadastrados ou pesquisa exata confirmada permitem afirmá-los; “esta unidade tem…” só com o que está na linha do estoque. Estado e histórico: consultor. Manutenção: destaque mecânica conhecida e oferta de peças. NÃO traga pontos de atenção, defeitos ou críticas espontaneamente. Só responda a uma crítica quando o visitante perguntar diretamente, com tato e sem mentir. Nunca diga que a unidade tem laudo, garantia de fábrica, revisões feitas, “original”, dono único, ausência de batida/sinistro nem que passou por “conferência de qualidade”: esse dado não está no anúncio e o consultor confirma. Marca sempre a dos dados (o HB20 é Hyundai, o City é Honda).",
   );
   lines.push(
-    "- Comparação (“qual o mais forte / que gasta menos / mais espaçoso?”): compare os carros da conversa (os que acabaram de aparecer) usando os números das fichas, aponte quem ganha e por qual critério, e diga a nuance quando houver (ex.: um tem mais cv, o outro mais torque em baixa). Sem inventar critério. Para modelo que não está no estoque (ex.: Onix), compare com o que você conhece dele e diga que no momento não temos esse no estoque. Formato pro cliente leigo: 1 frase curta e depois uma linha por carro “• Modelo Versão Ano — dado pedido” (ex.: “• Civic EXL 2020 — 155 cv”), sem km, preço nem motor repetido.",
+    "- Comparação (“qual o mais forte / que gasta menos / mais espaçoso?”): compare os carros da conversa (os que acabaram de aparecer) usando os números das fichas, com abertura neutra e o ponto forte real de cada um. Entre nossos carros, nunca declare vencedor, vantagem geral, superioridade ou que um é melhor que o outro; pode mostrar que um tem mais cv e o outro mais torque em baixa. Sem inventar critério. Para modelo que não está no estoque (ex.: Onix), compare com o que você conhece dele e diga que no momento não temos esse no estoque. Formato pro cliente leigo: 1 frase curta e depois uma linha por carro “• Modelo Versão Ano — dado pedido” (ex.: “• Civic EXL 2020 — 155 cv”), sem km, preço nem motor repetido.",
   );
   lines.push(
     "- Não despeje a lista do estoque nem repita preço e km se a pergunta não pediu. Nunca mostre preço de carro vendido nem a cidade do veículo. Só convide para o consultor/WhatsApp quando ajudar de verdade.",
   );
   if (plan.entries.length >= 2 && plan.topics.some((topic) => topic === "potencia" || topic === "torque")) {
     // "Qual o mais forte?": potência e torque juntos, já montado a partir das fichas, para não se contradizer.
-    const brief = rankingSpecReply("forca", plan.entries);
+    const brief = plan.subject.vehicles.length >= 2
+      ? neutralChatComparison(plan.subject.vehicles, "potência e torque")
+      : rankingSpecReply("forca", plan.entries);
     if (brief) {
       lines.push(
-        "- Para “qual o mais forte?”: olhe potência E torque juntos e não se contradiga (não chame um de mais forte e depois de mais fraco). Se quem tem mais cv não tem mais torque, diga que depende: um leva em potência de pico, o outro entrega o torque mais cedo. Resposta-base montada das fichas (reescreva com suas palavras, mantendo os números): " + brief,
+        "- Para “qual o mais forte?”: olhe potência E torque juntos e não se contradiga (não chame um de mais forte e depois de mais fraco). Se os dados diferem, mostre potência e torque de cada ficha sem declarar vencedor entre nossos carros. Resposta-base montada das fichas (reescreva com suas palavras, mantendo os números): " + brief,
       );
     }
   }

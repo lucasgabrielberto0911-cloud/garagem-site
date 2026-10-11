@@ -109,7 +109,7 @@ test("garantia vem do texto oficial com exclusões; estado da unidade continua s
 
 test("tom positivo na manutenção e resposta honesta à pergunta direta sobre consumo do Lancer", async () => {
   assert.match(CHAT_SYSTEM_PROMPT, /NÃO traga defeitos/);
-  assert.match(CHAT_SYSTEM_PROMPT, /DE SÉRIE confirmado.*versão.*ano-modelo exatos/);
+  assert.match(CHAT_SYSTEM_PROMPT, /só afirma na nossa unidade se estiver nos acessórios da ficha/);
   for (const spec of VEHICLE_SPECS) assert.doesNotMatch(spec.manutencao, /ponto de atenção|vale olhar|problemas crônicos|mais caras/);
   const result = await runChatTurn({ mensagem: "o Lancer 2.0 bebe muito?", historico: [], stock, generate: noModel });
   assert.match(result.reply, /8,8 km\/l na cidade.*10,7 km\/l na estrada/);
@@ -123,7 +123,8 @@ test("jornada de seis turnos responde a pergunta e conserva cards na busca", asy
     const result = await runChatTurn({ mensagem, historico, stock, generate: noModel });
     if (mensagem.includes("pontos positivos")) assert.match(result.reply, /Kicks.*economia.*CVT.*porta-malas/);
     if (mensagem.includes("até 70")) assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [hb.id]);
-    if (mensagem.includes("x HR-V")) assert.match(result.reply, /Kicks.*economia.*HR-V.*conforto e espaço/);
+    if (mensagem.includes("x HR-V")) assert.match(result.reply, /Os dois são ótimas escolhas/);
+    if (mensagem.includes("x HR-V")) assert.match(result.reply, /• Kicks[^\n]*\n• HR-V/);
     if (mensagem.includes("vendedor")) assert.match(result.reply, /WhatsApp|wa\.me/);
     assert.doesNotMatch(result.reply, /ponto de atenção|conferir.*suspensão/);
     historico.push({ role: "user", content: mensagem }, { role: "assistant", content: result.reply });

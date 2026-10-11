@@ -92,7 +92,8 @@ test("Lucas 2: qual o mais forte? depois dos HB20 usa as fichas dos carros mostr
   assert.match(prompt, /NUNCA afirme nada sobre a UNIDADE do estoque/);
   // "Qual o mais forte?": o prompt leva a resposta-base com potência E torque juntos.
   assert.match(prompt, /Para “qual o mais forte\?”: olhe potência E torque juntos/);
-  assert.match(prompt, /Depende do que você chama de forte/);
+  assert.match(prompt, /São ótimas escolhas, cada um tem seu ponto forte/);
+  assert.doesNotMatch(prompt, /aponte quem ganha/);
   assert.doesNotMatch(prompt, /FILTRO DO VISITANTE|cilindrada sozinha/);
   assert.match(prompt, /TODO o estoque.*Civic/);
   assert.doesNotMatch(result.reply, robotic);
