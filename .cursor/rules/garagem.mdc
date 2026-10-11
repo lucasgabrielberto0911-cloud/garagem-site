@@ -9,3 +9,4 @@ alwaysApply: true
 - Vendido = sem preço. Cidade só no admin. Chips pequenos nos cards.
 - Para mudança de veículo, use `revalidatePublicStock()`. Nunca use `revalidatePath("/estoque/[id]", "page")`.
 - `npm test`, `npm run lint` e `npm run build` precisam passar. Nada de comandos contra o banco de produção.
+- Economia Vercel: teste local antes do push; junte correções em lote; só label `preview` ou `[preview]` no commit quando o PR estiver pronto para o teste final (ver AGENTS.md).
