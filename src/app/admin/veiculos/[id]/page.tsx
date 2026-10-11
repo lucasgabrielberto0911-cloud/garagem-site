@@ -41,6 +41,7 @@ import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehicleLocationLabel } from "@/lib/vehicle-location";
 import { CONSIGNED_LABEL } from "@/lib/vehicle-ops";
 import { getAdminVerifiedState } from "@/lib/vehicle-verified-data";
+import { getStoredListingScore } from "@/lib/listing-score-store";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +77,7 @@ export default async function EditVehiclePage({
 
   // Custos e documentos só na aba Operação — e em paralelo com o veículo,
   // sem esperar a primeira consulta.
-  const [vehicle, costs, documents, verified] = await Promise.all([
+  const [vehicle, costs, documents, verified, listingScore] = await Promise.all([
     prisma.vehicle.findUnique({
       where: { id },
       include: {
@@ -112,6 +113,8 @@ export default async function EditVehiclePage({
     view === "verificado"
       ? getAdminVerifiedState(id)
       : Promise.resolve(null),
+    // Nota gravada no último Salvar com alteração. Abrir o admin não chama o Jev.
+    view === "anuncio" ? getStoredListingScore(id) : Promise.resolve(null),
   ]);
 
   if (!vehicle) {
@@ -215,7 +218,12 @@ export default async function EditVehiclePage({
           documents={documents}
         />
       ) : (
-        <VehicleForm mode="edit" vehicle={vehicle} adminId={session.adminId} />
+        <VehicleForm
+          mode="edit"
+          vehicle={vehicle}
+          adminId={session.adminId}
+          listingScore={listingScore}
+        />
       )}
     </div>
   );

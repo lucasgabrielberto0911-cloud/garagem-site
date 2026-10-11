@@ -2,6 +2,7 @@
 
 import { photoQueueStorage } from "@/lib/admin-photo-queue-store";
 import { ListingQualityCard } from "@/components/admin/ListingQualityCard";
+import type { StoredListingScore } from "@/lib/listing-score";
 import { VehicleFormPreview } from "@/components/admin/VehicleFormPreview";
 import { vehicleFieldErrors } from "@/lib/admin-vehicle-fields";
 import { adminMutation } from "@/lib/admin-mutation";
@@ -163,10 +164,13 @@ export function VehicleForm({
   vehicle,
   mode,
   adminId,
+  listingScore = null,
 }: {
   vehicle?: VehicleWithPhotos;
   mode: "create" | "edit";
   adminId: string;
+  /** Nota gravada no último Salvar. O formulário nunca chama o Jev. */
+  listingScore?: StoredListingScore | null;
 }) {
   const router = useRouter();
   const boundUpdate = useMemo(
@@ -617,6 +621,10 @@ export function VehicleForm({
           category,
         }}
         coverUrl={photos[0]?.url ?? ""}
+        judgment={listingScore?.judgment ?? null}
+        scoredAt={listingScore?.scoredAt ?? null}
+        dirty={dirty}
+        saving={saving}
         onJump={(section) => revealSections([section])}
       />
 

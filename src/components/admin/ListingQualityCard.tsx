@@ -10,7 +10,18 @@ import {
 } from "@/lib/listing-present";
 import { useEffect, useState } from "react";
 
-const DEBOUNCE_MS = 800;
+function scoredDateLabel(scoredAt: string | null) {
+  if (!scoredAt) return null;
+  const date = new Date(scoredAt);
+  if (Number.isNaN(date.getTime())) return null;
+  return `Calculada ao salvar em ${date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  })}.`;
+}
 
 function useCoverWarnings(url: string) {
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -73,94 +84,35 @@ function useCoverWarnings(url: string) {
   return warnings;
 }
 
-function requestBody(draft: ListingDraft) {
-  return {
-    brand: draft.brand,
-    model: draft.model,
-    version: draft.version,
-    year: draft.year,
-    yearModel: draft.yearModel,
-    km: draft.km,
-    transmission: draft.transmission,
-    fuel: draft.fuel,
-    color: draft.color,
-    price: draft.price,
-    description: draft.description,
-    accessories: draft.accessories,
-    photoCount: draft.photoCount,
-    status: draft.status,
-    category: draft.category,
-  };
-}
-
+/**
+ * Mostra a nota gravada no último Salvar com alteração. Este componente nunca
+ * chama o Jev: abrir o admin ou editar campos não gasta nada. A nota é
+ * recalculada no servidor só quando o anúncio é salvo com mudança.
+ */
 export function ListingQualityCard({
   draft,
   coverUrl,
+  judgment,
+  scoredAt,
+  dirty,
+  saving,
   onJump,
 }: {
   draft: ListingDraft;
   coverUrl: string;
+  judgment: ListingJudgment | null;
+  scoredAt: string | null;
+  dirty: boolean;
+  saving: boolean;
   onJump: (section: VehicleFormSectionId) => void;
 }) {
   const coverWarnings = useCoverWarnings(coverUrl);
-  const [judgment, setJudgment] = useState<ListingJudgment | null>(null);
-  const [pending, setPending] = useState(false);
-  const [slow, setSlow] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const serialized = JSON.stringify(requestBody(draft));
-
-  useEffect(() => {
-    if (!pending) {
-      setSlow(false);
-      return;
-    }
-    const timer = window.setTimeout(() => setSlow(true), 350);
-    return () => window.clearTimeout(timer);
-  }, [pending]);
-
-  useEffect(() => {
-    const payload = JSON.parse(serialized) as ListingDraft;
-    if (payload.status === "vendido" || !payload.brand.trim() || !payload.model.trim()) {
-      setJudgment(null);
-      setPending(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => {
-      setPending(true);
-      void fetch("/api/admin/anuncios/nota", {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "Content-Type": "application/json" },
-        body: serialized,
-      })
-        .then(async (response) => {
-          if (!response.ok) {
-            setJudgment(null);
-            return;
-          }
-          const data = (await response.json()) as { judgment?: unknown };
-          setJudgment(isListingJudgment(data.judgment) ? data.judgment : null);
-        })
-        .catch((error: unknown) => {
-          if (error instanceof DOMException && error.name === "AbortError") return;
-          setJudgment(null);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setPending(false);
-        });
-    }, DEBOUNCE_MS);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [serialized]);
 
   if (draft.status === "vendido") return null;
 
-  const view = presentListing({ ...draft, coverWarnings }, judgment);
+  const stored = isListingJudgment(judgment) ? judgment : null;
+  const view = presentListing({ ...draft, coverWarnings }, stored);
   if (!view.prompt && view.advice.length === 0 && !view.clearNote && !view.grade) {
     return null;
   }
@@ -169,9 +121,16 @@ export function ListingQualityCard({
     ? view.prompt
     : view.grade
       ? view.grade.label
-      : slow
-        ? "Lendo a legenda…"
-        : null;
+      : null;
+  const scoreHint = view.prompt
+    ? null
+    : saving && dirty
+      ? "Salvando… a nota é atualizada junto."
+      : view.grade && dirty
+        ? "Nota do último salvamento. Salve para atualizar."
+        : view.grade
+          ? scoredDateLabel(scoredAt)
+          : "A nota do Jev sai quando você salvar uma alteração.";
   const scoreText = view.grade
     ? view.grade.score.toLocaleString("pt-BR", {
         minimumFractionDigits: 1,
@@ -212,6 +171,12 @@ export function ListingQualityCard({
             </p>
           ) : null}
         </div>
+
+        {scoreHint ? (
+          <p className="mt-1 text-[11px] leading-relaxed text-muted">
+            {scoreHint}
+          </p>
+        ) : null}
 
         {view.grade ? (
           <div className="mt-3 h-1 bg-white/10" aria-hidden="true">
