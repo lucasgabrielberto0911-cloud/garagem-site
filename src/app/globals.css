@@ -1954,7 +1954,8 @@ html[data-consent="essential"] .site-consent {
   pointer-events: none;
   box-shadow: 0 0 22px 2px rgba(232, 24, 28, 0.45);
   opacity: 0.25;
-  animation: assistantGlow 4.6s ease-in-out infinite;
+  /* Começa depois do 1º paint do hero. */
+  animation: assistantGlow 4.6s ease-in-out 2s infinite both;
 }
 
 .assistant-cta {
@@ -1979,7 +1980,7 @@ html[data-consent="essential"] .site-consent {
     transparent 100%
   );
   transform: translateX(-160%) skewX(-18deg);
-  animation: assistantSheen 4.6s ease-in-out infinite;
+  animation: assistantSheen 4.6s ease-in-out 2s infinite both;
 }
 
 @keyframes assistantSheen {
