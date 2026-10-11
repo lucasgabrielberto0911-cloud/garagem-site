@@ -200,6 +200,23 @@ export function expertSubject(ctx: ExpertContext): ExpertSubject {
     if (rows.length === 0) {
       return { vehicles: [], source: "named", unmatched: dedupeById(named), outside };
     }
+    // "e de consumo, o Civic?" depois de "o Civic 2020…": com dois Civic no estoque,
+    // segue o ano/versão já dito na conversa (ou o carro da tela), sem listar os dois.
+    const topicsNow = detectSpecTopics(ctx.mensagem);
+    const sameModel = new Set(rows.map((vehicle) => fold(vehicle.model))).size === 1;
+    if (rows.length > 1 && sameModel && !topicsNow.includes("ranking") && !topicsNow.includes("comparacao")) {
+      const said = ctx.historico.filter((turn) => turn.role === "user").slice(-4).map((turn) => turn.content);
+      for (let index = said.length - 1; index >= 0; index -= 1) {
+        if (!mentionedModelPools(rows, said[index]!).length) continue;
+        const earlier = narrowNamed(rows, said.slice(index).join(" "));
+        if (earlier.length >= 1 && earlier.length < rows.length) {
+          return { vehicles: dedupeById(earlier), source: "named", outside };
+        }
+        break;
+      }
+      const onScreen = rows.find((vehicle) => vehicle.id === ctx.activeVehicle?.id);
+      if (onScreen) return { vehicles: [onScreen], source: "named", outside };
+    }
     return { vehicles: rows, source: "named", outside };
   }
   const outsideSpecs = specsMentioned(ctx.mensagem);

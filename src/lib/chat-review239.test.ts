@@ -111,3 +111,22 @@ test("frase que termina em 'WhatsApp: <link>' fecha com ponto", async () => {
     "Pra não te passar informação errada, o vendedor confirma pelas fotos ou no WhatsApp.",
   );
 });
+
+test("'e de consumo, o Civic?' segue o Civic 2020 citado antes, sem listar o outro Civic", async () => {
+  const civics = [
+    ...stock,
+    car("c20", "Honda", "Civic", "EXL 2.0 Flexone CVT", 2020, 109900),
+    car("c15", "Honda", "Civic", "LXR 2.0 Flexone", 2015, 69900),
+  ];
+  const result = await runChatTurn({
+    mensagem: "e de consumo, o Civic?",
+    historico: [
+      { role: "user", content: "e o Civic 2020, faz 0 a 100 em quanto?" },
+      { role: "assistant", content: "O Civic 2.0 faz o 0 a 100 km/h em cerca de 10,9 segundos." },
+    ],
+    stock: civics,
+    readIntent: noReading,
+    generate: async () => ({ text: "O Civic 2020 faz cerca de 10 km/l na cidade.", functionCall: null }),
+  });
+  assert.doesNotMatch(result.reply, /2015/, result.reply);
+});
