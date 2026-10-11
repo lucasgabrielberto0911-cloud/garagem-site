@@ -68,7 +68,7 @@ test("não mistura combustíveis e não classifica valores conflitantes", () => 
 test("comparação entre dois modelos sem o modelo de linguagem fala o vencedor com os cv da ficha", async () => {
   const result = await runChatTurn({mensagem: "entre Civic e Duster, qual é o mais potente com etanol?", historico: [], stock: [civic, duster], generate: noModel});
   assert.equal(result.meta?.policy, "expert");
-  assert.match(result.reply, /Civic.*155 cv.*mais forte/);
+  assert.match(result.reply, /Civic 2\.0 é o mais forte em potência:\n• Civic 2\.0 — 155 cv/);
   assert.match(result.reply, /Duster.*142 cv/);
   assert.doesNotMatch(result.reply, /Achei|No estoque:/);
 });

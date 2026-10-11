@@ -27,6 +27,8 @@ export function looksTruncated(
   if (/R\$\s*\d[\d.]*$/.test(trimmed)) return false;
   if (/\d[\d.]*\s*km$/i.test(trimmed)) return false;
   if (/[.!?]["”']?$/.test(trimmed)) return false;
+  // Lista compacta do ranking (“• Civic EXL 2020 — 155 cv”) termina sem ponto.
+  if (/(?:^|\n)•\s+[^\n]{3,}$/.test(trimmed)) return false;
   // Parada natural (STOP) num parêntese, reticências ou emoji fecha a resposta; não é corte.
   if (finishReason === "STOP" && trimmed.length >= 20 && /[)\]…\p{Extended_Pictographic}]$/u.test(trimmed)) {
     return false;

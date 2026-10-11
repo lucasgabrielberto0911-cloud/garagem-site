@@ -348,6 +348,38 @@ function ChatBubbleBody({ text }: { text: string }) {
           (part) => part.type !== "link" || !/wa\.me\//i.test(part.href),
         );
         const evidenceNote = /não foi medido|nao foi medido/i.test(block);
+        const lines = block.split("\n").filter((line) => line.trim());
+        const rankStart = lines.findIndex((line) => /^•\s/.test(line.trim()));
+        if (rankStart >= 0 && lines.slice(rankStart).every((line) => /^•\s/.test(line.trim()))) {
+          const lead = lines.slice(0, rankStart).join(" ");
+          return (
+            <div key={`r-${index}`} className={index > 0 ? "mt-2.5" : ""}>
+              {lead ? (
+                <p className="text-pretty text-[14px] leading-[1.55] text-cream/95">{lead}</p>
+              ) : null}
+              <ul
+                className={`${lead ? "mt-2 " : ""}divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-white/[0.04] ring-1 ring-inset ring-white/[0.06]`}
+                data-chat-rank-list="1"
+              >
+                {lines.slice(rankStart).map((line, lineIndex) => {
+                  const [name, ...rest] = line.trim().replace(/^•\s+/, "").split(" — ");
+                  const value = rest.join(" — ");
+                  return (
+                    <li
+                      key={`${name}-${lineIndex}`}
+                      className="flex items-baseline justify-between gap-3 px-3 py-2 text-[13.5px] leading-snug"
+                    >
+                      <span className="min-w-0 text-cream/90">{name}</span>
+                      {value ? (
+                        <span className="shrink-0 text-right font-semibold tabular-nums text-cream">{value}</span>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        }
         return (
           <p
             key={`p-${index}`}

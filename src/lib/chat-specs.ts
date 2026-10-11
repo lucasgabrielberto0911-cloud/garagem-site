@@ -1170,22 +1170,11 @@ export function rankSpecs(criterion: SpecCriterion, entries: NamedSpec[]): Named
   return [...entries].sort((a, b) => score(b) - score(a));
 }
 
-/** "120 cv" quando etanol e gasolina são iguais; o par completo quando diferem. */
-function pairText(pair: FuelPair, unit: string) {
-  return pair.etanol != null && pair.etanol === pair.gasolina
-    ? `${num(pair.etanol)} ${unit}`
-    : fuelPair(pair, unit);
-}
 
 function maxTorque(spec: VehicleSpec) {
   return Math.max(spec.torque.etanol ?? 0, spec.torque.gasolina ?? 0);
 }
 
-/** "5.000 rpm (já disponível…)" → 5000. */
-function torqueRpmValue(spec: VehicleSpec) {
-  const match = /([\d.]+)\s*rpm/.exec(spec.torqueRpm ?? "");
-  return match ? Number(match[1]!.replace(/\./g, "")) : null;
-}
 
 /**
  * "Qual o mais forte?" olhando potência E torque juntos, sem se contradizer: quando quem tem mais cv
@@ -1198,40 +1187,22 @@ export function powerTorqueReply(ranked: NamedSpec[]): string | null {
   const byTorque = [...ranked].sort((a, b) => maxTorque(b.spec) - maxTorque(a.spec));
   const torquer = byTorque[0]!;
   if (torquer === power || maxTorque(torquer.spec) <= maxTorque(power.spec)) return null;
-  const cvPower = bestCv(power.spec);
-  const cvTorquer = bestCv(torquer.spec);
-  const rpmPower = torqueRpmValue(power.spec);
-  const rpmTorquer = torqueRpmValue(torquer.spec);
-  const rpmPowerText = power.spec.torqueRpm?.replace(/\s*\(.*\)\s*$/, "");
-  const rpmTorquerText = torquer.spec.torqueRpm?.replace(/\s*\(.*\)\s*$/, "");
-  // "Bem mais cedo" só quando a diferença de giro é grande; pequena vira "um pouco mais cedo".
-  const earlier =
-    rpmPower != null && rpmTorquer != null && rpmTorquer < rpmPower
-      ? rpmTorquer <= rpmPower * 0.6
-        ? ", bem mais cedo"
-        : ", um pouco mais cedo"
-      : "";
-  const slightly = cvTorquer >= cvPower * 0.9 ? "só um pouco menos, " : "";
-  const first =
-    `Depende do que você chama de forte. Em potência máxima, ${power.spec.artigo} ${power.nome} leva: ` +
-    `${pairText(power.spec.cv, "cv")}, mas o torque dele (${pairText(power.spec.torque, "kgfm")}) ` +
-    `${rpmPowerText ? `só aparece em giro alto, a ${rpmPowerText}` : "vem em giro mais alto"}.`;
-  const second =
-    ` ${cap(torquer.spec.artigo)} ${torquer.nome} tem ${pairText(torquer.spec.cv, "cv")}, ${slightly}` +
-    `e entrega ${pairText(torquer.spec.torque, "kgfm")}${rpmTorquerText ? ` a ${rpmTorquerText}` : ""}` +
-    `${earlier}: é o que responde melhor em retomada e ultrapassagem.`;
-  const others = ranked
-    .filter((entry) => entry !== power && entry !== torquer)
-    .slice(0, 2)
-    .map((entry) => `${entry.spec.artigo} ${entry.nome} tem ${pairText(entry.spec.cv, "cv")}`);
-  const rest = others.length ? ` Já ${others.join("; ")}.` : "";
-  const summary = ` Resumindo: potência de pico, ${power.nome}; força logo ao pisar no acelerador, ${torquer.nome}.`;
-  return `${first}${second}${rest}${summary} ${CLOSING}`;
+  // Curto pro leigo: quem leva em cada critério + uma linha por carro com cv e torque.
+  const lead =
+    `Depende do que você chama de forte: em potência leva ${power.spec.artigo} ${power.nome}; ` +
+    `na força ao pisar (torque, retomada) leva ${torquer.spec.artigo} ${torquer.nome}.`;
+  const rows = ranked.slice(0, 3).map((entry) => ({
+    name: entry.nome,
+    value: `${num(bestCv(entry.spec))} cv · ${num(maxTorque(entry.spec))} kgfm`,
+  }));
+  return specRankList(lead, rows);
 }
 
-function cap(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
+/** Frase curta + uma linha “• carro — dado” por carro (o chat desenha como lista). */
+function specRankList(lead: string, rows: Array<{ name: string; value: string }>) {
+  return `${lead}\n${rows.map((row) => `• ${row.name} — ${row.value}`).join("\n")}`;
 }
+
 
 /** Resposta de reserva para "qual o mais forte/econômico…" com as fichas da conversa. */
 export function rankingSpecReply(criterion: SpecCriterion, entries: NamedSpec[]): string | null {
@@ -1241,32 +1212,33 @@ export function rankingSpecReply(criterion: SpecCriterion, entries: NamedSpec[])
     // Potência e torque juntos; se o mesmo carro lidera os dois, vale a resposta de potência.
     return powerTorqueReply(ranked) ?? rankingSpecReply("potencia", entries);
   }
-  const top = ranked[0]!;
-  const others = ranked.slice(1);
-  const describe = (entry: NamedSpec) => {
+  const value = (entry: NamedSpec): string | null => {
     const { spec } = entry;
     switch (criterion) {
       case "potencia": {
-        const power = fuelPair(spec.cv, "cv");
-        return power ? `${spec.artigo} ${entry.nome} (${power})` : null;
+        const cv = bestCv(spec);
+        return cv ? `${num(cv)} cv` : null;
       }
       case "torque": {
-        const torque = fuelPair(spec.torque, "kgfm");
-        return torque ? `${spec.artigo} ${entry.nome} (${torque})` : null;
+        const torque = maxTorque(spec);
+        return torque ? `${num(torque)} kgfm` : null;
       }
       case "economia": {
         const city = spec.cidade?.gasolina ?? spec.consumoMoto;
-        return city ? `${spec.artigo} ${entry.nome} (cerca de ${num(city)} km/l na cidade, na gasolina)` : null;
+        return city ? `${num(city)} km/l na cidade` : null;
       }
       case "espaco":
-        return spec.portaMalas ? `${spec.artigo} ${entry.nome} (${num(spec.portaMalas)} L de porta-malas)` : null;
+        return spec.portaMalas ? `${num(spec.portaMalas)} L de porta-malas` : null;
       case "aceleracao":
-        return spec.zeroACem ? `${spec.artigo} ${entry.nome} (0 a 100 em cerca de ${num(spec.zeroACem)} s)` : null;
+        return spec.zeroACem ? `0 a 100 em ${num(spec.zeroACem)} s` : null;
     }
   };
-  const lead = describe(top);
-  if (!lead) return null;
-  const rest = others.slice(0, 3).map(describe).filter(Boolean);
+  const top = ranked[0]!;
+  if (!value(top)) return null;
+  const rows = ranked
+    .slice(0, 3)
+    .map((entry) => ({ name: entry.nome, value: value(entry) }))
+    .filter((row): row is { name: string; value: string } => Boolean(row.value));
   const label =
     criterion === "potencia"
       ? "mais forte em potência"
@@ -1277,18 +1249,12 @@ export function rankingSpecReply(criterion: SpecCriterion, entries: NamedSpec[])
           : criterion === "espaco"
             ? "mais espaçoso"
             : "mais rápido";
-  const tail = rest.length ? ` Pra comparar: ${rest.join("; ")}.` : "";
-  // Potência não é tudo: o turbo costuma ganhar em torque e retomada.
+  const source = criterion === "economia" ? "Pelo Inmetro (gasolina)" : "Pela ficha de fábrica";
+  // Potência não é tudo: se outro tem mais torque (turbo), uma frase curta depois da lista.
   let nuance = "";
   if (criterion === "potencia") {
-    const topTorque = Math.max(top.spec.torque.etanol ?? 0, top.spec.torque.gasolina ?? 0);
-    const torquer = ranked
-      .slice(1)
-      .find((entry) => Math.max(entry.spec.torque.etanol ?? 0, entry.spec.torque.gasolina ?? 0) > topTorque);
-    if (torquer) {
-      const value = Math.max(torquer.spec.torque.etanol ?? 0, torquer.spec.torque.gasolina ?? 0);
-      nuance = ` Em torque, porém, ${torquer.spec.artigo} ${torquer.nome} leva: ${num(value)} kgfm contra ${num(topTorque)} kgfm.`;
-    }
+    const torquer = ranked.slice(1).find((entry) => maxTorque(entry.spec) > maxTorque(top.spec));
+    if (torquer) nuance = `\n\nEm torque (força na retomada), ${torquer.spec.artigo} ${torquer.nome} leva: ${num(maxTorque(torquer.spec))} kgfm.`;
   }
-  return `Entre esses, ${lead} é o ${label}.${tail}${nuance} ${CLOSING}`;
+  return `${specRankList(`${source}, ${top.spec.artigo} ${top.nome} é o ${label}:`, rows)}${nuance}`;
 }

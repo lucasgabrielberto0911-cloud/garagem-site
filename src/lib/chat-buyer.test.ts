@@ -480,7 +480,7 @@ test("Pulse vs HR-V no mesmo preço não inventa mais em conta", async () => {
   });
   assert.equal(result.meta?.policy, "compare");
   assert.equal(result.vehicles.length, 2);
-  assert.match(result.reply, /R\$ 89\.900/);
+  assert.match(result.reply, /mesmo preço/);
   assert.match(result.reply, /menos km/);
   assert.match(result.reply, /mais novo|desempate é km e ano/);
   assert.doesNotMatch(result.reply, /mais em conta/);
@@ -693,16 +693,16 @@ test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () 
   );
   assert.match(result.reply, /automáticos.*109\.000/i);
   assert.doesNotMatch(result.reply, /eu olho o motor maior antes do preço/);
-  assert.match(result.reply, /Lancer: motor 2\.0/);
-  assert.match(result.reply, /Civic: motor 2\.0/);
-  assert.match(result.reply, /Corolla: motor 2\.0/);
-  assert.match(result.reply, /80 mil km/);
+  assert.match(result.reply, /• Lancer 2\.0 2014 — 160 cv/);
+  assert.match(result.reply, /• Civic LXR 2014 — 155 cv/);
+  assert.match(result.reply, /• Corolla XEi 2015 — 154 cv/);
+  assert.match(result.reply, /80\.000 km/);
   assert.match(result.reply, /62\.900/);
   assert.doesNotMatch(result.reply, /mais em conta/);
   // Com ficha de fábrica na base, a lista mostra os cv de catálogo (e só deles).
-  assert.match(result.reply, /Lancer: motor 2\.0, cerca de 160 cv na gasolina/);
-  assert.match(result.reply, /Civic: motor 2\.0, cerca de 155 cv no etanol e 150 cv na gasolina/);
-  assert.match(result.reply, /Corolla: motor 2\.0, cerca de 154 cv no etanol e 143 cv na gasolina/);
+  assert.doesNotMatch(result.reply, /motor 2\.0, cerca de|cv na gasolina/);
+  assert.doesNotMatch(result.reply, /\d+ mil km e R\$/);
+  assert.match(result.reply, /^Mais fortes \(cv de fábrica\)/);
   assert.doesNotMatch(result.reply, /No estoque:|Achei \d/);
   assert.doesNotMatch(result.reply, /wa\.me|whatsapp/i);
   assert.equal(chatWhatsAppCta(result.reply), null);
@@ -834,7 +834,7 @@ test("2.0 mais barato não manda começar pelo 1.0", async () => {
     [duster.id, lancer.id, civic.id],
   );
   assert.doesNotMatch(result.reply, /HB20/);
-  assert.match(result.reply, /Duster: motor 2\.0, cerca de 142 cv/);
+  assert.match(result.reply, /• Duster Dynamique 2014 — 142 cv/);
   assert.doesNotMatch(result.reply, /No estoque:|Achei \d/);
   assert.doesNotMatch(
     result.reply,
@@ -943,7 +943,7 @@ test("segunda mensagem herda automático e teto e Nova conversa limpa", async ()
   );
   assert.match(result.reply, /automáticos.*100\.000/i);
   assert.doesNotMatch(result.reply, /eu olho o motor maior antes do preço/);
-  assert.match(result.reply, /motor 2\.0|com motor 2\.0/);
+  assert.match(result.reply, /• Lancer 2\.0 2016 — 160 cv/);
 
   const fewerKm = await runChatTurn({
     mensagem: "e o de menos km?",
@@ -1119,8 +1119,8 @@ test("família, primeiro carro, econômico e SUV filtram o estoque real", async 
   assert.equal(economy.vehicles[0]?.id, "hb");
   assert.match(economy.reply, /HB20 Vision 1\.0/);
   // Com a ficha dos dois, "econômico" vem do Inmetro, não só do tamanho do motor.
-  assert.match(economy.reply, /HB20 faz cerca de 13,1 km\/l na cidade \(Inmetro, na gasolina\)/);
-  assert.match(economy.reply, /Civic faz cerca de 9,7 km\/l/);
+  assert.match(economy.reply, /• HB20 Vision 2020 — 13,1 km\/l/);
+  assert.match(economy.reply, /• Civic LXR 2015 — 9,7 km\/l/);
   assert.doesNotMatch(economy.reply, /é o de motor menor|mais econômico da lista|No estoque:|Achei \d/);
   assert.ok(economy.vehicles.every((vehicle) => vehicle.price <= 70_000));
 

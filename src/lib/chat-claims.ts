@@ -207,7 +207,7 @@ export function guardUnaskedOffers(text: string, message: string) {
   if (!TRADE_ASKED.test(asked)) drop.push("troca(?! de (?:oleo|correia|pneus?|bateria))", "avalia(?:r|cao) (?:da|de) troca");
   if (!drop.length || !text.trim()) return text;
   const topic = `(?:${drop.join("|")})`;
-  const verb = "(?:(?:falar|conversar|saber|ver|tratar|combinar|fazer|simular|montar|tirar duvidas?)(?: (?:sobre|de|do|da|das|dos|uma|a|o|as|os))?(?: (?:o|a|as|os|um|uma))? )?";
+  const verb = "(?:(?:falar|conversar|saber|ver|tratar|combinar|fazer|simular|montar|avaliar|tirar duvidas?)(?: (?:sobre|de|do|da|das|dos|uma|a|o|as|os))?(?: (?:o|a|as|os|um|uma))? )?";
   const clause = new RegExp(`(?:,\\s*|\\s+(?:ou|e)\\s+)${verb}${topic}\\b`, "g");
   const lead = new RegExp(`\\b${verb}${topic}\\s+(?:ou|e)\\s+`, "g");
   const parts = splitSentences(text).map((sentence) => {

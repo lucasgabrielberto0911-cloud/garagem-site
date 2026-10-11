@@ -1080,7 +1080,7 @@ export async function runChatTurn(input: {
         const scope = expertPlan?.subject.vehicles ?? (activeVehicle ? [activeVehicle] : promptStock);
         const guarded = guardUnaskedOffers(guardSalesTone(guardLlmReply(result.text, input.stock, scope, research?.paragraphs.map(paragraph => paragraph.text).join(" ")), visitorMessage) ?? "", visitorMessage).replace(/checagem (?:rigorosa|completa|minuciosa|criteriosa)(?: na loja)?/gi, "checagem na loja");
         return guarded && guarded !== CHAT_FALLBACK_REPLY && expertPlan?.stockRanking && !guarded.includes(expertPlan.stockRanking) && !/estoque (?:inteiro|todo)|loja toda|da loja inteira/i.test(guarded)
-          ? `${guarded} ${expertPlan.stockRanking}` : guarded;
+          ? `${guarded}${/(?:^|\n)•[^\n]*$/.test(guarded) ? "\n\n" : " "}${expertPlan.stockRanking}` : guarded;
       })(),
     });
     if (input.onToken && !input.generate) {
