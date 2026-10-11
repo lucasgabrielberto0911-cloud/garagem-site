@@ -16,6 +16,7 @@ import {
   galleryPreviewSrcSet,
   galleryThumbSrc,
   isActiveStockSort,
+  isDailyStockSort,
   modelAfterBrandChange,
   modelFilterOptions,
   modelsForBrand,
@@ -196,13 +197,15 @@ test("URLs antigas com cidade não restringem o estoque público", () => {
   }
 });
 
-test("rótulo de ordenação do estoque cai em mais recentes", () => {
+test("rótulo de ordenação do estoque cai em destaques do dia", () => {
   assert.equal(stockSortLabel("menor-preco"), "Menor preço");
   assert.equal(stockSortLabel("maior-preco"), "Maior preço");
   assert.equal(stockSortLabel("nome"), "Nome (A–Z)");
-  assert.equal(stockSortLabel(""), "Mais recentes");
-  assert.equal(stockSortLabel(undefined), "Mais recentes");
-  assert.equal(stockSortLabel("desconhecido"), "Mais recentes");
+  assert.equal(stockSortLabel("recentes"), "Mais recentes");
+  assert.equal(stockSortLabel("destaques"), "Destaques do dia");
+  assert.equal(stockSortLabel(""), "Destaques do dia");
+  assert.equal(stockSortLabel(undefined), "Destaques do dia");
+  assert.equal(stockSortLabel("desconhecido"), "Destaques do dia");
 });
 
 test("ordenação do estoque usa preço, km, ano e nome", () => {
@@ -214,8 +217,14 @@ test("ordenação do estoque usa preço, km, ano e nome", () => {
   assert.deepEqual(stockOrderBy("luxo"), { createdAt: "desc" });
   assert.deepEqual(stockOrderBy(undefined), { createdAt: "desc" });
   assert.equal(isActiveStockSort("nome"), true);
-  assert.equal(isActiveStockSort("recentes"), false);
+  assert.equal(isActiveStockSort("recentes"), true);
+  assert.equal(isActiveStockSort("destaques"), false);
   assert.equal(isActiveStockSort("luxo"), false);
+  assert.equal(isDailyStockSort(""), true);
+  assert.equal(isDailyStockSort(undefined), true);
+  assert.equal(isDailyStockSort("destaques"), true);
+  assert.equal(isDailyStockSort("recentes"), false);
+  assert.equal(isDailyStockSort("nome"), false);
 });
 
 test("modelo entra na URL e a ordenação sozinha também busca a lista", () => {
@@ -227,7 +236,8 @@ test("modelo entra na URL e a ordenação sozinha também busca a lista", () => 
   );
   assert.equal(stockViewNeedsFetch({ sort: "nome" }), true);
   assert.equal(stockViewNeedsFetch({ sort: "menor-preco" }), true);
-  assert.equal(stockViewNeedsFetch({ sort: "recentes" }), false);
+  assert.equal(stockViewNeedsFetch({ sort: "recentes" }), true);
+  assert.equal(stockViewNeedsFetch({ sort: "destaques" }), false);
   assert.equal(stockViewNeedsFetch({}), false);
 
   const filters = readFileSync(
@@ -257,7 +267,7 @@ test("modelo entra na URL e a ordenação sozinha também busca a lista", () => 
   assert.match(where, /transmissionWhere\(filters\.transmission\)/);
   assert.match(where, /and\.push\(gear\)/);
   assert.doesNotMatch(where, /transmission: filters\.transmission/);
-  assert.match(vehicles, /stock-page-v15/);
+  assert.match(vehicles, /stock-page-v16/);
   assert.equal(parseStockFilters({ transmission: "automatico" }).transmission, "automatico");
   assert.equal(stockViewNeedsFetch({ transmission: "automatico" }), true);
   assert.equal(stockViewNeedsFetch({ transmission: "manual" }), true);

@@ -19,7 +19,8 @@ function withCardDefaults(row: VehicleCardRecord): VehicleCardRecord {
   void internalCity;
   return {
     ...publicRow,
-    photos: row.photos.map((photo) => ({
+    createdAt: row.createdAt ?? new Date(0),
+    photos: (row.photos ?? []).map((photo) => ({
       url: photo.url,
       thumbnailUrl: photo.thumbnailUrl ?? null,
     })),

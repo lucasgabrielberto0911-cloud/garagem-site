@@ -23,6 +23,7 @@ export type VehicleCardRecord = {
   featured: boolean;
   color?: string | null;
   locationCity?: string | null;
+  createdAt: Date | string;
   updatedAt?: Date | string | null;
   photos: VehicleCardPhoto[];
 };
@@ -315,6 +316,7 @@ export type StockPageResult = {
 };
 
 export const STOCK_SORT_OPTIONS = [
+  { value: "destaques", label: "Destaques do dia" },
   { value: "recentes", label: "Mais recentes" },
   { value: "menor-preco", label: "Menor preço" },
   { value: "maior-preco", label: "Maior preço" },
@@ -332,21 +334,27 @@ export function stockCityFilter(value?: string | null) {
 }
 
 export function stockSortLabel(sort?: string | null) {
-  const key = (sort || "recentes").trim();
+  const key = (sort || "destaques").trim();
   const found = STOCK_SORT_OPTIONS.find((option) => option.value === key);
-  return found?.label ?? "Mais recentes";
+  return found?.label ?? "Destaques do dia";
 }
 
 /** Ordenação fora do padrão: a lista precisa da consulta, não do HTML recente. */
 export function isActiveStockSort(sort?: string | null) {
   const key = (sort ?? "").trim();
-  if (!key || key === "recentes") return false;
+  if (!key || key === "destaques") return false;
   return STOCK_SORT_OPTIONS.some((option) => option.value === key);
+}
+
+/** Identifica ordenação diária do estoque (padrão quando vazia ou 'destaques'). */
+export function isDailyStockSort(sort?: string | null): boolean {
+  const key = (sort ?? "").trim();
+  return !key || key === "destaques";
 }
 
 /**
  * Marca, modelo, ano, preço, km (e os outros filtros já existentes) ou uma
- * ordem que não seja “mais recentes”. A página sem query continua estática.
+ * ordem que não seja “destaques”. A página sem query continua estática.
  */
 export function stockViewNeedsFetch(
   input: Partial<Record<(typeof STOCK_FILTER_KEYS)[number] | "sort", string | undefined>>,
@@ -359,9 +367,9 @@ export type StockOrderBy =
   | Record<string, "asc" | "desc">
   | Array<Record<string, "asc" | "desc">>;
 
-/** Preço, km, ano e nome. O restante cai em mais recentes. */
+/** Preço, km, ano e nome. Destaques e padrão usam createdAt desc na consulta base. */
 export function stockOrderBy(sort?: string | null): StockOrderBy {
-  switch ((sort ?? "recentes").trim()) {
+  switch ((sort ?? "destaques").trim()) {
     case "menor-preco":
       return { price: "asc" };
     case "maior-preco":
@@ -372,6 +380,8 @@ export function stockOrderBy(sort?: string | null): StockOrderBy {
       return { yearModel: "desc" };
     case "nome":
       return [{ brand: "asc" }, { model: "asc" }];
+    case "destaques":
+    case "recentes":
     default:
       return { createdAt: "desc" };
   }
