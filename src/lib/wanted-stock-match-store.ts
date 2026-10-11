@@ -6,6 +6,12 @@ import { formatCurrencyBRL } from "./format";
 import { vehiclePath } from "./vehicle-slug";
 import { MATCH_DISMISSED_ACTION, matchWhatsApp, wantedStockMatch } from "./wanted-stock-match";
 
+/** Mesma normalização dos termos em wantedStockMatch; o filtro definitivo continua lá. */
+function matchWords(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/([a-z])-([a-z])/g, "$1$2").match(/[a-z]+|\d+/g) ?? [];
+}
+
 export async function loadWantedStockMatches() {
   const [leads, vehicles] = await Promise.all([
     prisma.leadVenda.findMany({
@@ -28,18 +34,25 @@ export async function loadWantedStockMatches() {
     const changes = item.changes as { vehicleId?: unknown } | null;
     return typeof changes?.vehicleId === "string" ? [item.entityId + ":" + changes.vehicleId] : [];
   }));
-  return leads.flatMap(lead => vehicles.flatMap(vehicle => {
-    const id = lead.id + ":" + vehicle.id;
-    if (dismissed.has(id)) return [];
-    const criteria = wantedStockMatch(lead, vehicle);
-    if (!criteria) return [];
-    return [{
-      id, leadId: lead.id, vehicleId: vehicle.id, title: lead.name,
-      detail: [vehicle.brand, vehicle.model, vehicle.version, vehicle.yearModel, Number.isFinite(vehicle.price) && vehicle.price > 0 ? formatCurrencyBRL(vehicle.price) : null].filter(Boolean).join(" · "),
-      criteria: criteria.join(", "), href: "/admin/leads?lead=" + encodeURIComponent(lead.id),
-      vehicleHref: vehiclePath(vehicle), whatsappHref: matchWhatsApp(lead, vehicle),
-    }];
-  }));
+  // Todo match exige a primeira palavra do modelo no pedido. Preparar uma vez
+  // evita normalizar modelos e avaliar faixas em cada par incompatível.
+  const anchors = vehicles.map(vehicle => matchWords(vehicle.model)[0] ?? "");
+  return leads.flatMap(lead => {
+    const requestWords = new Set(matchWords(lead.vehicleInfo));
+    return vehicles.flatMap((vehicle, index) => {
+      if (!requestWords.has(anchors[index])) return [];
+      const id = lead.id + ":" + vehicle.id;
+      if (dismissed.has(id)) return [];
+      const criteria = wantedStockMatch(lead, vehicle);
+      if (!criteria) return [];
+      return [{
+        id, leadId: lead.id, vehicleId: vehicle.id, title: lead.name,
+        detail: [vehicle.brand, vehicle.model, vehicle.version, vehicle.yearModel, Number.isFinite(vehicle.price) && vehicle.price > 0 ? formatCurrencyBRL(vehicle.price) : null].filter(Boolean).join(" · "),
+        criteria: criteria.join(", "), href: "/admin/leads?lead=" + encodeURIComponent(lead.id),
+        vehicleHref: vehiclePath(vehicle), whatsappHref: matchWhatsApp(lead, vehicle),
+      }];
+    });
+  });
 }
 
 export const getWantedStockMatches = unstable_cache(loadWantedStockMatches, ["wanted-stock-matches-v1"], {
