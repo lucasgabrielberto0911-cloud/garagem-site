@@ -260,7 +260,7 @@ test("ranking: o mais forte em cv, com a nuance do torque do turbo", () => {
 });
 
 test("nenhuma ficha cita preço, cidade ou fala da unidade usada", () => {
-  const forbidden = /R\$|\bpreço\b|Vitória|Linhares|Aracruz|Garagem|Sua Garagem|da unidade|desta unidade|esta unidade/i;
+  const forbidden = /R\$|\bpreço\b|Vitória|Linhares|Aracruz|Garagem|da unidade|desta unidade|esta unidade/i;
   for (const spec of VEHICLE_SPECS as VehicleSpec[]) {
     assert.doesNotMatch(formatSpecForPrompt(spec), forbidden, spec.id);
     assert.doesNotMatch(`${spec.seguranca} ${spec.manutencao}`, /revisões feitas|único dono|laudo|garantia de fábrica da unidade/i, spec.id);
