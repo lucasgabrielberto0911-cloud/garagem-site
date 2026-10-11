@@ -6,6 +6,15 @@ export function chatSearchText(value: string) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+/** Cilindrada exata; dinheiro, km e pedidos de motor mínimo não entram aqui. */
+export function parseChatDisplacementFilter(value: string): number | null {
+  const text = chatSearchText(value);
+  const match = text.match(/\b([1-6])[.,](\d)(?:\s*t\b|\b)(?!\d|\s*(?:mil|k\b|reais|km\b|quilometros|\+))/);
+  if (match && !/\b(?:acima de|a partir de|maior que|pelo menos|no minimo(?: de)?)\s*$/.test(text.slice(0, match.index)))
+    return Number(`${match[1]}.${match[2]}`);
+  return /\b(?:carros?|motor(?:es)?|veiculos?)\s+(?:de\s+)?mil\b(?!\s*(?:reais|km\b|quilometros))/.test(text) ? 1 : null;
+}
+
 export function withoutChatMetrics(value: string) {
   return chatSearchText(value)
     // Aceleração não é faixa de preço, inclusive “de 0 a 100”.
