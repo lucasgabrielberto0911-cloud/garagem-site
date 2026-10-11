@@ -384,6 +384,7 @@ function ChatBubbleBody({ text }: { text: string }) {
 function ChatResearchDetails({ research }: {
   research: import("@/lib/chat-research-data").ChatResearch;
 }) {
+  const [open, setOpen] = useState(false);
   if (research.unavailable) return null;
   const sources = [...new Map([
     ...(research.comparison?.sources ?? []),
@@ -391,7 +392,8 @@ function ChatResearchDetails({ research }: {
   ].map(source => [source.href, source])).values()];
   if (!sources.length && !research.suggestionsHtml) return null;
   return (
-    <details className="text-[12px] text-cream/60">
+    <details className="text-[12px] text-cream/60"
+      onToggle={event => setOpen((event.currentTarget as HTMLDetailsElement).open)}>
       <summary className="cursor-pointer py-2 focus-visible:outline focus-visible:outline-2">
         Fontes dos dados do modelo
       </summary>
@@ -403,8 +405,8 @@ function ChatResearchDetails({ research }: {
           </li>
         ))}
       </ul>
-      {/* Sugestões do Google Search: exigidas pelos termos do grounding; ficam dentro do recolhível. */}
-      {research.suggestionsHtml ? (
+      {/* Sugestões do Google Search: exigidas pelos termos do grounding; só montam ao abrir o recolhível. */}
+      {open && research.suggestionsHtml ? (
         <iframe title="Sugestões da pesquisa Google" sandbox="allow-popups allow-popups-to-escape-sandbox"
           referrerPolicy="no-referrer" srcDoc={research.suggestionsHtml}
           className="mb-2 h-28 w-full rounded-lg border-0 bg-white" />
