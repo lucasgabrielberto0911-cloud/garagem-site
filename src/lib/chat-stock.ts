@@ -449,6 +449,31 @@ export function pickComparedModelVehicles(
   return picks.length >= 2 ? picks : [];
 }
 
+/** Opcional de um carro do estoque citado pelo nome, fora da ficha dele
+ * ("O City EXL 2018 tem airbags laterais?"): só quando o nome (e o ano/versão,
+ * se houver mais de uma unidade) aponta para UMA unidade. Senão, null.
+ */
+export function namedUnitForEquipment(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+): ChatVehicleRecord | null {
+  if (!asksAboutEquipment(mensagem)) return null;
+  const pool = singleMentionedModelPool(stock, mensagem);
+  if (!pool?.length) return null;
+  if (pool.length === 1) return pool[0]!;
+  const folded = normalize(mensagem);
+  const years: string[] = folded.match(/\b(?:19|20)\d{2}\b/g) ?? [];
+  let narrowed = years.length ? pool.filter(vehicle => years.includes(String(vehicle.yearModel))) : pool;
+  if (narrowed.length > 1) {
+    const byTrim = narrowed.filter(vehicle => {
+      const trim = normalize(vehicle.version ?? "").split(" ")[0] ?? "";
+      return /^[a-z]{2,}$/.test(trim) && new RegExp(`\\b${trim}\\b`).test(folded);
+    });
+    if (byTrim.length) narrowed = byTrim;
+  }
+  return narrowed.length === 1 ? narrowed[0]! : null;
+}
+
 export function matchFocusedVehicle(
   mensagem: string,
   stock: ChatVehicleRecord[],
@@ -775,30 +800,47 @@ export function formatFocusedEquipmentReply(
   if (asked.length) {
     const listed = (names: string[]) =>
       names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} e ${names.at(-1)}`;
-    // "6 Air Bags" na ficha responde o "quantos?": usa o item cadastrado quando traz a quantidade.
+    // Airbags: usa o item cadastrado ("6 Air Bags", "Airbags frontais"), que traz quantidade e posição.
     const present = asked.flatMap(([label, , data]) => {
       const item = items.find(value => data.test(normalize(value)));
       if (!item) return [];
-      return [label === "airbags" && /^\d+\s*air ?bags?\b/i.test(item.trim()) ? item.trim().replace(/air ?bags?/i, "airbags") : label];
+      if (label !== "airbags") return [label];
+      const text = item.trim().replace(/air ?bags?/i, "airbags");
+      return [/^airbags\b/i.test(text) ? text.replace(/^./, c => c.toLowerCase()) : text];
     });
     const absent = asked
       .filter(([, , data]) => !items.some(value => data.test(normalize(value))))
       .map(([label]) => label);
+    // Posição pedida (laterais, cortina, frontais) que o item da ficha não cita: não afirma.
+    const airbagItem = items.find(value => /air ?bags?/.test(normalize(value)));
+    const positions = ([
+      ["frontais", /\bfronta(?:l|is)\b/],
+      ["laterais", /\blatera(?:l|is)\b/],
+      ["de cortina", /\bcortinas?\b/],
+    ] as const).filter(([, re]) => re.test(folded));
+    const unconfirmed = airbagItem
+      ? positions.filter(([, re]) => !re.test(normalize(airbagItem))).map(([label]) => label)
+      : [];
+    const plural = (names: string[]) =>
+      names.length > 1 || /^(?:(?:[2-9]|\d{2,})\b|airbags\b|freios\b)/i.test(names[0] ?? "");
     const extras = items
       .filter(value => !asked.some(([, , data]) => data.test(normalize(value))))
       .slice(0, 3);
     const parts: string[] = [];
-    if (present.length) parts.push(`Sim, na ficha desse ${named.name} consta ${listed(present)}.`);
+    if (present.length) {
+      parts.push(`${unconfirmed.length ? "Na" : "Sim, na"} ficha desse ${named.name} consta${plural(present) ? "m" : ""} ${listed(present)}.`);
+    }
+    if (unconfirmed.length) parts.push(`A ficha não detalha se há airbags ${listed(unconfirmed)}.`);
     if (absent.length) {
       parts.push(
         present.length
-          ? `${listed(absent).replace(/^./, c => c.toUpperCase())} não aparece${absent.length > 1 ? "m" : ""} na ficha.`
-          : `Na ficha desse ${named.name} não consta ${listed(absent)}.`,
+          ? `${listed(absent).replace(/^./, c => c.toUpperCase())} não aparece${plural(absent) ? "m" : ""} na ficha.`
+          : `Na ficha desse ${named.name} não consta${plural(absent) ? "m" : ""} ${listed(absent)}.`,
       );
       if (extras.length) parts.push(`Os itens cadastrados incluem ${extras.join(", ")}.`);
     }
     parts.push(
-      absent.length
+      absent.length || unconfirmed.length
         ? `Pra não te passar informação errada, o vendedor confirma pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`
         : `Qualquer detalhe, o vendedor mostra nas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`,
     );

@@ -60,8 +60,8 @@ test("'e airbag e ABS, tem?' no carro em tela: ABS consta, airbag não aparece, 
     generate: async () => { throw new Error("não deveria gerar"); },
   });
   assert.equal(result.meta?.policy, "stock-fact");
-  assert.match(result.reply, /consta freios ABS/);
-  assert.match(result.reply, /Airbags não aparece/i);
+  assert.match(result.reply, /constam freios ABS/);
+  assert.match(result.reply, /Airbags não aparecem/i);
   assert.doesNotMatch(result.reply, /tem airbag|com airbag/i);
 });
 
@@ -129,4 +129,31 @@ test("'e de consumo, o Civic?' segue o Civic 2020 citado antes, sem listar o out
     generate: async () => ({ text: "O Civic 2020 faz cerca de 10 km/l na cidade.", functionCall: null }),
   });
   assert.doesNotMatch(result.reply, /2015/, result.reply);
+});
+
+test("carro do estoque citado pelo nome, fora da ficha: opcional sai da ficha dele, sem chamar o modelo", async () => {
+  const fichaStock = [
+    ...stock,
+    car("c", "Honda", "City", "EXL 1.5 CVT I-VTEC", 2018, 84900, { accessories: ["Câmera de ré", "6 airbags (frontais, laterais e de cortina)", "Freios ABS"] }),
+    car("k2", "Nissan", "Kicks", "S 1.6", 2017, 69900, { accessories: ["ABS"] }),
+  ].map(v => v.id === "k" ? { ...v, accessories: ["ABS", "6 Air Bags"] } : v);
+  const ask = (mensagem: string) => runChatTurn({ mensagem, historico: [], stock: fichaStock, readIntent: noReading, generate: async () => { throw new Error("não deveria gerar"); } });
+  const city = await ask("O City EXL 2018 tem airbags laterais?");
+  assert.equal(city.meta?.policy, "stock-fact");
+  assert.match(city.reply, /Sim, na ficha desse City constam 6 airbags \(frontais, laterais e de cortina\)/);
+  // Duas unidades de Kicks: o ano escolhe a certa; a posição não citada na ficha não é afirmada.
+  const kicks = await ask("O Kicks 2019 de vocês tem airbags de cortina?");
+  assert.equal(kicks.meta?.policy, "stock-fact");
+  assert.match(kicks.reply, /^Na ficha desse Kicks constam 6 airbags\. A ficha não detalha se há airbags de cortina\./);
+  assert.match(kicks.reply, /vendedor confirma/);
+});
+
+test("nome ambíguo (duas unidades sem ano) não escolhe uma ficha por conta própria", async () => {
+  const { namedUnitForEquipment } = await import("@/lib/chat-stock");
+  const two = [...stock, car("k2", "Nissan", "Kicks", "S 1.6", 2017, 69900)];
+  assert.equal(namedUnitForEquipment(two, "o Kicks tem airbag?"), null);
+  assert.equal(namedUnitForEquipment(two, "o Kicks 2017 tem airbag?")?.id, "k2");
+  assert.equal(namedUnitForEquipment(two, "o Kicks SL tem airbag?")?.id, "k");
+  assert.equal(namedUnitForEquipment(two, "quais carros têm airbag?"), null);
+  assert.equal(namedUnitForEquipment(two, "qual o consumo do Gol?"), null);
 });

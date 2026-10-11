@@ -138,12 +138,12 @@ test("airbags no plural e 'Air Bags' com espaço na ficha contam como item cadas
   assert.equal(asksAboutEquipment("Quantos airbags tem?"), true);
   assert.equal(asksAboutEquipment("tem air bag?"), true);
   const many = formatFocusedEquipmentReply(kicks, "Quantos airbags tem?");
-  assert.match(many, /consta 6 airbags/);
+  assert.match(many, /constam 6 airbags/);
   assert.doesNotMatch(many, /não consta/);
-  assert.match(formatFocusedEquipmentReply(kicks, "tem airbag e ABS?"), /consta 6 airbags e freios ABS/);
+  assert.match(formatFocusedEquipmentReply(kicks, "tem airbag e ABS?"), /constam 6 airbags e freios ABS/);
   assert.match(formatFocusedEquipmentReply(kicks, "tem câmeras?"), /consta câmera de ré/);
   const plain = { ...kicks, accessories: ["Airbags frontais"] };
-  assert.match(formatFocusedEquipmentReply(plain, "tem air bag?"), /consta airbags/);
+  assert.match(formatFocusedEquipmentReply(plain, "tem air bag?"), /constam airbags/);
   const none = { ...kicks, accessories: ["Multimídia"] };
-  assert.match(formatFocusedEquipmentReply(none, "tem airbags?"), /não consta airbags/);
+  assert.match(formatFocusedEquipmentReply(none, "tem airbags?"), /não constam airbags/);
 });
