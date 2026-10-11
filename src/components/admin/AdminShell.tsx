@@ -179,7 +179,7 @@ export function AdminShell({
               aria-current={active ? "page" : undefined}
               className={`flex min-h-[48px] items-center gap-3 px-3 py-2.5 text-sm font-medium transition touch-manipulation ${
                 active
-                  ? "bg-brand text-cream"
+                  ? "bg-brand text-white"
                   : "text-muted hover:bg-white/5 hover:text-cream"
               }`}
             >
@@ -188,7 +188,7 @@ export function AdminShell({
               {badge ? (
                 <span
                   className={`min-w-[22px] px-1.5 py-0.5 text-center font-display text-[11px] font-bold ${
-                    active ? "bg-cream/20 text-cream" : "bg-brand text-cream"
+                    active ? "bg-cream/20 text-cream" : "bg-brand text-white"
                   }`}
                 >
                   {badge}
@@ -205,7 +205,7 @@ export function AdminShell({
           href="/admin/conta"
           className={`flex min-h-[48px] items-center gap-3 px-3 py-2.5 text-sm transition touch-manipulation ${
             pathname.startsWith("/admin/conta")
-              ? "bg-brand text-cream"
+              ? "bg-brand text-white"
               : "text-muted hover:bg-white/5 hover:text-cream"
           }`}
         >
@@ -255,7 +255,7 @@ export function AdminShell({
     <div className="min-h-dvh bg-asphalt text-cream lg:flex">
       <a
         href="#painel"
-        className="fixed left-4 top-0 z-[80] -translate-y-full bg-brand px-4 py-3 font-display text-sm font-semibold text-cream outline-none transition focus:translate-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream"
+        className="fixed left-4 top-0 z-[80] -translate-y-full bg-brand px-4 py-3 font-display text-sm font-semibold text-white outline-none transition focus:translate-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream"
       >
         Pular para o conteúdo
       </a>
@@ -386,16 +386,19 @@ export function AdminShell({
                     active ? "text-cream" : "text-muted active:text-cream"
                   }`}
                 >
+                  {active ? (
+                    <span className="absolute inset-x-5 top-0 h-0.5 bg-brand" aria-hidden="true" />
+                  ) : null}
                   <Icon className="h-5 w-5" />
                   <span
-                    className={`text-[10px] uppercase tracking-wide ${
+                    className={`text-xs ${
                       active ? "font-semibold" : "font-medium"
                     }`}
                   >
                     {label}
                   </span>
                   {badge ? (
-                    <span className="absolute right-1/2 top-1 min-w-[16px] translate-x-[14px] bg-brand px-1 text-center font-display text-[9px] font-bold text-cream">
+                    <span className="absolute right-1/2 top-1 min-w-[16px] translate-x-[14px] bg-brand px-1 text-center font-display text-xs font-bold leading-4 text-white">
                       {badge > 9 ? "9+" : badge}
                     </span>
                   ) : null}
@@ -422,7 +425,7 @@ export function AdminShell({
               ) : (
                 <IconMenu className="h-5 w-5" />
               )}
-              <span className="text-[10px] font-medium uppercase tracking-wide">
+              <span className="text-xs font-medium">
                 Mais
               </span>
             </button>

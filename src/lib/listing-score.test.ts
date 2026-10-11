@@ -5,7 +5,9 @@ import type { ListingDraft, ListingJudgment } from "./listing-present";
 import {
   listingDraftFromVehicle,
   listingInputHash,
+  parseStoredListingScore,
   refreshListingScoreOnSave,
+  scorable,
   shouldScoreOnSave,
   type ListingScoreDeps,
 } from "./listing-score";
@@ -190,3 +192,135 @@ test("o admin no navegador não chama o Jev (nem rota de nota)", () => {
   const page = readFileSync(new URL("src/app/admin/veiculos/[id]/page.tsx", root), "utf8");
   assert.doesNotMatch(page, /judgeListingQuality|askJev|scoreListingAfterSave/);
 });
+
+test("scorable: valida critérios mínimos para chamar o Jev", () => {
+  assert.equal(scorable(base), true);
+  assert.equal(scorable({ ...base, status: "reservado" }), true);
+  assert.equal(scorable({ ...base, status: "vendido" }), false);
+  assert.equal(scorable({ ...base, brand: "" }), false);
+  assert.equal(scorable({ ...base, brand: "   " }), false);
+  assert.equal(scorable({ ...base, model: "" }), false);
+  assert.equal(scorable({ ...base, model: "   " }), false);
+});
+
+test("parseStoredListingScore: converte linha do banco e valida estrutura", () => {
+  assert.equal(parseStoredListingScore(null), null);
+  assert.equal(
+    parseStoredListingScore({
+      judgment: null,
+      inputHash: "hash123",
+      updatedAt: new Date(),
+    }),
+    null,
+  );
+  assert.equal(
+    parseStoredListingScore({
+      judgment: { captionScore: 2 }, // Faltam campos obrigatórios do judgment
+      inputHash: "hash123",
+      updatedAt: new Date(),
+    }),
+    null,
+  );
+
+  const date = new Date("2026-10-10T15:30:00.000Z");
+  const parsed = parseStoredListingScore({
+    judgment,
+    inputHash: "hash-valido",
+    updatedAt: date,
+  });
+  assert.deepEqual(parsed, {
+    judgment,
+    inputHash: "hash-valido",
+    scoredAt: date.toISOString(),
+  });
+});
+
+test("refreshListingScoreOnSave: retorno do Jev com formato inválido resulta em jev-falhou sem gravar", async () => {
+  const invalidJudgment = { captionScore: "invalido" } as unknown as ListingJudgment;
+  const { deps, calls } = fakeDeps({ judge: async () => invalidJudgment });
+  const after = { ...base, version: "Touring" };
+
+  const outcome = await refreshListingScoreOnSave(
+    { vehicleId: "v1", before: base, after },
+    deps,
+  );
+  assert.equal(outcome, "jev-falhou");
+  assert.equal(calls.save, 0);
+});
+
+test("refreshListingScoreOnSave: falha ao gravar no banco não derruba o Salvar e retorna erro", async () => {
+  const { deps } = fakeDeps({
+    save: async () => {
+      throw new Error("falha de conexão ao salvar nota");
+    },
+  });
+  const after = { ...base, version: "Touring" };
+
+  const outcome = await refreshListingScoreOnSave(
+    { vehicleId: "v1", before: base, after },
+    deps,
+  );
+  assert.equal(outcome, "erro");
+});
+
+test("refreshListingScoreOnSave: veículo não avaliável retorna nao-avaliavel diretamente", async () => {
+  const { deps, calls } = fakeDeps();
+  const outcomeVendido = await refreshListingScoreOnSave(
+    { vehicleId: "v1", before: base, after: { ...base, status: "vendido" } },
+    deps,
+  );
+  assert.equal(outcomeVendido, "nao-avaliavel");
+  assert.equal(calls.judge, 0);
+  assert.equal(calls.load, 0);
+
+  const outcomeSemModelo = await refreshListingScoreOnSave(
+    { vehicleId: "v1", before: base, after: { ...base, model: "  " } },
+    deps,
+  );
+  assert.equal(outcomeSemModelo, "nao-avaliavel");
+  assert.equal(calls.judge, 0);
+  assert.equal(calls.load, 0);
+});
+
+test("campos técnicos avaliados pelo Jev disparam recálculo", () => {
+  // Combustível
+  assert.equal(
+    shouldScoreOnSave({ before: base, after: { ...base, fuel: "Diesel" }, storedHash: null }),
+    true,
+  );
+  // Câmbio
+  assert.equal(
+    shouldScoreOnSave({ before: base, after: { ...base, transmission: "Manual" }, storedHash: null }),
+    true,
+  );
+  // Ano / Modelo
+  assert.equal(
+    shouldScoreOnSave({ before: base, after: { ...base, yearModel: "2022" }, storedHash: null }),
+    true,
+  );
+  // Categoria
+  assert.equal(
+    shouldScoreOnSave({ before: base, after: { ...base, category: "moto" }, storedHash: null }),
+    true,
+  );
+  // Versão
+  assert.equal(
+    shouldScoreOnSave({ before: base, after: { ...base, version: "Touring" }, storedHash: null }),
+    true,
+  );
+});
+
+test("reabrir rascunho sem before mas com hash já gravado no banco não chama o Jev", async () => {
+  const hashGravado = listingInputHash(base);
+  const { deps, calls } = fakeDeps({ stored: hashGravado });
+
+  const outcome = await refreshListingScoreOnSave(
+    { vehicleId: "v1", before: null, after: base },
+    deps,
+  );
+  assert.equal(outcome, "sem-mudanca");
+  assert.equal(calls.load, 1);
+  assert.equal(calls.judge, 0);
+  assert.equal(calls.save, 0);
+});
+

@@ -6,13 +6,13 @@ import { PURCHASE_STATUSES, PURCHASE_STATUS_LABEL } from "@/lib/lead-funnel";
 import { LeadFollowUp } from "@/components/admin/LeadFollowUp";
 import { adminMutation } from "@/lib/admin-mutation";
 import { exportAdminCsv } from "@/lib/admin-export-client";
-import { localDateInput } from "@/lib/admin-date";
+import { adminDate, localDateInput } from "@/lib/admin-date";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import type { LeadVenda } from "@prisma/client";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { IconDownload, IconTrash, IconUsers } from "@/components/admin/icons";
+import { IconChevronDown, IconDownload, IconTrash, IconUsers } from "@/components/admin/icons";
 import { IconInbox } from "@/components/admin/icons";
 import { IconPhone, IconWhatsApp } from "@/components/site/icons";
 import { EmptyState, btn, inputClass } from "@/components/admin/ui";
@@ -45,10 +45,6 @@ const CONSULTA_PLACA_URL_BASE = "https://placafipe.com/placa/";
 
 function consultaPlacaUrl(plate: string) {
   return `${CONSULTA_PLACA_URL_BASE}${encodeURIComponent(normalizePlate(plate))}`;
-}
-
-function whatsappLink(lead: LeadVenda) {
-  return buildLeadWhatsAppUrl(lead);
 }
 
 function formatDateTime(value: Date) {
@@ -178,7 +174,7 @@ export function LeadsTable({
         </div>
       ) : null}
       <div className="border border-white/10 bg-ink/50 p-3 sm:p-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
           <FilterChip
             label={`Todos (${counts.total})`}
             active={!status}
@@ -221,7 +217,7 @@ export function LeadsTable({
               type="search"
               value={term}
               onChange={(event) => setTerm(event.target.value)}
-              placeholder="Buscar por nome, telefone, placa ou veículo"
+              placeholder="Nome, telefone, placa ou veículo"
               className={inputClass}
             />
             <button type="submit" className={btn.outline}>
@@ -296,216 +292,17 @@ export function LeadsTable({
       ) : (
         <ul className="space-y-3">
           {leads.map((lead) => (
-            <li
-              id={`lead-${lead.id}`}
+            <LeadCard
               key={lead.id}
-              className="border border-white/10 bg-ink/50 p-4 sm:p-5"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-display text-base font-semibold text-cream">
-                    {leadDisplayName(lead)}
-                  </p>
-                  <span
-                    className={`px-2 py-0.5 text-[10px] uppercase tracking-wider ${
-                      STATUS_STYLE[lead.status as LeadStatus] ??
-                      "bg-white/10 text-muted"
-                    }`}
-                  >
-                    {lead.source?.startsWith("whatsapp:") ? PURCHASE_STATUS_LABEL[lead.status as keyof typeof PURCHASE_STATUS_LABEL] || STATUS_LABEL[lead.status as LeadStatus] || lead.status : STATUS_LABEL[lead.status as LeadStatus] ?? lead.status}
-                  </span>
-                  {lead.source === "chatbot-site" ? (
-                    <span className="rounded border border-brand/40 bg-brand/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand">
-                      Chatbot IA
-                    </span>
-                  ) : lead.source === "vender" ? (
-                    <span className="rounded border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-cream/80">
-                      Avaliação
-                    </span>
-                  ) : lead.source === WANTED_LEAD_SOURCE ? (
-                    <span className="rounded border border-brand/40 bg-brand/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand">
-                      Não encontrou
-                    </span>
-                  ) : lead.source ? (
-                    <span className="rounded border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted">
-                      {purchaseSourceLabel(lead.source)}
-                    </span>
-                  ) : null}
-                </div>
-                {lead.source === WANTED_LEAD_SOURCE ? (
-                  <p className="mt-1 text-sm text-cream">
-                    Modelo pedido:{" "}
-                    <span className="font-medium">{lead.vehicleInfo}</span>
-                  </p>
-                ) : (
-                  <>
-                    <p className="mt-1 text-sm text-muted">
-                      {lead.vehicleInfo}
-                      {lead.km !== null
-                        ? ` · ${formatNumberBR(lead.km)} km`
-                        : ""}
-                    </p>
-                    <p className="mt-1 text-sm text-cream">
-                      Placa:{" "}
-                      <span className="font-display font-semibold tracking-wide">
-                        {lead.plate
-                          ? formatPlateDisplay(lead.plate)
-                          : "Não informada"}
-                      </span>
-                    </p>
-                  </>
-                )}
-                <p className="mt-1 text-sm text-muted">
-                  {leadHasPhone(lead) ? formatPhoneBR(lead.phone) : "Sem telefone"}
-                  {emailFromLeadNotes(lead.notes)
-                    ? ` · ${emailFromLeadNotes(lead.notes)}`
-                    : ""}
-                  {" · "}
-                  {formatDateTime(lead.createdAt)}
-                </p>
-                {lead.source || lead.interestVehicleId ? (
-                  <p className="mt-1 text-xs text-muted">
-                    {lead.source ? (
-                      <span>
-                        Origem:{" "}
-                        <strong className="font-medium text-cream">
-                          {lead.source === "chatbot-site"
-                            ? "Chatbot do site"
-                            : lead.source === "vender"
-                              ? "Formulário de avaliação"
-                              : lead.source === WANTED_LEAD_SOURCE
-                                ? "Formulário — não encontrou o modelo"
-                                : purchaseSourceLabel(lead.source)}
-                        </strong>
-                      </span>
-                    ) : null}
-                    {lead.source && lead.interestVehicleId ? " · " : null}
-                    {lead.interestVehicleId ? (
-                      <a
-                        href={`/estoque/${lead.interestVehicleId}`}
-                        className="text-cream underline-offset-2 hover:underline"
-                      >
-                        {lead.source === WANTED_LEAD_SOURCE
-                          ? "Anúncio que estava aberto"
-                          : "Interesse no estoque"}
-                      </a>
-                    ) : null}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
-                <label className="sr-only" htmlFor={`status-${lead.id}`}>
-                  Status do lead
-                </label>
-                <select
-                  id={`status-${lead.id}`}
-                  value={lead.status}
-                  disabled={savingId === lead.id}
-                  onChange={(event) => changeStatus(lead, event.target.value)}
-                  className={`${inputClass} bg-asphalt disabled:opacity-60`}
-                >
-                  {(lead.source?.startsWith("whatsapp:") ? PURCHASE_STATUSES : LEAD_STATUSES).map((value) => (
-                    <option key={value} value={value}>
-                      {lead.source?.startsWith("whatsapp:") ? PURCHASE_STATUS_LABEL[value as keyof typeof PURCHASE_STATUS_LABEL] || STATUS_LABEL[value] : STATUS_LABEL[value]}
-                    </option>
-                  ))}
-                </select>
-                <div className="grid grid-cols-2 gap-2">
-                  {lead.plate ? (
-                    <>
-                      <a
-                        href={consultaPlacaUrl(lead.plate)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10"
-                      >
-                        Consultar FIPE
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => copyPlate(lead.plate)}
-                        className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream"
-                      >
-                        Copiar placa
-                      </button>
-                    </>
-                  ) : null}
-                  {leadHasPhone(lead) ? <>
-                  <a
-                    href={whatsappLink(lead)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-[#25D366]/50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#25D366] transition hover:bg-[#25D366]/10"
-                  >
-                    <IconWhatsApp className="h-4 w-4" />
-                    WhatsApp
-                  </a>
-                  <a
-                    href={`tel:+55${lead.phone.replace(/\D/g, "")}`}
-                    className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream"
-                  >
-                    <IconPhone className="h-4 w-4" />
-                    Ligar
-                  </a>
-                  </> : null}
-                  <button
-                    type="button"
-                    onClick={() => convert(lead)}
-                    disabled={savingId === lead.id}
-                    title="Criar cliente com estes dados"
-                    className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-cream disabled:opacity-60"
-                  >
-                    <IconUsers className="h-4 w-4" />
-                    Virar cliente
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDeleteTarget(lead)}
-                    aria-label="Excluir lead"
-                    className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-brand transition hover:bg-brand/10"
-                  >
-                    <IconTrash className="h-4 w-4" />
-                    Excluir
-                  </button>
-                </div>
-              </div>
-
-              {lead.photoUrls && lead.photoUrls.length > 0 ? (
-                <div className="mt-3 border-t border-white/10 pt-3">
-                  <p className="text-[11px] uppercase tracking-wider text-muted">
-                    Fotos do usado
-                  </p>
-                  <ul className="mt-2 flex flex-wrap gap-2">
-                    {lead.photoUrls.map((url, index) => (
-                      <li key={url}>
-                        <a
-                          href={adminFileViewHref(url)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex min-h-[36px] items-center border border-white/15 px-2.5 text-xs text-cream transition hover:border-brand"
-                        >
-                          Foto {index + 1}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              {lead.source?.startsWith("whatsapp:") ? <PurchaseLeadForm key={`${lead.id}-${new Date(lead.updatedAt).getTime()}`} vehicles={vehicles} lead={lead} /> : null}
-              <LeadFollowUp
-                id={lead.id}
-                nextAction={lead.nextAction}
-                nextActionAt={lead.nextActionAt}
-              />
-
-              {lead.notes ? (
-                <p className="mt-3 whitespace-pre-line border-t border-white/10 pt-3 text-sm leading-relaxed text-muted">
-                  {lead.notes}
-                </p>
-              ) : null}
-            </li>
+              lead={lead}
+              vehicles={vehicles}
+              saving={savingId === lead.id}
+              startOpen={leadId === lead.id}
+              onStatus={changeStatus}
+              onConvert={convert}
+              onDelete={setDeleteTarget}
+              onCopyPlate={copyPlate}
+            />
           ))}
         </ul>
       )}
@@ -549,6 +346,305 @@ export function LeadsTable({
         onConfirm={confirmDelete}
       />
     </div>
+  );
+}
+
+/** Badge de status com texto legível (AA): o vermelho vira realce, não cor do texto. */
+function statusBadgeStyle(lead: LeadVenda) {
+  const style = STATUS_STYLE[lead.status as LeadStatus] ?? "bg-white/10 text-muted";
+  return style
+    .replace(/\btext-brand\b/, "text-cream ring-1 ring-inset ring-brand/60")
+    .replace("bg-brand/15", "bg-brand/25");
+}
+
+function statusLabel(lead: LeadVenda) {
+  return lead.source?.startsWith("whatsapp:")
+    ? PURCHASE_STATUS_LABEL[lead.status as keyof typeof PURCHASE_STATUS_LABEL] ||
+        STATUS_LABEL[lead.status as LeadStatus] ||
+        lead.status
+    : STATUS_LABEL[lead.status as LeadStatus] ?? lead.status;
+}
+
+function originLabel(lead: LeadVenda) {
+  if (lead.source === "chatbot-site") return "Chatbot do site";
+  if (lead.source === "vender") return "Formulário de avaliação";
+  if (lead.source === WANTED_LEAD_SOURCE) return "Formulário — não encontrou o modelo";
+  return lead.source ? purchaseSourceLabel(lead.source) : "";
+}
+
+function originChip(lead: LeadVenda) {
+  if (lead.source === "chatbot-site")
+    return { text: "Chatbot IA", className: "border-brand/50 bg-brand/20 text-cream" };
+  if (lead.source === "vender")
+    return { text: "Avaliação", className: "border-white/20 bg-white/10 text-cream" };
+  if (lead.source === WANTED_LEAD_SOURCE)
+    return { text: "Não encontrou", className: "border-brand/50 bg-brand/20 text-cream" };
+  if (lead.source)
+    return { text: purchaseSourceLabel(lead.source), className: "border-white/10 bg-white/5 text-muted" };
+  return null;
+}
+
+const leadAction =
+  "inline-flex min-h-[44px] items-center justify-center gap-2 border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition touch-manipulation disabled:opacity-60";
+
+/**
+ * Card do contato: a face fechada mostra só o que decide o próximo toque
+ * (nome, interesse, status, próxima ação e WhatsApp). Status, placa, fotos,
+ * conversão, exclusão, atendimento e notas ficam no detalhe, que continua
+ * montado depois de aberto para não perder texto digitado.
+ */
+function LeadCard({
+  lead,
+  vehicles,
+  saving,
+  startOpen,
+  onStatus,
+  onConvert,
+  onDelete,
+  onCopyPlate,
+}: {
+  lead: LeadVenda;
+  vehicles: LeadVehicleOption[];
+  saving: boolean;
+  startOpen: boolean;
+  onStatus: (lead: LeadVenda, value: string) => void;
+  onConvert: (lead: LeadVenda) => void;
+  onDelete: (lead: LeadVenda) => void;
+  onCopyPlate: (plate: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(startOpen);
+  const [opened, setOpened] = useState(startOpen);
+  const detailId = `lead-detail-${lead.id}`;
+  const chip = originChip(lead);
+  const email = emailFromLeadNotes(lead.notes);
+  const hasPhone = leadHasPhone(lead);
+  const isWanted = lead.source === WANTED_LEAD_SOURCE;
+  const overdue = lead.nextActionAt
+    ? localDateInput(new Date(lead.nextActionAt)) < localDateInput()
+    : false;
+  const interest = isWanted
+    ? `Modelo pedido: ${lead.vehicleInfo}`
+    : `${lead.vehicleInfo}${lead.km !== null ? ` · ${formatNumberBR(lead.km)} km` : ""}`;
+
+  return (
+    <li id={`lead-${lead.id}`} className="border border-white/10 bg-ink/50">
+      <div className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-2">
+          <p className="min-w-0 truncate font-display text-lg font-semibold leading-snug text-cream">
+            {leadDisplayName(lead)}
+          </p>
+          <span
+            className={`shrink-0 px-2 py-1 text-xs font-semibold uppercase tracking-wide ${statusBadgeStyle(lead)}`}
+          >
+            {statusLabel(lead)}
+          </span>
+        </div>
+        <p className="mt-0.5 truncate text-sm text-cream" title={interest}>
+          {interest}
+        </p>
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+          {chip ? (
+            <span className={`border px-1.5 py-0.5 font-semibold uppercase tracking-wide ${chip.className}`}>
+              {chip.text}
+            </span>
+          ) : null}
+          <span>{hasPhone ? formatPhoneBR(lead.phone) : "Sem telefone"}</span>
+          <span aria-hidden="true">·</span>
+          <span>{formatDateTime(lead.createdAt)}</span>
+        </p>
+        {lead.nextAction || lead.nextActionAt ? (
+          <p className={`mt-2 truncate text-sm ${overdue ? "text-brand-orange" : "text-cream"}`}>
+            <span className="font-semibold">{overdue ? "Atrasado: " : "Próxima ação: "}</span>
+            {lead.nextAction || "retomar contato"}
+            {lead.nextActionAt
+              ? ` · ${adminDate(new Date(lead.nextActionAt))}`
+              : ""}
+          </p>
+        ) : null}
+        <div className="mt-3 flex gap-2">
+          {hasPhone ? (
+            <>
+              <a
+                href={buildLeadWhatsAppUrl(lead)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${leadAction} min-w-0 flex-1 border-[#25D366]/60 text-[#25D366] hover:bg-[#25D366]/10`}
+              >
+                <IconWhatsApp className="h-4 w-4" />
+                WhatsApp
+              </a>
+              <a
+                href={`tel:+55${lead.phone.replace(/\D/g, "")}`}
+                aria-label={`Ligar para ${leadDisplayName(lead)}`}
+                className={`${leadAction} w-11 shrink-0 border-white/15 px-0 text-cream hover:border-brand sm:w-auto sm:px-3`}
+              >
+                <IconPhone className="h-4 w-4" />
+                <span className="hidden sm:inline">Ligar</span>
+              </a>
+            </>
+          ) : null}
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls={detailId}
+            onClick={() => {
+              setOpened(true);
+              setExpanded((value) => !value);
+            }}
+            className={`${leadAction} ${hasPhone ? "shrink-0" : "flex-1"} border-white/15 text-cream hover:border-brand`}
+          >
+            {expanded ? "Fechar" : "Detalhes"}
+            <IconChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+      </div>
+
+      {opened ? (
+        <div id={detailId} hidden={!expanded} className="border-t border-white/10">
+          <div className="space-y-3 p-3 sm:p-4">
+            <div>
+              <label
+                htmlFor={`status-${lead.id}`}
+                className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted"
+              >
+                Status do lead
+              </label>
+              <select
+                id={`status-${lead.id}`}
+                value={lead.status}
+                disabled={saving}
+                onChange={(event) => onStatus(lead, event.target.value)}
+                className={`${inputClass} bg-asphalt disabled:opacity-60`}
+              >
+                {(lead.source?.startsWith("whatsapp:") ? PURCHASE_STATUSES : LEAD_STATUSES).map((value) => (
+                  <option key={value} value={value}>
+                    {lead.source?.startsWith("whatsapp:")
+                      ? PURCHASE_STATUS_LABEL[value as keyof typeof PURCHASE_STATUS_LABEL] || STATUS_LABEL[value]
+                      : STATUS_LABEL[value]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+              {!isWanted ? (
+                <div className="flex gap-2">
+                  <dt className="text-muted">Placa</dt>
+                  <dd className="font-display font-semibold tracking-wide text-cream">
+                    {lead.plate ? formatPlateDisplay(lead.plate) : "Não informada"}
+                  </dd>
+                </div>
+              ) : null}
+              {lead.source ? (
+                <div className="flex gap-2">
+                  <dt className="text-muted">Origem</dt>
+                  <dd className="text-cream">{originLabel(lead)}</dd>
+                </div>
+              ) : null}
+              {email ? (
+                <div className="flex min-w-0 gap-2">
+                  <dt className="text-muted">E-mail</dt>
+                  <dd className="min-w-0 break-all text-cream">{email}</dd>
+                </div>
+              ) : null}
+            </dl>
+
+            {lead.interestVehicleId ? (
+              <a
+                href={`/estoque/${lead.interestVehicleId}`}
+                className="inline-flex min-h-[44px] items-center text-sm text-cream underline decoration-white/30 underline-offset-4 hover:decoration-brand"
+              >
+                {isWanted ? "Anúncio que estava aberto" : "Interesse no estoque"}
+              </a>
+            ) : null}
+
+            <div className="grid grid-cols-2 gap-2">
+              {lead.plate ? (
+                <>
+                  <a
+                    href={consultaPlacaUrl(lead.plate)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${leadAction} border-brand/50 text-red-400 hover:bg-brand/10`}
+                  >
+                    Consultar FIPE
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => onCopyPlate(lead.plate)}
+                    className={`${leadAction} border-white/15 text-muted hover:text-cream`}
+                  >
+                    Copiar placa
+                  </button>
+                </>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => onConvert(lead)}
+                disabled={saving}
+                title="Criar cliente com estes dados"
+                className={`${leadAction} border-white/15 text-muted hover:text-cream`}
+              >
+                <IconUsers className="h-4 w-4" />
+                Virar cliente
+              </button>
+              <button
+                type="button"
+                onClick={() => onDelete(lead)}
+                aria-label="Excluir lead"
+                className={`${leadAction} border-brand/50 text-red-400 hover:bg-brand/10`}
+              >
+                <IconTrash className="h-4 w-4" />
+                Excluir
+              </button>
+            </div>
+
+            {lead.photoUrls && lead.photoUrls.length > 0 ? (
+              <div className="border-t border-white/10 pt-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  Fotos do usado
+                </p>
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {lead.photoUrls.map((url, index) => (
+                    <li key={url}>
+                      <a
+                        href={adminFileViewHref(url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center border border-white/15 px-3 text-sm text-cream transition hover:border-brand"
+                      >
+                        Foto {index + 1}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {lead.notes ? (
+              <p className="whitespace-pre-line border-t border-white/10 pt-3 text-sm leading-relaxed text-muted">
+                {lead.notes}
+              </p>
+            ) : null}
+          </div>
+
+          {lead.source?.startsWith("whatsapp:") ? (
+            <div className="px-3 pb-3 sm:px-4">
+              <PurchaseLeadForm
+                key={`${lead.id}-${new Date(lead.updatedAt).getTime()}`}
+                vehicles={vehicles}
+                lead={lead}
+              />
+            </div>
+          ) : null}
+          <LeadFollowUp
+            id={lead.id}
+            nextAction={lead.nextAction}
+            nextActionAt={lead.nextActionAt}
+          />
+        </div>
+      ) : null}
+    </li>
   );
 }
 

@@ -41,7 +41,7 @@ export async function updateLeadStatus(
         leadId: id, adminId: session.adminId, note: `${funnelActivity(status)} Situação atualizada para ${status}.`,
       } });
     });
-    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
+    revalidateTag(ADMIN_NEW_LEADS_TAG, { expire: 0 });
     revalidatePath("/admin/leads");
     revalidatePath("/admin");
     expireAdminData();
@@ -90,7 +90,7 @@ export async function convertLeadToCustomer(
         where: { id }, data: { status: "contatado" },
       });
     });
-    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
+    revalidateTag(ADMIN_NEW_LEADS_TAG, { expire: 0 });
     revalidatePath("/admin/leads");
     revalidatePath("/admin");
     expireAdminData();
@@ -112,7 +112,7 @@ export async function deleteLead(id: string): Promise<LeadActionState> {
   try {
     await requireAdmin();
     await prisma.leadVenda.delete({ where: { id } });
-    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
+    revalidateTag(ADMIN_NEW_LEADS_TAG, { expire: 0 });
     revalidatePath("/admin/leads");
     revalidatePath("/admin");
     expireAdminData();
@@ -162,7 +162,7 @@ export async function savePurchaseLead(form: FormData): Promise<LeadActionState>
         data: { leadId: lead.id, adminId: session.adminId, note: `${funnelActivity(status)} ${PURCHASE_STATUS_LABEL[status as keyof typeof PURCHASE_STATUS_LABEL]}` },
       });
     });
-    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
+    revalidateTag(ADMIN_NEW_LEADS_TAG, { expire: 0 });
     revalidatePath("/admin/leads");
     revalidatePath("/admin/agenda");
     expireAdminData();

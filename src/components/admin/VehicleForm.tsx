@@ -49,6 +49,8 @@ import { Field, btn, inputClass } from "@/components/admin/ui";
 import {
   VehiclePhotoManager,
   photosFromRecords,
+  reconcileDraftPhotos,
+  serializePhotos,
   type PhotoItem,
 } from "@/components/admin/VehiclePhotoManager";
 import {
@@ -190,6 +192,7 @@ export function VehicleForm({
         .slice()
         .sort((a, b) => a.order - b.order)
         .map((photo) => ({
+          id: photo.id,
           url: photo.url,
           thumbnailUrl: photo.thumbnailUrl,
         })) ?? [],
@@ -585,7 +588,7 @@ export function VehicleForm({
                 onClick={() => revealSections([section.id])}
                 className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 border px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
                   count > 0
-                    ? "border-brand/60 text-brand"
+                    ? "border-brand/60 text-red-400"
                     : "border-white/10 text-muted hover:text-cream"
                 }`}
               >
@@ -642,7 +645,7 @@ export function VehicleForm({
             .filter(Boolean)
             .join(" · ")}
         </p>
-        <p className="mt-2 font-display text-xl font-bold text-brand">
+        <p className="mt-2 font-display text-xl font-bold text-red-400">
           {listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}
         </p>
         <p className="mt-2 text-xs text-muted">
@@ -720,7 +723,21 @@ export function VehicleForm({
           if (draft.values && typeof draft.values === "object")
             setValues(draft.values as typeof values);
           if (Array.isArray(draft.photos))
-            setPhotos(draft.photos as PhotoItem[]);
+            setPhotos(
+              reconcileDraftPhotos(
+                (draft.photos as Array<Partial<PhotoItem>>).filter(
+                  (photo): photo is Partial<PhotoItem> & { url: string } =>
+                    typeof photo?.url === "string",
+                ),
+                vehicle
+                  ? photosFromRecords(
+                      vehicle.photos
+                        .slice()
+                        .sort((a, b) => a.order - b.order),
+                    )
+                  : [],
+              ),
+            );
           if (Array.isArray(draft.accessories))
             setAccessoriesState(normalizeAccessories(draft.accessories));
           const fields = draft.fields as Record<string, string> | undefined;
@@ -801,12 +818,7 @@ export function VehicleForm({
           <input
             type="hidden"
             name="photoUrls"
-            value={JSON.stringify(
-              photos.map((photo) => ({
-                url: photo.url,
-                thumbnailUrl: photo.thumbnailUrl ?? null,
-              })),
-            )}
+            value={serializePhotos(photos)}
           />
           <input
             type="hidden"
@@ -833,7 +845,7 @@ export function VehicleForm({
             })}`}
           >
             <div className="mb-5">
-              <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
+              <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
                 Tipo do anúncio
               </span>
               <div
@@ -1021,7 +1033,7 @@ export function VehicleForm({
               ) : null}
 
               <div className="col-span-2 sm:col-span-1">
-                <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
+                <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
                   Onde está o veículo *
                 </span>
                 <div
@@ -1052,7 +1064,7 @@ export function VehicleForm({
                         <span className="font-display text-sm font-semibold uppercase tracking-wide">
                           {option.label}
                         </span>
-                        <span className="text-[10px] uppercase tracking-wider opacity-70">
+                        <span className="text-xs uppercase tracking-wider opacity-70">
                           ES
                         </span>
                       </button>
@@ -1065,7 +1077,7 @@ export function VehicleForm({
                   </p>
                 ) : null}
                 {errors.locationCity ? (
-                  <p className="mt-1.5 text-xs text-brand">
+                  <p className="mt-1.5 text-xs text-red-400">
                     {errors.locationCity}
                   </p>
                 ) : (
@@ -1081,7 +1093,7 @@ export function VehicleForm({
               </div>
 
               <div className="col-span-2 sm:col-span-1">
-                <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
+                <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
                   Vitrine
                 </span>
                 <label className="flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50">
@@ -1101,7 +1113,7 @@ export function VehicleForm({
               </div>
 
               <div className="col-span-2 sm:col-span-1">
-                <span className="mb-1.5 block text-[11px] uppercase tracking-wider text-muted">
+                <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
                   Interno · não aparece no site
                 </span>
                 <label
@@ -1379,7 +1391,7 @@ export function VehicleForm({
               >
                 <p
                   className={`font-display text-xs font-semibold uppercase tracking-wider ${
-                    priceSaveBlocked ? "text-brand" : "text-brand-orange"
+                    priceSaveBlocked ? "text-red-400" : "text-brand-orange"
                   }`}
                 >
                   {priceSaveBlocked
@@ -1542,7 +1554,7 @@ export function VehicleForm({
                   : "Opcional · não aparece no site"
               }
               action={
-                <span className="text-[11px] text-muted">
+                <span className="text-xs text-muted">
                   Não aparece no site
                 </span>
               }

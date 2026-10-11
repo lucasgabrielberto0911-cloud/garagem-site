@@ -22,7 +22,7 @@ export default async function ClientesPage({
   const first = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
   const q = (first(query.q) || "").trim();
   const pageInput = Number(first(query.page));
-  const page = Number.isFinite(pageInput) ? Math.max(1, Math.trunc(pageInput)) : 1;
+  const page = Number.isFinite(pageInput) ? Math.min(1_000_000, Math.max(1, Math.trunc(pageInput))) : 1;
   const pageSize = ADMIN_CUSTOMERS_PAGE_SIZE;
   const selected = first(query.cliente);
   const filtered = Boolean(q || selected);

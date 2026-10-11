@@ -130,7 +130,7 @@ export function SiteContentEditor({
           ) : null}
         </div>
         {errors.founderPhotoUrl ? (
-          <p className="mt-3 text-sm text-brand">{errors.founderPhotoUrl}</p>
+          <p className="mt-3 text-sm text-red-400">{errors.founderPhotoUrl}</p>
         ) : null}
       </Card>
 

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { getSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { withAdminStorageLock } from "@/lib/admin-storage-lock";
 import { isMissingTableError } from "@/lib/prisma-errors";
 import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 import {
@@ -30,30 +30,22 @@ export async function saveVehicleVerifiedInfo(
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const vehicle = await prisma.vehicle.findUnique({
-    where: { id: vehicleId },
-    select: {
-      id: true,
-      category: true,
-      photos: { select: { id: true } },
-    },
-  });
-  if (!vehicle) return { ok: false, message: "Veículo não encontrado." };
-
   const drafts = VERIFIED_TOPICS.map((topic) => ({
     key: topic.key,
     text: String(formData.get(`text:${topic.key}`) ?? ""),
     photoIds: formData.getAll(`photos:${topic.key}`).map(String),
   }));
-  const result = sanitizeVerifiedDrafts(
-    drafts,
-    new Set(vehicle.photos.map((photo) => photo.id)),
-    vehicle.category === "moto",
-  );
-  if (!result.ok) return { ok: false, message: result.message };
-
+  let savedCount = 0;
   try {
-    await prisma.$transaction(async (tx) => {
+    const invalid = await withAdminStorageLock(async (tx) => {
+      // A leitura e a gravação compartilham o lock da reconciliação de fotos.
+      const vehicle = await tx.vehicle.findUnique({
+        where: { id: vehicleId }, select: { category: true, photos: { select: { id: true } } },
+      });
+      if (!vehicle) return { ok: false, message: "Veículo não encontrado." };
+      const result = sanitizeVerifiedDrafts(drafts, new Set(vehicle.photos.map(photo => photo.id)), vehicle.category === "moto");
+      if (!result.ok) return { ok: false, message: result.message };
+      savedCount = result.items.length;
       const previous = await tx.vehicleVerifiedInfo.findUnique({
         where: { vehicleId },
         select: { items: true },
@@ -76,7 +68,9 @@ export async function saveVehicleVerifiedInfo(
           },
         });
       }
+      return null;
     });
+    if (invalid) return invalid;
   } catch (error) {
     if (isMissingTableError(error, "VehicleVerifiedInfo")) {
       return {
@@ -96,7 +90,7 @@ export async function saveVehicleVerifiedInfo(
   return {
     ok: true,
     message:
-      result.items.length === 0
+      savedCount === 0
         ? "Nada preenchido: a ficha não mostra a seção."
         : "Salvo. A ficha já usa estas informações.",
   };

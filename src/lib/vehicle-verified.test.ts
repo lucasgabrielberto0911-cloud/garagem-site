@@ -6,9 +6,11 @@ import { isMissingTableError } from "./prisma-errors";
 import {
   VERIFIED_PHOTOS_PER_TOPIC,
   VERIFIED_TEXT_MAX,
+  isVerifiedTopicKey,
   parseVerifiedItems,
   publicVerifiedItems,
   sanitizeVerifiedDrafts,
+  verifiedHeading,
   verifiedTopicLabel,
 } from "./vehicle-verified";
 
@@ -159,3 +161,102 @@ test("salvar usa só a revalidação da ficha daquele veículo", () => {
   assert.doesNotMatch(action, /\[id\]/);
   assert.doesNotMatch(action, /tx\.vehicle\.(update|create)/);
 });
+
+test("isVerifiedTopicKey: valida rigorosamente as 5 chaves de tópicos", () => {
+  assert.equal(isVerifiedTopicKey("manutencao"), true);
+  assert.equal(isVerifiedTopicKey("pneus"), true);
+  assert.equal(isVerifiedTopicKey("interior"), true);
+  assert.equal(isVerifiedTopicKey("lataria"), true);
+  assert.equal(isVerifiedTopicKey("documentacao"), true);
+
+  assert.equal(isVerifiedTopicKey("motor"), false);
+  assert.equal(isVerifiedTopicKey("cambio"), false);
+  assert.equal(isVerifiedTopicKey("cidade"), false);
+  assert.equal(isVerifiedTopicKey("preco"), false);
+  assert.equal(isVerifiedTopicKey(""), false);
+  assert.equal(isVerifiedTopicKey(null), false);
+  assert.equal(isVerifiedTopicKey(undefined), false);
+  assert.equal(isVerifiedTopicKey(123), false);
+});
+
+test("verifiedHeading: exibe título correto para carro e moto", () => {
+  assert.equal(verifiedHeading(false), "Verificado neste carro");
+  assert.equal(verifiedHeading(true), "Verificado nesta moto");
+});
+
+test("parseVerifiedItems: preserva estritamente a ordem canônica dos tópicos", () => {
+  // Passa tópicos na ordem inversa: documentação, lataria, pneus, manutenção
+  const reversed = [
+    { key: "documentacao", text: "IPVA quitado", photoIds: [] },
+    { key: "lataria", text: "Sem riscos", photoIds: [] },
+    { key: "pneus", text: "Pneus meia vida", photoIds: [] },
+    { key: "manutencao", text: "Revisão recente", photoIds: [] },
+  ];
+
+  const parsed = parseVerifiedItems(reversed);
+  assert.deepEqual(
+    parsed.map((item) => item.key),
+    ["manutencao", "pneus", "lataria", "documentacao"],
+  );
+});
+
+test("sanitizeVerifiedDrafts: limite exato de 200 caracteres vs 201", () => {
+  const photos = new Set(["foto1"]);
+  const exatamente200 = "a".repeat(VERIFIED_TEXT_MAX);
+  const resultado200 = sanitizeVerifiedDrafts(
+    [{ key: "manutencao", text: exatamente200, photoIds: [] }],
+    photos,
+  );
+  assert.equal(resultado200.ok, true);
+
+  const maisDe200 = "a".repeat(VERIFIED_TEXT_MAX + 1);
+  const resultado201 = sanitizeVerifiedDrafts(
+    [{ key: "manutencao", text: maisDe200, photoIds: [] }],
+    photos,
+  );
+  assert.equal(resultado201.ok, false);
+});
+
+test("sanitizeVerifiedDrafts: mensagens de erro personalizadas para moto", () => {
+  const photos = new Set(["f1"]);
+
+  // Erro em 'interior' no modo moto usa 'Banco e acabamento'
+  const erroInteriorMoto = sanitizeVerifiedDrafts(
+    [{ key: "interior", text: "", photoIds: ["f1"] }],
+    photos,
+    true,
+  );
+  assert.equal(erroInteriorMoto.ok, false);
+  if (!erroInteriorMoto.ok) {
+    assert.match(erroInteriorMoto.message, /^Banco e acabamento:/);
+  }
+
+  // Erro em 'lataria' no modo moto usa 'Carenagem e pintura'
+  const erroLatariaMoto = sanitizeVerifiedDrafts(
+    [{ key: "lataria", text: "Sem amassados", photoIds: ["foto-alheia"] }],
+    photos,
+    true,
+  );
+  assert.equal(erroLatariaMoto.ok, false);
+  if (!erroLatariaMoto.ok) {
+    assert.match(erroLatariaMoto.message, /^Carenagem e pintura: foto não é deste veículo/);
+  }
+});
+
+test("publicVerifiedItems: exibe rótulos adaptados para motos e mantém miniaturas", () => {
+  const items = [
+    { key: "interior" as const, text: "Banco sem rasgos", photoIds: ["f1"] },
+    { key: "lataria" as const, text: "Pintura original", photoIds: ["f2"] },
+  ];
+  const photos = [
+    { id: "f1", url: "https://example.com/banco.webp", thumbnailUrl: "https://example.com/banco-thumb.webp" },
+    { id: "f2", url: "https://example.com/carenagem.webp" },
+  ];
+
+  const publicosMoto = publicVerifiedItems(items, photos, true);
+  assert.equal(publicosMoto[0].label, "Banco e acabamento");
+  assert.equal(publicosMoto[0].photos[0].thumbnailUrl, "https://example.com/banco-thumb.webp");
+  assert.equal(publicosMoto[1].label, "Carenagem e pintura");
+  assert.equal(publicosMoto[1].photos[0].thumbnailUrl, undefined);
+});
+

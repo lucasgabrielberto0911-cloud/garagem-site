@@ -1,6 +1,8 @@
 "use server";
 
 import { withAdminStorageLock } from "@/lib/admin-storage-lock";
+import { reconcileAdminPhotos } from "@/lib/admin-photo-reconcile";
+import type { Prisma } from "@prisma/client";
 import { parseMoneyBR } from "@/lib/admin-money";
 import { vehicleFieldErrors } from "@/lib/admin-vehicle-fields";
 import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
@@ -11,7 +13,6 @@ import { listingDraftFromVehicle } from "@/lib/listing-score";
 import { scoreListingAfterSave } from "@/lib/listing-score-store";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { isMissingColumnError } from "@/lib/prisma-errors";
 import { getSession } from "@/lib/auth";
 import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/lib/photo-master";
 import { copyPrivateMaster } from "@/lib/photo-master-store";
@@ -166,6 +167,7 @@ function parseVehicleFields(formData: FormData) {
   if (priceTextError) throw new Error(priceTextError);
 
   let photos: Array<{
+    id?: string;
     url: string;
     thumbnailUrl: string | null;
   }> = [];
@@ -189,7 +191,9 @@ function parseVehicleFields(formData: FormData) {
               "string"
                 ? (item as { thumbnailUrl: string }).thumbnailUrl
                 : null;
-            return { url, thumbnailUrl };
+            const id = typeof (item as { id?: unknown }).id === "string"
+              ? (item as { id: string }).id : undefined;
+            return { id, url, thumbnailUrl };
           }
           return null;
         })
@@ -197,6 +201,7 @@ function parseVehicleFields(formData: FormData) {
           (
             item,
           ): item is {
+            id?: string;
             url: string;
             thumbnailUrl: string | null;
           } => Boolean(item),
@@ -373,25 +378,6 @@ export async function createVehicle(
   }
 }
 
-async function loadPreviousPhotoUrls(vehicleId: string) {
-  try {
-    return await prisma.photo.findMany({
-      where: { vehicleId },
-      select: { url: true, thumbnailUrl: true },
-    });
-  } catch (error) {
-    if (!isMissingColumnError(error, "thumbnailUrl")) throw error;
-    const legacy = await prisma.photo.findMany({
-      where: { vehicleId },
-      select: { url: true },
-    });
-    return legacy.map((photo) => ({
-      url: photo.url,
-      thumbnailUrl: null as string | null,
-    }));
-  }
-}
-
 export async function updateVehicle(
   id: string,
   _prev: VehicleFormState,
@@ -403,23 +389,19 @@ export async function updateVehicle(
     const data = parseVehicleFields(formData);
     await assertCanFeature({ vehicleId: id, featured: data.featured });
 
-    const [previousVehicle, previous] = await Promise.all([
-      prisma.vehicle.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          brand: true,
-          model: true,
-          version: true,
-          yearModel: true,
-          locationCity: true,
-        },
-      }),
-      loadPreviousPhotoUrls(id),
-    ]);
+    const previousVehicle = await prisma.vehicle.findUnique({
+      where: { id },
+      select: { id: true, brand: true, model: true, version: true, yearModel: true, locationCity: true },
+    });
 
     const result = await withAdminStorageLock(async (tx) => {
       const current = await tx.vehicle.findUniqueOrThrow({ where: { id } });
+      const currentPhotos = await tx.photo.findMany({
+        where: { vehicleId: id },
+        orderBy: { order: "asc" },
+        select: { id: true, url: true, thumbnailUrl: true, order: true },
+      });
+      const photoPlan = reconcileAdminPhotos(currentPhotos, data.photos);
       const expected = String(formData.get("expectedUpdatedAt") || "");
       if (!expected || current.updatedAt.toISOString() !== expected)
         throw new Error(
@@ -455,32 +437,52 @@ export async function updateVehicle(
           hasVideo: data.hasVideo,
           consigned: data.consigned,
           photos: {
-            deleteMany: {},
-            create: data.photos.map((photo, order) => ({
-              url: photo.url,
-              thumbnailUrl: photo.thumbnailUrl,
-              order,
+            deleteMany: { id: { in: photoPlan.deleteIds } },
+            update: photoPlan.update.map(({ id: photoId, ...photo }) => ({
+              where: { id: photoId }, data: photo,
             })),
+            create: photoPlan.create,
           },
         },
       });
+      if (photoPlan.deleteIds.length) {
+        // Bancos antigos ainda podem não ter a tabela de informações verificadas.
+        const [table] = await tx.$queryRaw<Array<{ present: boolean }>>`
+          SELECT to_regclass('"VehicleVerifiedInfo"') IS NOT NULL AS present
+        `;
+        if (table.present) {
+          const verified = await tx.vehicleVerifiedInfo.findUnique({ where: { vehicleId: id } });
+          if (verified && Array.isArray(verified.items)) {
+            const removedIds = new Set(photoPlan.deleteIds);
+            const items = verified.items.map(item => {
+              if (!item || typeof item !== "object" || Array.isArray(item) || !Array.isArray(item.photoIds)) return item;
+              return { ...item, photoIds: item.photoIds.filter(photoId => typeof photoId !== "string" || !removedIds.has(photoId)) };
+            });
+            if (JSON.stringify(items) !== JSON.stringify(verified.items)) {
+              await tx.vehicleVerifiedInfo.update({
+                where: { vehicleId: id }, data: { items: items as Prisma.InputJsonValue },
+              });
+            }
+          }
+        }
+      }
       await recordAdminAudit(tx, session.adminId, id, "vehicle.update", {
         price: { before: current.price, after: saved.price },
         status: { before: current.status, after: saved.status },
       });
-      return { saved, current };
+      return { saved, current, currentPhotos };
     });
     const updated = result.saved;
 
     // Só o Salvar chama o Jev, e só se mudou o que ele lê.
     await scoreListingAfterSave({
       vehicleId: id,
-      before: listingDraftFromVehicle(result.current, previous.length),
+      before: listingDraftFromVehicle(result.current, result.currentPhotos.length),
       after: listingDraftFromVehicle(updated, data.photos.length),
     });
 
     const kept = new Set(data.photos.map((photo) => photo.url));
-    const removed = previous.flatMap((photo) =>
+    const removed = result.currentPhotos.flatMap((photo) =>
       kept.has(photo.url)
         ? []
         : [
@@ -491,7 +493,7 @@ export async function updateVehicle(
           ],
     );
     // Capa reenquadrada: a miniatura antiga da mesma foto também sai.
-    removed.push(...replacedThumbnails(previous, data.photos));
+    removed.push(...replacedThumbnails(result.currentPhotos, data.photos));
     if (removed.length > 0) {
       await deleteUnusedAdminFiles(removed);
     }

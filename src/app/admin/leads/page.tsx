@@ -9,6 +9,7 @@ import { AdminPageHeader, btn } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
 import { findLeadVendas, findWeeklyPurchaseLeads } from "@/lib/lead-venda";
 import { LEAD_STATUSES, isLeadSource, isLeadStatus } from "@/lib/leads";
+import { findLeadVehicleOptions, LEAD_VEHICLE_SELECT, leadVehicleOption } from "@/lib/admin-lead-vehicle-options";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_LEADS_PAGE_SIZE } from "@/lib/admin-vehicles";
 
@@ -19,7 +20,7 @@ export default async function LeadsPage({
 }: {
   searchParams: Promise<{
     status?: string;
-    page?: string;
+    page?: string | string[];
     q?: string;
     origem?: string;
     lead?: string;
@@ -33,7 +34,8 @@ export default async function LeadsPage({
   const valid = isLeadStatus(status);
   const q = (query.q ?? "").trim();
   const origem = isLeadSource(query.origem || "") ? query.origem! : "";
-  const page = Math.max(1, Number(query.page) || 1);
+  const requestedPage = Number(Array.isArray(query.page) ? query.page[0] : query.page);
+  const page = Number.isFinite(requestedPage) ? Math.min(1_000_000, Math.max(1, Math.trunc(requestedPage))) : 1;
   const pageSize = ADMIN_LEADS_PAGE_SIZE;
   const where = query.lead
     ? { id: query.lead }
@@ -55,10 +57,8 @@ export default async function LeadsPage({
     }),
     // Sem filtro, o total já sai do groupBy.
     filtered ? prisma.leadVenda.count({ where }) : Promise.resolve(null),
-    prisma.vehicle.findMany({
-      select: { id: true, brand: true, model: true, version: true, yearModel: true, status: true },
-      orderBy: [{ brand: "asc" }, { model: "asc" }],
-    }),
+    // Sem busca sob demanda na UI ainda: lista inicial cobre todo o estoque ativo.
+    findLeadVehicleOptions({ pageSize: 200 }),
     findWeeklyPurchaseLeads(leadWeekStart(now), now),
   ]);
 
@@ -72,7 +72,13 @@ export default async function LeadsPage({
     total: groups.reduce((sum, group) => sum + group._count._all, 0),
   };
   const total = filteredTotal ?? counts.total;
-  const vehicles = stock.map(vehicle => ({ id: vehicle.id, label: [vehicle.brand, vehicle.model, vehicle.version, vehicle.yearModel, vehicle.status === "vendido" ? "(vendido)" : ""].filter(Boolean).join(" ") }));
+  // Um lote para as seleções da página, inclusive carros vendidos; não é N+1.
+  const selectedIds = [...new Set(leads.flatMap(lead => lead.interestVehicleId ? [lead.interestVehicleId] : []))];
+  const missingIds = selectedIds.filter(id => !stock.items.some(vehicle => vehicle.id === id));
+  const selected = missingIds.length ? await prisma.vehicle.findMany({
+    where: { id: { in: missingIds } }, select: LEAD_VEHICLE_SELECT,
+  }) : [];
+  const vehicles = [...stock.items, ...selected.map(leadVehicleOption)];
   const summary = weeklyLeadSummary(weekly, now);
 
   return (

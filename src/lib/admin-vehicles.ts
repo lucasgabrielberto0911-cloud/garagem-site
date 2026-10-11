@@ -256,6 +256,12 @@ export function parseAdminVehiclesDir(
   return sort === "recent" ? "desc" : "asc";
 }
 
+/** Limites locais até a integração do parser compartilhado da Frente C. */
+function finiteInteger(value: number | undefined, fallback: number, max: number) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(max, Math.max(1, Math.trunc(value))) : fallback;
+}
+
 export async function getAdminVehiclesPage(options: {
   q?: string;
   tab: VehiclesTab;
@@ -266,11 +272,8 @@ export async function getAdminVehiclesPage(options: {
   sort?: AdminVehiclesSort;
   dir?: "asc" | "desc";
 }) {
-  const pageSize = Math.min(
-    Math.max(options.pageSize ?? ADMIN_VEHICLES_PAGE_SIZE, 1),
-    50,
-  );
-  const page = Math.max(options.page ?? 1, 1);
+  const pageSize = finiteInteger(options.pageSize, ADMIN_VEHICLES_PAGE_SIZE, 50);
+  const page = finiteInteger(options.page, 1, 1_000_000);
   const sort = options.sort ?? "recent";
   const dir = options.dir ?? (sort === "recent" ? "desc" : "asc");
   const statusFilter =
@@ -535,11 +538,8 @@ export async function getAdminSalesPage(options?: {
   period?: SalesPeriod;
   q?: string;
 }) {
-  const pageSize = Math.min(
-    Math.max(options?.pageSize ?? ADMIN_SALES_PAGE_SIZE, 1),
-    80,
-  );
-  const page = Math.max(options?.page ?? 1, 1);
+  const pageSize = finiteInteger(options?.pageSize, ADMIN_SALES_PAGE_SIZE, 80);
+  const page = finiteInteger(options?.page, 1, 1_000_000);
   const period = options?.period ?? "all";
   const where = { AND: [salesPeriodWhere(period), salesSearchWhere(options?.q), ...(options?.id ? [{ id: options.id }] : [])] };
 
@@ -594,7 +594,7 @@ export async function getSellableVehicles(options?: {
   q?: string;
   take?: number;
 }) {
-  const take = Math.min(Math.max(options?.take ?? 20, 1), 50);
+  const take = finiteInteger(options?.take, 20, 50);
   const vehicles = await prisma.vehicle.findMany({
     where: {
       AND: [{ sale: null, historical: false }, searchWhere(options?.q ?? "")],
@@ -613,7 +613,7 @@ export type CustomerSearchRecord = {
 };
 
 export async function searchCustomers(options?: { q?: string; take?: number }) {
-  const take = Math.min(Math.max(options?.take ?? 20, 1), 50);
+  const take = finiteInteger(options?.take, 20, 50);
   const term = (options?.q ?? "").trim();
   const where = customerSearchWhere(term);
 
