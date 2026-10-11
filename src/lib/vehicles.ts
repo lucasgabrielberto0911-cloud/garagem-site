@@ -663,13 +663,17 @@ async function loadStockCatalogLinks(): Promise<StockCatalogLink[]> {
 }
 
 const loadStockCatalogCached = unstable_cache(
-  loadStockCatalogLinks,
+  async (_dateKey: string) => loadStockCatalogLinks(),
   ["stock-catalog-links-v2"],
   PUBLIC_CACHE,
 );
 
 export const getStockCatalogLinks = cache(() =>
-  safeQuery("índice do estoque", () => loadStockCatalogCached(), [] as StockCatalogLink[]),
+  safeQuery(
+    "índice do estoque",
+    () => loadStockCatalogCached(saoPauloDateKey()),
+    [] as StockCatalogLink[],
+  ),
 );
 
 export const getStockPage = cache(
