@@ -49,6 +49,8 @@ import { Field, btn, inputClass } from "@/components/admin/ui";
 import {
   VehiclePhotoManager,
   photosFromRecords,
+  reconcileDraftPhotos,
+  serializePhotos,
   type PhotoItem,
 } from "@/components/admin/VehiclePhotoManager";
 import {
@@ -190,6 +192,7 @@ export function VehicleForm({
         .slice()
         .sort((a, b) => a.order - b.order)
         .map((photo) => ({
+          id: photo.id,
           url: photo.url,
           thumbnailUrl: photo.thumbnailUrl,
         })) ?? [],
@@ -720,7 +723,21 @@ export function VehicleForm({
           if (draft.values && typeof draft.values === "object")
             setValues(draft.values as typeof values);
           if (Array.isArray(draft.photos))
-            setPhotos(draft.photos as PhotoItem[]);
+            setPhotos(
+              reconcileDraftPhotos(
+                (draft.photos as Array<Partial<PhotoItem>>).filter(
+                  (photo): photo is Partial<PhotoItem> & { url: string } =>
+                    typeof photo?.url === "string",
+                ),
+                vehicle
+                  ? photosFromRecords(
+                      vehicle.photos
+                        .slice()
+                        .sort((a, b) => a.order - b.order),
+                    )
+                  : [],
+              ),
+            );
           if (Array.isArray(draft.accessories))
             setAccessoriesState(normalizeAccessories(draft.accessories));
           const fields = draft.fields as Record<string, string> | undefined;
@@ -801,12 +818,7 @@ export function VehicleForm({
           <input
             type="hidden"
             name="photoUrls"
-            value={JSON.stringify(
-              photos.map((photo) => ({
-                url: photo.url,
-                thumbnailUrl: photo.thumbnailUrl ?? null,
-              })),
-            )}
+            value={serializePhotos(photos)}
           />
           <input
             type="hidden"

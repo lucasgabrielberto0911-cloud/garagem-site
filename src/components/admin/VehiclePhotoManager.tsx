@@ -77,17 +77,54 @@ export function createPhotoId() {
   return `photo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** Fotos já salvas mantêm o id do banco (o servidor usa o id para preservar vínculos); sem id, nasce um id local. */
 export function photosFromRecords(
   photos: Array<{
+    id?: string;
     url: string;
     thumbnailUrl?: string | null;
   }>,
 ): PhotoItem[] {
   return photos.map((photo) => ({
-    id: createPhotoId(),
+    id: photo.id || createPhotoId(),
     url: photo.url,
     thumbnailUrl: photo.thumbnailUrl ?? null,
   }));
+}
+
+/**
+ * Contrato do campo `photoUrls`: `{ id, url, thumbnailUrl }` por foto, na ordem da galeria.
+ * Ids de fotos novas são locais (uuid); o servidor trata id desconhecido como foto nova.
+ */
+export function serializePhotos(photos: PhotoItem[]) {
+  return JSON.stringify(
+    photos.map((photo) => ({
+      id: photo.id,
+      url: photo.url,
+      thumbnailUrl: photo.thumbnailUrl ?? null,
+    })),
+  );
+}
+
+/**
+ * Rascunho de veículo existente: devolve às fotos o id salvo no banco quando a URL é a mesma,
+ * para o rascunho não "recriar" fotos que já têm vínculos (Verificado). Fotos sem id viram locais.
+ */
+export function reconcileDraftPhotos(
+  draft: Array<Partial<PhotoItem> & { url: string }>,
+  saved: PhotoItem[],
+): PhotoItem[] {
+  const savedIds = new Set(saved.map((photo) => photo.id));
+  const usedIds = new Set<string>();
+  return draft.map((photo) => {
+    let id = photo.id && savedIds.has(photo.id) && !usedIds.has(photo.id) ? photo.id : "";
+    if (!id) {
+      const match = saved.find((item) => item.url === photo.url && !usedIds.has(item.id));
+      id = match?.id ?? (photo.id && !savedIds.has(photo.id) ? photo.id : createPhotoId());
+    }
+    usedIds.add(id);
+    return { id, url: photo.url, thumbnailUrl: photo.thumbnailUrl ?? null };
+  });
 }
 
 export function photosFromUrls(urls: string[]): PhotoItem[] {
