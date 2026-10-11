@@ -9,7 +9,7 @@ import { AdminPageHeader, btn } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
 import { findLeadVendas, findWeeklyPurchaseLeads } from "@/lib/lead-venda";
 import { LEAD_STATUSES, isLeadSource, isLeadStatus } from "@/lib/leads";
-import { findLeadVehicleOptions, LEAD_VEHICLE_SELECT, leadVehicleOption } from "@/lib/admin-lead-vehicle-options";
+import { LEAD_VEHICLE_SELECT, leadVehicleOption } from "@/lib/admin-lead-vehicle-options";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_LEADS_PAGE_SIZE } from "@/lib/admin-vehicles";
 
@@ -44,7 +44,7 @@ export default async function LeadsPage({
   const filtered =
     Boolean(query.lead) || valid || Boolean(q) || Boolean(origem);
   const now = new Date();
-  const [leads, groups, filteredTotal, stock, weekly] = await Promise.all([
+  const [leads, groups, filteredTotal, weekly] = await Promise.all([
     findLeadVendas({
       where,
       skip: (page - 1) * pageSize,
@@ -57,8 +57,6 @@ export default async function LeadsPage({
     }),
     // Sem filtro, o total já sai do groupBy.
     filtered ? prisma.leadVenda.count({ where }) : Promise.resolve(null),
-    // Sem busca sob demanda na UI ainda: lista inicial cobre todo o estoque ativo.
-    findLeadVehicleOptions({ pageSize: 200 }),
     findWeeklyPurchaseLeads(leadWeekStart(now), now),
   ]);
 
@@ -74,11 +72,10 @@ export default async function LeadsPage({
   const total = filteredTotal ?? counts.total;
   // Um lote para as seleções da página, inclusive carros vendidos; não é N+1.
   const selectedIds = [...new Set(leads.flatMap(lead => lead.interestVehicleId ? [lead.interestVehicleId] : []))];
-  const missingIds = selectedIds.filter(id => !stock.items.some(vehicle => vehicle.id === id));
-  const selected = missingIds.length ? await prisma.vehicle.findMany({
-    where: { id: { in: missingIds } }, select: LEAD_VEHICLE_SELECT,
+  const selected = selectedIds.length ? await prisma.vehicle.findMany({
+    where: { id: { in: selectedIds } }, select: LEAD_VEHICLE_SELECT,
   }) : [];
-  const vehicles = [...stock.items, ...selected.map(leadVehicleOption)];
+  const selectedVehicles = selected.map(leadVehicleOption);
   const summary = weeklyLeadSummary(weekly, now);
 
   return (
@@ -96,10 +93,10 @@ export default async function LeadsPage({
         ].join("")}
       />
 
-      <PurchaseLeadForm vehicles={vehicles.filter(v => !v.label.endsWith("(vendido)"))} />
+      <PurchaseLeadForm />
       <LeadWeeklySummary {...summary} />
       <LeadsTable
-        vehicles={vehicles}
+        selectedVehicles={selectedVehicles}
         leadId={query.lead}
         leads={leads}
         status={valid ? status : ""}

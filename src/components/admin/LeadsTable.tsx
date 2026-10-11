@@ -56,7 +56,7 @@ function formatDateTime(value: Date) {
 
 export function LeadsTable({
   leadId,
-  vehicles,
+  selectedVehicles,
   leads,
   status,
   query = "",
@@ -67,7 +67,7 @@ export function LeadsTable({
   total,
 }: {
   leadId?: string;
-  vehicles: LeadVehicleOption[];
+  selectedVehicles: LeadVehicleOption[];
   leads: LeadVenda[];
   status: string;
   query?: string;
@@ -295,7 +295,7 @@ export function LeadsTable({
             <LeadCard
               key={lead.id}
               lead={lead}
-              vehicles={vehicles}
+              selectedVehicle={selectedVehicles.find(vehicle => vehicle.id === lead.interestVehicleId)}
               saving={savingId === lead.id}
               startOpen={leadId === lead.id}
               onStatus={changeStatus}
@@ -395,7 +395,7 @@ const leadAction =
  */
 function LeadCard({
   lead,
-  vehicles,
+  selectedVehicle,
   saving,
   startOpen,
   onStatus,
@@ -404,7 +404,7 @@ function LeadCard({
   onCopyPlate,
 }: {
   lead: LeadVenda;
-  vehicles: LeadVehicleOption[];
+  selectedVehicle?: LeadVehicleOption;
   saving: boolean;
   startOpen: boolean;
   onStatus: (lead: LeadVenda, value: string) => void;
@@ -632,7 +632,7 @@ function LeadCard({
             <div className="px-3 pb-3 sm:px-4">
               <PurchaseLeadForm
                 key={`${lead.id}-${new Date(lead.updatedAt).getTime()}`}
-                vehicles={vehicles}
+                selectedVehicle={selectedVehicle}
                 lead={lead}
               />
             </div>
