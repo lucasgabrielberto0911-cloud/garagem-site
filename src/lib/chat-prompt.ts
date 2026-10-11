@@ -356,7 +356,7 @@ export function isPowerQuery(mensagem: string) {
 export function isChatSelectionQuery(mensagem: string) {
   const text = foldIntent(mensagem);
   return (
-    /\bcusto[\s-]*beneficio\b/.test(text) ||
+    /\b(custo[\s-]*beneficio|carro bom|bom carro|bons carros|carros bons|bom e barato|boa opcao)\b/.test(text) ||
     parseStarterIntent(mensagem) ||
     parseDeliveryIntent(mensagem) ||
     /\b(fortes?|potentes?|motorizad[oa]s?)\b/.test(text) ||
@@ -381,7 +381,7 @@ export type ChatRankMode =
 
 /** Família / espaçoso / 4 portas. “espaço” solto não conta. */
 export function parseFamilyIntent(mensagem: string) {
-  return /\b(familia|familiar|familias|espacos[oa]s?|porta[- ]malas|4 portas|quatro portas|7 lugares)\b/.test(
+  return /\b(familia|familiar|familias|espacos[oa]s?|porta[- ]malas|4 portas|quatro portas|7 lugares|[45] pessoas|cinco pessoas|quatro pessoas|bagagem|bagagens|malas|filhos|criancas|cadeirinha|bebe)\b/.test(
     foldIntent(mensagem),
   );
 }

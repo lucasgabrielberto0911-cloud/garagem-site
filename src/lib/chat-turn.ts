@@ -62,6 +62,7 @@ import {
   CHAT_KEYS_REPLY,
   CHAT_SOCIAL_REPLY,
   CHAT_PCD_REPLY,
+  CHAT_GEAR_EXTRA_REPLY,
   CHAT_RECALL_REPLY,
   CHAT_HOURS_REPLY,
   CHAT_CONTACT_REPLY,
@@ -522,7 +523,14 @@ export async function runChatTurn(input: {
     const units = activeVehicle ? [activeVehicle] : writesFull ? named : fuelUnits(named, input.stock);
     // Sem carro citado: "é flex?" depois de uma lista responde pelos que foram mostrados.
     const lastAssistant = [...input.historico].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
-    const shown = units.length ? [] : input.stock.filter((vehicle) => lastAssistant.includes(formatVehicleLine(vehicle)));
+    let shown = units.length ? [] : input.stock.filter((vehicle) => lastAssistant.includes(formatVehicleLine(vehicle)));
+    // "a mais barata é flex?": só a que ele apontou na lista.
+    const pickFold = visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (shown.length > 1) {
+      if (/mais barat|mais em conta/.test(pickFold)) shown = [[...shown].sort((a, b) => a.price - b.price)[0]!];
+      else if (/mais nov/.test(pickFold)) shown = [[...shown].sort((a, b) => b.yearModel - a.yearModel || a.km - b.km)[0]!];
+      else if (/menos km|menor km|rodou menos/.test(pickFold)) shown = [[...shown].sort((a, b) => a.km - b.km)[0]!];
+    }
     const reply = units.length ? fuelFactReply(visitorMessage, units) : shown.length === 1 ? fuelFactReply(visitorMessage, shown) : fuelListReply(visitorMessage, shown);
     if (reply) {
       emit(reply);
@@ -564,8 +572,8 @@ export async function runChatTurn(input: {
     emit(reply);
     return finish(reply, false, { policy, cards: false });
   }
-  if (policy === "pcd" || policy === "recall" || policy === "hours") {
-    const reply = { pcd: CHAT_PCD_REPLY, recall: CHAT_RECALL_REPLY, hours: CHAT_HOURS_REPLY }[policy];
+  if (policy === "pcd" || policy === "recall" || policy === "hours" || policy === "gear-extra") {
+    const reply = { pcd: CHAT_PCD_REPLY, recall: CHAT_RECALL_REPLY, hours: CHAT_HOURS_REPLY, "gear-extra": CHAT_GEAR_EXTRA_REPLY }[policy];
     // PCD: mostra os automáticos (os mais bem colocados).
     const autos = policy === "pcd"
       ? input.stock
@@ -850,10 +858,13 @@ export async function runChatTurn(input: {
       intent: chatRankMode(scopedMessage),
     });
     emit(reply);
-    return finish(reply, false, {
+    // Texto montado da ficha: o polimento não corta "3.200 km" nem a pergunta final.
+    const result = finish(reply, false, {
       policy: "compare",
       forcedVehicles: compared.slice(0, 2),
     });
+    result.reply = reply;
+    return result;
   }
   if (
     !mayCreateLead &&
