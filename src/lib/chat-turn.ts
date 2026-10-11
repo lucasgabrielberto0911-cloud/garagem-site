@@ -128,7 +128,7 @@ import {
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 import { chatTurnMayCreateLead } from "@/lib/chat-guard";
-import { asksAboutFuel, dieselWishReply, fuelFactReply, fuelUnits } from "@/lib/chat-fuel";
+import { asksAboutFuel, dieselWishReply, fuelFactReply, fuelListReply, fuelUnits } from "@/lib/chat-fuel";
 import { asksColorOf, colorReply, mentionedStockBrand, parseColorWish } from "@/lib/chat-attrs";
 import { parseChatSearchRanges } from "@/lib/chat-search-filters";
 import { isAnaphoricVehicleFollowUp } from "@/lib/chat-text";
@@ -404,7 +404,10 @@ export async function runChatTurn(input: {
   if (
     !mayCreateLead &&
     !activeVehicle &&
-    isTradeInMessage(lastUser) &&
+    // Troca na última fala, ou nas 3 últimas se ele diz "no meu"/"nele".
+    (isTradeInMessage(lastUser) ||
+      (input.historico.filter((turn) => turn.role === "user").slice(-3).some((turn) => isTradeInMessage(turn.content)) &&
+        /\b(no meu|na minha|meu carro|minha moto|nele|nela|pelo meu|pela minha|o meu|a minha)\b/.test(fold(visitorMessage)))) &&
     /\b(quanto|valor|avalia\w*|paga\w*|da(?:o)? nele|da(?:o)? nela|vale)\b/.test(fold(visitorMessage)) &&
     !singleMentionedModelPool(input.stock, visitorMessage)
   ) {
@@ -514,10 +517,13 @@ export async function runChatTurn(input: {
     // "a Biz 125 é flex?" fica na BIZ 125; "a Biz é flex?" mostra as duas Biz (nada de responder só uma).
     const writesFull = named.length > 0 && /\s/.test(named[0]!.model.trim()) && visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(named[0]!.model.toLowerCase());
     const units = activeVehicle ? [activeVehicle] : writesFull ? named : fuelUnits(named, input.stock);
-    const reply = units.length ? fuelFactReply(visitorMessage, units) : null;
+    // Sem carro citado: "é flex?" depois de uma lista responde pelos que foram mostrados.
+    const lastAssistant = [...input.historico].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
+    const shown = units.length ? [] : input.stock.filter((vehicle) => lastAssistant.includes(formatVehicleLine(vehicle)));
+    const reply = units.length ? fuelFactReply(visitorMessage, units) : shown.length === 1 ? fuelFactReply(visitorMessage, shown) : fuelListReply(visitorMessage, shown);
     if (reply) {
       emit(reply);
-      const result = finish(reply, false, { policy: "stock-fact", forcedVehicles: units.slice(0, 3) });
+      const result = finish(reply, false, { policy: "stock-fact", forcedVehicles: (units.length ? units : shown).slice(0, 3) });
       result.reply = reply;
       return result;
     }

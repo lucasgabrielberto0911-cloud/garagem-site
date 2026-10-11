@@ -1,4 +1,5 @@
 import type { ChatVehicleRecord } from "@/lib/chat-stock";
+import { formatModelName } from "@/lib/format";
 import { site } from "@/lib/site";
 
 const fold = (text: string) =>
@@ -15,8 +16,7 @@ export function asksAboutFuel(mensagem: string): boolean {
 }
 
 function spokenName(vehicle: ChatVehicleRecord) {
-  const model = vehicle.model.trim();
-  const name = model.split(/\s+/).map((word) => word.length <= 4 || /\d/.test(word) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
+  const name = formatModelName(vehicle.model.trim());
   return `${vehicle.category === "moto" ? "a" : "o"} ${name}`;
 }
 
@@ -72,4 +72,12 @@ export function dieselWishReply(mensagem: string, stock: ChatVehicleRecord[], na
   const fuels = [...new Set(stock.map((vehicle) => fuelLabel(vehicle.fuel ?? "")).filter(Boolean))]
     .map((label) => label.replace(/ \(gasolina e etanol\)/, "").replace(/^a /, ""));
   return `Diesel não temos agora: o estoque da Garagem hoje é ${fuels.join(" e ")}. Se quiser, o consultor te avisa quando chegar um diesel: https://wa.me/${site.whatsappNumber}`;
+}
+
+/** "é flex?" depois de uma lista: responde unidade por unidade do que foi mostrado. */
+export function fuelListReply(mensagem: string, shown: ChatVehicleRecord[]): string | null {
+  if (!asksAboutFuel(mensagem) || shown.length < 2) return null;
+  if (shown.some((vehicle) => !vehicle.fuel || !vehicle.fuel.trim())) return null;
+  const lines = shown.map((vehicle) => `${spokenName(vehicle).replace(/^(o|a) /, "")} ${vehicle.yearModel} é ${fuelLabel(vehicle.fuel!)}`);
+  return `Dos que separei: ${lines.join("; ")}.`;
 }
