@@ -350,8 +350,10 @@ export function planExpertTurn(ctx: ExpertContext): ExpertPlan {
   }
   const { entries, missing } = namedSpecsFor(subject.vehicles, subject.specs);
   const criterion = specCriterionFromMessage(question);
-  const whole = namedSpecsFor(ctx.stock.filter(vehicle => vehicle.category !== "moto"));
-  const global = criterion && topics.includes("ranking") ? rankSpecs(criterion === "forca" ? "potencia" : criterion, whole.entries)[0] : undefined;
+  // "qual moto gasta menos?": ranking entre as motos; carro entre carros. Com modelos citados, sem ranking do estoque todo.
+  const motoTalk = /\bmotos?\b/.test(question.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
+  const whole = namedSpecsFor(ctx.stock.filter(vehicle => (vehicle.category === "moto") === motoTalk));
+  const global = criterion && topics.includes("ranking") && subject.source !== "named" ? rankSpecs(criterion === "forca" ? "potencia" : criterion, whole.entries)[0] : undefined;
   const values = global ? {
     economia: [`${global.spec.cidade?.gasolina ?? global.spec.consumoMoto} km/l na cidade, na gasolina`, "em economia"],
     aceleracao: [`0 a 100 em cerca de ${global.spec.zeroACem} s`, "em aceleração"],
@@ -438,7 +440,7 @@ export function buildExpertPromptBlock(plan: ExpertPlan) {
     "- NUNCA afirme nada sobre a UNIDADE do estoque: estado, revisões, histórico, dono, laudo, garantia além da política da loja, ou equipamento que não esteja na linha do estoque. Equipamentos da base genérica não comprovam versão e ano exatos; só dados cadastrados ou pesquisa exata confirmada permitem afirmá-los; “esta unidade tem…” só com o que está na linha do estoque. Estado e histórico: consultor. Manutenção: destaque mecânica conhecida e oferta de peças. NÃO traga pontos de atenção, defeitos ou críticas espontaneamente. Só responda a uma crítica quando o visitante perguntar diretamente, com tato e sem mentir. Nunca diga que a unidade tem laudo, garantia de fábrica, revisões feitas, “original”, dono único, ausência de batida/sinistro nem que passou por “conferência de qualidade”: esse dado não está no anúncio e o consultor confirma. Marca sempre a dos dados (o HB20 é Hyundai, o City é Honda).",
   );
   lines.push(
-    "- Comparação (“qual o mais forte / que gasta menos / mais espaçoso?”): compare os carros da conversa (os que acabaram de aparecer) usando os números das fichas, aponte quem ganha e por qual critério, e diga a nuance quando houver (ex.: um tem mais cv, o outro mais torque em baixa). Sem inventar critério. Para modelo que não está no estoque (ex.: Onix), compare com o que você conhece dele e diga que no momento não temos esse no estoque.",
+    "- Comparação (“qual o mais forte / que gasta menos / mais espaçoso?”): compare os carros da conversa (os que acabaram de aparecer) usando os números das fichas, aponte quem ganha e por qual critério, e diga a nuance quando houver (ex.: um tem mais cv, o outro mais torque em baixa). Sem inventar critério. Para modelo que não está no estoque (ex.: Onix), compare com o que você conhece dele e diga que no momento não temos esse no estoque. Formato pro cliente leigo: 1 frase curta e depois uma linha por carro “• Modelo Versão Ano — dado pedido” (ex.: “• Civic EXL 2020 — 155 cv”), sem km, preço nem motor repetido.",
   );
   lines.push(
     "- Não despeje a lista do estoque nem repita preço e km se a pergunta não pediu. Nunca mostre preço de carro vendido nem a cidade do veículo. Só convide para o consultor/WhatsApp quando ajudar de verdade.",
@@ -568,7 +570,7 @@ export function expertFallbackReply(plan: ExpertPlan, message: string) {
   }
   if (criterion && plan.entries.length >= 2) {
     const ranked = rankingSpecReply(criterion, plan.entries);
-    if (ranked) return `${ranked}${plan.stockRanking && plan.subject.source !== "stock" ? ` ${plan.stockRanking}` : ""}`;
+    if (ranked) return `${ranked}${plan.stockRanking && plan.subject.source !== "stock" ? `\n\n${plan.stockRanking}` : ""}`;
   }
   if (plan.subject.vehicles.length && !plan.subject.outside?.length && plan.entries.length && (plan.topics.includes("pontosfortes") || plan.topics.includes("comparacao"))) {
     return plan.entries.slice(0, 2).map(entry => {

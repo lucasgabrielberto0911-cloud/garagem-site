@@ -52,7 +52,6 @@ import {
   findVehicleSpec,
   specCityKmL,
   specMaxCv,
-  specPowerText,
 } from "@/lib/chat-specs";
 
 /** Batch size. Search reads every available listing; only a shortlist goes to the model. */
@@ -753,6 +752,24 @@ const GENERIC_STOCK_TOKEN =
 export function formatVehicleLine(vehicle: ChatVehicleRecord) {
   const version = shortVersion(vehicle.version, vehicle.model);
   return `${vehicle.brand} ${vehicle.model}${version ? ` ${version}` : ""} ${vehicle.yearModel} · ${vehicle.km.toLocaleString("pt-BR")} km · R$ ${vehicle.price.toLocaleString("pt-BR")}`;
+}
+
+/** “Civic EXL 2020” / “Lancer 2.0 2014”: nome curto da linha do ranking (km e preço ficam nos cards). */
+export function rankLineName(vehicle: ChatVehicleRecord) {
+  const model = formatModelName(vehicle.model || vehicle.brand).trim();
+  const first = shortVersion(vehicle.version, vehicle.model).split(" ")[0] ?? "";
+  const trim = /^[a-z]/i.test(first) && !/^(flex|flexone|fire|evo|automatic[oa]|manual|completo)$/i.test(first)
+    ? first
+    : /^\d\.\d$/.test(first)
+      ? first
+      : "";
+  return `${model}${trim ? ` ${trim}` : ""} ${vehicle.yearModel}`.trim();
+}
+
+/** Frase curta + uma linha por carro só com o dado pedido. O chat desenha as linhas “• ” como lista. */
+export function formatRankList(lead: string, rows: Array<{ name: string; value?: string | null }>) {
+  const lines = rows.map((row) => `• ${row.name}${row.value ? ` — ${row.value}` : ""}`);
+  return `${lead}\n${lines.join("\n")}`;
 }
 
 function talkName(vehicle: ChatVehicleRecord) {
@@ -1767,6 +1784,77 @@ function formatEconomyCompare(vehicles: ChatVehicleRecord[]) {
   return `${lead} ${others.charAt(0).toUpperCase()}${others.slice(1)}.`;
 }
 
+/** Comparação por força: frase curta + “• carro — N cv” (ou o motor, sem ficha). */
+function formatPowerCompareList(vehicles: ChatVehicleRecord[]) {
+  const specs = vehicles.map((v) => findVehicleSpec(v));
+  if (specs.every(Boolean)) {
+    const rows = vehicles
+      .map((v, index) => ({ v, cv: specMaxCv(specs[index]!) }))
+      .sort((a, b) => b.cv - a.cv || a.v.price - b.v.price);
+    const top = rows[0]!;
+    const tie = rows.filter((row) => row.cv === top.cv).length > 1;
+    const lead = tie
+      ? "Pela ficha de fábrica, empatam em potência:"
+      : `Pela ficha de fábrica, ${talkName(top.v).labeled} é o mais forte:`;
+    return formatRankList(lead, rows.map((row) => ({ name: rankLineName(row.v), value: `${row.cv} cv` })));
+  }
+  const ranked = rankByPower(vehicles, "");
+  if (!ranked.some((v) => stockEngineLabel(v))) return formatPowerCompare(vehicles);
+  const top = ranked[0]!;
+  const tie = ranked.filter((v) => powerRankKey(v) === powerRankKey(top)).length > 1;
+  return formatRankList(
+    tie ? "Pelo motor da ficha, empatam:" : `Pelo motor da ficha, ${talkName(top).labeled} é o mais forte:`,
+    ranked.map((v) => ({ name: rankLineName(v), value: stockEngineLabel(v) ? `motor ${stockEngineLabel(v)}` : null })),
+  );
+}
+
+/** Comparação por economia: km/l do Inmetro quando todos têm ficha; senão, o motor. */
+function formatEconomyCompareList(vehicles: ChatVehicleRecord[]) {
+  const specs = vehicles.map((v) => findVehicleSpec(v));
+  if (specs.every((spec) => spec && specCityKmL(spec) != null)) {
+    const rows = vehicles
+      .map((v, index) => ({ v, kml: specCityKmL(specs[index]!)! }))
+      .sort((a, b) => b.kml - a.kml || a.v.price - b.v.price);
+    return formatRankList(
+      `Pelo Inmetro (cidade, gasolina), ${talkName(rows[0]!.v).labeled} é o mais econômico:`,
+      rows.map((row) => ({ name: rankLineName(row.v), value: `${String(row.kml).replace(".", ",")} km/l` })),
+    );
+  }
+  const ranked = rankChatVehicles(vehicles, "carro econômico");
+  if (!ranked.some((v) => stockEngineLabel(v))) return formatEconomyCompare(vehicles);
+  return formatRankList(
+    `${talkName(ranked[0]!).cap} é o de motor menor, o que costuma gastar menos:`,
+    ranked.map((v) => ({ name: rankLineName(v), value: stockEngineLabel(v) ? `motor ${stockEngineLabel(v)}` : null })),
+  );
+}
+
+/** Comparação por espaço: litros de porta-malas da ficha; senão, carroceria e portas. */
+function formatFamilyCompareList(vehicles: ChatVehicleRecord[]) {
+  const specs = vehicles.map((v) => findVehicleSpec(v));
+  if (specs.every((spec) => spec?.portaMalas)) {
+    const rows = vehicles
+      .map((v, index) => ({ v, liters: specs[index]!.portaMalas! }))
+      .sort((a, b) => b.liters - a.liters || a.v.price - b.v.price);
+    return formatRankList(
+      `Pela ficha de fábrica, ${talkName(rows[0]!.v).labeled} é o mais espaçoso:`,
+      rows.map((row) => ({ name: rankLineName(row.v), value: `${row.liters.toLocaleString("pt-BR")} L de porta-malas` })),
+    );
+  }
+  const ranked = rankChatVehicles(vehicles, "carro para família");
+  const describe = (v: ChatVehicleRecord) => {
+    const bits: string[] = [];
+    const body = vehicleBodyStyle(v);
+    if (body) bits.push(BODY_SPOKEN[body] ?? body);
+    if (v.doors != null && v.doors > 0) bits.push(`${v.doors} portas`);
+    return bits.join(", ") || null;
+  };
+  if (!ranked.some(describe)) return formatFamilyCompare(vehicles);
+  return formatRankList(
+    `${talkName(ranked[0]!).cap} é o mais espaçoso da lista:`,
+    ranked.map((v) => ({ name: rankLineName(v), value: describe(v) })),
+  );
+}
+
 /** Compara os 2–3 anúncios da tela com dados reais. Consumo só se solicitado. */
 export function compareChatStockPicks(
   vehicles: ChatVehicleRecord[],
@@ -1782,8 +1870,8 @@ export function compareChatStockPicks(
   if (intent === "delivery") return formatDeliveryCompare(vehicles);
   if ((intent === "power" || opts.power) && vehicles.length >= 2) {
     const body = opts.includeConsumption
-      ? `${formatPowerCompare(vehicles)}\n\n${formatConsumptionCompare(vehicles)}`
-      : formatPowerCompare(vehicles);
+      ? `${formatPowerCompareList(vehicles)}\n\n${formatConsumptionCompare(vehicles)}`
+      : formatPowerCompareList(vehicles);
     if (opts.withLeadin === false) return body;
     return `Vou te ajudar a escolher.\n\n${body}`;
   }
@@ -1793,10 +1881,10 @@ export function compareChatStockPicks(
   ) {
     const body =
       intent === "family"
-        ? formatFamilyCompare(vehicles)
+        ? formatFamilyCompareList(vehicles)
         : intent === "starter"
           ? formatStarterCompare(vehicles)
-          : formatEconomyCompare(vehicles);
+          : formatEconomyCompareList(vehicles);
     const withConsumption =
       opts.includeConsumption && body
         ? `${body}\n\n${formatConsumptionCompare(vehicles)}`
@@ -1837,92 +1925,41 @@ export function compareChatStockPicks(
   const mixed = autos.length > 0 && manuals.length > 0;
   const auto = autos[0];
   const autoOnly = autos.length <= 1;
-  const autoBit = autoOnly
-    ? "é o automático da lista — mais conforto no trânsito"
-    : "é automático — mais conforto no trânsito";
 
-  const picks: string[] = [];
-  const mentioned = new Set<string>();
-
-  if (allSamePrice) {
-    picks.push(
-      vehicles.length === 2
-        ? `Os dois estão em ${formatChatPrice(minPrice)} — o desempate é km e ano.`
-        : `Estes estão em ${formatChatPrice(minPrice)} — o desempate é km e ano.`,
-    );
-  } else if (uniqueCheap) {
-    const cheap = talkName(cheapest);
-    if (mixed && auto?.id === cheapest.id) {
-      picks.push(
-        autoOnly
-          ? `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e o automático da lista — mais conforto no trânsito.`
-          : `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) e é automático — mais conforto no trânsito.`,
-      );
-      mentioned.add(cheapest.id);
-      if (auto) mentioned.add(auto.id);
-    } else {
-      picks.push(
-        `${cheap.cap} é o mais em conta (${formatChatPrice(cheapest.price)}) — um bom começo.`,
-      );
-      mentioned.add(cheapest.id);
-    }
-  } else {
-    picks.push(
-      `${joinPtNames(tiedCheap.map((vehicle) => talkName(vehicle).name))} saem por ${formatChatPrice(minPrice)}.`,
-    );
-  }
-
-  if (hasKmSpread && (allSamePrice || lowestKm.id !== cheapest.id || !uniqueCheap)) {
-    const alreadyKm = picks.some((pick) => /menos km/.test(pick));
-    if (!alreadyKm) {
-      const low = talkName(lowestKm);
-      const alsoNewest =
-        allSamePrice && hasYearSpread && lowestKm.id === newest.id;
-      if (mixed && auto?.id === lowestKm.id && !mentioned.has(auto.id)) {
-        picks.push(
-          alsoNewest
-            ? `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}), é o mais novo (${newest.yearModel}) e ${autoBit}.`
-            : `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}) e ${autoBit}.`,
-        );
-        mentioned.add(lowestKm.id);
-        mentioned.add(auto.id);
-      } else {
-        picks.push(
-          alsoNewest
-            ? `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}) e é o mais novo (${newest.yearModel}).`
-            : `${low.cap} tem menos km (${formatChatKm(lowestKm.km)}).`,
-        );
-        mentioned.add(lowestKm.id);
-      }
-    }
-  }
-
-  if (mixed && auto && !mentioned.has(auto.id)) {
-    picks.push(`${talkName(auto).cap} ${autoBit}.`);
-    mentioned.add(auto.id);
-  }
-
-  if (hasYearSpread && !mentioned.has(newest.id)) {
-    picks.push(`${talkName(newest).cap} é o mais novo (${newest.yearModel}).`);
-    mentioned.add(newest.id);
-  }
-
+  // Uma linha por carro com o ponto forte dele, sem número: km e preço já estão nos cards.
+  const traits = new Map<string, string[]>(vehicles.map((vehicle) => [vehicle.id, []]));
+  const add = (vehicle: ChatVehicleRecord, trait: string) => traits.get(vehicle.id)?.push(trait);
+  if (!allSamePrice && uniqueCheap) add(cheapest, "mais em conta");
+  if (hasKmSpread && vehicles.filter((vehicle) => vehicle.km === lowestKm.km).length === 1) add(lowestKm, "menos km");
+  if (hasYearSpread && vehicles.filter((vehicle) => vehicle.yearModel === newest.yearModel).length === 1) add(newest, "mais novo");
+  if (mixed && autoOnly && auto) add(auto, "automático, mais conforto no trânsito");
   for (const vehicle of vehicles) {
-    if (mentioned.has(vehicle.id)) continue;
-    if (allSamePrice || vehicle.price === minPrice) continue;
-    if (vehicle.price === maxPrice && vehicle.price > minPrice) {
-      picks.push(
-        `${talkName(vehicle).cap} fica um pouco acima (${formatChatPrice(vehicle.price)}).`,
-      );
-      mentioned.add(vehicle.id);
-    }
+    const list = traits.get(vehicle.id)!;
+    if (list.length) continue;
+    const body = vehicleBodyStyle(vehicle);
+    const motor = stockEngineLabel(vehicle);
+    const gear = isAutomaticVehicle(vehicle) ? "automático" : null;
+    list.push([body ? BODY_SPOKEN[body] ?? body : null, motor ? `motor ${motor}` : null, gear].filter(Boolean).join(", ") || "boa opção também");
   }
-
+  const leader = vehicles.find((vehicle) => (traits.get(vehicle.id)?.length ?? 0) >= 2);
+  const lead = allSamePrice
+    ? `${vehicles.length === 2 ? "Os dois estão" : "Estão"} no mesmo preço; o desempate é km e ano:`
+    : leader
+      ? `No geral, ${talkName(leader).labeled} leva vantagem:`
+      : "Cada um tem seu ponto forte:";
+  const list = formatRankList(
+    lead,
+    vehicles.map((vehicle) => ({ name: rankLineName(vehicle), value: traits.get(vehicle.id)!.slice(0, 2).join(" e ") })),
+  );
   const body = opts.includeConsumption
-    ? `${picks.join(" ")}\n\n${formatConsumptionCompare(vehicles)}`
-    : picks.join(" ");
+    ? `${list}\n\n${formatConsumptionCompare(vehicles)}`
+    : list;
   if (opts.withLeadin === false) return body;
-  return `Vou te ajudar a escolher.\n\n${body}`;
+  // "Kicks ou HR-V?": direto na lista, sem "Vou te ajudar a escolher".
+  if (vehicles.length === 2 && !opts.includeConsumption) {
+    return `${body}\n\nQuer que eu compare consumo, espaço ou itens da ficha?`;
+  }
+  return body;
 }
 
 function foldReply(value: string) {
@@ -2562,7 +2599,7 @@ export function similarAfterEmptyFilter(
 }
 
 const WAITLIST_STOP =
-  /^(menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
+  /^(quem|filho|filhos|filha|filhas|esposa|marido|mulher|namorada|mae|pai|pessoas|bagagem|bagagens|criancas|cadeirinha|bebe|menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
 
 const INTENT_SEEK_NOISE =
   /^(forte|fortes|rapido|rapida|rapidos|veloz|arranque|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
@@ -2827,8 +2864,8 @@ export function formatShortlistFollowUp(
     const otherBit = others.length
       ? ` ${joinClauses(
           others.map(
-            (vehicle) =>
-              `${talkName(vehicle).cap} está com ${formatChatKm(vehicle.km)}`,
+            (vehicle, index) =>
+              `${index === 0 ? talkName(vehicle).cap : talkName(vehicle).labeled} está com ${formatChatKm(vehicle.km)}`,
           ),
         )}.`
       : "";
@@ -2909,7 +2946,7 @@ export function searchChatInventory(
   );
   if (brands.length)
     pool = pool.filter((v) => brands.includes(normalize(v.brand)));
-  if (/\bcusto[\s-]*beneficio\b/.test(normalize(message))) {
+  if (/\b(custo[\s-]*beneficio|carro bom|bom carro|bons carros|carros bons|bom e barato|boa opcao)\b/.test(normalize(message))) {
     // Preço por novidade do ano, com acréscimo proporcional à quilometragem.
     const oldestYear = Math.min(...pool.map(vehicle => vehicle.yearModel));
     const score = (vehicle: ChatVehicleRecord) => vehicle.price * (1 + vehicle.km / 100_000) / (1 + vehicle.yearModel - oldestYear);
@@ -2995,46 +3032,40 @@ export function searchChatInventory(
       ? ` (são ${pool.length}, separei os ${picks.length} que mais combinam)`
       : "";
   const lead = `Olha o que tenho ${subject}${more}:`;
-  const specs = picks.map((v) => ({ v, spec: findVehicleSpec(v) }));
-  const withPower = power ? specs.every((item) => item.spec) : false;
-  const economySpecs =
-    !power && chatRankMode(message) === "economy"
-      ? picks.map((v) => ({ v, spec: findVehicleSpec(v) }))
-      : [];
-  const economyOk =
-    economySpecs.length > 1 && economySpecs.every((item) => item.spec && specCityKmL(item.spec) != null);
-  const reasons = economyOk
-    ? `${economySpecs
-        .map(({ v, spec }) => `${talkName(v).cap} faz cerca de ${String(specCityKmL(spec!)).replace(".", ",")} km/l na cidade (Inmetro, na gasolina), ${spokenTransmission(v)}, ${formatChatKm(v.km)} e ${formatChatPrice(v.price)}.`)
-        .join(" ")}`
-    : power
-    ? picks
-        .map((v) => {
-          const spec = specs.find((item) => item.v.id === v.id)?.spec;
-          const cv = spec ? specPowerText(spec) : null;
-          const motor = stockEngineLabel(v);
-          return `${talkName(v).cap}: ${motor ? `motor ${motor}, ` : ""}${cv ? `cerca de ${cv}, ` : ""}${v.transmission}, ${formatChatKm(v.km)} e ${formatChatPrice(v.price)}.`;
-        })
-        .join(" ")
-    : compareChatStockPicks(picks, {
-        withLeadin: false,
-        intent: chatRankMode(message),
-      });
-  const caveat = economyOk
-    ? " Consumo de teste do Inmetro; na rua varia com trânsito e jeito de dirigir."
-    : power
-    ? withPower
-      ? " Os cv são de fábrica e variam um pouco com o combustível."
-      : " Se quiser os cv de cada um, me diz qual deles que eu passo os números de fábrica."
-    : order === "km"
-      ? " A ordem é da menor para a maior quilometragem."
-      : order === "year"
-        ? " A ordem é do ano mais recente para o mais antigo."
-        : "";
+  const listing = picks.map(formatVehicleLine).join("\n");
+  // Ranking: frase curta + uma linha por carro só com o dado pedido (km, preço e motor ficam nos cards).
+  // As linhas “marca modelo · km · R$” continuam no texto (o chat as esconde) pro follow-up saber quem foi mostrado.
+  const scope = recorte === "veículos" ? "do estoque" : `entre os ${recorte}`;
+  const specs = picks.map((v) => findVehicleSpec(v));
+  const ranking = (label: string, value: (v: ChatVehicleRecord, index: number) => string | null, note = "") =>
+    ({
+      picks,
+      candidates: ranked,
+      reply: `${formatRankList(`${label} ${scope}:`, picks.map((v, index) => ({ name: rankLineName(v), value: value(v, index) })))}${note ? `\n\n${note}` : ""}\n\n${listing}`,
+    });
+  if (power) {
+    const allSpecs = specs.every(Boolean);
+    const note = allSpecs ? "" : "Se quiser os cv de cada um, me diz qual deles que eu passo os números de fábrica.";
+    return ranking(allSpecs ? "Mais fortes (cv de fábrica)" : "Motores maiores", (v, index) => {
+      const spec = specs[index];
+      if (spec) return `${specMaxCv(spec)} cv`;
+      const motor = stockEngineLabel(v);
+      return motor ? `motor ${motor}` : null;
+    }, note);
+  }
+  if (!power && chatRankMode(message) === "economy" && picks.length > 1 && specs.every((spec) => spec && specCityKmL(spec) != null)) {
+    return ranking("Mais econômicos (Inmetro, cidade)", (_v, index) => `${String(specCityKmL(specs[index]!)).replace(".", ",")} km/l`);
+  }
+  if (order === "km") return ranking("Menos rodados", (v) => formatChatKm(v.km));
+  if (order === "year") return ranking("Mais novos", () => null);
+  const reasons = compareChatStockPicks(picks, {
+    withLeadin: false,
+    intent: chatRankMode(message),
+  });
   return {
     picks,
     candidates: ranked,
-    reply: `${lead}\n${picks.map(formatVehicleLine).join("\n")}\n\n${reasons}${caveat}`,
+    reply: `${lead}\n${listing}\n\n${reasons}`,
   };
 }
 
@@ -3217,6 +3248,9 @@ export const CHAT_WARRANTY_REPLY =
 export const CHAT_ORIGIN_REPLY =
   `Todo seminovo passa por checagem na loja antes do anúncio. Laudo cautelar e histórico de cada carro (leilão, sinistro) não ficam no anúncio: o consultor confirma no WhatsApp, carro a carro, antes de você fechar. ${CHAT_WHATSAPP_URL}`;
 
+export const CHAT_GEAR_EXTRA_REPLY =
+  `Acessório que não está na ficha (capacete, baú, película) não vem no anúncio. Se quiser, o consultor vê com você o que dá pra combinar na negociação: ${CHAT_WHATSAPP_URL}`;
+
 export const CHAT_PCD_REPLY =
   `A isenção PCD de IPI e ICMS vale na compra de carro 0 km. Nos seminovos da Garagem não tem essa isenção, mas automático ajuda bastante no dia a dia: separei os nossos. Sobre IPVA no seu caso, o consultor te orienta no WhatsApp: ${CHAT_WHATSAPP_URL}`;
 
@@ -3389,7 +3423,7 @@ export function formatTransmissionCompareReply(
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(
   mensagem: string,
-): "pcd" | "recall" | "hours" | "social" | "contact" | "city" | "keys" | "zero" | "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
+): "gear-extra" | "pcd" | "recall" | "hours" | "social" | "contact" | "city" | "keys" | "zero" | "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
   const folded = normalize(mensagem);
   // "Tem carro em Aracruz?" / "atendem Vitória?": área de atendimento, não modelo.
   if (/\b(?:em|de|pra|para|na|no)\s+(?:aracruz|vitoria|serra|vila velha|guarapari|cariacica|colatina|cachoeiro|linhares)\b/.test(folded) &&
@@ -3416,6 +3450,9 @@ export function chatPolicyShortcut(
     !/\b(financi\w*|parcela\w*|entrada)\b/.test(folded)) {
     return "debts";
   }
+  // Capacete, baú, acessório "junto": não vem no anúncio; o consultor vê na negociação (sem prometer).
+  if (/\b(capacetes?|bau|bauleto|jaqueta|luvas|tapetes?|insulfilm|pelicula|brinde|vem junto|acompanha)\b/.test(folded) &&
+    !/\b(manual|chave)\b/.test(folded)) return "gear-extra";
   // PCD: isenção de IPI/ICMS é de carro 0 km; nos seminovos, automáticos + consultor.
   if (/\b(pcd|deficiente|deficiencia|isencao)\b/.test(folded)) return "pcd";
   if (/\brecalls?\b/.test(folded)) return "recall";
@@ -3426,7 +3463,7 @@ export function chatPolicyShortcut(
   if (/\b(instagram|insta|facebook|tiktok|rede social|redes sociais)\b/.test(folded)) return "social";
   if (/\b(qual (?:o|e o|é o) (?:whats|whatsapp|zap|numero|telefone|contato)|numero de (?:voces|vcs|contato)|telefone de (?:voces|vcs)|passa o (?:whats|zap|numero)|(?:whats|zap|telefone|numero) (?:de voces|de vcs|da loja))\b/.test(folded)) return "contact";
   // Manual e chave reserva: vem da ficha quando consta; senão o consultor confirma.
-  if (/\b(chave reserva|chave extra|segunda chave|duas chaves|chave copia|manual do proprietario|manual de fabrica|manual e (?:a )?chave|livro de revis\w*|manual e livro)\b/.test(folded)) {
+  if (/\b(chave reserva|chave extra|segunda chave|duas chaves|chave copia|manual do proprietario|manual de fabrica|manual e (?:a )?chave|livro de revis\w*|manual e livro|acompanha (?:o )?manual|vem (?:com )?(?:o )?manual|manual do dono|manual de instrucoes)\b/.test(folded)) {
     return "keys";
   }
   // 0 km: a loja é de seminovos.
@@ -3548,6 +3585,7 @@ export function localGarageReply(
   if (policy === "keys") return CHAT_KEYS_REPLY;
   if (policy === "social") return CHAT_SOCIAL_REPLY;
   if (policy === "pcd") return CHAT_PCD_REPLY;
+  if (policy === "gear-extra") return CHAT_GEAR_EXTRA_REPLY;
   if (policy === "recall") return CHAT_RECALL_REPLY;
   if (policy === "hours") return CHAT_HOURS_REPLY;
   if (policy === "contact") return CHAT_CONTACT_REPLY;

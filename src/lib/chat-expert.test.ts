@@ -107,8 +107,8 @@ test("Lucas 2 sem o modelo de linguagem: ranking determinístico pelas fichas, c
     stock,
     generate: noModel,
   });
-  assert.match(result.reply, /^Depende do que você chama de forte\. Em potência máxima, o HB20 1\.6 leva: 128 cv no etanol e 122 cv na gasolina/);
-  assert.match(result.reply, /O HB20S 1\.0 turbo tem 120 cv, só um pouco menos, e entrega 17,5 kgfm a 1\.500 rpm, bem mais cedo/);
+  assert.match(result.reply, /^Depende do que você chama de forte: em potência leva o HB20 1\.6; na força ao pisar \(torque, retomada\) leva o HB20S 1\.0 turbo\./);
+  assert.match(result.reply, /• HB20S 1\.0 turbo — 120 cv · 17,5 kgfm/);
   assert.doesNotMatch(result.reply, robotic);
   assert.doesNotMatch(result.reply, /cilindrada sozinha|preciso de potência documentada/);
 });

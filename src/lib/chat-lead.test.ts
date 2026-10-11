@@ -351,13 +351,12 @@ test("comparação com consumo usa anúncios atuais e pesquisa com fontes", asyn
   const compared = compareChatStockPicks([palio, prismaJoy, hb20Auto], {
     includeConsumption: true,
   });
-  assert.match(compared, /Vou te ajudar a escolher/);
-  assert.match(compared, /Palio Weekend/);
-  assert.match(compared, /mais em conta/);
-  assert.match(compared, /HB20/);
+  assert.match(compared, /^No geral, o HB20 leva vantagem:\n• /);
+  assert.match(compared, /• Palio Weekend [^\n]* — mais em conta/);
+  assert.match(compared, /• Prisma [^\n]* — mais novo/);
+  assert.match(compared, /• HB20 [^\n]* — [^\n]*automático/);
   assert.match(compared, /Prisma e HB20/);
-  assert.match(compared, /Prisma é o mais novo \(2019\)/);
-  assert.match(compared, /automático da lista/);
+  assert.doesNotMatch(compared, /R\$|\d+ mil km/);
   assert.match(compared, /11–14/);
   assert.match(compared, /8–11/);
   assert.match(compared, /foi medido na loja/i);
@@ -382,7 +381,7 @@ Hyundai HB20 Comfort 1.0 2015 · 127.000 km · R$ 55.900`,
   assert.match(result.reply, /mais em conta/);
   assert.match(result.reply, /Prisma/);
   assert.match(result.reply, /HB20/);
-  assert.match(result.reply, /Prisma é o mais novo/);
+  assert.match(result.reply, /• Prisma [^\n]* — mais novo/);
   assert.doesNotMatch(result.reply, /11–14|km\/l/);
   assert.match(result.reply, /automático/);
   assert.match(result.reply, /\n\n/);
@@ -488,8 +487,8 @@ test("dois carros no mesmo preço não viram meio do preço", () => {
     category: "carro",
   };
   const compared = compareChatStockPicks([i30, palioSame, prismaMid]);
-  assert.match(compared, /I30 e Palio Weekend saem por R\$ 47\.900/);
-  assert.match(compared, /automático da lista/);
+  assert.match(compared, /• I30 [^\n]* — [^\n]*automático/);
+  assert.doesNotMatch(compared, /R\$/);
   assert.doesNotMatch(compared, /mais em conta/);
   assert.doesNotMatch(compared, /também está em/);
   assert.doesNotMatch(compared, /meio do preço/);
@@ -519,7 +518,7 @@ test("Pulse e HR-V no mesmo preço comparam km e ano, não mais em conta", () =>
     category: "carro",
   };
   const compared = compareChatStockPicks([pulse, hrv]);
-  assert.match(compared, /Os dois estão em R\$ 89\.900/);
+  assert.match(compared, /^Os dois estão no mesmo preço; o desempate é km e ano:/);
   assert.match(compared, /menos km/);
   assert.match(compared, /mais novo/);
   assert.doesNotMatch(compared, /mais em conta/);
@@ -566,7 +565,7 @@ test("comparação fala Lancer, não LANCER", () => {
   assert.doesNotMatch(compared, /LANCER/);
   assert.match(compared, /HB20/);
   assert.match(compared, /Onix/);
-  assert.match(compared, /um pouco acima/);
+  assert.match(compared, /• Lancer [^\n]* — /);
   assert.doesNotMatch(compared, /Entre esses/);
   assert.doesNotMatch(compared, /meio do preço/);
 });

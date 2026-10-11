@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  chatCtaIntent,
+  chatCtaTopic,
   chatSessionHints,
   chatWhatsAppCta,
   displayChatText,
@@ -53,14 +55,14 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
 
   const trade =
     "Aceitamos carro ou moto na troca. Avaliação no WhatsApp: https://wa.me/5527996330706";
-  assert.equal(chatWhatsAppCta(trade)?.label, "Avaliar meu usado");
+  assert.equal(chatWhatsAppCta(trade)?.label, "Avaliar minha troca");
 
   const tradeVehicle = chatWhatsAppCta(trade, {
     label: "Honda BIZ 125 EX 2023",
     model: "BIZ 125",
     category: "moto",
   });
-  assert.equal(tradeVehicle?.label, "Avaliar meu usado");
+  assert.equal(tradeVehicle?.label, "Avaliar minha troca");
   assert.match(decodeURIComponent(tradeVehicle?.href ?? ""), /Honda BIZ 125 EX 2023/);
   assert.match(decodeURIComponent(tradeVehicle?.href ?? ""), /avaliar uma troca/);
 
@@ -234,3 +236,85 @@ test("handoff do chat leva modelo, câmbio e teto reais, com UTM", () => {
   assert.doesNotMatch(decodeURIComponent(cta?.href ?? ""), /Creta|inventad/);
 });
 
+
+test("botão do WhatsApp segue a pergunta do visitante, não a resposta", () => {
+  const hb20s = {
+    label: "Hyundai HB20S Platinum 2022",
+    brand: "Hyundai",
+    model: "HB20S",
+    version: "Platinum 1.0 TGDI",
+    year: 2022,
+    price: 99900,
+    path: "/estoque/hyundai-hb20s-2022-abc",
+  };
+  const reply =
+    "O HB20S tem motor turbo de 120 cv, câmbio automático de 6 marchas e porta-malas de 475 litros. Se quiser ver fotos extras ou falar sobre financiamento, o consultor te atende no WhatsApp https://wa.me/5527996330706";
+  const question = chatWhatsAppCta(reply, hb20s, {
+    userText: "como é o motor, o câmbio e o porta-malas do hb20s?",
+  });
+  assert.equal(question?.label, "Perguntar sobre o HB20S");
+  assert.equal(question?.benefit, "Tirar dúvidas com o consultor");
+  const text = decodeURIComponent(question?.href ?? "");
+  assert.match(text, /Hyundai HB20S/);
+  assert.match(text, /tirar umas dúvidas sobre motor, câmbio e porta-malas/);
+  assert.doesNotMatch(text, /parcela/);
+  assert.match(question?.href ?? "", /utm_campaign=chat/);
+  assert.match(text, /estoque\/hyundai-hb20s-2022-abc/);
+
+  const cases: Array<[string, string]> = [
+    ["dá pra financiar em 48x?", "Simular parcela"],
+    ["aceita meu carro na troca?", "Avaliar minha troca"],
+    ["posso agendar uma visita sábado?", "Agendar visita"],
+    ["tem mais fotos do interior?", "Pedir mais fotos"],
+    ["manda um vídeo dele?", "Pedir vídeo"],
+  ];
+  for (const [ask, label] of cases) {
+    assert.equal(chatWhatsAppCta(reply, hb20s, { userText: ask })?.label, label, ask);
+  }
+  const finance = decodeURIComponent(chatWhatsAppCta(reply, hb20s, { userText: "qual a parcela?" })?.href ?? "");
+  assert.match(finance, /HB20S.*simular as parcelas/s);
+  const visit = decodeURIComponent(chatWhatsAppCta(reply, hb20s, { userText: "quero agendar visita" })?.href ?? "");
+  assert.match(visit, /HB20S.*de perto/s);
+  const photos = decodeURIComponent(chatWhatsAppCta(reply, hb20s, { userText: "tem mais fotos?" })?.href ?? "");
+  assert.match(photos, /HB20S.*mais fotos dele/s);
+
+  // Sem carro e sem assunto claro: neutro.
+  assert.equal(chatWhatsAppCta(reply, null, { userText: "oi, tudo bem?" })?.label, "Chamar consultor");
+  // Moto: artigo feminino.
+  assert.equal(
+    chatWhatsAppCta(reply, { label: "Honda BIZ 125 EX 2023", model: "BIZ 125", category: "moto" }, { userText: "a biz é flex?" })?.label,
+    "Perguntar sobre a BIZ 125",
+  );
+  // Vendido continua “Avisar quando chegar”, mesmo com pergunta de parcela.
+  assert.equal(chatWhatsAppCta(reply, { ...hb20s, sold: true }, { userText: "qual a parcela?" })?.label, "Avisar quando chegar");
+});
+
+test("assunto do botão sai da pergunta", () => {
+  assert.equal(chatCtaIntent("quanto fica a entrada?"), "finance");
+  assert.equal(chatCtaIntent("pego meu usado na troca?"), "trade");
+  assert.equal(chatCtaIntent("qual o consumo?"), "question");
+  assert.equal(chatCtaTopic("e o consumo e o airbag?"), "consumo e segurança");
+  assert.equal(chatCtaTopic("tem?"), "");
+});
+
+test("pergunta do carro vence o handoff da sessão (automático herdado)", () => {
+  const cta = chatWhatsAppCta(
+    "Ótimo carro. O consultor te atende no WhatsApp",
+    { label: "Hyundai HB20S Comfort Plus 2024", brand: "Hyundai", model: "HB20S", year: 2024 },
+    { userText: "Como é o motor do HB20S?", handoff: { vehicles: [{ brand: "Hyundai", model: "HB20S" }], transmission: "automatico" } },
+  );
+  assert.equal(cta?.label, "Perguntar sobre o HB20S");
+});
+
+test("follow-up sem card usa o carro do card anterior só pra parcela/troca/visita/fotos", () => {
+  const prev = { label: "Hyundai HB20S Comfort Plus 2024", brand: "Hyundai", model: "HB20S", year: 2024 };
+  const reply = "Aceitamos sim, avaliação no WhatsApp https://wa.me/5527996330706";
+  const trade = chatWhatsAppCta(reply, null, { userText: "aceita meu gol na troca?", contextVehicle: prev });
+  assert.equal(trade?.label, "Avaliar minha troca");
+  assert.match(decodeURIComponent(trade?.href ?? ""), /HB20S.*avaliar uma troca/s);
+  const photos = chatWhatsAppCta(reply, null, { userText: "tem mais fotos?", contextVehicle: prev });
+  assert.match(decodeURIComponent(photos?.href ?? ""), /HB20S.*mais fotos dele/s);
+  assert.match(decodeURIComponent(chatWhatsAppCta(reply, null, { userText: "tem mais fotos?" })?.href ?? ""), /queria mais fotos\./);
+  // Pergunta geral não vira “Perguntar sobre o HB20S”.
+  assert.equal(chatWhatsAppCta(reply, null, { userText: "vocês abrem domingo?", contextVehicle: prev })?.label, "Chamar consultor");
+});

@@ -6,6 +6,7 @@ import {
 import {
   WHATSAPP_BRAND,
   WHATSAPP_MESSAGES,
+  formatCustomerVehicleWhatsAppText,
   applyWhatsAppUtm,
   whatsappContentFromVehicle,
   whatsappUrl,
@@ -153,6 +154,7 @@ export function resolveChatWhatsAppVehicle(
 function chatVehicleWhatsAppText(
   vehicle: ChatWhatsAppVehicle,
   intent: VehicleWhatsAppIntent,
+  topic?: string | null,
 ) {
   const isMoto = vehicle.category === "moto";
   const path = vehicle.path?.startsWith("/estoque/") ? vehicle.path : "";
@@ -173,6 +175,15 @@ function chatVehicleWhatsAppText(
       path,
       isMoto,
       intent,
+      topic,
+    });
+  }
+  if (intent === "question" || intent === "photos") {
+    return formatCustomerVehicleWhatsAppText({
+      intent,
+      label: vehicle.label,
+      isMoto,
+      topic,
     });
   }
   if (intent === "finance") {
@@ -298,13 +309,69 @@ export function chatHeaderWhatsAppMessage(input: {
   return input.pageMessage?.trim() || WHATSAPP_MESSAGES.help;
 }
 
+export type ChatCtaIntent =
+  | "finance"
+  | "trade"
+  | "visit"
+  | "photos"
+  | "video"
+  | "question"
+  | null;
+
+/** Assunto do botão do WhatsApp — sai da pergunta do visitante, não da resposta. */
+export function chatCtaIntent(userText: string): ChatCtaIntent {
+  const t = fold(userText);
+  if (!t.trim()) return null;
+  if (/financ|parcel|prestac|simula|\b(?:60|48|36|24|18|12)\s*x\b|\b(?:60|48|36|24|18|12)\s*vezes\b|cartao|\bentrada\b|\bboleto\b/.test(t)) return "finance";
+  if (/\btroc(?:a|ar|o)\b|meu (?:usado|carro|veiculo|moto)|avaliar? (?:o )?meu|dar (?:o )?meu|\bna troca\b/.test(t)) return "trade";
+  if (/visit|agendar|ver (?:ele |ela |o carro |a moto )?(?:de perto|pessoalmente)|test ?drive|\bir ai\b|passar ai|onde (?:fica|voces ficam)|endereco|retirar|buscar o carro/.test(t)) return "visit";
+  if (/\bvideos?\b/.test(t)) return "video";
+  if (/\bfotos?\b|\bimage(?:m|ns)\b|\bprints?\b/.test(t)) return "photos";
+  return "question";
+}
+
+const CTA_TOPICS: Array<[RegExp, string]> = [
+  [/\bmotor|\bpotencia|\bcv\b|\bturbo|\bcilindrada|\btorque/, "motor"],
+  [/\bcambio|\bmarchas?\b|\bautomatic|\bmanual\b|\bcvt\b/, "câmbio"],
+  [/porta[ -]?malas|\bbagag|\blitros\b/, "porta-malas"],
+  [/\bconsumo|\beconomi|km ?\/ ?l|\bgasta\b|\bautonomia/, "consumo"],
+  [/\bquilometr|\bkm\b|\brodad/, "quilometragem"],
+  [/\bairbags?|\babs\b|\bseguranca|\bestabilidade/, "segurança"],
+  [/\bopcion|\bmultimidia|\bcamera|\bsensor|\bteto|\bcentral|\bacessorio|\bcompleto|\bitens\b/, "opcionais"],
+  [/\bgarantia/, "garantia"],
+  [/\bdocument|\btransfer|\bipva|\blicenciamento/, "documentação"],
+  [/\bcor\b|\bpintura/, "cor"],
+];
+
+/** “motor, câmbio e porta-malas” — até 3 assuntos citados na pergunta. */
+export function chatCtaTopic(userText: string): string {
+  const t = fold(userText);
+  const topics = CTA_TOPICS.filter(([re]) => re.test(t)).map(([, name]) => name).slice(0, 3);
+  if (topics.length <= 1) return topics[0] ?? "";
+  return `${topics.slice(0, -1).join(", ")} e ${topics[topics.length - 1]}`;
+}
+
 export function chatWhatsAppCta(
   text: string,
   vehicle?: ChatWhatsAppVehicle | null,
-  opts: { force?: boolean; handoff?: ChatHandoffContext } = {},
+  opts: {
+    force?: boolean;
+    handoff?: ChatHandoffContext;
+    /** Última pergunta do visitante: define o assunto do botão. */
+    userText?: string | null;
+    /** Carro do card anterior (follow-up sem card: “aceita troca nele?”). Só pra parcela, troca, visita e fotos. */
+    contextVehicle?: ChatWhatsAppVehicle | null;
+  } = {},
 ): ChatWhatsAppCta | null {
   if (!opts.force && !/whatsapp|wa\.me/i.test(text)) return null;
   const folded = fold(text);
+  const hasUser = typeof opts.userText === "string" && opts.userText.trim() !== "";
+  const userIntent = hasUser ? chatCtaIntent(opts.userText ?? "") : null;
+  // Sem a pergunta (chamadas antigas), cai no texto da resposta.
+  const wants = (intent: "finance" | "trade", replyRe: RegExp) =>
+    hasUser ? userIntent === intent : replyRe.test(folded);
+  const subject = vehicle ?? (userIntent && userIntent !== "question" ? opts.contextVehicle ?? null : null);
+  const subjectTrack = chatWhatsAppTrack(subject);
   const track = chatWhatsAppTrack(vehicle);
   const fromReply = extractWhatsAppHref(text);
   const waitlistHref =
@@ -327,28 +394,52 @@ export function chatWhatsAppCta(
       benefit: "Consultor humano · das 8h às 23h",
     };
   }
-  if (/financi|parcela|60x|simul|cartao|18 vez/.test(folded)) {
+  if (wants("finance", /financi|parcela|60x|simul|cartao|18 vez/)) {
     return {
       href: whatsappUrl(
-        vehicle
-          ? chatVehicleWhatsAppText(vehicle, "finance")
+        subject
+          ? chatVehicleWhatsAppText(subject, "finance")
           : WHATSAPP_MESSAGES.finance,
-        track,
+        subjectTrack,
       ),
       label: "Simular parcela",
       benefit: "O consultor calcula no seu caso",
     };
   }
-  if (/\btroca\b/.test(folded)) {
+  if (wants("trade", /\btroca\b/)) {
     return {
       href: whatsappUrl(
-        vehicle
-          ? chatVehicleWhatsAppText(vehicle, "trade")
+        subject
+          ? chatVehicleWhatsAppText(subject, "trade")
           : WHATSAPP_MESSAGES.sell,
-        track,
+        subjectTrack,
       ),
-      label: "Avaliar meu usado",
+      label: "Avaliar minha troca",
       benefit: "Valor da troca com fotos, pelo WhatsApp",
+    };
+  }
+  if (userIntent === "visit") {
+    return {
+      href: whatsappUrl(
+        subject
+          ? chatVehicleWhatsAppText(subject, "visit")
+          : WHATSAPP_MESSAGES.visit,
+        subjectTrack,
+      ),
+      label: "Agendar visita",
+      benefit: "Consultor combina dia e local",
+    };
+  }
+  if (userIntent === "photos" || userIntent === "video") {
+    return {
+      href: whatsappUrl(
+        subject
+          ? chatVehicleWhatsAppText(subject, userIntent)
+          : formatCustomerVehicleWhatsAppText({ intent: "photos" }),
+        subjectTrack,
+      ),
+      label: userIntent === "video" ? "Pedir vídeo" : "Pedir mais fotos",
+      benefit: "O consultor manda pelo WhatsApp",
     };
   }
   if (
@@ -370,6 +461,19 @@ export function chatWhatsAppCta(
     (opts.handoff?.priceLimit != null ||
       opts.handoff?.transmission != null ||
       (handoffVehicles?.length ?? 0) > 1);
+  if (userIntent === "question" && vehicle) {
+    const name = (vehicle.model || vehicle.label || "").trim();
+    return {
+      href: whatsappUrl(
+        chatVehicleWhatsAppText(vehicle, "question", chatCtaTopic(opts.userText ?? "")),
+        track,
+      ),
+      label: name
+        ? `Perguntar sobre ${vehicle.category === "moto" ? "a" : "o"} ${name}`
+        : "Tirar dúvidas",
+      benefit: "Tirar dúvidas com o consultor",
+    };
+  }
   return {
     href: whatsappUrl(
       handoffReady

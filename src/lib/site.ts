@@ -108,7 +108,9 @@ export type CustomerWhatsAppVehicleIntent =
   | "finance"
   | "visit"
   | "trade"
-  | "similar";
+  | "similar"
+  | "question"
+  | "photos";
 
 /** Campanhas internas dos CTAs públicos; não representam a origem do visitante. */
 export type WhatsAppCampaign =
@@ -143,6 +145,8 @@ export function formatCustomerVehicleWhatsAppText(input: {
   priceLabel?: string | null;
   isMoto?: boolean;
   sold?: boolean;
+  /** Assunto da dúvida (“motor, câmbio e porta-malas”), só no intent question. */
+  topic?: string | null;
 }) {
   const label = (input.label ?? "").replace(/\s+/g, " ").trim();
   const priceLabel = (input.priceLabel ?? "").replace(/\s+/g, " ").trim();
@@ -169,6 +173,17 @@ export function formatCustomerVehicleWhatsAppText(input: {
       return label
         ? `Oi! ${seen} e quero ver ${input.isMoto ? "ela" : "ele"} de perto.`
         : `Oi! ${seen} e quero conhecer o estoque.`;
+    case "question": {
+      const topic = (input.topic ?? "").replace(/\s+/g, " ").trim();
+      const about = topic
+        ? `sobre ${topic}`
+        : label
+          ? `sobre ${input.isMoto ? "ela" : "ele"}`
+          : "";
+      return `Oi! ${seen} e quero tirar umas dúvidas${about ? ` ${about}` : ""}.`;
+    }
+    case "photos":
+      return `Oi! ${seen} e queria mais fotos${label ? ` ${input.isMoto ? "dela" : "dele"}` : ""}.`;
     case "similar":
       return label
         ? `Oi! ${seen} e queria ver outros na mesma faixa.`

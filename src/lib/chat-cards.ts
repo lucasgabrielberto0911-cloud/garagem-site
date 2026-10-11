@@ -122,6 +122,11 @@ export function isChatVehicleListingLine(line: string) {
   return /·/.test(trimmed) || trimmed.length < 160;
 }
 
+/** “• Civic EXL 2020 — 155 cv”: linha do ranking compacto, desenhada como lista. */
+export function isChatRankLine(line: string) {
+  return /^•\s+\S/.test(line.trim());
+}
+
 export function stripChatVehicleListingLines(
   text: string,
   vehicles: ChatVehicleCard[] = [],
@@ -129,6 +134,7 @@ export function stripChatVehicleListingLines(
   return text
     .split("\n")
     .filter((line) => {
+      if (isChatRankLine(line)) return true;
       if (isChatVehicleListingLine(line)) return false;
       if (vehicles.length === 0) return true;
       if (
@@ -201,7 +207,9 @@ export function polishChatReplyWithCards(
   const paragraphs = stripped
     .split(/\n+/)
     .map((para) =>
-      para
+      isChatRankLine(para)
+        ? para.trim()
+        : para
         .split(/(?<=[.!?])\s+/)
         .map((part) => part.trim())
         .filter(Boolean)
@@ -212,7 +220,11 @@ export function polishChatReplyWithCards(
     )
     .filter(Boolean);
 
-  let intro = paragraphs.join("\n\n").trim();
+  // Linhas “• ” seguidas formam um bloco só (lista), não parágrafos soltos.
+  let intro = paragraphs
+    .join("\n\n")
+    .replace(/(^•[^\n]*)\n\n(?=•)/gm, "$1\n")
+    .trim();
   if (intro.length > CARD_INTRO_MAX) {
     let kept = "";
     for (const para of paragraphs) {

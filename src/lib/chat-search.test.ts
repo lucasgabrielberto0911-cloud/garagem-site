@@ -386,7 +386,7 @@ test("mais forte entre automáticos até 80 mil ordena pelos cv de catálogo, n�
     },
   });
   assert.deepEqual(result.vehicles.map((v) => v.id), ["civic", "duster", "hrv"]);
-  assert.match(result.reply, /Civic: motor 2\.0, cerca de 155 cv no etanol e 150 cv na gasolina/);
+  assert.match(result.reply, /^Mais fortes \(cv de fábrica\)[^\n]*\n• Civic LXR 2015 — 155 cv\n• Duster Dynamique 2014 — 142 cv/);
   assert.doesNotMatch(result.reply, /Corolla|No estoque:|Achei \d/);
 });
 

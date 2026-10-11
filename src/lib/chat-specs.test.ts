@@ -240,22 +240,21 @@ test("ranking: o mais forte em cv, com a nuance do torque do turbo", () => {
   assert.equal(specCriterionFromMessage("qual o mais potente?"), "potencia");
   const power = rankingSpecReply("forca", entries)!;
   // Potência e torque juntos, sem contradição: o 1.6 leva em cv, o turbo entrega o torque bem mais cedo.
-  assert.match(power, /^Depende do que você chama de forte\. Em potência máxima, o HB20 1\.6 leva: 128 cv no etanol e 122 cv na gasolina, mas o torque dele \(16,5 kgfm no etanol e 16 kgfm na gasolina\) só aparece em giro alto, a 5\.000 rpm\./);
-  assert.match(power, /O HB20S 1\.0 turbo tem 120 cv, só um pouco menos, e entrega 17,5 kgfm a 1\.500 rpm, bem mais cedo: é o que responde melhor em retomada e ultrapassagem\./);
-  assert.match(power, /Já o HB20 1\.0 tem 80 cv no etanol e 75 cv na gasolina\./);
-  assert.match(power, /Resumindo: potência de pico, HB20 1\.6; força logo ao pisar no acelerador, HB20S 1\.0 turbo\./);
+  assert.match(power, /^Depende do que você chama de forte: em potência leva o HB20 1\.6; na força ao pisar \(torque, retomada\) leva o HB20S 1\.0 turbo\./);
+  assert.match(power, /\n• HB20 1\.6 — 128 cv · 16,5 kgfm\n• HB20S 1\.0 turbo — 120 cv · 17,5 kgfm\n• HB20 1\.0 — 80 cv/);
+  assert.doesNotMatch(power, /R\$|\bkm\b/);
   assert.doesNotMatch(power, /é o mais forte|mais fraco/);
   // "Mais potente" pergunta só potência: resposta direta, com a nuance do torque no fim.
   const potente = rankingSpecReply("potencia", entries)!;
-  assert.match(potente, /^Entre esses, o HB20 1\.6 \(128 cv no etanol e 122 cv na gasolina\) é o mais forte em potência\./);
-  assert.match(potente, /Em torque, porém, o HB20S 1\.0 turbo leva: 17,5 kgfm contra 16,5 kgfm\./);
+  assert.match(potente, /^Pela ficha de fábrica, o HB20 1\.6 é o mais forte em potência:\n• HB20 1\.6 — 128 cv\n/);
+  assert.match(potente, /Em torque \(força na retomada\), o HB20S 1\.0 turbo leva: 17,5 kgfm\./);
   // Quando o mesmo carro lidera cv e torque, a resposta é direta.
   const same = rankingSpecReply("forca", [entry("hyundai-hb20s-1.0-tgdi", "HB20S 1.0 turbo"), entry("hyundai-hb20-1.0", "HB20 1.0")])!;
-  assert.match(same, /^Entre esses, o HB20S 1\.0 turbo \(120 cv/);
+  assert.match(same, /^Pela ficha de fábrica, o HB20S 1\.0 turbo é o mais forte em potência:\n• HB20S 1\.0 turbo — 120 cv/);
   assert.equal(specCriterionFromMessage("qual gasta menos?"), "economia");
   const economy = rankingSpecReply("economia", entries)!;
-  assert.match(economy, /o HB20 1\.0 \(cerca de 13,1 km\/l na cidade, na gasolina\) é o mais econômico/);
-  assert.match(rankingSpecReply("espaco", [entry("honda-civic-2.0-cvt", "Civic 2.0"), entry("fiat-mobi-1.0", "Mobi 1.0")])!, /Civic 2\.0 \(519 L de porta-malas\) é o mais espaçoso/);
+  assert.match(economy, /o HB20 1\.0 é o mais econômico:\n• HB20 1\.0 — 13,1 km\/l na cidade/);
+  assert.match(rankingSpecReply("espaco", [entry("honda-civic-2.0-cvt", "Civic 2.0"), entry("fiat-mobi-1.0", "Mobi 1.0")])!, /Civic 2\.0 é o mais espaçoso:\n• Civic 2\.0 — 519 L de porta-malas/);
   assert.equal(rankingSpecReply("potencia", [entries[0]!]), null);
 });
 
