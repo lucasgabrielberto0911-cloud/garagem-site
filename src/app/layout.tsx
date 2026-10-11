@@ -14,7 +14,9 @@ const display = Sora({
   weight: ["600", "700"],
   variable: "--font-display",
   display: "swap",
-  preload: true,
+  // A capa do LCP disputa a rede lenta do celular. Preload da Sora atrasava
+  // a primeira pintura; o CSS continua baixando a fonte, com fallback métrico.
+  preload: false,
   adjustFontFallback: true,
 });
 

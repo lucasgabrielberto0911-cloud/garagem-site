@@ -172,7 +172,13 @@ test("medidas públicas batem com o layout e com o upload", () => {
     "utf8",
   );
   assert.match(image, /loading=\{priority \|\| eager \? "eager" : "lazy"\}/);
-  assert.match(image, /fetchPriority=\{priority \? "high" : eager \? "auto" : "low"\}/);
+  assert.match(image, /fetchPriority=\{priority \? "high" : "low"\}/);
+  const layout = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../app/layout.tsx"),
+    "utf8",
+  );
+  const displayFont = layout.slice(layout.indexOf("const display"), layout.indexOf("const body"));
+  assert.match(displayFont, /preload:\s*false/);
 });
 
 test("galeria só baixa o slide ativo e os vizinhos", () => {
