@@ -295,3 +295,34 @@ test("estrada de chão é pergunta de robustez, não lista de estrada", async ()
   const turn = await runChatTurn({ mensagem: "o Kicks aguenta estrada de chão?", historico: [], stock: stock7, readIntent: async () => null, generate: async () => ({ text: "O Kicks tem altura boa do solo para estrada de chão.", functionCall: null }) });
   assert.doesNotMatch(turn.reply, /Para estrada, você prioriza/);
 });
+
+const colored = [
+  car("gol-p", "Volkswagen", "Gol", "Trend 1.0", 2012, 32900, { color: "Preto" }),
+  car("nivus-p", "Volkswagen", "Nivus", "Highline", 2021, 104900, { color: "Preto", transmission: "Automático" }),
+  car("mobi-b", "Fiat", "Mobi", "Like", 2024, 57900, { color: "Branco" }),
+  car("city-b", "Honda", "City", "EXL", 2018, 84900, { color: "Branco", transmission: "CVT" }),
+  car("hyundai-p", "Hyundai", "HB20", "Evolution", 2022, 64900, { color: "Prata" }),
+  car("cg-v", "Honda", "CG 160 Start", "Start", 2023, 17000, { category: "moto", color: "Vermelha", accessories: ["Partida elétrica"] }),
+];
+const askC = (mensagem: string) =>
+  runChatTurn({ mensagem, historico: [], stock: colored, readIntent: async () => null, generate: noModel });
+
+test("cor: mostra os da cor pedida, aplica os outros filtros e nunca diz 'Preto não está na lista'", async () => {
+  const black = await askC("tem carro preto?");
+  assert.match(black.reply, /^Na cor preta temos 2 carros\./);
+  assert.deepEqual(black.vehicles.map((vehicle) => vehicle.id), ["nivus-p", "gol-p"]);
+  const whiteAuto = await askC("tem carro branco automático?");
+  assert.deepEqual(whiteAuto.vehicles.map((vehicle) => vehicle.id), ["city-b"]);
+  const red = await askC("tem carro vermelho?");
+  assert.match(red.reply, /^Carro vermelho não temos agora\..*Na cor vermelha, temos a CG 160 Start/);
+  assert.equal((await askC("qual a cor do Nivus?")).reply, "O Nivus que temos é preto.");
+});
+
+test("marca sozinha vira busca; 'CG' (sigla de 2 letras) é o modelo e a partida elétrica vem da ficha", async () => {
+  const brand = await askC("tem Hyundai?");
+  assert.deepEqual(brand.vehicles.map((vehicle) => vehicle.id), ["hyundai-p"]);
+  const cg = await askC("a CG tem partida elétrica?");
+  assert.match(cg.reply, /^Sim, na ficha dessa CG 160 Start consta partida elétrica/);
+  const cheap = await askC("quero uma moto barata");
+  assert.doesNotMatch(cheap.reply, /não está na lista/);
+});
