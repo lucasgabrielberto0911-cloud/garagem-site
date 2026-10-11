@@ -86,6 +86,8 @@ import {
   namedUnitForEquipment,
   equipmentAcrossStockReply,
   asksForFichaSummary,
+  asksForSimilarToActive,
+  similarToActiveReply,
   withoutGearShiftWords,
   asksAboutKm,
   asksAboutAvailability,
@@ -397,6 +399,17 @@ export async function runChatTurn(input: {
   if (isFipeQuestion(scopedMessage)) {
     emit(CHAT_FIPE_REPLY);
     return finish(CHAT_FIPE_REPLY, false, { cards: false, fipe: true });
+  }
+
+  // Na página do carro: "tem outros parecidos?" usa esse carro como referência (não é modelo que falta).
+  if (
+    activeVehicle &&
+    asksForSimilarToActive(visitorMessage) &&
+    explicitModelUnits.every((vehicle) => vehicle.model === activeVehicle.model)
+  ) {
+    const similar = similarToActiveReply(activeVehicle, input.stock, visitorMessage);
+    emit(similar.reply);
+    return finish(similar.reply, false, { policy: "similar-active", plain: true, cards: similar.vehicles.length > 0, forcedVehicles: similar.vehicles });
   }
 
   const mayCreateLead = chatTurnMayCreateLead(visitorMessage, input.historico);
