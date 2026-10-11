@@ -85,6 +85,8 @@ import {
   asksAboutEquipment,
   namedUnitForEquipment,
   equipmentAcrossStockReply,
+  asksForFichaSummary,
+  withoutGearShiftWords,
   asksAboutKm,
   asksAboutAvailability,
   asksAboutListedFacts,
@@ -235,7 +237,9 @@ export async function runChatTurn(input: {
     (!tradeTurn
       ? namedUnitForEquipment(input.stock, visitorMessage) ?? undefined
       : undefined);
-  const unitEquipmentTurn = Boolean(equipmentVehicle) && asksAboutEquipment(visitorMessage);
+  // Na página do carro, "o que ele tem?" / "quais os opcionais?" é a ficha dele (resumo), não busca no estoque.
+  const fichaSummaryTurn = Boolean(activeVehicle) && asksForFichaSummary(visitorMessage);
+  const unitEquipmentTurn = Boolean(equipmentVehicle) && (asksAboutEquipment(visitorMessage) || fichaSummaryTurn);
   const expertTurn =
     !tradeTurn &&
     !unitEquipmentTurn &&
@@ -448,9 +452,10 @@ export async function runChatTurn(input: {
     emit(reply);
     return finish(reply, false, { cards: false, policy: "vehicle-location-private" });
   }
+  // "Troca de marcha no volante" é opcional do carro, não troca de veículo.
   const humanAction =
     /\b(troca\w*|troco|financi\w*|parcela\w*|vender|anunciar|visita|video|consultor|whatsapp)\b/i.test(
-      visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+      withoutGearShiftWords(visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, "")),
     );
   // "Aceita meu Celta na troca?" → "quanto vcs pagam nele?": continua a troca, não vira busca.
   const fold = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
