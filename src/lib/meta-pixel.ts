@@ -64,7 +64,8 @@ export type ChatEventName =
   | "ChatStockExplore"
   | "ChatFollowupClick"
   | "ChatClose"
-  | "ChatLeadCreated";
+  | "ChatLeadCreated"
+  | "ChatHomeCtaClick";
 
 export type ChatEventParams = {
   source?: string;
@@ -436,6 +437,7 @@ const CHAT_GA_EVENTS: Record<ChatEventName, string> = {
   ChatFollowupClick: "chat_followup_click",
   ChatClose: "chat_close",
   ChatLeadCreated: "chat_lead_created",
+  ChatHomeCtaClick: "chat_home_cta_click",
 };
 
 /** Funil do chat: somente categorias e IDs públicos, nunca texto ou PII. */

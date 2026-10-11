@@ -651,6 +651,7 @@ export function SiteChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([OPENING]);
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
+  const [autoSend, setAutoSend] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [showLatest, setShowLatest] = useState(false);
   const [mobileDialog, setMobileDialog] = useState(false);
@@ -805,7 +806,9 @@ export function SiteChat() {
   useEffect(() => {
     function applyRequest(request: SiteChatOpenRequest | null) {
       if (!request) return;
-      if (request.prompt?.trim()) setDraft(request.prompt.trim().slice(0, 800));
+      const prompt = request.prompt?.trim().slice(0, 800);
+      if (prompt && request.send) setAutoSend(prompt);
+      else if (prompt) setDraft(prompt);
       openChat(request.source);
     }
 
@@ -817,6 +820,15 @@ export function SiteChat() {
     applyRequest(consumeSiteChatOpenRequest());
     return () => window.removeEventListener(SITE_CHAT_OPEN_EVENT, onOpen);
   }, []);
+
+  // Pergunta vinda da home (sugestão ou campo do hero): envia assim que o chat abre.
+  useEffect(() => {
+    if (!open || !autoSend || pending) return;
+    const text = autoSend;
+    setAutoSend(null);
+    void send(text, "suggestion");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, autoSend, pending]);
 
   function scrollToLatest() {
     const node = listRef.current;

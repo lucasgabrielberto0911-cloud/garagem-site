@@ -6,6 +6,8 @@ export const CHAT_HELP_LABEL = "Ajuda para escolher";
 export type SiteChatOpenRequest = {
   source: string;
   prompt?: string;
+  /** Envia a pergunta assim que o chat abrir (sugestões da home), em vez de só preencher o campo. */
+  send?: boolean;
 };
 
 declare global {
