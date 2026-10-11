@@ -77,7 +77,7 @@ import {
   type ChatVehicleContext,
 } from "@/lib/chat-vehicle-context";
 
-const ASSISTANT_NAME = "Sua Garagem";
+const ASSISTANT_NAME = "Garagem";
 const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
 
 const OPENING: ChatMessage = {

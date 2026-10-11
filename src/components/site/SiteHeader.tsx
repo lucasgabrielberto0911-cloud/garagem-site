@@ -14,7 +14,7 @@ import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { InstallAppHeaderButton, InstallAppMenuItem } from "@/components/site/InstallAppButton";
 import { SiteWordmark } from "@/components/site/SiteWordmark";
 import { usePageWhatsAppTarget } from "@/components/site/usePageWhatsAppHref";
-import { trackWhatsAppClick } from "@/lib/meta-pixel";
+import { trackCatalogWhatsAppClick, trackWhatsAppClick } from "@/lib/meta-pixel";
 import {
   DESKTOP_NAV_LINKS,
   NAV_LINKS,
@@ -98,7 +98,8 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-asphalt/[0.98] pt-safe backdrop-blur-md pl-safe pr-safe">
+      {/* Asfalto sólido. Com 98% a foto da ficha vazava no zoom, sem o desfoque. */}
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-asphalt pt-safe pl-safe pr-safe">
         <div className="mx-auto flex h-[72px] w-full max-w-[90rem] items-center gap-3 px-3 sm:gap-5 sm:px-6 lg:h-[76px] lg:gap-8 lg:px-8 xl:gap-10">
           <Link
             href="/"
@@ -108,7 +109,11 @@ export function SiteHeader() {
           >
             <SiteWordmark
               size="header"
-              priority={headerWordmarkPriority(pathname)}
+              priority={
+                pathname === "/estoque" || pathname.startsWith("/seminovos")
+                  ? false
+                  : headerWordmarkPriority(pathname)
+              }
             />
           </Link>
 
@@ -159,7 +164,10 @@ export function SiteHeader() {
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackWhatsAppClick("header", whatsappRef)}
+              onClick={() => {
+                trackWhatsAppClick("header", whatsappRef);
+                trackCatalogWhatsAppClick(whatsapp.catalogParams);
+              }}
               className="hidden h-11 shrink-0 items-center gap-2 bg-brand px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex xl:px-4 xl:text-sm"
             >
               <IconWhatsApp className="h-4 w-4" />
@@ -269,6 +277,7 @@ export function SiteHeader() {
                   rel="noopener noreferrer"
                   onClick={() => {
                     trackWhatsAppClick("header-menu", whatsappRef);
+                    trackCatalogWhatsAppClick(whatsapp.catalogParams);
                     closeMenu();
                   }}
                   className="whatsapp-btn flex min-h-[52px] w-full items-center justify-center gap-2.5 px-4 py-4 font-display text-base font-semibold text-white touch-manipulation"

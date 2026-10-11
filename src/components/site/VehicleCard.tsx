@@ -29,11 +29,13 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 export function VehicleCard({
   vehicle,
   priority = false,
+  eager = false,
   returnTo,
   showDestaque = false,
 }: {
   vehicle: VehicleCardData;
   priority?: boolean;
+  eager?: boolean;
   returnTo?: string;
   showDestaque?: boolean;
   /** Compatibilidade com chamadas antigas: a foto agora é 4:3 em todas as listas. */
@@ -90,6 +92,7 @@ export function VehicleCard({
             height={360}
             sizes={CARD_SIZES}
             priority={priority}
+            eager={eager}
             className="object-cover"
           />
           <div className="listing-card-shade" aria-hidden="true" />

@@ -135,7 +135,7 @@ export function LeadFollowUp({
                   })}
                 </p>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-cream">
-                  {item.note}
+                  {item.note.replace(/^\[funil:[^\]]+\]\s*/, "")}
                 </p>
               </li>
             ))}

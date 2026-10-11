@@ -1,5 +1,8 @@
 "use server";
 
+import { isLeadOrigin } from "@/lib/lead-origin";
+import { businessDay } from "@/lib/admin-date";
+import { PURCHASE_STATUSES, PURCHASE_STATUS_LABEL, funnelActivity } from "@/lib/lead-funnel";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { getSession } from "@/lib/auth";
@@ -14,6 +17,7 @@ export type LeadActionState = { ok: boolean; message: string };
 async function requireAdmin() {
   const session = await getSession();
   if (!session) throw new Error("Sessão expirada.");
+  return session;
 }
 
 export async function updateLeadStatus(
@@ -21,13 +25,22 @@ export async function updateLeadStatus(
   status: string,
 ): Promise<LeadActionState> {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     if (!isLeadStatus(status)) {
       return { ok: false, message: "Status inválido." };
     }
 
-    await prisma.leadVenda.update({ where: { id }, data: { status } });
+    await prisma.$transaction(async (tx) => {
+      const lead = await tx.leadVenda.findUniqueOrThrow({ where: { id } });
+      if (lead.status === status) return;
+      await tx.leadVenda.update({ where: { id }, data: {
+        status, ...(status === "fechado" || status === "perdido" ? { nextAction: null, nextActionAt: null } : {}),
+      } });
+      await tx.leadActivity.create({ data: {
+        leadId: id, adminId: session.adminId, note: `${funnelActivity(status)} Situação atualizada para ${status}.`,
+      } });
+    });
     revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
     revalidatePath("/admin/leads");
     revalidatePath("/admin");
@@ -70,12 +83,11 @@ export async function convertLeadToCustomer(
           email: emailFromLeadNotes(lead.notes),
           notes: wanted
             ? `Pedido de modelo: ${lead.vehicleInfo}${lead.notes ? ` — ${lead.notes}` : ""}`
-            : `Lead de venda/troca: ${lead.vehicleInfo}${lead.plate ? ` · placa ${lead.plate}` : ""}${lead.notes ? ` — ${lead.notes}` : ""}`,
+            : `Lead de ${lead.source?.startsWith("whatsapp:") ? "compra" : "venda/troca"}: ${lead.vehicleInfo}${lead.plate ? ` · placa ${lead.plate}` : ""}${lead.notes ? ` — ${lead.notes}` : ""}`,
         },
       });
-      await tx.leadVenda.update({
-        where: { id },
-        data: { status: "contatado" },
+      if (!lead.source?.startsWith("whatsapp:")) await tx.leadVenda.update({
+        where: { id }, data: { status: "contatado" },
       });
     });
     revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
@@ -108,5 +120,55 @@ export async function deleteLead(id: string): Promise<LeadActionState> {
   } catch (error) {
     console.error("[admin/leads] falha ao remover lead:", error);
     return { ok: false, message: "Não foi possível remover o lead." };
+  }
+}
+
+/** Cadastro rápido de uma conversa de compra; etapas ficam no histórico existente. */
+export async function savePurchaseLead(form: FormData): Promise<LeadActionState> {
+  try {
+    const session = await getSession();
+    if (!session) return { ok: false, message: "Sessão expirada." };
+    const value = (key: string) => String(form.get(key) || "").trim();
+    const id = value("id");
+    const name = value("name");
+    const phone = value("phone").replace(/\D/g, "");
+    const origin = value("origin");
+    const status = value("status");
+    const interestVehicleId = value("vehicle") || null;
+    const nextAction = value("nextAction");
+    const nextActionAt = value("date") ? businessDay(value("date")) : null;
+    if (!name && !phone) return { ok: false, message: "Informe o nome ou o telefone." };
+    if (name.length > 120 || (phone && !/^\d{10,13}$/.test(phone)) || !isLeadOrigin(origin) ||
+      !(PURCHASE_STATUSES as readonly string[]).includes(status) || nextAction.length > 300 ||
+      (nextActionAt && (!nextAction || Number.isNaN(nextActionAt.getTime())))) {
+      return { ok: false, message: "Confira nome, telefone, origem e próxima ação/data." };
+    }
+    await prisma.$transaction(async (tx) => {
+      const existing = id ? await tx.leadVenda.findUnique({ where: { id } }) : null;
+      if (id && !existing?.source?.startsWith("whatsapp:")) throw new Error("Conversa não encontrada.");
+      const vehicle = interestVehicleId ? await tx.vehicle.findUnique({
+        where: { id: interestVehicleId }, select: { brand: true, model: true, version: true, yearModel: true },
+      }) : null;
+      if (interestVehicleId && !vehicle) throw new Error("Veículo não encontrado.");
+      const terminal = status === "fechado" || status === "perdido";
+      const data = {
+        name, phone, source: `whatsapp:${origin}`, status, interestVehicleId,
+        vehicleInfo: vehicle ? [vehicle.brand, vehicle.model, vehicle.version, vehicle.yearModel].filter(Boolean).join(" ") : "Sem veículo definido",
+        nextAction: terminal ? null : nextAction || null,
+        nextActionAt: terminal ? null : nextActionAt,
+      };
+      const lead = id ? await tx.leadVenda.update({ where: { id }, data }) : await tx.leadVenda.create({ data });
+      if (!existing || existing.status !== status) await tx.leadActivity.create({
+        data: { leadId: lead.id, adminId: session.adminId, note: `${funnelActivity(status)} ${PURCHASE_STATUS_LABEL[status as keyof typeof PURCHASE_STATUS_LABEL]}` },
+      });
+    });
+    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
+    revalidatePath("/admin/leads");
+    revalidatePath("/admin/agenda");
+    expireAdminData();
+    return { ok: true, message: id ? "Conversa atualizada." : "Conversa registrada." };
+  } catch (error) {
+    console.error("[admin/leads] falha ao registrar conversa:", error);
+    return { ok: false, message: "Não foi possível salvar a conversa. Confira os dados e tente novamente." };
   }
 }

@@ -2,11 +2,14 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { preload } from "react-dom";
 import { VehicleImage } from "@/components/VehicleImage";
 import { useSpeculativeLoading } from "./useSpeculativeLoading";
 import { vehiclePhotoAlt } from "@/lib/format";
+import { publicPhotoSrc } from "@/lib/public-photo-url";
 import {
   GALLERY_HERO_SIZES,
+  galleryLcpSrc,
   galleryPreviewSrc,
   galleryPreviewSrcSet,
   galleryThumbSrc,
@@ -49,6 +52,15 @@ export function VehicleGallery({
   const [zoomOpen, setZoomOpen] = useState(false);
   const total = photos.length;
   const speculativeLoading = useSpeculativeLoading();
+  const lcpPhoto = photos[0];
+  if (lcpPhoto?.url) {
+    // href simples, só no celular: o srcset da página ainda escolhe o 1280 no desktop.
+    preload(publicPhotoSrc(galleryLcpSrc(lcpPhoto)), {
+      as: "image",
+      fetchPriority: "high",
+      media: "(max-width: 639px)",
+    });
+  }
 
   useEffect(() => {
     if (!speculativeLoading) return;
@@ -189,13 +201,14 @@ export function VehicleGallery({
                 {index === active ||
                 (speculativeLoading && neighbors && shouldLoadGallerySlide(index, active)) ? (
                   <VehicleImage
-                    src={galleryPreviewSrc(photo)}
+                    src={index === 0 ? galleryLcpSrc(photo) : galleryPreviewSrc(photo)}
                     alt={vehiclePhotoAlt(alt, index, total)}
                     fill
                     sizes={GALLERY_HERO_SIZES}
                     srcSet={galleryPreviewSrcSet(photo)}
                     recoverable
                     priority={index === 0}
+                    decoding={index === 0 ? "async" : undefined}
                     className="object-cover [-webkit-touch-callout:none]"
                   />
                 ) : (
@@ -211,7 +224,7 @@ export function VehicleGallery({
 
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-2 left-[max(0.5rem,env(safe-area-inset-left,0px))] z-[2] flex h-8 w-8 items-center justify-center border border-white/20 bg-asphalt/80 text-cream backdrop-blur"
+          className="pointer-events-none absolute bottom-2 left-[max(0.5rem,env(safe-area-inset-left,0px))] z-[2] flex h-8 w-8 items-center justify-center border border-white/20 bg-asphalt/80 text-cream"
         >
           <ExpandIcon />
         </span>
@@ -223,7 +236,7 @@ export function VehicleGallery({
               onClick={() => goTo(active - 1)}
               aria-label="Foto anterior"
               disabled={active === 0}
-              className="absolute left-[max(0.5rem,env(safe-area-inset-left,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream backdrop-blur transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-30"
+              className="absolute left-[max(0.5rem,env(safe-area-inset-left,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-30"
             >
               <Arrow direction="left" />
             </button>
@@ -232,13 +245,13 @@ export function VehicleGallery({
               onClick={() => goTo(active + 1)}
               aria-label="Próxima foto"
               disabled={active === total - 1}
-              className="absolute right-[max(0.5rem,env(safe-area-inset-right,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream backdrop-blur transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-30"
+              className="absolute right-[max(0.5rem,env(safe-area-inset-right,0px))] top-1/2 z-[2] flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-white/15 bg-asphalt/80 text-cream transition touch-manipulation hover:border-brand active:border-brand disabled:opacity-30"
             >
               <Arrow direction="right" />
             </button>
 
             <span
-              className="pointer-events-none absolute bottom-2 right-2 z-[2] bg-asphalt/80 px-2 py-1 text-xs font-medium text-cream backdrop-blur lg:bottom-auto lg:top-2"
+              className="pointer-events-none absolute bottom-2 right-2 z-[2] bg-asphalt/80 px-2 py-1 text-xs font-medium text-cream lg:bottom-auto lg:top-2"
               aria-live="polite"
             >
               {active + 1}/{total}

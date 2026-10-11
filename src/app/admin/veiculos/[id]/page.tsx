@@ -17,6 +17,14 @@ const VehicleForm = nextDynamic(
   { loading: () => <PanelChunkLoading /> },
 );
 
+const VehicleVerifiedPanel = nextDynamic(
+  () =>
+    import("@/components/admin/VehicleVerifiedPanel").then(
+      (mod) => mod.VehicleVerifiedPanel,
+    ),
+  { loading: () => <PanelChunkLoading /> },
+);
+
 const VehicleOpsPanel = nextDynamic(
   () =>
     import("@/components/admin/VehicleOpsPanel").then(
@@ -32,6 +40,7 @@ import { prisma } from "@/lib/prisma";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import { vehicleLocationLabel } from "@/lib/vehicle-location";
 import { CONSIGNED_LABEL } from "@/lib/vehicle-ops";
+import { getAdminVerifiedState } from "@/lib/vehicle-verified-data";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +53,7 @@ const STATUS_LABEL: Record<
   vendido: { label: "Vendido", tone: "neutral" },
 };
 
-type EditView = "anuncio" | "operacao";
+type EditView = "anuncio" | "operacao" | "verificado";
 
 export default async function EditVehiclePage({
   params,
@@ -60,11 +69,14 @@ export default async function EditVehiclePage({
     params,
     searchParams,
   ]);
-  const view: EditView = viewParam === "operacao" ? "operacao" : "anuncio";
+  const view: EditView =
+    viewParam === "operacao" || viewParam === "verificado"
+      ? viewParam
+      : "anuncio";
 
   // Custos e documentos só na aba Operação — e em paralelo com o veículo,
   // sem esperar a primeira consulta.
-  const [vehicle, costs, documents] = await Promise.all([
+  const [vehicle, costs, documents, verified] = await Promise.all([
     prisma.vehicle.findUnique({
       where: { id },
       include: {
@@ -96,6 +108,10 @@ export default async function EditVehiclePage({
           orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
+    // Informações verificadas só na aba própria; sem a tabela, a aba avisa.
+    view === "verificado"
+      ? getAdminVerifiedState(id)
+      : Promise.resolve(null),
   ]);
 
   if (!vehicle) {
@@ -144,7 +160,7 @@ export default async function EditVehiclePage({
         }
       />
 
-      <nav className="grid grid-cols-2 border-b border-white/10">
+      <nav className="grid grid-cols-3 border-b border-white/10">
         <TabLink
           href={`/admin/veiculos/${vehicle.id}`}
           active={view === "anuncio"}
@@ -158,9 +174,27 @@ export default async function EditVehiclePage({
         >
           Operação
         </TabLink>
+        <TabLink
+          href={`/admin/veiculos/${vehicle.id}?view=verificado`}
+          active={view === "verificado"}
+        >
+          Verificado
+        </TabLink>
       </nav>
 
-      {view === "operacao" ? (
+      {view === "verificado" && verified ? (
+        <VehicleVerifiedPanel
+          vehicleId={vehicle.id}
+          isMoto={vehicle.category === "moto"}
+          photos={vehicle.photos.map((photo) => ({
+            id: photo.id,
+            url: photo.url,
+            thumbnailUrl: photo.thumbnailUrl,
+          }))}
+          items={verified.available ? verified.items : []}
+          unavailable={verified.available ? undefined : verified.reason}
+        />
+      ) : view === "operacao" ? (
         <VehicleOpsPanel
           vehicle={{
             id: vehicle.id,
