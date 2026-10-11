@@ -39,3 +39,14 @@ O atraso de ~1,2 s entre o HTML e a primeira pintura, visto em máquinas de agen
 - O travamento continua com os scripts removidos e sem nenhuma `animation` no CSS. Subgrid dos cards, seletores `body:has(...)`, `content-visibility` e o número de fatias do `@font-face` não mudaram o custo do layout.
 
 Ao medir, use uma máquina com poucas fontes (ou `FONTCONFIG_FILE` apontando para uma configuração mínima), faça pelo menos 10 rodadas e compare a **mediana**. Rodada isolada pode cair no travamento. Os números absolutos da Vercel real (rede + celular de verdade) são os que valem.
+
+## CSS do painel separado do CSS público
+
+O CSS global (`src/app/globals.css` + Tailwind) é bloqueante de renderização na home, no estoque e na ficha. O painel tem CSS próprio para não pesar nelas:
+
+- `tailwind.config.ts` (site) **exclui** `src/components/admin/**` e `src/app/admin/**` do `content`.
+- `src/app/admin/admin.css` (importado em `src/app/admin/layout.tsx`) gera, com `tailwind.admin.config.ts`, só os utilitários dos arquivos do painel, mais `pb-admin-nav`, `bottom-admin-nav` e `scroll-mt-admin-form`.
+- As regras `:focus-visible` e `a/button:focus:not(:focus-visible)` estão repetidas no fim do `admin.css`: precisam vir **depois** dos utilitários (senão `outline-none` apaga o anel de foco nos campos do painel). Se mudar essas regras no `globals.css`, mude também no `admin.css`.
+- Componente de `components/admin` usado em página pública não ganha estilo: mova o componente ou a classe para fora de `admin`.
+
+Medição (Lighthouse mobile simulado local, mediana de 10 rodadas): CSS bloqueante de 21,7 KB (2 arquivos) para 19,1 KB (1 arquivo) e "render-blocking" estimado de 454 para 154 ms.
