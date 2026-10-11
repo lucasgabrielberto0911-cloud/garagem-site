@@ -46,6 +46,7 @@ import {
   parseChatSearchRanges,
   chatSearchOrder,
   chatSearchResets,
+  parseChatDisplacementFilter,
 } from "@/lib/chat-search-filters";
 import {
   findVehicleSpec,
@@ -223,7 +224,7 @@ export function parseVehicleCategoryFilter(
 export function resolveChatCategory(mensagem: string): "carro" | "moto" | null {
   return (
     parseVehicleCategoryFilter(mensagem) ??
-    (parsePriceLimit(mensagem) != null || isChatSelectionQuery(mensagem)
+    (parsePriceLimit(mensagem) != null || isChatSelectionQuery(mensagem) || asksForTurbo(mensagem) || parseChatDisplacementFilter(mensagem) != null
       ? "carro"
       : null)
   );
@@ -286,12 +287,28 @@ function filterStockByGear(
 
 export function hasChatStockFilter(mensagem: string) {
   return (
+    asksForTurbo(mensagem) ||
+    parseChatDisplacementFilter(mensagem) != null ||
     parseTransmissionFilter(mensagem) != null ||
     parsePriceLimit(mensagem) != null ||
     parseVehicleCategoryFilter(mensagem) != null ||
     Object.keys(parseChatSearchRanges(mensagem)).length > 0 ||
     parseBodyStyleFilter(mensagem) != null
   );
+}
+
+/** Só sinais escritos no motor ou na versão da ficha, sem deduzir pelo modelo. */
+export function asksForTurbo(value: string) {
+  return /\b(?:turbo|biturbo|tsi|tfsi|tb|t[- ]?gdi|t200|t270|thp|t[- ]?jet|ecoboost)\b|\b[1-6][.,]\d\s*t\b/i.test(value);
+}
+
+function filterStockByEngine(stock: ChatVehicleRecord[], mensagem: string) {
+  const liters = parseChatDisplacementFilter(mensagem);
+  const turbo = asksForTurbo(mensagem);
+  return stock.filter(vehicle => {
+    const ficha = `${vehicle.engine ?? ""} ${vehicle.version ?? ""}`;
+    return (liters == null || parseChatDisplacementFilter(ficha) === liters) && (!turbo || asksForTurbo(ficha));
+  });
 }
 
 function filterStockByBody(stock: ChatVehicleRecord[], mensagem: string) {
@@ -317,6 +334,7 @@ export function applyChatStockFilters(
   if (parseBodyStyleFilter(mensagem)) {
     next = filterStockByBody(next, mensagem);
   }
+  next = filterStockByEngine(next, mensagem);
   if (parseCheapIntent(mensagem)) {
     const modelPool = singleMentionedModelPool(next, mensagem);
     if (modelPool) next = modelPool;
@@ -896,6 +914,39 @@ function unitHasEquipment(vehicle: ChatVehicleRecord, data: RegExp) {
   return (vehicle.accessories ?? []).some(value => data.test(normalize(value)));
 }
 
+/** Quantidade e posição precisam aparecer nos próprios itens de airbag da ficha. */
+function requestedAirbagDetail(mensagem: string) {
+  const text = normalize(mensagem);
+  if (!/air ?bags?/.test(text)) return null;
+  const count = text.match(/\b(\d+|dois|quatro|seis|oito|dez)\s+air ?bags?\b/);
+  const words: Record<string, number> = { dois: 2, quatro: 4, seis: 6, oito: 8, dez: 10 };
+  const n = count ? words[count[1]!] ?? Number(count[1]) : null;
+  const positions = ([
+    ["frontais", /\bfronta(?:l|is)\b/],
+    ["laterais", /\blatera(?:l|is)\b/],
+    ["de cortina", /\bcortinas?\b/],
+  ] as const).filter(([, re]) => re.test(text));
+  if (n == null && !positions.length) return null;
+  return {
+    label: `${n == null ? "" : `${n} `}airbags${positions.length ? ` ${positions.map(([label]) => label).join(" e ")}` : ""}`,
+    data: [...(n == null ? [] : [new RegExp(`\\b(?:${n}|${Object.keys(words).find(word => words[word] === n) ?? n})\\s+air ?bags?\\b`)]), ...positions.map(([, re]) => re)],
+  };
+}
+
+function unitHasAirbagDetail(vehicle: ChatVehicleRecord, detail: NonNullable<ReturnType<typeof requestedAirbagDetail>>) {
+  const items = (vehicle.accessories ?? []).map(normalize).filter(value => /air ?bags?/.test(value));
+  return detail.data.every(re => items.some(value => re.test(value)));
+}
+
+function airbagDetailFallback(vehicles: ChatVehicleRecord[], label: string, stock: ChatVehicleRecord[]) {
+  const picks = vehicles.slice(0, 3);
+  const names = picks.map(vehicle => chatUnitName(vehicle, stock, true)).join(", ");
+  return {
+    reply: `As fichas não detalham ${label}; o consultor confirma pelo WhatsApp.${names ? ` ${names} ${picks.length === 1 ? "tem airbags na ficha e está" : "têm airbags na ficha e estão"} aqui.` : ""}`,
+    vehicles: picks,
+  };
+}
+
 const pluralEquipment = (names: string[]) =>
   names.length > 1 || /^(?:(?:[2-9]|\d{2,})\b|airbags\b|freios\b|bancos\b|vidros\b|rodas\b|sensores\b)/i.test(names[0] ?? "");
 
@@ -944,16 +995,19 @@ export function equipmentAcrossStockReply(
   if (/\b(esse|essa|este|esta|dele|dela|nele|nela|desse|dessa|deste|desta)\b/.test(folded)) return null;
   const resolved = resolveNamedModelPool(stock, mensagem);
   const pools = resolved ? [resolved] : namedModelPools(stock, mensagem);
-  const labels = asked.map(([label]) => label);
+  const airbagDetail = requestedAirbagDetail(mensagem);
+  const labels = asked.map(([label]) => label === "airbags" && airbagDetail ? airbagDetail.label : label);
   const items = joinEquipment(labels);
   const m = pluralEquipment(labels) ? "m" : "";
-  const has = (vehicle: ChatVehicleRecord) => asked.every(([, , data]) => unitHasEquipment(vehicle, data));
+  const hasGeneric = (vehicle: ChatVehicleRecord) => asked.every(([, , data]) => unitHasEquipment(vehicle, data));
+  const has = (vehicle: ChatVehicleRecord) => hasGeneric(vehicle) && (!airbagDetail || unitHasAirbagDetail(vehicle, airbagDetail));
   if (pools.length === 1) {
     const pool = pools[0]!;
     if (pool.length < 2 || namedUnitForEquipment(stock, mensagem)) return null;
     // Algum carro sem nada na ficha, ou pergunta que já aponta uma unidade (ano/motor): fluxo antigo.
     if (pool.some(unit => !(unit.accessories ?? []).length)) return null;
     if (/\b(?:19|20)\d{2}\b|\b\d[.,]\d\b/.test(folded)) return null;
+    if (airbagDetail && !pool.some(has)) return airbagDetailFallback(pool.filter(hasGeneric), airbagDetail.label, stock);
     const units = [...pool].sort((a, b) => a.yearModel - b.yearModel).slice(0, 4);
     const withItem = units.filter(has);
     const without = units.filter(unit => !has(unit));
@@ -972,6 +1026,8 @@ export function equipmentAcrossStockReply(
   // Estoque inteiro: cara de busca ("quais", "carros com", "algum") ou outro filtro, e nenhum modelo citado.
   // Filtro de verdade (câmbio, preço, ano/km, carroceria); "carros"/"motos" sozinho é só a categoria.
   const filtered =
+    asksForTurbo(mensagem) ||
+    parseChatDisplacementFilter(mensagem) != null ||
     parseTransmissionFilter(mensagem) != null ||
     parsePriceLimit(mensagem) != null ||
     Object.keys(equipmentRanges(mensagem)).length > 0 ||
@@ -1009,6 +1065,10 @@ export function equipmentAcrossStockReply(
   const byYear = scope.filter(has).sort((a, b) => b.yearModel - a.yearModel || a.price - b.price);
   const found = rankEquipmentFound(byYear, mensagem, mode);
   const phrase = describeEquipmentScope(mensagem, wantsMoto);
+  if (!found.length && airbagDetail) {
+    const generic = scope.filter(hasGeneric).sort((a, b) => b.yearModel - a.yearModel || a.price - b.price);
+    return airbagDetailFallback(generic, airbagDetail.label, stock);
+  }
   // Só nega quando a ficha de TODOS os carros do recorte foi checada (nenhuma vazia).
   const unchecked = scope.filter(unit => !(unit.accessories ?? []).length);
   if (!found.length && unchecked.length) {
@@ -1153,15 +1213,17 @@ export function formatFocusedEquipmentReply(
       return `Na ficha ${desse} ${named.name} consta direção hidráulica (não a elétrica). Qualquer detalhe, o vendedor mostra nas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
     }
     // Posição pedida (laterais, cortina, frontais) que o item da ficha não cita: não afirma.
-    const airbagItem = raw.find(value => /air ?bags?|bolsas? (?:de ar|inflaveis)/.test(normalize(value)));
+    const airbagItems = raw.filter(value => /air ?bags?|bolsas? (?:de ar|inflaveis)/.test(normalize(value)));
     const positions = ([
       ["frontais", /\bfronta(?:l|is)\b/],
       ["laterais", /\blatera(?:l|is)\b/],
       ["de cortina", /\bcortinas?\b/],
     ] as const).filter(([, re]) => re.test(folded));
-    const unconfirmed = airbagItem
-      ? positions.filter(([, re]) => !re.test(normalize(airbagItem))).map(([label]) => label)
+    const unconfirmed = airbagItems.length
+      ? positions.filter(([, re]) => !airbagItems.some(value => re.test(normalize(value)))).map(([label]) => label)
       : [];
+    const detail = requestedAirbagDetail(mensagem);
+    const unconfirmedCount = detail && /^\d/.test(detail.label) && !airbagItems.some(value => detail.data[0]!.test(normalize(value)));
     const plural = (names: string[]) => pluralEquipment(names);
     // Lista curta: rótulos curtos, no máximo 3.
     const extras = [...new Set(items
@@ -1171,9 +1233,10 @@ export function formatFocusedEquipmentReply(
       .slice(0, 3);
     const parts: string[] = [];
     if (present.length) {
-      parts.push(`${unconfirmed.length ? "Na" : "Sim, na"} ficha ${desse} ${named.name} consta${plural(present) ? "m" : ""} ${listed(present)}.`);
+      parts.push(`${unconfirmed.length || unconfirmedCount ? "Na" : "Sim, na"} ficha ${desse} ${named.name} consta${plural(present) ? "m" : ""} ${listed(present)}.`);
     }
     if (unconfirmed.length) parts.push(`A ficha não detalha se há airbags ${listed(unconfirmed)}.`);
+    if (unconfirmedCount) parts.push(`A ficha não detalha ${detail.label}.`);
     if (absent.length) {
       parts.push(
         present.length
@@ -1183,7 +1246,7 @@ export function formatFocusedEquipmentReply(
       if (extras.length) parts.push(`Os itens cadastrados incluem ${extras.join(", ")}.`);
     }
     parts.push(
-      absent.length || unconfirmed.length
+      absent.length || unconfirmed.length || unconfirmedCount
         ? `Pra não te passar informação errada, o vendedor confirma pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`
         : `Qualquer detalhe, o vendedor mostra nas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`,
     );
@@ -2469,6 +2532,19 @@ export function similarAfterEmptyFilter(
   const sameKind = (vehicle: ChatVehicleRecord) => ((vehicle.category ?? "carro") === "moto") === motoTalk;
   const relaxed = relaxChatStockFilters(stock, mensagem);
   const kind = relaxed.some(sameKind) ? relaxed.filter(sameKind) : relaxed;
+  const liters = parseChatDisplacementFilter(mensagem);
+  if (asksForTurbo(mensagem) || liters != null) {
+    const geared = filterStockByTransmission(kind, mensagem);
+    const pool = geared.length ? geared : kind;
+    const styled = filterStockByBody(pool, mensagem);
+    const nearby = styled.length ? styled : pool;
+    if (liters == null) return rankByPower(nearby).slice(0, limit);
+    const distance = (vehicle: ChatVehicleRecord) => {
+      const engine = parseChatDisplacementFilter(`${vehicle.engine ?? ""} ${vehicle.version ?? ""}`);
+      return engine == null ? Infinity : Math.abs(engine - liters);
+    };
+    return [...nearby].sort((a, b) => distance(a) - distance(b) || a.price - b.price).slice(0, limit);
+  }
   // Modelo que não temos: parecidos são da mesma carroceria (Corolla → sedãs; picape → SUVs), mais novos primeiro.
   const asked = motoTalk ? null : parseBodyStyleFilter(mensagem) ?? askedModelBody(mensagem);
   const bodies = asked === "pickup" ? ["pickup", "suv"] : asked ? [asked] : [];
@@ -2502,6 +2578,7 @@ function waitlistInterestBits(mensagem: string) {
         token.length >= 3 &&
         !WAITLIST_STOP.test(token) &&
         !PROFILE_SEEK_NOISE.test(token) &&
+        !/^(turbo|biturbo|tsi|tfsi|tgdi|t200|t270|thp|tjet|ecoboost|motor|melhor|custo|beneficio)$/.test(token) &&
         !/^\d+$/.test(token),
     );
 }
@@ -2832,6 +2909,18 @@ export function searchChatInventory(
   );
   if (brands.length)
     pool = pool.filter((v) => brands.includes(normalize(v.brand)));
+  if (/\bcusto[\s-]*beneficio\b/.test(normalize(message))) {
+    // Preço por novidade do ano, com acréscimo proporcional à quilometragem.
+    const oldestYear = Math.min(...pool.map(vehicle => vehicle.yearModel));
+    const score = (vehicle: ChatVehicleRecord) => vehicle.price * (1 + vehicle.km / 100_000) / (1 + vehicle.yearModel - oldestYear);
+    const ranked = [...pool].sort((a, b) => score(a) - score(b) || a.price - b.price);
+    if (!ranked.length) return null;
+    return {
+      picks: ranked.slice(0, 3),
+      candidates: ranked,
+      reply: "Separei os melhores custos-benefícios da Garagem, equilibrando preço, ano mais recente e menor quilometragem.",
+    };
+  }
   // "Qual o melhor carro?" / "qual vocês recomendam?": os mais novos do recorte, não os mais baratos.
   const wantsBest = /\b(qual (?:e |eh )?o melhor|melhor(?:es)? carros?|melhores|recomendam|recomenda|indicam|indica|top)\b/.test(normalize(message)) &&
     (chatRankMode(message) === "default" || chatRankMode(message) === "price") && mentionedModelGroups(stock, message).size === 0;
@@ -2864,6 +2953,11 @@ export function searchChatInventory(
           rankChatVehicles(pool, message);
   const picks = ranked.slice(0, 3);
   if (!picks.length) return null;
+  const liters = parseChatDisplacementFilter(message);
+  if (asksForTurbo(message) || liters != null) {
+    const motor = [liters == null ? null : `motor ${liters.toFixed(1)}`, asksForTurbo(message) ? "turbo" : null].filter(Boolean).join(" ");
+    return { picks, candidates: ranked, reply: `Separei ${picks.length} ${picks.length === 1 ? "opção" : "opções"} com ${motor} na ficha da Garagem.` };
+  }
   const power = isPowerQuery(message);
   const price = parsePriceLimit(message);
   const gear = parseTransmissionFilter(message);
@@ -2959,7 +3053,8 @@ export function emptyFilterReply(
   if (
     asksAboutAvailability(mensagem) &&
     parseTransmissionFilter(mensagem) == null &&
-    parsePriceLimit(mensagem) == null
+    parsePriceLimit(mensagem) == null &&
+    !asksForTurbo(mensagem) && parseChatDisplacementFilter(mensagem) == null
   ) {
     return null;
   }
@@ -2969,6 +3064,14 @@ export function emptyFilterReply(
   const query = formatChatWaitlistQuery(mensagem);
   const recorte = query ? ` (${query})` : "";
   const similar = similarAfterEmptyFilter(mensagem, stock, 3);
+  if (asksForTurbo(mensagem) || parseChatDisplacementFilter(mensagem) != null) {
+    const liters = parseChatDisplacementFilter(mensagem);
+    const motor = [liters == null ? null : `motor ${liters.toFixed(1)}`, asksForTurbo(mensagem) ? "turbo" : null].filter(Boolean).join(" ");
+    const noneTurbo = asksForTurbo(mensagem) && !filterStockByEngine(filterStockByCategory(stock, mensagem), "turbo").length;
+    const head = noneTurbo ? "Turbo não temos agora." : `Não temos ${motor} nessa combinação agora.`;
+    const offer = noneTurbo && liters == null ? " Separei os mais fortes que temos." : " Separei as opções mais próximas da Garagem.";
+    return `${head}${similar.length ? offer : ""}`;
+  }
   const wait = `Se quiser, o consultor anota e te avisa no WhatsApp quando chegar: ${chatWaitlistWhatsAppUrl(mensagem)}`;
   // "Tem moto automática?": as Biz são semiautomáticas (sem embreagem) — dizer isso, não "não tem anúncio".
   if (resolveChatCategory(mensagem) === "moto" && parseTransmissionFilter(mensagem) === "automatico" && !singleMentionedModelPool(stock, mensagem)) {

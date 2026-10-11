@@ -356,6 +356,7 @@ export function isPowerQuery(mensagem: string) {
 export function isChatSelectionQuery(mensagem: string) {
   const text = foldIntent(mensagem);
   return (
+    /\bcusto[\s-]*beneficio\b/.test(text) ||
     parseStarterIntent(mensagem) ||
     parseDeliveryIntent(mensagem) ||
     /\b(fortes?|potentes?|motorizad[oa]s?)\b/.test(text) ||

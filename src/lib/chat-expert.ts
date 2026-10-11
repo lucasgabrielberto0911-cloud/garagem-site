@@ -16,9 +16,10 @@ import {
   parseBodyStyleFilter,
   parsePriceLimit,
 } from "@/lib/chat-prompt";
-import { parseChatSearchRanges } from "@/lib/chat-search-filters";
+import { parseChatSearchRanges, parseChatDisplacementFilter } from "@/lib/chat-search-filters";
 import { isAnaphoricVehicleFollowUp } from "@/lib/chat-text";
 import {
+  asksForTurbo,
   mentionedModelPools,
   parseTransmissionFilter,
   type ChatVehicleRecord,
@@ -370,6 +371,7 @@ function isListRequest(message: string) {
   const text = fold(message);
   // Só filtro de verdade: a palavra “carro” solta (“consumo desse carro?”) não faz lista.
   return (
+    (/\b(tem|ha|algum|carros?|veiculos?)\b/.test(text) && (asksForTurbo(message) || parseChatDisplacementFilter(message) != null)) ||
     parsePriceLimit(message) != null ||
     Object.keys(parseChatSearchRanges(message)).length > 0 ||
     parseTransmissionFilter(message) != null ||
