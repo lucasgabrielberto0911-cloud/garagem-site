@@ -7,6 +7,8 @@ import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
 import { recordAdminAudit } from "@/lib/admin-audit";
 
 import { revalidatePath } from "next/cache";
+import { listingDraftFromVehicle } from "@/lib/listing-score";
+import { scoreListingAfterSave } from "@/lib/listing-score-store";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
@@ -339,6 +341,13 @@ export async function createVehicle(
       return created;
     });
 
+    // Anúncio novo conta como alteração. Falha do Jev não afeta o Salvar.
+    await scoreListingAfterSave({
+      vehicleId: vehicle.id,
+      before: null,
+      after: listingDraftFromVehicle(vehicle, data.photos.length),
+    });
+
     revalidatePath("/admin/veiculos");
     await revalidatePublicStock(vehicle);
     return {
@@ -409,7 +418,7 @@ export async function updateVehicle(
       loadPreviousPhotoUrls(id),
     ]);
 
-    const updated = await withAdminStorageLock(async (tx) => {
+    const result = await withAdminStorageLock(async (tx) => {
       const current = await tx.vehicle.findUniqueOrThrow({ where: { id } });
       const expected = String(formData.get("expectedUpdatedAt") || "");
       if (!expected || current.updatedAt.toISOString() !== expected)
@@ -459,7 +468,15 @@ export async function updateVehicle(
         price: { before: current.price, after: saved.price },
         status: { before: current.status, after: saved.status },
       });
-      return saved;
+      return { saved, current };
+    });
+    const updated = result.saved;
+
+    // Só o Salvar chama o Jev, e só se mudou o que ele lê.
+    await scoreListingAfterSave({
+      vehicleId: id,
+      before: listingDraftFromVehicle(result.current, previous.length),
+      after: listingDraftFromVehicle(updated, data.photos.length),
     });
 
     const kept = new Set(data.photos.map((photo) => photo.url));
