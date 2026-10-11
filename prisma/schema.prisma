@@ -170,6 +170,8 @@ model Sale {
   notes         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
+
+  @@index([customerId])
 }
 
 model Admin {
@@ -200,6 +202,8 @@ model LeadVenda {
   photoUrls         String[] @default([])
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([status, createdAt])
 }
 
 model Testimonial {
