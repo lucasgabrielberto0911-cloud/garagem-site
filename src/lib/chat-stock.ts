@@ -722,7 +722,8 @@ function formatChatKm(km: number) {
 function spokenTransmission(vehicle: ChatVehicleRecord) {
   const text = (vehicle.transmission ?? "").trim().toLowerCase();
   if (!text) return "";
-  return (vehicle.category ?? "carro") === "moto" ? text.replace(/o$/, "a") : text;
+  const spoken = text.replace(/\bcvt\b/g, "CVT");
+  return (vehicle.category ?? "carro") === "moto" ? spoken.replace(/o$/, "a") : spoken;
 }
 
 /** Um anúncio em frase falada, sem o prefixo de busca. */
@@ -732,7 +733,9 @@ function spokenListing(vehicle: ChatVehicleRecord) {
 }
 
 function isAutomaticVehicle(vehicle: ChatVehicleRecord) {
-  return /automatic|cvt/.test(normalize(vehicle.transmission ?? ""));
+  // Semiautomático (Biz, embreagem automática) não é câmbio automático.
+  const value = normalize(vehicle.transmission ?? "");
+  return /automatic|cvt/.test(value) && !/semi/.test(value);
 }
 
 function isManualVehicle(vehicle: ChatVehicleRecord) {
@@ -1165,16 +1168,16 @@ export function formatFocusedEquipmentReply(
 
   if (/\b(automatico|automatica|cvt)\b/.test(folded) && !/\bmanual\b/.test(folded)) {
     if (isAutomaticVehicle(vehicle)) {
-      return `Sim — ${named.labeled} é ${vehicle.transmission}.`;
+      return `Sim, ${named.labeled} é ${spokenTransmission(vehicle)}.`;
     }
-    return `${named.cap} nesta unidade está como ${vehicle.transmission}.`;
+    return `${named.cap} é ${spokenTransmission(vehicle)}.`;
   }
 
   if (/\bmanual\b/.test(folded) && !/\b(automatico|cvt)\b/.test(folded)) {
     if (isManualVehicle(vehicle)) {
-      return `Sim — ${named.labeled} é ${vehicle.transmission}.`;
+      return `Sim, ${named.labeled} é ${spokenTransmission(vehicle)}.`;
     }
-    return `${named.cap} nesta unidade está como ${vehicle.transmission}.`;
+    return `${named.cap} é ${spokenTransmission(vehicle)}.`;
   }
 
   if (items.length === 0) {
@@ -2391,14 +2394,19 @@ export function similarAfterEmptyFilter(
 ): ChatVehicleRecord[] {
   const mentioned = singleMentionedModelPool(stock, mensagem);
   const mentionedIds = new Set((mentioned ?? []).map((vehicle) => vehicle.id));
-  return relaxChatStockFilters(stock, mensagem)
+  // "tem Onix?": parecido é carro, não moto (a não ser que a conversa seja de moto).
+  const folded = normalize(mensagem);
+  const motoTalk = resolveChatCategory(mensagem) === "moto" || /\b(motos?|cg|cb|biz|pop|fan|titan|xre|bros|fazer|factor|lander|nmax|pcx|ninja|hornet|twister|crosser|xtz|yamaha|suzuki|kawasaki|harley|scooter|cilindradas|cc)\b/.test(folded);
+  const sameKind = (vehicle: ChatVehicleRecord) => ((vehicle.category ?? "carro") === "moto") === motoTalk;
+  const relaxed = relaxChatStockFilters(stock, mensagem);
+  return (relaxed.some(sameKind) ? relaxed.filter(sameKind) : relaxed)
     .filter((vehicle) => !mentionedIds.has(vehicle.id))
     .sort((a, b) => a.price - b.price)
     .slice(0, limit);
 }
 
 const WAITLIST_STOP =
-  /^(tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares)$/;
+  /^(tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem)$/;
 
 const INTENT_SEEK_NOISE =
   /^(forte|fortes|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
@@ -2940,6 +2948,18 @@ export const CHAT_TRADE_REPLY =
 export const CHAT_WARRANTY_REPLY =
   `${officialWarrantyDetail()} Se quiser o detalhe no seu caso, o consultor confirma no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
 
+export const CHAT_ORIGIN_REPLY =
+  `Todo seminovo passa por checagem na loja antes do anúncio. Laudo cautelar e histórico de cada carro (leilão, sinistro) não ficam no anúncio: o consultor confirma no WhatsApp, carro a carro, antes de você fechar. ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_VISIT_REPLY =
+  `Dá sim! O atendimento é com horário marcado em Linhares: o consultor combina o dia e a hora com você no WhatsApp (atendemos das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_ADDRESS_REPLY =
+  `A Garagem é uma loja digital, sem loja aberta ao público. Pra ver um carro, a visita é com horário marcado em Linhares, combinada com o consultor no WhatsApp (das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_TRADE_VALUE_REPLY =
+  `O valor do seu carro o consultor avalia com algumas fotos no WhatsApp (ano, km e estado contam) e já encaixa na conta do carro que você quer. ${CHAT_WHATSAPP_URL}`;
+
 export const CHAT_DOCS_REPLY =
   `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
 
@@ -2998,8 +3018,22 @@ export function formatTransmissionCompareReply(
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(
   mensagem: string,
-): "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | null {
+): "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | null {
   const folded = normalize(mensagem);
+  // Procedência, laudo, leilão: não está no anúncio; o consultor confirma carro a carro.
+  if (/\b(leilao|leiloes|leiload[oa]s?|sinistr\w*|procedencia|laudo|cautelar|vistoria cautelar|recuperad[oa]s? de financiamento|passagem por leilao)\b/.test(folded) &&
+    !/\b(financi\w*|parcela|fipe)\b/.test(folded.replace(/recuperad[oa]s? de financiamento/g, ""))) {
+    return "origin";
+  }
+  // Endereço da loja: loja digital, visita com hora marcada em Linhares.
+  if (/\b(endereco|loja fisica|onde (?:fica|e|esta) a (?:loja|garagem)|onde (?:voces|vcs) (?:ficam|estao|sao)|onde fica (?:voces|vcs)|localizacao da loja|qual a localizacao|tem loja)\b/.test(folded)) {
+    return "address";
+  }
+  // Ver o carro pessoalmente / agendar visita.
+  if (/\b(agendar|agendamento|marcar (?:uma |um )?(?:visita|horario)|visitar|test ?drive|ver (?:o carro|a moto|ele|ela|pessoalmente)|ir ai|passar ai|ir na loja|ir ate voces|conhecer o carro)\b/.test(folded) &&
+    !/\b(fotos?|videos?|financi\w*|troca\w*)\b/.test(folded)) {
+    return "visit";
+  }
   if (
     /^(aceita cartao|aceitam cartao|cartao de credito|parcela no cartao|da para parcelar no cartao|da pra parcelar no cartao|aceita cartao de credito)$/.test(
       folded,
@@ -3081,6 +3115,9 @@ export function localGarageReply(
   if (policy === "troca") return CHAT_TRADE_REPLY;
   if (policy === "warranty") return CHAT_WARRANTY_REPLY;
   if (policy === "docs") return CHAT_DOCS_REPLY;
+  if (policy === "origin") return CHAT_ORIGIN_REPLY;
+  if (policy === "visit") return CHAT_VISIT_REPLY;
+  if (policy === "address") return CHAT_ADDRESS_REPLY;
   if (policy === "gear") return formatTransmissionCompareReply(stock, mensagem);
 
   if (/\b(cartao|credito|18x)\b/.test(text)) {
