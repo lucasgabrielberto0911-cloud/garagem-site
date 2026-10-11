@@ -905,31 +905,47 @@ export function normalizeChatAccessories(items: string[]) {
     .map(value => value.replace(/\s+(?:com função|com funcao|com sistema|nas? \d|nos? \d).*$/i, "")))];
 }
 
-/** Opcionais que o chat confere na ficha: [rótulo, pergunta, item cadastrado]. */
+/**
+ * Dicionário de sinônimos dos opcionais: [rótulo, pergunta do cliente, item cadastrado na ficha].
+ * O chat consulta a ficha por aqui antes de responder: item que está na ficha nunca é negado.
+ * Ordem importa só para exibição; cada pergunta pode casar mais de um item.
+ */
 const EQUIPMENT_ITEMS = [
-  ["central multimídia", /multimidia|central|carplay|android auto/, /multimidia|carplay|android auto|central (?:de )?(?:midia|entretenimento)|tela (?:touch|sensivel)|media ?nav|mylink|my link|uconnect|intellilink|\bsync\b|\bgps\b/],
+  ["troca de marchas no volante (paddle shift)", /borboletas?|paddle|\baletas?\b|\bshift\b|(?:troca\w*|passa\w*|muda\w*)\s+(?:a |as |de )?marchas?\s+(?:no|pelo|atras do) volante|marchas? no volante/, /paddle|borboleta|\baletas?\b|marchas?\b.{0,30}\bvolante|volante\b.{0,30}\b(?:paddle|marchas?)/],
+  ["Apple CarPlay / Android Auto", /carplay|car play|android auto|espelh\w*/, /carplay|android auto|espelhamento/],
+  ["central multimídia", /multimidia|\bcentral\b|\btela\b(?!.{0,12}\b(?:painel|tft)\b)/, /multimidia|carplay|android auto|central (?:de )?(?:midia|entretenimento)|tela (?:touch|sensivel)|media ?nav|mylink|my link|uconnect|intellilink|\bsync\b|\bgps\b/],
   ["teto solar", /teto solar|teto panoramico|sunroof|\btem teto\b(?! de)/, /teto solar|teto panoramico|teto de vidro|sunroof/],
   ["airbags", /air ?bags?|bolsas? de ar/, /air ?bags?|bolsas? (?:de ar|inflaveis)/],
   ["freios ABS", /\babs\b/, /\babs\b|antitravamento|anti ?bloqueio/],
-  ["controle de estabilidade", /controle de estabilidade|\besp\b/, /controle (?:eletronico )?de estabilidade|controle de tracao e estabilidade|\b(?:esp|esc|vdc|vsc|vsa)\b/],
+  ["controle de estabilidade", /controle de (?:estabilidade|tracao)|\besp\b|\bvsa\b/, /controle (?:eletronico )?de (?:estabilidade|tracao)|\b(?:esp|esc|vdc|vsc|vsa)\b/],
   ["câmera de ré", /cameras?/, /camera/],
-  ["piloto automático", /piloto automatic\w*|controle de cruzeiro|cruise/, /piloto automatico|cruise control|controle de (?:cruzeiro|velocidade)/],
+  ["piloto automático", /piloto automatic\w*|controle de cruzeiro|cruise|\bacc\b/, /piloto automatico|cruise control|controle de (?:cruzeiro|velocidade)/],
   ["direção elétrica", /direcao (?:eletrica|eletroassistida)/, /direcao (?:eletrica|eletroassistida)|direcao eletrica progressiva/],
   ["direção hidráulica", /direcao hidraulica/, /direcao hidraulica/],
-  ["ar-condicionado", /ar[- ]?condicionado|\bar digital\b|climatizador/, /ar[- ]?condicionado|\bar digital\b|climatiz/],
+  ["ar-condicionado digital", /\bar(?:[- ]?condicionado)? (?:e |eh )?(?:digital|automatico)|dual zone|climatizador digital/, /\bar(?:[- ]?condicionado)? digital|dual zone|climatiz\w* digital/],
+  ["ar-condicionado", /ar[- ]?condicionado|\btem ar\b|climatizador/, /ar[- ]?condicionado|\bar digital\b|climatiz/],
   ["sensor de estacionamento", /sensor(?:es)? de (?:estacionamento|re|re)|sensor(?:es)? (?:traseiros?|de marcha a re)/, /sensor(?:es)? de (?:estacionamento|re)\b/],
   ["bancos de couro", /bancos?\b.{0,20}couro|^(?!.*volante).*\bcouro\b/, /\bbancos?\b.*\bcouro\b/],
   ["vidros elétricos", /vidros? eletricos?/, /vidros? eletricos?/],
-  ["bluetooth", /bluetooth/, /bluetooth/],
-  ["rodas de liga leve", /rodas? de liga|liga leve/, /rodas? de liga/],
-  ["partida por botão", /keyless|partida (?:por|no|com) botao|botao de partida|chave presencial/, /keyless|partida (?:por|no) botao|chave presencial|smart entry/],
-  ["ISOFIX", /isofix/, /isofix/],
-  ["partida elétrica", /partida eletrica|arranque eletrico/, /partida eletrica/],
-  ["painel digital", /painel digital|velocimetro digital/, /painel\b.{0,30}digital|velocimetro digital/],
-  ["alarme", /\balarme\b/, /\balarme\b/],
   ["travas elétricas", /travas? eletricas?/, /travas? eletricas?/],
+  ["retrovisores elétricos", /retrovisor(?:es)? eletricos?/, /retrovisor(?:es)? eletricos?/],
+  ["bluetooth", /bluetooth/, /bluetooth/],
+  ["entrada USB", /\busb\b/, /\busb\b/],
+  ["rodas de liga leve", /rodas? de liga|liga leve/, /rodas? de liga/],
+  ["partida por botão", /keyless|partida (?:por|no|com) botao|botao de partida|chave presencial|start ?stop/, /keyless|partida (?:por|no) botao|chave presencial|smart entry/],
+  ["ISOFIX", /isofix|cadeirinha/, /isofix/],
+  ["partida elétrica", /partida eletrica|arranque eletrico/, /partida eletrica/],
+  ["painel digital", /painel\b.{0,12}digital|velocimetro digital|\btft\b/, /painel\b.{0,40}digital|velocimetro digital|\btft\b/],
+  ["freios CBS (combinados)", /\bcbs\b|freios?\b.{0,8}combinad\w*|frenagem combinada/, /\bcbs\b|freios? combinad|frenagem combinada/],
+  ["faróis de neblina", /neblina|farol de milha|farois de milha/, /neblina/],
+  ["faróis de LED", /farol de led|farois (?:de |em |full )?led|\bled\b/, /farois? (?:de |em |full )?led|\bled\b/],
+  ["acendimento automático dos faróis", /sensor crepuscular|farol automatico|farois automaticos|acendimento automatico/, /crepuscular|acendimento automatico/],
+  ["sensor de chuva", /sensor de chuva|limpador automatico/, /sensor de chuva/],
+  ["freio de estacionamento eletrônico", /freio de mao eletronico|freio (?:de estacionamento )?eletronico|brake hold|\bepb\b/, /freio de estacionamento eletronico|\bepb\b|brake hold/],
+  ["monitoramento de pressão dos pneus", /pressao dos pneus|\btpms\b/, /pressao dos pneus|\btpms\b/],
+  ["alarme", /\balarme\b/, /\balarme\b/],
   ["computador de bordo", /computador de bordo/, /computador de bordo/],
-  ["volante multifuncional", /volante multifuncional|comandos? no volante/, /volante multifuncional|comandos?\b.{0,20}volante/],
+  ["volante multifuncional", /volante multifuncional|comandos? no volante/, /volante multifuncional|comandos?\b.{0,20}volante|volante\b.{0,20}comandos/],
 ] as const;
 
 function askedEquipment(mensagem: string) {
@@ -1222,7 +1238,12 @@ export function formatFocusedEquipmentReply(
       // O texto do chat não pode perder a palavra no polimento (que confere o nome na ficha).
       if (label !== "airbags") {
         // Rótulo do chat quando a palavra-chave dele está no item ("… com ABS e EBD" → "freios ABS").
-        const keyword = ({ "freios ABS": /\babs\b/, "câmera de ré": /camera/, "controle de estabilidade": /estabilidade/, "teto solar": /teto solar/, "bancos de couro": /couro/ } as Record<string, RegExp>)[label];
+        // CarPlay dentro de "Central multimídia 7\" com GPS, Apple CarPlay e Android Auto": cita o que a ficha diz.
+        if (label === "Apple CarPlay / Android Auto") {
+          const folded = normalize(item);
+          return [[/carplay/.test(folded) && "Apple CarPlay", /android auto/.test(folded) && "Android Auto", /espelhamento/.test(folded) && "espelhamento de celular"].filter(Boolean).join(" e ")];
+        }
+        const keyword = ({ "freios ABS": /\babs\b/, "câmera de ré": /camera/, "controle de estabilidade": /estabilidade|tracao/, "teto solar": /teto solar/, "bancos de couro": /couro/, "troca de marchas no volante (paddle shift)": /paddle|borboleta|aleta|marchas?/ } as Record<string, RegExp>)[label];
         const short = shortAccessory(item);
         const lower = (text: string) => /^(?:multimidia|central|camera|freios?|controle|teto|sistema|kit|tela|bolsas?|sensor(?:es)?|vidros?|bancos?|piloto|direcao|rodas?|partida|chave|ar)\b/.test(normalize(text)) ? text.replace(/^./, c => c.toLowerCase()) : text;
         // A ficha detalha o próprio item ("Sensor de estacionamento traseiro"): usa o texto dela.
@@ -1318,7 +1339,93 @@ export function formatFocusedEquipmentReply(
   if (items.length === 0) {
     return `A ficha ${desse} ${named.name} ainda não lista os opcionais. O vendedor confirma rapidinho pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
-  return `${named.cap} na ficha tem ${items.slice(0, 6).join(", ")}. O que não estiver escrito a gente não inventa — o consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  return formatFichaSummary(vehicle, stock);
+}
+
+/** Grupos do resumo da ficha ("o que ele tem?"), na ordem de exibição. */
+const FICHA_GROUPS: Array<[string, RegExp]> = [
+  ["Conforto", /\bar\b|ar[- ]?condicionado|climatiz|couro|bancos?|piloto|cruise|vidros?|travas?|retrovisor|teto|freio de estacionamento|brake hold|assento|porta-objetos|ergonom/],
+  ["Tecnologia", /multimidia|carplay|android auto|media ?nav|bluetooth|\busb\b|\bgps\b|\bsom\b|\bradio\b|\btela\b|painel|computador de bordo|keyless|chave presencial|partida (?:eletrica|no|por)|tomada|velocimetro|hdmi/],
+  ["Segurança", /air ?bags?|bolsas?|\babs\b|\bebd\b|estabilidade|tracao|camera|sensor|isofix|alarme|\bcbs\b|freios?|frenagem|pressao dos pneus|tpms|imobilizador|cintos?|trava de guidao|protecao|rampa/],
+  ["Câmbio e direção", /paddle|borboleta|marchas?|direcao|volante/],
+  ["Visual", /farol|farois|\bled\b|\bdrl\b|rodas?|lanternas?|grade|mascara|para-choques|barras? de teto/],
+];
+
+/** Rótulo curto e legível de um item da ficha para o resumo (sem cortar no meio da ideia). */
+function fichaSummaryLabel(item: string) {
+  let short = item.split(/\s*[(;:]/)[0]!.replace(/\s+/g, " ").trim();
+  if (short.length > 50) {
+    // Item longo: fica o núcleo antes do "com …" ("Freios ABS com distribuição…" → "Freios ABS").
+    const core = short.split(/\s+com\s+/i)[0]!.split(",")[0]!.trim();
+    short = core.length >= 8 ? core : short.split(",")[0]!.trim();
+    if (short.length > 50) {
+      let out = "";
+      for (const word of short.split(" ")) {
+        if ((out ? `${out} ${word}` : word).length > 44) break;
+        out = out ? `${out} ${word}` : word;
+      }
+      short = out;
+    }
+    short = short.replace(/(?:\s+(?:de|do|da|dos|das|com|em|e|para|no|na|nas|nos|\d+\S*))+$/i, "");
+  }
+  const folded = normalize(item);
+  const extra = /carplay/.test(folded) && !/carplay/.test(normalize(short)) ? " com CarPlay" : /paddle/.test(folded) && !/paddle|marchas?/.test(normalize(short)) ? " com paddle shift" : "";
+  const label = `${short}${extra}`;
+  // Minúscula no começo, menos sigla ("ABS", "ISOFIX") e nome próprio de sistema ("Media Nav").
+  return /^[A-ZÀ-Ú][a-zà-ú]/.test(label) && !/^(?:Media|Apple|Keyless|Isofix)\b/.test(label) ? label.charAt(0).toLowerCase() + label.slice(1) : label;
+}
+
+/**
+ * "O que ele tem?" na página do carro: resumo organizado dos destaques DESSA ficha.
+ * Só itens cadastrados; nada de outro carro nem do modelo em geral.
+ */
+export function formatFichaSummary(vehicle: ChatVehicleRecord, stock: ChatVehicleRecord[] = []) {
+  const moto = (vehicle.category ?? "carro") === "moto";
+  const desse = moto ? "dessa" : "desse";
+  const name = chatUnitName(vehicle, stock, true);
+  const raw = [...new Set((vehicle.accessories ?? []).map(value => value.replace(/\s+/g, " ").trim()).filter(value => value.length >= 2))];
+  if (!raw.length) {
+    return `A ficha ${desse} ${name} ainda não detalha os opcionais. O consultor confirma tudo pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  }
+  // Cada item entra no primeiro grupo que casar; no máximo 6 por grupo, para caber no celular.
+  // Borboleta/paddle vai para "Câmbio e direção" mesmo dentro de "Volante em couro com … paddle shift".
+  const gearIndex = FICHA_GROUPS.findIndex(([group]) => group === "Câmbio e direção");
+  const visualIndex = FICHA_GROUPS.findIndex(([group]) => group === "Visual");
+  const groupOf = (item: string) =>
+    /paddle|borboleta|marchas?\b.{0,30}volante/.test(normalize(item)) ? gearIndex
+      : /^(?:farol|farois)\b/.test(normalize(item)) ? visualIndex
+      : FICHA_GROUPS.findIndex(([, re]) => re.test(normalize(item)));
+  const lines: string[] = [];
+  FICHA_GROUPS.forEach(([group], index) => {
+    const labels = [...new Set(raw.filter(item => groupOf(item) === index).map(fichaSummaryLabel))].slice(0, 6);
+    if (labels.length) lines.push(`• ${group}: ${labels.join(", ")}`);
+  });
+  const rest = raw.filter(item => groupOf(item) < 0).slice(0, 3).map(fichaSummaryLabel);
+  if (rest.length) lines.push(`• Outros: ${rest.join(", ")}`);
+  const total = raw.length;
+  const intro = total >= 12
+    ? `${moto ? "A" : "O"} ${name} vem bem equipad${moto ? "a" : "o"}: são ${total} itens na ficha. Os destaques:`
+    : `Na ficha ${desse} ${name} constam:`;
+  return `${intro}\n${lines.join("\n")}\nQuer ver de perto? Agende uma visita ou fale com o consultor no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+}
+
+/** Tira "troca(r) de marcha(s)" do texto: é o câmbio/borboleta, não troca de veículo. */
+export function withoutGearShiftWords(text: string) {
+  return text.replace(/\btroca\w*\s+(?:a |as |de |da |das )?marchas?\b/gi, " ");
+}
+
+/** Pergunta geral sobre os itens do carro em tela ("o que ele tem?", "quais os opcionais dele?"). */
+export function asksForFichaSummary(mensagem: string): boolean {
+  const folded = normalize(mensagem);
+  if (askedEquipment(mensagem).length) return false;
+  // Pedido de outros carros, preço, defeito, documentos etc. não é resumo de ficha.
+  if (/\b(carros|motos|estoque|opcoes|outros?|outras?|parecid\w*|barat\w*|ate \d+|de carro|defeitos?|problemas?|ruim|revis\w*|document\w*|garantia|multas?|ipva|km|quilomet\w*|consumo|gasta|preco|valor|parcela\w*|entrada|financ\w*|cor|motor|potencia|cavalos|troca|trocar)\b/.test(folded)) return false;
+  return (
+    /\b(equipamentos?|opcionais|opcional|acessorios|itens|equipad[oa]|complet[oa]|recursos)\b/.test(folded) ||
+    /\b(?:o que|oque|que)\s+(?:mais\s+)?(?:(?:ele|ela|(?:esse|essa|este|esta|o|a)(?:\s+(?:carro|moto|veiculo))?)\s+)?(?:tem|vem|traz)\b/.test(folded) ||
+    /\b(?:o que|oque)\s+(?:mais\s+)?vem\s+n(?:ele|ela|esse|essa|este|esta)\b/.test(folded) ||
+    /\b(?:vem|tem) com o que\b|\btem o que\b/.test(folded)
+  );
 }
 
 function formatConsumptionCompare(vehicles: ChatVehicleRecord[]) {
@@ -3634,7 +3741,7 @@ export function localGarageReply(
   if (/\b(horario|atendimento|endereco|localizacao)\b/.test(text)) {
     return `A gente atende online todos os dias, das 8h às 23h — Aracruz, Vitória, Linhares, Serra e Vila Velha. Loja digital, visita combinada. Um consultor confirma o melhor jeito no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
-  if (/\btroca\b/.test(text)) {
+  if (/\btroca\b/.test(withoutGearShiftWords(text))) {
     return CHAT_TRADE_REPLY;
   }
   if (/\b(documentacao|transferencia|detran|despachante)\b/.test(text)) {

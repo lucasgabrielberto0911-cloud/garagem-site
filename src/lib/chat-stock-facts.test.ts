@@ -62,8 +62,9 @@ test("quantos km responde a frase completa do hodômetro", () => {
 test("equipamento cortado em direção é tratado como frase quebrada", () => {
   assert.equal(equipmentReplyLooksBroken("O Fox tem ar-condicionado, direção"), true);
   const complete = formatFocusedEquipmentReply(hb20, "quais os opcionais?");
-  assert.match(complete, /Direção hidráulica/);
-  assert.match(complete, /na ficha tem/);
+  // Resumo organizado da ficha (grupos), com o item inteiro.
+  assert.match(complete, /direção hidráulica/i);
+  assert.match(complete, /Na ficha desse HB20 .*constam:/);
   assert.doesNotMatch(complete, /direção$/);
 });
 
