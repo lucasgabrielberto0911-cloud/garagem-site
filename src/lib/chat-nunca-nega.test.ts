@@ -62,6 +62,12 @@ test("ficha com outro nome para o item: responde com o nome da ficha, sem palavr
   assert.doesNotMatch((await ask("o Gol tem controle de estabilidade?")).reply, NEGATIVE);
 });
 
+test("item dentro de frase longa da ficha: responde com o nome do item, não com o resto da frase", async () => {
+  const civic = await ask("o Civic 2020 tem ABS?");
+  assert.match(civic.reply, /constam freios ABS/);
+  assert.doesNotMatch(civic.reply, /freios a disco/);
+});
+
 test("ficha vazia: não nega, oferece confirmar com o vendedor", async () => {
   const palio = stock.find(v => v.id === "palio")!;
   const reply = formatFocusedEquipmentReply(palio, "tem airbag?", stock);

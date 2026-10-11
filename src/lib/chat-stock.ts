@@ -1035,7 +1035,9 @@ export function formatFocusedEquipmentReply(
       // Quando a ficha usa outro nome ("Media Nav", "teto panorâmico", "VDC"), diz o nome da ficha.
       // O texto do chat não pode perder a palavra no polimento (que confere o nome na ficha).
       if (label !== "airbags") {
-        if (normalize(item).includes(normalize(label)) || (label === "câmera de ré" && normalize(item).includes("camera"))) return [label];
+        // Rótulo do chat quando a palavra-chave dele está no item ("… com ABS e EBD" → "freios ABS").
+        const keyword = ({ "freios ABS": /\babs\b/, "câmera de ré": /camera/, "controle de estabilidade": /estabilidade/, "teto solar": /teto solar/ } as Record<string, RegExp>)[label];
+        if (normalize(item).includes(normalize(label)) || keyword?.test(normalize(item))) return [label];
         const short = shortAccessory(item);
         return [/^(?:multimidia|central|camera|freios?|controle|teto|sistema|kit|tela|bolsas?)\b/.test(normalize(short)) ? short.replace(/^./, c => c.toLowerCase()) : short];
       }
