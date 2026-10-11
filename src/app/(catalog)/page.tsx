@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HomeAssistantCta } from "@/components/site/HomeAssistantCta";
 import { Suspense } from "react";
 import { preload } from "react-dom";
 import { JsonLd } from "@/components/JsonLd";
@@ -153,6 +154,7 @@ export default async function HomePage() {
               <ButtonLink href="/estoque" size="lg" className="w-full">
                 Ver estoque
               </ButtonLink>
+              <HomeAssistantCta />
               <p className="text-center text-sm font-medium leading-none text-cream">
                 {site.whatsappLabel}
               </p>
