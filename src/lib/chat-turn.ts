@@ -123,6 +123,7 @@ import {
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 import { chatTurnMayCreateLead } from "@/lib/chat-guard";
+import { asksAboutFuel, fuelFactReply, fuelUnits } from "@/lib/chat-fuel";
 import { parseChatSearchRanges } from "@/lib/chat-search-filters";
 import { isAnaphoricVehicleFollowUp } from "@/lib/chat-text";
 import { researchChatVehicles, chatResearchTopic } from "@/lib/chat-research";
@@ -470,6 +471,20 @@ export async function runChatTurn(input: {
     return result;
   }
   const policy = mayCreateLead ? null : chatPolicyShortcut(scopedMessage);
+  // "A Biz 125 é flex?": combustível vem da ficha, resposta direta.
+  if (!mayCreateLead && !tradeTurn && asksAboutFuel(visitorMessage)) {
+    const named = singleMentionedModelPool(input.stock, visitorMessage) ?? [];
+    // "a Biz 125 é flex?" fica na BIZ 125; "a Biz é flex?" mostra as duas Biz (nada de responder só uma).
+    const writesFull = named.length > 0 && /\s/.test(named[0]!.model.trim()) && visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(named[0]!.model.toLowerCase());
+    const units = activeVehicle ? [activeVehicle] : writesFull ? named : fuelUnits(named, input.stock);
+    const reply = units.length ? fuelFactReply(visitorMessage, units) : null;
+    if (reply) {
+      emit(reply);
+      const result = finish(reply, false, { policy: "stock-fact", forcedVehicles: units.slice(0, 3) });
+      result.reply = reply;
+      return result;
+    }
+  }
   if (policy === "card") {
     emit(CHAT_CARD_REPLY);
     return finish(CHAT_CARD_REPLY, false, { policy });
@@ -608,11 +623,14 @@ export async function runChatTurn(input: {
   if (empty) {
     const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
     emit(empty);
-    return finish(empty, false, {
+    // Texto fixo: sem comparação anexada depois do "não temos agora".
+    const result = finish(empty, false, {
       policy: "waitlist",
       forcedVehicles: similar,
       cards: similar.length > 0,
     });
+    result.reply = empty;
+    return result;
   }
 
   if (
