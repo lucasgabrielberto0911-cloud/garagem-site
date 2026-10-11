@@ -27,7 +27,7 @@ test("cidade do veículo fica fora dos filtros e consultas públicos", () => {
   assert.match(browse, /STOCK_FILTER_KEYS/);
   assert.doesNotMatch(browse, /city: params\.city/);
   assert.match(where, /stockCityFilter\(filters\.city\)/);
-  assert.match(vehicles, /stock-page-v15/);
+  assert.match(vehicles, /stock-page-v16/);
   assert.doesNotMatch(filters, /Vitória/);
 });
 

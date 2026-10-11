@@ -69,6 +69,6 @@ test("estoque SSR lista cada ficha e a grade segue em lotes de 8", () => {
 
   const loader = readSrc("lib/vehicles.ts");
   assert.match(loader, /PUBLIC_SITEMAP_VEHICLE_WHERE/);
-  assert.match(loader, /stock-catalog-links-v1/);
+  assert.match(loader, /stock-catalog-links-v2/);
   assert.match(loader, /createdAt:\s*"desc"/);
 });
