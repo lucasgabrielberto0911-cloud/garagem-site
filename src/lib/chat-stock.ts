@@ -481,12 +481,23 @@ export function namedUnitForEquipment(
   return narrowed.length === 1 ? filled(narrowed[0]!) : null;
 }
 
+/** Modelos citados de verdade: "sedan" sozinho não cita o "Ka Sedan" (precisa do "Ka"). */
+function namedModelPools(stock: ChatVehicleRecord[], mensagem: string) {
+  const folded = normalize(mensagem);
+  return mentionedModelPools(stock, mensagem).filter(pool => {
+    const words = normalize(pool[0]?.model ?? "").split(/[^a-z0-9]+/).filter(Boolean);
+    if (!words.some(word => parseBodyStyleFilter(word))) return true;
+    const head = words.find(word => !parseBodyStyleFilter(word));
+    return !head || new RegExp(`(?:^|[^a-z0-9])${head}(?:$|[^a-z0-9])`).test(folded);
+  });
+}
+
 /** Um modelo citado. "HB20" também casa o HB20S: fica o modelo escrito por inteiro, se for um só. */
 function resolveNamedModelPool(stock: ChatVehicleRecord[], mensagem: string): ChatVehicleRecord[] | null {
-  const named = mentionedModelPools(stock, mensagem);
+  const folded = normalize(mensagem);
+  const named = namedModelPools(stock, mensagem);
   if (named.length === 1) return named[0]!;
   if (named.length < 2) return null;
-  const folded = normalize(mensagem);
   const whole = named.filter(pool => {
     const model = normalize(pool[0]?.model ?? "").replace(/[^a-z0-9]+/g, " ").trim();
     return model && new RegExp(`(?:^|[^a-z0-9])${model.replace(/ /g, "[^a-z0-9]*")}(?:$|[^a-z0-9])`).test(folded);
@@ -803,11 +814,11 @@ export function normalizeChatAccessories(items: string[]) {
 
 /** Opcionais que o chat confere na ficha: [rótulo, pergunta, item cadastrado]. */
 const EQUIPMENT_ITEMS = [
-  ["central multimídia", /multimidia|central|carplay|android auto/, /multimidia|carplay|android auto/],
-  ["teto solar", /teto solar/, /teto solar/],
-  ["airbags", /air ?bags?|bolsas? de ar/, /air ?bags?/],
-  ["freios ABS", /\babs\b/, /\babs\b/],
-  ["controle de estabilidade", /controle de estabilidade|\besp\b/, /controle de estabilidade|\besp\b/],
+  ["central multimídia", /multimidia|central|carplay|android auto/, /multimidia|carplay|android auto|central (?:de )?(?:midia|entretenimento)|tela (?:touch|sensivel)|media ?nav|mylink|my link|uconnect|intellilink|\bsync\b|\bgps\b/],
+  ["teto solar", /teto solar|teto panoramico|sunroof/, /teto solar|teto panoramico|teto de vidro|sunroof/],
+  ["airbags", /air ?bags?|bolsas? de ar/, /air ?bags?|bolsas? (?:de ar|inflaveis)/],
+  ["freios ABS", /\babs\b/, /\babs\b|antitravamento|anti ?bloqueio/],
+  ["controle de estabilidade", /controle de estabilidade|\besp\b/, /controle (?:eletronico )?de estabilidade|\b(?:esp|esc|vdc|vsc|vsa)\b/],
   ["câmera de ré", /cameras?/, /camera/],
 ] as const;
 
@@ -816,8 +827,9 @@ function askedEquipment(mensagem: string) {
   return EQUIPMENT_ITEMS.filter(([, question]) => question.test(folded));
 }
 
+/** Confere no texto cru da ficha: a limpeza de exibição corta "… com ABS e EBD". */
 function unitHasEquipment(vehicle: ChatVehicleRecord, data: RegExp) {
-  return normalizeChatAccessories(vehicle.accessories ?? []).some(value => data.test(normalize(value)));
+  return (vehicle.accessories ?? []).some(value => data.test(normalize(value)));
 }
 
 const pluralEquipment = (names: string[]) =>
@@ -867,7 +879,7 @@ export function equipmentAcrossStockReply(
   if (!asked.length || !asksAboutEquipment(mensagem)) return null;
   if (/\b(esse|essa|este|esta|dele|dela|nele|nela|desse|dessa|deste|desta)\b/.test(folded)) return null;
   const resolved = resolveNamedModelPool(stock, mensagem);
-  const pools = resolved ? [resolved] : mentionedModelPools(stock, mensagem);
+  const pools = resolved ? [resolved] : namedModelPools(stock, mensagem);
   const labels = asked.map(([label]) => label);
   const items = joinEquipment(labels);
   const m = pluralEquipment(labels) ? "m" : "";
@@ -893,28 +905,107 @@ export function equipmentAcrossStockReply(
     return { reply: `Temos ${units.length} ${model}: na ficha do ${names(withItem)} consta${m} ${items}; na do ${names(without)}, não aparece${m}. ${confirm}`, vehicles: [...withItem, ...without] };
   }
   if (pools.length > 1) return null;
-  // Estoque inteiro: precisa de cara de busca ("quais", "carros com", "algum") e nenhum modelo citado.
-  if (!/\b(quais|qual|que carros?|algum|alguma|carros?|modelos?|veiculos?|opcoes|estoque|motos?)\b/.test(folded)) return null;
-  // Busca com outro filtro (preço, ano, km, câmbio, carroceria): fica com a busca normal.
-  if (
+  // Estoque inteiro: cara de busca ("quais", "carros com", "algum") ou outro filtro, e nenhum modelo citado.
+  // Filtro de verdade (câmbio, preço, ano/km, carroceria); "carros"/"motos" sozinho é só a categoria.
+  const filtered =
+    parseTransmissionFilter(mensagem) != null ||
     parsePriceLimit(mensagem) != null ||
-    Object.keys(parseChatSearchRanges(mensagem)).length > 0 ||
-    /\b(automatic\w*|manual|cvt|suv|sedan|seda|hatch|picape|pickup|diesel|economic\w*|familia|barat\w*|ate)\b/.test(folded)
-  ) return null;
-  const wantsMoto = /\bmotos?\b/.test(folded);
-  const scope = stock.filter(vehicle => ((vehicle.category ?? "carro") === "moto") === wantsMoto);
-  const found = scope.filter(has).sort((a, b) => b.yearModel - a.yearModel || a.price - b.price);
-  const kind = wantsMoto ? "moto" : "carro";
-  if (!found.length) {
-    return { reply: `No estoque de agora, nenhum${wantsMoto ? "a" : ""} ${kind} tem ${items} cadastrado${m ? "s" : ""} na ficha. Se quiser, o consultor te avisa quando chegar: ${CHAT_WHATSAPP_URL}`, vehicles: [] };
+    Object.keys(equipmentRanges(mensagem)).length > 0 ||
+    parseBodyStyleFilter(mensagem) != null;
+  if (!filtered && !/\b(quais|qual|que carros?|algum|alguma|carros?|modelos?|veiculos?|opcoes|estoque|motos?)\b/.test(folded)) return null;
+  // Critério subjetivo (econômico, família, potente…) fica com a busca normal, que sabe ranquear.
+  if (/\b(economic\w*|economia|familia|potente\w*|forte\w*|espacos\w*|confortave\w*|diesel)\b/.test(folded)) return null;
+  // Ano citado que o filtro não entendeu: não arrisca ignorar o ano.
+  const yearRange = equipmentRanges(mensagem);
+  if (/\b(?:19|20)\d{2}\b/.test(folded) && yearRange.minYear == null && yearRange.maxYear == null) return null;
+  const wantsMoto = resolveChatCategory(mensagem) === "moto" || /\bmotos?\b/.test(folded);
+  const base = stock.filter(vehicle => ((vehicle.category ?? "carro") === "moto") === wantsMoto);
+  const extraYear = equipmentRanges(mensagem).minYear;
+  const scope = (filtered ? filterStockByPrice(applyChatStockFilters(base, mensagem), mensagem) : base)
+    .filter(vehicle => extraYear == null || vehicle.yearModel >= extraYear);
+  if (!scope.length) {
+    if (!filtered) return null;
+    // Nada com esses filtros: diz isso e mostra o mais perto que tem o item (mesma carroceria/câmbio, se houver).
+    const phraseEmpty = describeEquipmentScope(mensagem, wantsMoto);
+    const sameKind = filterStockByTransmission(parseBodyStyleFilter(mensagem) ? filterStockByBody(base, mensagem) : base, mensagem).filter(has);
+    const pool = (sameKind.length ? sameKind : base.filter(has)).sort((a, b) => a.price - b.price || b.yearModel - a.yearModel);
+    const near = pool[0];
+    const nearText = near
+      ? ` Com ${items} na ficha, o mais perto é ${talkName(near).labeled.split(" ")[0]} ${chatUnitName(near, base, true)} (R$ ${near.price.toLocaleString("pt-BR")}).`
+      : "";
+    return {
+      reply: `No estoque de agora não temos ${phraseEmpty.one}.${nearText} Se quiser, o consultor te avisa quando chegar: ${CHAT_WHATSAPP_URL}`,
+      vehicles: pool.slice(0, 3),
+    };
   }
-  const shown = found.slice(0, 6).map(unit => chatUnitName(unit, scope, true));
-  const rest = found.length - shown.length;
-  const count = found.length === 1 ? `1 ${kind}` : `${found.length} ${kind}s`;
-  const list = rest > 0 ? `${shown.join(", ")} e mais ${rest}` : joinEquipment(shown);
+  const found = scope.filter(has).sort((a, b) => b.yearModel - a.yearModel || a.price - b.price);
+  const phrase = describeEquipmentScope(mensagem, wantsMoto);
+  // Só nega quando a ficha de TODOS os carros do recorte foi checada (nenhuma vazia).
+  const unchecked = scope.filter(unit => !(unit.accessories ?? []).length);
+  if (!found.length && unchecked.length) {
+    return {
+      reply: `Pra ${phrase.many} com ${items}, o vendedor confirma rapidinho pelas fotos ou no WhatsApp: nem todas as fichas listam os opcionais. ${CHAT_WHATSAPP_URL}`,
+      vehicles: scope.slice(0, 3),
+    };
+  }
+  if (!found.length) {
+    if (!filtered) {
+      return { reply: `No estoque de agora, nenhum${wantsMoto ? "a" : ""} ${phrase.one} tem ${items} cadastrado${m ? "s" : ""} na ficha. Se quiser, o consultor te avisa quando chegar: ${CHAT_WHATSAPP_URL}`, vehicles: [] };
+    }
+    // Com filtro: diz o que há no filtro e mostra o mais perto que tem o item, sem esconder o estoque.
+    const near = base.filter(has).sort((a, b) => a.price - b.price || b.yearModel - a.yearModel)[0];
+    const nearText = near
+      ? ` Com ${items} na ficha, o mais perto é ${talkName(near).labeled.split(" ")[0]} ${chatUnitName(near, base, true)} (R$ ${near.price.toLocaleString("pt-BR")}).`
+      : "";
+    return {
+      reply: `${phrase.feminine ? "Nas" : "Nos"} ${phrase.many} do estoque, ${items} não aparece${m} na ficha.${nearText} ${scope.length === 1 ? `Quer ver ${phrase.feminine ? "a" : "o"} ${phrase.one} que temos?` : `Quer ver ${phrase.feminine ? "as" : "os"} ${scope.length} ${phrase.many} que temos?`}`,
+      vehicles: [...(near ? [near] : []), ...scope].slice(0, 3),
+    };
+  }
+  // Lista curta: só a contagem e os 3 cards de destaque, sem enumerar nomes.
+  const count = found.length === 1 ? `1 ${phrase.one}` : `${found.length} ${phrase.many}`;
+  const highlight = found.length === 1 ? "separei aqui pra você" : found.length <= 3 ? "separei aqui" : "separei os destaques";
   return {
-    reply: `Com ${items} na ficha, temos ${count} no estoque: ${list}. Quer que eu filtre por preço ou tamanho?`,
+    reply: `Temos ${count} com ${items} na ficha, ${highlight}. Quer que eu filtre por preço ou tipo?`,
     vehicles: found.slice(0, 3),
+  };
+}
+
+/** Faixas da busca, incluindo "2020 pra cima" / "2018 em diante", que o filtro geral não lê. */
+function equipmentRanges(mensagem: string) {
+  const ranges = { ...parseChatSearchRanges(mensagem) };
+  const up = normalize(mensagem).match(/\b((?:19|20)\d{2})\s*(?:pra cima|para cima|ou mais novos?|em diante|ou acima)\b/);
+  if (up && ranges.minYear == null) ranges.minYear = Number(up[1]);
+  return ranges;
+}
+
+/** "SUVs automáticos até R$ 60.000": o recorte da busca em palavras, no singular e no plural. */
+function describeEquipmentScope(mensagem: string, moto: boolean) {
+  const body = moto ? null : parseBodyStyleFilter(mensagem);
+  const nouns: Record<string, [string, string, boolean]> = {
+    suv: ["SUV", "SUVs", false],
+    sedan: ["sedã", "sedãs", false],
+    hatch: ["hatch", "hatches", false],
+    pickup: ["picape", "picapes", true],
+    wagon: ["perua", "peruas", true],
+  };
+  const [one, many, feminine] = body ? nouns[body]! : moto ? ["moto", "motos", true] : ["carro", "carros", false];
+  const gear = parseTransmissionFilter(mensagem);
+  const gearOne = gear === "automatico" ? (feminine ? "automática" : "automático") : gear === "manual" ? "manual" : "";
+  const gearMany = gear === "automatico" ? (feminine ? "automáticas" : "automáticos") : gear === "manual" ? "manuais" : "";
+  const extras: string[] = [];
+  const limit = parsePriceLimit(mensagem);
+  if (limit != null) extras.push(`até R$ ${limit.toLocaleString("pt-BR")}`);
+  const ranges = equipmentRanges(mensagem);
+  if (ranges.minPrice != null) extras.push(`acima de R$ ${ranges.minPrice.toLocaleString("pt-BR")}`);
+  if (ranges.minYear != null) extras.push(`a partir de ${ranges.minYear}`);
+  if (ranges.maxYear != null) extras.push(`até ${ranges.maxYear}`);
+  if (ranges.maxKm != null) extras.push(`com até ${ranges.maxKm.toLocaleString("pt-BR")} km`);
+  const tail = extras.length ? ` ${extras.join(" ")}` : "";
+  return {
+    one: `${one}${gearOne ? ` ${gearOne}` : ""}${tail}`,
+    many: `${many}${gearMany ? ` ${gearMany}` : ""}${tail}`,
+    feminine,
   };
 }
 
@@ -926,23 +1017,32 @@ export function formatFocusedEquipmentReply(
   const folded = normalize(mensagem);
   const named = { ...talkName(vehicle), name: chatUnitName(vehicle, stock) };
   const items = normalizeChatAccessories(vehicle.accessories ?? []);
+  // Presença confere no texto cru da ficha; "items" (limpo) é só para exibir.
+  const raw = (vehicle.accessories ?? []).map(value => value.trim()).filter(Boolean);
   const asked = askedEquipment(mensagem);
+  // Ficha sem opcionais listados: nada a negar; o vendedor confirma.
+  const asksAir = /ar condicionado|arcondicionado|\btem ar\b|\bar[- ]condicionado\b/.test(folded);
+  if (raw.length === 0 && (asked.length || asksAir)) {
+    return `A ficha desse ${named.name} ainda não lista os opcionais. O vendedor confirma rapidinho pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  }
   if (asked.length) {
     const listed = (names: string[]) =>
       names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} e ${names.at(-1)}`;
     // Airbags: usa o item cadastrado ("6 Air Bags", "Airbags frontais"), que traz quantidade e posição.
     const present = asked.flatMap(([label, , data]) => {
-      const item = items.find(value => data.test(normalize(value)));
+      const item = raw.find(value => data.test(normalize(value)));
       if (!item) return [];
+      // Teto: diz exatamente o que está na ficha ("teto panorâmico" não vira "teto solar").
+      if (label === "teto solar") return [shortAccessory(item).replace(/^./, c => c.toLowerCase())];
       if (label !== "airbags") return [label];
       const text = item.trim().replace(/air ?bag(s?)/i, (_, plural: string) => `airbag${plural}`);
       return [/^airbags?\b/i.test(text) ? text.replace(/^./, c => c.toLowerCase()) : text];
     });
     const absent = asked
-      .filter(([, , data]) => !items.some(value => data.test(normalize(value))))
+      .filter(([, , data]) => !raw.some(value => data.test(normalize(value))))
       .map(([label]) => label);
     // Posição pedida (laterais, cortina, frontais) que o item da ficha não cita: não afirma.
-    const airbagItem = items.find(value => /air ?bags?/.test(normalize(value)));
+    const airbagItem = raw.find(value => /air ?bags?|bolsas? (?:de ar|inflaveis)/.test(normalize(value)));
     const positions = ([
       ["frontais", /\bfronta(?:l|is)\b/],
       ["laterais", /\blatera(?:l|is)\b/],
@@ -985,10 +1085,11 @@ export function formatFocusedEquipmentReply(
       folded,
     )
   ) {
-    const has = items.some((item) => {
+    const has = raw.some((item) => {
       const key = normalize(item).replace(/\s+/g, "");
       return (
         key.includes("arcondicionado") ||
+        key.includes("climatiz") ||
         key === "ar" ||
         /\bar\b/.test(normalize(item))
       );
@@ -1014,7 +1115,7 @@ export function formatFocusedEquipmentReply(
   }
 
   if (items.length === 0) {
-    return `Na ficha d${named.labeled} não tem opcional listado. O consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `A ficha desse ${named.name} ainda não lista os opcionais. O vendedor confirma rapidinho pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   return `${named.cap} na ficha tem ${items.slice(0, 6).join(", ")}. O que não estiver escrito a gente não inventa — o consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
 }
