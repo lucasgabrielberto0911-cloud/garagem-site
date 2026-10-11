@@ -428,8 +428,10 @@ function ChatText({
   vehicleContext,
   handoff,
   research,
+  userText,
 }: {
   text: string;
+  userText?: string | null;
   vehicles?: ChatVehicleCard[];
   stockHref?: string | null;
   leadCreated?: boolean;
@@ -464,6 +466,7 @@ function ChatText({
   );
   const cta = showWhatsApp
     ? chatWhatsAppCta(text, ctaVehicle, {
+        userText: userText ?? "",
         handoff: {
           vehicles:
             vehicles.length > 0
@@ -1289,6 +1292,12 @@ export function SiteChat() {
                       leadCreated={message.leadCreated}
                       research={message.research}
                       showWhatsApp={latest && !pending}
+                      userText={
+                        messages
+                          .slice(0, index)
+                          .reverse()
+                          .find((item) => item.role === "user")?.content ?? ""
+                      }
                       vehicleContext={vehicleContext}
                       followups={
                         !pending &&

@@ -193,6 +193,58 @@ export function guardSalesTone(text: string, message: string) {
   return splitSentences(text).filter(sentence => !/\bpontos? de atencao\b|\bproblemas? cronicos?\b|\bvale (?:dar|olhar|conferir|checar)\b|\bpecas.*(?:mais caras|acima da media)\b/.test(fold(sentence))).join("").trim();
 }
 
+const FINANCE_ASKED = /financ|parcel|prestac|simula|\b\d{2}\s*x\b|\bvezes\b|cartao|\bentrada\b|\bboleto\b|pagamento|\bpagar\b|a vista/;
+const TRADE_ASKED = /\btroc|meu (?:usado|carro|veiculo|moto)/;
+
+/**
+ * Fechamento coerente com o botão: não puxa financiamento/troca que o visitante não pediu.
+ * “Se quiser ver fotos extras ou falar sobre financiamento, o consultor…” → “Se quiser ver fotos extras, o consultor…”.
+ */
+export function guardUnaskedOffers(text: string, message: string) {
+  const asked = fold(message);
+  const drop: string[] = [];
+  if (!FINANCE_ASKED.test(asked)) drop.push("financiamento", "financiar", "parcelas?", "simula(?:r|cao)(?: d[ae]s? parcelas?)?");
+  if (!TRADE_ASKED.test(asked)) drop.push("troca(?! de (?:oleo|correia|pneus?|bateria))", "avalia(?:r|cao) (?:da|de) troca");
+  if (!drop.length || !text.trim()) return text;
+  const topic = `(?:${drop.join("|")})`;
+  const verb = "(?:(?:falar|conversar|saber|ver|tratar|combinar|fazer|simular|montar|tirar duvidas?)(?: (?:sobre|de|do|da|das|dos|uma|a|o|as|os))?(?: (?:o|a|as|os|um|uma))? )?";
+  const clause = new RegExp(`(?:,\\s*|\\s+(?:ou|e)\\s+)${verb}${topic}\\b`, "g");
+  const lead = new RegExp(`\\b${verb}${topic}\\s+(?:ou|e)\\s+`, "g");
+  const parts = splitSentences(text).map((sentence) => {
+    const folded = fold(sentence);
+    if (!/whatsapp|consultor|vendedor/.test(folded)) return sentence;
+    const mapped = stripAccentsKeepLength(sentence);
+    let out = "";
+    let last = 0;
+    const cuts: Array<[number, number]> = [];
+    for (const re of [clause, lead]) {
+      re.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(mapped))) cuts.push([m.index, m.index + m[0].length]);
+    }
+    if (!cuts.length && !new RegExp(`\\b${topic}\\b`).test(mapped)) return sentence;
+    cuts.sort((a, b) => a[0] - b[0]);
+    for (const [start, end] of cuts) {
+      if (start < last) continue;
+      out += sentence.slice(last, start);
+      last = end;
+    }
+    out += sentence.slice(last);
+    // Sobrou o assunto não pedido? Vira um convite neutro, mantendo o link.
+    if (new RegExp(`\\b${topic}\\b`).test(stripAccentsKeepLength(out))) {
+      const url = /https?:\/\/\S+/.exec(sentence)?.[0]?.replace(/[.,;!?]+$/, "");
+      const space = /^\s*/.exec(sentence)?.[0] ?? "";
+      return `${space}Qualquer dúvida, o consultor te atende no WhatsApp${url ? `: ${url}` : "."}`;
+    }
+    return out.replace(/[ \t]{2,}/g, " ");
+  });
+  return parts.join("").replace(/[ \t]{2,}/g, " ").replace(/\s+\n/g, "\n").trim();
+}
+
+function stripAccentsKeepLength(value: string) {
+  return [...value].map((ch) => ch.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().charAt(0) || ch).join("");
+}
+
 /** Tudo que se aplica ao texto do modelo de linguagem antes de chegar ao visitante. */
 export function guardLlmReply(
   text: string,

@@ -413,6 +413,7 @@ export function formatVehicleWhatsAppMessage(input: {
   path?: string;
   isMoto?: boolean;
   intent?: VehicleWhatsAppIntent;
+  topic?: string | null;
   /** Ignorado: o pré-preenchido usa o wordmark “Garagem”. */
   siteName?: string;
   origin?: string;
@@ -430,6 +431,7 @@ export function formatVehicleWhatsAppMessage(input: {
     priceLabel,
     isMoto: input.isMoto,
     sold: input.status === "vendido",
+    topic: input.topic,
   });
 
   const lines = [line];
