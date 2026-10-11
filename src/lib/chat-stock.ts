@@ -2915,9 +2915,13 @@ export function emptyFilterReply(
   const wait = `Se quiser, o consultor anota e te avisa no WhatsApp quando chegar: ${chatWaitlistWhatsAppUrl(mensagem)}`;
   // "Tem picape?": recorte só de carroceria — fala direto, sem "Nessa combinação (carro pickup)".
   const body = parseBodyStyleFilter(mensagem);
-  if (body && parsePriceLimit(mensagem) == null && !parseTransmissionFilter(mensagem) && Object.keys(parseChatSearchRanges(mensagem)).length === 0) {
-    const label = { pickup: "Picape", wagon: "Perua", suv: "SUV", sedan: "Sedan", hatch: "Hatch" }[body];
-    const alt = body === "pickup" && similar.some((vehicle) => vehicleBodyStyle(vehicle) === "suv") ? "separei os SUVs, que são os mais parecidos" : "separei os mais parecidos que temos";
+  if (body && !parseTransmissionFilter(mensagem) && Object.keys(parseChatSearchRanges(mensagem)).length === 0) {
+    const limit = parsePriceLimit(mensagem);
+    const ceiling = limit != null ? ` até ${formatChatPrice(limit)}` : "";
+    const label = `${{ pickup: "Picape", wagon: "Perua", suv: "SUV", sedan: "Sedan", hatch: "Hatch" }[body]}${ceiling}`;
+    const alt = body === "pickup" && similar.length && similar.every((vehicle) => vehicleBodyStyle(vehicle) === "suv")
+      ? `separei ${similar.length === 1 ? "o SUV" : "os SUVs"}${ceiling ? " nessa faixa" : ""}, ${similar.length === 1 ? "o mais parecido" : "os mais parecidos"}`
+      : similar.length === 1 ? "separei o mais parecido que temos" : "separei os mais parecidos que temos";
     return similar.length
       ? `${label} não temos agora; ${alt}. ${wait}`
       : `${label} não temos agora. ${wait}`;

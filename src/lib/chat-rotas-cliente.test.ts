@@ -239,3 +239,29 @@ test("estrada com teto de preço: os mais fortes do recorte primeiro", async () 
   const turn = await ask5("preciso de um carro pra pegar estrada todo fim de semana, até 60 mil");
   assert.equal(turn.vehicles[0]?.id, "duster");
 });
+
+const stock6 = [
+  ...stock,
+  car("biz110", "Honda", "BIZ", "110i", 2023, 15200, { category: "moto", fuel: "Gasolina", engine: "110" }),
+  car("kicks6", "Nissan", "Kicks", "SL 1.6", 2019, 86900, { transmission: "Automático", engine: "1.6" }),
+  car("lancer", "Mitsubishi", "Lancer", "2.0", 2014, 62900, { transmission: "Automático", engine: "2.0", fuel: "Gasolina" }),
+];
+const ask6 = (mensagem: string) =>
+  runChatTurn({ mensagem, historico: [], stock: stock6, readIntent: async () => null, generate: noModel });
+
+test("combustível pela ficha: resposta direta, sem lista", async () => {
+  assert.equal((await ask6("a Biz 125 é flex?")).reply, "Sim, a BIZ 125 é flex (gasolina e etanol).");
+  assert.equal((await ask6("o Lancer é flex?")).reply, "O Lancer é a gasolina, conforme a ficha.");
+  const both = await ask6("a Biz aceita etanol?");
+  assert.match(both.reply, /BIZ 125 2023 é flex.*BIZ 2023 é a gasolina/);
+  assert.equal(both.vehicles.length, 2);
+});
+
+test("picape: texto direto, sem sobra de comparação, também com teto de preço", async () => {
+  const plain = await ask6("tem pickup?");
+  assert.match(plain.reply, /^Picape não temos agora; separei/);
+  assert.doesNotMatch(plain.reply, /mais em conta|Nessa combinação/);
+  const ceiling = await ask6("tem picape até 80 mil?");
+  assert.match(ceiling.reply, /^Picape até R\$ 80\.000 não temos agora; separei/);
+  assert.doesNotMatch(ceiling.reply, /Nessa combinação/);
+});
