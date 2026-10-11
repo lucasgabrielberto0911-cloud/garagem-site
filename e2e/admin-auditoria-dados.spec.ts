@@ -5,8 +5,11 @@ import { WANTED_LEAD_SOURCE } from "../src/lib/leads";
 import { PrismaClient } from "@prisma/client";
 
 const database = new URL(process.env.DATABASE_URL || "postgresql://invalid/");
-if (database.port !== "5544" || database.pathname !== "/garagem_e2e" || !["localhost", "127.0.0.1"].includes(database.hostname)) throw new Error("Use apenas o banco local da auditoria.");
-if (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.JEV_API_KEY) throw new Error("Desligue Storage e Jev externos para esta auditoria.");
+// Depende das fixtures do seed da auditoria (banco local garagem_e2e na porta 5544).
+// No CI (banco `ci`) o arquivo é pulado em vez de derrubar a suíte inteira.
+const auditDatabase = database.port === "5544" && database.pathname === "/garagem_e2e" && ["localhost", "127.0.0.1"].includes(database.hostname);
+if (auditDatabase && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.JEV_API_KEY)) throw new Error("Desligue Storage e Jev externos para esta auditoria.");
+test.skip(!auditDatabase, "Requer o banco local da auditoria com o seed do admin.");
 const prisma = new PrismaClient();
 const vehicleId = "cmubrhzwf0000l304geveibp1";
 
