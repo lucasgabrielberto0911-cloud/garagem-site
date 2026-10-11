@@ -161,3 +161,35 @@ test("'qual o melhor carro?' mostra os mais novos, não os mais baratos", async 
   const turn = await ask("qual o melhor carro de vcs?");
   assert.equal(turn.vehicles[0]?.model, "Mobi");
 });
+
+test("troca + busca: aceita a troca e busca sem o carro do visitante", async () => {
+  const turn = await ask("oi, quero trocar meu Gol 2010 num carro automático até 70 mil");
+  assert.match(turn.reply, /^Aceitamos sim: o seu usado entra na conta/);
+  assert.ok(turn.vehicles.length > 0);
+  assert.ok(turn.vehicles.every((v) => v.model !== "Gol"));
+});
+
+test("orçamento sem carro na faixa: diz o carro mais em conta e mostra motos que cabem", async () => {
+  const turn = await ask("tô sem grana, tem algo até 20 mil?");
+  assert.match(turn.reply, /^Carro até R\$ 20\.000 não temos agora; o mais em conta é o Palio 2008 \(R\$ 24\.900\)\. Moto até esse valor temos 2/);
+  assert.deepEqual(turn.vehicles.map((v) => v.model), ["BIZ 125", "CG 160 Start"]);
+});
+
+test("cidade: área de atendimento, não modelo", async () => {
+  const turn = await ask("boa noite, tem algum carro em Aracruz?");
+  assert.match(turn.reply, /^Atendemos Aracruz e região sim!/);
+  assert.doesNotMatch(turn.reply, /não está na lista/);
+});
+
+test("'o mais barato automático com câmera': ordena, não corta o recorte (nunca nega)", async () => {
+  const withCams = [
+    car("ka", "Ford", "KA SEDAN", "SE 1.5", 2019, 49990, { transmission: "Automático", accessories: ["Airbag duplo"] }),
+    car("duster", "Renault", "Duster", "2.0", 2014, 54900, { transmission: "Automático", accessories: ["Freios ABS"] }),
+    car("hb", "Hyundai", "HB20", "1.6", 2015, 56900, { transmission: "Automático", accessories: ["ABS"] }),
+    car("civic", "Honda", "Civic", "LXR", 2015, 74900, { transmission: "Automático", accessories: ["Câmera de ré"] }),
+    car("kicks", "Nissan", "Kicks", "SL", 2019, 86900, { transmission: "Automático", accessories: ["Camera 360"] }),
+  ];
+  const turn = await runChatTurn({ mensagem: "qual o mais barato automático com câmera?", historico: [], stock: withCams, readIntent: async () => null, generate: noModel });
+  assert.doesNotMatch(turn.reply, /não aparece|não consta|nenhum/);
+  assert.equal(turn.vehicles[0]?.model, "Civic");
+});
