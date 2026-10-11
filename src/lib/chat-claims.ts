@@ -200,5 +200,38 @@ export function guardLlmReply(
   scope: ChatVehicleRecord[] = [],
   verifiedSeries = "",
 ): string {
-  return guardEquipmentClaims(guardUnitClaims(fixVehicleBrands(text, stock)), scope, verifiedSeries);
+  return guardNegativeEquipmentClaims(
+    guardEquipmentClaims(guardUnitClaims(fixVehicleBrands(text, stock)), scope, verifiedSeries),
+    [...scope, ...stock],
+  );
+}
+
+export const NEGATIVE_EQUIPMENT_REPLACEMENT =
+  "Esse item o vendedor confirma rapidinho pelas fotos ou no WhatsApp, pra eu não te passar informação errada.";
+
+/**
+ * Regra da loja: nunca negar um opcional que algum carro do estoque tem na ficha.
+ * Frase com negação ("não temos", "nenhum", "sem", "não tem") + opcional que consta na ficha
+ * de algum carro em jogo vira a frase de confirmação com o vendedor.
+ */
+export function guardNegativeEquipmentClaims(text: string, vehicles: ChatVehicleRecord[] = []): string {
+  if (!text.trim() || !vehicles.length) return text;
+  const compact = (value: string) => fold(value).replace(/[^a-z0-9]+/g, "");
+  const fichas = vehicles.map(vehicle => compact((vehicle.accessories ?? []).join(" ")));
+  let replaced = false;
+  const parts = splitSentences(text).map((sentence) => {
+    const folded = fold(sentence);
+    if (!/\b(?:nao|nenhum|nenhuma|sem|nem)\b/.test(folded)) return sentence;
+    const terms = [...folded.matchAll(new RegExp(`${SAFETY_TERMS.source}|${EQUIPMENT_TERMS.source}|air bags?`, "g"))].map(match => match[0]!);
+    const contradicts = terms.some(term => {
+      const key = compact(term).replace(/s$/, "");
+      return key.length >= 3 && fichas.some(ficha => ficha.includes(key));
+    });
+    if (!contradicts) return sentence;
+    if (replaced) return "";
+    replaced = true;
+    return `${/^\s*/.exec(sentence)?.[0] ?? ""}${NEGATIVE_EQUIPMENT_REPLACEMENT}`;
+  });
+  if (!replaced) return text;
+  return parts.join("").replace(/[ \t]{2,}/g, " ").replace(/\s+\n/g, "\n").trim();
 }

@@ -174,7 +174,8 @@ test("'quais carros têm airbag?' lista as unidades com o item na ficha; dois ig
   const ask = (mensagem: string) => runChatTurn({ mensagem, historico: [], stock: fichaStock, readIntent: noReading, generate: async () => { throw new Error("não deveria gerar"); } });
   const list = await ask("quais carros têm airbag?");
   assert.equal(list.meta?.policy, "stock-equipment");
-  assert.match(list.reply, /Com airbags na ficha, temos 2 carros no estoque: Civic EXL 2020 e City 2018\./);
+  assert.match(list.reply, /^Temos 2 carros com airbags na ficha, separei aqui\. Quer que eu filtre por preço ou tipo\?$/);
+  assert.doesNotMatch(list.reply, /Civic|City/);
   assert.deepEqual(list.vehicles.map(v => v.id), ["v2", "c"]);
   const none = await ask("algum carro com teto solar?");
   assert.match(none.reply, /nenhum carro tem teto solar cadastrado na ficha/);
