@@ -878,13 +878,13 @@ export function SalesManager({
                   <div className="flex items-start justify-between gap-3 p-4 pb-3">
                     <div className="min-w-0">
                       {sale.vehicle.historical ? (
-                        <p className="font-display text-sm font-semibold text-cream">
+                        <p className="font-display text-base font-semibold text-cream">
                           {sale.vehicle.brand} {sale.vehicle.model}
                         </p>
                       ) : (
                         <Link
                           href={`/admin/veiculos/${sale.vehicle.id}?view=operacao`}
-                          className="font-display text-sm font-semibold text-cream"
+                          className="-my-2 inline-flex min-h-[44px] items-center font-display text-base font-semibold text-cream"
                         >
                           {sale.vehicle.brand} {sale.vehicle.model}
                         </Link>
