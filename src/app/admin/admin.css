@@ -1,0 +1,45 @@
+@config "../../../tailwind.admin.config.ts";
+@tailwind utilities;
+
+@layer utilities {
+  /* Folga do conteúdo acima da bottom nav do admin. */
+  .pb-admin-nav {
+    padding-bottom: calc(var(--admin-nav-h) + 1rem);
+  }
+
+  @media (min-width: 1024px) {
+    .pb-admin-nav {
+      padding-bottom: 2rem;
+    }
+  }
+
+  .bottom-admin-nav {
+    bottom: var(--admin-nav-h);
+  }
+
+  /* Âncora abaixo do notch (celular) ou do menu de seções fixo (desktop). */
+  .scroll-mt-admin-form {
+    scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  }
+
+  @media (min-width: 1024px) {
+    .scroll-mt-admin-form {
+      scroll-margin-top: 4.5rem;
+    }
+  }
+}
+
+/*
+ * Repete as regras de foco do globals.css. Elas precisam vir DEPOIS dos
+ * utilitários (como no CSS único de antes): sem isso, `outline-none` deste
+ * arquivo passa a vencer o anel de foco global nos campos do painel.
+ */
+:focus-visible {
+  outline: 2px solid #e8181c;
+  outline-offset: 3px;
+}
+
+a:focus:not(:focus-visible),
+button:focus:not(:focus-visible) {
+  outline: none;
+}
