@@ -54,7 +54,7 @@ export function FormSection({
                   {title}
                 </span>
                 {errorCount > 0 ? (
-                  <span className="bg-brand px-1.5 py-0.5 font-display text-[10px] font-bold text-cream">
+                  <span className="bg-brand px-1.5 py-0.5 font-display text-xs font-bold text-cream">
                     {errorCount === 1 ? "1 erro" : `${errorCount} erros`}
                   </span>
                 ) : null}

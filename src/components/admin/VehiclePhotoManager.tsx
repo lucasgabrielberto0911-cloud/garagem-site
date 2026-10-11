@@ -573,7 +573,7 @@ export function VehiclePhotoManager({
             automaticamente para envio. A foto aparece assim que o
             envio termina. A placa é borrada somente na área que você marcar.
           </p>
-          <p className="mt-2 hidden text-[11px] text-muted/80 sm:block">
+          <p className="mt-2 hidden text-xs text-muted/80 sm:block">
             Espere o envio ou o borrão terminar antes de salvar o anúncio.
           </p>
           <input
@@ -634,7 +634,7 @@ export function VehiclePhotoManager({
                   key={job.id}
                   className="flex items-center justify-between gap-2"
                 >
-                  <span className="min-w-0 text-brand leading-relaxed">
+                  <span className="min-w-0 text-red-400 leading-relaxed">
                     {job.name}
                     {job.error ? ` — ${job.error}` : ""}
                   </span>
@@ -646,7 +646,7 @@ export function VehiclePhotoManager({
                           jobs.filter((item) => item.id === job.id),
                         )
                       }
-                      className="shrink-0 text-[11px] uppercase tracking-wider text-cream underline-offset-2 hover:underline"
+                      className="shrink-0 text-xs uppercase tracking-wider text-cream underline-offset-2 hover:underline"
                     >
                       Reenviar
                     </button>
@@ -771,13 +771,13 @@ export function VehiclePhotoManager({
 
                   <span className="absolute left-1.5 top-1.5 flex items-center gap-1 bg-asphalt/80 px-1.5 py-1 text-cream backdrop-blur">
                     <IconGrip className="hidden h-3.5 w-3.5 text-muted lg:block" />
-                    <span className="font-display text-[10px] font-semibold tabular-nums">
+                    <span className="font-display text-xs font-semibold tabular-nums">
                       {index + 1}
                     </span>
                   </span>
 
                   {index === 0 ? (
-                    <span className="absolute right-1.5 top-1.5 bg-brand px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-cream">
+                    <span className="absolute right-1.5 top-1.5 bg-brand px-2 py-0.5 font-display text-xs font-semibold uppercase tracking-wider text-cream">
                       Capa
                     </span>
                   ) : null}
@@ -791,7 +791,7 @@ export function VehiclePhotoManager({
                         event.stopPropagation();
                         setEditingId(photo.id);
                       }}
-                      className="min-h-11 min-w-0 flex-1 px-1.5 text-center font-display text-[10px] font-semibold uppercase tracking-wider text-cream touch-manipulation disabled:opacity-60"
+                      className="min-h-11 min-w-0 flex-1 px-1.5 text-center font-display text-xs font-semibold uppercase tracking-wider text-cream touch-manipulation disabled:opacity-60"
                       title="Marcar a placa com um retângulo e borrar só essa área"
                     >
                       {blurring && editingId === photo.id
@@ -827,7 +827,7 @@ export function VehiclePhotoManager({
                         event.stopPropagation();
                         setEditingId(photo.id);
                       }}
-                      className="min-h-11 flex-1 bg-asphalt/90 px-1.5 text-center font-display text-[10px] font-semibold uppercase tracking-wider text-cream touch-manipulation disabled:opacity-80"
+                      className="min-h-11 flex-1 bg-asphalt/90 px-1.5 text-center font-display text-xs font-semibold uppercase tracking-wider text-cream touch-manipulation disabled:opacity-80"
                       title="Marcar a placa com um retângulo e borrar só essa área"
                     >
                       {blurring && editingId === photo.id
@@ -851,7 +851,7 @@ export function VehiclePhotoManager({
                       aria-label={`Baixar foto ${index + 1} em JPG de alta qualidade`}
                     >
                       <IconDownload className="h-4 w-4" />
-                      <span className="font-display text-[10px] font-semibold uppercase tracking-wider">
+                      <span className="font-display text-xs font-semibold uppercase tracking-wider">
                         {downloadId === photo.id ? "…" : "Alta"}
                       </span>
                     </button>
@@ -1047,7 +1047,7 @@ function PhotoAction({
       onMouseDown={(event) => event.stopPropagation()}
       className={`inline-flex h-11 w-11 items-center justify-center transition disabled:opacity-30 touch-manipulation ${
         danger
-          ? "text-brand hover:bg-brand/20 hover:text-cream"
+          ? "text-red-400 hover:bg-brand/20 hover:text-cream"
           : "text-cream/80 hover:bg-white/10 hover:text-cream"
       }`}
     >

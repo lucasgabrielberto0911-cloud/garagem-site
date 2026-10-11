@@ -373,7 +373,7 @@ export function VehicleOpsPanel({
       <Card
         title="Checklist interno"
         action={
-          <span className="text-[11px] text-muted" aria-live="polite">
+          <span className="text-xs text-muted" aria-live="polite">
             {opsPending ? "Salvando…" : opsNote}
           </span>
         }
@@ -638,7 +638,7 @@ export function VehicleOpsPanel({
                           label: costListTitle(cost.kind, cost.description),
                         })
                       }
-                      className={`${iconTap} text-brand hover:text-cream`}
+                      className={`${iconTap} text-red-400 hover:text-cream`}
                       aria-label="Remover custo"
                     >
                       <IconTrash className="h-4 w-4" />
@@ -811,7 +811,7 @@ export function VehicleOpsPanel({
                       label: docListTitle(doc.kind, doc.title),
                     })
                   }
-                  className={`${iconTap} text-brand hover:text-cream`}
+                  className={`${iconTap} text-red-400 hover:text-cream`}
                   aria-label="Remover documento"
                 >
                   <IconTrash className="h-4 w-4" />
@@ -887,11 +887,11 @@ function MiniStat({
     tone === "good"
       ? "text-emerald-300"
       : tone === "bad"
-        ? "text-brand"
+        ? "text-red-400"
         : "text-cream";
   return (
     <div className="flex min-w-0 items-center justify-between gap-3 border border-white/10 px-3 py-2.5 min-[440px]:block">
-      <p className="text-[10px] uppercase tracking-wider text-muted">{label}</p>
+      <p className="text-xs uppercase tracking-wider text-muted">{label}</p>
       <p
         title={value}
         className={`break-words font-display text-sm font-semibold tabular-nums min-[440px]:mt-1 ${color}`}

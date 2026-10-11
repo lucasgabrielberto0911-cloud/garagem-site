@@ -403,7 +403,7 @@ export function FipeLookup({
 
       {plateResult?.versions.length ? (
         <div className="space-y-2">
-          <p className="text-[11px] uppercase tracking-wider text-muted">
+          <p className="text-xs uppercase tracking-wider text-muted">
             Versões FIPE da placa
           </p>
           <div className="max-h-56 space-y-2 overflow-y-auto">
@@ -443,7 +443,7 @@ export function FipeLookup({
       <div className="border-t border-white/10 pt-4">
         {catalogOpen ? (
           <>
-        <p className="mb-3 text-[11px] uppercase tracking-wider text-muted">
+        <p className="mb-3 text-xs uppercase tracking-wider text-muted">
           Ou busque por marca / modelo / ano
         </p>
 
@@ -542,7 +542,7 @@ export function FipeLookup({
       {referencePrice != null && referencePrice > 0 ? (
         <p className="text-sm text-cream" data-testid="fipe-reference-inline">
           Referência FIPE:{" "}
-          <span className="font-semibold text-brand">
+          <span className="font-semibold text-red-400">
             {formatCurrencyBRL(referencePrice)}
           </span>
         </p>

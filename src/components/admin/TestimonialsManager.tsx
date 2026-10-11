@@ -347,7 +347,7 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                         current ? { ...current, photoUrl: "" } : current,
                       )
                     }
-                    className="text-xs text-brand underline-offset-4 hover:underline"
+                    className="text-xs text-red-400 underline-offset-4 hover:underline"
                   >
                     Remover foto
                   </button>
@@ -418,7 +418,7 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                         className="object-cover"
                       />
                     ) : (
-                      <span className="flex h-full w-full items-center justify-center font-display text-sm font-semibold text-brand">
+                      <span className="flex h-full w-full items-center justify-center font-display text-sm font-semibold text-red-400">
                         {item.name.charAt(0).toUpperCase()}
                       </span>
                     )}
@@ -468,7 +468,7 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                 <button
                   type="button"
                   onClick={() => setDeleteTarget(item)}
-                  className={`${mobileActionCell} border-l border-white/10 text-brand`}
+                  className={`${mobileActionCell} border-l border-white/10 text-red-400`}
                   aria-label="Excluir depoimento"
                   title="Excluir"
                 >

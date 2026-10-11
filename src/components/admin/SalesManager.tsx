@@ -905,10 +905,10 @@ export function SalesManager({
                       </p>
                       {finance ? (
                         <p
-                          className={`text-[11px] ${
+                          className={`text-xs ${
                             finance.margin >= 0
                               ? "text-emerald-300"
-                              : "text-brand"
+                              : "text-red-400"
                           }`}
                         >
                           {formatCurrencyBRL(finance.margin)}
@@ -969,7 +969,7 @@ export function SalesManager({
                     <button
                       type="button"
                       onClick={() => setCancelTarget(sale)}
-                      className={`${mobileActionCell} border-l border-white/10 text-brand`}
+                      className={`${mobileActionCell} border-l border-white/10 text-red-400`}
                       aria-label="Cancelar venda"
                     >
                       <IconTrash className="h-4 w-4" />
@@ -1057,10 +1057,10 @@ export function SalesManager({
                         {formatCurrencyBRL(sale.salePrice)}
                         {finance ? (
                           <p
-                            className={`text-[11px] font-normal ${
+                            className={`text-xs font-normal ${
                               finance.margin >= 0
                                 ? "text-emerald-300"
-                                : "text-brand"
+                                : "text-red-400"
                             }`}
                           >
                             {formatCurrencyBRL(finance.margin)}
@@ -1093,7 +1093,7 @@ export function SalesManager({
                           <button
                             type="button"
                             onClick={() => setCancelTarget(sale)}
-                            className="p-2 text-brand transition hover:text-cream"
+                            className="p-2 text-red-400 transition hover:text-cream"
                             aria-label="Cancelar venda"
                             title="Cancelar venda"
                           >

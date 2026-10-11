@@ -10,7 +10,7 @@ export function VehicleFormPreview({ children, price }: { children: ReactNode; p
       <details className="border border-white/10 bg-ink/50 sm:hidden">
         <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
           <span className="min-w-0 text-sm font-semibold text-cream">Conferir anúncio <span aria-hidden="true">⌄</span></span>
-          <span className="shrink-0 text-sm font-semibold text-brand">{price}</span>
+          <span className="shrink-0 text-sm font-semibold text-red-400">{price}</span>
         </summary>
         <div className="border-t border-white/10 p-3" aria-label="Conferência do anúncio">
           {children}
