@@ -59,6 +59,9 @@ import {
   CHAT_ORIGIN_REPLY,
   CHAT_SELL_REPLY,
   CHAT_DEBTS_REPLY,
+  CHAT_CASH_REPLY,
+  CHAT_DELIVERY_REPLY,
+  CHAT_CONSORTIUM_REPLY,
   CHAT_VISIT_REPLY,
   CHAT_ADDRESS_REPLY,
   CHAT_TRADE_VALUE_REPLY,
@@ -411,6 +414,40 @@ export async function runChatTurn(input: {
     !mayCreateLead && !humanAction && !tradeTurn && !activeVehicle
       ? equipmentAcrossStockReply(input.stock, visitorMessage)
       : null;
+  // "tem câmera?" sem carro citado, depois de uma lista: o carro único da última resposta, ou o recorte da conversa.
+  if (
+    !acrossStock &&
+    !mayCreateLead &&
+    !humanAction &&
+    !tradeTurn &&
+    !activeVehicle &&
+    !equipmentVehicle &&
+    asksAboutEquipment(visitorMessage) &&
+    !singleMentionedModelPool(input.stock, visitorMessage)
+  ) {
+    const lastReply = [...input.historico].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
+    const shown = input.stock.filter((vehicle) =>
+      lastReply.includes(`${vehicle.brand} ${vehicle.model}`) && lastReply.includes(String(vehicle.yearModel)),
+    );
+    if (shown.length === 1 && (shown[0]!.accessories ?? []).length) {
+      const reply = formatFocusedEquipmentReply(shown[0]!, visitorMessage, input.stock);
+      emit(reply);
+      return finish(reply, false, { policy: "stock-fact", forcedVehicles: [shown[0]!] });
+    }
+    // Recorte lembrado da conversa (SUV, até 60 mil, automático) + o opcional de agora.
+    const remembered = scopeChatMessage("quais carros", input.historico, input.stock);
+    const inScope = equipmentAcrossStockReply(input.stock, `${remembered} com ${visitorMessage}`);
+    if (inScope) {
+      emit(inScope.reply);
+      const result = finish(inScope.reply, false, {
+        policy: "stock-equipment",
+        forcedVehicles: inScope.vehicles,
+        cards: inScope.vehicles.length > 0,
+      });
+      result.reply = inScope.reply;
+      return result;
+    }
+  }
   if (acrossStock) {
     emit(acrossStock.reply);
     const result = finish(acrossStock.reply, false, {
@@ -456,8 +493,8 @@ export async function runChatTurn(input: {
     emit(reply);
     return finish(reply, false, { policy, cards: false });
   }
-  if (policy === "sell" || policy === "debts") {
-    const reply = policy === "sell" ? CHAT_SELL_REPLY : CHAT_DEBTS_REPLY;
+  if (policy === "sell" || policy === "debts" || policy === "cash" || policy === "delivery" || policy === "consortium") {
+    const reply = { sell: CHAT_SELL_REPLY, debts: CHAT_DEBTS_REPLY, cash: CHAT_CASH_REPLY, delivery: CHAT_DELIVERY_REPLY, consortium: CHAT_CONSORTIUM_REPLY }[policy];
     emit(reply);
     return finish(reply, false, { policy, cards: false });
   }

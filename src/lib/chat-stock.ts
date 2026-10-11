@@ -2772,7 +2772,10 @@ export function searchChatInventory(
   );
   if (brands.length)
     pool = pool.filter((v) => brands.includes(normalize(v.brand)));
-  const order = chatSearchOrder(message);
+  // "Qual o melhor carro?" / "qual vocês recomendam?": os mais novos do recorte, não os mais baratos.
+  const wantsBest = /\b(qual (?:e |eh )?o melhor|melhor(?:es)? carros?|melhores|recomendam|recomenda|indicam|indica|top)\b/.test(normalize(message)) &&
+    (chatRankMode(message) === "default" || chatRankMode(message) === "price") && mentionedModelGroups(stock, message).size === 0;
+  const order = chatSearchOrder(message) ?? (wantsBest ? "year" : null);
   const bySpec = (rows: ChatVehicleRecord[]) => {
     // Com ficha de todos, "mais forte" vira cv de catálogo (um turbo 1.0 pode passar um 1.6).
     const specs = rows.map((v) => findVehicleSpec(v));
@@ -3013,6 +3016,15 @@ export const CHAT_SELL_REPLY =
 export const CHAT_DEBTS_REPLY =
   `Multas, IPVA e débitos de cada carro não ficam no anúncio: o consultor confirma a situação do documento no WhatsApp antes de você fechar, junto com a transferência. ${CHAT_WHATSAPP_URL}`;
 
+export const CHAT_CASH_REPLY =
+  `À vista dá sim; a forma de pagamento e a condição o consultor combina com você no WhatsApp, com o carro escolhido. Também dá pra financiar em até 60 vezes, no cartão em até 18 vezes, e o seu usado entra na conta. ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_DELIVERY_REPLY =
+  `Entrega ou retirada a gente combina com o consultor no WhatsApp, junto com a proposta, tudo claro antes de fechar. Atendemos Aracruz, Vitória, Linhares, Serra, Vila Velha e região. ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_CONSORTIUM_REPLY =
+  `Carta de consórcio o consultor confirma no WhatsApp se dá pra usar no seu caso. Na loja: financiamento em até 60 vezes, cartão em até 18 vezes, à vista e troca. ${CHAT_WHATSAPP_URL}`;
+
 export const CHAT_DOCS_REPLY =
   `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
 
@@ -3071,8 +3083,18 @@ export function formatTransmissionCompareReply(
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(
   mensagem: string,
-): "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | null {
+): "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
   const folded = normalize(mensagem);
+  // Consórcio: a loja não tem regra publicada; o consultor confirma (nada de "aceita" ou "não aceita").
+  if (/\b(consorcio|carta de credito|carta contemplada)\b/.test(folded)) return "consortium";
+  // Desconto / à vista: sem prometer desconto.
+  if (/\b(desconto|descontos|a vista|avista|pix)\b/.test(folded) && !/\b(financi\w*|parcela\w*|cartao|troca\w*)\b/.test(folded)) {
+    return "cash";
+  }
+  // Frete / entrega: combinado com o consultor, sem inventar taxa (nem "sem frete").
+  if (/\b(frete|entrega|entregam|entregar|leva(?:m)? o carro|levar o carro|manda(?:m)? o carro)\b/.test(folded) && !/\b(entrada)\b/.test(folded)) {
+    return "delivery";
+  }
   // "Vocês compram carro?" / "quero vender meu carro": compramos usado (página inicial).
   if (/\b(?:voces|vcs|ces) compram\b|\bcompram (?:meu|minha|carros?|motos?|usados?)\b|\b(?:quero|queria|gostaria de|posso) vender (?:o |a )?(?:meu|minha)\b|\bvender (?:meu|minha) (?:carro|moto)\b/.test(folded)) {
     return "sell";
@@ -3153,6 +3175,8 @@ export function seeksMissingNamedModel(
   if (POLICY_SEEK.test(folded)) return false;
   if (chatPolicyShortcut(mensagem)) return false;
   if (asksAboutTransmissionCompare(mensagem)) return false;
+  // "tem câmera?" pergunta de opcional, não modelo.
+  if (asksAboutEquipment(mensagem)) return false;
   if (parsePriceLimit(mensagem) != null && waitlistInterestBits(mensagem).length === 0) {
     return false;
   }
@@ -3182,6 +3206,9 @@ export function localGarageReply(
   if (policy === "docs") return CHAT_DOCS_REPLY;
   if (policy === "origin") return CHAT_ORIGIN_REPLY;
   if (policy === "sell") return CHAT_SELL_REPLY;
+  if (policy === "cash") return CHAT_CASH_REPLY;
+  if (policy === "delivery") return CHAT_DELIVERY_REPLY;
+  if (policy === "consortium") return CHAT_CONSORTIUM_REPLY;
   if (policy === "debts") return CHAT_DEBTS_REPLY;
   if (policy === "visit") return CHAT_VISIT_REPLY;
   if (policy === "address") return CHAT_ADDRESS_REPLY;
