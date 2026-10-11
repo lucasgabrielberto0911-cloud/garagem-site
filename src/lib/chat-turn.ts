@@ -63,6 +63,7 @@ import {
   CHAT_ZERO_REPLY,
   newestChatVehicles,
   partialCompareReply,
+  matchedChatStock,
   similarToNamedReply,
   CHAT_SELL_REPLY,
   CHAT_DEBTS_REPLY,
@@ -126,6 +127,7 @@ import {
 } from "@/lib/chat-stock";
 import { chatTurnMayCreateLead } from "@/lib/chat-guard";
 import { asksAboutFuel, fuelFactReply, fuelUnits } from "@/lib/chat-fuel";
+import { asksColorOf, colorReply, mentionedStockBrand, parseColorWish } from "@/lib/chat-attrs";
 import { parseChatSearchRanges } from "@/lib/chat-search-filters";
 import { isAnaphoricVehicleFollowUp } from "@/lib/chat-text";
 import { researchChatVehicles, chatResearchTopic } from "@/lib/chat-research";
@@ -485,6 +487,25 @@ export async function runChatTurn(input: {
       return result;
     }
   }
+  // Cor: "qual a cor do Nivus?" pela ficha; "tem carro preto?" mostra os da cor (não "Preto não está na lista").
+  if (!mayCreateLead && !tradeTurn && !humanAction && (parseColorWish(visitorMessage) || asksColorOf(visitorMessage))) {
+    const named = activeVehicle && asksColorOf(visitorMessage) && !singleMentionedModelPool(input.stock, visitorMessage)
+      ? [activeVehicle]
+      : singleMentionedModelPool(input.stock, visitorMessage);
+    const folded = visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const category = /\bmotos?\b/.test(folded) ? "moto" : /\bcarros?\b/.test(folded) || parseBodyStyleFilter(visitorMessage) ? "carro" : null;
+    const colorTalk = named || asksColorOf(visitorMessage) || /\b(tem|temos|quero|procuro|carros?|motos?|cor|algum|alguma|veiculos?)\b/.test(folded);
+    // "carro branco automático", "suv prata": aplica os outros filtros antes da cor.
+    const filtered = hasChatStockFilter(visitorMessage) && !(category && !parseTransmissionFilter(visitorMessage) && parsePriceLimit(visitorMessage) == null && !parseBodyStyleFilter(visitorMessage));
+    const base = filtered ? matchedChatStock(visitorMessage, input.stock) : input.stock;
+    const color = colorTalk ? colorReply(visitorMessage, base, named, category, filtered, input.stock) : null;
+    if (color) {
+      emit(color.reply);
+      const result = finish(color.reply, false, { policy: "stock-color", forcedVehicles: color.vehicles, cards: color.vehicles.length > 0 });
+      result.reply = color.reply;
+      return result;
+    }
+  }
   // "A Biz 125 é flex?": combustível vem da ficha, resposta direta.
   if (!mayCreateLead && !tradeTurn && asksAboutFuel(visitorMessage)) {
     const named = singleMentionedModelPool(input.stock, visitorMessage) ?? [];
@@ -714,6 +735,8 @@ export async function runChatTurn(input: {
   const selection =
     !skipShortcuts && !namedComparison && (isChatSelectionQuery(scopedMessage) ||
     roadUse ||
+    // "tem Hyundai?": marca do estoque sem modelo vira busca da marca.
+    (!mentionedPool && Boolean(mentionedStockBrand(scopedMessage, input.stock)) && !asksAboutEquipment(visitorMessage)) ||
     Object.keys(parseChatSearchRanges(scopedMessage)).length > 0 ||
     (hasChatStockFilter(scopedMessage) &&
       !isFocusedVehicleFactQuestion(

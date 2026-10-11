@@ -388,6 +388,11 @@ function modelMatchNeedles(model: string) {
 function messageMentionsModel(mensagem: string, model: string) {
   const folded = normalize(mensagem);
   const compactMsg = compactAlnum(mensagem);
+  // "a CG tem partida elétrica?": sigla de 2 letras que abre o nome ("CG 160 Start"), como palavra inteira.
+  const head = normalize(model).split(" ");
+  if (head.length > 1 && /^[a-z]{2}$/.test(head[0]!) && head[0] !== "ka" && new RegExp(`\\b${head[0]}\\b`).test(folded)) {
+    return true;
+  }
   for (const needle of modelMatchNeedles(model)) {
     if (needle.includes(" ") ? folded.includes(needle) : new RegExp(`\\b${needle}\\b`).test(folded)) {
       return true;
@@ -872,6 +877,12 @@ const EQUIPMENT_ITEMS = [
   ["rodas de liga leve", /rodas? de liga|liga leve/, /rodas? de liga/],
   ["partida por botão", /keyless|partida (?:por|no|com) botao|botao de partida|chave presencial/, /keyless|partida (?:por|no) botao|chave presencial|smart entry/],
   ["ISOFIX", /isofix/, /isofix/],
+  ["partida elétrica", /partida eletrica|arranque eletrico/, /partida eletrica/],
+  ["painel digital", /painel digital|velocimetro digital/, /painel\b.{0,30}digital|velocimetro digital/],
+  ["alarme", /\balarme\b/, /\balarme\b/],
+  ["travas elétricas", /travas? eletricas?/, /travas? eletricas?/],
+  ["computador de bordo", /computador de bordo/, /computador de bordo/],
+  ["volante multifuncional", /volante multifuncional|comandos? no volante/, /volante multifuncional|comandos?\b.{0,20}volante/],
 ] as const;
 
 function askedEquipment(mensagem: string) {
@@ -1101,6 +1112,7 @@ export function formatFocusedEquipmentReply(
 ) {
   const folded = normalize(mensagem);
   const named = { ...talkName(vehicle), name: chatUnitName(vehicle, stock) };
+  const desse = (vehicle.category ?? "carro") === "moto" ? "dessa" : "desse";
   const items = normalizeChatAccessories(vehicle.accessories ?? []);
   // Presença confere no texto cru da ficha; "items" (limpo) é só para exibir.
   const raw = (vehicle.accessories ?? []).map(value => value.trim()).filter(Boolean);
@@ -1108,7 +1120,7 @@ export function formatFocusedEquipmentReply(
   // Ficha sem opcionais listados: nada a negar; o vendedor confirma.
   const asksAir = /ar condicionado|arcondicionado|\btem ar\b|\bar[- ]condicionado\b/.test(folded);
   if (raw.length === 0 && (asked.length || asksAir)) {
-    return `A ficha desse ${named.name} ainda não lista os opcionais. O vendedor confirma rapidinho pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `A ficha ${desse} ${named.name} ainda não lista os opcionais. O vendedor confirma rapidinho pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (asked.length) {
     const listed = (names: string[]) =>
@@ -1137,7 +1149,7 @@ export function formatFocusedEquipmentReply(
       .map(([label]) => label);
     // "Tem direção elétrica?" e a ficha diz hidráulica: responde o que tem, sem só negar.
     if (absent.length === 1 && !present.length && absent[0] === "direção elétrica" && raw.some(value => /direcao hidraulica/.test(normalize(value)))) {
-      return `Na ficha desse ${named.name} consta direção hidráulica (não a elétrica). Qualquer detalhe, o vendedor mostra nas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+      return `Na ficha ${desse} ${named.name} consta direção hidráulica (não a elétrica). Qualquer detalhe, o vendedor mostra nas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
     }
     // Posição pedida (laterais, cortina, frontais) que o item da ficha não cita: não afirma.
     const airbagItem = raw.find(value => /air ?bags?|bolsas? (?:de ar|inflaveis)/.test(normalize(value)));
@@ -1158,14 +1170,14 @@ export function formatFocusedEquipmentReply(
       .slice(0, 3);
     const parts: string[] = [];
     if (present.length) {
-      parts.push(`${unconfirmed.length ? "Na" : "Sim, na"} ficha desse ${named.name} consta${plural(present) ? "m" : ""} ${listed(present)}.`);
+      parts.push(`${unconfirmed.length ? "Na" : "Sim, na"} ficha ${desse} ${named.name} consta${plural(present) ? "m" : ""} ${listed(present)}.`);
     }
     if (unconfirmed.length) parts.push(`A ficha não detalha se há airbags ${listed(unconfirmed)}.`);
     if (absent.length) {
       parts.push(
         present.length
           ? `${listed(absent).replace(/^./, c => c.toUpperCase())} não aparece${plural(absent) ? "m" : ""} na ficha.`
-          : `Na ficha desse ${named.name} não consta${plural(absent) ? "m" : ""} ${listed(absent)}.`,
+          : `Na ficha ${desse} ${named.name} não consta${plural(absent) ? "m" : ""} ${listed(absent)}.`,
       );
       if (extras.length) parts.push(`Os itens cadastrados incluem ${extras.join(", ")}.`);
     }
@@ -1212,7 +1224,7 @@ export function formatFocusedEquipmentReply(
   }
 
   if (items.length === 0) {
-    return `A ficha desse ${named.name} ainda não lista os opcionais. O vendedor confirma rapidinho pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `A ficha ${desse} ${named.name} ainda não lista os opcionais. O vendedor confirma rapidinho pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   return `${named.cap} na ficha tem ${items.slice(0, 6).join(", ")}. O que não estiver escrito a gente não inventa — o consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;
 }
@@ -2473,7 +2485,7 @@ export function similarAfterEmptyFilter(
 }
 
 const WAITLIST_STOP =
-  /^(cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
+  /^(barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
 
 const INTENT_SEEK_NOISE =
   /^(forte|fortes|rapido|rapida|rapidos|veloz|arranque|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
