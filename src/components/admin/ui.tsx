@@ -67,7 +67,7 @@ export function AdminPageHeader({
     >
       <div className="min-w-0">
         <div className="mb-2 h-1 w-16 bg-brand-gradient" aria-hidden="true" />
-        <h1 className="font-display text-xl font-bold tracking-tight text-cream sm:text-3xl">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-cream sm:text-4xl">
           {title}
         </h1>
         {subtitle ? (
@@ -192,13 +192,15 @@ export type BadgeTone = keyof typeof BADGE_TONES;
 export function Badge({
   children,
   tone = "neutral",
+  className = "",
 }: {
   children: ReactNode;
   tone?: BadgeTone;
+  className?: string;
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-1 font-display text-xs font-semibold uppercase tracking-wide ${BADGE_TONES[tone]}`}
+      className={`${className} inline-flex items-center gap-1 px-2 py-1 font-display text-xs font-semibold uppercase tracking-wide ${BADGE_TONES[tone]}`}
     >
       {children}
     </span>

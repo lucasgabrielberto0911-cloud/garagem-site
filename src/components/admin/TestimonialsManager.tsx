@@ -402,9 +402,9 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
           }
         />
       ) : (
-        <ul className="grid gap-3 lg:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {items.map((item) => (
-            <li key={item.id} className="border border-white/10 bg-ink/50 p-4">
+            <li key={item.id} className="min-w-0 border border-white/10 bg-ink/50 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-brand/15">
@@ -424,10 +424,10 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate font-display text-sm font-semibold text-cream">
+                    <p className="break-words font-display text-base font-semibold leading-snug text-cream">
                       {cleanTestimonialField(item.name) ?? item.name}
                     </p>
-                    <p className="truncate text-xs text-muted">
+                    <p className="break-words text-xs leading-relaxed text-muted">
                       {cleanTestimonialField(item.city) ?? "Sem cidade"}
                       {cleanTestimonialField(item.vehicleLabel)
                         ? ` · ${cleanTestimonialField(item.vehicleLabel)}`
@@ -436,12 +436,12 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                     </p>
                   </div>
                 </div>
-                <Badge tone={item.published ? "success" : "neutral"}>
+                <Badge tone={item.published ? "success" : "neutral"} className="shrink-0">
                   {item.published ? "No site" : "Oculto"}
                 </Badge>
               </div>
 
-              <p className="mt-3 text-sm leading-relaxed text-muted">
+              <p className="mt-3 break-words text-sm leading-relaxed text-muted">
                 {cleanTestimonialField(item.message) ?? item.message}
               </p>
 

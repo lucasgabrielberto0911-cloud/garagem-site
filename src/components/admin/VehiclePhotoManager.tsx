@@ -777,7 +777,7 @@ export function VehiclePhotoManager({
                   </span>
 
                   {index === 0 ? (
-                    <span className="absolute right-1.5 top-1.5 bg-brand px-2 py-0.5 font-display text-xs font-semibold uppercase tracking-wider text-cream">
+                    <span className="absolute right-1.5 top-1.5 bg-brand px-2 py-0.5 font-display text-xs font-semibold uppercase tracking-wider text-white">
                       Capa
                     </span>
                   ) : null}

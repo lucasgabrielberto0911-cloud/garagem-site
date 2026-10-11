@@ -197,7 +197,7 @@ export function VehicleVerifiedPanel({
                               className="h-full w-full object-cover"
                             />
                             {selected ? (
-                              <span className="absolute right-0.5 top-0.5 bg-brand px-1 font-display text-xs font-bold text-cream">
+                              <span className="absolute right-0.5 top-0.5 bg-brand px-1 font-display text-xs font-bold text-white">
                                 {topicState.photoIds.indexOf(photo.id) + 1}
                               </span>
                             ) : null}

@@ -1164,7 +1164,7 @@ function VehicleAdminCard({
   return (
     <li className="overflow-hidden border border-white/10 bg-ink/50">
       <div className="flex gap-3 p-3 lg:gap-4">
-        <label className="flex shrink-0 items-start pt-1">
+        <label className="-my-3 -ml-3 flex w-11 shrink-0 cursor-pointer items-start justify-center self-stretch pt-4 touch-manipulation lg:-ml-1 lg:w-9">
           <span className="sr-only">Selecionar {title}</span>
           <input
             type="checkbox"
@@ -1187,7 +1187,7 @@ function VehicleAdminCard({
               className="object-cover"
             />
             {vehicle.featured ? (
-              <span className="absolute left-1 top-1 bg-brand px-1.5 py-0.5 font-display text-xs font-bold uppercase text-cream">
+              <span className="absolute left-1 top-1 bg-brand px-1.5 py-0.5 font-display text-xs font-bold uppercase text-white">
                 Destaque
               </span>
             ) : null}

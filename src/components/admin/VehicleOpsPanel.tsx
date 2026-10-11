@@ -106,7 +106,7 @@ function Toggle({
       <span
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border ${
           checked
-            ? "border-brand bg-brand text-cream"
+            ? "border-brand bg-brand text-white"
             : "border-white/20 text-transparent"
         }`}
       >
