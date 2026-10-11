@@ -50,8 +50,9 @@ export function VehicleImage({
   const finalSet = publicPhotoSrcSet(srcSet);
   const mobileSet = publicPhotoSrcSet(mobileSrcSet);
 
-  // Só a capa do LCP entra no preload. A segunda foto da grade baixa
-  // junto, mas sem prioridade alta — senão as duas dividem a rede lenta.
+  // Só a capa do LCP entra no preload e na prioridade alta. A segunda
+  // foto da primeira dobra ainda baixa cedo, mas com prioridade baixa,
+  // para não dividir a rede lenta com a capa.
   if (priority) {
     const options = { as: "image" as const, fetchPriority: "high" as const,
       imageSizes: finalSet || mobileSet ? sizes : undefined };
@@ -92,7 +93,7 @@ export function VehicleImage({
       className={className}
       loading={priority || eager ? "eager" : "lazy"}
       decoding={decoding ?? (priority ? "sync" : "async")}
-      fetchPriority={priority ? "high" : eager ? "auto" : "low"}
+      fetchPriority={priority ? "high" : "low"}
     />
   );
 }

@@ -4,6 +4,7 @@
  * Sem essas vars (Hobby / um pod) o contador local ainda reduz abuso básico.
  */
 import {
+  checkSharedLimit,
   checkSharedLoginLimit,
   clearSharedLoginLimit,
 } from "@/lib/admin-login-limit";
@@ -92,7 +93,16 @@ export async function checkDistributedRateLimit(
       const remote = await checkUpstashRateLimit(key, options);
       if (remote) return remote;
     } catch (error) {
-      console.warn("[rate-limit] Upstash indisponível, usando memória:", error);
+      console.warn("[rate-limit] Upstash indisponível, usando o banco:", error);
+    }
+  }
+  // Sem Upstash, o contador no banco vale para todas as instâncias; a memória
+  // de cada função serverless sozinha quase não limita nada.
+  if (process.env.DATABASE_URL?.trim() && !process.env.RATE_LIMIT_MEMORY_ONLY) {
+    try {
+      return await checkSharedLimit(`rl:${key}`, options);
+    } catch (error) {
+      console.warn("[rate-limit] banco indisponível, usando memória:", error);
     }
   }
   return checkRateLimit(key, options);

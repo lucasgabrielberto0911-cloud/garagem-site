@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { SNIFFED_EXTENSION, sniffImageType } from "@/lib/image-sniff";
 import { checkVenderPhotoRateLimit } from "@/lib/rate-limit";
 import {
   VEHICLE_DOCS_BUCKET,
@@ -12,22 +13,9 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const MAX_SIZE = 4 * 1024 * 1024;
-const ALLOWED: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/jpg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
-
 function clientKey(request: Request) {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   return forwarded || request.headers.get("x-real-ip") || "unknown";
-}
-
-function extensionFromName(name: string) {
-  const match = name.toLowerCase().match(/\.(jpe?g|png|webp)$/);
-  if (!match) return "";
-  return match[1] === "jpeg" ? "jpg" : match[1];
 }
 
 export async function POST(request: Request) {
@@ -69,26 +57,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const mime = (file.type || "").toLowerCase();
-    const extension = ALLOWED[mime] || extensionFromName(file.name);
-    if (!extension) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const contentType = sniffImageType(buffer);
+    if (!contentType) {
       return NextResponse.json(
         { error: "Use JPG, PNG ou WEBP." },
         { status: 400 },
       );
     }
 
-    const contentType =
-      extension === "png"
-        ? "image/png"
-        : extension === "webp"
-          ? "image/webp"
-          : "image/jpeg";
-
-    const path = `vender/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+    const path = `vender/${Date.now()}-${crypto.randomUUID()}.${SNIFFED_EXTENSION[contentType]}`;
     await ensurePrivateDocsBucket();
     const supabase = getSupabaseAdmin();
-    const buffer = Buffer.from(await file.arrayBuffer());
 
     const { error } = await supabase.storage
       .from(VEHICLE_DOCS_BUCKET)
