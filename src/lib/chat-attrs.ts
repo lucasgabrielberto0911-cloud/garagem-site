@@ -1,4 +1,5 @@
 import type { ChatVehicleRecord } from "@/lib/chat-stock";
+import { formatModelName } from "@/lib/format";
 
 const fold = (text: string) =>
   text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -22,7 +23,7 @@ function isMoto(vehicle: ChatVehicleRecord) {
 }
 
 function displayName(vehicle: ChatVehicleRecord) {
-  return vehicle.model.trim().split(/\s+/).map((word) => word.length <= 4 || /\d/.test(word) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
+  return formatModelName(vehicle.model.trim());
 }
 
 function colorWord(vehicle: ChatVehicleRecord) {

@@ -326,3 +326,36 @@ test("marca sozinha vira busca; 'CG' (sigla de 2 letras) é o modelo e a partida
   const cheap = await askC("quero uma moto barata");
   assert.doesNotMatch(cheap.reply, /não está na lista/);
 });
+
+test("contato, Instagram, diesel e 'por menos de 30 mil': respostas diretas, sem lista de espera", async () => {
+  const insta = await ask("vcs tem instagram?");
+  assert.match(insta.reply, /Instagram da Garagem é @suagaragem1/);
+  const zap = await ask("qual o whatsapp?");
+  assert.match(zap.reply, /^O WhatsApp da Garagem é/);
+  const diesel = await ask("tem algum diesel?");
+  assert.match(diesel.reply, /^Diesel não temos agora: o estoque da Garagem hoje é flex/);
+  const cheap = await ask("tem algum por menos de 30 mil?");
+  assert.doesNotMatch(cheap.reply, /não está na lista/);
+  assert.ok(cheap.vehicles.length > 0);
+});
+
+test("conversa: 'é flex?' depois da lista responde cada uma; 'quanto pagam no meu' lembra a troca de 2 turnos atrás", async () => {
+  const first = await ask6("tem moto?");
+  const fuel = await runChatTurn({
+    mensagem: "é flex?",
+    historico: [{ role: "user", content: "tem moto?" }, { role: "assistant", content: first.reply }],
+    stock: stock6, readIntent: async () => null, generate: noModel,
+  });
+  assert.match(fuel.reply, /^Dos que separei: .*BIZ 2023 é a gasolina/);
+  const trade = await runChatTurn({
+    mensagem: "quanto vocês pagam no meu?",
+    historico: [
+      { role: "user", content: "quero trocar meu Celta 2010" },
+      { role: "assistant", content: "Aceitamos sim." },
+      { role: "user", content: "num SUV" },
+      { role: "assistant", content: "Olha o que tenho de carros:" },
+    ],
+    stock: stock6, readIntent: async () => null, generate: noModel,
+  });
+  assert.match(trade.reply, /consultor avalia com algumas fotos/);
+});
