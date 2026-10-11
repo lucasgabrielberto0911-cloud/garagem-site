@@ -458,12 +458,19 @@ export function namedUnitForEquipment(
   mensagem: string,
 ): ChatVehicleRecord | null {
   if (!asksAboutEquipment(mensagem)) return null;
-  const pool = singleMentionedModelPool(stock, mensagem);
+  const pool = resolveNamedModelPool(stock, mensagem);
   if (!pool?.length) return null;
-  if (pool.length === 1) return pool[0]!;
+  // Ficha sem nenhum opcional cadastrado não é base para dizer "não consta": segue o fluxo antigo.
+  const filled = (unit: ChatVehicleRecord) => (unit.accessories ?? []).length > 0 ? unit : null;
+  if (pool.length === 1) return filled(pool[0]!);
   const folded = normalize(mensagem);
   const years: string[] = folded.match(/\b(?:19|20)\d{2}\b/g) ?? [];
   let narrowed = years.length ? pool.filter(vehicle => years.includes(String(vehicle.yearModel))) : pool;
+  const engines: string[] = mensagem.match(/\b\d[.,]\d\b/g)?.map(value => value.replace(",", ".")) ?? [];
+  if (narrowed.length > 1 && engines.length) {
+    const byEngine = narrowed.filter(vehicle => engines.some(engine => `${vehicle.engine ?? ""} ${vehicle.version ?? ""}`.replace(/,/g, ".").includes(engine)));
+    if (byEngine.length) narrowed = byEngine;
+  }
   if (narrowed.length > 1) {
     const byTrim = narrowed.filter(vehicle => {
       const trim = normalize(vehicle.version ?? "").split(" ")[0] ?? "";
@@ -471,7 +478,20 @@ export function namedUnitForEquipment(
     });
     if (byTrim.length) narrowed = byTrim;
   }
-  return narrowed.length === 1 ? narrowed[0]! : null;
+  return narrowed.length === 1 ? filled(narrowed[0]!) : null;
+}
+
+/** Um modelo citado. "HB20" também casa o HB20S: fica o modelo escrito por inteiro, se for um só. */
+function resolveNamedModelPool(stock: ChatVehicleRecord[], mensagem: string): ChatVehicleRecord[] | null {
+  const named = mentionedModelPools(stock, mensagem);
+  if (named.length === 1) return named[0]!;
+  if (named.length < 2) return null;
+  const folded = normalize(mensagem);
+  const whole = named.filter(pool => {
+    const model = normalize(pool[0]?.model ?? "").replace(/[^a-z0-9]+/g, " ").trim();
+    return model && new RegExp(`(?:^|[^a-z0-9])${model.replace(/ /g, "[^a-z0-9]*")}(?:$|[^a-z0-9])`).test(folded);
+  });
+  return whole.length === 1 ? whole[0]! : null;
 }
 
 export function matchFocusedVehicle(
@@ -781,22 +801,132 @@ export function normalizeChatAccessories(items: string[]) {
     .map(value => value.replace(/\s+(?:com função|com funcao|com sistema|nas? \d|nos? \d).*$/i, "")))];
 }
 
+/** Opcionais que o chat confere na ficha: [rótulo, pergunta, item cadastrado]. */
+const EQUIPMENT_ITEMS = [
+  ["central multimídia", /multimidia|central|carplay|android auto/, /multimidia|carplay|android auto/],
+  ["teto solar", /teto solar/, /teto solar/],
+  ["airbags", /air ?bags?|bolsas? de ar/, /air ?bags?/],
+  ["freios ABS", /\babs\b/, /\babs\b/],
+  ["controle de estabilidade", /controle de estabilidade|\besp\b/, /controle de estabilidade|\besp\b/],
+  ["câmera de ré", /cameras?/, /camera/],
+] as const;
+
+function askedEquipment(mensagem: string) {
+  const folded = normalize(mensagem);
+  return EQUIPMENT_ITEMS.filter(([, question]) => question.test(folded));
+}
+
+function unitHasEquipment(vehicle: ChatVehicleRecord, data: RegExp) {
+  return normalizeChatAccessories(vehicle.accessories ?? []).some(value => data.test(normalize(value)));
+}
+
+const pluralEquipment = (names: string[]) =>
+  names.length > 1 || /^(?:(?:[2-9]|\d{2,})\b|airbags\b|freios\b)/i.test(names[0] ?? "");
+
+const joinEquipment = (names: string[]) =>
+  names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} e ${names.at(-1)}`;
+
+/** Nome da unidade que a diferencia de outra igual no estoque: "Civic EXL 2020". */
+export function chatUnitName(vehicle: ChatVehicleRecord, stock: ChatVehicleRecord[] = [], withYear = false) {
+  const name = formatModelName(vehicle.model || vehicle.brand).trim();
+  const same = stock.filter(other => other.id !== vehicle.id && normalize(other.model) === normalize(vehicle.model));
+  if (!same.length && !withYear) return name;
+  const trimOf = (unit: ChatVehicleRecord) => (unit.version ?? "").trim().split(/\s+/)[0] ?? "";
+  const trim = trimOf(vehicle);
+  const showTrim = same.length > 0 && /^[a-z]{2,}$/i.test(trim) &&
+    same.some(other => normalize(trimOf(other)) !== normalize(trim)) &&
+    !normalize(name).split(" ").includes(normalize(trim));
+  const label = showTrim ? `${name} ${trim.length <= 4 ? trim.toUpperCase() : trim.charAt(0).toUpperCase() + trim.slice(1).toLowerCase()}` : name;
+  return `${label} ${vehicle.yearModel}`;
+}
+
+/** Item longo da ficha vira rótulo curto: "Câmbio borboleta (Paddle Shift) atrás…" → "Câmbio borboleta". */
+function shortAccessory(value: string) {
+  const base = value.split(/\s*[(,;:]/)[0]!.trim();
+  if (base.length <= 28) return base;
+  const words = base.split(/\s+/);
+  let out = "";
+  for (const word of words) {
+    if ((out ? `${out} ${word}` : word).length > 28) break;
+    out = out ? `${out} ${word}` : word;
+  }
+  return out.replace(/\s+(?:de|do|da|dos|das|com|em|e|para|no|na)$/i, "");
+}
+
+/**
+ * Opcional no estoque inteiro ("quais carros têm airbag?") ou num modelo com mais de
+ * uma unidade ("o Civic tem câmera de ré?"): responde pela ficha de cada unidade.
+ * Só para os itens de EQUIPMENT_ITEMS; o resto segue o fluxo normal.
+ */
+export function equipmentAcrossStockReply(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+): { reply: string; vehicles: ChatVehicleRecord[] } | null {
+  const folded = normalize(mensagem);
+  const asked = askedEquipment(mensagem);
+  if (!asked.length || !asksAboutEquipment(mensagem)) return null;
+  if (/\b(esse|essa|este|esta|dele|dela|nele|nela|desse|dessa|deste|desta)\b/.test(folded)) return null;
+  const resolved = resolveNamedModelPool(stock, mensagem);
+  const pools = resolved ? [resolved] : mentionedModelPools(stock, mensagem);
+  const labels = asked.map(([label]) => label);
+  const items = joinEquipment(labels);
+  const m = pluralEquipment(labels) ? "m" : "";
+  const has = (vehicle: ChatVehicleRecord) => asked.every(([, , data]) => unitHasEquipment(vehicle, data));
+  if (pools.length === 1) {
+    const pool = pools[0]!;
+    if (pool.length < 2 || namedUnitForEquipment(stock, mensagem)) return null;
+    // Algum carro sem nada na ficha, ou pergunta que já aponta uma unidade (ano/motor): fluxo antigo.
+    if (pool.some(unit => !(unit.accessories ?? []).length)) return null;
+    if (/\b(?:19|20)\d{2}\b|\b\d[.,]\d\b/.test(folded)) return null;
+    const units = [...pool].sort((a, b) => a.yearModel - b.yearModel).slice(0, 4);
+    const withItem = units.filter(has);
+    const without = units.filter(unit => !has(unit));
+    const names = (list: ChatVehicleRecord[]) => joinEquipment(list.map(unit => chatUnitName(unit, stock, true)));
+    const model = formatModelName(units[0]!.model || units[0]!.brand).trim();
+    const confirm = `Pra não te passar informação errada, o vendedor confirma pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    if (!without.length) {
+      return { reply: `Temos ${units.length} ${model} e, na ficha dos ${units.length === 2 ? "dois" : units.length}, consta${m} ${items}: ${names(units)}. Qualquer detalhe, o vendedor mostra nas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`, vehicles: units };
+    }
+    if (!withItem.length) {
+      return { reply: `Na ficha dos nossos ${model} (${names(units)}) não consta${m} ${items}. ${confirm}`, vehicles: units };
+    }
+    return { reply: `Temos ${units.length} ${model}: na ficha do ${names(withItem)} consta${m} ${items}; na do ${names(without)}, não aparece${m}. ${confirm}`, vehicles: [...withItem, ...without] };
+  }
+  if (pools.length > 1) return null;
+  // Estoque inteiro: precisa de cara de busca ("quais", "carros com", "algum") e nenhum modelo citado.
+  if (!/\b(quais|qual|que carros?|algum|alguma|carros?|modelos?|veiculos?|opcoes|estoque|motos?)\b/.test(folded)) return null;
+  // Busca com outro filtro (preço, ano, km, câmbio, carroceria): fica com a busca normal.
+  if (
+    parsePriceLimit(mensagem) != null ||
+    Object.keys(parseChatSearchRanges(mensagem)).length > 0 ||
+    /\b(automatic\w*|manual|cvt|suv|sedan|seda|hatch|picape|pickup|diesel|economic\w*|familia|barat\w*|ate)\b/.test(folded)
+  ) return null;
+  const wantsMoto = /\bmotos?\b/.test(folded);
+  const scope = stock.filter(vehicle => ((vehicle.category ?? "carro") === "moto") === wantsMoto);
+  const found = scope.filter(has).sort((a, b) => b.yearModel - a.yearModel || a.price - b.price);
+  const kind = wantsMoto ? "moto" : "carro";
+  if (!found.length) {
+    return { reply: `No estoque de agora, nenhum${wantsMoto ? "a" : ""} ${kind} tem ${items} cadastrado${m ? "s" : ""} na ficha. Se quiser, o consultor te avisa quando chegar: ${CHAT_WHATSAPP_URL}`, vehicles: [] };
+  }
+  const shown = found.slice(0, 6).map(unit => chatUnitName(unit, scope, true));
+  const rest = found.length - shown.length;
+  const count = found.length === 1 ? `1 ${kind}` : `${found.length} ${kind}s`;
+  const list = rest > 0 ? `${shown.join(", ")} e mais ${rest}` : joinEquipment(shown);
+  return {
+    reply: `Com ${items} na ficha, temos ${count} no estoque: ${list}. Quer que eu filtre por preço ou tamanho?`,
+    vehicles: found.slice(0, 3),
+  };
+}
+
 export function formatFocusedEquipmentReply(
   vehicle: ChatVehicleRecord,
   mensagem: string,
+  stock: ChatVehicleRecord[] = [],
 ) {
   const folded = normalize(mensagem);
-  const named = talkName(vehicle);
+  const named = { ...talkName(vehicle), name: chatUnitName(vehicle, stock) };
   const items = normalizeChatAccessories(vehicle.accessories ?? []);
-  const requested = [
-    ["central multimídia", /multimidia|central|carplay|android auto/, /multimidia|carplay|android auto/],
-    ["teto solar", /teto solar/, /teto solar/],
-    ["airbags", /air ?bags?|bolsas? de ar/, /air ?bags?/],
-    ["freios ABS", /\babs\b/, /\babs\b/],
-    ["controle de estabilidade", /controle de estabilidade|\besp\b/, /controle de estabilidade|\besp\b/],
-    ["câmera de ré", /cameras?/, /camera/],
-  ] as const;
-  const asked = requested.filter(([, question]) => question.test(folded));
+  const asked = askedEquipment(mensagem);
   if (asked.length) {
     const listed = (names: string[]) =>
       names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} e ${names.at(-1)}`;
@@ -805,8 +935,8 @@ export function formatFocusedEquipmentReply(
       const item = items.find(value => data.test(normalize(value)));
       if (!item) return [];
       if (label !== "airbags") return [label];
-      const text = item.trim().replace(/air ?bags?/i, "airbags");
-      return [/^airbags\b/i.test(text) ? text.replace(/^./, c => c.toLowerCase()) : text];
+      const text = item.trim().replace(/air ?bag(s?)/i, (_, plural: string) => `airbag${plural}`);
+      return [/^airbags?\b/i.test(text) ? text.replace(/^./, c => c.toLowerCase()) : text];
     });
     const absent = asked
       .filter(([, , data]) => !items.some(value => data.test(normalize(value))))
@@ -823,8 +953,11 @@ export function formatFocusedEquipmentReply(
       : [];
     const plural = (names: string[]) =>
       names.length > 1 || /^(?:(?:[2-9]|\d{2,})\b|airbags\b|freios\b)/i.test(names[0] ?? "");
-    const extras = items
+    // Lista curta: rótulos curtos, no máximo 3.
+    const extras = [...new Set(items
       .filter(value => !asked.some(([, , data]) => data.test(normalize(value))))
+      .map(shortAccessory)
+      .filter(value => value.length >= 3))]
       .slice(0, 3);
     const parts: string[] = [];
     if (present.length) {
@@ -1831,7 +1964,7 @@ export function enrichChatStockReply(
         equipmentReplyLooksBroken(reply) ||
         looksTruncatedReply(reply)
       ) {
-        return formatFocusedEquipmentReply(focused, mensagem);
+        return formatFocusedEquipmentReply(focused, mensagem, stock);
       }
       return reply;
     }
@@ -2835,7 +2968,7 @@ export function localGarageReply(
       return consumption;
     }
     if (asksAboutEquipment(mensagem) || asksAboutNamedGear(mensagem)) {
-      return formatFocusedEquipmentReply(match, mensagem);
+      return formatFocusedEquipmentReply(match, mensagem, stock);
     }
     return spokenListing(match);
   }

@@ -304,7 +304,8 @@ test("falha do modelo de linguagem: resposta de reserva honesta, sem prefixo rob
 });
 
 test("unidade única citada pelo nome ('o gol tem airbag?'): responde pela ficha dela, sem o modelo", async () => {
-  const result = await runChatTurn({ mensagem: "o gol tem airbag?", historico: [], stock, generate: noModel });
+  const withFicha = stock.map(v => v === gol ? { ...v, accessories: ["Ar-condicionado", "Direção hidráulica"] } : v);
+  const result = await runChatTurn({ mensagem: "o gol tem airbag?", historico: [], stock: withFicha, generate: noModel });
   assert.equal(result.meta?.policy, "stock-fact");
   assert.match(result.reply, /ficha desse Gol/);
   assert.doesNotMatch(result.reply, robotic);
