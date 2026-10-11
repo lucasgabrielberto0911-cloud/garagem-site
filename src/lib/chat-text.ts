@@ -457,7 +457,7 @@ export function chatWhatsAppCta(
     (opts.handoff?.priceLimit != null ||
       opts.handoff?.transmission != null ||
       (handoffVehicles?.length ?? 0) > 1);
-  if (userIntent === "question" && vehicle && !handoffReady) {
+  if (userIntent === "question" && vehicle) {
     const name = (vehicle.model || vehicle.label || "").trim();
     return {
       href: whatsappUrl(

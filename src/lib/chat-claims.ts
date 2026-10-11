@@ -208,7 +208,8 @@ export function guardUnaskedOffers(text: string, message: string) {
   if (!drop.length || !text.trim()) return text;
   const topic = `(?:${drop.join("|")})`;
   const verb = "(?:(?:falar|conversar|saber|ver|tratar|combinar|fazer|simular|montar|avaliar|tirar duvidas?)(?: (?:sobre|de|do|da|das|dos|uma|a|o|as|os))?(?: (?:o|a|as|os|um|uma))? )?";
-  const clause = new RegExp(`(?:,\\s*|\\s+(?:ou|e)\\s+)${verb}${topic}\\b`, "g");
+  // Do último conector (vírgula, “ou”, “e”) até a próxima vírgula/fim: “ou simular uma condição”.
+  const clause = new RegExp(`(?:,\\s*|\\s+(?:ou|e)\\s+)(?:(?!\\s(?:ou|e)\\s|,)[^.!?])*?\\b${topic}\\b[^,.!?]*?(?=\\s*(?:,|[.!?]|$))`, "g");
   const lead = new RegExp(`\\b${verb}${topic}\\s+(?:ou|e)\\s+`, "g");
   const parts = splitSentences(text).map((sentence) => {
     const folded = fold(sentence);

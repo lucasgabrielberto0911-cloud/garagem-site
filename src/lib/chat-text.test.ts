@@ -296,3 +296,12 @@ test("assunto do botão sai da pergunta", () => {
   assert.equal(chatCtaTopic("e o consumo e o airbag?"), "consumo e segurança");
   assert.equal(chatCtaTopic("tem?"), "");
 });
+
+test("pergunta do carro vence o handoff da sessão (automático herdado)", () => {
+  const cta = chatWhatsAppCta(
+    "Ótimo carro. O consultor te atende no WhatsApp",
+    { label: "Hyundai HB20S Comfort Plus 2024", brand: "Hyundai", model: "HB20S", year: 2024 },
+    { userText: "Como é o motor do HB20S?", handoff: { vehicles: [{ brand: "Hyundai", model: "HB20S" }], transmission: "automatico" } },
+  );
+  assert.equal(cta?.label, "Perguntar sobre o HB20S");
+});

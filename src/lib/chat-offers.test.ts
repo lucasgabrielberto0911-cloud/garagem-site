@@ -33,3 +33,15 @@ test("ranking compacto: linhas • ficam juntas e não ganham ponto final", () =
   );
   assert.equal(looksTruncated("Os mais fortes:\n• Civic EXL 2020 — 155 cv"), false);
 });
+
+test("tira a oração inteira do assunto não pedido", () => {
+  const out = guardUnaskedOffers(
+    "O porta-malas tem 475 litros. Se quiser ver mais detalhes, fotos ou simular uma condição, o consultor te atende no WhatsApp",
+    "Como é o motor, o câmbio e o porta-malas do HB20S?",
+  );
+  assert.match(out, /Se quiser ver mais detalhes, fotos, o consultor te atende no WhatsApp$/);
+  assert.equal(
+    guardUnaskedOffers("Se quiser ver fotos extras e vídeo ou falar sobre financiamento, chama no WhatsApp.", "tem câmera?"),
+    "Se quiser ver fotos extras e vídeo, chama no WhatsApp.",
+  );
+});
