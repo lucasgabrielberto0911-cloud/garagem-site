@@ -87,3 +87,11 @@ test("com cards na tela, a comparação por perfil continua na bolha", async () 
   assert.match(out, /HR-V EXL 2016 é ideal/);
   assert.doesNotMatch(out, /R\$ 86\.900/);
 });
+
+test("sem a URL do WhatsApp, a frase não termina pendurada em 'lá em'", async () => {
+  const { displayChatText } = await import("@/lib/chat-text");
+  assert.equal(
+    displayChatText("O consultor faz a avaliação pelo WhatsApp, é só chamar lá em https://wa.me/5527996330706"),
+    "O consultor faz a avaliação pelo WhatsApp, é só chamar.",
+  );
+});

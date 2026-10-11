@@ -748,7 +748,7 @@ export async function runChatTurn(input: {
       text: (() => {
         const scope = expertPlan?.subject.vehicles ?? (activeVehicle ? [activeVehicle] : promptStock);
         const guarded = (guardSalesTone(guardLlmReply(result.text, input.stock, scope, research?.paragraphs.map(paragraph => paragraph.text).join(" ")), visitorMessage) ?? "").replace(/checagem (?:rigorosa|completa|minuciosa|criteriosa)(?: na loja)?/gi, "checagem na loja");
-        return guarded && guarded !== CHAT_FALLBACK_REPLY && expertPlan?.stockRanking && !guarded.includes(expertPlan.stockRanking)
+        return guarded && guarded !== CHAT_FALLBACK_REPLY && expertPlan?.stockRanking && !guarded.includes(expertPlan.stockRanking) && !/estoque (?:inteiro|todo)|loja toda|da loja inteira/i.test(guarded)
           ? `${guarded} ${expertPlan.stockRanking}` : guarded;
       })(),
     });

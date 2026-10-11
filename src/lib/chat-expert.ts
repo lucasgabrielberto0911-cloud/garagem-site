@@ -394,7 +394,7 @@ export function expertDirectReply(plan: ExpertPlan, message: string) {
     const entry = plan.entries[0]!;
     const city = entry.spec.cidade?.gasolina;
     const road = entry.spec.estrada?.gasolina;
-    if (city && road) return `Para um ${entry.nome}, a referência na gasolina é cerca de ${String(city).replace(".", ",")} km/l na cidade e ${String(road).replace(".", ",")} km/l na estrada; no trânsito pesado pode gastar mais. O ponto forte é ${entry.spec.manutencao}. Se a prioridade for economia, posso comparar outras opções do estoque; o vendedor confirma os detalhes no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    if (city && road) return `Para um ${entry.nome}, a referência na gasolina é cerca de ${String(city).replace(".", ",")} km/l na cidade e ${String(road).replace(".", ",")} km/l na estrada; no trânsito pesado pode gastar mais. A favor dele: ${entry.spec.manutencao}. Se a prioridade for economia, posso comparar outras opções do estoque; o vendedor confirma os detalhes no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (/\b(problema|defeito|ponto fraco)\b/.test(fold(message))) return null;
   // Algum carro citado sem ficha: o modelo de linguagem completa com cautela.
