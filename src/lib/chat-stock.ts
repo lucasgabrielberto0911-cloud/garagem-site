@@ -259,11 +259,25 @@ export function filterStockByTransmission(
   stock: ChatVehicleRecord[],
   mensagem: string,
 ) {
+  const geared = filterStockByGear(stock, mensagem);
+  // "tem câmbio CVT?": os que trazem CVT na ficha (câmbio ou versão, ex. Xtronic); sem nenhum, os automáticos.
+  if (/\bcvt\b/.test(normalize(mensagem))) {
+    const cvt = geared.filter((vehicle) => /\b(cvt|xtronic)\b/.test(normalize(`${vehicle.transmission ?? ""} ${vehicle.version ?? ""}`)));
+    if (cvt.length) return cvt;
+  }
+  return geared;
+}
+
+function filterStockByGear(
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+) {
   const wanted = parseTransmissionFilter(mensagem);
   if (!wanted) return stock;
   return stock.filter((vehicle) => {
     const value = normalize(vehicle.transmission ?? "");
-    if (wanted === "automatico") return /automatic|cvt/.test(value);
+    // Semiautomático (Biz) não é câmbio automático.
+    if (wanted === "automatico") return /automatic|cvt/.test(value) && !/semi/.test(value);
     return /manual/.test(value) && !/automatic/.test(value);
   });
 }
@@ -2433,7 +2447,7 @@ export function similarAfterEmptyFilter(
 }
 
 const WAITLIST_STOP =
-  /^(tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
+  /^(cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
 
 const INTENT_SEEK_NOISE =
   /^(forte|fortes|rapido|rapida|rapidos|veloz|arranque|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
@@ -2909,10 +2923,20 @@ export function emptyFilterReply(
     return null;
   }
   if (matchedChatStock(mensagem, stock).length > 0) return null;
+  // "a Biz é automática?": pergunta de câmbio de um modelo que temos — a ficha responde, não a lista de espera.
+  if (parseTransmissionFilter(mensagem) && parsePriceLimit(mensagem) == null && singleMentionedModelPool(stock, mensagem)) return null;
   const query = formatChatWaitlistQuery(mensagem);
   const recorte = query ? ` (${query})` : "";
   const similar = similarAfterEmptyFilter(mensagem, stock, 3);
   const wait = `Se quiser, o consultor anota e te avisa no WhatsApp quando chegar: ${chatWaitlistWhatsAppUrl(mensagem)}`;
+  // "Tem moto automática?": as Biz são semiautomáticas (sem embreagem) — dizer isso, não "não tem anúncio".
+  if (resolveChatCategory(mensagem) === "moto" && parseTransmissionFilter(mensagem) === "automatico" && !singleMentionedModelPool(stock, mensagem)) {
+    const semi = stock.filter((vehicle) => vehicle.category === "moto" && /semi/.test(normalize(vehicle.transmission ?? "")));
+    if (semi.length) {
+      const names = [...new Set(semi.map((vehicle) => talkName(vehicle).name))].join(" e a ");
+      return `Moto automática (scooter) não temos agora, mas a ${names} ${semi.length > 1 ? "são semi-automáticas" : "é semi-automática"}: sem embreagem, só troca a marcha no pé. Separei aqui.`;
+    }
+  }
   // "Tem picape?": recorte só de carroceria — fala direto, sem "Nessa combinação (carro pickup)".
   const body = parseBodyStyleFilter(mensagem);
   if (body && !parseTransmissionFilter(mensagem) && Object.keys(parseChatSearchRanges(mensagem)).length === 0) {
@@ -3059,6 +3083,45 @@ export function newestChatVehicles(mensagem: string, stock: ChatVehicleRecord[],
 }
 
 /** "Civic ou Corolla?": um temos, outro não — mostra o que temos, sem dizer que "esse modelo" falta. */
+/** "parecido com o Kicks, mais barato": mesma carroceria e categoria, outro modelo; "mais barato" corta pelo preço dele. */
+export function similarToNamedReply(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+  pool: ChatVehicleRecord[],
+): { reply: string; vehicles: ChatVehicleRecord[] } | null {
+  const folded = normalize(mensagem);
+  if (!/\b(parecid[oa]s?|semelhante|similar|no estilo d[oa]|estilo d[oa]|tipo d[oa]|na linha d[oa]|igual a[o]?)\b/.test(folded)) return null;
+  const ref = [...pool].sort((a, b) => a.price - b.price)[0];
+  if (!ref) return null;
+  const cheaper = /\b(mais barat[oa]|mais em conta|mais economic[oa] no preco|menos de|abaixo)\b/.test(folded);
+  const body = vehicleBodyStyle(ref);
+  const kind = ref.category ?? "carro";
+  const limit = parsePriceLimit(mensagem);
+  const candidates = stock.filter((vehicle) =>
+    vehicle.model !== ref.model &&
+    (vehicle.category ?? "carro") === kind &&
+    (!body || vehicleBodyStyle(vehicle) === body) &&
+    (!cheaper || vehicle.price < ref.price) &&
+    (limit == null || vehicle.price <= limit));
+  const name = talkName(ref);
+  const label = body ? { suv: "SUV", sedan: "sedan", hatch: "hatch", pickup: "picape", wagon: "perua" }[body] : kind;
+  if (!candidates.length) {
+    return {
+      reply: cheaper
+        ? `Mais em conta que ${name.labeled} (${formatChatPrice(ref.price)}), na mesma linha (${label}), não temos agora. ${name.cap} é o ${label} de menor preço do estoque; se quiser, vejo outras opções até um valor que você escolher.`
+        : `Na linha d${name.labeled} (${label}) não temos outro agora. Se quiser, vejo outras opções até um valor que você escolher.`,
+      vehicles: [ref],
+    };
+  }
+  const picks = candidates
+    .sort((a, b) => Math.abs(a.price - ref.price) - Math.abs(b.price - ref.price))
+    .slice(0, 3);
+  const lead = cheaper
+    ? `Na linha d${name.labeled} (${label}) e mais em conta que ele (${formatChatPrice(ref.price)}):`
+    : `Na linha d${name.labeled} (${label}), temos:`;
+  return { reply: `${lead}\n${picks.map(formatVehicleLine).join("\n")}`, vehicles: picks };
+}
+
 export function partialCompareReply(mensagem: string, present: ChatVehicleRecord): string {
   const presentWords = new Set(normalize(`${present.brand} ${present.model}`).split(" "));
   const missing = waitlistInterestBits(mensagem)

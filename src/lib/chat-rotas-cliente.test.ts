@@ -265,3 +265,33 @@ test("picape: texto direto, sem sobra de comparação, também com teto de preç
   assert.match(ceiling.reply, /^Picape até R\$ 80\.000 não temos agora; separei/);
   assert.doesNotMatch(ceiling.reply, /Nessa combinação/);
 });
+
+const stock7 = [
+  ...stock6,
+  car("city", "Honda", "City", "EXL 1.5", 2018, 84900, { transmission: "CVT", engine: "1.5" }),
+  car("hrv", "Honda", "HR-V", "EXL 1.8", 2016, 84900, { transmission: "Automático", engine: "1.8" }),
+];
+const ask7 = (mensagem: string) =>
+  runChatTurn({ mensagem, historico: [], stock: stock7, readIntent: async () => null, generate: noModel });
+
+test("câmbio: semiautomática não é automático; CVT mostra os CVT da ficha", async () => {
+  const auto = await ask7("quero um veículo automático");
+  assert.ok(auto.vehicles.every((vehicle) => !/semi/i.test(vehicle.transmission ?? "")));
+  const cvt = await ask7("tem câmbio cvt?");
+  assert.deepEqual(cvt.vehicles.map((vehicle) => vehicle.id), ["city"]);
+  const moto = await ask7("tem moto automática?");
+  assert.match(moto.reply, /^Moto automática \(scooter\) não temos agora, mas a BIZ 125 é semi-automática/);
+  assert.deepEqual(moto.vehicles.map((vehicle) => vehicle.id), ["biz"]);
+});
+
+test("'parecido com o Kicks, mais barato': outros SUVs abaixo do preço dele, não o Kicks", async () => {
+  const turn = await ask7("quero algo parecido com o Kicks mais barato");
+  assert.match(turn.reply, /^Na linha do Kicks \(SUV\) e mais em conta/);
+  assert.ok(turn.vehicles.length > 0);
+  assert.ok(turn.vehicles.every((vehicle) => vehicle.model !== "Kicks" && vehicle.price < 86900));
+});
+
+test("estrada de chão é pergunta de robustez, não lista de estrada", async () => {
+  const turn = await runChatTurn({ mensagem: "o Kicks aguenta estrada de chão?", historico: [], stock: stock7, readIntent: async () => null, generate: async () => ({ text: "O Kicks tem altura boa do solo para estrada de chão.", functionCall: null }) });
+  assert.doesNotMatch(turn.reply, /Para estrada, você prioriza/);
+});

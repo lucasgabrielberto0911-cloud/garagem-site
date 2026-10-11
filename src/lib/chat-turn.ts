@@ -63,6 +63,7 @@ import {
   CHAT_ZERO_REPLY,
   newestChatVehicles,
   partialCompareReply,
+  similarToNamedReply,
   CHAT_SELL_REPLY,
   CHAT_DEBTS_REPLY,
   CHAT_CASH_REPLY,
@@ -193,9 +194,10 @@ export async function runChatTurn(input: {
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
   const visitorMessage = input.mensagem;
+  // "estrada de chão/terra" é pergunta de robustez (vai à conversa), não lista de estrada.
   const roadUse = /\b(estrada|rodovias?|viagens?|viajar|ultrapassagens?|retomadas?)\b/i.test(
     visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-  );
+  ) && !/\b(estradas? de (?:chao|terra)|chao batido|lama|barro|off ?road)\b/i.test(visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
   // "Kicks ou HR-V, qual você indica?": comparação por perfil entre dois modelos nomeados.
   // Usa só a mensagem do visitante: um "até 70 mil" de turnos anteriores não vira filtro aqui.
   const namedComparison =
@@ -471,6 +473,17 @@ export async function runChatTurn(input: {
     return result;
   }
   const policy = mayCreateLead ? null : chatPolicyShortcut(scopedMessage);
+  // "quero algo parecido com o Kicks, mais barato": outros da mesma linha, não o próprio Kicks.
+  if (!mayCreateLead && !tradeTurn && !humanAction && compared.length < 2) {
+    const pool = singleMentionedModelPool(input.stock, visitorMessage);
+    const similarTo = pool?.length ? similarToNamedReply(visitorMessage, input.stock, pool) : null;
+    if (similarTo) {
+      emit(similarTo.reply);
+      const result = finish(similarTo.reply, false, { policy: "similar-to", forcedVehicles: similarTo.vehicles });
+      result.reply = similarTo.reply;
+      return result;
+    }
+  }
   // "A Biz 125 é flex?": combustível vem da ficha, resposta direta.
   if (!mayCreateLead && !tradeTurn && asksAboutFuel(visitorMessage)) {
     const named = singleMentionedModelPool(input.stock, visitorMessage) ?? [];
@@ -621,7 +634,9 @@ export async function runChatTurn(input: {
       ? null
       : emptyFilterReply(scopedMessage, input.stock);
   if (empty) {
-    const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
+    const similar = empty.startsWith("Moto automática")
+      ? input.stock.filter((vehicle) => vehicle.category === "moto" && /semi/i.test(vehicle.transmission ?? "")).slice(0, 3)
+      : similarAfterEmptyFilter(scopedMessage, input.stock, 3);
     emit(empty);
     // Texto fixo: sem comparação anexada depois do "não temos agora".
     const result = finish(empty, false, {
