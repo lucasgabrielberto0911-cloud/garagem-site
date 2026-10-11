@@ -22,6 +22,7 @@ import {
   chatRankMode,
   isPowerQuery,
   isChatSelectionQuery,
+  parseBodyStyleFilter,
   rankChatVehicles,
   parsePriceLimit,
 } from "@/lib/chat-prompt";
@@ -104,12 +105,16 @@ import {
   toChatStockLine,
   consumptionReplyLooksBroken,
   emptyFilterReply,
+  budgetFallbackReply,
   equipmentReplyLooksBroken,
   formatShortlistFollowUp,
   formatTransmissionCompareReply,
   hasChatStockFilter,
   hasConsumptionFigures,
   missingModelReply,
+  chatCityReply,
+  mentionedModelPools,
+  parseTransmissionFilter,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 import { chatTurnMayCreateLead } from "@/lib/chat-guard";
@@ -493,6 +498,11 @@ export async function runChatTurn(input: {
     emit(reply);
     return finish(reply, false, { policy, cards: false });
   }
+  if (policy === "city") {
+    const reply = chatCityReply(visitorMessage);
+    emit(reply);
+    return finish(reply, false, { policy, cards: false });
+  }
   if (policy === "sell" || policy === "debts" || policy === "cash" || policy === "delivery" || policy === "consortium") {
     const reply = { sell: CHAT_SELL_REPLY, debts: CHAT_DEBTS_REPLY, cash: CHAT_CASH_REPLY, delivery: CHAT_DELIVERY_REPLY, consortium: CHAT_CONSORTIUM_REPLY }[policy];
     emit(reply);
@@ -537,6 +547,35 @@ export async function runChatTurn(input: {
     /\b(indica|indicaria|recomenda|recomendaria|sugere|compensa|vale mais|melhor pra|melhor para|qual (?:e|é) melhor|qual o melhor)\b/i.test(visitorMessage);
   const skipShortcuts = tradeTurn || expertTurn || recommendTurn;
 
+  // "Quero trocar meu Gol 2010 num automático até 70 mil": aceita a troca e busca SEM o carro dele.
+  if (tradeTurn && !mayCreateLead && !activeVehicle) {
+    const wanted = visitorMessage.replace(/\b(?:meu|minha|tenho (?:um|uma))\s+[\wÀ-ú-]+(?:\s+[\wÀ-ú-]+)?(?:\s+(?:19|20)\d{2})?/i, " ");
+    // Só com recorte de busca (preço, câmbio, carroceria) e sem carro do estoque citado ("pelo BIZ 125?" vai à conversa).
+    const hasCriteria =
+      (parsePriceLimit(wanted) != null ||
+        parseTransmissionFilter(wanted) != null ||
+        parseBodyStyleFilter(wanted) != null) &&
+      mentionedModelPools(input.stock, wanted).length === 0;
+    const found = hasCriteria ? searchChatInventory(wanted, input.stock) : null;
+    if (found && found.picks.length) {
+      const reply = `Aceitamos sim: o seu usado entra na conta, e o consultor avalia com algumas fotos no WhatsApp (${CHAT_WHATSAPP_URL}).\n\n${found.reply}`;
+      emit(reply);
+      const result = finish(reply, false, { policy: "trade-search", forcedVehicles: found.picks });
+      result.reply = reply;
+      return result;
+    }
+  }
+
+  const budget =
+    mayCreateLead || humanAction || skipShortcuts
+      ? null
+      : budgetFallbackReply(scopedMessage, input.stock);
+  if (budget) {
+    emit(budget.reply);
+    const result = finish(budget.reply, false, { policy: "budget", forcedVehicles: budget.vehicles });
+    result.reply = budget.reply;
+    return result;
+  }
   const empty =
     mayCreateLead || humanAction || skipShortcuts
       ? null

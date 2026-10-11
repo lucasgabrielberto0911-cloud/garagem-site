@@ -959,7 +959,9 @@ export function equipmentAcrossStockReply(
   const wantsMoto = resolveChatCategory(mensagem) === "moto" || /\bmotos?\b/.test(folded);
   const base = stock.filter(vehicle => ((vehicle.category ?? "carro") === "moto") === wantsMoto);
   const extraYear = equipmentRanges(mensagem).minYear;
-  const scope = (filtered ? filterStockByPrice(applyChatStockFilters(base, mensagem), mensagem) : base)
+  // "o mais barato": é ordem, não recorte. O recorte confere a ficha de TODOS os carros do filtro.
+  const filterText = mensagem.replace(/\b(?:mais |bem )?(?:barat[oa]s?|baratinh[oa]s?|em conta|preco baixo|valor baixo|pechincha|promocao)\b/gi, " ");
+  const scope = (filtered ? filterStockByPrice(applyChatStockFilters(base, filterText), mensagem) : base)
     .filter(vehicle => extraYear == null || vehicle.yearModel >= extraYear);
   if (!scope.length) {
     if (!filtered) return null;
@@ -2431,7 +2433,7 @@ export function similarAfterEmptyFilter(
 }
 
 const WAITLIST_STOP =
-  /^(tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem)$/;
+  /^(tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
 
 const INTENT_SEEK_NOISE =
   /^(forte|fortes|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
@@ -2917,6 +2919,33 @@ export function emptyFilterReply(
   return `Nessa combinação${recorte} ainda não tem anúncio agora. Na mesma ideia, olha o que tem no estoque. ${wait}`;
 }
 
+/**
+ * "Tem algo até 20 mil?" / "carro até 15 mil?" sem carro na faixa: diz o carro mais em conta
+ * e, se couber, as motos até esse valor (sem esconder o que temos).
+ */
+export function budgetFallbackReply(
+  mensagem: string,
+  stock: ChatVehicleRecord[],
+): { reply: string; vehicles: ChatVehicleRecord[] } | null {
+  const limit = parsePriceLimit(mensagem);
+  if (limit == null) return null;
+  if (resolveChatCategory(mensagem) === "moto") return null;
+  if (parseTransmissionFilter(mensagem) || parseBodyStyleFilter(mensagem) || Object.keys(parseChatSearchRanges(mensagem)).length > 0) return null;
+  const cars = stock.filter((vehicle) => (vehicle.category ?? "carro") !== "moto");
+  if (!cars.length || cars.some((vehicle) => vehicle.price <= limit)) return null;
+  const cheapest = [...cars].sort((a, b) => a.price - b.price)[0]!;
+  const motos = stock
+    .filter((vehicle) => vehicle.category === "moto" && vehicle.price <= limit)
+    .sort((a, b) => a.price - b.price);
+  const motoText = motos.length
+    ? ` Moto até esse valor temos ${motos.length === 1 ? "1" : motos.length}: separei aqui.`
+    : "";
+  return {
+    reply: `Carro até ${formatChatPrice(limit)} não temos agora; o mais em conta é ${talkName(cheapest).labeled} ${cheapest.yearModel} (${formatChatPrice(cheapest.price)}).${motoText} Se quiser, o consultor te avisa quando chegar um carro nessa faixa: ${CHAT_WHATSAPP_URL}`,
+    vehicles: motos.length ? motos.slice(0, 3) : [cheapest],
+  };
+}
+
 export function looksLikeMissingModelReply(reply: string): boolean {
   const folded = normalize(reply);
   return /\b(nao esta na lista atual|nao tem anuncio|nao temos (esse|este) modelo|modelo nao esta|nessa combinacao ainda nao tem)\b/.test(
@@ -3025,6 +3054,15 @@ export const CHAT_DELIVERY_REPLY =
 export const CHAT_CONSORTIUM_REPLY =
   `Carta de consórcio o consultor confirma no WhatsApp se dá pra usar no seu caso. Na loja: financiamento em até 60 vezes, cartão em até 18 vezes, à vista e troca. ${CHAT_WHATSAPP_URL}`;
 
+export function chatCityReply(mensagem: string) {
+  const city = normalize(mensagem).match(/\b(aracruz|vitoria|serra|vila velha|guarapari|cariacica|colatina|cachoeiro|linhares)\b/)?.[1] ?? "";
+  const names: Record<string, string> = { aracruz: "Aracruz", vitoria: "Vitória", serra: "Serra", "vila velha": "Vila Velha", guarapari: "Guarapari", cariacica: "Cariacica", colatina: "Colatina", cachoeiro: "Cachoeiro", linhares: "Linhares" };
+  const name = names[city] ?? "sua cidade";
+  return city === "linhares"
+    ? `Atendemos Linhares sim! Você escolhe aqui no site, e a visita é com horário marcado em Linhares, combinada com o consultor no WhatsApp (das 8h às 23h). ${CHAT_WHATSAPP_URL}`
+    : `Atendemos ${name} e região sim! Você escolhe aqui no site; a visita é com horário marcado em Linhares, ou a entrega/retirada a gente combina com o consultor no WhatsApp (das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
+}
+
 export const CHAT_DOCS_REPLY =
   `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
 
@@ -3083,8 +3121,14 @@ export function formatTransmissionCompareReply(
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(
   mensagem: string,
-): "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
+): "city" | "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
   const folded = normalize(mensagem);
+  // "Tem carro em Aracruz?" / "atendem Vitória?": área de atendimento, não modelo.
+  if (/\b(?:em|de|pra|para|na|no)\s+(?:aracruz|vitoria|serra|vila velha|guarapari|cariacica|colatina|cachoeiro|linhares)\b/.test(folded) &&
+    /\b(tem|atende\w*|entrega\w*|voces|vcs|carros?|motos?|loja)\b/.test(folded) &&
+    parsePriceLimit(mensagem) == null && !parseTransmissionFilter(mensagem) && !parseBodyStyleFilter(mensagem)) {
+    return "city";
+  }
   // Consórcio: a loja não tem regra publicada; o consultor confirma (nada de "aceita" ou "não aceita").
   if (/\b(consorcio|carta de credito|carta contemplada)\b/.test(folded)) return "consortium";
   // Desconto / à vista: sem prometer desconto.
@@ -3119,6 +3163,10 @@ export function chatPolicyShortcut(
   // Ver o carro pessoalmente / agendar visita.
   if (/\b(agendar|agendamento|marcar (?:uma |um )?(?:visita|horario)|visitar|test ?drive|ver (?:o carro|a moto|ele|ela|pessoalmente)|ir ai|passar ai|ir na loja|ir ate voces|conhecer o carro)\b/.test(folded) &&
     !/\b(fotos?|videos?|financi\w*|troca\w*)\b/.test(folded)) {
+    return "visit";
+  }
+  if (/\b(?:ver|olhar|ir)(?:\s+(?:ele|ela|o carro|a moto|o veiculo|pessoalmente|ai|la))?\s+(?:(?:no|na|nesse|neste|de)\s+)?(?:amanha|hoje|sabado|domingo|segunda|terca|quarta|quinta|sexta|fim de semana|semana que vem)\b/.test(folded) &&
+    !/\b(fotos?|videos?)\b/.test(folded)) {
     return "visit";
   }
   if (
@@ -3205,6 +3253,7 @@ export function localGarageReply(
   if (policy === "warranty") return CHAT_WARRANTY_REPLY;
   if (policy === "docs") return CHAT_DOCS_REPLY;
   if (policy === "origin") return CHAT_ORIGIN_REPLY;
+  if (policy === "city") return chatCityReply(mensagem);
   if (policy === "sell") return CHAT_SELL_REPLY;
   if (policy === "cash") return CHAT_CASH_REPLY;
   if (policy === "delivery") return CHAT_DELIVERY_REPLY;
