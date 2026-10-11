@@ -1922,6 +1922,13 @@ export function compareChatStockPicks(
     ? `${picks.join(" ")}\n\n${formatConsumptionCompare(vehicles)}`
     : picks.join(" ");
   if (opts.withLeadin === false) return body;
+  // "Kicks ou HR-V?": a ficha de cada um numa linha, depois o destaque — sem "Vou te ajudar a escolher".
+  if (vehicles.length === 2 && !opts.includeConsumption) {
+    const facts = vehicles
+      .map((vehicle) => `${talkName(vehicle).cap} ${vehicle.yearModel}: ${formatChatKm(vehicle.km)}${spokenTransmission(vehicle) ? `, ${spokenTransmission(vehicle)}` : ""}, ${formatChatPrice(vehicle.price)}.`)
+      .join(" ");
+    return `${facts}\n\n${body} Quer que eu compare consumo ou itens da ficha?`;
+  }
   return `Vou te ajudar a escolher.\n\n${body}`;
 }
 
@@ -2562,7 +2569,7 @@ export function similarAfterEmptyFilter(
 }
 
 const WAITLIST_STOP =
-  /^(menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
+  /^(quem|filho|filhos|filha|filhas|esposa|marido|mulher|namorada|mae|pai|pessoas|bagagem|bagagens|criancas|cadeirinha|bebe|menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
 
 const INTENT_SEEK_NOISE =
   /^(forte|fortes|rapido|rapida|rapidos|veloz|arranque|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
@@ -2827,8 +2834,8 @@ export function formatShortlistFollowUp(
     const otherBit = others.length
       ? ` ${joinClauses(
           others.map(
-            (vehicle) =>
-              `${talkName(vehicle).cap} está com ${formatChatKm(vehicle.km)}`,
+            (vehicle, index) =>
+              `${index === 0 ? talkName(vehicle).cap : talkName(vehicle).labeled} está com ${formatChatKm(vehicle.km)}`,
           ),
         )}.`
       : "";
@@ -2909,7 +2916,7 @@ export function searchChatInventory(
   );
   if (brands.length)
     pool = pool.filter((v) => brands.includes(normalize(v.brand)));
-  if (/\bcusto[\s-]*beneficio\b/.test(normalize(message))) {
+  if (/\b(custo[\s-]*beneficio|carro bom|bom carro|bons carros|carros bons|bom e barato|boa opcao)\b/.test(normalize(message))) {
     // Preço por novidade do ano, com acréscimo proporcional à quilometragem.
     const oldestYear = Math.min(...pool.map(vehicle => vehicle.yearModel));
     const score = (vehicle: ChatVehicleRecord) => vehicle.price * (1 + vehicle.km / 100_000) / (1 + vehicle.yearModel - oldestYear);
@@ -3217,6 +3224,9 @@ export const CHAT_WARRANTY_REPLY =
 export const CHAT_ORIGIN_REPLY =
   `Todo seminovo passa por checagem na loja antes do anúncio. Laudo cautelar e histórico de cada carro (leilão, sinistro) não ficam no anúncio: o consultor confirma no WhatsApp, carro a carro, antes de você fechar. ${CHAT_WHATSAPP_URL}`;
 
+export const CHAT_GEAR_EXTRA_REPLY =
+  `Acessório que não está na ficha (capacete, baú, película) não vem no anúncio. Se quiser, o consultor vê com você o que dá pra combinar na negociação: ${CHAT_WHATSAPP_URL}`;
+
 export const CHAT_PCD_REPLY =
   `A isenção PCD de IPI e ICMS vale na compra de carro 0 km. Nos seminovos da Garagem não tem essa isenção, mas automático ajuda bastante no dia a dia: separei os nossos. Sobre IPVA no seu caso, o consultor te orienta no WhatsApp: ${CHAT_WHATSAPP_URL}`;
 
@@ -3389,7 +3399,7 @@ export function formatTransmissionCompareReply(
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(
   mensagem: string,
-): "pcd" | "recall" | "hours" | "social" | "contact" | "city" | "keys" | "zero" | "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
+): "gear-extra" | "pcd" | "recall" | "hours" | "social" | "contact" | "city" | "keys" | "zero" | "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
   const folded = normalize(mensagem);
   // "Tem carro em Aracruz?" / "atendem Vitória?": área de atendimento, não modelo.
   if (/\b(?:em|de|pra|para|na|no)\s+(?:aracruz|vitoria|serra|vila velha|guarapari|cariacica|colatina|cachoeiro|linhares)\b/.test(folded) &&
@@ -3416,6 +3426,9 @@ export function chatPolicyShortcut(
     !/\b(financi\w*|parcela\w*|entrada)\b/.test(folded)) {
     return "debts";
   }
+  // Capacete, baú, acessório "junto": não vem no anúncio; o consultor vê na negociação (sem prometer).
+  if (/\b(capacetes?|bau|bauleto|jaqueta|luvas|tapetes?|insulfilm|pelicula|brinde|vem junto|acompanha)\b/.test(folded) &&
+    !/\b(manual|chave)\b/.test(folded)) return "gear-extra";
   // PCD: isenção de IPI/ICMS é de carro 0 km; nos seminovos, automáticos + consultor.
   if (/\b(pcd|deficiente|deficiencia|isencao)\b/.test(folded)) return "pcd";
   if (/\brecalls?\b/.test(folded)) return "recall";
@@ -3426,7 +3439,7 @@ export function chatPolicyShortcut(
   if (/\b(instagram|insta|facebook|tiktok|rede social|redes sociais)\b/.test(folded)) return "social";
   if (/\b(qual (?:o|e o|é o) (?:whats|whatsapp|zap|numero|telefone|contato)|numero de (?:voces|vcs|contato)|telefone de (?:voces|vcs)|passa o (?:whats|zap|numero)|(?:whats|zap|telefone|numero) (?:de voces|de vcs|da loja))\b/.test(folded)) return "contact";
   // Manual e chave reserva: vem da ficha quando consta; senão o consultor confirma.
-  if (/\b(chave reserva|chave extra|segunda chave|duas chaves|chave copia|manual do proprietario|manual de fabrica|manual e (?:a )?chave|livro de revis\w*|manual e livro)\b/.test(folded)) {
+  if (/\b(chave reserva|chave extra|segunda chave|duas chaves|chave copia|manual do proprietario|manual de fabrica|manual e (?:a )?chave|livro de revis\w*|manual e livro|acompanha (?:o )?manual|vem (?:com )?(?:o )?manual|manual do dono|manual de instrucoes)\b/.test(folded)) {
     return "keys";
   }
   // 0 km: a loja é de seminovos.
@@ -3548,6 +3561,7 @@ export function localGarageReply(
   if (policy === "keys") return CHAT_KEYS_REPLY;
   if (policy === "social") return CHAT_SOCIAL_REPLY;
   if (policy === "pcd") return CHAT_PCD_REPLY;
+  if (policy === "gear-extra") return CHAT_GEAR_EXTRA_REPLY;
   if (policy === "recall") return CHAT_RECALL_REPLY;
   if (policy === "hours") return CHAT_HOURS_REPLY;
   if (policy === "contact") return CHAT_CONTACT_REPLY;
