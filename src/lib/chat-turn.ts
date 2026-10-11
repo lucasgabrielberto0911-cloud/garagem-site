@@ -57,6 +57,8 @@ import {
   CHAT_WARRANTY_REPLY,
   CHAT_DOCS_REPLY,
   CHAT_ORIGIN_REPLY,
+  CHAT_SELL_REPLY,
+  CHAT_DEBTS_REPLY,
   CHAT_VISIT_REPLY,
   CHAT_ADDRESS_REPLY,
   CHAT_TRADE_VALUE_REPLY,
@@ -454,6 +456,11 @@ export async function runChatTurn(input: {
     emit(reply);
     return finish(reply, false, { policy, cards: false });
   }
+  if (policy === "sell" || policy === "debts") {
+    const reply = policy === "sell" ? CHAT_SELL_REPLY : CHAT_DEBTS_REPLY;
+    emit(reply);
+    return finish(reply, false, { policy, cards: false });
+  }
   if (policy === "visit" || policy === "address") {
     const reply = policy === "visit" ? CHAT_VISIT_REPLY : CHAT_ADDRESS_REPLY;
     emit(reply);
@@ -583,6 +590,10 @@ export async function runChatTurn(input: {
   ) {
     const found = searchChatInventory(scopedMessage, input.stock);
     if (found) {
+      // Estrada: os mais fortes e confortáveis do recorte, não os mais baratos.
+      if (roadUse && parsePriceLimit(scopedMessage) == null && !isPowerQuery(scopedMessage)) {
+        found.picks = rankChatVehicles(found.candidates, "carro potente").slice(0, found.picks.length);
+      }
       const inventoryBase = roadUse
         ? `${found.reply.split("\n")[0]}\n${found.picks.map(formatVehicleLine).join("\n")}\n\n${compareChatStockPicks(found.picks, {
             withLeadin: false,

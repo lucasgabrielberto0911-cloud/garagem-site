@@ -350,7 +350,8 @@ test("sujeito da pergunta: nomeado > tela > conversa; ano e motor sem estoque n�
   assert.deepEqual(expertSubject(ctx("quantos cv tem o Civic LXR?")).vehicles.map((x) => x.id), ["civic15"]);
   const wrongYear = expertSubject(ctx("quantos cv tem o hb20 2030?"));
   assert.equal(wrongYear.vehicles.length, 0);
-  assert.equal(wrongYear.unmatched?.length, 3);
+  // "hb20" escrito: só os HB20 (o HB20S, só parecido, não entra).
+  assert.equal(wrongYear.unmatched?.length, 2);
   assert.deepEqual(expertSubject(ctx("e o torque?", { activeVehicle: city })).vehicles.map((x) => x.id), ["city"]);
   assert.deepEqual(
     expertSubject(ctx("e o torque?", { activeVehicle: city, historico: [user("quantos cv tem o Kicks?")] })).vehicles.map((x) => x.id),

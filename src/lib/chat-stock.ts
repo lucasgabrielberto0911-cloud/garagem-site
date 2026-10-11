@@ -398,8 +398,15 @@ function messageMentionsModel(mensagem: string, model: string) {
 
 function mentionedModelGroups(stock: ChatVehicleRecord[], mensagem: string) {
   const models = new Map<string, ChatVehicleRecord[]>();
+  const foldedMsg = normalize(mensagem);
   for (const vehicle of stock) {
     if (!messageMentionsModel(mensagem, vehicle.model)) continue;
+    // "quero um sedan" não cita o "Ka Sedan": com palavra de carroceria no nome, precisa da outra palavra.
+    const words = normalize(vehicle.model).split(/[^a-z0-9]+/).filter(Boolean);
+    if (words.length > 1 && words.some(word => parseBodyStyleFilter(word))) {
+      const head = words.find(word => !parseBodyStyleFilter(word));
+      if (head && !new RegExp(`(?:^|[^a-z0-9])${head}(?:$|[^a-z0-9])`).test(foldedMsg)) continue;
+    }
     const model = normalize(vehicle.model);
     const list = models.get(model) ?? [];
     list.push(vehicle);
@@ -412,6 +419,12 @@ function mentionedModelGroups(stock: ChatVehicleRecord[], mensagem: string) {
   for (const model of [...models.keys()]) {
     const longer = written.find(other => other !== model && spaced(other).startsWith(spaced(model)) && spaced(other).length > spaced(model).length);
     if (longer) models.delete(model);
+  }
+  // "HB20 ou Mobi": o HB20S (só parecido, não escrito) não entra quando o HB20 foi escrito.
+  for (const model of [...models.keys()]) {
+    if (written.includes(model)) continue;
+    const shorter = written.find(other => other !== model && spaced(model).startsWith(spaced(other)));
+    if (shorter) models.delete(model);
   }
   return models;
 }
@@ -827,7 +840,7 @@ export function normalizeChatAccessories(items: string[]) {
 /** Opcionais que o chat confere na ficha: [rótulo, pergunta, item cadastrado]. */
 const EQUIPMENT_ITEMS = [
   ["central multimídia", /multimidia|central|carplay|android auto/, /multimidia|carplay|android auto|central (?:de )?(?:midia|entretenimento)|tela (?:touch|sensivel)|media ?nav|mylink|my link|uconnect|intellilink|\bsync\b|\bgps\b/],
-  ["teto solar", /teto solar|teto panoramico|sunroof/, /teto solar|teto panoramico|teto de vidro|sunroof/],
+  ["teto solar", /teto solar|teto panoramico|sunroof|\btem teto\b(?! de)/, /teto solar|teto panoramico|teto de vidro|sunroof/],
   ["airbags", /air ?bags?|bolsas? de ar/, /air ?bags?|bolsas? (?:de ar|inflaveis)/],
   ["freios ABS", /\babs\b/, /\babs\b|antitravamento|anti ?bloqueio/],
   ["controle de estabilidade", /controle de estabilidade|\besp\b/, /controle (?:eletronico )?de estabilidade|controle de tracao e estabilidade|\b(?:esp|esc|vdc|vsc|vsa)\b/],
@@ -2960,6 +2973,12 @@ export const CHAT_ADDRESS_REPLY =
 export const CHAT_TRADE_VALUE_REPLY =
   `O valor do seu carro o consultor avalia com algumas fotos no WhatsApp (ano, km e estado contam) e já encaixa na conta do carro que você quer. ${CHAT_WHATSAPP_URL}`;
 
+export const CHAT_SELL_REPLY =
+  `Compramos sim! Manda os dados e algumas fotos do seu carro ou moto no WhatsApp que o consultor avalia, e se quiser ele também entra na troca. ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_DEBTS_REPLY =
+  `Multas, IPVA e débitos de cada carro não ficam no anúncio: o consultor confirma a situação do documento no WhatsApp antes de você fechar, junto com a transferência. ${CHAT_WHATSAPP_URL}`;
+
 export const CHAT_DOCS_REPLY =
   `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
 
@@ -3018,14 +3037,26 @@ export function formatTransmissionCompareReply(
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(
   mensagem: string,
-): "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | null {
+): "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | null {
   const folded = normalize(mensagem);
+  // "Vocês compram carro?" / "quero vender meu carro": compramos usado (página inicial).
+  if (/\b(?:voces|vcs|ces) compram\b|\bcompram (?:meu|minha|carros?|motos?|usados?)\b|\b(?:quero|queria|gostaria de|posso) vender (?:o |a )?(?:meu|minha)\b|\bvender (?:meu|minha) (?:carro|moto)\b/.test(folded)) {
+    return "sell";
+  }
+  // Multa, IPVA, débitos do carro: não ficam no anúncio.
+  if (/\b(multas?|debitos?|ipva|licenciamento|alienad[oa]|restricao|restricoes|quitad[oa])\b/.test(folded) &&
+    !/\b(financi\w*|parcela\w*|entrada)\b/.test(folded)) {
+    return "debts";
+  }
   // Procedência, laudo, leilão: não está no anúncio; o consultor confirma carro a carro.
   if (/\b(leilao|leiloes|leiload[oa]s?|sinistr\w*|procedencia|laudo|cautelar|vistoria cautelar|recuperad[oa]s? de financiamento|passagem por leilao)\b/.test(folded) &&
     !/\b(financi\w*|parcela|fipe)\b/.test(folded.replace(/recuperad[oa]s? de financiamento/g, ""))) {
     return "origin";
   }
   // Endereço da loja: loja digital, visita com hora marcada em Linhares.
+  if (/\b(?:carros?|motos?|veiculos?|voces|vcs) (?:de (?:voces|vcs) )?(?:ficam|estao) onde\b|\bonde (?:ficam|estao) os (?:carros|veiculos)\b/.test(folded)) {
+    return "address";
+  }
   if (/\b(endereco|loja fisica|onde (?:fica|e|esta) a (?:loja|garagem)|onde (?:voces|vcs) (?:ficam|estao|sao)|onde fica (?:voces|vcs)|localizacao da loja|qual a localizacao|tem loja)\b/.test(folded)) {
     return "address";
   }
@@ -3116,6 +3147,8 @@ export function localGarageReply(
   if (policy === "warranty") return CHAT_WARRANTY_REPLY;
   if (policy === "docs") return CHAT_DOCS_REPLY;
   if (policy === "origin") return CHAT_ORIGIN_REPLY;
+  if (policy === "sell") return CHAT_SELL_REPLY;
+  if (policy === "debts") return CHAT_DEBTS_REPLY;
   if (policy === "visit") return CHAT_VISIT_REPLY;
   if (policy === "address") return CHAT_ADDRESS_REPLY;
   if (policy === "gear") return formatTransmissionCompareReply(stock, mensagem);
