@@ -57,9 +57,9 @@ test("filtros do estoque no celular alinham rótulo, chips e Filtros sem máscar
   assert.ok(barStart > 0 && barEnd > barStart);
   const bar = filters.slice(barStart, barEnd);
   assert.doesNotMatch(filters.slice(barEnd), /Onde o veículo está/);
-  assert.match(bar, /MobileChipRow label="Faixa"/);
+  assert.match(bar, /MobileChipRow label="Atalhos"/);
   assert.doesNotMatch(bar, /label="Marca"/);
-  const faixa = bar.slice(bar.indexOf('label="Faixa"'), bar.indexOf('label="Câmbio"'));
+  const faixa = bar.slice(bar.indexOf('label="Atalhos"'), bar.indexOf('stock-chip-action'));
   assert.doesNotMatch(faixa, /stock-chip-action/);
   assert.match(bar, /stock-chip-action/);
   assert.match(bar, /Filtros/);

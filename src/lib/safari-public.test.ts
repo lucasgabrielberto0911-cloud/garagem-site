@@ -44,7 +44,7 @@ test("layout público e filtros do estoque não dependem de 100vh", () => {
   const offline = src("app/offline/page.tsx");
   assert.match(layout, /min-h-app-screen/);
   assert.doesNotMatch(layout, /min-h-screen/);
-  assert.match(filters, /100dvh/);
+  assert.match(filters, /88dvh/);
   assert.doesNotMatch(filters, /100vh/);
   assert.match(offline, /min-h-app-screen/);
 });

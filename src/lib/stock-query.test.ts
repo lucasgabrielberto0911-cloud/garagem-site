@@ -252,11 +252,12 @@ test("modelo entra na URL e a ordenação sozinha também busca a lista", () => 
     join(dirname(fileURLToPath(import.meta.url)), "../lib/vehicles.ts"),
     "utf8",
   );
-  assert.match(filters, /Todos os modelos/);
+  assert.match(filters, /emptyLabel="Todos"/);
   assert.match(filters, /desktop-modelo/);
   assert.match(filters, /transmissionFilterParam/);
   assert.match(filters, /desktop-cambio/);
-  assert.match(filters, /sticky-gear-/);
+  assert.doesNotMatch(filters, /lg:overflow-y-auto/);
+  assert.match(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../components/site/StockSortSelect.tsx"), "utf8"), /destaques/);
   assert.match(browse, /stockViewNeedsFetch/);
   assert.match(vehicles, /stockOrderBy\(filters\.sort\)/);
   assert.match(vehicles, /model: \{/);

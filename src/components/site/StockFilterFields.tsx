@@ -3,15 +3,15 @@
 import { cloneElement, isValidElement, useId, type Dispatch, type SetStateAction, type ReactNode } from "react";
 import type { Facets, FilterValues } from "./StockFilters";
 import { CATEGORY_FILTER_OPTIONS, BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, KM_OPTIONS, selectClass, selectedOption, toggleAccessoryValue, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
-import { modelAfterBrandChange, modelFilterOptions, STOCK_SORT_OPTIONS } from "@/lib/stock-query";
+import { modelAfterBrandChange, modelFilterOptions } from "@/lib/stock-query";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import { transmissionFilterOptions, transmissionFilterParam } from "@/lib/vehicle-display";
 import { stockRangeError } from "@/lib/stock-range-validation";
 
 export type StockFilterFieldsProps = {
-  facets: Facets; draft: FilterValues; setDraft: Dispatch<SetStateAction<FilterValues>>; onApply: () => void;
+  facets: Facets; draft: FilterValues; setDraft: Dispatch<SetStateAction<FilterValues>>; onApply: () => void; resultCount?: number | null;
 };
-export function StockFilterFields({ facets, draft, setDraft, onApply }: StockFilterFieldsProps) {
+export function StockFilterFields({ facets, draft, setDraft, onApply, resultCount }: StockFilterFieldsProps) {
   const rangeError = stockRangeError(draft);
   /** Só os campos que existem dentro do painel do celular (a busca fica fora). */
   const draftFilterCount = [
@@ -169,21 +169,6 @@ export function StockFilterFields({ facets, draft, setDraft, onApply }: StockFil
                   </span>
                 </summary>
                 <div className="space-y-5 pb-4 pt-1">
-                  <MobileField label="Ordenar">
-                    <select
-                      value={draft.sort}
-                      onChange={(event) =>
-                        setDraft({ ...draft, sort: event.target.value })
-                      }
-                      className={selectClass}
-                    >
-                      {STOCK_SORT_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </MobileField>
                   <MobileField label="Combustível">
                     <select
                       value={draft.fuel}
@@ -275,7 +260,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply }: StockFil
                   disabled={Boolean(rangeError)}
                   className="min-h-[52px] bg-brand px-3 font-display text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-50"
                 >
-                  Ver veículos
+                  {typeof resultCount === "number" ? `Ver ${resultCount} ${resultCount === 1 ? "veículo" : "veículos"}` : "Ver veículos"}
                 </button>
               </div>
             </div>
