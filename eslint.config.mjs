@@ -17,6 +17,15 @@ const eslintConfig = defineConfig([
       // React 19 plugin: padrões existentes (sync de URL/storage) não entram nesta PR.
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/refs": "off",
+      // `const { campo: _descartado, ...resto } = obj` é o jeito de omitir uma chave.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          ignoreRestSiblings: true,
+          varsIgnorePattern: "^_",
+          argsIgnorePattern: "^_",
+        },
+      ],
     },
   },
 ]);

@@ -7,6 +7,7 @@ import {
   hasMarketingConsent,
   isConsentChoice,
   readStoredConsent,
+  rememberAdVisit,
   shouldLoadMetaPixel,
 } from "./consent";
 
@@ -21,6 +22,13 @@ test("consentimento de marketing só vale com accepted", () => {
 
 test("sem window não lê consentimento", () => {
   assert.equal(readStoredConsent(), null);
+});
+
+test("visita de anúncio lembrada na aba mantém o pixel sem fbclid na URL", () => {
+  assert.equal(shouldLoadMetaPixel("essential", "", true), true);
+  assert.equal(shouldLoadMetaPixel(null, "", true), true);
+  assert.equal(shouldLoadMetaPixel(null, "", false), false);
+  assert.equal(rememberAdVisit("?fbclid=abc"), false, "sem window não grava");
 });
 
 test("pixel sobe no aceite e no anúncio, mesmo com só o essencial", () => {

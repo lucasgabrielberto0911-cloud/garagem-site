@@ -133,7 +133,7 @@ test("o formulário público pede consentimento antes de enviar e não é WhatsA
       initialModel: "HB20",
     }),
   );
-  const consentAt = html.indexOf("Autorizo a Sua Garagem");
+  const consentAt = html.indexOf("Autorizo a Garagem");
   const sendAt = html.indexOf("Enviar pedido");
   assert.ok(consentAt > 0);
   assert.ok(sendAt > consentAt);

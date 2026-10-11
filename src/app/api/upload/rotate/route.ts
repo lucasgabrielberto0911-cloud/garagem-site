@@ -7,21 +7,15 @@ import { downloadPrivateMaster, uploadPrivateMasterBytes } from "@/lib/photo-mas
 import { encodeMasterJpeg, toDownloadJpeg } from "@/lib/photo-jpeg";
 import { parsePhotoRotation, rotatePhoto } from "@/lib/photo-rotation";
 import { cardObjectPath, encodeCardImage, encodeGalleryImage } from "@/lib/image-variants";
+import { ownPublicPhotoPath } from "@/lib/own-photo-path";
 import { getSupabaseAdmin, hasSupabaseServiceRole, VEHICLE_PHOTOS_BUCKET, VEHICLE_DOCS_BUCKET } from "@/lib/supabase";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 const headers = { "Cache-Control": "private, no-store" };
 
 function ownPhotoPath(value: unknown) {
-  if (typeof value !== "string") return null;
-  try {
-    const url = new URL(value);
-    const base = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
-    const prefix = `/storage/v1/object/public/${VEHICLE_PHOTOS_BUCKET}/`;
-    if (url.protocol !== "https:" || url.origin !== base.origin || url.search || url.hash || !url.pathname.startsWith(prefix)) return null;
-    const path = decodeURIComponent(url.pathname.slice(prefix.length));
-    return !path.includes("/") && galleryStemFromStoragePath(path) ? path : null;
-  } catch { return null; }
+  const path = ownPublicPhotoPath(value);
+  return path && !path.includes("/") && galleryStemFromStoragePath(path) ? path : null;
 }
 
 export async function GET(request: NextRequest) {

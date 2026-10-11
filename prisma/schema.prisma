@@ -74,6 +74,7 @@ model Vehicle {
   sale         Sale?
   costs        VehicleCost[]
   documents    VehicleDocument[]
+  verifiedInfo VehicleVerifiedInfo?
 
   @@index([status, createdAt])
   @@index([status, price])
@@ -128,6 +129,22 @@ model VehicleDocument {
   @@index([vehicleId])
 }
 
+/**
+ * Informações verificadas daquele exemplar (revisões, pneus, interior, lataria,
+ * documentação). Tabela própria e opcional: o Vehicle não ganha coluna, então
+ * o site e o admin seguem funcionando se o SQL ainda não rodou
+ * (prisma/sql/vehicle-verified-info.sql). `items` = lista de
+ * { key, text, photoIds } — ver src/lib/vehicle-verified.ts.
+ */
+model VehicleVerifiedInfo {
+  id        String   @id @default(cuid())
+  vehicleId String   @unique
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  items     Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Customer {
   id        String   @id @default(cuid())
   name      String
@@ -153,6 +170,8 @@ model Sale {
   notes         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
+
+  @@index([customerId])
 }
 
 model Admin {
@@ -183,6 +202,8 @@ model LeadVenda {
   photoUrls         String[] @default([])
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([status, createdAt])
 }
 
 model Testimonial {

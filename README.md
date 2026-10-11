@@ -1,40 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Garagem — site e painel
 
-## Getting Started
+Site público de seminovos da Garagem (Linhares/ES) e painel administrativo da loja.
+Produção: <https://www.suagaragem.net>.
 
-First, run the development server:
+## Stack
+
+- Next.js (App Router, React 19, React Compiler) e Tailwind CSS 3
+- PostgreSQL no Supabase, acessado com Prisma (`prisma/schema.prisma`)
+- Fotos e documentos no Supabase Storage (bucket público `veiculos`, privado `documentos`)
+- Deploy na Vercel (região `gru1`, ver `vercel.json`)
+- Assistente do site com Gemini (`GEMINI_API_KEY`)
+
+## Como está organizado
+
+| Pasta | O que tem |
+| --- | --- |
+| `src/app/(site)`, `(catalog)`, `(vehicle)` | Páginas públicas: home, estoque, ficha do veículo, vender, pedido, FAQ, cidades |
+| `src/app/admin` | Painel (protegido por `src/proxy.ts` e por sessão em cada ação) |
+| `src/app/api` | Rotas: chat, estoque, upload, catálogo Meta, saúde, fotos |
+| `src/components/site`, `src/components/admin` | Componentes do site e do painel |
+| `src/lib` | Regras de negócio, consultas, SEO, chat e testes (`*.test.ts`) |
+| `prisma` | Schema, seed e SQLs aditivos (`prisma/sql`) |
+| `e2e` | Percursos no navegador (Playwright) |
+| `docs` | Operação (`ops.md`), painel, avaliação do chat, prévias de fotos antigas |
+| `branding` | Logo e imagens originais da marca |
+
+## Rodar localmente
 
 ```bash
+cp .env.example .env      # preencha DATABASE_URL, DIRECT_URL e as chaves do Supabase
+npm ci
+npm run db:push           # aplica o schema no banco
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Nunca use o banco de produção para testes. O painel só cria um administrador com
+`ADMIN_BOOTSTRAP_PASSWORD` definido (veja `.env.example`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Testes e verificações
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm test                  # testes de lógica
+npm run lint
+npm run build
+npm run e2e:seed && npm run test:e2e   # exige E2E_TEST=1 e banco local `ci` ou `garagem_e2e`
+```
 
-## Learn More
+O CI (`.github/workflows/ci.yml`) roda tudo isso.
+Veja `e2e/README.md` para os percursos cobertos.
 
-To learn more about Next.js, take a look at the following resources:
+## Regras que não podem quebrar
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- WhatsApp único da loja: (27) 99633-0706. Instagram: @suagaragem1.
+- A marca visível é só "Garagem" (nunca "Sua" ao lado do logo); vermelho `#F80000`.
+- Não inventar preço, km, equipamento, laudo ou vistoria. "Consignado" nunca aparece para o cliente.
+- Carro vendido: ficha responde 200, título com "(vendido)", `noindex, follow`, sem preço e sem Offer com preço.
+- A cidade do veículo aparece só no admin.
+- No celular, o estoque mostra 2 carros por linha.
+- Não aumentar escritas de ISR nem ligar a otimização paga de imagens da Vercel (ver `docs/ops.md`).
+- `robots.txt` bloqueia só `/admin` e `/api`; `sitemap.xml` deve responder 200.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Operação
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Operação (Vercel Hobby)
-
-Notas de Functions Storage, retenção de deploys (Hobby, 30 dias) e Image Optimization: [`docs/ops.md`](docs/ops.md).
+Região, retenção de deploys, catálogo Meta e imagens: [`docs/ops.md`](docs/ops.md).
+SQLs que precisam ser aplicados à mão no Supabase: [`prisma/sql`](prisma/sql).

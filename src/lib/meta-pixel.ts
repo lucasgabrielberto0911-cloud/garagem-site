@@ -272,6 +272,28 @@ function fire(event: string, payload?: CatalogEventPayload) {
   window.setTimeout(tick, TRACK_RETRY_MS);
 }
 
+/**
+ * trackCustom também espera o stub do fbq (o Pixel sobe depois do efeito de
+ * consentimento); antes o evento era descartado se o clique vinha primeiro.
+ */
+function fireCustom(event: string, payload: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  const run = () => {
+    const fbq = getFbq();
+    if (!fbq) return false;
+    fbq("trackCustom", event, payload);
+    return true;
+  };
+  if (run()) return;
+  const started = Date.now();
+  const tick = () => {
+    if (run()) return;
+    if (Date.now() - started > TRACK_RETRY_BUDGET_MS) return;
+    window.setTimeout(tick, TRACK_RETRY_MS);
+  };
+  window.setTimeout(tick, TRACK_RETRY_MS);
+}
+
 export function trackPageView() {
   fire("PageView");
 }
@@ -297,6 +319,35 @@ export function trackLead(params: CatalogEventParams) {
   const payload = buildCatalogPayload(params);
   fire("Lead", payload);
   fireGtag("generate_lead", gtagItemParams(payload));
+}
+
+/** Dados do veículo da ficha (contexto do chat) no formato de evento de catálogo. */
+export function catalogParamsFromChatVehicle(vehicle: {
+  id: string;
+  label: string;
+  brand: string;
+  model: string;
+  year?: number;
+  price?: number;
+}): CatalogEventParams {
+  return {
+    content_ids: [vehicle.id],
+    content_name: vehicle.label,
+    value: vehicle.price,
+    make: vehicle.brand,
+    model: vehicle.model,
+    year: vehicle.year,
+  };
+}
+
+/**
+ * Clique de WhatsApp fora dos CTAs da ficha (cabeçalho, float) com veículo
+ * aberto: mesmo Lead + AddToCart do catálogo. Sem veículo não dispara nada.
+ */
+export function trackCatalogWhatsAppClick(params?: CatalogEventParams) {
+  if (!params || params.content_ids.length === 0) return;
+  trackLead(params);
+  trackAddToCart(params);
 }
 
 /** @deprecated Use trackLead — Commerce Manager casa Lead, não Contact. */
@@ -359,8 +410,7 @@ export function trackVehicleView(ref: VehicleFunnelRef) {
   if (typeof window === "undefined") return;
   const params = vehicleFunnelParams(ref);
   if (!params.vehicle_id) return;
-  const fbq = getFbq();
-  if (fbq) fbq("trackCustom", "vehicle_view", params);
+  fireCustom("vehicle_view", params);
   fireGtag("vehicle_view", params);
 }
 
@@ -369,8 +419,7 @@ export function trackWhatsAppClick(label: string, ref?: VehicleFunnelRef) {
   if (typeof window === "undefined") return;
   const funnel = vehicleFunnelParams(ref);
   const custom: Record<string, string> = { label, ...funnel };
-  const fbq = getFbq();
-  if (fbq) fbq("trackCustom", "WhatsAppClick", custom);
+  fireCustom("WhatsAppClick", custom);
   fireGtag("whatsapp_click", {
     event_category: "engagement",
     event_label: label,

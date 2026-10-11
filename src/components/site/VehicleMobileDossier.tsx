@@ -25,6 +25,8 @@ import {
   type VehicleConditionsContent,
 } from "@/lib/vehicle-conditions";
 import { whatsappContentFromVehicle } from "@/lib/site";
+import { VehicleVerifiedList } from "@/components/site/VehicleVerifiedInfo";
+import type { PublicVerifiedItem } from "@/lib/vehicle-verified";
 
 /** Já aparecem na primeira dobra. */
 const FOLD_LABELS = new Set(["Ano", "KM", "Câmbio"]);
@@ -170,6 +172,8 @@ export function VehicleMobileBlocks({
   google,
   prompt,
   quickActions,
+  verified = [],
+  verifiedHeading,
 }: {
   fullLabel: string;
   path: string;
@@ -188,6 +192,9 @@ export function VehicleMobileBlocks({
   listedLine?: ReactNode;
   google: GoogleReviews;
   prompt: string;
+  /** Pontos verificados daquele exemplar (só os preenchidos). Vazio = sem bloco. */
+  verified?: PublicVerifiedItem[];
+  verifiedHeading?: string;
   quickActions?: {
     contentPath: string;
     video: string;
@@ -211,6 +218,12 @@ export function VehicleMobileBlocks({
 
   return (
     <div className="mt-5 border-t border-white/10 lg:hidden">
+      {verified.length > 0 ? (
+        <DossierBlock title={verifiedHeading ?? "Verificado neste carro"} defaultOpen>
+          <VehicleVerifiedList items={verified} alt={fullLabel} />
+        </DossierBlock>
+      ) : null}
+
       <DossierBlock title={STORE_INSPECTION_LABEL}>
         {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
           <p className="mb-3 text-[15px] leading-7 text-cream">{inspectionNote}</p>

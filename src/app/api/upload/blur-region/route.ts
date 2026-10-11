@@ -3,9 +3,12 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { blurImageRegions } from "@/lib/blur-region";
 import { BlurRectError, parseBlurRects } from "@/lib/blur-rects";
+import { coverFrameFromCardUrl } from "@/lib/cover-frame";
+import { uploadFramedCard } from "@/lib/framed-card-store";
 import {
   cardObjectPath,
   encodeCardImage,
+  encodeFramedCardSet,
   encodeGalleryImage,
 } from "@/lib/image-variants";
 import { encodeMasterJpeg } from "@/lib/photo-jpeg";
@@ -47,7 +50,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { url?: unknown; rects?: unknown };
+    const body = (await request.json()) as {
+      url?: unknown;
+      rects?: unknown;
+      thumbnailUrl?: unknown;
+    };
     const url = typeof body.url === "string" ? body.url.trim() : "";
     if (!isOwnPhotoUrl(url)) {
       return NextResponse.json(
@@ -70,27 +77,34 @@ export async function POST(request: Request) {
       master ? Buffer.from(master) : original,
       rects,
     );
-    const [gallery, card] = await Promise.all([
+    // Borrar não muda a geometria: a capa enquadrada no admin continua enquadrada.
+    const frame = coverFrameFromCardUrl(
+      typeof body.thumbnailUrl === "string" ? body.thumbnailUrl : null,
+    );
+    const [gallery, card, framedSet] = await Promise.all([
       encodeGalleryImage(processed),
-      encodeCardImage(processed),
+      frame ? null : encodeCardImage(processed),
+      frame ? encodeFramedCardSet(processed, frame) : null,
     ]);
 
     const id = createPhotoMasterId();
     const galleryPath = await prepareGalleryUploadPath(id, gallery);
-    const cardPath = cardObjectPath(galleryPath);
     const supabase = getSupabaseAdmin();
 
+    // Com enquadramento, a capa sai de novo no mesmo recorte (480 e, se couber, 960).
     const [galleryUpload, cardUpload] = await Promise.all([
       supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(galleryPath, gallery.buffer, {
         contentType: gallery.contentType,
         upsert: false,
         cacheControl: "31536000",
       }),
-      supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(cardPath, card.buffer, {
-        contentType: card.contentType,
-        upsert: false,
-        cacheControl: "31536000",
-      }),
+      frame && framedSet
+        ? uploadFramedCard(supabase, galleryPath, frame, framedSet)
+        : supabase.storage.from(VEHICLE_PHOTOS_BUCKET).upload(cardObjectPath(galleryPath), card!.buffer, {
+            contentType: card!.contentType,
+            upsert: false,
+            cacheControl: "31536000",
+          }).then(({ error }) => ({ path: cardObjectPath(galleryPath), error })),
     ]);
 
     if (galleryUpload.error) {
@@ -103,7 +117,7 @@ export async function POST(request: Request) {
     const { data } = supabase.storage
       .from(VEHICLE_PHOTOS_BUCKET)
       .getPublicUrl(galleryPath);
-    const thumb = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(cardPath);
+    const thumb = supabase.storage.from(VEHICLE_PHOTOS_BUCKET).getPublicUrl(cardUpload.path);
 
     try {
       const jpeg = await encodeMasterJpeg(new Uint8Array(processed));

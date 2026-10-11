@@ -81,14 +81,14 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: "1080x1920",
         type: "image/png",
         form_factor: "narrow",
-        label: "Estoque da Sua Garagem no celular",
+        label: "Estoque da Garagem no celular",
       },
       {
         src: "/screenshots/wide.png",
         sizes: "1920x1080",
         type: "image/png",
         form_factor: "wide",
-        label: "Estoque da Sua Garagem no computador",
+        label: "Estoque da Garagem no computador",
       },
     ],
   };

@@ -1,3 +1,4 @@
+import { WhatsAppOrigin } from "@/components/site/WhatsAppOrigin";
 import { consentBootstrapScript } from "@/lib/consent";
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
@@ -27,7 +28,7 @@ const body = Inter({
 });
 
 const description =
-  "Seminovos com procedência verificada em Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Compra, venda, troca e financiamento na Sua Garagem.";
+  "Seminovos com procedência verificada em Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Compra, venda, troca e financiamento na Garagem.";
 
 function supabaseOrigin() {
   const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -191,6 +192,7 @@ export default function RootLayout({
       <body
         className={`${display.variable} ${body.variable} font-body antialiased bg-asphalt text-cream`}
       >
+        <WhatsAppOrigin />
         <BootSplash />
         {children}
         <PwaRegister />

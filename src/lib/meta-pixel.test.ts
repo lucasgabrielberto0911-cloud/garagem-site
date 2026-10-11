@@ -5,6 +5,8 @@ import {
   META_CATALOG_CONTENT_TYPE,
   buildChatEventPayload,
   buildCatalogPayload,
+  catalogParamsFromChatVehicle,
+  trackCatalogWhatsAppClick,
   classifyChatIntent,
   stockSearchString,
   trackAddToCart,
@@ -316,4 +318,20 @@ test("ChatLeadCreated e Lead do catálogo não levam telefone", () => {
   });
   assert.equal(calls[1]?.[1], "Lead");
   assert.equal(gtagCalls[1]?.[1], "generate_lead");
+});
+
+test("cabeçalho/float na ficha: params de catálogo do veículo e nada sem veículo", () => {
+  const params = catalogParamsFromChatVehicle({
+    id: VEHICLE_CUID,
+    label: "Hyundai HB20 2024",
+    brand: "Hyundai",
+    model: "HB20",
+    year: 2024,
+    price: 80000,
+  });
+  const payload = buildCatalogPayload(params);
+  assert.deepEqual(payload.content_ids, [VEHICLE_CUID]);
+  assert.equal(payload.content_type, META_CATALOG_CONTENT_TYPE);
+  assert.equal(payload.value, 80000);
+  assert.doesNotThrow(() => trackCatalogWhatsAppClick(undefined));
 });

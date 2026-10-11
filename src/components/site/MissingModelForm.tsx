@@ -466,7 +466,7 @@ export function MissingModelForm({
                 htmlFor={ids.consent}
                 className="text-xs leading-relaxed text-muted"
               >
-                Autorizo a Sua Garagem a usar meu nome, e-mail e telefone só para
+                Autorizo a Garagem a usar meu nome, e-mail e telefone só para
                 me avisar sobre o modelo que pedi. Sem spam e sem repassar a
                 terceiros.
               </label>{" "}
