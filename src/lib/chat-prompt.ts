@@ -299,7 +299,7 @@ function foldIntent(value: string) {
 }
 
 const POWER_WORD =
-  /\b(fortes?|motorizad[oa]s?|potentes?|pegada|torque|esportiv[oa]s?)\b/;
+  /\b(fortes?|motorizad[oa]s?|potentes?|pegada|torque|esportiv[oa]s?|rapid[oa]s?|veloz|velozes|arranque|0 a 100)\b/;
 
 const STRONG_ENGINE_BADGE =
   /\b(tsi|tfsi|thp|tjet|t-jet|t jet|turbo|biturbo|ecoboost|gti|gsi|v6|v8)\b/i;
@@ -383,7 +383,7 @@ export function parseFamilyIntent(mensagem: string) {
 
 /** Primeiro carro, cidade ou app. Nome de cidade solto e “whatsapp” não contam. */
 export function parseStarterIntent(mensagem: string) {
-  return /\b(primeiro carro|primeiro veiculo|primeira moto|carro de cidade|uso na cidade|para a cidade|pra cidade)\b/.test(
+  return /\b(primeiro carro|primeiro veiculo|primeira moto|aprendendo a dirigir|aprender a dirigir|carteira nova|cnh nova|recem habilitad[oa]|acabei de tirar (?:a )?(?:carteira|cnh|habilitacao)|tirei (?:a )?(?:carteira|cnh) agora|carro de cidade|uso na cidade|para a cidade|pra cidade)\b/.test(
     foldIntent(mensagem),
   );
 }
