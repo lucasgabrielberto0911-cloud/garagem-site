@@ -766,17 +766,24 @@ export function formatFocusedEquipmentReply(
   const requested = [
     ["central multimídia", /multimidia|central|carplay|android auto/, /multimidia|carplay|android auto/],
     ["teto solar", /teto solar/, /teto solar/],
-    ["airbags", /airbags?/, /airbags?/],
+    ["airbags", /air ?bags?|bolsas? de ar/, /air ?bags?/],
     ["freios ABS", /\babs\b/, /\babs\b/],
     ["controle de estabilidade", /controle de estabilidade|\besp\b/, /controle de estabilidade|\besp\b/],
-    ["câmera de ré", /camera/, /camera/],
+    ["câmera de ré", /cameras?/, /camera/],
   ] as const;
   const asked = requested.filter(([, question]) => question.test(folded));
   if (asked.length) {
     const listed = (names: string[]) =>
       names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} e ${names.at(-1)}`;
-    const present = asked.filter(([, , data]) => items.some(value => data.test(normalize(value)))).map(([label]) => label);
-    const absent = asked.filter(([label]) => !present.includes(label)).map(([label]) => label);
+    // "6 Air Bags" na ficha responde o "quantos?": usa o item cadastrado quando traz a quantidade.
+    const present = asked.flatMap(([label, , data]) => {
+      const item = items.find(value => data.test(normalize(value)));
+      if (!item) return [];
+      return [label === "airbags" && /^\d+\s*air ?bags?\b/i.test(item.trim()) ? item.trim().replace(/air ?bags?/i, "airbags") : label];
+    });
+    const absent = asked
+      .filter(([, , data]) => !items.some(value => data.test(normalize(value))))
+      .map(([label]) => label);
     const extras = items
       .filter(value => !asked.some(([, , data]) => data.test(normalize(value))))
       .slice(0, 3);
@@ -937,7 +944,7 @@ export function asksAboutConsumption(mensagem: string): boolean {
 
 export function asksAboutEquipment(mensagem: string): boolean {
   const folded = normalize(mensagem);
-  return /\b(ar condicionado|arcondicionado|multimidia|bluetooth|direcao|airbag|abs|couro|teto solar|sensor|camera|vidros? eletricos|piloto|acessorios?|opcionais|equipado)\b/.test(
+  return /\b(ar condicionado|arcondicionado|multimidia|bluetooth|direcao|air ?bags?|abs|couro|teto solar|sensor|camera|vidros? eletricos|piloto|acessorios?|opcionais|equipado)\b/.test(
     folded,
   );
 }
