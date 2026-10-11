@@ -22,6 +22,7 @@ import {
   chatRankMode,
   isPowerQuery,
   isChatSelectionQuery,
+  rankChatVehicles,
   parsePriceLimit,
 } from "@/lib/chat-prompt";
 import { guardLlmReply, guardSalesTone } from "@/lib/chat-claims";
@@ -55,6 +56,10 @@ import {
   CHAT_TRADE_REPLY,
   CHAT_WARRANTY_REPLY,
   CHAT_DOCS_REPLY,
+  CHAT_ORIGIN_REPLY,
+  CHAT_VISIT_REPLY,
+  CHAT_ADDRESS_REPLY,
+  CHAT_TRADE_VALUE_REPLY,
   CHAT_COMPARE_ASK_REPLY,
   CHAT_AVAILABILITY_ASK_REPLY,
   asksAboutConsumption,
@@ -136,6 +141,9 @@ export type ChatTurnResult = {
 };
 
 /** Despedida ou “só olhando”: a resposta não pede cards nem lista de carros. */
+/** Modelos vendidos no Brasil com 7 lugares (de série ou na versão de 7). */
+const SEVEN_SEATS = /\b(spin|grand livina|zafira|sw4|pajero (?:full|dakar|sport)|outlander|allspace|commander|journey|sorento|santa fe|grand santa fe|captiva|doblo|picasso|carens|territory|xc90|discovery|carnival|sharan|7 lugares)\b/;
+
 export function isBrowsingOrThanks(message: string) {
   const text = message
     .toLowerCase()
@@ -367,6 +375,35 @@ export async function runChatTurn(input: {
     /\b(troca\w*|troco|financi\w*|parcela\w*|vender|anunciar|visita|video|consultor|whatsapp)\b/i.test(
       visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
     );
+  // "Aceita meu Celta na troca?" → "quanto vcs pagam nele?": continua a troca, não vira busca.
+  const fold = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const lastUser = [...input.historico].reverse().find((turn) => turn.role === "user")?.content ?? "";
+  if (
+    !mayCreateLead &&
+    !activeVehicle &&
+    isTradeInMessage(lastUser) &&
+    /\b(quanto|valor|avalia\w*|paga\w*|da(?:o)? nele|da(?:o)? nela|vale)\b/.test(fold(visitorMessage)) &&
+    !singleMentionedModelPool(input.stock, visitorMessage)
+  ) {
+    emit(CHAT_TRADE_VALUE_REPLY);
+    return finish(CHAT_TRADE_VALUE_REPLY, false, { policy: "trade-value", cards: false });
+  }
+  // "Tem carro de 7 lugares?": nenhum modelo de 7 lugares no estoque → diz e mostra os mais espaçosos.
+  if (
+    !mayCreateLead &&
+    /\b(7|sete) lugares\b/.test(fold(visitorMessage)) &&
+    !input.stock.some((vehicle) => SEVEN_SEATS.test(fold(`${vehicle.model} ${vehicle.version ?? ""}`)))
+  ) {
+    const roomy = rankChatVehicles(
+      input.stock.filter((vehicle) => (vehicle.category ?? "carro") !== "moto"),
+      "carro para família espaçoso",
+    ).slice(0, 3);
+    const reply = `No estoque de agora não temos carro de 7 lugares. Os mais espaçosos que temos estão aqui, e se quiser, o consultor te avisa quando chegar um de 7: ${CHAT_WHATSAPP_URL}`;
+    emit(reply);
+    const result = finish(reply, false, { policy: "seven-seats", forcedVehicles: roomy, cards: roomy.length > 0 });
+    result.reply = reply;
+    return result;
+  }
   // "Quais carros têm airbag?" / "o Civic tem câmera?" com dois Civic: ficha de cada unidade.
   const acrossStock =
     !mayCreateLead && !humanAction && !tradeTurn && !activeVehicle
@@ -403,6 +440,24 @@ export async function runChatTurn(input: {
   if (policy === "docs") {
     emit(CHAT_DOCS_REPLY);
     return finish(CHAT_DOCS_REPLY, false, { policy });
+  }
+  if (policy === "origin") {
+    // Laudo que está na ficha do carro em tela (ou do único citado): diz que consta.
+    const unit = activeVehicle ?? (() => {
+      const pool = singleMentionedModelPool(input.stock, visitorMessage);
+      return pool?.length === 1 ? pool[0] : undefined;
+    })();
+    const laudo = unit?.accessories?.find((item) => /laudo/i.test(item));
+    const reply = unit && laudo
+      ? `Na ficha desse ${unit.model.length <= 4 ? unit.model.toUpperCase() : unit.model.charAt(0).toUpperCase() + unit.model.slice(1).toLowerCase()} consta "${laudo.trim()}". O histórico completo (leilão, sinistro) o consultor confirma no WhatsApp antes de você fechar: ${CHAT_WHATSAPP_URL}`
+      : CHAT_ORIGIN_REPLY;
+    emit(reply);
+    return finish(reply, false, { policy, cards: false });
+  }
+  if (policy === "visit" || policy === "address") {
+    const reply = policy === "visit" ? CHAT_VISIT_REPLY : CHAT_ADDRESS_REPLY;
+    emit(reply);
+    return finish(reply, false, { policy, cards: false });
   }
   if (policy === "gear") {
     const reply = formatTransmissionCompareReply(input.stock, scopedMessage);
@@ -528,12 +583,17 @@ export async function runChatTurn(input: {
   ) {
     const found = searchChatInventory(scopedMessage, input.stock);
     if (found) {
-      const inventoryReply = roadUse
+      const inventoryBase = roadUse
         ? `${found.reply.split("\n")[0]}\n${found.picks.map(formatVehicleLine).join("\n")}\n\n${compareChatStockPicks(found.picks, {
             withLeadin: false,
             intent: "default",
           })} Para estrada, você prioriza conforto, consumo ou desempenho? Eu comparo as versões com os dados de fábrica.`
         : found.reply;
+      // Rodar de app: o ano mínimo aceito muda por aplicativo e cidade; não inventamos a regra.
+      const appNote = /\b(uber|99 ?pop|de app|para app|pro app|aplicativo)\b/i.test(visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))
+        ? " Pra app, vale conferir o ano mínimo que o aplicativo aceita na sua cidade."
+        : "";
+      const inventoryReply = `${inventoryBase}${appNote}`;
       emit(inventoryReply);
       const result = finish(inventoryReply, false, {
         policy: "inventory-search",

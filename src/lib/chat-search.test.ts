@@ -99,7 +99,7 @@ test("uma pergunta factual sobre o HB20 continua falando só dele", async () => 
     reply.vehicles.map((v) => v.id),
     ["hb"],
   );
-  assert.match(reply.reply, /HB20.*Automático/);
+  assert.match(reply.reply, /HB20.*automático/);
 });
 
 test("a ficha não prende uma nova pesquisa no carro aberto", () => {

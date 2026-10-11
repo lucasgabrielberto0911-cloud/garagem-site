@@ -383,14 +383,15 @@ export function parseFamilyIntent(mensagem: string) {
 
 /** Primeiro carro, cidade ou app. Nome de cidade solto e “whatsapp” não contam. */
 export function parseStarterIntent(mensagem: string) {
-  return /\b(primeiro carro|primeiro veiculo|primeira moto|carro de cidade|uso na cidade|para a cidade|pra cidade|uber|para app|pro app|para o app|aplicativo)\b/.test(
+  return /\b(primeiro carro|primeiro veiculo|primeira moto|carro de cidade|uso na cidade|para a cidade|pra cidade)\b/.test(
     foldIntent(mensagem),
   );
 }
 
 /** Lista econômica. “consumo” e “é econômico?” continuam pergunta de ficha. */
 export function parseEconomyIntent(mensagem: string) {
-  return /\b(economico|economica|mais economico|mais economica)\b/.test(
+  // Rodar de app (Uber, 99): o que pesa é consumo.
+  return /\b(economico|economica|mais economico|mais economica|uber|99 ?pop|para app|pro app|para o app|de app|aplicativo)\b/.test(
     foldIntent(mensagem),
   );
 }

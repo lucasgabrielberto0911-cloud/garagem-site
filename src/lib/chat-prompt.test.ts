@@ -431,7 +431,9 @@ test("intenções de família, primeiro carro, econômico e carroceria", () => {
   );
   assert.equal(parseFamilyIntent("tem espaço no banco?"), false);
   assert.equal(parseStarterIntent("primeiro carro para a cidade"), true);
-  assert.equal(parseStarterIntent("uber até 60 mil"), true);
+  // App (Uber, 99) agora ordena por consumo.
+  assert.equal(parseStarterIntent("uber até 60 mil"), false);
+  assert.equal(parseEconomyIntent("uber até 60 mil"), true);
   assert.equal(parseStarterIntent("moro em Vitória"), false);
   assert.equal(parseStarterIntent("chama no whatsapp"), false);
   assert.equal(parseEconomyIntent("carro econômico até 70 mil"), true);
