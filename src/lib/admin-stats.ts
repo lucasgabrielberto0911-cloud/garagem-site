@@ -36,28 +36,24 @@ export const getNewLeadsBadgeCount = unstable_cache(
   { revalidate: 15, tags: [ADMIN_NEW_LEADS_TAG] },
 );
 
-/** bcrypt em todo admin a cada dashboard é caro — cacheia o alerta. */
-export const getUsingSeedPassword = unstable_cache(
-  async () => {
-    try {
-      const admins = await prisma.admin.findMany({
-        select: { passwordHash: true },
-      });
-      const matches = await Promise.all(
-        admins.flatMap((admin) =>
-          WEAK_ADMIN_PASSWORDS.map((password) =>
-            bcrypt.compare(password, admin.passwordHash),
-          ),
-        ),
-      );
-      return matches.some(Boolean);
-    } catch {
-      return null;
-    }
+/** Apenas alerta informativo: nunca participa da autenticação. O hash novo muda a chave imediatamente. */
+export const getAdminWeakPasswordAlert = unstable_cache(
+  async (_adminId: string, passwordHash: string) => {
+    return (await Promise.all(WEAK_ADMIN_PASSWORDS.map(password => bcrypt.compare(password, passwordHash)))).some(Boolean);
   },
-  ["admin-seed-password"],
-  { revalidate: 300, tags: [ADMIN_SEED_PASSWORD_TAG] },
+  ["admin-password-alert-v1"],
+  { revalidate: 60, tags: [ADMIN_SEED_PASSWORD_TAG] },
 );
+
+/** O dashboard já tem cache; a lista de hashes atual evita alerta velho após troca. */
+export async function getUsingSeedPassword() {
+  try {
+    const admins = await prisma.admin.findMany({ select: { id: true, passwordHash: true } });
+    return (await Promise.all(admins.map(admin => getAdminWeakPasswordAlert(admin.id, admin.passwordHash)))).some(Boolean);
+  } catch {
+    return null;
+  }
+}
 
 function startOfMonth() {
   return businessPeriodStart("month");
@@ -201,26 +197,15 @@ async function loadDashboardData() {
     safe(
       "pendingCounts",
       async () => {
-        const [withoutPhotos, stale, missingSales] = await Promise.all([
-          prisma.vehicle.count({
-            where: {
-              historical: false,
-              status: { in: ["disponivel", "reservado"] },
-              photos: { none: {} },
-            },
-          }),
-          prisma.vehicle.count({
-            where: {
-              historical: false,
-              status: "disponivel",
-              createdAt: { lt: staleBefore },
-            },
-          }),
-          prisma.vehicle.count({
-            where: { historical: false, status: "vendido", sale: null },
-          }),
-        ]);
-        return { withoutPhotos, stale, missingSales };
+        const [counts] = await prisma.$queryRaw<Array<{ withoutPhotos: number; stale: number; missingSales: number }>>`
+          SELECT count(*) FILTER (WHERE status IN ('disponivel', 'reservado')
+            AND NOT EXISTS (SELECT 1 FROM "Photo" p WHERE p."vehicleId" = v.id))::int AS "withoutPhotos",
+            count(*) FILTER (WHERE status = 'disponivel' AND "createdAt" < ${staleBefore})::int AS stale,
+            count(*) FILTER (WHERE status = 'vendido'
+            AND NOT EXISTS (SELECT 1 FROM "Sale" s WHERE s."vehicleId" = v.id))::int AS "missingSales"
+          FROM "Vehicle" v WHERE historical = false
+        `;
+        return counts;
       },
       null as {
         withoutPhotos: number;
@@ -414,8 +399,13 @@ async function loadDashboardData() {
  * as actions do painel chamam expireAdminData() e lead novo do site expira
  * pela tag do badge. Vídeo não entra: não vale uma leitura só para avisar.
  */
-export const getDashboardData = unstable_cache(
-  loadDashboardData,
+const getDashboardDataForDay = unstable_cache(
+  async (_day: string) => loadDashboardData(),
   ["admin-dashboard-v5"],
   { revalidate: 60, tags: [ADMIN_DATA_TAG, ADMIN_NEW_LEADS_TAG] },
 );
+
+/** O dia na chave também renova alertas e período do mês na virada local. */
+export function getDashboardData() {
+  return getDashboardDataForDay(localDateInput());
+}

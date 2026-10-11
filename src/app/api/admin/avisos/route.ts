@@ -4,20 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { COST_WARNINGS_PAGE_SIZE, MISSING_SALE_COST_WHERE, costWarningsPage } from "@/lib/admin-cost-warnings";
 import { agendaWhere } from "@/lib/admin-agenda";
 import { parseNoticeKind } from "@/lib/admin-notifications";
-import { getWantedStockMatches } from "@/lib/wanted-stock-match-store";
+import { getAdminNoticeSnapshot } from "@/lib/admin-notice-store";
 
 export async function GET(request: NextRequest) {
   if (!(await getSession())) return NextResponse.json({}, { status: 401 });
   try {
     const kind = parseNoticeKind(request.nextUrl.searchParams.get("tipo"));
     const now = new Date();
-    const [hoje, atrasados, vendas, matches] = await Promise.all([
-      prisma.leadVenda.count({ where: agendaWhere("hoje", now) }),
-      prisma.leadVenda.count({ where: agendaWhere("atrasados", now) }),
-      prisma.sale.count({ where: MISSING_SALE_COST_WHERE }),
-      getWantedStockMatches(),
-    ]);
-    const counts = { hoje, atrasados, vendas, pedidos: matches.length };
+    const { counts, matches } = await getAdminNoticeSnapshot(now);
     const total = counts[kind];
     const pages = Math.max(1, Math.ceil(total / COST_WARNINGS_PAGE_SIZE));
     const page = Math.min(pages, costWarningsPage(request.nextUrl.searchParams.get("page")));

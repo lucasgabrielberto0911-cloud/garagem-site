@@ -1,9 +1,8 @@
-import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { AccountForms } from "@/components/admin/AccountForms";
 import { AdminAuditHistory } from "@/components/admin/AdminAuditHistory";
 import { AdminPageHeader } from "@/components/admin/ui";
-import { WEAK_ADMIN_PASSWORDS } from "@/lib/admin-security";
+import { getAdminWeakPasswordAlert } from "@/lib/admin-stats";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -20,13 +19,7 @@ export default async function ContaPage() {
 
   if (!admin) redirect("/admin/login");
 
-  const usingSeedPassword = (
-    await Promise.all(
-      WEAK_ADMIN_PASSWORDS.map((password) =>
-        bcrypt.compare(password, admin.passwordHash),
-      ),
-    )
-  ).some(Boolean);
+  const usingSeedPassword = await getAdminWeakPasswordAlert(session.adminId, admin.passwordHash);
 
   return (
     <div className="space-y-6">
