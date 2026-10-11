@@ -34,7 +34,7 @@ O PR só sai de rascunho com `test`, `lint` e `build` passando. Mexeu em tela p�
 | Cursor (cloud agent) | Segundo programador, trabalha em paralelo | Sim |
 
 Regras:
-1. **1 tarefa = 1 branch = 1 PR rascunho.** Não junte assuntos diferentes no mesmo PR.
+1. **1 tarefa = 1 branch = 1 PR rascunho.** Não junte assuntos diferentes no mesmo PR. Para economizar deploys na Vercel, **junte várias correções pequenas do mesmo assunto num único PR** (lote), em vez de um PR por microcorreção.
 2. **Prefixo de branch por agente:** `claude/<tema>`, `codex/<tema>` (só relatórios), `cursor/<tema>`. Use temas curtos em kebab-case, por exemplo `claude/ficha-jsonld-veiculo`.
 3. **Sempre abrir como Draft PR.** O título fica em português e o corpo diz o que mudou, por quê, como foi validado (comandos e telas) e o que falta.
 4. **Merge fica com o Grok Bot (coordenador).** Em 2026-10-10 o Lucas autorizou: o Grok Bot revisa CI e preview e faz o squash-merge. Os outros agentes **sempre** abrem Draft PR e **nunca** fazem merge, force-push em `main`, rebase de branch alheia ou fecham PR de outro agente.
@@ -69,6 +69,16 @@ Regras:
 - Fichas: metadata via App Router, canonical pelo slug (`src/lib/vehicle-slug.ts`), JSON-LD de veículo/oferta sem preço quando vendido.
 - Meça antes e depois (Lighthouse ou Chrome DevTools MCP no preview da Vercel) quando mexer em tela pública. Metas: LCP ≤ 2,5 s, INP ≤ 200 ms, CLS ≤ 0,1 no celular.
 - Fotos públicas saem por `/api/fotos/...` com cache longo. Não troque para `next/image` sem medir (ver `docs/ops.md`, seção Image Optimization).
+
+
+## Economia de deploys na Vercel (Hobby: ~100/dia)
+O plano Hobby limita deploys por dia. Cada push e cada merge geram deploy se o build não for ignorado.
+- **Teste localmente antes do push:** `npm test`, `npm run lint` e, se mexeu em tela/build, `npm run build`. Só dê push quando estiver verde.
+- **Junte correções em lotes** no mesmo PR/assunto (menos push = menos preview).
+- **Preview na Vercel só sob demanda.** Por padrão o Ignored Build Step (`scripts/vercel-ignore.sh`) **pula** preview. A produção (`main`) sempre builda.
+  - Quando o PR estiver pronto para o **teste final** no preview: coloque a label GitHub `preview` **ou** inclua `[preview]` na mensagem do commit.
+  - Não marque `preview` / `[preview]` em todo push intermediário.
+- Merge na `main` continua gerando o deploy de produção (quando a cota do dia permitir).
 
 ## Relatórios do Codex (`docs/pesquisas/`)
 Formato: `AAAA-MM-DD-tema.md`, com resumo, evidências (arquivo:linha, URL, medição), prioridades (impacto × esforço) e uma lista de tarefas prontas para virar issue/PR.
