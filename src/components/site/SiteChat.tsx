@@ -461,9 +461,11 @@ function ChatText({
   handoff,
   research,
   userText,
+  contextCards = [],
 }: {
   text: string;
   userText?: string | null;
+  contextCards?: ChatVehicleCard[];
   vehicles?: ChatVehicleCard[];
   stockHref?: string | null;
   leadCreated?: boolean;
@@ -499,6 +501,10 @@ function ChatText({
   const cta = showWhatsApp
     ? chatWhatsAppCta(text, ctaVehicle, {
         userText: userText ?? "",
+        contextVehicle:
+          vehicles.length === 0 && contextCards.length === 1
+            ? resolveChatWhatsAppVehicle(null, contextCards)
+            : null,
         handoff: {
           vehicles:
             vehicles.length > 0
@@ -1329,6 +1335,13 @@ export function SiteChat() {
                           .slice(0, index)
                           .reverse()
                           .find((item) => item.role === "user")?.content ?? ""
+                      }
+                      contextCards={
+                        messages
+                          .slice(0, index)
+                          .reverse()
+                          .find((item) => item.role === "assistant" && (item.vehicles?.length ?? 0) > 0)
+                          ?.vehicles ?? []
                       }
                       vehicleContext={vehicleContext}
                       followups={

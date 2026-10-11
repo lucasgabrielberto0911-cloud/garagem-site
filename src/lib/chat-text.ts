@@ -359,6 +359,8 @@ export function chatWhatsAppCta(
     handoff?: ChatHandoffContext;
     /** Última pergunta do visitante: define o assunto do botão. */
     userText?: string | null;
+    /** Carro do card anterior (follow-up sem card: “aceita troca nele?”). Só pra parcela, troca, visita e fotos. */
+    contextVehicle?: ChatWhatsAppVehicle | null;
   } = {},
 ): ChatWhatsAppCta | null {
   if (!opts.force && !/whatsapp|wa\.me/i.test(text)) return null;
@@ -368,6 +370,8 @@ export function chatWhatsAppCta(
   // Sem a pergunta (chamadas antigas), cai no texto da resposta.
   const wants = (intent: "finance" | "trade", replyRe: RegExp) =>
     hasUser ? userIntent === intent : replyRe.test(folded);
+  const subject = vehicle ?? (userIntent && userIntent !== "question" ? opts.contextVehicle ?? null : null);
+  const subjectTrack = chatWhatsAppTrack(subject);
   const track = chatWhatsAppTrack(vehicle);
   const fromReply = extractWhatsAppHref(text);
   const waitlistHref =
@@ -393,10 +397,10 @@ export function chatWhatsAppCta(
   if (wants("finance", /financi|parcela|60x|simul|cartao|18 vez/)) {
     return {
       href: whatsappUrl(
-        vehicle
-          ? chatVehicleWhatsAppText(vehicle, "finance")
+        subject
+          ? chatVehicleWhatsAppText(subject, "finance")
           : WHATSAPP_MESSAGES.finance,
-        track,
+        subjectTrack,
       ),
       label: "Simular parcela",
       benefit: "O consultor calcula no seu caso",
@@ -405,10 +409,10 @@ export function chatWhatsAppCta(
   if (wants("trade", /\btroca\b/)) {
     return {
       href: whatsappUrl(
-        vehicle
-          ? chatVehicleWhatsAppText(vehicle, "trade")
+        subject
+          ? chatVehicleWhatsAppText(subject, "trade")
           : WHATSAPP_MESSAGES.sell,
-        track,
+        subjectTrack,
       ),
       label: "Avaliar minha troca",
       benefit: "Valor da troca com fotos, pelo WhatsApp",
@@ -417,10 +421,10 @@ export function chatWhatsAppCta(
   if (userIntent === "visit") {
     return {
       href: whatsappUrl(
-        vehicle
-          ? chatVehicleWhatsAppText(vehicle, "visit")
+        subject
+          ? chatVehicleWhatsAppText(subject, "visit")
           : WHATSAPP_MESSAGES.visit,
-        track,
+        subjectTrack,
       ),
       label: "Agendar visita",
       benefit: "Consultor combina dia e local",
@@ -429,10 +433,10 @@ export function chatWhatsAppCta(
   if (userIntent === "photos" || userIntent === "video") {
     return {
       href: whatsappUrl(
-        vehicle
-          ? chatVehicleWhatsAppText(vehicle, userIntent)
-          : WHATSAPP_MESSAGES.general,
-        track,
+        subject
+          ? chatVehicleWhatsAppText(subject, userIntent)
+          : formatCustomerVehicleWhatsAppText({ intent: "photos" }),
+        subjectTrack,
       ),
       label: userIntent === "video" ? "Pedir vídeo" : "Pedir mais fotos",
       benefit: "O consultor manda pelo WhatsApp",

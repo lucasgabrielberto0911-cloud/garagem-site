@@ -305,3 +305,16 @@ test("pergunta do carro vence o handoff da sessão (automático herdado)", () =>
   );
   assert.equal(cta?.label, "Perguntar sobre o HB20S");
 });
+
+test("follow-up sem card usa o carro do card anterior só pra parcela/troca/visita/fotos", () => {
+  const prev = { label: "Hyundai HB20S Comfort Plus 2024", brand: "Hyundai", model: "HB20S", year: 2024 };
+  const reply = "Aceitamos sim, avaliação no WhatsApp https://wa.me/5527996330706";
+  const trade = chatWhatsAppCta(reply, null, { userText: "aceita meu gol na troca?", contextVehicle: prev });
+  assert.equal(trade?.label, "Avaliar minha troca");
+  assert.match(decodeURIComponent(trade?.href ?? ""), /HB20S.*avaliar uma troca/s);
+  const photos = chatWhatsAppCta(reply, null, { userText: "tem mais fotos?", contextVehicle: prev });
+  assert.match(decodeURIComponent(photos?.href ?? ""), /HB20S.*mais fotos dele/s);
+  assert.match(decodeURIComponent(chatWhatsAppCta(reply, null, { userText: "tem mais fotos?" })?.href ?? ""), /queria mais fotos\./);
+  // Pergunta geral não vira “Perguntar sobre o HB20S”.
+  assert.equal(chatWhatsAppCta(reply, null, { userText: "vocês abrem domingo?", contextVehicle: prev })?.label, "Chamar consultor");
+});
