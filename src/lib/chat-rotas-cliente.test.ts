@@ -359,3 +359,15 @@ test("conversa: 'é flex?' depois da lista responde cada uma; 'quanto pagam no m
   });
   assert.match(trade.reply, /consultor avalia com algumas fotos/);
 });
+
+test("PCD, recall e horário: respostas da loja; 'tem Corolla 2018?' não casa com o City 2018", async () => {
+  const pcd = await ask7("tem carro pra pcd?");
+  assert.match(pcd.reply, /isenção PCD de IPI e ICMS vale na compra de carro 0 km/);
+  assert.ok(pcd.vehicles.length > 0 && pcd.vehicles.every((vehicle) => !/semi|manual/i.test(vehicle.transmission ?? "")));
+  assert.match((await ask7("o carro tem recall?")).reply, /consultor confere pelo chassi/);
+  assert.match((await ask7("vcs abrem domingo?")).reply, /^Atendemos todos os dias, das 8h às 23h/);
+  const corolla = await ask7("tem corolla 2018?");
+  assert.match(corolla.reply, /^Corolla não está na lista atual/);
+  const onix = await ask7("tem onix plus?");
+  assert.match(onix.reply, /^Onix Plus não está na lista atual/);
+});

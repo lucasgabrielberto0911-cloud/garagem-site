@@ -3160,7 +3160,13 @@ export function missingModelReply(
   // Diz o nome do modelo pedido ("tem Onix?" → "Onix não está…") quando é uma palavra só, limpa.
   const bits = waitlistInterestBits(mensagem).filter((token) => !INTENT_SEEK_NOISE.test(token));
   const asked = bits.length === 1 && /^[a-z][a-z0-9-]{1,14}$/.test(bits[0]!) ? bits[0]! : null;
-  const name = asked ? askedModelName(mensagem, asked) : null;
+  // "Onix Plus": duas palavras, uma delas modelo de catálogo → nome inteiro.
+  const pair = !asked && bits.length === 2 && bits.every((bit) => /^[a-z][a-z0-9-]{1,14}$/.test(bit)) &&
+    bits.some((bit) => vehicleBodyStyle({ category: "carro", model: bit, version: null }) != null) &&
+    normalize(mensagem).includes(`${bits[0]} ${bits[1]}`)
+    ? bits.map((bit) => askedModelName(mensagem, bit)).join(" ")
+    : null;
+  const name = asked ? askedModelName(mensagem, asked) : pair;
   const subject = name ? `${name} não está na lista atual.` : "Esse modelo não está na lista atual.";
   if (similar.length === 0) {
     return `${subject} Posso olhar outro na mesma ideia, ou ${wait}`;
@@ -3210,6 +3216,15 @@ export const CHAT_WARRANTY_REPLY =
 
 export const CHAT_ORIGIN_REPLY =
   `Todo seminovo passa por checagem na loja antes do anúncio. Laudo cautelar e histórico de cada carro (leilão, sinistro) não ficam no anúncio: o consultor confirma no WhatsApp, carro a carro, antes de você fechar. ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_PCD_REPLY =
+  `A isenção PCD de IPI e ICMS vale na compra de carro 0 km. Nos seminovos da Garagem não tem essa isenção, mas automático ajuda bastante no dia a dia: separei os nossos. Sobre IPVA no seu caso, o consultor te orienta no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_RECALL_REPLY =
+  `Recall de cada carro o consultor confere pelo chassi no site da montadora antes de você fechar. É só chamar no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_HOURS_REPLY =
+  `Atendemos todos os dias, das 8h às 23h, aqui e no WhatsApp. Pra ver um carro, a visita é com horário marcado em Linhares: ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_SOCIAL_REPLY =
   `O Instagram da Garagem é ${site.instagram} (${site.instagramUrl}). Pra atendimento, o mais rápido é o WhatsApp: ${CHAT_WHATSAPP_URL}`;
@@ -3374,7 +3389,7 @@ export function formatTransmissionCompareReply(
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(
   mensagem: string,
-): "social" | "contact" | "city" | "keys" | "zero" | "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
+): "pcd" | "recall" | "hours" | "social" | "contact" | "city" | "keys" | "zero" | "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
   const folded = normalize(mensagem);
   // "Tem carro em Aracruz?" / "atendem Vitória?": área de atendimento, não modelo.
   if (/\b(?:em|de|pra|para|na|no)\s+(?:aracruz|vitoria|serra|vila velha|guarapari|cariacica|colatina|cachoeiro|linhares)\b/.test(folded) &&
@@ -3401,6 +3416,12 @@ export function chatPolicyShortcut(
     !/\b(financi\w*|parcela\w*|entrada)\b/.test(folded)) {
     return "debts";
   }
+  // PCD: isenção de IPI/ICMS é de carro 0 km; nos seminovos, automáticos + consultor.
+  if (/\b(pcd|deficiente|deficiencia|isencao)\b/.test(folded)) return "pcd";
+  if (/\brecalls?\b/.test(folded)) return "recall";
+  // Horário: atendimento online todos os dias; visita com hora marcada.
+  if (/\b(horario|que horas|abre[mn]?|fecha[mn]?|funcionamento|atendem (?:domingo|sabado|feriado)|abertos?)\b/.test(folded) &&
+    !/\b(teto|porta|porta-malas|portamalas|vidro|capo)\b/.test(folded)) return "hours";
   // Redes sociais / contato: canais oficiais do site.
   if (/\b(instagram|insta|facebook|tiktok|rede social|redes sociais)\b/.test(folded)) return "social";
   if (/\b(qual (?:o|e o|é o) (?:whats|whatsapp|zap|numero|telefone|contato)|numero de (?:voces|vcs|contato)|telefone de (?:voces|vcs)|passa o (?:whats|zap|numero)|(?:whats|zap|telefone|numero) (?:de voces|de vcs|da loja))\b/.test(folded)) return "contact";
@@ -3498,6 +3519,13 @@ export function seeksMissingNamedModel(
   if (tokens.length === 0) return false;
   if (!NAMED_STOCK_SEEK.test(folded)) return false;
   if (singleMentionedModelPool(stock, mensagem)) return false;
+  // "tem Corolla 2018?" / "tem Onix Plus?": modelo de catálogo que não temos — o ano ou o "Plus"
+  // não pode casar com o City 2018 ou o HB20S Comfort Plus.
+  const stockNames = normalize(stock.map((vehicle) => `${vehicle.brand} ${vehicle.model}`).join(" "));
+  if (tokens.some((token) => /^[a-z][a-z0-9-]{2,}$/.test(token) && !stockNames.includes(token) &&
+    vehicleBodyStyle({ category: "carro", model: token, version: null }) != null)) {
+    return true;
+  }
   if (matchFocusedVehicle(mensagem, stock)) return false;
   if (matchInterestVehicle(mensagem, stock, 2)) return false;
   return true;
@@ -3519,6 +3547,9 @@ export function localGarageReply(
   if (policy === "origin") return CHAT_ORIGIN_REPLY;
   if (policy === "keys") return CHAT_KEYS_REPLY;
   if (policy === "social") return CHAT_SOCIAL_REPLY;
+  if (policy === "pcd") return CHAT_PCD_REPLY;
+  if (policy === "recall") return CHAT_RECALL_REPLY;
+  if (policy === "hours") return CHAT_HOURS_REPLY;
   if (policy === "contact") return CHAT_CONTACT_REPLY;
   if (policy === "zero") return CHAT_ZERO_REPLY;
   if (policy === "city") return chatCityReply(mensagem);
