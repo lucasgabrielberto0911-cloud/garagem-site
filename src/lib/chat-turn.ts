@@ -60,6 +60,7 @@ import {
   asksAboutConsumption,
   asksAboutEquipment,
   namedUnitForEquipment,
+  equipmentAcrossStockReply,
   asksAboutKm,
   asksAboutAvailability,
   asksAboutListedFacts,
@@ -188,7 +189,8 @@ export async function runChatTurn(input: {
   // Fora da ficha, um carro do estoque citado pelo nome (uma unidade só) responde pela ficha dele.
   const equipmentVehicle =
     activeVehicle ??
-    (!tradeTurn && !namedComparison
+    // namedUnitForEquipment já recusa comparação de verdade (dois modelos escritos).
+    (!tradeTurn
       ? namedUnitForEquipment(input.stock, visitorMessage) ?? undefined
       : undefined);
   const unitEquipmentTurn = Boolean(equipmentVehicle) && asksAboutEquipment(visitorMessage);
@@ -365,6 +367,22 @@ export async function runChatTurn(input: {
     /\b(troca\w*|troco|financi\w*|parcela\w*|vender|anunciar|visita|video|consultor|whatsapp)\b/i.test(
       visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
     );
+  // "Quais carros têm airbag?" / "o Civic tem câmera?" com dois Civic: ficha de cada unidade.
+  const acrossStock =
+    !mayCreateLead && !humanAction && !tradeTurn && !activeVehicle
+      ? equipmentAcrossStockReply(input.stock, visitorMessage)
+      : null;
+  if (acrossStock) {
+    emit(acrossStock.reply);
+    const result = finish(acrossStock.reply, false, {
+      policy: "stock-equipment",
+      forcedVehicles: acrossStock.vehicles,
+      cards: acrossStock.vehicles.length > 0,
+    });
+    // Texto exato da ficha: o polimento de busca não troca a lista por comparação.
+    result.reply = acrossStock.reply;
+    return result;
+  }
   const policy = mayCreateLead ? null : chatPolicyShortcut(scopedMessage);
   if (policy === "card") {
     emit(CHAT_CARD_REPLY);
@@ -480,10 +498,10 @@ export async function runChatTurn(input: {
     equipmentVehicle &&
     !mayCreateLead &&
     !humanAction &&
-    !namedComparison &&
+    (!namedComparison || !activeVehicle) &&
     (!otherModel || otherModel.some((vehicle) => vehicle.id === equipmentVehicle.id))
   ) {
-    const reply = formatFocusedEquipmentReply(equipmentVehicle, visitorMessage);
+    const reply = formatFocusedEquipmentReply(equipmentVehicle, visitorMessage, input.stock);
     emit(reply);
     return finish(reply, false, { policy: "stock-fact", forcedVehicles: [equipmentVehicle] });
   }
@@ -651,7 +669,7 @@ export async function runChatTurn(input: {
       ? formatFocusedConsumptionReply(focusedVehicle)
       : asksAboutKm(scopedMessage)
         ? formatFocusedKmReply(focusedVehicle)
-        : formatFocusedEquipmentReply(focusedVehicle, scopedMessage);
+        : formatFocusedEquipmentReply(focusedVehicle, scopedMessage, input.stock);
     emit(reply);
     return finish(reply, false, { policy: "stock-fact" });
   }
@@ -864,7 +882,7 @@ export async function runChatTurn(input: {
     if (inferred && (broken || kmOnly)) {
       const catalog = kmOnly
         ? formatFocusedKmReply(inferred)
-        : formatFocusedEquipmentReply(inferred, scopedMessage);
+        : formatFocusedEquipmentReply(inferred, scopedMessage, input.stock);
       if (!generated || catalog.startsWith(generated)) {
         emit(generated ? catalog.slice(generated.length) : catalog);
       }

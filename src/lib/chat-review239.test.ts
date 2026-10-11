@@ -144,16 +144,44 @@ test("carro do estoque citado pelo nome, fora da ficha: opcional sai da ficha de
   // Duas unidades de Kicks: o ano escolhe a certa; a posição não citada na ficha não é afirmada.
   const kicks = await ask("O Kicks 2019 de vocês tem airbags de cortina?");
   assert.equal(kicks.meta?.policy, "stock-fact");
-  assert.match(kicks.reply, /^Na ficha desse Kicks constam 6 airbags\. A ficha não detalha se há airbags de cortina\./);
+  assert.match(kicks.reply, /^Na ficha desse Kicks SL 2019 constam 6 airbags\. A ficha não detalha se há airbags de cortina\./);
   assert.match(kicks.reply, /vendedor confirma/);
 });
 
 test("nome ambíguo (duas unidades sem ano) não escolhe uma ficha por conta própria", async () => {
   const { namedUnitForEquipment } = await import("@/lib/chat-stock");
-  const two = [...stock, car("k2", "Nissan", "Kicks", "S 1.6", 2017, 69900)];
+  const two = [...stock, car("k2", "Nissan", "Kicks", "S 1.6", 2017, 69900, { accessories: ["ABS"] })]
+    .map(v => v.id === "k" ? { ...v, accessories: ["6 Air Bags"] } : v);
   assert.equal(namedUnitForEquipment(two, "o Kicks tem airbag?"), null);
   assert.equal(namedUnitForEquipment(two, "o Kicks 2017 tem airbag?")?.id, "k2");
   assert.equal(namedUnitForEquipment(two, "o Kicks SL tem airbag?")?.id, "k");
   assert.equal(namedUnitForEquipment(two, "quais carros têm airbag?"), null);
   assert.equal(namedUnitForEquipment(two, "qual o consumo do Gol?"), null);
+});
+
+test("ficha sem nenhum opcional cadastrado não vira 'não consta'", async () => {
+  const { namedUnitForEquipment } = await import("@/lib/chat-stock");
+  assert.equal(namedUnitForEquipment(stock, "o HR-V tem airbag?"), null);
+});
+
+test("'quais carros têm airbag?' lista as unidades com o item na ficha; dois iguais dizem qual é", async () => {
+  const fichaStock = [
+    car("c", "Honda", "City", "EXL 1.5 CVT I-VTEC", 2018, 84900, { accessories: ["Câmera de ré", "6 airbags (frontais, laterais e de cortina)"] }),
+    car("v1", "Honda", "Civic", "LXR 2.0 FlexOne", 2015, 74900, { accessories: ["Câmera de ré", "Bancos de couro"] }),
+    car("v2", "Honda", "Civic", "EXL 2.0 Flex 16v", 2020, 126900, { accessories: ["Câmera de ré multivisão com guias dinâmicas", "6 Airbags (frontais, laterais e de cortina)", "Câmbio borboleta (Paddle Shift) atrás do volante para trocas de marcha", "Painel de instrumentos digital em tela TFT de 7\" em alta resolução"] }),
+    car("b", "Honda", "BIZ", "110i", 2023, 15200, { category: "moto", accessories: ["Partida elétrica"] }),
+  ];
+  const ask = (mensagem: string) => runChatTurn({ mensagem, historico: [], stock: fichaStock, readIntent: noReading, generate: async () => { throw new Error("não deveria gerar"); } });
+  const list = await ask("quais carros têm airbag?");
+  assert.equal(list.meta?.policy, "stock-equipment");
+  assert.match(list.reply, /Com airbags na ficha, temos 2 carros no estoque: Civic EXL 2020 e City 2018\./);
+  assert.deepEqual(list.vehicles.map(v => v.id), ["v2", "c"]);
+  const none = await ask("algum carro com teto solar?");
+  assert.match(none.reply, /nenhum carro tem teto solar cadastrado na ficha/);
+  assert.doesNotMatch(none.reply, /Esse modelo não está/);
+  const civic = await ask("O Civic tem câmera de ré?");
+  assert.match(civic.reply, /Temos 2 Civic e, na ficha dos dois, consta câmera de ré: Civic LXR 2015 e Civic EXL 2020/);
+  const one = await ask("O Civic 2020 tem teto solar?");
+  assert.match(one.reply, /^Na ficha desse Civic EXL 2020 não consta teto solar\. Os itens cadastrados incluem Câmera de ré multivisão, 6 Airbags, Câmbio borboleta\./);
+  assert.doesNotMatch(one.reply, /atrás do volante|Paddle Shift/);
 });
