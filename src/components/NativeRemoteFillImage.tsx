@@ -17,6 +17,8 @@ export function NativeRemoteFillImage({
   mobileSrcSet,
   className,
   priority,
+  eager = false,
+  decoding,
   recoverable = false,
 }: {
   src: string;
@@ -28,9 +30,11 @@ export function NativeRemoteFillImage({
   mobileSrcSet?: string;
   className?: string;
   priority?: boolean;
+  eager?: boolean;
+  decoding?: "sync" | "async" | "auto";
   recoverable?: boolean;
 }) {
-  if (recoverable) return <RecoverableVehicleImage key={src} src={src} alt={alt} width={width} height={height} sizes={sizes} srcSet={srcSet} mobileSrcSet={mobileSrcSet} className={className} priority={priority} />;
+  if (recoverable) return <RecoverableVehicleImage key={src} src={src} alt={alt} width={width} height={height} sizes={sizes} srcSet={srcSet} mobileSrcSet={mobileSrcSet} className={className} priority={priority} eager={eager} decoding={decoding} />;
   const image = (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -40,9 +44,9 @@ export function NativeRemoteFillImage({
       alt={alt}
       width={width}
       height={height}
-      loading={priority ? "eager" : "lazy"}
-      decoding={priority ? "sync" : "async"}
-      fetchPriority={priority ? "high" : "low"}
+      loading={priority || eager ? "eager" : "lazy"}
+      decoding={decoding ?? (priority ? "sync" : "async")}
+      fetchPriority={priority ? "high" : eager ? "auto" : "low"}
       draggable={false}
       className={`absolute inset-0 h-full w-full ${className ?? ""}`}
       onError={(event) => {

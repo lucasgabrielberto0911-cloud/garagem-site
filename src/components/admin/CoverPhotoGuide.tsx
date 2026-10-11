@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { VehicleImage } from "@/components/VehicleImage";
 import { assessCoverPhoto, type CoverAssessment } from "@/lib/cover-photo-quality";
+import { isFramedCardUrl } from "@/lib/cover-frame";
 import { supabaseCardSrc } from "@/lib/stock-query";
+import { btn } from "./ui";
 import type { PhotoItem } from "./VehiclePhotoManager";
 
-export function CoverPhotoGuide({ photos, disabled, onCover }: { photos: PhotoItem[]; disabled: boolean; onCover: (index: number) => void }) {
+export function CoverPhotoGuide({ photos, disabled, onCover, onFrame }: { photos: PhotoItem[]; disabled: boolean; onCover: (index: number) => void; onFrame: () => void }) {
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<{ url: string; assessment: CoverAssessment | null } | null>(null);
   const cover = photos[0];
@@ -37,16 +39,30 @@ export function CoverPhotoGuide({ photos, disabled, onCover }: { photos: PhotoIt
   }, [open, url]);
   if (!cover) return null;
   const current = result?.url === url ? result : null;
+  // O mesmo arquivo que o card do site usa; sem miniatura, o recorte ao vivo centralizado.
+  const cardSrc = cover.thumbnailUrl || supabaseCardSrc(cover.url) || cover.url;
+  const framed = isFramedCardUrl(cover.thumbnailUrl);
   return (
-    <details className="mt-4 rounded-lg border border-white/10 bg-white/[.02]" onToggle={event => setOpen(event.currentTarget.open)}>
+    <>
+    <div className="mt-4 flex items-center gap-3 rounded-lg border border-white/10 bg-white/[.02] p-3">
+      <div className="relative aspect-[4/3] w-28 shrink-0 overflow-hidden rounded bg-asphalt">
+        <VehicleImage key={cardSrc} src={cardSrc} alt="Capa como aparece no card do site" fill sizes="112px" className="object-cover" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-cream">Capa no card</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted">{framed ? "Enquadramento escolhido por você." : "Enquadramento automático, centralizado."}</p>
+        <button type="button" disabled={disabled} onClick={onFrame} className={`${btn.outline} mt-2 w-full sm:w-auto`}>Ajustar enquadramento</button>
+      </div>
+    </div>
+    <details className="mt-3 rounded-lg border border-white/10 bg-white/[.02]" onToggle={event => setOpen(event.currentTarget.open)}>
       <summary className="min-h-11 cursor-pointer px-3 py-3 text-sm font-medium text-cream">Conferir a capa do anúncio</summary>
       {open ? <div className="border-t border-white/10 p-3">
         <div className="grid gap-4 sm:grid-cols-[minmax(0,220px)_1fr]">
           <div>
             <div className="relative mx-auto aspect-[4/3] w-full max-w-[220px] overflow-hidden rounded-lg bg-asphalt">
-              <VehicleImage src={supabaseCardSrc(cover.url) || cover.url} alt="Prévia do recorte da capa no anúncio" fill sizes="220px" className="object-cover" />
+              <VehicleImage key={cardSrc} src={cardSrc} alt="Prévia do recorte da capa no anúncio" fill sizes="220px" className="object-cover" />
             </div>
-            <p className="mt-2 text-center text-xs text-muted">Recorte da capa no celular</p>
+            <p className="mt-2 text-center text-xs text-muted">Recorte da capa no card</p>
           </div>
           <div className="min-w-0">
             <p className="text-sm leading-relaxed text-muted">Confira se o veículo aparece inteiro e está nítido. Estes sinais ajudam você a escolher; não impedem o envio nem a publicação.</p>
@@ -66,5 +82,6 @@ export function CoverPhotoGuide({ photos, disabled, onCover }: { photos: PhotoIt
         </div>
       </div> : null}
     </details>
+    </>
   );
 }

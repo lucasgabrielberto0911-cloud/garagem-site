@@ -112,7 +112,7 @@ test("pergunta de potência responde o dado com fontes antes do card e WhatsApp 
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
   await page.goto("/estoque");
   await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
-  const dialog = page.getByRole("dialog", { name: "Sua Garagem", exact: true });
+  const dialog = page.getByRole("dialog", { name: "Garagem", exact: true });
   await dialog.locator("textarea").fill("quantos cv tem a duster?");
   await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
   await expect(dialog).toHaveAttribute("aria-busy", "false");
@@ -149,4 +149,41 @@ test("cookies na primeira visita e nas visitas com aceite salvo, sem hidrataçã
   await page.evaluate(() => localStorage.setItem("garagem_consent", "accepted"));
   await page.reload(); await expect(page.getByRole("dialog", { name: "Consentimento de cookies" })).toBeHidden();
   await expect(page.locator("html")).toHaveAttribute("data-consent", "accepted");
+});
+
+test("primeira origem consentida acompanha a navegação e some ao revogar", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("garagem_consent", "accepted"));
+  await page.goto("/estoque?utm_source=instagram&utm_campaign=campanha-teste");
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem("garagem_primeira_origem"))).toBe("instagram");
+  const card = page.locator("article.listing-card").filter({ has: page.getByRole("heading", { name: "Civic", exact: true }) });
+  await card.locator("[data-stock-card]").click();
+  await expect(page).toHaveURL(new RegExp(civic.id));
+  const enrich = () => page.evaluate(() => {
+    // O CTA do cabeçalho usa a mensagem geral; o da ficha cita o carro.
+    const anchor = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href*="wa.me"]')).find(a => a.href.includes("utm_source=site") && (new URL(a.href).searchParams.get("text") ?? "").includes("Civic"));
+    if (!anchor) throw new Error("CTA da ficha não encontrado");
+    // contextmenu exercita o listener sem abrir o WhatsApp externo.
+    anchor.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true }));
+    return new URL(anchor.href).searchParams.get("text");
+  });
+  expect(await enrich()).toMatch(/Civic[^\n]*Vim pelo Instagram\./);
+  await page.evaluate(() => {
+    localStorage.setItem("garagem_consent", "essential");
+    window.dispatchEvent(new CustomEvent("garagem:consent", { detail: "essential" }));
+  });
+  expect(await enrich()).not.toContain("Vim pelo Instagram");
+  expect(await page.evaluate(() => sessionStorage.getItem("garagem_primeira_origem"))).toBeNull();
+});
+
+test("sem consentimento, origem não fica na aba nem na mensagem", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
+  await page.goto("/estoque?utm_source=instagram");
+  const anchor = page.locator(".listing-card-interest a").first();
+  await expect(anchor).toHaveAttribute("href", /wa\.me/);
+  const message = await anchor.evaluate(element => {
+    element.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true }));
+    return new URL((element as HTMLAnchorElement).href).searchParams.get("text");
+  });
+  expect(message).not.toContain("Vim pelo Instagram");
+  expect(await page.evaluate(() => sessionStorage.getItem("garagem_primeira_origem"))).toBeNull();
 });

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AdminShell } from "@/components/admin/AdminShell";
 
 export const metadata: Metadata = {
-  title: "Painel | Sua Garagem",
+  title: "Painel | Garagem",
   robots: { index: false, follow: false, nocache: true },
   alternates: { canonical: "/admin" },
 };

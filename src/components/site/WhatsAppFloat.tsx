@@ -2,7 +2,7 @@
 
 import { IconWhatsApp } from "@/components/site/icons";
 import { usePageWhatsAppTarget } from "@/components/site/usePageWhatsAppHref";
-import { trackWhatsAppClick } from "@/lib/meta-pixel";
+import { trackCatalogWhatsAppClick, trackWhatsAppClick } from "@/lib/meta-pixel";
 
 /**
  * Float só no desktop — no mobile o WhatsApp já está na bottom nav.
@@ -17,12 +17,13 @@ export function WhatsAppFloat() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Abrir WhatsApp"
-      onClick={() =>
+      onClick={() => {
         trackWhatsAppClick("float", {
           vehicleId: whatsapp.vehicleId,
           slug: whatsapp.slug,
-        })
-      }
+        });
+        trackCatalogWhatsAppClick(whatsapp.catalogParams);
+      }}
       className="whatsapp-float fixed bottom-6 right-6 z-50 hidden h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition hover:scale-105 active:scale-95 touch-manipulation lg:flex"
     >
       <IconWhatsApp className="h-7 w-7" />

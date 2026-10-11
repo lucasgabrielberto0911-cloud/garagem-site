@@ -135,3 +135,12 @@ export async function markLeadContatado(id: string) {
     return false;
   }
 }
+
+/** Coorte semanal completa, independente da paginação da lista. */
+export async function findWeeklyPurchaseLeads(start: Date, end: Date) {
+  return prisma.leadVenda.findMany({
+    where: { source: { startsWith: "whatsapp:" }, createdAt: { gte: start, lte: end } },
+    select: { createdAt: true, status: true, source: true, interestVehicleId: true, vehicleInfo: true,
+      activities: { select: { note: true } } },
+  });
+}

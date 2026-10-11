@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { withAdminStorageLock } from "@/lib/admin-storage-lock";
+import { hdCardCompanion } from "@/lib/cover-frame";
 import { masterObjectPathFromGalleryPath, previousObjectPathFromGalleryPath } from "@/lib/photo-master";
 import { deleteStoragePublicUrls, parseStoredFileRef } from "@/lib/supabase";
 
@@ -35,6 +36,9 @@ export async function adminFileReferences(tx: Prisma.TransactionClient) {
     if (ref.kind === "private") privatePaths.add(ref.path);
     else {
       publicPaths.add(ref.path);
+      // O par 960×720 da capa enquadrada vive e morre com o 480.
+      const hdCard = hdCardCompanion(ref.path);
+      if (hdCard) publicPaths.add(hdCard);
       const master = masterObjectPathFromGalleryPath(ref.path);
       if (master) privatePaths.add(master);
       const previous = previousObjectPathFromGalleryPath(ref.path);

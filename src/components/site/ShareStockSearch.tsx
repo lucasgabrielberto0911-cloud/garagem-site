@@ -28,8 +28,8 @@ export function ShareStockSearch({ className = "", icon }: { className?: string;
     try {
       const url = stockShareUrl(site.url, window.location.search);
       const result = await shareVehicleLink(copyOnly ? { clipboard: navigator.clipboard } : navigator, {
-        title: "Busca de veículos — Sua Garagem",
-        text: "Veja esta busca de seminovos na Sua Garagem.", url,
+        title: "Busca de veículos — Garagem",
+        text: "Veja esta busca de seminovos na Garagem.", url,
       });
       finish(result === "cancelled" ? "idle" : result);
     } catch { finish("failed"); }

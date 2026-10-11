@@ -1,10 +1,10 @@
-# Sua Garagem — seminovos com procedência
+# Garagem — seminovos com procedência
 # https://www.suagaragem.net
 
 > Loja digital de seminovos no Espírito Santo. Atendimento online todos os dias, das 8h às 23h, com foco em Aracruz, Vitória, Linhares, Serra, Vila Velha e região.
 
 ## Identidade
-- Nome comercial: Sua Garagem
+- Nome comercial: Garagem
 - Razão social: Garagem Motorcycle Ltda
 - CNPJ: 47.740.076/0001-17
 - Site: https://www.suagaragem.net
