@@ -59,6 +59,7 @@ import {
   CHAT_AVAILABILITY_ASK_REPLY,
   asksAboutConsumption,
   asksAboutEquipment,
+  namedUnitForEquipment,
   asksAboutKm,
   asksAboutAvailability,
   asksAboutListedFacts,
@@ -184,7 +185,13 @@ export async function runChatTurn(input: {
   const tradeTurn = isTradeInMessage(visitorMessage);
   // Pergunta técnica sobre modelo(s): responde primeiro, com a base de fichas.
   // Equipamento do carro em tela é dado da ficha da unidade, não da pesquisa do modelo.
-  const unitEquipmentTurn = Boolean(activeVehicle) && asksAboutEquipment(visitorMessage);
+  // Fora da ficha, um carro do estoque citado pelo nome (uma unidade só) responde pela ficha dele.
+  const equipmentVehicle =
+    activeVehicle ??
+    (!tradeTurn && !namedComparison
+      ? namedUnitForEquipment(input.stock, visitorMessage) ?? undefined
+      : undefined);
+  const unitEquipmentTurn = Boolean(equipmentVehicle) && asksAboutEquipment(visitorMessage);
   const expertTurn =
     !tradeTurn &&
     !unitEquipmentTurn &&
@@ -470,15 +477,15 @@ export async function runChatTurn(input: {
   const otherModel = singleMentionedModelPool(input.stock, visitorMessage);
   if (
     unitEquipmentTurn &&
-    activeVehicle &&
+    equipmentVehicle &&
     !mayCreateLead &&
     !humanAction &&
     !namedComparison &&
-    (!otherModel || otherModel.some((vehicle) => vehicle.id === activeVehicle.id))
+    (!otherModel || otherModel.some((vehicle) => vehicle.id === equipmentVehicle.id))
   ) {
-    const reply = formatFocusedEquipmentReply(activeVehicle, visitorMessage);
+    const reply = formatFocusedEquipmentReply(equipmentVehicle, visitorMessage);
     emit(reply);
-    return finish(reply, false, { policy: "stock-fact", forcedVehicles: [activeVehicle] });
+    return finish(reply, false, { policy: "stock-fact", forcedVehicles: [equipmentVehicle] });
   }
   const selection =
     !skipShortcuts && !namedComparison && (isChatSelectionQuery(scopedMessage) ||

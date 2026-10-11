@@ -293,12 +293,20 @@ test("B2 financiamento: a entrada não vira orçamento nem 'modelo não está na
 
 test("falha do modelo de linguagem: resposta de reserva honesta, sem prefixo robótico", async () => {
   const result = await runChatTurn({
-    mensagem: "o gol tem airbag?",
+    // Dois HB20 no estoque: o nome não aponta uma ficha só, então segue para o modelo.
+    mensagem: "o hb20 tem airbag?",
     historico: [],
     stock,
     generate: async () => ({ text: CHAT_FALLBACK_REPLY, functionCall: null }),
   });
   assert.match(result.reply, /equipamentos de segurança.*dependem da versão e do ano/);
+  assert.doesNotMatch(result.reply, robotic);
+});
+
+test("unidade única citada pelo nome ('o gol tem airbag?'): responde pela ficha dela, sem o modelo", async () => {
+  const result = await runChatTurn({ mensagem: "o gol tem airbag?", historico: [], stock, generate: noModel });
+  assert.equal(result.meta?.policy, "stock-fact");
+  assert.match(result.reply, /ficha desse Gol/);
   assert.doesNotMatch(result.reply, robotic);
 });
 
