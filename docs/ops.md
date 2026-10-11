@@ -30,3 +30,12 @@ No Commerce Manager, substitua o upload manual por essa URL, mantenha o catálog
 ## Image Optimization
 
 A cota Hobby de `/_next/image` já esgotou neste projeto (`unoptimized: true` em `next.config.mjs`). Cards usam o WebP 480×300 gerado no upload (`thumbnailUrl`). Não religar o otimizador da Vercel sem upgrade de plano.
+
+## Medir a primeira pintura (FCP/LCP) no celular
+
+O atraso de ~1,2 s entre o HTML e a primeira pintura, visto em máquinas de agente (Lighthouse "mobile" em Linux), **não vem do CSS nem do JS do site**. Em 10/2026 isolamos a causa com o build local:
+
+- Com a fontconfig padrão da máquina de medição (~3,7 mil fontes), o primeiro layout custa ~130–170 ms (FCP ~280 ms) e, com a CPU disputada, o Chrome headless trava ~1,25 s antes da primeira pintura (12/12 rodadas). Com uma fontconfig mínima (só DejaVu) o layout cai para ~30–40 ms, o FCP para ~120–200 ms e o travamento some (0/12).
+- O travamento continua com os scripts removidos e sem nenhuma `animation` no CSS. Subgrid dos cards, seletores `body:has(...)`, `content-visibility` e o número de fatias do `@font-face` não mudaram o custo do layout.
+
+Ao medir, use uma máquina com poucas fontes (ou `FONTCONFIG_FILE` apontando para uma configuração mínima), faça pelo menos 10 rodadas e compare a **mediana**. Rodada isolada pode cair no travamento. Os números absolutos da Vercel real (rede + celular de verdade) são os que valem.
