@@ -10,7 +10,8 @@ export function leadVehicleOption(vehicle: Prisma.VehicleGetPayload<{ select: ty
 }
 
 /** Busca limitada; recuperar por ID inclui vendidos já escolhidos no atendimento. */
-export async function findLeadVehicleOptions(options: { q?: string; id?: string; page?: number }) {
+export async function findLeadVehicleOptions(options: { q?: string; id?: string; page?: number; pageSize?: number }) {
+  const size = Number.isFinite(options.pageSize) ? Math.min(200, Math.max(1, Math.trunc(options.pageSize!))) : 20;
   const page = Number.isFinite(options.page) ? Math.min(1_000_000, Math.max(1, Math.trunc(options.page!))) : 1;
   const q = (options.q || "").trim().slice(0, 120);
   const items = await prisma.vehicle.findMany({
@@ -22,8 +23,8 @@ export async function findLeadVehicleOptions(options: { q?: string; id?: string;
     },
     select: LEAD_VEHICLE_SELECT,
     orderBy: [{ brand: "asc" }, { model: "asc" }, { id: "asc" }],
-    skip: options.id ? 0 : (page - 1) * 20,
-    take: options.id ? 1 : 21,
+    skip: options.id ? 0 : (page - 1) * size,
+    take: options.id ? 1 : size + 1,
   });
-  return { items: items.slice(0, 20).map(leadVehicleOption), hasMore: items.length > 20 };
+  return { items: items.slice(0, size).map(leadVehicleOption), hasMore: items.length > size };
 }

@@ -57,7 +57,8 @@ export default async function LeadsPage({
     }),
     // Sem filtro, o total já sai do groupBy.
     filtered ? prisma.leadVenda.count({ where }) : Promise.resolve(null),
-    findLeadVehicleOptions({}),
+    // Sem busca sob demanda na UI ainda: lista inicial cobre todo o estoque ativo.
+    findLeadVehicleOptions({ pageSize: 200 }),
     findWeeklyPurchaseLeads(leadWeekStart(now), now),
   ]);
 
