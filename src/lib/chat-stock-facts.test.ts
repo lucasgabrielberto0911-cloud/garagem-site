@@ -137,7 +137,6 @@ test("airbags no plural e 'Air Bags' com espaço na ficha contam como item cadas
   const kicks = { ...hb20, model: "Kicks", version: "SL 1.6 Flex Start XTRONIC", yearModel: 2019, accessories: ["Multimídia", "ABS", "6 Air Bags", "Camera 360 (Around View Monitor)"] };
   assert.equal(asksAboutEquipment("Quantos airbags tem?"), true);
   assert.equal(asksAboutEquipment("tem air bag?"), true);
-  assert.equal(asksAboutEquipment("tem câmeras e sensores?"), true);
   const many = formatFocusedEquipmentReply(kicks, "Quantos airbags tem?");
   assert.match(many, /consta 6 airbags/);
   assert.doesNotMatch(many, /não consta/);

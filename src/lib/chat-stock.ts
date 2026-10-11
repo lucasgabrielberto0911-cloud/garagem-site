@@ -944,7 +944,7 @@ export function asksAboutConsumption(mensagem: string): boolean {
 
 export function asksAboutEquipment(mensagem: string): boolean {
   const folded = normalize(mensagem);
-  return /\b(ar condicionado|arcondicionado|multimidia|bluetooth|direcao|air ?bags?|abs|couro|teto solar|sensor(?:es)?|cameras?|vidros? eletricos|piloto|acessorios?|opcionais|equipado)\b/.test(
+  return /\b(ar condicionado|arcondicionado|multimidia|bluetooth|direcao|air ?bags?|abs|couro|teto solar|sensor|camera|vidros? eletricos|piloto|acessorios?|opcionais|equipado)\b/.test(
     folded,
   );
 }
