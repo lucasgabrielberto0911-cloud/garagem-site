@@ -126,3 +126,38 @@ test("modelo que não temos: diz o nome e mostra parecidos da mesma carroceria",
   assert.match(tcross.reply, /^T-Cross não está/);
   assert.deepEqual(tcross.vehicles.map((v) => v.model), ["Kicks"]);
 });
+
+test("desconto/à vista, frete e consórcio: política da loja, sem prometer nem inventar", async () => {
+  const cash = await ask("tem desconto à vista?");
+  assert.match(cash.reply, /^À vista dá sim/);
+  assert.doesNotMatch(cash.reply, /Esse modelo não está|\d+ ?%/);
+  const freight = await ask("qual o valor do frete pra Vitória?");
+  assert.match(freight.reply, /Entrega ou retirada a gente combina com o consultor/);
+  assert.doesNotMatch(freight.reply, /não cobra|grátis|gratuit/i);
+  const consortium = await ask("voces aceitam consórcio?");
+  assert.match(consortium.reply, /consultor confirma no WhatsApp se dá pra usar/);
+  assert.doesNotMatch(consortium.reply, /não aceita|aceitamos consórcio/i);
+});
+
+test("'tem câmera?' na conversa: usa o recorte lembrado ou o carro único da última resposta", async () => {
+  const withCams = [
+    car("kicks", "Nissan", "Kicks", "SL 1.6", 2019, 86900, { transmission: "Automático", accessories: ["Câmera de ré"] }),
+    car("duster", "Renault", "Duster", "Dynamique 2.0", 2014, 54900, { transmission: "Automático", accessories: ["Freios ABS"] }),
+    car("hb", "Hyundai", "HB20S", "1.0 TB", 2024, 87900, { accessories: ["Câmera de ré"] }),
+  ];
+  const run = (mensagem: string, historico: Array<{ role: "user" | "assistant"; content: string }>) =>
+    runChatTurn({ mensagem, historico, stock: withCams, readIntent: async () => null, generate: noModel });
+  const suv = await run("tem câmera?", [{ role: "user", content: "quero um SUV" }, { role: "assistant", content: "Olha os SUVs." }]);
+  assert.match(suv.reply, /^Temos 1 SUV com câmera de ré na ficha/);
+  assert.doesNotMatch(suv.reply, /não está na lista/);
+  const one = await run("tem câmera?", [
+    { role: "user", content: "o suv mais barato?" },
+    { role: "assistant", content: "Olha o que tenho de carros:\nRenault Duster Dynamique 2.0 2014 · 101.000 km · R$ 54.900" },
+  ]);
+  assert.match(one.reply, /ficha desse Duster/);
+});
+
+test("'qual o melhor carro?' mostra os mais novos, não os mais baratos", async () => {
+  const turn = await ask("qual o melhor carro de vcs?");
+  assert.equal(turn.vehicles[0]?.model, "Mobi");
+});
