@@ -7,6 +7,7 @@ import {
   typicalConsumptionRange,
 } from "@/lib/chat-consumption";
 import { shortVersion } from "@/lib/vehicle-display";
+import { relatedVehicleScore } from "@/lib/related-vehicles";
 import { site } from "@/lib/site";
 import { officialWarrantyDetail } from "@/lib/chat-warranty";
 import {
@@ -3434,6 +3435,64 @@ export function similarToNamedReply(
     ? `Na linha d${name.labeled} (${label}) e mais em conta que ele (${formatChatPrice(ref.price)}):`
     : `Na linha d${name.labeled} (${label}), temos:`;
   return { reply: `${lead}\n${picks.map(formatVehicleLine).join("\n")}`, vehicles: picks };
+}
+
+/**
+ * Na página de um carro: "tem outros parecidos?", "outras opções?", "similar mais barato?".
+ * Não é pedido de modelo que falta: o carro de referência é o da página.
+ */
+export function asksForSimilarToActive(mensagem: string): boolean {
+  const folded = normalize(mensagem);
+  // Outras opções de pagamento, cor, parcela etc. não são outros carros.
+  if (/\b(pagamento|pagar|cor|cores|parcela\w*|financ\w*|entrada|horario|dia|fotos?|videos?)\b/.test(folded)) return false;
+  return (
+    /\b(parecid\w*|semelhante\w*|similar\w*|alternativas?|nessa linha|na mesma linha|desse estilo|nesse estilo|mesmo estilo|mesma pegada|tipo esse|tipo dele|tipo dela|igual a esse|igual a essa)\b/.test(folded) ||
+    /\b(?:outr[oa]s? (?:opc\w*|carros?|motos?|modelos?|veiculos?)|mais opc\w*|(?:tem|teria|tens|existe) (?:algum |alguma )?outr[oa]s?|(?:mostra|mostre|ver|manda|mande|quero ver)\w* (?:mais |outr[oa]s?))\b/.test(folded)
+  );
+}
+
+/** Até 3 do estoque parecidos com o carro da página (sem ele): mesma categoria, carroceria e faixa de preço. */
+export function similarToActiveReply(
+  active: ChatVehicleRecord,
+  stock: ChatVehicleRecord[],
+  mensagem: string,
+): { reply: string; vehicles: ChatVehicleRecord[] } {
+  const folded = normalize(mensagem);
+  const cheaper = /\b(mais barat[oa]s?|mais em conta|mais acessive\w*|menor preco|preco menor|mais baixo|economizar)\b/.test(folded);
+  const newer = /\b(mais nov[oa]s?|mais recente)\b/.test(folded);
+  const kind = active.category ?? "carro";
+  const body = vehicleBodyStyle(active);
+  const moto = kind === "moto";
+  const name = chatUnitName(active, stock, true);
+  const esse = moto ? "essa" : "esse";
+  const pool = stock.filter((vehicle) =>
+    vehicle.id !== active.id &&
+    (vehicle.category ?? "carro") === kind &&
+    (!cheaper || vehicle.price < active.price) &&
+    (!newer || vehicle.yearModel > active.yearModel));
+  // "tem outro Civic?" na ficha do Civic: a outra unidade do mesmo modelo vem primeiro.
+  const namedSame = new RegExp(`\\b${normalize(active.model).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(folded);
+  const current = { id: active.id, brand: active.brand, category: kind, price: active.price, transmission: active.transmission, version: active.version };
+  const score = (vehicle: ChatVehicleRecord) =>
+    relatedVehicleScore({ ...vehicle, category: vehicle.category ?? "carro" }, current) +
+    (body && vehicleBodyStyle(vehicle) === body ? 6 : 0) +
+    (normalize(vehicle.model) === normalize(active.model) ? (namedSame ? 100 : 4) : 0);
+  const picks = [...pool]
+    .sort((a, b) => score(b) - score(a) || Math.abs(a.price - active.price) - Math.abs(b.price - active.price))
+    .slice(0, 3);
+  const ask = `Quer que eu compare alguma com ${esse} ${name}? Se preferir, o consultor ajuda no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+  if (!picks.length) {
+    const what = cheaper ? `mais em conta que ${esse} ${name}` : newer ? `mais nova que ${esse} ${name}` : `parecida com ${esse} ${name}`;
+    return {
+      reply: `Agora não temos outra opção ${what} no estoque. Se quiser, o consultor te avisa quando chegar uma: ${CHAT_WHATSAPP_URL}`,
+      vehicles: [],
+    };
+  }
+  const extra = cheaper ? " e mais em conta" : newer ? " e mais novas" : "";
+  return {
+    reply: `Separei opções parecidas com ${esse} ${name}${extra}:\n${picks.map(formatVehicleLine).join("\n")}\n${ask}`,
+    vehicles: picks,
+  };
 }
 
 export function partialCompareReply(mensagem: string, present: ChatVehicleRecord): string {
