@@ -109,3 +109,20 @@ test("'sedan' sozinho não vira o Ka Sedan; 'HB20 ou Mobi' compara os dois escri
   const pair = await run("HB20 ou Mobi pra primeiro carro?");
   assert.deepEqual(pair.vehicles.map((v) => v.model).sort(), ["HB20", "Mobi"]);
 });
+
+test("modelo que não temos: diz o nome e mostra parecidos da mesma carroceria", async () => {
+  const mixed = [
+    car("palio", "Fiat", "Palio", "Celebration 1.0", 2008, 24900),
+    car("mobi", "Fiat", "Mobi", "Like 1.0", 2024, 57900),
+    car("ka", "Ford", "KA SEDAN", "SE 1.5", 2019, 49990),
+    car("civic", "Honda", "Civic", "EXL 2.0", 2020, 126900, { engine: "2.0" }),
+    car("kicks", "Nissan", "Kicks", "SL 1.6", 2019, 86900, { engine: "1.6" }),
+  ];
+  const run = (mensagem: string) => runChatTurn({ mensagem, historico: [], stock: mixed, readIntent: async () => null, generate: noModel });
+  const corolla = await run("tem corolla?");
+  assert.match(corolla.reply, /^Corolla não está na lista atual\. Separei parecidos/);
+  assert.deepEqual(corolla.vehicles.map((v) => v.model), ["Civic", "Ka Sedan"]);
+  const tcross = await run("tem t-cross?");
+  assert.match(tcross.reply, /^T-Cross não está/);
+  assert.deepEqual(tcross.vehicles.map((v) => v.model), ["Kicks"]);
+});

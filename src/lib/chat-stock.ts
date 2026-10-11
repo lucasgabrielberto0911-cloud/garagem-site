@@ -27,6 +27,7 @@ import {
   rankChatVehicles,
   stockEngineLabel,
   vehicleBodyStyle,
+  type ChatBodyStyle,
   type ChatRankMode,
   type ChatStockLine,
   type ChatStockPromptOpts,
@@ -2412,7 +2413,18 @@ export function similarAfterEmptyFilter(
   const motoTalk = resolveChatCategory(mensagem) === "moto" || /\b(motos?|cg|cb|biz|pop|fan|titan|xre|bros|fazer|factor|lander|nmax|pcx|ninja|hornet|twister|crosser|xtz|yamaha|suzuki|kawasaki|harley|scooter|cilindradas|cc)\b/.test(folded);
   const sameKind = (vehicle: ChatVehicleRecord) => ((vehicle.category ?? "carro") === "moto") === motoTalk;
   const relaxed = relaxChatStockFilters(stock, mensagem);
-  return (relaxed.some(sameKind) ? relaxed.filter(sameKind) : relaxed)
+  const kind = relaxed.some(sameKind) ? relaxed.filter(sameKind) : relaxed;
+  // Modelo que não temos: parecidos são da mesma carroceria (Corolla → sedãs; picape → SUVs), mais novos primeiro.
+  const asked = !motoTalk && !parseBodyStyleFilter(mensagem) ? askedModelBody(mensagem) : null;
+  const bodies = asked === "pickup" ? ["pickup", "suv"] : asked ? [asked] : [];
+  const sameBody = bodies.length ? kind.filter((vehicle) => bodies.includes(vehicleBodyStyle(vehicle) ?? "")) : [];
+  if (sameBody.length) {
+    return sameBody
+      .filter((vehicle) => !mentionedIds.has(vehicle.id))
+      .sort((a, b) => b.yearModel - a.yearModel || a.price - b.price)
+      .slice(0, limit);
+  }
+  return kind
     .filter((vehicle) => !mentionedIds.has(vehicle.id))
     .sort((a, b) => a.price - b.price)
     .slice(0, limit);
@@ -2909,16 +2921,38 @@ export function looksLikeMissingModelReply(reply: string): boolean {
   );
 }
 
+/** Nome do modelo como o visitante escreveu, com caixa de vitrine: "t-cross" → "T-Cross", "s10" → "S10". */
+function askedModelName(mensagem: string, bit: string) {
+  const raw = mensagem.normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(new RegExp(`(?:^|[^a-z0-9-])((?:[a-z0-9]+-)?${bit}(?:-[a-z0-9]+)?)(?=$|[^a-z0-9-])`, "i"))?.[1] ?? bit;
+  return raw.split("-").map(part => part.length <= 3 || /\d/.test(part) ? part.toUpperCase() : part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join("-");
+}
+
+/** Carroceria do modelo pedido que não temos ("tem Corolla?" → sedan), pelo catálogo. */
+function askedModelBody(mensagem: string): ChatBodyStyle | null {
+  const bits = waitlistInterestBits(mensagem).filter((token) => !INTENT_SEEK_NOISE.test(token));
+  for (const bit of bits) {
+    const name = askedModelName(mensagem, bit);
+    const body = vehicleBodyStyle({ category: "carro", model: name, version: null });
+    if (body) return body;
+  }
+  return null;
+}
+
 export function missingModelReply(
   mensagem: string,
   stock: ChatVehicleRecord[],
 ): string {
   const similar = findSimilarVehicles(mensagem, stock, 3);
   const wait = `o consultor anota e te avisa no WhatsApp quando chegar: ${chatWaitlistWhatsAppUrl(mensagem)}`;
+  // Diz o nome do modelo pedido ("tem Onix?" → "Onix não está…") quando é uma palavra só, limpa.
+  const bits = waitlistInterestBits(mensagem).filter((token) => !INTENT_SEEK_NOISE.test(token));
+  const asked = bits.length === 1 && /^[a-z][a-z0-9-]{1,14}$/.test(bits[0]!) ? bits[0]! : null;
+  const name = asked ? askedModelName(mensagem, asked) : null;
+  const subject = name ? `${name} não está na lista atual.` : "Esse modelo não está na lista atual.";
   if (similar.length === 0) {
-    return `Esse modelo não está na lista atual. Posso olhar outro na mesma ideia, ou ${wait}`;
+    return `${subject} Posso olhar outro na mesma ideia, ou ${wait}`;
   }
-  return `Esse modelo não está na lista atual. Na mesma ideia, olha o que tem no estoque — ou ${wait}`;
+  return `${subject} Separei parecidos que temos, ou ${wait}`;
 }
 
 export function enrichMissingModelReply(
