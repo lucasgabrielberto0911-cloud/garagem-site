@@ -18,6 +18,7 @@ import {
   isChatSelectionQuery,
   parseBodyStyleFilter,
   parseCheapIntent,
+  parseDeliveryIntent,
   parseEconomyIntent,
   parseFamilyIntent,
   parsePriceLimit,
@@ -433,7 +434,7 @@ function mentionedModelGroups(stock: ChatVehicleRecord[], mensagem: string) {
   const written = [...models.keys()].filter(model => spaced(model) && folded.includes(` ${spaced(model)} `));
   for (const model of [...models.keys()]) {
     const longer = written.find(other => other !== model && spaced(other).startsWith(spaced(model)) && spaced(other).length > spaced(model).length);
-    if (longer) models.delete(model);
+    if (longer && !folded.replaceAll(` ${spaced(longer)} `, " ").includes(` ${spaced(model)} `)) models.delete(model);
   }
   // "HB20 ou Mobi": o HB20S (só parecido, não escrito) não entra quando o HB20 foi escrito.
   for (const model of [...models.keys()]) {
@@ -1632,7 +1633,7 @@ function formatStarterCompare(vehicles: ChatVehicleRecord[]) {
     motor ? `motor ${motor}` : null,
   ].filter(Boolean);
   const hint = hints.length ? `, ${hints.join(", ")}` : "";
-  const lead = `Para primeiro carro, ${talkName(top).labeled} sai por ${formatChatPrice(top.price)}${hint}, com ${formatChatKm(top.km)}.`;
+  const lead = `Para começar a dirigir ou usar na cidade, eu priorizaria ${talkName(top).labeled} ${top.yearModel}${hint}, com ${formatChatKm(top.km)}, por ${formatChatPrice(top.price)}.`;
   const rest = ranked.slice(1);
   if (rest.length === 0) return lead;
   const others = joinClauses(
@@ -1642,6 +1643,30 @@ function formatStarterCompare(vehicles: ChatVehicleRecord[]) {
     ),
   );
   return `${lead} ${others.charAt(0).toUpperCase()}${others.slice(1)}.`;
+}
+
+function formatDeliveryCompare(vehicles: ChatVehicleRecord[]) {
+  const cg = vehicles.find((vehicle) => /\bcg\s*160\b/.test(normalize(vehicle.model)));
+  const biz = vehicles.find((vehicle) => /\bbiz\b/.test(normalize(vehicle.model)));
+  if (cg) {
+    return `Para entregas, eu começaria pela ${talkName(cg).name}: robustez para a rotina com carga e manutenção simples${biz ? "; a BIZ também é uma opção prática para rodar com economia" : ""}.`;
+  }
+  return "Para entregas, estas são opções para buscar economia no dia a dia e manutenção simples.";
+}
+
+/** Diferenças de modelo com dados da base; opcionais continuam restritos à ficha da unidade. */
+export function formatModelDifferenceReply(vehicles: ChatVehicleRecord[]) {
+  const picks = vehicles.slice(0, 2);
+  const differences = picks.map((vehicle) => {
+    const body = vehicleBodyStyle(vehicle);
+    const spec = findVehicleSpec(vehicle);
+    const trunk = spec?.portaMalas != null
+      ? `, com porta-malas de referência de ${spec.aprox ? "cerca de " : ""}${spec.portaMalas} litros`
+      : "";
+    return `o ${formatModelName(vehicle.model)}${body ? ` é ${BODY_SPOKEN[body]}` : ` tem câmbio ${spokenTransmission(vehicle)}`}${trunk}`;
+  });
+  const units = picks.map((vehicle) => `${formatModelName(vehicle.model)} ${vehicle.yearModel} por ${formatChatPrice(vehicle.price)}`);
+  return `${differences.join("; ").replace(/^o /, "O ")}. Na Garagem, temos ${units.join(" e ")}.`;
 }
 
 function formatEconomyCompare(vehicles: ChatVehicleRecord[]) {
@@ -1678,6 +1703,7 @@ export function compareChatStockPicks(
 ) {
   if (vehicles.length === 0) return "";
   const intent = opts.intent ?? (opts.power ? "power" : "default");
+  if (intent === "delivery") return formatDeliveryCompare(vehicles);
   if ((intent === "power" || opts.power) && vehicles.length >= 2) {
     const body = opts.includeConsumption
       ? `${formatPowerCompare(vehicles)}\n\n${formatConsumptionCompare(vehicles)}`
@@ -2452,6 +2478,9 @@ const WAITLIST_STOP =
 const INTENT_SEEK_NOISE =
   /^(forte|fortes|rapido|rapida|rapidos|veloz|arranque|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
 
+const PROFILE_SEEK_NOISE =
+  /^(meu|minha|meus|minhas|sua|esposa|filha|mulher|namorada|mae|aprendendo|aprender|dirigir|tirou|carteira|cnh|habilitacao|entregador|entregadores|motoboy|ifood|trabalhar|trabalho|entrega|entregas)$/;
+
 function waitlistInterestBits(mensagem: string) {
   return normalize(mensagem)
     .split(" ")
@@ -2459,6 +2488,7 @@ function waitlistInterestBits(mensagem: string) {
       (token) =>
         token.length >= 3 &&
         !WAITLIST_STOP.test(token) &&
+        !PROFILE_SEEK_NOISE.test(token) &&
         !/^\d+$/.test(token),
     );
 }
@@ -2539,6 +2569,7 @@ const RANK_WORD: Partial<Record<ChatRankMode, string>> = {
   power: "forte",
   family: "família",
   starter: "primeiro carro",
+  delivery: "moto para entregas",
   economy: "econômico",
   cheap: "barato",
 };
@@ -2880,10 +2911,7 @@ export function searchChatInventory(
         .join(" ")
     : compareChatStockPicks(picks, {
         withLeadin: false,
-        intent:
-          /compar/i.test(message) && chatRankMode(message) === "starter"
-            ? "default"
-            : chatRankMode(message),
+        intent: chatRankMode(message),
       });
   const caveat = economyOk
     ? " Consumo de teste do Inmetro; na rua varia com trânsito e jeito de dirigir."
@@ -3239,7 +3267,7 @@ export function chatPolicyShortcut(
     return "cash";
   }
   // Frete / entrega: combinado com o consultor, sem inventar taxa (nem "sem frete").
-  if (/\b(frete|entrega|entregam|entregar|leva(?:m)? o carro|levar o carro|manda(?:m)? o carro)\b/.test(folded) && !/\b(entrada)\b/.test(folded)) {
+  if (/\b(frete|entrega|entregam|entregar|leva(?:m)? o carro|levar o carro|manda(?:m)? o carro)\b/.test(folded) && !/\b(entrada)\b/.test(folded) && !parseDeliveryIntent(mensagem)) {
     return "delivery";
   }
   // "Vocês compram carro?" / "quero vender meu carro": compramos usado (página inicial).

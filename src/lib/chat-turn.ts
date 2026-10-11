@@ -93,6 +93,7 @@ import {
   formatFocusedConsumptionReply,
   formatFocusedEquipmentReply,
   formatFocusedKmReply,
+  formatModelDifferenceReply,
   formatVehicleLine,
   isIncompleteStockReply,
   isFocusedVehicleFactQuestion,
@@ -570,6 +571,15 @@ export async function runChatTurn(input: {
     const reply = formatTransmissionCompareReply(input.stock, scopedMessage);
     emit(reply);
     return finish(reply, false, { policy });
+  }
+
+  // Diferença entre modelos nomeados: carroceria e porta-malas da base, com as unidades disponíveis.
+  if (!tradeTurn && !mayCreateLead && !humanAction && compared.length >= 2 &&
+    /\bdiferencas?\b/.test(visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()) &&
+    expertPlan?.topics.every((topic) => topic === "comparacao") !== false) {
+    const reply = formatModelDifferenceReply(compared);
+    emit(reply);
+    return finish(reply, false, { policy: "compare-difference", plain: true, forcedVehicles: compared });
   }
 
   // Pergunta técnica simples e coberta pela base: resposta direta, sem gastar o modelo de linguagem.
