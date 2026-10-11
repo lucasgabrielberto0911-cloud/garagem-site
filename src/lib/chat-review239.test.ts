@@ -95,3 +95,11 @@ test("sem a URL do WhatsApp, a frase não termina pendurada em 'lá em'", async 
     "O consultor faz a avaliação pelo WhatsApp, é só chamar.",
   );
 });
+
+test("link do WhatsApp no meio da frase leva o conector junto", async () => {
+  const { displayChatText } = await import("@/lib/chat-text");
+  assert.equal(
+    displayChatText("A avaliação a gente alinha com o consultor no WhatsApp, é só chamar lá em https://wa.me/5527996330706 que ele te ajuda com tudo."),
+    "A avaliação a gente alinha com o consultor no WhatsApp, é só chamar que ele te ajuda com tudo.",
+  );
+});

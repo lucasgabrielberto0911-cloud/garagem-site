@@ -68,7 +68,13 @@ export function splitChatLinks(text: string): ChatTextPart[] {
 
 /** Texto da bolha sem URL seca — o WhatsApp vira botão à parte. */
 export function displayChatText(text: string) {
-  let value = text.replace(URL_RE, "");
+  // "é só chamar lá em <link> que ele te ajuda": o conector sai junto com o link.
+  const connector = String.raw`\s+(?:l[aá]\s+)?(?:em|no|pelo|aqui|neste link|nesse link)\s*:?\s*`;
+  let value = text
+    .replace(new RegExp(String.raw`${connector}https?:\/\/wa\.me\/\S*?[.!]?(?=[ \t]*$)`, "gim"), ".")
+    .replace(new RegExp(String.raw`${connector}(?=https?:\/\/wa\.me\/)`, "gi"), " ")
+    .replace(URL_RE, "")
+    .replace(/[ \t]{2,}/g, " ");
   value = value
     .split("\n")
     .map((line) => {
