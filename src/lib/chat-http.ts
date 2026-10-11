@@ -54,12 +54,13 @@ function json(
 }
 
 function publicResult(result: ChatTurnResult) {
+  const research = readChatResearch(result.research);
   return {
     reply: result.reply,
     leadCreated: result.leadCreated,
     vehicles: result.vehicles,
     stockHref: result.stockHref,
-    ...(result.research ? { research: readChatResearch(result.research) } : {}),
+    ...(research ? { research } : {}),
   };
 }
 
@@ -206,6 +207,7 @@ export async function handleChatPost(
         leadCreated: result.leadCreated,
         cards: result.vehicles.length,
         model: result.meta?.model,
+        calls: result.meta?.calls,
       });
       return json(session, publicResult(result));
     }
@@ -249,6 +251,7 @@ export async function handleChatPost(
               leadCreated: result.leadCreated,
               cards: result.vehicles.length,
               model: result.meta?.model,
+              calls: result.meta?.calls,
             });
             const catchUp = catchUpStreamText(emitted, result.reply);
             if (catchUp) send("token", { text: catchUp });

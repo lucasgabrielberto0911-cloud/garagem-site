@@ -16,15 +16,17 @@ const duster = {...civic, id: "duster", brand: "Renault", model: "Duster", versi
 const stock = [civic, newer, duster];
 const user = (content: string): ChatTurn => ({role: "user", content});
 
+const noModel = async () => { throw Error("não precisa do modelo de linguagem"); };
+
 for (const [question, id] of [
   ["quantos cvs tem o Civic LXR 2015?", "lxr"],
   ["qual a potencia do Civic EXL 2020?", "exl"],
   ["quantos cavalos tem o Civic 2019/2020?", "exl"],
-] as const) test(`resposta documentada: ${question}`, async () => {
-  const result = await runChatTurn({mensagem: question, historico: [], stock, vehicleId: duster.id});
+] as const) test(`resposta direta da ficha: ${question}`, async () => {
+  const result = await runChatTurn({mensagem: question, historico: [], stock, vehicleId: duster.id, generate: noModel});
+  assert.equal(result.meta?.policy, "spec-direct");
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [id]);
-  assert.match(result.reply, /155 cv com etanol e 150 cv com gasolina/);
-  assert.ok(result.research?.paragraphs.every(paragraph => paragraph.sources.length));
+  assert.match(result.reply, /155 cv no etanol e 150 cv na gasolina/);
   assert.doesNotMatch(result.reply, /142 cv|mais potente|Achei|kgfm/);
 });
 
@@ -34,17 +36,19 @@ test("novo modelo com erro de digitação não herda o modelo anterior", async (
   assert.match(result.reply,/142 cv/);assert.doesNotMatch(result.reply,/155 cv|Civic/);
 });
 
-for (const choice of ["o 2020", "2020", "o de 2020", "quero o 2020", "EXL", "o LXR"]) test(`desambiguação continua a pergunta: ${choice}`, async () => {
-  const result = await runChatTurn({mensagem: choice, historico: [user("quantos cv tem o Civic?")], stock});
-  assert.equal(result.meta?.policy, "technical-research");
-  assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [choice.toLowerCase().includes("lxr") ? "lxr" : "exl"]);
-  assert.match(result.reply, /155 cv com etanol/);
+for (const choice of ["o 2020", "2020"]) test(`resposta curta com o ano continua a pergunta: ${choice}`, async () => {
+  const result = await runChatTurn({mensagem: "e o torque?", historico: [user("quantos cv tem o Civic?"), user(choice)], stock, vehicleId: duster.id, generate: noModel});
+  assert.equal(result.meta?.policy, "spec-direct");
+  assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [newer.id]);
+  assert.match(result.reply, /19,5 kgfm no etanol e 19,3 kgfm na gasolina/);
+  assert.doesNotMatch(result.reply, /142|Achei/);
 });
 
-test("versão escolhida em resposta curta continua no torque", async () => {
-  const result = await runChatTurn({mensagem:"e o torque?",historico:[user("quantos cv tem o Civic?"),user("EXL")],stock,vehicleId:civic.id});
-  assert.deepEqual(result.vehicles.map(vehicle=>vehicle.id),[newer.id]);
-  assert.match(result.reply,/EXL.*2020/);
+test("seguimento sem repetir o modelo usa o carro da mensagem anterior, não o da ficha aberta", async () => {
+  const result = await runChatTurn({mensagem: "e o torque?", historico: [user("quantos cv tem o Civic 2020?")], stock, vehicleId: duster.id, generate: noModel});
+  assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [newer.id]);
+  assert.match(result.reply, /19,5 kgfm/);
+  assert.doesNotMatch(result.reply, /20,9|142/);
 });
 
 test("não mistura combustíveis e não classifica valores conflitantes", () => {
@@ -61,9 +65,12 @@ test("não mistura combustíveis e não classifica valores conflitantes", () => 
   assert.equal(ambiguous.powerOrder,undefined);
 });
 
-test("combustível pedido prevalece sobre o padrão da comparação", async () => {
-  const result = await runChatTurn({mensagem:"entre Civic e Duster, qual é o mais potente com etanol?",historico:[],stock:[civic,duster]});
-  assert.match(result.reply,/Comparando todos com etanol/);assert.match(result.reply,/155 cv/);assert.doesNotMatch(result.reply,/Comparando todos com gasolina/);
+test("comparação entre dois modelos sem o modelo de linguagem fala o vencedor com os cv da ficha", async () => {
+  const result = await runChatTurn({mensagem: "entre Civic e Duster, qual é o mais potente com etanol?", historico: [], stock: [civic, duster], generate: noModel});
+  assert.equal(result.meta?.policy, "expert");
+  assert.match(result.reply, /Civic.*155 cv.*mais forte/);
+  assert.match(result.reply, /Duster.*142 cv/);
+  assert.doesNotMatch(result.reply, /Achei|No estoque:/);
 });
 
 test("falha externa repetida tem cache curto, sem uma segunda chamada", async () => {
@@ -79,54 +86,60 @@ test("falha externa repetida tem cache curto, sem uma segunda chamada", async ()
   }finally{globalThis.fetch=before;if(key===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=key;}
 });
 
-test("grounding usa fallback já configurado somente se o endpoint for rejeitado", async () => {
+test("grounding tenta o Gemini 3.5 primeiro e só cai no 2.5 se o endpoint for rejeitado", async () => {
   const before=globalThis.fetch,key=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL;
   process.env.GEMINI_API_KEY="fixture-local";delete process.env.GEMINI_MODEL;
   try{
     for(const status of [400,404,401,403,429,500]){
-      const urls:string[]=[];
+      const urls:string[]=[];let firstBody: {generationConfig: {thinkingConfig: unknown}} = {generationConfig: {thinkingConfig: null}};
       globalThis.fetch=(async(url,opts)=>{
         urls.push(String(url));const body=JSON.parse(String(opts?.body));
+        if(urls.length===1) firstBody=body;
         assert.deepEqual(body.tools,[{google_search:{}}]);
         return urls.length===1?Response.json({error:{}},{status}):Response.json({candidates:[]});
       }) as typeof fetch;
-      if(status===400||status===404){await generateGroundedResearch("identidade pública");assert.equal(urls.length,2);assert.match(urls[1]!,/gemini-2.5-flash:/);}
+      if(status===400||status===404){await generateGroundedResearch("identidade pública");assert.equal(urls.length,2);assert.match(urls[0]!,/gemini-3\.5-flash-lite:/);assert.match(urls[1]!,/gemini-2\.5-flash-lite:/);}
       else{await assert.rejects(generateGroundedResearch("identidade pública"));assert.equal(urls.length,1);}
+      // Gemini 3.x: thinkingLevel e sem temperature.
+      assert.deepEqual(firstBody.generationConfig.thinkingConfig,{thinkingLevel:"minimal"});
+      assert.equal("temperature" in firstBody.generationConfig,false);
     }
     const controller=new AbortController();controller.abort();
     await assert.rejects(generateGroundedResearch("identidade pública",controller.signal));
   }finally{globalThis.fetch=before;if(key===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=key;if(model===undefined)delete process.env.GEMINI_MODEL;else process.env.GEMINI_MODEL=model;}
 });
 
-test("assunto e ano escolhidos continuam no torque e consumo sem virar potência", async () => {
+test("assunto e ano escolhidos continuam no torque e no consumo sem virar potência", async () => {
   const history = [user("quantos cv tem o Civic?"), user("o 2020")];
-  const torque = await runChatTurn({mensagem: "e o torque?", historico: history, stock, vehicleId: civic.id});
+  const torque = await runChatTurn({mensagem: "e o torque?", historico: history, stock, vehicleId: civic.id, generate: noModel});
   assert.deepEqual(torque.vehicles.map(vehicle => vehicle.id), [newer.id]);
   assert.match(torque.reply, /19,5 kgfm.*19,3 kgfm/);
   assert.doesNotMatch(torque.reply, /cv|2015/);
-  let seen: string[] = [];
-  const consumption = await runChatTurn({mensagem: "e o consumo?", historico: history, stock, research: async (vehicles, _signal, topic) => {
-    seen = vehicles.map(vehicle => vehicle.id); assert.equal(topic, "consumo"); return {paragraphs: [], unavailable: true};
-  }});
-  assert.deepEqual(seen, [newer.id]);
-  assert.doesNotMatch(consumption.reply, /\d+\s*km\/l|155 cv/);
+  const consumption = await runChatTurn({mensagem: "e o consumo?", historico: history, stock, generate: noModel});
+  assert.equal(consumption.meta?.policy, "spec-direct");
+  assert.match(consumption.reply, /7,2 km\/l na cidade e 8,9 km\/l na estrada com etanol/);
+  assert.match(consumption.reply, /10,5 km\/l na cidade e 13 km\/l na estrada/);
+  assert.doesNotMatch(consumption.reply, /155 cv|2015/);
 });
 
-test("comparação completa responde o vencedor/empate primeiro no mesmo combustível", async () => {
+test("qual desses é o mais potente? compara os carros da conversa pelas fichas", async () => {
   const streamed: string[] = [];
+  let prompt = "";
   const result = await runChatTurn({mensagem: "qual desses é o mais potente?", historico: [user("compare Civic e Duster")], stock,
-    onToken: text => streamed.push(text)});
-  assert.match(result.reply, /^Comparando todos com gasolina/);
-  assert.match(result.reply, /Civic LXR.*2015.*Civic EXL.*2020.*empatam.*150 cv/);
-  assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [civic.id, newer.id, duster.id]);
-  assert.equal(streamed.join(""), result.reply);
+    onToken: text => streamed.push(text), generate: async ({systemPrompt}) => { prompt = systemPrompt; return {text: "O Civic é o mais forte: cerca de 155 cv no etanol, contra 142 cv da Duster.", functionCall: null}; }});
+  assert.equal(result.meta?.policy, "expert");
+  assert.match(prompt, /FICHAS TÉCNICAS DE REFERÊNCIA/);
+  assert.match(prompt, /155 cv/);
+  assert.match(prompt, /142 cv/);
+  assert.match(result.reply, /^O Civic é o mais forte/);
+  assert.ok(result.vehicles.length > 0 && result.vehicles.every(vehicle => ["lxr", "exl", "duster"].includes(vehicle.id)));
 });
 
-test("e o consumo preserva a dupla mesmo sem repetir 'desses dois'", async () => {
-  let seen: string[] = [];
-  await runChatTurn({mensagem: "e o consumo?", historico: [user("compare Civic e Duster")], stock: [civic,duster],
-    research: async (vehicles, _signal, topic) => { seen = vehicles.map(vehicle => vehicle.id); assert.equal(topic, "consumo"); return {paragraphs: [], unavailable: true}; }});
-  assert.deepEqual(seen.sort(), [civic.id,duster.id].sort());
+test("e o consumo? preserva a dupla da conversa mesmo sem repetir 'desses dois'", async () => {
+  const result = await runChatTurn({mensagem: "e o consumo?", historico: [user("compare Civic e Duster")], stock: [civic,duster], generate: noModel});
+  assert.match(result.reply, /Civic 2\.0 tem|Civic.*km\/l/);
+  assert.match(result.reply, /Duster.*5,8 km\/l na cidade/);
+  assert.deepEqual(result.vehicles.map(vehicle => vehicle.id).sort(), [civic.id, duster.id].sort());
 });
 
 test("potência e torque pedidos juntos chegam juntos na resposta", async () => {

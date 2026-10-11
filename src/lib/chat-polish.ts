@@ -27,6 +27,13 @@ export function looksTruncated(
   if (/R\$\s*\d[\d.]*$/.test(trimmed)) return false;
   if (/\d[\d.]*\s*km$/i.test(trimmed)) return false;
   if (/[.!?]["”']?$/.test(trimmed)) return false;
+  // Parada natural (STOP) num parêntese, reticências ou emoji fecha a resposta; não é corte.
+  if (finishReason === "STOP" && trimmed.length >= 20 && /[)\]…\p{Extended_Pictographic}]$/u.test(trimmed)) {
+    return false;
+  }
+  // O próprio modelo parou (STOP) numa resposta de bom tamanho: refazer a chamada custa
+  // segundos e dinheiro; o ponto final que falta é colocado por closeTruncatedReply.
+  if (finishReason === "STOP" && trimmed.length >= 80) return false;
   // Frase sem ponto/!/? — inclusive cortes de produção ("Para o Fox com motor 1.6 flex").
   return true;
 }
@@ -180,9 +187,14 @@ function accessoryAllowed(key: string, allowed: Set<string>): boolean {
     if (key === "ar condicionado" && item === "arcondicionado") return true;
     if (key === "multimidia" && item.includes("multimidia")) return true;
     if (item === key.replace(/\s/g, "")) return true;
+    // Item cadastrado mais longo cobre o termo ("ar condicionado digital" → "ar condicionado").
+    if (` ${item.replace(/[^a-z0-9]+/g, " ")} `.includes(` ${key.replace(/[^a-z0-9]+/g, " ")} `)) return true;
   }
   return false;
 }
+
+/** Frase que nega o item ("não consta teto solar") não afirma nada: não pode perder o nome do item. */
+const NEGATED_ACCESSORY = /\b(?:nao|sem)\b/;
 
 function tidyAccessoryGaps(text: string): string {
   return text
@@ -199,30 +211,42 @@ function tidyAccessoryGaps(text: string): string {
     .trim();
 }
 
+/** Itens de segurança de série do MODELO: numa resposta técnica são dado de fábrica, não equipamento da unidade. */
+const SAFETY_TERM = /airbag|\babs\b|estabilidade|tracao|isofix|freio|cinto/;
+
 export function stripInventedAccessories(
   text: string,
   vehicles: ChatVehicleRecord[],
+  opts: { safetyTerms?: boolean } = {},
 ): string {
   if (!text.trim() || vehicles.length === 0) return text;
   const allowed = allowedAccessoryKeys(vehicles);
+  const patterns = opts.safetyTerms
+    ? ACCESSORY_PATTERNS.filter((item) => !SAFETY_TERM.test(item.key))
+    : ACCESSORY_PATTERNS;
   if (allowed.size === 0) {
     let next = text;
-    for (const item of ACCESSORY_PATTERNS) {
+    for (const item of patterns) {
       next = next.replace(item.re, "");
     }
     return tidyAccessoryGaps(next);
   }
-  let next = text;
-  for (const item of ACCESSORY_PATTERNS) {
-    if (!item.re.test(next)) {
+  const sentences = text.split(/(?<=[.!?])(?=\s)/);
+  const cleaned = sentences.map((sentence) => {
+    if (NEGATED_ACCESSORY.test(fold(sentence))) return sentence;
+    let next = sentence;
+    for (const item of patterns) {
+      if (!item.re.test(next)) {
+        item.re.lastIndex = 0;
+        continue;
+      }
       item.re.lastIndex = 0;
-      continue;
+      if (accessoryAllowed(item.key, allowed)) continue;
+      next = next.replace(item.re, "");
     }
-    item.re.lastIndex = 0;
-    if (accessoryAllowed(item.key, allowed)) continue;
-    next = next.replace(item.re, "");
-  }
-  return tidyAccessoryGaps(next);
+    return next;
+  });
+  return tidyAccessoryGaps(cleaned.join(""));
 }
 
 export function closeTruncatedReply(text: string): string {
@@ -238,9 +262,11 @@ export function closeTruncatedReply(text: string): string {
 export function applyChatReplyGuards(
   text: string,
   vehicles: ChatVehicleRecord[] = [],
-  opts: { truncated?: boolean } = {},
+  opts: { truncated?: boolean; safetyTerms?: boolean } = {},
 ): string {
-  let next = stripInventedAccessories(text, vehicles);
+  let next = stripInventedAccessories(text, vehicles, {
+    safetyTerms: opts.safetyTerms,
+  });
   next = polishPortuguese(next);
   next = stripRepeatedDisplacement(next);
   next = ensureWarrantyCopy(next);

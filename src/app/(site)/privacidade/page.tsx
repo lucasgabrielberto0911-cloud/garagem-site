@@ -10,7 +10,7 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/privacidade",
 });
 
-const UPDATED_AT = "setembro de 2026";
+const UPDATED_AT = "outubro de 2026";
 
 export default function PrivacidadePage() {
   return (
@@ -93,6 +93,15 @@ export default function PrivacidadePage() {
               com prestadores de serviço de tecnologia que hospedam o site e o
               banco de dados, e com autoridades públicas quando houver exigência
               legal. Não vendemos dados pessoais.
+            </p>
+            <p>
+              No assistente, o texto das mensagens, com telefone, e-mail e
+              documentos removidos, é enviado a um provedor de inteligência artificial,
+              a TypeSafe AI, só para entender o que você procura (por exemplo,
+              financiar ou trocar) e orientar o atendimento. Quando você pede
+              contato, essa leitura fica anotada no seu registro, visível apenas
+              para a equipe. Ela não é mostrada a você nem decide nada sobre
+              você, e a equipe continua sendo quem atende.
             </p>
           </Block>
 

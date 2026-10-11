@@ -8,6 +8,11 @@ export function chatSearchText(value: string) {
 
 export function withoutChatMetrics(value: string) {
   return chatSearchText(value)
+    // Aceleração não é faixa de preço, inclusive “de 0 a 100”.
+    .replace(/\b(?:de\s+)?(?:0\s*(?:a|ate|[-–])\s*100|zero\s+a\s+cem)(?:\s*km\s*\/\s*h)?\b/g, " ")
+    // Valor de entrada não é orçamento: “uns 20 mil de entrada”, “entrada de 15 mil”.
+    .replace(/\b\d[\d.,]*\s*(?:mil|k)?\s*(?:reais\s*)?(?:de |na |como |pra |para )?(?:entrada|sinal)\b/g, " ")
+    .replace(/\b(?:entrada|sinal)\s*(?:de|em|:)?\s*(?:uns\s*|cerca de\s*)?(?:r\$\s*)?\d[\d.,]*\s*(?:mil|k)?\b/g, " ")
     .replace(/\b\d[\d.,]*\s*(?:mil|k)?\s*(?:km|quilometros?)\b/g, " ")
     .replace(/\b(?:ano\s*)?(?:19|20)\d{2}\b/g, " ");
 }

@@ -11,6 +11,8 @@ export type LeadNotifyPayload = {
   plate?: string;
   km?: number | null;
   notes?: string | null;
+  /** Leitura curta do assistente, ex.: "Quente · quer financiar". Só para a equipe. */
+  reading?: string | null;
   source?: string | null;
   interestVehicleId?: string | null;
   photoCount?: number;
@@ -36,6 +38,7 @@ export function buildLeadWebhookBody(payload: LeadNotifyPayload) {
       plate: payload.plate ?? "",
       km: payload.km ?? null,
       notes: payload.notes ?? null,
+      reading: payload.reading ?? null,
       source: payload.source ?? "vender",
       interestVehicleId: payload.interestVehicleId ?? null,
       photoCount: payload.photoCount ?? 0,
@@ -57,6 +60,7 @@ export function buildLeadNotifyEmail(payload: LeadNotifyPayload) {
       : `Veículo: ${payload.vehicleInfo}`,
     payload.plate ? `Placa: ${payload.plate}` : null,
     payload.km != null ? `KM: ${payload.km}` : null,
+    payload.reading ? `Leitura: ${payload.reading}` : null,
     payload.source ? `Origem: ${payload.source}` : null,
     payload.interestVehicleId
       ? `Interesse (id): ${payload.interestVehicleId}`
@@ -68,7 +72,7 @@ export function buildLeadNotifyEmail(payload: LeadNotifyPayload) {
   return {
     subject: wanted
       ? `Modelo pedido: ${payload.vehicleInfo} — ${payload.name}`
-      : `Lead: ${payload.vehicleInfo} — ${payload.name}`,
+      : `Lead${payload.reading ? ` (${payload.reading})` : ""}: ${payload.vehicleInfo} — ${payload.name}`,
     text: lines.join("\n"),
   };
 }

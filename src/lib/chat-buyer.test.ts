@@ -201,17 +201,34 @@ test("HB20 vs Onix compara só os dois e deixa o Compass de fora", async () => {
   assert.doesNotMatch(result.reply, /BIZ|Civic/);
 });
 
-test("HB20 vs Onix fora do estoque vira waitlist, não pede os dois modelos", async () => {
+test("HB20 vs Onix, ambos fora do estoque: responde como especialista, sem lista de espera nem pedir os dois modelos", async () => {
+  let prompt = "";
   const result = await runChatTurn({
+    mensagem: "HB20 vs Onix",
+    historico: [],
+    stock: [compass, biz],
+    generate: async ({ systemPrompt }) => {
+      prompt = systemPrompt;
+      return {
+        text: "O HB20 1.0 tem 80 cv no etanol e o Onix 1.0 aspirado fica por perto; no estoque agora não tenho nenhum dos dois, mas o consultor te avisa quando chegar.",
+        functionCall: null,
+      };
+    },
+  });
+  assert.equal(result.meta?.policy, "expert");
+  assert.match(prompt, /citou onix, que não está no estoque/);
+  assert.match(prompt, /FICHAS TÉCNICAS DE REFERÊNCIA/);
+  assert.doesNotMatch(result.reply, /Me diz os dois modelos|não está na lista atual/i);
+  // Sem o modelo de linguagem a reserva não chuta o Onix.
+  const offline = await runChatTurn({
     mensagem: "HB20 vs Onix",
     historico: [],
     stock: [compass, biz],
     generate: blockedGenerate(),
   });
-  assert.equal(result.meta?.policy, "waitlist");
-  assert.doesNotMatch(result.reply, /Me diz os dois modelos/);
-  assert.match(result.reply, /não está na lista atual/i);
-  assert.match(decodeURIComponent(result.reply), /hb20|onix/i);
+  assert.equal(offline.meta?.policy, "expert");
+  assert.match(offline.reply, /Do Onix eu não tenho nem estoque nem ficha de fábrica/);
+  assert.doesNotMatch(offline.reply, /Me diz os dois modelos/);
 });
 
 test("Esse carro ainda tem? sem ficha pede o modelo, não waitlist de carro", async () => {
@@ -318,7 +335,7 @@ test("garantia, docs e cartão vs financiamento continuam atalho da loja", async
     stock: [hb20],
     generate: blockedGenerate(),
   });
-  assert.match(warranty.reply, /3 meses de motor e câmbio/);
+  assert.match(warranty.reply, /garantia comercial de 3 meses para motor e câmbio/);
   assert.match(warranty.reply, /8h às 23h/);
 
   const docs = await runChatTurn({
@@ -381,19 +398,19 @@ test("tem biz até 15 mil não mistura carro na waitlist", async () => {
   assert.doesNotMatch(result.reply, /HB20|Onix|Compass/);
 });
 
-test("consumo do Fox 1.6 exige fonte técnica e não duplica cilindrada", async () => {
+test("consumo do Fox 1.6 sem ficha na base não vira estimativa e não duplica cilindrada", async () => {
   const result = await runChatTurn({
     mensagem: "Qual consumo do Fox 1.6?",
     historico: [],
     stock: [fox16, hb20],
     generate: blockedGenerate(),
   });
-  assert.equal(result.meta?.policy, "technical-research");
+  assert.equal(result.meta?.policy, "expert");
   assert.match(result.reply, /Fox 1\.6/);
-  assert.equal(result.research?.unavailable, true);
   assert.doesNotMatch(result.reply, /\d+.*km\/l/);
   assert.doesNotMatch(result.reply, /1\.6 1\.6/);
-  assert.match(result.reply, /dados técnicos do modelo/);
+  assert.match(result.reply, /prefiro não chutar/);
+  assert.doesNotMatch(result.reply, /Achei|No estoque:/);
 });
 
 test("card de consumo do Fox Bluemotion não duplica 1.6 na versão", async () => {
@@ -682,7 +699,11 @@ test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () 
   assert.match(result.reply, /80 mil km/);
   assert.match(result.reply, /62\.900/);
   assert.doesNotMatch(result.reply, /mais em conta/);
-  assert.doesNotMatch(result.reply, /\b\d+\s*cv\b/i);
+  // Com ficha de fábrica na base, a lista mostra os cv de catálogo (e só deles).
+  assert.match(result.reply, /Lancer: motor 2\.0, cerca de 160 cv na gasolina/);
+  assert.match(result.reply, /Civic: motor 2\.0, cerca de 155 cv no etanol e 150 cv na gasolina/);
+  assert.match(result.reply, /Corolla: motor 2\.0, cerca de 154 cv no etanol e 143 cv na gasolina/);
+  assert.doesNotMatch(result.reply, /No estoque:|Achei \d/);
   assert.doesNotMatch(result.reply, /wa\.me|whatsapp/i);
   assert.equal(chatWhatsAppCta(result.reply), null);
   const lancerAt = result.reply.search(/Lancer/);
@@ -813,7 +834,8 @@ test("2.0 mais barato não manda começar pelo 1.0", async () => {
     [duster.id, lancer.id, civic.id],
   );
   assert.doesNotMatch(result.reply, /HB20/);
-  assert.match(result.reply, /cilindrada sozinha não confirma/);
+  assert.match(result.reply, /Duster: motor 2\.0, cerca de 142 cv/);
+  assert.doesNotMatch(result.reply, /No estoque:|Achei \d/);
   assert.doesNotMatch(
     result.reply,
     /gastar menos|mais em conta|prioridade virar só o preço/i,
@@ -1095,10 +1117,11 @@ test("família, primeiro carro, econômico e SUV filtram o estoque real", async 
     generate,
   });
   assert.equal(economy.vehicles[0]?.id, "hb");
-  assert.doesNotMatch(economy.reply, /km\/l/);
   assert.match(economy.reply, /HB20 Vision 1\.0/);
-  assert.match(economy.reply, /Motor menor, sozinho, não confirma/);
-  assert.doesNotMatch(economy.reply, /é o de motor menor|mais econômico da lista/);
+  // Com a ficha dos dois, "econômico" vem do Inmetro, não só do tamanho do motor.
+  assert.match(economy.reply, /HB20 faz cerca de 13,1 km\/l na cidade \(Inmetro, na gasolina\)/);
+  assert.match(economy.reply, /Civic faz cerca de 9,7 km\/l/);
+  assert.doesNotMatch(economy.reply, /é o de motor menor|mais econômico da lista|No estoque:|Achei \d/);
   assert.ok(economy.vehicles.every((vehicle) => vehicle.price <= 70_000));
 
   const suv = selectVehiclesForChatPrompt(stock, "suv automático até 130 mil");
@@ -1113,9 +1136,10 @@ test("família, primeiro carro, econômico e SUV filtram o estoque real", async 
     stock,
     generate,
   });
-  assert.equal(fact.meta?.policy, "technical-research");
-  assert.equal(fact.research?.unavailable, true);
-  assert.doesNotMatch(fact.reply, /\d+.*km\/l/);
+  assert.equal(fact.meta?.policy, "spec-direct");
+  // "É econômico?" vira o consumo do Inmetro daquela versão, sem afirmar nada da unidade.
+  assert.match(fact.reply, /Pelo Inmetro, o HB20 1\.0 faz cerca de 9,8 km\/l na cidade/);
+  assert.doesNotMatch(fact.reply, /esta unidade|Achei|No estoque:/);
   assert.equal(fact.vehicles.length, 1);
   assert.equal(fact.vehicles[0]?.id, "hb");
 });

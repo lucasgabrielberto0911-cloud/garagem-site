@@ -5,6 +5,11 @@ import {
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 import { sanitizeSensitiveText } from "@/lib/chat-guard";
+import {
+  composeLeadNotes,
+  formatReadingNote,
+  type ChatReading,
+} from "@/lib/chat-jev";
 import { notifyNewLead } from "@/lib/lead-notify";
 import { createLeadVenda } from "@/lib/lead-venda";
 
@@ -38,6 +43,7 @@ export function leadArgsAreComplete(args: CriarLeadArgs | null) {
 export async function createChatLead(
   args: CriarLeadArgs,
   stock: ChatVehicleRecord[],
+  opts: { reading?: ChatReading | null } = {},
 ) {
   const name = sanitizeSensitiveText(args.nome ?? "");
   const phone = (args.telefone ?? "").replace(/\D/g, "");
@@ -51,7 +57,8 @@ export async function createChatLead(
     vehicleInfo: interest || "Interesse via chatbot",
     plate: "",
     km: null,
-    notes: message || null,
+    // A leitura do Jev fica só no registro do lead (admin) e no alerta ao Lucas.
+    notes: composeLeadNotes(message, opts.reading),
     interestVehicleId: match?.id ?? null,
     source: "chatbot-site",
     photoUrls: [],
@@ -64,6 +71,7 @@ export async function createChatLead(
     phone,
     vehicleInfo: interest || "Interesse via chatbot",
     notes: message || null,
+    reading: formatReadingNote(opts.reading) || null,
     source: "chatbot-site",
     interestVehicleId: match?.id ?? null,
   });

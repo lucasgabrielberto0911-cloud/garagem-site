@@ -48,7 +48,6 @@ const stock = [
     category: "moto",
   },
 ];
-const noResearch = async () => ({ paragraphs: [], unavailable: true as const });
 
 for (const message of [
   "qual automatico mais forte?",
@@ -65,7 +64,6 @@ for (const message of [
       historico: [],
       stock,
       vehicleId: "hb",
-      research: noResearch,
       generate: async () => {
         modelCalls++;
         return { text: "Sim — o HB20 é Automático." };
@@ -86,7 +84,8 @@ for (const message of [
       ),
     );
     assert.doesNotMatch(reply.reply, /Sim.*HB20|é o mais forte|\d+\s*cv/);
-    assert.match(reply.reply, /cilindrada sozinha não confirma/);
+    assert.match(reply.reply, /me diz qual deles que eu passo os números de fábrica/);
+    assert.doesNotMatch(reply.reply, /No estoque:|Achei \d/);
   });
 }
 
@@ -135,7 +134,6 @@ test("comparação preserva carros e teto depois de pergunta sobre garantia", as
     mensagem,
     historico,
     stock,
-    research: noResearch,
   });
   assert.ok(reply.vehicles.length > 0);
   assert.ok(
@@ -224,7 +222,6 @@ test("pesquisa não desvia cadastro de contato para resposta determinística", a
       "Quero o automático mais forte. Meu nome é Ana Souza, telefone 27988887777",
     historico: [],
     stock,
-    research: noResearch,
     generate: async () => {
       calls++;
       return {
@@ -338,79 +335,59 @@ test("tirar um filtro vale para esta mensagem e as próximas", () => {
   assert.equal(parseChatSearchRanges(yearReset).minYear, undefined);
 });
 
-test("consumo não vira seleção genérica e não publica estimativa sem fonte", async () => {
+test("consumo de um carro sem ficha na base não vira lista nem estimativa", async () => {
   const result = await runChatTurn({
     mensagem: "Qual consumo desse carro?",
     historico: [],
     stock,
     vehicleId: "civic",
-    research: noResearch,
     generate: async () => {
-      throw new Error("não deveria usar resposta sem pesquisa");
+      throw new Error("modelo fora do ar");
     },
   });
-  assert.equal(result.meta?.policy, "technical-research");
-  assert.equal(result.vehicles[0]?.id, "civic");
-  assert.equal(result.research?.unavailable, true);
-  assert.doesNotMatch(result.reply, /km\/l|faixa típica/);
+  assert.equal(result.meta?.policy, "expert");
+  assert.equal(result.vehicles.length, 0, "o carro aberto na tela não vira card repetido");
+  assert.doesNotMatch(result.reply, /\d.*km\/l|faixa típica|Achei|No estoque/);
+  assert.match(result.reply, /consultor/);
 });
 
-test("consumo sem modelo pede identificação em vez de estimar números", async () => {
+test("consumo sem modelo identificado pergunta de qual carro, sem estimar números", async () => {
   const result = await runChatTurn({
     mensagem: "quanto faz por litro?",
     historico: [],
     stock,
-    research: noResearch,
+    generate: async () => {
+      throw new Error("modelo fora do ar");
+    },
   });
-  assert.equal(result.meta?.policy, "technical-ask");
+  assert.equal(result.meta?.policy, "expert");
   assert.equal(result.vehicles.length, 0);
+  assert.match(result.reply, /De qual carro/);
   assert.doesNotMatch(result.reply, /\d.*km\/l/);
 });
 
-test("potência documentada completa corrige a ordem dos cards sem trocar os filtros", async () => {
-  const { parseGroundedResearch } = await import("./chat-research");
+test("mais forte entre automáticos até 80 mil ordena pelos cv de catálogo, não pela cilindrada", async () => {
+  const real = (id: string, brand: string, model: string, version: string, engine: string, yearModel: number, price: number): ChatVehicleRecord => ({
+    id, brand, model, version, engine, yearModel, price, km: 90000, transmission: "Automático", category: "carro", color: "Preto", fuel: "Flex",
+  });
+  const lista = [
+    real("hb16", "Hyundai", "HB20", "Premium 1.6 Aut", "1.6", 2015, 56900),
+    real("hrv", "Honda", "HR-V", "EXL 1.8", "1.8", 2016, 79900),
+    real("duster", "Renault", "Duster", "Dynamique 2.0", "2.0", 2014, 54900),
+    real("civic", "Honda", "Civic", "LXR 2.0", "2.0", 2015, 74900),
+    real("caro", "Toyota", "Corolla", "Altis 2.0", "2.0", 2018, 99900),
+  ];
   const result = await runChatTurn({
     mensagem: "qual automático mais forte até 80 mil?",
     historico: [],
-    stock,
-    research: async (vehicles) =>
-      parseGroundedResearch(
-        {
-          candidates: [
-            {
-              groundingMetadata: {
-                groundingChunks: [
-                  {
-                    web: {
-                      uri: "https://honda.com.br/catalogo-fixture",
-                      title: "Catálogo simulado para teste",
-                    },
-                  },
-                ],
-                groundingSupports: vehicles.map((v) => ({
-                  segment: {
-                    text: `${v.model} ${v.version} ${v.yearModel}: potência de catálogo ${v.id === "civic" ? 155 : v.id === "duster" ? 143 : 128} cv com etanol.`,
-                  },
-                  groundingChunkIndices: [0],
-                })),
-                searchEntryPoint: {
-                  renderedContent:
-                    '<a href="https://www.google.com/search">Google</a>',
-                },
-              },
-            },
-          ],
-        },
-        vehicles,
-      ),
+    stock: lista,
+    generate: async () => {
+      throw new Error("a busca não precisa do modelo");
+    },
   });
-  assert.deepEqual(
-    result.vehicles.map((v) => v.id),
-    ["civic", "duster", "hb"],
-  );
-  assert.match(result.reply, /potência de catálogo confirmada/);
-  assert.match(result.research!.comparison!.text, /Civic.*155 cv/);
-  assert.doesNotMatch(result.reply, /HR-V/);
+  assert.deepEqual(result.vehicles.map((v) => v.id), ["civic", "duster", "hrv"]);
+  assert.match(result.reply, /Civic: motor 2\.0, cerca de 155 cv no etanol e 150 cv na gasolina/);
+  assert.doesNotMatch(result.reply, /Corolla|No estoque:|Achei \d/);
 });
 
 test("atalho de uma pesquisa por modelo preserva versão e não abre todo o estoque", async () => {
@@ -424,7 +401,6 @@ test("atalho de uma pesquisa por modelo preserva versão e não abre todo o esto
     mensagem: "Honda Civic LXR automático até 80 mil",
     historico: [],
     stock: [...many, ...stock],
-    research: noResearch,
   });
   assert.ok(result.stockHref);
   const params = new URL(result.stockHref!, "https://www.suagaragem.net")
@@ -436,7 +412,6 @@ test("atalho de uma pesquisa por modelo preserva versão e não abre todo o esto
     mensagem: "HB20 automático até 80 mil",
     historico: [],
     stock,
-    research: noResearch,
   });
   assert.equal(single.stockHref, null);
 });
@@ -445,16 +420,15 @@ test("qualquer câmbio com força mantém orçamento e não vira aula de transmi
   const result = await runChatTurn({
     mensagem: "qual o mais forte, manual ou automático?",
     historico: [{ role: "user", content: "carros até 80 mil" }],
-    stock,
-    research: noResearch,
+    // O modelo de teste "Manual teste" se chamaria como a palavra do câmbio; aqui ele tem outro nome.
+    stock: stock.map((v) => (v.model === "Manual teste" ? { ...v, model: "Prisma teste" } : v)),
   });
   assert.equal(result.meta?.policy, "inventory-search");
-  assert.equal(result.research?.unavailable, true);
   assert.ok(result.vehicles.every((v) => v.price <= 80000));
   assert.ok(result.vehicles.some((v) => v.transmission === "Manual"));
 });
 
-test("pergunta técnica junto com financiamento mantém pesquisa com fontes", async () => {
+test("pergunta técnica junto com financiamento continua técnica e sem estimativa", async () => {
   for (const mensagem of [
     "qual automático mais forte para financiar?",
     "qual o consumo do Civic para financiar?",
@@ -463,31 +437,43 @@ test("pergunta técnica junto com financiamento mantém pesquisa com fontes", as
       mensagem,
       historico: [],
       stock,
-      research: noResearch,
       generate: async () => {
         throw new Error("não responder por estimativa");
       },
     });
-    assert.equal(result.research?.unavailable, true);
     assert.doesNotMatch(result.reply, /\d.*(?:km\/l|cv)/);
-    assert.ok(result.vehicles.length > 0);
+    assert.doesNotMatch(result.reply, /Achei|No estoque:/);
+    assert.ok(result.reply.length > 20);
   }
 });
 
-test("modelo ausente citado na pergunta técnica não vira pesquisa do carro da ficha aberta", async () => {
-  let researchCalls = 0;
-  const result = await runChatTurn({
+test("modelo ausente do estoque citado na pergunta técnica não vira resposta do carro da ficha aberta", async () => {
+  // O Corolla não está no estoque de teste, mas a base de fichas conhece o modelo.
+  const known = await runChatTurn({
     mensagem: "qual a potência do Corolla?",
     historico: [],
     stock,
     vehicleId: "civic",
-    research: async () => {
-      researchCalls++;
-      return noResearch();
+    generate: async () => {
+      throw new Error("a ficha responde sozinha");
     },
   });
-  assert.equal(researchCalls, 0);
-  assert.equal(result.vehicles.length, 0);
-  assert.match(result.reply, /modelo, versão e ano/);
-  assert.doesNotMatch(result.reply, /Civic/);
+  assert.equal(known.vehicles.length, 0);
+  assert.match(known.reply, /Corolla 2\.0 tem cerca de 154 cv no etanol e 143 cv na gasolina/);
+  assert.doesNotMatch(known.reply, /Civic|155 cv/);
+  // Modelo fora do estoque e fora da base: o modelo de linguagem responde sem usar a ficha do Civic.
+  let prompt = "";
+  const unknown = await runChatTurn({
+    mensagem: "qual a potência do Onix?",
+    historico: [],
+    stock,
+    vehicleId: "civic",
+    generate: async ({ systemPrompt }) => {
+      prompt = systemPrompt;
+      return { text: "O Onix 1.0 tem em torno de 80 cv; no estoque não tenho ele agora.", functionCall: null };
+    },
+  });
+  assert.match(prompt, /não está no estoque e não tem ficha aqui/);
+  assert.doesNotMatch(prompt, /FICHAS TÉCNICAS DE REFERÊNCIA/);
+  assert.equal(unknown.vehicles.length, 0);
 });

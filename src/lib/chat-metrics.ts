@@ -12,6 +12,8 @@ export type ChatTurnMetric = {
   leadCreated?: boolean;
   cards?: number;
   model?: string;
+  /** Pedidos feitos ao Gemini nesta resposta (1 = sem repetição). */
+  calls?: number;
 };
 
 export function logChatTurn(event: ChatTurnMetric) {
@@ -27,5 +29,6 @@ export function logChatTurn(event: ChatTurnMetric) {
     leadCreated: Boolean(event.leadCreated),
     cards: event.cards ?? 0,
     model: event.model ?? null,
+    calls: event.calls ?? null,
   });
 }
