@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { selectChatVehicles } from "./chat-cards";
 import {
   asksAboutAvailability,
+  asksAboutEquipment,
   asksAboutKm,
   asksAboutTransmissionCompare,
   asksToCompareModels,
@@ -130,4 +131,20 @@ test("diferença automático vs manual compara o estoque atual", () => {
   assert.match(reply, /HB20/);
   assert.match(reply, /Onix/);
   assert.doesNotMatch(reply, /fipe/i);
+});
+
+test("airbags no plural e 'Air Bags' com espaço na ficha contam como item cadastrado", () => {
+  const kicks = { ...hb20, model: "Kicks", version: "SL 1.6 Flex Start XTRONIC", yearModel: 2019, accessories: ["Multimídia", "ABS", "6 Air Bags", "Camera 360 (Around View Monitor)"] };
+  assert.equal(asksAboutEquipment("Quantos airbags tem?"), true);
+  assert.equal(asksAboutEquipment("tem air bag?"), true);
+  assert.equal(asksAboutEquipment("tem câmeras e sensores?"), true);
+  const many = formatFocusedEquipmentReply(kicks, "Quantos airbags tem?");
+  assert.match(many, /consta 6 airbags/);
+  assert.doesNotMatch(many, /não consta/);
+  assert.match(formatFocusedEquipmentReply(kicks, "tem airbag e ABS?"), /consta 6 airbags e freios ABS/);
+  assert.match(formatFocusedEquipmentReply(kicks, "tem câmeras?"), /consta câmera de ré/);
+  const plain = { ...kicks, accessories: ["Airbags frontais"] };
+  assert.match(formatFocusedEquipmentReply(plain, "tem air bag?"), /consta airbags/);
+  const none = { ...kicks, accessories: ["Multimídia"] };
+  assert.match(formatFocusedEquipmentReply(none, "tem airbags?"), /não consta airbags/);
 });
