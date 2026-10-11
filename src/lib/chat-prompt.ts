@@ -356,7 +356,7 @@ export function isPowerQuery(mensagem: string) {
 export function isChatSelectionQuery(mensagem: string) {
   const text = foldIntent(mensagem);
   return (
-    /\bcusto[\s-]*beneficio\b/.test(text) ||
+    /\b(custo[\s-]*beneficio|carro bom|bom carro|bons carros|carros bons|bom e barato|boa opcao)\b/.test(text) ||
     parseStarterIntent(mensagem) ||
     parseDeliveryIntent(mensagem) ||
     /\b(fortes?|potentes?|motorizad[oa]s?)\b/.test(text) ||

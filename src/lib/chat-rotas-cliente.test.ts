@@ -379,3 +379,18 @@ test("comparação de 2: ficha de cada um em uma linha, sem 'Vou te ajudar a esc
   const kids = await ask7("carro pra quem tem 2 filhos");
   assert.doesNotMatch(kids.reply, /não está na lista/);
 });
+
+test("conversa: 'a mais barata é flex?' responde só ela; capacete/manual não viram modelo; 'carro bom' é custo-benefício", async () => {
+  const first = await ask6("quero ver motos");
+  const fuel = await runChatTurn({
+    mensagem: "a mais barata é flex?",
+    historico: [{ role: "user", content: "quero ver motos" }, { role: "assistant", content: first.reply }],
+    stock: stock6, readIntent: async () => null, generate: noModel,
+  });
+  assert.equal(fuel.reply, "Sim, a BIZ 125 é flex (gasolina e etanol).");
+  assert.match((await ask6("tem capacete junto?")).reply, /não vem no anúncio/);
+  assert.match((await ask6("a moto acompanha manual?")).reply, /Manual e chave reserva variam/);
+  const good = await ask7("quero um carro bom");
+  assert.doesNotMatch(good.reply, /não está na lista/);
+  assert.notEqual(good.vehicles[0]?.id, "palio");
+});
