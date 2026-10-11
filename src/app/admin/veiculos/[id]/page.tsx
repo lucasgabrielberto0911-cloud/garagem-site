@@ -1,37 +1,7 @@
 import Link from "next/link";
-import nextDynamic from "next/dynamic";
+import { VehicleTabsLoader } from "@/components/admin/VehicleTabsLoader";
 import type { ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
-function PanelChunkLoading() {
-  return (
-    <div className="space-y-3" aria-hidden="true">
-      <div className="skeleton h-[52px] w-full" />
-      <div className="skeleton h-40 w-full" />
-      <div className="skeleton h-[52px] w-full" />
-    </div>
-  );
-}
-
-const VehicleForm = nextDynamic(
-  () => import("@/components/admin/VehicleForm").then((mod) => mod.VehicleForm),
-  { loading: () => <PanelChunkLoading /> },
-);
-
-const VehicleVerifiedPanel = nextDynamic(
-  () =>
-    import("@/components/admin/VehicleVerifiedPanel").then(
-      (mod) => mod.VehicleVerifiedPanel,
-    ),
-  { loading: () => <PanelChunkLoading /> },
-);
-
-const VehicleOpsPanel = nextDynamic(
-  () =>
-    import("@/components/admin/VehicleOpsPanel").then(
-      (mod) => mod.VehicleOpsPanel,
-    ),
-  { loading: () => <PanelChunkLoading /> },
-);
 import { AdminPageHeader, Badge } from "@/components/admin/ui";
 import { daysInStock } from "@/lib/admin-stats";
 import { editListingGapLine } from "@/lib/stock-quality";
@@ -186,44 +156,27 @@ export default async function EditVehiclePage({
       </nav>
 
       {view === "verificado" && verified ? (
-        <VehicleVerifiedPanel
-          vehicleId={vehicle.id}
-          isMoto={vehicle.category === "moto"}
-          photos={vehicle.photos.map((photo) => ({
-            id: photo.id,
-            url: photo.url,
-            thumbnailUrl: photo.thumbnailUrl,
-          }))}
-          items={verified.available ? verified.items : []}
-          unavailable={verified.available ? undefined : verified.reason}
-        />
+        <VehicleTabsLoader view="verificado" panelProps={{
+          vehicleId: vehicle.id,
+          isMoto: vehicle.category === "moto",
+          photos: vehicle.photos.map(({ id, url, thumbnailUrl }) => ({ id, url, thumbnailUrl })),
+          items: verified.available ? verified.items : [],
+          unavailable: verified.available ? undefined : verified.reason,
+        }} />
       ) : view === "operacao" ? (
-        <VehicleOpsPanel
-          vehicle={{
-            id: vehicle.id,
-            price: vehicle.price,
-            salePrice: vehicle.sale?.salePrice ?? null,
-            purchasePrice: vehicle.purchasePrice,
-            consigned: vehicle.consigned,
-            inStoreName: vehicle.inStoreName,
-            hasSpareKey: vehicle.hasSpareKey,
-            hasManual: vehicle.hasManual,
-          }}
-          photos={vehicle.photos.map((photo) => ({
-            id: photo.id,
-            url: photo.url,
-            thumbnailUrl: photo.thumbnailUrl,
-          }))}
-          costs={costs}
-          documents={documents}
-        />
+        <VehicleTabsLoader view="operacao" panelProps={{
+          vehicle: {
+            id: vehicle.id, price: vehicle.price, salePrice: vehicle.sale?.salePrice ?? null,
+            purchasePrice: vehicle.purchasePrice, consigned: vehicle.consigned,
+            inStoreName: vehicle.inStoreName, hasSpareKey: vehicle.hasSpareKey, hasManual: vehicle.hasManual,
+          },
+          photos: vehicle.photos.map(({ id, url, thumbnailUrl }) => ({ id, url, thumbnailUrl })),
+          costs, documents,
+        }} />
       ) : (
-        <VehicleForm
-          mode="edit"
-          vehicle={vehicle}
-          adminId={session.adminId}
-          listingScore={listingScore}
-        />
+        <VehicleTabsLoader view="anuncio" panelProps={{
+          mode: "edit", vehicle, adminId: session.adminId, listingScore,
+        }} />
       )}
     </div>
   );
