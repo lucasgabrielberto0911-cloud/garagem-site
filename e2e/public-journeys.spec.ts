@@ -99,8 +99,9 @@ test("card, ficha, voltar, favoritos e WhatsApp oficial", async ({ page }, info)
 test("busca tolerante encontra o Civic e mantém ordenação", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
   await page.goto("/estoque?sort=menor-preco");
-  await page.getByRole("searchbox", { name: "Buscar por marca, modelo ou versão" }).fill("civc");
-  await page.getByRole("button", { name: "Buscar", exact: true }).click();
+  const busca = page.getByRole("searchbox", { name: "Buscar por marca, modelo ou versão" });
+  await busca.fill("civc");
+  await busca.press("Enter");
   await expect(page).toHaveURL(/q=civc/); await expect(page).toHaveURL(/sort=menor-preco/);
   await page.getByRole("link", { name: /^Civic 1 veículo$/ }).click();
   await expect(page).toHaveURL(/q=Civic/); await expect(page).toHaveURL(/sort=menor-preco/);

@@ -1,21 +1,19 @@
 import type { Facets } from "@/components/site/StockFilters";
 
 /** Reserve o espaço dos filtros antes da hidratação, sem empurrar os anúncios. */
-export function StockFiltersSkeleton({ facets }: { facets?: Facets }) {
+export function StockFiltersSkeleton(_props: { facets?: Facets }) {
   const rows = [
-    "Faixa",
-    ...(!facets || facets.transmissions.length > 0 ? ["Câmbio"] : []),
+    "Atalhos",
   ];
 
   return (
     <div role="status" aria-label="Carregando filtros">
       <div
         aria-hidden="true"
-        className="border-0 bg-transparent p-0 lg:border lg:border-white/10 lg:bg-ink lg:h-[70dvh] lg:p-6"
+        className="border-0 bg-transparent p-0 lg:border lg:border-white/10 lg:bg-ink lg:h-[34rem] lg:p-5"
       >
-        <div className="mx-auto flex max-w-2xl gap-2 lg:flex-col lg:gap-3">
-          <div className="h-11 flex-1 lg:h-[52px] border border-white/10 bg-asphalt lg:flex-none" />
-          <div className="h-11 w-[52px] lg:h-[52px] bg-brand/20 sm:w-[96px] lg:w-full" />
+        <div className="mx-auto max-w-2xl">
+          <div className="h-11 border border-white/10 bg-asphalt lg:h-[48px]" />
         </div>
       </div>
       <div
@@ -31,9 +29,8 @@ export function StockFiltersSkeleton({ facets }: { facets?: Facets }) {
             </div>
           </div>
         ))}
-        <div className="mt-2 grid grid-cols-1 gap-2 min-[360px]:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="mt-2">
           <div className="h-11 border border-white/15 bg-asphalt" />
-          <div className="h-11 border border-white/15 bg-asphalt min-[360px]:w-[78px]" />
         </div>
       </div>
     </div>

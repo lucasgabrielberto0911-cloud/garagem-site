@@ -1,5 +1,6 @@
 "use client";
 
+import { StockSortSelect } from "@/components/site/StockSortSelect";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -116,7 +117,7 @@ export function EstoqueBrowseFallback({
           : "Atualizando o estoque…"}
         {vehicles.length > 0 ? (
           <span className="hidden lg:inline">
-            {` · ${stockSortLabel("recentes")}`}
+            {` · ${stockSortLabel("destaques")}`}
             {total > vehicles.length ? " · role para ver todos" : ""}
           </span>
         ) : null}
@@ -256,10 +257,11 @@ export function EstoqueBrowse({
         </div>
       ) : null}
 
+      <div className="mb-2 mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:mb-0 lg:mt-0">
       <p
         role="status"
         aria-atomic="true"
-        className="stock-count mb-2 mt-3 text-left text-sm font-medium text-cream lg:mb-0 lg:mt-0 lg:text-xs lg:font-normal lg:uppercase lg:tracking-wider lg:text-muted"
+        className="stock-count text-left text-sm font-medium text-cream lg:text-xs lg:font-normal lg:uppercase lg:tracking-wider lg:text-muted"
       >
         {loading
           ? "Atualizando o estoque…"
@@ -275,6 +277,8 @@ export function EstoqueBrowse({
           </span>
         ) : null}
       </p>
+        <StockSortSelect value={params.sort} />
+      </div>
 
       {previousResults ? (
         <p className="mb-3 text-xs leading-relaxed text-muted" data-stock-previous-results="">

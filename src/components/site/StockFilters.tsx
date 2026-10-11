@@ -2,14 +2,13 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
-import { CATEGORY_FILTER_OPTIONS, BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, KM_OPTIONS, selectClass, selectedOption, toggleAccessoryValue, splitAccessories, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
+import { BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, KM_OPTIONS, selectClass, selectedOption, toggleAccessoryValue, splitAccessories, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
 import { IconClose, IconSearch, IconShare } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import {
   modelAfterBrandChange,
   modelFilterOptions,
-  STOCK_SORT_OPTIONS,
   type StockModelOption,
 } from "@/lib/stock-query";
 import { handleFocusTrap } from "@/lib/focus-trap";
@@ -86,9 +85,15 @@ export function StockFilters({ facets }: { facets: Facets }) {
     minYear: params.get("minYear") ?? "",
     maxYear: params.get("maxYear") ?? "",
     maxKm: params.get("maxKm") ?? "",
-    sort: params.get("sort") ?? "recentes",
+    sort: params.get("sort") ?? "destaques",
   };
   const [draft, setDraft] = useState(current);
+  const [qText, setQText] = useState(current.q);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const searchTimer = useRef<number | undefined>(undefined);
+  const currentRef = useRef(current);
+  currentRef.current = current;
+  const [draftTotal, setDraftTotal] = useState<number | null>(null);
   const [FilterFields, setFilterFields] = useState<ComponentType<import("./StockFilterFields").StockFilterFieldsProps> | null>(null);
   const [fieldsFailed, setFieldsFailed] = useState(false);
   const [fieldsAttempt, setFieldsAttempt] = useState(0);
@@ -151,13 +156,19 @@ export function StockFilters({ facets }: { facets: Facets }) {
   }, [open]);
 
   useEffect(() => {
+    // Mantém o campo igual à URL (ex.: Limpar filtros), sem atropelar quem está digitando.
+    if (document.activeElement !== searchRef.current) setQText(params.get("q") ?? "");
+    return () => window.clearTimeout(searchTimer.current);
+  }, [params]);
+
+  useEffect(() => {
     setDraft(current);
     // URL params are the source of truth after navigation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
 
   const hasFilter = Object.entries(current).some(
-    ([key, value]) => value && !(key === "sort" && value === "recentes"),
+    ([key, value]) => value && !(key === "sort" && value === "destaques"),
   );
   const activeFilters: ActiveFilter[] = [];
   if (current.q) activeFilters.push({ key: "q", label: `Busca: “${current.q}”` });
@@ -251,7 +262,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     };
     const next = new URLSearchParams();
     Object.entries(normalized).forEach(([key, value]) => {
-      if (value && !(key === "sort" && value === "recentes")) {
+      if (value && !(key === "sort" && value === "destaques")) {
         next.set(key, String(value));
       }
     });
@@ -280,6 +291,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
     navigate({ ...current, ...patch });
   }
 
+  const updateRef = useRef(update);
+  updateRef.current = update;
+
   function clearFilters() {
     setOpen(false);
     navigate({
@@ -297,7 +311,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
       minYear: "",
       maxYear: "",
       maxKm: "",
-      sort: "recentes",
+      sort: "destaques",
     });
   }
 
@@ -306,91 +320,122 @@ export function StockFilters({ facets }: { facets: Facets }) {
     current.transmission,
   );
   const gearValue = transmissionFilterParam(current.transmission);
+  const quickChips = [
+    {
+      key: "carro",
+      label: "Carros",
+      active: current.category === "carro",
+      onClick: () => update({ category: current.category === "carro" ? "" : "carro" }),
+    },
+    {
+      key: "moto",
+      label: "Motos",
+      active: current.category === "moto",
+      onClick: () => update({ category: current.category === "moto" ? "" : "moto" }),
+    },
+    {
+      key: "automatico",
+      label: "Automático",
+      active: gearValue === "automatico",
+      onClick: () => update({ transmission: gearValue === "automatico" ? "" : "automatico" }),
+    },
+    ...BUDGET_CHIPS.map((chip) => {
+      const active = current.minPrice === chip.minPrice && current.maxPrice === chip.maxPrice;
+      return {
+        key: `faixa-${chip.label}`,
+        label: chip.label,
+        active,
+        onClick: () =>
+          update(active ? { minPrice: "", maxPrice: "" } : { minPrice: chip.minPrice, maxPrice: chip.maxPrice }),
+      };
+    }),
+  ];
+
+  // "Ver X veículos": conta o resultado do rascunho enquanto a gaveta está aberta.
+  const draftKey = JSON.stringify({ ...draft, sort: "", transmission: transmissionFilterParam(draft.transmission) });
+  useEffect(() => {
+    if (!open) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      const query = new URLSearchParams();
+      Object.entries(JSON.parse(draftKey) as FilterValues).forEach(([key, value]) => {
+        if (value && key !== "sort") query.set(key, String(value));
+      });
+      query.set("page", "1");
+      query.set("pageSize", "1");
+      fetch(`/api/estoque?${query.toString()}`, { signal: controller.signal })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => {
+          if (data && Number.isFinite(data.total)) setDraftTotal(data.total);
+        })
+        .catch(() => {});
+    }, 300);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [open, draftKey]);
 
   return (
     <>
       <div
         aria-busy={isPending}
         data-pending={isPending}
-        className={`border-0 bg-transparent p-0 transition-opacity lg:border lg:border-white/10 lg:bg-ink lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-6 lg:pr-5 ${
+        className={`border-0 bg-transparent p-0 transition-opacity lg:border lg:border-white/10 lg:bg-ink lg:p-5 ${
           isPending ? "opacity-70" : ""
         }`}
       >
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            const value = (
-              event.currentTarget.elements.namedItem("q") as HTMLInputElement
-            ).value;
-            update({ q: value });
+            if (searchTimer.current) window.clearTimeout(searchTimer.current);
+            update({ q: qText.trim() });
           }}
-          className="mx-auto flex max-w-2xl gap-2 lg:flex-col lg:gap-3"
+          className="mx-auto max-w-2xl"
           role="search"
         >
-          <div className="flex min-h-11 flex-1 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand lg:min-h-[52px]">
+          <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand lg:min-h-[48px]">
             <IconSearch className="h-4 w-4 shrink-0 text-muted" />
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
             </label>
             <input
               id="estoque-busca"
+              ref={searchRef}
               name="q"
               type="search"
-              defaultValue={current.q}
-              key={current.q}
+              enterKeyHint="search"
+              value={qText}
+              onChange={(event) => {
+                const value = event.target.value;
+                setQText(value);
+                if (searchTimer.current) window.clearTimeout(searchTimer.current);
+                searchTimer.current = window.setTimeout(() => {
+                  if (value.trim() !== currentRef.current.q) updateRef.current({ q: value.trim() });
+                }, 600);
+              }}
               placeholder="Marca, modelo ou versão"
-              className="w-full min-w-0 bg-transparent py-2 text-base lg:py-3 text-cream placeholder:text-muted focus:outline-none"
+              className="w-full min-w-0 bg-transparent py-2 text-base text-cream placeholder:text-muted focus:outline-none lg:text-sm"
             />
           </div>
-          <button
-            type="submit"
-            disabled={isPending}
-            aria-label="Buscar"
-            className="min-h-11 bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 sm:px-6 lg:min-h-[52px] lg:w-full"
-          >
-            <span className="hidden sm:inline">{isPending ? "Buscando..." : "Buscar"}</span>
-            <IconSearch className="h-5 w-5 sm:hidden" />
-          </button>
         </form>
 
-        {/* Desktop: filtros completos. */}
-        <div className="mt-6 hidden lg:block">
-          <div className="flex items-center gap-2.5 border-b border-white/10 pb-4">
-            <FilterIcon />
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
-              Filtrar estoque
-            </h2>
+        {/* Desktop: filtros completos, sem rolagem interna. */}
+        <div className="mt-5 hidden lg:block">
+          <div>
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+              Atalhos
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {quickChips.map((chip) => (
+                <Chip key={chip.key} active={chip.active} onClick={chip.onClick}>
+                  {chip.label}
+                </Chip>
+              ))}
+            </div>
           </div>
 
-          <div className="mt-5 space-y-4">
-            <DesktopField label="Ordenar resultados" htmlFor="estoque-ordem">
-              <select
-                id="estoque-ordem"
-                value={current.sort}
-                onChange={(event) => update({ sort: event.target.value })}
-                className={selectClass}
-              >
-                {STOCK_SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </DesktopField>
-            <DesktopField label="Tipo" htmlFor="desktop-tipo">
-              <select
-                id="desktop-tipo"
-                value={current.category}
-                onChange={(event) => update({ category: event.target.value })}
-                className={selectClass}
-              >
-                {CATEGORY_FILTER_OPTIONS.map((option) => (
-                  <option key={option.value || "ambos"} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </DesktopField>
+          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/10 pt-5">
             <FilterSelect
               label="Marca"
               id="desktop-marca"
@@ -402,7 +447,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 })
               }
               options={facets.brands}
-              emptyLabel="Todas as marcas"
+              emptyLabel="Todas"
             />
             <FilterSelect
               label="Modelo"
@@ -413,61 +458,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
               )}
               onChange={(value) => update({ model: value })}
               options={modelFilterOptions(facets.models, current.brand, current.model)}
-              emptyLabel="Todos os modelos"
+              emptyLabel="Todos"
             />
-            <FilterSelect
-              label="Câmbio"
-              id="desktop-cambio"
-              value={gearValue}
-              onChange={(value) => update({ transmission: value })}
-              options={gearOptions}
-              emptyLabel="Todos os câmbios"
-            />
-            <FilterSelect
-              label="Combustível"
-              id="desktop-combustivel"
-              value={current.fuel}
-              onChange={(value) => update({ fuel: value })}
-              options={facets.fuels}
-              emptyLabel="Todos os combustíveis"
-            />
-            {(facets.colors ?? []).length > 0 ? (
-              <FilterSelect
-                label="Cor"
-                id="desktop-cor"
-                value={current.color}
-                onChange={(value) => update({ color: value })}
-                options={facets.colors ?? []}
-                emptyLabel="Todas as cores"
-              />
-            ) : null}
-            {(facets.accessories ?? []).length > 0 ? (
-              <div>
-                <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
-                  Acessórios
-                </p>
-                <AccessoryChips
-                  options={facets.accessories ?? []}
-                  value={current.accessory}
-                  onToggle={(name) =>
-                    update({
-                      accessory: toggleAccessoryValue(current.accessory, name),
-                    })
-                  }
-                />
-              </div>
-            ) : null}
-            <label className="flex min-h-[48px] cursor-pointer items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 text-sm text-cream">
-              <input
-                type="checkbox"
-                checked={Boolean(current.laudo)}
-                onChange={(event) =>
-                  update({ laudo: event.target.checked ? "1" : "" })
-                }
-                className="h-4 w-4 accent-brand"
-              />
-              Com vistoria da loja
-            </label>
             <DesktopField label="Preço mínimo" htmlFor="desktop-preco-min">
               <select
                 id="desktop-preco-min"
@@ -503,10 +495,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 onChange={(event) => update({ minYear: event.target.value })}
                 className={selectClass}
               >
-                <option value="">Qualquer ano</option>
+                <option value="">Qualquer</option>
                 {facets.years.map((year) => (
                   <option key={`min-${year}`} value={year}>
-                    A partir de {year}
+                    {year}
                   </option>
                 ))}
               </select>
@@ -518,29 +510,98 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 onChange={(event) => update({ maxYear: event.target.value })}
                 className={selectClass}
               >
-                <option value="">Qualquer ano</option>
+                <option value="">Qualquer</option>
                 {facets.years.map((year) => (
                   <option key={`max-${year}`} value={year}>
-                    Até {year}
-                  </option>
-                ))}
-              </select>
-            </DesktopField>
-            <DesktopField label="Quilometragem" htmlFor="desktop-km">
-              <select
-                id="desktop-km"
-                value={current.maxKm}
-                onChange={(event) => update({ maxKm: event.target.value })}
-                className={selectClass}
-              >
-                {KM_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                    {year}
                   </option>
                 ))}
               </select>
             </DesktopField>
           </div>
+
+          <details
+            className="mt-5 border border-white/10 bg-asphalt/30 px-3.5 py-1"
+            open={Boolean(
+              current.transmission || current.fuel || current.color || current.accessory || current.laudo || current.maxKm,
+            )}
+          >
+            <summary className="flex min-h-[44px] cursor-pointer list-none items-center font-display text-xs font-semibold uppercase tracking-wider text-cream [&::-webkit-details-marker]:hidden">
+              Mais filtros
+              <span className="ml-auto text-[10px] font-medium normal-case tracking-wide text-muted">
+                câmbio, combustível, cor, km
+              </span>
+            </summary>
+            <div className="space-y-4 pb-4 pt-2">
+              <FilterSelect
+                label="Câmbio"
+                id="desktop-cambio"
+                value={gearValue}
+                onChange={(value) => update({ transmission: value })}
+                options={gearOptions}
+                emptyLabel="Todos os câmbios"
+              />
+              <FilterSelect
+                label="Combustível"
+                id="desktop-combustivel"
+                value={current.fuel}
+                onChange={(value) => update({ fuel: value })}
+                options={facets.fuels}
+                emptyLabel="Todos os combustíveis"
+              />
+              {(facets.colors ?? []).length > 0 ? (
+                <FilterSelect
+                  label="Cor"
+                  id="desktop-cor"
+                  value={current.color}
+                  onChange={(value) => update({ color: value })}
+                  options={facets.colors ?? []}
+                  emptyLabel="Todas as cores"
+                />
+              ) : null}
+              <DesktopField label="Quilometragem" htmlFor="desktop-km">
+                <select
+                  id="desktop-km"
+                  value={current.maxKm}
+                  onChange={(event) => update({ maxKm: event.target.value })}
+                  className={selectClass}
+                >
+                  {KM_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </DesktopField>
+              {(facets.accessories ?? []).length > 0 ? (
+                <div>
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+                    Acessórios
+                  </p>
+                  <AccessoryChips
+                    options={facets.accessories ?? []}
+                    value={current.accessory}
+                    onToggle={(name) =>
+                      update({
+                        accessory: toggleAccessoryValue(current.accessory, name),
+                      })
+                    }
+                  />
+                </div>
+              ) : null}
+              <label className="flex min-h-[48px] cursor-pointer items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 text-sm text-cream">
+                <input
+                  type="checkbox"
+                  checked={Boolean(current.laudo)}
+                  onChange={(event) =>
+                    update({ laudo: event.target.checked ? "1" : "" })
+                  }
+                  className="h-4 w-4 accent-brand"
+                />
+                Com vistoria da loja
+              </label>
+            </div>
+          </details>
 
           {activeFilters.length > 0 ? (
             <div className="mt-5 border-t border-white/10 pt-5">
@@ -571,27 +632,12 @@ export function StockFilters({ facets }: { facets: Facets }) {
         data-stock-filters=""
         className="stock-chip-bar mt-2 border border-white/10 bg-ink px-2.5 py-2 lg:hidden"
       >
-        <MobileChipRow label="Faixa">
-          {BUDGET_CHIPS.map((chip) => {
-            const active =
-              (current.minPrice || "") === chip.minPrice &&
-              (current.maxPrice || "") === chip.maxPrice;
-            return (
-              <Chip
-                key={`sticky-${chip.label}`}
-                active={active}
-                onClick={() =>
-                  update(
-                    active
-                      ? { minPrice: "", maxPrice: "" }
-                      : { minPrice: chip.minPrice, maxPrice: chip.maxPrice },
-                  )
-                }
-              >
-                {chip.label}
-              </Chip>
-            );
-          })}
+        <MobileChipRow label="Atalhos">
+          {quickChips.map((chip) => (
+            <Chip key={`sticky-${chip.key}`} active={chip.active} onClick={chip.onClick}>
+              {chip.label}
+            </Chip>
+          ))}
         </MobileChipRow>
         {current.brand &&
         modelFilterOptions(facets.models, current.brand, current.model).length > 0 ? (
@@ -624,51 +670,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
             ))}
           </MobileChipRow>
         ) : null}
-        {gearOptions.length > 0 ? (
-          <MobileChipRow label="Câmbio">
-            {gearOptions.map((item) => (
-              <Chip
-                key={`sticky-gear-${item.value}`}
-                active={gearValue === item.value}
-                onClick={() =>
-                  update({
-                    transmission: gearValue === item.value ? "" : item.value,
-                  })
-                }
-              >
-                {item.label}
-              </Chip>
-            ))}
-          </MobileChipRow>
-        ) : null}
-        <div className="mt-2 grid grid-cols-1 items-center gap-2 min-[360px]:grid-cols-[minmax(0,1fr)_auto]">
-          <div className="relative min-w-0">
-            <label htmlFor="estoque-ordem-mobile" className="sr-only">
-              Ordenar resultados
-            </label>
-            <select
-              id="estoque-ordem-mobile"
-              value={current.sort}
-              onChange={(event) => update({ sort: event.target.value })}
-              className="min-h-11 w-full appearance-none rounded-none border border-white/15 bg-asphalt py-2 pl-2.5 pr-7 text-base text-cream outline-none transition focus:border-brand"
-            >
-              {STOCK_SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-              aria-hidden="true"
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </div>
+        <div className="mt-2">
           <button
             type="button"
             onClick={() => {
@@ -766,7 +768,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
             </div>
 
             {FilterFields ? (
-              <FilterFields facets={facets} draft={draft} setDraft={setDraft}
+              <FilterFields facets={facets} draft={draft} setDraft={setDraft} resultCount={draftTotal}
                 onApply={() => { setOpen(false); navigate(draft); }} />
             ) : (
               <div className="px-4 py-8 sm:px-5" aria-live="polite">

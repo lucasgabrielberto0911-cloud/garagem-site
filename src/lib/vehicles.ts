@@ -9,6 +9,7 @@ import { SEED_TESTIMONIALS } from "@/lib/testimonials-seed";
 import { cleanTestimonialField } from "@/lib/testimonials-clean";
 import {
   STOCK_PAGE_SIZE,
+  isDailyStockSort,
   stockCityFilter,
   stockOrderBy,
   type StockFilters,
@@ -16,6 +17,7 @@ import {
   type StockPageResult,
   type VehicleCardRecord,
 } from "@/lib/stock-query";
+import { orderStockDaily, saoPauloDateKey } from "@/lib/stock-daily-order";
 import {
   colorWhere,
   formatColorLabel,
@@ -490,7 +492,8 @@ function stockQueryKey(filters: StockFilters) {
     maxYear: filters.maxYear ?? 0,
     maxKm: filters.maxKm ?? 0,
     city: filters.city ?? "",
-    sort: filters.sort ?? "recentes",
+    sort: filters.sort ?? "destaques",
+    ...(isDailyStockSort(filters.sort) ? { dateKey: saoPauloDateKey() } : {}),
     page,
     pageSize,
   });
@@ -513,6 +516,50 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
   const catalog = filters.q?.trim() ? await loadStockSearchCatalog() : [];
   const where = buildStockWhere(filters, catalog);
   const orderBy = stockOrderBy(filters.sort);
+
+  if (isDailyStockSort(filters.sort)) {
+    const allVehicles = await findCardVehicles({
+      where,
+      orderBy,
+    });
+    const ordered = orderStockDaily(allVehicles);
+    const total = ordered.length;
+    const startIndex = (page - 1) * pageSize;
+    const vehicles = ordered.slice(startIndex, startIndex + pageSize);
+
+    if (page > 1) {
+      return {
+        vehicles,
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 1,
+      };
+    }
+
+    const suggestions =
+      total === 0 && filters.q?.trim()
+        ? (
+            await Promise.all(
+              stockSearchSuggestions(filters.q, catalog).map(async (query) => ({
+                query,
+                count: await prisma.vehicle.count({
+                  where: buildStockWhere({ ...filters, q: query }, catalog),
+                }),
+              })),
+            )
+          ).filter((item) => item.count > 0)
+        : [];
+
+    return {
+      vehicles,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      ...(suggestions.length ? { suggestions } : {}),
+    };
+  }
 
   const vehicles = await findCardVehicles({
     where,
@@ -552,7 +599,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v15"],
+  ["stock-page-v16"],
   PUBLIC_CACHE,
 );
 
@@ -577,6 +624,7 @@ const STOCK_CATALOG_SELECT = {
   version: true,
   yearModel: true,
   price: true,
+  createdAt: true,
 } as const;
 
 export type StockCatalogLink = {
@@ -586,39 +634,46 @@ export type StockCatalogLink = {
   version: string | null;
   yearModel: number;
   price: number;
+  createdAt: Date | string;
 };
 
 /**
- * Todas as fichas disponíveis, na ordem da listagem (mais recentes).
+ * Todas as fichas disponíveis, na ordem da listagem (destaques do dia).
  * A grade visível continua em lotes de 8; este índice entra no HTML
  * para o crawler abrir cada anúncio sem rodar o scroll infinito.
  */
 async function loadStockCatalogLinks(): Promise<StockCatalogLink[]> {
   const orderBy = { createdAt: "desc" as const };
+  let links: StockCatalogLink[];
   try {
-    return await prisma.vehicle.findMany({
+    links = await prisma.vehicle.findMany({
       where: PUBLIC_SITEMAP_VEHICLE_WHERE,
       select: STOCK_CATALOG_SELECT,
       orderBy,
     });
   } catch (error) {
     if (!isMissingColumnError(error, "historical")) throw error;
-    return prisma.vehicle.findMany({
+    links = await prisma.vehicle.findMany({
       where: { status: "disponivel" },
       select: STOCK_CATALOG_SELECT,
       orderBy,
     });
   }
+  return orderStockDaily(links);
 }
 
 const loadStockCatalogCached = unstable_cache(
-  loadStockCatalogLinks,
-  ["stock-catalog-links-v1"],
+  async (_dateKey: string) => loadStockCatalogLinks(),
+  ["stock-catalog-links-v2"],
   PUBLIC_CACHE,
 );
 
 export const getStockCatalogLinks = cache(() =>
-  safeQuery("índice do estoque", () => loadStockCatalogCached(), [] as StockCatalogLink[]),
+  safeQuery(
+    "índice do estoque",
+    () => loadStockCatalogCached(saoPauloDateKey()),
+    [] as StockCatalogLink[],
+  ),
 );
 
 export const getStockPage = cache(

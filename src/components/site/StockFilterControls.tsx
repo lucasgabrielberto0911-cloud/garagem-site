@@ -25,9 +25,9 @@ export function toggleAccessoryValue(current: string, name: string) {
 }
 
 export const CATEGORY_FILTER_OPTIONS = [
-  { value: "", label: "Ambos" },
-  { value: "carro", label: "Carro" },
-  { value: "moto", label: "Moto" },
+  { value: "", label: "Carros e motos" },
+  { value: "carro", label: "Carros" },
+  { value: "moto", label: "Motos" },
 ] as const;
 
 export const BUDGET_CHIPS = [
