@@ -350,8 +350,10 @@ export function planExpertTurn(ctx: ExpertContext): ExpertPlan {
   }
   const { entries, missing } = namedSpecsFor(subject.vehicles, subject.specs);
   const criterion = specCriterionFromMessage(question);
-  const whole = namedSpecsFor(ctx.stock.filter(vehicle => vehicle.category !== "moto"));
-  const global = criterion && topics.includes("ranking") ? rankSpecs(criterion === "forca" ? "potencia" : criterion, whole.entries)[0] : undefined;
+  // "qual moto gasta menos?": ranking entre as motos; carro entre carros. Com modelos citados, sem ranking do estoque todo.
+  const motoTalk = /\bmotos?\b/.test(question.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
+  const whole = namedSpecsFor(ctx.stock.filter(vehicle => (vehicle.category === "moto") === motoTalk));
+  const global = criterion && topics.includes("ranking") && subject.source !== "named" ? rankSpecs(criterion === "forca" ? "potencia" : criterion, whole.entries)[0] : undefined;
   const values = global ? {
     economia: [`${global.spec.cidade?.gasolina ?? global.spec.consumoMoto} km/l na cidade, na gasolina`, "em economia"],
     aceleracao: [`0 a 100 em cerca de ${global.spec.zeroACem} s`, "em aceleração"],

@@ -850,10 +850,13 @@ export async function runChatTurn(input: {
       intent: chatRankMode(scopedMessage),
     });
     emit(reply);
-    return finish(reply, false, {
+    // Texto montado da ficha: o polimento não corta "3.200 km" nem a pergunta final.
+    const result = finish(reply, false, {
       policy: "compare",
       forcedVehicles: compared.slice(0, 2),
     });
+    result.reply = reply;
+    return result;
   }
   if (
     !mayCreateLead &&

@@ -381,7 +381,7 @@ export type ChatRankMode =
 
 /** Família / espaçoso / 4 portas. “espaço” solto não conta. */
 export function parseFamilyIntent(mensagem: string) {
-  return /\b(familia|familiar|familias|espacos[oa]s?|porta[- ]malas|4 portas|quatro portas|7 lugares)\b/.test(
+  return /\b(familia|familiar|familias|espacos[oa]s?|porta[- ]malas|4 portas|quatro portas|7 lugares|[45] pessoas|cinco pessoas|quatro pessoas|bagagem|bagagens|malas|filhos|criancas|cadeirinha|bebe)\b/.test(
     foldIntent(mensagem),
   );
 }
