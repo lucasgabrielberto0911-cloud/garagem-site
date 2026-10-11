@@ -174,7 +174,7 @@ export function LeadsTable({
         </div>
       ) : null}
       <div className="border border-white/10 bg-ink/50 p-3 sm:p-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
           <FilterChip
             label={`Todos (${counts.total})`}
             active={!status}
@@ -217,7 +217,7 @@ export function LeadsTable({
               type="search"
               value={term}
               onChange={(event) => setTerm(event.target.value)}
-              placeholder="Buscar por nome, telefone, placa ou veículo"
+              placeholder="Nome, telefone, placa ou veículo"
               className={inputClass}
             />
             <button type="submit" className={btn.outline}>
