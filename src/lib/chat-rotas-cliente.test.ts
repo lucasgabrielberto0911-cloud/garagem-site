@@ -326,3 +326,15 @@ test("marca sozinha vira busca; 'CG' (sigla de 2 letras) é o modelo e a partida
   const cheap = await askC("quero uma moto barata");
   assert.doesNotMatch(cheap.reply, /não está na lista/);
 });
+
+test("contato, Instagram, diesel e 'por menos de 30 mil': respostas diretas, sem lista de espera", async () => {
+  const insta = await ask("vcs tem instagram?");
+  assert.match(insta.reply, /Instagram da Garagem é @suagaragem1/);
+  const zap = await ask("qual o whatsapp?");
+  assert.match(zap.reply, /^O WhatsApp da Garagem é/);
+  const diesel = await ask("tem algum diesel?");
+  assert.match(diesel.reply, /^Diesel não temos agora: o estoque da Garagem hoje é flex/);
+  const cheap = await ask("tem algum por menos de 30 mil?");
+  assert.doesNotMatch(cheap.reply, /não está na lista/);
+  assert.ok(cheap.vehicles.length > 0);
+});

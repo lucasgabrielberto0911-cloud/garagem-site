@@ -60,6 +60,8 @@ import {
   CHAT_DOCS_REPLY,
   CHAT_ORIGIN_REPLY,
   CHAT_KEYS_REPLY,
+  CHAT_SOCIAL_REPLY,
+  CHAT_CONTACT_REPLY,
   CHAT_ZERO_REPLY,
   newestChatVehicles,
   partialCompareReply,
@@ -126,7 +128,7 @@ import {
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 import { chatTurnMayCreateLead } from "@/lib/chat-guard";
-import { asksAboutFuel, fuelFactReply, fuelUnits } from "@/lib/chat-fuel";
+import { asksAboutFuel, dieselWishReply, fuelFactReply, fuelUnits } from "@/lib/chat-fuel";
 import { asksColorOf, colorReply, mentionedStockBrand, parseColorWish } from "@/lib/chat-attrs";
 import { parseChatSearchRanges } from "@/lib/chat-search-filters";
 import { isAnaphoricVehicleFollowUp } from "@/lib/chat-text";
@@ -552,6 +554,23 @@ export async function runChatTurn(input: {
       : CHAT_ORIGIN_REPLY;
     emit(reply);
     return finish(reply, false, { policy, cards: false });
+  }
+  if (policy === "social" || policy === "contact") {
+    const reply = policy === "social" ? CHAT_SOCIAL_REPLY : CHAT_CONTACT_REPLY;
+    emit(reply);
+    const result = finish(reply, false, { policy, cards: false });
+    result.reply = reply;
+    return result;
+  }
+  // Diesel sem nenhum no estoque: diz direto (flex e gasolina), sem "Diesel não está na lista".
+  if (!mayCreateLead && !tradeTurn) {
+    const diesel = dieselWishReply(visitorMessage, input.stock, Boolean(activeVehicle || singleMentionedModelPool(input.stock, visitorMessage)));
+    if (diesel) {
+      emit(diesel);
+      const result = finish(diesel, false, { policy: "diesel", cards: false });
+      result.reply = diesel;
+      return result;
+    }
   }
   if (policy === "keys") {
     // Chave reserva / manual que constam na ficha do carro em tela (ou do único citado): diz que consta.

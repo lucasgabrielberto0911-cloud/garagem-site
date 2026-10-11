@@ -7,6 +7,7 @@ import {
   typicalConsumptionRange,
 } from "@/lib/chat-consumption";
 import { shortVersion } from "@/lib/vehicle-display";
+import { site } from "@/lib/site";
 import { officialWarrantyDetail } from "@/lib/chat-warranty";
 import {
   CHAT_WHATSAPP_URL,
@@ -2485,7 +2486,7 @@ export function similarAfterEmptyFilter(
 }
 
 const WAITLIST_STOP =
-  /^(barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
+  /^(menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
 
 const INTENT_SEEK_NOISE =
   /^(forte|fortes|rapido|rapida|rapidos|veloz|arranque|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
@@ -3107,6 +3108,12 @@ export const CHAT_WARRANTY_REPLY =
 export const CHAT_ORIGIN_REPLY =
   `Todo seminovo passa por checagem na loja antes do anúncio. Laudo cautelar e histórico de cada carro (leilão, sinistro) não ficam no anúncio: o consultor confirma no WhatsApp, carro a carro, antes de você fechar. ${CHAT_WHATSAPP_URL}`;
 
+export const CHAT_SOCIAL_REPLY =
+  `O Instagram da Garagem é ${site.instagram} (${site.instagramUrl}). Pra atendimento, o mais rápido é o WhatsApp: ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_CONTACT_REPLY =
+  `O WhatsApp da Garagem é ${site.whatsappLabel}, das 8h às 23h, todos os dias: ${CHAT_WHATSAPP_URL}`;
+
 export const CHAT_KEYS_REPLY =
   `Manual e chave reserva variam de unidade para unidade: o consultor confere no carro que você escolher e te confirma no WhatsApp. ${CHAT_WHATSAPP_URL}`;
 
@@ -3264,7 +3271,7 @@ export function formatTransmissionCompareReply(
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(
   mensagem: string,
-): "city" | "keys" | "zero" | "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
+): "social" | "contact" | "city" | "keys" | "zero" | "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
   const folded = normalize(mensagem);
   // "Tem carro em Aracruz?" / "atendem Vitória?": área de atendimento, não modelo.
   if (/\b(?:em|de|pra|para|na|no)\s+(?:aracruz|vitoria|serra|vila velha|guarapari|cariacica|colatina|cachoeiro|linhares)\b/.test(folded) &&
@@ -3291,6 +3298,9 @@ export function chatPolicyShortcut(
     !/\b(financi\w*|parcela\w*|entrada)\b/.test(folded)) {
     return "debts";
   }
+  // Redes sociais / contato: canais oficiais do site.
+  if (/\b(instagram|insta|facebook|tiktok|rede social|redes sociais)\b/.test(folded)) return "social";
+  if (/\b(qual (?:o|e o|é o) (?:whats|whatsapp|zap|numero|telefone|contato)|numero de (?:voces|vcs|contato)|telefone de (?:voces|vcs)|passa o (?:whats|zap|numero)|(?:whats|zap|telefone|numero) (?:de voces|de vcs|da loja))\b/.test(folded)) return "contact";
   // Manual e chave reserva: vem da ficha quando consta; senão o consultor confirma.
   if (/\b(chave reserva|chave extra|segunda chave|duas chaves|chave copia|manual do proprietario|manual de fabrica|manual e (?:a )?chave|livro de revis\w*|manual e livro)\b/.test(folded)) {
     return "keys";
@@ -3405,6 +3415,8 @@ export function localGarageReply(
   if (policy === "docs") return CHAT_DOCS_REPLY;
   if (policy === "origin") return CHAT_ORIGIN_REPLY;
   if (policy === "keys") return CHAT_KEYS_REPLY;
+  if (policy === "social") return CHAT_SOCIAL_REPLY;
+  if (policy === "contact") return CHAT_CONTACT_REPLY;
   if (policy === "zero") return CHAT_ZERO_REPLY;
   if (policy === "city") return chatCityReply(mensagem);
   if (policy === "sell") return CHAT_SELL_REPLY;

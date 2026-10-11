@@ -1,4 +1,5 @@
 import type { ChatVehicleRecord } from "@/lib/chat-stock";
+import { site } from "@/lib/site";
 
 const fold = (text: string) =>
   text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -62,4 +63,13 @@ export function fuelUnits(pool: ChatVehicleRecord[], stock: ChatVehicleRecord[])
   const kind = pool[0]!.category ?? "carro";
   const all = stock.filter((vehicle) => (vehicle.category ?? "carro") === kind && fold(vehicle.model).split(/\s+/)[0] === base);
   return all.length ? all : pool;
+}
+
+/** "tem algum diesel?" sem diesel no estoque: resposta direta com os combustíveis que temos. */
+export function dieselWishReply(mensagem: string, stock: ChatVehicleRecord[], named: boolean): string | null {
+  if (named || !/\bdiesel\b/.test(fold(mensagem))) return null;
+  if (stock.some((vehicle) => /diesel/.test(fold(vehicle.fuel ?? "")))) return null;
+  const fuels = [...new Set(stock.map((vehicle) => fuelLabel(vehicle.fuel ?? "")).filter(Boolean))]
+    .map((label) => label.replace(/ \(gasolina e etanol\)/, "").replace(/^a /, ""));
+  return `Diesel não temos agora: o estoque da Garagem hoje é ${fuels.join(" e ")}. Se quiser, o consultor te avisa quando chegar um diesel: https://wa.me/${site.whatsappNumber}`;
 }
