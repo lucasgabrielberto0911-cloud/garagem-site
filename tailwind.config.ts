@@ -1,10 +1,14 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  // O painel tem CSS próprio (src/app/admin/admin.css): os utilitários que só
+  // ele usa ficam fora do CSS bloqueante da home, do estoque e da ficha.
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "!./src/components/admin/**",
+    "!./src/app/admin/**",
   ],
   theme: {
     extend: {
