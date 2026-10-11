@@ -27,6 +27,7 @@ import {
   rankChatVehicles,
   stockEngineLabel,
   vehicleBodyStyle,
+  type ChatBodyStyle,
   type ChatRankMode,
   type ChatStockLine,
   type ChatStockPromptOpts,
@@ -398,8 +399,15 @@ function messageMentionsModel(mensagem: string, model: string) {
 
 function mentionedModelGroups(stock: ChatVehicleRecord[], mensagem: string) {
   const models = new Map<string, ChatVehicleRecord[]>();
+  const foldedMsg = normalize(mensagem);
   for (const vehicle of stock) {
     if (!messageMentionsModel(mensagem, vehicle.model)) continue;
+    // "quero um sedan" não cita o "Ka Sedan": com palavra de carroceria no nome, precisa da outra palavra.
+    const words = normalize(vehicle.model).split(/[^a-z0-9]+/).filter(Boolean);
+    if (words.length > 1 && words.some(word => parseBodyStyleFilter(word))) {
+      const head = words.find(word => !parseBodyStyleFilter(word));
+      if (head && !new RegExp(`(?:^|[^a-z0-9])${head}(?:$|[^a-z0-9])`).test(foldedMsg)) continue;
+    }
     const model = normalize(vehicle.model);
     const list = models.get(model) ?? [];
     list.push(vehicle);
@@ -412,6 +420,12 @@ function mentionedModelGroups(stock: ChatVehicleRecord[], mensagem: string) {
   for (const model of [...models.keys()]) {
     const longer = written.find(other => other !== model && spaced(other).startsWith(spaced(model)) && spaced(other).length > spaced(model).length);
     if (longer) models.delete(model);
+  }
+  // "HB20 ou Mobi": o HB20S (só parecido, não escrito) não entra quando o HB20 foi escrito.
+  for (const model of [...models.keys()]) {
+    if (written.includes(model)) continue;
+    const shorter = written.find(other => other !== model && spaced(model).startsWith(spaced(other)));
+    if (shorter) models.delete(model);
   }
   return models;
 }
@@ -827,7 +841,7 @@ export function normalizeChatAccessories(items: string[]) {
 /** Opcionais que o chat confere na ficha: [rótulo, pergunta, item cadastrado]. */
 const EQUIPMENT_ITEMS = [
   ["central multimídia", /multimidia|central|carplay|android auto/, /multimidia|carplay|android auto|central (?:de )?(?:midia|entretenimento)|tela (?:touch|sensivel)|media ?nav|mylink|my link|uconnect|intellilink|\bsync\b|\bgps\b/],
-  ["teto solar", /teto solar|teto panoramico|sunroof/, /teto solar|teto panoramico|teto de vidro|sunroof/],
+  ["teto solar", /teto solar|teto panoramico|sunroof|\btem teto\b(?! de)/, /teto solar|teto panoramico|teto de vidro|sunroof/],
   ["airbags", /air ?bags?|bolsas? de ar/, /air ?bags?|bolsas? (?:de ar|inflaveis)/],
   ["freios ABS", /\babs\b/, /\babs\b|antitravamento|anti ?bloqueio/],
   ["controle de estabilidade", /controle de estabilidade|\besp\b/, /controle (?:eletronico )?de estabilidade|controle de tracao e estabilidade|\b(?:esp|esc|vdc|vsc|vsa)\b/],
@@ -2399,7 +2413,18 @@ export function similarAfterEmptyFilter(
   const motoTalk = resolveChatCategory(mensagem) === "moto" || /\b(motos?|cg|cb|biz|pop|fan|titan|xre|bros|fazer|factor|lander|nmax|pcx|ninja|hornet|twister|crosser|xtz|yamaha|suzuki|kawasaki|harley|scooter|cilindradas|cc)\b/.test(folded);
   const sameKind = (vehicle: ChatVehicleRecord) => ((vehicle.category ?? "carro") === "moto") === motoTalk;
   const relaxed = relaxChatStockFilters(stock, mensagem);
-  return (relaxed.some(sameKind) ? relaxed.filter(sameKind) : relaxed)
+  const kind = relaxed.some(sameKind) ? relaxed.filter(sameKind) : relaxed;
+  // Modelo que não temos: parecidos são da mesma carroceria (Corolla → sedãs; picape → SUVs), mais novos primeiro.
+  const asked = !motoTalk && !parseBodyStyleFilter(mensagem) ? askedModelBody(mensagem) : null;
+  const bodies = asked === "pickup" ? ["pickup", "suv"] : asked ? [asked] : [];
+  const sameBody = bodies.length ? kind.filter((vehicle) => bodies.includes(vehicleBodyStyle(vehicle) ?? "")) : [];
+  if (sameBody.length) {
+    return sameBody
+      .filter((vehicle) => !mentionedIds.has(vehicle.id))
+      .sort((a, b) => b.yearModel - a.yearModel || a.price - b.price)
+      .slice(0, limit);
+  }
+  return kind
     .filter((vehicle) => !mentionedIds.has(vehicle.id))
     .sort((a, b) => a.price - b.price)
     .slice(0, limit);
@@ -2896,16 +2921,38 @@ export function looksLikeMissingModelReply(reply: string): boolean {
   );
 }
 
+/** Nome do modelo como o visitante escreveu, com caixa de vitrine: "t-cross" → "T-Cross", "s10" → "S10". */
+function askedModelName(mensagem: string, bit: string) {
+  const raw = mensagem.normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(new RegExp(`(?:^|[^a-z0-9-])((?:[a-z0-9]+-)?${bit}(?:-[a-z0-9]+)?)(?=$|[^a-z0-9-])`, "i"))?.[1] ?? bit;
+  return raw.split("-").map(part => part.length <= 3 || /\d/.test(part) ? part.toUpperCase() : part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join("-");
+}
+
+/** Carroceria do modelo pedido que não temos ("tem Corolla?" → sedan), pelo catálogo. */
+function askedModelBody(mensagem: string): ChatBodyStyle | null {
+  const bits = waitlistInterestBits(mensagem).filter((token) => !INTENT_SEEK_NOISE.test(token));
+  for (const bit of bits) {
+    const name = askedModelName(mensagem, bit);
+    const body = vehicleBodyStyle({ category: "carro", model: name, version: null });
+    if (body) return body;
+  }
+  return null;
+}
+
 export function missingModelReply(
   mensagem: string,
   stock: ChatVehicleRecord[],
 ): string {
   const similar = findSimilarVehicles(mensagem, stock, 3);
   const wait = `o consultor anota e te avisa no WhatsApp quando chegar: ${chatWaitlistWhatsAppUrl(mensagem)}`;
+  // Diz o nome do modelo pedido ("tem Onix?" → "Onix não está…") quando é uma palavra só, limpa.
+  const bits = waitlistInterestBits(mensagem).filter((token) => !INTENT_SEEK_NOISE.test(token));
+  const asked = bits.length === 1 && /^[a-z][a-z0-9-]{1,14}$/.test(bits[0]!) ? bits[0]! : null;
+  const name = asked ? askedModelName(mensagem, asked) : null;
+  const subject = name ? `${name} não está na lista atual.` : "Esse modelo não está na lista atual.";
   if (similar.length === 0) {
-    return `Esse modelo não está na lista atual. Posso olhar outro na mesma ideia, ou ${wait}`;
+    return `${subject} Posso olhar outro na mesma ideia, ou ${wait}`;
   }
-  return `Esse modelo não está na lista atual. Na mesma ideia, olha o que tem no estoque — ou ${wait}`;
+  return `${subject} Separei parecidos que temos, ou ${wait}`;
 }
 
 export function enrichMissingModelReply(
@@ -2959,6 +3006,12 @@ export const CHAT_ADDRESS_REPLY =
 
 export const CHAT_TRADE_VALUE_REPLY =
   `O valor do seu carro o consultor avalia com algumas fotos no WhatsApp (ano, km e estado contam) e já encaixa na conta do carro que você quer. ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_SELL_REPLY =
+  `Compramos sim! Manda os dados e algumas fotos do seu carro ou moto no WhatsApp que o consultor avalia, e se quiser ele também entra na troca. ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_DEBTS_REPLY =
+  `Multas, IPVA e débitos de cada carro não ficam no anúncio: o consultor confirma a situação do documento no WhatsApp antes de você fechar, junto com a transferência. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_DOCS_REPLY =
   `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
@@ -3018,14 +3071,26 @@ export function formatTransmissionCompareReply(
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(
   mensagem: string,
-): "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | null {
+): "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | null {
   const folded = normalize(mensagem);
+  // "Vocês compram carro?" / "quero vender meu carro": compramos usado (página inicial).
+  if (/\b(?:voces|vcs|ces) compram\b|\bcompram (?:meu|minha|carros?|motos?|usados?)\b|\b(?:quero|queria|gostaria de|posso) vender (?:o |a )?(?:meu|minha)\b|\bvender (?:meu|minha) (?:carro|moto)\b/.test(folded)) {
+    return "sell";
+  }
+  // Multa, IPVA, débitos do carro: não ficam no anúncio.
+  if (/\b(multas?|debitos?|ipva|licenciamento|alienad[oa]|restricao|restricoes|quitad[oa])\b/.test(folded) &&
+    !/\b(financi\w*|parcela\w*|entrada)\b/.test(folded)) {
+    return "debts";
+  }
   // Procedência, laudo, leilão: não está no anúncio; o consultor confirma carro a carro.
   if (/\b(leilao|leiloes|leiload[oa]s?|sinistr\w*|procedencia|laudo|cautelar|vistoria cautelar|recuperad[oa]s? de financiamento|passagem por leilao)\b/.test(folded) &&
     !/\b(financi\w*|parcela|fipe)\b/.test(folded.replace(/recuperad[oa]s? de financiamento/g, ""))) {
     return "origin";
   }
   // Endereço da loja: loja digital, visita com hora marcada em Linhares.
+  if (/\b(?:carros?|motos?|veiculos?|voces|vcs) (?:de (?:voces|vcs) )?(?:ficam|estao) onde\b|\bonde (?:ficam|estao) os (?:carros|veiculos)\b/.test(folded)) {
+    return "address";
+  }
   if (/\b(endereco|loja fisica|onde (?:fica|e|esta) a (?:loja|garagem)|onde (?:voces|vcs) (?:ficam|estao|sao)|onde fica (?:voces|vcs)|localizacao da loja|qual a localizacao|tem loja)\b/.test(folded)) {
     return "address";
   }
@@ -3116,6 +3181,8 @@ export function localGarageReply(
   if (policy === "warranty") return CHAT_WARRANTY_REPLY;
   if (policy === "docs") return CHAT_DOCS_REPLY;
   if (policy === "origin") return CHAT_ORIGIN_REPLY;
+  if (policy === "sell") return CHAT_SELL_REPLY;
+  if (policy === "debts") return CHAT_DEBTS_REPLY;
   if (policy === "visit") return CHAT_VISIT_REPLY;
   if (policy === "address") return CHAT_ADDRESS_REPLY;
   if (policy === "gear") return formatTransmissionCompareReply(stock, mensagem);

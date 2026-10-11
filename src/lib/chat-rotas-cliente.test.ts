@@ -81,3 +81,48 @@ test("semiautomática não é automática", async () => {
   assert.match(turn.reply, /semi-automática/);
   assert.doesNotMatch(turn.reply, /é automátic[oa]/);
 });
+
+test("vender o carro, multa/IPVA e 'ficam onde': respostas da loja, sem lista de carros", async () => {
+  const sell = await ask("vcs compram carro?");
+  assert.match(sell.reply, /^Compramos sim!/);
+  assert.equal(sell.vehicles.length, 0);
+  for (const question of ["o carro tem multa?", "IPVA tá pago?"]) {
+    const turn = await ask(question);
+    assert.match(turn.reply, /não ficam no anúncio: o consultor confirma/, question);
+    assert.doesNotMatch(turn.reply, /Esse modelo não está/, question);
+  }
+  const where = await ask("os carros de vcs ficam onde?");
+  assert.match(where.reply, /horário marcado em Linhares/);
+});
+
+test("'sedan' sozinho não vira o Ka Sedan; 'HB20 ou Mobi' compara os dois escritos", async () => {
+  const sedanStock = [
+    car("ka", "Ford", "KA SEDAN", "SE 1.5", 2019, 49990, { transmission: "Automático" }),
+    car("lancer", "Mitsubishi", "LANCER", "2.0", 2014, 62900, { transmission: "Automático", engine: "2.0" }),
+    car("hb", "Hyundai", "HB20", "1.0", 2022, 64900),
+    car("hbs", "Hyundai", "HB20S", "1.0 TB", 2024, 87900, { transmission: "Automático" }),
+    car("mobi", "Fiat", "Mobi", "Like 1.0", 2024, 57900),
+  ];
+  const run = (mensagem: string) => runChatTurn({ mensagem, historico: [], stock: sedanStock, readIntent: async () => null, generate: noModel });
+  const sedan = await run("quero um sedan até 80 mil");
+  assert.deepEqual(sedan.vehicles.map((v) => v.model).sort(), ["Ka Sedan", "Lancer"].sort());
+  const pair = await run("HB20 ou Mobi pra primeiro carro?");
+  assert.deepEqual(pair.vehicles.map((v) => v.model).sort(), ["HB20", "Mobi"]);
+});
+
+test("modelo que não temos: diz o nome e mostra parecidos da mesma carroceria", async () => {
+  const mixed = [
+    car("palio", "Fiat", "Palio", "Celebration 1.0", 2008, 24900),
+    car("mobi", "Fiat", "Mobi", "Like 1.0", 2024, 57900),
+    car("ka", "Ford", "KA SEDAN", "SE 1.5", 2019, 49990),
+    car("civic", "Honda", "Civic", "EXL 2.0", 2020, 126900, { engine: "2.0" }),
+    car("kicks", "Nissan", "Kicks", "SL 1.6", 2019, 86900, { engine: "1.6" }),
+  ];
+  const run = (mensagem: string) => runChatTurn({ mensagem, historico: [], stock: mixed, readIntent: async () => null, generate: noModel });
+  const corolla = await run("tem corolla?");
+  assert.match(corolla.reply, /^Corolla não está na lista atual\. Separei parecidos/);
+  assert.deepEqual(corolla.vehicles.map((v) => v.model), ["Civic", "Ka Sedan"]);
+  const tcross = await run("tem t-cross?");
+  assert.match(tcross.reply, /^T-Cross não está/);
+  assert.deepEqual(tcross.vehicles.map((v) => v.model), ["Kicks"]);
+});
