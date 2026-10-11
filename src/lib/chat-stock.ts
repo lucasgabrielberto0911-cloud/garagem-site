@@ -242,7 +242,8 @@ export function foldedTransmission(value: string) {
 export function parseTransmissionFilter(
   mensagem: string,
 ): "automatico" | "manual" | null {
-  const folded = normalize(mensagem);
+  // "piloto automático" e "ar digital automático" são opcionais, não câmbio.
+  const folded = normalize(mensagem).replace(/\bpiloto automatic\w*|\bar(?:[- ]?condicionado)?(?: digital)? automatic\w*/g, " ");
   const auto =
     /\b(automatic[oa]s?|automatic|automtico|automtatico|autmatico|autimatico|cvt)\b/.test(
       folded,
@@ -403,6 +404,14 @@ function mentionedModelGroups(stock: ChatVehicleRecord[], mensagem: string) {
     const list = models.get(model) ?? [];
     list.push(vehicle);
     models.set(model, list);
+  }
+  // "Palio Weekend", "BIZ 125", "HB20S" escritos por inteiro: o irmão de nome mais curto sai.
+  const folded = ` ${normalize(mensagem).replace(/[^a-z0-9]+/g, " ")} `;
+  const spaced = (model: string) => model.replace(/[^a-z0-9]+/g, " ").trim();
+  const written = [...models.keys()].filter(model => spaced(model) && folded.includes(` ${spaced(model)} `));
+  for (const model of [...models.keys()]) {
+    const longer = written.find(other => other !== model && spaced(other).startsWith(spaced(model)) && spaced(other).length > spaced(model).length);
+    if (longer) models.delete(model);
   }
   return models;
 }
@@ -818,8 +827,19 @@ const EQUIPMENT_ITEMS = [
   ["teto solar", /teto solar|teto panoramico|sunroof/, /teto solar|teto panoramico|teto de vidro|sunroof/],
   ["airbags", /air ?bags?|bolsas? de ar/, /air ?bags?|bolsas? (?:de ar|inflaveis)/],
   ["freios ABS", /\babs\b/, /\babs\b|antitravamento|anti ?bloqueio/],
-  ["controle de estabilidade", /controle de estabilidade|\besp\b/, /controle (?:eletronico )?de estabilidade|\b(?:esp|esc|vdc|vsc|vsa)\b/],
+  ["controle de estabilidade", /controle de estabilidade|\besp\b/, /controle (?:eletronico )?de estabilidade|controle de tracao e estabilidade|\b(?:esp|esc|vdc|vsc|vsa)\b/],
   ["câmera de ré", /cameras?/, /camera/],
+  ["piloto automático", /piloto automatic\w*|controle de cruzeiro|cruise/, /piloto automatico|cruise control|controle de (?:cruzeiro|velocidade)/],
+  ["direção elétrica", /direcao (?:eletrica|eletroassistida)/, /direcao (?:eletrica|eletroassistida)|direcao eletrica progressiva/],
+  ["direção hidráulica", /direcao hidraulica/, /direcao hidraulica/],
+  ["ar-condicionado", /ar[- ]?condicionado|\bar digital\b|climatizador/, /ar[- ]?condicionado|\bar digital\b|climatiz/],
+  ["sensor de estacionamento", /sensor(?:es)? de (?:estacionamento|re|re)|sensor(?:es)? (?:traseiros?|de marcha a re)/, /sensor(?:es)? de (?:estacionamento|re)\b/],
+  ["bancos de couro", /bancos?\b.{0,20}couro|^(?!.*volante).*\bcouro\b/, /\bbancos?\b.*\bcouro\b/],
+  ["vidros elétricos", /vidros? eletricos?/, /vidros? eletricos?/],
+  ["bluetooth", /bluetooth/, /bluetooth/],
+  ["rodas de liga leve", /rodas? de liga|liga leve/, /rodas? de liga/],
+  ["partida por botão", /keyless|partida (?:por|no|com) botao|botao de partida|chave presencial/, /keyless|partida (?:por|no) botao|chave presencial|smart entry/],
+  ["ISOFIX", /isofix/, /isofix/],
 ] as const;
 
 function askedEquipment(mensagem: string) {
@@ -833,7 +853,7 @@ function unitHasEquipment(vehicle: ChatVehicleRecord, data: RegExp) {
 }
 
 const pluralEquipment = (names: string[]) =>
-  names.length > 1 || /^(?:(?:[2-9]|\d{2,})\b|airbags\b|freios\b)/i.test(names[0] ?? "");
+  names.length > 1 || /^(?:(?:[2-9]|\d{2,})\b|airbags\b|freios\b|bancos\b|vidros\b|rodas\b|sensores\b)/i.test(names[0] ?? "");
 
 const joinEquipment = (names: string[]) =>
   names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} e ${names.at(-1)}`;
@@ -914,7 +934,8 @@ export function equipmentAcrossStockReply(
     parseBodyStyleFilter(mensagem) != null;
   if (!filtered && !/\b(quais|qual|que carros?|algum|alguma|carros?|modelos?|veiculos?|opcoes|estoque|motos?)\b/.test(folded)) return null;
   // Critério subjetivo sem filtro objetivo (econômico, família…) fica com a busca normal, que sabe ranquear.
-  if (!filtered && /\b(economic\w*|economia|familia|potente\w*|forte\w*|espacos\w*|confortave\w*|diesel)\b/.test(folded)) return null;
+  // Diesel o filtro não lê: não arrisca. Econômico, barato, família etc. ordenam os que têm o item.
+  if (/\bdiesel\b/.test(folded)) return null;
   // Ano citado que o filtro não entendeu: não arrisca ignorar o ano.
   const yearRange = equipmentRanges(mensagem);
   if (/\b(?:19|20)\d{2}\b/.test(folded) && yearRange.minYear == null && yearRange.maxYear == null) return null;
@@ -938,7 +959,9 @@ export function equipmentAcrossStockReply(
       vehicles: pool.slice(0, 3),
     };
   }
-  const found = scope.filter(has).sort((a, b) => b.yearModel - a.yearModel || a.price - b.price);
+  const mode = chatRankMode(mensagem);
+  const byYear = scope.filter(has).sort((a, b) => b.yearModel - a.yearModel || a.price - b.price);
+  const found = rankEquipmentFound(byYear, mensagem, mode);
   const phrase = describeEquipmentScope(mensagem, wantsMoto);
   // Só nega quando a ficha de TODOS os carros do recorte foi checada (nenhuma vazia).
   const unchecked = scope.filter(unit => !(unit.accessories ?? []).length);
@@ -964,11 +987,39 @@ export function equipmentAcrossStockReply(
   }
   // Lista curta: só a contagem e os 3 cards de destaque, sem enumerar nomes.
   const count = found.length === 1 ? `1 ${phrase.one}` : `${found.length} ${phrase.many}`;
-  const highlight = found.length === 1 ? "separei aqui pra você" : found.length <= 3 ? "separei aqui" : "separei os destaques";
+  const rankedNote: Partial<Record<ChatRankMode, string>> = {
+    economy: "os mais econômicos",
+    cheap: "os mais em conta",
+    price: "os mais em conta",
+    family: "os que mais combinam com família",
+    starter: "os que mais combinam com primeiro carro",
+    power: "os mais fortes",
+  };
+  const highlight = found.length === 1
+    ? "separei aqui pra você"
+    : found.length > 3 && rankedNote[mode]
+      ? `separei ${rankedNote[mode]}`
+      : found.length <= 3 ? "separei aqui" : "separei os destaques";
   return {
     reply: `Temos ${count} com ${items} na ficha, ${highlight}. Quer que eu filtre por preço ou tipo?`,
     vehicles: found.slice(0, 3),
   };
+}
+
+/** Ordem dos carros com o opcional: pelo pedido (econômico, barato, família) ou do mais novo. */
+function rankEquipmentFound(rows: ChatVehicleRecord[], mensagem: string, mode: ChatRankMode) {
+  if (rows.length < 2 || mode === "default") return rows;
+  if (mode === "cheap" || mode === "price") return [...rows].sort((a, b) => a.price - b.price || b.yearModel - a.yearModel);
+  if (mode === "economy") {
+    const specs = rows.map(vehicle => findVehicleSpec(vehicle));
+    if (specs.every(spec => spec && specCityKmL(spec) != null)) {
+      return rows
+        .map((vehicle, index) => ({ vehicle, kml: specCityKmL(specs[index]!)! }))
+        .sort((a, b) => b.kml - a.kml || a.vehicle.price - b.vehicle.price)
+        .map(item => item.vehicle);
+    }
+  }
+  return rankChatVehicles(rows, mensagem);
 }
 
 /** Faixas da busca, incluindo "2020 pra cima" / "2018 em diante", que o filtro geral não lê. */
@@ -1036,10 +1087,13 @@ export function formatFocusedEquipmentReply(
       // O texto do chat não pode perder a palavra no polimento (que confere o nome na ficha).
       if (label !== "airbags") {
         // Rótulo do chat quando a palavra-chave dele está no item ("… com ABS e EBD" → "freios ABS").
-        const keyword = ({ "freios ABS": /\babs\b/, "câmera de ré": /camera/, "controle de estabilidade": /estabilidade/, "teto solar": /teto solar/ } as Record<string, RegExp>)[label];
-        if (normalize(item).includes(normalize(label)) || keyword?.test(normalize(item))) return [label];
+        const keyword = ({ "freios ABS": /\babs\b/, "câmera de ré": /camera/, "controle de estabilidade": /estabilidade/, "teto solar": /teto solar/, "bancos de couro": /couro/ } as Record<string, RegExp>)[label];
         const short = shortAccessory(item);
-        return [/^(?:multimidia|central|camera|freios?|controle|teto|sistema|kit|tela|bolsas?)\b/.test(normalize(short)) ? short.replace(/^./, c => c.toLowerCase()) : short];
+        const lower = (text: string) => /^(?:multimidia|central|camera|freios?|controle|teto|sistema|kit|tela|bolsas?|sensor(?:es)?|vidros?|bancos?|piloto|direcao|rodas?|partida|chave|ar)\b/.test(normalize(text)) ? text.replace(/^./, c => c.toLowerCase()) : text;
+        // A ficha detalha o próprio item ("Sensor de estacionamento traseiro"): usa o texto dela.
+        if (normalize(short).startsWith(normalize(label)) && short.length > label.length) return [lower(short)];
+        if (normalize(item).includes(normalize(label)) || keyword?.test(normalize(item))) return [label];
+        return [lower(short)];
       }
       const text = item.trim().replace(/air ?bag(s?)/i, (_, plural: string) => `airbag${plural}`);
       return [/^airbags?\b/i.test(text) ? text.replace(/^./, c => c.toLowerCase()) : text];
@@ -1047,6 +1101,10 @@ export function formatFocusedEquipmentReply(
     const absent = asked
       .filter(([, , data]) => !raw.some(value => data.test(normalize(value))))
       .map(([label]) => label);
+    // "Tem direção elétrica?" e a ficha diz hidráulica: responde o que tem, sem só negar.
+    if (absent.length === 1 && !present.length && absent[0] === "direção elétrica" && raw.some(value => /direcao hidraulica/.test(normalize(value)))) {
+      return `Na ficha desse ${named.name} consta direção hidráulica (não a elétrica). Qualquer detalhe, o vendedor mostra nas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    }
     // Posição pedida (laterais, cortina, frontais) que o item da ficha não cita: não afirma.
     const airbagItem = raw.find(value => /air ?bags?|bolsas? (?:de ar|inflaveis)/.test(normalize(value)));
     const positions = ([
@@ -1057,8 +1115,7 @@ export function formatFocusedEquipmentReply(
     const unconfirmed = airbagItem
       ? positions.filter(([, re]) => !re.test(normalize(airbagItem))).map(([label]) => label)
       : [];
-    const plural = (names: string[]) =>
-      names.length > 1 || /^(?:(?:[2-9]|\d{2,})\b|airbags\b|freios\b)/i.test(names[0] ?? "");
+    const plural = (names: string[]) => pluralEquipment(names);
     // Lista curta: rótulos curtos, no máximo 3.
     const extras = [...new Set(items
       .filter(value => !asked.some(([, , data]) => data.test(normalize(value))))
@@ -1226,13 +1283,13 @@ export function asksAboutConsumption(mensagem: string): boolean {
 
 export function asksAboutEquipment(mensagem: string): boolean {
   const folded = normalize(mensagem);
-  return /\b(ar condicionado|arcondicionado|multimidia|bluetooth|direcao|air ?bags?|abs|couro|teto solar|sensor|camera|vidros? eletricos|piloto|acessorios?|opcionais|equipado)\b/.test(
+  return askedEquipment(mensagem).length > 0 || /\b(ar condicionado|arcondicionado|multimidia|bluetooth|direcao|air ?bags?|abs|couro|teto solar|sensor|camera|vidros? eletricos?|piloto|acessorios?|opcionais|equipado|isofix|keyless)\b/.test(
     folded,
   );
 }
 
 export function asksAboutNamedGear(mensagem: string): boolean {
-  const folded = normalize(mensagem);
+  const folded = normalize(mensagem).replace(/\bpiloto automatic\w*|\bar(?:[- ]?condicionado)?(?: digital)? automatic\w*/g, " ");
   if (isChatSelectionQuery(mensagem)) return false;
   if (
     /\b(tem|e|eh|possui)\s+(automatico|automatica|manual|cvt)\b/.test(folded)

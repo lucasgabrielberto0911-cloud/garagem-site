@@ -186,6 +186,11 @@ function accessoryAllowed(key: string, allowed: Set<string>): boolean {
     if (item === key) return true;
     if (key === "ar condicionado" && item === "arcondicionado") return true;
     if (key === "multimidia" && item.includes("multimidia")) return true;
+    // Mesmo item com outras palavras na ficha ("Bancos com revestimento em couro", "Sensores de estacionamento").
+    if (key === "controle de estabilidade" && /\bestabilidade\b/.test(item)) return true;
+    if (key === "bancos de couro" && /\bbancos?\b.*\bcouro\b/.test(item)) return true;
+    if (key === "sensor de estacionamento" && /\bsensor(?:es)? de (?:estacionamento|re)\b/.test(item)) return true;
+    if ((key === "ar condicionado" || key === "ar-condicionado") && /\bar[- ]?condicionado\b/.test(item)) return true;
     if (item === key.replace(/\s/g, "")) return true;
     // Item cadastrado mais longo cobre o termo ("ar condicionado digital" → "ar condicionado").
     if (` ${item.replace(/[^a-z0-9]+/g, " ")} `.includes(` ${key.replace(/[^a-z0-9]+/g, " ")} `)) return true;
