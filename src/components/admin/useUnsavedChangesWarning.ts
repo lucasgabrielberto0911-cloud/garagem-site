@@ -113,6 +113,7 @@ function onClick(event: MouseEvent) {
 
 function activate() {
   dirtyCount += 1;
+  skipNextClick = false;
   if (dirtyCount > 1) return;
   window.addEventListener("beforeunload", onBeforeUnload);
   document.addEventListener("click", onClick, true);

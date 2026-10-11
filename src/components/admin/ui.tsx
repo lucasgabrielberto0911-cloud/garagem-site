@@ -12,13 +12,13 @@ export const inputClass =
 
 export const btn = {
   primary:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 bg-brand px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-cream transition touch-manipulation hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 bg-brand px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-white transition touch-manipulation hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60",
   outline:
     "inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-cream transition touch-manipulation hover:border-brand disabled:cursor-not-allowed disabled:opacity-60",
   ghost:
     "inline-flex min-h-[44px] items-center justify-center gap-2 px-3 py-2 text-xs text-muted transition touch-manipulation hover:text-cream disabled:opacity-60",
   danger:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/50 px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-brand transition touch-manipulation hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand/60 px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-red-400 transition touch-manipulation hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60",
 } as const;
 
 /** Grade de métricas: 2 colunas no celular, 4 no desktop. */
@@ -30,10 +30,10 @@ export const iconTap =
 
 /** Célula de ação (ícone + rótulo) nos cards do painel. */
 export const mobileActionCell =
-  "flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 px-1 text-center text-[10px] font-semibold uppercase tracking-wide text-muted transition touch-manipulation hover:text-cream";
+  "flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 px-1 text-center text-xs font-semibold uppercase tracking-wide text-muted transition touch-manipulation hover:text-cream";
 
 /** Igual ao celular, mas vira botão horizontal no desktop. */
-export const listActionCell = `${mobileActionCell} lg:min-h-[44px] lg:w-auto lg:flex-row lg:gap-1.5 lg:px-3.5 lg:text-[11px]`;
+export const listActionCell = `${mobileActionCell} lg:min-h-[44px] lg:w-auto lg:flex-row lg:gap-1.5 lg:px-3.5`;
 
 const HEADER_ACTIONS = {
   stack:
@@ -136,7 +136,7 @@ export function StatCard({
 }) {
   const tones = {
     default: { border: "border-white/10", value: "text-cream" },
-    brand: { border: "border-brand/50", value: "text-brand" },
+    brand: { border: "border-brand/50", value: "text-red-400" },
     warning: { border: "border-brand-orange/50", value: "text-brand-orange" },
     success: { border: "border-emerald-400/40", value: "text-emerald-300" },
   } as const;
@@ -181,7 +181,7 @@ export function StatCard({
 
 const BADGE_TONES = {
   neutral: "bg-white/10 text-muted",
-  brand: "bg-brand/15 text-brand",
+  brand: "bg-brand/20 text-cream ring-1 ring-inset ring-brand/50",
   warning: "bg-brand-orange/15 text-brand-orange",
   success: "bg-emerald-400/15 text-emerald-300",
   info: "bg-sky-400/15 text-sky-300",
@@ -198,7 +198,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-1 font-display text-[10px] font-semibold uppercase tracking-wider ${BADGE_TONES[tone]}`}
+      className={`inline-flex items-center gap-1 px-2 py-1 font-display text-xs font-semibold uppercase tracking-wide ${BADGE_TONES[tone]}`}
     >
       {children}
     </span>
