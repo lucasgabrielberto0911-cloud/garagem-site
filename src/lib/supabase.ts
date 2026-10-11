@@ -1,6 +1,7 @@
 import { VEHICLE_PHOTOS_BUCKET, VEHICLE_DOCS_BUCKET, parseStoredFileRef, storagePathFromPublicUrl } from "@/lib/storage-file-ref";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { zoomObjectPath } from "./photo-zoom-path";
+import { hdCardCompanion } from "./cover-frame";
 import { galleryPreviewObjectPath } from "./gallery-preview-path";
 
 /**
@@ -72,6 +73,8 @@ export async function deleteStorageFiles(
       if (zoom) list.push(zoom);
       const preview = galleryPreviewObjectPath(parsed.path);
       if (preview) list.push(preview);
+      const hdCard = hdCardCompanion(parsed.path);
+      if (hdCard) list.push(hdCard);
     }
     grouped.set(parsed.bucket, list);
   }

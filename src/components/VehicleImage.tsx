@@ -13,6 +13,8 @@ export function VehicleImage({
   sizes,
   className = "",
   priority = false,
+  eager = false,
+  decoding,
   srcSet,
   mobileSrcSet,
   recoverable = false,
@@ -33,7 +35,11 @@ export function VehicleImage({
    * (upload ou transformação do Storage) e não passam por /_next/image.
    */
   unoptimized?: boolean;
+  /** Primeira foto visível: preload, alta prioridade e decodificação imediata. */
   priority?: boolean;
+  /** Foto da primeira dobra que não é o LCP: baixa cedo, sem disputar a capa. */
+  eager?: boolean;
+  decoding?: "sync" | "async" | "auto";
   /**
    * Aceito por compatibilidade e ignorado.
    * Qualidades diferentes multiplicavam a cota de imagens.
@@ -44,8 +50,8 @@ export function VehicleImage({
   const finalSet = publicPhotoSrcSet(srcSet);
   const mobileSet = publicPhotoSrcSet(mobileSrcSet);
 
-  // Match the <picture> selection: never preload a desktop derivative on a
-  // phone. Only the already-prioritized first photos get a resource hint.
+  // Só a capa do LCP entra no preload. A segunda foto da grade baixa
+  // junto, mas sem prioridade alta — senão as duas dividem a rede lenta.
   if (priority) {
     const options = { as: "image" as const, fetchPriority: "high" as const,
       imageSizes: finalSet || mobileSet ? sizes : undefined };
@@ -69,6 +75,8 @@ export function VehicleImage({
         mobileSrcSet={mobileSet}
         className={className}
         priority={priority}
+        eager={eager}
+        decoding={decoding}
         recoverable={recoverable}
       />
     );
@@ -82,9 +90,9 @@ export function VehicleImage({
       width={width ?? 160}
       height={height ?? 120}
       className={className}
-      loading={priority ? "eager" : "lazy"}
-      decoding={priority ? "sync" : "async"}
-      fetchPriority={priority ? "high" : "low"}
+      loading={priority || eager ? "eager" : "lazy"}
+      decoding={decoding ?? (priority ? "sync" : "async")}
+      fetchPriority={priority ? "high" : eager ? "auto" : "low"}
     />
   );
 }

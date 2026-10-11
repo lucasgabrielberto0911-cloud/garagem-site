@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "code-review-graph": {
+      "type": "stdio",
+      "command": "/home/box/.local/bin/code-review-graph",
+      "args": [
+        "serve",
+        "--repo",
+        "/workspace/crg-garagem",
+        "--tools",
+        "get_minimal_context_tool,get_impact_radius_tool,query_graph_tool,get_review_context_tool,detect_changes_tool,semantic_search_nodes_tool,traverse_graph_tool,get_affected_flows_tool,get_architecture_overview_tool,list_graph_stats_tool,find_large_functions_tool"
+      ]
+    }
+  }
+}

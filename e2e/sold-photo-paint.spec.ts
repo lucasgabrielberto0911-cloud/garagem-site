@@ -27,7 +27,7 @@ test("ficha vendida: WhatsApp convida para similares sem o preço antigo",async(
   // A ficha vendida oferece a ajuda no cabeçalho mobile; no desktop, só WhatsApp.
   if(page.viewportSize()!.width<1024){
     await page.getByRole("button",{name:"Ajuda para escolher",exact:true}).first().click();
-    const chat=page.getByRole("dialog",{name:"Sua Garagem",exact:true});
+    const chat=page.getByRole("dialog",{name:"Garagem",exact:true});
     const chatContact=chat.getByRole("link",{name:"Falar com um vendedor no WhatsApp",exact:true});
     const chatMessage=new URL((await chatContact.getAttribute("href"))!).searchParams.get("text");
     expect(chatMessage).toMatch(/já foi vendido.*opções parecidas no estoque/);

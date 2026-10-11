@@ -59,6 +59,6 @@ export function matchWhatsApp(lead: MatchLead, vehicle: MatchVehicle) {
   const firstName = lead.name.trim().split(/\s+/)[0] || "";
   const label = [vehicle.brand, vehicle.model, vehicle.version, vehicle.yearModel].filter(Boolean).join(" ");
   const price = Number.isFinite(vehicle.price) && vehicle.price > 0 ? ", por " + formatCurrencyBRL(vehicle.price) : "";
-  const message = "Olá, " + firstName + "! Aqui é da Sua Garagem. Você pediu um " + lead.vehicleInfo + ". Temos este " + label + price + ", que pode fazer sentido para você. Quer conversar sobre ele? " + site.url + vehiclePath(vehicle);
+  const message = "Olá, " + firstName + "! Aqui é da Garagem. Você pediu um " + lead.vehicleInfo + ". Temos este " + label + price + ", que pode fazer sentido para você. Quer conversar sobre ele? " + site.url + vehiclePath(vehicle);
   return "https://wa.me/" + phone + "?text=" + encodeURIComponent(message);
 }

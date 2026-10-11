@@ -24,7 +24,7 @@ function openWhatsApp(
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     event.preventDefault();
     void queueWhatsAppIfOffline({
-      url: href,
+      url: event.currentTarget.href || href,
       label,
       vehicleId,
     });
@@ -45,6 +45,7 @@ export function VehicleMobileBar({
   videoMessage,
   financeMessage,
   tradeMessage,
+  visitMessage,
   brand,
   model,
   year,
@@ -68,6 +69,8 @@ export function VehicleMobileBar({
   videoMessage?: string;
   financeMessage?: string;
   tradeMessage?: string;
+  /** Mensagem pronta `intent: "visit"`; sem ela a ação não aparece. */
+  visitMessage?: string;
   brand: string;
   model: string;
   year: number;
@@ -94,6 +97,7 @@ export function VehicleMobileBar({
   const financeHref = financeMessage ? whatsappUrl(financeMessage, track) : null;
   const tradeHref = tradeMessage ? whatsappUrl(tradeMessage, track) : null;
   const videoHref = videoMessage ? whatsappUrl(videoMessage, track) : null;
+  const visitHref = visitMessage ? whatsappUrl(visitMessage, track) : null;
   const secondary = [
     financeHref
       ? {
@@ -138,7 +142,7 @@ export function VehicleMobileBar({
   return (
     <div
       data-vehicle-mobile-bar=""
-      className="fixed inset-x-0 bottom-0 z-40 box-border min-h-[var(--ficha-sticky-bar)] border-t border-white/15 bg-asphalt px-3 pt-2 pb-[env(safe-area-inset-bottom,0px)] pl-safe pr-safe lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 box-border min-h-[var(--ficha-sticky-bar)] border-t border-white/15 bg-asphalt px-3 pt-2 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pl-safe pr-safe lg:hidden"
     >
       <div className="relative mx-auto max-w-6xl">
         {!sold && moreOpen && secondary.length > 0 ? (
@@ -216,40 +220,77 @@ export function VehicleMobileBar({
               {soldLabel}
             </Link>
           ) : (
-            <VehicleLeadHit
-              contentId={vehicleId}
-              contentName={contentName}
-              value={price}
-              make={brand}
-              model={model}
-              year={year}
-              stateOfVehicle={stateOfVehicle}
-              exteriorColor={exteriorColor}
-              transmission={catalogTransmission}
-              bodyStyle={bodyStyle}
-              fuelType={fuelType}
-              postalCode={postalCode}
-            >
-              <a
-                id="ficha-whatsapp"
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Abrir WhatsApp sobre ${contentName}`}
-                onClick={(event) =>
-                  openWhatsApp(event, href, "ficha-mobile", vehicleId, vehicleSlug)
-                }
-                className="inline-flex min-h-12 shrink-0 items-center justify-center gap-1.5 bg-brand px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide text-cream touch-manipulation hover:bg-[#c91418] sm:px-4 sm:text-sm"
+            <div className="flex shrink-0 flex-col items-stretch gap-1">
+              <VehicleLeadHit
+                contentId={vehicleId}
+                contentName={contentName}
+                value={price}
+                make={brand}
+                model={model}
+                year={year}
+                stateOfVehicle={stateOfVehicle}
+                exteriorColor={exteriorColor}
+                transmission={catalogTransmission}
+                bodyStyle={bodyStyle}
+                fuelType={fuelType}
+                postalCode={postalCode}
               >
-                <IconWhatsApp className="h-4 w-4" />
-                <span className="text-left leading-tight">
-                  Tenho interesse
-                  <span className="mt-0.5 block text-[9px] font-medium normal-case tracking-normal text-cream/80">
-                    no WhatsApp
+                <a
+                  id="ficha-whatsapp"
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Abrir WhatsApp sobre ${contentName}`}
+                  onClick={(event) =>
+                    openWhatsApp(event, href, "ficha-mobile", vehicleId, vehicleSlug)
+                  }
+                  className="inline-flex min-h-12 shrink-0 items-center justify-center gap-1.5 bg-brand px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide text-cream touch-manipulation hover:bg-[#c91418] sm:px-4 sm:text-sm"
+                >
+                  <IconWhatsApp className="h-4 w-4" />
+                  <span className="text-left leading-tight">
+                    Tenho interesse
+                    <span className="mt-0.5 block text-[9px] font-medium normal-case tracking-normal text-cream/80">
+                      no WhatsApp
+                    </span>
                   </span>
-                </span>
-              </a>
-            </VehicleLeadHit>
+                </a>
+              </VehicleLeadHit>
+              {visitHref ? (
+                <VehicleLeadHit
+                  contentId={vehicleId}
+                  contentName={contentName}
+                  value={price}
+                  make={brand}
+                  model={model}
+                  year={year}
+                  stateOfVehicle={stateOfVehicle}
+                  exteriorColor={exteriorColor}
+                  transmission={catalogTransmission}
+                  bodyStyle={bodyStyle}
+                  fuelType={fuelType}
+                  postalCode={postalCode}
+                >
+                  <a
+                    href={visitHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Agendar visita: combinar dia e hora pelo WhatsApp"
+                    onClick={(event) =>
+                      openWhatsApp(
+                        event,
+                        visitHref,
+                        "ficha-visit",
+                        vehicleId,
+                        vehicleSlug,
+                      )
+                    }
+                    className="inline-flex min-h-[38px] w-full items-center justify-center border border-white/25 px-3 font-display text-[11px] font-semibold uppercase tracking-wide text-cream touch-manipulation transition hover:border-white/50 active:border-white/50"
+                  >
+                    Agendar visita
+                  </a>
+                </VehicleLeadHit>
+              ) : null}
+            </div>
           )}
         </div>
       </div>

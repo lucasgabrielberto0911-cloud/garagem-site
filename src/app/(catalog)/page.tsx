@@ -42,13 +42,13 @@ import {
   getTestimonials,
 } from "@/lib/vehicles";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
+import { HOME_SEO_TITLE, SEO_LOCAL_LOCATION } from "@/lib/seo-local";
 
 export const revalidate = 600;
 
 export const metadata = buildPageMetadata({
-  title: `${site.name} | Seminovos com procedência no ${site.state}`,
-  description:
-    "Seminovos com procedência verificada em Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Compra, venda, troca e financiamento na Sua Garagem.",
+  title: HOME_SEO_TITLE,
+  description: `Seminovos com procedência em ${SEO_LOCAL_LOCATION} e região. Escolha no site, peça vídeo no WhatsApp e marque visita. Troca e financiamento na Garagem.`,
   path: "/",
 });
 
@@ -73,7 +73,9 @@ const REASONS = [
 const HERO_WORDMARK = "/branding/logo-wordmark.webp";
 
 export default async function HomePage() {
-  preload(HERO_WORDMARK, { as: "image", fetchPriority: "high" });
+  // O LCP no celular é a foto do carro, não o wordmark. Prioridade baixa
+  // para o logo não dividir a rede lenta com a capa.
+  preload(HERO_WORDMARK, { as: "image", fetchPriority: "low" });
 
   const [featured, brands, testimonials, publicSite, siteContent, faqItems] =
     await Promise.all([
@@ -128,10 +130,10 @@ export default async function HomePage() {
           <div className="flex flex-col gap-2.5 sm:gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
             <div className="hero-text min-w-0 max-w-2xl">
               <div className="hero-brand">
-                <SiteWordmark size="hero" priority />
+                <SiteWordmark size="hero" />
               </div>
               <h1 className="mt-3 font-display text-lg font-semibold leading-snug tracking-tight text-cream sm:mt-3 sm:text-3xl sm:leading-[1.12] lg:text-[2rem]">
-                Seminovos com procedência em {site.region}.
+                Seminovos com procedência em {SEO_LOCAL_LOCATION}.
               </h1>
               <ul className="mt-3 flex max-w-lg flex-col gap-2 border-l-2 border-brand/60 pl-3 text-sm leading-snug text-cream sm:gap-1.5 sm:border-0 sm:pl-0 sm:text-base">
                 <li>A gente revisa cada veículo, e ele sai com garantia.</li>

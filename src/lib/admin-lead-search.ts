@@ -1,4 +1,4 @@
-import { isLeadStatus, WANTED_LEAD_SOURCE } from "@/lib/leads";
+import { isLeadStatus, isLeadSource } from "@/lib/leads";
 export function leadSearchWhere(input: {
   status?: string | null;
   q?: string | null;
@@ -9,7 +9,7 @@ export function leadSearchWhere(input: {
   const plate = q.replace(/[^a-zA-Z0-9]/g, "");
   return {
     ...(isLeadStatus(input.status || "") ? { status: input.status! } : {}),
-    ...(input.origem === WANTED_LEAD_SOURCE ? { source: input.origem } : {}),
+    ...(isLeadSource(input.origem || "") ? { source: input.origem } : {}),
     ...(q
       ? {
           OR: [

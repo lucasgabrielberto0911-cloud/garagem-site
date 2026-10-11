@@ -31,7 +31,7 @@ import {
   type DashboardAlert,
 } from "@/lib/admin-dashboard";
 import { formatCurrencyBRL, formatNumberBR, formatPhoneBR } from "@/lib/format";
-import { LEAD_STATUS_LABEL, LEAD_STATUSES } from "@/lib/leads";
+import { LEAD_STATUS_LABEL, LEAD_STATUSES, leadDisplayName, leadHasPhone } from "@/lib/leads";
 import { coverSrc } from "@/lib/stock-query";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
@@ -84,7 +84,7 @@ async function DashboardContent() {
       key: `due-${lead.id}`,
       tone: "warning",
       icon: "alert",
-      title: `Retomar atendimento: ${lead.name}`,
+      title: `Retomar atendimento: ${leadDisplayName(lead)}`,
       description: lead.nextAction || "Próximo contato agendado.",
       href: `/admin/leads?lead=${lead.id}`,
     });
@@ -414,10 +414,10 @@ async function DashboardContent() {
                       >
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-cream">
-                            {lead.name}
+                            {leadDisplayName(lead)}
                           </p>
                           <p className="truncate text-xs text-muted">
-                            {formatPhoneBR(lead.phone)} · {lead.vehicleInfo}
+                            {leadHasPhone(lead) ? `${formatPhoneBR(lead.phone)} · ` : ""}{lead.vehicleInfo}
                           </p>
                         </div>
                         <Badge

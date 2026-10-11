@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "disableClaudeAiConnectors": true,
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "60"
+  },
+  "permissions": {
+    "deny": [
+      "Read(./package-lock.json)",
+      "Read(./**/*.zip)",
+      "Read(./branding/**)",
+      "Read(./.next/**)",
+      "Read(./node_modules/**)"
+    ]
+  },
+  "enabledPlugins": {
+    "github@synced": false,
+    "pdf-viewer@synced": false,
+    "operations@synced": false,
+    "activecampaign@synced": false,
+    "sales@synced": false,
+    "legal@synced": false,
+    "productivity@synced": false,
+    "finance@synced": false,
+    "marketing@synced": false,
+    "enterprise-search@synced": false,
+    "data@synced": false,
+    "design@synced": false,
+    "remotion@remotion": false
+  },
+  "skillOverrides": {
+    "dataviz": "off",
+    "claude-api": "off",
+    "keybindings-help": "off",
+    "plugin-authoring": "off",
+    "built-in-browser": "off",
+    "chrome-browser": "off",
+    "computer-use": "off",
+    "deep-research": "off",
+    "docs": "off",
+    "docx": "off",
+    "google-workspace": "off",
+    "import-memory": "off",
+    "morning": "off",
+    "pdf": "off",
+    "pptx": "off",
+    "xlsx": "off",
+    "skill-creator": "off"
+  },
+  "enabledMcpjsonServers": [
+    "code-review-graph"
+  ]
+}

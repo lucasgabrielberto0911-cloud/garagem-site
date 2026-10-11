@@ -1,11 +1,14 @@
+import { PurchaseLeadForm } from "@/components/admin/PurchaseLeadForm";
+import { LeadWeeklySummary } from "@/components/admin/LeadWeeklySummary";
+import { leadWeekStart, weeklyLeadSummary } from "@/lib/lead-funnel";
 import Link from "next/link";
 import { leadSearchWhere } from "@/lib/admin-lead-search";
 import { redirect } from "next/navigation";
 import { LeadsTable } from "@/components/admin/LeadsTable";
 import { AdminPageHeader, btn } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
-import { findLeadVendas } from "@/lib/lead-venda";
-import { LEAD_STATUSES, WANTED_LEAD_SOURCE, isLeadStatus } from "@/lib/leads";
+import { findLeadVendas, findWeeklyPurchaseLeads } from "@/lib/lead-venda";
+import { LEAD_STATUSES, isLeadSource, isLeadStatus } from "@/lib/leads";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_LEADS_PAGE_SIZE } from "@/lib/admin-vehicles";
 
@@ -29,7 +32,7 @@ export default async function LeadsPage({
   const status = (query.status ?? "").trim();
   const valid = isLeadStatus(status);
   const q = (query.q ?? "").trim();
-  const origem = query.origem === WANTED_LEAD_SOURCE ? WANTED_LEAD_SOURCE : "";
+  const origem = isLeadSource(query.origem || "") ? query.origem! : "";
   const page = Math.max(1, Number(query.page) || 1);
   const pageSize = ADMIN_LEADS_PAGE_SIZE;
   const where = query.lead
@@ -38,7 +41,8 @@ export default async function LeadsPage({
 
   const filtered =
     Boolean(query.lead) || valid || Boolean(q) || Boolean(origem);
-  const [leads, groups, filteredTotal] = await Promise.all([
+  const now = new Date();
+  const [leads, groups, filteredTotal, stock, weekly] = await Promise.all([
     findLeadVendas({
       where,
       skip: (page - 1) * pageSize,
@@ -51,6 +55,11 @@ export default async function LeadsPage({
     }),
     // Sem filtro, o total já sai do groupBy.
     filtered ? prisma.leadVenda.count({ where }) : Promise.resolve(null),
+    prisma.vehicle.findMany({
+      select: { id: true, brand: true, model: true, version: true, yearModel: true, status: true },
+      orderBy: [{ brand: "asc" }, { model: "asc" }],
+    }),
+    findWeeklyPurchaseLeads(leadWeekStart(now), now),
   ]);
 
   const counts: Record<string, number> & { total: number } = {
@@ -63,11 +72,13 @@ export default async function LeadsPage({
     total: groups.reduce((sum, group) => sum + group._count._all, 0),
   };
   const total = filteredTotal ?? counts.total;
+  const vehicles = stock.map(vehicle => ({ id: vehicle.id, label: [vehicle.brand, vehicle.model, vehicle.version, vehicle.yearModel, vehicle.status === "vendido" ? "(vendido)" : ""].filter(Boolean).join(" ") }));
+  const summary = weeklyLeadSummary(weekly, now);
 
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Leads de venda"
+        title="Leads e conversas"
         actions={<Link href="/admin/agenda" className={btn.outline}>Ver agenda</Link>}
         subtitle={[
           counts.novo > 0
@@ -79,7 +90,10 @@ export default async function LeadsPage({
         ].join("")}
       />
 
+      <PurchaseLeadForm vehicles={vehicles.filter(v => !v.label.endsWith("(vendido)"))} />
+      <LeadWeeklySummary {...summary} />
       <LeadsTable
+        vehicles={vehicles}
         leadId={query.lead}
         leads={leads}
         status={valid ? status : ""}
