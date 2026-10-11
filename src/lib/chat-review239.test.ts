@@ -20,7 +20,7 @@ const stock = [
 ];
 const noReading = async () => null;
 
-test("Kicks x HR-V 'qual você indica?' vai ao especialista mesmo com 'até 70 mil' no histórico", async () => {
+test("Kicks x HR-V 'qual você indica?' compara fichas sem declarar vencedor mesmo com 'até 70 mil' no histórico", async () => {
   let called = false;
   const result = await runChatTurn({
     mensagem: "entre o Kicks e o HR-V, qual você indica?",
@@ -35,7 +35,7 @@ test("Kicks x HR-V 'qual você indica?' vai ao especialista mesmo com 'até 70 m
       return { text: "O Kicks é ótimo pra quem quer economia; o HR-V pra quem quer mais espaço.", functionCall: null };
     },
   });
-  assert.equal(called, true, `${result.meta?.policy}: ${result.reply}`);
+  assert.equal(called, false, `${result.meta?.policy}: ${result.reply}`);
   assert.notEqual(result.meta?.policy, "inventory-empty");
   assert.match(result.reply, /Kicks/);
 });

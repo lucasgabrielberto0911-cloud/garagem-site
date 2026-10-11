@@ -100,8 +100,8 @@ import {
   formatFocusedConsumptionReply,
   formatFocusedEquipmentReply,
   formatFocusedKmReply,
-  formatModelDifferenceReply,
   formatVehicleLine,
+  rankLineName,
   isIncompleteStockReply,
   isFocusedVehicleFactQuestion,
   looksLikeMissingModelReply,
@@ -132,6 +132,10 @@ import {
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 import { chatTurnMayCreateLead } from "@/lib/chat-guard";
+import { neutralChatComparison, guardChatComparisonWinner } from "@/lib/chat-comparison";
+import { asksChatMedia, resolveChatMediaVehicles, chatMediaVehicleName, pendingChatMediaMessage } from "@/lib/chat-media";
+import { matchChatSoldVehicle, similarToChatSoldVehicle, chatSoldVehicleName, type ChatSoldVehicle } from "@/lib/chat-sold";
+import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 import { asksAboutFuel, dieselWishReply, fuelFactReply, fuelListReply, fuelUnits } from "@/lib/chat-fuel";
 import { asksColorOf, colorReply, mentionedStockBrand, parseColorWish } from "@/lib/chat-attrs";
 import { parseChatSearchRanges } from "@/lib/chat-search-filters";
@@ -184,6 +188,8 @@ export async function runChatTurn(input: {
   mensagem: string;
   historico: ChatTurn[];
   stock: ChatVehicleRecord[];
+  soldStock?: ChatSoldVehicle[];
+  previousVehicleIds?: string[];
   vehicleId?: string;
   generate?: typeof generateChatReply;
   researchVehicles?: typeof researchChatVehicles;
@@ -203,6 +209,7 @@ export async function runChatTurn(input: {
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
   const visitorMessage = input.mensagem;
+  const explicitModelUnits = mentionedModelPools(input.stock, visitorMessage).flat();
   // "estrada de chão/terra" é pergunta de robustez (vai à conversa), não lista de estrada.
   const roadUse = /\b(estrada|rodovias?|viagens?|viajar|ultrapassagens?|retomadas?)\b/i.test(
     visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
@@ -349,6 +356,7 @@ export async function runChatTurn(input: {
       truncated: opts.truncated,
       safetyTerms: opts.plain,
     });
+    if (!tradeTurn && compared.length >= 2) guarded = guardChatComparisonWinner(guarded, compared);
     if (
       looksLikeMissingModelReply(guarded) &&
       !/whatsapp|wa\.me/i.test(guarded)
@@ -388,6 +396,48 @@ export async function runChatTurn(input: {
   }
 
   const mayCreateLead = chatTurnMayCreateLead(visitorMessage, input.historico);
+  const soldVehicle = !tradeTurn
+    ? matchChatSoldVehicle(visitorMessage, input.stock, input.soldStock ?? [], input.vehicleId)
+    : undefined;
+  if (soldVehicle && !mayCreateLead) {
+    const similar = similarToChatSoldVehicle(soldVehicle, input.stock, visitorMessage);
+    const name = chatSoldVehicleName(soldVehicle);
+    const href = whatsappUrl(WHATSAPP_MESSAGES.wanted(name), { campaign: "chat" });
+    const reply = `O ${name} já foi vendido.${similar.length ? " Separei opções parecidas do estoque." : ""} Podemos te avisar quando chegar outro pelo WhatsApp: ${href}`;
+    emit(reply);
+    const result = finish(reply, false, { policy: "sold", plain: true, forcedVehicles: similar, cards: similar.length > 0 });
+    result.reply = reply;
+    return result;
+  }
+  const mediaMessage = asksChatMedia(visitorMessage) ? visitorMessage : pendingChatMediaMessage(visitorMessage, input.historico, input.stock);
+  if (!tradeTurn && !mayCreateLead && mediaMessage) {
+    const candidates = resolveChatMediaVehicles(mediaMessage, input.stock, input.vehicleId, input.previousVehicleIds);
+    const video = /v[ií]deo/i.test(mediaMessage);
+    const reply = candidates.length === 1
+      ? `O consultor manda ${video ? "um vídeo" : "mais fotos"} do ${chatMediaVehicleName(candidates[0]!)} pelo WhatsApp: ${CHAT_WHATSAPP_URL}`
+      : candidates.length > 1
+        ? `De qual deles: ${candidates.map(chatMediaVehicleName).join(", ")}?`
+        : "De qual carro você quer fotos ou vídeo?";
+    emit(reply);
+    const result = finish(reply, false, { policy: candidates.length === 1 ? "media" : "media-ask", plain: true, cards: candidates.length === 1, forcedVehicles: candidates.length === 1 ? candidates : undefined });
+    result.reply = reply;
+    return result;
+  }
+  // “Tem City?” / “tem hrv?”: disponibilidade simples usa o nome escrito agora,
+  // sem carregar modelos de buscas anteriores nem gastar uma chamada ao modelo.
+  const availableNamed = singleMentionedModelPool(input.stock, visitorMessage);
+  if (!tradeTurn && !mayCreateLead && availableNamed?.length &&
+    /^(?:(?:voces|vcs) )?(?:tem|ainda tem)\b/i.test(visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()) &&
+    !isChatSelectionQuery(visitorMessage) && !hasChatStockFilter(visitorMessage) &&
+    !asksAboutEquipment(visitorMessage) && !asksAboutConsumption(visitorMessage) &&
+    !asksAboutFuel(visitorMessage) && !asksAboutListedFacts(visitorMessage) &&
+    !/troca|financi|parcela|garantia|consultor|whatsapp/i.test(visitorMessage)) {
+    const reply = availableNamed.length === 1
+      ? formatAvailabilityReply(availableNamed[0])
+      : `Temos ${availableNamed.slice(0, 3).map(chatMediaVehicleName).join(", ")} no estoque. Qual deles você quer conhecer?`;
+    emit(reply);
+    return finish(reply, false, { policy: "availability", plain: true, forcedVehicles: availableNamed });
+  }
   if (
     !mayCreateLead &&
     /\b(?:onde (?:fica|esta|estao|posso ver).{0,24}(?:carro|moto|veiculo|unidade)|(?:cidade|localizacao) (?:do|da|desse|dessa|deste|desta) (?:carro|moto|veiculo|unidade))\b/i.test(
@@ -644,13 +694,14 @@ export async function runChatTurn(input: {
     return finish(reply, false, { policy });
   }
 
-  // Diferença entre modelos nomeados: carroceria e porta-malas da base, com as unidades disponíveis.
+  // Comparações da loja: pontos de cada unidade, sem declarar vencedor nem chamar o modelo.
   if (!tradeTurn && !mayCreateLead && !humanAction && compared.length >= 2 &&
-    /\bdiferencas?\b/.test(visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()) &&
-    expertPlan?.topics.every((topic) => topic === "comparacao") !== false) {
-    const reply = formatModelDifferenceReply(compared);
+    !asksAboutEquipment(visitorMessage) &&
+    expertPlan?.topics.every(topic => ["comparacao", "potencia", "torque", "consumo", "portamalas", "ranking"].includes(topic)) !== false &&
+    (namedComparison || asksToCompareModels(visitorMessage) || asksWhichTwoToCompare(visitorMessage))) {
+    const reply = neutralChatComparison(compared, visitorMessage);
     emit(reply);
-    return finish(reply, false, { policy: "compare-difference", plain: true, forcedVehicles: compared });
+    return finish(reply, false, { policy: /diferenc/i.test(fold(visitorMessage)) ? "compare-difference" : "compare", plain: true, forcedVehicles: compared });
   }
 
   // Pergunta técnica simples e coberta pela base: resposta direta, sem gastar o modelo de linguagem.
@@ -701,7 +752,7 @@ export async function runChatTurn(input: {
   }
 
   const budget =
-    mayCreateLead || humanAction || skipShortcuts
+    mayCreateLead || humanAction || skipShortcuts || explicitModelUnits.length > 0
       ? null
       : budgetFallbackReply(scopedMessage, input.stock);
   if (budget) {
@@ -711,7 +762,7 @@ export async function runChatTurn(input: {
     return result;
   }
   const empty =
-    mayCreateLead || humanAction || skipShortcuts
+    mayCreateLead || humanAction || skipShortcuts || explicitModelUnits.length > 0
       ? null
       : emptyFilterReply(scopedMessage, input.stock);
   if (empty) {
@@ -783,7 +834,11 @@ export async function runChatTurn(input: {
     return finish(reply, false, { policy: "stock-fact", forcedVehicles: [equipmentVehicle] });
   }
   const selection =
-    !skipShortcuts && !namedComparison && (isChatSelectionQuery(scopedMessage) ||
+    !skipShortcuts && !namedComparison && (
+    (explicitModelUnits.length > 0 && /\b(mostra\w*|quero|procuro|busco|ver)\b/i.test(visitorMessage) &&
+      !/\b(sabado|domingo|segunda|terca|quarta|quinta|sexta|hoje|amanha|horario|agendar|visita)\b/.test(fold(visitorMessage)) &&
+      !asksToCompareModels(visitorMessage)) ||
+    isChatSelectionQuery(scopedMessage) ||
     roadUse ||
     // "tem Hyundai?": marca do estoque sem modelo vira busca da marca.
     (!mentionedPool && Boolean(mentionedStockBrand(scopedMessage, input.stock)) && !asksAboutEquipment(visitorMessage)) ||
@@ -836,6 +891,15 @@ export async function runChatTurn(input: {
       );
       return result;
     }
+    if (explicitModelUnits.length > 0) {
+      // O filtro atual pode não bater, mas o modelo existe: mostra as unidades reais.
+      const years: string[] = visitorMessage.match(/\b(?:19|20)\d{2}\b/g) ?? [];
+      const byYear = years.length ? explicitModelUnits.filter(vehicle => years.includes(String(vehicle.yearModel))) : [];
+      const picks = (byYear.length ? byYear : explicitModelUnits).slice(0, 3);
+      const reply = `Temos o modelo no estoque, com estas configurações:\n${picks.map(vehicle => `• ${rankLineName(vehicle)} — ${vehicle.transmission}`).join("\n")}`;
+      emit(reply);
+      return finish(reply, false, { policy: "inventory-named", plain: true, forcedVehicles: picks });
+    }
     const reply =
       "Não achei um anúncio que reúna esses critérios agora. Você pode mudar o recorte ou falar com um consultor no WhatsApp: " +
       CHAT_WHATSAPP_URL;
@@ -861,7 +925,7 @@ export async function runChatTurn(input: {
     // Texto montado da ficha: o polimento não corta "3.200 km" nem a pergunta final.
     const result = finish(reply, false, {
       policy: "compare",
-      forcedVehicles: compared.slice(0, 2),
+      forcedVehicles: compared.slice(0, 3),
     });
     result.reply = reply;
     return result;
@@ -1079,8 +1143,9 @@ export async function runChatTurn(input: {
       text: (() => {
         const scope = expertPlan?.subject.vehicles ?? (activeVehicle ? [activeVehicle] : promptStock);
         const guarded = guardUnaskedOffers(guardSalesTone(guardLlmReply(result.text, input.stock, scope, research?.paragraphs.map(paragraph => paragraph.text).join(" ")), visitorMessage) ?? "", visitorMessage).replace(/checagem (?:rigorosa|completa|minuciosa|criteriosa)(?: na loja)?/gi, "checagem na loja");
-        return guarded && guarded !== CHAT_FALLBACK_REPLY && expertPlan?.stockRanking && !guarded.includes(expertPlan.stockRanking) && !/estoque (?:inteiro|todo)|loja toda|da loja inteira/i.test(guarded)
-          ? `${guarded}${/(?:^|\n)•[^\n]*$/.test(guarded) ? "\n\n" : " "}${expertPlan.stockRanking}` : guarded;
+        const comparisonSafe = !tradeTurn && compared.length >= 2 ? guardChatComparisonWinner(guarded, compared) : guarded;
+        return comparisonSafe && comparisonSafe !== CHAT_FALLBACK_REPLY && expertPlan?.stockRanking && !comparisonSafe.includes(expertPlan.stockRanking) && !/estoque (?:inteiro|todo)|loja toda|da loja inteira/i.test(comparisonSafe)
+          ? `${comparisonSafe}${/(?:^|\n)•[^\n]*$/.test(comparisonSafe) ? "\n\n" : " "}${expertPlan.stockRanking}` : comparisonSafe;
       })(),
     });
     if (input.onToken && !input.generate) {

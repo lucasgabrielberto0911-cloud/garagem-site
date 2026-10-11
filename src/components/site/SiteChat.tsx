@@ -50,6 +50,7 @@ import {
   chatHeaderWhatsAppMessage,
   chatSessionHints,
   chatWhatsAppCta,
+  chatReplyCtaIntent,
   displayChatText,
   formatChatHandoffMessage,
   lastShownChatVehicles,
@@ -482,7 +483,7 @@ function ChatText({
     vehicles.length > 0 ? polishChatReplyWithCards(text, vehicles) : text;
   const visible = displayChatText(source);
   const ctaVehicle = resolveChatWhatsAppVehicle(
-    vehicleContext
+    vehicleContext && !(vehicles.length === 1 && ["photos", "video"].includes(chatReplyCtaIntent(text, userText ?? "") ?? ""))
       ? {
           id: vehicleContext.id,
           label: vehicleContext.label,
@@ -1075,6 +1076,7 @@ export function SiteChat() {
       const data = await requestChatReply(
         {
           mensagem,
+          previousVehicleIds: lastShownChatVehicles(messages).map(vehicle => vehicle.id),
           vehicleId: resolveChatRequestVehicleId({
             mensagem,
             pageVehicleId: vehicleContext?.id,

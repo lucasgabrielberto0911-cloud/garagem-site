@@ -131,12 +131,11 @@ test("diferença de HB20 e HB20S reconhece os dois nomes e usa dados existentes"
     const resultado = await perguntar(mensagem);
     assert.equal(resultado.meta?.policy, "compare-difference");
     assert.deepEqual(resultado.vehicles.map((vehicle) => vehicle.id), ["hb20s", "hb20"]);
-    assert.match(resultado.reply, /HB20 é hatch.*300 litros/);
-    assert.match(resultado.reply, /HB20S é sedan.*cerca de 475 litros/);
-    assert.match(resultado.reply, /Na Garagem, temos/);
-    assert.match(resultado.reply, /HB20 2022 por R\$ 64\.900/);
-    assert.match(resultado.reply, /HB20S 2024 por R\$ 87\.900/);
-    assert.equal(resultado.reply.match(/[.!?](?:\s|$)/g)?.length, 2);
+    assert.match(resultado.reply, /• HB20[^\n]*2022 — hatch; 300 L/);
+    assert.match(resultado.reply, /• HB20S[^\n]*2024 — sedan; cerca de 475 L/);
+    assert.match(resultado.reply, /^Os dois são ótimas escolhas/);
+    assert.equal(resultado.reply.split("\n").length, 3);
+    assert.doesNotMatch(resultado.reply, /R\$/);
     respostaCurta(resultado.reply);
   }
 });
@@ -145,17 +144,17 @@ test("diferença de outros modelos não inventa porta-malas sem ficha técnica",
   const unknown = carro("argo", "Argo", 2025, 15_000, 72_000);
   const resultado = await perguntar("diferença entre Argo e Mobi", [mobi, unknown]);
   assert.deepEqual(resultado.vehicles.map((vehicle) => vehicle.id), ["mobi", "argo"]);
-  assert.match(resultado.reply, /Argo é hatch/);
-  assert.match(resultado.reply, /Mobi é hatch/);
-  assert.match(resultado.reply, /Argo 2025 por R\$ 72\.000/);
+  assert.match(resultado.reply, /• Argo[^\n]*2025 — hatch/);
+  assert.match(resultado.reply, /• Mobi[^\n]*2024 — hatch/);
+  assert.equal(resultado.vehicles.find(vehicle => vehicle.id === "argo")?.price, 72000);
   assert.doesNotMatch(resultado.reply, /Argo[^;.]*\d+ litros/);
   respostaCurta(resultado.reply);
 });
 
-test("versão sem especificação mantém carroceria e preço, sem copiar litros do modelo irmão", async () => {
+test("versão sem especificação mantém carroceria e preço no card, sem copiar litros do modelo irmão", async () => {
   const semFicha = { ...hb20s, version: "Comfort 1.0", transmission: "Manual", engine: "1.0" };
   const resultado = await perguntar("diferença entre HB20 e HB20S", [hb20, semFicha]);
-  assert.match(resultado.reply, /HB20S é sedan/);
+  assert.match(resultado.reply, /• HB20S[^\n]*2024 — sedan/);
   assert.doesNotMatch(resultado.reply, /475|HB20S[^;.]*\d+ litros/);
   assert.equal(resultado.vehicles.length, 2);
 });

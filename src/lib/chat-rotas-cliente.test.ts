@@ -376,7 +376,8 @@ test("comparação de 2: ficha de cada um em uma linha, sem 'Vou te ajudar a esc
   const turn = await ask6("biz 125 ou cg?");
   assert.match(turn.reply, /\n• BIZ 125 [^\n]*2023 — mais em conta\n• CG 160 Start [^\n]*2023 — /);
   assert.doesNotMatch(turn.reply, /R\$|60 mil km/);
-  assert.match(turn.reply, /Quer que eu compare consumo, espaço ou itens da ficha\?$/);
+  assert.equal(turn.reply.split("\n").length, 3);
+  assert.match(turn.reply, /^Os dois são ótimas escolhas/);
   const kids = await ask7("carro pra quem tem 2 filhos");
   assert.doesNotMatch(kids.reply, /não está na lista/);
 });
