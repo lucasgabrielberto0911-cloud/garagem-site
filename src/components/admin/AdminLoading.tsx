@@ -9,15 +9,16 @@ export function AdminLoading({
   rows?: number;
 }) {
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="h-1 w-16 bg-brand-gradient" aria-hidden="true" />
+    <div className="space-y-6" role="status" aria-live="polite" aria-busy="true">
+      <span className="sr-only">Carregando…</span>
+      <div aria-hidden="true">
+        <div className="h-1 w-16 bg-brand-gradient" />
         <div className="skeleton mt-3 h-8 w-56" />
         <div className="skeleton mt-3 h-3 w-72 max-w-full" />
       </div>
 
       {cards > 0 ? (
-        <div className={adminStatGrid}>
+        <div className={adminStatGrid} aria-hidden="true">
           {Array.from({ length: cards }).map((_, index) => (
             <div key={index} className="border border-white/10 px-5 py-4">
               <div className="skeleton h-2.5 w-24" />
@@ -27,7 +28,7 @@ export function AdminLoading({
         </div>
       ) : null}
 
-      <div className="space-y-3">
+      <div className="space-y-3" aria-hidden="true">
         {Array.from({ length: rows }).map((_, index) => (
           <div key={index} className="border border-white/10 p-4">
             <div className="flex items-center gap-3">
@@ -48,19 +49,20 @@ export function AdminLoading({
 /** Skeleton do cadastro/edição: cabeçalho, menu de seções e cards fechados. */
 export function AdminFormLoading({ tabs = false }: { tabs?: boolean }) {
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="h-1 w-16 bg-brand-gradient" aria-hidden="true" />
+    <div className="space-y-6" role="status" aria-live="polite" aria-busy="true">
+      <span className="sr-only">Carregando formulário…</span>
+      <div aria-hidden="true">
+        <div className="h-1 w-16 bg-brand-gradient" />
         <div className="skeleton mt-3 h-8 w-56 max-w-full" />
         <div className="skeleton mt-3 h-3 w-64 max-w-full" />
       </div>
-      {tabs ? <div className="skeleton h-12 w-full" /> : null}
-      <div className="flex gap-2 overflow-hidden">
+      {tabs ? <div className="skeleton h-12 w-full" aria-hidden="true" /> : null}
+      <div className="flex gap-2 overflow-hidden" aria-hidden="true">
         {Array.from({ length: 6 }).map((_, index) => (
           <div key={index} className="skeleton h-11 w-20 shrink-0" />
         ))}
       </div>
-      <div className="space-y-3">
+      <div className="space-y-3" aria-hidden="true">
         <div className="skeleton h-[52px] w-full" />
         <div className="border border-white/10 p-4">
           <div className="skeleton h-3 w-24" />

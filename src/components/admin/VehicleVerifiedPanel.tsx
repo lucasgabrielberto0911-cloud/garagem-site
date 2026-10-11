@@ -155,7 +155,7 @@ export function VehicleVerifiedPanel({
                 }
                 className={`${inputClass} mt-1.5 resize-y`}
               />
-              <div className="mt-1 flex justify-between gap-3 text-[11px] text-muted">
+              <div className="mt-1 flex justify-between gap-3 text-xs text-muted">
                 <span>
                   {topicState.text.length}/{VERIFIED_TEXT_MAX}
                 </span>
@@ -197,7 +197,7 @@ export function VehicleVerifiedPanel({
                               className="h-full w-full object-cover"
                             />
                             {selected ? (
-                              <span className="absolute right-0.5 top-0.5 bg-brand px-1 font-display text-[10px] font-bold text-cream">
+                              <span className="absolute right-0.5 top-0.5 bg-brand px-1 font-display text-xs font-bold text-white">
                                 {topicState.photoIds.indexOf(photo.id) + 1}
                               </span>
                             ) : null}

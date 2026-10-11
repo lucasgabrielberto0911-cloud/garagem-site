@@ -92,7 +92,7 @@ const MARK_SOLD_BTN =
   "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 border border-brand-orange/50 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition touch-manipulation hover:border-brand-orange hover:bg-brand-orange/15";
 
 const FILTER_PILL =
-  "inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-[11px] font-semibold uppercase tracking-wide transition touch-manipulation";
+  "inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation";
 
 const SORT_SELECT_OPTIONS = [
   { value: "recent:desc", label: "Recentes" },
@@ -127,7 +127,7 @@ function vehicleFinance(vehicle: VehicleRow) {
 function ConsignedChip() {
   return (
     <span
-      className="shrink-0 bg-sky-400/10 px-1.5 py-0.5 text-[11px] font-medium text-sky-200"
+      className="shrink-0 bg-sky-400/10 px-1.5 py-0.5 text-xs font-medium text-sky-200"
       data-testid="consigned-badge"
     >
       {CONSIGNED_LABEL}
@@ -634,9 +634,9 @@ export function VehiclesTable({
         >
           Em estoque
           <span
-            className={`px-1.5 py-0.5 text-[10px] ${
+            className={`px-1.5 py-0.5 text-xs ${
               tab === "estoque"
-                ? "bg-brand/20 text-brand"
+                ? "bg-brand/25 text-cream"
                 : "bg-white/10 text-muted"
             }`}
           >
@@ -656,9 +656,9 @@ export function VehiclesTable({
         >
           Destaques
           <span
-            className={`px-1.5 py-0.5 text-[10px] ${
+            className={`px-1.5 py-0.5 text-xs ${
               tab === "destaques"
-                ? "bg-brand/20 text-brand"
+                ? "bg-brand/25 text-cream"
                 : "bg-white/10 text-muted"
             }`}
           >
@@ -678,9 +678,9 @@ export function VehiclesTable({
         >
           Vendidos
           <span
-            className={`px-1.5 py-0.5 text-[10px] ${
+            className={`px-1.5 py-0.5 text-xs ${
               tab === "vendidos"
-                ? "bg-brand/20 text-brand"
+                ? "bg-brand/25 text-cream"
                 : "bg-white/10 text-muted"
             }`}
           >
@@ -759,12 +759,12 @@ export function VehiclesTable({
                     onClick={() => applyFilters({ status: option.value, ...(option.value === "reservado" && pending === "antigos" ? { pending: "" as const } : {}) })}
                     className={`${FILTER_PILL} ${
                       active
-                        ? "bg-brand/15 text-brand"
+                        ? "bg-brand/25 text-cream"
                         : "text-muted hover:bg-white/5 hover:text-cream"
                     }`}
                   >
                     {option.label}
-                    <span className="ml-1.5 text-[10px] tabular-nums opacity-70">
+                    <span className="ml-1.5 text-xs tabular-nums opacity-70">
                       {option.count}
                     </span>
                   </button>
@@ -836,7 +836,7 @@ export function VehiclesTable({
               prefetch={false}
               href="/"
               target="_blank"
-              className="font-medium text-brand underline-offset-4 hover:underline"
+              className="font-medium text-red-400 underline-offset-4 hover:underline"
             >
               Ver a home
             </Link>
@@ -1164,7 +1164,7 @@ function VehicleAdminCard({
   return (
     <li className="overflow-hidden border border-white/10 bg-ink/50">
       <div className="flex gap-3 p-3 lg:gap-4">
-        <label className="flex shrink-0 items-start pt-1">
+        <label className="-my-3 -ml-3 flex w-11 shrink-0 cursor-pointer items-start justify-center self-stretch pt-4 touch-manipulation lg:-ml-1 lg:w-9">
           <span className="sr-only">Selecionar {title}</span>
           <input
             type="checkbox"
@@ -1187,11 +1187,11 @@ function VehicleAdminCard({
               className="object-cover"
             />
             {vehicle.featured ? (
-              <span className="absolute left-1 top-1 bg-brand px-1.5 py-0.5 font-display text-[9px] font-bold uppercase text-cream">
+              <span className="absolute left-1 top-1 bg-brand px-1.5 py-0.5 font-display text-xs font-bold uppercase text-white">
                 Destaque
               </span>
             ) : null}
-            <span className="absolute bottom-1 right-1 bg-black/55 px-1.5 py-0.5 text-[10px] tabular-nums text-cream/70">
+            <span className="absolute bottom-1 right-1 bg-black/55 px-1.5 py-0.5 text-xs tabular-nums text-cream/70">
               {vehicle.photoCount > 0
                 ? `${vehicle.photoCount} foto${vehicle.photoCount === 1 ? "" : "s"}`
                 : "Sem foto"}
@@ -1230,7 +1230,7 @@ function VehicleAdminCard({
               {finance ? (
                 <span
                   className={`mt-1 block text-xs ${
-                    finance.value >= 0 ? "text-emerald-300" : "text-brand"
+                    finance.value >= 0 ? "text-emerald-300" : "text-red-400"
                   }`}
                 >
                   {finance.label} {formatCurrencyBRL(finance.value)}

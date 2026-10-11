@@ -279,7 +279,7 @@ export function PlateBlurEditor({
                       height: `${rect.height * 100}%`,
                     }}
                   >
-                    <span className="absolute left-0 top-0 bg-brand px-1 font-display text-[10px] font-semibold text-cream">
+                    <span className="absolute left-0 top-0 bg-brand px-1 font-display text-xs font-semibold text-white">
                       {index + 1}
                     </span>
                   </div>

@@ -97,7 +97,7 @@ export function AdminNotifications({ count, onCount }: { count: number | null; o
           <div className="mb-4 grid grid-cols-2 gap-1 sm:grid-cols-4" role="group" aria-label="Tipo de aviso">
             {NOTICE_KINDS.map(({ value, label }) => <button key={value} type="button" aria-pressed={kind === value}
               onClick={() => { setKind(value); setPage(1); setData(null); setDismissError(""); }}
-              className={`min-h-11 rounded-lg px-1 text-xs font-semibold transition ${kind === value ? "bg-brand text-cream" : "border border-white/10 text-muted hover:bg-white/5"}`}>
+              className={`min-h-11 rounded-lg px-1 text-xs font-semibold transition ${kind === value ? "bg-brand text-white" : "border border-white/10 text-muted hover:bg-white/5"}`}>
               {label}{data ? ` (${data.counts[value]})` : ""}
             </button>)}
           </div>

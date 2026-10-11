@@ -150,7 +150,7 @@ export default function CoverFrameEditor({ url, thumbnailUrl, applying, onClose,
           />
           {box ? <div aria-hidden="true" className="pointer-events-none absolute border-2 border-cream shadow-[0_0_0_9999px_rgba(13,13,15,0.68)]" style={{ left: `${box.left * 100}%`, top: `${box.top * 100}%`, width: `${box.width * 100}%`, height: `${box.height * 100}%` }} /> : null}
         </div>
-        {imageError ? <p role="alert" className="mt-3 text-sm text-brand">Não foi possível carregar a foto. Feche e tente novamente.</p> : !size ? <p role="status" className="mt-2 text-xs text-muted">Carregando foto…</p> : null}
+        {imageError ? <p role="alert" className="mt-3 text-sm text-red-400">Não foi possível carregar a foto. Feche e tente novamente.</p> : !size ? <p role="status" className="mt-2 text-xs text-muted">Carregando foto…</p> : null}
 
         <div className="mt-3 flex items-center gap-2">
           <button type="button" aria-label="Diminuir zoom" disabled={!ready || applying || frame.zoom <= COVER_ZOOM_MIN} onClick={() => changeZoom(frame.zoom - ZOOM_STEP)} className={`${btn.outline} !px-0 w-11 shrink-0 text-lg`}>−</button>

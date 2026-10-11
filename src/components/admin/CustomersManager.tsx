@@ -443,7 +443,7 @@ export function CustomersManager({
                 <button
                   type="button"
                   onClick={() => setDeleteTarget(customer)}
-                  className={`${mobileActionCell} border-l border-white/10 text-brand`}
+                  className={`${mobileActionCell} border-l border-white/10 text-red-400`}
                   aria-label="Excluir cliente"
                   title="Excluir"
                 >

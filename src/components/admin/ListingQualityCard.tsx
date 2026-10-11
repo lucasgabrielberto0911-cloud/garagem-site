@@ -155,7 +155,7 @@ export function ListingQualityCard({
             </h2>
             {statusLine ? (
               <p
-                className={`mt-0.5 text-xs ${view.grade?.label === "Fraco" ? "text-brand" : "text-muted"}`}
+                className={`mt-0.5 text-xs ${view.grade?.label === "Fraco" ? "text-red-400" : "text-muted"}`}
                 aria-live="polite"
               >
                 {statusLine}
@@ -167,13 +167,13 @@ export function ListingQualityCard({
               <span className="font-display text-3xl font-bold leading-none text-cream">
                 {scoreText}
               </span>
-              <span className="mt-1 block text-[11px] text-muted">de 10</span>
+              <span className="mt-1 block text-xs text-muted">de 10</span>
             </p>
           ) : null}
         </div>
 
         {scoreHint ? (
-          <p className="mt-1 text-[11px] leading-relaxed text-muted">
+          <p className="mt-1 text-xs leading-relaxed text-muted">
             {scoreHint}
           </p>
         ) : null}
@@ -229,7 +229,7 @@ export function ListingQualityCard({
         ) : null}
 
         {view.grade ? (
-          <p className="mt-3 text-[11px] leading-relaxed text-muted">
+          <p className="mt-3 text-xs leading-relaxed text-muted">
             A nota não impede salvar nem publicar.
           </p>
         ) : null}
