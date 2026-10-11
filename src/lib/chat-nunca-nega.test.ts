@@ -53,6 +53,15 @@ test("pelo nome, fora da página: item da ficha nunca é negado", async () => {
   }
 });
 
+test("ficha com outro nome para o item: responde com o nome da ficha, sem palavra cortada", async () => {
+  const duster = await ask("a Duster tem multimídia?");
+  assert.match(duster.reply, /consta Media Nav 7" com GPS\./);
+  assert.doesNotMatch(duster.reply, /central \./);
+  const gol = stock.find(v => v.id === "gol")!;
+  assert.match(formatFocusedEquipmentReply(gol, "tem controle de estabilidade?", stock), /consta VDC/);
+  assert.doesNotMatch((await ask("o Gol tem controle de estabilidade?")).reply, NEGATIVE);
+});
+
 test("ficha vazia: não nega, oferece confirmar com o vendedor", async () => {
   const palio = stock.find(v => v.id === "palio")!;
   const reply = formatFocusedEquipmentReply(palio, "tem airbag?", stock);

@@ -60,7 +60,7 @@ test("'e airbag e ABS, tem?' no carro em tela: ABS consta, airbag não aparece, 
     generate: async () => { throw new Error("não deveria gerar"); },
   });
   assert.equal(result.meta?.policy, "stock-fact");
-  assert.match(result.reply, /constam freios ABS/);
+  assert.match(result.reply, /consta ABS/);
   assert.match(result.reply, /Airbags não aparecem/i);
   assert.doesNotMatch(result.reply, /tem airbag|com airbag/i);
 });

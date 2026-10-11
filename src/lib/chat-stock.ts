@@ -913,8 +913,8 @@ export function equipmentAcrossStockReply(
     Object.keys(equipmentRanges(mensagem)).length > 0 ||
     parseBodyStyleFilter(mensagem) != null;
   if (!filtered && !/\b(quais|qual|que carros?|algum|alguma|carros?|modelos?|veiculos?|opcoes|estoque|motos?)\b/.test(folded)) return null;
-  // Critério subjetivo (econômico, família, potente…) fica com a busca normal, que sabe ranquear.
-  if (/\b(economic\w*|economia|familia|potente\w*|forte\w*|espacos\w*|confortave\w*|diesel)\b/.test(folded)) return null;
+  // Critério subjetivo sem filtro objetivo (econômico, família…) fica com a busca normal, que sabe ranquear.
+  if (!filtered && /\b(economic\w*|economia|familia|potente\w*|forte\w*|espacos\w*|confortave\w*|diesel)\b/.test(folded)) return null;
   // Ano citado que o filtro não entendeu: não arrisca ignorar o ano.
   const yearRange = equipmentRanges(mensagem);
   if (/\b(?:19|20)\d{2}\b/.test(folded) && yearRange.minYear == null && yearRange.maxYear == null) return null;
@@ -1032,9 +1032,13 @@ export function formatFocusedEquipmentReply(
     const present = asked.flatMap(([label, , data]) => {
       const item = raw.find(value => data.test(normalize(value)));
       if (!item) return [];
-      // Teto: diz exatamente o que está na ficha ("teto panorâmico" não vira "teto solar").
-      if (label === "teto solar") return [shortAccessory(item).replace(/^./, c => c.toLowerCase())];
-      if (label !== "airbags") return [label];
+      // Quando a ficha usa outro nome ("Media Nav", "teto panorâmico", "VDC"), diz o nome da ficha.
+      // O texto do chat não pode perder a palavra no polimento (que confere o nome na ficha).
+      if (label !== "airbags") {
+        if (normalize(item).includes(normalize(label)) || (label === "câmera de ré" && normalize(item).includes("camera"))) return [label];
+        const short = shortAccessory(item);
+        return [/^(?:multimidia|central|camera|freios?|controle|teto|sistema|kit|tela|bolsas?)\b/.test(normalize(short)) ? short.replace(/^./, c => c.toLowerCase()) : short];
+      }
       const text = item.trim().replace(/air ?bag(s?)/i, (_, plural: string) => `airbag${plural}`);
       return [/^airbags?\b/i.test(text) ? text.replace(/^./, c => c.toLowerCase()) : text];
     });
