@@ -82,8 +82,13 @@ export function sanitizeSensitiveText(value: string) {
 /** Só declara criar_lead quando já aparece telefone na conversa — payload menor. */
 export function chatTurnMayCreateLead(
   mensagem: string,
-  history: Array<{ content: string }> = [],
+  history: Array<{ content: string; role?: string }> = [],
 ) {
-  const blob = `${history.map((turn) => turn.content).join("\n")}\n${mensagem}`;
+  // Só o que o VISITANTE escreveu: o link do WhatsApp da loja nas respostas do
+  // assistente (wa.me/55…) não é telefone de lead.
+  const blob = `${history
+    .filter((turn) => turn.role !== "assistant")
+    .map((turn) => turn.content)
+    .join("\n")}\n${mensagem}`.replace(/(?:https?:\/\/)?wa\.me\/\S+/gi, " ");
   return /(?:\+?55[\s.-]?)?(?:\(?\d{2}\)?[\s.-]*)9?\d{4}[\s.-]?\d{4}/.test(blob);
 }

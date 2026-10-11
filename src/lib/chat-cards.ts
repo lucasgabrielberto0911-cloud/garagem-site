@@ -139,10 +139,12 @@ export function stripChatVehicleListingLines(
         return true;
       }
       if (looksLikeLooseVehicleTitle(line)) return false;
-      const folded = fold(line);
+      const folded = fold(line).trim();
+      // Só some a linha que é praticamente o título do card ("Nissan Kicks SL 2019 · …").
+      // Frase de verdade que cita o carro (comparação, pontos fortes) fica.
       return !vehicles.some((vehicle) => {
         const title = fold(vehicle.title);
-        return title.length >= 5 && folded.includes(title);
+        return title.length >= 5 && folded.startsWith(title) && folded.length <= title.length + 60 && !/[.!?]$/.test(folded);
       });
     })
     .join("\n")

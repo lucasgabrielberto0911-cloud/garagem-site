@@ -64,3 +64,26 @@ test("'e airbag e ABS, tem?' no carro em tela: ABS consta, airbag não aparece, 
   assert.match(result.reply, /Airbags não aparece/i);
   assert.doesNotMatch(result.reply, /tem airbag|com airbag/i);
 });
+
+test("link do WhatsApp da loja no histórico não conta como telefone de lead", async () => {
+  const { chatTurnMayCreateLead } = await import("@/lib/chat-guard");
+  const historico = [
+    { role: "user", content: "esse Gol tem teto solar?" },
+    { role: "assistant", content: "Na ficha desse Gol não consta teto solar. O vendedor confirma no WhatsApp: https://wa.me/5527996330706" },
+  ];
+  assert.equal(chatTurnMayCreateLead("e airbag e ABS, tem?", historico), false);
+  assert.equal(chatTurnMayCreateLead("meu zap é 27 99988-7766", historico), true);
+});
+
+test("com cards na tela, a comparação por perfil continua na bolha", async () => {
+  const { polishChatReplyWithCards } = await import("@/lib/chat-cards");
+  const cards = [
+    { id: "k", brand: "Nissan", model: "Kicks", version: "SL", year: 2019, km: 78000, price: 86900, title: "Nissan Kicks" },
+    { id: "h", brand: "Honda", model: "HR-V", version: "EXL", year: 2016, km: 103000, price: 84900, title: "Honda HR-V" },
+  ] as never;
+  const text = "Os dois são ótimas escolhas.\n\nO Nissan Kicks SL 2019 é ótimo pra quem quer economia e conforto.\nO Honda HR-V EXL 2016 é ideal pra quem quer mais espaço.\nNissan Kicks SL 2019 · 78.000 km · R$ 86.900";
+  const out = polishChatReplyWithCards(text, cards);
+  assert.match(out, /Kicks SL 2019 é ótimo/);
+  assert.match(out, /HR-V EXL 2016 é ideal/);
+  assert.doesNotMatch(out, /R\$ 86\.900/);
+});
