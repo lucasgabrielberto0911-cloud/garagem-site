@@ -101,6 +101,7 @@ import {
   formatFocusedEquipmentReply,
   formatFocusedKmReply,
   formatVehicleLine,
+  rankLineName,
   isIncompleteStockReply,
   isFocusedVehicleFactQuestion,
   looksLikeMissingModelReply,
@@ -208,6 +209,7 @@ export async function runChatTurn(input: {
   const confirm = input.confirm ?? confirmAfterLead;
   const createLead = input.createLead ?? createChatLead;
   const visitorMessage = input.mensagem;
+  const explicitModelUnits = mentionedModelPools(input.stock, visitorMessage).flat();
   // "estrada de chão/terra" é pergunta de robustez (vai à conversa), não lista de estrada.
   const roadUse = /\b(estrada|rodovias?|viagens?|viajar|ultrapassagens?|retomadas?)\b/i.test(
     visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
@@ -750,7 +752,7 @@ export async function runChatTurn(input: {
   }
 
   const budget =
-    mayCreateLead || humanAction || skipShortcuts
+    mayCreateLead || humanAction || skipShortcuts || explicitModelUnits.length > 0
       ? null
       : budgetFallbackReply(scopedMessage, input.stock);
   if (budget) {
@@ -760,7 +762,7 @@ export async function runChatTurn(input: {
     return result;
   }
   const empty =
-    mayCreateLead || humanAction || skipShortcuts
+    mayCreateLead || humanAction || skipShortcuts || explicitModelUnits.length > 0
       ? null
       : emptyFilterReply(scopedMessage, input.stock);
   if (empty) {
@@ -832,7 +834,11 @@ export async function runChatTurn(input: {
     return finish(reply, false, { policy: "stock-fact", forcedVehicles: [equipmentVehicle] });
   }
   const selection =
-    !skipShortcuts && !namedComparison && (isChatSelectionQuery(scopedMessage) ||
+    !skipShortcuts && !namedComparison && (
+    (explicitModelUnits.length > 0 && /\b(mostra\w*|quero|procuro|busco|ver)\b/i.test(visitorMessage) &&
+      !/\b(sabado|domingo|segunda|terca|quarta|quinta|sexta|hoje|amanha|horario|agendar|visita)\b/.test(fold(visitorMessage)) &&
+      !asksToCompareModels(visitorMessage)) ||
+    isChatSelectionQuery(scopedMessage) ||
     roadUse ||
     // "tem Hyundai?": marca do estoque sem modelo vira busca da marca.
     (!mentionedPool && Boolean(mentionedStockBrand(scopedMessage, input.stock)) && !asksAboutEquipment(visitorMessage)) ||
@@ -884,6 +890,15 @@ export async function runChatTurn(input: {
         result.vehicles.length,
       );
       return result;
+    }
+    if (explicitModelUnits.length > 0) {
+      // O filtro atual pode não bater, mas o modelo existe: mostra as unidades reais.
+      const years: string[] = visitorMessage.match(/\b(?:19|20)\d{2}\b/g) ?? [];
+      const byYear = years.length ? explicitModelUnits.filter(vehicle => years.includes(String(vehicle.yearModel))) : [];
+      const picks = (byYear.length ? byYear : explicitModelUnits).slice(0, 3);
+      const reply = `Temos o modelo no estoque, com estas configurações:\n${picks.map(vehicle => `• ${rankLineName(vehicle)} — ${vehicle.transmission}`).join("\n")}`;
+      emit(reply);
+      return finish(reply, false, { policy: "inventory-named", plain: true, forcedVehicles: picks });
     }
     const reply =
       "Não achei um anúncio que reúna esses critérios agora. Você pode mudar o recorte ou falar com um consultor no WhatsApp: " +

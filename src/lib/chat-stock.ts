@@ -497,6 +497,17 @@ export function pickComparedModelVehicles(
   limit = 3,
 ): ChatVehicleRecord[] {
   const groups = mentionedModelPools(stock, mensagem);
+  // “Civic 2020 ou 2015”: duas unidades da mesma família também são comparação.
+  if (groups.length === 1 && asksToCompareModels(mensagem)) {
+    const years = [...new Set(mensagem.match(/\b(?:19|20)\d{2}\b/g) ?? [])];
+    if (years.length >= 2) {
+      const units = years.flatMap(year => {
+        const unit = pickFromModelGroup(groups[0]!.filter(vehicle => vehicle.yearModel === Number(year)));
+        return unit ? [unit] : [];
+      }).slice(0, limit);
+      return units.length >= 2 ? units : [];
+    }
+  }
   if (groups.length < 2) return [];
   const picks: ChatVehicleRecord[] = [];
   const seen = new Set<string>();
@@ -2703,6 +2714,8 @@ export function scopeChatMessage(
 ) {
   const current = mensagem.trim();
   if (skipsChatMemory(current)) return current;
+  // Modelo escrito agora redefine o assunto; só valem os filtros desta mensagem.
+  if (mentionedModelGroups(stock, current).size > 0) return current;
   const prior = historico
     .filter((turn) => turn.role === "user" && turn.content.trim())
     .map((turn) => turn.content.trim());
@@ -2991,14 +3004,17 @@ export function searchChatInventory(
   const gear = parseTransmissionFilter(message);
   const ranges = parseChatSearchRanges(message);
   const category = resolveChatCategory(message);
+  const body = category === "moto" ? null : parseBodyStyleFilter(message);
   const recorte = [
-    category === "moto"
+    body
+      ? { suv: "SUVs", sedan: "sedãs", hatch: "hatches", pickup: "picapes", wagon: "peruas" }[body]
+      : category === "moto"
       ? "motos"
       : category === "carro"
         ? "carros"
         : "veículos",
     gear === "automatico"
-      ? "automáticos"
+      ? body === "pickup" || body === "wagon" ? "automáticas" : "automáticos"
       : gear === "manual"
         ? "manuais"
         : null,
@@ -3016,7 +3032,8 @@ export function searchChatInventory(
     .join(", ")
     .replace("carros,", "carros")
     .replace("motos,", "motos")
-    .replace("veículos,", "veículos");
+    .replace("veículos,", "veículos")
+    .replace(/^(SUVs|sedãs|hatches|picapes|peruas),/, "$1");
   const subject = recorte === "veículos" ? "no estoque agora" : `de ${recorte}`;
   const more =
     pool.length > picks.length
@@ -3026,7 +3043,7 @@ export function searchChatInventory(
   const listing = picks.map(formatVehicleLine).join("\n");
   // Ranking: frase curta + uma linha por carro só com o dado pedido (km, preço e motor ficam nos cards).
   // As linhas “marca modelo · km · R$” continuam no texto (o chat as esconde) pro follow-up saber quem foi mostrado.
-  const scope = recorte === "veículos" ? "do estoque" : `entre os ${recorte}`;
+  const scope = recorte === "veículos" ? "do estoque" : `entre ${body === "pickup" || body === "wagon" ? "as" : "os"} ${recorte}`;
   const specs = picks.map((v) => findVehicleSpec(v));
   const ranking = (label: string, value: (v: ChatVehicleRecord, index: number) => string | null, note = "") =>
     ({

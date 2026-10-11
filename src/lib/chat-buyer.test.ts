@@ -385,17 +385,18 @@ test("Gemini cortado em limite de R$ não fica na resposta final", async () => {
   assert.doesNotMatch(result.reply, /limite de R\$\.$/);
 });
 
-test("tem biz até 15 mil não mistura carro na waitlist", async () => {
+test("tem biz até 15 mil mostra a moto conhecida mesmo fora do orçamento", async () => {
   const result = await runChatTurn({
     mensagem: "tem biz até 15 mil?",
     historico: [],
     stock: [hb20, onix, compass, biz],
     generate: blockedGenerate(),
   });
-  assert.equal(result.meta?.policy, "waitlist");
+  assert.equal(result.meta?.policy, "inventory-named");
   assert.match(decodeURIComponent(result.reply), /biz/i);
   assert.ok(result.vehicles.every((vehicle) => vehicle.category === "moto"));
   assert.doesNotMatch(result.reply, /HB20|Onix|Compass/);
+  assert.doesNotMatch(result.reply, /Não achei|não tem anúncio|não está na lista/);
 });
 
 test("consumo do Fox 1.6 sem ficha na base não vira estimativa e não duplica cilindrada", async () => {
