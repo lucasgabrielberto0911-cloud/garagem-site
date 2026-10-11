@@ -193,3 +193,49 @@ test("'o mais barato automático com câmera': ordena, não corta o recorte (nun
   assert.doesNotMatch(turn.reply, /não aparece|não consta|nenhum/);
   assert.equal(turn.vehicles[0]?.model, "Civic");
 });
+
+const stock5 = [
+  ...stock,
+  car("civic", "Honda", "Civic", "EXL 2.0", 2020, 126900, { transmission: "Automático", engine: "2.0" }),
+  car("kicks", "Nissan", "Kicks", "SL 1.6", 2019, 86900, { transmission: "Automático", engine: "1.6" }),
+  car("chave", "Fiat", "Uno", "Way 1.0", 2015, 34900, { accessories: ["Manual do proprietário e chave reserva"] }),
+];
+const ask5 = (mensagem: string, vehicleId?: string) =>
+  runChatTurn({ mensagem, historico: [], stock: stock5, vehicleId, readIntent: async () => null, generate: noModel });
+
+test("'Civic ou Corolla?': mostra o Civic que temos, sem 'esse modelo não está'", async () => {
+  const turn = await ask5("Civic ou Corolla?");
+  assert.match(turn.reply, /^Corolla não está na lista atual; o Civic temos/);
+  assert.doesNotMatch(turn.reply, /Esse modelo/);
+  assert.equal(turn.vehicles[0]?.id, "civic");
+});
+
+test("0 km: loja de seminovos, mostra os mais novos", async () => {
+  const turn = await ask5("tem algum 0km?");
+  assert.match(turn.reply, /0 km a gente não trabalha/);
+  assert.doesNotMatch(turn.reply, /não está na lista/);
+  assert.equal(turn.vehicles[0]?.id, "mobi");
+  const moto = await ask5("tem moto 0km?");
+  assert.ok(moto.vehicles.every((vehicle) => vehicle.category === "moto"));
+});
+
+test("manual e chave reserva: consta na ficha → diz; sem carro → consultor confirma (nunca nega)", async () => {
+  const unit = await ask5("tem manual e chave reserva?", "chave");
+  assert.match(unit.reply, /consta: Manual do proprietário e chave reserva/);
+  const generic = await ask5("o carro tem manual e chave reserva?");
+  assert.match(generic.reply, /consultor confere/);
+  assert.doesNotMatch(generic.reply, /não está na lista|não (?:tem|consta)/);
+});
+
+test("picape sem estoque: fala direto e mostra SUVs; 'já foi batido' é procedência", async () => {
+  const turn = await ask5("tem pickup?");
+  assert.match(turn.reply, /^Picape não temos agora; separei os SUVs/);
+  assert.doesNotMatch(turn.reply, /Nessa combinação/);
+  const crash = await ask5("o Kicks já foi batido?");
+  assert.match(crash.reply, /consultor confirma no WhatsApp, carro a carro/);
+});
+
+test("estrada com teto de preço: os mais fortes do recorte primeiro", async () => {
+  const turn = await ask5("preciso de um carro pra pegar estrada todo fim de semana, até 60 mil");
+  assert.equal(turn.vehicles[0]?.id, "duster");
+});

@@ -2417,7 +2417,7 @@ export function similarAfterEmptyFilter(
   const relaxed = relaxChatStockFilters(stock, mensagem);
   const kind = relaxed.some(sameKind) ? relaxed.filter(sameKind) : relaxed;
   // Modelo que não temos: parecidos são da mesma carroceria (Corolla → sedãs; picape → SUVs), mais novos primeiro.
-  const asked = !motoTalk && !parseBodyStyleFilter(mensagem) ? askedModelBody(mensagem) : null;
+  const asked = motoTalk ? null : parseBodyStyleFilter(mensagem) ?? askedModelBody(mensagem);
   const bodies = asked === "pickup" ? ["pickup", "suv"] : asked ? [asked] : [];
   const sameBody = bodies.length ? kind.filter((vehicle) => bodies.includes(vehicleBodyStyle(vehicle) ?? "")) : [];
   if (sameBody.length) {
@@ -2436,7 +2436,7 @@ const WAITLIST_STOP =
   /^(tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
 
 const INTENT_SEEK_NOISE =
-  /^(forte|fortes|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
+  /^(forte|fortes|rapido|rapida|rapidos|veloz|arranque|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
 
 function waitlistInterestBits(mensagem: string) {
   return normalize(mensagem)
@@ -2913,6 +2913,15 @@ export function emptyFilterReply(
   const recorte = query ? ` (${query})` : "";
   const similar = similarAfterEmptyFilter(mensagem, stock, 3);
   const wait = `Se quiser, o consultor anota e te avisa no WhatsApp quando chegar: ${chatWaitlistWhatsAppUrl(mensagem)}`;
+  // "Tem picape?": recorte só de carroceria — fala direto, sem "Nessa combinação (carro pickup)".
+  const body = parseBodyStyleFilter(mensagem);
+  if (body && parsePriceLimit(mensagem) == null && !parseTransmissionFilter(mensagem) && Object.keys(parseChatSearchRanges(mensagem)).length === 0) {
+    const label = { pickup: "Picape", wagon: "Perua", suv: "SUV", sedan: "Sedan", hatch: "Hatch" }[body];
+    const alt = body === "pickup" && similar.some((vehicle) => vehicleBodyStyle(vehicle) === "suv") ? "separei os SUVs, que são os mais parecidos" : "separei os mais parecidos que temos";
+    return similar.length
+      ? `${label} não temos agora; ${alt}. ${wait}`
+      : `${label} não temos agora. ${wait}`;
+  }
   if (similar.length === 0) {
     return `Nessa combinação${recorte} ainda não tem anúncio agora. ${wait}`;
   }
@@ -3030,6 +3039,33 @@ export const CHAT_WARRANTY_REPLY =
 export const CHAT_ORIGIN_REPLY =
   `Todo seminovo passa por checagem na loja antes do anúncio. Laudo cautelar e histórico de cada carro (leilão, sinistro) não ficam no anúncio: o consultor confirma no WhatsApp, carro a carro, antes de você fechar. ${CHAT_WHATSAPP_URL}`;
 
+export const CHAT_KEYS_REPLY =
+  `Manual e chave reserva variam de unidade para unidade: o consultor confere no carro que você escolher e te confirma no WhatsApp. ${CHAT_WHATSAPP_URL}`;
+
+export const CHAT_ZERO_REPLY =
+  "0 km a gente não trabalha: a Garagem vende seminovos. Separei os mais novos do estoque.";
+
+/** Do estoque, os mais novos (carro, ou moto se a conversa for de moto). */
+export function newestChatVehicles(mensagem: string, stock: ChatVehicleRecord[], limit = 3) {
+  const moto = resolveChatCategory(mensagem) === "moto";
+  return stock
+    .filter((vehicle) => ((vehicle.category ?? "carro") === "moto") === moto)
+    .sort((a, b) => b.yearModel - a.yearModel || a.km - b.km)
+    .slice(0, limit);
+}
+
+/** "Civic ou Corolla?": um temos, outro não — mostra o que temos, sem dizer que "esse modelo" falta. */
+export function partialCompareReply(mensagem: string, present: ChatVehicleRecord): string {
+  const presentWords = new Set(normalize(`${present.brand} ${present.model}`).split(" "));
+  const missing = waitlistInterestBits(mensagem)
+    .filter((token) => !INTENT_SEEK_NOISE.test(token) && !presentWords.has(token) && !/^(compensa|vale|pena|melhor|indica|recomenda|qual|ou|versus|diferenca|comparar|compara)$/.test(token) && /^[a-z][a-z0-9-]{1,14}$/.test(token));
+  const talk = talkName(present);
+  const lead = missing.length === 1
+    ? `${askedModelName(mensagem, missing[0]!)} não está na lista atual; ${talk.labeled} temos`
+    : `${talk.cap} temos`;
+  return `${lead}: ${formatVehicleLine(present)}.\nSeparei também parecidos do estoque. Quer que eu compare com algum deles?`;
+}
+
 export const CHAT_VISIT_REPLY =
   `Dá sim! O atendimento é com horário marcado em Linhares: o consultor combina o dia e a hora com você no WhatsApp (atendemos das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
 
@@ -3121,7 +3157,7 @@ export function formatTransmissionCompareReply(
 /** Atalhos do chat (chips) — política fixa, sem perguntar de novo o modelo. */
 export function chatPolicyShortcut(
   mensagem: string,
-): "city" | "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
+): "city" | "keys" | "zero" | "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
   const folded = normalize(mensagem);
   // "Tem carro em Aracruz?" / "atendem Vitória?": área de atendimento, não modelo.
   if (/\b(?:em|de|pra|para|na|no)\s+(?:aracruz|vitoria|serra|vila velha|guarapari|cariacica|colatina|cachoeiro|linhares)\b/.test(folded) &&
@@ -3148,8 +3184,16 @@ export function chatPolicyShortcut(
     !/\b(financi\w*|parcela\w*|entrada)\b/.test(folded)) {
     return "debts";
   }
+  // Manual e chave reserva: vem da ficha quando consta; senão o consultor confirma.
+  if (/\b(chave reserva|chave extra|segunda chave|duas chaves|chave copia|manual do proprietario|manual de fabrica|manual e (?:a )?chave|livro de revis\w*|manual e livro)\b/.test(folded)) {
+    return "keys";
+  }
+  // 0 km: a loja é de seminovos.
+  if (/\b(0 ?km|zero ?km|zero quilometro|zerad[oa]s?)\b/.test(folded) && !/\b(ate|menos de|abaixo de)\s+0\b/.test(folded)) {
+    return "zero";
+  }
   // Procedência, laudo, leilão: não está no anúncio; o consultor confirma carro a carro.
-  if (/\b(leilao|leiloes|leiload[oa]s?|sinistr\w*|procedencia|laudo|cautelar|vistoria cautelar|recuperad[oa]s? de financiamento|passagem por leilao)\b/.test(folded) &&
+  if (/\b(leilao|leiloes|leiload[oa]s?|sinistr\w*|batid[oa]|ja bateu|enchente|procedencia|laudo|cautelar|vistoria cautelar|recuperad[oa]s? de financiamento|passagem por leilao)\b/.test(folded) &&
     !/\b(financi\w*|parcela|fipe)\b/.test(folded.replace(/recuperad[oa]s? de financiamento/g, ""))) {
     return "origin";
   }
@@ -3253,6 +3297,8 @@ export function localGarageReply(
   if (policy === "warranty") return CHAT_WARRANTY_REPLY;
   if (policy === "docs") return CHAT_DOCS_REPLY;
   if (policy === "origin") return CHAT_ORIGIN_REPLY;
+  if (policy === "keys") return CHAT_KEYS_REPLY;
+  if (policy === "zero") return CHAT_ZERO_REPLY;
   if (policy === "city") return chatCityReply(mensagem);
   if (policy === "sell") return CHAT_SELL_REPLY;
   if (policy === "cash") return CHAT_CASH_REPLY;

@@ -23,6 +23,7 @@ import {
   isPowerQuery,
   isChatSelectionQuery,
   parseBodyStyleFilter,
+  vehicleBodyStyle,
   rankChatVehicles,
   parsePriceLimit,
 } from "@/lib/chat-prompt";
@@ -58,6 +59,10 @@ import {
   CHAT_WARRANTY_REPLY,
   CHAT_DOCS_REPLY,
   CHAT_ORIGIN_REPLY,
+  CHAT_KEYS_REPLY,
+  CHAT_ZERO_REPLY,
+  newestChatVehicles,
+  partialCompareReply,
   CHAT_SELL_REPLY,
   CHAT_DEBTS_REPLY,
   CHAT_CASH_REPLY,
@@ -498,6 +503,26 @@ export async function runChatTurn(input: {
     emit(reply);
     return finish(reply, false, { policy, cards: false });
   }
+  if (policy === "keys") {
+    // Chave reserva / manual que constam na ficha do carro em tela (ou do único citado): diz que consta.
+    const unit = activeVehicle ?? (() => {
+      const pool = singleMentionedModelPool(input.stock, visitorMessage);
+      return pool?.length === 1 ? pool[0] : undefined;
+    })();
+    const items = unit?.accessories?.filter((item) => /chave|manual do|manual de|livro|revis/i.test(item)) ?? [];
+    const reply = unit && items.length
+      ? `Na ficha desse ${unit.model.length <= 4 ? unit.model.toUpperCase() : unit.model.charAt(0).toUpperCase() + unit.model.slice(1).toLowerCase()} consta: ${items.map((item) => item.trim()).join(", ")}. Qualquer outro detalhe, o consultor confere no carro e te confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`
+      : CHAT_KEYS_REPLY;
+    emit(reply);
+    return finish(reply, false, { policy, cards: false });
+  }
+  if (policy === "zero") {
+    const newest = newestChatVehicles(visitorMessage, input.stock, 3);
+    emit(CHAT_ZERO_REPLY);
+    const result = finish(CHAT_ZERO_REPLY, false, { policy, forcedVehicles: newest, cards: newest.length > 0 });
+    result.reply = CHAT_ZERO_REPLY;
+    return result;
+  }
   if (policy === "city") {
     const reply = chatCityReply(visitorMessage);
     emit(reply);
@@ -667,7 +692,7 @@ export async function runChatTurn(input: {
     const found = searchChatInventory(scopedMessage, input.stock);
     if (found) {
       // Estrada: os mais fortes e confortáveis do recorte, não os mais baratos.
-      if (roadUse && parsePriceLimit(scopedMessage) == null && !isPowerQuery(scopedMessage)) {
+      if (roadUse && !isPowerQuery(scopedMessage)) {
         found.picks = rankChatVehicles(found.candidates, "carro potente").slice(0, found.picks.length);
       }
       const inventoryBase = roadUse
@@ -746,6 +771,21 @@ export async function runChatTurn(input: {
     !asksAboutConsumption(scopedMessage) &&
     !asksAboutEquipment(scopedMessage)
   ) {
+    // "Civic ou Corolla?": o Civic temos — mostra ele primeiro, sem "esse modelo não está".
+    const namedPools = mentionedModelPools(input.stock, scopedMessage);
+    if (namedPools.length === 1 && namedPools[0]!.length > 0) {
+      const present = [...namedPools[0]!].sort((a, b) => b.yearModel - a.yearModel || a.km - b.km)[0]!;
+      const reply = partialCompareReply(scopedMessage, present);
+      const body = vehicleBodyStyle(present);
+      const similar = input.stock
+        .filter((vehicle) => vehicle.model !== present.model && (vehicle.category ?? "carro") === (present.category ?? "carro") && (!body || vehicleBodyStyle(vehicle) === body))
+        .sort((a, b) => Math.abs(a.price - present.price) - Math.abs(b.price - present.price))
+        .slice(0, 2);
+      emit(reply);
+      const result = finish(reply, false, { policy: "compare-partial", forcedVehicles: [present, ...similar] });
+      result.reply = reply;
+      return result;
+    }
     const reply = missingModelReply(scopedMessage, input.stock);
     const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
     emit(reply);
