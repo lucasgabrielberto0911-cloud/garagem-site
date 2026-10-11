@@ -1,3 +1,4 @@
+import { WhatsAppOrigin } from "@/components/site/WhatsAppOrigin";
 import { consentBootstrapScript } from "@/lib/consent";
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
@@ -193,6 +194,7 @@ export default function RootLayout({
       <body
         className={`${display.variable} ${body.variable} font-body antialiased bg-asphalt text-cream`}
       >
+        <WhatsAppOrigin />
         <BootSplash />
         {children}
         <PwaRegister />

@@ -142,8 +142,14 @@ test("sobre e itens começam abertos; vistoria e ficha ficam fechadas", () => {
   const blocks = [...dossier.matchAll(/<DossierBlock\b([^>]*)>/g)].map(
     (match) => match[1] ?? "",
   );
-  const openBlocks = blocks.filter((attrs) => /\bdefaultOpen\b/.test(attrs));
+  const allOpen = blocks.filter((attrs) => /\bdefaultOpen\b/.test(attrs));
+  // "Verificado neste carro" só existe quando a loja preencheu e abre primeiro.
+  const verified = allOpen.filter((attrs) => /verifiedHeading/.test(attrs));
+  const openBlocks = allOpen.filter((attrs) => !/verifiedHeading/.test(attrs));
 
+  assert.equal(verified.length, 1);
+  assert.match(dossier, /verified\.length > 0 \?\s*\(\s*<DossierBlock/);
+  assert.ok(dossier.indexOf("verifiedHeading ??") < dossier.indexOf("STORE_INSPECTION_LABEL}"));
   assert.equal(openBlocks.length, 2);
   assert.match(openBlocks[0] ?? "", /Sobre o veículo/);
   assert.match(openBlocks[1] ?? "", /Itens e acessórios/);

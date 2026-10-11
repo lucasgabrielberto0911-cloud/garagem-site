@@ -8,6 +8,8 @@ export type ServiceCity = {
   paragraphs: readonly [string, string];
   bullets: readonly string[];
   faqs: readonly { question: string; answer: string }[];
+  /** Passo a passo do atendimento. Só a cidade que tem o texto real mostra a seção. */
+  steps?: readonly { title: string; text: string }[];
 };
 
 /** Índice público só com os botões das cidades. O rodapé aponta para cá. */
@@ -86,8 +88,8 @@ export const SERVICE_CITIES = [
     slug: "linhares",
     name: "Linhares",
     metaDescription:
-      "Seminovos em Linhares e no norte do ES. Antes da BR-101, veja ficha, fotos e preço no site da Garagem e peça o vídeo no WhatsApp — das 8h às 23h.",
-    lead: "De Linhares à capital são horas na BR-101. No Centro, no Araçá, no Interlagos ou no interior, você vê o seminovo no site da Garagem e tira a dúvida no WhatsApp antes de sair.",
+      "Seminovos em Linhares/ES: escolha no site, peça o vídeo no WhatsApp e combine visita com hora marcada na cidade. Troca e financiamento, das 8h às 23h.",
+    lead: "No Centro, no Araçá ou no Interlagos, você escolhe o seminovo no site da Garagem e resolve o resto no WhatsApp: vídeo, dúvida de financiamento, troca e visita com hora marcada em Linhares.",
     paragraphs: [
       "Se o caminho passa pelo Rio Doce ou pela estrada, faz diferença decidir com o carro na tela. No anúncio estão a ficha, a quilometragem, as fotos e o preço. Se você pedir o vídeo, a gente mostra o que der para mostrar.",
       "Você fala com a gente todos os dias, das 8h às 23h. Troca e documentação entram na mesma conversa, sem pressa. Não temos loja em Linhares: visita, entrega ou retirada a gente combina com a proposta já clara.",
@@ -95,8 +97,26 @@ export const SERVICE_CITIES = [
     bullets: [
       "Ficha, km e preço no site, para você decidir ainda em Linhares",
       "Vídeo do carro antes de pegar a BR-101",
-      "Troca e documentação alinhadas com você na conversa",
+      "Visita com hora marcada em Linhares, quando a proposta estiver clara",
       `WhatsApp ${PHONES[0].label} — das 8h às 23h, todos os dias`,
+    ],
+    steps: [
+      {
+        title: "Escolha no site",
+        text: "Filtre o estoque por marca, ano, preço, km ou câmbio e abra a ficha: fotos, quilometragem e preço do anúncio.",
+      },
+      {
+        title: "Tire dúvidas e peça o vídeo",
+        text: "No WhatsApp, das 8h às 23h, a gente responde e manda o vídeo do carro que você escolheu.",
+      },
+      {
+        title: "Visita com hora marcada em Linhares",
+        text: "Quando a proposta estiver clara, combinamos um horário para você ver o carro pessoalmente, em Linhares.",
+      },
+      {
+        title: "Troca e financiamento na mesma conversa",
+        text: "Seu usado entra na avaliação pela página Vender/Trocar ou pelo WhatsApp. O financiamento é explicado antes de você decidir.",
+      },
     ],
     faqs: [
       {
@@ -113,6 +133,11 @@ export const SERVICE_CITIES = [
         question: "Posso colocar meu veículo na troca?",
         answer:
           "Pode. Envie os dados pela página Vender/Trocar ou pelo WhatsApp para uma avaliação sem compromisso.",
+      },
+      {
+        question: "Como funciona o financiamento para quem está em Linhares?",
+        answer:
+          "A Garagem financia em até 60x, e o cartão de crédito é aceito em até 18x. A parcela o consultor calcula no WhatsApp, com o carro que você escolheu.",
       },
     ],
   },
@@ -358,7 +383,7 @@ export const SERVICE_CITIES = [
 
 export type ServiceCitySlug = (typeof SERVICE_CITIES)[number]["slug"];
 
-export function getServiceCity(slug: string) {
+export function getServiceCity(slug: string): ServiceCity | null {
   return SERVICE_CITIES.find((city) => city.slug === slug) ?? null;
 }
 

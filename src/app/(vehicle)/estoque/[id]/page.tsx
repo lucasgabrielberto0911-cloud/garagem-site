@@ -16,6 +16,7 @@ import {
   VehicleMobileSummary,
 } from "@/components/site/VehicleMobileDossier";
 import { VehicleConditions } from "@/components/site/VehicleConditions";
+import { VehicleVerifiedSection } from "@/components/site/VehicleVerifiedInfo";
 import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { StockBackLink } from "@/components/site/StockBackLink";
@@ -54,6 +55,8 @@ import { isRetiredStockSlug } from "@/lib/retired-listings";
 import { catalogPixelAutoFields } from "@/lib/catalog-feed";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
 import { getVehicleConditions, getGoogleReviews } from "@/lib/site-content";
+import { getVehicleVerifiedItems } from "@/lib/vehicle-verified-data";
+import { publicVerifiedItems, verifiedHeading } from "@/lib/vehicle-verified";
 import {
   getPublicVehicleStaticParams,
   getRelatedVehicles,
@@ -229,7 +232,7 @@ export default async function VehicleDetailPage({
   const sameBandTitle = isMoto
     ? "Motos na mesma faixa"
     : "Carros na mesma faixa";
-  const [related, conditions, google] = await Promise.all([
+  const [related, conditions, google, verifiedItems] = await Promise.all([
     getRelatedVehicles(
       vehicle.id,
       vehicle.brand,
@@ -240,7 +243,10 @@ export default async function VehicleDetailPage({
     ),
     getVehicleConditions(),
     getGoogleReviews(),
+    // Falha ou tabela ausente = sem seção; carro vendido não mostra.
+    sold ? Promise.resolve([]) : getVehicleVerifiedItems(vehicle.id),
   ]);
+  const verified = publicVerifiedItems(verifiedItems, vehicle.photos, isMoto);
 
   const specs = buildVehiclePublicSpecs({
     category: vehicle.category,
@@ -434,6 +440,14 @@ export default async function VehicleDetailPage({
                   </div>
                 ) : null}
               </section>
+            ) : null}
+
+            {verified.length > 0 ? (
+              <VehicleVerifiedSection
+                items={verified}
+                alt={galleryAlt}
+                heading={verifiedHeading(isMoto)}
+              />
             ) : null}
           </div>
 
@@ -666,6 +680,8 @@ export default async function VehicleDetailPage({
           }
           google={google}
           prompt={`Tenho dúvida sobre o ${title}`}
+          verified={verified}
+          verifiedHeading={verifiedHeading(isMoto)}
           quickActions={
             sold
               ? undefined
@@ -722,6 +738,7 @@ export default async function VehicleDetailPage({
         videoMessage={whatsapp.video}
         financeMessage={whatsapp.finance}
         tradeMessage={whatsapp.trade}
+        visitMessage={whatsapp.visit}
         brand={formatBrandName(vehicle.brand)}
         model={formatModelName(vehicle.model)}
         year={vehicle.yearModel}

@@ -18,8 +18,24 @@ export type SellLeadState = {
 
 const MAX_VENDER_PHOTOS = 3;
 
-function text(data: FormData, key: string) {
-  return String(data.get(key) ?? "").trim();
+/** Limites por campo: o formulário é público e o banco não impõe tamanho. */
+const MAX_LENGTH = {
+  name: 100,
+  phone: 30,
+  brand: 60,
+  model: 80,
+  plate: 12,
+  notes: 1000,
+  source: 40,
+} as const;
+
+function text(data: FormData, key: string, max = 300) {
+  return String(data.get(key) ?? "").trim().slice(0, max);
+}
+
+/** Origem só aceita letras minúsculas, números e hífen (ex.: `vender`). */
+function parseSource(raw: string) {
+  return /^[a-z0-9-]{1,40}$/.test(raw) ? raw : "vender";
 }
 
 async function clientKey() {
@@ -65,17 +81,17 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
     };
   }
 
-  const name = text(data, "name");
-  const phone = text(data, "phone");
-  const brand = text(data, "brand");
-  const model = text(data, "model");
+  const name = text(data, "name", MAX_LENGTH.name);
+  const phone = text(data, "phone", MAX_LENGTH.phone);
+  const brand = text(data, "brand", MAX_LENGTH.brand);
+  const model = text(data, "model", MAX_LENGTH.model);
   const year = text(data, "year");
-  const plate = normalizePlate(text(data, "plate"));
-  const kmRaw = text(data, "km").replace(/\D/g, "");
-  const notes = text(data, "notes");
+  const plate = normalizePlate(text(data, "plate", MAX_LENGTH.plate));
+  const kmRaw = text(data, "km", 12).replace(/\D/g, "").slice(0, 7);
+  const notes = text(data, "notes", MAX_LENGTH.notes);
   const interestRaw = text(data, "interestVehicleId");
   const interestVehicleId = isVehicleCuid(interestRaw) ? interestRaw : null;
-  const source = text(data, "source") || "vender";
+  const source = parseSource(text(data, "source", MAX_LENGTH.source));
   const photoUrls = parsePhotoUrls(data);
 
   const fieldErrors: Record<string, string> = {};
