@@ -1,9 +1,10 @@
+import { buildStockFacets, type StockFacets } from "@/lib/stock-facets";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { stockSearchSuggestions, stockSearchWhere } from "@/lib/stock-search";
 import { isMissingColumnError } from "@/lib/prisma-errors";
-import { brandKey, formatBrandName, formatModelName } from "@/lib/format";
+import { brandKey, formatBrandName } from "@/lib/format";
 import { extractVehicleIdFromParam, vehicleSlug } from "@/lib/vehicle-slug";
 import { SEED_TESTIMONIALS } from "@/lib/testimonials-seed";
 import { cleanTestimonialField } from "@/lib/testimonials-clean";
@@ -13,14 +14,12 @@ import {
   stockCityFilter,
   stockOrderBy,
   type StockFilters,
-  type StockModelOption,
   type StockPageResult,
   type VehicleCardRecord,
 } from "@/lib/stock-query";
 import { orderStockDaily, saoPauloDateKey } from "@/lib/stock-daily-order";
 import {
   colorWhere,
-  formatColorLabel,
   transmissionWhere,
 } from "@/lib/vehicle-display";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
@@ -481,10 +480,8 @@ function stockQueryKey(filters: StockFilters) {
     transmission: filters.transmission ?? "",
     fuel: filters.fuel ?? "",
     color: (filters.color ?? "").trim().toLocaleLowerCase("pt-BR"),
-    accessories: (filters.accessories ?? [])
-      .map((item) => item.toLocaleLowerCase("pt-BR"))
-      .sort()
-      .join("|"),
+    // hasEvery compara os valores exatos; o cache preserva o array e a grafia.
+    accessories: [...(filters.accessories ?? [])].sort(),
     hasInspection: Boolean(filters.hasInspection),
     minPrice: filters.minPrice ?? 0,
     maxPrice: filters.maxPrice ?? 0,
@@ -507,6 +504,31 @@ const loadStockSearchCatalog = unstable_cache(
   ["stock-search-catalog-v2"], PUBLIC_CACHE,
 );
 
+/** O mesmo conjunto ordenado atende todas as páginas sem repetir fotos/histórico. */
+const loadDailyStockPoolCached = unstable_cache(
+  async (key: string) => {
+    const filters = JSON.parse(key) as StockFilters;
+    const catalog = filters.q?.trim() ? await loadStockSearchCatalog() : [];
+    return orderStockDaily(await findCardVehicles({
+      where: buildStockWhere(filters, catalog),
+      orderBy: stockOrderBy(filters.sort),
+    }));
+  },
+  ["stock-daily-pool-v1"],
+  PUBLIC_CACHE,
+);
+
+/** Total compartilhado entre páginas nas ordenações paginadas pelo banco. */
+const loadStockCountCached = unstable_cache(
+  async (key: string) => {
+    const filters = JSON.parse(key) as StockFilters;
+    const catalog = filters.q?.trim() ? await loadStockSearchCatalog() : [];
+    return prisma.vehicle.count({ where: buildStockWhere(filters, catalog) });
+  },
+  ["stock-count-v1"],
+  PUBLIC_CACHE,
+);
+
 async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
   const pageSize = Math.min(
     Math.max(filters.pageSize ?? STOCK_PAGE_SIZE, 1),
@@ -518,11 +540,9 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
   const orderBy = stockOrderBy(filters.sort);
 
   if (isDailyStockSort(filters.sort)) {
-    const allVehicles = await findCardVehicles({
-      where,
-      orderBy,
-    });
-    const ordered = orderStockDaily(allVehicles);
+    const ordered = await loadDailyStockPoolCached(
+      stockQueryKey({ ...filters, page: 1, pageSize: STOCK_PAGE_SIZE }),
+    );
     const total = ordered.length;
     const startIndex = (page - 1) * pageSize;
     const vehicles = ordered.slice(startIndex, startIndex + pageSize);
@@ -530,10 +550,10 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
     if (page > 1) {
       return {
         vehicles,
-        total: 0,
+        total,
         page,
         pageSize,
-        totalPages: 1,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
       };
     }
 
@@ -561,25 +581,27 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
     };
   }
 
-  const vehicles = await findCardVehicles({
-    where,
-    orderBy,
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-  });
+  const [vehicles, total] = await Promise.all([
+    findCardVehicles({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    loadStockCountCached(stockQueryKey({ ...filters, page: 1, pageSize: STOCK_PAGE_SIZE })),
+  ]);
 
-  // Página 2+ da rolagem infinita: o cliente já tem o total da 1ª resposta.
+  // Página 2+ mantém o total real sem repetir a contagem no banco.
   if (page > 1) {
     return {
       vehicles,
-      total: 0,
+      total,
       page,
       pageSize,
-      totalPages: 1,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
     };
   }
 
-  const total = await prisma.vehicle.count({ where });
   // Só após resultado vazio. Cada sugestão é conferida com TODOS os filtros atuais.
   const suggestions = total === 0 && filters.q?.trim()
     ? (await Promise.all(stockSearchSuggestions(filters.q, catalog).map(async query => ({
@@ -599,7 +621,7 @@ async function fetchStockPage(filters: StockFilters): Promise<StockPageResult> {
 
 const loadStockPageCached = unstable_cache(
   async (key: string) => fetchStockPage(JSON.parse(key) as StockFilters),
-  ["stock-page-v16"],
+  ["stock-page-v17"],
   PUBLIC_CACHE,
 );
 
@@ -691,17 +713,6 @@ export const getStockPage = cache(
     ),
 );
 
-type StockFacets = {
-  categories: string[];
-  brands: string[];
-  models: StockModelOption[];
-  transmissions: string[];
-  fuels: string[];
-  colors: string[];
-  accessories: string[];
-  years: number[];
-};
-
 const EMPTY_FACETS: StockFacets = {
   categories: [],
   brands: [],
@@ -715,111 +726,21 @@ const EMPTY_FACETS: StockFacets = {
 
 const loadStockFacetsCached = unstable_cache(
   async (): Promise<StockFacets> => {
-    const available = { status: "disponivel" as const };
-
-    const [categories, brands, modelRows, transmissions, fuels, colors, years, accessoryRows] =
-      await Promise.all([
-      prisma.vehicle.groupBy({
-        by: ["category"],
-        where: available,
-        orderBy: { category: "asc" },
-      }),
-      prisma.vehicle.groupBy({
-        by: ["brand"],
-        where: available,
-        orderBy: { brand: "asc" },
-      }),
-      prisma.vehicle.groupBy({
-        by: ["brand", "model"],
-        where: available,
-        orderBy: [{ brand: "asc" }, { model: "asc" }],
-      }),
-      prisma.vehicle.groupBy({
-        by: ["transmission"],
-        where: available,
-        orderBy: { transmission: "asc" },
-      }),
-      prisma.vehicle.groupBy({
-        by: ["fuel"],
-        where: available,
-        orderBy: { fuel: "asc" },
-      }),
-      prisma.vehicle.groupBy({
-        by: ["color"],
-        where: available,
-        orderBy: { color: "asc" },
-      }),
-      prisma.vehicle.groupBy({
-        by: ["yearModel"],
-        where: available,
-        orderBy: { yearModel: "desc" },
-      }),
-      prisma.vehicle.findMany({
-        where: available,
-        select: { accessories: true },
-        take: 400,
-      }),
-    ]);
-
-    const brandsByKey = new Map<string, string>();
-    for (const row of brands) {
-      const raw = row.brand?.trim();
-      if (!raw) continue;
-      const key = brandKey(raw);
-      if (!brandsByKey.has(key)) {
-        brandsByKey.set(key, formatBrandName(raw));
-      }
-    }
-
-    const unique = (values: string[]) =>
-      Array.from(new Set(values.filter(Boolean))).sort((a, b) =>
-        a.localeCompare(b, "pt-BR"),
-      );
-
-    const accessoryByKey = new Map<string, string>();
-    for (const row of accessoryRows) {
-      for (const item of row.accessories) {
-        const raw = item?.trim();
-        if (!raw) continue;
-        const key = raw.toLocaleLowerCase("pt-BR");
-        if (!accessoryByKey.has(key)) accessoryByKey.set(key, raw);
-      }
-    }
-
-    const modelsByKey = new Map<string, StockModelOption>();
-    for (const row of modelRows) {
-      const brand = formatBrandName(row.brand ?? "");
-      const model = formatModelName(row.model ?? "");
-      if (!brand || !model) continue;
-      const key = `${brandKey(brand)}|${brandKey(model)}`;
-      if (!modelsByKey.has(key)) modelsByKey.set(key, { brand, model });
-    }
-
-    return {
-      categories: unique(categories.map((row) => row.category)),
-      brands: Array.from(brandsByKey.values()).sort((a, b) =>
-        a.localeCompare(b, "pt-BR"),
-      ),
-      models: Array.from(modelsByKey.values()).sort((a, b) => {
-        const byBrand = a.brand.localeCompare(b.brand, "pt-BR");
-        return byBrand !== 0 ? byBrand : a.model.localeCompare(b.model, "pt-BR");
-      }),
-      transmissions: unique(transmissions.map((row) => row.transmission)),
-      fuels: unique(fuels.map((row) => row.fuel)),
-      colors: unique(
-        colors
-          .map((row) => formatColorLabel(row.color))
-          .filter(Boolean),
-      ),
-      accessories: Array.from(accessoryByKey.values()).sort((a, b) =>
-        a.localeCompare(b, "pt-BR"),
-      ),
-      years: years.map((row) => row.yearModel),
-    };
+    // Uma projeção enxuta substitui oito consultas e exclui veículos históricos.
+    const rows = await prisma.vehicle.findMany({
+      where: PUBLIC_SITEMAP_VEHICLE_WHERE,
+      select: {
+        category: true, brand: true, model: true, transmission: true,
+        fuel: true, color: true, yearModel: true, accessories: true,
+      },
+      orderBy: { brand: "asc" },
+    });
+    return buildStockFacets(rows);
   },
-  ["stock-facets-v6"],
+  ["stock-facets-v7"],
   PUBLIC_CACHE,
 );
+
 
 export const getStockFacets = cache(() =>
   safeQuery("filtros do estoque", () => loadStockFacetsCached(), EMPTY_FACETS),

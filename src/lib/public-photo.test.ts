@@ -57,6 +57,39 @@ test("miniatura substituível tem cache longo e revalidação", async () => {
   assert.doesNotMatch(response.headers.get("cache-control")!, /immutable/);
 });
 
+test("GET e HEAD condicionais retornam 304 sem bytes nem credenciais", async () => {
+  for (const method of ["GET", "HEAD"]) {
+    const conditional = new Request("https://www.suagaragem.net" + own, {
+      method,
+      headers: { "If-None-Match": '"photo"', "If-Modified-Since": "Mon, 12 Oct 2026 12:00:00 GMT", Cookie: "session=privada", Authorization: "Bearer privado" },
+    });
+    const result = await servePublicPhoto(conditional, ["v1", "original", "car-card.webp"], async (_url, options) => {
+      const headers = new Headers(options?.headers);
+      assert.equal(headers.get("if-none-match"), '"photo"');
+      assert.equal(headers.get("if-modified-since"), "Mon, 12 Oct 2026 12:00:00 GMT");
+      assert.equal(headers.get("cookie"), null);
+      assert.equal(headers.get("authorization"), null);
+      return new Response(null, { status: 304, headers: { ETag: '"photo"', "Set-Cookie": "privado", "Last-Modified": "Mon, 12 Oct 2026 12:00:00 GMT" } });
+    });
+    assert.equal(result.status, 304);
+    assert.equal(await result.text(), "");
+    assert.equal(result.headers.get("etag"), '"photo"');
+    assert.match(result.headers.get("cache-control")!, /max-age=604800/);
+    assert.equal(result.headers.get("set-cookie"), null);
+  }
+});
+
+test("foto alterada retorna 200 e 304 sem requisição condicional não é cacheado", async () => {
+  const conditional = new Request("https://www.suagaragem.net" + own, { headers: { "If-None-Match": '"antiga"' } });
+  const changed = await servePublicPhoto(conditional, ["v1", "original", key], async () => new Response("nova", { headers: { "Content-Type": "image/webp", ETag: '"nova"' } }));
+  assert.equal(changed.status, 200);
+  assert.equal(await changed.text(), "nova");
+  assert.equal(changed.headers.get("etag"), '"nova"');
+  const unsolicited = await servePublicPhoto(request(), ["v1", "original", key], async () => new Response(null, { status: 304 }));
+  assert.equal(unsolicited.status, 502);
+  assert.equal(unsolicited.headers.get("cache-control"), "no-store");
+});
+
 test("erros, HTML, redirect e falhas de rede não ficam cacheados", async () => {
   for (const response of [new Response("missing", { status: 404 }), new Response("error", { status: 503 }), new Response("login", { headers: { "Content-Type": "text/html" } }), new Response("partial", { status: 206, headers: { "Content-Type": "image/webp" } })]) {
     const result = await servePublicPhoto(request(), ["v1", "original", key], async () => response);

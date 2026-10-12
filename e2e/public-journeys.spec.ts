@@ -18,6 +18,35 @@ const test = base.extend<{ browserErrors: string[] }>({
   }, { auto: true }],
 });
 
+test("paginação diária mantém total, continuidade e ordem entre tamanhos de página", async ({ request }) => {
+  const pages = [];
+  for (const page of [1, 2, 3, 4]) {
+    const response = await request.get(`/api/estoque?page=${page}&pageSize=1`);
+    expect(response.status()).toBe(200);
+    const data = await response.json();
+    expect(data.total).toBe(3);
+    expect(data.hasMore).toBe(page < 3);
+    expect(data.vehicles).toHaveLength(page <= 3 ? 1 : 0);
+    pages.push(...data.vehicles);
+  }
+  const full = await (await request.get("/api/estoque?pageSize=3")).json();
+  expect(pages.map(vehicle => vehicle.id)).toEqual(full.vehicles.map((vehicle: { id: string }) => vehicle.id));
+  expect(new Set(pages.map(vehicle => vehicle.id)).size).toBe(3);
+  expect(JSON.stringify(pages)).not.toContain("locationCity");
+  for (const page of [2, 3]) {
+    const sorted = await (await request.get(`/api/estoque?sort=menor-preco&page=${page}&pageSize=1`)).json();
+    expect(sorted.total).toBe(3);
+    expect(sorted.hasMore).toBe(page < 3);
+    expect(sorted.vehicles).toHaveLength(1);
+  }
+  // A chave do cache precisa preservar o array para o filtro hasEvery do Prisma.
+  for (const sort of ["destaques", "menor-preco"]) {
+    const filtered = await request.get(`/api/estoque?sort=${sort}&accessory=acessorio-inexistente`);
+    expect(filtered.status()).toBe(200);
+    expect((await filtered.json()).vehicles).toHaveLength(0);
+  }
+});
+
 test("404 real, aliases 308 e vendido sem preço no HTML/JSON-LD", async ({ request, page }) => {
   const canonical = await request.get(path); expect(canonical.status()).toBe(200);
   for (const alias of [`/estoque/${civic.id}`, `/estoque/nome-antigo-${civic.id}`]) {

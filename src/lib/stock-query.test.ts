@@ -268,7 +268,7 @@ test("modelo entra na URL e a ordenação sozinha também busca a lista", () => 
   assert.match(where, /transmissionWhere\(filters\.transmission\)/);
   assert.match(where, /and\.push\(gear\)/);
   assert.doesNotMatch(where, /transmission: filters\.transmission/);
-  assert.match(vehicles, /stock-page-v16/);
+  assert.match(vehicles, /stock-page-v17/);
   assert.equal(parseStockFilters({ transmission: "automatico" }).transmission, "automatico");
   assert.equal(stockViewNeedsFetch({ transmission: "automatico" }), true);
   assert.equal(stockViewNeedsFetch({ transmission: "manual" }), true);
