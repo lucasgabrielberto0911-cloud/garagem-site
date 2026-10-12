@@ -21,12 +21,12 @@ function openAssistant(source: Source, prompt?: string) {
  */
 export function HomeAssistantButton() {
   return (
-    <span className="assistant-cta-glow relative block w-full">
+    <span className="assistant-cta-glow relative block w-full lg:h-full">
       <button
         type="button"
         onClick={() => openAssistant("home-hero-cta")}
         aria-label="Pergunte ao assistente"
-        className="assistant-cta relative isolate inline-flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden border border-brand/80 bg-asphalt px-3 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-ink touch-manipulation sm:gap-2.5 sm:px-7 sm:text-base lg:text-sm"
+        className="assistant-cta relative isolate inline-flex min-h-[52px] w-full lg:flex lg:h-full items-center justify-center gap-2 overflow-hidden border border-brand/80 bg-asphalt px-3 py-4 lg:py-3.5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-ink touch-manipulation sm:gap-2.5 sm:px-7 sm:text-base lg:text-sm"
       >
         <span className="relative z-10 inline-flex items-center gap-2 sm:gap-2.5">
           <IconChat className="h-5 w-5 shrink-0 text-brand" />
@@ -55,7 +55,7 @@ export function HomeAssistantAsk() {
   }
 
   return (
-    <div className="w-full sm:border sm:border-white/10 sm:bg-asphalt/70 sm:p-3 lg:flex lg:h-full lg:flex-col lg:justify-center lg:px-2 lg:py-3">
+    <div className="w-full sm:border sm:border-white/10 sm:bg-asphalt/70 sm:p-3 lg:px-2 lg:py-3">
       <p className="mb-1.5 hidden text-[13px] lg:mb-2.5 font-medium leading-tight text-muted sm:block">Pergunte qualquer coisa sobre nossos carros</p>
       <form onSubmit={submit} className="hidden items-center gap-2 sm:flex">
         <label htmlFor="home-assistant-input" className="sr-only">Pergunte qualquer coisa sobre nossos carros</label>
