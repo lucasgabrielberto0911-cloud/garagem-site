@@ -25,7 +25,7 @@ export function TrustBadges({ compact = false }: { compact?: boolean }) {
           }`}
         >
           <Icon
-            className={`shrink-0 text-brand ${compact ? "h-5 w-5" : "h-6 w-6 sm:h-7 sm:w-7"}`}
+            className={`shrink-0 text-brand-light ${compact ? "h-5 w-5" : "h-6 w-6 sm:h-7 sm:w-7"}`}
           />
           <span
             className={`font-display font-semibold uppercase text-cream ${

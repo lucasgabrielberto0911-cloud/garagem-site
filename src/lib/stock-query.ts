@@ -25,6 +25,8 @@ export type VehicleCardRecord = {
   locationCity?: string | null;
   createdAt: Date | string;
   updatedAt?: Date | string | null;
+  /** Preço atual menor que o último registrado (VehiclePriceHistory). */
+  priceDrop?: boolean;
   photos: VehicleCardPhoto[];
 };
 

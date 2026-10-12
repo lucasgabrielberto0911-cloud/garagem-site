@@ -68,7 +68,7 @@ export function VehicleVerifiedSection({
         id="ficha-verificado-titulo"
         className="flex items-center gap-2 font-display text-base font-semibold text-cream"
       >
-        <IconShieldCheck className="h-4 w-4 text-brand" />
+        <IconShieldCheck className="h-4 w-4 text-brand-light" />
         {heading}
       </h2>
       <p className="mt-1 text-xs text-muted">

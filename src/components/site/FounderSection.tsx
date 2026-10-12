@@ -41,7 +41,7 @@ export function FounderSection({
               : "mx-auto max-w-3xl px-6 py-10 sm:px-10 sm:py-12 lg:px-12 lg:py-14"
           }
         >
-          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.22em] text-brand">
+          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-light">
             Quem está por trás da Garagem?
           </p>
           <h2

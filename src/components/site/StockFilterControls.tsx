@@ -146,7 +146,7 @@ export function AccessoryChips({
         <button
           type="button"
           onClick={() => setExpanded((open) => !open)}
-          className="mt-2 min-h-[44px] text-xs font-semibold uppercase tracking-wide text-brand"
+          className="mt-2 min-h-[44px] text-xs font-semibold uppercase tracking-wide text-brand-light"
         >
           {expanded ? "Ver menos" : `Ver mais (${options.length - 8})`}
         </button>

@@ -3,6 +3,7 @@ import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { RememberVehicleSnapshot } from "@/components/site/RememberVehicleSnapshot";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
+import { isNewListing } from "@/lib/vehicle-badges";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import { publicCardFacts, type PublicCardFact } from "@/lib/public-card-facts";
 import {
@@ -47,10 +48,6 @@ export function VehicleCard({
   const badge = STATUS_BADGE[vehicle.status];
   const facts = new Map(card.facts.map((fact) => [fact.label, fact]));
   const version = collapseWhitespace(vehicle.version ?? "");
-  const ariaLabel = card.priceLabel
-    ? `${display.titleWithYear} — ${card.priceLabel}`
-    : display.titleWithYear;
-
   return (
     <article className="vehicle-card listing-card card-lift group">
       <RememberVehicleSnapshot
@@ -78,7 +75,6 @@ export function VehicleCard({
       <StockVehicleLink
         href={display.path}
         returnTo={returnTo}
-        ariaLabel={ariaLabel}
         className="listing-card-main"
       >
         <div className="listing-card-photo relative aspect-[4/3] overflow-hidden bg-asphalt" data-vehicle-photo="">
@@ -98,13 +94,19 @@ export function VehicleCard({
           <div className="listing-card-shade" aria-hidden="true" />
           <div className="listing-card-badges">
             {badge ? <span className={badge.className}>{badge.label}</span> : null}
+            {!badge && isNewListing(vehicle.createdAt) ? (
+              <span className="bg-cream text-asphalt">Novo</span>
+            ) : null}
+            {!badge && vehicle.priceDrop ? (
+              <span className="bg-brand text-cream">Baixou o preço</span>
+            ) : null}
             {!cover ? <span className="bg-white/15 text-cream">Sem foto</span> : null}
             {showDestaque ? <span className="bg-brand text-cream">Destaque</span> : null}
           </div>
         </div>
         <div className="listing-card-name" data-vehicle-body="">
           <p className="listing-card-brand">{formatBrandName(vehicle.brand)}</p>
-          <h3 className="listing-card-title font-display">{formatModelName(vehicle.model)}</h3>
+          <h2 className="listing-card-title font-display">{formatModelName(vehicle.model)}</h2>
         </div>
         <div className="listing-card-version">
           {version ? <p>{version}</p> : null}
@@ -117,7 +119,7 @@ export function VehicleCard({
           <Fact fact={facts.get("Câmbio")} />
         </div>
         <div className="listing-card-price-row">
-          {card.priceLabel ? <p className="listing-card-price font-display text-brand">{card.priceLabel}</p> : null}
+          {card.priceLabel ? <p className="listing-card-price font-display text-brand-light">{card.priceLabel}</p> : null}
         </div>
       </StockVehicleLink>
       <div className="vehicle-card-favorite">

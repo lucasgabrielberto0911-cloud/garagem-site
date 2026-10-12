@@ -109,7 +109,7 @@ function ComparisonTable({ selected, rows }: { selected: VehicleCardData[]; rows
                 {selected.map((vehicle, index) => {
                   const note = index > 0 && row.metric ? comparisonDifference(row.metric, vehicle[row.metric], selected[0][row.metric]) : null;
                   const differs = index > 0 && (row.metric ? Boolean(note) : differentComparisonText(row.value(vehicle), row.value(selected[0])));
-                  return <td key={vehicle.id} data-comparison-difference={differs ? "" : undefined} className={"border-l border-white/10 px-2 py-3 leading-relaxed " + (differs ? "bg-white/[0.045] " : "") + (row.label === "Preço" ? "font-display text-sm font-semibold text-brand sm:text-lg" : "text-xs text-cream sm:text-sm")}>
+                  return <td key={vehicle.id} data-comparison-difference={differs ? "" : undefined} className={"border-l border-white/10 px-2 py-3 leading-relaxed " + (differs ? "bg-white/[0.045] " : "") + (row.label === "Preço" ? "font-display text-sm font-semibold text-brand-light sm:text-lg" : "text-xs text-cream sm:text-sm")}>
                     {row.value(vehicle)}
                     {note ? <span className="mt-1 block font-sans text-[10px] font-normal leading-relaxed text-muted sm:text-xs">{note}</span> : null}
                   </td>;

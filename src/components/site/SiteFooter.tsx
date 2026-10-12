@@ -130,7 +130,7 @@ export async function SiteFooter() {
                     href={telUrl(index)}
                     className="inline-flex min-h-[36px] items-center gap-2 transition hover:text-cream"
                   >
-                    <IconPhone className="h-4 w-4 shrink-0 text-brand" />
+                    <IconPhone className="h-4 w-4 shrink-0 text-brand-light" />
                     <span>{phone.label}</span>
                   </a>
                 </li>
@@ -149,7 +149,7 @@ export async function SiteFooter() {
                   href={`mailto:${site.email}`}
                   className="inline-flex min-h-[36px] items-center gap-2 transition hover:text-cream"
                 >
-                  <IconMail className="h-4 w-4 shrink-0 text-brand" />
+                  <IconMail className="h-4 w-4 shrink-0 text-brand-light" />
                   <span className="flex flex-col">
                     <span>{site.email}</span>
                     <span className="text-[11px] text-muted">{emailCopy.hint}</span>
@@ -164,17 +164,17 @@ export async function SiteFooter() {
                     rel="noopener noreferrer"
                     className="inline-flex min-h-[36px] items-center gap-2 transition hover:text-cream"
                   >
-                    <IconMapPin className="h-4 w-4 shrink-0 text-brand" />
+                    <IconMapPin className="h-4 w-4 shrink-0 text-brand-light" />
                     <span>Google Maps</span>
                   </a>
                 </li>
               ) : null}
               <li className="flex items-start gap-2">
-                <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                <IconMapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
                 <span>{site.address}</span>
               </li>
               <li className="flex items-center gap-2 text-xs">
-                <IconClock className="h-4 w-4 shrink-0 text-brand" />
+                <IconClock className="h-4 w-4 shrink-0 text-brand-light" />
                 <span>{site.hours}</span>
               </li>
             </ul>
@@ -189,7 +189,7 @@ export async function SiteFooter() {
               href={telUrl(index)}
               className="flex min-h-[48px] items-center justify-center gap-2 border border-white/10 bg-asphalt/50 text-sm text-cream touch-manipulation"
             >
-              <IconPhone className="h-4 w-4 text-brand" />
+              <IconPhone className="h-4 w-4 text-brand-light" />
               {phone.label}
             </a>
           ))}
@@ -197,7 +197,7 @@ export async function SiteFooter() {
             href={`mailto:${site.email}`}
             className="flex min-h-[48px] items-center justify-center gap-2 border border-white/10 bg-asphalt/50 text-sm text-cream touch-manipulation"
           >
-            <IconMail className="h-4 w-4 text-brand" />
+            <IconMail className="h-4 w-4 text-brand-light" />
             {site.email}
           </a>
           <Link

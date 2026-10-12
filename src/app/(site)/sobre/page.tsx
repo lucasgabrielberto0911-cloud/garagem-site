@@ -118,7 +118,7 @@ export default async function SobrePage() {
               key={stat.label}
               className="flex flex-col items-center bg-ink px-4 py-6 text-center"
             >
-              <p className="font-display text-2xl font-bold text-brand sm:text-3xl">
+              <p className="font-display text-2xl font-bold text-brand-light sm:text-3xl">
                 {stat.value}
               </p>
               <p className="mt-2 text-[11px] uppercase tracking-wider text-muted">
@@ -234,7 +234,7 @@ export default async function SobrePage() {
                     className="flex flex-col items-center border border-white/10 bg-ink p-6 text-center lg:items-start lg:text-left"
                   >
                     <span className="inline-flex h-11 w-11 items-center justify-center bg-brand/10">
-                      <Icon className="h-5 w-5 text-brand" />
+                      <Icon className="h-5 w-5 text-brand-light" />
                     </span>
                     <h3 className="mt-5 font-display text-base font-semibold text-cream">
                       {title}
@@ -275,7 +275,7 @@ export default async function SobrePage() {
                   },
                 ].map((item) => (
                   <li key={item.step} className="text-center sm:text-left">
-                    <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
+                    <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand-light">
                       {item.step}
                     </p>
                     <h3 className="mt-2 font-display text-base font-semibold text-cream">
@@ -328,7 +328,7 @@ export default async function SobrePage() {
                       href={publicSite.instagramUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-brand underline-offset-4 transition hover:underline"
+                      className="text-brand-light underline-offset-4 transition hover:underline"
                     >
                       {publicSite.instagram}
                     </a>

@@ -92,7 +92,7 @@ export function FavoriteButton({
         aria-pressed={active}
         className={`inline-flex min-h-[48px] items-center justify-center gap-2 border px-5 font-display text-xs font-semibold uppercase tracking-wide transition touch-manipulation sm:text-sm ${
           active
-            ? "border-brand bg-brand/10 text-brand"
+            ? "border-brand bg-brand/10 text-brand-light"
             : "border-white/20 text-cream hover:border-brand hover:bg-white/5"
         } ${className}`}
       >
@@ -118,10 +118,10 @@ export function FavoriteButton({
       } ${
         ghost
           ? active
-            ? "text-brand"
-            : "text-cream/90 hover:text-brand"
+            ? "text-brand-light"
+            : "text-cream/90 hover:text-brand-light"
           : active
-            ? "border-brand bg-brand/20 text-brand"
+            ? "border-brand bg-brand/20 text-brand-light"
             : "border-white/20 bg-asphalt/70 text-cream hover:border-brand"
       } ${className}`}
     >

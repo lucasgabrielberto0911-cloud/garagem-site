@@ -56,7 +56,7 @@ export function StockBackLink({
       scroll={href ? false : undefined}
       className="mb-2 inline-flex items-center py-1 text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
     >
-      <span className="mr-2 text-brand" aria-hidden="true">
+      <span className="mr-2 text-brand-light" aria-hidden="true">
         ←
       </span>
       {href ? "Voltar aos resultados" : "Voltar ao estoque"}

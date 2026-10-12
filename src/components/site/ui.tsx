@@ -81,7 +81,7 @@ export function SectionHeading({
   return (
     <div className="text-left">
       {eyebrow ? (
-        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
+        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light">
           {eyebrow}
         </p>
       ) : null}
@@ -121,7 +121,7 @@ export function PageHeader({
   const Heading = headingAs;
   return (
     <header className="text-center">
-      <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
+      <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand-light">
         {eyebrow}
       </p>
       <Heading

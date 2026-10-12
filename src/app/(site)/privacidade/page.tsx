@@ -175,7 +175,7 @@ export default function PrivacidadePage() {
           </p>
           <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-muted">
             Fale direto com a gente. Também vale conferir as{" "}
-            <Link href="/faq" className="text-brand underline-offset-4 hover:underline">
+            <Link href="/faq" className="text-brand-light underline-offset-4 hover:underline">
               dúvidas frequentes
             </Link>
             .

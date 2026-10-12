@@ -29,7 +29,7 @@ export function HomeAssistantButton() {
         className="assistant-cta relative isolate inline-flex min-h-[52px] w-full lg:flex lg:h-full items-center justify-center gap-2 overflow-hidden border border-brand/80 bg-asphalt px-3 py-4 lg:py-3.5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-ink touch-manipulation sm:gap-2.5 sm:px-7 sm:text-base lg:text-sm"
       >
         <span className="relative z-10 inline-flex items-center gap-2 sm:gap-2.5">
-          <IconChat className="h-5 w-5 shrink-0 text-brand" />
+          <IconChat className="h-5 w-5 shrink-0 text-brand-light" />
           <span className="sm:hidden">Assistente</span>
           <span className="hidden sm:inline">Pergunte ao assistente</span>
         </span>

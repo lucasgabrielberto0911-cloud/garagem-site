@@ -24,7 +24,7 @@ export function FavoritesLink({ className = "" }: { className?: string }) {
         strokeWidth="1.7"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={`h-5 w-5 ${ready && count > 0 ? "text-brand" : ""}`}
+        className={`h-5 w-5 ${ready && count > 0 ? "text-brand-light" : ""}`}
         aria-hidden="true"
       >
         <path d="M12 20s-7-4.6-7-9.6A4.4 4.4 0 0112 7a4.4 4.4 0 017 3.4c0 5-7 9.6-7 9.6z" />

@@ -172,7 +172,7 @@ export default async function SeminovosCidadePage({
             <ol className="mt-5 grid gap-3 sm:grid-cols-2">
               {city.steps.map((step, index) => (
                 <li key={step.title} className="border border-white/10 bg-ink p-5">
-                  <span className="font-display text-sm font-semibold text-brand">
+                  <span className="font-display text-sm font-semibold text-brand-light">
                     {index + 1}
                   </span>
                   <p className="mt-1 font-display text-sm font-semibold text-cream">

@@ -17,7 +17,8 @@ const config: Config = {
         cream: "#F7F5F2",
         ink: "#17171A",
         brand: {
-          DEFAULT: "#E8181C",
+          DEFAULT: "#D91519",
+          light: "#FF4448",
           orange: "#FF8A00",
           yellow: "#FFC72C",
         },

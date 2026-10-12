@@ -53,7 +53,7 @@ export default async function ContatoPage() {
           >
             <div className="h-1 bg-brand" aria-hidden="true" />
             <div className="p-3.5 sm:p-6">
-              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
+              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light">
                 Canal da loja
               </p>
               <h2
@@ -75,7 +75,7 @@ export default async function ContatoPage() {
                     <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                       Telefone
                     </span>
-                    <span className="mt-1 block font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand sm:text-3xl">
+                    <span className="mt-1 block font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand-light sm:text-3xl">
                       {phone.label}
                     </span>
                   </span>

@@ -13,6 +13,7 @@ import { listingDraftFromVehicle } from "@/lib/listing-score";
 import { scoreListingAfterSave } from "@/lib/listing-score-store";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { getSession } from "@/lib/auth";
 import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/lib/photo-master";
 import { copyPrivateMaster } from "@/lib/photo-master-store";
@@ -472,6 +473,8 @@ export async function updateVehicle(
       });
       return { saved, current, currentPhotos };
     });
+    // Fora da transação: se a tabela ainda não existir, o Salvar não é afetado.
+    await recordVehiclePriceChange(id, result.current.price, result.saved.price);
     const updated = result.saved;
 
     // Só o Salvar chama o Jev, e só se mudou o que ele lê.

@@ -27,11 +27,11 @@ function formatTestimonialDate(value: Date | string | null | undefined) {
 function StarRow({ rating }: { rating: number }) {
   const safe = Math.min(5, Math.max(1, Math.round(rating)));
   return (
-    <p className="mt-2 flex gap-0.5 text-brand" aria-label={`${safe} de 5`}>
+    <p className="mt-2 flex gap-0.5 text-brand-light" role="img" aria-label={`${safe} de 5`}>
       {([1, 2, 3, 4, 5] as const).map((star) => (
         <IconStar
           key={star}
-          className={`h-3.5 w-3.5 ${star <= safe ? "text-brand" : "text-white/15"}`}
+          className={`h-3.5 w-3.5 ${star <= safe ? "text-brand-light" : "text-white/15"}`}
         />
       ))}
     </p>
@@ -85,7 +85,7 @@ export function Testimonials({ items }: { items: TestimonialItem[] }) {
             key={item.id}
             className="flex flex-col border border-white/10 bg-ink p-4 text-left sm:p-5"
           >
-            <IconQuote className="h-6 w-6 text-brand/60" />
+            <IconQuote className="h-6 w-6 text-brand-light/60" />
             <StarRow rating={item.rating} />
             <blockquote className="mt-3 flex-1 text-sm leading-snug text-cream/90">
               {cleanMessage}
@@ -148,7 +148,7 @@ function Avatar({
 
   return (
     <div
-      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/15 font-display text-sm font-semibold text-brand"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/15 font-display text-sm font-semibold text-brand-light"
       aria-hidden="true"
     >
       {initials}

@@ -10,7 +10,7 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
             <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-4 py-1 font-display text-base font-semibold text-cream marker:hidden touch-manipulation">
               <span>{item.question}</span>
               <span
-                className="mt-1 shrink-0 text-brand transition-transform duration-300 group-open:rotate-45"
+                className="mt-1 shrink-0 text-brand-light transition-transform duration-300 group-open:rotate-45"
                 aria-hidden="true"
               >
                 <svg
