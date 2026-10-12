@@ -13,7 +13,7 @@ const brandHex = (tailwindConfig.theme?.extend?.colors as { brand: { DEFAULT: st
 const brandChannels = brandHex.slice(1).match(/../g)!.map(value => parseInt(value, 16)).join(", ");
 
 const live = process.env.CHAT_QA_LIVE === "1";
-const shots = "/workspace/chat-qa/ui/shots";
+const shots = process.env.CHAT_QA_SHOTS ?? "test-results/chat-ui-shots";
 const stock: ChatVehicleRecord[] = samples.map(sample => ({ ...sample, category: "carro", accessories: ["Ar-condicionado", "Direção hidráulica"], doors: 4 }));
 const cases = ["quero um carro forte e econômico", "preciso de um carro espaçoso e barato", "automático e econômico", "SUV para família", "me mostra opções de carro econômico"];
 const viewports = [{ width: 320, height: 740 }, { width: 360, height: 740 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 1366, height: 900 }, { width: 1440, height: 900 }];
