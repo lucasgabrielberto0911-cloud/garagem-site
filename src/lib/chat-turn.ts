@@ -1487,7 +1487,7 @@ export function formatChatResult(result: ChatTurnResult, input: Parameters<typeo
     result.vehicles = picks.map(toChatVehicleCard);
   }
   const technicalAnswer = ["expert", "spec-direct", "stock-fact"].includes(result.meta?.policy ?? "") && !/^•\s/m.test(result.reply);
-  if (!technicalAnswer && (picks.length >= 2 || (picks.length === 1 && (linkedPaths.length || result.meta?.policy === "inventory-search")))) {
+  if (!technicalAnswer && (picks.length >= 2 || (picks.length === 1 && (linkedPaths.length || result.meta?.policy === "inventory-search" || result.meta?.policy === "stock-equipment")))) {
     const rows = result.reply.split("\n").filter(line => /^•\s/.test(line.trim()));
     const reasons = new Map<string, string>();
     for (const [index, line] of rows.entries()) {
