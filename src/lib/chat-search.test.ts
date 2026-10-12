@@ -282,13 +282,15 @@ test("busca não perde anúncios depois do antigo teto de 80", async () => {
   }));
   try {
     prisma.vehicle.findMany = (async (args: unknown) => {
-      calls++;
       const query = args as {
         where: Record<string, unknown>;
         cursor?: { id: string };
         take: number;
       };
       assert.equal(query.where.status, "disponivel");
+      // Consulta à parte dos consignados (desempate interno): não conta como página do estoque.
+      if (query.where.consigned === true) return [];
+      calls++;
       assert.equal(query.where.historical, false);
       const start = query.cursor
         ? fixture.findIndex((v) => v.id === query.cursor!.id) + 1

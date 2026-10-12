@@ -110,6 +110,8 @@ export type ChatVehicleRecord = {
   engine?: string | null;
   doors?: number | null;
   accessories?: string[];
+  /** Só uso interno (desempate): nunca vai para o prompt nem para a resposta. */
+  consigned?: boolean;
   photos?: Array<{ url: string; thumbnailUrl?: string | null }>;
 };
 
@@ -151,12 +153,25 @@ export async function loadChatStock(): Promise<ChatVehicleRecord[]> {
       cursor = page[page.length - 1]!.id;
     }
   };
+  let rows: ChatVehicleRecord[];
   try {
-    return await read(true);
+    rows = await read(true);
   } catch (error) {
     if (!isMissingColumnError(error, "historical")) throw error;
-    return read(false);
+    rows = await read(false);
   }
+  // O select público não expõe `consigned`; o desempate "estoque próprio primeiro" usa uma consulta à parte.
+  try {
+    const consigned = await prisma.vehicle.findMany({
+      where: { status: "disponivel", consigned: true },
+      select: { id: true },
+    });
+    const ids = new Set(consigned.map(row => row.id));
+    if (ids.size) rows = rows.map(row => (ids.has(row.id) ? { ...row, consigned: true } : row));
+  } catch (error) {
+    if (!isMissingColumnError(error, "consigned")) throw error;
+  }
+  return rows;
 }
 
 function normalize(value: string) {
@@ -489,7 +504,7 @@ export function mentionedModelPools(
 }
 
 function pickFromModelGroup(group: ChatVehicleRecord[]) {
-  return [...group].sort((a, b) => a.price - b.price || a.km - b.km)[0] ?? null;
+  return [...group].sort((a, b) => Number(!!a.consigned) - Number(!!b.consigned) || a.price - b.price || a.km - b.km)[0] ?? null;
 }
 
 export function pickComparedModelVehicles(
@@ -764,7 +779,9 @@ export function matchInterestVehicle(
         score += 3;
       }
     }
-    if (score > bestScore) {
+    // Empate (ex.: só "Civic"): a unidade própria vem antes da consignada.
+    const ownWinsTie = score === bestScore && !!best?.consigned && !vehicle.consigned;
+    if (score > bestScore || (score > 0 && ownWinsTie)) {
       best = vehicle;
       bestScore = score;
     }

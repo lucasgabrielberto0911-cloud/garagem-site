@@ -9,7 +9,7 @@ import { RecentlyViewedVehicles } from "@/components/site/RecentlyViewedVehicles
 import { StockFiltersSkeleton } from "@/components/site/StockFiltersSkeleton";
 import { StockBrowseShell } from "@/components/site/StockPending";
 import { Container, PageHeader } from "@/components/site/ui";
-import { buildPageMetadata, itemListJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, buildPageMetadata, itemListJsonLd } from "@/lib/seo";
 import { ESTOQUE_SEO_TITLE, SEO_LOCAL_LOCATION } from "@/lib/seo-local";
 import { site } from "@/lib/site";
 import { getStockCatalogLinks, getStockFacets, getStockPage } from "@/lib/vehicles";
@@ -40,6 +40,12 @@ export default async function EstoquePage() {
           })}
         />
       ) : null}
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Início", path: "/" },
+          { name: "Estoque", path: "/estoque" },
+        ])}
+      />
       <Container>
         <PageHeader
           eyebrow="Estoque"

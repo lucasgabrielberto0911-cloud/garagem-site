@@ -367,7 +367,12 @@ export function vehicleJsonLd(vehicle: {
   };
   if (priceOk) {
     offers.price = vehicle.price;
+    // Google pede validade do preço; a ficha revalida a cada 10 min, então a data nunca fica vencida.
+    offers.priceValidUntil = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
   }
+  const images = vehicle.photos
+    .map((photo) => (photo.url ? absoluteUrl(publicPhotoSrc(photo.url)) : ""))
+    .filter(Boolean);
 
   return {
     "@context": "https://schema.org",
@@ -381,6 +386,7 @@ export function vehicleJsonLd(vehicle: {
     productionDate: String(vehicle.year),
     ...(display.color ? { color: display.color } : {}),
     ...(description ? { description } : {}),
+    ...(vehicle.version?.trim() ? { vehicleConfiguration: vehicle.version.trim() } : {}),
     ...(vehicle.engine?.trim()
       ? {
           vehicleEngine: {
@@ -392,7 +398,7 @@ export function vehicleJsonLd(vehicle: {
     ...(vehicle.doors != null && vehicle.doors > 0
       ? { numberOfDoors: vehicle.doors }
       : {}),
-    image: vehicle.photos.map((photo) => photo.url ? absoluteUrl(publicPhotoSrc(photo.url)) : "").filter(Boolean),
+    ...(images.length ? { image: images } : {}),
     url: absoluteUrl(path),
     mileageFromOdometer: {
       "@type": "QuantitativeValue",
