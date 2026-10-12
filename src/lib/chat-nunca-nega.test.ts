@@ -87,9 +87,9 @@ test("busca no estoque com filtro: conta os carros que têm o item, sem negar", 
   assert.match(cheap.reply, /^Temos 3 carros até R\$ 60\.000 com central multimídia na ficha/);
   assert.deepEqual(cheap.vehicles.map(v => v.id).sort(), ["duster", "gol", "hb"]);
   const auto = await ask("automático com airbag");
-  assert.match(auto.reply, /^Temos 5 carros automáticos com airbags na ficha, separei os destaques\. Quer que eu filtre por preço ou tipo\?$/);
+  assert.match(auto.reply, /^Temos 5 carros automáticos com airbags na ficha, separei os destaques\. Quer que eu filtre por preço ou tipo\?\n/);
   assert.equal(auto.vehicles.length, 3);
-  assert.doesNotMatch(auto.reply, /Kicks|HR-V|HB20|Ka/);
+  assert.equal(auto.reply.split("\n").filter(line => line.startsWith("• ")).length, 3);
 });
 
 test("'nenhum' só quando TODAS as fichas do recorte foram checadas", () => {

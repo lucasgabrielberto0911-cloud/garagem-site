@@ -36,7 +36,7 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /mais de 1\.000 carros vendidos/);
   assert.match(
     CHAT_SYSTEM_PROMPT,
-    /Aracruz, Vitória, Linhares, Serra, Vila Velha/,
+    /Não cite cidade, localização nem endereço/,
   );
   assert.match(CHAT_SYSTEM_PROMPT, /troca \(carro ou moto\)/);
   assert.match(CHAT_SYSTEM_PROMPT, /financia em até 60x/);
@@ -48,7 +48,7 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /único automático/);
   assert.match(CHAT_SYSTEM_PROMPT, /NUNCA inventar equipamento/);
   assert.match(CHAT_SYSTEM_PROMPT, /preço de referência FIPE/);
-  assert.match(CHAT_SYSTEM_PROMPT, /sem markdown/);
+  assert.match(CHAT_SYSTEM_PROMPT, /nome em negrito clicável/);
   assert.match(CHAT_SYSTEM_PROMPT, /eae/);
   assert.match(CHAT_SYSTEM_PROMPT, /um por linha/);
   assert.match(CHAT_SYSTEM_PROMPT, /COMO AJUDAR DE VERDADE/);
@@ -69,7 +69,7 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /Nunca começar com “não posso”/);
   assert.match(CHAT_SYSTEM_PROMPT, /responda com a ficha técnica do modelo/);
   assert.match(CHAT_SYSTEM_PROMPT, /ESCOLHER um carro/);
-  assert.match(CHAT_SYSTEM_PROMPT, /consultor monta a simulação/);
+  assert.match(CHAT_SYSTEM_PROMPT, /consultor confirma as condições/);
   assert.match(CHAT_SYSTEM_PROMPT, /NUNCA invente banco/);
   assert.match(CHAT_SYSTEM_PROMPT, /KM, câmbio e equipamentos/);
   assert.match(CHAT_SYSTEM_PROMPT, /Esse carro ainda tem/);

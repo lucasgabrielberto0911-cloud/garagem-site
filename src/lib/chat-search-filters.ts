@@ -69,7 +69,7 @@ export function parseChatSearchRanges(value: string): ChatSearchRanges {
   }
   const price =
     withoutChatMetrics(text).match(
-      /\b(?:a partir de|acima de)\s+(?:r\$\s*)?([\d.,]+)\s*(mil|k)?\b/,
+      /\b(?:a partir de|acima de|mais de|superior a)\s+(?:r\$\s*)?([\d.,]+)\s*(mil|k)?\b/,
     ) ??
     withoutChatMetrics(text).match(
       /\b(?:entre|de)\s+(?:r\$\s*)?([\d.,]+)\s*(mil|k)?\s+(?:a|ate|e)\s+(?:r\$\s*)?[\d.,]+/,

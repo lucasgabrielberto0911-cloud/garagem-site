@@ -43,7 +43,7 @@ test("bateria de 25 perguntas: comparação, mídia, vendidos, preço, pagamento
     ["manda mais fotos", /De qual deles: .*City.*Kicks.*HR-V/, { previousVehicleIds: ["lote-city", "lote-kicks", "lote-hrv"] }],
     ["qual o preço do City?", /65\.000/],
     ["aceita troca?", /Aceitamos sim/],
-    ["vocês financiam?", /60 vezes/],
+    ["vocês financiam?", /análise de crédito/],
     ["aceita cartão?", /18 vezes/],
     ["qual horário de vocês?", /8h às 23h/],
   ];

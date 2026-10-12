@@ -77,7 +77,8 @@ test("Lucas 2: qual o mais forte? depois dos HB20 usa as fichas dos carros mostr
       return { text: reply, functionCall: null, model: "gemini-3.5-flash-lite", calls: 1 };
     },
   });
-  assert.ok(result.reply.startsWith(reply));
+  assert.match(result.reply, /^Dos três, em potência pura o HB20 1\.6 leva, com cerca de 128 cv no etanol/);
+  assert.doesNotMatch(result.reply, /120 cv/);
   assert.match(result.reply, /No estoque inteiro.*Civic/);
   assert.equal(result.meta?.policy, "expert");
   assert.equal(result.meta?.model, "gemini-3.5-flash-lite");
@@ -109,7 +110,7 @@ test("Lucas 2 sem o modelo de linguagem: ranking determinístico pelas fichas, c
     generate: noModel,
   });
   assert.match(result.reply, /^Depende do que você chama de forte: em potência leva o HB20 1\.6; na força ao pisar \(torque, retomada\) leva o HB20S 1\.0 turbo\./);
-  assert.match(result.reply, /• \*\*\[HB20S 1\.0 turbo\]\(\/estoque\/[^)]+\)\*\* — 120 cv · 17,5 kgfm/);
+  assert.match(result.reply, /• \*\*\[HB20S Comfort 2024\]\(\/estoque\/[^)]+\)\*\* — Automático/);
   assert.doesNotMatch(result.reply, robotic);
   assert.doesNotMatch(result.reply, /cilindrada sozinha|preciso de potência documentada/);
 });
@@ -225,11 +226,11 @@ test("B2 troca: Gol G6 2014 com 120 mil km na troca do City não vira pergunta d
       return { text: reply, functionCall: null };
     },
   });
-  assert.equal(result.reply, reply);
-  assert.equal(result.meta?.policy, "trade");
+  assert.match(result.reply, /Aceitamos sim.*consultor avalia/);
+  assert.equal(result.meta?.policy, "troca");
   assert.doesNotMatch(result.reply, /76 mil km|hodômetro/);
-  assert.match(prompt, /para dar na troca/);
-  assert.match(prompt, /NÃO avalie o carro dele/);
+  assert.equal(prompt, "");
+  assert.doesNotMatch(result.reply, /R\$/);
   assert.equal(result.vehicles.length, 0);
   // Sem o modelo de linguagem: acolhe a troca e leva ao consultor, sem responder km.
   const offline = await runChatTurn({

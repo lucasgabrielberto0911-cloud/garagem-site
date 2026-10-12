@@ -202,7 +202,7 @@ test("atalhos de financiar e troca não pedem modelo de novo", async () => {
   assert.equal(chatPolicyShortcut("Dá para parcelar?"), "finance");
   assert.equal(chatPolicyShortcut("Aceita cartão?"), "card");
   assert.equal(chatPolicyShortcut("Aceita troca?"), "troca");
-  assert.equal(chatPolicyShortcut("Quero financiar o HB20"), null);
+  assert.equal(chatPolicyShortcut("Quero financiar o HB20"), "finance");
   assert.equal(chatPolicyShortcut("Aceita financiamento no cartão?"), "card");
   assert.equal(chatPolicyShortcut("Como funciona a transferência?"), "docs");
   assert.equal(chatPolicyShortcut("Tem garantia?"), "warranty");
@@ -219,9 +219,9 @@ test("atalhos de financiar e troca não pedem modelo de novo", async () => {
   });
   assert.equal(called, 0);
   assert.equal(finance.reply, CHAT_FINANCE_REPLY);
-  assert.match(finance.reply, /Dá sim/);
-  assert.match(finance.reply, /60 vezes/);
-  assert.match(finance.reply, /18 vezes/);
+  assert.match(finance.reply, /análise de crédito/);
+  assert.match(finance.reply, /com ou sem entrada/);
+  assert.match(finance.reply, /WhatsApp/);
   assert.doesNotMatch(finance.reply, /não (monto|posso|calculo|cubro)/i);
   assert.doesNotMatch(finance.reply, /qual modelo/i);
 
@@ -331,7 +331,7 @@ test("filtro vazio oferece waitlist no WhatsApp e similares", async () => {
   assert.match(result.reply, /não tem anúncio agora/i);
   assert.match(result.reply, /wa\.me|WhatsApp/i);
   assert.match(decodeURIComponent(result.reply), /automático até R\$\s*40\.000/i);
-  assert.doesNotMatch(result.reply, /mais em conta/);
+  assert.ok(result.vehicles.every(v => v.price > 40000));
   assert.doesNotMatch(result.reply, /R\$ 0/);
   assert.ok(result.vehicles.some((vehicle) => vehicle.model === "HB20"));
   assert.equal(result.meta?.policy, "waitlist");

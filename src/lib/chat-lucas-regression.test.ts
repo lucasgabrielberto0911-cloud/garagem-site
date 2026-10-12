@@ -1,3 +1,4 @@
+import { textoVisivelChat } from "./chat-test-text";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { runChatTurn } from "./chat-turn";
@@ -45,8 +46,8 @@ test("conversa exata: Civic → consumo/autonomia do Kicks → marchas do Coroll
   ] as const) {
     const result = await runChatTurn({ mensagem, historico, stock, generate: noModel });
     assert.equal(result.meta?.policy, "spec-direct", mensagem);
-    assert.match(result.reply, pattern, mensagem);
-    assert.doesNotMatch(result.reply, /100\.000|Olha o que tenho|R\$/);
+    assert.match(textoVisivelChat(result.reply), pattern, mensagem);
+    assert.doesNotMatch(textoVisivelChat(result.reply), /100\.000|Olha o que tenho|R\$/);
     historico.push({ role: "user", content: mensagem }, { role: "assistant", content: result.reply });
   }
   assert.doesNotMatch(scopeChatMessage("tem SUV?", historico, stock), /até 100 mil/);
@@ -58,17 +59,17 @@ test("ranking considera Lancer após os primeiros 16 anúncios, inclusive depois
     const plan = planExpertTurn({ mensagem: "qual o mais forte da loja?", historico, stock: many, promptStock: many.slice(0, 3) });
     assert.match(plan.stockRanking!, /Lancer 2.0: 160 cv/);
     const result = await runChatTurn({ mensagem: "qual o mais forte?", historico, stock: many, generate: noModel });
-    assert.match(result.reply, /Lancer.*160 cv/);
-    if (historico.length) assert.match(result.reply, /HB20/);
+    assert.match(textoVisivelChat(result.reply), /Lancer.*160 cv/);
+    if (historico.length) assert.match(textoVisivelChat(result.reply), /HB20/);
   }
   const generated = await runChatTurn({ mensagem: "qual o mais forte da loja?", historico: [], stock: many,
     generate: async () => ({ text: "O HB20 1.6 tem 128 cv com etanol.", functionCall: null }),
   });
-  assert.match(generated.reply, /No estoque inteiro.*Lancer.*160 cv/);
+  assert.match(textoVisivelChat(generated.reply), /No estoque inteiro.*Lancer.*160 cv/);
   const fallback = await runChatTurn({ mensagem: "qual o mais forte?", historico: [], stock: many,
     generate: async () => ({ text: CHAT_FALLBACK_REPLY, functionCall: null }),
   });
-  assert.match(fallback.reply, /Lancer.*160 cv/);
+  assert.match(textoVisivelChat(fallback.reply), /Lancer.*160 cv/);
   assert.ok(!fallback.reply.startsWith(CHAT_FALLBACK_REPLY));
   for (const question of ["qual o mais rápido?", "qual o mais econômico?"]) {
     const plan = planExpertTurn({ mensagem: question, historico: [], stock: many, promptStock: [hb] });
@@ -112,10 +113,10 @@ test("tom positivo na manutenção e resposta honesta à pergunta direta sobre c
   assert.match(CHAT_SYSTEM_PROMPT, /só afirma na nossa unidade se estiver nos acessórios da ficha/);
   for (const spec of VEHICLE_SPECS) assert.doesNotMatch(spec.manutencao, /ponto de atenção|vale olhar|problemas crônicos|mais caras/);
   const result = await runChatTurn({ mensagem: "o Lancer 2.0 bebe muito?", historico: [], stock, generate: noModel });
-  assert.match(result.reply, /8,8 km\/l na cidade.*10,7 km\/l na estrada/);
+  assert.match(textoVisivelChat(result.reply), /8,8 km\/l na cidade.*10,7 km\/l na estrada/);
   // Resposta direta e honesta, puxando para o lado bom do carro (sem defeito espontâneo).
-  assert.match(result.reply, /A favor dele: motor 2\.0 MIVEC robusto/);
-  assert.doesNotMatch(result.reply, /suspensão|bomba|ruim/);
+  assert.match(textoVisivelChat(result.reply), /A favor dele: motor 2\.0 MIVEC robusto/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /suspensão|bomba|ruim/);
 });
 
 test("jornada de seis turnos responde a pergunta e conserva cards na busca", async () => {
@@ -124,18 +125,18 @@ test("jornada de seis turnos responde a pergunta e conserva cards na busca", asy
     const result = await runChatTurn({ mensagem, historico, stock, generate: noModel });
     // Pontos positivos: listinha compacta (4 a 6 linhas) com câmbio da ficha, espaço e economia.
     if (mensagem.includes("pontos positivos")) {
-      assert.match(result.reply, /Kicks/);
-      assert.match(result.reply, /CVT/);
-      assert.match(result.reply, /porta-malas/);
-      assert.match(result.reply, /km\/l/);
+      assert.match(textoVisivelChat(result.reply), /Kicks/);
+      assert.match(textoVisivelChat(result.reply), /CVT/);
+      assert.match(textoVisivelChat(result.reply), /porta-malas/);
+      assert.match(textoVisivelChat(result.reply), /km\/l/);
       const points = result.reply.split("\n").filter(line => /^• \*\*/.test(line));
       assert.ok(points.length >= 4 && points.length <= 6);
     }
     if (mensagem.includes("até 70")) assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [hb.id]);
-    if (mensagem.includes("x HR-V")) assert.match(result.reply, /Os dois são ótimas escolhas/);
-    if (mensagem.includes("x HR-V")) assert.match(result.reply, /• Kicks[^\n]*\n• HR-V/);
-    if (mensagem.includes("vendedor")) assert.match(result.reply, /WhatsApp|wa\.me/);
-    assert.doesNotMatch(result.reply, /ponto de atenção|conferir.*suspensão/);
+    if (mensagem.includes("x HR-V")) assert.match(textoVisivelChat(result.reply), /Os dois são ótimas escolhas/);
+    if (mensagem.includes("x HR-V")) assert.match(textoVisivelChat(result.reply), /• Kicks[^\n]*\n• HR-V/);
+    if (mensagem.includes("vendedor")) assert.match(textoVisivelChat(result.reply), /WhatsApp|wa\.me/);
+    assert.doesNotMatch(textoVisivelChat(result.reply), /ponto de atenção|conferir.*suspensão/);
     historico.push({ role: "user", content: mensagem }, { role: "assistant", content: result.reply });
   }
 });
@@ -187,7 +188,7 @@ test("pesquisa fica no contexto da resposta e falha não impede o especialista",
         return { text: "O Argo Drive 1.3 2023 é uma opção econômica para o dia a dia.", functionCall: null };
       },
     });
-    assert.match(result.reply, /^O Argo/);
+    assert.match(textoVisivelChat(result.reply), /^O Argo/);
     assert.equal(Boolean(result.research), !unavailable);
   }
 });

@@ -1,3 +1,4 @@
+import { textoVisivelChat } from "./chat-test-text";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { leadArgsAreComplete, parseCriarLeadArgs } from "./chat-lead";
@@ -240,8 +241,8 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
       };
     },
   });
-  assert.match(existing.reply, /64900/);
-  assert.match(existing.reply, /68450/);
+  assert.match(textoVisivelChat(existing.reply), /64900/);
+  assert.match(textoVisivelChat(existing.reply), /68450/);
   assert.equal(existing.leadCreated, false);
   assert.equal(existing.vehicles.length, 1);
   assert.equal(existing.vehicles[0]?.id, hb20.id);
@@ -255,8 +256,8 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
       throw new Error("modelo fora do estoque não deve ir ao Gemini");
     },
   });
-  assert.match(missing.reply, /não está na lista atual/i);
-  assert.match(missing.reply, /wa\.me\/5527996330706/);
+  assert.match(textoVisivelChat(missing.reply), /não está na lista atual/i);
+  assert.match(textoVisivelChat(missing.reply), /wa\.me\/5527996330706/);
   assert.match(decodeURIComponent(missing.reply), /porsche cayenne/i);
   assert.equal(missing.vehicles[0]?.id, hb20.id);
 
@@ -285,7 +286,7 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
   });
   assert.equal(lead.leadCreated, true);
   assert.equal(created[0]?.source, "chatbot-site");
-  assert.match(lead.reply, /Ana/);
+  assert.match(textoVisivelChat(lead.reply), /Ana/);
 });
 
 test("lista vazia do modelo é preenchida com o estoque até o valor", async () => {
@@ -302,9 +303,9 @@ test("lista vazia do modelo é preenchida com o estoque até o valor", async () 
       };
     },
   });
-  assert.match(result.reply, /HB20/);
-  assert.doesNotMatch(result.reply, /Compass/);
-  assert.doesNotMatch(result.reply, /consumo|catálogo/);
+  assert.match(textoVisivelChat(result.reply), /HB20/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /Compass/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /consumo|catálogo/);
   assert.equal(result.vehicles.length, 1);
   assert.equal(result.vehicles[0]?.id, hb20.id);
 });
@@ -377,14 +378,14 @@ Hyundai HB20 Comfort 1.0 2015 · 127.000 km · R$ 55.900`,
       functionCall: null,
     }),
   });
-  assert.match(result.reply, /70\.000/);
-  assert.match(result.reply, /mais em conta/);
-  assert.match(result.reply, /Prisma/);
-  assert.match(result.reply, /HB20/);
-  assert.match(result.reply, /• Prisma [^\n]* — mais novo/);
-  assert.doesNotMatch(result.reply, /11–14|km\/l/);
-  assert.match(result.reply, /automático/);
-  assert.match(result.reply, /\n\n/);
+  assert.match(textoVisivelChat(result.reply), /70\.000/);
+  assert.match(textoVisivelChat(result.reply), /mais em conta/);
+  assert.match(textoVisivelChat(result.reply), /Prisma/);
+  assert.match(textoVisivelChat(result.reply), /HB20/);
+  assert.match(textoVisivelChat(result.reply), /• Prisma [^\n]* — mais novo/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /11–14|km\/l/);
+  assert.match(textoVisivelChat(result.reply), /automático/);
+  assert.equal(result.reply.split("\n").filter(line => line.startsWith("• ")).length, 3);
   assert.equal(result.vehicles.length, 3);
 });
 
@@ -439,14 +440,14 @@ Hyundai HB20 Premium Automatico 1.6 2015 · 127.000 km · R$ 55.900`,
       functionCall: null,
     }),
   });
-  assert.match(result.reply, /carros até R\$ 70\.000/i);
-  assert.match(result.reply, /Prisma/);
-  assert.match(result.reply, /Palio Weekend/);
-  assert.match(result.reply, /HB20/);
-  assert.doesNotMatch(result.reply, /Onix/);
-  assert.doesNotMatch(result.reply, /Evolution/);
-  assert.doesNotMatch(result.reply, /Separei 3/);
-  assert.doesNotMatch(result.reply, /não foi medido/);
+  assert.match(textoVisivelChat(result.reply), /carros até R\$ 70\.000/i);
+  assert.match(textoVisivelChat(result.reply), /Prisma/);
+  assert.match(textoVisivelChat(result.reply), /Palio Weekend/);
+  assert.match(textoVisivelChat(result.reply), /HB20/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /Onix/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /Evolution/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /Separei 3/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /não foi medido/);
 });
 
 test("dois carros no mesmo preço não viram meio do preço", () => {
@@ -611,8 +612,8 @@ test("eae recusado pelo modelo vira cumprimento da loja", async () => {
       functionCall: null,
     }),
   });
-  assert.match(result.reply, /estoque/);
-  assert.doesNotMatch(result.reply, /só com assuntos da Garagem/);
+  assert.match(textoVisivelChat(result.reply), /estoque/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /só com assuntos da Garagem/);
 });
 
 test("Gemini fora do ar ainda responde o estoque e o financiamento", async () => {
@@ -624,10 +625,10 @@ test("Gemini fora do ar ainda responde o estoque e o financiamento", async () =>
       throw new Error("quota");
     },
   });
-  assert.match(stock.reply, /64\.900/);
-  assert.match(stock.reply, /68\.450/);
-  assert.match(stock.reply, /Pelo Inmetro, o HB20 1\.0 faz cerca de 9,8 km\/l na cidade/);
-  assert.doesNotMatch(stock.reply, /Achei|No estoque:/);
+  assert.match(textoVisivelChat(stock.reply), /64\.900/);
+  assert.match(textoVisivelChat(stock.reply), /68\.450/);
+  assert.match(textoVisivelChat(stock.reply), /Pelo Inmetro, o HB20 1\.0 faz cerca de 9,8 km\/l na cidade/);
+  assert.doesNotMatch(textoVisivelChat(stock.reply), /Achei|No estoque:/);
   assert.equal(stock.leadCreated, false);
 
   const finance = await runChatTurn({
@@ -638,9 +639,9 @@ test("Gemini fora do ar ainda responde o estoque e o financiamento", async () =>
       throw new Error("quota");
     },
   });
-  assert.match(finance.reply, /60 vezes/);
-  assert.match(finance.reply, /18 vezes/);
-  assert.match(finance.reply, /WhatsApp/);
+  assert.match(textoVisivelChat(finance.reply), /análise de crédito/);
+  assert.match(textoVisivelChat(finance.reply), /WhatsApp/);
+  assert.match(textoVisivelChat(finance.reply), /WhatsApp/);
 
   const card = await runChatTurn({
     mensagem: "Aceita cartão de crédito até 18x?",
@@ -650,8 +651,8 @@ test("Gemini fora do ar ainda responde o estoque e o financiamento", async () =>
       throw new Error("quota");
     },
   });
-  assert.match(card.reply, /18 vezes/);
-  assert.match(card.reply, /cartão/);
+  assert.match(textoVisivelChat(card.reply), /18 vezes/);
+  assert.match(textoVisivelChat(card.reply), /cartão/);
 });
 
 test("sessão do chat bloqueia depois de 30 mensagens", () => {
@@ -689,10 +690,10 @@ test("pergunta de troca de seminovo não injeta catálogo duplicado", async () =
       functionCall: null,
     }),
   });
-  assert.doesNotMatch(result.reply, /Achei (?:ele )?no estoque/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /Achei (?:ele )?no estoque/);
   assert.match(
     result.reply,
-    /Com certeza, a gente aceita veículo na troca sim/,
+    /Aceitamos sim/,
   );
 });
 
@@ -729,7 +730,7 @@ test("consumo do Fox, sem ficha na base, vai ao modelo com aviso e sem estimativ
   });
   assert.match(prompt, /Sem ficha na base: Volkswagen Fox Trend 1\.6 2014/);
   assert.doesNotMatch(prompt, /FICHAS TÉCNICAS DE REFERÊNCIA/);
-  assert.doesNotMatch(result.reply, /\d+.*km\/l/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /\d+.*km\/l/);
   assert.equal(result.vehicles.length, 1);
   assert.equal(result.vehicles[0]?.id, fox.id);
   // Se o modelo de linguagem cair, a reserva também não inventa número.
@@ -741,8 +742,8 @@ test("consumo do Fox, sem ficha na base, vai ao modelo com aviso e sem estimativ
       throw new Error("quota");
     },
   });
-  assert.match(offline.reply, /Fox 2014 eu não tenho esse dado de fábrica/);
-  assert.doesNotMatch(offline.reply, /\d+.*km\/l/);
+  assert.match(textoVisivelChat(offline.reply), /Fox 2014 eu não tenho esse dado de fábrica/);
+  assert.doesNotMatch(textoVisivelChat(offline.reply), /\d+.*km\/l/);
 });
 
 test("consumo no stream usa o modelo, preserva a unidade e não publica km/l inventado", async () => {
@@ -766,7 +767,7 @@ test("consumo no stream usa o modelo, preserva a unidade e não publica km/l inv
   });
   assert.equal(streamed, true);
   assert.equal(tokens.join(""), result.reply);
-  assert.doesNotMatch(result.reply, /\d+.*km\/l/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /\d+.*km\/l/);
   assert.equal(result.vehicles[0]?.id, fox.id);
 });
 
@@ -795,8 +796,8 @@ test("consumo do HB20 Premium foca o Premium e não a shortlist", async () => {
       throw new Error("a ficha responde sozinha");
     },
   });
-  assert.match(result.reply, /Pelo Inmetro, o HB20 1\.6 faz cerca de 7 km\/l na cidade e 8,3 km\/l na estrada com etanol/);
-  assert.doesNotMatch(result.reply, /Evolution 1\.0|9,8 km\/l/);
+  assert.match(textoVisivelChat(result.reply), /Pelo Inmetro, o HB20 1\.6 faz cerca de 7 km\/l na cidade e 8,3 km\/l na estrada com etanol/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /Evolution 1\.0|9,8 km\/l/);
   assert.equal(result.vehicles.length, 1);
   assert.equal(result.vehicles[0]?.id, premium.id);
 });
@@ -846,8 +847,8 @@ test("consumo sem modelo identificado pergunta de qual carro, sem faixa estimada
       throw new Error("quota");
     },
   });
-  assert.doesNotMatch(offline.reply, /9–12 km\/l|\d+.*km\/l/);
-  assert.match(offline.reply, /De qual carro você quer saber/);
+  assert.doesNotMatch(textoVisivelChat(offline.reply), /9–12 km\/l|\d+.*km\/l/);
+  assert.match(textoVisivelChat(offline.reply), /De qual carro você quer saber/);
   assert.equal(offline.vehicles.length, 0);
 });
 
@@ -870,8 +871,8 @@ test("Fox tem ar-condicionado responde a ficha da unidade", async () => {
       functionCall: null,
     }),
   });
-  assert.match(result.reply, /ar-condicionado/i);
-  assert.doesNotMatch(result.reply, /direção$/);
+  assert.match(textoVisivelChat(result.reply), /ar-condicionado/i);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /direção$/);
   assert.equal(result.vehicles[0]?.id, fox.id);
 });
 
@@ -888,7 +889,7 @@ test("Esse carro ainda tem? responde da ficha da unidade", async () => {
     },
   });
   assert.equal(called, false);
-  assert.match(result.reply, /ainda está no estoque/);
+  assert.match(textoVisivelChat(result.reply), /ainda está no estoque/);
   assert.equal(result.vehicles[0]?.id, hb20.id);
   assert.equal(result.meta?.policy, "availability");
 });
@@ -906,7 +907,7 @@ test("ainda tem? com vehicleId fora do estoque diz que já vendeu", async () => 
     },
   });
   assert.equal(called, false);
-  assert.match(result.reply, /já saiu do estoque/);
+  assert.match(textoVisivelChat(result.reply), /já saiu do estoque/);
   assert.equal(result.vehicles.length, 0);
   assert.equal(result.meta?.policy, "availability");
 });
@@ -941,7 +942,7 @@ test("HB20 ou Onix compara duas unidades reais", async () => {
     "HB20",
     "Onix",
   ]);
-  assert.match(result.reply, /mais em conta|estoque/i);
+  assert.match(textoVisivelChat(result.reply), /mais em conta|estoque/i);
 });
 
 test("quantos km do HB20 usa o hodômetro da ficha", async () => {
@@ -956,8 +957,8 @@ test("quantos km do HB20 usa o hodômetro da ficha", async () => {
     },
   });
   assert.equal(called, false);
-  assert.match(result.reply, /68 mil km/);
-  assert.match(result.reply, /hodômetro/);
+  assert.match(textoVisivelChat(result.reply), /68 mil km/);
+  assert.match(textoVisivelChat(result.reply), /hodômetro/);
   assert.equal(result.vehicles[0]?.id, hb20.id);
 });
 

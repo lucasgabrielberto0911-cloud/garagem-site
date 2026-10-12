@@ -329,7 +329,10 @@ function filterStockByEngine(stock: ChatVehicleRecord[], mensagem: string) {
 function filterStockByBody(stock: ChatVehicleRecord[], mensagem: string) {
   const style = parseBodyStyleFilter(mensagem);
   if (!style) return stock;
-  return stock.filter((vehicle) => vehicleBodyStyle(vehicle) === style);
+  const styles = /\bou\b/.test(normalize(mensagem))
+    ? mensagem.split(/\bou\b/i).map(parseBodyStyleFilter).filter(Boolean)
+    : [style];
+  return stock.filter((vehicle) => styles.includes(vehicleBodyStyle(vehicle)));
 }
 
 function filterStockByPrice(stock: ChatVehicleRecord[], mensagem: string) {
@@ -801,6 +804,7 @@ export function formatVehicleLine(vehicle: ChatVehicleRecord) {
 /** “Civic EXL 2020” / “Lancer 2.0 2014”: nome curto da linha do ranking (km e preço ficam nos cards). */
 export function rankLineName(vehicle: ChatVehicleRecord) {
   const model = formatModelName(vehicle.model || vehicle.brand).trim();
+  if (/^biz$/i.test(model) && /110i/i.test(vehicle.version ?? "")) return `Biz 110i ${vehicle.yearModel}`;
   const first = shortVersion(vehicle.version, vehicle.model).split(" ")[0] ?? "";
   const trim = /^[a-z]/i.test(first) && !/^(flex|flexone|fire|evo|automatic[oa]|manual|completo)$/i.test(first)
     ? first
@@ -946,12 +950,13 @@ export function normalizeChatAccessories(items: string[]) {
 const EQUIPMENT_ITEMS = [
   ["troca de marchas no volante (paddle shift)", /borboletas?|paddle|\baletas?\b|\bshift\b|(?:troca\w*|passa\w*|muda\w*)\s+(?:a |as |de )?marchas?\s+(?:no|pelo|atras do) volante|marchas? no volante/, /paddle|borboleta|\baletas?\b|marchas?\b.{0,30}\bvolante|volante\b.{0,30}\b(?:paddle|marchas?)/],
   ["Apple CarPlay / Android Auto", /carplay|car play|android auto|espelh\w*/, /carplay|android auto|espelhamento/],
-  ["central multimídia", /multimidia|\bcentral\b|\btela\b(?!.{0,12}\b(?:painel|tft)\b)/, /multimidia|carplay|android auto|central (?:de )?(?:midia|entretenimento)|tela (?:touch|sensivel)|media ?nav|mylink|my link|uconnect|intellilink|\bsync\b|\bgps\b/],
+  ["central multimídia", /multimidia|\bcentral\b|\btela\b(?!.{0,12}\b(?:painel|tft)\b)/, /^(?!.*ar[- ]?condicionado).*?(?:multimidia|carplay|android auto|central (?:de )?(?:midia|entretenimento)|tela (?:touch|sensivel)|media ?nav|mylink|my link|uconnect|intellilink|\bsync\b|\bgps\b)/],
   ["teto solar", /teto solar|teto panoramico|sunroof|\btem teto\b(?! de)/, /teto solar|teto panoramico|teto de vidro|sunroof/],
   ["airbags", /air ?bags?|bolsas? de ar/, /air ?bags?|bolsas? (?:de ar|inflaveis)/],
   ["freios ABS", /\babs\b/, /\babs\b|antitravamento|anti ?bloqueio/],
   ["controle de estabilidade", /controle de (?:estabilidade|tracao)|\besp\b|\bvsa\b/, /controle (?:eletronico )?de (?:estabilidade|tracao)|\b(?:esp|esc|vdc|vsc|vsa)\b/],
   ["câmera de ré", /cameras?/, /camera/],
+  ["piloto automático adaptativo (ACC)", /adaptativo|\bacc\b/, /adaptativo|\bacc\b/],
   ["piloto automático", /piloto automatic\w*|controle de cruzeiro|cruise|\bacc\b/, /piloto automatico|cruise control|controle de (?:cruzeiro|velocidade)/],
   ["direção elétrica", /direcao (?:eletrica|eletroassistida)/, /direcao (?:eletrica|eletroassistida)|direcao eletrica progressiva/],
   ["direção hidráulica", /direcao hidraulica/, /direcao hidraulica/],
@@ -983,7 +988,7 @@ const EQUIPMENT_ITEMS = [
 
 function askedEquipment(mensagem: string) {
   const folded = normalize(mensagem);
-  return EQUIPMENT_ITEMS.filter(([, question]) => question.test(folded));
+  return EQUIPMENT_ITEMS.filter(([label, question]) => question.test(folded) && !(label === "piloto automático" && /adaptativo|\bacc\b/.test(folded)) && !(label === "ar-condicionado" && /ar digital|dual zone|climatizador digital|ar[- ]?condicionado (?:digital|automatico)/.test(folded)));
 }
 
 /** Confere no texto cru da ficha: a limpeza de exibição corta "… com ABS e EBD". */
@@ -1062,6 +1067,16 @@ function shortAccessory(value: string) {
  * uma unidade ("o Civic tem câmera de ré?"): responde pela ficha de cada unidade.
  * Só para os itens de EQUIPMENT_ITEMS; o resto segue o fluxo normal.
  */
+/** Motivo de card confirmado somente pelos opcionais cadastrados nesta unidade. */
+export function confirmedEquipmentReason(vehicle: ChatVehicleRecord, mensagem: string): string | null {
+  const asked = askedEquipment(mensagem);
+  const detail = requestedAirbagDetail(mensagem);
+  if (!asked.length || !asked.every(([, , data]) => unitHasEquipment(vehicle, data)) ||
+      (detail && !unitHasAirbagDetail(vehicle, detail))) return null;
+  const labels = asked.map(([label]) => label === "airbags" && detail ? detail.label : label);
+  return `${joinEquipment([...new Set(labels)])} na ficha`;
+}
+
 export function equipmentAcrossStockReply(
   stock: ChatVehicleRecord[],
   mensagem: string,
@@ -1074,7 +1089,7 @@ export function equipmentAcrossStockReply(
   const pools = resolved ? [resolved] : namedModelPools(stock, mensagem);
   const airbagDetail = requestedAirbagDetail(mensagem);
   const labels = asked.map(([label]) => label === "airbags" && airbagDetail ? airbagDetail.label : label);
-  const items = joinEquipment(labels);
+  const items = joinEquipment([...new Set(labels)]);
   const m = pluralEquipment(labels) ? "m" : "";
   const hasGeneric = (vehicle: ChatVehicleRecord) => asked.every(([, , data]) => unitHasEquipment(vehicle, data));
   const has = (vehicle: ChatVehicleRecord) => hasGeneric(vehicle) && (!airbagDetail || unitHasAirbagDetail(vehicle, airbagDetail));
@@ -1261,8 +1276,10 @@ export function formatFocusedEquipmentReply(
     return `A ficha ${desse} ${named.name} ainda não lista os opcionais. O vendedor confirma rapidinho pelas fotos ou no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (asked.length) {
-    const listed = (names: string[]) =>
-      names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} e ${names.at(-1)}`;
+    const listed = (values: string[]) => {
+      const names = [...new Set(values)];
+      return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} e ${names.at(-1)}`;
+    };
     // Airbags: usa o item cadastrado ("6 Air Bags", "Airbags frontais"), que traz quantidade e posição.
     const present = asked.flatMap(([label, , data]) => {
       const item = raw.find(value => data.test(normalize(value)));
@@ -2741,7 +2758,7 @@ export function similarAfterEmptyFilter(
 }
 
 const WAITLIST_STOP =
-  /^(quem|filho|filhos|filha|filhas|esposa|marido|mulher|namorada|mae|pai|pessoas|bagagem|bagagens|criancas|cadeirinha|bebe|menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automaticos?|automaticas?|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
+  /^(entre|disponiveis|valores|precos|modelos|superior|partir|quem|filho|filhos|filha|filhas|esposa|marido|mulher|namorada|mae|pai|pessoas|bagagem|bagagens|criancas|cadeirinha|bebe|menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automaticos?|automaticas?|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
 
 const INTENT_SEEK_NOISE =
   /^(forte|fortes|rapido|rapida|rapidos|veloz|arranque|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
@@ -2929,7 +2946,7 @@ export function scopeChatMessage(
   const foldedCurrent = normalize(current);
   const fresh = isFreshGeneralRankQuestion(current);
   const resets = chatSearchResets(current);
-  const clearPrice = resets.price || fresh;
+  const clearPrice = resets.price || fresh || !isAnaphoricVehicleFollowUp(current);
   const clearGear = resets.gear || fresh;
   const clearYear = resets.year || fresh;
   const clearKm = resets.km || fresh;
@@ -3394,7 +3411,7 @@ export function enrichMissingModelReply(
 }
 
 export const CHAT_FINANCE_REPLY =
-  `Dá sim — financiamento em até 60 vezes ou cartão de crédito em até 18 vezes. O consultor simula as condições para você no WhatsApp, com o carro que escolher. ${CHAT_WHATSAPP_URL}`;
+  `Trabalhamos com os principais bancos, com ou sem entrada, sujeito à análise de crédito. O consultor confirma as condições pelo WhatsApp: ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_CARD_REPLY =
   `Dá sim — no cartão de crédito a gente parcela em até 18 vezes; no financiamento, em até 60 vezes. O consultor confirma as condições para você no WhatsApp. ${CHAT_WHATSAPP_URL}`;
@@ -3418,7 +3435,7 @@ export const CHAT_RECALL_REPLY =
   `Recall de cada carro o consultor confere pelo chassi no site da montadora antes de você fechar. É só chamar no WhatsApp: ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_HOURS_REPLY =
-  `Atendemos todos os dias, das 8h às 23h, aqui e no WhatsApp. Pra ver um carro, a visita é com horário marcado em Linhares: ${CHAT_WHATSAPP_URL}`;
+  `Atendemos todos os dias, das 8h às 23h, aqui e no WhatsApp. Pra ver um carro, a visita é com horário marcado: ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_SOCIAL_REPLY =
   `O Instagram da Garagem é ${site.instagram} (${site.instagramUrl}). Pra atendimento, o mais rápido é o WhatsApp: ${CHAT_WHATSAPP_URL}`;
@@ -3551,10 +3568,10 @@ export function partialCompareReply(mensagem: string, present: ChatVehicleRecord
 }
 
 export const CHAT_VISIT_REPLY =
-  `Dá sim! O atendimento é com horário marcado em Linhares: o consultor combina o dia e a hora com você no WhatsApp (atendemos das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
+  `Dá sim! O atendimento é com horário marcado: o consultor combina o dia e a hora com você no WhatsApp (atendemos das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_ADDRESS_REPLY =
-  `A Garagem é uma loja digital, sem loja aberta ao público. Pra ver um carro, a visita é com horário marcado em Linhares, combinada com o consultor no WhatsApp (das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
+  `A Garagem é uma loja digital, sem loja aberta ao público. Pra ver um carro, a visita é com horário marcado, combinada com o consultor no WhatsApp (das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_TRADE_VALUE_REPLY =
   `O valor do seu carro o consultor avalia com algumas fotos no WhatsApp (ano, km e estado contam) e já encaixa na conta do carro que você quer. ${CHAT_WHATSAPP_URL}`;
@@ -3569,18 +3586,13 @@ export const CHAT_CASH_REPLY =
   `À vista dá sim; a forma de pagamento e a condição o consultor combina com você no WhatsApp, com o carro escolhido. Também dá pra financiar em até 60 vezes, no cartão em até 18 vezes, e o seu usado entra na conta. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_DELIVERY_REPLY =
-  `Entrega ou retirada a gente combina com o consultor no WhatsApp, junto com a proposta, tudo claro antes de fechar. Atendemos Aracruz, Vitória, Linhares, Serra, Vila Velha e região. ${CHAT_WHATSAPP_URL}`;
+  `Entrega ou retirada a gente combina com o consultor no WhatsApp, junto com a proposta, tudo claro antes de fechar. ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_CONSORTIUM_REPLY =
   `Carta de consórcio o consultor confirma no WhatsApp se dá pra usar no seu caso. Na loja: financiamento em até 60 vezes, cartão em até 18 vezes, à vista e troca. ${CHAT_WHATSAPP_URL}`;
 
-export function chatCityReply(mensagem: string) {
-  const city = normalize(mensagem).match(/\b(aracruz|vitoria|serra|vila velha|guarapari|cariacica|colatina|cachoeiro|linhares)\b/)?.[1] ?? "";
-  const names: Record<string, string> = { aracruz: "Aracruz", vitoria: "Vitória", serra: "Serra", "vila velha": "Vila Velha", guarapari: "Guarapari", cariacica: "Cariacica", colatina: "Colatina", cachoeiro: "Cachoeiro", linhares: "Linhares" };
-  const name = names[city] ?? "sua cidade";
-  return city === "linhares"
-    ? `Atendemos Linhares sim! Você escolhe aqui no site, e a visita é com horário marcado em Linhares, combinada com o consultor no WhatsApp (das 8h às 23h). ${CHAT_WHATSAPP_URL}`
-    : `Atendemos ${name} e região sim! Você escolhe aqui no site; a visita é com horário marcado em Linhares, ou a entrega/retirada a gente combina com o consultor no WhatsApp (das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
+export function chatCityReply(_mensagem: string) {
+  return CHAT_ADDRESS_REPLY;
 }
 
 export const CHAT_DOCS_REPLY =
@@ -3643,6 +3655,8 @@ export function chatPolicyShortcut(
   mensagem: string,
 ): "gear-extra" | "pcd" | "recall" | "hours" | "social" | "contact" | "city" | "keys" | "zero" | "finance" | "card" | "troca" | "warranty" | "docs" | "gear" | "origin" | "visit" | "address" | "sell" | "debts" | "cash" | "delivery" | "consortium" | null {
   const folded = normalize(mensagem);
+  if (/\b(troca|trocar)\b/.test(folded) && !/marchas?|volante|paddle|borboleta/.test(folded)) return "troca";
+  if (/\b(financi\w*|juros|parcelas?|simular)\b/.test(folded) && !/\b(cartao|18x|consumo|potencia|cvs?|mais forte)\b/.test(folded)) return "finance";
   // "Tem carro em Aracruz?" / "atendem Vitória?": área de atendimento, não modelo.
   if (/\b(?:em|de|pra|para|na|no)\s+(?:aracruz|vitoria|serra|vila velha|guarapari|cariacica|colatina|cachoeiro|linhares)\b/.test(folded) &&
     /\b(tem|atende\w*|entrega\w*|voces|vcs|carros?|motos?|loja)\b/.test(folded) &&
@@ -3842,7 +3856,7 @@ export function localGarageReply(
     return CHAT_WARRANTY_REPLY;
   }
   if (/\b(horario|atendimento|endereco|localizacao)\b/.test(text)) {
-    return `A gente atende online todos os dias, das 8h às 23h — Aracruz, Vitória, Linhares, Serra e Vila Velha. Loja digital, visita combinada. Um consultor confirma o melhor jeito no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return `A gente atende online todos os dias, das 8h às 23h. Loja digital, visita combinada. Um consultor confirma o melhor jeito no WhatsApp: ${CHAT_WHATSAPP_URL}`;
   }
   if (/\btroca\b/.test(withoutGearShiftWords(text))) {
     return CHAT_TRADE_REPLY;

@@ -86,7 +86,8 @@ test("números de potência e aceleração não viram cilindrada de moto", async
   const bike = { ...duster, id: "bike", brand: "Honda", model: "Biz", version: "ES 125", engine: "125cc", category: "moto", yearModel: 2023, transmission: "Semi-automático" };
   const power = await runChatTurn({ mensagem: "essa Biz tem 150 cv?", historico: [], stock: [bike], vehicleId: bike.id, generate: noModel });
   assert.equal(power.meta?.policy, "spec-direct");
-  assert.match(power.reply, /Biz 125 tem cerca de 9,2 cv/);
+  assert.match(power.reply, /Biz 125 tem motor adequado ao dia a dia/);
+  assert.doesNotMatch(power.reply, /\bcv\b/i);
   assert.doesNotMatch(power.reply, /150 cv/);
   const accel = await runChatTurn({ mensagem: "essa Biz faz de 0 a 100 em quanto tempo?", historico: [], stock: [bike], vehicleId: bike.id,
     generate: async () => ({ text: "Moto de 125 cc não é feita para isso: o 0 a 100 dela não é um número que a Honda divulga.", functionCall: null }) });

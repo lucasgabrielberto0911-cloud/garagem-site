@@ -1,3 +1,4 @@
+import { vehiclePath } from "@/lib/vehicle-slug";
 import { findVehicleSpec, specMaxCv } from "@/lib/chat-specs";
 import { article as opinionArticle, opinionName, opinionReply, planOpinionTurn } from "@/lib/chat-opinion";
 import {
@@ -87,6 +88,7 @@ import {
   asksAboutEquipment,
   namedUnitForEquipment,
   equipmentAcrossStockReply,
+  confirmedEquipmentReason,
   asksForFichaSummary,
   asksForSimilarToActive,
   similarToActiveReply,
@@ -190,7 +192,7 @@ export function isBrowsingOrThanks(message: string) {
   );
 }
 
-export async function runChatTurn(input: {
+async function runChatTurnInternal(input: {
   mensagem: string;
   historico: ChatTurn[];
   stock: ChatVehicleRecord[];
@@ -255,8 +257,11 @@ export async function runChatTurn(input: {
       activeVehicle,
     });
   const browsing = isBrowsingOrThanks(visitorMessage);
+  let streamed = false;
   const emit = (text: string) => {
-    if (text) input.onToken?.(text);
+    if (!text) return;
+    if (streamed) input.onToken?.(sanitizePower(text, expertPlan?.subject.vehicles.length ? expertPlan.subject.vehicles : activeVehicle ? [activeVehicle] : promptStock));
+
   };
 
   // Leitura do Jev (intenção e temperatura). Só orienta o tom; nunca bloqueia.
@@ -371,8 +376,10 @@ export async function runChatTurn(input: {
     ) {
       guarded = `${guarded.trim()} Se quiser, o consultor anota e te avisa no WhatsApp: ${CHAT_WHATSAPP_URL}`;
     }
+    // Estes atalhos já trazem texto conferido da ficha; só recebem a formatação comum.
+    if (["opinion", "sold", "media", "media-ask", "seven-seats", "stock-equipment", "similar-to", "stock-color", "diesel", "zero", "budget", "waitlist", "inventory-search"].includes(opts.policy ?? "")) guarded = reply;
     const vehicles = picked.map(toChatVehicleCard);
-    return {
+    const result = formatChatResult({
       reply: guarded,
       leadCreated,
       vehicles,
@@ -390,7 +397,10 @@ export async function runChatTurn(input: {
         model: opts.model,
         calls: opts.calls,
       },
-    };
+    }, input, picked);
+    result.reply = sanitizePower(result.reply, expertPlan?.subject.vehicles.length ? expertPlan.subject.vehicles : picked.length ? picked : activeVehicle ? [activeVehicle] : []);
+    if (!streamed) input.onToken?.(result.reply);
+    return result;
   };
 
   if (isOffScopeMessage(scopedMessage)) {
@@ -404,6 +414,49 @@ export async function runChatTurn(input: {
   }
 
   const fold = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  // Políticas comerciais e rankings cobertos pela ficha não precisam do modelo.
+  if (/\b(?:falar|conversar|chamar)\b/.test(fold(visitorMessage)) && /\b(vendedor|consultor|humano|atendente)\b/.test(fold(visitorMessage))) {
+    emit(CHAT_CONTACT_REPLY);
+    return finish(CHAT_CONTACT_REPLY, false, { cards: false, plain: true, policy: "contact" });
+  }
+  const directPolicy = chatPolicyShortcut(visitorMessage);
+  if (directPolicy === "troca" && /\b(quero|procuro|busco)\b/.test(fold(visitorMessage)) && parsePriceLimit(visitorMessage) != null) {
+    const desired = visitorMessage.replace(/^.*?\b(?:num|numa|por um|por uma|em um|em uma)\b/i, "");
+    const picks = matchedChatStock(desired, input.stock).slice(0, CHAT_CARD_LIMIT);
+    const reply = `Aceitamos sim: o seu usado entra na conta; o consultor avalia pelas fotos no WhatsApp.\n${compareChatStockPicks(picks).split("\n").slice(1).join("\n")}`;
+    emit(reply);
+    return finish(reply, false, { plain: true, forcedVehicles: picks, cards: picks.length > 0, policy: "troca-busca" });
+  }
+
+  if (directPolicy === "finance" || directPolicy === "troca" && !(/\b(quero|procuro|busco)\b/.test(fold(visitorMessage)) && parsePriceLimit(visitorMessage) != null)) {
+    const reply = directPolicy === "finance" ? CHAT_FINANCE_REPLY : CHAT_TRADE_REPLY;
+    emit(reply);
+    return finish(reply, false, { cards: false, plain: true, policy: directPolicy });
+  }
+  const economy = /economi|gasta menos|consum/.test(fold(visitorMessage));
+  const globalRank = /\b(mais economico|mais economica|mais forte|mais potente)\b/.test(fold(visitorMessage));
+  const refersToList = /\b(deles|delas|desses|dessas)\b/.test(fold(visitorMessage));
+  if ((economy && refersToList) || (globalRank && (economy || /estoque/.test(fold(visitorMessage))) && !explicitModelUnits.length && !activeVehicle)) {
+    const remembered = (input.previousVehicleIds ?? []).map(id => input.stock.find(v => v.id === id)).filter((v): v is ChatVehicleRecord => Boolean(v));
+    const pool = refersToList ? remembered : matchedChatStock(visitorMessage, input.stock);
+    const rows = pool.map(vehicle => {
+      const spec = findVehicleSpec(vehicle);
+      return { vehicle, value: economy ? spec?.cidade?.gasolina ?? spec?.consumoMoto : spec ? specMaxCv(spec) : undefined };
+    }).filter((row): row is { vehicle: ChatVehicleRecord; value: number } => row.value != null && (economy || row.value >= 90 && !/\b1[.,]0\b/.test(row.vehicle.engine ?? row.vehicle.version ?? "")))
+      .sort((a, b) => b.value - a.value).slice(0, CHAT_CARD_LIMIT);
+    if (rows.length) {
+      const reply = `Pela ficha${economy ? " de consumo" : " de potência"}, o destaque é ${rankLineName(rows[0]!.vehicle)}:\n` + rows.map(({ vehicle, value }) => `• [**${rankLineName(vehicle)}**](${vehiclePath(vehicle)}) — ${value.toLocaleString("pt-BR")} ${economy ? vehicle.category === "moto" ? "km/l (referência aproximada)" : "km/l (cidade, gasolina/Inmetro)" : "cv"}`).join("\n");
+      emit(reply);
+      return finish(reply, false, { plain: true, forcedVehicles: rows.map(row => row.vehicle), policy: "ranking-ficha" });
+    }
+  }
+  if (/\b(quanto (?:ta|custa|sai|e)|qual (?:o )?(?:valor|preco))\b/.test(fold(visitorMessage)) && explicitModelUnits.length > 1 && !matchChatSoldVehicle(visitorMessage, input.stock, input.soldStock ?? [], input.vehicleId)) {
+    const units = explicitModelUnits.slice(0, CHAT_CARD_LIMIT);
+    const reply = `Estas são as opções:\n${units.map(v => `• [**${rankLineName(v)}**](${vehiclePath(v)}) — ${v.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`).join("\n")}`;
+    emit(reply);
+    return finish(reply, false, { plain: true, forcedVehicles: units, policy: "preco-modelo" });
+  }
+
   // Seguro e revisão não são pedidos de estoque; não há política publicada de seguro.
   if (/\b(seguradora|apolice|seguro)\b/.test(fold(visitorMessage)) && /\b(vem|contratar|cotacao|incluso|includo|por fora|seguradora|apolice)\b/.test(fold(visitorMessage))) {
     const answer = await generate({ systemPrompt: systemPromptFor(), history: input.historico, mensagem: visitorMessage, signal: input.signal });
@@ -443,7 +496,7 @@ export async function runChatTurn(input: {
       const answer = opinionReply(opinion, visitorMessage);
       emit(answer.reply);
       const result = finish(answer.reply, false, { policy: "opinion", plain: true, forcedVehicles: answer.vehicles });
-      result.reply = answer.reply;
+
       return result;
     }
   }
@@ -457,7 +510,6 @@ export async function runChatTurn(input: {
     const reply = `O ${name} já foi vendido.${similar.length ? " Separei opções parecidas do estoque." : ""} Podemos te avisar quando chegar outro pelo WhatsApp: ${href}`;
     emit(reply);
     const result = finish(reply, false, { policy: "sold", plain: true, forcedVehicles: similar, cards: similar.length > 0 });
-    result.reply = reply;
     return result;
   }
   const mediaMessage = asksChatMedia(visitorMessage) ? visitorMessage : pendingChatMediaMessage(visitorMessage, input.historico, input.stock);
@@ -471,7 +523,6 @@ export async function runChatTurn(input: {
         : "De qual carro você quer fotos ou vídeo?";
     emit(reply);
     const result = finish(reply, false, { policy: candidates.length === 1 ? "media" : "media-ask", plain: true, cards: candidates.length === 1, forcedVehicles: candidates.length === 1 ? candidates : undefined });
-    result.reply = reply;
     return result;
   }
   // “Tem City?” / “tem hrv?”: disponibilidade simples usa o nome escrito agora,
@@ -532,7 +583,6 @@ export async function runChatTurn(input: {
     const reply = `No estoque de agora não temos carro de 7 lugares. Os mais espaçosos que temos estão aqui, e se quiser, o consultor te avisa quando chegar um de 7: ${CHAT_WHATSAPP_URL}`;
     emit(reply);
     const result = finish(reply, false, { policy: "seven-seats", forcedVehicles: roomy, cards: roomy.length > 0 });
-    result.reply = reply;
     return result;
   }
   // "Quais carros têm airbag?" / "o Civic tem câmera?" com dois Civic: ficha de cada unidade.
@@ -553,7 +603,7 @@ export async function runChatTurn(input: {
   ) {
     const lastReply = [...input.historico].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
     const shown = input.stock.filter((vehicle) =>
-      lastReply.includes(`${vehicle.brand} ${vehicle.model}`) && lastReply.includes(String(vehicle.yearModel)),
+      (lastReply.includes(`${vehicle.brand} ${vehicle.model}`) && lastReply.includes(String(vehicle.yearModel)) || lastReply.includes(vehiclePath(vehicle))),
     );
     if (shown.length === 1 && (shown[0]!.accessories ?? []).length) {
       const reply = formatFocusedEquipmentReply(shown[0]!, visitorMessage, input.stock);
@@ -570,7 +620,6 @@ export async function runChatTurn(input: {
         forcedVehicles: inScope.vehicles,
         cards: inScope.vehicles.length > 0,
       });
-      result.reply = inScope.reply;
       return result;
     }
   }
@@ -582,7 +631,6 @@ export async function runChatTurn(input: {
       cards: acrossStock.vehicles.length > 0,
     });
     // Texto exato da ficha: o polimento de busca não troca a lista por comparação.
-    result.reply = acrossStock.reply;
     return result;
   }
   const policy = mayCreateLead ? null : chatPolicyShortcut(scopedMessage);
@@ -593,7 +641,7 @@ export async function runChatTurn(input: {
     if (similarTo) {
       emit(similarTo.reply);
       const result = finish(similarTo.reply, false, { policy: "similar-to", forcedVehicles: similarTo.vehicles });
-      result.reply = similarTo.reply;
+
       return result;
     }
   }
@@ -612,7 +660,7 @@ export async function runChatTurn(input: {
     if (color) {
       emit(color.reply);
       const result = finish(color.reply, false, { policy: "stock-color", forcedVehicles: color.vehicles, cards: color.vehicles.length > 0 });
-      result.reply = color.reply;
+
       return result;
     }
   }
@@ -624,7 +672,7 @@ export async function runChatTurn(input: {
     const units = activeVehicle ? [activeVehicle] : writesFull ? named : fuelUnits(named, input.stock);
     // Sem carro citado: "é flex?" depois de uma lista responde pelos que foram mostrados.
     const lastAssistant = [...input.historico].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
-    let shown = units.length ? [] : input.stock.filter((vehicle) => lastAssistant.includes(formatVehicleLine(vehicle)));
+    let shown = units.length ? [] : input.stock.filter((vehicle) => (lastAssistant.includes(formatVehicleLine(vehicle)) || lastAssistant.includes(vehiclePath(vehicle))));
     // "a mais barata é flex?": só a que ele apontou na lista.
     const pickFold = visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     if (shown.length > 1) {
@@ -635,9 +683,8 @@ export async function runChatTurn(input: {
     const reply = units.length ? fuelFactReply(visitorMessage, units) : shown.length === 1 ? fuelFactReply(visitorMessage, shown) : fuelListReply(visitorMessage, shown);
     if (reply) {
       emit(reply);
-      const result = finish(reply, false, { policy: "stock-fact", forcedVehicles: (units.length ? units : shown).slice(0, 3) });
-      result.reply = reply;
-      return result;
+      const result = finish(reply, false, { policy: "stock-fact", plain: true, forcedVehicles: (units.length ? units : shown).slice(0, 3) });
+        return result;
     }
   }
   if (policy === "card") {
@@ -684,14 +731,12 @@ export async function runChatTurn(input: {
       : [];
     emit(reply);
     const result = finish(reply, false, { policy, forcedVehicles: autos, cards: autos.length > 0 });
-    result.reply = reply;
     return result;
   }
   if (policy === "social" || policy === "contact") {
     const reply = policy === "social" ? CHAT_SOCIAL_REPLY : CHAT_CONTACT_REPLY;
     emit(reply);
     const result = finish(reply, false, { policy, cards: false });
-    result.reply = reply;
     return result;
   }
   // Diesel sem nenhum no estoque: diz direto (flex e gasolina), sem "Diesel não está na lista".
@@ -700,7 +745,7 @@ export async function runChatTurn(input: {
     if (diesel) {
       emit(diesel);
       const result = finish(diesel, false, { policy: "diesel", cards: false });
-      result.reply = diesel;
+
       return result;
     }
   }
@@ -721,7 +766,7 @@ export async function runChatTurn(input: {
     const newest = newestChatVehicles(visitorMessage, input.stock, 3);
     emit(CHAT_ZERO_REPLY);
     const result = finish(CHAT_ZERO_REPLY, false, { policy, forcedVehicles: newest, cards: newest.length > 0 });
-    result.reply = CHAT_ZERO_REPLY;
+
     return result;
   }
   if (policy === "city") {
@@ -815,8 +860,7 @@ export async function runChatTurn(input: {
       const reply = `Aceitamos sim: o seu usado entra na conta, e o consultor avalia com algumas fotos no WhatsApp (${CHAT_WHATSAPP_URL}).\n\n${found.reply}`;
       emit(reply);
       const result = finish(reply, false, { policy: "trade-search", forcedVehicles: found.picks });
-      result.reply = reply;
-      return result;
+        return result;
     }
   }
 
@@ -827,7 +871,7 @@ export async function runChatTurn(input: {
   if (budget) {
     emit(budget.reply);
     const result = finish(budget.reply, false, { policy: "budget", forcedVehicles: budget.vehicles });
-    result.reply = budget.reply;
+
     return result;
   }
   const empty =
@@ -845,7 +889,7 @@ export async function runChatTurn(input: {
       forcedVehicles: similar,
       cards: similar.length > 0,
     });
-    result.reply = empty;
+
     return result;
   }
 
@@ -951,8 +995,8 @@ export async function runChatTurn(input: {
         policy: "inventory-search",
         forcedVehicles: found.picks,
       });
-      // Preserve exact inventory prose: enrichment must not turn a search into a gear fact.
-      result.reply = inventoryReply;
+      // Conserva o texto da busca sem transformá-lo em uma afirmação de equipamento.
+
       result.stockHref = chatStockExploreHref(
         scopedMessage,
         found.candidates,
@@ -996,7 +1040,6 @@ export async function runChatTurn(input: {
       policy: "compare",
       forcedVehicles: compared.slice(0, 3),
     });
-    result.reply = reply;
     return result;
   }
   if (
@@ -1035,8 +1078,7 @@ export async function runChatTurn(input: {
         .slice(0, 2);
       emit(reply);
       const result = finish(reply, false, { policy: "compare-partial", forcedVehicles: [present, ...similar] });
-      result.reply = reply;
-      return result;
+        return result;
     }
     const reply = missingModelReply(scopedMessage, input.stock);
     const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
@@ -1210,7 +1252,7 @@ export async function runChatTurn(input: {
     const guardReply = (result: GeminiGenerateResult): GeminiGenerateResult => ({
       ...result,
       text: (() => {
-        const scope = expertPlan?.subject.vehicles ?? (activeVehicle ? [activeVehicle] : promptStock);
+        const scope = expertPlan?.subject.vehicles.length ? expertPlan.subject.vehicles : (activeVehicle ? [activeVehicle] : promptStock);
         const guarded = guardUnaskedOffers(guardSalesTone(guardLlmReply(result.text, input.stock, scope, research?.paragraphs.map(paragraph => paragraph.text).join(" ")), visitorMessage) ?? "", visitorMessage).replace(/checagem (?:rigorosa|completa|minuciosa|criteriosa)(?: na loja)?/gi, "checagem na loja");
         const comparisonSafe = !tradeTurn && compared.length >= 2 ? guardChatComparisonWinner(guarded, compared) : guarded;
         return comparisonSafe && comparisonSafe !== CHAT_FALLBACK_REPLY && expertPlan?.stockRanking && !comparisonSafe.includes(expertPlan.stockRanking) && !/estoque (?:inteiro|todo)|loja toda|da loja inteira/i.test(comparisonSafe)
@@ -1219,8 +1261,28 @@ export async function runChatTurn(input: {
     });
     if (input.onToken && !input.generate) {
       // A guarda precisa ver frases completas antes de exibir afirmações sobre a unidade.
-      first = guardReply(await generateStream(request, { onToken: () => {} }));
-      if (first.text && !first.functionCall) emit(first.text);
+      let buffer = "";
+      const flush = (text: string) => {
+        const safe = guardReply({ text, functionCall: null } as GeminiGenerateResult).text ?? "";
+        if (safe) {
+          streamed = true;
+          const whitespace = text.match(/^\s*/)?.[0] ?? "";
+          const trailing = text.match(/\s*$/)?.[0] ?? "";
+          input.onToken?.(`${whitespace}${sanitizePower(safe.trim(), expertPlan?.subject.vehicles.length ? expertPlan.subject.vehicles : (activeVehicle ? [activeVehicle] : promptStock))}${trailing}`);
+        }
+      };
+      first = guardReply(await generateStream(request, { onToken: delta => {
+        buffer += delta;
+        // Retém somente a frase incompleta: cv pode chegar dividido entre deltas.
+        let boundary: RegExpExecArray | null;
+        while ((boundary = /[!?](?:\s|$)|\.(?=\s)|\n/.exec(buffer))) {
+          const end = boundary.index + boundary[0].length;
+          flush(buffer.slice(0, end));
+          buffer = buffer.slice(end);
+        }
+      } }));
+      if (!first.functionCall && buffer) flush(buffer);
+
     } else {
       first = guardReply(await generate(request));
       if (first.text && !first.functionCall) emit(first.text);
@@ -1373,4 +1435,60 @@ export async function runChatTurn(input: {
 
   const finalText = first.text?.trim() || CHAT_FALLBACK_REPLY;
   return finish(finalText, false, { ...turnMeta, ...shaped(finalText) });
+}
+
+/** Respostas diretas e listas recebem a mesma formatação antes de serem emitidas. */
+function formatChatResult(result: ChatTurnResult, input: Parameters<typeof runChatTurnInternal>[0], picks: ChatVehicleRecord[]): ChatTurnResult {
+
+  if (picks.length >= 2) {
+    if (!result.reply.includes("• ") && !asksAboutEquipment(input.mensagem)) {
+      const comparison = asksAboutFuel(input.mensagem)
+        ? `Combustível das opções:\n${picks.map(v => `• ${rankLineName(v)} — ${v.fuel}`).join("\n")}`
+        : neutralChatComparison(picks, input.mensagem);
+      result.reply = `${result.reply.split("\n")[0]}\n${comparison.split("\n").slice(1).join("\n")}`;
+    }
+    if (/hatch\s+ou\s+sedan/i.test(input.mensagem)) result.reply = result.reply.replace("de sedãs", "de hatches ou sedãs");
+    const rows = result.reply.split("\n").filter(line => line.startsWith("• "));
+    const asksPrice = /pre[cç]o|valor|quanto (?:ta|custa|sai)/i.test(input.mensagem);
+    result.reply = rows.length === picks.length
+      ? `${result.reply.split("\n")[0]}\n${rows.map((line, index) => {
+          const v = picks.find(vehicle => line.includes(vehiclePath(vehicle)) || line.startsWith(`• ${rankLineName(vehicle)} —`)) ?? picks[index]!;
+          const reason = line.split(" — ").slice(1).join(" — ");
+          const spec = findVehicleSpec(v);
+          const hidePower = spec && (specMaxCv(spec) < 90 || /\b1[.,]0\b/.test(spec.motor));
+          const safeReason = hidePower && /\bcv\b|potência/.test(reason) ? `${v.transmission}, ${v.km.toLocaleString("pt-BR")} km` : reason;
+          return `• **[${rankLineName(v)}](${vehiclePath(v)})** — ${safeReason}${asksPrice && !/R\$/.test(reason) && !/já foi vendido/.test(result.reply) ? `; ${v.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : ""}`;
+        }).join("\n")}`
+      : `${result.reply.split("\n")[0]}\n${picks.map(v => `• **[${rankLineName(v)}](${vehiclePath(v)})** — ${equipmentReason(v, input.mensagem) ?? `${v.transmission}, ${v.km.toLocaleString("pt-BR")} km`}${asksPrice && !/já foi vendido/.test(result.reply) ? `; ${v.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : ""}`).join("\n")}`;
+  }
+  result.reply = sanitizePower(result.reply, picks);
+  return result;
+}
+
+function equipmentReason(vehicle: ChatVehicleRecord, mensagem: string): string | null {
+  if (!asksAboutEquipment(mensagem)) return null;
+  return confirmedEquipmentReason(vehicle, mensagem);
+}
+
+/** Não divulga potência baixa nem de motor 1.0, inclusive nos atalhos técnicos. */
+function sanitizePower(text: string, vehicles: ChatVehicleRecord[]): string {
+  const hidden = vehicles.filter(vehicle => {
+    const spec = findVehicleSpec(vehicle);
+    return spec && (specMaxCv(spec) < 90 || /\b1[.,]0\b/.test(spec.motor));
+  });
+  if (!hidden.length) return text;
+  const qualitative = hidden.length === vehicles.length
+    ? text.replace(/(?:cerca de )?\d+(?:[.,]\d+)?\s*cv(?:\s+no (?:etanol|gasolina))?(?:\s+e\s+\d+(?:[.,]\d+)?\s*cv(?:\s+na (?:gasolina|etanol))?)?/gi, "motor adequado ao dia a dia")
+    : text;
+  return qualitative.replace(/\b\d+(?:[.,]\d+)?(?:\s*(?:a|–|-)\s*\d+(?:[.,]\d+)?)?\s*cv\b/gi, value => {
+    if (hidden.length === vehicles.length) return "motor adequado ao dia a dia";
+    return hidden.some(vehicle => {
+      const spec = findVehicleSpec(vehicle)!;
+      return value.match(/\d+(?:[.,]\d+)?/g)?.some(number => Number(number.replace(",", ".")) === specMaxCv(spec) || Object.values(spec.cv).includes(Number(number.replace(",", "."))));
+    }) ? "motor adequado ao dia a dia" : value;
+  });
+}
+
+export async function runChatTurn(input: Parameters<typeof runChatTurnInternal>[0]): Promise<ChatTurnResult> {
+  return runChatTurnInternal(input);
 }
