@@ -509,11 +509,26 @@ export function pickComparedModelVehicles(
       return units.length >= 2 ? units : [];
     }
   }
+  if (groups.length === 1 && asksToCompareModels(mensagem)) {
+    const sides = normalize(mensagem).split(/\s+(?:ou|versus|vs|e)\s+/);
+    const units = sides.flatMap(side => {
+      const tokens = side.split(" ").filter(token => token.length >= 3 && !WAITLIST_STOP.test(token));
+      const rows = groups[0]!.filter(vehicle => tokens.some(token => normalize(vehicle.version ?? "").split(" ").includes(token)));
+      const unit = rows.length === 1 ? rows[0] : null;
+      return unit ? [unit] : [];
+    });
+    const unique = [...new Map(units.map(vehicle => [vehicle.id, vehicle])).values()];
+    if (unique.length >= 2) return unique.slice(0, limit);
+  }
   if (groups.length < 2) return [];
   const picks: ChatVehicleRecord[] = [];
   const seen = new Set<string>();
   for (const group of groups) {
-    const vehicle = pickFromModelGroup(group);
+    // Cada lado conserva seu próprio motor/versão, sem filtrar o outro modelo.
+    const side = mensagem.split(/\s+(?:ou|versus|vs|e)\s+|[,;:]/i).find(part => mentionedModelPools(group, part).length > 0) ?? mensagem;
+    const liters = parseChatDisplacementFilter(side);
+    const narrowed = group.filter(vehicle => liters == null || parseChatDisplacementFilter(`${vehicle.engine ?? ""} ${vehicle.version ?? ""} ${vehicle.model}`) === liters);
+    const vehicle = pickFromModelGroup(narrowed);
     if (!vehicle || seen.has(vehicle.id)) continue;
     seen.add(vehicle.id);
     picks.push(vehicle);
@@ -1605,7 +1620,7 @@ export function asksToCompareModels(mensagem: string): boolean {
   if (/\bdiferen/.test(folded) && !asksAboutTransmissionCompare(mensagem)) {
     return true;
   }
-  return /\sou\s/.test(folded);
+  return /\sou\s|\bentre (?!(?:os|as) (?:dois|duas|tres)\b|eles\b|elas\b|esses\b|essas\b|estes\b|estas\b)\S+.*\se\s/.test(folded);
 }
 
 /** “qual o melhor?” / “compara” sem dois modelos — não despeja o estoque. */
@@ -1915,7 +1930,7 @@ function formatPowerCompareList(vehicles: ChatVehicleRecord[]) {
     const lead = tie
       ? "Pela ficha de fábrica, empatam em potência:"
       : `Pela ficha de fábrica, ${talkName(top.v).labeled} é o mais forte:`;
-    return formatRankList(lead, rows.map((row) => ({ name: rankLineName(row.v), value: `${row.cv} cv` })));
+    return formatRankList(lead, rows.map((row) => ({ name: rankLineName(row.v), value: `${row.cv.toLocaleString("pt-BR")} cv` })));
   }
   const ranked = rankByPower(vehicles, "");
   if (!ranked.some((v) => stockEngineLabel(v))) return formatPowerCompare(vehicles);
@@ -2709,7 +2724,7 @@ export function similarAfterEmptyFilter(
 }
 
 const WAITLIST_STOP =
-  /^(quem|filho|filhos|filha|filhas|esposa|marido|mulher|namorada|mae|pai|pessoas|bagagem|bagagens|criancas|cadeirinha|bebe|menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automatico|automatica|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
+  /^(quem|filho|filhos|filha|filhas|esposa|marido|mulher|namorada|mae|pai|pessoas|bagagem|bagagens|criancas|cadeirinha|bebe|menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automaticos?|automaticas?|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
 
 const INTENT_SEEK_NOISE =
   /^(forte|fortes|rapido|rapida|rapidos|veloz|arranque|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
@@ -3164,7 +3179,7 @@ export function searchChatInventory(
     const note = allSpecs ? "" : "Se quiser os cv de cada um, me diz qual deles que eu passo os números de fábrica.";
     return ranking(allSpecs ? "Mais fortes (cv de fábrica)" : "Motores maiores", (v, index) => {
       const spec = specs[index];
-      if (spec) return `${specMaxCv(spec)} cv`;
+      if (spec) return `${specMaxCv(spec).toLocaleString("pt-BR")} cv`;
       const motor = stockEngineLabel(v);
       return motor ? `motor ${motor}` : null;
     }, note);
@@ -3612,7 +3627,7 @@ export function chatPolicyShortcut(
     return "cash";
   }
   // Frete / entrega: combinado com o consultor, sem inventar taxa (nem "sem frete").
-  if (/\b(frete|entrega|entregam|entregar|leva(?:m)? o carro|levar o carro|manda(?:m)? o carro)\b/.test(folded) && !/\b(entrada)\b/.test(folded) && !parseDeliveryIntent(mensagem)) {
+  if (/\b(frete|entrega|entregam|entregar|leva(?:m)? o carro|levar o carro|manda(?:m)? o carro)\b/.test(folded) && !/\b(entrada|revis\w*|manutencao|preventiva)\b/.test(folded) && !parseDeliveryIntent(mensagem)) {
     return "delivery";
   }
   // "Vocês compram carro?" / "quero vender meu carro": compramos usado (página inicial).

@@ -1,3 +1,5 @@
+import { findVehicleSpec, specMaxCv } from "@/lib/chat-specs";
+import { article as opinionArticle, opinionName, opinionReply, planOpinionTurn } from "@/lib/chat-opinion";
 import {
   CHAT_CARD_LIMIT,
   isBareBudgetQuery,
@@ -401,6 +403,20 @@ export async function runChatTurn(input: {
     return finish(CHAT_FIPE_REPLY, false, { cards: false, fipe: true });
   }
 
+  const fold = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  // Seguro e revisão não são pedidos de estoque; não há política publicada de seguro.
+  if (/\b(seguradora|apolice|seguro)\b/.test(fold(visitorMessage)) && /\b(vem|contratar|cotacao|incluso|includo|por fora|seguradora|apolice)\b/.test(fold(visitorMessage))) {
+    const answer = await generate({ systemPrompt: systemPromptFor(), history: input.historico, mensagem: visitorMessage, signal: input.signal });
+    const reply = answer.text || CHAT_FALLBACK_REPLY;
+    emit(reply);
+    return finish(reply, false, { plain: true, cards: false, policy: "insurance-model" });
+  }
+  if (/\b(revisao|revisados?|manutencao preventiva)\b/.test(fold(visitorMessage)) && /\b(voces|vcs|entreg\w*|vem|feita)\b/.test(fold(visitorMessage)) && !/\b(cara|caro|barat\w*|preco|quanto)\b/.test(fold(visitorMessage))) {
+    const reply = `Os itens de revisão dessa unidade não estão no anúncio; o consultor confirma o que foi feito antes da entrega pelo WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    emit(reply);
+    return finish(reply, false, { plain: true, cards: false, policy: "maintenance" });
+  }
+
   // Na página do carro: "tem outros parecidos?" usa esse carro como referência (não é modelo que falta).
   if (
     activeVehicle &&
@@ -413,6 +429,24 @@ export async function runChatTurn(input: {
   }
 
   const mayCreateLead = chatTurnMayCreateLead(visitorMessage, input.historico);
+  // Conversa sobre UM carro ("é rápido?", "vale a pena?", "pontos positivos dele?", "e do HB20 1.6?"):
+  // resposta direta com a ficha técnica da versão e a ficha do anúncio, nunca frase de busca.
+  if (!mayCreateLead && !tradeTurn && !namedComparison) {
+    const opinion = planOpinionTurn({
+      message: visitorMessage,
+      historico: input.historico,
+      stock: input.stock,
+      activeVehicle,
+      previousVehicleIds: input.previousVehicleIds,
+    });
+    if (opinion) {
+      const answer = opinionReply(opinion, visitorMessage);
+      emit(answer.reply);
+      const result = finish(answer.reply, false, { policy: "opinion", plain: true, forcedVehicles: answer.vehicles });
+      result.reply = answer.reply;
+      return result;
+    }
+  }
   const soldVehicle = !tradeTurn
     ? matchChatSoldVehicle(visitorMessage, input.stock, input.soldStock ?? [], input.vehicleId)
     : undefined;
@@ -471,7 +505,6 @@ export async function runChatTurn(input: {
       withoutGearShiftWords(visitorMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, "")),
     );
   // "Aceita meu Celta na troca?" → "quanto vcs pagam nele?": continua a troca, não vira busca.
-  const fold = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const lastUser = [...input.historico].reverse().find((turn) => turn.role === "user")?.content ?? "";
   if (
     !mayCreateLead &&
@@ -621,7 +654,7 @@ export async function runChatTurn(input: {
   }
   if (policy === "warranty") {
     emit(CHAT_WARRANTY_REPLY);
-    return finish(CHAT_WARRANTY_REPLY, false, { policy });
+    return finish(CHAT_WARRANTY_REPLY, false, { policy, plain: true, cards: false });
   }
   if (policy === "docs") {
     emit(CHAT_DOCS_REPLY);
@@ -717,7 +750,25 @@ export async function runChatTurn(input: {
     !asksAboutEquipment(visitorMessage) &&
     expertPlan?.topics.every(topic => ["comparacao", "potencia", "torque", "consumo", "portamalas", "ranking"].includes(topic)) !== false &&
     (namedComparison || asksToCompareModels(visitorMessage) || asksWhichTwoToCompare(visitorMessage))) {
-    const reply = neutralChatComparison(compared, visitorMessage);
+    const performance = /anda mais|mais rapid|mais potente|desempenho/.test(fold(visitorMessage));
+    const travel = /viajar|viagem/.test(fold(visitorMessage));
+    let reply = neutralChatComparison(compared, `${visitorMessage}${performance ? " potência" : ""}${travel ? " espaço porta-malas" : ""}`);
+    if (performance) {
+      const powers = compared.map(vehicle => ({ vehicle, cv: (() => { const spec = findVehicleSpec(vehicle); return spec ? specMaxCv(spec) : null; })() }));
+      if (powers.every(item => item.cv != null)) {
+        powers.sort((a, b) => b.cv! - a.cv!);
+        reply += powers[0]!.cv === powers[1]!.cv
+          ? "\nOs dois têm a mesma potência de fábrica, então andam parecido. Os dois andam bem no dia a dia!"
+          : `\nQuem anda mais é ${opinionArticle(powers[0]!.vehicle)} ${opinionName(powers[0]!.vehicle)}, com mais potência. Mas os dois andam bem no dia a dia!`;
+      }
+    }
+    if (travel) {
+      const trunks = compared.map(vehicle => ({ vehicle, liters: findVehicleSpec(vehicle)?.portaMalas ?? null }));
+      const roomy = trunks.every(item => item.liters != null) ? [...trunks].sort((a, b) => b.liters! - a.liters!)[0]! : null;
+      reply += roomy && trunks.some(item => item.liters !== roomy.liters)
+        ? `\nPra viajar com bagagem, ${opinionArticle(roomy.vehicle)} ${opinionName(roomy.vehicle)} leva mais no porta-malas. Os dois vão bem na estrada!`
+        : "\nOs dois vão bem na estrada!";
+    }
     emit(reply);
     return finish(reply, false, { policy: /diferenc/i.test(fold(visitorMessage)) ? "compare-difference" : "compare", plain: true, forcedVehicles: compared });
   }
