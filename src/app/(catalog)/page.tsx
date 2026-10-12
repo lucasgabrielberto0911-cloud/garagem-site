@@ -123,7 +123,7 @@ export default async function HomePage() {
           <span className="hero-red-orb hero-red-orb-2" />
         </div>
         <div
-          className="absolute inset-x-0 bottom-0 -z-10 h-16 bg-gradient-to-t from-asphalt to-transparent"
+          className="hero-bottom-fade"
           aria-hidden="true"
         />
 
