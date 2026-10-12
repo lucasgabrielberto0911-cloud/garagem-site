@@ -123,13 +123,16 @@ export default async function HomePage() {
           <span className="hero-red-orb hero-red-orb-2" />
         </div>
         <div
-          className="absolute inset-x-0 bottom-0 -z-10 h-16 bg-gradient-to-t from-asphalt to-transparent"
+          className="hero-bottom-fade"
           aria-hidden="true"
         />
 
         <Container className="py-4 sm:py-6 lg:py-7">
-          <div className="flex flex-col gap-2.5 sm:gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
-            <div className="hero-text min-w-0 max-w-2xl">
+          {/* Computador: grade de 2 colunas; a da direita ocupa as 2 linhas (texto + números),
+              com topo no logo e base na base dos cards de números. Celular/tablet: sem mudança. */}
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-x-8 xl:grid-cols-[minmax(0,1fr)_30rem] xl:gap-x-10">
+          <div className="flex flex-col gap-2.5 sm:gap-4 lg:contents">
+            <div className="hero-text min-w-0 max-w-2xl lg:col-start-1 lg:row-start-1">
               <div className="hero-brand">
                 <SiteWordmark size="hero" />
               </div>
@@ -145,22 +148,22 @@ export default async function HomePage() {
             {/* Grade única: celular = WhatsApp / [Ver estoque | Assistente] / sugestões;
                 tablet = empilhado; computador = [WhatsApp | Ver estoque] / Assistente / caixinha,
                 alinhada ao topo do logo e com a altura do hero de antes. */}
-            <div className="hero-cta grid w-full shrink-0 grid-cols-2 gap-2 sm:max-w-xs sm:grid-cols-1 sm:gap-2.5 lg:max-w-[30rem] lg:grid-cols-2 lg:gap-2">
+            <div className="hero-cta grid w-full shrink-0 grid-cols-2 gap-2 sm:max-w-xs sm:grid-cols-1 sm:gap-2.5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-w-none lg:grid-cols-2 lg:grid-rows-[auto_auto_auto_1fr] lg:gap-2 xl:grid-rows-[auto_auto_1fr] xl:gap-3">
               <WhatsAppButton
                 size="lg"
-                className="col-span-2 w-full sm:col-span-1 lg:!px-3 lg:!min-h-[44px] lg:!py-2.5 lg:!text-sm lg:!gap-2 lg:whitespace-nowrap"
+                className="col-span-2 w-full sm:col-span-1 lg:col-span-2 lg:!px-3 xl:col-span-1 lg:!text-sm lg:!gap-2 lg:whitespace-nowrap"
                 trackingLabel="home-hero"
                 message={WHATSAPP_MESSAGES.help}
               >
                 Falar no WhatsApp
               </WhatsAppButton>
-              <ButtonLink href="/estoque" size="lg" className="w-full !px-3 sm:!px-7 lg:!px-3 lg:!min-h-[44px] lg:!py-2.5 lg:!text-sm lg:!gap-2 lg:whitespace-nowrap">
+              <ButtonLink href="/estoque" size="lg" className="w-full !px-3 sm:!px-7 lg:col-span-2 lg:!px-3 xl:col-span-1 lg:!text-sm lg:!gap-2 lg:whitespace-nowrap">
                 Ver estoque
               </ButtonLink>
               <div className="lg:col-span-2">
                 <HomeAssistantButton />
               </div>
-              <div className="col-span-2 sm:col-span-1 lg:col-span-2">
+              <div className="col-span-2 sm:col-span-1 lg:col-span-2 lg:h-full">
                 <HomeAssistantAsk />
               </div>
               {/* O telefone já está no header e no WhatsApp; fica só no tablet, como antes. */}
@@ -170,10 +173,11 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="hero-stats mx-auto mt-4 hidden w-full max-w-2xl sm:mt-8 sm:block lg:mx-0">
+          <div className="hero-stats mx-auto mt-4 hidden w-full max-w-2xl sm:mt-8 sm:block lg:col-start-1 lg:row-start-2 lg:mx-0 lg:self-end">
             <Suspense fallback={<StatsBarSkeleton />}>
               <StatsBar />
             </Suspense>
+          </div>
           </div>
         </Container>
       </section>

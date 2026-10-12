@@ -1324,6 +1324,16 @@ textarea:-webkit-autofill:focus {
   pointer-events: none;
 }
 
+/* Fade da base do hero ancorado no topo (inset 0): se a 1ª pintura pega o hero
+   ainda parseando, ele só cresce, sem deslocar nada (não conta como CLS). */
+.hero-bottom-fade {
+  position: absolute;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background: linear-gradient(to top, theme("colors.asphalt") 0, transparent 4rem);
+}
+
 .hero-red-orb {
   position: absolute;
   border-radius: 9999px;
@@ -1526,6 +1536,19 @@ textarea:-webkit-autofill:focus {
     height: 110vw;
     right: -60%;
     bottom: -20%;
+  }
+
+  @media (max-width: 639px) {
+    /* No celular as manchas ficam presas ao topo (em vw), não à altura do hero:
+       mesma posição de antes (~ -20%), mas sem deslocar enquanto o hero termina de carregar. */
+    .hero-red-orb-1 {
+      top: -19.5vw;
+    }
+
+    .hero-red-orb-2 {
+      top: 7vw;
+      bottom: auto;
+    }
   }
 
   .hero-red-orb-3,
