@@ -1,3 +1,4 @@
+import { textoVisivelChat } from "./chat-test-text";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { runChatTurn } from "./chat-turn";
@@ -23,11 +24,11 @@ test("Civic 2020 ou 2015 compara as duas unidades, inclusive após busca incompa
       const result = await ask(mensagem, stock, historico);
       assert.equal(result.meta?.policy, "compare", `${historyText}: ${result.reply}`);
       assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), ["civic-2020-explicito", "civic-2015-explicito"]);
-      assert.match(result.reply, /^Os dois são ótimas escolhas/);
-      assert.match(result.reply, /• Civic EXL 2020 —/);
-      assert.match(result.reply, /• Civic LXR 2015 —/);
+      assert.match(textoVisivelChat(result.reply), /^Os dois são ótimas escolhas/);
+      assert.match(textoVisivelChat(result.reply), /• Civic EXL 2020 —/);
+      assert.match(textoVisivelChat(result.reply), /• Civic LXR 2015 —/);
       assert.equal(result.reply.split("\n").length, 3);
-      assert.doesNotMatch(result.reply, /Não achei|leva vantagem|ganha/);
+      assert.doesNotMatch(textoVisivelChat(result.reply), /Não achei|leva vantagem|ganha/);
     }
   }
 });
@@ -42,16 +43,16 @@ test("modelos atuais ignoram filtros herdados; critérios incompatíveis mostram
     assert.equal(scopeChatMessage(mensagem, historico, stock), mensagem);
     const result = await ask(mensagem, stock, historico);
     assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), ["city-sem-heranca"]);
-    assert.doesNotMatch(result.reply, /Não achei|não temos|não está/);
-    assert.doesNotMatch(result.reply, /\[LLM\]/);
+    assert.doesNotMatch(textoVisivelChat(result.reply), /Não achei|não temos|não está/);
+    assert.doesNotMatch(textoVisivelChat(result.reply), /\[LLM\]/);
     assert.equal(result.meta?.policy, mensagem.startsWith("tem") ? "availability" : "inventory-search");
   }
   for (const mensagem of ["mostra City manual", "quero City até 40 mil", "quero um SUV City", "mostra City ano 2025"]) {
     const result = await ask(mensagem, stock);
     assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), ["city-sem-heranca"], mensagem);
-    assert.match(result.reply, /City/);
-    assert.doesNotMatch(result.reply, /Não achei|não temos|não está/);
-    assert.match(result.reply, /Automático/);
+    assert.match(textoVisivelChat(result.reply), /City/);
+    assert.doesNotMatch(textoVisivelChat(result.reply), /Não achei|não temos|não está/);
+    assert.match(textoVisivelChat(result.reply), /Automático/);
   }
   // O cliente ainda pode refinar uma busca sem escrever um novo modelo.
   assert.match(scopeChatMessage("menos km", historico, stock), /suv.*carro|suv/i);

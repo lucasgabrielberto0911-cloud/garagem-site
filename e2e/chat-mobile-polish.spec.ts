@@ -68,3 +68,25 @@ test("fontes ficam em uma linha recolhida sem painel ou sugestões abaixo da res
   await expect(answer.getByRole("link", {name: /Honda — catálogo/})).toBeVisible();
   expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
 });
+
+
+test("bateria40: nomes em negrito abrem a ficha nos dois formatos de link", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
+  await page.route("**/api/chat", route => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({
+      reply: "Estas são as opções:\n• **[Civic LXR 2015](/estoque/civic-lxr-2015)** — bancos de couro na ficha\n• [**HR-V EXL 2016**](/estoque/hr-v-exl-2016) — central multimídia na ficha",
+      vehicles: [],
+    }),
+  }));
+  await page.goto("/estoque");
+  await page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Garagem", exact: true });
+  await dialog.locator("textarea").fill("quais opções vocês têm?");
+  await dialog.getByRole("button", { name: "Enviar", exact: true }).click();
+  const answer = dialog.locator('[data-chat-latest="1"]');
+  await expect(answer.getByRole("link", { name: "Civic LXR 2015", exact: true })).toHaveAttribute("href", "/estoque/civic-lxr-2015");
+  await expect(answer.getByRole("link", { name: "HR-V EXL 2016", exact: true })).toHaveAttribute("href", "/estoque/hr-v-exl-2016");
+  await expect(answer.locator("[data-chat-rank-list] li")).toHaveCount(2);
+  expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+});

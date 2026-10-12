@@ -256,8 +256,12 @@ for (const message of ["civic ou lancer, qual anda mais?", "biz 125 ou biz 110i 
     const units = pickComparedModelVehicles(stock, message);
     assert.equal(units.length, 2);
     const result = await ask(message);
-    for (const unit of units) assert.ok(result.reply.includes(`${specMaxCv(findVehicleSpec(unit)!).toLocaleString("pt-BR")} cv`));
-    assert.match(result.reply, /Quem anda mais é|mesma potência/);
+    for (const unit of units) {
+      const cv = specMaxCv(findVehicleSpec(unit)!);
+      if (cv >= 90) assert.ok(result.reply.includes(`${cv.toLocaleString("pt-BR")} cv`));
+      else assert.doesNotMatch(result.reply, /\bcv\b/);
+    }
+    assert.match(result.reply, /ótimas escolhas/);
     assert.equal(result.vehicles.length, 2);
   });
 }

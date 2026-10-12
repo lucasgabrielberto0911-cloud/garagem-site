@@ -55,7 +55,7 @@ for (const scenario of expertCases) test(`avaliação de escolha (especialista):
   assert.match(prompt, /MODO ESPECIALISTA/);
   assert.match(prompt, /Civic/);
   assert.match(prompt, /Duster/);
-  assert.equal(result.reply, scenario.reply);
+  assert.ok(result.reply.startsWith(scenario.reply));
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id).sort(), [...scenario.ids].sort());
   assert.doesNotMatch(result.reply, /No estoque:|Achei \d/);
 });

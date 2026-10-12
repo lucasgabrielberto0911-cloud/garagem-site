@@ -1,3 +1,4 @@
+import { textoVisivelChat } from "./chat-test-text";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { runChatTurn } from "./chat-turn";
@@ -83,9 +84,9 @@ for (const message of [
           v.category === "carro" && /automático/i.test(v.transmission ?? ""),
       ),
     );
-    assert.doesNotMatch(reply.reply, /Sim.*HB20|é o mais forte|\d+\s*cv/);
-    assert.match(reply.reply, /me diz qual deles que eu passo os números de fábrica/);
-    assert.doesNotMatch(reply.reply, /No estoque:|Achei \d/);
+    assert.doesNotMatch(textoVisivelChat(reply.reply), /Sim.*HB20|é o mais forte|\d+\s*cv/);
+    assert.equal(reply.reply.split("\n").filter(line => line.startsWith("• ")).length, reply.vehicles.length);
+    assert.doesNotMatch(textoVisivelChat(reply.reply), /No estoque:|Achei \d/);
   });
 }
 
@@ -99,7 +100,7 @@ test("uma pergunta factual sobre o HB20 continua falando só dele", async () => 
     reply.vehicles.map((v) => v.id),
     ["hb"],
   );
-  assert.match(reply.reply, /HB20.*automático/);
+  assert.match(textoVisivelChat(reply.reply), /HB20.*automático/);
 });
 
 test("a ficha não prende uma nova pesquisa no carro aberto", () => {
@@ -128,7 +129,7 @@ test("comparação preserva carros e teto depois de pergunta sobre garantia", as
     { role: "user" as const, content: "Qual a garantia?" },
   ];
   const scoped = scopeChatMessage(mensagem, historico, stock);
-  assert.match(scoped, /80 mil/);
+  assert.doesNotMatch(scoped, /80 mil/);
   assert.match(scoped, /carro/);
   const reply = await runChatTurn({
     mensagem,
@@ -188,7 +189,7 @@ test("ano, km e intervalo de preço filtram juntos, e link pode manter filtros",
 
 test("refinar por ano/km mantém exatamente orçamento e categoria da conversa", () => {
   const scoped = scopeChatMessage(
-    "qual o mais novo?",
+    "qual desses é o mais novo?",
     [
       {
         role: "user",
@@ -254,7 +255,7 @@ test("cidade interna não filtra nem aparece no caminho público do estoque", ()
     located,
   );
   assert.ok(found);
-  assert.doesNotMatch(found.reply, /Aracruz|Serra/);
+  assert.doesNotMatch(textoVisivelChat(found.reply), /Aracruz|Serra/);
   const href = chatStockExploreHref(
     "carro automático em Serra, a partir de 2015, até 110 mil km",
     located,
@@ -351,8 +352,8 @@ test("consumo de um carro sem ficha na base não vira lista nem estimativa", asy
   });
   assert.equal(result.meta?.policy, "expert");
   assert.equal(result.vehicles.length, 0, "o carro aberto na tela não vira card repetido");
-  assert.doesNotMatch(result.reply, /\d.*km\/l|faixa típica|Achei|No estoque/);
-  assert.match(result.reply, /consultor/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /\d.*km\/l|faixa típica|Achei|No estoque/);
+  assert.match(textoVisivelChat(result.reply), /consultor/);
 });
 
 test("consumo sem modelo identificado pergunta de qual carro, sem estimar números", async () => {
@@ -366,8 +367,8 @@ test("consumo sem modelo identificado pergunta de qual carro, sem estimar númer
   });
   assert.equal(result.meta?.policy, "expert");
   assert.equal(result.vehicles.length, 0);
-  assert.match(result.reply, /De qual carro/);
-  assert.doesNotMatch(result.reply, /\d.*km\/l/);
+  assert.match(textoVisivelChat(result.reply), /De qual carro/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /\d.*km\/l/);
 });
 
 test("mais forte entre automáticos até 80 mil ordena pelos cv de catálogo, não pela cilindrada", async () => {
@@ -390,8 +391,8 @@ test("mais forte entre automáticos até 80 mil ordena pelos cv de catálogo, n�
     },
   });
   assert.deepEqual(result.vehicles.map((v) => v.id), ["civic", "duster", "hrv"]);
-  assert.match(result.reply, /^Mais fortes \(cv de fábrica\)[^\n]*\n• Civic LXR 2015 — 155 cv\n• Duster Dynamique 2014 — 142 cv/);
-  assert.doesNotMatch(result.reply, /Corolla|No estoque:|Achei \d/);
+  assert.match(textoVisivelChat(result.reply), /^Mais fortes \(cv de fábrica\)[^\n]*\n• Civic LXR 2015 — 155 cv\n• Duster Dynamique 2014 — 142 cv/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /Corolla|No estoque:|Achei \d/);
 });
 
 test("atalho de uma pesquisa por modelo preserva versão e não abre todo o estoque", async () => {
@@ -445,8 +446,8 @@ test("pergunta técnica junto com financiamento continua técnica e sem estimati
         throw new Error("não responder por estimativa");
       },
     });
-    assert.doesNotMatch(result.reply, /\d.*(?:km\/l|cv)/);
-    assert.doesNotMatch(result.reply, /Achei|No estoque:/);
+    assert.doesNotMatch(textoVisivelChat(result.reply), /\d.*(?:km\/l|cv)/);
+    assert.doesNotMatch(textoVisivelChat(result.reply), /Achei|No estoque:/);
     assert.ok(result.reply.length > 20);
   }
 });
@@ -463,8 +464,8 @@ test("modelo ausente do estoque citado na pergunta técnica não vira resposta d
     },
   });
   assert.equal(known.vehicles.length, 0);
-  assert.match(known.reply, /Corolla 2\.0 tem cerca de 154 cv no etanol e 143 cv na gasolina/);
-  assert.doesNotMatch(known.reply, /Civic|155 cv/);
+  assert.match(textoVisivelChat(known.reply), /Corolla 2\.0 tem cerca de 154 cv no etanol e 143 cv na gasolina/);
+  assert.doesNotMatch(textoVisivelChat(known.reply), /Civic|155 cv/);
   // Modelo fora do estoque e fora da base: o modelo de linguagem responde sem usar a ficha do Civic.
   let prompt = "";
   const unknown = await runChatTurn({

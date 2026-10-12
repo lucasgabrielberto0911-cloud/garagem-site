@@ -1,3 +1,4 @@
+import { textoVisivelChat } from "./chat-test-text";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { runChatTurn } from "./chat-turn";
@@ -26,29 +27,29 @@ for (const [question, id] of [
   const result = await runChatTurn({mensagem: question, historico: [], stock, vehicleId: duster.id, generate: noModel});
   assert.equal(result.meta?.policy, "spec-direct");
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [id]);
-  assert.match(result.reply, /155 cv no etanol e 150 cv na gasolina/);
-  assert.doesNotMatch(result.reply, /142 cv|mais potente|Achei|kgfm/);
+  assert.match(textoVisivelChat(result.reply), /155 cv no etanol e 150 cv na gasolina/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /142 cv|mais potente|Achei|kgfm/);
 });
 
 test("novo modelo com erro de digitação não herda o modelo anterior", async () => {
   const result=await runChatTurn({mensagem:"quantos cv tem a Dustter?",historico:[user("quantos cv tem o Civic LXR 2015?")],stock,vehicleId:civic.id});
   assert.deepEqual(result.vehicles.map(vehicle=>vehicle.id),[duster.id]);
-  assert.match(result.reply,/142 cv/);assert.doesNotMatch(result.reply,/155 cv|Civic/);
+  assert.match(textoVisivelChat(result.reply),/142 cv/);assert.doesNotMatch(textoVisivelChat(result.reply),/155 cv|Civic/);
 });
 
 for (const choice of ["o 2020", "2020"]) test(`resposta curta com o ano continua a pergunta: ${choice}`, async () => {
   const result = await runChatTurn({mensagem: "e o torque?", historico: [user("quantos cv tem o Civic?"), user(choice)], stock, vehicleId: duster.id, generate: noModel});
   assert.equal(result.meta?.policy, "spec-direct");
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [newer.id]);
-  assert.match(result.reply, /19,5 kgfm no etanol e 19,3 kgfm na gasolina/);
-  assert.doesNotMatch(result.reply, /142|Achei/);
+  assert.match(textoVisivelChat(result.reply), /19,5 kgfm no etanol e 19,3 kgfm na gasolina/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /142|Achei/);
 });
 
 test("seguimento sem repetir o modelo usa o carro da mensagem anterior, não o da ficha aberta", async () => {
   const result = await runChatTurn({mensagem: "e o torque?", historico: [user("quantos cv tem o Civic 2020?")], stock, vehicleId: duster.id, generate: noModel});
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [newer.id]);
-  assert.match(result.reply, /19,5 kgfm/);
-  assert.doesNotMatch(result.reply, /20,9|142/);
+  assert.match(textoVisivelChat(result.reply), /19,5 kgfm/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /20,9|142/);
 });
 
 test("não mistura combustíveis e não classifica valores conflitantes", () => {
@@ -68,10 +69,10 @@ test("não mistura combustíveis e não classifica valores conflitantes", () => 
 test("comparação entre dois modelos sem o modelo de linguagem mostra os cv de cada ficha sem vencedor", async () => {
   const result = await runChatTurn({mensagem: "entre Civic e Duster, qual é o mais potente com etanol?", historico: [], stock: [civic, duster], generate: noModel});
   assert.equal(result.meta?.policy, "compare");
-  assert.match(result.reply, /^Os dois são ótimas escolhas/);
-  assert.match(result.reply, /• Civic[^\n]*2015 — 155 cv/);
-  assert.match(result.reply, /Duster.*142 cv/);
-  assert.doesNotMatch(result.reply, /Achei|No estoque:/);
+  assert.match(textoVisivelChat(result.reply), /^Os dois são ótimas escolhas/);
+  assert.match(textoVisivelChat(result.reply), /• Civic[^\n]*2015 — 155 cv/);
+  assert.match(textoVisivelChat(result.reply), /Duster.*142 cv/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /Achei|No estoque:/);
 });
 
 test("falha externa repetida tem cache curto, sem uma segunda chamada", async () => {
@@ -114,13 +115,13 @@ test("assunto e ano escolhidos continuam no torque e no consumo sem virar potên
   const history = [user("quantos cv tem o Civic?"), user("o 2020")];
   const torque = await runChatTurn({mensagem: "e o torque?", historico: history, stock, vehicleId: civic.id, generate: noModel});
   assert.deepEqual(torque.vehicles.map(vehicle => vehicle.id), [newer.id]);
-  assert.match(torque.reply, /19,5 kgfm.*19,3 kgfm/);
-  assert.doesNotMatch(torque.reply, /cv|2015/);
+  assert.match(textoVisivelChat(torque.reply), /19,5 kgfm.*19,3 kgfm/);
+  assert.doesNotMatch(textoVisivelChat(torque.reply), /cv|2015/);
   const consumption = await runChatTurn({mensagem: "e o consumo?", historico: history, stock, generate: noModel});
   assert.equal(consumption.meta?.policy, "spec-direct");
-  assert.match(consumption.reply, /7,2 km\/l na cidade e 8,9 km\/l na estrada com etanol/);
-  assert.match(consumption.reply, /10,5 km\/l na cidade e 13 km\/l na estrada/);
-  assert.doesNotMatch(consumption.reply, /155 cv|2015/);
+  assert.match(textoVisivelChat(consumption.reply), /7,2 km\/l na cidade e 8,9 km\/l na estrada com etanol/);
+  assert.match(textoVisivelChat(consumption.reply), /10,5 km\/l na cidade e 13 km\/l na estrada/);
+  assert.doesNotMatch(textoVisivelChat(consumption.reply), /155 cv|2015/);
 });
 
 test("qual desses é o mais potente? compara os carros da conversa pelas fichas", async () => {
@@ -132,20 +133,20 @@ test("qual desses é o mais potente? compara os carros da conversa pelas fichas"
   assert.match(prompt, /FICHAS TÉCNICAS DE REFERÊNCIA/);
   assert.match(prompt, /155 cv/);
   assert.match(prompt, /142 cv/);
-  assert.match(result.reply, /^O Civic é o mais forte/);
+  assert.match(textoVisivelChat(result.reply), /^O Civic é o mais forte/);
   assert.ok(result.vehicles.length > 0 && result.vehicles.every(vehicle => ["lxr", "exl", "duster"].includes(vehicle.id)));
 });
 
 test("e o consumo? preserva a dupla da conversa mesmo sem repetir 'desses dois'", async () => {
   const result = await runChatTurn({mensagem: "e o consumo?", historico: [user("compare Civic e Duster")], stock: [civic,duster], generate: noModel});
-  assert.match(result.reply, /Civic 2\.0 tem|Civic.*km\/l/);
-  assert.match(result.reply, /Duster.*5,8 km\/l na cidade/);
+  assert.match(textoVisivelChat(result.reply), /Civic 2\.0 tem|Civic.*km\/l/);
+  assert.match(textoVisivelChat(result.reply), /Duster.*5,8 km\/l na cidade/);
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id).sort(), [civic.id, duster.id].sort());
 });
 
 test("potência e torque pedidos juntos chegam juntos na resposta", async () => {
   const result = await runChatTurn({mensagem: "potência e torque do Civic LXR 2015", historico: [], stock});
-  assert.match(result.reply, /155 cv.*150 cv/); assert.match(result.reply, /19,5 kgfm.*19,3 kgfm/);
+  assert.match(textoVisivelChat(result.reply), /155 cv.*150 cv/); assert.match(textoVisivelChat(result.reply), /19,5 kgfm.*19,3 kgfm/);
 });
 
 test("catálogos não são extrapolados a outra versão, combustível, motor ou ano", () => {

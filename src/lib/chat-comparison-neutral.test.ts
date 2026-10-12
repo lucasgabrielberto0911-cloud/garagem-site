@@ -1,3 +1,4 @@
+import { textoVisivelChat } from "./chat-test-text";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { runChatTurn } from "./chat-turn";
@@ -17,10 +18,10 @@ const noModel = async () => { throw new Error("Comparação simples não deve ch
 
 test("Kicks ou HR-V: abertura neutra, ponto forte de cada ficha e dois cards", async () => {
   const result = await runChatTurn({ mensagem: "Kicks ou HR-V?", historico: [], stock, readIntent: async () => null, generate: noModel });
-  assert.match(result.reply, /^Os dois são ótimas escolhas, cada um tem seu ponto forte:/);
-  assert.match(result.reply, /• Kicks .*2019 — menos km e mais novo/);
-  assert.match(result.reply, /• HR-V .*2016 — mais em conta/);
-  assert.doesNotMatch(result.reply, /leva vantagem|ganha|melhor|Quer que|WhatsApp/);
+  assert.match(textoVisivelChat(result.reply), /^Os dois são ótimas escolhas, cada um tem seu ponto forte:/);
+  assert.match(textoVisivelChat(result.reply), /• Kicks .*2019 — menos km e mais novo/);
+  assert.match(textoVisivelChat(result.reply), /• HR-V .*2016 — mais em conta/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /leva vantagem|ganha|melhor|Quer que|WhatsApp/);
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), ["kicks-neutro", "hrv-neutro"]);
   assert.equal(result.reply.split("\n").length, 3);
 });
@@ -28,11 +29,11 @@ test("Kicks ou HR-V: abertura neutra, ponto forte de cada ficha e dois cards", a
 test("indicação, diferença e dados pedidos entre nossos carros continuam neutros", async () => {
   for (const mensagem of ["Kicks ou HR-V, qual você indica?", "qual é melhor, Kicks ou HR-V?", "diferença entre Kicks e HR-V", "Kicks ou HR-V, qual o mais forte?", "Kicks ou HR-V, qual é mais econômico?", "Kicks ou HR-V, qual tem mais espaço?", "Kicks ou HR-V, qual consome menos?"]) {
     const result = await runChatTurn({ mensagem, historico: [], stock, readIntent: async () => null, generate: noModel });
-    assert.match(result.reply, /^Os dois são ótimas escolhas/, mensagem);
+    assert.match(textoVisivelChat(result.reply), /^Os dois são ótimas escolhas/, mensagem);
     assert.equal(result.reply.split("\n").filter(line => line.startsWith("• ")).length, 2, mensagem);
     assert.equal(result.vehicles.length, 2, mensagem);
-    assert.doesNotMatch(result.reply, /leva vantagem|ganha|vence|é melhor|mais forte:|mais econômico:/, mensagem);
-    if (mensagem.includes("consome")) assert.match(result.reply, /km\/l/);
+    assert.doesNotMatch(textoVisivelChat(result.reply), /leva vantagem|ganha|vence|é melhor|mais forte:|mais econômico:/, mensagem);
+    if (mensagem.includes("consome")) assert.match(textoVisivelChat(result.reply), /km\/l/);
   }
 });
 
@@ -40,7 +41,7 @@ test("três modelos: uma frase, três linhas e três cards, sem herdar orçament
   const result = await runChatTurn({ mensagem: "Kicks, HR-V ou Civic?", historico: [{ role: "user", content: "até 40 mil" }], stock, readIntent: async () => null, generate: noModel });
   assert.equal(result.vehicles.length, 3);
   assert.equal(result.reply.split("\n").length, 4);
-  assert.match(result.reply, /^São ótimas escolhas/);
+  assert.match(textoVisivelChat(result.reply), /^São ótimas escolhas/);
 });
 
 test("potência, consumo e espaço usam valores da ficha, sem inferir pela cilindrada", () => {
@@ -67,6 +68,6 @@ test("guarda do turno bloqueia vencedor antes de emitir texto do modelo", async 
     generate: async () => ({ text: "O Kicks leva vantagem:\n• Kicks 2019 — menos km\n• HR-V 2016 — mais em conta", functionCall: null }),
     onToken: text => { emitted += text; },
   });
-  assert.doesNotMatch(result.reply, /leva vantagem/);
+  assert.doesNotMatch(textoVisivelChat(result.reply), /leva vantagem/);
   assert.doesNotMatch(emitted, /leva vantagem/);
 });

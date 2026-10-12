@@ -213,6 +213,12 @@ function performanceReply(vehicle: ChatVehicleRecord, message: string, withGear 
   const name = opinionName(vehicle, spec);
   const o = article(vehicle, spec);
   const power = powerOf(spec);
+  if (isWeakEngine(vehicle, spec, power, engineLabel(vehicle, spec))) {
+    const turbo = /turbo/i.test(spec?.motor ?? "");
+    const acceleration = turbo && spec?.zeroACem ? ` Pela ficha, faz o 0 a 100 em cerca de ${num(spec.zeroACem)} s.` : "";
+    const torque = turbo && spec?.torqueRpm ? " O turbo entrega torque já em baixa rotação." : "";
+    return `${/frac[oa]|fraquinh/.test(fold(message)) ? "Fraco não! " : ""}${cap(o)} ${name} ${turbo ? "responde bem nas arrancadas e retomadas" : "tem boa disposição para o dia a dia"}.${torque}${acceleration} ${gearSentence(vehicle, 2, withGear)}`.trim();
+  }
   const text = fold(message);
   const asksWeak = /\bfrac[oa]|fraquinh/.test(text);
   if (isMoto(vehicle)) {
@@ -343,10 +349,10 @@ export function positivePoints(vehicle: ChatVehicleRecord): Array<[string, strin
   const moto = isMoto(vehicle);
   const body = vehicleBodyStyle(vehicle);
   const engine = engineLabel(vehicle, spec);
-  const weak = !moto && isWeakEngine(vehicle, spec, power, engine);
+  const weak = isWeakEngine(vehicle, spec, power, engine);
   const points: Record<string, [string, string] | null> = {};
   if (moto) {
-    points.motor = power ? ["Motor", `${power.approx}${num(power.cv)} cv, ágil no trânsito`] : null;
+    points.motor = power && !weak ? ["Motor", `${power.approx}${num(power.cv)} cv, ágil no trânsito`] : null;
   } else if (!weak && power) {
     const adjective = ["esperto na cidade e na estrada", "disposto no dia a dia", "ágil na cidade", "focado em economia"][power.level - 1];
     points.motor = ["Motor", `${engine ? `${engine} de ` : ""}${power.approx}${num(power.cv)} cv${power.fuel}, ${adjective}`];
@@ -414,19 +420,17 @@ function worthReply(vehicle: ChatVehicleRecord) {
 
 /** Resposta da conversa (texto + carros do card). */
 export function opinionReply(plan: { kinds: OpinionKind[]; units: ChatVehicleRecord[] }, message: string) {
-  const units = plan.units.slice(0, 2);
+  // Opinião trata da unidade principal; outras fichas não emprestam números à resposta.
+  const units = plan.units.slice(0, 1);
   const kinds = plan.kinds;
   if (kinds.includes("pontos")) return { reply: pointsReply(units[0]!), vehicles: [units[0]!] };
   if (kinds.includes("valeapena") && !kinds.includes("desempenho") && !kinds.includes("economia")) {
     return { reply: worthReply(units[0]!), vehicles: [units[0]!] };
   }
-  // Duas unidades do mesmo modelo (ex.: dois Civic 2.0): um texto só; o câmbio só entra quando é igual nas duas.
-  const sameModel = units.length > 1 && units.every((vehicle) => opinionName(vehicle) === opinionName(units[0]!));
-  const withGear = !sameModel || units.every((vehicle) => gearOf(vehicle) === gearOf(units[0]!));
-  const parts = (sameModel ? units.slice(0, 1) : units).map((vehicle) => {
+  const parts = units.map((vehicle) => {
     const lines: string[] = [];
-    if (kinds.includes("desempenho") || kinds.includes("valeapena")) lines.push(performanceReply(vehicle, message, withGear));
-    if (kinds.includes("economia")) lines.push(economyReply(vehicle, message, withGear));
+    if (kinds.includes("desempenho") || kinds.includes("valeapena")) lines.push(performanceReply(vehicle, message, true));
+    if (kinds.includes("economia")) lines.push(economyReply(vehicle, message, true));
     if (kinds.includes("confiavel")) lines.push(reliabilityReply(vehicle, message));
     // Duas perguntas na mesma fala: a segunda sem repetir o "Sim!" de abertura.
     return lines.slice(0, 2).map((line, index) => (index === 0 ? line : line.replace(/^(?:Sim!|É, sim!|Anda bem, sim!)\s*/, ""))).join(" ");

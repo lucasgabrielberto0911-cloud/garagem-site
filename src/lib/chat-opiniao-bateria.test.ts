@@ -221,3 +221,13 @@ test(`bateria de conversa: ${CASES.length} perguntas de cliente real`, async () 
   console.log(`ACERTO: ${ok}/${CASES.length} (${((100 * ok) / CASES.length).toFixed(1)}%)`);
   assert.deepEqual(fails, []);
 });
+
+
+test("opinião rejeita potência e consumo de outro card", async () => {
+  const result = await runChatTurn({ mensagem: "o civic exl anda bem?", historico: [], stock, generate: llm, readIntent: async () => null });
+  const caseInfo: Case = { q: "o civic exl anda bem?", car: CIVIC_EXL, kind: "opiniao" };
+  const foreign = await runChatTurn({ mensagem: "o hb20 1.6 anda bem?", historico: [], stock, generate: llm, readIntent: async () => null });
+  for (const number of ["128 cv", "9,7 km/l"]) {
+    assert.match(judge(caseInfo, { ...result, reply: `O Civic tem ${number}.`, vehicles: [...result.vehicles, ...foreign.vehicles] }) ?? "", /número inventado/);
+  }
+});

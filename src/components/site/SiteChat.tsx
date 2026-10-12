@@ -365,7 +365,7 @@ function ChatBubbleBody({ text }: { text: string }) {
                 data-chat-rank-list="1"
               >
                 {lines.slice(rankStart).map((line, lineIndex) => {
-                  const labeled = /^•\s+\*\*(.+?)\*\*\s*(.*)$/.exec(line.trim());
+                  const labeled = line.includes("/estoque/") ? null : /^•\s+\*\*(.+?)\*\*\s*(.*)$/.exec(line.trim());
                   if (labeled) {
                     // Pontos positivos: "• **Motor:** texto" vira rótulo em negrito + texto.
                     return (
@@ -381,7 +381,7 @@ function ChatBubbleBody({ text }: { text: string }) {
                   const [name, ...rest] = line.trim().replace(/^•\s+/, "").split(" — ");
                   const value = rest.join(" — ");
                   // "• **[Carro](/estoque/slug)** — motivo": nome em negrito que abre a ficha.
-                  const linked = /^\*\*\[([^\]]+)\]\((\/estoque\/[^)\s]+)\)\*\*$/.exec(name ?? "");
+                  const linked = /^\[\*\*([^\]]+?)\*\*\]\((\/estoque\/[^)\s]+)\)$/.exec(name ?? "") ?? /^\*\*\[([^\]]+)\]\((\/estoque\/[^)\s]+)\)\*\*$/.exec(name ?? "");
                   if (linked) {
                     return (
                       <li
