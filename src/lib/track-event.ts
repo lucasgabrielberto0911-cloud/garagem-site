@@ -7,8 +7,7 @@ import { vehicleFunnelParams, type VehicleFunnelRef } from "@/lib/meta-pixel";
  */
 export type SiteEventName =
   | "chat_message_sent"
-  | "chat_visit_request"
-  | "finance_simulate";
+  | "chat_visit_request";
 
 type Gtag = (...args: unknown[]) => void;
 type Fbq = (...args: unknown[]) => void;
@@ -16,7 +15,6 @@ type Fbq = (...args: unknown[]) => void;
 const CUSTOM_NAMES: Record<SiteEventName, string> = {
   chat_message_sent: "ChatMessageSent",
   chat_visit_request: "ChatVisitRequest",
-  finance_simulate: "FinanceSimulate",
 };
 
 /** Mantém só valores curtos e primitivos; descarta o resto. */
