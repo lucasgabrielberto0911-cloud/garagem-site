@@ -1101,7 +1101,21 @@ export function equipmentAcrossStockReply(
     if (pool.some(unit => !(unit.accessories ?? []).length)) return null;
     if (/\b(?:19|20)\d{2}\b|\b\d[.,]\d\b/.test(folded)) return null;
     if (airbagDetail && !pool.some(has)) return airbagDetailFallback(pool.filter(hasGeneric), airbagDetail.label, stock);
-    const units = [...pool].sort((a, b) => a.yearModel - b.yearModel).slice(0, 4);
+    const limit = Math.min(chatPickLimit(mensagem), 3);
+    const poolWithItem = pool.filter(has);
+    const poolWithout = pool.filter(unit => !has(unit));
+    let units: ChatVehicleRecord[];
+    if (poolWithItem.length > 0 && poolWithout.length > 0) {
+      if (limit === 2) {
+        units = [poolWithItem[0]!, poolWithout[0]!].sort((a, b) => a.yearModel - b.yearModel);
+      } else {
+        const pickWith = poolWithItem.slice(0, 2);
+        const pickWithout = poolWithout.slice(0, 3 - pickWith.length);
+        units = [...pickWith, ...pickWithout].sort((a, b) => a.yearModel - b.yearModel);
+      }
+    } else {
+      units = [...pool].sort((a, b) => a.yearModel - b.yearModel).slice(0, limit);
+    }
     const withItem = units.filter(has);
     const without = units.filter(unit => !has(unit));
     const names = (list: ChatVehicleRecord[]) => joinEquipment(list.map(unit => chatUnitName(unit, stock, true)));

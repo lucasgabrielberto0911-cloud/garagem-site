@@ -1,6 +1,6 @@
 import { findVehicleSpec, specMaxCv, specCityKmL } from "./chat-specs";
 import { vehiclePath } from "./vehicle-slug";
-import { parseBodyStyleFilter, vehicleBodyStyle } from "./chat-prompt";
+import { parseBodyStyleFilter } from "./chat-prompt";
 import { parseTransmissionFilter } from "./chat-stock";
 import type { ChatVehicleRecord } from "./chat-stock";
 
@@ -40,7 +40,6 @@ export function chatBlockName(v: ChatVehicleRecord) {
 export function formatChatCarBlocks(picks: ChatVehicleRecord[], message: string) {
   const criteria = chatCriteria(message);
   const used = new Map<string, Set<number>>();
-  let sourceUsed = false;
   let consumptionUsed = false;
   let previousDetail = "";
   const choose = (v: ChatVehicleRecord, key: string, templates: string[]) => {
@@ -58,14 +57,13 @@ export function formatChatCarBlocks(picks: ChatVehicleRecord[], message: string)
       const kml = specCityKmL(spec);
       if (kml != null) {
         const amount = `${spec.aprox ? "cerca de " : ""}${kml.toLocaleString("pt-BR")}`;
-        const source = sourceUsed ? "" : ", pelo Inmetro";
         reasons.push(choose(v, "economy", [
-          `Faz ${amount} km/l na cidade com gasolina${source}.`,
-          `Bebe pouco: ${amount} km/l na cidade, rodando com gasolina${source}.`,
-          `No gasto é uma boa pedida, com ${amount} km/l na cidade (gasolina)${source}.`,
-          `Pra quem roda muito, ${amount} km/l na cidade com gasolina${source}.`,
+          `Pra economizar no dia a dia, faz ${amount} km/l na cidade com gasolina.`,
+          `Bebe pouco: ${amount} km/l na cidade, rodando com gasolina.`,
+          `No gasto é uma boa pedida, com ${amount} km/l na cidade com gasolina.`,
+          `Pra quem roda muito, são ${amount} km/l na cidade com gasolina.`,
         ]));
-        sourceUsed = true; consumptionUsed = true;
+        consumptionUsed = true;
       }
     }
     if (criteria.power && spec) {
@@ -82,16 +80,16 @@ export function formatChatCarBlocks(picks: ChatVehicleRecord[], message: string)
           `Motor ${motor}${turbo} com ${cv} cv, dá fôlego na estrada.`,
           `${motor}${turbo} com ${cv} cv, anda bem com a família a bordo.`,
           `São ${cv} cv no motor ${motor}${turbo}, pra acompanhar suas viagens.`,
-          `O motor ${motor}${turbo} entrega ${cv} cv de fábrica.`,
+          `Com ${cv} cv, o motor ${motor}${turbo} dá fôlego pros seus trajetos.`,
         ]));
       }
     }
     if (criteria.space) {
       const n = spec?.portaMalas;
       if (n != null) reasons.push(choose(v, "space", [
-        `Porta-malas de ${n} litros, cabe a bagagem da família.`,
-        `São ${n} litros de porta-malas, bom pra mala e carrinho de bebê.`,
-        `A bagagem vai em um porta-malas de ${n} litros.`,
+        `O porta-malas tem ${n} litros pra levar a bagagem da família.`,
+        `São ${n} litros de porta-malas pra organizar malas e compras.`,
+        `Pra viajar em família, tem ${n} litros de porta-malas.`,
         `Com ${n} litros no porta-malas, dá pra organizar as malas.`,
       ]));
       else if ((v.doors ?? 0) >= 4) reasons.push(choose(v, "space", [
@@ -122,13 +120,12 @@ export function formatChatCarBlocks(picks: ChatVehicleRecord[], message: string)
       { key: "gear", text: `Câmbio ${v.transmission.toLowerCase()}, pra acompanhar sua rotina.` },
       v.color ? { key: "year", text: `É uma unidade ${v.yearModel}, na cor ${v.color.toLowerCase()}.` } : null,
     ].filter((d): d is { key: string; text: string } => d != null);
-    let first = reasons[0] ?? choose(v, "fallback", [
+    const first = reasons[0] ?? choose(v, "fallback", [
       `É uma unidade ${v.yearModel} com câmbio ${v.transmission.toLowerCase()}.`,
       `Câmbio ${v.transmission.toLowerCase()} em uma unidade ${v.yearModel}.`,
       `A unidade é de ${v.yearModel} e tem ${v.km.toLocaleString("pt-BR")} km rodados.`,
       `Com ${v.km.toLocaleString("pt-BR")} km rodados, é uma unidade ${v.yearModel}.`,
     ]);
-    if (criteria.space && vehicleBodyStyle(v) === "suv") first = `SUV com ${first[0]!.toLowerCase()}${first.slice(1)}`;
     const repeats = (d: { key: string; text: string }) =>
       (d.key === "km" && first.includes(v.km.toLocaleString("pt-BR"))) ||
       (d.key === "gear" && first.toLowerCase().includes(v.transmission.toLowerCase())) || d.text === first;
@@ -139,7 +136,7 @@ export function formatChatCarBlocks(picks: ChatVehicleRecord[], message: string)
     const prose = second ? `${first} ${second}` : first;
     return `• **[${chatBlockName(v)}](${vehiclePath(v)})** — ${prose.length <= 230 ? prose : first}`;
   });
-  const labels = [criteria.power && "mais fôlego", criteria.economy && "economizar combustível", criteria.space && "bastante espaço", criteria.cheap && "gastar menos", criteria.automatic && "câmbio automático"].filter((label): label is string => Boolean(label));
+  const labels = [criteria.power && "mais fôlego", criteria.economy && "economia de combustível", criteria.space && "bastante espaço", criteria.cheap && "preço em conta", criteria.automatic && "câmbio automático"].filter((label): label is string => Boolean(label));
   const human = labels.length > 1 ? `${labels.slice(0, -1).join(", ")} e ${labels.at(-1)}` : labels[0] ?? "o que você procura";
   const count = picks.length === 3 ? "três" : "dois";
   const intros = [`Pra quem quer ${human}, estes ${count} entregam bem.`, `Olha só, estes ${count} combinam com ${human}.`, `Estes ${count} combinam com ${human}.`];
@@ -149,7 +146,8 @@ export function formatChatCarBlocks(picks: ChatVehicleRecord[], message: string)
   const gearLabel = gear === "automatico" ? body === "pickup" || body === "wagon" ? "automáticas" : "automáticos" : gear === "manual" ? "manuais" : "";
   const intro = bodyLabel ? `Olha o que tenho de ${bodyLabel}${gearLabel ? ` ${gearLabel}` : ""} pro seu pedido:` : picks.length === 1 ? "Esse aqui combina bem com o seu pedido:" : intros[hash(message) % intros.length];
   const missing = criteria.economy ? picks.filter(v => { const spec = findVehicleSpec(v); return !spec || specCityKmL(spec) == null; }) : [];
-  const closing = missing.length ? `Do ${missing.map(v => v.model).join(" e do ")} ainda não tenho o consumo na ficha, mas o consultor confirma${consumptionUsed ? ", e os números disponíveis variam conforme o uso" : ""}.` : consumptionUsed ? "Os números de consumo são de referência e variam conforme o uso." : "";
+  const source = consumptionUsed ? "O consumo é uma referência do Inmetro e varia conforme o uso." : "";
+  const closing = [missing.length ? `Do ${missing.map(v => v.model).join(" e do ")} ainda não tenho o consumo na ficha, mas o consultor confirma pra você.` : "", source].filter(Boolean).join(" ");
   return `${intro}\n\n${lines.join("\n\n")}${closing ? `\n\n${closing}` : ""}`;
 }
 

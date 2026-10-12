@@ -112,6 +112,8 @@ test("Lucas 2 sem o modelo de linguagem: ranking determinístico pelas fichas, c
   assert.doesNotMatch(result.reply, /em potência leva|leva vantagem|é melhor/);
   assert.equal(result.vehicles.length, 2);
   assert.match(result.reply, /• \*\*\[Hyundai HB20S 2024\]\(\/estoque\/[^)]+\)\*\* —/);
+  assert.match(result.reply, /torque/i);
+  assert.doesNotMatch(result.reply, /120\s*cv/i);
   assert.doesNotMatch(result.reply, robotic);
   assert.doesNotMatch(result.reply, /cilindrada sozinha|preciso de potência documentada/);
 });

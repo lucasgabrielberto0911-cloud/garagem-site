@@ -15,6 +15,7 @@ import {
 import { coverSrc } from "@/lib/stock-query";
 import { shortVersion } from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
+import { chatCriteria } from "@/lib/chat-multicriterio";
 import {
   parseChatSearchRanges,
   chatSearchOrder,
@@ -473,9 +474,11 @@ export function chatStockExploreHref(
   stock: ChatVehicleRecord[],
   shown: number,
 ) {
+  const criteria = chatCriteria(mensagem);
+  const combinedCheap = criteria.cheap && (criteria.power || criteria.economy || criteria.space);
   const budget =
     parsePriceLimit(mensagem) ??
-    (parseCheapIntent(mensagem) ? cheapPriceCap(applyChatStockFilters(stock, mensagem)) : null);
+    (parseCheapIntent(mensagem) && !combinedCheap ? cheapPriceCap(applyChatStockFilters(stock, mensagem)) : null);
   const category = resolveChatCategory(mensagem);
   const pool = applyChatStockFilters(stock, mensagem);
   const priced =

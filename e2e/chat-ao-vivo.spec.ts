@@ -58,7 +58,7 @@ async function formatAcceptance(answer: Locator, expected: number) {
     expect(prose.length).toBeGreaterThanOrEqual(25);
     expect(prose.length).toBeLessThanOrEqual(260);
     expect(prose.split(/[.!?]\s/).length).toBeLessThanOrEqual(2);
-    expect(prose).not.toMatch(/R\$|•|—|vale conhecer|equilibrando|n[aã]o (tem|possui|vem com) ar-condicionado/i);
+    expect(prose).not.toMatch(/R\$|•|—|vale conhecer|equilibrando|\bcom\s+com\b|SUV com|n[aã]o (tem|possui|vem com) ar-condicionado/i);
     firstSentences.push(prose.split(/[.!?]\s/)[0]!);
     const id = await cards.nth(i).getAttribute("data-chat-vehicle");
     const unit = stock.find(v => v.id === id);
@@ -67,6 +67,19 @@ async function formatAcceptance(answer: Locator, expected: number) {
     expect(await link.evaluate(el => getComputedStyle(el).fontFamily)).toMatch(/Barlow.*Condensed/i);
   }
   expect(firstSentences[0]).not.toBe(firstSentences[1]);
+  expect(firstSentences[0]!.split(/\s+/).slice(0, 2).join(" ")).not.toBe(firstSentences[1]!.split(/\s+/).slice(0, 2).join(" "));
+  const stockLink = answer.locator('a[href^="/estoque"]').filter({ hasText: /^Ver (todos|o estoque)/ });
+  if (await stockLink.count()) {
+    const href = await stockLink.first().getAttribute("href");
+    const cap = new URL(href!, "http://localhost").searchParams.get("maxPrice");
+    if (cap) {
+      for (const card of await cards.all()) {
+        const id = await card.getAttribute("data-chat-vehicle");
+        const unit = stock.find(v => v.id === id);
+        expect(unit!.price).toBeLessThanOrEqual(Number(cap));
+      }
+    }
+  }
   await expect(answer).not.toContainText(/Linhares|simulador|simula[cç][aã]o|parcel|taxa|juros|entrada m[ií]nima|cidade de|faixa de|abaixo de R\$/i);
   const intro = answer.locator("p").first();
   await expect(intro).not.toContainText(/^Separei \d|^Temos (duas|tr[eê]s) [oó]timas/i);

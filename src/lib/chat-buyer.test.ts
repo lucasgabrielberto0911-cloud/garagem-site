@@ -1089,7 +1089,7 @@ test("família, primeiro carro, econômico e SUV filtram o estoque real", async 
   });
   assert.equal(family.vehicles[0]?.id, "compass");
   assert.match(textoVisivelChat(family.reply), /4 portas/);
-  assert.match(textoVisivelChat(family.reply), /SUV/);
+  assert.doesNotMatch(textoVisivelChat(family.reply), /SUV com|\bcom\s+com\b/i);
   const compassBlock = textoVisivelChat(family.reply).split("\n").find(line => /• .*Compass/.test(line));
   assert.ok(compassBlock);
   assert.doesNotMatch(compassBlock, /litros de porta-malas|porta-malas de \d/i);

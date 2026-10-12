@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ChatBubbleBody } from "../components/site/ChatBubbleBody";
-import { combinedChatRanking } from "./chat-multicriterio";
+import { combinedChatRanking, formatChatCarBlocks } from "./chat-multicriterio";
 import { vehiclePath } from "./vehicle-slug";
 import { toChatVehicleCard } from "./chat-cards";
 import { searchChatInventory, type ChatVehicleRecord } from "./chat-stock";
@@ -18,6 +18,52 @@ const stock = [
   car("m", "Fiat", "Mobi", "Like 1.0", 2024, 57000, "Manual"),
   car("k", "Nissan", "Kicks", "SL 1.6", 2019, 86000),
 ];
+
+test("SUVs para família têm frases completas e aberturas distintas em todas as variações", () => {
+  const duster = car("cmuobm8ka0000jg04pe8ybs5n", "Renault", "Duster", "Dynamique 2.0", 2014, 54900);
+  const hrv = car("cmud192iz0000l6041ewv0ki6", "Honda", "HR-V", "EXL 1.8", 2016, 84900);
+  const openings = new Set<string>();
+  for (let variation = 0; variation < 8; variation++) {
+    const picks = [duster, hrv].map(v => ({ ...v, id: `${v.id}${variation}` }));
+    const reply = formatChatCarBlocks(picks, "SUV para família");
+    assert.doesNotMatch(reply, /\bcom\s+com\b|SUV com|SUV com a bagagem/i);
+    const prose = reply.split("\n").filter(line => line.startsWith("•")).map(line => line.split(" — ")[1]!);
+    assert.equal(prose.length, 2);
+    assert.match(prose[0]!, /475 litros/);
+    assert.match(prose[1]!, /437 litros/);
+    const starts = prose.map(text => text.replace(/\d+/g, "n").split(/\s+/).slice(0, 2).join(" "));
+    assert.notEqual(starts[0], starts[1]);
+    starts.forEach(start => openings.add(start));
+  }
+  assert.equal(openings.size, 4);
+});
+
+test("recomendação acolhedora mantém consumo e potência reais com fonte uma vez no fechamento", () => {
+  const city = car("city", "Honda", "City", "EX 1.5", 2016, 69900, "CVT");
+  for (let variation = 0; variation < 8; variation++) {
+    const picks = [stock[0]!, city].map(v => ({ ...v, id: `${v.id}${variation}` }));
+    const reply = formatChatCarBlocks(picks, "quero um carro forte e econômico");
+    const blocks = reply.split("\n").filter(line => line.startsWith("•"));
+    for (const [index, block] of blocks.entries()) {
+      const spec = findVehicleSpec(picks[index]!)!;
+      assert.ok(block.includes(`${specCityKmL(spec)!.toLocaleString("pt-BR")} km/l`));
+      assert.ok(block.includes(`${specMaxCv(spec)} cv`));
+      assert.match(block, /na cidade.*gasolina/);
+      assert.doesNotMatch(block, /Inmetro|de fábrica/);
+    }
+    assert.equal((reply.match(/Inmetro/g) ?? []).length, 1);
+    assert.match(reply, /Inmetro e varia conforme o uso\.$/);
+    assert.doesNotMatch(reply.split("\n")[0]!, /com economizar|com mais fôlego e economizar/);
+  }
+});
+
+test("espaço com economia não cria prefixo de SUV sobre o consumo", () => {
+  const duster = car("duster", "Renault", "Duster", "Dynamique 2.0", 2014, 54900);
+  const reply = formatChatCarBlocks([duster], "SUV espaçoso e econômico");
+  assert.match(reply, /8,5 km\/l/);
+  assert.match(reply, /475 litros/);
+  assert.doesNotMatch(reply, /SUV com|\bcom\s+com\b/i);
+});
 for (const question of ["quero um carro forte e economico", "carro potente que gaste pouco", "espaçoso e barato", "automático econômico"]) {
   test(question + ": critérios preservados até a resposta e os cards", async () => {
     const found = searchChatInventory(question, stock)!;
