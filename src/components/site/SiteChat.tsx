@@ -262,7 +262,7 @@ function ChatVehicleMini({
       });
 
   return (
-    <article data-chat-vehicle={vehicle.id} className="group relative flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-2.5 transition hover:border-white/20 hover:bg-white/[0.07]">
+    <article data-chat-vehicle={vehicle.id} className="group relative flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-2 transition hover:border-white/20 hover:bg-white/[0.07]">
       <Link href={vehicle.href} prefetch={false} onClick={() => onVehicleClick?.(vehicle)} aria-label={`${label} — ${chatVehiclePrice(vehicle)}. Abrir ficha`} className="absolute inset-0 rounded-xl touch-manipulation" />
       <span className="pointer-events-none relative aspect-[4/3] w-[72px] shrink-0 overflow-hidden rounded-lg bg-asphalt max-[359px]:w-16">
         {/* eslint-disable-next-line @next/next/no-img-element -- capa remota, sem cota /_next/image */}
@@ -274,13 +274,13 @@ function ChatVehicleMini({
       </span>
       <div className="pointer-events-none min-w-0 flex-1">
         <h3 className="truncate font-display text-[14px] font-semibold leading-5 text-cream">{vehicle.title}</h3>
-        <p className="mt-1 flex flex-wrap items-baseline gap-x-1 text-[12px] leading-4 text-cream/75 tabular-nums">
+        <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1 text-[12px] leading-4 text-cream/75 tabular-nums">
           <span>{vehicle.year} · {vehicle.km.toLocaleString("pt-BR")} km ·</span>{" "}
           <span className="whitespace-nowrap font-display text-[13px] font-bold text-[#ff6b70]">{chatVehiclePrice(vehicle)}</span>
         </p>
         <VehicleCardWhatsApp variant="chat-compact" vehicleId={vehicle.id} label={label} message={whatsappMessage} value={vehicle.sold ? 0 : vehicle.price} make={vehicle.brand} model={vehicle.model} year={vehicle.year} path={vehicle.href} showOnStockList trackingLabel="chat-card" campaign="chat" />
       </div>
-      <IconArrowRight className="pointer-events-none h-4 w-4 shrink-0 text-cream/40 max-[359px]:hidden" />
+      <IconArrowRight className="pointer-events-none h-4 w-4 shrink-0 text-cream/40 max-[419px]:hidden" />
     </article>
   );
 }
