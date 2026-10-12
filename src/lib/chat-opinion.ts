@@ -323,54 +323,73 @@ export function fichaHighlights(vehicle: ChatVehicleRecord, max = 3) {
 
 const join = (items: string[]) => (items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} e ${items.at(-1)}`);
 
-/** 4 a 6 pontos curtos, adaptados ao tipo de carro. */
+/** Motor fraco (1.0 ou menos de 90 cv): nunca citar cv nem potência. */
+function isWeakEngine(vehicle: ChatVehicleRecord, spec: VehicleSpec | null, power: Power | null, engine: string) {
+  if (/^1[.,]0\b/.test(engine)) return true;
+  return power != null && power.cv < 90;
+}
+
+/** Trecho da manutenção da ficha que fala de peças (fato conhecido do modelo). */
+function partsFact(spec: VehicleSpec | null) {
+  const clause = spec?.manutencao?.split(/;/).map((part) => part.trim()).find((part) => /pe[cç]as?/i.test(part) && /barat|acess[ií]ve|f[aá]ce?is|todo lugar/i.test(part));
+  // Tira o adjetivo solto (“mecânica Fire simples e …”) e fica com o fato sobre custo e peças.
+  return clause?.replace(/^mec[âa]nica [^,]*? simples e (?=das |com )/i, "") ?? null;
+}
+
+/** 4 a 6 pontos de uma linha, cada um com dado real da ficha do anúncio ou do modelo; sem dado, omite. */
 export function positivePoints(vehicle: ChatVehicleRecord): Array<[string, string]> {
   const spec = findVehicleSpec(vehicle);
   const power = powerOf(spec);
   const moto = isMoto(vehicle);
   const body = vehicleBodyStyle(vehicle);
   const engine = engineLabel(vehicle, spec);
+  const weak = !moto && isWeakEngine(vehicle, spec, power, engine);
   const points: Record<string, [string, string] | null> = {};
-  const adjective = power ? ["esperto na cidade e na estrada", "disposto no dia a dia", "ágil na cidade", "focado em economia"][power.level - 1] : "boa disposição no dia a dia";
   if (moto) {
     points.motor = power ? ["Motor", `${power.approx}${num(power.cv)} cv, ágil no trânsito`] : null;
+  } else if (!weak && power) {
+    const adjective = ["esperto na cidade e na estrada", "disposto no dia a dia", "ágil na cidade", "focado em economia"][power.level - 1];
+    points.motor = ["Motor", `${engine ? `${engine} de ` : ""}${power.approx}${num(power.cv)} cv${power.fuel}, ${adjective}`];
   } else {
-    points.motor = power ? ["Motor", `${engine ? `${engine} de ` : ""}${power.approx}${num(power.cv)} cv${power.fuel}, ${adjective}`] : engine ? ["Motor", `${engine}, ${adjective}`] : null;
+    points.motor = null;
   }
   const gear = gearOf(vehicle);
+  const marchas = spec?.marchas && gear === "manual" ? `manual de ${spec.marchas} marchas` : null;
   points.cambio = ["Câmbio", {
     auto: "automático, confortável no trânsito",
     cvt: "CVT, suave e econômico na cidade",
     semi: "semiautomático, sem embreagem no trânsito",
-    manual: moto ? "manual, simples de pilotar" : "manual, simples e barato de manter",
+    manual: marchas ?? "manual",
   }[gear]];
   const city = spec?.cidade?.gasolina;
+  const road = spec?.estrada?.gasolina;
   points.economia = spec?.consumoMoto
     ? ["Economia", `na casa dos ${num(spec.consumoMoto)} km/l`]
-    : city != null && city >= 10.8
-      ? ["Economia", `cerca de ${num(city)} km/l na cidade (gasolina, Inmetro)`]
+    : city != null && (weak || city >= 10.8)
+      ? ["Economia", `${spec?.aprox ? "cerca de " : ""}${num(city)} km/l na cidade${road != null ? ` e ${num(road)} km/l na estrada` : ""} (gasolina, Inmetro)`]
       : null;
+  const parts = partsFact(spec);
   const care = spec?.manutencao?.split(/;|, com |, que /)[0]?.trim();
   points.confianca = moto
-    ? ["Manutenção", care ? care.replace(/^uma das motos mais /, "das mais ") : "simples e barata"]
-    : care ? ["Confiabilidade", care] : null;
-  const trunk = spec?.portaMalas ? `${num(spec.portaMalas)} litros` : null;
-  points.espaco = moto
-    ? ["Praticidade", "leve e fácil de estacionar"]
-    : body === "suv"
-      ? ["Altura e espaço", `posição de dirigir alta${trunk ? ` e porta-malas de ${trunk}` : ""}`]
-      : body === "sedan"
-        ? trunk ? ["Porta-malas", `${trunk}, ótimo pra viagem`] : ["Espaço", "sedã com bom espaço pra família"]
-        : body === "wagon"
-          ? ["Espaço", `perua com porta-malas de ${trunk ?? "bom tamanho"}`]
-          : ["Praticidade", "compacto e fácil de estacionar"];
+    ? care ? ["Manutenção", care.replace(/^uma das motos mais /, "das mais ")] : null
+    : parts ? ["Manutenção", parts] : null;
+  const trunk = spec?.portaMalas ? `${spec.aprox ? "cerca de " : ""}${num(spec.portaMalas)} litros` : null;
+  points.espaco = !moto && trunk
+    ? body === "suv"
+      ? ["Altura e espaço", `posição de dirigir alta e porta-malas de ${trunk}`]
+      : ["Porta-malas", trunk]
+    : null;
   const highlights = fichaHighlights(vehicle, 3);
   points.itens = highlights.length ? ["Itens da ficha", join(highlights)] : null;
+  const kmText = vehicle.km > 0 ? `${vehicle.km.toLocaleString("pt-BR")} km rodados` : null;
+  points.ano = ["Ano e km", `${vehicle.yearModel}${kmText ? `, ${kmText}` : ""}`];
   const order = moto
-    ? ["economia", "confianca", "motor", "cambio", "itens", "espaco"]
-    : body === "suv" || body === "sedan" || body === "wagon"
-      ? ["espaco", "motor", "cambio", "itens", "confianca", "economia"]
-      : ["motor", "cambio", "economia", "confianca", "itens", "espaco"];
+    ? ["economia", "confianca", "motor", "cambio", "itens", "ano"]
+    : weak
+      ? ["economia", "confianca", "itens", "espaco", "cambio", "ano"]
+      : body === "suv" || body === "sedan" || body === "wagon"
+        ? ["espaco", "motor", "cambio", "itens", "economia", "confianca", "ano"]
+        : ["motor", "cambio", "economia", "confianca", "itens", "espaco", "ano"];
   return order.map((key) => points[key]).filter((point): point is [string, string] => Boolean(point)).slice(0, 6);
 }
 

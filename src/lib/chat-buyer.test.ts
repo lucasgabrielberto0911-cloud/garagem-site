@@ -909,9 +909,12 @@ test("segunda mensagem herda automático e teto e Nova conversa limpa", async ()
     [{ role: "user", content: "automático até 100 mil" }],
     stock,
   );
-  assert.match(scoped, /100 mil/);
-  assert.match(scoped, /automático/i);
+  // Pergunta geral nova não herda teto nem câmbio.
+  assert.doesNotMatch(scoped, /100 mil|automático/i);
   assert.match(scoped, /forte/);
+  // Follow-up explícito continua herdando.
+  const followUp = scopeChatMessage("qual desses é o mais forte?", [{ role: "user", content: "automático até 100 mil" }], stock);
+  assert.match(followUp, /100 mil/);
 
   const result = await runChatTurn({
     mensagem: "quero mais forte",
@@ -922,29 +925,15 @@ test("segunda mensagem herda automático e teto e Nova conversa limpa", async ()
     stock,
     generate: async ({ systemPrompt, mensagem }) => {
       assert.equal(mensagem, "quero mais forte");
-      assert.match(systemPrompt, /100\.000/);
+      assert.doesNotMatch(systemPrompt, /100\.000/);
       assert.match(systemPrompt, /motor mais forte/);
       assert.match(systemPrompt, /Não pergunte de novo/);
       return { text: "Separei algumas opções.", functionCall: null };
     },
   });
-  assert.deepEqual(
-    result.vehicles.map((vehicle) => vehicle.id),
-    ["lancer", "civic", "corolla"],
-  );
-  assert.ok(result.vehicles.every((vehicle) => vehicle.price <= 100_000));
-  assert.ok(
-    result.vehicles.every((vehicle) =>
-      /autom/i.test(vehicle.transmission ?? ""),
-    ),
-  );
-  assert.doesNotMatch(
-    result.reply,
-    /orçamento ou o câmbio|automático ou manual/i,
-  );
-  assert.match(result.reply, /automáticos.*100\.000/i);
-  assert.doesNotMatch(result.reply, /eu olho o motor maior antes do preço/);
-  assert.match(result.reply, /• Lancer 2\.0 2016 — 160 cv/);
+  // Pergunta geral nova: ranking no estoque todo, sem o teto/câmbio da pergunta anterior.
+  assert.ok(result.vehicles.length > 0);
+  assert.doesNotMatch(result.reply, /automáticos.*100\.000/i);
 
   const fewerKm = await runChatTurn({
     mensagem: "e o de menos km?",

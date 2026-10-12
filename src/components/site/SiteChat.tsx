@@ -380,6 +380,24 @@ function ChatBubbleBody({ text }: { text: string }) {
                   }
                   const [name, ...rest] = line.trim().replace(/^•\s+/, "").split(" — ");
                   const value = rest.join(" — ");
+                  // "• **[Carro](/estoque/slug)** — motivo": nome em negrito que abre a ficha.
+                  const linked = /^\*\*\[([^\]]+)\]\((\/estoque\/[^)\s]+)\)\*\*$/.exec(name ?? "");
+                  if (linked) {
+                    return (
+                      <li
+                        key={`${linked[2]}-${lineIndex}`}
+                        className="px-3 py-2 text-[13.5px] leading-snug text-cream/90"
+                      >
+                        <Link
+                          href={linked[2]!}
+                          className="font-semibold text-cream underline decoration-white/30 underline-offset-[3px] transition hover:decoration-cream [overflow-wrap:anywhere]"
+                        >
+                          {linked[1]}
+                        </Link>
+                        {value ? <span className="text-cream/80">{" — "}{value}</span> : null}
+                      </li>
+                    );
+                  }
                   return (
                     <li
                       key={`${name}-${lineIndex}`}

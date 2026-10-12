@@ -109,7 +109,7 @@ test("Lucas 2 sem o modelo de linguagem: ranking determinístico pelas fichas, c
     generate: noModel,
   });
   assert.match(result.reply, /^Depende do que você chama de forte: em potência leva o HB20 1\.6; na força ao pisar \(torque, retomada\) leva o HB20S 1\.0 turbo\./);
-  assert.match(result.reply, /• HB20S 1\.0 turbo — 120 cv · 17,5 kgfm/);
+  assert.match(result.reply, /• \*\*\[HB20S 1\.0 turbo\]\(\/estoque\/[^)]+\)\*\* — 120 cv · 17,5 kgfm/);
   assert.doesNotMatch(result.reply, robotic);
   assert.doesNotMatch(result.reply, /cilindrada sozinha|preciso de potência documentada/);
 });

@@ -2814,6 +2814,18 @@ export function looksLikeShortlistFollowUp(mensagem: string) {
   );
 }
 
+/**
+ * Pergunta nova e geral (“qual o mais econômico?”, “quero mais forte”): sem “desses/nele/e o…”,
+ * não herda faixa de preço, câmbio, ano nem km de perguntas anteriores.
+ */
+export function isFreshGeneralRankQuestion(mensagem: string) {
+  const folded = normalize(mensagem);
+  if (isAnaphoricVehicleFollowUp(mensagem) || looksLikeShortlistFollowUp(mensagem)) return false;
+  if (/\b(desses|destes|desse|deste|deles|nele|nela|neles|dele|dela|dentre|entre eles|entre elas|dos dois|das duas|mesma faixa|mesmo valor|mesmo orcamento|ainda|tambem)\b/.test(folded)) return false;
+  if (/^(?:e|mas|so|agora)\b/.test(folded) || /\bcompar\w*/.test(folded)) return false;
+  return explicitRank(mensagem) != null || parseEconomyIntent(mensagem);
+}
+
 function skipsChatMemory(mensagem: string) {
   if (!mensagem.trim()) return true;
   if (isOffScopeMessage(mensagem) || isFipeQuestion(mensagem) || isChatPing(mensagem)) {
@@ -2915,12 +2927,12 @@ export function scopeChatMessage(
 
   const append: string[] = [];
   const foldedCurrent = normalize(current);
-  const {
-    price: clearPrice,
-    gear: clearGear,
-    year: clearYear,
-    km: clearKm,
-  } = chatSearchResets(current);
+  const fresh = isFreshGeneralRankQuestion(current);
+  const resets = chatSearchResets(current);
+  const clearPrice = resets.price || fresh;
+  const clearGear = resets.gear || fresh;
+  const clearYear = resets.year || fresh;
+  const clearKm = resets.km || fresh;
   if (!clearPrice && parsePriceLimit(current) == null && price != null) {
     append.push(
       price % 1000 === 0

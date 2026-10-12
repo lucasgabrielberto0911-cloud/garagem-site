@@ -25,7 +25,6 @@ import { Container, WhatsAppButton } from "@/components/site/ui";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
-import { FinanceSimulator } from "@/components/site/FinanceSimulator";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
@@ -551,17 +550,8 @@ export default async function VehicleDetailPage({
                     trade={whatsapp.trade}
                   />
                   <p className="-mt-2 text-[11px] leading-relaxed text-muted">
-                    Simular, troca e vídeo também abrem o WhatsApp deste veículo.
+                    Esses botões também abrem o WhatsApp deste veículo.
                   </p>
-
-                  <FinanceSimulator
-                    vehicleId={vehicle.id}
-                    slug={canonicalSlug}
-                    path={path}
-                    label={fullLabel}
-                    price={vehicle.price}
-                    isMoto={vehicle.category === "moto"}
-                  />
 
                   <ChatOpenButton
                     source="ficha"

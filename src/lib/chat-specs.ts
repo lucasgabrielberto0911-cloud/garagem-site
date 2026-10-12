@@ -11,6 +11,7 @@
  * vai com `aprox: true` e o texto sai com "cerca de". Campo ausente = sem dado
  * confiável: o assistente não chuta.
  */
+import { vehiclePath } from "./vehicle-slug";
 
 export type SpecSubject = {
   brand: string;
@@ -928,7 +929,12 @@ export const DIRECT_SPEC_TOPICS: SpecTopic[] = [
   "portamalas",
 ];
 
-export type NamedSpec = { spec: VehicleSpec; nome: string };
+export type NamedSpec = {
+  spec: VehicleSpec;
+  nome: string;
+  /** Anúncio do estoque; quando existe, o nome na lista vira link para a ficha. */
+  vehicle?: { id: string; brand: string; model: string; version?: string | null; yearModel: number };
+};
 
 function capital(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1);
@@ -1193,14 +1199,19 @@ export function powerTorqueReply(ranked: NamedSpec[]): string | null {
     `na força ao pisar (torque, retomada) leva ${torquer.spec.artigo} ${torquer.nome}.`;
   const rows = ranked.slice(0, 3).map((entry) => ({
     name: entry.nome,
+    vehicle: entry.vehicle,
     value: `${num(bestCv(entry.spec))} cv · ${num(maxTorque(entry.spec))} kgfm`,
   }));
   return specRankList(lead, rows);
 }
 
 /** Frase curta + uma linha “• carro — dado” por carro (o chat desenha como lista). */
-function specRankList(lead: string, rows: Array<{ name: string; value: string }>) {
-  return `${lead}\n${rows.map((row) => `• ${row.name} — ${row.value}`).join("\n")}`;
+function specRankList(lead: string, rows: Array<{ name: string; value: string; vehicle?: NamedSpec["vehicle"] }>) {
+  const item = (row: (typeof rows)[number]) => {
+    const name = row.name.replace(/[\[\]()*]/g, "");
+    return row.vehicle ? `**[${name}](${vehiclePath(row.vehicle)})**` : row.name;
+  };
+  return `${lead}\n${rows.slice(0, 3).map((row) => `• ${item(row)} — ${row.value}`).join("\n")}`;
 }
 
 
@@ -1237,8 +1248,8 @@ export function rankingSpecReply(criterion: SpecCriterion, entries: NamedSpec[])
   if (!value(top)) return null;
   const rows = ranked
     .slice(0, 3)
-    .map((entry) => ({ name: entry.nome, value: value(entry) }))
-    .filter((row): row is { name: string; value: string } => Boolean(row.value));
+    .map((entry) => ({ name: entry.nome, value: value(entry), vehicle: entry.vehicle }))
+    .filter((row): row is { name: string; value: string; vehicle: NamedSpec["vehicle"] } => Boolean(row.value));
   const label =
     criterion === "potencia"
       ? "mais forte em potência"
