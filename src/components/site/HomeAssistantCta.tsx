@@ -26,7 +26,7 @@ export function HomeAssistantButton() {
         type="button"
         onClick={() => openAssistant("home-hero-cta")}
         aria-label="Pergunte ao assistente"
-        className="assistant-cta relative isolate inline-flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden border border-brand/80 bg-asphalt px-3 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-ink touch-manipulation sm:gap-2.5 sm:px-7 sm:text-base lg:min-h-[44px] lg:py-2.5 lg:text-sm"
+        className="assistant-cta relative isolate inline-flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden border border-brand/80 bg-asphalt px-3 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-ink touch-manipulation sm:gap-2.5 sm:px-7 sm:text-base lg:text-sm"
       >
         <span className="relative z-10 inline-flex items-center gap-2 sm:gap-2.5">
           <IconChat className="h-5 w-5 shrink-0 text-brand" />
@@ -55,8 +55,8 @@ export function HomeAssistantAsk() {
   }
 
   return (
-    <div className="w-full sm:border sm:border-white/10 sm:bg-asphalt/70 sm:p-3 lg:p-2">
-      <p className="mb-1.5 hidden text-[13px] font-medium leading-tight text-muted sm:block lg:hidden">Pergunte qualquer coisa sobre nossos carros</p>
+    <div className="w-full sm:border sm:border-white/10 sm:bg-asphalt/70 sm:p-3 lg:flex lg:h-full lg:flex-col lg:justify-center lg:px-2 lg:py-3">
+      <p className="mb-1.5 hidden text-[13px] lg:mb-2.5 font-medium leading-tight text-muted sm:block">Pergunte qualquer coisa sobre nossos carros</p>
       <form onSubmit={submit} className="hidden items-center gap-2 sm:flex">
         <label htmlFor="home-assistant-input" className="sr-only">Pergunte qualquer coisa sobre nossos carros</label>
         <input
@@ -68,23 +68,23 @@ export function HomeAssistantAsk() {
           enterKeyHint="send"
           autoComplete="off"
           placeholder="Ex.: tem SUV automático?"
-          className="h-10 min-w-0 flex-1 border border-white/15 bg-ink px-3 text-[16px] text-cream placeholder:text-muted focus:border-brand focus:outline-none sm:text-sm"
+          className="h-10 min-w-0 flex-1 lg:h-11 border border-white/15 bg-ink px-3 text-[16px] text-cream placeholder:text-muted focus:border-brand focus:outline-none sm:text-sm"
         />
-        <button type="submit" aria-label="Enviar pergunta ao assistente" className="flex h-10 w-10 shrink-0 items-center justify-center bg-brand text-cream transition hover:bg-[#c91418] touch-manipulation">
+        <button type="submit" aria-label="Enviar pergunta ao assistente" className="flex h-10 w-10 lg:h-11 lg:w-11 shrink-0 items-center justify-center bg-brand text-cream transition hover:bg-[#c91418] touch-manipulation">
           <IconSend className="h-4 w-4" />
         </button>
       </form>
       <div
         role="group"
         aria-label="Pergunte qualquer coisa sobre nossos carros"
-        className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:mt-1.5 sm:flex-wrap sm:overflow-visible sm:px-0 lg:flex-nowrap lg:gap-1 lg:overflow-x-auto"
+        className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:mt-1.5 lg:mt-2 xl:mt-2.5 sm:flex-wrap sm:overflow-visible sm:px-0 lg:gap-1 xl:flex-nowrap xl:overflow-x-auto"
       >
         {SUGGESTIONS.map((suggestion) => (
           <button
             key={suggestion}
             type="button"
             onClick={() => openAssistant("home-hero-sugestao", suggestion)}
-            className="h-8 shrink-0 whitespace-nowrap rounded-full border border-white/15 bg-asphalt/60 px-3 text-[12px] lg:px-2.5 lg:text-[11.5px] leading-none text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation"
+            className="h-8 shrink-0 lg:h-9 whitespace-nowrap rounded-full border border-white/15 bg-asphalt/60 px-3 text-[12px] lg:px-2.5 lg:text-[11.5px] leading-none text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation"
           >
             {suggestion}
           </button>
