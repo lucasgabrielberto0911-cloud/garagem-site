@@ -1,0 +1,28 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { buildStockFacets } from "./stock-facets";
+
+const row = {
+  category: "carro", brand: "Honda", model: "Civic", transmission: "Automático",
+  fuel: "Flex", color: "preto", yearModel: 2020, accessories: ["ABS"],
+};
+
+test("facetas deduplicam marcas, modelos, anos e acessórios sem perder opções", () => {
+  const result = buildStockFacets([
+    row,
+    { ...row, brand: "HONDA", model: "CIVIC", yearModel: 2018, accessories: ["abs", " Airbag "] },
+    { ...row, brand: "Toyota", model: "Corolla", color: null, yearModel: 2020 },
+  ]);
+  assert.deepEqual(result.brands, ["Honda", "Toyota"]);
+  assert.deepEqual(result.models, [{ brand: "Honda", model: "Civic" }, { brand: "Toyota", model: "Corolla" }]);
+  assert.deepEqual(result.years, [2020, 2018]);
+  assert.deepEqual(result.accessories, ["ABS", "Airbag"]);
+  assert.deepEqual(result.categories, ["carro"]);
+  assert.deepEqual(result.colors, ["Preto"]);
+});
+
+test("facetas incluem acessórios além do antigo limite de 400 e aceitam estoque vazio", () => {
+  const rows = Array.from({ length: 401 }, (_, i) => ({ ...row, accessories: i === 400 ? ["Teto solar"] : [] }));
+  assert.deepEqual(buildStockFacets(rows).accessories, ["Teto solar"]);
+  assert.ok(Object.values(buildStockFacets([])).every(values => values.length === 0));
+});
