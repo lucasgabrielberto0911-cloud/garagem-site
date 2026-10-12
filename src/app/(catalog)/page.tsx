@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HomeAssistantCta } from "@/components/site/HomeAssistantCta";
+import { HomeAssistantAsk, HomeAssistantButton } from "@/components/site/HomeAssistantCta";
 import { Suspense } from "react";
 import { preload } from "react-dom";
 import { JsonLd } from "@/components/JsonLd";
@@ -128,7 +128,7 @@ export default async function HomePage() {
         />
 
         <Container className="py-4 sm:py-6 lg:py-7">
-          <div className="flex flex-col gap-2.5 sm:gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+          <div className="flex flex-col gap-2.5 sm:gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
             <div className="hero-text min-w-0 max-w-2xl">
               <div className="hero-brand">
                 <SiteWordmark size="hero" />
@@ -142,20 +142,29 @@ export default async function HomePage() {
               </ul>
             </div>
 
-            <div className="hero-cta flex w-full shrink-0 flex-col gap-2.5 sm:max-w-xs lg:max-w-sm">
+            {/* Grade única: celular = WhatsApp / [Ver estoque | Assistente] / sugestões;
+                tablet = empilhado; computador = [WhatsApp | Ver estoque] / Assistente / caixinha,
+                alinhada ao topo do logo e com a altura do hero de antes. */}
+            <div className="hero-cta grid w-full shrink-0 grid-cols-2 gap-2 sm:max-w-xs sm:grid-cols-1 sm:gap-2.5 lg:max-w-[30rem] lg:grid-cols-2 lg:gap-2">
               <WhatsAppButton
                 size="lg"
-                className="w-full"
+                className="col-span-2 w-full sm:col-span-1 lg:!px-3 lg:!min-h-[44px] lg:!py-2.5 lg:!text-sm lg:!gap-2 lg:whitespace-nowrap"
                 trackingLabel="home-hero"
                 message={WHATSAPP_MESSAGES.help}
               >
                 Falar no WhatsApp
               </WhatsAppButton>
-              <ButtonLink href="/estoque" size="lg" className="w-full">
+              <ButtonLink href="/estoque" size="lg" className="w-full !px-3 sm:!px-7 lg:!px-3 lg:!min-h-[44px] lg:!py-2.5 lg:!text-sm lg:!gap-2 lg:whitespace-nowrap">
                 Ver estoque
               </ButtonLink>
-              <HomeAssistantCta />
-              <p className="text-center text-sm font-medium leading-none text-cream">
+              <div className="lg:col-span-2">
+                <HomeAssistantButton />
+              </div>
+              <div className="col-span-2 sm:col-span-1 lg:col-span-2">
+                <HomeAssistantAsk />
+              </div>
+              {/* O telefone já está no header e no WhatsApp; fica só no tablet, como antes. */}
+              <p className="hidden text-center text-sm font-medium leading-none text-cream sm:block lg:hidden">
                 {site.whatsappLabel}
               </p>
             </div>
