@@ -7,13 +7,11 @@ import type { ReactNode } from "react";
  */
 export function StockVehicleLink({
   href,
-  ariaLabel,
   className = "",
   children,
 }: {
   href: string;
   returnTo?: string;
-  ariaLabel: string;
   className?: string;
   children: ReactNode;
 }) {
@@ -22,7 +20,6 @@ export function StockVehicleLink({
       href={href}
       prefetch={false}
       data-stock-card=""
-      aria-label={ariaLabel}
       className={`flex h-full flex-col outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt ${className}`}
     >
       {children}

@@ -339,7 +339,7 @@ export function SellForm({
             retornamos no telefone informado, das 8h às 23h. Sem taxa e sem
             compromisso.
           </p>
-          {formError ? <p className="mt-4 text-sm leading-relaxed text-brand" role="alert">{formError}</p> : null}
+          {formError ? <p className="mt-4 text-sm leading-relaxed text-brand-light" role="alert">{formError}</p> : null}
           <div className="mt-4 flex flex-col gap-3">
             <button
               type="submit"
@@ -386,7 +386,7 @@ function AfterSend({
     <div ref={containerRef} tabIndex={-1} aria-labelledby="sell-form-receipt-heading" className="scroll-mt-24 overflow-hidden border border-brand/40 bg-ink outline-none" aria-live="polite">
       <div className="h-1 bg-brand" aria-hidden="true" />
       <div className="p-4 sm:p-6">
-        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
+        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light">
           {mode === "queued" ? "Sem conexão" : "Pedido recebido"}
         </p>
         <h2 id="sell-form-receipt-heading" className="mt-2 font-display text-xl font-bold tracking-tight text-cream">
@@ -451,7 +451,7 @@ function FormBlock({
 }) {
   return (
     <section className="border border-white/10 bg-ink p-4 sm:p-5">
-      <h3 className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
+      <h3 className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light">
         {title}
       </h3>
       {hint ? <p className="mt-1 text-sm leading-snug text-muted">{hint}</p> : null}
@@ -499,14 +499,14 @@ function Field({
         {optional ? (
           <span className="ml-1 normal-case">(opcional)</span>
         ) : (
-          <span className="ml-1 text-brand" aria-hidden="true">
+          <span className="ml-1 text-brand-light" aria-hidden="true">
             *
           </span>
         )}
       </label>
       {decorated}
       {error ? (
-        <p id={errorId} className="mt-1.5 text-xs text-brand" role="alert">
+        <p id={errorId} className="mt-1.5 text-xs text-brand-light" role="alert">
           {error}
         </p>
       ) : null}

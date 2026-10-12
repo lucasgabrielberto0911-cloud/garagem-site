@@ -69,7 +69,7 @@ export default async function VenderPage({
                         {" · "}
                         <Link
                           href={vehiclePath(interestVehicle)}
-                          className="text-brand underline-offset-4 hover:underline"
+                          className="text-brand-light underline-offset-4 hover:underline"
                         >
                           Ver anúncio
                         </Link>
@@ -81,7 +81,7 @@ export default async function VenderPage({
             </div>
 
             <aside className="mt-4 lg:sticky lg:top-24 lg:mt-10">
-              <h2 className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
+              <h2 className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light">
                 Como funciona
               </h2>
               <ol className="mt-3 grid gap-1.5">
@@ -90,7 +90,7 @@ export default async function VenderPage({
                     key={title}
                     className="flex gap-3 border border-white/10 bg-ink px-3.5 py-3"
                   >
-                    <span className="font-display text-sm font-bold leading-5 text-brand">
+                    <span className="font-display text-sm font-bold leading-5 text-brand-light">
                       {index + 1}
                     </span>
                     <div className="min-w-0">

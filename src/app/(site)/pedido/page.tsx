@@ -46,7 +46,7 @@ export default async function PedidoPage({
           href={copy.pagePath}
           className="inline-flex items-center py-1 text-xs font-medium uppercase tracking-wider text-muted transition hover:text-cream"
         >
-          <span className="mr-2 text-brand" aria-hidden="true">
+          <span className="mr-2 text-brand-light" aria-hidden="true">
             ←
           </span>
           Voltar ao estoque

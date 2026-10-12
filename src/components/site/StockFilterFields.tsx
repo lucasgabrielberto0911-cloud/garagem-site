@@ -225,7 +225,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
               </details>
             </div>
             <div className="shrink-0 border-t border-white/10 bg-ink px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:px-5">
-              {rangeError ? <p role="alert" className="mb-2 text-sm text-brand">{rangeError}</p> : draftFilterCount > 0 ? <p role="status" className="mb-2 text-xs text-muted">{draftFilterCount} {draftFilterCount === 1 ? "filtro selecionado" : "filtros selecionados"}</p> : null}
+              {rangeError ? <p role="alert" className="mb-2 text-sm text-brand-light">{rangeError}</p> : draftFilterCount > 0 ? <p role="status" className="mb-2 text-xs text-muted">{draftFilterCount} {draftFilterCount === 1 ? "filtro selecionado" : "filtros selecionados"}</p> : null}
               <div className="grid grid-cols-[auto_1fr] gap-3">
                 <button
                   type="button"

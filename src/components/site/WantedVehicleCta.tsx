@@ -46,7 +46,7 @@ export function WantedVehicleCta({
 
   return (
     <div className="mx-auto max-w-3xl border border-brand/40 bg-ink p-5 text-center sm:p-7">
-      <p className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
+      <p className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-light">
         Lista de espera
       </p>
       <h2 className="mt-2 font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">

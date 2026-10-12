@@ -169,7 +169,7 @@ export function FichaSectionNav({ hasDetails }: { hasDetails: boolean }) {
                 onClick={(event) => onJump(event, section.id)}
                 className={`-mb-px flex min-h-11 w-full items-center justify-center whitespace-nowrap border-b-2 px-1.5 font-display text-[11px] font-semibold uppercase tracking-wide transition touch-manipulation sm:px-3 sm:text-xs ${
                   active
-                    ? "border-brand text-brand"
+                    ? "border-brand text-brand-light"
                     : "border-transparent text-muted hover:text-cream"
                 }`}
               >

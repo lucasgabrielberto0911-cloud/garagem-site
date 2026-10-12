@@ -240,7 +240,7 @@ export function VehicleMobileBar({
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`Abrir WhatsApp sobre ${contentName}`}
+                  aria-label={`Tenho interesse no WhatsApp — ${contentName}`}
                   onClick={(event) =>
                     openWhatsApp(event, href, "ficha-mobile", vehicleId, vehicleSlug)
                   }
@@ -249,8 +249,7 @@ export function VehicleMobileBar({
                   <IconWhatsApp className="h-4 w-4" />
                   <span className="text-left leading-tight">
                     Tenho interesse
-                    <span className="mt-0.5 block text-[9px] font-medium normal-case tracking-normal text-cream/80">
-                      no WhatsApp
+                    <span className="mt-0.5 block text-[9px] font-medium normal-case tracking-normal text-cream">                      no WhatsApp
                     </span>
                   </span>
                 </a>

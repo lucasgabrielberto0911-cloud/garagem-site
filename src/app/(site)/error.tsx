@@ -17,7 +17,7 @@ export default function SiteError({
 
   return (
     <Container size="text" className="py-20 text-center lg:py-28">
-      <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand">
+      <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand-light">
         Erro
       </p>
       <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-cream sm:text-4xl">

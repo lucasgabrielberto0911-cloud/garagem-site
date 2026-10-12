@@ -290,7 +290,7 @@ export function SiteHeader() {
                     key={phone.digits}
                     href={telUrl(index)}
                     onClick={closeMenu}
-                    className="flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/50 px-4 py-4 font-display text-base font-semibold text-brand touch-manipulation"
+                    className="flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-brand/50 px-4 py-4 font-display text-base font-semibold text-brand-light touch-manipulation"
                   >
                     <IconPhone className="h-5 w-5" />
                     <span>{phone.label}</span>

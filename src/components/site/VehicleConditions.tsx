@@ -46,7 +46,7 @@ export function VehicleConditions({
             const Icon = ICONS[index % ICONS.length];
             return (
               <li key={`${item.label}-${index}`} className="flex gap-2.5 text-sm">
-                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
                 <span>
                   <span className="font-display font-semibold text-cream">
                     {item.label}.{" "}

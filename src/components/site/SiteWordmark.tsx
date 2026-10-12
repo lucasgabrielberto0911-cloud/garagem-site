@@ -45,12 +45,11 @@ export function SiteWordmark({
   return (
     <span
       className={`inline-flex items-center ${className}`.trim()}
-      aria-label={site.name}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- wordmark estático, sem cota /_next/image */}
       <img
         src="/branding/logo-wordmark.webp"
-        alt=""
+        alt={site.name}
         width={look.width}
         height={look.height}
         decoding={priority ? "sync" : "async"}

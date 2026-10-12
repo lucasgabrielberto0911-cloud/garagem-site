@@ -39,7 +39,7 @@ export function CookieConsent() {
         <Link
           href="/privacidade"
           prefetch={false}
-          className="underline decoration-white/40 underline-offset-2 hover:text-brand"
+          className="underline decoration-white/40 underline-offset-2 hover:text-brand-light"
         >
           Privacidade
         </Link>

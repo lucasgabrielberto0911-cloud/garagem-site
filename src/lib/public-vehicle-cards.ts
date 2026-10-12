@@ -1,3 +1,4 @@
+import { vehicleIdsWithPriceDrop } from "@/lib/vehicle-price-history";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { PUBLIC_VEHICLE_CARD_SELECT } from "@/lib/public-stock";
@@ -28,6 +29,15 @@ function withCardDefaults(row: VehicleCardRecord): VehicleCardRecord {
 }
 
 /** Card público sem cidade do veículo, placa, FIPE ou documentos. */
+/** Marca `priceDrop` só com histórico real; tabela ausente = sem selo. */
+async function withPriceDrops(cards: VehicleCardRecord[]) {
+  const drops = await vehicleIdsWithPriceDrop(
+    cards.filter((card) => card.status !== "vendido"),
+  );
+  if (drops.size === 0) return cards;
+  return cards.map((card) => (drops.has(card.id) ? { ...card, priceDrop: true } : card));
+}
+
 export async function queryPublicVehicleCards(
   args: CardQuery,
 ): Promise<VehicleCardRecord[]> {
@@ -36,13 +46,13 @@ export async function queryPublicVehicleCards(
       ...args,
       select: PUBLIC_VEHICLE_CARD_SELECT,
     });
-    return rows.map(withCardDefaults);
+    return withPriceDrops(rows.map(withCardDefaults));
   } catch (error) {
     if (!isMissingColumnError(error, "thumbnailUrl")) throw error;
     const rows = await prisma.vehicle.findMany({
       ...args,
       select: PUBLIC_VEHICLE_CARD_SELECT_LEGACY,
     });
-    return rows.map(withCardDefaults);
+    return withPriceDrops(rows.map(withCardDefaults));
   }
 }

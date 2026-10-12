@@ -29,8 +29,8 @@ export const LEAD_STATUS_LABEL: Record<LeadStatus, string> = {
 };
 
 export const LEAD_STATUS_STYLE: Record<LeadStatus, string> = {
-  novo: "bg-brand/15 text-brand",
-  conversa: "bg-brand/15 text-brand",
+  novo: "bg-brand/15 text-brand-light",
+  conversa: "bg-brand/15 text-brand-light",
   "visita-marcada": "bg-brand-orange/15 text-brand-orange",
   visitou: "bg-brand-yellow/15 text-brand-yellow",
   contatado: "bg-brand-orange/15 text-brand-orange",

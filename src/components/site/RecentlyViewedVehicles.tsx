@@ -45,7 +45,7 @@ export function RecentlyViewedVehicles() {
     <section data-recent-vehicles="" className="my-5">
       <button type="button" aria-expanded={open} aria-controls={regionId}
         onClick={() => { if (!open) setAttempt(value => value + 1); setOpen(value => !value); }}
-        className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-white/15 bg-ink/40 px-4 py-3 text-left text-sm font-semibold text-cream transition hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+        className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-white/15 bg-ink/40 px-4 py-3 text-left text-sm font-semibold text-cream transition hover:text-brand-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
         Vistos recentemente <span aria-hidden="true">{open ? "−" : "+"}</span>
       </button>
       {open ? (

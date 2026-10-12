@@ -752,7 +752,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           >
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-ink px-4 py-3 sm:px-5">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-brand">Estoque</p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-brand-light">Estoque</p>
                 <h2 id="titulo-filtros" className="font-display text-lg font-semibold text-cream">
                   Filtrar veículos
                 </h2>
@@ -802,7 +802,7 @@ function ActiveFilterChips({
           aria-label={`Remover ${filter.label}`}
         >
           <span className="min-w-0 whitespace-normal [overflow-wrap:anywhere]">{filter.label}</span>
-          <IconClose className="h-3.5 w-3.5 shrink-0 text-brand" />
+          <IconClose className="h-3.5 w-3.5 shrink-0 text-brand-light" />
         </button>
       ))}
     </div>

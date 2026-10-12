@@ -30,7 +30,7 @@ function FactGroup({ lines }: { lines: DescriptionFact[] }) {
       {shouts.map((line) => (
         <p
           key={`${line.emoji}-${line.text}`}
-          className="flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand"
+          className="flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light"
         >
           <span aria-hidden="true">{line.emoji}</span>
           <span>{line.text}</span>

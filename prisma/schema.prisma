@@ -76,6 +76,7 @@ model Vehicle {
   documents    VehicleDocument[]
   verifiedInfo VehicleVerifiedInfo?
   listingScore VehicleListingScore?
+  priceHistory VehiclePriceHistory[]
 
   @@index([status, createdAt])
   @@index([status, price])
@@ -151,6 +152,17 @@ model VehicleListingScore {
   inputHash String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Histórico de preço (selo "Baixou o preço"): uma linha por mudança registrada no admin.
+model VehiclePriceHistory {
+  id        String   @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  price     Float
+  createdAt DateTime @default(now())
+
+  @@index([vehicleId, createdAt])
 }
 
 model VehicleVerifiedInfo {

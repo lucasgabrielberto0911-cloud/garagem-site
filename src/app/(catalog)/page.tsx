@@ -186,7 +186,7 @@ export default async function HomePage() {
       <Section id="destaques" spacing="none" className="border-t border-white/5 py-3 sm:py-6 lg:py-9">
         <div className="flex flex-col">
         <div>
-          <p className="hidden font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand sm:block">
+          <p className="hidden font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light sm:block">
             Estoque
           </p>
           <h2 className="font-display text-lg font-semibold leading-tight tracking-tight text-cream sm:mt-0.5 sm:text-2xl">
@@ -235,7 +235,7 @@ export default async function HomePage() {
           <Link
             href="/estoque"
             prefetch={false}
-            className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
+            className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand-light transition hover:text-brand-orange"
           >
             Ver todos os veículos
             <IconArrowRight className="h-4 w-4" />
@@ -275,7 +275,7 @@ export default async function HomePage() {
               className="flex h-full gap-3 border border-white/10 bg-asphalt p-4 text-left"
             >
               <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center bg-brand/10">
-                <Icon className="h-5 w-5 text-brand" />
+                <Icon className="h-5 w-5 text-brand-light" />
               </span>
               <div className="min-w-0">
                 <h3 className="font-display text-base font-semibold text-cream">
@@ -325,14 +325,14 @@ export default async function HomePage() {
             </div>
             <div className="bg-asphalt px-4 py-3.5">
               <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
-                <IconClock className="h-3.5 w-3.5 text-brand" />
+                <IconClock className="h-3.5 w-3.5 text-brand-light" />
                 Horário
               </dt>
               <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.hours}</dd>
             </div>
             <div className="bg-asphalt px-4 py-3.5">
               <dt className="flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-wide text-muted">
-                <IconMapPin className="h-3.5 w-3.5 text-brand" />
+                <IconMapPin className="h-3.5 w-3.5 text-brand-light" />
                 Modalidade
               </dt>
               <dd className="mt-1 text-sm leading-snug text-cream">{publicSite.address}</dd>
@@ -367,7 +367,7 @@ export default async function HomePage() {
             aria-hidden="true"
           />
           <div className="px-5 py-6 sm:px-7 sm:py-7">
-            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
+            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-light">
               Avaliação sem compromisso
             </p>
             <h2 className="mt-1 font-display text-xl font-semibold tracking-tight text-cream sm:text-2xl">
@@ -408,7 +408,7 @@ export default async function HomePage() {
             <Link
               href="/faq"
               prefetch={false}
-              className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
+              className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand-light transition hover:text-brand-orange"
             >
               Ver todas as dúvidas
               <IconArrowRight className="h-4 w-4" />

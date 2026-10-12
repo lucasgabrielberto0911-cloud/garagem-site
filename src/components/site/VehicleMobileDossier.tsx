@@ -77,7 +77,7 @@ export function VehicleMobileSummary({
       {version ? (
         <p className="mt-1 break-normal whitespace-normal text-sm leading-relaxed text-muted">{version}</p>
       ) : null}
-      <p className="mt-1.5 font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand">
+      <p className="mt-1.5 font-display text-[1.65rem] font-bold leading-none tracking-tight text-brand-light">
         {sold ? (
           <span className="text-base text-muted">Já vendido</span>
         ) : (
@@ -137,7 +137,7 @@ function DossierBlock({
         <span>{title}</span>
         <span
           aria-hidden="true"
-          className="text-muted transition-transform duration-200 group-open:rotate-180 group-open:text-brand"
+          className="text-muted transition-transform duration-200 group-open:rotate-180 group-open:text-brand-light"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path

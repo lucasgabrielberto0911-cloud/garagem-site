@@ -46,7 +46,7 @@ export function SimilarVehicles({
         <Link
           href={stockHref}
           prefetch={false}
-          className="inline-flex min-h-[44px] items-center gap-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand transition hover:text-brand-orange"
+          className="inline-flex min-h-[44px] items-center gap-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-light transition hover:text-brand-orange"
         >
           Ver a faixa no estoque
           <IconArrowRight className="h-3.5 w-3.5" />

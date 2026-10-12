@@ -27,7 +27,7 @@ function digitsToGrouped(value: string) {
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return (
-    <p id={id} className="mt-1.5 text-xs text-brand" role="alert">
+    <p id={id} className="mt-1.5 text-xs text-brand-light" role="alert">
       {message}
     </p>
   );
@@ -255,7 +255,7 @@ export function MissingModelForm({
                 className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
               >
                 Modelo que você procura
-                <span className="ml-1 text-brand" aria-hidden="true">
+                <span className="ml-1 text-brand-light" aria-hidden="true">
                   *
                 </span>
               </label>
@@ -279,7 +279,7 @@ export function MissingModelForm({
                 className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
               >
                 Seu nome
-                <span className="ml-1 text-brand" aria-hidden="true">
+                <span className="ml-1 text-brand-light" aria-hidden="true">
                   *
                 </span>
               </label>
@@ -302,7 +302,7 @@ export function MissingModelForm({
                 className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
               >
                 E-mail
-                <span className="ml-1 text-brand" aria-hidden="true">
+                <span className="ml-1 text-brand-light" aria-hidden="true">
                   *
                 </span>
               </label>
@@ -327,7 +327,7 @@ export function MissingModelForm({
                 className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
               >
                 Telefone
-                <span className="ml-1 text-brand" aria-hidden="true">
+                <span className="ml-1 text-brand-light" aria-hidden="true">
                   *
                 </span>
               </label>
@@ -473,7 +473,7 @@ export function MissingModelForm({
               <Link
                 href="/privacidade"
                 prefetch={false}
-                className="text-xs text-cream underline decoration-white/30 underline-offset-2 hover:text-brand"
+                className="text-xs text-cream underline decoration-white/30 underline-offset-2 hover:text-brand-light"
               >
                 Política de privacidade
               </Link>
@@ -482,7 +482,7 @@ export function MissingModelForm({
           </div>
 
           {formError ? (
-            <p className="mt-4 text-sm text-brand" role="alert">
+            <p className="mt-4 text-sm text-brand-light" role="alert">
               {formError}
             </p>
           ) : null}

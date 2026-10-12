@@ -25,6 +25,7 @@ import { Container, WhatsAppButton } from "@/components/site/ui";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
+import { FinanceSimulator } from "@/components/site/FinanceSimulator";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
@@ -330,7 +331,7 @@ export default async function VehicleDetailPage({
               A página permanece no ar para quem chegou por um link antigo. Veja{" "}
               <Link
                 href="#mesma-faixa"
-                className="font-medium text-brand underline-offset-4 hover:underline"
+                className="font-medium text-brand-light underline-offset-4 hover:underline"
               >
                 {sameBandTitle.toLowerCase()}
               </Link>{" "}
@@ -338,7 +339,7 @@ export default async function VehicleDetailPage({
               <Link
                 href="/estoque"
                 prefetch={false}
-                className="font-medium text-brand underline-offset-4 hover:underline"
+                className="font-medium text-brand-light underline-offset-4 hover:underline"
               >
                 estoque disponível
               </Link>
@@ -454,7 +455,7 @@ export default async function VehicleDetailPage({
           <aside className="ficha-aside order-2 hidden lg:sticky lg:z-20 lg:block">
             <div className="space-y-4 border border-white/10 bg-ink p-4 sm:p-6">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-display text-[11px] font-semibold uppercase tracking-wider text-brand">
+                <span className="font-display text-[11px] font-semibold uppercase tracking-wider text-brand-light">
                   {vehicleCategoryLabel(vehicle.category)}
                 </span>
                 {sold ? (
@@ -552,6 +553,15 @@ export default async function VehicleDetailPage({
                   <p className="-mt-2 text-[11px] leading-relaxed text-muted">
                     Simular, troca e vídeo também abrem o WhatsApp deste veículo.
                   </p>
+
+                  <FinanceSimulator
+                    vehicleId={vehicle.id}
+                    slug={canonicalSlug}
+                    path={path}
+                    label={fullLabel}
+                    price={vehicle.price}
+                    isMoto={vehicle.category === "moto"}
+                  />
 
                   <ChatOpenButton
                     source="ficha"

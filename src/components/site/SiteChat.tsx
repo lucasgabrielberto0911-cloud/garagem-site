@@ -4,6 +4,8 @@ import Link from "next/link";
 import { publicPhotoSrc } from "@/lib/public-photo-url";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ChatVisitPanel } from "@/components/site/ChatVisitPanel";
+import { trackEvent } from "@/lib/track-event";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import {
   IconArrowRight,
@@ -668,6 +670,7 @@ export function SiteChat() {
   const [failure, setFailure] = useState<string | null>(null);
   const [showLatest, setShowLatest] = useState(false);
   const [mobileDialog, setMobileDialog] = useState(false);
+  const [visitOpen, setVisitOpen] = useState(false);
   const followScrollRef = useRef(true);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const requestRef = useRef<{
@@ -1063,6 +1066,7 @@ export function SiteChat() {
 
     const intent = classifyChatIntent(mensagem);
     lastIntentRef.current = intent;
+    trackEvent("chat_message_sent", { intent, origin });
     const isFirst = messageCountRef.current === 0;
     messageCountRef.current += 1;
     if (isFirst) {
@@ -1524,6 +1528,22 @@ export function SiteChat() {
             </div>
           ) : null}
 
+          {visitOpen ? (
+            <ChatVisitPanel
+              initialVehicle={vehicleContext?.label}
+              onClose={() => setVisitOpen(false)}
+            />
+          ) : (
+            <div className="flex shrink-0 justify-end border-t border-white/[0.07] bg-[#141417] px-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setVisitOpen(true)}
+                className="min-h-11 px-2 text-[12px] font-semibold text-cream/80 underline underline-offset-4"
+              >
+                Marcar visita
+              </button>
+            </div>
+          )}
           <form
             data-chat-composer=""
             className="shrink-0 border-t border-white/[0.07] bg-[#141417] px-3 pb-2 pt-3"

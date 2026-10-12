@@ -23,7 +23,7 @@ export function GoogleReviewsBadge({
       rel="noopener noreferrer"
       className={`inline-flex min-h-[44px] items-center gap-2 border border-white/10 bg-ink px-4 py-2 text-sm text-cream transition hover:border-brand ${className}`}
     >
-      <IconStar className="h-4 w-4 text-brand" />
+      <IconStar className="h-4 w-4 text-brand-light" />
       <span className="font-display font-semibold">{rating}</span>
       <span className="text-muted">
         ({count} {reviews.reviewCount === 1 ? "avaliação" : "avaliações"} no
