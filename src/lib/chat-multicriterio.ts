@@ -24,7 +24,8 @@ export function chatPickLimit(message: string) {
   if (/\b(opc(?:ao|oes)|lista|alguns|uns|tres|3)\b/.test(text)) return 3;
   const criteria = chatCriteria(message);
   if (criteria.power || criteria.economy || criteria.space || criteria.cheap) return 2;
-  return /automatic|manual|cvt|\bsuv\b|sedan|hatch|picape|perua|ate\s+(?:r\$\s*)?\d|\d+\s*(?:mil|k)\b/.test(text) ? 3 : 2;
+  if (/\b(entregador|entregas?|motoboy|ifood|primeir[oa]|mulher|esposa|namorada|m[aã]e|filh[ao]|dirigir)\b/.test(text)) return 2;
+  return /automatic|manual|cvt|\bsuvs?\b|sedans?|sed[aã]s?|hatch(?:es)?|picapes?|peruas?|motos?|ate\s+(?:r\$\s*)?\d|\d+\s*(?:mil|k)\b/.test(text) ? 3 : 2;
 }
 
 export function chatBlockName(v: ChatVehicleRecord) {
@@ -142,9 +143,11 @@ export function formatChatCarBlocks(picks: ChatVehicleRecord[], message: string)
   const intros = [`Pra quem quer ${human}, estes ${count} entregam bem.`, `Olha só, estes ${count} combinam com ${human}.`, `Estes ${count} combinam com ${human}.`];
   const body = parseBodyStyleFilter(message);
   const bodyLabel = body ? { suv: "SUVs", sedan: "sedãs", hatch: "hatches", pickup: "picapes", wagon: "peruas" }[body] : null;
+  const isMoto = picks.length > 0 && (picks.every(v => v.category === "moto") || /\bmotos?\b/.test(fold(message)));
+  const kindLabel = isMoto ? "motos" : bodyLabel;
   const gear = parseTransmissionFilter(message);
   const gearLabel = gear === "automatico" ? body === "pickup" || body === "wagon" ? "automáticas" : "automáticos" : gear === "manual" ? "manuais" : "";
-  const intro = bodyLabel ? `Olha o que tenho de ${bodyLabel}${gearLabel ? ` ${gearLabel}` : ""} pro seu pedido:` : picks.length === 1 ? "Esse aqui combina bem com o seu pedido:" : intros[hash(message) % intros.length];
+  const intro = kindLabel ? `Olha o que tenho de ${kindLabel}${gearLabel ? ` ${gearLabel}` : ""} pro seu pedido:` : picks.length === 1 ? "Esse aqui combina bem com o seu pedido:" : intros[hash(message) % intros.length];
   const missing = criteria.economy ? picks.filter(v => { const spec = findVehicleSpec(v); return !spec || specCityKmL(spec) == null; }) : [];
   const source = consumptionUsed ? "O consumo é uma referência do Inmetro e varia conforme o uso." : "";
   const closing = [missing.length ? `Do ${missing.map(v => v.model).join(" e do ")} ainda não tenho o consumo na ficha, mas o consultor confirma pra você.` : "", source].filter(Boolean).join(" ");
