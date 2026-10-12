@@ -148,7 +148,8 @@ test("nova busca mais forte não herda um modelo único anterior", () => {
     stock,
   );
   assert.doesNotMatch(text, /HB20/i);
-  assert.match(text, /80 mil/);
+  assert.doesNotMatch(text, /80 mil/);
+  assert.match(text, /automático/);
 });
 
 test("km, ano, cilindrada e parcelas não viram preço", () => {
@@ -333,7 +334,8 @@ test("tirar um filtro vale para esta mensagem e as próximas", () => {
     historico.slice(0, 1),
     stock,
   );
-  assert.equal(parsePriceLimit(yearReset), 80000);
+  // Pergunta geral nova não herda teto; o ano também fica livre.
+  assert.equal(parsePriceLimit(yearReset), null);
   assert.equal(parseChatSearchRanges(yearReset).minYear, undefined);
 });
 
