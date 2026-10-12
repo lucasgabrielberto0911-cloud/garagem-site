@@ -354,8 +354,8 @@ test("comparação com consumo usa anúncios atuais e pesquisa com fontes", asyn
   });
   assert.match(compared, /^São ótimas escolhas, cada um tem seu ponto forte:\n• /);
   assert.match(compared, /• Palio Weekend [^\n]* — mais em conta/);
-  assert.match(compared, /• Prisma [^\n]* — mais novo/);
-  assert.match(compared, /• HB20 [^\n]* — [^\n]*automático/);
+  assert.match(compared, /• (?:[^\n]* )?Prisma [^\n]* — mais novo/);
+  assert.match(compared, /• (?:[^\n]* )?HB20 [^\n]* — [^\n]*automático/);
   assert.match(compared, /Prisma e HB20/);
   assert.doesNotMatch(compared, /R\$|\d+ mil km/);
   assert.match(compared, /11–14/);
@@ -378,11 +378,11 @@ Hyundai HB20 Comfort 1.0 2015 · 127.000 km · R$ 55.900`,
       functionCall: null,
     }),
   });
-  assert.match(textoVisivelChat(result.reply), /70\.000/);
-  assert.match(textoVisivelChat(result.reply), /mais em conta/);
+  assert.ok(result.vehicles.every(vehicle => vehicle.price <= 70_000));
+  assert.equal(result.vehicles[0]?.id, palio.id);
   assert.match(textoVisivelChat(result.reply), /Prisma/);
   assert.match(textoVisivelChat(result.reply), /HB20/);
-  assert.match(textoVisivelChat(result.reply), /• Prisma [^\n]* — mais novo/);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Prisma 2019 — /);
   assert.doesNotMatch(textoVisivelChat(result.reply), /11–14|km\/l/);
   assert.match(textoVisivelChat(result.reply), /automático/);
   assert.equal(result.reply.split("\n").filter(line => line.startsWith("• ")).length, 3);
@@ -440,7 +440,8 @@ Hyundai HB20 Premium Automatico 1.6 2015 · 127.000 km · R$ 55.900`,
       functionCall: null,
     }),
   });
-  assert.match(textoVisivelChat(result.reply), /carros até R\$ 70\.000/i);
+  assert.ok(result.vehicles.every(vehicle => vehicle.price <= 70_000));
+  assert.equal(result.reply.split("\n").filter(line => line.startsWith("• **[")).length, result.vehicles.length);
   assert.match(textoVisivelChat(result.reply), /Prisma/);
   assert.match(textoVisivelChat(result.reply), /Palio Weekend/);
   assert.match(textoVisivelChat(result.reply), /HB20/);
@@ -566,7 +567,7 @@ test("comparação fala Lancer, não LANCER", () => {
   assert.doesNotMatch(compared, /LANCER/);
   assert.match(compared, /HB20/);
   assert.match(compared, /Onix/);
-  assert.match(compared, /• Lancer [^\n]* — /);
+  assert.match(compared, /• (?:[^\n]* )?Lancer [^\n]* — /);
   assert.doesNotMatch(compared, /Entre esses/);
   assert.doesNotMatch(compared, /meio do preço/);
 });

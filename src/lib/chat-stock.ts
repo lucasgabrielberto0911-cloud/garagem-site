@@ -1,3 +1,4 @@
+import { chatCriteria, combinedChatRanking, chatPickLimit } from "./chat-multicriterio";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { formatModelName } from "@/lib/format";
@@ -353,7 +354,7 @@ export function applyChatStockFilters(
     next = filterStockByBody(next, mensagem);
   }
   next = filterStockByEngine(next, mensagem);
-  if (parseCheapIntent(mensagem)) {
+  if (parseCheapIntent(mensagem) && !chatCriteria(mensagem).space && !chatCriteria(mensagem).power) {
     const modelPool = singleMentionedModelPool(next, mensagem);
     if (modelPool) next = modelPool;
     if (parsePriceLimit(mensagem) == null) {
@@ -3126,23 +3127,32 @@ export function searchChatInventory(
     const ranked = [...pool].sort((a, b) => score(a) - score(b) || a.price - b.price);
     if (!ranked.length) return null;
     return {
-      picks: ranked.slice(0, 3),
+      picks: ranked.slice(0, chatPickLimit(message)),
       candidates: ranked,
       reply: "Separei os melhores custos-benefícios da Garagem, equilibrando preço, ano mais recente e menor quilometragem.",
     };
   }
-  // "Qual o melhor carro?" / "qual vocês recomendam?": os mais novos do recorte, não os mais baratos.
+  // Combina as preferências antes dos atalhos de critério único.
+  const combined = combinedChatRanking(pool, message);
+  if (combined) return combined;
+  // Recomendação geral prioriza os mais novos do recorte.
   const wantsBest = /\b(qual (?:e |eh )?o melhor|melhor(?:es)? carros?|melhores|recomendam|recomenda|indicam|indica|top)\b/.test(normalize(message)) &&
     (chatRankMode(message) === "default" || chatRankMode(message) === "price") && mentionedModelGroups(stock, message).size === 0;
   const order = chatSearchOrder(message) ?? (wantsBest ? "year" : null);
   const bySpec = (rows: ChatVehicleRecord[]) => {
-    // Com ficha de todos, "mais forte" vira cv de catálogo (um turbo 1.0 pode passar um 1.6).
-    const specs = rows.map((v) => findVehicleSpec(v));
-    if (rows.length < 2 || specs.some((spec) => !spec)) return null;
-    return rows
-      .map((v, index) => ({ v, cv: specMaxCv(specs[index]!) }))
+    // Ordena pelos cv conhecidos mesmo quando alguma unidade não tem ficha.
+    // Sem ficha, conserva a posição do ranking de motor, sem inventar potência.
+    const fallback = rankChatVehicles(rows, message);
+    const known = rows.flatMap(v => {
+      const spec = findVehicleSpec(v);
+      return spec ? [{ v, cv: specMaxCv(spec) }] : [];
+    })
       .sort((a, b) => b.cv - a.cv || a.v.price - b.v.price)
       .map((item) => item.v);
+    if (known.length < 2) return null;
+    const knownIds = new Set(known.map(v => v.id));
+    let index = 0;
+    return fallback.map(v => knownIds.has(v.id) ? known[index++]! : v);
   };
   const byEconomy = (rows: ChatVehicleRecord[]) => {
     // Com ficha de todos, "econômico" vira km/l do Inmetro, não só o tamanho do motor.
@@ -3161,7 +3171,7 @@ export function searchChatInventory(
         : (isPowerQuery(message) ? bySpec(pool) : null) ??
           (chatRankMode(message) === "economy" ? byEconomy(pool) : null) ??
           rankChatVehicles(pool, message);
-  const picks = ranked.slice(0, 3);
+  const picks = ranked.slice(0, chatPickLimit(message));
   if (!picks.length) return null;
   const liters = parseChatDisplacementFilter(message);
   if (asksForTurbo(message) || liters != null) {

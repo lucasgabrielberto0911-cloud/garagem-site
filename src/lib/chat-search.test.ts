@@ -76,7 +76,7 @@ for (const message of [
       reply.vehicles.map((v) => v.id),
       ["duster", "civic", "hrv"]
         .filter((id) => !message.includes("80 mil") || id !== "hrv")
-        .concat(message.includes("80 mil") ? ["hb"] : []),
+        .concat(message.includes("80 mil") ? ["hb"] : []).slice(0, 2),
     );
     assert.ok(
       reply.vehicles.every(
@@ -390,8 +390,10 @@ test("mais forte entre automáticos até 80 mil ordena pelos cv de catálogo, n�
       throw new Error("a busca não precisa do modelo");
     },
   });
-  assert.deepEqual(result.vehicles.map((v) => v.id), ["civic", "duster", "hrv"]);
-  assert.match(textoVisivelChat(result.reply), /^Mais fortes \(cv de fábrica\)[^\n]*\n• Civic LXR 2015 — 155 cv\n• Duster Dynamique 2014 — 142 cv/);
+  assert.deepEqual(result.vehicles.map((v) => v.id), ["civic", "duster"]);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2015 — [^\n]*155 cv/);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Duster 2014 — [^\n]*142 cv/);
+  assert.ok(result.vehicles.every(v => v.price <= 80_000 && v.transmission === "Automático"));
   assert.doesNotMatch(textoVisivelChat(result.reply), /Corolla|No estoque:|Achei \d/);
 });
 

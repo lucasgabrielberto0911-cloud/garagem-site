@@ -347,7 +347,7 @@ test("conversa: 'é flex?' depois da lista responde cada uma; 'quanto pagam no m
     historico: [{ role: "user", content: "tem moto?" }, { role: "assistant", content: first.reply }],
     stock: stock6, readIntent: async () => null, generate: noModel,
   });
-  assert.match(textoVisivelChat(fuel.reply), /Biz 110i 2023 — Gasolina/);
+  assert.match(textoVisivelChat(fuel.reply), /BIZ 2023 é a gasolina/);
   const trade = await runChatTurn({
     mensagem: "quanto vocês pagam no meu?",
     historico: [
@@ -375,7 +375,7 @@ test("PCD, recall e horário: respostas da loja; 'tem Corolla 2018?' não casa c
 
 test("comparação de 2: ficha de cada um em uma linha, sem 'Vou te ajudar a escolher', e '3.200 km' não é cortado", async () => {
   const turn = await ask6("biz 125 ou cg?");
-  assert.match(textoVisivelChat(turn.reply), /\n• BIZ 125 [^\n]*2023 — mais em conta\n• CG 160 Start [^\n]*2023 — /);
+  assert.match(textoVisivelChat(turn.reply), /\n• (?:[^\n]* )?BIZ 125 [^\n]*2023 — mais em conta[^\n]*\n• (?:[^\n]* )?CG 160 Start [^\n]*2023 — /);
   assert.doesNotMatch(textoVisivelChat(turn.reply), /R\$|60 mil km/);
   assert.equal(turn.reply.split("\n").length, 3);
   assert.match(textoVisivelChat(turn.reply), /^Os dois são ótimas escolhas/);

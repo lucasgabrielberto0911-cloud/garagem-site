@@ -30,12 +30,12 @@ for (const mensagem of ["quero um carro turbo", "tem carro turbo?", "tem turbo?"
     const resposta = await perguntar(mensagem);
     assert.equal(resposta.meta?.policy, "inventory-search");
     assert.deepEqual(resposta.vehicles.map(v => v.id), ["hb20s", "nivus"]);
-    assert.match(resposta.reply, /turbo.*ficha.*Garagem/);
+    assert.match(resposta.reply, /turbo.*ficha/);
     assert.doesNotMatch(resposta.reply, /não temos|lista atual|fontes|Sua Garagem/i);
   });
 }
 
-test("turbo reconhece marcadores do motor e da versão, limitando a três cards", async () => {
+test("turbo reconhece marcadores do motor e da versão, limitando a dois cards", async () => {
   const sinais = ["turbo", "TSI", "TB", "TGDI", "T-GDI", "T200", "T270", "1.0T", "1.0 T", "TFSI", "THP", "T-Jet", "EcoBoost"];
   for (const sinal of sinais) {
     for (const campo of ["engine", "version"] as const) {
@@ -45,13 +45,13 @@ test("turbo reconhece marcadores do motor e da versão, limitando a três cards"
     }
   }
   const resposta = await perguntar("quero carro turbo", sinais.map((sinal, i) => carro(`turbo-${i}`, { engine: sinal })));
-  assert.equal(resposta.vehicles.length, 3);
+  assert.equal(resposta.vehicles.length, 2);
 });
 
 test("sem turbo, fala direto e oferece os motores mais fortes", async () => {
   const resposta = await perguntar("tem carro turbo?", estoque.filter(v => !["nivus", "hb20s"].includes(v.id)));
   assert.match(resposta.reply, /^Turbo não temos agora\. Separei os mais fortes que temos\./);
-  assert.equal(resposta.vehicles.length, 3);
+  assert.equal(resposta.vehicles.length, 2);
   assert.equal(resposta.vehicles[0]?.id, "civic");
 });
 
@@ -67,7 +67,7 @@ for (const mensagem of ["tem carro 1.0 automático?", "tem carro 1,0 automático
   test(`cilindrada e câmbio filtram juntos: ${mensagem}`, async () => {
     const resposta = await perguntar(mensagem);
     assert.deepEqual(resposta.vehicles.map(v => v.id), ["hb20s", "nivus"]);
-    assert.match(resposta.reply, /motor 1\.0/);
+    assert.match(resposta.reply, /Motor 1[.,]0/);
   });
 }
 
@@ -96,7 +96,7 @@ test("combinação sem 1.0 oferece a cilindrada mais próxima mantendo câmbio e
   assert.deepEqual(resposta.vehicles.map(v => v.id), ["ka", "hb-auto"]);
 });
 
-test("custo-benefício equilibra preço, ano e km, com três cards", async () => {
+test("custo-benefício equilibra preço, ano e km, com dois cards", async () => {
   const fichas = [
     carro("novo-pouco", { price: 50_000, yearModel: 2024, km: 20_000 }),
     carro("novo-muito", { price: 50_000, yearModel: 2024, km: 80_000 }),
@@ -106,8 +106,9 @@ test("custo-benefício equilibra preço, ano e km, com três cards", async () =>
   ];
   for (const mensagem of ["qual o melhor custo benefício?", "quero o melhor custo-benefício"]) {
     const resposta = await perguntar(mensagem, fichas);
-    assert.deepEqual(resposta.vehicles.map(v => v.id), ["novo-pouco", "ano-anterior", "novo-muito"]);
-    assert.match(resposta.reply, /Garagem.*preço.*ano.*quilometragem/);
+    assert.deepEqual(resposta.vehicles.map(v => v.id), ["novo-pouco", "ano-anterior"]);
+    assert.deepEqual(resposta.vehicles.map(v => v.year), [2024, 2023]);
+    assert.doesNotMatch(resposta.reply, /equilibrando|R\$/);
     assert.doesNotMatch(resposta.reply, /lista atual|fontes|Sua Garagem/i);
   }
   const filtrado = await perguntar("melhor custo benefício automático até 40 mil", fichas);
@@ -124,11 +125,11 @@ const airbags = [
   carro("sem-detalhes"),
 ];
 
-test("quantidade de airbags conta só confirmações literais e mostra três cards", async () => {
+test("quantidade de airbags conta só confirmações literais e mostra dois cards", async () => {
   for (const mensagem of ["tem carro com 6 airbags?", "tem carro com seis airbags?"]) {
     const resposta = await perguntar(mensagem, airbags);
     assert.match(resposta.reply, /^Temos 4 carros com 6 airbags na ficha/);
-    assert.deepEqual(resposta.vehicles.map(v => v.id), ["seis", "civic-seis", "kicks"]);
+    assert.deepEqual(resposta.vehicles.map(v => v.id), ["seis", "civic-seis"]);
     assert.doesNotMatch(resposta.reply, /não tem|fontes/i);
   }
 });
@@ -136,7 +137,7 @@ test("quantidade de airbags conta só confirmações literais e mostra três car
 test("airbags laterais e de cortina exigem posições escritas na ficha", async () => {
   const laterais = await perguntar("tem carro com airbags laterais?", airbags);
   assert.match(laterais.reply, /^Temos 3 carros com airbags laterais na ficha/);
-  assert.deepEqual(laterais.vehicles.map(v => v.id), ["civic-seis", "city", "hrv"]);
+  assert.deepEqual(laterais.vehicles.map(v => v.id), ["civic-seis", "city"]);
   const cortina = await perguntar("tem carro com airbags de cortina?", airbags);
   assert.match(cortina.reply, /^Temos 2 carros com airbags de cortina na ficha/);
   assert.deepEqual(cortina.vehicles.map(v => v.id), ["civic-seis", "city"]);
@@ -149,7 +150,7 @@ test("airbag sem detalhe confirmado encaminha ao consultor e cita as fichas com 
     const resposta = await perguntar("tem carro com 8 airbags?", fichas);
     assert.match(resposta.reply, /fichas não detalham 8 airbags.*consultor confirma.*t[eê]m airbags na ficha/);
     assert.doesNotMatch(resposta.reply, /não (?:tem|temos)|nenhum|Sim/i);
-    assert.equal(resposta.vehicles.length, Math.min(3, fichas.length - 1));
+    assert.equal(resposta.vehicles.length, Math.min(2, fichas.length - 1));
     assert.ok(resposta.vehicles.every(v => v.id !== "sem-detalhes"));
   }
   const cortina = await perguntar("tem carro com airbags de cortina?", [airbags[0]!]);

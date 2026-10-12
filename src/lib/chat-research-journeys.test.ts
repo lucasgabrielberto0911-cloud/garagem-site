@@ -70,7 +70,7 @@ test("comparação entre dois modelos sem o modelo de linguagem mostra os cv de 
   const result = await runChatTurn({mensagem: "entre Civic e Duster, qual é o mais potente com etanol?", historico: [], stock: [civic, duster], generate: noModel});
   assert.equal(result.meta?.policy, "compare");
   assert.match(textoVisivelChat(result.reply), /^Os dois são ótimas escolhas/);
-  assert.match(textoVisivelChat(result.reply), /• Civic[^\n]*2015 — 155 cv/);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic[^\n]*2015 — 155 cv/);
   assert.match(textoVisivelChat(result.reply), /Duster.*142 cv/);
   assert.doesNotMatch(textoVisivelChat(result.reply), /Achei|No estoque:/);
 });

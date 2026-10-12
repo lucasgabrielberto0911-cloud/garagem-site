@@ -45,6 +45,22 @@ function fold(value: string) {
 }
 
 export function splitChatLinks(text: string): ChatTextPart[] {
+  const markdown = /(?:\*\*)?\[([^\]\n]+)\]\(([^)\n]*)\)(?:\*\*)?/g;
+  if (markdown.test(text)) {
+    markdown.lastIndex = 0;
+    const result: ChatTextPart[] = [];
+    let cursor = 0;
+    for (const match of text.matchAll(markdown)) {
+      result.push(...splitChatLinks(text.slice(cursor, match.index)));
+      const href = match[2]!;
+      const safe = /^\/estoque\/[a-zA-Z0-9_-]+$/.test(href) || /^https:\/\/wa\.me\/\d+(?:\?[^\s\\]*)?$/.test(href);
+      result.push(safe ? { type: "link", href, label: match[1]!.replace(/\*\*/g, "") } : { type: "text", value: match[1]!.replace(/\*\*/g, "") });
+      cursor = match.index! + match[0].length;
+    }
+    result.push(...splitChatLinks(text.slice(cursor)));
+    return result;
+  }
+  text = text.replace(/(?:\*\*)?\[[^\]\n]*(?:\]\([^\)\n]*)?$/, "");
   const parts: ChatTextPart[] = [];
   let last = 0;
   for (const match of text.matchAll(URL_RE)) {
@@ -54,11 +70,7 @@ export function splitChatLinks(text: string): ChatTextPart[] {
     }
     const raw = match[0];
     const href = raw.replace(/[.,;:!?]+$/, "");
-    parts.push({
-      type: "link",
-      href,
-      label: /wa\.me\//i.test(href) ? "WhatsApp" : href,
-    });
+    parts.push(/^https:\/\/wa\.me\/\d+(?:\?[^\s]*)?$/.test(href) ? { type: "link", href, label: "WhatsApp" } : { type: "text", value: href });
     last = start + href.length;
   }
   if (last < text.length) {

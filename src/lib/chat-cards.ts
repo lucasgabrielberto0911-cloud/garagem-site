@@ -57,6 +57,7 @@ export type ChatVehicleCard = {
   transmission: string | null;
   category?: string;
   photo: string | null;
+  sold?: boolean;
 };
 
 function fold(value: string) {
@@ -159,7 +160,7 @@ export function stripChatVehicleListingLines(
     .trim();
 }
 
-const CARD_INTRO_MAX = 720;
+const CARD_INTRO_MAX = 1100;
 const CARD_FILLER =
   /tem o mais em conta|o de menor km|automatico se houver|se quiser esticar|logo acima|qual perfil te serve|qual desses|hatch ou sedan/;
 
@@ -229,7 +230,7 @@ export function polishChatReplyWithCards(
     let kept = "";
     for (const para of paragraphs) {
       const next = kept ? `${kept}\n\n${para}` : para;
-      if (next.length > CARD_INTRO_MAX && kept) break;
+      if (next.length > CARD_INTRO_MAX && kept && !isChatRankLine(para)) break;
       kept = next;
     }
     intro = kept;
@@ -425,7 +426,13 @@ export function selectChatVehicles(
         : pool.filter((vehicle) => vehicle.price <= budget);
     const namedPool = singleMentionedModelPool(priced, mensagem);
     const rows = namedPool ?? priced;
-    const ranked = guided
+    const order = chatSearchOrder(mensagem);
+    const orderedRows = guided ? rankChatVehicles(rows, mensagem).slice(0, CHAT_CARD_LIMIT) : rows;
+    const ranked = order === "km"
+      ? [...orderedRows].sort((a, b) => a.km - b.km || a.price - b.price)
+      : order === "year"
+        ? [...orderedRows].sort((a, b) => b.yearModel - a.yearModel || a.km - b.km)
+        : guided
       ? rankChatVehicles(rows, mensagem)
       : [...rows].sort((a, b) => a.price - b.price);
     if (ranked.length > 0) return ranked.slice(0, limit);
@@ -604,7 +611,7 @@ export function chatFollowupsAfterCards(
 }
 
 export function chatVehiclePrice(vehicle: ChatVehicleCard) {
-  return formatCurrencyBRL(vehicle.price);
+  return vehicle.sold ? "Vendido" : formatCurrencyBRL(vehicle.price);
 }
 
 export function chatVehicleVersion(vehicle: ChatVehicleCard) {

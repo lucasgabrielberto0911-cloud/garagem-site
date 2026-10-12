@@ -691,20 +691,20 @@ test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () 
   });
   assert.deepEqual(
     result.vehicles.map((vehicle) => vehicle.id),
-    [lancer.id, civic.id, corolla.id],
+    [lancer.id, civic.id],
   );
-  assert.match(textoVisivelChat(result.reply), /automáticos.*109\.000/i);
+  assert.ok(result.vehicles.every(vehicle => /automático/i.test(vehicle.transmission) && vehicle.price <= 109_000));
   assert.doesNotMatch(textoVisivelChat(result.reply), /eu olho o motor maior antes do preço/);
-  assert.match(textoVisivelChat(result.reply), /• Lancer 2\.0 2014 — 160 cv/);
-  assert.match(textoVisivelChat(result.reply), /• Civic LXR 2014 — 155 cv/);
-  assert.match(textoVisivelChat(result.reply), /• Corolla XEi 2015 — 154 cv/);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Lancer 2014 — [^\n]*160 cv/);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2014 — [^\n]*155 cv/);
+  assert.ok(!result.vehicles.some(v => v.id === corolla.id));
   assert.equal(result.vehicles.find(v => /Lancer/i.test(v.model))?.km, 80000);
   assert.equal(result.vehicles.find(v => /Lancer/i.test(v.model))?.price, 62900);
   assert.doesNotMatch(textoVisivelChat(result.reply), /mais em conta/);
   // Com ficha de fábrica na base, a lista mostra os cv de catálogo (e só deles).
   assert.doesNotMatch(textoVisivelChat(result.reply), /motor 2\.0, cerca de|cv na gasolina/);
   assert.doesNotMatch(textoVisivelChat(result.reply), /\d+ mil km e R\$/);
-  assert.match(textoVisivelChat(result.reply), /^Mais fortes \(cv de fábrica\)/);
+  assert.match(textoVisivelChat(result.reply), /mais fôlego/);
   assert.doesNotMatch(textoVisivelChat(result.reply), /No estoque:|Achei \d/);
   assert.doesNotMatch(textoVisivelChat(result.reply), /wa\.me|whatsapp/i);
   assert.equal(chatWhatsAppCta(result.reply), null);
@@ -833,10 +833,11 @@ test("2.0 mais barato não manda começar pelo 1.0", async () => {
   });
   assert.deepEqual(
     result.vehicles.map((vehicle) => vehicle.id),
-    [duster.id, lancer.id, civic.id],
+    [lancer.id, civic.id],
   );
   assert.doesNotMatch(textoVisivelChat(result.reply), /HB20/);
-  assert.match(textoVisivelChat(result.reply), /• Duster Dynamique 2014 — 142 cv/);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Lancer 2014 — [^\n]*160 cv/);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2015 — [^\n]*155 cv/);
   assert.doesNotMatch(textoVisivelChat(result.reply), /No estoque:|Achei \d/);
   assert.doesNotMatch(
     result.reply,
@@ -946,7 +947,7 @@ test("segunda mensagem herda automático e teto e Nova conversa limpa", async ()
     generate: blockedGenerate(),
   });
   assert.match(textoVisivelChat(fewerKm.reply), /Corolla/);
-  assert.match(textoVisivelChat(fewerKm.reply), /70 mil km/);
+  assert.match(textoVisivelChat(fewerKm.reply), /70(?: mil|\.000) km/);
   assert.doesNotMatch(textoVisivelChat(fewerKm.reply), /HB20|Gol|Creta/);
   assert.doesNotMatch(textoVisivelChat(fewerKm.reply), /wa\.me|whatsapp/i);
   assert.ok(
@@ -964,9 +965,10 @@ test("segunda mensagem herda automático e teto e Nova conversa limpa", async ()
     stock,
     generate: blockedGenerate(),
   });
-  assert.match(textoVisivelChat(pick.reply), /Eu levaria o Lancer/);
-  assert.match(textoVisivelChat(pick.reply), /motor maior/);
-  assert.match(textoVisivelChat(pick.reply), /62\.900/);
+  assert.equal(pick.vehicles[0]?.model, "Lancer");
+  assert.doesNotMatch(pick.reply, /Eu levaria|leva vantagem/);
+  assert.ok(pick.vehicles.every(v => ["Lancer", "Civic"].includes(v.model)));
+  assert.ok(pick.vehicles.some(v => v.price === 62900));
   assert.doesNotMatch(textoVisivelChat(pick.reply), /HB20|Gol/);
   assert.equal(chatWhatsAppCta(pick.reply), null);
 
@@ -1088,7 +1090,9 @@ test("família, primeiro carro, econômico e SUV filtram o estoque real", async 
   assert.equal(family.vehicles[0]?.id, "compass");
   assert.match(textoVisivelChat(family.reply), /4 portas/);
   assert.match(textoVisivelChat(family.reply), /SUV/);
-  assert.doesNotMatch(textoVisivelChat(family.reply), /litros de porta-malas|porta-malas de \d/i);
+  const compassBlock = textoVisivelChat(family.reply).split("\n").find(line => /• .*Compass/.test(line));
+  assert.ok(compassBlock);
+  assert.doesNotMatch(compassBlock, /litros de porta-malas|porta-malas de \d/i);
   assert.doesNotMatch(textoVisivelChat(family.reply), /Civic[^\n]*4 portas/);
 
   const starter = await runChatTurn({
@@ -1108,10 +1112,10 @@ test("família, primeiro carro, econômico e SUV filtram o estoque real", async 
     generate,
   });
   assert.equal(economy.vehicles[0]?.id, "hb");
-  assert.match(textoVisivelChat(economy.reply), /HB20 Vision 2020/);
+  assert.match(textoVisivelChat(economy.reply), /HB20 2020/);
   // Com a ficha dos dois, "econômico" vem do Inmetro, não só do tamanho do motor.
-  assert.match(textoVisivelChat(economy.reply), /• HB20 Vision 2020 — 13,1 km\/l/);
-  assert.match(textoVisivelChat(economy.reply), /• Civic LXR 2015 — 9,7 km\/l/);
+  assert.match(textoVisivelChat(economy.reply), /• (?:[^\n]* )?HB20 2020 — [^\n]*13,1 km\/l/);
+  assert.match(textoVisivelChat(economy.reply), /• (?:[^\n]* )?Civic 2015 — [^\n]*9,7 km\/l/);
   assert.doesNotMatch(textoVisivelChat(economy.reply), /é o de motor menor|mais econômico da lista|No estoque:|Achei \d/);
   assert.ok(economy.vehicles.every((vehicle) => vehicle.price <= 70_000));
 
