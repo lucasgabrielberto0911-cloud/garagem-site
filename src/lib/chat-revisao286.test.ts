@@ -3,7 +3,7 @@ import test from "node:test";
 import { runChatTurn, formatChatResult } from "./chat-turn";
 import { vehiclePath } from "./vehicle-slug";
 import { toChatVehicleCard } from "./chat-cards";
-import type { ChatVehicleRecord } from "./chat-stock";
+import { applyChatStockFilters, type ChatVehicleRecord } from "./chat-stock";
 import type { ChatTurn } from "./chat-gemini";
 
 const base = { color: "Prata", fuel: "Flex", category: "carro" as const, km: 50_000, price: 70_000 };
@@ -231,3 +231,32 @@ test("Bloqueante 5: 'qual o mais forte?' preserva nuance torque × cv do 1.0 tur
   // Não deve divulgar 120 cv para o 1.0 turbo
   assert.doesNotMatch(result.reply, /120\s*cv/i);
 });
+
+// 6) applyChatStockFilters com 'barato e econômico' (combinedCheap): não aplica teto de ~1,35x do mais barato
+test("Bloqueante 6: applyChatStockFilters com 'barato e econômico' não aplica teto cheapPriceCap de ~1,35x", () => {
+  // Com pergunta apenas de 'barato', o teto de ~1,35x do mais barato (56.900 -> cap 77.000) filtra hb20s (89.900) e kicks (89.900)
+  const cheapOnly = applyChatStockFilters(stock, "qual carro mais em conta você tem?");
+  assert.ok(cheapOnly.every((vehicle) => vehicle.price <= 77_000));
+  assert.equal(cheapOnly.some((vehicle) => vehicle.id === "hb20s"), false);
+
+  // Com pergunta combinada 'barato e econômico', não aplica o teto de preço não pedido:
+  // modelos acima do teto (como o HB20S de 89.900) continuam no pool para o ranking multicritério avaliar
+  const combined = applyChatStockFilters(stock, "qual carro barato e econômico você indica?");
+  assert.ok(combined.some((vehicle) => vehicle.id === "hb20s"), "HB20S deve estar no pool com critério combinado");
+  assert.ok(combined.some((vehicle) => vehicle.price > 77_000), "Pool combinado não deve podar veículos acima de 1,35x");
+});
+
+test("Bloqueante 6b: runChatTurn para 'barato e econômico' não poda opções econômicas por faixa não pedida", async () => {
+  const result = await runChatTurn({
+    mensagem: "qual carro barato e econômico você indica?",
+    historico: [],
+    stock,
+    generate: async () => {
+      throw new Error("deterministico sem LLM para multicriterio");
+    },
+  });
+
+  assert.ok(result.vehicles.length >= 2, "deve retornar cards combinando preço e economia");
+  assert.doesNotMatch(result.reply, /faixa|teto|limite de pre[cç]o/i);
+});
+

@@ -473,7 +473,7 @@ function AssistantRow({
 }) {
   return (
     <div
-      className={`min-w-0 space-y-2${latest ? " scroll-mt-2" : ""}`}
+      className="min-w-0 space-y-2"
       data-chat-latest={latest ? "1" : undefined}
     >
       {pending ? (
@@ -538,6 +538,7 @@ export function SiteChat() {
     question: string;
   } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const lastTopRef = useRef(0);
   const userScrolledUpRef = useRef(false);
   const programmaticUntilRef = useRef(0);
@@ -708,25 +709,43 @@ export function SiteChat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, autoSend, pending]);
 
-  function scrollToLatest(toBottom = false) {
+  function scrollToLatest(smooth = false) {
     const node = listRef.current;
     if (!node) return;
-    const latest = node.querySelector<HTMLElement>("[data-chat-latest='1']");
-    const top =
-      !toBottom && latest && latest.offsetHeight > node.clientHeight
-        ? latest.getBoundingClientRect().top -
-          node.getBoundingClientRect().top +
-          node.scrollTop -
-          8
-        : node.scrollHeight;
-    programmaticUntilRef.current = performance.now() + 120;
-    node.scrollTo({ top: Math.max(0, top), behavior: "instant" });
+    const animate =
+      smooth && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    programmaticUntilRef.current = performance.now() + (animate ? 500 : 120);
+    node.scrollTo({
+      top: node.scrollHeight,
+      behavior: animate ? "smooth" : "instant",
+    });
     lastTopRef.current = node.scrollTop;
   }
 
+  function syncLatestButton() {
+    const node = listRef.current;
+    if (!node) return;
+    const distance = node.scrollHeight - node.scrollTop - node.clientHeight;
+    setShowLatest(
+      userScrolledUpRef.current && distance > 160 && messagesRef.current.length > 1,
+    );
+  }
+
   useEffect(() => {
-    if (open && followScrollRef.current) scrollToLatest();
+    if (open && followScrollRef.current) scrollToLatest(pending);
   }, [open, messages, pending]);
+
+  useEffect(() => {
+    // Cards e fotos carregam depois do texto: acompanha o crescimento do conteúdo.
+    const content = contentRef.current;
+    if (!open || !content || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (followScrollRef.current) scrollToLatest(requestRef.current !== null);
+      else syncLatestButton();
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -1179,7 +1198,7 @@ export function SiteChat() {
             role="region"
             aria-label="Conversa"
             ref={listRef}
-            className="site-chat-scroll min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-3.5 py-4"
+            className="site-chat-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-3.5 py-4"
             onWheel={(event) => { if (event.deltaY < 0) programmaticUntilRef.current = 0; }}
             onTouchStart={() => { programmaticUntilRef.current = 0; }}
             onScroll={(event) => {
@@ -1193,12 +1212,13 @@ export function SiteChat() {
               setShowLatest(userScrolledUpRef.current && distance > 160 && messages.length > 1);
             }}
           >
+            <div ref={contentRef} className="space-y-4">
             {messages.map((message, index) => {
               const latest = index === messages.length - 1;
               return message.role === "user" ? (
                 <div
                   key={`user-${index}`}
-                  className={`flex justify-end pl-10${latest ? " scroll-mt-2" : ""}`}
+                  className="flex justify-end pl-10"
                   data-chat-latest={latest ? "1" : undefined}
                 >
                   <p className="whitespace-pre-wrap rounded-[18px] rounded-tr-md bg-brand/90 ring-0 px-4 py-2.5 text-[14px] leading-[1.5] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] [overflow-wrap:anywhere]">
@@ -1341,6 +1361,7 @@ export function SiteChat() {
                 </div>
               </div>
             ) : null}
+            </div>
           </div>
 
           <p role="status" aria-live="polite" className="sr-only">
@@ -1409,7 +1430,20 @@ export function SiteChat() {
                 autoComplete="off"
                 className="min-h-11 max-h-28 min-w-0 flex-1 resize-none bg-transparent py-[11px] text-base leading-[22px] text-cream outline-none placeholder:text-muted disabled:opacity-60"
               />
+              {pending ? (
               <button
+                key="stop"
+                type="button"
+                onClick={stopReply}
+                aria-label="Parar resposta"
+                title="Parar resposta"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.1] text-cream transition hover:bg-white/[0.16] active:bg-white/[0.2] touch-manipulation"
+              >
+                <span aria-hidden="true" className="h-3.5 w-3.5 rounded-[3px] bg-current" />
+              </button>
+              ) : (
+              <button
+                key="send"
                 type="submit"
                 disabled={!canSend}
                 aria-label="Enviar"
@@ -1417,10 +1451,10 @@ export function SiteChat() {
               >
                 <IconSend className="h-5 w-5" />
               </button>
+              )}
             </div>
             <div data-chat-footer="" className="flex h-7 items-center justify-between gap-2 px-1 text-[11px] text-muted">
               <p>Respostas automáticas · confirme no WhatsApp</p>
-              {pending ? <button type="button" onClick={stopReply} className="relative shrink-0 text-[11px] font-semibold text-cream/70 hover:text-cream before:absolute before:-inset-2 before:content-['']">Parar resposta</button> : null}
             </div>
           </form>
         </section>

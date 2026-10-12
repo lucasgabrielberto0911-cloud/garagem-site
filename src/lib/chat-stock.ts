@@ -354,7 +354,9 @@ export function applyChatStockFilters(
     next = filterStockByBody(next, mensagem);
   }
   next = filterStockByEngine(next, mensagem);
-  if (parseCheapIntent(mensagem) && !chatCriteria(mensagem).space && !chatCriteria(mensagem).power) {
+  const criteria = chatCriteria(mensagem);
+  const combinedCheap = criteria.cheap && (criteria.power || criteria.economy || criteria.space);
+  if (parseCheapIntent(mensagem) && !combinedCheap) {
     const modelPool = singleMentionedModelPool(next, mensagem);
     if (modelPool) next = modelPool;
     if (parsePriceLimit(mensagem) == null) {
