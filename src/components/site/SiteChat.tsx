@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Barlow_Condensed } from "next/font/google";
 import { ChatBubbleBody } from "./ChatBubbleBody";
 import { publicPhotoSrc } from "@/lib/public-photo-url";
 import { usePathname } from "next/navigation";
@@ -80,7 +79,6 @@ import {
   type ChatVehicleContext,
 } from "@/lib/chat-vehicle-context";
 
-const chatDisplay = Barlow_Condensed({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-chat-display", display: "swap", preload: false });
 
 const ASSISTANT_NAME = "Garagem";
 const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
@@ -221,7 +219,7 @@ function ChatWhatsAppButton({
   );
 }
 
-const QUICK_ACTION_CLASS = "inline-flex h-10 lg:h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-3.5 font-display text-[13px] font-semibold tracking-wide text-cream/90 transition hover:border-white/25 hover:bg-white/[0.08] active:bg-white/[0.12] touch-manipulation";
+const QUICK_ACTION_CLASS = "inline-flex h-10 lg:h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-3.5 font-display text-[13px] font-semibold leading-none text-cream/90 transition hover:border-white/25 hover:bg-white/[0.08] active:bg-white/[0.12] touch-manipulation";
 
 function ChatVehicleMini({
   vehicle,
@@ -264,7 +262,7 @@ function ChatVehicleMini({
       });
 
   return (
-    <article data-chat-vehicle={vehicle.id} className="group relative flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-2 transition hover:bg-white/[0.07]">
+    <article data-chat-vehicle={vehicle.id} className="group relative flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-2 transition hover:border-white/20 hover:bg-white/[0.07]">
       <Link href={vehicle.href} prefetch={false} onClick={() => onVehicleClick?.(vehicle)} aria-label={`${label} — ${chatVehiclePrice(vehicle)}. Abrir ficha`} className="absolute inset-0 rounded-xl touch-manipulation" />
       <span className="pointer-events-none relative aspect-[4/3] w-[72px] shrink-0 overflow-hidden rounded-lg bg-asphalt max-[359px]:w-16">
         {/* eslint-disable-next-line @next/next/no-img-element -- capa remota, sem cota /_next/image */}
@@ -275,14 +273,14 @@ function ChatVehicleMini({
         }} />
       </span>
       <div className="pointer-events-none min-w-0 flex-1">
-        <h3 className="truncate font-display text-[15px] font-semibold leading-5 text-cream">{vehicle.title}</h3>
-        <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1 text-[12px] leading-4 text-cream/70 tabular-nums">
+        <h3 className="truncate font-display text-[14px] font-semibold leading-5 text-cream">{vehicle.title}</h3>
+        <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1 text-[12px] leading-4 text-cream/75 tabular-nums">
           <span>{vehicle.year} · {vehicle.km.toLocaleString("pt-BR")} km ·</span>{" "}
-          <span className="whitespace-nowrap font-display text-[14px] font-bold text-[#ff555b]">{chatVehiclePrice(vehicle)}</span>
+          <span className="whitespace-nowrap font-display text-[13px] font-bold text-[#ff6b70]">{chatVehiclePrice(vehicle)}</span>
         </p>
         <VehicleCardWhatsApp variant="chat-compact" vehicleId={vehicle.id} label={label} message={whatsappMessage} value={vehicle.sold ? 0 : vehicle.price} make={vehicle.brand} model={vehicle.model} year={vehicle.year} path={vehicle.href} showOnStockList trackingLabel="chat-card" campaign="chat" />
       </div>
-      <IconArrowRight className="pointer-events-none h-4 w-4 shrink-0 text-cream/40 max-[359px]:hidden" />
+      <IconArrowRight className="pointer-events-none h-4 w-4 shrink-0 text-cream/40 max-[419px]:hidden" />
     </article>
   );
 }
@@ -1100,7 +1098,7 @@ export function SiteChat() {
   return (
     <div
       ref={shellRef}
-      className={`${chatDisplay.variable} site-chat pointer-events-none fixed z-[60] flex flex-col items-end${
+      className={`site-chat pointer-events-none fixed z-[60] flex flex-col items-end${
         open ? " is-open" : ""
       }`}
     >
