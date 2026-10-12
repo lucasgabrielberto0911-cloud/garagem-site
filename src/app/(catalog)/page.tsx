@@ -148,7 +148,7 @@ export default async function HomePage() {
             {/* Grade única: celular = WhatsApp / [Ver estoque | Assistente] / sugestões;
                 tablet = empilhado; computador = [WhatsApp | Ver estoque] / Assistente / caixinha,
                 alinhada ao topo do logo e com a altura do hero de antes. */}
-            <div className="hero-cta grid w-full shrink-0 grid-cols-2 gap-2 sm:max-w-xs sm:grid-cols-1 sm:gap-2.5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-w-none lg:grid-cols-2 lg:grid-rows-[auto_auto_auto_1fr] lg:gap-2 xl:grid-rows-[auto_auto_1fr] xl:gap-3">
+            <div className="hero-cta grid w-full shrink-0 grid-cols-2 gap-2 sm:max-w-xs sm:grid-cols-1 sm:gap-2.5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-w-none lg:grid-cols-2 lg:grid-rows-[1fr_1fr_1fr_auto] lg:gap-2 xl:grid-rows-[1fr_1fr_auto] xl:gap-3">
               <WhatsAppButton
                 size="lg"
                 className="col-span-2 w-full sm:col-span-1 lg:col-span-2 lg:!px-3 xl:col-span-1 lg:!text-sm lg:!gap-2 lg:whitespace-nowrap"
@@ -163,7 +163,7 @@ export default async function HomePage() {
               <div className="lg:col-span-2">
                 <HomeAssistantButton />
               </div>
-              <div className="col-span-2 sm:col-span-1 lg:col-span-2 lg:h-full">
+              <div className="col-span-2 sm:col-span-1 lg:col-span-2">
                 <HomeAssistantAsk />
               </div>
               {/* O telefone já está no header e no WhatsApp; fica só no tablet, como antes. */}
