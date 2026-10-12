@@ -2041,6 +2041,3 @@ html[data-consent="essential"] .site-consent {
 /* O teclado usa o espaço dos atalhos para preservar a conversa. */
 body[data-chat-keyboard] [data-chat-quick-actions],
 body[data-chat-keyboard] [data-chat-footer] { display: none; }
-
-/* Barlow fica restrita ao assistente; o admin conserva Sora. */
-.site-chat { --font-display: var(--font-chat-display); }

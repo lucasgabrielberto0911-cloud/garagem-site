@@ -11,7 +11,7 @@ import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { trackEvent } from "@/lib/track-event";
 
 const FIELD =
-  "w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-cream placeholder:text-cream/40 focus:border-white/25 focus:outline-none";
+  "w-full mt-1 min-h-11 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-base text-cream lg:text-[14px] placeholder:text-cream/40 focus:border-white/25 focus:outline-none";
 
 /** Coleta carro, dúvidas e horário e abre o WhatsApp com a mensagem pronta. */
 export function ChatVisitPanel({
@@ -35,20 +35,20 @@ export function ChatVisitPanel({
       id="chat-visit-panel"
       role="group"
       aria-label="Marcar visita"
-      className="max-h-[55%] shrink-0 overflow-y-auto space-y-2 border-t border-white/[0.07] bg-asphalt px-3 pb-2 pt-3"
+      className="max-h-[55%] shrink-0 overflow-y-auto space-y-3 border-t border-white/[0.07] bg-asphalt px-4 pb-3 pt-3"
     >
       <div className="flex items-center justify-between">
-        <p className="text-[12px] font-semibold text-cream">Marcar visita</p>
+        <p className="font-display text-[15px] font-semibold leading-5 text-cream">Marcar visita</p>
         <button
           type="button"
           onClick={onClose}
           aria-label="Fechar"
-          className="relative h-8 w-8 text-xl text-cream/70 before:absolute before:-inset-1.5 before:content-['']"
+          className="relative -mr-2 h-10 w-10 text-xl text-cream/70 before:absolute before:-inset-1.5 before:content-['']"
         >
           ×
         </button>
       </div>
-      <label className="block text-[11px] text-cream/70">
+      <label className="block text-[12px] font-medium leading-4 text-cream/75">
         Carro de interesse
         <input
           className={FIELD}
@@ -58,7 +58,7 @@ export function ChatVisitPanel({
           placeholder="Ex.: Onix 2020"
         />
       </label>
-      <label className="block text-[11px] text-cream/70">
+      <label className="block text-[12px] font-medium leading-4 text-cream/75">
         Dúvidas (opcional)
         <input
           className={FIELD}
@@ -68,7 +68,7 @@ export function ChatVisitPanel({
           placeholder="Ex.: aceita troca? financia?"
         />
       </label>
-      <label className="block text-[11px] text-cream/70">
+      <label className="block text-[12px] font-medium leading-4 text-cream/75">
         Horário desejado
         <input
           className={FIELD}
@@ -92,7 +92,7 @@ export function ChatVisitPanel({
           trackEvent("chat_visit_request", { has_questions: input.questions.trim() ? 1 : 0 });
           trackWhatsAppClick("chat-visita");
         }}
-        className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 text-[13px] font-semibold text-asphalt ${
+        className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 text-[14px] font-semibold text-asphalt ${
           complete ? "" : "pointer-events-none opacity-50"
         }`}
       >
