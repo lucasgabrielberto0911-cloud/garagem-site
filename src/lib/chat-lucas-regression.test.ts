@@ -113,7 +113,8 @@ test("tom positivo na manutenção e resposta honesta à pergunta direta sobre c
   for (const spec of VEHICLE_SPECS) assert.doesNotMatch(spec.manutencao, /ponto de atenção|vale olhar|problemas crônicos|mais caras/);
   const result = await runChatTurn({ mensagem: "o Lancer 2.0 bebe muito?", historico: [], stock, generate: noModel });
   assert.match(result.reply, /8,8 km\/l na cidade.*10,7 km\/l na estrada/);
-  assert.match(result.reply, /robusto.*WhatsApp/);
+  // Resposta direta e honesta, puxando para o lado bom do carro (sem defeito espontâneo).
+  assert.match(result.reply, /A favor dele: motor 2\.0 MIVEC robusto/);
   assert.doesNotMatch(result.reply, /suspensão|bomba|ruim/);
 });
 
@@ -121,7 +122,15 @@ test("jornada de seis turnos responde a pergunta e conserva cards na busca", asy
   const historico: ChatTurn[] = [];
   for (const mensagem of ["pontos positivos do Kicks", "0 a 100 do Civic", "consumo do Civic", "tem automático até 70 mil?", "Kicks x HR-V", "quero falar com o vendedor"]) {
     const result = await runChatTurn({ mensagem, historico, stock, generate: noModel });
-    if (mensagem.includes("pontos positivos")) assert.match(result.reply, /Kicks.*economia.*CVT.*porta-malas/);
+    // Pontos positivos: listinha compacta (4 a 6 linhas) com câmbio da ficha, espaço e economia.
+    if (mensagem.includes("pontos positivos")) {
+      assert.match(result.reply, /Kicks/);
+      assert.match(result.reply, /CVT/);
+      assert.match(result.reply, /porta-malas/);
+      assert.match(result.reply, /km\/l/);
+      const points = result.reply.split("\n").filter(line => /^• \*\*/.test(line));
+      assert.ok(points.length >= 4 && points.length <= 6);
+    }
     if (mensagem.includes("até 70")) assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [hb.id]);
     if (mensagem.includes("x HR-V")) assert.match(result.reply, /Os dois são ótimas escolhas/);
     if (mensagem.includes("x HR-V")) assert.match(result.reply, /• Kicks[^\n]*\n• HR-V/);

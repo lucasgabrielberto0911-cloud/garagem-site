@@ -363,6 +363,19 @@ function ChatBubbleBody({ text }: { text: string }) {
                 data-chat-rank-list="1"
               >
                 {lines.slice(rankStart).map((line, lineIndex) => {
+                  const labeled = /^•\s+\*\*(.+?)\*\*\s*(.*)$/.exec(line.trim());
+                  if (labeled) {
+                    // Pontos positivos: "• **Motor:** texto" vira rótulo em negrito + texto.
+                    return (
+                      <li
+                        key={`${labeled[1]}-${lineIndex}`}
+                        className="px-3 py-2 text-[13.5px] leading-snug text-cream/90"
+                      >
+                        <strong className="font-semibold text-cream">{labeled[1]}</strong>{" "}
+                        {labeled[2]}
+                      </li>
+                    );
+                  }
                   const [name, ...rest] = line.trim().replace(/^•\s+/, "").split(" — ");
                   const value = rest.join(" — ");
                   return (

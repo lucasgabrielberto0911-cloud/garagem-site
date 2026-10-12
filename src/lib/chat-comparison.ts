@@ -27,7 +27,7 @@ export function neutralChatComparison(vehicles: ChatVehicleRecord[], message: st
     const kml = ethanol ? consumptionRef?.etanol : consumptionRef?.gasolina ?? spec?.consumoMoto;
     if (consumption && kml != null) data.push(`${String(kml).replace(".", ",")} km/l (${vehicle.category === "moto" ? "referência aproximada" : `${ethanol ? "etanol" : "gasolina"}, ${road ? "estrada" : "cidade"}/Inmetro`})`);
     const cv = spec ? (ethanol ? spec.cv.etanol : gasoline ? spec.cv.gasolina : specMaxCv(spec)) : null;
-    if (power && cv != null && cv > 0) data.push(`${cv} cv${ethanol ? " (etanol)" : gasoline ? " (gasolina)" : ""}`);
+    if (power && cv != null && cv > 0) data.push(`${cv.toLocaleString("pt-BR")} cv${ethanol ? " (etanol)" : gasoline ? " (gasolina)" : ""}`);
     const kgfm = spec ? (ethanol ? spec.torque.etanol : gasoline ? spec.torque.gasolina : spec.torque.etanol ?? spec.torque.gasolina) : null;
     if (torque && kgfm != null) data.push(`${String(kgfm).replace(".", ",")} kgfm`);
     if (space && spec?.portaMalas != null) data.push(`${spec.aprox ? "cerca de " : ""}${spec.portaMalas} L de porta-malas`);

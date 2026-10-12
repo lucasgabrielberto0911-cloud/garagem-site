@@ -60,6 +60,8 @@ Nunca mencionar ou vazar preço de referência FIPE (nem deveria estar no contex
 
 Português do Brasil correto: loja e garantia são femininos (pela loja, da loja, pela garantia). Nunca escreva “pelo loja”.
 
+PERGUNTAS DE POLÍTICA: seguro e revisão preventiva não são pedidos de lista de estoque. Não invente seguro incluso nem revisão feita; quando não houver política publicada ou histórico no anúncio, o consultor confirma pelo WhatsApp. Comparações com números usam apenas as FICHAS TÉCNICAS fornecidas, respeitando o ano e o motor pedidos.
+
 AFIRMAÇÕES PROIBIDAS SOBRE A UNIDADE: nos dados de cada carro só existem marca, modelo, versão, ano, km, preço, cor, câmbio, combustível, motor, portas e acessórios cadastrados. Por isso NUNCA diga nem sugira, de um carro específico, que ele tem ou não tem: laudo (cautelar ou outro), garantia de fábrica ou estendida ou qualquer garantia diferente da oficial acima (nada de “90 dias de tudo”), revisões feitas ou em dia, “revisado”, correia, pneus ou bateria trocados, histórico de manutenção, ausência de batida, sinistro, leilão ou remarcação, peças ou pintura “originais”, dono único ou primeiro dono, inspeção ou “conferência de qualidade”, procedência garantida, nem qualquer estado de conservação. A garantia oficial da loja (3 meses de motor e câmbio, com as exclusões acima) você pode e deve explicar quando perguntarem. Se perguntarem do resto, diga que esse dado não está no anúncio e que o vendedor confirma pelo WhatsApp.
 EQUIPAMENTOS E VERSÃO: fonte de verdade é a ficha do nosso carro (acessórios cadastrados); depois, a pesquisa trazida no contexto. Item de segurança (airbags, ABS, controle de estabilidade, câmera) ou opcional (multimídia, teto solar, ar-condicionado, couro, sensores) você só afirma na nossa unidade se estiver nos acessórios da ficha. Nunca negue um item cadastrado na ficha. Dado típico do MODELO pode aparecer assim: “a versão costuma vir com…”, nunca como fato da unidade (“esse carro tem…”). Item de outra versão ou de outro ano, opcional ou qualquer dúvida: não afirme; diga que o vendedor confirma pelas fotos ou no WhatsApp. Potência, torque, 0–100, consumo e marchas podem ser ditos, sempre presos à versão, ao ano e ao motor do NOSSO carro.
 MARCA CORRETA: use sempre a marca que está nos dados do estoque ou nas fichas (o HB20 é Hyundai, o City é Honda, o Onix é Chevrolet). Nunca troque nem invente a marca de um modelo.
@@ -303,7 +305,7 @@ function foldIntent(value: string) {
 }
 
 const POWER_WORD =
-  /\b(fortes?|motorizad[oa]s?|potentes?|pegada|torque|esportiv[oa]s?|rapid[oa]s?|veloz|velozes|arranque|0 a 100)\b/;
+  /\b(fortes?|motorizad[oa]s?|potentes?|pegada|torque|esportiv[oa]s?|rapid[oa]s?|veloz|velozes|arranque|0 a 100|anda mais|anda melhor|corre mais|mais espert[oa]|mais ligeir[oa])\b/;
 
 const STRONG_ENGINE_BADGE =
   /\b(tsi|tfsi|thp|tjet|t-jet|t jet|turbo|biturbo|ecoboost|gti|gsi|v6|v8)\b/i;

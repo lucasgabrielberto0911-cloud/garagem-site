@@ -1137,9 +1137,10 @@ test("família, primeiro carro, econômico e SUV filtram o estoque real", async 
     stock,
     generate,
   });
-  assert.equal(fact.meta?.policy, "spec-direct");
-  // "É econômico?" vira o consumo do Inmetro daquela versão, sem afirmar nada da unidade.
-  assert.match(fact.reply, /Pelo Inmetro, o HB20 1\.0 faz cerca de 9,8 km\/l na cidade/);
+  assert.equal(fact.meta?.policy, "opinion");
+  // "É econômico?" responde direto (sim/não) com o consumo do Inmetro daquela versão, sem afirmar nada da unidade.
+  assert.match(fact.reply, /^É econômico, sim! Pelo Inmetro, o HB20 1\.0 faz cerca de 13,1 km\/l na cidade/);
+  assert.match(fact.reply, /no etanol, 9,8/);
   assert.doesNotMatch(fact.reply, /esta unidade|Achei|No estoque:/);
   assert.equal(fact.vehicles.length, 1);
   assert.equal(fact.vehicles[0]?.id, "hb");
