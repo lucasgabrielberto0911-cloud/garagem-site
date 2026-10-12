@@ -1,3 +1,4 @@
+import { chatCriteria, chatPickLimit, chatBlockName, formatChatCarBlocks } from "./chat-multicriterio";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import { findVehicleSpec, specMaxCv } from "@/lib/chat-specs";
 import { article as opinionArticle, opinionName, opinionReply, planOpinionTurn } from "@/lib/chat-opinion";
@@ -86,9 +87,9 @@ import {
   CHAT_AVAILABILITY_ASK_REPLY,
   asksAboutConsumption,
   asksAboutEquipment,
+  confirmedEquipmentReason,
   namedUnitForEquipment,
   equipmentAcrossStockReply,
-  confirmedEquipmentReason,
   asksForFichaSummary,
   asksForSimilarToActive,
   similarToActiveReply,
@@ -172,6 +173,7 @@ export type ChatTurnResult = {
     offScope?: boolean;
     fipe?: boolean;
     policy?: string | null;
+    plain?: boolean;
     model?: string;
     /** Pedidos feitos ao Gemini nesta resposta (1 = sem repetição). */
     calls?: number;
@@ -333,12 +335,12 @@ async function runChatTurnInternal(input: {
           reply,
           scopedMessage,
           input.stock,
-          CHAT_CARD_LIMIT,
+          compared.length >= 3 && /\b(?:ou|versus|vs)\b/i.test(scopedMessage) ? 3 : chatPickLimit(scopedMessage),
           activeVehicle?.id,
         )
       : [];
     if (opts.forcedVehicles?.length) {
-      picked = opts.forcedVehicles.slice(0, CHAT_CARD_LIMIT);
+      picked = opts.forcedVehicles.slice(0, compared.length >= 3 && /\b(?:ou|versus|vs)\b/i.test(scopedMessage) ? 3 : Math.min(chatPickLimit(scopedMessage), 3));
     }
     let text = applyChatReplyGuards(
       reply,
@@ -394,6 +396,7 @@ async function runChatTurnInternal(input: {
         offScope: Boolean(opts.offScope),
         fipe: Boolean(opts.fipe),
         policy: opts.policy ?? null,
+        plain: Boolean(opts.plain),
         model: opts.model,
         calls: opts.calls,
       },
@@ -433,26 +436,37 @@ async function runChatTurnInternal(input: {
     emit(reply);
     return finish(reply, false, { cards: false, plain: true, policy: directPolicy });
   }
+  const requestedCriteria = chatCriteria(visitorMessage);
+  const multipleCriteria = [requestedCriteria.power, requestedCriteria.economy, requestedCriteria.space, requestedCriteria.cheap].filter(Boolean).length > 1 || requestedCriteria.automatic && requestedCriteria.economy;
+  if (multipleCriteria && !activeVehicle && !explicitModelUnits.length) {
+    const found = searchChatInventory(scopedMessage, input.stock);
+    if (found) {
+      emit(found.reply);
+      return finish(found.reply, false, { plain: true, forcedVehicles: found.picks, cards: true, policy: "inventory-search" });
+    }
+  }
   const economy = /economi|gasta menos|consum/.test(fold(visitorMessage));
   const globalRank = /\b(mais economico|mais economica|mais forte|mais potente)\b/.test(fold(visitorMessage));
   const refersToList = /\b(deles|delas|desses|dessas)\b/.test(fold(visitorMessage));
-  if ((economy && refersToList) || (globalRank && (economy || /estoque/.test(fold(visitorMessage))) && !explicitModelUnits.length && !activeVehicle)) {
+  if (!multipleCriteria && ((economy && refersToList) || (globalRank && (economy || /estoque/.test(fold(visitorMessage))) && !explicitModelUnits.length && !activeVehicle))) {
     const remembered = (input.previousVehicleIds ?? []).map(id => input.stock.find(v => v.id === id)).filter((v): v is ChatVehicleRecord => Boolean(v));
-    const pool = refersToList ? remembered : matchedChatStock(visitorMessage, input.stock);
+    const pool = matchedChatStock(scopedMessage, refersToList ? remembered : input.stock);
     const rows = pool.map(vehicle => {
       const spec = findVehicleSpec(vehicle);
       return { vehicle, value: economy ? spec?.cidade?.gasolina ?? spec?.consumoMoto : spec ? specMaxCv(spec) : undefined };
-    }).filter((row): row is { vehicle: ChatVehicleRecord; value: number } => row.value != null && (economy || row.value >= 90 && !/\b1[.,]0\b/.test(row.vehicle.engine ?? row.vehicle.version ?? "")))
-      .sort((a, b) => b.value - a.value).slice(0, CHAT_CARD_LIMIT);
+    }).filter((row): row is { vehicle: ChatVehicleRecord; value: number } => row.value != null)
+      .sort((a, b) => b.value - a.value).slice(0, chatPickLimit(scopedMessage));
     if (rows.length) {
-      const reply = `Pela ficha${economy ? " de consumo" : " de potência"}, o destaque é ${rankLineName(rows[0]!.vehicle)}:\n` + rows.map(({ vehicle, value }) => `• [**${rankLineName(vehicle)}**](${vehiclePath(vehicle)}) — ${value.toLocaleString("pt-BR")} ${economy ? vehicle.category === "moto" ? "km/l (referência aproximada)" : "km/l (cidade, gasolina/Inmetro)" : "cv"}`).join("\n");
+      const reply = economy
+        ? `Pela ficha de consumo, o destaque é ${rankLineName(rows[0]!.vehicle)}:\n` + rows.map(({ vehicle, value }) => `• **[${rankLineName(vehicle)}](${vehiclePath(vehicle)})** — ${value.toLocaleString("pt-BR")} ${vehicle.category === "moto" ? "km/l (referência aproximada)" : "km/l (cidade, gasolina/Inmetro)"}`).join("\n")
+        : formatChatCarBlocks(rows.map(row => row.vehicle), scopedMessage);
       emit(reply);
       return finish(reply, false, { plain: true, forcedVehicles: rows.map(row => row.vehicle), policy: "ranking-ficha" });
     }
   }
   if (/\b(quanto (?:ta|custa|sai|e)|qual (?:o )?(?:valor|preco))\b/.test(fold(visitorMessage)) && explicitModelUnits.length > 1 && !matchChatSoldVehicle(visitorMessage, input.stock, input.soldStock ?? [], input.vehicleId)) {
     const units = explicitModelUnits.slice(0, CHAT_CARD_LIMIT);
-    const reply = `Estas são as opções:\n${units.map(v => `• [**${rankLineName(v)}**](${vehiclePath(v)}) — ${v.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`).join("\n")}`;
+    const reply = `Estas são as opções:\n${units.map(v => `• **[${rankLineName(v)}](${vehiclePath(v)})** — ${v.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`).join("\n")}`;
     emit(reply);
     return finish(reply, false, { plain: true, forcedVehicles: units, policy: "preco-modelo" });
   }
@@ -689,15 +703,15 @@ async function runChatTurnInternal(input: {
   }
   if (policy === "card") {
     emit(CHAT_CARD_REPLY);
-    return finish(CHAT_CARD_REPLY, false, { policy });
+    return finish(CHAT_CARD_REPLY, false, { policy, plain: true, cards: false });
   }
   if (policy === "finance") {
     emit(CHAT_FINANCE_REPLY);
-    return finish(CHAT_FINANCE_REPLY, false, { policy });
+    return finish(CHAT_FINANCE_REPLY, false, { policy, plain: true, cards: false });
   }
   if (policy === "troca") {
     emit(CHAT_TRADE_REPLY);
-    return finish(CHAT_TRADE_REPLY, false, { policy });
+    return finish(CHAT_TRADE_REPLY, false, { policy, plain: true, cards: false });
   }
   if (policy === "warranty") {
     emit(CHAT_WARRANTY_REPLY);
@@ -705,7 +719,7 @@ async function runChatTurnInternal(input: {
   }
   if (policy === "docs") {
     emit(CHAT_DOCS_REPLY);
-    return finish(CHAT_DOCS_REPLY, false, { policy });
+    return finish(CHAT_DOCS_REPLY, false, { policy, plain: true, cards: false });
   }
   if (policy === "origin") {
     // Laudo que está na ficha do carro em tela (ou do único citado): diz que consta.
@@ -951,6 +965,7 @@ async function runChatTurnInternal(input: {
     (explicitModelUnits.length > 0 && /\b(mostra\w*|quero|procuro|busco|ver)\b/i.test(visitorMessage) &&
       !/\b(sabado|domingo|segunda|terca|quarta|quinta|sexta|hoje|amanha|horario|agendar|visita)\b/.test(fold(visitorMessage)) &&
       !asksToCompareModels(visitorMessage)) ||
+    multipleCriteria ||
     isChatSelectionQuery(scopedMessage) ||
     roadUse ||
     // "tem Hyundai?": marca do estoque sem modelo vira busca da marca.
@@ -1033,6 +1048,7 @@ async function runChatTurnInternal(input: {
       withLeadin: true,
       power: isPowerQuery(scopedMessage),
       intent: chatRankMode(scopedMessage),
+      includeConsumption: asksAboutConsumption(scopedMessage) || chatRankMode(scopedMessage) === "economy",
     });
     emit(reply);
     // Texto montado da ficha: o polimento não corta "3.200 km" nem a pergunta final.
@@ -1291,7 +1307,7 @@ async function runChatTurnInternal(input: {
     input.signal?.throwIfAborted();
     const fallback = fromStock();
     emit(fallback);
-    return finish(fallback, false, shaped(fallback));
+    return finish(fallback, false, { policy: "stock-fallback", ...shaped(fallback) });
   }
 
   const turnMeta = {
@@ -1308,7 +1324,7 @@ async function runChatTurnInternal(input: {
   ) {
     const fallback = fromStock();
     emit(fallback);
-    return finish(fallback, false, { ...turnMeta, ...shaped(fallback) });
+    return finish(fallback, false, { ...turnMeta, policy: "stock-fallback", ...shaped(fallback) });
   }
   if (
     !first.functionCall &&
@@ -1329,7 +1345,7 @@ async function runChatTurnInternal(input: {
       if (!generated || fallback.startsWith(generated)) {
         emit(generated ? fallback.slice(generated.length) : fallback);
       }
-      return finish(fallback, false, { ...turnMeta, truncated: false });
+      return finish(fallback, false, { ...turnMeta, truncated: false, policy: "stock-fallback" });
     }
   }
 
@@ -1438,55 +1454,200 @@ async function runChatTurnInternal(input: {
 }
 
 /** Respostas diretas e listas recebem a mesma formatação antes de serem emitidas. */
-function formatChatResult(result: ChatTurnResult, input: Parameters<typeof runChatTurnInternal>[0], picks: ChatVehicleRecord[]): ChatTurnResult {
+export function formatChatResult(result: ChatTurnResult, input: Parameters<typeof runChatTurnInternal>[0], picks: ChatVehicleRecord[]): ChatTurnResult {
 
-  if (picks.length >= 2) {
-    if (!result.reply.includes("• ") && !asksAboutEquipment(input.mensagem)) {
-      const comparison = asksAboutFuel(input.mensagem)
-        ? `Combustível das opções:\n${picks.map(v => `• ${rankLineName(v)} — ${v.fuel}`).join("\n")}`
-        : neutralChatComparison(picks, input.mensagem);
-      result.reply = `${result.reply.split("\n")[0]}\n${comparison.split("\n").slice(1).join("\n")}`;
+  const originalReply = result.reply;
+  const clientAskedPrice =
+    parsePriceLimit(input.mensagem) != null ||
+    /barat|pre[cç]o|valor|quanto|faixa|or[cç]amento|caber no bolso/i.test(input.mensagem);
+  const unaskedPricePattern =
+    /R\$|\b\d+[\d.,]*\s*(?:mil|k)\b(?!\s*km)|\b(?:at[eé]|faixa(?: de| dos)?|or[cç]amento(?: de)?|menos de|abaixo de|em torno de)\s+(?:r\$\s*)?\d+|\b\d{2,3}\.000\b(?!\s*km)/i;
+
+  /** Cidade/local do veículo ou da loja. "Consumo na cidade" (uso urbano) continua permitido. */
+  const mentionsLocation = (text: string) =>
+    /Linhares|nossa cidade|sua cidade|\bcidade de\b|\blocal\b|\bloja\b/i.test(text) ||
+    (/\bcidade\b/i.test(text) && !/km\/l|consumo|urbano|tr[aâ]nsito|\b(?:na|pela|pra|para|no uso em|dentro da|em)\s+cidade\b|\(cidade\b|\bcidade[,/]/i.test(text));
+  const unsafeIntro = (intro: string) =>
+    /^(?:Separei\s+\d|Temos (?:duas|três) ótimas|•)|equilibrando|vale conhecer|Eu levaria|em potência leva|leva vantagem|é melhor|ganha|vence|superior/i.test(intro) ||
+    mentionsLocation(intro) ||
+    /parcel|taxa|juros|\bsimula(?:dor|[cç][aã]o)\b/i.test(intro) ||
+    (!clientAskedPrice && unaskedPricePattern.test(intro));
+  const linkedPaths = [...result.reply.matchAll(/\[[^\]\n]+\]\((\/estoque\/[^)\s]+)\)/g)].map(match => match[1]);
+  if (linkedPaths.length) {
+    // Ordem e quantidade vêm dos links efetivamente citados, nunca de cards extras.
+    picks = [...new Set(linkedPaths)].flatMap(path => {
+      const vehicle = picks.find(v => vehiclePath(v) === path);
+      return vehicle ? [vehicle] : [];
+    }).slice(0, /\b(?:ou|versus|vs)\b/i.test(input.mensagem) && linkedPaths.length >= 3 ? 3 : chatPickLimit(input.mensagem));
+    const allowed = new Set(picks.map(vehiclePath));
+    result.reply = result.reply.split("\n").filter(line => {
+      const path = line.match(/\]\((\/estoque\/[^)\s]+)\)/)?.[1];
+      return !path || allowed.has(path);
+    }).join("\n");
+    result.vehicles = picks.map(toChatVehicleCard);
+  }
+  const technicalAnswer = ["expert", "spec-direct", "stock-fact"].includes(result.meta?.policy ?? "") && !/^•\s/m.test(result.reply);
+  if (!technicalAnswer && (picks.length >= 2 || (picks.length === 1 && (linkedPaths.length || result.meta?.policy === "inventory-search")))) {
+    const rows = result.reply.split("\n").filter(line => /^•\s/.test(line.trim()));
+    const reasons = new Map<string, string>();
+    for (const [index, line] of rows.entries()) {
+      const v = picks.find(vehicle => line.includes(vehiclePath(vehicle)) || line.startsWith(`• ${rankLineName(vehicle)} —`)) ?? (!linkedPaths.length ? picks[index] : undefined);
+      if (!v || reasons.has(v.id)) continue;
+      const rawReason = line.split(/\s[—–]\s/).slice(1).join(" ").replace(/R\$\s*[\d.,]+/g, "").replace(/;\s*/g, ". ").trim();
+      const spec = findVehicleSpec(v);
+      const isOneLiter = /\b1[.,]0\b/.test(v.engine ?? v.version ?? "") || (spec != null && (specMaxCv(spec) < 90 || /\b1[.,]0\b/.test(spec.motor)));
+      const realKmL: number[] = spec
+        ? [spec.cidade?.gasolina, spec.cidade?.etanol, spec.estrada?.gasolina, spec.estrada?.etanol, spec.consumoMoto].filter((n): n is number => n != null)
+        : [];
+      const validSentences = rawReason
+        .split(/(?<=[.!?])\s+/)
+        .filter(sentence => {
+          if (!/km\/l/i.test(sentence)) return true;
+          if (realKmL.length === 0) return false;
+          const nums = [...sentence.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:km\/l)?/gi)].map(m => Number(m[1].replace(",", ".")));
+          return nums.some(n => realKmL.some(real => Math.abs(n - real) < 0.2));
+        });
+      let reason = validSentences.join(" ").trim();
+      if (isOneLiter) {
+        reason = reason
+          .replace(/(?:,\s*)?(?:com\s+|de\s+)?(?:cerca de |aproximadamente |em torno de |perto de )?\d+(?:[.,]\d+)?(?:\s*(?:a|–|-)\s*\d+(?:[.,]\d+)?)?\s*(?:cv|cavalos)(?:\s+de pot[eê]ncia)?(?:\s*[·•–—]\s*)?/gi, "")
+          .replace(/^[·•–—]\s*/, "")
+          .trim();
+        if (/^\d+(?:[.,]\d+)?\s*kgfm\b/i.test(reason) && !/torque/i.test(reason)) {
+          reason = `${reason} de torque`;
+        }
+      }
+      const unsafe =
+        (/\bcv\b|cavalos|pot[eê]ncia/i.test(reason) && (!spec || isOneLiter)) ||
+        (/km\/l/i.test(reason) && !/gasolina|etanol/i.test(reason)) ||
+        mentionsLocation(reason) ||
+        /simulador|simula[cç][aã]o|parcel|taxa|juros|vale conhecer|equilibrando|leva vantagem|ganha|vence|é melhor/i.test(reason) ||
+        (!clientAskedPrice && unaskedPricePattern.test(reason));
+      const sentences = reason.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
+      if (!unsafe && sentences.length > 0 && sentences.length <= 260) {
+        reasons.set(v.id, sentences.length >= 25 ? sentences : `${sentences.replace(/\.$/, "")}. Está com ${v.km.toLocaleString("pt-BR")} km rodados.`);
+      }
     }
-    if (/hatch\s+ou\s+sedan/i.test(input.mensagem)) result.reply = result.reply.replace("de sedãs", "de hatches ou sedãs");
-    const rows = result.reply.split("\n").filter(line => line.startsWith("• "));
-    const asksPrice = /pre[cç]o|valor|quanto (?:ta|custa|sai)/i.test(input.mensagem);
-    result.reply = rows.length === picks.length
-      ? `${result.reply.split("\n")[0]}\n${rows.map((line, index) => {
-          const v = picks.find(vehicle => line.includes(vehiclePath(vehicle)) || line.startsWith(`• ${rankLineName(vehicle)} —`)) ?? picks[index]!;
-          const reason = line.split(" — ").slice(1).join(" — ");
-          const spec = findVehicleSpec(v);
-          const hidePower = spec && (specMaxCv(spec) < 90 || /\b1[.,]0\b/.test(spec.motor));
-          const safeReason = hidePower && /\bcv\b|potência/.test(reason) ? `${v.transmission}, ${v.km.toLocaleString("pt-BR")} km` : reason;
-          return `• **[${rankLineName(v)}](${vehiclePath(v)})** — ${safeReason}${asksPrice && !/R\$/.test(reason) && !/já foi vendido/.test(result.reply) ? `; ${v.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : ""}`;
-        }).join("\n")}`
-      : `${result.reply.split("\n")[0]}\n${picks.map(v => `• **[${rankLineName(v)}](${vehiclePath(v)})** — ${equipmentReason(v, input.mensagem) ?? `${v.transmission}, ${v.km.toLocaleString("pt-BR")} km`}${asksPrice && !/já foi vendido/.test(result.reply) ? `; ${v.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : ""}`).join("\n")}`;
+    if (reasons.size === picks.length) {
+      let intro = result.reply.split("\n")[0]?.trim() ?? "";
+      if (/em potência leva/i.test(intro)) {
+        intro = intro.replace(/em potência leva ([^;]+); na força ao pisar \(torque, retomada\) leva ([\s\S]+?)\.?$/i, "$1 tem mais potência de fábrica; na força ao pisar (torque, retomada), $2 entrega mais torque em baixa rotação.");
+      }
+      if (!intro || unsafeIntro(intro)) intro = formatChatCarBlocks(picks, input.mensagem).split("\n")[0]!;
+      if (linkedPaths.length) intro = intro.split(/(?<=[.!?])\s+/)[0]!;
+      const closing = result.reply.split("\n").filter(line => /variam conforme o uso|ainda não tenho o consumo/.test(line)).slice(0, 1);
+      result.reply = `${intro}\n${picks.map(v => `• **[${chatBlockName(v)}](${vehiclePath(v)})** — ${reasons.get(v.id)}`).join("\n")}${closing.length ? `\n\n${closing[0]}` : ""}`;
+    } else {
+      const oldIntro = result.reply.split("\n")[0]!;
+      const equipmentRows = asksAboutEquipment(input.mensagem) ? picks.map(v => confirmedEquipmentReason(v, input.mensagem)) : [];
+      const generated = formatChatCarBlocks(picks, input.mensagem);
+      // Conserva o recorte e as ressalvas úteis; preço continua só nos cards.
+      const safeIntro = oldIntro;
+      result.reply = generated;
+      if (!unsafeIntro(oldIntro) && oldIntro.trim()) result.reply = generated.replace(generated.split("\n")[0]!, safeIntro);
+      if (equipmentRows.some(Boolean)) result.reply = result.reply.split("\n").map(line => {
+        const index = picks.findIndex(v => line.includes(vehiclePath(v)));
+        const reason = equipmentRows[index];
+        if (!reason) return line;
+        const prose = reason.length < 25 ? `Vem com ${reason.replace(/\.$/, "")}. O consultor envia fotos para você conferir.` : reason;
+        return prose.length <= 260 ? `• **[${chatBlockName(picks[index]!)}](${vehiclePath(picks[index]!)})** — ${prose.replace(/\.$/, "")}.` : line;
+      }).join("\n");
+    }
+  }
+
+  if (result.meta?.policy === "inventory-search" && !linkedPaths.length && picks.length && !/não (?:temos|tem|está)|fichas não detalham/i.test(originalReply)) {
+    result.reply = formatChatCarBlocks(picks, input.mensagem);
+  }
+  if (!/prioriza conforto, consumo ou desempenho/.test(result.reply) && /prioriza conforto, consumo ou desempenho/.test(originalReply)) {
+    result.reply += "\n\nPara estrada, você prioriza conforto, consumo ou desempenho?";
+  }
+  if (/uber|aplicativo|\bapp\b/i.test(input.mensagem) && !/ano mínimo que o aplicativo aceita/.test(result.reply)) {
+    const caution = originalReply.match(/[^.!?\n]*ano mínimo que o aplicativo aceita[^.!?\n]*[.!?]?/)?.[0]?.trim();
+    if (caution) result.reply += `\n\n${caution}`;
+  }
+  let inmetroUsed = false;
+  result.reply = result.reply.replace(/(?:, pelo |\/|referência )?Inmetro/gi, source => { if (inmetroUsed) return ""; inmetroUsed = true; return source; });
+  if (/km\/l/.test(result.reply) && !/varia|variam/.test(result.reply)) result.reply += "\n\nOs números de consumo variam conforme o uso.";
+  // Só o texto livre da IA passa pelo filtro de frases: respostas de política/atalho já vêm conferidas
+  // (ex.: "financiamento em até 60 vezes", "loja digital", preço do carro que ainda está no estoque).
+  if (!result.meta?.plain && !result.meta?.policy && !result.meta?.offScope && !result.meta?.fipe) {
+    result.reply = result.reply
+      .split("\n")
+      .map(line => {
+        if (/^•\s/.test(line.trim())) return line;
+        return line
+          .split(/(?<=[.!?])\s+/)
+          .filter(sentence => {
+            if (mentionsLocation(sentence)) return false;
+            if (!clientAskedPrice && unaskedPricePattern.test(sentence) && !/^•\s/.test(sentence)) return false;
+            if (/parcel|taxa|juros|\bsimula(?:dor|[cç][aã]o)\b/i.test(sentence)) return false;
+            return true;
+          })
+          .join(" ");
+      })
+      .filter(line => line.trim().length > 0)
+      .join("\n");
   }
   result.reply = sanitizePower(result.reply, picks);
   return result;
 }
 
-function equipmentReason(vehicle: ChatVehicleRecord, mensagem: string): string | null {
-  if (!asksAboutEquipment(mensagem)) return null;
-  return confirmedEquipmentReason(vehicle, mensagem);
-}
-
 /** Não divulga potência baixa nem de motor 1.0, inclusive nos atalhos técnicos. */
 function sanitizePower(text: string, vehicles: ChatVehicleRecord[]): string {
   const hidden = vehicles.filter(vehicle => {
+    if (/\b1[.,]0\b/.test(vehicle.engine ?? vehicle.version ?? "")) return true;
     const spec = findVehicleSpec(vehicle);
-    return spec && (specMaxCv(spec) < 90 || /\b1[.,]0\b/.test(spec.motor));
+    return (spec != null && (specMaxCv(spec) < 90 || /\b1[.,]0\b/.test(spec.motor))) ||
+           (vehicle.category === "moto" && (!spec || specMaxCv(spec) < 90));
   });
   if (!hidden.length) return text;
-  const qualitative = hidden.length === vehicles.length
-    ? text.replace(/(?:cerca de )?\d+(?:[.,]\d+)?\s*cv(?:\s+no (?:etanol|gasolina))?(?:\s+e\s+\d+(?:[.,]\d+)?\s*cv(?:\s+na (?:gasolina|etanol))?)?/gi, "motor adequado ao dia a dia")
-    : text;
-  return qualitative.replace(/\b\d+(?:[.,]\d+)?(?:\s*(?:a|–|-)\s*\d+(?:[.,]\d+)?)?\s*cv\b/gi, value => {
-    if (hidden.length === vehicles.length) return "motor adequado ao dia a dia";
-    return hidden.some(vehicle => {
-      const spec = findVehicleSpec(vehicle)!;
-      return value.match(/\d+(?:[.,]\d+)?/g)?.some(number => Number(number.replace(",", ".")) === specMaxCv(spec) || Object.values(spec.cv).includes(Number(number.replace(",", "."))));
-    }) ? "motor adequado ao dia a dia" : value;
-  });
+  if (hidden.length === vehicles.length) {
+    let out = text.replace(
+      /(?:cerca de |aproximadamente |em torno de )?\d+(?:[.,]\d+)?\s*cv(?:\s+no (?:etanol|gasolina))?(?:\s+e\s+\d+(?:[.,]\d+)?\s*cv(?:\s+na (?:gasolina|etanol))?)?/gi,
+      "motor adequado ao dia a dia",
+    );
+    out = out.replace(
+      /(?:,\s*)?(?:com\s+|de\s+)?(?:cerca de |aproximadamente |em torno de |perto de )?\b\d+(?:[.,]\d+)?(?:\s*(?:a|–|-)\s*\d+(?:[.,]\d+)?)?\s*(?:cv|cavalos)(?:\s+de pot[eê]ncia)?/gi,
+      "",
+    );
+    out = out.replace(/\bpot[eê]ncia de (?:cerca de |aproximadamente |em torno de )?\d+(?:[.,]\d+)?\s*(?:cv|cavalos)\b/gi, "");
+    out = out.replace(/\b\d+(?:[.,]\d+)?\s*cavalos\b/gi, "motor adequado ao dia a dia");
+    return out.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,])/g, "$1").trim();
+  }
+
+  let out = text.split("\n").map(line => {
+    const refersToHidden = hidden.some(h => line.includes(vehiclePath(h)) || line.includes(chatBlockName(h)));
+    if (refersToHidden) {
+      let cleaned = line.replace(
+        /(?:,\s*)?(?:com\s+|de\s+)?(?:cerca de |aproximadamente |em torno de |perto de )?\b\d+(?:[.,]\d+)?(?:\s*(?:a|–|-)\s*\d+(?:[.,]\d+)?)?\s*(?:cv|cavalos)(?:\s+de pot[eê]ncia)?(?:\s*[·•–—]\s*)?/gi,
+        "",
+      );
+      cleaned = cleaned.replace(/—\s*[·•–—]\s*/g, "— ");
+      return cleaned.replace(/[ \t]{2,}/g, " ").trim();
+    }
+    return line;
+  }).join("\n");
+
+  for (const h of hidden) {
+    const spec = findVehicleSpec(h);
+    const cvValues = spec ? [specMaxCv(spec), ...Object.values(spec.cv)] : [];
+    for (const val of cvValues) {
+      const valStr = String(val).replace(".", "[.,]");
+      const numRe = new RegExp(`(?:cerca de |aproximadamente |em torno de |perto de )?${valStr}\\s*(?:cv|cavalos)(?: de pot[eê]ncia)?`, "gi");
+      out = out.replace(numRe, "");
+    }
+    const modelToken = h.model.length >= 3 ? h.model.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
+    if (modelToken) {
+      const modelPowerRe = new RegExp(`(${modelToken}[^.!?\\n]*?)\\b(?:tem |com )?(?:cerca de |aproximadamente |em torno de |perto de )?\\d+(?:[.,]\\d+)?\\s*(?:cv|cavalos)(?: de pot[eê]ncia)?\\b`, "gi");
+      out = out.replace(modelPowerRe, "$1");
+    }
+  }
+
+  out = out.replace(/\btem\s*,\s*mas entrega/gi, "entrega")
+           .replace(/\s+([.,])/g, "$1")
+           .replace(/[ \t]{2,}/g, " ")
+           .trim();
+  return out;
 }
 
 export async function runChatTurn(input: Parameters<typeof runChatTurnInternal>[0]): Promise<ChatTurnResult> {

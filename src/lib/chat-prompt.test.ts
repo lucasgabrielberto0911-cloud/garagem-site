@@ -52,18 +52,18 @@ test("system prompt traz as regras fixas e o WhatsApp oficial", () => {
   assert.match(CHAT_SYSTEM_PROMPT, /eae/);
   assert.match(CHAT_SYSTEM_PROMPT, /um por linha/);
   assert.match(CHAT_SYSTEM_PROMPT, /COMO AJUDAR DE VERDADE/);
-  assert.match(CHAT_SYSTEM_PROMPT, /mini-anúncio com foto/);
+  assert.match(CHAT_SYSTEM_PROMPT, /preço está no card/);
   assert.match(CHAT_SYSTEM_PROMPT, /não pergunte hatch/);
   assert.match(CHAT_SYSTEM_PROMPT, /Não estime km\/l/);
   assert.match(CHAT_SYSTEM_PROMPT, /versão e do ano/);
-  assert.match(CHAT_SYSTEM_PROMPT, /mais em conta se o preço for menor/);
+  assert.match(CHAT_SYSTEM_PROMPT, /menores preços reais/);
   assert.match(CHAT_SYSTEM_PROMPT, /1 a 3 frases curtas/);
   assert.match(CHAT_SYSTEM_PROMPT, /HANDOFF/);
   assert.match(CHAT_SYSTEM_PROMPT, /WhatsApp só quando um humano/);
   assert.doesNotMatch(CHAT_SYSTEM_PROMPT, /Termine SEMPRE/);
   assert.match(CHAT_SYSTEM_PROMPT, /Comparar o estoque não leva link/);
-  assert.match(CHAT_SYSTEM_PROMPT, /Não comece com/);
-  assert.match(CHAT_SYSTEM_PROMPT, /frase falada de recorte/);
+  assert.match(CHAT_SYSTEM_PROMPT, /Nunca “Separei N”/);
+  assert.match(CHAT_SYSTEM_PROMPT, /frase calorosa/);
   assert.match(CHAT_SYSTEM_PROMPT, /consultor humano/);
   assert.match(CHAT_SYSTEM_PROMPT, /um pouco animado/);
   assert.match(CHAT_SYSTEM_PROMPT, /Nunca começar com “não posso”/);
@@ -504,4 +504,13 @@ test("ranking segue a intenção dominante sem inventar dado", () => {
     rankChatVehicles([hb, civic, compass], "carro para família")[0]?.model,
     "Compass",
   );
+});
+
+test("formato multicarros tem limite, wire e dados verificáveis sem exemplo do estoque", () => {
+  assert.match(CHAT_SYSTEM_PROMPT, /FORMATO COM VÁRIOS CARROS/);
+  assert.match(CHAT_SYSTEM_PROMPT, /Padrão: 2 carros/);
+  assert.match(CHAT_SYSTEM_PROMPT, /Máximo absoluto: 3/);
+  assert.match(CHAT_SYSTEM_PROMPT, /• \*\*\[Marca Modelo Ano\]/);
+  assert.match(CHAT_SYSTEM_PROMPT, /use apenas carros e dados da lista do contexto/);
+  assert.doesNotMatch(CHAT_SYSTEM_PROMPT, /Marca Modelo ano · km · R\$ preço/);
 });

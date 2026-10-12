@@ -41,7 +41,10 @@ test("orçamento e saudação direta respondem sem esperar o modelo; usam dados 
         [car.id],
       );
       assert.equal(result.vehicles[0].price, 74900);
-      assert.match(result.reply, /74\.900/);
+      assert.equal(result.vehicles[0]?.price, 74900);
+      const row = result.reply.split("\n").find(line => line.startsWith("•"));
+      assert.ok(row?.includes(result.vehicles[0]!.href));
+      assert.doesNotMatch(row!, /R\$/);
     }
   }
 });

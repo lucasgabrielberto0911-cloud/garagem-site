@@ -25,8 +25,8 @@ test("Civic 2020 ou 2015 compara as duas unidades, inclusive após busca incompa
       assert.equal(result.meta?.policy, "compare", `${historyText}: ${result.reply}`);
       assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), ["civic-2020-explicito", "civic-2015-explicito"]);
       assert.match(textoVisivelChat(result.reply), /^Os dois são ótimas escolhas/);
-      assert.match(textoVisivelChat(result.reply), /• Civic EXL 2020 —/);
-      assert.match(textoVisivelChat(result.reply), /• Civic LXR 2015 —/);
+      assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2020 —/);
+      assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2015 —/);
       assert.equal(result.reply.split("\n").length, 3);
       assert.doesNotMatch(textoVisivelChat(result.reply), /Não achei|leva vantagem|ganha/);
     }

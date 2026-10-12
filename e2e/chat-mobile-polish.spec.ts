@@ -87,6 +87,6 @@ test("bateria40: nomes em negrito abrem a ficha nos dois formatos de link", asyn
   const answer = dialog.locator('[data-chat-latest="1"]');
   await expect(answer.getByRole("link", { name: "Civic LXR 2015", exact: true })).toHaveAttribute("href", "/estoque/civic-lxr-2015");
   await expect(answer.getByRole("link", { name: "HR-V EXL 2016", exact: true })).toHaveAttribute("href", "/estoque/hr-v-exl-2016");
-  await expect(answer.locator("[data-chat-rank-list] li")).toHaveCount(2);
+  await expect(answer.locator("[data-chat-car-block]")).toHaveCount(2);
   expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
 });

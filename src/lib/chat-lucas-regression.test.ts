@@ -134,7 +134,7 @@ test("jornada de seis turnos responde a pergunta e conserva cards na busca", asy
     }
     if (mensagem.includes("até 70")) assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), [hb.id]);
     if (mensagem.includes("x HR-V")) assert.match(textoVisivelChat(result.reply), /Os dois são ótimas escolhas/);
-    if (mensagem.includes("x HR-V")) assert.match(textoVisivelChat(result.reply), /• Kicks[^\n]*\n• HR-V/);
+    if (mensagem.includes("x HR-V")) assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Kicks[^\n]*\n• (?:[^\n]* )?HR-V/);
     if (mensagem.includes("vendedor")) assert.match(textoVisivelChat(result.reply), /WhatsApp|wa\.me/);
     assert.doesNotMatch(textoVisivelChat(result.reply), /ponto de atenção|conferir.*suspensão/);
     historico.push({ role: "user", content: mensagem }, { role: "assistant", content: result.reply });

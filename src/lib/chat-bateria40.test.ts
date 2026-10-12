@@ -30,7 +30,7 @@ for (const caso of cases) {
       if (caso.id === "b20") result.vehicles.forEach(v => assert.ok(v.price >= 50000 && v.price <= 65000));
       if (caso.id === "b21") result.vehicles.forEach(v => assert.ok(v.price > 100000));
       if (caso.id === "b29") { assert.equal(result.vehicles.length, 1); assert.match(result.vehicles[0]!.model, /nivus/i); }
-      if (caso.id === "b04" && history.length === 0) { assert.equal(result.vehicles.length, 2); assert.match(result.reply, /74.900/); assert.match(result.reply, /126.900/); }
+      if (caso.id === "b04" && history.length === 0) { assert.equal(result.vehicles.length, 2); assert.deepEqual(result.vehicles.map(v => v.price).sort((a, b) => a - b), [74900, 126900]); assert.doesNotMatch(result.reply, /R\$/); }
       if (caso.id === "b09") { assert.match(result.reply, /multimídia/i); assert.doesNotMatch(result.reply, /ar-condicionado/i); }
       if (caso.id === "b12") assert.equal((result.reply.match(/ar-condicionado digital/g) ?? []).length, 1);
       if (caso.id === "b01" && history.length) { assert.match(result.vehicles[0]!.model, /ka/i); result.vehicles.forEach(v => assert.ok(previousVehicleIds.includes(v.id))); }

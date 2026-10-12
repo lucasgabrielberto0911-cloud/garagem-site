@@ -11,7 +11,7 @@ import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { trackEvent } from "@/lib/track-event";
 
 const FIELD =
-  "w-full rounded-xl border border-white/10 bg-[#1B1B20] px-3 py-2 text-[13px] text-cream placeholder:text-cream/40 focus:border-white/25 focus:outline-none";
+  "w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-cream placeholder:text-cream/40 focus:border-white/25 focus:outline-none";
 
 /** Coleta carro, dúvidas e horário e abre o WhatsApp com a mensagem pronta. */
 export function ChatVisitPanel({
@@ -32,18 +32,20 @@ export function ChatVisitPanel({
 
   return (
     <div
+      id="chat-visit-panel"
       role="group"
       aria-label="Marcar visita"
-      className="shrink-0 space-y-2 border-t border-white/[0.07] bg-[#141417] px-3 pb-2 pt-3"
+      className="max-h-[55%] shrink-0 overflow-y-auto space-y-2 border-t border-white/[0.07] bg-asphalt px-3 pb-2 pt-3"
     >
       <div className="flex items-center justify-between">
         <p className="text-[12px] font-semibold text-cream">Marcar visita</p>
         <button
           type="button"
           onClick={onClose}
-          className="min-h-11 px-2 text-[12px] text-cream/70 underline underline-offset-4"
+          aria-label="Fechar"
+          className="relative h-8 w-8 text-xl text-cream/70 before:absolute before:-inset-1.5 before:content-['']"
         >
-          Fechar
+          ×
         </button>
       </div>
       <label className="block text-[11px] text-cream/70">
@@ -77,6 +79,7 @@ export function ChatVisitPanel({
         />
       </label>
       <a
+        role="link"
         href={complete ? chatVisitWhatsAppUrl(input) : undefined}
         target="_blank"
         rel="noopener noreferrer"

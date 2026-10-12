@@ -19,8 +19,8 @@ const noModel = async () => { throw new Error("Comparação simples não deve ch
 test("Kicks ou HR-V: abertura neutra, ponto forte de cada ficha e dois cards", async () => {
   const result = await runChatTurn({ mensagem: "Kicks ou HR-V?", historico: [], stock, readIntent: async () => null, generate: noModel });
   assert.match(textoVisivelChat(result.reply), /^Os dois são ótimas escolhas, cada um tem seu ponto forte:/);
-  assert.match(textoVisivelChat(result.reply), /• Kicks .*2019 — menos km e mais novo/);
-  assert.match(textoVisivelChat(result.reply), /• HR-V .*2016 — mais em conta/);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Kicks .*2019 — menos km e mais novo/);
+  assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?HR-V .*2016 — mais em conta/);
   assert.doesNotMatch(textoVisivelChat(result.reply), /leva vantagem|ganha|melhor|Quer que|WhatsApp/);
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), ["kicks-neutro", "hrv-neutro"]);
   assert.equal(result.reply.split("\n").length, 3);
@@ -56,7 +56,7 @@ test("prompt e guarda impedem o modelo de declarar vencedor", () => {
   for (const phrase of ["O Kicks leva vantagem:", "O HR-V ganha.", "O Civic é melhor.", "O Kicks é a melhor opção.", "O HR-V é superior."]) {
     const safe = guardChatComparisonWinner(`${phrase}\n• Kicks 2019 — menos km\n• HR-V 2016 — mais em conta`, stock);
     assert.doesNotMatch(safe, /leva vantagem|ganha|é melhor|melhor opção|superior/);
-    assert.match(safe, /• Kicks/);
+    assert.match(safe, /• (?:[^\n]* )?Kicks/);
   }
   assert.equal(guardChatComparisonWinner("O Civic tem menos km.", stock), "O Civic tem menos km.");
 });

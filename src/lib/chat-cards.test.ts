@@ -19,6 +19,7 @@ import {
   toChatVehicleCard,
 } from "./chat-cards";
 import type { ChatVehicleRecord } from "./chat-stock";
+import { runChatTurn } from "./chat-turn";
 
 const biz: ChatVehicleRecord = {
   id: "cbiz125garagem00000000001",
@@ -381,6 +382,39 @@ test("baratinho do HB20 não puxa irmão caro", () => {
     ) ?? "",
     /maxPrice=45900/,
   );
+});
+
+test("CTA de critérios combinados não impõe teto barato que exclui os recomendados", async () => {
+  const cars: ChatVehicleRecord[] = [
+    { ...prisma, id: "gol", brand: "Volkswagen", model: "Gol", version: "1.0", yearModel: 2012, price: 32900 },
+    { ...prisma, id: "palio", brand: "Fiat", model: "Palio", version: "Fire 1.0", yearModel: 2008, price: 24900 },
+    { ...prisma, id: "weekend", brand: "Fiat", model: "Palio Weekend", version: "Adventure 1.8", yearModel: 2016, price: 47900 },
+    { ...compass, id: "duster", brand: "Renault", model: "Duster", version: "Dynamique 2.0", yearModel: 2014, price: 54900 },
+    { ...compass, id: "hrv", brand: "Honda", model: "HR-V", version: "EXL 1.8", yearModel: 2016, price: 84900 },
+  ];
+  const question = "preciso de um carro espaçoso e barato";
+  const result = await runChatTurn({
+    mensagem: question, historico: [], stock: cars,
+    readIntent: async () => null,
+    generate: async () => { throw new Error("Critérios resolvidos com estoque local"); },
+  });
+  assert.deepEqual(result.vehicles.map(v => v.id), ["weekend", "duster"]);
+  assert.equal(result.stockHref, "/estoque?category=carro");
+  assert.equal(chatStockExploreLabel(result.stockHref!), "Ver o estoque completo");
+  assert.doesNotMatch(result.reply, /\bcom\s+com\b|SUV com/i);
+  for (const message of [question, "forte e barato", "econômico e em conta"]) {
+    const href = chatStockExploreHref(message, cars, 2);
+    if (href) {
+      assert.doesNotMatch(href, /maxPrice=/);
+      assert.equal(chatStockExploreLabel(href), "Ver o estoque completo");
+    }
+  }
+  const explicit = chatStockExploreHref(`${question} até 55 mil`, cars, 2)!;
+  assert.match(explicit, /maxPrice=55000/);
+  assert.match(chatStockExploreLabel(explicit), /55\.000/);
+  assert.ok(result.vehicles.every(v => v.price <= 55000));
+  const simpleCheap = chatStockExploreHref("quero um carro barato", cars, 2)!;
+  assert.match(simpleCheap, /maxPrice=32900/);
 });
 
 test("financiamento sem carro citado não inventa anúncio", () => {

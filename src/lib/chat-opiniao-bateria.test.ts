@@ -66,7 +66,7 @@ function judge(c: Case, r: Result): string | null {
   if (!reply.trim()) return "resposta vazia";
   if (c.kind !== "lista" && SEARCH_PHRASE.test(reply.trim())) return "respondeu conversa com frase de busca";
   if (c.kind === "lista") {
-    if (r.vehicles.length < (c.minCards ?? 3)) return `lista com ${r.vehicles.length} cards`;
+    if (r.vehicles.length < (c.minCards ?? 2)) return `lista com ${r.vehicles.length} cards`;
     if (reply.split("\n")[0]!.length > 160) return "frase da lista longa demais";
     return null;
   }

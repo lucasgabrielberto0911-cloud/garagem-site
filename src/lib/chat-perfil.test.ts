@@ -57,8 +57,8 @@ for (const mensagem of [
 ]) {
   test(`perfil urbano prioriza ano e km sem estereótipo: ${mensagem}`, async () => {
     const resultado = await perguntar(mensagem);
-    assert.deepEqual(resultado.vehicles.map((vehicle) => vehicle.id), ["mobi", "hb20", "hb20s"]);
-    assert.match(textoVisivelChat(resultado.reply), /• Mobi 1\.0 2024 —/);
+    assert.deepEqual(resultado.vehicles.map((vehicle) => vehicle.id), ["mobi", "hb20"]);
+    assert.match(textoVisivelChat(resultado.reply), /• (?:[^\n]* )?Mobi 2024 —/);
     assert.doesNotMatch(textoVisivelChat(resultado.reply), /Palio|bom começo|esposa|filha|mulher|namorada|mãe|feminin/i);
     respostaCurta(resultado.reply);
   });
@@ -68,7 +68,7 @@ test("primeiro carro mantém prioridade dentro do teto de 40 mil", async () => {
   const resultado = await perguntar("primeiro carro até 40 mil");
   assert.deepEqual(resultado.vehicles.map((vehicle) => vehicle.id), ["gol", "palio"]);
   assert.ok(resultado.vehicles.every((vehicle) => vehicle.price <= 40_000));
-  assert.match(textoVisivelChat(resultado.reply), /• Gol 1\.0 2012 —/);
+  assert.match(textoVisivelChat(resultado.reply), /• (?:[^\n]* )?Gol 2012 —/);
   assert.doesNotMatch(textoVisivelChat(resultado.reply), /Palio.*bom começo|Mobi|HB20/);
 });
 
@@ -90,7 +90,7 @@ test("ranking de primeiro carro coincide entre unidades e linhas do prompt", () 
 test("comparação do perfil mantém destaque coerente com os cards", async () => {
   const resultado = await perguntar("compara opções de primeiro carro até 70 mil");
   assert.equal(resultado.vehicles[0]?.id, "mobi");
-  assert.match(textoVisivelChat(resultado.reply), /• Mobi 1\.0 2024 —/);
+  assert.match(textoVisivelChat(resultado.reply), /• (?:[^\n]* )?Mobi 2024 —/);
   assert.doesNotMatch(textoVisivelChat(resultado.reply), /Palio.*(?:bom começo|mais em conta)/);
 });
 
@@ -101,10 +101,10 @@ for (const mensagem of [
 ]) {
   test(`entregas priorizam CG 160 e depois BIZ: ${mensagem}`, async () => {
     const resultado = await perguntar(mensagem);
-    assert.deepEqual(resultado.vehicles.map((vehicle) => vehicle.id), ["cg", "biz125", "biz110"]);
-    assert.match(textoVisivelChat(resultado.reply), /• CG 160 Start 2023 —/);
+    assert.deepEqual(resultado.vehicles.map((vehicle) => vehicle.id), ["cg", "biz125"]);
+    assert.match(textoVisivelChat(resultado.reply), /• (?:[^\n]* )?CG 160 Start 2023 —/);
     assert.doesNotMatch(textoVisivelChat(resultado.reply), /km\/l|\d+\s*kg|retirada|WhatsApp/i);
-    assert.equal(resultado.reply.split("\n").filter(line => line.startsWith("• ")).length, 3);
+    assert.equal(resultado.reply.split("\n").filter(line => line.startsWith("• ")).length, 2);
     respostaCurta(resultado.reply);
   });
 }
@@ -113,7 +113,7 @@ test("entregas respeitam orçamento e só citam motos disponíveis", async () =>
   const resultado = await perguntar("moto pra entregador até 16 mil");
   assert.deepEqual(resultado.vehicles.map((vehicle) => vehicle.id), ["biz125", "biz110"]);
   assert.doesNotMatch(textoVisivelChat(resultado.reply), /CG|carro|retirada/);
-  assert.match(textoVisivelChat(resultado.reply), /• BIZ 125 EX 2023 —/);
+  assert.match(textoVisivelChat(resultado.reply), /• (?:[^\n]* )?BIZ 125 2023 —/);
 });
 
 test("frete da loja continua separado do perfil de entregador", async () => {
@@ -132,8 +132,8 @@ test("diferença de HB20 e HB20S reconhece os dois nomes e usa dados existentes"
     const resultado = await perguntar(mensagem);
     assert.equal(resultado.meta?.policy, "compare-difference");
     assert.deepEqual(resultado.vehicles.map((vehicle) => vehicle.id), ["hb20s", "hb20"]);
-    assert.match(textoVisivelChat(resultado.reply), /• HB20[^\n]*2022 — hatch; 300 L/);
-    assert.match(textoVisivelChat(resultado.reply), /• HB20S[^\n]*2024 — sedan; cerca de 475 L/);
+    assert.match(textoVisivelChat(resultado.reply), /• (?:[^\n]* )?HB20[^\n]*2022 — hatch\. 300 L/);
+    assert.match(textoVisivelChat(resultado.reply), /• (?:[^\n]* )?HB20S[^\n]*2024 — sedan\. cerca de 475 L/);
     assert.match(textoVisivelChat(resultado.reply), /^Os dois são ótimas escolhas/);
     assert.equal(resultado.reply.split("\n").length, 3);
     assert.doesNotMatch(textoVisivelChat(resultado.reply), /R\$/);
@@ -145,8 +145,8 @@ test("diferença de outros modelos não inventa porta-malas sem ficha técnica",
   const unknown = carro("argo", "Argo", 2025, 15_000, 72_000);
   const resultado = await perguntar("diferença entre Argo e Mobi", [mobi, unknown]);
   assert.deepEqual(resultado.vehicles.map((vehicle) => vehicle.id), ["mobi", "argo"]);
-  assert.match(textoVisivelChat(resultado.reply), /• Argo[^\n]*2025 — hatch/);
-  assert.match(textoVisivelChat(resultado.reply), /• Mobi[^\n]*2024 — hatch/);
+  assert.match(textoVisivelChat(resultado.reply), /• (?:[^\n]* )?Argo[^\n]*2025 — hatch/);
+  assert.match(textoVisivelChat(resultado.reply), /• (?:[^\n]* )?Mobi[^\n]*2024 — hatch/);
   assert.equal(resultado.vehicles.find(vehicle => vehicle.id === "argo")?.price, 72000);
   assert.doesNotMatch(textoVisivelChat(resultado.reply), /Argo[^;.]*\d+ litros/);
   respostaCurta(resultado.reply);
@@ -155,7 +155,7 @@ test("diferença de outros modelos não inventa porta-malas sem ficha técnica",
 test("versão sem especificação mantém carroceria e preço no card, sem copiar litros do modelo irmão", async () => {
   const semFicha = { ...hb20s, version: "Comfort 1.0", transmission: "Manual", engine: "1.0" };
   const resultado = await perguntar("diferença entre HB20 e HB20S", [hb20, semFicha]);
-  assert.match(textoVisivelChat(resultado.reply), /• HB20S[^\n]*2024 — sedan/);
+  assert.match(textoVisivelChat(resultado.reply), /• (?:[^\n]* )?HB20S[^\n]*2024 — sedan/);
   assert.doesNotMatch(textoVisivelChat(resultado.reply), /475|HB20S[^;.]*\d+ litros/);
   assert.equal(resultado.vehicles.length, 2);
 });

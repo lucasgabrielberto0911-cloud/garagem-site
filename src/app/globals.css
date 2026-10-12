@@ -645,7 +645,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 }
 
 .site-chat-panel :focus-visible {
-  outline: 2px solid rgba(247, 245, 242, 0.28);
+  outline: 2px solid rgba(247, 245, 242, 0.6);
   outline-offset: 2px;
 }
 
@@ -720,7 +720,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
     right: max(1.5rem, env(safe-area-inset-right, 0px));
     bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
     left: auto;
-    width: min(28rem, calc(100vw - 3rem));
+    width: min(30rem, calc(100vw - 3rem));
     max-width: calc(100vw - 3rem);
     height: auto;
     align-items: stretch;
@@ -730,7 +730,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   .site-chat.is-open .site-chat-panel {
     width: 100%;
     height: min(
-      680px,
+      720px,
       calc(
         100svh - 2.25rem - env(safe-area-inset-top, 0px) -
           env(safe-area-inset-bottom, 0px)
@@ -2037,3 +2037,10 @@ html[data-consent="essential"] .site-consent {
     opacity: 0;
   }
 }
+
+/* O teclado usa o espaço dos atalhos para preservar a conversa. */
+body[data-chat-keyboard] [data-chat-quick-actions],
+body[data-chat-keyboard] [data-chat-footer] { display: none; }
+
+/* Barlow fica restrita ao assistente; o admin conserva Sora. */
+.site-chat { --font-display: var(--font-chat-display); }

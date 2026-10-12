@@ -17,11 +17,11 @@ const unit = (id: string, model: string, yearModel: number, price: number, extra
 const stock = [unit("similar-civic", "Civic", 2020, 92000), unit("similar-city", "City", 2019, 69000), unit("similar-hrv", "HR-V", 2016, 72000), unit("similar-kicks", "Kicks", 2019, 80000), unit("similar-nivus", "Nivus", 2021, 89000), unit("fora-moto", "BIZ", 2023, 14000, { category: "moto" })];
 const noModel = async () => { throw new Error("Vendido conhecido não deve chamar o modelo"); };
 
-test("Pulse vendido informa a venda e oferece três SUVs disponíveis, com aviso correto", async () => {
+test("Pulse vendido informa a venda e oferece dois SUVs disponíveis, com aviso correto", async () => {
   const result = await runChatTurn({ mensagem: "tem o Pulse?", historico: [], stock, soldStock: sold, readIntent: async () => null, generate: noModel });
   assert.match(result.reply, /Pulse .*já foi vendido/);
   assert.doesNotMatch(result.reply, /não está na lista|R\$/);
-  assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), ["similar-nivus", "similar-kicks", "similar-hrv"]);
+  assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), ["similar-nivus", "similar-kicks"]);
   const cta = chatWhatsAppCta(result.reply, resolveChatWhatsAppVehicle(null, result.vehicles), { userText: "tem o Pulse?" });
   assert.equal(cta?.label, "Avisar quando chegar");
   assert.match(decodeURIComponent(cta?.href ?? ""), /Pulse/);
@@ -34,7 +34,7 @@ test("Corolla Altis vendido não se confunde com Corolla GLi disponível", async
   assert.equal(matchChatSoldVehicle("tem Corolla GLi?", available, sold), undefined);
   const result = await runChatTurn({ mensagem: "e o Corolla Altis?", historico: [], stock: available, soldStock: sold, readIntent: async () => null, generate: noModel });
   assert.match(result.reply, /Corolla Altis .*já foi vendido/);
-  assert.equal(result.vehicles.length, 3);
+  assert.equal(result.vehicles.length, 2);
   assert.equal(result.vehicles[0]?.id, "similar-civic");
   assert.ok(result.vehicles.every(vehicle => !vehicle.id.startsWith("vendido")));
 });

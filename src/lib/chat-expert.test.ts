@@ -109,8 +109,11 @@ test("Lucas 2 sem o modelo de linguagem: ranking determinístico pelas fichas, c
     stock,
     generate: noModel,
   });
-  assert.match(result.reply, /^Depende do que você chama de forte: em potência leva o HB20 1\.6; na força ao pisar \(torque, retomada\) leva o HB20S 1\.0 turbo\./);
-  assert.match(result.reply, /• \*\*\[HB20S Comfort 2024\]\(\/estoque\/[^)]+\)\*\* — Automático/);
+  assert.doesNotMatch(result.reply, /em potência leva|leva vantagem|é melhor/);
+  assert.equal(result.vehicles.length, 2);
+  assert.match(result.reply, /• \*\*\[Hyundai HB20S 2024\]\(\/estoque\/[^)]+\)\*\* —/);
+  assert.match(result.reply, /torque/i);
+  assert.doesNotMatch(result.reply, /120\s*cv/i);
   assert.doesNotMatch(result.reply, robotic);
   assert.doesNotMatch(result.reply, /cilindrada sozinha|preciso de potência documentada/);
 });
