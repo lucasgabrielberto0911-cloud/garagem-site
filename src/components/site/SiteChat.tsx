@@ -381,11 +381,11 @@ function ChatBubbleBody({ text }: { text: string }) {
                   return (
                     <li
                       key={`${name}-${lineIndex}`}
-                      className="flex items-baseline justify-between gap-3 px-3 py-2 text-[13.5px] leading-snug"
+                      className="flex flex-col gap-0.5 px-3 py-2 text-[13.5px] leading-snug sm:flex-row sm:items-baseline sm:justify-between sm:gap-3"
                     >
-                      <span className="min-w-0 text-cream/90">{name}</span>
+                      <span className="min-w-0 text-cream/90 [overflow-wrap:anywhere] sm:flex-1">{name}</span>
                       {value ? (
-                        <span className="shrink-0 text-right font-semibold tabular-nums text-cream">{value}</span>
+                        <span className="min-w-0 font-semibold tabular-nums text-cream [overflow-wrap:anywhere] sm:max-w-[55%] sm:shrink-0 sm:text-right">{value}</span>
                       ) : null}
                     </li>
                   );

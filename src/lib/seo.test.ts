@@ -72,3 +72,15 @@ test("Google recebe fotos públicas no domínio canônico e mantém imagens exte
   ] }) as { image: string[] };
   assert.deepEqual(data.image, ["https://www.suagaragem.net/fotos/v1/original/car.webp", "https://cdn.example/hb20.webp"]);
 });
+
+test("JSON-LD do veículo traz versão e validade do preço; vendido não traz preço nem validade", () => {
+  const data = vehicleJsonLd({ ...hb20, version: "Comfort 1.0" }) as {
+    vehicleConfiguration?: string;
+    offers: Record<string, unknown>;
+  };
+  assert.equal(data.vehicleConfiguration, "Comfort 1.0");
+  assert.match(String(data.offers.priceValidUntil), /^\d{4}-\d{2}-\d{2}$/);
+  const sold = vehicleJsonLd({ ...hb20, status: "vendido" }) as { offers: Record<string, unknown> };
+  assert.equal("price" in sold.offers, false);
+  assert.equal("priceValidUntil" in sold.offers, false);
+});
