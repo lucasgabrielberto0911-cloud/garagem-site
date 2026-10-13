@@ -1299,7 +1299,7 @@ export function SiteChat() {
               );
             })}
             {showTyping ? (
-              <AssistantRow pending latest>
+              <AssistantRow pending>
                 <span className="sr-only">Digitando</span>
                 <span className="site-chat-typing" aria-hidden="true">
                   <span />
