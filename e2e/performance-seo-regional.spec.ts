@@ -37,6 +37,8 @@ test("São Mateus e Sooretama têm página, canonical, schema e entrada no sitem
 });
 
 test("estoque usa logo responsivo e preserva a prioridade da primeira capa", async ({ page }, info) => {
+  const logos = new Set<string>();
+  page.on("request", request => { if (request.url().includes("/branding/logo-wordmark")) logos.add(request.url()); });
   await page.goto("/estoque");
   const logo = page.locator('header img[alt="Garagem"]').first();
   await expect(logo).toBeVisible();
@@ -48,12 +50,19 @@ test("estoque usa logo responsivo e preserva a prioridade da primeira capa", asy
     await decoded.decode();
     return { src: img.currentSrc, width: img.getBoundingClientRect().width, pixels: decoded.naturalWidth, dpr: devicePixelRatio };
   });
-  expect(selected.src).toMatch(/logo-wordmark-(320|480|640)\.webp$/);
+  expect(selected.src).toMatch(/logo-wordmark(?:-(320|480|640))?\.webp$/);
   expect(selected.width).toBeLessThanOrEqual(196);
   expect(selected.pixels).toBeGreaterThanOrEqual(Math.ceil(selected.width * selected.dpr));
   await expect(page.locator('link[rel="preconnect"][href*="supabase"]')).toHaveCount(0);
   const firstCover = page.locator("article.listing-card img").first();
   await expect(firstCover).toHaveAttribute("fetchpriority", "high");
   await expect(firstCover).toHaveAttribute("loading", "eager");
+  await page.locator('footer img[alt="Garagem"]').scrollIntoViewIfNeeded();
+  await expect.poll(() => page.locator('footer img[alt="Garagem"]').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+  expect(logos.size, "splash, header e rodapé compartilham um arquivo da marca").toBe(1);
+  await page.goto("/");
+  await expect(page.locator('header img[alt="Garagem"]').first()).toBeVisible();
+  expect(logos.size, "preload e hero da home reutilizam o mesmo arquivo").toBe(1);
+  await page.goto("/estoque");
   await page.screenshot({ path: info.outputPath("estoque-logo-responsivo.png") });
 });
