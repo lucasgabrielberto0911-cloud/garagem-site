@@ -214,3 +214,13 @@ test("sem consentimento, origem não fica na aba nem na mensagem", async ({ page
   expect(message).not.toContain("Vim pelo Instagram");
   expect(await page.evaluate(() => sessionStorage.getItem("garagem_primeira_origem"))).toBeNull();
 });
+
+test("home apresenta o norte do ES no título e nos metadados", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Seminovos com procedência para todo o norte do ES.");
+  await expect(page).toHaveTitle("Garagem | Seminovos com procedência no norte do ES");
+  for (const seletor of ['meta[name="description"]', 'meta[property="og:description"]', 'meta[name="twitter:description"]']) {
+    await expect(page.locator(seletor)).toHaveAttribute("content", /Linhares, Colatina, São Mateus, Aracruz e Sooretama/);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

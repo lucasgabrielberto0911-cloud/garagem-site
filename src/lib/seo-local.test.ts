@@ -7,6 +7,7 @@ import { VEHICLE_SEO_LOCATION, VEHICLE_SEO_TITLE_MAX } from "./vehicle-seo";
 import {
   ESTOQUE_SEO_TITLE,
   HOME_SEO_TITLE,
+  HOME_SEO_DESCRIPTION,
   SEO_LOCAL_CITY,
   SEO_LOCAL_LOCATION,
 } from "./seo-local";
@@ -23,10 +24,10 @@ test("região de busca local tem um ponto só e é Linhares/ES", () => {
   assert.equal(VEHICLE_SEO_LOCATION, SEO_LOCAL_LOCATION);
 });
 
-test("título da home foca em Linhares e cabe na busca", () => {
+test("título da home foca no norte do ES e cabe na busca", () => {
   assert.equal(
     HOME_SEO_TITLE,
-    "Garagem | Seminovos em Linhares/ES com procedência",
+    "Garagem | Seminovos com procedência no norte do ES",
   );
   assert.ok(HOME_SEO_TITLE.length <= VEHICLE_SEO_TITLE_MAX, HOME_SEO_TITLE);
 });
@@ -38,16 +39,21 @@ test("título do estoque termina em | Garagem uma vez só", () => {
   assert.ok(ESTOQUE_SEO_TITLE.length <= VEHICLE_SEO_TITLE_MAX, ESTOQUE_SEO_TITLE);
 });
 
-test("home e estoque usam a região centralizada, sem repetir Linhares/ES", () => {
+test("home usa SEO regional e estoque mantém a região local centralizada", () => {
   const home = readSrc("app/(catalog)/page.tsx");
   const estoque = readSrc("app/(catalog)/estoque/page.tsx");
 
   for (const source of [home, estoque]) {
-    assert.match(source, /SEO_LOCAL_LOCATION/);
+
     assert.doesNotMatch(source, /Linhares\/ES/);
     assert.doesNotMatch(source, /Sua Garagem/);
   }
   assert.match(home, /title: HOME_SEO_TITLE/);
+  assert.match(home, /description: HOME_SEO_DESCRIPTION/);
+  assert.match(estoque, /SEO_LOCAL_LOCATION/);
+  for (const cidade of ["Linhares", "Colatina", "São Mateus", "Aracruz", "Sooretama"]) {
+    assert.ok(HOME_SEO_DESCRIPTION.includes(cidade));
+  }
   assert.match(estoque, /title: ESTOQUE_SEO_TITLE/);
   assert.doesNotMatch(estoque, /title: `Estoque \|/);
 });
