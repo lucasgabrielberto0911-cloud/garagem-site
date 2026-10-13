@@ -236,7 +236,7 @@ export default async function VehicleDetailPage({
     getRelatedVehicles(
       vehicle.id,
       vehicle.brand,
-      4,
+      3,
       vehicle.category,
       vehicle.price,
       display.transmission,
