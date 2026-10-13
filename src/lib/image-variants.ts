@@ -5,9 +5,10 @@ export const GALLERY_MAX_EDGE = 1280;
 export const CARD_WIDTH = 480;
 export const CARD_HEIGHT = 360;
 export const GALLERY_QUALITY = 78;
-export const CARD_QUALITY = 74;
-/** Mesmo q75 do 720/960 ao vivo da capa automática. */
-export const CARD_HD_QUALITY = 75;
+/** Derivados gravados no upload: menos bytes sem reduzir resolução ou recorte. */
+export const CARD_QUALITY = 68;
+export const CARD_HD_QUALITY = 72;
+export const GALLERY_PREVIEW_QUALITY = 74;
 
 export type EncodedImage = {
   buffer: Buffer;
@@ -85,12 +86,12 @@ export async function encodeFramedCardImage(buffer: Buffer, frame: CoverFrame): 
   return (await encodeFramedCardSet(buffer, frame)).card;
 }
 
-/** Mesmos 800 px / q80 do render móvel, preservando proporção e orientação. */
+/** Preview gravado no upload, com 800 px e proporção/orientação preservadas. */
 export async function encodeGalleryPreview(buffer: Buffer): Promise<EncodedImage> {
   const optimized = await sharp(buffer, { failOn: "none" })
     .rotate()
     .resize({ width: 800, withoutEnlargement: true })
-    .webp({ quality: 80, effort: 6 })
+    .webp({ quality: GALLERY_PREVIEW_QUALITY, effort: 6 })
     .toBuffer();
   return { buffer: optimized, contentType: "image/webp", extension: "webp" };
 }
