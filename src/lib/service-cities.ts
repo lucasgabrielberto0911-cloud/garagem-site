@@ -379,6 +379,68 @@ export const SERVICE_CITIES = [
       },
     ],
   },
+  {
+    slug: "sao-mateus",
+    name: "São Mateus",
+    metaDescription:
+      "Seminovos para São Mateus e o norte do ES. Compare fotos, km, câmbio e preço no site da Garagem e peça um vídeo pelo WhatsApp, todos os dias das 8h às 23h.",
+    lead: "Se você está em São Mateus, comece pelo que o anúncio mostra: fotos, ano, quilometragem e preço. A Garagem atende o norte do ES pelo WhatsApp, e você pode pedir um vídeo antes de avançar na escolha.",
+    paragraphs: [
+      "Para quem usa o carro na cidade ou pega a BR-101, consumo, espaço e câmbio pesam de formas diferentes. Use os filtros do estoque para comparar as opções e abra a ficha do veículo que combina com sua rotina em São Mateus.",
+      "O atendimento funciona todos os dias, das 8h às 23h. Envie o anúncio no WhatsApp e conte o que você precisa conferir: um detalhe nas fotos, o histórico informado ou as condições de troca. A equipe orienta os próximos passos e a documentação.",
+    ],
+    bullets: [
+      "Fotos, ano, km e preço para comparar as opções do estoque",
+      "Vídeo do veículo escolhido quando você pedir",
+      "Avaliação do usado pela página Vender/Trocar",
+      `WhatsApp ${PHONES[0].label} · todos os dias, 8h–23h`,
+    ],
+    faqs: [
+      {
+        question: "A Garagem atende quem está em São Mateus?",
+        answer: "Sim. São Mateus faz parte da região atendida pela Garagem no norte do ES. Você começa pelo estoque no site e fala com a equipe pelo WhatsApp, todos os dias das 8h às 23h.",
+      },
+      {
+        question: "Os anúncios desta página são exclusivos de São Mateus?",
+        answer: "Não. Esta página explica o atendimento para São Mateus e mostra o estoque disponível da Garagem. As condições e os detalhes de cada veículo estão na ficha do anúncio.",
+      },
+      {
+        question: "Como peço mais detalhes antes de escolher?",
+        answer: "Abra a ficha do veículo e use o botão de WhatsApp. Diga o que quer conferir e peça um vídeo; a equipe responde às dúvidas e conversa sobre a proposta e a documentação.",
+      },
+    ],
+  },
+  {
+    slug: "sooretama",
+    name: "Sooretama",
+    metaDescription:
+      "Seminovos para Sooretama, no norte do ES. Veja ficha, fotos e preço no site da Garagem, avalie a troca do seu usado e fale no WhatsApp, das 8h às 23h.",
+    lead: "Em Sooretama, você pode escolher com calma pelo celular. Filtre o estoque da Garagem por preço, ano ou câmbio, veja as fotos e leve suas dúvidas ao WhatsApp antes de decidir.",
+    paragraphs: [
+      "Se a sua rotina passa pela BR-101 ou pelos trajetos entre Sooretama e Linhares, compare quilometragem, combustível e espaço na ficha. Os anúncios reúnem as informações do veículo, e um vídeo pode ajudar a conferir o que as fotos não mostram.",
+      "Tem um usado para vender ou colocar na troca? Envie marca, ano, km e fotos pela página Vender/Trocar e converse sobre a avaliação sem compromisso. A Garagem atende pelo WhatsApp das 8h às 23h, inclusive no fim de semana, e orienta a documentação durante a negociação.",
+    ],
+    bullets: [
+      "Filtros de preço, ano e câmbio para sua busca em Sooretama",
+      "Ficha e vídeo para conferir detalhes antes da proposta",
+      "Dados e fotos do seu usado para avaliação de venda ou troca",
+      `WhatsApp oficial ${PHONES[0].label} · das 8h às 23h`,
+    ],
+    faqs: [
+      {
+        question: "Como funciona o atendimento para Sooretama?",
+        answer: "Você escolhe no estoque do site e chama a Garagem pelo WhatsApp. A equipe atende Sooretama e o norte do ES todos os dias, das 8h às 23h, para tirar dúvidas, enviar vídeos e orientar a negociação.",
+      },
+      {
+        question: "Posso oferecer meu usado na troca em Sooretama?",
+        answer: "Sim. Envie marca, modelo, ano, quilometragem e fotos pela página Vender/Trocar ou pelo WhatsApp. A equipe avalia os dados e conversa com você sobre as condições, sem compromisso.",
+      },
+      {
+        question: "Esta página mostra apenas veículos de Sooretama?",
+        answer: "Não. A vitrine reúne o estoque disponível da Garagem, compartilhado entre as páginas das cidades atendidas. Abra a ficha para consultar fotos, preço e detalhes do anúncio.",
+      },
+    ],
+  },
 ] as const satisfies readonly ServiceCity[];
 
 export type ServiceCitySlug = (typeof SERVICE_CITIES)[number]["slug"];

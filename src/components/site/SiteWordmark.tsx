@@ -2,6 +2,12 @@ import { site } from "@/lib/site";
 
 type WordmarkSize = "header" | "hero" | "footer" | "splash";
 
+export const WORDMARK_SRC = "/branding/logo-wordmark-320.webp";
+export const WORDMARK_SRC_SET = "/branding/logo-wordmark-320.webp 320w, /branding/logo-wordmark-480.webp 480w, /branding/logo-wordmark-640.webp 640w, /branding/logo-wordmark.webp 887w";
+// Usa o maior slot da marca em cada breakpoint. Splash, header, hero e rodapé
+// compartilham um download, em vez de somar arquivos menores diferentes.
+export const WORDMARK_SIZES = "(min-width: 1024px) 380px, (min-width: 640px) 360px, min(72vw, 280px)";
+
 const SIZE: Record<
   WordmarkSize,
   { img: string; width: number; height: number }
@@ -48,10 +54,13 @@ export function SiteWordmark({
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- wordmark estático, sem cota /_next/image */}
       <img
-        src="/branding/logo-wordmark.webp"
+        src={WORDMARK_SRC}
+        srcSet={WORDMARK_SRC_SET}
+        sizes={WORDMARK_SIZES}
         alt={site.name}
         width={look.width}
         height={look.height}
+        loading={size === "footer" && !priority ? "lazy" : "eager"}
         decoding={priority ? "sync" : "async"}
         fetchPriority={priority ? "high" : "low"}
         className={look.img}
