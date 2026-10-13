@@ -20,9 +20,9 @@ import { MAX_HOME_FEATURED } from "@/lib/featured";
 export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: `Seminovos no Espírito Santo | ${site.name}`,
+  title: `Seminovos no norte do ES | ${site.name}`,
   description:
-    "Seminovos com procedência para Aracruz, Grande Vitória, Linhares, Guarapari, Cachoeiro, Colatina e região. Estoque no site e atendimento da Garagem pelo WhatsApp, todos os dias das 8h às 23h.",
+    "Seminovos com procedência para Linhares, Colatina, São Mateus, Aracruz e Sooretama, no norte do ES. Compare o estoque da Garagem e fale pelo WhatsApp, das 8h às 23h.",
   path: "/seminovos",
 });
 

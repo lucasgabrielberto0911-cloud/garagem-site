@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { getServiceCity } from "./service-cities";
 import {
   hasPublishablePrice,
   localBusinessJsonLd,
   pageCanonicalPath,
+  serviceCityJsonLd,
   vehicleAvailabilityUrl,
   vehicleJsonLd,
 } from "./seo";
@@ -63,6 +65,26 @@ test("a loja não usa Aracruz como cidade padrão e publica um telefone só", ()
   assert.equal(data.address.addressLocality, "Linhares");
   assert.notEqual(data.address.addressLocality, "Aracruz");
   assert.deepEqual(data.telephone, ["+5527996330706"]);
+});
+
+test("cobertura do norte do ES inclui São Mateus e Sooretama sem mudar o endereço", () => {
+  const data = localBusinessJsonLd() as {
+    areaServed: { name: string; "@type": string }[];
+    address: { addressLocality: string; addressRegion: string; addressCountry: string };
+  };
+  for (const slug of ["sao-mateus", "sooretama"]) {
+    const city = getServiceCity(slug);
+    assert.ok(city);
+    assert.ok(data.areaServed.some(area => area["@type"] === "City" && area.name === city.name));
+    const page = serviceCityJsonLd(city);
+    assert.equal(page.url, `https://www.suagaragem.net/seminovos/${slug}`);
+    assert.equal(page.about.name, city.name);
+    assert.equal(page.provider.areaServed.name, city.name);
+    assert.equal("address" in page.provider, false);
+  }
+  assert.equal(data.address.addressLocality, "Linhares");
+  assert.equal(data.address.addressRegion, "ES");
+  assert.equal(data.address.addressCountry, "BR");
 });
 
 test("Google recebe fotos públicas no domínio canônico e mantém imagens externas", () => {

@@ -19,9 +19,11 @@ const EXPECTED = [
   "colatina",
   "cariacica",
   "viana",
+  "sao-mateus",
+  "sooretama",
 ];
 
-test("cidades de atendimento cobrem Grande Vitória, litoral e interior", () => {
+test("cidades de atendimento cobrem o norte do ES, Grande Vitória, litoral e interior", () => {
   assert.deepEqual(
     SERVICE_CITIES.map((city) => city.slug),
     EXPECTED,
@@ -62,6 +64,8 @@ const LOCAL_MARKS: Record<string, readonly string[]> = {
   colatina: ["São Silvano", "Honório Fraga", "Rio Doce"],
   cariacica: ["Campo Grande", "Itacibá", "Porto de Santana"],
   viana: ["Marcílio de Noronha", "BR-262", "Universal"],
+  "sao-mateus": ["São Mateus", "BR-101"],
+  sooretama: ["Sooretama", "BR-101"],
 };
 
 test("tom de consultor: fala com você, cita o lugar e evita anúncio frio", () => {
