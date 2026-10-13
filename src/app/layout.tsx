@@ -7,6 +7,7 @@ import { BootSplash } from "@/components/site/BootSplash";
 import { PwaRegister } from "@/components/site/PwaRegister";
 import { installCaptureScript } from "@/lib/pwa-install";
 import { site } from "@/lib/site";
+import { HOME_SEO_DESCRIPTION, HOME_SEO_TITLE } from "@/lib/seo-local";
 import "./globals.css";
 
 const display = Sora({
@@ -29,8 +30,7 @@ const body = Inter({
   adjustFontFallback: true,
 });
 
-const description =
-  "Seminovos com procedência verificada em Aracruz, Vitória, Linhares, Serra, Vila Velha e região do ES. Compra, venda, troca e financiamento na Garagem.";
+const description = HOME_SEO_DESCRIPTION;
 
 function supabaseOrigin() {
   const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -45,7 +45,7 @@ function supabaseOrigin() {
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: `${site.name} | Seminovos com procedência no ${site.state}`,
+    default: HOME_SEO_TITLE,
     template: "%s",
   },
   description,
@@ -57,10 +57,11 @@ export const metadata: Metadata = {
     "revenda de veículos",
     "Espírito Santo",
     "Aracruz",
-    "Vitória",
+    "norte do Espírito Santo",
+    "Colatina",
+    "São Mateus",
+    "Sooretama",
     "Linhares",
-    "Serra",
-    "Vila Velha",
     "financiamento de carros",
     "vender carro usado",
     "troca de veículo",
@@ -74,7 +75,7 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     url: site.url,
     siteName: site.name,
-    title: `${site.name} | Seminovos com procedência no ${site.state}`,
+    title: HOME_SEO_TITLE,
     description,
     images: [
       {
@@ -87,7 +88,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${site.name} | Seminovos com procedência no ${site.state}`,
+    title: HOME_SEO_TITLE,
     description,
     images: ["/og.png"],
   },
