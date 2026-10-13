@@ -170,10 +170,12 @@ test("troca + busca: aceita a troca e busca sem o carro do visitante", async () 
   assert.ok(turn.vehicles.every((v) => v.model !== "Gol"));
 });
 
-test("orçamento sem carro na faixa: diz o carro mais em conta e mostra motos que cabem", async () => {
+test("orçamento sem carro na faixa: diz o carro mais em conta e oferece ampliar sem motos", async () => {
   const turn = await ask("tô sem grana, tem algo até 20 mil?");
-  assert.match(textoVisivelChat(turn.reply), /^Carro até R\$ 20\.000 não temos agora; o mais em conta é o Palio 2008 \(R\$ 24\.900\)\. Moto até esse valor temos 2/);
-  assert.deepEqual(turn.vehicles.map((v) => v.model), ["BIZ 125", "CG 160 Start"]);
+  assert.match(textoVisivelChat(turn.reply), /^Carro até R\$ 20\.000 não temos agora; o mais em conta é o Palio 2008 \(R\$ 24\.900\)/);
+  assert.match(textoVisivelChat(turn.reply), /Quer ampliar/);
+  assert.doesNotMatch(textoVisivelChat(turn.reply), /moto|BIZ|CG 160/i);
+  assert.deepEqual(turn.vehicles.map((v) => v.model), ["Palio"]);
 });
 
 test("cidade: área de atendimento, não modelo", async () => {

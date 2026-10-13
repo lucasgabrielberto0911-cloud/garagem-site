@@ -147,7 +147,8 @@ import { matchChatSoldVehicle, similarToChatSoldVehicle, chatSoldVehicleName, ty
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 import { asksAboutFuel, dieselWishReply, fuelFactReply, fuelListReply, fuelUnits } from "@/lib/chat-fuel";
 import { asksColorOf, colorReply, mentionedStockBrand, parseColorWish } from "@/lib/chat-attrs";
-import { parseChatSearchRanges } from "@/lib/chat-search-filters";
+import { asksForMoreChatVehicles, parseChatSearchRanges } from "@/lib/chat-search-filters";
+import { planChatSalesSearch, shownChatVehicleIds } from "@/lib/chat-sales-search";
 import { isAnaphoricVehicleFollowUp } from "@/lib/chat-text";
 import { researchChatVehicles, chatResearchTopic } from "@/lib/chat-research";
 import type { ChatResearch } from "@/lib/chat-research-data";
@@ -200,6 +201,8 @@ async function runChatTurnInternal(input: {
   stock: ChatVehicleRecord[];
   soldStock?: ChatSoldVehicle[];
   previousVehicleIds?: string[];
+  shownVehicleIds?: string[];
+  searchHistory?: ChatTurn[];
   vehicleId?: string;
   generate?: typeof generateChatReply;
   researchVehicles?: typeof researchChatVehicles;
@@ -231,7 +234,7 @@ async function runChatTurnInternal(input: {
     parsePriceLimit(visitorMessage) == null;
   const scopedMessage = namedComparison
     ? visitorMessage
-    : scopeChatMessage(visitorMessage, input.historico, input.stock);
+    : scopeChatMessage(visitorMessage, input.searchHistory ?? input.historico, input.stock);
   const mentionedPool = singleMentionedModelPool(input.stock, scopedMessage);
   const compared = pickComparedModelVehicles(input.stock, scopedMessage);
   // Visitante falando do carro DELE na troca: nada de responder km/ano do anúncio.
@@ -423,6 +426,7 @@ async function runChatTurnInternal(input: {
     return finish(CHAT_CONTACT_REPLY, false, { cards: false, plain: true, policy: "contact" });
   }
   const directPolicy = chatPolicyShortcut(visitorMessage);
+  const mayCreateLead = chatTurnMayCreateLead(visitorMessage, input.historico);
   if (directPolicy === "troca" && /\b(quero|procuro|busco)\b/.test(fold(visitorMessage)) && parsePriceLimit(visitorMessage) != null) {
     const desired = visitorMessage.replace(/^.*?\b(?:num|numa|por um|por uma|em um|em uma)\b/i, "");
     const picks = matchedChatStock(desired, input.stock).slice(0, CHAT_CARD_LIMIT);
@@ -436,9 +440,12 @@ async function runChatTurnInternal(input: {
     emit(reply);
     return finish(reply, false, { cards: false, plain: true, policy: directPolicy });
   }
+  const shownIds = shownChatVehicleIds(input.historico, input.stock, [...(input.shownVehicleIds ?? []), ...(input.previousVehicleIds ?? [])]);
   const requestedCriteria = chatCriteria(visitorMessage);
   const multipleCriteria = [requestedCriteria.power, requestedCriteria.economy, requestedCriteria.space, requestedCriteria.cheap].filter(Boolean).length > 1 || requestedCriteria.automatic && requestedCriteria.economy;
   if (multipleCriteria && !activeVehicle && !explicitModelUnits.length) {
+    const unseenSearch = shownIds.size ? planChatSalesSearch(visitorMessage, scopedMessage, input.stock, shownIds) : null;
+    if (unseenSearch) return finish(unseenSearch.reply, false, { plain: true, policy: unseenSearch.policy, forcedVehicles: unseenSearch.picks, cards: unseenSearch.picks.length > 0 });
     const found = searchChatInventory(scopedMessage, input.stock);
     if (found) {
       emit(found.reply);
@@ -449,6 +456,8 @@ async function runChatTurnInternal(input: {
   const globalRank = /\b(mais economico|mais economica|mais forte|mais potente)\b/.test(fold(visitorMessage));
   const refersToList = /\b(deles|delas|desses|dessas)\b/.test(fold(visitorMessage));
   if (!multipleCriteria && ((economy && refersToList) || (globalRank && (economy || /estoque/.test(fold(visitorMessage))) && !explicitModelUnits.length && !activeVehicle))) {
+    const unseenSearch = !refersToList && shownIds.size ? planChatSalesSearch(visitorMessage, scopedMessage, input.stock, shownIds) : null;
+    if (unseenSearch) return finish(unseenSearch.reply, false, { plain: true, policy: unseenSearch.policy, forcedVehicles: unseenSearch.picks, cards: unseenSearch.picks.length > 0 });
     const remembered = (input.previousVehicleIds ?? []).map(id => input.stock.find(v => v.id === id)).filter((v): v is ChatVehicleRecord => Boolean(v));
     const pool = matchedChatStock(scopedMessage, refersToList ? remembered : input.stock);
     const rows = pool.map(vehicle => {
@@ -495,7 +504,6 @@ async function runChatTurnInternal(input: {
     return finish(similar.reply, false, { policy: "similar-active", plain: true, cards: similar.vehicles.length > 0, forcedVehicles: similar.vehicles });
   }
 
-  const mayCreateLead = chatTurnMayCreateLead(visitorMessage, input.historico);
   // Conversa sobre UM carro ("é rápido?", "vale a pena?", "pontos positivos dele?", "e do HB20 1.6?"):
   // resposta direta com a ficha técnica da versão e a ficha do anúncio, nunca frase de busca.
   if (!mayCreateLead && !tradeTurn && !namedComparison) {
@@ -876,6 +884,19 @@ async function runChatTurnInternal(input: {
       const result = finish(reply, false, { policy: "trade-search", forcedVehicles: found.picks });
         return result;
     }
+  }
+
+  const moreVehicles = asksForMoreChatVehicles(visitorMessage);
+  const salesSearch = !skipShortcuts && !mayCreateLead && !humanAction && !namedComparison &&
+    explicitModelUnits.length === 0 && !asksAboutEquipment(visitorMessage) &&
+    (moreVehicles || isChatSelectionQuery(scopedMessage) || hasChatStockFilter(scopedMessage))
+    ? planChatSalesSearch(visitorMessage, scopedMessage, input.stock, shownIds)
+    : null;
+  if (salesSearch) {
+    return finish(salesSearch.reply, false, {
+      policy: salesSearch.policy, plain: true,
+      cards: salesSearch.picks.length > 0, forcedVehicles: salesSearch.picks,
+    });
   }
 
   const budget =
@@ -1456,6 +1477,9 @@ async function runChatTurnInternal(input: {
 /** Respostas diretas e listas recebem a mesma formatação antes de serem emitidas. */
 export function formatChatResult(result: ChatTurnResult, input: Parameters<typeof runChatTurnInternal>[0], picks: ChatVehicleRecord[]): ChatTurnResult {
 
+  // As alternativas já têm links, frases conferidas e próximo passo de vendedor.
+  if (result.meta?.policy === "inventory-alternatives" || (result.meta?.policy === "waitlist" && result.meta.plain)) return result;
+
   const originalReply = result.reply;
   const clientAskedPrice =
     parsePriceLimit(input.mensagem) != null ||
@@ -1589,6 +1613,9 @@ export function formatChatResult(result: ChatTurnResult, input: Parameters<typeo
       .join("\n");
   }
   result.reply = sanitizePower(result.reply, picks);
+  if (["inventory-search", "waitlist", "budget"].includes(result.meta?.policy ?? "") && !/\?\s*[^\n]*$/.test(result.reply)) {
+    result.reply += picks.length ? "\n\nQual deles você quer conhecer melhor? Vem dar uma olhada!" : "\n\nQuer considerar outro câmbio ou ampliar um pouco a faixa?";
+  }
   return result;
 }
 
