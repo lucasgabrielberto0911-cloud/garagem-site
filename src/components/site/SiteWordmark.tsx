@@ -54,7 +54,7 @@ export function SiteWordmark({
       {/* eslint-disable-next-line @next/next/no-img-element -- wordmark estático, sem cota /_next/image */}
       <img
         src={look.sizes ? "/branding/logo-wordmark-320.webp" : "/branding/logo-wordmark.webp"}
-        srcSet={look.sizes ? "/branding/logo-wordmark-320.webp 320w, /branding/logo-wordmark-640.webp 640w, /branding/logo-wordmark.webp 887w" : undefined}
+        srcSet={look.sizes ? "/branding/logo-wordmark-320.webp 320w, /branding/logo-wordmark-480.webp 480w, /branding/logo-wordmark-640.webp 640w, /branding/logo-wordmark.webp 887w" : undefined}
         sizes={look.sizes}
         alt={site.name}
         width={look.width}

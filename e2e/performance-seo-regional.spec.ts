@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+test.use({ deviceScaleFactor: 3 });
+
 test.beforeEach(async ({ page }) => {
   // Fotos offline; páginas, consultas, sitemap e JSON-LD vêm do app/banco local.
   await page.route("**/fotos/**", route => route.fulfill({ contentType: "image/png", path: "public/branding/placeholder-car.png" }));
@@ -40,9 +42,15 @@ test("estoque usa logo responsivo e preserva a prioridade da primeira capa", asy
   await expect(logo).toBeVisible();
   await expect(logo).toHaveAttribute("srcset", /logo-wordmark-320\.webp 320w/);
   await expect.poll(() => logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
-  const selected = await logo.evaluate((img: HTMLImageElement) => ({ src: img.currentSrc, width: img.getBoundingClientRect().width }));
-  expect(selected.src).toMatch(/logo-wordmark-(320|640)\.webp$/);
+  const selected = await logo.evaluate(async (img: HTMLImageElement) => {
+    const decoded = new Image();
+    decoded.src = img.currentSrc;
+    await decoded.decode();
+    return { src: img.currentSrc, width: img.getBoundingClientRect().width, pixels: decoded.naturalWidth, dpr: devicePixelRatio };
+  });
+  expect(selected.src).toMatch(/logo-wordmark-(320|480|640)\.webp$/);
   expect(selected.width).toBeLessThanOrEqual(196);
+  expect(selected.pixels).toBeGreaterThanOrEqual(Math.ceil(selected.width * selected.dpr));
   await expect(page.locator('link[rel="preconnect"][href*="supabase"]')).toHaveCount(0);
   const firstCover = page.locator("article.listing-card img").first();
   await expect(firstCover).toHaveAttribute("fetchpriority", "high");
