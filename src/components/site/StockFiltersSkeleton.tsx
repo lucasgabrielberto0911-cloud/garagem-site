@@ -20,17 +20,17 @@ export function StockFiltersSkeleton(_props: { facets?: Facets }) {
         aria-hidden="true"
         className="stock-chip-bar mt-2 border border-white/10 bg-ink px-2.5 py-2 lg:hidden"
       >
-        {rows.map((label) => (
-          <div key={label} className="stock-chip-row">
-            <p className="stock-chip-label">{label}</p>
-            <div className="flex min-w-0 flex-1 gap-2 overflow-hidden">
-              <span className="h-11 w-20 shrink-0 border border-white/10 bg-white/5" />
-              <span className="h-11 w-20 shrink-0 border border-white/10 bg-white/5" />
+        <div className="flex items-center gap-2">
+          {rows.map((label) => (
+            <div key={label} className="stock-chip-row min-w-0 flex-1">
+              <p className="stock-chip-label">{label}</p>
+              <div className="flex min-w-0 flex-1 gap-2 overflow-hidden">
+                <span className="h-11 w-20 shrink-0 border border-white/10 bg-white/5" />
+                <span className="h-11 w-20 shrink-0 border border-white/10 bg-white/5" />
+              </div>
             </div>
-          </div>
-        ))}
-        <div className="mt-2">
-          <div className="h-11 border border-white/15 bg-asphalt" />
+          ))}
+          <div className="h-11 w-24 shrink-0 border border-white/15 bg-asphalt" />
         </div>
       </div>
     </div>

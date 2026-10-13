@@ -253,7 +253,7 @@ test("WhatsApp leva preço, URL e acento — sem XS XS", () => {
   assert.doesNotMatch(text, /Tenho interesse/);
 });
 
-test("mensagem de financiamento pede simulação de parcelas", () => {
+test("mensagem de financiamento pergunta sobre financiamento", () => {
   const text = formatVehicleWhatsAppMessage({
     brand: "Honda",
     model: "HR-V",
@@ -264,7 +264,7 @@ test("mensagem de financiamento pede simulação de parcelas", () => {
     intent: "finance",
     origin: "https://www.suagaragem.net",
   });
-  assert.match(text, /quero simular as parcelas/);
+  assert.match(text, /quero saber sobre o financiamento/);
   assert.match(text, /R\$\s*89\.900/);
   assert.doesNotMatch(text, /análise de crédito e CET/);
   assert.doesNotMatch(text, /Sua Garagem/);
@@ -306,7 +306,7 @@ test("vendido não leva preço em nenhuma intenção de WhatsApp", () => {
     assert.equal(message.split("\n")[1], `https://www.suagaragem.net${base.path}`);
   }
   const available = formatVehicleWhatsAppMessage({ ...base, status: "disponivel", intent: "finance" });
-  assert.match(available, /por R\$\s*89\.900.*simular as parcelas/);
+  assert.match(available, /por R\$\s*89\.900.*saber sobre o financiamento/);
   const reserved = formatVehicleWhatsAppMessage({ ...base, status: "reservado" });
   assert.match(reserved, /por R\$\s*89\.900.*quero saber mais/);
   assert.match(formatVehicleWhatsAppMessage({ ...base, brand: "Honda", model: "Biz", isMoto: true }), /já foi vendida/);

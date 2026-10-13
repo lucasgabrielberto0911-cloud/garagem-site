@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  hasMarketingConsent,
   readStoredConsent,
   writeStoredConsent,
   type ConsentChoice,
@@ -51,7 +50,7 @@ export function CookieConsent() {
             writeStoredConsent("accepted");
             setChoice("accepted");
           }}
-          className="inline-flex min-h-11 items-center justify-center bg-brand px-2 text-center font-display text-[11px] font-semibold uppercase leading-tight tracking-wide text-cream"
+          className="inline-flex min-h-11 items-center justify-center bg-brand px-2 text-center font-display text-[13px] font-semibold uppercase leading-tight tracking-wide text-cream"
         >
           Aceitar
         </button>
@@ -61,16 +60,11 @@ export function CookieConsent() {
             writeStoredConsent("essential");
             setChoice("essential");
           }}
-          className="inline-flex min-h-11 items-center justify-center border border-white/20 px-2 text-center font-display text-[11px] font-semibold uppercase leading-tight tracking-wide text-cream"
+          className="inline-flex min-h-11 items-center justify-center border border-white/20 px-2 text-center font-display text-[13px] font-semibold uppercase leading-tight tracking-wide text-cream"
         >
           Só o essencial
         </button>
       </div>
-      <span className="sr-only">
-        {hasMarketingConsent(choice === "pending" ? null : choice)
-          ? "Medição liberada"
-          : "Medição bloqueada"}
-      </span>
     </div>
   );
 }

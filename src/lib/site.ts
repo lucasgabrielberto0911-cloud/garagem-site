@@ -164,7 +164,7 @@ export function formatCustomerVehicleWhatsAppText(input: {
 
   switch (input.intent) {
     case "finance":
-      return `Oi! ${seen} e quero simular as parcelas.`;
+      return `Oi! ${seen} e quero saber sobre o financiamento.`;
     case "trade":
       return `Oi! ${seen} e quero avaliar uma troca.`;
     case "video":
