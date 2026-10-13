@@ -62,11 +62,7 @@ export default async function PedidoPage({
             contextLabel={copy.contextLabel}
             pagePath={copy.pagePath}
             initialModel={copy.initialModel}
-            initialYearMin={copy.initialYearMin}
-            initialYearMax={copy.initialYearMax}
-            initialPriceMin={copy.initialPriceMin}
             initialPriceMax={copy.initialPriceMax}
-            initialKmMax={copy.initialKmMax}
             description={copy.description}
           />
         </div>

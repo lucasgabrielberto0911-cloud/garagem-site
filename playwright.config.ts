@@ -29,6 +29,8 @@ export default defineConfig({
     { name: "desktop", use: { viewport: { width: 1440, height: 900 } } },
   ],
   webServer: {
+    // Segredo exclusivo do servidor E2E, limitado ao banco local acima.
+    env: { JWT_SECRET: "garagem-e2e-local-sem-acesso-externo" },
     command: "npm run start -- --hostname 127.0.0.1 --port 3362",
     url: "http://127.0.0.1:3362",
     reuseExistingServer: false,

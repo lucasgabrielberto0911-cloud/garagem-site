@@ -9,6 +9,7 @@ import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { PHONES } from "@/lib/site";
 import {
   emailFromLeadNotes,
+  maxPriceFromLeadNotes,
   parseWantedLeadForm,
   toLeadVendaData,
   WANTED_LEAD_SOURCE,
@@ -82,22 +83,40 @@ test("faixas vazias não viram erro e o filtro do estoque fica na observação",
   assert.doesNotMatch(stored.notes, /Ano:|Preço:|Km:/);
 });
 
-test("sem consentimento, modelo ou e-mail o pedido não segue", () => {
-  const missingConsent = parseWantedLeadForm(form({ ...valid, consent: "" }));
-  assert.equal(missingConsent.ok, false);
-  if (missingConsent.ok) return;
-  assert.equal(missingConsent.message, "Confira os campos destacados.");
-  assert.match(missingConsent.fieldErrors.consent, /Confirme o uso dos dados/);
-
-  const missingModel = parseWantedLeadForm(form({ ...valid, model: "A" }));
-  assert.equal(missingModel.ok, false);
-  if (missingModel.ok) return;
-  assert.match(missingModel.fieldErrors.model, /modelo/);
-
+test("pedido compacto aceita só telefone, nome e carro, sem e-mail ou checkbox", () => {
+  const parsed = parseWantedLeadForm(form({ phone: valid.phone, name: valid.name, model: valid.model }));
+  assert.equal(parsed.ok, true);
+  if (!parsed.ok || !parsed.lead) return;
+  assert.equal(parsed.lead.email, null);
+  for (const key of ["yearMin", "yearMax", "priceMin", "priceMax", "kmMin", "kmMax"] as const) {
+    assert.equal(parsed.lead[key], null);
+  }
+  assert.doesNotMatch(toLeadVendaData(parsed.lead).notes, /E-mail:|Ano:|Preço:|Km:/);
+  for (const key of ["phone", "name", "model"]) {
+    const invalid = parseWantedLeadForm(form({ phone: valid.phone, name: valid.name, model: valid.model, [key]: "" }));
+    assert.equal(invalid.ok, false);
+    if (!invalid.ok) assert.ok(invalid.fieldErrors[key]);
+  }
   const badEmail = parseWantedLeadForm(form({ ...valid, email: "ana@" }));
   assert.equal(badEmail.ok, false);
-  if (badEmail.ok) return;
-  assert.match(badEmail.fieldErrors.email, /e-mail válido/);
+  if (!badEmail.ok) assert.match(badEmail.fieldErrors.email, /e-mail válido/);
+});
+
+test("valor máximo com máscara é salvo e limita as sugestões de estoque", () => {
+  const parsed = parseWantedLeadForm(form({ phone: valid.phone, name: valid.name, model: valid.model, priceMax: "R$ 95.000" }));
+  assert.equal(parsed.ok, true);
+  if (!parsed.ok || !parsed.lead) return;
+  assert.equal(parsed.lead.priceMax, 95000);
+  const notes = toLeadVendaData(parsed.lead).notes;
+  assert.equal(maxPriceFromLeadNotes(notes), 95000);
+  assert.match(notes, /Preço: até R\$\s*95\.000/);
+  assert.equal(maxPriceFromLeadNotes(null), null);
+  assert.equal(maxPriceFromLeadNotes("Preço: até inválido"), null);
+  for (const priceMax of ["R$ 0", "-100", "R$ 5.000.001", "abc"]) {
+    const invalid = parseWantedLeadForm(form({ ...valid, priceMax }));
+    assert.equal(invalid.ok, false);
+    if (!invalid.ok) assert.ok(invalid.fieldErrors.priceMax);
+  }
 });
 
 test("faixa invertida e telefone sem DDD voltam em português", () => {
@@ -125,7 +144,7 @@ test("honeypot não monta lead", () => {
   assert.equal(parsed.lead, null);
 });
 
-test("o formulário público pede consentimento antes de enviar e não é WhatsApp", () => {
+test("o formulário público tem quatro campos ordenados e aviso de privacidade antes de enviar", () => {
   const html = renderToStaticMarkup(
     createElement(MissingModelForm, {
       idPrefix: "teste",
@@ -133,12 +152,14 @@ test("o formulário público pede consentimento antes de enviar e não é WhatsA
       initialModel: "HB20",
     }),
   );
-  const consentAt = html.indexOf("Autorizo a Garagem");
+  const consentAt = html.indexOf("A Garagem usa seu nome e telefone");
   const sendAt = html.indexOf("Enviar pedido");
   assert.ok(consentAt > 0);
   assert.ok(sendAt > consentAt);
   assert.match(html, /name="model"/);
-  assert.match(html, /name="email"/);
+  assert.doesNotMatch(html, /name="email"|name="consent"|name="yearMin"|name="yearMax"|name="priceMin"|name="kmMin"|name="kmMax"/);
+  const fields = [...html.matchAll(/<input[^>]*name="(phone|name|model|priceMax)"/g)].map(match => match[1]);
+  assert.deepEqual(fields, ["phone", "name", "model", "priceMax"]);
   assert.match(html, /name="phone"/);
   assert.match(html, /HB20/);
   assert.match(html, /Política de privacidade/);

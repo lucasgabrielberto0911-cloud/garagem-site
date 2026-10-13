@@ -1,6 +1,6 @@
 export const WANTED_DRAFT_KEY = "garagem:pedido:rascunho:v1";
 export const WANTED_DRAFT_TTL = 24 * 60 * 60 * 1000;
-const limits = { model: 120, name: 120, email: 254, phone: 30, yearMin: 4, yearMax: 4, priceMin: 30, priceMax: 30, kmMin: 30, kmMax: 30 } as const;
+const limits = { model: 120, name: 120, phone: 30, priceMax: 30 } as const;
 export type WantedDraftFields = Record<keyof typeof limits, string>;
 
 export function wantedDraftFields(input: Record<string, unknown>): WantedDraftFields {

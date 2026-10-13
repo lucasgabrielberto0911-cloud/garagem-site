@@ -28,3 +28,10 @@ test("a mesma busca com outro câmbio ou categoria não recupera o rascunho ante
   assert.notEqual(wantedVehicleDraftContext({ q: "Civic", category: "moto" }), wantedVehicleDraftContext({ q: "Civic", category: "carro" }));
   assert.equal(automatic, wantedVehicleDraftContext({ transmission: "automatico", q: " Civic " }));
 });
+
+test("rascunho compacto preserva o valor máximo e descarta e-mail e faixas antigas", () => {
+  const fields = wantedDraftFields({ model: "Civic", priceMax: "R$ 80.000", email: "antigo@teste.com", yearMin: "2015", priceMin: "10000", kmMax: "60000" });
+  const raw = serializeWantedDraft(fields, "", 100);
+  assert.equal(parseWantedDraft(raw, "", 101)?.priceMax, "R$ 80.000");
+  assert.doesNotMatch(raw!, /email|yearMin|priceMin|kmMax/);
+});

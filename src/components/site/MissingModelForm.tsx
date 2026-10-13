@@ -21,7 +21,7 @@ function digitsToGrouped(value: string) {
   const digits = value.replace(/\D/g, "");
   if (!digits) return "";
   const amount = Number(digits);
-  return Number.isFinite(amount) ? formatNumberBR(amount) : "";
+  return Number.isFinite(amount) ? `R$ ${formatNumberBR(amount)}` : "";
 }
 
 function FieldError({ id, message }: { id: string; message?: string }) {
@@ -43,12 +43,7 @@ export function MissingModelForm({
   pagePath = "",
   interestVehicleId = "",
   initialModel = "",
-  initialYearMin = "",
-  initialYearMax = "",
-  initialPriceMin = "",
   initialPriceMax = "",
-  initialKmMin = "",
-  initialKmMax = "",
   rememberDraft = false,
   draftContextKey = "",
 }: {
@@ -61,12 +56,7 @@ export function MissingModelForm({
   pagePath?: string;
   interestVehicleId?: string;
   initialModel?: string;
-  initialYearMin?: string;
-  initialYearMax?: string;
-  initialPriceMin?: string;
   initialPriceMax?: string;
-  initialKmMin?: string;
-  initialKmMax?: string;
   rememberDraft?: boolean;
   draftContextKey?: string;
 }) {
@@ -90,16 +80,12 @@ export function MissingModelForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
   const [phone, setPhone] = useState("");
-  const [priceMin, setPriceMin] = useState(() => digitsToGrouped(initialPriceMin));
   const [priceMax, setPriceMax] = useState(() => digitsToGrouped(initialPriceMax));
-  const [kmMin, setKmMin] = useState(() => digitsToGrouped(initialKmMin));
-  const [kmMax, setKmMax] = useState(() => digitsToGrouped(initialKmMax));
   const TitleTag = titleAs;
-  const draftContext = JSON.stringify([initialModel, initialYearMin, initialYearMax, initialPriceMin, initialPriceMax, initialKmMin, initialKmMax, draftContextKey, interestVehicleId]);
+  const draftContext = JSON.stringify([initialModel, initialPriceMax, draftContextKey, interestVehicleId]);
   const draft = useWantedDraft(formRef, rememberDraft && !sent, draftContext, fields => {
     setPhone(formatPhoneBR(fields.phone));
-    setPriceMin(digitsToGrouped(fields.priceMin)); setPriceMax(digitsToGrouped(fields.priceMax));
-    setKmMin(digitsToGrouped(fields.kmMin)); setKmMax(digitsToGrouped(fields.kmMax));
+    setPriceMax(digitsToGrouped(fields.priceMax));
   });
 
   useEffect(() => {
@@ -109,15 +95,8 @@ export function MissingModelForm({
   const ids = {
     model: `${idPrefix}-modelo`,
     name: `${idPrefix}-nome`,
-    email: `${idPrefix}-email`,
     phone: `${idPrefix}-telefone`,
-    yearMin: `${idPrefix}-ano-de`,
-    yearMax: `${idPrefix}-ano-ate`,
-    priceMin: `${idPrefix}-preco-de`,
     priceMax: `${idPrefix}-preco-ate`,
-    kmMin: `${idPrefix}-km-de`,
-    kmMax: `${idPrefix}-km-ate`,
-    consent: `${idPrefix}-consentimento`,
   };
 
   function focusField(name: string) {
@@ -194,14 +173,11 @@ export function MissingModelForm({
           type="button"
           onClick={() => {
             setPhone("");
-            setPriceMin(digitsToGrouped(initialPriceMin));
             setPriceMax(digitsToGrouped(initialPriceMax));
-            setKmMin(digitsToGrouped(initialKmMin));
-            setKmMax(digitsToGrouped(initialKmMax));
             setErrors({});
             setFormError("");
             setSent(false);
-            focusField("model");
+            focusField("phone");
           }}
           className="mt-6 min-h-[48px] border border-white/20 px-5 py-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-white/5"
         >
@@ -214,7 +190,7 @@ export function MissingModelForm({
   return (
     <section
       data-missing-model-form=""
-      className="border border-white/10 bg-ink p-5 sm:p-7"
+      className="border border-white/10 bg-ink p-4 sm:p-5"
     >
       <TitleTag className="font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
         {title}
@@ -223,7 +199,7 @@ export function MissingModelForm({
         {description}
       </p>
 
-      <form ref={formRef} className="relative mt-5" noValidate onSubmit={handleSubmit}
+      <form ref={formRef} className="relative mt-4" noValidate onSubmit={handleSubmit}
         onInput={rememberDraft ? draft.remember : undefined}
         onChange={rememberDraft ? draft.remember : undefined}>
         <fieldset disabled={isPending} className="min-w-0">
@@ -248,37 +224,39 @@ export function MissingModelForm({
             <input type="hidden" name="interestVehicleId" value={interestVehicleId} />
           ) : null}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
               <label
-                htmlFor={ids.model}
+                htmlFor={ids.phone}
                 className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
               >
-                Modelo que você procura
+                Telefone com DDD
                 <span className="ml-1 text-brand-light" aria-hidden="true">
                   *
                 </span>
               </label>
               <input
-                id={ids.model}
-                name="model"
+                id={ids.phone}
+                name="phone"
                 required
-                defaultValue={initialModel}
-                autoComplete="off"
-                placeholder="Ex.: Corolla automático"
-                aria-invalid={Boolean(errors.model) || undefined}
-                aria-describedby={errors.model ? `${ids.model}-erro` : undefined}
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(event) => setPhone(formatPhoneBR(event.target.value))}
+                placeholder="(00) 00000-0000"
+                aria-invalid={Boolean(errors.phone) || undefined}
+                aria-describedby={errors.phone ? `${ids.phone}-erro` : undefined}
                 className={inputClass}
               />
-              <FieldError id={`${ids.model}-erro`} message={errors.model} />
+              <FieldError id={`${ids.phone}-erro`} message={errors.phone} />
             </div>
-
             <div>
               <label
                 htmlFor={ids.name}
                 className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
               >
-                Seu nome
+                Nome
                 <span className="ml-1 text-brand-light" aria-hidden="true">
                   *
                 </span>
@@ -298,188 +276,52 @@ export function MissingModelForm({
 
             <div>
               <label
-                htmlFor={ids.email}
+                htmlFor={ids.model}
                 className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
               >
-                E-mail
+                Carro que deseja
                 <span className="ml-1 text-brand-light" aria-hidden="true">
                   *
                 </span>
               </label>
               <input
-                id={ids.email}
-                name="email"
-                type="email"
+                id={ids.model}
+                name="model"
                 required
-                autoComplete="email"
-                inputMode="email"
-                placeholder="voce@email.com"
-                aria-invalid={Boolean(errors.email) || undefined}
-                aria-describedby={errors.email ? `${ids.email}-erro` : undefined}
+                defaultValue={initialModel}
+                autoComplete="off"
+                placeholder="Ex.: Corolla automático"
+                aria-invalid={Boolean(errors.model) || undefined}
+                aria-describedby={errors.model ? `${ids.model}-erro` : undefined}
                 className={inputClass}
               />
-              <FieldError id={`${ids.email}-erro`} message={errors.email} />
+              <FieldError id={`${ids.model}-erro`} message={errors.model} />
             </div>
 
-            <div className="sm:col-span-2">
-              <label
-                htmlFor={ids.phone}
-                className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
-              >
-                Telefone
-                <span className="ml-1 text-brand-light" aria-hidden="true">
-                  *
-                </span>
-              </label>
-              <input
-                id={ids.phone}
-                name="phone"
-                required
-                inputMode="tel"
-                autoComplete="tel"
-                value={phone}
-                onChange={(event) => setPhone(formatPhoneBR(event.target.value))}
-                placeholder="(00) 00000-0000"
-                aria-invalid={Boolean(errors.phone) || undefined}
-                aria-describedby={errors.phone ? `${ids.phone}-erro` : undefined}
-                className={inputClass}
-              />
-              <FieldError id={`${ids.phone}-erro`} message={errors.phone} />
-            </div>
-          </div>
-
-          <fieldset className="mt-5">
-            <legend className="text-xs uppercase tracking-wider text-muted">
-              Faixas (opcional)
-            </legend>
-            <div className="mt-3 grid gap-4 sm:grid-cols-3">
-              <div>
-                <p className="mb-1.5 text-xs text-muted">Ano</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    id={ids.yearMin}
-                    name="yearMin"
-                    inputMode="numeric"
-                    maxLength={4}
-                    defaultValue={initialYearMin.replace(/\D/g, "").slice(0, 4)}
-                    placeholder="De"
-                    aria-label="Ano inicial"
-                    aria-invalid={Boolean(errors.yearMin) || undefined}
-                    aria-describedby={errors.yearMin ? `${ids.yearMin}-erro` : undefined}
-                    className={inputClass}
-                  />
-                  <input
-                    id={ids.yearMax}
-                    name="yearMax"
-                    inputMode="numeric"
-                    maxLength={4}
-                    defaultValue={initialYearMax.replace(/\D/g, "").slice(0, 4)}
-                    placeholder="Até"
-                    aria-label="Ano final"
-                    aria-invalid={Boolean(errors.yearMax) || undefined}
-                    aria-describedby={errors.yearMax ? `${ids.yearMax}-erro` : undefined}
-                    className={inputClass}
-                  />
-                </div>
-                <FieldError id={`${ids.yearMin}-erro`} message={errors.yearMin} />
-                <FieldError id={`${ids.yearMax}-erro`} message={errors.yearMax} />
-              </div>
-
-              <div>
-                <p className="mb-1.5 text-xs text-muted">Preço</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    id={ids.priceMin}
-                    name="priceMin"
-                    inputMode="numeric"
-                    value={priceMin}
-                    onChange={(event) => setPriceMin(digitsToGrouped(event.target.value))}
-                    placeholder="De"
-                    aria-label="Preço inicial"
-                    aria-invalid={Boolean(errors.priceMin) || undefined}
-                    aria-describedby={errors.priceMin ? `${ids.priceMin}-erro` : undefined}
-                    className={inputClass}
-                  />
-                  <input
-                    id={ids.priceMax}
-                    name="priceMax"
-                    inputMode="numeric"
-                    value={priceMax}
-                    onChange={(event) => setPriceMax(digitsToGrouped(event.target.value))}
-                    placeholder="Até"
-                    aria-label="Preço final"
-                    aria-invalid={Boolean(errors.priceMax) || undefined}
-                    aria-describedby={errors.priceMax ? `${ids.priceMax}-erro` : undefined}
-                    className={inputClass}
-                  />
-                </div>
-                <FieldError id={`${ids.priceMin}-erro`} message={errors.priceMin} />
-                <FieldError id={`${ids.priceMax}-erro`} message={errors.priceMax} />
-              </div>
-
-              <div>
-                <p className="mb-1.5 text-xs text-muted">Quilometragem</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    id={ids.kmMin}
-                    name="kmMin"
-                    inputMode="numeric"
-                    value={kmMin}
-                    onChange={(event) => setKmMin(digitsToGrouped(event.target.value))}
-                    placeholder="De"
-                    aria-label="Quilometragem inicial"
-                    aria-invalid={Boolean(errors.kmMin) || undefined}
-                    aria-describedby={errors.kmMin ? `${ids.kmMin}-erro` : undefined}
-                    className={inputClass}
-                  />
-                  <input
-                    id={ids.kmMax}
-                    name="kmMax"
-                    inputMode="numeric"
-                    value={kmMax}
-                    onChange={(event) => setKmMax(digitsToGrouped(event.target.value))}
-                    placeholder="Até"
-                    aria-label="Quilometragem final"
-                    aria-invalid={Boolean(errors.kmMax) || undefined}
-                    aria-describedby={errors.kmMax ? `${ids.kmMax}-erro` : undefined}
-                    className={inputClass}
-                  />
-                </div>
-                <FieldError id={`${ids.kmMin}-erro`} message={errors.kmMin} />
-                <FieldError id={`${ids.kmMax}-erro`} message={errors.kmMax} />
-              </div>
-            </div>
-          </fieldset>
-
-          <div className="mt-5 flex items-start gap-3">
-            <input
-              id={ids.consent}
-              name="consent"
-              type="checkbox"
-              value="sim"
-              aria-invalid={Boolean(errors.consent) || undefined}
-              aria-describedby={errors.consent ? `${ids.consent}-erro` : undefined}
-              className="mt-1 h-4 w-4 shrink-0 accent-brand"
-            />
             <div>
-              <label
-                htmlFor={ids.consent}
-                className="text-xs leading-relaxed text-muted"
-              >
-                Autorizo a Garagem a usar meu nome, e-mail e telefone só para
-                me avisar sobre o modelo que pedi. Sem spam e sem repassar a
-                terceiros.
-              </label>{" "}
-              <Link
-                href="/privacidade"
-                prefetch={false}
-                className="text-xs text-cream underline decoration-white/30 underline-offset-2 hover:text-brand-light"
-              >
-                Política de privacidade
-              </Link>
-              <FieldError id={`${ids.consent}-erro`} message={errors.consent} />
+              <label htmlFor={ids.priceMax} className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+                Valor máximo <span className="normal-case">(opcional)</span>
+              </label>
+              <input
+                id={ids.priceMax}
+                name="priceMax"
+                inputMode="numeric"
+                value={priceMax}
+                onChange={(event) => setPriceMax(digitsToGrouped(event.target.value))}
+                placeholder="R$ 80.000"
+                aria-invalid={Boolean(errors.priceMax) || undefined}
+                aria-describedby={errors.priceMax ? `${ids.priceMax}-erro` : undefined}
+                className={inputClass}
+              />
+              <FieldError id={`${ids.priceMax}-erro`} message={errors.priceMax} />
             </div>
           </div>
+          <p className="mt-3 text-xs leading-relaxed text-muted">
+            A Garagem usa seu nome e telefone para atender este pedido de compra.{" "}
+            <Link href="/privacidade" prefetch={false} className="text-cream underline decoration-white/30 underline-offset-2 hover:text-brand-light">
+              Política de privacidade
+            </Link>
+          </p>
 
           {formError ? (
             <p className="mt-4 text-sm text-brand-light" role="alert">
@@ -491,7 +333,7 @@ export function MissingModelForm({
             type="submit"
             disabled={!ready || isPending}
             aria-busy={isPending}
-            className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center bg-brand px-7 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 sm:w-auto"
+            className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center bg-brand px-7 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand/90 disabled:opacity-70 sm:w-auto"
           >
             {isPending ? "Enviando…" : "Enviar pedido"}
           </button>
@@ -500,7 +342,7 @@ export function MissingModelForm({
           <div data-wanted-draft="" className="mt-4 flex flex-wrap items-center justify-between gap-2 border border-white/10 bg-asphalt px-3 py-2 text-xs text-muted">
             <p role="status">{draft.failed ? "Não foi possível guardar o rascunho nesta aba. Você pode continuar preenchendo e enviar." : draft.restored ? "Seu preenchimento foi recuperado." : "Rascunho guardado nesta aba."}</p>
             <button type="button" disabled={isPending} onClick={() => {
-              draft.discard(); setErrors({}); setFormError(""); focusField("model");
+              draft.discard(); setErrors({}); setFormError(""); focusField("phone");
             }} className="min-h-11 shrink-0 text-cream underline underline-offset-4">Apagar preenchimento</button>
           </div>
         ) : null}
