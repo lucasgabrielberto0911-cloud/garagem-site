@@ -266,3 +266,21 @@ export function IconShare({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconPlay({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M10 9.5v5l4.5-2.5z" />
+    </svg>
+  );
+}
+
+export function IconSwap({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 8h14M14 4l4 4-4 4" />
+      <path d="M20 16H6M10 12l-4 4 4 4" />
+    </svg>
+  );
+}

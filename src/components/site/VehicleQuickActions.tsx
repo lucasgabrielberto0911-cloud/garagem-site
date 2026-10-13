@@ -59,8 +59,8 @@ export function VehicleQuickActions({
     {
       trackingLabel: "ficha-finance",
       hrefMessage: finance,
-      label: "Simular",
-      ariaLabel: "Simular parcelas deste veículo no WhatsApp",
+      label: "Financiamento",
+      ariaLabel: "Falar sobre financiamento deste veículo no WhatsApp",
     },
     {
       trackingLabel: "ficha-trade",

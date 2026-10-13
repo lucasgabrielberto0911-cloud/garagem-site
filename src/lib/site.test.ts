@@ -45,7 +45,7 @@ test("CTA genérico do topo e da home no tom natural", () => {
   );
   assert.equal(
     WHATSAPP_MESSAGES.finance,
-    "Oi! Vi o site da Garagem e quero simular as parcelas.",
+    "Oi! Vi o site da Garagem e quero saber sobre o financiamento.",
   );
   assert.equal(WHATSAPP_BRAND, "Garagem");
   assert.doesNotMatch(WHATSAPP_MESSAGES.general, /Sua Garagem/);
@@ -59,7 +59,7 @@ test("helpers de veículo sem preço caem no fallback sem “por R$”", () => {
   );
   assert.equal(
     WHATSAPP_MESSAGES.vehicleFinance("Hyundai HB20 2022"),
-    "Oi! Vi o Hyundai HB20 2022 no site da Garagem e quero simular as parcelas.",
+    "Oi! Vi o Hyundai HB20 2022 no site da Garagem e quero saber sobre o financiamento.",
   );
   assert.equal(
     WHATSAPP_MESSAGES.vehicleTrade("Honda BIZ 125 EX 2023", true),
@@ -162,7 +162,7 @@ test("ficha path e tracking centralizam campanha ficha + utm_content", () => {
   const finance = whatsappUrl(WHATSAPP_MESSAGES.vehicleFinance("Honda Civic EXL 2020"), fromVehicle);
   assert.match(finance, /utm_campaign=ficha/);
   assert.match(finance, /utm_content=honda-civic-exl-2020-abc/);
-  assert.match(decodeURIComponent(finance), /simular as parcelas/);
+  assert.match(decodeURIComponent(finance), /saber sobre o financiamento/);
 });
 
 test("header/float na ficha herdam ficha+slug mesmo sem contexto hidratado", () => {

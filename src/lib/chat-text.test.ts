@@ -42,7 +42,7 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   assert.doesNotMatch(displayChatText(finance), /wa\.me/);
   assert.match(displayChatText(finance), /60x/);
   const financeCta = chatWhatsAppCta(finance);
-  assert.equal(financeCta?.label, "Simular parcela");
+  assert.equal(financeCta?.label, "Falar sobre financiamento");
   assert.match(financeCta?.benefit ?? "", /seu caso/);
   assert.match(financeCta?.href ?? "", /wa\.me\/5527996330706/);
   assert.match(financeCta?.href ?? "", /utm_source=site/);
@@ -50,7 +50,7 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
   assert.match(financeCta?.href ?? "", /utm_campaign=chat/);
   assert.match(
     decodeURIComponent(financeCta?.href ?? ""),
-    /Oi! Vi o site da Garagem e quero simular as parcelas\./,
+    /Oi! Vi o site da Garagem e quero saber sobre o financiamento\./,
   );
 
   const trade =
@@ -71,7 +71,7 @@ test("esconde o link seco e vira botão de WhatsApp com um ganho", () => {
     model: "BIZ 125",
     category: "moto",
   });
-  assert.equal(financeVehicle?.label, "Simular parcela");
+  assert.equal(financeVehicle?.label, "Falar sobre financiamento");
   assert.match(decodeURIComponent(financeVehicle?.href ?? ""), /Honda BIZ 125 EX 2023/);
 
   const soldVehicle = chatWhatsAppCta("Chama no WhatsApp: https://wa.me/5527996330706", {
@@ -262,7 +262,7 @@ test("botão do WhatsApp segue a pergunta do visitante, não a resposta", () => 
   assert.match(text, /estoque\/hyundai-hb20s-2022-abc/);
 
   const cases: Array<[string, string]> = [
-    ["dá pra financiar em 48x?", "Simular parcela"],
+    ["dá pra financiar em 48x?", "Falar sobre financiamento"],
     ["aceita meu carro na troca?", "Avaliar minha troca"],
     ["posso agendar uma visita sábado?", "Agendar visita"],
     ["tem mais fotos do interior?", "Pedir mais fotos"],
@@ -272,7 +272,7 @@ test("botão do WhatsApp segue a pergunta do visitante, não a resposta", () => 
     assert.equal(chatWhatsAppCta(reply, hb20s, { userText: ask })?.label, label, ask);
   }
   const finance = decodeURIComponent(chatWhatsAppCta(reply, hb20s, { userText: "qual a parcela?" })?.href ?? "");
-  assert.match(finance, /HB20S.*simular as parcelas/s);
+  assert.match(finance, /HB20S.*saber sobre o financiamento/s);
   const visit = decodeURIComponent(chatWhatsAppCta(reply, hb20s, { userText: "quero agendar visita" })?.href ?? "");
   assert.match(visit, /HB20S.*de perto/s);
   const photos = decodeURIComponent(chatWhatsAppCta(reply, hb20s, { userText: "tem mais fotos?" })?.href ?? "");
