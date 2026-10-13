@@ -113,12 +113,18 @@ const NOT_A_MODEL = new Set(
   ).split(" "),
 );
 
+const KNOWN_BRANDS = new Set(
+  (
+    "ford chevrolet chevy fiat volkswagen vw gm honda hyundai toyota renault nissan jeep peugeot citroen mitsubishi kia yamaha suzuki bmw audi mercedes chery caoa byd gwm volvo ram porsche"
+  ).split(" "),
+);
+
 const OUTSIDE_PHRASE =
-  /\b(?:com o|com a|ou o|ou a|vs|versus|contra o|contra a|do|da|dos|das|sobre o|sobre a|sobre|pelo|pela|e o|e a|tem o|tem a|de um|de uma)\s+([a-z0-9][a-z0-9-]{2,})/g;
+  /\b(?:com o|com a|ou o|ou a|vs|versus|contra o|contra a|do|da|dos|das|sobre o|sobre a|sobre|pelo|pela|e o|e a|tem o|tem a|de um|de uma)\s+([a-z0-9][a-z0-9-]*)/g;
 const COMPARATIVE_THAN =
-  /\b(?:melhor|pior|maior|menor|mais|menos|igual|parecido|diferente)\s+(?:\w+\s+)?(?:que|do que|de que)\s+(?:o|a)\s+([a-z0-9][a-z0-9-]{2,})/g;
+  /\b(?:melhor|pior|maior|menor|mais|menos|igual|parecido|diferente)\s+(?:\w+\s+)?(?:que|do que|de que)\s+(?:o|a)\s+([a-z0-9][a-z0-9-]*)/g;
 const CAPITALIZED_MODEL =
-  /\b(?:o|a|do|da|um|uma|com o|com a|ou o|ou a|vs|versus)\s+([A-Z][A-Za-z0-9-]{2,})/g;
+  /\b(?:o|a|do|da|um|uma|com o|com a|ou o|ou a|vs|versus)\s+([A-Z][A-Za-z0-9-]*)/g;
 
 /**
  * Modelos que a pessoa citou e que não estão no estoque nem na base de fichas
@@ -129,12 +135,26 @@ export function outsideModelCandidates(message: string, stock: ChatVehicleRecord
   const consider = (raw: string) => {
     const token = fold(raw);
     if (!token || /^\d/.test(token) || NOT_A_MODEL.has(token)) return;
+    if (KNOWN_BRANDS.has(token) || stock.some((v) => fold(v.brand) === token)) return;
     if (mentionedModelPools(stock, token).length) return;
     if (specsMentioned(token).length) return;
     if (!found.includes(token)) found.push(token);
   };
-  for (const match of fold(message).matchAll(OUTSIDE_PHRASE)) consider(match[1]!);
-  for (const match of fold(message).matchAll(COMPARATIVE_THAN)) consider(match[1]!);
+  const folded = fold(message);
+  for (const match of folded.matchAll(OUTSIDE_PHRASE)) {
+    const raw = match[1]!;
+    const token = fold(raw);
+    if (KNOWN_BRANDS.has(token) || stock.some((v) => fold(v.brand) === token)) {
+      const rest = folded.slice((match.index ?? 0) + match[0].length).trim();
+      const nextWord = rest.split(/\s+/)[0];
+      if (nextWord && !NOT_A_MODEL.has(nextWord)) {
+        consider(nextWord);
+      }
+      continue;
+    }
+    consider(raw);
+  }
+  for (const match of folded.matchAll(COMPARATIVE_THAN)) consider(match[1]!);
   for (const match of message.matchAll(CAPITALIZED_MODEL)) consider(match[1]!);
   return found;
 }
@@ -187,7 +207,13 @@ function narrowNamed(vehicles: ChatVehicleRecord[], message: string) {
 /** De qual(is) carro(s) do estoque a pergunta técnica está falando. */
 export function expertSubject(ctx: ExpertContext): ExpertSubject {
   const named = mentionedModelPools(ctx.stock, ctx.mensagem).flat();
-  const outside = outsideModelCandidates(ctx.mensagem, ctx.stock);
+  const rawOutside = outsideModelCandidates(ctx.mensagem, ctx.stock);
+  const namedBrands = new Set(named.map((v) => fold(v.brand)));
+  const namedModelTokens = new Set(named.flatMap((v) => fold(v.model).split(/\s+/)));
+  const outside = rawOutside.filter(
+    (token) => !namedBrands.has(token) && !namedModelTokens.has(token) && !named.some((v) => fold(v.model) === token),
+  );
+  const outsideProp = outside.length ? outside : undefined;
   if (named.length) {
     // “Esse HB20…” na ficha de um HB20: é o carro da tela, não a família toda.
     if (
@@ -195,12 +221,12 @@ export function expertSubject(ctx: ExpertContext): ExpertSubject {
       isAnaphoricVehicleFollowUp(ctx.mensagem) &&
       named.some((vehicle) => vehicle.id === ctx.activeVehicle?.id)
     ) {
-      return { vehicles: [ctx.activeVehicle], source: "active", outside };
+      return { vehicles: [ctx.activeVehicle], source: "active", outside: outsideProp };
     }
     const rows = narrowNamed(named, ctx.mensagem);
     // Pediu um ano ou motor que o estoque não tem: não responde com a ficha de outro carro.
     if (rows.length === 0) {
-      return { vehicles: [], source: "named", unmatched: dedupeById(named), outside };
+      return { vehicles: [], source: "named", unmatched: dedupeById(named), outside: outsideProp };
     }
     // "e de consumo, o Civic?" depois de "o Civic 2020…": com dois Civic no estoque,
     // segue o ano/versão já dito na conversa (ou o carro da tela), sem listar os dois.
@@ -212,19 +238,19 @@ export function expertSubject(ctx: ExpertContext): ExpertSubject {
         if (!mentionedModelPools(rows, said[index]!).length) continue;
         const earlier = narrowNamed(rows, said.slice(index).join(" "));
         if (earlier.length >= 1 && earlier.length < rows.length) {
-          return { vehicles: dedupeById(earlier), source: "named", outside };
+          return { vehicles: dedupeById(earlier), source: "named", outside: outsideProp };
         }
         break;
       }
       const onScreen = rows.find((vehicle) => vehicle.id === ctx.activeVehicle?.id);
-      if (onScreen) return { vehicles: [onScreen], source: "named", outside };
+      if (onScreen) return { vehicles: [onScreen], source: "named", outside: outsideProp };
     }
-    return { vehicles: rows, source: "named", outside };
+    return { vehicles: rows, source: "named", outside: outsideProp };
   }
   const outsideSpecs = specsMentioned(ctx.mensagem);
-  if (outsideSpecs.length) return { vehicles: [], source: "outside", specs: outsideSpecs, outside };
+  if (outsideSpecs.length) return { vehicles: [], source: "outside", specs: outsideSpecs, outside: outsideProp };
   // Citou um modelo que não está no estoque nem na base: nunca responde com o carro aberto.
-  if (outside.length) return { vehicles: [], source: "outside", outside };
+  if (outside.length) return { vehicles: [], source: "outside", outside: outsideProp };
   const topics = detectSpecTopics(ctx.mensagem);
   const comparing = topics.includes("ranking") || topics.includes("comparacao");
   // “E o torque?”, “o 2020”, “quantos cavalos ela tem?”: segue o modelo dito antes pelo visitante.
@@ -441,7 +467,7 @@ export function buildExpertPromptBlock(plan: ExpertPlan) {
     "- NUNCA afirme nada sobre a UNIDADE do estoque: estado, revisões, histórico, dono, laudo, garantia além da política da loja, ou equipamento que não esteja na linha do estoque. Equipamentos da base genérica não comprovam versão e ano exatos; só dados cadastrados ou pesquisa exata confirmada permitem afirmá-los; “esta unidade tem…” só com o que está na linha do estoque. Estado e histórico: consultor. Manutenção: destaque mecânica conhecida e oferta de peças. NÃO traga pontos de atenção, defeitos ou críticas espontaneamente. Só responda a uma crítica quando o visitante perguntar diretamente, com tato e sem mentir. Nunca diga que a unidade tem laudo, garantia de fábrica, revisões feitas, “original”, dono único, ausência de batida/sinistro nem que passou por “conferência de qualidade”: esse dado não está no anúncio e o consultor confirma. Marca sempre a dos dados (o HB20 é Hyundai, o City é Honda).",
   );
   lines.push(
-    "- Comparação (“qual o mais forte / que gasta menos / mais espaçoso?”): compare os carros da conversa (os que acabaram de aparecer) usando os números das fichas, com abertura neutra e o ponto forte real de cada um. Entre nossos carros, nunca declare vencedor, vantagem geral, superioridade ou que um é melhor que o outro; pode mostrar que um tem mais cv e o outro mais torque em baixa. Sem inventar critério. Para modelo que não está no estoque (ex.: Onix), compare com o que você conhece dele e diga que no momento não temos esse no estoque. Formato pro cliente leigo: 1 frase curta e depois uma linha por carro “• Modelo Versão Ano — dado pedido” (ex.: “• Civic EXL 2020 — 155 cv”), sem km, preço nem motor repetido.",
+    "- Comparação (“qual o mais forte / que gasta menos / mais espaçoso?”): compare os carros da conversa (os que acabaram de aparecer) usando os números das fichas, com abertura neutra e o ponto forte real de cada um. Entre nossos carros, nunca declare vencedor, vantagem geral, superioridade ou que um é melhor que o outro; pode mostrar que um tem mais cv e o outro mais torque em baixa. Sem inventar critério. Para modelo que não está no estoque (ex.: Taycan), compare com o que você conhece dele e diga que no momento não temos esse no estoque. Formato pro cliente leigo: 1 frase curta e depois uma linha por carro “• Modelo Versão Ano — dado pedido” (ex.: “• Civic EXL 2020 — 155 cv”), sem km, preço nem motor repetido.",
   );
   lines.push(
     "- Não despeje a lista do estoque nem repita preço e km se a pergunta não pediu. Nunca mostre preço de carro vendido nem a cidade do veículo. Só convide para o consultor/WhatsApp quando ajudar de verdade.",
