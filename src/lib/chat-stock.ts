@@ -416,9 +416,7 @@ function modelMatchNeedles(model: string) {
   const compact = compactAlnum(model);
   const first = full.split(" ").find((token) => /[a-z]/.test(token) && (token.length >= 3 || token === "ka" || token === "cg"));
   const needles = [full];
-  if (compact.length >= 2 && compact !== full.replace(/ /g, "")) {
-    needles.push(compact);
-  } else if (compact.length >= 2) {
+  if (compact.length >= 3) {
     needles.push(compact);
   }
   if (first && first !== full) needles.push(first);
@@ -430,14 +428,14 @@ function messageMentionsModel(mensagem: string, model: string) {
   const compactMsg = compactAlnum(mensagem);
   // "a CG tem partida elétrica?", "Ford Ka": sigla ou modelo de 2 letras ("CG 160 Start", "Ka Sedan", "Ka").
   const head = normalize(model).split(" ");
-  if (head.length > 0 && /^[a-z]{2}$/.test(head[0]!) && new RegExp(`\\b${head[0]}\\b`).test(folded)) {
+  if (head.length > 0 && /^(?:ka|cg)$/.test(head[0]!) && new RegExp(`\\b${head[0]}\\b`).test(folded)) {
     return true;
   }
   for (const needle of modelMatchNeedles(model)) {
     if (needle.includes(" ") ? folded.includes(needle) : new RegExp(`\\b${needle}\\b`).test(folded)) {
       return true;
     }
-    if (!needle.includes(" ") && compactMsg.includes(needle) && (needle.length >= 3 || needle === "ka" || needle === "cg")) {
+    if (!needle.includes(" ") && compactMsg.includes(needle) && needle.length >= 3) {
       return true;
     }
   }
