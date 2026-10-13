@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { ChatTurn } from "./chat-gemini";
 import { runChatTurn } from "./chat-turn";
-import { scopeChatMessage, type ChatVehicleRecord } from "./chat-stock";
+import { scopeChatMessage, formatChatWaitlistQuery, similarAfterEmptyFilter, type ChatVehicleRecord } from "./chat-stock";
 import { parsePriceLimit } from "./chat-prompt";
 import { asksForMoreChatVehicles, parseChatSearchRanges } from "./chat-search-filters";
 
@@ -31,7 +31,7 @@ test("Manual de 45 a 50 mil → outro → outros mantém faixa, oferece automát
       seen.add(vehicle.id);
       assert.ok(result.reply.includes(vehicle.href), "O nome do veículo precisa ser clicável");
     }
-    assert.match(result.reply, /\?/);
+    assert.match(result.reply.trim(), /\?$/);
     assert.doesNotMatch(result.reply, /CG 160|Palio 2008|Gol 2012|cv\b|simulador|Linhares|consignado/);
     if (mensagem === "Manual de 45 a 50 mil") assert.deepEqual(result.vehicles.map(v => v.id), ["weekend"]);
     if (mensagem === "outro") {
@@ -41,6 +41,7 @@ test("Manual de 45 a 50 mil → outro → outros mantém faixa, oferece automát
     if (mensagem === "outros") {
       assert.equal(result.vehicles.length, 0);
       assert.match(result.reply, /Não tenho outras opções.*Quer considerar outro câmbio ou ampliar/s);
+      assert.match(result.reply, /faixa de R\$ 45\.000 a R\$ 50\.000\?$/);
     }
     historico.push({ role: "user", content: mensagem }, { role: "assistant", content: result.reply });
   }
@@ -61,12 +62,54 @@ test("automático até 70 mil → mais mantém câmbio e teto sem repetir", asyn
 test("tem moto? libera motos e tem mais continua buscando motos", async () => {
   const first = await runChatTurn({ mensagem: "tem moto?", historico: [], stock, generate });
   assert.deepEqual(first.vehicles.map(v => v.id), ["cg"]);
+  assert.match(first.reply.trim(), /\?$/);
   const next = await runChatTurn({ mensagem: "tem mais", stock, generate, historico: [
     { role: "user", content: "tem moto?" }, { role: "assistant", content: first.reply },
   ] });
   assert.equal(next.vehicles.length, 0);
   assert.match(next.reply, /Já te mostrei|só esse/);
   assert.match(next.reply, /\?/);
+});
+
+test("mais após esgotar automáticos não troca por manual mesmo dentro do orçamento", async () => {
+  const estoque = stock.filter(v => ["weekend", "duster", "civic"].includes(v.id));
+  const primeira = await runChatTurn({ mensagem: "automático até 70 mil", historico: [], stock: estoque, generate });
+  assert.deepEqual(primeira.vehicles.map(v => v.id), ["duster"]);
+  const proxima = await runChatTurn({ mensagem: "mais", stock: estoque, generate, previousVehicleIds: ["duster"], historico: [
+    { role: "user", content: "automático até 70 mil" }, { role: "assistant", content: primeira.reply },
+  ] });
+  assert.deepEqual(proxima.vehicles, []);
+  assert.match(proxima.reply, /Automático nessa faixa é só esse/);
+  assert.match(proxima.reply.trim(), /\?$/);
+});
+
+test("sem veículos na faixa não usa fallback acima do teto ou abaixo do piso", async () => {
+  const foraDaFaixa = stock.filter(v => v.price < 45000 || v.price > 50000);
+  const result = await runChatTurn({ mensagem: "Manual de 45 a 50 mil", historico: [], stock: foraDaFaixa, generate });
+  assert.deepEqual(result.vehicles, []);
+  assert.match(result.reply, /manual de R\$ 45\.000 a R\$ 50\.000/);
+  assert.match(result.reply.trim(), /\?$/);
+  assert.deepEqual(similarAfterEmptyFilter("manual de 45 a 50 mil", foraDaFaixa), []);
+  assert.equal(formatChatWaitlistQuery("manual de 45 a 50 mil"), "manual de R$ 45.000 a R$ 50.000");
+});
+
+test("sem motos informa ausência, sem mostrar carros e com convite final", async () => {
+  const result = await runChatTurn({ mensagem: "tem moto?", historico: [], stock: stock.filter(v => v.category !== "moto"), generate });
+  assert.deepEqual(result.vehicles, []);
+  assert.match(result.reply, /moto.*ainda não tem anúncio/);
+  assert.match(result.reply.trim(), /\?$/);
+});
+
+test("convite fecha políticas, comparações e respostas geradas após o polimento", async () => {
+  for (const mensagem of ["aceita troca?", "qual a garantia?", "Kicks ou Civic?", "quero um carro para viajar"]) {
+    const chunks: string[] = [];
+    const result = await runChatTurn({ mensagem, historico: [], stock, readIntent: async () => null,
+      generate: async () => ({ text: "Posso te ajudar a escolher pelo uso no dia a dia.", finishReason: "STOP" }),
+      onToken: text => chunks.push(text),
+    });
+    assert.match(result.reply.trim(), /\?$/, mensagem);
+    assert.equal(chunks.join(""), result.reply);
+  }
 });
 
 test("follow-ups preservam faixa mínima, máxima e carroceria através de perguntas intermediárias", () => {

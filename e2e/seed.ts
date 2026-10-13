@@ -25,6 +25,19 @@ try {
   await prisma.vehicle.upsert({ where: { id: soldId }, create: sold, update: sold });
   await prisma.photo.deleteMany({ where: { vehicleId: soldId } });
   await prisma.photo.createMany({ data: photos.map((photo, order) => ({ ...photo, vehicleId: soldId, order })) });
+  // A conversa HTTP reproduz o caso informado pelo Lucas sem mudar as fixtures do browser.
+  if (process.env.E2E_CHAT_CONVERSA === "1") {
+    const weekend = {
+      brand: "Fiat", model: "Palio Weekend", year: 2016, yearModel: 2016,
+      price: 47900, transmission: "Manual", category: "carro", fuel: "Flex",
+      km: 50000, status: "disponivel", historical: false,
+    };
+    await prisma.vehicle.upsert({
+      where: { id: "ce2eweekend000000000000001" },
+      create: { id: "ce2eweekend000000000000001", ...weekend }, update: weekend,
+    });
+    console.log("Conversa HTTP: Palio Weekend 2016 manual de R$ 47.900 (km fictício de teste).");
+  }
   console.log("E2E: três disponíveis e uma simulação de vendido no banco local.");
 } finally { await prisma.$disconnect(); }
 

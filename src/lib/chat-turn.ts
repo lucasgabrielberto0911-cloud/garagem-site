@@ -405,6 +405,12 @@ async function runChatTurnInternal(input: {
       },
     }, input, picked);
     result.reply = sanitizePower(result.reply, expertPlan?.subject.vehicles.length ? expertPlan.subject.vehicles : picked.length ? picked : activeVehicle ? [activeVehicle] : []);
+    // O convite vem após toda a formatação, inclusive depois de links de WhatsApp.
+    if (!/\?\s*$/u.test(result.reply.trim().replace(/[\p{Extended_Pictographic}\u200d\ufe0f]+$/u, "").trim())) {
+      const convite = "\n\nQual outro detalhe você quer conhecer?";
+      result.reply += convite;
+      if (streamed) input.onToken?.(convite);
+    }
     if (!streamed) input.onToken?.(result.reply);
     return result;
   };
@@ -1614,7 +1620,7 @@ export function formatChatResult(result: ChatTurnResult, input: Parameters<typeo
   }
   result.reply = sanitizePower(result.reply, picks);
   if (["inventory-search", "waitlist", "budget"].includes(result.meta?.policy ?? "") && !/\?\s*[^\n]*$/.test(result.reply)) {
-    result.reply += picks.length ? "\n\nQual deles você quer conhecer melhor? Vem dar uma olhada!" : "\n\nQuer considerar outro câmbio ou ampliar um pouco a faixa?";
+    result.reply += picks.length ? "\n\nQual deles você quer conhecer melhor?" : "\n\nQuer considerar outro câmbio ou ampliar um pouco a faixa?";
   }
   return result;
 }

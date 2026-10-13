@@ -70,6 +70,7 @@ async function conversa(turnos) {
 
 function checagensComuns(respostas, falhas) {
   for (const r of respostas) {
+    if (!terminaComPergunta(r.reply)) falhas.push(`"${r.mensagem}": não termina com pergunta/convite`);
     for (const [re, rotulo] of PROIBIDOS) {
       if (re.test(r.reply)) falhas.push(`"${r.mensagem}": menciona ${rotulo}`);
     }
@@ -86,7 +87,17 @@ function semRepeticao(respostas, falhas) {
   }
 }
 
-const HONESTO = /fora d|acima|abaixo|um pouco|alternativ|n[ãa]o (tenho|temos|encontr)|nenhum|sem (mais )?op[çc]|autom[áa]tic/i;
+// Confere o estoque pela API, independente da resposta do assistente.
+const estoque = [];
+for (let pagina = 1; ; pagina++) {
+  const res = await fetch(`${BASE_URL}/api/estoque?page=${pagina}&pageSize=60`, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+  const data = await res.json();
+  if (!res.ok || !Array.isArray(data.vehicles)) throw new Error(`Estoque indisponível: HTTP ${res.status}`);
+  estoque.push(...data.vehicles);
+  if (!data.hasMore) break;
+}
+const motosDisponiveis = estoque.filter(ehMoto);
+console.log(`Estoque conferido: ${estoque.length} veículos, ${motosDisponiveis.length} motos.`);
 
 const cenarios = [
   {
@@ -98,13 +109,14 @@ const cenarios = [
         for (const v of r.vehicles) {
           if (ehMoto(v)) falhas.push(`"${r.mensagem}": moto ${nome(v)}`);
           const fora = v.price < 45000 || v.price > 50000;
-          if (fora && !HONESTO.test(r.reply)) falhas.push(`"${r.mensagem}": ${nome(v)} fora de R$45-50 mil sem avisar`);
+          if (fora) falhas.push(`"${r.mensagem}": ${nome(v)} fora de R$45-50 mil`);
           if (ehAutomatico(v) && !/autom[áa]tic/i.test(r.reply)) {
             falhas.push(`"${r.mensagem}": ${nome(v)} automático sem dizer que é automático`);
           }
         }
-        if (!terminaComPergunta(r.reply)) falhas.push(`"${r.mensagem}": não termina com pergunta/convite`);
       }
+      const manuais = estoque.filter(v => ehManual(v) && !ehMoto(v) && v.price >= 45000 && v.price <= 50000);
+      if (manuais.length && !respostas[0].vehicles.some(v => manuais.some(m => m.id === v.id))) falhas.push("primeira resposta não mostra o manual disponível na faixa");
     },
   },
   {
@@ -126,9 +138,11 @@ const cenarios = [
     turnos: ["tem moto?"],
     verificar(respostas, falhas) {
       const r = respostas[0];
-      if (!r.vehicles.some(ehMoto)) {
+      if (motosDisponiveis.length && !r.vehicles.some(ehMoto)) {
         falhas.push(`nenhuma moto nos cards (${r.vehicles.map((v) => v.title).join(", ") || "sem cards"})`);
       }
+      if (r.vehicles.some(v => !ehMoto(v))) falhas.push("busca de moto mostrou carro");
+      if (!motosDisponiveis.length && (r.vehicles.length || !/n[ãa]o (?:tenho|temos|tem)|ainda n[ãa]o tem/i.test(r.reply))) falhas.push("ausência de motos no estoque não foi informada honestamente");
     },
   },
 ];

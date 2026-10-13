@@ -135,7 +135,8 @@ test("diferença de HB20 e HB20S reconhece os dois nomes e usa dados existentes"
     assert.match(textoVisivelChat(resultado.reply), /• (?:[^\n]* )?HB20[^\n]*2022 — hatch\. 300 L/);
     assert.match(textoVisivelChat(resultado.reply), /• (?:[^\n]* )?HB20S[^\n]*2024 — sedan\. cerca de 475 L/);
     assert.match(textoVisivelChat(resultado.reply), /^Os dois são ótimas escolhas/);
-    assert.equal(resultado.reply.split("\n").length, 3);
+    assert.equal(resultado.reply.split("\n").length, 5);
+    assert.match(resultado.reply.trim(), /\?$/);
     assert.doesNotMatch(textoVisivelChat(resultado.reply), /R\$/);
     respostaCurta(resultado.reply);
   }

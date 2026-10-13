@@ -2735,6 +2735,9 @@ export function similarAfterEmptyFilter(
   stock: ChatVehicleRecord[],
   limit = 3,
 ): ChatVehicleRecord[] {
+  const floor = parseChatSearchRanges(mensagem).minPrice;
+  const ceiling = parsePriceLimit(mensagem);
+  stock = stock.filter(vehicle => (floor == null || vehicle.price >= floor) && (ceiling == null || vehicle.price <= ceiling));
   const mentioned = singleMentionedModelPool(stock, mensagem);
   const mentionedIds = new Set((mentioned ?? []).map((vehicle) => vehicle.id));
   // "tem Onix?": parecido é carro, não moto (a não ser que a conversa seja de moto).
@@ -2804,6 +2807,7 @@ export function formatChatWaitlistQuery(mensagem: string) {
   const category = parseVehicleCategoryFilter(mensagem);
   const gear = parseTransmissionFilter(mensagem);
   const limit = parsePriceLimit(mensagem);
+  const minPrice = parseChatSearchRanges(mensagem).minPrice;
   if (category === "moto" && !/\bmoto\b/.test(bits.join(" "))) bits.push("moto");
   if (category === "carro" && !/\bcarro\b/.test(bits.join(" "))) {
     bits.push("carro");
@@ -2812,7 +2816,9 @@ export function formatChatWaitlistQuery(mensagem: string) {
     bits.push("automático");
   }
   if (gear === "manual" && !named.includes("manual")) bits.push("manual");
-  if (limit != null) bits.push(`até ${formatChatPrice(limit)}`);
+  if (minPrice != null && limit != null) bits.push(`de ${formatChatPrice(minPrice)} a ${formatChatPrice(limit)}`);
+  else if (limit != null) bits.push(`até ${formatChatPrice(limit)}`);
+  else if (minPrice != null) bits.push(`a partir de ${formatChatPrice(minPrice)}`);
   if (parseCheapIntent(mensagem) && limit == null) bits.push("mais em conta");
   if (isPowerQuery(mensagem) && !bits.some((bit) => /\bforte\b/.test(bit))) {
     bits.push("forte");

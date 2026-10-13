@@ -121,7 +121,7 @@ test("turno fora de escopo não chama o Gemini", async () => {
     },
   });
   assert.equal(called, 0);
-  assert.equal(first.reply, CHAT_OFF_SCOPE_REPLY);
+  assert.equal(first.reply, `${CHAT_OFF_SCOPE_REPLY}\n\nQual outro detalhe você quer conhecer?`);
   assert.equal(first.leadCreated, false);
 
   const repeat = await runChatTurn({
@@ -137,7 +137,7 @@ test("turno fora de escopo não chama o Gemini", async () => {
     },
   });
   assert.equal(called, 0);
-  assert.equal(repeat.reply, CHAT_OFF_SCOPE_REPEAT_REPLY);
+  assert.equal(repeat.reply, `${CHAT_OFF_SCOPE_REPEAT_REPLY}\n\nQual outro detalhe você quer conhecer?`);
 });
 
 test("FIPE é pergunta guardada e não cola no veículo da página", async () => {
@@ -171,7 +171,7 @@ test("FIPE é pergunta guardada e não cola no veículo da página", async () =>
     },
   });
   assert.equal(called, 0);
-  assert.equal(result.reply, CHAT_FIPE_REPLY);
+  assert.equal(result.reply, `${CHAT_FIPE_REPLY}\n\nQual outro detalhe você quer conhecer?`);
   assert.equal(result.vehicles.length, 0);
   assert.equal(result.stockHref, null);
   assert.doesNotMatch(result.reply, /Etios|Corolla|60\.900/);
@@ -191,7 +191,7 @@ test("atalho de garantia cita motor e câmbio", async () => {
     },
   });
   assert.equal(called, 0);
-  assert.equal(result.reply, CHAT_WARRANTY_REPLY);
+  assert.equal(result.reply, `${CHAT_WARRANTY_REPLY}\n\nQual outro detalhe você quer conhecer?`);
   assert.match(result.reply, /garantia comercial de 3 meses para motor e câmbio/);
 });
 
@@ -218,7 +218,7 @@ test("atalhos de financiar e troca não pedem modelo de novo", async () => {
     },
   });
   assert.equal(called, 0);
-  assert.equal(finance.reply, CHAT_FINANCE_REPLY);
+  assert.equal(finance.reply, `${CHAT_FINANCE_REPLY}\n\nQual outro detalhe você quer conhecer?`);
   assert.match(finance.reply, /análise de crédito/);
   assert.match(finance.reply, /com ou sem entrada/);
   assert.match(finance.reply, /WhatsApp/);
@@ -235,7 +235,7 @@ test("atalhos de financiar e troca não pedem modelo de novo", async () => {
     },
   });
   assert.equal(called, 0);
-  assert.equal(card.reply, CHAT_CARD_REPLY);
+  assert.equal(card.reply, `${CHAT_CARD_REPLY}\n\nQual outro detalhe você quer conhecer?`);
   assert.match(card.reply, /18 vezes/);
   assert.doesNotMatch(card.reply, /não (monto|posso|calculo|cubro)/i);
   assert.equal(finance.vehicles.length, 0);
@@ -250,7 +250,7 @@ test("atalhos de financiar e troca não pedem modelo de novo", async () => {
     },
   });
   assert.equal(called, 0);
-  assert.equal(trade.reply, CHAT_TRADE_REPLY);
+  assert.equal(trade.reply, `${CHAT_TRADE_REPLY}\n\nQual outro detalhe você quer conhecer?`);
   assert.doesNotMatch(trade.reply, /qual carro/i);
 });
 
@@ -267,7 +267,7 @@ test("documentação, cartão no financiamento e garantia não passam pelo Gemin
     generate,
   });
   assert.equal(called, 0);
-  assert.equal(docs.reply, CHAT_DOCS_REPLY);
+  assert.equal(docs.reply, `${CHAT_DOCS_REPLY}\n\nQual outro detalhe você quer conhecer?`);
   assert.match(docs.reply, /RG\/CPF|CNH/);
   assert.doesNotMatch(docs.reply, /fipe/i);
 
@@ -277,7 +277,7 @@ test("documentação, cartão no financiamento e garantia não passam pelo Gemin
     stock: [],
     generate,
   });
-  assert.equal(card.reply, CHAT_CARD_REPLY);
+  assert.equal(card.reply, `${CHAT_CARD_REPLY}\n\nQual outro detalhe você quer conhecer?`);
   assert.match(card.reply, /18 vezes/);
   assert.match(card.reply, /60 vezes/);
 
@@ -287,10 +287,10 @@ test("documentação, cartão no financiamento e garantia não passam pelo Gemin
     stock: [],
     generate,
   });
-  assert.equal(warranty.reply, CHAT_WARRANTY_REPLY);
+  assert.equal(warranty.reply, `${CHAT_WARRANTY_REPLY}\n\nQual outro detalhe você quer conhecer?`);
 });
 
-test("filtro vazio oferece waitlist no WhatsApp e similares", async () => {
+test("filtro vazio oferece waitlist no WhatsApp sem veículos fora da faixa", async () => {
   const hb20 = {
     id: "c-hb20-wait",
     brand: "Hyundai",
@@ -328,11 +328,11 @@ test("filtro vazio oferece waitlist no WhatsApp e similares", async () => {
     },
   });
   assert.equal(called, 0);
-  assert.match(result.reply, /não tem anúncio agora/i);
+  assert.match(result.reply, /não tenho automático até R\$ 40\.000 agora/i);
   assert.match(result.reply, /wa\.me|WhatsApp/i);
   assert.match(decodeURIComponent(result.reply), /automático até R\$\s*40\.000/i);
-  assert.ok(result.vehicles.every(v => v.price > 40000));
+  assert.deepEqual(result.vehicles, []);
   assert.doesNotMatch(result.reply, /R\$ 0/);
-  assert.ok(result.vehicles.some((vehicle) => vehicle.model === "HB20"));
+  assert.match(result.reply.trim(), /\?$/);
   assert.equal(result.meta?.policy, "waitlist");
 });
