@@ -414,30 +414,30 @@ export function cheapPriceCap(stock: ChatVehicleRecord[]): number | null {
 function modelMatchNeedles(model: string) {
   const full = normalize(model);
   const compact = compactAlnum(model);
-  const first = full.split(" ").find((token) => /[a-z]/.test(token) && token.length >= 3);
+  const first = full.split(" ").find((token) => /[a-z]/.test(token) && (token.length >= 3 || token === "ka" || token === "cg"));
   const needles = [full];
-  if (compact.length >= 3 && compact !== full.replace(/ /g, "")) {
+  if (compact.length >= 2 && compact !== full.replace(/ /g, "")) {
     needles.push(compact);
-  } else if (compact.length >= 3) {
+  } else if (compact.length >= 2) {
     needles.push(compact);
   }
   if (first && first !== full) needles.push(first);
-  return [...new Set(needles.filter((item) => item.length >= 3))];
+  return [...new Set(needles.filter((item) => item.length >= 3 || item === "ka" || item === "cg"))];
 }
 
 function messageMentionsModel(mensagem: string, model: string) {
   const folded = normalize(mensagem);
   const compactMsg = compactAlnum(mensagem);
-  // "a CG tem partida elétrica?": sigla de 2 letras que abre o nome ("CG 160 Start"), como palavra inteira.
+  // "a CG tem partida elétrica?", "Ford Ka": sigla ou modelo de 2 letras ("CG 160 Start", "Ka Sedan", "Ka").
   const head = normalize(model).split(" ");
-  if (head.length > 1 && /^[a-z]{2}$/.test(head[0]!) && head[0] !== "ka" && new RegExp(`\\b${head[0]}\\b`).test(folded)) {
+  if (head.length > 0 && /^[a-z]{2}$/.test(head[0]!) && new RegExp(`\\b${head[0]}\\b`).test(folded)) {
     return true;
   }
   for (const needle of modelMatchNeedles(model)) {
     if (needle.includes(" ") ? folded.includes(needle) : new RegExp(`\\b${needle}\\b`).test(folded)) {
       return true;
     }
-    if (!needle.includes(" ") && compactMsg.includes(needle) && needle.length >= 3) {
+    if (!needle.includes(" ") && compactMsg.includes(needle) && (needle.length >= 3 || needle === "ka" || needle === "cg")) {
       return true;
     }
   }
