@@ -27,7 +27,8 @@ test("Civic 2020 ou 2015 compara as duas unidades, inclusive após busca incompa
       assert.match(textoVisivelChat(result.reply), /^Os dois são ótimas escolhas/);
       assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2020 —/);
       assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2015 —/);
-      assert.equal(result.reply.split("\n").length, 3);
+      assert.equal(result.reply.split("\n").length, 5);
+      assert.match(result.reply.trim(), /\?$/);
       assert.doesNotMatch(textoVisivelChat(result.reply), /Não achei|leva vantagem|ganha/);
     }
   }

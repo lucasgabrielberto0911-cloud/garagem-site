@@ -56,6 +56,7 @@ test("bateria de 25 perguntas: comparação, mídia, vendidos, preço, pagamento
     assert.match(result.reply, expected, mensagem);
     assert.doesNotMatch(result.reply, /leva vantagem|Sua Garagem|Fontes:|\[LLM\]/, mensagem);
     assert.ok(result.vehicles.length <= 3, mensagem);
-    assert.ok(result.reply.replace(/https?:\/\/\S+/g, "").length < 600, mensagem);
+    assert.ok(result.reply.replace(/https?:\/\/\S+/g, "").length < 650, mensagem);
+    assert.match(result.reply.trim(), /\?$/, mensagem);
   }
 });

@@ -49,6 +49,7 @@ import {
   chatSearchOrder,
   chatSearchResets,
   parseChatDisplacementFilter,
+  asksForMoreChatVehicles,
 } from "@/lib/chat-search-filters";
 import {
   findVehicleSpec,
@@ -251,8 +252,7 @@ export function filterStockByCategory(
   mensagem: string,
 ) {
   const category = resolveChatCategory(mensagem);
-  if (!category) return stock;
-  return stock.filter((vehicle) => (vehicle.category ?? "carro") === category);
+  return stock.filter((vehicle) => (vehicle.category ?? "carro") === (category ?? "carro"));
 }
 
 export function foldedTransmission(value: string) {
@@ -2735,6 +2735,9 @@ export function similarAfterEmptyFilter(
   stock: ChatVehicleRecord[],
   limit = 3,
 ): ChatVehicleRecord[] {
+  const floor = parseChatSearchRanges(mensagem).minPrice;
+  const ceiling = parsePriceLimit(mensagem);
+  stock = stock.filter(vehicle => (floor == null || vehicle.price >= floor) && (ceiling == null || vehicle.price <= ceiling));
   const mentioned = singleMentionedModelPool(stock, mensagem);
   const mentionedIds = new Set((mentioned ?? []).map((vehicle) => vehicle.id));
   // "tem Onix?": parecido é carro, não moto (a não ser que a conversa seja de moto).
@@ -2742,7 +2745,7 @@ export function similarAfterEmptyFilter(
   const motoTalk = resolveChatCategory(mensagem) === "moto" || /\b(motos?|cg|cb|biz|pop|fan|titan|xre|bros|fazer|factor|lander|nmax|pcx|ninja|hornet|twister|crosser|xtz|yamaha|suzuki|kawasaki|harley|scooter|cilindradas|cc)\b/.test(folded);
   const sameKind = (vehicle: ChatVehicleRecord) => ((vehicle.category ?? "carro") === "moto") === motoTalk;
   const relaxed = relaxChatStockFilters(stock, mensagem);
-  const kind = relaxed.some(sameKind) ? relaxed.filter(sameKind) : relaxed;
+  const kind = relaxed.filter(sameKind);
   const liters = parseChatDisplacementFilter(mensagem);
   if (asksForTurbo(mensagem) || liters != null) {
     const geared = filterStockByTransmission(kind, mensagem);
@@ -2804,6 +2807,7 @@ export function formatChatWaitlistQuery(mensagem: string) {
   const category = parseVehicleCategoryFilter(mensagem);
   const gear = parseTransmissionFilter(mensagem);
   const limit = parsePriceLimit(mensagem);
+  const minPrice = parseChatSearchRanges(mensagem).minPrice;
   if (category === "moto" && !/\bmoto\b/.test(bits.join(" "))) bits.push("moto");
   if (category === "carro" && !/\bcarro\b/.test(bits.join(" "))) {
     bits.push("carro");
@@ -2812,7 +2816,9 @@ export function formatChatWaitlistQuery(mensagem: string) {
     bits.push("automático");
   }
   if (gear === "manual" && !named.includes("manual")) bits.push("manual");
-  if (limit != null) bits.push(`até ${formatChatPrice(limit)}`);
+  if (minPrice != null && limit != null) bits.push(`de ${formatChatPrice(minPrice)} a ${formatChatPrice(limit)}`);
+  else if (limit != null) bits.push(`até ${formatChatPrice(limit)}`);
+  else if (minPrice != null) bits.push(`a partir de ${formatChatPrice(minPrice)}`);
   if (parseCheapIntent(mensagem) && limit == null) bits.push("mais em conta");
   if (isPowerQuery(mensagem) && !bits.some((bit) => /\bforte\b/.test(bit))) {
     bits.push("forte");
@@ -2961,7 +2967,8 @@ export function scopeChatMessage(
   const foldedCurrent = normalize(current);
   const fresh = isFreshGeneralRankQuestion(current);
   const resets = chatSearchResets(current);
-  const clearPrice = resets.price || fresh || !isAnaphoricVehicleFollowUp(current);
+  const more = asksForMoreChatVehicles(current);
+  const clearPrice = resets.price || fresh || (!isAnaphoricVehicleFollowUp(current) && !more);
   const clearGear = resets.gear || fresh;
   const clearYear = resets.year || fresh;
   const clearKm = resets.km || fresh;
@@ -3018,7 +3025,7 @@ export function scopeChatMessage(
     (parseVehicleCategoryFilter(current) == null ||
       parseVehicleCategoryFilter(current) === category) &&
     parseBodyStyleFilter(current) == null &&
-    (!isChatSelectionQuery(current) || isAnaphoricVehicleFollowUp(current)) &&
+    (!isChatSelectionQuery(current) || isAnaphoricVehicleFollowUp(current) || more) &&
     modelNames.length > 0
   ) {
     append.push(modelNames.slice(0, 3).join(" "));
@@ -3334,7 +3341,7 @@ export function emptyFilterReply(
 
 /**
  * "Tem algo até 20 mil?" / "carro até 15 mil?" sem carro na faixa: diz o carro mais em conta
- * e, se couber, as motos até esse valor (sem esconder o que temos).
+ * e oferece ampliar a faixa, sem sugerir motos que o visitante não pediu.
  */
 export function budgetFallbackReply(
   mensagem: string,
@@ -3347,15 +3354,9 @@ export function budgetFallbackReply(
   const cars = stock.filter((vehicle) => (vehicle.category ?? "carro") !== "moto");
   if (!cars.length || cars.some((vehicle) => vehicle.price <= limit)) return null;
   const cheapest = [...cars].sort((a, b) => a.price - b.price)[0]!;
-  const motos = stock
-    .filter((vehicle) => vehicle.category === "moto" && vehicle.price <= limit)
-    .sort((a, b) => a.price - b.price);
-  const motoText = motos.length
-    ? ` Moto até esse valor temos ${motos.length === 1 ? "1" : motos.length}: separei aqui.`
-    : "";
   return {
-    reply: `Carro até ${formatChatPrice(limit)} não temos agora; o mais em conta é ${talkName(cheapest).labeled} ${cheapest.yearModel} (${formatChatPrice(cheapest.price)}).${motoText} Se quiser, o consultor te avisa quando chegar um carro nessa faixa: ${CHAT_WHATSAPP_URL}`,
-    vehicles: motos.length ? motos.slice(0, 3) : [cheapest],
+    reply: `Carro até ${formatChatPrice(limit)} não temos agora; o mais em conta é ${talkName(cheapest).labeled} ${cheapest.yearModel} (${formatChatPrice(cheapest.price)}). Quer ampliar um pouco a faixa para conhecer esse carro ou prefere que o consultor te avise quando chegar um nessa faixa? ${CHAT_WHATSAPP_URL}`,
+    vehicles: [cheapest],
   };
 }
 

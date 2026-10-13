@@ -170,10 +170,12 @@ test("troca + busca: aceita a troca e busca sem o carro do visitante", async () 
   assert.ok(turn.vehicles.every((v) => v.model !== "Gol"));
 });
 
-test("orçamento sem carro na faixa: diz o carro mais em conta e mostra motos que cabem", async () => {
+test("orçamento sem carro na faixa: diz o carro mais em conta e oferece ampliar sem motos", async () => {
   const turn = await ask("tô sem grana, tem algo até 20 mil?");
-  assert.match(textoVisivelChat(turn.reply), /^Carro até R\$ 20\.000 não temos agora; o mais em conta é o Palio 2008 \(R\$ 24\.900\)\. Moto até esse valor temos 2/);
-  assert.deepEqual(turn.vehicles.map((v) => v.model), ["BIZ 125", "CG 160 Start"]);
+  assert.match(textoVisivelChat(turn.reply), /^Carro até R\$ 20\.000 não temos agora; o mais em conta é o Palio 2008 \(R\$ 24\.900\)/);
+  assert.match(textoVisivelChat(turn.reply), /Quer ampliar/);
+  assert.doesNotMatch(textoVisivelChat(turn.reply), /moto|BIZ|CG 160/i);
+  assert.deepEqual(turn.vehicles.map((v) => v.model), ["Palio"]);
 });
 
 test("cidade: área de atendimento, não modelo", async () => {
@@ -251,8 +253,8 @@ const ask6 = (mensagem: string) =>
   runChatTurn({ mensagem, historico: [], stock: stock6, readIntent: async () => null, generate: noModel });
 
 test("combustível pela ficha: resposta direta, sem lista", async () => {
-  assert.equal((await ask6("a Biz 125 é flex?")).reply, "Sim, a BIZ 125 é flex (gasolina e etanol).");
-  assert.equal((await ask6("o Lancer é flex?")).reply, "O Lancer é a gasolina, conforme a ficha.");
+  assert.equal((await ask6("a Biz 125 é flex?")).reply, "Sim, a BIZ 125 é flex (gasolina e etanol).\n\nQual outro detalhe você quer conhecer?");
+  assert.equal((await ask6("o Lancer é flex?")).reply, "O Lancer é a gasolina, conforme a ficha.\n\nQual outro detalhe você quer conhecer?");
   const both = await ask6("a Biz aceita etanol?");
   assert.match(textoVisivelChat(both.reply), /BIZ 125 2023 é flex.*BIZ 2023 é a gasolina/);
   assert.equal(both.vehicles.length, 2);
@@ -316,7 +318,7 @@ test("cor: mostra os da cor pedida, aplica os outros filtros e nunca diz 'Preto 
   assert.deepEqual(whiteAuto.vehicles.map((vehicle) => vehicle.id), ["city-b"]);
   const red = await askC("tem carro vermelho?");
   assert.match(textoVisivelChat(red.reply), /^Carro vermelho não temos agora\..*Na cor vermelha, temos a CG 160 Start/);
-  assert.equal((await askC("qual a cor do Nivus?")).reply, "O Nivus que temos é preto.");
+  assert.equal((await askC("qual a cor do Nivus?")).reply, "O Nivus que temos é preto.\n\nQual outro detalhe você quer conhecer?");
 });
 
 test("marca sozinha vira busca; 'CG' (sigla de 2 letras) é o modelo e a partida elétrica vem da ficha", async () => {
@@ -377,7 +379,8 @@ test("comparação de 2: ficha de cada um em uma linha, sem 'Vou te ajudar a esc
   const turn = await ask6("biz 125 ou cg?");
   assert.match(textoVisivelChat(turn.reply), /\n• (?:[^\n]* )?BIZ 125 [^\n]*2023 — mais em conta[^\n]*\n• (?:[^\n]* )?CG 160 Start [^\n]*2023 — /);
   assert.doesNotMatch(textoVisivelChat(turn.reply), /R\$|60 mil km/);
-  assert.equal(turn.reply.split("\n").length, 3);
+  assert.equal(turn.reply.split("\n").length, 5);
+  assert.match(turn.reply.trim(), /\?$/);
   assert.match(textoVisivelChat(turn.reply), /^Os dois são ótimas escolhas/);
   const kids = await ask7("carro pra quem tem 2 filhos");
   assert.doesNotMatch(textoVisivelChat(kids.reply), /não está na lista/);
@@ -390,7 +393,7 @@ test("conversa: 'a mais barata é flex?' responde só ela; capacete/manual não 
     historico: [{ role: "user", content: "quero ver motos" }, { role: "assistant", content: first.reply }],
     stock: stock6, readIntent: async () => null, generate: noModel,
   });
-  assert.equal(fuel.reply, "Sim, a BIZ 125 é flex (gasolina e etanol).");
+  assert.equal(fuel.reply, "Sim, a BIZ 125 é flex (gasolina e etanol).\n\nQual outro detalhe você quer conhecer?");
   assert.match((await ask6("tem capacete junto?")).reply, /não vem no anúncio/);
   assert.match((await ask6("a moto acompanha manual?")).reply, /Manual e chave reserva variam/);
   const good = await ask7("quero um carro bom");

@@ -92,10 +92,10 @@ function sseResponse(
   );
 }
 
-export function readChatTurns(raw: unknown): ChatTurn[] {
+export function readChatTurns(raw: unknown, limit = CHAT_MAX_HISTORY): ChatTurn[] {
   if (!Array.isArray(raw)) return [];
   const turns: ChatTurn[] = [];
-  for (const item of raw.slice(-CHAT_MAX_HISTORY)) {
+  for (const item of raw.slice(-limit)) {
     if (!item || typeof item !== "object") continue;
     const role = (item as { role?: string }).role;
     const content = String((item as { content?: string }).content ?? "").trim();
@@ -141,6 +141,8 @@ export async function handleChatPost(
       historico?: unknown;
       vehicleId?: unknown;
       previousVehicleIds?: unknown;
+      shownVehicleIds?: unknown;
+      searchHistory?: unknown;
       stream?: unknown;
     };
     const vehicleId =
@@ -164,9 +166,15 @@ export async function handleChatPost(
     }
 
     const historico = readChatTurns(body.historico);
+    const searchHistory = Array.isArray(body.searchHistory)
+      ? readChatTurns(body.searchHistory, 100).filter(turn => turn.role === "user")
+      : undefined;
     // Só IDs: nomes, preços e status enviados pelo cliente nunca são fonte de verdade.
     const previousVehicleIds = Array.isArray(body.previousVehicleIds)
       ? [...new Set(body.previousVehicleIds.filter((id): id is string => typeof id === "string" && id.length > 0 && id.length <= 100))].slice(0, 3)
+      : [];
+    const shownVehicleIds = Array.isArray(body.shownVehicleIds)
+      ? [...new Set(body.shownVehicleIds.filter((id): id is string => typeof id === "string" && id.length > 0 && id.length <= 100))].slice(0, 500)
       : [];
     let stock: ChatVehicleRecord[] = [];
     let soldStock: ChatSoldVehicle[] = [];
@@ -210,6 +218,8 @@ export async function handleChatPost(
         stock,
         soldStock,
         previousVehicleIds,
+        shownVehicleIds,
+        searchHistory,
         vehicleId,
         signal,
       });
@@ -252,6 +262,8 @@ export async function handleChatPost(
               stock,
               soldStock,
               previousVehicleIds,
+              shownVehicleIds,
+              searchHistory,
               vehicleId,
               signal,
               onToken: (text) => {

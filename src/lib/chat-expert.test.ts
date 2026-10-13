@@ -46,7 +46,7 @@ test("Lucas 1: quantos cv tem o hb20 1.6? responde o cv primeiro, sem prefixo ro
   });
   assert.equal(
     result.reply,
-    "O HB20 1.6 tem cerca de 128 cv no etanol e 122 cv na gasolina. São números de referência dessa versão; podem variar um pouco na prática.",
+    "O HB20 1.6 tem cerca de 128 cv no etanol e 122 cv na gasolina. São números de referência dessa versão; podem variar um pouco na prática.\n\nQual outro detalhe você quer conhecer?",
   );
   assert.equal(result.meta?.policy, "spec-direct");
   assert.doesNotMatch(result.reply, robotic);
@@ -157,7 +157,7 @@ test("modelo desconhecido: o modelo de linguagem responde com cautela; sem ele, 
       return { text: reply, functionCall: null };
     },
   });
-  assert.equal(known.reply, reply);
+  assert.equal(known.reply, `${reply}\n\nQual outro detalhe você quer conhecer?`);
   assert.match(prompt, /citou taycan, que não está no estoque e não tem ficha aqui/);
   assert.match(prompt, /só com números de que tenha segurança/);
   assert.doesNotMatch(prompt, /FICHAS TÉCNICAS DE REFERÊNCIA/);

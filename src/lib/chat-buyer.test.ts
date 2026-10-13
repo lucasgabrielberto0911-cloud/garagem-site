@@ -240,7 +240,7 @@ test("Esse carro ainda tem? sem ficha pede o modelo, não waitlist de carro", as
     generate: blockedGenerate(),
   });
   assert.equal(result.meta?.policy, "availability-ask");
-  assert.equal(result.reply, CHAT_AVAILABILITY_ASK_REPLY);
+  assert.equal(result.reply, `${CHAT_AVAILABILITY_ASK_REPLY}\n\nQual outro detalhe você quer conhecer?`);
   assert.doesNotMatch(textoVisivelChat(result.reply), /combinação \(carro\)/);
 });
 
@@ -252,7 +252,7 @@ test("qual o melhor? sem modelo não despeja o estoque", async () => {
     generate: blockedGenerate(),
   });
   assert.equal(result.meta?.policy, "compare-ask");
-  assert.equal(result.reply, CHAT_COMPARE_ASK_REPLY);
+  assert.equal(result.reply, `${CHAT_COMPARE_ASK_REPLY}\n\nQual outro detalhe você quer conhecer?`);
   assert.equal(result.vehicles.length, 0);
 });
 

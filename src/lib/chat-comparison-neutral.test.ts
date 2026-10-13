@@ -23,7 +23,8 @@ test("Kicks ou HR-V: abertura neutra, ponto forte de cada ficha e dois cards", a
   assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?HR-V .*2016 — mais em conta/);
   assert.doesNotMatch(textoVisivelChat(result.reply), /leva vantagem|ganha|melhor|Quer que|WhatsApp/);
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id), ["kicks-neutro", "hrv-neutro"]);
-  assert.equal(result.reply.split("\n").length, 3);
+  assert.equal(result.reply.split("\n").length, 5);
+  assert.match(result.reply.trim(), /\?$/);
 });
 
 test("indicação, diferença e dados pedidos entre nossos carros continuam neutros", async () => {
@@ -40,7 +41,8 @@ test("indicação, diferença e dados pedidos entre nossos carros continuam neut
 test("três modelos: uma frase, três linhas e três cards, sem herdar orçamento anterior", async () => {
   const result = await runChatTurn({ mensagem: "Kicks, HR-V ou Civic?", historico: [{ role: "user", content: "até 40 mil" }], stock, readIntent: async () => null, generate: noModel });
   assert.equal(result.vehicles.length, 3);
-  assert.equal(result.reply.split("\n").length, 4);
+  assert.equal(result.reply.split("\n").length, 6);
+  assert.match(result.reply.trim(), /\?$/);
   assert.match(textoVisivelChat(result.reply), /^São ótimas escolhas/);
 });
 

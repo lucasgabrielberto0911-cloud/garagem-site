@@ -1,9 +1,15 @@
-/** Only explicit units/ranges count: an engine, year or km is never a price. */
+/** Só unidades/faixas explícitas contam: motor, ano e km nunca são preço. */
 export function chatSearchText(value: string) {
   return value
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Pedido de novas sugestões, sem confundir com perguntas sobre os carros da lista. */
+export function asksForMoreChatVehicles(value: string) {
+  const text = chatSearchText(value).replace(/[?!.,]+/g, " ").replace(/\s+/g, " ").trim();
+  return /^(?:(?:e|mas|entao)\s+)?(?:(?:tem|teria|quero|mostra|mostre|manda|mande|me mostra|pode mostrar)\s+)?(?:outr[oa]s?|mais)(?:\s+(?:opc(?:ao|oes)|carros?|motos?|veiculos?|modelos?))?(?:\s+(?:por favor|ai))?$/.test(text);
 }
 
 /** Cilindrada exata; dinheiro, km e pedidos de motor mínimo não entram aqui. */

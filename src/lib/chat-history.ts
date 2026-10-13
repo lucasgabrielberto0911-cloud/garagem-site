@@ -8,7 +8,29 @@ export type ChatMessage = {
   stockHref?: string | null;
   leadCreated?: boolean;
   research?: ChatResearch;
+  searchContext?: ChatSearchContext;
 };
+
+export type ChatSearchContext = { searchHistory: Array<{ role: "user"; content: string }>; shownVehicleIds: string[] };
+
+/** O histórico visual pode ser curto; os filtros e as unidades vistas duram a conversa. */
+export function chatSearchContext(messages: ChatMessage[]): ChatSearchContext {
+  const lastContextIndex = messages.findLastIndex(message => message.searchContext);
+  const previous = messages[lastContextIndex]?.searchContext;
+  const recent = messages.slice(lastContextIndex + 1);
+  return {
+    searchHistory: [...(previous?.searchHistory ?? []), ...recent.filter(message => message.role === "user").map(({ content }) => ({ role: "user" as const, content: content.slice(0, 800) }))].slice(-100),
+    shownVehicleIds: [...new Set([...(previous?.shownVehicleIds ?? []), ...recent.flatMap(message => message.role === "assistant" ? (message.vehicles ?? []).map(vehicle => vehicle.id) : [])])].slice(-500),
+  };
+}
+
+function readSearchContext(raw: unknown): ChatSearchContext | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const value = raw as Partial<ChatSearchContext>;
+  const searchHistory = Array.isArray(value.searchHistory) ? value.searchHistory.slice(-100).flatMap(turn => turn?.role === "user" && typeof turn.content === "string" && turn.content.trim() ? [{ role: "user" as const, content: turn.content.slice(0, 800) }] : []) : [];
+  const shownVehicleIds = Array.isArray(value.shownVehicleIds) ? [...new Set(value.shownVehicleIds.filter(id => typeof id === "string" && id.length > 0 && id.length <= 100))].slice(-500) : [];
+  return { searchHistory, shownVehicleIds };
+}
 
 export function readVehicleCards(raw: unknown): ChatVehicleCard[] {
   if (!Array.isArray(raw)) return [];
@@ -106,6 +128,7 @@ export function parseChatHistory(
         messages.push({
           role: row.role,
           content: row.content.slice(0, 5_000),
+          ...(row.searchContext ? { searchContext: readSearchContext(row.searchContext) } : {}),
           ...(row.role === "assistant"
             ? {
                 vehicles: readVehicleCards(row.vehicles),
@@ -157,7 +180,9 @@ export function saveHistoryForKey(key: string, messages: ChatMessage[]) {
   delete store.byKey[key];
   delete store.savedAt[key];
   if (messages.length > 1) {
-    store.byKey[key] = messages.slice(-CHAT_HISTORY_MESSAGES);
+    const saved = messages.slice(-CHAT_HISTORY_MESSAGES);
+    saved[saved.length - 1] = { ...saved[saved.length - 1], searchContext: chatSearchContext(messages) };
+    store.byKey[key] = saved;
     store.savedAt[key] = Date.now();
   }
   writeHistoryStore(store);

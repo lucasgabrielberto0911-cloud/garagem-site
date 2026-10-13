@@ -33,6 +33,7 @@ import {
 } from "@/lib/chat-open";
 import {
   emptyHistory,
+  chatSearchContext,
   readHistoryStore,
   writeHistoryStore,
   saveHistoryForKey,
@@ -998,6 +999,7 @@ export function SiteChat() {
         {
           mensagem,
           previousVehicleIds: lastShownChatVehicles(messages).map(vehicle => vehicle.id),
+          ...chatSearchContext(messages),
           vehicleId: resolveChatRequestVehicleId({
             mensagem,
             pageVehicleId: vehicleContext?.id,
