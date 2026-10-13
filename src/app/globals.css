@@ -1136,9 +1136,43 @@ body:has([data-ficha-page]) .whatsapp-float {
   }
 }
 
+[data-chat-enter] {
+  animation: site-chat-enter 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+[data-chat-enter] [data-chat-vehicle] {
+  animation: site-chat-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.12s;
+}
+
+[data-chat-enter] [data-chat-vehicle]:nth-child(2) {
+  animation-delay: 0.19s;
+}
+
+[data-chat-enter] [data-chat-vehicle]:nth-child(3) {
+  animation-delay: 0.26s;
+}
+
+[data-chat-enter] [data-chat-vehicle]:nth-child(n + 4) {
+  animation-delay: 0.33s;
+}
+
+@keyframes site-chat-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .site-chat-panel,
-  .site-chat-typing span {
+  .site-chat-typing span,
+  [data-chat-enter],
+  [data-chat-enter] [data-chat-vehicle] {
     animation: none;
   }
 }

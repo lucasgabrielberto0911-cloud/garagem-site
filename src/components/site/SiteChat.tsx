@@ -464,15 +464,18 @@ function AssistantRow({
   children,
   pending = false,
   latest = false,
+  enter = false,
 }: {
   children: ReactNode;
   pending?: boolean;
   latest?: boolean;
+  enter?: boolean;
 }) {
   return (
     <div
       className="min-w-0 space-y-2"
       data-chat-latest={latest ? "1" : undefined}
+      data-chat-enter={enter ? "" : undefined}
     >
       {pending ? (
         <div className="w-fit rounded-[18px] rounded-tl-md bg-white/[0.06] px-4 py-3.5">
@@ -551,6 +554,8 @@ export function SiteChat() {
   const sendingRef = useRef(false);
   const pageKeyRef = useRef(pageKey);
   const messagesRef = useRef(messages);
+  // Só respostas criadas depois do envio animam; histórico restaurado entra sem efeito.
+  const enterFromRef = useRef(Number.POSITIVE_INFINITY);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -979,6 +984,12 @@ export function SiteChat() {
     requestRef.current = active;
     const timer = window.setTimeout(() => controller.abort("timeout"), 45_000);
     let streamed = false;
+    enterFromRef.current = nextHistory.length;
+    // Mantém o indicador de digitando por um instante mínimo; respostas lentas não esperam mais nada.
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let revealGate: Promise<void> = reduceMotion
+      ? Promise.resolve()
+      : new Promise((resolve) => window.setTimeout(resolve, 500));
     followScrollRef.current = true;
     setShowLatest(false);
     setFailure(null);
@@ -1004,17 +1015,21 @@ export function SiteChat() {
         (text) => {
           if (requestRef.current !== active) return;
           streamed = true;
-          setMessages((current) => {
-            const last = current[current.length - 1];
-            if (last?.role === "assistant")
-              return [
-                ...current.slice(0, -1),
-                { ...last, content: last.content + text },
-              ];
-            return [...current, { role: "assistant", content: text }];
+          revealGate = revealGate.then(() => {
+            if (requestRef.current !== active) return;
+            setMessages((current) => {
+              const last = current[current.length - 1];
+              if (last?.role === "assistant")
+                return [
+                  ...current.slice(0, -1),
+                  { ...last, content: last.content + text },
+                ];
+              return [...current, { role: "assistant", content: text }];
+            });
           });
         },
       );
+      await revealGate;
       if (requestRef.current === active)
         commitAssistant(data, intent, streamed);
     } catch (error) {
@@ -1224,7 +1239,7 @@ export function SiteChat() {
                   </p>
                 </div>
               ) : (
-                <AssistantRow key={`assistant-${index}`} latest={latest}>
+                <AssistantRow key={`assistant-${index}`} latest={latest} enter={index >= enterFromRef.current}>
                   {index === 0 && message.content === OPENING.content ? (
                     <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#ff7378]">
@@ -1284,7 +1299,7 @@ export function SiteChat() {
               );
             })}
             {showTyping ? (
-              <AssistantRow pending latest>
+              <AssistantRow pending>
                 <span className="sr-only">Digitando</span>
                 <span className="site-chat-typing" aria-hidden="true">
                   <span />
