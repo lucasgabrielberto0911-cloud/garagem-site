@@ -79,3 +79,17 @@ test("capas visíveis antes de baixar o JavaScript e sem mudar de tamanho na hid
     }finally{release();await page.unroute(pattern);}
   }
 });
+
+test("ficha: carros na mesma faixa mostra no máximo 3 cards, numa linha só no desktop",async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem("garagem_consent","essential"));
+  await page.route("**/fotos/**",route=>route.fulfill({contentType:"image/png",body:readFileSync("public/branding/placeholder-car.png")}));
+  await page.goto(vehiclePath(available));
+  const section=page.locator("[data-similar-vehicles]");
+  if(await section.count()===0) return;
+  const items=section.locator(".listing-card-item");
+  expect(await items.count()).toBeLessThanOrEqual(3);
+  if(page.viewportSize()!.width>=1024){
+    const tops=await items.evaluateAll(els=>els.map(el=>Math.round(el.getBoundingClientRect().top)));
+    expect(new Set(tops).size).toBeLessThanOrEqual(1);
+  }
+});

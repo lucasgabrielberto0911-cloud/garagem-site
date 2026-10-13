@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { SimilarVehicles } from "@/components/site/SimilarVehicles";
+import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { FavoritesProvider } from "@/lib/favorites";
 import type { VehicleCardData } from "@/components/site/VehicleCard";
 import {
@@ -136,7 +137,7 @@ test("moto sugere moto perto e deixa de fora carro, vendido e consignado", () =>
   );
 });
 
-test("prefere marca ou câmbio quando ainda fecha quatro na faixa", () => {
+test("prefere marca ou câmbio quando ainda fecha três na faixa", () => {
   const current = {
     id: "self",
     brand: "Honda",
@@ -159,15 +160,15 @@ test("prefere marca ou câmbio quando ainda fecha quatro na faixa", () => {
       }),
     ],
     current,
-    4,
+    3,
   );
   assert.deepEqual(
     picked.map((item) => item.id),
-    ["h1", "h3", "h4", "h2"],
+    ["h1", "h3", "h4"],
   );
 });
 
-test("com menos de quatro da mesma marca ou câmbio, completa a faixa", () => {
+test("com menos de três da mesma marca ou câmbio, completa a faixa", () => {
   const picked = pickRelatedVehicles(
     [
       vehicle({ id: "same", brand: "Honda", price: 92000, transmission: "Manual" }),
@@ -190,11 +191,11 @@ test("com menos de quatro da mesma marca ou câmbio, completa a faixa", () => {
       price: 90000,
       transmission: "Automático",
     },
-    4,
+    3,
   );
   assert.deepEqual(
     picked.map((item) => item.id),
-    ["same", "b", "a", "c"],
+    ["same", "b", "a"],
   );
 });
 
@@ -384,4 +385,34 @@ test("a ficha mantém âncoras, filtros e o formulário, e as cidades o estoque 
   assert.match(related, /status: "disponivel"/);
   assert.match(related, /historical: false/);
   assert.doesNotMatch(related, /take: 48/);
+});
+
+test("ficha pede só três relacionados e a grade não deixa card órfão no desktop", () => {
+  const page = readFileSync("src/app/(vehicle)/estoque/[id]/page.tsx", "utf8");
+  const call = page.slice(page.indexOf("getRelatedVehicles("), page.indexOf("getVehicleConditions()"));
+  assert.match(call, /vehicle\.brand,\s*3,/);
+
+  const cards = Array.from({ length: 4 }, (_, index) => card({ id: `c${index}` }));
+  const html = renderToStaticMarkup(
+    createElement(
+      FavoritesProvider,
+      null,
+      createElement(SimilarVehicles, {
+        vehicles: cards,
+        title: "Carros na mesma faixa",
+        description: "x",
+        stockHref: "/estoque",
+      }),
+    ),
+  );
+  assert.equal((html.match(/listing-card-item/g) ?? []).length, 3);
+
+  const viewed = renderToStaticMarkup(
+    createElement(
+      FavoritesProvider,
+      null,
+      createElement(VehicleGrid, { vehicles: cards, desktopCols: 4, lgVisibleCount: 3 }),
+    ),
+  );
+  assert.equal((viewed.match(/lg:max-xl:hidden/g) ?? []).length, 1);
 });

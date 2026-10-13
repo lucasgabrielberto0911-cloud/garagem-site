@@ -8,12 +8,15 @@ export function VehicleGrid({
   returnTo,
   desktopCols = 3,
   destaqueLimit = 3,
+  lgVisibleCount,
 }: {
   vehicles: VehicleCardData[];
   priorityCount?: number;
   returnTo?: string;
   desktopCols?: 3 | 4;
   destaqueLimit?: number;
+  /** Esconde os cards a partir deste índice só entre lg e xl, para a última linha não ficar com card órfão. */
+  lgVisibleCount?: number;
   /** Mantido para compatibilidade; todos os cards usam agora a mesma foto 4:3. */
   photoLayout?: "default" | "stock";
 }) {
@@ -24,7 +27,7 @@ export function VehicleGrid({
       {vehicles.map((vehicle, index) => {
         const high = index === 0 && priorityCount > 0;
         return (
-          <div key={vehicle.id} className="listing-card-item min-w-0">
+          <div key={vehicle.id} className={`listing-card-item min-w-0${lgVisibleCount !== undefined && index >= lgVisibleCount ? " lg:max-xl:hidden" : ""}`}>
             <VehicleCard
               vehicle={vehicle}
               priority={high}

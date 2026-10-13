@@ -62,7 +62,7 @@ export function RecentlyViewedVehicles() {
               <p>Não conseguimos consultar esses anúncios agora.</p>
               <button type="button" onClick={() => setAttempt(value => value + 1)} className="mt-3 min-h-11 border border-white/25 px-4 font-semibold text-cream hover:border-brand">Tentar novamente</button>
             </div>
-          ) : current.vehicles.length ? <VehicleGrid vehicles={current.vehicles} desktopCols={4} destaqueLimit={0} /> : (
+          ) : current.vehicles.length ? <VehicleGrid vehicles={current.vehicles} desktopCols={4} lgVisibleCount={3} destaqueLimit={0} /> : (
             <p role="status" className="py-3 text-sm leading-relaxed text-muted">Esses anúncios não estão disponíveis agora. Você pode continuar escolhendo no estoque.</p>
           )}
         </div>
