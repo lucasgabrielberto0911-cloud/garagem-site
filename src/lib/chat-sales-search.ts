@@ -9,6 +9,9 @@ import {
   parseTransmissionFilter,
   searchChatInventory,
   formatChatWaitlistQuery,
+  parseVehicleCategoryFilter,
+  resolveChatCategory,
+  talkName,
   type ChatVehicleRecord,
 } from "./chat-stock";
 import { vehiclePath } from "./vehicle-slug";
@@ -44,16 +47,49 @@ export function planChatSalesSearch(
   const gear = parseTransmissionFilter(scopedMessage);
   const price = parsePriceLimit(scopedMessage);
   const minPrice = parseChatSearchRanges(scopedMessage).minPrice;
+  const category = parseVehicleCategoryFilter(scopedMessage) ?? resolveChatCategory(scopedMessage);
   // As buscas iniciais continuam nos atalhos existentes; filtros vazios de câmbio/preço
   // e novas sugestões precisam de uma resposta honesta antes de qualquer fallback.
   const initialEmpty = !more && !shownIds.size;
   if (initialEmpty && !(gear && price != null && !exact && !asksForTurbo(scopedMessage) && parseChatDisplacementFilter(scopedMessage) == null)) return null;
   if (found) {
     const blocks = formatChatCarBlocks(found.picks, scopedMessage);
-    return { policy: "inventory-alternatives", picks: found.picks, reply: `${blocks}\n\nQual ${found.picks.length === 1 ? "detalhe desse você quer conhecer" : "desses você quer conhecer melhor"}?` };
+    return { policy: "inventory-alternatives", picks: found.picks, reply: `${blocks}\n\nQual ${found.picks.length === 1 ? (found.picks[0]?.category === "moto" ? "detalhe dessa moto você quer conhecer" : "detalhe desse você quer conhecer") : "desses você quer conhecer melhor"}?` };
   }
 
-  const label = gear === "manual" ? "Manual" : gear === "automatico" ? "Automático" : "Veículo";
+  // Moto automática (scooter) não temos, mas as Biz semiautomáticas atendem quem busca pilotar sem embreagem.
+  if (gear === "automatico" && category === "moto") {
+    const semi = unseen.filter(
+      v => (v.category === "moto" || /biz/i.test(v.model)) &&
+           /semi/.test(chatSearchText(v.transmission ?? "")) &&
+           (price == null || v.price <= price) &&
+           (minPrice == null || v.price >= minPrice)
+    );
+    if (semi.length) {
+      const picks = semi.slice(0, 3);
+      const names = [...new Set(picks.map(v => talkName(v).name))].join(" e a ");
+      const blocks = formatChatCarBlocks(picks, scopedMessage);
+      const question = picks.length === 1 ? "Quer conhecer melhor essa moto?" : "Qual dessas motos você quer conhecer melhor?";
+      return {
+        policy: initialEmpty ? "waitlist" : "inventory-alternatives",
+        picks,
+        reply: `Moto automática (scooter) não temos agora, mas a ${names} ${picks.length > 1 ? "são semi-automáticas" : "é semi-automática"}: sem embreagem, só troca a marcha no pé.\n\n${blocks}\n\n${question}`,
+      };
+    }
+  }
+
+  const label =
+    category === "moto"
+      ? gear === "automatico"
+        ? "Moto automática"
+        : gear === "manual"
+          ? "Moto manual"
+          : "Moto"
+      : gear === "manual"
+        ? "Manual"
+        : gear === "automatico"
+          ? "Automático"
+          : "Veículo";
   const recorte = price != null ? "nessa faixa" : "com esses filtros";
   const exactCount = exact?.candidates.length ?? 0;
   const intro = exactCount === 1
