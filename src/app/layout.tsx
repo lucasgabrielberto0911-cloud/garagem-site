@@ -1,7 +1,7 @@
 import { WhatsAppOrigin } from "@/components/site/WhatsAppOrigin";
 import { consentBootstrapScript } from "@/lib/consent";
 import type { Metadata, Viewport } from "next";
-import { Inter, Sora } from "next/font/google";
+import { Barlow_Condensed, Inter } from "next/font/google";
 import { AppToaster } from "@/components/Toaster";
 import { BootSplash } from "@/components/site/BootSplash";
 import { PwaRegister } from "@/components/site/PwaRegister";
@@ -10,12 +10,12 @@ import { site } from "@/lib/site";
 import { HOME_SEO_DESCRIPTION, HOME_SEO_TITLE } from "@/lib/seo-local";
 import "./globals.css";
 
-const display = Sora({
+const display = Barlow_Condensed({
   subsets: ["latin"],
   weight: ["600", "700"],
   variable: "--font-display",
   display: "swap",
-  // A capa do LCP disputa a rede lenta do celular. Preload da Sora atrasava
+  // A capa do LCP disputa a rede lenta do celular. Preload da Barlow Condensed atrasava
   // a primeira pintura; o CSS continua baixando a fonte, com fallback métrico.
   preload: false,
   adjustFontFallback: true,
@@ -31,16 +31,6 @@ const body = Inter({
 });
 
 const description = HOME_SEO_DESCRIPTION;
-
-function supabaseOrigin() {
-  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  if (!raw) return null;
-  try {
-    return new URL(raw).origin;
-  } catch {
-    return null;
-  }
-}
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -178,15 +168,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const storageOrigin = supabaseOrigin();
-
   return (
     <html lang="pt-BR" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <script id="garagem-consent-bootstrap" dangerouslySetInnerHTML={{ __html: consentBootstrapScript() }} />
-        {storageOrigin ? (
-          <link rel="preconnect" href={storageOrigin} crossOrigin="anonymous" />
-        ) : null}
         <script
           id="garagem-install-capture"
           dangerouslySetInnerHTML={{ __html: installCaptureScript() }}

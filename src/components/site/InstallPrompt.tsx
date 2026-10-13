@@ -18,6 +18,7 @@ import {
   type InstallCoachKind,
 } from "@/lib/pwa-install";
 import { site } from "@/lib/site";
+import { CONSENT_EVENT, isConsentChoice, readStoredConsent } from "@/lib/consent";
 
 export function InstallPrompt() {
   const pathname = usePathname();
@@ -29,6 +30,7 @@ export function InstallPrompt() {
     if (typeof window === "undefined") return;
     let timer = 0;
     let cancelled = false;
+    let consent = readStoredConsent();
 
     function standaloneNow() {
       return isStandaloneDisplay(
@@ -41,10 +43,11 @@ export function InstallPrompt() {
     }
 
     function schedule(next: InstallCoachKind) {
-      if (!next || timer) return;
+      if (!next || timer || !consent) return;
       const delay = next === "ios" ? 10000 : 12000;
       timer = window.setTimeout(() => {
-        if (cancelled) return;
+        timer = 0;
+        if (cancelled || !consent) return;
         const dismissKey = next === "ios" ? IOS_TIP_DISMISS_KEY : INSTALL_DISMISS_KEY;
         let seenAt: number | null = null;
         try {
@@ -87,7 +90,7 @@ export function InstallPrompt() {
     }
 
     function consider() {
-      if (cancelled || standaloneNow()) return;
+      if (cancelled || !consent || standaloneNow()) return;
       const mobileSurface = window.matchMedia(
         "(max-width: 1023px), (pointer: coarse)",
       ).matches;
@@ -103,13 +106,21 @@ export function InstallPrompt() {
       if (ios) schedule("ios");
     }
 
+    function onConsent(event: Event) {
+      const choice = (event as CustomEvent).detail;
+      consent = isConsentChoice(choice) ? choice : readStoredConsent();
+      consider();
+    }
+
     consider();
+    window.addEventListener(CONSENT_EVENT, onConsent);
     window.addEventListener("garagem:install-change", consider);
 
     return () => {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
       window.removeEventListener("garagem:install-change", consider);
+      window.removeEventListener(CONSENT_EVENT, onConsent);
     };
   }, [hideOnMoneyPage]);
 

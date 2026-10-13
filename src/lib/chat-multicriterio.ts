@@ -146,7 +146,7 @@ export function formatChatCarBlocks(picks: ChatVehicleRecord[], message: string)
   const isMoto = picks.length > 0 && (picks.every(v => v.category === "moto") || /\bmotos?\b/.test(fold(message)));
   const kindLabel = isMoto ? "motos" : bodyLabel;
   const gear = parseTransmissionFilter(message);
-  const gearLabel = gear === "automatico" ? body === "pickup" || body === "wagon" ? "automáticas" : "automáticos" : gear === "manual" ? "manuais" : "";
+  const gearLabel = gear === "automatico" ? isMoto || body === "pickup" || body === "wagon" ? "automáticas" : "automáticos" : gear === "manual" ? "manuais" : "";
   const intro = kindLabel ? `Olha o que tenho de ${kindLabel}${gearLabel ? ` ${gearLabel}` : ""} pro seu pedido:` : picks.length === 1 ? "Esse aqui combina bem com o seu pedido:" : intros[hash(message) % intros.length];
   const missing = criteria.economy ? picks.filter(v => { const spec = findVehicleSpec(v); return !spec || specCityKmL(spec) == null; }) : [];
   const source = consumptionUsed ? "O consumo é uma referência do Inmetro e varia conforme o uso." : "";

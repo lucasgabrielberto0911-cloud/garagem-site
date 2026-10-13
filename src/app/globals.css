@@ -19,7 +19,7 @@
   );
   --admin-nav-h: 0px;
   /* Barra fixa da ficha. A primeira dobra desconta esta altura para a foto não ficar embaixo. */
-  --ficha-sticky-bar: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+  --ficha-sticky-bar: calc(6rem + env(safe-area-inset-bottom, 0px));
   /* Âncoras Fotos / Especificações / Detalhes. A dobra do celular desconta esta faixa. */
   --ficha-section-nav: 2.75rem;
   /*
@@ -374,6 +374,13 @@ body {
   animation: fadeInScale 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Celular: o cabeçalho já mostra a marca, então o hero não repete o logo. */
+@media (max-width: 639px) {
+  .hero-brand {
+    display: none;
+  }
+}
+
 /* Wordmark do hero menor que o splash — o header já carrega a marca. */
 .hero-brand img {
   width: min(40vw, 132px);
@@ -486,6 +493,12 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   margin-inline: 0;
   column-gap: 0.75rem;
   row-gap: 0.875rem;
+}
+/* Celular (2 colunas): o último card, se ímpar, ocupa a linha inteira em vez de ficar órfão. */
+@media (max-width: 1023px) {
+  .listing-card-grid > .listing-card-item:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
 .listing-card-item,
 .listing-card-item .listing-card {
@@ -642,6 +655,28 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   body:has(.site-chat.is-open) .whatsapp-float {
     display: none;
   }
+
+  /*
+   * A faixa reservada no conteúdo deixa os dois atalhos fora dos cards.
+   */
+  body:has(.listing-card-grid) main {
+    padding-right: 6.5rem;
+  }
+
+  body:has(.listing-card-grid) .site-chat:not(.is-open) {
+    right: 1.5rem;
+    bottom: calc(1.5rem + 3.5rem + 0.75rem);
+  }
+
+  body:has(.listing-card-grid) .site-chat:not(.is-open) .site-chat-launcher {
+    width: 3.5rem;
+    height: 3.5rem;
+    padding: 0;
+  }
+
+  body:has(.listing-card-grid) .site-chat:not(.is-open) .site-chat-launcher span {
+    display: none;
+  }
 }
 
 .site-chat-panel :focus-visible {
@@ -677,11 +712,15 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 }
 
 @media (max-width: 1023px) {
+  /* Painel de ponta a ponta: encosta no rodapé e não deixa a página aparecer atrás. */
   .site-chat.is-open {
-    left: max(0.5rem, env(safe-area-inset-left, 0px));
-    right: max(0.5rem, env(safe-area-inset-right, 0px));
-    top: max(0.5rem, env(safe-area-inset-top, 0px));
-    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+      env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    @apply bg-asphalt;
     width: auto;
     height: auto;
     max-width: none;
@@ -692,6 +731,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   body[data-chat-keyboard] .site-chat.is-open {
     bottom: 0;
     top: 0;
+    padding-bottom: 0;
   }
 
   body[data-chat-keyboard] .site-chat.is-open .site-chat-panel {
@@ -703,6 +743,8 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
     width: 100%;
     height: 100%;
     max-height: none;
+    border-radius: 0;
+    border-width: 0;
     min-height: 0;
     flex: 1 1 auto;
     animation: fadeIn 0.2s ease both;
@@ -784,14 +826,19 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 
 body:has([data-vehicle-mobile-bar]) .site-consent,
 body:has([data-ficha-page]) .site-consent {
-  bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--ficha-sticky-bar) + 0.25rem);
+}
+
+/* Convite de instalação espera a escolha de cookies: nunca empilha os dois. */
+body:has(.site-consent) [data-install-coach] {
+  display: none;
 }
 
 body:has(.site-chat.is-open) .site-consent,
 body:has([data-nav-open]) .site-consent,
 body:has([data-nav-open]) .site-chat:not(.is-open),
 body:has([data-filters-open]) .site-chat:not(.is-open),
-body:has([data-install-coach]) .site-chat:not(.is-open) {
+body:not(:has(.site-consent)):has([data-install-coach]) .site-chat:not(.is-open) {
   display: none;
 }
 

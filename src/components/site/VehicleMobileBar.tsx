@@ -34,7 +34,7 @@ function openWhatsApp(
 /**
  * Barra fixa no mobile, sempre visível. A altura está em `--ficha-sticky-bar`
  * para a primeira dobra reservar o espaço e a foto não ficar por baixo.
- * Simular, troca e vídeo sobem por cima da barra, sem empurrar o layout.
+ * Financiamento, troca e vídeo sobem por cima da barra, sem empurrar o layout.
  */
 export function VehicleMobileBar({
   vehicleId,
@@ -102,9 +102,9 @@ export function VehicleMobileBar({
     financeHref
       ? {
           href: financeHref,
-          label: "Simular",
+          label: "Financiamento",
           tracking: "ficha-finance",
-          aria: "Simular parcelas deste veículo no WhatsApp",
+          aria: "Falar sobre financiamento deste veículo no WhatsApp",
         }
       : null,
     tradeHref
@@ -142,7 +142,7 @@ export function VehicleMobileBar({
   return (
     <div
       data-vehicle-mobile-bar=""
-      className="fixed inset-x-0 bottom-0 z-40 box-border min-h-[var(--ficha-sticky-bar)] border-t border-white/15 bg-asphalt px-3 pt-2 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pl-safe pr-safe lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 box-border min-h-[var(--ficha-sticky-bar)] border-t border-white/15 bg-asphalt pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] lg:hidden"
     >
       <div className="relative mx-auto max-w-6xl">
         {!sold && moreOpen && secondary.length > 0 ? (
@@ -191,7 +191,7 @@ export function VehicleMobileBar({
         ) : null}
 
         <div className="flex items-center gap-3">
-          <div className="min-w-0 flex-1 pl-0.5">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-xs text-muted">
               {sold ? "Já vendido" : `${brand} ${model} · ${year}`}
             </p>
@@ -204,9 +204,9 @@ export function VehicleMobileBar({
                 aria-expanded={moreOpen}
                 aria-controls={moreId}
                 onClick={() => setMoreOpen((open) => !open)}
-                className="mt-0.5 min-h-11 text-left font-display text-[11px] font-semibold text-muted underline-offset-2 transition hover:text-cream hover:underline active:text-cream active:underline touch-manipulation"
+                className="min-h-11 text-left font-display text-[11px] font-semibold text-muted underline-offset-2 transition hover:text-cream hover:underline active:text-cream active:underline touch-manipulation"
               >
-                {moreOpen ? "Fechar opções" : "Simular / troca / vídeo"}
+                {moreOpen ? "Fechar opções" : "Financiamento, troca ou vídeo"}
               </button>
             ) : null}
           </div>
@@ -220,7 +220,7 @@ export function VehicleMobileBar({
               {soldLabel}
             </Link>
           ) : (
-            <div className="flex shrink-0 flex-col items-stretch gap-1">
+            <div className="flex shrink-0 flex-col items-stretch gap-0.5">
               <VehicleLeadHit
                 contentId={vehicleId}
                 contentName={contentName}
@@ -244,7 +244,7 @@ export function VehicleMobileBar({
                   onClick={(event) =>
                     openWhatsApp(event, href, "ficha-mobile", vehicleId, vehicleSlug)
                   }
-                  className="inline-flex min-h-12 shrink-0 items-center justify-center gap-1.5 bg-brand px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide text-cream touch-manipulation hover:bg-[#c91418] sm:px-4 sm:text-sm"
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 bg-brand px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-cream touch-manipulation hover:bg-[#c91418] sm:px-4 sm:text-sm"
                 >
                   <IconWhatsApp className="h-4 w-4" />
                   <span className="text-left leading-tight">

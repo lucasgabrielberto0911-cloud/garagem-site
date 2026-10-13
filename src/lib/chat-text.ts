@@ -431,8 +431,8 @@ export function chatWhatsAppCta(
           : WHATSAPP_MESSAGES.finance,
         subjectTrack,
       ),
-      label: "Simular parcela",
-      benefit: "O consultor calcula no seu caso",
+      label: "Falar sobre financiamento",
+      benefit: "O consultor explica as condições no seu caso",
     };
   }
   if (wants("trade", /\btroca\b/)) {

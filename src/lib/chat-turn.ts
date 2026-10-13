@@ -1620,7 +1620,11 @@ export function formatChatResult(result: ChatTurnResult, input: Parameters<typeo
   }
   result.reply = sanitizePower(result.reply, picks);
   if (["inventory-search", "waitlist", "budget"].includes(result.meta?.policy ?? "") && !/\?\s*[^\n]*$/.test(result.reply)) {
-    result.reply += picks.length ? "\n\nQual deles você quer conhecer melhor?" : "\n\nQuer considerar outro câmbio ou ampliar um pouco a faixa?";
+    result.reply += picks.length === 1
+      ? (picks[0]?.category === "moto" ? "\n\nQuer conhecer melhor essa moto?" : "\n\nQuer conhecer melhor esse carro?")
+      : picks.length > 1
+        ? "\n\nQual deles você quer conhecer melhor?"
+        : "\n\nQuer considerar outro câmbio ou ampliar um pouco a faixa?";
   }
   return result;
 }

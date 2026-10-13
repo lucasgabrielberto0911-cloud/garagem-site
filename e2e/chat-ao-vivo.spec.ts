@@ -64,7 +64,7 @@ async function formatAcceptance(answer: Locator, expected: number) {
     const unit = stock.find(v => v.id === id);
     const spec = unit && findVehicleSpec(unit);
     if (spec && (/\b1[.,]0\b/.test(spec.motor) || specMaxCv(spec) < 90)) expect(prose).not.toMatch(/\b\d{2,3}\s*cv\b|cavalos|pot[eê]ncia/i);
-    expect(await link.evaluate(el => getComputedStyle(el).fontFamily)).toMatch(/Sora/i);
+    expect(await link.evaluate(el => getComputedStyle(el).fontFamily)).toMatch(/Barlow Condensed/i);
   }
   expect(firstSentences[0]).not.toBe(firstSentences[1]);
   expect(firstSentences[0]!.split(/\s+/).slice(0, 2).join(" ")).not.toBe(firstSentences[1]!.split(/\s+/).slice(0, 2).join(" "));
@@ -130,7 +130,7 @@ async function layoutAcceptance(page: Page, dialog: Locator) {
     expect(await interest.evaluate(el => parseFloat(getComputedStyle(el, "::before").top))).toBeLessThanOrEqual(-6);
     await expect(card.locator("span.rounded-md")).toHaveCount(0);
     expect(await card.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
-    expect(await card.locator("h3").evaluate(el => getComputedStyle(el).fontFamily)).toMatch(/Sora/i);
+    expect(await card.locator("h3").evaluate(el => getComputedStyle(el).fontFamily)).toMatch(/Barlow Condensed/i);
   }
   return { viewport: page.viewportSize(), conversa: s.height, rodape: t.height + f.height, header: (await dialog.locator("header").boundingBox())!.height };
 }

@@ -30,7 +30,7 @@ test("CTAs da ficha passam pelo helper ficha — não reutilizam home", () => {
 
   assert.match(bar, /fichaWhatsAppTracking/);
   assert.match(bar, /Tenho interesse/);
-  assert.match(bar, /Simular \/ troca \/ vídeo/);
+  assert.match(bar, /Financiamento, troca ou vídeo/);
   assert.match(bar, /no WhatsApp/);
   assert.doesNotMatch(bar, /IntersectionObserver/);
   assert.doesNotMatch(bar, /translate-y-full/);

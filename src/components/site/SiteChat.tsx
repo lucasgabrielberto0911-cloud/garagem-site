@@ -12,7 +12,9 @@ import {
   IconArrowRight,
   IconChat,
   IconGearShift,
-  IconFileText,
+  IconPlay,
+  IconShieldCheck,
+  IconSwap,
   IconClose,
   IconRefresh,
   IconSend,
@@ -103,6 +105,24 @@ const VEHICLE_SUGGESTIONS = [
   "Aceita meu usado na troca?",
   "Falar com um consultor",
 ];
+
+/** Ícone pelo assunto do atalho, não pela posição: a lista muda com o contexto. */
+function SuggestionIcon({ text, index }: { text: string; index: number }) {
+  const t = text.toLowerCase();
+  if (/autom[aá]tic|c[aâ]mbio/.test(t)) return <IconGearShift className="h-4 w-4" />;
+  if (/financ|parcel|mil\b/.test(t)) {
+    return <span className="font-display text-[15px] font-semibold">R$</span>;
+  }
+  if (/v[ií]deo/.test(t)) return <IconPlay className="h-4 w-4" />;
+  if (/troca|usado/.test(t)) return <IconSwap className="h-4 w-4" />;
+  if (/garantia|condi[cç]/.test(t)) return <IconShieldCheck className="h-4 w-4" />;
+  if (/consultor|avisar|encomendar/.test(t)) return <IconWhatsApp className="h-4 w-4" />;
+  return index === 0 ? (
+    <span className="font-display text-[15px] font-semibold">R$</span>
+  ) : (
+    <IconRefresh className="h-4 w-4" />
+  );
+}
 
 const CHAT_STORAGE_OPEN_KEY = "garagem_site_chat_is_open_v1";
 
@@ -1243,17 +1263,23 @@ export function SiteChat() {
               ) : (
                 <AssistantRow key={`assistant-${index}`} latest={latest} enter={index >= enterFromRef.current}>
                   {index === 0 && message.content === OPENING.content ? (
-                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#ff7378]">
-                        Ajuda para escolher
-                      </p>
-                      <h2 className="mt-2 font-display text-[20px] font-semibold leading-[1.2] tracking-[-0.025em] text-cream">
-                        Vamos encontrar o seu próximo veículo.
-                      </h2>
-                      <p className="mt-3 text-[14px] leading-[1.6] text-cream/75">
+                    started ? (
+                      <p className="text-[13px] leading-[1.5] text-cream/60">
                         {OPENING.content}
                       </p>
-                    </div>
+                    ) : (
+                      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#ff7378]">
+                          Ajuda para escolher
+                        </p>
+                        <h2 className="mt-1.5 font-display text-[18px] font-semibold leading-[1.2] tracking-[-0.025em] text-cream">
+                          Vamos encontrar o seu próximo veículo.
+                        </h2>
+                        <p className="mt-2 text-[13px] leading-[1.5] text-cream/75">
+                          {OPENING.content}
+                        </p>
+                      </div>
+                    )
                   ) : (
                     <ChatText
                       text={message.content}
@@ -1330,17 +1356,7 @@ export function SiteChat() {
                         className="group flex h-full min-h-[64px] w-full flex-col items-start justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left text-[13px] leading-snug text-cream/90 transition hover:border-white/20 hover:bg-white/[0.05] hover:text-cream active:bg-white/[0.06] touch-manipulation"
                       >
                         <span className="text-cream/50" aria-hidden="true">
-                          {index === 0 ? (
-                            <span className="font-display text-[15px] font-semibold">
-                              R$
-                            </span>
-                          ) : index === 1 ? (
-                            <IconGearShift className="h-4 w-4" />
-                          ) : index === 2 ? (
-                            <IconFileText className="h-4 w-4" />
-                          ) : (
-                            <IconRefresh className="h-4 w-4" />
-                          )}
+                          <SuggestionIcon text={suggestion} index={index} />
                         </span>
                         <span>{suggestion}</span>
                       </button>

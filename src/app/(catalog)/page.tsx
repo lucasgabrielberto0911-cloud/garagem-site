@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { preload } from "react-dom";
 import { JsonLd } from "@/components/JsonLd";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
-import { SiteWordmark } from "@/components/site/SiteWordmark";
+import { SiteWordmark, WORDMARK_SRC as HERO_WORDMARK, WORDMARK_SRC_SET, WORDMARK_SIZES } from "@/components/site/SiteWordmark";
 import { FaqAccordion } from "@/components/site/FaqAccordion";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { HeroSearch } from "@/components/site/HeroSearch";
@@ -71,12 +71,10 @@ const REASONS = [
   },
 ] as const;
 
-const HERO_WORDMARK = "/branding/logo-wordmark.webp";
-
 export default async function HomePage() {
   // O LCP no celular é a foto do carro, não o wordmark. Prioridade baixa
   // para o logo não dividir a rede lenta com a capa.
-  preload(HERO_WORDMARK, { as: "image", fetchPriority: "low" });
+  preload(HERO_WORDMARK, { as: "image", fetchPriority: "low", imageSrcSet: WORDMARK_SRC_SET, imageSizes: WORDMARK_SIZES });
 
   const [featured, brands, testimonials, publicSite, siteContent, faqItems] =
     await Promise.all([

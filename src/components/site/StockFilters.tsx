@@ -632,13 +632,41 @@ export function StockFilters({ facets }: { facets: Facets }) {
         data-stock-filters=""
         className="stock-chip-bar mt-2 border border-white/10 bg-ink px-2.5 py-2 lg:hidden"
       >
-        <MobileChipRow label="Atalhos">
-          {quickChips.map((chip) => (
-            <Chip key={`sticky-${chip.key}`} active={chip.active} onClick={chip.onClick}>
-              {chip.label}
-            </Chip>
-          ))}
-        </MobileChipRow>
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+          <MobileChipRow label="Atalhos">
+            {quickChips.map((chip) => (
+              <Chip key={`sticky-${chip.key}`} active={chip.active} onClick={chip.onClick}>
+                {chip.label}
+              </Chip>
+            ))}
+          </MobileChipRow>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(current);
+              setOpen(true);
+            }}
+            ref={filterButtonRef}
+            className="stock-chip-action"
+            aria-expanded={open}
+            aria-controls="painel-filtros"
+            aria-label={
+              activeFilterCount > 0
+                ? `Abrir filtros, ${activeFilterCount} ativos`
+                : "Abrir filtros"
+            }
+          >
+            <FilterIcon />
+            Filtros
+            {activeFilterCount > 0 ? (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] text-white">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
         {current.brand &&
         modelFilterOptions(facets.models, current.brand, current.model).length > 0 ? (
           <MobileChipRow label="Modelo">
@@ -670,32 +698,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
             ))}
           </MobileChipRow>
         ) : null}
-        <div className="mt-2">
-          <button
-            type="button"
-            onClick={() => {
-              setDraft(current);
-              setOpen(true);
-            }}
-            ref={filterButtonRef}
-            className="stock-chip-action"
-            aria-expanded={open}
-            aria-controls="painel-filtros"
-            aria-label={
-              activeFilterCount > 0
-                ? `Abrir filtros, ${activeFilterCount} ativos`
-                : "Abrir filtros"
-            }
-          >
-            <FilterIcon />
-            Filtros
-            {activeFilterCount > 0 ? (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] text-white">
-                {activeFilterCount}
-              </span>
-            ) : null}
-          </button>
-        </div>
         {activeFilters.length > 0 ? (
           <section
             aria-label="Filtros ativos"
