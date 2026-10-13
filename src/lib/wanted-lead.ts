@@ -1,7 +1,7 @@
 /**
  * Pedido de quem não encontrou o modelo.
  * Grava em LeadVenda (mesma lista do admin), com source `nao-encontrou`.
- * O modelo pedido fica em vehicleInfo; e-mail e faixas ficam nas observações.
+ * O modelo pedido fica em vehicleInfo; valor máximo e dados antigos ficam nas observações.
  */
 
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
@@ -23,7 +23,7 @@ export type WantedLeadPage = "estoque" | "ficha";
 export type WantedLeadDraft = {
   name: string;
   phone: string;
-  email: string;
+  email: string | null;
   model: string;
   yearMin: number | null;
   yearMax: number | null;
@@ -73,7 +73,7 @@ function parseYear(raw: string): number | null | "invalid" {
 
 function parseMoney(raw: string): number | null | "invalid" {
   if (!raw) return null;
-  const normalized = raw.replace(/\./g, "").replace(",", ".");
+  const normalized = raw.replace(/^R\$\s*/, "").replace(/\./g, "").replace(",", ".");
   if (!/^\d+(\.\d+)?$/.test(normalized)) return "invalid";
   const value = Math.round(Number(normalized));
   if (!Number.isFinite(value) || value <= 0 || value > 5_000_000) {
@@ -91,10 +91,6 @@ function parseKm(raw: string): number | null | "invalid" {
     return "invalid";
   }
   return value;
-}
-
-function hasConsent(value: string) {
-  return value === "sim" || value === "on" || value === "1" || value === "true";
 }
 
 function safePath(value: string) {
@@ -118,7 +114,7 @@ function rangeLine(
 
 export function formatWantedLeadNotes(lead: WantedLeadDraft) {
   const lines = [
-    `E-mail: ${lead.email}`,
+    lead.email ? `E-mail: ${lead.email}` : null,
     `Modelo pedido: ${lead.model}`,
     rangeLine("Ano", lead.yearMin, lead.yearMax, (value) => String(value)),
     rangeLine("Preço", lead.priceMin, lead.priceMax, (value) =>
@@ -143,6 +139,14 @@ export function emailFromLeadNotes(notes: string | null | undefined) {
     return null;
   }
   return email;
+}
+
+/** Valor máximo no formato já usado pelas sugestões de estoque e pedidos antigos. */
+export function maxPriceFromLeadNotes(notes: string | null | undefined) {
+  const raw = notes?.match(/^Preço:\s*até\s+(.*)$/m)?.[1];
+  if (!raw) return null;
+  const value = parseMoney(raw.trim());
+  return typeof value === "number" ? value : null;
 }
 
 export function toLeadVendaData(lead: WantedLeadDraft) {
@@ -174,7 +178,6 @@ export function parseWantedLeadForm(data: FormData): ParsedWantedLead {
   const priceMaxRaw = text(data, "priceMax");
   const kmMinRaw = text(data, "kmMin");
   const kmMaxRaw = text(data, "kmMax");
-  const consent = text(data, "consent");
   const sourcePage: WantedLeadPage =
     text(data, "sourcePage") === "ficha" ? "ficha" : "estoque";
   const pagePath = safePath(text(data, "pagePath"));
@@ -183,6 +186,10 @@ export function parseWantedLeadForm(data: FormData): ParsedWantedLead {
   const interestVehicleId = isVehicleCuid(interestRaw) ? interestRaw : null;
 
   const fieldErrors: Record<string, string> = {};
+  if (phone.length < 10 || phone.length > 11) {
+    fieldErrors.phone = "Informe um telefone com DDD.";
+  }
+
   if (model.length < 2) {
     fieldErrors.model = "Informe o modelo que você procura.";
   } else if (model.length > 80) {
@@ -190,13 +197,9 @@ export function parseWantedLeadForm(data: FormData): ParsedWantedLead {
   }
   if (name.length < 3) fieldErrors.name = "Informe seu nome.";
   else if (name.length > 80) fieldErrors.name = "Use até 80 caracteres no nome.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 120) {
+  if (email && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 120)) {
     fieldErrors.email = "Informe um e-mail válido.";
   }
-  if (phone.length < 10 || phone.length > 11) {
-    fieldErrors.phone = "Informe um telefone com DDD.";
-  }
-
   const yearMin = parseYear(yearMinRaw);
   const yearMax = parseYear(yearMaxRaw);
   const maxYear = new Date().getFullYear() + 1;
@@ -235,9 +238,7 @@ export function parseWantedLeadForm(data: FormData): ParsedWantedLead {
       "A quilometragem final precisa ser igual ou maior que a inicial.";
   }
 
-  if (!hasConsent(consent)) {
-    fieldErrors.consent = "Confirme o uso dos dados para enviar.";
-  }
+  // Art. 7º, V, da LGPD: atendimento ao pedido de compra iniciado pelo titular.
 
   if (Object.keys(fieldErrors).length > 0) {
     return {
@@ -253,7 +254,7 @@ export function parseWantedLeadForm(data: FormData): ParsedWantedLead {
     lead: {
       name,
       phone,
-      email,
+      email: email || null,
       model,
       yearMin: typeof yearMin === "number" ? yearMin : null,
       yearMax: typeof yearMax === "number" ? yearMax : null,

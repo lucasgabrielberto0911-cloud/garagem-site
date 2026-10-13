@@ -17,6 +17,7 @@ import { IconInbox } from "@/components/admin/icons";
 import { IconPhone, IconWhatsApp } from "@/components/site/icons";
 import { EmptyState, btn, inputClass } from "@/components/admin/ui";
 import {
+  formatCurrencyBRL,
   formatNumberBR,
   formatPhoneBR,
   formatPlateDisplay,
@@ -32,7 +33,7 @@ import {
   leadDisplayName,
   leadHasPhone,
 } from "@/lib/leads";
-import { emailFromLeadNotes } from "@/lib/wanted-lead";
+import { emailFromLeadNotes, maxPriceFromLeadNotes } from "@/lib/wanted-lead";
 import {
   convertLeadToCustomer,
   deleteLead,
@@ -419,6 +420,7 @@ function LeadCard({
   const email = emailFromLeadNotes(lead.notes);
   const hasPhone = leadHasPhone(lead);
   const isWanted = lead.source === WANTED_LEAD_SOURCE;
+  const maxPrice = isWanted ? maxPriceFromLeadNotes(lead.notes) : null;
   const overdue = lead.nextActionAt
     ? localDateInput(new Date(lead.nextActionAt)) < localDateInput()
     : false;
@@ -539,6 +541,12 @@ function LeadCard({
                 <div className="flex gap-2">
                   <dt className="text-muted">Origem</dt>
                   <dd className="text-cream">{originLabel(lead)}</dd>
+                </div>
+              ) : null}
+              {maxPrice !== null ? (
+                <div className="flex gap-2">
+                  <dt className="text-muted">Valor máximo</dt>
+                  <dd className="text-cream">{formatCurrencyBRL(maxPrice)}</dd>
                 </div>
               ) : null}
               {email ? (
