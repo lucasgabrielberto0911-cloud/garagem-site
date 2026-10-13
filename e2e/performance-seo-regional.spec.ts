@@ -50,7 +50,7 @@ test("estoque usa logo responsivo e preserva a prioridade da primeira capa", asy
     await decoded.decode();
     return { src: img.currentSrc, width: img.getBoundingClientRect().width, pixels: decoded.naturalWidth, dpr: devicePixelRatio };
   });
-  expect(selected.src).toMatch(/logo-wordmark(?:-(320|480|640))?\.webp$/);
+  expect(selected.src).toMatch(/logo-wordmark-(320|480|640)\.webp$/);
   expect(selected.width).toBeLessThanOrEqual(196);
   expect(selected.pixels).toBeGreaterThanOrEqual(Math.ceil(selected.width * selected.dpr));
   await expect(page.locator('link[rel="preconnect"][href*="supabase"]')).toHaveCount(0);
@@ -59,10 +59,10 @@ test("estoque usa logo responsivo e preserva a prioridade da primeira capa", asy
   await expect(firstCover).toHaveAttribute("loading", "eager");
   await page.locator('footer img[alt="Garagem"]').scrollIntoViewIfNeeded();
   await expect.poll(() => page.locator('footer img[alt="Garagem"]').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
-  expect(logos.size, "splash, header e rodapé compartilham um arquivo da marca").toBe(1);
+  expect(logos.size, "header e rodapé usam até dois tamanhos adequados aos seus slots").toBeLessThanOrEqual(2);
   await page.goto("/");
   await expect(page.locator('header img[alt="Garagem"]').first()).toBeVisible();
-  expect(logos.size, "preload e hero da home reutilizam o mesmo arquivo").toBe(1);
+  expect(logos.size, "preload e hero não acrescentam downloads redundantes").toBeLessThanOrEqual(3);
   await page.goto("/estoque");
   await page.screenshot({ path: info.outputPath("estoque-logo-responsivo.png") });
 });

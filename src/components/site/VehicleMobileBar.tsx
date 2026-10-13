@@ -142,7 +142,7 @@ export function VehicleMobileBar({
   return (
     <div
       data-vehicle-mobile-bar=""
-      className="fixed inset-x-0 bottom-0 z-40 box-border min-h-[var(--ficha-sticky-bar)] border-t border-white/15 bg-asphalt pt-1.5 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 box-border min-h-[var(--ficha-sticky-bar)] border-t border-white/15 bg-asphalt pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] lg:hidden"
     >
       <div className="relative mx-auto max-w-6xl">
         {!sold && moreOpen && secondary.length > 0 ? (
@@ -204,7 +204,7 @@ export function VehicleMobileBar({
                 aria-expanded={moreOpen}
                 aria-controls={moreId}
                 onClick={() => setMoreOpen((open) => !open)}
-                className="min-h-9 text-left font-display text-[11px] font-semibold text-muted underline-offset-2 transition hover:text-cream hover:underline active:text-cream active:underline touch-manipulation"
+                className="min-h-11 text-left font-display text-[11px] font-semibold text-muted underline-offset-2 transition hover:text-cream hover:underline active:text-cream active:underline touch-manipulation"
               >
                 {moreOpen ? "Fechar opções" : "Financiamento, troca ou vídeo"}
               </button>
@@ -220,7 +220,7 @@ export function VehicleMobileBar({
               {soldLabel}
             </Link>
           ) : (
-            <div className="flex shrink-0 flex-col items-stretch gap-1">
+            <div className="flex shrink-0 flex-col items-stretch gap-0.5">
               <VehicleLeadHit
                 contentId={vehicleId}
                 contentName={contentName}
@@ -244,7 +244,7 @@ export function VehicleMobileBar({
                   onClick={(event) =>
                     openWhatsApp(event, href, "ficha-mobile", vehicleId, vehicleSlug)
                   }
-                  className="inline-flex min-h-12 shrink-0 items-center justify-center gap-1.5 bg-brand px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide text-cream touch-manipulation hover:bg-[#c91418] sm:px-4 sm:text-sm"
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 bg-brand px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-cream touch-manipulation hover:bg-[#c91418] sm:px-4 sm:text-sm"
                 >
                   <IconWhatsApp className="h-4 w-4" />
                   <span className="text-left leading-tight">
@@ -283,7 +283,7 @@ export function VehicleMobileBar({
                         vehicleSlug,
                       )
                     }
-                    className="inline-flex min-h-[34px] w-full items-center justify-center border border-white/25 px-3 font-display text-[11px] font-semibold uppercase tracking-wide text-cream touch-manipulation transition hover:border-white/50 active:border-white/50"
+                    className="inline-flex min-h-[38px] w-full items-center justify-center border border-white/25 px-3 font-display text-[11px] font-semibold uppercase tracking-wide text-cream touch-manipulation transition hover:border-white/50 active:border-white/50"
                   >
                     Agendar visita
                   </a>

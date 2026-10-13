@@ -19,7 +19,7 @@
   );
   --admin-nav-h: 0px;
   /* Barra fixa da ficha. A primeira dobra desconta esta altura para a foto não ficar embaixo. */
-  --ficha-sticky-bar: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+  --ficha-sticky-bar: calc(6rem + env(safe-area-inset-bottom, 0px));
   /* Âncoras Fotos / Especificações / Detalhes. A dobra do celular desconta esta faixa. */
   --ficha-section-nav: 2.75rem;
   /*
@@ -657,10 +657,12 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   }
 
   /*
-   * Em listas de cards, o atalho do assistente sobe para cima do WhatsApp
-   * e vira ícone: os dois ficam na faixa lateral e não cobrem o botão
-   * "Tenho interesse" da última coluna.
+   * A faixa reservada no conteúdo deixa os dois atalhos fora dos cards.
    */
+  body:has(.listing-card-grid) main {
+    padding-right: 6.5rem;
+  }
+
   body:has(.listing-card-grid) .site-chat:not(.is-open) {
     right: 1.5rem;
     bottom: calc(1.5rem + 3.5rem + 0.75rem);
@@ -718,7 +720,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
     bottom: 0;
     padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
       env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
-    background: #0d0d0f;
+    @apply bg-asphalt;
     width: auto;
     height: auto;
     max-width: none;
@@ -824,7 +826,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 
 body:has([data-vehicle-mobile-bar]) .site-consent,
 body:has([data-ficha-page]) .site-consent {
-  bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--ficha-sticky-bar) + 0.25rem);
 }
 
 /* Convite de instalação espera a escolha de cookies: nunca empilha os dois. */
@@ -836,7 +838,7 @@ body:has(.site-chat.is-open) .site-consent,
 body:has([data-nav-open]) .site-consent,
 body:has([data-nav-open]) .site-chat:not(.is-open),
 body:has([data-filters-open]) .site-chat:not(.is-open),
-body:has([data-install-coach]) .site-chat:not(.is-open) {
+body:not(:has(.site-consent)):has([data-install-coach]) .site-chat:not(.is-open) {
   display: none;
 }
 

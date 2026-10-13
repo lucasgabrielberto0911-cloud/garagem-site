@@ -314,7 +314,7 @@ test("Item 11: 'Tem moto automática de 15 mil?' sugere Biz 125 semiautomática 
   });
   assert.doesNotMatch(result.reply, /moto automático/i);
   assert.match(result.reply, /semi-automática|semi-automáticas/i);
-  assert.match(result.reply, /sem embreagem/i);
+  assert.doesNotMatch(result.reply, /sem embreagem|marcha no pé/i);
   assert.ok(result.vehicles.some((v) => /biz/i.test(v.model) && v.price <= 15000));
 });
 
@@ -368,7 +368,7 @@ test("Item 12: com múltiplos veículos, pergunta de fechamento fica no plural",
   assert.match(result.reply, /Qual deles você quer conhecer melhor\?/);
 });
 
-test("Item 12: agendamento presencial usa 'Vem dar uma olhada!' sem citar localização", async () => {
+test("Item 12: agendamento preserva o texto original e exige horário marcado", async () => {
   for (const q of [
     "Posso ir aí ver os carros amanhã?",
     "Quero agendar uma visita amanhã",
@@ -380,9 +380,22 @@ test("Item 12: agendamento presencial usa 'Vem dar uma olhada!' sem citar locali
       generate: generateNoOp,
     });
     assert.equal(result.meta?.policy, "visit");
-    assert.match(result.reply, /^Vem dar uma olhada!/);
+    assert.match(result.reply, /^Dá sim!/);
     assert.match(result.reply, /horário marcado/);
     assert.doesNotMatch(result.reply, /Linhares|rua|avenida|bairro|centro/i);
     assert.ok(result.reply.includes(CHAT_VISIT_REPLY));
   }
+});
+
+
+test("integração: crédito aprovado e entrada não são perguntas de parcelamento no cartão", () => {
+  for (const mensagem of [
+    "Qual a parcela do financiamento? Tenho crédito aprovado",
+    "Meu cartão de crédito está limpo, dá pra dar de entrada?",
+  ]) assert.notEqual(chatPolicyShortcut(mensagem), "card", mensagem);
+});
+
+test("integração: mais um desconto e mais entrada não pedem outro veículo", () => {
+  for (const mensagem of ["mais um desconto?", "mais um pouco de entrada"])
+    assert.equal(asksForMoreChatVehicles(mensagem), false, mensagem);
 });

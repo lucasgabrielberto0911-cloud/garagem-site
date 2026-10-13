@@ -3593,7 +3593,7 @@ export function partialCompareReply(mensagem: string, present: ChatVehicleRecord
 }
 
 export const CHAT_VISIT_REPLY =
-  `Vem dar uma olhada! O atendimento é com horário marcado: o consultor combina o dia e a hora com você no WhatsApp (atendemos das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
+  `Dá sim! O atendimento é com horário marcado: o consultor combina o dia e a hora com você no WhatsApp (atendemos das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_ADDRESS_REPLY =
   `A Garagem é uma loja digital, sem loja aberta ao público. Pra ver um carro, a visita é com horário marcado, combinada com o consultor no WhatsApp (das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
@@ -3749,7 +3749,7 @@ export function chatPolicyShortcut(
     return "visit";
   }
   if (
-    /\b(?:aceit\w*|parcel\w*|pass\w*|pag\w*|divid\w*|quantas vezes|condic\w*)\s+(?:no\s+|em\s+|com\s+|o\s+)?cartao\b|\bcartao de credito\b|\bparcelamento no cartao\b/.test(
+    /\b(?:aceit\w*|parcel\w*|pass\w*|pag\w*|divid\w*|quantas vezes|condic\w*)\s+(?:no\s+|em\s+|com\s+|o\s+)?cartao\b|\b(?:limite de parcelas|parcelamento|parcelas) no cartao\b/.test(
       folded,
     )
   ) {
@@ -3757,7 +3757,7 @@ export function chatPolicyShortcut(
   }
   if (
     /\b(financi\w*|parcel\w*|60x)\b/.test(folded) &&
-    /\b(cartao|credito|18x)\b/.test(folded)
+    /\b(cartao|18x)\b/.test(folded)
   ) {
     return "card";
   }

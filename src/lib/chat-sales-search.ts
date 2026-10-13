@@ -57,7 +57,7 @@ export function planChatSalesSearch(
     return { policy: "inventory-alternatives", picks: found.picks, reply: `${blocks}\n\nQual ${found.picks.length === 1 ? (found.picks[0]?.category === "moto" ? "detalhe dessa moto você quer conhecer" : "detalhe desse você quer conhecer") : "desses você quer conhecer melhor"}?` };
   }
 
-  // Moto automática (scooter) não temos, mas as Biz semiautomáticas atendem quem busca pilotar sem embreagem.
+  // Alternativa semiautomática: informa o câmbio cadastrado, sem assumir detalhes mecânicos.
   if (gear === "automatico" && category === "moto") {
     const semi = unseen.filter(
       v => (v.category === "moto" || /biz/i.test(v.model)) &&
@@ -67,13 +67,13 @@ export function planChatSalesSearch(
     );
     if (semi.length) {
       const picks = semi.slice(0, 3);
-      const names = [...new Set(picks.map(v => talkName(v).name))].join(" e a ");
+      const names = [...new Set(picks.map(v => talkName(v).labeled))].join(" e ");
       const blocks = formatChatCarBlocks(picks, scopedMessage);
       const question = picks.length === 1 ? "Quer conhecer melhor essa moto?" : "Qual dessas motos você quer conhecer melhor?";
       return {
-        policy: initialEmpty ? "waitlist" : "inventory-alternatives",
+        policy: "inventory-alternatives",
         picks,
-        reply: `Moto automática (scooter) não temos agora, mas a ${names} ${picks.length > 1 ? "são semi-automáticas" : "é semi-automática"}: sem embreagem, só troca a marcha no pé.\n\n${blocks}\n\n${question}`,
+        reply: `Moto automática (scooter) não temos agora, mas ${names} ${picks.length > 1 ? "são semi-automáticas" : "é semi-automática"}. O consultor confirma os detalhes do câmbio no WhatsApp.\n\n${blocks}\n\n${question}`,
       };
     }
   }
