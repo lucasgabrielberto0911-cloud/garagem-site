@@ -821,7 +821,7 @@ export function formatRankList(lead: string, rows: Array<{ name: string; value?:
   return `${lead}\n${lines.join("\n")}`;
 }
 
-function talkName(vehicle: ChatVehicleRecord) {
+export function talkName(vehicle: ChatVehicleRecord) {
   const name = formatModelName(vehicle.model || vehicle.brand).trim();
   const article = (vehicle.category ?? "carro") === "moto" ? "a" : "o";
   const labeled = `${article} ${name}`;
@@ -2776,7 +2776,7 @@ export function similarAfterEmptyFilter(
 }
 
 const WAITLIST_STOP =
-  /^(entre|disponiveis|valores|precos|modelos|superior|partir|quem|filho|filhos|filha|filhas|esposa|marido|mulher|namorada|mae|pai|pessoas|bagagem|bagagens|criancas|cadeirinha|bebe|menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automaticos?|automaticas?|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
+  /^(entre|disponiveis|valores|precos|modelos|superior|partir|quem|filho|filhos|filha|filhas|esposa|marido|mulher|namorada|mae|pai|pessoas|bagagem|bagagens|criancas|cadeirinha|bebe|menos|abaixo|acima|valor|preco|faixa|barata|baratas|baratos|baratinha|baratinhos|baratinhas|cambio|cambios|marcha|marchas|transmissao|embreagem|tem|temos|vende|vendem|quero|procuro|mostrar|mostra|ver|me|os|as|uns|um|uma|de|do|da|dos|das|no|na|em|por|com|ate|ainda|disponivel|anuncio|estoque|carro|carros|moto|motos|automaticos?|automaticas?|manual|cvt|mil|k|reais|voces|voce|qual|quais|esse|essa|este|esta|ai|agora|verdade|entao|chegou|chegar|sim|nao|mais|barato|baratinho|maximo|familia|familiar|espacoso|espacosa|economico|economica|hatch|hatchs|sedan|sedans|suv|suvs|pickup|picape|picapes|caminhonete|perua|peruas|primeiro|primeira|cidade|aplicativo|uber|portas|porta|malas|lugares|vcs|vc|ces|mano|mana|cara|top|algum|alguma|alguns|algumas|bom|boa|bons|boas|legal|show|massa|conto|contos|pila|pilas|real|amanha|manha|tarde|noite|hoje|dia|semana|sabado|domingo|olhada|dar|pode|posso|consigo|preciso|gostaria|queria|saber|pra|para|que|tipo|algo|bem|muito|seminovo|seminovos|usado|usados|novo|nova|novos|novas|recente|recentes|veiculo|veiculos|opcao|opcoes|ter|tenho|vcs?|tbm|tambem|ainda|aqui|loja|garagem|aracruz|vitoria|linhares|serra|vila|velha|guarapari|cariacica|colatina|cachoeiro|espirito|santo|regiao|cidade|boa|noite|dia|tarde|oi|ola|sem|grana|dinheiro|apertado|algo|coisa)$/;
 
 const INTENT_SEEK_NOISE =
   /^(forte|fortes|rapido|rapida|rapidos|veloz|arranque|potente|potentes|motorizado|motorizada|pegada|torque|esportivo|esportiva|familia|familiar|espacoso|espacosa|economico|economica|hatch|sedan|suv|pickup|picape|perua|primeiro|primeira|cidade|aplicativo|uber)$/;
@@ -2813,7 +2813,7 @@ export function formatChatWaitlistQuery(mensagem: string) {
     bits.push("carro");
   }
   if (gear === "automatico" && !named.includes("automatico")) {
-    bits.push("automático");
+    bits.push(category === "moto" ? "automática" : "automático");
   }
   if (gear === "manual" && !named.includes("manual")) bits.push("manual");
   if (minPrice != null && limit != null) bits.push(`de ${formatChatPrice(minPrice)} a ${formatChatPrice(limit)}`);
@@ -3214,7 +3214,7 @@ export function searchChatInventory(
         ? "carros"
         : "veículos",
     gear === "automatico"
-      ? body === "pickup" || body === "wagon" ? "automáticas" : "automáticos"
+      ? category === "moto" || body === "pickup" || body === "wagon" ? "automáticas" : "automáticos"
       : gear === "manual"
         ? "manuais"
         : null,
@@ -3265,7 +3265,7 @@ export function searchChatInventory(
     return ranking("Mais econômicos (Inmetro, cidade)", (_v, index) => `${String(specCityKmL(specs[index]!)).replace(".", ",")} km/l`);
   }
   if (order === "km") return ranking("Menos rodados", (v) => formatChatKm(v.km));
-  if (order === "year") return ranking("Mais novos", () => null);
+  if (order === "year") return ranking(category === "moto" ? "Mais novas" : "Mais novos", () => null);
   const reasons = compareChatStockPicks(picks, {
     withLeadin: false,
     intent: chatRankMode(message),
@@ -3593,7 +3593,7 @@ export function partialCompareReply(mensagem: string, present: ChatVehicleRecord
 }
 
 export const CHAT_VISIT_REPLY =
-  `Dá sim! O atendimento é com horário marcado: o consultor combina o dia e a hora com você no WhatsApp (atendemos das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
+  `Vem dar uma olhada! O atendimento é com horário marcado: o consultor combina o dia e a hora com você no WhatsApp (atendemos das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
 
 export const CHAT_ADDRESS_REPLY =
   `A Garagem é uma loja digital, sem loja aberta ao público. Pra ver um carro, a visita é com horário marcado, combinada com o consultor no WhatsApp (das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
@@ -3749,14 +3749,14 @@ export function chatPolicyShortcut(
     return "visit";
   }
   if (
-    /^(aceita cartao|aceitam cartao|cartao de credito|parcela no cartao|da para parcelar no cartao|da pra parcelar no cartao|aceita cartao de credito)$/.test(
+    /\b(?:aceit\w*|parcel\w*|pass\w*|pag\w*|divid\w*|quantas vezes|condic\w*)\s+(?:no\s+|em\s+|com\s+|o\s+)?cartao\b|\bcartao de credito\b|\bparcelamento no cartao\b/.test(
       folded,
     )
   ) {
     return "card";
   }
   if (
-    /\b(financi\w*|parcela|60x)\b/.test(folded) &&
+    /\b(financi\w*|parcel\w*|60x)\b/.test(folded) &&
     /\b(cartao|credito|18x)\b/.test(folded)
   ) {
     return "card";

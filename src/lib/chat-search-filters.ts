@@ -9,7 +9,7 @@ export function chatSearchText(value: string) {
 /** Pedido de novas sugestões, sem confundir com perguntas sobre os carros da lista. */
 export function asksForMoreChatVehicles(value: string) {
   const text = chatSearchText(value).replace(/[?!.,]+/g, " ").replace(/\s+/g, " ").trim();
-  return /^(?:(?:e|mas|entao)\s+)?(?:(?:tem|teria|quero|mostra|mostre|manda|mande|me mostra|pode mostrar)\s+)?(?:outr[oa]s?|mais)(?:\s+(?:opc(?:ao|oes)|carros?|motos?|veiculos?|modelos?))?(?:\s+(?:por favor|ai))?$/.test(text);
+  return /^(?:(?:e|mas|entao)\s+)?(?:(?:tem|teria|quero(?:\s+ver)?|ver|mostra|mostre|manda|mande|me mostra|pode(?:\s+me)?\s+(?:mostrar|mandar))\s+)?(?:outr[oa]s?|mais)(?:\s+(?:um(?:as?)?|uns|algum(?:as?)?|alguns|outr[oa]s?))?(?:\s+(?:de(?:les)?|opc(?:ao|oes)|carros?|motos?|veiculos?|modelos?))?(?:\s+(?:por favor|ai|pra mim|pro meu caso))?$/.test(text);
 }
 
 /** Cilindrada exata; dinheiro, km e pedidos de motor mínimo não entram aqui. */
@@ -90,9 +90,9 @@ export function parseChatSearchRanges(value: string): ChatSearchRanges {
 
 export function chatSearchOrder(value: string): "km" | "year" | null {
   const text = chatSearchText(value);
-  if (/\b(menos km|menor km|menos rodad[oa]|menor quilometragem)\b/.test(text))
+  if (/\b(menos km|menor km|menos rodad[oa]s?|menor quilometragem)\b/.test(text))
     return "km";
-  if (/\b(mais nov[oa]s?|mais recente|ano mais novo)\b/.test(text))
+  if (/\b(mais nov[oa]s?|mais recentes?|ano mais nov[oa]s?|ano mais recentes?)\b/.test(text))
     return "year";
   return null;
 }
