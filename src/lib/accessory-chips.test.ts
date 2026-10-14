@@ -16,6 +16,11 @@ test("ícone casa com o item e cai no check quando não conhece", () => {
   assert.equal(accessoryIconKey("Sensor de estacionamento"), "sensor");
   assert.equal(accessoryIconKey("Direção hidráulica"), "steering");
   assert.equal(accessoryIconKey("Vidros elétricos"), "window");
+  assert.equal(accessoryIconKey("Sensor de ré"), "sensor");
+  assert.equal(accessoryIconKey("Para-brisa"), "window");
+  assert.equal(accessoryIconKey("Bolha / carenagem"), "window");
+  assert.equal(accessoryIconKey("Assistente de partida em rampa"), "shield");
+  assert.equal(accessoryIconKey("Partida elétrica"), "key");
   assert.equal(accessoryIconKey("Item inventado qualquer"), "check");
 });
 

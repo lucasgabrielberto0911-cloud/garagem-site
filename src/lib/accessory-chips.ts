@@ -29,7 +29,7 @@ export type AccessoryIconKey =
 function normalize(text: string): string {
   return text
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 }
 
@@ -41,11 +41,12 @@ const ICON_RULES: ReadonlyArray<readonly [RegExp, AccessoryIconKey]> = [
   [/ar[- ]condicionado|ar digital|climatiz/, "snow"],
   [/chuva/, "rain"],
   [/crepuscular|teto solar/, "sun"],
-  [/camera|\bre\b/, "camera"],
+  [/camera/, "camera"],
   [/sensor/, "sensor"],
   [/retrovisor/, "mirror"],
   [/farol|\bled\b|neblina|drl/, "light"],
-  [/vidro/, "window"],
+  [/vidro|para-brisa|bolha/, "window"],
+  [/assistente|rampa/, "shield"],
   [/keyless|partida/, "key"],
   [/trava|alarme|imobilizador/, "lock"],
   [/direcao|volante|guidao|manete|empunhadura/, "steering"],
@@ -54,7 +55,7 @@ const ICON_RULES: ReadonlyArray<readonly [RegExp, AccessoryIconKey]> = [
   [/piloto automatico|cruise/, "gauge"],
   [/roda|pneu/, "wheel"],
   [/bauleto|bolsa/, "bag"],
-  [/motor|injecao|escape|amortecedor|suspensao|cavalete|para-brisa|bolha/, "engine"],
+  [/motor|injecao|escape|amortecedor|suspensao|cavalete/, "engine"],
 ];
 
 export function accessoryIconKey(item: string): AccessoryIconKey {
