@@ -4,6 +4,7 @@ import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
+import { VehicleAccessoryChips } from "@/components/site/VehicleAccessoryChips";
 import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
@@ -287,14 +288,7 @@ export function VehicleMobileBlocks({
           defaultOpen
           section={description ? undefined : "detalhes"}
         >
-          <ul className="divide-y divide-white/10 border border-white/10">
-            {accessories.map((item) => (
-              <li key={item} className="flex items-center gap-3 px-3 py-2.5 text-cream">
-                <span className="h-1.5 w-1.5 shrink-0 bg-brand" aria-hidden="true" />
-                <span className="text-[15px] leading-snug">{item}</span>
-              </li>
-            ))}
-          </ul>
+          <VehicleAccessoryChips items={accessories} />
         </DossierBlock>
       ) : null}
 
