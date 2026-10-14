@@ -16,6 +16,7 @@ const WIDTHS = {
   text: "max-w-3xl",
   narrow: "max-w-4xl",
   content: "max-w-7xl",
+  header: "max-w-[90rem]",
 } as const;
 
 export type ContainerSize = keyof typeof WIDTHS;
