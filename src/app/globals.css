@@ -658,8 +658,9 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
 
   /*
    * A faixa reservada no conteúdo deixa os dois atalhos fora dos cards.
+   * Na ficha os atalhos ficam ocultos; a grade de similares não precisa dela.
    */
-  body:has(.listing-card-grid) main {
+  body:has(.listing-card-grid):not(:has([data-ficha-page])) main {
     padding-right: 6.5rem;
   }
 

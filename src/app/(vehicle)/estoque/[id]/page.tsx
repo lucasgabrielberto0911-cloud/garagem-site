@@ -318,7 +318,7 @@ export default async function VehicleDetailPage({
           { name: fullLabel, path },
         ])}
       />
-      <Container>
+      <Container size="header">
         {sold ? (
           <div
             role="status"
