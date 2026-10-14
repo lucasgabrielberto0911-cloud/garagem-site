@@ -17,6 +17,7 @@ import {
 } from "@/components/site/VehicleMobileDossier";
 import { VehicleConditions } from "@/components/site/VehicleConditions";
 import { VehicleVerifiedSection } from "@/components/site/VehicleVerifiedInfo";
+import { VehicleAccessoryChips } from "@/components/site/VehicleAccessoryChips";
 import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { StockBackLink } from "@/components/site/StockBackLink";
@@ -423,20 +424,7 @@ export default async function VehicleDetailPage({
                     <h2 className="font-display text-base font-semibold text-cream">
                       Itens e acessórios
                     </h2>
-                    <ul className="mt-3 columns-1 gap-x-8 text-sm text-cream/90 sm:columns-2">
-                      {accessories.map((item) => (
-                        <li
-                          key={item}
-                          className="mb-1.5 flex break-inside-avoid items-start gap-2"
-                        >
-                          <span
-                            className="mt-2 h-1 w-1 shrink-0 bg-brand"
-                            aria-hidden="true"
-                          />
-                          <span className="leading-snug">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <VehicleAccessoryChips items={accessories} />
                   </div>
                 ) : null}
               </section>
