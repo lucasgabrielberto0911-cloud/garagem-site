@@ -48,7 +48,7 @@ Regras:
 - Paleta: preto `#0D0D0F` (`asphalt`), vermelho `#F80000` e off-white `#F7F5F2` (`cream`).
   - No Tailwind de hoje, o token `brand` é `#E8181C`. Use os tokens (`bg-asphalt`, `text-cream`, `bg-brand`) e não espalhe hex no código. Trocar o token para `#F80000` é PR próprio.
 - O gradiente `#E8181C → #FF8A00 → #FFC72C` (`bg-brand-gradient`) entra **só como detalhe** (filete, sublinhado, ícone), nunca em fundo grande ou botão principal.
-- Fonte de títulos: Barlow Condensed (`font-display`).
+- Fontes do **site**: Sora nos títulos, nav, botões e números (`font-display`) + Inter no texto (`font-body`). **Barlow Condensed é só para vídeos e artes**, nunca no site. O logo (`SiteWordmark`) não muda.
 
 ## Regras de negócio do site
 - **Carro vendido não mostra preço** em lugar nenhum: ficha, card, JSON-LD, mensagem de WhatsApp e assistente. Isso já está implementado (ver `src/app/(vehicle)/estoque/[id]/page.tsx` e o PR #227). A ficha vendida usa `noindex, follow` e título com "(vendido)".
