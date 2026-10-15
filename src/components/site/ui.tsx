@@ -15,7 +15,7 @@ import {
 const WIDTHS = {
   text: "max-w-3xl",
   narrow: "max-w-4xl",
-  content: "max-w-7xl",
+  content: "max-w-[90rem]",
   header: "max-w-[90rem]",
 } as const;
 
@@ -32,6 +32,7 @@ export function Container({
 }) {
   return (
     <div
+      data-site-container=""
       className={`mx-auto w-full px-4 sm:px-6 lg:px-8 ${WIDTHS[size]} ${className}`}
     >
       {children}

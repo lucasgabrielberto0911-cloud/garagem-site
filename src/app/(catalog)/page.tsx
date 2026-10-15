@@ -304,7 +304,7 @@ export default async function HomePage() {
       </Section>
 
       {/* 6. ATENDIMENTO — um número, horário e modalidade reais */}
-      <Section spacing="snug" className="border-t border-white/5 bg-ink/40" size="narrow">
+      <Section spacing="snug" className="border-t border-white/5 bg-ink/40">
         <SectionHeading
           eyebrow="Atendimento"
           title={`Loja digital no ${publicSite.state}`}
@@ -358,7 +358,7 @@ export default async function HomePage() {
       </Section>
 
       {/* 7. VENDER OU TROCAR */}
-      <Section spacing="snug" className="border-t border-white/5" size="narrow">
+      <Section spacing="snug" className="border-t border-white/5">
         <div className="relative overflow-hidden border border-white/10 bg-ink">
           <div
             className="absolute inset-x-0 top-0 h-0.5 bg-brand"
@@ -394,7 +394,7 @@ export default async function HomePage() {
       </Section>
 
       {/* 8. DÚVIDAS */}
-      <Section spacing="snug" className="border-t border-white/5 bg-ink/40" size="narrow">
+      <Section spacing="snug" className="border-t border-white/5 bg-ink/40">
         <SectionHeading
           eyebrow="Dúvidas frequentes"
           title="Antes de fechar negócio"
@@ -416,7 +416,7 @@ export default async function HomePage() {
       </Section>
 
       {/* 9. CTA FINAL — mesmo número, chat só em contorno */}
-      <Section spacing="snug" className="border-t border-white/5" size="narrow">
+      <Section spacing="snug" className="border-t border-white/5">
         <h2 className="max-w-xl font-display text-xl font-semibold tracking-tight text-cream sm:text-2xl">
           Ainda em dúvida sobre o próximo passo?
         </h2>

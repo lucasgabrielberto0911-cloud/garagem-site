@@ -23,7 +23,7 @@ test("ficha compacta preserva os alvos de toque, o texto de visita e não oferec
   expect((await bar.getByRole("link", { name: "Agendar visita: combinar dia e hora pelo WhatsApp", exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(38);
 });
 
-test("atalhos ficam fora da última coluna também em 1024 e 1280 px", async ({ page }) => {
+test("layout da home centralizado com margens simétricas em 1024, 1280 e 1440 px", async ({ page }) => {
   if (page.viewportSize()!.width < 1024) return;
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
   for (const width of [1024, 1280, 1440]) {
@@ -31,11 +31,15 @@ test("atalhos ficam fora da última coluna também em 1024 e 1280 px", async ({ 
     await page.goto("/");
     const cards = page.locator("article.listing-card");
     await expect(cards.first()).toBeVisible();
-    const whatsapp = page.locator(".whatsapp-float");
-    await expect(whatsapp).toBeVisible();
-    const cardRight = Math.max(...await cards.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().right)));
-    const floatBox = (await whatsapp.boundingBox())!;
-    expect(cardRight).toBeLessThan(floatBox.x);
+    const containers = page.locator("main [data-site-container]");
+    const count = await containers.count();
+    expect(count).toBeGreaterThan(0);
+    for (let i = 0; i < count; i++) {
+      const box = (await containers.nth(i).boundingBox())!;
+      const leftGap = box.x;
+      const rightGap = width - (box.x + box.width);
+      expect(Math.abs(leftGap - rightGap)).toBeLessThanOrEqual(2);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
 });

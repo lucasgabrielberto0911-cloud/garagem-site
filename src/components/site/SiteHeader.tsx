@@ -100,7 +100,10 @@ export function SiteHeader() {
     <>
       {/* Asfalto sólido. Com 98% a foto da ficha vazava no zoom, sem o desfoque. */}
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-asphalt pt-safe pl-safe pr-safe">
-        <div className="mx-auto flex h-[72px] w-full max-w-[90rem] items-center gap-3 px-3 sm:gap-5 sm:px-6 lg:h-[76px] lg:gap-8 lg:px-8 xl:gap-10">
+        <div
+          data-site-container=""
+          className="mx-auto flex h-[72px] w-full max-w-[90rem] items-center gap-3 px-4 sm:gap-5 sm:px-6 lg:h-[76px] lg:gap-8 lg:px-8 xl:gap-10"
+        >
           <Link
             href="/"
             prefetch={false}

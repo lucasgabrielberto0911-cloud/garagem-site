@@ -39,7 +39,7 @@ export default async function ContatoPage() {
   return (
     <div data-clear-fab="">
       <div className="clear-fab-screen lg:py-12">
-        <Container size="narrow" className="pt-5 lg:pt-0">
+        <Container className="pt-5 lg:pt-0">
           <PageHeader
             compact
             eyebrow="Contato"
@@ -119,7 +119,7 @@ export default async function ContatoPage() {
         </Container>
       </div>
 
-      <Container size="narrow" className="mt-6 pb-8 lg:mt-0 lg:pb-12">
+      <Container className="mt-6 pb-8 lg:mt-0 lg:pb-12">
         <h2 className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
           Outros canais
         </h2>
