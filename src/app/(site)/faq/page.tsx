@@ -22,7 +22,7 @@ export default async function FaqPage() {
     <div className="py-12 lg:py-16">
       <JsonLd data={faqJsonLd(items)} />
 
-      <Container size="narrow">
+      <Container>
         <PageHeader
           eyebrow="Dúvidas frequentes"
           title="Tudo que perguntam antes de comprar"
