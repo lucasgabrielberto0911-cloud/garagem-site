@@ -31,7 +31,7 @@ test.describe("Centralização do layout do site inteiro", () => {
       // 1. Mobile 390px sem quebra
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto(pageInfo.path);
-      await expect(page.locator("header")).toBeVisible();
+      await expect(page.getByRole("banner")).toBeVisible();
       await expect(page.locator("main")).toBeVisible();
       const mobileScrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
       expect(mobileScrollWidth).toBeLessThanOrEqual(390);
@@ -41,7 +41,7 @@ test.describe("Centralização do layout do site inteiro", () => {
         await page.setViewportSize({ width, height: 900 });
         await page.goto(pageInfo.path);
 
-        const headerBox = await page.locator("header [data-site-container]").first().evaluate(el => {
+        const headerBox = await page.getByRole("banner").locator("[data-site-container]").first().evaluate(el => {
           const rect = el.getBoundingClientRect();
           const css = getComputedStyle(el);
           const pl = parseFloat(css.paddingLeft);
