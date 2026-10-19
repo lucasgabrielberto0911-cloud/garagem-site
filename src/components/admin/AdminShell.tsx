@@ -9,6 +9,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
+  IconCalendar,
   IconCash,
   IconDashboard,
   IconExternal,
@@ -30,7 +31,7 @@ type NavItem = {
   href: string;
   label: string;
   Icon: (props: { className?: string }) => ReactNode;
-  badgeKey?: "leads";
+  badgeKey?: "leads" | "agenda";
   match: (pathname: string) => boolean;
 };
 
@@ -55,16 +56,17 @@ const NAV: NavItem[] = [
     match: (pathname) => pathname.startsWith("/admin/leads"),
   },
   {
+    href: "/admin/agenda",
+    label: "Agenda",
+    Icon: IconCalendar,
+    badgeKey: "agenda",
+    match: (pathname) => pathname.startsWith("/admin/agenda"),
+  },
+  {
     href: "/admin/vendas",
     label: "Vendas",
     Icon: IconCash,
     match: (pathname) => pathname.startsWith("/admin/vendas"),
-  },
-  {
-    href: "/admin/agenda",
-    label: "Agenda",
-    Icon: IconInbox,
-    match: (pathname) => pathname.startsWith("/admin/agenda"),
   },
   {
     href: "/admin/clientes",
@@ -98,25 +100,43 @@ export function AdminShell({
 }) {
   const [costWarnings, setCostWarnings] = useState<number | null>(null);
   const [newLeads, setNewLeads] = useState(initialLeads);
+  const [agendaDue, setAgendaDue] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
 
+  // Busca ao trocar de tela e a cada 60 s com a aba visível, para o lead novo
+  // aparecer sem recarregar. Ao voltar para a aba, atualiza na hora.
   useEffect(() => {
-    const controller = new AbortController();
-    if (pathname !== "/admin/login")
+    if (pathname === "/admin/login") return;
+    let controller = new AbortController();
+    function refresh() {
+      controller.abort();
+      controller = new AbortController();
       fetch("/api/admin/badge", { signal: controller.signal })
         .then(async (response) => {
           if (response.ok) {
             const data = await response.json();
             if (typeof data.count === "number") setNewLeads(data.count);
+            if (typeof data.agenda === "number") setAgendaDue(data.agenda);
             setCostWarnings(typeof data.notifications === "number" ? data.notifications : null);
           }
         })
         .catch(() => {});
-    return () => controller.abort();
+    }
+    function onVisible() {
+      if (document.visibilityState === "visible") refresh();
+    }
+    refresh();
+    const timer = window.setInterval(onVisible, 60_000);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [pathname]);
   useEffect(() => {
     setMenuOpen(false);
@@ -169,7 +189,7 @@ export function AdminShell({
       >
         {NAV.map(({ href, label, Icon, badgeKey, match }) => {
           const active = match(pathname);
-          const badge = badgeKey === "leads" && newLeads > 0 ? newLeads : null;
+          const badge = (badgeKey === "leads" ? newLeads : badgeKey === "agenda" ? agendaDue : 0) || null;
 
           return (
             <Link
@@ -187,7 +207,7 @@ export function AdminShell({
               <span className="flex-1">{label}</span>
               {badge ? (
                 <span
-                  className={`min-w-[22px] px-1.5 py-0.5 text-center font-display text-[11px] font-bold ${
+                  className={`min-w-[22px] px-1.5 py-0.5 text-center font-display text-xs font-bold ${
                     active ? "bg-cream/20 text-cream" : "bg-brand text-white"
                   }`}
                 >
@@ -245,7 +265,7 @@ export function AdminShell({
           className="h-7 w-auto"
         />
       </Link>
-      <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <span className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-muted">
         Admin
       </span>
     </div>
@@ -287,7 +307,7 @@ export function AdminShell({
             height={25}
             className="h-6 w-auto"
           />
-          <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          <span className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-muted">
             Admin
           </span>
         </Link>
@@ -375,7 +395,7 @@ export function AdminShell({
           {BOTTOM_NAV.map(({ href, label, Icon, badgeKey, match }) => {
             const active = match(pathname);
             const badge =
-              badgeKey === "leads" && newLeads > 0 ? newLeads : null;
+              (badgeKey === "leads" ? newLeads : badgeKey === "agenda" ? agendaDue : 0) || null;
             return (
               <li key={href} className="flex flex-1">
                 <Link

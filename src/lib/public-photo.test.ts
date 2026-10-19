@@ -53,7 +53,7 @@ test("GET mantém os bytes e remove noindex, cookies e cache do Storage; HEAD é
 
 test("miniatura substituível tem cache longo e revalidação", async () => {
   const response = await servePublicPhoto(request(), ["v1", "original", "car-card.webp"], async () => new Response("image", { headers: { "Content-Type": "image/webp" } }));
-  assert.match(response.headers.get("cache-control")!, /max-age=604800/);
+  assert.match(response.headers.get("cache-control")!, /max-age=2592000/);
   assert.doesNotMatch(response.headers.get("cache-control")!, /immutable/);
 });
 
@@ -74,7 +74,7 @@ test("GET e HEAD condicionais retornam 304 sem bytes nem credenciais", async () 
     assert.equal(result.status, 304);
     assert.equal(await result.text(), "");
     assert.equal(result.headers.get("etag"), '"photo"');
-    assert.match(result.headers.get("cache-control")!, /max-age=604800/);
+    assert.match(result.headers.get("cache-control")!, /max-age=2592000/);
     assert.equal(result.headers.get("set-cookie"), null);
   }
 });

@@ -525,7 +525,6 @@ export async function updateVehicle(
         yearModel: data.yearModel,
       },
       previousVehicle,
-      { immediate: previousVehicle?.locationCity !== data.locationCity },
     );
     return { success: true, updatedAt: updated.updatedAt.toISOString() };
   } catch (error) {
