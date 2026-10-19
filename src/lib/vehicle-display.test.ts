@@ -400,6 +400,11 @@ test("acessórios com palavras truncadas e parênteses abertos são sanitizados"
   );
 });
 
+test("acessórios públicos válidos não perdem palavras por limite de entrada", () => {
+  const text = "Sistema multimídia original com câmera de ré, Bluetooth e comandos no volante (compatível com Android Auto e Apple CarPlay)";
+  assert.deepEqual(collapseDuplicateAccessories([text]), [text]);
+});
+
 test("Destaque fica limitado aos primeiros N featured", () => {
   const ids = featuredBadgeIds(
     [

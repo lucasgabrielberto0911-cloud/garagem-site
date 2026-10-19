@@ -18,6 +18,7 @@ const AI_USER_AGENTS = [
 
 const META_USER_AGENTS = [
   "facebookexternalhit",
+  "Facebot",
   "meta-externalagent",
 ] as const;
 
@@ -30,8 +31,8 @@ export default function robots(): MetadataRoute.Robots {
       },
       ...META_USER_AGENTS.map((userAgent) => ({
         userAgent,
-        allow: ["/", "/api/meta/catalog.csv", "/api/catalog-jpg/"],
-        disallow: ["/admin", "/api"],
+        ...PUBLIC_RULE,
+        allow: ["/", "/api/meta/catalog.csv$", "/api/catalog-jpg/"],
       })),
       ...AI_USER_AGENTS.map((userAgent) => ({
         userAgent,

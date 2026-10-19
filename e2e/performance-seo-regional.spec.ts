@@ -14,7 +14,7 @@ test("São Mateus e Sooretama têm página, canonical, schema e entrada no sitem
   const xml = await sitemap.text();
   await page.goto("/cidades");
   for (const [slug, name] of [["sao-mateus", "São Mateus"], ["sooretama", "Sooretama"]]) {
-    await expect(page.getByRole("link", { name: `Seminovos em ${name}`, exact: true })).toHaveAttribute("href", `/seminovos/${slug}`);
+    await expect(page.getByRole("link", { name: new RegExp(`Seminovos em ${name}`) }).first()).toHaveAttribute("href", `/seminovos/${slug}`);
     expect(xml).toContain(`<loc>https://www.suagaragem.net/seminovos/${slug}</loc>`);
   }
   for (const [slug, name] of [["sao-mateus", "São Mateus"], ["sooretama", "Sooretama"]]) {

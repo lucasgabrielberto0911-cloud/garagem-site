@@ -17,10 +17,6 @@ export function getSupabaseAdmin(): SupabaseClient {
     throw new Error("Supabase env vars are not configured");
   }
 
-  if (typeof globalThis.WebSocket === "undefined") {
-    globalThis.WebSocket = class {} as unknown as typeof WebSocket;
-  }
-
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });

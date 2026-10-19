@@ -369,6 +369,7 @@ export default async function VehicleDetailPage({
           </nav>
         </div>
 
+        <h1 className="sr-only">{title}</h1>
         <FichaSectionNav hasDetails={hasDetails} />
 
         {/* Mobile: primeira dobra. Desktop: galeria | ficha. */}
@@ -414,12 +415,7 @@ export default async function VehicleDetailPage({
                     </h2>
                     <VehicleDescription
                       text={description}
-                      summaryFacts={{
-                        price: vehicle.price,
-                        km: vehicle.km,
-                        year: vehicle.year,
-                        yearModel: vehicle.yearModel,
-                      }}
+                      summaryFacts={vehicle}
                       className="mt-2 text-sm sm:text-[15px]"
                     />
                   </div>
@@ -473,9 +469,9 @@ export default async function VehicleDetailPage({
                 ) : null}
               </div>
               <div>
-                <h1 className="font-display text-[1.65rem] font-bold leading-tight tracking-tight text-cream sm:text-2xl sm:text-[1.75rem]">
+                <p className="font-display text-[1.65rem] font-bold leading-tight tracking-tight text-cream sm:text-2xl sm:text-[1.75rem]">
                   {title}
-                </h1>
+                </p>
                 {vehicle.version?.trim() ? (
                   <p className="mt-1 text-sm text-muted">{collapseWhitespace(vehicle.version ?? "")}</p>
                 ) : null}
@@ -662,12 +658,7 @@ export default async function VehicleDetailPage({
           model={formatModelName(vehicle.model)}
           vehicleId={vehicle.id}
           description={description}
-          summaryFacts={{
-            price: vehicle.price,
-            km: vehicle.km,
-            year: vehicle.year,
-            yearModel: vehicle.yearModel,
-          }}
+          summaryFacts={vehicle}
           accessories={accessories}
           specs={specs}
           inspection={vehicle.inspection}

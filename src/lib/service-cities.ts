@@ -12,8 +12,8 @@ export type ServiceCity = {
   steps?: readonly { title: string; text: string }[];
 };
 
-/** Índice público só com os botões das cidades. O rodapé aponta para cá. */
-export const CITIES_DIRECTORY_PATH = "/cidades";
+/** Índice público das cidades e do estoque. O rodapé aponta para cá. */
+export const CITIES_DIRECTORY_PATH = "/seminovos";
 
 export const SERVICE_CITIES = [
   {

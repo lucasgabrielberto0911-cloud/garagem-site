@@ -132,6 +132,7 @@ const nextConfig = {
       "/estoque/toyota-etios-xs-xs-1-5-16v-flex-automatico-2017-cmturwtw30000l804s8700mu4",
     ];
     return [
+      { source: "/cidades", destination: "/seminovos", statusCode: 301 },
       {
         source: "/",
         has: [{ type: "host", value: "suagaragem.net" }],

@@ -54,15 +54,13 @@ export function VehicleImage({
   // foto da primeira dobra ainda baixa cedo, mas com prioridade baixa,
   // para não dividir a rede lenta com a capa.
   if (priority) {
-    const mobileSizes = sizes?.includes("calc((100vw - 44px) / 2)")
-      ? "calc((100vw - 44px) / 2)"
-      : sizes;
-    const options = { as: "image" as const, fetchPriority: "high" as const };
+    const options = { as: "image" as const, fetchPriority: "high" as const,
+      imageSizes: finalSet || mobileSet ? sizes : undefined };
     if (mobileSet) {
-      preload(finalSrc, { ...options, imageSrcSet: mobileSet, imageSizes: mobileSizes, media: "(max-width: 639px)" });
-      preload(finalSrc, { ...options, imageSrcSet: finalSet, imageSizes: sizes, media: "(min-width: 640px)" });
+      preload(finalSrc, { ...options, imageSrcSet: mobileSet, media: "(max-width: 639px)" });
+      preload(finalSrc, { ...options, imageSrcSet: finalSet, media: "(min-width: 640px)" });
     } else {
-      preload(finalSrc, { ...options, imageSrcSet: finalSet, imageSizes: sizes });
+      preload(finalSrc, { ...options, imageSrcSet: finalSet });
     }
   }
 

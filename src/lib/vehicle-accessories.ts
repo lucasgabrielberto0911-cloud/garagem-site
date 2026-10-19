@@ -164,7 +164,7 @@ export function filterAccessoriesForCategory(
  * Trunca em palavra inteira sem cortar no meio da palavra,
  * corrige truncamentos conhecidos e fecha parênteses abertos.
  */
-export function sanitizeAccessory(raw: string, maxLen = 100): string {
+export function sanitizeAccessory(raw: string, maxLen = Infinity): string {
   if (typeof raw !== "string") return "";
   let text = raw.trim().replace(/\s+/g, " ");
   if (!text) return "";
@@ -172,23 +172,20 @@ export function sanitizeAccessory(raw: string, maxLen = 100): string {
   // Corrige truncamento conhecido de palavra
   text = text.replace(/\bcombustíve\b/gi, "combustível");
 
+  maxLen = Math.max(0, maxLen);
   if (text.length > maxLen) {
-    const cut = text.slice(0, maxLen);
-    const lastSpace = cut.lastIndexOf(" ");
-    text = (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trim();
+    const lastSpace = text.lastIndexOf(" ", maxLen);
+    text = lastSpace < 0 ? "" : text.slice(0, lastSpace);
   }
 
-  // Remove pontuações finais pendentes deixadas por corte
-  text = text.replace(/[,;:\-\s]+$/, "");
-
-  // Fecha parênteses abertos desbalanceados
-  const opens = (text.match(/\(/g) || []).length;
-  const closes = (text.match(/\)/g) || []).length;
-  if (opens > closes) {
-    text += ")".repeat(opens - closes);
+  for (;;) {
+    // Remove pontuações finais pendentes deixadas por corte
+    text = text.replace(/[,;:\-\s]+$/, "");
+    // Fecha parênteses abertos desbalanceados
+    const missing = Math.max(0, (text.match(/\(/g) || []).length - (text.match(/\)/g) || []).length);
+    if (text.length + missing <= maxLen) return text + ")".repeat(missing);
+    text = text.replace(/\s*\S+$/, "");
   }
-
-  return text;
 }
 
 /** Limpa, corta e remove duplicatas (case-insensitive), preservando a ordem. */
@@ -200,7 +197,7 @@ export function normalizeAccessories(raw: unknown): string[] {
 
   for (const item of raw) {
     if (typeof item !== "string") continue;
-    const value = sanitizeAccessory(item);
+    const value = sanitizeAccessory(item, 100);
     if (!value) continue;
     const key = value.toLocaleLowerCase("pt-BR");
     if (seen.has(key)) continue;
