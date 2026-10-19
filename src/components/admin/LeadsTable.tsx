@@ -6,7 +6,11 @@ import { PURCHASE_STATUSES, PURCHASE_STATUS_LABEL } from "@/lib/lead-funnel";
 import { LeadFollowUp } from "@/components/admin/LeadFollowUp";
 import { adminMutation } from "@/lib/admin-mutation";
 import { exportAdminCsv } from "@/lib/admin-export-client";
-import { adminDate, localDateInput } from "@/lib/admin-date";
+import { adminActionDate, localDateInput } from "@/lib/admin-date";
+import {
+  leadResponseUrgency,
+  summarizeUnansweredLeads,
+} from "@/lib/lead-response-alert";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -24,19 +28,26 @@ import {
   normalizePlate,
 } from "@/lib/format";
 import {
+  LEAD_LOSS_REASONS,
+  LEAD_LOSS_REASON_LABEL,
   LEAD_STATUSES,
   LEAD_STATUS_LABEL as STATUS_LABEL,
   LEAD_STATUS_STYLE as STATUS_STYLE,
   WANTED_LEAD_SOURCE,
   buildLeadWhatsAppUrl,
+  isLeadLossReason,
+  type LeadLossReason,
   type LeadStatus,
   leadDisplayName,
   leadHasPhone,
+  summarizeLeadLosses,
 } from "@/lib/leads";
 import { emailFromLeadNotes, maxPriceFromLeadNotes } from "@/lib/wanted-lead";
 import {
   convertLeadToCustomer,
   deleteLead,
+  recordLeadWhatsAppClick,
+  saveLeadLossReason,
   updateLeadStatus,
 } from "@/app/admin/leads/actions";
 import { adminFileViewHref } from "@/lib/storage-file-ref";
@@ -125,6 +136,32 @@ export function LeadsTable({
     }
   }
 
+  function handleWhatsApp(lead: LeadVenda) {
+    startTransition(() => {
+      void recordLeadWhatsAppClick(lead.id).then((result) => {
+        if (result.ok) router.refresh();
+      });
+    });
+  }
+
+  async function handleSaveLossReason(
+    lead: LeadVenda,
+    reason: LeadLossReason,
+    detail: string,
+  ) {
+    setSavingId(lead.id);
+    const result = await adminMutation(() =>
+      saveLeadLossReason(lead.id, reason, detail),
+    );
+    setSavingId(null);
+    if (result.ok) {
+      toast.success(result.message);
+      router.refresh();
+    } else {
+      toast.error(result.message);
+    }
+  }
+
   async function convert(lead: LeadVenda) {
     setSavingId(lead.id);
     const result = await adminMutation(() => convertLeadToCustomer(lead.id));
@@ -160,6 +197,9 @@ export function LeadsTable({
     }
   }
 
+  const unansweredSummary = summarizeUnansweredLeads(leads);
+  const lossSummary = summarizeLeadLosses(leads);
+
   return (
     <div className="space-y-4">
       {leadId ? (
@@ -172,6 +212,50 @@ export function LeadsTable({
           >
             Ver todos os contatos
           </button>
+        </div>
+      ) : null}
+      {unansweredSummary.totalUrgent > 0 ? (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-2 border border-brand/50 bg-brand/10 p-3 text-xs sm:text-sm"
+        >
+          <span className="font-semibold text-cream">
+            Alerta de resposta:{" "}
+            {unansweredSummary.overdueCount > 0
+              ? `${unansweredSummary.overdueCount} atrasado(s) (+2h)`
+              : ""}
+            {unansweredSummary.overdueCount > 0 &&
+            unansweredSummary.alertCount > 0
+              ? " · "
+              : ""}
+            {unansweredSummary.alertCount > 0
+              ? `${unansweredSummary.alertCount} aguardando há +30 min`
+              : ""}
+          </span>
+          {status !== "novo" ? (
+            <button
+              type="button"
+              onClick={() => goTo({ status: "novo", q: query, page: 1 })}
+              className="font-display text-xs font-semibold uppercase tracking-wide text-cream underline underline-offset-4"
+            >
+              Filtrar novos
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {lossSummary.length > 0 && status === "perdido" ? (
+        <div className="flex flex-wrap items-center gap-2 border border-white/10 bg-ink/50 p-3 text-xs text-muted">
+          <span className="font-semibold uppercase tracking-wide text-cream">
+            Principais motivos de perda:
+          </span>
+          {lossSummary.map((item) => (
+            <span
+              key={item.reason}
+              className="border border-white/10 bg-white/5 px-2 py-0.5 text-cream"
+            >
+              {item.label} ({item.count})
+            </span>
+          ))}
         </div>
       ) : null}
       <div className="border border-white/10 bg-ink/50 p-3 sm:p-4">
@@ -300,6 +384,8 @@ export function LeadsTable({
               saving={savingId === lead.id}
               startOpen={leadId === lead.id}
               onStatus={changeStatus}
+              onWhatsApp={handleWhatsApp}
+              onSaveLossReason={handleSaveLossReason}
               onConvert={convert}
               onDelete={setDeleteTarget}
               onCopyPlate={copyPlate}
@@ -400,6 +486,8 @@ function LeadCard({
   saving,
   startOpen,
   onStatus,
+  onWhatsApp,
+  onSaveLossReason,
   onConvert,
   onDelete,
   onCopyPlate,
@@ -409,12 +497,24 @@ function LeadCard({
   saving: boolean;
   startOpen: boolean;
   onStatus: (lead: LeadVenda, value: string) => void;
+  onWhatsApp: (lead: LeadVenda) => void;
+  onSaveLossReason: (
+    lead: LeadVenda,
+    reason: LeadLossReason,
+    detail: string,
+  ) => Promise<void>;
   onConvert: (lead: LeadVenda) => void;
   onDelete: (lead: LeadVenda) => void;
   onCopyPlate: (plate: string) => void;
 }) {
   const [expanded, setExpanded] = useState(startOpen);
   const [opened, setOpened] = useState(startOpen);
+  const initialLossReason =
+    lead.lostReason && isLeadLossReason(lead.lostReason)
+      ? lead.lostReason
+      : "";
+  const [lossReason, setLossReason] = useState<string>(initialLossReason);
+  const [lossDetail, setLossDetail] = useState("");
   const detailId = `lead-detail-${lead.id}`;
   const chip = originChip(lead);
   const email = emailFromLeadNotes(lead.notes);
@@ -424,6 +524,11 @@ function LeadCard({
   const overdue = lead.nextActionAt
     ? localDateInput(new Date(lead.nextActionAt)) < localDateInput()
     : false;
+  const urgency = leadResponseUrgency(lead);
+  const lossLabel =
+    lead.lostReason && isLeadLossReason(lead.lostReason)
+      ? LEAD_LOSS_REASON_LABEL[lead.lostReason]
+      : null;
   const interest = isWanted
     ? `Modelo pedido: ${lead.vehicleInfo}`
     : `${lead.vehicleInfo}${lead.km !== null ? ` · ${formatNumberBR(lead.km)} km` : ""}`;
@@ -450,6 +555,22 @@ function LeadCard({
               {chip.text}
             </span>
           ) : null}
+          {urgency.level !== "ok" ? (
+            <span
+              className={`px-1.5 py-0.5 font-semibold uppercase tracking-wide ${
+                urgency.level === "atrasado"
+                  ? "bg-brand text-white"
+                  : "border border-brand/60 bg-brand/20 text-cream"
+              }`}
+            >
+              {urgency.label}
+            </span>
+          ) : null}
+          {lossLabel ? (
+            <span className="border border-white/15 bg-white/5 px-1.5 py-0.5 text-cream">
+              Objeção: {lossLabel}
+            </span>
+          ) : null}
           <span>{hasPhone ? formatPhoneBR(lead.phone) : "Sem telefone"}</span>
           <span aria-hidden="true">·</span>
           <span>{formatDateTime(lead.createdAt)}</span>
@@ -459,7 +580,7 @@ function LeadCard({
             <span className="font-semibold">{overdue ? "Atrasado: " : "Próxima ação: "}</span>
             {lead.nextAction || "retomar contato"}
             {lead.nextActionAt
-              ? ` · ${adminDate(new Date(lead.nextActionAt))}`
+              ? ` · ${adminActionDate(new Date(lead.nextActionAt))}`
               : ""}
           </p>
         ) : null}
@@ -470,6 +591,7 @@ function LeadCard({
                 href={buildLeadWhatsAppUrl(lead)}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => onWhatsApp(lead)}
                 className={`${leadAction} min-w-0 flex-1 border-[#25D366]/60 text-[#25D366] hover:bg-[#25D366]/10`}
               >
                 <IconWhatsApp className="h-4 w-4" />
@@ -504,29 +626,86 @@ function LeadCard({
       {opened ? (
         <div id={detailId} hidden={!expanded} className="border-t border-white/10">
           <div className="space-y-3 p-3 sm:p-4">
-            <div>
-              <label
-                htmlFor={`status-${lead.id}`}
-                className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted"
-              >
-                Status do lead
-              </label>
-              <select
-                id={`status-${lead.id}`}
-                value={lead.status}
-                disabled={saving}
-                onChange={(event) => onStatus(lead, event.target.value)}
-                className={`${inputClass} bg-asphalt disabled:opacity-60`}
-              >
-                {(lead.source?.startsWith("whatsapp:") ? PURCHASE_STATUSES : LEAD_STATUSES).map((value) => (
-                  <option key={value} value={value}>
-                    {lead.source?.startsWith("whatsapp:")
-                      ? PURCHASE_STATUS_LABEL[value as keyof typeof PURCHASE_STATUS_LABEL] || STATUS_LABEL[value]
-                      : STATUS_LABEL[value]}
-                  </option>
-                ))}
-              </select>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor={`status-${lead.id}`}
+                  className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted"
+                >
+                  Status do lead
+                </label>
+                <select
+                  id={`status-${lead.id}`}
+                  value={lead.status}
+                  disabled={saving}
+                  onChange={(event) => onStatus(lead, event.target.value)}
+                  className={`${inputClass} bg-asphalt disabled:opacity-60`}
+                >
+                  {(lead.source?.startsWith("whatsapp:") ? PURCHASE_STATUSES : LEAD_STATUSES).map((value) => (
+                    <option key={value} value={value}>
+                      {lead.source?.startsWith("whatsapp:")
+                        ? PURCHASE_STATUS_LABEL[value as keyof typeof PURCHASE_STATUS_LABEL] || STATUS_LABEL[value]
+                        : STATUS_LABEL[value]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor={`loss-reason-${lead.id}`}
+                  className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted"
+                >
+                  Objeção / motivo de perda
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    id={`loss-reason-${lead.id}`}
+                    value={lossReason}
+                    disabled={saving}
+                    onChange={(event) => {
+                      const val = event.target.value;
+                      setLossReason(val);
+                      if (val && isLeadLossReason(val) && !lossDetail.trim()) {
+                        void onSaveLossReason(lead, val, "");
+                      }
+                    }}
+                    className={`${inputClass} min-w-0 flex-1 bg-asphalt disabled:opacity-60`}
+                  >
+                    <option value="">Selecionar motivo…</option>
+                    {LEAD_LOSS_REASONS.map((reason) => (
+                      <option key={reason} value={reason}>
+                        {LEAD_LOSS_REASON_LABEL[reason]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
+
+            {lossReason && isLeadLossReason(lossReason) ? (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="text"
+                  value={lossDetail}
+                  onChange={(event) => setLossDetail(event.target.value)}
+                  maxLength={300}
+                  placeholder="Detalhe da objeção (ex.: pediu R$ 3 mil de desconto ou taxa alta)"
+                  className={`${inputClass} min-w-0 flex-1`}
+                />
+                <button
+                  type="button"
+                  disabled={saving || !lossDetail.trim()}
+                  onClick={async () => {
+                    await onSaveLossReason(lead, lossReason, lossDetail);
+                    setLossDetail("");
+                  }}
+                  className={btn.outline}
+                >
+                  Registrar detalhe
+                </button>
+              </div>
+            ) : null}
 
             <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
               {!isWanted ? (
