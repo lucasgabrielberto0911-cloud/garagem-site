@@ -11,6 +11,7 @@ import {
 import { site } from "@/lib/site";
 import { OFFICIAL_WARRANTY_SUMMARY, officialWarrantyDetail } from "@/lib/chat-warranty";
 import { shortVersion } from "@/lib/vehicle-display";
+import { formatBrandName, formatModelName } from "@/lib/format";
 import { parseChatNumberAmount, withoutChatMetrics } from "@/lib/chat-search-filters";
 
 export const CHAT_WHATSAPP_URL = `https://wa.me/${site.whatsappNumber}`;
@@ -219,7 +220,7 @@ function stockLineLabel(
 ) {
   const version = shortVersion(vehicle.version, vehicle.model);
   const versionBit = version ? ` ${version}` : "";
-  const base = `${vehicle.brand} ${vehicle.model}${versionBit} ${vehicle.year} · ${vehicle.km.toLocaleString("pt-BR")} km · ${formatChatPrice(vehicle.price)}`;
+  const base = `${formatBrandName(vehicle.brand)} ${formatModelName(vehicle.model)}${versionBit} ${vehicle.year} · ${vehicle.km.toLocaleString("pt-BR")} km · ${formatChatPrice(vehicle.price)}`;
   if (!withExtras) return base;
   const color = vehicle.color?.trim() ? vehicle.color.trim() : "cor não informada";
   const kind = vehicle.category === "moto" ? "moto" : "carro";

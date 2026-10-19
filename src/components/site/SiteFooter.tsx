@@ -183,6 +183,18 @@ export async function SiteFooter() {
 
         {/* Mobile: contato essencial + atalho para a lista de cidades */}
         <div className="mt-8 space-y-3 text-center sm:hidden">
+          <nav aria-label="Navegação do rodapé" className="mb-5">
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">Navegação e serviços</h2>
+            <ul className="mt-3 grid grid-cols-2 gap-2 text-left">
+              {[...NAV_LINKS, ...SECONDARY_LINKS, ...SERVICES.map(({ label, href }) => ({ label, href }))].map((link) => (
+                <li key={`${link.href}-${link.label}`}>
+                  <Link href={link.href} prefetch={false} className="flex min-h-11 items-center border border-white/10 px-3 text-sm text-muted transition hover:text-cream">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
           {PHONES.map((phone, index) => (
             <a
               key={phone.digits}

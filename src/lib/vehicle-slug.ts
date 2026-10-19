@@ -27,7 +27,17 @@ export function isVehicleCuid(value: string) {
 }
 
 export function vehicleSlug(vehicle: VehiclePathInput) {
-  const label = [vehicle.brand, vehicle.model, vehicle.version, String(vehicle.yearModel)]
+  const modelTokens = new Set(
+    vehicle.model.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/[a-z0-9]+/g) ?? [],
+  );
+  const version = (vehicle.version ?? "")
+    .split(/\s+/)
+    .filter((token) => {
+      const normalized = token.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return !modelTokens.has(normalized.replace(/[^a-z0-9]/g, ""));
+    })
+    .join(" ");
+  const label = [vehicle.brand, vehicle.model, version, String(vehicle.yearModel)]
     .filter((part): part is string => Boolean(part && String(part).trim()))
     .join(" ");
   const base = slugifyPart(label) || "veiculo";

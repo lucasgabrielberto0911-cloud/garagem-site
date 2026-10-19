@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isVehicleCuid } from "./vehicle-slug";
+import { isVehicleCuid, vehicleSlug } from "./vehicle-slug";
 import {
   CATALOG_DEALER_ID,
   META_CSV_COLUMNS,
@@ -21,6 +21,13 @@ import {
 } from "./catalog-feed";
 
 const VEHICLE_CUID = "cmt0ewzpg0000lc0493fl02h7";
+
+test("slug remove repetição de tokens da versão já presentes no modelo", () => {
+  assert.equal(
+    vehicleSlug({ id: VEHICLE_CUID, brand: "Honda", model: "CG 160 Start", version: "160 Start", yearModel: 2023 }),
+    `honda-cg-160-start-2023-${VEHICLE_CUID}`,
+  );
+});
 
 const sample: CatalogFeedVehicle = {
   id: VEHICLE_CUID,
