@@ -299,7 +299,7 @@ export function VehiclePromoKitModal({
                   readOnly
                   value={whatsappText}
                   rows={8}
-                  className="w-full resize-none border border-white/10 bg-asphalt p-3 font-mono text-xs text-cream outline-none focus:border-brand"
+                  className="w-full resize-none border border-white/10 bg-asphalt p-3 font-body text-xs text-cream outline-none focus:border-brand"
                 />
                 <button
                   type="button"
@@ -321,7 +321,7 @@ export function VehiclePromoKitModal({
                   readOnly
                   value={instagramText}
                   rows={8}
-                  className="w-full resize-none border border-white/10 bg-asphalt p-3 font-mono text-xs text-cream outline-none focus:border-brand"
+                  className="w-full resize-none border border-white/10 bg-asphalt p-3 font-body text-xs text-cream outline-none focus:border-brand"
                 />
                 <button
                   type="button"
