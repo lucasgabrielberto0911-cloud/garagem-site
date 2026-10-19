@@ -77,18 +77,20 @@ export function buildPageMetadata({
   title,
   description,
   path,
+  canonicalPath,
   noIndex = false,
 }: {
   title: string;
   description: string;
   path: string;
+  canonicalPath?: string;
   noIndex?: boolean;
 }): Metadata {
   const url = absoluteUrl(path);
   return {
     title,
     description,
-    alternates: { canonical: pageCanonicalPath(path) },
+    alternates: { canonical: pageCanonicalPath(canonicalPath ?? path) },
     ...(noIndex
       ? { robots: { index: false, follow: true } }
       : { robots: { index: true, follow: true } }),

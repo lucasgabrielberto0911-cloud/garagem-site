@@ -64,7 +64,11 @@ export function NativeRemoteFillImage({
   );
   return mobileSrcSet ? (
     <picture className="contents">
-      <source media="(max-width: 639px)" srcSet={mobileSrcSet} sizes={sizes} />
+      <source
+        media="(max-width: 639px)"
+        srcSet={mobileSrcSet}
+        sizes={sizes?.includes("calc((100vw - 44px) / 2)") ? "calc((100vw - 44px) / 2)" : sizes}
+      />
       {image}
     </picture>
   ) : image;

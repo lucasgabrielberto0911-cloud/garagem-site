@@ -379,6 +379,23 @@ test("acessórios duplicados colapsam (hífen / caixa)", () => {
   );
 });
 
+test("acessórios com palavras truncadas e parênteses abertos são sanitizados", () => {
+  assert.deepEqual(
+    collapseDuplicateAccessories([
+      "Painel digital blackout (velocímetro digital, hodômetro e marcador de combustíve",
+      "Tampa do tanque de combustível estilo aviação (articulada",
+      "Painel com conta-giros (tacômetro",
+      "Assento largo (piloto + garupa",
+    ]),
+    [
+      "Painel digital blackout (velocímetro digital, hodômetro e marcador de combustível)",
+      "Tampa do tanque de combustível estilo aviação (articulada)",
+      "Painel com conta-giros (tacômetro)",
+      "Assento largo (piloto + garupa)",
+    ],
+  );
+});
+
 test("Destaque fica limitado aos primeiros N featured", () => {
   const ids = featuredBadgeIds(
     [

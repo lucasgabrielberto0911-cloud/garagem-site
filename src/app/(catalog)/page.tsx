@@ -196,7 +196,7 @@ export default async function HomePage() {
         </div>
 
         <div className="hero-search mt-3 max-sm:order-3 sm:mt-4">
-          <HeroSearch brands={brands} />
+          <HeroSearch brands={brands.slice(0, 5)} />
         </div>
 
         <div className="mt-2 max-sm:order-2 sm:mt-4">
@@ -222,7 +222,7 @@ export default async function HomePage() {
           ) : (
             <VehicleGrid
               vehicles={featured}
-              priorityCount={2}
+              priorityCount={1}
               desktopCols={4}
               destaqueLimit={0}
             />

@@ -73,3 +73,8 @@ test("páginas de cidade e a vitrine delas continuam no ar", () => {
   assert.match(sitemap, /CITIES_DIRECTORY_PATH/);
   assert.match(sitemap, /\/seminovos\/\$\{city\.slug\}/);
 });
+
+test("/cidades aponta canonical para /seminovos para evitar canibalização", async () => {
+  const { metadata } = await import("@/app/(site)/cidades/page");
+  assert.equal(metadata?.alternates?.canonical, "/seminovos");
+});

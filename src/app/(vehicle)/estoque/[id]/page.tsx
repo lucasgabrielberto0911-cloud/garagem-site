@@ -414,7 +414,12 @@ export default async function VehicleDetailPage({
                     </h2>
                     <VehicleDescription
                       text={description}
-                      summaryFacts={vehicle}
+                      summaryFacts={{
+                        price: vehicle.price,
+                        km: vehicle.km,
+                        year: vehicle.year,
+                        yearModel: vehicle.yearModel,
+                      }}
                       className="mt-2 text-sm sm:text-[15px]"
                     />
                   </div>
@@ -657,7 +662,12 @@ export default async function VehicleDetailPage({
           model={formatModelName(vehicle.model)}
           vehicleId={vehicle.id}
           description={description}
-          summaryFacts={vehicle}
+          summaryFacts={{
+            price: vehicle.price,
+            km: vehicle.km,
+            year: vehicle.year,
+            yearModel: vehicle.yearModel,
+          }}
           accessories={accessories}
           specs={specs}
           inspection={vehicle.inspection}

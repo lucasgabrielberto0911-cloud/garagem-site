@@ -17,6 +17,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Escolha a cidade para abrir a página de seminovos da Garagem no Espírito Santo.",
   path: CITIES_DIRECTORY_PATH,
+  canonicalPath: "/seminovos",
 });
 
 export default function CidadesPage() {

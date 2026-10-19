@@ -69,7 +69,7 @@ export function VehicleCard({
             vehicle.updatedAt instanceof Date
               ? vehicle.updatedAt.toISOString()
               : vehicle.updatedAt ?? null,
-          photos: vehicle.photos,
+          photos: vehicle.photos[0] ? [vehicle.photos[0]] : [],
         }}
       />
       <StockVehicleLink

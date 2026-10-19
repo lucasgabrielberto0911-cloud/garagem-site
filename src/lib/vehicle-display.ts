@@ -18,6 +18,7 @@ import {
   type CustomerWhatsAppVehicleIntent,
 } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
+import { sanitizeAccessory } from "@/lib/vehicle-accessories";
 
 export const MAX_DESTAQUE_BADGES = 3;
 
@@ -447,7 +448,7 @@ export function collapseDuplicateAccessories(items: string[]) {
   const seen = new Set<string>();
   const result: string[] = [];
   for (const raw of items) {
-    const value = collapseWhitespace(raw);
+    const value = sanitizeAccessory(raw);
     if (!value) continue;
     const key = foldToken(value);
     if (!key || seen.has(key)) continue;

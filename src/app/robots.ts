@@ -16,6 +16,11 @@ const AI_USER_AGENTS = [
   "Applebot-Extended",
 ] as const;
 
+const META_USER_AGENTS = [
+  "facebookexternalhit",
+  "meta-externalagent",
+] as const;
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -23,6 +28,11 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         ...PUBLIC_RULE,
       },
+      ...META_USER_AGENTS.map((userAgent) => ({
+        userAgent,
+        allow: ["/", "/api/meta/catalog.csv", "/api/catalog-jpg/"],
+        disallow: ["/admin", "/api"],
+      })),
       ...AI_USER_AGENTS.map((userAgent) => ({
         userAgent,
         ...PUBLIC_RULE,

@@ -128,7 +128,7 @@ export function EstoqueBrowseFallback({
             <HideStockCardInterest>
               <VehicleGrid
                 vehicles={vehicles}
-                priorityCount={2}
+                priorityCount={1}
                 returnTo="/estoque"
                 photoLayout="stock"
               />
