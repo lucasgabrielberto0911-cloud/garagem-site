@@ -89,14 +89,14 @@ async function loadPublicSitemapVehicles() {
 
   try {
     return await prisma.vehicle.findMany({
-      where: PUBLIC_SITEMAP_VEHICLE_WHERE,
+      where: { ...PUBLIC_SITEMAP_VEHICLE_WHERE, status: { in: ["disponivel", "vendido"] } },
       select,
       orderBy: { updatedAt: "desc" },
     });
   } catch (error) {
     if (!isMissingColumnError(error, "historical")) throw error;
     return prisma.vehicle.findMany({
-      where: { status: "disponivel" },
+      where: { status: { in: ["disponivel", "vendido"] } },
       select,
       orderBy: { updatedAt: "desc" },
     });

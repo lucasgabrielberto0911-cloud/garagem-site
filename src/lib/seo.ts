@@ -1,7 +1,7 @@
 import { publicVehicleDescription } from "./public-vehicle-description";
 import type { Metadata } from "next";
 import { publicPhotoSrc } from "@/lib/public-photo-url";
-import { formatBrandName, formatModelName } from "@/lib/format";
+import { formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import {
   publicGoogleUrl,
   type GoogleReviews,
@@ -355,20 +355,19 @@ export function vehicleJsonLd(vehicle: {
   const path = display.path;
   const priceOk = vehicle.status !== "vendido" && hasPublishablePrice(vehicle.price);
   const availability = vehicleAvailabilityUrl(vehicle.status);
-  const description = publicVehicleDescription(vehicle.description, vehicle.status === "vendido");
+  const description = publicVehicleDescription(vehicle.description, vehicle.status === "vendido")
+    || vehicleSeoDescription({ ...vehicle, version: display.version, year: vehicle.yearModel, sold: vehicle.status === "vendido" });
 
   const offers: Record<string, unknown> = {
     "@type": "Offer",
-    priceCurrency: "BRL",
     availability,
     url: absoluteUrl(path),
-    seller: { "@id": absoluteUrl("/#loja") },
+    seller: { "@type": "AutoDealer", "@id": absoluteUrl("/#loja"), name: site.name, url: absoluteUrl("/") },
     itemCondition: "https://schema.org/UsedCondition",
   };
   if (priceOk) {
     offers.price = vehicle.price;
-    // Google pede validade do preço; a ficha revalida a cada 10 min, então a data nunca fica vencida.
-    offers.priceValidUntil = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+    offers.priceCurrency = "BRL";
   }
   const images = vehicle.photos
     .map((photo) => (photo.url ? absoluteUrl(publicPhotoSrc(photo.url)) : ""))

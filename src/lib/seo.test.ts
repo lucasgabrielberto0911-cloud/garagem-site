@@ -95,14 +95,55 @@ test("Google recebe fotos públicas no domínio canônico e mantém imagens exte
   assert.deepEqual(data.image, ["https://www.suagaragem.net/fotos/v1/original/car.webp", "https://cdn.example/hb20.webp"]);
 });
 
-test("JSON-LD do veículo traz versão e validade do preço; vendido não traz preço nem validade", () => {
+test("JSON-LD do veículo traz versão e não inventa prazo de validade da oferta", () => {
   const data = vehicleJsonLd({ ...hb20, version: "Comfort 1.0" }) as {
     vehicleConfiguration?: string;
     offers: Record<string, unknown>;
   };
   assert.equal(data.vehicleConfiguration, "Comfort 1.0");
-  assert.match(String(data.offers.priceValidUntil), /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal("priceValidUntil" in data.offers, false);
   const sold = vehicleJsonLd({ ...hb20, status: "vendido" }) as { offers: Record<string, unknown> };
   assert.equal("price" in sold.offers, false);
   assert.equal("priceValidUntil" in sold.offers, false);
+});
+
+
+test("JSON-LD completo preserva dados reais e usa Car ou Motorcycle como subtipos de Vehicle", () => {
+  const data = vehicleJsonLd(hb20);
+  assert.equal(data["@context"], "https://schema.org");
+  assert.equal(data["@id"], `${data.url}#veiculo`);
+  assert.equal(data.name, "Hyundai HB20 Evolution 1.0 2022");
+  assert.deepEqual(data.brand, { "@type": "Brand", name: "Hyundai" });
+  assert.equal(data.model, "HB20");
+  assert.equal(data.vehicleModelDate, "2022");
+  assert.equal(data.productionDate, "2021");
+  assert.equal(data.color, "Prata");
+  assert.equal(data.fuelType, "Flex");
+  assert.equal(data.vehicleTransmission, "Manual");
+  assert.equal(data.numberOfDoors, 4);
+  assert.deepEqual(data.vehicleEngine, { "@type": "EngineSpecification", name: "1.0 12V" });
+  assert.deepEqual(data.image, [hb20.photos[0].url]);
+  assert.equal(data.offers.url, data.url);
+  assert.equal(data.offers["@type"], "Offer");
+  assert.equal(data.offers.itemCondition, "https://schema.org/UsedCondition");
+  assert.equal((data.offers.seller as { name: string }).name, "Garagem");
+  assert.equal(vehicleJsonLd({ ...hb20, category: "moto" })["@type"], "Motorcycle");
+  assert.equal("aggregateRating" in data, false);
+});
+
+test("vendido remove preço da descrição e da oferta; campos ausentes não são inventados", () => {
+  const data = vehicleJsonLd({ ...hb20, status: "vendido", description: "Preço: 64900", photos: [], engine: null, doors: null, color: null });
+  const serialized = JSON.stringify(data);
+  assert.doesNotMatch(serialized, /64900|price|R\$|locationCity|aggregateRating/);
+  assert.equal(data.offers.availability, "https://schema.org/OutOfStock");
+  assert.match(data.description!, /vendido/);
+  assert.equal("image" in data, false);
+  assert.equal("vehicleEngine" in data, false);
+  assert.equal("numberOfDoors" in data, false);
+  assert.equal("color" in data, false);
+  for (const price of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const offers = vehicleJsonLd({ ...hb20, price }).offers;
+    assert.equal("price" in offers, false);
+    assert.equal("priceCurrency" in offers, false);
+  }
 });

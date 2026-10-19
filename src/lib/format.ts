@@ -113,36 +113,30 @@ export function formatVehicleLabel(
   return year != null ? `${label} ${year}` : label;
 }
 
-/**
- * Meta description curta (≈120–155 chars), sem emoji e sem o texto de legenda
- * do anúncio (WhatsApp/redes).
- */
+/** Meta description da ficha, sem cortar os dados que identificam o carro. */
 export function vehicleSeoDescription(input: {
   brand: string;
   model: string;
+  version?: string | null;
   year: number;
   price: number;
   km: number;
   transmission: string;
   sold?: boolean;
   siteName?: string;
-  /** Região de atendimento (nunca a cidade individual do carro). */
-  location?: string;
 }) {
-  const brand = formatBrandName(input.brand);
-  const model = formatModelName(input.model);
+  const label = [formatVehicleLabel(input.brand, input.model), input.version, input.year]
+    .filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
   const siteName = input.siteName ?? "Garagem";
-
-  const text = input.sold
-    ? `Este ${brand} ${model} já foi vendido. Confira outras opções disponíveis no estoque da ${siteName}.`
-    : `${brand} ${model} ${input.year} à venda${input.location ? ` em ${input.location}` : ""} por ${formatCurrencyBRL(input.price)}. ${formatNumberBR(input.km)} km, câmbio ${input.transmission}. Confira fotos e condições de pagamento na ${siteName}.`;
-
-  let clean = text.replace(/\s+/g, " ").trim();
-  if (clean.length < 120) {
-    clean = `${clean.replace(/\.$/, "")}. Atendimento rápido pelo WhatsApp.`;
+  if (input.sold) {
+    return `${label} (vendido), seminovo ES na ${siteName}. Veja veículos similares disponíveis e fale pelo WhatsApp.`;
   }
-  if (clean.length <= 155) return clean;
-  return `${clean.slice(0, 154).trimEnd()}…`;
+  const price = Number.isFinite(input.price) && input.price > 0
+    ? ` por ${formatCurrencyBRL(input.price)}` : "";
+  const base = `${label}, seminovo ES${price} na ${siteName}.`;
+  const details = ` ${formatNumberBR(input.km)} km, câmbio ${input.transmission}.`;
+  const cta = " Confira fotos e fale pelo WhatsApp.";
+  return `${base}${base.length + details.length + cta.length <= 160 ? details : ""}${cta}`;
 }
 
 /** Alt text de foto na ficha: "Marca Modelo Ano - foto N de T". */

@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { VEHICLE_SEO_LOCATION, VEHICLE_SEO_TITLE_MAX } from "./vehicle-seo";
 import {
   ESTOQUE_SEO_TITLE,
   HOME_SEO_TITLE,
@@ -21,7 +20,6 @@ function readSrc(rel: string) {
 test("região de busca local tem um ponto só e é Linhares/ES", () => {
   assert.equal(SEO_LOCAL_CITY, "Linhares");
   assert.equal(SEO_LOCAL_LOCATION, "Linhares/ES");
-  assert.equal(VEHICLE_SEO_LOCATION, SEO_LOCAL_LOCATION);
 });
 
 test("título da home foca no norte do ES e cabe na busca", () => {
@@ -29,14 +27,14 @@ test("título da home foca no norte do ES e cabe na busca", () => {
     HOME_SEO_TITLE,
     "Garagem | Seminovos com procedência no norte do ES",
   );
-  assert.ok(HOME_SEO_TITLE.length <= VEHICLE_SEO_TITLE_MAX, HOME_SEO_TITLE);
+  assert.ok(HOME_SEO_TITLE.length <= 60, HOME_SEO_TITLE);
 });
 
 test("título do estoque termina em | Garagem uma vez só", () => {
   assert.equal(ESTOQUE_SEO_TITLE, "Carros e motos seminovos em Linhares/ES | Garagem");
   assert.equal(ESTOQUE_SEO_TITLE.split("| Garagem").length - 1, 1);
   assert.doesNotMatch(ESTOQUE_SEO_TITLE, /Sua Garagem/);
-  assert.ok(ESTOQUE_SEO_TITLE.length <= VEHICLE_SEO_TITLE_MAX, ESTOQUE_SEO_TITLE);
+  assert.ok(ESTOQUE_SEO_TITLE.length <= 60, ESTOQUE_SEO_TITLE);
 });
 
 test("home usa SEO regional e estoque mantém a região local centralizada", () => {
