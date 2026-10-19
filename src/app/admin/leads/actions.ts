@@ -43,7 +43,10 @@ export async function updateLeadStatus(
     const validReason =
       lostReason && isLeadLossReason(lostReason) ? lostReason : null;
 
-    await prisma.$transaction(async (tx) => {
+    const cleanLossDetail = (lossDetail ?? "").trim().slice(0, 500);
+
+    // Erro de coluna dentro da transação aborta o Postgres: refaz a transação inteira sem lostReason.
+    const run = (withLostReason: boolean) => prisma.$transaction(async (tx) => {
       const lead = await tx.leadVenda.findUniqueOrThrow({
         where: { id },
         select: { id: true, status: true },
@@ -55,22 +58,19 @@ export async function updateLeadStatus(
           ? { nextAction: null, nextActionAt: null }
           : {}),
       };
-      try {
-        await tx.leadVenda.update({
-          where: { id },
-          data: {
-            ...baseData,
-            ...(status === "fechado"
+      await tx.leadVenda.update({
+        where: { id },
+        data: {
+          ...baseData,
+          ...(!withLostReason
+            ? {}
+            : status === "fechado"
               ? { lostReason: null }
               : validReason
                 ? { lostReason: validReason }
                 : {}),
-          },
-        });
-      } catch (err) {
-        if (!isMissingColumnError(err)) throw err;
-        await tx.leadVenda.update({ where: { id }, data: baseData });
-      }
+        },
+      });
       if (statusChanged) {
         const label = LEAD_STATUS_LABEL[status] ?? status;
         await tx.leadActivity.create({
@@ -86,11 +86,17 @@ export async function updateLeadStatus(
           data: {
             leadId: id,
             adminId: session.adminId,
-            note: lossReasonActivity(validReason, lossDetail),
+            note: lossReasonActivity(validReason, cleanLossDetail),
           },
         });
       }
     });
+    try {
+      await run(true);
+    } catch (err) {
+      if (!isMissingColumnError(err)) throw err;
+      await run(false);
+    }
     revalidateTag(ADMIN_NEW_LEADS_TAG, { expire: 0 });
     revalidatePath("/admin/leads");
     revalidatePath("/admin/agenda");
@@ -118,15 +124,15 @@ export async function saveLeadLossReason(
       return { ok: false, message: "A observação pode ter no máximo 500 caracteres." };
     }
 
+    try {
+      await prisma.leadVenda.update({
+        where: { id },
+        data: { lostReason: reason },
+      });
+    } catch (err) {
+      if (!isMissingColumnError(err)) throw err;
+    }
     await prisma.$transaction(async (tx) => {
-      try {
-        await tx.leadVenda.update({
-          where: { id },
-          data: { lostReason: reason },
-        });
-      } catch (err) {
-        if (!isMissingColumnError(err)) throw err;
-      }
       await tx.leadActivity.create({
         data: {
           leadId: id,
