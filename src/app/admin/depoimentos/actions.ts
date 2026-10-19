@@ -1,7 +1,7 @@
 "use server";
 
 import { withAdminStorageLock } from "@/lib/admin-storage-lock";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
@@ -80,7 +80,7 @@ export async function saveTestimonial(
     return { ok: false, message: "Não foi possível salvar o depoimento." };
   }
 
-  revalidateTag(TESTIMONIALS_CACHE_TAG, "max");
+  updateTag(TESTIMONIALS_CACHE_TAG);
   revalidatePath("/admin/depoimentos");
   expireAdminData();
   revalidatePath("/");
@@ -94,7 +94,7 @@ export async function setTestimonialPublished(id: string, published: boolean) {
   await requireAdmin();
 
   await prisma.testimonial.update({ where: { id }, data: { published } });
-  revalidateTag(TESTIMONIALS_CACHE_TAG, "max");
+  updateTag(TESTIMONIALS_CACHE_TAG);
   revalidatePath("/admin/depoimentos");
   expireAdminData();
   revalidatePath("/");
@@ -112,7 +112,7 @@ export async function deleteTestimonial(
   await requireAdmin();
 
   await prisma.testimonial.delete({ where: { id } });
-  revalidateTag(TESTIMONIALS_CACHE_TAG, "max");
+  updateTag(TESTIMONIALS_CACHE_TAG);
   revalidatePath("/admin/depoimentos");
   expireAdminData();
   revalidatePath("/");
