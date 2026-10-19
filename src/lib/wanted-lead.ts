@@ -127,6 +127,7 @@ export function formatWantedLeadNotes(lead: WantedLeadDraft) {
         : `Filtro: ${lead.contextLabel}`
       : null,
     lead.pagePath ? `Página: ${lead.pagePath}` : null,
+    "Autorizou contato sobre o pedido: sim",
   ];
   return lines.filter((line): line is string => Boolean(line)).join("\n");
 }
@@ -238,7 +239,10 @@ export function parseWantedLeadForm(data: FormData): ParsedWantedLead {
       "A quilometragem final precisa ser igual ou maior que a inicial.";
   }
 
-  // Art. 7º, V, da LGPD: atendimento ao pedido de compra iniciado pelo titular.
+  // Art. 7º, I, da LGPD: o aviso depende de consentimento marcado pelo titular.
+  if (text(data, "consent") !== "sim") {
+    fieldErrors.consent = "Marque a autorização para receber o aviso.";
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     return {

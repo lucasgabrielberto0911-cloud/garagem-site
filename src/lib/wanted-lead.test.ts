@@ -83,8 +83,8 @@ test("faixas vazias não viram erro e o filtro do estoque fica na observação",
   assert.doesNotMatch(stored.notes, /Ano:|Preço:|Km:/);
 });
 
-test("pedido compacto aceita só telefone, nome e carro, sem e-mail ou checkbox", () => {
-  const parsed = parseWantedLeadForm(form({ phone: valid.phone, name: valid.name, model: valid.model }));
+test("pedido compacto aceita só telefone, nome e carro, sem e-mail, só com a autorização marcada", () => {
+  const parsed = parseWantedLeadForm(form({ phone: valid.phone, name: valid.name, model: valid.model, consent: "sim" }));
   assert.equal(parsed.ok, true);
   if (!parsed.ok || !parsed.lead) return;
   assert.equal(parsed.lead.email, null);
@@ -93,7 +93,7 @@ test("pedido compacto aceita só telefone, nome e carro, sem e-mail ou checkbox"
   }
   assert.doesNotMatch(toLeadVendaData(parsed.lead).notes, /E-mail:|Ano:|Preço:|Km:/);
   for (const key of ["phone", "name", "model"]) {
-    const invalid = parseWantedLeadForm(form({ phone: valid.phone, name: valid.name, model: valid.model, [key]: "" }));
+    const invalid = parseWantedLeadForm(form({ phone: valid.phone, name: valid.name, model: valid.model, consent: "sim", [key]: "" }));
     assert.equal(invalid.ok, false);
     if (!invalid.ok) assert.ok(invalid.fieldErrors[key]);
   }
@@ -103,7 +103,7 @@ test("pedido compacto aceita só telefone, nome e carro, sem e-mail ou checkbox"
 });
 
 test("valor máximo com máscara é salvo e limita as sugestões de estoque", () => {
-  const parsed = parseWantedLeadForm(form({ phone: valid.phone, name: valid.name, model: valid.model, priceMax: "R$ 95.000" }));
+  const parsed = parseWantedLeadForm(form({ phone: valid.phone, name: valid.name, model: valid.model, consent: "sim", priceMax: "R$ 95.000" }));
   assert.equal(parsed.ok, true);
   if (!parsed.ok || !parsed.lead) return;
   assert.equal(parsed.lead.priceMax, 95000);
@@ -157,9 +157,11 @@ test("o formulário público tem quatro campos ordenados e aviso de privacidade 
   assert.ok(consentAt > 0);
   assert.ok(sendAt > consentAt);
   assert.match(html, /name="model"/);
-  assert.doesNotMatch(html, /name="email"|name="consent"|name="yearMin"|name="yearMax"|name="priceMin"|name="kmMin"|name="kmMax"/);
+  assert.doesNotMatch(html, /name="email"|name="yearMin"|name="yearMax"|name="priceMin"|name="kmMin"|name="kmMax"/);
   const fields = [...html.matchAll(/<input[^>]*name="(phone|name|model|priceMax)"/g)].map(match => match[1]);
   assert.deepEqual(fields, ["phone", "name", "model", "priceMax"]);
+  assert.match(html, /name="consent"[^>]*type="checkbox"|type="checkbox"[^>]*name="consent"/);
+  assert.match(html, /Autorizo a Garagem a entrar em contato pelo telefone informado/);
   assert.match(html, /name="phone"/);
   assert.match(html, /HB20/);
   assert.match(html, /Política de privacidade/);
@@ -213,4 +215,10 @@ test("estoque abre o pedido em outra página; a ficha mantém o formulário", ()
   assert.match(city, /getCityShowcaseVehicles\(\)/);
   assert.doesNotMatch(city, /MissingModelForm/);
   assert.doesNotMatch(city, /city=serra|city=linhares/);
+});
+
+test("sem a autorização marcada o pedido não é aceito", () => {
+  const parsed = parseWantedLeadForm(form({ ...valid, consent: "" }));
+  assert.equal(parsed.ok, false);
+  if (!parsed.ok) assert.ok(parsed.fieldErrors.consent);
 });

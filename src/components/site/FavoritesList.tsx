@@ -280,7 +280,7 @@ function FavoritesListWhatsApp({ vehicles }: { vehicles: VehicleCardData[] }) {
       slug={pack.slug}
       message={pack.message}
     >
-      Enviar minha lista no WhatsApp
+      Receber esta lista no WhatsApp
     </WhatsAppButton>
   );
 }

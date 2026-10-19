@@ -26,7 +26,8 @@ export type VehicleCardRecord = {
   createdAt: Date | string;
   updatedAt?: Date | string | null;
   /** Preço atual menor que o último registrado (VehiclePriceHistory). */
-  priceDrop?: boolean;
+  /** Valor da queda em R$ (histórico real); ausente = sem queda. */
+  priceDrop?: number;
   photos: VehicleCardPhoto[];
 };
 

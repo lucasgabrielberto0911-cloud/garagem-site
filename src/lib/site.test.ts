@@ -118,6 +118,8 @@ test("wa.me dos CTAs leva UTM de origem sem alterar o pré-preenchido", () => {
   assert.equal(whatsappCampaignFromLabel("favoritos-lista"), "favoritos");
   assert.equal(whatsappCampaignFromLabel("favoritos-vazio"), "favoritos");
   assert.equal(whatsappCampaignFromPath("/favoritos"), "favoritos");
+  assert.equal(whatsappCampaignFromPath("/seminovos/linhares"), "cidade");
+  assert.equal(whatsappCampaignFromLabel("cidade-hero"), "cidade");
   const shortcut = pwaShortcutWhatsAppUrl();
   assert.match(shortcut, /^https:\/\/wa\.me\/5527996330706\?/);
   assert.match(shortcut, /utm_source=site/);
@@ -217,6 +219,7 @@ test("lista de favoritos leva modelo, ano, slug e o id do salvo por último", ()
   assert.equal(pack.content, "fiat-pulse-2022-abc,honda-civic-2020-xyz");
   assert.match(pack.message, /Fiat Pulse 2022, Honda Civic 2020/);
   assert.doesNotMatch(pack.message, /e mais/);
+  assert.match(pack.message, /\nhttps:\/\/[^\n]+\/estoque\/fiat-pulse-2022-abc\nhttps:\/\/[^\n]+\/estoque\/honda-civic-2020-xyz$/);
 
   const href = whatsappUrl(pack.message, {
     campaign: pack.campaign,

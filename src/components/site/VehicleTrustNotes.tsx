@@ -2,6 +2,7 @@ import {
   IconClock,
   IconClipboardCheck,
   IconFileText,
+  IconPlay,
   IconShieldCheck,
 } from "@/components/site/icons";
 
@@ -24,8 +25,26 @@ const NOTES = [
   },
 ] as const;
 
-/** Confiança ao lado do preço — garantia, documentação e horário reais da loja. */
-export function VehicleTrustNotes({ className = "" }: { className?: string }) {
+const VIDEO_NOTE = { Icon: IconPlay, label: "Vídeo do carro pelo WhatsApp, se quiser" } as const;
+
+/**
+ * Confiança ao lado do preço. Os itens fixos são da loja; `warranty` e
+ * `documentation` só entram se o admin preencheu para este veículo.
+ */
+export function VehicleTrustNotes({
+  className = "",
+  warranty,
+  documentation,
+}: {
+  className?: string;
+  warranty?: string | null;
+  documentation?: string | null;
+}) {
+  const own = [
+    warranty?.trim() ? { Icon: IconShieldCheck, label: `Garantia deste carro: ${warranty.trim()}` } : null,
+    documentation?.trim() ? { Icon: IconFileText, label: documentation.trim() } : null,
+  ].filter((note) => note !== null);
+  const notes = [...own, ...NOTES, VIDEO_NOTE];
   return (
     <section
       aria-label="Por que comprar na Garagem"
@@ -35,13 +54,13 @@ export function VehicleTrustNotes({ className = "" }: { className?: string }) {
         Por que comprar na Garagem
       </h2>
       <ul className="grid gap-2 sm:grid-cols-2">
-      {NOTES.map(({ Icon, label }) => (
+      {notes.map(({ Icon, label }) => (
         <li
           key={label}
           className="flex items-center gap-2 text-left text-[11px] leading-snug text-cream/85"
         >
           <Icon className="h-3.5 w-3.5 shrink-0 text-brand-light" />
-          <span>{label}</span>
+          <span className="min-w-0 [overflow-wrap:anywhere]">{label}</span>
         </li>
       ))}
       </ul>

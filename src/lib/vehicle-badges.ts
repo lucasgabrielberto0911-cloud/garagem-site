@@ -10,17 +10,24 @@ export function isNewListing(createdAt: Date | string, now: Date = new Date()) {
 }
 
 /**
- * Selo "Baixou o preço": só com histórico real. `history` vem em qualquer ordem;
- * o preço atual precisa ser menor que o último preço registrado diferente dele.
+ * Valor da queda: só com histórico real. `history` vem em qualquer ordem;
+ * compara com o último preço registrado diferente do atual. 0 = sem queda.
  */
-export function hasPriceDrop(
+export function priceDropAmount(
   currentPrice: number,
   history: { price: number; createdAt: Date | string }[],
 ) {
-  if (!(currentPrice > 0)) return false;
+  if (!(currentPrice > 0)) return 0;
   const sorted = [...history].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
   const previous = sorted.find((entry) => entry.price !== currentPrice);
-  return !!previous && currentPrice < previous.price;
+  return previous && currentPrice < previous.price ? previous.price - currentPrice : 0;
+}
+
+export function hasPriceDrop(
+  currentPrice: number,
+  history: { price: number; createdAt: Date | string }[],
+) {
+  return priceDropAmount(currentPrice, history) > 0;
 }

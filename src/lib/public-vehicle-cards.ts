@@ -29,13 +29,13 @@ function withCardDefaults(row: VehicleCardRecord): VehicleCardRecord {
 }
 
 /** Card público sem cidade do veículo, placa, FIPE ou documentos. */
-/** Marca `priceDrop` só com histórico real; tabela ausente = sem selo. */
+/** Preenche `priceDrop` (valor em R$) só com histórico real; tabela ausente = sem selo. */
 async function withPriceDrops(cards: VehicleCardRecord[]) {
   const drops = await vehicleIdsWithPriceDrop(
     cards.filter((card) => card.status !== "vendido"),
   );
   if (drops.size === 0) return cards;
-  return cards.map((card) => (drops.has(card.id) ? { ...card, priceDrop: true } : card));
+  return cards.map((card) => (drops.has(card.id) ? { ...card, priceDrop: drops.get(card.id) } : card));
 }
 
 export async function queryPublicVehicleCards(
