@@ -1,3 +1,4 @@
+import { TrafficFunnel } from "@/components/admin/TrafficFunnel";
 import { PurchaseLeadForm } from "@/components/admin/PurchaseLeadForm";
 import { LeadWeeklySummary } from "@/components/admin/LeadWeeklySummary";
 import { leadWeekStart, weeklyLeadSummary } from "@/lib/lead-funnel";
@@ -94,6 +95,7 @@ export default async function LeadsPage({
       />
 
       <PurchaseLeadForm />
+      <TrafficFunnel />
       <LeadWeeklySummary {...summary} />
       <LeadsTable
         selectedVehicles={selectedVehicles}

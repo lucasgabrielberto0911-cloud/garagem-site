@@ -4,7 +4,6 @@ import { DeferredMarketing } from "@/components/DeferredMarketing";
 import { MarketingScripts } from "@/components/MarketingScripts";
 import { JsonLd } from "@/components/JsonLd";
 import { MobileBottomNav } from "@/components/site/MobileBottomNav";
-import { ScrollProgress } from "@/components/site/ScrollProgress";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { OfflineLeadFlush } from "@/components/site/OfflineLeadFlush";
@@ -34,7 +33,6 @@ export default function SiteLayout({
         <Suspense fallback={null}>
           <SiteJsonLd />
         </Suspense>
-        <ScrollProgress />
         <SiteHeader />
         <a
           href="#conteudo"

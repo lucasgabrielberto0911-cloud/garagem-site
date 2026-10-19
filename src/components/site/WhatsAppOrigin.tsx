@@ -1,10 +1,27 @@
 "use client";
+import { extractVehicleIdFromParam } from "@/lib/vehicle-slug";
+import { usePathname } from "next/navigation";
+import { recordSiteFunnel } from "@/lib/site-funnel-client";
 import { useEffect } from "react";
 import { CONSENT_EVENT, hasMarketingConsent } from "@/lib/consent";
 import { applyWhatsAppOrigin, classifyLeadOrigin, isLeadOrigin, type LeadOrigin } from "@/lib/lead-origin";
 const KEY = "garagem_primeira_origem";
-/** Captura no layout raiz, que permanece entre home/estoque/ficha. Nenhuma requisição extra. */
+/** Captura no layout raiz, que permanece entre home/estoque/ficha. Enriquece links sem dados pessoais. */
 export function WhatsAppOrigin() {
+  const pathname = usePathname();
+  useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
+    let recorded = false;
+    function record() {
+      if (recorded || !hasMarketingConsent()) return;
+      recorded = true;
+      const vehicleId = pathname.startsWith("/estoque/") ? extractVehicleIdFromParam(pathname.split("/")[2]) ?? undefined : undefined;
+      recordSiteFunnel("visita", vehicleId);
+    }
+    record();
+    window.addEventListener(CONSENT_EVENT, record);
+    return () => window.removeEventListener(CONSENT_EVENT, record);
+  }, [pathname]);
   useEffect(() => {
     if (window.location.pathname.startsWith("/admin")) return;
     const landing = classifyLeadOrigin(window.location.search, document.referrer, window.location.origin);

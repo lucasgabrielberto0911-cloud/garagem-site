@@ -48,6 +48,7 @@ function describe(changes: unknown) {
 async function historyData() {
   try {
     const rows = await prisma.adminAudit.findMany({
+      where: { NOT: { action: { startsWith: "site:" } } },
       take: 50,
       orderBy: { createdAt: "desc" },
     });

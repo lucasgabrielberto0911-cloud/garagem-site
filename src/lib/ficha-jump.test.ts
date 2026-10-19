@@ -154,7 +154,7 @@ test("especificações e detalhes apontam para o que o anúncio já tem", () => 
   assert.match(noText, /id="especificacoes"/);
 });
 
-test("filtros do estoque e o estoque inteiro das cidades ficam como estão", () => {
+test("filtros do estoque e a vitrine real das cidades são preservados", () => {
   const filters = readSrc("components/site/StockFilters.tsx");
   const stock = readSrc("app/(catalog)/estoque/page.tsx");
   const city = readSrc("app/(site)/seminovos/[cidade]/page.tsx");
@@ -167,7 +167,7 @@ test("filtros do estoque e o estoque inteiro das cidades ficam como estão", () 
   assert.match(filters, /maxKm/);
   assert.match(filters, /Ano mín\./);
   assert.match(city, /getCityShowcaseVehicles\(\)/);
-  assert.match(city, /vehicles=\{featured\}/);
+  assert.match(city, /vehicles=\{featured\.slice\(0, 6\)\}/);
   assert.doesNotMatch(city, /useSearchParams|EstoqueBrowse|\/api\/estoque/);
   const showcase = vehicles.slice(
     vehicles.indexOf("async function fetchCityShowcaseVehicles"),

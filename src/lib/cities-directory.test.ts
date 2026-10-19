@@ -59,12 +59,12 @@ test("página de cidades só lista botões para as páginas que já existem", ()
   assert.equal(new Set(buttonClasses).size, 1);
 });
 
-test("páginas de cidade e o estoque delas continuam no ar", () => {
+test("páginas de cidade e a vitrine delas continuam no ar", () => {
   const cityPage = readSrc("app/(site)/seminovos/[cidade]/page.tsx");
   const sitemap = readSrc("app/sitemap.ts");
 
   assert.match(cityPage, /getCityShowcaseVehicles\(\)/);
-  assert.match(cityPage, /vehicles=\{featured\}/);
+  assert.match(cityPage, /vehicles=\{featured\.slice\(0, 6\)\}/);
   assert.match(cityPage, /CITIES_DIRECTORY_PATH/);
   assert.match(cityPage, /Ver cidades/);
   assert.doesNotMatch(cityPage, /Todas as cidades/);

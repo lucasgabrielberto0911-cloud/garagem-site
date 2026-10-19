@@ -1,15 +1,16 @@
 "use client";
 
+import { BootSplash } from "@/components/site/BootSplash";
+import { ScrollProgress } from "@/components/site/ScrollProgress";
 import { BackToTop } from "@/components/site/BackToTop";
 import { InstallPrompt } from "@/components/site/InstallPrompt";
 
-/**
- * Chrome que pode esperar o idle: um chunk só, importado em DeferredMarketing.
- * O SW registra no layout (PwaRegister) para a abertura do app não esperar.
- */
+/** Chrome secundário carregado após load e ocioso. */
 export function SiteExtras() {
   return (
     <>
+      <BootSplash />
+      <ScrollProgress />
       <BackToTop />
       <InstallPrompt />
     </>

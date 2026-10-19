@@ -13,7 +13,7 @@ const CITIES = [
   ["vitoria", "Vitória"],
 ] as const;
 
-test("toda landing descreve o estoque inteiro, sem recorte por cidade", () => {
+test("toda landing descreve uma seleção do estoque, sem recorte por cidade", () => {
   const hrefs = new Set<string>();
   const headings = new Set<string>();
   for (const [, name] of CITIES) {
@@ -22,7 +22,7 @@ test("toda landing descreve o estoque inteiro, sem recorte por cidade", () => {
     headings.add(copy.heading);
     assert.equal(copy.stockHref, "/estoque");
     assert.equal(copy.stockLabel, "Ver o estoque");
-    assert.match(copy.intro, /mesma do estoque/i);
+    assert.match(copy.intro, /estoque do site/i);
     assert.match(copy.intro, /ficha/i);
     assert.match(copy.intro, new RegExp(name));
     assert.match(copy.whatsappMessage, /vídeo/i);
@@ -38,7 +38,7 @@ test("toda landing descreve o estoque inteiro, sem recorte por cidade", () => {
   assert.equal(headings.size, 1);
 });
 
-test("a página e a consulta trazem o estoque disponível inteiro", () => {
+test("a consulta traz todo o estoque e a página limita a vitrine a seis veículos", () => {
   const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
   const page = readFileSync(
     join(srcRoot, "app/(site)/seminovos/[cidade]/page.tsx"),
@@ -47,7 +47,7 @@ test("a página e a consulta trazem o estoque disponível inteiro", () => {
   const vehicles = readFileSync(join(srcRoot, "lib/vehicles.ts"), "utf8");
   assert.match(page, /getCityShowcaseVehicles\(\)/);
   assert.match(page, /const featured = await getCityShowcaseVehicles\(\)/);
-  assert.match(page, /vehicles=\{featured\}/);
+  assert.match(page, /vehicles=\{featured\.slice\(0, 6\)\}/);
   assert.match(page, /cityPageStockCopy/);
   assert.doesNotMatch(page, /showWhatsApp/);
   assert.match(page, /Pedir vídeo ou visita/);

@@ -1,3 +1,6 @@
+import { getStockLandingHistory } from "@/lib/stock-landing-data";
+import { stockLandingLinks } from "@/lib/stock-landings";
+import { BUYING_GUIDES } from "@/lib/buying-guides";
 import type { MetadataRoute } from "next";
 import { publicPhotoSrc } from "@/lib/public-photo-url";
 import { prisma } from "@/lib/prisma";
@@ -17,6 +20,9 @@ const STATIC_ROUTES: {
   changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
   priority: number;
 }[] = [
+  { path: "/modelos", changeFrequency: "weekly", priority: 0.7 },
+  { path: "/guias", changeFrequency: "monthly", priority: 0.5 },
+  ...BUYING_GUIDES.map(guide => ({ path: `/guias/${guide.slug}`, changeFrequency: "monthly" as const, priority: 0.5 })),
   { path: "/", changeFrequency: "daily", priority: 1 },
   { path: "/estoque", changeFrequency: "daily", priority: 0.9 },
   { path: "/pedido", changeFrequency: "monthly", priority: 0.4 },
@@ -50,7 +56,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("[sitemap] falha ao listar veículos:", error);
   }
 
+  let landings: ReturnType<typeof stockLandingLinks> = [];
+  try { landings = stockLandingLinks(await getStockLandingHistory()); }
+  catch (error) { console.error("[sitemap] falha ao listar marcas e modelos:", error); }
   return [
+    ...landings.map(link => ({ url: absoluteUrl(link.path), changeFrequency: "weekly" as const, priority: 0.7 })),
     ...STATIC_ROUTES.map((route) => ({
       url: absoluteUrl(route.path),
       changeFrequency: route.changeFrequency,
