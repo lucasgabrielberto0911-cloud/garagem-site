@@ -102,3 +102,15 @@ test.describe("Centralização do layout do site inteiro", () => {
     });
   }
 });
+
+test("rodapé mobile mostra navegação e serviços", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const footer = page.locator("footer");
+  await footer.scrollIntoViewIfNeeded();
+  const mobileNav = footer.getByRole("navigation", { name: "Navegação do rodapé" });
+  await expect(mobileNav.getByRole("heading", { name: "Navegação e serviços" })).toBeVisible();
+  for (const href of ["/sobre", "/estoque", "/vender", "/faq"]) {
+    await expect(mobileNav.locator(`a[href="${href}"]`).first()).toBeVisible();
+  }
+});

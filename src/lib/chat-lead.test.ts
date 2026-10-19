@@ -233,7 +233,7 @@ test("turno com carro do estoque, carro inexistente e lead", async () => {
     historico: [],
     stock: [hb20],
     generate: async ({ systemPrompt }) => {
-      assert.match(systemPrompt, /Hyundai HB20 evolution 1\.0 2022/);
+      assert.match(systemPrompt, /Hyundai HB20 Evolution 1\.0 2022/);
       assert.match(systemPrompt, /R\$ 64\.900/);
       return {
         text: "Temos o Hyundai HB20 evolution 1.0 2022, 68450 km, R$ 64900, Prata.",

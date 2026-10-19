@@ -152,6 +152,10 @@ test("Prisma FIPE junk e Fastback Automatico viram versão curta", () => {
   assert.equal(formatTransmissionLabel("Automatico"), "Automático");
 });
 
+test("normaliza versão iniciada em minúscula para exibição", () => {
+  assert.equal(shortVersion("evolution 1.0", "HB20"), "Evolution 1.0");
+});
+
 test("filtro de câmbio aceita o slug da URL e o rótulo gravado", () => {
   assert.equal(transmissionFilterParam("automatico"), "automatico");
   assert.equal(transmissionFilterParam("Automático"), "automatico");

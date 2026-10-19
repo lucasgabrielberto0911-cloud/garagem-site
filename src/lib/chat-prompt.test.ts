@@ -112,7 +112,7 @@ test("estoque real entra no prompt; carro fora da lista não é inventado", () =
     },
   ]);
 
-  assert.match(prompt, /Hyundai HB20 evolution 1\.0 2022/);
+  assert.match(prompt, /Hyundai HB20 Evolution 1\.0 2022/);
   assert.match(prompt, /R\$ 64\.900/);
   assert.match(prompt, /68\.450 km/);
   const stockBlock = formatStockForPrompt(
@@ -134,7 +134,7 @@ test("estoque real entra no prompt; carro fora da lista não é inventado", () =
     ],
     { consumption: true, equipment: true },
   );
-  assert.match(stockBlock, /motor 1\.0 12V|evolution 1\.0/);
+  assert.match(stockBlock, /motor 1\.0 12V|Evolution 1\.0/);
   assert.match(stockBlock, /4 portas/);
   assert.match(stockBlock, /Ar condicionado/);
   assert.match(stockBlock, /consumo típico|faixa típica de catálogo/);
@@ -257,7 +257,7 @@ test("prompt com activeVehicle injeta contexto e regra de desambiguação", () =
   );
 
   assert.match(prompt, /VEÍCULO QUE O VISITANTE ESTÁ VENDO NA TELA AGORA/);
-  assert.match(prompt, /Hyundai HB20 evolution 1\.0 2021/);
+  assert.match(prompt, /Hyundai HB20 Evolution 1\.0 2021/);
   assert.match(prompt, /REGRA DE DESAMBIGUAÇÃO/);
   assert.match(prompt, /refira-se ESTRITAMENTE a esta unidade específica/);
   assert.match(prompt, /NÃO confunda com outras unidades do mesmo modelo/);

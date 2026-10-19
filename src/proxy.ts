@@ -11,6 +11,23 @@ function isPublicAdminPath(pathname: string) {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const repeatedCgSlug = pathname.match(
+    /^\/estoque\/honda-cg-160-start-160-start-(\d{4}-c[a-z0-9]{20,32})$/i,
+  );
+  if (repeatedCgSlug) {
+    const destination = request.nextUrl.clone();
+    destination.pathname = `/estoque/honda-cg-160-start-${repeatedCgSlug[1]}`;
+    return NextResponse.redirect(destination, 301);
+  }
+
+  if (
+    pathname !== "/admin" &&
+    !pathname.startsWith("/admin/") &&
+    !pathname.startsWith("/api/admin/")
+  ) {
+    return NextResponse.next();
+  }
+
   if (isPublicAdminPath(pathname)) {
     return NextResponse.next();
   }
@@ -55,5 +72,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/estoque/:path*"],
 };
