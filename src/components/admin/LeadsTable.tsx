@@ -13,8 +13,10 @@ import { toast } from "sonner";
 import type { LeadVenda } from "@prisma/client";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { IconChevronDown, IconDownload, IconTrash, IconUsers } from "@/components/admin/icons";
+import { ActionSheet, ActionSheetButton } from "@/components/admin/ActionSheet";
+import { LeadWhatsAppMenu } from "@/components/admin/LeadWhatsAppMenu";
 import { IconInbox } from "@/components/admin/icons";
-import { IconPhone, IconWhatsApp } from "@/components/site/icons";
+import { IconPhone } from "@/components/site/icons";
 import { EmptyState, btn, inputClass } from "@/components/admin/ui";
 import {
   formatCurrencyBRL,
@@ -28,7 +30,6 @@ import {
   LEAD_STATUS_LABEL as STATUS_LABEL,
   LEAD_STATUS_STYLE as STATUS_STYLE,
   WANTED_LEAD_SOURCE,
-  buildLeadWhatsAppUrl,
   type LeadStatus,
   leadDisplayName,
   leadHasPhone,
@@ -366,6 +367,16 @@ function statusLabel(lead: LeadVenda) {
     : STATUS_LABEL[lead.status as LeadStatus] ?? lead.status;
 }
 
+/** Mesmas opções do select do detalhe e da folha de status do card. */
+function statusOptions(lead: LeadVenda) {
+  return lead.source?.startsWith("whatsapp:")
+    ? PURCHASE_STATUSES.map((value) => ({
+        value,
+        label: PURCHASE_STATUS_LABEL[value as keyof typeof PURCHASE_STATUS_LABEL] || STATUS_LABEL[value],
+      }))
+    : LEAD_STATUSES.map((value) => ({ value, label: STATUS_LABEL[value] }));
+}
+
 function originLabel(lead: LeadVenda) {
   if (lead.source === "chatbot-site") return "Chatbot do site";
   if (lead.source === "vender") return "Formulário de avaliação";
@@ -415,6 +426,7 @@ function LeadCard({
 }) {
   const [expanded, setExpanded] = useState(startOpen);
   const [opened, setOpened] = useState(startOpen);
+  const [statusOpen, setStatusOpen] = useState(false);
   const detailId = `lead-detail-${lead.id}`;
   const chip = originChip(lead);
   const email = emailFromLeadNotes(lead.notes);
@@ -435,12 +447,40 @@ function LeadCard({
           <p className="min-w-0 truncate font-display text-lg font-semibold leading-snug text-cream">
             {leadDisplayName(lead)}
           </p>
-          <span
-            className={`shrink-0 px-2 py-1 text-xs font-semibold uppercase tracking-wide ${statusBadgeStyle(lead)}`}
+          <button
+            type="button"
+            disabled={saving}
+            aria-label={`Alterar status: ${statusLabel(lead)}`}
+            aria-haspopup="dialog"
+            onClick={() => setStatusOpen(true)}
+            className="-my-2 -mr-1 flex min-h-[44px] shrink-0 items-center px-1 touch-manipulation disabled:opacity-60"
           >
-            {statusLabel(lead)}
-          </span>
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold uppercase tracking-wide ${statusBadgeStyle(lead)}`}
+            >
+              {statusLabel(lead)}
+              <IconChevronDown className="h-3 w-3" />
+            </span>
+          </button>
         </div>
+        <ActionSheet
+          open={statusOpen}
+          title="Status do lead"
+          subtitle={leadDisplayName(lead)}
+          onClose={() => setStatusOpen(false)}
+        >
+          {statusOptions(lead).map(({ value, label }) => (
+            <ActionSheetButton
+              key={value}
+              label={value === lead.status ? `${label} (atual)` : label}
+              disabled={value === lead.status}
+              onClick={() => {
+                setStatusOpen(false);
+                onStatus(lead, value);
+              }}
+            />
+          ))}
+        </ActionSheet>
         <p className="mt-0.5 truncate text-sm text-cream" title={interest}>
           {interest}
         </p>
@@ -466,15 +506,11 @@ function LeadCard({
         <div className="mt-3 flex gap-2">
           {hasPhone ? (
             <>
-              <a
-                href={buildLeadWhatsAppUrl(lead)}
-                target="_blank"
-                rel="noopener noreferrer"
+              <LeadWhatsAppMenu
+                lead={lead}
                 className={`${leadAction} min-w-0 flex-1 border-[#25D366]/60 text-[#25D366] hover:bg-[#25D366]/10`}
-              >
-                <IconWhatsApp className="h-4 w-4" />
-                WhatsApp
-              </a>
+                menuClassName={`${leadAction} -ml-2 w-11 shrink-0 border-[#25D366]/60 px-0 text-[#25D366] hover:bg-[#25D366]/10`}
+              />
               <a
                 href={`tel:+55${lead.phone.replace(/\D/g, "")}`}
                 aria-label={`Ligar para ${leadDisplayName(lead)}`}
@@ -518,12 +554,8 @@ function LeadCard({
                 onChange={(event) => onStatus(lead, event.target.value)}
                 className={`${inputClass} bg-asphalt disabled:opacity-60`}
               >
-                {(lead.source?.startsWith("whatsapp:") ? PURCHASE_STATUSES : LEAD_STATUSES).map((value) => (
-                  <option key={value} value={value}>
-                    {lead.source?.startsWith("whatsapp:")
-                      ? PURCHASE_STATUS_LABEL[value as keyof typeof PURCHASE_STATUS_LABEL] || STATUS_LABEL[value]
-                      : STATUS_LABEL[value]}
-                  </option>
+                {statusOptions(lead).map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
                 ))}
               </select>
             </div>

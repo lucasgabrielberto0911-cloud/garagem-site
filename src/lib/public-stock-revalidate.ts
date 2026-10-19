@@ -1,4 +1,4 @@
-import { revalidatePath, revalidateTag, updateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { prisma } from "@/lib/prisma";
 import { vehiclePath, type VehiclePathInput } from "@/lib/vehicle-slug";
@@ -12,15 +12,15 @@ const SLUG_SELECT = {
   yearModel: true,
 } as const;
 
-function revalidateSharedPublicStock(expireAdmin = true, immediate = false) {
+/**
+ * Com TTL de 1 h, a alteração do painel precisa aparecer na hora: `updateTag`
+ * expira o cache e a próxima leitura já vê o dado novo. Só funciona em Server Actions
+ * (todos os chamadores ficam em `src/app/admin/**`, arquivos "use server").
+ */
+function revalidateSharedPublicStock(expireAdmin = true) {
   if (expireAdmin) expireAdminData();
-  // Somente Server Actions podem pedir leitura imediata após a alteração.
-  if (immediate) {
-    updateTag(VEHICLES_PUBLIC_CACHE_TAG);
-    revalidatePath("/api/estoque");
-  } else {
-    revalidateTag(VEHICLES_PUBLIC_CACHE_TAG, "max");
-  }
+  updateTag(VEHICLES_PUBLIC_CACHE_TAG);
+  revalidatePath("/api/estoque");
   revalidatePath("/");
   revalidatePath("/estoque");
   revalidatePath("/sitemap.xml");
@@ -43,9 +43,8 @@ function revalidateSlug(vehicle: VehiclePathInput, seen: Set<string>) {
 export async function revalidatePublicStock(
   vehicle?: VehiclePathInput | string | null,
   previous?: VehiclePathInput | null,
-  options: { immediate?: boolean } = {},
 ) {
-  revalidateSharedPublicStock(true, options.immediate);
+  revalidateSharedPublicStock();
   const seen = new Set<string>();
   if (previous?.id) revalidateSlug(previous, seen);
 

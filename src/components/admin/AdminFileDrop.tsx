@@ -64,7 +64,7 @@ export function AdminFileDrop({
 
   return (
     <div>
-      <p className="mb-1.5 text-[11px] uppercase tracking-wider text-muted">
+      <p className="mb-1.5 text-xs uppercase tracking-wider text-muted">
         {label}
         {required ? <span className="ml-1 text-brand">*</span> : null}
       </p>
