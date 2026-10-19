@@ -4,7 +4,7 @@ import { RememberVehicleSnapshot } from "@/components/site/RememberVehicleSnapsh
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import { isNewListing } from "@/lib/vehicle-badges";
-import { formatBrandName, formatModelName } from "@/lib/format";
+import { formatBrandName, formatCurrencyBRL, formatModelName } from "@/lib/format";
 import { publicCardFacts, type PublicCardFact } from "@/lib/public-card-facts";
 import {
   CARD_SIZES,
@@ -95,10 +95,12 @@ export function VehicleCard({
           <div className="listing-card-badges">
             {badge ? <span className={badge.className}>{badge.label}</span> : null}
             {!badge && isNewListing(vehicle.createdAt) ? (
-              <span className="bg-cream text-asphalt">Novo</span>
+              <span className="bg-cream text-asphalt">Novo esta semana</span>
             ) : null}
             {!badge && vehicle.priceDrop ? (
-              <span className="bg-brand text-cream">Baixou o preço</span>
+              <span className="bg-brand text-cream">
+                Baixou {formatCurrencyBRL(vehicle.priceDrop)}
+              </span>
             ) : null}
             {!cover ? <span className="bg-white/15 text-cream">Sem foto</span> : null}
             {showDestaque ? <span className="bg-brand text-cream">Destaque</span> : null}

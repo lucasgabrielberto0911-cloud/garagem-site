@@ -1,12 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { isMissingTableError } from "@/lib/prisma-errors";
-import { hasPriceDrop } from "@/lib/vehicle-badges";
+import { priceDropAmount } from "@/lib/vehicle-badges";
 
-/** Ids com queda de preço. Sem a tabela no banco, devolve vazio. */
+/** Valor da queda por veículo (só quedas reais). Sem a tabela no banco, devolve vazio. */
 export async function vehicleIdsWithPriceDrop(
   vehicles: { id: string; price: number }[],
-): Promise<Set<string>> {
-  const result = new Set<string>();
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
   if (vehicles.length === 0) return result;
   try {
     const rows = await prisma.vehiclePriceHistory.findMany({
@@ -21,7 +21,8 @@ export async function vehicleIdsWithPriceDrop(
       byVehicle.set(row.vehicleId, list);
     }
     for (const v of vehicles) {
-      if (hasPriceDrop(v.price, byVehicle.get(v.id) ?? [])) result.add(v.id);
+      const amount = priceDropAmount(v.price, byVehicle.get(v.id) ?? []);
+      if (amount > 0) result.set(v.id, amount);
     }
   } catch {
     // Selo é opcional: tabela ausente ou banco indisponível não pode derrubar a listagem.

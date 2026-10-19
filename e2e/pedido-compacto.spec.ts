@@ -17,10 +17,10 @@ test.beforeEach(async ({ page }) => {
 test("ficha: quatro campos, máscara e layout sem rolagem lateral", async ({ page }, info) => {
   await page.goto(vehiclePath(samples[0]));
   const form = page.locator("[data-missing-model-form] form");
-  const inputs = form.locator("input:not([type=hidden]):not([name=website])");
+  const inputs = form.locator("input:not([type=hidden]):not([type=checkbox]):not([name=website])");
   await expect(inputs).toHaveCount(4);
   expect(await inputs.evaluateAll(fields => fields.map(field => field.getAttribute("name")))).toEqual(["phone", "name", "model", "priceMax"]);
-  await expect(form.getByRole("checkbox")).toHaveCount(0);
+  await expect(form.getByRole("checkbox", { name: /Autorizo/ })).toHaveCount(1);
   await form.getByLabel("Valor máximo").fill("95000");
   await expect(form.getByLabel("Valor máximo")).toHaveValue("R$ 95.000");
   const boxes = await inputs.evaluateAll(fields => fields.map(field => {
@@ -54,6 +54,7 @@ test("envio sem e-mail salva orçamento no banco e exibe no admin", async ({ pag
     await form.getByRole("textbox", { name: "Nome", exact: true }).fill(name);
     await form.getByLabel("Carro que deseja").fill("Honda Civic");
     await form.getByLabel("Valor máximo").fill("95000");
+    await form.getByRole("checkbox", { name: /Autorizo/ }).check();
     await form.getByRole("button", { name: "Enviar pedido", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Pedido recebido" })).toBeVisible();
     const lead = await prisma.leadVenda.findFirstOrThrow({ where: { name }, orderBy: { createdAt: "desc" } });
@@ -92,6 +93,7 @@ test("pedido: rascunho recupera valor máximo e envio aceita orçamento vazio", 
     form = page.locator("[data-missing-model-form] form");
     await expect(form.getByLabel("Valor máximo")).toHaveValue("R$ 80.000");
     await form.getByLabel("Valor máximo").fill("");
+    await form.getByRole("checkbox", { name: /Autorizo/ }).check();
     await form.getByRole("button", { name: "Enviar pedido", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Pedido recebido" })).toBeVisible();
     const lead = await prisma.leadVenda.findFirstOrThrow({ where: { name } });

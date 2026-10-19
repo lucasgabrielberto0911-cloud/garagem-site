@@ -119,6 +119,7 @@ export type WhatsAppCampaign =
   | "filtro"
   | "home"
   | "favoritos"
+  | "cidade"
   | "chat"
   | "pwa";
 
@@ -244,6 +245,7 @@ export function whatsappCampaignFromPath(pathname: string): WhatsAppCampaign {
   const path = (pathname || "/").split("?")[0]?.replace(/\/+$/, "") || "/";
   if (path === "/estoque" || path.startsWith("/estoque")) return "estoque";
   if (path === "/favoritos") return "favoritos";
+  if (path.startsWith("/seminovos/")) return "cidade";
   return "home";
 }
 
@@ -254,6 +256,7 @@ export function whatsappCampaignFromLabel(label: string): WhatsAppCampaign {
   if (key.includes("ficha")) return "ficha";
   if (key.includes("home")) return "home";
   if (key.includes("favorit")) return "favoritos";
+  if (key.includes("cidade")) return "cidade";
   if (key.includes("filtro")) return "filtro";
   if (
     key.includes("estoque") ||
@@ -285,10 +288,17 @@ export function favoritesListWhatsApp(vehicles: FavoritesWhatsAppVehicle[]) {
     .filter(Boolean);
   const shown = labels.slice(0, FAVORITES_WHATSAPP_CAP);
   const extra = labels.length - shown.length;
+  const links = rows
+    .filter((vehicle) => vehicle.path?.startsWith("/estoque/"))
+    .slice(0, FAVORITES_WHATSAPP_CAP)
+    .map((vehicle) => `${site.url.replace(/\/$/, "")}${vehicle.path}`);
   const message = labels.length
-    ? `Oi! Separei no site da ${WHATSAPP_BRAND}: ${shown.join(", ")}${
-        extra > 0 ? ` e mais ${extra}` : ""
-      }. Pode me passar as condições?`
+    ? [
+        `Oi! Separei no site da ${WHATSAPP_BRAND}: ${shown.join(", ")}${
+          extra > 0 ? ` e mais ${extra}` : ""
+        }. Pode me passar as condições?`,
+        ...links,
+      ].join("\n")
     : WHATSAPP_MESSAGES.similarFavorites;
   const slugs = rows
     .map((vehicle) =>

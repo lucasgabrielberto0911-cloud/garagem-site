@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
+import { ChatNudge } from "@/components/site/ChatNudge";
 import { IconChat } from "@/components/site/icons";
 import { CHAT_HELP_LABEL, SITE_CHAT_OPEN_EVENT, requestSiteChat } from "@/lib/chat-open";
 
@@ -40,6 +41,7 @@ export function DeferredSiteChat() {
   }, [load, cancelPending]);
   if (Chat) return <Chat />;
   return <>
+    <ChatNudge />
     <div className="site-chat pointer-events-none fixed z-[60] flex flex-col items-end">
       <button type="button" onClick={() => requestSiteChat({ source: "launcher" })} aria-label={CHAT_HELP_LABEL} aria-busy={status === "loading"}
         className="site-chat-launcher pointer-events-auto flex h-11 w-auto items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#F0282C] to-[#D0141A] pl-3.5 pr-4 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_12px_28px_-8px_rgba(232,24,28,0.65),0_2px_6px_rgba(0,0,0,0.35)] ring-1 ring-black/20 transition hover:-translate-y-0.5 active:translate-y-0 touch-manipulation sm:h-14 sm:gap-2.5 sm:pl-5 sm:pr-6">

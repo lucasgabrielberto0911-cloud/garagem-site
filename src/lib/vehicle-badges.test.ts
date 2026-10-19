@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { hasPriceDrop, isNewListing } from "./vehicle-badges";
+import { hasPriceDrop, isNewListing, priceDropAmount } from "./vehicle-badges";
 
 const now = new Date("2026-10-12T12:00:00Z");
 const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000);
@@ -34,4 +34,16 @@ test("usa o último preço diferente, mesmo fora de ordem", () => {
     ]),
     true,
   );
+});
+
+test("priceDropAmount devolve o valor da queda ou 0", () => {
+  assert.equal(
+    priceDropAmount(48000, [
+      { price: 50000, createdAt: daysAgo(10) },
+      { price: 48000, createdAt: daysAgo(1) },
+    ]),
+    2000,
+  );
+  assert.equal(priceDropAmount(55000, [{ price: 50000, createdAt: daysAgo(2) }]), 0);
+  assert.equal(priceDropAmount(50000, []), 0);
 });

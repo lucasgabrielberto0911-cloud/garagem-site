@@ -67,3 +67,10 @@ test("header, barra e float da ficha vendida não recebem o preço antigo", () =
   assert.doesNotMatch(text, /R\$|89\.900/);
   assert.match(pageWhatsAppMessage({ ...civic, brand: undefined, model: undefined, sold: true }), /opções parecidas no estoque/);
 });
+
+test("página de cidade leva o nome da cidade e a campanha cidade", () => {
+  const href = pageWhatsAppHref({ pathname: "/seminovos/aracruz", vehicle: null });
+  assert.match(decodeURIComponent(href), /seminovos em Aracruz/);
+  assert.match(href, /utm_campaign=cidade/);
+  assert.equal(pageWhatsAppMessage(null, "/seminovos/inexistente"), WHATSAPP_MESSAGES.general);
+});

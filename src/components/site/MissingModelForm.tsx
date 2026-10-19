@@ -97,6 +97,7 @@ export function MissingModelForm({
     name: `${idPrefix}-nome`,
     phone: `${idPrefix}-telefone`,
     priceMax: `${idPrefix}-preco-ate`,
+    consent: `${idPrefix}-autorizo`,
   };
 
   function focusField(name: string) {
@@ -317,11 +318,26 @@ export function MissingModelForm({
             </div>
           </div>
           <p className="mt-3 text-xs leading-relaxed text-muted">
-            A Garagem usa seu nome e telefone para atender este pedido de compra.{" "}
+            A Garagem usa seu nome e telefone só para atender este pedido de compra.{" "}
             <Link href="/privacidade" prefetch={false} className="text-cream underline decoration-white/30 underline-offset-2 hover:text-brand-light">
               Política de privacidade
             </Link>
           </p>
+          <label htmlFor={ids.consent} className="mt-3 flex items-start gap-3 text-sm leading-snug text-cream">
+            <input
+              id={ids.consent}
+              name="consent"
+              type="checkbox"
+              value="sim"
+              aria-invalid={Boolean(errors.consent) || undefined}
+              aria-describedby={errors.consent ? `${ids.consent}-erro` : undefined}
+              className="mt-0.5 h-5 w-5 shrink-0 accent-brand"
+            />
+            <span>
+              Autorizo a Garagem a entrar em contato pelo telefone informado quando chegar um carro compatível.
+            </span>
+          </label>
+          <FieldError id={`${ids.consent}-erro`} message={errors.consent} />
 
           {formError ? (
             <p className="mt-4 text-sm text-brand-light" role="alert">

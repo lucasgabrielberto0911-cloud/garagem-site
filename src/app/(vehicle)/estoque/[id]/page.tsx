@@ -248,6 +248,7 @@ export default async function VehicleDetailPage({
     sold ? Promise.resolve([]) : getVehicleVerifiedItems(vehicle.id),
   ]);
   const verified = publicVerifiedItems(verifiedItems, vehicle.photos, isMoto);
+  const verifiedDocumentation = verified.find((item) => item.key === "documentacao")?.text;
 
   const specs = buildVehiclePublicSpecs({
     category: vehicle.category,
@@ -485,7 +486,12 @@ export default async function VehicleDetailPage({
               {!sold ? (
                 <VehicleInspectionBadge inspection={vehicle.inspection} />
               ) : null}
-              {!sold ? <VehicleTrustNotes /> : null}
+              {!sold ? (
+                <VehicleTrustNotes
+                  warranty={vehicle.warranty}
+                  documentation={verifiedDocumentation}
+                />
+              ) : null}
 
               {sold ? (
                 <Link
@@ -669,6 +675,7 @@ export default async function VehicleDetailPage({
           google={google}
           prompt={`Tenho dúvida sobre o ${title}`}
           verified={verified}
+          warranty={vehicle.warranty}
           verifiedHeading={verifiedHeading(isMoto)}
           quickActions={
             sold

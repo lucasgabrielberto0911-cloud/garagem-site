@@ -175,6 +175,7 @@ export function VehicleMobileBlocks({
   quickActions,
   verified = [],
   verifiedHeading,
+  warranty,
 }: {
   fullLabel: string;
   path: string;
@@ -196,6 +197,7 @@ export function VehicleMobileBlocks({
   /** Pontos verificados daquele exemplar (só os preenchidos). Vazio = sem bloco. */
   verified?: PublicVerifiedItem[];
   verifiedHeading?: string;
+  warranty?: string | null;
   quickActions?: {
     contentPath: string;
     video: string;
@@ -337,7 +339,13 @@ export function VehicleMobileBlocks({
       ) : null}
 
       <DossierBlock title="Atendimento">
-        {!sold ? <VehicleTrustNotes className="mb-3" /> : null}
+        {!sold ? (
+          <VehicleTrustNotes
+            className="mb-3"
+            warranty={warranty}
+            documentation={verified.find((item) => item.key === "documentacao")?.text}
+          />
+        ) : null}
         {!sold ? (
           <GoogleReviewsBadge reviews={google} className="mb-3 border-white/10" />
         ) : null}
