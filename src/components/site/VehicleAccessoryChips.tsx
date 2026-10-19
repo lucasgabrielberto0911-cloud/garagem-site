@@ -85,7 +85,7 @@ export function VehicleAccessoryChips({ items }: { items: readonly string[] }) {
         >
           <svg
             viewBox="0 0 24 24"
-            className="h-[18px] w-[18px] shrink-0 text-brand"
+            className="h-[18px] w-[18px] shrink-0 text-brand-light"
             fill="none"
             stroke="currentColor"
             strokeWidth={1.8}
@@ -95,7 +95,7 @@ export function VehicleAccessoryChips({ items }: { items: readonly string[] }) {
           >
             {ICONS[accessoryIconKey(item)]}
           </svg>
-          <span className="text-[13px] leading-snug sm:text-sm">{item}</span>
+          <span className="text-[13px] leading-snug sm:text-sm first-letter:uppercase">{item}</span>
         </li>
       ))}
     </ul>

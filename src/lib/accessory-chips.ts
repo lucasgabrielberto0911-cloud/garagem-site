@@ -51,7 +51,7 @@ const ICON_RULES: ReadonlyArray<readonly [RegExp, AccessoryIconKey]> = [
   [/trava|alarme|imobilizador/, "lock"],
   [/direcao|volante|guidao|manete|empunhadura/, "steering"],
   [/banco|couro/, "seat"],
-  [/airbag|abs\b|estabilidade|freio|protetor de carenagem/, "shield"],
+  [/air\s*bags?|abs\b|estabilidade|freio|protetor de carenagem/, "shield"],
   [/piloto automatico|cruise/, "gauge"],
   [/roda|pneu/, "wheel"],
   [/bauleto|bolsa/, "bag"],

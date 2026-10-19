@@ -62,6 +62,7 @@ export const CAR_ACCESSORY_PRESETS = [
   "Bancos de couro",
   "Bancos elétricos",
   "Airbag duplo",
+  "6 Airbags",
   "ABS",
   "Controle de estabilidade",
   "Piloto automático",
