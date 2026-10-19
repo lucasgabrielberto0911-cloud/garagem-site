@@ -346,7 +346,7 @@ export function shortVersion(
   text = collapseRepeatedDisplacement(text);
   text = text.replace(GEAR_STRIP, " ");
   text = collapseWhitespace(text).replace(/^[\s/.,-]+|[\s/.,-]+$/g, "");
-  if (mostlyUppercase(text)) {
+  if (mostlyUppercase(text) || /^[a-z]/.test(text)) {
     text = applyPtAccents(formatModelName(text));
   }
   text = text.replace(/\bflexpower\b/gi, "Flex").replace(/\bflex\b/gi, "Flex");

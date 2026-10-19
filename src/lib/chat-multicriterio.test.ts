@@ -200,6 +200,20 @@ test("um resultado de busca tem bloco e card, sem preço na prosa", async () => 
   assert.doesNotMatch(rows[0]!, /R\$/);
 });
 
+test("fechamento usa feminino quando todas as sugestões são motos", () => {
+  const bikes = ["Biz 125", "CG 160 Start"].map((model, index) => ({
+    ...car(`moto${index}`, "Honda", model, "", 2023, 12000),
+    category: "moto" as const,
+  }));
+  const input = { mensagem: "tem moto?", historico: [], stock: bikes };
+  const result = formatChatResult(
+    { reply: "Olha estas opções.", vehicles: bikes.map(toChatVehicleCard), leadCreated: false, stockHref: null, meta: { policy: "inventory-search" } },
+    input,
+    bikes,
+  );
+  assert.match(result.reply, /Qual delas você quer conhecer melhor\?/);
+});
+
 test("LLM: troca abertura de contagem e faixa de preço não solicitada", () => {
   const picks = stock.slice(0, 2);
   for (const intro of ["Separei 2 ótimas opções.", "Temos duas ótimas opções.", "Equilibrando tudo para você.", "Carros até R$ 100.000."]) {

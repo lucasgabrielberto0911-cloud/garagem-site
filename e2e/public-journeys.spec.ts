@@ -49,6 +49,10 @@ test("paginação diária mantém total, continuidade e ordem entre tamanhos de 
 
 test("404 real, aliases 308 e vendido sem preço no HTML/JSON-LD", async ({ request, page }) => {
   const canonical = await request.get(path); expect(canonical.status()).toBe(200);
+  const oldCgSlug = "/estoque/honda-cg-160-start-160-start-2023-cmu4r55kv0000kz04se25nrgg";
+  const cgRedirect = await request.get(oldCgSlug, { maxRedirects: 0 });
+  expect(cgRedirect.status()).toBe(301);
+  expect(cgRedirect.headers().location).toContain("/estoque/honda-cg-160-start-2023-cmu4r55kv0000kz04se25nrgg");
   for (const alias of [`/estoque/${civic.id}`, `/estoque/nome-antigo-${civic.id}`]) {
     const response = await request.get(alias, { maxRedirects: 0 });
     expect(response.status()).toBe(308); expect(response.headers().location.split(", ").every(value => value === path)).toBe(true);
