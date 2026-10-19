@@ -83,6 +83,7 @@ test("visita e clique consentidos chegam ao diário e ao funil autenticado", asy
     await context.addCookies([{ name: "session", value: token, url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
     await page.goto("/admin/leads");
     await expect(page.getByText("Funil por origem e veículo", { exact: true })).toBeVisible();
+    await page.getByText("Funil por origem e veículo", { exact: true }).click();
     await expect(page.getByRole("heading", { name: "Por origem", exact: true }).first()).toBeVisible();
     await noOverflow(page);
     await page.screenshot({ path: info.outputPath("funil.png"), fullPage: true });

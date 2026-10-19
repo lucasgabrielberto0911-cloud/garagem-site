@@ -6,7 +6,7 @@ export async function GET() {
   if (!(await getSession())) return NextResponse.json({}, { status: 401 });
   try {
     const { count, counts } = await getAdminNoticeSnapshot();
-    return NextResponse.json({ count, costWarnings: counts.vendas,
+    return NextResponse.json({ count, costWarnings: counts.vendas, agenda: counts.hoje + counts.atrasados,
       notifications: counts.vendas + counts.hoje + counts.atrasados + counts.pedidos,
     }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
