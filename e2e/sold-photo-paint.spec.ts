@@ -39,8 +39,8 @@ test("ficha vendida: WhatsApp convida para similares sem o preço antigo",async(
   expect(new URL((await interest.getAttribute("href"))!).searchParams.get("text")).toMatch(/por R\$\s*74\.900/);
 });
 
-test("home e estoque entregam fotos visíveis mesmo com JavaScript desligado",async({browser,page})=>{
-  const context=await browser.newContext({javaScriptEnabled:false,viewport:page.viewportSize()!,baseURL:"http://127.0.0.1:3362"});
+test("home e estoque entregam fotos visíveis mesmo com JavaScript desligado",async({browser,page,baseURL})=>{
+  const context=await browser.newContext({javaScriptEnabled:false,viewport:page.viewportSize()!,baseURL});
   try{
     await context.route("**/fotos/**",route=>route.fulfill({contentType:"image/png",body:readFileSync("public/branding/placeholder-car.png")}));
     const staticPage=await context.newPage();
