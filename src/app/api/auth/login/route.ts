@@ -15,9 +15,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Acesso inválido." }, { status: 403 });
   try {
     const type = request.headers.get("content-type") || "";
-    const body = type.includes("application/json")
-      ? await request.json()
-      : Object.fromEntries(await request.formData());
+    const body = await (type.includes("application/json")
+      ? request.json()
+      : request.formData().then((data) => Object.fromEntries(data))).catch(() => null);
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json({ error: "Informe email e senha válidos." }, { status: 400 });
+    }
     const email =
       typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body.password === "string" ? body.password : "";

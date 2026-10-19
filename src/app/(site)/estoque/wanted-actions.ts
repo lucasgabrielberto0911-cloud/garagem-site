@@ -55,7 +55,7 @@ export async function createWantedLead(
 
   try {
     const lead = await createLeadVenda(record);
-    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
+    revalidateTag(ADMIN_NEW_LEADS_TAG, { expire: 0 });
     notifyNewLead({
       id: lead.id,
       name: record.name,

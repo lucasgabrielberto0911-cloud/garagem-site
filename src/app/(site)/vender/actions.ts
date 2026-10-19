@@ -139,7 +139,7 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
       source,
       photoUrls,
     });
-    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
+    revalidateTag(ADMIN_NEW_LEADS_TAG, { expire: 0 });
     notifyNewLead({
       id: lead.id,
       name,
