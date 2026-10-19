@@ -14,7 +14,7 @@ import { ESTOQUE_SEO_TITLE, SEO_LOCAL_LOCATION } from "@/lib/seo-local";
 import { site } from "@/lib/site";
 import { getStockCatalogLinks, getStockFacets, getStockPage } from "@/lib/vehicles";
 
-export const revalidate = 600;
+export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: ESTOQUE_SEO_TITLE,

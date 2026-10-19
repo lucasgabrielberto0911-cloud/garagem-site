@@ -47,7 +47,7 @@ export const VEHICLES_PUBLIC_CACHE_TAG = "vehicles-public";
 export const TESTIMONIALS_CACHE_TAG = "testimonials";
 
 const PUBLIC_CACHE: { revalidate: number; tags: string[] } = {
-  revalidate: 600,
+  revalidate: 3600,
   tags: [VEHICLES_PUBLIC_CACHE_TAG],
 };
 
@@ -824,9 +824,9 @@ export const getSiteStats = cache(() =>
   safeQuery("estatísticas", () => loadSiteStatsCached(), EMPTY_STATS),
 );
 
-/** 600, não 300: a home também lê depoimentos, e o menor cache da rota vira o ISR. */
+/** Igual ao estoque: a home também lê depoimentos, e o menor cache da rota vira o ISR. */
 const TESTIMONIALS_CACHE: { revalidate: number; tags: string[] } = {
-  revalidate: 600,
+  revalidate: 3600,
   tags: [TESTIMONIALS_CACHE_TAG],
 };
 
