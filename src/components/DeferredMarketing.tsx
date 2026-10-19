@@ -19,9 +19,6 @@ export function DeferredMarketing() {
 
     function cleanup() {
       window.removeEventListener("load", arm);
-      window.removeEventListener("pointerdown", load);
-      window.removeEventListener("keydown", load);
-      window.removeEventListener("scroll", load);
       if (idleId && typeof window.cancelIdleCallback === "function") {
         window.cancelIdleCallback(idleId);
       }
@@ -49,10 +46,6 @@ export function DeferredMarketing() {
     }
 
     function arm() {
-      window.addEventListener("pointerdown", load, { once: true, passive: true });
-      window.addEventListener("keydown", load, { once: true });
-      window.addEventListener("scroll", load, { once: true, passive: true });
-
       const ric = window.requestIdleCallback;
       if (typeof ric === "function") {
         idleId = ric(() => {

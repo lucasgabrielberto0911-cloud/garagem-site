@@ -13,7 +13,7 @@ type FunnelLead = {
   createdAt: Date; status: string; source: string | null; interestVehicleId: string | null;
   vehicleInfo: string; activities: { note: string }[];
 };
-export type FunnelCounts = { label: string; conversas: number; marcadas: number; visitas: number; vendas: number };
+export type FunnelCounts = { key: string; label: string; conversas: number; marcadas: number; visitas: number; vendas: number };
 export function weeklyLeadSummary(leads: FunnelLead[], now = new Date()) {
   const cars = new Map<string, FunnelCounts>();
   const sources = new Map<string, FunnelCounts>();
@@ -29,7 +29,7 @@ export function weeklyLeadSummary(leads: FunnelLead[], now = new Date()) {
       [cars, lead.interestVehicleId || vehicle, vehicle],
       [sources, lead.source, purchaseSourceLabel(lead.source)],
     ] as const) {
-      const counts = map.get(key) || { label, conversas: 0, marcadas: 0, visitas: 0, vendas: 0 };
+      const counts = map.get(key) || { key, label, conversas: 0, marcadas: 0, visitas: 0, vendas: 0 };
       counts.conversas++;
       if (stages.has("visita-marcada")) counts.marcadas++;
       if (stages.has("visitou")) counts.visitas++;

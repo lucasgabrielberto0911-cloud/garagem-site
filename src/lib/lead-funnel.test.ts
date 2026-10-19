@@ -18,8 +18,8 @@ test("resumo preserva visitas de perdas, deduplica etapas e não presume visita 
     { ...lead, source: "vender" }, { ...lead, source: "chatbot-site" }, { ...lead, source: "nao-encontrou" },
     { ...lead, createdAt: new Date("2026-10-05T02:59:59Z") }, { ...lead, createdAt: new Date("2026-10-11T00:00:00Z") },
   ], now);
-  assert.deepEqual(result.cars, [{ label: "Civic 2020", conversas: 2, marcadas: 1, visitas: 1, vendas: 1 }]);
-  assert.deepEqual(result.sources, [{ label: "Instagram", conversas: 2, marcadas: 1, visitas: 1, vendas: 1 }]);
+  assert.deepEqual(result.cars, [{ key: "carro-1", label: "Civic 2020", conversas: 2, marcadas: 1, visitas: 1, vendas: 1 }]);
+  assert.deepEqual(result.sources, [{ key: "whatsapp:instagram", label: "Instagram", conversas: 2, marcadas: 1, visitas: 1, vendas: 1 }]);
   assert.equal(weeklyLeadSummary([{ ...lead, status: "perdido", activities: [{ note: funnelActivity("fechado") }] }], now).cars[0].vendas, 1);
 });
 test("status, filtro e agenda convivem com os cadastros antigos", () => {

@@ -452,6 +452,8 @@ export const NAV_LINKS = [
 export const DESKTOP_NAV_LINKS = NAV_LINKS.filter((link) => link.href !== "/");
 
 export const SECONDARY_LINKS = [
+  { href: "/modelos", label: "Marcas e modelos" },
+  { href: "/guias", label: "Guias de compra" },
   { href: "/favoritos", label: "Favoritos" },
   { href: "/privacidade", label: "Política de privacidade" },
 ] as const;

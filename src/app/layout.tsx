@@ -3,8 +3,7 @@ import { consentBootstrapScript } from "@/lib/consent";
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
 import { AppToaster } from "@/components/Toaster";
-import { BootSplash } from "@/components/site/BootSplash";
-import { PwaRegister } from "@/components/site/PwaRegister";
+import { DeferredPwa } from "@/components/site/DeferredPwa";
 import { installCaptureScript } from "@/lib/pwa-install";
 import { site } from "@/lib/site";
 import { HOME_SEO_DESCRIPTION, HOME_SEO_TITLE } from "@/lib/seo-local";
@@ -181,9 +180,8 @@ export default function RootLayout({
         className={`${display.variable} ${body.variable} font-body antialiased bg-asphalt text-cream`}
       >
         <WhatsAppOrigin />
-        <BootSplash />
         {children}
-        <PwaRegister />
+        <DeferredPwa />
         <AppToaster />
       </body>
     </html>

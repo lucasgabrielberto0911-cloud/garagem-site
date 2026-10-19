@@ -334,7 +334,7 @@ test("o bloco mostra foto, nome, ano, km e preço, e some se não houver opção
   assert.doesNotMatch(missingKm, /R\$/);
 });
 
-test("a ficha mantém âncoras, filtros e o formulário, e as cidades o estoque inteiro", () => {
+test("a ficha mantém âncoras, filtros e formulário; cidades exibem até seis veículos", () => {
   const page = readSrc("app/(vehicle)/estoque/[id]/page.tsx");
   const similar = readSrc("components/site/SimilarVehicles.tsx");
   const filters = readSrc("components/site/StockFilters.tsx");
@@ -368,7 +368,7 @@ test("a ficha mantém âncoras, filtros e o formulário, e as cidades o estoque 
   assert.match(sections, /Detalhes/);
 
   assert.match(city, /getCityShowcaseVehicles\(\)/);
-  assert.match(city, /vehicles=\{featured\}/);
+  assert.match(city, /vehicles=\{featured\.slice\(0, 6\)\}/);
   assert.doesNotMatch(city, /useSearchParams|EstoqueBrowse|\/api\/estoque/);
   const showcase = vehicles.slice(
     vehicles.indexOf("async function fetchCityShowcaseVehicles"),

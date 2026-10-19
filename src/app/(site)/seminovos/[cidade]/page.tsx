@@ -1,3 +1,4 @@
+import { stockLandingLinks } from "@/lib/stock-landings";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -24,7 +25,7 @@ import {
 } from "@/lib/seo";
 import { getCityShowcaseVehicles } from "@/lib/vehicles";
 
-export const revalidate = 3600;
+export const revalidate = 600;
 
 type Params = { cidade: string };
 
@@ -119,7 +120,7 @@ export default async function SeminovosCidadePage({
               </p>
             ) : (
               <VehicleGrid
-                vehicles={featured}
+                vehicles={featured.slice(0, 6)}
                 priorityCount={2}
                 returnTo={path}
               />
@@ -208,6 +209,8 @@ export default async function SeminovosCidadePage({
           </div>
         </section>
 
+        <nav aria-label="Outras cidades atendidas" className="mt-12 flex flex-wrap gap-x-5">{SERVICE_CITIES.filter(item => item.slug !== city.slug).map(item => <Link className="inline-flex min-h-11 items-center text-sm text-muted underline" key={item.slug} href={`/seminovos/${item.slug}`}>{item.name}</Link>)}</nav>
+        <nav aria-label="Modelos disponíveis" className="mt-6 flex flex-wrap gap-x-5">{stockLandingLinks(featured).filter(item => item.path.startsWith("/modelo/")).map(item => <Link className="inline-flex min-h-11 items-center text-sm text-muted underline" key={item.path} href={item.path}>{item.label}</Link>)}</nav>
         <div className="mt-12 flex justify-center">
           <ButtonLink href={CITIES_DIRECTORY_PATH} variant="outline">
             Ver cidades

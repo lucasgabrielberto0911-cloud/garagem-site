@@ -1,3 +1,4 @@
+import { recordSiteFunnel } from "./site-funnel-client";
 export const META_PIXEL_ID =
   process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() ||
   process.env.NEXT_PUBLIC_FB_PIXEL_ID?.trim() ||
@@ -418,6 +419,7 @@ export function trackVehicleView(ref: VehicleFunnelRef) {
 /** Clique em WhatsApp (float, favoritos, hero, ficha) — Meta custom + GA4. */
 export function trackWhatsAppClick(label: string, ref?: VehicleFunnelRef) {
   if (typeof window === "undefined") return;
+  recordSiteFunnel("whatsapp", ref?.vehicleId);
   const funnel = vehicleFunnelParams(ref);
   const custom: Record<string, string> = { label, ...funnel };
   fireCustom("WhatsAppClick", custom);
