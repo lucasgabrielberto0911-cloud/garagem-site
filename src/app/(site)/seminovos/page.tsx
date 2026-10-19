@@ -10,7 +10,7 @@ import {
 } from "@/components/site/ui";
 import { site } from "@/lib/site";
 import {
-  SERVICE_CITIES,
+  CITIES_DIRECTORY_PATH,
   breadcrumbJsonLd,
   buildPageMetadata,
 } from "@/lib/seo";
@@ -22,7 +22,7 @@ export const revalidate = 3600;
 export const metadata: Metadata = buildPageMetadata({
   title: `Seminovos no Espírito Santo | ${site.name}`,
   description:
-    "Seminovos com procedência para Aracruz, Grande Vitória, Linhares, Guarapari, Cachoeiro, Colatina e região. Estoque no site e atendimento da Garagem pelo WhatsApp, todos os dias das 8h às 23h.",
+    "Encontre carros e motos seminovos no Espírito Santo. Veja os destaques da Garagem, consulte fotos e detalhes dos anúncios e negocie sua compra ou troca pelo WhatsApp.",
   path: "/seminovos",
 });
 
@@ -43,7 +43,7 @@ export default async function SeminovosHubPage() {
         <PageHeader
           eyebrow={`${site.state} · loja digital`}
           title="Seminovos no Espírito Santo"
-          description="A Garagem atende o Estado pelo site e WhatsApp — sem ponto físico obrigatório. Escolha a cidade para ver como a gente atende aí, ou vá direto aos anúncios."
+          description="Encontre seu próximo carro ou moto na Garagem. Explore os destaques, confira fotos e detalhes de cada anúncio e converse com a equipe sobre compra ou troca."
         />
 
         <nav aria-label="Você está aqui" className="mt-4 text-xs text-muted">
@@ -56,29 +56,20 @@ export default async function SeminovosHubPage() {
 
         <section className="mt-10">
           <h2 className="font-display text-xl font-semibold text-cream">
-            Cidades atendidas
+            Escolha seu próximo seminovo
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-            Cada página é o atendimento naquela cidade. A lista de carros é o
-            estoque inteiro do site — os mesmos anúncios, cada um com a ficha.
+            Consulte ano, quilometragem, câmbio e preço nas fichas dos veículos
+            disponíveis. Para comparar todas as opções, acesse o estoque completo.
+            Se pretende trocar, fale com a equipe sobre a avaliação do seu veículo.
           </p>
-          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {SERVICE_CITIES.map((city) => (
-              <li key={city.slug}>
-                <Link
-                  href={`/seminovos/${city.slug}`}
-                  className="flex min-h-[88px] flex-col justify-center border border-white/10 bg-ink/60 px-4 py-4 transition hover:border-brand hover:bg-ink"
-                >
-                  <span className="font-display text-sm font-semibold uppercase tracking-wide text-cream">
-                    {city.name}
-                  </span>
-                  <span className="mt-1 text-xs text-muted">
-                    Seminovos em {city.name}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
+            Para saber como funciona o atendimento na sua região, veja as{" "}
+            <Link href={CITIES_DIRECTORY_PATH} className="text-cream underline underline-offset-4 transition hover:text-brand">
+              cidades atendidas pela Garagem
+            </Link>
+            .
+          </p>
         </section>
 
         <section className="mt-12">
@@ -88,8 +79,8 @@ export default async function SeminovosHubPage() {
                 Em destaque agora
               </h2>
               <p className="mt-1.5 text-sm text-muted">
-                Destaques do estoque disponível agora. Na página de cada cidade
-                a lista é o estoque inteiro, não um recorte por cidade.
+                Veículos disponíveis em destaque. Abra um anúncio para conhecer
+                os detalhes e falar com a equipe pelo WhatsApp.
               </p>
             </div>
             <ButtonLink href="/estoque" variant="outline" className="sm:shrink-0">
