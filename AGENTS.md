@@ -57,8 +57,9 @@ Regras:
 - O botão de WhatsApp é o principal CTA. Não remova os eventos `AddToCart` e `Lead` (com `content_ids` = id do veículo e `content_type=vehicle`): a campanha da Meta otimiza em AddToCart (ver `docs/ops.md`).
 
 ## Cache / ISR (Vercel Hobby: cada regravação custa)
-- Páginas públicas: `revalidate = 600` em home, `/estoque` e ficha. `sitemap.ts` usa `revalidate = 300`.
+- Páginas públicas: `revalidate = 3600` em home, `/estoque` e ficha (o painel invalida na hora, ver abaixo). `sitemap.ts` usa `revalidate = 300`.
 - Dados públicos usam `unstable_cache` com a tag `VEHICLES_PUBLIC_CACHE_TAG` (`src/lib/vehicles.ts`). Site e conteúdo usam a tag `site-settings` (3600 s). Os dados do admin usam tags próprias (`src/lib/admin-stats.ts`, `admin-revalidate.ts`).
+- Todo dado público de estoque (`PUBLIC_CACHE`) e depoimentos usa 3600 s. Como o TTL é longo, **toda ação do painel que muda dado público precisa invalidar na hora** (`updateTag`, só em Server Actions). Ação nova de estoque sem `revalidatePublicStock()` deixa o site velho por até 1 h.
 - Mudou um veículo? Chame **`revalidatePublicStock()`** (`src/lib/public-stock-revalidate.ts`), que revalida a tag, home, `/estoque`, sitemap e **só o slug daquela ficha**.
   - **Nunca** use `revalidatePath("/estoque/[id]", "page")`: isso regrava todas as fichas.
   - `updateTag` só pode ser usado em Server Actions.
@@ -68,7 +69,7 @@ Regras:
 ## SEO e performance
 - Fichas: metadata via App Router, canonical pelo slug (`src/lib/vehicle-slug.ts`), JSON-LD de veículo/oferta sem preço quando vendido.
 - Meça antes e depois (Lighthouse ou Chrome DevTools MCP no preview da Vercel) quando mexer em tela pública. Metas: LCP ≤ 2,5 s, INP ≤ 200 ms, CLS ≤ 0,1 no celular.
-- Fotos públicas saem por `/api/fotos/...` com cache longo. Não troque para `next/image` sem medir (ver `docs/ops.md`, seção Image Optimization).
+- Fotos públicas saem por `/api/fotos/...` com cache longo (cards `-card.webp`: 30 dias, sem `immutable`, porque o backfill regrava o mesmo caminho). Não troque para `next/image` sem medir (ver `docs/ops.md`, seção Image Optimization).
 
 
 ## Economia de deploys na Vercel (Hobby: ~100/dia)

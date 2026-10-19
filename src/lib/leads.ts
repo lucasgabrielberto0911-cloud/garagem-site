@@ -44,6 +44,16 @@ export function isLeadStatus(value: string): value is LeadStatus {
   return (LEAD_STATUSES as readonly string[]).includes(value);
 }
 
+export function leadFirstName(name: string) {
+  return name.trim().split(/\s+/)[0] || "cliente";
+}
+
+export function whatsappUrl(phone: string, text: string) {
+  const digits = phone.replace(/\D/g, "");
+  const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
+  return `https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`;
+}
+
 export function buildLeadWhatsAppUrl(lead: {
   phone: string;
   name: string;
@@ -51,9 +61,7 @@ export function buildLeadWhatsAppUrl(lead: {
   plate?: string | null;
   source?: string | null;
 }): string {
-  const digits = lead.phone.replace(/\D/g, "");
-  const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
-  const firstName = lead.name.trim().split(/\s+/)[0] || "cliente";
+  const firstName = leadFirstName(lead.name);
   let text = "";
   if (lead.source === "chatbot-site") {
     const topic = lead.vehicleInfo ? ` sobre o ${lead.vehicleInfo}` : "";
@@ -70,7 +78,7 @@ export function buildLeadWhatsAppUrl(lead: {
     const vehicle = lead.vehicleInfo ? ` do ${lead.vehicleInfo}` : "";
     text = `Olá, ${firstName}! Aqui é da Garagem. Recebemos sua solicitação de avaliação${vehicle}${plateLabel}.`;
   }
-  return `https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`;
+  return whatsappUrl(lead.phone, text);
 }
 
 /** Conversa registrada só com telefone (ou só com nome) ainda aparece com rótulo legível. */

@@ -45,7 +45,7 @@ import {
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import { HOME_SEO_DESCRIPTION, HOME_SEO_TITLE } from "@/lib/seo-local";
 
-export const revalidate = 600;
+export const revalidate = 3600;
 
 export const metadata = buildPageMetadata({
   title: HOME_SEO_TITLE,
