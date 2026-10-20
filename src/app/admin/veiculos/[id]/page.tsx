@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { CommercialPanel } from "@/components/admin/CommercialPanel";
+import type { Prisma } from "@prisma/client";
+import { adminDate } from "@/lib/admin-date";
 import { VehicleTabsLoader } from "@/components/admin/VehicleTabsLoader";
 import type { ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
@@ -91,6 +94,14 @@ export default async function EditVehiclePage({
     notFound();
   }
 
+  const commercial = view === "operacao" ? await Promise.all([
+    prisma.vehicleReservation.findFirst({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, include: { customer: { select: { name: true } } } }),
+    prisma.vehicleAssessment.findUnique({ where: { vehicleId: id } }),
+    prisma.financeSimulation.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 20 }),
+    prisma.commercialDocument.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, kind: true, createdAt: true } }),
+    prisma.vehiclePriceHistory.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 10 }),
+  ]) : null;
+
   const status = STATUS_LABEL[vehicle.status] ?? {
     label: vehicle.status,
     tone: "neutral" as const,
@@ -154,6 +165,15 @@ export default async function EditVehiclePage({
           Verificado
         </TabLink>
       </nav>
+
+      {commercial ? <CommercialPanel
+        vehicle={{ id, status: vehicle.status, price: vehicle.price, fipePrice: vehicle.fipePrice, purchasePrice: vehicle.purchasePrice, consigned: vehicle.consigned, days, costs: costs.reduce((sum, cost) => sum + cost.amount, 0) }}
+        reservation={commercial[0] ? { customer: commercial[0].customer.name, deposit: Number(commercial[0].deposit), expiresAt: commercial[0].expiresAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }), status: commercial[0].status } : null}
+        assessment={commercial[1] ? { items: commercial[1].items as Prisma.JsonArray as { label: string; status: string }[], notes: commercial[1].notes, offer: Number(commercial[1].offer), approved: commercial[1].approved } : null}
+        simulations={commercial[2].map((s) => ({ id: s.id, customerName: s.customerName, bank: s.bank, installment: Number(s.installment), months: s.months, rate: Number(s.rate), status: s.status }))}
+        documents={commercial[3].map((d) => ({ id: d.id, kind: d.kind, date: adminDate(d.createdAt) }))}
+        history={commercial[4].map((h) => ({ price: h.price, date: adminDate(h.createdAt) }))}
+      /> : null}
 
       {view === "verificado" && verified ? (
         <VehicleTabsLoader view="verificado" panelProps={{

@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { afterSaleMessage, AFTER_SALE } from "@/lib/admin-commercial";
+import { completeAfterSale } from "@/app/admin/veiculos/commercial-actions";
 import { redirect } from "next/navigation";
 import { AdminPageHeader, btn, inputClass } from "@/components/admin/ui";
 import { LeadFollowUp } from "@/components/admin/LeadFollowUp";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { adminDate } from "@/lib/admin-date";
+import { adminActionDate } from "@/lib/admin-date";
 import { AGENDA_PERIODS, agendaWhere, parseAgendaPeriod } from "@/lib/admin-agenda";
 import { leadSearchWhere } from "@/lib/admin-lead-search";
 import { LeadWhatsAppMenu } from "@/components/admin/LeadWhatsAppMenu";
@@ -37,6 +39,11 @@ export default async function AgendaPage({ searchParams }: {
     take: PAGE_SIZE,
     select: { id: true, name: true, phone: true, vehicleInfo: true, plate: true, source: true, nextAction: true, nextActionAt: true },
   });
+  const taskDate = agendaWhere(period, now).nextActionAt;
+  const [afterSales, siteSettings] = await Promise.all([
+    prisma.afterSaleTask.findMany({ where: { completedAt: null, dueAt: taskDate as import("@prisma/client").Prisma.DateTimeFilter }, orderBy: { dueAt: "asc" }, take: 50, include: { sale: { include: { customer: true, vehicle: true } } } }),
+    prisma.siteSettings.findUnique({ where: { id: "default" }, select: { googleProfileUrl: true } }),
+  ]);
   function href(value = period, nextPage = 1) {
     const params = new URLSearchParams({ periodo: value });
     if (q) params.set("q", q);
@@ -66,19 +73,35 @@ export default async function AgendaPage({ searchParams }: {
       {leads.map((lead) => <article key={lead.id} className="min-w-0 space-y-3 rounded-lg border border-white/10 bg-ink/50 p-4">
         <div className="flex items-start justify-between gap-3">
           <h2 className="min-w-0 break-words font-display text-lg font-semibold">{leadDisplayName(lead)}</h2>
-          <time dateTime={lead.nextActionAt!.toISOString()} className={`shrink-0 text-xs ${period === "atrasados" ? "text-brand-orange" : "text-muted"}`}>{adminDate(lead.nextActionAt!)}</time>
+          <time dateTime={lead.nextActionAt!.toISOString()} className={`shrink-0 text-xs ${period === "atrasados" ? "text-brand-orange" : "text-muted"}`}>{adminActionDate(lead.nextActionAt!)}</time>
         </div>
         <p className="break-words text-sm text-muted">{lead.vehicleInfo}</p>
         <p className="break-words text-sm">{lead.nextAction || "Retomar atendimento"}</p>
         <div className="flex gap-2">
           <Link href={`/admin/leads?lead=${encodeURIComponent(lead.id)}`} className={`${btn.outline} flex-1`}>Abrir lead</Link>
           {leadHasPhone(lead)
-            ? <LeadWhatsAppMenu lead={lead} className={`${btn.outline} flex-1 gap-2`} menuClassName={`${btn.outline} -ml-2 w-11 shrink-0 px-0`} />
+            ? <LeadWhatsAppMenu lead={lead} leadId={lead.id} className={`${btn.outline} flex-1 gap-2`} menuClassName={`${btn.outline} -ml-2 w-11 shrink-0 px-0`} />
             : <span className="flex-1 self-center text-xs text-muted">Sem telefone</span>}
         </div>
         <LeadFollowUp id={lead.id} nextAction={lead.nextAction} nextActionAt={lead.nextActionAt} />
       </article>)}
     </div>}
+    <section className="space-y-3" aria-label="Pós-venda">
+      <h2 className="font-display text-xl font-semibold">Pós-venda automático</h2>
+      <p className="text-sm text-muted">Tarefas geradas ao registrar vendas com cliente: entrega, 7 dias, 30 dias e 180 dias. Envio pelo vendedor. Exibindo até 50 tarefas deste período.</p>
+      {afterSales.length === 0 ? <p className="text-sm text-muted">Nenhuma tarefa neste período.</p> : afterSales.map((task) => {
+        const customer = task.sale.customer;
+        const label = `${task.sale.vehicle.brand} ${task.sale.vehicle.model} ${task.sale.vehicle.yearModel}`;
+        const message = afterSaleMessage(task.kind, customer?.name ?? "cliente", label, siteSettings?.googleProfileUrl?.startsWith("https://") ? siteSettings.googleProfileUrl : null);
+        const phone = customer?.phone.replace(/\D/g, "") ?? "";
+        return <article key={task.id} className="space-y-3 rounded-lg border border-white/10 p-4">
+          <h3 className="font-display">{customer?.name ?? "Cliente não cadastrado"} · {AFTER_SALE.find((item) => item.kind === task.kind)?.label}</h3>
+          <p className="text-xs text-muted">{adminActionDate(task.dueAt)} · {label}</p><p className="text-sm">{message}</p>
+          <div className="flex flex-wrap gap-2">{phone.length >= 10 ? <a href={`https://wa.me/${phone.startsWith("55") && phone.length > 11 ? phone : `55${phone}`}?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer" className={btn.outline}>Abrir mensagem no WhatsApp</a> : <span className="text-sm text-muted">Cliente sem telefone válido</span>}
+          <form action={completeAfterSale.bind(null, task.id)}><button className={btn.primary}>Marcar tarefa concluída</button></form></div>
+        </article>;
+      })}
+    </section>
     {pages > 1 ? <nav aria-label="Páginas da agenda" className="flex justify-between gap-2">
       {page > 1 ? <Link href={href(period, page - 1)} className={btn.outline}>Anterior</Link> : <span />}
       {page < pages ? <Link href={href(period, page + 1)} className={btn.outline}>Próxima</Link> : null}

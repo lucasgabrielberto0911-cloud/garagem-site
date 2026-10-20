@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import { ADMIN_NEW_LEADS_TAG } from "@/lib/admin-cache";
 import { notifyNewLead } from "@/lib/lead-notify";
@@ -55,7 +55,7 @@ export async function createWantedLead(
 
   try {
     const lead = await createLeadVenda(record);
-    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
+    updateTag(ADMIN_NEW_LEADS_TAG);
     notifyNewLead({
       id: lead.id,
       name: record.name,

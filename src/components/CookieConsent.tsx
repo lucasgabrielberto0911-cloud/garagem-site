@@ -29,11 +29,10 @@ export function CookieConsent() {
     >
       <p className="text-xs leading-snug text-cream/90">
         <span className="lg:hidden">
-          Google Analytics só com seu aceite. Medimos visitas de anúncios.
+          Google Analytics só com seu aceite. Medimos visitas vindas de anúncios.
         </span>
         <span className="hidden lg:inline">
-          Google Analytics só com seu aceite. Visitas vindas de anúncios são
-          medidas.
+          Google Analytics só com seu aceite. Medimos visitas vindas de anúncios.
         </span>{" "}
         <Link
           href="/privacidade"

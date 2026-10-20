@@ -2,7 +2,7 @@ const transferSource = { label: "Detran/ES: transferência de propriedade", url:
 export const BUYING_GUIDES = [
   {
     slug: "documentos-comprar-seminovo-es", title: "Documentos para comprar seminovo no ES",
-    description: "Prepare os documentos e confirme as exigências antes de fechar a compra.",
+    description: "Veja quais documentos preparar e confirme as exigências antes de fechar a compra.",
     sections: [
       ["Separe seus documentos", "Tenha identificação, CPF e comprovante de endereço. Confira no Detran/ES a lista aplicável ao seu caso; compra por empresa ou representante pode exigir documentos adicionais."],
       ["Confira os documentos do carro", "Compare os dados do CRLV-e com o veículo e com a negociação. Peça à loja a documentação de venda aplicável e guarde proposta, recibos e comprovantes."],
@@ -11,7 +11,7 @@ export const BUYING_GUIDES = [
   },
   {
     slug: "como-conferir-laudo-cautelar", title: "Como conferir um laudo cautelar",
-    description: "Leia o laudo completo e esclareça apontamentos antes da decisão.",
+    description: "Leia o laudo completo e tire dúvidas sobre qualquer apontamento antes de decidir.",
     sections: [
       ["Peça o laudo completo", "Confira identificação do veículo, data, empresa responsável e forma de validar o documento com o emissor. Uma foto da capa não mostra o resultado completo."],
       ["Leia os apontamentos", "Peça explicação dos itens inspecionados, ressalvas e limites do serviço contratado. Não presuma que a palavra aprovado garante ausência de problemas."],
@@ -22,9 +22,9 @@ export const BUYING_GUIDES = [
     slug: "transferencia-veiculo-es", title: "Transferência de veículo no Espírito Santo",
     description: "Organize a transferência com o roteiro oficial do Detran/ES.",
     sections: [
-      ["Verifique o procedimento", "Consulte o serviço de transferência de propriedade no Detran/ES. O documento e a forma de assinatura dependem da situação do veículo e da venda."],
-      ["Planeje as etapas", "Confira documentação, assinaturas, vistoria e pagamentos exigidos no serviço oficial. Combine com a loja as responsabilidades e o acompanhamento do processo."],
-      ["Confira a conclusão", "A assinatura da autorização de venda não encerra, por si só, todas as etapas. Confirme a conclusão no órgão de trânsito e a emissão do documento atualizado."],
+      ["Verifique o procedimento", "Consulte o serviço de transferência de propriedade no Detran/ES e confira os documentos e as formas de assinatura exigidos para a situação do veículo e da venda."],
+      ["Planeje as etapas", "Confira no serviço oficial quais documentos e assinaturas são necessários e se há vistoria ou pagamentos a fazer. Converse com a equipe da Garagem para alinhar as responsabilidades e saber como acompanhar o processo."],
+      ["Acompanhe a conclusão", "Só a assinatura da autorização de venda não encerra o processo. Confirme no Detran/ES a conclusão da transferência e quais documentos do veículo precisam estar atualizados."],
     ], sources: [transferSource],
   },
   {

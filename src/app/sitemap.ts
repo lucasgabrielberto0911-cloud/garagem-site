@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
 import {
+  CITIES_DIRECTORY_PATH,
   SERVICE_CITIES,
   absoluteUrl,
 } from "@/lib/seo";
@@ -31,6 +32,7 @@ const STATIC_ROUTES: {
   { path: "/faq", changeFrequency: "monthly", priority: 0.5 },
   { path: "/privacidade", changeFrequency: "yearly", priority: 0.3 },
   { path: "/seminovos", changeFrequency: "weekly", priority: 0.75 },
+  { path: CITIES_DIRECTORY_PATH, changeFrequency: "monthly", priority: 0.65 },
   ...SERVICE_CITIES.map((city) => ({
     path: `/seminovos/${city.slug}`,
     changeFrequency: "monthly" as const,

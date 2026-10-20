@@ -40,6 +40,7 @@ import {
   revalidatePublicStock,
   revalidatePublicStockMany,
 } from "@/lib/public-stock-revalidate";
+import { formatBrandName, formatModelName } from "@/lib/format";
 
 export type VehicleFormState = {
   error?: string;
@@ -57,13 +58,25 @@ function requireNumber(value: FormDataEntryValue | null, label: string) {
   return parsed;
 }
 
+/** Só normaliza texto todo em maiúsculas ou minúsculas; "T-Cross" digitado certo fica como está. */
+function normalizeCase(value: string, format: (v: string) => string) {
+  return value === value.toUpperCase() || value === value.toLowerCase()
+    ? format(value)
+    : value;
+}
+
 function parseVehicleFields(formData: FormData) {
   const category = parseVehicleCategory(
     String(formData.get("category") || "carro"),
   );
-  const brand = String(formData.get("brand") || "").trim();
-  const model = String(formData.get("model") || "").trim();
-  const version = String(formData.get("version") || "").trim() || null;
+  const brandRaw = String(formData.get("brand") || "").trim();
+  const brand = normalizeCase(brandRaw, formatBrandName);
+  const modelRaw = String(formData.get("model") || "").trim();
+  const model = normalizeCase(modelRaw, formatModelName);
+  const rawVersion = String(formData.get("version") || "").trim();
+  const version = rawVersion
+    ? rawVersion.charAt(0).toUpperCase() + rawVersion.slice(1)
+    : null;
   const fuel = String(formData.get("fuel") || "").trim();
   const transmission = String(formData.get("transmission") || "").trim();
   const color = String(formData.get("color") || "").trim() || null;
@@ -294,6 +307,9 @@ export async function createVehicle(
 
   try {
     const data = parseVehicleFields(formData);
+    if (data.status === "reservado") {
+      return { error: "Use a aba Operação para reservar com cliente, sinal e prazo." };
+    }
     await assertCanFeature({ featured: data.featured });
 
     const vehicle = await withAdminStorageLock(async (tx) => {
@@ -396,7 +412,10 @@ export async function updateVehicle(
     });
 
     const result = await withAdminStorageLock(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
       const current = await tx.vehicle.findUniqueOrThrow({ where: { id } });
+      if (data.status === "reservado" && current.status !== "reservado") throw new Error("Use a aba Operação para reservar com cliente, sinal e prazo.");
+      if (current.status === "reservado" && data.status !== "reservado") await tx.vehicleReservation.updateMany({ where: { vehicleId: id, status: { in: data.status === "vendido" ? ["ativa"] : ["ativa", "convertida"] } }, data: { status: data.status === "vendido" ? "convertida" : "cancelada" } });
       const currentPhotos = await tx.photo.findMany({
         where: { vehicleId: id },
         orderBy: { order: "asc" },
@@ -568,6 +587,8 @@ export async function markVehicleAsSold(id: string) {
   const session = await requireAdmin();
 
   await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
+    await tx.vehicleReservation.updateMany({ where: { vehicleId: id, status: "ativa" }, data: { status: "convertida" } });
     const previous = await tx.vehicle.findUniqueOrThrow({
       where: { id },
       select: { status: true },
@@ -595,6 +616,8 @@ export async function setVehicleStatus(id: string, status: string) {
     return { ok: false, message: "Status inválido." };
   }
 
+  if (status === "reservado") return { ok: false, message: "Use a aba Operação para reservar com cliente, sinal e prazo." };
+
   if (status === "disponivel") {
     const current = await prisma.vehicle.findUnique({
       where: { id },
@@ -609,6 +632,8 @@ export async function setVehicleStatus(id: string, status: string) {
   }
 
   await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
+    await tx.vehicleReservation.updateMany({ where: { vehicleId: id, status: { in: status === "vendido" ? ["ativa"] : ["ativa", "convertida"] } }, data: { status: status === "vendido" ? "convertida" : "cancelada" } });
     const previous = await tx.vehicle.findUniqueOrThrow({
       where: { id },
       select: { status: true },
@@ -691,10 +716,12 @@ export async function setVehiclesStatus(
   }
 
   await prisma.$transaction(async (tx) => {
+    for (const id of [...appliedIds].sort()) await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
     const previous = await tx.vehicle.findMany({
       where: { id: { in: appliedIds } },
       select: { id: true, status: true },
     });
+    await tx.vehicleReservation.updateMany({ where: { vehicleId: { in: appliedIds }, status: { in: status === "vendido" ? ["ativa"] : ["ativa", "convertida"] } }, data: { status: status === "vendido" ? "convertida" : "cancelada" } });
     await tx.vehicle.updateMany({
       where: { id: { in: appliedIds } },
       data: status === "vendido" ? { status, featured: false } : { status },

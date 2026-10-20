@@ -57,17 +57,17 @@ const REASONS = [
   {
     Icon: IconClipboardCheck,
     title: "Revisão com garantia",
-    text: "A gente revisa cada veículo antes de anunciar. O que a gente viu, conta pra você no atendimento.",
+    text: "A gente revisa cada veículo antes de anunciar. O que encontramos, explicamos pra você no atendimento.",
   },
   {
     Icon: IconShieldCheck,
     title: "Documentação pronta",
-    text: "A gente olha o histórico, os débitos e as restrições antes. A documentação vai 100% preparada, pra você ter mais tranquilidade.",
+    text: "A gente confere o histórico, os débitos e as restrições do veículo. A documentação fica preparada para a transferência, pra você ter mais tranquilidade.",
   },
   {
     Icon: IconHandshake,
     title: "Negociação clara",
-    text: "O preço está no anúncio. Financiamento em até 60x e cartão em até 18x — a parcela o consultor calcula no WhatsApp.",
+    text: "O preço está no anúncio. Há financiamento em até 60 vezes, sujeito à análise de crédito, e pagamento com cartão em até 18 vezes. O consultor informa o valor da parcela e as condições no WhatsApp.",
   },
 ] as const;
 
@@ -191,7 +191,7 @@ export default async function HomePage() {
             Veículos em destaque
           </h2>
           <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-muted sm:block">
-            Seleção da loja — no máximo 8 anúncios. O estoque muda rápido.
+            Até 8 veículos em destaque. O estoque muda rápido; veja as demais opções disponíveis.
           </p>
         </div>
 
@@ -264,7 +264,7 @@ export default async function HomePage() {
         <SectionHeading
           eyebrow="Diferenciais"
           title={`Por que a ${site.name}`}
-          description="Três coisas que a gente faz em todo seminovo, antes de você fechar."
+          description="Três coisas que fazemos em cada seminovo antes de você fechar a compra."
         />
         <ul className="mt-5 grid gap-3 lg:grid-cols-3">
           {REASONS.map(({ Icon, title, text }) => (

@@ -18,19 +18,6 @@ test("ficha disponível e vendida têm um H1 acessível em qualquer viewport", a
   }
 });
 
-test("cidades tem redirect 301, destino canônico e nenhum link ou sitemap na URL antiga", async ({ page, request }) => {
-  const redirect = await request.get("/cidades?origem=rodape", { maxRedirects: 0 });
-  expect(redirect.status()).toBe(301);
-  expect(redirect.headers().location).toBe("/seminovos?origem=rodape");
-  await page.goto("/cidades");
-  await expect(page).toHaveURL(/\/seminovos$/);
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://www.suagaragem.net/seminovos");
-  await expect(page.locator('a[href="/cidades"]')).toHaveCount(0);
-  const xml = await (await request.get("/sitemap.xml")).text();
-  expect(xml).not.toContain("/cidades</loc>");
-  expect(xml.match(/<loc>https:\/\/www\.suagaragem\.net\/seminovos<\/loc>/g)).toHaveLength(1);
-});
-
 test("cards mantêm uma capa prioritária e a segunda eager com prioridade baixa", async ({ page }) => {
   for (const path of ["/", "/estoque"]) {
     await page.goto(path);

@@ -31,6 +31,7 @@ import {
   type VehicleFormState,
 } from "@/app/admin/veiculos/actions";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { VehiclePromoKitModal } from "@/components/admin/VehiclePromoKitModal";
 import {
   ActionSheet,
   ActionSheetButton,
@@ -256,16 +257,19 @@ export function VehicleForm({
   const [fuel, setFuel] = useState(
     () => vehicle?.fuel ?? defaultFuel(parseVehicleCategory(vehicle?.category)),
   );
-  const [transmission, setTransmission] = useState(vehicle?.transmission ?? "");
+   const [transmission, setTransmission] = useState(vehicle?.transmission ?? "");
   const [pendingAction, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmSold, setConfirmSold] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [quickMode, setQuickMode] = useState(mode === "create");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [openSections, setOpenSections] = useState<Set<VehicleFormSectionId>>(
     () =>
       new Set(
         initialOpenSections(mode, {
+          quickMode: mode === "create",
           descriptionNeedsAttention: Boolean(
             vehicle?.description &&
             descriptionPriceMismatch(vehicle.description, vehicle.price),
@@ -310,7 +314,8 @@ export function VehicleForm({
       void fetch(`/api/admin/drafts?key=vehicle:${vehicle?.id ?? "new"}`, {
         method: "DELETE",
       });
-      setDirty(false);
+      // No cadastro, a guarda sai ao desmontar: limpá-la antes pode cancelar o redirecionamento pelo histórico.
+      if (!state.id) setDirty(false);
       toast.success("Anúncio salvo com sucesso.");
     }
     if (state.success && state.id) router.push(`/admin/veiculos/${state.id}`);
@@ -522,13 +527,26 @@ export function VehicleForm({
     });
   }
 
-  function handleMarkSold() {
+  function handleMarkSold(registerSale = false) {
     if (!vehicle) return;
+    const targetId = vehicle.id;
     startTransition(async () => {
       try {
-        await markVehicleAsSold(vehicle.id);
-        toast.success("Veículo movido para a aba Vendidos.");
-        router.push("/admin/veiculos?tab=vendidos");
+        await markVehicleAsSold(targetId);
+        if (registerSale) {
+          toast.success(
+            "Veículo marcado como vendido. Abrindo registro de venda...",
+          );
+          router.push(`/admin/vendas?vehicle=${targetId}`);
+        } else {
+          toast.success("Veículo movido para a aba Vendidos.", {
+            action: {
+              label: "Registrar venda",
+              onClick: () => router.push(`/admin/vendas?vehicle=${targetId}`),
+            },
+          });
+          router.push("/admin/veiculos?tab=vendidos");
+        }
       } catch {
         toast.error("Erro ao atualizar o status.");
       }
@@ -833,6 +851,53 @@ export function VehicleForm({
           <input type="hidden" name="km" value={values.km.replace(/\D/g, "")} />
           <input type="hidden" name="category" value={category} />
           <input type="hidden" name="locationCity" value={locationCity} />
+
+          {mode === "create" ? (
+            <div className="flex flex-col gap-2 border border-white/10 bg-ink/70 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <span className="font-display text-xs font-semibold uppercase tracking-wider text-cream">
+                  Modo de preenchimento
+                </span>
+                <p className="text-xs text-muted">
+                  {quickMode
+                    ? "Cadastro rápido: preencha só o essencial (marca, modelo, preço, fotos e ficha). Opcionais podem ser completados depois."
+                    : "Ficha completa: todas as seções e opcionais abertos para detalhamento."}
+                </p>
+              </div>
+              <div className="flex gap-2 self-start sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickMode(true);
+                    setOpenSections(
+                      new Set(["identificacao", "essencial", "fotos", "ficha"]),
+                    );
+                  }}
+                  className={`min-h-[38px] px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wider transition touch-manipulation ${
+                    quickMode
+                      ? "bg-brand text-cream"
+                      : "border border-white/10 bg-asphalt text-muted hover:text-cream"
+                  }`}
+                >
+                  ⚡ Cadastro rápido
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickMode(false);
+                    setOpenSections(new Set(sections.map((s) => s.id)));
+                  }}
+                  className={`min-h-[38px] px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wider transition touch-manipulation ${
+                    !quickMode
+                      ? "bg-brand text-cream"
+                      : "border border-white/10 bg-asphalt text-muted hover:text-cream"
+                  }`}
+                >
+                  Ficha completa
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <FormSection
             {...sectionProps("identificacao")}
@@ -1673,6 +1738,14 @@ export function VehicleForm({
                       <IconExternal className="h-4 w-4" />
                       Ver no site
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => setPromoOpen(true)}
+                      className={btn.ghost}
+                    >
+                      <IconExternal className="h-4 w-4" />
+                      Kit de divulgação
+                    </button>
                     {vehicle.status !== "vendido" ? (
                       <button
                         type="button"
@@ -1720,6 +1793,15 @@ export function VehicleForm({
             label="Ver no site"
             hint="Abre a página pública em outra aba"
             onNavigate={() => setMoreOpen(false)}
+          />
+          <ActionSheetButton
+            icon={<IconExternal className="h-4 w-4" />}
+            label="Kit de divulgação"
+            hint="WhatsApp, Instagram e card Status"
+            onClick={() => {
+              setMoreOpen(false);
+              setPromoOpen(true);
+            }}
           />
           {vehicle.status !== "vendido" ? (
             <ActionSheetButton
@@ -1781,15 +1863,36 @@ export function VehicleForm({
       <ConfirmDialog
         open={confirmSold}
         title="Marcar como vendido"
-        description={`Confirmar venda de ${vehicle ? `${vehicle.brand} ${vehicle.model}` : "este veículo"}? Ele sai da aba Em estoque e vai para Vendidos. A página pública continua no ar com aviso (sem 404). Para registrar valor e cliente, use a tela de Vendas.`}
-        confirmLabel="Marcar como vendido"
+        description={`Confirmar venda de ${vehicle ? `${vehicle.brand} ${vehicle.model}` : "este veículo"}? Ele sai da aba Em estoque e vai para Vendidos. A página pública continua no ar com aviso (sem 404).`}
+        confirmLabel="Só marcar vendido"
+        alternateConfirm={{
+          label: "Vendido e registrar venda",
+          onConfirm: () => {
+            setConfirmSold(false);
+            handleMarkSold(true);
+          },
+        }}
         danger={false}
         loading={pendingAction}
         onCancel={() => setConfirmSold(false)}
         onConfirm={() => {
           setConfirmSold(false);
-          handleMarkSold();
+          handleMarkSold(false);
         }}
+      />
+
+      <VehiclePromoKitModal
+        vehicle={
+          vehicle
+            ? {
+                ...vehicle,
+                photos,
+                accessories,
+              }
+            : null
+        }
+        open={promoOpen}
+        onClose={() => setPromoOpen(false)}
       />
     </>
   );

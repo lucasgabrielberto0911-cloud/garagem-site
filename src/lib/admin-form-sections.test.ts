@@ -29,6 +29,9 @@ test("edição abre só preço/status e fotos; cadastro novo abre o que precisa 
   assert.ok(create.includes("identificacao"));
   assert.deepEqual(create, ["identificacao"]);
   assert.ok(!create.includes("operacao"));
+
+  const createQuick = initialOpenSections("create", { quickMode: true });
+  assert.deepEqual(createQuick, ["identificacao", "essencial", "fotos", "ficha"]);
 });
 
 test("erro de validação aponta a seção certa, na ordem da tela", () => {

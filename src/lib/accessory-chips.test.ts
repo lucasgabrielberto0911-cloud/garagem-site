@@ -20,6 +20,8 @@ test("ícone casa com o item e cai no check quando não conhece", () => {
   assert.equal(accessoryIconKey("Para-brisa"), "window");
   assert.equal(accessoryIconKey("Bolha / carenagem"), "window");
   assert.equal(accessoryIconKey("Assistente de partida em rampa"), "shield");
+  assert.equal(accessoryIconKey("6 Airbags"), "shield");
+  assert.equal(accessoryIconKey("6 Air Bags"), "shield");
   assert.equal(accessoryIconKey("Partida elétrica"), "key");
   assert.equal(accessoryIconKey("Item inventado qualquer"), "check");
 });
@@ -48,6 +50,8 @@ test("chips renderizam todos os itens com ícone decorativo", () => {
   assert.equal((html.match(/data-accessory-chip(?!s)/g) ?? []).length, 5);
   assert.equal((html.match(/aria-hidden="true"/g) ?? []).length, 5);
   for (const item of items) assert.ok(html.includes(item));
+  assert.match(html, /text-brand-light/);
+  assert.match(html, /first-letter:uppercase/);
   assert.match(html, /grid-cols-2/);
   assert.match(html, /lg:grid-cols-3/);
   assert.match(html, /col-span-2 lg:col-span-2/);
