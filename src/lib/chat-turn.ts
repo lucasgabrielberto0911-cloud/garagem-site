@@ -197,6 +197,11 @@ export function isBrowsingOrThanks(message: string) {
   );
 }
 
+function topVehicleWithPrice(vehicle: ChatVehicleRecord): string {
+  const priceText = vehicle.price ? ` (${formatChatPrice(vehicle.price)})` : "";
+  return `${talkName(vehicle).labeled}${priceText}`;
+}
+
 async function runChatTurnInternal(input: {
   mensagem: string;
   historico: ChatTurn[];
@@ -456,8 +461,7 @@ async function runChatTurnInternal(input: {
   if (directPolicy === "finance") {
     if (modelUnits.length > 0) {
       const top = modelUnits[0]!;
-      const priceText = top.price ? ` (${formatChatPrice(top.price)})` : "";
-      const reply = `Temos ${talkName(top).labeled}${priceText} no estoque. ${CHAT_FINANCE_REPLY}`;
+      const reply = `Temos ${topVehicleWithPrice(top)} no estoque. ${CHAT_FINANCE_REPLY}`;
       emit(reply);
       return finish(reply, false, { cards: true, forcedVehicles: modelUnits, policy: "finance" });
     }
@@ -743,13 +747,6 @@ async function runChatTurnInternal(input: {
     return finish(CHAT_CARD_REPLY, false, { policy, plain: true, cards: false });
   }
   if (policy === "finance") {
-    if (modelUnits.length > 0) {
-      const top = modelUnits[0]!;
-      const priceText = top.price ? ` (${formatChatPrice(top.price)})` : "";
-      const reply = `Temos ${talkName(top).labeled}${priceText} no estoque. ${CHAT_FINANCE_REPLY}`;
-      emit(reply);
-      return finish(reply, false, { policy: "finance", cards: true, forcedVehicles: modelUnits });
-    }
     emit(CHAT_FINANCE_REPLY);
     return finish(CHAT_FINANCE_REPLY, false, { policy, plain: true, cards: false });
   }
@@ -840,8 +837,7 @@ async function runChatTurnInternal(input: {
   if (policy === "visit" || policy === "address") {
     if (policy === "visit" && modelUnits.length > 0) {
       const top = modelUnits[0]!;
-      const priceText = top.price ? ` (${formatChatPrice(top.price)})` : "";
-      const reply = `Dá sim para ver ${talkName(top).labeled}${priceText} pessoalmente! O atendimento é com horário marcado: o consultor combina o dia e a hora com você no WhatsApp (atendemos das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
+      const reply = `Dá sim para ver ${topVehicleWithPrice(top)} pessoalmente! O atendimento é com horário marcado: o consultor combina o dia e a hora com você no WhatsApp (atendemos das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
       emit(reply);
       return finish(reply, false, { policy: "visit", cards: true, forcedVehicles: modelUnits });
     }

@@ -49,7 +49,7 @@ export function ChatVisitPanel({
         </button>
       </div>
       <label className="block text-[11px] text-cream/70">
-        Carro de interesse <span className="text-[#ff7378]" aria-hidden="true">*</span>
+        Carro de interesse <span className="text-brand-light" aria-hidden="true">*</span>
         <input
           className={FIELD}
           value={input.vehicle}
@@ -69,7 +69,7 @@ export function ChatVisitPanel({
         />
       </label>
       <label className="block text-[11px] text-cream/70">
-        Horário desejado <span className="text-[#ff7378]" aria-hidden="true">*</span>
+        Horário desejado <span className="text-brand-light" aria-hidden="true">*</span>
         <input
           className={FIELD}
           value={input.time}

@@ -1287,7 +1287,7 @@ export function SiteChat() {
                       stockHref={message.stockHref}
                       leadCreated={message.leadCreated}
                       research={message.research}
-                      showWhatsApp={true}
+                      showWhatsApp={!latest || !pending}
                       userText={
                         messages
                           .slice(0, index)
