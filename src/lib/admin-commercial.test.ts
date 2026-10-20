@@ -33,3 +33,8 @@ test("PDF com Sora e Inter preserva acentos e pagina condições longas", async 
   assert.ok(pdf.getPageCount() >= 2);
   assert.equal(pdf.getTitle(), "Garagem — Recibo de sinal");
 });
+test("recibo de sinal típico cabe em uma página e usa o nome do vendedor", async () => {
+  const data = { customer: "João Gonçalves", cpf: "123.456.789-09", phone: "27999990000", vehicle: "Citroën C3", plate: "ABC1D23", amount: 5000, total: 60000, payment: "Pix", conditions: "Reserva por 7 dias.", seller: "vendedor@exemplo.com", sellerName: "Marcos Pereira", date: "2026-10-19T12:00:00Z", year: 2019, yearModel: 2020, color: "Prata", km: 48200 };
+  const pdf = await PDFDocument.load(await commercialPdf("recibo", data, "teste-local"));
+  assert.equal(pdf.getPageCount(), 1);
+});

@@ -91,7 +91,7 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
         <p className="mb-3 text-sm text-muted">Documento de apoio à negociação. Confira dados e condições antes de assinar. O recibo declara sinal já recebido.</p>
         <form action={submit} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="operation" value="document" />
           <label className="block text-sm">Documento<select name="kind" className={inputClass}><option value="proposta">Proposta</option><option value="recibo">Recibo de sinal</option></select></label><CustomerSelect />
-          <Field label="Valor proposto / sinal recebido (R$)" name="amount" /><Field label="Forma de pagamento" name="payment" />
+          <Field label="Valor proposto / sinal recebido (R$)" name="amount" /><Field label="Forma de pagamento" name="payment" /><Field label="Nome do vendedor (assinatura)" name="sellerName" required={false} />
           <label className="block text-sm sm:col-span-2">Condições, validade e observações<textarea name="conditions" required maxLength={3000} className={inputClass} /></label><button className={btn.primary}>Gerar e baixar PDF</button>
         </form>
         <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}`}>{d.kind === "recibo" ? "Recibo" : "Proposta"} · {d.date} · Baixar PDF</a></li>)}</ul>
