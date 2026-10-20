@@ -192,6 +192,18 @@ export async function loadAdminJpeg(url: string): Promise<Uint8Array | null> {
   return encodeDownload(file.bytes, ADMIN_JPEG_QUALITY, MAX_ADMIN_SOURCE_BYTES);
 }
 
+export async function loadAdminJpegSafely(
+  url: string,
+  loader: typeof loadAdminJpeg = loadAdminJpeg,
+): Promise<Uint8Array | null> {
+  try {
+    return await loader(url);
+  } catch {
+    console.error("[photo-archive] falha inesperada ao preparar JPG");
+    return null;
+  }
+}
+
 export function attachmentHeaders(filename: string, contentType: string) {
   const ascii = filename.replace(/[^\x20-\x7E]/g, "_");
   return {

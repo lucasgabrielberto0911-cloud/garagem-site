@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import {
-  chatRateLimitStatus,
   geminiKeyConfigured,
 } from "@/lib/launch-readiness";
 
@@ -54,17 +53,7 @@ function databaseHost() {
   }
 }
 
-/**
- * Diagnóstico do deploy.
- *
- * - Sem sessão de admin (ex.: monitores de uptime): resposta MÍNIMA —
- *   apenas ok/erro de banco. Não expõe host, envs nem dicas internas.
- * - Com sessão de admin ativa: diagnóstico completo com host e hints,
- *   igual ao comportamento anterior.
- *
- * NÃO cria/migra admin aqui mais (isso agora é bootstrap explícito
- * via ADMIN_BOOTSTRAP_PASSWORD em src/lib/ensure-admin.ts).
- */
+/** Diagnóstico do deploy com estado mínimo e sem configuração interna. */
 export async function GET() {
   const session = await getSession();
 
@@ -85,26 +74,11 @@ export async function GET() {
   const host = databaseHost();
 
   if (!hasDatabaseUrl) {
-    return NextResponse.json(
-      {
-        ok: false,
-        database: "missing",
-        hint: "No Vercel → Settings → Environment Variables, cole o DATABASE_URL do Supabase (não use localhost) e faça Redeploy.",
-      },
-      { status: 503 },
-    );
+    return NextResponse.json({ ok: false, checks: { database: false } }, { status: 503 });
   }
 
   if (host?.includes("localhost") || host?.startsWith("127.")) {
-    return NextResponse.json(
-      {
-        ok: false,
-        database: "localhost",
-        host,
-        hint: "O DATABASE_URL no Vercel está como localhost. Troque pela URI do Supabase: Project Settings → Database → Connect → URI (Transaction pooler). Também configure DIRECT_URL (Direct connection).",
-      },
-      { status: 503 },
-    );
+    return NextResponse.json({ ok: false, checks: { database: false } }, { status: 503 });
   }
 
   const dbUrl = process.env.DATABASE_URL?.trim() ?? "";
@@ -119,67 +93,26 @@ export async function GET() {
     host?.includes("pooler") ||
     /(?:^|[?&])pgbouncer=true(?:&|$)/i.test(dbUrl);
   if (!looksPooled) {
-    return NextResponse.json(
-      {
-        ok: false,
-        database: "direct-url",
-        host,
-        hint: "DATABASE_URL parece conexão direta (porta 5432). No Vercel use a URI Transaction pooler do Supabase (porta 6543, com ?pgbouncer=true). Deixe a Direct connection só em DIRECT_URL (migrations).",
-      },
-      { status: 503 },
-    );
+    return NextResponse.json({ ok: false, checks: { database: false } }, { status: 503 });
   }
 
   try {
-    const adminCount = await prisma.admin.count();
+    await prisma.admin.count();
     const schema = await inspectSchema();
-    const rateLimit = chatRateLimitStatus();
-    let thumbnails: { total: number; withThumb: number; coverage: number } | null =
-      null;
+    let thumbnails: boolean | null = null;
     try {
-      const [total, withThumb] = await Promise.all([
+      await Promise.all([
         prisma.photo.count(),
         prisma.photo.count({ where: { thumbnailUrl: { not: null } } }),
       ]);
-      thumbnails = {
-        total,
-        withThumb,
-        coverage: total > 0 ? Math.round((withThumb / total) * 100) : 100,
-      };
+      thumbnails = true;
     } catch {
       thumbnails = null;
     }
-    return NextResponse.json({
-      ok: schema.ok,
-      database: "ok",
-      host,
-      adminCount,
-      schema,
-      storage: {
-        configured: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()),
-        serviceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
-        hint: process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
-          ? undefined
-          : "Adicione SUPABASE_SERVICE_ROLE_KEY no Vercel para o upload de fotos funcionar.",
-        thumbnails,
-      },
-      chat: {
-        gemini: geminiKeyConfigured(),
-        rateLimit: rateLimit.mode,
-        launchException: rateLimit.launchException,
-      },
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        database: "error",
-        host,
-        hint: "DATABASE_URL inválida ou tabelas ainda não criadas. Confira a URI do Supabase e rode prisma db push no banco.",
-        detail:
-          error instanceof Error ? error.message.slice(0, 160) : undefined,
-      },
-      { status: 503 },
-    );
+    const storage = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+    const chat = geminiKeyConfigured();
+    return NextResponse.json({ ok: schema.ok, checks: { database: true, schema: schema.ok, storage, thumbnails, chat } });
+  } catch {
+    return NextResponse.json({ ok: false, checks: { database: false } }, { status: 503 });
   }
 }
