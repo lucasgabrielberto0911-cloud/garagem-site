@@ -62,6 +62,7 @@ async function flushQueue() {
         : "Abrimos o WhatsApp com o recado que ficou guardado.",
     );
   } else {
+    await deleteIntent(first.id);
     notify("Há um recado de interesse pronto. Toque para abrir o WhatsApp.", {
       action: {
         label: "Abrir",

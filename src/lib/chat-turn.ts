@@ -30,6 +30,7 @@ import {
   vehicleBodyStyle,
   rankChatVehicles,
   parsePriceLimit,
+  formatChatPrice,
 } from "@/lib/chat-prompt";
 import { guardLlmReply, guardSalesTone, guardUnaskedOffers } from "@/lib/chat-claims";
 import { applyChatReplyGuards, looksTruncated } from "@/lib/chat-polish";
@@ -110,6 +111,7 @@ import {
   formatFocusedEquipmentReply,
   formatFocusedKmReply,
   formatVehicleLine,
+  talkName,
   rankLineName,
   isIncompleteStockReply,
   isFocusedVehicleFactQuestion,
@@ -441,10 +443,31 @@ async function runChatTurnInternal(input: {
     return finish(reply, false, { plain: true, forcedVehicles: picks, cards: picks.length > 0, policy: "troca-busca" });
   }
 
-  if (directPolicy === "finance" || directPolicy === "troca" && !(/\b(quero|procuro|busco)\b/.test(fold(visitorMessage)) && parsePriceLimit(visitorMessage) != null)) {
-    const reply = directPolicy === "finance" ? CHAT_FINANCE_REPLY : CHAT_TRADE_REPLY;
-    emit(reply);
-    return finish(reply, false, { cards: false, plain: true, policy: directPolicy });
+  const modelUnits = activeVehicle
+    ? [activeVehicle]
+    : explicitModelUnits.length > 0
+      ? (() => {
+          const years: string[] = visitorMessage.match(/\b(?:19|20)\d{2}\b/g) ?? [];
+          const byYear = years.length ? explicitModelUnits.filter(vehicle => years.includes(String(vehicle.yearModel))) : [];
+          return (byYear.length ? byYear : explicitModelUnits).slice(0, CHAT_CARD_LIMIT);
+        })()
+      : [];
+
+  if (directPolicy === "finance") {
+    if (modelUnits.length > 0) {
+      const top = modelUnits[0]!;
+      const priceText = top.price ? ` (${formatChatPrice(top.price)})` : "";
+      const reply = `Temos ${talkName(top).labeled}${priceText} no estoque. ${CHAT_FINANCE_REPLY}`;
+      emit(reply);
+      return finish(reply, false, { cards: true, forcedVehicles: modelUnits, policy: "finance" });
+    }
+    emit(CHAT_FINANCE_REPLY);
+    return finish(CHAT_FINANCE_REPLY, false, { cards: false, plain: true, policy: "finance" });
+  }
+
+  if (directPolicy === "troca" && !(/\b(quero|procuro|busco)\b/.test(fold(visitorMessage)) && parsePriceLimit(visitorMessage) != null)) {
+    emit(CHAT_TRADE_REPLY);
+    return finish(CHAT_TRADE_REPLY, false, { cards: false, plain: true, policy: "troca" });
   }
   const shownIds = shownChatVehicleIds(input.historico, input.stock, [...(input.shownVehicleIds ?? []), ...(input.previousVehicleIds ?? [])]);
   const requestedCriteria = chatCriteria(visitorMessage);
@@ -720,6 +743,13 @@ async function runChatTurnInternal(input: {
     return finish(CHAT_CARD_REPLY, false, { policy, plain: true, cards: false });
   }
   if (policy === "finance") {
+    if (modelUnits.length > 0) {
+      const top = modelUnits[0]!;
+      const priceText = top.price ? ` (${formatChatPrice(top.price)})` : "";
+      const reply = `Temos ${talkName(top).labeled}${priceText} no estoque. ${CHAT_FINANCE_REPLY}`;
+      emit(reply);
+      return finish(reply, false, { policy: "finance", cards: true, forcedVehicles: modelUnits });
+    }
     emit(CHAT_FINANCE_REPLY);
     return finish(CHAT_FINANCE_REPLY, false, { policy, plain: true, cards: false });
   }
@@ -808,6 +838,13 @@ async function runChatTurnInternal(input: {
     return finish(reply, false, { policy, cards: false });
   }
   if (policy === "visit" || policy === "address") {
+    if (policy === "visit" && modelUnits.length > 0) {
+      const top = modelUnits[0]!;
+      const priceText = top.price ? ` (${formatChatPrice(top.price)})` : "";
+      const reply = `Dá sim para ver ${talkName(top).labeled}${priceText} pessoalmente! O atendimento é com horário marcado: o consultor combina o dia e a hora com você no WhatsApp (atendemos das 8h às 23h). ${CHAT_WHATSAPP_URL}`;
+      emit(reply);
+      return finish(reply, false, { policy: "visit", cards: true, forcedVehicles: modelUnits });
+    }
     const reply = policy === "visit" ? CHAT_VISIT_REPLY : CHAT_ADDRESS_REPLY;
     emit(reply);
     return finish(reply, false, { policy, cards: false });

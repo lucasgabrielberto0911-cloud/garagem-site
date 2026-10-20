@@ -109,7 +109,7 @@ export default async function ContatoPage() {
                   size="lg"
                   className="w-full"
                   trackingLabel="contato"
-                  message={WHATSAPP_MESSAGES.visit}
+                  message={WHATSAPP_MESSAGES.general}
                 >
                   Chamar no WhatsApp
                 </WhatsAppButton>

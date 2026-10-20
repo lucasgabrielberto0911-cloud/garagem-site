@@ -49,7 +49,7 @@ export function ChatVisitPanel({
         </button>
       </div>
       <label className="block text-[11px] text-cream/70">
-        Carro de interesse
+        Carro de interesse <span className="text-[#ff7378]" aria-hidden="true">*</span>
         <input
           className={FIELD}
           value={input.vehicle}
@@ -69,7 +69,7 @@ export function ChatVisitPanel({
         />
       </label>
       <label className="block text-[11px] text-cream/70">
-        Horário desejado
+        Horário desejado <span className="text-[#ff7378]" aria-hidden="true">*</span>
         <input
           className={FIELD}
           value={input.time}
@@ -78,6 +78,11 @@ export function ChatVisitPanel({
           placeholder="Ex.: sábado de manhã"
         />
       </label>
+      {!complete ? (
+        <p className="text-[11px] text-cream/50">
+          Preencha o carro e o horário desejado para enviar.
+        </p>
+      ) : null}
       <a
         role="link"
         href={complete ? chatVisitWhatsAppUrl(input) : undefined}
@@ -91,6 +96,7 @@ export function ChatVisitPanel({
           }
           trackEvent("chat_visit_request", { has_questions: input.questions.trim() ? 1 : 0 });
           trackWhatsAppClick("chat-visita");
+          onClose();
         }}
         className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 text-[13px] font-semibold text-asphalt ${
           complete ? "" : "pointer-events-none opacity-50"

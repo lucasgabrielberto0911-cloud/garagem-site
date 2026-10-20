@@ -329,14 +329,21 @@ export default async function VehicleDetailPage({
               Este veículo já foi vendido
             </p>
             <p className="mt-1 text-sm text-muted">
-              A página permanece no ar para quem chegou por um link antigo. Veja{" "}
-              <Link
-                href="#mesma-faixa"
-                className="font-medium text-brand-light underline-offset-4 hover:underline"
-              >
-                {sameBandTitle.toLowerCase()}
-              </Link>{" "}
-              ou o{" "}
+              A página permanece no ar para quem chegou por um link antigo.{" "}
+              {related.length > 0 ? (
+                <>
+                  Veja{" "}
+                  <Link
+                    href="#mesma-faixa"
+                    className="font-medium text-brand-light underline-offset-4 hover:underline"
+                  >
+                    {sameBandTitle.toLowerCase()}
+                  </Link>{" "}
+                  ou o{" "}
+                </>
+              ) : (
+                "Veja o "
+              )}
               <Link
                 href="/estoque"
                 prefetch={false}
@@ -501,7 +508,7 @@ export default async function VehicleDetailPage({
                 <Link
                   href={related.length > 0 ? "#mesma-faixa" : "/estoque"}
                   prefetch={false}
-                  className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-asphalt transition hover:bg-brand-orange"
+                  className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-orange"
                 >
                   {related.length > 0 ? "Ver na mesma faixa" : "Ver estoque disponível"}
                 </Link>

@@ -1287,7 +1287,7 @@ export function SiteChat() {
                       stockHref={message.stockHref}
                       leadCreated={message.leadCreated}
                       research={message.research}
-                      showWhatsApp={latest && !pending}
+                      showWhatsApp={true}
                       userText={
                         messages
                           .slice(0, index)
@@ -1406,7 +1406,7 @@ export function SiteChat() {
             followScrollRef.current = true; userScrolledUpRef.current = false; setShowLatest(false); scrollToLatest(true); listRef.current?.focus({ preventScroll: true });
           }}><svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></button> : null}
           </div>
-          {visitOpen ? <ChatVisitPanel initialVehicle={vehicleContext?.label} onClose={() => setVisitOpen(false)} /> : null}
+          {visitOpen ? <ChatVisitPanel initialVehicle={vehicleContext?.label ?? lastChatCards?.[0]?.title} onClose={() => setVisitOpen(false)} /> : null}
           <div role="toolbar" aria-label="Ações rápidas" data-chat-quick-actions="" className={`${started ? "flex" : "hidden lg:flex"} shrink-0 gap-2 overflow-x-auto px-3 pb-1.5 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
             <button type="button" aria-pressed={visitOpen} aria-expanded={visitOpen} aria-controls="chat-visit-panel" onClick={() => setVisitOpen(!visitOpen)} className={`${QUICK_ACTION_CLASS} ${visitOpen ? "border-brand/60 bg-brand/15 text-cream" : ""}`}>Marcar visita</button>
             <a href={headerWhatsAppHref} target="_blank" rel="noopener noreferrer" onClick={() => trackWhatsAppClick("chat", chatFunnelRef())} className={QUICK_ACTION_CLASS}><IconWhatsApp className="h-4 w-4 text-[#25D366]" />Falar no WhatsApp</a>

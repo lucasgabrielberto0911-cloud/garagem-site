@@ -37,7 +37,7 @@ test("a página do pedido reaproveita o modelo e devolve o caminho do estoque", 
   assert.equal(copy.pagePath, "/estoque?q=HB20&minPrice=40000&maxPrice=60000");
   assert.equal(wantedVehicleReturnTo({ sem: "1" }), "/estoque");
   assert.match(copy.contextLabel, /HB20/);
-  assert.match(copy.description, /Não tem HB20 agora/);
+  assert.match(copy.description, /Não tem HB20.*agora/);
   assert.doesNotMatch(copy.pagePath, /sem=/);
 });
 

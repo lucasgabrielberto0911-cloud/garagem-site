@@ -215,7 +215,7 @@ export function VehicleMobileBar({
             <Link
               href={soldHref}
               prefetch={false}
-              className="inline-flex min-h-12 shrink-0 items-center justify-center bg-brand px-5 py-3 font-display text-sm font-semibold text-asphalt touch-manipulation"
+              className="inline-flex min-h-12 shrink-0 items-center justify-center bg-brand px-5 py-3 font-display text-sm font-semibold text-cream touch-manipulation"
             >
               {soldLabel}
             </Link>
