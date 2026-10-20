@@ -285,14 +285,6 @@ async function DashboardContent() {
           </section>
         </>
       ) : null}
-      {data.pendingCounts ? (
-        <p className="text-sm leading-relaxed text-muted">
-          Pendências do estoque: {data.pendingCounts.withoutPhotos} sem foto ·{" "}
-          {data.pendingCounts.stale} parados há mais de {STALE_DAYS} dias ·{" "}
-          {data.pendingCounts.missingSales} vendidos sem registro financeiro.
-          Abaixo aparece uma amostra com acesso direto.
-        </p>
-      ) : null}
       <Card collapsed title="Vendas nos últimos seis meses">
         {data.failures.includes("monthlySales") ? (
           <p role="status" className="text-sm text-muted">
@@ -337,6 +329,13 @@ async function DashboardContent() {
             ) : null
           }
         >
+          {data.pendingCounts ? (
+            <p className="mb-3 text-xs leading-relaxed text-muted">
+              {data.pendingCounts.withoutPhotos} sem foto ·{" "}
+              {data.pendingCounts.stale} parados há mais de {STALE_DAYS} dias ·{" "}
+              {data.pendingCounts.missingSales} vendidos sem registro financeiro
+            </p>
+          ) : null}
           {data.failures.length > 0 && alertList.length === 0 ? (
             <p className="text-sm text-muted">
               Não foi possível conferir todas as pendências. Atualize os dados

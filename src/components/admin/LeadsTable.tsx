@@ -16,7 +16,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import type { LeadVenda } from "@prisma/client";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { IconChevronDown, IconDownload, IconTrash, IconUsers } from "@/components/admin/icons";
+import { IconChevronDown, IconDownload, IconMore, IconTrash, IconUsers } from "@/components/admin/icons";
 import { ActionSheet, ActionSheetButton } from "@/components/admin/ActionSheet";
 import { LeadWhatsAppMenu } from "@/components/admin/LeadWhatsAppMenu";
 import { IconInbox } from "@/components/admin/icons";
@@ -515,6 +515,7 @@ function LeadCard({
   const [lossReason, setLossReason] = useState<string>(initialLossReason);
   const [lossDetail, setLossDetail] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const detailId = `lead-detail-${lead.id}`;
   const chip = originChip(lead);
   const email = emailFromLeadNotes(lead.notes);
@@ -765,46 +766,59 @@ function LeadCard({
               </a>
             ) : null}
 
-            <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setMoreOpen(true)}
+              aria-haspopup="dialog"
+              className={`${leadAction} w-full border-white/15 text-muted hover:text-cream sm:w-auto`}
+            >
+              <IconMore className="h-4 w-4" />
+              Mais ações
+            </button>
+            <ActionSheet
+              open={moreOpen}
+              title="Mais ações"
+              subtitle={leadDisplayName(lead)}
+              onClose={() => setMoreOpen(false)}
+            >
               {lead.plate ? (
                 <>
-                  <a
-                    href={consultaPlacaUrl(lead.plate)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${leadAction} border-brand/50 text-red-400 hover:bg-brand/10`}
-                  >
-                    Consultar FIPE
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => onCopyPlate(lead.plate)}
-                    className={`${leadAction} border-white/15 text-muted hover:text-cream`}
-                  >
-                    Copiar placa
-                  </button>
+                  <ActionSheetButton
+                    label="Consultar FIPE"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      window.open(consultaPlacaUrl(lead.plate!), "_blank", "noopener,noreferrer");
+                    }}
+                  />
+                  <ActionSheetButton
+                    label="Copiar placa"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      onCopyPlate(lead.plate);
+                    }}
+                  />
                 </>
               ) : null}
-              <button
-                type="button"
-                onClick={() => onConvert(lead)}
+              <ActionSheetButton
+                icon={<IconUsers className="h-4 w-4" />}
+                label="Virar cliente"
+                hint="Criar cliente com estes dados"
                 disabled={saving}
-                title="Criar cliente com estes dados"
-                className={`${leadAction} border-white/15 text-muted hover:text-cream`}
-              >
-                <IconUsers className="h-4 w-4" />
-                Virar cliente
-              </button>
-              <button
-                type="button"
-                onClick={() => onDelete(lead)}
-                aria-label="Excluir lead"
-                className={`${leadAction} border-brand/50 text-red-400 hover:bg-brand/10`}
-              >
-                <IconTrash className="h-4 w-4" />
-                Excluir
-              </button>
-            </div>
+                onClick={() => {
+                  setMoreOpen(false);
+                  onConvert(lead);
+                }}
+              />
+              <ActionSheetButton
+                icon={<IconTrash className="h-4 w-4" />}
+                label="Excluir lead"
+                tone="danger"
+                onClick={() => {
+                  setMoreOpen(false);
+                  onDelete(lead);
+                }}
+              />
+            </ActionSheet>
 
             {lead.photoUrls && lead.photoUrls.length > 0 ? (
               <div className="border-t border-white/10 pt-3">

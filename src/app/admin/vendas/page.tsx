@@ -64,10 +64,10 @@ export default async function VendasPage({
     <div className="space-y-6">
       <AdminPageHeader
         title="Vendas"
-        subtitle="Registre e edite vendas do estoque ou históricas. Cliente é opcional — basta carro, placa e valor nas históricas."
+        subtitle="Registre e edite vendas do estoque ou históricas. Cliente é opcional."
       />
 
-      <p className="text-sm text-muted">
+      <p className="text-xs text-muted">
         Indicadores: {label}.{query ? " A busca filtra a lista e a exportação; os indicadores mostram todo o período." : ""} Consignados contam no faturamento, sem
         apuração de lucro.
       </p>
@@ -76,11 +76,6 @@ export default async function VendasPage({
         <StatCard
           label="Faturamento no período"
           value={formatCurrencyBRL(revenue)}
-          hint={
-            knownProfitCount > 0
-              ? `Lucro ${formatCurrencyBRL(knownProfit)} em ${knownProfitCount} venda(s) com compra informada`
-              : undefined
-          }
           tone={revenue > 0 ? "success" : "default"}
         />
         <StatCard
