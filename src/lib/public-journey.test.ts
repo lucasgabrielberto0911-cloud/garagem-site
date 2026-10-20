@@ -67,8 +67,8 @@ test("filtros do estoque no celular alinham rótulo, chips e Filtros sem máscar
   assert.match(readSrc("lib/stock-chip-track.ts"), /chipTrackInsets/);
   assert.match(filters, /Até 30 mil/);
   assert.match(filters, /Até 50 mil/);
-  assert.match(filters, /50 a 80 mil/);
-  assert.match(filters, /80 a 120 mil/);
+  assert.match(filters, /R\$ 50 mil a R\$ 80 mil/);
+  assert.match(filters, /R\$ 80 mil a R\$ 120 mil/);
   assert.match(filters, /Acima de 120 mil/);
   assert.match(css, /\.stock-chip-row\s*\{[^}]*align-items:\s*center/);
   assert.match(css, /\.stock-chip-row\s*\{[^}]*height:\s*2\.75rem/);
