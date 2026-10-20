@@ -554,6 +554,10 @@ export function VehiclesTable({
   }
 
   function changeStatus(vehicle: VehicleRow, status: string) {
+    if (status === "reservado") {
+      router.push(`/admin/veiculos/${vehicle.id}?view=operacao`);
+      return;
+    }
     runQuickAction(
       vehicle.id,
       () => setVehicleStatus(vehicle.id, status),

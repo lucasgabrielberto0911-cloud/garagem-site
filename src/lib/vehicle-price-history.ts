@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isMissingTableError } from "@/lib/prisma-errors";
 import { priceDropAmount } from "@/lib/vehicle-badges";
@@ -39,17 +40,18 @@ export async function recordVehiclePriceChange(
   vehicleId: string,
   previousPrice: number | null | undefined,
   newPrice: number,
+  db: Prisma.TransactionClient | typeof prisma = prisma,
 ) {
   try {
-    const count = await prisma.vehiclePriceHistory.count({ where: { vehicleId } });
+    const count = await db.vehiclePriceHistory.count({ where: { vehicleId } });
     const changed = previousPrice !== newPrice;
     if (count === 0 && changed && previousPrice && previousPrice > 0) {
-      await prisma.vehiclePriceHistory.create({
+      await db.vehiclePriceHistory.create({
         data: { vehicleId, price: previousPrice, createdAt: new Date(Date.now() - 1000) },
       });
     }
     if (count === 0 || changed) {
-      await prisma.vehiclePriceHistory.create({ data: { vehicleId, price: newPrice } });
+      await db.vehiclePriceHistory.create({ data: { vehicleId, price: newPrice } });
     }
   } catch (error) {
     if (!isMissingTableError(error, "VehiclePriceHistory")) {
