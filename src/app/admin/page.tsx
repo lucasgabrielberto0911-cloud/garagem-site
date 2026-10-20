@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import { DashboardRefresh } from "@/components/admin/DashboardRefresh";
+import { DashboardTodayBlock } from "@/components/admin/DashboardTodayBlock";
+import { DashboardSalesGoal } from "@/components/admin/DashboardSalesGoal";
 import { adminDate } from "@/lib/admin-date";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -79,23 +81,41 @@ async function DashboardContent() {
         "Marcar vendido tira o anúncio do estoque. Registre a venda separadamente para contabilizar o faturamento.",
       href: `/admin/vendas?vehicle=${vehicle.id}`,
     });
-  for (const lead of data.dueLeads)
+  for (const lead of [...(data.unansweredLeads?.urgent ?? [])].reverse())
     alertList.unshift({
-      key: `due-${lead.id}`,
-      tone: "warning",
+      key: `unanswered-${lead.id}`,
+      tone: "brand",
       icon: "alert",
-      title: `Retomar atendimento: ${leadDisplayName(lead)}`,
-      description: lead.nextAction || "Próximo contato agendado.",
+      title:
+        lead.urgency === "atrasado"
+          ? `Lead atrasado (+2h sem resposta): ${leadDisplayName(lead)}`
+          : `Responder lead (+30 min): ${leadDisplayName(lead)}`,
+      description: `${lead.urgencyLabel} · ${lead.vehicleInfo}`,
       href: `/admin/leads?lead=${lead.id}`,
     });
   const { head: alertHead, rest: alertRest } = splitDashboardAlerts(alertList);
+
+  const unansweredHint =
+    (data.unansweredLeads?.overdueCount ?? 0) > 0 ||
+    (data.unansweredLeads?.alertCount ?? 0) > 0
+      ? [
+          data.unansweredLeads.overdueCount > 0
+            ? `${data.unansweredLeads.overdueCount} atrasado(s) (+2h)`
+            : "",
+          data.unansweredLeads.alertCount > 0
+            ? `${data.unansweredLeads.alertCount} há +30 min`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : `${leads.total} lead(s) no total`;
 
   const leadsCard = (
     <StatCard
       key="leads"
       label="Leads novos"
       value={leads.byStatus.novo}
-      hint={`${leads.total} lead(s) no total`}
+      hint={unansweredHint}
       tone={leads.byStatus.novo > 0 ? "brand" : "default"}
       href="/admin/leads?status=novo"
     />
@@ -218,6 +238,17 @@ async function DashboardContent() {
       ) : null}
       {data.failures.length === 0 ? (
         <>
+          <DashboardTodayBlock
+            dueLeads={data.hoje?.dueLeads ?? data.dueLeads}
+            unansweredLeads={data.hoje?.unansweredLeads ?? []}
+            reservedVehicles={data.hoje?.reservedVehicles ?? []}
+          />
+
+          <DashboardSalesGoal
+            salesGoal={data.salesGoal}
+            leaderboard={data.leaderboard}
+          />
+
           {/* Celular: 2 números que pedem ação; o resto fica em “Mais números”. */}
           <section className="space-y-3 lg:hidden" aria-label="Números da loja">
             <div className={adminStatGrid}>

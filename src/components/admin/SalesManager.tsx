@@ -34,6 +34,10 @@ import {
 import { SearchSelect } from "@/components/admin/SearchSelect";
 import { createSale, deleteSale, updateSale } from "@/app/admin/vendas/actions";
 import {
+  extractSaleCommission,
+  extractSaleSeller,
+} from "@/lib/sales-goals";
+import {
   formatPhoneBR,
   formatPlateDisplay,
   formatPlateInput,
@@ -197,6 +201,8 @@ export function SalesManager({
   const [phone, setPhone] = useState("");
   const [plate, setPlate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [sellerName, setSellerName] = useState("");
+  const [commission, setCommission] = useState("");
   const [saleDate, setSaleDate] = useState(todayInputValue());
   const [notes, setNotes] = useState("");
   const [cancelTarget, setCancelTarget] = useState<SaleRow | null>(null);
@@ -313,6 +319,8 @@ export function SalesManager({
     setPhone("");
     setPlate("");
     setPaymentMethod("");
+    setSellerName("");
+    setCommission("");
     setSaleDate(todayInputValue());
     setNotes("");
     setErrors({});
@@ -362,6 +370,10 @@ export function SalesManager({
     );
     setPhone(sale.customer?.phone ? formatPhoneBR(sale.customer.phone) : "");
     setPaymentMethod(sale.paymentMethod);
+    const seller = extractSaleSeller(sale);
+    setSellerName(seller !== "Geral" ? seller : "");
+    const comm = extractSaleCommission(sale);
+    setCommission(comm ? moneyInput(comm) : "");
     setSaleDate(dateInputFrom(new Date(sale.saleDate)));
     setNotes(sale.notes ?? "");
     setErrors({});
@@ -705,6 +717,39 @@ export function SalesManager({
                     className={inputClass}
                   />
                 </Field>
+
+                <Field
+                  label="Vendedor"
+                  hint="Nome do vendedor responsável (opcional)."
+                >
+                  <input
+                    name="sellerName"
+                    value={sellerName}
+                    onChange={(event) => {
+                      setSellerName(event.target.value);
+                      setDirty(true);
+                    }}
+                    placeholder="Ex.: Lucas, Carlos..."
+                    className={inputClass}
+                  />
+                </Field>
+
+                <Field
+                  label="Comissão (R$)"
+                  hint="Comissão em R$ (padrão de 1,5% se vazio)."
+                >
+                  <input
+                    name="commission"
+                    inputMode="decimal"
+                    value={commission}
+                    onChange={(event) => {
+                      setCommission(moneyTyping(event.target.value));
+                      setDirty(true);
+                    }}
+                    placeholder="Ex.: 1.500"
+                    className={inputClass}
+                  />
+                </Field>
               </div>
 
               <Field label="Observações">
@@ -928,6 +973,14 @@ export function SalesManager({
                       <p>{formatPhoneBR(sale.customer.phone)}</p>
                     ) : null}
                     {sale.notes ? <p className="italic">{sale.notes}</p> : null}
+                    {extractSaleSeller(sale) !== "Geral" ? (
+                      <p className="text-cream">
+                        Vendedor: <span className="font-medium">{extractSaleSeller(sale)}</span>
+                      </p>
+                    ) : null}
+                    <p className="text-xs text-brand-orange">
+                      Comissão: {formatCurrencyBRL(extractSaleCommission(sale))}
+                    </p>
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       <Badge tone="success">{sale.paymentMethod}</Badge>
                       {sale.vehicle.historical ? (
@@ -1051,7 +1104,17 @@ export function SalesManager({
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge tone="success">{sale.paymentMethod}</Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge tone="success">{sale.paymentMethod}</Badge>
+                          {extractSaleSeller(sale) !== "Geral" ? (
+                            <span className="text-xs text-cream">
+                              {extractSaleSeller(sale)}
+                            </span>
+                          ) : null}
+                          <span className="text-xs text-brand-orange">
+                            {formatCurrencyBRL(extractSaleCommission(sale))}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 font-medium">
                         {formatCurrencyBRL(sale.salePrice)}

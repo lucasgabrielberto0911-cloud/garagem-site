@@ -44,6 +44,16 @@ export function isLeadStatus(value: string): value is LeadStatus {
   return (LEAD_STATUSES as readonly string[]).includes(value);
 }
 
+export function leadFirstName(name: string) {
+  return name.trim().split(/\s+/)[0] || "cliente";
+}
+
+export function whatsappUrl(phone: string, text: string) {
+  const digits = phone.replace(/\D/g, "");
+  const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
+  return `https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`;
+}
+
 export function buildLeadWhatsAppUrl(lead: {
   phone: string;
   name: string;
@@ -51,9 +61,7 @@ export function buildLeadWhatsAppUrl(lead: {
   plate?: string | null;
   source?: string | null;
 }): string {
-  const digits = lead.phone.replace(/\D/g, "");
-  const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
-  const firstName = lead.name.trim().split(/\s+/)[0] || "cliente";
+  const firstName = leadFirstName(lead.name);
   let text = "";
   if (lead.source === "chatbot-site") {
     const topic = lead.vehicleInfo ? ` sobre o ${lead.vehicleInfo}` : "";
@@ -70,7 +78,7 @@ export function buildLeadWhatsAppUrl(lead: {
     const vehicle = lead.vehicleInfo ? ` do ${lead.vehicleInfo}` : "";
     text = `Olá, ${firstName}! Aqui é da Garagem. Recebemos sua solicitação de avaliação${vehicle}${plateLabel}.`;
   }
-  return `https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`;
+  return whatsappUrl(lead.phone, text);
 }
 
 /** Conversa registrada só com telefone (ou só com nome) ainda aparece com rótulo legível. */
@@ -85,3 +93,69 @@ export function isLeadSource(value: string) {
   return ["vender", "chatbot-site", WANTED_LEAD_SOURCE].includes(value) ||
     (value.startsWith("whatsapp:") && isLeadOrigin(value.slice("whatsapp:".length)));
 }
+
+export const LEAD_LOSS_REASONS = [
+  "preco",
+  "financiamento",
+  "avaliacao-troca",
+  "documentacao",
+  "comprou-outro",
+  "desistiu",
+  "sem-resposta",
+  "outro",
+] as const;
+
+export type LeadLossReason = (typeof LEAD_LOSS_REASONS)[number];
+
+export const LEAD_LOSS_REASON_LABEL: Record<LeadLossReason, string> = {
+  preco: "Preço acima do orçamento",
+  financiamento: "Financiamento não aprovado / taxa",
+  "avaliacao-troca": "Valor do usado na troca",
+  documentacao: "Documentação / restrição",
+  "comprou-outro": "Comprou outro veículo",
+  desistiu: "Adiou ou desistiu da compra",
+  "sem-resposta": "Parou de responder",
+  outro: "Outro motivo",
+};
+
+export function isLeadLossReason(value: string): value is LeadLossReason {
+  return (LEAD_LOSS_REASONS as readonly string[]).includes(value);
+}
+
+export function lossReasonActivity(reason: LeadLossReason, detail?: string | null) {
+  const cleanDetail = (detail ?? "").trim();
+  const label = LEAD_LOSS_REASON_LABEL[reason];
+  return `[perda:${reason}] Motivo da perda / objeção: ${label}${cleanDetail ? ` — ${cleanDetail}` : ""}`;
+}
+
+export function extractLossReasonFromNote(note: string): LeadLossReason | null {
+  const match = /^\[perda:([^\]]+)\]/.exec(note.trim());
+  if (!match) return null;
+  return isLeadLossReason(match[1]) ? match[1] : null;
+}
+
+export type LeadLossSummaryItem = {
+  reason: LeadLossReason;
+  label: string;
+  count: number;
+};
+
+export function summarizeLeadLosses(
+  leads: Array<{ status: string; lostReason?: string | null }>,
+): LeadLossSummaryItem[] {
+  const counts = new Map<LeadLossReason, number>();
+  for (const lead of leads) {
+    if (lead.status !== "perdido" && !lead.lostReason) continue;
+    const reason = lead.lostReason && isLeadLossReason(lead.lostReason) ? lead.lostReason : null;
+    if (!reason) continue;
+    counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  }
+  return LEAD_LOSS_REASONS.map((reason) => ({
+    reason,
+    label: LEAD_LOSS_REASON_LABEL[reason],
+    count: counts.get(reason) ?? 0,
+  }))
+    .filter((item) => item.count > 0)
+    .sort((a, b) => b.count - a.count);
+}
+

@@ -52,7 +52,7 @@ test("estoque SSR lista cada ficha e a grade segue em lotes de 8", () => {
     }),
   );
   assert.match(html, /stock-catalog-index/);
-  assert.match(html, /Todos os anúncios/);
+  assert.match(html, /<h2 class="font-display">Todos os anúncios<\/h2>/);
   assert.match(html, /Palio Weekend/);
   assert.match(html, /47\.900/);
   assert.match(html, /href="\/estoque\/fiat-palio-weekend-2016-/);

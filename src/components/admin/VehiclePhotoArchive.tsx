@@ -122,7 +122,7 @@ export function VehiclePhotoArchive({
                     />
                   </div>
                   <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-                    <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider text-muted">
+                    <span className="inline-flex items-center gap-1 text-xs uppercase tracking-wider text-muted">
                       <IconImage className="h-3.5 w-3.5" />
                       {String(index + 1).padStart(2, "0")}
                     </span>
@@ -135,7 +135,7 @@ export function VehiclePhotoArchive({
                       aria-label={`Baixar foto ${index + 1} em JPG de alta qualidade`}
                     >
                       <IconDownload className="h-4 w-4" />
-                      <span className="font-display text-[10px] font-semibold uppercase tracking-wider">
+                      <span className="font-display text-xs font-semibold uppercase tracking-wider">
                         {busy ? "…" : "Alta"}
                       </span>
                     </button>

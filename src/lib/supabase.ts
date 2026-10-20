@@ -19,6 +19,12 @@ export function getSupabaseAdmin(): SupabaseClient {
 
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
+    realtime: {
+      transport:
+        typeof WebSocket !== "undefined"
+          ? WebSocket
+          : (class {} as unknown as typeof WebSocket),
+    },
   });
 }
 

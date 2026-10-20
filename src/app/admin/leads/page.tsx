@@ -95,8 +95,6 @@ export default async function LeadsPage({
       />
 
       <PurchaseLeadForm />
-      <TrafficFunnel />
-      <LeadWeeklySummary {...summary} />
       <LeadsTable
         selectedVehicles={selectedVehicles}
         leadId={query.lead}
@@ -109,6 +107,8 @@ export default async function LeadsPage({
         pageSize={pageSize}
         total={total}
       />
+      <TrafficFunnel />
+      <LeadWeeklySummary {...summary} />
     </div>
   );
 }
