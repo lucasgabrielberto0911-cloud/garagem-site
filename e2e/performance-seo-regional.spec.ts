@@ -8,6 +8,33 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
 });
 
+test("cidades e seminovos têm intenções, canonicals e links próprios", async ({ page }) => {
+  const cidades = await page.goto("/cidades");
+  expect(cidades?.status()).toBe(200);
+  await expect(page).toHaveTitle("Cidades atendidas no Espírito Santo | Garagem");
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://www.suagaragem.net/cidades");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Cidades atendidas no Espírito Santo");
+  await expect(page.getByRole("navigation", { name: "Cidades atendidas", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const vitrine = page.getByRole("link", { name: "seminovos no Espírito Santo", exact: true });
+  await expect(vitrine).toHaveAttribute("href", "/seminovos");
+  await vitrine.click();
+
+  await expect(page).toHaveURL(/\/seminovos$/);
+  await expect(page).toHaveTitle("Seminovos no Espírito Santo | Garagem");
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://www.suagaragem.net/seminovos");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Seminovos no Espírito Santo");
+  await expect(page.getByRole("heading", { name: "Em destaque agora", exact: true })).toBeVisible();
+  await expect(page.locator('main a[href^="/seminovos/"]')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const diretorio = page.getByRole("link", { name: "cidades atendidas pela Garagem", exact: true });
+  await expect(diretorio).toHaveAttribute("href", "/cidades");
+  await diretorio.click();
+  await expect(page).toHaveURL(/\/cidades$/);
+});
+
 test("São Mateus e Sooretama têm página, canonical, schema e entrada no sitemap", async ({ page, request }) => {
   const sitemap = await request.get("/sitemap.xml");
   expect(sitemap.status()).toBe(200);
