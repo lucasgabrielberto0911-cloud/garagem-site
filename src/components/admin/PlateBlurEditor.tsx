@@ -6,6 +6,8 @@ import { btn } from "@/components/admin/ui";
 import { handleFocusTrap } from "@/lib/focus-trap";
 import {
   MAX_MANUAL_BLUR_RECTS,
+  clientPointToNormalized,
+  containImageFrame,
   isDrawableRect,
   rectFromPoints,
   type NormalizedRect,
@@ -58,6 +60,14 @@ export function PlateBlurEditor({
     setFailed(false);
     dragRef.current = null;
   }, [imageUrl]);
+
+  useEffect(() => {
+    if (blurred) {
+      setRects([]);
+      setDraft(null);
+      dragRef.current = null;
+    }
+  }, [blurred]);
 
   useEffect(() => {
     if (!open || !mounted) return;
@@ -115,18 +125,17 @@ export function PlateBlurEditor({
       setFrame(null);
       return;
     }
-    const scale = Math.min(
-      imageBox.width / naturalWidth,
-      imageBox.height / naturalHeight,
+    const fitted = containImageFrame(
+      {
+        left: imageBox.left - stageBox.left,
+        top: imageBox.top - stageBox.top,
+        width: imageBox.width,
+        height: imageBox.height,
+      },
+      naturalWidth,
+      naturalHeight,
     );
-    const width = naturalWidth * scale;
-    const height = naturalHeight * scale;
-    setFrame({
-      left: imageBox.left - stageBox.left + (imageBox.width - width) / 2,
-      top: imageBox.top - stageBox.top + (imageBox.height - height) / 2,
-      width,
-      height,
-    });
+    setFrame(fitted);
   }
 
   function pointFromEvent(event: React.PointerEvent) {
@@ -134,10 +143,12 @@ export function PlateBlurEditor({
     if (!overlay) return null;
     const bounds = overlay.getBoundingClientRect();
     if (bounds.width < 1 || bounds.height < 1) return null;
-    return {
-      x: (event.clientX - bounds.left) / bounds.width,
-      y: (event.clientY - bounds.top) / bounds.height,
-    };
+    return clientPointToNormalized(event.clientX, event.clientY, {
+      left: bounds.left,
+      top: bounds.top,
+      width: bounds.width,
+      height: bounds.height,
+    });
   }
 
   function onPointerDown(event: React.PointerEvent<HTMLDivElement>) {
