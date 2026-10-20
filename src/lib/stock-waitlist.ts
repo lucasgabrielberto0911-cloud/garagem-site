@@ -47,16 +47,18 @@ function money(value: string) {
 
 /** “Hyundai automático até R$ 50.000” — para preencher o WhatsApp. */
 export function formatStockWaitlistQuery(input: StockWaitlistFilters) {
-  const query = compact(input.q);
-  if (query) return query;
-
   const bits: string[] = [];
+  const query = compact(input.q);
   const brand = compact(input.brand);
   const model = compact(input.model);
   const vehicle = [brand ? formatBrandName(brand) : "", model ? formatModelName(model) : ""]
     .filter(Boolean)
     .join(" ");
-  if (vehicle) bits.push(vehicle);
+  if (query) {
+    bits.push(query);
+  } else if (vehicle) {
+    bits.push(vehicle);
+  }
   const category = compact(input.category);
   if (category) bits.push(vehicleCategoryLabel(category).toLocaleLowerCase("pt-BR"));
   const transmission = transmissionFilterLabel(input.transmission);

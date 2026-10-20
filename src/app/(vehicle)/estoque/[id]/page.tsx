@@ -476,7 +476,7 @@ export default async function VehicleDetailPage({
                   <Link
                     href="#mesma-faixa"
                     prefetch={false}
-                    className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-asphalt transition hover:bg-brand-orange"
+                    className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-orange"
                   >
                     Ver opções e pedir parecido
                   </Link>
