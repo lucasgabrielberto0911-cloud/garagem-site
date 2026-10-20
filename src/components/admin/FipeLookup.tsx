@@ -5,7 +5,6 @@ import { Field, btn, inputClass } from "@/components/admin/ui";
 import {
   formatCurrencyBRL,
   formatPlateDisplay,
-  formatPlateInput,
   isValidPlate,
   normalizePlate,
 } from "@/lib/format";
@@ -37,6 +36,7 @@ export type FipeApplyPayload = {
 type Props = {
   category: VehicleCategory;
   plate: string;
+  plateError?: string;
   onPlateChange: (plate: string) => void;
   /** Valor já salvo (edição) — só referência até nova consulta. */
   initialFipePrice?: number | null;
@@ -59,6 +59,7 @@ async function loadJson<T>(url: string, signal?: AbortSignal): Promise<T> {
 export function FipeLookup({
   category,
   plate,
+  plateError,
   onPlateChange,
   initialFipePrice,
   onApply,
@@ -289,8 +290,8 @@ export function FipeLookup({
   }
 
   async function handlePlateLookup() {
-    const normalized = normalizePlate(plate);
-    if (!isValidPlate(normalized)) {
+    const normalized = plate.replace(/[\s-]/g, "").toUpperCase();
+    if (normalized.length !== 7 || !isValidPlate(normalized)) {
       setStatus("Informe uma placa válida (ABC1D23 ou ABC-1234).");
       return;
     }
@@ -368,16 +369,21 @@ export function FipeLookup({
       <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
         <Field
           label="Placa (interna)"
+          error={plateError}
           hint="Só no admin. O site mostra no máximo o final da placa."
         >
           <input
             name="plate"
             value={plate}
+            aria-invalid={Boolean(plateError)}
             onChange={(event) =>
-              onPlateChange(formatPlateInput(event.target.value))
+              onPlateChange(event.target.value.toUpperCase())
             }
             placeholder="ABC1D23 ou ABC-1234"
             autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="characters"
+            spellCheck={false}
             className={inputClass}
           />
         </Field>

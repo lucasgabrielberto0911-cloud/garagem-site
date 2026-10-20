@@ -13,13 +13,17 @@ import { sessionFingerprint } from "./admin-session-fingerprint";
 test("dinheiro: centavos brasileiros, grupos e entrada inválida", () => {
   for (const [value, expected] of [
     ["100,50", 100.5],
+    ["45900.50", 45900.5],
+    [45900.5, 45900.5],
+    ["45.900", 45900],
+    [" R$ 45.900,00 ", 45900],
     ["1.234,56", 1234.56],
     ["100", 100],
     ["0,01", 0.01],
     ["R$ 98.765,40", 98765.4],
   ] as const)
     assert.equal(parseMoneyBR(value), expected);
-  for (const value of ["", "texto", "100,500", "1,2,3", "1.23"])
+  for (const value of ["", "texto", "100,500", "1,2,3"])
     assert.equal(parseMoneyBR(value), null);
   assert.equal(moneyInput(100.5), "100,50");
   assert.equal(moneySum([0.1, 0.2]), 0.3);
