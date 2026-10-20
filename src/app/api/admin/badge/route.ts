@@ -13,6 +13,7 @@ export async function GET() {
         unanswered30m,
         unanswered2h,
         costWarnings: counts.vendas,
+        agenda: counts.hoje + counts.atrasados,
         notifications:
           counts.vendas + counts.hoje + counts.atrasados + counts.pedidos,
       },

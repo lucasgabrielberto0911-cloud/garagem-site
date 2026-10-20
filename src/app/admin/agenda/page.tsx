@@ -2,13 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminPageHeader, btn, inputClass } from "@/components/admin/ui";
 import { LeadFollowUp } from "@/components/admin/LeadFollowUp";
-import { LeadWhatsAppButton } from "@/components/admin/LeadWhatsAppButton";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { adminActionDate } from "@/lib/admin-date";
 import { AGENDA_PERIODS, agendaWhere, parseAgendaPeriod } from "@/lib/admin-agenda";
 import { leadSearchWhere } from "@/lib/admin-lead-search";
-import { buildLeadWhatsAppUrl, leadDisplayName, leadHasPhone } from "@/lib/leads";
+import { LeadWhatsAppMenu } from "@/components/admin/LeadWhatsAppMenu";
+import { leadDisplayName, leadHasPhone } from "@/lib/leads";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 20;
@@ -70,9 +70,11 @@ export default async function AgendaPage({ searchParams }: {
         </div>
         <p className="break-words text-sm text-muted">{lead.vehicleInfo}</p>
         <p className="break-words text-sm">{lead.nextAction || "Retomar atendimento"}</p>
-        <div className="grid grid-cols-2 gap-2">
-          <Link href={`/admin/leads?lead=${encodeURIComponent(lead.id)}`} className={btn.outline}>Abrir lead</Link>
-          {leadHasPhone(lead) ? <LeadWhatsAppButton leadId={lead.id} href={buildLeadWhatsAppUrl(lead)} className={btn.outline}>WhatsApp</LeadWhatsAppButton> : <span className="self-center text-xs text-muted">Sem telefone</span>}
+        <div className="flex gap-2">
+          <Link href={`/admin/leads?lead=${encodeURIComponent(lead.id)}`} className={`${btn.outline} flex-1`}>Abrir lead</Link>
+          {leadHasPhone(lead)
+            ? <LeadWhatsAppMenu lead={lead} leadId={lead.id} className={`${btn.outline} flex-1 gap-2`} menuClassName={`${btn.outline} -ml-2 w-11 shrink-0 px-0`} />
+            : <span className="flex-1 self-center text-xs text-muted">Sem telefone</span>}
         </div>
         <LeadFollowUp id={lead.id} nextAction={lead.nextAction} nextActionAt={lead.nextActionAt} />
       </article>)}
