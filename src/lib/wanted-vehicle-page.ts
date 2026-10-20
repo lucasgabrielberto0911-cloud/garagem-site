@@ -10,9 +10,33 @@ export const WANTED_VEHICLE_PATH = "/pedido";
 
 export const WANTED_VEHICLE_BUTTON_LABEL = "Não achou seu próximo veículo?";
 
+export const WANTED_BUDGET_OPTIONS = [
+  "Até R$ 50 mil",
+  "R$ 50 mil a R$ 80 mil",
+  "R$ 80 mil a R$ 120 mil",
+  "Acima de R$ 120 mil",
+] as const;
+
 export type WantedVehicleQuery = Partial<
   Record<(typeof STOCK_FILTER_KEYS)[number] | "sem", string>
 >;
+
+export function wantedBudgetToQuery(
+  budget?: string | null,
+): Pick<WantedVehicleQuery, "minPrice" | "maxPrice"> {
+  switch ((budget ?? "").trim()) {
+    case "Até R$ 50 mil":
+      return { maxPrice: "50000" };
+    case "R$ 50 mil a R$ 80 mil":
+      return { minPrice: "50000", maxPrice: "80000" };
+    case "R$ 80 mil a R$ 120 mil":
+      return { minPrice: "80000", maxPrice: "120000" };
+    case "Acima de R$ 120 mil":
+      return { minPrice: "120000" };
+    default:
+      return {};
+  }
+}
 
 /** Stable filter identity; order and presentation copy cannot merge two searches. */
 export function wantedVehicleDraftContext(params: WantedVehicleQuery) {

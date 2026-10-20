@@ -199,6 +199,7 @@ export function VehicleMobileBlocks({
     video: string;
     finance: string;
     trade: string;
+    visit?: string;
     stateOfVehicle?: string;
     exteriorColor?: string;
     transmission?: string;
@@ -315,6 +316,7 @@ export function VehicleMobileBlocks({
               video={quickActions.video}
               finance={quickActions.finance}
               trade={quickActions.trade}
+              visit={quickActions.visit}
               className="grid"
             />
           </div>
