@@ -6,7 +6,6 @@ import { JsonLd } from "@/components/JsonLd";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { SiteWordmark, WORDMARK_SRC as HERO_WORDMARK, WORDMARK_SRC_SET, WORDMARK_SIZES } from "@/components/site/SiteWordmark";
 import { FaqAccordion } from "@/components/site/FaqAccordion";
-import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { HeroSearch } from "@/components/site/HeroSearch";
 import { StatsBar, StatsBarSkeleton } from "@/components/site/StatsBar";
 import { Testimonials } from "@/components/site/Testimonials";
@@ -34,8 +33,7 @@ import {
 } from "@/components/site/icons";
 import { buildPageMetadata, itemListJsonLd, localBusinessJsonLd, websiteJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
-import { googleReviewsReady } from "@/lib/google-reviews";
-import { getPublishedFaq, getSiteContent } from "@/lib/site-content";
+import { getPublishedFaq } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 import {
   getFeaturedVehicles,
@@ -76,14 +74,11 @@ export default async function HomePage() {
   // carro: só pré-carrega a partir de 640 px, em prioridade baixa.
   preload(HERO_WORDMARK, { as: "image", fetchPriority: "low", imageSrcSet: WORDMARK_SRC_SET, imageSizes: WORDMARK_SIZES, media: "(min-width: 640px)" });
 
-  const [featured, brands, testimonials, publicSite, siteContent, faqItems] =
+  const [featured, brands, publicSite] =
     await Promise.all([
     getFeaturedVehicles(MAX_HOME_FEATURED),
     getStockBrands(5),
-    getTestimonials(6),
     getPublicSite(),
-    getSiteContent(),
-    getPublishedFaq(),
   ]);
 
   return (
@@ -97,23 +92,6 @@ export default async function HomePage() {
           })}
         />
       ) : null}
-      {testimonials.filter((item) => !String(item.id).startsWith("seed-")).length > 0 ? (
-        <JsonLd
-          data={localBusinessJsonLd(
-            publicSite,
-            testimonials
-              .filter((item) => !String(item.id).startsWith("seed-"))
-              .map((item) => ({
-                name: item.name,
-                city: item.city,
-                message: item.message,
-                rating: item.rating,
-              })),
-            siteContent.google,
-          )}
-        />
-      ) : null}
-
       {/* 1. HERO — o que a loja é, e o único WhatsApp */}
       <section className="hero-red-black relative isolate overflow-hidden">
         <div className="hero-color-field" aria-hidden="true">
@@ -195,11 +173,11 @@ export default async function HomePage() {
           </p>
         </div>
 
-        <div className="hero-search mt-3 max-sm:order-3 sm:mt-4">
+        <div className="hero-search mt-3 sm:mt-4">
           <HeroSearch brands={brands.slice(0, 5)} />
         </div>
 
-        <div className="mt-2 max-sm:order-2 sm:mt-4">
+        <div className="mt-2 sm:mt-4">
           {featured.length === 0 ? (
             <div className="max-w-2xl border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-left">
               <p className="font-display text-lg font-semibold text-cream">
@@ -291,16 +269,11 @@ export default async function HomePage() {
         <SectionHeading
           eyebrow="Depoimentos"
           title="Quem compra, indica"
-          description="Depoimentos enviados à loja. Não substituem avaliações do Google."
+          description="Relatos de clientes enviados à loja."
         />
-        {googleReviewsReady(siteContent.google) ? (
-          <div className="mt-4">
-            <GoogleReviewsBadge reviews={siteContent.google} />
-          </div>
-        ) : null}
-        <div className="mt-4">
-          <Testimonials items={testimonials} />
-        </div>
+        <Suspense fallback={<p className="mt-4 min-h-80 text-sm text-muted" role="status">Carregando depoimentos…</p>}>
+          <HomeTestimonials publicSite={publicSite} />
+        </Suspense>
       </Section>
 
       {/* 6. ATENDIMENTO — um número, horário e modalidade reais */}
@@ -401,7 +374,9 @@ export default async function HomePage() {
           description="As perguntas que mais recebemos sobre compra, troca e documentação."
         />
         <div className="mt-4">
-          <FaqAccordion items={faqItems.slice(0, 5)} />
+          <Suspense fallback={<p className="min-h-80 text-sm text-muted" role="status">Carregando dúvidas…</p>}>
+            <HomeFaq />
+          </Suspense>
           <div className="mt-4">
             <Link
               href="/faq"
@@ -450,4 +425,24 @@ export default async function HomePage() {
       </Section>
     </>
   );
+}
+
+// Dados abaixo da dobra não bloqueiam a busca e as capas do estoque.
+async function HomeTestimonials({ publicSite }: { publicSite: Awaited<ReturnType<typeof getPublicSite>> }) {
+  const testimonials = await getTestimonials(6);
+  const reviews = testimonials.filter(item => !String(item.id).startsWith("seed-"));
+  return <>
+    {reviews.length > 0 ? <JsonLd data={localBusinessJsonLd(publicSite, reviews.map(item => ({
+      name: item.name,
+      city: item.city,
+      message: item.message,
+      rating: item.rating,
+    })))} /> : null}
+    <div className="mt-4"><Testimonials items={testimonials} /></div>
+  </>;
+}
+
+async function HomeFaq() {
+  const items = await getPublishedFaq();
+  return <FaqAccordion items={items.slice(0, 5)} />;
 }
