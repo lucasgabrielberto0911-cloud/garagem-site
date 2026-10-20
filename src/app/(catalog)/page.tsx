@@ -33,7 +33,7 @@ import {
 } from "@/components/site/icons";
 import { buildPageMetadata, itemListJsonLd, localBusinessJsonLd, websiteJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
-import { getPublishedFaq } from "@/lib/site-content";
+import { getGoogleReviews, getPublishedFaq } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 import {
   getFeaturedVehicles,
@@ -271,7 +271,14 @@ export default async function HomePage() {
           title="Quem compra, indica"
           description="Relatos de clientes enviados à loja."
         />
-        <Suspense fallback={<p className="mt-4 min-h-80 text-sm text-muted" role="status">Carregando depoimentos…</p>}>
+        <Suspense fallback={
+          <div aria-hidden="true" className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Aproxima seis cards; quantidade e textos publicados podem variar. */}
+            {Array.from({ length: 6 }, (_, index) => (
+              <div key={index} className="h-64 border border-white/10 bg-ink max-[360px]:h-72" />
+            ))}
+          </div>
+        }>
           <HomeTestimonials publicSite={publicSite} />
         </Suspense>
       </Section>
@@ -374,7 +381,13 @@ export default async function HomePage() {
           description="As perguntas que mais recebemos sobre compra, troca e documentação."
         />
         <div className="mt-4">
-          <Suspense fallback={<p className="min-h-80 text-sm text-muted" role="status">Carregando dúvidas…</p>}>
+          <Suspense fallback={
+            <div aria-hidden="true" className="mx-auto max-w-3xl divide-y divide-white/10 border border-white/10 bg-ink">
+              {Array.from({ length: 5 }, (_, index) => (
+                <div key={index} className="h-[84px] max-[360px]:h-24 sm:h-20" />
+              ))}
+            </div>
+          }>
             <HomeFaq />
           </Suspense>
           <div className="mt-4">
@@ -429,7 +442,12 @@ export default async function HomePage() {
 
 // Dados abaixo da dobra não bloqueiam a busca e as capas do estoque.
 async function HomeTestimonials({ publicSite }: { publicSite: Awaited<ReturnType<typeof getPublicSite>> }) {
-  const testimonials = await getTestimonials(6);
+  const data = await Promise.all([getTestimonials(6), getGoogleReviews()]).catch(error => {
+    console.error("[home] falha ao carregar depoimentos:", error);
+    return null;
+  });
+  if (!data) return null;
+  const [testimonials, google] = data;
   const reviews = testimonials.filter(item => !String(item.id).startsWith("seed-"));
   return <>
     {reviews.length > 0 ? <JsonLd data={localBusinessJsonLd(publicSite, reviews.map(item => ({
@@ -437,12 +455,16 @@ async function HomeTestimonials({ publicSite }: { publicSite: Awaited<ReturnType
       city: item.city,
       message: item.message,
       rating: item.rating,
-    })))} /> : null}
+    })), google)} /> : null}
     <div className="mt-4"><Testimonials items={testimonials} /></div>
   </>;
 }
 
 async function HomeFaq() {
-  const items = await getPublishedFaq();
+  const items = await getPublishedFaq().catch(error => {
+    console.error("[home] falha ao carregar dúvidas:", error);
+    return null;
+  });
+  if (!items) return null;
   return <FaqAccordion items={items.slice(0, 5)} />;
 }

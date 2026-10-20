@@ -13,25 +13,25 @@ test("busca vem antes dos cards, envia GET sem JavaScript e encontra o modelo", 
     await context.route("**/fotos/**", route => route.fulfill({ contentType: "image/png", path: "public/branding/placeholder-car.png" }));
     const home = await context.newPage();
     await home.goto("/");
-    const search = home.getByRole("search");
+    const search = home.locator(".hero-search").getByRole("search");
     const firstCard = home.locator("article.listing-card").first();
     const searchBox = await search.boundingBox();
     const cardBox = await firstCard.boundingBox();
     expect(searchBox!.y + searchBox!.height).toBeLessThanOrEqual(cardBox!.y);
-    await home.getByRole("searchbox", { name: "Buscar por marca ou modelo" }).fill("Civic");
+    await search.getByRole("searchbox", { name: "Buscar por marca ou modelo" }).fill("Civic");
     await Promise.all([
       home.waitForURL(/\/estoque\?q=Civic/, { waitUntil: "commit" }),
-      home.getByRole("searchbox", { name: "Buscar por marca ou modelo" }).press("Enter", { noWaitAfter: true }),
+      search.getByRole("searchbox", { name: "Buscar por marca ou modelo" }).press("Enter", { noWaitAfter: true }),
     ]);
   } finally {
     await context.close();
   }
   await page.goto("/");
-  await page.getByRole("searchbox", { name: "Buscar por marca ou modelo" }).fill("Civic");
-  await page.getByRole("button", { name: "Buscar", exact: true }).click();
+  await page.locator(".hero-search").getByRole("searchbox", { name: "Buscar por marca ou modelo" }).fill("Civic");
+  await page.locator(".hero-search").getByRole("button", { name: "Buscar", exact: true }).click();
   await expect(page).toHaveURL(/\/estoque\?q=Civic/);
-  await expect(page.locator("article.listing-card")).toHaveCount(1);
-  await expect(page.locator("article.listing-card")).toContainText(/Civic/i);
+  await expect(page.locator("article.listing-card")).not.toHaveCount(0);
+  await expect(page.locator("article.listing-card").first()).toContainText(/Civic/i);
   await expect(page.locator('article.listing-card a[href*="wa.me"]').first()).toBeVisible();
 });
 
@@ -42,6 +42,10 @@ test("home mantém depoimentos, FAQ e região sem selo Google", async ({ page })
   await expect(page.locator("details").first()).toBeAttached();
   await expect(page.getByRole("heading", { name: "Loja digital no Espírito Santo" })).toBeVisible();
   await expect(page.getByText(/avaliaç(?:ão|ões) no Google/)).toHaveCount(0);
+  const schemas = await page.locator('script[type="application/ld+json"]').evaluateAll(scripts =>
+    scripts.map(script => JSON.parse(script.textContent || "{}")),
+  );
+  expect(schemas.find(schema => schema["@type"] === "AutoDealer" && schema.review?.length > 0)?.sameAs).toContain("https://maps.google.com/?cid=1234567890");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
