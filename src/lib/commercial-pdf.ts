@@ -59,9 +59,9 @@ const clean = (value: string) => value.replace(/[\x00-\x08\x0B-\x1F\x7F]/g, "").
 const money = (value: number) => clean(formatAdminMoney(value));
 
 const RECEIPT_TERMS = [
-  "O sinal é parte do pagamento e será abatido do preço no Contrato de Compra e Venda de Veículo. Este recibo não substitui o contrato nem a transferência.",
+  "O sinal é uma garantia (arras) que reserva o veículo ao cliente e, concretizada a compra, será abatido do preço no Contrato de Compra e Venda de Veículo. Este recibo não substitui o contrato nem a transferência.",
   "O veículo fica reservado ao cliente pelo prazo combinado; vencido o prazo sem a conclusão, a reserva pode ser desfeita.",
-  "Desistindo o cliente sem justo motivo, o sinal não é devolvido; desistindo a Garagem, ou sendo o negócio inviabilizado sem culpa do cliente, o sinal é restituído (cláusula 8ª do contrato).",
+  "Em caso de desistência do cliente, o sinal não é restituído e fica com a Garagem; se a desistência for da Garagem, o sinal é devolvido na forma da lei (cláusula 8ª do contrato).",
 ];
 
 export async function commercialPdf(kind: string, input: DocumentSnapshot, id: string) {
@@ -273,7 +273,7 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     });
     y -= 8;
     paragraph(`Forma de pagamento do saldo: ${clean(data.payment)}.`, 10);
-    paragraph("§ 1º O sinal tem natureza de princípio de pagamento e é integralmente abatido do preço. § 2º Em caso de financiamento, a venda fica condicionada à aprovação do crédito; se negado, as partes poderão ajustar outra forma de pagamento ou rescindir o contrato, aplicando-se a cláusula 8ª.", 10);
+    paragraph("§ 1º O sinal tem natureza de garantia (arras): reserva o veículo ao(à) COMPRADOR(A) e, concretizada a compra, é integralmente abatido do preço. § 2º Em caso de financiamento, a venda fica condicionada à aprovação do crédito; se negado, as partes poderão ajustar outra forma de pagamento ou rescindir o contrato.", 10);
 
     clause("Cláusula 3ª — Da entrega", [
       `A entrega do veículo ocorrerá em até ${days} (${days === 1 ? "um" : days === 5 ? "cinco" : String(days)}) dias úteis após a compensação integral dos valores devidos e a assinatura deste contrato, nas dependências da VENDEDORA, mediante termo de entrega, com o veículo limpo e acompanhado das chaves e do manual, quando existirem.`,
@@ -293,8 +293,8 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
       "Aplica-se a garantia legal prevista no Código de Defesa do Consumidor (Lei nº 8.078/1990), de 90 (noventa) dias para vícios de fácil constatação e ocultos em veículos usados, contados da entrega. A garantia não cobre desgaste natural de peças, mau uso, acidentes, modificações feitas por terceiros ou falta de manutenção.",
     ]);
     clause("Cláusula 8ª — Da desistência e do sinal", [
-      "Desistindo o(a) COMPRADOR(A) do negócio sem justo motivo, o sinal pago não será devolvido e ficará com a VENDEDORA, a título de indenização pelo tempo de reserva do veículo e pelas oportunidades de venda perdidas.",
-      "Desistindo a VENDEDORA, ou sendo o negócio inviabilizado por vício de documentação, gravame ou reprovação do crédito que não decorra de culpa do(a) COMPRADOR(A), o sinal será restituído integralmente, em até 5 (cinco) dias úteis, sem prejuízo de perdas e danos quando cabíveis.",
+      "O sinal pago é garantia (arras) destinada a reservar o veículo, que deixa de ser oferecido a terceiros enquanto durar a reserva. Concretizada a compra, o sinal é abatido do preço. Em caso de desistência do(a) COMPRADOR(A), o sinal não será restituído e ficará com a VENDEDORA.",
+      "Em caso de desistência da VENDEDORA, esta restituirá o sinal ao(à) COMPRADOR(A) nos termos da lei, sem prejuízo das demais consequências legais cabíveis.",
     ]);
     if (data.conditions.trim()) clause("Cláusula 9ª — Das condições adicionais", [clean(data.conditions)]);
     clause(`Cláusula ${data.conditions.trim() ? "10ª" : "9ª"} — Do foro`, [
