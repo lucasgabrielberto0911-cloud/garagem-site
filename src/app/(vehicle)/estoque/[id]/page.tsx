@@ -313,13 +313,17 @@ export default async function VehicleDetailPage({
             </p>
             <p className="mt-1 text-sm text-muted">
               A página permanece no ar para quem chegou por um link antigo. Veja{" "}
-              <Link
-                href="#mesma-faixa"
-                className="font-medium text-brand-light underline-offset-4 hover:underline"
-              >
-                {sameBandTitle.toLowerCase()}
-              </Link>{" "}
-              ou o{" "}
+              {related.length > 0 ? (
+                <>
+                  <Link
+                    href="#mesma-faixa"
+                    className="font-medium text-brand-light underline-offset-4 hover:underline"
+                  >
+                    {sameBandTitle.toLowerCase()}
+                  </Link>{" "}
+                  ou o{" "}
+                </>
+              ) : null}
               <Link
                 href="/estoque"
                 prefetch={false}
@@ -481,13 +485,28 @@ export default async function VehicleDetailPage({
               ) : null}
 
               {sold ? (
-                <Link
-                  href={related.length > 0 ? "#mesma-faixa" : "/estoque"}
-                  prefetch={false}
-                  className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-asphalt transition hover:bg-brand-orange"
-                >
-                  {related.length > 0 ? "Ver na mesma faixa" : "Ver estoque disponível"}
-                </Link>
+                <div className="space-y-2">
+                  <Link
+                    href={related.length > 0 ? "#mesma-faixa" : "/estoque"}
+                    prefetch={false}
+                    className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-asphalt transition hover:bg-brand-orange"
+                  >
+                    {related.length > 0 ? "Ver na mesma faixa" : "Ver estoque disponível"}
+                  </Link>
+                  <WhatsAppButton
+                    size="md"
+                    variant="outline"
+                    className="w-full"
+                    trackingLabel="ficha-vendido"
+                    campaign="ficha"
+                    content={fichaTrack.content}
+                    vehicleId={vehicle.id}
+                    slug={canonicalSlug}
+                    message={whatsapp.interest}
+                  >
+                    Pedir parecido no WhatsApp
+                  </WhatsAppButton>
+                </div>
               ) : (
                 <>
                   <VehicleLeadHit
@@ -529,6 +548,7 @@ export default async function VehicleDetailPage({
                     video={whatsapp.video}
                     finance={whatsapp.finance}
                     trade={whatsapp.trade}
+                    visit={whatsapp.visit}
                   />
                   <p className="-mt-2 text-[11px] leading-relaxed text-muted">
                     Esses botões também abrem o WhatsApp deste veículo.
@@ -666,6 +686,7 @@ export default async function VehicleDetailPage({
                   video: whatsapp.video,
                   finance: whatsapp.finance,
                   trade: whatsapp.trade,
+                  visit: whatsapp.visit,
                 }
           }
         />
@@ -677,6 +698,7 @@ export default async function VehicleDetailPage({
             contextLabel={fullLabel}
             pagePath={path}
             interestVehicleId={vehicle.id}
+            initialModel={sold ? title : ""}
             description={
               sold
                 ? `O ${title} já foi. Se você procura outro, deixa o modelo aqui.`
