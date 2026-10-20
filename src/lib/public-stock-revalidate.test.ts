@@ -6,11 +6,29 @@ import { test } from "node:test";
 const readSrc = (path: string) => readFileSync(join(process.cwd(), "src", path), "utf8");
 
 test("páginas públicas de estoque usam TTL de 1 h (a invalidação vem do painel)", () => {
-  for (const file of ["app/(catalog)/page.tsx", "app/(catalog)/estoque/page.tsx", "app/(vehicle)/estoque/[id]/page.tsx"]) {
+  for (const file of [
+    "app/(catalog)/page.tsx",
+    "app/(catalog)/estoque/page.tsx",
+    "app/(vehicle)/estoque/[id]/page.tsx",
+    "app/(catalog)/marca/[slug]/page.tsx",
+    "app/(catalog)/modelo/[slug]/page.tsx",
+    "app/(site)/modelos/page.tsx",
+    "app/(site)/seminovos/page.tsx",
+    "app/(site)/seminovos/[cidade]/page.tsx",
+    "app/(site)/guias/page.tsx",
+    "app/(site)/guias/[slug]/page.tsx",
+    "app/(site)/faq/page.tsx",
+    "app/(site)/sobre/page.tsx",
+    "app/(site)/contato/page.tsx",
+    "app/(site)/vender/page.tsx",
+    "app/(site)/pedido/page.tsx",
+  ]) {
     assert.match(readSrc(file), /export const revalidate = 3600;/, file);
   }
   assert.match(readSrc("lib/vehicles.ts"), /PUBLIC_CACHE[^]*?revalidate: 3600/);
   assert.match(readSrc("lib/vehicles.ts"), /TESTIMONIALS_CACHE[^]*?revalidate: 3600/);
+  assert.match(readSrc("lib/stock-landing-data.ts"), /revalidate: 3600,\s*tags:\s*\[VEHICLES_PUBLIC_CACHE_TAG\]/);
+  assert.match(readSrc("app/sitemap.ts"), /unstable_cache\(loadPublicSitemapVehicles[^]*?revalidate: 3600,\s*tags:\s*\[VEHICLES_PUBLIC_CACHE_TAG\]/);
 });
 
 test("revalidatePublicStock expira a tag na hora e só a ficha daquele veículo", () => {

@@ -13,6 +13,7 @@ import {
   CITIES_DIRECTORY_PATH,
   breadcrumbJsonLd,
   buildPageMetadata,
+  itemListJsonLd,
 } from "@/lib/seo";
 import { getFeaturedVehicles } from "@/lib/vehicles";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
@@ -38,6 +39,14 @@ export default async function SeminovosHubPage() {
           { name: "Seminovos", path },
         ])}
       />
+      {featured.length > 0 && (
+        <JsonLd
+          data={itemListJsonLd(featured, {
+            name: `Seminovos no Espírito Santo — ${site.name}`,
+            path,
+          })}
+        />
+      )}
 
       <Container>
         <PageHeader

@@ -6,7 +6,7 @@ import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { BUYING_GUIDES } from "@/lib/buying-guides";
 import { getCityShowcaseVehicles } from "@/lib/vehicles";
 import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
-export const revalidate = 600;
+export const revalidate = 3600;
 type Props = { params: Promise<{ slug: string }> };
 export function generateStaticParams() { return BUYING_GUIDES.map(guide => ({ slug: guide.slug })); }
 export async function generateMetadata({ params }: Props) {

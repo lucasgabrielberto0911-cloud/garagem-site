@@ -59,9 +59,9 @@ export function StatsBarSkeleton() {
   return (
     <div className="grid animate-pulse grid-cols-2 divide-x divide-white/10 border border-white/10 bg-ink/70">
       {[0, 1].map((index) => (
-        <div key={index} className="px-3 py-5 sm:px-6 sm:py-7">
+        <div key={index} className="px-3 py-2.5 text-center sm:px-4 sm:py-3">
           <div className="mx-auto h-7 w-20 bg-white/10 sm:h-8 sm:w-28" />
-          <div className="mx-auto mt-2 h-3 w-28 bg-white/5 sm:w-40" />
+          <div className="mx-auto mt-1 h-4 w-28 bg-white/5 sm:mt-1.5 sm:w-40" />
         </div>
       ))}
     </div>

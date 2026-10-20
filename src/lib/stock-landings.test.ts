@@ -8,6 +8,15 @@ test("landings deduplicam caixa e acentos sem misturar marcas", () => {
   assert.ok(links.some(row => row.path === "/modelo/toyota-civic"));
   assert.equal(stockLandingSlug("Citroën C4 Cactus"), "citroen-c4-cactus");
   assert.deepEqual(stockLandingLinks([]), []);
+
+  const dated = stockLandingLinks([
+    { brand: "Honda", model: "Civic", updatedAt: "2026-10-10T10:00:00.000Z" },
+    { brand: "Honda", model: "Fit", updatedAt: "2026-10-20T15:30:00.000Z" },
+  ]);
+  const honda = dated.find(row => row.path === "/marca/honda");
+  const civic = dated.find(row => row.path === "/modelo/honda-civic");
+  assert.equal(honda?.lastModified?.toISOString(), "2026-10-20T15:30:00.000Z");
+  assert.equal(civic?.lastModified?.toISOString(), "2026-10-10T10:00:00.000Z");
 });
 
 test("texto da marca usa modelos reais; texto do modelo usa anos e contagem", () => {

@@ -197,7 +197,6 @@ export function VehicleGallery({
                     srcSet={galleryPreviewSrcSet(photo)}
                     recoverable
                     priority={index === 0}
-                    decoding={index === 0 ? "async" : undefined}
                     className="object-cover [-webkit-touch-callout:none]"
                   />
                 ) : (
