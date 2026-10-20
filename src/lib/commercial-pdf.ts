@@ -13,10 +13,17 @@ export type DocumentSnapshot = {
   /** Nome de quem assina pela loja (campo do formulário). Nunca usar e-mail aqui. */
   sellerName?: string;
   year?: number; yearModel?: number; color?: string; km?: number; total?: number;
+  /** Só contrato: dados que o cadastro ainda não tem saem como linha em branco para preencher à mão. */
+  rg?: string; address?: string; chassis?: string; renavam?: string;
+  /** Sinal já pago: número e data do recibo; é abatido do preço. */
+  signal?: { amount: number; receiptId?: string; date?: string };
+  downPayment?: number; financed?: number;
+  /** Prazo de entrega em dias úteis após a quitação (padrão: 5). */
+  deliveryDays?: number;
 };
 
 /**
- * DADOS DA LOJA NOS PDFs (proposta e recibo). Único lugar para trocar.
+ * DADOS DA LOJA NOS PDFs (contrato e recibo). Único lugar para trocar.
  * Para a loja de Vitória: ajuste razão social, CNPJ, endereço e cidade abaixo.
  * `address` vazio = a linha de endereço some do cabeçalho e do rodapé.
  */
@@ -55,7 +62,7 @@ const RECEIPT_TERMS = [
   "O sinal é parte do pagamento e será abatido do valor total do veículo na conclusão do negócio.",
   "O veículo fica reservado ao cliente pelo prazo combinado; vencido o prazo sem a conclusão, a reserva pode ser desfeita.",
   "A devolução ou a retenção do sinal segue o que foi combinado entre as partes no momento da reserva.",
-  "Este recibo não substitui o contrato de compra e venda nem a transferência do veículo.",
+  "O valor será abatido do preço no Contrato de Compra e Venda de Veículo. Este recibo não substitui o contrato nem a transferência.",
 ];
 
 export async function commercialPdf(kind: string, data: DocumentSnapshot, id: string) {
@@ -63,7 +70,7 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
   // Recibo é compacto para caber em uma página.
   const SECTION_GAP = isReceipt ? 15 : 30; // espaço antes de toda seção
   const LEAD = isReceipt ? 12.5 : 15; // entrelinha dos textos
-  const docTitle = isReceipt ? "Recibo de sinal" : "Proposta comercial";
+  const docTitle = isReceipt ? "Recibo de sinal" : "Contrato de compra e venda";
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const [titleBytes, regularBytes, semiBytes, logoBytes] = await Promise.all([
@@ -192,8 +199,131 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
     });
   }
 
+
+  function contract() {
+    const blank = (value: string | undefined, n = 28) => clean(value ?? "").trim() || "_".repeat(n);
+    const price = data.amount;
+    const signal = data.signal?.amount ?? 0;
+    const down = data.downPayment ?? 0;
+    const financed = data.financed ?? 0;
+    const balance = Math.round((price - signal - down - financed) * 100) / 100;
+    const yearText = data.yearModel ? (data.year && data.year !== data.yearModel ? `${data.year}/${data.yearModel}` : String(data.yearModel)) : blank(undefined, 8);
+    const kmText = typeof data.km === "number" ? `${new Intl.NumberFormat("pt-BR").format(data.km)} km` : blank(undefined, 8);
+    const days = data.deliveryDays ?? 5;
+    const sellerName = clean(data.sellerName ?? "").trim();
+    const receiptRef = data.signal?.receiptId
+      ? `recibo de sinal nº ${clean(data.signal.receiptId)}${data.signal.date ? `, emitido em ${new Date(data.signal.date).toLocaleDateString("pt-BR", { timeZone: tz })}` : ""}`
+      : "recibo de sinal emitido pela VENDEDORA";
+
+    const clause = (heading: string, texts: string[]) => {
+      const h = texts.reduce((sum, t) => sum + wrap(t, regular, 10, CONTENT_W).length * 13.5, 0);
+      y -= 12;
+      ensure(30 + Math.min(h, 60));
+      page.drawText(heading.toUpperCase(), { x: MARGIN, y, size: 9.5, font: title, color: ASPHALT });
+      y -= 15;
+      texts.forEach((t) => {
+        const lines = wrap(t, regular, 10, CONTENT_W);
+        lines.forEach((line) => {
+          ensure(13.5);
+          if (line) page.drawText(line, { x: MARGIN, y, size: 10, font: regular, color: ASPHALT });
+          y -= 13.5;
+        });
+        y -= 2;
+      });
+    };
+
+    section("Das partes", 90);
+    paragraph(`VENDEDORA: ${PDF_STORE.legalName}, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${PDF_STORE.cnpj}, com sede em ${blank(PDF_STORE.address, 40)}, ${PDF_STORE.city}/${PDF_STORE.stateCode}, neste ato representada por ${blank(sellerName, 28)}, doravante denominada VENDEDORA.`, 10);
+    y -= 4;
+    paragraph(`COMPRADOR(A): ${clean(data.customer)}, portador(a) do CPF nº ${blank(data.cpf, 18)}, RG nº ${blank(data.rg, 16)}, residente e domiciliado(a) em ${blank(data.address, 44)}, telefone ${blank(data.phone, 16)}, doravante denominado(a) COMPRADOR(A).`, 10);
+    y -= 4;
+    paragraph("As partes têm entre si justo e contratado o presente Contrato de Compra e Venda de Veículo, que se rege pelas cláusulas abaixo.", 10);
+
+    section("Veículo", 70);
+    {
+      const rowsData = [
+        [{ label: "Marca / modelo", value: data.vehicle, weight: 2 }, { label: "Ano fab./modelo", value: yearText }, { label: "Cor", value: blank(data.color, 10) }],
+        [{ label: "Placa", value: blank(data.plate, 10) }, { label: "RENAVAM", value: blank(data.renavam, 14), weight: 1.3 }, { label: "Chassi", value: blank(data.chassis, 20), weight: 1.8 }, { label: "Km", value: kmText }],
+      ];
+      rowsData.forEach((r) => { fields(r); y -= 4; });
+    }
+
+    clause("Cláusula 1ª — Do objeto", [
+      "A VENDEDORA vende ao(à) COMPRADOR(A), e este(a) compra, o veículo identificado acima, no estado em que se encontra, livre e desembaraçado de ônus, gravames, penhoras e restrições judiciais ou administrativas, salvo se expressamente informado neste contrato.",
+    ]);
+
+    // Preço e pagamento: tabela que fecha com o total.
+    y -= 12;
+    ensure(30 + 4 * 24);
+    page.drawText("CLÁUSULA 2ª — DO PREÇO E DA FORMA DE PAGAMENTO", { x: MARGIN, y, size: 9.5, font: title, color: ASPHALT });
+    y -= 15;
+    paragraph(`O preço certo e ajustado da venda é de ${money(price)} (${moneyInWords(price)}), pago da seguinte forma:`, 10);
+    y -= 2;
+    const rows: [string, string, boolean][] = [["Preço total do veículo", money(price), true]];
+    if (signal > 0) rows.push([`(−) Sinal já pago — ${receiptRef}, abatido do preço`, money(signal), false]);
+    if (down > 0) rows.push(["(−) Entrada", money(down), false]);
+    if (financed > 0) rows.push(["(−) Valor financiado (pago pela instituição financeira)", money(financed), false]);
+    rows.push([balance > 0 ? "Saldo a pagar pelo(a) COMPRADOR(A)" : "Saldo", money(Math.max(balance, 0)), true]);
+    ensure(rows.length * 22 + 6);
+    rows.forEach(([lab, val, strong]) => {
+      const fill = strong ? CREAM : WHITE;
+      page.drawRectangle({ x: MARGIN, y: y - 22, width: CONTENT_W, height: 22, color: fill, borderColor: LINE, borderWidth: 0.6 });
+      page.drawText(lab, { x: MARGIN + 10, y: y - 15, size: 9.5, font: strong ? semi : regular, color: ASPHALT });
+      page.drawText(val, { x: MARGIN + CONTENT_W - 10 - (strong ? title : regular).widthOfTextAtSize(val, 10), y: y - 15, size: 10, font: strong ? title : regular, color: ASPHALT });
+      y -= 22;
+    });
+    y -= 8;
+    paragraph(`Forma de pagamento do saldo: ${clean(data.payment)}.`, 10);
+    paragraph("§ 1º O sinal tem natureza de princípio de pagamento e é integralmente abatido do preço. § 2º Em caso de financiamento, a venda fica condicionada à aprovação do crédito; se negado, as partes poderão ajustar outra forma de pagamento ou rescindir o contrato, aplicando-se a cláusula 8ª.", 10);
+
+    clause("Cláusula 3ª — Da entrega", [
+      `A entrega do veículo ocorrerá em até ${days} (${days === 1 ? "um" : days === 5 ? "cinco" : String(days)}) dias úteis após a compensação integral dos valores devidos e a assinatura deste contrato, nas dependências da VENDEDORA, mediante termo de entrega, com o veículo limpo e acompanhado das chaves e do manual, quando existirem.`,
+    ]);
+    clause("Cláusula 4ª — Da transferência e da documentação", [
+      "A VENDEDORA entregará o Certificado de Registro do Veículo (CRV/ATPV-e) devidamente preenchido e assinado, com firma reconhecida quando exigida, e o veículo licenciado. O(A) COMPRADOR(A) compromete-se a providenciar a transferência de propriedade no órgão de trânsito no prazo de 30 (trinta) dias, nos termos do art. 123 do Código de Trânsito Brasileiro, arcando com taxas, vistoria e emolumentos da transferência.",
+    ]);
+    clause("Cláusula 5ª — Das multas, débitos e responsabilidades", [
+      "Multas, IPVA, licenciamento, taxas e quaisquer débitos relativos a fatos geradores anteriores à data da entrega são de responsabilidade da VENDEDORA. Os posteriores à entrega, inclusive infrações de trânsito cometidas após a tradição, são de responsabilidade do(a) COMPRADOR(A), que deverá indicar-se como condutor quando for o caso.",
+      "O(A) COMPRADOR(A) responde por danos a terceiros e infrações ocorridas depois da entrega, ainda que a transferência de propriedade não tenha sido concluída, e se obriga a realizá-la no prazo da cláusula 4ª.",
+    ]);
+    clause("Cláusula 6ª — Do estado do veículo e da vistoria", [
+      "O(A) COMPRADOR(A) declara ter examinado o veículo, sua documentação e seu histórico, podendo submetê-lo a vistoria de sua confiança antes da entrega, e o recebe em seu estado de conservação, ciente de que se trata de veículo usado, sujeito ao desgaste natural compatível com a idade e a quilometragem informadas.",
+      "A VENDEDORA declara que a quilometragem, o ano e as demais características informadas neste contrato correspondem ao que é de seu conhecimento.",
+    ]);
+    clause("Cláusula 7ª — Da garantia", [
+      "Aplica-se a garantia legal prevista no Código de Defesa do Consumidor (Lei nº 8.078/1990), de 90 (noventa) dias para vícios de fácil constatação e ocultos em veículos usados, contados da entrega. A garantia não cobre desgaste natural de peças, mau uso, acidentes, modificações feitas por terceiros ou falta de manutenção.",
+    ]);
+    clause("Cláusula 8ª — Da desistência e do sinal", [
+      "Desistindo o(a) COMPRADOR(A) do negócio sem justo motivo, o sinal pago não será devolvido e ficará com a VENDEDORA, a título de indenização pelo tempo de reserva do veículo e pelas oportunidades de venda perdidas.",
+      "Desistindo a VENDEDORA, ou sendo o negócio inviabilizado por vício de documentação, gravame ou reprovação do crédito que não decorra de culpa do(a) COMPRADOR(A), o sinal será restituído integralmente, em até 5 (cinco) dias úteis, sem prejuízo de perdas e danos quando cabíveis.",
+    ]);
+    if (data.conditions.trim()) clause("Cláusula 9ª — Das condições adicionais", [clean(data.conditions)]);
+    clause(`Cláusula ${data.conditions.trim() ? "10ª" : "9ª"} — Do foro`, [
+      `As partes elegem o foro da comarca de ${PDF_STORE.city}/${PDF_STORE.stateCode} para dirimir quaisquer controvérsias deste contrato, ressalvado o foro do domicílio do consumidor, quando aplicável. E, por estarem justas e contratadas, assinam este instrumento em 2 (duas) vias de igual teor, na presença de 2 (duas) testemunhas.`,
+    ]);
+
+    // Local, data e assinaturas juntos.
+    y -= 18;
+    ensure(230);
+    page.drawText(`${PDF_STORE.city}/${PDF_STORE.stateCode}${longDate ? `, ${longDate}` : ""}.`, { x: MARGIN, y, size: 11, font: regular, color: ASPHALT });
+    y -= 50;
+    const sigW = (CONTENT_W - 40) / 2;
+    const sign = (x: number, who: string, name: string, sub: string) => {
+      page.drawLine({ start: { x, y }, end: { x: x + sigW, y }, thickness: 0.8, color: ASPHALT });
+      page.drawText(who.toUpperCase(), { x, y: y - 14, size: 8, font: semi, color: BRAND });
+      const lines = [...(name ? wrap(name, semi, 10, sigW).slice(0, 2) : []), ...(sub ? [sub] : [])];
+      lines.forEach((text, row) => page.drawText(text, { x, y: y - 28 - row * 12, size: row === 0 && name ? 10 : 9, font: row === 0 && name ? semi : regular, color: row === 0 && name ? ASPHALT : MUTED }));
+    };
+    sign(MARGIN, "Vendedora — Garagem", sellerName, PDF_STORE.legalName);
+    sign(MARGIN + sigW + 40, "Comprador(a)", clean(data.customer), data.cpf ? `CPF ${data.cpf}` : "");
+    y -= 70;
+    sign(MARGIN, "Testemunha 1", "", "Nome e CPF:");
+    sign(MARGIN + sigW + 40, "Testemunha 2", "", "Nome e CPF:");
+  }
+
   newPage(true);
 
+  if (isReceipt) {
   section("Cliente");
   fields([{ label: "Nome", value: data.customer, weight: 2 }, { label: "CPF", value: data.cpf || "Não informado" }, { label: "Telefone", value: data.phone }]);
 
@@ -231,7 +361,7 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
   {
     const hasTotal = isReceipt && typeof data.total === "number" && data.total > 0;
     const balance = hasTotal ? Math.max(0, Math.round((data.total! - data.amount) * 100) / 100) : 0;
-    const label = isReceipt ? "Sinal recebido" : "Valor proposto";
+    const label = "Sinal recebido";
     const payLines = wrap(data.payment, regular, 10.5, CONTENT_W - 40);
     const headH = isReceipt ? 58 : 66; // rótulo + valor principal
     const summaryH = hasTotal ? (isReceipt ? 40 : 46) : 0;
@@ -272,12 +402,13 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
       y -= 4;
       paragraph(`Observações: ${data.conditions}`, 9.5);
     }
-  } else {
-    section("Condições");
-    paragraph(data.conditions || "Sem condições adicionais.");
   }
 
+  }
+  if (!isReceipt) contract();
+
   // Local, data e assinaturas ficam juntos na mesma página.
+  if (isReceipt) {
   y -= SECTION_GAP;
   ensure(isReceipt ? 90 : 100);
   const place = `${PDF_STORE.city}/${PDF_STORE.stateCode}${longDate ? `, ${longDate}` : ""}.`;
@@ -297,16 +428,17 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
     const lines = [...wrap(sig.name, semi, 10, sigW).slice(0, 2), ...(sig.sub ? [sig.sub] : [])];
     lines.forEach((text, row) => page.drawText(text, { x, y: y - 28 - row * 12, size: row === 0 && sig.name ? 10 : 9, font: row === 0 && sig.name ? semi : regular, color: row === 0 && sig.name ? ASPHALT : MUTED }));
   });
+  }
 
   // Rodapé e numeração depois que o total de páginas é conhecido.
   pages.forEach((p, i) => {
     p.drawLine({ start: { x: MARGIN, y: FOOTER_Y + 22 }, end: { x: PAGE_W - MARGIN, y: FOOTER_Y + 22 }, thickness: 0.6, color: LINE });
     p.drawText(`${PDF_STORE.legalName} · CNPJ ${PDF_STORE.cnpj} · ${PDF_STORE.city}/${PDF_STORE.stateCode} · www.suagaragem.net`, { x: MARGIN, y: FOOTER_Y + 8, size: 8, font: semi, color: ASPHALT });
-    p.drawText("Documento de apoio à negociação. Confira os dados antes de assinar.", { x: MARGIN, y: FOOTER_Y - 4, size: 8, font: regular, color: MUTED });
+    p.drawText(isReceipt ? "Confira os dados antes de assinar." : "Contrato de compra e venda de veículo. Rubrique as páginas e confira os dados antes de assinar.", { x: MARGIN, y: FOOTER_Y - 4, size: 8, font: regular, color: MUTED });
     const n = `Página ${i + 1} de ${pages.length}`;
     p.drawText(n, { x: PAGE_W - MARGIN - regular.widthOfTextAtSize(n, 8), y: FOOTER_Y + 8, size: 8, font: regular, color: MUTED });
   });
 
-  pdf.setTitle(`Garagem — ${isReceipt ? "Recibo de sinal" : "Proposta"}`);
+  pdf.setTitle(`Garagem — ${isReceipt ? "Recibo de sinal" : "Contrato de compra e venda"}`);
   return pdf.save();
 }

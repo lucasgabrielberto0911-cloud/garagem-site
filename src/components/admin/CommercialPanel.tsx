@@ -87,14 +87,14 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
         </form>
         <div className="mt-4 space-y-3">{simulations.map((s) => <form key={s.id} action={submit} className="space-y-2 border-t border-white/10 pt-3"><input type="hidden" name="operation" value="finance-status" /><input type="hidden" name="simulationId" value={s.id} /><p className="text-sm">{s.customerName} · {s.bank} · {s.months} × {brl(s.installment)} · {s.rate}% a.m.</p><label className="block text-sm">Situação<select name="status" className={inputClass} defaultValue={s.status}>{FINANCE_STATUSES.map((value, index) => <option key={value} value={value}>{["Simulação", "Enviada ao banco", "Aprovada", "Recusada"][index]}</option>)}</select></label><button className={btn.outline}>Atualizar acompanhamento</button></form>)}</div>
       </Card>
-      <Card title="Proposta e recibo de sinal em PDF" collapsed>
+      <Card title="Contrato e recibo de sinal em PDF" collapsed>
         <p className="mb-3 text-sm text-muted">Documento de apoio à negociação. Confira dados e condições antes de assinar. O recibo declara sinal já recebido.</p>
         <form action={submit} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="operation" value="document" />
-          <label className="block text-sm">Documento<select name="kind" className={inputClass}><option value="proposta">Proposta</option><option value="recibo">Recibo de sinal</option></select></label><CustomerSelect />
+          <label className="block text-sm">Documento<select name="kind" className={inputClass}><option value="proposta">Contrato de compra e venda</option><option value="recibo">Recibo de sinal</option></select></label><CustomerSelect />
           <Field label="Valor proposto / sinal recebido (R$)" name="amount" /><Field label="Forma de pagamento" name="payment" /><Field label="Nome do vendedor (assinatura)" name="sellerName" required={false} />
           <label className="block text-sm sm:col-span-2">Condições, validade e observações<textarea name="conditions" required maxLength={3000} className={inputClass} /></label><button className={btn.primary}>Gerar e baixar PDF</button>
         </form>
-        <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}`}>{d.kind === "recibo" ? "Recibo" : "Proposta"} · {d.date} · Baixar PDF</a></li>)}</ul>
+        <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}`}>{d.kind === "recibo" ? "Recibo" : "Contrato"} · {d.date} · Baixar PDF</a></li>)}</ul>
       </Card>
     </fieldset>
   </div>;
