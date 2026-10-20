@@ -31,7 +31,7 @@ import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { stockLandingLinks } from "@/lib/stock-landings";
-import { SERVICE_CITIES } from "@/lib/service-cities";
+import { CITIES_DIRECTORY_PATH, SERVICE_CITIES } from "@/lib/service-cities";
 import { JsonLd } from "@/components/JsonLd";
 import { vehicleSeoTitle } from "@/lib/vehicle-seo";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
@@ -717,7 +717,7 @@ export default async function VehicleDetailPage({
                 Seminovos em {city.name}
               </Link>
             ))}
-            <Link href="/cidades" prefetch={false} className="py-2 underline-offset-4 hover:text-cream hover:underline">Todas as cidades atendidas</Link>
+            <Link href={CITIES_DIRECTORY_PATH} prefetch={false} className="py-2 underline-offset-4 hover:text-cream hover:underline">Todas as cidades atendidas</Link>
           </div>
         </nav>
 

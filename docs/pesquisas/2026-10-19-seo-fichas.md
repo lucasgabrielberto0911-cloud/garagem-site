@@ -8,7 +8,7 @@ Open Graph e Twitter usam a primeira foto cadastrada e alt com identificação c
 
 ## Evidências
 
-- `src/app/(vehicle)/estoque/[id]/page.tsx`: metadata, canonical, compartilhamento, alt, breadcrumbs e navegação; cache continua em 600 s.
+- `src/app/(vehicle)/estoque/[id]/page.tsx`: metadata, canonical, compartilhamento, alt, breadcrumbs e navegação; cache preservado (3600 s).
 - `src/lib/vehicle-seo.ts` e `src/lib/format.ts`: identificação preservada, inclusive em versões longas; títulos podem exceder a largura exibida pelo buscador.
 - `src/lib/seo.ts`: `Car`/`Motorcycle` são subtipos de [Vehicle](https://schema.org/Vehicle). Oferta usa BRL, condição usada, disponibilidade, URL canônica e vendedor identificado. Vendido não contém preço, moeda nem validade. Remove-se o prazo de 30 dias que era calculado sem uma validade comercial cadastrada.
 - O [Schema.org Offer](https://schema.org/Offer) permite descrever disponibilidade sem preço. Isso não garante elegibilidade para [resultados enriquecidos de produto do Google](https://developers.google.com/search/docs/appearance/structured-data/product-snippet), que exigem campos adicionais, incluindo preço na oferta. Não se inventa preço para atender ao validador.
