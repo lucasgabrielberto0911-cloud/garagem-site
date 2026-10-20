@@ -43,6 +43,9 @@ try {
   await prisma.vehicle.upsert({ where: { id: soldId }, create: sold, update: sold });
   await prisma.photo.deleteMany({ where: { vehicleId: soldId } });
   await prisma.photo.createMany({ data: photos.map((photo, order) => ({ ...photo, vehicleId: soldId, order })) });
+  // Modelo com histórico, sem estoque disponível, para o pedido contextual.
+  const soldOnly = { ...sold, id: "ce2esoldfit000000000000001", model: "Fit", version: null, price: 54321 };
+  await prisma.vehicle.upsert({ where: { id: soldOnly.id }, create: soldOnly, update: soldOnly });
   // A conversa HTTP reproduz o caso informado pelo Lucas sem mudar as fixtures do browser.
   if (process.env.E2E_CHAT_CONVERSA === "1") {
     const weekend = {

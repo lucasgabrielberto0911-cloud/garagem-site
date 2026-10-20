@@ -15,7 +15,7 @@ import { notifyError, notifySuccess } from "@/lib/notify";
 import { focusFormFeedback, useFormViewport } from "@/lib/form-feedback";
 import { WhatsAppButton } from "@/components/site/ui";
 import { createSellLead } from "@/app/(site)/vender/actions";
-import { formatNumberBR, formatPhoneBR, formatPlateInput } from "@/lib/format";
+import { formatNumberBR, formatPhoneBR, formatPlateInput, isValidPlate } from "@/lib/format";
 import { SellPhotoUpload } from "./SellPhotoUpload";
 import { useSellDraft } from "./useSellDraft";
 import { trackLead, trackPwaEvent } from "@/lib/meta-pixel";
@@ -105,7 +105,7 @@ export function SellForm({
     if (!brand) nextErrors.brand = "Informe a marca.";
     if (!model) nextErrors.model = "Informe o modelo.";
     if (!/^\d{4}$/.test(year)) nextErrors.year = "Informe o ano com 4 dígitos.";
-    if (!plate) nextErrors.plate = "Informe a placa.";
+    if (plate && !isValidPlate(plate)) nextErrors.plate = "Informe uma placa válida ou deixe para depois.";
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       const first = Object.keys(nextErrors)[0];
@@ -242,7 +242,7 @@ export function SellForm({
           </Field>
         </FormBlock>
 
-        <FormBlock title="O veículo" hint="Marca, modelo, ano e placa são obrigatórios.">
+        <FormBlock title="O veículo" hint="Informe marca, modelo e ano para iniciar o contato. Placa e fotos podem vir depois.">
           <Field label="Marca do veículo" error={errors.brand} htmlFor="brand">
             <input
               id="brand"
@@ -275,58 +275,63 @@ export function SellForm({
             />
           </Field>
 
-          <Field label="Placa do veículo" error={errors.plate} htmlFor="plate">
-            <input
-              id="plate"
-              name="plate"
-              required
-              autoComplete="off"
-              spellCheck={false}
-              value={plate}
-              onChange={(event) => setPlate(formatPlateInput(event.target.value))}
-              placeholder="ABC-1234 ou ABC1D23"
-              className={`${inputClass} uppercase`}
-              aria-describedby="plate-hint"
-            />
-            <p id="plate-hint" className="mt-1.5 text-[11px] text-muted">
-              Aceita placa antiga (ABC-1234) ou Mercosul (ABC1D23).
-            </p>
-          </Field>
-
-          <Field label="Quilometragem" error={errors.km} htmlFor="km" optional>
-            <input
-              id="km"
-              name="km"
-              inputMode="numeric"
-              value={km}
-              onChange={(event) => {
-                const digits = event.target.value.replace(/\D/g, "");
-                setKm(digits ? formatNumberBR(Number(digits)) : "");
-              }}
-              placeholder="Ex.: 45.000"
-              className={inputClass}
-            />
-          </Field>
         </FormBlock>
 
-        <FormBlock title="Fotos e observações">
-          <div className="lg:col-span-2">
-            <Field label="Observações" error={errors.notes} htmlFor="notes" optional>
-              <textarea
-                id="notes"
-                name="notes"
-                rows={4}
-                defaultValue={interestNote ?? ""}
-                placeholder="Conte o estado do veículo, itens opcionais, se há débitos, se quer vender ou trocar..."
-                className={`${inputClass} resize-y`}
+        <details open={Boolean(errors.plate)} className="border border-white/10">
+          <summary className="min-h-11 cursor-pointer px-4 py-3 font-display text-sm text-cream">
+            Complementar com placa, km ou fotos (opcional)
+          </summary>
+          <FormBlock title="Detalhes para a avaliação">
+            <Field label="Placa do veículo" error={errors.plate} htmlFor="plate" optional>
+              <input
+                id="plate"
+                name="plate"
+                autoComplete="off"
+                spellCheck={false}
+                value={plate}
+                onChange={(event) => setPlate(formatPlateInput(event.target.value))}
+                placeholder="ABC-1234 ou ABC1D23"
+                className={`${inputClass} uppercase`}
+                aria-describedby="plate-hint"
+              />
+              <p id="plate-hint" className="mt-1.5 text-[11px] text-muted">
+                Pode enviar depois. Se informar, use ABC-1234 ou ABC1D23.
+              </p>
+            </Field>
+
+            <Field label="Quilometragem" error={errors.km} htmlFor="km" optional>
+              <input
+                id="km"
+                name="km"
+                inputMode="numeric"
+                value={km}
+                onChange={(event) => {
+                  const digits = event.target.value.replace(/\D/g, "");
+                  setKm(digits ? formatNumberBR(Number(digits)) : "");
+                }}
+                placeholder="Ex.: 45.000"
+                className={inputClass}
               />
             </Field>
-          </div>
 
-          <div className="lg:col-span-2">
-            <SellPhotoUpload disabled={isPending} onBusyChange={setPhotoBusy} onUrlsChange={setPhotoUrls} />
-          </div>
-        </FormBlock>
+            <div className="lg:col-span-2">
+              <Field label="Observações" error={errors.notes} htmlFor="notes" optional>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={4}
+                  defaultValue={interestNote ?? ""}
+                  placeholder="Conte o estado do veículo, itens opcionais, se há débitos, se quer vender ou trocar..."
+                  className={`${inputClass} resize-y`}
+                />
+              </Field>
+            </div>
+
+            <div className="lg:col-span-2">
+              <SellPhotoUpload disabled={isPending} onBusyChange={setPhotoBusy} onUrlsChange={setPhotoUrls} />
+            </div>
+          </FormBlock>
+        </details>
 
         {interestVehicleId ? (
           <input type="hidden" name="interestVehicleId" value={interestVehicleId} />
@@ -335,7 +340,7 @@ export function SellForm({
 
         <div className="border border-white/10 bg-ink p-4 sm:p-5">
           <p className="text-sm leading-relaxed text-muted">
-            Depois do envio, avaliamos tabela, histórico e conservação e
+            Este é o contato inicial. Podemos pedir placa, fotos e mais detalhes para avaliar tabela, histórico e conservação. Depois,
             retornamos no telefone informado, das 8h às 23h. Sem taxa e sem
             compromisso.
           </p>

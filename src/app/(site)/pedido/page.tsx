@@ -51,6 +51,9 @@ export default async function PedidoPage({
           </span>
           Voltar ao estoque
         </Link>
+        <p className="mt-4 text-sm text-muted">
+          Confira o modelo e informe seu contato abaixo. O pedido só fica salvo após o envio e a confirmação nesta página.
+        </p>
         <div className="mt-6">
           <MissingModelForm
             key={draftContext}
