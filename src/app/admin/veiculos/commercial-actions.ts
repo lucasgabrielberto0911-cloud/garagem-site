@@ -92,13 +92,14 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         const reservation = kind === "recibo" ? await tx.vehicleReservation.findFirst({ where: { vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } }) : null;
         if (kind === "recibo" && (!reservation || Number(reservation.deposit) !== amount)) throw new CommercialError("Recibo de sinal exige reserva do cliente com o mesmo valor recebido.");
         // Contrato: o sinal já pago (recibo da reserva) é abatido do preço.
-        let signal: { amount: number; receiptId: string; date: string } | undefined;
+        let signal: { amount: number; receiptId?: string; date?: string } | undefined;
         if (kind === "proposta") {
           const held = await tx.vehicleReservation.findFirst({ where: { vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } });
           const receipt = held ? await tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["reservationId"], equals: held.id } }, orderBy: { createdAt: "desc" } }) : null;
-          if (held && receipt) signal = { amount: Number(held.deposit), receiptId: receipt.id, date: receipt.createdAt.toISOString() };
+          if (held) signal = { amount: Number(held.deposit), receiptId: receipt?.id, date: receipt?.createdAt.toISOString() };
+          if (signal && signal.amount >= amount) throw new CommercialError("O preço total do contrato deve ser maior que o sinal já pago.");
         }
-        const doc = await tx.commercialDocument.create({ data: { vehicleId, kind, snapshot: { address: customer.address ?? "", signal, customer: customer.name, cpf: customer.cpf ?? "", phone: customer.phone, vehicle: [vehicle.brand, vehicle.model, vehicle.version].filter(Boolean).join(" "), year: vehicle.year, yearModel: vehicle.yearModel, color: vehicle.color ?? "", km: vehicle.km, total: vehicle.price, plate: vehicle.plate ?? "", amount, conditions: text("conditions"), payment: text("payment").slice(0, 200), seller: session.email, sellerName: text("sellerName").slice(0, 120), date: new Date().toISOString(), reservationId: reservation?.id ?? null, saleId: vehicle.sale?.id ?? null } } });
+        const doc = await tx.commercialDocument.create({ data: { vehicleId, kind, snapshot: { address: customer.address ?? "", signal, customer: customer.name, cpf: customer.cpf ?? "", phone: customer.phone, vehicle: [vehicle.brand, vehicle.model, vehicle.version].filter(Boolean).join(" "), year: vehicle.year, yearModel: vehicle.yearModel, color: vehicle.color ?? "", km: vehicle.km, total: kind === "proposta" ? amount : vehicle.price, plate: vehicle.plate ?? "", amount, conditions: text("conditions"), payment: text("payment").slice(0, 200), seller: session.email, date: new Date().toISOString(), reservationId: reservation?.id ?? null, saleId: vehicle.sale?.id ?? null } } });
         documentId = doc.id;
       } else throw new CommercialError("Operação inválida.");
       await recordAdminAudit(tx, session.adminId, vehicleId, `commercial.${operation}`, { operation });

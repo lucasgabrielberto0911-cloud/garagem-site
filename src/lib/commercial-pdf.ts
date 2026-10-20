@@ -23,15 +23,17 @@ export type DocumentSnapshot = {
 /**
  * DADOS DA LOJA NOS PDFs (contrato e recibo). Único lugar para trocar.
  * Para a loja de Vitória: ajuste razão social, CNPJ, endereço e cidade abaixo.
- * `address` vazio = a linha de endereço some do cabeçalho e do rodapé.
+ * `address` vazio = o cabeçalho omite o endereço e o contrato imprime `ADDRESS_PLACEHOLDER` em "com sede em".
  */
 export const PDF_STORE = {
   legalName: site.legalName, // razão social
   cnpj: site.cnpj,
-  address: "", // ex.: "Av. Exemplo, 100, Centro, Vitória/ES, CEP 29000-000"
+  address: "", // ex.: "Av. Exemplo, 100, Centro, Vitória/ES, CEP 29000-000". PENDENTE: o Lucas passa o endereço da sede.
   city: SEO_LOCAL_CITY, // cidade usada em "Cidade/UF, data" acima das assinaturas
   stateCode: site.stateCode,
 } as const;
+
+const ADDRESS_PLACEHOLDER = "[ENDEREÇO DA SEDE — PREENCHER]";
 
 const PAGE_W = 595.28;
 const PAGE_H = 841.89;
@@ -57,16 +59,16 @@ const clean = (value: string) => value.replace(/[\x00-\x08\x0B-\x1F\x7F]/g, "").
 const money = (value: number) => clean(formatAdminMoney(value));
 
 const RECEIPT_TERMS = [
-  "O sinal é parte do pagamento e será abatido do valor total do veículo na conclusão do negócio.",
+  "O sinal é parte do pagamento e será abatido do preço no Contrato de Compra e Venda de Veículo. Este recibo não substitui o contrato nem a transferência.",
   "O veículo fica reservado ao cliente pelo prazo combinado; vencido o prazo sem a conclusão, a reserva pode ser desfeita.",
-  "A devolução ou a retenção do sinal segue o que foi combinado entre as partes no momento da reserva.",
-  "O valor será abatido do preço no Contrato de Compra e Venda de Veículo. Este recibo não substitui o contrato nem a transferência.",
+  "Desistindo o cliente sem justo motivo, o sinal não é devolvido; desistindo a Garagem, ou sendo o negócio inviabilizado sem culpa do cliente, o sinal é restituído (cláusula 8ª do contrato).",
 ];
 
-export async function commercialPdf(kind: string, data: DocumentSnapshot, id: string) {
+export async function commercialPdf(kind: string, input: DocumentSnapshot, id: string) {
   const isReceipt = kind === "recibo";
+  let data = input;
   // Recibo é compacto para caber em uma página.
-  const SECTION_GAP = isReceipt ? 15 : 30; // espaço antes de toda seção
+  const SECTION_GAP = isReceipt ? 10 : 30; // espaço antes de toda seção
   const LEAD = isReceipt ? 12.5 : 15; // entrelinha dos textos
   const docTitle = isReceipt ? "Recibo de sinal" : "Contrato de compra e venda";
   const pdf = await PDFDocument.create();
@@ -155,7 +157,7 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
   }
 
   function ensure(height: number) {
-    if (y - height < (isReceipt ? 68 : BOTTOM)) newPage(false);
+    if (y - height < (isReceipt ? 64 : BOTTOM)) newPage(false);
   }
 
   // Toda seção começa com o mesmo espaço, exceto no topo da página.
@@ -166,7 +168,7 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
     page.drawRectangle({ x: MARGIN, y: y - 3, width: 3, height: 13, color: BRAND });
     page.drawText(label.toUpperCase(), { x: MARGIN + 10, y, size: 10, font: title, color: ASPHALT });
     page.drawLine({ start: { x: MARGIN, y: y - 9 }, end: { x: PAGE_W - MARGIN, y: y - 9 }, thickness: 0.6, color: LINE });
-    y -= isReceipt ? 24 : 28;
+    y -= isReceipt ? 22 : 28;
   }
 
   // Linha de campos: rótulo pequeno em cima, valor embaixo.
@@ -189,8 +191,8 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
 
   function paragraph(text: string, size = 10.5, bullet = false) {
     const lines = wrap(text, regular, size, CONTENT_W - (bullet ? 14 : 0));
-    ensure(lines.length * LEAD);
     lines.forEach((line, i) => {
+      ensure(LEAD);
       if (bullet && i === 0) page.drawRectangle({ x: MARGIN + 1, y: y + 3, width: 3, height: 3, color: BRAND });
       if (line) page.drawText(line, { x: MARGIN + (bullet ? 14 : 0), y, size, font: regular, color: ASPHALT });
       y -= LEAD;
@@ -230,7 +232,7 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
     };
 
     section("Das partes", 90);
-    paragraph(`VENDEDORA: ${PDF_STORE.legalName}, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${PDF_STORE.cnpj}, com sede em ${blank(PDF_STORE.address, 40)}, ${PDF_STORE.city}/${PDF_STORE.stateCode}, doravante denominada VENDEDORA.`, 10);
+    paragraph(`VENDEDORA: ${PDF_STORE.legalName}, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${PDF_STORE.cnpj}, com sede em ${PDF_STORE.address || ADDRESS_PLACEHOLDER}, ${PDF_STORE.city}/${PDF_STORE.stateCode}, doravante denominada VENDEDORA.`, 10);
     y -= 4;
     paragraph(`COMPRADOR(A): ${clean(data.customer)}, portador(a) do CPF nº ${blank(data.cpf, 18)}, RG nº ${blank(data.rg, 16)}, residente e domiciliado(a) em ${blank(data.address, 44)}, telefone ${blank(data.phone, 16)}, doravante denominado(a) COMPRADOR(A).`, 10);
     y -= 4;
@@ -318,6 +320,32 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
     sign(MARGIN + sigW + 40, "Testemunha 2", "", "Nome e CPF:");
   }
 
+  // Recibo cabe em uma página: textos que passam do limite de linhas são cortados com "…".
+  function fit(value: string, font: PDFFont, size: number, width: number, maxLines: number) {
+    const text = clean(value).replace(/\s+/g, " ").trim();
+    if (wrap(text, font, size, width).length <= maxLines) return text;
+    let lo = 0, hi = text.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (wrap(`${text.slice(0, mid).trimEnd()}…`, font, size, width).length <= maxLines) lo = mid; else hi = mid - 1;
+    }
+    return `${text.slice(0, lo).trimEnd()}…`;
+  }
+  if (isReceipt) {
+    const nameW = ((CONTENT_W - 32) * 2) / 4;
+    data = {
+      ...input,
+      customer: fit(input.customer, regular, 11, nameW, 2),
+      cpf: fit(input.cpf, regular, 11, 100, 1),
+      phone: fit(input.phone, regular, 11, 100, 1),
+      vehicle: fit(input.vehicle, regular, 10.5, 150, 2),
+      color: fit(input.color ?? "", semi, 10.5, 60, 1),
+      plate: fit(input.plate, semi, 10.5, 66, 1),
+      payment: fit(input.payment, regular, 10.5, CONTENT_W - 40, 1),
+      conditions: fit(input.conditions, regular, 9.5, CONTENT_W - 120, 1),
+    };
+  }
+
   newPage(true);
 
   if (isReceipt) {
@@ -339,7 +367,7 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
     const fixed = cols.reduce((sum, col) => sum + col.width, 0);
     cols[0].width = CONTENT_W - fixed;
     const wrapped = cols.map((col) => wrap(col.value, col === cols[0] ? regular : semi, 10.5, col.width - 20));
-    const rowH = Math.max(isReceipt ? 28 : 32, Math.max(...wrapped.map((l) => l.length)) * 14 + 16);
+    const rowH = Math.max(28, Math.max(...wrapped.map((l) => l.length)) * 14 + 16);
     ensure(24 + rowH);
     page.drawRectangle({ x: MARGIN, y: y - 24, width: CONTENT_W, height: 24, color: ASPHALT });
     const top = y - 24;
@@ -356,22 +384,22 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
 
   section("Valores");
   {
-    const hasTotal = isReceipt && typeof data.total === "number" && data.total > 0;
+    const hasTotal = typeof data.total === "number" && data.total > 0;
     const balance = hasTotal ? Math.max(0, Math.round((data.total! - data.amount) * 100) / 100) : 0;
     const label = "Sinal recebido";
     const payLines = wrap(data.payment, regular, 10.5, CONTENT_W - 40);
-    const headH = isReceipt ? 58 : 66; // rótulo + valor principal
-    const summaryH = hasTotal ? (isReceipt ? 40 : 46) : 0;
-    const boxH = headH + summaryH + (isReceipt ? 30 : 34) + payLines.length * 14;
+    const headH = 58; // rótulo + valor principal
+    const summaryH = hasTotal ? 40 : 0;
+    const boxH = headH + summaryH + 30 + payLines.length * 14;
     ensure(boxH);
     const top = y;
     page.drawRectangle({ x: MARGIN, y: top - boxH, width: CONTENT_W, height: boxH, color: ASPHALT });
     page.drawRectangle({ x: MARGIN, y: top - boxH, width: 5, height: boxH, color: BRAND });
     page.drawText(label.toUpperCase(), { x: MARGIN + 20, y: top - 24, size: 8, font: semi, color: SOFT });
     const amountText = money(data.amount);
-    let size = isReceipt ? 24 : 28;
+    let size = 24;
     while (size > 14 && title.widthOfTextAtSize(amountText, size) > CONTENT_W - 40) size -= 1;
-    page.drawText(amountText, { x: MARGIN + 20, y: top - (isReceipt ? 50 : 54), size, font: title, color: WHITE });
+    page.drawText(amountText, { x: MARGIN + 20, y: top - 50, size, font: title, color: WHITE });
     let cursor = top - headH;
     if (hasTotal) {
       page.drawLine({ start: { x: MARGIN + 20, y: cursor }, end: { x: MARGIN + CONTENT_W - 20, y: cursor }, thickness: 0.5, color: rgb(0.25, 0.25, 0.27) });
@@ -391,8 +419,8 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
 
   if (isReceipt) {
     section("Declaração");
-    const vehicleLine = [data.vehicle, data.yearModel ? `ano ${data.year && data.year !== data.yearModel ? `${data.year}/${data.yearModel}` : data.yearModel}` : "", data.color ? `cor ${data.color}` : "", data.plate ? `placa ${data.plate}` : ""].filter(Boolean).join(", ");
-    paragraph(`Recebemos de ${data.customer}${data.cpf ? `, CPF ${data.cpf}` : ""}, a quantia de ${money(data.amount)} (${moneyInWords(data.amount)}), referente ao sinal do veículo ${vehicleLine}, dando-lhe plena quitação do valor recebido.`, 11);
+    const vehicleLine = [fit(data.vehicle, regular, 11, 240, 1), data.yearModel ? `ano ${data.year && data.year !== data.yearModel ? `${data.year}/${data.yearModel}` : data.yearModel}` : "", data.color ? `cor ${data.color}` : "", data.plate ? `placa ${data.plate}` : ""].filter(Boolean).join(", ");
+    paragraph(`Recebemos de ${fit(data.customer, regular, 11, 240, 1)}${data.cpf ? `, CPF ${data.cpf}` : ""}, a quantia de ${money(data.amount)} (${moneyInWords(data.amount)}), referente ao sinal do veículo ${vehicleLine}, dando-lhe plena quitação do valor recebido.`, 11);
     section("Condições do recibo", RECEIPT_TERMS.reduce((sum, term) => sum + wrap(term, regular, 9.5, CONTENT_W - 14).length * LEAD, 0));
     RECEIPT_TERMS.forEach((term) => paragraph(term, 9.5, true));
     if (data.conditions.trim()) {
@@ -407,10 +435,10 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
   // Local, data e assinaturas ficam juntos na mesma página.
   if (isReceipt) {
   y -= SECTION_GAP;
-  ensure(isReceipt ? 90 : 100);
+  ensure(86);
   const place = `${PDF_STORE.city}/${PDF_STORE.stateCode}${longDate ? `, ${longDate}` : ""}.`;
   page.drawText(place, { x: MARGIN, y, size: 11, font: regular, color: ASPHALT });
-  y -= isReceipt ? 30 : 46;
+  y -= 30;
   const sigW = (CONTENT_W - 40) / 2;
   const sigs = [
     { who: "Cliente", name: data.customer, sub: data.cpf ? `CPF ${data.cpf}` : "" },

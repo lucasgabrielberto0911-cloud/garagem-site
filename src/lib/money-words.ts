@@ -21,17 +21,19 @@ function integerWords(n: number) {
   ];
   const parts: string[] = [];
   let rest = n;
+  let lastValue = 0; // valor da última parte falada
   for (const group of groups) {
     const count = Math.floor(rest / group.size);
     rest %= group.size;
     if (!count) continue;
+    lastValue = count;
     parts.push(group.size === 1_000 && count === 1 ? "mil" : `${below1000(count)} ${count === 1 ? group.one : group.many}`);
   }
-  if (rest) parts.push(below1000(rest));
+  if (rest) { parts.push(below1000(rest)); lastValue = rest; }
   // "e" antes da última parte quando ela é < 100 ou centena exata ("mil e quinhentos", "dois milhões e cem").
   const last = parts.length > 1 ? parts.pop()! : null;
   if (last === null) return parts[0];
-  const joinWithE = rest > 0 && (rest < 100 || rest % 100 === 0);
+  const joinWithE = lastValue < 100 || lastValue % 100 === 0;
   return parts.length && joinWithE ? `${parts.join(", ")} e ${last}` : `${[...parts, last].join(", ")}`;
 }
 
