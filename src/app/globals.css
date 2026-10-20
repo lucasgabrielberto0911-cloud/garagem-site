@@ -804,7 +804,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
     position: static;
     z-index: auto;
     max-width: none;
-    margin: 0.5rem max(0.75rem, env(safe-area-inset-right, 0px)) 0.75rem
+    margin: 0.25rem max(0.75rem, env(safe-area-inset-right, 0px)) 0.25rem
       max(0.75rem, env(safe-area-inset-left, 0px));
     box-shadow: none;
   }

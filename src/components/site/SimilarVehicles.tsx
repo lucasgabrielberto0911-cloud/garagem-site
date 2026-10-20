@@ -28,8 +28,6 @@ export function SimilarVehicles({
     slug: string;
   };
 }) {
-  if (vehicles.length === 0) return null;
-
   return (
     <section
       id="mesma-faixa"
@@ -41,7 +39,7 @@ export function SimilarVehicles({
           <h2 className="font-display text-lg font-bold tracking-tight text-cream sm:text-xl">
             {title}
           </h2>
-          <p className="mt-1 max-w-xl text-sm text-muted">{description}</p>
+          <p className="mt-1 max-w-xl text-sm text-muted">{vehicles.length ? description : "Nenhum parecido disponível agora. Deixe seu pedido ou fale com a loja."}</p>
         </div>
         <Link
           href={stockHref}
@@ -52,9 +50,11 @@ export function SimilarVehicles({
           <IconArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
-      <div className="mt-5">
-        <VehicleGrid vehicles={vehicles.slice(0, 3)} />
-      </div>
+      {vehicles.length > 0 ? (
+        <div className="mt-5">
+          <VehicleGrid vehicles={vehicles.slice(0, 3)} />
+        </div>
+      ) : null}
       {whatsapp ? (
         <div className="mt-5">
           <WhatsAppButton

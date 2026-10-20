@@ -16,3 +16,22 @@ export function stockLandingLinks(rows: { brand: string; model: string }[]) {
   }
   return [...links.values()].sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 }
+
+/** Texto baseado no estoque real, sem características ou promessas inventadas. */
+export function stockLandingCopy(kind: "marca" | "modelo", label: string, rows: { model: string; yearModel: number; status: string }[]) {
+  const available = rows.filter(row => row.status === "disponivel");
+  const sold = rows.filter(row => row.status === "vendido");
+  const models = [...new Set(available.map(row => formatModelName(row.model)))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const years = [...new Set(available.map(row => row.yearModel))].sort((a, b) => a - b);
+  const stock = available.length
+    ? `${available.length} ${available.length === 1 ? "veículo disponível" : "veículos disponíveis"} de ${label} na Garagem.`
+    : `Sem ${label} disponível no momento. Registre o que procura para a loja entrar em contato.`;
+  const detail = available.length
+    ? kind === "marca"
+      ? `Modelos no estoque: ${models.join(", ")}. Confira ano, km e condições na ficha de cada veículo.`
+      : `Anos no estoque: ${years.join(", ")}. Compare versão, km e câmbio nas fichas disponíveis.`
+    : sold.length
+      ? `O histórico de ${label} abaixo reúne veículos já vendidos, sem preço de oferta.`
+      : "Consulte outras opções no estoque.";
+  return { description: stock, introduction: `${stock} ${detail}` };
+}

@@ -14,7 +14,7 @@ test.afterAll(async () => { await prisma.$disconnect(); });
 async function noOverflow(page: import("@playwright/test").Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
-test("landings, histórico sem preço, noindex vazio e descoberta no sitemap", async ({ page, request }) => {
+test("landings, histórico sem preço, 404 inexistente e descoberta no sitemap", async ({ page, request }) => {
   await page.goto("/modelo/honda-civic");
   await expect(page.getByRole("heading", { name: "Honda Civic seminovo", exact: true })).toBeVisible();
   await expect(page.locator("article.listing-card")).toHaveCount(1);
@@ -27,8 +27,10 @@ test("landings, histórico sem preço, noindex vazio e descoberta no sitemap", a
   await page.goto("/marca/honda");
   await expect(page.locator("article.listing-card")).toHaveCount(2);
   await noOverflow(page);
-  await page.goto("/modelo/sem-carro-nem-historico");
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  await expect(page.getByRole("link", { name: "Pedir Honda", exact: true })).toHaveAttribute("href", "/pedido?q=Honda");
+  const missing = await page.goto("/modelo/sem-carro-nem-historico");
+  expect(missing?.status()).toBe(404);
+  await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(1);
   await expect(page.locator("article.listing-card")).toHaveCount(0);
   const xml = await (await request.get("/sitemap.xml")).text();
   expect(xml).toContain("/modelo/honda-civic");

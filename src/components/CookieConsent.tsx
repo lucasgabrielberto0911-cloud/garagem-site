@@ -25,15 +25,10 @@ export function CookieConsent() {
     <div
       role="dialog"
       aria-label="Consentimento de cookies"
-      className="site-consent pointer-events-auto flex flex-col gap-2 border border-white/15 bg-ink/95 px-2.5 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur sm:px-3 sm:py-3"
+      className="site-consent pointer-events-auto flex flex-col gap-1 border border-white/15 bg-ink/95 px-2.5 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur sm:px-3 sm:py-3"
     >
       <p className="text-xs leading-snug text-cream/90">
-        <span className="lg:hidden">
-          Google Analytics só com seu aceite. Medimos visitas vindas de anúncios.
-        </span>
-        <span className="hidden lg:inline">
-          Google Analytics só com seu aceite. Medimos visitas vindas de anúncios.
-        </span>{" "}
+        Analytics só com aceite.{" "}
         <Link
           href="/privacidade"
           prefetch={false}
@@ -49,7 +44,7 @@ export function CookieConsent() {
             writeStoredConsent("accepted");
             setChoice("accepted");
           }}
-          className="inline-flex min-h-11 items-center justify-center bg-brand px-2 text-center font-display text-[13px] font-semibold uppercase leading-tight tracking-wide text-cream"
+          className="inline-flex min-h-11 items-center justify-center bg-brand px-2 text-center font-display text-xs font-semibold uppercase leading-tight tracking-wide text-cream"
         >
           Aceitar
         </button>
@@ -59,7 +54,7 @@ export function CookieConsent() {
             writeStoredConsent("essential");
             setChoice("essential");
           }}
-          className="inline-flex min-h-11 items-center justify-center border border-white/20 px-2 text-center font-display text-[13px] font-semibold uppercase leading-tight tracking-wide text-cream"
+          className="inline-flex min-h-11 items-center justify-center border border-white/20 px-2 text-center font-display text-xs font-semibold uppercase leading-tight tracking-wide text-cream"
         >
           Só o essencial
         </button>

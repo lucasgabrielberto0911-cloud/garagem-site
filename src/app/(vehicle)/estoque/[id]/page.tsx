@@ -6,7 +6,7 @@ import { RememberRecentVehicle } from "@/components/site/RememberRecentVehicle";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import { FichaSectionNav } from "@/components/site/FichaSectionNav";
-import { SimilarVehicles } from "@/components/site/SimilarVehicles";
+import { DeferredSimilarVehicles } from "@/components/site/DeferredSimilarVehicles";
 import { VehicleGallery } from "@/components/site/VehicleGallery";
 import { VehicleMobileBar } from "@/components/site/VehicleMobileBar";
 import {
@@ -55,7 +55,6 @@ import { getVehicleVerifiedItems } from "@/lib/vehicle-verified-data";
 import { publicVerifiedItems, verifiedHeading } from "@/lib/vehicle-verified";
 import {
   getPublicVehicleStaticParams,
-  getRelatedVehicles,
   getVehicleByParam,
 } from "@/lib/vehicles";
 
@@ -219,19 +218,11 @@ export default async function VehicleDetailPage({
       intent: "similar",
     }),
   };
-  const sameBandHref = priceBandHref(vehicle.price);
+  const sameBandHref = sold ? "/estoque" : priceBandHref(vehicle.price);
   const sameBandTitle = isMoto
     ? "Motos na mesma faixa"
     : "Carros na mesma faixa";
-  const [related, conditions, verifiedItems] = await Promise.all([
-    getRelatedVehicles(
-      vehicle.id,
-      vehicle.brand,
-      3,
-      vehicle.category,
-      vehicle.price,
-      display.transmission,
-    ),
+  const [conditions, verifiedItems] = await Promise.all([
     getVehicleConditions(),
     // Falha ou tabela ausente = sem seção; carro vendido não mostra.
     sold ? Promise.resolve([]) : getVehicleVerifiedItems(vehicle.id),
@@ -313,17 +304,13 @@ export default async function VehicleDetailPage({
             </p>
             <p className="mt-1 text-sm text-muted">
               A página permanece no ar para quem chegou por um link antigo. Veja{" "}
-              {related.length > 0 ? (
-                <>
-                  <Link
-                    href="#mesma-faixa"
-                    className="font-medium text-brand-light underline-offset-4 hover:underline"
-                  >
-                    {sameBandTitle.toLowerCase()}
-                  </Link>{" "}
-                  ou o{" "}
-                </>
-              ) : null}
+              <Link
+                href="#mesma-faixa"
+                className="font-medium text-brand-light underline-offset-4 hover:underline"
+              >
+                opções e peça um parecido
+              </Link>{" "}
+              ou confira o{" "}
               <Link
                 href="/estoque"
                 prefetch={false}
@@ -487,11 +474,11 @@ export default async function VehicleDetailPage({
               {sold ? (
                 <div className="space-y-2">
                   <Link
-                    href={related.length > 0 ? "#mesma-faixa" : "/estoque"}
+                    href="#mesma-faixa"
                     prefetch={false}
                     className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-asphalt transition hover:bg-brand-orange"
                   >
-                    {related.length > 0 ? "Ver na mesma faixa" : "Ver estoque disponível"}
+                    Ver opções e pedir parecido
                   </Link>
                   <WhatsAppButton
                     size="md"
@@ -727,23 +714,31 @@ export default async function VehicleDetailPage({
           </div>
         </nav>
 
-        <SimilarVehicles
-          vehicles={related}
-          title={sameBandTitle}
-          description={
-            sold
-              ? "Este já foi. Estas opções estão no estoque agora — abra a ficha."
-              : "Se este não fechar, estes estão na mesma faixa. Abra a ficha."
+        <Suspense
+          fallback={
+            <div id="mesma-faixa" className="mt-10 min-h-64" aria-busy="true">
+              <p className="text-muted">Buscando veículos parecidos...</p>
+            </div>
           }
-          stockHref={sameBandHref}
-          whatsapp={{
-            message: whatsapp.sameBand,
-            trackingLabel: "ficha-mesma-faixa",
-            content: fichaTrack.content,
-            vehicleId: vehicle.id,
-            slug: canonicalSlug,
-          }}
-        />
+        >
+          <DeferredSimilarVehicles
+            query={[vehicle.id, vehicle.brand, 3, vehicle.category, vehicle.price, display.transmission]}
+            title={sameBandTitle}
+            description={
+              sold
+                ? "Este já foi. Estas opções estão no estoque agora — abra a ficha."
+                : "Se este não fechar, estes estão na mesma faixa. Abra a ficha."
+            }
+            stockHref={sameBandHref}
+            whatsapp={{
+              message: whatsapp.sameBand,
+              trackingLabel: "ficha-mesma-faixa",
+              content: fichaTrack.content,
+              vehicleId: vehicle.id,
+              slug: canonicalSlug,
+            }}
+          />
+        </Suspense>
       </Container>
 
       <VehicleMobileBar
@@ -768,8 +763,8 @@ export default async function VehicleDetailPage({
         postalCode={autoHit.postalCode}
         sold={sold}
         category={vehicle.category}
-        soldHref={related.length > 0 ? "#mesma-faixa" : "/estoque"}
-        soldLabel={related.length > 0 ? "Ver na mesma faixa" : "Ver estoque"}
+        soldHref="#mesma-faixa"
+        soldLabel="Ver opções"
       />
     </div>
   );

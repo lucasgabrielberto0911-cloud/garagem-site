@@ -52,7 +52,7 @@ test("envio sem e-mail salva orçamento no banco e exibe no admin", async ({ pag
     const form = page.locator("[data-missing-model-form] form");
     await form.getByLabel("Telefone com DDD").fill("27988887766");
     await form.getByRole("textbox", { name: "Nome", exact: true }).fill(name);
-    await form.getByLabel("Carro que deseja").fill("Honda Civic");
+    await form.getByLabel("Veículo que procura").fill("Honda Civic");
     await form.getByLabel("Valor máximo").fill("95000");
     await form.getByRole("checkbox", { name: /Autorizo/ }).check();
     await form.getByRole("button", { name: "Enviar pedido", exact: true }).click();
