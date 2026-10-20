@@ -50,3 +50,8 @@ O CSS global (`src/app/globals.css` + Tailwind) é bloqueante de renderização 
 - Componente de `components/admin` usado em página pública não ganha estilo: mova o componente ou a classe para fora de `admin`.
 
 Medição (Lighthouse mobile simulado local, mediana de 10 rodadas): CSS bloqueante de 21,7 KB (2 arquivos) para 19,1 KB (1 arquivo) e "render-blocking" estimado de 454 para 154 ms.
+
+## PDFs do painel (contrato e recibo)
+- Cada PDF tem ~495 KB porque as fontes (Sora, Inter) entram inteiras, sem subset: o subset do fontkit perde glifos. Não "otimize" isso.
+- Dados da loja (razão social, CNPJ, endereço da sede) ficam em `PDF_STORE`, em `src/lib/commercial-pdf.ts`. Endereço vazio imprime o placeholder "[ENDEREÇO DA SEDE — PREENCHER]" no contrato.
+- O recibo cabe em 1 página no caso típico: campos do cabeçalho (cliente, veículo etc.) são ajustados com "…". Observações longas quebram linha sem corte e seguem na 2ª página (teste em `src/lib/admin-commercial.test.ts`).

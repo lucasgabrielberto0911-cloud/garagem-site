@@ -34,6 +34,7 @@ export function VehicleQuickActions({
   video,
   finance,
   trade,
+  visit,
   className = "hidden lg:grid",
 }: {
   contentId: string;
@@ -53,6 +54,7 @@ export function VehicleQuickActions({
   video: string;
   finance: string;
   trade: string;
+  visit?: string;
   className?: string;
 }) {
   const actions: Action[] = [
@@ -74,10 +76,22 @@ export function VehicleQuickActions({
       label: "Vídeo",
       ariaLabel: "Pedir vídeo deste veículo no WhatsApp",
     },
+    ...(visit
+      ? [
+          {
+            trackingLabel: "ficha-visit",
+            hrefMessage: visit,
+            label: "Agendar visita",
+            ariaLabel: "Agendar visita: combinar dia e hora pelo WhatsApp",
+          },
+        ]
+      : []),
   ];
 
+  const colsClass = actions.length === 4 ? "grid-cols-2" : "grid-cols-3";
+
   return (
-    <div className={`grid grid-cols-3 gap-2 ${className}`}>
+    <div className={`grid ${colsClass} gap-2 ${className}`}>
       {actions.map((action) => (
         <VehicleLeadHit
           key={action.trackingLabel}

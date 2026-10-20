@@ -1,21 +1,22 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import Link from "next/link";
+import { type FormEvent, useRef, useState } from "react";
 import { SiteLeadHit } from "@/components/site/VehiclePixel";
 import { IconWhatsApp } from "@/components/site/icons";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
+import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
-
-const BUDGETS = [
-  "Até R$ 50 mil",
-  "R$ 50 mil a R$ 80 mil",
-  "R$ 80 mil a R$ 120 mil",
-  "Acima de R$ 120 mil",
-] as const;
+import {
+  WANTED_BUDGET_OPTIONS,
+  wantedBudgetToQuery,
+  wantedVehicleHref,
+} from "@/lib/wanted-vehicle-page";
 
 /**
- * "Avisar quando chegar": formulário curto. O pedido abre o WhatsApp
- * com o modelo já preenchido — não há fila local para acompanhar.
+ * "Avisar quando chegar": formulário curto. O link abre o WhatsApp com o
+ * modelo já preenchido (com origem consentida e fila offline) ou encaminha
+ * para `/pedido` com modelo e faixa preenchidos.
  */
 export function WantedVehicleCta({
   title = "Avisar quando chegar",
@@ -28,6 +29,7 @@ export function WantedVehicleCta({
 }) {
   const [wanted, setWanted] = useState(initialWanted);
   const [budget, setBudget] = useState<string>("");
+  const linkRef = useRef<HTMLAnchorElement>(null);
 
   const model = wanted.trim();
   const detail = budget
@@ -37,11 +39,14 @@ export function WantedVehicleCta({
   const href = whatsappUrl(WHATSAPP_MESSAGES.wanted(detail || undefined), {
     campaign: "estoque",
   });
+  const pedidoHref = wantedVehicleHref({
+    q: model || undefined,
+    ...wantedBudgetToQuery(budget),
+  });
 
-  function openWhatsApp(event?: FormEvent) {
-    event?.preventDefault();
-    trackWhatsAppClick("avise-me");
-    window.open(href, "_blank", "noopener,noreferrer");
+  function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    linkRef.current?.click();
   }
 
   return (
@@ -56,7 +61,7 @@ export function WantedVehicleCta({
         {description}
       </p>
 
-      <form className="mt-5 grid gap-3 text-left sm:grid-cols-[1fr_auto]" onSubmit={openWhatsApp}>
+      <form className="mt-5 grid gap-3 text-left sm:grid-cols-[1fr_auto]" onSubmit={onSubmit}>
         <label className="block sm:col-span-1">
           <span className="sr-only">Modelo que você procura</span>
           <input
@@ -76,7 +81,7 @@ export function WantedVehicleCta({
             className="w-full min-h-[48px] border border-white/10 bg-asphalt px-3 text-base text-cream outline-none transition focus:border-brand"
           >
             <option value="">Faixa (opcional)</option>
-            {BUDGETS.map((option) => (
+            {WANTED_BUDGET_OPTIONS.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
@@ -84,18 +89,40 @@ export function WantedVehicleCta({
           </select>
         </label>
 
-        <SiteLeadHit
-          contentName="Avise-me"
-          searchString={searchString || undefined}
-        >
-          <button
-            type="submit"
-            className="whatsapp-btn inline-flex min-h-[52px] w-full items-center justify-center gap-2 px-6 font-display text-xs font-semibold uppercase tracking-wide text-white touch-manipulation sm:col-span-2 sm:w-auto sm:justify-self-center"
+        <div className="flex flex-col items-center justify-center gap-2 sm:col-span-2 sm:flex-row">
+          <SiteLeadHit
+            contentName="Avise-me"
+            searchString={searchString || undefined}
           >
-            <IconWhatsApp className="h-4 w-4" />
-            Avisar no WhatsApp
-          </button>
-        </SiteLeadHit>
+            <a
+              ref={linkRef}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => {
+                trackWhatsAppClick("avise-me");
+                if (typeof navigator !== "undefined" && !navigator.onLine) {
+                  event.preventDefault();
+                  void queueWhatsAppIfOffline({
+                    url: event.currentTarget.href || href,
+                    label: "avise-me",
+                  });
+                }
+              }}
+              className="whatsapp-btn inline-flex min-h-[52px] w-full items-center justify-center gap-2 px-6 font-display text-xs font-semibold uppercase tracking-wide text-white touch-manipulation sm:w-auto"
+            >
+              <IconWhatsApp className="h-4 w-4" />
+              Avisar no WhatsApp
+            </a>
+          </SiteLeadHit>
+          <Link
+            href={pedidoHref}
+            prefetch={false}
+            className="inline-flex min-h-[52px] w-full items-center justify-center border border-white/20 px-5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation sm:w-auto"
+          >
+            Registrar pedido no site
+          </Link>
+        </div>
       </form>
     </div>
   );

@@ -82,10 +82,10 @@ test("o formulário de venda mantém os campos e o envio de hoje", () => {
 });
 
 test("a confirmação da venda só cita fotos quando houve anexo", () => {
-  assert.equal(sellReceivedLine(0), "Marca, modelo, ano, placa e km.");
+  assert.equal(sellReceivedLine(0), "Contato e dados informados do veículo. Placa e outros detalhes podem ser combinados no atendimento.");
   assert.equal(
     sellReceivedLine(2),
-    "Marca, modelo, ano, placa, km e as fotos que você mandou.",
+    "Contato e dados informados do veículo, com as fotos que você mandou.",
   );
   assert.doesNotMatch(sellReceivedLine(0), /foto/i);
 });

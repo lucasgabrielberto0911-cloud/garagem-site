@@ -24,6 +24,7 @@ function Field({ label, name, value, type = "text", required = true }: { label: 
 export function CommercialPanel({ vehicle, reservation, assessment, simulations, documents, history }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [docKind, setDocKind] = useState("proposta");
   const [message, setMessage] = useState("");
   const [margin, setMargin] = useState("2.000,00");
   const [simulation, setSimulation] = useState<ReturnType<typeof simulateFinancing> | null>(null);
@@ -87,14 +88,14 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
         </form>
         <div className="mt-4 space-y-3">{simulations.map((s) => <form key={s.id} action={submit} className="space-y-2 border-t border-white/10 pt-3"><input type="hidden" name="operation" value="finance-status" /><input type="hidden" name="simulationId" value={s.id} /><p className="text-sm">{s.customerName} · {s.bank} · {s.months} × {brl(s.installment)} · {s.rate}% a.m.</p><label className="block text-sm">Situação<select name="status" className={inputClass} defaultValue={s.status}>{FINANCE_STATUSES.map((value, index) => <option key={value} value={value}>{["Simulação", "Enviada ao banco", "Aprovada", "Recusada"][index]}</option>)}</select></label><button className={btn.outline}>Atualizar acompanhamento</button></form>)}</div>
       </Card>
-      <Card title="Proposta e recibo de sinal em PDF" collapsed>
+      <Card title="Contrato e recibo de sinal em PDF" collapsed>
         <p className="mb-3 text-sm text-muted">Documento de apoio à negociação. Confira dados e condições antes de assinar. O recibo declara sinal já recebido.</p>
         <form action={submit} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="operation" value="document" />
-          <label className="block text-sm">Documento<select name="kind" className={inputClass}><option value="proposta">Proposta</option><option value="recibo">Recibo de sinal</option></select></label><CustomerSelect />
-          <Field label="Valor proposto / sinal recebido (R$)" name="amount" /><Field label="Forma de pagamento" name="payment" />
+          <label className="block text-sm">Documento<select name="kind" value={docKind} onChange={(e) => setDocKind(e.target.value)} className={inputClass}><option value="proposta">Contrato de compra e venda</option><option value="recibo">Recibo de sinal</option></select></label><CustomerSelect />
+          <Field label={docKind === "recibo" ? "Sinal recebido (R$)" : "Preço total do veículo (R$), antes de abater o sinal"} name="amount" /><Field label="Forma de pagamento" name="payment" />
           <label className="block text-sm sm:col-span-2">Condições, validade e observações<textarea name="conditions" required maxLength={3000} className={inputClass} /></label><button className={btn.primary}>Gerar e baixar PDF</button>
         </form>
-        <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}`}>{d.kind === "recibo" ? "Recibo" : "Proposta"} · {d.date} · Baixar PDF</a></li>)}</ul>
+        <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}`}>{d.kind === "recibo" ? "Recibo" : "Contrato"} · {d.date} · Baixar PDF</a></li>)}</ul>
       </Card>
     </fieldset>
   </div>;

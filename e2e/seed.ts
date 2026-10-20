@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import samples from "./public-samples.json";
+import { SEED_TESTIMONIALS } from "../src/lib/testimonials-seed";
 
 // Fixtures ficam exclusivamente no Postgres local/efêmero do CI.
 const database = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/");
@@ -21,6 +22,14 @@ function accessoriesFor(model: string) {
 async function seed() {
 const prisma = new PrismaClient();
 try {
+  // Perfil fictício para conferir o sameAs sem exibir nota/selo na home.
+  const google = { googleRating: 4.9, googleReviewCount: 127, googleProfileUrl: "https://maps.google.com/?cid=1234567890" };
+  await prisma.siteSettings.upsert({ where: { id: "default" }, create: { id: "default", ...google }, update: google });
+  for (const [index, item] of SEED_TESTIMONIALS.entries()) {
+    const id = `ce2etestimonial${index}`;
+    const data = { ...item, published: true };
+    await prisma.testimonial.upsert({ where: { id }, create: { id, ...data }, update: data });
+  }
   for (const sample of samples) {
     const { photos, ...publicFields } = sample;
     const data = { ...publicFields, accessories: accessoriesFor(sample.model), year: sample.yearModel, status: "disponivel", featured: true, historical: false };
@@ -34,6 +43,9 @@ try {
   await prisma.vehicle.upsert({ where: { id: soldId }, create: sold, update: sold });
   await prisma.photo.deleteMany({ where: { vehicleId: soldId } });
   await prisma.photo.createMany({ data: photos.map((photo, order) => ({ ...photo, vehicleId: soldId, order })) });
+  // Modelo com histórico, sem estoque disponível, para o pedido contextual.
+  const soldOnly = { ...sold, id: "ce2esoldfit000000000000001", model: "Fit", version: null, price: 54321 };
+  await prisma.vehicle.upsert({ where: { id: soldOnly.id }, create: soldOnly, update: soldOnly });
   // A conversa HTTP reproduz o caso informado pelo Lucas sem mudar as fixtures do browser.
   if (process.env.E2E_CHAT_CONVERSA === "1") {
     const weekend = {

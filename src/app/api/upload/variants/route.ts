@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { hasTrustedMutationOrigin } from "@/lib/admin-request-origin";
 import { storeCardThumbnail } from "@/lib/photo-thumbnails";
 import { hasSupabaseServiceRole } from "@/lib/supabase";
 
@@ -11,6 +12,7 @@ export const maxDuration = 60;
  * do upload assinado, quando /api/upload estoura o limite da Vercel).
  */
 export async function POST(request: Request) {
+  if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Origem inválida." }, { status: 403 });
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
