@@ -81,3 +81,25 @@ test("valor por extenso usa 'e' antes da última parte", () => {
   assert.equal(moneyInWords(1_234_000), "um milhão, duzentos e trinta e quatro mil reais");
   assert.equal(moneyInWords(5000), "cinco mil reais");
 });
+
+test("contrato com sinal, entrada e financiamento calcula linhas e assina Garagem Motorcycle Ltda", async () => {
+  const data = {
+    customer: "Carlos Silva",
+    cpf: "123.456.789-01",
+    phone: "27999991111",
+    vehicle: "Toyota Corolla XEi",
+    plate: "ABC1D23",
+    amount: 100000,
+    payment: "Entrada + Financiamento Santander",
+    conditions: "Transferência em até 30 dias.",
+    seller: "vendedor@garagem.net",
+    date: "2026-10-20T12:00:00Z",
+    signal: { amount: 10000, receiptId: "42" },
+    downPayment: 20000,
+    financed: 70000,
+  };
+  const bytes = await commercialPdf("contrato", data, "teste-contrato", 43);
+  const pdf = await PDFDocument.load(bytes);
+  assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
+  assert.ok(pdf.getPageCount() >= 2);
+});
