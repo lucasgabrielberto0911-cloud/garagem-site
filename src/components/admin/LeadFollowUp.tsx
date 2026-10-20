@@ -4,7 +4,12 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useUnsavedChangesWarning } from "@/components/admin/useUnsavedChangesWarning";
 import { Field, btn, inputClass } from "@/components/admin/ui";
-import { adminDate, localDateInput } from "@/lib/admin-date";
+import { adminDate, localDateInput, localTimeInput } from "@/lib/admin-date";
+import {
+  TIMELINE_KIND_STYLE,
+  type LeadTimelineItem,
+} from "@/lib/lead-timeline";
+
 export function LeadFollowUp({
   id,
   nextAction,
@@ -20,9 +25,13 @@ export function LeadFollowUp({
   const [date, setDate] = useState(
     nextActionAt ? localDateInput(new Date(nextActionAt)) : "",
   );
+  const [time, setTime] = useState(
+    nextActionAt ? localTimeInput(new Date(nextActionAt)) : "",
+  );
   const [history, setHistory] = useState<
     Array<{ id: string; note: string; createdAt: string }>
   >([]);
+  const [timeline, setTimeline] = useState<LeadTimelineItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -35,7 +44,8 @@ export function LeadFollowUp({
       const response = await fetch(`/api/admin/leads/${id}/activity`);
       if (!response.ok) throw new Error("read");
       const data = await response.json();
-      setHistory(data.activities);
+      setHistory(data.activities ?? []);
+      setTimeline(Array.isArray(data.timeline) ? data.timeline : []);
     } catch {
       setError("Não foi possível carregar o histórico.");
     } finally {
@@ -50,7 +60,7 @@ export function LeadFollowUp({
       }}
     >
       <summary className="min-h-12 cursor-pointer px-4 py-3 text-sm font-semibold">
-        Atendimento e próxima ação{nextAction ? ` · ${nextAction}` : ""}
+        Atendimento e linha do tempo{nextAction ? ` · ${nextAction}` : ""}
       </summary>
       <div className="space-y-4 px-4 pb-4">
         <form
@@ -62,7 +72,7 @@ export function LeadFollowUp({
               const response = await fetch(`/api/admin/leads/${id}/activity`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ note, nextAction: action, date }),
+                body: JSON.stringify({ note, nextAction: action, date, time }),
               });
               const data = await response.json();
               if (!response.ok) throw new Error(data.error);
@@ -103,46 +113,89 @@ export function LeadFollowUp({
                 placeholder="Ex.: combinar visita"
               />
             </Field>
-            <Field label="Dia para retomar">
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={inputClass}
-              />
-            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Dia para retomar">
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Hora para retomar" hint="Opcional">
+                <input
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
             <button type="submit" className={`${btn.outline} w-full sm:w-auto`}>
               {pending ? "Salvando…" : "Registrar atendimento"}
             </button>
           </fieldset>
         </form>
-        {loading ? (
-          <p role="status" className="text-sm text-muted">
-            Carregando histórico…
+        <div className="space-y-2 border-t border-white/10 pt-3">
+          <p className="font-display text-xs font-semibold uppercase tracking-wider text-muted">
+            Linha do tempo do lead
           </p>
-        ) : error ? (
-          <button type="button" className={btn.outline} onClick={load}>
-            {error} Tentar novamente
-          </button>
-        ) : history.length ? (
-          <ol className="space-y-3">
-            {history.map((item) => (
-              <li key={item.id} className="border-l border-white/15 pl-3">
-                <p className="text-xs text-muted">
-                  {adminDate(new Date(item.createdAt), {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                  })}
-                </p>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-cream">
-                  {item.note.replace(/^\[funil:[^\]]+\]\s*/, "")}
-                </p>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="text-sm text-muted">Nenhum contato registrado ainda.</p>
-        )}
+          {loading ? (
+            <p role="status" className="text-sm text-muted">
+              Carregando histórico…
+            </p>
+          ) : error ? (
+            <button type="button" className={btn.outline} onClick={load}>
+              {error} Tentar novamente
+            </button>
+          ) : timeline.length ? (
+            <ol className="space-y-3">
+              {timeline.map((item) => (
+                <li key={item.id} className="border-l border-white/15 pl-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`border px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${TIMELINE_KIND_STYLE[item.kind]}`}
+                    >
+                      {item.badge}
+                    </span>
+                    <time dateTime={item.at} className="text-xs text-muted">
+                      {adminDate(new Date(item.at), {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                    </time>
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-cream">
+                    {item.title}
+                  </p>
+                  {item.detail ? (
+                    <p className="mt-0.5 text-xs text-muted">{item.detail}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          ) : history.length ? (
+            <ol className="space-y-3">
+              {history.map((item) => (
+                <li key={item.id} className="border-l border-white/15 pl-3">
+                  <p className="text-xs text-muted">
+                    {adminDate(new Date(item.createdAt), {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-cream">
+                    {item.note.replace(/^\[funil:[^\]]+\]\s*/, "")}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="text-sm text-muted">
+              Nenhum contato registrado ainda.
+            </p>
+          )}
+        </div>
       </div>
     </details>
   );

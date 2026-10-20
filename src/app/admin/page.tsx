@@ -88,14 +88,41 @@ async function DashboardContent() {
       description: lead.nextAction || "Próximo contato agendado.",
       href: `/admin/leads?lead=${lead.id}`,
     });
+  for (const lead of [...(data.unansweredLeads?.urgent ?? [])].reverse())
+    alertList.unshift({
+      key: `unanswered-${lead.id}`,
+      tone: "brand",
+      icon: "alert",
+      title:
+        lead.urgency === "atrasado"
+          ? `Lead atrasado (+2h sem resposta): ${leadDisplayName(lead)}`
+          : `Responder lead (+30 min): ${leadDisplayName(lead)}`,
+      description: `${lead.urgencyLabel} · ${lead.vehicleInfo}`,
+      href: `/admin/leads?lead=${lead.id}`,
+    });
   const { head: alertHead, rest: alertRest } = splitDashboardAlerts(alertList);
+
+  const unansweredHint =
+    (data.unansweredLeads?.overdueCount ?? 0) > 0 ||
+    (data.unansweredLeads?.alertCount ?? 0) > 0
+      ? [
+          data.unansweredLeads.overdueCount > 0
+            ? `${data.unansweredLeads.overdueCount} atrasado(s) (+2h)`
+            : "",
+          data.unansweredLeads.alertCount > 0
+            ? `${data.unansweredLeads.alertCount} há +30 min`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : `${leads.total} lead(s) no total`;
 
   const leadsCard = (
     <StatCard
       key="leads"
       label="Leads novos"
       value={leads.byStatus.novo}
-      hint={`${leads.total} lead(s) no total`}
+      hint={unansweredHint}
       tone={leads.byStatus.novo > 0 ? "brand" : "default"}
       href="/admin/leads?status=novo"
     />

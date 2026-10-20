@@ -220,6 +220,7 @@ model LeadVenda {
   km                Int?
   notes             String?
   status            String   @default("novo")
+  lostReason        String?
   nextAction        String?
   nextActionAt      DateTime?
   activities        LeadActivity[]
