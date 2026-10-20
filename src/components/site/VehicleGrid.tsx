@@ -25,7 +25,9 @@ export function VehicleGrid({
   return (
     <div className={`listing-card-grid grid grid-cols-2 ${cols}`}>
       {vehicles.map((vehicle, index) => {
-        const high = index === 0 && priorityCount > 0;
+        // As duas primeiras fotos ficam acima da dobra no celular (2 colunas) e
+        // qualquer uma pode ser o LCP; com prioridade baixa a segunda perdia a banda.
+        const high = index < 2 && index < priorityCount;
         return (
           <div key={vehicle.id} className={`listing-card-item min-w-0${lgVisibleCount !== undefined && index >= lgVisibleCount ? " lg:max-xl:hidden" : ""}`}>
             <VehicleCard

@@ -50,9 +50,7 @@ export function VehicleImage({
   const finalSet = publicPhotoSrcSet(srcSet);
   const mobileSet = publicPhotoSrcSet(mobileSrcSet);
 
-  // Só a capa do LCP entra no preload e na prioridade alta. A segunda
-  // foto da primeira dobra ainda baixa cedo, mas com prioridade baixa,
-  // para não dividir a rede lenta com a capa.
+  // Só as capas da primeira dobra entram no preload e na prioridade alta.
   if (priority) {
     const options = { as: "image" as const, fetchPriority: "high" as const,
       imageSizes: finalSet || mobileSet ? sizes : undefined };
