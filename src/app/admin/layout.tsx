@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AdminShell } from "@/components/admin/AdminShell";
 import "./admin.css";
+import { ReservationExpiry } from "@/components/admin/ReservationExpiry";
 
 export const metadata: Metadata = {
   title: "Painel | Garagem",
@@ -13,5 +14,5 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AdminShell>{children}</AdminShell>;
+  return <AdminShell><ReservationExpiry />{children}</AdminShell>;
 }

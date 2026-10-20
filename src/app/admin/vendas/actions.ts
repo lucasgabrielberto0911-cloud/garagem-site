@@ -1,5 +1,6 @@
 "use server";
 
+import { scheduleAfterSale } from "@/lib/after-sale";
 import { lockCustomerIdentity } from "@/lib/admin-customer-lock";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { parseMoneyBR } from "@/lib/admin-money";
@@ -165,6 +166,7 @@ function parseSaleForm(formData: FormData): ParsedSaleForm {
 }
 
 async function revalidateSales(vehicleId?: string) {
+  revalidatePath("/admin/agenda");
   revalidatePath("/admin/vendas");
   revalidatePath("/admin/veiculos");
   revalidatePath("/admin");
@@ -244,6 +246,8 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
             notes,
           },
         });
+        await scheduleAfterSale(tx, registered);
+        await tx.vehicleReservation.updateMany({ where: { vehicleId: registered.vehicleId, status: "ativa" }, data: { status: "convertida" } });
         await recordAdminAudit(
           tx,
           session.adminId,
@@ -264,8 +268,11 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
       }
 
       await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${vehicleId} FOR UPDATE`;
+        const reservation = await tx.vehicleReservation.findFirst({ where: { vehicleId, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } });
+        if (reservation && ((customerId && customerId !== "novo" && customerId !== reservation.customerId) || ((!customerId || customerId === "novo") && (customerName || customerPhone)))) throw new Error("RESERVATION_CUSTOMER");
         const finalCustomerId = await resolveCustomerId(tx, {
-          customerId,
+          customerId: reservation?.customerId ?? customerId,
           customerName,
           customerPhone,
         });
@@ -277,9 +284,11 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
             salePrice,
             paymentMethod,
             saleDate,
-            notes,
+            notes: reservation ? [notes, `Sinal recebido: R$ ${Number(reservation.deposit).toFixed(2)} (incluído no total da venda).`].filter(Boolean).join("\n") : notes,
           },
         });
+        await scheduleAfterSale(tx, registered);
+        await tx.vehicleReservation.updateMany({ where: { vehicleId: registered.vehicleId, status: "ativa" }, data: { status: "convertida" } });
         await recordAdminAudit(
           tx,
           session.adminId,
@@ -295,6 +304,7 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
       });
     }
   } catch (error) {
+    if (error instanceof Error && error.message === "RESERVATION_CUSTOMER") return { ok: false, message: "O cliente da venda deve ser o titular da reserva. Cancele a reserva antes de vender a outra pessoa." };
     if (error instanceof Error && error.message === "DUPLICATE_CUSTOMER")
       return {
         ok: false,
@@ -363,7 +373,8 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
     };
   try {
     await prisma.$transaction(async (tx) => {
-      const finalCustomerId = await resolveCustomerId(tx, {
+      for (const id of [...new Set([existing.vehicleId, vehicleId || existing.vehicleId])].sort()) await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
+      let finalCustomerId = await resolveCustomerId(tx, {
         customerId,
         customerName,
         customerPhone,
@@ -397,6 +408,7 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
             notes,
           },
         });
+        await scheduleAfterSale(tx, { id: saleId, saleDate, customerId: finalCustomerId });
         await recordAdminAudit(tx, session.adminId, saleId, "sale.update", {
           salePrice: { before: existing.salePrice, after: salePrice },
           vehicleId: existing.vehicleId,
@@ -405,6 +417,9 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
       }
 
       const nextVehicleId = vehicleId || existing.vehicleId;
+      const reservation = await tx.vehicleReservation.findFirst({ where: { vehicleId: nextVehicleId, status: "ativa" } });
+      if (reservation && finalCustomerId && finalCustomerId !== reservation.customerId) throw new Error("RESERVATION_CUSTOMER");
+      if (reservation) finalCustomerId = reservation.customerId;
       if (nextVehicleId !== existing.vehicleId) {
         const otherSale = await tx.sale.findUnique({
           where: { vehicleId: nextVehicleId },
@@ -434,12 +449,15 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
           notes,
         },
       });
+      await tx.vehicleReservation.updateMany({ where: { vehicleId: nextVehicleId, status: "ativa" }, data: { status: "convertida" } });
+      await scheduleAfterSale(tx, { id: saleId, saleDate, customerId: finalCustomerId });
       await recordAdminAudit(tx, session.adminId, saleId, "sale.update", {
         salePrice: { before: existing.salePrice, after: salePrice },
         vehicleId: nextVehicleId,
       });
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "RESERVATION_CUSTOMER") return { ok: false, message: "O veículo está reservado para outro cliente. Confira a reserva na aba Operação." };
     if (error instanceof Error && error.message === "DUPLICATE_CUSTOMER")
       return {
         ok: false,
