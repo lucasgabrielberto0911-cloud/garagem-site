@@ -53,7 +53,6 @@ const DIFERENCIAIS = [
 ] as const;
 
 const TOC = [
-  { id: "por-tras", label: "Quem está por trás" },
   { id: "historia", label: "Nossa história" },
   { id: "missao", label: "Missão e valores" },
   { id: "compromisso", label: "Compromisso" },

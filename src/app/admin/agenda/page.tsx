@@ -4,7 +4,7 @@ import { AdminPageHeader, btn, inputClass } from "@/components/admin/ui";
 import { LeadFollowUp } from "@/components/admin/LeadFollowUp";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { adminDate } from "@/lib/admin-date";
+import { adminActionDate } from "@/lib/admin-date";
 import { AGENDA_PERIODS, agendaWhere, parseAgendaPeriod } from "@/lib/admin-agenda";
 import { leadSearchWhere } from "@/lib/admin-lead-search";
 import { LeadWhatsAppMenu } from "@/components/admin/LeadWhatsAppMenu";
@@ -66,14 +66,14 @@ export default async function AgendaPage({ searchParams }: {
       {leads.map((lead) => <article key={lead.id} className="min-w-0 space-y-3 rounded-lg border border-white/10 bg-ink/50 p-4">
         <div className="flex items-start justify-between gap-3">
           <h2 className="min-w-0 break-words font-display text-lg font-semibold">{leadDisplayName(lead)}</h2>
-          <time dateTime={lead.nextActionAt!.toISOString()} className={`shrink-0 text-xs ${period === "atrasados" ? "text-brand-orange" : "text-muted"}`}>{adminDate(lead.nextActionAt!)}</time>
+          <time dateTime={lead.nextActionAt!.toISOString()} className={`shrink-0 text-xs ${period === "atrasados" ? "text-brand-orange" : "text-muted"}`}>{adminActionDate(lead.nextActionAt!)}</time>
         </div>
         <p className="break-words text-sm text-muted">{lead.vehicleInfo}</p>
         <p className="break-words text-sm">{lead.nextAction || "Retomar atendimento"}</p>
         <div className="flex gap-2">
           <Link href={`/admin/leads?lead=${encodeURIComponent(lead.id)}`} className={`${btn.outline} flex-1`}>Abrir lead</Link>
           {leadHasPhone(lead)
-            ? <LeadWhatsAppMenu lead={lead} className={`${btn.outline} flex-1 gap-2`} menuClassName={`${btn.outline} -ml-2 w-11 shrink-0 px-0`} />
+            ? <LeadWhatsAppMenu lead={lead} leadId={lead.id} className={`${btn.outline} flex-1 gap-2`} menuClassName={`${btn.outline} -ml-2 w-11 shrink-0 px-0`} />
             : <span className="flex-1 self-center text-xs text-muted">Sem telefone</span>}
         </div>
         <LeadFollowUp id={lead.id} nextAction={lead.nextAction} nextActionAt={lead.nextActionAt} />

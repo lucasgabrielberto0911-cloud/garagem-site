@@ -6,7 +6,7 @@ import type { LeadVenda } from "@prisma/client";
 import { savePurchaseLead } from "@/app/admin/leads/actions";
 import { ORIGIN_LABELS } from "@/lib/lead-origin";
 import { PURCHASE_STATUSES, PURCHASE_STATUS_LABEL } from "@/lib/lead-funnel";
-import { localDateInput } from "@/lib/admin-date";
+import { localDateInput, localTimeInput } from "@/lib/admin-date";
 import { Field, btn, inputClass } from "@/components/admin/ui";
 import { useUnsavedChangesWarning } from "@/components/admin/useUnsavedChangesWarning";
 import { SearchSelect } from "@/components/admin/SearchSelect";
@@ -81,6 +81,7 @@ export function PurchaseLeadForm({ selectedVehicle, lead }: { selectedVehicle?: 
       </select></Field>
       <Field label="Próxima ação"><input disabled={pending} name="nextAction" maxLength={300} defaultValue={lead?.nextAction || ""} placeholder="Ex.: confirmar visita às 10h" className={inputClass} /></Field>
       <Field label="Dia para retomar"><input disabled={pending} name="date" type="date" defaultValue={lead?.nextActionAt ? localDateInput(new Date(lead.nextActionAt)) : ""} className={inputClass} /></Field>
+      <Field label="Hora para retomar" hint="Opcional"><input disabled={pending} name="time" type="time" defaultValue={lead?.nextActionAt ? localTimeInput(new Date(lead.nextActionAt)) : ""} className={inputClass} /></Field>
       <button disabled={pending} className={`${btn.primary} min-h-12 self-end`}>{pending ? "Salvando…" : lead ? "Salvar conversa" : "Registrar conversa"}</button>
     </form>
   </details>;

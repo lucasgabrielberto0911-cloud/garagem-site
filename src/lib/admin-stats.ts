@@ -24,6 +24,7 @@ import {
   computeMonthlySalesGoal,
   computeSalesLeaderboard,
 } from "@/lib/sales-goals";
+import { summarizeUnansweredLeads } from "@/lib/lead-response-alert";
 
 export { daysInStock, STALE_DAYS } from "@/lib/stock-quality";
 
@@ -101,6 +102,7 @@ async function loadDashboardData() {
     unansweredLeads,
     reservedVehicles,
     monthSaleRecords,
+    newLeadsForUrgency,
     staleVehicles,
     withoutPhotos,
     publishedTestimonials,
@@ -338,6 +340,23 @@ async function loadDashboardData() {
       [],
     ),
     safe(
+      "newLeadsForUrgency",
+      () =>
+        prisma.leadVenda.findMany({
+          where: { status: "novo" },
+          orderBy: { createdAt: "asc" },
+          take: 30,
+          select: {
+            id: true,
+            name: true,
+            vehicleInfo: true,
+            status: true,
+            createdAt: true,
+          },
+        }),
+      [],
+    ),
+    safe(
       "staleVehicles",
       () =>
         prisma.vehicle.findMany({
@@ -410,6 +429,7 @@ async function loadDashboardData() {
     ...siteDefaults,
     ...DEFAULT_ABOUT,
   };
+  const unansweredSummary = summarizeUnansweredLeads(newLeadsForUrgency);
 
   return {
     failures,
@@ -428,6 +448,17 @@ async function loadDashboardData() {
       salesRevenue: monthSales._sum.salePrice ?? 0,
     }),
     leaderboard: computeSalesLeaderboard(monthSaleRecords),
+    unansweredLeads: {
+      alertCount: unansweredSummary.alertCount,
+      overdueCount: unansweredSummary.overdueCount,
+      urgent: unansweredSummary.urgent.slice(0, 5).map((item) => ({
+        id: item.id,
+        name: item.name,
+        vehicleInfo: item.vehicleInfo,
+        urgency: item.urgency,
+        urgencyLabel: item.urgencyLabel,
+      })),
+    },
     vehicles: {
       total: vehicleGroups.reduce((sum, group) => sum + group._count._all, 0),
       available,

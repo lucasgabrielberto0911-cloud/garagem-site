@@ -18,7 +18,7 @@ export function StockCatalogLinks({
 
   return (
     <nav aria-label="Todos os anúncios" className="stock-catalog-index">
-      <h2>Todos os anúncios</h2>
+      <h2 className="font-display">Todos os anúncios</h2>
       <p>
         A grade carrega aos poucos. Aqui está cada seminovo disponível, para
         abrir a ficha direto — preço, ano e km.

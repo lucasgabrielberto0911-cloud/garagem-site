@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { recordLeadWhatsAppClick } from "@/app/admin/leads/actions";
 import { ActionSheet, ActionSheetLink } from "@/components/admin/ActionSheet";
 import { IconChevronDown } from "@/components/admin/icons";
 import { IconWhatsApp } from "@/components/site/icons";
@@ -18,16 +20,31 @@ type MenuLead = {
 /** WhatsApp direto (mensagem padrão da origem) mais um menu de modelos prontos. */
 export function LeadWhatsAppMenu({
   lead,
+  leadId,
   className,
   menuClassName,
 }: {
   lead: MenuLead;
+  /** Quando informado, registra o clique no WhatsApp do lead. */
+  leadId?: string;
   className: string;
   menuClassName: string;
 }) {
   const [open, setOpen] = useState(false);
   const templates = leadWhatsAppTemplates(lead);
-  const close = () => setOpen(false);
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const track = () => {
+    if (!leadId) return;
+    startTransition(() => {
+      void recordLeadWhatsAppClick(leadId).then((res) => {
+        if (res.ok) router.refresh();
+      });
+    });
+  };
+  const close = () => {
+    setOpen(false);
+  };
 
   return (
     <>
@@ -35,6 +52,7 @@ export function LeadWhatsAppMenu({
         href={buildLeadWhatsAppUrl(lead)}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={track}
         className={className}
       >
         <IconWhatsApp className="h-4 w-4" />
@@ -61,7 +79,10 @@ export function LeadWhatsAppMenu({
           hint="A abordagem da origem do lead"
           href={buildLeadWhatsAppUrl(lead)}
           external
-          onNavigate={close}
+          onNavigate={() => {
+            track();
+            close();
+          }}
         />
         {templates.map((template) => (
           <ActionSheetLink
@@ -71,7 +92,10 @@ export function LeadWhatsAppMenu({
             hint={template.hint}
             href={template.href}
             external
-            onNavigate={close}
+            onNavigate={() => {
+            track();
+            close();
+          }}
           />
         ))}
       </ActionSheet>
