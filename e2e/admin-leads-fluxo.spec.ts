@@ -64,11 +64,18 @@ test("login: formulário, senha inválida, sessão protegida e logout", async ({
 });
 
 test("login: rejeita corpo inválido, origem externa, cookie falso e excesso de tentativas", async ({ page, conta }) => {
-  for (const body of ["null", "{", "[]", '{"email":{},"password":[]}']) {
+  for (const body of ["null", "{", "[]", '{"email":{},"password":[]}',
+    JSON.stringify({ email: conta.email }),
+    JSON.stringify({ email: "a".repeat(255), password }),
+    JSON.stringify({ email: conta.email, password: "a".repeat(257) }),
+  ]) {
     const response = await page.request.post("/api/auth/login", { data: body, headers: { "Content-Type": "application/json" } });
     expect(response.status(), body).toBe(400);
     expect(response.headers()["set-cookie"]).toBeUndefined();
   }
+  expect((await page.request.post("/api/auth/login", {
+    data: "formulário inválido", headers: { "Content-Type": "multipart/form-data" },
+  })).status()).toBe(400);
   expect((await page.request.post("/api/auth/login", { data: { email: conta.email, password }, headers: { Origin: "https://externo.test" } })).status()).toBe(403);
   expect((await page.request.get("/api/admin/leads/veiculos", { headers: { Cookie: "session=falso" } })).status()).toBe(401);
   for (let i = 0; i < 8; i++) expect((await page.request.post("/api/auth/login", { data: { email: conta.email, password: "incorreta" } })).status()).toBe(401);
@@ -109,14 +116,16 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   const vehicle = await prisma.vehicle.findFirstOrThrow({ where: { model: conta.prefixo } });
   expect(vehicle.price).toBe(87654);
   expect(vehicle.km).toBe(42000);
-  await page.goto(`/admin/veiculos/${vehicle.id}`);
+  await expect(page).toHaveURL(`/admin/veiculos/${vehicle.id}`);
   await page.locator('[name="priceDisplay"]').fill("86543");
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).price).toBe(86543);
+  await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
   const maisAcoes = page.getByRole("button", { name: "Mais ações do anúncio", exact: true });
   if (await maisAcoes.isVisible()) await maisAcoes.click();
   await page.getByRole("button", { name: /^Marcar vendido/ }).click();
-  await page.getByRole("button", { name: "Marcar como vendido", exact: true }).click();
+  await page.getByRole("button", { name: "Só marcar vendido", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/veiculos\?tab=vendidos$/);
   await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).status).toBe("vendido");
   await page.goto(vehiclePath(vehicle));
   await expect(page.locator("main")).toContainText(/vendido/i);
