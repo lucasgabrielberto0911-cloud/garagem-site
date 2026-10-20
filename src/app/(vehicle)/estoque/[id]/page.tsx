@@ -24,6 +24,7 @@ import { StockBackLink } from "@/components/site/StockBackLink";
 import { VehicleLeadHit, VehicleViewContent } from "@/components/site/VehiclePixel";
 import { Container, WhatsAppButton } from "@/components/site/ui";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
+import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
@@ -56,7 +57,7 @@ import {
 import { isRetiredStockSlug } from "@/lib/retired-listings";
 import { catalogPixelAutoFields } from "@/lib/catalog-feed";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
-import { getVehicleConditions } from "@/lib/site-content";
+import { getVehicleConditions, getGoogleReviews } from "@/lib/site-content";
 import { getVehicleVerifiedItems } from "@/lib/vehicle-verified-data";
 import { publicVerifiedItems, verifiedHeading } from "@/lib/vehicle-verified";
 import {
@@ -120,7 +121,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: path },
-    robots: { index: true, follow: true },
+    robots: sold ? { index: false, follow: true } : undefined,
     openGraph: {
       type: "website",
       title,
@@ -240,7 +241,7 @@ export default async function VehicleDetailPage({
   const sameBandTitle = isMoto
     ? "Motos na mesma faixa"
     : "Carros na mesma faixa";
-  const [related, conditions, verifiedItems] = await Promise.all([
+  const [related, conditions, google, verifiedItems] = await Promise.all([
     getRelatedVehicles(
       vehicle.id,
       vehicle.brand,
@@ -250,6 +251,7 @@ export default async function VehicleDetailPage({
       display.transmission,
     ),
     getVehicleConditions(),
+    getGoogleReviews(),
     // Falha ou tabela ausente = sem seção; carro vendido não mostra.
     sold ? Promise.resolve([]) : getVehicleVerifiedItems(vehicle.id),
   ]);
@@ -601,6 +603,12 @@ export default async function VehicleDetailPage({
                   />
                 </p>
               ) : null}
+              {!sold ? (
+                <GoogleReviewsBadge
+                  reviews={google}
+                  className="mt-0 border-white/10"
+                />
+              ) : null}
 
               {!sold ? (
                 <>
@@ -669,6 +677,7 @@ export default async function VehicleDetailPage({
               updatedLabel={updatedLabel}
             />
           }
+          google={google}
           prompt={`Tenho dúvida sobre o ${title}`}
           verified={verified}
           warranty={vehicle.warranty}

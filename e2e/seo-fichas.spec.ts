@@ -23,15 +23,19 @@ test("fichas têm metadados únicos, foto principal, Vehicle/Offer e navegação
     await page.goto(`${path}?utm_source=teste-seo`);
     const title = await page.title();
     const description = (await page.locator('meta[name="description"]').getAttribute("content"))!;
+    expect(description).toContain(buildVehicleFullLabel(car));
+    expect(title.length).toBeLessThanOrEqual(60);
+    expect(title).toContain(car.brand);
+    expect(title).toContain(car.model);
+    expect(title).toContain(String(car.yearModel));
     for (const text of [title, description]) {
-      expect(text).toContain(buildVehicleFullLabel(car));
       expect(text.replace(/\s/g, " ")).toContain(formatCurrencyBRL(car.price).replace(/\s/g, " "));
       expect(text).toContain("seminovo ES");
     }
     titles.add(title);
     descriptions.add(description);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", origin + path);
-    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
+    await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
     for (const selector of ['meta[property="og:image"]', 'meta[name="twitter:image"]']) {
       await expect(page.locator(selector)).toHaveAttribute("content", origin + publicPhotoSrc(car.photos[0].url));
     }
@@ -62,20 +66,17 @@ test("fichas têm metadados únicos, foto principal, Vehicle/Offer e navegação
     await expect(navigation.getByRole("link", { name: "Seminovos em São Mateus", exact: true })).toHaveAttribute("href", "/seminovos/sao-mateus");
     const photo = page.locator('[data-ficha-page] img').first();
     await expect(photo).toHaveAttribute("alt", `${buildVehicleFullLabel(car)} · ${car.color} - foto 1 de ${car.photos.length}`);
-    await expect(page.locator("[data-ficha-page]")).not.toContainText(/avaliações no Google|Localização do veículo/);
+    await expect(page.locator("[data-ficha-page]")).not.toContainText(/Localização do veículo/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   expect(titles.size).toBe(samples.length);
   expect(descriptions.size).toBe(samples.length);
 });
 
-test("vendido segue indexável no sitemap, preserva canonical e oferece similares sem preço antigo", async ({ page, request }) => {
+test("vendido usa noindex, follow, fica fora do sitemap, preserva canonical e oferece similares sem preço antigo", async ({ page, request }) => {
   const path = vehiclePath(sold);
-  const response = await request.get(path, { headers: { "User-Agent": "Googlebot" } });
-  expect(response.status()).toBe(200);
-  expect(response.headers()["x-robots-tag"] ?? "").not.toContain("noindex");
   await page.goto(path);
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, follow");
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", origin + path);
   expect(await page.title()).toContain("(vendido)");
   for (const selector of ['meta[name="description"]', 'meta[property="og:title"]', 'meta[property="og:description"]', 'meta[name="twitter:title"]', 'meta[name="twitter:description"]']) {
@@ -92,7 +93,7 @@ test("vendido segue indexável no sitemap, preserva canonical e oferece similare
   expect(await similar.count()).toBeGreaterThan(0);
   await expect(page.locator('[data-similar-vehicles]')).not.toContainText("Vendido");
   const sitemap = await (await request.get("/sitemap.xml")).text();
-  expect(sitemap).toContain(`<loc>${origin + path}</loc>`);
+  expect(sitemap).not.toContain(`<loc>${origin + path}</loc>`);
   const stock = await (await request.get("/api/estoque")).json();
   expect(stock.vehicles.map((car: { id: string }) => car.id)).not.toContain(sold.id);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
