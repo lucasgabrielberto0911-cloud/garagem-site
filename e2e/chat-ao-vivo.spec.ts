@@ -189,10 +189,9 @@ test.describe("assistente: critérios C da especificação", () => {
     await expect(toolbar).toBeHidden();
     await page.evaluate(() => delete document.body.dataset.chatKeyboard);
     const href = (await answer.locator("[data-chat-car-block] a").first().getAttribute("href"))!;
-    const navigation = page.waitForResponse(r => new URL(r.url()).pathname === href && r.request().isNavigationRequest());
     await answer.locator("[data-chat-car-block] a").first().click();
-    expect((await navigation).status()).toBe(200);
     await expect(page).toHaveURL(new RegExp(href + "$"));
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("interesse mantém eventos Meta e card abre a ficha", async ({ page, context }) => {

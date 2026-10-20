@@ -30,3 +30,19 @@ test("status, filtro e agenda convivem com os cadastros antigos", () => {
   assert.deepEqual(agendaWhere("hoje", now).status, { notIn: ["fechado", "perdido"] });
   assert.doesNotMatch(decodeURIComponent(buildLeadWhatsAppUrl({ name: "Ana", phone: "27999999999", source: "whatsapp:google", vehicleInfo: "Civic" })), /avaliação/);
 });
+
+test("funil separa origens e veículos e inclui os limites da coorte sem duplicar etapas", () => {
+  const rows = [
+    { ...lead, status: "fechado", source: "whatsapp:google", activities: [{ note: funnelActivity("visitou") }, { note: funnelActivity("visitou") }] },
+    { ...lead, status: "conversa", source: "whatsapp:instagram", interestVehicleId: null, vehicleInfo: "", createdAt: now, activities: [] },
+    { ...lead, createdAt: new Date(now.getTime() + 1) },
+    { ...lead, createdAt: new Date(leadWeekStart(now).getTime() - 1) },
+  ];
+  const result = weeklyLeadSummary(rows, now);
+  assert.deepEqual(result.sources, [
+    { key: "whatsapp:google", label: "Google", conversas: 1, marcadas: 0, visitas: 1, vendas: 1 },
+    { key: "whatsapp:instagram", label: "Instagram", conversas: 1, marcadas: 0, visitas: 0, vendas: 0 },
+  ]);
+  assert.equal(result.cars.length, 2);
+  assert.equal(result.cars[1].label, "Sem veículo definido");
+});

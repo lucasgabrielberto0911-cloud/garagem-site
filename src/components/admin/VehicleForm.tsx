@@ -314,7 +314,8 @@ export function VehicleForm({
       void fetch(`/api/admin/drafts?key=vehicle:${vehicle?.id ?? "new"}`, {
         method: "DELETE",
       });
-      setDirty(false);
+      // No cadastro, a guarda sai ao desmontar: limpá-la antes pode cancelar o redirecionamento pelo histórico.
+      if (!state.id) setDirty(false);
       toast.success("Anúncio salvo com sucesso.");
     }
     if (state.success && state.id) router.push(`/admin/veiculos/${state.id}`);
