@@ -383,6 +383,28 @@ test("acessórios duplicados colapsam (hífen / caixa)", () => {
   );
 });
 
+test("acessórios com palavras truncadas e parênteses abertos são sanitizados", () => {
+  assert.deepEqual(
+    collapseDuplicateAccessories([
+      "Painel digital blackout (velocímetro digital, hodômetro e marcador de combustíve",
+      "Tampa do tanque de combustível estilo aviação (articulada",
+      "Painel com conta-giros (tacômetro",
+      "Assento largo (piloto + garupa",
+    ]),
+    [
+      "Painel digital blackout (velocímetro digital, hodômetro e marcador de combustível)",
+      "Tampa do tanque de combustível estilo aviação (articulada)",
+      "Painel com conta-giros (tacômetro)",
+      "Assento largo (piloto + garupa)",
+    ],
+  );
+});
+
+test("acessórios públicos válidos não perdem palavras por limite de entrada", () => {
+  const text = "Sistema multimídia original com câmera de ré, Bluetooth e comandos no volante (compatível com Android Auto e Apple CarPlay)";
+  assert.deepEqual(collapseDuplicateAccessories([text]), [text]);
+});
+
 test("Destaque fica limitado aos primeiros N featured", () => {
   const ids = featuredBadgeIds(
     [

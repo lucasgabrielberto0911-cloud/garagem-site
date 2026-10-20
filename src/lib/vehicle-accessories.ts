@@ -159,6 +159,35 @@ export function filterAccessoriesForCategory(
   });
 }
 
+/**
+ * Sanitiza e normaliza um item de acessório / opcional:
+ * Trunca em palavra inteira sem cortar no meio da palavra,
+ * corrige truncamentos conhecidos e fecha parênteses abertos.
+ */
+export function sanitizeAccessory(raw: string, maxLen = Infinity): string {
+  if (typeof raw !== "string") return "";
+  let text = raw.trim().replace(/\s+/g, " ");
+  if (!text) return "";
+
+  // Corrige truncamento conhecido de palavra
+  text = text.replace(/\bcombustíve\b/gi, "combustível");
+
+  maxLen = Math.max(0, maxLen);
+  if (text.length > maxLen) {
+    const lastSpace = text.lastIndexOf(" ", maxLen);
+    text = lastSpace < 0 ? "" : text.slice(0, lastSpace);
+  }
+
+  for (;;) {
+    // Remove pontuações finais pendentes deixadas por corte
+    text = text.replace(/[,;:\-\s]+$/, "");
+    // Fecha parênteses abertos desbalanceados
+    const missing = Math.max(0, (text.match(/\(/g) || []).length - (text.match(/\)/g) || []).length);
+    if (text.length + missing <= maxLen) return text + ")".repeat(missing);
+    text = text.replace(/\s*\S+$/, "");
+  }
+}
+
 /** Limpa, corta e remove duplicatas (case-insensitive), preservando a ordem. */
 export function normalizeAccessories(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
@@ -168,7 +197,7 @@ export function normalizeAccessories(raw: unknown): string[] {
 
   for (const item of raw) {
     if (typeof item !== "string") continue;
-    const value = item.trim().replace(/\s+/g, " ").slice(0, 80);
+    const value = sanitizeAccessory(item, 100);
     if (!value) continue;
     const key = value.toLocaleLowerCase("pt-BR");
     if (seen.has(key)) continue;

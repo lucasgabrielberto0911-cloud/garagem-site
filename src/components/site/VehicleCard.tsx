@@ -69,7 +69,7 @@ export function VehicleCard({
             vehicle.updatedAt instanceof Date
               ? vehicle.updatedAt.toISOString()
               : vehicle.updatedAt ?? null,
-          photos: vehicle.photos,
+          photos: vehicle.photos.slice(0, 1).map(({ url, thumbnailUrl }) => ({ url, thumbnailUrl })),
         }}
       />
       <StockVehicleLink

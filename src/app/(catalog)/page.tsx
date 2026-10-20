@@ -72,9 +72,9 @@ const REASONS = [
 ] as const;
 
 export default async function HomePage() {
-  // O LCP no celular é a foto do carro, não o wordmark. Prioridade baixa
-  // para o logo não dividir a rede lenta com a capa.
-  preload(HERO_WORDMARK, { as: "image", fetchPriority: "low", imageSrcSet: WORDMARK_SRC_SET, imageSizes: WORDMARK_SIZES });
+  // O logo do hero fica oculto no celular (.hero-brand) e o LCP lá é a foto do
+  // carro: só pré-carrega a partir de 640 px, em prioridade baixa.
+  preload(HERO_WORDMARK, { as: "image", fetchPriority: "low", imageSrcSet: WORDMARK_SRC_SET, imageSizes: WORDMARK_SIZES, media: "(min-width: 640px)" });
 
   const [featured, brands, testimonials, publicSite, siteContent, faqItems] =
     await Promise.all([
@@ -196,7 +196,7 @@ export default async function HomePage() {
         </div>
 
         <div className="hero-search mt-3 max-sm:order-3 sm:mt-4">
-          <HeroSearch brands={brands} />
+          <HeroSearch brands={brands.slice(0, 5)} />
         </div>
 
         <div className="mt-2 max-sm:order-2 sm:mt-4">

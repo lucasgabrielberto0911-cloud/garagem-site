@@ -63,7 +63,7 @@ export function SiteWordmark({
         alt={site.name}
         width={look.width}
         height={look.height}
-        loading={size === "footer" && !priority ? "lazy" : "eager"}
+        loading={(size === "footer" || size === "hero") && !priority ? "lazy" : "eager"}
         decoding={priority ? "sync" : "async"}
         fetchPriority={priority ? "high" : "low"}
         className={look.img}
