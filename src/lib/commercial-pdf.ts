@@ -67,7 +67,7 @@ const RECEIPT_TERMS = [
 export async function commercialPdf(kind: string, input: DocumentSnapshot, id: string) {
   const isReceipt = kind === "recibo";
   let data = input;
-  // Recibo é compacto para caber em uma página.
+  // Recibo é compacto: 1 página, ou 2 se a observação for longa.
   const SECTION_GAP = isReceipt ? 10 : 30; // espaço antes de toda seção
   const LEAD = isReceipt ? 12.5 : 15; // entrelinha dos textos
   const docTitle = isReceipt ? "Recibo de sinal" : "Contrato de compra e venda";
@@ -320,7 +320,7 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     sign(MARGIN + sigW + 40, "Testemunha 2", "", "Nome e CPF:");
   }
 
-  // Recibo cabe em uma página: textos que passam do limite de linhas são cortados com "…".
+  // Recibo compacto: campos do cabeçalho são cortados com "…". A observação nunca é cortada (quebra e segue na 2ª página).
   function fit(value: string, font: PDFFont, size: number, width: number, maxLines: number) {
     const text = clean(value).replace(/\s+/g, " ").trim();
     if (wrap(text, font, size, width).length <= maxLines) return text;
@@ -342,7 +342,6 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
       color: fit(input.color ?? "", semi, 10.5, 60, 1),
       plate: fit(input.plate, semi, 10.5, 66, 1),
       payment: fit(input.payment, regular, 10.5, CONTENT_W - 40, 1),
-      conditions: fit(input.conditions, regular, 9.5, CONTENT_W - 120, 1),
     };
   }
 

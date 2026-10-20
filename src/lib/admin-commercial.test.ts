@@ -3,6 +3,10 @@ import { test } from "node:test";
 import { afterSaleMessage, simulateFinancing, suggestPrice } from "./admin-commercial";
 import { commercialPdf } from "./commercial-pdf";
 import { PDFDocument } from "pdf-lib";
+import { execFileSync } from "node:child_process";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { moneyInWords } from "./money-words";
 
 test("Price calcula taxa zero, juros e rejeita valores inválidos", () => {
@@ -41,20 +45,34 @@ test("recibo de sinal típico cabe em uma página e assina como a empresa", asyn
   const contrato = await PDFDocument.load(await commercialPdf("proposta", data, "teste-local"));
   assert.equal(contrato.getTitle(), "Garagem — Contrato de compra e venda");
 });
-test("recibo continua em uma página com os dados no tamanho máximo", async () => {
+test("recibo com dados no tamanho máximo e observação curta continua em uma página", async () => {
   const long = "Palavra".repeat(30);
   const base = { cpf: "123.456.789-09", phone: "27999990000", plate: "ABC1D23", amount: 5000, total: 60000, payment: "WWWW ".repeat(40), seller: "x", date: "2026-10-19T12:00:00Z", year: 2019, yearModel: 2020, km: 48200 };
   const wide = (n: number) => "W".repeat(n);
   for (const extra of [
-    { customer: "Ana", vehicle: "Citroën C3", color: "Prata", conditions: "Observação longa. ".repeat(170) },
-    { customer: long, vehicle: long, color: long, conditions: "x".repeat(3000) },
-    { customer: "Nome Sobrenome ".repeat(11), vehicle: "Marca Modelo Versão ".repeat(10), color: "Azul Marinho Metálico", conditions: "Reserva. ".repeat(330) },
-    { customer: wide(200), vehicle: wide(200), color: wide(50), conditions: wide(3000), plate: wide(30), cpf: wide(40), phone: wide(40) },
-    { customer: "MMMM MMMM ".repeat(20), vehicle: "MMMM MMMM ".repeat(20), color: "MMMM MMMM", conditions: "WWWW ".repeat(600) },
+    { customer: "Ana", vehicle: "Citroën C3", color: "Prata", conditions: "Reserva por 7 dias." },
+    { customer: long, vehicle: long, color: long, conditions: "Reserva por 7 dias." },
+    { customer: "Nome Sobrenome ".repeat(11), vehicle: "Marca Modelo Versão ".repeat(10), color: "Azul Marinho Metálico", conditions: "Reserva por 7 dias." },
+    { customer: wide(200), vehicle: wide(200), color: wide(50), conditions: "Reserva por 7 dias.", plate: wide(30), cpf: wide(40), phone: wide(40) },
+    { customer: "MMMM MMMM ".repeat(20), vehicle: "MMMM MMMM ".repeat(20), color: "MMMM MMMM", conditions: "Reserva por 7 dias." },
   ]) {
     const pdf = await PDFDocument.load(await commercialPdf("recibo", { ...base, ...extra }, "teste-local"));
     assert.equal(pdf.getPageCount(), 1, extra.customer.slice(0, 12));
   }
+});
+test("recibo com observação longa continua na 2ª página sem cortar o texto", async () => {
+  const words = Array.from({ length: 160 }, (_, i) => `palavra${i + 1}`);
+  const conditions = `${words.join(" ")} FIM`;
+  const data = { customer: "João Gonçalves", cpf: "123.456.789-09", phone: "27999990000", vehicle: "Citroën C3", plate: "ABC1D23", amount: 5000, total: 60000, payment: "Pix", conditions, seller: "x", date: "2026-10-19T12:00:00Z", year: 2019, yearModel: 2020, color: "Prata", km: 48200 };
+  const bytes = await commercialPdf("recibo", data, "teste-local");
+  assert.equal((await PDFDocument.load(bytes)).getPageCount(), 2);
+  const dir = await mkdtemp(path.join(tmpdir(), "recibo-"));
+  const file = path.join(dir, "r.pdf");
+  await writeFile(file, bytes);
+  const text = execFileSync("pdftotext", [file, "-"], { encoding: "utf8" }).replace(/\s+/g, " ");
+  // Rodapé e cabeçalho da 2ª página ficam no meio do texto: compara só as palavras da observação, em ordem.
+  assert.equal((text.match(/palavra\d+|FIM/g) ?? []).join(" "), conditions);
+  assert.ok(text.includes("Página 1 de 2") && text.includes("Página 2 de 2"));
 });
 test("valor por extenso usa 'e' antes da última parte", () => {
   assert.equal(moneyInWords(1_500_000), "um milhão e quinhentos mil reais");
