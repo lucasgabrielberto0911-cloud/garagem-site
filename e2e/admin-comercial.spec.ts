@@ -69,7 +69,7 @@ test("giro, avaliação, financiamento, reserva, PDF privado e pós-venda", asyn
   await reserve.getByRole("button", { name: "Confirmar reserva" }).click();
   await expect.poll(async () => (await db.vehicle.findUniqueOrThrow({ where: { id: vehicleId } })).status).toBe("reservado");
 
-  const documentPanel = page.locator("details").filter({ has: page.locator("summary", { hasText: "Proposta e recibo" }) });
+  const documentPanel = page.locator("details").filter({ has: page.locator("summary", { hasText: "Contrato e recibo de sinal" }) });
   await documentPanel.locator("summary").click();
   await documentPanel.locator("select[name=kind]").selectOption("recibo");
   await documentPanel.getByRole("combobox").nth(1).click();

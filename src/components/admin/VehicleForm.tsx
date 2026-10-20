@@ -910,6 +910,9 @@ export function VehicleForm({
                 }
                 placeholder="ABC1D23 ou ABC-1234"
                 autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="characters"
+                spellCheck={false}
                 className={inputClass}
               />
             </Field>
