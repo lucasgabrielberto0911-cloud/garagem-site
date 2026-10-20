@@ -74,11 +74,20 @@ export async function GET() {
   const host = databaseHost();
 
   if (!hasDatabaseUrl) {
-    return NextResponse.json({ ok: false, checks: { database: false } }, { status: 503 });
+    return NextResponse.json({
+      ok: false,
+      database: "missing",
+      hint: "No Vercel → Settings → Environment Variables, configure o DATABASE_URL do Supabase e faça Redeploy.",
+    }, { status: 503 });
   }
 
   if (host?.includes("localhost") || host?.startsWith("127.")) {
-    return NextResponse.json({ ok: false, checks: { database: false } }, { status: 503 });
+    return NextResponse.json({
+      ok: false,
+      database: "localhost",
+      host,
+      hint: "O DATABASE_URL no Vercel está como localhost. Configure a URI Transaction pooler do Supabase e DIRECT_URL para migrations.",
+    }, { status: 503 });
   }
 
   const dbUrl = process.env.DATABASE_URL?.trim() ?? "";
@@ -93,26 +102,46 @@ export async function GET() {
     host?.includes("pooler") ||
     /(?:^|[?&])pgbouncer=true(?:&|$)/i.test(dbUrl);
   if (!looksPooled) {
-    return NextResponse.json({ ok: false, checks: { database: false } }, { status: 503 });
+    return NextResponse.json({
+      ok: false,
+      database: "direct-url",
+      host,
+      hint: "DATABASE_URL parece conexão direta. No Vercel use a URI Transaction pooler do Supabase; deixe a Direct connection em DIRECT_URL.",
+    }, { status: 503 });
   }
 
   try {
-    await prisma.admin.count();
+    const adminCount = await prisma.admin.count();
     const schema = await inspectSchema();
-    let thumbnails: boolean | null = null;
-    try {
-      await Promise.all([
-        prisma.photo.count(),
-        prisma.photo.count({ where: { thumbnailUrl: { not: null } } }),
-      ]);
-      thumbnails = true;
-    } catch {
-      thumbnails = null;
-    }
-    const storage = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+    const storageConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim());
+    const serviceRoleConfigured = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
     const chat = geminiKeyConfigured();
-    return NextResponse.json({ ok: schema.ok, checks: { database: true, schema: schema.ok, storage, thumbnails, chat } });
-  } catch {
-    return NextResponse.json({ ok: false, checks: { database: false } }, { status: 503 });
+    return NextResponse.json({
+      ok: schema.ok,
+      database: "ok",
+      host,
+      adminCount,
+      schema,
+      storage: {
+        configured: storageConfigured,
+        serviceRole: serviceRoleConfigured,
+        hint: serviceRoleConfigured ? undefined : "Adicione SUPABASE_SERVICE_ROLE_KEY no Vercel para o upload de fotos funcionar.",
+      },
+      chat: { gemini: chat },
+    });
+  } catch (error) {
+    const detail = error instanceof Error
+      ? error.message
+          .replace(/https?:\/\/\S+/gi, "[URL removida]")
+          .replace(/((?:token|key|password|secret)\s*[=:]\s*)\S+/gi, "$1[redigido]")
+          .slice(0, 160)
+      : undefined;
+    return NextResponse.json({
+      ok: false,
+      database: "error",
+      host,
+      hint: "DATABASE_URL inválida ou tabelas ainda não criadas. Confira a URI do Supabase e o schema.",
+      detail,
+    }, { status: 503 });
   }
 }

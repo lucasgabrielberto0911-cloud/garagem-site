@@ -198,8 +198,13 @@ export async function loadAdminJpegSafely(
 ): Promise<Uint8Array | null> {
   try {
     return await loader(url);
-  } catch {
-    console.error("[photo-archive] falha inesperada ao preparar JPG");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    const safeDetail = detail
+      .replace(/https?:\/\/\S+/gi, "[URL removida]")
+      .replace(/((?:token|key|password|secret)\s*[=:]\s*)\S+/gi, "$1[redigido]")
+      .slice(0, 160);
+    console.error("[photo-archive] falha inesperada ao preparar JPG:", safeDetail);
     return null;
   }
 }
