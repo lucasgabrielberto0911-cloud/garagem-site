@@ -31,15 +31,15 @@ test("cidades tem redirect 301, destino canônico e nenhum link ou sitemap na UR
   expect(xml.match(/<loc>https:\/\/www\.suagaragem\.net\/seminovos<\/loc>/g)).toHaveLength(1);
 });
 
-test("as duas primeiras capas têm prioridade alta e as demais ficam lazy", async ({ page }) => {
+test("cards mantêm uma capa prioritária e a segunda eager com prioridade baixa", async ({ page }) => {
   for (const path of ["/", "/estoque"]) {
     await page.goto(path);
     const covers = page.locator("article.listing-card img");
     await expect(covers.first()).toHaveAttribute("fetchpriority", "high");
     await expect(covers.first()).toHaveAttribute("loading", "eager");
-    await expect(covers.nth(1)).toHaveAttribute("fetchpriority", "high");
+    await expect(covers.nth(1)).toHaveAttribute("fetchpriority", "low");
     await expect(covers.nth(1)).toHaveAttribute("loading", "eager");
-    await expect(page.locator('article.listing-card img[fetchpriority="high"]')).toHaveCount(2);
+    await expect(page.locator('article.listing-card img[fetchpriority="high"]')).toHaveCount(1);
     if (page.viewportSize()!.width < 640) {
       const source = page.locator('article.listing-card source[media="(max-width: 639px)"]').first();
       await expect(source).toHaveAttribute("srcset", /480w$/);
