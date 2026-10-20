@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { safeJpgDownloadName } from "@/lib/photo-archive";
 import {
   attachmentHeaders,
-  loadAdminJpeg,
+  loadAdminJpegSafely,
   vehiclePhotoStoragePath,
 } from "@/lib/photo-archive-download";
 
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const bytes = await loadAdminJpeg(url);
+  const bytes = await loadAdminJpegSafely(url);
   if (!bytes) {
     return NextResponse.json(
       { error: "Não foi possível preparar o JPG." },

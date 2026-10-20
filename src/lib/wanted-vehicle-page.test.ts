@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
+  WANTED_BUDGET_OPTIONS,
   WANTED_VEHICLE_BUTTON_LABEL,
+  wantedBudgetToQuery,
   wantedVehicleFormCopy,
   wantedVehicleHref,
   wantedVehicleReturnTo,
@@ -70,4 +72,31 @@ test("pedido com carros na lista usa o texto de quem não achou na grade", () =>
   assert.equal(copy.initialModel, "Civic");
   assert.match(copy.description, /Se o modelo não está na lista/);
   assert.equal(copy.pagePath, "/estoque?model=Civic");
+});
+
+test("WantedVehicleCta converte faixa em query de /pedido e usa link wa.me real; ficha vendida pré-preenche modelo sem preço", () => {
+  assert.equal(WANTED_BUDGET_OPTIONS.length, 4);
+  assert.deepEqual(wantedBudgetToQuery("Até R$ 50 mil"), { maxPrice: "50000" });
+  assert.deepEqual(wantedBudgetToQuery("R$ 50 mil a R$ 80 mil"), {
+    minPrice: "50000",
+    maxPrice: "80000",
+  });
+  assert.deepEqual(wantedBudgetToQuery("R$ 80 mil a R$ 120 mil"), {
+    minPrice: "80000",
+    maxPrice: "120000",
+  });
+  assert.deepEqual(wantedBudgetToQuery("Acima de R$ 120 mil"), { minPrice: "120000" });
+  assert.deepEqual(wantedBudgetToQuery(""), {});
+  assert.equal(
+    wantedVehicleHref({ q: "Corolla", ...wantedBudgetToQuery("R$ 50 mil a R$ 80 mil") }),
+    "/pedido?q=Corolla&minPrice=50000&maxPrice=80000",
+  );
+
+  const cta = readFileSync("src/components/site/WantedVehicleCta.tsx", "utf8");
+  const ficha = readFileSync("src/app/(vehicle)/estoque/[id]/page.tsx", "utf8");
+  assert.doesNotMatch(cta, /window\.open/);
+  assert.match(cta, /href=\{href\}/);
+  assert.match(cta, /Registrar pedido no site/);
+  assert.match(ficha, /initialModel=\{sold \? title : ""\}/);
+  assert.match(ficha, /Pedir parecido no WhatsApp/);
 });

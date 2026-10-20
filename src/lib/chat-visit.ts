@@ -1,5 +1,12 @@
 import { WHATSAPP_BRAND, whatsappUrl } from "@/lib/site";
 
+export const VISIT_TIME_OPTIONS = [
+  "Hoje à tarde",
+  "Amanhã de manhã",
+  "Amanhã à tarde",
+  "Sábado de manhã",
+] as const;
+
 export type ChatVisitInput = {
   vehicle: string;
   questions: string;

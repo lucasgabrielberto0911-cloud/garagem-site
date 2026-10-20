@@ -4,8 +4,11 @@ export function parseMoneyBR(value: unknown): number | null {
     .replace(/R\$/gi, "")
     .replace(/\s/g, "");
   if (!text) return null;
-  if (!/^-?\d+(?:\.\d{3})*(?:,\d{1,2})?$/.test(text)) return null;
-  const amount = Number(text.replace(/\./g, "").replace(",", "."));
+  // Três casas após ponto indicam milhar; uma ou duas indicam centavos.
+  const brasileiro = /^-?\d+(?:\.\d{3})*(?:,\d{1,2})?$/.test(text);
+  const decimal = /^-?\d+\.\d{1,2}$/.test(text);
+  if (!brasileiro && !decimal) return null;
+  const amount = Number(brasileiro ? text.replace(/\./g, "").replace(",", ".") : text);
   return Number.isFinite(amount) && Math.abs(amount) <= 999999999
     ? Math.round(amount * 100) / 100
     : null;

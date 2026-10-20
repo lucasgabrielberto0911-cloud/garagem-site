@@ -1,6 +1,7 @@
 import { prepareGalleryUploadPath } from "@/lib/gallery-preview-store";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { hasTrustedMutationOrigin } from "@/lib/admin-request-origin";
 import {
   cardObjectPath,
   encodeCardImage,
@@ -103,6 +104,9 @@ async function uploadPublicObject(
 }
 
 export async function POST(request: Request) {
+  if (!hasTrustedMutationOrigin(request)) {
+    return NextResponse.json({ error: "Origem inválida." }, { status: 403 });
+  }
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });

@@ -4,10 +4,10 @@ import { photoQueueStorage } from "@/lib/admin-photo-queue-store";
 import { ListingQualityCard } from "@/components/admin/ListingQualityCard";
 import type { StoredListingScore } from "@/lib/listing-score";
 import { VehicleFormPreview } from "@/components/admin/VehicleFormPreview";
-import { vehicleFieldErrors } from "@/lib/admin-vehicle-fields";
+import { parseVehicleFormFields, parseVehicleKm } from "@/lib/admin-vehicle-fields";
 import { adminMutation } from "@/lib/admin-mutation";
 import { focusAdminError } from "@/lib/admin-form-focus";
-import { moneyInput, moneyTyping, parseMoneyBR } from "@/lib/admin-money";
+import { moneyInput, parseMoneyBR } from "@/lib/admin-money";
 import {
   VehicleDraftToolbar,
   type VehicleDraftPayload,
@@ -310,6 +310,7 @@ export function VehicleForm({
       }
     }
     if (state.success) {
+      setErrors({});
       void photoQueueStorage(`${adminId}:${vehicle?.id ?? "new"}`, null);
       void fetch(`/api/admin/drafts?key=vehicle:${vehicle?.id ?? "new"}`, {
         method: "DELETE",
@@ -436,22 +437,9 @@ export function VehicleForm({
 
     const brand = value("brand").trim();
     const model = value("model").trim();
-    const year = value("year");
-    const yearModel = value("yearModel");
-    const km = value("kmDisplay").replace(/\D/g, "");
-    const price = parseMoneyBR(value("priceDisplay"));
-    const currentYear = new Date().getFullYear();
-
-    if (!year || Number(year) < 1950 || Number(year) > currentYear + 1) {
-      next.year = "Ano inválido.";
-    }
-    if (
-      !yearModel ||
-      Number(yearModel) < 1950 ||
-      Number(yearModel) > currentYear + 2
-    ) {
-      next.yearModel = "Ano modelo inválido.";
-    }
+    const parsed = parseVehicleFormFields(new FormData(form));
+    const { km, price } = parsed;
+    Object.assign(next, parsed.fieldErrors);
 
     const listingIssues = validateVehicleListing({
       brand,
@@ -459,13 +447,13 @@ export function VehicleForm({
       fuel,
       transmission,
       color: value("color").trim() || color,
-      km: km === "" ? null : Number(km),
+      km,
       price,
       locationCity: value("locationCity").trim() || locationCity,
     });
     for (const issue of listingIssues) {
       if (issue.field === "form") continue;
-      next[issue.field] = issue.message;
+      if (!next[issue.field]) next[issue.field] = issue.message;
     }
 
     const listed = price ?? 0;
@@ -487,16 +475,6 @@ export function VehicleForm({
       next[control.name] = control.validationMessage || "Valor inválido.";
     }
 
-    Object.assign(
-      next,
-      vehicleFieldErrors({
-        year: Number(year),
-        yearModel: Number(yearModel),
-        km: Number(km),
-        status,
-        doors: value("doors") ? Number(value("doors")) : null,
-      }),
-    );
     setErrors(next);
     revealSections(sectionsWithErrors(next));
     const first = Object.keys(next)[0];
@@ -795,7 +773,21 @@ export function VehicleForm({
       <form
         id="vehicle-form"
         noValidate
-        onChange={() => setDirty(true)}
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+        onChange={(event) => {
+          setDirty(true);
+          const target = event.target;
+          if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) return;
+          const name = target.name;
+          const field = name === "priceDisplay" ? "price" : name === "kmDisplay" ? "km" : name;
+          setErrors((current) => {
+            const next = { ...current };
+            delete next[field];
+            return next;
+          });
+        }}
         onSubmit={(event) => {
           // Dispara a action na mão: com <form action>, o React 19 reseta o
           // form ao terminar e o select de status volta a mostrar o valor
@@ -846,9 +838,9 @@ export function VehicleForm({
           <input
             type="hidden"
             name="price"
-            value={parseMoneyBR(values.price) ?? ""}
+            value={values.price}
           />
-          <input type="hidden" name="km" value={values.km.replace(/\D/g, "")} />
+          <input type="hidden" name="km" value={values.km} />
           <input type="hidden" name="category" value={category} />
           <input type="hidden" name="locationCity" value={locationCity} />
 
@@ -944,6 +936,7 @@ export function VehicleForm({
             <FipeLookup
               category={category}
               plate={plate}
+              plateError={errors.plate}
               onPlateChange={handlePlateChange}
               initialFipePrice={vehicle?.fipePrice}
               onApply={applyFipeSelection}
@@ -1013,7 +1006,7 @@ export function VehicleForm({
                   onChange={(event) =>
                     setValues((current) => ({
                       ...current,
-                      price: moneyTyping(event.target.value),
+                      price: event.target.value,
                     }))
                   }
                   onBlur={() => {
@@ -1261,7 +1254,7 @@ export function VehicleForm({
               <Field label="Ano de fabricação" required error={errors.year}>
                 <input
                   name="year"
-                  type="number"
+                  type="text"
                   inputMode="numeric"
                   value={year}
                   onChange={(event) => setYear(event.target.value)}
@@ -1271,7 +1264,7 @@ export function VehicleForm({
               <Field label="Ano modelo" required error={errors.yearModel}>
                 <input
                   name="yearModel"
-                  type="number"
+                  type="text"
                   inputMode="numeric"
                   value={yearModel}
                   onChange={(event) => setYearModel(event.target.value)}
@@ -1283,7 +1276,7 @@ export function VehicleForm({
                 required
                 error={errors.km}
                 hint={
-                  kmHint(Number(values.km.replace(/\D/g, "") || Number.NaN)) ??
+                  kmHint(parseVehicleKm(values.km)) ??
                   undefined
                 }
               >
@@ -1294,9 +1287,7 @@ export function VehicleForm({
                   onChange={(event) =>
                     setValues((current) => ({
                       ...current,
-                      km: formatNumberBR(
-                        Number(event.target.value.replace(/\D/g, "") || 0),
-                      ),
+                      km: event.target.value,
                     }))
                   }
                   placeholder="0"
@@ -1635,6 +1626,7 @@ export function VehicleForm({
                 ) : (
                   <Field
                     label="Preço de compra"
+                    error={errors.purchasePrice}
                     hint="Opcional. Custos extras entram depois, na aba Operação."
                   >
                     <input
@@ -1642,7 +1634,7 @@ export function VehicleForm({
                       inputMode="decimal"
                       value={purchase}
                       onChange={(event) =>
-                        setPurchase(moneyTyping(event.target.value))
+                        setPurchase(event.target.value)
                       }
                       placeholder="0"
                       className={inputClass}
