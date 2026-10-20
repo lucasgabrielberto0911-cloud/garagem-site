@@ -1,15 +1,6 @@
-import { formatVehicleLabel } from "@/lib/format";
-import { SEO_LOCAL_LOCATION } from "@/lib/seo-local";
+import { formatCurrencyBRL, formatVehicleLabel } from "@/lib/format";
 import { shortVersion } from "@/lib/vehicle-display";
 import { site } from "@/lib/site";
-
-/**
- * Região usada nos títulos de busca local das fichas (vem de `seo-local`, o
- * ponto único da região). Não é a cidade individual do carro: a cidade do
- * veículo só aparece no admin (PR #219) e os carros podem estar em outras
- * cidades (consignados).
- */
-export const VEHICLE_SEO_LOCATION = SEO_LOCAL_LOCATION;
 
 /** O Google corta títulos por volta de 60 caracteres. */
 export const VEHICLE_SEO_TITLE_MAX = 60;
@@ -19,22 +10,22 @@ type VehicleSeoTitleInput = {
   model: string;
   version?: string | null;
   yearModel: number;
+  price?: number;
   sold?: boolean;
   siteName?: string;
-  location?: string;
   maxLength?: number;
 };
 
 /**
- * "Honda City EXL 2018 em Linhares/ES | Garagem".
+ * Título único para SEO com identificação do veículo, preço e busca regional:
+ * "Honda Civic LXR 2015 por R$ 74.900 | seminovo ES | Garagem".
  *
- * Quando passa do limite, corta primeiro as palavras finais da versão (marca,
- * modelo e ano ficam), e só depois abre mão da região. Vendido não leva
- * região nem preço: "Honda City EXL 2018 (vendido) | Garagem".
+ * Quando passa do limite (60 caracteres), corta palavras da versão antes do
+ * sufixo para evitar que o buscador corte a marca e o contexto regional.
+ * Carro vendido não divulga preço antigo: "Honda Civic LXR 2015 (vendido) | seminovo ES | Garagem".
  */
 export function vehicleSeoTitle(input: VehicleSeoTitleInput) {
   const siteName = input.siteName ?? site.name;
-  const location = input.location ?? VEHICLE_SEO_LOCATION;
   const max = input.maxLength ?? VEHICLE_SEO_TITLE_MAX;
   const base = formatVehicleLabel(input.brand, input.model);
   const year = String(input.yearModel);
@@ -42,16 +33,23 @@ export function vehicleSeoTitle(input: VehicleSeoTitleInput) {
     .split(/\s+/)
     .filter(Boolean);
 
-  const suffixes = input.sold
-    ? [` (vendido) | ${siteName}`]
-    : [` em ${location} | ${siteName}`, ` | ${siteName}`];
+  const status = input.sold
+    ? " (vendido)"
+    : input.price != null && Number.isFinite(input.price) && input.price > 0
+      ? ` por ${formatCurrencyBRL(input.price)}`
+      : "";
+
+  const suffixes = [` | seminovo ES | ${siteName}`, ` | ${siteName}`];
 
   for (const suffix of suffixes) {
     for (let n = versionTokens.length; n >= 0; n--) {
-      const label = [base, ...versionTokens.slice(0, n), year].join(" ");
-      if (label.length + suffix.length <= max) return label + suffix;
+      const versionPart = versionTokens.slice(0, n).join(" ");
+      const label = [base, versionPart, year].filter(Boolean).join(" ");
+      const candidate = `${label}${status}${suffix}`;
+      if (candidate.length <= max) return candidate;
     }
   }
-  // Marca + modelo + ano já estouram o limite: devolve o mínimo sem cortar.
-  return `${base} ${year}${suffixes[suffixes.length - 1]}`;
+
+  // Marca + modelo + ano + status já estouram o limite: devolve com sufixo mínimo sem quebrar.
+  return `${[base, year].filter(Boolean).join(" ")}${status}${suffixes[suffixes.length - 1]}`;
 }

@@ -1,87 +1,89 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { vehicleSeoDescription } from "./format";
-import {
-  VEHICLE_SEO_LOCATION,
-  VEHICLE_SEO_TITLE_MAX,
-  vehicleSeoTitle,
-} from "./vehicle-seo";
+import { vehiclePhotoAlt, vehicleSeoDescription } from "./format";
+import { VEHICLE_SEO_TITLE_MAX, vehicleSeoTitle } from "./vehicle-seo";
 
-test("título da ficha inclui versão, região de atendimento e marca Garagem", () => {
-  assert.equal(
-    vehicleSeoTitle({ brand: "Honda", model: "City", version: "EXL", yearModel: 2018 }),
-    "Honda City EXL 2018 em Linhares/ES | Garagem",
-  );
-  assert.equal(VEHICLE_SEO_LOCATION, "Linhares/ES");
+const civic = {
+  brand: "Honda",
+  model: "Civic",
+  version: "LXR",
+  yearModel: 2015,
+  year: 2015,
+  price: 74900,
+  km: 106000,
+  transmission: "Automático",
+};
+
+test("título e descrição incluem marca, modelo, versão, ano, preço e seminovo ES", () => {
+  for (const text of [vehicleSeoTitle(civic), vehicleSeoDescription(civic)]) {
+    assert.match(text, /Honda Civic LXR 2015/);
+    assert.match(text, /R\$\s*74\.900/);
+    assert.match(text, /seminovo ES/);
+    assert.match(text, /Garagem/);
+  }
+  assert.ok(vehicleSeoTitle(civic).length <= VEHICLE_SEO_TITLE_MAX);
+  assert.ok(vehicleSeoDescription(civic).length <= 160);
 });
 
-test("título sem versão não deixa espaço duplo", () => {
-  assert.equal(
-    vehicleSeoTitle({ brand: "Fiat", model: "Uno", version: null, yearModel: 2015 }),
-    "Fiat Uno 2015 em Linhares/ES | Garagem",
-  );
+test("versão, ano e preço diferenciam os metadados de cada anúncio", () => {
+  for (const variant of [{ version: "EXR" }, { year: 2016, yearModel: 2016 }, { price: 79900 }]) {
+    assert.notEqual(vehicleSeoTitle(civic), vehicleSeoTitle({ ...civic, ...variant }));
+    assert.notEqual(vehicleSeoDescription(civic), vehicleSeoDescription({ ...civic, ...variant }));
+  }
 });
 
-test("título vendido mantém (vendido), sem região e sem preço", () => {
-  const title = vehicleSeoTitle({
-    brand: "Honda",
-    model: "City",
-    version: "EXL",
-    yearModel: 2018,
-    sold: true,
-  });
-  assert.equal(title, "Honda City EXL 2018 (vendido) | Garagem");
-  assert.doesNotMatch(title, /R\$|Linhares/);
-});
-
-test("versão longa é cortada por palavras e o título cabe no limite", () => {
-  const title = vehicleSeoTitle({
+test("versão longa corta palavras antes do sufixo para caber no limite de 60 caracteres sem perder a marca", () => {
+  const input = {
+    ...civic,
     brand: "Volkswagen",
     model: "Gol",
     version: "1.6 MSI Highline Total Flex Automatizado Plus",
     yearModel: 2020,
-  });
-  assert.ok(title.length <= VEHICLE_SEO_TITLE_MAX, title);
-  assert.match(title, /^Volkswagen Gol 1\.6 .*2020 em Linhares\/ES \| Garagem$/);
+    price: 54900,
+  };
+  const title = vehicleSeoTitle(input);
+  assert.ok(title.length <= VEHICLE_SEO_TITLE_MAX, `título excedeu ${VEHICLE_SEO_TITLE_MAX}: ${title} (${title.length})`);
+  assert.match(title, /Garagem$/);
   assert.doesNotMatch(title, /Plus/);
 });
 
-test("sem espaço nem para marca/modelo/ano + região, abre mão da região", () => {
-  const title = vehicleSeoTitle({
-    brand: "Mercedes-Benz",
-    model: "Classe C 180 Avantgarde",
-    version: "Turbo",
-    yearModel: 2019,
-  });
-  assert.doesNotMatch(title, /Linhares/);
-  assert.match(title, /2019 \| Garagem$/);
-});
-
-test("descrição usa a região de atendimento quando informada", () => {
-  const description = vehicleSeoDescription({
-    brand: "Honda",
-    model: "City",
-    year: 2018,
-    price: 79900,
-    km: 60000,
-    transmission: "Automático",
-    location: VEHICLE_SEO_LOCATION,
-  });
-  assert.match(description, /à venda em Linhares\/ES por /);
-  assert.ok(description.length <= 155);
-});
-
-test("descrição de vendido não leva preço nem região", () => {
-  const description = vehicleSeoDescription({
-    brand: "Honda",
-    model: "City",
-    year: 2018,
-    price: 79900,
-    km: 60000,
-    transmission: "Automático",
+test("versão longa em vendido respeita o teto de 60 caracteres e mantém (vendido)", () => {
+  const input = {
+    ...civic,
+    brand: "Volkswagen",
+    model: "Gol",
+    version: "1.6 MSI Highline Total Flex Automatizado Plus",
+    yearModel: 2020,
     sold: true,
-    location: VEHICLE_SEO_LOCATION,
-  });
-  assert.doesNotMatch(description, /R\$|Linhares/);
-  assert.match(description, /vendido/);
+  };
+  const title = vehicleSeoTitle(input);
+  assert.ok(title.length <= VEHICLE_SEO_TITLE_MAX, `título excedeu ${VEHICLE_SEO_TITLE_MAX}: ${title} (${title.length})`);
+  assert.match(title, /\(vendido\)/);
+  assert.match(title, /Garagem$/);
+  assert.doesNotMatch(title, /Plus|R\$/);
+});
+
+test("sem versão ou preço publicável não há espaços duplicados nem preço fictício", () => {
+  for (const price of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const input = { ...civic, version: null, price };
+    for (const text of [vehicleSeoTitle(input), vehicleSeoDescription(input)]) {
+      assert.match(text, /Honda Civic 2015/);
+      assert.doesNotMatch(text, /  |R\$|NaN|Infinity/);
+    }
+  }
+});
+
+test("vendido preserva identificação e busca regional, sem divulgar preço antigo", () => {
+  const sold = { ...civic, sold: true };
+  for (const text of [vehicleSeoTitle(sold), vehicleSeoDescription(sold)]) {
+    assert.match(text, /Honda Civic LXR 2015 \(vendido\)/);
+    assert.match(text, /seminovo ES/);
+    assert.doesNotMatch(text, /R\$|74[.,]?900/);
+  }
+  assert.ok(vehicleSeoTitle(sold).length <= VEHICLE_SEO_TITLE_MAX);
+  assert.match(vehicleSeoDescription(sold), /similares disponíveis/);
+});
+
+test("alt identifica o veículo e a posição real da foto sem inventar ângulo", () => {
+  assert.equal(vehiclePhotoAlt("Honda Civic LXR 2015 · Prata", 0, 3), "Honda Civic LXR 2015 · Prata - foto 1 de 3");
 });

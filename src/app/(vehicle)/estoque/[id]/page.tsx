@@ -24,15 +24,16 @@ import { StockBackLink } from "@/components/site/StockBackLink";
 import { VehicleLeadHit, VehicleViewContent } from "@/components/site/VehiclePixel";
 import { Container, WhatsAppButton } from "@/components/site/ui";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
-import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { MissingModelForm } from "@/components/site/MissingModelForm";
+import { stockLandingLinks } from "@/lib/stock-landings";
+import { CITIES_DIRECTORY_PATH, SERVICE_CITIES } from "@/lib/service-cities";
 import { JsonLd } from "@/components/JsonLd";
-import { VEHICLE_SEO_LOCATION, vehicleSeoTitle } from "@/lib/vehicle-seo";
+import { vehicleSeoTitle } from "@/lib/vehicle-seo";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
 import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
@@ -55,7 +56,7 @@ import {
 import { isRetiredStockSlug } from "@/lib/retired-listings";
 import { catalogPixelAutoFields } from "@/lib/catalog-feed";
 import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
-import { getVehicleConditions, getGoogleReviews } from "@/lib/site-content";
+import { getVehicleConditions } from "@/lib/site-content";
 import { getVehicleVerifiedItems } from "@/lib/vehicle-verified-data";
 import { publicVerifiedItems, verifiedHeading } from "@/lib/vehicle-verified";
 import {
@@ -90,25 +91,26 @@ export async function generateMetadata({
 
   const sold = vehicle.status === "vendido";
   const display = formatVehicleDisplay(vehicle);
-  const label = display.titleWithYear;
+  const label = display.fullLabel;
   const title = vehicleSeoTitle({
     brand: vehicle.brand,
     model: vehicle.model,
     version: vehicle.version,
     yearModel: vehicle.yearModel,
+    price: vehicle.price,
     sold,
     siteName: site.name,
   });
   const description = vehicleSeoDescription({
     brand: vehicle.brand,
     model: vehicle.model,
+    version: display.version,
     year: vehicle.yearModel,
     price: vehicle.price,
     km: vehicle.km,
     transmission: display.transmission,
     sold,
     siteName: site.name,
-    location: VEHICLE_SEO_LOCATION,
   });
   const rawCover = vehicle.photos[0]?.url;
   const cover = rawCover ? absoluteUrl(publicPhotoSrc(rawCover)) : null;
@@ -128,8 +130,6 @@ export async function generateMetadata({
         ? [
             {
               url: cover,
-              width: 1200,
-              height: 630,
               alt: label,
             },
           ]
@@ -146,7 +146,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title,
       description,
-      images: cover ? [cover] : [absoluteUrl("/og.png")],
+      images: [{ url: cover ?? absoluteUrl("/og.png"), alt: label }],
     },
   };
 }
@@ -189,7 +189,14 @@ export default async function VehicleDetailPage({
   const display = formatVehicleDisplay(vehicle);
   const title = display.title;
   const fullLabel = display.fullLabel;
-  const galleryAlt = display.titleWithYear;
+  const galleryAlt = [display.fullLabel, display.color].filter(Boolean).join(" · ");
+  const landingLinks = stockLandingLinks([vehicle]);
+  const breadcrumbs = [
+    { name: "Início", path: "/" },
+    { name: "Estoque", path: "/estoque" },
+    ...landingLinks.map(link => ({ name: link.label, path: link.path })),
+    { name: fullLabel, path },
+  ];
   const accessories = collapseDuplicateAccessories(vehicle.accessories);
   const whatsapp = {
     interest: formatVehicleWhatsAppMessage({
@@ -233,7 +240,7 @@ export default async function VehicleDetailPage({
   const sameBandTitle = isMoto
     ? "Motos na mesma faixa"
     : "Carros na mesma faixa";
-  const [related, conditions, google, verifiedItems] = await Promise.all([
+  const [related, conditions, verifiedItems] = await Promise.all([
     getRelatedVehicles(
       vehicle.id,
       vehicle.brand,
@@ -243,7 +250,6 @@ export default async function VehicleDetailPage({
       display.transmission,
     ),
     getVehicleConditions(),
-    getGoogleReviews(),
     // Falha ou tabela ausente = sem seção; carro vendido não mostra.
     sold ? Promise.resolve([]) : getVehicleVerifiedItems(vehicle.id),
   ]);
@@ -312,13 +318,7 @@ export default async function VehicleDetailPage({
         }}
       />
       <JsonLd data={vehicleJsonLd(vehicle)} />
-      <JsonLd
-        data={breadcrumbJsonLd([
-          { name: "Início", path: "/" },
-          { name: "Estoque", path: "/estoque" },
-          { name: fullLabel, path },
-        ])}
-      />
+      <JsonLd data={breadcrumbJsonLd(breadcrumbs)} />
       <Container size="header">
         {sold ? (
           <div
@@ -357,15 +357,18 @@ export default async function VehicleDetailPage({
             aria-label="Você está aqui"
             className="text-xs text-muted sm:text-center"
           >
-            <Link href="/" prefetch={false} className="transition hover:text-cream">
-              Início
-            </Link>
-            <span className="mx-2">/</span>
-            <Link href="/estoque" prefetch={false} className="transition hover:text-cream">
-              Estoque
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-cream">{title}</span>
+            {breadcrumbs.map((item, index) => (
+              <span key={item.path}>
+                {index > 0 ? <span className="mx-2" aria-hidden="true">/</span> : null}
+                {index === breadcrumbs.length - 1 ? (
+                  <span aria-current="page" className="text-cream">{item.name}</span>
+                ) : (
+                  <Link href={item.path} prefetch={false} className="transition hover:text-cream">
+                    {item.name}
+                  </Link>
+                )}
+              </span>
+            ))}
           </nav>
         </div>
 
@@ -598,12 +601,6 @@ export default async function VehicleDetailPage({
                   />
                 </p>
               ) : null}
-              {!sold ? (
-                <GoogleReviewsBadge
-                  reviews={google}
-                  className="mt-0 border-white/10"
-                />
-              ) : null}
 
               {!sold ? (
                 <>
@@ -672,7 +669,6 @@ export default async function VehicleDetailPage({
               updatedLabel={updatedLabel}
             />
           }
-          google={google}
           prompt={`Tenho dúvida sobre o ${title}`}
           verified={verified}
           warranty={vehicle.warranty}
@@ -704,6 +700,26 @@ export default async function VehicleDetailPage({
             }
           />
         </div>
+
+        <nav aria-label="Explore marcas, modelos e cidades" className="mt-10 space-y-3 text-sm text-muted">
+          <p className="font-display font-semibold text-cream">Encontre seu próximo seminovo</p>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {landingLinks.map(link => (
+              <Link key={link.path} href={link.path} prefetch={false} className="py-2 underline-offset-4 hover:text-cream hover:underline">
+                {link.label} seminovo
+              </Link>
+            ))}
+          </div>
+          <p>Atendimento no Espírito Santo:</p>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {SERVICE_CITIES.map(city => (
+              <Link key={city.slug} href={`/seminovos/${city.slug}`} prefetch={false} className="py-2 underline-offset-4 hover:text-cream hover:underline">
+                Seminovos em {city.name}
+              </Link>
+            ))}
+            <Link href={CITIES_DIRECTORY_PATH} prefetch={false} className="py-2 underline-offset-4 hover:text-cream hover:underline">Todas as cidades atendidas</Link>
+          </div>
+        </nav>
 
         <SimilarVehicles
           vehicles={related}

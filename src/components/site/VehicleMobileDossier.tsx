@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
-import { GoogleReviewsBadge } from "@/components/site/GoogleReviewsBadge";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { VehicleAccessoryChips } from "@/components/site/VehicleAccessoryChips";
 import { VehicleDescription } from "@/components/site/VehicleDescription";
@@ -11,7 +10,6 @@ import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import type { DescriptionSummaryFacts } from "@/lib/vehicle-description";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
-import type { GoogleReviews } from "@/lib/google-reviews";
 import {
   SPEC_EMPTY,
   STORE_INSPECTION_LABEL,
@@ -170,7 +168,6 @@ export function VehicleMobileBlocks({
   inspection,
   conditions,
   listedLine,
-  google,
   prompt,
   quickActions,
   verified = [],
@@ -192,7 +189,6 @@ export function VehicleMobileBlocks({
   inspection?: string | null;
   conditions: VehicleConditionsContent;
   listedLine?: ReactNode;
-  google: GoogleReviews;
   prompt: string;
   /** Pontos verificados daquele exemplar (só os preenchidos). Vazio = sem bloco. */
   verified?: PublicVerifiedItem[];
@@ -345,9 +341,6 @@ export function VehicleMobileBlocks({
             warranty={warranty}
             documentation={verified.find((item) => item.key === "documentacao")?.text}
           />
-        ) : null}
-        {!sold ? (
-          <GoogleReviewsBadge reviews={google} className="mb-3 border-white/10" />
         ) : null}
         {!sold ? (
           <FavoriteButton

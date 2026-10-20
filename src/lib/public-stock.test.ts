@@ -64,7 +64,7 @@ test("ficha pública inclui chave, manual e vídeo e esconde documentos", () => 
   assert.equal("documents" in CHAT_VEHICLE_SELECT, false);
 });
 
-test("sitemap só inclui estoque disponível e não histórico", () => {
+test("filtros do estoque incluem apenas disponíveis, sem vendas internas", () => {
   assert.equal(PUBLIC_SITEMAP_VEHICLE_WHERE.status, "disponivel");
   assert.equal(PUBLIC_SITEMAP_VEHICLE_WHERE.historical, false);
   assert.equal(isPublicStockVehicle({ status: "disponivel", historical: false }), true);
