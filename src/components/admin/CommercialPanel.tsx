@@ -22,6 +22,14 @@ function Field({ label, name, value, type = "text", required = true }: { label: 
   return <label className="block space-y-1 text-sm"><span>{label}</span><input name={name} type={type} defaultValue={value} required={required} maxLength={type === "text" ? 200 : undefined} className={inputClass} /></label>;
 }
 
+async function fetchDocFile(id: string, kind: string, number?: number) {
+  try {
+    const r = await fetch(`/api/admin/documentos/${id}`);
+    if (!r.ok || !r.headers.get("content-type")?.includes("application/pdf")) return null;
+    return new File([await r.blob()], `garagem-${kind}-${number}.pdf`, { type: "application/pdf" });
+  } catch { return null; }
+}
+
 export function CommercialPanel({ vehicle, reservation, assessment, simulations, documents, history }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -39,8 +47,9 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
         if (result.documentId) {
           const kind = String(form.get("kind"));
           // Baixa o PDF já aqui para o botão de compartilhar abrir direto no gesto do toque (iOS).
-          const file = await fetch(`/api/admin/documentos/${result.documentId}`).then((r) => r.blob()).then((b) => new File([b], `garagem-${kind}-${result.documentNumber}.pdf`, { type: "application/pdf" })).catch(() => null);
+          const file = await fetchDocFile(result.documentId, kind, result.documentNumber);
           setLastDoc({ id: result.documentId, kind, number: result.documentNumber, file });
+          if (!file) setMessage("Operação registrada, mas o PDF não pôde ser baixado. Use “Compartilhar” para tentar de novo.");
         }
       } catch { setMessage("Falha de conexão. Confira o registro antes de tentar novamente."); }
     });
@@ -51,14 +60,21 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
     el.open = true;
     el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
-  function shareDoc(doc: NonNullable<typeof lastDoc>) {
+  async function shareDoc(doc: NonNullable<typeof lastDoc>) {
+    if (!doc.file) {
+      const file = await fetchDocFile(doc.id, doc.kind, doc.number);
+      if (!file) { setMessage("Não foi possível baixar o PDF. Tente novamente."); return; }
+      setMessage("");
+      setLastDoc({ ...doc, file });
+      return;
+    }
     const label = `${doc.kind === "recibo" ? "Recibo" : "Proposta"}${doc.number ? ` nº ${doc.number}` : ""} - Garagem`;
     if (doc.file && navigator.canShare?.({ files: [doc.file] })) navigator.share({ files: [doc.file], title: label, text: label }).catch(() => {});
     else window.open(`https://wa.me/?text=${encodeURIComponent(label)}`, "_blank", "noopener");
   }
   const bar = "inline-flex min-h-11 flex-1 items-center justify-center px-2 text-center text-xs font-semibold touch-manipulation";
   return <div className="space-y-4 pb-16 font-body md:pb-0">
-    <nav aria-label="Ações rápidas" className="fixed inset-x-0 bottom-0 z-30 flex gap-2 border-t border-white/10 bg-asphalt p-2 md:hidden">
+    <nav aria-label="Ações rápidas" className="fixed inset-x-0 bottom-admin-nav z-30 flex gap-2 border-t border-white/10 bg-asphalt p-2 md:hidden">
       <button type="button" className={`${btn.primary} ${bar}`} onClick={() => openCard("reserva")} disabled={vehicle.status !== "disponivel"}>Reservar</button>
       <button type="button" className={`${btn.outline} ${bar}`} onClick={() => openCard("proposta")}>Gerar proposta</button>
       {reservation ? <a className={`${btn.outline} ${bar}`} href={whatsappUrl(reservation.phone, `Olá, ${reservation.customer.split(" ")[0]}! Aqui é da Garagem.`)} target="_blank" rel="noopener noreferrer">WhatsApp do cliente</a> : null}

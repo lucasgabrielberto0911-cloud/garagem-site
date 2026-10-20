@@ -8,6 +8,7 @@ import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { parseMoneyBR } from "@/lib/admin-money";
 import { ENTRY_ITEMS, FINANCE_STATUSES, simulateFinancing, suggestPrice } from "@/lib/admin-commercial";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { expireAdminData } from "@/lib/admin-revalidate";
 import { revalidatePublicStock, revalidatePublicStockMany } from "@/lib/public-stock-revalidate";
 import { expireReservations } from "@/lib/reservations";
 
@@ -109,6 +110,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
   }
   revalidatePath(`/admin/veiculos/${vehicleId}`);
   revalidatePath("/admin/agenda");
+  if (text("operation") === "extend-reservation") expireAdminData();
   if (["reserve", "cancel-reservation", "price"].includes(text("operation")) || (text("operation") === "assessment" && form.get("approved") === "on")) await revalidatePublicStock(vehicleId);
   return { ok: true, message: "Operação registrada.", documentId, documentNumber };
 }
