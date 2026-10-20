@@ -92,10 +92,16 @@ export function sectionsWithErrors(
  */
 export function initialOpenSections(
   mode: VehicleFormMode,
-  options: { descriptionNeedsAttention?: boolean; photoCount?: number } = {},
+  options: {
+    descriptionNeedsAttention?: boolean;
+    photoCount?: number;
+    quickMode?: boolean;
+  } = {},
 ): VehicleFormSectionId[] {
   if (mode === "create") {
-    return ["identificacao"];
+    return options.quickMode
+      ? ["identificacao", "essencial", "fotos", "ficha"]
+      : ["identificacao"];
   }
   const open: VehicleFormSectionId[] = ["essencial", "fotos"];
   if (options.descriptionNeedsAttention) open.push("descricao");

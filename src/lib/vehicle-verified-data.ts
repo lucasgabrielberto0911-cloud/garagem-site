@@ -22,7 +22,7 @@ const loadVerifiedCached = unstable_cache(
     return row ? parseVerifiedItems(row.items) : [];
   },
   ["vehicle-verified-v1"],
-  { revalidate: 600, tags: [VEHICLES_PUBLIC_CACHE_TAG] },
+  { revalidate: 3600, tags: [VEHICLES_PUBLIC_CACHE_TAG] },
 );
 
 /**

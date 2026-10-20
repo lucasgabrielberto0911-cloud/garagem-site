@@ -39,11 +39,13 @@ function withLeadDefaults(
         | "updatedAt"
         | "nextAction"
         | "nextActionAt"
+        | "lostReason"
       >
     >,
 ): LeadVenda {
   return {
     ...row,
+    lostReason: row.lostReason ?? null,
     nextAction: row.nextAction ?? null,
     nextActionAt: row.nextActionAt ?? null,
     interestVehicleId: row.interestVehicleId ?? null,

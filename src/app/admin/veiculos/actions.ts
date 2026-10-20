@@ -40,6 +40,7 @@ import {
   revalidatePublicStock,
   revalidatePublicStockMany,
 } from "@/lib/public-stock-revalidate";
+import { formatBrandName, formatModelName } from "@/lib/format";
 
 export type VehicleFormState = {
   error?: string;
@@ -57,13 +58,25 @@ function requireNumber(value: FormDataEntryValue | null, label: string) {
   return parsed;
 }
 
+/** Só normaliza texto todo em maiúsculas ou minúsculas; "T-Cross" digitado certo fica como está. */
+function normalizeCase(value: string, format: (v: string) => string) {
+  return value === value.toUpperCase() || value === value.toLowerCase()
+    ? format(value)
+    : value;
+}
+
 function parseVehicleFields(formData: FormData) {
   const category = parseVehicleCategory(
     String(formData.get("category") || "carro"),
   );
-  const brand = String(formData.get("brand") || "").trim();
-  const model = String(formData.get("model") || "").trim();
-  const version = String(formData.get("version") || "").trim() || null;
+  const brandRaw = String(formData.get("brand") || "").trim();
+  const brand = normalizeCase(brandRaw, formatBrandName);
+  const modelRaw = String(formData.get("model") || "").trim();
+  const model = normalizeCase(modelRaw, formatModelName);
+  const rawVersion = String(formData.get("version") || "").trim();
+  const version = rawVersion
+    ? rawVersion.charAt(0).toUpperCase() + rawVersion.slice(1)
+    : null;
   const fuel = String(formData.get("fuel") || "").trim();
   const transmission = String(formData.get("transmission") || "").trim();
   const color = String(formData.get("color") || "").trim() || null;
@@ -512,7 +525,6 @@ export async function updateVehicle(
         yearModel: data.yearModel,
       },
       previousVehicle,
-      { immediate: previousVehicle?.locationCity !== data.locationCity },
     );
     return { success: true, updatedAt: updated.updatedAt.toISOString() };
   } catch (error) {

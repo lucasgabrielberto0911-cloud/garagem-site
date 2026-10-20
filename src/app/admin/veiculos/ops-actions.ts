@@ -11,6 +11,7 @@ import { expireAdminData } from "@/lib/admin-revalidate";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 import { isInternalAdminFileUrl } from "@/lib/supabase";
 import {
   docKindLabel,
@@ -88,6 +89,8 @@ export async function updateVehicleOps(
   }
 
   revalidateVehicle(vehicleId);
+  // Chave reserva, manual e "no nome da loja" aparecem na ficha pública.
+  await revalidatePublicStock(vehicleId);
   return { ok: true, message: "Operação atualizada." };
 }
 
