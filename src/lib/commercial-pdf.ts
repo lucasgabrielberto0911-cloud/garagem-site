@@ -416,7 +416,6 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     y = top - boxH;
   }
 
-  if (isReceipt) {
     section("Declaração");
     const vehicleLine = [fit(data.vehicle, regular, 11, 240, 1), data.yearModel ? `ano ${data.year && data.year !== data.yearModel ? `${data.year}/${data.yearModel}` : data.yearModel}` : "", data.color ? `cor ${data.color}` : "", data.plate ? `placa ${data.plate}` : ""].filter(Boolean).join(", ");
     paragraph(`Recebemos de ${fit(data.customer, regular, 11, 240, 1)}${data.cpf ? `, CPF ${data.cpf}` : ""}, a quantia de ${money(data.amount)} (${moneyInWords(data.amount)}), referente ao sinal do veículo ${vehicleLine}, dando-lhe plena quitação do valor recebido.`, 11);
@@ -426,7 +425,6 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
       y -= 4;
       paragraph(`Observações: ${data.conditions}`, 9.5);
     }
-  }
 
   }
   if (!isReceipt) contract();

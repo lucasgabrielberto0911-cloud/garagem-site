@@ -54,4 +54,4 @@ Medição (Lighthouse mobile simulado local, mediana de 10 rodadas): CSS bloquea
 ## PDFs do painel (contrato e recibo)
 - Cada PDF tem ~495 KB porque as fontes (Sora, Inter) entram inteiras, sem subset: o subset do fontkit perde glifos. Não "otimize" isso.
 - Dados da loja (razão social, CNPJ, endereço da sede) ficam em `PDF_STORE`, em `src/lib/commercial-pdf.ts`. Endereço vazio imprime o placeholder "[ENDEREÇO DA SEDE — PREENCHER]" no contrato.
-- O recibo precisa caber em 1 página: textos longos são cortados com "…" (teste em `src/lib/admin-commercial.test.ts`).
+- O recibo cabe em 1 página no caso típico: campos do cabeçalho (cliente, veículo etc.) são ajustados com "…". Observações longas quebram linha sem corte e seguem na 2ª página (teste em `src/lib/admin-commercial.test.ts`).

@@ -2,11 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { afterSaleMessage, simulateFinancing, suggestPrice } from "./admin-commercial";
 import { commercialPdf } from "./commercial-pdf";
-import { PDFDocument } from "pdf-lib";
-import { execFileSync } from "node:child_process";
-import { mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
+import { PDFDocument, PDFPage } from "pdf-lib";
 import { moneyInWords } from "./money-words";
 
 test("Price calcula taxa zero, juros e rejeita valores inválidos", () => {
@@ -66,10 +62,16 @@ test("recibo com observação longa continua na 2ª página sem cortar o texto",
   const data = { customer: "João Gonçalves", cpf: "123.456.789-09", phone: "27999990000", vehicle: "Citroën C3", plate: "ABC1D23", amount: 5000, total: 60000, payment: "Pix", conditions, seller: "x", date: "2026-10-19T12:00:00Z", year: 2019, yearModel: 2020, color: "Prata", km: 48200 };
   const bytes = await commercialPdf("recibo", data, "teste-local");
   assert.equal((await PDFDocument.load(bytes)).getPageCount(), 2);
-  const dir = await mkdtemp(path.join(tmpdir(), "recibo-"));
-  const file = path.join(dir, "r.pdf");
-  await writeFile(file, bytes);
-  const text = execFileSync("pdftotext", [file, "-"], { encoding: "utf8" }).replace(/\s+/g, " ");
+  // Sem binário externo: captura o texto desenhado em cada página.
+  const drawn: string[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) { drawn.push(text); return original.call(this, text, options); };
+  try {
+    await commercialPdf("recibo", data, "teste-local");
+  } finally {
+    PDFPage.prototype.drawText = original;
+  }
+  const text = drawn.join(" ").replace(/\s+/g, " ");
   // Rodapé e cabeçalho da 2ª página ficam no meio do texto: compara só as palavras da observação, em ordem.
   assert.equal((text.match(/palavra\d+|FIM/g) ?? []).join(" "), conditions);
   assert.ok(text.includes("Página 1 de 2") && text.includes("Página 2 de 2"));
