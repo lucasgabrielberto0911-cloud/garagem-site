@@ -86,7 +86,8 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
   const brand = text(data, "brand", MAX_LENGTH.brand);
   const model = text(data, "model", MAX_LENGTH.model);
   const year = text(data, "year");
-  const plate = normalizePlate(text(data, "plate", MAX_LENGTH.plate));
+  const plateInput = text(data, "plate", MAX_LENGTH.plate);
+  const plate = normalizePlate(plateInput);
   const kmRaw = text(data, "km", 12).replace(/\D/g, "").slice(0, 7);
   const notes = text(data, "notes", MAX_LENGTH.notes);
   const interestRaw = text(data, "interestVehicleId");
@@ -110,9 +111,7 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
       fieldErrors.year = `Ano entre 1950 e ${maxYear}.`;
     }
   }
-  if (!plate) {
-    fieldErrors.plate = "Informe a placa do veículo.";
-  } else if (!isValidPlate(plate)) {
+  if (plateInput && !isValidPlate(plate)) {
     fieldErrors.plate =
       "Placa inválida. Use o formato antigo (ABC-1234) ou Mercosul (ABC1D23).";
   }

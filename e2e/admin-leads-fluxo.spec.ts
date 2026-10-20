@@ -103,23 +103,42 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await form.locator('[name="model"]').fill(conta.prefixo);
   await form.locator('[name="color"]').fill("Prata");
   await abrir("Preço e status");
-  await form.locator('[name="priceDisplay"]').fill("87654");
+  await form.locator('[name="priceDisplay"]').fill(" R$ 87.654,00 ");
   await form.getByRole("button", { name: "Linhares ES", exact: true }).click();
   await abrir("Ficha técnica");
-  await form.locator('[name="year"]').fill("2020");
+  await form.locator('[name="year"]').fill(" 2020 ");
   await form.locator('[name="yearModel"]').fill("2021");
-  await form.locator('[name="kmDisplay"]').fill("42000");
+  await form.locator('[name="kmDisplay"]').fill("-42000");
   await form.locator('[name="fuel"]').selectOption({ label: "Flex" });
   await form.locator('[name="transmission"]').selectOption({ label: "Manual" });
+  await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
+  await expect(form.getByText("Informe KM inteiro entre 0 e 999.999.", { exact: true })).toBeVisible();
+  await form.locator('[name="kmDisplay"]').fill("42.000 km");
+  await expect(form.getByText("Informe KM inteiro entre 0 e 999.999.", { exact: true })).toHaveCount(0);
+  await abrir("Identificação");
+  await form.locator('[name="plate"]').fill("abc-1234");
+  await expect(form.locator('[name="plate"]')).toHaveAttribute("autocorrect", "off");
   await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
   await expect.poll(() => prisma.vehicle.count({ where: { model: conta.prefixo } })).toBe(1);
   const vehicle = await prisma.vehicle.findFirstOrThrow({ where: { model: conta.prefixo } });
   expect(vehicle.price).toBe(87654);
   expect(vehicle.km).toBe(42000);
+  expect(vehicle.plate).toBe("ABC1234");
+  expect(vehicle.doors).toBeNull();
+  expect(vehicle.purchasePrice).toBeNull();
   await expect(page).toHaveURL(`/admin/veiculos/${vehicle.id}`);
-  await page.locator('[name="priceDisplay"]').fill("86543");
+  await page.locator('[name="priceDisplay"]').fill("86543.50");
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
-  await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).price).toBe(86543);
+  await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).price).toBe(86543.5);
+  await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
+  // Uma falha no servidor após salvar não pode perder a versão usada no próximo save.
+  await form.locator('[name="photoUrls"]').evaluate((input: HTMLInputElement) => { input.value = "{"; });
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await expect(page.getByText("Fotos inválidas.", { exact: true })).toBeVisible();
+  await form.locator('[name="photoUrls"]').evaluate((input: HTMLInputElement) => { input.value = "[]"; });
+  await form.locator('[name="priceDisplay"]').fill("85.900");
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).price).toBe(85900);
   await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
   const maisAcoes = page.getByRole("button", { name: "Mais ações do anúncio", exact: true });
   if (await maisAcoes.isVisible()) await maisAcoes.click();
@@ -203,6 +222,7 @@ test("avaliação: formulário salva lead com origem e mostra recibo", async ({ 
   await page.request.post("/api/auth/logout");
   await page.goto(`/vender?interesse=${samples[0].id}`);
   const form = page.locator("form").filter({ has: page.locator('[name="plate"]') });
+  await form.getByText("Complementar com placa, km ou fotos (opcional)", { exact: true }).click();
   for (const [field, value] of Object.entries({ name: conta.prefixo, phone: "27988887766", brand: "Honda", model: "Civic", year: "2020", plate: "ABC1D23", km: "42000", notes: "Avaliação fictícia" })) {
     await form.locator(`[name="${field}"]`).fill(value);
   }

@@ -265,7 +265,7 @@ function card(overrides: Partial<VehicleCardData> = {}): VehicleCardData {
   };
 }
 
-test("o bloco mostra foto, nome, ano, km e preço, e some se não houver opção", () => {
+test("o bloco mostra foto, nome, ano, km e preço, e oferece contato se não houver opção", () => {
   const html = renderToStaticMarkup(
     createElement(
       FavoritesProvider,
@@ -314,7 +314,10 @@ test("o bloco mostra foto, nome, ano, km e preço, e some se não houver opção
       stockHref: "/estoque",
     }),
   );
-  assert.equal(empty, "");
+  assert.match(empty, /id="mesma-faixa"/);
+  assert.match(empty, /Nenhum parecido disponível agora/);
+  assert.match(empty, /href="\/estoque"/);
+  assert.doesNotMatch(empty, /<article/);
 
   const missingKm = renderToStaticMarkup(
     createElement(
@@ -352,7 +355,7 @@ test("a ficha mantém âncoras, filtros e formulário; cidades exibem até seis 
   assert.match(page, /MissingModelForm/);
   assert.match(page, /sourcePage="ficha"/);
   assert.ok(
-    page.indexOf("<MissingModelForm") < page.indexOf("<SimilarVehicles"),
+    page.indexOf("<MissingModelForm") < page.indexOf("<DeferredSimilarVehicles"),
   );
   assert.doesNotMatch(similar, /showWhatsApp|whatsappCampaign/);
   assert.match(readSrc("components/site/VehicleCard.tsx"), /VehicleCardWhatsApp/);
@@ -389,8 +392,10 @@ test("a ficha mantém âncoras, filtros e formulário; cidades exibem até seis 
 
 test("ficha pede só três relacionados e a grade não deixa card órfão no desktop", () => {
   const page = readFileSync("src/app/(vehicle)/estoque/[id]/page.tsx", "utf8");
-  const call = page.slice(page.indexOf("getRelatedVehicles("), page.indexOf("getVehicleConditions()"));
-  assert.match(call, /vehicle\.brand,\s*3,/);
+  assert.match(page, /query=\{\[vehicle\.id, vehicle\.brand, 3,/);
+  assert.doesNotMatch(page, /await getRelatedVehicles/);
+  const deferred = readSrc("components/site/DeferredSimilarVehicles.tsx");
+  assert.match(deferred, /await getRelatedVehicles\(\.\.\.query\)/);
 
   const cards = Array.from({ length: 4 }, (_, index) => card({ id: `c${index}` }));
   const html = renderToStaticMarkup(

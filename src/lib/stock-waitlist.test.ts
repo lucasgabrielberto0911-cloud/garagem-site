@@ -13,6 +13,13 @@ test("lista de espera prefere a busca livre", () => {
   );
 });
 
+test("lista de espera combina busca livre com filtros adicionais", () => {
+  assert.match(
+    formatStockWaitlistQuery({ q: "Civic", maxPrice: "60000", transmission: "automatico" }),
+    /Civic, automático, até R\$\s*60\.000/,
+  );
+});
+
 test("filtros viram frase natural para o WhatsApp", () => {
   assert.match(
     formatStockWaitlistQuery({

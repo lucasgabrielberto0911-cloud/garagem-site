@@ -118,7 +118,11 @@ function ComparisonTable({ selected, rows }: { selected: VehicleCardData[]; rows
               <tr className="border-t border-white/10 align-top">
                 <th scope="row" className="sticky left-0 z-10 bg-ink px-1 py-3 text-[10px] font-medium text-muted sm:px-2">Contato</th>
                 {selected.map(vehicle => <td key={vehicle.id} className="border-l border-white/10 p-2">
-                  <WhatsAppButton message={formatVehicleWhatsAppMessage(vehicle)} trackingLabel="comparacao-favoritos" vehicleId={vehicle.id} variant="outline" className="!h-14 !min-h-14 w-full !gap-1 !py-2 !whitespace-normal !border-emerald-500/30 bg-[#11231a] !px-1 !text-[10px] !tracking-normal hover:!bg-[#183225] [&_svg]:shrink-0 [&_svg]:!h-3.5 [&_svg]:!w-3.5 [&_svg]:text-[#25d366] sm:!text-xs"><span className="min-w-0 text-center">Tenho interesse</span></WhatsAppButton>
+                  <WhatsAppButton message={formatVehicleWhatsAppMessage({
+                    ...vehicle,
+                    path: vehiclePath(vehicle),
+                    isMoto: vehicle.category === "moto",
+                  })} trackingLabel="comparacao-favoritos" vehicleId={vehicle.id} variant="outline" className="!h-14 !min-h-14 w-full !gap-1 !py-2 !whitespace-normal !border-emerald-500/30 bg-[#11231a] !px-1 !text-[10px] !tracking-normal hover:!bg-[#183225] [&_svg]:shrink-0 [&_svg]:!h-3.5 [&_svg]:!w-3.5 [&_svg]:text-[#25d366] sm:!text-xs"><span className="min-w-0 text-center">Tenho interesse</span></WhatsAppButton>
                   <Link href={vehiclePath(vehicle)} className="mt-1 flex min-h-11 items-center justify-center text-xs text-cream underline underline-offset-4">Abrir anúncio</Link>
                 </td>)}
               </tr>

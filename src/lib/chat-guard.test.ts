@@ -336,3 +336,42 @@ test("filtro vazio oferece waitlist no WhatsApp sem veículos fora da faixa", as
   assert.match(result.reply.trim(), /\?$/);
   assert.equal(result.meta?.policy, "waitlist");
 });
+
+test("pergunta de financiamento ou visita com modelo específico traz o card e o contexto do carro", async () => {
+  const civic = {
+    id: "c-civic-finance",
+    brand: "Honda",
+    model: "Civic",
+    version: "EXL 2.0",
+    yearModel: 2020,
+    km: 45000,
+    price: 115000,
+    color: "Cinza",
+    transmission: "Automático",
+    fuel: "Flex",
+    category: "carro",
+  };
+
+  const finance = await runChatTurn({
+    mensagem: "Quanto fica o financiamento do Civic 2020?",
+    historico: [],
+    stock: [civic],
+    generate: async () => ({ text: "não deveria", functionCall: null }),
+  });
+  assert.equal(finance.vehicles.length, 1);
+  assert.equal(finance.vehicles[0]?.id, "c-civic-finance");
+  assert.match(finance.reply, /Civic/i);
+  assert.match(finance.reply, /115\.000/);
+  assert.match(finance.reply, /análise de crédito/i);
+
+  const visit = await runChatTurn({
+    mensagem: "Quero agendar uma visita pra ver o Civic",
+    historico: [],
+    stock: [civic],
+    generate: async () => ({ text: "não deveria", functionCall: null }),
+  });
+  assert.equal(visit.vehicles.length, 1);
+  assert.equal(visit.vehicles[0]?.id, "c-civic-finance");
+  assert.match(visit.reply, /Civic/i);
+  assert.match(visit.reply, /horário marcado/i);
+});

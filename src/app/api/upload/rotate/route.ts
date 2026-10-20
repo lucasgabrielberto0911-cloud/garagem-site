@@ -2,6 +2,7 @@ import { galleryPreviewObjectPath } from "@/lib/gallery-preview-path";
 import { prepareGalleryUploadPath } from "@/lib/gallery-preview-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
+import { hasTrustedMutationOrigin } from "@/lib/admin-request-origin";
 import { createPhotoMasterId, galleryStemFromStoragePath, masterObjectPathFromGalleryPath, previousObjectPathFromGalleryPath } from "@/lib/photo-master";
 import { downloadPrivateMaster, uploadPrivateMasterBytes } from "@/lib/photo-master-store";
 import { encodeMasterJpeg, toDownloadJpeg } from "@/lib/photo-jpeg";
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: Request) {
+  if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Origem inválida." }, { status: 403, headers });
   if (!(await getSession())) return NextResponse.json({}, { status: 401, headers });
   if (!hasSupabaseServiceRole()) return NextResponse.json({ error: "Fotos indisponíveis." }, { status: 503, headers });
   let galleryPath: string | null = null;

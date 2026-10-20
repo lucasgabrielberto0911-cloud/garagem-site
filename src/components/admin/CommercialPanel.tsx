@@ -33,6 +33,7 @@ async function fetchDocFile(id: string, kind: string, number?: number) {
 export function CommercialPanel({ vehicle, reservation, assessment, simulations, documents, history }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [docKind, setDocKind] = useState("proposta");
   const [message, setMessage] = useState("");
   const [margin, setMargin] = useState("2.000,00");
   const [simulation, setSimulation] = useState<ReturnType<typeof simulateFinancing> | null>(null);
@@ -125,8 +126,8 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
       <Card id="proposta" title="Proposta e recibo em PDF" collapsed>
         <p className="mb-3 text-sm text-muted">Documento de apoio à negociação. Confira dados e condições antes de assinar. O recibo declara valor já recebido e recebe número sequencial.</p>
         <form action={submit} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="operation" value="document" />
-          <label className="block text-sm">Documento<select name="kind" className={inputClass}><option value="proposta">Proposta</option><option value="recibo">Recibo (sinal, complemento, entrada ou quitação)</option></select></label><CustomerSelect />
-          <Field label="Valor proposto / recebido (R$)" name="amount" /><Field label="Forma de pagamento" name="payment" />
+          <label className="block text-sm">Documento<select name="kind" value={docKind} onChange={(e) => setDocKind(e.target.value)} className={inputClass}><option value="proposta">Proposta</option><option value="recibo">Recibo (sinal, complemento, entrada ou quitação)</option></select></label><CustomerSelect />
+          <Field label={docKind === "recibo" ? "Valor recebido (R$)" : "Preço total do veículo (R$), antes de abater o sinal"} name="amount" /><Field label="Forma de pagamento" name="payment" />
           <label className="block text-sm sm:col-span-2">Condições, validade e observações<textarea name="conditions" required maxLength={3000} className={inputClass} /></label><button className={btn.primary}>Gerar PDF</button>
           {lastDoc ? <div className="flex flex-wrap gap-2 sm:col-span-2"><a className={btn.primary} href={`/api/admin/documentos/${lastDoc.id}?inline`} target="_blank" rel="noopener noreferrer">Abrir PDF</a><button type="button" className={btn.outline} onClick={() => shareDoc(lastDoc)}>Compartilhar no WhatsApp</button></div> : null}
         </form>

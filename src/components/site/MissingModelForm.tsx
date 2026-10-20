@@ -280,7 +280,7 @@ export function MissingModelForm({
                 htmlFor={ids.model}
                 className="mb-1.5 block text-xs uppercase tracking-wider text-muted"
               >
-                Carro que deseja
+                Veículo que procura
                 <span className="ml-1 text-brand-light" aria-hidden="true">
                   *
                 </span>

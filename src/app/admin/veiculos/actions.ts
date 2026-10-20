@@ -3,8 +3,7 @@
 import { withAdminStorageLock } from "@/lib/admin-storage-lock";
 import { reconcileAdminPhotos } from "@/lib/admin-photo-reconcile";
 import type { Prisma } from "@prisma/client";
-import { parseMoneyBR } from "@/lib/admin-money";
-import { vehicleFieldErrors } from "@/lib/admin-vehicle-fields";
+import { parseVehicleFormFields } from "@/lib/admin-vehicle-fields";
 import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
 import { recordAdminAudit } from "@/lib/admin-audit";
 
@@ -29,7 +28,7 @@ import {
 } from "@/lib/vehicle-accessories";
 import {
   descriptionPriceSaveError,
-  vehicleListingError,
+  validateVehicleListing,
 } from "@/lib/admin-vehicle-validate";
 import {
   parseVehicleLocationCity,
@@ -49,14 +48,6 @@ export type VehicleFormState = {
   id?: string;
   fieldErrors?: Record<string, string>;
 };
-
-function requireNumber(value: FormDataEntryValue | null, label: string) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    throw new Error(`${label} inválido.`);
-  }
-  return parsed;
-}
 
 /** Só normaliza texto todo em maiúsculas ou minúsculas; "T-Cross" digitado certo fica como está. */
 function normalizeCase(value: string, format: (v: string) => string) {
@@ -83,13 +74,6 @@ function parseVehicleFields(formData: FormData) {
   const description = String(formData.get("description") || "").trim() || null;
   const engine = String(formData.get("engine") || "").trim() || null;
   const warranty = String(formData.get("warranty") || "").trim() || null;
-  const plateRaw = String(formData.get("plate") || "").trim();
-  const plate = plateRaw
-    ? plateRaw
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .toUpperCase()
-        .slice(0, 7)
-    : null;
   const plateEnd = String(formData.get("plateEnd") || "").trim() || null;
   const inspection = String(formData.get("inspection") || "").trim() || null;
   const status = String(formData.get("status") || "disponivel").trim();
@@ -101,39 +85,11 @@ function parseVehicleFields(formData: FormData) {
     );
   }
   const featured = featuredRequested && status === "disponivel";
-  const year = requireNumber(formData.get("year"), "Ano");
-  const yearModel = requireNumber(formData.get("yearModel"), "Ano modelo");
-  const km = requireNumber(formData.get("km"), "KM");
-  const price = requireNumber(formData.get("price"), "Preço");
-  const fipePriceRaw = String(formData.get("fipePrice") || "").trim();
-  const fipePrice = fipePriceRaw
-    ? (() => {
-        const parsed = Number(fipePriceRaw);
-        if (!Number.isFinite(parsed) || parsed < 0) {
-          throw new Error("Preço FIPE inválido.");
-        }
-        return parsed;
-      })()
-    : null;
-  const doorsRaw = String(formData.get("doors") || "").trim();
-  const doors = doorsRaw
-    ? requireNumber(formData.get("doors"), "Portas")
-    : null;
-
+  const { year, yearModel, km, doors, price, fipePrice, purchasePrice, plate, fieldErrors } = parseVehicleFormFields(formData);
+  if (Object.keys(fieldErrors).length || price == null)
+    throw Object.assign(new Error(Object.values(fieldErrors)[0]), { fieldErrors });
   const consigned =
     formData.get("consigned") === "on" || formData.get("consigned") === "true";
-  const purchaseRaw = consigned
-    ? ""
-    : String(formData.get("purchasePrice") || "").trim();
-  const purchasePrice = parseMoneyBR(purchaseRaw);
-  if (purchaseRaw && purchasePrice == null)
-    throw new Error("Preço de compra inválido.");
-  if (
-    purchasePrice != null &&
-    (!Number.isFinite(purchasePrice) || purchasePrice < 0)
-  ) {
-    throw new Error("Preço de compra inválido.");
-  }
   const inStoreName = formData.get("inStoreName") === "on";
   const hasSpareKey = formData.get("hasSpareKey") === "on";
   const hasManual = formData.get("hasManual") === "on";
@@ -147,21 +103,7 @@ function parseVehicleFields(formData: FormData) {
     });
   }
 
-  if (!brand || !model || !fuel || !transmission) {
-    throw new Error("Preencha marca, modelo, combustível e câmbio.");
-  }
-  const fieldErrors = vehicleFieldErrors({
-    year,
-    yearModel,
-    km,
-    status,
-    doors,
-  });
-  if (Object.keys(fieldErrors).length)
-    throw Object.assign(new Error(Object.values(fieldErrors)[0]), {
-      fieldErrors,
-    });
-  const listingError = vehicleListingError({
+  const listingIssues = validateVehicleListing({
     brand,
     model,
     fuel,
@@ -171,14 +113,16 @@ function parseVehicleFields(formData: FormData) {
     price,
     locationCity,
   });
-  if (listingError) throw new Error(listingError);
+  if (listingIssues.length) throw Object.assign(new Error(listingIssues[0].message), {
+    fieldErrors: Object.fromEntries(listingIssues.map(({ field, message }) => [field, message])),
+  });
 
   const priceTextError = descriptionPriceSaveError({
     description,
     price,
     status,
   });
-  if (priceTextError) throw new Error(priceTextError);
+  if (priceTextError) throw Object.assign(new Error(priceTextError), { fieldErrors: { description: priceTextError } });
 
   let photos: Array<{
     id?: string;
@@ -536,6 +480,7 @@ export async function updateVehicle(
   } catch (error) {
     console.error(error);
     return {
+      updatedAt: _prev.updatedAt,
       error:
         error instanceof Error ? error.message : "Erro ao atualizar veículo.",
       fieldErrors: (error as { fieldErrors?: Record<string, string> })
