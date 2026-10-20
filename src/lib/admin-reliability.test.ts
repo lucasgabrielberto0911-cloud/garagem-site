@@ -1,4 +1,4 @@
-import { isSameOriginRequest } from "./admin-request-origin";
+import { hasTrustedMutationOrigin, isSameOriginRequest } from "./admin-request-origin";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseMoneyBR, moneyInput, moneySum } from "./admin-money";
@@ -216,4 +216,13 @@ test("origem considera o Host público atrás do proxy e rejeita outra origem", 
     ),
     false,
   );
+});
+
+test("mutação autenticada exige Origin válido e da mesma origem", () => {
+  const request = (origin?: string) => new Request("https://garagem.test/api/upload", {
+    headers: { host: "garagem.test", ...(origin ? { origin } : {}) },
+  });
+  assert.equal(hasTrustedMutationOrigin(request()), false);
+  assert.equal(hasTrustedMutationOrigin(request("https://atacante.test")), false);
+  assert.equal(hasTrustedMutationOrigin(request("https://garagem.test")), true);
 });

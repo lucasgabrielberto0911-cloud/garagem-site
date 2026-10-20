@@ -1,6 +1,7 @@
 import { prepareGalleryUploadPath } from "@/lib/gallery-preview-store";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { hasTrustedMutationOrigin } from "@/lib/admin-request-origin";
 import { blurImageRegions } from "@/lib/blur-region";
 import { BlurRectError, parseBlurRects } from "@/lib/blur-rects";
 import { coverFrameFromCardUrl } from "@/lib/cover-frame";
@@ -37,6 +38,9 @@ const MAX_BYTES = 20 * 1024 * 1024;
  * novas no Storage. Não há detector nem chamada externa.
  */
 export async function POST(request: Request) {
+  if (!hasTrustedMutationOrigin(request)) {
+    return NextResponse.json({ error: "Origem inválida." }, { status: 403 });
+  }
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
