@@ -24,7 +24,7 @@ import {
   mobileActionCell,
 } from "@/components/admin/ui";
 import { deleteCustomer, saveCustomer } from "@/app/admin/clientes/actions";
-import { formatCpfBR, formatCurrencyBRL, formatPhoneBR } from "@/lib/format";
+import { formatCpfBR, formatCurrencyBRL, formatPhoneBR, maskCpf } from "@/lib/format";
 
 export type CustomerRow = {
   id: string;
@@ -375,7 +375,7 @@ export function CustomersManager({
                     </p>
                     {customer.cpf ? (
                       <p className="text-xs text-muted">
-                        CPF {formatCpfBR(customer.cpf)}
+                        CPF {maskCpf(customer.cpf)}
                       </p>
                     ) : null}
                   </div>

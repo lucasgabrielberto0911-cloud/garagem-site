@@ -31,5 +31,5 @@ test("PDF com Sora e Inter preserva acentos e pagina condições longas", async 
   assert.equal(Buffer.from(bytes).subarray(0, 5).toString(), "%PDF-");
   const pdf = await PDFDocument.load(bytes);
   assert.ok(pdf.getPageCount() >= 2);
-  assert.equal(pdf.getTitle(), "Garagem — Recibo de sinal");
+  assert.equal(pdf.getTitle(), "Garagem — Recibo");
 });

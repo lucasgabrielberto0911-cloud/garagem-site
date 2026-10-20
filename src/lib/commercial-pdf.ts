@@ -6,7 +6,7 @@ import { formatAdminMoney } from "./admin-money";
 
 export type DocumentSnapshot = { customer: string; cpf: string; phone: string; vehicle: string; plate: string; amount: number; payment: string; conditions: string; seller: string; date: string };
 
-export async function commercialPdf(kind: string, data: DocumentSnapshot, id: string) {
+export async function commercialPdf(kind: string, data: DocumentSnapshot, id: string, number?: number) {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const [titleBytes, textBytes] = await Promise.all([
@@ -35,13 +35,13 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
     }
   }
   line("Garagem", true);
-  line(kind === "recibo" ? "Recibo de sinal" : "Proposta comercial", true);
+  line(`${kind === "recibo" ? "Recibo" : "Proposta comercial"}${number ? ` nº ${number}` : ""}`, true);
   line(`Registro: ${id}`);
   line(`Emissão: ${new Date(data.date).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}`);
   line(`Cliente: ${data.customer}`);
   line(`CPF: ${data.cpf || "Não informado"} | Telefone: ${data.phone}`);
   line(`Veículo: ${data.vehicle} | Placa: ${data.plate || "Não informada"}`);
-  line(`${kind === "recibo" ? "Sinal recebido" : "Valor proposto"}: ${formatAdminMoney(data.amount)}`);
+  line(`${kind === "recibo" ? "Valor recebido" : "Valor proposto"}: ${formatAdminMoney(data.amount)}`);
   line(`Forma de pagamento: ${data.payment}`);
   line("Condições", true);
   line(data.conditions);
@@ -49,6 +49,6 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
   line("Documento de apoio à negociação. Confira os dados antes de assinar.");
   line("Cliente: __________________________________________");
   line("Garagem: __________________________________________");
-  pdf.setTitle(`Garagem — ${kind === "recibo" ? "Recibo de sinal" : "Proposta"}`);
+  pdf.setTitle(`Garagem — ${kind === "recibo" ? "Recibo" : "Proposta"}${number ? ` nº ${number}` : ""}`);
   return pdf.save();
 }

@@ -6,6 +6,7 @@ import { PURCHASE_STATUSES, PURCHASE_STATUS_LABEL, funnelActivity } from "@/lib/
 import { revalidatePath, revalidateTag } from "next/cache";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { getSession } from "@/lib/auth";
+import { recordAdminAudit } from "@/lib/admin-audit";
 import { ADMIN_NEW_LEADS_TAG } from "@/lib/admin-cache";
 import { lockCustomerIdentity } from "@/lib/admin-customer-lock";
 import {
@@ -276,8 +277,11 @@ export async function convertLeadToCustomer(
 
 export async function deleteLead(id: string): Promise<LeadActionState> {
   try {
-    await requireAdmin();
-    await prisma.leadVenda.delete({ where: { id } });
+    const session = await requireAdmin();
+    await prisma.$transaction(async (tx) => {
+      await tx.leadVenda.delete({ where: { id } });
+      await recordAdminAudit(tx, session.adminId, id, "lead.delete", {});
+    });
     revalidateTag(ADMIN_NEW_LEADS_TAG, { expire: 0 });
     revalidatePath("/admin/leads");
     revalidatePath("/admin");

@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { recordAdminAudit } from "@/lib/admin-audit";
+import { isValidCpf } from "@/lib/format";
 import { lockCustomerIdentity } from "@/lib/admin-customer-lock";
 import { prisma } from "@/lib/prisma";
 
@@ -30,7 +32,7 @@ function parseCustomer(formData: FormData) {
   if (name.length < 2) fieldErrors.name = "Informe o nome do cliente.";
   if (phone.length < 10) fieldErrors.phone = "Telefone incompleto.";
   if (email && !email.includes("@")) fieldErrors.email = "E-mail inválido.";
-  if (cpf && cpf.length !== 11) fieldErrors.cpf = "CPF deve ter 11 dígitos.";
+  if (cpf && !isValidCpf(cpf)) fieldErrors.cpf = "CPF inválido. Confira os 11 dígitos.";
 
   return { data: { name, phone, cpf, email, address, notes }, fieldErrors };
 }
@@ -80,9 +82,12 @@ export async function saveCustomer(
 }
 
 export async function deleteCustomer(id: string): Promise<CustomerActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
-  const sales = await prisma.sale.count({ where: { customerId: id } });
+  const [sales, reservations] = await Promise.all([
+    prisma.sale.count({ where: { customerId: id } }),
+    prisma.vehicleReservation.count({ where: { customerId: id } }),
+  ]);
   if (sales > 0) {
     return {
       ok: false,
@@ -90,8 +95,22 @@ export async function deleteCustomer(id: string): Promise<CustomerActionState> {
         "Este cliente tem vendas registradas. Cancele as vendas antes de excluí-lo.",
     };
   }
+  if (reservations > 0) {
+    return {
+      ok: false,
+      message: "Este cliente tem reservas registradas e não pode ser excluído.",
+    };
+  }
 
-  await prisma.customer.delete({ where: { id } });
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.customer.delete({ where: { id } });
+      await recordAdminAudit(tx, session.adminId, id, "customer.delete", {});
+    });
+  } catch (error) {
+    console.error("[admin/clientes] falha ao excluir cliente:", error);
+    return { ok: false, message: "Não foi possível excluir o cliente." };
+  }
   revalidatePath("/admin/clientes");
   return { ok: true, message: "Cliente excluído." };
 }
