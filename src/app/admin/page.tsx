@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import { DashboardRefresh } from "@/components/admin/DashboardRefresh";
+import { DashboardTodayBlock } from "@/components/admin/DashboardTodayBlock";
+import { DashboardSalesGoal } from "@/components/admin/DashboardSalesGoal";
 import { adminDate } from "@/lib/admin-date";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -78,15 +80,6 @@ async function DashboardContent() {
       description:
         "Marcar vendido tira o anúncio do estoque. Registre a venda separadamente para contabilizar o faturamento.",
       href: `/admin/vendas?vehicle=${vehicle.id}`,
-    });
-  for (const lead of data.dueLeads)
-    alertList.unshift({
-      key: `due-${lead.id}`,
-      tone: "warning",
-      icon: "alert",
-      title: `Retomar atendimento: ${leadDisplayName(lead)}`,
-      description: lead.nextAction || "Próximo contato agendado.",
-      href: `/admin/leads?lead=${lead.id}`,
     });
   for (const lead of [...(data.unansweredLeads?.urgent ?? [])].reverse())
     alertList.unshift({
@@ -245,6 +238,17 @@ async function DashboardContent() {
       ) : null}
       {data.failures.length === 0 ? (
         <>
+          <DashboardTodayBlock
+            dueLeads={data.hoje?.dueLeads ?? data.dueLeads}
+            unansweredLeads={data.hoje?.unansweredLeads ?? []}
+            reservedVehicles={data.hoje?.reservedVehicles ?? []}
+          />
+
+          <DashboardSalesGoal
+            salesGoal={data.salesGoal}
+            leaderboard={data.leaderboard}
+          />
+
           {/* Celular: 2 números que pedem ação; o resto fica em “Mais números”. */}
           <section className="space-y-3 lg:hidden" aria-label="Números da loja">
             <div className={adminStatGrid}>

@@ -15,6 +15,8 @@ import {
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { normalizeSalesQuery } from "@/lib/admin-sales-search";
+import { DashboardSalesGoal } from "@/components/admin/DashboardSalesGoal";
+import { computeMonthlySalesGoal, computeSalesLeaderboard } from "@/lib/sales-goals";
 import { SELLABLE_VEHICLE_SELECT } from "@/lib/admin-vehicles";
 
 export const dynamic = "force-dynamic";
@@ -102,6 +104,15 @@ export default async function VendasPage({
         </p>
       ) : null}
       {saleId ? <Link href="/admin/vendas" className="inline-flex min-h-11 items-center text-sm underline underline-offset-4">Voltar a todas as vendas</Link> : null}
+
+      <DashboardSalesGoal
+        salesGoal={computeMonthlySalesGoal({
+          salesCount: count,
+          salesRevenue: revenue,
+        })}
+        leaderboard={computeSalesLeaderboard(list.sales)}
+      />
+
       <SalesManager
         key={`${period}:${query}:${saleId ?? ""}`}
         query={query}

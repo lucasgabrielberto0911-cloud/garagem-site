@@ -20,6 +20,10 @@ import {
   googleReviewsReady,
 } from "@/lib/google-reviews";
 import { daysInStock, staleCutoffDate } from "@/lib/stock-quality";
+import {
+  computeMonthlySalesGoal,
+  computeSalesLeaderboard,
+} from "@/lib/sales-goals";
 import { summarizeUnansweredLeads } from "@/lib/lead-response-alert";
 
 export { daysInStock, STALE_DAYS } from "@/lib/stock-quality";
@@ -95,6 +99,9 @@ async function loadDashboardData() {
     monthlySales,
     saleGaps,
     dueLeads,
+    unansweredLeads,
+    reservedVehicles,
+    monthSaleRecords,
     newLeadsForUrgency,
     staleVehicles,
     withoutPhotos,
@@ -266,8 +273,69 @@ async function loadDashboardData() {
             status: { notIn: ["fechado", "perdido"] },
           },
           orderBy: { nextActionAt: "asc" },
-          take: 5,
-          select: { id: true, name: true, nextAction: true },
+          take: 6,
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            nextAction: true,
+            nextActionAt: true,
+            vehicleInfo: true,
+          },
+        }),
+      [],
+    ),
+    safe(
+      "unansweredLeads",
+      () => {
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        return prisma.leadVenda.findMany({
+          where: {
+            status: "novo",
+            createdAt: { lte: oneHourAgo },
+          },
+          orderBy: { createdAt: "asc" },
+          take: 6,
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            vehicleInfo: true,
+            createdAt: true,
+          },
+        });
+      },
+      [],
+    ),
+    safe(
+      "reservedVehicles",
+      () =>
+        prisma.vehicle.findMany({
+          where: { status: "reservado" },
+          orderBy: { updatedAt: "asc" },
+          take: 6,
+          select: {
+            id: true,
+            brand: true,
+            model: true,
+            price: true,
+            updatedAt: true,
+          },
+        }),
+      [],
+    ),
+    safe(
+      "monthSaleRecords",
+      () =>
+        prisma.sale.findMany({
+          where: { saleDate: { gte: monthStart } },
+          orderBy: { saleDate: "desc" },
+          select: {
+            id: true,
+            salePrice: true,
+            notes: true,
+            saleDate: true,
+          },
         }),
       [],
     ),
@@ -370,6 +438,16 @@ async function loadDashboardData() {
     monthlySales,
     saleGaps,
     dueLeads,
+    hoje: {
+      dueLeads,
+      unansweredLeads,
+      reservedVehicles,
+    },
+    salesGoal: computeMonthlySalesGoal({
+      salesCount: monthSales._count._all,
+      salesRevenue: monthSales._sum.salePrice ?? 0,
+    }),
+    leaderboard: computeSalesLeaderboard(monthSaleRecords),
     unansweredLeads: {
       alertCount: unansweredSummary.alertCount,
       overdueCount: unansweredSummary.overdueCount,

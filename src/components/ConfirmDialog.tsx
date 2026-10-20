@@ -13,6 +13,7 @@ export function ConfirmDialog({
   loading = false,
   typedPhrase,
   typedLabel,
+  alternateConfirm,
   onConfirm,
   onCancel,
 }: {
@@ -25,6 +26,11 @@ export function ConfirmDialog({
   loading?: boolean;
   typedPhrase?: string;
   typedLabel?: string;
+  alternateConfirm?: {
+    label: string;
+    onConfirm: () => void;
+    loading?: boolean;
+  };
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -120,6 +126,16 @@ export function ConfirmDialog({
             >
               {cancelLabel}
             </button>
+            {alternateConfirm ? (
+              <button
+                type="button"
+                onClick={alternateConfirm.onConfirm}
+                disabled={loading || alternateConfirm.loading}
+                className="min-h-[44px] border border-brand bg-brand/10 px-4 py-2 text-sm font-medium text-cream transition touch-manipulation hover:bg-brand/20 disabled:opacity-60"
+              >
+                {alternateConfirm.loading ? "Aguarde..." : alternateConfirm.label}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={onConfirm}

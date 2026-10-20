@@ -12,6 +12,7 @@ import {
   ActionSheetButton,
   ActionSheetLink,
 } from "@/components/admin/ActionSheet";
+import { VehiclePromoKitModal } from "@/components/admin/VehiclePromoKitModal";
 import {
   IconCash,
   IconCheck,
@@ -192,6 +193,7 @@ export function VehiclesTable({
   const loadingRef = useRef(false);
   const [deleteTarget, setDeleteTarget] = useState<VehicleRow | null>(null);
   const [soldTarget, setSoldTarget] = useState<VehicleRow | null>(null);
+  const [promoTarget, setPromoTarget] = useState<VehicleRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [markingSold, setMarkingSold] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -420,16 +422,30 @@ export function VehiclesTable({
     }
   }
 
-  async function confirmMarkSold() {
+  async function confirmMarkSold(registerSale = false) {
     if (!soldTarget) return;
+    const targetId = soldTarget.id;
     setMarkingSold(true);
     try {
-      await markVehicleAsSold(soldTarget.id);
-      toast.success(
-        "Veículo movido para a aba Vendidos. A página permanece no site.",
-      );
-      applyLocalStatus(soldTarget.id, "vendido", soldTarget.featured);
-      router.refresh();
+      await markVehicleAsSold(targetId);
+      applyLocalStatus(targetId, "vendido", soldTarget.featured);
+      if (registerSale) {
+        toast.success(
+          "Veículo marcado como vendido. Abrindo registro de venda...",
+        );
+        router.push(`/admin/vendas?vehicle=${targetId}`);
+      } else {
+        toast.success(
+          "Veículo movido para a aba Vendidos. A página permanece no site.",
+          {
+            action: {
+              label: "Registrar venda",
+              onClick: () => router.push(`/admin/vendas?vehicle=${targetId}`),
+            },
+          },
+        );
+        router.refresh();
+      }
     } catch {
       toast.error("Erro ao marcar como vendido.");
     } finally {
@@ -1055,6 +1071,7 @@ export function VehiclesTable({
             onDuplicate={() => duplicate(actionsTarget)}
             onMarkSold={() => setSoldTarget(actionsTarget)}
             onDelete={() => setDeleteTarget(actionsTarget)}
+            onPromo={() => setPromoTarget(actionsTarget)}
           />
         ) : null}
       </ActionSheet>
@@ -1067,11 +1084,21 @@ export function VehiclesTable({
             ? `Confirmar venda de ${soldTarget.brand} ${soldTarget.model}? Sai da aba Em estoque e vai para Vendidos. A página pública continua no ar com aviso (sem 404).`
             : undefined
         }
-        confirmLabel="Marcar como vendido"
+        confirmLabel="Só marcar vendido"
+        alternateConfirm={{
+          label: "Vendido e registrar venda",
+          onConfirm: () => void confirmMarkSold(true),
+        }}
         danger={false}
         loading={markingSold}
         onCancel={() => setSoldTarget(null)}
-        onConfirm={confirmMarkSold}
+        onConfirm={() => void confirmMarkSold(false)}
+      />
+
+      <VehiclePromoKitModal
+        vehicle={promoTarget}
+        open={promoTarget !== null}
+        onClose={() => setPromoTarget(null)}
       />
 
       <ConfirmDialog
@@ -1285,6 +1312,7 @@ function SheetActions({
   onDuplicate,
   onMarkSold,
   onDelete,
+  onPromo,
 }: {
   vehicle: VehicleRow;
   busy: boolean;
@@ -1294,6 +1322,7 @@ function SheetActions({
   onDuplicate: () => void;
   onMarkSold: () => void;
   onDelete: () => void;
+  onPromo?: () => void;
 }) {
   const run = (action: () => void) => () => {
     close();
@@ -1312,6 +1341,14 @@ function SheetActions({
         hint="Preço, fotos e ficha"
         onNavigate={close}
       />
+      {onPromo ? (
+        <ActionSheetButton
+          icon={<IconExternal className="h-4 w-4" />}
+          label="Kit de divulgação"
+          hint="WhatsApp, Instagram e card Status"
+          onClick={run(onPromo)}
+        />
+      ) : null}
       {beforeDelete.map((action) => (
         <OverflowAction
           key={action}

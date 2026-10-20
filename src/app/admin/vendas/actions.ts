@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/lib/photo-master";
 import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
 import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
+import { formatSaleNotes } from "@/lib/sales-goals";
 
 export type SaleActionState = {
   ok: boolean;
@@ -98,7 +99,11 @@ function parseSaleForm(formData: FormData): ParsedSaleForm {
   const customerName = String(formData.get("customerName") || "").trim();
   const customerPhone = digitsOnly(formData.get("customerPhone"));
   const paymentMethodRaw = String(formData.get("paymentMethod") || "").trim();
-  const notes = String(formData.get("notes") || "").trim() || null;
+  const sellerName = String(formData.get("sellerName") || "").trim() || null;
+  const commissionRaw = String(formData.get("commission") || "").trim();
+  const commission = commissionRaw ? parseMoneyBR(commissionRaw) : null;
+  const rawNotes = String(formData.get("notes") || "").trim() || null;
+  const notes = formatSaleNotes(rawNotes, sellerName, commission);
   const salePrice = parseMoneyBR(formData.get("salePrice")) ?? 0;
   const saleDateRaw = String(formData.get("saleDate") || "").trim();
 
