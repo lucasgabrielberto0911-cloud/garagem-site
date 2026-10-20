@@ -10,8 +10,6 @@ import { site } from "./site";
 /** Campos opcionais não existem em documentos antigos; nesse caso a coluna/linha é omitida. */
 export type DocumentSnapshot = {
   customer: string; cpf: string; phone: string; vehicle: string; plate: string; amount: number; payment: string; conditions: string; seller: string; date: string;
-  /** Nome de quem assina pela loja (campo do formulário). Nunca usar e-mail aqui. */
-  sellerName?: string;
   year?: number; yearModel?: number; color?: string; km?: number; total?: number;
   /** Só contrato: dados que o cadastro ainda não tem saem como linha em branco para preencher à mão. */
   rg?: string; address?: string; chassis?: string; renavam?: string;
@@ -210,7 +208,6 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
     const yearText = data.yearModel ? (data.year && data.year !== data.yearModel ? `${data.year}/${data.yearModel}` : String(data.yearModel)) : blank(undefined, 8);
     const kmText = typeof data.km === "number" ? `${new Intl.NumberFormat("pt-BR").format(data.km)} km` : blank(undefined, 8);
     const days = data.deliveryDays ?? 5;
-    const sellerName = clean(data.sellerName ?? "").trim();
     const receiptRef = data.signal?.receiptId
       ? `recibo de sinal nº ${clean(data.signal.receiptId)}${data.signal.date ? `, emitido em ${new Date(data.signal.date).toLocaleDateString("pt-BR", { timeZone: tz })}` : ""}`
       : "recibo de sinal emitido pela VENDEDORA";
@@ -233,7 +230,7 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
     };
 
     section("Das partes", 90);
-    paragraph(`VENDEDORA: ${PDF_STORE.legalName}, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${PDF_STORE.cnpj}, com sede em ${blank(PDF_STORE.address, 40)}, ${PDF_STORE.city}/${PDF_STORE.stateCode}, neste ato representada por ${blank(sellerName, 28)}, doravante denominada VENDEDORA.`, 10);
+    paragraph(`VENDEDORA: ${PDF_STORE.legalName}, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${PDF_STORE.cnpj}, com sede em ${blank(PDF_STORE.address, 40)}, ${PDF_STORE.city}/${PDF_STORE.stateCode}, doravante denominada VENDEDORA.`, 10);
     y -= 4;
     paragraph(`COMPRADOR(A): ${clean(data.customer)}, portador(a) do CPF nº ${blank(data.cpf, 18)}, RG nº ${blank(data.rg, 16)}, residente e domiciliado(a) em ${blank(data.address, 44)}, telefone ${blank(data.phone, 16)}, doravante denominado(a) COMPRADOR(A).`, 10);
     y -= 4;
@@ -314,7 +311,7 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
       const lines = [...(name ? wrap(name, semi, 10, sigW).slice(0, 2) : []), ...(sub ? [sub] : [])];
       lines.forEach((text, row) => page.drawText(text, { x, y: y - 28 - row * 12, size: row === 0 && name ? 10 : 9, font: row === 0 && name ? semi : regular, color: row === 0 && name ? ASPHALT : MUTED }));
     };
-    sign(MARGIN, "Vendedora — Garagem", sellerName, PDF_STORE.legalName);
+    sign(MARGIN, "Vendedora", PDF_STORE.legalName, `CNPJ ${PDF_STORE.cnpj}`);
     sign(MARGIN + sigW + 40, "Comprador(a)", clean(data.customer), data.cpf ? `CPF ${data.cpf}` : "");
     y -= 70;
     sign(MARGIN, "Testemunha 1", "", "Nome e CPF:");
@@ -415,16 +412,14 @@ export async function commercialPdf(kind: string, data: DocumentSnapshot, id: st
   page.drawText(place, { x: MARGIN, y, size: 11, font: regular, color: ASPHALT });
   y -= isReceipt ? 30 : 46;
   const sigW = (CONTENT_W - 40) / 2;
-  const sellerName = clean(data.sellerName ?? "").trim();
   const sigs = [
     { who: "Cliente", name: data.customer, sub: data.cpf ? `CPF ${data.cpf}` : "" },
-    { who: "Vendedor — Garagem", name: sellerName, sub: PDF_STORE.legalName },
+    { who: "Vendedora", name: PDF_STORE.legalName, sub: `CNPJ ${PDF_STORE.cnpj}` },
   ];
   sigs.forEach((sig, i) => {
     const x = MARGIN + i * (sigW + 40);
     page.drawLine({ start: { x, y }, end: { x: x + sigW, y }, thickness: 0.8, color: ASPHALT });
     page.drawText(sig.who.toUpperCase(), { x, y: y - 14, size: 8, font: semi, color: BRAND });
-    // Sem nome do vendedor, a linha fica para preenchimento à mão.
     const lines = [...wrap(sig.name, semi, 10, sigW).slice(0, 2), ...(sig.sub ? [sig.sub] : [])];
     lines.forEach((text, row) => page.drawText(text, { x, y: y - 28 - row * 12, size: row === 0 && sig.name ? 10 : 9, font: row === 0 && sig.name ? semi : regular, color: row === 0 && sig.name ? ASPHALT : MUTED }));
   });
