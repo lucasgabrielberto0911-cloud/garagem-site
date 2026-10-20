@@ -12,3 +12,7 @@ export function isSameOriginRequest(request: Request) {
     return false;
   }
 }
+
+export function hasTrustedMutationOrigin(request: Request) {
+  return Boolean(request.headers.get("origin") && isSameOriginRequest(request));
+}

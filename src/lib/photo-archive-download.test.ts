@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   attachmentHeaders,
   isSafeVehicleStoragePath,
+  loadAdminJpegSafely,
   vehiclePhotoStoragePath,
 } from "./photo-archive-download";
 
@@ -55,4 +56,8 @@ test("anexo do download é jpeg com nome .jpg", () => {
     'attachment; filename="hyundai-creta-2022-01.jpg"',
   );
   assert.equal(headers["Cache-Control"], "private, no-store");
+});
+
+test("falha inesperada no download JPG retorna nulo controlado", async () => {
+  assert.equal(await loadAdminJpegSafely(OBJECT, async () => { throw new Error("storage indisponível"); }), null);
 });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { hasTrustedMutationOrigin } from "@/lib/admin-request-origin";
 import { coverFrameSourcePath, parseCoverFrame } from "@/lib/cover-frame";
 import { uploadFramedCard } from "@/lib/framed-card-store";
 import { encodeFramedCardSet } from "@/lib/image-variants";
@@ -22,6 +23,7 @@ const MAX_GALLERY_BYTES = 20 * 1024 * 1024;
  * miniatura nova quando o admin salva.
  */
 export async function POST(request: Request) {
+  if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Origem inválida." }, { status: 403, headers });
   if (!(await getSession())) return NextResponse.json({ error: "Não autorizado." }, { status: 401, headers });
   if (!hasSupabaseServiceRole()) return NextResponse.json({ error: "Fotos indisponíveis." }, { status: 503, headers });
   try {

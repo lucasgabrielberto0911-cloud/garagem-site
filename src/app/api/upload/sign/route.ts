@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { hasTrustedMutationOrigin } from "@/lib/admin-request-origin";
 import { isPhotoMasterId } from "@/lib/photo-master";
 import {
   VEHICLE_PHOTOS_BUCKET,
@@ -14,6 +15,7 @@ export const runtime = "nodejs";
  * evitando o limite de body (~4.5 MB) da Vercel que causa 413.
  */
 export async function POST(request: Request) {
+  if (!hasTrustedMutationOrigin(request)) return NextResponse.json({ error: "Origem inválida." }, { status: 403 });
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });

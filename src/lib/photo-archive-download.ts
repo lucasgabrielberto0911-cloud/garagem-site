@@ -192,6 +192,23 @@ export async function loadAdminJpeg(url: string): Promise<Uint8Array | null> {
   return encodeDownload(file.bytes, ADMIN_JPEG_QUALITY, MAX_ADMIN_SOURCE_BYTES);
 }
 
+export async function loadAdminJpegSafely(
+  url: string,
+  loader: typeof loadAdminJpeg = loadAdminJpeg,
+): Promise<Uint8Array | null> {
+  try {
+    return await loader(url);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    const safeDetail = detail
+      .replace(/https?:\/\/\S+/gi, "[URL removida]")
+      .replace(/((?:token|key|password|secret)\s*[=:]\s*)\S+/gi, "$1[redigido]")
+      .slice(0, 160);
+    console.error("[photo-archive] falha inesperada ao preparar JPG:", safeDetail);
+    return null;
+  }
+}
+
 export function attachmentHeaders(filename: string, contentType: string) {
   const ascii = filename.replace(/[^\x20-\x7E]/g, "_");
   return {

@@ -2,11 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { preload } from "react-dom";
 import { VehicleImage } from "@/components/VehicleImage";
 import { useSpeculativeLoading } from "./useSpeculativeLoading";
 import { vehiclePhotoAlt } from "@/lib/format";
-import { publicPhotoSrc } from "@/lib/public-photo-url";
 import {
   GALLERY_HERO_SIZES,
   galleryLcpSrc,
@@ -52,15 +50,6 @@ export function VehicleGallery({
   const [zoomOpen, setZoomOpen] = useState(false);
   const total = photos.length;
   const speculativeLoading = useSpeculativeLoading();
-  const lcpPhoto = photos[0];
-  if (lcpPhoto?.url) {
-    // href simples, só no celular: o srcset da página ainda escolhe o 1280 no desktop.
-    preload(publicPhotoSrc(galleryLcpSrc(lcpPhoto)), {
-      as: "image",
-      fetchPriority: "high",
-      media: "(max-width: 639px)",
-    });
-  }
 
   useEffect(() => {
     if (!speculativeLoading) return;

@@ -1,9 +1,8 @@
 import { publicVehicleDescription } from "@/lib/public-vehicle-description";
 import type { Metadata } from "next";
-import { publicPhotoSrc, publicPhotoSrcSet } from "@/lib/public-photo-url";
+import { publicPhotoSrc } from "@/lib/public-photo-url";
 import Link from "next/link";
 import { RememberRecentVehicle } from "@/components/site/RememberRecentVehicle";
-import { preload } from "react-dom";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import { FichaSectionNav } from "@/components/site/FichaSectionNav";
@@ -40,11 +39,6 @@ import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
 import { absoluteUrl, breadcrumbJsonLd, vehicleJsonLd } from "@/lib/seo";
 import { fichaWhatsAppTracking, site } from "@/lib/site";
 import { priceBandHref } from "@/lib/related-vehicles";
-import {
-  GALLERY_HERO_SIZES,
-  galleryPreviewSrc,
-  galleryPreviewSrcSet,
-} from "@/lib/stock-query";
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 import {
   collapseDuplicateAccessories,
@@ -171,17 +165,6 @@ export default async function VehicleDetailPage({
   }
 
   const path = vehiclePath(vehicle);
-  const hero = vehicle.photos[0];
-  const heroSrc = hero ? publicPhotoSrc(galleryPreviewSrc(hero)) : "";
-  const heroSet = hero ? publicPhotoSrcSet(galleryPreviewSrcSet(hero)) : undefined;
-  if (heroSrc) {
-    preload(heroSrc, {
-      as: "image",
-      fetchPriority: "high",
-      imageSrcSet: heroSet,
-      imageSizes: heroSet ? GALLERY_HERO_SIZES : undefined,
-    });
-  }
   const fichaTrack = fichaWhatsAppTracking({ id: vehicle.id, path });
   const sold = vehicle.status === "vendido";
   const description = publicVehicleDescription(vehicle.description, sold);
@@ -505,13 +488,28 @@ export default async function VehicleDetailPage({
               ) : null}
 
               {sold ? (
-                <Link
-                  href={related.length > 0 ? "#mesma-faixa" : "/estoque"}
-                  prefetch={false}
-                  className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-orange"
-                >
-                  {related.length > 0 ? "Ver na mesma faixa" : "Ver estoque disponível"}
-                </Link>
+                <div className="space-y-2">
+                  <Link
+                    href={related.length > 0 ? "#mesma-faixa" : "/estoque"}
+                    prefetch={false}
+                    className="inline-flex w-full min-h-[48px] items-center justify-center bg-brand px-5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-orange"
+                  >
+                    {related.length > 0 ? "Ver na mesma faixa" : "Ver estoque disponível"}
+                  </Link>
+                  <WhatsAppButton
+                    size="md"
+                    variant="outline"
+                    className="w-full"
+                    trackingLabel="ficha-vendido"
+                    campaign="ficha"
+                    content={fichaTrack.content}
+                    vehicleId={vehicle.id}
+                    slug={canonicalSlug}
+                    message={whatsapp.interest}
+                  >
+                    Pedir parecido no WhatsApp
+                  </WhatsAppButton>
+                </div>
               ) : (
                 <>
                   <VehicleLeadHit
@@ -553,6 +551,7 @@ export default async function VehicleDetailPage({
                     video={whatsapp.video}
                     finance={whatsapp.finance}
                     trade={whatsapp.trade}
+                    visit={whatsapp.visit}
                   />
                   <p className="-mt-2 text-[11px] leading-relaxed text-muted">
                     Esses botões também abrem o WhatsApp deste veículo.
@@ -690,6 +689,7 @@ export default async function VehicleDetailPage({
                   video: whatsapp.video,
                   finance: whatsapp.finance,
                   trade: whatsapp.trade,
+                  visit: whatsapp.visit,
                 }
           }
         />
@@ -701,6 +701,7 @@ export default async function VehicleDetailPage({
             contextLabel={fullLabel}
             pagePath={path}
             interestVehicleId={vehicle.id}
+            initialModel={sold ? title : ""}
             description={
               sold
                 ? `O ${title} já foi. Se você procura outro, deixa o modelo aqui.`

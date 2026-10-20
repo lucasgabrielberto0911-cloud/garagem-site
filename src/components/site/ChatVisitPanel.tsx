@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { IconWhatsApp } from "@/components/site/icons";
 import {
+  VISIT_TIME_OPTIONS,
   chatVisitWhatsAppUrl,
   isChatVisitComplete,
   type ChatVisitInput,
 } from "@/lib/chat-visit";
-import { trackWhatsAppClick } from "@/lib/meta-pixel";
+import { trackWhatsAppClick, type VehicleFunnelRef } from "@/lib/meta-pixel";
+import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
 import { trackEvent } from "@/lib/track-event";
 
 const FIELD =
@@ -16,9 +18,11 @@ const FIELD =
 /** Coleta carro, dúvidas e horário e abre o WhatsApp com a mensagem pronta. */
 export function ChatVisitPanel({
   initialVehicle,
+  funnel,
   onClose,
 }: {
   initialVehicle?: string;
+  funnel?: VehicleFunnelRef;
   onClose: () => void;
 }) {
   const [input, setInput] = useState<ChatVisitInput>({
@@ -27,6 +31,7 @@ export function ChatVisitPanel({
     time: "",
   });
   const complete = isChatVisitComplete(input);
+  const href = complete ? chatVisitWhatsAppUrl(input) : undefined;
   const set = (key: keyof ChatVisitInput) => (value: string) =>
     setInput((prev) => ({ ...prev, [key]: value }));
 
@@ -78,6 +83,26 @@ export function ChatVisitPanel({
           placeholder="Ex.: sábado de manhã"
         />
       </label>
+      <div className="flex flex-wrap gap-1.5">
+        {VISIT_TIME_OPTIONS.map((option) => {
+          const selected = input.time === option;
+          return (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => set("time")(option)}
+              className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium transition touch-manipulation ${
+                selected
+                  ? "border-brand/70 bg-brand/20 text-cream"
+                  : "border-white/10 bg-white/[0.04] text-cream/75 hover:border-white/25 hover:text-cream"
+              }`}
+            >
+              {option}
+            </button>
+          );
+        })}
+      </div>
       {!complete ? (
         <p className="text-[11px] text-cream/50">
           Preencha o carro e o horário desejado para enviar.
@@ -85,17 +110,25 @@ export function ChatVisitPanel({
       ) : null}
       <a
         role="link"
-        href={complete ? chatVisitWhatsAppUrl(input) : undefined}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
         aria-disabled={!complete}
         onClick={(event) => {
-          if (!complete) {
+          if (!complete || !href) {
             event.preventDefault();
             return;
           }
           trackEvent("chat_visit_request", { has_questions: input.questions.trim() ? 1 : 0 });
-          trackWhatsAppClick("chat-visita");
+          trackWhatsAppClick("chat-visita", funnel);
+          if (typeof navigator !== "undefined" && !navigator.onLine) {
+            event.preventDefault();
+            void queueWhatsAppIfOffline({
+              url: event.currentTarget.href || href,
+              label: "chat-visita",
+              vehicleId: funnel?.vehicleId,
+            });
+          }
           onClose();
         }}
         className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 text-[13px] font-semibold text-asphalt ${
