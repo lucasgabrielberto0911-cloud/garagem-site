@@ -104,6 +104,7 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await form.locator('[name="color"]').fill("Prata");
   await abrir("Preço e status");
   await form.locator('[name="priceDisplay"]').fill(" R$ 87.654,00 ");
+  await abrir("Mais opções");
   await form.getByRole("button", { name: "Linhares ES", exact: true }).click();
   await abrir("Ficha técnica");
   await form.locator('[name="year"]').fill(" 2020 ");
@@ -127,7 +128,16 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   expect(vehicle.doors).toBeNull();
   expect(vehicle.purchasePrice).toBeNull();
   await expect(page).toHaveURL(`/admin/veiculos/${vehicle.id}`);
+  const tabsNav = page.getByRole("navigation", { name: "Abas da ficha do veículo" });
+  for (const label of ["Anúncio", "Fotos", "Venda", "Custos e docs", "Verificado"]) {
+    await expect(tabsNav.getByRole("link", { name: new RegExp(`^${label}`) })).toBeVisible();
+  }
   await page.locator('[name="priceDisplay"]').fill("86543.50");
+  await tabsNav.getByRole("link", { name: "Fotos", exact: true }).click();
+  await expect(form.getByText("Já temos vídeo deste veículo", { exact: true })).toBeVisible();
+  await expect(form.locator('[name="priceDisplay"]')).toHaveValue("86.543,50");
+  await tabsNav.getByRole("link", { name: "Anúncio", exact: true }).click();
+  await expect(form.locator('[name="priceDisplay"]')).toBeVisible();
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).price).toBe(86543.5);
   await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();

@@ -104,7 +104,7 @@ test("salvar preserva IDs, ordem, foto transformada e retira apenas vínculos ex
   }
 });
 
-test("as três abas carregam e preservam os controles de cada painel", async ({ page }) => {
+test("as cinco abas carregam e preservam os controles de cada painel", async ({ page }) => {
   for (let round = 0; round < 3; round++) {
     await page.goto(`/admin/veiculos/${vehicleId}?view=verificado`);
     await expect(page.getByText("Revisões e manutenção", { exact: true }).first()).toBeVisible();
@@ -112,6 +112,12 @@ test("as três abas carregam e preservam os controles de cada painel", async ({ 
     await page.goto(`/admin/veiculos/${vehicleId}?view=operacao`);
     await expect(page.getByTestId("consigned-ops-note")).toBeVisible();
     await expect(page.locator("#vehicle-form")).toHaveCount(0);
+    await page.goto(`/admin/veiculos/${vehicleId}?view=venda`);
+    await expect(page.getByText("Sugestão de preço por giro", { exact: true }).first()).toBeVisible();
+    await expect(page.locator("#vehicle-form")).toHaveCount(0);
+    await page.goto(`/admin/veiculos/${vehicleId}?view=fotos`);
+    await expect(page.locator("#vehicle-form")).toBeVisible();
+    await expect(page.locator('[name="consigned"]')).toHaveCount(1);
     await page.goto(`/admin/veiculos/${vehicleId}`);
     await expect(page.locator("#vehicle-form")).toBeVisible();
     await expect(page.locator('[name="consigned"]')).toHaveCount(1);

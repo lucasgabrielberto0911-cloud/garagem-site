@@ -32,7 +32,7 @@ test("giro, avaliação, financiamento, reserva, PDF privado e pós-venda", asyn
   expect(login.ok()).toBeTruthy();
   const cookie = login.headers()["set-cookie"].split(";")[0];
   await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
-  await page.goto(`/admin/veiculos/${vehicleId}?view=operacao`);
+  await page.goto(`/admin/veiculos/${vehicleId}?view=venda`);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   const price = page.locator("details").filter({ has: page.locator("summary", { hasText: "Sugestão de preço por giro" }) });
   await price.locator("summary").click();

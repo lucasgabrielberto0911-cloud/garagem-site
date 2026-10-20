@@ -27,7 +27,7 @@ const STATUS_LABEL: Record<
   vendido: { label: "Vendido", tone: "neutral" },
 };
 
-type EditView = "anuncio" | "operacao" | "verificado";
+type EditView = "anuncio" | "fotos" | "venda" | "operacao" | "verificado";
 
 export default async function EditVehiclePage({
   params,
@@ -44,12 +44,17 @@ export default async function EditVehiclePage({
     searchParams,
   ]);
   const view: EditView =
-    viewParam === "operacao" || viewParam === "verificado"
+    viewParam === "fotos" ||
+    viewParam === "venda" ||
+    viewParam === "operacao" ||
+    viewParam === "verificado"
       ? viewParam
-      : "anuncio";
+      : viewParam === "custos"
+        ? "operacao"
+        : "anuncio";
 
-  // Custos e documentos só na aba Operação — e em paralelo com o veículo,
-  // sem esperar a primeira consulta.
+  // Custos e documentos só nas abas de Custos e docs / Venda — e em paralelo
+  // com o veículo, sem esperar a primeira consulta.
   const [vehicle, costs, documents, verified, listingScore] = await Promise.all([
     prisma.vehicle.findUnique({
       where: { id },
@@ -64,13 +69,13 @@ export default async function EditVehiclePage({
             vehicleId: true,
           },
         },
-        // Preço de venda só entra na aba Operação.
+        // Preço de venda só entra na aba Custos e docs (Operação).
         ...(view === "operacao"
           ? { sale: { select: { salePrice: true } } }
           : {}),
       },
     }),
-    view === "operacao"
+    view === "operacao" || view === "venda"
       ? prisma.vehicleCost.findMany({
           where: { vehicleId: id },
           orderBy: { incurredAt: "desc" },
@@ -87,14 +92,16 @@ export default async function EditVehiclePage({
       ? getAdminVerifiedState(id)
       : Promise.resolve(null),
     // Nota gravada no último Salvar com alteração. Abrir o admin não chama o Jev.
-    view === "anuncio" ? getStoredListingScore(id) : Promise.resolve(null),
+    view === "anuncio" || view === "fotos"
+      ? getStoredListingScore(id)
+      : Promise.resolve(null),
   ]);
 
   if (!vehicle) {
     notFound();
   }
 
-  const commercial = view === "operacao" ? await Promise.all([
+  const commercial = view === "venda" ? await Promise.all([
     prisma.vehicleReservation.findFirst({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, include: { customer: { select: { name: true, phone: true } } } }),
     prisma.vehicleAssessment.findUnique({ where: { vehicleId: id } }),
     prisma.financeSimulation.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 20 }),
@@ -144,38 +151,58 @@ export default async function EditVehiclePage({
         }
       />
 
-      <nav className="grid grid-cols-3 border-b border-white/10">
+      <nav
+        aria-label="Abas da ficha do veículo"
+        className="-mx-3 flex overflow-x-auto border-b border-white/10 px-3 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-5 sm:px-0 [&::-webkit-scrollbar]:hidden"
+      >
         <TabLink
           href={`/admin/veiculos/${vehicle.id}`}
           active={view === "anuncio"}
+          tab="anuncio"
         >
           Anúncio
+        </TabLink>
+        <TabLink
+          href={`/admin/veiculos/${vehicle.id}?view=fotos`}
+          active={view === "fotos"}
+          tab="fotos"
+        >
+          Fotos
+        </TabLink>
+        <TabLink
+          href={`/admin/veiculos/${vehicle.id}?view=venda`}
+          active={view === "venda"}
+          tab="venda"
+        >
+          Venda
         </TabLink>
         <TabLink
           href={`/admin/veiculos/${vehicle.id}?view=operacao`}
           active={view === "operacao"}
           mark={!vehicle.purchasePrice && !vehicle.consigned}
+          tab="operacao"
         >
-          Operação
+          Custos e docs
         </TabLink>
         <TabLink
           href={`/admin/veiculos/${vehicle.id}?view=verificado`}
           active={view === "verificado"}
+          tab="verificado"
         >
           Verificado
         </TabLink>
       </nav>
 
-      {commercial ? <CommercialPanel
-        vehicle={{ id, status: vehicle.status, price: vehicle.price, fipePrice: vehicle.fipePrice, purchasePrice: vehicle.purchasePrice, consigned: vehicle.consigned, days, costs: costs.reduce((sum, cost) => sum + cost.amount, 0) }}
-        reservation={commercial[0] ? { customer: commercial[0].customer.name, phone: commercial[0].customer.phone, deposit: Number(commercial[0].deposit), expiresAt: commercial[0].expiresAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }), deadline: commercial[0].status === "ativa" ? reservationDeadline(commercial[0].expiresAt) : null, status: commercial[0].status } : null}
-        assessment={commercial[1] ? { items: commercial[1].items as Prisma.JsonArray as { label: string; status: string }[], notes: commercial[1].notes, offer: Number(commercial[1].offer), approved: commercial[1].approved } : null}
-        simulations={commercial[2].map((s) => ({ id: s.id, customerName: s.customerName, bank: s.bank, installment: Number(s.installment), months: s.months, rate: Number(s.rate), status: s.status }))}
-        documents={commercial[3].map((d) => ({ id: d.id, kind: d.kind, number: d.number, date: adminDate(d.createdAt) }))}
-        history={commercial[4].map((h) => ({ price: h.price, date: adminDate(h.createdAt) }))}
-      /> : null}
-
-      {view === "verificado" && verified ? (
+      {view === "venda" && commercial ? (
+        <CommercialPanel
+          vehicle={{ id, status: vehicle.status, price: vehicle.price, fipePrice: vehicle.fipePrice, purchasePrice: vehicle.purchasePrice, consigned: vehicle.consigned, days, costs: costs.reduce((sum, cost) => sum + cost.amount, 0) }}
+          reservation={commercial[0] ? { customer: commercial[0].customer.name, phone: commercial[0].customer.phone, deposit: Number(commercial[0].deposit), expiresAt: commercial[0].expiresAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }), deadline: commercial[0].status === "ativa" ? reservationDeadline(commercial[0].expiresAt) : null, status: commercial[0].status } : null}
+          assessment={commercial[1] ? { items: commercial[1].items as Prisma.JsonArray as { label: string; status: string }[], notes: commercial[1].notes, offer: Number(commercial[1].offer), approved: commercial[1].approved } : null}
+          simulations={commercial[2].map((s) => ({ id: s.id, customerName: s.customerName, bank: s.bank, installment: Number(s.installment), months: s.months, rate: Number(s.rate), status: s.status }))}
+          documents={commercial[3].map((d) => ({ id: d.id, kind: d.kind, number: d.number, date: adminDate(d.createdAt) }))}
+          history={commercial[4].map((h) => ({ price: h.price, date: adminDate(h.createdAt) }))}
+        />
+      ) : view === "verificado" && verified ? (
         <VehicleTabsLoader view="verificado" panelProps={{
           vehicleId: vehicle.id,
           isMoto: vehicle.category === "moto",
@@ -195,7 +222,11 @@ export default async function EditVehiclePage({
         }} />
       ) : (
         <VehicleTabsLoader view="anuncio" panelProps={{
-          mode: "edit", vehicle, adminId: session.adminId, listingScore,
+          mode: "edit",
+          vehicle,
+          adminId: session.adminId,
+          listingScore,
+          initialTab: view === "fotos" ? "fotos" : "anuncio",
         }} />
       )}
     </div>
@@ -206,18 +237,22 @@ function TabLink({
   href,
   active,
   mark = false,
+  tab,
   children,
 }: {
   href: string;
   active: boolean;
   mark?: boolean;
+  tab: EditView;
   children: ReactNode;
 }) {
   return (
     <Link
-          prefetch={false}
+      prefetch={false}
       href={href}
-      className={`-mb-px inline-flex min-h-[48px] items-center justify-center gap-2 border-b-2 px-3 py-2.5 font-display text-xs font-semibold uppercase tracking-wider transition touch-manipulation sm:px-4 ${
+      data-vehicle-tab={tab}
+      aria-current={active ? "page" : undefined}
+      className={`-mb-px inline-flex min-h-[48px] shrink-0 items-center justify-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 font-display text-xs font-semibold uppercase tracking-wider transition touch-manipulation sm:px-4 ${
         active
           ? "border-brand text-cream"
           : "border-transparent text-muted hover:text-cream"
