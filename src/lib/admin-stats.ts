@@ -320,6 +320,12 @@ async function loadDashboardData() {
             model: true,
             price: true,
             updatedAt: true,
+            reservations: {
+              where: { status: "ativa" },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: { expiresAt: true },
+            },
           },
         }),
       [],
@@ -441,7 +447,10 @@ async function loadDashboardData() {
     hoje: {
       dueLeads,
       unansweredLeads,
-      reservedVehicles,
+      reservedVehicles: reservedVehicles.map(({ reservations, ...vehicle }) => ({
+        ...vehicle,
+        expiresAt: reservations[0]?.expiresAt ?? null,
+      })),
     },
     salesGoal: computeMonthlySalesGoal({
       salesCount: monthSales._count._all,

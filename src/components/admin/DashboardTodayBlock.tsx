@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatCurrencyBRL, formatPhoneBR } from "@/lib/format";
+import { reservationDeadline } from "@/lib/admin-date";
 import { leadDisplayName } from "@/lib/leads";
 import { Badge } from "@/components/admin/ui";
 import { IconCash } from "@/components/admin/icons";
@@ -27,6 +28,7 @@ export type TodayBlockProps = {
     model: string;
     price: number;
     updatedAt: Date | string;
+    expiresAt?: Date | string | null;
   }>;
 };
 
@@ -235,6 +237,9 @@ export function DashboardTodayBlock({
                       {formatDaysReserved(vehicle.updatedAt)}
                     </span>
                   </div>
+                  {reservationDeadline(vehicle.expiresAt) ? (
+                    <p className="font-medium text-brand">{reservationDeadline(vehicle.expiresAt)}</p>
+                  ) : null}
                   <div className="mt-1 flex items-center justify-between">
                     <span className="text-cream font-medium">
                       {formatCurrencyBRL(vehicle.price)}

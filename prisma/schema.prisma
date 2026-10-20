@@ -385,6 +385,7 @@ model CommercialDocument {
   vehicleId String
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   kind String
+  number Int @unique @default(autoincrement())
   snapshot Json
   createdAt DateTime @default(now())
   @@index([vehicleId, createdAt])

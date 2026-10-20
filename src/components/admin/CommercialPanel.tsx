@@ -5,20 +5,29 @@ import { useRouter } from "next/navigation";
 import { saveCommercial } from "@/app/admin/veiculos/commercial-actions";
 import { ENTRY_ITEMS, FINANCE_STATUSES, simulateFinancing, suggestPrice } from "@/lib/admin-commercial";
 import { formatAdminMoney as brl, moneyInput, parseMoneyBR } from "@/lib/admin-money";
+import { whatsappUrl } from "@/lib/leads";
 import { SearchSelect } from "./SearchSelect";
 import { btn, Card, inputClass } from "./ui";
 
 type Props = {
   vehicle: { id: string; status: string; price: number; fipePrice: number | null; purchasePrice: number | null; consigned: boolean; days: number; costs: number };
-  reservation: { customer: string; deposit: number; expiresAt: string; status: string } | null;
+  reservation: { customer: string; phone: string; deadline: string | null; deposit: number; expiresAt: string; status: string } | null;
   assessment: { items: { label: string; status: string }[]; notes: string; offer: number; approved: boolean } | null;
   simulations: { id: string; customerName: string; bank: string; installment: number; months: number; rate: number; status: string }[];
-  documents: { id: string; kind: string; date: string }[];
+  documents: { id: string; kind: string; number: number; date: string }[];
   history: { price: number; date: string }[];
 };
 
 function Field({ label, name, value, type = "text", required = true }: { label: string; name: string; value?: string | number; type?: string; required?: boolean }) {
   return <label className="block space-y-1 text-sm"><span>{label}</span><input name={name} type={type} defaultValue={value} required={required} maxLength={type === "text" ? 200 : undefined} className={inputClass} /></label>;
+}
+
+async function fetchDocFile(id: string, kind: string, number?: number) {
+  try {
+    const r = await fetch(`/api/admin/documentos/${id}`);
+    if (!r.ok || !r.headers.get("content-type")?.includes("application/pdf")) return null;
+    return new File([await r.blob()], `garagem-${kind}-${number}.pdf`, { type: "application/pdf" });
+  } catch { return null; }
 }
 
 export function CommercialPanel({ vehicle, reservation, assessment, simulations, documents, history }: Props) {
@@ -28,6 +37,7 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
   const [message, setMessage] = useState("");
   const [margin, setMargin] = useState("2.000,00");
   const [simulation, setSimulation] = useState<ReturnType<typeof simulateFinancing> | null>(null);
+  const [lastDoc, setLastDoc] = useState<{ id: string; kind: string; number?: number; file: File | null } | null>(null);
   const suggestion = suggestPrice({ price: vehicle.price, fipe: vehicle.fipePrice, purchase: vehicle.purchasePrice, costs: vehicle.costs, days: vehicle.days, margin: parseMoneyBR(margin) ?? 0, consigned: vehicle.consigned });
   function submit(form: FormData) {
     start(async () => {
@@ -36,15 +46,40 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
         setMessage(result.message);
         if (result.ok) router.refresh();
         if (result.documentId) {
-          const link = document.createElement("a");
-          link.href = `/api/admin/documentos/${result.documentId}`;
-          link.download = "";
-          link.click();
+          const kind = String(form.get("kind"));
+          // Baixa o PDF já aqui para o botão de compartilhar abrir direto no gesto do toque (iOS).
+          const file = await fetchDocFile(result.documentId, kind, result.documentNumber);
+          setLastDoc({ id: result.documentId, kind, number: result.documentNumber, file });
+          if (!file) setMessage("Operação registrada, mas o PDF não pôde ser baixado. Use “Compartilhar” para tentar de novo.");
         }
       } catch { setMessage("Falha de conexão. Confira o registro antes de tentar novamente."); }
     });
   }
-  return <div className="space-y-4 font-body">
+  function openCard(id: string) {
+    const el = document.getElementById(id) as HTMLDetailsElement | null;
+    if (!el) return;
+    el.open = true;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  async function shareDoc(doc: NonNullable<typeof lastDoc>) {
+    if (!doc.file) {
+      const file = await fetchDocFile(doc.id, doc.kind, doc.number);
+      if (!file) { setMessage("Não foi possível baixar o PDF. Tente novamente."); return; }
+      setMessage("");
+      setLastDoc({ ...doc, file });
+      return;
+    }
+    const label = `${doc.kind === "recibo" ? "Recibo" : "Proposta"}${doc.number ? ` nº ${doc.number}` : ""} - Garagem`;
+    if (doc.file && navigator.canShare?.({ files: [doc.file] })) navigator.share({ files: [doc.file], title: label, text: label }).catch(() => {});
+    else window.open(`https://wa.me/?text=${encodeURIComponent(label)}`, "_blank", "noopener");
+  }
+  const bar = "inline-flex min-h-11 flex-1 items-center justify-center px-2 text-center text-xs font-semibold touch-manipulation";
+  return <div className="space-y-4 pb-16 font-body md:pb-0">
+    <nav aria-label="Ações rápidas" className="fixed inset-x-0 bottom-admin-nav z-30 flex gap-2 border-t border-white/10 bg-asphalt p-2 md:hidden">
+      <button type="button" className={`${btn.primary} ${bar}`} onClick={() => openCard("reserva")} disabled={vehicle.status !== "disponivel"}>Reservar</button>
+      <button type="button" className={`${btn.outline} ${bar}`} onClick={() => openCard("proposta")}>Gerar proposta</button>
+      {reservation ? <a className={`${btn.outline} ${bar}`} href={whatsappUrl(reservation.phone, `Olá, ${reservation.customer.split(" ")[0]}! Aqui é da Garagem.`)} target="_blank" rel="noopener noreferrer">WhatsApp do cliente</a> : null}
+    </nav>
     <p role="status" aria-live="polite" className="text-sm">{pending ? "Salvando…" : message}</p>
     <fieldset disabled={pending} className="min-w-0 space-y-4">
       <Card title="Sugestão de preço por giro" collapsed>
@@ -57,10 +92,10 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
         </form>
         <ul className="mt-3 text-xs text-muted">{history.map((h, i) => <li key={i}>{h.date} · {brl(h.price)}</li>)}</ul>
       </Card>
-      <Card title="Reserva com sinal e prazo" collapsed>
+      <Card id="reserva" title="Reserva com sinal e prazo" collapsed>
         <p className="mb-3 text-xs text-muted">Reservas vencidas são liberadas em até 1 minuto com o painel aberto ou na rotina diária às 6h.</p>
-        {reservation ? <p className="mb-3 text-sm">{reservation.customer} · sinal {brl(reservation.deposit)} · prazo {reservation.expiresAt} · {reservation.status}. O sinal integra o valor total da venda; não some novamente.</p> : null}
-        {reservation?.status === "ativa" ? <form action={submit}><input type="hidden" name="operation" value="cancel-reservation" /><p className="mb-2 text-xs text-muted">Cancelar libera o veículo. A devolução do sinal deve ser acertada com o cliente.</p><button className={btn.outline}>Cancelar reserva e liberar veículo</button><a className={`${btn.primary} mt-2`} href={`/admin/vendas?vehicle=${vehicle.id}`}>Registrar venda (sinal incluído)</a></form> : vehicle.status === "disponivel" ? <form action={submit} className="grid gap-3 sm:grid-cols-2">
+        {reservation ? <p className="mb-3 text-sm">{reservation.customer} · sinal {brl(reservation.deposit)} · prazo {reservation.expiresAt} · {reservation.status}{reservation.deadline ? ` · ${reservation.deadline}` : ""}. O sinal integra o valor total da venda; não some novamente.</p> : null}
+        {reservation?.status === "ativa" ? <><form action={submit}><input type="hidden" name="operation" value="cancel-reservation" /><p className="mb-2 text-xs text-muted">Cancelar libera o veículo. A devolução do sinal deve ser acertada com o cliente.</p><button className={btn.outline}>Cancelar reserva e liberar veículo</button></form><form action={submit} className="mt-3 space-y-2"><input type="hidden" name="operation" value="extend-reservation" /><Field label="Novo prazo (horário de Brasília)" name="expiresAt" type="datetime-local" /><button className={btn.outline}>Prorrogar reserva</button></form><a className={`${btn.primary} mt-2`} href={`/admin/vendas?vehicle=${vehicle.id}`}>Registrar venda (sinal incluído)</a></> : vehicle.status === "disponivel" ? <form action={submit} className="grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="operation" value="reserve" /><CustomerSelect />
           <Field label="Sinal recebido (R$)" name="deposit" value="0,00" /><Field label="Prazo (horário de Brasília)" name="expiresAt" type="datetime-local" />
           <button className={btn.primary}>Confirmar reserva</button>
@@ -88,14 +123,15 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
         </form>
         <div className="mt-4 space-y-3">{simulations.map((s) => <form key={s.id} action={submit} className="space-y-2 border-t border-white/10 pt-3"><input type="hidden" name="operation" value="finance-status" /><input type="hidden" name="simulationId" value={s.id} /><p className="text-sm">{s.customerName} · {s.bank} · {s.months} × {brl(s.installment)} · {s.rate}% a.m.</p><label className="block text-sm">Situação<select name="status" className={inputClass} defaultValue={s.status}>{FINANCE_STATUSES.map((value, index) => <option key={value} value={value}>{["Simulação", "Enviada ao banco", "Aprovada", "Recusada"][index]}</option>)}</select></label><button className={btn.outline}>Atualizar acompanhamento</button></form>)}</div>
       </Card>
-      <Card title="Contrato e recibo de sinal em PDF" collapsed>
-        <p className="mb-3 text-sm text-muted">Documento de apoio à negociação. Confira dados e condições antes de assinar. O recibo declara sinal já recebido.</p>
+      <Card id="proposta" title="Proposta e recibo em PDF" collapsed>
+        <p className="mb-3 text-sm text-muted">Documento de apoio à negociação. Confira dados e condições antes de assinar. O recibo declara valor já recebido e recebe número sequencial.</p>
         <form action={submit} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="operation" value="document" />
-          <label className="block text-sm">Documento<select name="kind" value={docKind} onChange={(e) => setDocKind(e.target.value)} className={inputClass}><option value="proposta">Contrato de compra e venda</option><option value="recibo">Recibo de sinal</option></select></label><CustomerSelect />
-          <Field label={docKind === "recibo" ? "Sinal recebido (R$)" : "Preço total do veículo (R$), antes de abater o sinal"} name="amount" /><Field label="Forma de pagamento" name="payment" />
-          <label className="block text-sm sm:col-span-2">Condições, validade e observações<textarea name="conditions" required maxLength={3000} className={inputClass} /></label><button className={btn.primary}>Gerar e baixar PDF</button>
+          <label className="block text-sm">Documento<select name="kind" value={docKind} onChange={(e) => setDocKind(e.target.value)} className={inputClass}><option value="proposta">Proposta</option><option value="recibo">Recibo (sinal, complemento, entrada ou quitação)</option></select></label><CustomerSelect />
+          <Field label={docKind === "recibo" ? "Valor recebido (R$)" : "Preço total do veículo (R$), antes de abater o sinal"} name="amount" /><Field label="Forma de pagamento" name="payment" />
+          <label className="block text-sm sm:col-span-2">Condições, validade e observações<textarea name="conditions" required maxLength={3000} className={inputClass} /></label><button className={btn.primary}>Gerar PDF</button>
+          {lastDoc ? <div className="flex flex-wrap gap-2 sm:col-span-2"><a className={btn.primary} href={`/api/admin/documentos/${lastDoc.id}?inline`} target="_blank" rel="noopener noreferrer">Abrir PDF</a><button type="button" className={btn.outline} onClick={() => shareDoc(lastDoc)}>Compartilhar no WhatsApp</button></div> : null}
         </form>
-        <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}`}>{d.kind === "recibo" ? "Recibo" : "Contrato"} · {d.date} · Baixar PDF</a></li>)}</ul>
+        <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}?inline`} target="_blank" rel="noopener noreferrer">{d.kind === "recibo" ? "Recibo" : "Proposta"} nº {d.number} · {d.date} · Abrir PDF</a></li>)}</ul>
       </Card>
     </fieldset>
   </div>;

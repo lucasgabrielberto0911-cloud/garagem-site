@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth";
 import { ADMIN_SEED_PASSWORD_TAG } from "@/lib/admin-cache";
 import { prisma } from "@/lib/prisma";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export type AccountActionState = {
   ok: boolean;
@@ -112,6 +113,11 @@ export async function changeAdminPassword(
     where: { id: admin.id },
     data: { passwordHash: await bcrypt.hash(next, 10) },
   });
+
+  // Só registro: falha no log não pode desfazer a troca nem mudar o fluxo.
+  await prisma
+    .$transaction((tx) => recordAdminAudit(tx, admin.id, admin.id, "admin.password-change", {}))
+    .catch((error) => console.error("[admin/conta] falha ao registrar troca de senha:", error));
 
   const token = await createSessionToken(admin.id, admin.email);
   (await cookies()).set(SESSION_COOKIE, token, sessionCookieOptions());

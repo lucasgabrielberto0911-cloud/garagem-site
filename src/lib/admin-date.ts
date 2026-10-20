@@ -69,3 +69,11 @@ export function adminActionDate(date: Date) {
   const time = localTimeInput(date);
   return time ? `${adminDate(date)} às ${time}` : adminDate(date);
 }
+
+/** Aviso do prazo da reserva ativa: vencida, vence hoje (Brasília) ou nada. */
+export function reservationDeadline(expiresAt?: Date | string | null): string | null {
+  if (!expiresAt) return null;
+  const date = new Date(expiresAt);
+  if (date.getTime() <= Date.now()) return "Reserva vencida";
+  return localDateInput(date) === localDateInput() ? "Vence hoje" : null;
+}

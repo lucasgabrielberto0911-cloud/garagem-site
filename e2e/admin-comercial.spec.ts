@@ -77,9 +77,8 @@ test("giro, avaliação, financiamento, reserva, PDF privado e pós-venda", asyn
   await documentPanel.locator("input[name=amount]").fill("1.000,00");
   await documentPanel.locator("input[name=payment]").fill("Pix");
   await documentPanel.locator("textarea[name=conditions]").fill("Sinal recebido. Saldo a combinar. Prazo informado na reserva.");
-  const download = page.waitForEvent("download");
-  await documentPanel.getByRole("button", { name: "Gerar e baixar PDF" }).click();
-  expect((await download).suggestedFilename()).toMatch(/garagem-recibo-.*\.pdf/);
+  await documentPanel.getByRole("button", { name: "Gerar PDF" }).click();
+  await expect(documentPanel.getByRole("link", { name: "Abrir PDF" }).first()).toBeVisible();
   const doc = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId } });
   expect((await publicRequest.get(`/api/admin/documentos/${doc.id}`)).status()).toBe(401);
   await publicRequest.dispose();

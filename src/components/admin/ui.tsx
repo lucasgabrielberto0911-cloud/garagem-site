@@ -89,7 +89,9 @@ export function Card({
   title,
   action,
   collapsed = false,
+  id,
 }: {
+  id?: string;
   collapsed?: boolean;
   children: ReactNode;
   className?: string;
@@ -98,7 +100,7 @@ export function Card({
 }) {
   if (collapsed && title)
     return (
-      <details className={`border border-white/10 bg-ink/50 ${className}`}>
+      <details id={id} className={`border border-white/10 bg-ink/50 ${className}`}>
         <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-display text-base font-semibold text-cream [&::-webkit-details-marker]:hidden">
           {title}
           <IconChevronDown className="h-4 w-4 shrink-0" />

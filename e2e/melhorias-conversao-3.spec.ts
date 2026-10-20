@@ -25,7 +25,7 @@ test("ficha vendida pré-preenche o modelo no pedido sem preço e oferece WhatsA
   await page.goto(vehiclePath(soldCivic));
   const modelInput = page
     .locator("[data-missing-model-form] form")
-    .getByLabel("Carro que deseja");
+    .getByLabel("Veículo que procura");
   await expect(modelInput).toHaveValue("Honda Civic");
   await modelInput.fill("Honda Civic LXR");
   await expect(modelInput).toHaveValue("Honda Civic LXR");
@@ -154,7 +154,7 @@ test("Avisar quando chegar preserva origem consentida no WhatsApp e leva modelo 
     /\/pedido\?q=Corolla&minPrice=50000&maxPrice=80000/,
   );
   const form = page.locator("[data-missing-model-form] form");
-  await expect(form.getByLabel("Carro que deseja")).toHaveValue("Corolla");
+  await expect(form.getByLabel("Veículo que procura")).toHaveValue("Corolla");
   await expect(form.getByLabel("Valor máximo")).toHaveValue("R$ 80.000");
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),

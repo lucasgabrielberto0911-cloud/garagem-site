@@ -176,6 +176,24 @@ export function formatCpfBR(value: string) {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
+/** CPF com 11 dígitos, dígitos verificadores corretos e sem sequência repetida. */
+export function isValidCpf(value: string) {
+  const d = value.replace(/\D/g, "");
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  for (const size of [9, 10]) {
+    let sum = 0;
+    for (let i = 0; i < size; i++) sum += Number(d[i]) * (size + 1 - i);
+    if (((sum * 10) % 11) % 10 !== Number(d[size])) return false;
+  }
+  return true;
+}
+
+/** CPF para listas: só os 6 dígitos do meio aparecem (***.456.789-**). */
+export function maskCpf(value: string) {
+  const d = value.replace(/\D/g, "");
+  return d.length === 11 ? `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**` : "***";
+}
+
 /** Placa só com letras/números em maiúsculas (ex.: ABC1234, ABC1D23). */
 export function normalizePlate(value: string) {
   return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 7);

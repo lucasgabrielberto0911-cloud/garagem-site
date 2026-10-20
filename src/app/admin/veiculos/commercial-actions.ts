@@ -8,6 +8,7 @@ import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { parseMoneyBR } from "@/lib/admin-money";
 import { ENTRY_ITEMS, FINANCE_STATUSES, simulateFinancing, suggestPrice } from "@/lib/admin-commercial";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { expireAdminData } from "@/lib/admin-revalidate";
 import { revalidatePublicStock, revalidatePublicStockMany } from "@/lib/public-stock-revalidate";
 import { expireReservations } from "@/lib/reservations";
 
@@ -23,7 +24,7 @@ export async function releaseExpiredReservations() {
   }
 }
 
-export async function saveCommercial(vehicleId: string, form: FormData): Promise<{ ok: boolean; message: string; documentId?: string }> {
+export async function saveCommercial(vehicleId: string, form: FormData): Promise<{ ok: boolean; message: string; documentId?: string; documentNumber?: number }> {
   const session = await getSession();
   if (!session) return { ok: false, message: "Sessão expirada." };
   const text = (name: string) => String(form.get(name) ?? "").trim();
@@ -33,6 +34,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
     return value;
   };
   let documentId: string | undefined;
+  let documentNumber: number | undefined;
   try {
     await prisma.$transaction(async (tx) => {
       // Todas as operações comerciais do veículo compartilham a mesma trava.
@@ -53,6 +55,12 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         const result = await tx.vehicleReservation.updateMany({ where: { vehicleId, status: "ativa" }, data: { status: "cancelada" } });
         if (!result.count) throw new CommercialError("Não há reserva ativa.");
         if (vehicle.status === "reservado" && !vehicle.sale) await tx.vehicle.update({ where: { id: vehicleId }, data: { status: "disponivel" } });
+      } else if (operation === "extend-reservation") {
+        const reservation = await tx.vehicleReservation.findFirst({ where: { vehicleId, status: "ativa" }, orderBy: { createdAt: "desc" } });
+        if (!reservation) throw new CommercialError("Não há reserva ativa.");
+        const expiresAt = new Date(`${text("expiresAt")}:00-03:00`);
+        if (!Number.isFinite(expiresAt.getTime()) || expiresAt <= new Date() || expiresAt <= reservation.expiresAt) throw new CommercialError("Informe um prazo futuro e posterior ao atual.");
+        await tx.vehicleReservation.update({ where: { id: reservation.id }, data: { expiresAt } });
       } else if (operation === "price") {
         if (vehicle.status === "vendido" || vehicle.sale) throw new CommercialError("Veículo vendido não recebe ajuste de preço.");
         const suggestion = suggestPrice({ price: vehicle.price, fipe: vehicle.fipePrice, purchase: vehicle.purchasePrice, costs: vehicle.costs.reduce((sum, cost) => sum + cost.amount, 0), days: Math.max(0, Math.floor((Date.now() - vehicle.createdAt.getTime()) / 86400000)), margin: money("margin"), consigned: vehicle.consigned });
@@ -90,7 +98,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         if (!amount || !text("payment") || text("payment").length > 200 || !text("conditions") || text("conditions").length > 3000) throw new CommercialError("Informe valor positivo e condições de até 3.000 caracteres.");
         if (kind === "proposta" && vehicle.status === "vendido") throw new CommercialError("Veículo vendido não recebe proposta.");
         const reservation = kind === "recibo" ? await tx.vehicleReservation.findFirst({ where: { vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } }) : null;
-        if (kind === "recibo" && (!reservation || Number(reservation.deposit) !== amount)) throw new CommercialError("Recibo de sinal exige reserva do cliente com o mesmo valor recebido.");
+        if (kind === "recibo" && !reservation && vehicle.sale?.customerId !== customer.id) throw new CommercialError("Recibo exige reserva ou venda do veículo para este cliente.");
         // Contrato: o sinal já pago (recibo da reserva) é abatido do preço.
         let signal: { amount: number; receiptId?: string; date?: string } | undefined;
         if (kind === "proposta") {
@@ -101,6 +109,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         }
         const doc = await tx.commercialDocument.create({ data: { vehicleId, kind, snapshot: { address: customer.address ?? "", signal, customer: customer.name, cpf: customer.cpf ?? "", phone: customer.phone, vehicle: [vehicle.brand, vehicle.model, vehicle.version].filter(Boolean).join(" "), year: vehicle.year, yearModel: vehicle.yearModel, color: vehicle.color ?? "", km: vehicle.km, total: kind === "proposta" ? amount : vehicle.price, plate: vehicle.plate ?? "", amount, conditions: text("conditions"), payment: text("payment").slice(0, 200), seller: session.email, date: new Date().toISOString(), reservationId: reservation?.id ?? null, saleId: vehicle.sale?.id ?? null } } });
         documentId = doc.id;
+        documentNumber = doc.number;
       } else throw new CommercialError("Operação inválida.");
       await recordAdminAudit(tx, session.adminId, vehicleId, `commercial.${operation}`, { operation });
     });
@@ -109,8 +118,9 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
   }
   revalidatePath(`/admin/veiculos/${vehicleId}`);
   revalidatePath("/admin/agenda");
+  if (text("operation") === "extend-reservation") expireAdminData();
   if (["reserve", "cancel-reservation", "price"].includes(text("operation")) || (text("operation") === "assessment" && form.get("approved") === "on")) await revalidatePublicStock(vehicleId);
-  return { ok: true, message: "Operação registrada.", documentId };
+  return { ok: true, message: "Operação registrada.", documentId, documentNumber };
 }
 
 export async function completeAfterSale(id: string) {

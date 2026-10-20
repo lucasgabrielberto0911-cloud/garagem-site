@@ -64,7 +64,7 @@ const RECEIPT_TERMS = [
   "Em caso de desistência do cliente, o sinal não é restituído e fica com a Garagem; se a desistência for da Garagem, o sinal é devolvido na forma da lei (cláusula 8ª do contrato).",
 ];
 
-export async function commercialPdf(kind: string, input: DocumentSnapshot, id: string) {
+export async function commercialPdf(kind: string, input: DocumentSnapshot, id: string, number?: number) {
   const isReceipt = kind === "recibo";
   let data = input;
   // Recibo é compacto: 1 página, ou 2 se a observação for longa.
@@ -140,7 +140,7 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
       const right = PAGE_W - MARGIN;
       const t = docTitle.toUpperCase();
       page.drawText(t, { x: right - title.widthOfTextAtSize(t, 15), y: PAGE_H - 58, size: 15, font: title, color: ASPHALT });
-      const meta = `Nº ${clean(id)}`;
+      const meta = number ? `Nº ${number} · Registro ${clean(id)}` : `Nº ${clean(id)}`;
       page.drawText(meta, { x: right - semi.widthOfTextAtSize(meta, 9), y: PAGE_H - 75, size: 9, font: semi, color: BRAND });
       const dateText = `Emitido em ${issuedText}`;
       page.drawText(dateText, { x: right - regular.widthOfTextAtSize(dateText, 9), y: PAGE_H - 88, size: 9, font: regular, color: MUTED });
@@ -148,7 +148,7 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
       y = PAGE_H - (isReceipt ? 116 : 126);
     } else {
       drawLogo(page, PAGE_H - 52, 0.7);
-      const t = `${docTitle} · Nº ${clean(id)}`;
+      const t = `${docTitle} · Nº ${number ?? clean(id)}`;
       page.drawText(t, { x: PAGE_W - MARGIN - regular.widthOfTextAtSize(t, 9), y: PAGE_H - 56, size: 9, font: regular, color: MUTED });
       page.drawRectangle({ x: 0, y: PAGE_H - 76, width: PAGE_W, height: 3, color: BRAND });
       y = PAGE_H - 104;
@@ -459,6 +459,6 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     p.drawText(n, { x: PAGE_W - MARGIN - regular.widthOfTextAtSize(n, 8), y: FOOTER_Y + 8, size: 8, font: regular, color: MUTED });
   });
 
-  pdf.setTitle(`Garagem — ${isReceipt ? "Recibo de sinal" : "Contrato de compra e venda"}`);
+  pdf.setTitle(`Garagem — ${isReceipt ? "Recibo" : "Contrato de compra e venda"}${isReceipt && number ? ` nº ${number}` : ""}`);
   return pdf.save();
 }
