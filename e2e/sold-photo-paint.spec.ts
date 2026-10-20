@@ -40,7 +40,7 @@ test("ficha vendida: WhatsApp convida para similares sem o preço antigo",async(
 });
 
 test("home e estoque entregam fotos visíveis mesmo com JavaScript desligado",async({browser,page,baseURL})=>{
-  const context=await browser.newContext({javaScriptEnabled:false,viewport:page.viewportSize()!,baseURL});
+  const context=await browser.newContext({javaScriptEnabled:false,viewport:page.viewportSize()!,baseURL:baseURL||String(test.info().project.use.baseURL)});
   try{
     await context.route("**/fotos/**",route=>route.fulfill({contentType:"image/png",body:readFileSync("public/branding/placeholder-car.png")}));
     const staticPage=await context.newPage();

@@ -168,6 +168,8 @@ test("servidor valida status, anos inteiros, quilometragem e portas", () => {
 });
 test("alterar senha ou e-mail invalida a impressão da sessão antiga", () => {
   const first = sessionFingerprint("hash-original", "admin@example.test");
+  assert.equal(first, sessionFingerprint("hash-original", "admin@example.test"));
+  assert.match(first, /^[a-f0-9]{64}$/);
   assert.notEqual(first, sessionFingerprint("hash-novo", "admin@example.test"));
   assert.notEqual(
     first,
@@ -180,6 +182,12 @@ test("datas inválidas retornam erro sem quebrar a validação", () => {
     assert.ok(Number.isNaN(businessDay(text).getTime()));
 });
 test("origem considera o Host público atrás do proxy e rejeita outra origem", () => {
+  for (const origin of ["https://www.suagaragem.net.externo.test", "ftp://www.suagaragem.net", "https://www.suagaragem.net:8443", "inválida"]) {
+    assert.equal(isSameOriginRequest(new Request("http://localhost/api", {
+      headers: { host: "www.suagaragem.net", origin },
+    })), false, origin);
+  }
+  assert.equal(isSameOriginRequest(new Request("http://127.0.0.1:3362/api")), true);
   assert.equal(
     isSameOriginRequest(
       new Request("http://localhost:3100/api", {

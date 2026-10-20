@@ -1,6 +1,7 @@
 {
   "ignoreCommand": "bash scripts/vercel-ignore.sh",
   "regions": ["gru1"],
+  "crons": [{ "path": "/api/cron/reservas", "schedule": "0 9 * * *" }],
   "headers": [
     {
       "source": "/(.*)",

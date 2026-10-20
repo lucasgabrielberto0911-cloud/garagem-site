@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import { isValidPlate, normalizePlate } from "@/lib/format";
 import { notifyNewLead } from "@/lib/lead-notify";
@@ -139,7 +139,7 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
       source,
       photoUrls,
     });
-    revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
+    updateTag(ADMIN_NEW_LEADS_TAG);
     notifyNewLead({
       id: lead.id,
       name,

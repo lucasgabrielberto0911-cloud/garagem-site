@@ -63,7 +63,7 @@ test("envio sem e-mail salva orçamento no banco e exibe no admin", async ({ pag
     expect(lead.interestVehicleId).toBe(samples[0].id);
     expect(lead.notes).toMatch(/Preço: até R\$\s*95\.000/);
     expect(lead.notes).not.toMatch(/E-mail:|Ano:|Km:/);
-    const login = await page.request.post("/api/auth/login", { data: { email, password }, headers: { Origin: "http://127.0.0.1:3362" } });
+    const login = await page.request.post("/api/auth/login", { data: { email, password }, headers: { Origin: String(info.project.use.baseURL) } });
     expect(login.ok()).toBeTruthy();
     await page.goto("/admin/leads");
     const card = page.locator(`#lead-${lead.id}`);

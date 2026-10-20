@@ -7,8 +7,8 @@ import { trackSearch } from "@/lib/meta-pixel";
 
 const BUDGET_LINKS = [
   { label: "Até 50 mil", href: "/estoque?maxPrice=50000" },
-  { label: "50 a 80 mil", href: "/estoque?minPrice=50000&maxPrice=80000" },
-  { label: "80 a 120 mil", href: "/estoque?minPrice=80000&maxPrice=120000" },
+  { label: "R$ 50 mil a R$ 80 mil", href: "/estoque?minPrice=50000&maxPrice=80000" },
+  { label: "R$ 80 mil a R$ 120 mil", href: "/estoque?minPrice=80000&maxPrice=120000" },
   { label: "Acima de 120 mil", href: "/estoque?minPrice=120000" },
 ] as const;
 

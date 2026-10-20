@@ -33,8 +33,8 @@ export const CATEGORY_FILTER_OPTIONS = [
 export const BUDGET_CHIPS = [
   { label: "Até 30 mil", minPrice: "", maxPrice: "30000" },
   { label: "Até 50 mil", minPrice: "", maxPrice: "50000" },
-  { label: "50 a 80 mil", minPrice: "50000", maxPrice: "80000" },
-  { label: "80 a 120 mil", minPrice: "80000", maxPrice: "120000" },
+  { label: "R$ 50 mil a R$ 80 mil", minPrice: "50000", maxPrice: "80000" },
+  { label: "R$ 80 mil a R$ 120 mil", minPrice: "80000", maxPrice: "120000" },
   { label: "Acima de 120 mil", minPrice: "120000", maxPrice: "" },
 ] as const;
 

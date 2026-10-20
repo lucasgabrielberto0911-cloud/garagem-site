@@ -243,6 +243,12 @@ async function putWithCacheControl({
     try {
       const supabase = createClient(url, anon, {
         auth: { persistSession: false, autoRefreshToken: false },
+        realtime: {
+          transport:
+            typeof WebSocket !== "undefined"
+              ? WebSocket
+              : (class {} as unknown as typeof WebSocket),
+        },
       });
       const { error } = await supabase.storage
         .from(bucket)

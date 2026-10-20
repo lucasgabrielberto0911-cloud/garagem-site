@@ -64,7 +64,7 @@ export async function createChatLead(
     photoUrls: [],
   });
 
-  revalidateTag(ADMIN_NEW_LEADS_TAG, "max");
+  revalidateTag(ADMIN_NEW_LEADS_TAG, { expire: 0 });
   notifyNewLead({
     id: lead.id,
     name,

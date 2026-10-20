@@ -13,9 +13,9 @@ import {
 export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: `Cidades | ${site.name}`,
+  title: `Cidades atendidas no Espírito Santo | ${site.name}`,
   description:
-    "Escolha a cidade para abrir a página de seminovos da Garagem no Espírito Santo.",
+    "Conheça as cidades atendidas pela Garagem no Espírito Santo e veja como funciona o atendimento online na sua região.",
   path: CITIES_DIRECTORY_PATH,
 });
 
@@ -32,8 +32,8 @@ export default function CidadesPage() {
       <Container>
         <PageHeader
           eyebrow={`${site.state} · loja digital`}
-          title="Cidades"
-          description="Escolha a cidade para abrir a página de seminovos."
+          title="Cidades atendidas no Espírito Santo"
+          description="Encontre sua cidade e conheça o atendimento da Garagem na sua região. Nossa equipe atende pelo site e WhatsApp, todos os dias, das 8h às 23h."
         />
 
         <nav aria-label="Você está aqui" className="mt-4 text-center text-xs text-muted">
@@ -44,7 +44,25 @@ export default function CidadesPage() {
           <span className="text-cream">Cidades</span>
         </nav>
 
-        <div className="mt-10">
+        <section className="mx-auto mt-10 max-w-3xl">
+          <h2 className="font-display text-xl font-semibold text-cream">
+            Atendimento na sua região
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Escolha um município abaixo para consultar as informações de
+            atendimento local. Pelo WhatsApp, você pode combinar os próximos
+            passos da visita, negociação e entrega com a equipe.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            Já quer escolher um veículo? Conheça nossos{" "}
+            <Link href="/seminovos" className="text-cream underline underline-offset-4 transition hover:text-brand">
+              seminovos no Espírito Santo
+            </Link>
+            . O estoque é compartilhado entre as cidades atendidas.
+          </p>
+        </section>
+
+        <div className="mt-6">
           <CityDirectory />
         </div>
       </Container>

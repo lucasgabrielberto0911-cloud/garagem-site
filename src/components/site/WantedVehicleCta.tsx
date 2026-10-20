@@ -8,8 +8,8 @@ import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 
 const BUDGETS = [
   "Até R$ 50 mil",
-  "R$ 50 a 80 mil",
-  "R$ 80 a 120 mil",
+  "R$ 50 mil a R$ 80 mil",
+  "R$ 80 mil a R$ 120 mil",
   "Acima de R$ 120 mil",
 ] as const;
 
@@ -19,7 +19,7 @@ const BUDGETS = [
  */
 export function WantedVehicleCta({
   title = "Avisar quando chegar",
-  description = "Diz o modelo. A gente avisa no WhatsApp quando entrar no estoque.",
+  description = "Diga o modelo. A gente avisa no WhatsApp quando ele entrar no estoque.",
   initialWanted = "",
 }: {
   title?: string;
