@@ -702,7 +702,7 @@ export function VehiclePhotoManager({
               foto nova no site.
             </p>
           ) : null}
-          <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {photos.map((photo, index) => {
               const isDragging = dragIndex === index;
               const isOver = overIndex === index && dragIndex !== index;
@@ -753,7 +753,7 @@ export function VehiclePhotoManager({
                     setDragIndex(null);
                     setOverIndex(null);
                   }}
-                  className={`group relative aspect-[4/3] cursor-grab overflow-hidden border bg-asphalt active:cursor-grabbing ${
+                  className={`group cursor-grab overflow-hidden border bg-asphalt active:cursor-grabbing ${
                     isDragging
                       ? "border-brand opacity-50"
                       : isOver
@@ -761,15 +761,18 @@ export function VehiclePhotoManager({
                         : "border-white/10"
                   }`}
                 >
-                  <VehicleImage
-                    src={coverSrc([photo])}
-                    alt={`Foto ${index + 1} do veículo`}
-                    fill
-                    className="pointer-events-none object-cover [-webkit-touch-callout:none]"
-                    sizes="240px"
-                  />
+                  <div className="relative aspect-[4/3] bg-asphalt">
+                    <VehicleImage
+                      src={coverSrc([photo])}
+                      alt={`Foto ${index + 1} do veículo`}
+                      fill
+                      className="pointer-events-none object-cover [-webkit-touch-callout:none]"
+                      sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+                    />
+                  </div>
 
-                  <span className="absolute left-1.5 top-1.5 flex items-center gap-1 bg-asphalt/80 px-1.5 py-1 text-cream backdrop-blur">
+                  <div className="flex items-center justify-between gap-2 bg-asphalt px-2 py-1.5">
+                  <span className="flex items-center gap-1 text-cream">
                     <IconGrip className="hidden h-3.5 w-3.5 text-muted lg:block" />
                     <span className="font-display text-xs font-semibold tabular-nums">
                       {index + 1}
@@ -777,12 +780,13 @@ export function VehiclePhotoManager({
                   </span>
 
                   {index === 0 ? (
-                    <span className="absolute right-1.5 top-1.5 bg-brand px-2 py-0.5 font-display text-xs font-semibold uppercase tracking-wider text-white">
+                    <span className="bg-brand px-2 py-0.5 font-display text-xs font-semibold uppercase tracking-wider text-white">
                       Capa
                     </span>
                   ) : null}
+                  </div>
 
-                  <div className="absolute inset-x-0 bottom-0 flex items-stretch bg-asphalt/85 backdrop-blur lg:hidden">
+                  <div className="flex items-stretch bg-asphalt lg:hidden">
                     <button
                       type="button"
                       disabled={blurring || inFlight || rotating}
@@ -815,8 +819,8 @@ export function VehiclePhotoManager({
                     </button>
                   </div>
 
-                  <button type="button" disabled={blurring || inFlight || rotating} onClick={() => setRotationId(photo.id)} className="absolute right-1.5 top-8 hidden min-h-11 items-center bg-asphalt/90 px-2 text-xs text-cream disabled:opacity-50 lg:flex">Girar foto</button>
-                  <div className="absolute inset-x-1.5 bottom-14 hidden items-stretch gap-1 lg:flex">
+                  <button type="button" disabled={blurring || inFlight || rotating} onClick={() => setRotationId(photo.id)} className="hidden min-h-11 w-full items-center bg-asphalt px-2 text-xs text-cream disabled:opacity-50 lg:flex">Girar foto</button>
+                  <div className="hidden items-stretch gap-1 bg-asphalt px-1.5 lg:flex">
                     <button
                       type="button"
                       disabled={blurring || inFlight || rotating}
@@ -857,7 +861,7 @@ export function VehiclePhotoManager({
                     </button>
                   </div>
 
-                  <div className="absolute inset-x-0 bottom-0 hidden items-center justify-between gap-1 bg-asphalt/85 px-1.5 py-1.5 backdrop-blur lg:flex">
+                  <div className="hidden items-center justify-between gap-1 bg-asphalt px-1.5 py-1.5 lg:flex">
                     <div className="flex gap-0.5">
                       <PhotoAction
                         label="Mover para trás"
