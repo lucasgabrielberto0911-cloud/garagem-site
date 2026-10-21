@@ -4,7 +4,7 @@ import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveCommercial } from "@/app/admin/veiculos/commercial-actions";
 import { ENTRY_ITEMS, FINANCE_STATUSES, simulateFinancing, suggestPrice } from "@/lib/admin-commercial";
-import { fetchDocFile, shareDocFile } from "@/lib/commercial-client";
+import { fetchDocFile, rgAfterCustomerChange, shareDocFile } from "@/lib/commercial-client";
 import { formatAdminMoney as brl, moneyInput, parseMoneyBR } from "@/lib/admin-money";
 import { whatsappUrl } from "@/lib/leads";
 import { SearchSelect } from "./SearchSelect";
@@ -28,6 +28,7 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
   const [pending, start] = useTransition();
   const [docKind, setDocKind] = useState("proposta");
   const [message, setMessage] = useState("");
+  const [docCustomer, setDocCustomer] = useState({ id: "", rg: "" });
   const [margin, setMargin] = useState("2.000,00");
   const [simulation, setSimulation] = useState<ReturnType<typeof simulateFinancing> | null>(null);
   const [lastDoc, setLastDoc] = useState<{ id: string; kind: string; number?: number; file: File | null } | null>(null);
@@ -115,10 +116,10 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
       <Card id="proposta" title="Proposta e recibo em PDF" collapsed>
         <p className="mb-3 text-sm text-muted">Documento de apoio à negociação. Confira dados e condições antes de assinar. O recibo declara valor já recebido e recebe número sequencial.</p>
         <form action={submit} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="operation" value="document" />
-          <label className="block text-sm">Documento<select name="kind" value={docKind} onChange={(e) => setDocKind(e.target.value)} className={inputClass}><option value="proposta">Proposta</option><option value="contrato">Contrato de compra e venda</option><option value="recibo">Recibo (sinal, complemento, entrada ou quitação)</option></select></label><CustomerSelect />
+          <label className="block text-sm">Documento<select name="kind" value={docKind} onChange={(e) => setDocKind(e.target.value)} className={inputClass}><option value="proposta">Proposta</option><option value="contrato">Contrato de compra e venda</option><option value="recibo">Recibo (sinal, complemento, entrada ou quitação)</option></select></label><CustomerSelect onChange={(id) => setDocCustomer((c) => ({ id, rg: rgAfterCustomerChange(c.id, id, c.rg) }))} />
           {docKind !== "recibo" ? <>
             <Field label="Chassi" name="chassis" value={vehicle.chassis ?? ""} required={false} /><Field label="RENAVAM" name="renavam" value={vehicle.renavam ?? ""} required={false} />
-            <Field label="RG do cliente (vazio mantém o cadastro)" name="rg" required={false} />
+            <label className="block space-y-1 text-sm"><span>RG do cliente (vazio mantém o cadastro)</span><input name="rg" value={docCustomer.rg} onChange={(e) => setDocCustomer((c) => ({ ...c, rg: e.target.value }))} maxLength={200} className={inputClass} /></label>
           </> : null}
           <Field label={docKind === "recibo" ? "Valor recebido (R$)" : "Preço total do veículo (R$), antes de abater o sinal"} name="amount" /><Field label="Forma de pagamento" name="payment" />
           <label className="block text-sm sm:col-span-2">Condições, validade e observações<textarea name="conditions" required maxLength={3000} className={inputClass} /></label><button className={btn.primary}>Gerar PDF</button>

@@ -32,3 +32,8 @@ export async function shareDocFile(
     window.open(`https://wa.me/?text=${encodeURIComponent(label)}`, "_blank", "noopener");
   }
 }
+
+/** O RG digitado pertence ao cliente escolhido: ao trocar de cliente, o campo volta vazio (vazio mantém o cadastro). */
+export function rgAfterCustomerChange(previousId: string, nextId: string, rg: string) {
+  return previousId === nextId ? rg : "";
+}

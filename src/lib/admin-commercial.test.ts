@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { afterSaleMessage, financingSimulationDown, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, parseVehicleCustomerIds, resolveIdField, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
+import { rgAfterCustomerChange } from "./commercial-client";
 import { commercialPdf, expensesPdf, groupExpenseCosts } from "./commercial-pdf";
 import { PDFArray, PDFDocument, PDFPage, decodePDFRawStream, PDFRawStream } from "pdf-lib";
 import { moneyInWords } from "./money-words";
@@ -281,4 +282,9 @@ test("Chassi/RENAVAM/RG: ausente mantém o salvo, vazio enviado remove", () => {
   assert.equal(resolveIdField(true, "", "9BWZZZ377VT004251"), "");
   assert.equal(resolveIdField(true, "123", null), "123");
   assert.equal(resolveIdField(false, "", null), "");
+});
+test("trocar o cliente limpa o RG digitado para não gravar no cliente errado", () => {
+  assert.equal(rgAfterCustomerChange("a", "b", "12345"), "");
+  assert.equal(rgAfterCustomerChange("a", "", "12345"), "");
+  assert.equal(rgAfterCustomerChange("a", "a", "12345"), "12345");
 });
