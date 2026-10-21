@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { descriptionPriceSaveError } from "@/lib/admin-vehicle-validate";
 import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { parseMoneyBR } from "@/lib/admin-money";
-import { ENTRY_ITEMS, FINANCE_STATUSES, financingSimulationDown, parseVehicleCustomerIds, signalMismatch, parseContractPaymentsJson, simulateFinancing, suggestPrice, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
+import { ENTRY_ITEMS, FINANCE_STATUSES, financingSimulationDown, parseVehicleCustomerIds, resolveIdField, signalMismatch, parseContractPaymentsJson, simulateFinancing, suggestPrice, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { revalidatePublicStock, revalidatePublicStockMany } from "@/lib/public-stock-revalidate";
@@ -109,9 +109,10 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         const amount = money("amount");
         const ids = parseVehicleCustomerIds({ chassis: text("chassis"), renavam: text("renavam"), rg: text("rg") });
         if (ids.error) throw new CommercialError(ids.error);
-        const chassis = ids.chassis || vehicle.chassis || "";
-        const renavam = ids.renavam || vehicle.renavam || "";
-        const rg = ids.rg || customer.rg || "";
+        // Campo ausente mantém o cadastro; campo enviado vazio remove o valor.
+        const chassis = resolveIdField(form.has("chassis"), ids.chassis, vehicle.chassis);
+        const renavam = resolveIdField(form.has("renavam"), ids.renavam, vehicle.renavam);
+        const rg = resolveIdField(form.has("rg"), ids.rg, customer.rg);
         const isContract = kind === "proposta" || kind === "contrato";
         const parsedPayments = isContract ? parseContractPaymentsJson(text("payments")) : undefined;
         let paymentText = text("payment");
@@ -161,10 +162,10 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
 
         // Dados informados no contrato voltam ao cadastro, para o próximo documento sair pré-preenchido.
         if (isContract) {
-          if ((ids.chassis && ids.chassis !== vehicle.chassis) || (ids.renavam && ids.renavam !== vehicle.renavam)) {
+          if (chassis !== (vehicle.chassis ?? "") || renavam !== (vehicle.renavam ?? "")) {
             await tx.vehicle.update({ where: { id: vehicleId }, data: { chassis: chassis || null, renavam: renavam || null } });
           }
-          if (ids.rg && ids.rg !== customer.rg) await tx.customer.update({ where: { id: customer.id }, data: { rg: ids.rg } });
+          if (rg !== (customer.rg ?? "")) await tx.customer.update({ where: { id: customer.id }, data: { rg: rg || null } });
         }
 
         const doc = await tx.commercialDocument.create({

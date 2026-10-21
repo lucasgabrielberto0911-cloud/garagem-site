@@ -11,7 +11,7 @@ import { SearchSelect } from "./SearchSelect";
 import { btn, Card, inputClass } from "./ui";
 
 type Props = {
-  vehicle: { id: string; status: string; price: number; purchasePrice: number | null; consigned: boolean; days: number; costs: number };
+  vehicle: { id: string; chassis: string | null; renavam: string | null; status: string; price: number; purchasePrice: number | null; consigned: boolean; days: number; costs: number };
   reservation: { customer: string; phone: string; deadline: string | null; deposit: number; expiresAt: string; status: string } | null;
   assessment: { items: { label: string; status: string }[]; notes: string; offer: number; approved: boolean } | null;
   simulations: { id: string; customerName: string; bank: string; installment: number; months: number; rate: number; status: string }[];
@@ -33,6 +33,8 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
   const [lastDoc, setLastDoc] = useState<{ id: string; kind: string; number?: number; file: File | null } | null>(null);
   const suggestion = suggestPrice({ price: vehicle.price, purchase: vehicle.purchasePrice, costs: vehicle.costs, days: vehicle.days, margin: parseMoneyBR(margin) ?? 0, consigned: vehicle.consigned });
   function submit(form: FormData) {
+    // RG vazio na ficha = manter o do cadastro (o cliente é escolhido aqui, sem prefill).
+    if (!String(form.get("rg") ?? "").trim()) form.delete("rg");
     start(async () => {
       try {
         const result = await saveCommercial(vehicle.id, form);
@@ -114,6 +116,10 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
         <p className="mb-3 text-sm text-muted">Documento de apoio à negociação. Confira dados e condições antes de assinar. O recibo declara valor já recebido e recebe número sequencial.</p>
         <form action={submit} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="operation" value="document" />
           <label className="block text-sm">Documento<select name="kind" value={docKind} onChange={(e) => setDocKind(e.target.value)} className={inputClass}><option value="proposta">Proposta</option><option value="contrato">Contrato de compra e venda</option><option value="recibo">Recibo (sinal, complemento, entrada ou quitação)</option></select></label><CustomerSelect />
+          {docKind !== "recibo" ? <>
+            <Field label="Chassi" name="chassis" value={vehicle.chassis ?? ""} required={false} /><Field label="RENAVAM" name="renavam" value={vehicle.renavam ?? ""} required={false} />
+            <Field label="RG do cliente (vazio mantém o cadastro)" name="rg" required={false} />
+          </> : null}
           <Field label={docKind === "recibo" ? "Valor recebido (R$)" : "Preço total do veículo (R$), antes de abater o sinal"} name="amount" /><Field label="Forma de pagamento" name="payment" />
           <label className="block text-sm sm:col-span-2">Condições, validade e observações<textarea name="conditions" required maxLength={3000} className={inputClass} /></label><button className={btn.primary}>Gerar PDF</button>
           {lastDoc ? <div className="flex flex-wrap gap-2 sm:col-span-2"><a className={btn.primary} href={`/api/admin/documentos/${lastDoc.id}?inline`} target="_blank" rel="noopener noreferrer">Abrir PDF</a><button type="button" className={btn.outline} onClick={() => shareDoc(lastDoc)}>Compartilhar no WhatsApp</button></div> : null}

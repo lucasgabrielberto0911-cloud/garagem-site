@@ -187,3 +187,8 @@ export function parseVehicleCustomerIds(input: { chassis?: string; renavam?: str
   else if (rg.length > 20) error = "RG deve ter até 20 caracteres.";
   return { chassis, renavam, rg, error };
 }
+
+/** Campo ausente mantém o valor salvo; campo enviado (mesmo vazio) o substitui. */
+export function resolveIdField(sent: boolean, value: string, saved: string | null | undefined): string {
+  return sent ? value : saved || "";
+}

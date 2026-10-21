@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSaleMessage, financingSimulationDown, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, parseVehicleCustomerIds, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
+import { afterSaleMessage, financingSimulationDown, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, parseVehicleCustomerIds, resolveIdField, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
 import { commercialPdf, expensesPdf, groupExpenseCosts } from "./commercial-pdf";
 import { PDFArray, PDFDocument, PDFPage, decodePDFRawStream, PDFRawStream } from "pdf-lib";
 import { moneyInWords } from "./money-words";
@@ -274,4 +274,11 @@ test("contrato com chassi, RENAVAM e RG gera PDF válido e mantém observação 
   const pdf = await PDFDocument.load(await commercialPdf("contrato", data, "teste-local"));
   assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
   assert.ok(pdf.getPageCount() >= 2);
+});
+
+test("Chassi/RENAVAM/RG: ausente mantém o salvo, vazio enviado remove", () => {
+  assert.equal(resolveIdField(false, "", "9BWZZZ377VT004251"), "9BWZZZ377VT004251");
+  assert.equal(resolveIdField(true, "", "9BWZZZ377VT004251"), "");
+  assert.equal(resolveIdField(true, "123", null), "123");
+  assert.equal(resolveIdField(false, "", null), "");
 });
