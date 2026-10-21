@@ -201,7 +201,8 @@ test.describe("fluxo único de venda", () => {
     expect(login.ok()).toBeTruthy();
     const cookie = login.headers()["set-cookie"].split(";")[0];
     await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
-    await db.sale.create({ data: { vehicleId: flowVehicleId, customerId, salePrice: 60000, paymentMethod: "À vista/PIX" } });
+    const sale = await db.sale.create({ data: { vehicleId: flowVehicleId, customerId, salePrice: 60000, paymentMethod: "À vista/PIX" } });
+    const receipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { saleId: sale.id, customerId, amount: 5000, total: 60000, payment: "Sinal", payments: [{ method: "sinal", amount: 5000 }] } } });
     await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "vendido" } });
 
     await page.goto(`/admin/veiculos/${flowVehicleId}?view=operacao`);
@@ -213,7 +214,7 @@ test.describe("fluxo único de venda", () => {
     await expect(documents.getByText(/Contrato nº/)).toBeVisible();
 
     const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
-    expect(contract.snapshot).toMatchObject({ saleId: expect.any(String), signal: { amount: 5000 }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 55000 }] });
+    expect(contract.snapshot).toMatchObject({ saleId: sale.id, signal: { amount: 5000, receiptId: String(receipt.number) }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 55000 }] });
     expect(contract.snapshot).toMatchObject({ reservationId: null });
   });
 

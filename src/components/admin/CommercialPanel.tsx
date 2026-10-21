@@ -42,6 +42,8 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
     if (!String(form.get("rg") ?? "").trim()) form.delete("rg");
     if (form.get("operation") === "document" && form.get("kind") === "contrato") {
       const signalAmount = reservation?.deposit || parseMoneyBR(form.get("legacySignalAmount")) || 0;
+      if (signalAmount > 0) form.set("signalEnabled", "on");
+      else form.delete("signalEnabled");
       const selectedMethods = new Set(form.getAll("legacyPaymentMethod").map(String));
       form.set("payments", JSON.stringify([
         ...(signalAmount > 0 ? [{ method: "sinal", amount: signalAmount, signalDate: previousSignal?.date }] : []),

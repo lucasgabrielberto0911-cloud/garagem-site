@@ -159,7 +159,17 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
             signal = { amount: Number(held.deposit), receiptId: receipt ? String(receipt.number) : undefined, date: receipt?.createdAt.toISOString() };
             signalReservationId = held.id;
           } else if (signalEnabled && sinalItem && sinalItem.amount > 0) {
-            const receiptId = text("legacySignalReceiptId");
+            let receiptId = text("legacySignalReceiptId");
+            if (!receiptId && vehicle.sale?.id) {
+              const saleReceipt = await tx.commercialDocument.findFirst({
+                where: { vehicleId, kind: "recibo", snapshot: { path: ["saleId"], equals: vehicle.sale.id } },
+                orderBy: { createdAt: "desc" },
+              });
+              const saleReceiptSnapshot = saleReceipt?.snapshot as { amount?: number; customerId?: string } | null;
+              if (saleReceipt && saleReceiptSnapshot?.customerId === customer.id && Number(saleReceiptSnapshot.amount) === sinalItem.amount) {
+                receiptId = String(saleReceipt.number);
+              }
+            }
             if (receiptId) {
               const receiptNumber = Number(receiptId);
               const receiptDoc = Number.isInteger(receiptNumber) && receiptNumber > 0
