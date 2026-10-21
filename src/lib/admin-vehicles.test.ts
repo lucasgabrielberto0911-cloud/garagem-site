@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mapAdminVehicleStatsRow } from "./admin-vehicles";
+import { ADMIN_SALE_LIST_INCLUDE, mapAdminVehicleStatsRow } from "./admin-vehicles";
 
 test("contadores separam consignado e não trazem vídeo", () => {
   const stats = mapAdminVehicleStatsRow({
@@ -53,4 +53,10 @@ test("linha vazia de contadores zera em vez de NaN", () => {
   assert.equal(stats.stockValue, 0);
   assert.equal(stats.invested, 0);
   assert.equal(stats.consignedAvailable, 0);
+});
+
+test("lista de vendas traz chassi, RENAVAM e RG para o contrato não apagá-los", () => {
+  assert.equal(ADMIN_SALE_LIST_INCLUDE.vehicle.select.chassis, true);
+  assert.equal(ADMIN_SALE_LIST_INCLUDE.vehicle.select.renavam, true);
+  assert.equal(ADMIN_SALE_LIST_INCLUDE.customer.select.rg, true);
 });
