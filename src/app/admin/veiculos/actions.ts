@@ -11,7 +11,7 @@ import { revalidatePath } from "next/cache";
 import { listingDraftFromVehicle } from "@/lib/listing-score";
 import { scoreListingAfterSave } from "@/lib/listing-score-store";
 import { redirect } from "next/navigation";
-import { preparationPhotoError } from "@/lib/preparation";
+import { claimPreparation, preparationPhotoError } from "@/lib/preparation";
 import { prisma } from "@/lib/prisma";
 import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { getSession } from "@/lib/auth";
@@ -310,7 +310,7 @@ export async function createVehicle(
         "vehicle.create",
         { price: created.price, status: created.status },
       );
-      if (preparationId) await tx.preparationVehicle.deleteMany({ where: { id: preparationId } });
+      if (preparationId) await claimPreparation(tx, preparationId);
       return created;
     });
 

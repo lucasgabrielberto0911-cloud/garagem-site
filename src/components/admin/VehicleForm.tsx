@@ -1400,6 +1400,7 @@ export function VehicleForm({
                   className={inputClass}
                   required
                 >
+                  <option value="">Selecione o combustível</option>
                   {fuel && !fuelOptions.includes(fuel) ? (
                     <option value={fuel}>{fuel}</option>
                   ) : null}

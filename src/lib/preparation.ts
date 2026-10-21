@@ -70,3 +70,14 @@ export function preparationPrefill(item: Pick<PreparationInput, "brand" | "model
 export function preparationPhotoError(photoCount: number): string | null {
   return photoCount > 0 ? null : "Adicione as fotos do carro antes de cadastrar no estoque.";
 }
+
+export const PREPARATION_CLAIM_ERROR = "Este carro já foi movido ou não está mais marcado como pronto em Em preparação.";
+
+/** Consome a preparação dentro da transação do cadastro; sem exatamente 1 registro pronto, lança e reverte o veículo. */
+export async function claimPreparation(
+  tx: { preparationVehicle: { deleteMany(args: { where: { id: string; ready: true } }): Promise<{ count: number }> } },
+  id: string,
+) {
+  const { count } = await tx.preparationVehicle.deleteMany({ where: { id, ready: true } });
+  if (count !== 1) throw new Error(PREPARATION_CLAIM_ERROR);
+}
