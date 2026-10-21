@@ -87,13 +87,14 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
       if (customerId && customerId !== "novo" && !customer) throw new Error("CUSTOMER_INVALID");
       if (!customer && reservation) customer = await tx.customer.findUnique({ where: { id: reservation.customerId } });
       if (!customer) {
-        await lockCustomerIdentity(tx, customerPhone);
-        if (await tx.customer.findFirst({ where: { phone: customerPhone } })) throw new Error("DUPLICATE_CUSTOMER");
+        await lockCustomerIdentity(tx, customerPhone, cpf);
+        if (await tx.customer.findFirst({ where: { OR: [{ phone: customerPhone }, ...(cpf ? [{ cpf }] : [])] } })) throw new Error("DUPLICATE_CUSTOMER");
         customer = await tx.customer.create({ data: { name: customerName, phone: customerPhone, cpf: cpf || null, rg: identifiers.rg || null, address: String(input.address ?? "").trim() || null } });
       } else {
-        await lockCustomerIdentity(tx, customerPhone);
-        if (await tx.customer.findFirst({ where: { phone: customerPhone, NOT: { id: customer.id } } })) throw new Error("DUPLICATE_CUSTOMER");
-        customer = await tx.customer.update({ where: { id: customer.id }, data: { name: customerName, phone: customerPhone, cpf: cpf || customer.cpf, rg: identifiers.rg || customer.rg, address: String(input.address ?? customer.address ?? "").trim() || null } });
+        const customerCpf = cpf || customer.cpf;
+        await lockCustomerIdentity(tx, customerPhone, customerCpf);
+        if (await tx.customer.findFirst({ where: { OR: [{ phone: customerPhone }, ...(customerCpf ? [{ cpf: customerCpf }] : [])], NOT: { id: customer.id } } })) throw new Error("DUPLICATE_CUSTOMER");
+        customer = await tx.customer.update({ where: { id: customer.id }, data: { name: customerName, phone: customerPhone, cpf: customerCpf, rg: identifiers.rg || customer.rg, address: String(input.address ?? customer.address ?? "").trim() || null } });
       }
       const heldSignal = reservation ? Number(reservation.deposit) : 0;
       const signalPayment = payments.find((p: { method: string }) => p.method === "sinal");
@@ -124,7 +125,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
     return { ok: true, message: "Venda registrada e contrato gerado.", ...result };
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    const messages: Record<string, string> = { VEHICLE_UNAVAILABLE: "Veículo indisponível ou já vendido.", RESERVATION_CUSTOMER: "A reserva pertence a outro comprador. Cancele a reserva antes de continuar.", RESERVATION_SIGNAL_REQUIRED: "A reserva tem sinal. Marque o sinal para continuar.", INVALID_SIGNAL: "O sinal deve ser positivo e menor que o total negociado.", DUPLICATE_CUSTOMER: "Já existe cliente com este telefone; selecione o cadastro existente.", CUSTOMER_INVALID: "Cliente inválido." };
+    const messages: Record<string, string> = { VEHICLE_UNAVAILABLE: "Veículo indisponível ou já vendido.", RESERVATION_CUSTOMER: "A reserva pertence a outro comprador. Cancele a reserva antes de continuar.", RESERVATION_SIGNAL_REQUIRED: "A reserva tem sinal. Marque o sinal para continuar.", INVALID_SIGNAL: "O sinal deve ser positivo e menor que o total negociado.", DUPLICATE_CUSTOMER: "Já existe cliente com este telefone ou CPF; selecione o cadastro existente.", CUSTOMER_INVALID: "Cliente inválido." };
     return { ok: false, message: messages[message] ?? "Não foi possível registrar a venda." };
   }
 }

@@ -10,7 +10,7 @@ import { SearchSelect } from "./SearchSelect";
 import { btn, Card, inputClass } from "./ui";
 
 type Props = {
-  vehicle: { id: string; chassis: string | null; renavam: string | null; status: string; price: number; purchasePrice: number | null; consigned: boolean; days: number; costs: number };
+  vehicle: { id: string; chassis: string | null; renavam: string | null; status: string; price: number; purchasePrice: number | null; consigned: boolean; days: number; costs: number; sale: { salePrice: number; paymentMethod: string; customerId: string | null } | null };
   reservation: { customer: string; phone: string; deadline: string | null; deposit: number; expiresAt: string; status: string } | null;
   assessment: { items: { label: string; status: string }[]; notes: string; offer: number; approved: boolean } | null;
   simulations: { id: string; customerName: string; bank: string; installment: number; months: number; rate: number; status: string }[];
@@ -86,6 +86,7 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
         <div className="mt-4 space-y-3">{simulations.map((s) => <form key={s.id} action={submit} className="space-y-2 border-t border-white/10 pt-3"><input type="hidden" name="operation" value="finance-status" /><input type="hidden" name="simulationId" value={s.id} /><p className="text-sm">{s.customerName} · {s.bank} · {s.months} × {brl(s.installment)} · {s.rate}% a.m.</p><label className="block text-sm">Situação<select name="status" className={inputClass} defaultValue={s.status}>{FINANCE_STATUSES.map((value, index) => <option key={value} value={value}>{["Simulação", "Enviada ao banco", "Aprovada", "Recusada"][index]}</option>)}</select></label><button className={btn.outline}>Atualizar acompanhamento</button></form>)}</div>
       </Card>
       <Card title="Contratos e recibos gerados" collapsed>
+        {vehicle.sale && !documents.some((document) => document.kind === "contrato") && <form action={submit} className="mb-4 space-y-3 border-b border-white/10 pb-4"><input type="hidden" name="operation" value="document" /><input type="hidden" name="kind" value="contrato" /><input type="hidden" name="amount" value={moneyInput(vehicle.sale.salePrice)} /><input type="hidden" name="payment" value={vehicle.sale.paymentMethod} /><CustomerSelect /><Field label="Chassi" name="chassis" value={vehicle.chassis ?? ""} required={false} /><Field label="RENAVAM" name="renavam" value={vehicle.renavam ?? ""} required={false} /><Field label="RG do cliente" name="rg" required={false} /><button className={btn.primary}>Emitir contrato desta venda</button></form>}
         <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}?inline`} target="_blank" rel="noopener noreferrer">{d.kind === "recibo" ? "Recibo" : d.kind === "contrato" ? "Contrato" : "Proposta"}{d.number ? ` nº ${d.number}` : ""} · {d.date} · Abrir PDF</a></li>)}</ul>
       </Card>
     </fieldset>

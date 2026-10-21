@@ -100,11 +100,13 @@ test("atalho legado de vendas abre a página de fluxo", async ({ page, request, 
 
 test.describe("fluxo único de venda", () => {
   const flowVehicleId = "ce2efluxounicovehicle";
+  const duplicateCpfCustomerId = "ce2eduplicatecpf";
   test.beforeEach(async () => {
     await db.sale.deleteMany({ where: { vehicleId: flowVehicleId } });
     await db.commercialDocument.deleteMany({ where: { vehicleId: flowVehicleId } });
     await db.vehicleReservation.deleteMany({ where: { vehicleId: flowVehicleId } });
     await db.vehicle.deleteMany({ where: { id: flowVehicleId } });
+    await db.customer.upsert({ where: { id: duplicateCpfCustomerId }, create: { id: duplicateCpfCustomerId, name: "CPF já cadastrado", phone: "27999990001", cpf: "52998224725" }, update: { cpf: "52998224725" } });
     await db.vehicle.create({ data: { id: flowVehicleId, brand: "Toyota", model: "Corolla Fluxo E2E", year: 2021, yearModel: 2021, km: 30000, price: 60000, fuel: "Flex", transmission: "Automático", chassis: "9BWZZZ377VT004251", renavam: "12345678901" } });
   });
   test.afterEach(async () => {
@@ -112,6 +114,7 @@ test.describe("fluxo único de venda", () => {
     await db.commercialDocument.deleteMany({ where: { vehicleId: flowVehicleId } });
     await db.vehicleReservation.deleteMany({ where: { vehicleId: flowVehicleId } });
     await db.vehicle.deleteMany({ where: { id: flowVehicleId } });
+    await db.customer.deleteMany({ where: { id: duplicateCpfCustomerId } });
   });
 
   test("inicia pela ficha e registra contrato pelo valor livre acima do anúncio", async ({ page, request, context, baseURL }) => {
@@ -175,5 +178,63 @@ test.describe("fluxo único de venda", () => {
     await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
     await expect(page.getByRole("heading", { name: "Venda registrada" })).toBeVisible();
     expect((await db.sale.findUniqueOrThrow({ where: { vehicleId: flowVehicleId } })).customerId).toBe(customerId);
+  });
+
+  test("emite contrato para venda legada sem duplicar o registro", async ({ page, request, context, baseURL }) => {
+    const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
+    expect(login.ok()).toBeTruthy();
+    const cookie = login.headers()["set-cookie"].split(";")[0];
+    await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+    const sale = await db.sale.create({ data: { vehicleId: flowVehicleId, customerId, salePrice: 67000, paymentMethod: "Pix" } });
+    await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "vendido" } });
+
+    await page.goto(`/admin/veiculos/${flowVehicleId}?view=operacao`);
+    const documents = page.locator("details").filter({ has: page.locator("summary", { hasText: "Contratos e recibos gerados" }) });
+    await documents.locator("summary").click();
+    await documents.getByRole("combobox").click();
+    await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+    await documents.getByRole("button", { name: "Emitir contrato desta venda" }).click();
+    await expect(documents.getByText(/Contrato nº/)).toBeVisible();
+    expect(await db.sale.count({ where: { vehicleId: flowVehicleId } })).toBe(1);
+    const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
+    expect((contract.snapshot as { saleId: string }).saleId).toBe(sale.id);
+  });
+
+  test("rejeita CPF duplicado ao cadastrar e atualizar cliente e limpa RG ao trocar para novo", async ({ page, request, context, baseURL }) => {
+    const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
+    expect(login.ok()).toBeTruthy();
+    const cookie = login.headers()["set-cookie"].split(";")[0];
+    await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+    await db.customer.update({ where: { id: customerId }, data: { rg: "MG-12.345.678", cpf: null } });
+
+    for (const useNewCustomer of [false, true]) {
+      await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
+      await page.getByRole("button", { name: "Continuar" }).click();
+      if (useNewCustomer) {
+        await page.getByRole("combobox").click();
+        await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+        await expect(page.getByLabel("RG")).toHaveValue("MG-12.345.678");
+        await page.getByLabel("Cadastrar cliente nesta venda").check();
+        await expect(page.getByLabel("RG")).toHaveValue("");
+        await page.getByLabel("Nome").fill("Novo comprador");
+        await page.getByLabel("Telefone").fill("27988887777");
+      } else {
+        await page.getByRole("combobox").click();
+        await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+        await page.getByLabel("CPF").fill("529.982.247-25");
+      }
+      await page.getByLabel("CPF").fill("529.982.247-25");
+      await page.getByRole("button", { name: "Continuar" }).click();
+      await page.getByLabel("Valor total negociado").fill("67.000,00");
+      await page.getByRole("button", { name: /À vista\/PIX/ }).click();
+      await page.getByLabel("Valor", { exact: true }).fill("67.000,00");
+      await page.getByRole("button", { name: "Continuar" }).click();
+      await page.getByLabel("Responsável comercial").fill("Vendedor E2E");
+      await page.getByLabel("Comissão (R$)").fill("0");
+      await page.getByRole("button", { name: "Continuar" }).click();
+      await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
+      await expect(page.getByRole("alert")).toHaveText("Já existe cliente com este telefone ou CPF; selecione o cadastro existente.");
+    }
+    expect(await db.sale.count({ where: { vehicleId: flowVehicleId } })).toBe(0);
   });
 });
