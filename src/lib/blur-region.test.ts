@@ -5,6 +5,8 @@ import { blurImageRegions } from "./blur-region";
 import { encodeCardImage, encodeGalleryImage } from "./image-variants";
 import {
   BlurRectError,
+  clientPointToNormalized,
+  containImageFrame,
   isDrawableRect,
   normalizedRectToPixels,
   parseBlurRects,
@@ -12,6 +14,25 @@ import {
   type NormalizedRect,
   type PixelRect,
 } from "./blur-rects";
+
+test("seleção acompanha a foto em contain, zoom e orientação rotacionada", () => {
+  const cases = [
+    { box: { left: 10, top: 20, width: 400, height: 300 }, image: [1600, 900] as const },
+    { box: { left: 31, top: 47, width: 243, height: 611 }, image: [900, 1600] as const },
+    { box: { left: 0, top: 0, width: 1200, height: 700 }, image: [360, 640] as const },
+  ];
+
+  for (const { box, image: [width, height] } of cases) {
+    const frame = containImageFrame(box, width, height);
+    assert.ok(frame);
+    const point = clientPointToNormalized(
+      frame.left + frame.width * 0.375,
+      frame.top + frame.height * 0.625,
+      frame,
+    );
+    assert.deepEqual(point, { x: 0.375, y: 0.625 });
+  }
+});
 
 const WIDTH = 640;
 const HEIGHT = 360;
