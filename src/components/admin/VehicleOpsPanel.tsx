@@ -353,18 +353,10 @@ export function VehicleOpsPanel({
           Compra e custos
         </a>
         <a className={btn.outline} href="#documentos">
-          Documentos
+          Arquivos do carro
         </a>
         <a className={btn.outline} href="#acervo">
           Fotos em alta
-        </a>
-        <a
-          className={btn.outline}
-          href={`/api/admin/veiculos/${vehicle.id}/gastos`}
-          target="_blank"
-          rel="noopener"
-        >
-          Imprimir gastos
         </a>
       </nav>
       {opsDirty && !opsPending ? (
@@ -483,14 +475,24 @@ export function VehicleOpsPanel({
               extras > 0 ? `Custos · ${formatCurrencyBRL(extras)}` : "Custos"
             }
             action={
-              <button
-                type="button"
-                onClick={() => setShowCostForm((open) => !open)}
-                className={btn.ghost}
-              >
-                <IconPlus className="h-4 w-4" />
-                {showCostForm ? "Fechar" : "Adicionar"}
-              </button>
+              <div className="flex items-center gap-2">
+                <a
+                  className={btn.ghost}
+                  href={`/api/admin/veiculos/${vehicle.id}/gastos`}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Imprimir gastos
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowCostForm((open) => !open)}
+                  className={btn.ghost}
+                >
+                  <IconPlus className="h-4 w-4" />
+                  {showCostForm ? "Fechar" : "Adicionar"}
+                </button>
+              </div>
             }
           >
             {showCostForm ? (
@@ -663,8 +665,8 @@ export function VehicleOpsPanel({
       <Card
         title={
           documents.length > 0
-            ? `Documentos · ${documents.length}`
-            : "Documentos"
+            ? `Arquivos do carro · ${documents.length}`
+            : "Arquivos do carro"
         }
         action={
           <button

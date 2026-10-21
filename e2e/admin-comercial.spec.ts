@@ -13,7 +13,7 @@ test.beforeAll(async () => {
   await db.vehicle.deleteMany({ where: { id: vehicleId } });
   await db.customer.upsert({ where: { id: customerId }, create: { id: customerId, name: "Cliente Comercial E2E", phone: "27999990000" }, update: {} });
   await db.admin.upsert({ where: { email: "comercial@local.test" }, create: { name: "Teste local", email: "comercial@local.test", passwordHash: await bcrypt.hash("comercial-local-123", 4) }, update: {} });
-  await db.vehicle.create({ data: { id: vehicleId, brand: "Honda", model: "Civic Comercial E2E", year: 2020, yearModel: 2020, km: 50000, price: 60000, purchasePrice: 50000, fipePrice: 58000, fuel: "Flex", transmission: "Automático", createdAt: new Date(Date.now() - 100 * 86400000) } });
+  await db.vehicle.create({ data: { id: vehicleId, brand: "Honda", model: "Civic Comercial E2E", year: 2020, yearModel: 2020, km: 50000, price: 60000, purchasePrice: 50000, fuel: "Flex", transmission: "Automático", createdAt: new Date(Date.now() - 100 * 86400000) } });
 });
 test.afterAll(async () => {
   await db.sale.deleteMany({ where: { vehicleId } });
@@ -37,7 +37,7 @@ test("giro, avaliação, financiamento, reserva, PDF privado e pós-venda", asyn
   const price = page.locator("details").filter({ has: page.locator("summary", { hasText: "Sugestão de preço por giro" }) });
   await price.locator("summary").click();
   await price.getByRole("button", { name: "Aplicar redução" }).click();
-  await expect.poll(async () => (await db.vehicle.findUniqueOrThrow({ where: { id: vehicleId } })).price).toBe(55100);
+  await expect.poll(async () => (await db.vehicle.findUniqueOrThrow({ where: { id: vehicleId } })).price).toBe(57000);
   expect(await db.vehiclePriceHistory.count({ where: { vehicleId } })).toBe(2);
 
   const assessment = page.locator("details").filter({ has: page.locator("summary", { hasText: "Checklist de entrada" }) });
@@ -96,8 +96,14 @@ test("giro, avaliação, financiamento, reserva, PDF privado e pós-venda", asyn
   const saleForm = page.locator("form").filter({ has: page.locator('input[name="source"]') });
   await saleForm.locator('input[name="salePrice"]').fill("55.100,00");
   await saleForm.locator('select[name="paymentMethod"]').selectOption("À vista (Pix/dinheiro)");
-  page.once("dialog", (dialog) => dialog.accept());
-  await saleForm.getByRole("button", { name: "Registrar venda", exact: true }).click();
+  const registrar = saleForm.getByRole("button", { name: "Registrar venda", exact: true });
+  await registrar.click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialog).toBeHidden();
+  expect(await db.sale.count({ where: { vehicleId } })).toBe(0);
+  await registrar.click();
+  await dialog.getByRole("button", { name: "Registrar venda", exact: true }).click();
   await expect.poll(async () => db.sale.count({ where: { vehicleId } })).toBe(1);
   const sale = await db.sale.findUniqueOrThrow({ where: { vehicleId } });
   expect(sale.customerId).toBe(customerId);
@@ -178,10 +184,22 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
     });
     expect(Number(activeReservation.deposit)).toBe(10000);
 
-    // 2. Gera contrato de compra e venda abatendo o sinal já pago
-    await page.locator('input[name="payment"]').fill("Entrada Pix + Financiamento Santander");
-    await page.locator('input[name="downPayment"]').fill("30.000,00");
+    // 2. Gera contrato de compra e venda com múltiplas formas (Sinal + PIX + Troca + Financiamento)
+    // Ao gerar recibo de sinal, o chip "Sinal" (10.000) foi marcado automaticamente junto ao "À vista/PIX" (110.000),
+    // então a soma passa a 120.000 e deve mostrar aviso de diferença até ajustar os valores.
+    await expect(page.getByText(/Aviso: a soma das formas de pagamento/)).toBeVisible();
+
+    await page.locator('input[name="pixAmount"]').fill("15.000,00");
+    await page.getByRole("button", { name: "Troca (carro na troca)" }).click();
+    await page.locator('input[name="tradeVehicle"]').fill("Fiat Palio 2015");
+    await page.locator('input[name="tradePlate"]').fill("ODB4A12");
+    await page.locator('input[name="tradeAmount"]').fill("25.000,00");
+
+    await page.getByRole("button", { name: "Financiamento" }).click();
     await page.locator('input[name="bank"]').fill("Santander");
+    await page.locator('input[name="financed"]').fill("60.000,00");
+
+    await expect(page.getByTestId("payment-sum-status")).toContainText("Total confere");
     await page.locator('textarea[name="conditions"]').fill("Garantia de 90 dias de motor e câmbio.");
 
     await page.getByRole("button", { name: "Gerar contrato (PDF)" }).click();
@@ -193,6 +211,9 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
       orderBy: { createdAt: "desc" },
     });
     expect(contractDoc.number).toBeGreaterThan(0);
+    const snap = contractDoc.snapshot as { payments?: { method: string; amount: number }[] };
+    expect(Array.isArray(snap.payments)).toBe(true);
+    expect(snap.payments?.length).toBe(4);
     const contractPdf = await page.request.get(`/api/admin/documentos/${contractDoc.id}`);
     expect(contractPdf.status()).toBe(200);
     expect(contractPdf.headers()["content-type"]).toBe("application/pdf");

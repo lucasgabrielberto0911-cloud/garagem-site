@@ -380,12 +380,8 @@ export function catalogVehicleRow(
     .slice(0, CATALOG_IMAGE_SLOTS);
   if (images.length === 0) return null;
 
-  const place = catalogPlace(vehicle.locationCity);
   const address = JSON.stringify({
-    addr1: "Centro",
-    city: place.city,
     region: "Espírito Santo",
-    postal_code: place.postalCode,
     country: "Brazil",
   });
   const link = new URL(vehiclePath(vehicle), origin);
@@ -410,13 +406,13 @@ export function catalogVehicleRow(
     exterior_color: formatColorLabel(vehicle.color) || "Não informado",
     state_of_vehicle: "Used",
     address,
-    latitude: String(place.latitude),
-    longitude: String(place.longitude),
+    latitude: "",
+    longitude: "",
     availability: "AVAILABLE",
     condition: "EXCELLENT",
     dealer_id: CATALOG_DEALER_ID,
     dealer_name: site.name,
-    postal_code: place.postalCode,
+    postal_code: "",
     dealer_phone: dealerPhone(),
   };
 

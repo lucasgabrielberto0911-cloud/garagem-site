@@ -93,7 +93,7 @@ export function VehicleMobileSummary({
       >
         {facts.map((fact) => (
           <div key={fact.label} className={`min-w-0 border border-white/10 bg-ink px-2.5 py-2${fact.label === "Câmbio" ? " col-span-2" : ""}`}>
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
               {fact.label}
             </dt>
             <dd className="mt-0.5 font-display text-[13px] font-semibold leading-tight text-cream">
@@ -104,7 +104,7 @@ export function VehicleMobileSummary({
       </dl>
       {plate ? (
         <p className="mt-2 text-[13px] leading-snug text-cream">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
             Final da placa{" "}
           </span>
           <span className="font-display font-semibold">{plate}</span>
@@ -241,7 +241,7 @@ export function VehicleMobileBlocks({
           <dl className="ficha-spec-grid grid grid-cols-2 gap-2">
             {extraSpecs.map((spec) => (
               <div key={spec.label} className="min-w-0 border border-white/10 bg-ink px-3 py-2.5">
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
                   {spec.label}
                 </dt>
                 <dd
@@ -264,7 +264,7 @@ export function VehicleMobileBlocks({
             <ul className={conditions.intro ? "mt-4 space-y-3" : "space-y-3"}>
               {otherConditions.map((item) => (
                 <li key={item.label} className="border-l-2 border-brand/80 pl-3">
-                  <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-cream">
+                  <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-cream">
                     {item.label}
                   </p>
                   <p className="mt-1 text-[15px] leading-relaxed text-cream/80">{item.text}</p>
@@ -320,7 +320,7 @@ export function VehicleMobileBlocks({
               className="grid"
             />
           </div>
-          <p className="mt-2 text-[11px] leading-relaxed text-muted">
+          <p className="mt-2 text-xs leading-relaxed text-muted">
             Cada opção abre o WhatsApp deste veículo.
           </p>
           <ChatOpenButton
@@ -330,7 +330,7 @@ export function VehicleMobileBlocks({
             variant="outline"
             className="mt-3 w-full"
           />
-          <p className="mt-2 text-[11px] leading-relaxed text-muted">
+          <p className="mt-2 text-xs leading-relaxed text-muted">
             Dúvida breve no site. Preço, visita e proposta seguem no WhatsApp.
           </p>
         </DossierBlock>
@@ -356,7 +356,7 @@ export function VehicleMobileBlocks({
             className="mb-3 w-full"
           />
         ) : null}
-        <p className="text-[11px] leading-relaxed">
+        <p className="text-xs leading-relaxed">
           Financiamento em até 60x e cartão em até 18x. O consultor calcula a
           parcela no WhatsApp — o site não publica valor de parcela. Sujeito a
           análise de crédito e CET.

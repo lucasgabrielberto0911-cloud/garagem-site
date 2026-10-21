@@ -59,6 +59,7 @@ import {
   formatCurrencyBRL,
   formatNumberBR,
   formatPlateDisplay,
+  resolvePlateEnd,
   formatPlateInput,
 } from "@/lib/format";
 import {
@@ -409,10 +410,7 @@ export function VehicleForm({
   const [plate, setPlate] = useState(
     init?.plate ? formatPlateDisplay(init.plate) : "",
   );
-  const [plateEnd, setPlateEnd] = useState(init?.plateEnd ?? "");
-  const [fipePrice, setFipePrice] = useState<number | null>(
-    init?.fipePrice ?? null,
-  );
+  const plateEnd = resolvePlateEnd(plate, init?.plateEnd);
   const [engine, setEngine] = useState(init?.engine ?? "");
   const [purchase, setPurchase] = useState(
     prefill?.purchasePrice != null ? moneyInput(prefill.purchasePrice) : "",
@@ -457,8 +455,6 @@ export function VehicleForm({
 
   function handlePlateChange(next: string) {
     setPlate(next);
-    const last = next.replace(/[^0-9A-Za-z]/g, "").slice(-1);
-    if (/\d/.test(last) && !plateEnd) setPlateEnd(last);
   }
 
   function validate(): boolean {
@@ -715,7 +711,6 @@ export function VehicleForm({
             yearModel,
             plate,
             plateEnd,
-            fipePrice,
             engine,
             purchase,
             description,
@@ -739,7 +734,6 @@ export function VehicleForm({
           setYear(text("year"));
           setYearModel(text("yearModel"));
           setPlate(text("plate"));
-          setPlateEnd(text("plateEnd"));
           setEngine(text("engine"));
           setPurchase(text("purchase"));
           setDescription(text("description"));
@@ -755,9 +749,6 @@ export function VehicleForm({
           setFuel(text("fuel"));
           setTransmission(text("transmission"));
           setConsigned(Boolean(draft.consigned));
-          setFipePrice(
-            typeof draft.fipePrice === "number" ? draft.fipePrice : null,
-          );
           if (draft.values && typeof draft.values === "object")
             setValues(draft.values as typeof values);
           if (Array.isArray(draft.photos))
@@ -981,11 +972,6 @@ export function VehicleForm({
                 })}
               </div>
             </div>
-            <input
-              type="hidden"
-              name="fipePrice"
-              value={fipePrice != null && fipePrice > 0 ? String(fipePrice) : ""}
-            />
             <Field
               label="Placa (interna)"
               error={errors.plate}
@@ -1085,17 +1071,6 @@ export function VehicleForm({
                   placeholder="0"
                   className={`${inputClass} font-display text-lg font-semibold ${errors.price ? errorBorder : ""}`}
                 />
-                {fipePrice != null && fipePrice > 0 ? (
-                  <p
-                    className="mt-2 text-xs text-muted"
-                    data-testid="fipe-price-reference"
-                  >
-                    Referência FIPE:{" "}
-                    <span className="font-medium text-cream">
-                      {formatCurrencyBRL(fipePrice)}
-                    </span>
-                  </p>
-                ) : null}
               </Field>
               <Field label="Status">
                 <select
@@ -1492,13 +1467,13 @@ export function VehicleForm({
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Field
                 label="Final da placa"
-                hint="Ex.: 1 ou 2/3 — visível no site"
+                hint="Calculado a partir da placa interna — visível no site"
               >
                 <input
                   name="plateEnd"
                   value={plateEnd}
-                  onChange={(event) => setPlateEnd(event.target.value)}
-                  placeholder="Ex.: 7"
+                  readOnly
+                  placeholder="Preencha a placa"
                   className={inputClass}
                 />
               </Field>

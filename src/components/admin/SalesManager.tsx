@@ -12,6 +12,7 @@ import { focusAdminError } from "@/lib/admin-form-focus";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { confirmDiscard, useConfirmDialog } from "@/components/admin/useConfirmDialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { InfiniteSentinel } from "@/components/InfiniteSentinel";
 import {
@@ -178,6 +179,7 @@ export function SalesManager({
   query?: string;
   initialVehicle?: SellableVehicle | null;
 }) {
+  const [confirmAction, confirmDialog] = useConfirmDialog();
   const router = useRouter();
   const [exporting, setExporting] = useState(false);
   const [term, setTerm] = useState(query);
@@ -335,11 +337,11 @@ export function SalesManager({
     setErrors({});
   }
 
-  function startEdit(sale: SaleRow) {
+  async function startEdit(sale: SaleRow) {
     if (
       dirty &&
       open &&
-      !window.confirm("Descartar as alterações desta venda?")
+      !(await confirmDiscard(confirmAction, "desta venda"))
     )
       return;
     setDirty(false);
@@ -388,8 +390,9 @@ export function SalesManager({
     setErrors({});
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     if (isPending) return;
     const amount = parseMoneyBR(price);
     if (amount == null || amount <= 0) {
@@ -398,14 +401,14 @@ export function SalesManager({
       });
       return;
     }
-    if (
-      !window.confirm(
-        `${isEditing ? "Salvar" : "Registrar"} venda de ${isHistorical ? `${brand} ${model}` : selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "veículo selecionado"} por ${formatCurrencyBRL(amount)}?${amount < 1000 ? "\nValor abaixo de R$ 1.000: confira se é o valor completo da venda." : ""}`,
-      )
-    )
-      return;
-    const formData = new FormData(event.currentTarget);
-    const form = event.currentTarget;
+    const confirmed = await confirmAction({
+      title: `${isEditing ? "Salvar" : "Registrar"} venda?`,
+      description: `${isHistorical ? `${brand} ${model}` : selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Veículo selecionado"} por ${formatCurrencyBRL(amount)}.${amount < 1000 ? " Valor abaixo de R$ 1.000: confira se é o valor completo da venda." : ""}`,
+      confirmLabel: isEditing ? "Salvar venda" : "Registrar venda",
+      danger: false,
+    });
+    if (!confirmed) return;
+    const formData = new FormData(form);
 
     startTransition(async () => {
       const result = isEditing
@@ -447,6 +450,7 @@ export function SalesManager({
 
   return (
     <div className="space-y-5">
+      {confirmDialog}
       {commercialOpen ? (
         <SalesCommercialPanel
           initialVehicle={commercialVehicle}
@@ -796,10 +800,10 @@ export function SalesManager({
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     if (
                       dirty &&
-                      !window.confirm("Descartar as alterações desta venda?")
+                      !(await confirmDiscard(confirmAction, "desta venda"))
                     )
                       return;
                     setDirty(false);
@@ -829,7 +833,7 @@ export function SalesManager({
           </form>
         </Card>
       ) : (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <button
             type="button"
             onClick={() => {
@@ -878,6 +882,22 @@ export function SalesManager({
                 </option>
               ))}
             </select>
+            <form
+              className="flex min-w-0 flex-1 flex-wrap gap-2 sm:flex-nowrap"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const params = new URLSearchParams();
+                if (period !== "all") params.set("period", period);
+                const next = normalizeSalesQuery(term);
+                if (next) params.set("q", next);
+                router.push(params.size ? `/admin/vendas?${params}` : "/admin/vendas");
+              }}
+            >
+              <label htmlFor="sales-search" className="sr-only">Buscar venda</label>
+              <input id="sales-search" name="q" type="search" maxLength={120} value={term} onChange={(event) => setTerm(event.target.value)} placeholder="Cliente, carro ou placa" className={`${inputClass} min-w-0 flex-1 basis-full sm:basis-auto`} />
+              <button type="submit" className={`${btn.outline} flex-1 sm:flex-none`}>Buscar</button>
+              {query ? <Link href={period === "all" ? "/admin/vendas" : `/admin/vendas?period=${period}`} className={`${btn.ghost} flex-1 sm:flex-none`}>Limpar busca</Link> : null}
+            </form>
             <span className="text-xs text-muted">
               {total} {query ? "venda(s) encontrada(s)" : "venda(s)"}
               {period !== "all" && !query ? ` · ${formatCurrencyBRL(periodTotal)}` : ""}
@@ -902,7 +922,7 @@ export function SalesManager({
                 }
               }}
               disabled={total === 0 || exporting}
-              className={`${btn.outline} w-full sm:ml-auto sm:w-auto`}
+              className={`${btn.outline} w-full sm:w-auto`}
             >
               <IconDownload className="h-4 w-4" />
               {exporting ? "Preparando CSV…" : "Exportar todo o filtro"}
@@ -910,24 +930,6 @@ export function SalesManager({
           </>
         </div>
       )}
-
-      {!open ? (
-        <form className="space-y-2 border border-white/10 bg-ink/50 p-3 sm:p-4" onSubmit={event => {
-          event.preventDefault();
-          const params = new URLSearchParams();
-          if (period !== "all") params.set("period", period);
-          const next = normalizeSalesQuery(term);
-          if (next) params.set("q", next);
-          router.push(params.size ? `/admin/vendas?${params}` : "/admin/vendas");
-        }}>
-          <label htmlFor="sales-search" className="block text-sm font-semibold">Buscar venda</label>
-          <div className="flex flex-wrap gap-2 sm:flex-nowrap">
-            <input id="sales-search" name="q" type="search" maxLength={120} value={term} onChange={event => setTerm(event.target.value)} placeholder="Cliente, carro ou placa" className={`${inputClass} min-w-0 flex-1 basis-full sm:basis-auto`} />
-            <button type="submit" className={`${btn.outline} flex-1 sm:flex-none`}>Buscar</button>
-            {query ? <Link href={period === "all" ? "/admin/vendas" : `/admin/vendas?period=${period}`} className={`${btn.ghost} flex-1 sm:flex-none`}>Limpar busca</Link> : null}
-          </div>
-        </form>
-      ) : null}
 
       {rows.length === 0 ? (
         <EmptyState
@@ -1070,10 +1072,10 @@ export function SalesManager({
                       type="button"
                       onClick={() => setCancelTarget(sale)}
                       className={`${mobileActionCell} border-l border-white/10 text-red-400`}
-                      aria-label="Cancelar venda"
+                      aria-label="Desfazer venda"
                     >
                       <IconTrash className="h-4 w-4" />
-                      Excluir
+                      Desfazer
                     </button>
                   </div>
                 </li>
@@ -1204,8 +1206,8 @@ export function SalesManager({
                             type="button"
                             onClick={() => setCancelTarget(sale)}
                             className="p-2 text-red-400 transition hover:text-cream"
-                            aria-label="Cancelar venda"
-                            title="Cancelar venda"
+                            aria-label="Desfazer venda"
+                            title="Desfazer venda"
                           >
                             <IconTrash className="h-4 w-4" />
                           </button>
@@ -1246,15 +1248,15 @@ export function SalesManager({
 
       <ConfirmDialog
         open={cancelTarget !== null}
-        title="Cancelar venda"
+        title="Desfazer venda"
         description={
           cancelTarget
             ? cancelTarget.vehicle.historical
-              ? `A venda histórica de ${cancelTarget.vehicle.brand} ${cancelTarget.vehicle.model} será apagada.`
-              : `A venda de ${cancelTarget.vehicle.brand} ${cancelTarget.vehicle.model} será apagada e o veículo volta para o estoque como disponível.`
+              ? `A venda histórica de ${cancelTarget.vehicle.brand} ${cancelTarget.vehicle.model} será desfeita.`
+              : `A venda de ${cancelTarget.vehicle.brand} ${cancelTarget.vehicle.model} será desfeita e o veículo volta para o estoque como disponível.`
             : undefined
         }
-        confirmLabel="Cancelar venda"
+        confirmLabel="Desfazer venda"
         danger
         loading={isPending}
         onCancel={() => setCancelTarget(null)}

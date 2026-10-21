@@ -6,7 +6,7 @@ function form(overrides: Record<string, string> = {}) {
   const data = new FormData();
   for (const [key, value] of Object.entries({
     year: " 2020 ", yearModel: "2021", km: "120.000 km", price: "R$ 45.900,00",
-    status: "disponivel", plate: "abc-1234", doors: "", fipePrice: "", purchasePrice: "",
+    status: "disponivel", plate: "abc-1234", doors: "", purchasePrice: "",
     ...overrides,
   })) data.set(key, value);
   return data;
@@ -32,10 +32,10 @@ test("centavos, opcionais vazios e zero não se confundem", () => {
   const parsed = parseVehicleFormFields(form({ price: "45900.50", plate: " ", km: "0" }));
   assert.equal(parsed.price, 45900.5);
   assert.equal(parsed.km, 0);
-  for (const key of ["plate", "doors", "fipePrice", "purchasePrice"] as const)
+  for (const key of ["plate", "doors", "purchasePrice"] as const)
     assert.equal(parsed[key], null);
   assert.deepEqual(parsed.fieldErrors, {});
-  assert.equal(parseVehicleFormFields(form({ purchasePrice: "0", fipePrice: "45.900,50" })).purchasePrice, 0);
+  assert.equal(parseVehicleFormFields(form({ purchasePrice: "0" })).purchasePrice, 0);
   assert.equal(parseVehicleFormFields(form({ purchasePrice: "inválido", consigned: "on" })).purchasePrice, null);
 });
 
@@ -49,7 +49,7 @@ test("vazio obrigatório, frações, negativos e placa longa não viram números
     assert.ok(Number.isNaN(parseVehicleKm(km)), km);
   for (const plate of ["ABC12345", "AB1234", "ABC!1234", "1234567"])
     assert.match(parseVehicleFormFields(form({ plate })).fieldErrors.plate, /Placa:.*ABC-1234/);
-  for (const field of ["doors", "fipePrice", "purchasePrice"])
+  for (const field of ["doors", "purchasePrice"])
     assert.ok(parseVehicleFormFields(form({ [field]: "inválido" })).fieldErrors[field]);
   assert.ok(parseVehicleFormFields(form({ year: "2020.5" })).fieldErrors.year);
   assert.ok(parseVehicleFormFields(form({ priceDisplay: "" })).fieldErrors.price);

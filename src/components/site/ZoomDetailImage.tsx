@@ -23,7 +23,7 @@ export function ZoomDetailImage({ photoId, zoomed, alt }: { photoId: string; zoo
   return <>
     {current ? (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={current.src} alt={alt} aria-hidden="true" draggable={false} onError={event => { event.currentTarget.style.visibility = "hidden"; }} className="pointer-events-none absolute inset-0 h-full w-full object-contain [-webkit-touch-callout:none]" />
+      <img src={current.src} alt={alt} width={3840} height={2880} aria-hidden="true" draggable={false} onError={event => { event.currentTarget.style.visibility = "hidden"; }} className="pointer-events-none absolute inset-0 h-full w-full object-contain [-webkit-touch-callout:none]" />
     ) : null}
     {zoomed && loading && !current ? <span role="status" className="sr-only">Carregando mais detalhe na foto.</span> : null}
   </>;

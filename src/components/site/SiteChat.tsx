@@ -1163,7 +1163,7 @@ export function SiteChat() {
                   {ASSISTANT_NAME}
                 </p>
                 <p
-                  className="mt-0.5 truncate text-[11px] leading-4 text-muted min-[390px]:text-[12px]"
+                  className="mt-0.5 truncate text-xs leading-4 text-muted"
                   title="Assistente virtual"
                 >
                   Assistente virtual
@@ -1269,7 +1269,7 @@ export function SiteChat() {
                       </p>
                     ) : (
                       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#ff7378]">
+                        <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[#ff7378]">
                           Ajuda para escolher
                         </p>
                         <h2 className="mt-1.5 font-display text-[18px] font-semibold leading-[1.2] tracking-[-0.025em] text-cream">
@@ -1338,7 +1338,7 @@ export function SiteChat() {
             ) : null}
             {showSuggestions ? (
               <div className="!mt-4">
-                <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+                <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
                   Por onde você quer começar?
                 </p>
                 <ul className="grid grid-cols-2 gap-2">
@@ -1365,33 +1365,6 @@ export function SiteChat() {
                 </ul>
               </div>
             ) : null}
-            {failure ? (
-              <div
-                role="alert"
-                className="rounded-2xl border border-amber-300/15 bg-amber-300/[0.05] px-4 py-3 text-[12px] leading-5 text-cream/85"
-              >
-                <p>{failure}</p>
-                <div className="mt-1 flex flex-wrap gap-x-4">
-                  <button
-                    type="button"
-                    className="min-h-11 font-semibold underline underline-offset-4"
-                    onClick={() => inputRef.current?.focus()}
-                  >
-                    Rever mensagem
-                  </button>
-                  <a
-                    href={headerWhatsAppHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
-                    className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-[#25D366]"
-                  >
-                    <IconWhatsApp className="h-4 w-4" />
-                    Falar com consultor
-                  </a>
-                </div>
-              </div>
-            ) : null}
             </div>
           </div>
 
@@ -1413,6 +1386,33 @@ export function SiteChat() {
             <Link href="/estoque" prefetch={false} onClick={() => trackChatEvent("ChatStockExplore", { source: sourceRef.current, intent: lastIntentRef.current, message_count: messageCountRef.current })} className={QUICK_ACTION_CLASS}>Ver estoque<IconArrowRight className="h-4 w-4" /></Link>
             {vehicleContext && started ? activeSuggestions.slice(0, 2).map(suggestion => <button key={suggestion} type="button" disabled={pending} onClick={() => void send(resolveSuggestionPrompt(suggestion, vehicleContext), "suggestion")} className={QUICK_ACTION_CLASS}>{suggestion}</button>) : null}
           </div>
+          {failure ? (
+            <div
+              role="alert"
+              className="mx-3 mb-2 max-h-40 shrink-0 overflow-y-auto rounded-2xl border border-amber-300/15 bg-amber-300/[0.05] px-4 py-3 text-[12px] leading-5 text-cream/85"
+            >
+              <p>{failure}</p>
+              <div className="mt-1 flex flex-wrap gap-x-4">
+                <button
+                  type="button"
+                  className="min-h-11 font-semibold underline underline-offset-4"
+                  onClick={() => inputRef.current?.focus()}
+                >
+                  Rever mensagem
+                </button>
+                <a
+                  href={headerWhatsAppHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
+                  className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-[#25D366]"
+                >
+                  <IconWhatsApp className="h-4 w-4" />
+                  Falar no WhatsApp
+                </a>
+              </div>
+            </div>
+          ) : null}
           <form
             data-chat-composer=""
             className="shrink-0 border-t border-white/[0.07] bg-asphalt px-3 pb-1 pt-2"
@@ -1484,7 +1484,7 @@ export function SiteChat() {
               </button>
               )}
             </div>
-            <div data-chat-footer="" className="flex h-7 items-center justify-between gap-2 px-1 text-[11px] text-muted">
+            <div data-chat-footer="" className="flex h-7 items-center justify-between gap-2 px-1 text-xs text-muted">
               <p>Respostas automáticas · confirme no WhatsApp</p>
             </div>
           </form>

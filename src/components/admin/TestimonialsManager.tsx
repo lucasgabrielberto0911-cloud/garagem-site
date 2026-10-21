@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { confirmDiscard, useConfirmDialog } from "@/components/admin/useConfirmDialog";
 import { useUnsavedChangesWarning } from "@/components/admin/useUnsavedChangesWarning";
 import { adminMutation } from "@/lib/admin-mutation";
 import { focusAdminError } from "@/lib/admin-form-focus";
@@ -45,6 +46,7 @@ const emptyForm = {
 };
 
 export function TestimonialsManager({ items }: { items: Testimonial[] }) {
+  const [confirmAction, confirmDialog] = useConfirmDialog();
   const router = useRouter();
   const [dirty, setDirty] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -55,11 +57,11 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
 
   useUnsavedChangesWarning(dirty && Boolean(form));
 
-  function openCreate() {
+  async function openCreate() {
     if (
       uploading ||
       isPending ||
-      (dirty && !window.confirm("Descartar as alterações deste depoimento?"))
+      (dirty && !(await confirmDiscard(confirmAction, "deste depoimento")))
     )
       return;
     setDirty(false);
@@ -67,11 +69,11 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
     setForm({ ...emptyForm });
   }
 
-  function openEdit(item: Testimonial) {
+  async function openEdit(item: Testimonial) {
     if (
       uploading ||
       isPending ||
-      (dirty && !window.confirm("Descartar as alterações deste depoimento?"))
+      (dirty && !(await confirmDiscard(confirmAction, "deste depoimento")))
     )
       return;
     setDirty(false);
@@ -164,6 +166,7 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
 
   return (
     <div className="space-y-5">
+      {confirmDialog}
       {form ? (
         <Card title={form.id ? "Editar depoimento" : "Novo depoimento"}>
           <form
@@ -364,8 +367,8 @@ export function TestimonialsManager({ items }: { items: Testimonial[] }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (dirty && !window.confirm("Descartar as alterações?"))
+                  onClick={async () => {
+                    if (dirty && !(await confirmDiscard(confirmAction, "desta edição")))
                       return;
                     setDirty(false);
                     setForm(null);

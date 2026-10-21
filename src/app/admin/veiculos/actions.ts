@@ -86,7 +86,7 @@ function parseVehicleFields(formData: FormData) {
     );
   }
   const featured = featuredRequested && status === "disponivel";
-  const { year, yearModel, km, doors, price, fipePrice, purchasePrice, plate, fieldErrors } = parseVehicleFormFields(formData);
+  const { year, yearModel, km, doors, price, purchasePrice, plate, fieldErrors } = parseVehicleFormFields(formData);
   if (Object.keys(fieldErrors).length || price == null)
     throw Object.assign(new Error(Object.values(fieldErrors)[0]), { fieldErrors });
   const consigned =
@@ -187,7 +187,6 @@ function parseVehicleFields(formData: FormData) {
     yearModel,
     km,
     price,
-    fipePrice,
     fuel,
     transmission,
     color,
@@ -196,7 +195,7 @@ function parseVehicleFields(formData: FormData) {
     doors,
     warranty,
     plate,
-    plateEnd,
+    plateEnd: plate ? plate.slice(-1) : plateEnd,
     inspection,
     accessories,
     status,
@@ -273,7 +272,6 @@ export async function createVehicle(
           yearModel: data.yearModel,
           km: data.km,
           price: data.price,
-          fipePrice: data.fipePrice,
           fuel: data.fuel,
           transmission: data.transmission,
           color: data.color,
@@ -390,7 +388,6 @@ export async function updateVehicle(
           yearModel: data.yearModel,
           km: data.km,
           price: data.price,
-          fipePrice: data.fipePrice,
           fuel: data.fuel,
           transmission: data.transmission,
           color: data.color,
@@ -789,7 +786,6 @@ export async function duplicateVehicle(id: string) {
       yearModel: source.yearModel,
       km: source.km,
       price: source.price,
-      fipePrice: source.fipePrice,
       fuel: source.fuel,
       transmission: source.transmission,
       color: source.color,

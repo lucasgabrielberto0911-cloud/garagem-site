@@ -518,7 +518,7 @@ export default async function VehicleDetailPage({
                       Tenho interesse
                     </WhatsAppButton>
                   </VehicleLeadHit>
-                  <p className="text-[11px] leading-relaxed text-muted">
+                  <p className="text-xs leading-relaxed text-muted">
                     Abre o WhatsApp com este anúncio — modelo, ano e preço.
                   </p>
 
@@ -537,7 +537,7 @@ export default async function VehicleDetailPage({
                     trade={whatsapp.trade}
                     visit={whatsapp.visit}
                   />
-                  <p className="-mt-2 text-[11px] leading-relaxed text-muted">
+                  <p className="-mt-2 text-xs leading-relaxed text-muted">
                     Esses botões também abrem o WhatsApp deste veículo.
                   </p>
 
@@ -548,7 +548,7 @@ export default async function VehicleDetailPage({
                     variant="outline"
                     className="w-full"
                   />
-                  <p className="text-[11px] leading-relaxed text-muted">
+                  <p className="text-xs leading-relaxed text-muted">
                     Dúvida breve no site. Preço, visita e proposta seguem no WhatsApp.
                   </p>
                 </>
@@ -595,7 +595,7 @@ export default async function VehicleDetailPage({
 
               {!sold ? (
                 <>
-                  <p className="text-[11px] leading-relaxed text-muted">
+                  <p className="text-xs leading-relaxed text-muted">
                     Financiamento em até 60x e cartão em até 18x. O consultor
                     calcula a parcela no WhatsApp — o site não publica valor de
                     parcela. Sujeito a análise de crédito e CET.

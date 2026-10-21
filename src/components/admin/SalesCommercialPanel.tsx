@@ -3,10 +3,23 @@
 import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveCommercial } from "@/app/admin/veiculos/commercial-actions";
-import { simulateFinancing } from "@/lib/admin-commercial";
+import {
+  CONTRACT_PAYMENT_METHODS,
+  type ContractPaymentItem,
+  type ContractPaymentMethod,
+  simulateFinancing,
+  sumContractPayments,
+  summarizeContractPayments,
+} from "@/lib/admin-commercial";
 import { fetchDocFile, shareDocFile } from "@/lib/commercial-client";
-import { formatAdminMoney as formatCurrencyBRL, moneyInput, moneyTyping, parseMoneyBR } from "@/lib/admin-money";
-import { formatPhoneBR, formatPlateDisplay } from "@/lib/format";
+import {
+  formatAdminMoney as formatCurrencyBRL,
+  moneyDifference,
+  moneyInput,
+  moneyTyping,
+  parseMoneyBR,
+} from "@/lib/admin-money";
+import { formatPhoneBR, formatPlateDisplay, formatPlateInput } from "@/lib/format";
 import { SearchSelect } from "./SearchSelect";
 import { btn, Card, Field, inputClass } from "./ui";
 import type { SellableVehicle, CustomerOption } from "./SalesManager";
@@ -34,20 +47,113 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
   const [customerId, setCustomerId] = useState(initialCustomer?.id ?? "");
   const [pickedCustomer, setPickedCustomer] = useState<CustomerOption | null>(initialCustomer ?? null);
 
-  const [price, setPrice] = useState(initialVehicle?.price ? moneyInput(initialVehicle.price) : "");
-  const [payment, setPayment] = useState("À vista via Pix");
-  const [downPayment, setDownPayment] = useState("");
-  const [bank, setBank] = useState("");
-  const [months, setMonths] = useState("48");
-  const [rate, setRate] = useState("1,50");
-  const [deposit, setDeposit] = useState("");
-  const [expiresAt, setExpiresAt] = useState("");
-  const [conditions, setConditions] = useState("");
+  const initialPriceStr = initialVehicle?.price ? moneyInput(initialVehicle.price) : "";
+  const [price, setPrice] = useState(initialPriceStr);
 
+  // Seleção múltipla de formas de pagamento do contrato
+  const [selectedMethods, setSelectedMethods] = useState<ContractPaymentMethod[]>(["pix"]);
+
+  // À vista / PIX
+  const [pixAmount, setPixAmount] = useState(initialPriceStr);
+
+  // Financiamento
+  const [bank, setBank] = useState("");
+  const [downPayment, setDownPayment] = useState("");
+  const [months, setMonths] = useState("48");
+  const [financedAmount, setFinancedAmount] = useState("");
+  const [rate, setRate] = useState("1,50");
+
+  // Troca (carro na troca)
+  const [tradeVehicle, setTradeVehicle] = useState("");
+  const [tradePlate, setTradePlate] = useState("");
+  const [tradeAmount, setTradeAmount] = useState("");
+
+  // Cartão
+  const [cardAmount, setCardAmount] = useState("");
+  const [cardInstallments, setCardInstallments] = useState("1");
+
+  // Sinal (no contrato e no recibo de sinal separado)
+  const [deposit, setDeposit] = useState("");
+  const [signalDate, setSignalDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [expiresAt, setExpiresAt] = useState("");
+  const [receiptPayment, setReceiptPayment] = useState("À vista via Pix");
+
+  const [conditions, setConditions] = useState("");
   const [simulation, setSimulation] = useState<ReturnType<typeof simulateFinancing> | null>(null);
   const [message, setMessage] = useState("");
   const [lastDoc, setLastDoc] = useState<GeneratedDoc | null>(null);
   const [sessionDocs, setSessionDocs] = useState<GeneratedDoc[]>([]);
+
+  function toggleMethod(method: ContractPaymentMethod) {
+    setSelectedMethods((prev) => {
+      const exists = prev.includes(method);
+      const next = exists ? prev.filter((m) => m !== method) : [...prev, method];
+      const total = parseMoneyBR(price) ?? 0;
+      if (!exists && total > 0) {
+        if (method === "pix" && !pixAmount) {
+          setPixAmount(moneyInput(total));
+        } else if (method === "financiamento" && !financedAmount) {
+          const sinalVal = next.includes("sinal") ? (parseMoneyBR(deposit) ?? 0) : 0;
+          const downVal = parseMoneyBR(downPayment) ?? 0;
+          const rem = Math.max(0, moneyDifference(total, sinalVal + downVal));
+          if (rem > 0) setFinancedAmount(moneyInput(rem));
+        }
+      }
+      return next;
+    });
+    setSimulation(null);
+  }
+
+  function buildPaymentItems(): ContractPaymentItem[] {
+    const items: ContractPaymentItem[] = [];
+    for (const method of CONTRACT_PAYMENT_METHODS.map((m) => m.id)) {
+      if (!selectedMethods.includes(method)) continue;
+      if (method === "sinal") {
+        items.push({
+          method: "sinal",
+          amount: parseMoneyBR(deposit) ?? 0,
+          signalDate: signalDate || undefined,
+        });
+      } else if (method === "pix") {
+        items.push({
+          method: "pix",
+          amount: parseMoneyBR(pixAmount) ?? 0,
+        });
+      } else if (method === "financiamento") {
+        const down = parseMoneyBR(downPayment) ?? 0;
+        const fin = parseMoneyBR(financedAmount) ?? 0;
+        const inst = Number(months);
+        items.push({
+          method: "financiamento",
+          amount: fin,
+          bank: bank.trim() || undefined,
+          downPayment: down > 0 ? down : undefined,
+          installments: Number.isInteger(inst) && inst > 0 ? inst : undefined,
+        });
+      } else if (method === "troca") {
+        items.push({
+          method: "troca",
+          amount: parseMoneyBR(tradeAmount) ?? 0,
+          tradeVehicle: tradeVehicle.trim() || undefined,
+          tradePlate: tradePlate.trim() || undefined,
+        });
+      } else if (method === "cartao") {
+        const inst = Number(cardInstallments);
+        items.push({
+          method: "cartao",
+          amount: parseMoneyBR(cardAmount) ?? 0,
+          installments: Number.isInteger(inst) && inst > 0 ? inst : undefined,
+        });
+      }
+    }
+    return items;
+  }
+
+  const totalPrice = parseMoneyBR(price) ?? 0;
+  const activeItems = buildPaymentItems();
+  const paymentsSum = sumContractPayments(activeItems);
+  const diff = moneyDifference(totalPrice, paymentsSum);
+  const sumMatches = totalPrice > 0 && Math.abs(diff) <= 0.01 && activeItems.length > 0;
 
   async function loadVehicleOptions(query: string, signal?: AbortSignal) {
     const params = new URLSearchParams();
@@ -77,7 +183,8 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
 
   function handleCalculateSimulation() {
     const p = parseMoneyBR(price) ?? 0;
-    const d = parseMoneyBR(downPayment) ?? parseMoneyBR(deposit) ?? 0;
+    const fin = parseMoneyBR(financedAmount) ?? 0;
+    const d = fin > 0 && fin < p ? moneyDifference(p, fin) : (parseMoneyBR(downPayment) ?? parseMoneyBR(deposit) ?? 0);
     const r = Number(rate.replace(",", "."));
     const m = Number(months);
     if (!p || p <= 0 || !m || m <= 0) {
@@ -102,16 +209,11 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
       setMessage("Escolha um cliente cadastrado.");
       return;
     }
-    if (!payment.trim()) {
-      setMessage("Informe a forma de pagamento.");
-      return;
-    }
 
     const form = new FormData();
     form.set("operation", "document");
     form.set("kind", kind);
     form.set("customerId", customerId);
-    form.set("payment", payment.trim());
     if (conditions.trim()) form.set("conditions", conditions.trim());
 
     if (kind === "contrato") {
@@ -120,16 +222,41 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
         setMessage("Informe o valor do veículo.");
         return;
       }
+      if (selectedMethods.length === 0) {
+        setMessage("Selecione pelo menos uma forma de pagamento.");
+        return;
+      }
+      if (Math.abs(moneyDifference(amountVal, paymentsSum)) > 0.01) {
+        setMessage("A soma das formas de pagamento deve bater com o valor total do veículo.");
+        return;
+      }
+      const summary = summarizeContractPayments(activeItems);
       form.set("amount", price);
-      if (downPayment) form.set("downPayment", downPayment);
-      if (deposit) form.set("deposit", deposit);
-      if (bank.trim()) form.set("bank", bank.trim());
-      if (rate) form.set("rate", rate);
-      if (months) form.set("months", months);
+      form.set("payment", summary);
+      form.set("payments", JSON.stringify(activeItems));
+
+      if (selectedMethods.includes("sinal") && deposit) {
+        form.set("deposit", deposit);
+      }
+      if (selectedMethods.includes("financiamento")) {
+        const sinalVal = selectedMethods.includes("sinal") ? (parseMoneyBR(deposit) ?? 0) : 0;
+        const downVal = parseMoneyBR(downPayment) ?? 0;
+        if (sinalVal + downVal > 0) {
+          form.set("downPayment", moneyInput(sinalVal + downVal));
+        }
+        if (financedAmount) form.set("financed", financedAmount);
+        if (bank.trim()) form.set("bank", bank.trim());
+        if (rate) form.set("rate", rate);
+        if (months) form.set("months", months);
+      }
     } else {
-      const depositVal = parseMoneyBR(deposit) || parseMoneyBR(price);
+      const depositVal = parseMoneyBR(deposit);
       if (!depositVal || depositVal <= 0) {
         setMessage("Informe o valor do sinal recebido.");
+        return;
+      }
+      if (!receiptPayment.trim()) {
+        setMessage("Informe a forma de pagamento do sinal.");
         return;
       }
       if (expiresAt) {
@@ -140,6 +267,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
         }
         form.set("expiresAt", expiresAt);
       }
+      form.set("payment", receiptPayment.trim());
       form.set("amount", moneyInput(depositVal));
       form.set("deposit", moneyInput(depositVal));
       if (price) {
@@ -158,6 +286,9 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
           const doc: GeneratedDoc = { id: result.documentId, kind, number: result.documentNumber, file };
           setLastDoc(doc);
           setSessionDocs((prev) => [doc, ...prev.filter((d) => d.id !== doc.id)]);
+          if (kind === "recibo" && !selectedMethods.includes("sinal")) {
+            setSelectedMethods((prev) => [...prev, "sinal"]);
+          }
         }
       } catch {
         setMessage("Falha ao gerar documento. Tente novamente.");
@@ -171,8 +302,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
     <Card title="Contrato de compra e venda e recibo de sinal">
       <div className="space-y-4 font-body">
         <p className="text-sm text-muted">
-          Gere contrato de compra e venda e recibo de sinal para veículos do estoque.
-          Vendedora: <strong>Garagem Motorcycle Ltda</strong>. O sinal é garantia (arras) e não é restituído em caso de desistência do comprador.
+          Vendedora: <strong>Garagem Motorcycle Ltda</strong>. O recibo de sinal fica separado e seu valor é descontado do total no contrato.
         </p>
 
         {message ? (
@@ -182,7 +312,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
         ) : null}
 
         <fieldset disabled={isPending} className="space-y-4 min-w-0">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Veículo do estoque" required as="div">
               <SearchSelect
                 name="vehicleId"
@@ -192,15 +322,19 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                     ? `${pickedVehicle.brand} ${pickedVehicle.model}${pickedVehicle.version ? ` ${pickedVehicle.version}` : ""}${pickedVehicle.plate ? ` (${formatPlateDisplay(pickedVehicle.plate)})` : ""} · ${pickedVehicle.yearModel} · ${formatCurrencyBRL(pickedVehicle.price)}`
                     : ""
                 }
-                placeholder="Busque por marca, modelo ou placa"
+                placeholder="Marca, modelo ou placa"
                 emptyText="Nenhum veículo disponível"
                 loadOptions={loadVehicleOptions}
                 onChange={(id, item) => {
                   setVehicleId(id);
                   if (item) {
                     setPickedVehicle(item);
+                    const nextPrice = moneyInput(item.price);
                     if (!price || price === "0,00") {
-                      setPrice(moneyInput(item.price));
+                      setPrice(nextPrice);
+                      if (selectedMethods.length === 1 && selectedMethods[0] === "pix" && (!pixAmount || pixAmount === "0,00")) {
+                        setPixAmount(nextPrice);
+                      }
                     }
                   } else {
                     setPickedVehicle(null);
@@ -222,7 +356,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                     ? `${pickedCustomer.name}${pickedCustomer.phone ? ` · ${formatPhoneBR(pickedCustomer.phone)}` : ""}${pickedCustomer.cpf ? ` · CPF ${pickedCustomer.cpf}` : ""}`
                     : ""
                 }
-                placeholder="Busque por nome, telefone ou CPF"
+                placeholder="Nome, telefone ou CPF"
                 emptyText="Nenhum cliente encontrado"
                 loadOptions={loadCustomerOptions}
                 onChange={(id, item) => {
@@ -235,134 +369,326 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
               </a>
             </div>
 
-            <Field label="Valor do veículo / Total negociado (R$)" required hint="Preço total acordado na negociação.">
+            <Field label="Valor total do veículo (R$)" required>
               <input
                 name="price"
                 inputMode="decimal"
                 value={price}
-                onChange={(e) => setPrice(moneyTyping(e.target.value))}
-                placeholder="0,00"
-                className={inputClass}
-              />
-            </Field>
-
-            <Field label="Forma de pagamento" required hint="Ex.: À vista via Pix, Financiamento bancário, Cartão">
-              <input
-                name="payment"
-                value={payment}
-                onChange={(e) => setPayment(e.target.value)}
-                placeholder="Ex.: À vista via Pix"
-                className={inputClass}
-                maxLength={200}
-              />
-            </Field>
-
-            <Field label="Entrada total, incluindo sinal (R$)" hint="Soma do sinal com outros pagamentos de entrada.">
-              <input
-                name="downPayment"
-                inputMode="decimal"
-                value={downPayment}
                 onChange={(e) => {
-                  setDownPayment(moneyTyping(e.target.value));
-                  setSimulation(null);
+                  const val = moneyTyping(e.target.value);
+                  setPrice(val);
+                  if (selectedMethods.length === 1 && selectedMethods[0] === "pix") {
+                    setPixAmount(val);
+                  }
                 }}
                 placeholder="0,00"
                 className={inputClass}
               />
             </Field>
+          </div>
 
-            <Field label="Banco / Financeira" hint="Instituição que financiará o saldo.">
-              <input
-                name="bank"
-                value={bank}
-                onChange={(e) => setBank(e.target.value)}
-                placeholder="Ex.: Santander, BV, Itaú"
-                className={inputClass}
-                maxLength={160}
-              />
-            </Field>
+          <div className="space-y-3 border-t border-white/10 pt-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-medium text-cream">
+                Formas de pagamento do contrato <span className="text-brand">*</span>
+                <span className="ml-1.5 text-xs font-normal text-muted">(marque uma ou mais)</span>
+              </span>
+              {totalPrice > 0 ? (
+                <span
+                  data-testid="payment-sum-status"
+                  className={`text-xs font-medium px-2 py-1 border ${
+                    sumMatches
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                      : "border-amber-500/50 bg-amber-500/10 text-amber-300"
+                  }`}
+                >
+                  Soma: {formatCurrencyBRL(paymentsSum)} de {formatCurrencyBRL(totalPrice)}
+                  {!sumMatches
+                    ? diff > 0
+                      ? ` · faltam ${formatCurrencyBRL(diff)}`
+                      : ` · passam ${formatCurrencyBRL(Math.abs(diff))}`
+                    : " · Total confere"}
+                </span>
+              ) : null}
+            </div>
 
-            <Field label="Prazo do financiamento (meses)" hint="Número de parcelas.">
-              <input
-                name="months"
-                type="number"
-                min="1"
-                max="120"
-                value={months}
-                onChange={(e) => {
-                  setMonths(e.target.value);
-                  setSimulation(null);
-                }}
-                placeholder="48"
-                className={inputClass}
-              />
-            </Field>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Formas de pagamento">
+              {CONTRACT_PAYMENT_METHODS.map((method) => {
+                const active = selectedMethods.includes(method.id);
+                return (
+                  <button
+                    key={method.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggleMethod(method.id)}
+                    className={`min-h-[38px] px-3 py-1.5 text-xs font-display font-semibold tracking-wide border transition touch-manipulation ${
+                      active
+                        ? "border-brand bg-brand text-white"
+                        : "border-white/15 bg-ink text-cream hover:border-brand/60"
+                    }`}
+                  >
+                    {method.label}
+                  </button>
+                );
+              })}
+            </div>
 
-            <Field label="Taxa mensal (%)" hint="Taxa de juros estimada.">
-              <input
-                name="rate"
-                value={rate}
-                onChange={(e) => {
-                  setRate(e.target.value);
-                  setSimulation(null);
-                }}
-                placeholder="1,50"
-                className={inputClass}
-              />
-            </Field>
+            {totalPrice > 0 && !sumMatches ? (
+              <p role="alert" className="text-xs text-amber-300 font-medium">
+                Aviso: a soma das formas de pagamento ({formatCurrencyBRL(paymentsSum)}) não bate com o valor total do veículo ({formatCurrencyBRL(totalPrice)}).
+              </p>
+            ) : null}
 
-            <Field label="Sinal recebido (R$)" hint="Valor recebido para reserva (arras).">
-              <input
-                name="deposit"
-                inputMode="decimal"
-                value={deposit}
-                onChange={(e) => setDeposit(moneyTyping(e.target.value))}
-                placeholder="0,00"
-                className={inputClass}
-              />
-            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {selectedMethods.includes("pix") ? (
+                <div className="border border-white/10 bg-ink/40 p-3 space-y-2">
+                  <p className="text-xs font-display font-semibold uppercase tracking-wider text-cream">À vista / PIX</p>
+                  <Field label="Valor à vista / PIX (R$)" required>
+                    <input
+                      name="pixAmount"
+                      inputMode="decimal"
+                      value={pixAmount}
+                      onChange={(e) => setPixAmount(moneyTyping(e.target.value))}
+                      placeholder="0,00"
+                      className={inputClass}
+                    />
+                  </Field>
+                </div>
+              ) : null}
 
-            <Field label="Prazo da reserva (horário de Brasília)" hint="Data limite da garantia da reserva.">
-              <input
-                name="expiresAt"
-                type="datetime-local"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-                className={inputClass}
-              />
-            </Field>
+              {selectedMethods.includes("sinal") ? (
+                <div className="border border-white/10 bg-ink/40 p-3 space-y-2">
+                  <p className="text-xs font-display font-semibold uppercase tracking-wider text-cream">Sinal (abatido do total)</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Field label="Valor do sinal (R$)" required>
+                      <input
+                        name="signalAmount"
+                        inputMode="decimal"
+                        value={deposit}
+                        onChange={(e) => setDeposit(moneyTyping(e.target.value))}
+                        placeholder="0,00"
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="Data do sinal">
+                      <input
+                        name="signalDate"
+                        type="date"
+                        value={signalDate}
+                        onChange={(e) => setSignalDate(e.target.value)}
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+                </div>
+              ) : null}
 
-            <div className="sm:col-span-2">
-              <Field label="Condições, validade e observações" hint="Observações impressas no contrato e recibo (nunca cortadas).">
-                <textarea
-                  name="conditions"
-                  value={conditions}
-                  onChange={(e) => setConditions(e.target.value)}
-                  placeholder="Ex.: Veículo entregue revisado. Transferência por conta do comprador em até 30 dias."
-                  maxLength={3000}
-                  rows={3}
+              {selectedMethods.includes("financiamento") ? (
+                <div className="border border-white/10 bg-ink/40 p-3 space-y-2 sm:col-span-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-display font-semibold uppercase tracking-wider text-cream">Financiamento</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button type="button" className={btn.ghost} onClick={handleCalculateSimulation}>
+                        Simular parcelas
+                      </button>
+                      {simulation ? (
+                        <span className="text-xs text-cream">
+                          <strong>{formatCurrencyBRL(simulation.installment)}</strong> ({months}x) · Juros: {formatCurrencyBRL(simulation.interest)}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-5">
+                    <Field label="Banco / Financeira" required>
+                      <input
+                        name="bank"
+                        value={bank}
+                        onChange={(e) => setBank(e.target.value)}
+                        placeholder="Ex.: Santander, BV"
+                        className={inputClass}
+                        maxLength={160}
+                      />
+                    </Field>
+                    <Field label="Entrada (R$)">
+                      <input
+                        name="downPayment"
+                        inputMode="decimal"
+                        value={downPayment}
+                        onChange={(e) => {
+                          setDownPayment(moneyTyping(e.target.value));
+                          setSimulation(null);
+                        }}
+                        placeholder="0,00"
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="Valor financiado (R$)" required>
+                      <input
+                        name="financed"
+                        inputMode="decimal"
+                        value={financedAmount}
+                        onChange={(e) => {
+                          setFinancedAmount(moneyTyping(e.target.value));
+                          setSimulation(null);
+                        }}
+                        placeholder="0,00"
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="Parcelas">
+                      <input
+                        name="months"
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={months}
+                        onChange={(e) => {
+                          setMonths(e.target.value);
+                          setSimulation(null);
+                        }}
+                        placeholder="48"
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="Taxa a.m. (%)">
+                      <input
+                        name="rate"
+                        value={rate}
+                        onChange={(e) => {
+                          setRate(e.target.value);
+                          setSimulation(null);
+                        }}
+                        placeholder="1,50"
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+                </div>
+              ) : null}
+
+              {selectedMethods.includes("troca") ? (
+                <div className="border border-white/10 bg-ink/40 p-3 space-y-2 sm:col-span-2">
+                  <p className="text-xs font-display font-semibold uppercase tracking-wider text-cream">Troca (veículo na troca)</p>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <Field label="Veículo na troca (marca/modelo/ano)" required>
+                      <input
+                        name="tradeVehicle"
+                        value={tradeVehicle}
+                        onChange={(e) => setTradeVehicle(e.target.value)}
+                        placeholder="Ex.: Fiat Palio 1.0 2015"
+                        className={inputClass}
+                        maxLength={120}
+                      />
+                    </Field>
+                    <Field label="Placa do veículo na troca">
+                      <input
+                        name="tradePlate"
+                        value={tradePlate}
+                        onChange={(e) => setTradePlate(formatPlateInput(e.target.value))}
+                        placeholder="ABC1D23"
+                        className={inputClass}
+                        maxLength={8}
+                      />
+                    </Field>
+                    <Field label="Valor avaliado na troca (R$)" required>
+                      <input
+                        name="tradeAmount"
+                        inputMode="decimal"
+                        value={tradeAmount}
+                        onChange={(e) => setTradeAmount(moneyTyping(e.target.value))}
+                        placeholder="0,00"
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+                </div>
+              ) : null}
+
+              {selectedMethods.includes("cartao") ? (
+                <div className="border border-white/10 bg-ink/40 p-3 space-y-2">
+                  <p className="text-xs font-display font-semibold uppercase tracking-wider text-cream">Cartão</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Field label="Valor no cartão (R$)" required>
+                      <input
+                        name="cardAmount"
+                        inputMode="decimal"
+                        value={cardAmount}
+                        onChange={(e) => setCardAmount(moneyTyping(e.target.value))}
+                        placeholder="0,00"
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="Parcelas">
+                      <input
+                        name="cardInstallments"
+                        type="number"
+                        min="1"
+                        max="36"
+                        value={cardInstallments}
+                        onChange={(e) => setCardInstallments(e.target.value)}
+                        placeholder="1"
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="border border-white/10 bg-ink/30 p-3 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-display font-semibold uppercase tracking-wider text-cream">
+                Recibo de sinal separado (arras)
+              </p>
+              <span className="text-xs text-muted">Reserva o veículo e abate do total no contrato</span>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field label="Sinal recebido (R$)">
+                <input
+                  name="deposit"
+                  inputMode="decimal"
+                  value={deposit}
+                  onChange={(e) => setDeposit(moneyTyping(e.target.value))}
+                  placeholder="0,00"
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Forma de pagamento do sinal">
+                <input
+                  name="payment"
+                  value={receiptPayment}
+                  onChange={(e) => setReceiptPayment(e.target.value)}
+                  placeholder="Ex.: Pix chave CNPJ"
+                  className={inputClass}
+                  maxLength={200}
+                />
+              </Field>
+              <Field label="Prazo da reserva (Brasília)">
+                <input
+                  name="expiresAt"
+                  type="datetime-local"
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
                   className={inputClass}
                 />
               </Field>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              type="button"
-              className={btn.outline}
-              onClick={handleCalculateSimulation}
-            >
-              Calcular parcelas
-            </button>
-            {simulation ? (
-              <span className="text-xs text-cream">
-                Parcela: <strong>{formatCurrencyBRL(simulation.installment)}</strong> ({months}x) · Total com entrada: {formatCurrencyBRL(simulation.total)} · Juros: {formatCurrencyBRL(simulation.interest)}
-              </span>
-            ) : null}
-          </div>
+          <Field label="Condições, validade e observações" hint="Observações impressas no contrato e no recibo (nunca cortadas).">
+            <textarea
+              name="conditions"
+              value={conditions}
+              onChange={(e) => setConditions(e.target.value)}
+              placeholder="Ex.: Veículo entregue revisado. Transferência por conta do comprador em até 30 dias."
+              maxLength={3000}
+              rows={2}
+              className={inputClass}
+            />
+          </Field>
 
-          <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-white/10">
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-white/10">
             <button
               type="button"
               disabled={isPending}

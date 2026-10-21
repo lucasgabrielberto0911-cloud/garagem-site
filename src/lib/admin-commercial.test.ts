@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSaleMessage, simulateFinancing, suggestPrice } from "./admin-commercial";
+import { afterSaleMessage, financingSimulationDown, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
 import { commercialPdf, expensesPdf, groupExpenseCosts, preparationPdf, PREPARATION_CELL_SIZE, PREPARATION_COLS } from "./commercial-pdf";
 import { parsePreparationForm } from "./preparation";
 import { PDFArray, PDFDocument, PDFPage, decodePDFRawStream, PDFRawStream } from "pdf-lib";
@@ -13,13 +13,13 @@ test("Price calcula taxa zero, juros e rejeita valores inválidos", () => {
   assert.equal(simulateFinancing(60000, 10000, 1.5, 48).installment, 1468.75);
   for (const args of [[0, 0, 1, 12], [100, 100, 1, 12], [100, -1, 1, 12], [100, 0, -1, 12], [100, 0, 11, 12], [100, 0, 1, 0], [100, 0, 1, 1.5], [NaN, 0, 1, 12], [Infinity, 0, 1, 12]]) assert.throws(() => simulateFinancing(...args as [number, number, number, number]));
 });
-test("sugestão respeita custo, FIPE, margem mínima e dias de giro", () => {
-  const base = { price: 60000, fipe: 58000, purchase: 50000, costs: 2000, days: 90, margin: 4000, consigned: false };
-  assert.equal(suggestPrice(base)?.price, 56000);
-  assert.equal(suggestPrice({ ...base, fipe: null, days: 30 })?.price, 59400);
+test("sugestão respeita custo, margem mínima e dias de giro", () => {
+  const base = { price: 60000, purchase: 50000, costs: 2000, days: 90, margin: 4000, consigned: false };
+  assert.equal(suggestPrice(base)?.price, 57000);
+  assert.equal(suggestPrice({ ...base, days: 30 })?.price, 59400);
   assert.equal(suggestPrice({ ...base, purchase: null }), null);
   assert.equal(suggestPrice({ ...base, consigned: true }), null);
-  assert.equal(suggestPrice({ ...base, fipe: null, days: 0 })?.price, 60000);
+  assert.equal(suggestPrice({ ...base, days: 0 })?.price, 60000);
 });
 test("pós-venda usa Garagem, não inclui preço e omite link ausente", () => {
   for (const kind of ["entrega", "satisfacao", "documentacao", "revisao"]) {
@@ -195,4 +195,99 @@ test("PDF de preparação: colunas comportam data, valor e cabeçalhos completos
   for (const c of PREPARATION_COLS) assert.ok(semi.widthOfTextAtSize(c.label.toUpperCase(), 7) <= c.w - 4, `cabeçalho ${c.label} estoura`);
   const rows = [{ brand: "Fiat", model: "Punto", color: null, year: 2020, km: 1000, plate: "ABC1D23", purchasedAt: "2026-10-20T15:00:00Z", purchasePrice: 125000, ready: true, posted: true }];
   assert.equal((await PDFDocument.load(await preparationPdf(rows))).getPageCount(), 1);
+});
+
+test("contrato com múltiplas formas de pagamento (PIX, Financiamento, Troca, Cartão e Sinal) lista todas no PDF e soma bate com o total", async () => {
+  const rawPayments = JSON.stringify([
+    { method: "sinal", amount: 5000, signalDate: "2026-10-18" },
+    { method: "pix", amount: 15000 },
+    { method: "troca", amount: 30000, tradeVehicle: "Fiat Palio 2015", tradePlate: "ODB4A12" },
+    { method: "cartao", amount: 10000, installments: 10 },
+    { method: "financiamento", amount: 50000, downPayment: 10000, bank: "Santander", installments: 48 },
+  ]);
+  const payments = parseContractPaymentsJson(rawPayments);
+  assert.ok(payments);
+  assert.equal(payments.length, 5);
+  assert.equal(sumContractPayments(payments), 120000);
+  const summary = summarizeContractPayments(payments);
+  assert.ok(summary.includes("À vista/PIX"));
+  assert.ok(summary.includes("Financiamento Santander 48x"));
+  assert.ok(summary.includes("Troca Fiat Palio 2015"));
+  assert.ok(summary.includes("Cartão 10x"));
+  assert.ok(summary.includes("Sinal"));
+  assert.equal(formatContractPaymentRow(payments[2]), "(−) Troca — veículo na troca (Fiat Palio 2015 · placa ODB4A12)");
+
+  const data = {
+    customer: "Roberto Almeida",
+    cpf: "111.222.333-44",
+    phone: "27999993333",
+    vehicle: "Jeep Compass Longitude",
+    plate: "BRA2E19",
+    amount: 120000,
+    payment: summary,
+    payments,
+    signal: { amount: 5000, receiptId: "55", date: "2026-10-18T12:00:00Z" },
+    conditions: "Revisado e com transferência em 30 dias.",
+    seller: "vendedor@garagem.net",
+    date: "2026-10-20T15:00:00Z",
+  };
+  const drawn: string[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) { drawn.push(text); return original.call(this, text, options); };
+  let bytes: Uint8Array;
+  try {
+    bytes = await commercialPdf("contrato", data, "teste-contrato-multiplo", 56);
+  } finally {
+    PDFPage.prototype.drawText = original;
+  }
+  const text = drawn.join(" ");
+  assert.ok(text.includes("Garagem Motorcycle Ltda"), "vendedor sempre Garagem Motorcycle Ltda");
+  assert.ok(text.includes("recibo de sinal nº 55"), "sinal referencia recibo vinculado");
+  assert.ok(text.includes("À vista / PIX"), "lista PIX no PDF");
+  assert.ok(text.includes("Fiat Palio 2015 · placa ODB4A12"), "lista veículo e placa da troca no PDF");
+  assert.ok(text.includes("Cartão (10x)"), "lista cartão com parcelas no PDF");
+  assert.ok(text.includes("Entrada do financiamento"), "lista entrada do financiamento no PDF");
+  assert.ok(text.includes("Financiamento (Santander, 48x)"), "lista financiamento com banco e parcelas no PDF");
+  assert.ok(text.includes("0,00"), "saldo a pagar zera quando a soma das formas bate com o total");
+  const pdf = await PDFDocument.load(bytes);
+  assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
+  assert.ok(pdf.getPageCount() >= 2);
+});
+
+test("sinal da lista deve bater com o sinal persistido (alteração e omissão)", () => {
+  const pix = { method: "pix" as const, amount: 90000 };
+  assert.equal(signalMismatch([{ method: "sinal", amount: 10000 }, pix], 10000), undefined);
+  assert.ok(signalMismatch([{ method: "sinal", amount: 20000 }, pix], 10000));
+  assert.ok(signalMismatch([pix], 10000));
+  assert.equal(signalMismatch([pix], 0), undefined);
+});
+
+test("simulação usa o valor financiado: demais meios entram na entrada equivalente", () => {
+  const items = [
+    { method: "sinal" as const, amount: 10000 }, { method: "pix" as const, amount: 15000 },
+    { method: "troca" as const, amount: 25000 }, { method: "financiamento" as const, amount: 60000 },
+  ];
+  const down = financingSimulationDown(110000, items);
+  assert.equal(down, 50000);
+  assert.equal(simulateFinancing(110000, down!, 1.5, 48).installment, simulateFinancing(60000, 0, 1.5, 48).installment);
+  assert.equal(financingSimulationDown(110000, [{ method: "pix", amount: 110000 }]), undefined);
+});
+
+test("PDF: rótulo longo da troca quebra linha e não invade o valor", async () => {
+  const drawn: { text: string; x: number; y: number }[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) { drawn.push({ text, x: options?.x ?? 0, y: options?.y ?? 0 }); return original.call(this, text, options); };
+  try {
+    await commercialPdf("contrato", {
+      customer: "Ana", cpf: "", phone: "", vehicle: "Civic", plate: "AAA1A11", amount: 110000, payment: "x",
+      payments: [{ method: "troca", amount: 25000, tradeVehicle: "Toyota Corolla Cross XRE 2.0 Flex 16V Automático 2023", tradePlate: "ABC1D23" }, { method: "pix", amount: 85000 }],
+      conditions: "ok", seller: "v", date: "2026-10-20T15:00:00Z",
+    }, "t-longo", 1);
+  } finally { PDFPage.prototype.drawText = original; }
+  const label = drawn.filter((d) => /Troca|Corolla|ABC1D23/.test(d.text));
+  assert.ok(label.length >= 2, "rótulo quebrou em mais de uma linha");
+  const val = drawn.find((d) => d.text === "R$ 25.000,00" || d.text.includes("25.000,00"));
+  assert.ok(val);
+  // linhas do rótulo na mesma altura do valor não podem chegar ao x do valor
+  assert.ok(label.every((l) => l.y !== val!.y || l.x < val!.x));
 });
