@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSaleMessage, simulateFinancing, suggestPrice } from "./admin-commercial";
+import { afterSaleMessage, formatContractPaymentRow, parseContractPaymentsJson, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
 import { commercialPdf, expensesPdf, groupExpenseCosts } from "./commercial-pdf";
 import { PDFArray, PDFDocument, PDFPage, decodePDFRawStream, PDFRawStream } from "pdf-lib";
 import { moneyInWords } from "./money-words";
@@ -160,6 +160,63 @@ test("contrato com sinal manual sem recibo vinculado, entrada e financiamento n�
   assert.ok(text.includes("15.000,00"), "tabela de pagamento exibe o sinal de 15.000,00");
   assert.ok(text.includes("25.000,00"), "tabela de pagamento exibe a entrada de 25.000,00");
   assert.ok(text.includes("80.000,00"), "tabela de pagamento exibe o valor financiado de 80.000,00");
+  const pdf = await PDFDocument.load(bytes);
+  assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
+  assert.ok(pdf.getPageCount() >= 2);
+});
+
+test("contrato com múltiplas formas de pagamento (PIX, Financiamento, Troca, Cartão e Sinal) lista todas no PDF e soma bate com o total", async () => {
+  const rawPayments = JSON.stringify([
+    { method: "sinal", amount: 5000, signalDate: "2026-10-18" },
+    { method: "pix", amount: 15000 },
+    { method: "troca", amount: 30000, tradeVehicle: "Fiat Palio 2015", tradePlate: "ODB4A12" },
+    { method: "cartao", amount: 10000, installments: 10 },
+    { method: "financiamento", amount: 50000, downPayment: 10000, bank: "Santander", installments: 48 },
+  ]);
+  const payments = parseContractPaymentsJson(rawPayments);
+  assert.ok(payments);
+  assert.equal(payments.length, 5);
+  assert.equal(sumContractPayments(payments), 120000);
+  const summary = summarizeContractPayments(payments);
+  assert.ok(summary.includes("À vista/PIX"));
+  assert.ok(summary.includes("Financiamento Santander 48x"));
+  assert.ok(summary.includes("Troca Fiat Palio 2015"));
+  assert.ok(summary.includes("Cartão 10x"));
+  assert.ok(summary.includes("Sinal"));
+  assert.equal(formatContractPaymentRow(payments[2]), "(−) Troca — veículo na troca (Fiat Palio 2015 · placa ODB4A12)");
+
+  const data = {
+    customer: "Roberto Almeida",
+    cpf: "111.222.333-44",
+    phone: "27999993333",
+    vehicle: "Jeep Compass Longitude",
+    plate: "BRA2E19",
+    amount: 120000,
+    payment: summary,
+    payments,
+    signal: { amount: 5000, receiptId: "55", date: "2026-10-18T12:00:00Z" },
+    conditions: "Revisado e com transferência em 30 dias.",
+    seller: "vendedor@garagem.net",
+    date: "2026-10-20T15:00:00Z",
+  };
+  const drawn: string[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) { drawn.push(text); return original.call(this, text, options); };
+  let bytes: Uint8Array;
+  try {
+    bytes = await commercialPdf("contrato", data, "teste-contrato-multiplo", 56);
+  } finally {
+    PDFPage.prototype.drawText = original;
+  }
+  const text = drawn.join(" ");
+  assert.ok(text.includes("Garagem Motorcycle Ltda"), "vendedor sempre Garagem Motorcycle Ltda");
+  assert.ok(text.includes("recibo de sinal nº 55"), "sinal referencia recibo vinculado");
+  assert.ok(text.includes("À vista / PIX"), "lista PIX no PDF");
+  assert.ok(text.includes("Fiat Palio 2015 · placa ODB4A12"), "lista veículo e placa da troca no PDF");
+  assert.ok(text.includes("Cartão (10x)"), "lista cartão com parcelas no PDF");
+  assert.ok(text.includes("Entrada do financiamento"), "lista entrada do financiamento no PDF");
+  assert.ok(text.includes("Financiamento (Santander, 48x)"), "lista financiamento com banco e parcelas no PDF");
+  assert.ok(text.includes("0,00"), "saldo a pagar zera quando a soma das formas bate com o total");
   const pdf = await PDFDocument.load(bytes);
   assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
   assert.ok(pdf.getPageCount() >= 2);

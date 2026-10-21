@@ -178,10 +178,22 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
     });
     expect(Number(activeReservation.deposit)).toBe(10000);
 
-    // 2. Gera contrato de compra e venda abatendo o sinal já pago
-    await page.locator('input[name="payment"]').fill("Entrada Pix + Financiamento Santander");
-    await page.locator('input[name="downPayment"]').fill("30.000,00");
+    // 2. Gera contrato de compra e venda com múltiplas formas (Sinal + PIX + Troca + Financiamento)
+    // Ao gerar recibo de sinal, o chip "Sinal" (10.000) foi marcado automaticamente junto ao "À vista/PIX" (110.000),
+    // então a soma passa a 120.000 e deve mostrar aviso de diferença até ajustar os valores.
+    await expect(page.getByRole("alert")).toContainText("Aviso: a soma das formas de pagamento");
+
+    await page.locator('input[name="pixAmount"]').fill("15.000,00");
+    await page.getByRole("button", { name: "Troca (carro na troca)" }).click();
+    await page.locator('input[name="tradeVehicle"]').fill("Fiat Palio 2015");
+    await page.locator('input[name="tradePlate"]').fill("ODB4A12");
+    await page.locator('input[name="tradeAmount"]').fill("25.000,00");
+
+    await page.getByRole("button", { name: "Financiamento" }).click();
     await page.locator('input[name="bank"]').fill("Santander");
+    await page.locator('input[name="financed"]').fill("60.000,00");
+
+    await expect(page.getByTestId("payment-sum-status")).toContainText("Total confere");
     await page.locator('textarea[name="conditions"]').fill("Garantia de 90 dias de motor e câmbio.");
 
     await page.getByRole("button", { name: "Gerar contrato (PDF)" }).click();
@@ -193,6 +205,9 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
       orderBy: { createdAt: "desc" },
     });
     expect(contractDoc.number).toBeGreaterThan(0);
+    const snap = contractDoc.snapshot as { payments?: { method: string; amount: number }[] };
+    expect(Array.isArray(snap.payments)).toBe(true);
+    expect(snap.payments?.length).toBe(4);
     const contractPdf = await page.request.get(`/api/admin/documentos/${contractDoc.id}`);
     expect(contractPdf.status()).toBe(200);
     expect(contractPdf.headers()["content-type"]).toBe("application/pdf");

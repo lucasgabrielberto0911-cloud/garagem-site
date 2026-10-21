@@ -3,6 +3,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { formatAdminMoney, moneySum } from "./admin-money";
+import { type ContractPaymentItem, formatContractPaymentRow, sumContractPayments } from "./admin-commercial";
 import { expectedMargin, extrasTotal, hasCostBasis, investedTotal, VEHICLE_COST_KINDS } from "./vehicle-ops";
 import { moneyInWords } from "./money-words";
 import { SEO_LOCAL_CITY } from "./seo-local";
@@ -17,6 +18,8 @@ export type DocumentSnapshot = {
   /** Sinal já pago: número e data do recibo; é abatido do preço. */
   signal?: { amount: number; receiptId?: string; date?: string };
   downPayment?: number; financed?: number;
+  /** Formas de pagamento detalhadas do contrato (compatível com método único em contratos antigos). */
+  payments?: ContractPaymentItem[];
   /** Prazo de entrega em dias úteis após a quitação (padrão: 5). */
   deliveryDays?: number;
 };
@@ -260,10 +263,25 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     paragraph(`O preço certo e ajustado da venda é de ${money(price)} (${moneyInWords(price)}), pago da seguinte forma:`, 10);
     y -= 2;
     const rows: [string, string, boolean][] = [["Preço total do veículo", money(price), true]];
-    if (signal > 0) rows.push([`(−) Sinal já pago — ${receiptRef}, abatido do preço`, money(signal), false]);
-    if (down > 0) rows.push(["(−) Entrada", money(down), false]);
-    if (financed > 0) rows.push(["(−) Valor financiado (pago pela instituição financeira)", money(financed), false]);
-    rows.push([balance > 0 ? "Saldo a pagar pelo(a) COMPRADOR(A)" : "Saldo", money(Math.max(balance, 0)), true]);
+    const hasDetailedPayments = Array.isArray(data.payments) && data.payments.length > 0;
+    let computedBalance = balance;
+    if (hasDetailedPayments) {
+      for (const item of data.payments!) {
+        if (item.method === "financiamento" && item.downPayment && item.downPayment > 0) {
+          rows.push(["(−) Entrada do financiamento", money(item.downPayment), false]);
+        }
+        if (item.amount > 0) {
+          const ref = item.method === "sinal" && data.signal?.receiptId ? receiptRef : undefined;
+          rows.push([clean(formatContractPaymentRow(item, ref)), money(item.amount), false]);
+        }
+      }
+      computedBalance = Math.round((price - sumContractPayments(data.payments!)) * 100) / 100;
+    } else {
+      if (signal > 0) rows.push([`(−) Sinal já pago — ${receiptRef}, abatido do preço`, money(signal), false]);
+      if (down > 0) rows.push(["(−) Entrada", money(down), false]);
+      if (financed > 0) rows.push(["(−) Valor financiado (pago pela instituição financeira)", money(financed), false]);
+    }
+    rows.push([computedBalance > 0 ? "Saldo a pagar pelo(a) COMPRADOR(A)" : "Saldo", money(Math.max(computedBalance, 0)), true]);
     ensure(rows.length * 22 + 6);
     rows.forEach(([lab, val, strong]) => {
       const fill = strong ? CREAM : WHITE;
@@ -273,7 +291,7 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
       y -= 22;
     });
     y -= 8;
-    paragraph(`Forma de pagamento do saldo: ${clean(data.payment)}.`, 10);
+    paragraph(`Forma de pagamento${hasDetailedPayments ? "" : " do saldo"}: ${clean(data.payment)}.`, 10);
     paragraph("§ 1º O sinal tem natureza de garantia (arras): reserva o veículo ao(à) COMPRADOR(A) e, concretizada a compra, é integralmente abatido do preço. § 2º Em caso de financiamento, a venda fica condicionada à aprovação do crédito; se negado, as partes poderão ajustar outra forma de pagamento ou rescindir o contrato.", 10);
 
     clause("Cláusula 3ª — Da entrega", [
