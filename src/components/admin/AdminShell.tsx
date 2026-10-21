@@ -52,19 +52,19 @@ const NAV: NavItem[] = [
     match: (pathname) => pathname.startsWith("/admin/veiculos"),
   },
   {
-    href: "/admin/em-preparacao",
-    label: "Em preparação",
-    group: "Estoque",
-    Icon: IconCar,
-    match: (pathname) => pathname.startsWith("/admin/em-preparacao"),
-  },
-  {
     href: "/admin/leads",
     label: "Leads",
     group: "Relacionamento",
     Icon: IconInbox,
     badgeKey: "leads",
     match: (pathname) => pathname.startsWith("/admin/leads"),
+  },
+  {
+    href: "/admin/em-preparacao",
+    label: "Em preparação",
+    group: "Estoque",
+    Icon: IconCar,
+    match: (pathname) => pathname.startsWith("/admin/em-preparacao"),
   },
   {
     href: "/admin/agenda",
