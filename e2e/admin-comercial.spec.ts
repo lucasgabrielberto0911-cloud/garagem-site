@@ -422,10 +422,16 @@ test.describe("fluxo único de venda", () => {
     expect(withoutEligibleReservation.snapshot).not.toHaveProperty("signal");
 
     const manualReceipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { saleId: sale.id, customerId, amount: 5000, total: 67000, payment: "Sinal", payments: [{ method: "sinal", amount: 5000 }] } } });
-    await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "contrato", snapshot: { saleId: sale.id, customerId, total: 67000, conditions: "Entrega até 30/10/2026", signal: { amount: 5000, receiptId: String(manualReceipt.number), date: new Date().toISOString() }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] } } });
+    await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "contrato", snapshot: { saleId: sale.id, customerId, total: 67000, conditions: "Entrega até 30/10/2026", signal: { amount: 5000, receiptId: String(manualReceipt.number), date: new Date().toISOString() }, payments: [{ method: "sinal", amount: 5000 }, { method: "troca", amount: 20000, tradeVehicle: "Palio", tradePlate: "ABC1D23" }, { method: "financiamento", amount: 42000, downPayment: 5000, installments: 24 }] } } });
     await page.reload();
     await documents.locator("summary").click();
     await expect(documents.getByLabel("Sinal já recebido (R$)")).toHaveValue("5.000,00");
+    await expect(documents.getByLabel("Valor · Troca")).toHaveValue("20.000,00");
+    await expect(documents.getByLabel("Veículo/descrição da troca")).toHaveValue("Palio");
+    await expect(documents.getByLabel("Placa da troca")).toHaveValue("ABC1D23");
+    await expect(documents.getByLabel("Valor · Financiamento")).toHaveValue("42.000,00");
+    await expect(documents.getByLabel("Entrada do financiamento (R$)")).toHaveValue("5.000,00");
+    await expect(documents.getByLabel("Parcelas do financiamento")).toHaveValue("24");
     await expect(documents.getByLabel("Condições adicionais")).toHaveValue("Entrega até 30/10/2026");
     await documents.getByLabel("Condições adicionais").fill("Entrega até 31/10/2026");
     const contractIdsBeforeReissue = new Set((await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).map(({ id }) => id));
@@ -433,13 +439,14 @@ test.describe("fluxo único de venda", () => {
     await expect.poll(async () => (await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).some(({ id }) => !contractIdsBeforeReissue.has(id))).toBeTruthy();
     const reissued = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" }, orderBy: { createdAt: "desc" } });
     await expect(documents.locator(`a[href="/api/admin/documentos/${reissued.id}?inline"]`)).toBeVisible();
-    expect(reissued.snapshot).toMatchObject({ signal: { amount: 5000, receiptId: String(manualReceipt.number) }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] });
+    expect(reissued.snapshot).toMatchObject({ signal: { amount: 5000, receiptId: String(manualReceipt.number) }, payments: [{ method: "sinal", amount: 5000 }, { method: "troca", amount: 20000, tradeVehicle: "Palio", tradePlate: "ABC1D23" }, { method: "financiamento", amount: 42000, downPayment: 5000, installments: 24 }] });
     expect(reissued.snapshot).toMatchObject({ conditions: "Entrega até 31/10/2026" });
 
     await db.vehicleReservation.updateMany({ where: { vehicleId: flowVehicleId, customerId, status: "convertida" }, data: { status: "cancelada" } });
     await page.reload();
     await documents.locator("summary").click();
     await documents.getByLabel("Sinal já recebido (R$)").fill("0,00");
+    await documents.locator('input[name="legacyPaymentMethod"][value="pix"]').check();
     await documents.getByLabel("Valor · À vista/PIX").fill("67.000,00");
     const contractIdsBeforeSignalRemoval = new Set((await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).map(({ id }) => id));
     await documents.getByRole("button", { name: "Emitir nova versão do contrato" }).click();
