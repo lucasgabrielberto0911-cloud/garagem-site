@@ -107,7 +107,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: "atendimento",
     question: "Podem me mandar mais fotos ou um vídeo do veículo?",
     answer:
-      "Sim. Na página de cada veículo existe o botão “Vídeo”, que já abre o WhatsApp com o modelo escolhido. Gravamos o vídeo mostrando os detalhes que você pedir.",
+      "Sim. Na página de cada veículo existe o botão “Pedir vídeo”, que já abre o WhatsApp com o modelo escolhido. Gravamos o vídeo mostrando os detalhes que você pedir.",
   },
   {
     category: "atendimento",

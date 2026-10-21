@@ -136,7 +136,7 @@ export function ChatVisitPanel({
         }`}
       >
         <IconWhatsApp className="h-4 w-4" />
-        Falar no WhatsApp
+        Enviar pelo WhatsApp
       </a>
     </div>
   );
