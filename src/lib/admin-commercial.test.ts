@@ -181,7 +181,8 @@ test("contrato só inclui cláusula de sinal quando o snapshot tem sinal e finan
     };
     await commercialPdf("contrato", data, "contrato-sem-sinal");
     const withoutSignal = texts.join(" ");
-    assert.doesNotMatch(withoutSignal, /cláusula 8ª|sinal pago é garantia|natureza de garantia \(arras\)/i);
+    assert.doesNotMatch(withoutSignal, /cláusula 8ª — da desistência e do sinal|sinal pago é garantia|natureza de garantia \(arras\)/i);
+    assert.match(withoutSignal, /cláusula 8ª — do foro/i);
     assert.match(withoutSignal, /1\.250,00/);
     assert.doesNotMatch(withoutSignal, /juros|taxa a\.m\./i);
 
@@ -192,6 +193,23 @@ test("contrato só inclui cláusula de sinal quando o snapshot tem sinal e finan
     const withSignal = texts.join(" ");
     assert.match(withSignal, /cláusula 8ª — da desistência e do sinal/i);
     assert.match(withSignal, /sinal pago é garantia/);
+    assert.match(withSignal, /cláusula 9ª — do foro/i);
+
+    texts.length = 0;
+    await commercialPdf("contrato", { ...data, conditions: "Entrega após compensação." }, "contrato-sem-sinal-com-condicoes");
+    const withoutSignalWithConditions = texts.join(" ");
+    assert.match(withoutSignalWithConditions, /cláusula 8ª — das condições adicionais/i);
+    assert.match(withoutSignalWithConditions, /cláusula 9ª — do foro/i);
+
+    texts.length = 0;
+    await commercialPdf("contrato", {
+      ...data, conditions: "Entrega após compensação.", signal: { amount: 5000 },
+      payments: [{ method: "sinal", amount: 5000 }, { method: "financiamento", amount: 45000 }],
+    }, "contrato-com-sinal-com-condicoes");
+    const withSignalAndConditions = texts.join(" ");
+    assert.match(withSignalAndConditions, /cláusula 8ª — da desistência e do sinal/i);
+    assert.match(withSignalAndConditions, /cláusula 9ª — das condições adicionais/i);
+    assert.match(withSignalAndConditions, /cláusula 10ª — do foro/i);
   } finally {
     PDFPage.prototype.drawText = original;
   }

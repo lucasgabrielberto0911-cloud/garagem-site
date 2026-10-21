@@ -130,6 +130,7 @@ test.describe("fluxo único de venda", () => {
     await customerSearch.click();
     await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
     await page.getByRole("button", { name: "Continuar" }).click();
+    await expect(page.getByLabel("Valor do sinal", { exact: true })).toHaveCount(0);
     await page.getByLabel("Valor total negociado").fill("67.000,00");
     await page.getByRole("button", { name: /À vista\/PIX/ }).click();
     await page.getByLabel("Valor", { exact: true }).fill("67.000,00");
@@ -151,6 +152,45 @@ test.describe("fluxo único de venda", () => {
     expect((await pdf.body()).subarray(0, 5).toString()).toBe("%PDF-");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   });
+
+  for (const withSignal of [false, true]) {
+    test(`financiamento sem taxa e ${withSignal ? "com" : "sem"} sinal no fluxo único`, async ({ page, request, context, baseURL }) => {
+      const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
+      expect(login.ok()).toBeTruthy();
+      const cookie = login.headers()["set-cookie"].split(";")[0];
+      await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+      await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
+      await page.getByRole("button", { name: "Continuar" }).click();
+      await page.getByRole("combobox").click();
+      await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+      await page.getByRole("button", { name: "Continuar" }).click();
+      await expect(page.getByLabel("Valor do sinal", { exact: true })).toHaveCount(0);
+      await page.getByRole("button", { name: "Houve sinal" }).click();
+      await page.getByLabel("Valor do sinal", { exact: true }).fill("5.000,00");
+      // Desmarcar deve descartar o valor oculto e impedir recibo/cláusula de sinal.
+      if (!withSignal) await page.getByRole("button", { name: /Houve sinal/ }).click();
+      await expect(page.getByLabel("Valor do sinal", { exact: true })).toHaveCount(withSignal ? 1 : 0);
+      await page.getByRole("button", { name: /Financiamento/ }).click();
+      await expect(page.getByLabel(/taxa|juros|valor da parcela/i)).toHaveCount(0);
+      await page.getByLabel("Entrada adicional").fill("10.000,00");
+      await page.getByLabel("Valor financiado").fill(withSignal ? "45.000,00" : "50.000,00");
+      await page.getByLabel("Número de parcelas").fill("24");
+      await page.getByRole("button", { name: "Continuar" }).click();
+      await page.getByLabel("Responsável comercial").fill("Vendedor E2E");
+      await page.getByLabel("Comissão (R$)").fill("0");
+      await page.getByRole("button", { name: "Continuar" }).click();
+      await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
+      await expect(page.getByRole("heading", { name: "Venda registrada" })).toBeVisible();
+      const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
+      const snapshot = contract.snapshot as { total: number; signal?: { amount: number }; payments: { method: string; amount: number; downPayment?: number; installments?: number; installmentAmount?: number; rate?: number }[] };
+      expect(snapshot.total).toBe(60000);
+      expect(snapshot.signal?.amount).toBe(withSignal ? 5000 : undefined);
+      expect(snapshot.payments.filter((payment) => payment.method === "sinal")).toHaveLength(withSignal ? 1 : 0);
+      expect(snapshot.payments.find((payment) => payment.method === "financiamento")).toEqual({ method: "financiamento", amount: withSignal ? 45000 : 50000, downPayment: 10000, installments: 24 });
+      expect(await db.commercialDocument.count({ where: { vehicleId: flowVehicleId, kind: "recibo" } })).toBe(withSignal ? 1 : 0);
+      expect(await db.financeSimulation.count({ where: { vehicleId: flowVehicleId } })).toBe(0);
+    });
+  }
 
   test("mantém cliente e RG ao iniciar pela lista e conclui veículo legado vendido", async ({ page, request, context, baseURL }) => {
     const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
