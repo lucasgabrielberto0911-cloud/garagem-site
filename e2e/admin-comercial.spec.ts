@@ -96,8 +96,14 @@ test("giro, avaliação, financiamento, reserva, PDF privado e pós-venda", asyn
   const saleForm = page.locator("form").filter({ has: page.locator('input[name="source"]') });
   await saleForm.locator('input[name="salePrice"]').fill("55.100,00");
   await saleForm.locator('select[name="paymentMethod"]').selectOption("À vista (Pix/dinheiro)");
-  page.once("dialog", (dialog) => dialog.accept());
-  await saleForm.getByRole("button", { name: "Registrar venda", exact: true }).click();
+  const registrar = saleForm.getByRole("button", { name: "Registrar venda", exact: true });
+  await registrar.click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialog).toBeHidden();
+  expect(await db.sale.count({ where: { vehicleId } })).toBe(0);
+  await registrar.click();
+  await dialog.getByRole("button", { name: "Registrar venda", exact: true }).click();
   await expect.poll(async () => db.sale.count({ where: { vehicleId } })).toBe(1);
   const sale = await db.sale.findUniqueOrThrow({ where: { vehicleId } });
   expect(sale.customerId).toBe(customerId);

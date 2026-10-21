@@ -58,6 +58,7 @@ import {
   formatCurrencyBRL,
   formatNumberBR,
   formatPlateDisplay,
+  resolvePlateEnd,
   formatPlateInput,
 } from "@/lib/format";
 import {
@@ -401,7 +402,7 @@ export function VehicleForm({
   const [plate, setPlate] = useState(
     vehicle?.plate ? formatPlateDisplay(vehicle.plate) : "",
   );
-  const plateEnd = plate.replace(/[^0-9A-Za-z]/g, "").slice(-1);
+  const plateEnd = resolvePlateEnd(plate, vehicle?.plateEnd);
   const [engine, setEngine] = useState(vehicle?.engine ?? "");
   const [purchase, setPurchase] = useState("");
   const [description, setDescription] = useState(vehicle?.description ?? "");
