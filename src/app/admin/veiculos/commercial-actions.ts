@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { descriptionPriceSaveError } from "@/lib/admin-vehicle-validate";
 import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { parseMoneyBR } from "@/lib/admin-money";
-import { ENTRY_ITEMS, FINANCE_STATUSES, parseContractPaymentsJson, simulateFinancing, suggestPrice, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
+import { ENTRY_ITEMS, FINANCE_STATUSES, financingSimulationDown, signalMismatch, parseContractPaymentsJson, simulateFinancing, suggestPrice, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { revalidatePublicStock, revalidatePublicStockMany } from "@/lib/public-stock-revalidate";
@@ -138,6 +138,8 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
           if (signal && signal.amount >= amount) throw new CommercialError("O preço total do contrato deve ser maior que o sinal já pago.");
         }
         if (isContract && parsedPayments) {
+          const mismatch = signalMismatch(parsedPayments, signal?.amount ?? 0);
+          if (mismatch) throw new CommercialError(mismatch);
           const totalPayments = sumContractPayments(parsedPayments);
           if (Math.abs(totalPayments - amount) > 0.01) {
             throw new CommercialError("A soma das formas de pagamento deve ser igual ao valor total do veículo.");
@@ -189,7 +191,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
           const rate = Number(text("rate").replace(",", "."));
           const months = Number(text("months"));
           if (Number.isFinite(rate) && Number.isFinite(months) && months > 0) {
-            const downForSim = rawDownPayment ?? signalAmount;
+            const downForSim = (parsedPayments && financingSimulationDown(amount, parsedPayments)) ?? rawDownPayment ?? signalAmount;
             const simPrice = isContract ? amount : (parseMoneyBR(form.get("price")) ?? vehicle.price);
             let sim: ReturnType<typeof simulateFinancing> | null = null;
             try {

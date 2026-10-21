@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSaleMessage, formatContractPaymentRow, parseContractPaymentsJson, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
+import { afterSaleMessage, financingSimulationDown, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
 import { commercialPdf, expensesPdf, groupExpenseCosts } from "./commercial-pdf";
 import { PDFArray, PDFDocument, PDFPage, decodePDFRawStream, PDFRawStream } from "pdf-lib";
 import { moneyInWords } from "./money-words";
@@ -220,4 +220,42 @@ test("contrato com múltiplas formas de pagamento (PIX, Financiamento, Troca, Ca
   const pdf = await PDFDocument.load(bytes);
   assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
   assert.ok(pdf.getPageCount() >= 2);
+});
+
+test("sinal da lista deve bater com o sinal persistido (alteração e omissão)", () => {
+  const pix = { method: "pix" as const, amount: 90000 };
+  assert.equal(signalMismatch([{ method: "sinal", amount: 10000 }, pix], 10000), undefined);
+  assert.ok(signalMismatch([{ method: "sinal", amount: 20000 }, pix], 10000));
+  assert.ok(signalMismatch([pix], 10000));
+  assert.equal(signalMismatch([pix], 0), undefined);
+});
+
+test("simulação usa o valor financiado: demais meios entram na entrada equivalente", () => {
+  const items = [
+    { method: "sinal" as const, amount: 10000 }, { method: "pix" as const, amount: 15000 },
+    { method: "troca" as const, amount: 25000 }, { method: "financiamento" as const, amount: 60000 },
+  ];
+  const down = financingSimulationDown(110000, items);
+  assert.equal(down, 50000);
+  assert.equal(simulateFinancing(110000, down!, 1.5, 48).installment, simulateFinancing(60000, 0, 1.5, 48).installment);
+  assert.equal(financingSimulationDown(110000, [{ method: "pix", amount: 110000 }]), undefined);
+});
+
+test("PDF: rótulo longo da troca quebra linha e não invade o valor", async () => {
+  const drawn: { text: string; x: number; y: number }[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) { drawn.push({ text, x: options?.x ?? 0, y: options?.y ?? 0 }); return original.call(this, text, options); };
+  try {
+    await commercialPdf("contrato", {
+      customer: "Ana", cpf: "", phone: "", vehicle: "Civic", plate: "AAA1A11", amount: 110000, payment: "x",
+      payments: [{ method: "troca", amount: 25000, tradeVehicle: "Toyota Corolla Cross XRE 2.0 Flex 16V Automático 2023", tradePlate: "ABC1D23" }, { method: "pix", amount: 85000 }],
+      conditions: "ok", seller: "v", date: "2026-10-20T15:00:00Z",
+    }, "t-longo", 1);
+  } finally { PDFPage.prototype.drawText = original; }
+  const label = drawn.filter((d) => /Troca|Corolla|ABC1D23/.test(d.text));
+  assert.ok(label.length >= 2, "rótulo quebrou em mais de uma linha");
+  const val = drawn.find((d) => d.text === "R$ 25.000,00" || d.text.includes("25.000,00"));
+  assert.ok(val);
+  // linhas do rótulo na mesma altura do valor não podem chegar ao x do valor
+  assert.ok(label.every((l) => l.y !== val!.y || l.x < val!.x));
 });

@@ -282,13 +282,16 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
       if (financed > 0) rows.push(["(−) Valor financiado (pago pela instituição financeira)", money(financed), false]);
     }
     rows.push([computedBalance > 0 ? "Saldo a pagar pelo(a) COMPRADOR(A)" : "Saldo", money(Math.max(computedBalance, 0)), true]);
-    ensure(rows.length * 22 + 6);
-    rows.forEach(([lab, val, strong]) => {
-      const fill = strong ? CREAM : WHITE;
-      page.drawRectangle({ x: MARGIN, y: y - 22, width: CONTENT_W, height: 22, color: fill, borderColor: LINE, borderWidth: 0.6 });
-      page.drawText(lab, { x: MARGIN + 10, y: y - 15, size: 9.5, font: strong ? semi : regular, color: ASPHALT });
-      page.drawText(val, { x: MARGIN + CONTENT_W - 10 - (strong ? title : regular).widthOfTextAtSize(val, 10), y: y - 15, size: 10, font: strong ? title : regular, color: ASPHALT });
-      y -= 22;
+    const labelW = (text: string, strong: boolean) => CONTENT_W - 20 - (strong ? title : regular).widthOfTextAtSize(text, 10) - 14;
+    const laid = rows.map(([lab, val, strong]) => ({ lines: wrap(lab, strong ? semi : regular, 9.5, labelW(val, strong)), val, strong }));
+    const heightOf = (r: { lines: string[] }) => Math.max(22, r.lines.length * 12 + 10);
+    ensure(laid.reduce((sum, r) => sum + heightOf(r), 0) + 6);
+    laid.forEach((r) => {
+      const h = heightOf(r);
+      page.drawRectangle({ x: MARGIN, y: y - h, width: CONTENT_W, height: h, color: r.strong ? CREAM : WHITE, borderColor: LINE, borderWidth: 0.6 });
+      r.lines.forEach((line, i) => page.drawText(line, { x: MARGIN + 10, y: y - 15 - i * 12, size: 9.5, font: r.strong ? semi : regular, color: ASPHALT }));
+      page.drawText(r.val, { x: MARGIN + CONTENT_W - 10 - (r.strong ? title : regular).widthOfTextAtSize(r.val, 10), y: y - 15, size: 10, font: r.strong ? title : regular, color: ASPHALT });
+      y -= h;
     });
     y -= 8;
     paragraph(`Forma de pagamento${hasDetailedPayments ? "" : " do saldo"}: ${clean(data.payment)}.`, 10);

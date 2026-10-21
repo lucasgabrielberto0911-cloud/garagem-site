@@ -161,3 +161,18 @@ export function afterSaleMessage(kind: string, name: string, vehicle: string, go
   if (kind === "documentacao") return `${greeting} Já passou um mês desde a compra do ${vehicle}. Se tiver alguma dúvida sobre documentação, contrato, pagamento ou quitação, me chama. — Garagem`;
   return `${greeting} Lembrete de manutenção: por volta de 6 meses ou 10 mil km, vale conferir a revisão do ${vehicle} — óleo, filtros, pneus, freios e fluidos. O manual do veículo é a referência. — Garagem`;
 }
+
+/** Com sinal persistido (recibo da reserva), a lista de pagamentos deve trazer exatamente esse sinal. */
+export function signalMismatch(items: ContractPaymentItem[], signalAmount: number): string | undefined {
+  const listed = moneySum(items.filter((i) => i.method === "sinal").map((i) => i.amount));
+  if (signalAmount > 0 && Math.abs(listed - signalAmount) > 0.01) {
+    return `O sinal nas formas de pagamento (${formatAdminMoney(listed)}) deve ser igual ao sinal já pago (${formatAdminMoney(signalAmount)}).`;
+  }
+  return undefined;
+}
+
+/** Entrada equivalente para a simulação: tudo que não é financiado (total − valor financiado). */
+export function financingSimulationDown(total: number, items: ContractPaymentItem[]): number | undefined {
+  const financed = moneySum(items.filter((i) => i.method === "financiamento").map((i) => i.amount));
+  return financed > 0 && financed < total ? moneyDifference(total, financed) : undefined;
+}
