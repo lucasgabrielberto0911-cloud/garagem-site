@@ -20,8 +20,9 @@ for f in supabase/migrations/*; do
   if [ "$v" = "$anterior" ]; then echo "ERRO: versão duplicada: $v"; erro=1; fi
   anterior=$v
   if grep -qxF "$f" <<<"$novos"; then
-    # remove comentários "--" e /* */ e normaliza quebras/espaços para a detecção não depender da formatação
-    if perl -0pe 's/--[^\n]*//g; s{/\*.*?\*/}{ }gs' "$f" | tr '\r\n\t' '   ' | tr -s ' ' | grep -qiE '(^|;) ?(DROP (TABLE|SCHEMA)|TRUNCATE|DELETE FROM|REVOKE)|\bDROP COLUMN\b' \
+    # varredura única: comentários "--" e /* */ (aninhados) viram espaço, literais '...' e "..." viram vazios (respeita '' e "");
+    # depois normaliza quebras/espaços para a detecção não depender da formatação
+    if perl -0pe 's{(/\*(?:[^/*]++|/(?!\*)|\*(?!/)|(?1))*+\*/)|--[^\n]*|\x27(?:[^\x27]|\x27\x27)*\x27|"(?:[^"]|"")*"}{defined $1 || substr($&,0,1) eq "-" ? " " : substr($&,0,1) x 2}gse' "$f" | tr '\r\n\t' '   ' | tr -s ' ' | grep -qiE '(^|;) ?(DROP (TABLE|SCHEMA)|TRUNCATE|DELETE FROM|REVOKE)|\bDROP COLUMN\b' \
       && [ ! -f "supabase/rollback/$n" ]; then
       echo "ERRO: migration nova destrutiva sem supabase/rollback/$n"; erro=1
     elif [ ! -f "supabase/rollback/$n" ]; then
