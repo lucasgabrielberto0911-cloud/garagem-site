@@ -154,7 +154,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
           const held = await tx.vehicleReservation.findFirst({ where: { vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } });
           const receipt = held ? await tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["reservationId"], equals: held.id } }, orderBy: { createdAt: "desc" } }) : null;
           const sinalItem = parsedPayments?.find((p) => p.method === "sinal");
-          const signalEnabled = text("signalEnabled") === "on";
+          const signalEnabled = text("signalEnabled") === "on" || Number(held?.deposit) > 0 || (sinalItem?.amount ?? 0) > 0;
           if (signalEnabled && held && Number(held.deposit) > 0) {
             signal = { amount: Number(held.deposit), receiptId: receipt ? String(receipt.number) : undefined, date: receipt?.createdAt.toISOString() };
             signalReservationId = held.id;

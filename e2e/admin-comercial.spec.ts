@@ -181,6 +181,7 @@ test.describe("fluxo único de venda", () => {
     await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
     await db.sale.create({ data: { vehicleId: flowVehicleId, customerId, salePrice: 60000, paymentMethod: "Sinal" } });
     const reservation = await db.vehicleReservation.create({ data: { vehicleId: flowVehicleId, customerId, deposit: 60000, expiresAt: new Date(Date.now() + 86400000), status: "convertida" } });
+    const receipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { reservationId: reservation.id, customerId, amount: 60000, total: 60000, payment: "Sinal", payments: [{ method: "sinal", amount: 60000 }] } } });
     await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "vendido" } });
 
     await page.goto(`/admin/veiculos/${flowVehicleId}?view=operacao`);
@@ -192,7 +193,7 @@ test.describe("fluxo único de venda", () => {
     await expect(documents.getByText(/Contrato nº/)).toBeVisible();
 
     const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
-    expect(contract.snapshot).toMatchObject({ saleId: expect.any(String), reservationId: reservation.id, signal: { amount: 60000 }, payments: [{ method: "sinal", amount: 60000 }] });
+    expect(contract.snapshot).toMatchObject({ saleId: expect.any(String), reservationId: reservation.id, signal: { amount: 60000, receiptId: String(receipt.number) }, payments: [{ method: "sinal", amount: 60000 }] });
   });
 
   test("emite primeira versão de contrato legado com sinal manual", async ({ page, request, context, baseURL }) => {
@@ -211,7 +212,8 @@ test.describe("fluxo único de venda", () => {
     await expect(documents.getByText(/Contrato nº/)).toBeVisible();
 
     const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
-    expect(contract.snapshot).toMatchObject({ signal: { amount: 5000 }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 55000 }] });
+    expect(contract.snapshot).toMatchObject({ saleId: expect.any(String), signal: { amount: 5000 }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 55000 }] });
+    expect(contract.snapshot).not.toHaveProperty("reservationId");
   });
 
   test("conclui venda quando sinal da reserva cobre o total negociado", async ({ page, request, context, baseURL }) => {
