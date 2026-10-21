@@ -117,6 +117,25 @@ test.describe("fluxo único de venda", () => {
     await db.customer.deleteMany({ where: { id: duplicateCpfCustomerId } });
   });
 
+  test("emite recibo do sinal sem concluir a venda nem liberar reserva", async ({ page, request, context, baseURL }) => {
+    const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
+    expect(login.ok()).toBeTruthy();
+    const cookie = login.headers()["set-cookie"].split(";")[0];
+    await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+    const reservation = await db.vehicleReservation.create({ data: { vehicleId: flowVehicleId, customerId, deposit: 5000, expiresAt: new Date(Date.now() + 86400000) } });
+    await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "reservado" } });
+
+    await page.goto(`/admin/veiculos/${flowVehicleId}?view=operacao`);
+    const reservationPanel = page.locator("details").filter({ has: page.locator("summary", { hasText: "Reserva com sinal" }) });
+    await reservationPanel.locator("summary").click();
+    await reservationPanel.getByRole("button", { name: "Emitir recibo do sinal" }).click();
+    await expect.poll(() => db.commercialDocument.count({ where: { vehicleId: flowVehicleId, kind: "recibo" } })).toBe(1);
+    const receipt = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "recibo" } });
+    expect(receipt.snapshot).toMatchObject({ amount: 5000, payment: "Sinal", reservationId: reservation.id });
+    expect((await db.vehicle.findUniqueOrThrow({ where: { id: flowVehicleId } })).status).toBe("reservado");
+    expect(await db.sale.count({ where: { vehicleId: flowVehicleId } })).toBe(0);
+  });
+
   test("inicia pela ficha e registra contrato pelo valor livre acima do anúncio", async ({ page, request, context, baseURL }) => {
     const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
     expect(login.ok()).toBeTruthy();
@@ -226,6 +245,8 @@ test.describe("fluxo único de venda", () => {
     const cookie = login.headers()["set-cookie"].split(";")[0];
     await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
     const sale = await db.sale.create({ data: { vehicleId: flowVehicleId, customerId, salePrice: 67000, paymentMethod: "Pix" } });
+    const reservation = await db.vehicleReservation.create({ data: { vehicleId: flowVehicleId, customerId, deposit: 5000, expiresAt: new Date(Date.now() + 86400000), status: "convertida" } });
+    const receipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { reservationId: reservation.id, amount: 5000, total: 5000, payment: "Sinal", payments: [{ method: "sinal", amount: 5000 }] } } });
     await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "vendido" } });
 
     await page.goto(`/admin/veiculos/${flowVehicleId}?view=operacao`);
@@ -233,11 +254,12 @@ test.describe("fluxo único de venda", () => {
     await documents.locator("summary").click();
     await documents.getByRole("combobox").click();
     await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+    await documents.getByLabel("Valor · À vista/PIX").fill("62.000,00");
     await documents.getByRole("button", { name: "Emitir contrato desta venda" }).click();
     await expect(documents.getByText(/Contrato nº/)).toBeVisible();
     expect(await db.sale.count({ where: { vehicleId: flowVehicleId } })).toBe(1);
     const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
-    expect((contract.snapshot as { saleId: string }).saleId).toBe(sale.id);
+    expect(contract.snapshot).toMatchObject({ saleId: sale.id, signal: { amount: 5000, receiptId: String(receipt.number) }, reservationId: reservation.id, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] });
   });
 
   test("rejeita CPF duplicado ao cadastrar e atualizar cliente e limpa RG ao trocar para novo", async ({ page, request, context, baseURL }) => {

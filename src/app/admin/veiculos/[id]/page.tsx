@@ -201,7 +201,7 @@ export default async function EditVehiclePage({
 
       {view === "operacao" && commercial ? <CommercialPanel
           vehicle={{ id, chassis: vehicle.chassis, renavam: vehicle.renavam, status: vehicle.status, price: vehicle.price, purchasePrice: vehicle.purchasePrice, consigned: vehicle.consigned, days, costs: costs.reduce((sum, cost) => sum + cost.amount, 0), sale: vehicle.sale }}
-          reservation={commercial[0] ? { customer: commercial[0].customer.name, phone: commercial[0].customer.phone, deposit: Number(commercial[0].deposit), expiresAt: commercial[0].expiresAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }), deadline: commercial[0].status === "ativa" ? reservationDeadline(commercial[0].expiresAt) : null, status: commercial[0].status } : null}
+          reservation={commercial[0] ? { customerId: commercial[0].customer.id, customer: commercial[0].customer.name, phone: commercial[0].customer.phone, deposit: Number(commercial[0].deposit), expiresAt: commercial[0].expiresAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }), deadline: commercial[0].status === "ativa" ? reservationDeadline(commercial[0].expiresAt) : null, status: commercial[0].status } : null}
           assessment={commercial[1] ? { items: commercial[1].items as Prisma.JsonArray as { label: string; status: string }[], notes: commercial[1].notes, offer: Number(commercial[1].offer), approved: commercial[1].approved } : null}
           simulations={commercial[2].map((s) => ({ id: s.id, customerName: s.customerName, bank: s.bank, installment: Number(s.installment), months: s.months, rate: Number(s.rate), status: s.status }))}
           documents={commercial[3].map((d) => ({ id: d.id, kind: d.kind, number: d.number, date: adminDate(d.createdAt) }))}
