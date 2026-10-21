@@ -37,9 +37,10 @@ test("leads: card fechado compacto, ações no detalhe e WhatsApp à mão", asyn
   await expect(first.getByLabel("Status do lead")).toHaveCount(0);
   await toggle.click();
   await expect(first.getByLabel("Status do lead")).toBeVisible();
-  await expect(first.getByRole("button", { name: "Excluir lead" })).toBeVisible();
-  await expect(first.getByRole("button", { name: /Virar cliente/ })).toBeVisible();
-  const box = await first.getByRole("button", { name: "Excluir lead" }).boundingBox();
+  await first.getByRole("button", { name: "Mais ações" }).click();
+  const dialog = page.getByRole("dialog", { name: "Mais ações" });
+  await expect(dialog.getByRole("button", { name: /Virar cliente/ })).toBeVisible();
+  const box = await dialog.getByRole("button", { name: "Excluir lead" }).boundingBox();
   expect(box!.height).toBeGreaterThanOrEqual(44);
 });
 
