@@ -196,7 +196,7 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
     await page.locator('input[name="tradeAmount"]').fill("25.000,00");
 
     await page.getByRole("button", { name: "Financiamento" }).click();
-    await page.locator('#proposta input[name="bank"]').fill("Banco de teste");
+    await page.locator('input[name="bank"]').fill("Banco de teste");
     await page.getByRole("button", { name: "Sinal", exact: true }).click();
     await page.getByRole("button", { name: "À vista/PIX", exact: true }).click();
     await page.locator('input[name="financed"]').fill("110.000,00");
