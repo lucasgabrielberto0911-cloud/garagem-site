@@ -181,7 +181,7 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
     // 2. Gera contrato de compra e venda com múltiplas formas (Sinal + PIX + Troca + Financiamento)
     // Ao gerar recibo de sinal, o chip "Sinal" (10.000) foi marcado automaticamente junto ao "À vista/PIX" (110.000),
     // então a soma passa a 120.000 e deve mostrar aviso de diferença até ajustar os valores.
-    await expect(page.getByRole("alert")).toContainText("Aviso: a soma das formas de pagamento");
+    await expect(page.getByText(/Aviso: a soma das formas de pagamento/)).toBeVisible();
 
     await page.locator('input[name="pixAmount"]').fill("15.000,00");
     await page.getByRole("button", { name: "Troca (carro na troca)" }).click();
