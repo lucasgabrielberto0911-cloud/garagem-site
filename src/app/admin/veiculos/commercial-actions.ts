@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { descriptionPriceSaveError } from "@/lib/admin-vehicle-validate";
 import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { parseMoneyBR } from "@/lib/admin-money";
-import { ENTRY_ITEMS, FINANCE_STATUSES, simulateFinancing, suggestPrice } from "@/lib/admin-commercial";
+import { ENTRY_ITEMS, FINANCE_STATUSES, financingSimulationDown, signalMismatch, parseContractPaymentsJson, simulateFinancing, suggestPrice, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { revalidatePublicStock, revalidatePublicStockMany } from "@/lib/public-stock-revalidate";
@@ -107,8 +107,13 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         const customer = await tx.customer.findUnique({ where: { id: text("customerId") } });
         if (!customer) throw new CommercialError("Escolha um cliente cadastrado.");
         const amount = money("amount");
-        if (!amount || !text("payment") || text("payment").length > 200 || text("conditions").length > 3000) throw new CommercialError("Informe valor positivo, forma de pagamento e condições de até 3.000 caracteres.");
         const isContract = kind === "proposta" || kind === "contrato";
+        const parsedPayments = isContract ? parseContractPaymentsJson(text("payments")) : undefined;
+        let paymentText = text("payment");
+        if (!paymentText && parsedPayments) {
+          paymentText = summarizeContractPayments(parsedPayments);
+        }
+        if (!amount || !paymentText || paymentText.length > 200 || text("conditions").length > 3000) throw new CommercialError("Informe valor positivo, forma de pagamento e condições de até 3.000 caracteres.");
         if (isContract && vehicle.status === "vendido") throw new CommercialError("Veículo vendido não recebe contrato.");
         let reservation = kind === "recibo" ? await tx.vehicleReservation.findFirst({ where: { vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } }) : null;
         if (kind === "recibo" && !reservation && text("expiresAt")) {
@@ -121,12 +126,24 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         if (isContract) {
           const held = await tx.vehicleReservation.findFirst({ where: { vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } });
           const receipt = held ? await tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["reservationId"], equals: held.id } }, orderBy: { createdAt: "desc" } }) : null;
-          if (held) signal = { amount: Number(held.deposit), receiptId: receipt ? String(receipt.number) : undefined, date: receipt?.createdAt.toISOString() };
-          if (!signal) {
+          const sinalItem = parsedPayments?.find((p) => p.method === "sinal");
+          if (held) {
+            signal = { amount: Number(held.deposit), receiptId: receipt ? String(receipt.number) : undefined, date: receipt?.createdAt.toISOString() };
+          } else if (sinalItem && sinalItem.amount > 0) {
+            signal = { amount: sinalItem.amount, date: sinalItem.signalDate };
+          } else {
             const dep = parseMoneyBR(form.get("deposit"));
             if (dep && dep > 0) signal = { amount: dep };
           }
           if (signal && signal.amount >= amount) throw new CommercialError("O preço total do contrato deve ser maior que o sinal já pago.");
+        }
+        if (isContract && parsedPayments) {
+          const mismatch = signalMismatch(parsedPayments, signal?.amount ?? 0);
+          if (mismatch) throw new CommercialError(mismatch);
+          const totalPayments = sumContractPayments(parsedPayments);
+          if (Math.abs(totalPayments - amount) > 0.01) {
+            throw new CommercialError("A soma das formas de pagamento deve ser igual ao valor total do veículo.");
+          }
         }
         const rawDownPayment = parseMoneyBR(form.get("downPayment"));
         if (isContract && rawDownPayment != null && rawDownPayment >= amount) throw new CommercialError("A entrada deve ser menor que o valor total do contrato.");
@@ -134,7 +151,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         const downPayment = rawDownPayment != null ? Math.max(0, rawDownPayment - signalAmount) : undefined;
         const rawFinanced = parseMoneyBR(form.get("financed"));
         const totalEntry = rawDownPayment != null ? rawDownPayment : signalAmount;
-        if (isContract && rawFinanced != null && totalEntry + rawFinanced > amount) throw new CommercialError("A soma de sinal, entrada e financiamento não pode superar o valor do contrato.");
+        if (isContract && !parsedPayments && rawFinanced != null && totalEntry + rawFinanced > amount) throw new CommercialError("A soma de sinal, entrada e financiamento não pode superar o valor do contrato.");
         const financed = rawFinanced ?? (text("bank") ? Math.max(0, amount - totalEntry) : undefined);
 
         const doc = await tx.commercialDocument.create({
@@ -146,6 +163,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
               signal,
               downPayment: downPayment && downPayment > 0 ? downPayment : undefined,
               financed: financed && financed > 0 ? financed : undefined,
+              payments: parsedPayments,
               customer: customer.name,
               cpf: customer.cpf ?? "",
               phone: customer.phone,
@@ -158,7 +176,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
               plate: vehicle.plate ?? "",
               amount,
               conditions: text("conditions"),
-              payment: text("payment").slice(0, 200),
+              payment: paymentText.slice(0, 200),
               seller: session.email,
               date: new Date().toISOString(),
               reservationId: reservation?.id ?? null,
@@ -173,7 +191,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
           const rate = Number(text("rate").replace(",", "."));
           const months = Number(text("months"));
           if (Number.isFinite(rate) && Number.isFinite(months) && months > 0) {
-            const downForSim = rawDownPayment ?? signalAmount;
+            const downForSim = (parsedPayments && financingSimulationDown(amount, parsedPayments)) ?? rawDownPayment ?? signalAmount;
             const simPrice = isContract ? amount : (parseMoneyBR(form.get("price")) ?? vehicle.price);
             let sim: ReturnType<typeof simulateFinancing> | null = null;
             try {
