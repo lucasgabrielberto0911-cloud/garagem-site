@@ -174,6 +174,10 @@ export function signalMismatch(items: ContractPaymentItem[], signalAmount: numbe
   return undefined;
 }
 
+export function signalExceedsTotal(signalAmount: number, total: number) {
+  return signalAmount > total;
+}
+
 /** Entrada equivalente para a simulação: tudo que não é financiado (total − valor financiado). */
 export function financingSimulationDown(total: number, items: ContractPaymentItem[]): number | undefined {
   const financed = moneySum(items.filter((i) => i.method === "financiamento").map((i) => i.amount));

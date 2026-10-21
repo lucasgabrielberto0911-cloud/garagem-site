@@ -57,6 +57,7 @@ test("reserva, avaliação e fluxo único geram venda, contrato e recibo", async
   expect((await db.vehicle.findUniqueOrThrow({ where: { id: vehicleId } })).status).toBe("disponivel");
   await db.vehicleReservation.create({ data: { vehicleId, customerId, deposit: 1000, expiresAt: new Date(Date.now() + 86400000) } });
   await db.vehicle.update({ where: { id: vehicleId }, data: { status: "reservado" } });
+  const heldReceipt = await db.commercialDocument.create({ data: { vehicleId, kind: "recibo", snapshot: { reservationId: (await db.vehicleReservation.findFirstOrThrow({ where: { vehicleId, status: "ativa" } })).id, amount: 1000, total: 60000, payment: "Sinal", payments: [{ method: "sinal", amount: 1000 }] } } });
 
   await page.goto(`/admin/vendas/nova?veiculo=${vehicleId}`);
   await page.getByRole("button", { name: "Continuar" }).click();
@@ -79,6 +80,7 @@ test("reserva, avaliação e fluxo único geram venda, contrato e recibo", async
   expect(await db.commercialDocument.count({ where: { vehicleId, kind: "contrato" } })).toBe(1);
   expect(await db.commercialDocument.count({ where: { vehicleId, kind: "recibo" } })).toBe(1);
   const receipt = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId, kind: "recibo" } });
+  expect(receipt.id).toBe(heldReceipt.id);
   expect(receipt.snapshot).toMatchObject({ amount: 1000, total: 55100, payment: "Sinal", payments: [{ method: "sinal", amount: 1000 }] });
   await db.$transaction(async (tx) => { await scheduleAfterSale(tx, sale); await scheduleAfterSale(tx, sale); });
   expect(await db.afterSaleTask.count({ where: { saleId: sale.id } })).toBe(4);
@@ -138,6 +140,31 @@ test.describe("fluxo único de venda", () => {
     expect(receipt.snapshot).toMatchObject({ amount: 5000, payment: "Sinal", reservationId: reservation.id });
     expect((await db.vehicle.findUniqueOrThrow({ where: { id: flowVehicleId } })).status).toBe("reservado");
     expect(await db.sale.count({ where: { vehicleId: flowVehicleId } })).toBe(0);
+  });
+
+  test("conclui venda quando sinal da reserva cobre o total negociado", async ({ page, request, context, baseURL }) => {
+    const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
+    expect(login.ok()).toBeTruthy();
+    const cookie = login.headers()["set-cookie"].split(";")[0];
+    await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+    const reservation = await db.vehicleReservation.create({ data: { vehicleId: flowVehicleId, customerId, deposit: 60000, expiresAt: new Date(Date.now() + 86400000) } });
+    await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "reservado" } });
+    const receipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { reservationId: reservation.id, amount: 60000, total: 67000, payment: "Sinal", payments: [{ method: "sinal", amount: 60000 }] } } });
+
+    await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await expect(page.getByText("Cliente Comercial E2E · 27999990000")).toBeVisible();
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await expect(page.getByText("Soma informada: R$ 60.000,00 · Total: R$ 60.000,00")).toBeVisible();
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await page.getByLabel("Responsável comercial").fill("Vendedor E2E");
+    await page.getByLabel("Comissão (R$)").fill("0");
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
+    await expect(page.getByRole("heading", { name: "Venda registrada" })).toBeVisible();
+    expect((await db.sale.findUniqueOrThrow({ where: { vehicleId: flowVehicleId } })).salePrice).toBe(60000);
+    const updatedReceipt = await db.commercialDocument.findUniqueOrThrow({ where: { id: receipt.id } });
+    expect(updatedReceipt.snapshot).toMatchObject({ amount: 60000, total: 60000, reservationId: reservation.id });
   });
 
   test("inicia pela ficha e registra contrato pelo valor livre acima do anúncio", async ({ page, request, context, baseURL }) => {

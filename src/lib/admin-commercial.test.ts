@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSaleMessage, financingSimulationDown, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, parseVehicleCustomerIds, resolveIdField, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
+import { afterSaleMessage, financingSimulationDown, signalExceedsTotal, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, parseVehicleCustomerIds, resolveIdField, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
 import { rgAfterCustomerChange } from "./commercial-client";
 import { commercialPdf, expensesPdf, groupExpenseCosts, preparationPdf, PREPARATION_CELL_SIZE, PREPARATION_COLS } from "./commercial-pdf";
 import { parsePreparationForm } from "./preparation";
@@ -329,6 +329,11 @@ test("sinal da lista deve bater com o sinal persistido (alteração e omissão)"
   assert.ok(signalMismatch([{ method: "sinal", amount: 20000 }, pix], 10000));
   assert.ok(signalMismatch([pix], 10000));
   assert.equal(signalMismatch([pix], 0), undefined);
+});
+
+test("sinal pode cobrir o total, mas não superá-lo", () => {
+  assert.equal(signalExceedsTotal(60000, 60000), false);
+  assert.equal(signalExceedsTotal(60000.01, 60000), true);
 });
 
 test("simulação usa o valor financiado: demais meios entram na entrada equivalente", () => {

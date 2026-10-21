@@ -16,7 +16,7 @@ import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/
 import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
 import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 import { formatSaleNotes } from "@/lib/sales-goals";
-import { parseContractPaymentsJson, parseVehicleCustomerIds, signalMismatch, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
+import { parseContractPaymentsJson, parseVehicleCustomerIds, signalExceedsTotal, signalMismatch, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
 import { isValidCpf } from "@/lib/format";
 
 export type SaleActionState = {
@@ -101,7 +101,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
       const signalEnabled = input.signal === true;
       if (reservation && heldSignal > 0 && !signalEnabled) throw new Error("RESERVATION_SIGNAL_REQUIRED");
       const signal = signalEnabled ? { amount: heldSignal || Number(signalPayment?.amount ?? input.signalAmount ?? 0), reservationId: reservation?.id } : undefined;
-      if (signal && (signal.amount <= 0 || signal.amount >= total)) throw new Error("INVALID_SIGNAL");
+      if (signal && (signal.amount <= 0 || signalExceedsTotal(signal.amount, total))) throw new Error("INVALID_SIGNAL");
       if (signalMismatch(payments, signal?.amount ?? 0) || (!signal && signalPayment?.amount)) throw new Error("INVALID_SIGNAL");
       const row = await tx.sale.create({ data: { vehicleId, customerId: customer.id, salePrice: total, paymentMethod: summarizeContractPayments(payments), saleDate: new Date(), notes: [notes, signal ? `Sinal recebido: R$ ${signal.amount.toFixed(2)} (incluído no total da venda).` : null].filter(Boolean).join("\n") || null } });
       const snapshot = { address: customer.address ?? "", signal, payments, customer: customer.name, customerId: customer.id, cpf: customer.cpf ?? "", rg: customer.rg ?? "", chassis: identifiers.chassis || vehicle.chassis || "", renavam: identifiers.renavam || vehicle.renavam || "", phone: customer.phone, vehicle: [vehicle.brand, vehicle.model, vehicle.version].filter(Boolean).join(" "), year: vehicle.year, yearModel: vehicle.yearModel, color: vehicle.color ?? "", warranty: vehicle.warranty ?? undefined, km: vehicle.km, total, plate: vehicle.plate ?? "", amount: total, conditions: String(input.conditions ?? "").slice(0, 3000), payment: summarizeContractPayments(payments), seller: "Garagem", responsibleSeller: sellerName, commission, date: new Date().toISOString(), reservationId: reservation?.id ?? null, saleId: row.id };
@@ -109,7 +109,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
       if (signal) {
         const heldReceipt = reservation ? await tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["reservationId"], equals: reservation.id } }, orderBy: { createdAt: "desc" } }) : null;
         receipt = heldReceipt
-          ? await tx.commercialDocument.update({ where: { id: heldReceipt.id }, data: { snapshot: { ...(heldReceipt.snapshot as Record<string, unknown>), saleId: row.id } } })
+          ? await tx.commercialDocument.update({ where: { id: heldReceipt.id }, data: { snapshot: { ...(heldReceipt.snapshot as Record<string, unknown>), amount: signal.amount, total, payment: "Sinal", payments: [{ method: "sinal", amount: signal.amount }], saleId: row.id } } })
           : await tx.commercialDocument.create({ data: { vehicleId, kind: "recibo", snapshot: { ...snapshot, amount: signal.amount, total, payment: "Sinal", payments: [{ method: "sinal", amount: signal.amount }], saleId: row.id } } });
       }
       const contractSnapshot = { ...snapshot, signal: signal && receipt ? { ...signal, receiptId: String(receipt.number), date: receipt.createdAt.toISOString() } : undefined };
@@ -125,7 +125,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
     return { ok: true, message: "Venda registrada e contrato gerado.", ...result };
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    const messages: Record<string, string> = { VEHICLE_UNAVAILABLE: "Veículo indisponível ou já vendido.", RESERVATION_CUSTOMER: "A reserva pertence a outro comprador. Cancele a reserva antes de continuar.", RESERVATION_SIGNAL_REQUIRED: "A reserva tem sinal. Marque o sinal para continuar.", INVALID_SIGNAL: "O sinal deve ser positivo e menor que o total negociado.", DUPLICATE_CUSTOMER: "Já existe cliente com este telefone ou CPF; selecione o cadastro existente.", CUSTOMER_INVALID: "Cliente inválido." };
+    const messages: Record<string, string> = { VEHICLE_UNAVAILABLE: "Veículo indisponível ou já vendido.", RESERVATION_CUSTOMER: "A reserva pertence a outro comprador. Cancele a reserva antes de continuar.", RESERVATION_SIGNAL_REQUIRED: "A reserva tem sinal. Marque o sinal para continuar.", INVALID_SIGNAL: "O sinal deve ser positivo e não pode superar o total negociado.", DUPLICATE_CUSTOMER: "Já existe cliente com este telefone ou CPF; selecione o cadastro existente.", CUSTOMER_INVALID: "Cliente inválido." };
     return { ok: false, message: messages[message] ?? "Não foi possível registrar a venda." };
   }
 }

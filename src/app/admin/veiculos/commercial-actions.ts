@@ -7,7 +7,7 @@ import { descriptionPriceSaveError } from "@/lib/admin-vehicle-validate";
 import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { parseMoneyBR } from "@/lib/admin-money";
 import { isValidCpf } from "@/lib/format";
-import { ENTRY_ITEMS, FINANCE_STATUSES, financingSimulationDown, parseVehicleCustomerIds, resolveIdField, signalMismatch, parseContractPaymentsJson, simulateFinancing, suggestPrice, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
+import { ENTRY_ITEMS, FINANCE_STATUSES, financingSimulationDown, parseVehicleCustomerIds, resolveIdField, signalExceedsTotal, signalMismatch, parseContractPaymentsJson, simulateFinancing, suggestPrice, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { revalidatePublicStock, revalidatePublicStockMany } from "@/lib/public-stock-revalidate";
@@ -164,7 +164,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
             const dep = parseMoneyBR(form.get("deposit"));
             if (dep && dep > 0) signal = { amount: dep };
           }
-          if (signal && signal.amount >= amount) throw new CommercialError("O preço total do contrato deve ser maior que o sinal já pago.");
+          if (signal && signalExceedsTotal(signal.amount, amount)) throw new CommercialError("O sinal já pago não pode superar o preço total do contrato.");
         }
         if (isContract && parsedPayments) {
           const mismatch = signalMismatch(parsedPayments, signal?.amount ?? 0);
