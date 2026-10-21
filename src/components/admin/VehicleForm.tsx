@@ -165,8 +165,13 @@ export function VehicleForm({
   adminId,
   listingScore = null,
   initialTab = "anuncio",
+  prefill,
+  preparationId,
 }: {
   vehicle?: VehicleWithPhotos;
+  /** Dados de um carro Em preparação para pré-preencher o cadastro novo. */
+  prefill?: Partial<VehicleWithPhotos>;
+  preparationId?: string;
   mode: "create" | "edit";
   adminId: string;
   /** Nota gravada no último Salvar. O formulário nunca chama o Jev. */
@@ -174,6 +179,7 @@ export function VehicleForm({
   initialTab?: "anuncio" | "fotos";
 }) {
   const router = useRouter();
+  const init: Partial<VehicleWithPhotos> | undefined = vehicle ?? prefill;
   const [activeTab, setActiveTab] = useState<"anuncio" | "fotos">(
     initialTab === "fotos" ? "fotos" : "anuncio",
   );
@@ -245,25 +251,25 @@ export function VehicleForm({
     setDirty(true);
   };
   const [accessories, setAccessoriesState] = useState<string[]>(() =>
-    normalizeAccessories(vehicle?.accessories ?? []),
+    normalizeAccessories(init?.accessories ?? []),
   );
   const setAccessories: typeof setAccessoriesState = (next) => {
     setAccessoriesState(next);
     setDirty(true);
   };
-  const [consigned, setConsigned] = useState(vehicle?.consigned ?? false);
+  const [consigned, setConsigned] = useState(init?.consigned ?? false);
   const [customAccessory, setCustomAccessory] = useState("");
   const [category, setCategory] = useState<VehicleCategory>(() =>
-    parseVehicleCategory(vehicle?.category),
+    parseVehicleCategory(init?.category),
   );
   const [locationCity, setLocationCity] = useState<VehicleLocationCity | "">(
     () =>
-      parseVehicleLocationCity(vehicle?.locationCity) ?? "",
+      parseVehicleLocationCity(init?.locationCity) ?? "",
   );
   const [fuel, setFuel] = useState(
-    () => vehicle?.fuel ?? defaultFuel(parseVehicleCategory(vehicle?.category)),
+    () => init?.fuel ?? (prefill ? "" : defaultFuel(parseVehicleCategory(init?.category))),
   );
-   const [transmission, setTransmission] = useState(vehicle?.transmission ?? "");
+   const [transmission, setTransmission] = useState(init?.transmission ?? "");
   const [pendingAction, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmSold, setConfirmSold] = useState(false);
@@ -385,29 +391,31 @@ export function VehicleForm({
   }, [state, vehicle?.id, adminId, router]);
 
   const [values, setValues] = useState({
-    price: vehicle?.price != null ? moneyInput(vehicle.price) : "",
-    km: vehicle?.km != null ? formatNumberBR(vehicle.km) : "",
+    price: init?.price != null ? moneyInput(init.price) : "",
+    km: init?.km != null ? formatNumberBR(init.km) : "",
   });
-  const [brand, setBrand] = useState(vehicle?.brand ?? "");
-  const [model, setModel] = useState(vehicle?.model ?? "");
-  const [version, setVersion] = useState(vehicle?.version ?? "");
-  const [color, setColor] = useState(vehicle?.color ?? "");
+  const [brand, setBrand] = useState(init?.brand ?? "");
+  const [model, setModel] = useState(init?.model ?? "");
+  const [version, setVersion] = useState(init?.version ?? "");
+  const [color, setColor] = useState(init?.color ?? "");
   const [year, setYear] = useState(
-    vehicle?.year != null ? String(vehicle.year) : "",
+    init?.year != null ? String(init.year) : "",
   );
   const [yearModel, setYearModel] = useState(
-    vehicle?.yearModel != null ? String(vehicle.yearModel) : "",
+    init?.yearModel != null ? String(init.yearModel) : "",
   );
   const [plate, setPlate] = useState(
-    vehicle?.plate ? formatPlateDisplay(vehicle.plate) : "",
+    init?.plate ? formatPlateDisplay(init.plate) : "",
   );
-  const [plateEnd, setPlateEnd] = useState(vehicle?.plateEnd ?? "");
+  const [plateEnd, setPlateEnd] = useState(init?.plateEnd ?? "");
   const [fipePrice, setFipePrice] = useState<number | null>(
-    vehicle?.fipePrice ?? null,
+    init?.fipePrice ?? null,
   );
-  const [engine, setEngine] = useState(vehicle?.engine ?? "");
-  const [purchase, setPurchase] = useState("");
-  const [description, setDescription] = useState(vehicle?.description ?? "");
+  const [engine, setEngine] = useState(init?.engine ?? "");
+  const [purchase, setPurchase] = useState(
+    prefill?.purchasePrice != null ? moneyInput(prefill.purchasePrice) : "",
+  );
+  const [description, setDescription] = useState(init?.description ?? "");
   const [status, setStatus] = useState(vehicle?.status ?? "disponivel");
 
   const fuelOptions = getFuels(category);
@@ -857,6 +865,9 @@ export function VehicleForm({
             name="expectedUpdatedAt"
             value={state.updatedAt ?? vehicle?.updatedAt.toISOString() ?? ""}
           />
+          {preparationId ? (
+            <input type="hidden" name="preparationId" value={preparationId} />
+          ) : null}
           <input
             type="hidden"
             name="photoUrls"

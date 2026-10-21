@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import { listingDraftFromVehicle } from "@/lib/listing-score";
 import { scoreListingAfterSave } from "@/lib/listing-score-store";
 import { redirect } from "next/navigation";
+import { preparationPhotoError } from "@/lib/preparation";
 import { prisma } from "@/lib/prisma";
 import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { getSession } from "@/lib/auth";
@@ -255,6 +256,11 @@ export async function createVehicle(
       return { error: "Use a aba Operação para reservar com cliente, sinal e prazo." };
     }
     await assertCanFeature({ featured: data.featured });
+    const preparationId = String(formData.get("preparationId") || "");
+    if (preparationId) {
+      const photoError = preparationPhotoError(data.photos.length);
+      if (photoError) return { error: photoError };
+    }
 
     const vehicle = await withAdminStorageLock(async (tx) => {
       const created = await tx.vehicle.create({
@@ -304,6 +310,7 @@ export async function createVehicle(
         "vehicle.create",
         { price: created.price, status: created.status },
       );
+      if (preparationId) await tx.preparationVehicle.deleteMany({ where: { id: preparationId } });
       return created;
     });
 

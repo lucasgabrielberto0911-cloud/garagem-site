@@ -1,13 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AWAITING_PUBLICATION_WHERE, publishBlockMessage } from "./preparation";
+import { preparationPhotoError, preparationPrefill } from "./preparation";
 
-test("lista de aguardando publicação não filtra por preço (carro com preço salvo continua listado)", () => {
-  assert.equal("price" in AWAITING_PUBLICATION_WHERE, false);
-  assert.equal(AWAITING_PUBLICATION_WHERE.historical, true);
+const item = { brand: "Fiat", model: "Argo", color: "Branco", year: null, km: null, plate: "ABC1D23", purchasePrice: 40000 };
+
+test("pré-preenchimento usa só dados reais: ano e km ausentes ficam em branco (não inventa 0/ano corrente)", () => {
+  const p = preparationPrefill(item);
+  assert.equal(p.year, undefined);
+  assert.equal(p.km, undefined);
+  assert.equal("fuel" in p, false);
+  assert.equal("transmission" in p, false);
+  assert.equal(p.purchasePrice, 40000);
+  assert.equal(preparationPrefill({ ...item, year: 2020, km: 55000 }).km, 55000);
 });
 
-test("publicação: bloqueia preço zero e libera após salvar preço positivo", () => {
-  assert.ok(publishBlockMessage(0));
-  assert.equal(publishBlockMessage(45000), null);
+test("cadastro vindo de Em preparação exige foto antes de ir ao estoque", () => {
+  assert.ok(preparationPhotoError(0));
+  assert.equal(preparationPhotoError(3), null);
 });

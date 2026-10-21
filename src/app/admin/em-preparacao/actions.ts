@@ -1,12 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { recordAdminAudit } from "@/lib/admin-audit";
-import { expireAdminData } from "@/lib/admin-revalidate";
 import { getSession } from "@/lib/auth";
-import { AWAITING_PUBLICATION_WHERE, parsePreparationForm, publishBlockMessage } from "@/lib/preparation";
+import { parsePreparationForm } from "@/lib/preparation";
 import { prisma } from "@/lib/prisma";
-import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -33,51 +30,12 @@ export async function deletePreparationAction(form: FormData) {
   return back("Carro excluído.");
 }
 
-/**
- * Cria o veículo no estoque e remove o item da lista. O estoque ainda não tem
- * estado "rascunho": o veículo nasce `historical` (fora da vitrine pública) e
- * sem preço; o admin completa o anúncio na ficha.
- */
+/** Abre o cadastro de estoque pré-preenchido. O item só sai da lista quando o veículo é cadastrado. */
 export async function movePreparationToStockAction(form: FormData) {
-  const session = await requireAdmin();
+  await requireAdmin();
   const id = String(form.get("id") ?? "");
-  const item = await prisma.preparationVehicle.findUnique({ where: { id } });
+  const item = await prisma.preparationVehicle.findUnique({ where: { id }, select: { ready: true } });
   if (!item) return back("Carro não encontrado.", true);
   if (!item.ready) return back("Marque o carro como pronto antes de mover para o estoque.", true);
-  const year = item.year ?? new Date().getFullYear();
-  const vehicleId = await prisma.$transaction(async (tx) => {
-    const vehicle = await tx.vehicle.create({
-      data: {
-        brand: item.brand, model: item.model, color: item.color, year, yearModel: year,
-        km: item.km ?? 0, plate: item.plate, price: 0, purchasePrice: item.purchasePrice,
-        fuel: "Flex", transmission: "Manual", status: "disponivel", historical: true,
-      },
-    });
-    await tx.preparationVehicle.delete({ where: { id } });
-    await recordAdminAudit(tx, session.adminId, vehicle.id, "preparation.move", { from: id });
-    return vehicle.id;
-  });
-  expireAdminData();
-  revalidatePublicStock();
-  redirect(`/admin/veiculos/${vehicleId}`);
-}
-
-/** Publica o carro movido: só com preço informado, tira de `historical` e invalida o site. */
-export async function publishPreparedVehicleAction(form: FormData) {
-  const session = await requireAdmin();
-  const id = String(form.get("id") ?? "");
-  const vehicle = await prisma.vehicle.findFirst({
-    where: { id, ...AWAITING_PUBLICATION_WHERE },
-    select: { id: true, price: true },
-  });
-  if (!vehicle) return back("Carro não encontrado para publicar.", true);
-  const blocked = publishBlockMessage(vehicle.price);
-  if (blocked) return back(blocked, true);
-  await prisma.$transaction(async (tx) => {
-    await tx.vehicle.update({ where: { id }, data: { historical: false } });
-    await recordAdminAudit(tx, session.adminId, id, "preparation.publish", {});
-  });
-  expireAdminData();
-  revalidatePublicStock();
-  return back("Carro publicado no estoque.");
+  redirect(`/admin/veiculos/novo?prep=${encodeURIComponent(id)}`);
 }

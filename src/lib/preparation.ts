@@ -52,10 +52,21 @@ export function parsePreparationForm(form: FormData): { ok: true; data: Preparat
   };
 }
 
-/** Carros movidos para o estoque que aguardam publicação: ficam listados até publicar, com ou sem preço. */
-export const AWAITING_PUBLICATION_WHERE = { historical: true, sale: null, status: "disponivel" } as const;
+/** Só dados reais do carro em preparação; câmbio, combustível, fotos e preço o admin confirma no cadastro. */
+export function preparationPrefill(item: Pick<PreparationInput, "brand" | "model" | "color" | "year" | "km" | "plate" | "purchasePrice">) {
+  return {
+    brand: item.brand,
+    model: item.model,
+    color: item.color,
+    year: item.year ?? undefined,
+    yearModel: item.year ?? undefined,
+    km: item.km ?? undefined,
+    plate: item.plate,
+    purchasePrice: item.purchasePrice,
+  };
+}
 
-/** Mensagem de bloqueio da publicação, ou null quando o preço já permite publicar. */
-export function publishBlockMessage(price: number): string | null {
-  return price > 0 ? null : "Informe o preço na ficha antes de publicar.";
+/** Carro vindo de "Em preparação" só entra no estoque público com ao menos uma foto. */
+export function preparationPhotoError(photoCount: number): string | null {
+  return photoCount > 0 ? null : "Adicione as fotos do carro antes de cadastrar no estoque.";
 }
