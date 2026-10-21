@@ -24,11 +24,4 @@ const loadCachedStockLandingHistory = unstable_cache(
 );
 
 /** Histórico público apenas: nunca vendas internas nem preço de vendido. */
-export const getStockLandingHistory = cache(async () => {
-  try {
-    return await loadCachedStockLandingHistory();
-  } catch (error) {
-    console.error("[site] falha ao consultar histórico de marcas e modelos:", error);
-    return [];
-  }
-});
+export const getStockLandingHistory = cache(loadCachedStockLandingHistory);

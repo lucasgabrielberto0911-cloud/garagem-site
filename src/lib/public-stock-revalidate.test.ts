@@ -27,6 +27,7 @@ test("páginas públicas de estoque usam TTL de 1 h (a invalidação vem do pain
   assert.match(readSrc("lib/vehicles.ts"), /PUBLIC_CACHE[^]*?revalidate: 3600/);
   assert.match(readSrc("lib/vehicles.ts"), /TESTIMONIALS_CACHE[^]*?revalidate: 3600/);
   assert.match(readSrc("lib/stock-landing-data.ts"), /revalidate: 3600,\s*tags:\s*\[VEHICLES_PUBLIC_CACHE_TAG\]/);
+  assert.doesNotMatch(readSrc("lib/stock-landing-data.ts"), /catch\s*\(/);
   assert.match(readSrc("app/sitemap.ts"), /unstable_cache\(loadPublicSitemapVehicles[^]*?revalidate: 3600,\s*tags:\s*\[VEHICLES_PUBLIC_CACHE_TAG\]/);
 });
 
