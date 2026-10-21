@@ -61,3 +61,22 @@ export async function movePreparationToStockAction(form: FormData) {
   revalidatePublicStock();
   redirect(`/admin/veiculos/${vehicleId}`);
 }
+
+/** Publica o carro movido: só com preço informado, tira de `historical` e invalida o site. */
+export async function publishPreparedVehicleAction(form: FormData) {
+  const session = await requireAdmin();
+  const id = String(form.get("id") ?? "");
+  const vehicle = await prisma.vehicle.findFirst({
+    where: { id, historical: true, sale: null, status: "disponivel" },
+    select: { id: true, price: true },
+  });
+  if (!vehicle) return back("Carro não encontrado para publicar.", true);
+  if (vehicle.price <= 0) return back("Informe o preço na ficha antes de publicar.", true);
+  await prisma.$transaction(async (tx) => {
+    await tx.vehicle.update({ where: { id }, data: { historical: false } });
+    await recordAdminAudit(tx, session.adminId, id, "preparation.publish", {});
+  });
+  expireAdminData();
+  revalidatePublicStock();
+  return back("Carro publicado no estoque.");
+}

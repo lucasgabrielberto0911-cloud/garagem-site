@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { localDateInput } from "@/lib/admin-date";
 import { formatAdminMoney } from "@/lib/admin-money";
-import { deletePreparationAction, movePreparationToStockAction, savePreparationAction } from "./actions";
+import { deletePreparationAction, movePreparationToStockAction, publishPreparedVehicleAction, savePreparationAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +34,11 @@ export default async function EmPreparacaoPage({ searchParams }: { searchParams:
   if (!session) redirect("/admin/login");
   const { ok, erro } = await searchParams;
   const items = await prisma.preparationVehicle.findMany({ orderBy: [{ createdAt: "desc" }] });
+  const drafts = await prisma.vehicle.findMany({
+    where: { historical: true, sale: null, status: "disponivel", price: { lte: 0 } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, brand: true, model: true, year: true, plate: true },
+  });
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -52,6 +57,25 @@ export default async function EmPreparacaoPage({ searchParams }: { searchParams:
           <button className={btn.primary}>Cadastrar</button>
         </form>
       </details>
+
+      {drafts.length > 0 ? (
+        <section className="space-y-3 border border-white/10 p-4">
+          <h2 className="font-display text-sm font-semibold text-cream">Aguardando publicação</h2>
+          <p className="text-xs text-muted">Movidos para o estoque, ocultos até completar a ficha (preço e fotos) e publicar.</p>
+          <ul className="space-y-2">
+            {drafts.map((v) => (
+              <li key={v.id} className="flex flex-wrap items-center gap-2 text-sm text-cream">
+                <span>{v.brand} {v.model} {v.year} {v.plate ?? ""}</span>
+                <a href={`/admin/veiculos/${v.id}`} className={btn.outline}>Completar ficha</a>
+                <form action={publishPreparedVehicleAction}>
+                  <input type="hidden" name="id" value={v.id} />
+                  <button className={btn.primary}>Publicar</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {items.length === 0 ? <p className="text-sm text-muted">Nenhum carro em preparação.</p> : null}
       <ul className="space-y-3">
