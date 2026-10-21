@@ -81,3 +81,61 @@ test("valor por extenso usa 'e' antes da última parte", () => {
   assert.equal(moneyInWords(1_234_000), "um milhão, duzentos e trinta e quatro mil reais");
   assert.equal(moneyInWords(5000), "cinco mil reais");
 });
+
+test("contrato com sinal, entrada e financiamento calcula linhas e assina Garagem Motorcycle Ltda", async () => {
+  const data = {
+    customer: "Carlos Silva",
+    cpf: "123.456.789-01",
+    phone: "27999991111",
+    vehicle: "Toyota Corolla XEi",
+    plate: "ABC1D23",
+    amount: 100000,
+    payment: "Entrada + Financiamento Santander",
+    conditions: "Transferência em até 30 dias.",
+    seller: "vendedor@garagem.net",
+    date: "2026-10-20T12:00:00Z",
+    signal: { amount: 10000, receiptId: "42" },
+    downPayment: 20000,
+    financed: 70000,
+  };
+  const bytes = await commercialPdf("contrato", data, "teste-contrato", 43);
+  const pdf = await PDFDocument.load(bytes);
+  assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
+  assert.ok(pdf.getPageCount() >= 2);
+});
+
+test("contrato com sinal manual sem recibo vinculado, entrada e financiamento não exibe 'recibo de sinal nº'", async () => {
+  const data = {
+    customer: "Mariana Souza",
+    cpf: "987.654.321-09",
+    phone: "27999992222",
+    vehicle: "Honda HR-V EXL",
+    plate: "XYZ9K88",
+    amount: 120000,
+    payment: "Entrada + Financiamento Itaú",
+    conditions: "Veículo entregue revisado com garantia de 90 dias.",
+    seller: "vendedor@garagem.net",
+    date: "2026-10-20T14:00:00Z",
+    signal: { amount: 15000 },
+    downPayment: 25000,
+    financed: 80000,
+  };
+  const drawn: string[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) { drawn.push(text); return original.call(this, text, options); };
+  let bytes: Uint8Array;
+  try {
+    bytes = await commercialPdf("contrato", data, "teste-contrato-manual", 44);
+  } finally {
+    PDFPage.prototype.drawText = original;
+  }
+  const text = drawn.join(" ");
+  assert.ok(!text.includes("recibo de sinal nº"), "sinal manual sem recibo vinculado não deve apresentar 'recibo de sinal nº'");
+  assert.ok(text.includes("recibo de sinal emitido pela VENDEDORA"), "sinal manual sem recibo vinculado exibe descrição padrão da VENDEDORA");
+  assert.ok(text.includes("15.000,00"), "tabela de pagamento exibe o sinal de 15.000,00");
+  assert.ok(text.includes("25.000,00"), "tabela de pagamento exibe a entrada de 25.000,00");
+  assert.ok(text.includes("80.000,00"), "tabela de pagamento exibe o valor financiado de 80.000,00");
+  const pdf = await PDFDocument.load(bytes);
+  assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
+  assert.ok(pdf.getPageCount() >= 2);
+});
