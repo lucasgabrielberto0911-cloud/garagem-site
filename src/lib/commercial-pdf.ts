@@ -666,11 +666,11 @@ export type PreparationPdfRow = {
 
 /** Colunas da lista de preparação (somam CONTENT_W); larguras comportam data e valor completos. */
 export const PREPARATION_COLS = [
-  { label: "Marca", w: 50 }, { label: "Modelo/Versão", w: 92 }, { label: "Cor", w: 40 }, { label: "Ano", w: 28 },
-  { label: "KM", w: 40 }, { label: "Placa", w: 46 }, { label: "Compra", w: 54 }, { label: "Valor", w: 72 },
-  { label: "Pronto", w: 40 }, { label: "Postado", w: 45 },
+  { label: "Marca", w: 65 }, { label: "Modelo/Versão", w: 110 }, { label: "Cor", w: 42 }, { label: "Ano", w: 32 },
+  { label: "KM", w: 42 }, { label: "Placa", w: 52 }, { label: "Compra", w: 48 }, { label: "Valor", w: 62 },
+  { label: "Pronto", w: 40 }, { label: "Postado", w: 46 },
 ];
-export const PREPARATION_CELL_SIZE = 8;
+export const PREPARATION_CELL_SIZE = 7;
 
 /** Lista dos carros em preparação (campos vazios ficam em branco, para preencher à mão), no padrão visual do contrato. */
 export async function preparationPdf(rows: PreparationPdfRow[], generatedAt = new Date()) {
@@ -687,24 +687,36 @@ export async function preparationPdf(rows: PreparationPdfRow[], generatedAt = ne
   const semi = await pdf.embedFont(semiBytes);
   const logo = await pdf.embedPng(logoBytes);
   const tz = "America/Sao_Paulo";
-  const right = PAGE_W - MARGIN;
+  const margin = 28;
+  const contentWidth = PAGE_W - margin * 2;
+  const right = PAGE_W - margin;
+  const rowHeight = 34;
   const day = (iso?: string | null) => {
     const d = iso ? new Date(iso) : null;
     return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString("pt-BR", { timeZone: tz }) : "";
   };
-  const fitText = (value: string, font: PDFFont, size: number, width: number) => {
-    let text = clean(value).replace(/\s+/g, " ").trim();
-    if (font.widthOfTextAtSize(text, size) <= width) return text;
-    while (text && font.widthOfTextAtSize(`${text}…`, size) > width) text = text.slice(0, -1);
-    return `${text.trimEnd()}…`;
+  const wrap = (value: string, font: PDFFont, size: number, width: number) => {
+    const words = clean(value).replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+    const lines: string[] = [];
+    let line = "";
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (font.widthOfTextAtSize(candidate, size) <= width) line = candidate;
+      else {
+        if (line) lines.push(line);
+        line = word;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
   };
   const cols = PREPARATION_COLS;
   const pages: PDFPage[] = [];
   let page!: PDFPage;
   let y = 0;
   const header = () => {
-    page.drawRectangle({ x: MARGIN, y: y - 5, width: CONTENT_W, height: 18, color: ASPHALT });
-    let x = MARGIN + 4;
+    page.drawRectangle({ x: margin, y: y - 5, width: contentWidth, height: 18, color: ASPHALT });
+    let x = margin + 3;
     for (const c of cols) {
       page.drawText(c.label.toUpperCase(), { x, y, size: 7, font: semi, color: WHITE });
       x += c.w;
@@ -714,42 +726,55 @@ export async function preparationPdf(rows: PreparationPdfRow[], generatedAt = ne
   function newPage(first: boolean) {
     page = pdf.addPage([PAGE_W, PAGE_H]);
     pages.push(page);
-    const size = LOGO_SIZE * (first ? 1 : 0.7);
-    page.drawImage(logo, { x: MARGIN - LOGO_WORD_LEFT * size, y: PAGE_H - (first ? 66 : 52) - (1 - LOGO_WORD_CENTER_Y) * size, width: size, height: size });
+    const size = LOGO_SIZE * (first ? 0.72 : 0.7);
+    page.drawImage(logo, { x: margin - LOGO_WORD_LEFT * size, y: PAGE_H - (first ? 56 : 52) - (1 - LOGO_WORD_CENTER_Y) * size, width: size, height: size });
     if (first) {
-      page.drawText(`${PDF_STORE.legalName} · CNPJ ${PDF_STORE.cnpj}`, { x: MARGIN, y: PAGE_H - 92, size: 8, font: semi, color: ASPHALT });
-      page.drawText([PDF_STORE.address, `WhatsApp ${site.whatsappLabel}`, site.email].filter(Boolean).join(" · "), { x: MARGIN, y: PAGE_H - 104, size: 8, font: regular, color: MUTED });
-      page.drawRectangle({ x: 0, y: PAGE_H - 122, width: PAGE_W, height: 4, color: BRAND });
-      page.drawText("Carros em preparação", { x: MARGIN, y: PAGE_H - 150, size: 15, font: title, color: ASPHALT });
+      page.drawText(`${PDF_STORE.legalName} · CNPJ ${PDF_STORE.cnpj}`, { x: margin, y: PAGE_H - 92, size: 8, font: semi, color: ASPHALT });
+      page.drawText(`WhatsApp ${site.whatsappLabel} · ${site.email}`, { x: margin, y: PAGE_H - 104, size: 8, font: regular, color: MUTED });
+      page.drawText("www.suagaragem.net", { x: margin, y: PAGE_H - 116, size: 8, font: regular, color: MUTED });
+      page.drawRectangle({ x: margin, y: PAGE_H - 126, width: contentWidth, height: 3, color: BRAND });
+      page.drawText("Carros em preparação", { x: margin, y: PAGE_H - 151, size: 15, font: title, color: ASPHALT });
       const date = generatedAt.toLocaleDateString("pt-BR", { timeZone: tz });
-      page.drawText(`Gerado em ${date} · ${rows.length} veículo(s)`, { x: MARGIN, y: PAGE_H - 168, size: 9, font: regular, color: MUTED });
-      y = PAGE_H - 196;
+      page.drawText(`Gerado em ${date} · ${rows.length} veículo(s)`, { x: margin, y: PAGE_H - 169, size: 9, font: regular, color: MUTED });
+      y = PAGE_H - 190;
     } else {
-      page.drawRectangle({ x: 0, y: PAGE_H - 76, width: PAGE_W, height: 3, color: BRAND });
+      page.drawRectangle({ x: margin, y: PAGE_H - 76, width: contentWidth, height: 3, color: BRAND });
       y = PAGE_H - 104;
     }
     header();
   }
 
-  newPage(true);
-  for (const row of rows) {
-    if (y - 24 < BOTTOM) newPage(false);
-    const cells = [
-      row.brand, row.model, row.color ?? "", row.year ? String(row.year) : "",
-      row.km != null ? row.km.toLocaleString("pt-BR") : "", row.plate ?? "",
-      day(row.purchasedAt), row.purchasePrice != null ? money(row.purchasePrice) : "",
-      row.ready ? "Sim" : "", row.posted ? "Sim" : "",
-    ];
-    let x = MARGIN + 4;
-    cells.forEach((cell, i) => {
-      page.drawText(fitText(cell, regular, PREPARATION_CELL_SIZE, cols[i].w - 6), { x, y, size: PREPARATION_CELL_SIZE, font: regular, color: ASPHALT });
-      x += cols[i].w;
-    });
-    page.drawLine({ start: { x: MARGIN, y: y - 9 }, end: { x: right, y: y - 9 }, thickness: 0.5, color: LINE });
-    y -= 24;
-  }
-  if (y - 30 < BOTTOM) newPage(false);
-  page.drawText("Campos em branco: preencher à mão.", { x: MARGIN, y: y - 6, size: 9, font: regular, color: MUTED });
+  const capacity = Math.floor((PAGE_H - 190 - 22 - BOTTOM) / rowHeight);
+  const chunks: (PreparationPdfRow | null)[][] = rows.length <= capacity ? [rows] : Array.from({ length: Math.ceil(rows.length / capacity) }, (_, i) => rows.slice(i * capacity, (i + 1) * capacity));
+  const lastChunk = chunks.length - 1;
+  if (chunks[lastChunk].length < capacity) chunks[lastChunk] = [...chunks[lastChunk], ...Array.from({ length: capacity - chunks[lastChunk].length }, () => null)];
+  chunks.forEach((chunk, pageIndex) => {
+    newPage(pageIndex === 0);
+    for (const row of chunk) {
+      const top = y + 7;
+      page.drawRectangle({ x: margin, y: top - rowHeight, width: contentWidth, height: rowHeight, borderColor: LINE, borderWidth: 0.65 });
+      let x = margin;
+      for (const c of cols.slice(1)) { x += cols[cols.indexOf(c) - 1].w; page.drawLine({ start: { x, y: top - rowHeight }, end: { x, y: top }, thickness: 0.55, color: LINE }); }
+      const cells = row ? [row.brand, row.model, row.color ?? "", row.year ? String(row.year) : "", row.km != null ? row.km.toLocaleString("pt-BR") : "", row.plate ?? "", day(row.purchasedAt), row.purchasePrice != null ? money(row.purchasePrice) : ""] : [];
+      let cellX = margin;
+      cells.forEach((cell, i) => {
+        const lines = wrap(cell, regular, PREPARATION_CELL_SIZE, cols[i].w - 6).slice(0, 2);
+        lines.forEach((line, lineIndex) => page.drawText(line, { x: cellX + 3, y: top - 13 - lineIndex * 10, size: PREPARATION_CELL_SIZE, font: regular, color: ASPHALT }));
+        cellX += cols[i].w;
+      });
+      for (const [i, checked] of [[8, row?.ready], [9, row?.posted]] as const) {
+        const boxSize = 10;
+        const boxX = margin + cols.slice(0, i).reduce((sum, c) => sum + c.w, 0) + (cols[i].w - boxSize) / 2;
+        const boxY = top - (rowHeight + boxSize) / 2;
+        page.drawRectangle({ x: boxX, y: boxY, width: boxSize, height: boxSize, borderColor: ASPHALT, borderWidth: 0.8 });
+        if (checked) {
+          page.drawLine({ start: { x: boxX + 2, y: boxY + 5 }, end: { x: boxX + 4, y: boxY + 2 }, thickness: 1.2, color: ASPHALT });
+          page.drawLine({ start: { x: boxX + 4, y: boxY + 2 }, end: { x: boxX + 8, y: boxY + 8 }, thickness: 1.2, color: ASPHALT });
+        }
+      }
+      y -= rowHeight;
+    }
+  });
 
   pages.forEach((p, i) => {
     p.drawLine({ start: { x: MARGIN, y: FOOTER_Y + 22 }, end: { x: right, y: FOOTER_Y + 22 }, thickness: 0.6, color: LINE });
