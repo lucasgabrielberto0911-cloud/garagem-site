@@ -159,7 +159,22 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
             signal = { amount: Number(held.deposit), receiptId: receipt ? String(receipt.number) : undefined, date: receipt?.createdAt.toISOString() };
             signalReservationId = held.id;
           } else if (signalEnabled && sinalItem && sinalItem.amount > 0) {
-            signal = { amount: sinalItem.amount, date: sinalItem.signalDate, receiptId: text("legacySignalReceiptId") || undefined };
+            const receiptId = text("legacySignalReceiptId");
+            if (receiptId) {
+              const receiptNumber = Number(receiptId);
+              const receiptDoc = Number.isInteger(receiptNumber) && receiptNumber > 0
+                ? await tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", number: receiptNumber } })
+                : null;
+              const receiptSnapshot = receiptDoc?.snapshot as { amount?: number; customerId?: string; saleId?: string | null; reservationId?: string | null } | null;
+              const linkedReservation = receiptSnapshot?.reservationId
+                ? await tx.vehicleReservation.findFirst({ where: { id: receiptSnapshot.reservationId, vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } } })
+                : null;
+              const linkedToSale = receiptSnapshot?.saleId === vehicle.sale?.id && receiptSnapshot?.customerId === customer.id;
+              if (!receiptDoc || Number(receiptSnapshot?.amount) !== sinalItem.amount || (!linkedToSale && !linkedReservation)) {
+                throw new CommercialError("O recibo do sinal não pertence ao comprador atual desta venda.");
+              }
+            }
+            signal = { amount: sinalItem.amount, date: sinalItem.signalDate, receiptId: receiptId || undefined };
           } else if (signalEnabled) {
             const dep = parseMoneyBR(form.get("deposit"));
             if (dep && dep > 0) signal = { amount: dep };

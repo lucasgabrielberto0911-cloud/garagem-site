@@ -12,11 +12,11 @@ import { btn, Card, inputClass } from "./ui";
 const LEGACY_PAYMENT_METHODS = [{ id: "pix", label: "À vista/PIX" }, { id: "financiamento", label: "Financiamento" }, { id: "troca", label: "Troca" }, { id: "cartao", label: "Cartão" }] as const;
 
 type Props = {
-  vehicle: { id: string; chassis: string | null; renavam: string | null; status: string; price: number; purchasePrice: number | null; consigned: boolean; days: number; costs: number; sale: { salePrice: number; paymentMethod: string; customerId: string | null } | null };
+  vehicle: { id: string; chassis: string | null; renavam: string | null; status: string; price: number; purchasePrice: number | null; consigned: boolean; days: number; costs: number; sale: { id: string; salePrice: number; paymentMethod: string; customerId: string | null } | null };
   reservation: { customerId: string; customer: string; phone: string; deadline: string | null; deposit: number; expiresAt: string; status: string } | null;
   assessment: { items: { label: string; status: string }[]; notes: string; offer: number; approved: boolean } | null;
   simulations: { id: string; customerName: string; bank: string; installment: number; months: number; rate: number; status: string }[];
-  documents: { id: string; kind: string; number: number; date: string; signal?: { amount?: number; receiptId?: string; date?: string } }[];
+  documents: { id: string; kind: string; number: number; date: string; saleId?: string | null; customerId?: string | null; signal?: { amount?: number; receiptId?: string; date?: string } }[];
   history: { price: number; date: string }[];
 };
 
@@ -29,7 +29,8 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
   const [pending, start] = useTransition();
   const [message, setMessage] = useState("");
   const [margin, setMargin] = useState("2.000,00");
-  const previousSignal = documents.find((document) => document.kind === "contrato" && document.signal?.amount)?.signal;
+  const sale = vehicle.sale;
+  const previousSignal = sale?.customerId ? documents.find((document) => document.kind === "contrato" && document.saleId === sale.id && document.customerId === sale.customerId && document.signal?.amount)?.signal : undefined;
   const suggestion = suggestPrice({ price: vehicle.price, purchase: vehicle.purchasePrice, costs: vehicle.costs, days: vehicle.days, margin: parseMoneyBR(margin) ?? 0, consigned: vehicle.consigned });
   function submit(form: FormData) {
     // RG vazio na ficha = manter o do cadastro (o cliente é escolhido aqui, sem prefill).

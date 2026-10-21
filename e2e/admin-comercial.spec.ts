@@ -149,7 +149,10 @@ test.describe("fluxo único de venda", () => {
     await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
     await expect(page.getByRole("heading", { name: "Venda registrada" })).toBeVisible();
     const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
-    expect(contract.snapshot).toMatchObject({ signal: { amount: 5000 }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 55000 }] });
+    const snapshot = contract.snapshot as { signal?: { amount: number }; payments: { method: string; amount: number }[] };
+    expect(snapshot.signal?.amount).toBe(5000);
+    expect(snapshot.payments.find((payment) => payment.method === "sinal")).toMatchObject({ amount: 5000 });
+    expect(snapshot.payments.find((payment) => payment.method === "pix")).toMatchObject({ amount: 55000 });
   });
 
   test("emite recibo do sinal sem concluir a venda nem liberar reserva", async ({ page, request, context, baseURL }) => {
@@ -350,7 +353,7 @@ test.describe("fluxo único de venda", () => {
     await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
     const sale = await db.sale.create({ data: { vehicleId: flowVehicleId, customerId, salePrice: 67000, paymentMethod: "Pix" } });
     const reservation = await db.vehicleReservation.create({ data: { vehicleId: flowVehicleId, customerId, deposit: 5000, expiresAt: new Date(Date.now() + 86400000), status: "convertida" } });
-    const receipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { reservationId: reservation.id, amount: 5000, total: 5000, payment: "Sinal", payments: [{ method: "sinal", amount: 5000 }] } } });
+    const receipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { reservationId: reservation.id, customerId, amount: 5000, total: 5000, payment: "Sinal", payments: [{ method: "sinal", amount: 5000 }] } } });
     await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "vendido" } });
 
     await page.goto(`/admin/veiculos/${flowVehicleId}?view=operacao`);
@@ -396,7 +399,7 @@ test.describe("fluxo único de venda", () => {
     expect(withoutEligibleReservation.snapshot).toMatchObject({ saleId: sale.id, reservationId: null, payments: [{ method: "pix", amount: 67000 }] });
     expect(withoutEligibleReservation.snapshot).not.toHaveProperty("signal");
 
-    const manualReceipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { amount: 5000, total: 67000, payment: "Sinal", payments: [{ method: "sinal", amount: 5000 }] } } });
+    const manualReceipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { saleId: sale.id, customerId, amount: 5000, total: 67000, payment: "Sinal", payments: [{ method: "sinal", amount: 5000 }] } } });
     await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "contrato", snapshot: { saleId: sale.id, customerId, total: 67000, signal: { amount: 5000, receiptId: String(manualReceipt.number), date: new Date().toISOString() }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] } } });
     await page.reload();
     await documents.locator("summary").click();
@@ -405,6 +408,18 @@ test.describe("fluxo único de venda", () => {
     await expect(documents.getByText(/Contrato nº/)).toBeVisible();
     const reissued = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" }, orderBy: { createdAt: "desc" } });
     expect(reissued.snapshot).toMatchObject({ signal: { amount: 5000, receiptId: String(manualReceipt.number) }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] });
+
+    await db.sale.update({ where: { id: sale.id }, data: { customerId: otherCustomerId } });
+    await page.reload();
+    await documents.locator("summary").click();
+    await expect(documents.locator('input[name="customerId"]')).toHaveValue(otherCustomerId);
+    await expect(documents.getByLabel("Sinal já recebido (R$)")).toHaveValue("0,00");
+    await expect(documents.getByLabel("Valor · À vista/PIX")).toHaveValue("67.000,00");
+    await documents.getByRole("button", { name: "Emitir nova versão do contrato" }).click();
+    await expect(documents.getByText(/Contrato nº/)).toBeVisible();
+    const buyerChangedContract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" }, orderBy: { createdAt: "desc" } });
+    expect(buyerChangedContract.snapshot).toMatchObject({ customerId: otherCustomerId, payments: [{ method: "pix", amount: 67000 }] });
+    expect(buyerChangedContract.snapshot).not.toHaveProperty("signal");
     // afterAll limpa as reservas antes de excluir o cliente (FK RESTRICT).
   });
 
