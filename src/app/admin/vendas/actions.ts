@@ -540,6 +540,11 @@ export async function deleteSale(
           where: { id: sale.vehicleId },
           data: { status: "disponivel" },
         });
+        // A reserva convertida pela venda não pode ficar ligada ao cliente anterior.
+        await tx.vehicleReservation.updateMany({
+          where: { vehicleId: sale.vehicleId, status: "convertida" },
+          data: { status: "cancelada" },
+        });
         await recordAdminAudit(tx, session.adminId, id, "sale.cancel", {
           vehicleId: sale.vehicleId,
           salePrice: sale.salePrice,

@@ -69,15 +69,12 @@ test("giro, avaliação, financiamento, reserva, PDF privado e pós-venda", asyn
   await reserve.getByRole("button", { name: "Confirmar reserva" }).click();
   await expect.poll(async () => (await db.vehicle.findUniqueOrThrow({ where: { id: vehicleId } })).status).toBe("reservado");
 
-  const documentPanel = page.locator("details").filter({ has: page.locator('select[name="kind"]') });
-  await documentPanel.locator("summary").click();
-  await documentPanel.locator("select[name=kind]").selectOption("recibo");
-  await documentPanel.getByRole("combobox").nth(1).click();
-  await documentPanel.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
-  await documentPanel.locator("input[name=amount]").fill("1.000,00");
+  // Painel unificado: veículo e cliente da reserva já vêm preenchidos.
+  const documentPanel = page.locator("#proposta");
+  await documentPanel.locator("input[name=deposit]").fill("1.000,00");
   await documentPanel.locator("input[name=payment]").fill("Pix");
   await documentPanel.locator("textarea[name=conditions]").fill("Sinal recebido. Saldo a combinar. Prazo informado na reserva.");
-  await documentPanel.getByRole("button", { name: "Gerar PDF" }).click();
+  await documentPanel.getByRole("button", { name: "Gerar recibo de sinal (PDF)" }).click();
   await expect(documentPanel.getByRole("link", { name: "Abrir PDF" }).first()).toBeVisible();
   const doc = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId } });
   expect((await publicRequest.get(`/api/admin/documentos/${doc.id}`)).status()).toBe(401);
@@ -163,7 +160,7 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
     await page.locator('input[name="payment"]').fill("Pix chave CNPJ");
     await page.locator('textarea[name="conditions"]').fill("Sinal de reserva com garantia de prazo.");
 
-    await page.getByRole("button", { name: "Gerar recibo de sinal (PDF)" }).click();
+    await page.getByRole("button", { name: "Gerar recibo e reservar o carro (PDF)" }).click();
     await expect(page.getByText(/Recibo de sinal nº \d+ gerado!/)).toBeVisible();
 
     const receiptDoc = await db.commercialDocument.findFirstOrThrow({

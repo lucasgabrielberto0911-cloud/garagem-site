@@ -20,6 +20,8 @@ export type DocumentSnapshot = {
   downPayment?: number; financed?: number;
   /** Formas de pagamento detalhadas do contrato (compatível com método único em contratos antigos). */
   payments?: ContractPaymentItem[];
+  /** Garantia anunciada na ficha do veículo (texto livre). */
+  warranty?: string;
   /** Prazo de entrega em dias úteis após a quitação (padrão: 5). */
   deliveryDays?: number;
 };
@@ -312,6 +314,7 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
       "A VENDEDORA declara que a quilometragem, o ano e as demais características informadas neste contrato correspondem ao que é de seu conhecimento.",
     ]);
     clause("Cláusula 7ª — Da garantia", [
+      ...(data.warranty?.trim() ? [`Garantia oferecida para este veículo, conforme anúncio: ${clean(data.warranty)}.`] : []),
       "Aplica-se a garantia legal prevista no Código de Defesa do Consumidor (Lei nº 8.078/1990), de 90 (noventa) dias para vícios de fácil constatação e ocultos em veículos usados, contados da entrega. A garantia não cobre desgaste natural de peças, mau uso, acidentes, modificações feitas por terceiros ou falta de manutenção.",
     ]);
     clause("Cláusula 8ª — Da desistência e do sinal", [
