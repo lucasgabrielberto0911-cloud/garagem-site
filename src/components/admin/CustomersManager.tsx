@@ -1,6 +1,7 @@
 "use client";
 
 import { useUnsavedChangesWarning } from "@/components/admin/useUnsavedChangesWarning";
+import { confirmDiscard, useConfirmDialog } from "@/components/admin/useConfirmDialog";
 import { adminMutation } from "@/lib/admin-mutation";
 import { focusAdminError } from "@/lib/admin-form-focus";
 import { useRouter } from "next/navigation";
@@ -67,6 +68,7 @@ export function CustomersManager({
   pageSize?: number;
   total?: number;
 }) {
+  const [confirmAction, confirmDialog] = useConfirmDialog();
   const router = useRouter();
   const [dirty, setDirty] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -93,16 +95,16 @@ export function CustomersManager({
 
   useUnsavedChangesWarning(dirty && Boolean(form));
 
-  function openCreate() {
-    if (dirty && !window.confirm("Descartar as alterações deste cliente?"))
+  async function openCreate() {
+    if (dirty && !(await confirmDiscard(confirmAction, "deste cliente")))
       return;
     setDirty(false);
     setErrors({});
     setForm({ ...emptyForm });
   }
 
-  function openEdit(customer: CustomerRow) {
-    if (dirty && !window.confirm("Descartar as alterações deste cliente?"))
+  async function openEdit(customer: CustomerRow) {
+    if (dirty && !(await confirmDiscard(confirmAction, "deste cliente")))
       return;
     setDirty(false);
     setErrors({});
@@ -160,6 +162,7 @@ export function CustomersManager({
 
   return (
     <div className="space-y-5">
+      {confirmDialog}
       {form ? (
         <Card title={form.id ? "Editar cliente" : "Novo cliente"}>
           <form
@@ -284,8 +287,8 @@ export function CustomersManager({
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (dirty && !window.confirm("Descartar as alterações?"))
+                  onClick={async () => {
+                    if (dirty && !(await confirmDiscard(confirmAction, "desta edição")))
                       return;
                     setDirty(false);
                     setForm(null);

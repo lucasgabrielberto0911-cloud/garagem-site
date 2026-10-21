@@ -52,12 +52,6 @@ import {
 } from "@/app/admin/leads/actions";
 import { adminFileViewHref } from "@/lib/storage-file-ref";
 
-/** Troque aqui se mudar o serviço de consulta de placa. */
-const CONSULTA_PLACA_URL_BASE = "https://placafipe.com/placa/";
-
-function consultaPlacaUrl(plate: string) {
-  return `${CONSULTA_PLACA_URL_BASE}${encodeURIComponent(normalizePlate(plate))}`;
-}
 
 function formatDateTime(value: Date) {
   return new Date(value).toLocaleString("pt-BR", {
@@ -783,13 +777,6 @@ function LeadCard({
             >
               {lead.plate ? (
                 <>
-                  <ActionSheetButton
-                    label="Consultar FIPE"
-                    onClick={() => {
-                      setMoreOpen(false);
-                      window.open(consultaPlacaUrl(lead.plate!), "_blank", "noopener,noreferrer");
-                    }}
-                  />
                   <ActionSheetButton
                     label="Copiar placa"
                     onClick={() => {

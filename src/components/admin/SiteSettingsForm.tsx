@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirmDialog } from "@/components/admin/useConfirmDialog";
 import { useUnsavedChangesWarning } from "@/components/admin/useUnsavedChangesWarning";
 import { adminMutation } from "@/lib/admin-mutation";
 import { focusAdminError } from "@/lib/admin-form-focus";
@@ -23,6 +24,7 @@ export function SiteSettingsForm({
   initial: EditableSiteFields;
   content: SiteContent;
 }) {
+  const [confirmAction, confirmDialog] = useConfirmDialog();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [cleanupPending, startCleanup] = useTransition();
@@ -74,12 +76,12 @@ export function SiteSettingsForm({
         toast.success(preview.message);
         return;
       }
-      if (
-        !window.confirm(
-          `${preview.message}\nRemover somente esses arquivos? Esta ação não pode ser desfeita.`,
-        )
-      )
-        return;
+      const ok = await confirmAction({
+        title: "Remover arquivos órfãos?",
+        description: `${preview.message} Remover somente esses arquivos? Esta ação não pode ser desfeita.`,
+        confirmLabel: "Remover",
+      });
+      if (!ok) return;
       const result = await adminMutation(() =>
         cleanupOrphanPhotos(preview.candidates),
       );
@@ -319,6 +321,7 @@ export function SiteSettingsForm({
           </div>
         </Card>
       </fieldset>
+      {confirmDialog}
     </form>
   );
 }

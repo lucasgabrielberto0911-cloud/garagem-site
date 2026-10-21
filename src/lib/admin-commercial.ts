@@ -145,12 +145,11 @@ export function simulateFinancing(price: number, down: number, rate: number, mon
   return { principal, installment, total: moneySum([down, installment * months]), interest: moneyDifference(installment * months, principal) };
 }
 
-export function suggestPrice(input: { price: number; fipe: number | null; purchase: number | null; costs: number; days: number; margin: number; consigned: boolean }) {
+export function suggestPrice(input: { price: number; purchase: number | null; costs: number; days: number; margin: number; consigned: boolean }) {
   if (input.consigned || input.purchase == null || input.purchase <= 0) return null;
   const floor = moneySum([input.purchase, input.costs, input.margin]);
   const reduction = input.days >= 90 ? 0.05 : input.days >= 60 ? 0.03 : input.days >= 30 ? 0.01 : 0;
-  const market = input.fipe && input.fipe > 0 ? Math.min(input.price, input.fipe) : input.price;
-  const price = Math.round(Math.max(floor, market * (1 - reduction)) * 100) / 100;
+  const price = Math.round(Math.max(floor, input.price * (1 - reduction)) * 100) / 100;
   return { price, floor, difference: moneyDifference(price, input.price) };
 }
 

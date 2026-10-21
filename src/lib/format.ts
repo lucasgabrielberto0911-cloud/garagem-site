@@ -236,6 +236,12 @@ export function formatPlateDisplay(value: string) {
   return plate;
 }
 
+/** Final da placa: da placa interna; sem placa, mantém o final já cadastrado. */
+export function resolvePlateEnd(plate: string, saved?: string | null) {
+  const last = plate.replace(/[^0-9A-Za-z]/g, "").slice(-1);
+  return last || saved?.trim() || "";
+}
+
 const DAY_MS = 86_400_000;
 
 /** Texto público a partir do createdAt real do anúncio. Aceita Date ou ISO. */

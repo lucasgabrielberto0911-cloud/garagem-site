@@ -11,7 +11,7 @@ import { SearchSelect } from "./SearchSelect";
 import { btn, Card, inputClass } from "./ui";
 
 type Props = {
-  vehicle: { id: string; status: string; price: number; fipePrice: number | null; purchasePrice: number | null; consigned: boolean; days: number; costs: number };
+  vehicle: { id: string; status: string; price: number; purchasePrice: number | null; consigned: boolean; days: number; costs: number };
   reservation: { customer: string; phone: string; deadline: string | null; deposit: number; expiresAt: string; status: string } | null;
   assessment: { items: { label: string; status: string }[]; notes: string; offer: number; approved: boolean } | null;
   simulations: { id: string; customerName: string; bank: string; installment: number; months: number; rate: number; status: string }[];
@@ -31,7 +31,7 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
   const [margin, setMargin] = useState("2.000,00");
   const [simulation, setSimulation] = useState<ReturnType<typeof simulateFinancing> | null>(null);
   const [lastDoc, setLastDoc] = useState<{ id: string; kind: string; number?: number; file: File | null } | null>(null);
-  const suggestion = suggestPrice({ price: vehicle.price, fipe: vehicle.fipePrice, purchase: vehicle.purchasePrice, costs: vehicle.costs, days: vehicle.days, margin: parseMoneyBR(margin) ?? 0, consigned: vehicle.consigned });
+  const suggestion = suggestPrice({ price: vehicle.price, purchase: vehicle.purchasePrice, costs: vehicle.costs, days: vehicle.days, margin: parseMoneyBR(margin) ?? 0, consigned: vehicle.consigned });
   function submit(form: FormData) {
     start(async () => {
       try {
@@ -70,7 +70,7 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
     <p role="status" aria-live="polite" className="text-sm">{pending ? "Salvando…" : message}</p>
     <fieldset disabled={pending} className="min-w-0 space-y-4">
       <Card title="Sugestão de preço por giro" collapsed>
-        <p className="mb-3 text-sm text-muted">{vehicle.days} dias no estoque · FIPE {vehicle.fipePrice ? brl(vehicle.fipePrice) : "não informada"}. Redução de 1% após 30 dias, 3% após 60 e 5% após 90. Piso: compra + custos + margem mínima.</p>
+        <p className="mb-3 text-sm text-muted">{vehicle.days} dias no estoque. Redução de 1% após 30 dias, 3% após 60 e 5% após 90. Piso: compra + custos + margem mínima.</p>
         <form action={submit} className="space-y-3">
           <input type="hidden" name="operation" value="price" />
           <label className="block text-sm">Margem mínima (R$)<input className={inputClass} name="margin" value={margin} onChange={(e) => setMargin(e.target.value)} inputMode="decimal" required /></label>

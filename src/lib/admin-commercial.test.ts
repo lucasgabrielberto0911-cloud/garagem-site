@@ -10,13 +10,13 @@ test("Price calcula taxa zero, juros e rejeita valores inválidos", () => {
   assert.equal(simulateFinancing(60000, 10000, 1.5, 48).installment, 1468.75);
   for (const args of [[0, 0, 1, 12], [100, 100, 1, 12], [100, -1, 1, 12], [100, 0, -1, 12], [100, 0, 11, 12], [100, 0, 1, 0], [100, 0, 1, 1.5], [NaN, 0, 1, 12], [Infinity, 0, 1, 12]]) assert.throws(() => simulateFinancing(...args as [number, number, number, number]));
 });
-test("sugestão respeita custo, FIPE, margem mínima e dias de giro", () => {
-  const base = { price: 60000, fipe: 58000, purchase: 50000, costs: 2000, days: 90, margin: 4000, consigned: false };
-  assert.equal(suggestPrice(base)?.price, 56000);
-  assert.equal(suggestPrice({ ...base, fipe: null, days: 30 })?.price, 59400);
+test("sugestão respeita custo, margem mínima e dias de giro", () => {
+  const base = { price: 60000, purchase: 50000, costs: 2000, days: 90, margin: 4000, consigned: false };
+  assert.equal(suggestPrice(base)?.price, 57000);
+  assert.equal(suggestPrice({ ...base, days: 30 })?.price, 59400);
   assert.equal(suggestPrice({ ...base, purchase: null }), null);
   assert.equal(suggestPrice({ ...base, consigned: true }), null);
-  assert.equal(suggestPrice({ ...base, fipe: null, days: 0 })?.price, 60000);
+  assert.equal(suggestPrice({ ...base, days: 0 })?.price, 60000);
 });
 test("pós-venda usa Garagem, não inclui preço e omite link ausente", () => {
   for (const kind of ["entrega", "satisfacao", "documentacao", "revisao"]) {

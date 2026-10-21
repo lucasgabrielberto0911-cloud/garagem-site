@@ -50,18 +50,15 @@ export function parseVehicleFormFields(form: Pick<FormData, "get">) {
   const yearModel = integer("yearModel");
   const doors = text("doors") ? integer("doors") : null;
   const price = parseMoneyBR(form.get("priceDisplay") == null ? text("price") : text("priceDisplay"));
-  const fipePrice = parseMoneyBR(text("fipePrice"));
   const purchaseRaw = ["on", "true"].includes(text("consigned")) ? "" : text("purchasePrice");
   const purchasePrice = parseMoneyBR(purchaseRaw);
   const plate = text("plate").replace(/[\s-]/g, "").toUpperCase() || null;
   const fieldErrors = vehicleFieldErrors({ year, yearModel, km, doors, status: text("status") || "disponivel" });
   if (price == null || price < 1 || price > 9_999_999)
     fieldErrors.price = "Preço: informe entre R$ 1,00 e R$ 9.999.999,00 (ex.: 45.900,00).";
-  if (text("fipePrice") && (fipePrice == null || fipePrice < 0))
-    fieldErrors.fipePrice = "Preço FIPE: informe um valor positivo ou deixe vazio (ex.: 45.900,00).";
   if (purchaseRaw && (purchasePrice == null || purchasePrice < 0))
     fieldErrors.purchasePrice = "Preço de compra: informe zero ou um valor positivo (ex.: 45.900,00).";
   if (plate && !/^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(plate))
     fieldErrors.plate = "Placa: informe ABC-1234 ou ABC1D23, ou deixe vazio.";
-  return { year, yearModel, km, doors, price, fipePrice, purchasePrice, plate, fieldErrors };
+  return { year, yearModel, km, doors, price, purchasePrice, plate, fieldErrors };
 }

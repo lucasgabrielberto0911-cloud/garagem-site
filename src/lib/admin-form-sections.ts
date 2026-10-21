@@ -48,7 +48,6 @@ const FIELD_SECTION: Record<string, VehicleFormSectionId> = {
   plate: "identificacao",
   category: "identificacao",
   price: "essencial",
-  fipePrice: "identificacao",
   status: "essencial",
   locationCity: "essencial",
   featured: "essencial",
