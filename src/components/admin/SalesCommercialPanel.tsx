@@ -605,6 +605,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                         onChange={(e) => {
                           setFinancedAmount(moneyTyping(e.target.value));
                           setSimulation(null);
+                          setInstallmentAmount("");
                         }}
                         placeholder="0,00"
                         className={inputClass}
@@ -620,6 +621,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                         onChange={(e) => {
                           setMonths(e.target.value);
                           setSimulation(null);
+                          setInstallmentAmount("");
                         }}
                         placeholder="48"
                         className={inputClass}

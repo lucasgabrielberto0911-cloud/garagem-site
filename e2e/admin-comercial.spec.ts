@@ -198,7 +198,14 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
     await page.getByRole("button", { name: "Financiamento" }).click();
     await page.locator('#proposta input[name="bank"]').fill("Banco de teste");
     await page.locator('input[name="financed"]').fill("60.000,00");
-    await page.locator('input[name="installmentAmount"]').fill("1.500,00");
+    await page.getByRole("button", { name: "Simular parcelas" }).click();
+    await expect(page.locator('input[name="installmentAmount"]')).not.toHaveValue("");
+    await page.locator('input[name="financed"]').fill("55.000,00");
+    await expect(page.locator('input[name="installmentAmount"]')).toHaveValue("");
+    await page.locator('input[name="financed"]').fill("60.000,00");
+    await page.getByRole("button", { name: "Simular parcelas" }).click();
+    await page.locator('input[name="months"]').fill("24");
+    await expect(page.locator('input[name="installmentAmount"]')).toHaveValue("");
 
     await expect(page.getByTestId("payment-sum-status")).toContainText("Total confere");
     await page.locator('textarea[name="conditions"]').fill("Garantia de 90 dias de motor e câmbio.");
@@ -212,10 +219,13 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
       orderBy: { createdAt: "desc" },
     });
     expect(contractDoc.number).toBeGreaterThan(0);
-    const snap = contractDoc.snapshot as { payments?: { method: string; amount: number; bank?: string }[] };
+    const snap = contractDoc.snapshot as { payments?: { method: string; amount: number; bank?: string; installments?: number; installmentAmount?: number }[] };
     expect(Array.isArray(snap.payments)).toBe(true);
     expect(snap.payments?.length).toBe(4);
-    expect(snap.payments?.find((payment) => payment.method === "financiamento")?.bank).toBe("Banco de teste");
+    const financing = snap.payments?.find((payment) => payment.method === "financiamento");
+    expect(financing?.bank).toBe("Banco de teste");
+    expect(financing?.installmentAmount).toBeUndefined();
+    expect(financing?.installments).toBe(24);
     const contractPdf = await page.request.get(`/api/admin/documentos/${contractDoc.id}`);
     expect(contractPdf.status()).toBe(200);
     expect(contractPdf.headers()["content-type"]).toBe("application/pdf");
