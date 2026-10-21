@@ -21,7 +21,6 @@ test("páginas públicas de estoque usam TTL de 1 h (a invalidação vem do pain
     "app/(site)/sobre/page.tsx",
     "app/(site)/contato/page.tsx",
     "app/(site)/vender/page.tsx",
-    "app/(site)/pedido/page.tsx",
   ]) {
     assert.match(readSrc(file), /export const revalidate = 3600;/, file);
   }

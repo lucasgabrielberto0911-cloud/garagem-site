@@ -4,17 +4,9 @@ import { useEffect } from "react";
 import { readFavoriteIds } from "@/lib/favorites";
 import { writeFavoriteSnapshots, type FavoriteSnapshot } from "@/lib/offline-queue";
 
-// Só é preenchido nos efeitos do navegador. Coalesce os cards do mesmo commit em horário ocioso.
+// Só é preenchido nos efeitos do navegador. Coalesce os favoritos ativos do mesmo commit.
 const pending = new Map<string, FavoriteSnapshot>();
 let scheduled = false;
-
-function scheduleFlush(callback: () => void) {
-  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-    window.requestIdleCallback(callback, { timeout: 600 });
-    return;
-  }
-  setTimeout(callback, 120);
-}
 
 export function rememberFavoriteSnapshot(vehicle: FavoriteSnapshot, force = false) {
   if (!force) {
@@ -24,7 +16,7 @@ export function rememberFavoriteSnapshot(vehicle: FavoriteSnapshot, force = fals
   pending.set(vehicle.id, vehicle);
   if (scheduled) return;
   scheduled = true;
-  scheduleFlush(() => {
+  queueMicrotask(() => {
     const vehicles = [...pending.values()];
     pending.clear();
     scheduled = false;

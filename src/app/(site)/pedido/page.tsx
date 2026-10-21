@@ -10,7 +10,7 @@ import {
   type WantedVehicleQuery,
 } from "@/lib/wanted-vehicle-page";
 
-export const revalidate = 3600;
+export const revalidate = 600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Não encontrou o modelo? | ${site.name}`,
