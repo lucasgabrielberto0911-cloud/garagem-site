@@ -1,3 +1,4 @@
+import { AWAITING_PUBLICATION_WHERE } from "@/lib/preparation";
 import { redirect } from "next/navigation";
 import { AdminPageHeader, btn, inputClass } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
@@ -35,7 +36,7 @@ export default async function EmPreparacaoPage({ searchParams }: { searchParams:
   const { ok, erro } = await searchParams;
   const items = await prisma.preparationVehicle.findMany({ orderBy: [{ createdAt: "desc" }] });
   const drafts = await prisma.vehicle.findMany({
-    where: { historical: true, sale: null, status: "disponivel", price: { lte: 0 } },
+    where: AWAITING_PUBLICATION_WHERE,
     orderBy: { createdAt: "desc" },
     select: { id: true, brand: true, model: true, year: true, plate: true },
   });

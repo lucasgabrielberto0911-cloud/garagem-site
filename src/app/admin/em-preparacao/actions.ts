@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { getSession } from "@/lib/auth";
-import { parsePreparationForm } from "@/lib/preparation";
+import { AWAITING_PUBLICATION_WHERE, parsePreparationForm, publishBlockMessage } from "@/lib/preparation";
 import { prisma } from "@/lib/prisma";
 import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 
@@ -67,11 +67,12 @@ export async function publishPreparedVehicleAction(form: FormData) {
   const session = await requireAdmin();
   const id = String(form.get("id") ?? "");
   const vehicle = await prisma.vehicle.findFirst({
-    where: { id, historical: true, sale: null, status: "disponivel" },
+    where: { id, ...AWAITING_PUBLICATION_WHERE },
     select: { id: true, price: true },
   });
   if (!vehicle) return back("Carro não encontrado para publicar.", true);
-  if (vehicle.price <= 0) return back("Informe o preço na ficha antes de publicar.", true);
+  const blocked = publishBlockMessage(vehicle.price);
+  if (blocked) return back(blocked, true);
   await prisma.$transaction(async (tx) => {
     await tx.vehicle.update({ where: { id }, data: { historical: false } });
     await recordAdminAudit(tx, session.adminId, id, "preparation.publish", {});

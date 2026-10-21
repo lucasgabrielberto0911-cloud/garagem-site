@@ -51,3 +51,11 @@ export function parsePreparationForm(form: FormData): { ok: true; data: Preparat
     },
   };
 }
+
+/** Carros movidos para o estoque que aguardam publicação: ficam listados até publicar, com ou sem preço. */
+export const AWAITING_PUBLICATION_WHERE = { historical: true, sale: null, status: "disponivel" } as const;
+
+/** Mensagem de bloqueio da publicação, ou null quando o preço já permite publicar. */
+export function publishBlockMessage(price: number): string | null {
+  return price > 0 ? null : "Informe o preço na ficha antes de publicar.";
+}
