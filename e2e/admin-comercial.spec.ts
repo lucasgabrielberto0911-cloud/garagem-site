@@ -13,7 +13,7 @@ test.beforeAll(async () => {
   await db.vehicle.deleteMany({ where: { id: vehicleId } });
   await db.customer.upsert({ where: { id: customerId }, create: { id: customerId, name: "Cliente Comercial E2E", phone: "27999990000" }, update: {} });
   await db.admin.upsert({ where: { email: "comercial@local.test" }, create: { name: "Teste local", email: "comercial@local.test", passwordHash: await bcrypt.hash("comercial-local-123", 4) }, update: {} });
-  await db.vehicle.create({ data: { id: vehicleId, brand: "Honda", model: "Civic Comercial E2E", year: 2020, yearModel: 2020, km: 50000, price: 60000, purchasePrice: 50000, fipePrice: 58000, fuel: "Flex", transmission: "Automático", createdAt: new Date(Date.now() - 100 * 86400000) } });
+  await db.vehicle.create({ data: { id: vehicleId, brand: "Honda", model: "Civic Comercial E2E", year: 2020, yearModel: 2020, km: 50000, price: 60000, purchasePrice: 50000, fuel: "Flex", transmission: "Automático", createdAt: new Date(Date.now() - 100 * 86400000) } });
 });
 test.afterAll(async () => {
   await db.sale.deleteMany({ where: { vehicleId } });
@@ -37,7 +37,7 @@ test("giro, avaliação, financiamento, reserva, PDF privado e pós-venda", asyn
   const price = page.locator("details").filter({ has: page.locator("summary", { hasText: "Sugestão de preço por giro" }) });
   await price.locator("summary").click();
   await price.getByRole("button", { name: "Aplicar redução" }).click();
-  await expect.poll(async () => (await db.vehicle.findUniqueOrThrow({ where: { id: vehicleId } })).price).toBe(55100);
+  await expect.poll(async () => (await db.vehicle.findUniqueOrThrow({ where: { id: vehicleId } })).price).toBe(57000);
   expect(await db.vehiclePriceHistory.count({ where: { vehicleId } })).toBe(2);
 
   const assessment = page.locator("details").filter({ has: page.locator("summary", { hasText: "Checklist de entrada" }) });

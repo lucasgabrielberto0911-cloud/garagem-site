@@ -75,7 +75,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         await tx.vehicleReservation.update({ where: { id: reservation.id }, data: { expiresAt } });
       } else if (operation === "price") {
         if (vehicle.status === "vendido" || vehicle.sale) throw new CommercialError("Veículo vendido não recebe ajuste de preço.");
-        const suggestion = suggestPrice({ price: vehicle.price, fipe: vehicle.fipePrice, purchase: vehicle.purchasePrice, costs: vehicle.costs.reduce((sum, cost) => sum + cost.amount, 0), days: Math.max(0, Math.floor((Date.now() - vehicle.createdAt.getTime()) / 86400000)), margin: money("margin"), consigned: vehicle.consigned });
+        const suggestion = suggestPrice({ price: vehicle.price, purchase: vehicle.purchasePrice, costs: vehicle.costs.reduce((sum, cost) => sum + cost.amount, 0), days: Math.max(0, Math.floor((Date.now() - vehicle.createdAt.getTime()) / 86400000)), margin: money("margin"), consigned: vehicle.consigned });
         if (!suggestion || suggestion.price >= vehicle.price) throw new CommercialError("Sem redução sugerida com esta margem mínima.");
         const priceError = descriptionPriceSaveError({ description: vehicle.description, price: suggestion.price, status: vehicle.status });
         if (priceError) throw new CommercialError(priceError);
