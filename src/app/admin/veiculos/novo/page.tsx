@@ -2,12 +2,17 @@ import { redirect } from "next/navigation";
 import { VehicleForm } from "@/components/admin/VehicleForm";
 import { AdminPageHeader } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
+import { preparationPrefill } from "@/lib/preparation";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewVehiclePage() {
+export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ prep?: string }> }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
+
+  const { prep } = await searchParams;
+  const item = prep ? await prisma.preparationVehicle.findUnique({ where: { id: prep } }) : null;
 
   return (
     <div className="space-y-3 sm:space-y-6">
@@ -18,7 +23,12 @@ export default async function NewVehiclePage() {
           <span className="hidden sm:inline"> Custos e documentos ficam na aba Operação depois de salvar.</span>
         </>}
       />
-      <VehicleForm mode="create" adminId={session.adminId} />
+      <VehicleForm
+        mode="create"
+        adminId={session.adminId}
+        prefill={item ? preparationPrefill(item) : undefined}
+        preparationId={item?.id}
+      />
     </div>
   );
 }
