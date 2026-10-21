@@ -22,7 +22,7 @@ export async function getStoredListingScore(
   } catch (error) {
     if (isMissingTableError(error, "VehicleListingScore")) {
       console.warn(
-        "[nota-anuncio] tabela VehicleListingScore ausente: rode prisma/sql/vehicle-listing-score.sql",
+        "[nota-anuncio] tabela VehicleListingScore ausente: rode supabase/migrations/20261010000200_nota_do_anuncio.sql",
       );
     } else {
       console.error("[nota-anuncio] falha ao ler a nota:", error);
