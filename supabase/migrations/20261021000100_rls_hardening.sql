@@ -8,6 +8,15 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS public._rls_hardening_backup (tabela text NOT NULL, grantee text, privilegio text);
 ALTER TABLE public._rls_hardening_backup ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public._rls_hardening_backup FROM PUBLIC;
+DO $$
+DECLARE r text;
+BEGIN
+  FOREACH r IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
+      EXECUTE format('REVOKE ALL ON TABLE public._rls_hardening_backup FROM %I', r);
+    END IF;
+  END LOOP;
+END $$;
 
 DO $$
 DECLARE
