@@ -71,7 +71,7 @@ export default async function EditVehiclePage({
         },
         // Preço de venda só entra na aba Custos e docs (Operação).
         ...(view === "operacao" || view === "venda"
-          ? { sale: { select: { id: true, salePrice: true, paymentMethod: true, customerId: true } } }
+          ? { sale: { select: { id: true, salePrice: true, paymentMethod: true, customerId: true, customer: { select: { name: true, cpf: true } } } } }
           : {}),
       },
     }),
@@ -204,7 +204,7 @@ export default async function EditVehiclePage({
           reservation={commercial[0] ? { customerId: commercial[0].customer.id, customer: commercial[0].customer.name, phone: commercial[0].customer.phone, deposit: Number(commercial[0].deposit), expiresAt: commercial[0].expiresAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }), deadline: commercial[0].status === "ativa" ? reservationDeadline(commercial[0].expiresAt) : null, status: commercial[0].status } : null}
           assessment={commercial[1] ? { items: commercial[1].items as Prisma.JsonArray as { label: string; status: string }[], notes: commercial[1].notes, offer: Number(commercial[1].offer), approved: commercial[1].approved } : null}
           simulations={commercial[2].map((s) => ({ id: s.id, customerName: s.customerName, bank: s.bank, installment: Number(s.installment), months: s.months, rate: Number(s.rate), status: s.status }))}
-          documents={commercial[3].map((d) => { const snapshot = d.snapshot as { saleId?: string | null; customerId?: string | null; conditions?: string; signal?: { amount?: number; receiptId?: string; date?: string }; payments?: { method: string; amount: number; bank?: string; installmentAmount?: number; tradeVehicle?: string; tradePlate?: string; installments?: number; downPayment?: number }[] } | null; return { id: d.id, kind: d.kind, number: d.number, date: adminDate(d.createdAt), saleId: snapshot?.saleId, customerId: snapshot?.customerId, conditions: snapshot?.conditions, signal: snapshot?.signal, payments: snapshot?.payments }; })}
+          documents={commercial[3].map((d) => { const snapshot = d.snapshot as { saleId?: string | null; customerId?: string | null; customer?: string; cpf?: string; conditions?: string; signal?: { amount?: number; receiptId?: string; date?: string }; payments?: { method: string; amount: number; bank?: string; installmentAmount?: number; tradeVehicle?: string; tradePlate?: string; installments?: number; downPayment?: number }[] } | null; return { id: d.id, kind: d.kind, number: d.number, date: adminDate(d.createdAt), saleId: snapshot?.saleId, customerId: snapshot?.customerId, customer: snapshot?.customer, cpf: snapshot?.cpf, conditions: snapshot?.conditions, signal: snapshot?.signal, payments: snapshot?.payments }; })}
           history={commercial[4].map((h) => ({ price: h.price, date: adminDate(h.createdAt) }))}
         /> : null}
       {view === "verificado" && verified ? (
