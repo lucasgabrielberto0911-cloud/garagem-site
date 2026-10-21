@@ -145,39 +145,22 @@ test("HR-V com versão Automático e campo Manual vai Automatic no feed", () => 
   assert.match(row.title, /Honda HR-V EX 1\.8 Flex ONE 2018/);
 });
 
-test("endereço, CEP e coordenadas vêm da cidade do carro", () => {
-  const linhares = catalogVehicleRow(
-    { ...sample, locationCity: "linhares" },
-    "https://www.suagaragem.net",
-  );
-  assert.ok(linhares);
-  assert.equal(linhares.postal_code, "29900-000");
-  assert.equal(linhares.latitude, "-19.3911");
-  assert.equal(linhares.longitude, "-40.0722");
-  assert.match(linhares.address, /"city":"Linhares"/);
-  assert.doesNotMatch(linhares.address, /Vitória|Vitoria|Aracruz/);
-
-  const serra = catalogVehicleRow(
-    { ...sample, locationCity: "serra" },
-    "https://www.suagaragem.net",
-  );
-  assert.equal(serra?.postal_code, "29160-000");
-  assert.equal(serra?.latitude, "-20.1286");
-  assert.match(serra?.address ?? "", /"city":"Serra"/);
+test("CSV público não expõe cidade interna, CEP nem coordenadas do veículo", () => {
+  const baseline = catalogVehicleRow(sample, "https://www.suagaragem.net");
+  for (const locationCity of ["linhares", "serra", "vitoria", "aracruz"]) {
+    const row = catalogVehicleRow({ ...sample, locationCity }, "https://www.suagaragem.net");
+    assert.ok(row);
+    assert.deepEqual(row, baseline);
+    assert.deepEqual(JSON.parse(row.address), { region: "Espírito Santo", country: "Brazil" });
+    for (const field of ["postal_code", "latitude", "longitude"]) assert.equal(row[field as keyof typeof row], "");
+    const csv = buildCatalogCsv([{ ...sample, locationCity }]);
+    assert.doesNotMatch(csv, /Linhares|Serra|Vitória|Aracruz|29900-000|29160-000|29015-000|29190-022/);
+  }
 });
 
-test("catálogo e pixel preservam Vitória e Aracruz escolhidas no admin", () => {
-  for (const [locationCity, label, postalCode] of [
-    ["vitoria", "Vitória", "29015-000"],
-    ["aracruz", "Aracruz", "29190-022"],
-  ]) {
-    const vehicle = { ...sample, locationCity };
-    const row = catalogVehicleRow(vehicle, "https://www.suagaragem.net");
-    assert.ok(row);
-    assert.equal(JSON.parse(row.address).city, label);
-    assert.equal(row.postal_code, postalCode);
-    assert.equal(catalogPixelAutoFields(vehicle).postal_code, postalCode);
-    assert.doesNotMatch(row.address, /Linhares|Serra/);
+test("pixel preserva CEP de Vitória e Aracruz", () => {
+  for (const [locationCity, postalCode] of [["vitoria", "29015-000"], ["aracruz", "29190-022"]]) {
+    assert.equal(catalogPixelAutoFields({ ...sample, locationCity }).postal_code, postalCode);
   }
 });
 

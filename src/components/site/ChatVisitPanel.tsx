@@ -53,7 +53,7 @@ export function ChatVisitPanel({
           ×
         </button>
       </div>
-      <label className="block text-[11px] text-cream/70">
+      <label className="block text-xs text-cream/70">
         Carro de interesse <span className="text-brand-light" aria-hidden="true">*</span>
         <input
           className={FIELD}
@@ -63,7 +63,7 @@ export function ChatVisitPanel({
           placeholder="Ex.: Onix 2020"
         />
       </label>
-      <label className="block text-[11px] text-cream/70">
+      <label className="block text-xs text-cream/70">
         Dúvidas (opcional)
         <input
           className={FIELD}
@@ -73,7 +73,7 @@ export function ChatVisitPanel({
           placeholder="Ex.: aceita troca? financia?"
         />
       </label>
-      <label className="block text-[11px] text-cream/70">
+      <label className="block text-xs text-cream/70">
         Horário desejado <span className="text-brand-light" aria-hidden="true">*</span>
         <input
           className={FIELD}
@@ -92,7 +92,7 @@ export function ChatVisitPanel({
               type="button"
               aria-pressed={selected}
               onClick={() => set("time")(option)}
-              className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium transition touch-manipulation ${
+              className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition touch-manipulation ${
                 selected
                   ? "border-brand/70 bg-brand/20 text-cream"
                   : "border-white/10 bg-white/[0.04] text-cream/75 hover:border-white/25 hover:text-cream"
@@ -104,7 +104,7 @@ export function ChatVisitPanel({
         })}
       </div>
       {!complete ? (
-        <p className="text-[11px] text-cream/50">
+        <p className="text-xs text-cream/50">
           Preencha o carro e o horário desejado para enviar.
         </p>
       ) : null}
