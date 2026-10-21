@@ -35,7 +35,7 @@ async function inspectSchema() {
       missing,
       hint:
         missing.length > 0
-          ? "Rode prisma/sql/schema-align.sql no SQL Editor do Supabase."
+          ? "Rode supabase/migrations/20260827000100_alinhamento_schema.sql no SQL Editor do Supabase."
           : undefined,
     };
   } catch {

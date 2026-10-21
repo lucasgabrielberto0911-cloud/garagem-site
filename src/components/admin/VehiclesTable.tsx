@@ -1082,21 +1082,17 @@ export function VehiclesTable({
 
       <ConfirmDialog
         open={soldTarget !== null}
-        title="Marcar como vendido"
+        title="Registrar venda"
         description={
           soldTarget
-            ? `Confirmar venda de ${soldTarget.brand} ${soldTarget.model}? Sai da aba Em estoque e vai para Vendidos. A página pública continua no ar com aviso (sem 404).`
+            ? `Registrar a venda de ${soldTarget.brand} ${soldTarget.model}? O carro sai da aba Em estoque e você informa preço e cliente na tela de Vendas, para entrar na meta e no faturamento. A página pública continua no ar com aviso (sem 404).`
             : undefined
         }
-        confirmLabel="Só marcar vendido"
-        alternateConfirm={{
-          label: "Vendido e registrar venda",
-          onConfirm: () => void confirmMarkSold(true),
-        }}
+        confirmLabel="Registrar venda"
         danger={false}
         loading={markingSold}
         onCancel={() => setSoldTarget(null)}
-        onConfirm={() => void confirmMarkSold(false)}
+        onConfirm={() => void confirmMarkSold(true)}
       />
 
       <VehiclePromoKitModal

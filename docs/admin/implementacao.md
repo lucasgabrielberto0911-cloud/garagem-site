@@ -4,7 +4,7 @@ Base: main f43f97e. Sem alteração dos cards públicos e sem alteração de dad
 
 ## Publicação
 
-Este PR inclui novas tabelas privadas, dois campos de atendimento e a revisão de vendas. **Antes de colocar este código em produção**, revisar e aplicar `prisma/sql/admin-workspace-v2.sql`. O SQL é aditivo e não altera valores de preços, compra, custos ou vendas. Depois, revisar/aplicar `prisma/sql/admin-access-hardening.sql` para restringir as operações públicas e conferir novamente os advisors. Os SQLs ainda não foram executados em produção.
+Este PR inclui novas tabelas privadas, dois campos de atendimento e a revisão de vendas. **Antes de colocar este código em produção**, revisar e aplicar `supabase/migrations/20261003000100_admin_workspace_v2.sql`. O SQL é aditivo e não altera valores de preços, compra, custos ou vendas. Depois, revisar/aplicar `supabase/migrations/20261021000100_rls_hardening.sql` para restringir as operações públicas e conferir novamente os advisors. Os SQLs ainda não foram executados em produção.
 
 O armazenamento `documentos` foi conferido como privado e limitado a 12 MB; `veiculos` é público para exibição. Os arquivos internos passam por URL assinada, evitando enviar 12 MB pela função Vercel. A chave privilegiada permanece somente no servidor. Não alterar a privacidade dos buckets como parte do deploy.
 

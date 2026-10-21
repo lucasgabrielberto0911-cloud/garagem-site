@@ -143,7 +143,7 @@ model VehicleDocument {
  * Informações verificadas daquele exemplar (revisões, pneus, interior, lataria,
  * documentação). Tabela própria e opcional: o Vehicle não ganha coluna, então
  * o site e o admin seguem funcionando se o SQL ainda não rodou
- * (prisma/sql/vehicle-verified-info.sql). `items` = lista de
+ * (supabase/migrations/20261010000100_info_verificada_veiculo.sql). `items` = lista de
  * { key, text, photoIds } — ver src/lib/vehicle-verified.ts.
  */
 /**
@@ -406,4 +406,23 @@ model AfterSaleTask {
   completedAt DateTime?
   @@unique([saleId, kind])
   @@index([completedAt, dueAt])
+}
+
+/** Carro comprado ainda em preparação (uso interno do painel; nunca entra na vitrine). */
+model PreparationVehicle {
+  id            String    @id @default(cuid())
+  brand         String
+  model         String
+  color         String?
+  year          Int?
+  km            Int?
+  plate         String?
+  ready         Boolean   @default(false)
+  posted        Boolean   @default(false)
+  purchasedAt   DateTime?
+  purchasePrice Float?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([createdAt])
 }

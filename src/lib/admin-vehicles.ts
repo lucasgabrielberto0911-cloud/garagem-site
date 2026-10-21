@@ -202,7 +202,7 @@ export const ADMIN_SALE_LIST_INCLUDE = {
       costs: { select: { amount: true } },
     },
   },
-  customer: { select: { id: true, name: true, phone: true } },
+  customer: { select: { id: true, name: true, phone: true, cpf: true, address: true } },
 } as const;
 
 function tabStatusFilter(tab: VehiclesTab) {
@@ -618,6 +618,7 @@ export type CustomerSearchRecord = {
   phone: string;
   cpf?: string | null;
   rg?: string | null;
+  address?: string | null;
 };
 
 export async function searchCustomers(options?: { q?: string; take?: number }) {
@@ -629,7 +630,7 @@ export async function searchCustomers(options?: { q?: string; take?: number }) {
     where,
     orderBy: { name: "asc" },
     take,
-    select: { id: true, name: true, phone: true, cpf: true, rg: true },
+    select: { id: true, name: true, phone: true, cpf: true, rg: true, address: true },
   }) as Promise<CustomerSearchRecord[]>;
 }
 

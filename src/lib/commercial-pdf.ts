@@ -20,6 +20,8 @@ export type DocumentSnapshot = {
   downPayment?: number; financed?: number;
   /** Formas de pagamento detalhadas do contrato (compatível com método único em contratos antigos). */
   payments?: ContractPaymentItem[];
+  /** Garantia anunciada na ficha do veículo (texto livre). */
+  warranty?: string;
   /** Prazo de entrega em dias úteis após a quitação (padrão: 5). */
   deliveryDays?: number;
 };
@@ -312,6 +314,7 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
       "A VENDEDORA declara que a quilometragem, o ano e as demais características informadas neste contrato correspondem ao que é de seu conhecimento.",
     ]);
     clause("Cláusula 7ª — Da garantia", [
+      ...(data.warranty?.trim() ? [`Garantia oferecida para este veículo, conforme anúncio: ${clean(data.warranty)}.`] : []),
       "Aplica-se a garantia legal prevista no Código de Defesa do Consumidor (Lei nº 8.078/1990), de 90 (noventa) dias para vícios de fácil constatação e ocultos em veículos usados, contados da entrega. A garantia não cobre desgaste natural de peças, mau uso, acidentes, modificações feitas por terceiros ou falta de manutenção.",
     ]);
     clause("Cláusula 8ª — Da desistência e do sinal", [
@@ -644,5 +647,115 @@ export async function expensesPdf(input: ExpensesPdfInput) {
     p.drawText(n, { x: right - regular.widthOfTextAtSize(n, 8), y: FOOTER_Y + 8, size: 8, font: regular, color: MUTED });
   });
   pdf.setTitle(`Garagem — Gastos ${clean(input.vehicle)}`);
+  return pdf.save();
+}
+
+export type PreparationPdfRow = {
+  brand: string;
+  model: string;
+  color?: string | null;
+  year?: number | null;
+  km?: number | null;
+  plate?: string | null;
+  ready: boolean;
+  posted: boolean;
+  purchasedAt?: string | null;
+  purchasePrice?: number | null;
+};
+
+/** Colunas da lista de preparação (somam CONTENT_W); larguras comportam data e valor completos. */
+export const PREPARATION_COLS = [
+  { label: "Marca", w: 50 }, { label: "Modelo/Versão", w: 92 }, { label: "Cor", w: 40 }, { label: "Ano", w: 28 },
+  { label: "KM", w: 40 }, { label: "Placa", w: 46 }, { label: "Compra", w: 54 }, { label: "Valor", w: 72 },
+  { label: "Pronto", w: 40 }, { label: "Postado", w: 45 },
+];
+export const PREPARATION_CELL_SIZE = 8;
+
+/** Lista dos carros em preparação (campos vazios ficam em branco, para preencher à mão), no padrão visual do contrato. */
+export async function preparationPdf(rows: PreparationPdfRow[], generatedAt = new Date()) {
+  const pdf = await PDFDocument.create();
+  pdf.registerFontkit(fontkit);
+  const [titleBytes, regularBytes, semiBytes, logoBytes] = await Promise.all([
+    readFile(path.join(process.cwd(), "public/fonts/Sora-Bold.ttf")),
+    readFile(path.join(process.cwd(), "public/fonts/Inter-Regular.ttf")),
+    readFile(path.join(process.cwd(), "public/fonts/Inter-SemiBold.ttf")),
+    readFile(path.join(process.cwd(), "public/logo.png")),
+  ]);
+  const title = await pdf.embedFont(titleBytes);
+  const regular = await pdf.embedFont(regularBytes);
+  const semi = await pdf.embedFont(semiBytes);
+  const logo = await pdf.embedPng(logoBytes);
+  const tz = "America/Sao_Paulo";
+  const right = PAGE_W - MARGIN;
+  const day = (iso?: string | null) => {
+    const d = iso ? new Date(iso) : null;
+    return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString("pt-BR", { timeZone: tz }) : "";
+  };
+  const fitText = (value: string, font: PDFFont, size: number, width: number) => {
+    let text = clean(value).replace(/\s+/g, " ").trim();
+    if (font.widthOfTextAtSize(text, size) <= width) return text;
+    while (text && font.widthOfTextAtSize(`${text}…`, size) > width) text = text.slice(0, -1);
+    return `${text.trimEnd()}…`;
+  };
+  const cols = PREPARATION_COLS;
+  const pages: PDFPage[] = [];
+  let page!: PDFPage;
+  let y = 0;
+  const header = () => {
+    page.drawRectangle({ x: MARGIN, y: y - 5, width: CONTENT_W, height: 18, color: ASPHALT });
+    let x = MARGIN + 4;
+    for (const c of cols) {
+      page.drawText(c.label.toUpperCase(), { x, y, size: 7, font: semi, color: WHITE });
+      x += c.w;
+    }
+    y -= 22;
+  };
+  function newPage(first: boolean) {
+    page = pdf.addPage([PAGE_W, PAGE_H]);
+    pages.push(page);
+    const size = LOGO_SIZE * (first ? 1 : 0.7);
+    page.drawImage(logo, { x: MARGIN - LOGO_WORD_LEFT * size, y: PAGE_H - (first ? 66 : 52) - (1 - LOGO_WORD_CENTER_Y) * size, width: size, height: size });
+    if (first) {
+      page.drawText(`${PDF_STORE.legalName} · CNPJ ${PDF_STORE.cnpj}`, { x: MARGIN, y: PAGE_H - 92, size: 8, font: semi, color: ASPHALT });
+      page.drawText([PDF_STORE.address, `WhatsApp ${site.whatsappLabel}`, site.email].filter(Boolean).join(" · "), { x: MARGIN, y: PAGE_H - 104, size: 8, font: regular, color: MUTED });
+      page.drawRectangle({ x: 0, y: PAGE_H - 122, width: PAGE_W, height: 4, color: BRAND });
+      page.drawText("Carros em preparação", { x: MARGIN, y: PAGE_H - 150, size: 15, font: title, color: ASPHALT });
+      const date = generatedAt.toLocaleDateString("pt-BR", { timeZone: tz });
+      page.drawText(`Gerado em ${date} · ${rows.length} veículo(s)`, { x: MARGIN, y: PAGE_H - 168, size: 9, font: regular, color: MUTED });
+      y = PAGE_H - 196;
+    } else {
+      page.drawRectangle({ x: 0, y: PAGE_H - 76, width: PAGE_W, height: 3, color: BRAND });
+      y = PAGE_H - 104;
+    }
+    header();
+  }
+
+  newPage(true);
+  for (const row of rows) {
+    if (y - 24 < BOTTOM) newPage(false);
+    const cells = [
+      row.brand, row.model, row.color ?? "", row.year ? String(row.year) : "",
+      row.km != null ? row.km.toLocaleString("pt-BR") : "", row.plate ?? "",
+      day(row.purchasedAt), row.purchasePrice != null ? money(row.purchasePrice) : "",
+      row.ready ? "Sim" : "", row.posted ? "Sim" : "",
+    ];
+    let x = MARGIN + 4;
+    cells.forEach((cell, i) => {
+      page.drawText(fitText(cell, regular, PREPARATION_CELL_SIZE, cols[i].w - 6), { x, y, size: PREPARATION_CELL_SIZE, font: regular, color: ASPHALT });
+      x += cols[i].w;
+    });
+    page.drawLine({ start: { x: MARGIN, y: y - 9 }, end: { x: right, y: y - 9 }, thickness: 0.5, color: LINE });
+    y -= 24;
+  }
+  if (y - 30 < BOTTOM) newPage(false);
+  page.drawText("Campos em branco: preencher à mão.", { x: MARGIN, y: y - 6, size: 9, font: regular, color: MUTED });
+
+  pages.forEach((p, i) => {
+    p.drawLine({ start: { x: MARGIN, y: FOOTER_Y + 22 }, end: { x: right, y: FOOTER_Y + 22 }, thickness: 0.6, color: LINE });
+    p.drawText(`${PDF_STORE.legalName} · CNPJ ${PDF_STORE.cnpj} · ${PDF_STORE.city}/${PDF_STORE.stateCode} · www.suagaragem.net`, { x: MARGIN, y: FOOTER_Y + 8, size: 8, font: semi, color: ASPHALT });
+    const n = `Página ${i + 1} de ${pages.length}`;
+    p.drawText(n, { x: right - regular.widthOfTextAtSize(n, 8), y: FOOTER_Y + 8, size: 8, font: regular, color: MUTED });
+  });
+  pdf.setTitle("Garagem — Carros em preparação");
   return pdf.save();
 }

@@ -7,7 +7,7 @@ Escreva código, comentários de PR e textos do site em **português do Brasil**
 ## Projeto
 - Site da loja de seminovos **Garagem** (Linhares/ES): https://www.suagaragem.net
 - Stack: Next.js 16 (App Router) + React 19, Tailwind 3, Prisma 6 + Postgres no Supabase (`sa-east-1`), Vercel Hobby com Functions em `gru1` (ver `vercel.json` e `docs/ops.md`).
-- Pastas: `src/app/(catalog)` (home e estoque), `src/app/(vehicle)/estoque/[id]` (ficha), `src/app/admin` (painel), `src/app/api`, `src/components/site`, `src/components/admin`, `src/lib` (regras de negócio, com testes `*.test.ts`), `e2e/` (Playwright), `prisma/`.
+- Pastas: `src/app/(catalog)` (home e estoque), `src/app/(vehicle)/estoque/[id]` (ficha), `src/app/admin` (painel), `src/app/api`, `src/components/site`, `src/components/admin`, `src/lib` (regras de negócio, com testes `*.test.ts`), `e2e/` (Playwright), `prisma/`. Migrations SQL: **só** `supabase/migrations` (rollback em `supabase/rollback`; ver `supabase/README.md`). A antiga pasta `prisma/sql` foi removida.
 
 ## Comandos (iguais ao CI em `.github/workflows/ci.yml`)
 ```bash

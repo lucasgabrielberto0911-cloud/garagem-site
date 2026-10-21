@@ -76,7 +76,7 @@ export async function saveVehicleVerifiedInfo(
       return {
         ok: false,
         message:
-          "A tabela ainda não existe no banco. Rode prisma/sql/vehicle-verified-info.sql no Supabase.",
+          "A tabela ainda não existe no banco. Rode supabase/migrations/20261010000100_info_verificada_veiculo.sql no Supabase.",
       };
     }
     console.error(error);

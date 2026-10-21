@@ -36,7 +36,7 @@ export const getVehicleVerifiedItems = cache(
     } catch (error) {
       if (isMissingTableError(error, "VehicleVerifiedInfo")) {
         console.warn(
-          "[site] tabela VehicleVerifiedInfo ausente: rode prisma/sql/vehicle-verified-info.sql",
+          "[site] tabela VehicleVerifiedInfo ausente: rode supabase/migrations/20261010000100_info_verificada_veiculo.sql",
         );
       } else {
         console.error("[site] falha ao consultar informações verificadas:", error);
