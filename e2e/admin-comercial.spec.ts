@@ -78,6 +78,8 @@ test("reserva, avaliação e fluxo único geram venda, contrato e recibo", async
   expect(await db.afterSaleTask.count({ where: { saleId: sale.id } })).toBe(4);
   expect(await db.commercialDocument.count({ where: { vehicleId, kind: "contrato" } })).toBe(1);
   expect(await db.commercialDocument.count({ where: { vehicleId, kind: "recibo" } })).toBe(1);
+  const receipt = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId, kind: "recibo" } });
+  expect(receipt.snapshot).toMatchObject({ amount: 1000, total: 55100, payment: "Sinal", payments: [{ method: "sinal", amount: 1000 }] });
   await db.$transaction(async (tx) => { await scheduleAfterSale(tx, sale); await scheduleAfterSale(tx, sale); });
   expect(await db.afterSaleTask.count({ where: { saleId: sale.id } })).toBe(4);
   const docs = await db.commercialDocument.findMany({ where: { vehicleId } });
@@ -273,8 +275,9 @@ test.describe("fluxo único de venda", () => {
     const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
     expect(contract.snapshot).toMatchObject({ saleId: sale.id, signal: { amount: 5000, receiptId: String(receipt.number) }, reservationId: reservation.id, payments: [
       { method: "sinal", amount: 5000 }, { method: "pix", amount: 10000 },
+      { method: "financiamento", amount: 20000, installments: 24 },
       { method: "troca", amount: 20000, tradeVehicle: "Fiat Palio 2015", tradePlate: "ODB4A12" },
-      { method: "financiamento", amount: 20000, installments: 24 }, { method: "cartao", amount: 12000, installments: 6 },
+      { method: "cartao", amount: 12000, installments: 6 },
     ] });
 
     await db.commercialDocument.deleteMany({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
