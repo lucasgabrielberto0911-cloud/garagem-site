@@ -700,11 +700,15 @@ export async function preparationPdf(rows: PreparationPdfRow[], generatedAt = ne
     const lines: string[] = [];
     let line = "";
     for (const word of words) {
-      const candidate = line ? `${line} ${word}` : word;
-      if (font.widthOfTextAtSize(candidate, size) <= width) line = candidate;
-      else {
-        if (line) lines.push(line);
-        line = word;
+      let rest = word;
+      while (rest) {
+        const candidate = line ? `${line} ${rest}` : rest;
+        if (font.widthOfTextAtSize(candidate, size) <= width) { line = candidate; break; }
+        if (line) { lines.push(line); line = ""; continue; }
+        let cut = 1;
+        while (cut < rest.length && font.widthOfTextAtSize(rest.slice(0, cut + 1), size) <= width) cut++;
+        lines.push(rest.slice(0, cut));
+        rest = rest.slice(cut);
       }
     }
     if (line) lines.push(line);
@@ -744,35 +748,49 @@ export async function preparationPdf(rows: PreparationPdfRow[], generatedAt = ne
     header();
   }
 
-  const capacity = Math.floor((PAGE_H - 190 - 22 - BOTTOM) / rowHeight);
-  const chunks: (PreparationPdfRow | null)[][] = rows.length <= capacity ? [rows] : Array.from({ length: Math.ceil(rows.length / capacity) }, (_, i) => rows.slice(i * capacity, (i + 1) * capacity));
-  const lastChunk = chunks.length - 1;
-  if (chunks[lastChunk].length < capacity) chunks[lastChunk] = [...chunks[lastChunk], ...Array.from({ length: capacity - chunks[lastChunk].length }, () => null)];
+  const chunks: (PreparationPdfRow | null)[][] = [];
+  const pending = [...rows];
+  for (let pageIndex = 0; pending.length || !chunks.length; pageIndex++) {
+    let available = (PAGE_H - (pageIndex === 0 ? 212 : 126) + 7) - BOTTOM;
+    const chunk: (PreparationPdfRow | null)[] = [];
+    while (pending.length) {
+      const row = pending[0];
+      const values = [row.brand, row.model, row.color ?? "", row.year ? String(row.year) : "", row.km != null ? row.km.toLocaleString("pt-BR") : "", row.plate ?? "", day(row.purchasedAt), row.purchasePrice != null ? money(row.purchasePrice) : ""];
+      const height = Math.max(rowHeight, Math.max(...values.map((value, i) => wrap(value, regular, PREPARATION_CELL_SIZE, cols[i].w - 6).length)) * 10 + 16);
+      if (height > available && chunk.length) break;
+      chunk.push(pending.shift()!);
+      available -= height;
+      if (available < 0) break;
+    }
+    while (available >= rowHeight) { chunk.push(null); available -= rowHeight; }
+    chunks.push(chunk);
+  }
   chunks.forEach((chunk, pageIndex) => {
     newPage(pageIndex === 0);
     for (const row of chunk) {
       const top = y + 7;
-      page.drawRectangle({ x: margin, y: top - rowHeight, width: contentWidth, height: rowHeight, borderColor: LINE, borderWidth: 0.65 });
-      let x = margin;
-      for (const c of cols.slice(1)) { x += cols[cols.indexOf(c) - 1].w; page.drawLine({ start: { x, y: top - rowHeight }, end: { x, y: top }, thickness: 0.55, color: LINE }); }
       const cells = row ? [row.brand, row.model, row.color ?? "", row.year ? String(row.year) : "", row.km != null ? row.km.toLocaleString("pt-BR") : "", row.plate ?? "", day(row.purchasedAt), row.purchasePrice != null ? money(row.purchasePrice) : ""] : [];
+      const wrapped = cells.map((cell, i) => wrap(cell, regular, PREPARATION_CELL_SIZE, cols[i].w - 6));
+      const height = row ? Math.max(rowHeight, Math.max(...wrapped.map(lines => lines.length)) * 10 + 16) : rowHeight;
+      page.drawRectangle({ x: margin, y: top - height, width: contentWidth, height, borderColor: LINE, borderWidth: 0.65 });
+      let x = margin;
+      for (const c of cols.slice(1)) { x += cols[cols.indexOf(c) - 1].w; page.drawLine({ start: { x, y: top - height }, end: { x, y: top }, thickness: 0.55, color: LINE }); }
       let cellX = margin;
-      cells.forEach((cell, i) => {
-        const lines = wrap(cell, regular, PREPARATION_CELL_SIZE, cols[i].w - 6).slice(0, 2);
+      wrapped.forEach((lines, i) => {
         lines.forEach((line, lineIndex) => page.drawText(line, { x: cellX + 3, y: top - 13 - lineIndex * 10, size: PREPARATION_CELL_SIZE, font: regular, color: ASPHALT }));
         cellX += cols[i].w;
       });
       for (const [i, checked] of [[8, row?.ready], [9, row?.posted]] as const) {
         const boxSize = 10;
         const boxX = margin + cols.slice(0, i).reduce((sum, c) => sum + c.w, 0) + (cols[i].w - boxSize) / 2;
-        const boxY = top - (rowHeight + boxSize) / 2;
+        const boxY = top - (height + boxSize) / 2;
         page.drawRectangle({ x: boxX, y: boxY, width: boxSize, height: boxSize, borderColor: ASPHALT, borderWidth: 0.8 });
         if (checked) {
           page.drawLine({ start: { x: boxX + 2, y: boxY + 5 }, end: { x: boxX + 4, y: boxY + 2 }, thickness: 1.2, color: ASPHALT });
           page.drawLine({ start: { x: boxX + 4, y: boxY + 2 }, end: { x: boxX + 8, y: boxY + 8 }, thickness: 1.2, color: ASPHALT });
         }
       }
-      y -= rowHeight;
+      y -= height;
     }
   });
 
