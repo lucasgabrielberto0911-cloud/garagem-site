@@ -108,7 +108,7 @@ export default async function EditVehiclePage({
   }
 
   const commercial = view === "operacao" ? await Promise.all([
-    prisma.vehicleReservation.findFirst({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, include: { customer: { select: { id: true, name: true, phone: true, cpf: true, rg: true, address: true } } } }),
+    prisma.vehicleReservation.findFirst({ where: { vehicleId: id, status: { in: ["ativa", "convertida"] }, ...(vehicle.sale?.customerId ? { customerId: vehicle.sale.customerId } : {}) }, orderBy: { createdAt: "desc" }, include: { customer: { select: { id: true, name: true, phone: true, cpf: true, rg: true, address: true } } } }),
     prisma.vehicleAssessment.findUnique({ where: { vehicleId: id } }),
     prisma.financeSimulation.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 20 }),
     prisma.commercialDocument.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, kind: true, number: true, createdAt: true } }),

@@ -18,6 +18,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await db.sale.deleteMany({ where: { vehicleId } });
   await db.vehicle.deleteMany({ where: { id: vehicleId } });
+  await db.customer.deleteMany({ where: { id: "ce2eadminlote4outro" } });
   await db.customer.deleteMany({ where: { id: customerId } });
   await db.admin.deleteMany({ where: { email: "comercial@local.test" } });
   await db.$disconnect();
@@ -260,6 +261,25 @@ test.describe("fluxo único de venda", () => {
     expect(await db.sale.count({ where: { vehicleId: flowVehicleId } })).toBe(1);
     const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
     expect(contract.snapshot).toMatchObject({ saleId: sale.id, signal: { amount: 5000, receiptId: String(receipt.number) }, reservationId: reservation.id, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] });
+
+    await db.commercialDocument.deleteMany({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
+    await db.vehicleReservation.deleteMany({ where: { vehicleId: flowVehicleId } });
+    const otherCustomerId = "ce2eadminlote4outro";
+    await db.customer.upsert({ where: { id: otherCustomerId }, create: { id: otherCustomerId, name: "Outro Cliente E2E", phone: "27999990001" }, update: {} });
+    await db.vehicleReservation.create({ data: { vehicleId: flowVehicleId, customerId, deposit: 5000, expiresAt: new Date(Date.now() + 86400000), status: "cancelada" } });
+    await db.vehicleReservation.create({ data: { vehicleId: flowVehicleId, customerId: otherCustomerId, deposit: 8000, expiresAt: new Date(Date.now() + 86400000), status: "ativa" } });
+
+    await page.reload();
+    await documents.locator("summary").click();
+    await documents.getByRole("combobox").click();
+    await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+    await expect(documents.getByLabel("Valor · À vista/PIX")).toHaveValue("67.000,00");
+    await documents.getByRole("button", { name: "Emitir contrato desta venda" }).click();
+    await expect(documents.getByText(/Contrato nº/)).toBeVisible();
+    const withoutEligibleReservation = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
+    expect(withoutEligibleReservation.snapshot).toMatchObject({ saleId: sale.id, reservationId: null, payments: [{ method: "pix", amount: 67000 }] });
+    expect(withoutEligibleReservation.snapshot).not.toHaveProperty("signal");
+    await db.customer.delete({ where: { id: otherCustomerId } });
   });
 
   test("rejeita CPF duplicado ao cadastrar e atualizar cliente e limpa RG ao trocar para novo", async ({ page, request, context, baseURL }) => {

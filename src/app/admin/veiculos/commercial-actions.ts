@@ -149,13 +149,15 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
 
         // Contrato: o sinal já pago (recibo da reserva) é abatido do preço.
         let signal: { amount: number; receiptId?: string; date?: string } | undefined;
+        let signalReservationId: string | null = null;
         if (isContract) {
           const held = await tx.vehicleReservation.findFirst({ where: { vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } });
           const receipt = held ? await tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["reservationId"], equals: held.id } }, orderBy: { createdAt: "desc" } }) : null;
           const sinalItem = parsedPayments?.find((p) => p.method === "sinal");
           const signalEnabled = text("signalEnabled") === "on";
-          if (signalEnabled && held) {
+          if (signalEnabled && held && Number(held.deposit) > 0) {
             signal = { amount: Number(held.deposit), receiptId: receipt ? String(receipt.number) : undefined, date: receipt?.createdAt.toISOString() };
+            signalReservationId = held.id;
           } else if (signalEnabled && sinalItem && sinalItem.amount > 0) {
             signal = { amount: sinalItem.amount, date: sinalItem.signalDate };
           } else if (signalEnabled) {
@@ -218,7 +220,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
               payment: paymentText.slice(0, 200),
               seller: session.email,
               date: new Date().toISOString(),
-              reservationId: reservation?.id ?? null,
+              reservationId: reservation?.id ?? signalReservationId,
               saleId: vehicle.sale?.id ?? null,
             },
           },
