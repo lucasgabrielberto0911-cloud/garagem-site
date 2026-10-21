@@ -442,7 +442,7 @@ test.describe("fluxo único de venda", () => {
     await expect.poll(async () => (await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).some(({ id }) => !contractIdsBeforeReissue.has(id))).toBeTruthy();
     const reissued = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" }, orderBy: { createdAt: "desc" } });
     await expect(documents.locator(`a[href="/api/admin/documentos/${reissued.id}?inline"]`)).toBeVisible();
-    expect(reissued.snapshot).toMatchObject({ signal: { amount: 5000, receiptId: String(manualReceipt.number) }, payments: [{ method: "sinal", amount: 5000 }, { method: "troca", amount: 20000, tradeVehicle: "Palio", tradePlate: "ABC1D23" }, { method: "financiamento", amount: 37000, bank: "Banco de teste", downPayment: 5000, installments: 24, installmentAmount: 2500 }] });
+    expect(reissued.snapshot).toMatchObject({ signal: { amount: 5000, receiptId: String(manualReceipt.number) }, payments: [{ method: "sinal", amount: 5000 }, { method: "financiamento", amount: 37000, bank: "Banco de teste", downPayment: 5000, installments: 24, installmentAmount: 2500 }, { method: "troca", amount: 20000, tradeVehicle: "Palio", tradePlate: "ABC1D23" }] });
     expect(reissued.snapshot).toMatchObject({ conditions: "Entrega até 31/10/2026" });
 
     await db.vehicleReservation.updateMany({ where: { vehicleId: flowVehicleId, customerId, status: "convertida" }, data: { status: "cancelada" } });
