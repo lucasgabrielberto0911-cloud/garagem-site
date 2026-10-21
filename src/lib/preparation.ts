@@ -81,3 +81,8 @@ export async function claimPreparation(
   const { count } = await tx.preparationVehicle.deleteMany({ where: { id, ready: true } });
   if (count !== 1) throw new Error(PREPARATION_CLAIM_ERROR);
 }
+
+/** Escopo do rascunho: edição por veículo, cadastro por preparação e cadastro comum em "new". */
+export function vehicleDraftScope(vehicleId?: string | null, preparationId?: string | null) {
+  return vehicleId ?? (preparationId ? `new-${preparationId}` : "new");
+}

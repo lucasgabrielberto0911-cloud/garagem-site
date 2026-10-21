@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { claimPreparation, PREPARATION_CLAIM_ERROR, preparationPhotoError, preparationPrefill } from "./preparation";
+import { claimPreparation, PREPARATION_CLAIM_ERROR, preparationPhotoError, preparationPrefill, vehicleDraftScope } from "./preparation";
 
 const item = { brand: "Fiat", model: "Argo", color: "Branco", year: null, km: null, plate: "ABC1D23", purchasePrice: 40000 };
 
@@ -39,4 +39,13 @@ test("duas conclusões da mesma preparação: a segunda falha", async () => {
 test("preparação excluída ou desmarcada após abrir o formulário falha", async () => {
   await assert.rejects(claimPreparation(fakeTx([]), "p1"), { message: PREPARATION_CLAIM_ERROR });
   await assert.rejects(claimPreparation(fakeTx([{ id: "p1", ready: false }]), "p1"), { message: PREPARATION_CLAIM_ERROR });
+});
+
+test("rascunho do cadastro é isolado por preparação e do cadastro comum", () => {
+  const a = vehicleDraftScope(undefined, "A");
+  const b = vehicleDraftScope(undefined, "B");
+  assert.notEqual(a, b);
+  assert.notEqual(a, vehicleDraftScope());
+  assert.equal(vehicleDraftScope(), "new");
+  assert.equal(vehicleDraftScope("v1", "A"), "v1");
 });

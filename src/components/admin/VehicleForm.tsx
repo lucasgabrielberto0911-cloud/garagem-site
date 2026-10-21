@@ -8,6 +8,7 @@ import { parseVehicleFormFields, parseVehicleKm } from "@/lib/admin-vehicle-fiel
 import { adminMutation } from "@/lib/admin-mutation";
 import { focusAdminError } from "@/lib/admin-form-focus";
 import { moneyInput, parseMoneyBR } from "@/lib/admin-money";
+import { vehicleDraftScope } from "@/lib/preparation";
 import {
   VehicleDraftToolbar,
   type VehicleDraftPayload,
@@ -212,6 +213,7 @@ export function VehicleForm({
     ),
   );
   const [photosUploading, setPhotosUploading] = useState(false);
+  const draftScope = vehicleDraftScope(vehicle?.id, preparationId);
   const [draftSaving, setDraftSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedChangesWarning(dirty);
@@ -224,7 +226,7 @@ export function VehicleForm({
         signal: controller.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          key: `vehicle:${vehicle?.id ?? "new"}`,
+          key: `vehicle:${draftScope}`,
           reserve: true,
           photoUrls: photos.flatMap((photo) =>
             [photo.url, photo.thumbnailUrl].filter(Boolean),
@@ -245,7 +247,7 @@ export function VehicleForm({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [photos, dirty, vehicle?.id]);
+  }, [photos, dirty, draftScope]);
   const changePhotos: typeof setPhotos = (next) => {
     setPhotos(next);
     setDirty(true);
@@ -379,8 +381,8 @@ export function VehicleForm({
     }
     if (state.success) {
       setErrors({});
-      void photoQueueStorage(`${adminId}:${vehicle?.id ?? "new"}`, null);
-      void fetch(`/api/admin/drafts?key=vehicle:${vehicle?.id ?? "new"}`, {
+      void photoQueueStorage(`${adminId}:${draftScope}`, null);
+      void fetch(`/api/admin/drafts?key=vehicle:${draftScope}`, {
         method: "DELETE",
       });
       // No cadastro, a guarda sai ao desmontar: limpá-la antes pode cancelar o redirecionamento pelo histórico.
@@ -388,7 +390,7 @@ export function VehicleForm({
       toast.success("Anúncio salvo com sucesso.");
     }
     if (state.success && state.id) router.push(`/admin/veiculos/${state.id}`);
-  }, [state, vehicle?.id, adminId, router]);
+  }, [state, draftScope, adminId, router]);
 
   const [values, setValues] = useState({
     price: init?.price != null ? moneyInput(init.price) : "",
@@ -692,8 +694,8 @@ export function VehicleForm({
         </VehicleFormPreview>
       </div>
       <VehicleDraftToolbar
-        draftKey={`vehicle:${vehicle?.id ?? "new"}`}
-        storageKey={`garagem:vehicle-draft:${adminId}:${vehicle?.id ?? "new"}`}
+        draftKey={`vehicle:${draftScope}`}
+        storageKey={`garagem:vehicle-draft:${adminId}:${draftScope}`}
         enabled={dirty && !saving && !state.success}
         published={Boolean(state.success)}
         disabled={saving || photosUploading}
@@ -1311,7 +1313,7 @@ export function VehicleForm({
             }
           >
             <VehiclePhotoManager
-              queueKey={`${adminId}:${vehicle?.id ?? "new"}`}
+              queueKey={`${adminId}:${draftScope}`}
               photos={photos}
               onChange={changePhotos}
               onUploadingChange={setPhotosUploading}
