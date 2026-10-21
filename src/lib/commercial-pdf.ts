@@ -239,7 +239,7 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     };
 
     section("Das partes", 90);
-    paragraph(`VENDEDORA: ${PDF_STORE.legalName}, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${PDF_STORE.cnpj}, com sede em ${PDF_STORE.registeredAddress || ADDRESS_PLACEHOLDER}, ${PDF_STORE.city}/${PDF_STORE.stateCode}, doravante denominada VENDEDORA.`, 10);
+    paragraph(`VENDEDORA: ${PDF_STORE.legalName}, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${PDF_STORE.cnpj}, com sede em ${PDF_STORE.registeredAddress || `${ADDRESS_PLACEHOLDER}, ${PDF_STORE.city}/${PDF_STORE.stateCode}`}, doravante denominada VENDEDORA.`, 10);
     y -= 4;
     paragraph(`COMPRADOR(A): ${clean(data.customer)}, portador(a) do CPF nº ${blank(data.cpf, 18)}, RG nº ${blank(data.rg, 16)}, residente e domiciliado(a) em ${blank(data.address, 44)}, telefone ${blank(data.phone, 16)}, doravante denominado(a) COMPRADOR(A).`, 10);
     y -= 4;

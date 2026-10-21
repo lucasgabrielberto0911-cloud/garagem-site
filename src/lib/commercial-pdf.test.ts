@@ -41,5 +41,6 @@ test("contrato informa endereço cadastral na cláusula, sem alterar cabeçalho"
   const clause = drawn.filter(({ y }) => y < 730).map(({ text }) => text).join(" ");
   const header = drawn.filter(({ y }) => y >= 730).map(({ text }) => text).join(" ");
   assert.ok(clause.includes(`com sede em ${PDF_STORE.registeredAddress}`));
+  assert.ok(!clause.includes(`${PDF_STORE.registeredAddress}, ${PDF_STORE.city}/${PDF_STORE.stateCode}`));
   assert.ok(!header.includes(PDF_STORE.registeredAddress));
 });
