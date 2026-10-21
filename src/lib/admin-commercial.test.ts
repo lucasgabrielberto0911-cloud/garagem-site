@@ -169,6 +169,34 @@ test("contrato com sinal manual sem recibo vinculado, entrada e financiamento n�
   assert.ok(pdf.getPageCount() >= 2);
 });
 
+test("contrato só inclui cláusula de sinal quando o snapshot tem sinal e financiamento não exibe juros", async () => {
+  const texts: string[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) { texts.push(text); return original.call(this, text, options); };
+  try {
+    const data = {
+      customer: "Ana Costa", cpf: "12345678900", phone: "27999990000", vehicle: "Fiat Argo", plate: "ABC1D23",
+      amount: 50000, payment: "Financiamento", conditions: "", seller: "vendedor@garagem.net", date: "2026-10-20T12:00:00Z",
+      payments: [{ method: "financiamento" as const, amount: 50000, installments: 48, installmentAmount: 1250 }],
+    };
+    await commercialPdf("contrato", data, "contrato-sem-sinal");
+    const withoutSignal = texts.join(" ");
+    assert.doesNotMatch(withoutSignal, /cláusula 8ª|sinal pago é garantia|natureza de garantia \(arras\)/i);
+    assert.match(withoutSignal, /1\.250,00/);
+    assert.doesNotMatch(withoutSignal, /juros|taxa a\.m\./i);
+
+    texts.length = 0;
+    await commercialPdf("contrato", { ...data, signal: { amount: 5000 }, payments: [
+      { method: "sinal", amount: 5000 }, { method: "financiamento", amount: 45000, installments: 48, installmentAmount: 1125 },
+    ] }, "contrato-com-sinal");
+    const withSignal = texts.join(" ");
+    assert.match(withSignal, /cláusula 8ª — da desistência e do sinal/i);
+    assert.match(withSignal, /sinal pago é garantia/);
+  } finally {
+    PDFPage.prototype.drawText = original;
+  }
+});
+
 test("PDF de carros em preparação gera páginas e valida o formulário", async () => {
   const rows = Array.from({ length: 40 }, (_, i) => ({ brand: "Fiat", model: `Punto ${i}`, color: null, year: null, km: 1000, plate: null, ready: i % 2 === 0, posted: false }));
   const doc = await PDFDocument.load(await preparationPdf(rows, new Date("2026-10-20T15:00:00Z")));

@@ -16,6 +16,7 @@ export type ContractPaymentItem = {
   bank?: string;
   downPayment?: number;
   installments?: number;
+  installmentAmount?: number;
   tradeVehicle?: string;
   tradePlate?: string;
   signalDate?: string;
@@ -37,7 +38,7 @@ export function formatContractPaymentRow(item: ContractPaymentItem, receiptRef?:
     case "financiamento": {
       const details = [
         item.bank ? item.bank : "",
-        item.installments ? `${item.installments}x` : "",
+        item.installments ? `${item.installments}x${item.installmentAmount ? ` de ${formatAdminMoney(item.installmentAmount)}` : ""}` : "",
       ].filter(Boolean).join(", ");
       return `(−) Financiamento${details ? ` (${details})` : ""} — valor financiado`;
     }
@@ -62,7 +63,7 @@ export function summarizeContractPayments(items: ContractPaymentItem[]): string 
       case "financiamento": {
         const extra = [
           item.bank || "",
-          item.installments ? `${item.installments}x` : "",
+          item.installments ? `${item.installments}x${item.installmentAmount ? ` de ${formatAdminMoney(item.installmentAmount)}` : ""}` : "",
           item.downPayment && item.downPayment > 0 ? `entrada ${formatAdminMoney(item.downPayment)}` : "",
         ].filter(Boolean).join(" ");
         return `Financiamento${extra ? ` ${extra}` : ""} (${val})`;
@@ -107,6 +108,9 @@ export function parseContractPaymentsJson(raw: string): ContractPaymentItem[] | 
     }
     if (typeof obj.installments === "number" && Number.isInteger(obj.installments) && obj.installments > 0 && obj.installments <= 120) {
       item.installments = obj.installments;
+    }
+    if (typeof obj.installmentAmount === "number" && Number.isFinite(obj.installmentAmount) && obj.installmentAmount > 0) {
+      item.installmentAmount = Math.round(obj.installmentAmount * 100) / 100;
     }
     if (typeof obj.tradeVehicle === "string" && obj.tradeVehicle.trim()) item.tradeVehicle = obj.tradeVehicle.trim().slice(0, 120);
     if (typeof obj.tradePlate === "string" && obj.tradePlate.trim()) item.tradePlate = obj.tradePlate.trim().slice(0, 16);

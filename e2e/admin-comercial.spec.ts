@@ -153,6 +153,8 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
 
     await page.getByRole("combobox").nth(1).click();
     await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+    await expect(page.locator('input[name="signalAmount"]')).toHaveCount(0);
+    await expect(page.locator('input[name="signalDate"]')).toHaveCount(0);
 
     // 1. Gera recibo de sinal com prazo de reserva (expiresAt), criando reserva e marcando como reservado
     await page.locator('input[name="deposit"]').fill("10.000,00");
@@ -162,6 +164,7 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
 
     await page.getByRole("button", { name: "Gerar recibo e reservar o carro (PDF)" }).click();
     await expect(page.getByText(/Recibo de sinal nº \d+ gerado!/)).toBeVisible();
+    await expect(page.locator('input[name="signalAmount"]')).toBeVisible();
 
     const receiptDoc = await db.commercialDocument.findFirstOrThrow({
       where: { vehicleId: salesVehicleId, kind: "recibo" },
@@ -193,8 +196,8 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
     await page.locator('input[name="tradeAmount"]').fill("25.000,00");
 
     await page.getByRole("button", { name: "Financiamento" }).click();
-    await page.locator('input[name="bank"]').fill("Santander");
     await page.locator('input[name="financed"]').fill("60.000,00");
+    await page.locator('input[name="installmentAmount"]').fill("1.500,00");
 
     await expect(page.getByTestId("payment-sum-status")).toContainText("Total confere");
     await page.locator('textarea[name="conditions"]').fill("Garantia de 90 dias de motor e câmbio.");
