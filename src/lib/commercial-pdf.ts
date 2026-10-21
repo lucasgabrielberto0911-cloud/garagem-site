@@ -2,7 +2,8 @@ import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { formatAdminMoney } from "./admin-money";
+import { formatAdminMoney, moneySum } from "./admin-money";
+import { expectedMargin, extrasTotal, hasCostBasis, investedTotal, VEHICLE_COST_KINDS } from "./vehicle-ops";
 import { moneyInWords } from "./money-words";
 import { SEO_LOCAL_CITY } from "./seo-local";
 import { site } from "./site";
@@ -460,5 +461,167 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
   });
 
   pdf.setTitle(`Garagem — ${isReceipt ? "Recibo" : "Contrato de compra e venda"}${isReceipt && number ? ` nº ${number}` : ""}`);
+  return pdf.save();
+}
+
+export type ExpensesPdfInput = {
+  vehicle: string;
+  plate?: string;
+  consigned: boolean;
+  purchasePrice: number | null;
+  /** Preço de venda fechado, ou o anunciado quando ainda não vendeu. */
+  salePrice: number | null;
+  sold: boolean;
+  costs: { kind: string; description: string; amount: number; date: string }[];
+  /** Rótulo legível da categoria (ex.: "Mecânica / revisão"). */
+  kindLabel: (kind: string) => string;
+};
+
+/** Categorias na ordem do cadastro (`VEHICLE_COST_KINDS`, depois as desconhecidas); datas crescentes dentro de cada uma. */
+export function groupExpenseCosts(costs: ExpensesPdfInput["costs"]) {
+  const order = (kind: string) => {
+    const i = VEHICLE_COST_KINDS.findIndex((item) => item.value === kind);
+    return i < 0 ? VEHICLE_COST_KINDS.length : i;
+  };
+  const groups = new Map<string, ExpensesPdfInput["costs"]>();
+  for (const cost of [...costs].sort((a, b) => order(a.kind) - order(b.kind) || a.date.localeCompare(b.date))) {
+    groups.set(cost.kind, [...(groups.get(cost.kind) ?? []), cost]);
+  }
+  return groups;
+}
+
+/** Relatório de gastos de um veículo, no mesmo padrão visual do contrato. */
+export async function expensesPdf(input: ExpensesPdfInput) {
+  const pdf = await PDFDocument.create();
+  pdf.registerFontkit(fontkit);
+  const [titleBytes, regularBytes, semiBytes, logoBytes] = await Promise.all([
+    readFile(path.join(process.cwd(), "public/fonts/Sora-Bold.ttf")),
+    readFile(path.join(process.cwd(), "public/fonts/Inter-Regular.ttf")),
+    readFile(path.join(process.cwd(), "public/fonts/Inter-SemiBold.ttf")),
+    readFile(path.join(process.cwd(), "public/logo.png")),
+  ]);
+  const title = await pdf.embedFont(titleBytes);
+  const regular = await pdf.embedFont(regularBytes);
+  const semi = await pdf.embedFont(semiBytes);
+  const logo = await pdf.embedPng(logoBytes);
+  const tz = "America/Sao_Paulo";
+  const right = PAGE_W - MARGIN;
+  const docTitle = "Relatório de gastos";
+  const day = (iso: string) => {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("pt-BR", { timeZone: tz });
+  };
+  const fitText = (value: string, font: PDFFont, size: number, width: number) => {
+    let text = clean(value).replace(/\s+/g, " ").trim();
+    if (font.widthOfTextAtSize(text, size) <= width) return text;
+    while (text && font.widthOfTextAtSize(`${text}…`, size) > width) text = text.slice(0, -1);
+    return `${text.trimEnd()}…`;
+  };
+
+  const pages: PDFPage[] = [];
+  let page!: PDFPage;
+  let y = 0;
+  function newPage(first: boolean) {
+    page = pdf.addPage([PAGE_W, PAGE_H]);
+    pages.push(page);
+    const scale = first ? 1 : 0.7;
+    const size = LOGO_SIZE * scale;
+    page.drawImage(logo, { x: MARGIN - LOGO_WORD_LEFT * size, y: PAGE_H - (first ? 66 : 52) - (1 - LOGO_WORD_CENTER_Y) * size, width: size, height: size });
+    if (first) {
+      page.drawText(`${PDF_STORE.legalName} · CNPJ ${PDF_STORE.cnpj}`, { x: MARGIN, y: PAGE_H - 92, size: 8, font: semi, color: ASPHALT });
+      page.drawText([PDF_STORE.address, `WhatsApp ${site.whatsappLabel}`, site.email].filter(Boolean).join(" · "), { x: MARGIN, y: PAGE_H - 104, size: 8, font: regular, color: MUTED });
+      const t = docTitle.toUpperCase();
+      page.drawText(t, { x: right - title.widthOfTextAtSize(t, 15), y: PAGE_H - 58, size: 15, font: title, color: ASPHALT });
+      const emitted = `Emitido em ${new Date().toLocaleString("pt-BR", { timeZone: tz, dateStyle: "short", timeStyle: "short" }).replace(",", " às")}`;
+      page.drawText(emitted, { x: right - regular.widthOfTextAtSize(emitted, 9), y: PAGE_H - 75, size: 9, font: regular, color: MUTED });
+      page.drawRectangle({ x: 0, y: PAGE_H - 122, width: PAGE_W, height: 4, color: BRAND });
+      y = PAGE_H - 126;
+    } else {
+      const t = `${docTitle} · ${fitText(input.vehicle, regular, 9, 260)}`;
+      page.drawText(t, { x: right - regular.widthOfTextAtSize(t, 9), y: PAGE_H - 56, size: 9, font: regular, color: MUTED });
+      page.drawRectangle({ x: 0, y: PAGE_H - 76, width: PAGE_W, height: 3, color: BRAND });
+      y = PAGE_H - 104;
+    }
+  }
+  const ensure = (height: number) => { if (y - height < BOTTOM) newPage(false); };
+  function section(label: string, needed = 60) {
+    y -= 24;
+    ensure(needed);
+    page.drawRectangle({ x: MARGIN, y: y - 3, width: 3, height: 13, color: BRAND });
+    page.drawText(label.toUpperCase(), { x: MARGIN + 10, y, size: 10, font: title, color: ASPHALT });
+    page.drawLine({ start: { x: MARGIN, y: y - 9 }, end: { x: right, y: y - 9 }, thickness: 0.6, color: LINE });
+    y -= 28;
+  }
+  const amountRight = (text: string, font: PDFFont, size: number, color = ASPHALT) =>
+    page.drawText(text, { x: right - font.widthOfTextAtSize(text, size), y, size, font, color });
+
+  newPage(true);
+  section("Veículo");
+  page.drawText(fitText(input.vehicle, semi, 12, CONTENT_W), { x: MARGIN, y, size: 12, font: semi, color: ASPHALT });
+  y -= 15;
+  if (input.plate) {
+    page.drawText(`Placa ${clean(input.plate)}`, { x: MARGIN, y, size: 10, font: regular, color: MUTED });
+    y -= 15;
+  }
+
+  const groups = groupExpenseCosts(input.costs);
+  section("Gastos por categoria");
+  if (groups.size === 0) {
+    page.drawText("Nenhum gasto lançado para este veículo.", { x: MARGIN, y, size: 10.5, font: regular, color: MUTED });
+    y -= 15;
+  }
+  for (const [kind, items] of groups) {
+    ensure(48);
+    y -= 6;
+    page.drawText(input.kindLabel(kind).toUpperCase(), { x: MARGIN, y, size: 8, font: semi, color: BRAND });
+    amountRight(money(moneySum(items.map((item) => item.amount))), semi, 9);
+    y -= 16;
+    for (const item of items) {
+      ensure(16);
+      page.drawText(day(item.date), { x: MARGIN, y, size: 10, font: regular, color: MUTED });
+      const amountText = money(item.amount);
+      const descW = CONTENT_W - 70 - regular.widthOfTextAtSize(amountText, 10) - 12;
+      page.drawText(fitText(item.description || "—", regular, 10, descW), { x: MARGIN + 70, y, size: 10, font: regular, color: ASPHALT });
+      amountRight(amountText, regular, 10);
+      y -= 15;
+    }
+  }
+
+  // Resumo: compra, gastos, investido, venda e margem (só com dado).
+  const extras = extrasTotal(input.costs);
+  const rows: [string, string][] = [[input.consigned ? "Histórico de gastos (fora dos totais da loja)" : "Total de gastos", money(extras)]];
+  if (!input.consigned) {
+    if (input.purchasePrice != null) rows.push(["Preço de compra", money(input.purchasePrice)]);
+    if (hasCostBasis(input.purchasePrice, input.costs)) rows.push(["Investimento total (compra + gastos)", money(investedTotal(input.purchasePrice, input.costs))]);
+  }
+  if (input.salePrice != null) rows.push([input.sold ? "Preço de venda" : "Preço anunciado", money(input.salePrice)]);
+  const showMargin = !input.consigned && input.salePrice != null && hasCostBasis(input.purchasePrice, input.costs);
+  const boxH = 24 + rows.length * 20 + (showMargin ? 36 : 0);
+  section("Resumo", boxH + 40); // título (24 + 28 de respiro) e caixa na mesma página
+  const top = y + 8;
+  page.drawRectangle({ x: MARGIN, y: top - boxH, width: CONTENT_W, height: boxH, color: ASPHALT });
+  y = top - 26;
+  for (const [label, value] of rows) {
+    page.drawText(label.toUpperCase(), { x: MARGIN + 20, y, size: 7.5, font: semi, color: SOFT });
+    amountRight(value, title, 11, WHITE);
+    y -= 20;
+  }
+  if (showMargin) {
+    const margin = expectedMargin(input.salePrice!, input.purchasePrice, input.costs);
+    page.drawLine({ start: { x: MARGIN + 20, y: y + 10 }, end: { x: right - 20, y: y + 10 }, thickness: 0.5, color: rgb(0.25, 0.25, 0.27) });
+    y -= 6;
+    page.drawText(`MARGEM${input.sold ? "" : " ESTIMADA"}`.toUpperCase(), { x: MARGIN + 20, y, size: 7.5, font: semi, color: SOFT });
+    amountRight(money(margin), title, 14, WHITE);
+  }
+  y = top - boxH;
+
+  pages.forEach((p, i) => {
+    p.drawLine({ start: { x: MARGIN, y: FOOTER_Y + 22 }, end: { x: right, y: FOOTER_Y + 22 }, thickness: 0.6, color: LINE });
+    p.drawText(`${PDF_STORE.legalName} · CNPJ ${PDF_STORE.cnpj} · ${PDF_STORE.city}/${PDF_STORE.stateCode} · www.suagaragem.net`, { x: MARGIN, y: FOOTER_Y + 8, size: 8, font: semi, color: ASPHALT });
+    p.drawText("Documento interno. Não compartilhe com clientes.", { x: MARGIN, y: FOOTER_Y - 4, size: 8, font: regular, color: MUTED });
+    const n = `Página ${i + 1} de ${pages.length}`;
+    p.drawText(n, { x: right - regular.widthOfTextAtSize(n, 8), y: FOOTER_Y + 8, size: 8, font: regular, color: MUTED });
+  });
+  pdf.setTitle(`Garagem — Gastos ${clean(input.vehicle)}`);
   return pdf.save();
 }

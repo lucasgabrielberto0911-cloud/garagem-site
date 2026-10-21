@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { afterSaleMessage, simulateFinancing, suggestPrice } from "./admin-commercial";
-import { commercialPdf } from "./commercial-pdf";
-import { PDFDocument, PDFPage } from "pdf-lib";
+import { commercialPdf, expensesPdf, groupExpenseCosts } from "./commercial-pdf";
+import { PDFArray, PDFDocument, PDFPage, decodePDFRawStream, PDFRawStream } from "pdf-lib";
 import { moneyInWords } from "./money-words";
 
 test("Price calcula taxa zero, juros e rejeita valores inválidos", () => {
@@ -80,6 +80,31 @@ test("valor por extenso usa 'e' antes da última parte", () => {
   assert.equal(moneyInWords(1_500_000), "um milhão e quinhentos mil reais");
   assert.equal(moneyInWords(1_234_000), "um milhão, duzentos e trinta e quatro mil reais");
   assert.equal(moneyInWords(5000), "cinco mil reais");
+});
+
+test("Relatório de gastos segue a ordem das categorias e ordena por data só dentro de cada uma", () => {
+  const costs = [
+    { kind: "mecanica", description: "a", amount: 1, date: "2026-10-01" },
+    { kind: "despachante", description: "b", amount: 1, date: "2026-10-20" },
+    { kind: "mecanica", description: "c", amount: 1, date: "2026-09-01" },
+  ];
+  const groups = groupExpenseCosts(costs);
+  assert.deepEqual([...groups.keys()], ["despachante", "mecanica"]);
+  assert.deepEqual(groups.get("mecanica")!.map((c) => c.description), ["c", "a"]);
+});
+
+test("Relatório de gastos mantém o título do Resumo na mesma página da caixa", async () => {
+  const costs = Array.from({ length: 20 }, (_, i) => ({ kind: "mecanica", description: `Gasto ${i}`, amount: 100, date: `2026-10-${String(i + 1).padStart(2, "0")}` }));
+  for (let n = 14; n <= 22; n++) {
+    const bytes = await expensesPdf({ vehicle: "Fiat Uno 2015", plate: "ABC1D23", consigned: false, purchasePrice: 20000, salePrice: 30000, sold: false, costs: costs.slice(0, n), kindLabel: (k) => k });
+    const doc = await PDFDocument.load(bytes);
+    // Título de seção = retângulo de marca 3x13 (path "3 13 l"); a caixa do Resumo é o retângulo largo (507) da última página.
+    const last = doc.getPages().at(-1)!;
+    const streams = doc.context.lookup(last.node.normalizedEntries().Contents);
+    const refs = streams instanceof PDFArray ? streams.asArray() : [last.node.normalizedEntries().Contents];
+    const content = refs.map((r) => doc.context.lookup(r)).filter((o): o is PDFRawStream => o instanceof PDFRawStream).map((o) => Buffer.from(decodePDFRawStream(o).decode()).toString("latin1")).join("\n");
+    assert.match(content, /0 13 l\n3 13 l[\s\S]*\n507\.\d+ \d+ l/, `n=${n}: título e caixa na mesma página`);
+  }
 });
 
 test("contrato com sinal, entrada e financiamento calcula linhas e assina Garagem Motorcycle Ltda", async () => {
