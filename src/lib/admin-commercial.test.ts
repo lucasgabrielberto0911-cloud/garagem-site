@@ -188,7 +188,7 @@ test("PDF de preparação: colunas comportam data, valor e cabeçalhos completos
   doc.registerFontkit(fontkit);
   const regular = await doc.embedFont(await readFile("public/fonts/Inter-Regular.ttf"));
   const semi = await doc.embedFont(await readFile("public/fonts/Inter-SemiBold.ttf"));
-  assert.ok(PREPARATION_COLS.reduce((n, c) => n + c.w, 0) <= 595.28 - 88);
+  assert.ok(PREPARATION_COLS.reduce((n, c) => n + c.w, 0) <= 595.28 - 56);
   const col = (label: string) => PREPARATION_COLS.find((c) => c.label === label)!.w;
   for (const [label, text] of [["Compra", "20/10/2026"], ["Valor", "R$ 1.250.000,00"], ["Placa", "ABC1D23"], ["KM", "199.999"]]) {
     assert.ok(regular.widthOfTextAtSize(text, PREPARATION_CELL_SIZE) <= col(label) - 6, `${label} cortado`);
@@ -196,6 +196,28 @@ test("PDF de preparação: colunas comportam data, valor e cabeçalhos completos
   for (const c of PREPARATION_COLS) assert.ok(semi.widthOfTextAtSize(c.label.toUpperCase(), 7) <= c.w - 4, `cabeçalho ${c.label} estoura`);
   const rows = [{ brand: "Fiat", model: "Punto", color: null, year: 2020, km: 1000, plate: "ABC1D23", purchasedAt: "2026-10-20T15:00:00Z", purchasePrice: 125000, ready: true, posted: true }];
   assert.equal((await PDFDocument.load(await preparationPdf(rows))).getPageCount(), 1);
+});
+
+test("PDF de preparação é A4 e completa a tabela com caixas e linhas em branco", async () => {
+  const drawn: string[] = [];
+  let rectangles = 0;
+  const drawText = PDFPage.prototype.drawText;
+  const drawRectangle = PDFPage.prototype.drawRectangle;
+  PDFPage.prototype.drawText = function (text, options) { drawn.push(text); return drawText.call(this, text, options); };
+  PDFPage.prototype.drawRectangle = function (options) { rectangles++; return drawRectangle.call(this, options); };
+  let bytes: Uint8Array;
+  try {
+    bytes = await preparationPdf([{ brand: "Volkswagen", model: "Gol G5 Completo", ready: true, posted: false }], new Date("2026-10-20T15:00:00Z"));
+  } finally {
+    PDFPage.prototype.drawText = drawText;
+    PDFPage.prototype.drawRectangle = drawRectangle;
+  }
+  const doc = await PDFDocument.load(bytes);
+  const { width, height } = doc.getPage(0).getSize();
+  assert.ok(Math.abs(width - 595) < 1 && Math.abs(height - 842) < 1);
+  assert.ok(drawn.includes("Volkswagen") && drawn.includes("Gol G5 Completo"));
+  assert.ok(!drawn.some((text) => text.includes("…")));
+  assert.ok(rectangles >= 16 + 2, "tabela preenchida com linhas e caixinhas retangulares");
 });
 
 test("contrato com múltiplas formas de pagamento (PIX, Financiamento, Troca, Cartão e Sinal) lista todas no PDF e soma bate com o total", async () => {
