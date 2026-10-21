@@ -107,12 +107,14 @@ test("atalho legado de vendas abre a página de fluxo", async ({ page, request, 
 test.describe("fluxo único de venda", () => {
   const flowVehicleId = "ce2efluxounicovehicle";
   const duplicateCpfCustomerId = "ce2eduplicatecpf";
+  const correctedCustomerId = "ce2efluxocorrigido";
   test.beforeEach(async () => {
     await db.sale.deleteMany({ where: { vehicleId: flowVehicleId } });
     await db.commercialDocument.deleteMany({ where: { vehicleId: flowVehicleId } });
     await db.vehicleReservation.deleteMany({ where: { vehicleId: flowVehicleId } });
     await db.vehicle.deleteMany({ where: { id: flowVehicleId } });
     await db.customer.upsert({ where: { id: duplicateCpfCustomerId }, create: { id: duplicateCpfCustomerId, name: "CPF já cadastrado", phone: "27999990001", cpf: "52998224725" }, update: { cpf: "52998224725" } });
+    await db.customer.upsert({ where: { id: correctedCustomerId }, create: { id: correctedCustomerId, name: "Cliente antes E2E", phone: "27988887776" }, update: { name: "Cliente antes E2E", phone: "27988887776", address: null } });
     await db.vehicle.create({ data: { id: flowVehicleId, brand: "Toyota", model: "Corolla Fluxo E2E", year: 2021, yearModel: 2021, km: 30000, price: 60000, fuel: "Flex", transmission: "Automático", chassis: "9BWZZZ377VT004251", renavam: "12345678901" } });
   });
   test.afterEach(async () => {
@@ -121,6 +123,7 @@ test.describe("fluxo único de venda", () => {
     await db.vehicleReservation.deleteMany({ where: { vehicleId: flowVehicleId } });
     await db.vehicle.deleteMany({ where: { id: flowVehicleId } });
     await db.customer.deleteMany({ where: { id: duplicateCpfCustomerId } });
+    await db.customer.deleteMany({ where: { id: correctedCustomerId } });
   });
 
   test("emite recibo do sinal sem concluir a venda nem liberar reserva", async ({ page, request, context, baseURL }) => {
@@ -169,13 +172,14 @@ test.describe("fluxo único de venda", () => {
     expect(login.ok()).toBeTruthy();
     const cookie = login.headers()["set-cookie"].split(";")[0];
     await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
-    const reservation = await db.vehicleReservation.create({ data: { vehicleId: flowVehicleId, customerId, deposit: 60000, expiresAt: new Date(Date.now() + 86400000) } });
+    const reservation = await db.vehicleReservation.create({ data: { vehicleId: flowVehicleId, customerId: correctedCustomerId, deposit: 60000, expiresAt: new Date(Date.now() + 86400000) } });
     await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "reservado" } });
     const receipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { reservationId: reservation.id, amount: 60000, total: 67000, payment: "Sinal", payments: [{ method: "sinal", amount: 60000 }] } } });
+    await db.customer.update({ where: { id: correctedCustomerId }, data: { name: "Cliente corrigido E2E", phone: "27988887777", address: "Rua corrigida, 123" } });
 
     await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
     await page.getByRole("button", { name: "Continuar" }).click();
-    await expect(page.getByText("Cliente Comercial E2E · 27999990000")).toBeVisible();
+    await expect(page.getByText("Cliente corrigido E2E · 27988887777")).toBeVisible();
     await page.getByRole("button", { name: "Continuar" }).click();
     await expect(page.getByText("Soma informada: R$ 60.000,00 · Total: R$ 60.000,00")).toBeVisible();
     await page.getByRole("button", { name: "Continuar" }).click();
@@ -186,7 +190,29 @@ test.describe("fluxo único de venda", () => {
     await expect(page.getByRole("heading", { name: "Venda registrada" })).toBeVisible();
     expect((await db.sale.findUniqueOrThrow({ where: { vehicleId: flowVehicleId } })).salePrice).toBe(60000);
     const updatedReceipt = await db.commercialDocument.findUniqueOrThrow({ where: { id: receipt.id } });
-    expect(updatedReceipt.snapshot).toMatchObject({ amount: 60000, total: 60000, reservationId: reservation.id });
+    expect(updatedReceipt.snapshot).toMatchObject({ amount: 60000, total: 60000, reservationId: reservation.id, customer: "Cliente corrigido E2E", customerId: correctedCustomerId, phone: "27988887777", address: "Rua corrigida, 123" });
+  });
+
+  test("emite nova versão do contrato após corrigir venda e mantém documento anterior", async ({ page, request, context, baseURL }) => {
+    const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
+    expect(login.ok()).toBeTruthy();
+    const cookie = login.headers()["set-cookie"].split(";")[0];
+    await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+    const sale = await db.sale.create({ data: { vehicleId: flowVehicleId, customerId, salePrice: 60000, paymentMethod: "À vista/PIX" } });
+    await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "vendido" } });
+    const previous = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "contrato", snapshot: { saleId: sale.id, customerId, customer: "Nome antigo", total: 60000, amount: 60000, payment: "À vista/PIX", payments: [{ method: "pix", amount: 60000 }] } } });
+    await db.sale.update({ where: { id: sale.id }, data: { salePrice: 55000 } });
+
+    await page.goto(`/admin/veiculos/${flowVehicleId}?view=operacao`);
+    const documents = page.locator("details").filter({ has: page.locator("summary", { hasText: "Contratos e recibos gerados" }) });
+    await documents.locator("summary").click();
+    await expect(documents.getByRole("button", { name: "Emitir nova versão do contrato" })).toBeVisible();
+    await documents.getByRole("button", { name: "Emitir nova versão do contrato" }).click();
+
+    await expect.poll(() => db.commercialDocument.count({ where: { vehicleId: flowVehicleId, kind: "contrato" } })).toBe(2);
+    const current = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato", NOT: { id: previous.id } }, orderBy: { createdAt: "desc" } });
+    expect(current.snapshot).toMatchObject({ saleId: sale.id, customerId, total: 55000, amount: 55000, customer: "Cliente Comercial E2E" });
+    expect((await db.commercialDocument.findUniqueOrThrow({ where: { id: previous.id } })).snapshot).toMatchObject({ total: 60000, customer: "Nome antigo" });
   });
 
   test("inicia pela ficha e registra contrato pelo valor livre acima do anúncio", async ({ page, request, context, baseURL }) => {

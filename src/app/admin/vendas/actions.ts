@@ -109,7 +109,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
       if (signal) {
         const heldReceipt = reservation ? await tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["reservationId"], equals: reservation.id } }, orderBy: { createdAt: "desc" } }) : null;
         receipt = heldReceipt
-          ? await tx.commercialDocument.update({ where: { id: heldReceipt.id }, data: { snapshot: { ...(heldReceipt.snapshot as Record<string, unknown>), amount: signal.amount, total, payment: "Sinal", payments: [{ method: "sinal", amount: signal.amount }], saleId: row.id } } })
+          ? await tx.commercialDocument.update({ where: { id: heldReceipt.id }, data: { snapshot: { ...(heldReceipt.snapshot as Record<string, unknown>), customer: customer.name, customerId: customer.id, phone: customer.phone, cpf: customer.cpf ?? "", rg: customer.rg ?? "", address: customer.address ?? "", amount: signal.amount, total, payment: "Sinal", payments: [{ method: "sinal", amount: signal.amount }], saleId: row.id } } })
           : await tx.commercialDocument.create({ data: { vehicleId, kind: "recibo", snapshot: { ...snapshot, amount: signal.amount, total, payment: "Sinal", payments: [{ method: "sinal", amount: signal.amount }], saleId: row.id } } });
       }
       const contractSnapshot = { ...snapshot, signal: signal && receipt ? { ...signal, receiptId: String(receipt.number), date: receipt.createdAt.toISOString() } : undefined };
