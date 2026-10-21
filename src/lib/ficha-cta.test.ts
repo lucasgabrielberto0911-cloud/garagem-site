@@ -170,7 +170,7 @@ test("sobre e itens começam abertos; vistoria e ficha ficam fechadas", () => {
 test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () => {
   const specs: VehicleSpecRow[] = [
     { label: "Ano", value: "2014/2015" },
-    { label: "KM", value: "106.000" },
+    { label: "km", value: "106.000" },
     { label: "Câmbio", value: "Automático" },
     { label: "Tipo", value: "Carro" },
     { label: "Combustível", value: "Flex" },
@@ -264,7 +264,7 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
     "Cidade precisa vir depois de Portas na grade",
   );
   assert.doesNotMatch(fichaBody, />Ano</);
-  assert.doesNotMatch(fichaBody, />KM</);
+  assert.doesNotMatch(fichaBody, />km</);
   assert.doesNotMatch(html, /Chave reserva/);
   assert.doesNotMatch(html, /Manual do proprietário/);
   assert.doesNotMatch(html, /Vídeo sob pedido/);

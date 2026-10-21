@@ -24,7 +24,7 @@ function readSrc(rel: string) {
 
 const specs: VehicleSpecRow[] = [
   { label: "Ano", value: "2014/2015" },
-  { label: "KM", value: "106.000" },
+  { label: "km", value: "106.000" },
   { label: "Câmbio", value: "Automático" },
   { label: "Combustível", value: "Flex" },
   { label: "Cor", value: "Prata" },
