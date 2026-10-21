@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { isSameOriginRequest } from "@/lib/admin-request-origin";
 import {
   VEHICLE_DOCS_BUCKET,
   ensurePrivateDocsBucket,
@@ -11,6 +12,7 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const headers = { "Cache-Control": "private, no-store" };
 const MAX_SIZE = 12 * 1024 * 1024;
 
 const ALLOWED: Record<string, string> = {
@@ -27,22 +29,26 @@ function extensionFromName(name: string) {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json({ error: "Origem inválida." }, { status: 403, headers });
+  }
+
   const session = await getSession();
   if (!session) {
-    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+    return NextResponse.json({ error: "Não autorizado." }, { status: 401, headers });
   }
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) {
     return NextResponse.json(
       { error: "Upload indisponível: configure o Supabase no Vercel." },
-      { status: 503 },
+      { status: 503, headers },
     );
   }
 
   if (!hasSupabaseServiceRole()) {
     return NextResponse.json(
       { error: "Upload indisponível: falta SUPABASE_SERVICE_ROLE_KEY." },
-      { status: 503 },
+      { status: 503, headers },
     );
   }
 
@@ -50,13 +56,13 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file");
     if (!(file instanceof File) || file.size === 0) {
-      return NextResponse.json({ error: "Nenhum arquivo enviado." }, { status: 400 });
+      return NextResponse.json({ error: "Nenhum arquivo enviado." }, { status: 400, headers });
     }
 
     if (file.size > MAX_SIZE) {
       return NextResponse.json(
         { error: "Arquivo muito grande. Máximo 12 MB." },
-        { status: 400 },
+        { status: 400, headers },
       );
     }
 
@@ -73,7 +79,7 @@ export async function POST(request: Request) {
     if (!extension) {
       return NextResponse.json(
         { error: "Use PDF, JPG, PNG ou WEBP." },
-        { status: 400 },
+        { status: 400, headers },
       );
     }
 
@@ -109,25 +115,22 @@ export async function POST(request: Request) {
     if (error) {
       console.error("[admin/files] upload:", error);
       return NextResponse.json(
-        { error: error.message || "Falha no upload." },
-        { status: 500 },
+        { error: "Não foi possível enviar o arquivo. Tente novamente." },
+        { status: 500, headers },
       );
     }
 
     return NextResponse.json({
       url: privateFileRef(path),
       name: file.name,
-    });
+    }, { headers });
   } catch (error) {
     console.error("[admin/files]", error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Erro ao enviar arquivo.",
+        error: "Não foi possível enviar o arquivo. Tente novamente.",
       },
-      { status: 500 },
+      { status: 500, headers },
     );
   }
 }

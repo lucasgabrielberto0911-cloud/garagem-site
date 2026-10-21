@@ -82,37 +82,32 @@ const loadPublicSiteCached = unstable_cache(
   async (): Promise<SiteConfig & EditableSiteFields> => {
     const defaults = pickEditable(site as SiteConfig & EditableSiteFields);
 
-    try {
-      const row = await prisma.siteSettings.findUnique({
-        where: { id: "default" },
-      });
+    const row = await prisma.siteSettings.findUnique({
+      where: { id: "default" },
+    });
 
-      if (!row) {
-        return { ...site, ...defaults };
-      }
-
-      const salesBaseFromLegacy = parseLegacySoldBase(row.aboutSold);
-      const statsSalesBase =
-        row.statsSalesBase > 0 ? row.statsSalesBase : salesBaseFromLegacy;
-
-      return {
-        ...site,
-        region: coalesce(row.region, defaults.region),
-        email: coalesce(row.email, defaults.email),
-        address: coalesce(row.address, defaults.address),
-        hours: coalesce(row.hours, defaults.hours),
-        hoursWeekdays: coalesce(row.hoursWeekdays, defaults.hoursWeekdays),
-        hoursSaturday: coalesce(row.hoursSaturday, defaults.hoursSaturday),
-        aboutYears: coalesce(row.aboutYears, defaults.aboutYears),
-        aboutHours: coalesce(row.aboutHours, defaults.aboutHours),
-        aboutFocus: coalesce(row.aboutFocus, defaults.aboutFocus),
-        statsStockBase: row.statsStockBase ?? 0,
-        statsSalesBase,
-      };
-    } catch (error) {
-      console.error("[site-settings] falha ao ler config:", error);
+    if (!row) {
       return { ...site, ...defaults };
     }
+
+    const salesBaseFromLegacy = parseLegacySoldBase(row.aboutSold);
+    const statsSalesBase =
+      row.statsSalesBase > 0 ? row.statsSalesBase : salesBaseFromLegacy;
+
+    return {
+      ...site,
+      region: coalesce(row.region, defaults.region),
+      email: coalesce(row.email, defaults.email),
+      address: coalesce(row.address, defaults.address),
+      hours: coalesce(row.hours, defaults.hours),
+      hoursWeekdays: coalesce(row.hoursWeekdays, defaults.hoursWeekdays),
+      hoursSaturday: coalesce(row.hoursSaturday, defaults.hoursSaturday),
+      aboutYears: coalesce(row.aboutYears, defaults.aboutYears),
+      aboutHours: coalesce(row.aboutHours, defaults.aboutHours),
+      aboutFocus: coalesce(row.aboutFocus, defaults.aboutFocus),
+      statsStockBase: row.statsStockBase ?? 0,
+      statsSalesBase,
+    };
   },
   ["public-site-settings-v2"],
   // 3600: o layout público usa este cache. Um valor menor puxa o ISR de todas as rotas.
@@ -124,7 +119,13 @@ const loadPublicSiteCached = unstable_cache(
  * React cache deduplica no request; unstable_cache cobre requests seguintes.
  */
 export const getPublicSite = cache(async (): Promise<SiteConfig & EditableSiteFields> => {
-  return loadPublicSiteCached();
+  try {
+    return await loadPublicSiteCached();
+  } catch (error) {
+    console.error("[site-settings] falha ao ler config:", error);
+    const defaults = pickEditable(site as SiteConfig & EditableSiteFields);
+    return { ...site, ...defaults };
+  }
 });
 
 /** Valores efetivos dos campos editáveis (já com fallback). */

@@ -210,33 +210,28 @@ async function loadSiteSettingsRow() {
 
 const loadSiteContentCached = unstable_cache(
   async (): Promise<SiteContent> => {
-    try {
-      const row = await loadSiteSettingsRow();
+    const row = await loadSiteSettingsRow();
 
-      if (!row) {
-        return EMPTY_SITE_CONTENT;
-      }
-
-      return {
-        google: parseGoogle(
-          row.googleRating,
-          row.googleReviewCount,
-          row.googleProfileUrl,
-        ),
-        faqItems: mergeFaqItems(parseFaqItems(row.faqJson) ?? FAQ_ITEMS),
-        conditions: mergeConditions(
-          row.conditionsTitle,
-          row.conditionsIntro,
-          row.conditionsJson,
-        ),
-        founderPhotoUrl: parseFounderPhotoUrl(
-          "founderPhotoUrl" in row ? row.founderPhotoUrl : null,
-        ),
-      };
-    } catch (error) {
-      console.error("[site-content] falha ao ler conteúdo do site:", error);
+    if (!row) {
       return EMPTY_SITE_CONTENT;
     }
+
+    return {
+      google: parseGoogle(
+        row.googleRating,
+        row.googleReviewCount,
+        row.googleProfileUrl,
+      ),
+      faqItems: mergeFaqItems(parseFaqItems(row.faqJson) ?? FAQ_ITEMS),
+      conditions: mergeConditions(
+        row.conditionsTitle,
+        row.conditionsIntro,
+        row.conditionsJson,
+      ),
+      founderPhotoUrl: parseFounderPhotoUrl(
+        "founderPhotoUrl" in row ? row.founderPhotoUrl : null,
+      ),
+    };
   },
   ["public-site-content-v6"],
   // Mesmo piso do site-settings: FAQ, avaliações e condições entram no layout.
@@ -244,7 +239,12 @@ const loadSiteContentCached = unstable_cache(
 );
 
 export const getSiteContent = cache(async (): Promise<SiteContent> => {
-  return loadSiteContentCached();
+  try {
+    return await loadSiteContentCached();
+  } catch (error) {
+    console.error("[site-content] falha ao ler conteúdo do site:", error);
+    return EMPTY_SITE_CONTENT;
+  }
 });
 
 export const getGoogleReviews = cache(async () => {
