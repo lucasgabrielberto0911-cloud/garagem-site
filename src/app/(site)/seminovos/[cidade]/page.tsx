@@ -21,11 +21,12 @@ import {
   buildPageMetadata,
   faqJsonLd,
   getServiceCity,
+  itemListJsonLd,
   serviceCityJsonLd,
 } from "@/lib/seo";
 import { getCityShowcaseVehicles } from "@/lib/vehicles";
 
-export const revalidate = 600;
+export const revalidate = 3600;
 
 type Params = { cidade: string };
 
@@ -76,6 +77,14 @@ export default async function SeminovosCidadePage({
       />
       <JsonLd data={serviceCityJsonLd(city)} />
       <JsonLd data={faqJsonLd(faqs)} />
+      {featured.length > 0 && (
+        <JsonLd
+          data={itemListJsonLd(featured, {
+            name: `Seminovos em ${city.name} — ${site.name}`,
+            path,
+          })}
+        />
+      )}
 
       <Container>
         <PageHeader

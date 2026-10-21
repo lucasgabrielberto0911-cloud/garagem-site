@@ -369,14 +369,23 @@ export function vehicleJsonLd(vehicle: {
     offers.price = vehicle.price;
     offers.priceCurrency = "BRL";
   }
-  const images = vehicle.photos
-    .map((photo) => (photo.url ? absoluteUrl(publicPhotoSrc(photo.url)) : ""))
-    .filter(Boolean);
+  const images = [
+    ...new Set(
+      vehicle.photos
+        .map((photo) => (photo.url ? absoluteUrl(publicPhotoSrc(photo.url)) : ""))
+        .filter(Boolean),
+    ),
+  ];
 
   return {
     "@context": "https://schema.org",
     "@type": vehicle.category === "moto" ? "Motorcycle" : "Car",
     "@id": absoluteUrl(`${path}#veiculo`),
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": absoluteUrl(path),
+    },
+    inLanguage: "pt-BR",
     name,
     sku: vehicle.id,
     brand: { "@type": "Brand", name: brand },

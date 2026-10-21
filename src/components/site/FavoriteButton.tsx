@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { rememberFavoriteSnapshot } from "@/components/site/RememberVehicleSnapshot";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { useFavorites } from "@/lib/favorites";
 import { trackAddToWishlist, trackPwaEvent } from "@/lib/meta-pixel";
-import { enqueueIntent } from "@/lib/offline-queue";
+import {
+  enqueueIntent,
+  writeFavoriteSnapshot,
+  type FavoriteSnapshot,
+} from "@/lib/offline-queue";
 
 export function FavoriteButton({
   vehicleId,
@@ -13,6 +18,7 @@ export function FavoriteButton({
   make,
   model,
   year,
+  snapshot,
   variant = "icon",
   size = "md",
   appearance = "ghost",
@@ -24,6 +30,7 @@ export function FavoriteButton({
   make?: string;
   model?: string;
   year?: number;
+  snapshot?: FavoriteSnapshot;
   variant?: "icon" | "full";
   size?: "sm" | "md";
   /** `ghost`: ícone pequeno, alvo de 44px, sem caixa — para o card do estoque. */
@@ -34,9 +41,19 @@ export function FavoriteButton({
   const [pulse, setPulse] = useState(false);
   const active = ready && has(vehicleId);
 
+  useEffect(() => {
+    if (active && snapshot) {
+      rememberFavoriteSnapshot(snapshot, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, vehicleId]);
+
   function applyToggle() {
     try {
       const added = toggle(vehicleId);
+      if (added && snapshot) {
+        writeFavoriteSnapshot(snapshot);
+      }
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         void enqueueIntent({ type: "favorite", vehicleId, added });
         trackPwaEvent("PwaOfflineQueued", { kind: "favorite" });

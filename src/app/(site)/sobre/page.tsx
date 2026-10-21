@@ -14,14 +14,15 @@ import {
   IconShieldCheck,
   IconWhatsApp,
 } from "@/components/site/icons";
+import { JsonLd } from "@/components/JsonLd";
 import { formatNumberBR } from "@/lib/format";
-import { buildPageMetadata } from "@/lib/seo";
+import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { getSiteContent } from "@/lib/site-content";
 import { getPublicSite } from "@/lib/site-settings";
 import { getSiteStats } from "@/lib/vehicles";
 
-export const revalidate = 600;
+export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Sobre a ${site.name}`,
@@ -77,6 +78,12 @@ export default async function SobrePage() {
 
   return (
     <div className="py-12 lg:py-16">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Início", path: "/" },
+          { name: "Sobre", path: "/sobre" },
+        ])}
+      />
       <Container>
         <PageHeader
           eyebrow="Sobre nós"

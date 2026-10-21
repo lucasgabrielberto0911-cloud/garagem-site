@@ -90,9 +90,12 @@ test("cobertura do norte do ES inclui São Mateus e Sooretama sem mudar o endere
 test("Google recebe fotos públicas no domínio canônico e mantém imagens externas", () => {
   const data = vehicleJsonLd({ ...hb20, photos: [
     { url: "https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/car.webp" },
+    { url: "https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/car.webp" },
     { url: "https://cdn.example/hb20.webp" },
-  ] }) as { image: string[] };
+  ] }) as { image: string[]; mainEntityOfPage: { "@type": string; "@id": string }; inLanguage: string; url: string };
   assert.deepEqual(data.image, ["https://www.suagaragem.net/fotos/v1/original/car.webp", "https://cdn.example/hb20.webp"]);
+  assert.deepEqual(data.mainEntityOfPage, { "@type": "WebPage", "@id": data.url });
+  assert.equal(data.inLanguage, "pt-BR");
 });
 
 test("JSON-LD do veículo traz versão e não inventa prazo de validade da oferta", () => {

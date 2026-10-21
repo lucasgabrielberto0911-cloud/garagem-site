@@ -5,7 +5,7 @@ import { createContext, createElement, useCallback, useContext, useEffect, useMe
 const STORAGE_KEY = "garagem:favoritos";
 const CHANGE_EVENT = "garagem:favoritos-alterados";
 
-function read(): string[] {
+export function readFavoriteIds(): string[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -16,6 +16,8 @@ function read(): string[] {
     return [];
   }
 }
+
+const read = readFavoriteIds;
 
 function write(ids: string[]) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));

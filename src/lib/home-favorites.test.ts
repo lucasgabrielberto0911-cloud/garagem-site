@@ -86,7 +86,12 @@ test("favoritos: lista no WhatsApp com id, e vazio aponta estoque", () => {
   assert.match(list, /href="\/estoque"/);
   assert.match(list, /trackingLabel="favoritos-vazio"/);
   assert.match(readSrc("lib/favorites.ts"), /garagem:favoritos/);
-  assert.match(readSrc("components/site/FavoriteButton.tsx"), /href="\/favoritos"/);
+  const favBtn = readSrc("components/site/FavoriteButton.tsx");
+  assert.match(favBtn, /href="\/favoritos"/);
+  assert.match(favBtn, /writeFavoriteSnapshot\(snapshot\)/);
+  const rememberSnap = readSrc("components/site/RememberVehicleSnapshot.tsx");
+  assert.match(rememberSnap, /queueMicrotask\(/);
+  assert.doesNotMatch(rememberSnap, /requestIdleCallback/);
   const comparison = readSrc("components/site/FavoritesComparison.tsx");
   assert.doesNotMatch(comparison, /vehicleLocationLabel|Cidade/);
 });
