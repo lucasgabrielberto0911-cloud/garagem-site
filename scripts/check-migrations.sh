@@ -7,7 +7,9 @@ cd "$(dirname "$0")/.."
 base="${1:-}"
 erro=0
 novos=""
-[ -n "$base" ] && novos=$(git diff --name-only --diff-filter=A "$base" -- supabase/migrations)
+if [ -n "$base" ]; then
+  novos=$(git diff --name-only --diff-filter=A "$base" -- supabase/migrations) || { echo "ERRO: git diff falhou para a referência-base: $base"; exit 2; }
+fi
 anterior=""
 for f in supabase/migrations/*; do
   n=$(basename "$f")
