@@ -8,6 +8,7 @@ import { parseVehicleFormFields, parseVehicleKm } from "@/lib/admin-vehicle-fiel
 import { adminMutation } from "@/lib/admin-mutation";
 import { focusAdminError } from "@/lib/admin-form-focus";
 import { moneyInput, parseMoneyBR } from "@/lib/admin-money";
+import { vehicleDraftScope } from "@/lib/preparation";
 import {
   VehicleDraftToolbar,
   type VehicleDraftPayload,
@@ -166,8 +167,13 @@ export function VehicleForm({
   adminId,
   listingScore = null,
   initialTab = "anuncio",
+  prefill,
+  preparationId,
 }: {
   vehicle?: VehicleWithPhotos;
+  /** Dados de um carro Em preparação para pré-preencher o cadastro novo. */
+  prefill?: Partial<VehicleWithPhotos>;
+  preparationId?: string;
   mode: "create" | "edit";
   adminId: string;
   /** Nota gravada no último Salvar. O formulário nunca chama o Jev. */
@@ -175,6 +181,7 @@ export function VehicleForm({
   initialTab?: "anuncio" | "fotos";
 }) {
   const router = useRouter();
+  const init: Partial<VehicleWithPhotos> | undefined = vehicle ?? prefill;
   const [activeTab, setActiveTab] = useState<"anuncio" | "fotos">(
     initialTab === "fotos" ? "fotos" : "anuncio",
   );
@@ -207,6 +214,7 @@ export function VehicleForm({
     ),
   );
   const [photosUploading, setPhotosUploading] = useState(false);
+  const draftScope = vehicleDraftScope(vehicle?.id, preparationId);
   const [draftSaving, setDraftSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedChangesWarning(dirty);
@@ -219,7 +227,7 @@ export function VehicleForm({
         signal: controller.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          key: `vehicle:${vehicle?.id ?? "new"}`,
+          key: `vehicle:${draftScope}`,
           reserve: true,
           photoUrls: photos.flatMap((photo) =>
             [photo.url, photo.thumbnailUrl].filter(Boolean),
@@ -240,31 +248,31 @@ export function VehicleForm({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [photos, dirty, vehicle?.id]);
+  }, [photos, dirty, draftScope]);
   const changePhotos: typeof setPhotos = (next) => {
     setPhotos(next);
     setDirty(true);
   };
   const [accessories, setAccessoriesState] = useState<string[]>(() =>
-    normalizeAccessories(vehicle?.accessories ?? []),
+    normalizeAccessories(init?.accessories ?? []),
   );
   const setAccessories: typeof setAccessoriesState = (next) => {
     setAccessoriesState(next);
     setDirty(true);
   };
-  const [consigned, setConsigned] = useState(vehicle?.consigned ?? false);
+  const [consigned, setConsigned] = useState(init?.consigned ?? false);
   const [customAccessory, setCustomAccessory] = useState("");
   const [category, setCategory] = useState<VehicleCategory>(() =>
-    parseVehicleCategory(vehicle?.category),
+    parseVehicleCategory(init?.category),
   );
   const [locationCity, setLocationCity] = useState<VehicleLocationCity | "">(
     () =>
-      parseVehicleLocationCity(vehicle?.locationCity) ?? "",
+      parseVehicleLocationCity(init?.locationCity) ?? "",
   );
   const [fuel, setFuel] = useState(
-    () => vehicle?.fuel ?? defaultFuel(parseVehicleCategory(vehicle?.category)),
+    () => init?.fuel ?? (prefill ? "" : defaultFuel(parseVehicleCategory(init?.category))),
   );
-   const [transmission, setTransmission] = useState(vehicle?.transmission ?? "");
+   const [transmission, setTransmission] = useState(init?.transmission ?? "");
   const [pendingAction, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmSold, setConfirmSold] = useState(false);
@@ -374,8 +382,8 @@ export function VehicleForm({
     }
     if (state.success) {
       setErrors({});
-      void photoQueueStorage(`${adminId}:${vehicle?.id ?? "new"}`, null);
-      void fetch(`/api/admin/drafts?key=vehicle:${vehicle?.id ?? "new"}`, {
+      void photoQueueStorage(`${adminId}:${draftScope}`, null);
+      void fetch(`/api/admin/drafts?key=vehicle:${draftScope}`, {
         method: "DELETE",
       });
       // No cadastro, a guarda sai ao desmontar: limpá-la antes pode cancelar o redirecionamento pelo histórico.
@@ -383,29 +391,31 @@ export function VehicleForm({
       toast.success("Anúncio salvo com sucesso.");
     }
     if (state.success && state.id) router.push(`/admin/veiculos/${state.id}`);
-  }, [state, vehicle?.id, adminId, router]);
+  }, [state, draftScope, adminId, router]);
 
   const [values, setValues] = useState({
-    price: vehicle?.price != null ? moneyInput(vehicle.price) : "",
-    km: vehicle?.km != null ? formatNumberBR(vehicle.km) : "",
+    price: init?.price != null ? moneyInput(init.price) : "",
+    km: init?.km != null ? formatNumberBR(init.km) : "",
   });
-  const [brand, setBrand] = useState(vehicle?.brand ?? "");
-  const [model, setModel] = useState(vehicle?.model ?? "");
-  const [version, setVersion] = useState(vehicle?.version ?? "");
-  const [color, setColor] = useState(vehicle?.color ?? "");
+  const [brand, setBrand] = useState(init?.brand ?? "");
+  const [model, setModel] = useState(init?.model ?? "");
+  const [version, setVersion] = useState(init?.version ?? "");
+  const [color, setColor] = useState(init?.color ?? "");
   const [year, setYear] = useState(
-    vehicle?.year != null ? String(vehicle.year) : "",
+    init?.year != null ? String(init.year) : "",
   );
   const [yearModel, setYearModel] = useState(
-    vehicle?.yearModel != null ? String(vehicle.yearModel) : "",
+    init?.yearModel != null ? String(init.yearModel) : "",
   );
   const [plate, setPlate] = useState(
-    vehicle?.plate ? formatPlateDisplay(vehicle.plate) : "",
+    init?.plate ? formatPlateDisplay(init.plate) : "",
   );
-  const plateEnd = resolvePlateEnd(plate, vehicle?.plateEnd);
-  const [engine, setEngine] = useState(vehicle?.engine ?? "");
-  const [purchase, setPurchase] = useState("");
-  const [description, setDescription] = useState(vehicle?.description ?? "");
+  const plateEnd = resolvePlateEnd(plate, init?.plateEnd);
+  const [engine, setEngine] = useState(init?.engine ?? "");
+  const [purchase, setPurchase] = useState(
+    prefill?.purchasePrice != null ? moneyInput(prefill.purchasePrice) : "",
+  );
+  const [description, setDescription] = useState(init?.description ?? "");
   const [status, setStatus] = useState(vehicle?.status ?? "disponivel");
 
   const fuelOptions = getFuels(category);
@@ -680,8 +690,8 @@ export function VehicleForm({
         </VehicleFormPreview>
       </div>
       <VehicleDraftToolbar
-        draftKey={`vehicle:${vehicle?.id ?? "new"}`}
-        storageKey={`garagem:vehicle-draft:${adminId}:${vehicle?.id ?? "new"}`}
+        draftKey={`vehicle:${draftScope}`}
+        storageKey={`garagem:vehicle-draft:${adminId}:${draftScope}`}
         enabled={dirty && !saving && !state.success}
         published={Boolean(state.success)}
         disabled={saving || photosUploading}
@@ -848,6 +858,9 @@ export function VehicleForm({
             name="expectedUpdatedAt"
             value={state.updatedAt ?? vehicle?.updatedAt.toISOString() ?? ""}
           />
+          {preparationId ? (
+            <input type="hidden" name="preparationId" value={preparationId} />
+          ) : null}
           <input
             type="hidden"
             name="photoUrls"
@@ -1275,7 +1288,7 @@ export function VehicleForm({
             }
           >
             <VehiclePhotoManager
-              queueKey={`${adminId}:${vehicle?.id ?? "new"}`}
+              queueKey={`${adminId}:${draftScope}`}
               photos={photos}
               onChange={changePhotos}
               onUploadingChange={setPhotosUploading}
@@ -1364,6 +1377,7 @@ export function VehicleForm({
                   className={inputClass}
                   required
                 >
+                  <option value="">Selecione o combustível</option>
                   {fuel && !fuelOptions.includes(fuel) ? (
                     <option value={fuel}>{fuel}</option>
                   ) : null}

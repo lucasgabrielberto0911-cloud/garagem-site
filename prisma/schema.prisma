@@ -401,3 +401,22 @@ model AfterSaleTask {
   @@unique([saleId, kind])
   @@index([completedAt, dueAt])
 }
+
+/** Carro comprado ainda em preparação (uso interno do painel; nunca entra na vitrine). */
+model PreparationVehicle {
+  id            String    @id @default(cuid())
+  brand         String
+  model         String
+  color         String?
+  year          Int?
+  km            Int?
+  plate         String?
+  ready         Boolean   @default(false)
+  posted        Boolean   @default(false)
+  purchasedAt   DateTime?
+  purchasePrice Float?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([createdAt])
+}
