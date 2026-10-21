@@ -33,7 +33,7 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
   function submit(form: FormData) {
     // RG vazio na ficha = manter o do cadastro (o cliente é escolhido aqui, sem prefill).
     if (!String(form.get("rg") ?? "").trim()) form.delete("rg");
-    if (form.get("operation") === "document" && form.get("kind") === "contrato" && form.has("legacyPaymentMethod")) {
+    if (form.get("operation") === "document" && form.get("kind") === "contrato") {
       const signalAmount = form.get("signalEnabled") === "on" ? reservation?.deposit ?? 0 : 0;
       const selectedMethods = new Set(form.getAll("legacyPaymentMethod").map(String));
       form.set("payments", JSON.stringify([

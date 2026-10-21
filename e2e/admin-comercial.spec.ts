@@ -142,6 +142,28 @@ test.describe("fluxo único de venda", () => {
     expect(await db.sale.count({ where: { vehicleId: flowVehicleId } })).toBe(0);
   });
 
+  test("emite contrato legado pago só pelo sinal integral", async ({ page, request, context, baseURL }) => {
+    const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
+    expect(login.ok()).toBeTruthy();
+    const cookie = login.headers()["set-cookie"].split(";")[0];
+    await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+    await db.sale.create({ data: { vehicleId: flowVehicleId, customerId, salePrice: 60000, paymentMethod: "Sinal" } });
+    const reservation = await db.vehicleReservation.create({ data: { vehicleId: flowVehicleId, customerId, deposit: 60000, expiresAt: new Date(Date.now() + 86400000), status: "convertida" } });
+    await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "vendido" } });
+
+    await page.goto(`/admin/veiculos/${flowVehicleId}?view=operacao`);
+    const documents = page.locator("details").filter({ has: page.locator("summary", { hasText: "Contratos e recibos gerados" }) });
+    await documents.locator("summary").click();
+    await documents.getByRole("combobox").click();
+    await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+    await documents.locator('input[name="legacyPaymentMethod"][value="pix"]').uncheck();
+    await documents.getByRole("button", { name: "Emitir contrato desta venda" }).click();
+    await expect(documents.getByText(/Contrato nº/)).toBeVisible();
+
+    const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
+    expect(contract.snapshot).toMatchObject({ saleId: expect.any(String), reservationId: reservation.id, signal: { amount: 60000 }, payments: [{ method: "sinal", amount: 60000 }] });
+  });
+
   test("conclui venda quando sinal da reserva cobre o total negociado", async ({ page, request, context, baseURL }) => {
     const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
     expect(login.ok()).toBeTruthy();
