@@ -20,7 +20,8 @@ Produção: <https://www.suagaragem.net>.
 | `src/app/api` | Rotas: chat, estoque, upload, catálogo Meta, saúde, fotos |
 | `src/components/site`, `src/components/admin` | Componentes do site e do painel |
 | `src/lib` | Regras de negócio, consultas, SEO, chat e testes (`*.test.ts`) |
-| `prisma` | Schema, seed e SQLs aditivos (`prisma/sql`) |
+| `prisma` | Schema e seed |
+| `supabase` | Única pasta de migrations SQL (`migrations`, `rollback`, `legacy`; ver `supabase/README.md`) |
 | `e2e` | Percursos no navegador (Playwright) |
 | `docs` | Operação (`ops.md`), painel, avaliação do chat, prévias de fotos antigas |
 | `branding` | Logo e imagens originais da marca |
@@ -63,4 +64,4 @@ Veja `e2e/README.md` para os percursos cobertos.
 ## Operação
 
 Região, retenção de deploys, catálogo Meta e imagens: [`docs/ops.md`](docs/ops.md).
-SQLs que precisam ser aplicados à mão no Supabase: [`prisma/sql`](prisma/sql).
+Migrations SQL (aplicadas à mão no Supabase, validadas no CI): [`supabase`](supabase/README.md). Documentos privados: [`docs/documentos-privados.md`](docs/documentos-privados.md).

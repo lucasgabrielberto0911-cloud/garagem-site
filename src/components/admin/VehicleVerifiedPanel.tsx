@@ -74,7 +74,7 @@ export function VehicleVerifiedPanel({
       <Card title={verifiedHeading(isMoto)}>
         <p className="text-sm text-cream">
           {unavailable === "missing-table"
-            ? "Falta criar a tabela no banco. Cole prisma/sql/vehicle-verified-info.sql no SQL Editor do Supabase e recarregue esta aba."
+            ? "Falta criar a tabela no banco. Cole supabase/migrations/20261010000100_info_verificada_veiculo.sql no SQL Editor do Supabase e recarregue esta aba."
             : "Não foi possível ler as informações agora. Recarregue a página."}
         </p>
       </Card>

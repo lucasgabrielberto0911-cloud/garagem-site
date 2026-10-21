@@ -50,3 +50,38 @@ jobs:
           name: public-browser-failures
           path: test-results/
           retention-days: 7
+
+  migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/ci?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/ci?schema=public
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Nomes e rollbacks das migrations
+        run: scripts/check-migrations.sh "${{ github.event.pull_request.base.sha || github.event.before }}"
+      - run: npx prisma db push --skip-generate
+      - name: Aplica todas as migrations em ordem (2x, falha em erro)
+        run: scripts/ci-apply-migrations.sh
