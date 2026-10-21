@@ -20,7 +20,8 @@ for f in supabase/migrations/*; do
   if [ "$v" = "$anterior" ]; then echo "ERRO: versão duplicada: $v"; erro=1; fi
   anterior=$v
   if grep -qxF "$f" <<<"$novos"; then
-    if grep -qiE '^\s*(DROP (TABLE|SCHEMA)|TRUNCATE|DELETE FROM|REVOKE)|\bDROP COLUMN\b' "$f" \
+    # remove comentários "--" e normaliza quebras/espaços para a detecção não depender da formatação
+    if sed 's/--.*$//' "$f" | tr '\r\n\t' '   ' | tr -s ' ' | grep -qiE '(^|;) ?(DROP (TABLE|SCHEMA)|TRUNCATE|DELETE FROM|REVOKE)|\bDROP COLUMN\b' \
       && [ ! -f "supabase/rollback/$n" ]; then
       echo "ERRO: migration nova destrutiva sem supabase/rollback/$n"; erro=1
     elif [ ! -f "supabase/rollback/$n" ]; then
