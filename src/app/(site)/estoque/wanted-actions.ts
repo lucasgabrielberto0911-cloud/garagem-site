@@ -47,7 +47,9 @@ export async function createWantedLead(
   if (!limited.ok) {
     return {
       ok: false,
-      message: `Muitos pedidos agora. Tente de novo em ${limited.retryAfterSec}s.`,
+      message: limited.unavailable
+        ? "Serviço temporariamente indisponível. Tente novamente ou chame no WhatsApp."
+        : `Muitos pedidos agora. Tente de novo em ${limited.retryAfterSec}s.`,
     };
   }
 

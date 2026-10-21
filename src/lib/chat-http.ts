@@ -122,6 +122,7 @@ export async function handleChatPost(
     if (limited.ok && ip && deps.checkIpLimit) {
       limited = await deps.checkIpLimit(ip);
     }
+    if (limited.unavailable) throw new Error("Limitador compartilhado indisponível");
     if (!limited.ok) {
       return json(
         session,

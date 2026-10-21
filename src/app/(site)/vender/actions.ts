@@ -77,7 +77,9 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
   if (!limited.ok) {
     return {
       ok: false,
-      message: `Muitas solicitações. Tente de novo em ${limited.retryAfterSec}s ou chame no WhatsApp.`,
+      message: limited.unavailable
+        ? "Serviço temporariamente indisponível. Tente novamente ou chame no WhatsApp."
+        : `Muitas solicitações. Tente de novo em ${limited.retryAfterSec}s ou chame no WhatsApp.`,
     };
   }
 

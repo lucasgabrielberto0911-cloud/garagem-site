@@ -388,3 +388,27 @@ test("limite por IP vale mesmo com cookie novo e não roda sem IP", async () => 
   assert.equal(semIp.status, 200);
   assert.equal(ipChecked, false);
 });
+
+
+test("chat retorna 503 e não consulta estoque se limitador compartilhado falha", async (t) => {
+  t.mock.method(console, "error", () => {});
+  const response = await post({ mensagem: "Quero comprar um carro" }, {
+    checkLimit: async () => ({ ok: false, unavailable: true, retryAfterSec: 30 }),
+    loadStock: async () => { assert.fail("Não deve consultar estoque"); },
+    runTurn: async () => { assert.fail("Não deve executar turno"); },
+  });
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).code, "chat_unavailable");
+});
+
+
+test("chat também retorna 503 se o contador por IP falha", async (t) => {
+  t.mock.method(console, "error", () => {});
+  const response = await handleChatPost(new Request("http://localhost/api/chat", {
+    method: "POST", headers: { "x-forwarded-for": "127.0.0.1" }, body: "{}",
+  }), deps({
+    checkIpLimit: async () => ({ ok: false, unavailable: true, retryAfterSec: 30 }),
+    loadStock: async () => { assert.fail("Não deve consultar estoque"); },
+  }));
+  assert.equal(response.status, 503);
+});

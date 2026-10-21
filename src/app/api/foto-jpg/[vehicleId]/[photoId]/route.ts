@@ -37,9 +37,9 @@ export async function GET(
   const limited = await checkPhotoJpgRateLimit(clientKey(request));
   if (!limited.ok) {
     return NextResponse.json(
-      { error: `Muitos downloads. Tente de novo em ${limited.retryAfterSec}s.` },
+      { error: limited.unavailable ? "Serviço temporariamente indisponível." : `Muitos downloads. Tente de novo em ${limited.retryAfterSec}s.` },
       {
-        status: 429,
+        status: limited.unavailable ? 503 : 429,
         headers: {
           "Retry-After": String(limited.retryAfterSec ?? 60),
         },
