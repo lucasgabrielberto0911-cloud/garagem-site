@@ -17,6 +17,7 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => {
   await db.sale.deleteMany({ where: { vehicleId } });
+  await db.vehicleReservation.deleteMany({ where: { vehicleId } });
   await db.vehicle.deleteMany({ where: { id: vehicleId } });
   await db.customer.deleteMany({ where: { id: "ce2eadminlote4outro" } });
   await db.customer.deleteMany({ where: { id: customerId } });
@@ -255,12 +256,26 @@ test.describe("fluxo único de venda", () => {
     await documents.locator("summary").click();
     await documents.getByRole("combobox").click();
     await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
-    await documents.getByLabel("Valor · À vista/PIX").fill("62.000,00");
+    await documents.getByLabel("Valor · À vista/PIX").fill("10.000,00");
+    await documents.locator('input[name="legacyPaymentMethod"][value="troca"]').check();
+    await documents.getByLabel("Valor · Troca").fill("20.000,00");
+    await documents.getByLabel("Veículo/descrição da troca").fill("Fiat Palio 2015");
+    await documents.getByLabel("Placa da troca").fill("ODB4A12");
+    await documents.locator('input[name="legacyPaymentMethod"][value="cartao"]').check();
+    await documents.getByLabel("Valor · Cartão").fill("12.000,00");
+    await documents.getByLabel("Parcelas no cartão").fill("6");
+    await documents.locator('input[name="legacyPaymentMethod"][value="financiamento"]').check();
+    await documents.getByLabel("Valor · Financiamento").fill("20.000,00");
+    await documents.getByLabel("Parcelas do financiamento").fill("24");
     await documents.getByRole("button", { name: "Emitir contrato desta venda" }).click();
     await expect(documents.getByText(/Contrato nº/)).toBeVisible();
     expect(await db.sale.count({ where: { vehicleId: flowVehicleId } })).toBe(1);
     const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
-    expect(contract.snapshot).toMatchObject({ saleId: sale.id, signal: { amount: 5000, receiptId: String(receipt.number) }, reservationId: reservation.id, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] });
+    expect(contract.snapshot).toMatchObject({ saleId: sale.id, signal: { amount: 5000, receiptId: String(receipt.number) }, reservationId: reservation.id, payments: [
+      { method: "sinal", amount: 5000 }, { method: "pix", amount: 10000 },
+      { method: "troca", amount: 20000, tradeVehicle: "Fiat Palio 2015", tradePlate: "ODB4A12" },
+      { method: "financiamento", amount: 20000, installments: 24 }, { method: "cartao", amount: 12000, installments: 6 },
+    ] });
 
     await db.commercialDocument.deleteMany({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
     await db.vehicleReservation.deleteMany({ where: { vehicleId: flowVehicleId } });
@@ -279,7 +294,7 @@ test.describe("fluxo único de venda", () => {
     const withoutEligibleReservation = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
     expect(withoutEligibleReservation.snapshot).toMatchObject({ saleId: sale.id, reservationId: null, payments: [{ method: "pix", amount: 67000 }] });
     expect(withoutEligibleReservation.snapshot).not.toHaveProperty("signal");
-    await db.customer.delete({ where: { id: otherCustomerId } });
+    // afterAll limpa as reservas antes de excluir o cliente (FK RESTRICT).
   });
 
   test("rejeita CPF duplicado ao cadastrar e atualizar cliente e limpa RG ao trocar para novo", async ({ page, request, context, baseURL }) => {
