@@ -123,3 +123,10 @@ test("computeSalesLeaderboard: agrega por vendedor e ranqueia vendas", () => {
   assert.equal(result.leaderboard[1].seller, "Carlos");
   assert.equal(result.leaderboard[2].seller, "Geral");
 });
+
+test("hasSaleCommission: sem vendedor nem valor não mostra comissão", async () => {
+  const { hasSaleCommission } = await import("./sales-goals");
+  assert.equal(hasSaleCommission({ notes: "Pago no PIX" }), false);
+  assert.equal(hasSaleCommission({ notes: "x [vendedor: Lucas]" }), true);
+  assert.equal(hasSaleCommission({ commission: 0 }), true);
+});

@@ -2,7 +2,7 @@
 
 import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { saveCommercial } from "@/app/admin/veiculos/commercial-actions";
+import { completeCustomerData, saveCommercial } from "@/app/admin/veiculos/commercial-actions";
 import {
   CONTRACT_PAYMENT_METHODS,
   type ContractPaymentItem,
@@ -78,6 +78,8 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
   const [expiresAt, setExpiresAt] = useState("");
   const [receiptPayment, setReceiptPayment] = useState("À vista via Pix");
 
+  const [missingCpf, setMissingCpf] = useState("");
+  const [missingAddress, setMissingAddress] = useState("");
   const [conditions, setConditions] = useState("");
   const [simulation, setSimulation] = useState<ReturnType<typeof simulateFinancing> | null>(null);
   const [message, setMessage] = useState("");
@@ -298,6 +300,20 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
 
   const customerIdField = useId();
 
+  function handleCompleteCustomer() {
+    if (!pickedCustomer) return;
+    const customer = pickedCustomer;
+    startTransition(async () => {
+      const result = await completeCustomerData(customer.id, missingCpf, missingAddress);
+      setMessage(result.message);
+      if (result.ok) {
+        setPickedCustomer({ ...customer, cpf: result.cpf ?? customer.cpf, address: result.address ?? customer.address });
+        setMissingCpf("");
+        setMissingAddress("");
+      }
+    });
+  }
+
   return (
     <Card title="Contrato de compra e venda e recibo de sinal">
       <div className="space-y-4 font-body">
@@ -361,9 +377,25 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                 loadOptions={loadCustomerOptions}
                 onChange={(id, item) => {
                   setCustomerId(id);
-                  setPickedCustomer(item ? { id, name: item.name ?? item.label, phone: item.phone ?? "", cpf: item.cpf ?? null } : null);
+                  setPickedCustomer(item ? { id, name: item.name ?? item.label, phone: item.phone ?? "", cpf: item.cpf ?? null, address: item.address ?? null } : null);
                 }}
               />
+              {pickedCustomer && (!pickedCustomer.cpf || !pickedCustomer.address) ? (
+                <div className="space-y-2 rounded border border-brand-orange/40 p-2 text-xs">
+                  <p className="text-brand-orange">
+                    Faltam no cadastro: {[!pickedCustomer.cpf && "CPF", !pickedCustomer.address && "endereço"].filter(Boolean).join(" e ")}. O contrato sai com linha em branco para preencher à mão.
+                  </p>
+                  {!pickedCustomer.cpf ? (
+                    <input value={missingCpf} onChange={(e) => setMissingCpf(e.target.value)} inputMode="numeric" placeholder="CPF" aria-label="CPF do cliente" maxLength={14} className={inputClass} />
+                  ) : null}
+                  {!pickedCustomer.address ? (
+                    <input value={missingAddress} onChange={(e) => setMissingAddress(e.target.value)} placeholder="Endereço completo" aria-label="Endereço do cliente" maxLength={300} className={inputClass} />
+                  ) : null}
+                  <button type="button" onClick={handleCompleteCustomer} disabled={isPending || (!missingCpf.trim() && !missingAddress.trim())} className={btn.outline}>
+                    Salvar no cadastro
+                  </button>
+                </div>
+              ) : null}
               <a href="/admin/clientes" target="_blank" rel="noopener noreferrer" className="block text-xs text-muted underline">
                 Cadastrar novo cliente
               </a>
@@ -664,7 +696,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                   maxLength={200}
                 />
               </Field>
-              <Field label="Prazo da reserva (Brasília)">
+              <Field label="Prazo da reserva (Brasília)" hint="Com prazo, o recibo reserva o carro no site até essa data. Sem prazo, só vale se já houver reserva ou venda para o cliente.">
                 <input
                   name="expiresAt"
                   type="datetime-local"
@@ -704,7 +736,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
               onClick={() => handleGenerateDoc("recibo")}
               className={btn.outline}
             >
-              {isPending ? "Gerando…" : "Gerar recibo de sinal (PDF)"}
+              {isPending ? "Gerando…" : expiresAt ? "Gerar recibo e reservar o carro (PDF)" : "Gerar recibo de sinal (PDF)"}
             </button>
 
             {onClose ? (

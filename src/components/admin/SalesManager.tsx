@@ -37,6 +37,7 @@ import { SalesCommercialPanel } from "@/components/admin/SalesCommercialPanel";
 import { createSale, deleteSale, updateSale } from "@/app/admin/vendas/actions";
 import {
   extractSaleCommission,
+  hasSaleCommission,
   extractSaleSeller,
 } from "@/lib/sales-goals";
 import {
@@ -96,7 +97,7 @@ export type SellableVehicle = {
   costs: Array<{ amount: number }>;
 };
 
-export type CustomerOption = { id: string; name: string; phone: string; cpf?: string | null };
+export type CustomerOption = { id: string; name: string; phone: string; cpf?: string | null; address?: string | null };
 
 type SaleSource = "estoque" | "historica";
 
@@ -335,6 +336,19 @@ export function SalesManager({
     setSaleDate(todayInputValue());
     setNotes("");
     setErrors({});
+  }
+
+  function openSaleContract(sale: SaleRow) {
+    setCommercialVehicle({
+      ...sale.vehicle,
+      version: null,
+      price: sale.salePrice,
+      status: "vendido",
+    });
+    setCommercialCustomer(sale.customer ? { ...sale.customer, cpf: null } : null);
+    setOpen(false);
+    setCommercialOpen(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function startEdit(sale: SaleRow) {
@@ -757,7 +771,7 @@ export function SalesManager({
 
                 <Field
                   label="Comissão (R$)"
-                  hint="Comissão em R$ (padrão de 1,5% se vazio)."
+                  hint="Comissão em R$ (opcional)."
                 >
                   <input
                     name="commission"
@@ -1027,9 +1041,11 @@ export function SalesManager({
                         Vendedor: <span className="font-medium">{extractSaleSeller(sale)}</span>
                       </p>
                     ) : null}
-                    <p className="text-xs text-brand-orange">
-                      Comissão: {formatCurrencyBRL(extractSaleCommission(sale))}
-                    </p>
+                    {hasSaleCommission(sale) ? (
+                      <p className="text-xs text-brand-orange">
+                        Comissão: {formatCurrencyBRL(extractSaleCommission(sale))}
+                      </p>
+                    ) : null}
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       <Badge tone="success">{sale.paymentMethod}</Badge>
                       {sale.vehicle.historical ? (
@@ -1068,6 +1084,15 @@ export function SalesManager({
                       <IconPencil className="h-4 w-4" />
                       Editar
                     </button>
+                    {!sale.vehicle.historical ? (
+                      <button
+                        type="button"
+                        onClick={() => openSaleContract(sale)}
+                        className={`${mobileActionCell} border-l border-white/10`}
+                      >
+                        Contrato
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => setCancelTarget(sale)}
@@ -1160,9 +1185,11 @@ export function SalesManager({
                               {extractSaleSeller(sale)}
                             </span>
                           ) : null}
-                          <span className="text-xs text-brand-orange">
-                            {formatCurrencyBRL(extractSaleCommission(sale))}
-                          </span>
+                          {hasSaleCommission(sale) ? (
+                            <span className="text-xs text-brand-orange">
+                              {formatCurrencyBRL(extractSaleCommission(sale))}
+                            </span>
+                          ) : null}
                         </div>
                       </td>
                       <td className="px-4 py-3 font-medium">
@@ -1202,6 +1229,16 @@ export function SalesManager({
                           >
                             <IconPencil className="h-4 w-4" />
                           </button>
+                          {!sale.vehicle.historical ? (
+                            <button
+                              type="button"
+                              onClick={() => openSaleContract(sale)}
+                              className="p-2 text-xs text-cream transition hover:text-brand-light"
+                              title="Gerar contrato desta venda"
+                            >
+                              Contrato
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => setCancelTarget(sale)}

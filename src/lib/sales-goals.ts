@@ -127,6 +127,16 @@ export function extractSaleSeller(sale: {
   return "Geral";
 }
 
+/** Só há comissão a mostrar quando a venda tem vendedor ou valor informado (sem o 1,5% "fantasma"). */
+export function hasSaleCommission(sale: {
+  commission?: number | null;
+  notes?: string | null;
+}): boolean {
+  if (sale.commission != null) return true;
+  const match = sale.notes?.match(SELLER_NOTE_REGEX);
+  return Boolean(match);
+}
+
 export function extractSaleCommission(
   sale: {
     salePrice: number;

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { descriptionPriceSaveError } from "@/lib/admin-vehicle-validate";
 import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { parseMoneyBR } from "@/lib/admin-money";
+import { isValidCpf } from "@/lib/format";
 import { ENTRY_ITEMS, FINANCE_STATUSES, financingSimulationDown, signalMismatch, parseContractPaymentsJson, simulateFinancing, suggestPrice, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { expireAdminData } from "@/lib/admin-revalidate";
@@ -39,6 +40,32 @@ export async function releaseExpiredReservations() {
     await revalidatePublicStockMany(ids);
     revalidatePath("/admin/veiculos");
     for (const id of ids) revalidatePath(`/admin/veiculos/${id}`);
+  }
+}
+
+/** Completa CPF e endereço do cliente antes de gerar o contrato (só preenche o que estiver vazio). */
+export async function completeCustomerData(customerId: string, cpfRaw: string, addressRaw: string): Promise<{ ok: boolean; message: string; cpf?: string | null; address?: string | null }> {
+  const session = await getSession();
+  if (!session) return { ok: false, message: "Sessão expirada." };
+  const cpf = cpfRaw.replace(/\D/g, "");
+  const address = addressRaw.trim().slice(0, 300);
+  if (cpf && !isValidCpf(cpf)) return { ok: false, message: "CPF inválido. Confira os 11 dígitos." };
+  try {
+    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customer) return { ok: false, message: "Cliente não encontrado." };
+    const data: { cpf?: string; address?: string } = {};
+    if (cpf && !customer.cpf) {
+      const duplicate = await prisma.customer.findFirst({ where: { cpf, id: { not: customerId } }, select: { id: true } });
+      if (duplicate) return { ok: false, message: "Esse CPF já pertence a outro cliente." };
+      data.cpf = cpf;
+    }
+    if (address && !customer.address) data.address = address;
+    if (!Object.keys(data).length) return { ok: false, message: "Informe CPF ou endereço que ainda esteja em branco." };
+    const updated = await prisma.customer.update({ where: { id: customerId }, data });
+    revalidatePath("/admin/clientes");
+    return { ok: true, message: "Dados do cliente atualizados.", cpf: updated.cpf, address: updated.address };
+  } catch {
+    return { ok: false, message: "Não foi possível atualizar o cliente." };
   }
 }
 
@@ -114,7 +141,8 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
           paymentText = summarizeContractPayments(parsedPayments);
         }
         if (!amount || !paymentText || paymentText.length > 200 || text("conditions").length > 3000) throw new CommercialError("Informe valor positivo, forma de pagamento e condições de até 3.000 caracteres.");
-        if (isContract && vehicle.status === "vendido") throw new CommercialError("Veículo vendido não recebe contrato.");
+        // Vendido só recebe contrato da própria venda (mesmo cliente, ou venda sem cliente vinculado).
+        if (isContract && vehicle.status === "vendido" && !(vehicle.sale && (!vehicle.sale.customerId || vehicle.sale.customerId === customer.id))) throw new CommercialError("Veículo vendido só recebe contrato do cliente da venda.");
         let reservation = kind === "recibo" ? await tx.vehicleReservation.findFirst({ where: { vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } }) : null;
         if (kind === "recibo" && !reservation && text("expiresAt")) {
           reservation = await reserveVehicle(tx, vehicle, customer, amount, text("expiresAt"), session.adminId);
@@ -171,6 +199,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
               year: vehicle.year,
               yearModel: vehicle.yearModel,
               color: vehicle.color ?? "",
+              warranty: vehicle.warranty?.trim() || undefined,
               km: vehicle.km,
               total: isContract ? amount : (parseMoneyBR(form.get("price")) ?? parseMoneyBR(form.get("total")) ?? vehicle.price),
               plate: vehicle.plate ?? "",

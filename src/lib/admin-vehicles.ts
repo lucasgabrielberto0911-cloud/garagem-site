@@ -613,6 +613,7 @@ export type CustomerSearchRecord = {
   name: string;
   phone: string;
   cpf?: string | null;
+  address?: string | null;
 };
 
 export async function searchCustomers(options?: { q?: string; take?: number }) {
@@ -624,7 +625,7 @@ export async function searchCustomers(options?: { q?: string; take?: number }) {
     where,
     orderBy: { name: "asc" },
     take,
-    select: { id: true, name: true, phone: true, cpf: true },
+    select: { id: true, name: true, phone: true, cpf: true, address: true },
   }) as Promise<CustomerSearchRecord[]>;
 }
 

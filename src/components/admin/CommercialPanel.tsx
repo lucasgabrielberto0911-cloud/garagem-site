@@ -4,10 +4,11 @@ import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveCommercial } from "@/app/admin/veiculos/commercial-actions";
 import { ENTRY_ITEMS, FINANCE_STATUSES, simulateFinancing, suggestPrice } from "@/lib/admin-commercial";
-import { fetchDocFile, shareDocFile } from "@/lib/commercial-client";
 import { formatAdminMoney as brl, moneyInput, parseMoneyBR } from "@/lib/admin-money";
 import { whatsappUrl } from "@/lib/leads";
 import { SearchSelect } from "./SearchSelect";
+import { SalesCommercialPanel } from "./SalesCommercialPanel";
+import type { CustomerOption, SellableVehicle } from "./SalesManager";
 import { btn, Card, inputClass } from "./ui";
 
 type Props = {
@@ -17,20 +18,20 @@ type Props = {
   simulations: { id: string; customerName: string; bank: string; installment: number; months: number; rate: number; status: string }[];
   documents: { id: string; kind: string; number: number; date: string }[];
   history: { price: number; date: string }[];
+  salesVehicle: SellableVehicle;
+  reservationCustomer?: CustomerOption | null;
 };
 
 function Field({ label, name, value, type = "text", required = true }: { label: string; name: string; value?: string | number; type?: string; required?: boolean }) {
   return <label className="block space-y-1 text-sm"><span>{label}</span><input name={name} type={type} defaultValue={value} required={required} maxLength={type === "text" ? 200 : undefined} className={inputClass} /></label>;
 }
 
-export function CommercialPanel({ vehicle, reservation, assessment, simulations, documents, history }: Props) {
+export function CommercialPanel({ vehicle, reservation, assessment, simulations, documents, history, salesVehicle, reservationCustomer }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [docKind, setDocKind] = useState("proposta");
   const [message, setMessage] = useState("");
   const [margin, setMargin] = useState("2.000,00");
   const [simulation, setSimulation] = useState<ReturnType<typeof simulateFinancing> | null>(null);
-  const [lastDoc, setLastDoc] = useState<{ id: string; kind: string; number?: number; file: File | null } | null>(null);
   const suggestion = suggestPrice({ price: vehicle.price, purchase: vehicle.purchasePrice, costs: vehicle.costs, days: vehicle.days, margin: parseMoneyBR(margin) ?? 0, consigned: vehicle.consigned });
   function submit(form: FormData) {
     start(async () => {
@@ -38,13 +39,6 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
         const result = await saveCommercial(vehicle.id, form);
         setMessage(result.message);
         if (result.ok) router.refresh();
-        if (result.documentId) {
-          const kind = String(form.get("kind"));
-          // Baixa o PDF já aqui para o botão de compartilhar abrir direto no gesto do toque (iOS).
-          const file = await fetchDocFile(result.documentId, kind, result.documentNumber);
-          setLastDoc({ id: result.documentId, kind, number: result.documentNumber, file });
-          if (!file) setMessage("Operação registrada, mas o PDF não pôde ser baixado. Use “Compartilhar” para tentar de novo.");
-        }
       } catch { setMessage("Falha de conexão. Confira o registro antes de tentar novamente."); }
     });
   }
@@ -53,12 +47,6 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
     if (!el) return;
     el.open = true;
     el.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-  async function shareDoc(doc: NonNullable<typeof lastDoc>) {
-    await shareDocFile(doc, {
-      onFileDownloaded: (file) => setLastDoc({ ...doc, file }),
-      onError: (msg) => setMessage(msg),
-    });
   }
   const bar = "inline-flex min-h-11 flex-1 items-center justify-center px-2 text-center text-xs font-semibold touch-manipulation";
   return <div className="space-y-4 pb-16 font-body md:pb-0">
@@ -110,14 +98,10 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
         </form>
         <div className="mt-4 space-y-3">{simulations.map((s) => <form key={s.id} action={submit} className="space-y-2 border-t border-white/10 pt-3"><input type="hidden" name="operation" value="finance-status" /><input type="hidden" name="simulationId" value={s.id} /><p className="text-sm">{s.customerName} · {s.bank} · {s.months} × {brl(s.installment)} · {s.rate}% a.m.</p><label className="block text-sm">Situação<select name="status" className={inputClass} defaultValue={s.status}>{FINANCE_STATUSES.map((value, index) => <option key={value} value={value}>{["Simulação", "Enviada ao banco", "Aprovada", "Recusada"][index]}</option>)}</select></label><button className={btn.outline}>Atualizar acompanhamento</button></form>)}</div>
       </Card>
-      <Card id="proposta" title="Proposta e recibo em PDF" collapsed>
-        <p className="mb-3 text-sm text-muted">Documento de apoio à negociação. Confira dados e condições antes de assinar. O recibo declara valor já recebido e recebe número sequencial.</p>
-        <form action={submit} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="operation" value="document" />
-          <label className="block text-sm">Documento<select name="kind" value={docKind} onChange={(e) => setDocKind(e.target.value)} className={inputClass}><option value="proposta">Proposta</option><option value="contrato">Contrato de compra e venda</option><option value="recibo">Recibo (sinal, complemento, entrada ou quitação)</option></select></label><CustomerSelect />
-          <Field label={docKind === "recibo" ? "Valor recebido (R$)" : "Preço total do veículo (R$), antes de abater o sinal"} name="amount" /><Field label="Forma de pagamento" name="payment" />
-          <label className="block text-sm sm:col-span-2">Condições, validade e observações<textarea name="conditions" required maxLength={3000} className={inputClass} /></label><button className={btn.primary}>Gerar PDF</button>
-          {lastDoc ? <div className="flex flex-wrap gap-2 sm:col-span-2"><a className={btn.primary} href={`/api/admin/documentos/${lastDoc.id}?inline`} target="_blank" rel="noopener noreferrer">Abrir PDF</a><button type="button" className={btn.outline} onClick={() => shareDoc(lastDoc)}>Compartilhar no WhatsApp</button></div> : null}
-        </form>
+      <div id="proposta">
+        <SalesCommercialPanel initialVehicle={salesVehicle} initialCustomer={reservationCustomer} />
+      </div>
+      <Card title="Contratos e recibos gerados" collapsed>
         <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}?inline`} target="_blank" rel="noopener noreferrer">{d.kind === "recibo" ? "Recibo" : d.kind === "contrato" ? "Contrato" : "Proposta"}{d.number ? ` nº ${d.number}` : ""} · {d.date} · Abrir PDF</a></li>)}</ul>
       </Card>
     </fieldset>
