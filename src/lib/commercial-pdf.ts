@@ -29,12 +29,13 @@ export type DocumentSnapshot = {
 /**
  * DADOS DA LOJA NOS PDFs (contrato e recibo). Único lugar para trocar.
  * Para a loja de Vitória: ajuste razão social, CNPJ, endereço e cidade abaixo.
- * `address` vazio = o cabeçalho omite o endereço e o contrato imprime `ADDRESS_PLACEHOLDER` em "com sede em".
+ * `address` vazio = o cabeçalho omite o endereço; `registeredAddress` identifica a sede no contrato.
  */
 export const PDF_STORE = {
   legalName: site.legalName, // razão social
   cnpj: site.cnpj,
-  address: "", // ex.: "Av. Exemplo, 100, Centro, Vitória/ES, CEP 29000-000". PENDENTE: o Lucas passa o endereço da sede.
+  address: "", // endereço opcional do cabeçalho dos PDFs
+  registeredAddress: "Avenida Castro Alves, 48, Loja 2, Interlagos, Linhares - ES, CEP 29.903-168",
   city: SEO_LOCAL_CITY, // cidade usada em "Cidade/UF, data" acima das assinaturas
   stateCode: site.stateCode,
 } as const;
@@ -238,7 +239,7 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     };
 
     section("Das partes", 90);
-    paragraph(`VENDEDORA: ${PDF_STORE.legalName}, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${PDF_STORE.cnpj}, com sede em ${PDF_STORE.address || ADDRESS_PLACEHOLDER}, ${PDF_STORE.city}/${PDF_STORE.stateCode}, doravante denominada VENDEDORA.`, 10);
+    paragraph(`VENDEDORA: ${PDF_STORE.legalName}, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${PDF_STORE.cnpj}, com sede em ${PDF_STORE.registeredAddress || ADDRESS_PLACEHOLDER}, ${PDF_STORE.city}/${PDF_STORE.stateCode}, doravante denominada VENDEDORA.`, 10);
     y -= 4;
     paragraph(`COMPRADOR(A): ${clean(data.customer)}, portador(a) do CPF nº ${blank(data.cpf, 18)}, RG nº ${blank(data.rg, 16)}, residente e domiciliado(a) em ${blank(data.address, 44)}, telefone ${blank(data.phone, 16)}, doravante denominado(a) COMPRADOR(A).`, 10);
     y -= 4;

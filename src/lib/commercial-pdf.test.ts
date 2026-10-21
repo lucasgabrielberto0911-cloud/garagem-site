@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { PDFDocument } from "pdf-lib";
-import { commercialPdf, type DocumentSnapshot } from "./commercial-pdf";
+import { PDFDocument, PDFPage } from "pdf-lib";
+import { commercialPdf, PDF_STORE, type DocumentSnapshot } from "./commercial-pdf";
 
 const base: DocumentSnapshot = {
   customer: "Maria Souza", cpf: "52998224725", phone: "27999999999", vehicle: "Fiat Argo", plate: "ABC1D23",
@@ -23,4 +23,23 @@ test("recibo: observação longa vai para a 2ª página, sem cortar", async () =
 
 test("contrato aceita a garantia da ficha", async () => {
   assert.ok((await pages("contrato", { ...base, amount: 50000, total: 50000, warranty: "3 meses de motor e câmbio" })) >= 1);
+});
+
+test("contrato informa endereço cadastral na cláusula, sem alterar cabeçalho", async () => {
+  const drawn: { text: string; y: number }[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) {
+    drawn.push({ text, y: options.y });
+    return original.call(this, text, options);
+  };
+  try {
+    await commercialPdf("contrato", { ...base, amount: 50000, total: 50000 }, "id1", 1);
+  } finally {
+    PDFPage.prototype.drawText = original;
+  }
+
+  const clause = drawn.filter(({ y }) => y < 730).map(({ text }) => text).join(" ");
+  const header = drawn.filter(({ y }) => y >= 730).map(({ text }) => text).join(" ");
+  assert.ok(clause.includes(`com sede em ${PDF_STORE.registeredAddress}`));
+  assert.ok(!header.includes(PDF_STORE.registeredAddress));
 });
