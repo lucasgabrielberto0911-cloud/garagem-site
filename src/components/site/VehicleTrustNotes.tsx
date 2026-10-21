@@ -57,7 +57,7 @@ export function VehicleTrustNotes({
       {notes.map(({ Icon, label }) => (
         <li
           key={label}
-          className="flex items-center gap-2 text-left text-[11px] leading-snug text-cream/85"
+          className="flex items-center gap-2 text-left text-xs leading-snug text-cream/85"
         >
           <Icon className="h-3.5 w-3.5 shrink-0 text-brand-light" />
           <span className="min-w-0 [overflow-wrap:anywhere]">{label}</span>

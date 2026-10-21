@@ -16,8 +16,6 @@ export type SellLeadState = {
   fieldErrors?: Record<string, string>;
 };
 
-const MAX_VENDER_PHOTOS = 3;
-
 /** Limites por campo: o formulário é público e o banco não impõe tamanho. */
 const MAX_LENGTH = {
   name: 100,
@@ -59,7 +57,6 @@ function parsePhotoUrls(data: FormData) {
     if (!parsed.path.startsWith("vender/")) continue;
     if (unique.includes(value)) continue;
     unique.push(value);
-    if (unique.length >= MAX_VENDER_PHOTOS) break;
   }
   return unique;
 }
