@@ -4,6 +4,11 @@
 BEGIN;
 
 -- 1) RLS em toda tabela do schema public que ainda não tem + 2) sem acesso para anon/authenticated.
+-- Estado anterior das tabelas alteradas (usado só pelo rollback). Já nasce com RLS e sem grants para anon/authenticated.
+CREATE TABLE IF NOT EXISTS public._rls_hardening_backup (tabela text NOT NULL, grantee text, privilegio text);
+ALTER TABLE public._rls_hardening_backup ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public._rls_hardening_backup FROM PUBLIC;
+
 DO $$
 DECLARE
   t record;
@@ -13,8 +18,17 @@ BEGIN
     SELECT c.relname
     FROM pg_class c
     JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') AND NOT c.relrowsecurity
+    WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') AND NOT c.relrowsecurity AND c.relname <> '_rls_hardening_backup'
   LOOP
+    INSERT INTO public._rls_hardening_backup (tabela)
+    VALUES (t.relname);
+    INSERT INTO public._rls_hardening_backup (tabela, grantee, privilegio)
+    SELECT t.relname, g.rolname, a.privilege_type
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
+    CROSS JOIN LATERAL aclexplode(c.relacl) a
+    JOIN pg_roles g ON g.oid = a.grantee
+    WHERE c.relname = t.relname AND g.rolname IN ('anon', 'authenticated');
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t.relname);
     FOREACH r IN ARRAY ARRAY['anon', 'authenticated'] LOOP
       IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
@@ -37,7 +51,11 @@ BEGIN
     END LOOP;
     REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM PUBLIC;
   END IF;
+END $$;
 
+-- Bloco separado: um insufficient_privilege aqui não pode desfazer os REVOKE acima.
+DO $$
+BEGIN
   DROP POLICY IF EXISTS "Public delete veiculos" ON storage.objects;
   DROP POLICY IF EXISTS "Public update veiculos" ON storage.objects;
   DROP POLICY IF EXISTS "Public upload veiculos" ON storage.objects;
