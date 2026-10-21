@@ -362,7 +362,7 @@ export default async function HomePage() {
                   trackingLabel="home-vender"
                   message={WHATSAPP_MESSAGES.sell}
                 >
-                  Avaliar pelo WhatsApp
+                  Falar no WhatsApp
                 </WhatsAppButton>
               </SiteLeadHit>
               <ButtonLink href="/vender" size="lg" variant="outline">

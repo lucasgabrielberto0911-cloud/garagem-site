@@ -10,7 +10,7 @@
  * Tom de consultor: o que a loja confere, sem aviso de documento oficial.
  */
 export const STORE_INSPECTION_BODY =
-  "Antes de anunciar, a gente vistoria cada carro na loja. Confere óleo, fluidos e a condição geral — é assim com todo seminovo do estoque.";
+  "Antes de anunciar, a gente vistoria cada carro. Confere óleo, fluidos e a condição geral — é assim com todo seminovo do estoque.";
 
 const LEGACY_STORE_INSPECTION =
   /checagem interna de proced[eê]ncia/i;

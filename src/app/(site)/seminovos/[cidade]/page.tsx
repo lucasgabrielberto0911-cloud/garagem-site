@@ -155,7 +155,7 @@ export default async function SeminovosCidadePage({
                   trackingLabel="seminovos"
                   message={stock.whatsappMessage}
                 >
-                  Pedir vídeo ou visita
+                  Falar no WhatsApp
                 </WhatsAppButton>
               </SiteLeadHit>
               <ButtonLink href="/estoque" variant="outline">
