@@ -47,6 +47,14 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
   const [customerId, setCustomerId] = useState(initialCustomer?.id ?? "");
   const [pickedCustomer, setPickedCustomer] = useState<CustomerOption | null>(initialCustomer ?? null);
 
+  // Sincroniza a reserva vinda do servidor sem remontar o painel (preserva documento gerado e campos).
+  const [syncedCustomerId, setSyncedCustomerId] = useState(initialCustomer?.id ?? "");
+  if ((initialCustomer?.id ?? "") !== syncedCustomerId) {
+    setSyncedCustomerId(initialCustomer?.id ?? "");
+    setCustomerId(initialCustomer?.id ?? "");
+    setPickedCustomer(initialCustomer ?? null);
+  }
+
   const initialPriceStr = initialVehicle?.price ? moneyInput(initialVehicle.price) : "";
   const [price, setPrice] = useState(initialPriceStr);
 

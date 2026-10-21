@@ -11,6 +11,7 @@ import { ENTRY_ITEMS, FINANCE_STATUSES, financingSimulationDown, signalMismatch,
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { revalidatePublicStock, revalidatePublicStockMany } from "@/lib/public-stock-revalidate";
+import { completeCustomerFields } from "@/lib/admin-customer-complete";
 import { expireReservations } from "@/lib/reservations";
 
 class CommercialError extends Error {}
@@ -51,19 +52,10 @@ export async function completeCustomerData(customerId: string, cpfRaw: string, a
   const address = addressRaw.trim().slice(0, 300);
   if (cpf && !isValidCpf(cpf)) return { ok: false, message: "CPF inválido. Confira os 11 dígitos." };
   try {
-    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
-    if (!customer) return { ok: false, message: "Cliente não encontrado." };
-    const data: { cpf?: string; address?: string } = {};
-    if (cpf && !customer.cpf) {
-      const duplicate = await prisma.customer.findFirst({ where: { cpf, id: { not: customerId } }, select: { id: true } });
-      if (duplicate) return { ok: false, message: "Esse CPF já pertence a outro cliente." };
-      data.cpf = cpf;
-    }
-    if (address && !customer.address) data.address = address;
-    if (!Object.keys(data).length) return { ok: false, message: "Informe CPF ou endereço que ainda esteja em branco." };
-    const updated = await prisma.customer.update({ where: { id: customerId }, data });
+    const result = await prisma.$transaction((tx) => completeCustomerFields(tx, customerId, cpf, address));
+    if (!result.ok) return result;
     revalidatePath("/admin/clientes");
-    return { ok: true, message: "Dados do cliente atualizados.", cpf: updated.cpf, address: updated.address };
+    return { ok: true, message: "Dados do cliente atualizados.", cpf: result.cpf, address: result.address };
   } catch {
     return { ok: false, message: "Não foi possível atualizar o cliente." };
   }

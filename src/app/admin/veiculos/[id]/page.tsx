@@ -202,7 +202,7 @@ export default async function EditVehiclePage({
           documents={commercial[3].map((d) => ({ id: d.id, kind: d.kind, number: d.number, date: adminDate(d.createdAt) }))}
           history={commercial[4].map((h) => ({ price: h.price, date: adminDate(h.createdAt) }))}
           salesVehicle={{ id, brand: vehicle.brand, model: vehicle.model, version: vehicle.version, yearModel: vehicle.yearModel, plate: vehicle.plate, price: vehicle.price, status: vehicle.status, purchasePrice: vehicle.purchasePrice, consigned: vehicle.consigned, costs }}
-          reservationCustomer={commercial[0] ? { id: commercial[0].customer.id, name: commercial[0].customer.name, phone: commercial[0].customer.phone, cpf: commercial[0].customer.cpf, address: commercial[0].customer.address } : null}
+          reservationCustomer={commercial[0] && commercial[0].status === "ativa" && commercial[0].expiresAt > new Date() ? { id: commercial[0].customer.id, name: commercial[0].customer.name, phone: commercial[0].customer.phone, cpf: commercial[0].customer.cpf, address: commercial[0].customer.address } : null}
         />
       ) : view === "verificado" && verified ? (
         <VehicleTabsLoader view="verificado" panelProps={{
