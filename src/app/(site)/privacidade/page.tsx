@@ -39,8 +39,7 @@ export default function PrivacidadePage() {
                 quilometragem e observações) quando você preenche o formulário de
                 avaliação da página Vender/Trocar. No estoque e na ficha, se você
                 não encontrou o modelo, o formulário pede o modelo, seu nome,
-                e-mail, telefone e, se quiser, faixas de ano, preço e
-                quilometragem. No assistente, nome e telefone só entram se você
+                telefone e, se quiser, o preço máximo. No assistente, nome e telefone só entram se você
                 pedir contato — o texto da conversa não vai para analytics.
               </Item>
               <Item>

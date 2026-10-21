@@ -51,7 +51,7 @@ export function Testimonials({ items }: { items: TestimonialItem[] }) {
           Depoimentos em atualização
         </p>
         <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
-          Publique avaliações no painel para elas aparecerem aqui.
+          Em breve, avaliações de clientes aparecem aqui. Fale com a gente enquanto isso.
         </p>
         <WhatsAppButton
           className="mt-7"
