@@ -45,7 +45,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
   const customerId = typeof input.customerId === "string" ? input.customerId : "";
   const customerName = String(input.customerName ?? "").trim();
   const customerPhone = digitsOnly(input.customerPhone ?? "");
-  if ((!customerId || customerId === "novo") && (!customerName || customerPhone.length < 10)) return { ok: false, message: "Informe nome e telefone válidos do comprador." };
+  if (!customerName || customerPhone.length < 10) return { ok: false, message: "Informe nome e telefone válidos do comprador." };
   const sellerName = String(input.seller ?? "").trim();
   const commission = input.commission == null ? null : Number(input.commission);
   if (commission != null && (!Number.isFinite(commission) || commission < 0)) return { ok: false, message: "Comissão inválida." };
@@ -91,12 +91,14 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
         if (await tx.customer.findFirst({ where: { phone: customerPhone } })) throw new Error("DUPLICATE_CUSTOMER");
         customer = await tx.customer.create({ data: { name: customerName, phone: customerPhone, cpf: cpf || null, rg: identifiers.rg || null, address: String(input.address ?? "").trim() || null } });
       } else {
-        customer = await tx.customer.update({ where: { id: customer.id }, data: { cpf: cpf || customer.cpf, rg: identifiers.rg || customer.rg, address: String(input.address ?? customer.address ?? "").trim() || null } });
+        await lockCustomerIdentity(tx, customerPhone);
+        if (await tx.customer.findFirst({ where: { phone: customerPhone, NOT: { id: customer.id } } })) throw new Error("DUPLICATE_CUSTOMER");
+        customer = await tx.customer.update({ where: { id: customer.id }, data: { name: customerName, phone: customerPhone, cpf: cpf || customer.cpf, rg: identifiers.rg || customer.rg, address: String(input.address ?? customer.address ?? "").trim() || null } });
       }
       const heldSignal = reservation ? Number(reservation.deposit) : 0;
       const signalPayment = payments.find((p: { method: string }) => p.method === "sinal");
       const signalEnabled = input.signal === true;
-      if (reservation && !signalEnabled) throw new Error("RESERVATION_SIGNAL_REQUIRED");
+      if (reservation && heldSignal > 0 && !signalEnabled) throw new Error("RESERVATION_SIGNAL_REQUIRED");
       const signal = signalEnabled ? { amount: heldSignal || Number(signalPayment?.amount ?? input.signalAmount ?? 0), reservationId: reservation?.id } : undefined;
       if (signal && (signal.amount <= 0 || signal.amount >= total)) throw new Error("INVALID_SIGNAL");
       if (signalMismatch(payments, signal?.amount ?? 0) || (!signal && signalPayment?.amount)) throw new Error("INVALID_SIGNAL");

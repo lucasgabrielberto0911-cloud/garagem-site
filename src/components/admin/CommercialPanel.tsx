@@ -49,7 +49,6 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
   return <div className="space-y-4 pb-16 font-body md:pb-0">
     <nav aria-label="Ações rápidas" className="fixed inset-x-0 bottom-admin-nav z-30 flex gap-2 border-t border-white/10 bg-asphalt p-2 md:hidden">
       <button type="button" className={`${btn.primary} ${bar}`} onClick={() => openCard("reserva")} disabled={vehicle.status !== "disponivel"}>Reservar</button>
-      <button type="button" className={`${btn.outline} ${bar}`} onClick={() => openCard("proposta")}>Gerar proposta</button>
       {reservation ? <a className={`${btn.outline} ${bar}`} href={whatsappUrl(reservation.phone, `Olá, ${reservation.customer.split(" ")[0]}! Aqui é da Garagem.`)} target="_blank" rel="noopener noreferrer">WhatsApp do cliente</a> : null}
     </nav>
     <p role="status" aria-live="polite" className="text-sm">{pending ? "Salvando…" : message}</p>
