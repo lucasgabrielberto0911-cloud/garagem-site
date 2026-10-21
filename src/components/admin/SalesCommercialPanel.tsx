@@ -80,7 +80,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
   const [downPayment, setDownPayment] = useState("");
   const [months, setMonths] = useState("48");
   const [financedAmount, setFinancedAmount] = useState("");
-  const [rate, setRate] = useState("1,50");
+  const [installmentAmount, setInstallmentAmount] = useState("");
 
   // Troca (carro na troca)
   const [tradeVehicle, setTradeVehicle] = useState("");
@@ -148,6 +148,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
           bank: bank.trim() || undefined,
           downPayment: down > 0 ? down : undefined,
           installments: Number.isInteger(inst) && inst > 0 ? inst : undefined,
+          installmentAmount: parseMoneyBR(installmentAmount) ?? undefined,
         });
       } else if (method === "troca") {
         items.push({
@@ -203,16 +204,15 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
   function handleCalculateSimulation() {
     const p = parseMoneyBR(price) ?? 0;
     const fin = parseMoneyBR(financedAmount) ?? 0;
-    const d = fin > 0 && fin < p ? moneyDifference(p, fin) : (parseMoneyBR(downPayment) ?? parseMoneyBR(deposit) ?? 0);
-    const r = Number(rate.replace(",", "."));
     const m = Number(months);
     if (!p || p <= 0 || !m || m <= 0) {
       setMessage("Informe o valor do veículo e o prazo em meses para simular.");
       return;
     }
     try {
-      const sim = simulateFinancing(p, d, r, m);
+      const sim = simulateFinancing(fin, 0, 0, m);
       setSimulation(sim);
+      setInstallmentAmount(moneyInput(sim.installment));
       setMessage("");
     } catch (error) {
       setMessage((error as Error).message);
@@ -261,6 +261,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
       form.set("amount", price);
       form.set("payment", summary);
       form.set("payments", JSON.stringify(activeItems));
+      if (selectedMethods.includes("sinal")) form.set("signalEnabled", "on");
 
       if (selectedMethods.includes("sinal") && deposit) {
         form.set("deposit", deposit);
@@ -272,8 +273,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
           form.set("downPayment", moneyInput(sinalVal + downVal));
         }
         if (financedAmount) form.set("financed", financedAmount);
-        if (bank.trim()) form.set("bank", bank.trim());
-        if (rate) form.set("rate", rate);
+        if (installmentAmount) form.set("installmentAmount", installmentAmount);
         if (months) form.set("months", months);
       }
     } else {
@@ -567,18 +567,18 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                       </button>
                       {simulation ? (
                         <span className="text-xs text-cream">
-                          <strong>{formatCurrencyBRL(simulation.installment)}</strong> ({months}x) · Juros: {formatCurrencyBRL(simulation.interest)}
+                          <strong>{formatCurrencyBRL(simulation.installment)}</strong> ({months}x)
                         </span>
                       ) : null}
                     </div>
                   </div>
-                  <div className="grid gap-2 sm:grid-cols-5">
-                    <Field label="Banco / Financeira" required>
+                  <div className="grid gap-2 sm:grid-cols-4">
+                    <Field label="Banco / instituição">
                       <input
                         name="bank"
                         value={bank}
                         onChange={(e) => setBank(e.target.value)}
-                        placeholder="Ex.: Santander, BV"
+                        placeholder="Ex.: Santander"
                         className={inputClass}
                         maxLength={160}
                       />
@@ -604,6 +604,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                         onChange={(e) => {
                           setFinancedAmount(moneyTyping(e.target.value));
                           setSimulation(null);
+                          setInstallmentAmount("");
                         }}
                         placeholder="0,00"
                         className={inputClass}
@@ -619,20 +620,19 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                         onChange={(e) => {
                           setMonths(e.target.value);
                           setSimulation(null);
+                          setInstallmentAmount("");
                         }}
                         placeholder="48"
                         className={inputClass}
                       />
                     </Field>
-                    <Field label="Taxa a.m. (%)">
+                    <Field label="Valor da parcela (R$)">
                       <input
-                        name="rate"
-                        value={rate}
-                        onChange={(e) => {
-                          setRate(e.target.value);
-                          setSimulation(null);
-                        }}
-                        placeholder="1,50"
+                        name="installmentAmount"
+                        inputMode="decimal"
+                        value={installmentAmount}
+                        onChange={(e) => setInstallmentAmount(moneyTyping(e.target.value))}
+                        placeholder="0,00"
                         className={inputClass}
                       />
                     </Field>

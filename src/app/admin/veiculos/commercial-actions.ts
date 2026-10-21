@@ -153,11 +153,12 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
           const held = await tx.vehicleReservation.findFirst({ where: { vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } });
           const receipt = held ? await tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["reservationId"], equals: held.id } }, orderBy: { createdAt: "desc" } }) : null;
           const sinalItem = parsedPayments?.find((p) => p.method === "sinal");
-          if (held) {
+          const signalEnabled = text("signalEnabled") === "on";
+          if (signalEnabled && held) {
             signal = { amount: Number(held.deposit), receiptId: receipt ? String(receipt.number) : undefined, date: receipt?.createdAt.toISOString() };
-          } else if (sinalItem && sinalItem.amount > 0) {
+          } else if (signalEnabled && sinalItem && sinalItem.amount > 0) {
             signal = { amount: sinalItem.amount, date: sinalItem.signalDate };
-          } else {
+          } else if (signalEnabled) {
             const dep = parseMoneyBR(form.get("deposit"));
             if (dep && dep > 0) signal = { amount: dep };
           }

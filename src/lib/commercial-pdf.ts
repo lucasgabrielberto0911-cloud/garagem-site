@@ -298,7 +298,7 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     });
     y -= 8;
     paragraph(`Forma de pagamento${hasDetailedPayments ? "" : " do saldo"}: ${clean(data.payment)}.`, 10);
-    paragraph("§ 1º O sinal tem natureza de garantia (arras): reserva o veículo ao(à) COMPRADOR(A) e, concretizada a compra, é integralmente abatido do preço. § 2º Em caso de financiamento, a venda fica condicionada à aprovação do crédito; se negado, as partes poderão ajustar outra forma de pagamento ou rescindir o contrato.", 10);
+    paragraph(`${signal > 0 ? "§ 1º O sinal tem natureza de garantia (arras): reserva o veículo ao(à) COMPRADOR(A) e, concretizada a compra, é integralmente abatido do preço. " : ""}§ ${signal > 0 ? "2º" : "1º"} Em caso de financiamento, a venda fica condicionada à aprovação do crédito; se negado, as partes poderão ajustar outra forma de pagamento ou rescindir o contrato.`, 10);
 
     clause("Cláusula 3ª — Da entrega", [
       `A entrega do veículo ocorrerá em até ${days} (${days === 1 ? "um" : days === 5 ? "cinco" : String(days)}) dias úteis após a compensação integral dos valores devidos e a assinatura deste contrato, nas dependências da VENDEDORA, mediante termo de entrega, com o veículo limpo e acompanhado das chaves e do manual, quando existirem.`,
@@ -318,12 +318,13 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
       ...(data.warranty?.trim() ? [`Garantia oferecida para este veículo, conforme anúncio: ${clean(data.warranty)}.`] : []),
       "Aplica-se a garantia legal prevista no Código de Defesa do Consumidor (Lei nº 8.078/1990), de 90 (noventa) dias para vícios de fácil constatação e ocultos em veículos usados, contados da entrega. A garantia não cobre desgaste natural de peças, mau uso, acidentes, modificações feitas por terceiros ou falta de manutenção.",
     ]);
-    clause("Cláusula 8ª — Da desistência e do sinal", [
+    if (signal > 0) clause("Cláusula 8ª — Da desistência e do sinal", [
       "O sinal pago é garantia (arras) destinada a reservar o veículo, que deixa de ser oferecido a terceiros enquanto durar a reserva. Concretizada a compra, o sinal é abatido do preço. Em caso de desistência do(a) COMPRADOR(A), o sinal não será restituído e ficará com a VENDEDORA.",
       "Em caso de desistência da VENDEDORA, esta restituirá o sinal ao(à) COMPRADOR(A) nos termos da lei, sem prejuízo das demais consequências legais cabíveis.",
     ]);
-    if (data.conditions.trim()) clause("Cláusula 9ª — Das condições adicionais", [clean(data.conditions)]);
-    clause(`Cláusula ${data.conditions.trim() ? "10ª" : "9ª"} — Do foro`, [
+    const nextClause = signal > 0 ? 9 : 8;
+    if (data.conditions.trim()) clause(`Cláusula ${nextClause}ª — Das condições adicionais`, [clean(data.conditions)]);
+    clause(`Cláusula ${nextClause + (data.conditions.trim() ? 1 : 0)}ª — Do foro`, [
       `As partes elegem o foro da comarca de ${PDF_STORE.city}/${PDF_STORE.stateCode} para dirimir quaisquer controvérsias deste contrato, ressalvado o foro do domicílio do consumidor, quando aplicável. E, por estarem justas e contratadas, assinam este instrumento em 2 (duas) vias de igual teor, na presença de 2 (duas) testemunhas.`,
     ]);
 
