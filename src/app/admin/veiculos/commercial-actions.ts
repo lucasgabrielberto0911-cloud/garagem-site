@@ -159,7 +159,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
             signal = { amount: Number(held.deposit), receiptId: receipt ? String(receipt.number) : undefined, date: receipt?.createdAt.toISOString() };
             signalReservationId = held.id;
           } else if (signalEnabled && sinalItem && sinalItem.amount > 0) {
-            signal = { amount: sinalItem.amount, date: sinalItem.signalDate };
+            signal = { amount: sinalItem.amount, date: sinalItem.signalDate, receiptId: text("legacySignalReceiptId") || undefined };
           } else if (signalEnabled) {
             const dep = parseMoneyBR(form.get("deposit"));
             if (dep && dep > 0) signal = { amount: dep };

@@ -111,7 +111,7 @@ export default async function EditVehiclePage({
     prisma.vehicleReservation.findFirst({ where: { vehicleId: id, status: { in: ["ativa", "convertida"] }, ...(vehicle.sale?.customerId ? { customerId: vehicle.sale.customerId } : {}) }, orderBy: { createdAt: "desc" }, include: { customer: { select: { id: true, name: true, phone: true, cpf: true, rg: true, address: true } } } }),
     prisma.vehicleAssessment.findUnique({ where: { vehicleId: id } }),
     prisma.financeSimulation.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 20 }),
-    prisma.commercialDocument.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, kind: true, number: true, createdAt: true } }),
+    prisma.commercialDocument.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, kind: true, number: true, createdAt: true, snapshot: true } }),
     prisma.vehiclePriceHistory.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 10 }),
   ]) : null;
 
@@ -204,7 +204,7 @@ export default async function EditVehiclePage({
           reservation={commercial[0] ? { customerId: commercial[0].customer.id, customer: commercial[0].customer.name, phone: commercial[0].customer.phone, deposit: Number(commercial[0].deposit), expiresAt: commercial[0].expiresAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }), deadline: commercial[0].status === "ativa" ? reservationDeadline(commercial[0].expiresAt) : null, status: commercial[0].status } : null}
           assessment={commercial[1] ? { items: commercial[1].items as Prisma.JsonArray as { label: string; status: string }[], notes: commercial[1].notes, offer: Number(commercial[1].offer), approved: commercial[1].approved } : null}
           simulations={commercial[2].map((s) => ({ id: s.id, customerName: s.customerName, bank: s.bank, installment: Number(s.installment), months: s.months, rate: Number(s.rate), status: s.status }))}
-          documents={commercial[3].map((d) => ({ id: d.id, kind: d.kind, number: d.number, date: adminDate(d.createdAt) }))}
+          documents={commercial[3].map((d) => ({ id: d.id, kind: d.kind, number: d.number, date: adminDate(d.createdAt), signal: (d.snapshot as { signal?: { amount?: number; receiptId?: string; date?: string } } | null)?.signal }))}
           history={commercial[4].map((h) => ({ price: h.price, date: adminDate(h.createdAt) }))}
         /> : null}
       {view === "verificado" && verified ? (

@@ -126,6 +126,32 @@ test.describe("fluxo único de venda", () => {
     await db.customer.deleteMany({ where: { id: correctedCustomerId } });
   });
 
+  test("permite sinal posterior em reserva criada sem depósito", async ({ page, request, context, baseURL }) => {
+    const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
+    expect(login.ok()).toBeTruthy();
+    const cookie = login.headers()["set-cookie"].split(";")[0];
+    await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+    await db.vehicleReservation.create({ data: { vehicleId: flowVehicleId, customerId, deposit: 0, expiresAt: new Date(Date.now() + 86400000) } });
+    await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "reservado" } });
+
+    await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await page.getByLabel("Valor total negociado").fill("60.000,00");
+    await page.getByRole("button", { name: "Houve sinal" }).click();
+    await page.getByLabel("Valor do sinal").fill("5.000,00");
+    await page.getByRole("button", { name: /À vista\/PIX/ }).click();
+    await page.getByLabel("Valor", { exact: true }).fill("55.000,00");
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await page.getByLabel("Responsável comercial").fill("Vendedor E2E");
+    await page.getByLabel("Comissão (R$)").fill("0");
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
+    await expect(page.getByRole("heading", { name: "Venda registrada" })).toBeVisible();
+    const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
+    expect(contract.snapshot).toMatchObject({ signal: { amount: 5000 }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 55000 }] });
+  });
+
   test("emite recibo do sinal sem concluir a venda nem liberar reserva", async ({ page, request, context, baseURL }) => {
     const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
     expect(login.ok()).toBeTruthy();
@@ -369,6 +395,16 @@ test.describe("fluxo único de venda", () => {
     const withoutEligibleReservation = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
     expect(withoutEligibleReservation.snapshot).toMatchObject({ saleId: sale.id, reservationId: null, payments: [{ method: "pix", amount: 67000 }] });
     expect(withoutEligibleReservation.snapshot).not.toHaveProperty("signal");
+
+    const manualReceipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { amount: 5000, total: 67000, payment: "Sinal", payments: [{ method: "sinal", amount: 5000 }] } } });
+    await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "contrato", snapshot: { saleId: sale.id, customerId, total: 67000, signal: { amount: 5000, receiptId: String(manualReceipt.number), date: new Date().toISOString() }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] } } });
+    await page.reload();
+    await documents.locator("summary").click();
+    await expect(documents.getByLabel("Sinal já recebido (R$)")).toHaveValue("5.000,00");
+    await documents.getByRole("button", { name: "Emitir nova versão do contrato" }).click();
+    await expect(documents.getByText(/Contrato nº/)).toBeVisible();
+    const reissued = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" }, orderBy: { createdAt: "desc" } });
+    expect(reissued.snapshot).toMatchObject({ signal: { amount: 5000, receiptId: String(manualReceipt.number) }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] });
     // afterAll limpa as reservas antes de excluir o cliente (FK RESTRICT).
   });
 
