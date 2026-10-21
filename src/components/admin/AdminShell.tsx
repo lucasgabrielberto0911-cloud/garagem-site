@@ -30,6 +30,7 @@ import type { ReactNode } from "react";
 type NavItem = {
   href: string;
   label: string;
+  group: "Hoje" | "Estoque" | "Relacionamento" | "Site";
   Icon: (props: { className?: string }) => ReactNode;
   badgeKey?: "leads" | "agenda";
   match: (pathname: string) => boolean;
@@ -39,18 +40,21 @@ const NAV: NavItem[] = [
   {
     href: "/admin",
     label: "Dashboard",
+    group: "Hoje",
     Icon: IconDashboard,
     match: (pathname) => pathname === "/admin",
   },
   {
     href: "/admin/veiculos",
     label: "Veículos",
+    group: "Estoque",
     Icon: IconCar,
     match: (pathname) => pathname.startsWith("/admin/veiculos"),
   },
   {
     href: "/admin/leads",
     label: "Leads",
+    group: "Relacionamento",
     Icon: IconInbox,
     badgeKey: "leads",
     match: (pathname) => pathname.startsWith("/admin/leads"),
@@ -58,38 +62,44 @@ const NAV: NavItem[] = [
   {
     href: "/admin/agenda",
     label: "Agenda",
+    group: "Hoje",
     Icon: IconCalendar,
     badgeKey: "agenda",
     match: (pathname) => pathname.startsWith("/admin/agenda"),
   },
   {
-    href: "/admin/vendas",
-    label: "Vendas",
-    Icon: IconCash,
-    match: (pathname) => pathname.startsWith("/admin/vendas"),
-  },
-  {
     href: "/admin/clientes",
     label: "Clientes",
+    group: "Relacionamento",
     Icon: IconUsers,
     match: (pathname) => pathname.startsWith("/admin/clientes"),
   },
   {
+    href: "/admin/vendas",
+    label: "Vendas",
+    group: "Relacionamento",
+    Icon: IconCash,
+    match: (pathname) => pathname.startsWith("/admin/vendas"),
+  },
+  {
     href: "/admin/depoimentos",
     label: "Depoimentos",
+    group: "Site",
     Icon: IconQuote,
     match: (pathname) => pathname.startsWith("/admin/depoimentos"),
   },
   {
     href: "/admin/site",
     label: "Dados do site",
+    group: "Site",
     Icon: IconMapPin,
     match: (pathname) => pathname.startsWith("/admin/site"),
   },
 ];
 
-const BOTTOM_NAV = NAV.slice(0, 4);
-const DRAWER_ONLY = [...NAV.slice(4).map((item) => item.href), "/admin/conta"];
+const NAV_GROUPS: NavItem["group"][] = ["Hoje", "Estoque", "Relacionamento", "Site"];
+const BOTTOM_NAV = NAV.slice(0, 3);
+const DRAWER_ONLY = [...NAV.slice(3).map((item) => item.href), "/admin/conta"];
 
 export function AdminShell({
   children,
@@ -181,48 +191,63 @@ export function AdminShell({
     }
   }
 
+  const moreActive = menuOpen || DRAWER_ONLY.some((href) => pathname.startsWith(href));
+
   const sidebar = (
     <>
       <nav
-        className="flex flex-1 flex-col gap-1 p-3"
+        className="flex flex-1 flex-col gap-4 p-3 font-display"
         aria-label="Menu do painel"
       >
-        {NAV.map(({ href, label, Icon, badgeKey, match }) => {
-          const active = match(pathname);
-          const badge = (badgeKey === "leads" ? newLeads : badgeKey === "agenda" ? agendaDue : 0) || null;
+        {NAV_GROUPS.map((group) => (
+          <div key={group} role="group" aria-label={group}>
+            <h2 className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">
+              {group}
+            </h2>
+            {NAV.filter((item) => item.group === group).map(({ href, label, Icon, badgeKey, match }) => {
+              const active = match(pathname);
+              const badge = (badgeKey === "leads" ? newLeads : badgeKey === "agenda" ? agendaDue : 0) || null;
 
-          return (
-            <Link
-              prefetch={false}
-              key={href}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={`flex min-h-[48px] items-center gap-3 px-3 py-2.5 text-sm font-medium transition touch-manipulation ${
-                active
-                  ? "bg-brand text-white"
-                  : "text-muted hover:bg-white/5 hover:text-cream"
-              }`}
-            >
-              <Icon className="h-[18px] w-[18px] shrink-0" />
-              <span className="flex-1">{label}</span>
-              {badge ? (
-                <span
-                  className={`min-w-[22px] px-1.5 py-0.5 text-center font-display text-xs font-bold ${
-                    active ? "bg-cream/20 text-cream" : "bg-brand text-white"
+              return (
+                <Link
+                  prefetch={false}
+                  key={href}
+                  href={href}
+                  onClick={() => setMenuOpen(false)}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex min-h-[48px] items-center gap-3 px-3 py-2.5 text-sm font-medium transition touch-manipulation ${
+                    active
+                      ? "bg-brand text-white"
+                      : "text-muted hover:bg-white/5 hover:text-cream"
                   }`}
                 >
-                  {badge}
-                </span>
-              ) : null}
-            </Link>
-          );
-        })}
+                  <Icon className="h-[18px] w-[18px] shrink-0" />
+                  <span className="flex-1">{label}</span>
+                  {badge ? (
+                    <span
+                      className={`min-w-[22px] px-1.5 py-0.5 text-center font-display text-xs font-bold ${
+                        active ? "bg-cream/20 text-cream" : "bg-brand text-white"
+                      }`}
+                    >
+                      {badge}
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
-      <div className="space-y-1 border-t border-white/10 p-3">
+      <div className="space-y-1 border-t border-white/10 p-3 font-display">
+        <h2 className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">
+          Conta
+        </h2>
         <Link
           prefetch={false}
           href="/admin/conta"
+          onClick={() => setMenuOpen(false)}
+          aria-current={pathname.startsWith("/admin/conta") ? "page" : undefined}
           className={`flex min-h-[48px] items-center gap-3 px-3 py-2.5 text-sm transition touch-manipulation ${
             pathname.startsWith("/admin/conta")
               ? "bg-brand text-white"
@@ -279,7 +304,7 @@ export function AdminShell({
       >
         Pular para o conteúdo
       </a>
-      <aside className="hidden w-64 flex-col border-r border-white/10 bg-ink lg:fixed lg:inset-y-0 lg:flex">
+      <aside className="hidden w-64 flex-col border-r border-white/10 bg-ink lg:fixed lg:inset-y-0 lg:flex lg:overflow-y-auto">
         {brand}
         <div className="h-0.5 w-full bg-brand-gradient" aria-hidden="true" />
         {sidebar}
@@ -345,6 +370,7 @@ export function AdminShell({
               <Link
                 prefetch={false}
                 href="/admin"
+                onClick={() => setMenuOpen(false)}
                 className="flex min-h-[44px] items-center gap-2.5"
               >
                 <Image
@@ -391,7 +417,7 @@ export function AdminShell({
         aria-label="Atalhos do painel"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink/95 shadow-[0_-8px_30px_rgba(0,0,0,0.35)] backdrop-blur lg:hidden"
       >
-        <ul className="mx-auto flex max-w-lg items-stretch pb-safe">
+        <ul className="mx-auto flex max-w-lg items-stretch pb-safe font-display">
           {BOTTOM_NAV.map(({ href, label, Icon, badgeKey, match }) => {
             const active = match(pathname);
             const badge =
@@ -429,25 +455,31 @@ export function AdminShell({
           <li className="flex flex-1">
             <button
               type="button"
-              aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+              aria-label="Mais"
+              aria-haspopup="dialog"
               aria-expanded={menuOpen}
               aria-controls="admin-mobile-drawer"
               onClick={() => setMenuOpen((open) => !open)}
               className={`relative flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 py-2.5 transition touch-manipulation ${
-                menuOpen ||
-                DRAWER_ONLY.some((href) => pathname.startsWith(href))
+                moreActive
                   ? "text-cream"
                   : "text-muted active:text-cream"
               }`}
             >
+              {moreActive ? (
+                <span className="absolute inset-x-5 top-0 h-0.5 bg-brand" aria-hidden="true" />
+              ) : null}
               {menuOpen ? (
                 <IconClose className="h-5 w-5" />
               ) : (
                 <IconMenu className="h-5 w-5" />
               )}
-              <span className="text-xs font-medium">
-                Mais
-              </span>
+              <span className="text-xs font-medium">Mais</span>
+              {agendaDue > 0 ? (
+                <span className="absolute right-1/2 top-1 min-w-[16px] translate-x-[14px] bg-brand px-1 text-center font-display text-xs font-bold leading-4 text-white">
+                  {agendaDue > 9 ? "9+" : agendaDue}
+                </span>
+              ) : null}
             </button>
           </li>
         </ul>
