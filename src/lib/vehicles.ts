@@ -308,11 +308,7 @@ export const getVehicleByParam = cache(async (param: string) => {
   const id = extractVehicleIdFromParam(param);
   if (!id) return null;
 
-  return safeQuery(
-    `veículo ${id}`,
-    () => loadVehicleDetailCached(id),
-    null,
-  );
+  return loadVehicleDetailCached(id);
 });
 
 async function findRelatedCardPool(where: {
@@ -872,40 +868,6 @@ async function fetchPublishedTestimonials(take: number) {
       orderBy: [{ order: "asc" }, { createdAt: "desc" }],
       take,
     });
-
-    const hasDirty = rows.some(
-      (r) =>
-        (r.city && /ilustrativo/i.test(r.city)) ||
-        (r.vehicleLabel && /ilustrativo/i.test(r.vehicleLabel)) ||
-        (r.message && /ilustrativo/i.test(r.message)),
-    );
-    if (hasDirty) {
-      void prisma.testimonial
-        .findMany({
-          where: {
-            OR: [
-              { city: { contains: "ilustrativo", mode: "insensitive" } },
-              { vehicleLabel: { contains: "ilustrativo", mode: "insensitive" } },
-              { message: { contains: "ilustrativo", mode: "insensitive" } },
-            ],
-          },
-        })
-        .then(async (dirtyItems) => {
-          for (const item of dirtyItems) {
-            await prisma.testimonial
-              .update({
-                where: { id: item.id },
-                data: {
-                  city: cleanTestimonialField(item.city),
-                  vehicleLabel: cleanTestimonialField(item.vehicleLabel),
-                  message: cleanTestimonialField(item.message) ?? item.message,
-                },
-              })
-              .catch(() => {});
-          }
-        })
-        .catch(() => {});
-    }
 
     return rows.map((item) => ({
       ...item,

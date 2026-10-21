@@ -8,6 +8,9 @@ import {
   ensurePrivateDocsBucket,
   privateFileRef,
 } from "@/lib/supabase";
+
+const headers = { "Cache-Control": "private, no-store" };
+
 const types: Record<string, string> = {
   "application/pdf": "pdf",
   "image/jpeg": "jpg",
@@ -16,16 +19,16 @@ const types: Record<string, string> = {
 };
 export async function POST(request: Request) {
   if (!isSameOriginRequest(request))
-    return NextResponse.json({}, { status: 403 });
+    return NextResponse.json({}, { status: 403, headers });
   if (!(await getSession()))
     return NextResponse.json(
       { error: "Sessão expirada. Entre novamente e tente reenviar." },
-      { status: 401 },
+      { status: 401, headers },
     );
   if (!hasSupabaseServiceRole())
     return NextResponse.json(
       { error: "Upload indisponível." },
-      { status: 503 },
+      { status: 503, headers },
     );
   try {
     const body = await request.json();
@@ -37,7 +40,7 @@ export async function POST(request: Request) {
     )
       return NextResponse.json(
         { error: "Use PDF, JPG, PNG ou WEBP de até 12 MB." },
-        { status: 400 },
+        { status: 400, headers },
       );
     await ensurePrivateDocsBucket();
     const storage = getSupabaseAdmin().storage;
@@ -54,7 +57,7 @@ export async function POST(request: Request) {
           error:
             "O armazenamento privado não está disponível para este tamanho de arquivo.",
         },
-        { status: 503 },
+        { status: 503, headers },
       );
     const vehicle =
       typeof body.vehicleId === "string" &&
@@ -72,12 +75,12 @@ export async function POST(request: Request) {
         url: privateFileRef(path),
         name: String(body.name || "Arquivo").slice(0, 250),
       },
-      { headers: { "Cache-Control": "private, no-store" } },
+      { headers },
     );
   } catch {
     return NextResponse.json(
       { error: "Não foi possível preparar o upload. Tente novamente." },
-      { status: 500 },
+      { status: 500, headers },
     );
   }
 }
