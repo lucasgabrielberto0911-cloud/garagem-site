@@ -589,7 +589,7 @@ export async function expensesPdf(input: ExpensesPdfInput) {
 
   // Resumo: compra, gastos, investido, venda e margem (só com dado).
   const extras = extrasTotal(input.costs);
-  const rows: [string, string][] = [["Total de gastos", money(extras)]];
+  const rows: [string, string][] = [[input.consigned ? "Histórico de gastos (fora dos totais da loja)" : "Total de gastos", money(extras)]];
   if (!input.consigned) {
     if (input.purchasePrice != null) rows.push(["Preço de compra", money(input.purchasePrice)]);
     if (hasCostBasis(input.purchasePrice, input.costs)) rows.push(["Investimento total (compra + gastos)", money(investedTotal(input.purchasePrice, input.costs))]);
