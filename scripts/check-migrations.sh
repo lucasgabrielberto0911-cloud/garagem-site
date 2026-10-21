@@ -22,7 +22,7 @@ for f in supabase/migrations/*; do
   if grep -qxF "$f" <<<"$novos"; then
     # varredura única: comentários "--" e /* */ (aninhados) viram espaço, literais '...' e "..." viram vazios (respeita '' e "");
     # depois normaliza quebras/espaços para a detecção não depender da formatação
-    if perl -0pe 's{(/\*(?:[^/*]++|/(?!\*)|\*(?!/)|(?1))*+\*/)|--[^\n]*|\x27(?:[^\x27]|\x27\x27)*\x27|"(?:[^"]|"")*"}{defined $1 || substr($&,0,1) eq "-" ? " " : substr($&,0,1) x 2}gse' "$f" | tr '\r\n\t' '   ' | tr -s ' ' | grep -qiE '(^|;) ?(DROP (TABLE|SCHEMA)|TRUNCATE|DELETE FROM|REVOKE)|\bDROP COLUMN\b' \
+    if perl -0pe 's{(/\*(?:[^/*]++|/(?!\*)|\*(?!/)|(?1))*+\*/)|--[^\n]*|\x27(?:[^\x27]|\x27\x27)*\x27|"(?:[^"]|"")*"}{defined $1 || substr($&,0,1) eq "-" ? " " : substr($&,0,1) x 2}gse' "$f" | tr '\r\n\t' '   ' | tr -s ' ' | grep -qiP '(^|;) ?(DROP (TABLE|SCHEMA)|TRUNCATE|REVOKE)|\bDELETE FROM\b|\bALTER TABLE\b[^;]*\bDROP (?!(CONSTRAINT|DEFAULT|NOT NULL|IDENTITY|EXPRESSION)\b)' \
       && [ ! -f "supabase/rollback/$n" ]; then
       echo "ERRO: migration nova destrutiva sem supabase/rollback/$n"; erro=1
     elif [ ! -f "supabase/rollback/$n" ]; then
