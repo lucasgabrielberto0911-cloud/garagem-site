@@ -16,7 +16,7 @@ export const revalidate = 600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Contato | ${site.name}`,
-  description: `WhatsApp, telefone, e-mail e horário de atendimento online da ${site.name} em ${site.region} e região — todos os dias, das 8h às 23h.`,
+  description: `WhatsApp, telefone, e-mail e horário de atendimento online da ${site.name} em ${site.region} — todos os dias, das 8h às 23h.`,
   path: "/contato",
 });
 
@@ -44,7 +44,7 @@ export default async function ContatoPage() {
             compact
             eyebrow="Contato"
             title={`Fale com a ${publicSite.name}`}
-            description={`Somos loja digital e atendemos ${publicSite.region} e região — todos os dias, das 8h às 23h. Compare o estoque no assistente; simule e feche no WhatsApp.`}
+            description={`Somos loja digital e atendemos ${publicSite.region} — todos os dias, das 8h às 23h. Compare o estoque no assistente; simule e feche no WhatsApp.`}
           />
 
           <section
@@ -134,7 +134,7 @@ export default async function ContatoPage() {
                 Não temos showroom físico. Você escolhe no site, tira dúvidas e
                 pede vídeo pelo WhatsApp, e combinamos visita ao veículo, entrega
                 ou retirada. Atendimento online todos os dias, das 8h às 23h, em{" "}
-                {publicSite.region} e região.
+                {publicSite.region}.
               </p>
             )}
           </Channel>

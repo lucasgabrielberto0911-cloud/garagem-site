@@ -11,7 +11,7 @@ export const revalidate = 600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Vender ou trocar seu veículo | ${site.name}`,
-  description: `Avaliação gratuita e sem compromisso do seu veículo na ${site.name}. Compramos seu usado e aceitamos na troca em ${site.region} e região.`,
+  description: `Avaliação gratuita e sem compromisso do seu veículo na ${site.name}. Compramos seu usado e aceitamos na troca em ${site.region}.`,
   path: "/vender",
 });
 
