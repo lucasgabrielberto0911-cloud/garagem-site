@@ -121,6 +121,7 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
 
   const salesVehicleId = "ce2esalespanelvehicle";
   await db.commercialDocument.deleteMany({ where: { vehicleId: salesVehicleId } });
+  await db.vehicleReservation.deleteMany({ where: { vehicleId: salesVehicleId } });
   await db.sale.deleteMany({ where: { vehicleId: salesVehicleId } });
   await db.vehicle.deleteMany({ where: { id: salesVehicleId } });
   await db.vehicle.create({
@@ -150,6 +151,34 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
     await page.getByRole("combobox").nth(1).click();
     await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
 
+    // 1. Gera recibo de sinal com prazo de reserva (expiresAt), criando reserva e marcando como reservado
+    await page.locator('input[name="deposit"]').fill("10.000,00");
+    await page.locator('input[name="expiresAt"]').fill("2099-01-01T10:00");
+    await page.locator('input[name="payment"]').fill("Pix chave CNPJ");
+    await page.locator('textarea[name="conditions"]').fill("Sinal de reserva com garantia de prazo.");
+
+    await page.getByRole("button", { name: "Gerar recibo de sinal (PDF)" }).click();
+    await expect(page.getByText(/Recibo de sinal nº \d+ gerado!/)).toBeVisible();
+
+    const receiptDoc = await db.commercialDocument.findFirstOrThrow({
+      where: { vehicleId: salesVehicleId, kind: "recibo" },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(receiptDoc.number).toBeGreaterThan(0);
+    const receiptPdf = await page.request.get(`/api/admin/documentos/${receiptDoc.id}`);
+    expect(receiptPdf.status()).toBe(200);
+    expect(receiptPdf.headers()["content-type"]).toBe("application/pdf");
+    expect((await receiptPdf.body()).subarray(0, 5).toString()).toBe("%PDF-");
+
+    // Confere que o status do veículo passou a reservado e a reserva ativa foi criada com o prazo e sinal
+    const reservedVehicle = await db.vehicle.findUniqueOrThrow({ where: { id: salesVehicleId } });
+    expect(reservedVehicle.status).toBe("reservado");
+    const activeReservation = await db.vehicleReservation.findFirstOrThrow({
+      where: { vehicleId: salesVehicleId, status: "ativa" },
+    });
+    expect(Number(activeReservation.deposit)).toBe(10000);
+
+    // 2. Gera contrato de compra e venda abatendo o sinal já pago
     await page.locator('input[name="payment"]').fill("Entrada Pix + Financiamento Santander");
     await page.locator('input[name="downPayment"]').fill("30.000,00");
     await page.locator('input[name="bank"]').fill("Santander");
@@ -170,6 +199,7 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
     expect((await contractPdf.body()).subarray(0, 5).toString()).toBe("%PDF-");
   } finally {
     await db.commercialDocument.deleteMany({ where: { vehicleId: salesVehicleId } });
+    await db.vehicleReservation.deleteMany({ where: { vehicleId: salesVehicleId } });
     await db.sale.deleteMany({ where: { vehicleId: salesVehicleId } });
     await db.vehicle.deleteMany({ where: { id: salesVehicleId } });
   }

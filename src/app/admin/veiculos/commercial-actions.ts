@@ -14,6 +14,24 @@ import { expireReservations } from "@/lib/reservations";
 
 class CommercialError extends Error {}
 
+async function reserveVehicle(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  vehicle: { id: string; status: string; price: number; sale: unknown | null },
+  customer: { id: string },
+  deposit: number,
+  expiresAtRaw: string,
+  adminId: string,
+) {
+  if (vehicle.status !== "disponivel" || vehicle.sale) throw new CommercialError("Só é possível reservar veículo disponível e sem venda.");
+  const expiresAt = new Date(`${expiresAtRaw}:00-03:00`);
+  if (!Number.isFinite(expiresAt.getTime()) || expiresAt <= new Date()) throw new CommercialError("Informe um prazo futuro para a reserva.");
+  if (deposit > vehicle.price) throw new CommercialError("Sinal não pode superar o preço do veículo.");
+  const reservation = await tx.vehicleReservation.create({ data: { vehicleId: vehicle.id, customerId: customer.id, deposit, expiresAt } });
+  await tx.vehicle.update({ where: { id: vehicle.id }, data: { status: "reservado", featured: false } });
+  await recordAdminAudit(tx, adminId, vehicle.id, "commercial.reserve", { operation: "reserve", customerId: customer.id, deposit, expiresAt: expiresAt.toISOString() });
+  return reservation;
+}
+
 export async function releaseExpiredReservations() {
   if (!(await getSession())) return;
   const ids = await expireReservations();
@@ -42,15 +60,9 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
       const vehicle = await tx.vehicle.findUniqueOrThrow({ where: { id: vehicleId }, include: { costs: true, sale: true } });
       const operation = text("operation");
       if (operation === "reserve") {
-        if (vehicle.status !== "disponivel" || vehicle.sale) throw new CommercialError("Só é possível reservar veículo disponível e sem venda.");
-        const deposit = money("deposit");
-        const expiresAt = new Date(`${text("expiresAt")}:00-03:00`);
-        if (!Number.isFinite(expiresAt.getTime()) || expiresAt <= new Date()) throw new CommercialError("Informe um prazo futuro para a reserva.");
-        if (deposit > vehicle.price) throw new CommercialError("Sinal não pode superar o preço do veículo.");
         const customer = await tx.customer.findUnique({ where: { id: text("customerId") } });
         if (!customer) throw new CommercialError("Escolha um cliente cadastrado.");
-        await tx.vehicleReservation.create({ data: { vehicleId, customerId: customer.id, deposit, expiresAt } });
-        await tx.vehicle.update({ where: { id: vehicleId }, data: { status: "reservado", featured: false } });
+        await reserveVehicle(tx, vehicle, customer, money("deposit"), text("expiresAt"), session.adminId);
       } else if (operation === "cancel-reservation") {
         const result = await tx.vehicleReservation.updateMany({ where: { vehicleId, status: "ativa" }, data: { status: "cancelada" } });
         if (!result.count) throw new CommercialError("Não há reserva ativa.");
@@ -100,12 +112,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         if (isContract && vehicle.status === "vendido") throw new CommercialError("Veículo vendido não recebe contrato.");
         let reservation = kind === "recibo" ? await tx.vehicleReservation.findFirst({ where: { vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } }) : null;
         if (kind === "recibo" && !reservation && text("expiresAt")) {
-          const expiresAt = new Date(`${text("expiresAt")}:00-03:00`);
-          if (!Number.isFinite(expiresAt.getTime()) || expiresAt <= new Date()) throw new CommercialError("Informe um prazo futuro para a reserva.");
-          if (amount > vehicle.price) throw new CommercialError("Sinal não pode superar o preço do veículo.");
-          if (vehicle.status !== "disponivel" || vehicle.sale) throw new CommercialError("Só é possível reservar veículo disponível e sem venda.");
-          reservation = await tx.vehicleReservation.create({ data: { vehicleId, customerId: customer.id, deposit: amount, expiresAt } });
-          await tx.vehicle.update({ where: { id: vehicleId }, data: { status: "reservado", featured: false } });
+          reservation = await reserveVehicle(tx, vehicle, customer, amount, text("expiresAt"), session.adminId);
         }
         if (kind === "recibo" && !reservation && vehicle.sale?.customerId !== customer.id) throw new CommercialError("Recibo exige reserva ativa (informe o prazo) ou venda do veículo para este cliente.");
 
@@ -122,10 +129,12 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
           if (signal && signal.amount >= amount) throw new CommercialError("O preço total do contrato deve ser maior que o sinal já pago.");
         }
         const rawDownPayment = parseMoneyBR(form.get("downPayment"));
+        if (isContract && rawDownPayment != null && rawDownPayment >= amount) throw new CommercialError("A entrada deve ser menor que o valor total do contrato.");
         const signalAmount = signal?.amount ?? 0;
         const downPayment = rawDownPayment != null ? Math.max(0, rawDownPayment - signalAmount) : undefined;
         const rawFinanced = parseMoneyBR(form.get("financed"));
         const totalEntry = rawDownPayment != null ? rawDownPayment : signalAmount;
+        if (isContract && rawFinanced != null && totalEntry + rawFinanced > amount) throw new CommercialError("A soma de sinal, entrada e financiamento não pode superar o valor do contrato.");
         const financed = rawFinanced ?? (text("bank") ? Math.max(0, amount - totalEntry) : undefined);
 
         const doc = await tx.commercialDocument.create({
@@ -164,28 +173,34 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
           const rate = Number(text("rate").replace(",", "."));
           const months = Number(text("months"));
           if (Number.isFinite(rate) && Number.isFinite(months) && months > 0) {
+            const downForSim = rawDownPayment ?? signalAmount;
+            const simPrice = isContract ? amount : (parseMoneyBR(form.get("price")) ?? vehicle.price);
+            let sim: ReturnType<typeof simulateFinancing> | null = null;
             try {
-              const downForSim = rawDownPayment ?? signalAmount;
-              const sim = simulateFinancing(isContract ? amount : (parseMoneyBR(form.get("price")) ?? vehicle.price), downForSim, rate, months);
+              sim = simulateFinancing(simPrice, downForSim, rate, months);
+            } catch {
+              // não impede criação do documento se os parâmetros de juros forem inconsistentes
+            }
+            if (sim) {
               await tx.financeSimulation.create({
                 data: {
                   vehicleId,
                   customerName: customer.name,
                   bank: text("bank").slice(0, 160),
-                  price: isContract ? amount : (parseMoneyBR(form.get("price")) ?? vehicle.price),
+                  price: simPrice,
                   downPayment: downForSim,
                   rate,
                   months,
                   installment: sim.installment,
                 },
               });
-            } catch {
-              // não impede criação do documento
             }
           }
         }
       } else throw new CommercialError("Operação inválida.");
-      await recordAdminAudit(tx, session.adminId, vehicleId, `commercial.${operation}`, { operation });
+      if (operation !== "reserve") {
+        await recordAdminAudit(tx, session.adminId, vehicleId, `commercial.${operation}`, { operation });
+      }
     });
   } catch (error) {
     return { ok: false, message: error instanceof CommercialError ? error.message : "Não foi possível salvar. Atualize a página e tente novamente." };
