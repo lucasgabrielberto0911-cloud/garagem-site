@@ -112,7 +112,7 @@ export function WantedVehicleCta({
               className="whatsapp-btn inline-flex min-h-[52px] w-full items-center justify-center gap-2 px-6 font-display text-xs font-semibold uppercase tracking-wide text-white touch-manipulation sm:w-auto"
             >
               <IconWhatsApp className="h-4 w-4" />
-              Falar no WhatsApp
+              Avisar no WhatsApp
             </a>
           </SiteLeadHit>
           <Link
