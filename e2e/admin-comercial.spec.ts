@@ -426,9 +426,11 @@ test.describe("fluxo único de venda", () => {
     await page.reload();
     await documents.locator("summary").click();
     await expect(documents.getByLabel("Sinal já recebido (R$)")).toHaveValue("5.000,00");
+    const contractIdsBeforeReissue = new Set((await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).map(({ id }) => id));
     await documents.getByRole("button", { name: "Emitir nova versão do contrato" }).click();
-    await expect(documents.getByText(/Contrato nº/)).toBeVisible();
+    await expect.poll(async () => (await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).some(({ id }) => !contractIdsBeforeReissue.has(id))).toBeTruthy();
     const reissued = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" }, orderBy: { createdAt: "desc" } });
+    await expect(documents.locator(`a[href="/api/admin/documentos/${reissued.id}?inline"]`)).toBeVisible();
     expect(reissued.snapshot).toMatchObject({ signal: { amount: 5000, receiptId: String(manualReceipt.number) }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] });
 
     await db.vehicleReservation.updateMany({ where: { vehicleId: flowVehicleId, customerId: otherCustomerId, status: "ativa" }, data: { status: "cancelada" } });
@@ -438,9 +440,11 @@ test.describe("fluxo único de venda", () => {
     await expect(documents.locator('input[name="customerId"]')).toHaveValue(otherCustomerId);
     await expect(documents.getByLabel("Sinal já recebido (R$)")).toHaveValue("0,00");
     await expect(documents.getByLabel("Valor · À vista/PIX")).toHaveValue("67.000,00");
+    const contractIdsBeforeBuyerChange = new Set((await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).map(({ id }) => id));
     await documents.getByRole("button", { name: "Emitir nova versão do contrato" }).click();
-    await expect(documents.getByText(/Contrato nº/)).toBeVisible();
+    await expect.poll(async () => (await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).some(({ id }) => !contractIdsBeforeBuyerChange.has(id))).toBeTruthy();
     const buyerChangedContract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" }, orderBy: { createdAt: "desc" } });
+    await expect(documents.locator(`a[href="/api/admin/documentos/${buyerChangedContract.id}?inline"]`)).toBeVisible();
     expect(buyerChangedContract.snapshot).toMatchObject({ customerId: otherCustomerId, payments: [{ method: "pix", amount: 67000 }] });
     expect(buyerChangedContract.snapshot).not.toHaveProperty("signal");
     // afterAll limpa as reservas antes de excluir o cliente (FK RESTRICT).
