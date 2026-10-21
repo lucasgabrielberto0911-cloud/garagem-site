@@ -422,16 +422,36 @@ test.describe("fluxo único de venda", () => {
     expect(withoutEligibleReservation.snapshot).not.toHaveProperty("signal");
 
     const manualReceipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { saleId: sale.id, customerId, amount: 5000, total: 67000, payment: "Sinal", payments: [{ method: "sinal", amount: 5000 }] } } });
-    await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "contrato", snapshot: { saleId: sale.id, customerId, total: 67000, signal: { amount: 5000, receiptId: String(manualReceipt.number), date: new Date().toISOString() }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] } } });
+    await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "contrato", snapshot: { saleId: sale.id, customerId, total: 67000, conditions: "Entrega até 30/10/2026", signal: { amount: 5000, receiptId: String(manualReceipt.number), date: new Date().toISOString() }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] } } });
     await page.reload();
     await documents.locator("summary").click();
     await expect(documents.getByLabel("Sinal já recebido (R$)")).toHaveValue("5.000,00");
+    await expect(documents.getByLabel("Condições adicionais")).toHaveValue("Entrega até 30/10/2026");
+    await documents.getByLabel("Condições adicionais").fill("Entrega até 31/10/2026");
     const contractIdsBeforeReissue = new Set((await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).map(({ id }) => id));
     await documents.getByRole("button", { name: "Emitir nova versão do contrato" }).click();
     await expect.poll(async () => (await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).some(({ id }) => !contractIdsBeforeReissue.has(id))).toBeTruthy();
     const reissued = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" }, orderBy: { createdAt: "desc" } });
     await expect(documents.locator(`a[href="/api/admin/documentos/${reissued.id}?inline"]`)).toBeVisible();
     expect(reissued.snapshot).toMatchObject({ signal: { amount: 5000, receiptId: String(manualReceipt.number) }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] });
+    expect(reissued.snapshot).toMatchObject({ conditions: "Entrega até 31/10/2026" });
+
+    await db.vehicleReservation.updateMany({ where: { vehicleId: flowVehicleId, customerId, status: "convertida" }, data: { status: "cancelada" } });
+    await page.reload();
+    await documents.locator("summary").click();
+    await documents.getByLabel("Sinal já recebido (R$)").fill("0,00");
+    await documents.getByLabel("Valor · À vista/PIX").fill("67.000,00");
+    const contractIdsBeforeSignalRemoval = new Set((await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).map(({ id }) => id));
+    await documents.getByRole("button", { name: "Emitir nova versão do contrato" }).click();
+    await expect.poll(async () => (await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).some(({ id }) => !contractIdsBeforeSignalRemoval.has(id))).toBeTruthy();
+    const noSignalContract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" }, orderBy: { createdAt: "desc" } });
+    await expect(documents.locator(`a[href="/api/admin/documentos/${noSignalContract.id}?inline"]`)).toBeVisible();
+    expect(noSignalContract.snapshot).toMatchObject({ conditions: "Entrega até 31/10/2026", payments: [{ method: "pix", amount: 67000 }] });
+    expect(noSignalContract.snapshot).not.toHaveProperty("signal");
+    await page.reload();
+    await documents.locator("summary").click();
+    await expect(documents.getByLabel("Sinal já recebido (R$)")).toHaveValue("0,00");
+    await expect(documents.getByLabel("Valor · À vista/PIX")).toHaveValue("67.000,00");
 
     await db.vehicleReservation.updateMany({ where: { vehicleId: flowVehicleId, customerId: otherCustomerId, status: "ativa" }, data: { status: "cancelada" } });
     await db.sale.update({ where: { id: sale.id }, data: { customerId: otherCustomerId } });
