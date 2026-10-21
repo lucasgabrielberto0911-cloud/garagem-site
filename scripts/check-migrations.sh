@@ -20,9 +20,9 @@ for f in supabase/migrations/*; do
   if [ "$v" = "$anterior" ]; then echo "ERRO: versão duplicada: $v"; erro=1; fi
   anterior=$v
   if grep -qxF "$f" <<<"$novos"; then
-    # varredura única: comentários "--" e /* */ (aninhados) viram espaço, literais '...', E'...' (com \\) e "..." viram vazios (respeita '' e ""); dollar-quoted ($$..$$, $tag$..$tag$) é mantido como está (corpo de DO/função continua varrido);
+    # varredura única: comentários "--" e /* */ (aninhados) viram espaço, literais '...', E'...' (com \\) e "..." viram vazios (respeita '' e ""); dollar-quoted ($$..$$, $tag$..$tag$) mantém o corpo (DO/função continua varrido), normalizado recursivamente (comentários dentro dele também viram espaço);
     # depois normaliza quebras/espaços para a detecção não depender da formatação
-    if perl -0pe 's{(/\*(?:[^/*]++|/(?!\*)|\*(?!/)|(?1))*+\*/)|--[^\n]*|(\$(?:[A-Za-z_]\w*)?\$).*?\2|\b[eE]\x27(?:[^\x27\\]|\\.|\x27\x27)*\x27|\x27(?:[^\x27]|\x27\x27)*\x27|"(?:[^"]|"")*"}{defined $2 ? $& : defined $1 || substr($&,0,1) eq "-" ? " " : substr($&,0,1) x 2}gse' "$f" | tr '\r\n\t' '   ' | tr -s ' ' | grep -qiP '(^|;|\b(BEGIN|THEN|ELSE|LOOP)) ?(DROP (TABLE|SCHEMA)|TRUNCATE|REVOKE)|\bDELETE FROM\b|\bALTER TABLE\b[^;]*\bDROP (?!(CONSTRAINT|DEFAULT|NOT NULL|IDENTITY|EXPRESSION)\b)' \
+    if perl -0e 'sub n { my $t = shift; $t =~ s{(/\*(?:[^/*]++|/(?!\*)|\*(?!/)|(?1))*+\*/)|--[^\n]*|(\$(?:[A-Za-z_]\w*)?\$)(.*?)\2|\b[eE]\x27(?:[^\x27\\]|\\.|\x27\x27)*\x27|\x27(?:[^\x27]|\x27\x27)*\x27|"(?:[^"]|"")*"}{defined $2 ? $2 . n($3) . $2 : defined $1 || substr($&,0,1) eq "-" ? " " : substr($&,0,1) x 2}gse; $t } print n(<>)' "$f" | tr '\r\n\t' '   ' | tr -s ' ' | grep -qiP '(^|;|\b(BEGIN|THEN|ELSE|LOOP)) ?(DROP (TABLE|SCHEMA)|TRUNCATE|REVOKE)|\bDELETE FROM\b|\bALTER TABLE\b[^;]*\bDROP (?!(CONSTRAINT|DEFAULT|NOT NULL|IDENTITY|EXPRESSION)\b)' \
       && [ ! -f "supabase/rollback/$n" ]; then
       echo "ERRO: migration nova destrutiva sem supabase/rollback/$n"; erro=1
     elif [ ! -f "supabase/rollback/$n" ]; then
