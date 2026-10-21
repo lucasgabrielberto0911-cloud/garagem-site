@@ -639,6 +639,14 @@ export type PreparationPdfRow = {
   purchasePrice?: number | null;
 };
 
+/** Colunas da lista de preparação (somam CONTENT_W); larguras comportam data e valor completos. */
+export const PREPARATION_COLS = [
+  { label: "Marca", w: 50 }, { label: "Modelo/Versão", w: 92 }, { label: "Cor", w: 40 }, { label: "Ano", w: 28 },
+  { label: "KM", w: 40 }, { label: "Placa", w: 46 }, { label: "Compra", w: 54 }, { label: "Valor", w: 72 },
+  { label: "Pronto", w: 40 }, { label: "Postado", w: 45 },
+];
+export const PREPARATION_CELL_SIZE = 8;
+
 /** Lista dos carros em preparação (campos vazios ficam em branco, para preencher à mão), no padrão visual do contrato. */
 export async function preparationPdf(rows: PreparationPdfRow[], generatedAt = new Date()) {
   const pdf = await PDFDocument.create();
@@ -665,22 +673,7 @@ export async function preparationPdf(rows: PreparationPdfRow[], generatedAt = ne
     while (text && font.widthOfTextAtSize(`${text}…`, size) > width) text = text.slice(0, -1);
     return `${text.trimEnd()}…`;
   };
-  const cols = [
-    { label: "Marca", w: 62 },
-    { label: "Modelo/Versão", w: 104 },
-    { label: "Cor", w: 48 },
-    { label: "Ano", w: 30 },
-    { label: "KM", w: 48 },
-    { label: "Placa", w: 48 },
-    { label: "Compra", w: 52 },
-    { label: "Valor", w: 62 },
-    { label: "Pronto", w: 0 },
-    { label: "Postado", w: 0 },
-  ];
-  const fixed = cols.reduce((sum, c) => sum + c.w, 0);
-  const flagW = (CONTENT_W - fixed) / 2;
-  for (const c of cols) if (!c.w) c.w = flagW;
-
+  const cols = PREPARATION_COLS;
   const pages: PDFPage[] = [];
   let page!: PDFPage;
   let y = 0;
@@ -724,7 +717,7 @@ export async function preparationPdf(rows: PreparationPdfRow[], generatedAt = ne
     ];
     let x = MARGIN + 4;
     cells.forEach((cell, i) => {
-      page.drawText(fitText(cell, regular, 8.5, cols[i].w - 6), { x, y, size: 8.5, font: regular, color: ASPHALT });
+      page.drawText(fitText(cell, regular, PREPARATION_CELL_SIZE, cols[i].w - 6), { x, y, size: PREPARATION_CELL_SIZE, font: regular, color: ASPHALT });
       x += cols[i].w;
     });
     page.drawLine({ start: { x: MARGIN, y: y - 9 }, end: { x: right, y: y - 9 }, thickness: 0.5, color: LINE });
