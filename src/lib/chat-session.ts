@@ -43,6 +43,7 @@ export async function checkChatRateLimit(sessionId: string) {
   return checkDistributedRateLimit(`chat:${sessionId}`, {
     windowMs: CHAT_SESSION_WINDOW_MS,
     max: CHAT_SESSION_MAX_MESSAGES,
+    failClosed: true,
   });
 }
 
@@ -54,5 +55,6 @@ export async function checkChatIpRateLimit(ip: string) {
   return checkDistributedRateLimit(`chat-ip:${ip}`, {
     windowMs: CHAT_IP_WINDOW_MS,
     max: CHAT_IP_MAX_MESSAGES,
+    failClosed: true,
   });
 }

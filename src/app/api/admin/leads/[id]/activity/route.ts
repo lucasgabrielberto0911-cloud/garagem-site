@@ -4,38 +4,9 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { adminActionDate, businessDay } from "@/lib/admin-date";
 import { expireAdminData } from "@/lib/admin-revalidate";
-import { buildLeadTimeline } from "@/lib/lead-timeline";
-import { isMissingColumnError } from "@/lib/prisma-errors";
+import { loadLeadActivity } from "@/lib/lead-activity";
 
 const headers = { "Cache-Control": "private, no-store" };
-
-const LEAD_TIMELINE_SELECT = {
-  id: true,
-  name: true,
-  phone: true,
-  vehicleInfo: true,
-  status: true,
-  source: true,
-  nextAction: true,
-  nextActionAt: true,
-  createdAt: true,
-} as const;
-
-async function findLeadForTimeline(id: string) {
-  try {
-    return await prisma.leadVenda.findUnique({
-      where: { id },
-      select: { ...LEAD_TIMELINE_SELECT, lostReason: true },
-    });
-  } catch (error) {
-    if (!isMissingColumnError(error)) throw error;
-    const row = await prisma.leadVenda.findUnique({
-      where: { id },
-      select: LEAD_TIMELINE_SELECT,
-    });
-    return row ? { ...row, lostReason: null } : null;
-  }
-}
 
 export async function GET(
   _request: Request,
@@ -44,79 +15,7 @@ export async function GET(
   if (!(await getSession()))
     return NextResponse.json({}, { status: 401, headers });
   const { id } = await params;
-  const [lead, activities] = await Promise.all([
-    findLeadForTimeline(id),
-    prisma.leadActivity.findMany({
-      where: { leadId: id },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    }),
-  ]);
-
-  if (!lead) {
-    return NextResponse.json({ activities, timeline: [] }, { headers });
-  }
-
-  const digits = lead.phone.replace(/\D/g, "");
-  const [previousLeads, customer] =
-    digits.length >= 10
-      ? await Promise.all([
-          prisma.leadVenda
-            .findMany({
-              where: {
-                id: { not: id },
-                phone: { in: [lead.phone, digits] },
-              },
-              orderBy: { createdAt: "desc" },
-              take: 10,
-              select: {
-                id: true,
-                createdAt: true,
-                vehicleInfo: true,
-                status: true,
-                source: true,
-                activities: {
-                  orderBy: { createdAt: "desc" },
-                  take: 10,
-                  select: { id: true, note: true, createdAt: true },
-                },
-              },
-            })
-            .catch(() => []),
-          prisma.customer
-            .findFirst({
-              where: { phone: { in: [lead.phone, digits] } },
-              select: {
-                id: true,
-                name: true,
-                createdAt: true,
-                sales: {
-                  orderBy: { saleDate: "desc" },
-                  take: 10,
-                  select: {
-                    id: true,
-                    salePrice: true,
-                    paymentMethod: true,
-                    saleDate: true,
-                    vehicle: {
-                      select: { brand: true, model: true, yearModel: true },
-                    },
-                  },
-                },
-              },
-            })
-            .catch(() => null),
-        ])
-      : [[], null];
-
-  const timeline = buildLeadTimeline({
-    lead,
-    activities,
-    previousLeads,
-    customer,
-  });
-
-  return NextResponse.json({ activities, timeline }, { headers });
+  return NextResponse.json(await loadLeadActivity(id), { headers });
 }
 
 export async function POST(

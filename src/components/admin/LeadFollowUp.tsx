@@ -32,6 +32,7 @@ export function LeadFollowUp({
     Array<{ id: string; note: string; createdAt: string }>
   >([]);
   const [timeline, setTimeline] = useState<LeadTimelineItem[]>([]);
+  const [partial, setPartial] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -40,10 +41,12 @@ export function LeadFollowUp({
   async function load() {
     setLoading(true);
     setError("");
+    setPartial(false);
     try {
       const response = await fetch(`/api/admin/leads/${id}/activity`);
       if (!response.ok) throw new Error("read");
       const data = await response.json();
+      setPartial(data.partial === true);
       setHistory(data.activities ?? []);
       setTimeline(Array.isArray(data.timeline) ? data.timeline : []);
     } catch {
@@ -140,6 +143,14 @@ export function LeadFollowUp({
           <p className="font-display text-xs font-semibold uppercase tracking-wider text-muted">
             Linha do tempo do lead
           </p>
+          {partial && !loading && !error ? (
+            <p role="status" className="text-sm text-brand-yellow">
+              Histórico parcial: alguns contatos ou vendas não puderam ser carregados.{" "}
+              <button type="button" className="underline" onClick={load}>
+                Tentar novamente
+              </button>
+            </p>
+          ) : null}
           {loading ? (
             <p role="status" className="text-sm text-muted">
               Carregando histórico…

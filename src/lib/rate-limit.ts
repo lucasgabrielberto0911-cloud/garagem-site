@@ -1,8 +1,4 @@
-/**
- * Rate limit em memória, com Upstash opcional quando
- * UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN existem.
- * Sem essas vars (Hobby / um pod) o contador local ainda reduz abuso básico.
- */
+/** Limitador compartilhado; rotas públicas bloqueiam quando os contadores ficam indisponíveis. */
 import {
   checkSharedLimit,
   checkSharedLoginLimit,
@@ -13,7 +9,7 @@ type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
 
-export type RateLimitResult = { ok: boolean; retryAfterSec?: number };
+export type RateLimitResult = { ok: boolean; retryAfterSec?: number; unavailable?: boolean };
 
 export function checkRateLimit(
   key: string,
@@ -77,7 +73,10 @@ async function checkUpstashRateLimit(
   }
 
   const data = (await response.json()) as Array<{ result?: number }>;
-  const count = Number(data[0]?.result ?? 0);
+  const count = data[0]?.result;
+  if (typeof count !== "number" || !Number.isSafeInteger(count) || count < 1 || data.length !== 2 || ![0, 1].includes(data[1]?.result ?? -1)) {
+    throw new Error("Resposta inválida do contador compartilhado");
+  }
   if (count > options.max) {
     return { ok: false, retryAfterSec: ttlSec };
   }
@@ -86,14 +85,14 @@ async function checkUpstashRateLimit(
 
 export async function checkDistributedRateLimit(
   key: string,
-  options: { windowMs: number; max: number },
+  options: { windowMs: number; max: number; failClosed?: boolean },
 ): Promise<RateLimitResult> {
   if (isUpstashConfigured()) {
     try {
       const remote = await checkUpstashRateLimit(key, options);
       if (remote) return remote;
-    } catch (error) {
-      console.warn("[rate-limit] Upstash indisponível, usando o banco:", error);
+    } catch {
+      console.warn("[rate-limit] Upstash indisponível; tentando contador no banco.");
     }
   }
   // Sem Upstash, o contador no banco vale para todas as instâncias; a memória
@@ -101,9 +100,13 @@ export async function checkDistributedRateLimit(
   if (process.env.DATABASE_URL?.trim() && !process.env.RATE_LIMIT_MEMORY_ONLY) {
     try {
       return await checkSharedLimit(`rl:${key}`, options);
-    } catch (error) {
-      console.warn("[rate-limit] banco indisponível, usando memória:", error);
+    } catch {
+      console.warn("[rate-limit] Contador no banco indisponível.");
     }
+  }
+  if (options.failClosed) {
+    console.error("[rate-limit] ALERTA: contadores compartilhados indisponíveis; requisição pública bloqueada.");
+    return { ok: false, unavailable: true, retryAfterSec: 30 };
   }
   return checkRateLimit(key, options);
 }
@@ -134,6 +137,7 @@ export async function checkSellLeadRateLimit(key: string) {
   return checkDistributedRateLimit(`sell-lead:${key}`, {
     windowMs: SELL_LEAD_WINDOW_MS,
     max: SELL_LEAD_MAX,
+    failClosed: true,
   });
 }
 
@@ -144,6 +148,7 @@ export async function checkWantedLeadRateLimit(key: string) {
   return checkDistributedRateLimit(`wanted-lead:${key}`, {
     windowMs: WANTED_LEAD_WINDOW_MS,
     max: WANTED_LEAD_MAX,
+    failClosed: true,
   });
 }
 
@@ -165,5 +170,6 @@ export async function checkPhotoJpgRateLimit(key: string) {
   return checkDistributedRateLimit(`photo-jpg:${key}`, {
     windowMs: PHOTO_JPG_WINDOW_MS,
     max: PHOTO_JPG_MAX,
+    failClosed: true,
   });
 }
