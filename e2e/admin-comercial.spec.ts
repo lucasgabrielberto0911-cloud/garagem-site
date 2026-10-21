@@ -61,7 +61,7 @@ test("reserva, avaliação e fluxo único geram venda, contrato e recibo", async
 
   await page.goto(`/admin/vendas/nova?veiculo=${vehicleId}`);
   await page.getByRole("button", { name: "Continuar" }).click();
-  await expect(page.getByText("Cliente Comercial E2E · 27999990000")).toBeVisible();
+  await expect(page.getByRole("combobox")).toHaveValue("Cliente Comercial E2E · 27999990000");
   await page.getByRole("button", { name: "Continuar" }).click();
   await page.getByLabel("Valor total negociado").fill("55.100,00");
   await page.getByRole("button", { name: /À vista\/PIX/ }).click();
@@ -229,7 +229,7 @@ test.describe("fluxo único de venda", () => {
 
     await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
     await page.getByRole("button", { name: "Continuar" }).click();
-    await expect(page.getByText("Cliente corrigido E2E · 27988887777")).toBeVisible();
+    await expect(page.getByRole("combobox")).toHaveValue("Cliente corrigido E2E · 27988887777");
     await page.getByRole("button", { name: "Continuar" }).click();
     await expect(page.getByText("Soma informada: R$ 60.000,00 · Total: R$ 60.000,00")).toBeVisible();
     await page.getByRole("button", { name: "Continuar" }).click();
@@ -257,6 +257,7 @@ test.describe("fluxo único de venda", () => {
     const documents = page.locator("details").filter({ has: page.locator("summary", { hasText: "Contratos e recibos gerados" }) });
     await documents.locator("summary").click();
     await expect(documents.getByRole("button", { name: "Emitir nova versão do contrato" })).toBeVisible();
+    await documents.getByLabel("Valor · À vista/PIX").fill("55.000,00");
     await documents.getByRole("button", { name: "Emitir nova versão do contrato" }).click();
 
     await expect.poll(() => db.commercialDocument.count({ where: { vehicleId: flowVehicleId, kind: "contrato" } })).toBe(2);
