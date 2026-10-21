@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { afterSaleMessage, financingSimulationDown, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
-import { commercialPdf, expensesPdf, groupExpenseCosts } from "./commercial-pdf";
+import { commercialPdf, expensesPdf, groupExpenseCosts, preparationPdf, PREPARATION_CELL_SIZE, PREPARATION_COLS } from "./commercial-pdf";
+import { parsePreparationForm } from "./preparation";
 import { PDFArray, PDFDocument, PDFPage, decodePDFRawStream, PDFRawStream } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
+import { readFile } from "node:fs/promises";
 import { moneyInWords } from "./money-words";
 
 test("Price calcula taxa zero, juros e rejeita valores inválidos", () => {
@@ -163,6 +166,35 @@ test("contrato com sinal manual sem recibo vinculado, entrada e financiamento n�
   const pdf = await PDFDocument.load(bytes);
   assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
   assert.ok(pdf.getPageCount() >= 2);
+});
+
+test("PDF de carros em preparação gera páginas e valida o formulário", async () => {
+  const rows = Array.from({ length: 40 }, (_, i) => ({ brand: "Fiat", model: `Punto ${i}`, color: null, year: null, km: 1000, plate: null, ready: i % 2 === 0, posted: false }));
+  const doc = await PDFDocument.load(await preparationPdf(rows, new Date("2026-10-20T15:00:00Z")));
+  assert.ok(doc.getPageCount() >= 2);
+  assert.equal((await PDFDocument.load(await preparationPdf([]))).getPageCount(), 1);
+  const form = new FormData();
+  assert.equal(parsePreparationForm(form).ok, false);
+  form.set("brand", "Fiat"); form.set("model", "Uno"); form.set("plate", "abc-1234"); form.set("ready", "on"); form.set("purchasePrice", "10.500,00");
+  const parsed = parsePreparationForm(form);
+  assert.ok(parsed.ok && parsed.data.plate === "ABC1234" && parsed.data.ready && parsed.data.purchasePrice === 10500);
+  form.set("plate", "123");
+  assert.equal(parsePreparationForm(form).ok, false);
+});
+
+test("PDF de preparação: colunas comportam data, valor e cabeçalhos completos", async () => {
+  const doc = await PDFDocument.create();
+  doc.registerFontkit(fontkit);
+  const regular = await doc.embedFont(await readFile("public/fonts/Inter-Regular.ttf"));
+  const semi = await doc.embedFont(await readFile("public/fonts/Inter-SemiBold.ttf"));
+  assert.ok(PREPARATION_COLS.reduce((n, c) => n + c.w, 0) <= 595.28 - 88);
+  const col = (label: string) => PREPARATION_COLS.find((c) => c.label === label)!.w;
+  for (const [label, text] of [["Compra", "20/10/2026"], ["Valor", "R$ 1.250.000,00"], ["Placa", "ABC1D23"], ["KM", "199.999"]]) {
+    assert.ok(regular.widthOfTextAtSize(text, PREPARATION_CELL_SIZE) <= col(label) - 6, `${label} cortado`);
+  }
+  for (const c of PREPARATION_COLS) assert.ok(semi.widthOfTextAtSize(c.label.toUpperCase(), 7) <= c.w - 4, `cabeçalho ${c.label} estoura`);
+  const rows = [{ brand: "Fiat", model: "Punto", color: null, year: 2020, km: 1000, plate: "ABC1D23", purchasedAt: "2026-10-20T15:00:00Z", purchasePrice: 125000, ready: true, posted: true }];
+  assert.equal((await PDFDocument.load(await preparationPdf(rows))).getPageCount(), 1);
 });
 
 test("contrato com múltiplas formas de pagamento (PIX, Financiamento, Troca, Cartão e Sinal) lista todas no PDF e soma bate com o total", async () => {
