@@ -3,7 +3,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { formatAdminMoney, moneySum } from "./admin-money";
-import { expectedMargin, extrasTotal, hasCostBasis, investedTotal } from "./vehicle-ops";
+import { expectedMargin, extrasTotal, hasCostBasis, investedTotal, VEHICLE_COST_KINDS } from "./vehicle-ops";
 import { moneyInWords } from "./money-words";
 import { SEO_LOCAL_CITY } from "./seo-local";
 import { site } from "./site";
@@ -477,6 +477,19 @@ export type ExpensesPdfInput = {
   kindLabel: (kind: string) => string;
 };
 
+/** Categorias na ordem do cadastro (`VEHICLE_COST_KINDS`, depois as desconhecidas); datas crescentes dentro de cada uma. */
+export function groupExpenseCosts(costs: ExpensesPdfInput["costs"]) {
+  const order = (kind: string) => {
+    const i = VEHICLE_COST_KINDS.findIndex((item) => item.value === kind);
+    return i < 0 ? VEHICLE_COST_KINDS.length : i;
+  };
+  const groups = new Map<string, ExpensesPdfInput["costs"]>();
+  for (const cost of [...costs].sort((a, b) => order(a.kind) - order(b.kind) || a.date.localeCompare(b.date))) {
+    groups.set(cost.kind, [...(groups.get(cost.kind) ?? []), cost]);
+  }
+  return groups;
+}
+
 /** Relatório de gastos de um veículo, no mesmo padrão visual do contrato. */
 export async function expensesPdf(input: ExpensesPdfInput) {
   const pdf = await PDFDocument.create();
@@ -531,9 +544,9 @@ export async function expensesPdf(input: ExpensesPdfInput) {
     }
   }
   const ensure = (height: number) => { if (y - height < BOTTOM) newPage(false); };
-  function section(label: string) {
+  function section(label: string, needed = 60) {
     y -= 24;
-    ensure(60);
+    ensure(needed);
     page.drawRectangle({ x: MARGIN, y: y - 3, width: 3, height: 13, color: BRAND });
     page.drawText(label.toUpperCase(), { x: MARGIN + 10, y, size: 10, font: title, color: ASPHALT });
     page.drawLine({ start: { x: MARGIN, y: y - 9 }, end: { x: right, y: y - 9 }, thickness: 0.6, color: LINE });
@@ -551,11 +564,7 @@ export async function expensesPdf(input: ExpensesPdfInput) {
     y -= 15;
   }
 
-  // Categorias na ordem do cadastro; datas crescentes dentro de cada uma.
-  const groups = new Map<string, ExpensesPdfInput["costs"]>();
-  for (const cost of [...input.costs].sort((a, b) => a.date.localeCompare(b.date))) {
-    groups.set(cost.kind, [...(groups.get(cost.kind) ?? []), cost]);
-  }
+  const groups = groupExpenseCosts(input.costs);
   section("Gastos por categoria");
   if (groups.size === 0) {
     page.drawText("Nenhum gasto lançado para este veículo.", { x: MARGIN, y, size: 10.5, font: regular, color: MUTED });
@@ -588,8 +597,7 @@ export async function expensesPdf(input: ExpensesPdfInput) {
   if (input.salePrice != null) rows.push([input.sold ? "Preço de venda" : "Preço anunciado", money(input.salePrice)]);
   const showMargin = !input.consigned && input.salePrice != null && hasCostBasis(input.purchasePrice, input.costs);
   const boxH = 24 + rows.length * 20 + (showMargin ? 36 : 0);
-  section("Resumo");
-  ensure(boxH + 10);
+  section("Resumo", boxH + 40); // título (24 + 28 de respiro) e caixa na mesma página
   const top = y + 8;
   page.drawRectangle({ x: MARGIN, y: top - boxH, width: CONTENT_W, height: boxH, color: ASPHALT });
   y = top - 26;
