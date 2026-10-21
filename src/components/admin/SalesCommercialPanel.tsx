@@ -204,14 +204,13 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
   function handleCalculateSimulation() {
     const p = parseMoneyBR(price) ?? 0;
     const fin = parseMoneyBR(financedAmount) ?? 0;
-    const d = fin > 0 && fin < p ? moneyDifference(p, fin) : (parseMoneyBR(downPayment) ?? parseMoneyBR(deposit) ?? 0);
     const m = Number(months);
     if (!p || p <= 0 || !m || m <= 0) {
       setMessage("Informe o valor do veículo e o prazo em meses para simular.");
       return;
     }
     try {
-      const sim = simulateFinancing(p, d, 0, m);
+      const sim = simulateFinancing(fin, 0, 0, m);
       setSimulation(sim);
       setInstallmentAmount(moneyInput(sim.installment));
       setMessage("");

@@ -197,7 +197,16 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
 
     await page.getByRole("button", { name: "Financiamento" }).click();
     await page.locator('#proposta input[name="bank"]').fill("Banco de teste");
+    await page.getByRole("button", { name: "Sinal", exact: true }).click();
+    await page.getByRole("button", { name: "À vista/PIX", exact: true }).click();
+    await page.locator('input[name="financed"]').fill("110.000,00");
+    await page.locator('input[name="months"]').fill("48");
+    await page.getByRole("button", { name: "Simular parcelas" }).click();
+    await expect(page.locator('input[name="installmentAmount"]')).toHaveValue("2.291,67");
+    await page.getByRole("button", { name: "Sinal", exact: true }).click();
+    await page.getByRole("button", { name: "À vista/PIX", exact: true }).click();
     await page.locator('input[name="financed"]').fill("60.000,00");
+    await page.locator('input[name="months"]').fill("48");
     await page.getByRole("button", { name: "Simular parcelas" }).click();
     await expect(page.locator('input[name="installmentAmount"]')).not.toHaveValue("");
     await page.locator('input[name="financed"]').fill("55.000,00");
