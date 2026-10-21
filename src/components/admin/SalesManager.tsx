@@ -80,7 +80,7 @@ export type SaleRow = {
     consigned: boolean;
     costs: Array<{ amount: number }>;
   };
-  customer: { id: string; name: string; phone: string } | null;
+  customer: { id: string; name: string; phone: string; cpf?: string | null; address?: string | null } | null;
 };
 
 export type SellableVehicle = {
@@ -345,7 +345,7 @@ export function SalesManager({
       price: sale.salePrice,
       status: "vendido",
     });
-    setCommercialCustomer(sale.customer ? { ...sale.customer, cpf: null } : null);
+    setCommercialCustomer(sale.customer ?? null);
     setOpen(false);
     setCommercialOpen(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -467,6 +467,7 @@ export function SalesManager({
       {confirmDialog}
       {commercialOpen ? (
         <SalesCommercialPanel
+          key={`${commercialVehicle?.id ?? ""}:${commercialCustomer?.id ?? ""}:${commercialVehicle?.price ?? ""}`}
           initialVehicle={commercialVehicle}
           initialCustomer={commercialCustomer}
           onClose={() => setCommercialOpen(false)}

@@ -202,7 +202,7 @@ export const ADMIN_SALE_LIST_INCLUDE = {
       costs: { select: { amount: true } },
     },
   },
-  customer: { select: { id: true, name: true, phone: true } },
+  customer: { select: { id: true, name: true, phone: true, cpf: true, address: true } },
 } as const;
 
 function tabStatusFilter(tab: VehiclesTab) {

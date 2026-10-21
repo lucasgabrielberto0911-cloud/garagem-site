@@ -99,7 +99,7 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
         <div className="mt-4 space-y-3">{simulations.map((s) => <form key={s.id} action={submit} className="space-y-2 border-t border-white/10 pt-3"><input type="hidden" name="operation" value="finance-status" /><input type="hidden" name="simulationId" value={s.id} /><p className="text-sm">{s.customerName} · {s.bank} · {s.months} × {brl(s.installment)} · {s.rate}% a.m.</p><label className="block text-sm">Situação<select name="status" className={inputClass} defaultValue={s.status}>{FINANCE_STATUSES.map((value, index) => <option key={value} value={value}>{["Simulação", "Enviada ao banco", "Aprovada", "Recusada"][index]}</option>)}</select></label><button className={btn.outline}>Atualizar acompanhamento</button></form>)}</div>
       </Card>
       <div id="proposta">
-        <SalesCommercialPanel initialVehicle={salesVehicle} initialCustomer={reservationCustomer} />
+        <SalesCommercialPanel key={reservationCustomer?.id ?? "sem-cliente"} initialVehicle={salesVehicle} initialCustomer={reservationCustomer} />
       </div>
       <Card title="Contratos e recibos gerados" collapsed>
         <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}?inline`} target="_blank" rel="noopener noreferrer">{d.kind === "recibo" ? "Recibo" : d.kind === "contrato" ? "Contrato" : "Proposta"}{d.number ? ` nº ${d.number}` : ""} · {d.date} · Abrir PDF</a></li>)}</ul>

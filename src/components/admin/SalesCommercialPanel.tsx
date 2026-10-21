@@ -377,6 +377,8 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                 loadOptions={loadCustomerOptions}
                 onChange={(id, item) => {
                   setCustomerId(id);
+                  setMissingCpf("");
+                  setMissingAddress("");
                   setPickedCustomer(item ? { id, name: item.name ?? item.label, phone: item.phone ?? "", cpf: item.cpf ?? null, address: item.address ?? null } : null);
                 }}
               />
