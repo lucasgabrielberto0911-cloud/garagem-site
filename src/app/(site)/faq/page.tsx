@@ -12,7 +12,7 @@ export const revalidate = 600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Dúvidas frequentes | ${site.name}`,
-  description: `Como funciona a compra, a troca, o financiamento e a documentação na ${site.name} — seminovos em ${site.region} e região.`,
+  description: `Como funciona a compra, a troca, o financiamento e a documentação na ${site.name} — seminovos em ${site.region}.`,
   path: "/faq",
 });
 

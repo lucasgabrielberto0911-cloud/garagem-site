@@ -15,7 +15,7 @@ export function cityPageStockCopy(cityName: string): CityPageStockCopy {
   const name = cityName.trim() || "sua cidade";
   return {
     heading: "Estoque disponível agora",
-    intro: `Até seis anúncios do estoque do site, com foto, preço e ficha de cada veículo disponível. Quem está em ${name} vê opções do mesmo estoque. O WhatsApp pede vídeo ou visita — a escolha começa na ficha.`,
+    intro: `Até seis anúncios do estoque do site, com foto, preço e ficha de cada veículo disponível. Quem está em ${name} vê opções do mesmo estoque. No WhatsApp você pede vídeo ou visita; a escolha começa na ficha.`,
     empty:
       "Neste momento não tem veículo disponível no estoque. A página não inventa carro.",
     stockHref: "/estoque",

@@ -43,7 +43,7 @@ export async function SiteFooter() {
               aria-hidden="true"
             />
             <p className="mt-4 max-w-sm font-display text-base font-semibold leading-snug text-cream">
-              Seminovos com procedência em {site.region} e região
+              Seminovos com procedência em {site.region}
             </p>
             <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
               Loja 100% digital · atendimento online das 8h às 23h. Sem ponto

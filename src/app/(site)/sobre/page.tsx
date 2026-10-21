@@ -25,7 +25,7 @@ export const revalidate = 600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Sobre a ${site.name}`,
-  description: `Conheça a ${site.name}: mais de 20 anos de história, seminovos com procedência e atendimento digital em ${site.region} e região do ES.`,
+  description: `Conheça a ${site.name}: mais de 20 anos de história, seminovos com procedência e atendimento digital em ${site.region}.`,
   path: "/sobre",
 });
 
@@ -81,7 +81,7 @@ export default async function SobrePage() {
         <PageHeader
           eyebrow="Sobre nós"
           title={publicSite.name}
-          description={`Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência, negociação clara e atendimento de excelência em ${publicSite.region} e região.`}
+          description={`Mais de 20 anos de mercado. Mais de 1.000 veículos negociados. Seminovos com procedência, negociação clara e atendimento de excelência em ${publicSite.region}.`}
         />
 
         <FounderSection photoUrl={siteContent.founderPhotoUrl} />
@@ -198,8 +198,7 @@ export default async function SobrePage() {
                     <strong className="font-display font-semibold text-cream">
                       Visão.
                     </strong>{" "}
-                      Ser uma loja digital de seminovos de confiança em {publicSite.region}{" "}
-                    e região: a loja em que o cliente confia para negociar com
+                      Ser uma loja digital de seminovos de confiança em {publicSite.region}: a loja em que o cliente confia para negociar com
                     clareza e sair satisfeito.
                   </p>
                   <p>
