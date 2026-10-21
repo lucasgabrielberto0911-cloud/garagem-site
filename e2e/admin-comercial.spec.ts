@@ -206,6 +206,7 @@ test.describe("fluxo único de venda", () => {
 
     await page.goto(`/admin/veiculos/${flowVehicleId}?view=operacao`);
     const documents = page.locator("details").filter({ has: page.locator("summary", { hasText: "Contratos e recibos gerados" }) });
+    await documents.locator("summary").click();
     await documents.locator('input[name="legacySignalAmount"]').fill("5.000,00");
     await documents.locator('input[name="legacyPaymentAmount_pix"]').fill("55.000,00");
     await documents.getByRole("button", { name: "Emitir contrato desta venda" }).click();
@@ -213,7 +214,7 @@ test.describe("fluxo único de venda", () => {
 
     const contract = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" } });
     expect(contract.snapshot).toMatchObject({ saleId: expect.any(String), signal: { amount: 5000 }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 55000 }] });
-    expect(contract.snapshot).not.toHaveProperty("reservationId");
+    expect(contract.snapshot).toMatchObject({ reservationId: null });
   });
 
   test("conclui venda quando sinal da reserva cobre o total negociado", async ({ page, request, context, baseURL }) => {
@@ -430,6 +431,7 @@ test.describe("fluxo único de venda", () => {
     const reissued = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" }, orderBy: { createdAt: "desc" } });
     expect(reissued.snapshot).toMatchObject({ signal: { amount: 5000, receiptId: String(manualReceipt.number) }, payments: [{ method: "sinal", amount: 5000 }, { method: "pix", amount: 62000 }] });
 
+    await db.vehicleReservation.updateMany({ where: { vehicleId: flowVehicleId, customerId: otherCustomerId, status: "ativa" }, data: { status: "cancelada" } });
     await db.sale.update({ where: { id: sale.id }, data: { customerId: otherCustomerId } });
     await page.reload();
     await documents.locator("summary").click();
