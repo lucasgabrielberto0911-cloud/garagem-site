@@ -118,7 +118,7 @@ export function VehicleMobileBar({
     videoHref
       ? {
           href: videoHref,
-          label: "Vídeo",
+          label: "Pedir vídeo",
           tracking: "ficha-video",
           aria: "Pedir vídeo deste veículo no WhatsApp",
         }

@@ -73,7 +73,7 @@ export function VehicleQuickActions({
     {
       trackingLabel: "ficha-video",
       hrefMessage: video,
-      label: "Vídeo",
+      label: "Pedir vídeo",
       ariaLabel: "Pedir vídeo deste veículo no WhatsApp",
     },
     ...(visit

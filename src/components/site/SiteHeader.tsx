@@ -286,7 +286,7 @@ export function SiteHeader() {
                   className="whatsapp-btn flex min-h-[52px] w-full items-center justify-center gap-2.5 px-4 py-4 font-display text-base font-semibold text-white touch-manipulation"
                 >
                   <IconWhatsApp className="h-5 w-5" />
-                  Chamar no WhatsApp
+                  Falar no WhatsApp
                 </a>
                 {PHONES.map((phone, index) => (
                   <a
