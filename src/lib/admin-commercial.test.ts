@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { afterSaleMessage, simulateFinancing, suggestPrice } from "./admin-commercial";
-import { commercialPdf, expensesPdf, groupExpenseCosts } from "./commercial-pdf";
+import { commercialPdf, expensesPdf, groupExpenseCosts, preparationPdf } from "./commercial-pdf";
+import { parsePreparationForm } from "./preparation";
 import { PDFArray, PDFDocument, PDFPage, decodePDFRawStream, PDFRawStream } from "pdf-lib";
 import { moneyInWords } from "./money-words";
 
@@ -163,4 +164,18 @@ test("contrato com sinal manual sem recibo vinculado, entrada e financiamento n�
   const pdf = await PDFDocument.load(bytes);
   assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
   assert.ok(pdf.getPageCount() >= 2);
+});
+
+test("PDF de carros em preparação gera páginas e valida o formulário", async () => {
+  const rows = Array.from({ length: 40 }, (_, i) => ({ brand: "Fiat", model: `Punto ${i}`, color: null, year: null, km: 1000, plate: null, ready: i % 2 === 0, posted: false }));
+  const doc = await PDFDocument.load(await preparationPdf(rows, new Date("2026-10-20T15:00:00Z")));
+  assert.ok(doc.getPageCount() >= 2);
+  assert.equal((await PDFDocument.load(await preparationPdf([]))).getPageCount(), 1);
+  const form = new FormData();
+  assert.equal(parsePreparationForm(form).ok, false);
+  form.set("brand", "Fiat"); form.set("model", "Uno"); form.set("plate", "abc-1234"); form.set("ready", "on"); form.set("purchasePrice", "10.500,00");
+  const parsed = parsePreparationForm(form);
+  assert.ok(parsed.ok && parsed.data.plate === "ABC1234" && parsed.data.ready && parsed.data.purchasePrice === 10500);
+  form.set("plate", "123");
+  assert.equal(parsePreparationForm(form).ok, false);
 });
