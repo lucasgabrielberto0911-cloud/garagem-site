@@ -3,7 +3,7 @@
 BEGIN;
 
 -- CreateTable
-CREATE TABLE "PreparationVehicle" (
+CREATE TABLE IF NOT EXISTS "PreparationVehicle" (
     "id" TEXT NOT NULL,
     "brand" TEXT NOT NULL,
     "model" TEXT NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE "PreparationVehicle" (
 );
 
 -- CreateIndex
-CREATE INDEX "PreparationVehicle_createdAt_idx" ON "PreparationVehicle"("createdAt");
+CREATE INDEX IF NOT EXISTS "PreparationVehicle_createdAt_idx" ON "PreparationVehicle"("createdAt");
 
 ALTER TABLE "PreparationVehicle" ENABLE ROW LEVEL SECURITY;
 
