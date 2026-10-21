@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
+import { readFavoriteIds } from "@/lib/favorites";
 import { writeFavoriteSnapshots, type FavoriteSnapshot } from "@/lib/offline-queue";
 
-// Só é preenchido nos efeitos do navegador. Coalesce os cards do mesmo commit.
+// Só é preenchido nos efeitos do navegador. Coalesce os favoritos ativos do mesmo commit.
 const pending = new Map<string, FavoriteSnapshot>();
 let scheduled = false;
 
-function remember(vehicle: FavoriteSnapshot) {
+export function rememberFavoriteSnapshot(vehicle: FavoriteSnapshot, force = false) {
+  if (!force) {
+    const favorites = readFavoriteIds();
+    if (!favorites.includes(vehicle.id)) return;
+  }
   pending.set(vehicle.id, vehicle);
   if (scheduled) return;
   scheduled = true;
@@ -15,13 +20,15 @@ function remember(vehicle: FavoriteSnapshot) {
     const vehicles = [...pending.values()];
     pending.clear();
     scheduled = false;
-    writeFavoriteSnapshots(vehicles);
+    if (vehicles.length > 0) {
+      writeFavoriteSnapshots(vehicles);
+    }
   });
 }
 
 export function RememberVehicleSnapshot({ vehicle }: { vehicle: FavoriteSnapshot }) {
   useEffect(() => {
-    remember(vehicle);
+    rememberFavoriteSnapshot(vehicle);
     // snapshot is rebuilt no servidor; o id é a chave estável
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vehicle.id]);

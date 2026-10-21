@@ -6,7 +6,8 @@ import { Container, PageHeader, ButtonLink, WhatsAppButton } from "@/components/
 import { getStockLandingHistory } from "@/lib/stock-landing-data";
 import { stockLandingLinks, stockLandingCopy } from "@/lib/stock-landings";
 import { getCityShowcaseVehicles } from "@/lib/vehicles";
-import { breadcrumbJsonLd, buildPageMetadata, faqJsonLd, SERVICE_CITIES } from "@/lib/seo";
+import { breadcrumbJsonLd, buildPageMetadata, faqJsonLd, itemListJsonLd, SERVICE_CITIES } from "@/lib/seo";
+import { site } from "@/lib/site";
 import { wantedVehicleHref } from "@/lib/wanted-vehicle-page";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
@@ -37,6 +38,14 @@ export async function StockLanding({ kind, slug }: { kind: "marca" | "modelo"; s
   return <Container className="py-12">
     <JsonLd data={breadcrumbJsonLd([{ name: "Início", path: "/" }, { name: "Marcas e modelos", path: "/modelos" }, { name: link.label, path }])} />
     <JsonLd data={faqJsonLd(faqs)} />
+    {vehicles.length > 0 && (
+      <JsonLd
+        data={itemListJsonLd(vehicles, {
+          name: `${link.label} seminovo — ${site.name}`,
+          path,
+        })}
+      />
+    )}
     <PageHeader eyebrow="Garagem · Espírito Santo" title={`${link.label} seminovo`} description={copy.introduction} />
     <section className="mt-8"><h2 className="mb-4 font-display text-xl">Disponíveis agora</h2>
       {vehicles.length ? <VehicleGrid vehicles={vehicles} priorityCount={1} returnTo={path} /> : <p className="text-muted">Nenhum veículo disponível nesta seleção. Registre seu pedido com o modelo preenchido ou fale pelo WhatsApp.</p>}

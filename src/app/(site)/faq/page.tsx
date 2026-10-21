@@ -4,15 +4,15 @@ import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { FaqExplorer } from "@/components/site/FaqExplorer";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
-import { buildPageMetadata, faqJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, buildPageMetadata, faqJsonLd } from "@/lib/seo";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { getPublishedFaq } from "@/lib/site-content";
 
-export const revalidate = 600;
+export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Dúvidas frequentes | ${site.name}`,
-  description: `Como funciona a compra, a troca, o financiamento e a documentação na ${site.name} — seminovos em ${site.region} e região.`,
+  description: `Como funciona a compra, a troca, o financiamento e a documentação na ${site.name} — seminovos em ${site.region}.`,
   path: "/faq",
 });
 
@@ -20,6 +20,12 @@ export default async function FaqPage() {
   const items = await getPublishedFaq();
   return (
     <div className="py-12 lg:py-16">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Início", path: "/" },
+          { name: "Dúvidas frequentes", path: "/faq" },
+        ])}
+      />
       <JsonLd data={faqJsonLd(items)} />
 
       <Container>

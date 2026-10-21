@@ -50,7 +50,7 @@ test("a consulta traz todo o estoque e a página limita a vitrine a seis veícul
   assert.match(page, /vehicles=\{featured\.slice\(0, 6\)\}/);
   assert.match(page, /cityPageStockCopy/);
   assert.doesNotMatch(page, /showWhatsApp/);
-  assert.match(page, /Pedir vídeo ou visita/);
+  assert.match(page, /Falar no WhatsApp/);
   assert.match(page, /stock\.stockHref/);
   assert.doesNotMatch(page, /^["']use client["']/m);
   assert.doesNotMatch(page, /useSearchParams|EstoqueBrowse|\/api\/estoque|VehicleCardSkeleton/);

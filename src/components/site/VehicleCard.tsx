@@ -1,6 +1,5 @@
 import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
-import { RememberVehicleSnapshot } from "@/components/site/RememberVehicleSnapshot";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import { isNewListing } from "@/lib/vehicle-badges";
@@ -48,30 +47,28 @@ export function VehicleCard({
   const badge = STATUS_BADGE[vehicle.status];
   const facts = new Map(card.facts.map((fact) => [fact.label, fact]));
   const version = collapseWhitespace(vehicle.version ?? "");
+  const favoriteSnapshot = {
+    id: vehicle.id,
+    category: vehicle.category,
+    brand: vehicle.brand,
+    model: vehicle.model,
+    version: vehicle.version,
+    yearModel: vehicle.yearModel,
+    km: vehicle.km,
+    price: vehicle.price,
+    transmission: vehicle.transmission,
+    fuel: vehicle.fuel,
+    status: vehicle.status,
+    featured: vehicle.featured,
+    color: vehicle.color,
+    updatedAt:
+      vehicle.updatedAt instanceof Date
+        ? vehicle.updatedAt.toISOString()
+        : vehicle.updatedAt ?? null,
+    photos: vehicle.photos.slice(0, 1).map(({ url, thumbnailUrl }) => ({ url, thumbnailUrl })),
+  };
   return (
     <article className="vehicle-card listing-card card-lift group">
-      <RememberVehicleSnapshot
-        vehicle={{
-          id: vehicle.id,
-          category: vehicle.category,
-          brand: vehicle.brand,
-          model: vehicle.model,
-          version: vehicle.version,
-          yearModel: vehicle.yearModel,
-          km: vehicle.km,
-          price: vehicle.price,
-          transmission: vehicle.transmission,
-          fuel: vehicle.fuel,
-          status: vehicle.status,
-          featured: vehicle.featured,
-          color: vehicle.color,
-          updatedAt:
-            vehicle.updatedAt instanceof Date
-              ? vehicle.updatedAt.toISOString()
-              : vehicle.updatedAt ?? null,
-          photos: vehicle.photos.slice(0, 1).map(({ url, thumbnailUrl }) => ({ url, thumbnailUrl })),
-        }}
-      />
       <StockVehicleLink
         href={display.path}
         returnTo={returnTo}
@@ -132,6 +129,7 @@ export function VehicleCard({
           make={formatBrandName(vehicle.brand)}
           model={formatModelName(vehicle.model)}
           year={vehicle.yearModel}
+          snapshot={favoriteSnapshot}
           appearance="ghost"
           size="sm"
         />

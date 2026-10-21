@@ -4,6 +4,7 @@ import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveCommercial } from "@/app/admin/veiculos/commercial-actions";
 import { ENTRY_ITEMS, FINANCE_STATUSES, simulateFinancing, suggestPrice } from "@/lib/admin-commercial";
+import { fetchDocFile, shareDocFile } from "@/lib/commercial-client";
 import { formatAdminMoney as brl, moneyInput, parseMoneyBR } from "@/lib/admin-money";
 import { whatsappUrl } from "@/lib/leads";
 import { SearchSelect } from "./SearchSelect";
@@ -20,14 +21,6 @@ type Props = {
 
 function Field({ label, name, value, type = "text", required = true }: { label: string; name: string; value?: string | number; type?: string; required?: boolean }) {
   return <label className="block space-y-1 text-sm"><span>{label}</span><input name={name} type={type} defaultValue={value} required={required} maxLength={type === "text" ? 200 : undefined} className={inputClass} /></label>;
-}
-
-async function fetchDocFile(id: string, kind: string, number?: number) {
-  try {
-    const r = await fetch(`/api/admin/documentos/${id}`);
-    if (!r.ok || !r.headers.get("content-type")?.includes("application/pdf")) return null;
-    return new File([await r.blob()], `garagem-${kind}-${number}.pdf`, { type: "application/pdf" });
-  } catch { return null; }
 }
 
 export function CommercialPanel({ vehicle, reservation, assessment, simulations, documents, history }: Props) {
@@ -62,16 +55,10 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
     el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   async function shareDoc(doc: NonNullable<typeof lastDoc>) {
-    if (!doc.file) {
-      const file = await fetchDocFile(doc.id, doc.kind, doc.number);
-      if (!file) { setMessage("Não foi possível baixar o PDF. Tente novamente."); return; }
-      setMessage("");
-      setLastDoc({ ...doc, file });
-      return;
-    }
-    const label = `${doc.kind === "recibo" ? "Recibo" : "Proposta"}${doc.number ? ` nº ${doc.number}` : ""} - Garagem`;
-    if (doc.file && navigator.canShare?.({ files: [doc.file] })) navigator.share({ files: [doc.file], title: label, text: label }).catch(() => {});
-    else window.open(`https://wa.me/?text=${encodeURIComponent(label)}`, "_blank", "noopener");
+    await shareDocFile(doc, {
+      onFileDownloaded: (file) => setLastDoc({ ...doc, file }),
+      onError: (msg) => setMessage(msg),
+    });
   }
   const bar = "inline-flex min-h-11 flex-1 items-center justify-center px-2 text-center text-xs font-semibold touch-manipulation";
   return <div className="space-y-4 pb-16 font-body md:pb-0">
@@ -126,23 +113,36 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
       <Card id="proposta" title="Proposta e recibo em PDF" collapsed>
         <p className="mb-3 text-sm text-muted">Documento de apoio à negociação. Confira dados e condições antes de assinar. O recibo declara valor já recebido e recebe número sequencial.</p>
         <form action={submit} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="operation" value="document" />
-          <label className="block text-sm">Documento<select name="kind" value={docKind} onChange={(e) => setDocKind(e.target.value)} className={inputClass}><option value="proposta">Proposta</option><option value="recibo">Recibo (sinal, complemento, entrada ou quitação)</option></select></label><CustomerSelect />
+          <label className="block text-sm">Documento<select name="kind" value={docKind} onChange={(e) => setDocKind(e.target.value)} className={inputClass}><option value="proposta">Proposta</option><option value="contrato">Contrato de compra e venda</option><option value="recibo">Recibo (sinal, complemento, entrada ou quitação)</option></select></label><CustomerSelect />
           <Field label={docKind === "recibo" ? "Valor recebido (R$)" : "Preço total do veículo (R$), antes de abater o sinal"} name="amount" /><Field label="Forma de pagamento" name="payment" />
           <label className="block text-sm sm:col-span-2">Condições, validade e observações<textarea name="conditions" required maxLength={3000} className={inputClass} /></label><button className={btn.primary}>Gerar PDF</button>
           {lastDoc ? <div className="flex flex-wrap gap-2 sm:col-span-2"><a className={btn.primary} href={`/api/admin/documentos/${lastDoc.id}?inline`} target="_blank" rel="noopener noreferrer">Abrir PDF</a><button type="button" className={btn.outline} onClick={() => shareDoc(lastDoc)}>Compartilhar no WhatsApp</button></div> : null}
         </form>
-        <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}?inline`} target="_blank" rel="noopener noreferrer">{d.kind === "recibo" ? "Recibo" : "Proposta"} nº {d.number} · {d.date} · Abrir PDF</a></li>)}</ul>
+        <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}?inline`} target="_blank" rel="noopener noreferrer">{d.kind === "recibo" ? "Recibo" : d.kind === "contrato" ? "Contrato" : "Proposta"}{d.number ? ` nº ${d.number}` : ""} · {d.date} · Abrir PDF</a></li>)}</ul>
       </Card>
     </fieldset>
   </div>;
 }
 
-function CustomerSelect() {
+export function CustomerSelect({
+  value,
+  selectedLabel,
+  onChange,
+}: {
+  value?: string;
+  selectedLabel?: string;
+  onChange?: (id: string, item?: { id: string; label: string }) => void;
+} = {}) {
   const id = useId();
-  const [selected, setSelected] = useState({ id: "", label: "" });
+  const [internal, setInternal] = useState({ id: "", label: "" });
+  const currentId = value !== undefined ? value : internal.id;
+  const currentLabel = selectedLabel !== undefined ? selectedLabel : internal.label;
   return <div className="space-y-1 text-sm"><label htmlFor={id}>Cliente cadastrado</label><SearchSelect id={id}
-    name="customerId" value={selected.id} selectedLabel={selected.label} placeholder="Busque nome, telefone ou CPF"
-    onChange={(id, item) => setSelected({ id, label: item?.label ?? "" })}
+    name="customerId" value={currentId} selectedLabel={currentLabel} placeholder="Busque nome, telefone ou CPF"
+    onChange={(id, item) => {
+      setInternal({ id, label: item?.label ?? "" });
+      onChange?.(id, item ? { id: item.id, label: item.label } : undefined);
+    }}
     loadOptions={async (query, signal) => {
       const response = await fetch(`/api/admin/clientes?q=${encodeURIComponent(query)}&take=20`, { signal });
       if (!response.ok) throw new Error("Falha ao buscar clientes.");

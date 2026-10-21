@@ -166,7 +166,7 @@ export function FavoritesList() {
             message={WHATSAPP_MESSAGES.similarFavorites}
             variant="solid"
           >
-            Pedir no WhatsApp
+            Falar no WhatsApp
           </WhatsAppButton>
           <ChatOpenButton
             source="favoritos-vazio"
@@ -280,7 +280,7 @@ function FavoritesListWhatsApp({ vehicles }: { vehicles: VehicleCardData[] }) {
       slug={pack.slug}
       message={pack.message}
     >
-      Receber esta lista no WhatsApp
+      Falar no WhatsApp
     </WhatsAppButton>
   );
 }

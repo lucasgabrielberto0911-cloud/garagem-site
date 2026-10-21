@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { JsonLd } from "@/components/JsonLd";
 import { Container, PageHeader, WhatsAppButton } from "@/components/site/ui";
-import { buildPageMetadata } from "@/lib/seo";
+import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 import {
   PHONES,
   WHATSAPP_MESSAGES,
@@ -12,11 +13,11 @@ import {
 } from "@/lib/site";
 import { getPublicSite } from "@/lib/site-settings";
 
-export const revalidate = 600;
+export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Contato | ${site.name}`,
-  description: `WhatsApp, telefone, e-mail e horário de atendimento online da ${site.name} em ${site.region} e região — todos os dias, das 8h às 23h.`,
+  description: `WhatsApp, telefone, e-mail e horário de atendimento online da ${site.name} em ${site.region} — todos os dias, das 8h às 23h.`,
   path: "/contato",
 });
 
@@ -38,13 +39,19 @@ export default async function ContatoPage() {
 
   return (
     <div data-clear-fab="">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Início", path: "/" },
+          { name: "Contato", path: "/contato" },
+        ])}
+      />
       <div className="clear-fab-screen lg:py-12">
         <Container className="pt-5 lg:pt-0">
           <PageHeader
             compact
             eyebrow="Contato"
             title={`Fale com a ${publicSite.name}`}
-            description={`Somos loja digital e atendemos ${publicSite.region} e região — todos os dias, das 8h às 23h. Compare o estoque no assistente; simule e feche no WhatsApp.`}
+            description={`Somos loja digital e atendemos ${publicSite.region} — todos os dias, das 8h às 23h. Compare o estoque no assistente; simule e feche no WhatsApp.`}
           />
 
           <section
@@ -134,7 +141,7 @@ export default async function ContatoPage() {
                 Não temos showroom físico. Você escolhe no site, tira dúvidas e
                 pede vídeo pelo WhatsApp, e combinamos visita ao veículo, entrega
                 ou retirada. Atendimento online todos os dias, das 8h às 23h, em{" "}
-                {publicSite.region} e região.
+                {publicSite.region}.
               </p>
             )}
           </Channel>

@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { JsonLd } from "@/components/JsonLd";
 import { SellForm } from "@/components/site/SellForm";
 import { Container, PageHeader } from "@/components/site/ui";
-import { buildPageMetadata } from "@/lib/seo";
+import { breadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import { getVehicleById } from "@/lib/vehicles";
 
-export const revalidate = 600;
+export const revalidate = 3600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Vender ou trocar seu veículo | ${site.name}`,
-  description: `Avaliação gratuita e sem compromisso do seu veículo na ${site.name}. Compramos seu usado e aceitamos na troca em ${site.region} e região.`,
+  description: `Avaliação gratuita e sem compromisso do seu veículo na ${site.name}. Compramos seu usado e aceitamos na troca em ${site.region}.`,
   path: "/vender",
 });
 
@@ -46,6 +47,12 @@ export default async function VenderPage({
 
   return (
     <div data-clear-fab="" className="lg:py-12">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Início", path: "/" },
+          { name: "Vender ou trocar", path: "/vender" },
+        ])}
+      />
       <Container className="pt-5 lg:pt-0">
         <div className="lg:grid lg:grid-cols-[minmax(260px,300px)_minmax(0,1fr)] lg:items-start lg:gap-x-10 xl:gap-x-14">
           <div className="clear-fab-screen lg:contents">

@@ -69,7 +69,7 @@ test("giro, avaliação, financiamento, reserva, PDF privado e pós-venda", asyn
   await reserve.getByRole("button", { name: "Confirmar reserva" }).click();
   await expect.poll(async () => (await db.vehicle.findUniqueOrThrow({ where: { id: vehicleId } })).status).toBe("reservado");
 
-  const documentPanel = page.locator("details").filter({ has: page.locator("summary", { hasText: "Proposta e recibo" }) });
+  const documentPanel = page.locator("details").filter({ has: page.locator('select[name="kind"]') });
   await documentPanel.locator("summary").click();
   await documentPanel.locator("select[name=kind]").selectOption("recibo");
   await documentPanel.getByRole("combobox").nth(1).click();
@@ -110,4 +110,97 @@ test("giro, avaliação, financiamento, reserva, PDF privado e pós-venda", asyn
   await page.getByRole("button", { name: "Marcar tarefa concluída" }).click();
   await expect.poll(async () => db.afterSaleTask.count({ where: { saleId: sale.id, completedAt: { not: null } } })).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+});
+
+test("contrato e recibo gerados diretamente no painel de vendas", async ({ page, request, context, baseURL }) => {
+  test.setTimeout(90000);
+  const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
+  expect(login.ok()).toBeTruthy();
+  const cookie = login.headers()["set-cookie"].split(";")[0];
+  await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+
+  const salesVehicleId = "ce2esalespanelvehicle";
+  await db.commercialDocument.deleteMany({ where: { vehicleId: salesVehicleId } });
+  await db.vehicleReservation.deleteMany({ where: { vehicleId: salesVehicleId } });
+  await db.sale.deleteMany({ where: { vehicleId: salesVehicleId } });
+  await db.vehicle.deleteMany({ where: { id: salesVehicleId } });
+  await db.vehicle.create({
+    data: {
+      id: salesVehicleId,
+      brand: "Toyota",
+      model: "Corolla Vendas E2E",
+      year: 2022,
+      yearModel: 2022,
+      km: 30000,
+      price: 110000,
+      purchasePrice: 95000,
+      fuel: "Flex",
+      transmission: "Automático",
+      plate: "BRA2E19",
+    },
+  });
+
+  try {
+    await page.goto("/admin/vendas");
+    await page.getByRole("button", { name: "Contrato e recibo" }).click();
+    await expect(page.getByRole("heading", { name: "Contrato de compra e venda e recibo de sinal" })).toBeVisible();
+
+    await page.getByRole("combobox").first().click();
+    await page.getByRole("option", { name: /Corolla Vendas E2E/ }).click();
+
+    await page.getByRole("combobox").nth(1).click();
+    await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+
+    // 1. Gera recibo de sinal com prazo de reserva (expiresAt), criando reserva e marcando como reservado
+    await page.locator('input[name="deposit"]').fill("10.000,00");
+    await page.locator('input[name="expiresAt"]').fill("2099-01-01T10:00");
+    await page.locator('input[name="payment"]').fill("Pix chave CNPJ");
+    await page.locator('textarea[name="conditions"]').fill("Sinal de reserva com garantia de prazo.");
+
+    await page.getByRole("button", { name: "Gerar recibo de sinal (PDF)" }).click();
+    await expect(page.getByText(/Recibo de sinal nº \d+ gerado!/)).toBeVisible();
+
+    const receiptDoc = await db.commercialDocument.findFirstOrThrow({
+      where: { vehicleId: salesVehicleId, kind: "recibo" },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(receiptDoc.number).toBeGreaterThan(0);
+    const receiptPdf = await page.request.get(`/api/admin/documentos/${receiptDoc.id}`);
+    expect(receiptPdf.status()).toBe(200);
+    expect(receiptPdf.headers()["content-type"]).toBe("application/pdf");
+    expect((await receiptPdf.body()).subarray(0, 5).toString()).toBe("%PDF-");
+
+    // Confere que o status do veículo passou a reservado e a reserva ativa foi criada com o prazo e sinal
+    const reservedVehicle = await db.vehicle.findUniqueOrThrow({ where: { id: salesVehicleId } });
+    expect(reservedVehicle.status).toBe("reservado");
+    const activeReservation = await db.vehicleReservation.findFirstOrThrow({
+      where: { vehicleId: salesVehicleId, status: "ativa" },
+    });
+    expect(Number(activeReservation.deposit)).toBe(10000);
+
+    // 2. Gera contrato de compra e venda abatendo o sinal já pago
+    await page.locator('input[name="payment"]').fill("Entrada Pix + Financiamento Santander");
+    await page.locator('input[name="downPayment"]').fill("30.000,00");
+    await page.locator('input[name="bank"]').fill("Santander");
+    await page.locator('textarea[name="conditions"]').fill("Garantia de 90 dias de motor e câmbio.");
+
+    await page.getByRole("button", { name: "Gerar contrato (PDF)" }).click();
+    await expect(page.getByText(/Contrato de compra e venda nº \d+ gerado!/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "Abrir PDF" }).first()).toBeVisible();
+
+    const contractDoc = await db.commercialDocument.findFirstOrThrow({
+      where: { vehicleId: salesVehicleId, kind: "contrato" },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(contractDoc.number).toBeGreaterThan(0);
+    const contractPdf = await page.request.get(`/api/admin/documentos/${contractDoc.id}`);
+    expect(contractPdf.status()).toBe(200);
+    expect(contractPdf.headers()["content-type"]).toBe("application/pdf");
+    expect((await contractPdf.body()).subarray(0, 5).toString()).toBe("%PDF-");
+  } finally {
+    await db.commercialDocument.deleteMany({ where: { vehicleId: salesVehicleId } });
+    await db.vehicleReservation.deleteMany({ where: { vehicleId: salesVehicleId } });
+    await db.sale.deleteMany({ where: { vehicleId: salesVehicleId } });
+    await db.vehicle.deleteMany({ where: { id: salesVehicleId } });
+  }
 });

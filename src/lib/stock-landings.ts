@@ -3,15 +3,28 @@ import { formatBrandName, formatModelName } from "./format";
 export function stockLandingSlug(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
-export function stockLandingLinks(rows: { brand: string; model: string }[]) {
-  const links = new Map<string, { path: string; label: string }>();
+export function stockLandingLinks(
+  rows: { brand: string; model: string; updatedAt?: Date | string | null }[],
+) {
+  const links = new Map<string, { path: string; label: string; lastModified?: Date }>();
   for (const row of rows) {
     const brand = formatBrandName(row.brand.trim());
     const model = formatModelName(row.model.trim());
     if (!brand || !model) continue;
-    for (const [kind, label] of [["marca", brand], ["modelo", `${brand} ${model}`]]) {
+    const parsedDate = row.updatedAt ? new Date(row.updatedAt) : undefined;
+    const validDate =
+      parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : undefined;
+    for (const [kind, label] of [
+      ["marca", brand],
+      ["modelo", `${brand} ${model}`],
+    ] as const) {
       const path = `/${kind}/${stockLandingSlug(label)}`;
-      links.set(path, { path, label });
+      const existing = links.get(path);
+      const latest =
+        validDate && (!existing?.lastModified || validDate > existing.lastModified)
+          ? validDate
+          : existing?.lastModified;
+      links.set(path, latest ? { path, label, lastModified: latest } : { path, label });
     }
   }
   return [...links.values()].sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));

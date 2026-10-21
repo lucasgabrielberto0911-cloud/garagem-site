@@ -37,7 +37,7 @@ test("landing de cidade lista o estoque inteiro e não filtra pela cidade", () =
   assert.doesNotMatch(page, /Ver todos em/);
   assert.match(page, /stock\.stockHref/);
   assert.doesNotMatch(page, /showWhatsApp/);
-  assert.match(page, /Pedir vídeo ou visita/);
+  assert.match(page, /Falar no WhatsApp/);
   assert.doesNotMatch(page, /estão em \$\{city\.name\}/);
   assert.doesNotMatch(page, /city=serra|city=linhares/);
   const vehicles = readSrc("lib/vehicles.ts");
@@ -65,11 +65,11 @@ test("filtros do estoque no celular alinham rótulo, chips e Filtros sem máscar
   assert.match(bar, /Filtros/);
   assert.doesNotMatch(bar, /chip-scroll/);
   assert.match(readSrc("lib/stock-chip-track.ts"), /chipTrackInsets/);
-  assert.match(filters, /Até 30 mil/);
-  assert.match(filters, /Até 50 mil/);
+  assert.match(filters, /Até R\$ 30 mil/);
+  assert.match(filters, /Até R\$ 50 mil/);
   assert.match(filters, /R\$ 50 mil a R\$ 80 mil/);
   assert.match(filters, /R\$ 80 mil a R\$ 120 mil/);
-  assert.match(filters, /Acima de 120 mil/);
+  assert.match(filters, /Acima de R\$ 120 mil/);
   assert.match(css, /\.stock-chip-row\s*\{[^}]*align-items:\s*center/);
   assert.match(css, /\.stock-chip-row\s*\{[^}]*height:\s*2\.75rem/);
   assert.match(css, /\.stock-chip-action\s*\{[^}]*height:\s*2\.75rem/);

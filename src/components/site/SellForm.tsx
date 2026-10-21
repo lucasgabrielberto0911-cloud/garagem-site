@@ -11,7 +11,7 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import { notifyError, notifySuccess } from "@/lib/notify";
+import { notifySuccess } from "@/lib/notify";
 import { focusFormFeedback, useFormViewport } from "@/lib/form-feedback";
 import { WhatsAppButton } from "@/components/site/ui";
 import { createSellLead } from "@/app/(site)/vender/actions";
@@ -84,7 +84,6 @@ export function SellForm({
     } catch {
       const message = "Não conseguimos guardar a avaliação neste aparelho. Seus dados continuam no formulário. Tente de novo quando a conexão voltar ou chame no WhatsApp.";
       setFormError(message);
-      notifyError(message);
     }
   }
 
@@ -140,7 +139,6 @@ export function SellForm({
           formRef.current?.reset();
         } else {
           setFormError(result.message);
-          notifyError(result.message);
           const first = Object.keys(fieldErrors)[0];
           if (first) {
             setFocusTarget(first);
@@ -153,7 +151,6 @@ export function SellForm({
         }
         const message = "Não foi possível enviar agora. Seus dados continuam no formulário. Tente de novo.";
         setFormError(message);
-        notifyError(message);
       }
     });
   }
@@ -197,7 +194,7 @@ export function SellForm({
               <button type="button" onClick={() => { draft.discard(); setErrors({}); setFormError(""); }}
                 className="min-h-11 text-xs text-cream underline decoration-white/30 underline-offset-4">Apagar preenchimento</button>
             </div>
-            {!draft.failed ? <p className="text-[11px] leading-relaxed text-muted">Até fechar a aba, por até 24 horas. Ao voltar, selecione as fotos novamente.</p> : null}
+            {!draft.failed ? <p className="text-[11px] leading-relaxed text-muted">O preenchimento fica guardado por até 24 horas, até você fechar a aba.</p> : null}
           </div>
         ) : null}
         {/* Honeypot anti-spam — oculto de leitores de tela e usuários. */}

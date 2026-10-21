@@ -145,7 +145,7 @@ export function PageHeader({
 
 export function WhatsAppButton({
   message,
-  children = "Chamar no WhatsApp",
+  children = "Falar no WhatsApp",
   size = "md",
   variant = "solid",
   className = "",

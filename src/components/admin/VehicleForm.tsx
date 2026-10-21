@@ -55,15 +55,11 @@ import {
   type PhotoItem,
 } from "@/components/admin/VehiclePhotoManager";
 import {
-  FipeLookup,
-  type FipeApplyPayload,
-} from "@/components/admin/FipeLookup";
-import {
   formatCurrencyBRL,
   formatNumberBR,
   formatPlateDisplay,
+  formatPlateInput,
 } from "@/lib/format";
-import { plateEndFromPlate } from "@/lib/plate-lookup";
 import {
   CONSIGNED_HINT,
   CONSIGNED_LABEL,
@@ -449,48 +445,10 @@ export function VehicleForm({
     );
   }
 
-  function applyFipeSelection(payload: FipeApplyPayload) {
-    if (
-      (brand || model || version) &&
-      !window.confirm(
-        "Aplicar os dados consultados? Marca, modelo, versão e ano preenchidos podem ser substituídos. Confira a sugestão antes de salvar.",
-      )
-    )
-      return;
-    setDirty(true);
-    if (payload.brand) setBrand(payload.brand);
-    if (payload.model) setModel(payload.model);
-    if (payload.version) setVersion(payload.version);
-    if (payload.color) setColor(payload.color);
-    if (payload.engine) setEngine(payload.engine);
-    if (payload.year != null) setYear(String(payload.year));
-    if (payload.yearModel != null) setYearModel(String(payload.yearModel));
-    if (payload.fipePrice !== undefined) setFipePrice(payload.fipePrice);
-    if (payload.plateEnd) setPlateEnd(payload.plateEnd);
-    if (payload.fuel) {
-      const options = getFuels(category);
-      const matched = options.find(
-        (option) =>
-          option.toLocaleLowerCase("pt-BR") ===
-          payload.fuel!.toLocaleLowerCase("pt-BR"),
-      );
-      if (matched) setFuel(matched);
-    }
-    setErrors((current) => {
-      const next = { ...current };
-      if (payload.brand) delete next.brand;
-      if (payload.model) delete next.model;
-      if (payload.color) delete next.color;
-      if (payload.year != null) delete next.year;
-      if (payload.yearModel != null) delete next.yearModel;
-      return next;
-    });
-  }
-
   function handlePlateChange(next: string) {
     setPlate(next);
-    const end = plateEndFromPlate(next);
-    if (end && !plateEnd) setPlateEnd(end);
+    const last = next.replace(/[^0-9A-Za-z]/g, "").slice(-1);
+    if (/\d/.test(last) && !plateEnd) setPlateEnd(last);
   }
 
   function validate(): boolean {
@@ -1010,14 +968,31 @@ export function VehicleForm({
                 })}
               </div>
             </div>
-            <FipeLookup
-              category={category}
-              plate={plate}
-              plateError={errors.plate}
-              onPlateChange={handlePlateChange}
-              initialFipePrice={vehicle?.fipePrice}
-              onApply={applyFipeSelection}
+            <input
+              type="hidden"
+              name="fipePrice"
+              value={fipePrice != null && fipePrice > 0 ? String(fipePrice) : ""}
             />
+            <Field
+              label="Placa (interna)"
+              error={errors.plate}
+              hint="Só no admin. O site mostra no máximo o final da placa."
+            >
+              <input
+                name="plate"
+                value={plate}
+                aria-invalid={Boolean(errors.plate)}
+                onChange={(event) =>
+                  handlePlateChange(formatPlateInput(event.target.value))
+                }
+                placeholder="ABC1D23 ou ABC-1234"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                className={inputClass}
+              />
+            </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Marca" required error={errors.brand}>
                 <input

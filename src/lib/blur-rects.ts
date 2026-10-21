@@ -22,6 +22,51 @@ export type PixelRect = {
   height: number;
 };
 
+export type ImageFrame = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+/** Caixa visível da foto com object-fit: contain, em pixels CSS. */
+export function containImageFrame(
+  container: ImageFrame,
+  naturalWidth: number,
+  naturalHeight: number,
+): ImageFrame | null {
+  if (
+    container.width < 1 ||
+    container.height < 1 ||
+    naturalWidth < 1 ||
+    naturalHeight < 1
+  ) {
+    return null;
+  }
+  const scale = Math.min(container.width / naturalWidth, container.height / naturalHeight);
+  const width = naturalWidth * scale;
+  const height = naturalHeight * scale;
+  return {
+    left: container.left + (container.width - width) / 2,
+    top: container.top + (container.height - height) / 2,
+    width,
+    height,
+  };
+}
+
+/** clientX/Y e a moldura usam pixels CSS; devicePixelRatio não entra na conversão. */
+export function clientPointToNormalized(
+  clientX: number,
+  clientY: number,
+  frame: ImageFrame,
+) {
+  if (frame.width < 1 || frame.height < 1) return null;
+  return {
+    x: clamp01((clientX - frame.left) / frame.width),
+    y: clamp01((clientY - frame.top) / frame.height),
+  };
+}
+
 export class BlurRectError extends Error {
   constructor(message: string) {
     super(message);
