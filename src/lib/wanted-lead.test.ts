@@ -174,7 +174,8 @@ test("o formulário público tem quatro campos ordenados e aviso de privacidade 
   assert.match(source, /WANTED_LEAD_SUCCESS/);
   assert.match(WANTED_LEAD_SUCCESS, /Recebemos o modelo que você pediu/);
   assert.match(source, /Não foi possível enviar agora/);
-  assert.match(source, /notifyError\(result\.message\)/);
+  assert.match(source, /setFormError\(result\.message\)/);
+  assert.doesNotMatch(source, /notifyError/);
   assert.doesNotMatch(source, /WhatsAppButton|wa\.me|99633|setTimeout|Confirmado neste anúncio/);
 });
 

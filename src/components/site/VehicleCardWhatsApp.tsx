@@ -81,7 +81,7 @@ export function VehicleCardWhatsApp({
             });
           }
         }}
-        aria-label={`Tenho interesse no ${label} pelo WhatsApp`}
+        aria-label="Tenho interesse neste veículo pelo WhatsApp"
         className={
           compact
             ? `relative z-[1] pointer-events-auto mt-1.5 inline-flex h-8 items-center gap-1.5 rounded-full bg-[#25D366]/[0.12] px-3 text-[12px] font-semibold text-[#25D366] ring-1 ring-inset ring-[#25D366]/30 transition hover:bg-[#25D366]/20 before:absolute before:-inset-x-1 before:-inset-y-1.5 before:content-[''] touch-manipulation ${className}`

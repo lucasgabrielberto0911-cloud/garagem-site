@@ -95,7 +95,7 @@ export function buildVehiclePublicSpecs(
   const rows: VehicleSpecRow[] = [
     { label: "Tipo", value: vehicleCategoryLabel(vehicle.category) },
     { label: "Ano", value: yearValue, empty: yearValue === SPEC_EMPTY },
-    { label: "KM", value: formatNumberBR(vehicle.km) },
+    { label: "km", value: formatNumberBR(vehicle.km) },
     { label: "Câmbio", value: transmission, empty: !filled(vehicle.transmission) },
     { label: "Combustível", value: fuel, empty: !filled(vehicle.fuel) },
     { label: "Cor", value: color, empty: !filled(vehicle.color) },

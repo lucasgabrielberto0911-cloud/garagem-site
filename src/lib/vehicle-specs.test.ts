@@ -22,7 +22,7 @@ test("ficha sempre mostra os campos centrais, sem buraco de cor vazia", () => {
   });
   const byLabel = Object.fromEntries(specs.map((row) => [row.label, row]));
   assert.equal(byLabel.Ano?.value, "2014");
-  assert.equal(byLabel.KM?.value, "98.000");
+  assert.equal(byLabel.km?.value, "98.000");
   assert.equal(byLabel.Câmbio?.value, "Manual");
   assert.equal(byLabel.Combustível?.value, "Flex");
   assert.equal(byLabel.Cor?.value, SPEC_EMPTY_FEMININE);
@@ -129,7 +129,7 @@ test("cidade não deixa célula vazia na grade pública", () => {
     doors: 4,
     locationCity: "linhares",
   });
-  const fold = new Set(["Ano", "KM", "Câmbio"]);
+  const fold = new Set(["Ano", "km", "Câmbio"]);
   const extra = specs.filter((row) => !fold.has(row.label));
   const portas = extra.findIndex((row) => row.label === "Portas");
   assert.ok(portas >= 0);
