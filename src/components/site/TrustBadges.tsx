@@ -8,7 +8,7 @@ import {
 const BADGES = [
   { Icon: IconShieldCheck, label: "Garantia 3 meses · motor e câmbio" },
   { Icon: IconClipboardCheck, label: "Vistoria completa" },
-  { Icon: IconGauge, label: "KM conferido" },
+  { Icon: IconGauge, label: "km conferido" },
   { Icon: IconFileText, label: "Documentação em dia" },
 ] as const;
 

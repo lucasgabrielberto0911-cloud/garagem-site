@@ -28,7 +28,7 @@ import { VehicleVerifiedList } from "@/components/site/VehicleVerifiedInfo";
 import type { PublicVerifiedItem } from "@/lib/vehicle-verified";
 
 /** Já aparecem na primeira dobra. */
-const FOLD_LABELS = new Set(["Ano", "KM", "Câmbio"]);
+const FOLD_LABELS = new Set(["Ano", "km", "Câmbio"]);
 
 /** A âncora Especificações cai na grade completa quando ela existe. */
 export function hasMobileFichaSpecs(specs: VehicleSpecRow[]) {

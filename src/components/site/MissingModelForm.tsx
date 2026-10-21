@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useWantedDraft } from "./useWantedDraft";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { notifyError, notifySuccess } from "@/lib/notify";
+import { notifySuccess } from "@/lib/notify";
 import { focusFormFeedback, useFormViewport } from "@/lib/form-feedback";
 import { createWantedLead } from "@/app/(site)/estoque/wanted-actions";
 import { formatNumberBR, formatPhoneBR } from "@/lib/format";
@@ -38,7 +38,7 @@ export function MissingModelForm({
   sourcePage,
   title = "Não encontrou o modelo?",
   titleAs = "h2",
-  description = "Deixa o modelo que você procura. A loja guarda o pedido e te chama quando aparecer.",
+  description = "Deixe o modelo que você procura. A loja guarda o pedido e avisa você quando aparecer.",
   contextLabel = "",
   pagePath = "",
   interestVehicleId = "",
@@ -144,12 +144,10 @@ export function MissingModelForm({
         const fieldErrors = result.fieldErrors ?? {};
         setErrors(fieldErrors);
         setFormError(result.message);
-        notifyError(result.message);
         focusField(Object.keys(fieldErrors)[0] ?? "");
       } catch {
         const message = "Não foi possível enviar agora. Tente de novo.";
         setFormError(message);
-        notifyError(message);
       }
     });
   }
@@ -334,7 +332,7 @@ export function MissingModelForm({
               className="mt-0.5 h-5 w-5 shrink-0 accent-brand"
             />
             <span>
-              Autorizo a Garagem a entrar em contato pelo telefone informado quando chegar um carro compatível.
+              Autorizo a Garagem a entrar em contato pelo telefone informado quando chegar um veículo compatível.
             </span>
           </label>
           <FieldError id={`${ids.consent}-erro`} message={errors.consent} />
