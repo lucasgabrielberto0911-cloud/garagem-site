@@ -74,7 +74,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
         if (contract) return { saleId: vehicle.sale.id, contractId: contract.id, receiptId: receipt?.id, proposalId: proposal?.id };
         throw new Error("VEHICLE_UNAVAILABLE");
       }
-      if (!["disponivel", "reservado"].includes(vehicle.status)) throw new Error("VEHICLE_UNAVAILABLE");
+      if (!["disponivel", "reservado", "vendido"].includes(vehicle.status)) throw new Error("VEHICLE_UNAVAILABLE");
       const reservation = await tx.vehicleReservation.findFirst({ where: { vehicleId, status: "ativa", expiresAt: { gt: new Date() } }, orderBy: { createdAt: "desc" } });
       if (!reservation && vehicle.status === "reservado") {
         const expired = await tx.vehicleReservation.findFirst({ where: { vehicleId, status: "ativa" }, orderBy: { createdAt: "desc" } });

@@ -94,7 +94,7 @@ test("atalho legado de vendas abre a página de fluxo", async ({ page, request, 
   const cookie = login.headers()["set-cookie"].split(";")[0];
   await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
   await page.goto(`/admin/vendas?vehicle=${vehicleId}`);
-  await expect(page).toHaveURL(new RegExp(`/admin/vendas/nova\?veiculo=${vehicleId}`));
+  await expect(page).toHaveURL(new RegExp(`/admin/vendas/nova\\?veiculo=${vehicleId}`));
   await expect(page.getByRole("heading", { name: "Iniciar venda" })).toBeVisible();
 });
 
@@ -147,5 +147,33 @@ test.describe("fluxo único de venda", () => {
     expect(pdf.status()).toBe(200);
     expect((await pdf.body()).subarray(0, 5).toString()).toBe("%PDF-");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  });
+
+  test("mantém cliente e RG ao iniciar pela lista e conclui veículo legado vendido", async ({ page, request, context, baseURL }) => {
+    const login = await request.post("/api/auth/login", { data: { email: "comercial@local.test", password: "comercial-local-123" } });
+    expect(login.ok()).toBeTruthy();
+    const cookie = login.headers()["set-cookie"].split(";")[0];
+    await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+    await db.customer.update({ where: { id: customerId }, data: { rg: "MG-12.345.678" } });
+    await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "vendido" } });
+
+    await page.goto("/admin/clientes");
+    await page.locator(`a[href="/admin/vendas/nova?cliente=${customerId}"]`).click();
+    await page.locator('input[placeholder="Buscar veículo"]').fill("Corolla Fluxo E2E");
+    await page.getByRole("option", { name: /Corolla Fluxo E2E/ }).click();
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await expect(page.locator('input[name="customer"]')).toHaveValue(customerId);
+    await expect(page.getByLabel("RG")).toHaveValue("MG-12.345.678");
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await page.getByLabel("Valor total negociado").fill("67.000,00");
+    await page.getByRole("button", { name: /À vista\/PIX/ }).click();
+    await page.getByLabel("Valor", { exact: true }).fill("67.000,00");
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await page.getByLabel("Responsável comercial").fill("Vendedor E2E");
+    await page.getByLabel("Comissão (R$)").fill("0");
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
+    await expect(page.getByRole("heading", { name: "Venda registrada" })).toBeVisible();
+    expect((await db.sale.findUniqueOrThrow({ where: { vehicleId: flowVehicleId } })).customerId).toBe(customerId);
   });
 });
