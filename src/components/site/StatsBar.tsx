@@ -1,9 +1,6 @@
 import { formatNumberBR } from "@/lib/format";
 import { getSiteStats } from "@/lib/vehicles";
 
-/** Usado quando ainda não há dado real no banco — nada de número inventado. */
-const EMPTY_LABEL = "Estoque sendo montado";
-
 export async function StatsBar() {
   const { available, sales } = await getSiteStats();
 
@@ -32,22 +29,14 @@ function Stat({
   label: string;
   suffix: string;
 }) {
-  const hasValue = value > 0;
-
   return (
     <div className="px-3 py-2.5 text-center sm:px-4 sm:py-3">
-      {hasValue ? (
-        <dd className="font-display text-xl font-semibold text-cream sm:text-2xl">
-          {formatNumberBR(value)}
-          <span className="ml-1.5 align-middle font-body text-[10px] font-medium uppercase tracking-wider text-muted sm:ml-2 sm:text-xs">
-            {suffix}
-          </span>
-        </dd>
-      ) : (
-        <dd className="font-display text-sm font-semibold text-brand-yellow sm:text-lg">
-          {EMPTY_LABEL}
-        </dd>
-      )}
+      <dd className="font-display text-xl font-semibold text-cream sm:text-2xl">
+        {formatNumberBR(value)}
+        <span className="ml-1.5 align-middle font-body text-[10px] font-medium uppercase tracking-wider text-muted sm:ml-2 sm:text-xs">
+          {suffix}
+        </span>
+      </dd>
       <dt className="mt-1 text-xs uppercase tracking-wider text-muted sm:mt-1.5">
         {label}
       </dt>
