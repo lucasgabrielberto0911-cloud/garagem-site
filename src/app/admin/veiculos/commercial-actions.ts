@@ -202,6 +202,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
               financed: financed && financed > 0 ? financed : undefined,
               payments: parsedPayments,
               customer: customer.name,
+              customerId: customer.id,
               cpf: customer.cpf ?? "",
               rg,
               chassis,

@@ -157,8 +157,7 @@ test.describe("fluxo único de venda", () => {
     await page.goto(`/admin/veiculos/${flowVehicleId}?view=operacao`);
     const documents = page.locator("details").filter({ has: page.locator("summary", { hasText: "Contratos e recibos gerados" }) });
     await documents.locator("summary").click();
-    await documents.getByRole("combobox").click();
-    await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+    await expect(documents.locator('input[name="customerId"]')).toHaveValue(customerId);
     await documents.locator('input[name="legacyPaymentMethod"][value="pix"]').uncheck();
     await documents.getByRole("button", { name: "Emitir contrato desta venda" }).click();
     await expect(documents.getByText(/Contrato nº/)).toBeVisible();
@@ -331,8 +330,7 @@ test.describe("fluxo único de venda", () => {
     await page.goto(`/admin/veiculos/${flowVehicleId}?view=operacao`);
     const documents = page.locator("details").filter({ has: page.locator("summary", { hasText: "Contratos e recibos gerados" }) });
     await documents.locator("summary").click();
-    await documents.getByRole("combobox").click();
-    await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+    await expect(documents.locator('input[name="customerId"]')).toHaveValue(customerId);
     await documents.getByLabel("Valor · À vista/PIX").fill("10.000,00");
     await documents.locator('input[name="legacyPaymentMethod"][value="troca"]').check();
     await documents.getByLabel("Valor · Troca").fill("20.000,00");
@@ -364,8 +362,7 @@ test.describe("fluxo único de venda", () => {
 
     await page.reload();
     await documents.locator("summary").click();
-    await documents.getByRole("combobox").click();
-    await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+    await expect(documents.locator('input[name="customerId"]')).toHaveValue(customerId);
     await expect(documents.getByLabel("Valor · À vista/PIX")).toHaveValue("67.000,00");
     await documents.getByRole("button", { name: "Emitir contrato desta venda" }).click();
     await expect(documents.getByText(/Contrato nº/)).toBeVisible();
