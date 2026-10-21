@@ -358,6 +358,14 @@ export function VehicleOpsPanel({
         <a className={btn.outline} href="#acervo">
           Fotos em alta
         </a>
+        <a
+          className={btn.outline}
+          href={`/api/admin/veiculos/${vehicle.id}/gastos`}
+          target="_blank"
+          rel="noopener"
+        >
+          Imprimir gastos
+        </a>
       </nav>
       {opsDirty && !opsPending ? (
         <button
