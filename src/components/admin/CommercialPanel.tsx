@@ -3,12 +3,10 @@
 import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveCommercial } from "@/app/admin/veiculos/commercial-actions";
-import { ENTRY_ITEMS, FINANCE_STATUSES, simulateFinancing, suggestPrice } from "@/lib/admin-commercial";
+import { ENTRY_ITEMS, FINANCE_STATUSES, suggestPrice } from "@/lib/admin-commercial";
 import { formatAdminMoney as brl, moneyInput, parseMoneyBR } from "@/lib/admin-money";
 import { whatsappUrl } from "@/lib/leads";
 import { SearchSelect } from "./SearchSelect";
-import { SalesCommercialPanel } from "./SalesCommercialPanel";
-import type { CustomerOption, SellableVehicle } from "./SalesManager";
 import { btn, Card, inputClass } from "./ui";
 
 type Props = {
@@ -18,20 +16,17 @@ type Props = {
   simulations: { id: string; customerName: string; bank: string; installment: number; months: number; rate: number; status: string }[];
   documents: { id: string; kind: string; number: number; date: string }[];
   history: { price: number; date: string }[];
-  salesVehicle: SellableVehicle;
-  reservationCustomer?: CustomerOption | null;
 };
 
 function Field({ label, name, value, type = "text", required = true }: { label: string; name: string; value?: string | number; type?: string; required?: boolean }) {
   return <label className="block space-y-1 text-sm"><span>{label}</span><input name={name} type={type} defaultValue={value} required={required} maxLength={type === "text" ? 200 : undefined} className={inputClass} /></label>;
 }
 
-export function CommercialPanel({ vehicle, reservation, assessment, simulations, documents, history, salesVehicle, reservationCustomer }: Props) {
+export function CommercialPanel({ vehicle, reservation, assessment, simulations, documents, history }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [message, setMessage] = useState("");
   const [margin, setMargin] = useState("2.000,00");
-  const [simulation, setSimulation] = useState<ReturnType<typeof simulateFinancing> | null>(null);
   const suggestion = suggestPrice({ price: vehicle.price, purchase: vehicle.purchasePrice, costs: vehicle.costs, days: vehicle.days, margin: parseMoneyBR(margin) ?? 0, consigned: vehicle.consigned });
   function submit(form: FormData) {
     // RG vazio na ficha = manter o do cadastro (o cliente é escolhido aqui, sem prefill).
@@ -72,7 +67,7 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
       <Card id="reserva" title="Reserva com sinal e prazo" collapsed>
         <p className="mb-3 text-xs text-muted">Reservas vencidas são liberadas em até 1 minuto com o painel aberto ou na rotina diária às 6h.</p>
         {reservation ? <p className="mb-3 text-sm">{reservation.customer} · sinal {brl(reservation.deposit)} · prazo {reservation.expiresAt} · {reservation.status}{reservation.deadline ? ` · ${reservation.deadline}` : ""}. O sinal integra o valor total da venda; não some novamente.</p> : null}
-        {reservation?.status === "ativa" ? <><form action={submit}><input type="hidden" name="operation" value="cancel-reservation" /><p className="mb-2 text-xs text-muted">Cancelar libera o veículo. A devolução do sinal deve ser acertada com o cliente.</p><button className={btn.outline}>Cancelar reserva e liberar veículo</button></form><form action={submit} className="mt-3 space-y-2"><input type="hidden" name="operation" value="extend-reservation" /><Field label="Novo prazo (horário de Brasília)" name="expiresAt" type="datetime-local" /><button className={btn.outline}>Prorrogar reserva</button></form><a className={`${btn.primary} mt-2`} href={`/admin/vendas?vehicle=${vehicle.id}`}>Registrar venda (sinal incluído)</a></> : vehicle.status === "disponivel" ? <form action={submit} className="grid gap-3 sm:grid-cols-2">
+        {reservation?.status === "ativa" ? <><form action={submit}><input type="hidden" name="operation" value="cancel-reservation" /><p className="mb-2 text-xs text-muted">Cancelar libera o veículo. A devolução do sinal deve ser acertada com o cliente.</p><button className={btn.outline}>Cancelar reserva e liberar veículo</button></form><form action={submit} className="mt-3 space-y-2"><input type="hidden" name="operation" value="extend-reservation" /><Field label="Novo prazo (horário de Brasília)" name="expiresAt" type="datetime-local" /><button className={btn.outline}>Prorrogar reserva</button></form><a className={`${btn.primary} mt-2`} href={`/admin/vendas/nova?veiculo=${vehicle.id}`}>Iniciar venda (sinal incluído)</a></> : vehicle.status === "disponivel" ? <form action={submit} className="grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="operation" value="reserve" /><CustomerSelect />
           <Field label="Sinal recebido (R$)" name="deposit" value="0,00" /><Field label="Prazo (horário de Brasília)" name="expiresAt" type="datetime-local" />
           <button className={btn.primary}>Confirmar reserva</button>
@@ -88,21 +83,9 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
           <button className={btn.primary}>Salvar avaliação</button>
         </form>
       </Card>
-      <Card title="Simulador e acompanhamento de financiamento" collapsed>
-        <p className="mb-3 text-sm text-muted">Tabela Price, taxa mensal informada pelo vendedor. Estimativa sem IOF, seguros e tarifas; não representa CET nem aprovação de crédito.</p>
-        <form action={submit} onChange={() => setSimulation(null)} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="operation" value="finance" />
-          <Field label="Cliente" name="customerName" /><Field label="Banco / financeira" name="bank" />
-          <Field label="Valor do veículo (R$)" name="price" value={moneyInput(vehicle.price)} /><Field label="Entrada total, incluindo sinal (R$)" name="downPayment" value={moneyInput(reservation?.deposit ?? 0)} />
-          <Field label="Taxa mensal (%)" name="rate" value="1,50" /><Field label="Prazo (meses)" name="months" value={48} type="number" />
-          <button type="button" className={btn.outline} onClick={(event) => { const form = new FormData(event.currentTarget.form!); try { setSimulation(simulateFinancing(parseMoneyBR(form.get("price")) ?? NaN, parseMoneyBR(form.get("downPayment")) ?? NaN, Number(String(form.get("rate")).replace(",", ".")), Number(form.get("months")))); } catch (error) { setMessage((error as Error).message); } }}>Calcular parcelas</button>
-          <button className={btn.primary}>Salvar simulação</button>
-          {simulation ? <p className="text-sm sm:col-span-2">Parcela: {brl(simulation.installment)} · total com entrada: {brl(simulation.total)} · juros estimados: {brl(simulation.interest)}</p> : null}
-        </form>
+      <Card title="Histórico de simulações de financiamento" collapsed>
         <div className="mt-4 space-y-3">{simulations.map((s) => <form key={s.id} action={submit} className="space-y-2 border-t border-white/10 pt-3"><input type="hidden" name="operation" value="finance-status" /><input type="hidden" name="simulationId" value={s.id} /><p className="text-sm">{s.customerName} · {s.bank} · {s.months} × {brl(s.installment)} · {s.rate}% a.m.</p><label className="block text-sm">Situação<select name="status" className={inputClass} defaultValue={s.status}>{FINANCE_STATUSES.map((value, index) => <option key={value} value={value}>{["Simulação", "Enviada ao banco", "Aprovada", "Recusada"][index]}</option>)}</select></label><button className={btn.outline}>Atualizar acompanhamento</button></form>)}</div>
       </Card>
-      <div id="proposta">
-        <SalesCommercialPanel initialVehicle={salesVehicle} initialCustomer={reservationCustomer} />
-      </div>
       <Card title="Contratos e recibos gerados" collapsed>
         <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}?inline`} target="_blank" rel="noopener noreferrer">{d.kind === "recibo" ? "Recibo" : d.kind === "contrato" ? "Contrato" : "Proposta"}{d.number ? ` nº ${d.number}` : ""} · {d.date} · Abrir PDF</a></li>)}</ul>
       </Card>

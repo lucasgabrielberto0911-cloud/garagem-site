@@ -209,7 +209,7 @@ async function DashboardContent() {
               <IconPlus className="h-4 w-4" />
               Novo veículo
             </Link>
-            <Link href="/admin/vendas" className={btn.outline}>
+            <Link href="/admin/vendas/nova" className={btn.outline}>
               <span className="sm:hidden">Venda</span>
               <span className="hidden sm:inline">Registrar venda</span>
             </Link>

@@ -63,7 +63,6 @@ import { stockListQuietNote } from "@/lib/stock-quality";
 import {
   deleteVehicle,
   duplicateVehicle,
-  markVehicleAsSold,
   setVehicleFeatured,
   setVehicleStatus,
   setVehiclesStatus,
@@ -195,7 +194,6 @@ export function VehiclesTable({
   const [soldTarget, setSoldTarget] = useState<VehicleRow | null>(null);
   const [promoTarget, setPromoTarget] = useState<VehicleRow | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [markingSold, setMarkingSold] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkTarget, setBulkTarget] = useState<AdminBulkStatus | null>(null);
@@ -422,36 +420,11 @@ export function VehiclesTable({
     }
   }
 
-  async function confirmMarkSold(registerSale = false) {
+  function confirmMarkSold() {
     if (!soldTarget) return;
     const targetId = soldTarget.id;
-    setMarkingSold(true);
-    try {
-      await markVehicleAsSold(targetId);
-      applyLocalStatus(targetId, "vendido", soldTarget.featured);
-      if (registerSale) {
-        toast.success(
-          "Veículo marcado como vendido. Abrindo registro de venda...",
-        );
-        router.push(`/admin/vendas?vehicle=${targetId}`);
-      } else {
-        toast.success(
-          "Veículo movido para a aba Vendidos. A página permanece no site.",
-          {
-            action: {
-              label: "Registrar venda",
-              onClick: () => router.push(`/admin/vendas?vehicle=${targetId}`),
-            },
-          },
-        );
-        router.refresh();
-      }
-    } catch {
-      toast.error("Erro ao marcar como vendido.");
-    } finally {
-      setMarkingSold(false);
-      setSoldTarget(null);
-    }
+    setSoldTarget(null);
+    router.push(`/admin/vendas/nova?veiculo=${targetId}`);
   }
 
   function toggleSelected(id: string) {
@@ -927,16 +900,6 @@ export function VehiclesTable({
                 Marcar disponível
               </button>
             ) : null}
-            {bulkActionsForTab(tab).includes("vendido") &&
-            idsNeedingBulkStatus(items, selected, "vendido").length > 0 ? (
-              <button
-                type="button"
-                onClick={() => setBulkTarget("vendido")}
-                className={MARK_SOLD_BTN}
-              >
-                Marcar vendido
-              </button>
-            ) : null}
             <button
               type="button"
               onClick={() => setSelected([])}
@@ -1082,17 +1045,16 @@ export function VehiclesTable({
 
       <ConfirmDialog
         open={soldTarget !== null}
-        title="Registrar venda"
+        title="Iniciar venda"
         description={
           soldTarget
-            ? `Registrar a venda de ${soldTarget.brand} ${soldTarget.model}? O carro sai da aba Em estoque e você informa preço e cliente na tela de Vendas, para entrar na meta e no faturamento. A página pública continua no ar com aviso (sem 404).`
+            ? `Iniciar a venda de ${soldTarget.brand} ${soldTarget.model}? O anúncio só será marcado como vendido ao concluir o contrato.`
             : undefined
         }
-        confirmLabel="Registrar venda"
+        confirmLabel="Iniciar venda"
         danger={false}
-        loading={markingSold}
         onCancel={() => setSoldTarget(null)}
-        onConfirm={() => void confirmMarkSold(true)}
+        onConfirm={confirmMarkSold}
       />
 
       <VehiclePromoKitModal
@@ -1283,9 +1245,9 @@ function VehicleAdminCard({
             onClick={onMarkSold}
             className={MARK_SOLD_BTN}
             aria-label="Marcar como vendido"
-            title="Marcar como vendido — sai do estoque; a página permanece no site"
+            title="Iniciar venda — o estoque só muda ao concluir o contrato"
           >
-            Marcar vendido
+            Iniciar venda
           </button>
         ) : null}
         <button
@@ -1374,8 +1336,8 @@ function SheetActions({
       {adminCardShowsSoldAction(vehicle.status) ? (
         <ActionSheetButton
           icon={<IconCash className="h-4 w-4" />}
-          label="Marcar vendido"
-          hint="Sai do estoque; a página continua no site"
+          label="Iniciar venda"
+          hint="O estoque só muda ao concluir o contrato"
           tone="warning"
           disabled={busy}
           onClick={run(onMarkSold)}

@@ -70,7 +70,7 @@ export default async function EditVehiclePage({
           },
         },
         // Preço de venda só entra na aba Custos e docs (Operação).
-        ...(view === "operacao"
+        ...(view === "operacao" || view === "venda"
           ? { sale: { select: { salePrice: true } } }
           : {}),
       },
@@ -101,7 +101,13 @@ export default async function EditVehiclePage({
     notFound();
   }
 
-  const commercial = view === "venda" ? await Promise.all([
+  if (view === "venda") {
+    const sale = await prisma.sale.findUnique({ where: { vehicleId: id }, select: { id: true } });
+    if (sale) redirect(`/admin/vendas?venda=${sale.id}`);
+    redirect(`/admin/vendas/nova?veiculo=${id}`);
+  }
+
+  const commercial = view === "operacao" ? await Promise.all([
     prisma.vehicleReservation.findFirst({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, include: { customer: { select: { id: true, name: true, phone: true, cpf: true, rg: true, address: true } } } }),
     prisma.vehicleAssessment.findUnique({ where: { vehicleId: id } }),
     prisma.financeSimulation.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 20 }),
@@ -170,11 +176,11 @@ export default async function EditVehiclePage({
           Fotos
         </TabLink>
         <TabLink
-          href={`/admin/veiculos/${vehicle.id}?view=venda`}
-          active={view === "venda"}
+          href={`/admin/vendas/nova?veiculo=${vehicle.id}`}
+          active={false}
           tab="venda"
         >
-          Venda
+          Iniciar venda
         </TabLink>
         <TabLink
           href={`/admin/veiculos/${vehicle.id}?view=operacao`}
@@ -193,18 +199,15 @@ export default async function EditVehiclePage({
         </TabLink>
       </nav>
 
-      {view === "venda" && commercial ? (
-        <CommercialPanel
+      {view === "operacao" && commercial ? <CommercialPanel
           vehicle={{ id, chassis: vehicle.chassis, renavam: vehicle.renavam, status: vehicle.status, price: vehicle.price, purchasePrice: vehicle.purchasePrice, consigned: vehicle.consigned, days, costs: costs.reduce((sum, cost) => sum + cost.amount, 0) }}
           reservation={commercial[0] ? { customer: commercial[0].customer.name, phone: commercial[0].customer.phone, deposit: Number(commercial[0].deposit), expiresAt: commercial[0].expiresAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }), deadline: commercial[0].status === "ativa" ? reservationDeadline(commercial[0].expiresAt) : null, status: commercial[0].status } : null}
           assessment={commercial[1] ? { items: commercial[1].items as Prisma.JsonArray as { label: string; status: string }[], notes: commercial[1].notes, offer: Number(commercial[1].offer), approved: commercial[1].approved } : null}
           simulations={commercial[2].map((s) => ({ id: s.id, customerName: s.customerName, bank: s.bank, installment: Number(s.installment), months: s.months, rate: Number(s.rate), status: s.status }))}
           documents={commercial[3].map((d) => ({ id: d.id, kind: d.kind, number: d.number, date: adminDate(d.createdAt) }))}
           history={commercial[4].map((h) => ({ price: h.price, date: adminDate(h.createdAt) }))}
-          salesVehicle={{ id, brand: vehicle.brand, model: vehicle.model, version: vehicle.version, yearModel: vehicle.yearModel, plate: vehicle.plate, chassis: vehicle.chassis, renavam: vehicle.renavam, price: vehicle.price, status: vehicle.status, purchasePrice: vehicle.purchasePrice, consigned: vehicle.consigned, costs }}
-          reservationCustomer={commercial[0] && commercial[0].status === "ativa" && commercial[0].expiresAt > new Date() ? { id: commercial[0].customer.id, name: commercial[0].customer.name, phone: commercial[0].customer.phone, cpf: commercial[0].customer.cpf, rg: commercial[0].customer.rg, address: commercial[0].customer.address } : null}
-        />
-      ) : view === "verificado" && verified ? (
+        /> : null}
+      {view === "verificado" && verified ? (
         <VehicleTabsLoader view="verificado" panelProps={{
           vehicleId: vehicle.id,
           isMoto: vehicle.category === "moto",

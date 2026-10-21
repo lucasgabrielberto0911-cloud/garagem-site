@@ -113,8 +113,8 @@ test("as cinco abas carregam e preservam os controles de cada painel", async ({ 
     await expect(page.getByTestId("consigned-ops-note")).toBeVisible();
     await expect(page.locator("#vehicle-form")).toHaveCount(0);
     await page.goto(`/admin/veiculos/${vehicleId}?view=venda`);
-    await expect(page.getByText("Sugestão de preço por giro", { exact: true }).first()).toBeVisible();
-    await expect(page.locator("#vehicle-form")).toHaveCount(0);
+    await expect(page).toHaveURL(new RegExp(`/admin/vendas/nova\\?veiculo=${vehicleId}`));
+    await expect(page.getByRole("heading", { name: "Iniciar venda" })).toBeVisible();
     await page.goto(`/admin/veiculos/${vehicleId}?view=fotos`);
     await expect(page.locator("#vehicle-form")).toBeVisible();
     await expect(page.locator('[name="consigned"]')).toHaveCount(1);

@@ -27,7 +27,6 @@ import type { Photo, Vehicle } from "@prisma/client";
 import {
   createVehicle,
   deleteVehicle,
-  markVehicleAsSold,
   updateVehicle,
   type VehicleFormState,
 } from "@/app/admin/veiculos/actions";
@@ -538,30 +537,10 @@ export function VehicleForm({
     });
   }
 
-  function handleMarkSold(registerSale = false) {
+  function handleMarkSold() {
     if (!vehicle) return;
     const targetId = vehicle.id;
-    startTransition(async () => {
-      try {
-        await markVehicleAsSold(targetId);
-        if (registerSale) {
-          toast.success(
-            "Veículo marcado como vendido. Abrindo registro de venda...",
-          );
-          router.push(`/admin/vendas?vehicle=${targetId}`);
-        } else {
-          toast.success("Veículo movido para a aba Vendidos.", {
-            action: {
-              label: "Registrar venda",
-              onClick: () => router.push(`/admin/vendas?vehicle=${targetId}`),
-            },
-          });
-          router.push("/admin/veiculos?tab=vendidos");
-        }
-      } catch {
-        toast.error("Erro ao atualizar o status.");
-      }
-    });
+    router.push(`/admin/vendas/nova?veiculo=${targetId}`);
   }
 
   const errorBorder = "border-brand/60";
@@ -1079,7 +1058,7 @@ export function VehicleForm({
                   onChange={(event) => {
                     if (event.target.value === "vendido" && !alreadySold) {
                       toast.message(
-                        "Para vender, use o botão “Marcar vendido”. Assim a página continua no ar.",
+                        "Para vender, use “Iniciar venda”. O estoque muda ao concluir o contrato.",
                       );
                       return;
                     }
@@ -1094,7 +1073,7 @@ export function VehicleForm({
                       disabled={item.value === "vendido" && !alreadySold}
                     >
                       {item.value === "vendido" && !alreadySold
-                        ? "Vendido — use “Marcar vendido”"
+                        ? "Vendido — use “Iniciar venda”"
                         : item.label}
                     </option>
                   ))}
@@ -1103,7 +1082,7 @@ export function VehicleForm({
               <p className="col-span-2 -mt-2 text-xs leading-relaxed text-muted">
                 {alreadySold
                   ? "Já vendido. Disponível/reservado volta para o estoque ao salvar."
-                  : "Para vender, use “Marcar vendido” — a página continua no ar."}
+                  : "Para vender, use “Iniciar venda”. O estoque muda ao concluir o contrato."}
               </p>
 
               {priceMismatch ? (
@@ -1821,9 +1800,9 @@ export function VehicleForm({
                         onClick={() => setConfirmSold(true)}
                         disabled={pendingAction}
                         className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-brand-orange/50 px-4 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition hover:bg-brand-orange/10 disabled:opacity-60"
-                        title="Tira do estoque, mas mantém a página no site (SEO)"
+                        title="O veículo só será marcado como vendido ao concluir o contrato"
                       >
-                        Marcar vendido
+                        Iniciar venda
                       </button>
                     ) : (
                       <span className="inline-flex min-h-[44px] items-center justify-center font-display text-xs font-semibold uppercase tracking-wide text-muted">
@@ -1875,8 +1854,8 @@ export function VehicleForm({
           {vehicle.status !== "vendido" ? (
             <ActionSheetButton
               icon={<IconCash className="h-4 w-4" />}
-              label="Marcar vendido"
-              hint="Sai do estoque; a página continua no site"
+              label="Iniciar venda"
+              hint="O estoque só muda ao concluir o contrato"
               tone="warning"
               disabled={pendingAction}
               onClick={() => {
@@ -1931,22 +1910,15 @@ export function VehicleForm({
 
       <ConfirmDialog
         open={confirmSold}
-        title="Marcar como vendido"
-        description={`Confirmar venda de ${vehicle ? `${vehicle.brand} ${vehicle.model}` : "este veículo"}? Ele sai da aba Em estoque e vai para Vendidos. A página pública continua no ar com aviso (sem 404).`}
-        confirmLabel="Só marcar vendido"
-        alternateConfirm={{
-          label: "Vendido e registrar venda",
-          onConfirm: () => {
-            setConfirmSold(false);
-            handleMarkSold(true);
-          },
-        }}
+        title="Iniciar venda"
+        description={`Abrir o fluxo de venda de ${vehicle ? `${vehicle.brand} ${vehicle.model}` : "este veículo"}? O anúncio só será marcado como vendido ao concluir o contrato.`}
+        confirmLabel="Iniciar venda"
         danger={false}
         loading={pendingAction}
         onCancel={() => setConfirmSold(false)}
         onConfirm={() => {
           setConfirmSold(false);
-          handleMarkSold(false);
+          handleMarkSold();
         }}
       />
 

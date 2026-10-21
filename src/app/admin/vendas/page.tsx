@@ -13,11 +13,9 @@ import {
   parseSalesPeriod,
 } from "@/lib/admin-vehicles";
 import { getSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { normalizeSalesQuery } from "@/lib/admin-sales-search";
 import { DashboardSalesGoal } from "@/components/admin/DashboardSalesGoal";
 import { computeMonthlySalesGoal, computeSalesLeaderboard } from "@/lib/sales-goals";
-import { SELLABLE_VEHICLE_SELECT } from "@/lib/admin-vehicles";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +32,7 @@ export default async function VendasPage({
   const periodParam = first(params.period);
   const vehicleId = first(params.vehicle);
   const saleId = first(params.venda);
+  if (vehicleId && !saleId) redirect(`/admin/vendas/nova?veiculo=${encodeURIComponent(vehicleId)}`);
   const query = normalizeSalesQuery(first(params.q));
   const period = parseSalesPeriod(periodParam);
 
@@ -41,12 +40,6 @@ export default async function VendasPage({
     getAdminSalesPage({ page: 1, period, q: query, id: saleId }),
     getAdminSalesTotals(period),
   ]);
-  const initialVehicle = vehicleId
-    ? await prisma.vehicle.findFirst({
-        where: { id: vehicleId, sale: null, historical: false },
-        select: SELLABLE_VEHICLE_SELECT,
-      })
-    : null;
   const revenue = totals.revenue;
   const count = totals.count;
   const knownProfit = totals.profit;
@@ -64,7 +57,7 @@ export default async function VendasPage({
     <div className="space-y-6">
       <AdminPageHeader
         title="Vendas"
-        subtitle="Registre e edite vendas do estoque ou históricas. Cliente é opcional."
+        subtitle="Acompanhe e edite vendas. Para um novo negócio do estoque, use o fluxo integrado."
       />
 
       <p className="text-xs text-muted">
@@ -116,7 +109,6 @@ export default async function VendasPage({
         pageSize={list.pageSize}
         period={period}
         periodRevenue={revenue}
-        initialVehicle={initialVehicle}
       />
     </div>
   );
