@@ -47,12 +47,17 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
   const [customerId, setCustomerId] = useState(initialCustomer?.id ?? "");
   const [pickedCustomer, setPickedCustomer] = useState<CustomerOption | null>(initialCustomer ?? null);
 
+  const [missingCpf, setMissingCpf] = useState("");
+  const [missingAddress, setMissingAddress] = useState("");
+
   // Sincroniza a reserva vinda do servidor sem remontar o painel (preserva documento gerado e campos).
   const [syncedCustomerId, setSyncedCustomerId] = useState(initialCustomer?.id ?? "");
   if ((initialCustomer?.id ?? "") !== syncedCustomerId) {
     setSyncedCustomerId(initialCustomer?.id ?? "");
     setCustomerId(initialCustomer?.id ?? "");
     setPickedCustomer(initialCustomer ?? null);
+    setMissingCpf("");
+    setMissingAddress("");
   }
 
   const initialPriceStr = initialVehicle?.price ? moneyInput(initialVehicle.price) : "";
@@ -86,8 +91,6 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
   const [expiresAt, setExpiresAt] = useState("");
   const [receiptPayment, setReceiptPayment] = useState("À vista via Pix");
 
-  const [missingCpf, setMissingCpf] = useState("");
-  const [missingAddress, setMissingAddress] = useState("");
   const [conditions, setConditions] = useState("");
   const [simulation, setSimulation] = useState<ReturnType<typeof simulateFinancing> | null>(null);
   const [message, setMessage] = useState("");

@@ -109,7 +109,7 @@ export function computeMonthlySalesGoal(input: {
   };
 }
 
-const SELLER_NOTE_REGEX = /\[vendedor:\s*([^\]|]+)(?:\|\s*comissao:\s*([^\]]+))?\]/i;
+const SELLER_NOTE_REGEX = /\[(?:vendedor:\s*([^\]|]+)(?:\|\s*comissao:\s*([^\]]+))?|comissao:\s*([^\]]+))\]/i;
 
 export function extractSaleSeller(sale: {
   sellerName?: string | null;
@@ -154,8 +154,9 @@ export function extractSaleCommission(
   }
   if (sale.notes) {
     const match = sale.notes.match(SELLER_NOTE_REGEX);
-    if (match?.[2]) {
-      const parsed = Number(match[2].replace(/[^\d.,]/g, "").replace(",", "."));
+    const rawComm = match?.[2] ?? match?.[3];
+    if (rawComm) {
+      const parsed = Number(rawComm.replace(/[^\d.,]/g, "").replace(",", "."));
       if (Number.isFinite(parsed) && parsed >= 0) {
         return Math.round(parsed * 100) / 100;
       }

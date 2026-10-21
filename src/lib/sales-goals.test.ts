@@ -6,6 +6,7 @@ import {
   extractSaleSeller,
   extractSaleCommission,
   formatSaleNotes,
+  hasSaleCommission,
 } from "./sales-goals";
 
 test("computeMonthlySalesGoal: calcula progresso, restantes e ritmo diário", () => {
@@ -129,4 +130,17 @@ test("hasSaleCommission: sem vendedor nem valor não mostra comissão", async ()
   assert.equal(hasSaleCommission({ notes: "Pago no PIX" }), false);
   assert.equal(hasSaleCommission({ notes: "x [vendedor: Lucas]" }), true);
   assert.equal(hasSaleCommission({ commission: 0 }), true);
+});
+
+test("comissão sem vendedor: reconhece o formato salvo em notes", () => {
+  const notes = formatSaleNotes(null, null, 2000);
+  assert.equal(notes, "[comissao: 2000]");
+  assert.equal(hasSaleCommission({ notes }), true);
+  assert.equal(extractSaleCommission({ salePrice: 100_000, notes }), 2000);
+  assert.equal(extractSaleSeller({ notes }), "Geral");
+
+  const zero = formatSaleNotes(null, null, 0);
+  assert.equal(hasSaleCommission({ notes: zero }), true);
+  assert.equal(extractSaleCommission({ salePrice: 100_000, notes: zero }), 0);
+  assert.equal(formatSaleNotes(zero, null, null), null);
 });
