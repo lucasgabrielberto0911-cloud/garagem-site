@@ -570,6 +570,8 @@ export const SELLABLE_VEHICLE_SELECT = {
   version: true,
   yearModel: true,
   plate: true,
+  chassis: true,
+  renavam: true,
   price: true,
   status: true,
   purchasePrice: true,
@@ -584,6 +586,8 @@ export type SellableVehicleRecord = {
   version: string | null;
   yearModel: number;
   plate: string | null;
+  chassis: string | null;
+  renavam: string | null;
   price: number;
   status: string;
   purchasePrice: number | null;
@@ -613,6 +617,7 @@ export type CustomerSearchRecord = {
   name: string;
   phone: string;
   cpf?: string | null;
+  rg?: string | null;
 };
 
 export async function searchCustomers(options?: { q?: string; take?: number }) {
@@ -624,7 +629,7 @@ export async function searchCustomers(options?: { q?: string; take?: number }) {
     where,
     orderBy: { name: "asc" },
     take,
-    select: { id: true, name: true, phone: true, cpf: true },
+    select: { id: true, name: true, phone: true, cpf: true, rg: true },
   }) as Promise<CustomerSearchRecord[]>;
 }
 

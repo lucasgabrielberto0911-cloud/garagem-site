@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { descriptionPriceSaveError } from "@/lib/admin-vehicle-validate";
 import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { parseMoneyBR } from "@/lib/admin-money";
-import { ENTRY_ITEMS, FINANCE_STATUSES, financingSimulationDown, signalMismatch, parseContractPaymentsJson, simulateFinancing, suggestPrice, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
+import { ENTRY_ITEMS, FINANCE_STATUSES, financingSimulationDown, parseVehicleCustomerIds, signalMismatch, parseContractPaymentsJson, simulateFinancing, suggestPrice, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { revalidatePublicStock, revalidatePublicStockMany } from "@/lib/public-stock-revalidate";
@@ -107,6 +107,11 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         const customer = await tx.customer.findUnique({ where: { id: text("customerId") } });
         if (!customer) throw new CommercialError("Escolha um cliente cadastrado.");
         const amount = money("amount");
+        const ids = parseVehicleCustomerIds({ chassis: text("chassis"), renavam: text("renavam"), rg: text("rg") });
+        if (ids.error) throw new CommercialError(ids.error);
+        const chassis = ids.chassis || vehicle.chassis || "";
+        const renavam = ids.renavam || vehicle.renavam || "";
+        const rg = ids.rg || customer.rg || "";
         const isContract = kind === "proposta" || kind === "contrato";
         const parsedPayments = isContract ? parseContractPaymentsJson(text("payments")) : undefined;
         let paymentText = text("payment");
@@ -154,6 +159,14 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         if (isContract && !parsedPayments && rawFinanced != null && totalEntry + rawFinanced > amount) throw new CommercialError("A soma de sinal, entrada e financiamento não pode superar o valor do contrato.");
         const financed = rawFinanced ?? (text("bank") ? Math.max(0, amount - totalEntry) : undefined);
 
+        // Dados informados no contrato voltam ao cadastro, para o próximo documento sair pré-preenchido.
+        if (isContract) {
+          if ((ids.chassis && ids.chassis !== vehicle.chassis) || (ids.renavam && ids.renavam !== vehicle.renavam)) {
+            await tx.vehicle.update({ where: { id: vehicleId }, data: { chassis: chassis || null, renavam: renavam || null } });
+          }
+          if (ids.rg && ids.rg !== customer.rg) await tx.customer.update({ where: { id: customer.id }, data: { rg: ids.rg } });
+        }
+
         const doc = await tx.commercialDocument.create({
           data: {
             vehicleId,
@@ -166,6 +179,9 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
               payments: parsedPayments,
               customer: customer.name,
               cpf: customer.cpf ?? "",
+              rg,
+              chassis,
+              renavam,
               phone: customer.phone,
               vehicle: [vehicle.brand, vehicle.model, vehicle.version].filter(Boolean).join(" "),
               year: vehicle.year,

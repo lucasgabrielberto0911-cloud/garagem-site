@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSaleMessage, financingSimulationDown, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
+import { afterSaleMessage, financingSimulationDown, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, parseVehicleCustomerIds, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
 import { commercialPdf, expensesPdf, groupExpenseCosts } from "./commercial-pdf";
 import { PDFArray, PDFDocument, PDFPage, decodePDFRawStream, PDFRawStream } from "pdf-lib";
 import { moneyInWords } from "./money-words";
@@ -258,4 +258,20 @@ test("PDF: rótulo longo da troca quebra linha e não invade o valor", async () 
   assert.ok(val);
   // linhas do rótulo na mesma altura do valor não podem chegar ao x do valor
   assert.ok(label.every((l) => l.y !== val!.y || l.x < val!.x));
+});
+
+test("Chassi, RENAVAM e RG: normaliza, aceita vazio e rejeita tamanho inválido", () => {
+  assert.deepEqual(parseVehicleCustomerIds({}), { chassis: "", renavam: "", rg: "" , error: undefined });
+  const ok = parseVehicleCustomerIds({ chassis: " 9bwzzz377vt004251 ", renavam: "1234.567.890-1", rg: " MG-12.345.678 " });
+  assert.deepEqual(ok, { chassis: "9BWZZZ377VT004251", renavam: "12345678901", rg: "MG-12.345.678", error: undefined });
+  assert.match(parseVehicleCustomerIds({ chassis: "ABC123" }).error ?? "", /17 caracteres/);
+  assert.match(parseVehicleCustomerIds({ renavam: "12345" }).error ?? "", /11 dígitos/);
+  assert.match(parseVehicleCustomerIds({ rg: "1".repeat(21) }).error ?? "", /RG/);
+});
+
+test("contrato com chassi, RENAVAM e RG gera PDF válido e mantém observação longa", async () => {
+  const data = { customer: "Maria Souza", cpf: "123.456.789-09", rg: "MG-12.345.678", chassis: "9BWZZZ377VT004251", renavam: "12345678901", phone: "27999990000", vehicle: "Fiat Uno", plate: "ABC1D23", amount: 20000, total: 20000, payment: "Pix", conditions: "Condição válida. ".repeat(200), seller: "x", date: "2026-10-19T12:00:00Z" };
+  const pdf = await PDFDocument.load(await commercialPdf("contrato", data, "teste-local"));
+  assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
+  assert.ok(pdf.getPageCount() >= 2);
 });
