@@ -322,8 +322,9 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
       "O sinal pago é garantia (arras) destinada a reservar o veículo, que deixa de ser oferecido a terceiros enquanto durar a reserva. Concretizada a compra, o sinal é abatido do preço. Em caso de desistência do(a) COMPRADOR(A), o sinal não será restituído e ficará com a VENDEDORA.",
       "Em caso de desistência da VENDEDORA, esta restituirá o sinal ao(à) COMPRADOR(A) nos termos da lei, sem prejuízo das demais consequências legais cabíveis.",
     ]);
-    if (data.conditions.trim()) clause("Cláusula 9ª — Das condições adicionais", [clean(data.conditions)]);
-    clause(`Cláusula ${data.conditions.trim() ? "10ª" : "9ª"} — Do foro`, [
+    const nextClause = signal > 0 ? 9 : 8;
+    if (data.conditions.trim()) clause(`Cláusula ${nextClause}ª — Das condições adicionais`, [clean(data.conditions)]);
+    clause(`Cláusula ${nextClause + (data.conditions.trim() ? 1 : 0)}ª — Do foro`, [
       `As partes elegem o foro da comarca de ${PDF_STORE.city}/${PDF_STORE.stateCode} para dirimir quaisquer controvérsias deste contrato, ressalvado o foro do domicílio do consumidor, quando aplicável. E, por estarem justas e contratadas, assinam este instrumento em 2 (duas) vias de igual teor, na presença de 2 (duas) testemunhas.`,
     ]);
 

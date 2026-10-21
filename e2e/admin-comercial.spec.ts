@@ -196,6 +196,7 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
     await page.locator('input[name="tradeAmount"]').fill("25.000,00");
 
     await page.getByRole("button", { name: "Financiamento" }).click();
+    await page.locator('#proposta input[name="bank"]').fill("Banco de teste");
     await page.locator('input[name="financed"]').fill("60.000,00");
     await page.locator('input[name="installmentAmount"]').fill("1.500,00");
 
@@ -211,9 +212,10 @@ test("contrato e recibo gerados diretamente no painel de vendas", async ({ page,
       orderBy: { createdAt: "desc" },
     });
     expect(contractDoc.number).toBeGreaterThan(0);
-    const snap = contractDoc.snapshot as { payments?: { method: string; amount: number }[] };
+    const snap = contractDoc.snapshot as { payments?: { method: string; amount: number; bank?: string }[] };
     expect(Array.isArray(snap.payments)).toBe(true);
     expect(snap.payments?.length).toBe(4);
+    expect(snap.payments?.find((payment) => payment.method === "financiamento")?.bank).toBe("Banco de teste");
     const contractPdf = await page.request.get(`/api/admin/documentos/${contractDoc.id}`);
     expect(contractPdf.status()).toBe(200);
     expect(contractPdf.headers()["content-type"]).toBe("application/pdf");

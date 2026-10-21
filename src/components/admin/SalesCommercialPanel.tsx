@@ -76,6 +76,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
   const [pixAmount, setPixAmount] = useState(initialPriceStr);
 
   // Financiamento
+  const [bank, setBank] = useState("");
   const [downPayment, setDownPayment] = useState("");
   const [months, setMonths] = useState("48");
   const [financedAmount, setFinancedAmount] = useState("");
@@ -144,6 +145,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
         items.push({
           method: "financiamento",
           amount: fin,
+          bank: bank.trim() || undefined,
           downPayment: down > 0 ? down : undefined,
           installments: Number.isInteger(inst) && inst > 0 ? inst : undefined,
           installmentAmount: parseMoneyBR(installmentAmount) ?? undefined,
@@ -572,6 +574,16 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                     </div>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-4">
+                    <Field label="Banco / instituição">
+                      <input
+                        name="bank"
+                        value={bank}
+                        onChange={(e) => setBank(e.target.value)}
+                        placeholder="Ex.: Santander"
+                        className={inputClass}
+                        maxLength={160}
+                      />
+                    </Field>
                     <Field label="Entrada (R$)">
                       <input
                         name="downPayment"
