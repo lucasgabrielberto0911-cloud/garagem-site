@@ -168,14 +168,24 @@ export function VehicleForm({
   mode,
   adminId,
   listingScore = null,
+  initialTab = "anuncio",
 }: {
   vehicle?: VehicleWithPhotos;
   mode: "create" | "edit";
   adminId: string;
   /** Nota gravada no último Salvar. O formulário nunca chama o Jev. */
   listingScore?: StoredListingScore | null;
+  initialTab?: "anuncio" | "fotos";
 }) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"anuncio" | "fotos">(
+    initialTab === "fotos" ? "fotos" : "anuncio",
+  );
+  const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
+
+  useEffect(() => {
+    setActiveTab(initialTab === "fotos" ? "fotos" : "anuncio");
+  }, [initialTab]);
   const boundUpdate = useMemo(
     () => (vehicle ? updateVehicle.bind(null, vehicle.id) : createVehicle),
     [vehicle],
@@ -290,6 +300,12 @@ export function VehicleForm({
   function revealSections(ids: VehicleFormSectionId[], scrollTo = ids[0]) {
     if (ids.length === 0) return;
     setOpenSections((current) => new Set([...current, ...ids]));
+    const hasAnuncioTarget = ids.some((id) => id !== "fotos");
+    if (hasAnuncioTarget) {
+      setActiveTab("anuncio");
+    } else if (ids.includes("fotos")) {
+      setActiveTab("fotos");
+    }
     if (!scrollTo) return;
     requestAnimationFrame(() => {
       document.getElementById(sectionAnchor(scrollTo))?.scrollIntoView({
@@ -302,10 +318,60 @@ export function VehicleForm({
   }
 
   useEffect(() => {
+    if (mode !== "edit") return;
+    function onTabClick(event: MouseEvent) {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      )
+        return;
+      const anchor = (event.target as Element | null)?.closest?.(
+        'a[data-vehicle-tab="anuncio"], a[data-vehicle-tab="fotos"]',
+      );
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      const tab = anchor.getAttribute("data-vehicle-tab");
+      if (tab !== "anuncio" && tab !== "fotos") return;
+      event.preventDefault();
+      setActiveTab(tab);
+      if (tab === "fotos") {
+        setOpenSections((current) => new Set([...current, "fotos"]));
+      }
+      window.history.replaceState(window.history.state, "", anchor.href);
+    }
+    window.addEventListener("click", onTabClick, true);
+    return () => window.removeEventListener("click", onTabClick, true);
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "edit") return;
+    for (const tab of ["anuncio", "fotos"] as const) {
+      const el = document.querySelector<HTMLAnchorElement>(
+        `a[data-vehicle-tab="${tab}"]`,
+      );
+      if (!el) continue;
+      const isActive = activeTab === tab;
+      if (isActive) el.setAttribute("aria-current", "page");
+      else el.removeAttribute("aria-current");
+      el.classList.toggle("border-brand", isActive);
+      el.classList.toggle("text-cream", isActive);
+      el.classList.toggle("border-transparent", !isActive);
+      el.classList.toggle("text-muted", !isActive);
+      el.classList.toggle("hover:text-cream", !isActive);
+    }
+  }, [mode, activeTab]);
+
+  useEffect(() => {
     if (state.error) {
       toast.error(state.error);
       if (state.fieldErrors) {
         setErrors(state.fieldErrors);
+        if (state.fieldErrors.locationCity || state.fieldErrors.featured) {
+          setMoreOptionsOpen(true);
+        }
         revealSections(sectionsWithErrors(state.fieldErrors));
       }
     }
@@ -476,6 +542,9 @@ export function VehicleForm({
     }
 
     setErrors(next);
+    if (next.locationCity || next.featured) {
+      setMoreOptionsOpen(true);
+    }
     revealSections(sectionsWithErrors(next));
     const first = Object.keys(next)[0];
     if (first)
@@ -542,7 +611,9 @@ export function VehicleForm({
   const sectionProps = (id: VehicleFormSectionId) => ({
     id: sectionAnchor(id),
     title: sections.find((section) => section.id === id)?.label ?? id,
-    open: openSections.has(id),
+    open:
+      (mode === "edit" && id === "fotos" && activeTab === "fotos") ||
+      openSections.has(id),
     onToggle: () => toggleSection(id),
     errorCount: errorSections.get(id) ?? 0,
     nextLabel:
@@ -567,90 +638,93 @@ export function VehicleForm({
   const cityLabel =
     VEHICLE_LOCATION_CITIES.find((option) => option.value === locationCity)
       ?.label ?? "";
+  const isEditPhotosTab = mode === "edit" && activeTab === "fotos";
 
   return (
     <>
-      <nav
-        aria-label="Seções do anúncio"
-        className="-mx-3 border-b border-white/10 bg-asphalt/95 px-3 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:sticky lg:top-0 lg:z-20 lg:-mx-8 lg:px-8"
-      >
-        <div className={CHIP_SCROLL}>
-          {sections.map((section) => {
-            const count = errorSections.get(section.id) ?? 0;
-            return (
-              <button
-                key={section.id}
-                type="button"
-                onClick={() => revealSections([section.id])}
-                className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 border px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
-                  count > 0
-                    ? "border-brand/60 text-red-400"
-                    : "border-white/10 text-muted hover:text-cream"
-                }`}
-              >
-                {section.nav}
-                {count > 0 ? (
-                  <span
-                    className="h-1.5 w-1.5 bg-brand"
-                    aria-label="com erro"
-                  />
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+      <div className={isEditPhotosTab ? "hidden" : "space-y-4"}>
+        <nav
+          aria-label="Seções do anúncio"
+          className="-mx-3 border-b border-white/10 bg-asphalt/95 px-3 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:sticky lg:top-0 lg:z-20 lg:-mx-8 lg:px-8"
+        >
+          <div className={CHIP_SCROLL}>
+            {sections.map((section) => {
+              const count = errorSections.get(section.id) ?? 0;
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => revealSections([section.id])}
+                  className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 border px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
+                    count > 0
+                      ? "border-brand/60 text-red-400"
+                      : "border-white/10 text-muted hover:text-cream"
+                  }`}
+                >
+                  {section.nav}
+                  {count > 0 ? (
+                    <span
+                      className="h-1.5 w-1.5 bg-brand"
+                      aria-label="com erro"
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
 
-      <ListingQualityCard
-        draft={{
-          brand,
-          model,
-          version,
-          year,
-          yearModel,
-          km: values.km,
-          transmission,
-          fuel,
-          color,
-          price: listedPrice > 0 ? listedPrice : null,
-          description,
-          accessories,
-          photoCount: photos.length,
-          status,
-          category,
-        }}
-        coverUrl={photos[0]?.url ?? ""}
-        judgment={listingScore?.judgment ?? null}
-        scoredAt={listingScore?.scoredAt ?? null}
-        dirty={dirty}
-        saving={saving}
-        onJump={(section) => revealSections([section])}
-      />
-
-      <VehicleFormPreview price={listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}>
-        <p className="font-display text-lg font-semibold text-cream">
-          {`${brand} ${model}`.trim() || "Seu próximo anúncio"}
-        </p>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
-          {[
+        <ListingQualityCard
+          draft={{
+            brand,
+            model,
             version,
-            year && yearModel ? `${year}/${yearModel}` : "Ano a preencher",
-            values.km ? `${values.km} km` : "KM a preencher",
+            year,
+            yearModel,
+            km: values.km,
             transmission,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
-        <p className="mt-2 font-display text-xl font-bold text-red-400">
-          {listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}
-        </p>
-        <p className="mt-2 text-xs text-muted">
-          {photos.length} foto(s) ·{" "}
-          {Object.keys(errors).length
-            ? "Corrija os campos destacados antes de publicar."
-            : "Confira os dados, a capa e o preço antes de salvar."}
-        </p>
-      </VehicleFormPreview>
+            fuel,
+            color,
+            price: listedPrice > 0 ? listedPrice : null,
+            description,
+            accessories,
+            photoCount: photos.length,
+            status,
+            category,
+          }}
+          coverUrl={photos[0]?.url ?? ""}
+          judgment={listingScore?.judgment ?? null}
+          scoredAt={listingScore?.scoredAt ?? null}
+          dirty={dirty}
+          saving={saving}
+          onJump={(section) => revealSections([section])}
+        />
+
+        <VehicleFormPreview price={listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}>
+          <p className="font-display text-lg font-semibold text-cream">
+            {`${brand} ${model}`.trim() || "Seu próximo anúncio"}
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            {[
+              version,
+              year && yearModel ? `${year}/${yearModel}` : "Ano a preencher",
+              values.km ? `${values.km} km` : "KM a preencher",
+              transmission,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          <p className="mt-2 font-display text-xl font-bold text-red-400">
+            {listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}
+          </p>
+          <p className="mt-2 text-xs text-muted">
+            {photos.length} foto(s) ·{" "}
+            {Object.keys(errors).length
+              ? "Corrija os campos destacados antes de publicar."
+              : "Confira os dados, a capa e o preço antes de salvar."}
+          </p>
+        </VehicleFormPreview>
+      </div>
       <VehicleDraftToolbar
         draftKey={`vehicle:${vehicle?.id ?? "new"}`}
         storageKey={`garagem:vehicle-draft:${adminId}:${vehicle?.id ?? "new"}`}
@@ -861,6 +935,7 @@ export function VehicleForm({
                   type="button"
                   onClick={() => {
                     setQuickMode(true);
+                    setMoreOptionsOpen(false);
                     setOpenSections(
                       new Set(["identificacao", "essencial", "fotos", "ficha"]),
                     );
@@ -877,6 +952,7 @@ export function VehicleForm({
                   type="button"
                   onClick={() => {
                     setQuickMode(false);
+                    setMoreOptionsOpen(true);
                     setOpenSections(new Set(sections.map((s) => s.id)));
                   }}
                   className={`min-h-[38px] px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wider transition touch-manipulation ${
@@ -891,6 +967,7 @@ export function VehicleForm({
             </div>
           ) : null}
 
+          <div className={isEditPhotosTab ? "hidden" : "space-y-3 sm:space-y-4"}>
           <FormSection
             {...sectionProps("identificacao")}
             summary={`${isMoto ? "Moto" : "Carro"} · ${identitySummary({
@@ -1090,114 +1167,147 @@ export function VehicleForm({
                 </div>
               ) : null}
 
-              <div className="col-span-2 sm:col-span-1">
-                <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
-                  Onde está o veículo *
-                </span>
+              <div className="col-span-2 border-t border-white/10 pt-3">
+                <button
+                  type="button"
+                  aria-expanded={moreOptionsOpen}
+                  aria-controls="vehicle-more-options"
+                  onClick={() => setMoreOptionsOpen((current) => !current)}
+                  className="flex min-h-[44px] w-full items-center justify-between gap-2 border border-white/10 bg-ink px-3 py-2 text-left transition touch-manipulation hover:border-white/25"
+                >
+                  <span className="font-display text-xs font-semibold uppercase tracking-wider text-cream">
+                    Mais opções
+                  </span>
+                  <span className="truncate font-body text-xs text-muted">
+                    {[
+                      cityLabel || "Cidade",
+                      "Destaque",
+                      consigned ? CONSIGNED_LABEL : "Consignado",
+                    ].join(" · ")}{" "}
+                    {moreOptionsOpen ? "▲" : "▼"}
+                  </span>
+                </button>
+
                 <div
-                  className="grid grid-cols-2 gap-2"
-                  role="group"
-                  aria-label="Onde está o veículo"
+                  id="vehicle-more-options"
+                  className={
+                    moreOptionsOpen
+                      ? "mt-4 grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-4"
+                      : "hidden"
+                  }
                 >
-                  {VEHICLE_LOCATION_CITIES.map((option) => {
-                    const selected = locationCity === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => {
-                          if (option.value !== locationCity) setDirty(true);
-                          setLocationCity(option.value);
-                          setErrors((current) => {
-                            const next = { ...current };
-                            delete next.locationCity;
-                            return next;
-                          });
-                        }}
-                        className={`${SEGMENT} ${selected ? SEGMENT_ON : SEGMENT_OFF} ${
-                          errors.locationCity ? errorBorder : ""
-                        }`}
-                      >
-                        <span className="font-display text-sm font-semibold uppercase tracking-wide">
-                          {option.label}
-                        </span>
-                        <span className="text-xs uppercase tracking-wider opacity-70">
-                          ES
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {!locationCity && !errors.locationCity ? (
-                  <p className="mt-1.5 text-xs text-muted">
-                    Selecione a cidade onde o veículo está.
-                  </p>
-                ) : null}
-                {errors.locationCity ? (
-                  <p className="mt-1.5 text-xs text-red-400">
-                    {errors.locationCity}
-                  </p>
-                ) : (
-                  <details className="mt-1.5 text-xs text-muted">
-                    <summary className="cursor-pointer py-1 touch-manipulation">
-                      Para que serve?
-                    </summary>
-                    <p className="mt-1 leading-relaxed">
-                      {VEHICLE_LOCATION_HINT}
+                  <div className="col-span-2 sm:col-span-1">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+                      Onde está o veículo *
+                    </span>
+                    <div
+                      className="grid grid-cols-2 gap-2"
+                      role="group"
+                      aria-label="Onde está o veículo"
+                    >
+                      {VEHICLE_LOCATION_CITIES.map((option) => {
+                        const selected = locationCity === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() => {
+                              if (option.value !== locationCity) setDirty(true);
+                              setLocationCity(option.value);
+                              setErrors((current) => {
+                                const next = { ...current };
+                                delete next.locationCity;
+                                return next;
+                              });
+                            }}
+                            className={`${SEGMENT} ${selected ? SEGMENT_ON : SEGMENT_OFF} ${
+                              errors.locationCity ? errorBorder : ""
+                            }`}
+                          >
+                            <span className="font-display text-sm font-semibold uppercase tracking-wide">
+                              {option.label}
+                            </span>
+                            <span className="text-xs uppercase tracking-wider opacity-70">
+                              ES
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {!locationCity && !errors.locationCity ? (
+                      <p className="mt-1.5 text-xs text-muted">
+                        Selecione a cidade onde o veículo está.
+                      </p>
+                    ) : null}
+                    {errors.locationCity ? (
+                      <p className="mt-1.5 text-xs text-red-400">
+                        {errors.locationCity}
+                      </p>
+                    ) : (
+                      <details className="mt-1.5 text-xs text-muted">
+                        <summary className="cursor-pointer py-1 touch-manipulation">
+                          Para que serve?
+                        </summary>
+                        <p className="mt-1 leading-relaxed">
+                          {VEHICLE_LOCATION_HINT}
+                        </p>
+                      </details>
+                    )}
+                  </div>
+
+                  <div className="col-span-2 sm:col-span-1">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+                      Vitrine
+                    </span>
+                    <label className="flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50">
+                      <input
+                        type="checkbox"
+                        name="featured"
+                        defaultChecked={vehicle?.featured ?? false}
+                        className="h-5 w-5 accent-brand"
+                      />
+                      <IconStar className="h-4 w-4 text-brand-yellow" />
+                      Destaque na home
+                    </label>
+                    <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                      Até 8 na home, só disponível. A home não escolhe carro
+                      sozinha.
                     </p>
-                  </details>
-                )}
-              </div>
+                  </div>
 
-              <div className="col-span-2 sm:col-span-1">
-                <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
-                  Vitrine
-                </span>
-                <label className="flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 border border-white/10 bg-ink px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50">
-                  <input
-                    type="checkbox"
-                    name="featured"
-                    defaultChecked={vehicle?.featured ?? false}
-                    className="h-5 w-5 accent-brand"
-                  />
-                  <IconStar className="h-4 w-4 text-brand-yellow" />
-                  Destaque na home
-                </label>
-                <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                  Até 8 na home, só disponível. A home não escolhe carro
-                  sozinha.
-                </p>
-              </div>
-
-              <div className="col-span-2 sm:col-span-1">
-                <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
-                  Interno · não aparece no site
-                </span>
-                <label
-                  className={`flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 border px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50 ${
-                    consigned
-                      ? "border-sky-400/50 bg-sky-400/10"
-                      : "border-white/10 bg-ink"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    name="consigned"
-                    checked={consigned}
-                    onChange={(event) => setConsigned(event.target.checked)}
-                    className="h-5 w-5 accent-brand"
-                    data-testid="consigned-checkbox"
-                  />
-                  {CONSIGNED_LABEL}
-                </label>
-                <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                  {CONSIGNED_HINT}
-                </p>
+                  <div className="col-span-2 sm:col-span-1">
+                    <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+                      Interno · não aparece no site
+                    </span>
+                    <label
+                      className={`flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 border px-3 py-2.5 text-sm text-cream transition touch-manipulation hover:border-brand/50 ${
+                        consigned
+                          ? "border-sky-400/50 bg-sky-400/10"
+                          : "border-white/10 bg-ink"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        name="consigned"
+                        checked={consigned}
+                        onChange={(event) => setConsigned(event.target.checked)}
+                        className="h-5 w-5 accent-brand"
+                        data-testid="consigned-checkbox"
+                      />
+                      {CONSIGNED_LABEL}
+                    </label>
+                    <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                      {CONSIGNED_HINT}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </FormSection>
+          </div>
 
+          <div className={mode === "edit" && !isEditPhotosTab ? "hidden" : undefined}>
           <FormSection
             {...sectionProps("fotos")}
             title={`Fotos e vídeo${photos.length > 0 ? ` (${photos.length})` : ""}`}
@@ -1239,7 +1349,9 @@ export function VehicleForm({
               WhatsApp. A marcação fica só neste cadastro.
             </p>
           </FormSection>
+          </div>
 
+          <div className={isEditPhotosTab ? "hidden" : "space-y-3 sm:space-y-4"}>
           <FormSection
             {...sectionProps("ficha")}
             summary={fichaSummary({
@@ -1670,6 +1782,7 @@ export function VehicleForm({
               </div>
             </FormSection>
           ) : null}
+          </div>
 
           {/* Barra de ações fixa: salvar sempre ao alcance, sem rolar a página. */}
           <div className="fixed inset-x-0 bottom-admin-nav z-20 border-t border-white/10 bg-asphalt/95 px-3 py-2.5 backdrop-blur sm:px-6 sm:py-3 lg:sticky lg:inset-x-auto lg:-mx-8 lg:px-8">
