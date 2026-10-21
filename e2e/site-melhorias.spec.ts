@@ -28,8 +28,8 @@ test("buscar mantém alvo de toque maior sem transbordar", async ({ page }) => {
   await page.goto("/");
   const button = page.getByRole("button", { name: "Buscar", exact: true });
   const box = await button.boundingBox();
-  expect(box!.height).toBeGreaterThanOrEqual(52);
-  expect(box!.width).toBeGreaterThanOrEqual(72);
+  expect(box!.height).toBeGreaterThanOrEqual(51.9); // tolerância de subpixel (51,99997 no CI)
+  expect(box!.width).toBeGreaterThanOrEqual(71.9);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

@@ -75,12 +75,14 @@ export type SaleRow = {
     model: string;
     yearModel: number;
     plate: string | null;
+    chassis: string | null;
+    renavam: string | null;
     historical: boolean;
     purchasePrice: number | null;
     consigned: boolean;
     costs: Array<{ amount: number }>;
   };
-  customer: { id: string; name: string; phone: string; cpf?: string | null; address?: string | null } | null;
+  customer: { id: string; name: string; phone: string; cpf?: string | null; rg?: string | null; address?: string | null } | null;
 };
 
 export type SellableVehicle = {
@@ -90,6 +92,8 @@ export type SellableVehicle = {
   version: string | null;
   yearModel: number;
   plate?: string | null;
+  chassis?: string | null;
+  renavam?: string | null;
   price: number;
   status: string;
   purchasePrice: number | null;
@@ -97,7 +101,7 @@ export type SellableVehicle = {
   costs: Array<{ amount: number }>;
 };
 
-export type CustomerOption = { id: string; name: string; phone: string; cpf?: string | null; address?: string | null };
+export type CustomerOption = { id: string; name: string; phone: string; cpf?: string | null; rg?: string | null; address?: string | null };
 
 type SaleSource = "estoque" | "historica";
 

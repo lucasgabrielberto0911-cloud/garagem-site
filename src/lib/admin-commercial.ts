@@ -175,3 +175,20 @@ export function financingSimulationDown(total: number, items: ContractPaymentIte
   const financed = moneySum(items.filter((i) => i.method === "financiamento").map((i) => i.amount));
   return financed > 0 && financed < total ? moneyDifference(total, financed) : undefined;
 }
+
+/** Normaliza e valida chassi (17 alfanuméricos), RENAVAM (11 dígitos) e RG (até 20 caracteres). Vazio é permitido. */
+export function parseVehicleCustomerIds(input: { chassis?: string; renavam?: string; rg?: string }): { chassis: string; renavam: string; rg: string; error?: string } {
+  const chassis = (input.chassis ?? "").replace(/[\s.-]/g, "").toUpperCase();
+  const renavam = (input.renavam ?? "").replace(/\D/g, "");
+  const rg = (input.rg ?? "").trim();
+  let error: string | undefined;
+  if (chassis && !/^[A-Z0-9]{17}$/.test(chassis)) error = "Chassi deve ter 17 caracteres (letras e números).";
+  else if (renavam && renavam.length !== 11) error = "RENAVAM deve ter 11 dígitos.";
+  else if (rg.length > 20) error = "RG deve ter até 20 caracteres.";
+  return { chassis, renavam, rg, error };
+}
+
+/** Campo ausente mantém o valor salvo; campo enviado (mesmo vazio) o substitui. */
+export function resolveIdField(sent: boolean, value: string, saved: string | null | undefined): string {
+  return sent ? value : saved || "";
+}

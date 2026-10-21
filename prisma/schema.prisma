@@ -23,6 +23,10 @@ model Vehicle {
   fipePrice    Float?
   /** Placa completa — uso interno do admin (nunca exibir no site). */
   plate        String?
+  /** Chassi (17 caracteres) — uso interno do admin, sai no contrato. Nunca exibir no site. */
+  chassis      String?
+  /** RENAVAM (11 dígitos) — uso interno do admin, sai no contrato. Nunca exibir no site. */
+  renavam      String?
   fuel         String
   transmission String
   color        String?
@@ -182,6 +186,8 @@ model Customer {
   id        String   @id @default(cuid())
   name      String
   cpf       String?
+  /** RG — uso interno do admin, sai no contrato. */
+  rg        String?
   phone     String
   email     String?
   address   String?

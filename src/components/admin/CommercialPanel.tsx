@@ -12,7 +12,7 @@ import type { CustomerOption, SellableVehicle } from "./SalesManager";
 import { btn, Card, inputClass } from "./ui";
 
 type Props = {
-  vehicle: { id: string; status: string; price: number; purchasePrice: number | null; consigned: boolean; days: number; costs: number };
+  vehicle: { id: string; chassis: string | null; renavam: string | null; status: string; price: number; purchasePrice: number | null; consigned: boolean; days: number; costs: number };
   reservation: { customer: string; phone: string; deadline: string | null; deposit: number; expiresAt: string; status: string } | null;
   assessment: { items: { label: string; status: string }[]; notes: string; offer: number; approved: boolean } | null;
   simulations: { id: string; customerName: string; bank: string; installment: number; months: number; rate: number; status: string }[];
@@ -34,6 +34,8 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
   const [simulation, setSimulation] = useState<ReturnType<typeof simulateFinancing> | null>(null);
   const suggestion = suggestPrice({ price: vehicle.price, purchase: vehicle.purchasePrice, costs: vehicle.costs, days: vehicle.days, margin: parseMoneyBR(margin) ?? 0, consigned: vehicle.consigned });
   function submit(form: FormData) {
+    // RG vazio na ficha = manter o do cadastro (o cliente é escolhido aqui, sem prefill).
+    if (!String(form.get("rg") ?? "").trim()) form.delete("rg");
     start(async () => {
       try {
         const result = await saveCommercial(vehicle.id, form);

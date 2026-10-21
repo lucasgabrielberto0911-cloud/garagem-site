@@ -196,13 +196,15 @@ export const ADMIN_SALE_LIST_INCLUDE = {
       model: true,
       yearModel: true,
       plate: true,
+      chassis: true,
+      renavam: true,
       historical: true,
       purchasePrice: true,
       consigned: true,
       costs: { select: { amount: true } },
     },
   },
-  customer: { select: { id: true, name: true, phone: true, cpf: true, address: true } },
+  customer: { select: { id: true, name: true, phone: true, cpf: true, rg: true, address: true } },
 } as const;
 
 function tabStatusFilter(tab: VehiclesTab) {
@@ -570,6 +572,8 @@ export const SELLABLE_VEHICLE_SELECT = {
   version: true,
   yearModel: true,
   plate: true,
+  chassis: true,
+  renavam: true,
   price: true,
   status: true,
   purchasePrice: true,
@@ -584,6 +588,8 @@ export type SellableVehicleRecord = {
   version: string | null;
   yearModel: number;
   plate: string | null;
+  chassis: string | null;
+  renavam: string | null;
   price: number;
   status: string;
   purchasePrice: number | null;
@@ -613,6 +619,7 @@ export type CustomerSearchRecord = {
   name: string;
   phone: string;
   cpf?: string | null;
+  rg?: string | null;
   address?: string | null;
 };
 
@@ -625,7 +632,7 @@ export async function searchCustomers(options?: { q?: string; take?: number }) {
     where,
     orderBy: { name: "asc" },
     take,
-    select: { id: true, name: true, phone: true, cpf: true, address: true },
+    select: { id: true, name: true, phone: true, cpf: true, rg: true, address: true },
   }) as Promise<CustomerSearchRecord[]>;
 }
 

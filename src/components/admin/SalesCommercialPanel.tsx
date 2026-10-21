@@ -7,6 +7,7 @@ import {
   CONTRACT_PAYMENT_METHODS,
   type ContractPaymentItem,
   type ContractPaymentMethod,
+  parseVehicleCustomerIds,
   simulateFinancing,
   sumContractPayments,
   summarizeContractPayments,
@@ -47,6 +48,10 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
   const [customerId, setCustomerId] = useState(initialCustomer?.id ?? "");
   const [pickedCustomer, setPickedCustomer] = useState<CustomerOption | null>(initialCustomer ?? null);
 
+  // Chassi, RENAVAM e RG: pré-preenchidos do veículo e do cliente, editáveis.
+  const [chassis, setChassis] = useState(initialVehicle?.chassis ?? "");
+  const [renavam, setRenavam] = useState(initialVehicle?.renavam ?? "");
+  const [rg, setRg] = useState(initialCustomer?.rg ?? "");
   const [missingCpf, setMissingCpf] = useState("");
   const [missingAddress, setMissingAddress] = useState("");
 
@@ -56,6 +61,7 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
     setSyncedCustomerId(initialCustomer?.id ?? "");
     setCustomerId(initialCustomer?.id ?? "");
     setPickedCustomer(initialCustomer ?? null);
+    setRg(initialCustomer?.rg ?? "");
     setMissingCpf("");
     setMissingAddress("");
   }
@@ -230,6 +236,14 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
     if (conditions.trim()) form.set("conditions", conditions.trim());
 
     if (kind === "contrato") {
+      const ids = parseVehicleCustomerIds({ chassis, renavam, rg });
+      if (ids.error) {
+        setMessage(ids.error);
+        return;
+      }
+      form.set("chassis", ids.chassis);
+      form.set("renavam", ids.renavam);
+      form.set("rg", ids.rg);
       const amountVal = parseMoneyBR(price);
       if (!amountVal || amountVal <= 0) {
         setMessage("Informe o valor do veículo.");
@@ -356,6 +370,8 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                   setVehicleId(id);
                   if (item) {
                     setPickedVehicle(item);
+                    setChassis(item.chassis ?? "");
+                    setRenavam(item.renavam ?? "");
                     const nextPrice = moneyInput(item.price);
                     if (!price || price === "0,00") {
                       setPrice(nextPrice);
@@ -365,6 +381,8 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                     }
                   } else {
                     setPickedVehicle(null);
+                    setChassis("");
+                    setRenavam("");
                   }
                 }}
               />
@@ -390,7 +408,8 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                   setCustomerId(id);
                   setMissingCpf("");
                   setMissingAddress("");
-                  setPickedCustomer(item ? { id, name: item.name ?? item.label, phone: item.phone ?? "", cpf: item.cpf ?? null, address: item.address ?? null } : null);
+                  setPickedCustomer(item ? { id, name: item.name ?? item.label, phone: item.phone ?? "", cpf: item.cpf ?? null, rg: item.rg ?? null, address: item.address ?? null } : null);
+                  setRg(item?.rg ?? "");
                 }}
               />
               {pickedCustomer && (!pickedCustomer.cpf || !pickedCustomer.address) ? (
@@ -413,6 +432,16 @@ export function SalesCommercialPanel({ initialVehicle, initialCustomer, onClose 
                 Cadastrar novo cliente
               </a>
             </div>
+
+            <Field label="RG do comprador">
+              <input name="rg" value={rg} onChange={(e) => setRg(e.target.value)} maxLength={20} className={inputClass} />
+            </Field>
+            <Field label="Chassi" hint="17 caracteres.">
+              <input name="chassis" value={chassis} onChange={(e) => setChassis(e.target.value.toUpperCase())} maxLength={20} autoCapitalize="characters" className={inputClass} />
+            </Field>
+            <Field label="RENAVAM" hint="11 dígitos.">
+              <input name="renavam" inputMode="numeric" value={renavam} onChange={(e) => setRenavam(e.target.value.replace(/\D/g, "").slice(0, 11))} maxLength={11} className={inputClass} />
+            </Field>
 
             <Field label="Valor total do veículo (R$)" required>
               <input
