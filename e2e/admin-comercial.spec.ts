@@ -483,6 +483,22 @@ test.describe("fluxo único de venda", () => {
     await expect(documents.locator(`a[href="/api/admin/documentos/${buyerChangedContract.id}?inline"]`)).toBeVisible();
     expect(buyerChangedContract.snapshot).toMatchObject({ customerId: otherCustomerId, payments: [{ method: "pix", amount: 67000 }] });
     expect(buyerChangedContract.snapshot).not.toHaveProperty("signal");
+
+    await db.sale.update({ where: { id: sale.id }, data: { customerId: null } });
+    await db.vehicleReservation.create({ data: { vehicleId: flowVehicleId, customerId: otherCustomerId, deposit: 8000, expiresAt: new Date(Date.now() + 86400000), status: "ativa" } });
+    await page.reload();
+    await documents.locator("summary").click();
+    await documents.getByRole("combobox").click();
+    await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
+    await expect(documents.getByLabel("Sinal já recebido (R$)")).toHaveValue("0,00");
+    await documents.locator('input[name="legacyPaymentMethod"][value="pix"]').check();
+    await documents.getByLabel("Valor · À vista/PIX").fill("67.000,00");
+    const contractsBeforeThirdPartyReservation = new Set((await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).map(({ id }) => id));
+    await documents.getByRole("button", { name: "Emitir nova versão do contrato" }).click();
+    await expect.poll(async () => (await db.commercialDocument.findMany({ where: { vehicleId: flowVehicleId, kind: "contrato" }, select: { id: true } })).some(({ id }) => !contractsBeforeThirdPartyReservation.has(id))).toBeTruthy();
+    const contractWithoutThirdPartySignal = await db.commercialDocument.findFirstOrThrow({ where: { vehicleId: flowVehicleId, kind: "contrato" }, orderBy: { createdAt: "desc" } });
+    expect(contractWithoutThirdPartySignal.snapshot).toMatchObject({ customerId, payments: [{ method: "pix", amount: 67000 }] });
+    expect(contractWithoutThirdPartySignal.snapshot).not.toHaveProperty("signal");
     // afterAll limpa as reservas antes de excluir o cliente (FK RESTRICT).
   });
 
