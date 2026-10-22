@@ -2,6 +2,7 @@
 
 import { photoQueueStorage } from "@/lib/admin-photo-queue-store";
 import { ListingQualityCard } from "@/components/admin/ListingQualityCard";
+import { LegendPasteField } from "@/components/admin/LegendPasteField";
 import type { StoredListingScore } from "@/lib/listing-score";
 import { VehicleFormPreview } from "@/components/admin/VehicleFormPreview";
 import { parseVehicleFormFields, parseVehicleKm } from "@/lib/admin-vehicle-fields";
@@ -1566,6 +1567,16 @@ export function VehicleForm({
             }`}
             summary={accessoriesSummary(accessories)}
           >
+            <LegendPasteField
+              key={category}
+              category={category}
+              accessories={accessories}
+              description={description}
+              onApply={(items, legendDescription) => {
+                setAccessories(items);
+                if (legendDescription !== undefined) setDescription(legendDescription);
+              }}
+            />
             <p className="mb-4 text-xs leading-relaxed text-muted">
               Opções prontas para {isMoto ? "moto" : "carro"}. Você também pode
               escrever pontos manuais — tudo vira lista no anúncio.
