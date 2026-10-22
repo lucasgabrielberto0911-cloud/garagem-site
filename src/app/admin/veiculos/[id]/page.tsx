@@ -70,8 +70,8 @@ export default async function EditVehiclePage({
           },
         },
         // Preço de venda só entra na aba Custos e docs (Operação).
-        ...(view === "operacao"
-          ? { sale: { select: { salePrice: true } } }
+        ...(view === "operacao" || view === "venda"
+          ? { sale: { select: { id: true, salePrice: true, paymentMethod: true, customerId: true, customer: { select: { name: true, cpf: true } } } } }
           : {}),
       },
     }),
@@ -101,11 +101,17 @@ export default async function EditVehiclePage({
     notFound();
   }
 
-  const commercial = view === "venda" ? await Promise.all([
-    prisma.vehicleReservation.findFirst({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, include: { customer: { select: { id: true, name: true, phone: true, cpf: true, rg: true, address: true } } } }),
+  if (view === "venda") {
+    const sale = await prisma.sale.findUnique({ where: { vehicleId: id }, select: { id: true } });
+    if (sale) redirect(`/admin/vendas?venda=${sale.id}`);
+    redirect(`/admin/vendas/nova?veiculo=${id}`);
+  }
+
+  const commercial = view === "operacao" ? await Promise.all([
+    prisma.vehicleReservation.findFirst({ where: { vehicleId: id, status: { in: ["ativa", "convertida"] }, ...(vehicle.sale?.customerId ? { customerId: vehicle.sale.customerId } : {}) }, orderBy: { createdAt: "desc" }, include: { customer: { select: { id: true, name: true, phone: true, cpf: true, rg: true, address: true } } } }),
     prisma.vehicleAssessment.findUnique({ where: { vehicleId: id } }),
     prisma.financeSimulation.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 20 }),
-    prisma.commercialDocument.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, kind: true, number: true, createdAt: true } }),
+    prisma.commercialDocument.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, kind: true, number: true, createdAt: true, snapshot: true } }),
     prisma.vehiclePriceHistory.findMany({ where: { vehicleId: id }, orderBy: { createdAt: "desc" }, take: 10 }),
   ]) : null;
 
@@ -170,11 +176,11 @@ export default async function EditVehiclePage({
           Fotos
         </TabLink>
         <TabLink
-          href={`/admin/veiculos/${vehicle.id}?view=venda`}
-          active={view === "venda"}
+          href={`/admin/vendas/nova?veiculo=${vehicle.id}`}
+          active={false}
           tab="venda"
         >
-          Venda
+          Iniciar venda
         </TabLink>
         <TabLink
           href={`/admin/veiculos/${vehicle.id}?view=operacao`}
@@ -193,18 +199,15 @@ export default async function EditVehiclePage({
         </TabLink>
       </nav>
 
-      {view === "venda" && commercial ? (
-        <CommercialPanel
-          vehicle={{ id, chassis: vehicle.chassis, renavam: vehicle.renavam, status: vehicle.status, price: vehicle.price, purchasePrice: vehicle.purchasePrice, consigned: vehicle.consigned, days, costs: costs.reduce((sum, cost) => sum + cost.amount, 0) }}
-          reservation={commercial[0] ? { customer: commercial[0].customer.name, phone: commercial[0].customer.phone, deposit: Number(commercial[0].deposit), expiresAt: commercial[0].expiresAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }), deadline: commercial[0].status === "ativa" ? reservationDeadline(commercial[0].expiresAt) : null, status: commercial[0].status } : null}
+      {view === "operacao" && commercial ? <CommercialPanel
+          vehicle={{ id, chassis: vehicle.chassis, renavam: vehicle.renavam, status: vehicle.status, price: vehicle.price, purchasePrice: vehicle.purchasePrice, consigned: vehicle.consigned, days, costs: costs.reduce((sum, cost) => sum + cost.amount, 0), sale: vehicle.sale }}
+          reservation={commercial[0] ? { customerId: commercial[0].customer.id, customer: commercial[0].customer.name, phone: commercial[0].customer.phone, deposit: Number(commercial[0].deposit), expiresAt: commercial[0].expiresAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }), deadline: commercial[0].status === "ativa" ? reservationDeadline(commercial[0].expiresAt) : null, status: commercial[0].status } : null}
           assessment={commercial[1] ? { items: commercial[1].items as Prisma.JsonArray as { label: string; status: string }[], notes: commercial[1].notes, offer: Number(commercial[1].offer), approved: commercial[1].approved } : null}
           simulations={commercial[2].map((s) => ({ id: s.id, customerName: s.customerName, bank: s.bank, installment: Number(s.installment), months: s.months, rate: Number(s.rate), status: s.status }))}
-          documents={commercial[3].map((d) => ({ id: d.id, kind: d.kind, number: d.number, date: adminDate(d.createdAt) }))}
+          documents={commercial[3].map((d) => { const snapshot = d.snapshot as { saleId?: string | null; customerId?: string | null; customer?: string; cpf?: string; conditions?: string; signal?: { amount?: number; receiptId?: string; date?: string }; payments?: { method: string; amount: number; bank?: string; installmentAmount?: number; tradeVehicle?: string; tradePlate?: string; installments?: number; downPayment?: number }[] } | null; return { id: d.id, kind: d.kind, number: d.number, date: adminDate(d.createdAt), saleId: snapshot?.saleId, customerId: snapshot?.customerId, customer: snapshot?.customer, cpf: snapshot?.cpf, conditions: snapshot?.conditions, signal: snapshot?.signal, payments: snapshot?.payments }; })}
           history={commercial[4].map((h) => ({ price: h.price, date: adminDate(h.createdAt) }))}
-          salesVehicle={{ id, brand: vehicle.brand, model: vehicle.model, version: vehicle.version, yearModel: vehicle.yearModel, plate: vehicle.plate, chassis: vehicle.chassis, renavam: vehicle.renavam, price: vehicle.price, status: vehicle.status, purchasePrice: vehicle.purchasePrice, consigned: vehicle.consigned, costs }}
-          reservationCustomer={commercial[0] && commercial[0].status === "ativa" && commercial[0].expiresAt > new Date() ? { id: commercial[0].customer.id, name: commercial[0].customer.name, phone: commercial[0].customer.phone, cpf: commercial[0].customer.cpf, rg: commercial[0].customer.rg, address: commercial[0].customer.address } : null}
-        />
-      ) : view === "verificado" && verified ? (
+        /> : null}
+      {view === "verificado" && verified ? (
         <VehicleTabsLoader view="verificado" panelProps={{
           vehicleId: vehicle.id,
           isMoto: vehicle.category === "moto",

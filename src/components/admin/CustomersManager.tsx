@@ -5,6 +5,7 @@ import { confirmDiscard, useConfirmDialog } from "@/components/admin/useConfirmD
 import { adminMutation } from "@/lib/admin-mutation";
 import { focusAdminError } from "@/lib/admin-form-focus";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -412,7 +413,8 @@ export function CustomersManager({
                 ) : null}
               </div>
 
-              <div className="grid grid-cols-4 border-t border-white/10">
+              <div className="grid grid-cols-5 border-t border-white/10">
+                <Link href={`/admin/vendas/nova?cliente=${customer.id}`} className={mobileActionCell}>Iniciar venda</Link>
                 <a
                   href={`https://wa.me/55${customer.phone}`}
                   target="_blank"

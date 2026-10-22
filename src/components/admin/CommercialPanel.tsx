@@ -3,39 +3,67 @@
 import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveCommercial } from "@/app/admin/veiculos/commercial-actions";
-import { ENTRY_ITEMS, FINANCE_STATUSES, simulateFinancing, suggestPrice } from "@/lib/admin-commercial";
+import { ENTRY_ITEMS, FINANCE_STATUSES, suggestPrice } from "@/lib/admin-commercial";
 import { formatAdminMoney as brl, moneyInput, parseMoneyBR } from "@/lib/admin-money";
 import { whatsappUrl } from "@/lib/leads";
 import { SearchSelect } from "./SearchSelect";
-import { SalesCommercialPanel } from "./SalesCommercialPanel";
-import type { CustomerOption, SellableVehicle } from "./SalesManager";
 import { btn, Card, inputClass } from "./ui";
 
+const LEGACY_PAYMENT_METHODS = [{ id: "pix", label: "À vista/PIX" }, { id: "financiamento", label: "Financiamento" }, { id: "troca", label: "Troca" }, { id: "cartao", label: "Cartão" }] as const;
+
 type Props = {
-  vehicle: { id: string; chassis: string | null; renavam: string | null; status: string; price: number; purchasePrice: number | null; consigned: boolean; days: number; costs: number };
-  reservation: { customer: string; phone: string; deadline: string | null; deposit: number; expiresAt: string; status: string } | null;
+  vehicle: { id: string; chassis: string | null; renavam: string | null; status: string; price: number; purchasePrice: number | null; consigned: boolean; days: number; costs: number; sale: { id: string; salePrice: number; paymentMethod: string; customerId: string | null; customer?: { name: string; cpf: string | null } | null } | null };
+  reservation: { customerId: string; customer: string; phone: string; deadline: string | null; deposit: number; expiresAt: string; status: string } | null;
   assessment: { items: { label: string; status: string }[]; notes: string; offer: number; approved: boolean } | null;
   simulations: { id: string; customerName: string; bank: string; installment: number; months: number; rate: number; status: string }[];
-  documents: { id: string; kind: string; number: number; date: string }[];
+  documents: { id: string; kind: string; number: number; date: string; saleId?: string | null; customerId?: string | null; customer?: string; cpf?: string; conditions?: string; signal?: { amount?: number; receiptId?: string; date?: string }; payments?: { method: string; amount: number; bank?: string; installmentAmount?: number; tradeVehicle?: string; tradePlate?: string; installments?: number; downPayment?: number }[] }[];
   history: { price: number; date: string }[];
-  salesVehicle: SellableVehicle;
-  reservationCustomer?: CustomerOption | null;
 };
 
 function Field({ label, name, value, type = "text", required = true }: { label: string; name: string; value?: string | number; type?: string; required?: boolean }) {
   return <label className="block space-y-1 text-sm"><span>{label}</span><input name={name} type={type} defaultValue={value} required={required} maxLength={type === "text" ? 200 : undefined} className={inputClass} /></label>;
 }
 
-export function CommercialPanel({ vehicle, reservation, assessment, simulations, documents, history, salesVehicle, reservationCustomer }: Props) {
+export function CommercialPanel({ vehicle, reservation, assessment, simulations, documents, history }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [message, setMessage] = useState("");
   const [margin, setMargin] = useState("2.000,00");
-  const [simulation, setSimulation] = useState<ReturnType<typeof simulateFinancing> | null>(null);
+  const sale = vehicle.sale;
+  const [selectedCustomerId, setSelectedCustomerId] = useState(sale?.customerId ?? "");
+  const selectedReservation = reservation?.customerId === selectedCustomerId ? reservation : null;
+  const legacyCpf = (value?: string | null) => value?.replace(/\D/g, "");
+  const previousContract = sale?.customerId ? documents.find((document) => document.kind === "contrato" && document.saleId === sale.id && (document.customerId === sale.customerId || (!document.customerId && Boolean(sale.customer?.cpf && legacyCpf(document.cpf) === legacyCpf(sale.customer.cpf))))) : undefined;
+  const hasSaleContract = Boolean(sale && documents.some((document) => document.kind === "contrato" && document.saleId === sale.id));
+  const previousSignal = previousContract?.signal;
+  const previousPayments = previousContract?.payments ?? [];
+  const previousPayment = (method: string) => previousPayments.find((payment) => payment.method === method);
   const suggestion = suggestPrice({ price: vehicle.price, purchase: vehicle.purchasePrice, costs: vehicle.costs, days: vehicle.days, margin: parseMoneyBR(margin) ?? 0, consigned: vehicle.consigned });
   function submit(form: FormData) {
     // RG vazio na ficha = manter o do cadastro (o cliente é escolhido aqui, sem prefill).
     if (!String(form.get("rg") ?? "").trim()) form.delete("rg");
+    if (form.get("operation") === "document" && form.get("kind") === "contrato") {
+      const selectedCustomerId = String(form.get("customerId") ?? "");
+      const signalAmount = (reservation?.customerId === selectedCustomerId ? reservation.deposit : 0) || parseMoneyBR(form.get("legacySignalAmount")) || 0;
+      if (signalAmount > 0) form.set("signalEnabled", "on");
+      else form.delete("signalEnabled");
+      const selectedMethods = new Set(form.getAll("legacyPaymentMethod").map(String));
+      form.set("payments", JSON.stringify([
+        ...(signalAmount > 0 ? [{ method: "sinal", amount: signalAmount, signalDate: previousSignal?.date }] : []),
+        ...LEGACY_PAYMENT_METHODS.filter(({ id }) => selectedMethods.has(id)).map(({ id }) => ({
+          method: id,
+          amount: parseMoneyBR(form.get(`legacyPaymentAmount_${id}`)) ?? 0,
+          ...(id === "troca" ? { tradeVehicle: form.get("legacyTradeVehicle"), tradePlate: form.get("legacyTradePlate") } : {}),
+          ...(id === "cartao" ? { installments: Number(form.get("legacyInstallments_cartao")) } : {}),
+          ...(id === "financiamento" ? {
+            bank: form.get("legacyBank"),
+            downPayment: parseMoneyBR(form.get("legacyDownPayment")) ?? 0,
+            installments: Number(form.get("legacyInstallments_financiamento")),
+            installmentAmount: parseMoneyBR(form.get("legacyInstallmentAmount")) ?? 0,
+          } : {}),
+        })),
+      ]));
+    }
     start(async () => {
       try {
         const result = await saveCommercial(vehicle.id, form);
@@ -54,7 +82,6 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
   return <div className="space-y-4 pb-16 font-body md:pb-0">
     <nav aria-label="Ações rápidas" className="fixed inset-x-0 bottom-admin-nav z-30 flex gap-2 border-t border-white/10 bg-asphalt p-2 md:hidden">
       <button type="button" className={`${btn.primary} ${bar}`} onClick={() => openCard("reserva")} disabled={vehicle.status !== "disponivel"}>Reservar</button>
-      <button type="button" className={`${btn.outline} ${bar}`} onClick={() => openCard("proposta")}>Gerar proposta</button>
       {reservation ? <a className={`${btn.outline} ${bar}`} href={whatsappUrl(reservation.phone, `Olá, ${reservation.customer.split(" ")[0]}! Aqui é da Garagem.`)} target="_blank" rel="noopener noreferrer">WhatsApp do cliente</a> : null}
     </nav>
     <p role="status" aria-live="polite" className="text-sm">{pending ? "Salvando…" : message}</p>
@@ -72,7 +99,7 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
       <Card id="reserva" title="Reserva com sinal e prazo" collapsed>
         <p className="mb-3 text-xs text-muted">Reservas vencidas são liberadas em até 1 minuto com o painel aberto ou na rotina diária às 6h.</p>
         {reservation ? <p className="mb-3 text-sm">{reservation.customer} · sinal {brl(reservation.deposit)} · prazo {reservation.expiresAt} · {reservation.status}{reservation.deadline ? ` · ${reservation.deadline}` : ""}. O sinal integra o valor total da venda; não some novamente.</p> : null}
-        {reservation?.status === "ativa" ? <><form action={submit}><input type="hidden" name="operation" value="cancel-reservation" /><p className="mb-2 text-xs text-muted">Cancelar libera o veículo. A devolução do sinal deve ser acertada com o cliente.</p><button className={btn.outline}>Cancelar reserva e liberar veículo</button></form><form action={submit} className="mt-3 space-y-2"><input type="hidden" name="operation" value="extend-reservation" /><Field label="Novo prazo (horário de Brasília)" name="expiresAt" type="datetime-local" /><button className={btn.outline}>Prorrogar reserva</button></form><a className={`${btn.primary} mt-2`} href={`/admin/vendas?vehicle=${vehicle.id}`}>Registrar venda (sinal incluído)</a></> : vehicle.status === "disponivel" ? <form action={submit} className="grid gap-3 sm:grid-cols-2">
+        {reservation?.status === "ativa" ? <><form action={submit}><input type="hidden" name="operation" value="cancel-reservation" /><p className="mb-2 text-xs text-muted">Cancelar libera o veículo. A devolução do sinal deve ser acertada com o cliente.</p><button className={btn.outline}>Cancelar reserva e liberar veículo</button></form>{reservation.deposit > 0 && <form action={submit} className="mt-3 flex flex-wrap items-end gap-2"><input type="hidden" name="operation" value="document" /><input type="hidden" name="kind" value="recibo" /><input type="hidden" name="customerId" value={reservation.customerId} /><input type="hidden" name="amount" value={moneyInput(reservation.deposit)} /><input type="hidden" name="payment" value="Sinal" /><button className={btn.outline}>Emitir recibo do sinal</button></form>}<form action={submit} className="mt-3 space-y-2"><input type="hidden" name="operation" value="extend-reservation" /><Field label="Novo prazo (horário de Brasília)" name="expiresAt" type="datetime-local" /><button className={btn.outline}>Prorrogar reserva</button></form><a className={`${btn.primary} mt-2`} href={`/admin/vendas/nova?veiculo=${vehicle.id}`}>Iniciar venda (sinal incluído)</a></> : vehicle.status === "disponivel" ? <form action={submit} className="grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="operation" value="reserve" /><CustomerSelect />
           <Field label="Sinal recebido (R$)" name="deposit" value="0,00" /><Field label="Prazo (horário de Brasília)" name="expiresAt" type="datetime-local" />
           <button className={btn.primary}>Confirmar reserva</button>
@@ -88,22 +115,11 @@ export function CommercialPanel({ vehicle, reservation, assessment, simulations,
           <button className={btn.primary}>Salvar avaliação</button>
         </form>
       </Card>
-      <Card title="Simulador e acompanhamento de financiamento" collapsed>
-        <p className="mb-3 text-sm text-muted">Tabela Price, taxa mensal informada pelo vendedor. Estimativa sem IOF, seguros e tarifas; não representa CET nem aprovação de crédito.</p>
-        <form action={submit} onChange={() => setSimulation(null)} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="operation" value="finance" />
-          <Field label="Cliente" name="customerName" /><Field label="Banco / financeira" name="bank" />
-          <Field label="Valor do veículo (R$)" name="price" value={moneyInput(vehicle.price)} /><Field label="Entrada total, incluindo sinal (R$)" name="downPayment" value={moneyInput(reservation?.deposit ?? 0)} />
-          <Field label="Taxa mensal (%)" name="rate" value="1,50" /><Field label="Prazo (meses)" name="months" value={48} type="number" />
-          <button type="button" className={btn.outline} onClick={(event) => { const form = new FormData(event.currentTarget.form!); try { setSimulation(simulateFinancing(parseMoneyBR(form.get("price")) ?? NaN, parseMoneyBR(form.get("downPayment")) ?? NaN, Number(String(form.get("rate")).replace(",", ".")), Number(form.get("months")))); } catch (error) { setMessage((error as Error).message); } }}>Calcular parcelas</button>
-          <button className={btn.primary}>Salvar simulação</button>
-          {simulation ? <p className="text-sm sm:col-span-2">Parcela: {brl(simulation.installment)} · total com entrada: {brl(simulation.total)} · juros estimados: {brl(simulation.interest)}</p> : null}
-        </form>
+      <Card title="Histórico de simulações de financiamento" collapsed>
         <div className="mt-4 space-y-3">{simulations.map((s) => <form key={s.id} action={submit} className="space-y-2 border-t border-white/10 pt-3"><input type="hidden" name="operation" value="finance-status" /><input type="hidden" name="simulationId" value={s.id} /><p className="text-sm">{s.customerName} · {s.bank} · {s.months} × {brl(s.installment)} · {s.rate}% a.m.</p><label className="block text-sm">Situação<select name="status" className={inputClass} defaultValue={s.status}>{FINANCE_STATUSES.map((value, index) => <option key={value} value={value}>{["Simulação", "Enviada ao banco", "Aprovada", "Recusada"][index]}</option>)}</select></label><button className={btn.outline}>Atualizar acompanhamento</button></form>)}</div>
       </Card>
-      <div id="proposta">
-        <SalesCommercialPanel initialVehicle={salesVehicle} initialCustomer={reservationCustomer} />
-      </div>
       <Card title="Contratos e recibos gerados" collapsed>
+        {vehicle.sale && <form action={submit} className="mb-4 space-y-3 border-b border-white/10 pb-4"><input type="hidden" name="operation" value="document" /><input type="hidden" name="kind" value="contrato" /><input type="hidden" name="amount" value={moneyInput(vehicle.sale.salePrice)} /><Field key={selectedCustomerId} label="Sinal já recebido (R$)" name="legacySignalAmount" value={moneyInput(selectedReservation?.deposit || previousSignal?.amount || 0)} required={false} />{previousSignal?.receiptId && <input type="hidden" name="legacySignalReceiptId" value={previousSignal.receiptId} />}{vehicle.sale.customerId ? <><input type="hidden" name="customerId" value={vehicle.sale.customerId} /><p className="text-sm">Comprador atual da venda.</p></> : <CustomerSelect onChange={(id) => setSelectedCustomerId(id)} />}<fieldset className="space-y-2"><legend className="text-sm">Pagamentos reais do saldo</legend>{LEGACY_PAYMENT_METHODS.map(({ id, label }, index) => { const payment = previousPayment(id); return <div key={id} className="grid gap-2 sm:grid-cols-[1fr_1fr]"><label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="legacyPaymentMethod" value={id} defaultChecked={previousContract ? Boolean(payment) : !hasSaleContract && index === 0} />{label}</label><Field key={`${id}-${selectedCustomerId}`} label={`Valor · ${label}`} name={`legacyPaymentAmount_${id}`} value={payment ? moneyInput(payment.amount) : !previousContract && !hasSaleContract && index === 0 ? moneyInput(vehicle.sale!.salePrice - (selectedReservation?.deposit || previousSignal?.amount || 0)) : ""} required={false} />{id === "troca" && <><Field label="Veículo/descrição da troca" name="legacyTradeVehicle" value={payment?.tradeVehicle} required={false} /><Field label="Placa da troca" name="legacyTradePlate" value={payment?.tradePlate} required={false} /></>}{id === "cartao" && <Field label="Parcelas no cartão" name="legacyInstallments_cartao" type="number" value={payment?.installments} required={false} />}{id === "financiamento" && <><Field label="Banco do financiamento" name="legacyBank" value={payment?.bank} required={false} /><Field label="Valor da parcela (R$)" name="legacyInstallmentAmount" value={moneyInput(payment?.installmentAmount)} required={false} /><Field label="Entrada do financiamento (R$)" name="legacyDownPayment" value={moneyInput(payment?.downPayment)} required={false} /><Field label="Parcelas do financiamento" name="legacyInstallments_financiamento" type="number" value={payment?.installments} required={false} /></>}</div>; })}</fieldset><p className="text-xs text-muted">{selectedReservation && selectedReservation.deposit > 0 ? `Sinal da reserva: ${brl(selectedReservation.deposit)}. ` : ""}Informe os valores por forma de pagamento; a soma deve fechar o total da venda.</p><Field label="Chassi" name="chassis" value={vehicle.chassis ?? ""} required={false} /><Field label="RENAVAM" name="renavam" value={vehicle.renavam ?? ""} required={false} /><Field label="RG do cliente" name="rg" required={false} /><label className="block text-sm">Condições adicionais<textarea name="conditions" maxLength={3000} defaultValue={previousContract?.conditions ?? ""} className={inputClass} /></label><button className={btn.primary}>{documents.some((document) => document.kind === "contrato") ? "Emitir nova versão do contrato" : "Emitir contrato desta venda"}</button></form>}
         <ul className="mt-3 space-y-2">{documents.map((d) => <li key={d.id}><a className={btn.outline} href={`/api/admin/documentos/${d.id}?inline`} target="_blank" rel="noopener noreferrer">{d.kind === "recibo" ? "Recibo" : d.kind === "contrato" ? "Contrato" : "Proposta"}{d.number ? ` nº ${d.number}` : ""} · {d.date} · Abrir PDF</a></li>)}</ul>
       </Card>
     </fieldset>

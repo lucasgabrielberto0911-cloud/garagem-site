@@ -33,7 +33,6 @@ import {
   mobileActionCell,
 } from "@/components/admin/ui";
 import { SearchSelect } from "@/components/admin/SearchSelect";
-import { SalesCommercialPanel } from "@/components/admin/SalesCommercialPanel";
 import { createSale, deleteSale, updateSale } from "@/app/admin/vendas/actions";
 import {
   extractSaleCommission,
@@ -174,7 +173,6 @@ export function SalesManager({
   period,
   periodRevenue,
   query = "",
-  initialVehicle,
 }: {
   sales: SaleRow[];
   salesTotal: number;
@@ -182,7 +180,6 @@ export function SalesManager({
   period: Period;
   periodRevenue: number;
   query?: string;
-  initialVehicle?: SellableVehicle | null;
 }) {
   const [confirmAction, confirmDialog] = useConfirmDialog();
   const router = useRouter();
@@ -195,12 +192,12 @@ export function SalesManager({
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const loadingRef = useRef(false);
-  const [open, setOpen] = useState(Boolean(initialVehicle));
+  const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [source, setSource] = useState<SaleSource>("estoque");
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [vehicleId, setVehicleId] = useState(initialVehicle?.id || "");
+  const [vehicleId, setVehicleId] = useState("");
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
   const [yearModel, setYearModel] = useState("");
@@ -215,17 +212,8 @@ export function SalesManager({
   const [saleDate, setSaleDate] = useState(todayInputValue());
   const [notes, setNotes] = useState("");
   const [cancelTarget, setCancelTarget] = useState<SaleRow | null>(null);
-  const [pickedVehicle, setPickedVehicle] = useState<SellableVehicle | null>(
-    initialVehicle ?? null,
-  );
+  const [pickedVehicle, setPickedVehicle] = useState<SellableVehicle | null>(null);
   const [pickedCustomer, setPickedCustomer] = useState<CustomerOption | null>(
-    null,
-  );
-  const [commercialOpen, setCommercialOpen] = useState(false);
-  const [commercialVehicle, setCommercialVehicle] = useState<SellableVehicle | null>(
-    initialVehicle ?? null,
-  );
-  const [commercialCustomer, setCommercialCustomer] = useState<CustomerOption | null>(
     null,
   );
 
@@ -343,16 +331,7 @@ export function SalesManager({
   }
 
   function openSaleContract(sale: SaleRow) {
-    setCommercialVehicle({
-      ...sale.vehicle,
-      version: null,
-      price: sale.salePrice,
-      status: "vendido",
-    });
-    setCommercialCustomer(sale.customer ?? null);
-    setOpen(false);
-    setCommercialOpen(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    router.push(`/admin/veiculos/${sale.vehicle.id}?view=operacao`);
   }
 
   async function startEdit(sale: SaleRow) {
@@ -469,15 +448,6 @@ export function SalesManager({
   return (
     <div className="space-y-5">
       {confirmDialog}
-      {commercialOpen ? (
-        <SalesCommercialPanel
-          key={`${commercialVehicle?.id ?? ""}:${commercialCustomer?.id ?? ""}:${commercialVehicle?.price ?? ""}`}
-          initialVehicle={commercialVehicle}
-          initialCustomer={commercialCustomer}
-          onClose={() => setCommercialOpen(false)}
-        />
-      ) : null}
-
       {open ? (
         <Card title={isEditing ? "Editar venda" : "Registrar venda"}>
           <form
@@ -504,32 +474,7 @@ export function SalesManager({
               ) : null}
 
               {!isEditing ? (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSource("estoque");
-                      setErrors({});
-                    }}
-                    className={source === "estoque" ? btn.primary : btn.outline}
-                  >
-                    Do estoque
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSource("historica");
-                      setVehicleId("");
-                      if (!paymentMethod) setPaymentMethod("Histórico");
-                      setErrors({});
-                    }}
-                    className={
-                      source === "historica" ? btn.primary : btn.outline
-                    }
-                  >
-                    Venda histórica
-                  </button>
-                </div>
+                <p className="text-xs uppercase tracking-wider text-muted">Venda histórica</p>
               ) : (
                 <p className="text-xs uppercase tracking-wider text-muted">
                   {isHistorical ? "Venda histórica" : "Venda do estoque"}
@@ -833,49 +778,28 @@ export function SalesManager({
                 >
                   Cancelar
                 </button>
-                {!isHistorical && pickedVehicle ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCommercialVehicle(pickedVehicle);
-                      setCommercialCustomer(pickedCustomer);
-                      setOpen(false);
-                      setCommercialOpen(true);
-                    }}
-                    className={btn.outline}
-                  >
-                    Gerar contrato / recibo
-                  </button>
-                ) : null}
               </div>
             </fieldset>
           </form>
         </Card>
       ) : (
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <button
-            type="button"
-            onClick={() => {
-              setCommercialOpen(false);
-              setOpen(true);
-            }}
-            className={`${btn.primary} w-full sm:w-auto`}
-          >
+          <Link href="/admin/vendas/nova" className={`${btn.primary} w-full sm:w-auto`}>
             <IconPlus className="h-4 w-4" />
-            Registrar venda
-          </button>
+            Iniciar venda
+          </Link>
 
           <button
             type="button"
             onClick={() => {
-              setOpen(false);
-              setCommercialVehicle(pickedVehicle ?? initialVehicle ?? null);
-              setCommercialCustomer(pickedCustomer);
-              setCommercialOpen(true);
+              setSource("historica");
+              setVehicleId("");
+              setPaymentMethod("Histórico");
+              setOpen(true);
             }}
             className={`${btn.outline} w-full sm:w-auto`}
           >
-            Contrato e recibo
+            Registrar venda histórica
           </button>
 
           <>
@@ -1095,7 +1019,7 @@ export function SalesManager({
                         onClick={() => openSaleContract(sale)}
                         className={`${mobileActionCell} border-l border-white/10`}
                       >
-                        Contrato
+                        Ver venda/documentos
                       </button>
                     ) : null}
                     <button
@@ -1241,7 +1165,7 @@ export function SalesManager({
                               className="p-2 text-xs text-cream transition hover:text-brand-light"
                               title="Gerar contrato desta venda"
                             >
-                              Contrato
+                              Ver venda/documentos
                             </button>
                           ) : null}
                           <button

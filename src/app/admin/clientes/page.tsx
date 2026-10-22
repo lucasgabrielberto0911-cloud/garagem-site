@@ -96,6 +96,7 @@ export default async function ClientesPage({
       <AdminPageHeader
         title="Clientes"
         subtitle="Cadastro dos clientes da loja, com histórico de compras e contato rápido."
+        actions={selected ? <Link href={`/admin/vendas/nova?cliente=${selected}`} className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white">Iniciar venda</Link> : undefined}
       />
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">

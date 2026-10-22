@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSaleMessage, financingSimulationDown, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, parseVehicleCustomerIds, resolveIdField, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
+import { afterSaleMessage, financingSimulationDown, matchesSaleDocumentSnapshot, matchesSaleReceiptSnapshot, signalExceedsTotal, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, parseVehicleCustomerIds, resolveIdField, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
 import { rgAfterCustomerChange } from "./commercial-client";
 import { commercialPdf, expensesPdf, groupExpenseCosts, preparationPdf, PREPARATION_CELL_SIZE, PREPARATION_COLS } from "./commercial-pdf";
 import { parsePreparationForm } from "./preparation";
@@ -13,6 +13,56 @@ test("Price calcula taxa zero, juros e rejeita valores inválidos", () => {
   assert.deepEqual(simulateFinancing(12000, 2000, 0, 10), { principal: 10000, installment: 1000, total: 12000, interest: 0 });
   assert.equal(simulateFinancing(60000, 10000, 1.5, 48).installment, 1468.75);
   for (const args of [[0, 0, 1, 12], [100, 100, 1, 12], [100, -1, 1, 12], [100, 0, -1, 12], [100, 0, 11, 12], [100, 0, 1, 0], [100, 0, 1, 1.5], [NaN, 0, 1, 12], [Infinity, 0, 1, 12]]) assert.throws(() => simulateFinancing(...args as [number, number, number, number]));
+});
+test("documento de venda só reutiliza snapshot atual de comprador, total e pagamentos", () => {
+  const sale = { customerId: "cliente-b", cpf: "11144477735", name: "Bruno Cliente", phone: "27999990000", rg: "123456", address: "Rua A, 10", total: 55000, payments: [{ method: "pix" as const, amount: 55000 }] };
+  const current = { customerId: sale.customerId, cpf: sale.cpf, total: sale.total, payments: sale.payments };
+  const snapshot = { ...current, customer: sale.name, phone: sale.phone, rg: sale.rg, address: sale.address };
+  assert.equal(matchesSaleDocumentSnapshot(snapshot, sale), true);
+  assert.equal(matchesSaleDocumentSnapshot({ ...snapshot, customer: "Bruno Atualizado" }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...snapshot, phone: "27988887777" }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...snapshot, rg: "654321" }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...snapshot, address: "Rua B, 20" }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...current, customerId: "cliente-a" }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...current, total: 60000 }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...current, payments: [{ method: "pix", amount: 60000 }] }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ customer: "Cliente antigo", total: 60000 }, sale), false);
+});
+test("nova tentativa só retorna recibo e proposta da venda atual", () => {
+  const sale = { customerId: "cliente-b", cpf: "11144477735", total: 55000, payments: [{ method: "pix" as const, amount: 50000 }, { method: "sinal" as const, amount: 5000 }] };
+  const currentProposal = { customerId: sale.customerId, cpf: sale.cpf, total: sale.total, payments: sale.payments };
+  const currentReceipt = { ...currentProposal, amount: 5000, payments: [{ method: "sinal" as const, amount: 5000 }] };
+  assert.equal(matchesSaleDocumentSnapshot(currentProposal, sale), true);
+  assert.equal(matchesSaleDocumentSnapshot({ ...currentProposal, customerId: "cliente-a", total: 60000 }, sale), false);
+  assert.equal(matchesSaleReceiptSnapshot(currentReceipt, sale), true);
+  assert.equal(matchesSaleReceiptSnapshot({ ...currentReceipt, customerId: "cliente-a" }, sale), false);
+  assert.equal(matchesSaleReceiptSnapshot({ ...currentReceipt, total: 60000 }, sale), false);
+  assert.equal(matchesSaleReceiptSnapshot({ ...currentReceipt, amount: 4000 }, sale), false);
+  assert.equal(matchesSaleReceiptSnapshot(currentReceipt, { ...sale, payments: [{ method: "pix", amount: 55000 }] }), false);
+});
+test("reemissão mantém pagamentos em ordem diferente e exige CPF atual", () => {
+  const sale = {
+    customerId: "cliente-b", cpf: "111.444.777-35", total: 60000,
+    payments: [{ method: "pix" as const, amount: 55000 }, { method: "sinal" as const, amount: 5000 }],
+  };
+  const reissued = { customerId: sale.customerId, cpf: "11144477735", total: sale.total, payments: [...sale.payments].reverse() };
+  assert.equal(matchesSaleDocumentSnapshot(reissued, sale), true);
+  assert.equal(matchesSaleDocumentSnapshot({ ...reissued, cpf: "529.982.247-25" }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...reissued, payments: [{ method: "sinal", amount: 4000 }, sale.payments[0]] }, sale), false);
+});
+test("reemissão preserva data do recibo sem tornar a nova tentativa obsoleta", () => {
+  const sale = {
+    customerId: "cliente-b", cpf: "11144477735", total: 60000,
+    payments: [{ method: "pix" as const, amount: 55000 }, { method: "sinal" as const, amount: 5000 }],
+  };
+  const receiptDate = "2026-10-21T12:00:00.000Z";
+  const initial = { customerId: sale.customerId, cpf: sale.cpf, total: sale.total, signal: { amount: 5000, date: receiptDate }, payments: sale.payments };
+  const reissuedPayments = parseContractPaymentsJson(JSON.stringify([
+    { method: "sinal", amount: 5000, signalDate: receiptDate }, sale.payments[0],
+  ]));
+  assert.ok(reissuedPayments);
+  assert.equal(matchesSaleDocumentSnapshot({ ...initial, payments: reissuedPayments }, sale), true);
+  assert.equal(matchesSaleDocumentSnapshot({ ...initial, payments: [{ method: "sinal", amount: 4000, signalDate: receiptDate }, sale.payments[0]] }, sale), false);
 });
 test("sugestão respeita custo, margem mínima e dias de giro", () => {
   const base = { price: 60000, purchase: 50000, costs: 2000, days: 90, margin: 4000, consigned: false };
@@ -329,6 +379,11 @@ test("sinal da lista deve bater com o sinal persistido (alteração e omissão)"
   assert.ok(signalMismatch([{ method: "sinal", amount: 20000 }, pix], 10000));
   assert.ok(signalMismatch([pix], 10000));
   assert.equal(signalMismatch([pix], 0), undefined);
+});
+
+test("sinal pode cobrir o total, mas não superá-lo", () => {
+  assert.equal(signalExceedsTotal(60000, 60000), false);
+  assert.equal(signalExceedsTotal(60000.01, 60000), true);
 });
 
 test("simulação usa o valor financiado: demais meios entram na entrada equivalente", () => {
