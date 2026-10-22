@@ -16,7 +16,7 @@ import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/
 import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
 import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 import { formatSaleNotes } from "@/lib/sales-goals";
-import { parseContractPaymentsJson, parseVehicleCustomerIds, signalExceedsTotal, signalMismatch, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
+import { matchesSaleDocumentSnapshot, parseContractPaymentsJson, parseVehicleCustomerIds, signalExceedsTotal, signalMismatch, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
 import { isValidCpf } from "@/lib/format";
 
 export type SaleActionState = {
@@ -67,12 +67,12 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
         }
         if (Math.round(vehicle.sale.salePrice * 100) !== Math.round(total * 100) || !sameCustomer || vehicle.sale.paymentMethod !== summarizeContractPayments(payments)) throw new Error("VEHICLE_UNAVAILABLE");
         const [contract, receipt, proposal] = await Promise.all([
-          tx.commercialDocument.findFirst({ where: { vehicleId, kind: "contrato", snapshot: { path: ["saleId"], equals: vehicle.sale.id } } }),
-          tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["saleId"], equals: vehicle.sale.id } } }),
-          tx.commercialDocument.findFirst({ where: { vehicleId, kind: "proposta", snapshot: { path: ["saleId"], equals: vehicle.sale.id } } }),
+          tx.commercialDocument.findFirst({ where: { vehicleId, kind: "contrato", snapshot: { path: ["saleId"], equals: vehicle.sale.id } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),
+          tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["saleId"], equals: vehicle.sale.id } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),
+          tx.commercialDocument.findFirst({ where: { vehicleId, kind: "proposta", snapshot: { path: ["saleId"], equals: vehicle.sale.id } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),
         ]);
-        if (contract) return { saleId: vehicle.sale.id, contractId: contract.id, receiptId: receipt?.id, proposalId: proposal?.id };
-        throw new Error("VEHICLE_UNAVAILABLE");
+        if (contract && matchesSaleDocumentSnapshot(contract.snapshot, { customerId: vehicle.sale.customerId, cpf, total, payments })) return { saleId: vehicle.sale.id, contractId: contract.id, receiptId: receipt?.id, proposalId: proposal?.id };
+        throw new Error("SALE_DOCUMENT_STALE");
       }
       if (!["disponivel", "reservado", "vendido"].includes(vehicle.status)) throw new Error("VEHICLE_UNAVAILABLE");
       const reservation = await tx.vehicleReservation.findFirst({ where: { vehicleId, status: "ativa", expiresAt: { gt: new Date() } }, orderBy: { createdAt: "desc" } });
@@ -125,7 +125,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
     return { ok: true, message: "Venda registrada e contrato gerado.", ...result };
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    const messages: Record<string, string> = { VEHICLE_UNAVAILABLE: "Veículo indisponível ou já vendido.", RESERVATION_CUSTOMER: "A reserva pertence a outro comprador. Cancele a reserva antes de continuar.", RESERVATION_SIGNAL_REQUIRED: "A reserva tem sinal. Marque o sinal para continuar.", INVALID_SIGNAL: "O sinal deve ser positivo e não pode superar o total negociado.", DUPLICATE_CUSTOMER: "Já existe cliente com este telefone ou CPF; selecione o cadastro existente.", CUSTOMER_INVALID: "Cliente inválido." };
+    const messages: Record<string, string> = { VEHICLE_UNAVAILABLE: "Veículo indisponível ou já vendido.", SALE_DOCUMENT_STALE: "Os dados da venda divergiram do contrato. Reemita o contrato na operação do veículo e tente novamente.", RESERVATION_CUSTOMER: "A reserva pertence a outro comprador. Cancele a reserva antes de continuar.", RESERVATION_SIGNAL_REQUIRED: "A reserva tem sinal. Marque o sinal para continuar.", INVALID_SIGNAL: "O sinal deve ser positivo e não pode superar o total negociado.", DUPLICATE_CUSTOMER: "Já existe cliente com este telefone ou CPF; selecione o cadastro existente.", CUSTOMER_INVALID: "Cliente inválido." };
     return { ok: false, message: messages[message] ?? "Não foi possível registrar a venda." };
   }
 }

@@ -22,6 +22,14 @@ export type ContractPaymentItem = {
   signalDate?: string;
 };
 
+export function matchesSaleDocumentSnapshot(snapshot: unknown, sale: { customerId: string | null; cpf: string; total: number; payments: ContractPaymentItem[] }): boolean {
+  if (!snapshot || typeof snapshot !== "object") return false;
+  const document = snapshot as Record<string, unknown>;
+  const sameBuyer = document.customerId != null ? document.customerId === sale.customerId : Boolean(sale.cpf) && String(document.cpf ?? "").replace(/\D/g, "") === sale.cpf;
+  const snapshotPayments = parseContractPaymentsJson(JSON.stringify(document.payments ?? []));
+  return sameBuyer && Number(document.total ?? document.amount) === sale.total && JSON.stringify(snapshotPayments) === JSON.stringify(sale.payments);
+}
+
 export function formatContractPaymentRow(item: ContractPaymentItem, receiptRef?: string): string {
   switch (item.method) {
     case "sinal": {

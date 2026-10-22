@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSaleMessage, financingSimulationDown, signalExceedsTotal, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, parseVehicleCustomerIds, resolveIdField, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
+import { afterSaleMessage, financingSimulationDown, matchesSaleDocumentSnapshot, signalExceedsTotal, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, parseVehicleCustomerIds, resolveIdField, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
 import { rgAfterCustomerChange } from "./commercial-client";
 import { commercialPdf, expensesPdf, groupExpenseCosts, preparationPdf, PREPARATION_CELL_SIZE, PREPARATION_COLS } from "./commercial-pdf";
 import { parsePreparationForm } from "./preparation";
@@ -13,6 +13,15 @@ test("Price calcula taxa zero, juros e rejeita valores inválidos", () => {
   assert.deepEqual(simulateFinancing(12000, 2000, 0, 10), { principal: 10000, installment: 1000, total: 12000, interest: 0 });
   assert.equal(simulateFinancing(60000, 10000, 1.5, 48).installment, 1468.75);
   for (const args of [[0, 0, 1, 12], [100, 100, 1, 12], [100, -1, 1, 12], [100, 0, -1, 12], [100, 0, 11, 12], [100, 0, 1, 0], [100, 0, 1, 1.5], [NaN, 0, 1, 12], [Infinity, 0, 1, 12]]) assert.throws(() => simulateFinancing(...args as [number, number, number, number]));
+});
+test("documento de venda só reutiliza snapshot atual de comprador, total e pagamentos", () => {
+  const sale = { customerId: "cliente-b", cpf: "11144477735", total: 55000, payments: [{ method: "pix" as const, amount: 55000 }] };
+  const current = { customerId: sale.customerId, cpf: sale.cpf, total: sale.total, payments: sale.payments };
+  assert.equal(matchesSaleDocumentSnapshot(current, sale), true);
+  assert.equal(matchesSaleDocumentSnapshot({ ...current, customerId: "cliente-a" }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...current, total: 60000 }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...current, payments: [{ method: "pix", amount: 60000 }] }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ customer: "Cliente antigo", total: 60000 }, sale), false);
 });
 test("sugestão respeita custo, margem mínima e dias de giro", () => {
   const base = { price: 60000, purchase: 50000, costs: 2000, days: 90, margin: 4000, consigned: false };
