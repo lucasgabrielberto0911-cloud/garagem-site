@@ -139,7 +139,8 @@ for (const width of [390, 1440]) {
       await expect(page.locator('[name="featured"]')).toBeChecked();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
-      await expect(page).toHaveURL(/\/admin\/veiculos\/[^/?]+$/);
+      await expect(page).toHaveURL(/\/admin\/veiculos\/(?!novo$)[^/?]+$/);
+      await expect.poll(() => prisma.vehicle.findFirst({ where: { model: modelName } })).not.toBeNull();
       const saved = await prisma.vehicle.findFirstOrThrow({ where: { model: modelName }, include: { photos: { orderBy: { order: "asc" } } } });
       expect(saved.price).toBe(59900);
       expect(saved.hasVideo).toBe(true);
