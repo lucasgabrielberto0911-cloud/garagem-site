@@ -60,6 +60,7 @@ test("reserva, avaliação e fluxo único geram venda, contrato e recibo", async
   const heldReceipt = await db.commercialDocument.create({ data: { vehicleId, kind: "recibo", snapshot: { reservationId: (await db.vehicleReservation.findFirstOrThrow({ where: { vehicleId, status: "ativa" } })).id, customer: "Cliente Comercial E2E", customerId, cpf: "11144477735", phone: "27999990000", vehicle: "Honda Civic Comercial E2E", plate: "", amount: 1000, total: 60000, payment: "Sinal", conditions: "", seller: "Garagem", date: new Date().toISOString(), payments: [{ method: "sinal", amount: 1000 }] } } });
 
   await page.goto(`/admin/vendas/nova?veiculo=${vehicleId}`);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Continuar" }).click();
   await expect(page.getByRole("combobox")).toHaveValue("Cliente Comercial E2E · 27999990000");
   await page.getByRole("button", { name: "Continuar" }).click();
@@ -135,6 +136,7 @@ test.describe("fluxo único de venda", () => {
     await db.vehicle.update({ where: { id: flowVehicleId }, data: { status: "reservado" } });
 
     await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
+    await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Continuar" }).click();
     await page.getByRole("button", { name: "Continuar" }).click();
     await page.getByLabel("Valor total negociado").fill("60.000,00");
@@ -229,6 +231,7 @@ test.describe("fluxo único de venda", () => {
     await db.customer.update({ where: { id: correctedCustomerId }, data: { name: "Cliente corrigido E2E", phone: "27988887777", address: "Rua corrigida, 123" } });
 
     await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
+    await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Continuar" }).click();
     await expect(page.getByRole("combobox")).toHaveValue("Cliente corrigido E2E · 27988887777");
     await page.getByRole("button", { name: "Continuar" }).click();
@@ -275,6 +278,7 @@ test.describe("fluxo único de venda", () => {
     await page.goto(`/admin/veiculos/${flowVehicleId}`);
     await page.locator(`a[href="/admin/vendas/nova?veiculo=${flowVehicleId}"]`).click();
     await expect(page).toHaveURL(new RegExp(`/admin/vendas/nova\\?veiculo=${flowVehicleId}`));
+    await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Continuar" }).click();
     const customerSearch = page.getByRole("combobox");
     await customerSearch.click();
@@ -310,6 +314,7 @@ test.describe("fluxo único de venda", () => {
       const cookie = login.headers()["set-cookie"].split(";")[0];
       await context.addCookies([{ name: "session", value: cookie.slice("session=".length), url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
       await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
+      await page.waitForLoadState("networkidle");
       await page.getByRole("button", { name: "Continuar" }).click();
       await page.getByRole("combobox").click();
       await page.getByRole("option", { name: /Cliente Comercial E2E/ }).click();
@@ -352,6 +357,7 @@ test.describe("fluxo único de venda", () => {
 
     await page.goto("/admin/clientes");
     await page.locator(`a[href="/admin/vendas/nova?cliente=${customerId}"]`).click();
+    await page.waitForLoadState("networkidle");
     await page.locator('input[placeholder="Buscar veículo"]').fill("Corolla Fluxo E2E");
     await page.getByRole("option", { name: /Corolla Fluxo E2E/ }).click();
     await page.getByRole("button", { name: "Continuar" }).click();
@@ -511,6 +517,7 @@ test.describe("fluxo único de venda", () => {
 
     for (const useNewCustomer of [false, true]) {
       await page.goto(`/admin/vendas/nova?veiculo=${flowVehicleId}`);
+      await page.waitForLoadState("networkidle");
       await page.getByRole("button", { name: "Continuar" }).click();
       if (useNewCustomer) {
         await page.getByRole("combobox").click();

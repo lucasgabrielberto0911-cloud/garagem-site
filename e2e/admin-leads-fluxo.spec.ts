@@ -159,8 +159,9 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   if (await maisAcoes.isVisible()) await maisAcoes.click();
   const customer = await prisma.customer.create({ data: { name: conta.prefixo, phone: "27988887777" } });
   await page.getByRole("button", { name: /^Iniciar venda/ }).click();
-  await page.getByRole("button", { name: "Iniciar venda", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Iniciar venda", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/admin/vendas/nova\\?veiculo=${vehicle.id}`));
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Continuar" }).click();
   await page.getByRole("combobox").click();
   await page.getByRole("option", { name: new RegExp(conta.prefixo) }).click();
