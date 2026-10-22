@@ -5,10 +5,34 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  check:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm audit --omit=dev --audit-level=critical
+      - run: npm test
+      - run: npm run lint
+      - run: npx tsc --noEmit
+
+  e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     services:
       postgres:
         image: postgres:16-alpine
@@ -30,26 +54,53 @@ jobs:
       E2E_TEST: "1"
     steps:
       - uses: actions/checkout@v4
+      - id: playwright-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Cache Playwright
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+      - name: Playwright (download)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Playwright (deps)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Cache .next/cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**') }}
       - run: npx prisma generate
       - run: npx prisma db push --skip-generate
       - run: npm run e2e:seed
-      - run: npm audit --omit=dev --audit-level=critical
-      - run: npm test
-      - run: npm run lint
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - run: npx playwright test --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: public-browser-failures
+          name: e2e-failures-shard-${{ matrix.shard }}
           path: test-results/
           retention-days: 7
+
+  check:
+    runs-on: ubuntu-latest
+    needs: [unit, e2e]
+    if: always()
+    steps:
+      - name: Falha se algum job não passou
+        run: |
+          if [ "${{ needs.unit.result }}" != "success" ] || [ "${{ needs.e2e.result }}" != "success" ]; then
+            echo "unit=${{ needs.unit.result }} e2e=${{ needs.e2e.result }}"
+            exit 1
+          fi
 
   migrations:
     runs-on: ubuntu-latest
