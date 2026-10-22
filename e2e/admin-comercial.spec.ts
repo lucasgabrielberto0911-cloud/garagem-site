@@ -11,7 +11,7 @@ const customerId = "ce2eadminlote4customer";
 test.beforeAll(async () => {
   await db.sale.deleteMany({ where: { vehicleId } });
   await db.vehicle.deleteMany({ where: { id: vehicleId } });
-  await db.customer.upsert({ where: { id: customerId }, create: { id: customerId, name: "Cliente Comercial E2E", phone: "27999990000", cpf: "12345678901" }, update: { cpf: "12345678901" } });
+  await db.customer.upsert({ where: { id: customerId }, create: { id: customerId, name: "Cliente Comercial E2E", phone: "27999990000", cpf: "11144477735" }, update: { cpf: "11144477735" } });
   await db.admin.upsert({ where: { email: "comercial@local.test" }, create: { name: "Teste local", email: "comercial@local.test", passwordHash: await bcrypt.hash("comercial-local-123", 4) }, update: {} });
   await db.vehicle.create({ data: { id: vehicleId, brand: "Honda", model: "Civic Comercial E2E", year: 2020, yearModel: 2020, km: 50000, price: 60000, purchasePrice: 50000, fuel: "Flex", transmission: "Automático", createdAt: new Date(Date.now() - 100 * 86400000) } });
 });
@@ -424,7 +424,7 @@ test.describe("fluxo único de venda", () => {
     expect(withoutEligibleReservation.snapshot).not.toHaveProperty("signal");
 
     const manualReceipt = await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "recibo", snapshot: { saleId: sale.id, customerId, amount: 5000, total: 67000, payment: "Sinal", payments: [{ method: "sinal", amount: 5000 }] } } });
-    await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "contrato", snapshot: { saleId: sale.id, customer: "Cliente Comercial E2E", cpf: "123.456.789-01", total: 67000, conditions: "Entrega até 30/10/2026", signal: { amount: 5000, receiptId: String(manualReceipt.number), date: new Date().toISOString() }, payments: [{ method: "sinal", amount: 5000 }, { method: "troca", amount: 20000, tradeVehicle: "Palio", tradePlate: "ABC1D23" }, { method: "financiamento", amount: 37000, bank: "Banco de teste", downPayment: 5000, installments: 24, installmentAmount: 2500 }] } } });
+    await db.commercialDocument.create({ data: { vehicleId: flowVehicleId, kind: "contrato", snapshot: { saleId: sale.id, customer: "Cliente Comercial E2E", cpf: "111.444.777-35", total: 67000, conditions: "Entrega até 30/10/2026", signal: { amount: 5000, receiptId: String(manualReceipt.number), date: new Date().toISOString() }, payments: [{ method: "sinal", amount: 5000 }, { method: "troca", amount: 20000, tradeVehicle: "Palio", tradePlate: "ABC1D23" }, { method: "financiamento", amount: 37000, bank: "Banco de teste", downPayment: 5000, installments: 24, installmentAmount: 2500 }] } } });
     await page.reload();
     await documents.locator("summary").click();
     await expect(documents.getByLabel("Sinal já recebido (R$)")).toHaveValue("5.000,00");
