@@ -34,7 +34,7 @@ export const LEGEND_SYNONYMS: Record<string, string[]> = {
   "Rodas de liga": ["liga leve"],
 };
 
-const fold = (text: string) =>
+export const fold = (text: string) =>
   text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 function tokens(text: string) {
@@ -77,7 +77,7 @@ export function parseLegend(text: string, category: VehicleCategory): LegendPars
       )) continue;
       if (!matched.includes(candidate.preset)) matched.push(candidate.preset);
       candidate.words.forEach((_, offset) => used.add(i + offset));
-      remaining.fill(" ", words[i].start, words[i + candidate.words.length - 1].end);
+      remaining.fill("\n", words[i].start, words[i + candidate.words.length - 1].end);
     }
   }
 

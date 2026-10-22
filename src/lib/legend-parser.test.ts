@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
 import React from "react";
 import { LegendPasteField } from "../components/admin/LegendPasteField";
-import { mergeLegendAccessories, parseLegend } from "./legend-parser";
+import { fold, mergeLegendAccessories, parseLegend } from "./legend-parser";
 import { getAccessoryPresets } from "./vehicle-accessories";
 
 test("normaliza acentos, caixa e espaços, mantendo a legenda original", () => {
@@ -127,11 +127,32 @@ test("conectores não viram pontos manuais ao remover presets", () => {
   assert.deepEqual(parseLegend("Couro e ABS", "carro").unmatched, []);
 });
 
+test("itens não reconhecidos separados por um reconhecido não se fundem num só", () => {
+  const result = parseLegend("Revisado na concessionária Ar-condicionado Único dono", "carro");
+  assert.deepEqual(result.matched, ["Ar-condicionado"]);
+  assert.deepEqual(result.unmatched, ["Revisado na concessionária", "Único dono"]);
+});
+
+test("itens não reconhecidos entre vários reconhecidos permanecem separados", () => {
+  const result = parseLegend("Único dono Ar-condicionado IPVA pago Direção elétrica Garantia de fábrica", "carro");
+  assert.deepEqual(new Set(result.matched), new Set(["Ar-condicionado", "Direção elétrica"]));
+  assert.deepEqual(result.unmatched, ["Único dono", "IPVA pago", "Garantia de fábrica"]);
+});
+
+test("fold normaliza acentos e caixa", () => {
+  assert.equal(fold("Único dono"), fold("unico dono"));
+  assert.equal(fold("ÚNICO DONO"), fold("único dono"));
+  assert.equal(fold("Direção elétrica"), fold("direcao eletrica"));
+  assert.equal(fold("Câmera de ré"), fold("camera de re"));
+});
+
 // Executa os handlers do componente com estado persistente, sem navegador ou dependências extras.
 function legendField(t: TestContext, overrides: Partial<React.ComponentProps<typeof LegendPasteField>> = {}) {
   const state: unknown[] = [];
+  const refStore = { current: "" };
   let cursor = 0;
   t.mock.method(React, "useId", () => "legenda-teste");
+  t.mock.method(React, "useRef", () => refStore);
   t.mock.method(React, "useState", ((initial: unknown) => {
     const index = cursor++;
     if (!(index in state)) state[index] = typeof initial === "function" ? initial() : initial;
@@ -158,6 +179,22 @@ function legendField(t: TestContext, overrides: Partial<React.ComponentProps<typ
     textarea: () => find((element) => element.type === "textarea"),
     click: (label: string) => (find((element) => element.type === "button" && element.props.children === label).onClick as () => void)(),
     change: (text: string) => (find((element) => element.type === "textarea").onChange as (event: unknown) => void)({ target: { value: text } }),
+    deselect: (label: string) => {
+      cursor = 0;
+      const all = elements(LegendPasteField(props));
+      const labelEl = all.find(
+        (el) => el.type === "label" &&
+          elements(el.props.children as React.ReactNode).some(
+            (child) => child.type === "span" && child.props.children === label,
+          ),
+      );
+      assert.ok(labelEl, `Checkbox para "${label}" não encontrado`);
+      const checkbox = elements(labelEl.props.children as React.ReactNode).find(
+        (child) => child.type === "input" && child.props.type === "checkbox",
+      );
+      assert.ok(checkbox, `Checkbox para "${label}" não encontrado`);
+      (checkbox.props.onChange as (event: unknown) => void)({ target: { checked: false } });
+    },
     useDescription: () => {
       const label = find((element) => element.type === "label" && Array.isArray(element.props.children) && element.props.children.includes("Usar texto limpo como descrição"));
       const checkbox = elements(label.children as React.ReactNode)[0];
@@ -199,4 +236,27 @@ test("reanalisar e trocar categoria preservam texto e pontos manuais", (t) => {
   field.click("Analisar");
   field.click("Aplicar");
   assert.deepEqual(apply.mock.calls[0].arguments, [[], ["Direção elétrica"], undefined]);
+});
+
+test("trocar o texto limpa pontos manuais e seleção da legenda anterior", (t) => {
+  const apply = t.mock.fn(() => true);
+  const field = legendField(t, { onApply: apply });
+  field.change("Ar-condicionado; Único dono");
+  field.click("Analisar");
+  field.click("Adicionar como ponto manual");
+  field.change("ABS");
+  field.click("Analisar");
+  field.click("Aplicar");
+  assert.deepEqual(apply.mock.calls[0].arguments, [["ABS"], [], undefined]);
+});
+
+test("reanalisar o mesmo texto preserva itens desmarcados", (t) => {
+  const apply = t.mock.fn(() => true);
+  const field = legendField(t, { onApply: apply, category: "carro" });
+  field.change("Ar-condicionado; Direção elétrica; Único dono");
+  field.click("Analisar");
+  field.deselect("Ar-condicionado");
+  field.click("Analisar");
+  field.click("Aplicar");
+  assert.deepEqual(apply.mock.calls[0].arguments, [["Direção elétrica"], [], undefined]);
 });

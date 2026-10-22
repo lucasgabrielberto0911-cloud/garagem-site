@@ -1,7 +1,7 @@
 "use client";
 
-import { useId, useState } from "react";
-import { parseLegend, type LegendParseResult } from "@/lib/legend-parser";
+import { useId, useRef, useState } from "react";
+import { fold, parseLegend, type LegendParseResult } from "@/lib/legend-parser";
 import {
   normalizeAccessories,
   type VehicleCategory,
@@ -23,11 +23,21 @@ export function LegendPasteField({ category, description, onApply }: Props) {
   const [manual, setManual] = useState<string[]>([]);
   const [useDescription, setUseDescription] = useState(false);
   const [applyError, setApplyError] = useState("");
+  const prevTextRef = useRef("");
 
   function analyze() {
     const parsed = parseLegend(text, category);
-    setResult({ ...parsed, category, unmatched: parsed.unmatched.filter((item) => !manual.includes(item)) });
-    setSelected(parsed.matched);
+    const manualKeys = new Set(manual.map((m) => fold(m).replace(/\s+/g, " ").trim()));
+    setResult({ ...parsed, category, unmatched: parsed.unmatched.filter((item) => {
+      const key = fold(item).replace(/\s+/g, " ").trim();
+      return !manualKeys.has(key);
+    })});
+    if (text === prevTextRef.current) {
+      setSelected((current) => current.filter((item) => parsed.matched.includes(item)));
+    } else {
+      setSelected(parsed.matched);
+      prevTextRef.current = text;
+    }
     setApplyError("");
   }
 
@@ -43,7 +53,10 @@ export function LegendPasteField({ category, description, onApply }: Props) {
         onChange={(event) => {
           setText(event.target.value);
           setResult(null);
+          setManual([]);
+          setSelected([]);
           setUseDescription(false);
+          setApplyError("");
         }}
         placeholder="Cole a legenda e confira os itens antes de aplicar."
         className={`${inputClass} min-h-[44px] resize-y`}
