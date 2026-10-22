@@ -540,7 +540,7 @@ export function VehicleForm({
     const mismatch = descriptionPriceMismatch(value("description"), listed);
     if (
       mismatch &&
-      descriptionPriceMismatchBlocksSave(value("status") || status)
+      descriptionPriceMismatchBlocksSave(status)
     ) {
       next.description = mismatch.blockMessage;
     }
@@ -560,7 +560,7 @@ export function VehicleForm({
         next.photos = photosUploading
           ? "Espere o envio ou o borrão das fotos terminar."
           : "Adicione pelo menos uma foto.";
-      if (mode === "create" && value("status") === "reservado")
+      if (mode === "create" && status === "reservado")
         next.status = "Cadastre como disponível antes de reservar o veículo.";
       if (onlyStep) {
         for (const field of Object.keys(next)) {
@@ -690,9 +690,10 @@ export function VehicleForm({
 
   const internalOptions = (
               <div className="col-span-2 border-t border-white/10 pt-3">
+                {isWizard ? <p className="font-display text-xs font-semibold uppercase tracking-wider text-cream">Mais opções</p> : (
                 <button
                   type="button"
-                  aria-expanded={isWizard || moreOptionsOpen}
+                  aria-expanded={moreOptionsOpen}
                   aria-controls="vehicle-more-options"
                   onClick={() => setMoreOptionsOpen((current) => !current)}
                   className="flex min-h-[44px] w-full items-center justify-between gap-2 border border-white/10 bg-ink px-3 py-2 text-left transition touch-manipulation hover:border-white/25"
@@ -709,6 +710,7 @@ export function VehicleForm({
                     {moreOptionsOpen ? "▲" : "▼"}
                   </span>
                 </button>
+                )}
 
                 <div
                   id="vehicle-more-options"

@@ -51,22 +51,25 @@ async function uploadPhotos(page: Page) {
     const photo = samples.flatMap(sample => sample.photos)[count++ % 2];
     await route.fulfill({ json: { url: photo.url, thumbnailUrl: photo.thumbnailUrl } });
   });
-  const png = await page.evaluate(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 800;
-    canvas.height = 600;
-    const drawing = canvas.getContext("2d")!;
-    drawing.fillStyle = "#777777";
-    drawing.fillRect(0, 0, 800, 600);
-    return canvas.toDataURL("image/png").split(",")[1];
-  });
-  const input = page.locator('#secao-fotos input[type="file"]');
-  await expect(input).toBeEnabled();
-  await input.setInputFiles([1, 2].map(index => ({ name: `foto-${index}.png`, mimeType: "image/png", buffer: Buffer.from(png, "base64") })));
-  await expect(page.getByRole("progressbar", { name: "Progresso do envio das fotos" })).toBeVisible();
-  await next(page).click();
-  await expect(title(page)).toContainText("Etapa 1 de 4");
-  release();
+  try {
+    const png = await page.evaluate(() => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 600;
+      const drawing = canvas.getContext("2d")!;
+      drawing.fillStyle = "#777777";
+      drawing.fillRect(0, 0, 800, 600);
+      return canvas.toDataURL("image/png").split(",")[1];
+    });
+    const input = page.locator('#secao-fotos input[type="file"]');
+    await expect(input).toBeEnabled();
+    await input.setInputFiles([1, 2].map(index => ({ name: `foto-${index}.png`, mimeType: "image/png", buffer: Buffer.from(png, "base64") })));
+    await expect(page.getByRole("progressbar", { name: "Progresso do envio das fotos" })).toBeVisible();
+    await next(page).click();
+    await expect(title(page)).toContainText("Etapa 1 de 4");
+  } finally {
+    release();
+  }
   await expect.poll(async () => JSON.parse(await page.locator('[name="photoUrls"]').inputValue()).length).toBe(2);
   await expect(page.getByRole("progressbar", { name: "Progresso do envio das fotos" })).toHaveAttribute("aria-valuenow", "100");
 }
@@ -92,7 +95,7 @@ for (const width of [390, 1440]) {
       await expect(back(page)).toBeDisabled();
       expect((await next(page).boundingBox())!.height).toBeGreaterThanOrEqual(44);
       await next(page).click();
-      await expect(page.getByRole("alert")).toContainText("Adicione pelo menos uma foto");
+      await expect(page.getByText("Adicione pelo menos uma foto.", { exact: true })).toBeVisible();
       await uploadPhotos(page);
       const original = JSON.parse(await page.locator('[name="photoUrls"]').inputValue());
       if (width < 1024) await page.getByRole("button", { name: "Mais ações da foto 2", exact: true }).click();
@@ -112,16 +115,23 @@ for (const width of [390, 1440]) {
       await next(page).click();
       await expect(page.locator('[name="priceDisplay"]')).toBeFocused();
       await page.locator('[name="priceDisplay"]').fill("59.900,00");
-      await page.locator('[name="description"]').fill("Preço R$ 69.900,00.");
+      const form = page.locator("#vehicle-form");
+      await form.locator('[name="description"]').fill("Preço R$ 69.900,00.");
       await next(page).click();
       await expect(title(page)).toContainText("Etapa 3 de 4");
-      await page.locator('[name="description"]').fill("Veículo revisado e bem cuidado.");
+      await form.locator('[name="description"]').fill("Veículo revisado e bem cuidado.");
+      await form.locator('[name="status"]').selectOption("reservado");
+      await next(page).click();
+      await expect(page.getByText("Cadastre como disponível antes de reservar o veículo.", { exact: true })).toBeVisible();
+      await form.locator('[name="status"]').selectOption("disponivel");
       await back(page).click();
       await expect(page.locator('[name="model"]')).toHaveValue(modelName);
       await next(page).click();
-      await expect(page.locator('[name="description"]')).toHaveValue("Veículo revisado e bem cuidado.");
+      await expect(form.locator('[name="description"]')).toHaveValue("Veículo revisado e bem cuidado.");
       await next(page).click();
       await expect(title(page)).toContainText("Etapa 4 de 4");
+      await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
+      await expect(page.getByText("Selecione a cidade onde o veículo está.", { exact: true })).toBeVisible();
       await page.getByRole("button", { name: "Linhares ES", exact: true }).click();
       await page.locator('[name="featured"]').check();
       await back(page).click();
@@ -145,32 +155,38 @@ for (const width of [390, 1440]) {
       await next(page).click();
       await fillVehicle(page, modelName);
       await next(page).click();
-      await page.locator('[name="description"]').fill("Texto preservado no rascunho.");
+      const form = page.locator("#vehicle-form");
+      await form.locator('[name="description"]').fill("Texto preservado no rascunho.");
       await page.getByRole("button", { name: "Guardar rascunho", exact: true }).click();
       await expect(page.getByRole("button", { name: "Guardar rascunho", exact: true })).toBeEnabled();
       await page.reload();
       await page.getByRole("button", { name: "Retomar rascunho", exact: true }).click();
       await page.getByRole("button", { name: "Retomar", exact: true }).click();
       await expect(title(page)).toContainText("Etapa 3 de 4");
-      await expect(page.locator('[name="description"]')).toHaveValue("Texto preservado no rascunho.");
+      await expect(form.locator('[name="description"]')).toHaveValue("Texto preservado no rascunho.");
       await back(page).click();
       await expect(page.locator('[name="model"]')).toHaveValue(modelName);
       expect(JSON.parse(await page.locator('[name="photoUrls"]').inputValue())).toHaveLength(2);
     });
 
     test("edição usa wizard e atalho de fotos abre a primeira etapa", async ({ page, modelName }) => {
-      await page.goto(`/admin/veiculos/${samples[0].id}?view=anuncio`);
-      await expect(title(page)).toContainText("Etapa 1 de 4");
-      await next(page).click();
-      await expect(title(page)).toContainText("Etapa 2 de 4");
-      await page.locator('[name="model"]').fill(modelName);
-      await page.locator('a[data-vehicle-tab="fotos"]').click();
-      await expect(title(page)).toContainText("Etapa 1 de 4");
-      await next(page).click();
-      await expect(page.locator('[name="model"]')).toHaveValue(modelName);
-      await page.goto(`/admin/veiculos/${samples[0].id}?view=fotos`);
-      await expect(title(page)).toContainText("Etapa 1 de 4");
-      await expect(page.locator("#secao-fotos")).toBeVisible();
+      const original = await prisma.vehicle.findUniqueOrThrow({ where: { id: samples[0].id }, select: { model: true } });
+      try {
+        await page.goto(`/admin/veiculos/${samples[0].id}?view=anuncio`);
+        await expect(title(page)).toContainText("Etapa 1 de 4");
+        await next(page).click();
+        await expect(title(page)).toContainText("Etapa 2 de 4");
+        await page.locator('[name="model"]').fill(modelName);
+        await page.locator('a[data-vehicle-tab="fotos"]').click();
+        await expect(title(page)).toContainText("Etapa 1 de 4");
+        await next(page).click();
+        await expect(page.locator('[name="model"]')).toHaveValue(modelName);
+        await page.goto(`/admin/veiculos/${samples[0].id}?view=fotos`);
+        await expect(title(page)).toContainText("Etapa 1 de 4");
+        await expect(page.locator("#secao-fotos")).toBeVisible();
+      } finally {
+        await prisma.vehicle.updateMany({ where: { id: samples[0].id, model: modelName }, data: { model: original.model } });
+      }
     });
   });
 }

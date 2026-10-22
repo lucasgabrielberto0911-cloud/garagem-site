@@ -46,6 +46,31 @@ async function login(page: import("@playwright/test").Page, email: string) {
   await page.context().addCookies([{ ...cookie!, secure: false }]);
 }
 
+async function avancarEtapa(page: import("@playwright/test").Page, etapa: number) {
+  const nav = page.getByRole("navigation", { name: "Etapas do anúncio" });
+  while (!(await page.locator("#wizard-title").innerText()).includes(`Etapa ${etapa} de 4`)) {
+    await nav.getByRole("button", { name: "Próximo", exact: true }).click();
+  }
+}
+
+async function adicionarFotos(page: import("@playwright/test").Page) {
+  let count = 0;
+  await page.route("**/api/upload/master/sign", route => route.fulfill({ status: 503, json: {} }));
+  await page.route("**/api/upload", async route => {
+    const photo = samples.flatMap(sample => sample.photos)[count++ % 2];
+    await route.fulfill({ json: { url: photo.url, thumbnailUrl: photo.thumbnailUrl } });
+  });
+  const png = await page.evaluate(() => {
+    const canvas = document.createElement("canvas"); canvas.width = 800; canvas.height = 600;
+    canvas.getContext("2d")!.fillRect(0, 0, 800, 600);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  await page.locator('#secao-fotos input[type="file"]').setInputFiles([1, 2].map(index => ({
+    name: `foto-${index}.png`, mimeType: "image/png", buffer: Buffer.from(png, "base64"),
+  })));
+  await expect.poll(async () => JSON.parse(await page.locator('#vehicle-form [name="photoUrls"]').inputValue()).length).toBe(2);
+}
+
 test("login: formulário, senha inválida, sessão protegida e logout", async ({ page, conta }) => {
   await page.goto("/admin/leads");
   await expect(page).toHaveURL(/\/admin\/login/);
@@ -94,31 +119,29 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await login(page, conta.email);
   await page.goto("/admin/veiculos/novo");
   const form = page.locator("#vehicle-form");
-  async function abrir(label: string) {
-    const toggle = form.getByRole("button", { name: new RegExp(`^${label}`) }).first();
-    if (await toggle.getAttribute("aria-expanded") === "false") await toggle.click();
-  }
-  await abrir("Identificação");
+  await adicionarFotos(page);
+  await avancarEtapa(page, 2);
   await form.locator('[name="brand"]').fill("Honda");
   await form.locator('[name="model"]').fill(conta.prefixo);
   await form.locator('[name="color"]').fill("Prata");
-  await abrir("Preço e status");
-  await form.locator('[name="priceDisplay"]').fill(" R$ 87.654,00 ");
-  await abrir("Mais opções");
-  await form.getByRole("button", { name: "Linhares ES", exact: true }).click();
-  await abrir("Ficha técnica");
   await form.locator('[name="year"]').fill(" 2020 ");
   await form.locator('[name="yearModel"]').fill("2021");
   await form.locator('[name="kmDisplay"]').fill("-42000");
   await form.locator('[name="fuel"]').selectOption({ label: "Flex" });
   await form.locator('[name="transmission"]').selectOption({ label: "Manual" });
-  await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
+  await form.getByRole("button", { name: "Próximo", exact: true }).click();
   await expect(form.getByText("Informe KM inteiro entre 0 e 999.999.", { exact: true })).toBeVisible();
   await form.locator('[name="kmDisplay"]').fill("42.000 km");
   await expect(form.getByText("Informe KM inteiro entre 0 e 999.999.", { exact: true })).toHaveCount(0);
-  await abrir("Identificação");
+  await form.getByRole("button", { name: "Próximo", exact: true }).click();
+  await form.locator('[name="priceDisplay"]').fill(" R$ 87.654,00 ");
+  await form.locator('[name="description"]').fill("Veículo revisado e bem cuidado.");
+  await avancarEtapa(page, 4);
+  await form.getByRole("button", { name: "Linhares ES", exact: true }).click();
+  await form.getByRole("button", { name: "Voltar", exact: true }).click();
   await form.locator('[name="plate"]').fill("abc-1234");
   await expect(form.locator('[name="plate"]')).toHaveAttribute("autocorrect", "off");
+  await avancarEtapa(page, 4);
   await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
   await expect.poll(() => prisma.vehicle.count({ where: { model: conta.prefixo } })).toBe(1);
   const vehicle = await prisma.vehicle.findFirstOrThrow({ where: { model: conta.prefixo } });
