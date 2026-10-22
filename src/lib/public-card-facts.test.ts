@@ -345,3 +345,9 @@ test("card não exibe a cidade salva no admin, sem mudar os outros fatos", () =>
     assert.equal(card.version, publicCardFacts(hrv).version);
   }
 });
+
+test("veículo vendido nunca mostra preço no card, mesmo com preço no cadastro", () => {
+  assert.equal(publicCardFacts({ ...hrv, status: "vendido" }).priceLabel, "");
+  assert.notEqual(publicCardFacts({ ...hrv, status: "disponivel" }).priceLabel, "");
+  assert.notEqual(publicCardFacts({ ...hrv, status: null }).priceLabel, "");
+});
