@@ -2,7 +2,7 @@
 import { useConfirmDialog } from "@/components/admin/useConfirmDialog";
 import { useVehicleDraftAutosave } from "@/components/admin/useVehicleDraftAutosave";
 import { btn } from "@/components/admin/ui";
-export type VehicleDraftPayload = Record<string, unknown>;
+export type VehicleDraftPayload = Record<string, unknown> & { step?: number };
 export function VehicleDraftToolbar({
   draftKey,
   storageKey,

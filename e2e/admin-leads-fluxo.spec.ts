@@ -51,6 +51,41 @@ async function login(page: import("@playwright/test").Page, email: string) {
   await page.context().addCookies([{ ...cookie!, secure: false }]);
 }
 
+async function avancarEtapa(page: import("@playwright/test").Page, etapa: number) {
+  const nav = page.getByRole("navigation", { name: "Etapas do anúncio" });
+  await expect(page.locator('#secao-fotos input[type="file"]')).toBeEnabled();
+  const titulo = page.locator("#wizard-title");
+  const atual = Number((await titulo.innerText()).match(/Etapa (\d) de 4/)![1]);
+  for (let proxima = atual + 1; proxima <= etapa; proxima++) {
+    await nav.getByRole("button", { name: "Próximo", exact: true }).click();
+    await expect(titulo).toContainText(`Etapa ${proxima} de 4`);
+  }
+}
+
+async function adicionarFotos(page: import("@playwright/test").Page) {
+  const fotos = samples.flatMap(sample => sample.photos).slice(0, 2)
+    .map(({ url, thumbnailUrl }) => ({ url, thumbnailUrl }));
+  let count = 0;
+  await page.route("**/api/upload/master/sign", route => route.fulfill({ status: 503, json: {} }));
+  await page.route("**/api/upload", async route => {
+    const photo = fotos[count++ % fotos.length];
+    await route.fulfill({ json: { url: photo.url, thumbnailUrl: photo.thumbnailUrl } });
+  });
+  const png = await page.evaluate(() => {
+    const canvas = document.createElement("canvas"); canvas.width = 800; canvas.height = 600;
+    canvas.getContext("2d")!.fillRect(0, 0, 800, 600);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  const input = page.locator('#secao-fotos input[type="file"]');
+  await expect(input).toBeEnabled();
+  await input.setInputFiles([1, 2].map(index => ({
+    name: `foto-${index}.png`, mimeType: "image/png", buffer: Buffer.from(png, "base64"),
+  })));
+  await expect.poll(async () => JSON.parse(await page.locator('#vehicle-form [name="photoUrls"]').inputValue()))
+    .toEqual(expect.arrayContaining(fotos.map(foto => ({ id: expect.any(String), ...foto }))));
+  return fotos;
+}
+
 test("login: formulário, senha inválida, sessão protegida e logout", async ({ page, conta }) => {
   await page.goto("/admin/leads");
   await expect(page).toHaveURL(/\/admin\/login/);
@@ -99,31 +134,32 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await login(page, conta.email);
   await page.goto("/admin/veiculos/novo");
   const form = page.locator("#vehicle-form");
-  async function abrir(label: string) {
-    const toggle = form.getByRole("button", { name: new RegExp(`^${label}`) }).first();
-    if (await toggle.getAttribute("aria-expanded") === "false") await toggle.click();
-  }
-  await abrir("Identificação");
+  const fotosEnviadas = await adicionarFotos(page);
+  await avancarEtapa(page, 2);
   await form.locator('[name="brand"]').fill("Honda");
   await form.locator('[name="model"]').fill(conta.prefixo);
   await form.locator('[name="color"]').fill("Prata");
-  await abrir("Preço e status");
-  await form.locator('[name="priceDisplay"]').fill(" R$ 87.654,00 ");
-  await abrir("Mais opções");
-  await form.getByRole("button", { name: "Linhares ES", exact: true }).click();
-  await abrir("Ficha técnica");
   await form.locator('[name="year"]').fill(" 2020 ");
   await form.locator('[name="yearModel"]').fill("2021");
   await form.locator('[name="kmDisplay"]').fill("-42000");
   await form.locator('[name="fuel"]').selectOption({ label: "Flex" });
   await form.locator('[name="transmission"]').selectOption({ label: "Manual" });
-  await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
+  await form.getByRole("button", { name: "Próximo", exact: true }).click();
   await expect(form.getByText("Informe KM inteiro entre 0 e 999.999.", { exact: true })).toBeVisible();
   await form.locator('[name="kmDisplay"]').fill("42.000 km");
   await expect(form.getByText("Informe KM inteiro entre 0 e 999.999.", { exact: true })).toHaveCount(0);
-  await abrir("Identificação");
+  await form.getByRole("button", { name: "Próximo", exact: true }).click();
+  await form.locator('[name="priceDisplay"]').fill(" R$ 87.654,00 ");
+  await form.locator('[name="description"]').fill("Veículo revisado e bem cuidado.");
+  await avancarEtapa(page, 4);
+  await form.getByRole("button", { name: "Linhares ES", exact: true }).click();
+  await form.getByRole("button", { name: "Voltar", exact: true }).click();
+  await expect(page.locator("#wizard-title")).toContainText("Etapa 3 de 4");
+  await form.getByRole("button", { name: "Voltar", exact: true }).click();
+  await expect(page.locator("#wizard-title")).toContainText("Etapa 2 de 4");
   await form.locator('[name="plate"]').fill("abc-1234");
   await expect(form.locator('[name="plate"]')).toHaveAttribute("autocorrect", "off");
+  await avancarEtapa(page, 4);
   await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
   await expect.poll(() => prisma.vehicle.count({ where: { model: conta.prefixo } })).toBe(1);
   const vehicle = await prisma.vehicle.findFirstOrThrow({ where: { model: conta.prefixo } });
@@ -133,36 +169,58 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   expect(vehicle.doors).toBeNull();
   expect(vehicle.purchasePrice).toBeNull();
   await expect(page).toHaveURL(`/admin/veiculos/${vehicle.id}`);
+  const fotosSalvas = await prisma.photo.findMany({
+    where: { vehicleId: vehicle.id }, orderBy: { order: "asc" },
+    select: { id: true, url: true, thumbnailUrl: true },
+  });
+  expect(fotosSalvas).toHaveLength(fotosEnviadas.length);
+  expect(fotosSalvas.map(({ url, thumbnailUrl }) => ({ url, thumbnailUrl })))
+    .toEqual(expect.arrayContaining(fotosEnviadas));
   const tabsNav = page.getByRole("navigation", { name: "Abas da ficha do veículo" });
   for (const label of ["Anúncio", "Fotos", "Iniciar venda", "Custos e docs", "Verificado"]) {
     await expect(tabsNav.getByRole("link", { name: new RegExp(`^${label}`) })).toBeVisible();
   }
-  await page.locator('[name="priceDisplay"]').fill("86543.50");
+  await avancarEtapa(page, 3);
+  await expect(form.locator('[name="photoUrls"]')).toHaveValue(JSON.stringify(fotosSalvas));
+  await form.locator('[name="priceDisplay"]').fill("86543.50");
   await tabsNav.getByRole("link", { name: "Fotos", exact: true }).click();
+  await expect(page.locator("#wizard-title")).toHaveText("Etapa 1 de 4: Fotos");
   await expect(form.getByText("Já temos vídeo deste veículo", { exact: true })).toBeVisible();
   await expect(form.locator('[name="priceDisplay"]')).toHaveValue("86.543,50");
+  await expect(form.locator('[name="photoUrls"]')).toHaveValue(JSON.stringify(fotosSalvas));
   await tabsNav.getByRole("link", { name: "Anúncio", exact: true }).click();
+  await avancarEtapa(page, 3);
   await expect(form.locator('[name="priceDisplay"]')).toBeVisible();
+  await expect(form.locator('[name="photoUrls"]')).toHaveValue(JSON.stringify(fotosSalvas));
+  await avancarEtapa(page, 4);
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).price).toBe(86543.5);
   await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
   // Uma falha no servidor após salvar não pode perder a versão usada no próximo save.
+  const fotosValidas = await form.locator('[name="photoUrls"]').inputValue();
   await form.locator('[name="photoUrls"]').evaluate((input: HTMLInputElement) => { input.value = "{"; });
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect(page.getByText("Fotos inválidas.", { exact: true })).toBeVisible();
-  await form.locator('[name="photoUrls"]').evaluate((input: HTMLInputElement) => { input.value = "[]"; });
+  await form.locator('[name="photoUrls"]').evaluate((input: HTMLInputElement, fotos) => { input.value = fotos; }, fotosValidas);
+  await form.getByRole("button", { name: "Voltar", exact: true }).click();
+  await expect(page.locator("#wizard-title")).toHaveText("Etapa 3 de 4: Descrição, opcionais e preço");
   await form.locator('[name="priceDisplay"]').fill("85.900");
+  await avancarEtapa(page, 4);
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).price).toBe(85900);
   await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
-  const maisAcoes = page.getByRole("button", { name: "Mais ações do anúncio", exact: true });
-  if (await maisAcoes.isVisible()) await maisAcoes.click();
+  expect(await prisma.photo.findMany({
+    where: { vehicleId: vehicle.id }, orderBy: { order: "asc" },
+    select: { id: true, url: true, thumbnailUrl: true },
+  })).toEqual(fotosSalvas);
   const customer = await prisma.customer.create({ data: { name: conta.prefixo, phone: "27988887777" } });
-  await page.getByRole("button", { name: /^Iniciar venda/ }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Iniciar venda", exact: true }).click();
+  await tabsNav.getByRole("link", { name: "Iniciar venda", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/admin/vendas/nova\\?veiculo=${vehicle.id}`));
-  await page.waitForLoadState("networkidle");
+  // A venda abre por navegação do App Router; o estado global de rede não indica prontidão da tela.
+  await expect(page.getByPlaceholder("Buscar veículo", { exact: true }))
+    .toHaveValue(`${vehicle.brand} ${vehicle.model} ${vehicle.yearModel}`);
   await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page.getByRole("heading", { name: "Cliente", exact: true })).toBeVisible();
   await page.getByRole("combobox").click();
   await page.getByRole("option", { name: new RegExp(conta.prefixo) }).click();
   await page.getByRole("button", { name: "Continuar" }).click();

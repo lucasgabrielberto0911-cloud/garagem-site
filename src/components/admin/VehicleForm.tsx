@@ -5,6 +5,7 @@ import { ListingQualityCard } from "@/components/admin/ListingQualityCard";
 import { LegendPasteField } from "@/components/admin/LegendPasteField";
 import { mergeLegendAccessories } from "@/lib/legend-parser";
 import type { StoredListingScore } from "@/lib/listing-score";
+import { VehicleWizardNav, WIZARD_STEP_LABELS } from "@/components/admin/VehicleWizardNav";
 import { VehicleFormPreview } from "@/components/admin/VehicleFormPreview";
 import { parseVehicleFormFields, parseVehicleKm } from "@/lib/admin-vehicle-fields";
 import { adminMutation } from "@/lib/admin-mutation";
@@ -19,10 +20,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useActionState,
+  useCallback,
   useEffect,
   useMemo,
   useState,
   useTransition,
+  type ComponentProps,
 } from "react";
 import { toast } from "sonner";
 import type { Photo, Vehicle } from "@prisma/client";
@@ -101,6 +104,8 @@ import {
   deleteRequiresTypedConfirm,
 } from "@/lib/admin-list";
 import {
+  SECTIONS_BY_STEP,
+  type VehicleWizardStep,
   accessoriesSummary,
   descriptionSummary,
   fichaSummary,
@@ -131,8 +136,31 @@ const SEGMENT_ON = "border-brand bg-brand/10 text-cream";
 const SEGMENT_OFF =
   "border-white/10 bg-ink text-muted hover:border-white/25 hover:text-cream";
 
+function stepForField(field: string): VehicleWizardStep | undefined {
+  if (field === "photos") return 1;
+  if (field === "locationCity" || field === "featured") return 4;
+  const section = sectionForField(field);
+  return ([1, 2, 3, 4] as const).find(candidate =>
+    section != null && SECTIONS_BY_STEP[candidate].includes(section));
+}
+
 function sectionAnchor(id: VehicleFormSectionId) {
   return `secao-${id}`;
+}
+
+function WizardSection({ id, title, action, errorCount = 0, children }: ComponentProps<typeof FormSection>) {
+  return (
+    <section id={id} className={`scroll-mt-admin-form border bg-ink/50 ${errorCount ? "border-brand/50" : "border-white/10"}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-3 sm:px-5">
+        <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
+          {title}
+          {errorCount ? <span className="ml-2 text-red-400">{errorCount === 1 ? "1 erro" : `${errorCount} erros`}</span> : null}
+        </h3>
+        {action}
+      </div>
+      <div className="p-4 sm:p-5">{children}</div>
+    </section>
+  );
 }
 
 function SubmitButton({
@@ -168,6 +196,7 @@ export function VehicleForm({
   adminId,
   listingScore = null,
   initialTab = "anuncio",
+  layout = "accordion",
   prefill,
   preparationId,
 }: {
@@ -180,8 +209,11 @@ export function VehicleForm({
   /** Nota gravada no último Salvar. O formulário nunca chama o Jev. */
   listingScore?: StoredListingScore | null;
   initialTab?: "anuncio" | "fotos";
+  layout?: "accordion" | "wizard";
 }) {
   const router = useRouter();
+  const isWizard = layout === "wizard";
+  const [step, setStep] = useState<VehicleWizardStep>(1);
   const init: Partial<VehicleWithPhotos> | undefined = vehicle ?? prefill;
   const [activeTab, setActiveTab] = useState<"anuncio" | "fotos">(
     initialTab === "fotos" ? "fotos" : "anuncio",
@@ -190,7 +222,8 @@ export function VehicleForm({
 
   useEffect(() => {
     setActiveTab(initialTab === "fotos" ? "fotos" : "anuncio");
-  }, [initialTab]);
+    if (isWizard && initialTab === "fotos") setStep(1);
+  }, [initialTab, isWizard]);
   const boundUpdate = useMemo(
     () => (vehicle ? updateVehicle.bind(null, vehicle.id) : createVehicle),
     [vehicle],
@@ -281,6 +314,15 @@ export function VehicleForm({
   const [promoOpen, setPromoOpen] = useState(false);
   const [quickMode, setQuickMode] = useState(mode === "create");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (photosUploading || photos.length === 0) return;
+    setErrors((current) => {
+      if (!current.photos) return current;
+      const next = { ...current };
+      delete next.photos;
+      return next;
+    });
+  }, [photosUploading, photos.length]);
   const [openSections, setOpenSections] = useState<Set<VehicleFormSectionId>>(
     () =>
       new Set(
@@ -303,8 +345,14 @@ export function VehicleForm({
     });
   }
 
-  function revealSections(ids: VehicleFormSectionId[], scrollTo = ids[0]) {
+  const revealSections = useCallback((ids: VehicleFormSectionId[], scrollTo = ids[0]) => {
     if (ids.length === 0) return;
+    if (isWizard) {
+      const target = ([1, 2, 3, 4] as const).find((candidate) =>
+        SECTIONS_BY_STEP[candidate].includes(scrollTo),
+      );
+      if (target) setStep(target);
+    }
     setOpenSections((current) => new Set([...current, ...ids]));
     const hasAnuncioTarget = ids.some((id) => id !== "fotos");
     if (hasAnuncioTarget) {
@@ -321,7 +369,7 @@ export function VehicleForm({
         block: "start",
       });
     });
-  }
+  }, [isWizard]);
 
   useEffect(() => {
     if (mode !== "edit") return;
@@ -343,6 +391,7 @@ export function VehicleForm({
       if (tab !== "anuncio" && tab !== "fotos") return;
       event.preventDefault();
       setActiveTab(tab);
+      if (isWizard && tab === "fotos") setStep(1);
       if (tab === "fotos") {
         setOpenSections((current) => new Set([...current, "fotos"]));
       }
@@ -350,7 +399,7 @@ export function VehicleForm({
     }
     window.addEventListener("click", onTabClick, true);
     return () => window.removeEventListener("click", onTabClick, true);
-  }, [mode]);
+  }, [mode, isWizard]);
 
   useEffect(() => {
     if (mode !== "edit") return;
@@ -379,6 +428,11 @@ export function VehicleForm({
           setMoreOptionsOpen(true);
         }
         revealSections(sectionsWithErrors(state.fieldErrors));
+        if (isWizard) {
+          const target = ([1, 2, 3, 4] as const).find(candidate =>
+            Object.keys(state.fieldErrors ?? {}).some(field => stepForField(field) === candidate));
+          if (target) setStep(target);
+        }
       }
     }
     if (state.success) {
@@ -392,7 +446,7 @@ export function VehicleForm({
       toast.success("Anúncio salvo com sucesso.");
     }
     if (state.success && state.id) router.push(`/admin/veiculos/${state.id}`);
-  }, [state, draftScope, adminId, router]);
+  }, [state, draftScope, adminId, router, isWizard, revealSections]);
 
   const [values, setValues] = useState({
     price: init?.price != null ? moneyInput(init.price) : "",
@@ -458,7 +512,13 @@ export function VehicleForm({
     setPlate(next);
   }
 
-  function validate(): boolean {
+  function changeStep(next: VehicleWizardStep) {
+    setStep(next);
+    setDirty(true);
+    requestAnimationFrame(() => document.getElementById("wizard-title")?.focus());
+  }
+
+  function validate(onlyStep?: VehicleWizardStep): boolean {
     const next: Record<string, string> = {};
     const form = document.getElementById("vehicle-form") as HTMLFormElement;
     if (!form) return true;
@@ -491,7 +551,7 @@ export function VehicleForm({
     const mismatch = descriptionPriceMismatch(value("description"), listed);
     if (
       mismatch &&
-      descriptionPriceMismatchBlocksSave(value("status") || status)
+      descriptionPriceMismatchBlocksSave(status)
     ) {
       next.description = mismatch.blockMessage;
     }
@@ -506,13 +566,48 @@ export function VehicleForm({
       next[control.name] = control.validationMessage || "Valor inválido.";
     }
 
-    setErrors(next);
+    if (isWizard) {
+      if (photosUploading || photos.length === 0)
+        next.photos = photosUploading
+          ? "Espere o envio ou o borrão das fotos terminar."
+          : "Adicione pelo menos uma foto.";
+      if (mode === "create" && status === "reservado")
+        next.status = "Cadastre como disponível antes de reservar o veículo.";
+      if (mode === "create" && status === "vendido")
+        next.status = "Cadastre como disponível antes de iniciar a venda.";
+      if (onlyStep) {
+        for (const field of Object.keys(next)) {
+          if (stepForField(field) !== onlyStep) delete next[field];
+        }
+      }
+    }
+
+    setErrors((current) => onlyStep
+      ? { ...Object.fromEntries(Object.entries(current).filter(([field]) => stepForField(field) !== onlyStep)), ...next }
+      : next);
     if (next.locationCity || next.featured) {
       setMoreOptionsOpen(true);
     }
     revealSections(sectionsWithErrors(next));
-    const first = Object.keys(next)[0];
-    if (first)
+    const errorStep = isWizard && Object.keys(next).length
+      ? ([1, 2, 3, 4] as const).find(candidate =>
+          Object.keys(next).some(field => stepForField(field) === candidate))
+      : undefined;
+    if (errorStep) {
+      setStep(errorStep);
+    }
+    const first = isWizard
+      ? Array.from(form.elements)
+          .filter(control => !(control instanceof HTMLInputElement && control.type === "hidden"))
+          .map(control => (control as HTMLInputElement).name)
+          .map(name => name === "priceDisplay" ? "price" : name === "kmDisplay" ? "km" : name)
+          .find(field => next[field] && stepForField(field) === errorStep) ?? Object.keys(next).find(field => stepForField(field) === errorStep)
+      : Object.keys(next)[0];
+    if (first === "locationCity" && isWizard) {
+      requestAnimationFrame(() => form.querySelector<HTMLButtonElement>('[aria-label="Onde está o veículo"] button')?.focus());
+    } else if (first === "photos" && isWizard) {
+      requestAnimationFrame(() => document.getElementById("wizard-title")?.focus());
+    } else if (first)
       requestAnimationFrame(() =>
         focusAdminError(
           form,
@@ -545,6 +640,7 @@ export function VehicleForm({
     router.push(`/admin/vendas/nova?veiculo=${targetId}`);
   }
 
+  const Section = isWizard ? WizardSection : FormSection;
   const errorBorder = "border-brand/60";
   const sections = vehicleFormSections(mode);
   const errorSections = new Map<VehicleFormSectionId, number>();
@@ -558,16 +654,16 @@ export function VehicleForm({
     title: sections.find((section) => section.id === id)?.label ?? id,
     open:
       (mode === "edit" && id === "fotos" && activeTab === "fotos") ||
-      openSections.has(id),
-    onToggle: () => toggleSection(id),
+      isWizard || openSections.has(id),
+    onToggle: () => { if (!isWizard) toggleSection(id); },
     errorCount: errorSections.get(id) ?? 0,
     nextLabel:
-      mode === "create"
+      mode === "create" && !isWizard
         ? sections[sections.findIndex((section) => section.id === id) + 1]
             ?.label
         : undefined,
     onNext:
-      mode === "create"
+      mode === "create" && !isWizard
         ? () => {
             const next =
               sections[sections.findIndex((section) => section.id === id) + 1];
@@ -583,535 +679,11 @@ export function VehicleForm({
   const cityLabel =
     VEHICLE_LOCATION_CITIES.find((option) => option.value === locationCity)
       ?.label ?? "";
-  const isEditPhotosTab = mode === "edit" && activeTab === "fotos";
+  const isEditPhotosTab = !isWizard && mode === "edit" && activeTab === "fotos";
 
-  return (
-    <>
-      <div className={isEditPhotosTab ? "hidden" : "space-y-4"}>
-        <nav
-          aria-label="Seções do anúncio"
-          className="-mx-3 border-b border-white/10 bg-asphalt/95 px-3 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:sticky lg:top-0 lg:z-20 lg:-mx-8 lg:px-8"
-        >
-          <div className={CHIP_SCROLL}>
-            {sections.map((section) => {
-              const count = errorSections.get(section.id) ?? 0;
-              return (
-                <button
-                  key={section.id}
-                  type="button"
-                  onClick={() => revealSections([section.id])}
-                  className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 border px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
-                    count > 0
-                      ? "border-brand/60 text-red-400"
-                      : "border-white/10 text-muted hover:text-cream"
-                  }`}
-                >
-                  {section.nav}
-                  {count > 0 ? (
-                    <span
-                      className="h-1.5 w-1.5 bg-brand"
-                      aria-label="com erro"
-                    />
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-
-        <ListingQualityCard
-          draft={{
-            brand,
-            model,
-            version,
-            year,
-            yearModel,
-            km: values.km,
-            transmission,
-            fuel,
-            color,
-            price: listedPrice > 0 ? listedPrice : null,
-            description,
-            accessories,
-            photoCount: photos.length,
-            status,
-            category,
-          }}
-          coverUrl={photos[0]?.url ?? ""}
-          judgment={listingScore?.judgment ?? null}
-          scoredAt={listingScore?.scoredAt ?? null}
-          dirty={dirty}
-          saving={saving}
-          onJump={(section) => revealSections([section])}
-        />
-
-        <VehicleFormPreview price={listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}>
-          <p className="font-display text-lg font-semibold text-cream">
-            {`${brand} ${model}`.trim() || "Seu próximo anúncio"}
-          </p>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
-            {[
-              version,
-              year && yearModel ? `${year}/${yearModel}` : "Ano a preencher",
-              values.km ? `${values.km} km` : "KM a preencher",
-              transmission,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-          <p className="mt-2 font-display text-xl font-bold text-red-400">
-            {listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}
-          </p>
-          <p className="mt-2 text-xs text-muted">
-            {photos.length} foto(s) ·{" "}
-            {Object.keys(errors).length
-              ? "Corrija os campos destacados antes de publicar."
-              : "Confira os dados, a capa e o preço antes de salvar."}
-          </p>
-        </VehicleFormPreview>
-      </div>
-      <VehicleDraftToolbar
-        draftKey={`vehicle:${draftScope}`}
-        storageKey={`garagem:vehicle-draft:${adminId}:${draftScope}`}
-        enabled={dirty && !saving && !state.success}
-        published={Boolean(state.success)}
-        disabled={saving || photosUploading}
-        onSavingChange={setDraftSaving}
-        snapshot={() => {
-          const form = document.getElementById(
-            "vehicle-form",
-          ) as HTMLFormElement;
-          return {
-            fields: Object.fromEntries(new FormData(form)),
-            photos,
-            brand,
-            model,
-            version,
-            color,
-            year,
-            yearModel,
-            plate,
-            plateEnd,
-            engine,
-            purchase,
-            description,
-            status,
-            values,
-            category,
-            locationCity,
-            fuel,
-            transmission,
-            accessories,
-            consigned,
-          };
-        }}
-        restore={(draft: VehicleDraftPayload) => {
-          const text = (key: string) =>
-            typeof draft[key] === "string" ? (draft[key] as string) : "";
-          setBrand(text("brand"));
-          setModel(text("model"));
-          setVersion(text("version"));
-          setColor(text("color"));
-          setYear(text("year"));
-          setYearModel(text("yearModel"));
-          setPlate(text("plate"));
-          setEngine(text("engine"));
-          setPurchase(text("purchase"));
-          setDescription(text("description"));
-          setStatus(
-            ["disponivel", "reservado", "vendido"].includes(text("status"))
-              ? text("status")
-              : "disponivel",
-          );
-          setCategory(parseVehicleCategory(text("category")));
-          setLocationCity(
-            parseVehicleLocationCity(text("locationCity")) ?? "",
-          );
-          setFuel(text("fuel"));
-          setTransmission(text("transmission"));
-          setConsigned(Boolean(draft.consigned));
-          if (draft.values && typeof draft.values === "object")
-            setValues(draft.values as typeof values);
-          if (Array.isArray(draft.photos))
-            setPhotos(
-              reconcileDraftPhotos(
-                (draft.photos as Array<Partial<PhotoItem>>).filter(
-                  (photo): photo is Partial<PhotoItem> & { url: string } =>
-                    typeof photo?.url === "string",
-                ),
-                vehicle
-                  ? photosFromRecords(
-                      vehicle.photos
-                        .slice()
-                        .sort((a, b) => a.order - b.order),
-                    )
-                  : [],
-              ),
-            );
-          if (Array.isArray(draft.accessories))
-            setAccessoriesState(normalizeAccessories(draft.accessories));
-          const fields = draft.fields as Record<string, string> | undefined;
-          if (fields)
-            requestAnimationFrame(() => {
-              const form = document.getElementById(
-                "vehicle-form",
-              ) as HTMLFormElement;
-              for (const key of [
-                "doors",
-                "warranty",
-                "inspection",
-                "featured",
-                "hasVideo",
-                "inStoreName",
-                "hasSpareKey",
-                "hasManual",
-              ]) {
-                const element = form.elements.namedItem(key);
-                if (
-                  element instanceof HTMLInputElement ||
-                  element instanceof HTMLSelectElement
-                ) {
-                  if (
-                    element instanceof HTMLInputElement &&
-                    element.type === "checkbox"
-                  )
-                    element.checked = fields[key] === "on";
-                  else element.value = fields[key] || "";
-                }
-              }
-            });
-          setDirty(true);
-          setErrors({});
-        }}
-      />
-      <form
-        id="vehicle-form"
-        noValidate
-        autoComplete="off"
-        autoCorrect="off"
-        spellCheck={false}
-        onChange={(event) => {
-          setDirty(true);
-          const target = event.target;
-          if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) return;
-          const name = target.name;
-          const field = name === "priceDisplay" ? "price" : name === "kmDisplay" ? "km" : name;
-          setErrors((current) => {
-            const next = { ...current };
-            delete next[field];
-            return next;
-          });
-        }}
-        onSubmit={(event) => {
-          // Dispara a action na mão: com <form action>, o React 19 reseta o
-          // form ao terminar e o select de status volta a mostrar o valor
-          // antigo — o próximo "Salvar" regravaria o status errado.
-          event.preventDefault();
-          if (saving || draftSaving) return;
-          if (photosUploading) {
-            toast.error("Espere o envio ou o borrão das fotos terminar.");
-            revealSections(["fotos"]);
-            return;
-          }
-          if (priceSaveBlocked) {
-            toast.error(
-              priceMismatch?.blockMessage ??
-                "Corrija a descrição ou o preço antes de salvar.",
-            );
-            revealSections(["descricao"]);
-            return;
-          }
-          if (!validate()) {
-            toast.error("Corrija os campos destacados.");
-            return;
-          }
-          const data = new FormData(event.currentTarget);
-          startTransition(() => formAction(data));
-        }}
-        className="space-y-3 pb-28 sm:space-y-4 lg:pb-0"
-      >
-        <fieldset
-          disabled={saving}
-          className="min-w-0 space-y-3 sm:space-y-4"
-        >
-          <input
-            type="hidden"
-            name="expectedUpdatedAt"
-            value={state.updatedAt ?? vehicle?.updatedAt.toISOString() ?? ""}
-          />
-          {preparationId ? (
-            <input type="hidden" name="preparationId" value={preparationId} />
-          ) : null}
-          <input
-            type="hidden"
-            name="photoUrls"
-            value={serializePhotos(photos)}
-          />
-          <input
-            type="hidden"
-            name="accessories"
-            value={JSON.stringify(accessories)}
-          />
-          <input
-            type="hidden"
-            name="price"
-            value={values.price}
-          />
-          <input type="hidden" name="km" value={values.km} />
-          <input type="hidden" name="category" value={category} />
-          <input type="hidden" name="locationCity" value={locationCity} />
-
-          {mode === "create" ? (
-            <div className="flex flex-col gap-2 border border-white/10 bg-ink/70 p-3.5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <span className="font-display text-xs font-semibold uppercase tracking-wider text-cream">
-                  Modo de preenchimento
-                </span>
-                <p className="text-xs text-muted">
-                  {quickMode
-                    ? "Cadastro rápido: preencha só o essencial (marca, modelo, preço, fotos e ficha). Opcionais podem ser completados depois."
-                    : "Ficha completa: todas as seções e opcionais abertos para detalhamento."}
-                </p>
-              </div>
-              <div className="flex gap-2 self-start sm:self-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuickMode(true);
-                    setMoreOptionsOpen(false);
-                    setOpenSections(
-                      new Set(["identificacao", "essencial", "fotos", "ficha"]),
-                    );
-                  }}
-                  className={`min-h-[38px] px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wider transition touch-manipulation ${
-                    quickMode
-                      ? "bg-brand text-cream"
-                      : "border border-white/10 bg-asphalt text-muted hover:text-cream"
-                  }`}
-                >
-                  ⚡ Cadastro rápido
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuickMode(false);
-                    setMoreOptionsOpen(true);
-                    setOpenSections(new Set(sections.map((s) => s.id)));
-                  }}
-                  className={`min-h-[38px] px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wider transition touch-manipulation ${
-                    !quickMode
-                      ? "bg-brand text-cream"
-                      : "border border-white/10 bg-asphalt text-muted hover:text-cream"
-                  }`}
-                >
-                  Ficha completa
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          <div className={isEditPhotosTab ? "hidden" : "space-y-3 sm:space-y-4"}>
-          <FormSection
-            {...sectionProps("identificacao")}
-            summary={`${isMoto ? "Moto" : "Carro"} · ${identitySummary({
-              brand,
-              model,
-              version,
-              color,
-              plate,
-            })}`}
-          >
-            <div className="mb-5">
-              <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
-                Tipo do anúncio
-              </span>
-              <div
-                className="flex gap-2"
-                role="group"
-                aria-label="Tipo do anúncio"
-              >
-                {VEHICLE_CATEGORIES.map((option) => {
-                  const selected = category === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => changeCategory(option.value)}
-                      title={
-                        option.value === "moto"
-                          ? "Checklist e opções de moto (ABS, bauleto, painel digital…)."
-                          : "Checklist e opções de carro (multimídia, ar, bancos…)."
-                      }
-                      className={`${SEGMENT} ${selected ? SEGMENT_ON : SEGMENT_OFF}`}
-                    >
-                      <span className="font-display text-sm font-semibold uppercase tracking-wide">
-                        {option.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <Field
-              label="Placa (interna)"
-              error={errors.plate}
-              hint="Só no admin. O site mostra no máximo o final da placa."
-            >
-              <input
-                name="plate"
-                value={plate}
-                aria-invalid={Boolean(errors.plate)}
-                onChange={(event) =>
-                  handlePlateChange(formatPlateInput(event.target.value))
-                }
-                placeholder="ABC1D23 ou ABC-1234"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="characters"
-                spellCheck={false}
-                className={inputClass}
-              />
-            </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Marca" required error={errors.brand}>
-                <input
-                  name="brand"
-                  value={brand}
-                  onChange={(event) => setBrand(event.target.value)}
-                  placeholder={isMoto ? "Ex.: Honda" : "Ex.: Volkswagen"}
-                  className={`${inputClass} ${errors.brand ? errorBorder : ""}`}
-                />
-              </Field>
-              <Field label="Modelo" required error={errors.model}>
-                <input
-                  name="model"
-                  value={model}
-                  onChange={(event) => setModel(event.target.value)}
-                  placeholder={isMoto ? "Ex.: CB 500F" : "Ex.: Golf"}
-                  className={`${inputClass} ${errors.model ? errorBorder : ""}`}
-                />
-              </Field>
-              <Field label={isMoto ? "Versão / cilindrada" : "Versão"}>
-                <input
-                  name="version"
-                  value={version}
-                  onChange={(event) => setVersion(event.target.value)}
-                  placeholder={isMoto ? "Ex.: ABS 2023" : "Ex.: GTI 2.0 TSI"}
-                  className={inputClass}
-                />
-              </Field>
-              <Field
-                label="Cor"
-                required
-                error={errors.color}
-                hint="Fica vazia no anúncio se faltar."
-              >
-                <input
-                  name="color"
-                  value={color}
-                  onChange={(event) => setColor(event.target.value)}
-                  placeholder="Ex.: Prata"
-                  className={`${inputClass} ${errors.color ? errorBorder : ""}`}
-                />
-              </Field>
-            </div>
-          </FormSection>
-
-          <FormSection
-            {...sectionProps("essencial")}
-            summary={[
-              values.price ? `R$ ${values.price}` : "Sem preço",
-              statusLabel,
-              cityLabel,
-              consigned ? CONSIGNED_LABEL : "",
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          >
-            <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-4">
-              <Field label="Preço (R$)" required error={errors.price}>
-                <input
-                  name="priceDisplay"
-                  inputMode="decimal"
-                  value={values.price}
-                  onChange={(event) =>
-                    setValues((current) => ({
-                      ...current,
-                      price: event.target.value,
-                    }))
-                  }
-                  onBlur={() => {
-                    const amount = parseMoneyBR(values.price);
-                    if (amount != null)
-                      setValues((current) => ({
-                        ...current,
-                        price: moneyInput(amount),
-                      }));
-                  }}
-                  placeholder="0"
-                  className={`${inputClass} font-display text-lg font-semibold ${errors.price ? errorBorder : ""}`}
-                />
-              </Field>
-              <Field label="Status">
-                <select
-                  name="status"
-                  value={status}
-                  onChange={(event) => {
-                    if (event.target.value === "vendido" && !alreadySold) {
-                      toast.message(
-                        "Para vender, use “Iniciar venda”. O estoque muda ao concluir o contrato.",
-                      );
-                      return;
-                    }
-                    setStatus(event.target.value);
-                  }}
-                  className={inputClass}
-                >
-                  {STATUSES.map((item) => (
-                    <option
-                      key={item.value}
-                      value={item.value}
-                      disabled={item.value === "vendido" && !alreadySold}
-                    >
-                      {item.value === "vendido" && !alreadySold
-                        ? "Vendido — use “Iniciar venda”"
-                        : item.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <p className="col-span-2 -mt-2 text-xs leading-relaxed text-muted">
-                {alreadySold
-                  ? "Já vendido. Disponível/reservado volta para o estoque ao salvar."
-                  : "Para vender, use “Iniciar venda”. O estoque muda ao concluir o contrato."}
-              </p>
-
-              {priceMismatch ? (
-                <div
-                  role={priceSaveBlocked ? "alert" : "status"}
-                  className={`col-span-2 flex flex-col gap-2 border px-3 py-2.5 text-sm text-cream sm:flex-row sm:items-center sm:justify-between ${
-                    priceSaveBlocked
-                      ? "border-brand/50 bg-brand/10"
-                      : "border-brand-orange/40 bg-brand-orange/10"
-                  }`}
-                >
-                  <p className="leading-relaxed">
-                    {priceSaveBlocked
-                      ? "O preço do texto da descrição não bate com este preço — não dá para salvar assim."
-                      : "O preço do texto da descrição é diferente deste preço."}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => revealSections(["descricao"])}
-                    className={`${btn.outline} shrink-0`}
-                  >
-                    Ver descrição
-                  </button>
-                </div>
-              ) : null}
-
+  const internalOptions = (
               <div className="col-span-2 border-t border-white/10 pt-3">
+                {isWizard ? <p className="font-display text-xs font-semibold uppercase tracking-wider text-cream">Mais opções</p> : (
                 <button
                   type="button"
                   aria-expanded={moreOptionsOpen}
@@ -1131,11 +703,12 @@ export function VehicleForm({
                     {moreOptionsOpen ? "▲" : "▼"}
                   </span>
                 </button>
+                )}
 
                 <div
                   id="vehicle-more-options"
                   className={
-                    moreOptionsOpen
+                    (isWizard || moreOptionsOpen)
                       ? "mt-4 grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-4"
                       : "hidden"
                   }
@@ -1247,12 +820,574 @@ export function VehicleForm({
                   </div>
                 </div>
               </div>
+  );
+
+  return (
+    <>
+      <div className={(isWizard ? step !== 4 : isEditPhotosTab) ? "hidden" : "space-y-4"}>
+        <nav
+          hidden={isWizard}
+          aria-label="Seções do anúncio"
+          className="-mx-3 border-b border-white/10 bg-asphalt/95 px-3 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:sticky lg:top-0 lg:z-20 lg:-mx-8 lg:px-8"
+        >
+          <div className={CHIP_SCROLL}>
+            {sections.map((section) => {
+              const count = errorSections.get(section.id) ?? 0;
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => revealSections([section.id])}
+                  className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 border px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation ${
+                    count > 0
+                      ? "border-brand/60 text-red-400"
+                      : "border-white/10 text-muted hover:text-cream"
+                  }`}
+                >
+                  {section.nav}
+                  {count > 0 ? (
+                    <span
+                      className="h-1.5 w-1.5 bg-brand"
+                      aria-label="com erro"
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        <ListingQualityCard
+          draft={{
+            brand,
+            model,
+            version,
+            year,
+            yearModel,
+            km: values.km,
+            transmission,
+            fuel,
+            color,
+            price: listedPrice > 0 ? listedPrice : null,
+            description,
+            accessories,
+            photoCount: photos.length,
+            status,
+            category,
+          }}
+          coverUrl={photos[0]?.url ?? ""}
+          judgment={listingScore?.judgment ?? null}
+          scoredAt={listingScore?.scoredAt ?? null}
+          dirty={dirty}
+          saving={saving}
+          onJump={(section) => revealSections([section])}
+        />
+
+        <VehicleFormPreview price={listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}>
+          <p className="font-display text-lg font-semibold text-cream">
+            {`${brand} ${model}`.trim() || "Seu próximo anúncio"}
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            {[
+              version,
+              year && yearModel ? `${year}/${yearModel}` : "Ano a preencher",
+              values.km ? `${values.km} km` : "KM a preencher",
+              transmission,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          <p className="mt-2 font-display text-xl font-bold text-red-400">
+            {listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}
+          </p>
+          <p className="mt-2 text-xs text-muted">
+            {photos.length} foto(s) ·{" "}
+            {Object.keys(errors).length
+              ? "Corrija os campos destacados antes de publicar."
+              : "Confira os dados, a capa e o preço antes de salvar."}
+          </p>
+        </VehicleFormPreview>
+      </div>
+      <VehicleDraftToolbar
+        draftKey={`vehicle:${draftScope}`}
+        storageKey={`garagem:vehicle-draft:${adminId}:${draftScope}`}
+        enabled={dirty && !saving && !state.success}
+        published={Boolean(state.success)}
+        disabled={saving || photosUploading}
+        onSavingChange={setDraftSaving}
+        snapshot={() => {
+          const form = document.getElementById(
+            "vehicle-form",
+          ) as HTMLFormElement;
+          return {
+            step: isWizard ? step : undefined,
+            fields: Object.fromEntries(new FormData(form)),
+            photos,
+            brand,
+            model,
+            version,
+            color,
+            year,
+            yearModel,
+            plate,
+            plateEnd,
+            engine,
+            purchase,
+            description,
+            status,
+            values,
+            category,
+            locationCity,
+            fuel,
+            transmission,
+            accessories,
+            consigned,
+          };
+        }}
+        restore={(draft: VehicleDraftPayload) => {
+          if (isWizard) {
+            const savedStep = draft.step;
+            setStep(savedStep === 2 || savedStep === 3 || savedStep === 4 ? savedStep : 1);
+          }
+          const text = (key: string) =>
+            typeof draft[key] === "string" ? (draft[key] as string) : "";
+          setBrand(text("brand"));
+          setModel(text("model"));
+          setVersion(text("version"));
+          setColor(text("color"));
+          setYear(text("year"));
+          setYearModel(text("yearModel"));
+          setPlate(text("plate"));
+          setEngine(text("engine"));
+          setPurchase(text("purchase"));
+          setDescription(text("description"));
+          setStatus(
+            ["disponivel", "reservado", "vendido"].includes(text("status"))
+              ? text("status")
+              : "disponivel",
+          );
+          setCategory(parseVehicleCategory(text("category")));
+          setLocationCity(
+            parseVehicleLocationCity(text("locationCity")) ?? "",
+          );
+          setFuel(text("fuel"));
+          setTransmission(text("transmission"));
+          setConsigned(Boolean(draft.consigned));
+          if (draft.values && typeof draft.values === "object")
+            setValues(draft.values as typeof values);
+          if (Array.isArray(draft.photos))
+            setPhotos(
+              reconcileDraftPhotos(
+                (draft.photos as Array<Partial<PhotoItem>>).filter(
+                  (photo): photo is Partial<PhotoItem> & { url: string } =>
+                    typeof photo?.url === "string",
+                ),
+                vehicle
+                  ? photosFromRecords(
+                      vehicle.photos
+                        .slice()
+                        .sort((a, b) => a.order - b.order),
+                    )
+                  : [],
+              ),
+            );
+          if (Array.isArray(draft.accessories))
+            setAccessoriesState(normalizeAccessories(draft.accessories));
+          const fields = draft.fields as Record<string, string> | undefined;
+          if (fields)
+            requestAnimationFrame(() => {
+              const form = document.getElementById(
+                "vehicle-form",
+              ) as HTMLFormElement;
+              for (const key of [
+                "doors",
+                "warranty",
+                "inspection",
+                "featured",
+                "hasVideo",
+                "inStoreName",
+                "hasSpareKey",
+                "hasManual",
+              ]) {
+                const element = form.elements.namedItem(key);
+                if (
+                  element instanceof HTMLInputElement ||
+                  element instanceof HTMLSelectElement
+                ) {
+                  if (
+                    element instanceof HTMLInputElement &&
+                    element.type === "checkbox"
+                  )
+                    element.checked = fields[key] === "on";
+                  else element.value = fields[key] || "";
+                }
+              }
+            });
+          setDirty(true);
+          setErrors({});
+        }}
+      />
+      <form
+        id="vehicle-form"
+        noValidate
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+        onChange={(event) => {
+          setDirty(true);
+          const target = event.target;
+          if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) return;
+          const name = target.name;
+          const field = name === "priceDisplay" ? "price" : name === "kmDisplay" ? "km" : name;
+          setErrors((current) => {
+            const next = { ...current };
+            delete next[field];
+            return next;
+          });
+        }}
+        onSubmit={(event) => {
+          // Dispara a action na mão: com <form action>, o React 19 reseta o
+          // form ao terminar e o select de status volta a mostrar o valor
+          // antigo — o próximo "Salvar" regravaria o status errado.
+          event.preventDefault();
+          if (saving || draftSaving) return;
+          if (isWizard && step !== 4) {
+            if (validate(step)) changeStep((step + 1) as VehicleWizardStep);
+            return;
+          }
+          if (!validate()) {
+            toast.error("Corrija os campos destacados.");
+            return;
+          }
+          if (photosUploading) {
+            toast.error("Espere o envio ou o borrão das fotos terminar.");
+            revealSections(["fotos"]);
+            return;
+          }
+          if (priceSaveBlocked) {
+            toast.error(
+              priceMismatch?.blockMessage ??
+                "Corrija a descrição ou o preço antes de salvar.",
+            );
+            revealSections(["descricao"]);
+            return;
+          }
+          const data = new FormData(event.currentTarget);
+          startTransition(() => formAction(data));
+        }}
+        className={isWizard ? "space-y-4 pb-56 font-body" : "space-y-3 pb-28 sm:space-y-4 lg:pb-0"}
+      >
+        <fieldset
+          disabled={saving}
+          className={isWizard ? "flex min-w-0 flex-col gap-4" : "min-w-0 space-y-3 sm:space-y-4"}
+        >
+          {isWizard ? (
+            <div className="space-y-3">
+              <h2 id="wizard-title" tabIndex={-1} className="font-display text-lg font-semibold text-cream">
+                Etapa {step} de 4: {WIZARD_STEP_LABELS[step - 1]}
+              </h2>
+              {errors.photos && step === 1 ? <p role="alert" className="text-sm text-red-400">{errors.photos}</p> : null}
+              {step === 1 ? <p className="text-sm text-muted">A primeira foto é a capa. Confira e borre placas visíveis antes de publicar.</p> : null}
+              <div hidden={step !== 4} className="space-y-3 text-sm text-muted">
+                <p>{photos.length} foto(s) · 1ª é a capa</p>
+                <p>{identitySummary({ brand, model, version, color, plate })}</p>
+                <p>{fichaSummary({ year, yearModel, km: values.km, transmission, fuel })}</p>
+                <p>{descriptionSummary(description)}</p>
+                <p>{accessoriesSummary(accessories)}</p>
+                <p>{values.price ? `R$ ${values.price}` : "Sem preço"} · {statusLabel}</p>
+                {internalOptions}
+              </div>
             </div>
-          </FormSection>
+          ) : null}
+          <input
+            type="hidden"
+            name="expectedUpdatedAt"
+            value={state.updatedAt ?? vehicle?.updatedAt.toISOString() ?? ""}
+          />
+          {preparationId ? (
+            <input type="hidden" name="preparationId" value={preparationId} />
+          ) : null}
+          <input
+            type="hidden"
+            name="photoUrls"
+            value={serializePhotos(photos)}
+          />
+          <input
+            type="hidden"
+            name="accessories"
+            value={JSON.stringify(accessories)}
+          />
+          <input
+            type="hidden"
+            name="price"
+            value={values.price}
+          />
+          <input type="hidden" name="km" value={values.km} />
+          <input type="hidden" name="category" value={category} />
+          <input type="hidden" name="locationCity" value={locationCity} />
+
+          {mode === "create" && !isWizard ? (
+            <div className="flex flex-col gap-2 border border-white/10 bg-ink/70 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <span className="font-display text-xs font-semibold uppercase tracking-wider text-cream">
+                  Modo de preenchimento
+                </span>
+                <p className="text-xs text-muted">
+                  {quickMode
+                    ? "Cadastro rápido: preencha só o essencial (marca, modelo, preço, fotos e ficha). Opcionais podem ser completados depois."
+                    : "Ficha completa: todas as seções e opcionais abertos para detalhamento."}
+                </p>
+              </div>
+              <div className="flex gap-2 self-start sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickMode(true);
+                    setMoreOptionsOpen(false);
+                    setOpenSections(
+                      new Set(["identificacao", "essencial", "fotos", "ficha"]),
+                    );
+                  }}
+                  className={`min-h-[38px] px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wider transition touch-manipulation ${
+                    quickMode
+                      ? "bg-brand text-cream"
+                      : "border border-white/10 bg-asphalt text-muted hover:text-cream"
+                  }`}
+                >
+                  ⚡ Cadastro rápido
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickMode(false);
+                    setMoreOptionsOpen(true);
+                    setOpenSections(new Set(sections.map((s) => s.id)));
+                  }}
+                  className={`min-h-[38px] px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wider transition touch-manipulation ${
+                    !quickMode
+                      ? "bg-brand text-cream"
+                      : "border border-white/10 bg-asphalt text-muted hover:text-cream"
+                  }`}
+                >
+                  Ficha completa
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className={isWizard ? "contents" : isEditPhotosTab ? "hidden" : "space-y-3 sm:space-y-4"}>
+          <div hidden={isWizard && !SECTIONS_BY_STEP[step].includes("identificacao")} style={isWizard ? { order: 0 } : undefined}>
+          <Section
+            {...sectionProps("identificacao")}
+            summary={`${isMoto ? "Moto" : "Carro"} · ${identitySummary({
+              brand,
+              model,
+              version,
+              color,
+              plate,
+            })}`}
+          >
+            <div className="mb-5">
+              <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+                Tipo do anúncio
+              </span>
+              <div
+                className="flex gap-2"
+                role="group"
+                aria-label="Tipo do anúncio"
+              >
+                {VEHICLE_CATEGORIES.map((option) => {
+                  const selected = category === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => changeCategory(option.value)}
+                      title={
+                        option.value === "moto"
+                          ? "Checklist e opções de moto (ABS, bauleto, painel digital…)."
+                          : "Checklist e opções de carro (multimídia, ar, bancos…)."
+                      }
+                      className={`${SEGMENT} ${selected ? SEGMENT_ON : SEGMENT_OFF}`}
+                    >
+                      <span className="font-display text-sm font-semibold uppercase tracking-wide">
+                        {option.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <Field
+              label="Placa (interna)"
+              error={errors.plate}
+              hint="Só no admin. O site mostra no máximo o final da placa."
+            >
+              <input
+                name="plate"
+                value={plate}
+                aria-invalid={Boolean(errors.plate)}
+                onChange={(event) =>
+                  handlePlateChange(formatPlateInput(event.target.value))
+                }
+                placeholder="ABC1D23 ou ABC-1234"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                className={inputClass}
+              />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Marca" required error={errors.brand}>
+                <input
+                  name="brand"
+                  value={brand}
+                  onChange={(event) => setBrand(event.target.value)}
+                  placeholder={isMoto ? "Ex.: Honda" : "Ex.: Volkswagen"}
+                  className={`${inputClass} ${errors.brand ? errorBorder : ""}`}
+                />
+              </Field>
+              <Field label="Modelo" required error={errors.model}>
+                <input
+                  name="model"
+                  value={model}
+                  onChange={(event) => setModel(event.target.value)}
+                  placeholder={isMoto ? "Ex.: CB 500F" : "Ex.: Golf"}
+                  className={`${inputClass} ${errors.model ? errorBorder : ""}`}
+                />
+              </Field>
+              <Field label={isMoto ? "Versão / cilindrada" : "Versão"}>
+                <input
+                  name="version"
+                  value={version}
+                  onChange={(event) => setVersion(event.target.value)}
+                  placeholder={isMoto ? "Ex.: ABS 2023" : "Ex.: GTI 2.0 TSI"}
+                  className={inputClass}
+                />
+              </Field>
+              <Field
+                label="Cor"
+                required
+                error={errors.color}
+                hint="Fica vazia no anúncio se faltar."
+              >
+                <input
+                  name="color"
+                  value={color}
+                  onChange={(event) => setColor(event.target.value)}
+                  placeholder="Ex.: Prata"
+                  className={`${inputClass} ${errors.color ? errorBorder : ""}`}
+                />
+              </Field>
+            </div>
+          </Section>
           </div>
 
-          <div className={mode === "edit" && !isEditPhotosTab ? "hidden" : undefined}>
-          <FormSection
+          <div hidden={isWizard && !SECTIONS_BY_STEP[step].includes("essencial")} style={isWizard ? { order: 2 } : undefined}>
+          <Section
+            {...sectionProps("essencial")}
+            summary={[
+              values.price ? `R$ ${values.price}` : "Sem preço",
+              statusLabel,
+              cityLabel,
+              consigned ? CONSIGNED_LABEL : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          >
+            <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-4">
+              <Field label="Preço (R$)" required error={errors.price}>
+                <input
+                  name="priceDisplay"
+                  inputMode="decimal"
+                  value={values.price}
+                  onChange={(event) =>
+                    setValues((current) => ({
+                      ...current,
+                      price: event.target.value,
+                    }))
+                  }
+                  onBlur={() => {
+                    const amount = parseMoneyBR(values.price);
+                    if (amount != null)
+                      setValues((current) => ({
+                        ...current,
+                        price: moneyInput(amount),
+                      }));
+                  }}
+                  placeholder="0"
+                  className={`${inputClass} font-display text-lg font-semibold ${errors.price ? errorBorder : ""}`}
+                />
+              </Field>
+              <Field label="Status" error={errors.status}>
+                <select
+                  name="status"
+                  value={status}
+                  onChange={(event) => {
+                    if (event.target.value === "vendido" && !alreadySold) {
+                      toast.message(
+                        "Para vender, use “Iniciar venda”. O estoque muda ao concluir o contrato.",
+                      );
+                      return;
+                    }
+                    setStatus(event.target.value);
+                  }}
+                  className={inputClass}
+                >
+                  {STATUSES.map((item) => (
+                    <option
+                      key={item.value}
+                      value={item.value}
+                      disabled={item.value === "vendido" && !alreadySold}
+                    >
+                      {item.value === "vendido" && !alreadySold
+                        ? "Vendido — use “Iniciar venda”"
+                        : item.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <p className="col-span-2 -mt-2 text-xs leading-relaxed text-muted">
+                {alreadySold
+                  ? "Já vendido. Disponível/reservado volta para o estoque ao salvar."
+                  : "Para vender, use “Iniciar venda”. O estoque muda ao concluir o contrato."}
+              </p>
+
+              {priceMismatch ? (
+                <div
+                  role={priceSaveBlocked ? "alert" : "status"}
+                  className={`col-span-2 flex flex-col gap-2 border px-3 py-2.5 text-sm text-cream sm:flex-row sm:items-center sm:justify-between ${
+                    priceSaveBlocked
+                      ? "border-brand/50 bg-brand/10"
+                      : "border-brand-orange/40 bg-brand-orange/10"
+                  }`}
+                >
+                  <p className="leading-relaxed">
+                    {priceSaveBlocked
+                      ? "O preço do texto da descrição não bate com este preço — não dá para salvar assim."
+                      : "O preço do texto da descrição é diferente deste preço."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => revealSections(["descricao"])}
+                    className={`${btn.outline} shrink-0`}
+                  >
+                    Ver descrição
+                  </button>
+                </div>
+              ) : null}
+
+              {!isWizard ? internalOptions : null}
+            </div>
+          </Section>
+          </div>
+          </div>
+
+          <div className={isWizard ? "contents" : mode === "edit" && !isEditPhotosTab ? "hidden" : undefined}>
+          <div hidden={isWizard && !SECTIONS_BY_STEP[step].includes("fotos")} style={isWizard ? { order: 0 } : undefined}>
+          <Section
             {...sectionProps("fotos")}
             title={`Fotos e vídeo${photos.length > 0 ? ` (${photos.length})` : ""}`}
             summary={
@@ -1292,11 +1427,13 @@ export function VehicleForm({
               Não publica o vídeo no site. O visitante continua pedindo pelo
               WhatsApp. A marcação fica só neste cadastro.
             </p>
-          </FormSection>
+          </Section>
+          </div>
           </div>
 
-          <div className={isEditPhotosTab ? "hidden" : "space-y-3 sm:space-y-4"}>
-          <FormSection
+          <div className={isWizard ? "contents" : isEditPhotosTab ? "hidden" : "space-y-3 sm:space-y-4"}>
+          <div hidden={isWizard && !SECTIONS_BY_STEP[step].includes("ficha")} style={isWizard ? { order: 0 } : undefined}>
+          <Section
             {...sectionProps("ficha")}
             summary={fichaSummary({
               year,
@@ -1482,9 +1619,11 @@ export function VehicleForm({
                 />
               </Field>
             </div>
-          </FormSection>
+          </Section>
+          </div>
 
-          <FormSection
+          <div hidden={isWizard && !SECTIONS_BY_STEP[step].includes("descricao")} style={isWizard ? { order: 0 } : undefined}>
+          <Section
             {...sectionProps("descricao")}
             summary={
               priceMismatch
@@ -1538,9 +1677,11 @@ export function VehicleForm({
                 } ${errors.description ? errorBorder : ""}`}
               />
             </Field>
-          </FormSection>
+          </Section>
+          </div>
 
-          <FormSection
+          <div hidden={isWizard && !SECTIONS_BY_STEP[step].includes("itens")} style={isWizard ? { order: 1 } : undefined}>
+          <Section
             {...sectionProps("itens")}
             title={`Acessórios e itens · ${isMoto ? "moto" : "carro"}${
               accessories.length > 0 ? ` (${accessories.length})` : ""
@@ -1667,10 +1808,12 @@ export function VehicleForm({
                 </ul>
               ) : null}
             </div>
-          </FormSection>
+          </Section>
+          </div>
 
           {mode === "create" ? (
-            <FormSection
+            <div hidden={isWizard && !SECTIONS_BY_STEP[step].includes("operacao")} style={isWizard ? { order: 0 } : undefined}>
+          <Section
               {...sectionProps("operacao")}
               summary={
                 consigned
@@ -1736,12 +1879,24 @@ export function VehicleForm({
                   </label>
                 </div>
               </div>
-            </FormSection>
+            </Section>
+          </div>
           ) : null}
           </div>
 
+          {isWizard ? (
+            <VehicleWizardNav
+              step={step}
+              errorSteps={([1, 2, 3, 4] as const).filter(candidate => Object.keys(errors).some(field => stepForField(field) === candidate))}
+              disabled={saving || draftSaving}
+              onBack={() => changeStep((step - 1) as VehicleWizardStep)}
+              onNext={() => { if (validate(step)) changeStep((step + 1) as VehicleWizardStep); }}
+            >
+              <SubmitButton pending={saving} label={mode === "create" ? "Cadastrar veículo" : "Salvar alterações"} disabled={photosUploading || draftSaving} />
+            </VehicleWizardNav>
+          ) : null}
           {/* Barra de ações fixa: salvar sempre ao alcance, sem rolar a página. */}
-          <div className="fixed inset-x-0 bottom-admin-nav z-20 border-t border-white/10 bg-asphalt/95 px-3 py-2.5 backdrop-blur sm:px-6 sm:py-3 lg:sticky lg:inset-x-auto lg:-mx-8 lg:px-8">
+          <div hidden={isWizard} className="fixed inset-x-0 bottom-admin-nav z-20 border-t border-white/10 bg-asphalt/95 px-3 py-2.5 backdrop-blur sm:px-6 sm:py-3 lg:sticky lg:inset-x-auto lg:-mx-8 lg:px-8">
             <div className="flex flex-wrap items-center gap-2">
               <div className="min-w-0 flex-1 sm:flex-none">
                 <SubmitButton

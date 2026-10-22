@@ -12,6 +12,15 @@ export type VehicleFormSectionId =
   | "itens"
   | "operacao";
 
+export type VehicleWizardStep = 1 | 2 | 3 | 4;
+
+export const SECTIONS_BY_STEP: Record<VehicleWizardStep, VehicleFormSectionId[]> = {
+  1: ["fotos"],
+  2: ["identificacao", "ficha"],
+  3: ["descricao", "itens", "essencial"],
+  4: ["operacao"],
+};
+
 export type VehicleFormMode = "create" | "edit";
 
 export const VEHICLE_FORM_SECTIONS: ReadonlyArray<{

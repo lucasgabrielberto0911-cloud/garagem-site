@@ -19,11 +19,12 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
       <AdminPageHeader
         title="Novo veículo"
         subtitle={<>
-          Preencha o anúncio e as fotos.
-          <span className="hidden sm:inline"> Custos e documentos ficam na aba Operação depois de salvar.</span>
+          Crie o anúncio em quatro etapas: fotos, dados, descrição e revisão.
+          <span className="hidden sm:inline"> Confira também os dados internos na revisão antes de publicar.</span>
         </>}
       />
       <VehicleForm
+        layout="wizard"
         mode="create"
         adminId={session.adminId}
         prefill={item ? preparationPrefill(item) : undefined}

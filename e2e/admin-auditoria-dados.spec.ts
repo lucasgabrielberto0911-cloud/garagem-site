@@ -21,9 +21,19 @@ test.beforeEach(async ({ request, context, baseURL }) => {
 });
 test.afterAll(async () => { await prisma.$disconnect(); });
 
+async function revisarAnuncio(page: Page) {
+  const nav = page.getByRole("navigation", { name: "Etapas do anúncio" });
+  for (const etapa of [1, 2, 3]) {
+    await expect(page.locator("#wizard-title")).toContainText(`Etapa ${etapa} de 4`);
+    await nav.getByRole("button", { name: "Próximo", exact: true }).click();
+  }
+  await expect(page.locator("#wizard-title")).toContainText("Etapa 4 de 4");
+}
+
 async function savePhotos(page: Page, photos: unknown[]) {
   await page.goto(`/admin/veiculos/${vehicleId}`);
   await expect(page.locator("#vehicle-form")).toBeVisible();
+  await revisarAnuncio(page);
   await page.locator('input[name="photoUrls"]').evaluate((element, value) => {
     (element as HTMLInputElement).value = JSON.stringify(value);
   }, photos);
@@ -91,6 +101,7 @@ test("salvar preserva IDs, ordem, foto transformada e retira apenas vínculos ex
     // Um formulário desatualizado deve falhar sem alterar as fotos.
     await page.goto(`/admin/veiculos/${vehicleId}`);
     await expect(page.locator("#vehicle-form")).toBeVisible();
+    await revisarAnuncio(page);
     await page.locator('input[name="expectedUpdatedAt"]').evaluate(element => { (element as HTMLInputElement).value = "2000-01-01T00:00:00.000Z"; });
     await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
     await expect(page.getByText(/Este anúncio mudou em outro acesso/).first()).toBeVisible();
