@@ -51,6 +51,19 @@ export type VehicleFormState = {
   fieldErrors?: Record<string, string>;
 };
 
+class VehicleSaleConflictError extends Error {}
+
+/** Chamar após travar os veículos, antes de alterar estoque ou reservas. */
+async function assertNoVehicleSales(tx: Prisma.TransactionClient, ids: string[]) {
+  const sale = await tx.sale.findFirst({
+    where: { vehicleId: { in: ids } },
+    select: { id: true },
+  });
+  if (sale) throw new VehicleSaleConflictError(
+    "Cancele a venda em Vendas antes de voltar o veículo para disponível.",
+  );
+}
+
 /** Só normaliza texto todo em maiúsculas ou minúsculas; "T-Cross" digitado certo fica como está. */
 function normalizeCase(value: string, format: (v: string) => string) {
   return value === value.toUpperCase() || value === value.toLowerCase()
@@ -369,6 +382,7 @@ export async function updateVehicle(
     const result = await withAdminStorageLock(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
       const current = await tx.vehicle.findUniqueOrThrow({ where: { id } });
+      if (data.status === "disponivel") await assertNoVehicleSales(tx, [id]);
       if (data.status === "reservado" && current.status !== "reservado") throw new Error("Use a aba Operação para reservar com cliente, sinal e prazo.");
       if (data.status === "vendido" && current.status !== "vendido" && !(await tx.sale.findUnique({ where: { vehicleId: id }, select: { id: true } }))) throw new Error("Conclua o fluxo de venda para marcar o veículo como vendido.");
       if (current.status === "reservado" && data.status !== "reservado") await tx.vehicleReservation.updateMany({ where: { vehicleId: id, status: { in: data.status === "vendido" ? ["ativa"] : ["ativa", "convertida"] } }, data: { status: data.status === "vendido" ? "convertida" : "cancelada" } });
@@ -570,8 +584,6 @@ const VEHICLE_STATUSES = ["disponivel", "reservado", "vendido"] as const;
 export async function setVehicleStatus(id: string, status: string) {
   const session = await requireAdmin();
 
-  if (status === "vendido" && !(await prisma.sale.findUnique({ where: { vehicleId: id }, select: { id: true } }))) return { ok: false, message: "Conclua o fluxo de venda para marcar o veículo como vendido." };
-
   if (!(VEHICLE_STATUSES as readonly string[]).includes(status)) {
     return { ok: false, message: "Status inválido." };
   }
@@ -591,8 +603,10 @@ export async function setVehicleStatus(id: string, status: string) {
     if (priceTextError) return { ok: false, message: priceTextError };
   }
 
-  await prisma.$transaction(async (tx) => {
+  const conflict = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
+    if (status === "disponivel") await assertNoVehicleSales(tx, [id]);
+    if (status === "vendido" && !(await tx.sale.findUnique({ where: { vehicleId: id }, select: { id: true } }))) throw new VehicleSaleConflictError("Conclua o fluxo de venda para marcar o veículo como vendido.");
     await tx.vehicleReservation.updateMany({ where: { vehicleId: id, status: { in: status === "vendido" ? ["ativa"] : ["ativa", "convertida"] } }, data: { status: status === "vendido" ? "convertida" : "cancelada" } });
     const previous = await tx.vehicle.findUniqueOrThrow({
       where: { id },
@@ -607,7 +621,11 @@ export async function setVehicleStatus(id: string, status: string) {
     await recordAdminAudit(tx, session.adminId, id, "vehicle.status", {
       status: { before: previous.status, after: status },
     });
+  }).catch((error: unknown) => {
+    if (error instanceof VehicleSaleConflictError) return error.message;
+    throw error;
   });
+  if (conflict) return { ok: false, message: conflict };
   revalidatePath("/admin/veiculos");
   revalidatePath(`/admin/veiculos/${id}`);
   await revalidatePublicStock(id);
@@ -679,8 +697,9 @@ export async function setVehiclesStatus(
     };
   }
 
-  await prisma.$transaction(async (tx) => {
+  const conflict = await prisma.$transaction(async (tx) => {
     for (const id of [...appliedIds].sort()) await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
+    if (status === "disponivel") await assertNoVehicleSales(tx, appliedIds);
     const previous = await tx.vehicle.findMany({
       where: { id: { in: appliedIds } },
       select: { id: true, status: true },
@@ -697,7 +716,11 @@ export async function setVehiclesStatus(
         status: { before: row.status, after: status },
         batch: true,
       });
+  }).catch((error: unknown) => {
+    if (error instanceof VehicleSaleConflictError) return error.message;
+    throw error;
   });
+  if (conflict) return { ok: false, message: conflict };
 
   revalidatePath("/admin/veiculos");
   await revalidatePublicStockMany(appliedIds);
