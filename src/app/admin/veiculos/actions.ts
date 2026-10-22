@@ -126,6 +126,16 @@ function parseVehicleFields(formData: FormData) {
   });
   if (priceTextError) throw Object.assign(new Error(priceTextError), { fieldErrors: { description: priceTextError } });
 
+function isValidVehiclePhotoRef(url: string): boolean {
+  if (typeof url !== "string") return false;
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.length > 2048) return false;
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
+    return !trimmed.includes("..");
+  }
+  return storagePathFromPublicUrl(trimmed) !== null;
+}
+
   let photos: Array<{
     id?: string;
     url: string;
@@ -136,36 +146,32 @@ function parseVehicleFields(formData: FormData) {
     const parsed = JSON.parse(photosRaw) as unknown;
     if (Array.isArray(parsed)) {
       photos = parsed
-        .map((item) => {
+        .map((item): { id?: string; url: string; thumbnailUrl: string | null } | null => {
           if (typeof item === "string" && item) {
-            return { url: item, thumbnailUrl: null };
+            const trimmed = item.trim();
+            if (!isValidVehiclePhotoRef(trimmed)) return null;
+            return { url: trimmed, thumbnailUrl: null };
           }
           if (
             item &&
             typeof item === "object" &&
             typeof (item as { url?: unknown }).url === "string"
           ) {
-            const url = (item as { url: string }).url;
-            const thumbnailUrl =
+            const rawUrl = (item as { url: string }).url.trim();
+            if (!isValidVehiclePhotoRef(rawUrl)) return null;
+            const rawThumb =
               typeof (item as { thumbnailUrl?: unknown }).thumbnailUrl ===
               "string"
-                ? (item as { thumbnailUrl: string }).thumbnailUrl
+                ? (item as { thumbnailUrl: string }).thumbnailUrl.trim()
                 : null;
+            const thumbnailUrl = rawThumb && isValidVehiclePhotoRef(rawThumb) ? rawThumb : null;
             const id = typeof (item as { id?: unknown }).id === "string"
               ? (item as { id: string }).id : undefined;
-            return { id, url, thumbnailUrl };
+            return { id, url: rawUrl, thumbnailUrl };
           }
           return null;
         })
-        .filter(
-          (
-            item,
-          ): item is {
-            id?: string;
-            url: string;
-            thumbnailUrl: string | null;
-          } => Boolean(item),
-        );
+        .filter((item): item is { id?: string; url: string; thumbnailUrl: string | null } => item !== null);
     }
   } catch {
     throw new Error("Fotos inválidas.");

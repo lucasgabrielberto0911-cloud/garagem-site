@@ -11,6 +11,7 @@ import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
 import { FavoritesProvider } from "@/lib/favorites";
 import { publicCardFacts } from "@/lib/public-card-facts";
+import type { VehicleCardRecord } from "./stock-query";
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -197,7 +198,7 @@ test("card público não ganha selo de consignado nem laudo", () => {
   assert.doesNotMatch(source, /Consignado|laudo|Cautelar|inspection/i);
 });
 
-function sampleVehicle(overrides: Record<string, unknown> = {}) {
+function sampleVehicle(overrides: Record<string, unknown> = {}): VehicleCardRecord {
   return {
     id: "hrv-2016",
     category: "carro",
@@ -213,10 +214,11 @@ function sampleVehicle(overrides: Record<string, unknown> = {}) {
     featured: false,
     color: "Prata",
     locationCity: "linhares",
+    createdAt: new Date(),
     updatedAt: null,
     photos: [{ url: "https://example.com/hrv.jpg" }],
     ...overrides,
-  };
+  } as unknown as VehicleCardRecord;
 }
 
 function renderCard(overrides: Record<string, unknown> = {}, onStock = false) {

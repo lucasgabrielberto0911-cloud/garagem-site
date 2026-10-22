@@ -24,7 +24,7 @@ test("lote prepara preview, preserva bytes da galeria e registra antes de trocar
   let current = url;
   const result = await backfillLegacyGallery(photo, {
     read: async key => objects.get(key)!,
-    put: async (key, bytes) => { events.push("put"); assert.equal(objects.has(key), false); objects.set(key, bytes); },
+    put: async (key: string, bytes: Buffer, _type?: string) => { events.push("put"); assert.equal(objects.has(key), false); objects.set(key, Buffer.from(bytes)); },
     journal: async receipt => { events.push("journal"); assert.equal(receipt.url, url); },
     replace: async (_id, before, next) => { events.push("replace"); assert.equal(before, current); current = next; return true; },
   });

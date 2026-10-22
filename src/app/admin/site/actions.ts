@@ -1,7 +1,7 @@
 "use server";
 
 import { withAdminStorageLock } from "@/lib/admin-storage-lock";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
@@ -177,7 +177,7 @@ export async function updateSiteSettings(
     };
   }
 
-  revalidateTag("site-settings", "max");
+  updateTag("site-settings");
   revalidatePath("/");
   revalidatePath("/faq");
   revalidatePath("/contato");

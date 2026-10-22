@@ -34,6 +34,113 @@ async function requireAdmin() {
   return session;
 }
 
+async function listStorageCandidates(
+  publicPaths: Set<string>,
+  privatePaths: Set<string>,
+): Promise<
+  | { ok: true; orphans: string[]; checked: number }
+  | { ok: false; message: string }
+> {
+  const supabase = getSupabaseAdmin();
+  const orphans: string[] = [];
+  let offset = 0;
+  const limit = 100;
+  let checked = 0;
+
+  for (let page = 0; page < 50; page += 1) {
+    const { data, error } = await supabase.storage
+      .from(VEHICLE_PHOTOS_BUCKET)
+      .list("", {
+        limit,
+        offset,
+        sortBy: { column: "name", order: "asc" },
+      });
+
+    if (error) {
+      return {
+        ok: false,
+        message: error.message || "Falha ao listar Storage.",
+      };
+    }
+    if (!data || data.length === 0) break;
+
+    for (const item of data) {
+      if (!item.name || item.name.endsWith("/")) continue;
+      // Pasta de comprovantes/documentos — não entra na limpeza de fotos.
+      if (item.name === "docs") continue;
+      // Ignora "pastas" sem id/metadata de arquivo.
+      if (item.id === null && !item.metadata) continue;
+      checked += 1;
+      if (isCleanupCandidate(item, publicPaths)) {
+        orphans.push(`${VEHICLE_PHOTOS_BUCKET}/${item.name}`);
+      }
+    }
+
+    if (data.length < limit) break;
+    offset += limit;
+  }
+
+  // Masters privados recebem a mesma prévia e proteção, mesmo sem galeria órfã.
+  for (let page = 0; page < 50; page += 1) {
+    const { data, error } = await supabase.storage
+      .from(VEHICLE_DOCS_BUCKET)
+      .list(PHOTO_MASTER_PREFIX.replace(/\/$/, ""), {
+        limit,
+        offset: page * limit,
+        sortBy: { column: "name", order: "asc" },
+      });
+    if (error)
+      return {
+        ok: false,
+        message:
+          "Não foi possível conferir os originais privados. Nenhum arquivo foi removido.",
+      };
+    if (!data?.length) break;
+    for (const item of data) {
+      if (
+        !item.name ||
+        !/\.jpg$/i.test(item.name) ||
+        (item.id === null && !item.metadata)
+      )
+        continue;
+      checked++;
+      const path = `${PHOTO_MASTER_PREFIX}${item.name}`;
+      if (isCleanupCandidate({ ...item, name: path }, privatePaths))
+        orphans.push(`${VEHICLE_DOCS_BUCKET}/${path}`);
+    }
+    if (data.length < limit) break;
+  }
+
+  // Fotos do formulário Vender que ninguém anexou a um pedido (a pessoa
+  // desistiu antes de enviar). Mesma regra: 48 horas e sem vínculo.
+  for (let page = 0; page < 50; page += 1) {
+    const { data, error } = await supabase.storage
+      .from(VEHICLE_DOCS_BUCKET)
+      .list("vender", {
+        limit,
+        offset: page * limit,
+        sortBy: { column: "name", order: "asc" },
+      });
+    if (error)
+      return {
+        ok: false,
+        message:
+          "Não foi possível conferir as fotos do formulário Vender. Nenhum arquivo foi removido.",
+      };
+    if (!data?.length) break;
+    for (const item of data) {
+      if (!item.name || (item.id === null && !item.metadata)) continue;
+      checked++;
+      const path = `vender/${item.name}`;
+      if (isCleanupCandidate({ ...item, name: path }, privatePaths))
+        orphans.push(`${VEHICLE_DOCS_BUCKET}/${path}`);
+    }
+    if (data.length < limit) break;
+  }
+
+  return { ok: true, orphans, checked };
+}
+
 /**
  * Confere vínculos de todas as áreas e prepara prévia antes da remoção.
  */
@@ -51,122 +158,58 @@ export async function cleanupOrphanPhotos(
   }
 
   try {
+    // 1. Prévia montada remotamente fora da transação
+    if (!confirmed) {
+      const { publicPaths, privatePaths } = await adminFileReferences(prisma);
+      const candidatesResult = await listStorageCandidates(
+        publicPaths,
+        privatePaths,
+      );
+      if (!candidatesResult.ok) {
+        return { ok: false, message: candidatesResult.message };
+      }
+      return {
+        ok: true,
+        message: `${candidatesResult.orphans.length} arquivo(s) antigos sem vínculo. Fotos enviadas nas últimas 48 horas ficam protegidas.`,
+        checked: candidatesResult.checked,
+        candidates: candidatesResult.orphans,
+      };
+    }
+
+    // 2. Confirmação: protege apenas a revalidação e remoção de lotes confirmados
     return await withAdminStorageLock(async (tx) => {
       const supabase = getSupabaseAdmin();
+      const approved = new Set(confirmed.slice(0, 5000));
       const { publicPaths, privatePaths } = await adminFileReferences(tx);
-      const orphans: string[] = [];
-      let offset = 0;
-      const limit = 100;
-      let checked = 0;
 
-      for (let page = 0; page < 50; page += 1) {
-        const { data, error } = await supabase.storage
-          .from(VEHICLE_PHOTOS_BUCKET)
-          .list("", {
-            limit,
-            offset,
-            sortBy: { column: "name", order: "asc" },
-          });
+      // Revalida em lotes pequenos quais arquivos confirmados continuam sem vínculo
+      const eligible: string[] = [];
+      const confirmedList = Array.from(approved);
+      const BATCH_SIZE = 100;
 
-        if (error) {
-          return {
-            ok: false,
-            message: error.message || "Falha ao listar Storage.",
-          };
-        }
-        if (!data || data.length === 0) break;
-
-        for (const item of data) {
-          if (!item.name || item.name.endsWith("/")) continue;
-          // Pasta de comprovantes/documentos — não entra na limpeza de fotos.
-          if (item.name === "docs") continue;
-          // Ignora "pastas" sem id/metadata de arquivo.
-          if (item.id === null && !item.metadata) continue;
-          checked += 1;
-          if (isCleanupCandidate(item, publicPaths)) {
-            orphans.push(`${VEHICLE_PHOTOS_BUCKET}/${item.name}`);
+      for (let i = 0; i < confirmedList.length; i += BATCH_SIZE) {
+        const batch = confirmedList.slice(i, i + BATCH_SIZE);
+        for (const item of batch) {
+          if (item.startsWith(`${VEHICLE_PHOTOS_BUCKET}/`)) {
+            const rel = item.slice(VEHICLE_PHOTOS_BUCKET.length + 1);
+            if (!publicPaths.has(rel)) {
+              eligible.push(item);
+            }
+          } else if (item.startsWith(`${VEHICLE_DOCS_BUCKET}/`)) {
+            const rel = item.slice(VEHICLE_DOCS_BUCKET.length + 1);
+            if (!privatePaths.has(rel)) {
+              eligible.push(item);
+            }
           }
         }
-
-        if (data.length < limit) break;
-        offset += limit;
       }
-
-      // Masters privados recebem a mesma prévia e proteção, mesmo sem galeria órfã.
-      for (let page = 0; page < 50; page += 1) {
-        const { data, error } = await supabase.storage
-          .from(VEHICLE_DOCS_BUCKET)
-          .list(PHOTO_MASTER_PREFIX.replace(/\/$/, ""), {
-            limit,
-            offset: page * limit,
-            sortBy: { column: "name", order: "asc" },
-          });
-        if (error)
-          return {
-            ok: false,
-            message:
-              "Não foi possível conferir os originais privados. Nenhum arquivo foi removido.",
-          };
-        if (!data?.length) break;
-        for (const item of data) {
-          if (
-            !item.name ||
-            !/\.jpg$/i.test(item.name) ||
-            (item.id === null && !item.metadata)
-          )
-            continue;
-          checked++;
-          const path = `${PHOTO_MASTER_PREFIX}${item.name}`;
-          if (isCleanupCandidate({ ...item, name: path }, privatePaths))
-            orphans.push(`${VEHICLE_DOCS_BUCKET}/${path}`);
-        }
-        if (data.length < limit) break;
-      }
-
-      // Fotos do formulário Vender que ninguém anexou a um pedido (a pessoa
-      // desistiu antes de enviar). Mesma regra: 48 horas e sem vínculo.
-      for (let page = 0; page < 50; page += 1) {
-        const { data, error } = await supabase.storage
-          .from(VEHICLE_DOCS_BUCKET)
-          .list("vender", {
-            limit,
-            offset: page * limit,
-            sortBy: { column: "name", order: "asc" },
-          });
-        if (error)
-          return {
-            ok: false,
-            message:
-              "Não foi possível conferir as fotos do formulário Vender. Nenhum arquivo foi removido.",
-          };
-        if (!data?.length) break;
-        for (const item of data) {
-          if (!item.name || (item.id === null && !item.metadata)) continue;
-          checked++;
-          const path = `vender/${item.name}`;
-          if (isCleanupCandidate({ ...item, name: path }, privatePaths))
-            orphans.push(`${VEHICLE_DOCS_BUCKET}/${path}`);
-        }
-        if (data.length < limit) break;
-      }
-
-      if (!confirmed)
-        return {
-          ok: true,
-          message: `${orphans.length} arquivo(s) antigos sem vínculo. Fotos enviadas nas últimas 48 horas ficam protegidas.`,
-          checked,
-          candidates: orphans,
-        };
-      // Aceita apenas itens da prévia que continuam candidatos após reler todas as referências.
-      const approved = new Set(confirmed.slice(0, 5000));
-      const eligible = orphans.filter((path) => approved.has(path));
 
       if (eligible.length === 0) {
         return {
           ok: true,
-          message: `Nenhum arquivo aprovado continua sem vínculo. ${checked} arquivo(s) conferido(s).`,
+          message: `Nenhum arquivo aprovado continua sem vínculo.`,
           removed: 0,
-          checked,
+          checked: approved.size,
         };
       }
 
@@ -183,7 +226,7 @@ export async function cleanupOrphanPhotos(
               ok: false,
               message: `Limpeza interrompida: ${removed} arquivo(s) removido(s). Tente uma nova prévia.`,
               removed,
-              checked,
+              checked: approved.size,
             };
           removed += batch.length;
         }
@@ -194,9 +237,9 @@ export async function cleanupOrphanPhotos(
 
       return {
         ok: true,
-        message: `Removidos ${removed} arquivo(s) antigos sem vínculo de ${checked} conferidos.`,
+        message: `Removidos ${removed} arquivo(s) antigos sem vínculo de ${approved.size} conferidos.`,
         removed,
-        checked,
+        checked: approved.size,
       };
     });
   } catch (error) {

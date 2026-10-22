@@ -100,7 +100,13 @@ export async function POST(request: Request) {
       ? `${vehicleId}/${Date.now()}-${crypto.randomUUID()}.${extension}`
       : `${Date.now()}-${crypto.randomUUID()}.${extension}`;
 
-    await ensurePrivateDocsBucket();
+    const bucket = await ensurePrivateDocsBucket();
+    if (bucket && bucket.public) {
+      return NextResponse.json(
+        { error: "Armazenamento privado indisponível." },
+        { status: 503, headers },
+      );
+    }
     const supabase = getSupabaseAdmin();
     const buffer = Buffer.from(await file.arrayBuffer());
 

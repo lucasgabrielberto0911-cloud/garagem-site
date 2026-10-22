@@ -18,19 +18,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401, headers });
   }
 
-  const ref = request.nextUrl.searchParams.get("ref") ?? "";
-  const parsed = parseStoredFileRef(ref);
-  if (!parsed) {
-    return NextResponse.json({ error: "Arquivo inválido." }, { status: 400, headers });
-  }
-
-  if (parsed.kind === "public") {
-    const res = NextResponse.redirect(parsed.url, 302);
-    res.headers.set("Cache-Control", "private, no-store");
-    return res;
-  }
-
   try {
+    const ref = request.nextUrl.searchParams.get("ref") ?? "";
+    const parsed = parseStoredFileRef(ref);
+    if (!parsed) {
+      return NextResponse.json({ error: "Arquivo inválido." }, { status: 400, headers });
+    }
+
+    if (parsed.kind === "public") {
+      const res = NextResponse.redirect(parsed.url, 302);
+      res.headers.set("Cache-Control", "private, no-store");
+      return res;
+    }
+
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase.storage
       .from(parsed.bucket)
@@ -38,9 +38,14 @@ export async function GET(request: NextRequest) {
 
     if (error || !data?.signedUrl) {
       console.error("[admin/files/view]", error);
+      const isNotFound = error && /not found|não encontrado/i.test(error.message);
       return NextResponse.json(
-        { error: "Não foi possível abrir o arquivo." },
-        { status: 500, headers },
+        {
+          error: isNotFound
+            ? "Arquivo não encontrado."
+            : "Não foi possível abrir o arquivo.",
+        },
+        { status: isNotFound ? 404 : 500, headers },
       );
     }
 
