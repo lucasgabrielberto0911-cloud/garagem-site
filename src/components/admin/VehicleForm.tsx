@@ -314,6 +314,15 @@ export function VehicleForm({
   const [promoOpen, setPromoOpen] = useState(false);
   const [quickMode, setQuickMode] = useState(mode === "create");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (photosUploading || photos.length === 0) return;
+    setErrors((current) => {
+      if (!current.photos) return current;
+      const next = { ...current };
+      delete next.photos;
+      return next;
+    });
+  }, [photosUploading, photos.length]);
   const [openSections, setOpenSections] = useState<Set<VehicleFormSectionId>>(
     () =>
       new Set(
@@ -564,6 +573,8 @@ export function VehicleForm({
           : "Adicione pelo menos uma foto.";
       if (mode === "create" && status === "reservado")
         next.status = "Cadastre como disponível antes de reservar o veículo.";
+      if (mode === "create" && status === "vendido")
+        next.status = "Cadastre como disponível antes de iniciar a venda.";
       if (onlyStep) {
         for (const field of Object.keys(next)) {
           if (stepForField(field) !== onlyStep) delete next[field];

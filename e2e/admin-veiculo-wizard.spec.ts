@@ -72,6 +72,8 @@ async function uploadPhotos(page: Page) {
   }
   await expect.poll(async () => JSON.parse(await page.locator('[name="photoUrls"]').inputValue()).length).toBe(2);
   await expect(page.getByRole("progressbar", { name: "Progresso do envio das fotos" })).toHaveAttribute("aria-valuenow", "100");
+  await expect(page.getByText("Adicione pelo menos uma foto.", { exact: true })).toBeHidden();
+  await expect(page.getByText("Espere o envio ou o borrão das fotos terminar.", { exact: true })).toBeHidden();
 }
 
 async function fillVehicle(page: Page, modelName: string) {
@@ -177,7 +179,7 @@ for (const width of [390, 1440]) {
       expect(JSON.parse(await page.locator('[name="photoUrls"]').inputValue())).toHaveLength(2);
     });
 
-    for (const invalid of ["model", "description"] as const) {
+    for (const invalid of ["model", "description", "status"] as const) {
       test(`rascunho na revisão retorna à etapa do erro em ${invalid}`, async ({ page, modelName }) => {
         const description = invalid === "description" ? "Preço R$ 69.900,00." : "Veículo revisado.";
         const payload = {
@@ -186,7 +188,7 @@ for (const width of [390, 1440]) {
           brand: "Honda", model: invalid === "model" ? "" : modelName,
           color: "Prata", year: "2020", yearModel: "2021",
           fuel: "Flex", transmission: "Automático", locationCity: "linhares",
-          status: "disponivel", category: "carro", description,
+          status: invalid === "status" ? "vendido" : "disponivel", category: "carro", description,
           values: { price: "59.900,00", km: "45.000" },
           photos: samples[0].photos,
         };
@@ -206,6 +208,10 @@ for (const width of [390, 1440]) {
         await expect(title(page)).toContainText(`Etapa ${invalid === "model" ? 2 : 3} de 4`);
         const form = page.locator("#vehicle-form");
         if (invalid === "model") await expect(form.locator('[name="model"]')).toBeFocused();
+        else if (invalid === "status") {
+          await expect(form.locator('[name="status"]')).toBeFocused();
+          await expect(page.getByText("Cadastre como disponível antes de iniciar a venda.", { exact: true })).toBeVisible();
+        }
         else {
           await expect(form.locator('[name="description"]')).toBeFocused();
           await expect(form.getByTestId("description-price-mismatch")).toBeVisible();
