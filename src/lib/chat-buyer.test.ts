@@ -693,7 +693,7 @@ test("automático forte até 109 mil ranqueia 2.0 acima de 1.0 e 1.6", async () 
     result.vehicles.map((vehicle) => vehicle.id),
     [lancer.id, civic.id],
   );
-  assert.ok(result.vehicles.every(vehicle => /automático/i.test(vehicle.transmission) && vehicle.price <= 109_000));
+  assert.ok(result.vehicles.every(vehicle => /automático/i.test(vehicle.transmission ?? "") && vehicle.price <= 109_000));
   assert.doesNotMatch(textoVisivelChat(result.reply), /eu olho o motor maior antes do preço/);
   assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Lancer 2014 — [^\n]*160 cv/);
   assert.match(textoVisivelChat(result.reply), /• (?:[^\n]* )?Civic 2014 — [^\n]*155 cv/);

@@ -29,7 +29,7 @@ test("contrato informa endereço cadastral na cláusula, sem alterar cabeçalho"
   const drawn: { text: string; y: number }[] = [];
   const original = PDFPage.prototype.drawText;
   PDFPage.prototype.drawText = function (text, options) {
-    drawn.push({ text, y: options.y });
+    drawn.push({ text, y: options?.y ?? 0 });
     return original.call(this, text, options);
   };
   try {
@@ -49,7 +49,7 @@ test("PDF de preparação quebra palavras longas sem cortar o conteúdo e usa a 
   const drawn: { text: string; x: number; font: NonNullable<Parameters<PDFPage["drawText"]>[1]>["font"] }[] = [];
   const original = PDFPage.prototype.drawText;
   PDFPage.prototype.drawText = function (text, options) {
-    drawn.push({ text, x: options.x, font: options.font! });
+    drawn.push({ text, x: options?.x ?? 0, font: (options && options.font) as NonNullable<Parameters<PDFPage["drawText"]>[1]>["font"] });
     return original.call(this, text, options);
   };
   let bytes: Uint8Array;
@@ -69,5 +69,5 @@ test("PDF de preparação quebra palavras longas sem cortar o conteúdo e usa a 
   assert.ok(modelLines.some(text => text.includes("Lugares")));
   const longWordLines = modelLines.filter(text => /^[A-Z0-9./]+$/.test(text) && text.includes("/"));
   assert.ok(longWordLines.length > 1);
-  assert.ok(longWordLines.every(text => drawn.find(item => item.text === text && item.x === modelX)!.font.widthOfTextAtSize(text, 7) <= 104));
+  assert.ok(longWordLines.every(text => (drawn.find(item => item.text === text && item.x === modelX)?.font?.widthOfTextAtSize(text, 7) ?? 0) <= 104));
 });

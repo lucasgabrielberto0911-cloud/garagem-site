@@ -36,7 +36,7 @@ function blocks(options: { description?: string; accessories?: string[] }) {
     createElement(
       FavoritesProvider,
       null,
-      createElement(VehicleMobileBlocks, {
+      createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
         fullLabel: "Honda HR-V",
         path: "/estoque/hrv",
         sold: false,

@@ -11,6 +11,7 @@ import { supabaseOriginalSrc } from "@/lib/stock-query";
 import {
   VEHICLE_PHOTOS_BUCKET,
   getSupabaseAdmin,
+  isAllowedStorageHost,
   storagePathFromPublicUrl,
 } from "@/lib/supabase";
 
@@ -141,17 +142,61 @@ export async function loadArchiveOriginal(url: string): Promise<ArchiveFile | nu
     }
   }
 
-  if (!/^https?:\/\//i.test(original)) return null;
+  if (!/^https:\/\//i.test(original)) return null;
 
   try {
-    const response = await fetch(original);
-    if (!response.ok) return null;
-    return {
-      bytes: new Uint8Array(await response.arrayBuffer()),
-      contentType:
-        response.headers.get("content-type") ||
-        contentTypeFromName(original, "image/webp"),
-    };
+    const parsed = new URL(original);
+    if (parsed.protocol !== "https:") return null;
+    if (parsed.username || parsed.password) return null;
+    if (parsed.port && parsed.port !== "443") return null;
+    if (!isAllowedStorageHost(parsed.hostname)) return null;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetch(original, {
+        signal: controller.signal,
+        redirect: "error",
+      });
+      if (!response.ok || !response.body) return null;
+
+      const contentLength = Number(response.headers.get("content-length"));
+      if (contentLength && contentLength > MAX_SOURCE_BYTES) {
+        return null;
+      }
+
+      const reader = response.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > MAX_SOURCE_BYTES) {
+          await reader.cancel();
+          return null;
+        }
+        chunks.push(value);
+      }
+
+      const merged = new Uint8Array(total);
+      let offset = 0;
+      for (const chunk of chunks) {
+        merged.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+
+      return {
+        bytes: merged,
+        contentType:
+          response.headers.get("content-type") ||
+          contentTypeFromName(original, "image/webp"),
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
   } catch (error) {
     console.warn("[photo-archive] fetch:", error);
     return null;

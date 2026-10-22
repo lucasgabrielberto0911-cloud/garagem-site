@@ -10,7 +10,7 @@ test("conexão travada termina como timeout e cancela o transporte", async () =>
   assert.equal(signal?.aborted, true);
 });
 test("o limite também cobre um corpo JSON que nunca termina", async () => {
-  const fetcher = (async () => ({ ok: true, json: () => new Promise(() => {}) })) as typeof fetch;
+  const fetcher = (async () => ({ ok: true, json: () => new Promise(() => {}) })) as unknown as typeof fetch;
   await assert.rejects(requestJson("/api/estoque", {}, 10, fetcher), { name: "TimeoutError" });
 });
 test("navegar ou mudar filtro cancela sem virar timeout", async () => {

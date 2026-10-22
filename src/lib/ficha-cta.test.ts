@@ -183,7 +183,7 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
     createElement(
       FavoritesProvider,
       null,
-      createElement(VehicleMobileBlocks, {
+      createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
         fullLabel: "Honda HR-V",
         path: "/estoque/hrv",
         sold: false,
@@ -310,7 +310,7 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
     createElement(
       FavoritesProvider,
       null,
-      createElement(VehicleMobileBlocks, {
+      createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
         fullLabel: "Renault Sandero",
         path: "/estoque/sandero",
         sold: false,

@@ -4,8 +4,23 @@ import { hdCardCompanion } from "@/lib/cover-frame";
 import { masterObjectPathFromGalleryPath, previousObjectPathFromGalleryPath } from "@/lib/photo-master";
 import { deleteStoragePublicUrls, parseStoredFileRef } from "@/lib/supabase";
 
+import { prisma } from "@/lib/prisma";
+
+type DbClient =
+  | Prisma.TransactionClient
+  | Pick<
+      typeof prisma,
+      | "photo"
+      | "vehicleCost"
+      | "vehicleDocument"
+      | "testimonial"
+      | "siteSettings"
+      | "adminDraft"
+      | "leadVenda"
+    >;
+
 /** Falha de qualquer consulta bloqueia a exclusão; nunca considera o banco vazio. */
-export async function adminFileReferences(tx: Prisma.TransactionClient) {
+export async function adminFileReferences(tx: DbClient) {
   const [photos, costs, documents, testimonials, settings, drafts, leads] =
     await Promise.all([
       tx.photo.findMany({ select: { url: true, thumbnailUrl: true } }),

@@ -65,7 +65,7 @@ test("header, barra e float da ficha vendida não recebem o preço antigo", () =
   const text = url.searchParams.get("text")!;
   assert.match(text, /já foi vendido.*opções parecidas no estoque/);
   assert.doesNotMatch(text, /R\$|89\.900/);
-  assert.match(pageWhatsAppMessage({ ...civic, brand: undefined, model: undefined, sold: true }), /opções parecidas no estoque/);
+  assert.match(pageWhatsAppMessage({ ...civic, brand: undefined, model: undefined, sold: true } as unknown as Parameters<typeof pageWhatsAppMessage>[0]), /opções parecidas no estoque/);
 });
 
 test("página de cidade leva o nome da cidade e a campanha cidade", () => {

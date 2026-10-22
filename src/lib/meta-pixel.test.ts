@@ -208,7 +208,7 @@ test("WhatsAppClick vai para Meta custom e GA4", () => {
 
 test("vehicle_view e whatsapp_click levam o mesmo veículo e a UTM da página", () => {
   const { calls, gtagCalls } = installFbq();
-  (globalThis as { window: Window & { location?: { search: string } } }).window.location =
+  (globalThis as unknown as { window: { location: unknown } }).window.location =
     { search: "?utm_source=instagram&utm_campaign=stories&utm_content=bio" };
   const ref = { vehicleId: VEHICLE_CUID, slug: SLUG };
 

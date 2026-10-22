@@ -12,7 +12,7 @@ for (const caso of cases) {
   test(`bateria40: ${caso.id}`, async () => {
     const history: ChatTurn[] = [];
     let previousVehicleIds: string[] = [];
-    const questions = "conversa" in caso ? caso.conversa : ["pergunta" in caso ? caso.pergunta : ""];
+    const questions = ("conversa" in caso ? caso.conversa : ["pergunta" in caso ? caso.pergunta : ""]) ?? [];
     for (const mensagem of questions) {
       const result = await runChatTurn({ mensagem, historico: history, stock,
         vehicleId: "pagina" in caso ? caso.pagina : undefined, previousVehicleIds,

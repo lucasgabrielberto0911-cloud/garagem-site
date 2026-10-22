@@ -96,6 +96,8 @@ export const CHAT_VEHICLE_SELECT = {
   },
 } as const;
 
+export { CHAT_WHATSAPP_URL };
+
 export type ChatVehicleRecord = {
   id: string;
   brand: string;
@@ -108,6 +110,7 @@ export type ChatVehicleRecord = {
   transmission: string;
   fuel: string;
   category?: string;
+  bodyStyle?: string;
   locationCity?: string | null;
   engine?: string | null;
   doors?: number | null;

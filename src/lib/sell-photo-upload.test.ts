@@ -21,7 +21,8 @@ test("preparação travada tem prazo e cancelamento antes de iniciar o transport
 });
 test("progresso chega a 100 mas sucesso depende da confirmação da API", async () => {
   const progress: number[] = [];
-  const xhr = request(x => { x.upload.onprogress?.({ lengthComputable: true, loaded: 5, total: 10 } as ProgressEvent);x.upload.onprogress?.({ lengthComputable: true, loaded: 10, total: 10 } as ProgressEvent);x.onload?.(event); });
+  const uploadHelper = (x: XMLHttpRequest) => x.upload as unknown as { onprogress: ((ev: ProgressEvent) => void) | null };
+  const xhr = request(x => { uploadHelper(x).onprogress?.({ lengthComputable: true, loaded: 5, total: 10 } as ProgressEvent); uploadHelper(x).onprogress?.({ lengthComputable: true, loaded: 10, total: 10 } as ProgressEvent); x.onload?.(event); });
   assert.equal(await uploadSellPhoto(file, new AbortController().signal, p => progress.push(p), () => xhr), "private-reference");
   assert.deepEqual(progress, [50, 100]);assert.equal(xhr.onload, null);assert.equal(xhr.upload.onprogress, null);
 });
