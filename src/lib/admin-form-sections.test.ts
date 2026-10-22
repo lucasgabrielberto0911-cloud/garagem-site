@@ -15,7 +15,7 @@ import {
 test("ordem mobile-first: veículo, preço, fotos, ficha, descrição, itens", () => {
   assert.deepEqual(
     vehicleFormSections("edit").map((section) => section.id),
-    ["identificacao", "essencial", "fotos", "ficha", "descricao", "itens"],
+    ["identificacao", "essencial", "fotos", "ficha", "itens"],
   );
   assert.equal(vehicleFormSections("create").at(-1)?.id, "operacao");
 });
@@ -24,7 +24,7 @@ test("edição abre só preço/status e fotos; cadastro novo abre o que precisa 
   assert.deepEqual(initialOpenSections("edit"), ["essencial", "fotos"]);
   assert.deepEqual(
     initialOpenSections("edit", { descriptionNeedsAttention: true }),
-    ["essencial", "fotos", "descricao"],
+    ["essencial", "fotos", "itens"],
   );
   const create = initialOpenSections("create");
   assert.ok(create.includes("identificacao"));
@@ -46,7 +46,7 @@ test("erro de validação aponta a seção certa, na ordem da tela", () => {
       brand: "Informe a marca",
       price: "",
     }),
-    ["identificacao", "ficha", "descricao"],
+    ["identificacao", "ficha", "itens"],
   );
 });
 
@@ -115,7 +115,7 @@ test("sectionForField: mapeia todos os campos conhecidos e ignora desconhecidos"
   assert.equal(sectionForField("inspection"), "ficha");
 
   // Descrição
-  assert.equal(sectionForField("description"), "descricao");
+  assert.equal(sectionForField("description"), "itens");
 
   // Itens
   assert.equal(sectionForField("accessories"), "itens");
@@ -158,7 +158,6 @@ test("sectionsWithErrors: cobre todas as 7 seções na ordem correta da tela", (
     "essencial",
     "fotos",
     "ficha",
-    "descricao",
     "itens",
     "operacao",
   ]);
@@ -217,7 +216,7 @@ test("wizard distribui cada seção uma vez nas quatro etapas", () => {
   assert.deepEqual(SECTIONS_BY_STEP, {
     1: ["fotos"],
     2: ["identificacao", "ficha"],
-    3: ["descricao", "itens", "essencial"],
+    3: ["itens", "essencial"],
     4: ["operacao"],
   });
   const sections = Object.values(SECTIONS_BY_STEP).flat();

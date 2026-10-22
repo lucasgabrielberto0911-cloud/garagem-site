@@ -1,173 +1,75 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
-import { fold, parseLegend, type LegendParseResult } from "@/lib/legend-parser";
+import { useState } from "react";
+import { inputClass } from "./ui";
 import {
-  normalizeAccessories,
-  type VehicleCategory,
-} from "@/lib/vehicle-accessories";
-import { btn, inputClass } from "@/components/admin/ui";
+  accessoryGroup, groupAccessories, LEGEND_FIELDS, legendText, parseLegend, fold,
+  type LegendData, type LegendField, type LegendParseResult,
+} from "@/lib/legend-parser";
+import { parseMoneyBR } from "@/lib/admin-money";
+import { parseVehicleKm } from "@/lib/admin-vehicle-fields";
 
 type Props = {
-  category: VehicleCategory;
   description: string;
-  onPendingChange?: (pending: boolean) => void;
-  onApply: (selected: string[], manual: string[], description?: string) => boolean;
+  accessories: string[];
+  data: Record<LegendField, string>;
+  onChange: (result: LegendParseResult) => void;
+  onRemoveDescription: () => void;
+  onRemoveItem: (item: string) => void;
+  onFieldChange: (field: LegendField, value: string) => void;
 };
 
-export function LegendPasteField({ category, description, onApply, onPendingChange }: Props) {
-  const id = useId();
-  const [text, setText] = useState("");
-  const [analysis, setResult] = useState<(LegendParseResult & { category: VehicleCategory }) | null>(null);
-  const result = analysis?.category === category ? analysis : null;
-  const [selected, setSelected] = useState<string[]>([]);
-  const [manual, setManual] = useState<string[]>([]);
-  const [discarded, setDiscarded] = useState<string[]>([]);
-  const [useDescription, setUseDescription] = useState(false);
-  const [applyError, setApplyError] = useState("");
-  const prevTextRef = useRef("");
+function sameValue(field: LegendField, a: string, b: string) {
+  if (field === "price") return parseMoneyBR(a) === parseMoneyBR(b);
+  if (field === "km") return parseVehicleKm(a) === parseVehicleKm(b);
+  return fold(a.trim()) === fold(b.trim());
+}
 
-  function analyze() {
-    const parsed = parseLegend(text, category);
-    const excludedKeys = new Set([...manual, ...discarded].map((m) => fold(m).replace(/\s+/g, " ").trim()));
-    const listed = (parsed.listed ?? []).filter((item) => !excludedKeys.has(fold(item).replace(/\s+/g, " ").trim()));
-    setManual((current) => [...current, ...listed]);
-    const listedKeys = new Set(listed.map((item) => fold(item).replace(/\s+/g, " ").trim()));
-    setResult({ ...parsed, category, unmatched: parsed.unmatched.filter((item) => {
-      const key = fold(item).replace(/\s+/g, " ").trim();
-      return !excludedKeys.has(key) && !listedKeys.has(key);
-    })});
-    if (text === prevTextRef.current && analysis?.category === category) {
-      setSelected((current) => current.filter((item) => parsed.matched.includes(item)));
-    } else {
-      setSelected(parsed.matched);
-      prevTextRef.current = text;
-    }
-    setApplyError("");
+export function LegendPasteField({ description, accessories, data, onChange, onRemoveDescription, onRemoveItem, onFieldChange }: Props) {
+  const [text, setText] = useState(() => legendText(description, accessories, data));
+  const [detected, setDetected] = useState<LegendData>({});
+  function syncPreview(nextDescription: string, nextAccessories: string[], nextData = data) {
+    setText(legendText(nextDescription, nextAccessories, nextData));
+    setDetected({});
   }
-
-  return (
-    <div className="mb-5 space-y-3 border border-white/10 bg-ink p-3 sm:p-4">
-      <label htmlFor={id} className="block text-sm font-medium text-cream">
-        Colar legenda
-      </label>
-      <textarea
-        id={id}
-        rows={4}
-        value={text}
-        onChange={(event) => {
-          setText(event.target.value);
-          onPendingChange?.(Boolean(event.target.value.trim()));
-          prevTextRef.current = "";
-          setResult(null);
-          setManual([]);
-          setDiscarded([]);
-          setSelected([]);
-          setUseDescription(false);
-          setApplyError("");
-        }}
-        placeholder="Cole a legenda e confira os itens antes de aplicar."
-        className={`${inputClass} min-h-[44px] resize-y`}
-      />
-      <button type="button" onClick={analyze} disabled={!text.trim()}
-        className={`${btn.outline} min-h-[44px] w-full sm:w-auto`}>
-        Analisar
-      </button>
-
-      {result && (
-        <div className="space-y-4" aria-live="polite">
-          <div>
-            <p className="mb-2 text-sm text-cream">Reconhecidos ({result.matched.length})</p>
-            <div className="flex flex-wrap gap-2">
-              {result.matched.map((item) => (
-                <label key={item} className="flex min-h-[44px] max-w-full cursor-pointer items-center gap-2 border border-white/15 px-3 py-2 text-sm text-cream">
-                  <input type="checkbox" checked={selected.includes(item)}
-                    onChange={(event) => setSelected((current) => event.target.checked
-                      ? [...current, item] : current.filter((value) => value !== item))}
-                    className="h-4 w-4 shrink-0 accent-brand" />
-                  <span className="break-words">{item}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {result.unmatched.length > 0 && (
-            <div>
-              <p className="mb-2 text-sm text-cream">Não reconhecidos</p>
-              <ul className="space-y-3">
-                {result.unmatched.map((item) => (
-                  <li key={item} className="space-y-2 border-t border-white/10 pt-3">
-                    <p className="break-words text-sm text-muted">{item}</p>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <button type="button" className={`${btn.outline} min-h-[44px]`}
-                        onClick={() => {
-                          setManual((current) => normalizeAccessories([...current, item]));
-                          setResult({ ...result, unmatched: result.unmatched.filter((value) => value !== item) });
-                        }}>
-                        Adicionar como ponto manual
-                      </button>
-                      <button type="button" className={`${btn.outline} min-h-[44px]`}
-                        onClick={() => {
-                          setDiscarded((current) => [...current, item]);
-                          setResult({ ...result, unmatched: result.unmatched.filter((value) => value !== item) });
-                        }}>
-                        Descartar
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {manual.length > 0 && (
-            <div>
-              <p className="mb-2 text-sm text-cream">Opcionais livres selecionados</p>
-              <ul className="flex flex-wrap gap-2">
-                {manual.map((item) => (
-                  <li key={item} className="flex max-w-full items-center border border-white/15 pl-3 text-sm text-cream">
-                    <span className="break-words">{item}</span>
-                    <button type="button" aria-label={`Remover ${item}`}
-                      className="min-h-[44px] min-w-[44px] shrink-0 text-muted hover:text-brand"
-                      onClick={() => {
-                        setManual((current) => current.filter((value) => value !== item));
-                        setDiscarded((current) => [...current, item]);
-                      }}>×</button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-cream">
-            <input type="checkbox" checked={useDescription}
-              onChange={(event) => setUseDescription(event.target.checked)}
-              className="h-4 w-4 shrink-0 accent-brand" />
-            Usar texto limpo como descrição
-          </label>
-          <button type="button" className={`${btn.outline} min-h-[44px] w-full sm:w-auto`}
-            onClick={() => {
-              const replaceDescription = useDescription && (!description.trim() || description === result.description ||
-                window.confirm("Já existe uma descrição. Substituir pela legenda?"));
-              if (!onApply(selected, manual, replaceDescription ? result.description : undefined)) {
-                setApplyError("O limite é de 60 acessórios. Desmarque itens ou remova acessórios existentes antes de aplicar.");
-                return;
-              }
-              setText("");
-              onPendingChange?.(false);
-              prevTextRef.current = "";
-              setResult(null);
-              setSelected([]);
-              setManual([]);
-              setDiscarded([]);
-              setUseDescription(false);
-              setApplyError("");
-            }}>
-            Aplicar
-          </button>
-          {applyError && <p role="alert" className="text-sm text-brand">{applyError}</p>}
-        </div>
-      )}
+  return <div className="space-y-4">
+    <label htmlFor="vehicle-legend" className="block text-sm font-semibold text-cream">Colar legenda</label>
+    <p className="text-xs text-muted">Cole a legenda inteira. Descrição, dados, preço, opcionais e facilidades são separados automaticamente. Dados preenchidos são preservados; confira divergências abaixo.</p>
+    <textarea id="vehicle-legend" name="vehicle-legend" rows={16} value={text} className={`${inputClass} resize-y`}
+      placeholder="Cole aqui a legenda completa do anúncio."
+      onChange={event => {
+        setText(event.target.value);
+        const parsed = parseLegend(event.target.value);
+        setDetected(parsed.data);
+        onChange(parsed);
+      }} />
+    <div aria-label="Prévia da legenda" className="space-y-4">
+      {description && <section><h3 className="font-display font-semibold">Descrição</h3>
+        <div className="flex items-start gap-2"><p className="whitespace-pre-line break-words text-sm">{description}</p>
+          <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-lg text-muted hover:text-brand" aria-label="Remover descrição" onClick={() => { onRemoveDescription(); syncPreview("", accessories); }}>×</button></div></section>}
+      <section><h3 className="font-display font-semibold">Dados e preço</h3>
+        {Object.entries(LEGEND_FIELDS).map(([key, label]) => {
+          const field = key as LegendField;
+          const incoming = detected[field];
+          const conflict = incoming && data[field] && !sameValue(field, incoming, data[field]);
+          return data[field] || incoming ? <div key={field} className="py-1 text-sm">
+            <div className="flex items-center gap-2"><span>{label}: {data[field] || incoming}</span>
+              <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-lg text-muted hover:text-brand" aria-label={`Remover ${label}`} onClick={() => {
+                onFieldChange(field, "");
+                syncPreview(description, accessories, { ...data, [field]: "" });
+              }}>×</button></div>
+            {conflict && <p role="status" className="text-brand-orange">Divergência em {label}: legenda informa {incoming}. Campo mantido: {data[field]}.{" "}
+              <button type="button" className="underline" onClick={() => { onFieldChange(field, incoming); syncPreview(description, accessories, { ...data, [field]: incoming }); }}>Usar valor da legenda</button></p>}
+          </div> : null;
+        })}
+      </section>
+      {groupAccessories(accessories).map(({ group, items }) => <section key={group} aria-label={group}>
+        <h3 className="font-display font-semibold">{group}</h3>
+        <ul>{items.map(item => <li key={item} className="flex items-start gap-2 py-1 text-sm">
+          <span className="min-w-0 break-words">{accessoryGroup(item).text}</span>
+          <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-lg text-muted hover:text-brand" aria-label={`Remover ${accessoryGroup(item).text}`} onClick={() => { onRemoveItem(item); syncPreview(description, accessories.filter(entry => entry !== item)); }}>×</button>
+        </li>)}</ul>
+      </section>)}
     </div>
-  );
+  </div>;
 }

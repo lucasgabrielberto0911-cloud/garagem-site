@@ -3,7 +3,7 @@
 import { photoQueueStorage } from "@/lib/admin-photo-queue-store";
 import { ListingQualityCard } from "@/components/admin/ListingQualityCard";
 import { LegendPasteField } from "@/components/admin/LegendPasteField";
-import { mergeLegendAccessories } from "@/lib/legend-parser";
+import { legendAccessoriesError, type LegendField, type LegendParseResult } from "@/lib/legend-parser";
 import type { StoredListingScore } from "@/lib/listing-score";
 import { VehicleWizardNav, WIZARD_STEP_LABELS } from "@/components/admin/VehicleWizardNav";
 import { VehicleFormPreview } from "@/components/admin/VehicleFormPreview";
@@ -23,6 +23,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
   type ComponentProps,
@@ -80,7 +81,6 @@ import {
   VEHICLE_CATEGORIES,
   defaultFuel,
   filterAccessoriesForCategory,
-  getAccessoryPresets,
   getFuels,
   getTransmissions,
   normalizeAccessories,
@@ -295,8 +295,6 @@ export function VehicleForm({
     setDirty(true);
   };
   const [consigned, setConsigned] = useState(init?.consigned ?? false);
-  const [legendPending, setLegendPending] = useState(false);
-  const [customAccessory, setCustomAccessory] = useState("");
   const [category, setCategory] = useState<VehicleCategory>(() =>
     parseVehicleCategory(init?.category),
   );
@@ -474,9 +472,36 @@ export function VehicleForm({
   const [description, setDescription] = useState(init?.description ?? "");
   const [status, setStatus] = useState(vehicle?.status ?? "disponivel");
 
+  const autoLegendData = useRef<Partial<Record<LegendField, string>>>({});
+  const [legendRevision, setLegendRevision] = useState(0);
+
+  function changeLegendField(field: LegendField, value: string) {
+    delete autoLegendData.current[field];
+    if (field === "price" || field === "km") setValues(current => ({ ...current, [field]: value }));
+    else ({ year: setYear, yearModel: setYearModel, color: setColor, transmission: setTransmission, fuel: setFuel, engine: setEngine })[field](value);
+    setDirty(true);
+  }
+
+  function applyLegend(parsed: LegendParseResult) {
+    setDescription(parsed.description);
+    setAccessories(parsed.accessories);
+    const current = { ...values, year, yearModel, color, transmission, fuel, engine };
+    for (const key of Object.keys(current)) {
+      const field = key as LegendField;
+      if (!current[field].trim() || current[field] === autoLegendData.current[field]) {
+        const value = parsed.data[field] ?? "";
+        if (parsed.data[field] !== undefined || autoLegendData.current[field] !== undefined) {
+          changeLegendField(field, value);
+          autoLegendData.current[field] = value;
+        }
+      }
+    }
+    setErrors(current => { const next = { ...current }; delete next.accessories; delete next.description; return next; });
+    setDirty(true);
+  }
+
   const fuelOptions = getFuels(category);
   const transmissionOptions = getTransmissions(category);
-  const accessoryPresets = getAccessoryPresets(category);
   const isMoto = category === "moto";
   const transmissionAlert = transmissionConflictAlert(version, transmission);
   const transmissionSuggestion = suggestedTransmission(
@@ -532,7 +557,8 @@ export function VehicleForm({
     const parsed = parseVehicleFormFields(new FormData(form));
     const { km, price } = parsed;
     Object.assign(next, parsed.fieldErrors);
-    if (legendPending) next.accessories = "A legenda ainda não foi aplicada. Clique em Analisar e Aplicar, ou limpe o campo Colar legenda.";
+    const legendError = legendAccessoriesError(accessories);
+    if (legendError) next.accessories = legendError;
 
     const listingIssues = validateVehicleListing({
       brand,
@@ -577,6 +603,11 @@ export function VehicleForm({
         next.status = "Cadastre como disponível antes de reservar o veículo.";
       if (mode === "create" && status === "vendido")
         next.status = "Cadastre como disponível antes de iniciar a venda.";
+      if (onlyStep === 2) {
+        for (const field of ["color", "year", "yearModel", "km", "fuel", "transmission", "engine"]) {
+          if (!value(field === "km" ? "kmDisplay" : field).trim()) delete next[field];
+        }
+      }
       if (onlyStep) {
         for (const field of Object.keys(next)) {
           if (stepForField(field) !== onlyStep) delete next[field];
@@ -613,7 +644,9 @@ export function VehicleForm({
       requestAnimationFrame(() =>
         focusAdminError(
           form,
-          first === "price"
+          first === "description" || first === "accessories"
+            ? "vehicle-legend"
+            : first === "price"
             ? "priceDisplay"
             : first === "km"
               ? "kmDisplay"
@@ -963,6 +996,8 @@ export function VehicleForm({
           setEngine(text("engine"));
           setPurchase(text("purchase"));
           setDescription(text("description"));
+          setLegendRevision(current => current + 1);
+          autoLegendData.current = {};
           setStatus(
             ["disponivel", "reservado", "vendido"].includes(text("status"))
               ? text("status")
@@ -994,7 +1029,7 @@ export function VehicleForm({
               ),
             );
           if (Array.isArray(draft.accessories))
-            setAccessoriesState(normalizeAccessories(draft.accessories));
+            setAccessoriesState(draft.accessories.filter((item): item is string => typeof item === "string"));
           const fields = draft.fields as Record<string, string> | undefined;
           if (fields)
             requestAnimationFrame(() => {
@@ -1071,7 +1106,7 @@ export function VehicleForm({
               priceMismatch?.blockMessage ??
                 "Corrija a descrição ou o preço antes de salvar.",
             );
-            revealSections(["descricao"]);
+            revealSections(["itens"]);
             return;
           }
           const data = new FormData(event.currentTarget);
@@ -1373,7 +1408,7 @@ export function VehicleForm({
                   </p>
                   <button
                     type="button"
-                    onClick={() => revealSections(["descricao"])}
+                    onClick={() => revealSections(["itens"])}
                     className={`${btn.outline} shrink-0`}
                   >
                     Ver descrição
@@ -1624,200 +1659,19 @@ export function VehicleForm({
           </Section>
           </div>
 
-          <div hidden={isWizard && !SECTIONS_BY_STEP[step].includes("descricao")} style={isWizard ? { order: 0 } : undefined}>
-          <Section
-            {...sectionProps("descricao")}
-            summary={
-              priceMismatch
-                ? "Preço do texto ≠ preço do anúncio"
-                : descriptionSummary(description)
-            }
-          >
-            {priceMismatch ? (
-              <div
-                role={priceSaveBlocked ? "alert" : "status"}
-                data-testid="description-price-mismatch"
-                className={`mb-4 border px-3 py-3 text-sm text-cream ${
-                  priceSaveBlocked
-                    ? "border-brand/50 bg-brand/10"
-                    : "border-brand-orange/40 bg-brand-orange/10"
-                }`}
-              >
-                <p
-                  className={`font-display text-xs font-semibold uppercase tracking-wider ${
-                    priceSaveBlocked ? "text-red-400" : "text-brand-orange"
-                  }`}
-                >
-                  {priceSaveBlocked
-                    ? "Não dá para salvar assim"
-                    : "Preço do texto ≠ preço do anúncio"}
-                </p>
-                <p className="mt-1 leading-relaxed text-cream/90">
-                  {priceSaveBlocked
-                    ? priceMismatch.blockMessage
-                    : priceMismatch.message}
-                </p>
-                <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                  {priceSaveBlocked
-                    ? "Disponível e destaque na home ficam bloqueados até o texto e o preço baterem."
-                    : "Reservado ou vendido ainda salvam. Para voltar ao estoque, o texto e o preço precisam bater."}
-                </p>
-              </div>
-            ) : null}
-            <Field
-              label="Texto do anúncio"
-              error={errors.description}
-              hint="Conte o estado do veículo, revisões e o que ajuda a vender. Os acessórios ficam na lista de itens."
-            >
-              <textarea
-                name="description"
-                rows={5}
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                className={`${inputClass} resize-y ${
-                  priceMismatch ? "border-brand-orange/50" : ""
-                } ${errors.description ? errorBorder : ""}`}
-              />
-            </Field>
-          </Section>
-          </div>
-
+          <input type="hidden" name="description" value={description} />
           <div hidden={isWizard && !SECTIONS_BY_STEP[step].includes("itens")} style={isWizard ? { order: 1 } : undefined}>
-          <Section
-            {...sectionProps("itens")}
-            title={`Acessórios e itens · ${isMoto ? "moto" : "carro"}${
-              accessories.length > 0 ? ` (${accessories.length})` : ""
-            }`}
-            summary={accessoriesSummary(accessories)}
-          >
-            {errors.accessories ? <p role="alert" className="mb-3 text-sm text-red-400">{errors.accessories}</p> : null}
-            <LegendPasteField
-              category={category}
-              onPendingChange={setLegendPending}
-              description={description}
-              onApply={(items, manual, legendDescription) => {
-                const merged = mergeLegendAccessories(accessories, items, category, manual);
-                if (!merged) return false;
-                setAccessories(merged);
-                setErrors((current) => {
-                  const next = { ...current };
-                  delete next.accessories;
-                  return next;
-                });
-                if (legendDescription !== undefined) setDescription(legendDescription);
-                return true;
-              }}
-            />
-            <p className="mb-4 text-xs leading-relaxed text-muted">
-              Opções prontas para {isMoto ? "moto" : "carro"}. Você também pode
-              escrever pontos manuais — tudo vira lista no anúncio.
-            </p>
-
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {accessoryPresets.map((preset) => {
-                const checked = accessories.some(
-                  (item) =>
-                    item.toLocaleLowerCase("pt-BR") ===
-                    preset.toLocaleLowerCase("pt-BR"),
-                );
-                return (
-                  <label
-                    key={preset}
-                    className={`flex min-h-[44px] cursor-pointer items-center gap-2.5 border px-3 py-2.5 text-sm transition touch-manipulation ${
-                      checked
-                        ? "border-brand/50 bg-brand/10 text-cream"
-                        : "border-white/10 bg-ink text-muted hover:border-white/25 hover:text-cream"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => {
-                        setAccessories((current) => {
-                          if (checked) {
-                            return current.filter(
-                              (item) =>
-                                item.toLocaleLowerCase("pt-BR") !==
-                                preset.toLocaleLowerCase("pt-BR"),
-                            );
-                          }
-                          return normalizeAccessories([...current, preset]);
-                        });
-                      }}
-                      className="h-4 w-4 accent-brand"
-                    />
-                    {preset}
-                  </label>
-                );
-              })}
-            </div>
-
-            <div className="mt-5 border-t border-white/10 pt-5">
-              <Field
-                label="Ponto manual"
-                hint="Ex.: único dono, revisões na concessionária, pneus novos."
-              >
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    value={customAccessory}
-                    onChange={(event) => setCustomAccessory(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        const value = customAccessory.trim();
-                        if (!value) return;
-                        setAccessories((current) =>
-                          normalizeAccessories([...current, value]),
-                        );
-                        setCustomAccessory("");
-                      }
-                    }}
-                    placeholder="Digite e pressione Enter ou clique em Adicionar"
-                    className={inputClass}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const value = customAccessory.trim();
-                      if (!value) return;
-                      setAccessories((current) =>
-                        normalizeAccessories([...current, value]),
-                      );
-                      setCustomAccessory("");
-                    }}
-                    className={`${btn.outline} shrink-0`}
-                  >
-                    Adicionar
-                  </button>
-                </div>
-              </Field>
-
-              {accessories.length > 0 ? (
-                <ul className="mt-4 flex flex-wrap gap-2">
-                  {accessories.map((item) => (
-                    <li
-                      key={item}
-                      className="inline-flex items-center gap-1 border border-white/15 bg-ink pl-2.5 text-xs text-cream"
-                    >
-                      <span>{item}</span>
-                      <button
-                        type="button"
-                        aria-label={`Remover ${item}`}
-                        onClick={() =>
-                          setAccessories((current) =>
-                            current.filter((entry) => entry !== item),
-                          )
-                        }
-                        className="inline-flex h-9 w-9 items-center justify-center text-base text-muted transition touch-manipulation hover:text-brand"
-                      >
-                        ×
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          </Section>
+            <Section {...sectionProps("itens")} title="Legenda do anúncio" summary={accessoriesSummary(accessories)}>
+              {errors.accessories || legendAccessoriesError(accessories) ? <p role="alert" className="mb-3 text-sm text-red-400">{errors.accessories || legendAccessoriesError(accessories)}</p> : null}
+              {priceMismatch || errors.description ? <p role="alert" data-testid="description-price-mismatch" className="mb-3 text-sm text-red-400">{priceSaveBlocked ? "Não dá para salvar assim. " : ""}{errors.description || priceMismatch?.blockMessage}</p> : null}
+              <LegendPasteField key={legendRevision} description={description} accessories={accessories}
+                data={{ ...values, year, yearModel, color, transmission, fuel, engine }}
+                onChange={applyLegend}
+                onRemoveDescription={() => { setDescription(""); setDirty(true); }}
+                onRemoveItem={item => setAccessories(current => current.filter(entry => entry !== item))}
+                onFieldChange={changeLegendField}
+              />
+            </Section>
           </div>
 
           {mode === "create" ? (

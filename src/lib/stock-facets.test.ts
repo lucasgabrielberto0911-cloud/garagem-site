@@ -26,3 +26,8 @@ test("facetas incluem acessórios além do antigo limite de 400 e aceitam estoqu
   assert.deepEqual(buildStockFacets(rows).accessories, ["Teto solar"]);
   assert.ok(Object.values(buildStockFacets([])).every(values => values.length === 0));
 });
+
+
+test("facilidades comerciais ficam fora do filtro de opcionais", () => {
+  assert.deepEqual(buildStockFacets([{ ...row, accessories: ["Conforto: Direção elétrica", "Facilidades: Aceitamos troca"] }]).accessories, ["Conforto: Direção elétrica"]);
+});

@@ -4,6 +4,7 @@
  * Nada aqui bloqueia salvar ou publicar.
  */
 
+import { accessoryGroup } from "./legend-parser";
 import type { VehicleFormSectionId } from "@/lib/admin-form-sections";
 import { transmissionConflictAlert } from "@/lib/vehicle-display";
 
@@ -88,8 +89,9 @@ export function listingAccessories(draft: ListingDraft) {
   const seen = new Set<string>();
   const items: string[] = [];
   for (const raw of draft.accessories) {
-    const item = raw.trim();
-    if (!item) continue;
+    const parsed = accessoryGroup(raw.trim());
+    const item = parsed.text;
+    if (!item || parsed.group === "Facilidades") continue;
     const key = item.toLocaleLowerCase("pt-BR");
     if (seen.has(key)) continue;
     seen.add(key);
@@ -195,7 +197,7 @@ function captionAdvice(
   if (chars < 40) {
     return {
       id: "legenda",
-      section: "descricao",
+      section: "itens",
       title: "Legenda curta",
       detail: "Diga conservação, revisões e o que diferencia este veículo.",
     };
@@ -208,7 +210,7 @@ function captionAdvice(
     if (!judgment && chars < 140) {
       return {
         id: "legenda",
-        section: "descricao",
+        section: "itens",
         title: "Legenda ainda rasa",
         detail:
           "A ficha já está no anúncio. A legenda precisa de um motivo para chamar no WhatsApp.",
@@ -219,7 +221,7 @@ function captionAdvice(
   if (judgment.captionScore < 1.15) {
     return {
       id: "legenda",
-      section: "descricao",
+      section: "itens",
       title: "Legenda não vende",
       detail:
         "Troque o genérico por um fato: estado, uso, revisão ou um item que o outro anúncio não tem.",
@@ -227,7 +229,7 @@ function captionAdvice(
   }
   return {
     id: "legenda",
-    section: "descricao",
+    section: "itens",
     title: "Legenda ainda rasa",
     detail:
       "A ficha já está no anúncio. A legenda precisa de um motivo para chamar no WhatsApp.",

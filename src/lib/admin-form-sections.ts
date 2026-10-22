@@ -17,7 +17,7 @@ export type VehicleWizardStep = 1 | 2 | 3 | 4;
 export const SECTIONS_BY_STEP: Record<VehicleWizardStep, VehicleFormSectionId[]> = {
   1: ["fotos"],
   2: ["identificacao", "ficha"],
-  3: ["descricao", "itens", "essencial"],
+  3: ["itens", "essencial"],
   4: ["operacao"],
 };
 
@@ -33,8 +33,7 @@ export const VEHICLE_FORM_SECTIONS: ReadonlyArray<{
   { id: "essencial", label: "Preço e status", nav: "Preço" },
   { id: "fotos", label: "Fotos e vídeo", nav: "Fotos" },
   { id: "ficha", label: "Ficha técnica", nav: "Ficha" },
-  { id: "descricao", label: "Descrição", nav: "Descrição" },
-  { id: "itens", label: "Acessórios e itens", nav: "Itens" },
+  { id: "itens", label: "Legenda do anúncio", nav: "Legenda" },
   {
     id: "operacao",
     label: "Operação interna",
@@ -71,7 +70,7 @@ const FIELD_SECTION: Record<string, VehicleFormSectionId> = {
   plateEnd: "ficha",
   warranty: "ficha",
   inspection: "ficha",
-  description: "descricao",
+  description: "itens",
   accessories: "itens",
   purchasePrice: "operacao",
 };
@@ -113,7 +112,7 @@ export function initialOpenSections(
       : ["identificacao"];
   }
   const open: VehicleFormSectionId[] = ["essencial", "fotos"];
-  if (options.descriptionNeedsAttention) open.push("descricao");
+  if (options.descriptionNeedsAttention) open.push("itens");
   return open;
 }
 

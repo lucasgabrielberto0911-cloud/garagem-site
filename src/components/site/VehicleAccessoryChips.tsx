@@ -1,3 +1,4 @@
+import { accessoryGroup, groupAccessories } from "@/lib/legend-parser";
 import type { ReactNode } from "react";
 import {
   accessoryChipSpan,
@@ -75,12 +76,16 @@ function chipSpanClass(index: number, total: number) {
 }
 
 export function VehicleAccessoryChips({ items }: { items: readonly string[] }) {
+  const groups = groupAccessories(items);
   return (
-    <ul className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-3" data-accessory-chips>
+    <div data-accessory-chips>
+    {groups.map(({ group, items }) => <section key={group} aria-label={group} data-accessory-group={group}>
+    {group !== "Outros opcionais" ? <h3 className="mt-4 font-display text-sm font-semibold text-cream">{group}</h3> : null}
+    <ul className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-3">
       {items.map((item, index) => (
         <li
           key={item}
-          data-accessory-chip
+          data-accessory-chip={group === "Facilidades" ? undefined : ""}
           className={`flex min-h-[44px] items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-cream ${chipSpanClass(index, items.length)}`}
         >
           <svg
@@ -93,11 +98,13 @@ export function VehicleAccessoryChips({ items }: { items: readonly string[] }) {
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            {ICONS[accessoryIconKey(item)]}
+            {ICONS[accessoryIconKey(accessoryGroup(item).text)]}
           </svg>
-          <span className="text-[13px] leading-snug sm:text-sm first-letter:uppercase">{item}</span>
+          <span className="text-[13px] leading-snug sm:text-sm first-letter:uppercase">{accessoryGroup(item).text}</span>
         </li>
       ))}
     </ul>
+    </section>)}
+    </div>
   );
 }
