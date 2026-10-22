@@ -14,7 +14,8 @@ const SCRIPT = join(root, "scripts", "vercel-ignore.sh");
  * que não usam a API do GitHub não dependem de rede.
  */
 function runIgnore(env: Record<string, string>) {
-  const base = {
+  const base: NodeJS.ProcessEnv = {
+    NODE_ENV: "test",
     PATH: process.env.PATH ?? "",
     HOME: process.env.HOME ?? "",
     GITHUB_API_URL: "http://127.0.0.1:1",
