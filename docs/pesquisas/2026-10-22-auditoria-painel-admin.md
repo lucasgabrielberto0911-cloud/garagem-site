@@ -2,6 +2,8 @@
 
 Data: 22/10/2026. Tarefa: `10221601abce-1`. Base analisada: `6cdd75531d64d3034f80740835308f32e6d99ead` (`origin/main`).
 
+Retomada do WIP `7a592ba`, preservado na branch `reserva/10221601abce-1-auditoria-do-painel-admin-back`. Os logs temporários anteriores foram perdidos na pausa da VM. As verificações abaixo e as sondas dos achados 1, 2, 3, 4 e 6 foram executadas novamente na retomada; os demais achados foram reconferidos por leitura.
+
 ## Resumo
 
 O painel gerencia estoque, reservas, clientes, contatos, vendas, documentos e conteúdo do site. A carga considerada é a de uma loja pequena, com poucos administradores e duas ou mais abas simultâneas, inclusive durante envio e limpeza de fotos.
@@ -213,6 +215,21 @@ Todas as linhas abaixo tiveram a guarda de sessão revisada e responderam 401 à
 - A exclusão de veículo com `Sale` não apaga automaticamente a venda: a relação em `prisma/schema.prisma:204` não usa cascade. Não se confirmou a hipótese de exclusão silenciosa do histórico de vendas por essa ação.
 - A migration `supabase/migrations/20261021000100_rls_hardening.sql:49` habilita RLS e revoga acesso de `anon`/`authenticated`. Ela documenta que Prisma usa o dono das tabelas. Isso não prova que a migration esteja aplicada em produção; a [documentação de RLS](https://supabase.com/docs/guides/database/postgres/row-level-security) foi usada como referência, sem consultar o projeto remoto.
 - O changelog do Supabase foi consultado. A [mudança anunciada para cifras TLS antigas](https://supabase.com/changelog/cbc-tls-ciphers-deprecated), prevista a partir de 10/11/2026, não sustenta um defeito deste backend Node; não foi incluída como achado.
+
+### Variáveis de ambiente e fronteiras verificadas
+
+A revisão conferiu nomes e uso no código; não leu valores das credenciais de produção nem alterou a configuração da Vercel.
+
+| Configuração | Evidência e conclusão |
+| --- | --- |
+| `DATABASE_URL` / `DIRECT_URL` | `prisma/schema.prisma:5` e `src/lib/prisma.ts:7`: clientes usam as variáveis; o aviso de conexão direta não impede uma configuração incorreta. As URLs usadas nas verificações locais passaram por guarda de host e nome de banco. Pool e permissões reais permanecem sem verificação. |
+| `JWT_SECRET` / `SUPABASE_SERVICE_ROLE_KEY` | `src/lib/secrets.ts:15`: segredo explícito ou derivação da service role; ausência de ambos falha. Não há segredo padrão nessa função. A auditoria não mediu a força do valor configurado. |
+| `ADMIN_BOOTSTRAP_PASSWORD` | `src/lib/ensure-admin.ts:20`: bootstrap só é habilitado com valor explícito de pelo menos oito caracteres. Não se verificou se a variável permanece configurada em produção. |
+| Storage | `src/lib/supabase.ts:11`: cliente privilegiado exige service role, sem fallback para a chave pública. A assinatura de upload exige integração configurada e bucket privado; a divergência do multipart está no achado 5. |
+| `CRON_SECRET` | `src/app/api/cron/reservas/route.ts:9`: cron recusa segredo ausente e Authorization divergente antes de expirar reservas. A configuração e a execução real do agendamento não foram consultadas. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `RATE_LIMIT_MEMORY_ONLY` | `src/lib/rate-limit.ts:89` e `:122`: login prioriza contador compartilhado no banco e dispõe de fallback. O bypass explícito de banco por `RATE_LIMIT_MEMORY_ONLY` afeta o helper distribuído; isso não elimina a primeira tentativa do contador de login no PostgreSQL. |
+
+Não se atribuiu vazamento à simples presença de nomes de variáveis no código. As evidências concretas de exposição de detalhes e senha são os achados 6 e 9.
 
 ## Validações executadas
 
