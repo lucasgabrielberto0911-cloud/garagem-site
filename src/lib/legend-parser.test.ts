@@ -5,6 +5,98 @@ import { LegendPasteField } from "../components/admin/LegendPasteField";
 import { fold, mergeLegendAccessories, parseLegend } from "./legend-parser";
 import { getAccessoryPresets } from "./vehicle-accessories";
 
+const equipmentLegend = `✨ Equipamentos e conforto:
+✅ Central multimídia de 10,1" com Apple CarPlay e Android Auto sem fio
+✅ Painel de instrumentos digital de 7"
+✅ Ar-condicionado digital automático
+✅ Chave presencial com partida por botão
+✅ Faróis full LED
+✅ Rodas de liga leve aro 18"
+✅ Direção elétrica
+✅ Vidros, travas e retrovisores elétricos
+
+🛡️ Segurança:
+✅ 4 airbags
+✅ Câmera de ré
+✅ Sensor de estacionamento traseiro
+✅ Controle de tração e de estabilidade
+✅ Assistente de partida em rampa
+✅ Freios ABS com EBD
+✅ ISOFIX`;
+
+test("as 15 linhas marcadas são selecionadas ou criadas sem perder detalhes e compostos", () => {
+  const result = parseLegend(equipmentLegend, "carro");
+  assert.deepEqual(new Set(result.matched), new Set([
+    "Multimídia", "Apple CarPlay / Android Auto", "Ar digital", "Keyless (partida por botão)",
+    "Faróis de LED", "Rodas de liga leve", "Direção elétrica", "Vidros elétricos", "Travas elétricas",
+    "Retrovisores elétricos", "Câmera de ré", "Sensor de estacionamento", "Controle de estabilidade", "ABS",
+  ]));
+  assert.deepEqual(result.unmatched, result.listed);
+  const saved = mergeLegendAccessories([], result.matched, "carro", result.listed);
+  assert.ok(saved);
+  const lines = equipmentLegend.split("\n").filter((line) => line.startsWith("✅"));
+  assert.equal(lines.length, 15);
+  for (const line of lines) {
+    const parsed = parseLegend(line, "carro");
+    const items = [...parsed.matched, ...(parsed.listed ?? [])];
+    assert.ok(items.length, `Linha perdida: ${line}`);
+    for (const item of items) assert.ok(saved.includes(item), `Item perdido: ${item}`);
+  }
+  for (const item of [
+    'Central multimídia de 10,1" com Apple CarPlay e Android Auto sem fio',
+    'Painel de instrumentos digital de 7"', 'Rodas de liga leve aro 18"', "4 airbags",
+    "Controle de tração", "Assistente de partida em rampa", "EBD", "ISOFIX",
+  ]) assert.ok(saved.includes(item), `Detalhe perdido: ${item}`);
+  assert.ok(!saved.includes("Airbag duplo"));
+  assert.ok(!saved.some((item) => /conforto:|segurança:|✅|✨|🛡/iu.test(item)));
+});
+
+test("marcadores variados e texto sem acento reconhecem presets e preservam itens livres inteiros", () => {
+  const result = parseLegend(`Conforto:
+• DIRECAO ELETRICA
+- Vidros, travas e retrovisores eletricos
+* CarPlay e Android Auto
+✔ Chave presencial com partida por botao
+🔹 Bancos com aquecimento e memoria
+Seguranca:
+🛞 Controle de tracao e estabilidade
+▪ Freios ABS com EBD`, "carro");
+  assert.deepEqual(new Set(result.matched), new Set([
+    "Direção elétrica", "Vidros elétricos", "Travas elétricas", "Retrovisores elétricos",
+    "Apple CarPlay / Android Auto", "Keyless (partida por botão)", "Controle de estabilidade", "ABS",
+  ]));
+  assert.deepEqual(result.listed, ["Bancos com aquecimento e memoria", "Controle de tração", "EBD"]);
+});
+
+test("itens já existentes não duplicam e linha marcada não descarta preset de outra categoria", () => {
+  const result = parseLegend(`Opcionais:
+★ camera de re
+– CAMERA DE RE
+* Revisoes e garantia de fabrica
+✔ Bauleto original`, "carro");
+  assert.deepEqual(result.matched, ["Câmera de ré"]);
+  assert.deepEqual(result.listed, ["Revisoes e garantia de fabrica", "Bauleto original"]);
+  assert.deepEqual(mergeLegendAccessories(["Câmera de ré"], result.matched, "carro", result.listed), [
+    "Câmera de ré", "Revisoes e garantia de fabrica", "Bauleto original",
+  ]);
+});
+
+test("lista marcada acima do limite é recusada sem perder silenciosamente os últimos itens", () => {
+  const result = parseLegend(Array.from({ length: 61 }, (_, i) => `✅ Equipamento exclusivo ${i}`).join("\n"), "carro");
+  assert.equal(result.listed?.length, 61);
+  assert.equal(mergeLegendAccessories([], result.matched, "carro", result.listed), null);
+});
+
+test("compostos sem marcador também reconhecem os presets e mantêm o texto da descrição", () => {
+  const text = "Vidros, travas e retrovisores elétricos; Controle de tração e de estabilidade; ABS com EBD";
+  const result = parseLegend(text, "carro");
+  assert.deepEqual(new Set(result.matched), new Set([
+    "Vidros elétricos", "Travas elétricas", "Retrovisores elétricos", "Controle de estabilidade", "ABS",
+  ]));
+  assert.deepEqual(result.unmatched, ["Controle de tração", "EBD"]);
+  assert.equal(result.description, text);
+});
+
 test("normaliza acentos, caixa e espaços, mantendo a legenda original", () => {
   const text = "  DIRECAO   Eletrica; Câmera de ré  ";
   const result = parseLegend(text, "carro");
@@ -199,6 +291,7 @@ function legendField(t: TestContext, overrides: Partial<React.ComponentProps<typ
     props,
     textarea: () => find((element) => element.type === "textarea"),
     click: (label: string) => (find((element) => element.type === "button" && element.props.children === label).onClick as () => void)(),
+    remove: (label: string) => (find((element) => element.type === "button" && element.props["aria-label"] === `Remover ${label}`).onClick as () => void)(),
     change: (text: string) => (find((element) => element.type === "textarea").onChange as (event: unknown) => void)({ target: { value: text } }),
     deselect: (label: string) => {
       cursor = 0;
@@ -223,6 +316,32 @@ function legendField(t: TestContext, overrides: Partial<React.ComponentProps<typ
     },
   };
 }
+
+test("aplicar legenda marcada inclui automaticamente os 15 itens no array salvo", (t) => {
+  let saved: string[] | null = [];
+  const field = legendField(t, { category: "carro", onApply: (selected, manual) => {
+    saved = mergeLegendAccessories(["Direção elétrica"], selected, "carro", manual);
+    return saved !== null;
+  } });
+  field.change(equipmentLegend);
+  field.click("Analisar");
+  field.click("Analisar");
+  field.click("Aplicar");
+  const parsed = parseLegend(equipmentLegend, "carro");
+  assert.deepEqual(new Set(saved), new Set([...parsed.matched, ...(parsed.listed ?? [])]));
+  assert.equal(field.textarea().value, "");
+});
+
+test("remover opcional livre automático persiste ao reanalisar a legenda", (t) => {
+  const apply = t.mock.fn(() => true);
+  const field = legendField(t, { category: "carro", onApply: apply });
+  field.change("✅ ISOFIX\n✅ Direção elétrica");
+  field.click("Analisar");
+  field.remove("ISOFIX");
+  field.click("Analisar");
+  field.click("Aplicar");
+  assert.deepEqual(apply.mock.calls[0].arguments, [["Direção elétrica"], [], undefined]);
+});
 
 test("cancelar troca da descrição ainda aplica os acessórios e pontos manuais", (t) => {
   const apply = t.mock.fn(() => true);

@@ -8,6 +8,7 @@ import {
 export type LegendParseResult = {
   matched: string[];
   unmatched: string[];
+  listed?: string[];
   fullText: string;
   description: string;
 };
@@ -23,13 +24,13 @@ export const LEGEND_SYNONYMS: Record<string, string[]> = {
   "Sensor de estacionamento": ["sensor de ré", "sensor ré"],
   "Câmera de ré": ["cam de ré", "câmera ré"],
   "Bancos de couro": ["couro", "banco de couro", "bancos em couro", "banco em couro"],
-  "Airbag duplo": ["airbag", "airbags"],
+  "Airbag duplo": ["2 airbags", "dois airbags"],
   "Piloto automático": ["cruise", "cruise control"],
   "Rodas de liga leve": ["liga leve"],
   "Teto solar": ["teto panorâmico", "panorâmico"],
-  "Faróis de LED": ["led", "farol de led"],
+  "Faróis de LED": ["led", "farol de led", "faróis full LED"],
   "Apple CarPlay / Android Auto": ["carplay", "apple carplay", "android auto"],
-  "Keyless (partida por botão)": ["keyless", "partida botão", "partida por botão", "start stop", "chave presencial"],
+  "Keyless (partida por botão)": ["keyless", "partida botão", "partida por botão", "start stop", "chave presencial", "chave presencial com partida por botão"],
   "Farol de LED": ["led", "farois de led"],
   "LED diurno (DRL)": ["led diurno"],
   "Rodas de liga": ["liga leve"],
@@ -46,8 +47,15 @@ function tokens(text: string) {
   }));
 }
 
-export function parseLegend(text: string, category: VehicleCategory): LegendParseResult {
-  const source = text
+function expandCompoundItems(text: string) {
+  return text
+    .replace(/vidros,?\s+travas\s+e\s+retrovisores\s+el[eé]tricos/gi, "Vidros elétricos; Travas elétricas; Retrovisores elétricos")
+    .replace(/controle de tra[cç][aã]o e (?:de )?estabilidade/gi, "Controle de tração; Controle de estabilidade")
+    .replace(/(?:freios?\s+)?ABS com EBD/gi, "ABS; EBD");
+}
+
+function parsePlainLegend(text: string, category: VehicleCategory): LegendParseResult {
+  const description = text
     .replace(/(?:https?:\/\/|www\.)[^\s]+/gi, " ")
     .replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}\u200D\uFE0F\u20E3]/gu, "")
     .split(/\r?\n|\r/)
@@ -56,6 +64,7 @@ export function parseLegend(text: string, category: VehicleCategory): LegendPars
     .map((line) => line.replace(/\bsua\s+garagem\b/giu, "Garagem").replace(/^[\s•–—-]+/, "").trim())
     .filter(Boolean)
     .join("\n");
+  const source = expandCompoundItems(description);
   const words = tokens(source);
   const used = new Set<number>();
   const matched: string[] = [];
@@ -101,7 +110,47 @@ export function parseLegend(text: string, category: VehicleCategory): LegendPars
       return true;
     })).slice(0, Math.max(0, 60 - matched.length));
 
-  return { matched, unmatched, fullText: text, description: source };
+  return { matched, unmatched, fullText: text, description };
+}
+
+/** Linhas marcadas são itens completos; detalhes livres não podem virar fragmentos. */
+export function parseLegend(text: string, category: VehicleCategory): LegendParseResult {
+  const plain: string[] = [];
+  const descriptions: string[] = [];
+  const matched: string[] = [];
+  const listed: string[] = [];
+  for (const raw of text.split(/\r?\n|\r/)) {
+    const clean = raw
+      .replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}\u200D\uFE0F\u20E3]/gu, "")
+      .replace(/^[\s\p{P}\p{S}]+/u, "").trim();
+    if (/^(?:equipamentos(?: e conforto)?|conforto|seguranca|opcionais|acessorios)\s*:?$/i.test(fold(clean))) continue;
+    const marked = /^[\s]*[\p{P}\p{S}]/u.test(raw);
+    if (!marked || !clean || /^(?:https?:\/\/|www\.)/i.test(clean) || /^(?:sua\s+)?garagem[\s\p{P}]*$/iu.test(clean)) {
+      plain.push(raw);
+      descriptions.push(parsePlainLegend(raw, category).description);
+      continue;
+    }
+    const description = parsePlainLegend(clean, category).description;
+    if (!description) continue;
+    descriptions.push(description);
+    for (const item of expandCompoundItems(description).split(/\s*[;•]\s*/)) {
+      const parsed = parsePlainLegend(item, category);
+      matched.push(...parsed.matched);
+      // Preserva especificações (tela, quantidade, aro) e itens sem preset por inteiro.
+      if (!parsed.matched.length || parsed.unmatched.length) listed.push(item);
+    }
+  }
+  const parsed = parsePlainLegend(plain.join("\n"), category);
+  const unique = (items: string[]) => items.filter((item, index) =>
+    items.findIndex((other) => fold(other).replace(/\s+/g, " ") === fold(item).replace(/\s+/g, " ")) === index);
+  const result: LegendParseResult = {
+    matched: unique([...parsed.matched, ...matched]),
+    unmatched: unique([...parsed.unmatched, ...listed]),
+    fullText: text,
+    description: descriptions.filter(Boolean).join("\n"),
+  };
+  if (listed.length) result.listed = unique(listed);
+  return result;
 }
 
 /** Preserva os existentes; recusa acréscimos que ultrapassem o limite. */

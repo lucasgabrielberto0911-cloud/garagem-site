@@ -29,9 +29,12 @@ export function LegendPasteField({ category, description, onApply }: Props) {
   function analyze() {
     const parsed = parseLegend(text, category);
     const excludedKeys = new Set([...manual, ...discarded].map((m) => fold(m).replace(/\s+/g, " ").trim()));
+    const listed = (parsed.listed ?? []).filter((item) => !excludedKeys.has(fold(item).replace(/\s+/g, " ").trim()));
+    setManual((current) => [...current, ...listed]);
+    const listedKeys = new Set(listed.map((item) => fold(item).replace(/\s+/g, " ").trim()));
     setResult({ ...parsed, category, unmatched: parsed.unmatched.filter((item) => {
       const key = fold(item).replace(/\s+/g, " ").trim();
-      return !excludedKeys.has(key);
+      return !excludedKeys.has(key) && !listedKeys.has(key);
     })});
     if (text === prevTextRef.current && analysis?.category === category) {
       setSelected((current) => current.filter((item) => parsed.matched.includes(item)));
@@ -117,14 +120,17 @@ export function LegendPasteField({ category, description, onApply }: Props) {
 
           {manual.length > 0 && (
             <div>
-              <p className="mb-2 text-sm text-cream">Pontos manuais selecionados</p>
+              <p className="mb-2 text-sm text-cream">Opcionais livres selecionados</p>
               <ul className="flex flex-wrap gap-2">
                 {manual.map((item) => (
                   <li key={item} className="flex max-w-full items-center border border-white/15 pl-3 text-sm text-cream">
                     <span className="break-words">{item}</span>
                     <button type="button" aria-label={`Remover ${item}`}
                       className="min-h-[44px] min-w-[44px] shrink-0 text-muted hover:text-brand"
-                      onClick={() => setManual((current) => current.filter((value) => value !== item))}>×</button>
+                      onClick={() => {
+                        setManual((current) => current.filter((value) => value !== item));
+                        setDiscarded((current) => [...current, item]);
+                      }}>×</button>
                   </li>
                 ))}
               </ul>
