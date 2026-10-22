@@ -8,7 +8,7 @@ Produção: <https://www.suagaragem.net>.
 - Next.js (App Router, React 19, React Compiler) e Tailwind CSS 3
 - PostgreSQL no Supabase, acessado com Prisma (`prisma/schema.prisma`)
 - Fotos e documentos no Supabase Storage (bucket público `veiculos`, privado `documentos`)
-- Deploy na Vercel (região `gru1`, ver `vercel.json`)
+- Deploy na Vercel (região `gru1`; ver `vercel.json`)
 - Assistente do site com Gemini (`GEMINI_API_KEY`)
 
 ## Como está organizado
