@@ -11,13 +11,14 @@ import { btn, inputClass } from "@/components/admin/ui";
 type Props = {
   category: VehicleCategory;
   description: string;
-  onApply: (accessories: string[], description?: string) => boolean;
+  onApply: (selected: string[], manual: string[], description?: string) => boolean;
 };
 
 export function LegendPasteField({ category, description, onApply }: Props) {
   const id = useId();
   const [text, setText] = useState("");
-  const [result, setResult] = useState<LegendParseResult | null>(null);
+  const [analysis, setResult] = useState<(LegendParseResult & { category: VehicleCategory }) | null>(null);
+  const result = analysis?.category === category ? analysis : null;
   const [selected, setSelected] = useState<string[]>([]);
   const [manual, setManual] = useState<string[]>([]);
   const [useDescription, setUseDescription] = useState(false);
@@ -25,9 +26,8 @@ export function LegendPasteField({ category, description, onApply }: Props) {
 
   function analyze() {
     const parsed = parseLegend(text, category);
-    setResult(parsed);
+    setResult({ ...parsed, category, unmatched: parsed.unmatched.filter((item) => !manual.includes(item)) });
     setSelected(parsed.matched);
-    setManual([]);
     setApplyError("");
   }
 
@@ -120,13 +120,14 @@ export function LegendPasteField({ category, description, onApply }: Props) {
           </label>
           <button type="button" className={`${btn.outline} min-h-[44px] w-full sm:w-auto`}
             onClick={() => {
-              if (useDescription && description.trim() && description !== result.description &&
-                !window.confirm("Já existe uma descrição. Substituir pela legenda?")) return;
-              if (!onApply([...selected, ...manual], useDescription ? result.description : undefined)) {
+              const replaceDescription = useDescription && (!description.trim() || description === result.description ||
+                window.confirm("Já existe uma descrição. Substituir pela legenda?"));
+              if (!onApply(selected, manual, replaceDescription ? result.description : undefined)) {
                 setApplyError("O limite é de 60 acessórios. Desmarque itens ou remova acessórios existentes antes de aplicar.");
                 return;
               }
               setResult(null);
+              setManual([]);
               setUseDescription(false);
             }}>
             Aplicar

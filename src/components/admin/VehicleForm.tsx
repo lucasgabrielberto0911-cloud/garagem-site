@@ -1569,11 +1569,10 @@ export function VehicleForm({
             summary={accessoriesSummary(accessories)}
           >
             <LegendPasteField
-              key={category}
               category={category}
               description={description}
-              onApply={(items, legendDescription) => {
-                const merged = mergeLegendAccessories(accessories, items, category);
+              onApply={(items, manual, legendDescription) => {
+                const merged = mergeLegendAccessories(accessories, items, category, manual);
                 if (!merged) return false;
                 setAccessories(merged);
                 if (legendDescription !== undefined) setDescription(legendDescription);

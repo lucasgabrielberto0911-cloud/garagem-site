@@ -83,7 +83,7 @@ export function parseLegend(text: string, category: VehicleCategory): LegendPars
 
   const seen = new Set<string>();
   const unmatched = normalizeAccessories(remaining.join("")
-    .split(/[\n\r,;•]+|\s+[\/–—-]\s+/)
+    .split(/[\n\r,;•]+|\s+[\/–—-]\s+|\s+e\s+/i)
     .map((fragment) => fragment.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
     .filter((fragment) => {
       const key = fold(fragment).replace(/\s+/g, " ").trim();
@@ -100,9 +100,10 @@ export function mergeLegendAccessories(
   existing: string[],
   additions: string[],
   category: VehicleCategory,
+  manual: string[] = [],
 ): string[] | null {
   const seen = new Set(existing.map((item) => fold(item).replace(/\s+/g, " ").trim()));
-  const added = filterAccessoriesForCategory(additions, category).flatMap((item) =>
+  const added = [...filterAccessoriesForCategory(additions, category), ...manual].flatMap((item) =>
     normalizeAccessories([item]),
   ).filter((item) => {
     const key = fold(item).replace(/\s+/g, " ").trim();
