@@ -29,7 +29,7 @@ export function matchesSaleDocumentSnapshot(snapshot: unknown, sale: { customerI
     ? document.customerId === sale.customerId && String(document.cpf ?? "").replace(/\D/g, "") === sale.cpf.replace(/\D/g, "")
     : Boolean(sale.cpf) && String(document.cpf ?? "").replace(/\D/g, "") === sale.cpf.replace(/\D/g, "");
   const snapshotPayments = parseContractPaymentsJson(JSON.stringify(document.payments ?? []));
-  const sortPayments = (payments: ContractPaymentItem[] | undefined) => payments ? [...payments].sort((a, b) => a.method.localeCompare(b.method)) : undefined;
+  const sortPayments = (payments: ContractPaymentItem[] | undefined) => payments ? payments.map(({ signalDate: _signalDate, ...payment }) => payment).sort((a, b) => a.method.localeCompare(b.method)) : undefined;
   return sameBuyer && Number(document.total ?? document.amount) === sale.total && JSON.stringify(sortPayments(snapshotPayments)) === JSON.stringify(sortPayments(sale.payments));
 }
 

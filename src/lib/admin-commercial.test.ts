@@ -33,6 +33,20 @@ test("reemissão mantém pagamentos em ordem diferente e exige CPF atual", () =>
   assert.equal(matchesSaleDocumentSnapshot({ ...reissued, cpf: "529.982.247-25" }, sale), false);
   assert.equal(matchesSaleDocumentSnapshot({ ...reissued, payments: [{ method: "sinal", amount: 4000 }, sale.payments[0]] }, sale), false);
 });
+test("reemissão preserva data do recibo sem tornar a nova tentativa obsoleta", () => {
+  const sale = {
+    customerId: "cliente-b", cpf: "11144477735", total: 60000,
+    payments: [{ method: "pix" as const, amount: 55000 }, { method: "sinal" as const, amount: 5000 }],
+  };
+  const receiptDate = "2026-10-21T12:00:00.000Z";
+  const initial = { customerId: sale.customerId, cpf: sale.cpf, total: sale.total, signal: { amount: 5000, date: receiptDate }, payments: sale.payments };
+  const reissuedPayments = parseContractPaymentsJson(JSON.stringify([
+    { method: "sinal", amount: 5000, signalDate: receiptDate }, sale.payments[0],
+  ]));
+  assert.ok(reissuedPayments);
+  assert.equal(matchesSaleDocumentSnapshot({ ...initial, payments: reissuedPayments }, sale), true);
+  assert.equal(matchesSaleDocumentSnapshot({ ...initial, payments: [{ method: "sinal", amount: 4000, signalDate: receiptDate }, sale.payments[0]] }, sale), false);
+});
 test("sugestão respeita custo, margem mínima e dias de giro", () => {
   const base = { price: 60000, purchase: 50000, costs: 2000, days: 90, margin: 4000, consigned: false };
   assert.equal(suggestPrice(base)?.price, 57000);
