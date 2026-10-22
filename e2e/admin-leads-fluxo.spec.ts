@@ -158,12 +158,16 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   for (const label of ["Anúncio", "Fotos", "Venda", "Custos e docs", "Verificado"]) {
     await expect(tabsNav.getByRole("link", { name: new RegExp(`^${label}`) })).toBeVisible();
   }
-  await page.locator('[name="priceDisplay"]').fill("86543.50");
+  await avancarEtapa(page, 3);
+  await form.locator('[name="priceDisplay"]').fill("86543.50");
   await tabsNav.getByRole("link", { name: "Fotos", exact: true }).click();
+  await expect(page.locator("#wizard-title")).toHaveText("Etapa 1 de 4: Fotos");
   await expect(form.getByText("Já temos vídeo deste veículo", { exact: true })).toBeVisible();
   await expect(form.locator('[name="priceDisplay"]')).toHaveValue("86.543,50");
   await tabsNav.getByRole("link", { name: "Anúncio", exact: true }).click();
+  await avancarEtapa(page, 3);
   await expect(form.locator('[name="priceDisplay"]')).toBeVisible();
+  await avancarEtapa(page, 4);
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).price).toBe(86543.5);
   await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
@@ -172,7 +176,10 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect(page.getByText("Fotos inválidas.", { exact: true })).toBeVisible();
   await form.locator('[name="photoUrls"]').evaluate((input: HTMLInputElement) => { input.value = "[]"; });
+  await form.getByRole("button", { name: "Voltar", exact: true }).click();
+  await expect(page.locator("#wizard-title")).toHaveText("Etapa 3 de 4: Descrição, opcionais e preço");
   await form.locator('[name="priceDisplay"]').fill("85.900");
+  await avancarEtapa(page, 4);
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).price).toBe(85900);
   await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
