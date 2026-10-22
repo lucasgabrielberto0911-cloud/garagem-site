@@ -57,7 +57,7 @@ test("reserva, avaliação e fluxo único geram venda, contrato e recibo", async
   expect((await db.vehicle.findUniqueOrThrow({ where: { id: vehicleId } })).status).toBe("disponivel");
   await db.vehicleReservation.create({ data: { vehicleId, customerId, deposit: 1000, expiresAt: new Date(Date.now() + 86400000) } });
   await db.vehicle.update({ where: { id: vehicleId }, data: { status: "reservado" } });
-  const heldReceipt = await db.commercialDocument.create({ data: { vehicleId, kind: "recibo", snapshot: { reservationId: (await db.vehicleReservation.findFirstOrThrow({ where: { vehicleId, status: "ativa" } })).id, amount: 1000, total: 60000, payment: "Sinal", payments: [{ method: "sinal", amount: 1000 }] } } });
+  const heldReceipt = await db.commercialDocument.create({ data: { vehicleId, kind: "recibo", snapshot: { reservationId: (await db.vehicleReservation.findFirstOrThrow({ where: { vehicleId, status: "ativa" } })).id, customer: "Cliente Comercial E2E", customerId, cpf: "11144477735", phone: "27999990000", vehicle: "Honda Civic Comercial E2E", plate: "", amount: 1000, total: 60000, payment: "Sinal", conditions: "", seller: "Garagem", date: new Date().toISOString(), payments: [{ method: "sinal", amount: 1000 }] } } });
 
   await page.goto(`/admin/vendas/nova?veiculo=${vehicleId}`);
   await page.getByRole("button", { name: "Continuar" }).click();
@@ -535,7 +535,7 @@ test.describe("fluxo único de venda", () => {
       await page.getByLabel("Comissão (R$)").fill("0");
       await page.getByRole("button", { name: "Continuar" }).click();
       await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
-      await expect(page.getByRole("alert")).toHaveText("Já existe cliente com este telefone ou CPF; selecione o cadastro existente.");
+      await expect(page.getByText("Já existe cliente com este telefone ou CPF; selecione o cadastro existente.", { exact: true })).toHaveRole("alert");
     }
     expect(await db.sale.count({ where: { vehicleId: flowVehicleId } })).toBe(0);
   });
