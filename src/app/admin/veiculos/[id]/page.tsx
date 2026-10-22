@@ -131,6 +131,7 @@ export default async function EditVehiclePage({
         subtitle={
           <>
             {`No estoque há ${days} dia(s) · ${vehicle.photos.length} foto(s)`}
+            {view === "anuncio" || view === "fotos" ? <span className="mt-1 block">Revise o anúncio em quatro etapas.</span> : null}
             {gapLine ? <span className="mt-1 block">{gapLine}</span> : null}
           </>
         }
@@ -224,6 +225,7 @@ export default async function EditVehiclePage({
         }} />
       ) : (
         <VehicleTabsLoader view="anuncio" panelProps={{
+          layout: "wizard",
           mode: "edit",
           vehicle,
           adminId: session.adminId,

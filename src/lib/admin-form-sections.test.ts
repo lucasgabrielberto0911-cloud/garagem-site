@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  SECTIONS_BY_STEP,
   accessoriesSummary,
   descriptionSummary,
   fichaSummary,
@@ -210,4 +211,16 @@ test("detalhes dos resumos: limites e formatação", () => {
     fichaSummary({ year: "", yearModel: "", km: "", transmission: "", fuel: "" }),
     "Ano, km, câmbio",
   );
+});
+
+test("wizard distribui cada seção uma vez nas quatro etapas", () => {
+  assert.deepEqual(SECTIONS_BY_STEP, {
+    1: ["fotos"],
+    2: ["identificacao", "ficha"],
+    3: ["descricao", "itens", "essencial"],
+    4: ["operacao"],
+  });
+  const sections = Object.values(SECTIONS_BY_STEP).flat();
+  assert.equal(new Set(sections).size, sections.length);
+  assert.deepEqual([...sections].sort(), vehicleFormSections("create").map(s => s.id).sort());
 });
