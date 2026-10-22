@@ -47,6 +47,7 @@ test("estoque SSR lista cada ficha e a grade segue em lotes de 8", () => {
           version: null,
           yearModel: 2016,
           price: 47900,
+          createdAt: new Date(),
         },
       ],
     }),

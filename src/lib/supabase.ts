@@ -33,35 +33,58 @@ export function hasSupabaseServiceRole() {
   return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
 }
 
-export { VEHICLE_PHOTOS_BUCKET, VEHICLE_DOCS_BUCKET, PRIVATE_FILE_PREFIX, parseStoredFileRef, storagePathFromPublicUrl, privateFileRef, isInternalAdminFileUrl, adminFileViewHref, type StoredFileRef } from "@/lib/storage-file-ref";
+export { VEHICLE_PHOTOS_BUCKET, VEHICLE_DOCS_BUCKET, PRIVATE_FILE_PREFIX, parseStoredFileRef, storagePathFromPublicUrl, isAllowedStorageHost, privateFileRef, isInternalAdminFileUrl, adminFileViewHref, type StoredFileRef } from "@/lib/storage-file-ref";
 
 export async function ensurePrivateDocsBucket() {
   const supabase = getSupabaseAdmin();
-  const { data: buckets, error: listError } =
-    await supabase.storage.listBuckets();
-  if (listError) {
-    console.error("[storage] listBuckets:", listError);
-  }
-  if (buckets?.some((bucket) => bucket.name === VEHICLE_DOCS_BUCKET)) {
-    return;
+  const { data: bucket } =
+    await supabase.storage.getBucket(VEHICLE_DOCS_BUCKET);
+
+  if (bucket) {
+    if (bucket.public) {
+      throw new Error(
+        `O bucket ${VEHICLE_DOCS_BUCKET} está configurado como público. O armazenamento de documentos exige bucket privado.`,
+      );
+    }
+    return bucket;
   }
 
-  const { error } = await supabase.storage.createBucket(VEHICLE_DOCS_BUCKET, {
-    public: false,
-    fileSizeLimit: 12 * 1024 * 1024,
-    allowedMimeTypes: [
-      "application/pdf",
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-    ],
-  });
-  if (error && !/already exists|duplicate|exists/i.test(error.message)) {
-    console.error("[storage] createBucket documentos:", error);
+  const { error: createError } = await supabase.storage.createBucket(
+    VEHICLE_DOCS_BUCKET,
+    {
+      public: false,
+      fileSizeLimit: 12 * 1024 * 1024,
+      allowedMimeTypes: [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+      ],
+    },
+  );
+
+  if (
+    createError &&
+    !/already exists|duplicate|exists/i.test(createError.message)
+  ) {
+    console.error("[storage] createBucket documentos:", createError);
     throw new Error(
       "Não foi possível criar o bucket privado `documentos`. Crie no painel do Supabase (Storage → New bucket, público desligado).",
     );
   }
+
+  const { data: verified } =
+    await supabase.storage.getBucket(VEHICLE_DOCS_BUCKET);
+  if (verified) {
+    if (verified.public) {
+      throw new Error(
+        `O bucket ${VEHICLE_DOCS_BUCKET} está configurado como público. O armazenamento de documentos exige bucket privado.`,
+      );
+    }
+    return verified;
+  }
+
+  return { id: VEHICLE_DOCS_BUCKET, name: VEHICLE_DOCS_BUCKET, public: false, file_size_limit: 12 * 1024 * 1024 };
 }
 
 export async function deleteStorageFiles(

@@ -21,7 +21,7 @@ test("contexto de busca sobrevive ao histórico visual curto e acumula novos fil
     { role: "user", content: "Manual de 45 a 50 mil" },
     { role: "assistant", content: "O Palio Weekend.", vehicles: [{
       id: "weekend", href: "/estoque/weekend", title: "Fiat Palio Weekend", brand: "Fiat", model: "Palio Weekend",
-      year: 2016, km: 50000, price: 47900, color: "Branco", transmission: "Manual", photo: null,
+      year: 2016, km: 50000, price: 47900, color: "Branco", transmission: "Manual", photo: null, version: null,
     }] },
     ...Array.from({ length: 30 }, (_, index) => ({ role: index % 2 ? "assistant" as const : "user" as const, content: index % 2 ? "Quer ampliar?" : "outros" })),
   ];

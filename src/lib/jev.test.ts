@@ -11,9 +11,9 @@ import {
 } from "./jev";
 
 const KEY = "chave-secreta-de-teste-123";
-const QUESTIONS = {
+const QUESTIONS: Record<string, JevQuestion> = {
   temperatura: { type: "score", instructions: "?", criteria: ["a", "b", "c"] },
-} as const;
+};
 
 let warnings: string[] = [];
 const realWarn = console.warn;

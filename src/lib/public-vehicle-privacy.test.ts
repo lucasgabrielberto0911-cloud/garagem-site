@@ -12,7 +12,7 @@ test("API de cards não consulta nem devolve a cidade interna, mesmo em um regis
     prisma.vehicle.findMany = (async (args: { select: Record<string, unknown> }) => {
       assert.equal("locationCity" in args.select, false);
       return [{ id: "fixture", brand: "Honda", model: "Civic", locationCity: "serra", photos: [{ url: "https://example.test/photo.webp" }] }];
-    }) as typeof original;
+    }) as unknown as typeof original;
     const rows = await queryPublicVehicleCards({ where: { id: "fixture" } });
     assert.equal("locationCity" in rows[0]!, false);
     assert.doesNotMatch(JSON.stringify(rows), /serra|locationCity/);
