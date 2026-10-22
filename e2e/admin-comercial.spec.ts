@@ -288,7 +288,9 @@ test.describe("fluxo único de venda", () => {
     await page.getByLabel("Valor total negociado").fill("67.000,00");
     await page.getByRole("button", { name: /À vista\/PIX/ }).click();
     await page.getByLabel("Valor", { exact: true }).fill("67.000,00");
+    await page.getByLabel("Valor", { exact: true }).blur();
     await page.getByRole("button", { name: "Continuar" }).click();
+    await expect(page.getByRole("heading", { name: "Vendedor" })).toBeVisible();
     await page.getByLabel("Responsável comercial").fill("Vendedor E2E");
     await page.getByLabel("Comissão (R$)").fill("0");
     await page.getByRole("button", { name: "Continuar" }).click();
@@ -367,7 +369,9 @@ test.describe("fluxo único de venda", () => {
     await page.getByLabel("Valor total negociado").fill("67.000,00");
     await page.getByRole("button", { name: /À vista\/PIX/ }).click();
     await page.getByLabel("Valor", { exact: true }).fill("67.000,00");
+    await page.getByLabel("Valor", { exact: true }).blur();
     await page.getByRole("button", { name: "Continuar" }).click();
+    await expect(page.getByRole("heading", { name: "Vendedor" })).toBeVisible();
     await page.getByLabel("Responsável comercial").fill("Vendedor E2E");
     await page.getByLabel("Comissão (R$)").fill("0");
     await page.getByRole("button", { name: "Continuar" }).click();
@@ -537,7 +541,9 @@ test.describe("fluxo único de venda", () => {
       await page.getByLabel("Valor total negociado").fill("67.000,00");
       await page.getByRole("button", { name: /À vista\/PIX/ }).click();
       await page.getByLabel("Valor", { exact: true }).fill("67.000,00");
+      await page.getByLabel("Valor", { exact: true }).blur();
       await page.getByRole("button", { name: "Continuar" }).click();
+      await expect(page.getByRole("heading", { name: "Vendedor" })).toBeVisible();
       await page.getByLabel("Responsável comercial").fill("Vendedor E2E");
       await page.getByLabel("Comissão (R$)").fill("0");
       await page.getByRole("button", { name: "Continuar" }).click();

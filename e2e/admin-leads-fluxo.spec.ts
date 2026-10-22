@@ -169,7 +169,9 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await page.getByRole("button", { name: /À vista\/PIX/ }).click();
   await page.getByLabel("Valor total negociado").fill("85.900,00");
   await page.getByLabel("Valor", { exact: true }).fill("85.900,00");
+  await page.getByLabel("Valor", { exact: true }).blur();
   await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page.getByRole("heading", { name: "Vendedor" })).toBeVisible();
   await page.getByLabel("Responsável comercial").fill(conta.prefixo);
   await page.getByLabel("Comissão (R$)").fill("0");
   await page.getByRole("button", { name: "Continuar" }).click();
