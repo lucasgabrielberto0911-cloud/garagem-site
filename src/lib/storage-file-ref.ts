@@ -16,12 +16,93 @@ function publicMarker(bucket: string) {
   return `/storage/v1/object/public/${bucket}/`;
 }
 
+export function isAllowedStorageHost(
+  hostname: string,
+  port?: string,
+  protocol?: string,
+): boolean {
+  const host = hostname.toLowerCase().trim();
+
+  const configured = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (configured) {
+    try {
+      const configuredUrl = new URL(configured);
+      const configuredHost = configuredUrl.hostname.toLowerCase();
+      const configuredPort = configuredUrl.port;
+      const configuredProtocol = configuredUrl.protocol;
+
+      // Se NEXT_PUBLIC_SUPABASE_URL estiver explicitamente configurada (inclusive servidor mock em teste)
+      if (
+        host === configuredHost &&
+        (port ?? "") === configuredPort &&
+        (!protocol || protocol === configuredProtocol)
+      ) {
+        return true;
+      }
+    } catch {}
+  }
+
+  // Rejeita loopback e IPs especiais/privados
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host === "[::1]" ||
+    host === "0.0.0.0" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host === "169.254.169.254"
+  ) {
+    return false;
+  }
+
+  // Se não for a URL configurada, protocolo DEVE ser https e sem porta arbitrária
+  if (protocol && protocol !== "https:") {
+    return false;
+  }
+  if (port && port !== "443") {
+    return false;
+  }
+
+  // Permite subdomínios supabase.co válidos (ex: x.supabase.co em testes/staging)
+  // Rejeita qualquer outro host externo
+  if (host === "supabase.co" || host.endsWith(".supabase.co")) {
+    return /^[a-z0-9-]+(\.[a-z0-9-]+)*\.supabase\.co$/.test(host);
+  }
+
+  return false;
+}
+
 /** Extrai o path do objeto a partir da URL pública do Storage. */
 export function storagePathFromPublicUrl(url: string): string | null {
-  const marker = publicMarker(VEHICLE_PHOTOS_BUCKET);
-  const index = url.indexOf(marker);
-  if (index === -1) return null;
-  return decodeURIComponent(url.slice(index + marker.length));
+  if (!url || typeof url !== "string") return null;
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.length > 2048) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.username || parsed.password) return null;
+    if (!isAllowedStorageHost(parsed.hostname, parsed.port, parsed.protocol))
+      return null;
+
+    const marker = publicMarker(VEHICLE_PHOTOS_BUCKET);
+    const index = parsed.pathname.indexOf(marker);
+    if (index === -1) return null;
+
+    const rawPath = parsed.pathname.slice(index + marker.length);
+    const decoded = decodeURIComponent(rawPath);
+    if (
+      !decoded ||
+      decoded.startsWith("/") ||
+      decoded.includes("\\") ||
+      decoded.includes("..")
+    ) {
+      return null;
+    }
+    return decoded;
+  } catch {
+    return null;
+  }
 }
 
 export function parseStoredFileRef(
@@ -32,7 +113,7 @@ export function parseStoredFileRef(
 
   if (raw.startsWith(PRIVATE_FILE_PREFIX)) {
     const path = raw.slice(PRIVATE_FILE_PREFIX.length).replace(/^\/+/, "");
-    if (!path || path.includes("..")) return null;
+    if (!path || path.includes("..") || path.includes("\\")) return null;
     return { kind: "private", bucket: VEHICLE_DOCS_BUCKET, path };
   }
 

@@ -68,7 +68,7 @@ test("contato com nome e telefone continua indo para registro de lead; não cai 
     }),
     createLead: async () => {
       created++;
-      return { id: "local-lead" };
+      return { id: "local-lead", matchedVehicleId: null };
     },
     confirm: async () => "Seu contato foi registrado.",
   });

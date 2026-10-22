@@ -104,7 +104,7 @@ test("convite fecha políticas, comparações e respostas geradas após o polime
   for (const mensagem of ["aceita troca?", "qual a garantia?", "Kicks ou Civic?", "quero um carro para viajar"]) {
     const chunks: string[] = [];
     const result = await runChatTurn({ mensagem, historico: [], stock, readIntent: async () => null,
-      generate: async () => ({ text: "Posso te ajudar a escolher pelo uso no dia a dia.", finishReason: "STOP" }),
+      generate: async () => ({ text: "Posso te ajudar a escolher pelo uso no dia a dia.", finishReason: "STOP", functionCall: null }),
       onToken: text => chunks.push(text),
     });
     assert.match(result.reply.trim(), /\?$/, mensagem);

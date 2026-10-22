@@ -78,7 +78,8 @@ test("Bloqueante 1: descarta abertura e remove frases com Linhares/cidade/local,
     historico: [],
     stock: [hb16, kicks],
     generate: async () => ({
-      reply:
+      functionCall: null,
+      text:
         "Aqui na nossa loja de Linhares separei opções na faixa até 80 mil com parcelas acessíveis e simulação de juros baixos no simulador:\n" +
         `• [Hyundai HB20 2015](${vehiclePath(hb16)}) — Ótimo para uso urbano com parcela baixa na nossa cidade de Linhares.\n` +
         `• [Nissan Kicks 2019](${vehiclePath(kicks)}) — Confortável e confiável. Consulte a simulação de financiamento.`,

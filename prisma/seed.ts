@@ -8,7 +8,30 @@ import {
 
 const prisma = new PrismaClient();
 
+function assertSafeDatabaseTarget() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL não configurada.");
+  }
+  try {
+    const parsed = new URL(databaseUrl);
+    const isLocal = ["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname);
+    if (!isLocal && process.env.ALLOW_REMOTE_SEED !== "true") {
+      throw new Error(
+        `Segurança: seed bloqueado. DATABASE_URL aponta para host remoto (${parsed.hostname}). ` +
+        `Para rodar em ambiente remoto, defina explicitamente ALLOW_REMOTE_SEED=true.`
+      );
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("Segurança: seed bloqueado")) {
+      throw err;
+    }
+    // URL inválida será tratada pelo próprio Prisma
+  }
+}
+
 async function main() {
+  assertSafeDatabaseTarget();
   // Senha do seed: SEED_ADMIN_PASSWORD se definida; senão, gera aleatória
   // (o valor usado é impresso uma única vez no fim do seed).
   const generatedPassword = `seed-${randomUUID().replace(/-/g, "").slice(0, 14)}`;

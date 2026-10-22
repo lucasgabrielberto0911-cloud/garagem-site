@@ -67,7 +67,7 @@ for (const message of [
       vehicleId: "hb",
       generate: async () => {
         modelCalls++;
-        return { text: "Sim — o HB20 é Automático." };
+        return { text: "Sim — o HB20 é Automático.", functionCall: null };
       },
     });
     assert.equal(modelCalls, 0);
@@ -238,7 +238,7 @@ test("pesquisa não desvia cadastro de contato para resposta determinística", a
         },
       };
     },
-    createLead: async () => ({ id: "local-fixture" }),
+    createLead: async () => ({ id: "local-fixture", matchedVehicleId: null }),
     confirm: async () => "Contato registrado.",
   });
   assert.equal(calls, 1);
@@ -298,7 +298,7 @@ test("busca não perde anúncios depois do antigo teto de 80", async () => {
         ? fixture.findIndex((v) => v.id === query.cursor!.id) + 1
         : 0;
       return fixture.slice(start, start + query.take);
-    }) as typeof original;
+    }) as unknown as typeof original;
     const rows = await loadChatStock();
     assert.equal(rows.length, 83);
     assert.equal(rows.at(-1)?.id, "fixture-082");

@@ -58,7 +58,7 @@ test("funil aplica rate limit antes de ler corpo ou gravar evento", async (t) =>
 
 test("funil limita bytes sem content-length e cancela stream assim que excede", async (t) => {
   const write = setup(t);
-  for (const headers of [{}, { "content-length": "1" }]) {
+  for (const headers of [{} as Record<string, string>, { "content-length": "1" }]) {
     const state = { reads: 0, cancelled: false };
     const response = await POST(request(stream(["á".repeat(512), "á", valid], state), headers));
     assert.equal(response.status, 413);

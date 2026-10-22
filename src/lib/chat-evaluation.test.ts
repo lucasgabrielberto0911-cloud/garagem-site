@@ -24,7 +24,7 @@ for (const scenario of cases) test(`avaliação de escolha: ${scenario.question}
   const result = await runChatTurn({
     onToken: delta => streamed.push(delta),
     mensagem: scenario.question, historico: [...scenario.history], stock, vehicleId: "hb",
-    generate: async () => { generated++; return { text: "Sim — o HB20 é Automático." }; },
+    generate: async () => { generated++; return { text: "Sim — o HB20 é Automático.", functionCall: null }; },
   });
   assert.equal(generated, 0);
   assert.deepEqual(result.vehicles.map(vehicle => vehicle.id).sort(), [...scenario.ids].sort());

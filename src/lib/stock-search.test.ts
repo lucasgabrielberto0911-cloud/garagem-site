@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { stockSearchSuggestions, stockSearchWhere } from "./stock-search";
 const catalog = [{ brand: "Honda", model: "HR-V" }, { brand: "Honda", model: "CG 160 Start" }, { brand: "Honda", model: "Civic" }, { brand: "Citroën", model: "C3" }];
-function modelChoices(query: string) { return stockSearchWhere(query, catalog).flatMap(clause => clause.OR ?? []).flatMap(row => typeof row.model === "object" && row.model.in ? row.model.in : []); }
+function modelChoices(query: string, customCatalog = catalog): string[] { return stockSearchWhere(query, customCatalog).flatMap(clause => clause.OR ?? []).flatMap(row => (typeof row.model === "object" && row.model && "in" in row.model && Array.isArray((row.model as { in?: string[] }).in) ? (row.model as { in: string[] }).in : [])); }
 test("variações de separadores usam os nomes reais do catálogo", () => {
   for (const query of ["HRV", "HR-V", "hr v"]) assert.ok(modelChoices(query).includes("HR-V"));
   for (const query of ["CG160", "CG 160", "CG-160", "CG 160 Start"]) assert.ok(modelChoices(query).includes("CG 160 Start"));
@@ -33,7 +33,7 @@ test("ano colado ao nome e fabricação/modelo são números exatos", () => {
 test("abreviação de marca só aponta para a marca cadastrada", () => {
   const rows = [{ brand: "Volkswagen", model: "Gol" }, { brand: "Chevrolet", model: "Onix" }];
   for (const [query, brand] of [["VW", "Volkswagen"], ["GM", "Chevrolet"], ["Chevy", "Chevrolet"]]) {
-    assert.ok(stockSearchWhere(query, rows)[0].OR?.some(row => typeof row.brand === "object" && row.brand.in?.includes(brand)));
+    assert.ok(stockSearchWhere(query, rows)[0].OR?.some(row => typeof row.brand === "object" && Boolean((row.brand as { in?: string[] })?.in?.includes(brand))));
   }
   assert.deepEqual(modelChoices("VW"), []);
 });
@@ -50,9 +50,9 @@ test("não inventa carro nem aproxima termos curtos ou muito diferentes", () => 
   assert.ok(stockSearchSuggestions("civc", fullCatalog).length <= 3);
 });
 test("espaços, hífens, acentos e versão compacta mantêm os campos reais", () => {
-  assert.ok(stockSearchWhere("citroen", fullCatalog)[0].OR?.some(row => typeof row.brand === "object" && row.brand.in?.includes("Citroën")));
+  assert.ok(stockSearchWhere("citroen", fullCatalog)[0].OR?.some(row => typeof row.brand === "object" && Boolean((row.brand as { in?: string[] })?.in?.includes("Citroën"))));
   assert.ok(stockSearchWhere("honda-civic", fullCatalog)[0].OR?.some(row => row.AND));
-  assert.ok(stockSearchWhere("LXR2.0", fullCatalog)[0].OR?.some(row => typeof row.version === "object" && row.version.in?.includes("LXR 2.0 FlexOne")));
+  assert.ok(stockSearchWhere("LXR2.0", fullCatalog)[0].OR?.some(row => typeof row.version === "object" && Boolean((row.version as { in?: string[] })?.in?.includes("LXR 2.0 FlexOne"))));
   assert.equal(stockSearchWhere("Civic 2015", fullCatalog).length, 2);
 });
 test("ano é um critério separado e não texto da versão", () => {

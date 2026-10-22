@@ -260,6 +260,7 @@ function card(overrides: Partial<VehicleCardData> = {}): VehicleCardData {
     featured: false,
     color: "Prata",
     locationCity: "linhares",
+    createdAt: new Date(),
     photos: [{ url: "https://example.com/hb20s.jpg", thumbnailUrl: null }],
     ...overrides,
   };
