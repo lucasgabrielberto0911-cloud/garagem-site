@@ -195,7 +195,8 @@ for (const width of [390, 1440]) {
         }));
         let submissions = 0;
         page.on("request", request => {
-          if (request.headers()["next-action"]) submissions++;
+          // O painel também chama uma action automática para expirar reservas.
+          if (request.headers()["next-action"] && request.headers()["content-type"]?.startsWith("multipart/form-data")) submissions++;
         });
         await page.goto("/admin/veiculos/novo");
         await page.getByRole("button", { name: "Retomar rascunho", exact: true }).click();
@@ -203,10 +204,11 @@ for (const width of [390, 1440]) {
         await expect(title(page)).toContainText("Etapa 4 de 4");
         await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
         await expect(title(page)).toContainText(`Etapa ${invalid === "model" ? 2 : 3} de 4`);
-        if (invalid === "model") await expect(page.locator('[name="model"]')).toBeFocused();
+        const form = page.locator("#vehicle-form");
+        if (invalid === "model") await expect(form.locator('[name="model"]')).toBeFocused();
         else {
-          await expect(page.locator('[name="description"]')).toBeFocused();
-          await expect(page.getByTestId("description-price-mismatch")).toBeVisible();
+          await expect(form.locator('[name="description"]')).toBeFocused();
+          await expect(form.getByTestId("description-price-mismatch")).toBeVisible();
         }
         expect(submissions).toBe(0);
         expect(await prisma.vehicle.count({ where: { model: modelName } })).toBe(0);
