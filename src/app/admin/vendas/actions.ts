@@ -135,7 +135,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
       const proposal = input.includeProposal === true ? await tx.commercialDocument.create({ data: { vehicleId, kind: "proposta", snapshot: contractSnapshot } }) : null;
       const contract = await tx.commercialDocument.create({ data: { vehicleId, kind: "contrato", snapshot: contractSnapshot } });
       await tx.vehicleReservation.updateMany({ where: { vehicleId, status: "ativa" }, data: { status: "convertida" } });
-      await tx.vehicle.update({ where: { id: vehicleId }, data: { status: "vendido", featured: false, chassis: snapshot.chassis || null, renavam: snapshot.renavam || null } });
+      await tx.vehicle.update({ where: { id: vehicleId }, data: { status: "vendido", soldAt: row.saleDate, featured: false, chassis: snapshot.chassis || null, renavam: snapshot.renavam || null } });
       await scheduleAfterSale(tx, row);
       await recordAdminAudit(tx, session.adminId, row.id, "sale.create", { salePrice: total, vehicleId, contractId: contract.id });
       return { saleId: row.id, contractId: contract.id, receiptId: receipt?.id, proposalId: proposal?.id };
@@ -347,6 +347,7 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
             fuel: "Não informado",
             transmission: "Não informado",
             status: "vendido",
+            soldAt: saleDate,
             historical: true,
             featured: false,
             description:
@@ -425,7 +426,7 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
 
         await tx.vehicle.update({
           where: { id: vehicleId },
-          data: { status: "vendido", featured: false },
+          data: { status: "vendido", soldAt: saleDate, featured: false },
         });
       });
     }
@@ -521,6 +522,7 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
             year: resolvedYear,
             yearModel: resolvedYear,
             price: salePrice,
+            soldAt: saleDate,
           },
         });
 
@@ -556,11 +558,7 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
 
         await tx.vehicle.update({
           where: { id: existing.vehicleId },
-          data: { status: "disponivel" },
-        });
-        await tx.vehicle.update({
-          where: { id: nextVehicleId },
-          data: { status: "vendido", featured: false },
+          data: { status: "disponivel", soldAt: null },
         });
       }
 
@@ -574,6 +572,10 @@ export async function updateSale(formData: FormData): Promise<SaleActionState> {
           saleDate,
           notes,
         },
+      });
+      await tx.vehicle.update({
+        where: { id: nextVehicleId },
+        data: { status: "vendido", soldAt: saleDate, featured: false },
       });
       await tx.vehicleReservation.updateMany({ where: { vehicleId: nextVehicleId, status: "ativa" }, data: { status: "convertida" } });
       await scheduleAfterSale(tx, { id: saleId, saleDate, customerId: finalCustomerId });
@@ -664,7 +666,7 @@ export async function deleteSale(
         await tx.sale.delete({ where: { id, updatedAt: sale.updatedAt } });
         await tx.vehicle.update({
           where: { id: sale.vehicleId },
-          data: { status: "disponivel" },
+          data: { status: "disponivel", soldAt: null },
         });
         // A reserva convertida pela venda não pode ficar ligada ao cliente anterior.
         await tx.vehicleReservation.updateMany({

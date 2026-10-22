@@ -90,6 +90,8 @@ const STATUS_LABEL: Record<string, string> = {
 
 const MARK_SOLD_BTN =
   "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 border border-brand-orange/50 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-brand-orange transition touch-manipulation hover:border-brand-orange hover:bg-brand-orange/15";
+const MARK_SOLD_SIMPLE_BTN =
+  "inline-flex h-11 shrink-0 items-center justify-center border border-white/15 bg-transparent px-3 font-display text-xs font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:border-brand-orange hover:text-brand-orange disabled:opacity-50";
 
 const FILTER_PILL =
   "inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-xs font-semibold uppercase tracking-wide transition touch-manipulation";
@@ -192,6 +194,7 @@ export function VehiclesTable({
   const loadingRef = useRef(false);
   const [deleteTarget, setDeleteTarget] = useState<VehicleRow | null>(null);
   const [soldTarget, setSoldTarget] = useState<VehicleRow | null>(null);
+  const [simpleSoldTarget, setSimpleSoldTarget] = useState<VehicleRow | null>(null);
   const [promoTarget, setPromoTarget] = useState<VehicleRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -224,7 +227,7 @@ export function VehiclesTable({
   useEffect(() => {
     function onEscape(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
-      if (bulkTarget || soldTarget || deleteTarget || actionsTarget) return;
+      if (bulkTarget || soldTarget || simpleSoldTarget || deleteTarget || actionsTarget) return;
       if (selected.length === 0 && !undoBanner) return;
       event.preventDefault();
       setSelected([]);
@@ -235,6 +238,7 @@ export function VehiclesTable({
   }, [
     bulkTarget,
     soldTarget,
+    simpleSoldTarget,
     deleteTarget,
     actionsTarget,
     selected.length,
@@ -425,6 +429,31 @@ export function VehiclesTable({
     const targetId = soldTarget.id;
     setSoldTarget(null);
     router.push(`/admin/vendas/nova?veiculo=${targetId}`);
+  }
+
+  async function confirmSimpleSold() {
+    if (!simpleSoldTarget) return;
+    const target = simpleSoldTarget;
+    setBusyId(target.id);
+    try {
+      const response = await fetch(
+        `/api/admin/vehicles/${encodeURIComponent(target.id)}/sell`,
+        { method: "PATCH", headers: { "Content-Type": "application/json" }, body: "{}" },
+      );
+      const result = (await response.json()) as { ok?: boolean; message?: string };
+      if (!response.ok || !result.ok) {
+        toast.error(result.message ?? "Não foi possível marcar o veículo como vendido.");
+        return;
+      }
+      setSimpleSoldTarget(null);
+      applyLocalStatus(target.id, "vendido", target.featured);
+      toast.success(result.message ?? "Veículo marcado como vendido.");
+      router.refresh();
+    } catch {
+      toast.error("Não foi possível marcar o veículo como vendido.");
+    } finally {
+      setBusyId(null);
+    }
   }
 
   function toggleSelected(id: string) {
@@ -964,6 +993,7 @@ export function VehiclesTable({
                   selected={selected.includes(vehicle.id)}
                   onToggleSelect={() => toggleSelected(vehicle.id)}
                   onMarkSold={() => setSoldTarget(vehicle)}
+                  onMarkSoldSimple={() => setSimpleSoldTarget(vehicle)}
                   onMore={() => setActionsTarget(vehicle)}
                 />
               ))}
@@ -1037,6 +1067,7 @@ export function VehiclesTable({
             onFeatured={() => toggleFeatured(actionsTarget)}
             onDuplicate={() => duplicate(actionsTarget)}
             onMarkSold={() => setSoldTarget(actionsTarget)}
+            onMarkSoldSimple={() => setSimpleSoldTarget(actionsTarget)}
             onDelete={() => setDeleteTarget(actionsTarget)}
             onPromo={() => setPromoTarget(actionsTarget)}
           />
@@ -1045,16 +1076,31 @@ export function VehiclesTable({
 
       <ConfirmDialog
         open={soldTarget !== null}
-        title="Iniciar venda"
+        title="Registrar venda completa"
         description={
           soldTarget
-            ? `Iniciar a venda de ${soldTarget.brand} ${soldTarget.model}? O anúncio só será marcado como vendido ao concluir o contrato.`
+            ? `Registrar a venda completa de ${soldTarget.brand} ${soldTarget.model}? O formulário atual continuará incluindo os dados do comprador e da negociação.`
             : undefined
         }
-        confirmLabel="Iniciar venda"
+        confirmLabel="Registrar venda completa"
         danger={false}
         onCancel={() => setSoldTarget(null)}
         onConfirm={confirmMarkSold}
+      />
+
+      <ConfirmDialog
+        open={simpleSoldTarget !== null}
+        title="Marcar como vendida (simples)"
+        description={
+          simpleSoldTarget
+            ? `Marcar ${simpleSoldTarget.brand} ${simpleSoldTarget.model} como vendido sem registrar comprador, preço ou faturamento?`
+            : undefined
+        }
+        confirmLabel="Marcar como vendida (simples)"
+        danger
+        loading={busyId === simpleSoldTarget?.id}
+        onCancel={() => setSimpleSoldTarget(null)}
+        onConfirm={() => void confirmSimpleSold()}
       />
 
       <VehiclePromoKitModal
@@ -1135,6 +1181,7 @@ function VehicleAdminCard({
   selected,
   onToggleSelect,
   onMarkSold,
+  onMarkSoldSimple,
   onMore,
 }: {
   vehicle: VehicleRow;
@@ -1142,6 +1189,7 @@ function VehicleAdminCard({
   selected: boolean;
   onToggleSelect: () => void;
   onMarkSold: () => void;
+  onMarkSoldSimple: () => void;
   onMore: () => void;
 }) {
   const finance = vehicleFinance(vehicle);
@@ -1240,15 +1288,26 @@ function VehicleAdminCard({
           Editar
         </Link>
         {showSold ? (
-          <button
-            type="button"
-            onClick={onMarkSold}
-            className={MARK_SOLD_BTN}
-            aria-label="Marcar como vendido"
-            title="Iniciar venda — o estoque só muda ao concluir o contrato"
-          >
-            Iniciar venda
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={onMarkSoldSimple}
+              disabled={busy}
+              className={MARK_SOLD_SIMPLE_BTN}
+              aria-label="Marcar como vendida (simples)"
+            >
+              Marcar como vendida (simples)
+            </button>
+            <button
+              type="button"
+              onClick={onMarkSold}
+              disabled={busy}
+              className={MARK_SOLD_BTN}
+              aria-label="Registrar venda completa"
+            >
+              Registrar venda completa
+            </button>
+          </>
         ) : null}
         <button
           type="button"
@@ -1273,6 +1332,7 @@ function SheetActions({
   onFeatured,
   onDuplicate,
   onMarkSold,
+  onMarkSoldSimple,
   onDelete,
   onPromo,
 }: {
@@ -1283,6 +1343,7 @@ function SheetActions({
   onFeatured: () => void;
   onDuplicate: () => void;
   onMarkSold: () => void;
+  onMarkSoldSimple: () => void;
   onDelete: () => void;
   onPromo?: () => void;
 }) {
@@ -1334,14 +1395,23 @@ function SheetActions({
         />
       ))}
       {adminCardShowsSoldAction(vehicle.status) ? (
-        <ActionSheetButton
-          icon={<IconCash className="h-4 w-4" />}
-          label="Iniciar venda"
-          hint="O estoque só muda ao concluir o contrato"
-          tone="warning"
-          disabled={busy}
-          onClick={run(onMarkSold)}
-        />
+        <>
+          <ActionSheetButton
+            icon={<IconCheck className="h-4 w-4" />}
+            label="Marcar como vendida (simples)"
+            hint="Sem comprador, preço ou registro de faturamento"
+            disabled={busy}
+            onClick={run(onMarkSoldSimple)}
+          />
+          <ActionSheetButton
+            icon={<IconCash className="h-4 w-4" />}
+            label="Registrar venda completa"
+            hint="Abre o formulário atual de venda"
+            tone="warning"
+            disabled={busy}
+            onClick={run(onMarkSold)}
+          />
+        </>
       ) : null}
       <OverflowAction
         action="excluir"
