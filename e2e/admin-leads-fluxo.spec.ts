@@ -53,8 +53,12 @@ async function login(page: import("@playwright/test").Page, email: string) {
 
 async function avancarEtapa(page: import("@playwright/test").Page, etapa: number) {
   const nav = page.getByRole("navigation", { name: "Etapas do anúncio" });
-  while (!(await page.locator("#wizard-title").innerText()).includes(`Etapa ${etapa} de 4`)) {
+  await expect(page.locator('#secao-fotos input[type="file"]')).toBeEnabled();
+  const titulo = page.locator("#wizard-title");
+  const atual = Number((await titulo.innerText()).match(/Etapa (\d) de 4/)![1]);
+  for (let proxima = atual + 1; proxima <= etapa; proxima++) {
     await nav.getByRole("button", { name: "Próximo", exact: true }).click();
+    await expect(titulo).toContainText(`Etapa ${proxima} de 4`);
   }
 }
 
@@ -70,7 +74,9 @@ async function adicionarFotos(page: import("@playwright/test").Page) {
     canvas.getContext("2d")!.fillRect(0, 0, 800, 600);
     return canvas.toDataURL("image/png").split(",")[1];
   });
-  await page.locator('#secao-fotos input[type="file"]').setInputFiles([1, 2].map(index => ({
+  const input = page.locator('#secao-fotos input[type="file"]');
+  await expect(input).toBeEnabled();
+  await input.setInputFiles([1, 2].map(index => ({
     name: `foto-${index}.png`, mimeType: "image/png", buffer: Buffer.from(png, "base64"),
   })));
   await expect.poll(async () => JSON.parse(await page.locator('#vehicle-form [name="photoUrls"]').inputValue()).length).toBe(2);
@@ -177,10 +183,11 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).price).toBe(86543.5);
   await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
   // Uma falha no servidor após salvar não pode perder a versão usada no próximo save.
+  const fotosValidas = await form.locator('[name="photoUrls"]').inputValue();
   await form.locator('[name="photoUrls"]').evaluate((input: HTMLInputElement) => { input.value = "{"; });
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect(page.getByText("Fotos inválidas.", { exact: true })).toBeVisible();
-  await form.locator('[name="photoUrls"]').evaluate((input: HTMLInputElement) => { input.value = "[]"; });
+  await form.locator('[name="photoUrls"]').evaluate((input: HTMLInputElement, fotos) => { input.value = fotos; }, fotosValidas);
   await form.getByRole("button", { name: "Voltar", exact: true }).click();
   await expect(page.locator("#wizard-title")).toHaveText("Etapa 3 de 4: Descrição, opcionais e preço");
   await form.locator('[name="priceDisplay"]').fill("85.900");
@@ -188,11 +195,9 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).price).toBe(85900);
   await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
-  const maisAcoes = page.getByRole("button", { name: "Mais ações do anúncio", exact: true });
-  if (await maisAcoes.isVisible()) await maisAcoes.click();
+  expect(await prisma.photo.count({ where: { vehicleId: vehicle.id } })).toBe(2);
   const customer = await prisma.customer.create({ data: { name: conta.prefixo, phone: "27988887777" } });
-  await page.getByRole("button", { name: /^Iniciar venda/ }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Iniciar venda", exact: true }).click();
+  await tabsNav.getByRole("link", { name: "Iniciar venda", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/admin/vendas/nova\\?veiculo=${vehicle.id}`));
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Continuar" }).click();

@@ -182,14 +182,18 @@ for (const width of [390, 1440]) {
       try {
         await page.goto(`/admin/veiculos/${samples[0].id}?view=anuncio`);
         await expect(title(page)).toContainText("Etapa 1 de 4");
+        // O input só habilita após a hidratação e a recuperação da fila de fotos.
+        await expect(page.locator('#secao-fotos input[type="file"]')).toBeEnabled();
         await next(page).click();
         await expect(title(page)).toContainText("Etapa 2 de 4");
         await page.locator('[name="model"]').fill(modelName);
         await page.locator('a[data-vehicle-tab="fotos"]').click();
         await expect(title(page)).toContainText("Etapa 1 de 4");
         await next(page).click();
+        await expect(title(page)).toContainText("Etapa 2 de 4");
         await expect(page.locator('[name="model"]')).toHaveValue(modelName);
         await page.goto(`/admin/veiculos/${samples[0].id}?view=fotos`);
+        await expect(page.locator('#secao-fotos input[type="file"]')).toBeEnabled();
         await expect(title(page)).toContainText("Etapa 1 de 4");
         await expect(page.locator("#secao-fotos")).toBeVisible();
       } finally {
