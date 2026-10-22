@@ -137,6 +137,7 @@ const SEGMENT_OFF =
   "border-white/10 bg-ink text-muted hover:border-white/25 hover:text-cream";
 
 function stepForField(field: string): VehicleWizardStep | undefined {
+  if (field === "photos") return 1;
   if (field === "locationCity" || field === "featured") return 4;
   const section = sectionForField(field);
   return ([1, 2, 3, 4] as const).find(candidate =>
