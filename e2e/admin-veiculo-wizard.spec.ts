@@ -177,7 +177,43 @@ for (const width of [390, 1440]) {
       expect(JSON.parse(await page.locator('[name="photoUrls"]').inputValue())).toHaveLength(2);
     });
 
-    test("edição usa wizard e atalho de fotos abre a primeira etapa", async ({ page, modelName }) => {
+    for (const invalid of ["model", "description"] as const) {
+      test(`rascunho na revisão retorna à etapa do erro em ${invalid}`, async ({ page, modelName }) => {
+        const description = invalid === "description" ? "Preço R$ 69.900,00." : "Veículo revisado.";
+        const payload = {
+          step: 4,
+          fields: { description },
+          brand: "Honda", model: invalid === "model" ? "" : modelName,
+          color: "Prata", year: "2020", yearModel: "2021",
+          fuel: "Flex", transmission: "Automático", locationCity: "linhares",
+          status: "disponivel", category: "carro", description,
+          values: { price: "59.900,00", km: "45.000" },
+          photos: samples[0].photos,
+        };
+        await page.route("**/api/admin/drafts?**", route => route.fulfill({
+          json: { draft: { payload, updatedAt: new Date().toISOString() } },
+        }));
+        let submissions = 0;
+        page.on("request", request => {
+          if (request.headers()["next-action"]) submissions++;
+        });
+        await page.goto("/admin/veiculos/novo");
+        await page.getByRole("button", { name: "Retomar rascunho", exact: true }).click();
+        await page.getByRole("button", { name: "Retomar", exact: true }).click();
+        await expect(title(page)).toContainText("Etapa 4 de 4");
+        await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
+        await expect(title(page)).toContainText(`Etapa ${invalid === "model" ? 2 : 3} de 4`);
+        if (invalid === "model") await expect(page.locator('[name="model"]')).toBeFocused();
+        else {
+          await expect(page.locator('[name="description"]')).toBeFocused();
+          await expect(page.getByTestId("description-price-mismatch")).toBeVisible();
+        }
+        expect(submissions).toBe(0);
+        expect(await prisma.vehicle.count({ where: { model: modelName } })).toBe(0);
+      });
+    }
+
+    test("edição preserva etapa em Anúncio e atalho de fotos abre a primeira", async ({ page, modelName }) => {
       const original = await prisma.vehicle.findUniqueOrThrow({ where: { id: samples[0].id }, select: { model: true } });
       try {
         await page.goto(`/admin/veiculos/${samples[0].id}?view=anuncio`);
@@ -187,6 +223,9 @@ for (const width of [390, 1440]) {
         await next(page).click();
         await expect(title(page)).toContainText("Etapa 2 de 4");
         await page.locator('[name="model"]').fill(modelName);
+        await page.locator('a[data-vehicle-tab="anuncio"]').click();
+        await expect(title(page)).toContainText("Etapa 2 de 4");
+        await expect(page.locator('[name="model"]')).toHaveValue(modelName);
         await page.locator('a[data-vehicle-tab="fotos"]').click();
         await expect(title(page)).toContainText("Etapa 1 de 4");
         await next(page).click();

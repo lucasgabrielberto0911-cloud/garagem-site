@@ -382,7 +382,7 @@ export function VehicleForm({
       if (tab !== "anuncio" && tab !== "fotos") return;
       event.preventDefault();
       setActiveTab(tab);
-      if (isWizard) setStep(1);
+      if (isWizard && tab === "fotos") setStep(1);
       if (tab === "fotos") {
         setOpenSections((current) => new Set([...current, "fotos"]));
       }
@@ -1044,21 +1044,21 @@ export function VehicleForm({
             if (validate(step)) changeStep((step + 1) as VehicleWizardStep);
             return;
           }
-          if (!isWizard && photosUploading) {
+          if (!validate()) {
+            toast.error("Corrija os campos destacados.");
+            return;
+          }
+          if (photosUploading) {
             toast.error("Espere o envio ou o borrão das fotos terminar.");
             revealSections(["fotos"]);
             return;
           }
-          if (!isWizard && priceSaveBlocked) {
+          if (priceSaveBlocked) {
             toast.error(
               priceMismatch?.blockMessage ??
                 "Corrija a descrição ou o preço antes de salvar.",
             );
             revealSections(["descricao"]);
-            return;
-          }
-          if (!validate()) {
-            toast.error("Corrija os campos destacados.");
             return;
           }
           const data = new FormData(event.currentTarget);
