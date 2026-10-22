@@ -31,6 +31,7 @@ export const LEGEND_SYNONYMS: Record<string, string[]> = {
   "Apple CarPlay / Android Auto": ["carplay", "apple carplay", "android auto"],
   "Keyless (partida por botão)": ["keyless", "partida botão", "partida por botão"],
   "Farol de LED": ["led"],
+  "LED diurno (DRL)": ["led diurno"],
   "Rodas de liga": ["liga leve"],
 };
 
@@ -77,20 +78,24 @@ export function parseLegend(text: string, category: VehicleCategory): LegendPars
       )) continue;
       if (!matched.includes(candidate.preset)) matched.push(candidate.preset);
       candidate.words.forEach((_, offset) => used.add(i + offset));
-      remaining.fill("\n", words[i].start, words[i + candidate.words.length - 1].end);
+      remaining.fill("\0", words[i].start, words[i + candidate.words.length - 1].end);
     }
   }
 
   const seen = new Set<string>();
+  const allowed = new Set(getAccessoryPresets(category).map(fold));
+  const otherCategory = new Set(getAccessoryPresets(category === "moto" ? "carro" : "moto").map(fold));
   const unmatched = normalizeAccessories(remaining.join("")
+    .replace(/[ \t]*(?:\be[ \t]+)?\0+(?:[ \t]+e\b)?[ \t]*/gi, " ")
     .split(/[\n\r,;•]+|\s+[\/–—-]\s+|\s+e\s+/i)
     .map((fragment) => fragment.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
     .filter((fragment) => {
       const key = fold(fragment).replace(/\s+/g, " ").trim();
-      if (!key || seen.has(key)) return false;
+      if ((key.match(/\p{L}/gu)?.length ?? 0) < 3 || seen.has(key)) return false;
+      if (otherCategory.has(key) && !allowed.has(key)) return false;
       seen.add(key);
       return true;
-    })).slice(0, 60 - matched.length);
+    })).slice(0, Math.max(0, 60 - matched.length));
 
   return { matched, unmatched, fullText: text, description: source };
 }

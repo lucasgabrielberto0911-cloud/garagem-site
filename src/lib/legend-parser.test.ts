@@ -35,7 +35,7 @@ test("legenda real mistura presets e pontos manuais sem aplicar nada", () => {
 test("cada categoria reconhece somente seus presets; maior preset não duplica o menor", () => {
   const result = parseLegend("Direção elétrica; ABS; painel digital TFT; bauleto original; freio a disco (dianteiro e traseiro)", "moto");
   assert.deepEqual(new Set(result.matched), new Set(["ABS", "Painel digital TFT", "Bauleto original", "Freio a disco (dianteiro e traseiro)"]));
-  assert.deepEqual(result.unmatched, ["Direção elétrica"]);
+  assert.deepEqual(result.unmatched, []);
   for (const category of ["carro", "moto"] as const) {
     for (const preset of getAccessoryPresets(category)) {
       assert.deepEqual(parseLegend(preset, category), { matched: [preset], unmatched: [], fullText: preset, description: preset });
@@ -90,7 +90,7 @@ test("descrição remove cabeçalho, emojis, URLs e corrige a marca no texto út
 
 test("fragmentos preservam medidas, intervalos e hífens internos", () => {
   const result = parseLegend("pneu 120/70-17; 2019-2021; azul-escuro; revisão/garantia • Único dono - IPVA pago", "moto");
-  assert.deepEqual(result.unmatched, ["pneu 120/70-17", "2019-2021", "azul-escuro", "revisão/garantia", "Único dono", "IPVA pago"]);
+  assert.deepEqual(result.unmatched, ["pneu 120/70-17", "azul-escuro", "revisão/garantia", "Único dono", "IPVA pago"]);
 });
 
 test("merge recusa excesso sem truncar existentes ou acréscimos", () => {
@@ -127,16 +127,16 @@ test("conectores não viram pontos manuais ao remover presets", () => {
   assert.deepEqual(parseLegend("Couro e ABS", "carro").unmatched, []);
 });
 
-test("itens não reconhecidos separados por um reconhecido não se fundem num só", () => {
+test("remoção de um preset preserva a frase ao redor", () => {
   const result = parseLegend("Revisado na concessionária Ar-condicionado Único dono", "carro");
   assert.deepEqual(result.matched, ["Ar-condicionado"]);
-  assert.deepEqual(result.unmatched, ["Revisado na concessionária", "Único dono"]);
+  assert.deepEqual(result.unmatched, ["Revisado na concessionária Único dono"]);
 });
 
-test("itens não reconhecidos entre vários reconhecidos permanecem separados", () => {
+test("remoção de vários presets mantém o texto restante na mesma frase", () => {
   const result = parseLegend("Único dono Ar-condicionado IPVA pago Direção elétrica Garantia de fábrica", "carro");
   assert.deepEqual(new Set(result.matched), new Set(["Ar-condicionado", "Direção elétrica"]));
-  assert.deepEqual(result.unmatched, ["Único dono", "IPVA pago", "Garantia de fábrica"]);
+  assert.deepEqual(result.unmatched, ["Único dono IPVA pago Garantia de fábrica"]);
 });
 
 test("fold normaliza acentos e caixa", () => {
@@ -213,13 +213,13 @@ test("cancelar troca da descrição ainda aplica os acessórios e pontos manuais
     else Reflect.deleteProperty(globalThis, "window");
   });
   const field = legendField(t, { onApply: apply });
-  field.change("ABS; Direção elétrica");
+  field.change("ABS; Revisado na concessionária");
   field.click("Analisar");
   field.click("Adicionar como ponto manual");
   field.useDescription();
   field.click("Aplicar");
   assert.equal(confirm.mock.callCount(), 1);
-  assert.deepEqual(apply.mock.calls[0].arguments, [["ABS"], ["Direção elétrica"], undefined]);
+  assert.deepEqual(apply.mock.calls[0].arguments, [["ABS"], ["Revisado na concessionária"], undefined]);
 });
 
 test("reanalisar e trocar categoria preservam texto e pontos manuais", (t) => {
@@ -235,7 +235,7 @@ test("reanalisar e trocar categoria preservam texto e pontos manuais", (t) => {
   field.props.category = "moto";
   field.click("Analisar");
   field.click("Aplicar");
-  assert.deepEqual(apply.mock.calls[0].arguments, [[], ["Direção elétrica"], undefined]);
+  assert.deepEqual(apply.mock.calls[0].arguments, [[], ["Único dono"], undefined]);
 });
 
 test("trocar o texto limpa pontos manuais e seleção da legenda anterior", (t) => {
@@ -259,4 +259,103 @@ test("reanalisar o mesmo texto preserva itens desmarcados", (t) => {
   field.click("Analisar");
   field.click("Aplicar");
   assert.deepEqual(apply.mock.calls[0].arguments, [["Direção elétrica"], [], undefined]);
+});
+
+
+test("LED diurno tem prioridade sobre o alias genérico LED", () => {
+  assert.deepEqual(parseLegend("LED diurno", "moto").matched, ["LED diurno (DRL)"]);
+  assert.deepEqual(parseLegend("LED diurno", "moto").unmatched, []);
+  assert.deepEqual(new Set(parseLegend("led; LED diurno", "moto").matched), new Set(["Farol de LED", "LED diurno (DRL)"]));
+});
+
+test("sugestões descartam números e fragmentos com menos de três letras sem quebrar frases", () => {
+  for (const text of ["central multimídia 7", "2019 - 2021", "2019-2021", "a; de; 12; 7 pol 7"]) {
+    assert.deepEqual(parseLegend(text, "carro").unmatched, text.includes("pol") ? ["7 pol 7"] : []);
+  }
+  assert.deepEqual(parseLegend("Revisado e Ar-condicionado novo", "carro").unmatched, ["Revisado novo"]);
+  assert.deepEqual(parseLegend("Revisado Ar-condicionado e novo", "carro").unmatched, ["Revisado novo"]);
+  assert.deepEqual(parseLegend("Revisado e Ar-condicionado novo; Único dono", "carro").unmatched, ["Revisado novo", "Único dono"]);
+});
+
+test("sugestões excluem presets exclusivos da outra categoria, inclusive sem acentos", () => {
+  assert.deepEqual(parseLegend("DIRECAO   ELETRICA; Direção hidráulica; Único dono", "moto").unmatched, ["Único dono"]);
+  assert.deepEqual(parseLegend("Bauleto original; Painel digital TFT; Revisado", "carro").unmatched, ["Revisado"]);
+});
+
+test("mais de 60 presets reconhecidos não liberam sugestões pelo limite negativo", (t) => {
+  const presets = getAccessoryPresets("carro") as string[];
+  const originalLength = presets.length;
+  t.after(() => presets.splice(originalLength));
+  const extra = Array.from({ length: 65 }, (_, i) => `Opcional adicional ${i}`);
+  presets.push(...extra);
+  const result = parseLegend([...extra, "Único dono", "Revisado", "Garantia vigente"].join(";"), "carro");
+  assert.equal(result.matched.length, 65);
+  assert.deepEqual(result.unmatched, []);
+});
+
+test("editar e voltar ao texto original inicia uma nova seleção", (t) => {
+  const apply = t.mock.fn(() => true);
+  const field = legendField(t, { category: "carro", onApply: apply });
+  field.change("ABS; Ar-condicionado");
+  field.click("Analisar");
+  field.deselect("ABS");
+  field.change("ABS; Ar-condicionado novo");
+  field.change("ABS; Ar-condicionado");
+  field.click("Analisar");
+  field.click("Aplicar");
+  assert.deepEqual(new Set(apply.mock.calls[0].arguments[0]), new Set(["ABS", "Ar-condicionado"]));
+});
+
+test("descartar persiste ao reanalisar e é limpo ao editar o texto", (t) => {
+  const apply = t.mock.fn(() => true);
+  const field = legendField(t, { onApply: apply });
+  field.change("ABS; Revisado na concessionária");
+  field.click("Analisar");
+  field.click("Descartar");
+  field.click("Analisar");
+  assert.throws(() => field.click("Adicionar como ponto manual"), /Controle esperado/);
+  field.change("ABS; Revisado na concessionária;");
+  field.click("Analisar");
+  field.click("Adicionar como ponto manual");
+  field.click("Aplicar");
+  assert.deepEqual(apply.mock.calls[0].arguments, [["ABS"], ["Revisado na concessionária"], undefined]);
+});
+
+test("trocar categoria inicia seleção nova em ambas as direções", (t) => {
+  const apply = t.mock.fn(() => false);
+  const field = legendField(t, { onApply: apply });
+  field.change("ABS; Direção elétrica; Bauleto original");
+  field.click("Analisar");
+  field.deselect("ABS");
+  field.props.category = "carro";
+  field.click("Analisar");
+  field.click("Aplicar");
+  assert.deepEqual(new Set(apply.mock.calls[0].arguments[0]), new Set(["ABS", "Direção elétrica"]));
+  field.props.category = "moto";
+  field.click("Analisar");
+  field.click("Aplicar");
+  assert.deepEqual(new Set(apply.mock.calls[1].arguments[0]), new Set(["ABS", "Bauleto original"]));
+});
+
+test("aplicar limpa texto, seleção e descartes; falha mantém os dados para correção", (t) => {
+  let success = false;
+  const apply = t.mock.fn(() => success);
+  const field = legendField(t, { onApply: apply });
+  field.change("ABS; Revisado; Único dono");
+  field.click("Analisar");
+  field.click("Descartar");
+  field.click("Adicionar como ponto manual");
+  field.useDescription();
+  field.props.description = "";
+  field.click("Aplicar");
+  assert.equal(field.textarea().value, "ABS; Revisado; Único dono");
+  success = true;
+  field.click("Aplicar");
+  assert.equal(field.textarea().value, "");
+  assert.throws(() => field.click("Aplicar"), /Controle esperado/);
+  field.change("ABS; Revisado; Único dono");
+  field.click("Analisar");
+  field.click("Adicionar como ponto manual");
+  field.click("Aplicar");
+  assert.deepEqual(apply.mock.calls[2].arguments, [["ABS"], ["Revisado"], undefined]);
 });

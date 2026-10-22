@@ -21,18 +21,19 @@ export function LegendPasteField({ category, description, onApply }: Props) {
   const result = analysis?.category === category ? analysis : null;
   const [selected, setSelected] = useState<string[]>([]);
   const [manual, setManual] = useState<string[]>([]);
+  const [discarded, setDiscarded] = useState<string[]>([]);
   const [useDescription, setUseDescription] = useState(false);
   const [applyError, setApplyError] = useState("");
   const prevTextRef = useRef("");
 
   function analyze() {
     const parsed = parseLegend(text, category);
-    const manualKeys = new Set(manual.map((m) => fold(m).replace(/\s+/g, " ").trim()));
+    const excludedKeys = new Set([...manual, ...discarded].map((m) => fold(m).replace(/\s+/g, " ").trim()));
     setResult({ ...parsed, category, unmatched: parsed.unmatched.filter((item) => {
       const key = fold(item).replace(/\s+/g, " ").trim();
-      return !manualKeys.has(key);
+      return !excludedKeys.has(key);
     })});
-    if (text === prevTextRef.current) {
+    if (text === prevTextRef.current && analysis?.category === category) {
       setSelected((current) => current.filter((item) => parsed.matched.includes(item)));
     } else {
       setSelected(parsed.matched);
@@ -52,8 +53,10 @@ export function LegendPasteField({ category, description, onApply }: Props) {
         value={text}
         onChange={(event) => {
           setText(event.target.value);
+          prevTextRef.current = "";
           setResult(null);
           setManual([]);
+          setDiscarded([]);
           setSelected([]);
           setUseDescription(false);
           setApplyError("");
@@ -99,7 +102,10 @@ export function LegendPasteField({ category, description, onApply }: Props) {
                         Adicionar como ponto manual
                       </button>
                       <button type="button" className={`${btn.outline} min-h-[44px]`}
-                        onClick={() => setResult({ ...result, unmatched: result.unmatched.filter((value) => value !== item) })}>
+                        onClick={() => {
+                          setDiscarded((current) => [...current, item]);
+                          setResult({ ...result, unmatched: result.unmatched.filter((value) => value !== item) });
+                        }}>
                         Descartar
                       </button>
                     </div>
@@ -139,9 +145,14 @@ export function LegendPasteField({ category, description, onApply }: Props) {
                 setApplyError("O limite é de 60 acessórios. Desmarque itens ou remova acessórios existentes antes de aplicar.");
                 return;
               }
+              setText("");
+              prevTextRef.current = "";
               setResult(null);
+              setSelected([]);
               setManual([]);
+              setDiscarded([]);
               setUseDescription(false);
+              setApplyError("");
             }}>
             Aplicar
           </button>
