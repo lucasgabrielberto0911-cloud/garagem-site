@@ -16,7 +16,7 @@ import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/
 import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
 import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 import { formatSaleNotes } from "@/lib/sales-goals";
-import { matchesSaleDocumentSnapshot, parseContractPaymentsJson, parseVehicleCustomerIds, signalExceedsTotal, signalMismatch, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
+import { matchesSaleDocumentSnapshot, matchesSaleReceiptSnapshot, parseContractPaymentsJson, parseVehicleCustomerIds, signalExceedsTotal, signalMismatch, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
 import { isValidCpf } from "@/lib/format";
 
 export type SaleActionState = {
@@ -71,7 +71,13 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
           tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["saleId"], equals: vehicle.sale.id } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),
           tx.commercialDocument.findFirst({ where: { vehicleId, kind: "proposta", snapshot: { path: ["saleId"], equals: vehicle.sale.id } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),
         ]);
-        if (contract && matchesSaleDocumentSnapshot(contract.snapshot, { customerId: vehicle.sale.customerId, cpf, total, payments })) return { saleId: vehicle.sale.id, contractId: contract.id, receiptId: receipt?.id, proposalId: proposal?.id };
+        const currentSale = { customerId: vehicle.sale.customerId, cpf, total, payments };
+        if (contract && matchesSaleDocumentSnapshot(contract.snapshot, currentSale)) return {
+          saleId: vehicle.sale.id,
+          contractId: contract.id,
+          receiptId: receipt && matchesSaleReceiptSnapshot(receipt.snapshot, currentSale) ? receipt.id : undefined,
+          proposalId: proposal && matchesSaleDocumentSnapshot(proposal.snapshot, currentSale) ? proposal.id : undefined,
+        };
         throw new Error("SALE_DOCUMENT_STALE");
       }
       if (!["disponivel", "reservado", "vendido"].includes(vehicle.status)) throw new Error("VEHICLE_UNAVAILABLE");

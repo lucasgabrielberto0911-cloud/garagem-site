@@ -33,6 +33,15 @@ export function matchesSaleDocumentSnapshot(snapshot: unknown, sale: { customerI
   return sameBuyer && Number(document.total ?? document.amount) === sale.total && JSON.stringify(sortPayments(snapshotPayments)) === JSON.stringify(sortPayments(sale.payments));
 }
 
+export function matchesSaleReceiptSnapshot(snapshot: unknown, sale: { customerId: string | null; cpf: string; total: number; payments: ContractPaymentItem[] }): boolean {
+  if (!snapshot || typeof snapshot !== "object") return false;
+  const document = snapshot as Record<string, unknown>;
+  const signal = sale.payments.find((payment) => payment.method === "sinal");
+  return Boolean(signal)
+    && matchesSaleDocumentSnapshot({ ...document, payments: [{ method: "sinal", amount: Number(document.amount) }] }, { ...sale, payments: [signal!] })
+    && Number(document.total) === sale.total;
+}
+
 export function formatContractPaymentRow(item: ContractPaymentItem, receiptRef?: string): string {
   switch (item.method) {
     case "sinal": {

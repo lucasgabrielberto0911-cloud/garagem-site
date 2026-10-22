@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSaleMessage, financingSimulationDown, matchesSaleDocumentSnapshot, signalExceedsTotal, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, parseVehicleCustomerIds, resolveIdField, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
+import { afterSaleMessage, financingSimulationDown, matchesSaleDocumentSnapshot, matchesSaleReceiptSnapshot, signalExceedsTotal, signalMismatch, formatContractPaymentRow, parseContractPaymentsJson, parseVehicleCustomerIds, resolveIdField, simulateFinancing, suggestPrice, sumContractPayments, summarizeContractPayments } from "./admin-commercial";
 import { rgAfterCustomerChange } from "./commercial-client";
 import { commercialPdf, expensesPdf, groupExpenseCosts, preparationPdf, PREPARATION_CELL_SIZE, PREPARATION_COLS } from "./commercial-pdf";
 import { parsePreparationForm } from "./preparation";
@@ -22,6 +22,18 @@ test("documento de venda só reutiliza snapshot atual de comprador, total e paga
   assert.equal(matchesSaleDocumentSnapshot({ ...current, total: 60000 }, sale), false);
   assert.equal(matchesSaleDocumentSnapshot({ ...current, payments: [{ method: "pix", amount: 60000 }] }, sale), false);
   assert.equal(matchesSaleDocumentSnapshot({ customer: "Cliente antigo", total: 60000 }, sale), false);
+});
+test("nova tentativa só retorna recibo e proposta da venda atual", () => {
+  const sale = { customerId: "cliente-b", cpf: "11144477735", total: 55000, payments: [{ method: "pix" as const, amount: 50000 }, { method: "sinal" as const, amount: 5000 }] };
+  const currentProposal = { customerId: sale.customerId, cpf: sale.cpf, total: sale.total, payments: sale.payments };
+  const currentReceipt = { ...currentProposal, amount: 5000, payments: [{ method: "sinal" as const, amount: 5000 }] };
+  assert.equal(matchesSaleDocumentSnapshot(currentProposal, sale), true);
+  assert.equal(matchesSaleDocumentSnapshot({ ...currentProposal, customerId: "cliente-a", total: 60000 }, sale), false);
+  assert.equal(matchesSaleReceiptSnapshot(currentReceipt, sale), true);
+  assert.equal(matchesSaleReceiptSnapshot({ ...currentReceipt, customerId: "cliente-a" }, sale), false);
+  assert.equal(matchesSaleReceiptSnapshot({ ...currentReceipt, total: 60000 }, sale), false);
+  assert.equal(matchesSaleReceiptSnapshot({ ...currentReceipt, amount: 4000 }, sale), false);
+  assert.equal(matchesSaleReceiptSnapshot(currentReceipt, { ...sale, payments: [{ method: "pix", amount: 55000 }] }), false);
 });
 test("reemissão mantém pagamentos em ordem diferente e exige CPF atual", () => {
   const sale = {
