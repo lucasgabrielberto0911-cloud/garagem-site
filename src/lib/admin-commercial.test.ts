@@ -15,9 +15,14 @@ test("Price calcula taxa zero, juros e rejeita valores inválidos", () => {
   for (const args of [[0, 0, 1, 12], [100, 100, 1, 12], [100, -1, 1, 12], [100, 0, -1, 12], [100, 0, 11, 12], [100, 0, 1, 0], [100, 0, 1, 1.5], [NaN, 0, 1, 12], [Infinity, 0, 1, 12]]) assert.throws(() => simulateFinancing(...args as [number, number, number, number]));
 });
 test("documento de venda só reutiliza snapshot atual de comprador, total e pagamentos", () => {
-  const sale = { customerId: "cliente-b", cpf: "11144477735", total: 55000, payments: [{ method: "pix" as const, amount: 55000 }] };
+  const sale = { customerId: "cliente-b", cpf: "11144477735", name: "Bruno Cliente", phone: "27999990000", rg: "123456", address: "Rua A, 10", total: 55000, payments: [{ method: "pix" as const, amount: 55000 }] };
   const current = { customerId: sale.customerId, cpf: sale.cpf, total: sale.total, payments: sale.payments };
-  assert.equal(matchesSaleDocumentSnapshot(current, sale), true);
+  const snapshot = { ...current, customer: sale.name, phone: sale.phone, rg: sale.rg, address: sale.address };
+  assert.equal(matchesSaleDocumentSnapshot(snapshot, sale), true);
+  assert.equal(matchesSaleDocumentSnapshot({ ...snapshot, customer: "Bruno Atualizado" }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...snapshot, phone: "27988887777" }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...snapshot, rg: "654321" }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...snapshot, address: "Rua B, 20" }, sale), false);
   assert.equal(matchesSaleDocumentSnapshot({ ...current, customerId: "cliente-a" }, sale), false);
   assert.equal(matchesSaleDocumentSnapshot({ ...current, total: 60000 }, sale), false);
   assert.equal(matchesSaleDocumentSnapshot({ ...current, payments: [{ method: "pix", amount: 60000 }] }, sale), false);

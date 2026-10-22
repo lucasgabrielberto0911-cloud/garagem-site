@@ -71,7 +71,20 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
           tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["saleId"], equals: vehicle.sale.id } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),
           tx.commercialDocument.findFirst({ where: { vehicleId, kind: "proposta", snapshot: { path: ["saleId"], equals: vehicle.sale.id } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),
         ]);
-        const currentSale = { customerId: vehicle.sale.customerId, cpf, total, payments };
+        const currentCustomer = vehicle.sale.customerId
+          ? await tx.customer.findUnique({ where: { id: vehicle.sale.customerId } })
+          : null;
+        const currentSale = {
+          customerId: vehicle.sale.customerId,
+          cpf: currentCustomer ? currentCustomer.cpf ?? "" : cpf,
+          name: currentCustomer?.name ?? customerName,
+          phone: currentCustomer?.phone ?? customerPhone,
+          rg: currentCustomer ? currentCustomer.rg ?? "" : identifiers.rg,
+          address: currentCustomer ? currentCustomer.address ?? "" : String(input.address ?? "").trim(),
+          total,
+          payments,
+        };
+        if (vehicle.sale.customerId && !currentCustomer) throw new Error("SALE_DOCUMENT_STALE");
         if (contract && matchesSaleDocumentSnapshot(contract.snapshot, currentSale)) return {
           saleId: vehicle.sale.id,
           contractId: contract.id,

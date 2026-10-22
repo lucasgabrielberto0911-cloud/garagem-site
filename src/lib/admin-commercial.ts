@@ -22,18 +22,25 @@ export type ContractPaymentItem = {
   signalDate?: string;
 };
 
-export function matchesSaleDocumentSnapshot(snapshot: unknown, sale: { customerId: string | null; cpf: string; total: number; payments: ContractPaymentItem[] }): boolean {
+export function matchesSaleDocumentSnapshot(snapshot: unknown, sale: { customerId: string | null; cpf: string; name?: string; phone?: string; rg?: string; address?: string; total: number; payments: ContractPaymentItem[] }): boolean {
   if (!snapshot || typeof snapshot !== "object") return false;
   const document = snapshot as Record<string, unknown>;
   const sameBuyer = document.customerId != null
     ? document.customerId === sale.customerId && String(document.cpf ?? "").replace(/\D/g, "") === sale.cpf.replace(/\D/g, "")
     : Boolean(sale.cpf) && String(document.cpf ?? "").replace(/\D/g, "") === sale.cpf.replace(/\D/g, "");
+  const sameCustomerDetails = ["name", "phone", "rg", "address"].every((field) => {
+    const current = sale[field as "name" | "phone" | "rg" | "address"];
+    if (current === undefined) return true;
+    const saved = field === "name" ? document.customer : document[field];
+    const normalize = (value: unknown) => field === "phone" ? String(value ?? "").replace(/\D/g, "") : String(value ?? "").trim();
+    return normalize(saved) === normalize(current);
+  });
   const snapshotPayments = parseContractPaymentsJson(JSON.stringify(document.payments ?? []));
   const sortPayments = (payments: ContractPaymentItem[] | undefined) => payments ? payments.map(({ signalDate: _signalDate, ...payment }) => payment).sort((a, b) => a.method.localeCompare(b.method)) : undefined;
-  return sameBuyer && Number(document.total ?? document.amount) === sale.total && JSON.stringify(sortPayments(snapshotPayments)) === JSON.stringify(sortPayments(sale.payments));
+  return sameBuyer && sameCustomerDetails && Number(document.total ?? document.amount) === sale.total && JSON.stringify(sortPayments(snapshotPayments)) === JSON.stringify(sortPayments(sale.payments));
 }
 
-export function matchesSaleReceiptSnapshot(snapshot: unknown, sale: { customerId: string | null; cpf: string; total: number; payments: ContractPaymentItem[] }): boolean {
+export function matchesSaleReceiptSnapshot(snapshot: unknown, sale: { customerId: string | null; cpf: string; name?: string; phone?: string; rg?: string; address?: string; total: number; payments: ContractPaymentItem[] }): boolean {
   if (!snapshot || typeof snapshot !== "object") return false;
   const document = snapshot as Record<string, unknown>;
   const signal = sale.payments.find((payment) => payment.method === "sinal");
