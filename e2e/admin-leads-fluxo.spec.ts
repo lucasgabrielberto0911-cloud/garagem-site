@@ -139,6 +139,9 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await avancarEtapa(page, 4);
   await form.getByRole("button", { name: "Linhares ES", exact: true }).click();
   await form.getByRole("button", { name: "Voltar", exact: true }).click();
+  await expect(page.locator("#wizard-title")).toContainText("Etapa 3 de 4");
+  await form.getByRole("button", { name: "Voltar", exact: true }).click();
+  await expect(page.locator("#wizard-title")).toContainText("Etapa 2 de 4");
   await form.locator('[name="plate"]').fill("abc-1234");
   await expect(form.locator('[name="plate"]')).toHaveAttribute("autocorrect", "off");
   await avancarEtapa(page, 4);
