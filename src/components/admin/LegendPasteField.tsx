@@ -3,7 +3,6 @@
 import { useId, useState } from "react";
 import { parseLegend, type LegendParseResult } from "@/lib/legend-parser";
 import {
-  filterAccessoriesForCategory,
   normalizeAccessories,
   type VehicleCategory,
 } from "@/lib/vehicle-accessories";
@@ -11,24 +10,25 @@ import { btn, inputClass } from "@/components/admin/ui";
 
 type Props = {
   category: VehicleCategory;
-  accessories: string[];
   description: string;
-  onApply: (accessories: string[], description?: string) => void;
+  onApply: (accessories: string[], description?: string) => boolean;
 };
 
-export function LegendPasteField({ category, accessories, description, onApply }: Props) {
+export function LegendPasteField({ category, description, onApply }: Props) {
   const id = useId();
   const [text, setText] = useState("");
   const [result, setResult] = useState<LegendParseResult | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [manual, setManual] = useState<string[]>([]);
   const [useDescription, setUseDescription] = useState(false);
+  const [applyError, setApplyError] = useState("");
 
   function analyze() {
     const parsed = parseLegend(text, category);
     setResult(parsed);
     setSelected(parsed.matched);
     setManual([]);
+    setApplyError("");
   }
 
   return (
@@ -116,20 +116,22 @@ export function LegendPasteField({ category, accessories, description, onApply }
             <input type="checkbox" checked={useDescription}
               onChange={(event) => setUseDescription(event.target.checked)}
               className="h-4 w-4 shrink-0 accent-brand" />
-            Usar legenda como descrição
+            Usar texto limpo como descrição
           </label>
           <button type="button" className={`${btn.outline} min-h-[44px] w-full sm:w-auto`}
             onClick={() => {
-              if (useDescription && description.trim() && description !== result.fullText &&
+              if (useDescription && description.trim() && description !== result.description &&
                 !window.confirm("Já existe uma descrição. Substituir pela legenda?")) return;
-              onApply(normalizeAccessories(filterAccessoriesForCategory(
-                [...accessories, ...selected, ...manual], category,
-              )), useDescription ? result.fullText : undefined);
+              if (!onApply([...selected, ...manual], useDescription ? result.description : undefined)) {
+                setApplyError("O limite é de 60 acessórios. Desmarque itens ou remova acessórios existentes antes de aplicar.");
+                return;
+              }
               setResult(null);
               setUseDescription(false);
             }}>
             Aplicar
           </button>
+          {applyError && <p role="alert" className="text-sm text-brand">{applyError}</p>}
         </div>
       )}
     </div>
