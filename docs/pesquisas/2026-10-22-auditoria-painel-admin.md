@@ -2,7 +2,7 @@
 
 Data: 22/10/2026. Tarefa: `10221601abce-1`. Base analisada: `6cdd75531d64d3034f80740835308f32e6d99ead` (`origin/main`).
 
-Retomada do WIP `7a592ba`, preservado na branch `reserva/10221601abce-1-auditoria-do-painel-admin-back`. Os logs temporários anteriores foram perdidos na pausa da VM. As verificações e as sondas dos achados 1, 2, 4, 5 e 7 foram executadas novamente na retomada; os demais achados foram reconferidos por leitura. O achado 3 foi acrescentado após o build e a consulta aos avisos oficiais de segurança.
+Retomada do WIP `7a592ba`, preservado na branch `reserva/10221601abce-1-auditoria-do-painel-admin-back`; publicação do relatório na branch `reserva/audit-admin-backend`. Os logs temporários anteriores foram perdidos na pausa da VM. As verificações e as sondas dos achados 1, 2, 4, 5 e 7 foram executadas novamente na retomada; os demais achados foram reconferidos por leitura. O achado 3 foi acrescentado após o build e a consulta aos avisos oficiais de segurança.
 
 ## Resumo
 
@@ -270,9 +270,9 @@ Logs locais temporários: `/tmp/garagem-audit-admin-{tests,lint,types,build,buil
 
 Não foram executados Playwright, Lighthouse ou preview: nenhuma tela/código foi alterado. Também não foram aplicadas migrations de RLS ao banco remoto nem validados permissões, pool, limites ou variáveis reais da Vercel/Supabase. O build com banco local não valida disponibilidade da produção.
 
-## Bloqueio de entrega do PR
+## Pendência de build antes de integrar
 
-O relatório está concluído e os testes, lint e tipos passaram. O build falhou nas duas execuções por alerta de segurança da dependência já fixada na base, sem mudança de código nesta tarefa. O AGENTS.md exige build verde antes do push e permite ao Codex escrever somente relatórios; a tarefa também determina parar e explicar se houver bloqueio. Por isso, a versão final foi commitada apenas localmente, sem push, PR, atualização de dependências ou merge. A branch remota conserva os WIPs já existentes. Após um agente autorizado atualizar o framework em tarefa própria, repetir os checks e publicar este relatório em Draft PR com as cinco seções exigidas.
+O relatório está concluído e os testes, lint e tipos passaram. O build falhou nas duas execuções com `SecurityFatalError`, por avisos de segurança do Next.js 16.4.0 já fixado na base, incluindo [GHSA-p3m5-59mp-jv5r](https://github.com/vercel/next.js/security/advisories/GHSA-p3m5-59mp-jv5r). O problema é pré-existente e não foi causado pela auditoria, que altera somente este relatório. A publicação em Draft PR foi autorizada pelo orquestrador com essa pendência documentada. A atualização do framework deve ocorrer em tarefa própria por agente autorizado, seguida de nova validação antes de retirar o PR de rascunho. Nenhuma dependência ou dado de produção foi alterado nesta entrega.
 
 ## Tarefas prontas para virar issue/PR
 
