@@ -6,7 +6,9 @@ import { randomUUID, randomInt } from "node:crypto";
 import { ORIGIN_LABELS } from "../src/lib/lead-origin";
 import { weeklyLeadSummary } from "../src/lib/lead-funnel";
 import { vehiclePath } from "../src/lib/vehicle-slug";
-import { equipmentLegend } from "../src/lib/__fixtures__/legend-lucas";
+import { readFileSync } from "node:fs";
+import { accessoryGroup, parseLegend } from "../src/lib/legend-parser";
+const fastbackLegend = readFileSync("src/lib/__fixtures__/legend-fastback.txt", "utf8");
 import samples from "./public-samples.json";
 
 // playwright.config.ts exige banco local dedicado e notificações desativadas.
@@ -151,7 +153,7 @@ async function conferirZip(page: import("@playwright/test").Page) {
   await page.unroute("**/api/admin/fotos/jpg?**");
 }
 
-test("veículo: legenda do Lucas publica os 15 equipamentos e itens livres", async ({ page, conta }) => {
+test("veículo: legenda inteira do Fastback publica 15 opcionais agrupados e permite edição", async ({ page, conta }) => {
   await login(page, conta.email);
   await page.goto("/admin/veiculos/novo");
   const form = page.locator("#vehicle-form");
@@ -161,37 +163,31 @@ test("veículo: legenda do Lucas publica os 15 equipamentos e itens livres", asy
   await avancarEtapa(page, 2);
   await form.locator('[name="brand"]').fill("Honda");
   await form.locator('[name="model"]').fill(conta.prefixo);
-  await form.locator('[name="color"]').fill("Prata");
-  await form.locator('[name="year"]').fill("2020");
-  await form.locator('[name="yearModel"]').fill("2021");
-  await form.locator('[name="kmDisplay"]').fill("42000");
-  await form.locator('[name="fuel"]').selectOption({ label: "Flex" });
-  await form.locator('[name="transmission"]').selectOption({ label: "Manual" });
+  await form.locator('[name="color"]').fill("Branco");
+  // Dados vazios podem ser completados automaticamente pela legenda na etapa 3.
   await avancarEtapa(page, 3);
-  await form.locator('[name="priceDisplay"]').fill("87654");
-  await form.getByLabel("Colar legenda", { exact: true }).fill(equipmentLegend);
-  await form.getByRole("button", { name: "Próximo", exact: true }).click();
-  await expect(page.locator("#wizard-title")).toContainText("Etapa 3 de 4");
-  await expect(form.getByRole("alert")).toContainText("A legenda ainda não foi aplicada.");
-  await form.getByRole("button", { name: "Analisar", exact: true }).click();
-  await form.getByRole("button", { name: "Próximo", exact: true }).click();
-  await expect(page.locator("#wizard-title")).toContainText("Etapa 3 de 4");
-  await form.getByRole("button", { name: "Aplicar", exact: true }).click();
+  await form.getByLabel("Colar legenda", { exact: true }).fill(fastbackLegend);
+  const parsed = parseLegend(fastbackLegend);
   const aplicados: string[] = JSON.parse(await form.locator('[name="accessories"]').inputValue());
-  // Cada linha da legenda tem seus equipamentos e detalhes preservados.
-  const linhasEsperadas = [
-    ['Multimídia', 'Apple CarPlay / Android Auto', 'Central multimídia de 10,1" com Apple CarPlay e Android Auto sem fio'],
-    ['Painel de instrumentos digital de 7"'],
-    ['Ar digital', 'Ar-condicionado digital automático'],
-    ['Keyless (partida por botão)'], ['Faróis de LED'],
-    ['Rodas de liga leve', 'Rodas de liga leve aro 18"'], ['Direção elétrica'],
-    ['Vidros elétricos', 'Travas elétricas', 'Retrovisores elétricos'], ['4 airbags'],
-    ['Câmera de ré'], ['Sensor de estacionamento', 'Sensor de estacionamento traseiro'],
-    ['Controle de tração', 'Controle de estabilidade'], ['Assistente de partida em rampa'],
-    ['ABS', 'EBD'], ['ISOFIX'],
-  ];
-  expect(linhasEsperadas).toHaveLength(15);
-  for (const linha of linhasEsperadas) expect(aplicados).toEqual(expect.arrayContaining(linha));
+  expect(aplicados).toEqual(parsed.accessories);
+  const preview = form.getByLabel("Prévia da legenda", { exact: true });
+  await expect(preview.getByLabel("Conforto", { exact: true }).locator("li")).toHaveCount(8);
+  await expect(preview.getByLabel("Segurança", { exact: true }).locator("li")).toHaveCount(7);
+  await expect(preview.getByLabel("Facilidades", { exact: true }).locator("li")).toHaveCount(2);
+  const colorConflict = preview.getByRole("status").filter({ hasText: "Divergência em Cor" });
+  await expect(colorConflict).toContainText("Campo mantido: Branco");
+  await colorConflict.getByRole("button", { name: "Usar valor da legenda", exact: true }).click();
+  await expect(form.locator('[name="color"]')).toHaveValue("Prata");
+  // Digitação posterior atualiza dados preenchidos pela própria legenda.
+  await form.getByLabel("Colar legenda", { exact: true }).fill(fastbackLegend.replace("106.900", "107.900"));
+  await expect(form.locator('[name="priceDisplay"]')).toHaveValue("107.900");
+  await form.getByLabel("Colar legenda", { exact: true }).fill(`${fastbackLegend}\nConforto:\n✅ ${"Equipamento ".repeat(15)}`);
+  await form.getByRole("button", { name: "Próximo", exact: true }).click();
+  await expect(page.locator("#wizard-title")).toContainText("Etapa 3 de 4");
+  await expect(form.getByRole("alert")).toContainText("100 caracteres");
+  await form.getByLabel("Colar legenda", { exact: true }).fill(fastbackLegend);
+  await expect(form.locator('[name="description"]')).toHaveValue(parsed.description);
+  await expect(form.locator('[name="priceDisplay"]')).toHaveValue("106.900");
   await avancarEtapa(page, 4);
   await form.getByRole("button", { name: "Linhares ES", exact: true }).click();
   await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
@@ -204,8 +200,40 @@ test("veículo: legenda do Lucas publica os 15 equipamentos e itens livres", asy
   await expect(form.getByRole("button", { name: "Baixar todas as fotos em ordem (ZIP)", exact: true })).toBeVisible();
   await conferirZip(page);
   await page.goto(vehiclePath(vehicle));
+  expect(vehicle.description).toBe(parsed.description);
+  expect(vehicle.price).toBe(106900);
+  expect(vehicle.km).toBe(24000);
+  expect(vehicle.year).toBe(2023);
+  expect(vehicle.yearModel).toBe(2024);
+  expect(vehicle.engine).toBe("1.0 Turbo 200, até 130 cv");
+  expect(vehicle.transmission).toBe("Automático CVT com 7 marchas simuladas");
   const equipamentos = page.locator("[data-accessory-chips]:visible");
-  for (const item of aplicados) await expect(equipamentos.getByText(item, { exact: true })).toBeVisible();
+  await expect(equipamentos.locator("[data-accessory-chip]")).toHaveCount(15);
+  for (const [group, count] of [["Conforto", 8], ["Segurança", 7], ["Facilidades", 2]] as const) {
+    const section = equipamentos.getByRole("region", { name: group, exact: true });
+    await expect(section.getByRole("heading", { name: group, exact: true })).toBeVisible();
+    await expect(section.locator("li")).toHaveCount(count);
+  }
+  for (const item of aplicados) await expect(equipamentos.getByText(accessoryGroup(item).text, { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  // Edição usa o mesmo campo e salva exatamente a prévia após remover um item.
+  await page.goto(`/admin/veiculos/${vehicle.id}`);
+  await page.getByRole("navigation", { name: "Abas da ficha do veículo" }).getByRole("link", { name: "Anúncio", exact: true }).click();
+  await avancarEtapa(page, 3);
+  await form.getByLabel("Colar legenda", { exact: true }).fill(fastbackLegend);
+  await form.getByRole("button", { name: "Remover ISOFIX", exact: true }).click();
+  await expect(form.getByLabel("Colar legenda", { exact: true })).not.toHaveValue(/✅ ISOFIX/);
+  const remainingLegend = await form.getByLabel("Colar legenda", { exact: true }).inputValue();
+  await form.getByLabel("Colar legenda", { exact: true }).fill(`${remainingLegend}\n`);
+  await expect(preview.getByLabel("Segurança", { exact: true }).locator("li")).toHaveCount(6);
+  await avancarEtapa(page, 4);
+  await form.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).accessories).toEqual(aplicados.filter(item => accessoryGroup(item).text !== "ISOFIX"));
+  await expect(form.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
+  await expect(page.getByText("Anúncio salvo com sucesso.", { exact: true })).toBeVisible();
+  await page.goto(vehiclePath(vehicle));
+  await expect(page.locator("[data-accessory-chips]:visible [data-accessory-chip]")).toHaveCount(14);
+
 });
 
 test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", async ({ page, conta }) => {
@@ -228,7 +256,7 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await expect(form.getByText("Informe KM inteiro entre 0 e 999.999.", { exact: true })).toHaveCount(0);
   await form.getByRole("button", { name: "Próximo", exact: true }).click();
   await form.locator('[name="priceDisplay"]').fill(" R$ 87.654,00 ");
-  await form.locator('[name="description"]').fill("Veículo revisado e bem cuidado.");
+  await form.getByLabel("Colar legenda", { exact: true }).fill("Veículo revisado e bem cuidado.");
   await avancarEtapa(page, 4);
   await form.getByRole("button", { name: "Linhares ES", exact: true }).click();
   await form.getByRole("button", { name: "Voltar", exact: true }).click();

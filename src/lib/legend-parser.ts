@@ -1,174 +1,84 @@
-import {
-  getAccessoryPresets,
-  filterAccessoriesForCategory,
-  normalizeAccessories,
-  type VehicleCategory,
-} from "./vehicle-accessories";
+import { normalizeAccessories } from "./vehicle-accessories";
 
-export type LegendParseResult = {
-  matched: string[];
-  unmatched: string[];
-  listed?: string[];
-  fullText: string;
-  description: string;
-};
+export const LEGEND_GROUPS = ["Conforto", "Segurança", "Facilidades", "Outros opcionais"] as const;
+export type LegendGroup = typeof LEGEND_GROUPS[number];
+export const LEGEND_FIELDS = {
+  km: "Quilometragem", year: "Ano de fabricação", yearModel: "Ano modelo",
+  color: "Cor", transmission: "Câmbio", fuel: "Combustível", engine: "Motor", price: "Preço",
+} as const;
+export type LegendField = keyof typeof LEGEND_FIELDS;
+export type LegendData = Partial<Record<LegendField, string>>;
+export type LegendParseResult = { description: string; accessories: string[]; data: LegendData };
+export const fold = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-export const LEGEND_SYNONYMS: Record<string, string[]> = {
-  "Multimídia": ["central multimídia"],
-  "Ar-condicionado": ["ar condicionado gelado", "ar condicionado gelando", "ar gelado"],
-  "Ar digital": ["ar condicionado digital"],
-  "Direção hidráulica": ["dir hidráulica"],
-  "Direção elétrica": ["dir elétrica", "direção eletr"],
-  "Vidros elétricos": ["vidro elétrico"],
-  "Travas elétricas": ["trava elétrica", "trava elétrico", "travas elétrico"],
-  "Sensor de estacionamento": ["sensor de ré", "sensor ré"],
-  "Câmera de ré": ["cam de ré", "câmera ré"],
-  "Bancos de couro": ["couro", "banco de couro", "bancos em couro", "banco em couro"],
-  "Airbag duplo": ["2 airbags", "dois airbags"],
-  "Piloto automático": ["cruise", "cruise control"],
-  "Rodas de liga leve": ["liga leve"],
-  "Teto solar": ["teto panorâmico", "panorâmico"],
-  "Faróis de LED": ["led", "farol de led", "faróis full LED"],
-  "Apple CarPlay / Android Auto": ["carplay", "apple carplay", "android auto"],
-  "Keyless (partida por botão)": ["keyless", "partida botão", "partida por botão", "start stop", "chave presencial", "chave presencial com partida por botão"],
-  "Farol de LED": ["led", "farois de led"],
-  "LED diurno (DRL)": ["led diurno"],
-  "Rodas de liga": ["liga leve"],
-};
-
-export const fold = (text: string) =>
-  text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-
-function tokens(text: string) {
-  return Array.from(text.matchAll(/[\p{L}\p{N}][\p{L}\p{N}\p{M}]*/gu), (match) => ({
-    value: fold(match[0]),
-    start: match.index,
-    end: match.index + match[0].length,
-  }));
-}
-
-function expandCompoundItems(text: string) {
-  return text
-    .replace(/vidros,?\s+travas\s+e\s+retrovisores\s+el[eé]tricos/gi, "Vidros elétricos; Travas elétricas; Retrovisores elétricos")
-    .replace(/controle de tra[cç][aã]o e (?:de )?estabilidade/gi, "Controle de tração; Controle de estabilidade")
-    .replace(/(?:freios?\s+)?ABS com EBD/gi, "ABS; EBD");
-}
-
-function parsePlainLegend(text: string, category: VehicleCategory): LegendParseResult {
-  const description = text
-    .replace(/(?:https?:\/\/|www\.)[^\s]+/gi, " ")
-    .replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}\u200D\uFE0F\u20E3]/gu, "")
-    .split(/\r?\n|\r/)
-    .map((line) => line.trim())
-    .filter((line) => !/^[\s\p{P}]*(?:sua\s+)?garagem[\s\p{P}]*$/iu.test(line))
-    .map((line) => line.replace(/\bsua\s+garagem\b/giu, "Garagem").replace(/^[\s•–—-]+/, "").trim())
-    .filter(Boolean)
-    .join("\n");
-  const source = expandCompoundItems(description);
-  const words = tokens(source);
-  const used = new Set<number>();
-  const matched: string[] = [];
-  const remaining = source.split("");
-  const candidates = getAccessoryPresets(category).flatMap((preset) =>
-    [preset, ...(LEGEND_SYNONYMS[preset] ?? [])].map((alias) => ({
-      preset,
-      words: tokens(alias).map((word) => word.value),
-      length: fold(alias).length,
-    })),
-  ).sort((a, b) => b.words.length - a.words.length || b.length - a.length);
-
-  for (const candidate of candidates) {
-    for (let i = 0; i <= words.length - candidate.words.length; i++) {
-      if (!candidate.words.every((word, offset) =>
-        !used.has(i + offset) && words[i + offset].value === word &&
-        (offset === 0 || /^[\s()/–—-]*$/.test(
-          source.slice(words[i + offset - 1].end, words[i + offset].start),
-        )),
-      )) continue;
-      if (!matched.includes(candidate.preset)) matched.push(candidate.preset);
-      candidate.words.forEach((_, offset) => used.add(i + offset));
-      remaining.fill("\0", words[i].start, words[i + candidate.words.length - 1].end);
-    }
+export function accessoryGroup(item: string): { group: LegendGroup; text: string } {
+  for (const group of LEGEND_GROUPS) {
+    if (item.startsWith(`${group}: `)) return { group, text: item.slice(group.length + 2) };
   }
-
-  const seen = new Set<string>();
-  const fragmentKey = (value: string) => fold(value).replace(/[-\s]+/g, " ").trim();
-  const categoryKeys = (value: VehicleCategory) => new Set(getAccessoryPresets(value).flatMap((preset) =>
-    [preset, ...(LEGEND_SYNONYMS[preset] ?? [])].map(fragmentKey),
-  ));
-  const allowed = categoryKeys(category);
-  const otherCategory = categoryKeys(category === "moto" ? "carro" : "moto");
-  const unmatched = normalizeAccessories(remaining.join("")
-    .replace(/[ \t]*(?:\be[ \t]+)?\0+(?:[ \t]+e\b)?[ \t]*/gi, " ")
-    .split(/[\n\r,;•]+|\s+[\/–—-]\s+|\s+e\s+/i)
-    .map((fragment) => fragment.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
-    .filter((fragment) => {
-      const key = fragmentKey(fragment);
-      if (!/\p{L}/u.test(key) || (key.match(/[\p{L}\p{N}]/gu)?.length ?? 0) < 3 || seen.has(key)) return false;
-      if (otherCategory.has(key) && !allowed.has(key)) return false;
-      seen.add(key);
-      return true;
-    })).slice(0, Math.max(0, 60 - matched.length));
-
-  return { matched, unmatched, fullText: text, description };
+  return { group: "Outros opcionais", text: item };
 }
 
-/** Linhas marcadas são itens completos; detalhes livres não podem virar fragmentos. */
-export function parseLegend(text: string, category: VehicleCategory): LegendParseResult {
-  const plain: string[] = [];
-  const descriptions: string[] = [];
-  const matched: string[] = [];
-  const listed: string[] = [];
-  for (const raw of text.split(/\r?\n|\r/)) {
-    const clean = raw
-      .replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}\u200D\uFE0F\u20E3]/gu, "")
-      .replace(/^[\s\p{P}\p{S}]+/u, "").trim();
-    if (/^(?:equipamentos(?: e conforto)?|conforto|seguranca|opcionais|acessorios)\s*:?$/i.test(fold(clean))) continue;
-    const marked = /^[\s]*[\p{P}\p{S}]/u.test(raw);
-    if (!marked || !clean || /^(?:https?:\/\/|www\.)/i.test(clean) || /^(?:sua\s+)?garagem[\s\p{P}]*$/iu.test(clean)) {
-      plain.push(raw);
-      descriptions.push(parsePlainLegend(raw, category).description);
+export function groupAccessories(items: readonly string[]) {
+  return LEGEND_GROUPS.map(group => ({ group, items: items.filter(item => accessoryGroup(item).group === group) }))
+    .filter(group => group.items.length > 0);
+}
+
+/** Recusa qualquer normalização que cortaria itens ou detalhes exibidos na prévia. */
+export function legendAccessoriesError(items: string[]) {
+  return JSON.stringify(items) !== JSON.stringify(normalizeAccessories(items))
+    ? "Há itens acima do limite de 100 caracteres ou mais de 60 itens. Remova ou ajuste a legenda antes de publicar."
+    : "";
+}
+
+/** Cada linha marcada é um item inteiro, sem gerar também presets da mesma frase. */
+export function parseLegend(text: string): LegendParseResult {
+  const result: LegendParseResult = { description: "", accessories: [], data: {} };
+  const description: string[] = [];
+  const seen = new Set<string>();
+  let group: LegendGroup = "Outros opcionais";
+  for (const raw of text.split(/\r\n|[\r\n]/)) {
+    const line = raw.replace(/^[\s\p{P}\p{S}\uFE0F]+/u, "").trim();
+    if (!line) continue;
+    const key = fold(line);
+    if (/^(?:equipamentos(?: e conforto)?|conforto)\s*:?$/.test(key)) { group = "Conforto"; continue; }
+    if (/^seguranca\s*:?$/.test(key)) { group = "Segurança"; continue; }
+    if (/^facilidades\s*:?$/.test(key)) { group = "Facilidades"; continue; }
+    if (/^(?:outros opcionais|opcionais|acessorios)\s*:?$/.test(key)) { group = "Outros opcionais"; continue; }
+    if (/^\s*[✅✔☑•*–-]/u.test(raw)) {
+      const itemKey = fold(line).replace(/\s+/g, " ");
+      if (!seen.has(itemKey)) {
+        seen.add(itemKey);
+        result.accessories.push(`${group}: ${line}`);
+      }
       continue;
     }
-    const description = parsePlainLegend(clean, category).description;
-    if (!description) continue;
-    descriptions.push(description);
-    for (const item of expandCompoundItems(description).split(/\s*[;•]\s*/)) {
-      const parsed = parsePlainLegend(item, category);
-      matched.push(...parsed.matched);
-      // Preserva especificações (tela, quantidade, aro) e itens sem preset por inteiro.
-      if (!parsed.matched.length || parsed.unmatched.length) listed.push(item);
+    const datum = line.match(/^(Quilometragem|Km|Ano de fabricação|Ano modelo|Ano|Cor|Câmbio|Combustível|Motor|Valor|Preço)\s*:\s*(.+)$/i);
+    if (datum) {
+      const value = datum[2].trim();
+      const name = fold(datum[1]);
+      if (name === "ano de fabricacao" || name === "ano modelo") result.data[name === "ano modelo" ? "yearModel" : "year"] = value;
+      else if (name === "ano") {
+        const years = value.match(/^(\d{4})(?:\s*\/\s*(\d{4}))?$/);
+        if (years) { result.data.year = years[1]; result.data.yearModel = years[2] ?? years[1]; }
+        else description.push(line);
+      } else if (name === "km" || name === "quilometragem") result.data.km = value.replace(/\s*km$/i, "");
+      else if (name === "valor" || name === "preco") result.data.price = value.replace(/^R\$\s*/, "");
+      else {
+        const field = ({ cor: "color", cambio: "transmission", combustivel: "fuel", motor: "engine" } as const)[name as "cor" | "cambio" | "combustivel" | "motor"];
+        result.data[field] = value;
+      }
+      continue;
     }
+    // Cabeçalho comercial, identificação e convite não são a descrição do veículo.
+    if (/^(?:disponivel no estoque|agende sua visita)/.test(key) || /^\s*🚗/u.test(raw)) continue;
+    description.push(line);
   }
-  const parsed = parsePlainLegend(plain.join("\n"), category);
-  const unique = (items: string[]) => items.filter((item, index) =>
-    items.findIndex((other) => fold(other).replace(/\s+/g, " ") === fold(item).replace(/\s+/g, " ")) === index);
-  const result: LegendParseResult = {
-    matched: unique([...parsed.matched, ...matched]),
-    unmatched: unique([...parsed.unmatched, ...listed]),
-    fullText: text,
-    description: descriptions.filter(Boolean).join("\n"),
-  };
-  if (listed.length) result.listed = unique(listed);
+  result.description = description.join("\n\n");
   return result;
 }
 
-/** Preserva os existentes; recusa acréscimos que ultrapassem o limite. */
-export function mergeLegendAccessories(
-  existing: string[],
-  additions: string[],
-  category: VehicleCategory,
-  manual: string[] = [],
-): string[] | null {
-  const seen = new Set(existing.map((item) => fold(item).replace(/\s+/g, " ").trim()));
-  const added = [...filterAccessoriesForCategory(additions, category), ...manual].flatMap((item) =>
-    normalizeAccessories([item]),
-  ).filter((item) => {
-    const key = fold(item).replace(/\s+/g, " ").trim();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-  if (added.length && existing.length + added.length > 60) return null;
-  return [...existing, ...added];
+export function legendText(description: string, items: string[], data: LegendData = {}) {
+  const facts = Object.entries(data).filter(([, value]) => value).map(([field, value]) => `${LEGEND_FIELDS[field as LegendField]}: ${value}`).join("\n");
+  return [description, facts, ...groupAccessories(items).map(({ group, items }) =>
+    `${group}:\n${items.map(item => `✅ ${accessoryGroup(item).text}`).join("\n")}`)].filter(Boolean).join("\n\n");
 }

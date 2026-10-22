@@ -1,5 +1,6 @@
 "use server";
 
+import { legendAccessoriesError, LEGEND_GROUPS } from "@/lib/legend-parser";
 import { withAdminStorageLock } from "@/lib/admin-storage-lock";
 import { reconcileAdminPhotos } from "@/lib/admin-photo-reconcile";
 import type { Prisma } from "@prisma/client";
@@ -170,13 +171,18 @@ function parseVehicleFields(formData: FormData) {
     throw new Error("Fotos inválidas.");
   }
 
-  let accessories: string[] = [];
   const accessoriesRaw = String(formData.get("accessories") || "[]");
+  let rawAccessories: unknown;
   try {
-    accessories = normalizeAccessories(JSON.parse(accessoriesRaw));
+    rawAccessories = JSON.parse(accessoriesRaw);
   } catch {
     throw new Error("Acessórios inválidos.");
   }
+  if (Array.isArray(rawAccessories) && rawAccessories.some(item => typeof item === "string" && LEGEND_GROUPS.some(group => item.startsWith(`${group}: `)))) {
+    const error = legendAccessoriesError(rawAccessories);
+    if (error) throw Object.assign(new Error(error), { fieldErrors: { accessories: error } });
+  }
+  const accessories = normalizeAccessories(rawAccessories);
 
   return {
     category,
