@@ -23,6 +23,16 @@ test("documento de venda só reutiliza snapshot atual de comprador, total e paga
   assert.equal(matchesSaleDocumentSnapshot({ ...current, payments: [{ method: "pix", amount: 60000 }] }, sale), false);
   assert.equal(matchesSaleDocumentSnapshot({ customer: "Cliente antigo", total: 60000 }, sale), false);
 });
+test("reemissão mantém pagamentos em ordem diferente e exige CPF atual", () => {
+  const sale = {
+    customerId: "cliente-b", cpf: "111.444.777-35", total: 60000,
+    payments: [{ method: "pix" as const, amount: 55000 }, { method: "sinal" as const, amount: 5000 }],
+  };
+  const reissued = { customerId: sale.customerId, cpf: "11144477735", total: sale.total, payments: [...sale.payments].reverse() };
+  assert.equal(matchesSaleDocumentSnapshot(reissued, sale), true);
+  assert.equal(matchesSaleDocumentSnapshot({ ...reissued, cpf: "529.982.247-25" }, sale), false);
+  assert.equal(matchesSaleDocumentSnapshot({ ...reissued, payments: [{ method: "sinal", amount: 4000 }, sale.payments[0]] }, sale), false);
+});
 test("sugestão respeita custo, margem mínima e dias de giro", () => {
   const base = { price: 60000, purchase: 50000, costs: 2000, days: 90, margin: 4000, consigned: false };
   assert.equal(suggestPrice(base)?.price, 57000);

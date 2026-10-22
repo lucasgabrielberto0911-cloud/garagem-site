@@ -25,9 +25,12 @@ export type ContractPaymentItem = {
 export function matchesSaleDocumentSnapshot(snapshot: unknown, sale: { customerId: string | null; cpf: string; total: number; payments: ContractPaymentItem[] }): boolean {
   if (!snapshot || typeof snapshot !== "object") return false;
   const document = snapshot as Record<string, unknown>;
-  const sameBuyer = document.customerId != null ? document.customerId === sale.customerId : Boolean(sale.cpf) && String(document.cpf ?? "").replace(/\D/g, "") === sale.cpf;
+  const sameBuyer = document.customerId != null
+    ? document.customerId === sale.customerId && String(document.cpf ?? "").replace(/\D/g, "") === sale.cpf.replace(/\D/g, "")
+    : Boolean(sale.cpf) && String(document.cpf ?? "").replace(/\D/g, "") === sale.cpf.replace(/\D/g, "");
   const snapshotPayments = parseContractPaymentsJson(JSON.stringify(document.payments ?? []));
-  return sameBuyer && Number(document.total ?? document.amount) === sale.total && JSON.stringify(snapshotPayments) === JSON.stringify(sale.payments);
+  const sortPayments = (payments: ContractPaymentItem[] | undefined) => payments ? [...payments].sort((a, b) => a.method.localeCompare(b.method)) : undefined;
+  return sameBuyer && Number(document.total ?? document.amount) === sale.total && JSON.stringify(sortPayments(snapshotPayments)) === JSON.stringify(sortPayments(sale.payments));
 }
 
 export function formatContractPaymentRow(item: ContractPaymentItem, receiptRef?: string): string {
