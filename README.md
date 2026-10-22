@@ -38,6 +38,11 @@ npm run dev
 Nunca use o banco de produção para testes. O painel só cria um administrador com
 `ADMIN_BOOTSTRAP_PASSWORD` definido (veja `.env.example`).
 
+## Ambiente de desenvolvimento na VM
+
+O desenvolvimento roda na VM `garagem-dev`. Os programadores trabalham em
+sessões `tmux`, acompanhadas pelo painel.
+
 ## Testes e verificações
 
 ```bash
