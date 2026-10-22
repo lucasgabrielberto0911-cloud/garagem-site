@@ -20,7 +20,12 @@ const test = base.extend<{ conta: { email: string; prefixo: string }; destinos: 
     try { await executar({ email, prefixo }); }
     finally {
       await prisma.leadVenda.deleteMany({ where: { name: { startsWith: prefixo } } });
+      const vehicles = await prisma.vehicle.findMany({ where: { model: { startsWith: prefixo } }, select: { id: true } });
+      await prisma.sale.deleteMany({ where: { vehicleId: { in: vehicles.map(vehicle => vehicle.id) } } });
+      await prisma.commercialDocument.deleteMany({ where: { vehicleId: { in: vehicles.map(vehicle => vehicle.id) } } });
+      await prisma.vehicleReservation.deleteMany({ where: { vehicleId: { in: vehicles.map(vehicle => vehicle.id) } } });
       await prisma.vehicle.deleteMany({ where: { model: { startsWith: prefixo } } });
+      await prisma.customer.deleteMany({ where: { name: { startsWith: prefixo } } });
       await prisma.adminAudit.deleteMany({ where: { adminId: admin.id } });
       await prisma.admin.delete({ where: { id: admin.id } });
     }
@@ -155,7 +160,7 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   expect(vehicle.purchasePrice).toBeNull();
   await expect(page).toHaveURL(`/admin/veiculos/${vehicle.id}`);
   const tabsNav = page.getByRole("navigation", { name: "Abas da ficha do veículo" });
-  for (const label of ["Anúncio", "Fotos", "Venda", "Custos e docs", "Verificado"]) {
+  for (const label of ["Anúncio", "Fotos", "Iniciar venda", "Custos e docs", "Verificado"]) {
     await expect(tabsNav.getByRole("link", { name: new RegExp(`^${label}`) })).toBeVisible();
   }
   await avancarEtapa(page, 3);
@@ -185,9 +190,27 @@ test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", as
   await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
   const maisAcoes = page.getByRole("button", { name: "Mais ações do anúncio", exact: true });
   if (await maisAcoes.isVisible()) await maisAcoes.click();
-  await page.getByRole("button", { name: /^Marcar vendido/ }).click();
-  await page.getByRole("button", { name: "Só marcar vendido", exact: true }).click();
-  await expect(page).toHaveURL(/\/admin\/veiculos\?tab=vendidos$/);
+  const customer = await prisma.customer.create({ data: { name: conta.prefixo, phone: "27988887777" } });
+  await page.getByRole("button", { name: /^Iniciar venda/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Iniciar venda", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/admin/vendas/nova\\?veiculo=${vehicle.id}`));
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await page.getByRole("combobox").click();
+  await page.getByRole("option", { name: new RegExp(conta.prefixo) }).click();
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await page.getByRole("button", { name: /À vista\/PIX/ }).click();
+  await page.getByLabel("Valor total negociado").fill("85.900,00");
+  await page.getByLabel("Valor", { exact: true }).fill("85.900,00");
+  await page.getByLabel("Valor", { exact: true }).blur();
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page.getByRole("heading", { name: "Vendedor" })).toBeVisible();
+  await page.getByLabel("Responsável comercial").fill(conta.prefixo);
+  await page.getByLabel("Comissão (R$)").fill("0");
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
+  await expect(page.getByRole("heading", { name: "Venda registrada" })).toBeVisible();
+  expect((await prisma.sale.findUniqueOrThrow({ where: { vehicleId: vehicle.id } })).customerId).toBe(customer.id);
   await expect.poll(async () => (await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).status).toBe("vendido");
   await page.goto(vehiclePath(vehicle));
   await expect(page.locator("main")).toContainText(/vendido/i);

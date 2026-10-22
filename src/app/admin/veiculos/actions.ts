@@ -364,6 +364,7 @@ export async function updateVehicle(
       await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
       const current = await tx.vehicle.findUniqueOrThrow({ where: { id } });
       if (data.status === "reservado" && current.status !== "reservado") throw new Error("Use a aba Operação para reservar com cliente, sinal e prazo.");
+      if (data.status === "vendido" && current.status !== "vendido" && !(await tx.sale.findUnique({ where: { vehicleId: id }, select: { id: true } }))) throw new Error("Conclua o fluxo de venda para marcar o veículo como vendido.");
       if (current.status === "reservado" && data.status !== "reservado") await tx.vehicleReservation.updateMany({ where: { vehicleId: id, status: { in: data.status === "vendido" ? ["ativa"] : ["ativa", "convertida"] } }, data: { status: data.status === "vendido" ? "convertida" : "cancelada" } });
       const currentPhotos = await tx.photo.findMany({
         where: { vehicleId: id },
@@ -537,6 +538,7 @@ export async function markVehicleAsSold(id: string) {
 
   await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
+    if (!(await tx.sale.findUnique({ where: { vehicleId: id }, select: { id: true } }))) throw new Error("Conclua o fluxo de venda para marcar o veículo como vendido.");
     await tx.vehicleReservation.updateMany({ where: { vehicleId: id, status: "ativa" }, data: { status: "convertida" } });
     const previous = await tx.vehicle.findUniqueOrThrow({
       where: { id },
@@ -560,6 +562,8 @@ const VEHICLE_STATUSES = ["disponivel", "reservado", "vendido"] as const;
 
 export async function setVehicleStatus(id: string, status: string) {
   const session = await requireAdmin();
+
+  if (status === "vendido" && !(await prisma.sale.findUnique({ where: { vehicleId: id }, select: { id: true } }))) return { ok: false, message: "Conclua o fluxo de venda para marcar o veículo como vendido." };
 
   if (!(VEHICLE_STATUSES as readonly string[]).includes(status)) {
     return { ok: false, message: "Status inválido." };
@@ -606,6 +610,8 @@ export async function setVehiclesStatus(
   status: string,
 ): Promise<{ ok: boolean; message: string; appliedIds?: string[] }> {
   const session = await requireAdmin();
+
+  if (status === "vendido") return { ok: false, message: "Registre cada venda pelo fluxo de venda antes de marcar os veículos como vendidos." };
 
   if (!isAdminBulkStatus(status)) {
     return {

@@ -7,7 +7,7 @@ import { descriptionPriceSaveError } from "@/lib/admin-vehicle-validate";
 import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { parseMoneyBR } from "@/lib/admin-money";
 import { isValidCpf } from "@/lib/format";
-import { ENTRY_ITEMS, FINANCE_STATUSES, financingSimulationDown, parseVehicleCustomerIds, resolveIdField, signalMismatch, parseContractPaymentsJson, simulateFinancing, suggestPrice, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
+import { ENTRY_ITEMS, FINANCE_STATUSES, financingSimulationDown, parseVehicleCustomerIds, resolveIdField, signalExceedsTotal, signalMismatch, parseContractPaymentsJson, simulateFinancing, suggestPrice, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { revalidatePublicStock, revalidatePublicStockMany } from "@/lib/public-stock-revalidate";
@@ -149,20 +149,47 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
 
         // Contrato: o sinal já pago (recibo da reserva) é abatido do preço.
         let signal: { amount: number; receiptId?: string; date?: string } | undefined;
+        let signalReservationId: string | null = null;
         if (isContract) {
           const held = await tx.vehicleReservation.findFirst({ where: { vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } });
           const receipt = held ? await tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["reservationId"], equals: held.id } }, orderBy: { createdAt: "desc" } }) : null;
           const sinalItem = parsedPayments?.find((p) => p.method === "sinal");
-          const signalEnabled = text("signalEnabled") === "on";
-          if (signalEnabled && held) {
+          const signalEnabled = text("signalEnabled") === "on" || Number(held?.deposit) > 0 || (sinalItem?.amount ?? 0) > 0;
+          if (signalEnabled && held && Number(held.deposit) > 0) {
             signal = { amount: Number(held.deposit), receiptId: receipt ? String(receipt.number) : undefined, date: receipt?.createdAt.toISOString() };
+            signalReservationId = held.id;
           } else if (signalEnabled && sinalItem && sinalItem.amount > 0) {
-            signal = { amount: sinalItem.amount, date: sinalItem.signalDate };
+            let receiptId = text("legacySignalReceiptId");
+            if (!receiptId && vehicle.sale?.id) {
+              const saleReceipt = await tx.commercialDocument.findFirst({
+                where: { vehicleId, kind: "recibo", snapshot: { path: ["saleId"], equals: vehicle.sale.id } },
+                orderBy: { createdAt: "desc" },
+              });
+              const saleReceiptSnapshot = saleReceipt?.snapshot as { amount?: number; customerId?: string } | null;
+              if (saleReceipt && saleReceiptSnapshot?.customerId === customer.id && Number(saleReceiptSnapshot.amount) === sinalItem.amount) {
+                receiptId = String(saleReceipt.number);
+              }
+            }
+            if (receiptId) {
+              const receiptNumber = Number(receiptId);
+              const receiptDoc = Number.isInteger(receiptNumber) && receiptNumber > 0
+                ? await tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", number: receiptNumber } })
+                : null;
+              const receiptSnapshot = receiptDoc?.snapshot as { amount?: number; customerId?: string; saleId?: string | null; reservationId?: string | null } | null;
+              const linkedReservation = receiptSnapshot?.reservationId
+                ? await tx.vehicleReservation.findFirst({ where: { id: receiptSnapshot.reservationId, vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } } })
+                : null;
+              const linkedToSale = receiptSnapshot?.saleId === vehicle.sale?.id && receiptSnapshot?.customerId === customer.id;
+              if (!receiptDoc || Number(receiptSnapshot?.amount) !== sinalItem.amount || (!linkedToSale && !linkedReservation)) {
+                throw new CommercialError("O recibo do sinal não pertence ao comprador atual desta venda.");
+              }
+            }
+            signal = { amount: sinalItem.amount, date: sinalItem.signalDate, receiptId: receiptId || undefined };
           } else if (signalEnabled) {
             const dep = parseMoneyBR(form.get("deposit"));
             if (dep && dep > 0) signal = { amount: dep };
           }
-          if (signal && signal.amount >= amount) throw new CommercialError("O preço total do contrato deve ser maior que o sinal já pago.");
+          if (signal && signalExceedsTotal(signal.amount, amount)) throw new CommercialError("O sinal já pago não pode superar o preço total do contrato.");
         }
         if (isContract && parsedPayments) {
           const mismatch = signalMismatch(parsedPayments, signal?.amount ?? 0);
@@ -200,6 +227,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
               financed: financed && financed > 0 ? financed : undefined,
               payments: parsedPayments,
               customer: customer.name,
+              customerId: customer.id,
               cpf: customer.cpf ?? "",
               rg,
               chassis,
@@ -218,7 +246,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
               payment: paymentText.slice(0, 200),
               seller: session.email,
               date: new Date().toISOString(),
-              reservationId: reservation?.id ?? null,
+              reservationId: reservation?.id ?? signalReservationId,
               saleId: vehicle.sale?.id ?? null,
             },
           },

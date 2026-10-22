@@ -120,6 +120,11 @@ for (const width of [390, 1440]) {
       await next(page).click();
       await expect(title(page)).toContainText("Etapa 3 de 4");
       await form.locator('[name="description"]').fill("Veículo revisado e bem cuidado.");
+      await expect(page.getByLabel("Colar legenda", { exact: true })).toBeVisible();
+      await page.getByLabel("Colar legenda", { exact: true }).fill("✅ Ar-condicionado");
+      await page.getByRole("button", { name: "Analisar", exact: true }).click();
+      await page.getByRole("button", { name: "Aplicar", exact: true }).click();
+      await expect(form.getByRole("checkbox", { name: "Ar-condicionado", exact: true })).toBeChecked();
       await form.locator('[name="status"]').selectOption("reservado");
       await next(page).click();
       await expect(page.getByText("Cadastre como disponível antes de reservar o veículo.", { exact: true })).toBeVisible();
@@ -128,6 +133,7 @@ for (const width of [390, 1440]) {
       await expect(page.locator('[name="model"]')).toHaveValue(modelName);
       await next(page).click();
       await expect(form.locator('[name="description"]')).toHaveValue("Veículo revisado e bem cuidado.");
+      await expect(form.getByRole("checkbox", { name: "Ar-condicionado", exact: true })).toBeChecked();
       await next(page).click();
       await expect(title(page)).toContainText("Etapa 4 de 4");
       await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
@@ -143,6 +149,7 @@ for (const width of [390, 1440]) {
       await expect.poll(() => prisma.vehicle.findFirst({ where: { model: modelName } })).not.toBeNull();
       const saved = await prisma.vehicle.findFirstOrThrow({ where: { model: modelName }, include: { photos: { orderBy: { order: "asc" } } } });
       expect(saved.price).toBe(59900);
+      expect(saved.accessories).toContain("Ar-condicionado");
       expect(saved.hasVideo).toBe(true);
       expect(saved.featured).toBe(true);
       expect(saved.photos.map(photo => photo.url)).toEqual(reordered.map((photo: { url: string }) => photo.url));
