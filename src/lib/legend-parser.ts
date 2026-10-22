@@ -14,7 +14,7 @@ export type LegendParseResult = {
 
 export const LEGEND_SYNONYMS: Record<string, string[]> = {
   "Multimídia": ["central multimídia"],
-  "Ar-condicionado": ["ar condicionado gelado", "ar gelado"],
+  "Ar-condicionado": ["ar condicionado gelado", "ar condicionado gelando", "ar gelado"],
   "Ar digital": ["ar condicionado digital"],
   "Direção hidráulica": ["dir hidráulica"],
   "Direção elétrica": ["dir elétrica", "direção eletr"],
@@ -22,15 +22,15 @@ export const LEGEND_SYNONYMS: Record<string, string[]> = {
   "Travas elétricas": ["trava elétrica", "trava elétrico", "travas elétrico"],
   "Sensor de estacionamento": ["sensor de ré", "sensor ré"],
   "Câmera de ré": ["cam de ré", "câmera ré"],
-  "Bancos de couro": ["couro", "banco de couro"],
+  "Bancos de couro": ["couro", "banco de couro", "bancos em couro", "banco em couro"],
   "Airbag duplo": ["airbag", "airbags"],
   "Piloto automático": ["cruise", "cruise control"],
   "Rodas de liga leve": ["liga leve"],
   "Teto solar": ["teto panorâmico", "panorâmico"],
-  "Faróis de LED": ["led"],
+  "Faróis de LED": ["led", "farol de led"],
   "Apple CarPlay / Android Auto": ["carplay", "apple carplay", "android auto"],
-  "Keyless (partida por botão)": ["keyless", "partida botão", "partida por botão"],
-  "Farol de LED": ["led"],
+  "Keyless (partida por botão)": ["keyless", "partida botão", "partida por botão", "start stop", "chave presencial"],
+  "Farol de LED": ["led", "farois de led"],
   "LED diurno (DRL)": ["led diurno"],
   "Rodas de liga": ["liga leve"],
 };
@@ -83,15 +83,19 @@ export function parseLegend(text: string, category: VehicleCategory): LegendPars
   }
 
   const seen = new Set<string>();
-  const allowed = new Set(getAccessoryPresets(category).map(fold));
-  const otherCategory = new Set(getAccessoryPresets(category === "moto" ? "carro" : "moto").map(fold));
+  const fragmentKey = (value: string) => fold(value).replace(/[-\s]+/g, " ").trim();
+  const categoryKeys = (value: VehicleCategory) => new Set(getAccessoryPresets(value).flatMap((preset) =>
+    [preset, ...(LEGEND_SYNONYMS[preset] ?? [])].map(fragmentKey),
+  ));
+  const allowed = categoryKeys(category);
+  const otherCategory = categoryKeys(category === "moto" ? "carro" : "moto");
   const unmatched = normalizeAccessories(remaining.join("")
     .replace(/[ \t]*(?:\be[ \t]+)?\0+(?:[ \t]+e\b)?[ \t]*/gi, " ")
     .split(/[\n\r,;•]+|\s+[\/–—-]\s+|\s+e\s+/i)
     .map((fragment) => fragment.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
     .filter((fragment) => {
-      const key = fold(fragment).replace(/\s+/g, " ").trim();
-      if ((key.match(/\p{L}/gu)?.length ?? 0) < 3 || seen.has(key)) return false;
+      const key = fragmentKey(fragment);
+      if (!/\p{L}/u.test(key) || (key.match(/[\p{L}\p{N}]/gu)?.length ?? 0) < 3 || seen.has(key)) return false;
       if (otherCategory.has(key) && !allowed.has(key)) return false;
       seen.add(key);
       return true;

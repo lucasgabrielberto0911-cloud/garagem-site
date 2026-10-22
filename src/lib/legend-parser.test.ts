@@ -23,6 +23,27 @@ test("sinônimos usam palavras inteiras e o maior casamento primeiro", () => {
   assert.deepEqual(parseLegend("alarmeado ledor absurdo centralizado", "carro").matched, []);
 });
 
+test("sinônimos completos consomem a expressão sem sobrar prefixos", () => {
+  for (const [text, preset] of [
+    ["farol de led", "Faróis de LED"],
+    ["farois de led", "Faróis de LED"],
+    ["bancos em couro", "Bancos de couro"],
+    ["banco em couro", "Bancos de couro"],
+    ["start stop", "Keyless (partida por botão)"],
+    ["chave presencial", "Keyless (partida por botão)"],
+    ["ar condicionado gelando", "Ar-condicionado"],
+  ]) {
+    const result = parseLegend(text, "carro");
+    assert.deepEqual(result.matched, [preset]);
+    assert.deepEqual(result.unmatched, []);
+    assert.deepEqual(parseLegend(`Revisado; ${text}; Único dono`, "carro").unmatched, ["Revisado", "Único dono"]);
+  }
+  for (const text of ["farol de led", "farois de led"]) {
+    assert.deepEqual(parseLegend(text, "moto").matched, ["Farol de LED"]);
+    assert.deepEqual(parseLegend(text, "moto").unmatched, []);
+  }
+});
+
 test("legenda real mistura presets e pontos manuais sem aplicar nada", () => {
   const text = "🚗 GARAGEM\n✅ Ar-condicionado\n✅ Dir elétrica • Vidro elétrico / trava elétrica\n✅ Único dono; Revisões na concessionária\nhttps://suagaragem.net/estoque/123";
   const result = parseLegend(text, "carro");
@@ -280,6 +301,21 @@ test("sugestões descartam números e fragmentos com menos de três letras sem q
 test("sugestões excluem presets exclusivos da outra categoria, inclusive sem acentos", () => {
   assert.deepEqual(parseLegend("DIRECAO   ELETRICA; Direção hidráulica; Único dono", "moto").unmatched, ["Único dono"]);
   assert.deepEqual(parseLegend("Bauleto original; Painel digital TFT; Revisado", "carro").unmatched, ["Revisado"]);
+});
+
+test("filtro da outra categoria normaliza hífens e espaços e inclui sinônimos", () => {
+  const text = "AR CONDICIONADO; ar-condicionado; ar   condicionado; ar condicionado gelando; dir-eletrica; dir hidráulica; bancos em couro; banco em couro; start-stop; chave presencial; Único dono";
+  assert.deepEqual(parseLegend(text, "moto").unmatched, ["Único dono"]);
+  assert.deepEqual(parseLegend("para brisa; para-brisa; Revisado", "carro").unmatched, ["Revisado"]);
+  assert.deepEqual(parseLegend("azul-escuro; azul escuro", "carro").unmatched, ["azul-escuro"]);
+});
+
+test("sugestões preservam termos alfanuméricos como 4x4 e 4WD", () => {
+  for (const category of ["carro", "moto"] as const) {
+    const result = parseLegend("4x4; 4WD; 4wd; 2021; 12; de; Revisado", category);
+    assert.deepEqual(result.matched, []);
+    assert.deepEqual(result.unmatched, ["4x4", "4WD", "Revisado"]);
+  }
 });
 
 test("mais de 60 presets reconhecidos não liberam sugestões pelo limite negativo", (t) => {
