@@ -347,7 +347,7 @@ export function SellForm({
               type="submit"
               disabled={!ready || isPending || photoBusy}
               aria-busy={isPending}
-              className="min-h-[52px] w-full bg-brand px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] disabled:opacity-70 touch-manipulation"
+              className="min-h-[52px] w-full bg-brand px-7 py-4 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark disabled:opacity-70 touch-manipulation"
             >
               {isPending ? "Enviando..." : "Solicitar avaliação"}
             </button>

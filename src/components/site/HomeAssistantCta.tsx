@@ -70,7 +70,7 @@ export function HomeAssistantAsk() {
           placeholder="Ex.: tem SUV automático?"
           className="h-10 min-w-0 flex-1 lg:h-11 border border-white/15 bg-ink px-3 text-[16px] text-cream placeholder:text-muted focus:border-brand focus:outline-none sm:text-sm"
         />
-        <button type="submit" aria-label="Enviar pergunta ao assistente" className="flex h-10 w-10 lg:h-11 lg:w-11 shrink-0 items-center justify-center bg-brand text-cream transition hover:bg-[#c91418] touch-manipulation">
+        <button type="submit" aria-label="Enviar pergunta ao assistente" className="flex h-10 w-10 lg:h-11 lg:w-11 shrink-0 items-center justify-center bg-brand text-cream transition hover:bg-brand-dark touch-manipulation">
           <IconSend className="h-4 w-4" />
         </button>
       </form>
