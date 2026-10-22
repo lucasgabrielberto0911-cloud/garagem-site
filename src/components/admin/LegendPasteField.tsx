@@ -11,10 +11,11 @@ import { btn, inputClass } from "@/components/admin/ui";
 type Props = {
   category: VehicleCategory;
   description: string;
+  onPendingChange?: (pending: boolean) => void;
   onApply: (selected: string[], manual: string[], description?: string) => boolean;
 };
 
-export function LegendPasteField({ category, description, onApply }: Props) {
+export function LegendPasteField({ category, description, onApply, onPendingChange }: Props) {
   const id = useId();
   const [text, setText] = useState("");
   const [analysis, setResult] = useState<(LegendParseResult & { category: VehicleCategory }) | null>(null);
@@ -56,6 +57,7 @@ export function LegendPasteField({ category, description, onApply }: Props) {
         value={text}
         onChange={(event) => {
           setText(event.target.value);
+          onPendingChange?.(Boolean(event.target.value.trim()));
           prevTextRef.current = "";
           setResult(null);
           setManual([]);
@@ -152,6 +154,7 @@ export function LegendPasteField({ category, description, onApply }: Props) {
                 return;
               }
               setText("");
+              onPendingChange?.(false);
               prevTextRef.current = "";
               setResult(null);
               setSelected([]);

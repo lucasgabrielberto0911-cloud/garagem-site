@@ -22,12 +22,13 @@ import { btn } from "@/components/admin/ui";
 import type { NormalizedRect } from "@/lib/blur-rects";
 import { isFramedCardUrl, type CoverFrame } from "@/lib/cover-frame";
 import { downloadAttachment } from "@/lib/download-attachment";
-import { adminStorageJpgPath, archivePhotoFilename } from "@/lib/photo-archive";
+import { adminStorageJpgPath, archivePhotoFilename, archiveZipFilename } from "@/lib/photo-archive";
 import {
   photoUploadProgressLabel,
   summarizePhotoUploads,
   type PhotoUploadJobState,
 } from "@/lib/photo-upload-jobs";
+import { buildZipStore } from "@/lib/zip-store";
 import { coverSrc } from "@/lib/stock-query";
 
 const PlateBlurEditor = dynamic(
@@ -247,6 +248,7 @@ export function VehiclePhotoManager({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [removeIndex, setRemoveIndex] = useState<number | null>(null);
+  const [zipPending, setZipPending] = useState(false);
   const [downloadId, setDownloadId] = useState<string | null>(null);
   const [actionsId, setActionsId] = useState<string | null>(null);
 
@@ -327,6 +329,33 @@ export function VehiclePhotoManager({
           : job,
       ),
     );
+  }
+
+  async function downloadAllPhotos() {
+    if (zipPending || photos.length === 0) return;
+    setZipPending(true);
+    const vehicle = { brand: listing?.brand ?? "", model: listing?.model ?? "", year: listing?.year ?? new Date().getFullYear() };
+    try {
+      const entries = [];
+      // A ordem atual inclui fotos ainda não salvas e reordenações da edição.
+      for (const [index, photo] of photos.entries()) {
+        const name = archivePhotoFilename({ ...vehicle, index: index + 1, url: photo.url });
+        const response = await fetch(adminStorageJpgPath(photo.url, name));
+        if (!response.ok) throw new Error(`Não foi possível baixar a foto ${index + 1}. Tente de novo.`);
+        entries.push({ name, data: new Uint8Array(await response.arrayBuffer()) });
+      }
+      const url = URL.createObjectURL(new Blob([Uint8Array.from(buildZipStore(entries))], { type: "application/zip" }));
+      try {
+        await downloadAttachment(url, archiveZipFilename(vehicle));
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+      toast.success("ZIP com todas as fotos em ordem baixado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha no download.");
+    } finally {
+      setZipPending(false);
+    }
   }
 
   async function downloadPhoto(photo: PhotoItem, index: number) {
@@ -673,6 +702,15 @@ export function VehiclePhotoManager({
         </p>
       ) : photos.length > 0 ? (
         <>
+          <button
+            type="button"
+            onClick={() => void downloadAllPhotos()}
+            disabled={zipPending || inFlight || blurring || rotating || framing}
+            className={`${btn.outline} mb-4 w-full sm:w-auto`}
+          >
+            <IconDownload className="h-4 w-4" />
+            {zipPending ? "Montando ZIP…" : "Baixar todas as fotos em ordem (ZIP)"}
+          </button>
           <CoverPhotoGuide photos={photos} disabled={inFlight || blurring || rotating || framing} onCover={makeCover} onFrame={() => setFramingOpen(true)} />
           <details className="mt-4 text-xs text-muted">
             <summary className="cursor-pointer py-1 touch-manipulation">

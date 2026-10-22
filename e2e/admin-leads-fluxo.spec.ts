@@ -1,10 +1,12 @@
 import { test as base, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { readFile } from "node:fs/promises";
 import { randomUUID, randomInt } from "node:crypto";
 import { ORIGIN_LABELS } from "../src/lib/lead-origin";
 import { weeklyLeadSummary } from "../src/lib/lead-funnel";
 import { vehiclePath } from "../src/lib/vehicle-slug";
+import { equipmentLegend } from "../src/lib/__fixtures__/legend-lucas";
 import samples from "./public-samples.json";
 
 // playwright.config.ts exige banco local dedicado e notificações desativadas.
@@ -128,6 +130,82 @@ test("login: trocar a senha invalida a sessão anterior", async ({ page, conta }
   expect((await page.request.get("/api/admin/leads/veiculos")).status()).toBe(401);
   await page.goto("/admin/leads");
   await expect(page).toHaveURL(/\/admin\/login/);
+});
+
+async function conferirZip(page: import("@playwright/test").Page) {
+  const fotos: { url: string }[] = JSON.parse(await page.locator('#vehicle-form [name="photoUrls"]').inputValue());
+  const baixadas: string[] = [];
+  await page.route("**/api/admin/fotos/jpg?**", async route => {
+    baixadas.push(new URL(route.request().url()).searchParams.get("url")!);
+    await route.fulfill({ contentType: "image/jpeg", body: Buffer.from(`foto-${baixadas.length}`) });
+  });
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Baixar todas as fotos em ordem (ZIP)", exact: true }).click();
+  const arquivo = await download;
+  expect(arquivo.suggestedFilename()).toMatch(/\.zip$/);
+  const bytes = await readFile((await arquivo.path())!);
+  expect(bytes.subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+  expect(baixadas).toEqual(fotos.map(foto => foto.url));
+  const texto = bytes.toString();
+  expect(texto.indexOf("foto-1")).toBeLessThan(texto.indexOf("foto-2"));
+  await page.unroute("**/api/admin/fotos/jpg?**");
+}
+
+test("veículo: legenda do Lucas publica os 15 equipamentos e itens livres", async ({ page, conta }) => {
+  await login(page, conta.email);
+  await page.goto("/admin/veiculos/novo");
+  const form = page.locator("#vehicle-form");
+  await adicionarFotos(page);
+  await expect(form.getByRole("button", { name: "Baixar todas as fotos em ordem (ZIP)", exact: true })).toBeVisible();
+  await conferirZip(page);
+  await avancarEtapa(page, 2);
+  await form.locator('[name="brand"]').fill("Honda");
+  await form.locator('[name="model"]').fill(conta.prefixo);
+  await form.locator('[name="color"]').fill("Prata");
+  await form.locator('[name="year"]').fill("2020");
+  await form.locator('[name="yearModel"]').fill("2021");
+  await form.locator('[name="kmDisplay"]').fill("42000");
+  await form.locator('[name="fuel"]').selectOption({ label: "Flex" });
+  await form.locator('[name="transmission"]').selectOption({ label: "Manual" });
+  await avancarEtapa(page, 3);
+  await form.locator('[name="priceDisplay"]').fill("87654");
+  await form.getByLabel("Colar legenda", { exact: true }).fill(equipmentLegend);
+  await form.getByRole("button", { name: "Próximo", exact: true }).click();
+  await expect(page.locator("#wizard-title")).toContainText("Etapa 3 de 4");
+  await expect(form.getByRole("alert")).toContainText("A legenda ainda não foi aplicada.");
+  await form.getByRole("button", { name: "Analisar", exact: true }).click();
+  await form.getByRole("button", { name: "Próximo", exact: true }).click();
+  await expect(page.locator("#wizard-title")).toContainText("Etapa 3 de 4");
+  await form.getByRole("button", { name: "Aplicar", exact: true }).click();
+  const aplicados: string[] = JSON.parse(await form.locator('[name="accessories"]').inputValue());
+  // Cada linha da legenda tem seus equipamentos e detalhes preservados.
+  const linhasEsperadas = [
+    ['Multimídia', 'Apple CarPlay / Android Auto', 'Central multimídia de 10,1" com Apple CarPlay e Android Auto sem fio'],
+    ['Painel de instrumentos digital de 7"'],
+    ['Ar digital', 'Ar-condicionado digital automático'],
+    ['Keyless (partida por botão)'], ['Faróis de LED'],
+    ['Rodas de liga leve', 'Rodas de liga leve aro 18"'], ['Direção elétrica'],
+    ['Vidros elétricos', 'Travas elétricas', 'Retrovisores elétricos'], ['4 airbags'],
+    ['Câmera de ré'], ['Sensor de estacionamento', 'Sensor de estacionamento traseiro'],
+    ['Controle de tração', 'Controle de estabilidade'], ['Assistente de partida em rampa'],
+    ['ABS', 'EBD'], ['ISOFIX'],
+  ];
+  expect(linhasEsperadas).toHaveLength(15);
+  for (const linha of linhasEsperadas) expect(aplicados).toEqual(expect.arrayContaining(linha));
+  await avancarEtapa(page, 4);
+  await form.getByRole("button", { name: "Linhares ES", exact: true }).click();
+  await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
+  await expect.poll(() => prisma.vehicle.count({ where: { model: conta.prefixo } })).toBe(1);
+  const vehicle = await prisma.vehicle.findFirstOrThrow({ where: { model: conta.prefixo } });
+  expect(vehicle.status).toBe("disponivel");
+  expect(vehicle.accessories).toEqual(aplicados);
+  await expect(page).toHaveURL(`/admin/veiculos/${vehicle.id}`);
+  await page.getByRole("navigation", { name: "Abas da ficha do veículo" }).getByRole("link", { name: "Fotos", exact: true }).click();
+  await expect(form.getByRole("button", { name: "Baixar todas as fotos em ordem (ZIP)", exact: true })).toBeVisible();
+  await conferirZip(page);
+  await page.goto(vehiclePath(vehicle));
+  const equipamentos = page.locator("[data-accessory-chips]:visible");
+  for (const item of aplicados) await expect(equipamentos.getByText(item, { exact: true })).toBeVisible();
 });
 
 test("veículo: cadastrar, editar, marcar vendido e manter ficha sem preço", async ({ page, conta }) => {

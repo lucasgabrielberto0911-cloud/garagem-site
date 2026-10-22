@@ -295,6 +295,7 @@ export function VehicleForm({
     setDirty(true);
   };
   const [consigned, setConsigned] = useState(init?.consigned ?? false);
+  const [legendPending, setLegendPending] = useState(false);
   const [customAccessory, setCustomAccessory] = useState("");
   const [category, setCategory] = useState<VehicleCategory>(() =>
     parseVehicleCategory(init?.category),
@@ -531,6 +532,7 @@ export function VehicleForm({
     const parsed = parseVehicleFormFields(new FormData(form));
     const { km, price } = parsed;
     Object.assign(next, parsed.fieldErrors);
+    if (legendPending) next.accessories = "A legenda ainda não foi aplicada. Clique em Analisar e Aplicar, ou limpe o campo Colar legenda.";
 
     const listingIssues = validateVehicleListing({
       brand,
@@ -1688,13 +1690,20 @@ export function VehicleForm({
             }`}
             summary={accessoriesSummary(accessories)}
           >
+            {errors.accessories ? <p role="alert" className="mb-3 text-sm text-red-400">{errors.accessories}</p> : null}
             <LegendPasteField
               category={category}
+              onPendingChange={setLegendPending}
               description={description}
               onApply={(items, manual, legendDescription) => {
                 const merged = mergeLegendAccessories(accessories, items, category, manual);
                 if (!merged) return false;
                 setAccessories(merged);
+                setErrors((current) => {
+                  const next = { ...current };
+                  delete next.accessories;
+                  return next;
+                });
                 if (legendDescription !== undefined) setDescription(legendDescription);
                 return true;
               }}

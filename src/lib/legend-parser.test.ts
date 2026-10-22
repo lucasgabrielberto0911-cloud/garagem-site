@@ -5,24 +5,7 @@ import { LegendPasteField } from "../components/admin/LegendPasteField";
 import { fold, mergeLegendAccessories, parseLegend } from "./legend-parser";
 import { getAccessoryPresets } from "./vehicle-accessories";
 
-const equipmentLegend = `✨ Equipamentos e conforto:
-✅ Central multimídia de 10,1" com Apple CarPlay e Android Auto sem fio
-✅ Painel de instrumentos digital de 7"
-✅ Ar-condicionado digital automático
-✅ Chave presencial com partida por botão
-✅ Faróis full LED
-✅ Rodas de liga leve aro 18"
-✅ Direção elétrica
-✅ Vidros, travas e retrovisores elétricos
-
-🛡️ Segurança:
-✅ 4 airbags
-✅ Câmera de ré
-✅ Sensor de estacionamento traseiro
-✅ Controle de tração e de estabilidade
-✅ Assistente de partida em rampa
-✅ Freios ABS com EBD
-✅ ISOFIX`;
+import { equipmentLegend } from "./__fixtures__/legend-lucas";
 
 test("as 15 linhas marcadas são selecionadas ou criadas sem perder detalhes e compostos", () => {
   const result = parseLegend(equipmentLegend, "carro");
@@ -316,6 +299,23 @@ function legendField(t: TestContext, overrides: Partial<React.ComponentProps<typ
     },
   };
 }
+
+test("legenda permanece pendente até aplicar com sucesso ou limpar o texto", (t) => {
+  const pending = t.mock.fn();
+  let success = false;
+  const field = legendField(t, { onPendingChange: pending, onApply: () => success });
+  field.change("ABS");
+  assert.deepEqual(pending.mock.calls.map(call => call.arguments), [[true]]);
+  field.click("Analisar");
+  field.click("Aplicar");
+  assert.equal(pending.mock.callCount(), 1);
+  success = true;
+  field.click("Aplicar");
+  assert.deepEqual(pending.mock.calls[1].arguments, [false]);
+  field.change("Direção elétrica");
+  field.change("   ");
+  assert.deepEqual(pending.mock.calls.slice(2).map(call => call.arguments), [[true], [false]]);
+});
 
 test("aplicar legenda marcada inclui automaticamente os 15 itens no array salvo", (t) => {
   let saved: string[] | null = [];
