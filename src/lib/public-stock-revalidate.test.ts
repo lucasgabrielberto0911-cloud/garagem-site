@@ -34,13 +34,13 @@ test("páginas públicas de estoque usam TTL de 1 h (a invalidação vem do pain
 test("revalidatePublicStock expira a tag na hora e só a ficha daquele veículo", () => {
   const source = readSrc("lib/public-stock-revalidate.ts");
   assert.match(source, /updateTag\(VEHICLES_PUBLIC_CACHE_TAG\)/);
-  assert.doesNotMatch(source, /revalidateTag\(/);
+  assert.match(source, /revalidateTag\(VEHICLES_PUBLIC_CACHE_TAG, \{ expire: 0 \}\)/);
   // O único revalidatePath de ficha em lote fica em revalidateAllPublicFichas.
   assert.equal(source.match(/^\s+revalidatePath\("\/estoque\/\[id\]"/gm)?.length, 1);
   assert.match(source, /function revalidateAllPublicFichas[^]*revalidatePath\("\/estoque\/\[id\]", "page"\)/);
 });
 
-test("quem chama revalidatePublicStock é Server Action (updateTag não roda fora delas)", () => {
+test("revalidatePublicStock usa a API de cache adequada ao contexto", () => {
   for (const file of [
     "app/admin/veiculos/actions.ts",
     "app/admin/veiculos/ops-actions.ts",
@@ -50,6 +50,10 @@ test("quem chama revalidatePublicStock é Server Action (updateTag não roda for
   ]) {
     assert.match(readSrc(file), /^"use server";/, file);
   }
+  assert.match(
+    readSrc("app/api/admin/vehicles/[id]/sell/route.ts"),
+    /revalidatePublicStock\(id, undefined, "route-handler"\)/,
+  );
 });
 
 test("operação do veículo (chave reserva, manual, na loja) revalida a ficha pública", () => {

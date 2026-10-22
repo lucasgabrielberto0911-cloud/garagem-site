@@ -72,6 +72,7 @@ model Vehicle {
    * valor do estoque nem no lucro.
    */
   consigned    Boolean  @default(false)
+  soldAt       DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   photos       Photo[]

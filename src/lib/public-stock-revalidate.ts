@@ -1,4 +1,4 @@
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { expireAdminData } from "@/lib/admin-revalidate";
 import { prisma } from "@/lib/prisma";
 import { vehiclePath, type VehiclePathInput } from "@/lib/vehicle-slug";
@@ -13,13 +13,21 @@ const SLUG_SELECT = {
 } as const;
 
 /**
- * Com TTL de 1 h, a alteração do painel precisa aparecer na hora: `updateTag`
- * expira o cache e a próxima leitura já vê o dado novo. Só funciona em Server Actions
- * (todos os chamadores ficam em `src/app/admin/**`, arquivos "use server").
+ * Com TTL de 1 h, a alteração do painel precisa aparecer na hora. Server Actions
+ * usam `updateTag`; Route Handlers expiram a mesma tag com `revalidateTag`.
  */
-function revalidateSharedPublicStock(expireAdmin = true) {
+type RevalidationContext = "server-action" | "route-handler";
+
+function revalidateSharedPublicStock(
+  context: RevalidationContext = "server-action",
+  expireAdmin = true,
+) {
   if (expireAdmin) expireAdminData();
-  updateTag(VEHICLES_PUBLIC_CACHE_TAG);
+  if (context === "route-handler") {
+    revalidateTag(VEHICLES_PUBLIC_CACHE_TAG, { expire: 0 });
+  } else {
+    updateTag(VEHICLES_PUBLIC_CACHE_TAG);
+  }
   revalidatePath("/api/estoque");
   revalidatePath("/");
   revalidatePath("/estoque");
@@ -43,8 +51,9 @@ function revalidateSlug(vehicle: VehiclePathInput, seen: Set<string>) {
 export async function revalidatePublicStock(
   vehicle?: VehiclePathInput | string | null,
   previous?: VehiclePathInput | null,
+  context: RevalidationContext = "server-action",
 ) {
-  revalidateSharedPublicStock();
+  revalidateSharedPublicStock(context);
   const seen = new Set<string>();
   if (previous?.id) revalidateSlug(previous, seen);
 
@@ -79,6 +88,6 @@ export async function revalidatePublicStockMany(ids: string[]) {
  * não alcança fichas que o lote não enumerou.
  */
 export function revalidateAllPublicFichas() {
-  revalidateSharedPublicStock(false);
+  revalidateSharedPublicStock("server-action", false);
   revalidatePath("/estoque/[id]", "page");
 }
