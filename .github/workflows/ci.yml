@@ -68,12 +68,22 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
-      - name: Playwright (download)
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-      - name: Playwright (deps)
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+      - name: Playwright (instalação com tentativas limitadas)
+        timeout-minutes: 11
+        run: |
+          instalar() {
+            for tentativa in 1 2 3; do
+              if "$@"; then
+                return 0
+              fi
+              echo "::warning::Instalação do Playwright falhou na tentativa ${tentativa}/3."
+            done
+            return 1
+          }
+          instalar sudo env "PATH=$PATH" timeout --kill-after=15s 120s npx playwright install-deps chromium
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            instalar timeout --kill-after=15s 60s npx playwright install chromium
+          fi
       - name: Cache .next/cache
         uses: actions/cache@v4
         with:
