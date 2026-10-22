@@ -2,15 +2,15 @@
 
 Data: 22/10/2026. Tarefa: `10221601abce-1`. Base analisada: `6cdd75531d64d3034f80740835308f32e6d99ead` (`origin/main`).
 
-Retomada do WIP `7a592ba`, preservado na branch `reserva/10221601abce-1-auditoria-do-painel-admin-back`. Os logs temporários anteriores foram perdidos na pausa da VM. As verificações abaixo e as sondas dos achados 1, 2, 3, 4 e 6 foram executadas novamente na retomada; os demais achados foram reconferidos por leitura.
+Retomada do WIP `7a592ba`, preservado na branch `reserva/10221601abce-1-auditoria-do-painel-admin-back`. Os logs temporários anteriores foram perdidos na pausa da VM. As verificações e as sondas dos achados 1, 2, 4, 5 e 7 foram executadas novamente na retomada; os demais achados foram reconferidos por leitura. O achado 3 foi acrescentado após o build e a consulta aos avisos oficiais de segurança.
 
 ## Resumo
 
 O painel gerencia estoque, reservas, clientes, contatos, vendas, documentos e conteúdo do site. A carga considerada é a de uma loja pequena, com poucos administradores e duas ou mais abas simultâneas, inclusive durante envio e limpeza de fotos.
 
-Foram encontrados **10 achados: nenhum crítico confirmado, 2 altos, 7 médios e 1 baixo**. A prioridade é impedir que um veículo com venda ativa volte à vitrine pelos atalhos de status e impedir documentos com valores diferentes da venda. Os achados não equivalem a uma invasão ou vazamento ocorrido em produção.
+Foram encontrados **11 achados: nenhum crítico confirmado na configuração revisada, 3 altos, 7 médios e 1 baixo**. A dependência Next.js recebe classificação crítica no npm, mas a aplicação das condições de cada aviso é discriminada no achado 3. As prioridades são atualizar o framework, impedir que um veículo com venda ativa volte à vitrine pelos atalhos de status e impedir documentos com valores diferentes da venda. Os achados não equivalem a uma invasão ou vazamento ocorrido em produção.
 
-Este PR altera somente este relatório. Nenhuma correção de aplicação, migration, variável da Vercel ou dado de produção foi aplicada. As sondas usaram registros fictícios no PostgreSQL local `garagem_build`, com limpeza posterior.
+A entrega altera somente este relatório. Nenhuma correção de aplicação, migration, variável da Vercel ou dado de produção foi aplicada. As sondas usaram registros fictícios no PostgreSQL local `garagem_build`, com limpeza posterior.
 
 ## Método, cobertura e limites
 
@@ -30,22 +30,22 @@ Todas as linhas abaixo tiveram a guarda de sessão revisada e responderam 401 à
 | `/badge` | GET | Snapshot compartilhado; falha retorna contagens nulas, sem inventar zero |
 | `/busca` | GET | Termo normalizado; quatro buscas limitadas em paralelo |
 | `/clientes` | GET | `take` limitado no helper de consulta; resposta privada |
-| `/documentos/[id]` | GET | Busca por id; PDF privado; consulta fora do `try` (10) |
-| `/drafts` | GET, POST, DELETE | Chave e proprietário, teto de payload, versão e trava; erro de DELETE (10) |
+| `/documentos/[id]` | GET | Busca por id; PDF privado; consulta fora do `try` (11) |
+| `/drafts` | GET, POST, DELETE | Chave e proprietário, teto de payload, versão e trava; erro de DELETE (11) |
 | `/em-preparacao/pdf` | GET | PDF privado; carrega todos os itens de preparação, aceitável para a carga considerada |
 | `/export` | GET | Limite de 10 mil, lotes de 500, snapshot `RepeatableRead` e timeout explícito de 30 s |
-| `/files` | POST | Tipo/extensão e tamanho; guarda de origem; privacidade do bucket (5) |
-| `/files/sign` | POST | Tipo/tamanho e bucket privado; formato de JSON (10) |
-| `/files/view` | GET | URL assinada de 60 s ou redirecionamento legado; validação de referência (4, 10) |
+| `/files` | POST | Tipo/extensão e tamanho; guarda de origem; privacidade do bucket (6) |
+| `/files/sign` | POST | Tipo/tamanho e bucket privado; formato de JSON (11) |
+| `/files/view` | GET | URL assinada de 60 s ou redirecionamento legado; validação de referência (5, 11) |
 | `/fotos/jpg` | GET | Caminho de foto validado; conversão protegida contra exceção |
-| `/leads/[id]/activity` | GET, POST | Histórico limitado; nota/data validadas, transação e expiração admin; formato de JSON (10) |
+| `/leads/[id]/activity` | GET, POST | Histórico limitado; nota/data validadas, transação e expiração admin; formato de JSON (11) |
 | `/leads/veiculos` | GET | Opções paginadas e recuperação por id, incluindo vendido para o histórico |
 | `/pedidos/compatibilidade` | POST | Valida ids e compatibilidade atual; grava auditoria e expira cache admin |
 | `/session` | GET | Apenas informa validade da sessão; `private, no-store` |
-| `/vehicles/[id]/sell` | PATCH | Parser próprio, trava e transação; sinal no ramo simples (3); invalidação em contexto de handler |
-| `/veiculos/[id]/fotos` | GET | Busca fotos do veículo e monta ZIP em memória; destino de download (4) |
+| `/vehicles/[id]/sell` | PATCH | Parser próprio, trava e transação; sinal no ramo simples (4); invalidação em contexto de handler |
+| `/veiculos/[id]/fotos` | GET | Busca fotos do veículo e monta ZIP em memória; destino de download (5) |
 | `/veiculos/[id]/fotos/[photoId]` | GET | Confere vínculo da foto com o veículo; conversão com captura de erro |
-| `/veiculos/[id]/gastos` | GET | PDF de custos do veículo; consulta fora do `try` (10) |
+| `/veiculos/[id]/gastos` | GET | PDF de custos do veículo; consulta fora do `try` (11) |
 | `/veiculos` | GET | Página/tamanho limitados, seleção restrita e relações sem consulta por item |
 | `/vendas` | GET | Página/período normalizados e consultas limitadas |
 | `/vendas/veiculos` | GET | Veículos limitados; reservas buscadas por lote, sem N+1 |
@@ -84,9 +84,29 @@ Todas as linhas abaixo tiveram a guarda de sessão revisada e responderam 401 à
 
 **Prioridade/esforço:** P1; impacto alto × esforço pequeno/médio, aproximadamente 3–5 h.
 
+### 3. Next.js instalado tem avisos de segurança e interrompe o build
+
+**O que acontece:** o projeto fixa Next.js 16.4.0, versão listada em avisos de segurança publicados pelo mantenedor. O build local gerou as páginas, mas terminou com `SecurityFatalError`; `npm audit --omit=dev --json` identificou uma dependência direta crítica (`next`), com três avisos associados. Isso conta pacotes vulneráveis, não incidentes nem três invasões demonstradas.
+
+**Evidências:** `package.json:38` e `:60`, `next.config.mjs:20`, ações administrativas iniciadas por `"use server"` e ação pública em `src/app/(site)/vender/actions.ts:1`. Logs locais da retomada: `/tmp/garagem-audit-admin-build.log` e `/tmp/garagem-audit-admin-dependencies.json`.
+
+**Aplicabilidade dos avisos oficiais:**
+
+- [GHSA-p3m5-59mp-jv5r — negação de serviço](https://github.com/vercel/next.js/security/advisories/GHSA-p3m5-59mp-jv5r): o mantenedor descreve consumo excessivo de CPU em App Router com pelo menos uma Server Action e indica correção em 16.4.1. O projeto tem esse padrão, inclusive em rota pública; portanto a atualização é necessária. Não foi enviado payload de exploração nem medida a exposição real na Vercel.
+- [GHSA-2464-fhr4-w9xw — execução remota na otimização de imagens](https://github.com/vercel/next.js/security/advisories/GHSA-2464-fhr4-w9xw): o projeto configura `images.unoptimized: true` e declara `sharp` a partir de 0.35.5 (`package.json:42`), versão indicada pelo mantenedor como mitigação. Não se confirmou execução remota nessa configuração, nem se conferiu a árvore instalada em produção.
+- [GHSA-673q-mjm6-r5xr — execução remota com Cache Components](https://github.com/vercel/next.js/security/advisories/GHSA-673q-mjm6-r5xr): exige função `use cache` retornando múltiplos arrays tipados. A busca em `src` e na configuração não encontrou esse padrão nem `cacheComponents`. Não foi classificado como execução remota confirmada do painel.
+
+**Impacto se ficar:** permanece um risco de indisponibilidade aplicável ao padrão usado pela aplicação; o gate de dependências do CI (`.github/workflows/ci.yml:24`) também pode bloquear PRs com o advisory atual. O alerta de pacote crítico exige atualização mesmo sem reprodução das condições de execução remota.
+
+**Correção mínima:** abrir PR próprio de dependências com Next.js e `eslint-config-next` na mesma versão corrigida e atualizar o lockfile pelo gerenciador. O npm ofereceu 16.4.2 na consulta de 22/10/2026; confirmar a versão corrigida disponível ao executar a tarefa. Este relatório não altera dependências nem ignora o alerta.
+
+**Validação da futura correção:** `npm audit --omit=dev --audit-level=critical`, testes, lint, tipos, build local e e2e de login, ação administrativa e formulário público. Não executar demonstração de exploração em produção.
+
+**Prioridade/esforço:** P1; impacto alto × esforço pequeno/médio, 2–4 h incluindo regressão. Classificação alta por aplicabilidade demonstrada de negação de serviço; os avisos críticos condicionais permanecem explicitamente registrados.
+
 ## Achados médios — corrigir na sequência
 
-### 3. Venda simples converte reserva com sinal sem a proteção do fluxo completo
+### 4. Venda simples converte reserva com sinal sem a proteção do fluxo completo
 
 **O que acontece:** no PATCH de venda, a reserva e seu sinal são verificados apenas no ramo de venda completa. A atualização de reservas para `convertida` acontece também na modalidade simples, que não cria `Sale`.
 
@@ -100,7 +120,7 @@ Todas as linhas abaixo tiveram a guarda de sessão revisada e responderam 401 à
 
 **Prioridade/esforço:** P2; impacto médio × esforço pequeno, 2–3 h.
 
-### 4. URLs de fotos e anexos não têm uma fronteira única de origem confiável
+### 5. URLs de fotos e anexos não têm uma fronteira única de origem confiável
 
 **O que acontece:** o cadastro aceita URLs de foto arbitrárias; o carregador utilizado pelo ZIP consulta URLs HTTP externas, inclusive endereços locais. Referências de anexos também são consideradas internas pela presença de um trecho do caminho, sem conferir host.
 
@@ -116,7 +136,7 @@ Todas as linhas abaixo tiveram a guarda de sessão revisada e responderam 401 à
 
 **Prioridade/esforço:** P2; impacto médio × esforço médio, 4–8 h.
 
-### 5. Fallback de upload não rejeita bucket de documentos que esteja público
+### 6. Fallback de upload não rejeita bucket de documentos que esteja público
 
 **O que acontece:** `ensurePrivateDocsBucket` retorna quando encontra o nome do bucket, sem verificar `public`. A rota de assinatura faz essa verificação adicional; a rota multipart não faz.
 
@@ -130,7 +150,7 @@ Todas as linhas abaixo tiveram a guarda de sessão revisada e responderam 401 à
 
 **Prioridade/esforço:** P2; impacto potencial alto, condicionado à configuração × esforço pequeno, 2–3 h.
 
-### 6. Formulário de veículo recebe mensagem interna do Prisma
+### 7. Formulário de veículo recebe mensagem interna do Prisma
 
 **O que acontece:** criação e edição retornam `error.message` para qualquer exceção, incluindo erros de infraestrutura ou do ORM, além de registrarem o erro integral no servidor.
 
@@ -146,7 +166,7 @@ Todas as linhas abaixo tiveram a guarda de sessão revisada e responderam 401 à
 
 **Prioridade/esforço:** P2; impacto médio × esforço pequeno, 2–4 h.
 
-### 7. Configurações do site usam invalidação que ainda permite leitura antiga
+### 8. Configurações do site usam invalidação que ainda permite leitura antiga
 
 **O que acontece:** salvar configurações usa `revalidateTag("site-settings", "max")`, enquanto o cache público de uma hora alimenta diversas páginas e os campos do painel. O perfil `max` permite servir o valor anterior enquanto atualiza em segundo plano; a ação não garante expiração imediata para todas as consumidoras.
 
@@ -160,7 +180,7 @@ Todas as linhas abaixo tiveram a guarda de sessão revisada e responderam 401 à
 
 **Prioridade/esforço:** P2; impacto médio × esforço pequeno, 1–2 h.
 
-### 8. Limpeza mantém trava global de gravação durante chamadas ao Storage
+### 9. Limpeza mantém trava global de gravação durante chamadas ao Storage
 
 **O que acontece:** todas as gravações que usam `withAdminStorageLock` disputam a mesma trava do PostgreSQL. A limpeza mantém essa trava durante varreduras de tabelas e páginas do Storage, inclusive na montagem da prévia; a exclusão de anexos faz o mesmo durante remoção remota.
 
@@ -174,7 +194,7 @@ Todas as linhas abaixo tiveram a guarda de sessão revisada e responderam 401 à
 
 **Prioridade/esforço:** P2; impacto médio × esforço médio, 4–8 h.
 
-### 9. Seed geral é destrutivo sem barreira de ambiente e imprime senha
+### 10. Seed geral é destrutivo sem barreira de ambiente e imprime senha
 
 **O que acontece:** `prisma/seed.ts` aceita qualquer `DATABASE_URL`, remove vendas/fotos/veículos e imprime a senha calculada. Se o administrador já existir, o seed mantém seu hash, mas ainda imprime a nova senha calculada, que pode nem autenticar.
 
@@ -190,7 +210,7 @@ Todas as linhas abaixo tiveram a guarda de sessão revisada e responderam 401 à
 
 ## Achado baixo — corrigir junto ao endurecimento das APIs
 
-### 10. Entradas inválidas e falhas de leitura não têm resposta consistente
+### 11. Entradas inválidas e falhas de leitura não têm resposta consistente
 
 **O que acontece:** algumas rotas tratam JSON malformado como falha interna ou leem propriedades antes de validar o formato. Outras consultam o banco ou decodificam referências antes do `try` responsável por produzir uma resposta controlada.
 
@@ -209,7 +229,7 @@ Todas as linhas abaixo tiveram a guarda de sessão revisada e responderam 401 à
 - As rotas administrativas verificam sessão dentro do handler. O proxy verifica o JWT, mas `getSession` também consulta o administrador e compara a impressão derivada de senha/e-mail (`src/lib/auth.ts:49`). Não foi encontrada rota administrativa dependente somente da proteção do proxy.
 - O cookie de sessão usa `httpOnly`, `sameSite: lax` e `secure` em produção (`src/lib/auth.ts:39`). O bootstrap exige senha explícita; não há criação com senha padrão quando a variável está ausente (`src/lib/ensure-admin.ts:20`).
 - O contador de login usa incremento atômico no PostgreSQL, chave em hash e janela compartilhada (`src/lib/admin-login-limit.ts:23`). O fallback em memória existe quando os serviços compartilhados falham (`src/lib/rate-limit.ts:122`); não foi demonstrado bypass do login com banco operacional.
-- SQL sensível utiliza parâmetros; vendas/reservas usam transações e trava do veículo. Consultas principais têm paginação limitada e relações selecionadas; não foi identificado um N+1 relevante nas listagens usuais. A serialização de rede sob lock está descrita no achado 8.
+- SQL sensível utiliza parâmetros; vendas/reservas usam transações e trava do veículo. Consultas principais têm paginação limitada e relações selecionadas; não foi identificado um N+1 relevante nas listagens usuais. A serialização de rede sob lock está descrita no achado 9.
 - A invalidação por veículo distingue Server Action de Route Handler, inclui slug antigo quando necessário e evita invalidar todas as fichas no fluxo unitário (`src/lib/public-stock-revalidate.ts:21`, `:51`). O PATCH novo passa `"route-handler"`, corretamente.
 - A chamada ampla `revalidateAllPublicFichas` existe para manutenção em lote e tem justificativa explícita (`src/lib/public-stock-revalidate.ts:85`). Não foi classificada como bug dos fluxos unitários.
 - A exclusão de veículo com `Sale` não apaga automaticamente a venda: a relação em `prisma/schema.prisma:204` não usa cascade. Não se confirmou a hipótese de exclusão silenciosa do histórico de vendas por essa ação.
@@ -225,11 +245,11 @@ A revisão conferiu nomes e uso no código; não leu valores das credenciais de 
 | `DATABASE_URL` / `DIRECT_URL` | `prisma/schema.prisma:5` e `src/lib/prisma.ts:7`: clientes usam as variáveis; o aviso de conexão direta não impede uma configuração incorreta. As URLs usadas nas verificações locais passaram por guarda de host e nome de banco. Pool e permissões reais permanecem sem verificação. |
 | `JWT_SECRET` / `SUPABASE_SERVICE_ROLE_KEY` | `src/lib/secrets.ts:15`: segredo explícito ou derivação da service role; ausência de ambos falha. Não há segredo padrão nessa função. A auditoria não mediu a força do valor configurado. |
 | `ADMIN_BOOTSTRAP_PASSWORD` | `src/lib/ensure-admin.ts:20`: bootstrap só é habilitado com valor explícito de pelo menos oito caracteres. Não se verificou se a variável permanece configurada em produção. |
-| Storage | `src/lib/supabase.ts:11`: cliente privilegiado exige service role, sem fallback para a chave pública. A assinatura de upload exige integração configurada e bucket privado; a divergência do multipart está no achado 5. |
+| Storage | `src/lib/supabase.ts:11`: cliente privilegiado exige service role, sem fallback para a chave pública. A assinatura de upload exige integração configurada e bucket privado; a divergência do multipart está no achado 6. |
 | `CRON_SECRET` | `src/app/api/cron/reservas/route.ts:9`: cron recusa segredo ausente e Authorization divergente antes de expirar reservas. A configuração e a execução real do agendamento não foram consultadas. |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `RATE_LIMIT_MEMORY_ONLY` | `src/lib/rate-limit.ts:89` e `:122`: login prioriza contador compartilhado no banco e dispõe de fallback. O bypass explícito de banco por `RATE_LIMIT_MEMORY_ONLY` afeta o helper distribuído; isso não elimina a primeira tentativa do contador de login no PostgreSQL. |
 
-Não se atribuiu vazamento à simples presença de nomes de variáveis no código. As evidências concretas de exposição de detalhes e senha são os achados 6 e 9.
+Não se atribuiu vazamento à simples presença de nomes de variáveis no código. As evidências concretas de exposição de detalhes e senha são os achados 7 e 10.
 
 ## Validações executadas
 
@@ -238,16 +258,21 @@ As URLs de `DATABASE_URL` e `DIRECT_URL` foram verificadas por código antes de 
 | Verificação | Resultado |
 | --- | --- |
 | `npx prisma db push --skip-generate` no PostgreSQL local | Schema local conferido; sem alteração em produção |
-| `npm test` | Em execução; substituir pelo resultado final antes do commit |
-| `npm run lint` | Em execução; substituir pelo resultado final antes do commit |
+| `npm test` | Passou: 1.399 testes, 0 falhas, cerca de 365 s |
+| `npm run lint` | Passou, código de saída 0 |
 | `npx tsc --noEmit` | Passou, código de saída 0, sem diagnósticos |
-| `npm run build` com banco local | Em execução; substituir pelo resultado final antes do commit |
+| `npm run build` com banco local | Duas execuções com saída 1 pelo alerta `SecurityFatalError` do Next.js, após compilar, verificar tipos e gerar páginas. Build não passou; ver achado 3 |
+| `npm audit --omit=dev --json` | Uma dependência crítica (`next`), com três avisos; aplicabilidade detalhada no achado 3 |
 | Sondas de negócio com Prisma local | Confirmados status individual/lote, contrato divergente, reserva com sinal, erro Prisma e HTTP loopback |
 | Handlers administrativos sem sessão | 26 handlers nos 23 arquivos de rota retornaram 401 com `getSession()` nulo; chamada direta, sem proxy |
 
-Logs locais temporários: `/tmp/garagem-audit-admin-{tests,lint,types,build,probes}.log`. Sondas temporárias: `/tmp/garagem-audit-admin-probes.cjs`. Esses arquivos não integram o PR. Cache e autenticação simulados nas sondas não substituem e2e HTTP.
+Logs locais temporários: `/tmp/garagem-audit-admin-{tests,lint,types,build,build-retry,probes}.log`; auditoria em `/tmp/garagem-audit-admin-dependencies.json`. Sondas temporárias: `/tmp/garagem-audit-admin-probes.cjs`. Esses arquivos não integram a entrega. Cache e autenticação simulados nas sondas não substituem e2e HTTP.
 
 Não foram executados Playwright, Lighthouse ou preview: nenhuma tela/código foi alterado. Também não foram aplicadas migrations de RLS ao banco remoto nem validados permissões, pool, limites ou variáveis reais da Vercel/Supabase. O build com banco local não valida disponibilidade da produção.
+
+## Bloqueio de entrega do PR
+
+O relatório está concluído e os testes, lint e tipos passaram. O build falhou nas duas execuções por alerta de segurança da dependência já fixada na base, sem mudança de código nesta tarefa. O AGENTS.md exige build verde antes do push e permite ao Codex escrever somente relatórios; a tarefa também determina parar e explicar se houver bloqueio. Por isso, a versão final foi commitada apenas localmente, sem push, PR, atualização de dependências ou merge. A branch remota conserva os WIPs já existentes. Após um agente autorizado atualizar o framework em tarefa própria, repetir os checks e publicar este relatório em Draft PR com as cinco seções exigidas.
 
 ## Tarefas prontas para virar issue/PR
 
@@ -255,6 +280,7 @@ As estimativas são de implementação e regressão local; não incluem espera d
 
 | Ordem | Tarefa e arquivos-alvo | Critério de aceite | Esforço |
 | --- | --- | --- | --- |
+| P1 | Atualizar Next.js com avisos de segurança — `package.json` e lockfile | Next/config ESLint corrigidos; auditoria, build e regressão dos formulários passam | 2–4 h |
 | P1 | Proteger status contra venda ativa — `admin/veiculos/actions.ts` e testes de ações | Individual, lote e formulário rejeitam retorno com `Sale`; marcação simples continua reversível | 3–5 h |
 | P1 | Validar contrato contra venda — `admin/veiculos/commercial-actions.ts` | Total divergente é rejeitado sem criar documento; sinal e proposta pré-venda preservados | 3–5 h |
 | P2 | Proteger sinal na venda simples — `api/admin/vehicles/[id]/sell/route.ts` | Reserva com sinal não é convertida pelo PATCH simples | 2–3 h |
@@ -266,6 +292,6 @@ As estimativas são de implementação e regressão local; não incluem espera d
 | P2 | Bloquear seed fora do ambiente local — `prisma/seed.ts`, mensagem de `admin/site/actions.ts` | Nenhuma escrita antes da guarda e nenhuma senha em stdout | 2–4 h |
 | P3 | Padronizar casos inválidos das APIs revisadas | Payload inválido retorna 400; falha interna retorna erro controlado sem cache | 3–5 h |
 
-Agrupar correções pequenas do mesmo fluxo: status/sinal; documentos; arquivos; erros/cache do painel. Não misturar estes temas com mudanças visuais ou identidade da marca. O relatório pode ser incorporado pelo coordenador sem ativar preview; a implementação requer validação dos fluxos afetados.
+Agrupar correções pequenas do mesmo fluxo: status/sinal; documentos; arquivos; erros/cache do painel. Não misturar estes temas com mudanças visuais ou identidade da marca. A implementação requer validação dos fluxos afetados. Não foi solicitado preview.
 
-**Parecer:** a autenticação tem proteções relevantes, mas a consistência entre estoque, venda e contrato deve ser corrigida antes das melhorias de desempenho. Permanecem sem verificação o ambiente de produção, o e2e no navegador e a latência real de cache/Storage.
+**Parecer:** priorizar a atualização de segurança do Next.js e a consistência entre estoque, venda e contrato. A autenticação tem proteções relevantes; melhorias de desempenho vêm depois dessas correções. Permanecem sem verificação o ambiente de produção, o e2e no navegador e a latência real de cache/Storage.
