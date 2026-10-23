@@ -27,9 +27,28 @@ jobs:
       - run: npx tsc --noEmit
       - run: npx tsc --noEmit --project tsconfig.test.json
 
+  validate-schema-staging:
+    name: Validar schema Prisma contra staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - id: validate-schema-staging
+        name: Validar schema Prisma contra staging
+        env:
+          DATABASE_URL_STAGING: ${{ secrets.DATABASE_URL_STAGING }}
+          DIRECT_URL_STAGING: ${{ secrets.DIRECT_URL_STAGING }}
+        run: npm run prisma:validate:staging
+
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    needs: [validate-schema-staging]
     strategy:
       fail-fast: false
       matrix:
@@ -93,13 +112,13 @@ jobs:
 
   check:
     runs-on: ubuntu-latest
-    needs: [unit, e2e]
+    needs: [unit, e2e, validate-schema-staging]
     if: always()
     steps:
       - name: Falha se algum job não passou
         run: |
-          if [ "${{ needs.unit.result }}" != "success" ] || [ "${{ needs.e2e.result }}" != "success" ]; then
-            echo "unit=${{ needs.unit.result }} e2e=${{ needs.e2e.result }}"
+          if [ "${{ needs.unit.result }}" != "success" ] || [ "${{ needs.e2e.result }}" != "success" ] || [ "${{ needs.validate-schema-staging.result }}" != "success" ]; then
+            echo "unit=${{ needs.unit.result }} e2e=${{ needs.e2e.result }} validate-schema-staging=${{ needs.validate-schema-staging.result }}"
             exit 1
           fi
 

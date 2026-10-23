@@ -15,6 +15,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
+    "prisma:validate:staging": "scripts/validate-schema-staging.sh",
     "photos:backfill": "tsx scripts/backfill-photo-thumbnails.ts",
     "docs:migrate": "tsx scripts/migrate-private-docs.ts",
     "stock:import": "tsx scripts/import-stock-vehicle.ts",
