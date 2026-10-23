@@ -298,12 +298,12 @@ test("ficha pública não mostra confirmado neste anúncio nem equipamentos", ()
   assert.doesNotMatch(dossier, /Consignado/);
   assert.match(page, /VehicleTrustNotes/);
   assert.match(page, /VehicleInspectionBadge/);
-  assert.match(page, /Tenho interesse/);
+  assert.match(page, /Falar no WhatsApp/);
   assert.match(page, /Abre o WhatsApp com este anúncio — modelo, ano e preço\./);
   assert.match(dossier, /VehicleTrustNotes/);
 
   const trustAt = page.indexOf("<VehicleTrustNotes");
-  const interestAt = page.indexOf("Tenho interesse");
+  const interestAt = page.indexOf("Falar no WhatsApp");
   assert.ok(trustAt >= 0 && interestAt > trustAt);
 
   const html = renderToStaticMarkup(

@@ -15,6 +15,7 @@ export function StockFiltersSkeleton(_props: { facets?: Facets }) {
         <div className="mx-auto max-w-2xl">
           <div className="h-11 border border-white/10 bg-asphalt lg:h-[48px]" />
         </div>
+        <div className="mt-3 h-[72px] animate-pulse border border-white/10 bg-asphalt" />
       </div>
       <div
         aria-hidden="true"

@@ -35,7 +35,7 @@ test("ficha vendida: WhatsApp convida para similares sem o preço antigo",async(
     await chat.getByRole("button",{name:"Fechar chat",exact:true}).click();
   }
   await page.goto(vehiclePath(available));
-  const interest=page.locator('[data-ficha-page] aside').getByRole("link",{name:"Tenho interesse",exact:true,includeHidden:true});
+  const interest=page.locator('[data-ficha-page] aside').getByRole("link",{name:"Falar no WhatsApp",exact:true,includeHidden:true});
   expect(new URL((await interest.getAttribute("href"))!).searchParams.get("text")).toMatch(/por R\$\s*74\.900/);
 });
 

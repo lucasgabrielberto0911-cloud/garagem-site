@@ -132,14 +132,18 @@ import {
   emptyFilterReply,
   budgetFallbackReply,
   equipmentReplyLooksBroken,
+  findMotoAlternatives,
   formatShortlistFollowUp,
   formatTransmissionCompareReply,
   hasChatStockFilter,
   hasConsumptionFigures,
+  isMotoQuery,
   missingModelReply,
   chatCityReply,
   mentionedModelPools,
   parseTransmissionFilter,
+  parseVehicleCategoryFilter,
+  resolveChatCategory,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 import { chatTurnMayCreateLead } from "@/lib/chat-guard";
@@ -953,8 +957,9 @@ async function runChatTurnInternal(input: {
       ? null
       : emptyFilterReply(scopedMessage, input.stock);
   if (empty) {
-    const similar = empty.startsWith("Moto automática")
-      ? input.stock.filter((vehicle) => vehicle.category === "moto" && /semi/i.test(vehicle.transmission ?? "")).slice(0, 3)
+    const semiMotos = input.stock.filter((vehicle) => vehicle.category === "moto" && /semi/i.test(vehicle.transmission ?? "")).slice(0, 3);
+    const similar = empty.startsWith("Moto automática") && semiMotos.length > 0
+      ? semiMotos
       : similarAfterEmptyFilter(scopedMessage, input.stock, 3);
     emit(empty);
     // Texto fixo: sem comparação anexada depois do "não temos agora".
@@ -1080,6 +1085,15 @@ async function runChatTurnInternal(input: {
       return result;
     }
     if (explicitModelUnits.length > 0) {
+      const requestedGear = parseTransmissionFilter(scopedMessage);
+      const gearMismatch = requestedGear === "automatico" && !explicitModelUnits.some(v => /semi|auto|cvt/i.test(v.transmission ?? ""));
+      if (gearMismatch && (parseVehicleCategoryFilter(scopedMessage) === "moto" || resolveChatCategory(scopedMessage) === "moto" || isMotoQuery(scopedMessage))) {
+        const alts = findMotoAlternatives(scopedMessage, input.stock, 3);
+        if (alts && alts.picks.length > 0) {
+          emit(alts.reply);
+          return finish(alts.reply, false, { policy: "inventory-alternatives", forcedVehicles: alts.picks, cards: true, plain: true });
+        }
+      }
       // O filtro atual pode não bater, mas o modelo existe: mostra as unidades reais.
       const years: string[] = visitorMessage.match(/\b(?:19|20)\d{2}\b/g) ?? [];
       const byYear = years.length ? explicitModelUnits.filter(vehicle => years.includes(String(vehicle.yearModel))) : [];
@@ -1087,6 +1101,13 @@ async function runChatTurnInternal(input: {
       const reply = `Temos o modelo no estoque, com estas configurações:\n${picks.map(vehicle => `• ${rankLineName(vehicle)} — ${vehicle.transmission}`).join("\n")}`;
       emit(reply);
       return finish(reply, false, { policy: "inventory-named", plain: true, forcedVehicles: picks });
+    }
+    if (parseVehicleCategoryFilter(scopedMessage) === "moto" || resolveChatCategory(scopedMessage) === "moto" || isMotoQuery(scopedMessage)) {
+      const alts = findMotoAlternatives(scopedMessage, input.stock, 3);
+      if (alts && alts.picks.length > 0) {
+        emit(alts.reply);
+        return finish(alts.reply, false, { policy: "inventory-alternatives", forcedVehicles: alts.picks, cards: true, plain: true });
+      }
     }
     const reply =
       "Não achei um anúncio que reúna esses critérios agora. Você pode mudar o recorte ou falar com um consultor no WhatsApp: " +
@@ -1180,6 +1201,18 @@ async function runChatTurnInternal(input: {
       return finish(reply, false, { policy: "availability" });
     }
     if (seeksMissingNamedModel(scopedMessage, input.stock)) {
+      if (parseVehicleCategoryFilter(scopedMessage) === "moto" || resolveChatCategory(scopedMessage) === "moto" || isMotoQuery(scopedMessage)) {
+        const alts = findMotoAlternatives(scopedMessage, input.stock, 3);
+        if (alts && alts.picks.length > 0) {
+          emit(alts.reply);
+          return finish(alts.reply, false, {
+            policy: "inventory-alternatives",
+            forcedVehicles: alts.picks,
+            cards: true,
+            plain: true,
+          });
+        }
+      }
       const reply = missingModelReply(scopedMessage, input.stock);
       const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
       emit(reply);
@@ -1198,6 +1231,18 @@ async function runChatTurnInternal(input: {
     }
   }
   if (!mayCreateLead && !skipShortcuts && seeksMissingNamedModel(scopedMessage, input.stock)) {
+    if (parseVehicleCategoryFilter(scopedMessage) === "moto" || resolveChatCategory(scopedMessage) === "moto" || isMotoQuery(scopedMessage)) {
+      const alts = findMotoAlternatives(scopedMessage, input.stock, 3);
+      if (alts && alts.picks.length > 0) {
+        emit(alts.reply);
+        return finish(alts.reply, false, {
+          policy: "inventory-alternatives",
+          forcedVehicles: alts.picks,
+          cards: true,
+          plain: true,
+        });
+      }
+    }
     const reply = missingModelReply(scopedMessage, input.stock);
     const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
     emit(reply);
