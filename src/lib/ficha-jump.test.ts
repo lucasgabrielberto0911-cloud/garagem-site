@@ -99,7 +99,7 @@ test("a ficha marca fotos, especificações e o texto, e abre a foto grande em W
   assert.match(page, /VehicleViewContent/);
   assert.match(page, /VehicleLeadHit/);
   assert.match(page, /trackingLabel="ficha"/);
-  assert.match(page, /Tenho interesse/);
+  assert.match(page, /Falar no WhatsApp/);
   assert.match(page, /VehicleTrustNotes/);
   assert.match(page, /site\.whatsappLabel/);
   assert.match(page, /MissingModelForm/);

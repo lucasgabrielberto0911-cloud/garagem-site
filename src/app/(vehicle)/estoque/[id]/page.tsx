@@ -515,7 +515,7 @@ export default async function VehicleDetailPage({
                       slug={canonicalSlug}
                       message={whatsapp.interest}
                     >
-                      Tenho interesse
+                      Falar no WhatsApp
                     </WhatsAppButton>
                   </VehicleLeadHit>
                   <p className="text-xs leading-relaxed text-muted">
