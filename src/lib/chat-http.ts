@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { ChatTurn } from "@/lib/chat-gemini";
 import { logChatTurn } from "@/lib/chat-metrics";
 import { CHAT_FALLBACK_REPLY, CHAT_WHATSAPP_URL } from "@/lib/chat-prompt";
+import { ABUSE_LIMIT_REPLIES } from "@/lib/chat-replies";
 import { clientIp } from "@/lib/client-ip";
 import {
   applyChatSessionCookie,
@@ -127,7 +128,7 @@ export async function handleChatPost(
       return json(
         session,
         {
-          reply: `Você chegou ao limite de mensagens do assistente por hoje. Chama a gente no WhatsApp que um consultor te atende agora: ${CHAT_WHATSAPP_URL}`,
+          reply: ABUSE_LIMIT_REPLIES.rateLimited,
           leadCreated: false,
           vehicles: [],
           stockHref: null,
