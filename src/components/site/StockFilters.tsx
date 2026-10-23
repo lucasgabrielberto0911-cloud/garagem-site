@@ -22,6 +22,8 @@ import {
 import { vehicleCategoryLabel } from "@/lib/vehicle-accessories";
 
 import { ShareStockSearch } from "./ShareStockSearch";
+import { FiltroCidade } from "./estoque/FiltroCidade";
+import { parseVehicleLocationCity, vehicleLocationLabel } from "@/lib/vehicle-location";
 
 export type Facets = {
   categories?: string[];
@@ -36,6 +38,7 @@ export type Facets = {
 
 export type FilterValues = {
   q: string;
+  city: string;
   category: string;
   brand: string;
   model: string;
@@ -72,6 +75,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
   const current: FilterValues = {
     q: params.get("q") ?? "",
+    city: parseVehicleLocationCity(params.get("city")) ?? "",
     category: params.get("category") ?? "",
     brand: params.get("brand") ?? "",
     model: params.get("model") ?? "",
@@ -172,6 +176,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
   );
   const activeFilters: ActiveFilter[] = [];
   if (current.q) activeFilters.push({ key: "q", label: `Busca: “${current.q}”` });
+  if (current.city) activeFilters.push({ key: "city", label: `Cidade: ${vehicleLocationLabel(current.city)}` });
   if (current.category) {
     activeFilters.push({
       key: "category",
@@ -298,6 +303,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     setOpen(false);
     navigate({
       q: "",
+      city: "",
       category: "",
       brand: "",
       model: "",
@@ -419,6 +425,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
             />
           </div>
         </form>
+
+        <FiltroCidade value={current.city} onChange={(city) => update({ city })} />
 
         {/* Desktop: filtros completos, sem rolagem interna. */}
         <div className="mt-5 hidden lg:block">

@@ -190,8 +190,23 @@ test("galeria só baixa o slide ativo e os vizinhos", () => {
   assert.equal(shouldLoadGallerySlide(7, 10), false);
 });
 
-test("URLs antigas com cidade não restringem o estoque público", () => {
-  for (const city of ["linhares", "Serra", "Vitória", "aracruz", "guarapari", ""]) {
+test("cidade válida restringe o estoque e normaliza links compartilhados", () => {
+  for (const [input, city] of [["linhares", "linhares"], ["Serra", "serra"], [" Vitória ", "vitoria"], ["aracruz", "aracruz"]]) {
+    assert.deepEqual(stockCityFilter(input), { locationCity: city });
+    assert.equal(parseStockFilters({ city: input }).city, city);
+    assert.equal(stockViewNeedsFetch({ city }), true);
+  }
+  const combined = parseStockFilters({ city: "serra", transmission: "automatico", minPrice: "50000", maxPrice: "80000", q: "Honda", page: "2" });
+  assert.equal(combined.city, "serra");
+  assert.equal(combined.transmission, "automatico");
+  assert.equal(combined.minPrice, 50000);
+  assert.equal(combined.maxPrice, 80000);
+  assert.equal(combined.q, "Honda");
+  assert.equal(combined.page, 2);
+});
+
+test("cidade desconhecida não cria filtro arbitrário", () => {
+  for (const city of ["guarapari", "", "__proto__", "<script>"]) {
     assert.deepEqual(stockCityFilter(city), {});
     assert.equal(parseStockFilters({ city }).city, undefined);
   }
