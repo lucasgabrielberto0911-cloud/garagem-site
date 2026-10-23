@@ -1,7 +1,7 @@
 "use client";
 
 import { useHideStockCardInterest } from "@/components/site/HideStockCardInterest";
-import { VehicleLeadHit } from "@/components/site/VehiclePixel";
+import { VehicleLeadHit } from "@/lib/funnel-events";
 import { IconWhatsApp } from "@/components/site/icons";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";
 import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";

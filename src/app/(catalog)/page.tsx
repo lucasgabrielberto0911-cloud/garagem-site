@@ -12,7 +12,7 @@ import { Testimonials } from "@/components/site/Testimonials";
 import { TrustBadges } from "@/components/site/TrustBadges";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { RecentlyViewedVehicles } from "@/components/site/RecentlyViewedVehicles";
-import { SiteLeadHit } from "@/components/site/VehiclePixel";
+import { SiteLeadHit } from "@/lib/funnel-events";
 import { WantedVehicleCta } from "@/components/site/WantedVehicleCta";
 import {
   ActionRow,

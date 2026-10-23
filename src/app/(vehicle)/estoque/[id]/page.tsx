@@ -20,7 +20,7 @@ import { VehicleAccessoryChips } from "@/components/site/VehicleAccessoryChips";
 import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { StockBackLink } from "@/components/site/StockBackLink";
-import { VehicleLeadHit, VehicleViewContent } from "@/components/site/VehiclePixel";
+import { VehicleLeadHit, VehicleViewContent } from "@/lib/funnel-events";
 import { Container, WhatsAppButton } from "@/components/site/ui";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
