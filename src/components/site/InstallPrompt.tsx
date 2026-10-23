@@ -193,7 +193,7 @@ export function InstallPrompt() {
           <button
             type="button"
             onClick={() => void install()}
-            className="min-h-[44px] bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-[#c91418]"
+            className="min-h-[44px] bg-brand px-4 font-display text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-brand-dark"
           >
             Instalar
           </button>

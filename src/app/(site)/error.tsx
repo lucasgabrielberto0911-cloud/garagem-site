@@ -32,7 +32,7 @@ export default function SiteError({
         <button
           type="button"
           onClick={reset}
-          className="inline-flex items-center justify-center gap-2 bg-brand px-6 py-3.5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418]"
+          className="inline-flex items-center justify-center gap-2 bg-brand px-6 py-3.5 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark"
         >
           Tentar novamente
         </button>

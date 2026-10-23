@@ -141,6 +141,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         if (!amount || !paymentText || paymentText.length > 200 || text("conditions").length > 3000) throw new CommercialError("Informe valor positivo, forma de pagamento e condições de até 3.000 caracteres.");
         // Vendido só recebe contrato da própria venda (mesmo cliente, ou venda sem cliente vinculado).
         if (isContract && vehicle.status === "vendido" && !(vehicle.sale && (!vehicle.sale.customerId || vehicle.sale.customerId === customer.id))) throw new CommercialError("Veículo vendido só recebe contrato do cliente da venda.");
+        if (isContract && vehicle.sale && Math.round(amount * 100) !== Math.round(vehicle.sale.salePrice * 100)) throw new CommercialError("O valor do contrato deve ser igual ao valor da venda. Edite a venda em Vendas antes de emitir outro valor.");
         let reservation = kind === "recibo" ? await tx.vehicleReservation.findFirst({ where: { vehicleId, customerId: customer.id, status: { in: ["ativa", "convertida"] } }, orderBy: { createdAt: "desc" } }) : null;
         if (kind === "recibo" && !reservation && text("expiresAt")) {
           reservation = await reserveVehicle(tx, vehicle, customer, amount, text("expiresAt"), session.adminId);

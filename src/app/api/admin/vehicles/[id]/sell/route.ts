@@ -59,18 +59,19 @@ export async function PATCH(
         throw new Error("VEHICLE_UNAVAILABLE");
       }
 
+      const reservation = await tx.vehicleReservation.findFirst({
+        where: { vehicleId: id, status: { in: ["ativa", "convertida"] } },
+        orderBy: { createdAt: "desc" },
+        include: { customer: true },
+      });
+      if (reservation && Number(reservation.deposit) > 0) {
+        throw new Error("RESERVATION_SIGNAL_REQUIRED");
+      }
+
       let saleId: string | undefined;
       if (parsed.mode === "complete") {
-        const reservation = await tx.vehicleReservation.findFirst({
-          where: { vehicleId: id, status: { in: ["ativa", "convertida"] } },
-          orderBy: { createdAt: "desc" },
-          include: { customer: true },
-        });
         let customerId: string;
         if (reservation) {
-          if (Number(reservation.deposit) > 0) {
-            throw new Error("RESERVATION_SIGNAL_REQUIRED");
-          }
           const sameCustomer =
             reservation.customer.name === parsed.input.buyerName &&
             reservation.customer.phone.replace(/\D/g, "") ===

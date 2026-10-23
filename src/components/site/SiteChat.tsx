@@ -1196,7 +1196,7 @@ export function SiteChat() {
               <div className="flex items-center gap-3 border-t border-white/[0.06] py-2 pl-4 pr-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1.5 truncate text-[13px] font-medium leading-5 text-cream">
-                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${vehicleContext.sold ? "bg-amber-400" : "bg-brand"}`} aria-hidden="true" />
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${vehicleContext.sold ? "bg-cream/70" : "bg-brand"}`} aria-hidden="true" />
                     {vehicleContext.sold ? "Vendido · " : ""}
                     {vehicleContext.label}
                     {vehicleContext.year ? ` ${vehicleContext.year}` : ""}
@@ -1215,7 +1215,7 @@ export function SiteChat() {
                   }
                   className={`relative inline-flex h-8 shrink-0 items-center rounded-full px-3 text-[12px] before:absolute before:-inset-y-1.5 before:content-[''] font-semibold transition disabled:opacity-50 touch-manipulation ${
                     vehicleContext.sold
-                      ? "bg-amber-400/[0.12] text-amber-200 ring-1 ring-inset ring-amber-400/30 hover:bg-amber-400/20"
+                      ? "bg-white/10 text-cream/70 ring-1 ring-inset ring-white/15 hover:bg-white/15"
                       : "bg-white/[0.07] text-cream ring-1 ring-inset ring-white/10 hover:bg-white/[0.12]"
                   }`}
                 >
@@ -1389,7 +1389,7 @@ export function SiteChat() {
           {failure ? (
             <div
               role="alert"
-              className="mx-3 mb-2 max-h-40 shrink-0 overflow-y-auto rounded-2xl border border-amber-300/15 bg-amber-300/[0.05] px-4 py-3 text-[12px] leading-5 text-cream/85"
+              className="mx-3 mb-2 max-h-40 shrink-0 overflow-y-auto rounded-2xl border border-white/15 bg-white/[0.05] px-4 py-3 text-[12px] leading-5 text-cream/85"
             >
               <p>{failure}</p>
               <div className="mt-1 flex flex-wrap gap-x-4">
