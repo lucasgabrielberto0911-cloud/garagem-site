@@ -3,10 +3,10 @@ import { test } from "node:test";
 import { Prisma } from "@prisma/client";
 import { parseAdminSellInput } from "./admin-sell";
 
-test("Client funciona antes da migração de soldAt, inclusive em consultas sem select", () => {
+test("Client gerencia soldAt após a migração 20261022180400", () => {
   const vehicle = Prisma.dmmf.datamodel.models.find(model => model.name === "Vehicle");
   assert.ok(vehicle);
-  assert.equal(vehicle.fields.some(field => field.name === "soldAt"), false);
+  assert.equal(vehicle.fields.some(field => field.name === "soldAt" && field.type === "DateTime" && !field.isRequired), true);
 });
 
 test("payload vazio ou parcial marca venda simples", () => {

@@ -32,14 +32,14 @@ try {
   }
   for (const sample of samples) {
     const { photos, ...publicFields } = sample;
-    const data = { ...publicFields, accessories: accessoriesFor(sample.model), year: sample.yearModel, status: "disponivel", featured: true, historical: false };
+    const data = { ...publicFields, accessories: accessoriesFor(sample.model), year: sample.yearModel, status: "disponivel", soldAt: null, featured: true, historical: false };
     await prisma.vehicle.upsert({ where: { id: sample.id }, create: data, update: data });
     await prisma.photo.deleteMany({ where: { vehicleId: sample.id } });
     await prisma.photo.createMany({ data: photos.map((photo, order) => ({ ...photo, vehicleId: sample.id, order })) });
   }
   const soldId = "ce2esold000000000000000001";
   const { photos, ...civic } = samples[0];
-  const sold = { ...civic, accessories: [], id: soldId, year: civic.yearModel, status: "vendido", featured: false, historical: false };
+  const sold = { ...civic, accessories: [], id: soldId, year: civic.yearModel, status: "vendido", soldAt: new Date("2026-10-01T15:00:00Z"), featured: false, historical: false };
   await prisma.vehicle.upsert({ where: { id: soldId }, create: sold, update: sold });
   await prisma.photo.deleteMany({ where: { vehicleId: soldId } });
   await prisma.photo.createMany({ data: photos.map((photo, order) => ({ ...photo, vehicleId: soldId, order })) });
