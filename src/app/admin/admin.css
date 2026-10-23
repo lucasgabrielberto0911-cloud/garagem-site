@@ -35,7 +35,7 @@
  * arquivo passa a vencer o anel de foco global nos campos do painel.
  */
 :focus-visible {
-  outline: 2px solid #e8181c;
+  outline: 2px solid var(--brand-dark, #c91418);
   outline-offset: 3px;
 }
 

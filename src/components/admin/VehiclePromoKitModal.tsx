@@ -80,11 +80,16 @@ export function VehiclePromoKitModal({
     ctx.fillStyle = "#0D0D0F";
     ctx.fillRect(0, 0, W, H);
 
-    // Filete da marca no topo
+    // Filete da marca no topo usando tokens CSS
+    const rootStyle = typeof window !== "undefined" ? getComputedStyle(document.documentElement) : null;
+    const brandDark = rootStyle?.getPropertyValue("--brand-dark").trim() || "var(--brand-dark)";
+    const brandOrange = rootStyle?.getPropertyValue("--brand-orange").trim() || "var(--brand-orange)";
+    const brandYellow = rootStyle?.getPropertyValue("--brand-yellow").trim() || "var(--brand-yellow)";
+
     const grad = ctx.createLinearGradient(0, 0, W, 0);
-    grad.addColorStop(0, "#E8181C");
-    grad.addColorStop(0.5, "#FF8A00");
-    grad.addColorStop(1, "#FFC72C");
+    grad.addColorStop(0, brandDark);
+    grad.addColorStop(0.5, brandOrange);
+    grad.addColorStop(1, brandYellow);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, 16);
 
@@ -170,7 +175,7 @@ export function VehiclePromoKitModal({
       // Bloco de Preço
       const priceY = chipY + 110;
       if (!isSold) {
-        ctx.fillStyle = "#E8181C";
+        ctx.fillStyle = brandDark;
         ctx.fillRect(W / 2 - 280, priceY - 60, 560, 100);
         ctx.fillStyle = "#FFFFFF";
         ctx.font = "bold 52px sans-serif";

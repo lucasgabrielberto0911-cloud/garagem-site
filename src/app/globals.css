@@ -6,6 +6,7 @@
   --background: #0d0d0f;
   --foreground: #f7f5f2;
   --brand: #d91519;
+  --brand-dark: #c91418;
   --brand-orange: #ff8a00;
   --brand-yellow: #ffc72c;
   --ink: #17171a;
@@ -13,9 +14,9 @@
   --muted: #b4b4ba;
   --brand-gradient: linear-gradient(
     90deg,
-    #e8181c 0%,
-    #ff8a00 50%,
-    #ffc72c 100%
+    var(--brand-dark) 0%,
+    var(--brand-orange) 50%,
+    var(--brand-yellow) 100%
   );
   --admin-nav-h: 0px;
   /* Barra fixa da ficha. A primeira dobra desconta esta altura para a foto não ficar embaixo. */
@@ -51,7 +52,7 @@ html {
 }
 
 :focus-visible {
-  outline: 2px solid #e8181c;
+  outline: 2px solid var(--brand-dark);
   outline-offset: 3px;
 }
 
@@ -418,11 +419,11 @@ body {
 .brand-shimmer {
   background: linear-gradient(
     90deg,
-    #e8181c,
-    #ff8a00,
-    #ffc72c,
-    #ff8a00,
-    #e8181c
+    var(--brand-dark),
+    var(--brand-orange),
+    var(--brand-yellow),
+    var(--brand-orange),
+    var(--brand-dark)
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
@@ -433,7 +434,12 @@ body {
 }
 
 .progress-brand {
-  background: linear-gradient(90deg, #e8181c, #ff8a00, #ffc72c);
+  background: linear-gradient(
+    90deg,
+    var(--brand-dark),
+    var(--brand-orange),
+    var(--brand-yellow)
+  );
   background-size: 200% 100%;
 }
 
@@ -1723,7 +1729,12 @@ textarea:-webkit-autofill:focus {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #e8181c, #ff8a00, #ffc72c);
+  background: linear-gradient(
+    90deg,
+    var(--brand-dark),
+    var(--brand-orange),
+    var(--brand-yellow)
+  );
   transform-origin: left center;
   animation: brand-splash-bar 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
