@@ -8,7 +8,7 @@ const vehicle = (id = vehicleId) => ({
   id, brand: "Honda", model: "Civic", version: null, category: "carro",
   year: 2020, yearModel: 2020, km: 10000, price: 50000,
   fuel: "Flex", transmission: "Manual", color: "Preto", locationCity: "linhares",
-  status: "vendido", historical: false, featured: false, soldAt: date,
+  status: "vendido", historical: false, featured: false,
   updatedAt: date, createdAt: date, description: "Veículo de teste", accessories: [],
   chassis: null, renavam: null, costs: [],
 });
@@ -99,7 +99,7 @@ try {
   sell = require("../app/api/admin/vehicles/[id]/sell/route.ts");
 } finally { loader._load = originalLoad; }
 
-beforeEach(t => { state = fixture(); t.mock.method(console, "error", () => {}); });
+beforeEach(t => { state = fixture(); if ("mock" in t) t.mock.method(console, "error", () => {}); });
 function addSale(amount = 50000) { state.sales.push({ id: "venda", vehicleId, customerId: "cliente", salePrice: amount }); }
 function form(values: Record<string, unknown>) {
   const result = new FormData();
@@ -183,6 +183,20 @@ async function patch(body: unknown = {}) {
   return sell.PATCH(new Request("http://localhost/api/admin/vehicles/teste/sell", {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   }), { params: Promise.resolve({ id: vehicleId }) });
+}
+for (const mode of ["simples", "completa"]) {
+  test(`falha interna da venda ${mode} retorna mensagem própria e não grava`, async () => {
+    state.onLock = () => { throw new Error("detalhe privado do banco"); };
+    const body = mode === "simples" ? {} : {
+      buyerName: "Cliente de teste", buyerPhone: "27999991234", salePrice: 50000, paymentMethod: "Pix",
+    };
+    const response = await patch(body);
+    assert.equal(response.status, 500);
+    assert.equal((await response.json()).message, mode === "simples"
+      ? "Não foi possível marcar o veículo como vendido."
+      : "Não foi possível registrar a venda.");
+    untouched();
+  });
 }
 for (const status of ["ativa", "convertida"]) {
   test(`venda simples com sinal na reserva ${status} retorna 409 sem gravar`, async () => {

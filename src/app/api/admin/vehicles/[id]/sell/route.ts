@@ -43,7 +43,7 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const soldAt = new Date();
+  const saleDate = new Date();
   try {
     const result = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
@@ -103,7 +103,7 @@ export async function PATCH(
             salePrice: parsed.input.salePrice,
             paymentMethod: parsed.input.paymentMethod,
             notes: parsed.input.notes ?? null,
-            saleDate: soldAt,
+            saleDate,
           },
           select: { id: true, customerId: true, saleDate: true, salePrice: true },
         });
@@ -121,7 +121,7 @@ export async function PATCH(
       });
       await tx.vehicle.update({
         where: { id },
-        data: { status: "vendido", soldAt, featured: false },
+        data: { status: "vendido", featured: false },
       });
       if (parsed.mode === "simple") {
         await recordAdminAudit(tx, session.adminId, id, "vehicle.status", {
@@ -167,7 +167,9 @@ export async function PATCH(
           ? "Este telefone já pertence a outro cliente; registre a venda pela tela completa do painel."
           : status === 409
             ? "Este veículo já foi vendido ou tem uma venda registrada."
-            : "Não foi possível registrar a venda.";
+            : parsed.mode === "complete"
+              ? "Não foi possível registrar a venda."
+              : "Não foi possível marcar o veículo como vendido.";
     if (status === 500) console.error("[api/admin/vehicles/[id]/sell] falha ao registrar venda");
     return NextResponse.json(
       { ok: false, message: errorMessage },
