@@ -22,7 +22,7 @@ import { trackLead, trackPwaEvent } from "@/lib/meta-pixel";
 import { enqueueIntent, isLikelyNetworkFailure } from "@/lib/offline-queue";
 import { sellReceivedLine } from "@/lib/sell-receipt";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
-import { SiteLeadHit } from "@/components/site/VehiclePixel";
+import { SiteLeadHit } from "@/lib/funnel-events";
 
 const inputClass =
   "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition touch-manipulation placeholder:text-muted focus:border-brand";

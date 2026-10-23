@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
-import { VehicleLeadHit } from "@/components/site/VehiclePixel";
+import { VehicleLeadHit } from "@/lib/funnel-events";
 import { IconWhatsApp } from "@/components/site/icons";
 import { formatCurrencyBRL } from "@/lib/format";
 import { trackWhatsAppClick } from "@/lib/meta-pixel";

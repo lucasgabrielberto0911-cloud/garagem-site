@@ -1,5 +1,5 @@
 import { TrackedWhatsAppLink } from "@/components/site/TrackedWhatsAppLink";
-import { VehicleLeadHit } from "@/components/site/VehiclePixel";
+import { VehicleLeadHit } from "@/lib/funnel-events";
 import { fichaWhatsAppTracking, whatsappUrl } from "@/lib/site";
 
 function fichaHref(message: string, contentId: string, contentPath?: string) {
