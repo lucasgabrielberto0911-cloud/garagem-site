@@ -445,7 +445,6 @@ export function VehiclesTable({
         toast.error(result.message ?? "Não foi possível marcar o veículo como vendido.");
         return;
       }
-      setSimpleSoldTarget(null);
       applyLocalStatus(target.id, "vendido", target.featured);
       toast.success(result.message ?? "Veículo marcado como vendido.");
       router.refresh();
@@ -453,6 +452,7 @@ export function VehiclesTable({
       toast.error("Não foi possível marcar o veículo como vendido.");
     } finally {
       setBusyId(null);
+      setSimpleSoldTarget(null);
     }
   }
 
