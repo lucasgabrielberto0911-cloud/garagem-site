@@ -56,6 +56,7 @@ import {
   createChatLead,
   leadArgsAreComplete,
   parseCriarLeadArgs,
+  CHAT_LEAD_CONFIRMATION_REPLY,
 } from "@/lib/chat-lead";
 import {
   CHAT_CARD_REPLY,
@@ -145,7 +146,7 @@ import {
 import { chatTurnMayCreateLead } from "@/lib/chat-guard";
 import { neutralChatComparison, guardChatComparisonWinner } from "@/lib/chat-comparison";
 import { asksChatMedia, resolveChatMediaVehicles, chatMediaVehicleName, pendingChatMediaMessage } from "@/lib/chat-media";
-import { matchChatSoldVehicle, similarToChatSoldVehicle, chatSoldVehicleName, type ChatSoldVehicle } from "@/lib/chat-sold";
+import { matchChatSoldVehicle, similarToChatSoldVehicle, chatSoldVehicleName, formatChatSoldReply, type ChatSoldVehicle } from "@/lib/chat-sold";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 import { asksAboutFuel, dieselWishReply, fuelFactReply, fuelListReply, fuelUnits } from "@/lib/chat-fuel";
 import { asksColorOf, colorReply, mentionedStockBrand, parseColorWish } from "@/lib/chat-attrs";
@@ -562,7 +563,7 @@ async function runChatTurnInternal(input: {
     const similar = similarToChatSoldVehicle(soldVehicle, input.stock, visitorMessage);
     const name = chatSoldVehicleName(soldVehicle);
     const href = whatsappUrl(WHATSAPP_MESSAGES.wanted(name), { campaign: "chat" });
-    const reply = `O ${name} já foi vendido.${similar.length ? " Separei opções parecidas do estoque." : ""} Podemos te avisar quando chegar outro pelo WhatsApp: ${href}`;
+    const reply = formatChatSoldReply(name, href, similar.length > 0);
     emit(reply);
     const result = finish(reply, false, { policy: "sold", plain: true, forcedVehicles: similar, cards: similar.length > 0 });
     return result;
@@ -1480,8 +1481,7 @@ async function runChatTurnInternal(input: {
         const created = await createLead(args, input.stock, {
           reading: await readingWithin(reading, CHAT_READING_LEAD_WAIT_MS),
         });
-        let reply =
-          "Pronto — registrei seu contato. A equipe continua com você no WhatsApp.";
+        let reply: string = CHAT_LEAD_CONFIRMATION_REPLY;
         try {
           const confirmation = await confirm({
             systemPrompt: systemPromptFor(),

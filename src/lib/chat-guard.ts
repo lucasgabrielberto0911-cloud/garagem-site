@@ -1,7 +1,4 @@
-import {
-  CHAT_OFF_SCOPE_REPEAT_REPLY,
-  CHAT_OFF_SCOPE_REPLY,
-} from "@/lib/chat-prompt";
+import { ABUSE_LIMIT_REPLIES } from "@/lib/chat-replies";
 import type { ChatTurn } from "@/lib/chat-gemini";
 
 /** Depois do fold (minúsculas, sem acento). Palavras da loja / estoque / lead. */
@@ -63,8 +60,8 @@ export function previousOffScopeRedirects(history: ChatTurn[]) {
 /** Primeiro desvio: redireciona. Dois ou mais depois do redirect: mensagem curta, sem Gemini. */
 export function offScopeReply(history: ChatTurn[]) {
   return previousOffScopeRedirects(history) >= 1
-    ? CHAT_OFF_SCOPE_REPEAT_REPLY
-    : CHAT_OFF_SCOPE_REPLY;
+    ? ABUSE_LIMIT_REPLIES.offScopeRepeat
+    : ABUSE_LIMIT_REPLIES.offScope;
 }
 
 export function sanitizeSensitiveText(value: string) {

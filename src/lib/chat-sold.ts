@@ -2,6 +2,7 @@ import { singleMentionedModelPool, type ChatVehicleRecord } from "@/lib/chat-sto
 import { parsePriceLimit, vehicleBodyStyle } from "@/lib/chat-prompt";
 import { isAnaphoricVehicleFollowUp, chatCtaIntent } from "@/lib/chat-text";
 import { formatModelName } from "@/lib/format";
+import { SOLD_VEHICLE_REPLIES } from "@/lib/chat-replies";
 
 /** Identidade pública mínima: vendido nunca entra em card, prompt ou mensagem com preço. */
 export type ChatSoldVehicle = Pick<ChatVehicleRecord, "id" | "brand" | "model" | "version" | "yearModel" | "category" | "transmission">;
@@ -48,4 +49,8 @@ export function similarToChatSoldVehicle(sold: ChatSoldVehicle, stock: ChatVehic
 
 export function chatSoldVehicleName(vehicle: ChatSoldVehicle) {
   return [formatModelName(vehicle.model), vehicle.version, vehicle.yearModel].filter(Boolean).join(" ");
+}
+
+export function formatChatSoldReply(name: string, href: string, hasSimilar: boolean) {
+  return SOLD_VEHICLE_REPLIES.soldNotice(name, href, hasSimilar);
 }
