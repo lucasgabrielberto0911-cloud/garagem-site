@@ -202,6 +202,7 @@ async function main() {
         doors: 4,
         accessories: ["Ar-condicionado", "Direção hidráulica", "Vidros elétricos"],
         status: "disponivel",
+        soldAt: new Date(),
         featured: true,
         photos: {
           create: [
@@ -240,6 +241,36 @@ async function main() {
         featured: true,
         photos: {
           create: [{ url: "/branding/placeholder-car.png", order: 0 }],
+        },
+      },
+    }),
+    prisma.vehicle.create({
+      data: {
+        category: "carro",
+        brand: "Hyundai",
+        model: "HB20",
+        version: "Comfort Plus 1.0",
+        year: 2021,
+        yearModel: 2022,
+        km: 35000,
+        price: 68900,
+        fuel: "Flex",
+        transmission: "Manual",
+        color: "Branco",
+        description: "HB20 seminovo vendido.",
+        accessories: ["Multimídia", "Ar-condicionado", "Direção elétrica"],
+        status: "VENDIDO",
+        featured: false,
+        soldAt: null,
+        photos: {
+          create: [{ url: "/branding/placeholder-car.png", order: 0 }],
+        },
+        sale: {
+          create: {
+            salePrice: 68000,
+            paymentMethod: "Pix",
+            saleDate: new Date("2026-10-15T14:30:00.000Z"),
+          },
         },
       },
     }),
