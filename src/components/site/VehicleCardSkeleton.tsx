@@ -6,6 +6,10 @@ export function VehicleCardSkeleton() {
         <div className="skeleton h-3 w-12" />
         <div className="skeleton h-6 w-3/4" />
         <div className="skeleton h-8 w-full" />
+        <div className="flex gap-1.5">
+          <div className="skeleton h-5 w-12 rounded" />
+          <div className="skeleton h-5 w-14 rounded" />
+        </div>
         <div className="grid grid-cols-2 gap-1">
           <div className="skeleton h-6" />
           <div className="skeleton h-6" />

@@ -14,6 +14,7 @@ export type VehicleCardRecord = {
   brand: string;
   model: string;
   version: string | null;
+  year?: number;
   yearModel: number;
   km: number;
   price: number;
@@ -23,6 +24,9 @@ export type VehicleCardRecord = {
   featured: boolean;
   color?: string | null;
   locationCity?: string | null;
+  engine?: string | null;
+  engineDisplacement?: number | string | null;
+  cilindrada?: number | string | null;
   createdAt: Date | string;
   updatedAt?: Date | string | null;
   /** Preço atual menor que o último registrado (VehiclePriceHistory). */

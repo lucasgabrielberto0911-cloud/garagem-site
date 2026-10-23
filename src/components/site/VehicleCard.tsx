@@ -2,9 +2,11 @@ import { VehicleImage } from "@/components/VehicleImage";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { StockVehicleLink } from "@/components/site/StockVehicleLink";
 import { VehicleCardWhatsApp } from "@/components/site/VehicleCardWhatsApp";
+import { Chip } from "@/components/ui/Chip";
 import { isNewListing } from "@/lib/vehicle-badges";
 import { formatBrandName, formatCurrencyBRL, formatModelName } from "@/lib/format";
 import { publicCardFacts, type PublicCardFact } from "@/lib/public-card-facts";
+import { getVehicleDisplacementChip, getVehicleYearChip } from "@/lib/vehicle-chips";
 import {
   CARD_SIZES,
   coverSrc,
@@ -47,6 +49,8 @@ export function VehicleCard({
   const badge = STATUS_BADGE[vehicle.status];
   const facts = new Map(card.facts.map((fact) => [fact.label, fact]));
   const version = collapseWhitespace(vehicle.version ?? "");
+  const yearChip = getVehicleYearChip(vehicle);
+  const displacementChip = getVehicleDisplacementChip(vehicle);
   const favoriteSnapshot = {
     id: vehicle.id,
     category: vehicle.category,
@@ -110,6 +114,20 @@ export function VehicleCard({
         <div className="listing-card-version">
           {version ? <p>{version}</p> : null}
         </div>
+        {(yearChip || displacementChip) ? (
+          <div className="listing-card-chips flex flex-wrap items-center gap-1.5 px-2.5 sm:px-4 my-1.5" data-testid="vehicle-chips">
+            {yearChip ? (
+              <Chip variant="default" size="xs" data-spec-chip="year">
+                {yearChip}
+              </Chip>
+            ) : null}
+            {displacementChip ? (
+              <Chip variant="muted" size="xs" data-spec-chip="displacement">
+                {displacementChip}
+              </Chip>
+            ) : null}
+          </div>
+        ) : null}
         <div className="listing-card-year-km">
           <Fact fact={facts.get("Ano")} />
           <Fact fact={facts.get("Km")} />
