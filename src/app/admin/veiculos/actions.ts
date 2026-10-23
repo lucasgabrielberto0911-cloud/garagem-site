@@ -309,6 +309,7 @@ export async function createVehicle(
           inspection: data.inspection,
           accessories: data.accessories,
           status: data.status,
+          soldAt: data.status === "vendido" ? new Date() : null,
           locationCity: data.locationCity,
           featured: data.featured,
           purchasePrice: data.purchasePrice,
@@ -427,6 +428,7 @@ export async function updateVehicle(
           inspection: data.inspection,
           accessories: data.accessories,
           status: data.status,
+          soldAt: data.status === "vendido" ? current.soldAt ?? new Date() : null,
           locationCity: data.locationCity,
           featured: data.featured,
           hasVideo: data.hasVideo,
@@ -572,7 +574,7 @@ export async function markVehicleAsSold(id: string) {
     });
     await tx.vehicle.update({
       where: { id },
-      data: { status: "vendido", featured: false },
+      data: { status: "vendido", soldAt: new Date(), featured: false },
     });
     await recordAdminAudit(tx, session.adminId, id, "vehicle.status", {
       status: { before: previous.status, after: "vendido" },
@@ -620,8 +622,8 @@ export async function setVehicleStatus(id: string, status: string) {
     await tx.vehicle.update({
       where: { id },
       data: status === "vendido"
-        ? { status, featured: false }
-        : { status },
+        ? { status, soldAt: new Date(), featured: false }
+        : { status, soldAt: null },
     });
     await recordAdminAudit(tx, session.adminId, id, "vehicle.status", {
       status: { before: previous.status, after: status },
@@ -713,8 +715,8 @@ export async function setVehiclesStatus(
     await tx.vehicle.updateMany({
       where: { id: { in: appliedIds } },
       data: status === "vendido"
-        ? { status, featured: false }
-        : { status },
+        ? { status, soldAt: new Date(), featured: false }
+        : { status, soldAt: null },
     });
     for (const row of previous)
       await recordAdminAudit(tx, session.adminId, row.id, "vehicle.status", {

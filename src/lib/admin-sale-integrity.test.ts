@@ -8,7 +8,7 @@ const vehicle = (id = vehicleId) => ({
   id, brand: "Honda", model: "Civic", version: null, category: "carro",
   year: 2020, yearModel: 2020, km: 10000, price: 50000,
   fuel: "Flex", transmission: "Manual", color: "Preto", locationCity: "linhares",
-  status: "vendido", historical: false, featured: false,
+  status: "vendido", historical: false, featured: false, soldAt: date,
   updatedAt: date, createdAt: date, description: "Veículo de teste", accessories: [],
   chassis: null, renavam: null, costs: [],
 });
@@ -37,6 +37,10 @@ function fixture() {
       return [];
     },
     vehicle: {
+      create: async (args: { data: Record<string, unknown> }) => {
+        data.writes.push({ model: "vehicle", args });
+        return { ...vehicle(), ...args.data };
+      },
       findUnique: async (args: Parameters<typeof getVehicle>[0]) => getVehicle(args),
       findUniqueOrThrow: async (args: Parameters<typeof getVehicle>[0]) => getVehicle(args),
       findMany: async ({ where }: { where: { id: { in: string[] } } }) => data.vehicles.filter(row => where.id.in.includes(row.id)),
@@ -118,6 +122,22 @@ function underLock(operation: string) {
   assert.ok(state.calls.indexOf(operation) > state.calls.indexOf("lock"));
 }
 
+for (const status of ["disponivel", "vendido"]) {
+  test(`cadastro ${status} mantém soldAt consistente`, async () => {
+    const result = await actions.createVehicle({}, form({ ...vehicle(), status, photoUrls: "[]" }));
+    assert.ok(result.success, JSON.stringify(result));
+    const write = state.writes.find(write => write.model === "vehicle")!.args as { data: { soldAt: Date | null } };
+    if (status === "vendido") assert.ok(write.data.soldAt instanceof Date);
+    else assert.equal(write.data.soldAt, null);
+  });
+}
+test("edição de veículo vendido preserva a data da venda", async () => {
+  const result = await actions.updateVehicle(vehicleId, {}, form({ ...vehicle(), photoUrls: "[]", expectedUpdatedAt: date.toISOString() }));
+  assert.ok(result.success, JSON.stringify(result));
+  const write = state.writes.find(write => write.model === "vehicle")!.args as { data: { soldAt: Date } };
+  assert.equal(write.data.soldAt.toISOString(), date.toISOString());
+});
+
 test("status individual rejeita venda ativa antes de alterar reserva ou cache", async () => {
   addSale();
   const result = await actions.setVehicleStatus(vehicleId, "disponivel");
@@ -147,7 +167,9 @@ for (const mode of ["individual", "lote", "formulário"] as const) {
       : mode === "lote" ? await actions.setVehiclesStatus([vehicleId], "disponivel")
       : await actions.updateVehicle(vehicleId, {}, editForm());
     assert.ok("ok" in result ? result.ok : result.success, JSON.stringify(result));
-    assert.ok(state.writes.some(write => write.model === "vehicle")); assert.ok(state.cache.length > 0);
+    const write = state.writes.find(write => write.model === "vehicle")!.args as { data: { soldAt: Date | null } };
+    assert.equal(write.data.soldAt, null);
+    assert.ok(state.cache.length > 0);
   });
 }
 for (const amount of ["40.000,00", "50.000,01", "49.999,99"]) {
@@ -213,7 +235,9 @@ for (const deposit of [null, 0]) {
     state.vehicles[0].status = deposit === null ? "disponivel" : "reservado";
     if (deposit !== null) state.reservation = { id: "reserva", deposit, status: "ativa", customerId: "cliente", customer: state.customer };
     assert.equal((await patch()).status, 200);
-    assert.ok(state.writes.some(write => write.model === "vehicle")); assert.ok(state.cache.length > 0);
+    const write = state.writes.find(write => write.model === "vehicle")!.args as { data: { soldAt: Date } };
+    assert.ok(write.data.soldAt instanceof Date);
+    assert.ok(state.cache.length > 0);
   });
 }
 test("venda completa mantém bloqueio de sinal já existente", async () => {

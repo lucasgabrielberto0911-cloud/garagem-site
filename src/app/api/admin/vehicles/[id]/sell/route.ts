@@ -121,7 +121,7 @@ export async function PATCH(
       });
       await tx.vehicle.update({
         where: { id },
-        data: { status: "vendido", featured: false },
+        data: { status: "vendido", soldAt: saleDate, featured: false },
       });
       if (parsed.mode === "simple") {
         await recordAdminAudit(tx, session.adminId, id, "vehicle.status", {

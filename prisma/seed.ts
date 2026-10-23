@@ -243,6 +243,27 @@ async function main() {
         },
       },
     }),
+    prisma.vehicle.create({
+      data: {
+        brand: "Volkswagen",
+        model: "Fox",
+        year: 2018,
+        yearModel: 2018,
+        km: 65000,
+        price: 45900,
+        fuel: "Flex",
+        transmission: "Manual",
+        status: "vendido",
+        soldAt: new Date("2026-10-01T15:00:00Z"),
+        sale: {
+          create: {
+            salePrice: 45000,
+            paymentMethod: "Pix",
+            saleDate: new Date("2026-10-01T15:00:00Z"),
+          },
+        },
+      },
+    }),
   ]);
 
   console.log(`Admin: ${admin.email} / senha: ${seedPassword}`);
