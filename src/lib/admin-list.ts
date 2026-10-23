@@ -1,6 +1,6 @@
 /** Texto e regras de apresentação da lista de veículos no painel. */
 
-import { formatNumberBR } from "@/lib/format";
+import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
 import { formatTransmissionLabel } from "@/lib/vehicle-display";
 import { vehicleLocationLabel } from "@/lib/vehicle-location";
 
@@ -58,6 +58,26 @@ export const ADMIN_CARD_OVERFLOW_ACTIONS = [
 
 export type AdminCardOverflowAction =
   (typeof ADMIN_CARD_OVERFLOW_ACTIONS)[number];
+
+/** Retorna a exibição do preço no card admin; veículos vendidos nunca revelam preço. */
+export function adminCardPriceDisplay(vehicle: {
+  price: number;
+  status: string;
+}) {
+  if (vehicle.status === "vendido") {
+    return {
+      isSold: true,
+      missingPrice: false,
+      formattedPrice: null,
+    };
+  }
+  const missing = !(vehicle.price > 0);
+  return {
+    isSold: false,
+    missingPrice: missing,
+    formattedPrice: missing ? null : formatCurrencyBRL(vehicle.price),
+  };
+}
 
 export function deleteRequiresTypedConfirm(input: {
   photoCount?: number;

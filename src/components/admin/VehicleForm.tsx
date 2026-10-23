@@ -918,7 +918,7 @@ export function VehicleForm({
           onJump={(section) => revealSections([section])}
         />
 
-        <VehicleFormPreview price={listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}>
+        <VehicleFormPreview price={alreadySold ? "Vendido" : listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}>
           <p className="font-display text-lg font-semibold text-cream">
             {`${brand} ${model}`.trim() || "Seu próximo anúncio"}
           </p>
@@ -933,7 +933,7 @@ export function VehicleForm({
               .join(" · ")}
           </p>
           <p className="mt-2 font-display text-xl font-bold text-red-400">
-            {listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}
+            {alreadySold ? "Vendido" : listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}
           </p>
           <p className="mt-2 text-xs text-muted">
             {photos.length} foto(s) ·{" "}
@@ -1131,7 +1131,7 @@ export function VehicleForm({
                 <p>{fichaSummary({ year, yearModel, km: values.km, transmission, fuel })}</p>
                 <p>{descriptionSummary(description)}</p>
                 <p>{accessoriesSummary(accessories)}</p>
-                <p>{values.price ? `R$ ${values.price}` : "Sem preço"} · {statusLabel}</p>
+                <p>{alreadySold ? "Vendido" : values.price ? `R$ ${values.price}` : "Sem preço"} · {statusLabel}</p>
                 {internalOptions}
               </div>
             </div>
@@ -1326,7 +1326,7 @@ export function VehicleForm({
           <Section
             {...sectionProps("essencial")}
             summary={[
-              values.price ? `R$ ${values.price}` : "Sem preço",
+              alreadySold ? "Vendido" : values.price ? `R$ ${values.price}` : "Sem preço",
               statusLabel,
               cityLabel,
               consigned ? CONSIGNED_LABEL : "",

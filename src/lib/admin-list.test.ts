@@ -5,6 +5,7 @@ import {
   DELETE_CONFIRM_PHRASE,
   adminCardMetaLine,
   adminCardOverflowStatuses,
+  adminCardPriceDisplay,
   adminCardShowsSoldAction,
   deleteRequiresTypedConfirm,
 } from "./admin-list";
@@ -69,4 +70,20 @@ test("excluir com foto ou já vendido pede digitação", () => {
   assert.equal(deleteRequiresTypedConfirm({ photoCount: 3, status: "disponivel" }), true);
   assert.equal(deleteRequiresTypedConfirm({ photoCount: 0, status: "vendido" }), true);
   assert.equal(DELETE_CONFIRM_PHRASE, "EXCLUIR");
+});
+
+test("preço no card do admin: veículo vendido nunca exibe preço", () => {
+  const soldWithPrice = adminCardPriceDisplay({ price: 104900, status: "vendido" });
+  assert.equal(soldWithPrice.isSold, true);
+  assert.equal(soldWithPrice.formattedPrice, null);
+
+  const availableWithPrice = adminCardPriceDisplay({ price: 89000, status: "disponivel" });
+  assert.equal(availableWithPrice.isSold, false);
+  assert.equal(availableWithPrice.missingPrice, false);
+  assert.match(availableWithPrice.formattedPrice ?? "", /89\.000/);
+
+  const availableWithoutPrice = adminCardPriceDisplay({ price: 0, status: "disponivel" });
+  assert.equal(availableWithoutPrice.isSold, false);
+  assert.equal(availableWithoutPrice.missingPrice, true);
+  assert.equal(availableWithoutPrice.formattedPrice, null);
 });

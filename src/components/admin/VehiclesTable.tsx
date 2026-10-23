@@ -52,10 +52,12 @@ import {
   DELETE_CONFIRM_PHRASE,
   adminCardMetaLine,
   adminCardOverflowStatuses,
+  adminCardPriceDisplay,
   adminCardShowsSoldAction,
   deleteRequiresTypedConfirm,
   type AdminCardOverflowAction,
 } from "@/lib/admin-list";
+import { formatTransmissionLabel } from "@/lib/vehicle-display";
 import { coverSrc } from "@/lib/stock-query";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import type { StockPending } from "@/lib/admin-stock-pending";
@@ -129,7 +131,7 @@ function vehicleFinance(vehicle: VehicleRow) {
 function ConsignedChip() {
   return (
     <span
-      className="shrink-0 bg-sky-400/10 px-1.5 py-0.5 text-xs font-medium text-sky-200"
+      className="shrink-0 border border-sky-400/20 bg-sky-400/10 px-1.5 py-0.5 text-xs font-medium text-sky-200 font-body"
       data-testid="consigned-badge"
     >
       {CONSIGNED_LABEL}
@@ -1040,7 +1042,7 @@ export function VehiclesTable({
         }
         subtitle={
           actionsTarget
-            ? `${STATUS_LABEL[actionsTarget.status] ?? actionsTarget.status} · ${formatCurrencyBRL(actionsTarget.price)}`
+            ? `${STATUS_LABEL[actionsTarget.status] ?? actionsTarget.status}${actionsTarget.status === "vendido" ? "" : ` · ${formatCurrencyBRL(actionsTarget.price)}`}`
             : undefined
         }
         media={
@@ -1097,6 +1099,7 @@ export function VehiclesTable({
             : undefined
         }
         confirmLabel="Marcar como vendida (simples)"
+        cancelLabel="Cancelar"
         danger
         loading={busyId === simpleSoldTarget?.id}
         onCancel={() => setSimpleSoldTarget(null)}
@@ -1193,8 +1196,8 @@ function VehicleAdminCard({
   onMore: () => void;
 }) {
   const finance = vehicleFinance(vehicle);
+  const priceDisplay = adminCardPriceDisplay(vehicle);
   const title = `${vehicle.brand} ${vehicle.model}`;
-  const missingPrice = !(vehicle.price > 0);
   const meta = adminCardMetaLine(vehicle);
   const showSold = adminCardShowsSoldAction(vehicle.status);
 
@@ -1240,34 +1243,48 @@ function VehicleAdminCard({
               <span className="block font-display text-base font-semibold leading-tight text-cream">
                 {title}
               </span>
-              <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+              <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 border border-white/10 bg-white/5 px-1.5 py-0.5 text-xs font-body text-cream/80">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[vehicle.status] ?? "bg-white/35"}`}
                     aria-hidden="true"
                   />
                   {STATUS_LABEL[vehicle.status] ?? vehicle.status}
                 </span>
+                {vehicle.fuel ? (
+                  <span className="inline-flex items-center border border-white/10 bg-white/5 px-1.5 py-0.5 text-xs font-body text-muted">
+                    {vehicle.fuel}
+                  </span>
+                ) : null}
+                {vehicle.transmission ? (
+                  <span className="inline-flex items-center border border-white/10 bg-white/5 px-1.5 py-0.5 text-xs font-body text-muted">
+                    {formatTransmissionLabel(vehicle.transmission)}
+                  </span>
+                ) : null}
                 {vehicle.consigned ? <ConsignedChip /> : null}
               </span>
-              <span className="mt-1 block text-xs leading-relaxed text-muted">
+              <span className="mt-1 block text-xs leading-relaxed text-muted font-body">
                 {meta}
               </span>
             </span>
             <span className="shrink-0 sm:text-right">
-              {missingPrice ? (
-                <span className="text-sm font-medium text-muted">
+              {priceDisplay.isSold ? (
+                <span className="block font-display text-sm font-semibold uppercase tracking-wider text-muted sm:text-base">
+                  Vendido
+                </span>
+              ) : priceDisplay.missingPrice ? (
+                <span className="text-sm font-medium text-muted font-body">
                   Sem preço
                 </span>
               ) : (
                 <span className="block font-display text-lg font-bold leading-none text-cream sm:text-xl">
-                  {formatCurrencyBRL(vehicle.price)}
+                  {priceDisplay.formattedPrice}
                 </span>
               )}
-              {finance ? (
+              {!priceDisplay.isSold && finance ? (
                 <span
-                  className={`mt-1 block text-xs ${
-                    finance.value >= 0 ? "text-emerald-300" : "text-red-400"
+                  className={`mt-1 block text-xs font-body ${
+                    finance.value >= 0 ? "text-emerald-300" : "text-brand-orange"
                   }`}
                 >
                   {finance.label} {formatCurrencyBRL(finance.value)}

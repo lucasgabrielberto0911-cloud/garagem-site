@@ -84,6 +84,7 @@ export function ConfirmDialog({
       <div
         ref={panelRef}
         className="w-full max-w-md border border-white/10 bg-ink shadow-2xl"
+        aria-describedby={description ? "confirm-dialog-desc" : undefined}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="h-1 bg-brand-gradient" aria-hidden="true" />
@@ -95,11 +96,13 @@ export function ConfirmDialog({
             {title}
           </h2>
           {description ? (
-            <p className="mt-2 text-sm text-muted">{description}</p>
+            <p id="confirm-dialog-desc" className="mt-2 text-sm text-muted font-body leading-relaxed">
+              {description}
+            </p>
           ) : null}
           {needsPhrase ? (
-            <label className="mt-4 block">
-              <span className="text-xs uppercase tracking-wider text-muted">
+            <label className="mt-4 block font-body">
+              <span className="text-xs uppercase tracking-wider text-muted font-body">
                 {typedLabel ?? `Digite ${typedPhrase} para confirmar`}
               </span>
               <input
@@ -113,7 +116,7 @@ export function ConfirmDialog({
                 }}
                 autoComplete="off"
                 spellCheck={false}
-                className="mt-2 min-h-[44px] w-full border border-white/10 bg-asphalt px-3 py-2.5 text-base text-cream outline-none focus:border-brand"
+                className="mt-2 min-h-[44px] w-full border border-white/10 bg-asphalt px-3 py-2.5 font-body text-base text-cream outline-none focus:border-brand"
               />
             </label>
           ) : null}
@@ -122,7 +125,7 @@ export function ConfirmDialog({
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="min-h-[44px] border border-white/15 px-4 py-2 text-sm text-muted transition touch-manipulation hover:text-cream disabled:opacity-60"
+              className="min-h-[44px] border border-white/15 px-4 py-2 font-display text-sm font-medium text-muted transition touch-manipulation hover:text-cream disabled:opacity-60"
             >
               {cancelLabel}
             </button>
@@ -131,7 +134,7 @@ export function ConfirmDialog({
                 type="button"
                 onClick={alternateConfirm.onConfirm}
                 disabled={loading || alternateConfirm.loading}
-                className="min-h-[44px] border border-brand bg-brand/10 px-4 py-2 text-sm font-medium text-cream transition touch-manipulation hover:bg-brand/20 disabled:opacity-60"
+                className="min-h-[44px] border border-brand bg-brand/10 px-4 py-2 font-display text-sm font-medium text-cream transition touch-manipulation hover:bg-brand/20 disabled:opacity-60"
               >
                 {alternateConfirm.loading ? "Aguarde..." : alternateConfirm.label}
               </button>
@@ -140,7 +143,7 @@ export function ConfirmDialog({
               type="button"
               onClick={onConfirm}
               disabled={loading || !phraseOk}
-              className={`min-h-[44px] px-4 py-2 text-sm font-medium text-cream transition touch-manipulation disabled:opacity-60 ${
+              className={`min-h-[44px] px-4 py-2 font-display text-sm font-medium text-cream transition touch-manipulation disabled:opacity-60 ${
                 danger ? "bg-brand hover:bg-brand-dark" : "bg-white/10 hover:bg-white/20"
               }`}
             >

@@ -70,6 +70,7 @@ export const ADMIN_VEHICLE_LIST_SELECT = {
   createdAt: true,
   updatedAt: true,
   transmission: true,
+  fuel: true,
   color: true,
   plate: true,
   photos: {
@@ -103,6 +104,7 @@ export type AdminVehicleListItem = {
   createdAt: Date;
   updatedAt?: Date | string | null;
   transmission: string;
+  fuel?: string | null;
   color: string | null;
   plate: string | null;
   photos: Array<{ url: string; thumbnailUrl?: string | null }>;
@@ -150,6 +152,7 @@ const ADMIN_VEHICLE_LIST_SELECT_NO_CITY = {
   createdAt: true,
   updatedAt: true,
   transmission: true,
+  fuel: true,
   color: true,
   plate: true,
   photos: {
