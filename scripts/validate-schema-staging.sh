@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-# Prioridade para conexão no banco de staging: DIRECT_URL_STAGING > DATABASE_URL_STAGING > DIRECT_URL > DATABASE_URL
+# Fallback para DIRECT_URL/DATABASE_URL é apenas para uso local controlado; no CI, o check de GITHUB_ACTIONS falha se não houver URL *_STAGING.
 TARGET_URL="${DIRECT_URL_STAGING:-${DATABASE_URL_STAGING:-${DIRECT_URL:-${DATABASE_URL:-}}}}"
 
 if [ -z "$TARGET_URL" ]; then
