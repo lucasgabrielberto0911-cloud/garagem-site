@@ -507,7 +507,7 @@ export default async function VehicleDetailPage({
                   >
                     <WhatsAppButton
                       size="lg"
-                      className="hidden w-full lg:inline-flex"
+                      className="hidden w-full lg:inline-flex lg:text-lg"
                       trackingLabel="ficha"
                       campaign="ficha"
                       content={fichaTrack.content}
