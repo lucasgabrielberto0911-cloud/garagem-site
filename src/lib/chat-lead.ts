@@ -12,6 +12,10 @@ import {
 } from "@/lib/chat-jev";
 import { notifyNewLead } from "@/lib/lead-notify";
 import { createLeadVenda } from "@/lib/lead-venda";
+import { LEAD_CAPTURE_REPLIES } from "@/lib/chat-replies";
+
+export { LEAD_CAPTURE_REPLIES };
+export const CHAT_LEAD_CONFIRMATION_REPLY = LEAD_CAPTURE_REPLIES.confirmation;
 
 export type CriarLeadArgs = {
   nome?: string;
