@@ -48,7 +48,7 @@ export function FavoritesComparison({ vehicles }: { vehicles: VehicleCardData[] 
           {vehicles.map(vehicle => {
             const checked = ids.includes(vehicle.id);
             return <label key={vehicle.id} className={"flex min-h-11 min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs leading-relaxed " + (checked ? "border-brand/60 bg-brand/10 text-cream" : "border-white/15 text-muted")}>
-              <input type="checkbox" checked={checked} disabled={!checked && ids.length >= 3} onChange={() => { const next = toggleComparison(ids, vehicle.id); setChosen(next); writeComparisonSession({ chosen: next, open }); }} className="h-4 w-4 shrink-0 accent-[#ed1018]" />
+              <input type="checkbox" checked={checked} disabled={!checked && ids.length >= 3} onChange={() => { const next = toggleComparison(ids, vehicle.id); setChosen(next); writeComparisonSession({ chosen: next, open }); }} className="h-4 w-4 shrink-0 accent-brand" />
               <span>{formatVehicleLabel(vehicle.brand, vehicle.model, vehicle.yearModel)}{vehicle.version ? " · " + vehicle.version : ""}</span>
             </label>;
           })}
@@ -111,7 +111,7 @@ function ComparisonTable({ selected, rows }: { selected: VehicleCardData[]; rows
                   const differs = index > 0 && (row.metric ? Boolean(note) : differentComparisonText(row.value(vehicle), row.value(selected[0])));
                   return <td key={vehicle.id} data-comparison-difference={differs ? "" : undefined} className={"border-l border-white/10 px-2 py-3 leading-relaxed " + (differs ? "bg-white/[0.045] " : "") + (row.label === "Preço" ? "font-display text-sm font-semibold text-brand-light sm:text-lg" : "text-xs text-cream sm:text-sm")}>
                     {row.value(vehicle)}
-                    {note ? <span className="mt-1 block font-sans text-[10px] font-normal leading-relaxed text-muted sm:text-xs">{note}</span> : null}
+                    {note ? <span className="mt-1 block font-body text-[10px] font-normal leading-relaxed text-muted sm:text-xs">{note}</span> : null}
                   </td>;
                 })}
               </tr>)}

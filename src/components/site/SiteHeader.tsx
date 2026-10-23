@@ -171,7 +171,7 @@ export function SiteHeader() {
                 trackWhatsAppClick("header", whatsappRef);
                 trackCatalogWhatsAppClick(whatsapp.catalogParams);
               }}
-              className="hidden h-11 shrink-0 items-center gap-2 bg-brand px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418] sm:inline-flex xl:px-4 xl:text-sm"
+              className="hidden h-11 shrink-0 items-center gap-2 bg-brand px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark sm:inline-flex xl:px-4 xl:text-sm"
             >
               <IconWhatsApp className="h-4 w-4" />
               WhatsApp

@@ -594,13 +594,6 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   line-height: 1.4;
 }
 .listing-card-transmission { margin: 0 0.625rem 0.375rem; }
-.listing-card-city { margin: 0 0.625rem 0.125rem; }
-.listing-card-city dd {
-  padding: 0.1rem 0;
-  background: none;
-  font-size: 0.625rem;
-  color: #bcbcc4;
-}
 .listing-card-price-row {
   display: flex;
   align-items: flex-end;
@@ -641,8 +634,7 @@ body[data-chat-keyboard] [data-mobile-bottom-nav] {
   .listing-card-name { padding-inline: 1rem; }
   .listing-card-version { padding-inline: 1rem; }
   .listing-card-year-km,
-  .listing-card-transmission,
-  .listing-card-city { margin-inline: 1rem; }
+  .listing-card-transmission { margin-inline: 1rem; }
   .listing-card-price-row { padding-inline: 1rem; }
 }
 
