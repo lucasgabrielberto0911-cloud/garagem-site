@@ -244,7 +244,7 @@ export function VehicleMobileBar({
                   onClick={(event) =>
                     openWhatsApp(event, href, "ficha-mobile", vehicleId, vehicleSlug)
                   }
-                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 bg-brand px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-cream touch-manipulation hover:bg-brand-dark sm:px-4 sm:text-sm"
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 bg-brand px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-cream shadow-lg touch-manipulation hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-light focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt active:bg-brand-dark sm:px-4 sm:text-sm"
                 >
                   <IconWhatsApp className="h-4 w-4" />
                   <span className="text-left leading-tight">
