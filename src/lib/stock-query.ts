@@ -1,6 +1,5 @@
 import { COVER_HD_WIDTH, hdCardCompanion, isCardVariantPath, isFramedCardUrl } from "@/lib/cover-frame";
 import { publicPhotoOriginal } from "@/lib/public-photo-url";
-import { parseVehicleLocationCity } from "@/lib/vehicle-location";
 
 /** Tipos e parsers do estoque — seguro para o bundle do cliente. */
 
@@ -294,7 +293,6 @@ export type StockFilters = {
 /** Parâmetros que estreitam a lista. Ordenação fica de fora. */
 export const STOCK_FILTER_KEYS = [
   "q",
-  "city",
   "category",
   "brand",
   "model",
@@ -332,10 +330,10 @@ export const STOCK_SORT_OPTIONS = [
 
 export type StockSortValue = (typeof STOCK_SORT_OPTIONS)[number]["value"];
 
-/** Restringe por cidade sem expor a localização nos registros públicos. */
+/** Compatibilidade com chamadas antigas: cidade não restringe o estoque público. */
 export function stockCityFilter(value?: string | null) {
-  const city = parseVehicleLocationCity(value);
-  return city ? { locationCity: city } : {};
+  void value;
+  return {};
 }
 
 export function stockSortLabel(sort?: string | null) {
@@ -500,7 +498,6 @@ export function parseStockFilters(
 ): StockFilters {
   return {
     q: pickParam(input, "q"),
-    city: parseVehicleLocationCity(pickParam(input, "city")) ?? undefined,
     category: pickParam(input, "category"),
     brand: pickParam(input, "brand"),
     model: pickParam(input, "model"),

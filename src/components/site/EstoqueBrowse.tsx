@@ -63,7 +63,6 @@ function buildReturnTo(params: EstoqueSearchParams) {
 function stockQuery(params: EstoqueSearchParams) {
   return {
     q: params.q,
-    city: params.city,
     category: params.category,
     brand: params.brand,
     model: params.model,

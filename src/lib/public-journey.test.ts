@@ -10,7 +10,7 @@ function readSrc(rel: string) {
   return readFileSync(join(srcRoot, rel), "utf8");
 }
 
-test("cidade filtra o estoque público sem expor a localização nos registros", () => {
+test("cidade do veículo fica fora dos filtros e consultas públicos", () => {
   const filters = readSrc("components/site/StockFilters.tsx") + readSrc("components/site/StockFilterFields.tsx") + readSrc("components/site/StockFilterControls.tsx");
   const browse = readSrc("components/site/EstoqueBrowse.tsx");
   const vehicles = readSrc("lib/vehicles.ts");
@@ -19,17 +19,13 @@ test("cidade filtra o estoque público sem expor a localização nos registros",
     vehicles.indexOf("function stockQueryKey"),
   );
 
-  // A cidade pode RESTRINGIR a listagem, mas a localização continua fora dos dados exibidos.
   assert.doesNotMatch(filters, /VEHICLE_LOCATION_CITIES/);
   assert.doesNotMatch(filters, /sheet-city-/);
   assert.doesNotMatch(filters, /Onde o veículo está/);
   const stockQuery = readSrc("lib/stock-query.ts");
-  assert.match(stockQuery, /"city",/);
-  assert.match(stockQuery, /parseVehicleLocationCity/);
-  const select = readSrc("lib/public-vehicle-cards.ts");
-  assert.match(select, /locationCity: internalCity/);
+  assert.doesNotMatch(stockQuery, /"city",/);
   assert.match(browse, /STOCK_FILTER_KEYS/);
-  assert.match(browse, /city: params\.city/);
+  assert.doesNotMatch(browse, /city: params\.city/);
   assert.match(where, /stockCityFilter\(filters\.city\)/);
   assert.match(vehicles, /stock-page-v17/);
   assert.doesNotMatch(filters, /Vitória/);
