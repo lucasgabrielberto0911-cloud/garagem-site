@@ -84,9 +84,9 @@ export function VehicleCardWhatsApp({
         aria-label={`Tenho interesse em ${label} pelo WhatsApp`}
         className={
           compact
-            ? `relative z-[1] pointer-events-auto mt-1.5 inline-flex h-8 items-center gap-1.5 rounded-full bg-[#25D366]/20 px-3 text-[12px] font-bold text-[#25D366] ring-1 ring-inset ring-[#25D366]/40 shadow-sm shadow-[#25D366]/10 transition hover:bg-[#25D366]/30 hover:ring-[#25D366]/60 before:absolute before:-inset-x-1 before:-inset-y-1.5 before:content-[''] touch-manipulation ${className}`
+            ? `relative z-[1] pointer-events-auto mt-1.5 inline-flex h-8 items-center gap-1.5 rounded-full bg-[#25D366]/[0.12] px-3 text-[12px] font-semibold text-[#25D366] ring-1 ring-inset ring-[#25D366]/30 transition hover:bg-[#25D366]/20 before:absolute before:-inset-x-1 before:-inset-y-1.5 before:content-[''] touch-manipulation ${className}`
             : chat
-            ? `relative z-[1] inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#25D366]/15 px-4 text-[13px] font-semibold text-[#25D366] ring-1 ring-inset ring-[#25D366]/30 transition touch-manipulation hover:bg-[#25D366]/25 hover:text-cream ${className}`
+            ? `relative z-[1] inline-flex min-h-11 shrink-0 items-center justify-center gap-2 px-4 text-[13px] font-medium text-cream/85 transition touch-manipulation hover:bg-[#25D366]/[0.08] hover:text-cream ${className}`
             : `inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 border-t border-white/10 bg-[#101612] px-2 font-display text-[11px] font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-[#14301c] ${className}`
         }
       >
