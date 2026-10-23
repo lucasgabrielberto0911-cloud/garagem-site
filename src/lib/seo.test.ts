@@ -150,3 +150,14 @@ test("vendido remove preço da descrição e da oferta; campos ausentes não sã
     assert.equal("priceCurrency" in offers, false);
   }
 });
+
+test("JSON-LD da home não duplica a UF no endereço do depoimento", () => {
+  const data = localBusinessJsonLd(undefined, [
+    { name: "Ana", city: "Linhares, ES", rating: 5, message: "Ótimo atendimento" },
+    { name: "Beto", city: "Colatina", rating: 5, message: "Recomendo" },
+  ] as never) as { review: { author: { address: { name: string } } }[] };
+  assert.deepEqual(
+    data.review.map((item) => item.author.address.name),
+    ["Linhares, ES", "Colatina, ES"],
+  );
+});

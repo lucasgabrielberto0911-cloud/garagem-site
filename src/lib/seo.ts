@@ -231,7 +231,7 @@ export function localBusinessJsonLd(
       author: {
         "@type": "Person",
         name: review.name,
-        ...(review.city ? { address: { "@type": "Place", name: `${review.city}, ES` } } : {}),
+        ...(review.city ? { address: { "@type": "Place", name: reviewPlaceName(review.city) } } : {}),
       },
       reviewRating: {
         "@type": "Rating",
@@ -244,6 +244,12 @@ export function localBusinessJsonLd(
   }
 
   return data;
+}
+
+/** Cidade do depoimento + UF, sem duplicar o sufixo ", ES" já digitado. */
+function reviewPlaceName(city: string) {
+  const name = city.trim().replace(/\s*,\s*ES$/i, "").trim();
+  return `${name}, ES`;
 }
 
 /** JSON-LD da landing de cidade — amarra a página à cidade sem inventar endereço. */
