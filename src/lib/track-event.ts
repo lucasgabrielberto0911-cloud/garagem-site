@@ -3,7 +3,7 @@ import { vehicleFunnelParams, type VehicleFunnelRef } from "@/lib/meta-pixel";
 /**
  * Eventos de medição do site (GA4 + Meta custom). Nunca enviar texto livre nem PII.
  * Clique no WhatsApp (`trackWhatsAppClick`) e abertura do chat (`trackChatEvent("ChatOpen")`)
- * já disparam GA4 + Meta em meta-pixel.ts; aqui ficam os eventos novos.
+ * já disparam GA4 + Meta em funnel-events.ts; aqui ficam os eventos novos.
  */
 export type SiteEventName =
   | "chat_message_sent"
