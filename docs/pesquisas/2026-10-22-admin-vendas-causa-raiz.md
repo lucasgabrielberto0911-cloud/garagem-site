@@ -50,6 +50,7 @@ Verificações locais:
 | `npx tsx --test src/lib/admin-sell.test.ts src/lib/admin-sale-integrity.test.ts src/lib/public-stock-revalidate.test.ts` | 30 aprovados na versão final, incluindo dois novos cenários de falha interna sem gravação |
 | Playwright: cinco cenários, desktop e celular de 390 px, **sem** `soldAt` | 10 aprovados, 1,7 min |
 | Playwright: cinco cenários desktop, **com** `soldAt` | 5 aprovados, 1,2 min |
+| Playwright: cinco cenários em 430 px, sem `soldAt`, duas repetições com sincronização das etapas | 10 aprovados, 1,7 min |
 | `npm run lint` | Aprovado |
 | `npx tsc --noEmit` | Aprovado |
 | `npx tsc --noEmit --project tsconfig.test.json` | Aprovado |
@@ -65,6 +66,8 @@ Cobertura de `e2e/admin-vendas-recuperacao.spec.ts`:
 5. Venda completa pelo estoque e formulário: falha de validação não abre confirmação simples nem grava venda; dados permanecem; correção do telefone permite gravar contrato/venda e abrir a lista de vendas.
 
 Os E2E locais usaram uma configuração temporária baseada em `playwright.config.ts`, com `npm run dev -- --webpack --hostname 127.0.0.1 --port 3371`, cinco cenários e espera ampliada para a compilação de desenvolvimento. O arquivo temporário foi removido ao terminar. O comando de CI continua usando o build de produção e as quatro larguras previstas no repositório. Lint e tipos foram executados com o servidor parado para evitar a recriação concorrente dos arquivos gerados.
+
+O primeiro CI aprovou 1.439 unitários, lint, tipos, migrações, os quatro builds e três grupos E2E. O grupo de 430 px revelou um timeout no novo cenário completo: o teste agora retira o foco do valor de pagamento e confirma cada etapa antes da próxima interação. O cenário de duas tentativas tem limite próprio de 90 s; os demais limites e a política sem retries foram preservados.
 
 **Limites:** `next build` não foi executado localmente, conforme a regra final da tarefa que reserva o build ao CI. Produção não recebeu migração, seed, venda de teste, alteração de variáveis ou deploy. Até a entrega ser publicada, o site em produção continua sujeito ao erro diagnosticado. `Vehicle.soldAt` não recebe novos valores enquanto ignorado; datas de venda e auditoria continuam registradas. Reativar o campo exige migração validada em todos os ambientes e reconciliação das datas, inclusive veículos reabertos; somente remover `@ignore` recria o incidente.
 

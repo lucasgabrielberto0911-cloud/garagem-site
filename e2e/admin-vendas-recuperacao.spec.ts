@@ -47,6 +47,11 @@ async function openSimpleSale(page: Page, vehicle: { model: string }) {
   return page.getByRole("dialog", { name: "Marcar como vendida (simples)" });
 }
 
+async function advanceSale(page: Page, heading: string) {
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+}
+
 async function expectSale(vehicleId: string, price: number) {
   const vehicle = await db.vehicle.findUniqueOrThrow({
     where: { id: vehicleId }, include: { sale: { include: { customer: true, afterSaleTasks: true } }, costs: true },
@@ -120,32 +125,37 @@ test("API completa registra comprador, valor e pós-venda atomicamente", async (
 });
 
 test("fluxo completo preserva campos após falha, sem abrir venda simples, e grava contrato", async ({ page, vehicle }) => {
+  test.setTimeout(90_000);
   await page.goto(`/admin/veiculos?q=${encodeURIComponent(vehicle.model)}`);
   await page.getByRole("button", { name: "Registrar venda completa", exact: true }).click();
   await page.getByRole("dialog", { name: "Registrar venda completa" }).getByRole("button", { name: "Registrar venda completa", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/admin/vendas/nova\\?veiculo=${vehicle.id}`));
   await expect(page.getByRole("dialog", { name: "Marcar como vendida (simples)" })).toBeHidden();
-  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await advanceSale(page, "Cliente");
   await page.getByLabel("Cadastrar cliente nesta venda").check();
   await page.getByLabel("Nome", { exact: true }).fill("Comprador de teste");
   await page.getByLabel("Telefone", { exact: true }).fill("123");
-  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await advanceSale(page, "Pagamento");
   await page.getByLabel("Valor total negociado").fill("78.000,00");
   await page.getByRole("button", { name: /À vista\/PIX/ }).click();
   await page.getByLabel("Valor", { exact: true }).fill("78.000,00");
-  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByLabel("Valor", { exact: true }).blur();
+  await advanceSale(page, "Vendedor");
   await page.getByLabel("Responsável comercial").fill("Vendedor de teste");
   await page.getByLabel("Comissão (R$)").fill("0");
-  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await advanceSale(page, "Revisar e gerar contrato");
   await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
   await expect(page.getByText("Informe nome e telefone válidos do comprador.", { exact: true })).toBeVisible();
   await expect(page.getByRole("dialog", { name: "Marcar como vendida (simples)" })).toBeHidden();
   expect(await db.sale.count({ where: { vehicleId: vehicle.id } })).toBe(0);
   expect((await db.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).status).toBe("disponivel");
-  for (let step = 0; step < 3; step++) await page.getByRole("button", { name: "Voltar", exact: true }).click();
+  for (const heading of ["Vendedor", "Pagamento", "Cliente"]) {
+    await page.getByRole("button", { name: "Voltar", exact: true }).click();
+    await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+  }
   await expect(page.getByLabel("Nome", { exact: true })).toHaveValue("Comprador de teste");
   await page.getByLabel("Telefone", { exact: true }).fill("27988887777");
-  for (let step = 0; step < 3; step++) await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  for (const heading of ["Pagamento", "Vendedor", "Revisar e gerar contrato"]) await advanceSale(page, heading);
   await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
   await expect(page.getByRole("heading", { name: "Venda registrada", exact: true })).toBeVisible();
   const sale = await expectSale(vehicle.id, 78000);
