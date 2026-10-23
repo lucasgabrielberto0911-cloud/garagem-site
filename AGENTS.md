@@ -81,6 +81,12 @@ O plano Hobby limita deploys por dia. Cada push e cada merge geram deploy se o b
   - Não marque `preview` / `[preview]` em todo push intermediário.
 - Merge na `main` continua gerando o deploy de produção (quando a cota do dia permitir).
 
+## Build local em worktrees (Turbopack + node_modules symlink)
+- O Turbopack não suporta `node_modules` symlinkado de fora do worktree (ex.: link para `~/garagem-site/node_modules`): o build/dev local quebra.
+- Workaround no worktree, antes do build: copiar com hardlinks (rápido, sem duplicar espaço) — `cp -al ~/garagem-site/node_modules .` — e depois seguir com `npm run build`.
+- Alternativa sem copiar: rodar o build com webpack — `next build --webpack`.
+- O CI não é afetado: lá o `npm ci` instala num diretório real, sem symlink.
+
 ## Relatórios do Codex (`docs/pesquisas/`)
 Formato: `AAAA-MM-DD-tema.md`, com resumo, evidências (arquivo:linha, URL, medição), prioridades (impacto × esforço) e uma lista de tarefas prontas para virar issue/PR.
 O relatório não altera nenhum arquivo fora de `docs/pesquisas/`.
