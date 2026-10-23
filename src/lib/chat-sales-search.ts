@@ -6,6 +6,8 @@ import {
   formatVehicleLine,
   asksForTurbo,
   chatWaitlistWhatsAppUrl,
+  findMotoAlternatives,
+  isMotoQuery,
   parseTransmissionFilter,
   searchChatInventory,
   formatChatWaitlistQuery,
@@ -76,6 +78,14 @@ export function planChatSalesSearch(
         reply: `Moto automática (scooter) não temos agora, mas ${names} ${picks.length > 1 ? "são semi-automáticas" : "é semi-automática"}. O consultor confirma os detalhes do câmbio no WhatsApp.\n\n${blocks}\n\n${question}`,
       };
     }
+    const alts = findMotoAlternatives(scopedMessage, unseen, 3);
+    if (alts && alts.picks.length > 0) {
+      return {
+        policy: "inventory-alternatives",
+        picks: alts.picks,
+        reply: alts.reply,
+      };
+    }
   }
 
   const label =
@@ -115,6 +125,16 @@ export function planChatSalesSearch(
   }
 
   if (initialEmpty) {
+    if (category === "moto" || isMotoQuery(scopedMessage)) {
+      const alts = findMotoAlternatives(scopedMessage, unseen, 3);
+      if (alts && alts.picks.length > 0) {
+        return {
+          policy: "inventory-alternatives",
+          picks: alts.picks,
+          reply: alts.reply,
+        };
+      }
+    }
     return {
       policy: "waitlist", picks: [],
       reply: `Não tenho ${formatChatWaitlistQuery(scopedMessage)} agora. O consultor pode te avisar quando chegar: ${chatWaitlistWhatsAppUrl(scopedMessage)}\n\nQuer considerar outro câmbio ou ampliar um pouco essa faixa?`,
