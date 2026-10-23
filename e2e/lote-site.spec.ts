@@ -17,6 +17,8 @@ test("contato inicial de venda dispensa placa e mantém dados em erro", async ({
   const name = `Lote site ${Date.now()} ${info.project.name}`;
   const form = page.locator("form").filter({ has: page.locator('[name="plate"]') });
   try {
+    await expect(form).toHaveCount(1);
+    await expect(form.locator('[name="plate"]')).toHaveCount(1);
     await expect(form.locator('[name="plate"]')).toBeHidden();
     for (const [field, value] of Object.entries({ name, phone: "27988887766", brand: "Honda", model: "Civic", year: "2020" })) {
       await form.locator(`[name="${field}"]`).fill(value);

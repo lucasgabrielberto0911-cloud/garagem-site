@@ -18,13 +18,18 @@ const config: Config = {
         ink: "#17171A",
         brand: {
           DEFAULT: "#D91519",
+          dark: "#c91418",
           light: "#FF4448",
           orange: "#FF8A00",
           yellow: "#FFC72C",
         },
+        "accent-brand": "#ed1018",
         muted: "#B4B4BA",
         background: "var(--background)",
         foreground: "var(--foreground)",
+      },
+      accentColor: {
+        brand: "#ed1018",
       },
       fontFamily: {
         display: ["var(--font-display)", "sans-serif"],

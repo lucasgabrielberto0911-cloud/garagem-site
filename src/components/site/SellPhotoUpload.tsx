@@ -66,7 +66,7 @@ export function SellPhotoUpload({ disabled, onBusyChange, onUrlsChange }: { disa
       {jobs.map((job, index) => <li key={job.id} className="rounded-lg border border-white/15 bg-asphalt p-3" data-photo-phase={job.phase}>
         <p className="break-words text-sm font-semibold leading-relaxed text-cream">Foto {index + 1} · {job.file.name}</p>
         <p role="status" className="mt-1 text-xs leading-relaxed text-muted">{job.phase === "waiting" ? "Aguardando envio" : job.phase === "preparing" ? "Preparando a foto…" : job.phase === "uploading" ? `Enviando · ${job.percent}%` : job.phase === "saving" ? "Confirmando o envio…" : job.phase === "done" ? "Foto adicionada ao pedido" : job.error}</p>
-        {job.phase === "uploading" || job.phase === "saving" ? <progress max={100} value={job.percent} aria-label={`Progresso do envio da foto ${index + 1}`} className="mt-2 h-2 w-full accent-[#ed1018]" /> : null}
+        {job.phase === "uploading" || job.phase === "saving" ? <progress max={100} value={job.percent} aria-label={`Progresso do envio da foto ${index + 1}`} className="mt-2 h-2 w-full accent-brand" /> : null}
         {job.phase === "failed" || job.phase === "done" ? <div className="mt-2 flex flex-wrap gap-2">
           {job.phase === "failed" ? <button type="button" disabled={disabled || busy} onClick={() => void run([job.id])} className={buttonClass}>Tentar enviar foto {index + 1}</button> : null}
           <button type="button" disabled={disabled || busy} aria-label={`Remover foto ${index + 1}`} onClick={() => replace(jobsRef.current.filter(item => item.id !== job.id))} className={buttonClass}>Remover</button>

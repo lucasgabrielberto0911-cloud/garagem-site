@@ -177,7 +177,7 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading || !ready}
-            className="mt-6 min-h-[48px] w-full bg-brand py-3.5 font-display text-base font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 min-h-[48px] w-full bg-brand py-3.5 font-display text-base font-semibold uppercase tracking-wide text-cream transition touch-manipulation hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>

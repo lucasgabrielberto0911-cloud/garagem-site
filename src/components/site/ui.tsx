@@ -172,7 +172,7 @@ export function WhatsAppButton({
       : "min-h-[48px] px-5 py-3 text-xs sm:text-sm";
   const look =
     variant === "solid"
-      ? "bg-brand text-cream hover:bg-[#c91418]"
+      ? "bg-brand text-cream hover:bg-brand-dark"
       : "border border-white/20 text-cream hover:border-brand hover:bg-white/5";
 
   return (

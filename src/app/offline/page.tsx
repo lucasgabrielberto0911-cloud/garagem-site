@@ -25,7 +25,7 @@ export default function OfflinePage() {
       <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
         <Link
           href="/estoque"
-          className="inline-flex min-h-[48px] items-center justify-center bg-brand px-6 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-[#c91418]"
+          className="inline-flex min-h-[48px] items-center justify-center bg-brand px-6 font-display text-sm font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark"
         >
           Ver estoque
         </Link>

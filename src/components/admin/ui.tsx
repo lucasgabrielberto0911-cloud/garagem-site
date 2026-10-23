@@ -12,7 +12,7 @@ export const inputClass =
 
 export const btn = {
   primary:
-    "inline-flex min-h-[44px] items-center justify-center gap-2 bg-brand px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-white transition touch-manipulation hover:bg-[#c91418] disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 bg-brand px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-white transition touch-manipulation hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60",
   outline:
     "inline-flex min-h-[44px] items-center justify-center gap-2 border border-white/15 px-4 py-2.5 font-display text-sm font-semibold tracking-wide text-cream transition touch-manipulation hover:border-brand disabled:cursor-not-allowed disabled:opacity-60",
   ghost:

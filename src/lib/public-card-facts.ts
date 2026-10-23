@@ -23,6 +23,8 @@ export type PublicCardFactsInput = {
   transmission?: string | null;
   locationCity?: string | null;
   price?: number | null;
+  /** Carro vendido nunca mostra preço. */
+  status?: string | null;
 };
 
 export type PublicCardFacts = {
@@ -45,7 +47,9 @@ export function publicCardFacts(input: PublicCardFactsInput): PublicCardFacts {
   const version = shortVersion(input.version, model);
   const price = finiteNumber(input.price);
   const priceLabel =
-    price != null && price > 0 ? formatCurrencyBRL(price) : "";
+    input.status !== "vendido" && price != null && price > 0
+      ? formatCurrencyBRL(price)
+      : "";
 
   const facts: PublicCardFact[] = [];
 
