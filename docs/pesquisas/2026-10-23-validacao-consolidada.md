@@ -31,7 +31,7 @@ Cada comando foi limitado a 600 segundos, preservando seu código de saída.
 | `git diff --check origin/main...HEAD` | Exit 0. |
 | `git ls-files -u` e busca de marcadores de conflito nos arquivos-alvo | Nenhuma entrada não resolvida ou marcador encontrado. |
 
-O teste do componente foi executado separadamente porque `package.json:14`
+O teste do componente foi executado separadamente porque `package.json:13`
 limita `npm test` aos arquivos `src/lib/*.test.ts`. A verificação adicional
 de tipos inclui testes excluídos pelo tsconfig principal.
 
@@ -54,7 +54,7 @@ um deploy de preview. Não foi aberto outro PR, feito merge ou alterada produç�
 
 1. **Alto impacto, baixo esforço:** decidir na revisão do PR #381 a divergência
    entre o filtro público por cidade integrado e a proibição no `AGENTS.md`.
-   Evidência já registrada em `docs/pesquisas/2026-10-23-consolidacao-prs.md:53`.
+   Evidência já registrada em `docs/pesquisas/2026-10-23-consolidacao-prs.md:55`.
    As verificações aprovadas não resolvem essa decisão de escopo.
 2. **Médio impacto, esforço a determinar:** investigar em tarefa própria as
    três vulnerabilidades moderadas informadas por `npm ci`. A instalação
