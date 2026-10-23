@@ -1,5 +1,7 @@
 # Garagem — site e painel
 
+[![CI](https://github.com/lucasgabrielberto0911-cloud/garagem-site/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasgabrielberto0911-cloud/garagem-site/actions)
+
 Site público de seminovos da Garagem (Linhares/ES) e painel administrativo da loja.
 Produção: <https://www.suagaragem.net>.
 
