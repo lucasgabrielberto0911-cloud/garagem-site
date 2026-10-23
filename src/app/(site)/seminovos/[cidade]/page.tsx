@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
-import { SiteLeadHit } from "@/components/site/VehiclePixel";
+import { SiteLeadHit } from "@/lib/funnel-events";
 import {
   ActionRow,
   ButtonLink,
