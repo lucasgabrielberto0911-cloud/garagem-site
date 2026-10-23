@@ -1,10 +1,10 @@
 import {
   formatBrandName,
   formatCurrencyBRL,
-  formatKmBR,
   formatModelName,
   formatVehicleLabel,
 } from "@/lib/format";
+import { CARD_FORMATTERS } from "@/lib/chat-replies";
 import {
   parseCheapIntent,
   parsePriceLimit,
@@ -13,7 +13,6 @@ import {
   rankChatVehicles,
 } from "@/lib/chat-prompt";
 import { coverSrc } from "@/lib/stock-query";
-import { shortVersion } from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
 import { chatCriteria } from "@/lib/chat-multicriterio";
 import {
@@ -554,34 +553,17 @@ export function chatVehicleKm(
   vehicle: ChatVehicleCard,
   opts: { compact?: boolean } = {},
 ) {
-  if (vehicle.km >= 10_000) {
-    const mil = `${Math.round(vehicle.km / 1000)} mil`;
-    return opts.compact ? mil : `${mil} km`;
-  }
-  return formatKmBR(vehicle.km);
+  return CARD_FORMATTERS.km(vehicle, opts);
 }
 
 /** Ano · km · câmbio — sem “km” quando o câmbio já ocupa a linha. */
 export function chatVehicleMeta(vehicle: ChatVehicleCard) {
-  const gear = chatVehicleGear(vehicle);
-  return [
-    vehicle.year ? String(vehicle.year) : "",
-    chatVehicleKm(vehicle, { compact: Boolean(gear) }),
-    gear,
-  ]
-    .filter((item): item is string => Boolean(item && item !== "0"))
-    .join(" · ");
+  return CARD_FORMATTERS.meta(vehicle);
 }
 
 /** Câmbio curto no mini-anúncio — “Automático” estourava a linha do km. */
 export function chatVehicleGear(vehicle: ChatVehicleCard) {
-  const raw = vehicle.transmission?.trim();
-  if (!raw) return null;
-  const folded = fold(raw);
-  if (/cvt/.test(folded) && !/automatic/.test(folded)) return "CVT";
-  if (/automatic|cvt/.test(folded)) return "Auto";
-  if (/manual/.test(folded)) return "Manual";
-  return raw;
+  return CARD_FORMATTERS.gear(vehicle);
 }
 
 /** Atalhos depois dos mini-anúncios, com a faixa que o visitante já pediu. */
@@ -614,15 +596,13 @@ export function chatFollowupsAfterCards(
 }
 
 export function chatVehiclePrice(vehicle: ChatVehicleCard) {
-  return vehicle.sold ? "Vendido" : formatCurrencyBRL(vehicle.price);
+  return CARD_FORMATTERS.price(vehicle);
 }
 
 export function chatVehicleVersion(vehicle: ChatVehicleCard) {
-  const version = shortVersion(vehicle.version, vehicle.model);
-  return version || null;
+  return CARD_FORMATTERS.version(vehicle);
 }
 
 export function chatVehicleLabel(vehicle: ChatVehicleCard) {
-  const version = shortVersion(vehicle.version, vehicle.model);
-  return `${vehicle.title}${version ? ` ${version}` : ""} ${vehicle.year}`.trim();
+  return CARD_FORMATTERS.label(vehicle);
 }

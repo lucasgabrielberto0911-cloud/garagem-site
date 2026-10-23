@@ -9,8 +9,12 @@ import {
 } from "@/lib/chat-consumption";
 import { shortVersion } from "@/lib/vehicle-display";
 import { relatedVehicleScore } from "@/lib/related-vehicles";
-import { site } from "@/lib/site";
 import { officialWarrantyDetail } from "@/lib/chat-warranty";
+import {
+  GREETING_TEMPLATES,
+  EMPTY_STOCK_REPLIES,
+  SOLD_VEHICLE_REPLIES,
+} from "@/lib/chat-replies";
 import {
   CHAT_WHATSAPP_URL,
   chatRankMode,
@@ -63,8 +67,8 @@ export const CHAT_STOCK_TAKE = 80;
 /** Linhas no prompt do Gemini — Hobby Functions / payload enxuto. */
 export const CHAT_PROMPT_STOCK_LIMIT = 16;
 
-const MOTO_NAME_HINT =
-  /\b(biz|bros|titan|twister|crosser|xre|factor|fazer|pcx|nmax|n max|scooter|cg\s?\d{2,3}|fan\s?\d{2,3}|pop\s?\d{2,3}|yamaha|kawasaki|harley)\b/;
+export const MOTO_NAME_HINT =
+  /\b(biz|bros|titan|twister|crosser|xre|factor|fazer|pcx|nmax|n max|scooter|scooters|motoca|motocicleta|cg(?:\s?\d{2,3})?|fan(?:\s?\d{2,3})?|pop(?:\s?\d{2,3})?|cb(?:\s?\d{2,3})?|fz15|fz25|lander|xtz|ninja|z300|z400|mt03|mt07|r3|yamaha|kawasaki|harley)\b/i;
 
 export function chatStockAtCap(count: number, take = CHAT_STOCK_TAKE) {
   return count >= take;
@@ -1711,7 +1715,7 @@ export function formatAvailabilityReply(
   opts: { sold?: boolean } = {},
 ) {
   if (opts.sold) {
-    return `Essa unidade já saiu do estoque. Se quiser, o consultor procura outra parecida e te avisa no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return SOLD_VEHICLE_REPLIES.unitUnavailable;
   }
   if (!vehicle) {
     return CHAT_AVAILABILITY_ASK_REPLY;
@@ -2738,14 +2742,17 @@ export function similarAfterEmptyFilter(
   stock: ChatVehicleRecord[],
   limit = 3,
 ): ChatVehicleRecord[] {
+  const folded = normalize(mensagem);
+  const motoTalk = resolveChatCategory(mensagem) === "moto" || isMotoQuery(mensagem) || /\b(motos?|cg|cb|biz|pop|fan|titan|xre|bros|fazer|factor|lander|nmax|pcx|ninja|hornet|twister|crosser|xtz|yamaha|suzuki|kawasaki|harley|scooter|cilindradas|cc)\b/.test(folded);
+  if (motoTalk) {
+    const alts = findMotoAlternatives(mensagem, stock, limit);
+    if (alts && alts.picks.length > 0) return alts.picks;
+  }
   const floor = parseChatSearchRanges(mensagem).minPrice;
   const ceiling = parsePriceLimit(mensagem);
   stock = stock.filter(vehicle => (floor == null || vehicle.price >= floor) && (ceiling == null || vehicle.price <= ceiling));
   const mentioned = singleMentionedModelPool(stock, mensagem);
   const mentionedIds = new Set((mentioned ?? []).map((vehicle) => vehicle.id));
-  // "tem Onix?": parecido é carro, não moto (a não ser que a conversa seja de moto).
-  const folded = normalize(mensagem);
-  const motoTalk = resolveChatCategory(mensagem) === "moto" || /\b(motos?|cg|cb|biz|pop|fan|titan|xre|bros|fazer|factor|lander|nmax|pcx|ninja|hornet|twister|crosser|xtz|yamaha|suzuki|kawasaki|harley|scooter|cilindradas|cc)\b/.test(folded);
   const sameKind = (vehicle: ChatVehicleRecord) => ((vehicle.category ?? "carro") === "moto") === motoTalk;
   const relaxed = relaxChatStockFilters(stock, mensagem);
   const kind = relaxed.filter(sameKind);
@@ -3104,6 +3111,154 @@ export function chatWaitlistWhatsAppUrl(mensagem: string) {
   });
 }
 
+export const MOTO_CATALOG_REF_PRICES: Record<string, number> = {
+  cg: 17000,
+  "cg 160": 17000,
+  fan: 16500,
+  titan: 18000,
+  start: 16000,
+  cargo: 16000,
+  biz: 15000,
+  "biz 125": 15500,
+  "biz 110": 14000,
+  pop: 11000,
+  "pop 110": 11000,
+  bros: 21000,
+  "bros 160": 21000,
+  xre: 24000,
+  "xre 190": 21000,
+  "xre 300": 26000,
+  sahara: 32000,
+  twister: 22000,
+  "cb 300": 23000,
+  "cb 500": 34900,
+  fazer: 22000,
+  "fazer 250": 22000,
+  "fazer 150": 16000,
+  factor: 14500,
+  "factor 150": 14500,
+  "factor 125": 13000,
+  lander: 25000,
+  crosser: 19000,
+  nmax: 18000,
+  pcx: 18000,
+  elite: 13000,
+  fluo: 14000,
+  neo: 12000,
+  ninja: 30000,
+};
+
+export function isMotoQuery(message: string): boolean {
+  const folded = normalize(message);
+  return (
+    parseVehicleCategoryFilter(message) === "moto" ||
+    /\b(motos?|motocicletas?|scooter|scooters|motoca|cilindradas?|cc)\b/.test(folded) ||
+    MOTO_NAME_HINT.test(folded)
+  );
+}
+
+export function getMotoReferencePrice(
+  message: string,
+  stock: ChatVehicleRecord[],
+): number {
+  const limit = parsePriceLimit(message);
+  const minPrice = parseChatSearchRanges(message).minPrice;
+  if (limit != null && minPrice != null) {
+    return Math.round((limit + minPrice) / 2);
+  }
+  if (limit != null) return limit;
+  if (minPrice != null) return minPrice;
+
+  const folded = normalize(message);
+  const motosInStock = stock.filter((v) => (v.category ?? "") === "moto");
+
+  for (const moto of motosInStock) {
+    const motoModel = normalize(moto.model);
+    if (folded.includes(motoModel) || motoModel.split(" ").some((part) => part.length >= 3 && folded.includes(part))) {
+      return moto.price;
+    }
+  }
+
+  for (const [key, price] of Object.entries(MOTO_CATALOG_REF_PRICES)) {
+    if (new RegExp(`\\b${key}\\b`, "i").test(folded)) {
+      return price;
+    }
+  }
+
+  if (motosInStock.length > 0) {
+    return Math.round(motosInStock.reduce((acc, m) => acc + m.price, 0) / motosInStock.length);
+  }
+  return 17000;
+}
+
+export function findMotoAlternatives(
+  message: string,
+  stock: ChatVehicleRecord[],
+  limit = 3,
+): { reply: string; picks: ChatVehicleRecord[]; policy: string } | null {
+  const motos = stock.filter((v) => (v.category ?? "") === "moto");
+  if (motos.length === 0) return null;
+
+  const requestedGear = parseTransmissionFilter(message);
+  const refPrice = getMotoReferencePrice(message, stock);
+
+  // Faixa ±20% do preço de referência
+  const minBand = Math.round(refPrice * 0.8);
+  const maxBand = Math.round(refPrice * 1.2);
+  let inBand = motos.filter((m) => m.price >= minBand && m.price <= maxBand);
+  if (inBand.length === 0) {
+    inBand = [...motos].sort((a, b) => Math.abs(a.price - refPrice) - Math.abs(b.price - refPrice) || a.price - b.price);
+  }
+
+  let picks: ChatVehicleRecord[] = [];
+  let isGearFallback = false;
+
+  if (requestedGear === "automatico") {
+    const autoMotos = inBand.filter((m) => /semi|auto|cvt/i.test(m.transmission ?? ""));
+    if (autoMotos.length > 0) {
+      picks = autoMotos;
+    } else {
+      const manualMotos = inBand.filter((m) => !/semi|auto|cvt/i.test(m.transmission ?? "") || /manual/i.test(m.transmission ?? ""));
+      picks = manualMotos.length > 0 ? manualMotos : inBand;
+      isGearFallback = true;
+    }
+  } else if (requestedGear === "manual") {
+    const manualMotos = inBand.filter((m) => !/semi|auto|cvt/i.test(m.transmission ?? "") || /manual/i.test(m.transmission ?? ""));
+    picks = manualMotos.length > 0 ? manualMotos : inBand;
+  } else {
+    picks = inBand;
+  }
+
+  picks = picks.slice(0, limit);
+  if (picks.length === 0) return null;
+
+  const waitlistUrl = chatWaitlistWhatsAppUrl(message);
+  const priceLimit = parsePriceLimit(message);
+  const motoLabel = requestedGear === "automatico" ? "Moto automática" : requestedGear === "manual" ? "Moto manual" : "Moto";
+  let intro = "";
+
+  if (isGearFallback) {
+    intro = "Moto automática (scooter) não temos no estoque agora, mas separei alternativas manuais na mesma faixa de preço (±20%) para você conhecer:";
+  } else if (priceLimit != null && !motos.some((m) => m.price <= priceLimit)) {
+    intro = `${motoLabel} até ${formatChatPrice(priceLimit)} não temos no estoque agora, mas separei opções próximas na mesma faixa de valor:`;
+  } else {
+    const tokens = waitlistInterestBits(message).filter((t) => !INTENT_SEEK_NOISE.test(t));
+    const askedModel = tokens.length > 0 ? tokens[0] : null;
+    if (askedModel && !motos.some((m) => normalize(m.model).includes(askedModel))) {
+      intro = "Esse modelo não temos disponível no estoque agora, mas separei ótimas alternativas na mesma faixa de preço (±20%):";
+    } else {
+      intro = "Não temos exatamente essa combinação no estoque agora, mas separei alternativas próximas na mesma faixa de preço:";
+    }
+  }
+
+  const listing = picks.map(formatVehicleLine).join("\n");
+  const whatsappCta = `Se preferir, o consultor anota e te avisa no WhatsApp assim que entrar uma opção exatamente como você procura: ${waitlistUrl}`;
+  const question = picks.length === 1 ? "Quer conhecer melhor essa moto?" : "Qual dessas motos você quer conhecer melhor?";
+
+  const reply = `${intro}\n\n${listing}\n\n${whatsappCta}\n\n${question}`;
+  return { reply, picks, policy: "inventory-alternatives" };
+}
+
 /** Actual inventory search, with deterministic filters before prose generation. */
 export function searchChatInventory(
   message: string,
@@ -3323,6 +3478,12 @@ export function emptyFilterReply(
       return `Moto automática (scooter) não temos agora, mas a ${names} ${semi.length > 1 ? "são semi-automáticas" : "é semi-automática"}: sem embreagem, só troca a marcha no pé. Separei aqui.`;
     }
   }
+  if (resolveChatCategory(mensagem) === "moto" || isMotoQuery(mensagem)) {
+    const motoAlts = findMotoAlternatives(mensagem, stock, 3);
+    if (motoAlts && motoAlts.picks.length > 0) {
+      return motoAlts.reply;
+    }
+  }
   // "Tem picape?": recorte só de carroceria — fala direto, sem "Nessa combinação (carro pickup)".
   const body = parseBodyStyleFilter(mensagem);
   if (body && !parseTransmissionFilter(mensagem) && Object.keys(parseChatSearchRanges(mensagem)).length === 0) {
@@ -3352,7 +3513,21 @@ export function budgetFallbackReply(
 ): { reply: string; vehicles: ChatVehicleRecord[] } | null {
   const limit = parsePriceLimit(mensagem);
   if (limit == null) return null;
-  if (resolveChatCategory(mensagem) === "moto") return null;
+  if (resolveChatCategory(mensagem) === "moto" || isMotoQuery(mensagem)) {
+    const motos = stock.filter((vehicle) => (vehicle.category ?? "") === "moto");
+    if (!motos.length || motos.some((vehicle) => vehicle.price <= limit)) return null;
+    const alts = findMotoAlternatives(mensagem, stock, 3);
+    if (alts && alts.picks.length > 0) {
+      return { reply: alts.reply, vehicles: alts.picks };
+    }
+    const closest = [...motos].sort((a, b) => Math.abs(a.price - limit) || a.price - b.price);
+    const picks = closest.slice(0, 3);
+    const cheapest = closest[0]!;
+    return {
+      reply: `Moto até ${formatChatPrice(limit)} não temos agora; a mais próxima é ${talkName(cheapest).labeled} ${cheapest.yearModel} (${formatChatPrice(cheapest.price)}). Separei alternativas na mesma faixa para você conhecer, ou se preferir o consultor te avisa no WhatsApp assim que chegar uma no seu valor: ${chatWaitlistWhatsAppUrl(mensagem)}`,
+      vehicles: picks,
+    };
+  }
   if (parseTransmissionFilter(mensagem) || parseBodyStyleFilter(mensagem) || Object.keys(parseChatSearchRanges(mensagem)).length > 0) return null;
   const cars = stock.filter((vehicle) => (vehicle.category ?? "carro") !== "moto");
   if (!cars.length || cars.some((vehicle) => vehicle.price <= limit)) return null;
@@ -3392,7 +3567,6 @@ export function missingModelReply(
   stock: ChatVehicleRecord[],
 ): string {
   const similar = findSimilarVehicles(mensagem, stock, 3);
-  const wait = `o consultor anota e te avisa no WhatsApp quando chegar: ${chatWaitlistWhatsAppUrl(mensagem)}`;
   // Diz o nome do modelo pedido ("tem Onix?" → "Onix não está…") quando é uma palavra só, limpa.
   const bits = waitlistInterestBits(mensagem).filter((token) => !INTENT_SEEK_NOISE.test(token));
   const asked = bits.length === 1 && /^[a-z][a-z0-9-]{1,14}$/.test(bits[0]!) ? bits[0]! : null;
@@ -3403,11 +3577,7 @@ export function missingModelReply(
     ? bits.map((bit) => askedModelName(mensagem, bit)).join(" ")
     : null;
   const name = asked ? askedModelName(mensagem, asked) : pair;
-  const subject = name ? `${name} não está na lista atual.` : "Esse modelo não está na lista atual.";
-  if (similar.length === 0) {
-    return `${subject} Posso olhar outro na mesma ideia, ou ${wait}`;
-  }
-  return `${subject} Separei parecidos que temos, ou ${wait}`;
+  return EMPTY_STOCK_REPLIES.missingModel(name, chatWaitlistWhatsAppUrl(mensagem), similar.length > 0);
 }
 
 export function enrichMissingModelReply(
@@ -3462,20 +3632,16 @@ export const CHAT_PCD_REPLY =
 export const CHAT_RECALL_REPLY =
   `Recall de cada carro o consultor confere pelo chassi no site da montadora antes de você fechar. É só chamar no WhatsApp: ${CHAT_WHATSAPP_URL}`;
 
-export const CHAT_HOURS_REPLY =
-  `Atendemos todos os dias, das 8h às 23h, aqui e no WhatsApp. Pra ver um carro, a visita é com horário marcado: ${CHAT_WHATSAPP_URL}`;
+export const CHAT_HOURS_REPLY = GREETING_TEMPLATES.hours;
 
-export const CHAT_SOCIAL_REPLY =
-  `O Instagram da Garagem é ${site.instagram} (${site.instagramUrl}). Pra atendimento, o mais rápido é o WhatsApp: ${CHAT_WHATSAPP_URL}`;
+export const CHAT_SOCIAL_REPLY = GREETING_TEMPLATES.social;
 
-export const CHAT_CONTACT_REPLY =
-  `O WhatsApp da Garagem é ${site.whatsappLabel}, das 8h às 23h, todos os dias: ${CHAT_WHATSAPP_URL}`;
+export const CHAT_CONTACT_REPLY = GREETING_TEMPLATES.contact;
 
 export const CHAT_KEYS_REPLY =
   `Manual e chave reserva variam de unidade para unidade: o consultor confere no carro que você escolher e te confirma no WhatsApp. ${CHAT_WHATSAPP_URL}`;
 
-export const CHAT_ZERO_REPLY =
-  "0 km a gente não trabalha: a Garagem vende seminovos. Separei os mais novos do estoque.";
+export const CHAT_ZERO_REPLY = EMPTY_STOCK_REPLIES.zeroKm;
 
 /** Do estoque, os mais novos (carro, ou moto se a conversa for de moto). */
 export function newestChatVehicles(mensagem: string, stock: ChatVehicleRecord[], limit = 3) {
@@ -3626,11 +3792,9 @@ export function chatCityReply(_mensagem: string) {
 export const CHAT_DOCS_REPLY =
   `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
 
-export const CHAT_COMPARE_ASK_REPLY =
-  "Me diz os dois modelos que você quer comparar — por exemplo HB20 ou Onix — que eu cruzo o estoque agora, com preço e km reais.";
+export const CHAT_COMPARE_ASK_REPLY = EMPTY_STOCK_REPLIES.compareAsk;
 
-export const CHAT_AVAILABILITY_ASK_REPLY =
-  "Me diz o modelo que você quer conferir — eu olho no estoque agora e te falo se ainda tem.";
+export const CHAT_AVAILABILITY_ASK_REPLY = EMPTY_STOCK_REPLIES.availabilityAsk;
 
 export function formatTransmissionCompareReply(
   stock: ChatVehicleRecord[],

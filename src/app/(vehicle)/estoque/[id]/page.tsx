@@ -20,7 +20,7 @@ import { VehicleAccessoryChips } from "@/components/site/VehicleAccessoryChips";
 import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { ShareVehicle } from "@/components/site/ShareVehicle";
 import { StockBackLink } from "@/components/site/StockBackLink";
-import { VehicleLeadHit, VehicleViewContent } from "@/components/site/VehiclePixel";
+import { VehicleLeadHit, VehicleViewContent } from "@/lib/funnel-events";
 import { Container, WhatsAppButton } from "@/components/site/ui";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
@@ -507,7 +507,7 @@ export default async function VehicleDetailPage({
                   >
                     <WhatsAppButton
                       size="lg"
-                      className="hidden w-full lg:inline-flex"
+                      className="hidden w-full lg:inline-flex lg:text-lg"
                       trackingLabel="ficha"
                       campaign="ficha"
                       content={fichaTrack.content}
@@ -515,7 +515,7 @@ export default async function VehicleDetailPage({
                       slug={canonicalSlug}
                       message={whatsapp.interest}
                     >
-                      Tenho interesse
+                      Falar no WhatsApp
                     </WhatsAppButton>
                   </VehicleLeadHit>
                   <p className="text-xs leading-relaxed text-muted">

@@ -162,3 +162,41 @@ test("pedir mais sem orçamento não inventa uma faixa e mantém os carros eleg�
   assert.ok(result.vehicles.every(v => v.transmission === "Manual" && v.category === "carro"));
   assert.doesNotMatch(result.reply, /faixa de|até R\$|orçamento de/);
 });
+
+test("busca por moto inexistente (ex: 'Honda CG 160 2025 automática') sugere alternativas manuais na faixa ±20% com cards", async () => {
+  const motoStock = [
+    { ...car("factor", "Factor 150", 14500), brand: "Yamaha", category: "moto" as const, engine: "150cc", transmission: "Manual" },
+    { ...car("cg", "CG 160 Start", 17000), brand: "Honda", category: "moto" as const, engine: "160cc", transmission: "Manual", yearModel: 2023 },
+    { ...car("fazer", "Fazer 250", 21000), brand: "Yamaha", category: "moto" as const, engine: "250cc", transmission: "Manual" },
+  ];
+  const result = await runChatTurn({
+    mensagem: "Honda CG 160 2025 automática",
+    historico: [],
+    stock: motoStock,
+    generate,
+  });
+  assert.ok(result.vehicles.length > 0, "Deveria retornar cards de alternativas");
+  assert.ok(result.vehicles.every(v => v.category === "moto"), "Todas devem ser motos");
+  assert.ok(result.vehicles.every(v => v.transmission === "Manual"), "Devem ser manuais na ausência de automática");
+  // 17000 * 0.8 = 13600; 17000 * 1.2 = 20400
+  assert.ok(result.vehicles.some(v => v.id === "factor" || v.id === "cg"));
+  assert.match(result.reply, /automática/i);
+  assert.match(result.reply, /manual|manuais/i);
+  assert.match(result.reply, /wa\.me|whatsapp/i);
+});
+
+test("busca por moto abaixo do valor disponível ('moto até 10 mil') sugere as opções mais próximas", async () => {
+  const motoStock = [
+    { ...car("factor", "Factor 150", 14500), brand: "Yamaha", category: "moto" as const, engine: "150cc", transmission: "Manual" },
+    { ...car("cg", "CG 160 Start", 17000), brand: "Honda", category: "moto" as const, engine: "160cc", transmission: "Manual" },
+  ];
+  const result = await runChatTurn({
+    mensagem: "moto até 10 mil",
+    historico: [],
+    stock: motoStock,
+    generate,
+  });
+  assert.ok(result.vehicles.length > 0);
+  assert.ok(result.vehicles.every(v => v.category === "moto"));
+  assert.match(result.reply, /10\.000/);
+});

@@ -8,25 +8,26 @@ import {
   parseEngineDisplacementLiters,
   typicalConsumptionHint,
 } from "@/lib/chat-consumption";
-import { site } from "@/lib/site";
 import { OFFICIAL_WARRANTY_SUMMARY, officialWarrantyDetail } from "@/lib/chat-warranty";
 import { shortVersion } from "@/lib/vehicle-display";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import { parseChatNumberAmount, withoutChatMetrics } from "@/lib/chat-search-filters";
+import {
+  CHAT_WHATSAPP_URL,
+  EMPTY_STOCK_REPLIES,
+  ABUSE_LIMIT_REPLIES,
+  GREETING_TEMPLATES,
+} from "@/lib/chat-replies";
 
-export const CHAT_WHATSAPP_URL = `https://wa.me/${site.whatsappNumber}`;
+export { CHAT_WHATSAPP_URL };
 
-export const CHAT_FALLBACK_REPLY =
-  `Não consegui concluir sua resposta agora. Um consultor continua com você no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+export const CHAT_FALLBACK_REPLY = EMPTY_STOCK_REPLIES.fallback;
 
-export const CHAT_OFF_SCOPE_REPLY =
-  `Essa parte eu deixo com o consultor, mas nos assuntos da Garagem eu te ajudo sim: estoque, compra, venda, troca, financiamento e garantia. Se for outra coisa, chama no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+export const CHAT_OFF_SCOPE_REPLY = ABUSE_LIMIT_REPLIES.offScope;
 
-export const CHAT_OFF_SCOPE_REPEAT_REPLY =
-  `Só posso ajudar com assuntos da Garagem — chama no WhatsApp pra outros temas: ${CHAT_WHATSAPP_URL}`;
+export const CHAT_OFF_SCOPE_REPEAT_REPLY = ABUSE_LIMIT_REPLIES.offScopeRepeat;
 
-export const CHAT_PING_REPLY =
-  "Oi, tô aqui com você. Me conta o orçamento ou o modelo que você procura — eu comparo o estoque em poucas linhas e a gente continua no WhatsApp.";
+export const CHAT_PING_REPLY = GREETING_TEMPLATES.ping;
 
 export const CHAT_FIPE_REPLY =
   `A tabela FIPE eu não consulto por aqui — o preço que vale pra gente é o do anúncio no estoque. Se quiser, te mostro o que temos agora ou o consultor confirma no WhatsApp: ${CHAT_WHATSAPP_URL}`;

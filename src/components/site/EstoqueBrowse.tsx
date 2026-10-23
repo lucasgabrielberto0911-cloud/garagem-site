@@ -11,7 +11,7 @@ import { StockReturnCapture } from "@/components/site/StockReturnCapture";
 import { VehicleCardSkeletonGrid } from "@/components/site/VehicleCardSkeleton";
 import { HideStockCardInterest } from "@/components/site/HideStockCardInterest";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
-import { SiteLeadHit, StockSearchPixel } from "@/components/site/VehiclePixel";
+import { SiteLeadHit, StockSearchPixel } from "@/lib/funnel-events";
 import { WhatsAppButton } from "@/components/site/ui";
 import { formatStockWaitlistQuery, stockEmptyWhatsAppCta } from "@/lib/stock-waitlist";
 import {

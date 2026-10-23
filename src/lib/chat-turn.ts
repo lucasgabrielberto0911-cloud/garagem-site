@@ -56,6 +56,7 @@ import {
   createChatLead,
   leadArgsAreComplete,
   parseCriarLeadArgs,
+  CHAT_LEAD_CONFIRMATION_REPLY,
 } from "@/lib/chat-lead";
 import {
   CHAT_CARD_REPLY,
@@ -132,20 +133,24 @@ import {
   emptyFilterReply,
   budgetFallbackReply,
   equipmentReplyLooksBroken,
+  findMotoAlternatives,
   formatShortlistFollowUp,
   formatTransmissionCompareReply,
   hasChatStockFilter,
   hasConsumptionFigures,
+  isMotoQuery,
   missingModelReply,
   chatCityReply,
   mentionedModelPools,
   parseTransmissionFilter,
+  parseVehicleCategoryFilter,
+  resolveChatCategory,
   type ChatVehicleRecord,
 } from "@/lib/chat-stock";
 import { chatTurnMayCreateLead } from "@/lib/chat-guard";
 import { neutralChatComparison, guardChatComparisonWinner } from "@/lib/chat-comparison";
 import { asksChatMedia, resolveChatMediaVehicles, chatMediaVehicleName, pendingChatMediaMessage } from "@/lib/chat-media";
-import { matchChatSoldVehicle, similarToChatSoldVehicle, chatSoldVehicleName, type ChatSoldVehicle } from "@/lib/chat-sold";
+import { matchChatSoldVehicle, similarToChatSoldVehicle, chatSoldVehicleName, formatChatSoldReply, type ChatSoldVehicle } from "@/lib/chat-sold";
 import { WHATSAPP_MESSAGES, whatsappUrl } from "@/lib/site";
 import { asksAboutFuel, dieselWishReply, fuelFactReply, fuelListReply, fuelUnits } from "@/lib/chat-fuel";
 import { asksColorOf, colorReply, mentionedStockBrand, parseColorWish } from "@/lib/chat-attrs";
@@ -562,7 +567,7 @@ async function runChatTurnInternal(input: {
     const similar = similarToChatSoldVehicle(soldVehicle, input.stock, visitorMessage);
     const name = chatSoldVehicleName(soldVehicle);
     const href = whatsappUrl(WHATSAPP_MESSAGES.wanted(name), { campaign: "chat" });
-    const reply = `O ${name} já foi vendido.${similar.length ? " Separei opções parecidas do estoque." : ""} Podemos te avisar quando chegar outro pelo WhatsApp: ${href}`;
+    const reply = formatChatSoldReply(name, href, similar.length > 0);
     emit(reply);
     const result = finish(reply, false, { policy: "sold", plain: true, forcedVehicles: similar, cards: similar.length > 0 });
     return result;
@@ -953,8 +958,9 @@ async function runChatTurnInternal(input: {
       ? null
       : emptyFilterReply(scopedMessage, input.stock);
   if (empty) {
-    const similar = empty.startsWith("Moto automática")
-      ? input.stock.filter((vehicle) => vehicle.category === "moto" && /semi/i.test(vehicle.transmission ?? "")).slice(0, 3)
+    const semiMotos = input.stock.filter((vehicle) => vehicle.category === "moto" && /semi/i.test(vehicle.transmission ?? "")).slice(0, 3);
+    const similar = empty.startsWith("Moto automática") && semiMotos.length > 0
+      ? semiMotos
       : similarAfterEmptyFilter(scopedMessage, input.stock, 3);
     emit(empty);
     // Texto fixo: sem comparação anexada depois do "não temos agora".
@@ -1080,6 +1086,15 @@ async function runChatTurnInternal(input: {
       return result;
     }
     if (explicitModelUnits.length > 0) {
+      const requestedGear = parseTransmissionFilter(scopedMessage);
+      const gearMismatch = requestedGear === "automatico" && !explicitModelUnits.some(v => /semi|auto|cvt/i.test(v.transmission ?? ""));
+      if (gearMismatch && (parseVehicleCategoryFilter(scopedMessage) === "moto" || resolveChatCategory(scopedMessage) === "moto" || isMotoQuery(scopedMessage))) {
+        const alts = findMotoAlternatives(scopedMessage, input.stock, 3);
+        if (alts && alts.picks.length > 0) {
+          emit(alts.reply);
+          return finish(alts.reply, false, { policy: "inventory-alternatives", forcedVehicles: alts.picks, cards: true, plain: true });
+        }
+      }
       // O filtro atual pode não bater, mas o modelo existe: mostra as unidades reais.
       const years: string[] = visitorMessage.match(/\b(?:19|20)\d{2}\b/g) ?? [];
       const byYear = years.length ? explicitModelUnits.filter(vehicle => years.includes(String(vehicle.yearModel))) : [];
@@ -1087,6 +1102,13 @@ async function runChatTurnInternal(input: {
       const reply = `Temos o modelo no estoque, com estas configurações:\n${picks.map(vehicle => `• ${rankLineName(vehicle)} — ${vehicle.transmission}`).join("\n")}`;
       emit(reply);
       return finish(reply, false, { policy: "inventory-named", plain: true, forcedVehicles: picks });
+    }
+    if (parseVehicleCategoryFilter(scopedMessage) === "moto" || resolveChatCategory(scopedMessage) === "moto" || isMotoQuery(scopedMessage)) {
+      const alts = findMotoAlternatives(scopedMessage, input.stock, 3);
+      if (alts && alts.picks.length > 0) {
+        emit(alts.reply);
+        return finish(alts.reply, false, { policy: "inventory-alternatives", forcedVehicles: alts.picks, cards: true, plain: true });
+      }
     }
     const reply =
       "Não achei um anúncio que reúna esses critérios agora. Você pode mudar o recorte ou falar com um consultor no WhatsApp: " +
@@ -1180,6 +1202,18 @@ async function runChatTurnInternal(input: {
       return finish(reply, false, { policy: "availability" });
     }
     if (seeksMissingNamedModel(scopedMessage, input.stock)) {
+      if (parseVehicleCategoryFilter(scopedMessage) === "moto" || resolveChatCategory(scopedMessage) === "moto" || isMotoQuery(scopedMessage)) {
+        const alts = findMotoAlternatives(scopedMessage, input.stock, 3);
+        if (alts && alts.picks.length > 0) {
+          emit(alts.reply);
+          return finish(alts.reply, false, {
+            policy: "inventory-alternatives",
+            forcedVehicles: alts.picks,
+            cards: true,
+            plain: true,
+          });
+        }
+      }
       const reply = missingModelReply(scopedMessage, input.stock);
       const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
       emit(reply);
@@ -1198,6 +1232,18 @@ async function runChatTurnInternal(input: {
     }
   }
   if (!mayCreateLead && !skipShortcuts && seeksMissingNamedModel(scopedMessage, input.stock)) {
+    if (parseVehicleCategoryFilter(scopedMessage) === "moto" || resolveChatCategory(scopedMessage) === "moto" || isMotoQuery(scopedMessage)) {
+      const alts = findMotoAlternatives(scopedMessage, input.stock, 3);
+      if (alts && alts.picks.length > 0) {
+        emit(alts.reply);
+        return finish(alts.reply, false, {
+          policy: "inventory-alternatives",
+          forcedVehicles: alts.picks,
+          cards: true,
+          plain: true,
+        });
+      }
+    }
     const reply = missingModelReply(scopedMessage, input.stock);
     const similar = similarAfterEmptyFilter(scopedMessage, input.stock, 3);
     emit(reply);
@@ -1480,8 +1526,7 @@ async function runChatTurnInternal(input: {
         const created = await createLead(args, input.stock, {
           reading: await readingWithin(reading, CHAT_READING_LEAD_WAIT_MS),
         });
-        let reply =
-          "Pronto — registrei seu contato. A equipe continua com você no WhatsApp.";
+        let reply: string = CHAT_LEAD_CONFIRMATION_REPLY;
         try {
           const confirmation = await confirm({
             systemPrompt: systemPromptFor(),
