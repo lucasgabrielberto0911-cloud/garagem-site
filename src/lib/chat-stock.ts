@@ -9,8 +9,12 @@ import {
 } from "@/lib/chat-consumption";
 import { shortVersion } from "@/lib/vehicle-display";
 import { relatedVehicleScore } from "@/lib/related-vehicles";
-import { site } from "@/lib/site";
 import { officialWarrantyDetail } from "@/lib/chat-warranty";
+import {
+  GREETING_TEMPLATES,
+  EMPTY_STOCK_REPLIES,
+  SOLD_VEHICLE_REPLIES,
+} from "@/lib/chat-replies";
 import {
   CHAT_WHATSAPP_URL,
   chatRankMode,
@@ -1711,7 +1715,7 @@ export function formatAvailabilityReply(
   opts: { sold?: boolean } = {},
 ) {
   if (opts.sold) {
-    return `Essa unidade já saiu do estoque. Se quiser, o consultor procura outra parecida e te avisa no WhatsApp: ${CHAT_WHATSAPP_URL}`;
+    return SOLD_VEHICLE_REPLIES.unitUnavailable;
   }
   if (!vehicle) {
     return CHAT_AVAILABILITY_ASK_REPLY;
@@ -3563,7 +3567,6 @@ export function missingModelReply(
   stock: ChatVehicleRecord[],
 ): string {
   const similar = findSimilarVehicles(mensagem, stock, 3);
-  const wait = `o consultor anota e te avisa no WhatsApp quando chegar: ${chatWaitlistWhatsAppUrl(mensagem)}`;
   // Diz o nome do modelo pedido ("tem Onix?" → "Onix não está…") quando é uma palavra só, limpa.
   const bits = waitlistInterestBits(mensagem).filter((token) => !INTENT_SEEK_NOISE.test(token));
   const asked = bits.length === 1 && /^[a-z][a-z0-9-]{1,14}$/.test(bits[0]!) ? bits[0]! : null;
@@ -3574,11 +3577,7 @@ export function missingModelReply(
     ? bits.map((bit) => askedModelName(mensagem, bit)).join(" ")
     : null;
   const name = asked ? askedModelName(mensagem, asked) : pair;
-  const subject = name ? `${name} não está na lista atual.` : "Esse modelo não está na lista atual.";
-  if (similar.length === 0) {
-    return `${subject} Posso olhar outro na mesma ideia, ou ${wait}`;
-  }
-  return `${subject} Separei parecidos que temos, ou ${wait}`;
+  return EMPTY_STOCK_REPLIES.missingModel(name, chatWaitlistWhatsAppUrl(mensagem), similar.length > 0);
 }
 
 export function enrichMissingModelReply(
@@ -3633,20 +3632,16 @@ export const CHAT_PCD_REPLY =
 export const CHAT_RECALL_REPLY =
   `Recall de cada carro o consultor confere pelo chassi no site da montadora antes de você fechar. É só chamar no WhatsApp: ${CHAT_WHATSAPP_URL}`;
 
-export const CHAT_HOURS_REPLY =
-  `Atendemos todos os dias, das 8h às 23h, aqui e no WhatsApp. Pra ver um carro, a visita é com horário marcado: ${CHAT_WHATSAPP_URL}`;
+export const CHAT_HOURS_REPLY = GREETING_TEMPLATES.hours;
 
-export const CHAT_SOCIAL_REPLY =
-  `O Instagram da Garagem é ${site.instagram} (${site.instagramUrl}). Pra atendimento, o mais rápido é o WhatsApp: ${CHAT_WHATSAPP_URL}`;
+export const CHAT_SOCIAL_REPLY = GREETING_TEMPLATES.social;
 
-export const CHAT_CONTACT_REPLY =
-  `O WhatsApp da Garagem é ${site.whatsappLabel}, das 8h às 23h, todos os dias: ${CHAT_WHATSAPP_URL}`;
+export const CHAT_CONTACT_REPLY = GREETING_TEMPLATES.contact;
 
 export const CHAT_KEYS_REPLY =
   `Manual e chave reserva variam de unidade para unidade: o consultor confere no carro que você escolher e te confirma no WhatsApp. ${CHAT_WHATSAPP_URL}`;
 
-export const CHAT_ZERO_REPLY =
-  "0 km a gente não trabalha: a Garagem vende seminovos. Separei os mais novos do estoque.";
+export const CHAT_ZERO_REPLY = EMPTY_STOCK_REPLIES.zeroKm;
 
 /** Do estoque, os mais novos (carro, ou moto se a conversa for de moto). */
 export function newestChatVehicles(mensagem: string, stock: ChatVehicleRecord[], limit = 3) {
@@ -3797,11 +3792,9 @@ export function chatCityReply(_mensagem: string) {
 export const CHAT_DOCS_REPLY =
   `A transferência a gente combina com o consultor. Leva RG/CPF (ou CNH) e comprovante de residência; custos de Detran e despachante variam por caso — sem taxa padronizada no site. Confirma os passos no WhatsApp, das 8h às 23h: ${CHAT_WHATSAPP_URL}`;
 
-export const CHAT_COMPARE_ASK_REPLY =
-  "Me diz os dois modelos que você quer comparar — por exemplo HB20 ou Onix — que eu cruzo o estoque agora, com preço e km reais.";
+export const CHAT_COMPARE_ASK_REPLY = EMPTY_STOCK_REPLIES.compareAsk;
 
-export const CHAT_AVAILABILITY_ASK_REPLY =
-  "Me diz o modelo que você quer conferir — eu olho no estoque agora e te falo se ainda tem.";
+export const CHAT_AVAILABILITY_ASK_REPLY = EMPTY_STOCK_REPLIES.availabilityAsk;
 
 export function formatTransmissionCompareReply(
   stock: ChatVehicleRecord[],
