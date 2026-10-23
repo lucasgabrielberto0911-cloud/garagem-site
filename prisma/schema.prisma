@@ -72,7 +72,8 @@ model Vehicle {
    * valor do estoque nem no lucro.
    */
   consigned    Boolean  @default(false)
-  soldAt       DateTime?
+  // shortcut: reativar no Client só após validar a migração 20261022180400 nos bancos atendidos.
+  soldAt       DateTime? @ignore
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   photos       Photo[]

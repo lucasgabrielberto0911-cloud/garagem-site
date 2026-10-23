@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { Prisma } from "@prisma/client";
 import { parseAdminSellInput } from "./admin-sell";
+
+test("Client funciona antes da migração de soldAt, inclusive em consultas sem select", () => {
+  const vehicle = Prisma.dmmf.datamodel.models.find(model => model.name === "Vehicle");
+  assert.ok(vehicle);
+  assert.equal(vehicle.fields.some(field => field.name === "soldAt"), false);
+});
 
 test("payload vazio ou parcial marca venda simples", () => {
   assert.deepEqual(parseAdminSellInput({}), {
