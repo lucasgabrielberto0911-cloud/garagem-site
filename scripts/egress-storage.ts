@@ -1,15 +1,17 @@
 /**
  * Reduz egress do bucket `veiculos` (Supabase Storage):
  * - regrava com cacheControl de 1 ano os objetos que estão com outro valor;
- * - recomprime JPEG grandes, mantendo o MESMO path (a URL salva no banco não muda).
+ * - com --recompress, recomprime JPEG grandes, mantendo o MESMO path (a URL salva no banco não muda).
  *
  *   npx tsx --env-file=.env scripts/egress-storage.ts --dry-run --report=~/logs/egress-dryrun.txt
  *   npx tsx --env-file=.env scripts/egress-storage.ts --apply
  *
- * --dry-run: só lista metadados. Não baixa nem escreve nada (o download é o que gasta egress).
- * --apply:   antes de regravar, baixa cada alvo para <backup-dir>/<AAAA-MM-DDTHH-MM-SS>/
- *            e grava manifest.jsonl com o cacheControl/tamanho originais.
+ * --dry-run: só lista metadados (list e info). Não baixa nem escreve nada.
+ * --apply:   antes de regravar, copia cada alvo para `_backup-egress/<AAAA-MM-DDTHH-MM-SS>/<path>` dentro do próprio
+ *            bucket, com copy() (cópia server-side, sem download). Grava manifest.jsonl em <backup-dir>/<timestamp>/.
+ *            Para regravar ainda baixa os bytes de cada alvo: o Storage não troca só o cacheControl.
  *            Sem --dry-run nem --apply o script não faz nada.
+ * --recompress: inclui JPEG >= min-jpeg-kb na lista e recomprime. Desligado por padrão (com --dry-run mostra o que faria).
  *
  * Opções: --bucket=veiculos --min-jpeg-kb=100 --quality=80 --backup-dir=~/bak-storage-egress
  * Requer NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY (o script nunca imprime as chaves).
@@ -22,9 +24,12 @@ import path from "node:path";
 
 const ONE_YEAR = 31536000;
 const LIST_PAGE = 1000;
+// Pasta dentro do próprio bucket onde o --apply guarda a cópia de backup. Não entra na listagem.
+const BACKUP_PREFIX = "_backup-egress";
 
 const dryRun = process.argv.includes("--dry-run");
 const apply = process.argv.includes("--apply");
+const recompressEnabled = process.argv.includes("--recompress");
 if (dryRun === apply) {
   throw new Error("Escolha exatamente um modo: --dry-run ou --apply.");
 }
@@ -67,6 +72,11 @@ function isJpeg(obj: StorageObject) {
   return obj.mimetype === "image/jpeg" || /\.jpe?g$/i.test(obj.path);
 }
 
+// info() traz cacheControl no topo do objeto; list() traz dentro de metadata.
+function infoCacheControl(info: { cacheControl?: string; metadata?: Record<string, unknown> }) {
+  return String(info.cacheControl ?? info.metadata?.cacheControl ?? "");
+}
+
 async function listAll(supabase: SupabaseClient, prefix = ""): Promise<StorageObject[]> {
   const objects: StorageObject[] = [];
   let offset = 0;
@@ -81,6 +91,8 @@ async function listAll(supabase: SupabaseClient, prefix = ""): Promise<StorageOb
 
     for (const item of data) {
       const full = prefix ? `${prefix}/${item.name}` : item.name;
+      // Backups de rodadas anteriores não são alvo.
+      if (!prefix && item.name === BACKUP_PREFIX) continue;
       // Pasta no Storage vem sem id: desce recursivamente.
       if (!item.id) {
         objects.push(...(await listAll(supabase, full)));
@@ -117,7 +129,7 @@ async function loadRecompressed(): Promise<Set<string>> {
 function buildPlan(objects: StorageObject[], recompressed: Set<string>): PlanItem[] {
   const plan: PlanItem[] = [];
   for (const obj of objects) {
-    const recompress = isJpeg(obj) && obj.size >= minJpegBytes && !recompressed.has(obj.path);
+    const recompress = recompressEnabled && isJpeg(obj) && obj.size >= minJpegBytes && !recompressed.has(obj.path);
     if (recompress || !isOneYear(obj.cacheControl)) plan.push({ ...obj, recompress });
   }
   return plan;
@@ -132,7 +144,7 @@ async function dryRunReport(supabase: SupabaseClient, objects: StorageObject[], 
   const jpegs = objects.filter(isJpeg);
   const bigJpegs = objects.filter((obj) => isJpeg(obj) && obj.size >= minJpegBytes);
   const wrongCache = objects.filter((obj) => !isOneYear(obj.cacheControl));
-  const downloadBytes = plan.reduce((sum, item) => sum + item.size, 0);
+  const planBytes = plan.reduce((sum, item) => sum + item.size, 0);
 
   log(`Bucket: ${bucket}`);
   log(`Objetos: ${objects.length} (${mb(totalBytes)})`);
@@ -145,10 +157,12 @@ async function dryRunReport(supabase: SupabaseClient, objects: StorageObject[], 
   }
   log(`Fora de 1 ano: ${wrongCache.length} (${mb(wrongCache.reduce((s, o) => s + o.size, 0))})`);
   log(`JPEG: ${jpegs.length} (${mb(jpegs.reduce((s, o) => s + o.size, 0))}); >= ${minJpegBytes / 1024} KB: ${bigJpegs.length}`);
+  log(`Recompressão JPEG: ${recompressEnabled ? "ligada (--recompress)" : "desligada (use --recompress)"}`);
   log("");
   log(`Alvos a regravar: ${plan.length}`);
-  log(`Download estimado (egress do --apply, feito uma vez por alvo): ${mb(downloadBytes)}`);
-  log(`Backup local (se --apply): ${backupRoot}/<timestamp>/`);
+  log(`Backup no bucket via copy() (se --apply): ${mb(planBytes)} em ${BACKUP_PREFIX}/<timestamp>/ (sem egress, ocupa storage)`);
+  log(`Download para regravar (egress do --apply, uma vez por alvo): ${mb(planBytes)}`);
+  log(`Manifest local (se --apply): ${backupRoot}/<timestamp>/`);
   log("");
   log("path | KB | cacheControl atual | mimetype | recomprimir");
   for (const item of plan) {
@@ -167,7 +181,7 @@ async function dryRunReport(supabase: SupabaseClient, objects: StorageObject[], 
       log(`  ${obj.path}: info() falhou (${error?.message ?? "sem dados"})`);
       continue;
     }
-    const infoCache = String(data.metadata?.cacheControl ?? "");
+    const infoCache = infoCacheControl(data);
     log(`  ${obj.path}: list="${obj.cacheControl}" info="${infoCache}" ${infoCache === obj.cacheControl ? "OK" : "DIVERGE"}`);
   }
 }
@@ -188,6 +202,7 @@ async function applyPlan(supabase: SupabaseClient, plan: PlanItem[]) {
   }
   const stamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
   const runDir = path.join(backupRoot, stamp);
+  const backupDir = `${BACKUP_PREFIX}/${stamp}`;
   const manifest = path.join(runDir, "manifest.jsonl");
   await mkdir(runDir, { recursive: true });
 
@@ -207,9 +222,18 @@ async function applyPlan(supabase: SupabaseClient, plan: PlanItem[]) {
       failures.push(`${item.path}: info() falhou (${infoError?.message ?? "sem dados"})`);
       continue;
     }
-    const currentCache = String(current.metadata?.cacheControl ?? "");
+    const currentCache = infoCacheControl(current);
     if (!item.recompress && isOneYear(currentCache)) {
       skipped += 1;
+      continue;
+    }
+
+    // Backup dentro do Storage: copy() é server-side, então não baixa o arquivo.
+    // Se a cópia falhar, o original não é tocado.
+    const backupPath = `${backupDir}/${item.path}`;
+    const { error: copyError } = await supabase.storage.from(bucket).copy(item.path, backupPath);
+    if (copyError) {
+      failures.push(`${item.path}: backup via copy() falhou (${copyError.message})`);
       continue;
     }
 
@@ -219,11 +243,6 @@ async function applyPlan(supabase: SupabaseClient, plan: PlanItem[]) {
       continue;
     }
     const original = Buffer.from(await blob.arrayBuffer());
-
-    // Backup antes de qualquer escrita remota. flag "wx" nunca sobrescreve um backup existente.
-    const backupFile = path.join(runDir, item.path);
-    await mkdir(path.dirname(backupFile), { recursive: true });
-    await writeFile(backupFile, original, { flag: "wx" });
 
     let body = original;
     if (item.recompress) {
@@ -246,6 +265,7 @@ async function applyPlan(supabase: SupabaseClient, plan: PlanItem[]) {
       manifest,
       `${JSON.stringify({
         path: item.path,
+        backupPath,
         cacheControlAntes: currentCache,
         sizeAntes: original.length,
         sizeDepois: body.length,
@@ -257,7 +277,8 @@ async function applyPlan(supabase: SupabaseClient, plan: PlanItem[]) {
   }
 
   log("");
-  log(`Backup e manifest: ${runDir}`);
+  log(`Backup no bucket: ${BACKUP_PREFIX}/${stamp}/`);
+  log(`Manifest local: ${runDir}`);
   log(`Regravados: ${done} | já estavam ok: ${skipped} | falhas: ${failures.length}`);
   for (const failure of failures) log(`FALHA ${failure}`);
 }
