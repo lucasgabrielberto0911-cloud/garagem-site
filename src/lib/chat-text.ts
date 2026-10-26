@@ -10,6 +10,7 @@ import {
   applyWhatsAppUtm,
   whatsappContentFromVehicle,
   whatsappUrl,
+  site,
 } from "@/lib/site";
 import {
   formatVehicleWhatsAppMessage,
@@ -227,6 +228,7 @@ export type ChatHandoffVehicle = {
   year?: number;
   label?: string;
   category?: string;
+  href?: string;
 };
 
 export type ChatHandoffContext = {
@@ -242,7 +244,10 @@ function handoffVehicleLabel(vehicle: ChatHandoffVehicle) {
     version && base && !base.toLowerCase().includes(version.toLowerCase())
       ? `${base} ${version}`
       : base;
-  return (withVersion || vehicle.label || "").replace(/\s+/g, " ").trim();
+  const label = (withVersion || vehicle.label || "").replace(/\s+/g, " ").trim();
+  return vehicle.year && !label.includes(String(vehicle.year))
+    ? `${label} ${vehicle.year}`
+    : label;
 }
 
 /** Pré-preenche o WhatsApp só com veículos recebidos e o recorte da sessão. */
@@ -280,7 +285,11 @@ export function formatChatHandoffMessage(input: ChatHandoffContext = {}) {
       : "";
   const context = [gear, budget].filter(Boolean).join(" ");
   const contextBit = context ? ` ${context}` : "";
-  return `Oi! Vi ${article} ${names}${contextBit} no site da ${WHATSAPP_BRAND} e quero saber mais.`;
+  const links = (input.vehicles ?? []).slice(0, 3)
+    .flatMap(vehicle => /^\/estoque\/[a-z0-9-]+$/i.test(vehicle.href ?? "")
+      ? [`${site.url}${vehicle.href}`]
+      : []);
+  return [`Oi! Vi ${article} ${names}${contextBit} no site da ${WHATSAPP_BRAND} e quero saber mais.`, ...links].join("\n");
 }
 
 /** Orçamento e câmbio ditos pelo visitante. Não lê a resposta do assistente. */
