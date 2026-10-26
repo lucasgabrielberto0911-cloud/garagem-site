@@ -26,12 +26,9 @@ export async function servePublicPhoto(request: Request, parts: string[], fetche
       await response.body?.cancel();
       response = await fetcher(fallback, options);
     }
-    // Backfill pode substituir o card no mesmo caminho (upsert), então 30 dias e sem immutable.
-    // Galeria/rotação usam nomes novos.
-    const thumbnail = /-card\.webp$/i.test(parts.at(-1)!);
+    // Fotos e cards precisam de um novo caminho quando seus bytes mudarem.
     const headers = new Headers({
-      "Cache-Control": thumbnail ? "public, max-age=2592000, stale-while-revalidate=86400" : "public, max-age=31536000, immutable",
-      "CDN-Cache-Control": thumbnail ? "public, s-maxage=2592000, stale-while-revalidate=86400" : "public, s-maxage=31536000",
+      "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
       "X-Content-Type-Options": "nosniff",
     });
     for (const name of ["etag", "last-modified"]) {

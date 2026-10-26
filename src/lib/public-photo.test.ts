@@ -46,15 +46,13 @@ test("GET mantém os bytes e remove noindex, cookies e cache do Storage; HEAD é
   assert.deepEqual(new Uint8Array(await get.arrayBuffer()), bytes);
   assert.equal(await head.text(), "");
   assert.deepEqual([...get.headers], [...head.headers]);
-  assert.equal(get.headers.get("cache-control"), "public, max-age=31536000, immutable");
-  assert.equal(get.headers.get("cdn-cache-control"), "public, s-maxage=31536000");
+  assert.equal(get.headers.get("cache-control"), "public, max-age=31536000, s-maxage=31536000, immutable");
   for (const header of ["x-robots-tag", "set-cookie", "vary"]) assert.equal(get.headers.get(header), null);
 });
 
-test("miniatura substituível tem cache longo e revalidação", async () => {
+test("miniatura também fica imutável por um ano no navegador e na CDN", async () => {
   const response = await servePublicPhoto(request(), ["v1", "original", "car-card.webp"], async () => new Response("image", { headers: { "Content-Type": "image/webp" } }));
-  assert.match(response.headers.get("cache-control")!, /max-age=2592000/);
-  assert.doesNotMatch(response.headers.get("cache-control")!, /immutable/);
+  assert.equal(response.headers.get("cache-control"), "public, max-age=31536000, s-maxage=31536000, immutable");
 });
 
 test("GET e HEAD condicionais retornam 304 sem bytes nem credenciais", async () => {
@@ -74,7 +72,7 @@ test("GET e HEAD condicionais retornam 304 sem bytes nem credenciais", async () 
     assert.equal(result.status, 304);
     assert.equal(await result.text(), "");
     assert.equal(result.headers.get("etag"), '"photo"');
-    assert.match(result.headers.get("cache-control")!, /max-age=2592000/);
+    assert.equal(result.headers.get("cache-control"), "public, max-age=31536000, s-maxage=31536000, immutable");
     assert.equal(result.headers.get("set-cookie"), null);
   }
 });
