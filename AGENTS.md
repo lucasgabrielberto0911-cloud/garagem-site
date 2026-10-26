@@ -42,6 +42,7 @@ Regras:
 6. Quadro de tarefas: Issues do GitHub com labels `agente:claude`, `agente:codex`, `agente:cursor` e `area:<área>`. Pegue só issues com a sua label.
 7. **Produção é intocável:** não rode `prisma db push`, migrações, seeds ou scripts (`scripts/*.ts`) contra o banco real. Também não altere variáveis de ambiente na Vercel. Teste com banco local/isolado (igual ao CI).
 8. Nunca commitar `.env*`, fotos originais de anúncio, chaves ou tokens.
+9. **Egress de fotos é proibido:** agentes e scripts nunca baixam fotos do site em produção nem do Storage do Supabase. Use fixtures ou cópia local (ver "Fotos e egress do Supabase").
 
 ## Marca (obrigatório em qualquer texto, tela, arte ou vídeo)
 - O nome da marca é **Garagem**, não "Sua Garagem". `suagaragem.net` é só o domínio. Não crie novas ocorrências visíveis de "Sua Garagem". As ocorrências antigas (metadados, aviso de consentimento, assistente) só mudam em PR próprio, combinado com o Lucas.
@@ -70,6 +71,11 @@ Regras:
 - Fichas: metadata via App Router, canonical pelo slug (`src/lib/vehicle-slug.ts`), JSON-LD de veículo/oferta sem preço quando vendido.
 - Meça antes e depois (Lighthouse ou Chrome DevTools MCP no preview da Vercel) quando mexer em tela pública. Metas: LCP ≤ 2,5 s, INP ≤ 200 ms, CLS ≤ 0,1 no celular.
 - Fotos públicas saem por `/api/fotos/...` com cache longo (cards `-card.webp`: 30 dias, sem `immutable`, porque o backfill regrava o mesmo caminho). Não troque para `next/image` sem medir (ver `docs/ops.md`, seção Image Optimization).
+
+## Fotos e egress do Supabase
+- **Agentes e scripts nunca baixam fotos do site em produção nem do Storage do Supabase.** Isso vale para `https://www.suagaragem.net` (rotas `/api/fotos/...`, `/api/catalog-jpg/...`, `/fotos`), para as URLs do Storage (`*.supabase.co/storage/...`) e para o SDK (`supabase.storage...download`, `list`, `remove` ou qualquer script que copie o bucket). Todo download consome o Cached Egress do Supabase, que já estourou (6,3 de 5 GB em 26/10/2026).
+- **Use fixtures ou cópia local.** Em teste, e2e, captura de tela e medição, sirva a fixture `public/branding/placeholder-car.png` interceptando `**/fotos/**` com `page.route` (como em `e2e/sold-photo-paint.spec.ts` e `e2e/public-journeys.spec.ts`) ou use uma cópia local versionada no repositório. Para validar o pipeline real de imagens, use o banco e o bucket de teste local, nunca os de produção.
+- Não rode `curl`/`wget` de foto do site em produção nem escreva script que baixe o estoque inteiro, mesmo "só para conferir". Se a validação exigir imagem real, combine com o coordenador (Grok Bot) e use o ambiente de teste.
 
 
 ## Economia de deploys na Vercel (Hobby: ~100/dia)
