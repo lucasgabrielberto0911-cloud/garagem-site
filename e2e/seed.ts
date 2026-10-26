@@ -23,11 +23,11 @@ async function seed() {
 const prisma = new PrismaClient();
 try {
   // Perfil fictício para conferir o sameAs sem exibir nota/selo na home.
-  const google = { googleRating: 4.9, googleReviewCount: 127, googleProfileUrl: "https://maps.google.com/?cid=1234567890" };
+  const google = { googleRating: 4.9, googleReviewCount: 127, googleProfileUrl: "https://maps.google.com/?cid=1234567890", founderPhotoUrl: samples[0].photos[0].url };
   await prisma.siteSettings.upsert({ where: { id: "default" }, create: { id: "default", ...google }, update: google });
   for (const [index, item] of SEED_TESTIMONIALS.entries()) {
     const id = `ce2etestimonial${index}`;
-    const data = { ...item, published: true };
+    const data = { ...item, published: true, photoUrl: index === 0 ? samples[0].photos[0].url : null };
     await prisma.testimonial.upsert({ where: { id }, create: { id, ...data }, update: data });
   }
   for (const sample of samples) {

@@ -1,11 +1,12 @@
 import Image from "next/image";
+import { PUBLIC_PHOTO_PREFIX, publicPhotoSrc } from "@/lib/public-photo-url";
 
 export function FounderSection({
   photoUrl,
 }: {
   photoUrl?: string | null;
 }) {
-  const portrait = photoUrl?.trim() || null;
+  const portrait = photoUrl?.trim() ? publicPhotoSrc(photoUrl.trim()) : null;
 
   return (
     <section
@@ -28,7 +29,7 @@ export function FounderSection({
               fill
               sizes="(min-width: 1024px) 480px, 100vw"
               quality={90}
-              unoptimized={/^https?:\/\//i.test(portrait)}
+              unoptimized={portrait.startsWith(PUBLIC_PHOTO_PREFIX) || /^https?:\/\//i.test(portrait)}
               className="object-contain object-bottom"
             />
           </div>

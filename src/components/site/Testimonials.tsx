@@ -2,6 +2,7 @@ import { WhatsAppButton } from "@/components/site/ui";
 import { IconQuote, IconStar } from "@/components/site/icons";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { cleanTestimonialField } from "@/lib/testimonials-clean";
+import { publicPhotoSrc } from "@/lib/public-photo-url";
 
 export type TestimonialItem = {
   id: string;
@@ -129,7 +130,7 @@ function Avatar({
     return (
       // eslint-disable-next-line @next/next/no-img-element -- avatar remoto, sem /_next/image
       <img
-        src={photoUrl}
+        src={publicPhotoSrc(photoUrl)}
         alt={name}
         width={40}
         height={40}
