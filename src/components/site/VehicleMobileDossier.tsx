@@ -7,6 +7,7 @@ import { VehicleAccessoryChips } from "@/components/site/VehicleAccessoryChips";
 import { VehicleDescription } from "@/components/site/VehicleDescription";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
+import { VehicleSeals } from "@/components/site/VehicleSeals";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import type { DescriptionSummaryFacts } from "@/lib/vehicle-description";
 import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
@@ -26,6 +27,7 @@ import {
 import { whatsappContentFromVehicle } from "@/lib/site";
 import { VehicleVerifiedList } from "@/components/site/VehicleVerifiedInfo";
 import type { PublicVerifiedItem } from "@/lib/vehicle-verified";
+import type { VehicleSeal } from "@/lib/vehicle-seals";
 
 /** Já aparecem na primeira dobra. */
 const FOLD_LABELS = new Set(["Ano", "km", "Câmbio"]);
@@ -46,6 +48,7 @@ export function VehicleMobileSummary({
   transmission,
   plateEnd,
   inspection,
+  seals = [],
   specAnchor = false,
 }: {
   title: string;
@@ -58,6 +61,8 @@ export function VehicleMobileSummary({
   transmission: string;
   plateEnd?: string | null;
   inspection?: string | null;
+  /** Selos já filtrados (sem dado = sem selo). */
+  seals?: readonly VehicleSeal[];
   /** Quando a grade completa não existe, a âncora aponta para estes fatos. */
   specAnchor?: boolean;
 }) {
@@ -86,6 +91,7 @@ export function VehicleMobileSummary({
       {!sold ? (
         <VehicleInspectionBadge inspection={inspection} className="mt-2.5" />
       ) : null}
+      {!sold ? <VehicleSeals seals={seals} className="mt-2.5" /> : null}
       <dl
         className={`mt-2.5 grid grid-cols-2 gap-1.5${specAnchor ? " ficha-jump-target" : ""}`}
         id={specAnchor ? "especificacoes" : undefined}
