@@ -1,20 +1,20 @@
 import { IconClipboardCheck, IconFileText, IconShieldCheck } from "@/components/site/icons";
-import {
-  isPlaceholderCopy,
-  publicStoreInspectionText,
-  publishedConditionItems,
-  type ConditionItem,
-  type VehicleConditionsContent,
-} from "@/lib/vehicle-conditions";
+import { type VehicleConditionsContent } from "@/lib/vehicle-conditions";
 
-function conditionText(item: ConditionItem) {
-  if (item.label.toLocaleLowerCase("pt-BR") === "vistoria da loja") {
-    return publicStoreInspectionText(item.text);
-  }
-  return item.text;
-}
-
-const ICONS = [IconShieldCheck, IconFileText, IconClipboardCheck];
+/** Uma linha por item: o detalhe longo fica no WhatsApp e no bloco mobile. */
+const ITEMS = [
+  { Icon: IconShieldCheck, label: "Garantia", detail: "Motor e câmbio por 3 meses" },
+  {
+    Icon: IconFileText,
+    label: "Documentação e transferência",
+    detail: "combinadas pelo WhatsApp",
+  },
+  {
+    Icon: IconClipboardCheck,
+    label: "Vistoria da loja",
+    detail: "cada carro é conferido antes de anunciar",
+  },
+];
 
 export function VehicleConditions({
   vehicleWarranty,
@@ -24,45 +24,29 @@ export function VehicleConditions({
   conditions: VehicleConditionsContent;
 }) {
   const warranty = vehicleWarranty?.trim() || null;
-  const intro = isPlaceholderCopy(conditions.intro) ? null : conditions.intro;
-  const readyItems = publishedConditionItems(conditions.items);
 
   return (
-    <div className="border border-white/10 bg-asphalt/50 p-4 sm:p-5">
-      <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
+    <section
+      aria-label={conditions.title}
+      className="hidden border-t border-white/10 pt-5 lg:mt-6 lg:block"
+    >
+      <h2 className="font-display text-base font-semibold text-cream">
         {conditions.title}
       </h2>
-      {warranty ? (
-        <p className="mt-2 text-sm text-cream/90">
-          Neste veículo: <span className="font-medium">{warranty}</span>
-        </p>
-      ) : null}
-      {intro ? (
-        <p className="mt-2 text-sm leading-relaxed text-muted">{intro}</p>
-      ) : null}
-      {readyItems.length > 0 ? (
-        <ul className="mt-3 space-y-2.5">
-          {readyItems.map((item, index) => {
-            const Icon = ICONS[index % ICONS.length];
-            return (
-              <li key={`${item.label}-${index}`} className="flex gap-2.5 text-sm">
-                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
-                <span>
-                  <span className="font-display font-semibold text-cream">
-                    {item.label}.{" "}
-                  </span>
-                  <span className="text-muted">{conditionText(item)}</span>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          Confirme garantia, documentação e transferência no WhatsApp antes de
-          fechar.
-        </p>
-      )}
-    </div>
+      <ul className="mt-3 space-y-2">
+        {ITEMS.map(({ Icon, label, detail }, index) => (
+          <li key={label} className="flex items-start gap-2.5 text-sm leading-snug">
+            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
+            <span>
+              <span className="font-display font-semibold text-cream">{label}</span>
+              <span className="text-muted">
+                {" · "}
+                {index === 0 && warranty ? warranty : detail}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

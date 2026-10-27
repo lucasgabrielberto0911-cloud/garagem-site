@@ -412,6 +412,13 @@ export default async function VehicleDetailPage({
               </section>
             ) : null}
 
+            {!sold ? (
+              <VehicleConditions
+                vehicleWarranty={vehicle.warranty}
+                conditions={conditions}
+              />
+            ) : null}
+
             {verified.length > 0 ? (
               <VehicleVerifiedSection
                 items={verified}
@@ -614,13 +621,6 @@ export default async function VehicleDetailPage({
                     </Link>
                   </div>
                 </>
-              ) : null}
-
-              {!sold ? (
-                <VehicleConditions
-                  vehicleWarranty={vehicle.warranty}
-                  conditions={conditions}
-                />
               ) : null}
 
               <ShareVehicle
