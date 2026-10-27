@@ -7,15 +7,22 @@ import {
   type VehicleConditionsContent,
 } from "@/lib/vehicle-conditions";
 
-function conditionText(item: ConditionItem) {
-  if (item.label.toLocaleLowerCase("pt-BR") === "vistoria da loja") {
-    return publicStoreInspectionText(item.text);
-  }
+const ICONS = [IconShieldCheck, IconFileText, IconClipboardCheck];
+
+function isLabel(item: ConditionItem, label: string) {
+  return item.label.toLocaleLowerCase("pt-BR") === label;
+}
+
+function conditionText(item: ConditionItem, warranty: string | null) {
+  if (isLabel(item, "vistoria da loja")) return publicStoreInspectionText(item.text);
+  if (isLabel(item, "garantia") && warranty) return warranty;
   return item.text;
 }
 
-const ICONS = [IconShieldCheck, IconFileText, IconClipboardCheck];
-
+/**
+ * Garantia compacta da coluna esquerda (desktop). Usa os mesmos dados do painel
+ * que o bloco mobile (`VehicleMobileDossier`): título, itens editados e itens ocultados.
+ */
 export function VehicleConditions({
   vehicleWarranty,
   conditions,
@@ -24,45 +31,42 @@ export function VehicleConditions({
   conditions: VehicleConditionsContent;
 }) {
   const warranty = vehicleWarranty?.trim() || null;
-  const intro = isPlaceholderCopy(conditions.intro) ? null : conditions.intro;
-  const readyItems = publishedConditionItems(conditions.items);
+  const items = publishedConditionItems(conditions.items);
+  const intro = isPlaceholderCopy(conditions.intro) ? "" : conditions.intro.trim();
+  if (items.length === 0 && !intro) return null;
 
   return (
-    <div className="border border-white/10 bg-asphalt/50 p-4 sm:p-5">
-      <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-cream">
+    <section
+      aria-label={conditions.title}
+      className="hidden border-t border-white/10 pt-5 lg:mt-6 lg:block"
+    >
+      <h2 className="font-display text-base font-semibold text-cream">
         {conditions.title}
       </h2>
-      {warranty ? (
-        <p className="mt-2 text-sm text-cream/90">
-          Neste veículo: <span className="font-medium">{warranty}</span>
-        </p>
-      ) : null}
-      {intro ? (
-        <p className="mt-2 text-sm leading-relaxed text-muted">{intro}</p>
-      ) : null}
-      {readyItems.length > 0 ? (
-        <ul className="mt-3 space-y-2.5">
-          {readyItems.map((item, index) => {
+      {items.length > 0 ? (
+        <ul className="mt-3 space-y-2">
+          {items.map((item, index) => {
             const Icon = ICONS[index % ICONS.length];
             return (
-              <li key={`${item.label}-${index}`} className="flex gap-2.5 text-sm">
+              <li
+                key={`${item.label}-${index}`}
+                className="flex items-start gap-2.5 text-sm leading-snug"
+              >
                 <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand-light" />
-                <span>
-                  <span className="font-display font-semibold text-cream">
-                    {item.label}.{" "}
+                <span className="line-clamp-2">
+                  <span className="font-display font-semibold text-cream">{item.label}</span>
+                  <span className="text-muted">
+                    {" · "}
+                    {conditionText(item, warranty)}
                   </span>
-                  <span className="text-muted">{conditionText(item)}</span>
                 </span>
               </li>
             );
           })}
         </ul>
       ) : (
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          Confirme garantia, documentação e transferência no WhatsApp antes de
-          fechar.
-        </p>
+        <p className="mt-3 line-clamp-3 text-sm leading-snug text-muted">{intro}</p>
       )}
-    </div>
+    </section>
   );
 }
