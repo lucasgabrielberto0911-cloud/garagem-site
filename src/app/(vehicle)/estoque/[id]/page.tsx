@@ -598,22 +598,15 @@ export default async function VehicleDetailPage({
               ) : null}
 
               {!sold ? (
-                <>
-                  <p className="text-xs leading-relaxed text-muted">
-                    Financiamento em até 60x e cartão em até 18x. O consultor
-                    calcula a parcela no WhatsApp — o site não publica valor de
-                    parcela. Sujeito a análise de crédito e CET.
-                  </p>
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
-                    <Link
-                      href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
-                      prefetch={false}
-                      className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline"
-                    >
-                      Ou preencha a avaliação do seu usado
-                    </Link>
-                  </div>
-                </>
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+                  <Link
+                    href={`/vender?interesse=${vehicle.id}&label=${encodeURIComponent(fullLabel)}`}
+                    prefetch={false}
+                    className="min-h-[44px] inline-flex items-center text-muted underline-offset-4 transition hover:text-cream hover:underline"
+                  >
+                    Ou preencha a avaliação do seu usado
+                  </Link>
+                </div>
               ) : null}
 
               {!sold ? (
