@@ -356,7 +356,7 @@ test("a ficha mantém âncoras, filtros e formulário; cidades exibem até seis 
   assert.match(page, /MissingModelForm/);
   assert.match(page, /sourcePage="ficha"/);
   assert.ok(
-    page.indexOf("<MissingModelForm") < page.indexOf("<DeferredSimilarVehicles"),
+    page.indexOf("<DeferredSimilarVehicles") < page.indexOf("<MissingModelForm"),
   );
   assert.doesNotMatch(similar, /showWhatsApp|whatsappCampaign/);
   assert.match(readSrc("components/site/VehicleCard.tsx"), /VehicleCardWhatsApp/);
