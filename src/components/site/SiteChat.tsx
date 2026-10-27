@@ -222,16 +222,16 @@ function ChatWhatsAppButton({
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
-      className="group flex min-h-14 w-full items-center gap-3 rounded-2xl bg-[#25D366] py-2.5 pl-2.5 pr-4 text-left text-[#05170C] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_10px_24px_-14px_rgba(37,211,102,0.9)] transition hover:bg-[#34DE75] active:bg-[#1FC05B] touch-manipulation"
+      className="group flex min-h-14 w-full items-center gap-3 rounded-2xl bg-brand py-2.5 pl-2.5 pr-4 text-left text-white transition hover:bg-brand/90 active:bg-brand/80 touch-manipulation"
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#05170C]/[0.12]">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/10">
         <IconWhatsApp className="h-5 w-5" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block font-display text-[14px] font-semibold leading-5">
           {label}
         </span>
-        <span className="block text-[12px] leading-4 text-[#05170C]/75">
+        <span className="block font-body text-[12px] leading-4 text-white/85">
           {benefit}
         </span>
       </span>
@@ -266,6 +266,7 @@ function ChatVehicleMini({
             year: vehicle.year,
             label,
             category: vehicle.category,
+            href: vehicle.href,
           },
         ],
         priceLimit: handoff?.priceLimit,
@@ -394,6 +395,7 @@ function ChatText({
   );
   const cta = showWhatsApp
     ? chatWhatsAppCta(text, ctaVehicle, {
+        force: vehicles.length > 0,
         userText: userText ?? "",
         contextVehicle:
           vehicles.length === 0 && contextCards.length === 1
@@ -409,6 +411,7 @@ function ChatText({
                   year: vehicle.year,
                   label: vehicle.title,
                   category: vehicle.category,
+                  href: vehicle.href,
                 }))
               : handoff?.vehicles,
           priceLimit: handoff?.priceLimit,
