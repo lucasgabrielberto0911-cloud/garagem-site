@@ -178,13 +178,27 @@ test("nomeia o Fox dos cards mostrados e não pega outro anúncio da lista", () 
   );
 });
 
-test("handoff do chat leva modelo, câmbio e teto reais, com UTM", () => {
+test("handoff de várias recomendações inclui os anos e só links de fichas válidos", () => {
+  const message = formatChatHandoffMessage({ vehicles: [
+    { brand: "Honda", model: "Civic", year: 2015, href: "/estoque/civic-2015" },
+    { brand: "Fiat", model: "Palio", year: 2016, href: "/estoque/palio-2016" },
+    { label: "Toyota Corolla 2017", year: 2017, href: "//externo.example/estoque/corolla" },
+  ] });
+  assert.match(message, /Honda Civic 2015, Fiat Palio 2016 e Toyota Corolla 2017/);
+  assert.match(message, /https:\/\/www\.suagaragem\.net\/estoque\/civic-2015/);
+  assert.match(message, /https:\/\/www\.suagaragem\.net\/estoque\/palio-2016/);
+  assert.doesNotMatch(message, /externo\.example|2017 2017/);
+});
+
+test("handoff do chat leva marca, modelo, ano, link, câmbio e teto reais, com UTM", () => {
   const text = formatChatHandoffMessage({
     vehicles: [
       {
         brand: "Mitsubishi",
         model: "Lancer",
         version: "2.0",
+        year: 2014,
+        href: "/estoque/lancer-2014",
         category: "carro",
       },
     ],
@@ -193,7 +207,7 @@ test("handoff do chat leva modelo, câmbio e teto reais, com UTM", () => {
   });
   assert.match(
     text,
-    /Oi! Vi o Mitsubishi Lancer 2\.0 automático até R\$\s*109\.000 no site da Garagem e quero saber mais\./,
+    /Oi! Vi o Mitsubishi Lancer 2\.0 2014 automático até R\$\s*109\.000 no site da Garagem e quero saber mais\.\nhttps:\/\/www\.suagaragem\.net\/estoque\/lancer-2014/,
   );
   assert.equal(formatChatHandoffMessage({}), "Oi! Vi o site da Garagem e quero ajuda pra escolher um seminovo.");
   const href = whatsappUrl(text, { campaign: "chat" });
