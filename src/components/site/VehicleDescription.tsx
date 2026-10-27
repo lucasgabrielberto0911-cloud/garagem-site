@@ -100,20 +100,20 @@ export function VehicleDescription({
     !text.includes("\n")
   ) {
     return (
-      <p className={`text-[15px] leading-7 text-cream/90 ${className}`}>
+      <p className={`border-l-2 border-brand/80 pl-3 font-body text-[15px] leading-7 text-cream/90 ${className}`}>
         {segments[0].text}
       </p>
     );
   }
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`space-y-4 border-l-2 border-brand/80 pl-3 font-body ${className}`}>
       {segments.map((segment, index) => {
         if (segment.kind === "prose") {
           return (
             <p
               key={index}
-              className="border-l-2 border-brand/80 pl-3 text-[15px] leading-7 text-cream/90 whitespace-pre-line"
+              className="text-[15px] leading-7 text-cream/90 whitespace-pre-line"
             >
               {segment.text}
             </p>
