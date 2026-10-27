@@ -7,6 +7,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
 import { VehicleMobileBlocks, VehicleMobileSummary } from "@/components/site/VehicleMobileDossier";
+import { VehicleConditions } from "@/components/site/VehicleConditions";
 import { FavoritesProvider } from "@/lib/favorites";
 import { DEFAULT_GOOGLE_REVIEWS } from "@/lib/google-reviews";
 import { DEFAULT_VEHICLE_CONDITIONS } from "@/lib/vehicle-conditions";
@@ -237,7 +238,7 @@ test("html mobile deixa sobre e acessórios visíveis, com cidade na ficha", () 
     [
       ["Vistoria da loja", false],
       ["Ficha", false],
-      ["Garantia de 3 meses: motor e câmbio", false],
+      [DEFAULT_VEHICLE_CONDITIONS.title, false],
       ["Sobre o veículo", true],
       ["Itens e acessórios", true],
       ["Vídeo e propostas", false],
@@ -488,4 +489,30 @@ test("chip Ajuda no mobile ganha folga acima da nav e do próprio chip", () => {
     /padding-bottom:\s*calc\(\s*var\(--site-bottom-nav\)\s*\+\s*var\(--help-bubble-gap\)\s*\+\s*var\(--help-bubble-h\)\s*\+\s*var\(--help-bubble-clear\)/,
   );
   assert.doesNotMatch(css, /4\.5rem \+ 4\.25rem/);
+});
+
+test("garantia compacta do desktop segue título, edição e itens ocultos do painel", () => {
+  const render = (conditions: typeof DEFAULT_VEHICLE_CONDITIONS, warranty?: string) =>
+    renderToStaticMarkup(
+      createElement(VehicleConditions, { conditions, vehicleWarranty: warranty ?? null }),
+    );
+
+  const edited = render({
+    title: "Garantia editada",
+    intro: "",
+    items: [
+      { label: "Garantia", text: "Texto do painel" },
+      { label: "Entrega", text: "   " },
+      { label: "Documentação e transferência", text: "[PREENCHER]" },
+    ],
+  });
+  assert.match(edited, /Garantia editada/);
+  assert.match(edited, /Texto do painel/);
+  assert.doesNotMatch(edited, /Entrega|Documentação|Motor e câmbio por 3 meses/);
+
+  assert.match(
+    render(DEFAULT_VEHICLE_CONDITIONS, "12 meses neste carro"),
+    /12 meses neste carro/,
+  );
+  assert.equal(render({ title: "x", intro: "", items: [] }), "");
 });

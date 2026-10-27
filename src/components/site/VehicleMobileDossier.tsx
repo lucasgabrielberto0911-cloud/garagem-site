@@ -21,6 +21,7 @@ import {
 } from "@/lib/vehicle-specs";
 import {
   publicStoreInspectionText,
+  isPlaceholderCopy,
   publishedConditionItems,
   type VehicleConditionsContent,
 } from "@/lib/vehicle-conditions";
@@ -221,6 +222,7 @@ export function VehicleMobileBlocks({
     (item) => item.label.toLocaleLowerCase("pt-BR") === "vistoria da loja",
   );
   const otherConditions = conditionItems.filter((item) => item !== vistoria);
+  const intro = isPlaceholderCopy(conditions.intro) ? "" : conditions.intro.trim();
 
   return (
     <div className="mt-5 border-t border-white/10 lg:hidden">
@@ -263,11 +265,11 @@ export function VehicleMobileBlocks({
         </DossierBlock>
       ) : null}
 
-      {conditions.intro || otherConditions.length > 0 ? (
-        <DossierBlock title="Garantia de 3 meses: motor e câmbio">
-          {conditions.intro ? <p>{conditions.intro}</p> : null}
+      {intro || otherConditions.length > 0 ? (
+        <DossierBlock title={conditions.title}>
+          {intro ? <p>{intro}</p> : null}
           {otherConditions.length > 0 ? (
-            <ul className={conditions.intro ? "mt-4 space-y-3" : "space-y-3"}>
+            <ul className={intro ? "mt-4 space-y-3" : "space-y-3"}>
               {otherConditions.map((item) => (
                 <li key={item.label} className="border-l-2 border-brand/80 pl-3">
                   <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-cream">
