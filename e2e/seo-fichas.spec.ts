@@ -5,7 +5,6 @@ import { publicPhotoSrc } from "../src/lib/public-photo-url";
 import { formatCurrencyBRL } from "../src/lib/format";
 import { buildVehicleFullLabel } from "../src/lib/vehicle-display";
 import { stockLandingLinks } from "../src/lib/stock-landings";
-import { CITIES_DIRECTORY_PATH } from "../src/lib/service-cities";
 
 const origin = "https://www.suagaragem.net";
 const sold = { ...samples[0], id: "ce2esold000000000000000001" };
@@ -56,14 +55,12 @@ test("fichas têm metadados únicos, foto principal, Vehicle/Offer e navegação
     const breadcrumbs = schemas.find(schema => schema["@type"] === "BreadcrumbList").itemListElement;
     expect(breadcrumbs.map((item: { position: number }) => item.position)).toEqual([1, 2, 3, 4, 5]);
     expect(breadcrumbs.at(-1).item).toBe(origin + path);
-    const navigation = page.getByRole("navigation", { name: "Explore marcas, modelos e cidades" });
     for (const link of stockLandingLinks([car])) {
-      await expect(navigation.locator(`a[href="${link.path}"]`)).toBeVisible();
       expect(breadcrumbs.some((item: { item: string }) => item.item === origin + link.path)).toBe(true);
       expect((await request.get(link.path)).status()).toBe(200);
     }
-    await expect(navigation.getByRole("link", { name: "Todas as cidades atendidas" })).toHaveAttribute("href", CITIES_DIRECTORY_PATH);
-    await expect(navigation.getByRole("link", { name: "Seminovos em São Mateus", exact: true })).toHaveAttribute("href", "/seminovos/sao-mateus");
+    await expect(page.locator('nav[aria-label="Explore marcas, modelos e cidades"]')).toHaveCount(0);
+    await expect(page.getByText("Encontre seu próximo seminovo")).toHaveCount(0);
     const photo = page.locator('[data-ficha-page] img').first();
     await expect(photo).toHaveAttribute("alt", `${buildVehicleFullLabel(car)} · ${car.color} - foto 1 de ${car.photos.length}`);
     await expect(page.locator("[data-ficha-page]")).not.toContainText(/Localização do veículo/);
