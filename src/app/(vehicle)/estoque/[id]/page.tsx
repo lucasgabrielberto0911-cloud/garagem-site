@@ -682,22 +682,6 @@ export default async function VehicleDetailPage({
           }
         />
 
-        <div className="mt-10 sm:mt-12">
-          <MissingModelForm
-            idPrefix="ficha"
-            sourcePage="ficha"
-            contextLabel={fullLabel}
-            pagePath={path}
-            interestVehicleId={vehicle.id}
-            initialModel={sold ? title : ""}
-            description={
-              sold
-                ? `O ${title} já foi. Se você procura outro, deixa o modelo aqui.`
-                : `Se o ${title} não é o que você procura, deixa o modelo aqui.`
-            }
-          />
-        </div>
-
         <Suspense
           fallback={
             <div id="mesma-faixa" className="mt-10 min-h-64" aria-busy="true">
@@ -723,6 +707,22 @@ export default async function VehicleDetailPage({
             }}
           />
         </Suspense>
+
+        <div className="mt-10 sm:mt-12">
+          <MissingModelForm
+            idPrefix="ficha"
+            sourcePage="ficha"
+            contextLabel={fullLabel}
+            pagePath={path}
+            interestVehicleId={vehicle.id}
+            initialModel={sold ? title : ""}
+            description={
+              sold
+                ? `O ${title} já foi. Se você procura outro, deixa o modelo aqui.`
+                : `Se o ${title} não é o que você procura, deixa o modelo aqui.`
+            }
+          />
+        </div>
       </Container>
 
       <VehicleMobileBar
