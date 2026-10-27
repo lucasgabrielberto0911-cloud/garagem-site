@@ -24,6 +24,7 @@ import { VehicleLeadHit, VehicleViewContent } from "@/lib/funnel-events";
 import { Container, WhatsAppButton } from "@/components/site/ui";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
+import { VehicleSeals } from "@/components/site/VehicleSeals";
 import { VehicleTrustNotes } from "@/components/site/VehicleTrustNotes";
 import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
@@ -53,6 +54,7 @@ import { vehiclePath, vehicleSlug } from "@/lib/vehicle-slug";
 import { getVehicleConditions } from "@/lib/site-content";
 import { getVehicleVerifiedItems } from "@/lib/vehicle-verified-data";
 import { publicVerifiedItems, verifiedHeading } from "@/lib/vehicle-verified";
+import { publicVehicleSeals } from "@/lib/vehicle-seals";
 import {
   getPublicVehicleStaticParams,
   getVehicleByParam,
@@ -229,6 +231,7 @@ export default async function VehicleDetailPage({
   ]);
   const verified = publicVerifiedItems(verifiedItems, vehicle.photos, isMoto);
   const verifiedDocumentation = verified.find((item) => item.key === "documentacao")?.text;
+  const seals = sold ? [] : publicVehicleSeals({ verified, accessories });
 
   const specs = buildVehiclePublicSpecs({
     category: vehicle.category,
@@ -376,6 +379,7 @@ export default async function VehicleDetailPage({
                 transmission={display.transmission}
                 plateEnd={vehicle.plateEnd}
                 inspection={sold ? null : vehicle.inspection}
+                seals={seals}
                 specAnchor={!hasMobileFichaSpecs(specs)}
               />
             </div>
@@ -464,6 +468,7 @@ export default async function VehicleDetailPage({
               {!sold ? (
                 <VehicleInspectionBadge inspection={vehicle.inspection} />
               ) : null}
+              <VehicleSeals seals={seals} />
               {!sold ? (
                 <VehicleTrustNotes
                   warranty={vehicle.warranty}
