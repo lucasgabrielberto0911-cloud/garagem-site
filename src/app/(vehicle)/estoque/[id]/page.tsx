@@ -31,7 +31,6 @@ import { VehicleQuickActions } from "@/components/site/VehicleQuickActions";
 import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { stockLandingLinks } from "@/lib/stock-landings";
-import { CITIES_DIRECTORY_PATH, SERVICE_CITIES } from "@/lib/service-cities";
 import { JsonLd } from "@/components/JsonLd";
 import { vehicleSeoTitle } from "@/lib/vehicle-seo";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
@@ -698,26 +697,6 @@ export default async function VehicleDetailPage({
             }
           />
         </div>
-
-        <nav aria-label="Explore marcas, modelos e cidades" className="mt-10 space-y-3 text-sm text-muted">
-          <p className="font-display font-semibold text-cream">Encontre seu próximo seminovo</p>
-          <div className="flex flex-wrap gap-x-5 gap-y-2">
-            {landingLinks.map(link => (
-              <Link key={link.path} href={link.path} prefetch={false} className="py-2 underline-offset-4 hover:text-cream hover:underline">
-                {link.label} seminovo
-              </Link>
-            ))}
-          </div>
-          <p>Atendimento no Espírito Santo:</p>
-          <div className="flex flex-wrap gap-x-5 gap-y-2">
-            {SERVICE_CITIES.map(city => (
-              <Link key={city.slug} href={`/seminovos/${city.slug}`} prefetch={false} className="py-2 underline-offset-4 hover:text-cream hover:underline">
-                Seminovos em {city.name}
-              </Link>
-            ))}
-            <Link href={CITIES_DIRECTORY_PATH} prefetch={false} className="py-2 underline-offset-4 hover:text-cream hover:underline">Todas as cidades atendidas</Link>
-          </div>
-        </nav>
 
         <Suspense
           fallback={
