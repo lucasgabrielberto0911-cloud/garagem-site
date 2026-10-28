@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, KM_OPTIONS, selectClass, selectedOption, toggleAccessoryValue, splitAccessories, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
 import { IconClose, IconSearch, IconShare } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
@@ -69,6 +69,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const [open, setOpen] = useState(false);
   const sheetRef = useRef<HTMLElement>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const shortcutsLabelId = useId();
+  const desktopAccessoryLabelId = useId();
 
   const current: FilterValues = {
     q: params.get("q") ?? "",
@@ -415,7 +417,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 }, 600);
               }}
               placeholder="Marca, modelo ou versão"
-              className="w-full min-w-0 bg-transparent py-2 text-base text-cream placeholder:text-muted focus:outline-none lg:text-sm"
+              className="w-full min-w-0 min-h-11 bg-transparent py-2 text-base text-cream placeholder:text-muted lg:min-h-[48px] lg:text-sm"
             />
           </div>
         </form>
@@ -423,10 +425,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
         {/* Desktop: filtros completos, sem rolagem interna. */}
         <div className="mt-5 hidden lg:block">
           <div>
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+            <p id={shortcutsLabelId} className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
               Atalhos
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div role="group" aria-labelledby={shortcutsLabelId} className="flex flex-wrap gap-2">
               {quickChips.map((chip) => (
                 <Chip key={chip.key} active={chip.active} onClick={chip.onClick}>
                   {chip.label}
@@ -575,12 +577,13 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </DesktopField>
               {(facets.accessories ?? []).length > 0 ? (
                 <div>
-                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+                  <p id={desktopAccessoryLabelId} className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
                     Acessórios
                   </p>
                   <AccessoryChips
                     options={facets.accessories ?? []}
                     value={current.accessory}
+                    labelledBy={desktopAccessoryLabelId}
                     onToggle={(name) =>
                       update({
                         accessory: toggleAccessoryValue(current.accessory, name),
@@ -740,6 +743,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
           <button
             type="button"
             aria-label="Fechar filtros"
+            aria-hidden="true"
+            tabIndex={-1}
             onClick={() => setOpen(false)}
             className="absolute inset-0 bg-black/65 backdrop-blur-sm animate-fade-in"
           />
@@ -825,6 +830,7 @@ function MobileChipRow({
   children: ReactNode;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const labelId = useId();
 
   useLayoutEffect(() => {
     const track = trackRef.current;
@@ -880,8 +886,8 @@ function MobileChipRow({
 
   return (
     <div className="stock-chip-row">
-      <p className="stock-chip-label">{label}</p>
-      <div ref={trackRef} className="stock-chip-track scrollbar-hide">
+      <p id={labelId} className="stock-chip-label">{label}</p>
+      <div ref={trackRef} role="group" aria-labelledby={labelId} className="stock-chip-track scrollbar-hide">
         {children}
       </div>
     </div>
