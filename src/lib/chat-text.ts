@@ -26,6 +26,8 @@ export type ChatWhatsAppCta = {
   href: string;
   label: string;
   benefit: string;
+  /** Rótulo do `WhatsAppClick`; só muda onde a intenção precisa ser contada à parte. */
+  trackingLabel?: string;
 };
 
 const URL_RE = /https?:\/\/[^\s]+/g;
@@ -478,6 +480,7 @@ export function chatWhatsAppCta(
       ),
       label: userIntent === "video" ? "Pedir vídeo" : "Pedir mais fotos",
       benefit: "O consultor manda pelo WhatsApp",
+      ...(userIntent === "video" ? { trackingLabel: "chat-video" } : {}),
     };
   }
   if (

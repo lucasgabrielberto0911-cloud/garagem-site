@@ -177,6 +177,9 @@ test("o formulário público tem quatro campos ordenados e aviso de privacidade 
   assert.match(source, /setFormError\(result\.message\)/);
   assert.doesNotMatch(source, /notifyError/);
   assert.doesNotMatch(source, /WhatsAppButton|wa\.me|99633|setTimeout|Confirmado neste anúncio/);
+  const track = source.match(/trackLead\(\{[^}]*\}\)/)?.[0] ?? "";
+  assert.match(track, /content_name: "Não encontrou o modelo"/);
+  assert.doesNotMatch(track, /search_string/);
 });
 
 test("estoque abre o pedido em outra página; a ficha mantém o formulário", () => {

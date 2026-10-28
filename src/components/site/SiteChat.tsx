@@ -211,17 +211,19 @@ function ChatWhatsAppButton({
   href,
   label,
   benefit,
+  trackingLabel = "chat",
 }: {
   href: string;
   label: string;
   benefit: string;
+  trackingLabel?: string;
 }) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
+      onClick={() => trackWhatsAppClick(trackingLabel, chatFunnelRef())}
       className="group flex min-h-14 w-full items-center gap-3 rounded-2xl bg-brand py-2.5 pl-2.5 pr-4 text-left text-white transition hover:bg-brand/90 active:bg-brand/80 touch-manipulation"
     >
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/10">
@@ -464,6 +466,7 @@ function ChatText({
           href={cta.href}
           label={cta.label}
           benefit={cta.benefit}
+          trackingLabel={cta.trackingLabel}
         />
       ) : null}
       {followups.length > 0 && onFollowup ? (
