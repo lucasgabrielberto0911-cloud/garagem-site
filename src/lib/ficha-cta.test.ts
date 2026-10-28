@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { VehicleInspectionBadge } from "@/components/site/VehicleInspectionBadge";
 import { VehicleMobileBlocks, VehicleMobileSummary } from "@/components/site/VehicleMobileDossier";
 import { VehicleConditions } from "@/components/site/VehicleConditions";
+import { VehicleVerifiedList } from "@/components/site/VehicleVerifiedInfo";
 import { FavoritesProvider } from "@/lib/favorites";
 import { DEFAULT_GOOGLE_REVIEWS } from "@/lib/google-reviews";
 import { DEFAULT_VEHICLE_CONDITIONS } from "@/lib/vehicle-conditions";
@@ -515,4 +516,53 @@ test("garantia compacta do desktop segue título, edição e itens ocultos do pa
     /12 meses neste carro/,
   );
   assert.equal(render({ title: "x", intro: "", items: [] }), "");
+});
+
+test("PR-5 ficha: lista verificada tem dica sutil de vídeo e dossiê mobile evita repetição de condições", () => {
+  const verifiedMarkup = renderToStaticMarkup(
+    createElement(VehicleVerifiedList, {
+      items: [
+        {
+          key: "manutencao",
+          label: "Revisões e manutenção",
+          text: "Revisão na concessionária aos 40.000 km",
+          photos: [],
+        },
+      ],
+      alt: "Onix 2022",
+    }),
+  );
+  assert.match(verifiedMarkup, /Revisão na concessionária/);
+  assert.match(verifiedMarkup, /Quer ver algum detalhe específico\? Peça um vídeo pelo WhatsApp\./);
+
+  const dossierSrc = readSrc("components/site/VehicleMobileDossier.tsx");
+  assert.match(dossierSrc, /min-h-\[3rem\]/);
+  assert.match(dossierSrc, /py-3\.5/);
+  assert.match(dossierSrc, /pb-4/);
+  assert.match(dossierSrc, /otherConditions\.length === 0 && intro/);
+
+  const mobileMarkup = renderToStaticMarkup(
+    createElement(
+      FavoritesProvider,
+      null,
+      createElement(VehicleMobileBlocks as unknown as React.ComponentType<Record<string, unknown>>, {
+        fullLabel: "Chevrolet Onix Premier",
+        path: "/estoque/onix",
+        sold: false,
+        price: 79900,
+        yearModel: 2022,
+        make: "Chevrolet",
+        model: "Onix",
+        vehicleId: "v-onix",
+        accessories: [],
+        specs: [],
+        conditions: DEFAULT_VEHICLE_CONDITIONS,
+        warranty: "Garantia estendida de 1 ano",
+        prompt: "dúvida",
+      }),
+    ),
+  );
+  assert.match(mobileMarkup, /Garantia estendida de 1 ano/);
+  // Não duplica a introdução longa quando os itens de condições já estão presentes
+  assert.doesNotMatch(mobileMarkup, /Todo seminovo passa por checagem na loja antes do anúncio/);
 });
