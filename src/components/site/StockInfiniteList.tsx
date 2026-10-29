@@ -64,6 +64,10 @@ export function StockInfiniteList({
   const [failed, setFailed] = useState(false);
   const speculativeLoading = useSpeculativeLoading();
   const [position, setPosition] = useState<StockPosition | null>(null);
+  const [positionPath, setPositionPath] = useState<string | null>(null);
+  const [exhausted, setExhausted] = useState(false);
+  const pageRef = useRef(1);
+  const vehiclesRef = useRef(initialVehicles);
   const listRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
   const requestGenerationRef = useRef(0);
@@ -76,15 +80,18 @@ export function StockInfiniteList({
   const queryRef = useRef(query);
   queryRef.current = query;
 
-  const hasMore = vehicles.length < total;
+  const hasMore = !exhausted && vehicles.length < total;
+  const positionReady = positionPath === returnTo;
   const returnPage = position ? Math.min(position.page, Math.max(1, Math.ceil(total / pageSize))) : 1;
 
   useEffect(() => {
+    if (paused) return;
     const saved = readStockPosition(returnTo);
     if (!saved) clearStockPosition();
     setPosition(saved);
+    setPositionPath(returnTo);
     setLoading(false);
-  }, [returnTo]);
+  }, [returnTo, paused]);
 
   useEffect(() => {
     if (!position) return;
@@ -142,11 +149,11 @@ export function StockInfiniteList({
   );
 
   useEffect(() => {
-    if (paused || !speculativeLoading || !hasMore || position) return;
+    if (paused || !positionReady || !speculativeLoading || !hasMore || position) return;
     void loadPage(page + 1).catch(() => {
       /* o sentinel tenta de novo se a pré-carga falhar */
     });
-  }, [paused, speculativeLoading, hasMore, loadPage, page, position]);
+  }, [paused, positionReady, speculativeLoading, hasMore, loadPage, page, position]);
 
   useEffect(() => {
     return () => {
@@ -159,12 +166,12 @@ export function StockInfiniteList({
   }, []);
 
   const loadMore = useCallback(async () => {
-    if (paused || loadingRef.current || !hasMore) return;
+    if (paused || !positionReady || loadingRef.current || !hasMore) return;
     loadingRef.current = true;
     const generation = requestGenerationRef.current;
     setFailed(false);
 
-    const nextPage = page + 1;
+    const nextPage = pageRef.current + 1;
     const buffered =
       bufferRef.current?.page === nextPage ? bufferRef.current.vehicles : null;
 
@@ -176,10 +183,12 @@ export function StockInfiniteList({
       }
       if (generation !== requestGenerationRef.current) return;
       bufferRef.current = null;
-      setVehicles((current) => {
-        const seen = new Set(current.map((item) => item.id));
-        return [...current, ...incoming.filter((item) => !seen.has(item.id))];
-      });
+      const seen = new Set(vehiclesRef.current.map((item) => item.id));
+      const fresh = incoming.filter((item) => !seen.has(item.id));
+      if (!fresh.length) setExhausted(true);
+      vehiclesRef.current = [...vehiclesRef.current, ...fresh];
+      setVehicles(vehiclesRef.current);
+      pageRef.current = nextPage;
       setPage(nextPage);
     } catch (error) {
       if (generation !== requestGenerationRef.current || (error as { name?: string }).name === "AbortError") return;
@@ -190,7 +199,7 @@ export function StockInfiniteList({
         setLoading(false);
       }
     }
-  }, [paused, hasMore, loadPage, page]);
+  }, [paused, positionReady, hasMore, loadPage]);
 
   useEffect(() => {
     if (position && page < returnPage && hasMore && !failed && !loading) void loadMore();
@@ -227,7 +236,7 @@ export function StockInfiniteList({
       {hasMore ? (
         <InfiniteSentinel
           onVisible={loadMore}
-          disabled={paused || loading || failed || Boolean(position)}
+          disabled={paused || !positionReady || loading || failed || Boolean(position)}
           rootMargin={speculativeLoading ? "320px 0px" : "240px 0px"}
           watchKey={vehicles.length}
         >
@@ -265,7 +274,7 @@ export function StockInfiniteList({
         <p className="mt-6 text-center text-xs uppercase tracking-wider text-muted">
           {total === 1
             ? "1 veículo neste filtro"
-            : `Você viu os ${total} veículos`}
+            : `Você viu os ${vehicles.length} veículos`}
         </p>
       ) : null}
     </>
