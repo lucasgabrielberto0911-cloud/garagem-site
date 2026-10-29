@@ -12,7 +12,7 @@ function below1000(n: number) {
   return parts.join(" e ");
 }
 
-function integerWords(n: number) {
+export function integerWords(n: number) {
   if (n === 0) return "zero";
   const groups = [
     { size: 1_000_000_000, one: "bilhão", many: "bilhões" },
