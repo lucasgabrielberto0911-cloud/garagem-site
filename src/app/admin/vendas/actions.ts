@@ -16,8 +16,8 @@ import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/
 import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
 import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 import { formatSaleNotes } from "@/lib/sales-goals";
-import { matchesSaleDocumentSnapshot, matchesSaleReceiptSnapshot, parseContractPaymentsJson, parseVehicleCustomerIds, signalExceedsTotal, signalMismatch, summarizeContractPayments, sumContractPayments } from "@/lib/admin-commercial";
-import { isValidCpf } from "@/lib/format";
+import { matchesSaleDocumentSnapshot, matchesSaleReceiptSnapshot, summarizeContractPayments } from "@/lib/admin-commercial";
+import { digitsOnly, parseSaleFlowInput, resolveBuyer, resolveSignal } from "@/lib/sale-flow";
 
 export type SaleActionState = {
   ok: boolean;
@@ -25,35 +25,12 @@ export type SaleActionState = {
   fieldErrors?: Record<string, string>;
 };
 
-type SaleFlowPayload = { vehicleId?: string; total?: number; payments?: unknown; customerId?: string; customerName?: string; customerPhone?: string; seller?: string; commission?: number | null; signal?: boolean; signalAmount?: number; chassis?: string; renavam?: string; cpf?: string; rg?: string; address?: string; conditions?: string; includeProposal?: boolean };
-
 export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; message: string; saleId?: string; contractId?: string; receiptId?: string; proposalId?: string }> {
   const session = await requireAdmin();
-  let payload: unknown;
-  try { payload = JSON.parse(raw); } catch { return { ok: false, message: "Dados da venda inválidos." }; }
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return { ok: false, message: "Dados da venda inválidos." };
-  const input = payload as SaleFlowPayload;
-  const vehicleId = typeof input.vehicleId === "string" ? input.vehicleId : "";
-  const rawTotal = Number(input.total);
-  const total = Math.round(rawTotal * 100) / 100;
-  const paymentsRaw = JSON.stringify(input.payments ?? []);
-  const parsedPayments = (() => { try { return parseContractPaymentsJson(paymentsRaw); } catch { return undefined; } })();
-  if (!vehicleId || !Number.isFinite(rawTotal) || Math.abs(rawTotal - total) > 0.000001 || !Number.isSafeInteger(Math.round(total * 100)) || total <= 0 || !parsedPayments?.length || Math.abs(sumContractPayments(parsedPayments) - total) > 0.001) return { ok: false, message: "A soma dos pagamentos deve ser igual ao valor negociado." };
-  const payments = parsedPayments;
-  if (new Set(payments.map((payment) => payment.method)).size !== payments.length) return { ok: false, message: "Selecione cada forma de pagamento uma única vez." };
-  if (payments.some((payment) => payment.amount <= 0) || payments.some((payment) => payment.method === "financiamento" && !payment.installments) || payments.some((payment) => payment.method === "troca" && (!payment.tradeVehicle?.trim() || !payment.tradePlate?.trim())) || payments.some((payment) => payment.method === "cartao" && !payment.installments)) return { ok: false, message: "Complete os campos da forma de pagamento selecionada." };
-  const customerId = typeof input.customerId === "string" ? input.customerId : "";
-  const customerName = String(input.customerName ?? "").trim();
-  const customerPhone = digitsOnly(input.customerPhone ?? "");
-  if (!customerName || customerPhone.length < 10) return { ok: false, message: "Informe nome e telefone válidos do comprador." };
-  const sellerName = String(input.seller ?? "").trim();
-  const commission = input.commission == null ? null : Number(input.commission);
-  if (commission != null && (!Number.isFinite(commission) || commission < 0)) return { ok: false, message: "Comissão inválida." };
+  const parsed = parseSaleFlowInput(raw);
+  if (!parsed.ok) return { ok: false, message: parsed.message };
+  const { input, vehicleId, total, payments, customerId, customerName, customerPhone, sellerName, commission, cpf, identifiers } = parsed.value;
   const notes = formatSaleNotes(null, sellerName || null, commission);
-  const cpf = String(input.cpf ?? "").replace(/\D/g, "");
-  const identifiers = parseVehicleCustomerIds({ chassis: input.chassis, renavam: input.renavam, rg: input.rg });
-  if (cpf && !isValidCpf(cpf)) return { ok: false, message: "CPF inválido. Confira os 11 dígitos." };
-  if (identifiers.error) return { ok: false, message: identifiers.error };
   try {
     const result = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${vehicleId} FOR UPDATE`;
@@ -101,27 +78,8 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
         await tx.vehicleReservation.update({ where: { id: expired.id }, data: { status: "expirada" } });
         await tx.vehicle.update({ where: { id: vehicleId }, data: { status: "disponivel" } });
       }
-      if (reservation && ((customerId && customerId !== reservation.customerId) || (!customerId && (customerName || customerPhone)))) throw new Error("RESERVATION_CUSTOMER");
-      let customer = customerId && customerId !== "novo" ? await tx.customer.findUnique({ where: { id: customerId } }) : null;
-      if (customerId && customerId !== "novo" && !customer) throw new Error("CUSTOMER_INVALID");
-      if (!customer && reservation) customer = await tx.customer.findUnique({ where: { id: reservation.customerId } });
-      if (!customer) {
-        await lockCustomerIdentity(tx, customerPhone, cpf);
-        if (await tx.customer.findFirst({ where: { OR: [{ phone: customerPhone }, ...(cpf ? [{ cpf }] : [])] } })) throw new Error("DUPLICATE_CUSTOMER");
-        customer = await tx.customer.create({ data: { name: customerName, phone: customerPhone, cpf: cpf || null, rg: identifiers.rg || null, address: String(input.address ?? "").trim() || null } });
-      } else {
-        const customerCpf = cpf || customer.cpf;
-        await lockCustomerIdentity(tx, customerPhone, customerCpf);
-        if (await tx.customer.findFirst({ where: { OR: [{ phone: customerPhone }, ...(customerCpf ? [{ cpf: customerCpf }] : [])], NOT: { id: customer.id } } })) throw new Error("DUPLICATE_CUSTOMER");
-        customer = await tx.customer.update({ where: { id: customer.id }, data: { name: customerName, phone: customerPhone, cpf: customerCpf, rg: identifiers.rg || customer.rg, address: String(input.address ?? customer.address ?? "").trim() || null } });
-      }
-      const heldSignal = reservation ? Number(reservation.deposit) : 0;
-      const signalPayment = payments.find((p: { method: string }) => p.method === "sinal");
-      const signalEnabled = input.signal === true;
-      if (reservation && heldSignal > 0 && !signalEnabled) throw new Error("RESERVATION_SIGNAL_REQUIRED");
-      const signal = signalEnabled ? { amount: heldSignal || Number(signalPayment?.amount ?? input.signalAmount ?? 0), reservationId: reservation?.id } : undefined;
-      if (signal && (signal.amount <= 0 || signalExceedsTotal(signal.amount, total))) throw new Error("INVALID_SIGNAL");
-      if (signalMismatch(payments, signal?.amount ?? 0) || (!signal && signalPayment?.amount)) throw new Error("INVALID_SIGNAL");
+      const customer = await resolveBuyer(tx, { customerId, customerName, customerPhone, cpf, rg: identifiers.rg, address: input.address, reservationCustomerId: reservation?.customerId, hasReservation: Boolean(reservation) });
+      const signal = resolveSignal({ payments, total, signalEnabled: input.signal === true, signalAmountInput: input.signalAmount, reservation });
       const row = await tx.sale.create({ data: { vehicleId, customerId: customer.id, salePrice: total, paymentMethod: summarizeContractPayments(payments), saleDate: new Date(), notes: [notes, signal ? `Sinal recebido: R$ ${signal.amount.toFixed(2)} (incluído no total da venda).` : null].filter(Boolean).join("\n") || null } });
       const snapshot = { address: customer.address ?? "", signal, payments, customer: customer.name, customerId: customer.id, cpf: customer.cpf ?? "", rg: customer.rg ?? "", chassis: identifiers.chassis || vehicle.chassis || "", renavam: identifiers.renavam || vehicle.renavam || "", phone: customer.phone, vehicle: [vehicle.brand, vehicle.model, vehicle.version].filter(Boolean).join(" "), year: vehicle.year, yearModel: vehicle.yearModel, color: vehicle.color ?? "", warranty: vehicle.warranty ?? undefined, km: vehicle.km, total, plate: vehicle.plate ?? "", amount: total, conditions: String(input.conditions ?? "").slice(0, 3000), payment: summarizeContractPayments(payments), seller: "Garagem", responsibleSeller: sellerName, commission, date: new Date().toISOString(), reservationId: reservation?.id ?? null, saleId: row.id };
       let receipt = null;
@@ -153,10 +111,6 @@ async function requireAdmin() {
   const session = await getSession();
   if (!session) redirect("/admin/login");
   return session;
-}
-
-function digitsOnly(value: FormDataEntryValue | null) {
-  return String(value ?? "").replace(/\D/g, "");
 }
 
 async function resolveCustomerId(
