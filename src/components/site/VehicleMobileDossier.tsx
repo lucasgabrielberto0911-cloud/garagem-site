@@ -21,6 +21,7 @@ import {
 } from "@/lib/vehicle-specs";
 import {
   publicStoreInspectionText,
+  DEFAULT_VEHICLE_CONDITIONS,
   isPlaceholderCopy,
   publishedConditionItems,
   type VehicleConditionsContent,
@@ -139,7 +140,7 @@ function DossierBlock({
       id={section}
       data-ficha-section={section}
     >
-      <summary className="flex min-h-[3.25rem] cursor-pointer list-none items-center justify-between gap-3 py-4 font-display text-[15px] font-semibold tracking-tight text-cream [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-[3rem] cursor-pointer list-none items-center justify-between gap-3 py-3.5 font-display text-[15px] font-semibold tracking-tight text-cream [&::-webkit-details-marker]:hidden">
         <span>{title}</span>
         <span
           aria-hidden="true"
@@ -154,7 +155,7 @@ function DossierBlock({
           </svg>
         </span>
       </summary>
-      <div className="pb-5 text-[15px] leading-relaxed text-cream/80">{children}</div>
+      <div className="pb-4 text-[15px] leading-relaxed text-cream/80">{children}</div>
     </details>
   );
 }
@@ -222,21 +223,27 @@ export function VehicleMobileBlocks({
     (item) => item.label.toLocaleLowerCase("pt-BR") === "vistoria da loja",
   );
   const otherConditions = conditionItems.filter((item) => item !== vistoria);
-  const intro = isPlaceholderCopy(conditions.intro) ? "" : conditions.intro.trim();
+  const introText = conditions.intro.trim();
+  // O texto padrão repete a garantia/itens abaixo; introdução personalizada fica.
+  const intro =
+    isPlaceholderCopy(introText) ||
+    (otherConditions.length > 0 && introText === DEFAULT_VEHICLE_CONDITIONS.intro.trim())
+      ? ""
+      : introText;
 
   return (
     <div className="mt-5 border-t border-white/10 lg:hidden">
       {verified.length > 0 ? (
         <DossierBlock title={verifiedHeading ?? "Verificado neste carro"} defaultOpen>
-          <VehicleVerifiedList items={verified} alt={fullLabel} />
+          <VehicleVerifiedList items={verified} alt={fullLabel} showVideoHint={!sold} />
         </DossierBlock>
       ) : null}
 
       <DossierBlock title={STORE_INSPECTION_LABEL}>
         {inspectionNote && inspectionNote !== STORE_INSPECTION_NOTE ? (
-          <p className="mb-3 text-[15px] leading-7 text-cream">{inspectionNote}</p>
+          <p className="mb-2.5 text-[15px] leading-relaxed text-cream">{inspectionNote}</p>
         ) : null}
-        <p className="text-[15px] leading-7 text-cream/90">
+        <p className="text-[15px] leading-relaxed text-cream/90">
           {publicStoreInspectionText(vistoria?.text)}
         </p>
       </DossierBlock>
@@ -275,7 +282,11 @@ export function VehicleMobileBlocks({
                   <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-cream">
                     {item.label}
                   </p>
-                  <p className="mt-1 text-[15px] leading-relaxed text-cream/80">{item.text}</p>
+                  <p className="mt-1 text-[15px] leading-relaxed text-cream/80">
+                    {item.label.toLocaleLowerCase("pt-BR") === "garantia" && warranty
+                      ? warranty
+                      : item.text}
+                  </p>
                 </li>
               ))}
             </ul>
