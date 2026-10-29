@@ -21,6 +21,7 @@ import {
 } from "@/lib/vehicle-specs";
 import {
   publicStoreInspectionText,
+  DEFAULT_VEHICLE_CONDITIONS,
   isPlaceholderCopy,
   publishedConditionItems,
   type VehicleConditionsContent,
@@ -222,13 +223,19 @@ export function VehicleMobileBlocks({
     (item) => item.label.toLocaleLowerCase("pt-BR") === "vistoria da loja",
   );
   const otherConditions = conditionItems.filter((item) => item !== vistoria);
-  const intro = isPlaceholderCopy(conditions.intro) ? "" : conditions.intro.trim();
+  const introText = conditions.intro.trim();
+  // O texto padrão repete a garantia/itens abaixo; introdução personalizada fica.
+  const intro =
+    isPlaceholderCopy(introText) ||
+    (otherConditions.length > 0 && introText === DEFAULT_VEHICLE_CONDITIONS.intro.trim())
+      ? ""
+      : introText;
 
   return (
     <div className="mt-5 border-t border-white/10 lg:hidden">
       {verified.length > 0 ? (
         <DossierBlock title={verifiedHeading ?? "Verificado neste carro"} defaultOpen>
-          <VehicleVerifiedList items={verified} alt={fullLabel} />
+          <VehicleVerifiedList items={verified} alt={fullLabel} showVideoHint={!sold} />
         </DossierBlock>
       ) : null}
 
@@ -267,9 +274,9 @@ export function VehicleMobileBlocks({
 
       {intro || otherConditions.length > 0 ? (
         <DossierBlock title={conditions.title}>
-          {otherConditions.length === 0 && intro ? <p>{intro}</p> : null}
+          {intro ? <p>{intro}</p> : null}
           {otherConditions.length > 0 ? (
-            <ul className="space-y-3">
+            <ul className={intro ? "mt-4 space-y-3" : "space-y-3"}>
               {otherConditions.map((item) => (
                 <li key={item.label} className="border-l-2 border-brand/80 pl-3">
                   <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-cream">

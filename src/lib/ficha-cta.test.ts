@@ -539,7 +539,7 @@ test("PR-5 ficha: lista verificada tem dica sutil de vídeo e dossiê mobile evi
   assert.match(dossierSrc, /min-h-\[3rem\]/);
   assert.match(dossierSrc, /py-3\.5/);
   assert.match(dossierSrc, /pb-4/);
-  assert.match(dossierSrc, /otherConditions\.length === 0 && intro/);
+  assert.match(dossierSrc, /DEFAULT_VEHICLE_CONDITIONS\.intro/);
 
   const mobileMarkup = renderToStaticMarkup(
     createElement(

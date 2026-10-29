@@ -63,10 +63,12 @@ export function VehicleVerifiedSection({
   items,
   alt,
   heading,
+  sold = false,
 }: {
   items: PublicVerifiedItem[];
   alt: string;
   heading: string;
+  sold?: boolean;
 }) {
   return (
     <section
@@ -84,7 +86,7 @@ export function VehicleVerifiedSection({
         Informações da loja sobre este exemplar.
       </p>
       <div className="mt-3">
-        <VehicleVerifiedList items={items} alt={alt} />
+        <VehicleVerifiedList items={items} alt={alt} showVideoHint={!sold} />
       </div>
     </section>
   );

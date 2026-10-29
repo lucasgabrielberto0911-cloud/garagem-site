@@ -424,6 +424,7 @@ export default async function VehicleDetailPage({
                 items={verified}
                 alt={galleryAlt}
                 heading={verifiedHeading(isMoto)}
+                sold={sold}
               />
             ) : null}
           </div>
