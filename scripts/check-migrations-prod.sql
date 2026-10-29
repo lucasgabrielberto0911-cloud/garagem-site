@@ -50,7 +50,11 @@ WITH alvos(migration, tipo, tabela, objeto) AS (VALUES
   ('20261019000200_motivo_de_perda_lead','coluna','LeadVenda','lostReason'),
   ('20261020000100_numero_documento_comercial','coluna','CommercialDocument','number'),
   ('20261020000100_numero_documento_comercial','indice','CommercialDocument','CommercialDocument_number_key'),
-  ('20261021000100_rls_hardening','tabela','_rls_hardening_backup',NULL)
+  ('20261021000100_rls_hardening','tabela','_rls_hardening_backup',NULL),
+  ('20261029000100_nota_promissoria','tabela','PromissoryNote',NULL),
+  ('20261029000100_nota_promissoria','indice','PromissoryNote','PromissoryNote_number_key'),
+  ('20261029000100_nota_promissoria','constraint','PromissoryNote','promissory_status'),
+  ('20261029000100_nota_promissoria','constraint','PromissoryNote','promissory_values')
 )
 SELECT a.migration, a.tipo, a.tabela, a.objeto,
   CASE a.tipo

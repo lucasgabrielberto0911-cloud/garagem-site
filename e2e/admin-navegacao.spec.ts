@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 const grupos = {
   Hoje: [["Dashboard", "/admin"], ["Agenda", "/admin/agenda"]],
   Estoque: [["Veículos", "/admin/veiculos"], ["Em preparação", "/admin/em-preparacao"]],
-  Relacionamento: [["Leads", "/admin/leads"], ["Clientes", "/admin/clientes"], ["Vendas", "/admin/vendas"]],
+  Relacionamento: [["Leads", "/admin/leads"], ["Clientes", "/admin/clientes"], ["Vendas", "/admin/vendas"], ["Promissórias", "/admin/promissorias"]],
   Site: [["Depoimentos", "/admin/depoimentos"], ["Dados do site", "/admin/site"]],
 };
 

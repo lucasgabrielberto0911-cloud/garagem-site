@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { afterSaleMessage, AFTER_SALE } from "@/lib/admin-commercial";
 import { completeAfterSale } from "@/app/admin/veiculos/commercial-actions";
+import { dismissPromissoryNotice } from "@/app/admin/promissorias/actions";
 import { redirect } from "next/navigation";
 import { AdminPageHeader, btn, inputClass } from "@/components/admin/ui";
 import { LeadFollowUp } from "@/components/admin/LeadFollowUp";
@@ -11,6 +12,7 @@ import { AGENDA_PERIODS, agendaWhere, parseAgendaPeriod } from "@/lib/admin-agen
 import { leadSearchWhere } from "@/lib/admin-lead-search";
 import { LeadWhatsAppMenu } from "@/components/admin/LeadWhatsAppMenu";
 import { leadDisplayName, leadHasPhone } from "@/lib/leads";
+import { promissoryPaidNotice } from "@/lib/promissory-notes";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 20;
@@ -40,9 +42,10 @@ export default async function AgendaPage({ searchParams }: {
     select: { id: true, name: true, phone: true, vehicleInfo: true, plate: true, source: true, nextAction: true, nextActionAt: true },
   });
   const taskDate = agendaWhere(period, now).nextActionAt;
-  const [afterSales, siteSettings] = await Promise.all([
+  const [afterSales, siteSettings, paidNotes] = await Promise.all([
     prisma.afterSaleTask.findMany({ where: { completedAt: null, dueAt: taskDate as import("@prisma/client").Prisma.DateTimeFilter }, orderBy: { dueAt: "asc" }, take: 50, include: { sale: { include: { customer: true, vehicle: true } } } }),
     prisma.siteSettings.findUnique({ where: { id: "default" }, select: { googleProfileUrl: true } }),
+    prisma.promissoryNote.findMany({ where: { status: "paga", paidNoticeDoneAt: null }, orderBy: { paidAt: "asc" }, take: 50, select: { id: true, number: true, issuerName: true, paidAt: true } }),
   ]);
   function href(value = period, nextPage = 1) {
     const params = new URLSearchParams({ periodo: value });
@@ -102,6 +105,19 @@ export default async function AgendaPage({ searchParams }: {
         </article>;
       })}
     </section>
+    {paidNotes.length ? <section className="space-y-3" aria-label="Promissórias pagas">
+      <h2 className="font-display text-xl font-semibold">Promissórias pagas</h2>
+      <p className="text-sm text-muted">Avisos gerados quando uma nota é marcada como paga. Dê ciência depois de conferir o recebimento.</p>
+      {paidNotes.map((note) => <article key={note.id} className="space-y-3 rounded-lg border border-white/10 p-4">
+        <h3 className="font-display">Nota nº {note.number} · {note.issuerName}</h3>
+        <p className="text-xs text-muted">{note.paidAt ? `Baixada em ${adminActionDate(note.paidAt)}` : "Baixada"}</p>
+        <p className="text-sm">{promissoryPaidNotice(note)}</p>
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/admin/promissorias?status=pagas&q=${note.number}`} className={btn.outline}>Abrir nota</Link>
+          <form action={dismissPromissoryNotice.bind(null, note.id)}><button className={btn.primary}>Dar ciência</button></form>
+        </div>
+      </article>)}
+    </section> : null}
     {pages > 1 ? <nav aria-label="Páginas da agenda" className="flex justify-between gap-2">
       {page > 1 ? <Link href={href(period, page - 1)} className={btn.outline}>Anterior</Link> : <span />}
       {page < pages ? <Link href={href(period, page + 1)} className={btn.outline}>Próxima</Link> : null}

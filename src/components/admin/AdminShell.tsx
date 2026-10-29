@@ -89,6 +89,13 @@ const NAV: NavItem[] = [
     match: (pathname) => pathname.startsWith("/admin/vendas"),
   },
   {
+    href: "/admin/promissorias",
+    label: "Promissórias",
+    group: "Relacionamento",
+    Icon: IconCash,
+    match: (pathname) => pathname.startsWith("/admin/promissorias"),
+  },
+  {
     href: "/admin/depoimentos",
     label: "Depoimentos",
     group: "Site",
