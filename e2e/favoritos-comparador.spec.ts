@@ -27,7 +27,7 @@ test.beforeEach(async ({ page }) => {
   }, vehicles.map(vehicle => vehicle.id));
 });
 
-for (const width of [360, 390, 430, 1440]) {
+for (const width of [320, 360, 390, 430, 1440]) {
   test(`comparação legível, seleção e sessão em ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 932 });
     await page.goto("/favoritos");
@@ -54,13 +54,25 @@ for (const width of [360, 390, 430, 1440]) {
     await expect(checks.nth(3)).toBeDisabled();
     await expect(region.getByRole("columnheader")).toHaveCount(4);
     if (width < 1024) {
-      await page.getByRole("group", { name: "Ver colunas da comparação" }).getByRole("button").last().click();
-      await expect.poll(() => region.evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
-      await expect.poll(async () => {
-        const last = await region.locator("thead th").last().boundingBox();
+      const controls = page.getByRole("group", { name: "Ver colunas da comparação" }).getByRole("button");
+      for (const index of [2, 1, 0]) {
+        await controls.nth(index).click();
+        await expect.poll(() => region.evaluate((el, index) => {
+          const fixed = el.querySelector("thead th")!.getBoundingClientRect();
+          const column = el.querySelectorAll("thead th")[index + 1].getBoundingClientRect();
+          const box = el.getBoundingClientRect();
+          return Math.max(fixed.right - column.left, column.right - box.right);
+        }, index)).toBeLessThanOrEqual(2);
+        const contact = region.getByRole("link", { name: "Tenho interesse", exact: true }).nth(index);
+        await contact.scrollIntoViewIfNeeded();
+        const fixed = await region.locator("thead th").first().boundingBox();
         const box = await region.boundingBox();
-        return last!.x + last!.width - box!.x - box!.width;
-      }).toBeLessThanOrEqual(2);
+        const cta = await contact.boundingBox();
+        expect(cta!.x).toBeGreaterThanOrEqual(fixed!.x + fixed!.width - 2);
+        expect(cta!.x + cta!.width).toBeLessThanOrEqual(box!.x + box!.width + 2);
+        await expect(contact).toHaveAttribute("href", /^https:\/\/wa\.me\/5527996330706\?/);
+        await contact.click({ trial: true });
+      }
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await checks.nth(0).uncheck();
