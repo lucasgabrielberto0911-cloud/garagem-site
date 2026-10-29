@@ -77,7 +77,7 @@ export function HeroSearch({
         </div>
         <button
           type="submit"
-          className="h-10 shrink-0 bg-brand px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-cream transition hover:bg-brand-dark touch-manipulation sm:h-11 sm:px-5 sm:text-sm"
+          className="min-h-[52px] shrink-0 bg-brand px-4 font-display text-sm font-semibold uppercase tracking-normal text-cream transition hover:bg-brand-dark touch-manipulation sm:px-5 sm:tracking-wide"
         >
           Buscar
         </button>
