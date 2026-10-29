@@ -44,7 +44,7 @@ export const BUDGET_CHIPS = [
  * em ponteiro grosso e em iOS/iPadOS (`-webkit-touch-callout`).
  */
 export const selectClass =
-  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition touch-manipulation focus:border-brand lg:text-sm";
+  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream transition touch-manipulation focus:border-brand lg:text-sm";
 
 export const MIN_PRICE_OPTIONS = [
   { value: "", label: "Preço mínimo" },

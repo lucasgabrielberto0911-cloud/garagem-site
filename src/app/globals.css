@@ -1000,7 +1000,10 @@ body:has([data-ficha-page]) .whatsapp-float {
   gap: 0.5rem;
   flex: 1 1 auto;
   min-width: 0;
-  height: 2.75rem;
+  /* folga para o anel de foco (2px + offset 3px) não ser cortado */
+  height: calc(2.75rem + 0.75rem);
+  padding: 0.375rem;
+  margin: -0.375rem;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;

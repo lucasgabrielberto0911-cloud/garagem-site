@@ -71,6 +71,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const shortcutsLabelId = useId();
   const desktopAccessoryLabelId = useId();
+  const activeFiltersLabelId = useId();
 
   const current: FilterValues = {
     q: params.get("q") ?? "",
@@ -396,7 +397,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           className="mx-auto max-w-2xl"
           role="search"
         >
-          <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand lg:min-h-[48px]">
+          <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:outline focus-within:outline-2 focus-within:outline-offset-[3px] focus-within:outline-brand lg:min-h-[48px]">
             <IconSearch className="h-4 w-4 shrink-0 text-muted" />
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
@@ -417,7 +418,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 }, 600);
               }}
               placeholder="Marca, modelo ou versão"
-              className="w-full min-w-0 min-h-11 bg-transparent py-2 text-base text-cream placeholder:text-muted lg:min-h-[48px] lg:text-sm"
+              className="w-full min-w-0 bg-transparent py-2 text-base text-cream placeholder:text-muted focus:outline-none lg:text-sm"
             />
           </div>
         </form>
@@ -609,12 +610,17 @@ export function StockFilters({ facets }: { facets: Facets }) {
           {activeFilters.length > 0 ? (
             <div className="mt-5 border-t border-white/10 pt-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+                <p
+                  id={activeFiltersLabelId}
+                  className="text-[10px] font-medium uppercase tracking-wider text-muted"
+                >
                   Filtros ativos
                 </p>
                 <ShareSearchButton />
               </div>
-              <ActiveFilterChips filters={activeFilters} onRemove={removeFilter} />
+              <div role="group" aria-labelledby={activeFiltersLabelId}>
+                <ActiveFilterChips filters={activeFilters} onRemove={removeFilter} />
+              </div>
             </div>
           ) : null}
 
@@ -742,7 +748,6 @@ export function StockFilters({ facets }: { facets: Facets }) {
         <div className="fixed inset-0 z-[70] lg:hidden">
           <button
             type="button"
-            aria-label="Fechar filtros"
             aria-hidden="true"
             tabIndex={-1}
             onClick={() => setOpen(false)}
