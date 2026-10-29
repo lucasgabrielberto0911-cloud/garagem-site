@@ -140,6 +140,7 @@ test("aba Promissórias: emite várias parcelas, lista, baixa o PDF, marca paga 
     const cancelada = page.getByTestId("promissoria").filter({ hasText: `Nota nº ${notas[1].number} ` });
     await expect(cancelada).toContainText("Cancelada");
     await expect(cancelada.getByRole("link", { name: /Baixar PDF/ })).toHaveCount(0);
+    expect((await page.request.get(`/api/admin/promissorias/${notas[1].id}`)).status()).toBe(409);
     await page.goto("/admin/promissorias?status=pagas");
     await expect(page.getByTestId("promissoria").filter({ hasText: `Nota nº ${notas[0].number} ` }).getByRole("button")).toHaveCount(0);
   });

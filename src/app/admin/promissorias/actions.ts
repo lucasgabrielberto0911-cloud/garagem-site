@@ -29,6 +29,8 @@ function refresh() {
   revalidatePath("/admin/agenda");
 }
 
+const PROMISSORY_LOCK_KEY = 20261029;
+
 const FIELDS: Array<keyof PromissoryFormFields> = ["customerId", "name", "cpf", "rg", "birthDate", "phone", "address", "amount", "count", "firstDueDate", "issuedAt", "issuePlace", "paymentPlace", "notes"];
 
 /** Emite uma ou várias notas mensais de uma vez; os números saem da sequência do banco, na ordem das parcelas. */
@@ -43,6 +45,8 @@ export async function createPromissoryNotes(formData: FormData): Promise<Promiss
       return { ok: false, message: "Cliente não encontrado. Busque de novo ou preencha os dados à mão.", fieldErrors: { customerId: "Cliente não encontrado." } };
     }
     const numbers = await prisma.$transaction(async (tx) => {
+      // Serializa as emissões: os números do lote saem seguidos mesmo com duas emissões ao mesmo tempo.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${PROMISSORY_LOCK_KEY})`;
       const created: number[] = [];
       for (const installment of parsed.installments) {
         const note = await tx.promissoryNote.create({
@@ -71,7 +75,7 @@ export async function createPromissoryNotes(formData: FormData): Promise<Promiss
       return created;
     });
     refresh();
-    return { ok: true, message: numbers.length === 1 ? `Nota nº ${numbers[0]} emitida.` : `${numbers.length} notas emitidas (nº ${numbers[0]} a ${numbers[numbers.length - 1]}).` };
+    return { ok: true, message: numbers.length === 1 ? `Nota nº ${numbers[0]} emitida.` : `${numbers.length} notas emitidas (nº ${numbers.join(", ")}).` };
   } catch (error) {
     console.error("[admin/promissorias] falha ao emitir:", error);
     return { ok: false, message: "Não foi possível emitir as notas. Nada foi salvo." };

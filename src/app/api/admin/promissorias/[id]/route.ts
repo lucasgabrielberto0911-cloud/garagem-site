@@ -29,6 +29,10 @@ export async function GET(
       return new Response("Nota promissória não encontrada.", { status: 404, headers });
     }
 
+    if (note.status === "cancelada") {
+      return new Response("Nota cancelada não pode ser impressa.", { status: 409, headers });
+    }
+
     const inline = new URL(request.url).searchParams.has("inline");
     const bytes = await promissoryPdf(promissoryRowToPdfInput(note));
 

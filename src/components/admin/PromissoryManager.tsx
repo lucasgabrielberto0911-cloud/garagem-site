@@ -110,8 +110,8 @@ export function PromissoryManager({
     setCustomer(item);
     if (!item) return update("customerId", "");
     setForm((current) => current && {
-      ...current, customerId: item.id, name: item.name, phone: formatPhoneBR(item.phone), cpf: item.cpf ? formatCpfBR(item.cpf) : current.cpf,
-      rg: item.rg ?? current.rg, address: item.address ?? current.address,
+      ...current, customerId: item.id, name: item.name, phone: formatPhoneBR(item.phone), cpf: item.cpf ? formatCpfBR(item.cpf) : "",
+      rg: item.rg ?? "", address: item.address ?? "", birthDate: "",
     });
     setDirty(true);
   }
