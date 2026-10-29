@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, KM_OPTIONS, selectClass, selectedOption, toggleAccessoryValue, splitAccessories, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
 import { IconClose, IconSearch, IconShare } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
@@ -69,6 +69,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const [open, setOpen] = useState(false);
   const sheetRef = useRef<HTMLElement>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const shortcutsLabelId = useId();
+  const desktopAccessoryLabelId = useId();
+  const activeFiltersLabelId = useId();
 
   const current: FilterValues = {
     q: params.get("q") ?? "",
@@ -394,7 +397,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           className="mx-auto max-w-2xl"
           role="search"
         >
-          <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand lg:min-h-[48px]">
+          <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:outline focus-within:outline-2 focus-within:outline-offset-[3px] focus-within:outline-brand lg:min-h-[48px]">
             <IconSearch className="h-4 w-4 shrink-0 text-muted" />
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
@@ -423,10 +426,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
         {/* Desktop: filtros completos, sem rolagem interna. */}
         <div className="mt-5 hidden lg:block">
           <div>
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+            <p id={shortcutsLabelId} className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
               Atalhos
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div role="group" aria-labelledby={shortcutsLabelId} className="flex flex-wrap gap-2">
               {quickChips.map((chip) => (
                 <Chip key={chip.key} active={chip.active} onClick={chip.onClick}>
                   {chip.label}
@@ -575,12 +578,13 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </DesktopField>
               {(facets.accessories ?? []).length > 0 ? (
                 <div>
-                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+                  <p id={desktopAccessoryLabelId} className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
                     Acessórios
                   </p>
                   <AccessoryChips
                     options={facets.accessories ?? []}
                     value={current.accessory}
+                    labelledBy={desktopAccessoryLabelId}
                     onToggle={(name) =>
                       update({
                         accessory: toggleAccessoryValue(current.accessory, name),
@@ -606,12 +610,17 @@ export function StockFilters({ facets }: { facets: Facets }) {
           {activeFilters.length > 0 ? (
             <div className="mt-5 border-t border-white/10 pt-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+                <p
+                  id={activeFiltersLabelId}
+                  className="text-[10px] font-medium uppercase tracking-wider text-muted"
+                >
                   Filtros ativos
                 </p>
                 <ShareSearchButton />
               </div>
-              <ActiveFilterChips filters={activeFilters} onRemove={removeFilter} />
+              <div role="group" aria-labelledby={activeFiltersLabelId}>
+                <ActiveFilterChips filters={activeFilters} onRemove={removeFilter} />
+              </div>
             </div>
           ) : null}
 
@@ -739,7 +748,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
         <div className="fixed inset-0 z-[70] lg:hidden">
           <button
             type="button"
-            aria-label="Fechar filtros"
+            aria-hidden="true"
+            tabIndex={-1}
             onClick={() => setOpen(false)}
             className="absolute inset-0 bg-black/65 backdrop-blur-sm animate-fade-in"
           />
@@ -825,6 +835,7 @@ function MobileChipRow({
   children: ReactNode;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const labelId = useId();
 
   useLayoutEffect(() => {
     const track = trackRef.current;
@@ -880,8 +891,8 @@ function MobileChipRow({
 
   return (
     <div className="stock-chip-row">
-      <p className="stock-chip-label">{label}</p>
-      <div ref={trackRef} className="stock-chip-track scrollbar-hide">
+      <p id={labelId} className="stock-chip-label">{label}</p>
+      <div ref={trackRef} role="group" aria-labelledby={labelId} className="stock-chip-track scrollbar-hide">
         {children}
       </div>
     </div>

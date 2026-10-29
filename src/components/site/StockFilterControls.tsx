@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 export function splitAccessories(value: string) {
   return value
@@ -44,7 +44,7 @@ export const BUDGET_CHIPS = [
  * em ponteiro grosso e em iOS/iPadOS (`-webkit-touch-callout`).
  */
 export const selectClass =
-  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream outline-none transition touch-manipulation focus:border-brand lg:text-sm";
+  "w-full min-h-[48px] border border-white/10 bg-asphalt px-3.5 py-3 text-base text-cream transition touch-manipulation focus:border-brand lg:text-sm";
 
 export const MIN_PRICE_OPTIONS = [
   { value: "", label: "Preço mínimo" },
@@ -110,19 +110,28 @@ export function AccessoryChips({
   options,
   value,
   onToggle,
+  labelledBy,
 }: {
   options: string[];
   value: string;
   onToggle: (name: string) => void;
+  /** id do texto que nomeia o grupo (ex.: "Acessórios"). */
+  labelledBy: string;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const listId = useId();
   const selected = new Set(
     splitAccessories(value).map((item) => item.toLocaleLowerCase("pt-BR")),
   );
   const visible = expanded ? options : options.slice(0, 8);
   return (
     <div>
-      <div className="flex flex-wrap gap-2">
+      <div
+        id={listId}
+        role="group"
+        aria-labelledby={labelledBy}
+        className="flex flex-wrap gap-2"
+      >
         {visible.map((item) => {
           const active = selected.has(item.toLocaleLowerCase("pt-BR"));
           return (
@@ -146,6 +155,8 @@ export function AccessoryChips({
         <button
           type="button"
           onClick={() => setExpanded((open) => !open)}
+          aria-expanded={expanded}
+          aria-controls={listId}
           className="mt-2 min-h-[44px] text-xs font-semibold uppercase tracking-wide text-brand-light"
         >
           {expanded ? "Ver menos" : `Ver mais (${options.length - 8})`}

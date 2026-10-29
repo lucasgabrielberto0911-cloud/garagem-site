@@ -13,6 +13,8 @@ export type StockFilterFieldsProps = {
 };
 export function StockFilterFields({ facets, draft, setDraft, onApply, resultCount }: StockFilterFieldsProps) {
   const rangeError = stockRangeError(draft);
+  const priceLabelId = useId();
+  const accessoryLabelId = useId();
   /** Só os campos que existem dentro do painel do celular (a busca fica fora). */
   const draftFilterCount = [
     draft.category,
@@ -108,10 +110,10 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                 </select>
               </MobileField>
               <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
+                <p id={priceLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
                   Faixa de preço
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div role="group" aria-labelledby={priceLabelId} className="flex flex-wrap gap-2">
                   {BUDGET_CHIPS.map((chip) => {
                     const active =
                       (draft.minPrice || "") === chip.minPrice &&
@@ -195,12 +197,13 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                   ) : null}
                   {(facets.accessories ?? []).length > 0 ? (
                     <div>
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
+                      <p id={accessoryLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
                         Acessórios
                       </p>
                       <AccessoryChips
                         options={facets.accessories ?? []}
                         value={draft.accessory}
+                        labelledBy={accessoryLabelId}
                         onToggle={(name) =>
                           setDraft({
                             ...draft,
