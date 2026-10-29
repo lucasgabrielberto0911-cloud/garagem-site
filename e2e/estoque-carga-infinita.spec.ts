@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { readFileSync } from "node:fs";
+import { STOCK_POSITION_KEY } from "../src/lib/stock-return";
 
 test("mobile: botão, retorno da ficha e rolagem carregam o estoque", async ({ page }) => {
   test.skip(page.viewportSize()?.width !== 390, "cenário fixo em 390px");
@@ -20,18 +21,25 @@ test("mobile: botão, retorno da ficha e rolagem carregam o estoque", async ({ p
       if (url.pathname === "/api/estoque") pages.push(url.searchParams.get("page") ?? "");
     });
     await page.goto("/estoque?brand=TesteCargaInfinita&sort=menor-preco");
-    const cards = page.locator("a[data-stock-card]");
+    const cards = page.locator("[data-estoque-list] article.listing-card");
+    const links = cards.locator("a[data-stock-card]");
     await expect(page.locator("[data-estoque-list]")).toHaveAttribute("aria-busy", "false");
     await expect(cards).toHaveCount(8);
+    await expect(links).toHaveCount(8);
     await page.getByRole("button", { name: "Ver mais veículos" }).dispatchEvent("click");
     await expect(cards).toHaveCount(16);
+    await expect(links).toHaveCount(16);
+    for (let i = 8; i < 16; i++) {
+      await expect(cards.nth(i).locator("a[data-stock-card]")).toHaveAttribute("href", new RegExp(`${prefix}${i}$`));
+    }
     expect(pages).toContain("2");
-    await cards.nth(10).click();
+    await cards.nth(10).locator("a[data-stock-card]").click();
     await expect(page).toHaveURL(/\/estoque\//);
     await page.goBack();
     await expect(cards).toHaveCount(16);
+    await expect.poll(() => page.evaluate(key => sessionStorage.getItem(key), STOCK_POSITION_KEY)).toBeNull();
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.getByRole("button", { name: "Ver mais veículos" }).evaluate(button => button.scrollIntoView({ block: "center", behavior: "instant" }));
     await expect(cards).toHaveCount(17);
     expect(pages).toContain("3");
     await expect(page.getByText("Você viu os 17 veículos")).toBeVisible();
