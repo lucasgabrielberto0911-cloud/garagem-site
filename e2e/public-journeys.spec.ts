@@ -104,7 +104,7 @@ test("card, ficha, voltar, favoritos e WhatsApp oficial", async ({ page }, info)
   const hrv = page.locator("article.listing-card").filter({ has: page.getByRole("heading", { name: "HR-V", exact: true }) });
   await hrv.getByRole("button", { name: /^Salvar/ }).click();
   await page.goto("/favoritos"); await expect(page.locator("article.listing-card")).toHaveCount(3);
-  await page.getByText("Comparar favoritos", { exact: false }).click();
+  await page.locator("summary").filter({ hasText: "Comparar favoritos" }).click();
   const checks = page.locator("fieldset input[type=checkbox]");
   await expect(checks).toHaveCount(3);
   if (!(await checks.last().isChecked())) await checks.last().check();

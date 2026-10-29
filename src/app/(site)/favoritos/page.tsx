@@ -19,7 +19,7 @@ export default function FavoritosPage() {
         <PageHeader
           eyebrow="Meus favoritos"
           title="Veículos que você salvou"
-          description="Salvos neste aparelho para você comparar com calma. Sem cadastro — se limpar os dados do navegador, a lista some."
+          description="Salvos neste aparelho, sem cadastro. Com dois ou mais veículos, abra “Comparar favoritos” para conferir os dados lado a lado. Se limpar os dados do navegador, a lista some."
         />
 
         <div className="mt-12">
