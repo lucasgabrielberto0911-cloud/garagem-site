@@ -228,7 +228,8 @@ export function StockInfiniteList({
         <InfiniteSentinel
           onVisible={loadMore}
           disabled={paused || loading || failed || Boolean(position)}
-          rootMargin={speculativeLoading ? "320px 0px" : "0px"}
+          rootMargin={speculativeLoading ? "320px 0px" : "240px 0px"}
+          watchKey={vehicles.length}
         >
           {loading ? (
             <div aria-live="polite">
@@ -250,9 +251,14 @@ export function StockInfiniteList({
               Tentar de novo
             </button>
           ) : (
-            <p className="text-xs uppercase tracking-wider text-muted">
-              Role para ver o restante do estoque
-            </p>
+            <button
+              type="button"
+              onClick={() => void loadMore()}
+              data-stock-load-more=""
+              className="min-h-[48px] border border-white/15 px-4 text-xs uppercase tracking-wider text-cream transition hover:border-brand touch-manipulation"
+            >
+              Ver mais veículos
+            </button>
           )}
         </InfiniteSentinel>
       ) : vehicles.length > 0 ? (
