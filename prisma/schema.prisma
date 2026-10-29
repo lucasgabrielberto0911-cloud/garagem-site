@@ -197,6 +197,7 @@ model Customer {
   createdAt DateTime @default(now())
   sales     Sale[]
   reservations VehicleReservation[]
+  promissoryNotes PromissoryNote[]
 }
 
 model Sale {
@@ -216,6 +217,7 @@ model Sale {
   afterSaleTasks AfterSaleTask[]
 
   @@index([customerId])
+  promissoryNotes PromissoryNote[]
 }
 
 model Admin {
@@ -408,6 +410,41 @@ model AfterSaleTask {
   completedAt DateTime?
   @@unique([saleId, kind])
   @@index([completedAt, dueAt])
+}
+
+/** Nota promissória emitida pela loja (aba Promissórias do admin). Os dados do emitente são copiados na emissão. */
+model PromissoryNote {
+  id String @id @default(cuid())
+  number Int @unique @default(autoincrement())
+  customerId String?
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  issuerName String
+  issuerCpf String
+  issuerRg String?
+  issuerBirthDate DateTime @db.Date
+  issuerPhone String
+  issuerAddress String
+  amount Decimal @db.Decimal(12, 2)
+  dueDate DateTime @db.Date
+  issuedAt DateTime @db.Date
+  issuePlace String
+  paymentPlace String
+  installmentNo Int @default(1)
+  installmentCount Int @default(1)
+  saleId String?
+  sale Sale? @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  /// emitida | vinculada | paga | cancelada
+  status String @default("emitida")
+  paidAt DateTime?
+  /// Aviso da baixa na agenda: nulo enquanto pendente.
+  paidNoticeDoneAt DateTime?
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, dueDate])
+  @@index([customerId])
+  @@index([saleId])
+  @@index([paidAt, paidNoticeDoneAt])
 }
 
 /** Carro comprado ainda em preparação (uso interno do painel; nunca entra na vitrine). */
