@@ -4,7 +4,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { formatAdminMoney } from "./admin-money";
 import { PDF_STORE } from "./commercial-pdf";
-import { promissoryClause, promissoryLongDate, validatePromissory, type PromissoryInput } from "./promissory";
+import { promissoryClause, promissoryDateInWords, promissoryLongDate, validatePromissory, type PromissoryInput } from "./promissory";
+import { moneyInWords } from "./money-words";
 import { site } from "./site";
 
 /** Via única em A4, com os mesmos recursos locais dos demais PDFs comerciais. */
@@ -60,9 +61,14 @@ export async function promissoryPdf(input: PromissoryInput) {
     items.forEach((item, index) => {
       const x = margin + index * (column + gap);
       draw(item.label.toUpperCase(), x, y, 7.5, semi, brand);
-      const lines = wrap(item.value || "________________________", column);
+      const lines = wrap(item.value, column);
       rows = Math.max(rows, lines.length);
       lines.forEach((value, row) => draw(value, x, y - 17 - row * 14));
+    });
+    items.forEach((_, index) => {
+      const x = margin + index * (column + gap);
+      const bottom = y - 17 - (rows - 1) * 14 - 10;
+      page.drawLine({ start: { x, y: bottom }, end: { x: x + column, y: bottom }, color: asphalt, thickness: 0.6 });
     });
     y -= 31 + rows * 14;
   }
@@ -86,12 +92,23 @@ export async function promissoryPdf(input: PromissoryInput) {
   draw("VALOR", margin + width - semi.widthOfTextAtSize("VALOR", 7.5) - 10, 703, 7.5, semi, brand);
 
   y = 642;
-  draw(`Vencimento: ${promissoryLongDate(data.dueDate)}`, margin, y, 12, semi);
+  draw("Vencimento:", margin, y, 12, semi);
+  draw(` ${promissoryLongDate(data.dueDate)}`, margin + semi.widthOfTextAtSize("Vencimento:", 12), y, 12);
   y -= 30;
-  wrap(promissoryClause(data), width, 10.5).forEach((value) => {
-    draw(value, margin, y, 10.5);
-    y -= 16;
+  const clause = promissoryClause(data);
+  const highlights = [promissoryDateInWords(data.dueDate) + ",", "NOTA PROMISSÓRIA", `${site.legalName.toUpperCase()},`, site.cnpj, `${amount} (${moneyInWords(data.amount)})`].map(value => {
+    const start = clause.indexOf(value);
+    return { start, end: start + value.length };
   });
+  let x = margin;
+  for (const word of clause.matchAll(/\S+/g)) {
+    const font = highlights.some(range => word.index >= range.start && word.index < range.end) ? semi : regular;
+    const wordWidth = font.widthOfTextAtSize(word[0], 10.5);
+    if (x + wordWidth > margin + width) { x = margin; y -= 16; }
+    draw(word[0], x, y, 10.5, font);
+    x += wordWidth + regular.widthOfTextAtSize(" ", 10.5);
+  }
+  y -= 16;
   y -= 18;
   fields([
     { label: "Praça de pagamento", value: data.paymentPlace },
@@ -100,13 +117,13 @@ export async function promissoryPdf(input: PromissoryInput) {
   fields([{ label: "Emitente", value: data.issuer.name }]);
   fields([{ label: "CPF", value: data.issuer.cpf }, { label: "RG / órgão emissor", value: data.issuer.rg }]);
   fields([
-    { label: "Data de nascimento", value: data.issuer.birthDate ? data.issuer.birthDate.split("-").reverse().join("/") : "" },
+    { label: "Data de nascimento", value: data.issuer.birthDate.split("-").reverse().join("/") },
     { label: "Telefone", value: data.issuer.phone },
   ]);
   fields([{ label: "Endereço do emitente", value: data.issuer.address }]);
 
   y -= 22;
-  page.drawLine({ start: { x: margin + 70, y }, end: { x: margin + width - 70, y }, color: line, thickness: 0.8 });
+  page.drawLine({ start: { x: margin + 70, y }, end: { x: margin + width - 70, y }, color: asphalt, thickness: 0.8 });
   const nameLines = wrap(data.issuer.name, width - 140, 10, semi);
   nameLines.forEach((value) => {
     y -= 14;
@@ -116,11 +133,16 @@ export async function promissoryPdf(input: PromissoryInput) {
   const signature = `Assinatura do emitente · CPF ${data.issuer.cpf}`;
   draw(signature, margin + (width - regular.widthOfTextAtSize(signature, 9)) / 2, y, 9, regular, muted);
   y -= 28;
-  fields([{ label: "Testemunha 1", value: "Nome: ________________________" }, { label: "Testemunha 2", value: "Nome: ________________________" }]);
-  for (const label of ["CPF", "Assinatura"]) {
-    [margin, margin + (width + 20) / 2].forEach(x => draw(`${label}: ________________________`, x, y, 9));
-    y -= 24;
-  }
+  const witnessColumn = (width - 20) / 2;
+  [margin, margin + witnessColumn + 20].forEach((x, index) => {
+    draw(`TESTEMUNHA ${index + 1}`, x, y, 7.5, semi, brand);
+    ["Nome", "CPF", "Assinatura"].forEach((label, row) => {
+      const top = y - 18 - row * 24;
+      draw(`${label}:`, x, top, 9, regular, muted);
+      page.drawLine({ start: { x, y: top - 10 }, end: { x: x + witnessColumn, y: top - 10 }, color: asphalt, thickness: 0.6 });
+    });
+  });
+  y -= 88;
   if (y < 74) throw new Error("Os dados excedem o espaço de uma página A4. Reduza os textos dos campos.");
   page.drawLine({ start: { x: margin, y: 49 }, end: { x: margin + width, y: 49 }, color: line, thickness: 0.6 });
   const footer = `${PDF_STORE.legalName} · CNPJ ${PDF_STORE.cnpj} · ${PDF_STORE.city}/${PDF_STORE.stateCode} · www.suagaragem.net`;

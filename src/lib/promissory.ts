@@ -16,8 +16,8 @@ export type PromissoryInput = {
     cpf: string;
     address: string;
     rg?: string;
-    birthDate?: string;
-    phone?: string;
+    birthDate: string;
+    phone: string;
   };
 };
 
@@ -61,11 +61,9 @@ export function validatePromissory(input: PromissoryInput) {
   const name = text(input.issuer?.name, "Nome do emitente", 120);
   const cpf = text(input.issuer?.cpf, "CPF do emitente", 14);
   if (!/^(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/.test(cpf) || !isValidCpf(cpf)) throw new Error("Informe um CPF válido para o emitente.");
-  const birthDate = text(input.issuer.birthDate, "Data de nascimento", 10, false);
-  if (birthDate) {
-    dateParts(birthDate);
-    if (birthDate > input.issuedAt) throw new Error("A data de nascimento não pode ser posterior à emissão.");
-  }
+  const birthDate = text(input.issuer.birthDate, "Data de nascimento", 10);
+  dateParts(birthDate);
+  if (birthDate > input.issuedAt) throw new Error("A data de nascimento não pode ser posterior à emissão.");
   return {
     ...input,
     amount: Math.round(input.amount * 100) / 100,
@@ -75,7 +73,7 @@ export function validatePromissory(input: PromissoryInput) {
       name, cpf: formatCpfBR(cpf), birthDate,
       address: text(input.issuer.address, "Endereço do emitente", 240),
       rg: text(input.issuer.rg, "RG / órgão emissor", 60, false),
-      phone: text(input.issuer.phone, "Telefone", 30, false),
+      phone: text(input.issuer.phone, "Telefone", 30),
     },
   };
 }
