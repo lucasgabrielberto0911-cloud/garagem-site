@@ -37,7 +37,6 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
     ? [...payments.filter((p) => p.method !== "sinal"), { method: "sinal" as const, amount: heldDeposit ?? payments.find((p) => p.method === "sinal")?.amount ?? 0 }]
     : payments;
   const paymentTotal = sumContractPayments(selectedPayments);
-  const paymentMatches = totalNumber > 0 && Math.round(paymentTotal * 100) === Math.round(totalNumber * 100);
 
   const draft: SaleDraft = { vehicleId: vehicle?.id ?? "", customer, total: totalNumber, payments: selectedPayments, commission };
 
