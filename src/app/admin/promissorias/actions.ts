@@ -12,6 +12,7 @@ export type PromissoryActionState = {
   ok: boolean;
   message: string;
   fieldErrors?: Record<string, string>;
+  noteIds?: string[];
 };
 
 async function requireAdmin() {
@@ -47,7 +48,7 @@ export async function createPromissoryNotes(formData: FormData): Promise<Promiss
     const numbers = await prisma.$transaction(async (tx) => {
       // Serializa as emissões: os números do lote saem seguidos mesmo com duas emissões ao mesmo tempo.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${PROMISSORY_LOCK_KEY})`;
-      const created: number[] = [];
+      const created: { id: string; number: number }[] = [];
       for (const installment of parsed.installments) {
         const note = await tx.promissoryNote.create({
           data: {
@@ -69,13 +70,13 @@ export async function createPromissoryNotes(formData: FormData): Promise<Promiss
           },
           select: { id: true, number: true },
         });
-        created.push(note.number);
+        created.push(note);
         await recordAdminAudit(tx, session.adminId, note.id, "promissory.create", { number: note.number, installment: `${installment.installmentNo}/${installment.installmentCount}`, amount: installment.amount, dueDate: installment.dueDate });
       }
       return created;
     });
     refresh();
-    return { ok: true, message: numbers.length === 1 ? `Nota nº ${numbers[0]} emitida.` : `${numbers.length} notas emitidas (nº ${numbers.join(", ")}).` };
+    return { ok: true, noteIds: numbers.map((note) => note.id), message: numbers.length === 1 ? `Nota nº ${numbers[0].number} emitida.` : `${numbers.length} notas emitidas (nº ${numbers.map((note) => note.number).join(", ")}).` };
   } catch (error) {
     console.error("[admin/promissorias] falha ao emitir:", error);
     return { ok: false, message: "Não foi possível emitir as notas. Nada foi salvo." };
