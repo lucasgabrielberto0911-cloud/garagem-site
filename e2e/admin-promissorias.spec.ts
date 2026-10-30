@@ -72,11 +72,15 @@ test("aba Promissórias: emite várias parcelas, lista, baixa o PDF, marca paga 
     await expect(form.locator("input[name=phone]")).toHaveValue("(27) 99999-0000");
     await expect(form.locator("input[name=rg]")).toHaveValue("1234567 SSP/ES");
     await form.locator("input[name=birthDate]").fill("1985-03-12");
-    await form.locator("input[name=count]").fill("3");
+    await form.getByRole("button", { name: "Parcelar em 3x" }).click();
+    await expect(form.locator("input[name=count]")).toHaveValue("3");
     await expect(form.getByRole("status")).toContainText("3 notas de R$ 1.500,00");
     await expect(form.getByRole("status")).toContainText("31/01/2027 a 31/03/2027");
+    await expect(form.getByRole("list", { name: "Cronograma de parcelas" }).getByRole("listitem")).toHaveCount(3);
     await form.getByRole("button", { name: "Emitir notas" }).click();
     await expect(itens).toHaveCount(3);
+    await expect(page.getByRole("region", { name: "Notas recém-emitidas" })).toContainText("3 notas emitidas para Cliente Promissória E2E");
+    await expect(page.getByRole("region", { name: "Notas recém-emitidas" }).getByRole("link", { name: /Imprimir todas \(3\)/ })).toBeVisible();
   });
 
   const notas = await db.promissoryNote.findMany({ where: { issuerCpf: cpf }, orderBy: { number: "asc" } });
@@ -98,7 +102,7 @@ test("aba Promissórias: emite várias parcelas, lista, baixa o PDF, marca paga 
     await expect(itens.first()).toContainText("Vence em 31/01/2027");
   });
 
-  await test.step("PDF exige sessão e sai em application/pdf sem cache", async () => {
+  await test.step("PDF individual e em lote exigem sessão e saem em application/pdf sem cache", async () => {
     const response = await page.request.get(`/api/admin/promissorias/${notas[0].id}`);
     expect(response.status()).toBe(200);
     expect(response.headers()["content-type"]).toBe("application/pdf");
@@ -106,6 +110,18 @@ test("aba Promissórias: emite várias parcelas, lista, baixa o PDF, marca paga 
     expect(response.headers()["x-robots-tag"]).toContain("noindex");
     expect(response.headers()["content-disposition"]).toContain(`garagem-promissoria-${notas[0].number}.pdf`);
     expect((await response.body()).subarray(0, 5).toString()).toBe("%PDF-");
+
+    const batchResponse = await page.request.get(`/api/admin/promissorias/${notas.map((n) => n.id).join(",")}?inline=1`);
+    expect(batchResponse.status()).toBe(200);
+    expect(batchResponse.headers()["content-type"]).toBe("application/pdf");
+    expect(batchResponse.headers()["content-disposition"]).toContain("inline;");
+    expect(batchResponse.headers()["content-disposition"]).toContain(`garagem-promissorias-${notas[0].number}-a-${notas[2].number}.pdf`);
+    expect((await batchResponse.body()).subarray(0, 5).toString()).toBe("%PDF-");
+
+    await expect(itens.first().getByRole("link", { name: `Imprimir nota ${notas[0].number}` })).toHaveAttribute(
+      "href",
+      `/api/admin/promissorias/${encodeURIComponent(notas[0].id)}?inline=1`,
+    );
     expect((await page.request.get("/api/admin/promissorias/nao-existe")).status()).toBe(404);
   });
 
@@ -145,7 +161,10 @@ test("aba Promissórias: emite várias parcelas, lista, baixa o PDF, marca paga 
     await expect(page.getByTestId("promissoria").filter({ hasText: `Nota nº ${notas[0].number} ` }).getByRole("button")).toHaveCount(0);
   });
 
-  await test.step("busca por número e sem overflow horizontal", async () => {
+  await test.step("filtros por vencimento, busca por número e sem overflow horizontal", async () => {
+    await page.goto("/admin/promissorias?vencimento=vencidas");
+    await expect(page.getByRole("navigation", { name: "Filtro por vencimento" }).getByRole("link", { name: /Vencidas/ })).toHaveAttribute("aria-current", "page");
+
     await page.goto(`/admin/promissorias?status=todas&q=${notas[2].number}`);
     await expect(page.getByTestId("promissoria")).toHaveCount(1);
     await expect(page.getByTestId("promissoria")).toContainText(`Nota nº ${notas[2].number} `);

@@ -8,10 +8,21 @@ import { localDateInput } from "@/lib/admin-date";
 import { prisma } from "@/lib/prisma";
 import { parsePromissoryForm, type PromissoryFormFields } from "@/lib/promissory-notes";
 
+export type CreatedPromissorySummary = {
+  id: string;
+  number: number;
+  installmentNo: number;
+  installmentCount: number;
+  amount: number;
+  dueDate: string;
+};
+
 export type PromissoryActionState = {
   ok: boolean;
   message: string;
   fieldErrors?: Record<string, string>;
+  createdNotes?: CreatedPromissorySummary[];
+  issuerName?: string;
 };
 
 async function requireAdmin() {
@@ -44,10 +55,10 @@ export async function createPromissoryNotes(formData: FormData): Promise<Promiss
     if (parsed.customerId && !(await prisma.customer.findUnique({ where: { id: parsed.customerId }, select: { id: true } }))) {
       return { ok: false, message: "Cliente não encontrado. Busque de novo ou preencha os dados à mão.", fieldErrors: { customerId: "Cliente não encontrado." } };
     }
-    const numbers = await prisma.$transaction(async (tx) => {
+    const createdNotes = await prisma.$transaction(async (tx) => {
       // Serializa as emissões: os números do lote saem seguidos mesmo com duas emissões ao mesmo tempo.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${PROMISSORY_LOCK_KEY})`;
-      const created: number[] = [];
+      const created: CreatedPromissorySummary[] = [];
       for (const installment of parsed.installments) {
         const note = await tx.promissoryNote.create({
           data: {
@@ -69,13 +80,26 @@ export async function createPromissoryNotes(formData: FormData): Promise<Promiss
           },
           select: { id: true, number: true },
         });
-        created.push(note.number);
+        created.push({
+          id: note.id,
+          number: note.number,
+          installmentNo: installment.installmentNo,
+          installmentCount: installment.installmentCount,
+          amount: installment.amount,
+          dueDate: installment.dueDate,
+        });
         await recordAdminAudit(tx, session.adminId, note.id, "promissory.create", { number: note.number, installment: `${installment.installmentNo}/${installment.installmentCount}`, amount: installment.amount, dueDate: installment.dueDate });
       }
       return created;
     });
+    const numbers = createdNotes.map((item) => item.number);
     refresh();
-    return { ok: true, message: numbers.length === 1 ? `Nota nº ${numbers[0]} emitida.` : `${numbers.length} notas emitidas (nº ${numbers.join(", ")}).` };
+    return {
+      ok: true,
+      message: numbers.length === 1 ? `Nota nº ${numbers[0]} emitida.` : `${numbers.length} notas emitidas (nº ${numbers.join(", ")}).`,
+      createdNotes,
+      issuerName: parsed.issuer.name,
+    };
   } catch (error) {
     console.error("[admin/promissorias] falha ao emitir:", error);
     return { ok: false, message: "Não foi possível emitir as notas. Nada foi salvo." };
