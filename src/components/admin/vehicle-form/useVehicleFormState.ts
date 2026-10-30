@@ -78,6 +78,7 @@ export function useVehicleFormState({
   vehicle,
   prefill,
   preparationId,
+  draftId,
   mode,
   adminId,
   initialTab = "anuncio",
@@ -117,7 +118,7 @@ export function useVehicleFormState({
     ),
   );
   const [photosUploading, setPhotosUploading] = useState(false);
-  const draftScope = vehicleDraftScope(vehicle?.id, preparationId);
+  const draftScope = vehicleDraftScope(vehicle?.id, preparationId, draftId);
   const [draftSaving, setDraftSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedChangesWarning(dirty);

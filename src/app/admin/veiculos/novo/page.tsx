@@ -7,11 +7,11 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ prep?: string }> }) {
+export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ prep?: string; draft?: string }> }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const { prep } = await searchParams;
+  const { prep, draft } = await searchParams;
   const item = prep ? await prisma.preparationVehicle.findUnique({ where: { id: prep } }) : null;
 
   return (
@@ -29,6 +29,7 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
         adminId={session.adminId}
         prefill={item ? preparationPrefill(item) : undefined}
         preparationId={item?.id}
+        draftId={draft}
       />
     </div>
   );
