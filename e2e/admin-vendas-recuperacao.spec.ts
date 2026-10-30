@@ -124,7 +124,48 @@ test("API completa registra comprador, valor e pós-venda atomicamente", async (
   expect(await db.sale.count({ where: { vehicleId: vehicle.id } })).toBe(1);
 });
 
-test("fluxo completo preserva campos após falha, sem abrir venda simples, e grava contrato", async ({ page, vehicle }) => {
+test("venda rápida reaproveita cliente de mesmo nome e telefone, sem duplicar", async ({ page, vehicle }) => {
+  const phone = `279${randomInt(10_000_000, 99_999_999)}`;
+  const existing = await db.customer.create({ data: { name: "Comprador de teste", phone } });
+  const response = await page.request.patch(`/api/admin/vehicles/${vehicle.id}/sell`, { data: {
+    buyerName: "Comprador de teste", buyerPhone: phone, salePrice: 78000, paymentMethod: "Pix",
+  } });
+  expect(response.status()).toBe(200);
+  expect(await db.customer.count({ where: { phone } })).toBe(1);
+  expect((await db.sale.findUniqueOrThrow({ where: { vehicleId: vehicle.id } })).customerId).toBe(existing.id);
+});
+
+test("venda rápida com telefone de outro nome é recusada e manda para o assistente", async ({ page, vehicle }) => {
+  const phone = `279${randomInt(10_000_000, 99_999_999)}`;
+  const other = await db.customer.create({ data: { name: "Outra pessoa de teste", phone } });
+  try {
+    const response = await page.request.patch(`/api/admin/vehicles/${vehicle.id}/sell`, { data: {
+      buyerName: "Comprador de teste", buyerPhone: phone, salePrice: 78000, paymentMethod: "Pix",
+    } });
+    expect(response.status()).toBe(409);
+    expect(await response.json()).toMatchObject({ ok: false, nextUrl: `/admin/vendas/nova?veiculo=${vehicle.id}` });
+    expect(await db.sale.count({ where: { vehicleId: vehicle.id } })).toBe(0);
+    expect((await db.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).status).toBe("disponivel");
+  } finally {
+    await db.customer.delete({ where: { id: other.id } });
+  }
+});
+
+test("reserva com sinal na venda rápida manda para o assistente", async ({ page, vehicle }) => {
+  const customer = await db.customer.create({ data: { name: "Reserva de teste", phone: `279${randomInt(10_000_000, 99_999_999)}` } });
+  await db.vehicleReservation.create({ data: { vehicleId: vehicle.id, customerId: customer.id, deposit: 1000, expiresAt: new Date(Date.now() + 86_400_000) } });
+  try {
+    const response = await page.request.patch(`/api/admin/vehicles/${vehicle.id}/sell`, { data: {} });
+    expect(response.status()).toBe(409);
+    expect(await response.json()).toMatchObject({ ok: false, nextUrl: `/admin/vendas/nova?veiculo=${vehicle.id}` });
+    expect(await db.sale.count({ where: { vehicleId: vehicle.id } })).toBe(0);
+  } finally {
+    await db.vehicleReservation.deleteMany({ where: { vehicleId: vehicle.id } });
+    await db.customer.delete({ where: { id: customer.id } });
+  }
+});
+
+test("fluxo completo valida cada etapa, preserva campos ao voltar, sem abrir venda simples, e grava contrato", async ({ page, vehicle }) => {
   test.setTimeout(90_000);
   await page.goto(`/admin/veiculos?q=${encodeURIComponent(vehicle.model)}`);
   await page.getByRole("button", { name: "Registrar venda completa", exact: true }).click();
@@ -135,7 +176,14 @@ test("fluxo completo preserva campos após falha, sem abrir venda simples, e gra
   await page.getByLabel("Cadastrar cliente nesta venda").check();
   await page.getByLabel("Nome", { exact: true }).fill("Comprador de teste");
   await page.getByLabel("Telefone", { exact: true }).fill("123");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "telefone do comprador com DDD" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Cliente", exact: true })).toBeVisible();
+  await page.getByLabel("Telefone", { exact: true }).fill("27988887777");
+  await expect(page.getByLabel("Telefone", { exact: true })).toHaveValue("(27) 98888-7777");
   await advanceSale(page, "Pagamento");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Escolha pelo menos uma forma de pagamento" })).toBeVisible();
   await page.getByLabel("Valor total negociado").fill("78.000,00");
   await page.getByRole("button", { name: /À vista\/PIX/ }).click();
   await page.getByLabel("Valor", { exact: true }).fill("78.000,00");
@@ -144,17 +192,12 @@ test("fluxo completo preserva campos após falha, sem abrir venda simples, e gra
   await page.getByLabel("Responsável comercial").fill("Vendedor de teste");
   await page.getByLabel("Comissão (R$)").fill("0");
   await advanceSale(page, "Revisar e gerar contrato");
-  await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
-  await expect(page.getByText("Informe nome e telefone válidos do comprador.", { exact: true })).toBeVisible();
-  await expect(page.getByRole("dialog", { name: "Marcar como vendida (simples)" })).toBeHidden();
   expect(await db.sale.count({ where: { vehicleId: vehicle.id } })).toBe(0);
-  expect((await db.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).status).toBe("disponivel");
   for (const heading of ["Vendedor", "Pagamento", "Cliente"]) {
     await page.getByRole("button", { name: "Voltar", exact: true }).click();
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
   }
   await expect(page.getByLabel("Nome", { exact: true })).toHaveValue("Comprador de teste");
-  await page.getByLabel("Telefone", { exact: true }).fill("27988887777");
   for (const heading of ["Pagamento", "Vendedor", "Revisar e gerar contrato"]) await advanceSale(page, heading);
   await page.getByRole("button", { name: "Gerar contrato e registrar venda" }).click();
   await expect(page.getByRole("heading", { name: "Venda registrada", exact: true })).toBeVisible();

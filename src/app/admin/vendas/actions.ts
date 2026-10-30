@@ -1,7 +1,6 @@
 "use server";
 
 import { scheduleAfterSale } from "@/lib/after-sale";
-import { lockCustomerIdentity } from "@/lib/admin-customer-lock";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { parseMoneyBR } from "@/lib/admin-money";
 import { businessDay } from "@/lib/admin-date";
@@ -142,6 +141,7 @@ async function requireAdmin() {
   return session;
 }
 
+/** Cliente da venda do modal: cadastro escolhido, ou novo por `resolveBuyer` (mesma regra de duplicado do assistente). Sem nome e telefone, fica sem cliente. */
 async function resolveCustomerId(
   tx: Prisma.TransactionClient,
   {
@@ -156,24 +156,9 @@ async function resolveCustomerId(
 ) {
   const isNewCustomer = customerId === "" || customerId === "novo";
   if (!isNewCustomer) return customerId;
-
-  if (!customerName && customerPhone.length < 10) return null;
-
-  if (customerPhone) {
-    await lockCustomerIdentity(tx, customerPhone);
-    const existing = await tx.customer.findFirst({
-      where: { phone: customerPhone },
-    });
-    if (existing) throw new Error("DUPLICATE_CUSTOMER");
-  }
-  return (
-    await tx.customer.create({
-      data: {
-        name: customerName || "Não informado",
-        phone: customerPhone || "",
-      },
-    })
-  ).id;
+  if (!customerName && !customerPhone) return null;
+  const customer = await resolveBuyer(tx, { customerId: "novo", customerName, customerPhone, cpf: "", rg: "", address: undefined, hasReservation: false });
+  return customer.id;
 }
 
 type ParsedSaleForm = {
@@ -242,8 +227,9 @@ function parseSaleForm(formData: FormData): ParsedSaleForm {
   }
 
   const isNewCustomer = customerId === "" || customerId === "novo";
-  if (isNewCustomer && customerPhone && customerPhone.length < 10) {
-    fieldErrors.customerPhone = "Telefone incompleto.";
+  if (isNewCustomer && (customerName || customerPhone)) {
+    if (!customerName) fieldErrors.customerName = "Informe o nome do cliente, ou apague o telefone para registrar sem cliente.";
+    if (customerPhone.length < 10) fieldErrors.customerPhone = "Telefone incompleto: informe com DDD (10 ou 11 dígitos).";
   }
 
   const paymentMethod = paymentMethodRaw || (isHistorical ? "Histórico" : "");
@@ -418,7 +404,7 @@ export async function createSale(formData: FormData): Promise<SaleActionState> {
       return {
         ok: false,
         message:
-          "Já existe cliente com esse telefone. Escolha o cadastro no campo Cliente antes de registrar.",
+          "Já existe cliente com esse telefone ou CPF. Escolha o cadastro no campo Cliente antes de registrar.",
         fieldErrors: { customerPhone: "Cliente já cadastrado." },
       };
     console.error(error);

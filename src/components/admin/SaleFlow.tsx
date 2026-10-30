@@ -8,6 +8,8 @@ import { CustomerStage, PaymentStage, ReviewStage, SaleResult, SellerStage, Stag
 import type { Customer, SaleIds, SaleResultData, Vehicle, VehicleOption } from "@/components/admin/SaleFlowStages";
 import { adminMutation } from "@/lib/admin-mutation";
 import { moneyInput, parseMoneyBR } from "@/lib/admin-money";
+import { firstSaleProblem, validateSaleStage } from "@/lib/sale-flow-validation";
+import type { SaleDraft } from "@/lib/sale-flow-validation";
 import { sumContractPayments, type ContractPaymentItem, type ContractPaymentMethod } from "@/lib/admin-commercial";
 
 export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: Vehicle | null; initialCustomer: Customer | null }) {
@@ -35,7 +37,25 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
     ? [...payments.filter((p) => p.method !== "sinal"), { method: "sinal" as const, amount: heldDeposit ?? payments.find((p) => p.method === "sinal")?.amount ?? 0 }]
     : payments;
   const paymentTotal = sumContractPayments(selectedPayments);
-  const paymentMatches = totalNumber > 0 && Math.round(paymentTotal * 100) === Math.round(totalNumber * 100);
+
+  const draft: SaleDraft = { vehicleId: vehicle?.id ?? "", customer, total: totalNumber, payments: selectedPayments, commission };
+
+  function goTo(next: number) {
+    setError("");
+    setStage(next);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function notesProblem(forStage: number) {
+    if (forStage !== 2 || !payments.some((p) => p.method === "promissoria" && !p.noteIds?.length)) return null;
+    return "Promissória: emita as notas antes de continuar.";
+  }
+
+  function advance() {
+    const message = validateSaleStage(stage, draft) ?? notesProblem(stage);
+    if (message) { setError(message); return; }
+    goTo(stage + 1);
+  }
 
   function moneyField(key: string, value: number, update: (amount: number) => void) {
     const dropDraft = () => setMoneyDrafts((drafts) => { const next = { ...drafts }; delete next[key]; return next; });
@@ -95,6 +115,10 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
   }
 
   async function submit() {
+    const problem = firstSaleProblem(draft);
+    const notes = notesProblem(2);
+    if (!problem && notes) { setStage(2); setError(notes); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (problem) { setStage(problem.stage); setError(problem.message); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setBusy(true); setError("");
     const response = await adminMutation(() => finalizeSaleFlow(JSON.stringify({
       vehicleId: vehicle?.id,
@@ -129,13 +153,13 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
         {stage === 2 && <PaymentStage customer={customer ? { ...customer, rg: ids.rg } : null} notesBusy={issuingNotes} onBusyChange={setIssuingNotes} vehicle={vehicle} total={total} payments={payments} signal={signal} paymentTotal={paymentTotal} totalNumber={totalNumber} moneyField={moneyField} onTotalChange={setTotal} onToggle={toggle} updatePayment={updatePayment} />}
         {stage === 3 && <SellerStage seller={seller} commission={commission} onSellerChange={setSeller} onCommissionChange={setCommission} />}
         {stage === 4 && <ReviewStage vehicle={vehicle} customer={customer} totalNumber={totalNumber} selectedPayments={selectedPayments} seller={seller} commission={commission} includeProposal={includeProposal} conditions={conditions} onIncludeProposalChange={setIncludeProposal} onConditionsChange={setConditions} />}
-        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-        <div className="flex justify-between">
-          <button type="button" className={btn.outline} disabled={stage === 0 || busy || issuingNotes} onClick={() => setStage((current) => current - 1)}>Voltar</button>
-          {stage < 4 && <button type="button" className={btn.primary} disabled={issuingNotes || (stage === 2 && (!paymentMatches || payments.some((p) => p.method === "promissoria" && !p.noteIds?.length)))} onClick={() => setStage((current) => current + 1)}>Continuar</button>}
+        {error && <p role="alert" className="rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700">{error}</p>}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+          <button type="button" className={`${btn.outline} w-full sm:w-auto`} disabled={stage === 0 || busy || issuingNotes} onClick={() => goTo(stage - 1)}>Voltar</button>
+          {stage < 4 && <button type="button" className={`${btn.primary} w-full sm:w-auto`} disabled={issuingNotes} onClick={advance}>Continuar</button>}
         </div>
       </section>
-      {stage === 4 && <button type="button" className={btn.primary} disabled={busy || !vehicle || !customer || !selectedPayments.length || !paymentMatches} onClick={submit}>{busy ? "Registrando…" : "Gerar contrato e registrar venda"}</button>}
+      {stage === 4 && <button type="button" className={`${btn.primary} w-full sm:w-auto`} disabled={busy || issuingNotes} onClick={submit}>{busy ? "Registrando…" : "Gerar contrato e registrar venda"}</button>}
     </div>
   );
 }
