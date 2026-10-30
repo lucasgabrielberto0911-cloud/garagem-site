@@ -400,7 +400,7 @@ export function useVehicleFormState({
 
   function changeStep(next: VehicleWizardStep) {
     setStep(next);
-    setDirty(true);
+    if (mode === "create") setDirty(true);
     requestAnimationFrame(() =>
       document.getElementById("wizard-title")?.focus(),
     );
