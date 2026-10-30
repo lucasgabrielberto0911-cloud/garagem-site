@@ -179,10 +179,18 @@ test.describe("edição M5: etapas com acesso direto, salvar sempre visível e a
 
     // Kit de divulgação abre o modal e fecha.
     await sheet.getByRole("button", { name: /Kit de divulgação/i }).click();
+    const promoDialog = page.getByRole("dialog", { name: "Kit de Divulgação" });
+    await expect(promoDialog).toBeVisible();
     await expect(
-      page.getByRole("button", { name: /Copiar legenda/i }).first(),
+      promoDialog.getByRole("button", {
+        name: "Copiar texto do WhatsApp",
+        exact: true,
+      }),
     ).toBeVisible();
-    await page.keyboard.press("Escape");
+    await promoDialog
+      .getByRole("button", { name: "Fechar", exact: true })
+      .click();
+    await expect(promoDialog).toBeHidden();
 
     // Iniciar venda leva ao fluxo de venda após confirmação.
     await moreButton.click();
