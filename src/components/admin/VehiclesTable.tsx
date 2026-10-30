@@ -440,8 +440,13 @@ export function VehiclesTable({
         `/api/admin/vehicles/${encodeURIComponent(target.id)}/sell`,
         { method: "PATCH", headers: { "Content-Type": "application/json" }, body: "{}" },
       );
-      const result = (await response.json()) as { ok?: boolean; message?: string };
+      const result = (await response.json()) as { ok?: boolean; message?: string; nextUrl?: string };
       if (!response.ok || !result.ok) {
+        if (result.nextUrl?.startsWith("/admin/vendas/nova")) {
+          toast.error(result.message ?? "Conclua a venda pelo assistente.");
+          router.push(result.nextUrl);
+          return;
+        }
         toast.error(result.message ?? "Não foi possível marcar o veículo como vendido.");
         return;
       }

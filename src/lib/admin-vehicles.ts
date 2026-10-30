@@ -556,8 +556,16 @@ export async function getAdminSalesPage(options?: {
     }),
   ]);
 
+  // Venda de estoque sem contrato (modal ou "vender" rápido) ganha o aviso e o atalho "Gerar contrato" na lista.
+  const withContract = new Set(
+    (await prisma.commercialDocument.findMany({
+      where: { kind: "contrato", vehicleId: { in: sales.map((sale) => sale.vehicleId) } },
+      select: { vehicleId: true },
+    })).map((doc) => doc.vehicleId),
+  );
+
   return {
-    sales,
+    sales: sales.map((sale) => ({ ...sale, hasContract: withContract.has(sale.vehicleId) })),
     total,
     page,
     pageSize,
