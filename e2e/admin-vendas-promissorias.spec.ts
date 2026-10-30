@@ -79,7 +79,7 @@ test("contrato: notas existentes + PIX, divergência e nota paga não deixam ven
   const panel = page.getByRole("region", { name: "Pagamento em promissórias" });
   await panel.getByRole("checkbox", { name: new RegExp(`Nota nº ${saleData.number} ·`) }).check();
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText(/Faltam.*1\.000,00/);
+  await expect(page.getByRole("alert").filter({ hasText: /Faltam/ })).toContainText(/1\.000,00/);
   await page.getByRole("button", { name: /À vista\/PIX/ }).click();
   await page.getByLabel("Valor", { exact: true }).fill("1.000,00");
   await page.getByLabel("Valor", { exact: true }).blur();
