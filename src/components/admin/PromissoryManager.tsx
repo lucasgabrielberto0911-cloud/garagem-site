@@ -315,7 +315,7 @@ export function PromissoryManager({
     extra?: { required?: boolean; hint?: string; className?: string },
   ) => (
     <Field label={label} required={extra?.required} error={errors[name]} hint={extra?.hint} className={extra?.className}>
-      <input name={name} value={form![name]} onChange={(event) => update(name, event.target.value)} className={inputClass} {...props} />
+      <input name={name} value={form?.[name] ?? ""} onChange={(event) => update(name, event.target.value)} className={inputClass} {...props} />
     </Field>
   );
 
