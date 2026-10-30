@@ -22,17 +22,35 @@ export function VehicleDraftToolbar({
   disabled: boolean;
   onSavingChange: (saving: boolean) => void;
 }) {
-  const { draft, status, note, save, resumed } = useVehicleDraftAutosave({ draftKey, storageKey, snapshot, enabled, disabled, published, onSavingChange });
+  const {
+    draft,
+    status,
+    note,
+    save,
+    resumed,
+    confirmDialog: saveConfirmDialog,
+  } = useVehicleDraftAutosave({
+    draftKey,
+    storageKey,
+    snapshot,
+    enabled,
+    disabled,
+    published,
+    onSavingChange,
+  });
   const pending = status === "pending";
   const [confirmAction, confirmDialog] = useConfirmDialog();
   return (
     <div className="space-y-2 border border-white/10 bg-ink/50 p-3 sm:space-y-3 sm:p-4">
       {confirmDialog}
+      {saveConfirmDialog}
       <p className="hidden text-sm leading-relaxed text-muted sm:block">
-        O preenchimento é guardado automaticamente como rascunho privado.
-        Só salvar o anúncio atualiza a vitrine.
+        O preenchimento é guardado automaticamente como rascunho privado. Só
+        salvar o anúncio atualiza a vitrine.
       </p>
-      <p className="text-xs text-muted sm:hidden">Rascunho privado · não publica o anúncio</p>
+      <p className="text-xs text-muted sm:hidden">
+        Rascunho privado · não publica o anúncio
+      </p>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -40,7 +58,11 @@ export function VehicleDraftToolbar({
           onClick={save}
           className={`${btn.outline} flex-1 sm:flex-none`}
         >
-          {pending ? "Salvando rascunho…" : status === "error" || status === "conflict" ? "Tentar salvar rascunho" : "Guardar rascunho"}
+          {pending
+            ? "Salvando rascunho…"
+            : status === "error" || status === "conflict"
+              ? "Tentar salvar rascunho"
+              : "Guardar rascunho"}
         </button>
         {draft ? (
           <button

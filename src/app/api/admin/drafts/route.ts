@@ -3,8 +3,10 @@ import { withAdminStorageLock } from "@/lib/admin-storage-lock";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { draftVersionMatches } from "@/lib/admin-draft-version";
+
+import { vehicleDraftSummary } from "@/lib/vehicle-draft-fields";
 
 const headers = { "Cache-Control": "private, no-store" };
 
@@ -21,7 +23,36 @@ export async function GET(request: Request) {
     );
 
   try {
-    const key = new URL(request.url).searchParams.get("key") || "";
+    const params = new URL(request.url).searchParams;
+    const prefix = params.get("prefix");
+    const key = params.get("key") || "";
+    if (prefix !== null) {
+      if (prefix !== "vehicle:new" || params.has("key"))
+        return NextResponse.json(
+          { error: "Prefixo de rascunho inválido." },
+          { status: 400, headers },
+        );
+      const drafts = await prisma.adminDraft.findMany({
+        where: {
+          adminId: session.adminId,
+          expiresAt: { gt: new Date() },
+          OR: [{ key: "vehicle:new" }, { key: { startsWith: "vehicle:new-" } }],
+          payload: { path: ["fields"], not: Prisma.JsonNull },
+        },
+        select: { key: true, payload: true, updatedAt: true },
+        orderBy: [{ updatedAt: "desc" }, { key: "asc" }],
+      });
+      return NextResponse.json(
+        {
+          drafts: drafts.map((draft) => ({
+            key: draft.key,
+            updatedAt: draft.updatedAt,
+            ...vehicleDraftSummary(draft.payload),
+          })),
+        },
+        { headers },
+      );
+    }
     if (!validKey(key))
       return NextResponse.json(
         { error: "Rascunho inválido." },
@@ -87,7 +118,8 @@ export async function POST(request: Request) {
   const payload = body.payload;
   const photoUrls = body.photoUrls;
   const expectedUpdatedAt =
-    typeof body.expectedUpdatedAt === "string" || body.expectedUpdatedAt === null
+    typeof body.expectedUpdatedAt === "string" ||
+    body.expectedUpdatedAt === null
       ? body.expectedUpdatedAt
       : undefined;
 
@@ -132,8 +164,7 @@ export async function POST(request: Request) {
         };
       }
       const stored = existing?.payload as
-        | { photos?: Array<{ url?: string; thumbnailUrl?: string }> }
-        | undefined;
+        { photos?: Array<{ url?: string; thumbnailUrl?: string }> } | undefined;
       const savedUrls = Array.isArray(stored?.photos)
         ? stored.photos.flatMap((p) =>
             [p.url, p.thumbnailUrl].filter(
