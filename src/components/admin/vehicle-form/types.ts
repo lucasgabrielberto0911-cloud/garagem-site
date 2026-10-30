@@ -14,6 +14,7 @@ export type VehicleFormProps = {
   listingScore?: StoredListingScore | null;
   initialTab?: "anuncio" | "fotos";
   layout?: "wizard";
+  autoRestoreDraft?: boolean;
 };
 export const STATUSES = [
   { value: "disponivel", label: "Disponível" },

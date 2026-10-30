@@ -3,6 +3,65 @@ import type { Prisma } from "@prisma/client";
 export const DUPLICATE_DRAFT_KEY = "vehicle:new";
 export const DUPLICATE_BACKUP_KEY = "vehicle:new:backup";
 
+export function getLocalDraftStorageKey(
+  adminId: string,
+  scope = "new",
+): string {
+  return `garagem:vehicle-draft:${adminId}:${scope}`;
+}
+
+export function getLocalDraftBackupStorageKey(
+  adminId: string,
+  scope = "new",
+): string {
+  return `garagem:vehicle-draft:${adminId}:${scope}:backup`;
+}
+
+export function getLocalDraftAutoRestoreKey(
+  adminId: string,
+  scope = "new",
+): string {
+  return `garagem:vehicle-draft:${adminId}:${scope}:auto-restore`;
+}
+
+export type StorageLike = {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+};
+
+/**
+ * Limpa o rascunho local de novo veículo apenas para o admin informado,
+ * preservando um backup local do rascunho anterior (caso existisse)
+ * e marcando a flag para restauração automática no cadastro.
+ */
+export function rotateLocalDraftOnDuplicate(
+  storages: StorageLike[],
+  adminId: string,
+  sessionTarget?: Pick<StorageLike, "setItem"> | null,
+) {
+  if (!adminId) return;
+  const draftKey = getLocalDraftStorageKey(adminId, "new");
+  const backupKey = getLocalDraftBackupStorageKey(adminId, "new");
+  const autoRestoreKey = getLocalDraftAutoRestoreKey(adminId, "new");
+
+  for (const storage of storages) {
+    try {
+      const existing = storage.getItem(draftKey);
+      if (existing) {
+        storage.setItem(backupKey, existing);
+      }
+      storage.removeItem(draftKey);
+    } catch {}
+  }
+
+  if (sessionTarget) {
+    try {
+      sessionTarget.setItem(autoRestoreKey, "1");
+    } catch {}
+  }
+}
+
 export type DuplicateSourceVehicle = {
   category?: string | null;
   brand?: string | null;

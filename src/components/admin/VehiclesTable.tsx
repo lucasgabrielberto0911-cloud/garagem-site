@@ -60,6 +60,7 @@ import { coverSrc } from "@/lib/stock-query";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import type { StockPending } from "@/lib/admin-stock-pending";
 import { stockListQuietNote } from "@/lib/stock-quality";
+import { rotateLocalDraftOnDuplicate } from "@/lib/admin-duplicate-vehicle";
 import {
   deleteVehicle,
   duplicateVehicle,
@@ -153,6 +154,7 @@ export function VehiclesTable({
   availableCount: availableCountProp,
   reservedCount: reservedCountProp,
   quality,
+  adminId,
 }: {
   vehicles: VehicleRow[];
   initialTotal: number;
@@ -171,6 +173,7 @@ export function VehiclesTable({
     stale: number;
     staleDays: number;
   };
+  adminId?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -628,25 +631,18 @@ export function VehiclesTable({
       vehicle.id,
       () => duplicateVehicle(vehicle.id, options),
       (result) => {
-        try {
-          for (const storage of [window.sessionStorage, window.localStorage]) {
-            const toRemove: string[] = [];
-            for (let i = 0; i < storage.length; i++) {
-              const key = storage.key(i);
-              if (
-                key &&
-                key.startsWith("garagem:vehicle-draft:") &&
-                key.endsWith(":new")
-              ) {
-                toRemove.push(key);
-              }
-            }
-            for (const key of toRemove) storage.removeItem(key);
-          }
-        } catch {}
-        if (result.redirectUrl) {
-          router.push(result.redirectUrl);
-        } else {
+        if (!result.ok) return;
+        const currentAdminId = result.adminId ?? adminId;
+        if (currentAdminId) {
+          try {
+            rotateLocalDraftOnDuplicate(
+              [window.sessionStorage, window.localStorage],
+              currentAdminId,
+              window.sessionStorage,
+            );
+          } catch {}
+        }
+        if (!result.redirectUrl) {
           void fetchPage(1, sort, true);
         }
       },

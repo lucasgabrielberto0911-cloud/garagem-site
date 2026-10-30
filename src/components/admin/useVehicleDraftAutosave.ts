@@ -46,6 +46,8 @@ export function useVehicleDraftAutosave({
   draftKey,
   storageKey,
   snapshot,
+  restore,
+  autoRestore,
   enabled,
   disabled,
   published,
@@ -54,6 +56,8 @@ export function useVehicleDraftAutosave({
   draftKey: string;
   storageKey: string;
   snapshot: () => VehicleDraftPayload;
+  restore?: (value: VehicleDraftPayload) => void;
+  autoRestore?: boolean;
   enabled: boolean;
   disabled: boolean;
   published: boolean;
@@ -61,16 +65,27 @@ export function useVehicleDraftAutosave({
 }) {
   const [confirmAction, confirmDialog] = useConfirmDialog();
   const [draft, setDraft] = useState<VehicleDraftPayload | null>(null);
+  const [canResume, setCanResume] = useState(false);
   const [status, setStatus] = useState<Status>("loading");
   const [note, setNote] = useState("");
   const latest = useRef({
     snapshot,
+    restore,
+    autoRestore,
     enabled,
     disabled,
     published,
     onSavingChange,
   });
-  latest.current = { snapshot, enabled, disabled, published, onSavingChange };
+  latest.current = {
+    snapshot,
+    restore,
+    autoRestore,
+    enabled,
+    disabled,
+    published,
+    onSavingChange,
+  };
   const version = useRef<string | null>(null);
   const recovery = useRef(false);
   const conflict = useRef(false);
@@ -147,52 +162,48 @@ export function useVehicleDraftAutosave({
           throw new Error("save");
         }
         if (!active || latest.current.published) return;
-        version.current = data.updatedAt;
-        setDraft(payload);
-        if (fingerprint.current === JSON.stringify(payload))
-          store(payload, data.updatedAt);
+        version.current = data.draft.updatedAt;
+        store(payload, data.draft.updatedAt);
+        setStatus("saved");
+        setNote("Rascunho privado guardado.");
       },
-      (state) => {
-        if (!active || latest.current.published) return;
-        setStatus(conflict.current ? "conflict" : state);
-        latest.current.onSavingChange(state === "pending");
-        if (state === "saved")
-          setNote("Rascunho privado salvo. O anúncio ainda não foi publicado.");
-        if (state === "error" && !conflict.current)
-          setNote(
-            "Rascunho não salvo no servidor. Seus campos continuam aqui; tente novamente.",
-          );
+      {
+        onBusyChange: (busy) => {
+          if (!active) return;
+          latest.current.onSavingChange(busy);
+          if (busy) {
+            setStatus("pending");
+            setNote("Salvando rascunho…");
+          }
+        },
       },
     );
     queue.current = writes;
+
     capture.current = () => {
-      if (!active || !latest.current.enabled || latest.current.published)
-        return;
-      const payload = latest.current.snapshot();
-      const key = JSON.stringify(payload);
-      if (key === fingerprint.current) return;
-      fingerprint.current = key;
-      // A cópia local é imediata; o servidor recebe após uma pausa na digitação.
-      store(payload, null);
-      if (timer.current) clearTimeout(timer.current);
       if (
         !ready.current ||
         recovery.current ||
         conflict.current ||
-        latest.current.disabled
+        latest.current.disabled ||
+        latest.current.published
       )
         return;
+      const next = latest.current.snapshot();
+      const stringified = JSON.stringify(next);
+      if (stringified === fingerprint.current) return;
+      fingerprint.current = stringified;
+      store(next, null);
+      if (timer.current) clearTimeout(timer.current);
+      if (!latest.current.enabled) {
+        setStatus("idle");
+        setNote("");
+        return;
+      }
       setStatus("pending");
+      setNote("Salvando rascunho…");
       timer.current = setTimeout(() => {
-        if (
-          active &&
-          latest.current.enabled &&
-          !latest.current.disabled &&
-          !latest.current.published &&
-          !recovery.current &&
-          !conflict.current
-        )
-          writes.enqueue(payload);
+        writes.enqueue(next);
       }, 1000);
     };
     const read = async () => {
@@ -205,12 +216,38 @@ export function useVehicleDraftAutosave({
           local?.syncedVersion === null ? local.payload : remote?.payload;
         if (saved) {
           setDraft(saved);
-          recovery.current =
-            !latest.current.enabled ||
-            JSON.stringify(saved) !== JSON.stringify(latest.current.snapshot());
-          setNote(
-            "Há um rascunho privado para retomar. Ele não foi publicado.",
-          );
+          let shouldAuto = Boolean(latest.current.autoRestore);
+          if (!shouldAuto) {
+            try {
+              const autoKey = `${storageKey}:auto-restore`;
+              if (sessionStorage.getItem(autoKey) === "1") {
+                sessionStorage.removeItem(autoKey);
+                shouldAuto = true;
+              }
+            } catch {}
+          }
+          if (shouldAuto && latest.current.restore) {
+            latest.current.restore(saved);
+            recovery.current = false;
+            conflict.current = false;
+            setCanResume(false);
+            fingerprint.current = JSON.stringify(saved);
+            store(saved, version.current);
+          } else {
+            const needsRecovery =
+              !latest.current.enabled ||
+              JSON.stringify(saved) !==
+                JSON.stringify(latest.current.snapshot());
+            recovery.current = needsRecovery;
+            setCanResume(needsRecovery);
+            if (needsRecovery) {
+              setNote(
+                "Há um rascunho privado para retomar. Ele não foi publicado.",
+              );
+            }
+          }
+        } else {
+          setCanResume(false);
         }
         setStatus("idle");
         ready.current = true;
@@ -221,7 +258,24 @@ export function useVehicleDraftAutosave({
           const local = readBackup(storageKey);
           if (local) {
             setDraft(local.payload);
-            recovery.current = true;
+            let shouldAuto = Boolean(latest.current.autoRestore);
+            if (!shouldAuto) {
+              try {
+                const autoKey = `${storageKey}:auto-restore`;
+                if (sessionStorage.getItem(autoKey) === "1") {
+                  sessionStorage.removeItem(autoKey);
+                  shouldAuto = true;
+                }
+              } catch {}
+            }
+            if (shouldAuto && latest.current.restore) {
+              latest.current.restore(local.payload);
+              recovery.current = false;
+              setCanResume(false);
+            } else {
+              recovery.current = true;
+              setCanResume(true);
+            }
           }
           setStatus("error");
           setNote(
@@ -265,6 +319,7 @@ export function useVehicleDraftAutosave({
           if (timer.current) clearTimeout(timer.current);
           setStatus("conflict");
           setDraft(other.payload);
+          setCanResume(true);
           setNote(
             "Outra aba alterou o rascunho. Seus campos foram mantidos; escolha qual versão guardar ou retomar.",
           );
@@ -337,6 +392,7 @@ export function useVehicleDraftAutosave({
     }
     recovery.current = false;
     conflict.current = false;
+    setCanResume(false);
     if (timer.current) clearTimeout(timer.current);
     fingerprint.current = "";
     const payload = latest.current.snapshot();
@@ -366,7 +422,8 @@ export function useVehicleDraftAutosave({
     recovery.current = false;
     conflict.current = false;
     fingerprint.current = "";
+    setCanResume(false);
     setTimeout(() => capture.current(), 0);
   }
-  return { draft, status, note, save, resumed, confirmDialog };
+  return { draft, status, note, save, resumed, canResume, confirmDialog };
 }

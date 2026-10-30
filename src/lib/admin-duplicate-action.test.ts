@@ -171,8 +171,11 @@ test("duplicateVehicle retorna erro quando o veículo não existe", async () => 
 test("duplicateVehicle cria rascunho vehicle:new quando não há rascunho anterior", async () => {
   const result = await duplicateVehicle("v-1");
   assert.equal(result.ok, true);
-  assert.equal(result.redirectUrl, "/admin/veiculos/novo");
-  assert.equal(result.message, "Rascunho criado a partir do anúncio.");
+  if (result.ok) {
+    assert.equal(result.adminId, "admin-1");
+    assert.equal(result.redirectUrl, "/admin/veiculos/novo");
+    assert.equal(result.message, "Rascunho criado a partir do anúncio.");
+  }
 
   const draft = state.drafts.find((d) => d.key === "vehicle:new");
   assert.ok(draft);
@@ -222,7 +225,10 @@ test("duplicateVehicle com replaceDraft preserva rascunho anterior em backup e s
 
   const result = await duplicateVehicle("v-1", { replaceDraft: true });
   assert.equal(result.ok, true);
-  assert.equal(result.redirectUrl, "/admin/veiculos/novo");
+  if (result.ok) {
+    assert.equal(result.adminId, "admin-1");
+    assert.equal(result.redirectUrl, "/admin/veiculos/novo");
+  }
 
   // Rascunho anterior foi preservado em vehicle:new:backup
   const backup = state.drafts.find((d) => d.key === "vehicle:new:backup");

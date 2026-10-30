@@ -4,8 +4,13 @@ import {
   buildDuplicateDraftPayload,
   DUPLICATE_BACKUP_KEY,
   DUPLICATE_DRAFT_KEY,
+  getLocalDraftAutoRestoreKey,
+  getLocalDraftBackupStorageKey,
+  getLocalDraftStorageKey,
   hasDraftContent,
+  rotateLocalDraftOnDuplicate,
   type DuplicateSourceVehicle,
+  type StorageLike,
 } from "./admin-duplicate-vehicle";
 
 const mockVehicle: DuplicateSourceVehicle = {
@@ -196,4 +201,115 @@ test("hasDraftContent identifica rascunho com e sem conteúdo", () => {
     ),
     true,
   );
+});
+
+test("chaves locais de storage para rascunho de veículo", () => {
+  assert.equal(
+    getLocalDraftStorageKey("admin-1", "new"),
+    "garagem:vehicle-draft:admin-1:new",
+  );
+  assert.equal(
+    getLocalDraftBackupStorageKey("admin-1", "new"),
+    "garagem:vehicle-draft:admin-1:new:backup",
+  );
+  assert.equal(
+    getLocalDraftAutoRestoreKey("admin-1", "new"),
+    "garagem:vehicle-draft:admin-1:new:auto-restore",
+  );
+});
+
+test("rotateLocalDraftOnDuplicate preserva backup e limpa apenas o admin atual", () => {
+  function makeMockStorage(initial: Record<string, string>): StorageLike & {
+    data: Record<string, string>;
+  } {
+    const data = { ...initial };
+    return {
+      data,
+      getItem: (key: string) => data[key] ?? null,
+      setItem: (key: string, val: string) => {
+        data[key] = val;
+      },
+      removeItem: (key: string) => {
+        delete data[key];
+      },
+    };
+  }
+
+  const localStorage = makeMockStorage({
+    "garagem:vehicle-draft:admin-1:new": JSON.stringify({ brand: "Corolla" }),
+    "garagem:vehicle-draft:admin-2:new": JSON.stringify({ brand: "Civic" }),
+  });
+  const sessionStorage = makeMockStorage({
+    "garagem:vehicle-draft:admin-1:new": JSON.stringify({ brand: "Corolla" }),
+  });
+
+  rotateLocalDraftOnDuplicate([sessionStorage, localStorage], "admin-1", sessionStorage);
+
+  // Admin 1 teve rascunho movido para backup
+  assert.equal(
+    localStorage.data["garagem:vehicle-draft:admin-1:new"],
+    undefined,
+  );
+  assert.equal(
+    localStorage.data["garagem:vehicle-draft:admin-1:new:backup"],
+    JSON.stringify({ brand: "Corolla" }),
+  );
+  assert.equal(
+    sessionStorage.data["garagem:vehicle-draft:admin-1:new"],
+    undefined,
+  );
+  assert.equal(
+    sessionStorage.data["garagem:vehicle-draft:admin-1:new:backup"],
+    JSON.stringify({ brand: "Corolla" }),
+  );
+
+  // Admin 2 permaneceu intocado (não apagou outros admins)
+  assert.equal(
+    localStorage.data["garagem:vehicle-draft:admin-2:new"],
+    JSON.stringify({ brand: "Civic" }),
+  );
+
+  // Flag de restauração automática foi gravada no sessionStorage
+  assert.equal(
+    sessionStorage.data["garagem:vehicle-draft:admin-1:new:auto-restore"],
+    "1",
+  );
+});
+
+test("rotateLocalDraftOnDuplicate lida com ausência de rascunho anterior e erros de storage", () => {
+  let setCalls = 0;
+  const throwStorage: StorageLike = {
+    getItem: () => {
+      throw new Error("QuotaExceeded");
+    },
+    setItem: () => {
+      setCalls++;
+    },
+    removeItem: () => {
+      throw new Error("QuotaExceeded");
+    },
+  };
+
+  // Não deve lançar erro mesmo se o storage falhar
+  assert.doesNotThrow(() => {
+    rotateLocalDraftOnDuplicate([throwStorage], "admin-1", throwStorage);
+  });
+  assert.equal(setCalls, 1); // Tentou setar auto-restore
+
+  // Com adminId vazio não faz nada
+  let emptyCalls = 0;
+  const spyStorage: StorageLike = {
+    getItem: () => {
+      emptyCalls++;
+      return null;
+    },
+    setItem: () => {
+      emptyCalls++;
+    },
+    removeItem: () => {
+      emptyCalls++;
+    },
+  };
+  rotateLocalDraftOnDuplicate([spyStorage], "", spyStorage);
+  assert.equal(emptyCalls, 0);
 });

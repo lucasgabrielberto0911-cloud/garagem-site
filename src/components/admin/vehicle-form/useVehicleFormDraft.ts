@@ -11,7 +11,7 @@ import type { VehicleFormProps } from "./types";
 
 export function useVehicleFormDraft(
   form: VehicleFormModel,
-  { vehicle, adminId }: VehicleFormProps,
+  { vehicle, adminId, autoRestoreDraft }: VehicleFormProps,
 ) {
   const {
     step,
@@ -185,5 +185,6 @@ export function useVehicleFormDraft(
     onSavingChange: setDraftSaving,
     snapshot,
     restore,
+    autoRestore: Boolean(autoRestoreDraft),
   };
 }

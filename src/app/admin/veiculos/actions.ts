@@ -900,6 +900,7 @@ export async function duplicateVehicle(
   revalidatePath("/admin/veiculos");
   return {
     ok: true as const,
+    adminId: session.adminId,
     message: "Rascunho criado a partir do anúncio.",
     redirectUrl: "/admin/veiculos/novo",
   };
