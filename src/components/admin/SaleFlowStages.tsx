@@ -67,7 +67,7 @@ export async function searchCustomers(q: string, signal?: AbortSignal): Promise<
   const response = await fetch(`/api/admin/clientes?q=${encodeURIComponent(q)}&take=20`, { signal });
   if (!response.ok) return [];
   const data = await response.json();
-  return (data.customers ?? []).map((item: Customer) => ({ ...item, label: `${item.name} · ${item.phone}` }));
+  return (data.customers ?? []).map((item: Customer) => ({ ...item, phone: item.phone ?? "", cpf: item.cpf ?? "", rg: item.rg ?? "", address: item.address ?? "", label: `${item.name} · ${item.phone ?? ""}` }));
 }
 
 function methodLabel(method: ContractPaymentMethod) {
