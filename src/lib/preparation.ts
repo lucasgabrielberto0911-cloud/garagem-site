@@ -14,40 +14,91 @@ export type PreparationInput = {
   purchasePrice: number | null;
 };
 
+export type PreparationFormErrors = {
+  brand?: string;
+  model?: string;
+  color?: string;
+  year?: string;
+  km?: string;
+  plate?: string;
+  purchasePrice?: string;
+  purchasedAt?: string;
+};
+
+export type PreparationParseResult =
+  | { ok: true; data: PreparationInput }
+  | { ok: false; message: string; errors: PreparationFormErrors };
+
 const text = (value: FormDataEntryValue | null) => String(value ?? "").replace(/\s+/g, " ").trim();
 
-/** Valida o formulário de "Em preparação". Só marca e modelo são obrigatórios. */
-export function parsePreparationForm(form: FormData): { ok: true; data: PreparationInput } | { ok: false; message: string } {
+/** Valida o formulário de "Em preparação" com erros por campo. Só marca e modelo são obrigatórios. */
+export function parsePreparationForm(form: FormData): PreparationParseResult {
+  const errors: PreparationFormErrors = {};
+
   const brand = text(form.get("brand"));
+  if (!brand) errors.brand = "Informe a marca.";
+
   const model = text(form.get("model"));
-  if (!brand || !model) return { ok: false, message: "Informe a marca e o modelo." };
+  if (!model) errors.model = "Informe o modelo.";
 
   const yearText = text(form.get("year"));
   const year = yearText ? Number(yearText) : null;
-  if (year != null && (!Number.isInteger(year) || year < 1950 || year > new Date().getFullYear() + 1)) return { ok: false, message: "Ano inválido." };
+  const maxYear = new Date().getFullYear() + 1;
+  if (year != null && (!Number.isInteger(year) || year < 1950 || year > maxYear)) {
+    errors.year = "Ano inválido.";
+  }
 
   const kmText = text(form.get("km")).replace(/\./g, "");
   const km = kmText ? Number(kmText) : null;
-  if (km != null && (!Number.isInteger(km) || km < 0 || km > 2_000_000)) return { ok: false, message: "KM inválido." };
+  if (km != null && (!Number.isInteger(km) || km < 0 || km > 2_000_000)) {
+    errors.km = "KM inválido.";
+  }
 
   const plateText = text(form.get("plate"));
-  if (plateText && !isValidPlate(plateText)) return { ok: false, message: "Placa inválida." };
+  if (plateText && !isValidPlate(plateText)) {
+    errors.plate = "Placa inválida.";
+  }
 
   const priceText = text(form.get("purchasePrice"));
   const purchasePrice = priceText ? parseMoneyBR(priceText) : null;
-  if (priceText && (purchasePrice == null || purchasePrice < 0)) return { ok: false, message: "Valor de compra inválido." };
+  if (priceText && (purchasePrice == null || purchasePrice < 0)) {
+    errors.purchasePrice = "Valor de compra inválido.";
+  }
 
   const dateText = text(form.get("purchasedAt"));
   const purchasedAt = dateText ? new Date(`${dateText}T12:00:00-03:00`) : null;
-  if (purchasedAt && Number.isNaN(purchasedAt.getTime())) return { ok: false, message: "Data da compra inválida." };
+  if (purchasedAt && Number.isNaN(purchasedAt.getTime())) {
+    errors.purchasedAt = "Data da compra inválida.";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    const firstErrorMessage =
+      !brand && !model
+        ? "Informe a marca e o modelo."
+        : errors.brand ||
+          errors.model ||
+          errors.year ||
+          errors.km ||
+          errors.plate ||
+          errors.purchasePrice ||
+          errors.purchasedAt ||
+          "Corrija os campos destacados.";
+    return { ok: false, message: firstErrorMessage, errors };
+  }
 
   return {
     ok: true,
     data: {
-      brand, model, color: text(form.get("color")) || null, year, km,
+      brand,
+      model,
+      color: text(form.get("color")) || null,
+      year,
+      km,
       plate: plateText ? normalizePlate(plateText) : null,
-      ready: form.get("ready") === "on", posted: form.get("posted") === "on",
-      purchasedAt, purchasePrice,
+      ready: form.get("ready") === "on",
+      posted: form.get("posted") === "on",
+      purchasedAt,
+      purchasePrice,
     },
   };
 }

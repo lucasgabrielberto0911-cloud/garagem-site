@@ -17,13 +17,16 @@ import { prisma } from "@/lib/prisma";
 import { recordVehiclePriceChange } from "@/lib/vehicle-price-history";
 import { getSession } from "@/lib/auth";
 import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/lib/photo-master";
-import { copyPrivateMaster } from "@/lib/photo-master-store";
-import { cardObjectPathLike, hdCardCompanion } from "@/lib/cover-frame";
 import { replacedThumbnails } from "@/lib/vehicle-photo-files";
 import {
-  copyPublicStorageObject,
   storagePathFromPublicUrl,
 } from "@/lib/supabase";
+import {
+  buildDuplicateDraftPayload,
+  DUPLICATE_BACKUP_KEY,
+  DUPLICATE_DRAFT_KEY,
+  hasDraftContent,
+} from "@/lib/admin-duplicate-vehicle";
 import {
   normalizeAccessories,
   parseVehicleCategory,
@@ -803,117 +806,101 @@ export async function setVehicleFeatured(id: string, featured: boolean) {
 }
 
 /**
- * Duplica um anúncio para agilizar o cadastro de veículos parecidos. A cópia
- * nasce como disponível, sem destaque, com fotos novas no Storage — apagar
- * um não quebra o outro.
+ * Duplica um anúncio criando um novo rascunho de veículo (E4 / X5).
+ * Copia apenas os campos de modelo (marca, modelo, versão, opcionais, legenda)
+ * e omite dados específicos (fotos, placa, km, preço, cor).
+ * O rascunho fica disponível no fluxo de criação (/admin/veiculos/novo).
+ *
+ * Protege contra perda de dados: se já existir um rascunho `vehicle:new`
+ * com conteúdo preenchido, avisa o usuário antes de substituir.
+ * Quando a substituição for confirmada (`replaceDraft: true`), preserva o
+ * rascunho anterior como `vehicle:new:backup`.
  */
-export async function duplicateVehicle(id: string) {
-  await requireAdmin();
+export async function duplicateVehicle(
+  id: string,
+  options?: { replaceDraft?: boolean },
+) {
+  const session = await requireAdmin();
 
   const source = await prisma.vehicle.findUnique({
     where: { id },
-    include: { photos: { orderBy: { order: "asc" } } },
   });
 
   if (!source) {
     return { ok: false as const, message: "Veículo não encontrado." };
   }
 
-  const photos = await duplicateVehiclePhotos(source.photos);
-
-  const copy = await prisma.vehicle.create({
-    data: {
-      category: source.category,
-      brand: source.brand,
-      model: source.model,
-      version: source.version,
-      year: source.year,
-      yearModel: source.yearModel,
-      km: source.km,
-      price: source.price,
-      fuel: source.fuel,
-      transmission: source.transmission,
-      color: source.color,
-      description: source.description,
-      engine: source.engine,
-      doors: source.doors,
-      warranty: source.warranty,
-      plate: source.plate,
-      plateEnd: source.plateEnd,
-      inspection: source.inspection,
-      accessories: source.accessories,
-      status: "disponivel",
-      locationCity: source.locationCity,
-      featured: false,
-      consigned: source.consigned,
-      inStoreName: source.inStoreName,
-      hasSpareKey: source.hasSpareKey,
-      hasManual: source.hasManual,
-      photos: {
-        create: photos.map((photo, order) => ({
-          url: photo.url,
-          thumbnailUrl: photo.thumbnailUrl,
-          order,
-        })),
+  const existingDraft = await prisma.adminDraft.findUnique({
+    where: {
+      adminId_key: {
+        adminId: session.adminId,
+        key: DUPLICATE_DRAFT_KEY,
       },
     },
   });
 
-  revalidatePath("/admin/veiculos");
-  await revalidatePublicStock(copy);
-  return { ok: true as const, message: "Cópia criada.", id: copy.id };
-}
-
-async function duplicateVehiclePhotos(
-  photos: Array<{ url: string; thumbnailUrl: string | null }>,
-) {
-  const copied: Array<{
-    url: string;
-    thumbnailUrl: string | null;
-  }> = [];
-
-  for (const photo of photos) {
-    const sourcePath = storagePathFromPublicUrl(photo.url);
-    if (!sourcePath) {
-      copied.push({
-        url: photo.url,
-        thumbnailUrl: photo.thumbnailUrl,
-      });
-      continue;
-    }
-
-    const ext = sourcePath.match(/\.([a-z0-9]+)$/i)?.[1] ?? "webp";
-    const destPath = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
-    const newUrl = await copyPublicStorageObject(photo.url, destPath);
-
-    if (!newUrl) {
-      copied.push({
-        url: photo.url,
-        thumbnailUrl: photo.thumbnailUrl,
-      });
-      continue;
-    }
-
-    await copyPrivateMaster(sourcePath, destPath);
-
-    let thumbnailUrl: string | null = null;
-    if (photo.thumbnailUrl) {
-      // Capa enquadrada com par 960×720: o par vai junto. Se ele não copiar, o
-      // 480 sai no nome sem `-hd`, para a cópia nunca prometer um arquivo ausente.
-      const hdSource = hdCardCompanion(photo.thumbnailUrl);
-      const hdCopied = hdSource
-        ? await copyPublicStorageObject(
-            hdSource,
-            hdCardCompanion(cardObjectPathLike(photo.thumbnailUrl, destPath))!,
-          )
-        : null;
-      thumbnailUrl = await copyPublicStorageObject(
-        photo.thumbnailUrl,
-        cardObjectPathLike(photo.thumbnailUrl, destPath, Boolean(hdCopied)),
-      );
-    }
-    copied.push({ url: newUrl, thumbnailUrl });
+  if (hasDraftContent(existingDraft) && !options?.replaceDraft) {
+    return {
+      ok: false as const,
+      hasExistingDraft: true as const,
+      message:
+        "Já existe um rascunho de novo veículo em andamento. Deseja substituí-lo pelos dados deste anúncio?",
+    };
   }
 
-  return copied;
+  const payload = buildDuplicateDraftPayload(source);
+  const expiresAt = new Date(Date.now() + 30 * 86400000);
+
+  if (existingDraft && hasDraftContent(existingDraft)) {
+    await prisma.adminDraft.upsert({
+      where: {
+        adminId_key: {
+          adminId: session.adminId,
+          key: DUPLICATE_BACKUP_KEY,
+        },
+      },
+      create: {
+        adminId: session.adminId,
+        key: DUPLICATE_BACKUP_KEY,
+        payload: (existingDraft.payload ?? {}) as Prisma.InputJsonValue,
+        photoUrls: existingDraft.photoUrls,
+        expiresAt: existingDraft.expiresAt,
+      },
+      update: {
+        payload: (existingDraft.payload ?? {}) as Prisma.InputJsonValue,
+        photoUrls: existingDraft.photoUrls,
+        expiresAt: existingDraft.expiresAt,
+        updatedAt: new Date(),
+      },
+    });
+  }
+
+  await prisma.adminDraft.upsert({
+    where: {
+      adminId_key: {
+        adminId: session.adminId,
+        key: DUPLICATE_DRAFT_KEY,
+      },
+    },
+    create: {
+      adminId: session.adminId,
+      key: DUPLICATE_DRAFT_KEY,
+      payload,
+      photoUrls: [],
+      expiresAt,
+    },
+    update: {
+      payload,
+      photoUrls: [],
+      expiresAt,
+      updatedAt: new Date(),
+    },
+  });
+
+  revalidatePath("/admin/veiculos");
+  return {
+    ok: true as const,
+    message: "Rascunho criado a partir do anúncio.",
+    redirectUrl: "/admin/veiculos/novo",
+  };
 }
