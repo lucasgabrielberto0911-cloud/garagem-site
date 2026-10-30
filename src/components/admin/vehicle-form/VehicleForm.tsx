@@ -7,7 +7,6 @@ import { serializePhotos } from "@/components/admin/VehiclePhotoManager";
 import { useVehicleFormState } from "./useVehicleFormState";
 import { useVehicleFormDraft } from "./useVehicleFormDraft";
 import { VehicleFormSummary } from "./VehicleFormSummary";
-import { VehicleActionsMenu } from "./VehicleActionsMenu";
 import { ReviewStep } from "./ReviewStep";
 import { CreateWizard } from "./CreateWizard";
 import { EditLayout } from "./EditLayout";
@@ -77,7 +76,7 @@ export function VehicleForm(props: VehicleFormProps) {
           // antigo — o próximo "Salvar" regravaria o status errado.
           event.preventDefault();
           if (saving || draftSaving) return;
-          if (step !== 4) {
+          if (mode === "create" && step !== 4) {
             if (validate(step)) changeStep((step + 1) as VehicleWizardStep);
             return;
           }
@@ -131,7 +130,6 @@ export function VehicleForm(props: VehicleFormProps) {
           <Layout form={form} vehicle={vehicle} mode={mode} adminId={adminId} />
         </fieldset>
       </form>
-      <VehicleActionsMenu form={form} vehicle={vehicle} mode={mode} />
     </>
   );
 }
