@@ -24,7 +24,7 @@ import {
   PROMISSORY_DUE_FILTERS,
   PROMISSORY_MAX_INSTALLMENTS,
   PROMISSORY_STATUS_LABEL,
-  addMonthsClamped,
+  addDaysCivil,
   canCancelPromissory,
   canMarkPromissoryPaid,
   describePromissoryDue,
@@ -53,6 +53,7 @@ export type PromissoryRow = {
   paidAt: string | null;
   overdue: boolean;
   notes: string | null;
+  openIssuerCount: number;
 };
 
 type CustomerOption = { id: string; label: string; name: string; phone: string; cpf: string | null; rg: string | null; address: string | null };
@@ -307,15 +308,6 @@ export function PromissoryManager({
   const hasActiveFilters = Boolean(query) || filter !== "abertas" || due !== "todos";
   const activeDueLabel = due !== "todos" ? PROMISSORY_DUE_FILTERS.find((item) => item.value === due)?.label : null;
 
-  const openNotesByCpf = new Map<string, PromissoryRow[]>();
-  for (const note of notes) {
-    if (canMarkPromissoryPaid(note.status)) {
-      const group = openNotesByCpf.get(note.issuerCpf) ?? [];
-      group.push(note);
-      openNotesByCpf.set(note.issuerCpf, group);
-    }
-  }
-
   const text = (
     name: keyof PromissoryFormFields,
     label: string,
@@ -450,7 +442,7 @@ export function PromissoryManager({
                     {text("firstDueDate", "Primeiro vencimento", { type: "date", min: form.issuedAt }, { required: true })}
                     <div className="flex flex-wrap items-center gap-1" aria-label="Atalhos de primeiro vencimento">
                       {[
-                        { label: "+30 dias", date: addMonthsClamped(baseIssuedAt, 1) },
+                        { label: "+30 dias", date: addDaysCivil(baseIssuedAt, 30) },
                         { label: "Dia 5", date: nextMonthDayCivil(baseIssuedAt, 5) },
                         { label: "Dia 10", date: nextMonthDayCivil(baseIssuedAt, 10) },
                         { label: "Dia 15", date: nextMonthDayCivil(baseIssuedAt, 15) },
@@ -608,7 +600,6 @@ export function PromissoryManager({
           {notes.map((note) => {
             const status = parsePromissoryStatus(note.status);
             const dueAlert = describePromissoryDue(note.dueDate, today, note.status);
-            const openSameIssuer = openNotesByCpf.get(note.issuerCpf) ?? [];
             const canPay = canMarkPromissoryPaid(note.status);
             const canCancel = canCancelPromissory(note.status);
             const actionCount = 2 + (canPay ? 1 : 0) + (canCancel ? 1 : 0);
@@ -651,16 +642,16 @@ export function PromissoryManager({
                       : ""}
                   </p>
                   {note.notes ? <p className="line-clamp-2 text-xs italic text-muted">{note.notes}</p> : null}
-                  {canPay && openSameIssuer.length > 1 ? (
+                  {canPay && note.openIssuerCount > 1 ? (
                     <div className="pt-1">
                       <a
-                        href={`/api/admin/promissorias/${encodeURIComponent(openSameIssuer.map((n) => n.id).join(","))}?inline=1`}
+                        href={`/api/admin/promissorias/abertas?cpf=${encodeURIComponent(note.issuerCpf)}&inline=1`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 text-xs font-medium text-cream/80 underline decoration-white/30 underline-offset-2 hover:text-cream"
                       >
                         <IconPrinter className="h-3.5 w-3.5" />
-                        Imprimir todas em aberto deste cliente ({openSameIssuer.length})
+                        Imprimir todas em aberto deste cliente ({note.openIssuerCount})
                       </a>
                     </div>
                   ) : null}

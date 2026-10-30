@@ -89,6 +89,16 @@ export default async function PromissoriasPage({
     take: PAGE_SIZE,
   });
 
+  const openCpfs = Array.from(new Set(rows.filter((row) => OPEN.includes(row.status)).map((row) => row.issuerCpf)));
+  const openGroups = openCpfs.length
+    ? await prisma.promissoryNote.groupBy({
+        by: ["issuerCpf"],
+        where: { status: { in: OPEN }, issuerCpf: { in: openCpfs } },
+        _count: { _all: true },
+      })
+    : [];
+  const openCountByCpf = new Map(openGroups.map((group) => [group.issuerCpf, group._count._all]));
+
   const notes: PromissoryRow[] = rows.map((row) => ({
     id: row.id,
     number: row.number,
@@ -104,6 +114,7 @@ export default async function PromissoriasPage({
     paidAt: row.paidAt?.toISOString() ?? null,
     overdue: OPEN.includes(row.status) && dateOnly(row.dueDate) < today,
     notes: row.notes,
+    openIssuerCount: openCountByCpf.get(row.issuerCpf) ?? 0,
   }));
 
   function filterHref(nextStatus: PromissoryFilter, nextDue: PromissoryDueFilter = "todos") {

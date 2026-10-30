@@ -118,6 +118,16 @@ test("aba Promissórias: emite várias parcelas, lista, baixa o PDF, marca paga 
     expect(batchResponse.headers()["content-disposition"]).toContain(`garagem-promissorias-${notas[0].number}-a-${notas[2].number}.pdf`);
     expect((await batchResponse.body()).subarray(0, 5).toString()).toBe("%PDF-");
 
+    const cpfBatchResponse = await page.request.get(`/api/admin/promissorias/abertas?cpf=${encodeURIComponent(cpf)}&inline=1`);
+    expect(cpfBatchResponse.status()).toBe(200);
+    expect(cpfBatchResponse.headers()["content-disposition"]).toContain(`garagem-promissorias-${notas[0].number}-a-${notas[2].number}.pdf`);
+    expect((await cpfBatchResponse.body()).subarray(0, 5).toString()).toBe("%PDF-");
+
+    await expect(itens.first().getByRole("link", { name: "Imprimir todas em aberto deste cliente (3)" })).toHaveAttribute(
+      "href",
+      `/api/admin/promissorias/abertas?cpf=${encodeURIComponent(cpf)}&inline=1`,
+    );
+
     await expect(itens.first().getByRole("link", { name: `Imprimir nota ${notas[0].number}` })).toHaveAttribute(
       "href",
       `/api/admin/promissorias/${encodeURIComponent(notas[0].id)}?inline=1`,
