@@ -187,7 +187,9 @@ test("o admin no navegador não chama o Jev (nem rota de nota)", () => {
     existsSync(new URL("src/app/api/admin/anuncios/nota/route.ts", root)),
     false,
   );
-  const form = readFileSync(new URL("src/components/admin/VehicleForm.tsx", root), "utf8");
+  const form = [
+    "VehicleForm.tsx", "useVehicleFormState.ts", "VehicleFormSummary.tsx",
+  ].map(file => readFileSync(new URL(`src/components/admin/vehicle-form/${file}`, root), "utf8")).join("\n");
   assert.doesNotMatch(form, /judgeListingQuality|askJev|anuncios\/nota/);
   const page = readFileSync(new URL("src/app/admin/veiculos/[id]/page.tsx", root), "utf8");
   assert.doesNotMatch(page, /judgeListingQuality|askJev|scoreListingAfterSave/);

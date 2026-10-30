@@ -2,6 +2,7 @@ import { test as base, expect, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { randomInt, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import samples from "./public-samples.json";
 
 const database = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/");
@@ -20,6 +21,9 @@ const test = base.extend<{ modelName: string }>({
     } });
     try {
       page.on("dialog", dialog => dialog.accept());
+      const photoFixture = readFileSync("public/branding/placeholder-car.png");
+      await page.route("**/fotos/**", route => route.fulfill({ contentType: "image/png", body: photoFixture }));
+      await page.route("https://*.supabase.co/storage/**", route => route.fulfill({ contentType: "image/png", body: photoFixture }));
       await page.setExtraHTTPHeaders({ "X-Forwarded-For": `198.18.${randomInt(256)}.${randomInt(1, 255)}` });
       await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
       const login = await page.request.post("/api/auth/login", { data: { email, password } });
@@ -87,9 +91,7 @@ async function fillVehicle(page: Page, modelName: string) {
   await page.locator('[name="transmission"]').selectOption({ label: "Automático" });
 }
 
-for (const width of [390, 1440]) {
-  test.describe(`wizard em ${width}px`, () => {
-    test.use({ viewport: { width, height: 900 } });
+test.describe("wizard nos tamanhos configurados", () => {
 
     test("cria anúncio, bloqueia etapas inválidas e preserva campos ao voltar", async ({ page, modelName }) => {
       await page.goto("/admin/veiculos/novo");
@@ -100,7 +102,7 @@ for (const width of [390, 1440]) {
       await expect(page.getByText("Adicione pelo menos uma foto.", { exact: true })).toBeVisible();
       await uploadPhotos(page);
       const original = JSON.parse(await page.locator('[name="photoUrls"]').inputValue());
-      if (width < 1024) await page.getByRole("button", { name: "Mais ações da foto 2", exact: true }).click();
+      if (page.viewportSize()!.width < 1024) await page.getByRole("button", { name: "Mais ações da foto 2", exact: true }).click();
       await page.getByRole("button", { name: "Definir como capa", exact: true }).last().click();
       const reordered = JSON.parse(await page.locator('[name="photoUrls"]').inputValue());
       expect(reordered[0].url).toBe(original[1].url);
@@ -245,5 +247,4 @@ for (const width of [390, 1440]) {
         await prisma.vehicle.updateMany({ where: { id: samples[0].id, model: modelName }, data: { model: original.model } });
       }
     });
-  });
-}
+});
