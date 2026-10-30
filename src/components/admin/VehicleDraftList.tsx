@@ -45,6 +45,7 @@ export function VehicleDraftList({ adminId }: { adminId: string }) {
         title: "Descartar rascunho?",
         description: draft.title,
         confirmLabel: "Descartar",
+        danger: true,
       }))
     )
       return;

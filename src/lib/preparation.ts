@@ -84,5 +84,7 @@ export async function claimPreparation(
 
 /** Mantém escopos antigos; cadastros independentes recebem um identificador estável pela página. */
 export function vehicleDraftScope(vehicleId?: string | null, preparationId?: string | null, draftId?: string | null) {
-  return vehicleId ?? (preparationId ? `new-${preparationId}` : draftId ? `new-${draftId}` : "new");
+  if (vehicleId) return vehicleId;
+  const suffix = (preparationId || draftId)?.replace(/^(?:new-)+/, "");
+  return !suffix || suffix === "new" ? "new" : `new-${suffix}`;
 }

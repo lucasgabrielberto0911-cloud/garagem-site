@@ -53,6 +53,11 @@ test("rascunho do cadastro é isolado por preparação e do cadastro comum", () 
 
 test("cadastros independentes coexistem e retomam o mesmo identificador", () => {
   assert.equal(vehicleDraftScope(null, null, "a"), "new-a");
+  assert.equal(vehicleDraftScope(null, null, "new-a"), "new-a");
+  assert.equal(vehicleDraftScope(null, null, "new"), "new");
+  assert.equal(vehicleDraftScope(null, "new-p1"), "new-p1");
+  assert.equal(vehicleDraftScope(null, null, vehicleDraftScope(null, null, "a")), "new-a");
+  assert.equal(vehicleDraftScope(null, null, vehicleDraftScope()), "new");
   assert.notEqual(vehicleDraftScope(null, null, "a"), vehicleDraftScope(null, null, "b"));
   assert.equal(vehicleDraftScope("v1", "p1", "a"), "v1");
   assert.equal(vehicleDraftScope(null, "p1", "a"), "new-p1");
