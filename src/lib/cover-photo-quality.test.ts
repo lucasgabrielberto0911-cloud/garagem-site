@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { assessCoverPhoto } from "./cover-photo-quality";
+import { assessCoverPhoto, coverAssessmentSrc } from "./cover-photo-quality";
+import { PHOTO_STORAGE_ORIGIN } from "./public-photo-url";
 
 function pixels(fn: (x: number, y: number) => number) {
   const data = new Uint8ClampedArray(64 * 48 * 4);
@@ -25,4 +26,31 @@ test("sinal de nitidez é cauteloso e não acusa fundo uniforme de desfoque", ()
 });
 test("considera o recorte 4:3 de uma foto estreita", () => {
   assert.match(assessCoverPhoto(300, 1200, new Uint8ClampedArray(), 0, 0).warnings[0], /pequena/);
+});
+
+test("coverAssessmentSrc usa thumbnailUrl ou recorte 480x360 e nunca baixa o original inteiro", () => {
+  const original = `${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/carro-1.webp`;
+  const thumb = `${PHOTO_STORAGE_ORIGIN}/storage/v1/object/public/veiculos/carro-1-card.webp`;
+
+  assert.equal(
+    coverAssessmentSrc(original, thumb),
+    "/fotos/v1/original/carro-1-card.webp",
+  );
+  assert.equal(
+    coverAssessmentSrc(original, null),
+    "/fotos/v1/480x360-cover-q65/carro-1.webp",
+  );
+  assert.equal(
+    coverAssessmentSrc("/fotos/v1/original/carro-1.webp", null),
+    "/fotos/v1/480x360-cover-q65/carro-1.webp",
+  );
+  assert.equal(
+    coverAssessmentSrc("/fotos/v1/original/carro-1-card.webp", null),
+    "/fotos/v1/original/carro-1-card.webp",
+  );
+  assert.equal(
+    coverAssessmentSrc("/branding/placeholder-car.png", null),
+    "/branding/placeholder-car.png",
+  );
+  assert.equal(coverAssessmentSrc("", null), "");
 });

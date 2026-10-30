@@ -4,7 +4,17 @@
  * Vídeo, cor e câmbio ficam na tela de edição — sem badge em cada card.
  */
 
+import type {
+  VehicleFormSectionId,
+  VehicleWizardStep,
+} from "@/lib/admin-form-sections";
+import {
+  descriptionPriceMismatch,
+  descriptionPriceMismatchBlocksSave,
+  MIN_LISTING_PRICE,
+} from "@/lib/admin-vehicle-validate";
 import { transmissionConflictAlert } from "@/lib/vehicle-display";
+import { parseVehicleLocationCity } from "@/lib/vehicle-location";
 
 export { transmissionConflictAlert };
 
@@ -85,6 +95,269 @@ export function editListingGapLine(input: EditListingGapInput): string | null {
   if (gaps.length === 0) return null;
   return `Falta no cadastro: ${gaps.join(", ")}`;
 }
+
+export type PublishGapId =
+  | "fotos"
+  | "marca"
+  | "modelo"
+  | "preco"
+  | "ano"
+  | "km"
+  | "cambio"
+  | "combustivel"
+  | "cor"
+  | "preco-legenda"
+  | "cidade";
+
+export type PublishGapItem = {
+  id: PublishGapId;
+  /** Rótulo curto exibido na linha única "Falta: foto de capa, preço". */
+  label: string;
+  /** Nome do campo no formulário para foco direto ao tocar. */
+  field: string;
+  /** Seção do formulário onde o campo mora. */
+  section: VehicleFormSectionId;
+  /** Etapa do wizard (1 a 4). */
+  step: VehicleWizardStep;
+};
+
+export type PublishGapInput = {
+  status?: string | null;
+  photoCount?: number | null;
+  photos?: readonly unknown[] | null;
+  brand?: string | null;
+  model?: string | null;
+  version?: string | null;
+  year?: number | string | null;
+  yearModel?: number | string | null;
+  km?: number | string | null;
+  transmission?: string | null;
+  fuel?: string | null;
+  color?: string | null;
+  price?: number | string | null;
+  description?: string | null;
+  locationCity?: string | null;
+};
+
+export type PublishChecklistItem = PublishGapItem;
+export type PublishChecklistInput = PublishGapInput;
+
+function parsePriceValue(
+  price: number | string | null | undefined,
+): number | null {
+  if (typeof price === "number") {
+    return Number.isFinite(price) && price >= MIN_LISTING_PRICE ? price : null;
+  }
+  if (typeof price === "string") {
+    const cleaned = price
+      .replace(/R\$/gi, "")
+      .replace(/\s+/g, "")
+      .replace(/\./g, "")
+      .replace(",", ".");
+    if (!cleaned) return null;
+    const num = Number(cleaned);
+    return Number.isFinite(num) && num >= MIN_LISTING_PRICE ? num : null;
+  }
+  return null;
+}
+
+function hasValidYear(value: number | string | null | undefined): boolean {
+  if (typeof value === "number") {
+    return Number.isInteger(value) && value >= 1900 && value <= 2100;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!/^\d{4}$/.test(trimmed)) return false;
+    const num = Number(trimmed);
+    return num >= 1900 && num <= 2100;
+  }
+  return false;
+}
+
+function hasValidKm(value: number | string | null | undefined): boolean {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value >= 0;
+  }
+  if (typeof value === "string") {
+    return value.replace(/\D/g, "").length > 0;
+  }
+  return false;
+}
+
+/**
+ * Lista única do que falta para publicar o anúncio (G7 / X4 / M3).
+ * Veículo vendido nunca lista pendência nem preço.
+ */
+export function publishMissingItems(input: PublishGapInput): PublishGapItem[] {
+  if (input.status === "vendido") return [];
+
+  const items: PublishGapItem[] = [];
+  const hasPhotoField =
+    input.photoCount !== undefined || input.photos !== undefined;
+  const photoCount =
+    input.photoCount != null
+      ? input.photoCount
+      : Array.isArray(input.photos)
+        ? input.photos.length
+        : 0;
+
+  if (hasPhotoField && photoCount <= 0) {
+    items.push({
+      id: "fotos",
+      label: "foto de capa",
+      field: "photos",
+      section: "fotos",
+      step: 1,
+    });
+  }
+
+  if (input.brand !== undefined && !String(input.brand ?? "").trim()) {
+    items.push({
+      id: "marca",
+      label: "marca",
+      field: "brand",
+      section: "identificacao",
+      step: 2,
+    });
+  }
+
+  if (input.model !== undefined && !String(input.model ?? "").trim()) {
+    items.push({
+      id: "modelo",
+      label: "modelo",
+      field: "model",
+      section: "identificacao",
+      step: 2,
+    });
+  }
+
+  const numericPrice = parsePriceValue(input.price);
+  if (input.price !== undefined && numericPrice === null) {
+    items.push({
+      id: "preco",
+      label: "preço",
+      field: "priceDisplay",
+      section: "essencial",
+      step: 3,
+    });
+  }
+
+  if (input.year !== undefined && !hasValidYear(input.year)) {
+    items.push({
+      id: "ano",
+      label: "ano",
+      field: "year",
+      section: "ficha",
+      step: 2,
+    });
+  } else if (input.yearModel !== undefined && !hasValidYear(input.yearModel)) {
+    items.push({
+      id: "ano",
+      label: "ano",
+      field: "yearModel",
+      section: "ficha",
+      step: 2,
+    });
+  }
+
+  if (input.km !== undefined && !hasValidKm(input.km)) {
+    items.push({
+      id: "km",
+      label: "km",
+      field: "kmDisplay",
+      section: "ficha",
+      step: 2,
+    });
+  }
+
+  const conflict = transmissionConflictAlert(input.version, input.transmission);
+  if (
+    input.transmission !== undefined &&
+    !String(input.transmission ?? "").trim()
+  ) {
+    items.push({
+      id: "cambio",
+      label: "câmbio",
+      field: "transmission",
+      section: "ficha",
+      step: 2,
+    });
+  } else if (conflict) {
+    items.push({
+      id: "cambio",
+      label: "câmbio da versão",
+      field: "transmission",
+      section: "ficha",
+      step: 2,
+    });
+  }
+
+  if (input.fuel !== undefined && !String(input.fuel ?? "").trim()) {
+    items.push({
+      id: "combustivel",
+      label: "combustível",
+      field: "fuel",
+      section: "ficha",
+      step: 2,
+    });
+  }
+
+  if (input.color !== undefined && !String(input.color ?? "").trim()) {
+    items.push({
+      id: "cor",
+      label: "cor",
+      field: "color",
+      section: "identificacao",
+      step: 2,
+    });
+  }
+
+  if (
+    numericPrice !== null &&
+    input.description &&
+    descriptionPriceMismatchBlocksSave(input.status) &&
+    descriptionPriceMismatch(input.description, numericPrice)
+  ) {
+    items.push({
+      id: "preco-legenda",
+      label: "preço na legenda",
+      field: "description",
+      section: "itens",
+      step: 3,
+    });
+  }
+
+  if (
+    input.locationCity !== undefined &&
+    !parseVehicleLocationCity(input.locationCity)
+  ) {
+    items.push({
+      id: "cidade",
+      label: "cidade",
+      field: "locationCity",
+      section: "essencial",
+      step: 4,
+    });
+  }
+
+  return items;
+}
+
+/**
+ * Linha única "Falta: foto de capa, preço" (X4 / M3).
+ * Retorna null quando não falta nada para publicar.
+ */
+export function publishMissingLine(
+  input: PublishGapInput,
+  prefix = "Falta:",
+): string | null {
+  const items = publishMissingItems(input);
+  if (items.length === 0) return null;
+  return `${prefix} ${items.map((item) => item.label).join(", ")}`;
+}
+
+export const publishChecklistItems = publishMissingItems;
+export const publishChecklistLine = publishMissingLine;
 
 /**
  * Resumo da aba Em estoque. Não cita vídeo: isso não é aviso de lista.
