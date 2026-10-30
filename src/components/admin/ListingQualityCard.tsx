@@ -1,13 +1,18 @@
 "use client";
 
-import { assessCoverPhoto } from "@/lib/cover-photo-quality";
+import { PublishChecklist } from "@/components/admin/PublishChecklist";
 import type { VehicleFormSectionId } from "@/lib/admin-form-sections";
+import {
+  assessCoverPhoto,
+  coverAssessmentSrc,
+} from "@/lib/cover-photo-quality";
 import {
   isListingJudgment,
   presentListing,
   type ListingDraft,
   type ListingJudgment,
 } from "@/lib/listing-present";
+import { publishMissingItems } from "@/lib/stock-quality";
 import { useEffect, useState } from "react";
 
 function scoredDateLabel(scoredAt: string | null) {
@@ -24,19 +29,18 @@ function scoredDateLabel(scoredAt: string | null) {
 }
 
 function useCoverWarnings(url: string) {
-  const [warnings, setWarnings] = useState<string[]>([]);
+  const [result, setResult] = useState<{
+    url: string;
+    warnings: string[];
+  } | null>(null);
 
   useEffect(() => {
-    if (!url) {
-      setWarnings([]);
-      return;
-    }
-    setWarnings([]);
+    if (!url) return;
     let active = true;
     const image = new Image();
     image.crossOrigin = "anonymous";
-    const finish = (next: string[]) => {
-      if (active) setWarnings(next);
+    const finish = (warnings: string[]) => {
+      if (active) setResult({ url, warnings });
     };
     const timeout = window.setTimeout(() => finish([]), 8000);
     image.onload = () => {
@@ -81,17 +85,18 @@ function useCoverWarnings(url: string) {
     };
   }, [url]);
 
-  return warnings;
+  if (!url) return [];
+  return result?.url === url ? result.warnings : [];
 }
 
 /**
- * Mostra a nota gravada no último Salvar com alteração. Este componente nunca
- * chama o Jev: abrir o admin ou editar campos não gasta nada. A nota é
- * recalculada no servidor só quando o anúncio é salvo com mudança.
+ * Linha "Falta: ..." (PublishChecklist) + nota do último Salvar recolhida.
+ * Mede a capa pela miniatura (nunca baixa a foto inteira) e nunca chama o Jev no navegador.
  */
 export function ListingQualityCard({
   draft,
   coverUrl,
+  coverThumbnailUrl,
   judgment,
   scoredAt,
   dirty,
@@ -100,37 +105,36 @@ export function ListingQualityCard({
 }: {
   draft: ListingDraft;
   coverUrl: string;
+  coverThumbnailUrl?: string | null;
   judgment: ListingJudgment | null;
   scoredAt: string | null;
   dirty: boolean;
   saving: boolean;
   onJump: (section: VehicleFormSectionId) => void;
 }) {
-  const coverWarnings = useCoverWarnings(coverUrl);
-  const [showAll, setShowAll] = useState(false);
+  const thumbnailSrc =
+    draft.status !== "vendido" && draft.photoCount > 0
+      ? coverAssessmentSrc(coverUrl, coverThumbnailUrl)
+      : "";
+  const coverWarnings = useCoverWarnings(thumbnailSrc);
 
   if (draft.status === "vendido") return null;
 
+  const missingItems = publishMissingItems(draft);
   const stored = isListingJudgment(judgment) ? judgment : null;
   const view = presentListing({ ...draft, coverWarnings }, stored);
-  if (!view.prompt && view.advice.length === 0 && !view.clearNote && !view.grade) {
+
+  const missingIds = new Set<string>(missingItems.map((item) => item.id));
+  const extraAdvice = view.advice.filter((item) => !missingIds.has(item.id));
+
+  if (
+    missingItems.length === 0 &&
+    !view.grade &&
+    extraAdvice.length === 0
+  ) {
     return null;
   }
 
-  const statusLine = view.prompt
-    ? view.prompt
-    : view.grade
-      ? view.grade.label
-      : null;
-  const scoreHint = view.prompt
-    ? null
-    : saving && dirty
-      ? "Salvando… a nota é atualizada junto."
-      : view.grade && dirty
-        ? "Nota do último salvamento. Salve para atualizar."
-        : view.grade
-          ? scoredDateLabel(scoredAt)
-          : "A nota do Jev sai quando você salvar uma alteração.";
   const scoreText = view.grade
     ? view.grade.score.toLocaleString("pt-BR", {
         minimumFractionDigits: 1,
@@ -138,102 +142,95 @@ export function ListingQualityCard({
       })
     : null;
 
+  const scoreHint = saving && dirty
+    ? "Salvando… a nota é atualizada junto."
+    : view.grade && dirty
+      ? "Nota do último salvamento. Salve para atualizar."
+      : view.grade
+        ? scoredDateLabel(scoredAt)
+        : null;
+
   return (
-    <section
-      aria-label="Força do anúncio"
-      className="relative overflow-hidden border border-white/10 bg-ink/50"
-    >
-      <span
-        className="absolute inset-y-0 left-0 w-0.5 bg-brand-gradient"
-        aria-hidden="true"
+    <div aria-label="Força do anúncio" className="space-y-1.5">
+      <PublishChecklist
+        items={missingItems}
+        onJump={(section) => onJump(section)}
       />
-      <div className="px-3 py-3 pl-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="font-display text-base font-semibold tracking-wide text-cream">
-              {view.grade ? "Força do anúncio" : "Antes de publicar"}
-            </h2>
-            {statusLine ? (
-              <p
-                className={`mt-0.5 text-xs ${view.grade?.label === "Fraco" ? "text-red-400" : "text-muted"}`}
-                aria-live="polite"
-              >
-                {statusLine}
-              </p>
-            ) : null}
-          </div>
-          {scoreText ? (
-            <p className="shrink-0 text-right">
-              <span className="font-display text-3xl font-bold leading-none text-cream">
-                {scoreText}
-              </span>
-              <span className="mt-1 block text-xs text-muted">de 10</span>
-            </p>
-          ) : null}
-        </div>
 
-        {scoreHint ? (
-          <p className="mt-1 text-xs leading-relaxed text-muted">
-            {scoreHint}
-          </p>
-        ) : null}
-
-        {view.grade ? (
-          <div className="mt-3 h-1 bg-white/10" aria-hidden="true">
-            <div
-              className="h-full bg-brand"
-              style={{ width: `${view.grade.score * 10}%` }}
-            />
-          </div>
-        ) : null}
-
-        {view.clearNote ? (
-          <p className="mt-3 text-sm leading-relaxed text-cream">{view.clearNote}</p>
-        ) : null}
-
-        {view.advice.length > 0 ? (
-          <ul className="mt-3 border-t border-white/10">
-            {(showAll ? view.advice : view.advice.slice(0, 4)).map((item) => (
-              <li key={item.id} className="border-b border-white/10 last:border-b-0">
-                <button
-                  type="button"
-                  onClick={() => onJump(item.section)}
-                  className="flex min-h-11 w-full items-center justify-between gap-3 py-2.5 text-left touch-manipulation"
+      {extraAdvice.length > 0 ? (
+        <details className="group text-xs text-muted sm:text-sm">
+          <summary className="cursor-pointer select-none py-1 leading-relaxed text-muted hover:text-cream">
+            {view.grade && scoreText ? (
+              <span>
+                Nota do anúncio:{" "}
+                <strong
+                  className={
+                    view.grade.label === "Fraco"
+                      ? "font-semibold text-red-400"
+                      : "font-semibold text-cream"
+                  }
                 >
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium text-cream">
-                      {item.title}
+                  {scoreText}/10 ({view.grade.label})
+                </strong>{" "}
+                · {extraAdvice.length}{" "}
+                {extraAdvice.length === 1
+                  ? "sugestão opcional"
+                  : "sugestões opcionais"}
+              </span>
+            ) : (
+              <span>
+                Sugestões opcionais ({extraAdvice.length}):{" "}
+                {extraAdvice.map((item) => item.title.toLowerCase()).join(", ")}
+              </span>
+            )}
+          </summary>
+          <div className="mt-1 space-y-1 border-l border-white/10 pl-3">
+            {scoreHint ? (
+              <p className="text-xs leading-relaxed text-muted">{scoreHint}</p>
+            ) : null}
+            <ul className="divide-y divide-white/10">
+              {extraAdvice.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => onJump(item.section)}
+                    className="flex min-h-11 w-full items-center justify-between gap-3 py-2 text-left touch-manipulation"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-cream">
+                        {item.title}
+                      </span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+                        {item.detail}
+                      </span>
                     </span>
-                    <span className="mt-0.5 block text-xs leading-relaxed text-muted">
-                      {item.detail}
+                    <span
+                      className="shrink-0 font-display text-lg leading-none text-muted"
+                      aria-hidden="true"
+                    >
+                      ›
                     </span>
-                  </span>
-                  <span className="shrink-0 font-display text-lg leading-none text-muted" aria-hidden="true">
-                    ›
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {view.advice.length > 4 ? (
-          <button
-            type="button"
-            onClick={() => setShowAll((current) => !current)}
-            className="mt-1 min-h-11 w-full text-left text-xs font-semibold text-cream touch-manipulation"
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>
+      ) : view.grade && scoreText ? (
+        <p className="text-xs leading-relaxed text-muted sm:text-sm">
+          Nota do anúncio:{" "}
+          <strong
+            className={
+              view.grade.label === "Fraco"
+                ? "font-semibold text-red-400"
+                : "font-semibold text-cream"
+            }
           >
-            {showAll
-              ? "Mostrar menos"
-              : `Mais ${view.advice.length - 4} ${view.advice.length - 4 === 1 ? "ponto" : "pontos"}`}
-          </button>
-        ) : null}
-
-        {view.grade ? (
-          <p className="mt-3 text-xs leading-relaxed text-muted">
-            A nota não impede salvar nem publicar.
-          </p>
-        ) : null}
-      </div>
-    </section>
+            {scoreText}/10 ({view.grade.label})
+          </strong>
+          {scoreHint ? ` · ${scoreHint}` : ""}
+        </p>
+      ) : null}
+    </div>
   );
 }
