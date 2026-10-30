@@ -21,6 +21,7 @@ export type PromissoryActionState = {
   ok: boolean;
   message: string;
   fieldErrors?: Record<string, string>;
+  noteIds?: string[];
   createdNotes?: CreatedPromissorySummary[];
   issuerName?: string;
 };
@@ -96,6 +97,7 @@ export async function createPromissoryNotes(formData: FormData): Promise<Promiss
     refresh();
     return {
       ok: true,
+      noteIds: createdNotes.map((item) => item.id),
       message: numbers.length === 1 ? `Nota nº ${numbers[0]} emitida.` : `${numbers.length} notas emitidas (nº ${numbers.join(", ")}).`,
       createdNotes,
       issuerName: parsed.issuer.name,

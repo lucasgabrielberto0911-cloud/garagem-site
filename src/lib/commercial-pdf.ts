@@ -288,14 +288,23 @@ export async function commercialPdf(kind: string, input: DocumentSnapshot, id: s
     const labelW = (text: string, strong: boolean) => CONTENT_W - 20 - (strong ? title : regular).widthOfTextAtSize(text, 10) - 14;
     const laid = rows.map(([lab, val, strong]) => ({ lines: wrap(lab, strong ? semi : regular, 9.5, labelW(val, strong)), val, strong }));
     const heightOf = (r: { lines: string[] }) => Math.max(22, r.lines.length * 12 + 10);
-    ensure(laid.reduce((sum, r) => sum + heightOf(r), 0) + 6);
+    ensure(28);
     laid.forEach((r) => {
       const h = heightOf(r);
+      ensure(h);
       page.drawRectangle({ x: MARGIN, y: y - h, width: CONTENT_W, height: h, color: r.strong ? CREAM : WHITE, borderColor: LINE, borderWidth: 0.6 });
       r.lines.forEach((line, i) => page.drawText(line, { x: MARGIN + 10, y: y - 15 - i * 12, size: 9.5, font: r.strong ? semi : regular, color: ASPHALT }));
       page.drawText(r.val, { x: MARGIN + CONTENT_W - 10 - (r.strong ? title : regular).widthOfTextAtSize(r.val, 10), y: y - 15, size: 10, font: r.strong ? title : regular, color: ASPHALT });
       y -= h;
     });
+    for (const item of data.payments ?? []) {
+      if (item.method !== "promissoria") continue;
+      paragraph("A parcela em promissórias permanece devida nos vencimentos abaixo; a emissão das notas não representa quitação.", 10);
+      for (const note of item.notes ?? []) {
+        paragraph(`Nota promissória nº ${note.number} · ${money(note.amount)} · vencimento ${note.dueDate.split("-").reverse().join("/")}.`, 10);
+      }
+    }
+
     y -= 8;
     paragraph(`Forma de pagamento${hasDetailedPayments ? "" : " do saldo"}: ${clean(data.payment)}.`, 10);
     paragraph(`${signal > 0 ? "§ 1º O sinal tem natureza de garantia (arras): reserva o veículo ao(à) COMPRADOR(A) e, concretizada a compra, é integralmente abatido do preço. " : ""}§ ${signal > 0 ? "2º" : "1º"} Em caso de financiamento, a venda fica condicionada à aprovação do crédito; se negado, as partes poderão ajustar outra forma de pagamento ou rescindir o contrato.`, 10);

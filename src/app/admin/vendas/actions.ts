@@ -16,7 +16,8 @@ import { privateMasterRefForPublicUrl, privatePreviousRefForPublicUrl } from "@/
 import { deleteUnusedAdminFiles } from "@/lib/admin-file-references";
 import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 import { formatSaleNotes } from "@/lib/sales-goals";
-import { matchesSaleDocumentSnapshot, matchesSaleReceiptSnapshot, summarizeContractPayments } from "@/lib/admin-commercial";
+import { type ContractPaymentItem, matchesSaleDocumentSnapshot, matchesSaleReceiptSnapshot, summarizeContractPayments } from "@/lib/admin-commercial";
+import { salePromissorySnapshots } from "@/lib/sale-promissories";
 import { digitsOnly, parseSaleFlowInput, resolveBuyer, resolveSignal } from "@/lib/sale-flow";
 
 export type SaleActionState = {
@@ -62,6 +63,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
           payments,
         };
         if (vehicle.sale.customerId && !currentCustomer) throw new Error("SALE_DOCUMENT_STALE");
+        await attachPromissorySnapshot(tx, payments, { id: vehicle.sale.customerId ?? "", cpf: currentSale.cpf }, vehicle.sale.id);
         if (contract && matchesSaleDocumentSnapshot(contract.snapshot, currentSale)) return {
           saleId: vehicle.sale.id,
           contractId: contract.id,
@@ -79,8 +81,15 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
         await tx.vehicle.update({ where: { id: vehicleId }, data: { status: "disponivel" } });
       }
       const customer = await resolveBuyer(tx, { customerId, customerName, customerPhone, cpf, rg: identifiers.rg, address: input.address, reservationCustomerId: reservation?.customerId, hasReservation: Boolean(reservation) });
+      await attachPromissorySnapshot(tx, payments, customer);
       const signal = resolveSignal({ payments, total, signalEnabled: input.signal === true, signalAmountInput: input.signalAmount, reservation });
       const row = await tx.sale.create({ data: { vehicleId, customerId: customer.id, salePrice: total, paymentMethod: summarizeContractPayments(payments), saleDate: new Date(), notes: [notes, signal ? `Sinal recebido: R$ ${signal.amount.toFixed(2)} (incluído no total da venda).` : null].filter(Boolean).join("\n") || null } });
+      const promissory = payments.find((payment) => payment.method === "promissoria");
+      if (promissory) {
+        const linked = await tx.promissoryNote.updateMany({ where: { id: { in: promissory.noteIds }, status: "emitida", saleId: null }, data: { saleId: row.id, status: "vinculada" } });
+        if (linked.count !== promissory.noteIds!.length) throw new Error("PROMISSORY_UNAVAILABLE");
+        await recordAdminAudit(tx, session.adminId, row.id, "promissory.link", { noteIds: promissory.noteIds });
+      }
       const snapshot = { address: customer.address ?? "", signal, payments, customer: customer.name, customerId: customer.id, cpf: customer.cpf ?? "", rg: customer.rg ?? "", chassis: identifiers.chassis || vehicle.chassis || "", renavam: identifiers.renavam || vehicle.renavam || "", phone: customer.phone, vehicle: [vehicle.brand, vehicle.model, vehicle.version].filter(Boolean).join(" "), year: vehicle.year, yearModel: vehicle.yearModel, color: vehicle.color ?? "", warranty: vehicle.warranty ?? undefined, km: vehicle.km, total, plate: vehicle.plate ?? "", amount: total, conditions: String(input.conditions ?? "").slice(0, 3000), payment: summarizeContractPayments(payments), seller: "Garagem", responsibleSeller: sellerName, commission, date: new Date().toISOString(), reservationId: reservation?.id ?? null, saleId: row.id };
       let receipt = null;
       if (signal) {
@@ -98,13 +107,33 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
       await recordAdminAudit(tx, session.adminId, row.id, "sale.create", { salePrice: total, vehicleId, contractId: contract.id });
       return { saleId: row.id, contractId: contract.id, receiptId: receipt?.id, proposalId: proposal?.id };
     });
-    revalidatePath("/admin/vendas"); revalidatePath("/admin/agenda"); revalidatePath("/admin"); revalidatePath("/admin/clientes"); revalidatePath(`/admin/veiculos/${vehicleId}`); await revalidatePublicStock(vehicleId);
+    revalidatePath("/admin/promissorias"); revalidatePath("/admin/vendas"); revalidatePath("/admin/agenda"); revalidatePath("/admin"); revalidatePath("/admin/clientes"); revalidatePath(`/admin/veiculos/${vehicleId}`); await revalidatePublicStock(vehicleId);
     return { ok: true, message: "Venda registrada e contrato gerado.", ...result };
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    const messages: Record<string, string> = { VEHICLE_UNAVAILABLE: "Veículo indisponível ou já vendido.", SALE_DOCUMENT_STALE: "Os dados da venda divergiram do contrato. Reemita o contrato na operação do veículo e tente novamente.", RESERVATION_CUSTOMER: "A reserva pertence a outro comprador. Cancele a reserva antes de continuar.", RESERVATION_SIGNAL_REQUIRED: "A reserva tem sinal. Marque o sinal para continuar.", INVALID_SIGNAL: "O sinal deve ser positivo e não pode superar o total negociado.", DUPLICATE_CUSTOMER: "Já existe cliente com este telefone ou CPF; selecione o cadastro existente.", CUSTOMER_INVALID: "Cliente inválido." };
+    const messages: Record<string, string> = { PROMISSORY_UNAVAILABLE: "Uma nota foi paga, cancelada ou vinculada a outra venda. Volte ao pagamento e atualize as notas.", PROMISSORY_BUYER: "As promissórias devem pertencer ao comprador e ter o mesmo CPF. Confira o cliente selecionado.", PROMISSORY_TOTAL: "A soma das notas difere do valor em promissórias. Volte ao pagamento e selecione as notas novamente.", VEHICLE_UNAVAILABLE: "Veículo indisponível ou já vendido.", SALE_DOCUMENT_STALE: "Os dados da venda divergiram do contrato. Reemita o contrato na operação do veículo e tente novamente.", RESERVATION_CUSTOMER: "A reserva pertence a outro comprador. Cancele a reserva antes de continuar.", RESERVATION_SIGNAL_REQUIRED: "A reserva tem sinal. Marque o sinal para continuar.", INVALID_SIGNAL: "O sinal deve ser positivo e não pode superar o total negociado.", DUPLICATE_CUSTOMER: "Já existe cliente com este telefone ou CPF; selecione o cadastro existente.", CUSTOMER_INVALID: "Cliente inválido." };
     return { ok: false, message: messages[message] ?? "Não foi possível registrar a venda." };
   }
+}
+
+async function attachPromissorySnapshot(tx: Prisma.TransactionClient, payments: ContractPaymentItem[], buyer: { id: string; cpf: string | null }, saleId?: string) {
+  const payment = payments.find((item) => item.method === "promissoria");
+  if (!payment) return;
+  const notes = await tx.promissoryNote.findMany({ where: { id: { in: payment.noteIds } } });
+  payment.notes = salePromissorySnapshots(payment, notes.map((note) => ({ ...note, amount: Number(note.amount), dueDate: note.dueDate.toISOString().slice(0, 10) })), buyer, saleId);
+}
+
+/** Busca privada: somente notas livres do CPF informado, com filtro de número. */
+export async function availableSalePromissories(cpfInput: string, query = "", ids?: string[]) {
+  await requireAdmin();
+  const cpf = digitsOnly(cpfInput);
+  if (cpf.length !== 11 || (query.trim() && (!/^\d+$/.test(query.trim()) || Number(query) > 2147483647))) return [];
+  const notes = await prisma.promissoryNote.findMany({
+    where: { status: "emitida", saleId: null, ...(ids ? { id: { in: ids.slice(0, 60) } } : {}), issuerCpf: `${cpf.slice(0, 3)}.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-${cpf.slice(9)}`, ...(query.trim() ? { number: Number(query) || -1 } : {}) },
+    orderBy: [{ dueDate: "asc" }, { number: "asc" }], take: 100,
+    select: { id: true, number: true, amount: true, dueDate: true },
+  });
+  return notes.map((note) => ({ ...note, amount: Number(note.amount), dueDate: note.dueDate.toISOString().slice(0, 10) }));
 }
 
 async function requireAdmin() {

@@ -443,3 +443,16 @@ test("trocar o cliente limpa o RG digitado para não gravar no cliente errado", 
   assert.equal(rgAfterCustomerChange("a", "", "12345"), "");
   assert.equal(rgAfterCustomerChange("a", "a", "12345"), "12345");
 });
+
+test("contrato: promissória é preservada no parser e comparada pelos IDs sem depender da ordem", () => {
+  const payment = { method: "promissoria" as const, amount: 1500, noteIds: ["nota-2", "nota-1"] };
+  const parsed = parseContractPaymentsJson(JSON.stringify([payment]));
+  assert.deepEqual(parsed, [payment]);
+  assert.match(summarizeContractPayments([payment]), /Promissória/);
+  assert.match(formatContractPaymentRow(payment), /Promissórias/);
+  const sale = { customerId: "cliente", cpf: "52998224725", total: 1500, payments: [payment] };
+  const snapshot = { ...sale, payments: [{ ...payment, noteIds: ["nota-1", "nota-2"], notes: [{ id: "nota-1", number: 1, amount: 1500, dueDate: "2027-01-31" }] }] };
+  assert.equal(matchesSaleDocumentSnapshot(snapshot, sale), true);
+  assert.equal(matchesSaleDocumentSnapshot({ ...sale, payments: [{ ...payment, noteIds: ["nota-3"] }] }, sale), false);
+  assert.equal(sumContractPayments([payment, { method: "pix", amount: 0.01 }]), 1500.01);
+});

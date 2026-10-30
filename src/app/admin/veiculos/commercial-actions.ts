@@ -134,6 +134,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         const rg = resolveIdField(form.has("rg"), ids.rg, customer.rg);
         const isContract = kind === "proposta" || kind === "contrato";
         const parsedPayments = isContract ? parseContractPaymentsJson(text("payments")) : undefined;
+        if (parsedPayments?.some((payment) => payment.method === "promissoria")) throw new CommercialError("Para usar promissórias, registre a venda pelo assistente em Vendas > Iniciar venda.");
         let paymentText = text("payment");
         if (!paymentText && parsedPayments) {
           paymentText = summarizeContractPayments(parsedPayments);
