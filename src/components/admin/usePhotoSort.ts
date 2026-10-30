@@ -1,9 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { edgeScrollDelta, photoIndexAt } from "@/lib/photo-sort";
 
-const EDGE_PX = 70;
-const SCROLL_STEP = 14;
 
 /**
  * Reordenar fotos com pointer events (mouse, toque e caneta) a partir de uma alça.
@@ -28,24 +27,38 @@ export function usePhotoSort(onReorder: (from: number, to: number) => void, coun
     setDragIndex(index);
     setOver(index);
 
-    function onMove(event: PointerEvent) {
-      if (event.pointerId !== pointerId) return;
+    // Última posição do ponteiro: o loop de quadros reaproveita com o dedo parado na borda.
+    const pointer = { x: 0, y: 0, known: false };
+    let frame = 0;
+    function update() {
+      if (!pointer.known) return;
       // Pela geometria dos itens, não por elementFromPoint: barras fixas (rodapé do wizard,
       // navegação) cobrem o fim da tela e mascarariam o item sob o ponteiro.
-      let next: number | null = null;
-      for (const item of list.querySelectorAll<HTMLElement>("[data-photo-index]")) {
+      const boxes = Array.from(list.querySelectorAll<HTMLElement>("[data-photo-index]"), item => {
         const box = item.getBoundingClientRect();
-        if (event.clientX >= box.left && event.clientX <= box.right && event.clientY >= box.top && event.clientY <= box.bottom) {
-          next = Number(item.dataset.photoIndex);
-          break;
-        }
-      }
+        return { index: Number(item.dataset.photoIndex), left: box.left, right: box.right, top: box.top, bottom: box.bottom };
+      });
+      const next = photoIndexAt(boxes, pointer.x, pointer.y);
       if (next !== null && Number.isFinite(next) && next !== over.current) setOver(next);
-      if (event.clientY < EDGE_PX) window.scrollBy({ top: -SCROLL_STEP, behavior: "instant" });
-      else if (event.clientY > window.innerHeight - EDGE_PX) window.scrollBy({ top: SCROLL_STEP, behavior: "instant" });
+    }
+    function tick() {
+      const delta = edgeScrollDelta(pointer.y, window.innerHeight);
+      if (pointer.known && delta) {
+        window.scrollBy({ top: delta, behavior: "instant" });
+        update();
+      }
+      frame = requestAnimationFrame(tick);
+    }
+    function onMove(event: PointerEvent) {
+      if (event.pointerId !== pointerId) return;
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+      pointer.known = true;
+      update();
     }
     function end(event: PointerEvent, cancelled: boolean) {
       if (event.pointerId !== pointerId) return;
+      cancelAnimationFrame(frame);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
@@ -60,6 +73,7 @@ export function usePhotoSort(onReorder: (from: number, to: number) => void, coun
     function onCancel(event: PointerEvent) {
       end(event, true);
     }
+    frame = requestAnimationFrame(tick);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onCancel);
