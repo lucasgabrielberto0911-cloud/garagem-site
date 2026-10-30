@@ -54,6 +54,65 @@ export function promissoryInstallmentDates(firstDueDate: string, count: number) 
   return Array.from({ length: count }, (_, index) => addMonthsClamped(firstDueDate, index));
 }
 
+/** Soma dias a uma data civil AAAA-MM-DD em UTC, sem deslocamento de fuso. */
+export function addDaysCivil(value: string, days: number) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) throw new Error("Informe uma data válida no formato AAAA-MM-DD.");
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + days));
+  return date.toISOString().slice(0, 10);
+}
+
+/** Próxima data civil com o dia informado (ex.: 5, 10, 15) após a data base. */
+export function nextMonthDayCivil(baseDate: string, targetDay: number) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(baseDate);
+  if (!match || !Number.isInteger(targetDay) || targetDay < 1 || targetDay > 31) {
+    throw new Error("Informe uma data base e um dia do mês válidos.");
+  }
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const candidateThisMonth = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(Math.min(targetDay, daysInMonth(year, month))).padStart(2, "0")}`;
+  if (day < targetDay && candidateThisMonth > baseDate) return candidateThisMonth;
+  const nextIndex = year * 12 + month;
+  const nextYear = Math.floor(nextIndex / 12);
+  const nextMonth = (nextIndex % 12) + 1;
+  const clampedDay = Math.min(targetDay, daysInMonth(nextYear, nextMonth));
+  return `${String(nextYear).padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
+}
+
+/** Diferença em dias civis (to - from) entre duas datas AAAA-MM-DD. */
+export function diffCivilDays(from: string, to: string) {
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const [ty, tm, td] = to.split("-").map(Number);
+  const fromUtc = Date.UTC(fy, fm - 1, fd);
+  const toUtc = Date.UTC(ty, tm - 1, td);
+  return Math.round((toUtc - fromUtc) / 86_400_000);
+}
+
+export type PromissoryDueAlert = {
+  label: string;
+  badge: string;
+  tone: "warning" | "info";
+  overdue: boolean;
+};
+
+/** Descreve a urgência do vencimento para notas em aberto (vencida, vence hoje, vence em até 7 dias). */
+export function describePromissoryDue(dueDate: string, today: string, status: string): PromissoryDueAlert | null {
+  if (!canMarkPromissoryPaid(status) || !validDate(dueDate) || !validDate(today)) return null;
+  const diff = diffCivilDays(today, dueDate);
+  if (diff < 0) {
+    const days = Math.abs(diff);
+    return {
+      label: days === 1 ? "Vencida há 1 dia" : `Vencida há ${days} dias`,
+      badge: "Vencida",
+      tone: "warning",
+      overdue: true,
+    };
+  }
+  if (diff === 0) return { label: "Vence hoje", badge: "Vence hoje", tone: "warning", overdue: false };
+  if (diff === 1) return { label: "Vence amanhã", badge: "Vence amanhã", tone: "info", overdue: false };
+  if (diff <= 7) return { label: `Vence em ${diff} dias`, badge: `Vence em ${diff}d`, tone: "info", overdue: false };
+  return null;
+}
+
 export type PromissoryFormFields = {
   customerId: string;
   name: string;
@@ -122,16 +181,21 @@ export function parsePromissoryForm(fields: Partial<PromissoryFormFields>, today
   const notes = clean(fields.notes);
   const count = Number(clean(fields.count) || "1");
   const amount = parseMoneyBR(fields.amount);
-  const phone = normalizePromissoryPhone(clean(fields.phone));
+  const rawPhone = clean(fields.phone);
+  const phone = normalizePromissoryPhone(rawPhone);
+  const rawAmount = clean(fields.amount);
 
-  if (name.length < 2) errors.name = "Informe o nome do emitente.";
-  if (!isValidCpf(cpf)) errors.cpf = "CPF inválido. Confira os 11 dígitos.";
-  if (!address) errors.address = "Informe o endereço do emitente.";
+  if (name.length < 2) errors.name = "Informe o nome completo do emitente.";
+  if (!cpf) errors.cpf = "Informe o CPF do emitente (11 dígitos).";
+  else if (!isValidCpf(cpf)) errors.cpf = "CPF inválido. Confira os 11 dígitos.";
+  if (!address) errors.address = "Informe o endereço completo do emitente (rua, número, bairro e cidade/UF).";
   if (!birthDate) errors.birthDate = "Informe a data de nascimento.";
   else if (!validDate(birthDate) || birthDate < "1900-01-01") errors.birthDate = "Data de nascimento inválida.";
   else if (birthDate > today) errors.birthDate = "A data de nascimento não pode ser futura.";
-  if (!phone) errors.phone = "Informe o telefone com DDD.";
-  if (amount === null || amount <= 0) errors.amount = "Informe um valor maior que zero.";
+  if (!rawPhone) errors.phone = "Informe o telefone com DDD.";
+  else if (!phone) errors.phone = "Informe o telefone com DDD (10 ou 11 dígitos, ex.: (27) 99999-0000).";
+  if (!rawAmount) errors.amount = "Informe o valor de cada nota.";
+  else if (amount === null || amount <= 0) errors.amount = "Informe um valor maior que zero.";
   if (!Number.isInteger(count) || count < 1 || count > PROMISSORY_MAX_INSTALLMENTS) errors.count = `Informe de 1 a ${PROMISSORY_MAX_INSTALLMENTS} notas.`;
   if (!validDate(issuedAt)) errors.issuedAt = "Data de emissão inválida.";
   if (!validDate(firstDueDate)) errors.firstDueDate = "Informe o primeiro vencimento.";
@@ -214,6 +278,19 @@ export function parsePromissoryFilter(value: unknown): PromissoryFilter {
   return PROMISSORY_FILTERS.find((item) => item.value === value)?.value ?? "abertas";
 }
 
+export const PROMISSORY_DUE_FILTERS = [
+  { value: "todos", label: "Todos os vencimentos" },
+  { value: "vencidas", label: "Vencidas" },
+  { value: "hoje", label: "Vence hoje" },
+  { value: "7dias", label: "Próximos 7 dias" },
+  { value: "30dias", label: "Próximos 30 dias" },
+] as const;
+export type PromissoryDueFilter = (typeof PROMISSORY_DUE_FILTERS)[number]["value"];
+
+export function parsePromissoryDueFilter(value: unknown): PromissoryDueFilter {
+  return PROMISSORY_DUE_FILTERS.find((item) => item.value === value)?.value ?? "todos";
+}
+
 const FILTER_STATUS: Record<PromissoryFilter, PromissoryStatus[] | null> = {
   abertas: ["emitida", "vinculada"],
   pagas: ["paga"],
@@ -221,9 +298,28 @@ const FILTER_STATUS: Record<PromissoryFilter, PromissoryStatus[] | null> = {
   todas: null,
 };
 
-/** Filtro da lista: status da aba + busca por número, nome ou CPF do emitente. */
-export function promissoryListWhere(filter: PromissoryFilter, query: string): Prisma.PromissoryNoteWhereInput {
-  const statuses = FILTER_STATUS[filter];
+function civilUtcDate(value: string) {
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+function dueFilterClause(due: PromissoryDueFilter | undefined, today: string | undefined): Prisma.DateTimeFilter | Date | undefined {
+  if (!due || due === "todos" || !today || !validDate(today)) return undefined;
+  const todayUtc = civilUtcDate(today);
+  if (due === "vencidas") return { lt: todayUtc };
+  if (due === "hoje") return todayUtc;
+  if (due === "7dias") return { gte: todayUtc, lte: civilUtcDate(addDaysCivil(today, 7)) };
+  if (due === "30dias") return { gte: todayUtc, lte: civilUtcDate(addDaysCivil(today, 30)) };
+  return undefined;
+}
+
+/** Filtro da lista: status da aba + vencimento + busca por número, nome, CPF ou telefone do emitente. */
+export function promissoryListWhere(
+  filter: PromissoryFilter,
+  query: string,
+  options?: { due?: PromissoryDueFilter; today?: string },
+): Prisma.PromissoryNoteWhereInput {
+  const dueClause = dueFilterClause(options?.due, options?.today);
+  const statuses = FILTER_STATUS[filter] ?? (dueClause ? ["emitida", "vinculada"] : null);
   const term = query.trim().slice(0, 80);
   const digits = term.replace(/\D/g, "");
   const number = /^\d{1,9}$/.test(term) ? Number(term) : null;
@@ -233,5 +329,9 @@ export function promissoryListWhere(filter: PromissoryFilter, query: string): Pr
   if (digits.length >= 3) or.push({ issuerCpf: { contains: term } });
   if (digits.length === 11) or.push({ issuerCpf: formatCpfBR(digits) });
   if (digits.length >= 4) or.push({ issuerPhone: { contains: digits } });
-  return { ...(statuses ? { status: { in: statuses } } : {}), ...(or.length ? { OR: or } : {}) };
+  return {
+    ...(statuses ? { status: { in: statuses } } : {}),
+    ...(dueClause ? { dueDate: dueClause } : {}),
+    ...(or.length ? { OR: or } : {}),
+  };
 }
