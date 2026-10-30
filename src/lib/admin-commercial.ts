@@ -1,6 +1,6 @@
 import { formatAdminMoney, moneyDifference, moneySum } from "./admin-money";
 
-export type ContractPaymentMethod = "pix" | "financiamento" | "troca" | "cartao" | "sinal";
+export type ContractPaymentMethod = "pix" | "financiamento" | "troca" | "cartao" | "sinal" | "promissoria";
 
 export const CONTRACT_PAYMENT_METHODS: { id: ContractPaymentMethod; label: string }[] = [
   { id: "pix", label: "À vista/PIX" },
@@ -8,7 +8,10 @@ export const CONTRACT_PAYMENT_METHODS: { id: ContractPaymentMethod; label: strin
   { id: "troca", label: "Troca (carro na troca)" },
   { id: "cartao", label: "Cartão" },
   { id: "sinal", label: "Sinal" },
+  { id: "promissoria", label: "Promissória" },
 ];
+
+export type ContractPromissoryNote = { id: string; number: number; amount: number; dueDate: string };
 
 export type ContractPaymentItem = {
   method: ContractPaymentMethod;
@@ -20,6 +23,8 @@ export type ContractPaymentItem = {
   tradeVehicle?: string;
   tradePlate?: string;
   signalDate?: string;
+  noteIds?: string[];
+  notes?: ContractPromissoryNote[];
 };
 
 export function matchesSaleDocumentSnapshot(snapshot: unknown, sale: { customerId: string | null; cpf: string; name?: string; phone?: string; rg?: string; address?: string; total: number; payments: ContractPaymentItem[] }): boolean {
@@ -36,7 +41,7 @@ export function matchesSaleDocumentSnapshot(snapshot: unknown, sale: { customerI
     return normalize(saved) === normalize(current);
   });
   const snapshotPayments = parseContractPaymentsJson(JSON.stringify(document.payments ?? []));
-  const sortPayments = (payments: ContractPaymentItem[] | undefined) => payments ? payments.map(({ signalDate: _signalDate, ...payment }) => payment).sort((a, b) => a.method.localeCompare(b.method)) : undefined;
+  const sortPayments = (payments: ContractPaymentItem[] | undefined) => payments ? payments.map(({ signalDate: _signalDate, notes: _notes, noteIds, ...payment }) => ({ ...payment, ...(noteIds ? { noteIds: [...noteIds].sort() } : {}) })).sort((a, b) => a.method.localeCompare(b.method)) : undefined;
   return sameBuyer && sameCustomerDetails && Number(document.total ?? document.amount) === sale.total && JSON.stringify(sortPayments(snapshotPayments)) === JSON.stringify(sortPayments(sale.payments));
 }
 
@@ -60,6 +65,8 @@ export function formatContractPaymentRow(item: ContractPaymentItem, receiptRef?:
         : "";
       return `(−) Sinal já pago${dateStr ? ` (${dateStr})` : ""} — recibo de sinal emitido pela VENDEDORA, abatido do preço`;
     }
+    case "promissoria":
+      return "(−) Promissórias — obrigação representada pelas notas abaixo";
     case "pix":
       return "(−) À vista / PIX";
     case "financiamento": {
@@ -103,6 +110,8 @@ export function summarizeContractPayments(items: ContractPaymentItem[]): string 
         return `Cartão${item.installments ? ` ${item.installments}x` : ""} (${val})`;
       case "sinal":
         return `Sinal (${val})`;
+      case "promissoria":
+        return `Promissória (${val})`;
     }
   });
   return (parts.join(" + ") || "À vista/PIX").slice(0, 200);
@@ -124,11 +133,23 @@ export function parseContractPaymentsJson(raw: string): ContractPaymentItem[] | 
     const obj = entry as Record<string, unknown>;
     const method = String(obj.method ?? "");
     const amount = Number(obj.amount ?? 0);
-    if (!validMethods.has(method) || !Number.isFinite(amount) || amount < 0) continue;
+    if (!validMethods.has(method) || !Number.isFinite(amount) || amount < 0) {
+      if (method === "promissoria") return undefined;
+      continue;
+    }
     const item: ContractPaymentItem = {
       method: method as ContractPaymentMethod,
       amount: Math.round(amount * 100) / 100,
     };
+    if (method === "promissoria") {
+      if (amount <= 0 || !Number.isSafeInteger(Math.round(amount * 100)) || Math.abs(amount - item.amount) > 0.000001) return undefined;
+      if (!Array.isArray(obj.noteIds) || obj.noteIds.length < 1 || obj.noteIds.length > 60
+        || obj.noteIds.some((id) => typeof id !== "string" || !/^[a-zA-Z0-9_-]{1,100}$/.test(id))
+        || new Set(obj.noteIds).size !== obj.noteIds.length) return undefined;
+      item.noteIds = [...obj.noteIds] as string[];
+      // Os detalhes são preenchidos pelo servidor; o parser conserva snapshots já emitidos.
+      if (Array.isArray(obj.notes) && obj.notes.every((note) => note && typeof note === "object")) item.notes = obj.notes.map((note) => ({ id: String(note.id), number: Number(note.number), amount: Number(note.amount), dueDate: String(note.dueDate) }));
+    }
     if (typeof obj.bank === "string" && obj.bank.trim()) item.bank = obj.bank.trim().slice(0, 160);
     if (typeof obj.downPayment === "number" && Number.isFinite(obj.downPayment) && obj.downPayment > 0) {
       item.downPayment = Math.round(obj.downPayment * 100) / 100;

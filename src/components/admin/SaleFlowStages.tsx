@@ -1,5 +1,6 @@
 "use client";
 
+import { SalePromissoryPayment } from "./SalePromissoryPayment";
 import { SearchSelect } from "@/components/admin/SearchSelect";
 import { AdminPageHeader, btn, inputClass } from "@/components/admin/ui";
 import { formatAdminMoney, parseMoneyBR } from "@/lib/admin-money";
@@ -64,10 +65,11 @@ export async function searchCustomers(q: string, signal?: AbortSignal): Promise<
 }
 
 function methodLabel(method: ContractPaymentMethod) {
-  return method === "pix" ? "À vista/PIX" : method === "cartao" ? "Cartão" : method[0].toUpperCase() + method.slice(1);
+  return method === "pix" ? "À vista/PIX" : method === "cartao" ? "Cartão" : method === "promissoria" ? "Promissória" : method[0].toUpperCase() + method.slice(1);
 }
 
 function describePayment(p: ContractPaymentItem, hasReservedSignal: boolean) {
+  if (p.method === "promissoria") return `Promissórias: ${formatAdminMoney(p.amount)} · ${(p.notes ?? []).map((note) => `nº ${note.number}, vence ${note.dueDate.split("-").reverse().join("/")}`).join("; ")}`;
   if (p.method === "pix") return `À vista/PIX ${formatAdminMoney(p.amount)}`;
   if (p.method === "financiamento") return `Financiamento: entrada adicional ${formatAdminMoney(p.downPayment ?? 0)}, financiado ${formatAdminMoney(p.amount)}, ${p.installments ?? 0} parcelas`;
   if (p.method === "troca") return `Troca: ${p.tradeVehicle ?? ""} · ${p.tradePlate ?? ""} · ${formatAdminMoney(p.amount)}`;
@@ -80,7 +82,7 @@ export function StageProgress({ stage }: { stage: number }) {
     <ol className="grid grid-cols-5 gap-1" aria-label="Etapas">
       {stages.map((name, i) => (
         <li key={name} className={`min-w-0 break-words border-b-2 py-2 text-[10px] sm:text-xs ${i === stage ? "border-brand font-semibold" : "border-line text-muted"}`}>
-          <span className="mr-1">{i + 1}.</span>{name}
+          <span className="block">{i + 1}.</span>{i === 4 ? "Revisão" : name}
         </li>
       ))}
     </ol>
@@ -148,7 +150,10 @@ function PaymentCard({ p, moneyField, updatePayment }: { p: ContractPaymentItem;
   );
 }
 
-export function PaymentStage({ vehicle, total, payments, signal, paymentTotal, totalNumber, moneyField, onTotalChange, onToggle, updatePayment }: {
+export function PaymentStage({ customer, notesBusy, onBusyChange, vehicle, total, payments, signal, paymentTotal, totalNumber, moneyField, onTotalChange, onToggle, updatePayment }: {
+  customer: Customer | null;
+  notesBusy: boolean;
+  onBusyChange: (busy: boolean) => void;
   vehicle: Vehicle | null;
   total: string;
   payments: ContractPaymentItem[];
@@ -166,15 +171,17 @@ export function PaymentStage({ vehicle, total, payments, signal, paymentTotal, t
       <h2 className="text-lg font-semibold">Pagamento</h2>
       <Control label="Valor total negociado" value={total} onChange={(e) => onTotalChange(e.target.value)} />
       <div className="flex flex-wrap gap-2">
-        {(["pix", "financiamento", "troca", "cartao"] as ContractPaymentMethod[]).map((m) => (
-          <button type="button" key={m} className={btn.outline} onClick={() => onToggle(m)}>
+        {(["pix", "financiamento", "troca", "cartao", "promissoria"] as ContractPaymentMethod[]).map((m) => (
+          <button type="button" key={m} className={btn.outline} disabled={notesBusy} aria-pressed={payments.some((p) => p.method === m)} onClick={() => onToggle(m)}>
             {payments.some((p) => p.method === m) ? "✓ " : "+ "}{methodLabel(m)}
           </button>
         ))}
-        <button type="button" className={btn.outline} onClick={() => onToggle("sinal")}>{signal ? "✓ Houve sinal" : "Houve sinal"}</button>
+        <button type="button" className={btn.outline} disabled={notesBusy} onClick={() => onToggle("sinal")}>{signal ? "✓ Houve sinal" : "Houve sinal"}</button>
       </div>
       {signal && !hasReservedSignal && <Control label="Valor do sinal" {...moneyField("signal", payments.find((p) => p.method === "sinal")?.amount ?? 0, (amount) => updatePayment("sinal", { amount }))} />}
-      {payments.filter((p) => p.method !== "sinal").map((p) => <PaymentCard key={p.method} p={p} moneyField={moneyField} updatePayment={updatePayment} />)}
+      {payments.filter((p) => p.method !== "sinal" && p.method !== "promissoria").map((p) => <PaymentCard key={p.method} p={p} moneyField={moneyField} updatePayment={updatePayment} />)}
+      {payments.filter((p) => p.method === "promissoria").map((p) => <SalePromissoryPayment key={customer?.id + (customer?.cpf ?? "")} payment={p} customer={customer} remaining={Math.round((totalNumber - paymentTotal) * 100) / 100} onChange={(patch) => updatePayment("promissoria", patch)} onBusyChange={onBusyChange} />)}
+      {Math.round(paymentTotal * 100) !== Math.round(totalNumber * 100) && <p role="status" className="text-sm text-red-400">{paymentTotal < totalNumber ? "Falta informar" : "O pagamento excede o total em"} {formatAdminMoney(Math.abs(totalNumber - paymentTotal))}. Ajuste os pagamentos antes de continuar.</p>}
       <p>Soma informada: {formatAdminMoney(paymentTotal)} · Total: {formatAdminMoney(totalNumber)}</p>
     </>
   );
