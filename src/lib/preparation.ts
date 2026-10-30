@@ -82,7 +82,9 @@ export async function claimPreparation(
   if (count !== 1) throw new Error(PREPARATION_CLAIM_ERROR);
 }
 
-/** Escopo do rascunho: edição por veículo, cadastro por preparação e cadastro comum em "new". */
-export function vehicleDraftScope(vehicleId?: string | null, preparationId?: string | null) {
-  return vehicleId ?? (preparationId ? `new-${preparationId}` : "new");
+/** Mantém escopos antigos; cadastros independentes recebem um identificador estável pela página. */
+export function vehicleDraftScope(vehicleId?: string | null, preparationId?: string | null, draftId?: string | null) {
+  if (vehicleId) return vehicleId;
+  const suffix = (preparationId || draftId)?.replace(/^(?:new-)+/, "");
+  return !suffix || suffix === "new" ? "new" : `new-${suffix}`;
 }
