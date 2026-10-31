@@ -93,9 +93,6 @@ const SORT_SELECT_OPTIONS = [
   { value: "year:asc", label: "Mais antigo" },
 ] as const;
 
-const CHIP_SCROLL =
-  "flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
-
 const STATUS_DOT: Record<string, string> = {
   disponivel: "bg-emerald-400",
   reservado: "bg-brand-orange",
@@ -189,6 +186,9 @@ export function VehiclesTable({
   const [deleting, setDeleting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [selecting, setSelecting] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [bulkTarget, setBulkTarget] = useState<AdminBulkStatus | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [undoBanner, setUndoBanner] = useState<{ ids: string[] } | null>(null);
@@ -198,17 +198,28 @@ export function VehiclesTable({
   const allVisibleSelected =
     items.length > 0 && items.every((item) => selected.includes(item.id));
   const someVisibleSelected = selected.length > 0 && !allVisibleSelected;
+  const selectMode = selecting || selected.length > 0;
+  const statusFilterActive = tab === "estoque" && Boolean(status);
+  const pendingFilterActive = tab === "estoque" && Boolean(pending);
+  const activeFilterCount =
+    (q ? 1 : 0) + (statusFilterActive ? 1 : 0) + (pendingFilterActive ? 1 : 0);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) {
+      if (
+        (event.key !== "/" && event.key !== "?") ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey
+      ) {
         return;
       }
       const tag = (event.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if ((event.target as HTMLElement | null)?.isContentEditable) return;
       event.preventDefault();
-      searchRef.current?.focus();
+      if (event.key === "?") setShortcutsOpen(true);
+      else searchRef.current?.focus();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -223,12 +234,14 @@ export function VehiclesTable({
         simpleSoldTarget ||
         deleteTarget ||
         actionsTarget ||
-        duplicateConfirmTarget
+        duplicateConfirmTarget ||
+        shortcutsOpen
       )
         return;
-      if (selected.length === 0 && !undoBanner) return;
+      if (selected.length === 0 && !undoBanner && !selecting) return;
       event.preventDefault();
       setSelected([]);
+      setSelecting(false);
       setUndoBanner(null);
     }
     window.addEventListener("keydown", onEscape);
@@ -240,6 +253,8 @@ export function VehiclesTable({
     deleteTarget,
     actionsTarget,
     duplicateConfirmTarget,
+    shortcutsOpen,
+    selecting,
     selected.length,
     undoBanner,
   ]);
@@ -552,6 +567,59 @@ export function VehiclesTable({
     }
   }
 
+  async function bulkFeature(next: boolean) {
+    const targets = items.filter(
+      (item) =>
+        selected.includes(item.id) &&
+        item.featured !== next &&
+        (!next || item.status === "disponivel"),
+    );
+    if (targets.length === 0) {
+      toast.error(
+        next
+          ? "Só anúncio disponível entra na home."
+          : "Nenhum dos selecionados está na home.",
+      );
+      return;
+    }
+    setBulkBusy(true);
+    let done = 0;
+    let lastError = "";
+    try {
+      for (const vehicle of targets) {
+        const result = await setVehicleFeatured(vehicle.id, next);
+        if (!result.ok) {
+          lastError = result.message;
+          break;
+        }
+        done += 1;
+        setFeaturedCount((count) => Math.max(0, count + (next ? 1 : -1)));
+        if (tab === "destaques" && !next) {
+          removeFromList(vehicle.id, "destaques");
+          continue;
+        }
+        setItems((current) =>
+          current.map((item) =>
+            item.id === vehicle.id ? { ...item, featured: next } : item,
+          ),
+        );
+      }
+      if (done > 0) {
+        toast.success(
+          next
+            ? `${done} na home (destaque).`
+            : `${done} tirado(s) da home.`,
+        );
+        router.refresh();
+      }
+      if (lastError) toast.error(lastError);
+    } catch {
+      toast.error("Não foi possível atualizar os destaques.");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function undoBulkSold(ids: string[]) {
     const revert = bulkUndoStatus("vendido");
     if (!revert) return;
@@ -659,8 +727,7 @@ export function VehiclesTable({
           disabled={items.length === 0}
           className="h-5 w-5 accent-brand"
         />
-        <span className="sm:hidden">Selecionar todos</span>
-        <span className="hidden sm:inline">Todos</span>
+        <span>Selecionar todos</span>
       </label>
       <p className="shrink-0 text-xs text-muted">
         {selected.length > 0
@@ -758,135 +825,226 @@ export function VehiclesTable({
         <p className="text-xs leading-relaxed text-muted">{stockNote}</p>
       ) : null}
 
-      <div className="border border-white/10 bg-ink/50 p-2 sm:p-3">
-        <form
-          className="flex items-stretch gap-2"
-          role="search"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const form = event.currentTarget;
-            applyFilters({
-              q: (form.elements.namedItem("q") as HTMLInputElement).value,
-            });
-          }}
-        >
-          <input
-            ref={searchRef}
-            type="search"
-            name="q"
-            enterKeyHint="search"
-            defaultValue={q}
-            placeholder="Modelo ou placa"
-            aria-label="Buscar marca, modelo ou placa"
-            className={`${inputClass} min-w-0 flex-1`}
-          />
-          <button
-            type="submit"
-            disabled={isPending}
-            className={`${btn.outline} hidden shrink-0 px-4 sm:inline-flex`}
+      <div className="space-y-2">
+        <div className="flex items-stretch gap-2">
+          <form
+            className="flex min-w-0 flex-1 items-stretch gap-2"
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = event.currentTarget;
+              applyFilters({
+                q: (form.elements.namedItem("q") as HTMLInputElement).value,
+              });
+            }}
           >
-            {isPending ? "..." : "Buscar"}
-          </button>
-        </form>
-
-        <div className="mt-2 flex items-center gap-2">
-          <div className="hidden shrink-0 items-center gap-2 border-r border-white/10 pr-3 sm:flex">
-            {selectAll}
-          </div>
-          {tab === "estoque" ? (
-            <div
-              className={CHIP_SCROLL}
-              role="group"
-              aria-label="Filtrar por status"
+            <input
+              ref={searchRef}
+              type="search"
+              name="q"
+              enterKeyHint="search"
+              defaultValue={q}
+              placeholder="Marca, modelo ou placa"
+              aria-label="Buscar marca, modelo ou placa"
+              className={`${inputClass} min-w-0 flex-1`}
+            />
+            <button
+              type="submit"
+              disabled={isPending}
+              className={`${btn.outline} hidden shrink-0 px-4 sm:inline-flex`}
             >
-              {(
-                [
-                  { value: null, label: "Todos", count: estoqueCount },
-                  {
-                    value: "disponivel",
-                    label: "Disponível",
-                    count: availableCount,
-                  },
-                  {
-                    value: "reservado",
-                    label: "Reservado",
-                    count: reservedCount,
-                  },
-                ] as const
-              ).map((option) => {
-                const active =
-                  option.value === null ? !status : status === option.value;
-                return (
-                  <button
-                    key={option.label}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => applyFilters({ status: option.value, ...(option.value === "reservado" && pending === "antigos" ? { pending: "" as const } : {}) })}
-                    className={`${FILTER_PILL} ${
-                      active
-                        ? "bg-brand/25 text-cream"
-                        : "text-muted hover:bg-white/5 hover:text-cream"
-                    }`}
-                  >
+              {isPending ? "..." : "Buscar"}
+            </button>
+          </form>
+          <button
+            type="button"
+            aria-expanded={filtersOpen}
+            aria-controls="vehicles-filters"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className={`${btn.outline} shrink-0 px-3`}
+          >
+            Filtros
+            {activeFilterCount > 0 ? (
+              <span className="ml-1.5 text-xs tabular-nums text-brand-orange">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            aria-pressed={selectMode}
+            onClick={() => {
+              if (selectMode) {
+                setSelecting(false);
+                setSelected([]);
+              } else {
+                setSelecting(true);
+              }
+            }}
+            className="min-h-11 shrink-0 px-2 text-xs font-semibold uppercase tracking-wide text-muted transition touch-manipulation hover:text-cream"
+          >
+            {selectMode ? "Concluir" : "Selecionar"}
+          </button>
+        </div>
+
+        {filtersOpen ? (
+          <div
+            id="vehicles-filters"
+            className="space-y-3 border border-white/10 bg-ink/50 p-3"
+          >
+            {tab === "estoque" ? (
+              <>
+                <div>
+                  <p className="mb-1.5 text-xs text-muted">Status</p>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por status">
+                    {(
+                      [
+                        { value: null, label: "Todos", count: estoqueCount },
+                        { value: "disponivel", label: "Disponível", count: availableCount },
+                        { value: "reservado", label: "Reservado", count: reservedCount },
+                      ] as const
+                    ).map((option) => {
+                      const active =
+                        option.value === null ? !status : status === option.value;
+                      return (
+                        <button
+                          key={option.label}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() =>
+                            applyFilters({
+                              status: option.value,
+                              ...(option.value === "reservado" && pending === "antigos"
+                                ? { pending: "" as const }
+                                : {}),
+                            })
+                          }
+                          className={`${FILTER_PILL} ${
+                            active
+                              ? "bg-brand/25 text-cream"
+                              : "text-muted hover:bg-white/5 hover:text-cream"
+                          }`}
+                        >
+                          {option.label}
+                          <span className="ml-1.5 text-xs tabular-nums opacity-70">
+                            {option.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs text-muted">Precisa de atenção</p>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Pendências do estoque">
+                    {(
+                      [
+                        { value: "", label: "Nenhuma" },
+                        { value: "sem-fotos", label: "Sem foto" },
+                        { value: "sem-preco", label: "Sem preço" },
+                        { value: "antigos", label: "60+ dias" },
+                      ] as const
+                    ).map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={pending === option.value}
+                        disabled={isPending}
+                        onClick={() =>
+                          applyFilters({
+                            pending: option.value,
+                            ...(option.value === "antigos" ? { status: null } : {}),
+                          })
+                        }
+                        className={`${FILTER_PILL} ${
+                          pending === option.value
+                            ? "bg-brand/25 text-cream"
+                            : "text-muted hover:bg-white/5 hover:text-cream"
+                        } disabled:opacity-60`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : null}
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted" htmlFor="vehicles-sort">
+                Ordenar
+              </label>
+              <select
+                id="vehicles-sort"
+                value={`${sort.key}:${sort.dir}`}
+                onChange={(event) => {
+                  const [key, dir] = event.target.value.split(":") as [
+                    SortKey,
+                    "asc" | "desc",
+                  ];
+                  changeSort({ key, dir });
+                }}
+                className="h-11 min-w-0 flex-1 border border-white/10 bg-transparent px-2 text-sm text-cream outline-none focus:border-brand sm:max-w-[14rem]"
+              >
+                {SORT_SELECT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
                     {option.label}
-                    <span className="ml-1.5 text-xs tabular-nums opacity-70">
-                      {option.count}
-                    </span>
-                  </button>
-                );
-              })}
+                  </option>
+                ))}
+              </select>
             </div>
-          ) : (
-            <div className="min-w-0 flex-1" />
-          )}
-          {q ? (
+          </div>
+        ) : null}
+
+        {activeFilterCount > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5" aria-label="Filtros ativos">
+            {q ? (
+              <ActiveChip label={`Busca: ${q}`} onClear={() => applyFilters({ q: "" })} />
+            ) : null}
+            {statusFilterActive ? (
+              <ActiveChip
+                label={STATUS_LABEL[status ?? ""] ?? String(status)}
+                onClear={() => applyFilters({ status: null })}
+              />
+            ) : null}
+            {pendingFilterActive ? (
+              <ActiveChip
+                label={
+                  pending === "sem-fotos"
+                    ? "Sem foto"
+                    : pending === "sem-preco"
+                      ? "Sem preço"
+                      : "60+ dias"
+                }
+                onClear={() => applyFilters({ pending: "" })}
+              />
+            ) : null}
             <button
               type="button"
-              onClick={() => applyFilters({ q: "" })}
-              className="min-h-11 shrink-0 px-2 text-xs text-muted underline-offset-4 transition touch-manipulation hover:text-cream hover:underline"
+              onClick={() => applyFilters({ q: "", status: null, pending: "" })}
+              className="min-h-8 px-1.5 text-xs text-muted underline-offset-4 hover:text-cream hover:underline"
             >
-              Limpar busca
+              Limpar
             </button>
-          ) : null}
-          <label className="sr-only" htmlFor="vehicles-sort">
-            Ordenar
-          </label>
-          <select
-            id="vehicles-sort"
-            value={`${sort.key}:${sort.dir}`}
-            onChange={(event) => {
-              const [key, dir] = event.target.value.split(":") as [
-                SortKey,
-                "asc" | "desc",
-              ];
-              changeSort({ key, dir });
-            }}
-            aria-label="Ordenar"
-            className="h-11 w-[8.25rem] shrink-0 border border-white/10 bg-transparent px-2 text-xs text-cream outline-none focus:border-brand sm:w-[10.5rem] sm:text-sm"
-          >
-            {SORT_SELECT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+          </div>
+        ) : null}
 
-      {tab === "estoque" ? <div className="space-y-2">
-        <div role="group" aria-label="Pendências do estoque" className="grid grid-cols-3 gap-2">
-          {([
-            { value: "", label: "Sem filtro" },
-            { value: "sem-fotos", label: "Sem fotos" },
-            { value: "antigos", label: "60+ dias" },
-          ] as const).map((option) => <button key={option.value} type="button" aria-pressed={pending === option.value}
-            disabled={isPending} onClick={() => applyFilters({ pending: option.value, ...(option.value === "antigos" ? { status: null } : {}) })}
-            className={`min-h-11 rounded-lg border px-2 py-2 text-xs transition ${pending === option.value ? "border-brand/40 bg-brand/10 text-cream" : "border-white/10 text-muted hover:text-cream"} disabled:opacity-60`}>
-            {option.label}
-          </button>)}
-        </div>
-        {pending ? <p role="status" className="text-xs leading-relaxed text-muted">{total} veículo(s) {pending === "sem-fotos" ? "sem fotos" : "disponível(is) há mais de 60 dias"}. Abra Editar para revisar o anúncio.</p> : null}
-      </div> : null}
+        {selectMode ? (
+          <div className="flex items-center gap-3 border-b border-white/10 pb-2">
+            {selectAll}
+          </div>
+        ) : null}
+        {pending && tab === "estoque" ? (
+          <p role="status" className="text-xs leading-relaxed text-muted">
+            {total} veículo(s){" "}
+            {pending === "sem-fotos"
+              ? "sem fotos"
+              : pending === "sem-preco"
+                ? "sem preço"
+                : "disponível(is) há mais de 60 dias"}
+            . Abra Editar para revisar o anúncio.
+          </p>
+        ) : null}
+      </div>
 
       {tab === "destaques" ? (
         <div className="border border-white/10 bg-ink/40 px-4 py-3 text-sm">
@@ -958,7 +1116,7 @@ export function VehiclesTable({
             {selected.length} selecionado(s)
             <span className="text-muted">
               {" "}
-              · máx. {ADMIN_BULK_MAX} · Esc limpa · só disponível/vendido
+              · máx. {ADMIN_BULK_MAX} · Esc cancela
             </span>
           </p>
           <div className="flex flex-wrap gap-2">
@@ -971,6 +1129,26 @@ export function VehiclesTable({
               >
                 Marcar disponível
               </button>
+            ) : null}
+            {tab !== "vendidos" ? (
+              <>
+                <button
+                  type="button"
+                  disabled={bulkBusy}
+                  onClick={() => void bulkFeature(true)}
+                  className={btn.outline}
+                >
+                  Destacar
+                </button>
+                <button
+                  type="button"
+                  disabled={bulkBusy}
+                  onClick={() => void bulkFeature(false)}
+                  className={btn.outline}
+                >
+                  Tirar da home
+                </button>
+              </>
             ) : null}
             <button
               type="button"
@@ -1022,17 +1200,13 @@ export function VehiclesTable({
                 : "transition-opacity"
             }
           >
-            {selected.length > 0 ? (
-              <div className="mb-2 flex items-center justify-between gap-3 sm:hidden">
-                {selectAll}
-              </div>
-            ) : null}
             <ul className="space-y-2">
               {items.map((vehicle) => (
                 <VehicleAdminCard
                   key={vehicle.id}
                   vehicle={vehicle}
                   busy={busyId === vehicle.id}
+                  selectable={selectMode}
                   selected={selected.includes(vehicle.id)}
                   onToggleSelect={() => toggleSelected(vehicle.id)}
                   onMarkSold={() => setSoldTarget(vehicle)}
@@ -1073,6 +1247,27 @@ export function VehiclesTable({
           </div>
         </>
       )}
+
+      <ActionSheet
+        open={shortcutsOpen}
+        title="Atalhos do teclado"
+        onClose={() => setShortcutsOpen(false)}
+      >
+        <dl className="space-y-2 px-4 py-3 text-sm text-cream">
+          {[
+            ["/", "Buscar"],
+            ["?", "Mostrar esta lista"],
+            ["Esc", "Cancelar a seleção"],
+          ].map(([key, label]) => (
+            <div key={key} className="flex items-center justify-between gap-3">
+              <dt className="text-muted">{label}</dt>
+              <dd>
+                <kbd className="border border-white/20 px-2 py-0.5 text-xs">{key}</kbd>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </ActionSheet>
 
       <ActionSheet
         open={actionsTarget !== null}
@@ -1239,9 +1434,26 @@ export function VehiclesTable({
   );
 }
 
+function ActiveChip({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-white/10 py-0.5 pl-2.5 pr-1 text-xs text-cream">
+      <span className="truncate">{label}</span>
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label={`Remover filtro ${label}`}
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted hover:text-cream"
+      >
+        ×
+      </button>
+    </span>
+  );
+}
+
 function VehicleAdminCard({
   vehicle,
   busy,
+  selectable,
   selected,
   onToggleSelect,
   onMarkSold,
@@ -1250,6 +1462,7 @@ function VehicleAdminCard({
 }: {
   vehicle: VehicleRow;
   busy: boolean;
+  selectable: boolean;
   selected: boolean;
   onToggleSelect: () => void;
   onMarkSold: () => void;
@@ -1266,7 +1479,7 @@ function VehicleAdminCard({
   return (
     <li className="overflow-hidden border border-white/10 bg-ink/50">
       <div className="flex gap-3 p-3 lg:gap-4">
-        <label className="-my-3 -ml-3 flex w-11 shrink-0 cursor-pointer items-start justify-center self-stretch pt-4 touch-manipulation lg:-ml-1 lg:w-9">
+        {selectable ? <label className="-my-3 -ml-3 flex w-11 shrink-0 cursor-pointer items-start justify-center self-stretch pt-4 touch-manipulation lg:-ml-1 lg:w-9">
           <span className="sr-only">Selecionar {title}</span>
           <input
             type="checkbox"
@@ -1274,7 +1487,7 @@ function VehicleAdminCard({
             onChange={onToggleSelect}
             className="h-5 w-5 accent-brand"
           />
-        </label>
+        </label> : null}
         <Link
           prefetch={false}
           href={`/admin/veiculos/${vehicle.id}`}
