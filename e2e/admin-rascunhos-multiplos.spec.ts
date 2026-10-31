@@ -118,6 +118,57 @@ for (const draft of [undefined, "new", "new-a", "new-b"]) {
   });
 }
 
+test("descartar na barra: falha do DELETE mostra erro e sucesso apaga o rascunho", async ({
+  page,
+  adminId,
+  baseURL,
+}) => {
+  const saved = await page.request.post("/api/admin/drafts", {
+    headers: { Origin: baseURL! },
+    data: {
+      key: "vehicle:new",
+      payload: { fields: {}, model: "Descartável", step: 2 },
+      photoUrls: [],
+      expectedUpdatedAt: null,
+    },
+  });
+  expect(saved.ok()).toBeTruthy();
+  await page.goto("/admin/veiculos/novo");
+  const discard = async () => {
+    await page.getByRole("button", { name: "Descartar", exact: true }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Descartar", exact: true })
+      .click();
+  };
+
+  let fail = true;
+  await page.route("**/api/admin/drafts?key=*", async (route) => {
+    if (route.request().method() === "DELETE" && fail) {
+      await route.fulfill({ status: 500, body: "{}" });
+    } else {
+      await route.continue();
+    }
+  });
+  await discard();
+  await expect(page.getByTestId("draft-discard-error")).toContainText(
+    "Não foi possível descartar o rascunho",
+  );
+  expect(
+    await prisma.adminDraft.count({ where: { adminId, key: "vehicle:new" } }),
+  ).toBe(1);
+
+  fail = false;
+  await discard();
+  await expect(page.getByTestId("draft-discard-error")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Descartar", exact: true }),
+  ).toHaveCount(0);
+  expect(
+    await prisma.adminDraft.count({ where: { adminId, key: "vehicle:new" } }),
+  ).toBe(0);
+});
+
 test("substituir o rascunho usa o diálogo do painel e cancelar preserva a versão salva", async ({
   page,
   adminId,

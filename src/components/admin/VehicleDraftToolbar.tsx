@@ -37,6 +37,7 @@ export function VehicleDraftToolbar({
     draft,
     status,
     note,
+    discardError,
     save,
     discard,
     savedAt,
@@ -145,6 +146,15 @@ export function VehicleDraftToolbar({
           </>
         ) : null}
       </div>
+      {discardError ? (
+        <p
+          role="alert"
+          data-testid="draft-discard-error"
+          className="text-xs text-red-400"
+        >
+          {discardError}
+        </p>
+      ) : null}
       {failed && note ? (
         <p role="status" className="text-xs text-red-400">
           {note}

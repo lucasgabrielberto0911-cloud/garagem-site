@@ -68,6 +68,7 @@ export function useVehicleDraftAutosave({
   const [canResume, setCanResume] = useState(false);
   const [status, setStatus] = useState<Status>("loading");
   const [note, setNote] = useState("");
+  const [discardError, setDiscardError] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const settle = useRef<((ok: boolean) => void) | null>(null);
   const latest = useRef({
@@ -413,6 +414,7 @@ export function useVehicleDraftAutosave({
   }
   /** Apaga o rascunho guardado (servidor e cópia local); os campos da tela ficam. */
   async function discard(): Promise<boolean> {
+    setDiscardError("");
     try {
       const response = await fetch(
         `/api/admin/drafts?key=${encodeURIComponent(draftKey)}`,
@@ -420,7 +422,9 @@ export function useVehicleDraftAutosave({
       );
       if (!response.ok) throw new Error("discard");
     } catch {
-      setNote("Não foi possível descartar o rascunho. Tente novamente.");
+      setDiscardError(
+        "Não foi possível descartar o rascunho. Tente novamente.",
+      );
       return false;
     }
     try {
@@ -458,6 +462,7 @@ export function useVehicleDraftAutosave({
     draft,
     status,
     note,
+    discardError,
     save,
     discard,
     savedAt,
