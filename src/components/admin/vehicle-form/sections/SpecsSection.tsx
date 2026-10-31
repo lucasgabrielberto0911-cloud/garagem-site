@@ -147,16 +147,33 @@ export function SpecsSection({
             inputMode="numeric"
             value={year}
             onChange={(event) => setYear(event.target.value)}
+            maxLength={4}
             className={`${inputClass} ${errors.year ? errorBorder : ""}`}
           />
         </Field>
-        <Field label="Ano modelo" required error={errors.yearModel}>
+        <Field
+          label="Ano modelo"
+          required
+          error={errors.yearModel}
+          hint={
+            year && !yearModel ? (
+              <button
+                type="button"
+                className="underline underline-offset-2"
+                onClick={() => setYearModel(year)}
+              >
+                Mesmo ano ({year})
+              </button>
+            ) : undefined
+          }
+        >
           <input
             name="yearModel"
             type="text"
             inputMode="numeric"
             value={yearModel}
             onChange={(event) => setYearModel(event.target.value)}
+            maxLength={4}
             className={`${inputClass} ${errors.yearModel ? errorBorder : ""}`}
           />
         </Field>
