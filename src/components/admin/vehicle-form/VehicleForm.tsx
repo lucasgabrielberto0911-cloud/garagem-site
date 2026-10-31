@@ -103,7 +103,7 @@ export function VehicleForm(props: VehicleFormProps) {
         className="space-y-4 pb-56 font-body"
       >
         <fieldset disabled={saving} className="flex min-w-0 flex-col gap-4">
-          <ReviewStep form={form} vehicle={vehicle} />
+          <ReviewStep form={form} vehicle={vehicle} mode={mode} />
           <input
             type="hidden"
             name="expectedUpdatedAt"

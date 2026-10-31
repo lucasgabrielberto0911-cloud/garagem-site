@@ -263,7 +263,7 @@ export function useVehicleFormState({
         revealSections(sectionsWithErrors(state.fieldErrors));
         const target = ([1, 2, 3, 4] as const).find((candidate) =>
           Object.keys(state.fieldErrors ?? {}).some(
-            (field) => stepForField(field) === candidate,
+            (field) => stepForField(field, mode) === candidate,
           ),
         );
         if (target) setStep(target);
@@ -280,7 +280,7 @@ export function useVehicleFormState({
       toast.success("Anúncio salvo com sucesso.");
     }
     if (state.success && state.id) router.push(`/admin/veiculos/${state.id}`);
-  }, [state, draftScope, adminId, router, revealSections]);
+  }, [state, draftScope, adminId, router, revealSections, mode]);
 
   const [values, setValues] = useState({
     price: init?.price != null ? moneyInput(init.price) : "",
@@ -435,7 +435,7 @@ export function useVehicleFormState({
         ? {
             ...Object.fromEntries(
               Object.entries(current).filter(
-                ([field]) => stepForField(field) !== onlyStep,
+                ([field]) => stepForField(field, mode) !== onlyStep,
               ),
             ),
             ...next,
@@ -445,7 +445,7 @@ export function useVehicleFormState({
     revealSections(sectionsWithErrors(next));
     const errorStep = Object.keys(next).length
       ? ([1, 2, 3, 4] as const).find((candidate) =>
-          Object.keys(next).some((field) => stepForField(field) === candidate),
+          Object.keys(next).some((field) => stepForField(field, mode) === candidate),
         )
       : undefined;
     if (errorStep) {
@@ -465,8 +465,8 @@ export function useVehicleFormState({
               ? "km"
               : name,
         )
-        .find((field) => next[field] && stepForField(field) === errorStep) ??
-      Object.keys(next).find((field) => stepForField(field) === errorStep);
+        .find((field) => next[field] && stepForField(field, mode) === errorStep) ??
+      Object.keys(next).find((field) => stepForField(field, mode) === errorStep);
     if (first === "locationCity") {
       requestAnimationFrame(() =>
         form

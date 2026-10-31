@@ -6,14 +6,14 @@ import type { VehicleWizardStep } from "@/lib/admin-form-sections";
 export const WIZARD_STEP_LABELS = [
   "Fotos",
   "Dados do veículo",
-  "Descrição, opcionais e preço",
+  "Preço e anúncio",
   "Revisar e publicar",
 ] as const;
 
 export const WIZARD_STEP_SHORT_LABELS = [
   "Fotos",
   "Dados",
-  "Descrição",
+  "Preço",
   "Revisar",
 ] as const;
 

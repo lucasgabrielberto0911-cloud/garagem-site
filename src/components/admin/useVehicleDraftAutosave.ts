@@ -68,6 +68,8 @@ export function useVehicleDraftAutosave({
   const [canResume, setCanResume] = useState(false);
   const [status, setStatus] = useState<Status>("loading");
   const [note, setNote] = useState("");
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const settle = useRef<((ok: boolean) => void) | null>(null);
   const latest = useRef({
     snapshot,
     restore,
@@ -163,12 +165,17 @@ export function useVehicleDraftAutosave({
         }
         if (!active || latest.current.published) return;
         version.current = data.updatedAt;
+        setSavedAt(data.updatedAt);
         setDraft(payload);
         if (fingerprint.current === JSON.stringify(payload))
           store(payload, data.updatedAt);
       },
       (state) => {
         if (!active || latest.current.published) return;
+        if (state !== "pending") {
+          settle.current?.(state === "saved");
+          settle.current = null;
+        }
         setStatus(conflict.current ? "conflict" : state);
         latest.current.onSavingChange(state === "pending");
         if (state === "saved")
@@ -226,6 +233,7 @@ export function useVehicleDraftAutosave({
         const remote = await loadDraft(draftKey, loading.signal);
         if (!active) return;
         version.current = remote?.updatedAt ?? null;
+        setSavedAt(remote?.updatedAt ?? null);
         const local = readBackup(storageKey);
         const saved =
           local?.syncedVersion === null ? local.payload : remote?.payload;
@@ -355,11 +363,11 @@ export function useVehicleDraftAutosave({
     }
   }, [disabled, published, storageKey]);
 
-  async function save() {
-    if (disabled || published || status === "pending") return;
+  async function save(): Promise<boolean> {
+    if (disabled || published || status === "pending") return false;
     if (!ready.current) {
       await reload.current();
-      if (!ready.current) return;
+      if (!ready.current) return false;
     }
     if (recovery.current || conflict.current) {
       const confirmed = await confirmAction({
@@ -369,7 +377,7 @@ export function useVehicleDraftAutosave({
         confirmLabel: "Guardar",
       });
       if (!confirmed || latest.current.disabled || latest.current.published)
-        return;
+        return false;
     }
     // Releitura após decisão explícita; uma nova disputa continua protegida no servidor.
     if (recovery.current || conflict.current) {
@@ -377,7 +385,7 @@ export function useVehicleDraftAutosave({
         version.current = (await loadDraft(draftKey))?.updatedAt ?? null;
       } catch {
         setNote("Não foi possível consultar a versão salva. Tente novamente.");
-        return;
+        return false;
       }
     }
     recovery.current = false;
@@ -397,7 +405,38 @@ export function useVehicleDraftAutosave({
       sessionStorage.setItem(storageKey, value);
     } catch {}
     fingerprint.current = JSON.stringify(payload);
+    const done = new Promise<boolean>((resolve) => {
+      settle.current = resolve;
+    });
     queue.current?.enqueue(payload);
+    return done;
+  }
+  /** Apaga o rascunho guardado (servidor e cópia local); os campos da tela ficam. */
+  async function discard(): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `/api/admin/drafts?key=${encodeURIComponent(draftKey)}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) throw new Error("discard");
+    } catch {
+      setNote("Não foi possível descartar o rascunho. Tente novamente.");
+      return false;
+    }
+    try {
+      localStorage.removeItem(storageKey);
+      sessionStorage.removeItem(storageKey);
+    } catch {}
+    version.current = null;
+    recovery.current = false;
+    conflict.current = false;
+    setDraft(null);
+    setCanResume(false);
+    setSavedAt(null);
+    setNote("");
+    setStatus("idle");
+    fingerprint.current = "";
+    return true;
   }
   async function resumed() {
     try {
@@ -415,5 +454,15 @@ export function useVehicleDraftAutosave({
     fingerprint.current = "";
     setTimeout(() => capture.current(), 0);
   }
-  return { draft, status, note, save, resumed, canResume, confirmDialog };
+  return {
+    draft,
+    status,
+    note,
+    save,
+    discard,
+    savedAt,
+    resumed,
+    canResume,
+    confirmDialog,
+  };
 }

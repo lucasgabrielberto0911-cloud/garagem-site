@@ -36,7 +36,7 @@ export function EditLayout({
   } = form;
   const visible = SECTIONS_BY_STEP[step];
   const errorSteps = ([1, 2, 3, 4] as const).filter((candidate) =>
-    Object.keys(errors).some((field) => stepForField(field) === candidate),
+    Object.keys(errors).some((field) => stepForField(field, "edit") === candidate),
   );
   const navDisabled = saving || draftSaving;
   const saveDisabled = saving || photosUploading || draftSaving;

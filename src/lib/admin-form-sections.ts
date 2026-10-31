@@ -17,8 +17,8 @@ export type VehicleWizardStep = 1 | 2 | 3 | 4;
 export const SECTIONS_BY_STEP: Record<VehicleWizardStep, VehicleFormSectionId[]> = {
   1: ["fotos"],
   2: ["identificacao", "ficha"],
-  3: ["itens", "essencial"],
-  4: ["operacao"],
+  3: ["essencial", "itens", "operacao"],
+  4: [],
 };
 
 export type VehicleFormMode = "create" | "edit";

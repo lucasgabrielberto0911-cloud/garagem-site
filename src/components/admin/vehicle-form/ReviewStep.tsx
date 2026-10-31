@@ -12,7 +12,9 @@ import { MoreDetailsSection } from "./sections/MoreDetailsSection";
 export function ReviewStep({
   form,
   vehicle,
+  mode,
 }: {
+  mode: VehicleFormProps["mode"];
   form: VehicleFormModel;
   vehicle?: VehicleFormProps["vehicle"];
 }) {
@@ -65,7 +67,14 @@ export function ReviewStep({
         <p>
           {values.price ? `R$ ${values.price}` : "Sem preço"} · {statusLabel}
         </p>
-        <MoreDetailsSection form={form} vehicle={vehicle} />
+        {mode === "edit" ? (
+          <div className="border-t border-white/10 pt-3">
+            <p className="mb-4 font-display text-xs font-semibold uppercase tracking-wider text-cream">
+              Mais opções
+            </p>
+            <MoreDetailsSection form={form} vehicle={vehicle} />
+          </div>
+        ) : null}
       </div>
     </div>
   );

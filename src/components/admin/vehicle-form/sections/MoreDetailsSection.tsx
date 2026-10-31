@@ -39,14 +39,10 @@ export function MoreDetailsSection({
     setConsigned,
   } = form;
   return (
-    <div className="col-span-2 border-t border-white/10 pt-3">
-      <p className="font-display text-xs font-semibold uppercase tracking-wider text-cream">
-        Mais opções
-      </p>
-
+    <div>
       <div
         id="vehicle-more-options"
-        className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-4"
+        className="grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-4"
       >
         <div className="col-span-2 sm:col-span-1">
           <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">

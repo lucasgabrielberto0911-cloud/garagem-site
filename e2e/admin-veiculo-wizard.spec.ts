@@ -5,6 +5,14 @@ import { randomInt, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import samples from "./public-samples.json";
 
+async function guardarAgora(page: Page) {
+  const guardar = page.getByRole("button", { name: "Guardar agora", exact: true });
+  if (!(await guardar.isVisible())) {
+    await page.locator("button[aria-expanded]").filter({ hasText: /Rascunho automático|Salvo às|Salvando|Sem conexão|Outra aba/ }).click();
+  }
+  await guardar.click();
+}
+
 const database = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/");
 const localDatabase = process.env.E2E_TEST === "1"
   && ["localhost", "127.0.0.1", "[::1]"].includes(database.hostname)
@@ -160,15 +168,20 @@ test.describe("wizard nos tamanhos configurados", () => {
       await next(page).click();
       await expect(form.locator('[name="description"]')).toHaveValue("Veículo revisado e bem cuidado.");
       await expect(form.getByRole("button", { name: "Remover Ar-condicionado", exact: true })).toBeVisible();
+      // Cidade e destaque ficam em "Mais detalhes" na etapa 3; o erro abre a seção sozinho.
+      await expect(page.locator("#vehicle-more-details")).not.toHaveAttribute("open", "");
       await next(page).click();
-      await expect(title(page)).toContainText("Etapa 4 de 4");
-      await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
-      await expect(page.getByText("Selecione a cidade onde o veículo está.", { exact: true })).toBeVisible();
+      await expect(title(page)).toContainText("Etapa 3 de 4");
+      await expect(page.getByText("Selecione a cidade onde o veículo está.", { exact: true }).first()).toBeVisible();
+      await expect(page.locator("#vehicle-more-details")).toHaveAttribute("open", "");
       await page.getByRole("button", { name: "Linhares ES", exact: true }).click();
       await page.locator('[name="featured"]').check();
-      await back(page).click();
       await next(page).click();
+      await expect(title(page)).toContainText("Etapa 4 de 4");
+      await expect(page.getByRole("button", { name: "Linhares ES", exact: true })).toBeHidden();
+      await back(page).click();
       await expect(page.locator('[name="featured"]')).toBeChecked();
+      await next(page).click();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
       await expect(page).toHaveURL(/\/admin\/veiculos\/(?!novo$)[^/?]+$/);
@@ -183,6 +196,25 @@ test.describe("wizard nos tamanhos configurados", () => {
       await expect(page.getByText(modelName, { exact: false }).first()).toBeVisible();
     });
 
+    test("tela inicial limpa: status do rascunho em texto e detalhes recolhidos; guarda e sai", async ({ page, modelName }) => {
+      await page.goto("/admin/veiculos/novo");
+      await expect(page.getByRole("button", { name: "Continuar", exact: true })).toBeHidden();
+      await expect(page.getByRole("button", { name: "Guardar agora", exact: true })).toBeHidden();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+      await uploadPhotos(page);
+      await next(page).click();
+      await expect(page.locator("details", { hasText: "Mais detalhes (opcional)" })).not.toHaveAttribute("open", "");
+      await expect(page.locator('[name="engine"]')).toBeHidden();
+      await fillVehicle(page, modelName);
+      await next(page).click();
+      await expect(page.locator("#vehicle-more-details")).not.toHaveAttribute("open", "");
+      await expect(page.locator('[name="purchasePrice"]')).toBeHidden();
+      const status = page.locator("button[aria-expanded]").filter({ hasText: /Rascunho automático|Salvo às|Salvando/ });
+      await status.click();
+      await page.getByRole("button", { name: "Guardar e sair", exact: true }).click();
+      await expect(page).toHaveURL(/\/admin\/veiculos$/);
+    });
+
     test("retoma a etapa e os campos do rascunho após reload", async ({ page, modelName }) => {
       await page.goto("/admin/veiculos/novo");
       await uploadPhotos(page);
@@ -191,10 +223,10 @@ test.describe("wizard nos tamanhos configurados", () => {
       await next(page).click();
       const form = page.locator("#vehicle-form");
       await form.getByLabel("Colar legenda", { exact: true }).fill("Texto preservado no rascunho.");
-      await page.getByRole("button", { name: "Guardar rascunho", exact: true }).click();
-      await expect(page.getByRole("button", { name: "Guardar rascunho", exact: true })).toBeEnabled();
+      await guardarAgora(page);
+      await expect(page.getByRole("button", { name: "Guardar agora", exact: true })).toBeEnabled();
       await page.reload();
-      await page.getByRole("button", { name: "Retomar rascunho", exact: true }).click();
+      await page.getByRole("button", { name: "Continuar", exact: true }).click();
       await page.getByRole("button", { name: "Retomar", exact: true }).click();
       await expect(title(page)).toContainText("Etapa 3 de 4");
       await expect(form.locator('[name="description"]')).toHaveValue("Texto preservado no rascunho.");
@@ -225,7 +257,7 @@ test.describe("wizard nos tamanhos configurados", () => {
           if (request.headers()["next-action"] && request.headers()["content-type"]?.startsWith("multipart/form-data")) submissions++;
         });
         await page.goto("/admin/veiculos/novo");
-        await page.getByRole("button", { name: "Retomar rascunho", exact: true }).click();
+        await page.getByRole("button", { name: "Continuar", exact: true }).click();
         await page.getByRole("button", { name: "Retomar", exact: true }).click();
         await expect(title(page)).toContainText("Etapa 4 de 4");
         await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();

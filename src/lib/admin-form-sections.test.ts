@@ -216,8 +216,8 @@ test("wizard distribui cada seção uma vez nas quatro etapas", () => {
   assert.deepEqual(SECTIONS_BY_STEP, {
     1: ["fotos"],
     2: ["identificacao", "ficha"],
-    3: ["itens", "essencial"],
-    4: ["operacao"],
+    3: ["essencial", "itens", "operacao"],
+    4: [],
   });
   const sections = Object.values(SECTIONS_BY_STEP).flat();
   assert.equal(new Set(sections).size, sections.length);

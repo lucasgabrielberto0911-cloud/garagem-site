@@ -9,7 +9,9 @@ import { kmHint } from "@/lib/admin-vehicle-validate";
 export function SpecsSection({
   form,
   vehicle,
+  collapseAdvanced = false,
 }: {
+  collapseAdvanced?: boolean;
   form: Pick<
     VehicleFormModel,
     | "year"
@@ -59,6 +61,82 @@ export function SpecsSection({
     canFixTransmission,
     sectionProps,
   } = form;
+  const engineAndDoors = (
+    <>
+      <Field
+        label={isMoto ? "Motor / cilindrada" : "Motor"}
+        hint={isMoto ? "Ex.: 500cc" : "Ex.: 1.0 TSI"}
+      >
+        <input
+          name="engine"
+          value={engine}
+          onChange={(event) => setEngine(event.target.value)}
+          placeholder={isMoto ? "Ex.: 500cc" : "Ex.: 2.0 Flex"}
+          className={inputClass}
+        />
+      </Field>
+      {!isMoto ? (
+        <Field label="Portas" error={errors.doors}>
+          <input
+            name="doors"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={6}
+            defaultValue={vehicle?.doors ?? ""}
+            placeholder="Ex.: 4"
+            className={`${inputClass} ${errors.doors ? errorBorder : ""}`}
+          />
+        </Field>
+      ) : (
+        <input type="hidden" name="doors" value="" />
+      )}
+    </>
+  );
+  const origin = (
+    <>
+      <h3 className="mb-3 mt-6 border-t border-white/10 pt-5 font-display text-xs font-semibold uppercase tracking-wider text-muted">
+        Procedência e garantia
+      </h3>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Field
+          label="Final da placa"
+          hint="Calculado a partir da placa interna — visível no site"
+        >
+          <input
+            name="plateEnd"
+            value={plateEnd}
+            readOnly
+            placeholder="Preencha a placa"
+            className={inputClass}
+          />
+        </Field>
+        <Field
+          label="Garantia"
+          hint="A loja já anuncia 3 meses (motor e câmbio) no site. Preencha só se este carro for diferente."
+        >
+          <input
+            name="warranty"
+            defaultValue={vehicle?.warranty ?? ""}
+            placeholder="Ex.: 3 meses — motor e câmbio"
+            className={inputClass}
+          />
+        </Field>
+        <Field
+          label="Vistoria da loja"
+          hint="Se preenchido, a ficha mostra a checagem interna da loja. Não é documento oficial."
+          className="sm:col-span-2 lg:col-span-1"
+        >
+          <input
+            name="inspection"
+            defaultValue={vehicle?.inspection ?? ""}
+            placeholder="Ex.: Concluída"
+            className={inputClass}
+          />
+        </Field>
+      </div>
+    </>
+  );
   return (
     <WizardSection {...sectionProps("ficha")}>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -162,76 +240,25 @@ export function SpecsSection({
             </p>
           ) : null}
         </Field>
-        <Field
-          label={isMoto ? "Motor / cilindrada" : "Motor"}
-          hint={isMoto ? "Ex.: 500cc" : "Ex.: 1.0 TSI"}
-        >
-          <input
-            name="engine"
-            value={engine}
-            onChange={(event) => setEngine(event.target.value)}
-            placeholder={isMoto ? "Ex.: 500cc" : "Ex.: 2.0 Flex"}
-            className={inputClass}
-          />
-        </Field>
-        {!isMoto ? (
-          <Field label="Portas" error={errors.doors}>
-            <input
-              name="doors"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={6}
-              defaultValue={vehicle?.doors ?? ""}
-              placeholder="Ex.: 4"
-              className={`${inputClass} ${errors.doors ? errorBorder : ""}`}
-            />
-          </Field>
-        ) : (
-          <input type="hidden" name="doors" value="" />
-        )}
+        {collapseAdvanced ? null : engineAndDoors}
       </div>
 
-      <h3 className="mb-3 mt-6 border-t border-white/10 pt-5 font-display text-xs font-semibold uppercase tracking-wider text-muted">
-        Procedência e garantia
-      </h3>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Field
-          label="Final da placa"
-          hint="Calculado a partir da placa interna — visível no site"
-        >
-          <input
-            name="plateEnd"
-            value={plateEnd}
-            readOnly
-            placeholder="Preencha a placa"
-            className={inputClass}
-          />
-        </Field>
-        <Field
-          label="Garantia"
-          hint="A loja já anuncia 3 meses (motor e câmbio) no site. Preencha só se este carro for diferente."
-        >
-          <input
-            name="warranty"
-            defaultValue={vehicle?.warranty ?? ""}
-            placeholder="Ex.: 3 meses — motor e câmbio"
-            className={inputClass}
-          />
-        </Field>
-        <Field
-          label="Vistoria da loja"
-          hint="Se preenchido, a ficha mostra a checagem interna da loja. Não é documento oficial."
-          className="sm:col-span-2 lg:col-span-1"
-        >
-          <input
-            name="inspection"
-            defaultValue={vehicle?.inspection ?? ""}
-            placeholder="Ex.: Concluída"
-            className={inputClass}
-          />
-        </Field>
-      </div>
+      {collapseAdvanced ? (
+        <details className="mt-4 border-t border-white/10 pt-3">
+          <summary className="min-h-11 cursor-pointer touch-manipulation py-2 font-display text-xs font-semibold uppercase tracking-wider text-muted">
+            Mais detalhes (opcional)
+            <span className="ml-2 font-body normal-case tracking-normal">
+              Motor, portas, garantia, vistoria
+            </span>
+          </summary>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {engineAndDoors}
+          </div>
+          {origin}
+        </details>
+      ) : (
+        origin
+      )}
     </WizardSection>
   );
 }

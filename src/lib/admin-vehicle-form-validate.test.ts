@@ -66,8 +66,8 @@ test("validar uma etapa não antecipa nem apaga erros de outras etapas", () => {
   for (const [onlyStep, fields] of [
     [1, ["photos"]],
     [2, ["brand"]],
-    [3, ["price"]],
-    [4, ["locationCity"]],
+    [3, ["price", "locationCity"]],
+    [4, []],
   ] as const) {
     assert.deepEqual(
       Object.keys(
@@ -179,11 +179,14 @@ test("mapeia fotos, identificação, legenda, preço e opções internas às eta
     accessories: 3,
     price: 3,
     status: 3,
-    locationCity: 4,
-    featured: 4,
-    purchasePrice: 4,
+    locationCity: 3,
+    featured: 3,
+    purchasePrice: 3,
   })) {
     assert.equal(stepForField(field), step, field);
   }
+  // Na edição, cidade e destaque continuam na revisão.
+  assert.equal(stepForField("locationCity", "edit"), 4);
+  assert.equal(stepForField("featured", "edit"), 4);
   assert.equal(stepForField("inexistente"), undefined);
 });
