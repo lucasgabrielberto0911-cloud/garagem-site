@@ -105,7 +105,7 @@ export function VehicleDraftList({ adminId }: { adminId: string }) {
                 className={btn.ghost}
                 href={vehicleDraftHref(draft.key, draft.preparationId)}
               >
-                Continuar
+                Continuar rascunho
               </Link>
               <button
                 type="button"
