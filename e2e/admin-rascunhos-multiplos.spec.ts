@@ -1,7 +1,15 @@
-import { test as base, expect } from "@playwright/test";
+import { test as base, expect, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { randomInt, randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
+
+async function guardarAgora(page: Page) {
+  const guardar = page.getByRole("button", { name: "Guardar agora", exact: true });
+  if (!(await guardar.isVisible())) {
+    await page.locator("button[aria-expanded]").filter({ hasText: /Rascunho automático|Salvo às|Salvando|Sem conexão|Outra aba/ }).click();
+  }
+  await guardar.click();
+}
 
 const database = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/");
 const localDatabase =
@@ -82,7 +90,7 @@ for (const draft of [undefined, "new", "new-a", "new-b"]) {
     } else {
       await page.goto(url);
     }
-    await page.getByRole("button", { name: "Retomar rascunho", exact: true }).click();
+    await page.getByRole("button", { name: "Continuar", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Retomar", exact: true }).click();
     await expect(page.locator('[name="model"]')).toHaveValue(`Modelo ${scope}`);
     await page.locator('[name="model"]').fill(`Alterado ${scope}`);
@@ -91,14 +99,14 @@ for (const draft of [undefined, "new", "new-a", "new-b"]) {
       response.request().method() === "POST" &&
       response.request().postDataJSON().payload?.model === `Alterado ${scope}`,
     );
-    await page.getByRole("button", { name: "Guardar rascunho", exact: true }).click();
+    await guardarAgora(page);
     const response = await saved;
     expect(response.ok()).toBeTruthy();
     expect(response.request().postDataJSON().key).toBe(`vehicle:${scope}`);
-    await expect(page.getByRole("button", { name: "Guardar rascunho", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Guardar agora", exact: true })).toBeEnabled();
 
     await page.reload();
-    await page.getByRole("button", { name: "Retomar rascunho", exact: true }).click();
+    await page.getByRole("button", { name: "Continuar", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Retomar", exact: true }).click();
     await expect(page.locator('[name="model"]')).toHaveValue(`Alterado ${scope}`);
     for (const other of scopes.filter((item) => item !== scope)) {
@@ -109,6 +117,57 @@ for (const draft of [undefined, "new", "new-a", "new-b"]) {
     }
   });
 }
+
+test("descartar na barra: falha do DELETE mostra erro e sucesso apaga o rascunho", async ({
+  page,
+  adminId,
+  baseURL,
+}) => {
+  const saved = await page.request.post("/api/admin/drafts", {
+    headers: { Origin: baseURL! },
+    data: {
+      key: "vehicle:new",
+      payload: { fields: {}, model: "Descartável", step: 2 },
+      photoUrls: [],
+      expectedUpdatedAt: null,
+    },
+  });
+  expect(saved.ok()).toBeTruthy();
+  await page.goto("/admin/veiculos/novo");
+  const discard = async () => {
+    await page.getByRole("button", { name: "Descartar", exact: true }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Descartar", exact: true })
+      .click();
+  };
+
+  let fail = true;
+  await page.route("**/api/admin/drafts?key=*", async (route) => {
+    if (route.request().method() === "DELETE" && fail) {
+      await route.fulfill({ status: 500, body: "{}" });
+    } else {
+      await route.continue();
+    }
+  });
+  await discard();
+  await expect(page.getByTestId("draft-discard-error")).toContainText(
+    "Não foi possível descartar o rascunho",
+  );
+  expect(
+    await prisma.adminDraft.count({ where: { adminId, key: "vehicle:new" } }),
+  ).toBe(1);
+
+  fail = false;
+  await discard();
+  await expect(page.getByTestId("draft-discard-error")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Descartar", exact: true }),
+  ).toHaveCount(0);
+  expect(
+    await prisma.adminDraft.count({ where: { adminId, key: "vehicle:new" } }),
+  ).toBe(0);
+});
 
 test("substituir o rascunho usa o diálogo do painel e cancelar preserva a versão salva", async ({
   page,
@@ -132,11 +191,9 @@ test("substituir o rascunho usa o diálogo do painel e cancelar preserva a vers�
   ).toBeTruthy();
   await page.goto("/admin/veiculos/novo?draft=new");
   await expect(
-    page.getByRole("button", { name: "Retomar rascunho", exact: true }),
+    page.getByRole("button", { name: "Continuar", exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Guardar rascunho", exact: true })
-    .click();
+  await guardarAgora(page);
   await expect(
     page.getByRole("dialog", { name: "Substituir o rascunho anterior?" }),
   ).toBeVisible();
@@ -146,7 +203,7 @@ test("substituir o rascunho usa o diálogo do painel e cancelar preserva a vers�
   });
   expect(stored.payload).toEqual(payload);
   await page
-    .getByRole("button", { name: "Retomar rascunho", exact: true })
+    .getByRole("button", { name: "Continuar", exact: true })
     .click();
   await page
     .getByRole("dialog")

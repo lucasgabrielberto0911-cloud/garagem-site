@@ -1,14 +1,17 @@
+import { useEffect, useRef, useState } from "react";
 import {
   SECTIONS_BY_STEP,
   type VehicleWizardStep,
 } from "@/lib/admin-form-sections";
 import { stepForField } from "@/lib/admin-vehicle-form-validate";
+import { VEHICLE_LOCATION_CITIES } from "@/lib/vehicle-location";
 import { VehicleWizardNav } from "@/components/admin/VehicleWizardNav";
 import { IdentitySection } from "./sections/IdentitySection";
 import { PriceStatusSection } from "./sections/PriceStatusSection";
 import { PhotosSection } from "./sections/PhotosSection";
 import { SpecsSection } from "./sections/SpecsSection";
 import { LegendSection } from "./sections/LegendSection";
+import { MoreDetailsSection } from "./sections/MoreDetailsSection";
 import { OperationSection } from "./sections/OperationSection";
 import { SubmitButton } from "./SubmitButton";
 import type { VehicleFormProps } from "./types";
@@ -20,6 +23,51 @@ export type WizardLayoutProps = {
   mode: VehicleFormProps["mode"];
   adminId: string;
 };
+
+/** Cidade, destaque, consignado e custos internos: recolhidos, com resumo de uma linha. */
+function PriceMoreDetails({
+  form,
+  vehicle,
+}: {
+  form: VehicleFormModel;
+  vehicle?: VehicleFormProps["vehicle"];
+}) {
+  const { locationCity, errors, consigned } = form;
+  const hasError = Boolean(errors.locationCity || errors.purchasePrice);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (!hasError) return;
+    setOpen(true);
+    ref.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [hasError]);
+  const city = VEHICLE_LOCATION_CITIES.find(
+    (option) => option.value === locationCity,
+  )?.label;
+  return (
+    <details
+      ref={ref}
+      id="vehicle-more-details"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      className="border border-white/10 bg-ink/50"
+    >
+      <summary className="flex min-h-11 cursor-pointer touch-manipulation flex-wrap items-center gap-x-2 px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider text-cream sm:px-5">
+        Mais detalhes (opcional)
+        <span
+          className={`font-body text-xs font-normal normal-case tracking-normal ${errors.locationCity ? "text-red-400" : "text-muted"}`}
+        >
+          {city ? `Cidade ${city}` : "Falta a cidade"}
+          {consigned ? " · Consignado" : ""}
+        </span>
+      </summary>
+      <div className="space-y-4 border-t border-white/10 p-4 sm:p-5">
+        <MoreDetailsSection form={form} vehicle={vehicle} />
+        <OperationSection form={form} />
+      </div>
+    </details>
+  );
+}
 
 export function CreateWizard({
   form,
@@ -40,38 +88,30 @@ export function CreateWizard({
   const visible = SECTIONS_BY_STEP[step];
   return (
     <>
-      <div className="contents">
-        <div hidden={!visible.includes("identificacao")} style={{ order: 0 }}>
-          <IdentitySection form={form} />
-        </div>
-        <div hidden={!visible.includes("essencial")} style={{ order: 2 }}>
-          <PriceStatusSection form={form} />
-        </div>
+      <div hidden={!visible.includes("fotos")}>
+        <PhotosSection form={form} vehicle={vehicle} adminId={adminId} />
       </div>
-      <div className="contents">
-        <div hidden={!visible.includes("fotos")} style={{ order: 0 }}>
-          <PhotosSection form={form} vehicle={vehicle} adminId={adminId} />
-        </div>
+      <div hidden={!visible.includes("identificacao")}>
+        <IdentitySection form={form} />
       </div>
-      <div className="contents">
-        <div hidden={!visible.includes("ficha")} style={{ order: 0 }}>
-          <SpecsSection form={form} vehicle={vehicle} />
-        </div>
-        <input type="hidden" name="description" value={description} />
-        <div hidden={!visible.includes("itens")} style={{ order: 1 }}>
-          <LegendSection form={form} />
-        </div>
-        {mode === "create" ? (
-          <div hidden={!visible.includes("operacao")} style={{ order: 0 }}>
-            <OperationSection form={form} />
-          </div>
-        ) : null}
+      <div hidden={!visible.includes("ficha")}>
+        <SpecsSection form={form} vehicle={vehicle} collapseAdvanced />
+      </div>
+      <div hidden={!visible.includes("essencial")}>
+        <PriceStatusSection form={form} />
+      </div>
+      <input type="hidden" name="description" value={description} />
+      <div hidden={!visible.includes("itens")}>
+        <LegendSection form={form} />
+      </div>
+      <div hidden={!visible.includes("operacao")}>
+        <PriceMoreDetails form={form} vehicle={vehicle} />
       </div>
       <VehicleWizardNav
         step={step}
         errorSteps={([1, 2, 3, 4] as const).filter((candidate) =>
           Object.keys(errors).some(
-            (field) => stepForField(field) === candidate,
+            (field) => stepForField(field, "create") === candidate,
           ),
         )}
         disabled={saving || draftSaving}

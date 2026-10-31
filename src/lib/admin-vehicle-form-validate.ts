@@ -11,9 +11,14 @@ import {
 } from "./admin-vehicle-validate";
 import { legendAccessoriesError } from "./legend-parser";
 
-export function stepForField(field: string): VehicleWizardStep | undefined {
+export function stepForField(
+  field: string,
+  mode: "create" | "edit" = "create",
+): VehicleWizardStep | undefined {
   if (field === "photos") return 1;
-  if (field === "locationCity" || field === "featured") return 4;
+  // Na edição, cidade e destaque ficam na revisão; na criação, em "Mais detalhes" da etapa 3.
+  if (mode === "edit" && (field === "locationCity" || field === "featured"))
+    return 4;
   const section = sectionForField(field);
   return ([1, 2, 3, 4] as const).find(
     (candidate) =>
@@ -97,7 +102,7 @@ export function validateVehicleForm(
   }
   if (options.onlyStep) {
     for (const field of Object.keys(next)) {
-      if (stepForField(field) !== options.onlyStep) delete next[field];
+      if (stepForField(field, options.mode) !== options.onlyStep) delete next[field];
     }
   }
   return next;

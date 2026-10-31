@@ -27,8 +27,7 @@ export default async function NewVehiclePage({
       <AdminPageHeader
         title="Novo veículo"
         subtitle={<>
-          Crie o anúncio em quatro etapas: fotos, dados, descrição e revisão.
-          <span className="hidden sm:inline"> Confira também os dados internos na revisão antes de publicar.</span>
+          Crie o anúncio em quatro etapas: fotos, dados, preço e revisão.
         </>}
       />
       <VehicleForm
