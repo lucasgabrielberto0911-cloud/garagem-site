@@ -85,7 +85,7 @@ for (const draft of [undefined, "new", "new-a", "new-b"]) {
     if (scope !== "new") {
       await page.goto("/admin/veiculos/rascunhos");
       await page.getByRole("listitem").filter({ hasText: `Modelo ${scope}` })
-        .getByRole("link", { name: "Continuar", exact: true }).click();
+        .getByRole("link", { name: "Continuar rascunho", exact: true }).click();
       await expect(page).toHaveURL(url);
     } else {
       await page.goto(url);
