@@ -1,6 +1,9 @@
+"use client";
+
 import { ListingQualityCard } from "@/components/admin/ListingQualityCard";
-import { VehicleFormPreview } from "@/components/admin/VehicleFormPreview";
-import { formatCurrencyBRL } from "@/lib/format";
+import { useState } from "react";
+import { ListingPreview } from "@/components/admin/ListingPreview";
+import { parseVehicleKm } from "@/lib/admin-vehicle-fields";
 import type { VehicleFormProps } from "./types";
 import type { VehicleFormModel } from "./useVehicleFormState";
 
@@ -11,6 +14,7 @@ export function VehicleFormSummary({
   form: VehicleFormModel;
   listingScore?: VehicleFormProps["listingScore"];
 }) {
+  const [showPreview, setShowPreview] = useState(false);
   const {
     step,
     brand,
@@ -31,7 +35,6 @@ export function VehicleFormSummary({
     dirty,
     saving,
     revealSections,
-    errors,
   } = form;
   return (
     <div className={step !== 4 ? "hidden" : "space-y-4"}>
@@ -61,34 +64,32 @@ export function VehicleFormSummary({
         onJump={(section) => revealSections([section])}
       />
 
-      <VehicleFormPreview
-        price={
-          listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"
-        }
-      >
-        <p className="font-display text-lg font-semibold text-cream">
-          {`${brand} ${model}`.trim() || "Seu próximo anúncio"}
-        </p>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
-          {[
-            version,
-            year && yearModel ? `${year}/${yearModel}` : "Ano a preencher",
-            values.km ? `${values.km} km` : "KM a preencher",
-            transmission,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
-        <p className="mt-2 font-display text-xl font-bold text-red-400">
-          {listedPrice ? formatCurrencyBRL(listedPrice) : "Preço a preencher"}
-        </p>
-        <p className="mt-2 text-xs text-muted">
-          {photos.length} foto(s) ·{" "}
-          {Object.keys(errors).length
-            ? "Corrija os campos destacados antes de publicar."
-            : "Confira os dados, a capa e o preço antes de salvar."}
-        </p>
-      </VehicleFormPreview>
+      <div className="space-y-3">
+        <button
+          type="button"
+          aria-expanded={showPreview}
+          aria-controls="listing-preview-panel"
+          onClick={() => setShowPreview((open) => !open)}
+          className="min-h-11 border border-white/20 px-3 py-2 font-display text-sm text-cream transition hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {showPreview ? "Esconder prévia" : "Ver como fica no site"}
+        </button>
+        {showPreview ? (
+          <div id="listing-preview-panel">
+            <ListingPreview
+              brand={brand}
+              model={model}
+              version={version}
+              yearModel={Number(yearModel) || null}
+              km={parseVehicleKm(values.km)}
+              transmission={transmission}
+              price={listedPrice > 0 ? listedPrice : null}
+              status={status}
+              coverUrl={photos[0]?.url ?? ""}
+            />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

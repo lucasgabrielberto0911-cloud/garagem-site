@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { BrandModelOptions } from "@/components/admin/BrandModelOptions";
 import { VehicleForm } from "@/components/admin/VehicleForm";
 import { AdminPageHeader } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
@@ -39,6 +40,7 @@ export default async function NewVehiclePage({
         draftId={vehicleDraftParam(draft)}
         autoRestoreDraft={isDuplicate}
       />
+      <BrandModelOptions />
     </div>
   );
 }
