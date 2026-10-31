@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { btn, inputClass } from "@/components/admin/ui";
 import { localDateInput } from "@/lib/admin-date";
 import { moneyInput } from "@/lib/admin-money";
+import { checkedFieldValue } from "@/lib/preparation-form-fields";
 import { savePreparationAction, type PreparationActionState } from "./actions";
 
 type PreparationItem = {
@@ -54,8 +55,7 @@ export function PreparationForm({
   };
 
   const getCheckedValue = (key: string, fallback?: boolean) => {
-    if (fields && key in fields) return fields[key] === "on";
-    return fallback ?? false;
+    return checkedFieldValue(fields, key, fallback);
   };
 
   const inputErrorClass = (hasError?: boolean) =>

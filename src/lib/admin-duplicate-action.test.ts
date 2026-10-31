@@ -64,7 +64,15 @@ function fixture(): State {
   };
 }
 
+let lockTail: Promise<unknown> = Promise.resolve();
 const client = {
+  $queryRaw: async () => [],
+  // Simula pg_advisory_xact_lock: transações executam uma de cada vez.
+  $transaction: (cb: (tx: unknown) => Promise<unknown>) => {
+    const run = lockTail.then(() => cb(client));
+    lockTail = run.catch(() => {});
+    return run;
+  },
   vehicle: {
     findUnique: async ({ where }: { where: { id: string } }) =>
       state.vehicles.find((v) => v.id === where.id) ?? null,
@@ -74,12 +82,14 @@ const client = {
       where,
     }: {
       where: { adminId_key: { adminId: string; key: string } };
-    }) =>
-      state.drafts.find(
+    }) => {
+      await new Promise((r) => setTimeout(r, 5)); // abre janela de corrida
+      return state.drafts.find(
         (d) =>
           d.adminId === where.adminId_key.adminId &&
           d.key === where.adminId_key.key,
-      ) ?? null,
+      ) ?? null;
+    },
     upsert: async ({
       where,
       create,
@@ -241,4 +251,17 @@ test("duplicateVehicle com replaceDraft preserva rascunho anterior em backup e s
   assert.ok(current);
   assert.equal((current.payload as Record<string, unknown>).brand, "Honda");
   assert.equal((current.payload as Record<string, unknown>).model, "Civic");
+});
+
+test("duas duplicações simultâneas sem replaceDraft: só uma grava, a outra pede confirmação", async () => {
+  const [a, b] = await Promise.all([
+    duplicateVehicle("v-1"),
+    duplicateVehicle("v-1"),
+  ]);
+  const oks = [a, b].filter((r) => r.ok).length;
+  assert.equal(oks, 1);
+  const blocked = [a, b].find((r) => !r.ok);
+  assert.ok(blocked && !blocked.ok && blocked.hasExistingDraft);
+  assert.equal(state.drafts.filter((d) => d.key === "vehicle:new").length, 1);
+  assert.equal(state.drafts.some((d) => d.key === "vehicle:new:backup"), false);
 });

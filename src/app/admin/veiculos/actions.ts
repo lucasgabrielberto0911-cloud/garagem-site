@@ -830,16 +830,57 @@ export async function duplicateVehicle(
     return { ok: false as const, message: "Veículo não encontrado." };
   }
 
-  const existingDraft = await prisma.adminDraft.findUnique({
-    where: {
-      adminId_key: {
+  const payload = buildDuplicateDraftPayload(source);
+  const expiresAt = new Date(Date.now() + 30 * 86400000);
+
+  // Leitura + gravação sob o mesmo lock da API de rascunhos: duas abas não se sobrescrevem.
+  const blocked = await withAdminStorageLock(async (tx) => {
+    const existingDraft = await tx.adminDraft.findUnique({
+      where: {
+        adminId_key: { adminId: session.adminId, key: DUPLICATE_DRAFT_KEY },
+      },
+    });
+
+    if (hasDraftContent(existingDraft) && !options?.replaceDraft) return true;
+
+    if (existingDraft && hasDraftContent(existingDraft)) {
+      await tx.adminDraft.upsert({
+        where: {
+          adminId_key: { adminId: session.adminId, key: DUPLICATE_BACKUP_KEY },
+        },
+        create: {
+          adminId: session.adminId,
+          key: DUPLICATE_BACKUP_KEY,
+          payload: (existingDraft.payload ?? {}) as Prisma.InputJsonValue,
+          photoUrls: existingDraft.photoUrls,
+          expiresAt: existingDraft.expiresAt,
+        },
+        update: {
+          payload: (existingDraft.payload ?? {}) as Prisma.InputJsonValue,
+          photoUrls: existingDraft.photoUrls,
+          expiresAt: existingDraft.expiresAt,
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    await tx.adminDraft.upsert({
+      where: {
+        adminId_key: { adminId: session.adminId, key: DUPLICATE_DRAFT_KEY },
+      },
+      create: {
         adminId: session.adminId,
         key: DUPLICATE_DRAFT_KEY,
+        payload,
+        photoUrls: [],
+        expiresAt,
       },
-    },
+      update: { payload, photoUrls: [], expiresAt, updatedAt: new Date() },
+    });
+    return false;
   });
 
-  if (hasDraftContent(existingDraft) && !options?.replaceDraft) {
+  if (blocked) {
     return {
       ok: false as const,
       hasExistingDraft: true as const,
@@ -847,55 +888,6 @@ export async function duplicateVehicle(
         "Já existe um rascunho de novo veículo em andamento. Deseja substituí-lo pelos dados deste anúncio?",
     };
   }
-
-  const payload = buildDuplicateDraftPayload(source);
-  const expiresAt = new Date(Date.now() + 30 * 86400000);
-
-  if (existingDraft && hasDraftContent(existingDraft)) {
-    await prisma.adminDraft.upsert({
-      where: {
-        adminId_key: {
-          adminId: session.adminId,
-          key: DUPLICATE_BACKUP_KEY,
-        },
-      },
-      create: {
-        adminId: session.adminId,
-        key: DUPLICATE_BACKUP_KEY,
-        payload: (existingDraft.payload ?? {}) as Prisma.InputJsonValue,
-        photoUrls: existingDraft.photoUrls,
-        expiresAt: existingDraft.expiresAt,
-      },
-      update: {
-        payload: (existingDraft.payload ?? {}) as Prisma.InputJsonValue,
-        photoUrls: existingDraft.photoUrls,
-        expiresAt: existingDraft.expiresAt,
-        updatedAt: new Date(),
-      },
-    });
-  }
-
-  await prisma.adminDraft.upsert({
-    where: {
-      adminId_key: {
-        adminId: session.adminId,
-        key: DUPLICATE_DRAFT_KEY,
-      },
-    },
-    create: {
-      adminId: session.adminId,
-      key: DUPLICATE_DRAFT_KEY,
-      payload,
-      photoUrls: [],
-      expiresAt,
-    },
-    update: {
-      payload,
-      photoUrls: [],
-      expiresAt,
-      updatedAt: new Date(),
-    },
-  });
 
   revalidatePath("/admin/veiculos");
   return {

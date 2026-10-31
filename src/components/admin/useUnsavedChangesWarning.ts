@@ -88,6 +88,8 @@ let dirtyCount = 0;
 let sentinelUrl: string | null = null;
 let leaving = false;
 let skipNextClick = false;
+let confirmingBack = false;
+let restoring = false;
 
 function pushSentinel() {
   window.history.pushState(window.history.state, "");
@@ -105,6 +107,22 @@ function popSentinel() {
 }
 
 function onPopState(event: PopStateEvent) {
+  if (restoring) {
+    // Eco do history.go(1) que desfaz o segundo Voltar.
+    restoring = false;
+    event.stopImmediatePropagation();
+    return;
+  }
+  if (confirmingBack && !leaving) {
+    // Voltar de novo com o modal aberto: desfaz o recuo e mantém a pergunta pendente.
+    event.stopImmediatePropagation();
+    restoring = true;
+    window.setTimeout(() => {
+      restoring = false;
+    }, 600);
+    window.history.go(1);
+    return;
+  }
   if (leaving || !sentinelUrl || dirtyCount === 0) return;
   // Voltamos da entrada extra para a entrada original (mesma URL): é o gesto Voltar.
   if (window.location.href !== sentinelUrl) {
@@ -112,7 +130,9 @@ function onPopState(event: PopStateEvent) {
     return;
   }
   event.stopImmediatePropagation();
+  confirmingBack = true;
   void confirmUnsavedChanges(UNSAVED_CHANGES_MESSAGE).then((confirmed) => {
+    confirmingBack = false;
     if (confirmed) {
       leaving = true;
       sentinelUrl = null;
@@ -170,7 +190,7 @@ function onClick(event: MouseEvent) {
   });
 }
 
-function activate() {
+export function activateUnsavedGuard() {
   dirtyCount += 1;
   skipNextClick = false;
   if (dirtyCount > 1) return;
@@ -180,7 +200,7 @@ function activate() {
   pushSentinel();
 }
 
-function deactivate() {
+export function deactivateUnsavedGuard() {
   dirtyCount = Math.max(0, dirtyCount - 1);
   if (dirtyCount > 0) return;
   window.removeEventListener("beforeunload", onBeforeUnload);
@@ -197,7 +217,7 @@ function deactivate() {
 export function useUnsavedChangesWarning(dirty: boolean) {
   useEffect(() => {
     if (!dirty) return;
-    activate();
-    return deactivate;
+    activateUnsavedGuard();
+    return deactivateUnsavedGuard;
   }, [dirty]);
 }
