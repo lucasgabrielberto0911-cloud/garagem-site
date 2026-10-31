@@ -18,14 +18,14 @@ test("ficha disponível e vendida têm um H1 acessível em qualquer viewport", a
   }
 });
 
-test("cards mantêm uma capa prioritária e a segunda eager com prioridade baixa", async ({ page }) => {
+test("cards mantêm uma capa prioritária e as seguintes em lazy loading", async ({ page }) => {
   for (const path of ["/", "/estoque"]) {
     await page.goto(path);
     const covers = page.locator("article.listing-card img");
     await expect(covers.first()).toHaveAttribute("fetchpriority", "high");
     await expect(covers.first()).toHaveAttribute("loading", "eager");
     await expect(covers.nth(1)).toHaveAttribute("fetchpriority", "low");
-    await expect(covers.nth(1)).toHaveAttribute("loading", "eager");
+    await expect(covers.nth(1)).toHaveAttribute("loading", "lazy");
     await expect(page.locator('article.listing-card img[fetchpriority="high"]')).toHaveCount(1);
     if (page.viewportSize()!.width < 640) {
       const source = page.locator('article.listing-card source[media="(max-width: 639px)"]').first();
