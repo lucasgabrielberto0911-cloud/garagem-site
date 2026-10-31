@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { randomInt, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import samples from "./public-samples.json";
+import { conferirRodapeDoAnuncio } from "./admin-form-footer";
 
 async function guardarAgora(page: Page) {
   const guardar = page.getByRole("button", { name: "Guardar agora", exact: true });
@@ -104,6 +105,7 @@ test.describe("wizard nos tamanhos configurados", () => {
     test("cria anúncio, bloqueia etapas inválidas e preserva campos ao voltar", async ({ page, modelName }) => {
       await page.goto("/admin/veiculos/novo");
       await expect(title(page)).toContainText("Etapa 1 de 4");
+      await conferirRodapeDoAnuncio(page);
       await expect(back(page)).toBeDisabled();
       expect((await next(page).boundingBox())!.height).toBeGreaterThanOrEqual(44);
       await next(page).click();
@@ -222,6 +224,9 @@ test.describe("wizard nos tamanhos configurados", () => {
       await status.click();
       await page.getByRole("button", { name: "Guardar e sair", exact: true }).click();
       await expect(page).toHaveURL(/\/admin\/veiculos$/);
+      if (page.viewportSize()!.width < 1024) {
+        await expect(page.getByRole("navigation", { name: "Atalhos do painel" })).toBeVisible();
+      }
     });
 
     test("retoma a etapa e os campos do rascunho após reload", async ({ page, modelName }) => {

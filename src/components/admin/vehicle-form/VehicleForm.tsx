@@ -100,7 +100,7 @@ export function VehicleForm(props: VehicleFormProps) {
           const data = new FormData(event.currentTarget);
           startTransition(() => formAction(data));
         }}
-        className="space-y-4 pb-56 font-body"
+        className="vehicle-form space-y-4 font-body"
       >
         <fieldset disabled={saving} className="flex min-w-0 flex-col gap-4">
           <ReviewStep form={form} vehicle={vehicle} mode={mode} />

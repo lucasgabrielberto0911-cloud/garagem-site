@@ -4,6 +4,7 @@ import {
 } from "@/lib/admin-form-sections";
 import { stepForField } from "@/lib/admin-vehicle-form-validate";
 import { WIZARD_STEP_LABELS } from "@/components/admin/VehicleWizardNav";
+import { VehicleFormFooter } from "@/components/admin/VehicleFormFooter";
 import { IdentitySection } from "./sections/IdentitySection";
 import { PriceStatusSection } from "./sections/PriceStatusSection";
 import { PhotosSection } from "./sections/PhotosSection";
@@ -66,10 +67,7 @@ export function EditLayout({
         </div>
       </div>
 
-      <nav
-        aria-label="Etapas do anúncio"
-        className="fixed inset-x-0 bottom-admin-nav z-20 border-t border-white/10 bg-asphalt px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom,0px))] font-body text-cream sm:px-6 sm:py-3"
-      >
+      <VehicleFormFooter>
         <div className="mx-auto max-w-4xl space-y-2.5">
           <ol className="grid grid-cols-4 gap-1.5 font-display text-xs sm:gap-2">
             {WIZARD_STEP_LABELS.map((label, index) => {
@@ -150,7 +148,7 @@ export function EditLayout({
             <VehicleActionsMenu form={form} vehicle={vehicle} mode={mode} />
           </div>
         </div>
-      </nav>
+      </VehicleFormFooter>
     </>
   );
 }

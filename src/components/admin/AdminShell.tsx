@@ -311,7 +311,7 @@ export function AdminShell({
   );
 
   return (
-    <div className="min-h-dvh bg-asphalt text-cream lg:flex">
+    <div className="admin-shell min-h-dvh bg-asphalt text-cream lg:flex">
       <a
         href="#painel"
         className="fixed left-4 top-0 z-[80] -translate-y-full bg-brand px-4 py-3 font-display text-sm font-semibold text-white outline-none transition focus:translate-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cream"
@@ -346,7 +346,7 @@ export function AdminShell({
             height={25}
             className="h-6 w-auto"
           />
-          <span className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+          <span className="admin-mobile-label font-display text-xs font-semibold uppercase tracking-[0.2em] text-muted">
             Admin
           </span>
         </Link>
@@ -357,11 +357,22 @@ export function AdminShell({
           href="/"
           target="_blank"
           aria-label="Ver o site"
-          className="hidden h-11 w-11 items-center justify-center text-muted transition touch-manipulation active:text-cream min-[380px]:flex"
+          className="admin-site-link hidden h-11 w-11 items-center justify-center text-muted transition touch-manipulation active:text-cream min-[380px]:flex"
         >
           <IconExternal className="h-[18px] w-[18px]" />
         </Link>
           <AdminNotifications count={costWarnings} onCount={setCostWarnings} />
+            <button
+              type="button"
+              aria-label="Menu do painel"
+              aria-haspopup="dialog"
+              aria-expanded={menuOpen}
+              aria-controls="admin-mobile-drawer"
+              onClick={() => setMenuOpen((open) => !open)}
+              className="admin-form-menu hidden h-11 w-11 items-center justify-center text-muted touch-manipulation active:text-cream"
+            >
+              <IconMenu className="h-5 w-5" />
+            </button>
         </div>
       </div>
 
@@ -429,7 +440,7 @@ export function AdminShell({
 
       <nav
         aria-label="Atalhos do painel"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink/95 shadow-[0_-8px_30px_rgba(0,0,0,0.35)] backdrop-blur lg:hidden"
+        className="admin-bottom-nav fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink/95 shadow-[0_-8px_30px_rgba(0,0,0,0.35)] backdrop-blur lg:hidden"
       >
         <ul className="mx-auto flex max-w-lg items-stretch pb-safe font-display">
           {BOTTOM_NAV.map(({ href, label, Icon, badgeKey, match }) => {

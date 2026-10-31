@@ -2,6 +2,29 @@
 @tailwind utilities;
 
 @layer utilities {
+  .vehicle-form {
+    padding-bottom: calc(var(--admin-form-footer-h, 9rem) + 1rem);
+  }
+
+  .admin-shell:has(#vehicle-form) {
+    --admin-nav-h: 0px;
+  }
+
+  .admin-shell:has(#vehicle-form) .admin-bottom-nav,
+  .admin-shell:has(#vehicle-form) .admin-site-link {
+    display: none;
+  }
+
+  .admin-shell:has(#vehicle-form) .admin-form-menu {
+    display: flex;
+  }
+
+  @media (max-width: 379px) {
+    .admin-shell:has(#vehicle-form) .admin-mobile-label {
+      display: none;
+    }
+  }
+
   /* Folga do conteúdo acima da bottom nav do admin. */
   .pb-admin-nav {
     padding-bottom: calc(var(--admin-nav-h) + 1rem);

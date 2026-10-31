@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { VehicleWizardStep } from "@/lib/admin-form-sections";
+import { VehicleFormFooter } from "./VehicleFormFooter";
 
 export const WIZARD_STEP_LABELS = [
   "Fotos",
@@ -26,7 +27,7 @@ export function VehicleWizardNav({ step, errorSteps, disabled, onBack, onNext, c
   children: ReactNode;
 }) {
   return (
-    <nav aria-label="Etapas do anúncio" className="fixed inset-x-0 bottom-admin-nav z-20 border-t border-white/10 bg-asphalt px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] font-body text-cream sm:px-6">
+    <VehicleFormFooter>
       <div className="mx-auto max-w-4xl space-y-3">
         <ol className="grid grid-cols-4 gap-2 font-display text-xs">
           {WIZARD_STEP_LABELS.map((label, index) => {
@@ -65,6 +66,6 @@ export function VehicleWizardNav({ step, errorSteps, disabled, onBack, onNext, c
           )}
         </div>
       </div>
-    </nav>
+    </VehicleFormFooter>
   );
 }
