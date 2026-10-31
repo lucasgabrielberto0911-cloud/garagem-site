@@ -42,7 +42,7 @@ export function Field({
   className = "",
 }: {
   label: string;
-  hint?: string;
+  hint?: ReactNode;
   error?: string;
   required?: boolean;
   children: ReactNode;
@@ -78,7 +78,7 @@ export function Field({
     <div className={`block text-sm ${className}`}>
       <label
         htmlFor={id}
-        className="mb-1.5 block text-xs font-medium text-muted"
+        className="mb-1.5 block text-[13px] font-medium text-muted sm:text-sm"
       >
         {label}
         {required ? <span className="ml-1 text-brand">*</span> : null}

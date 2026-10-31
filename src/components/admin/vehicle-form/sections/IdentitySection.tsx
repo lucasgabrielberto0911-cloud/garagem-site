@@ -5,6 +5,7 @@ import { errorBorder } from "../types";
 import type { VehicleFormModel } from "../useVehicleFormState";
 import { VEHICLE_CATEGORIES } from "@/lib/vehicle-accessories";
 import { formatPlateInput } from "@/lib/format";
+import { BRAND_LIST_ID, MODEL_LIST_ID } from "@/components/admin/BrandModelOptions";
 import { SEGMENT, SEGMENT_ON, SEGMENT_OFF } from "../types";
 
 export function IdentitySection({
@@ -100,6 +101,8 @@ export function IdentitySection({
         <Field label="Marca" required error={errors.brand}>
           <input
             name="brand"
+            list={BRAND_LIST_ID}
+            autoCapitalize="words"
             value={brand}
             onChange={(event) => setBrand(event.target.value)}
             placeholder={isMoto ? "Ex.: Honda" : "Ex.: Volkswagen"}
@@ -110,6 +113,8 @@ export function IdentitySection({
           <Field label="Modelo" required error={errors.model}>
             <input
               name="model"
+              list={MODEL_LIST_ID}
+              autoCapitalize="words"
               value={model}
               onChange={(event) => setModel(event.target.value)}
               placeholder={isMoto ? "Ex.: CB 500F" : "Ex.: Golf"}
