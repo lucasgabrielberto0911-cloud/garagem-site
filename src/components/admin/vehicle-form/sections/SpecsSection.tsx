@@ -147,7 +147,6 @@ export function SpecsSection({
             inputMode="numeric"
             value={year}
             onChange={(event) => setYear(event.target.value)}
-            maxLength={4}
             className={`${inputClass} ${errors.year ? errorBorder : ""}`}
           />
         </Field>
@@ -173,7 +172,6 @@ export function SpecsSection({
             inputMode="numeric"
             value={yearModel}
             onChange={(event) => setYearModel(event.target.value)}
-            maxLength={4}
             className={`${inputClass} ${errors.yearModel ? errorBorder : ""}`}
           />
         </Field>
