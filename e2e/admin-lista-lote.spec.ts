@@ -107,9 +107,18 @@ test("selecionar mostra a barra de lote e destaca em lote; Esc cancela", async (
 
 test("atalhos: / foca a busca e ? lista os atalhos", async ({ page, tag }) => {
   await page.goto(`/admin/veiculos?q=${tag}`);
-  await page.locator("body").press("/");
-  await expect(page.getByRole("searchbox", { name: /Buscar/ })).toBeFocused();
-  await page.locator("body").press("Escape");
-  await page.keyboard.press("Shift+/");
-  await expect(page.getByText("Atalhos do teclado")).toBeVisible();
+  // Repete até hidratar: a tecla pode chegar antes do listener existir.
+  await expect(async () => {
+    await page.locator("body").press("/");
+    await expect(page.getByRole("searchbox", { name: /Buscar/ })).toBeFocused({
+      timeout: 500,
+    });
+  }).toPass({ timeout: 15_000 });
+  await page.getByRole("searchbox", { name: /Buscar/ }).blur();
+  await expect(async () => {
+    await page.locator("body").press("Shift+/");
+    await expect(page.getByText("Atalhos do teclado")).toBeVisible({
+      timeout: 500,
+    });
+  }).toPass({ timeout: 15_000 });
 });
