@@ -4,8 +4,18 @@ import {
   VEHICLE_DRAFT_FIELDS,
   vehicleDraftFields,
   vehicleDraftHref,
+  vehicleDraftParam,
   vehicleDraftSummary,
 } from "./vehicle-draft-fields";
+
+test("parâmetro de rascunho usa o primeiro valor e ignora valores inválidos", () => {
+  assert.equal(vehicleDraftParam("a"), "a");
+  assert.equal(vehicleDraftParam(["a", "b"]), "a");
+  assert.equal(vehicleDraftParam([]), undefined);
+  assert.equal(vehicleDraftParam([42, "b"]), undefined);
+  assert.equal(vehicleDraftParam("  "), undefined);
+  assert.equal(vehicleDraftParam(null), undefined);
+});
 
 test("captura e restauração usam o mesmo contrato sem compartilhar referências", () => {
   const source = Object.fromEntries(
