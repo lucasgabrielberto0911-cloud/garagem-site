@@ -1,3 +1,4 @@
+import { FipeDataLink, type FipeForm } from "../FipeFields";
 import { WizardSection } from "../WizardSection";
 import { Field, inputClass } from "@/components/admin/ui";
 import { errorBorder } from "../types";
@@ -9,7 +10,7 @@ import { SEGMENT, SEGMENT_ON, SEGMENT_OFF } from "../types";
 export function IdentitySection({
   form,
 }: {
-  form: Pick<
+  form: FipeForm & Pick<
     VehicleFormModel,
     | "category"
     | "isMoto"
@@ -105,15 +106,18 @@ export function IdentitySection({
             className={`${inputClass} ${errors.brand ? errorBorder : ""}`}
           />
         </Field>
-        <Field label="Modelo" required error={errors.model}>
-          <input
-            name="model"
-            value={model}
-            onChange={(event) => setModel(event.target.value)}
-            placeholder={isMoto ? "Ex.: CB 500F" : "Ex.: Golf"}
-            className={`${inputClass} ${errors.model ? errorBorder : ""}`}
-          />
-        </Field>
+        <div>
+          <Field label="Modelo" required error={errors.model}>
+            <input
+              name="model"
+              value={model}
+              onChange={(event) => setModel(event.target.value)}
+              placeholder={isMoto ? "Ex.: CB 500F" : "Ex.: Golf"}
+              className={`${inputClass} ${errors.model ? errorBorder : ""}`}
+            />
+          </Field>
+          <FipeDataLink form={form} />
+        </div>
         <Field label={isMoto ? "Versão / cilindrada" : "Versão"}>
           <input
             name="version"
