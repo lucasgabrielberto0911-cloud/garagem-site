@@ -12,12 +12,12 @@ import {
   IconArrowUp,
   IconDownload,
   IconEye,
-  IconGrip,
   IconImage,
   IconMore,
   IconStar,
   IconTrash,
 } from "@/components/admin/icons";
+import { PhotoGrid } from "@/components/admin/PhotoGrid";
 import { btn } from "@/components/admin/ui";
 import type { NormalizedRect } from "@/lib/blur-rects";
 import { isFramedCardUrl, type CoverFrame } from "@/lib/cover-frame";
@@ -245,8 +245,6 @@ export function VehiclePhotoManager({
   const [blurredIds, setBlurredIds] = useState<Set<string>>(() => new Set());
   const [fileDragging, setFileDragging] = useState(false);
   const fileDragDepth = useRef(0);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [overIndex, setOverIndex] = useState<number | null>(null);
   const [removeIndex, setRemoveIndex] = useState<number | null>(null);
   const [zipPending, setZipPending] = useState(false);
   const [downloadId, setDownloadId] = useState<string | null>(null);
@@ -716,10 +714,10 @@ export function VehiclePhotoManager({
             <summary className="cursor-pointer py-1 touch-manipulation">
               A 1ª foto é a capa.{" "}
               <span className="lg:hidden">
-                Toque em ⋯ para mover, baixar ou remover.
+                Arraste pela alça ⠿ para reorganizar. Toque em ⋯ para baixar ou remover.
               </span>
               <span className="hidden lg:inline">
-                Arraste para reorganizar.
+                Arraste pela alça ⠿ para reorganizar.
               </span>{" "}
               <span className="text-cream underline underline-offset-2">
                 Como funciona
@@ -740,64 +738,21 @@ export function VehiclePhotoManager({
               foto nova no site.
             </p>
           ) : null}
-          <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {photos.map((photo, index) => {
-              const isDragging = dragIndex === index;
-              const isOver = overIndex === index && dragIndex !== index;
+          <PhotoGrid
+            ids={photos.map((photo) => photo.id)}
+            onReorder={reorder}
+            disabled={inFlight || blurring || rotating || framing}
+          >
+            {(index) => {
+              const photo = photos[index];
               return (
-                <li
-                  key={photo.id}
-                  draggable
+                <div
                   onContextMenu={(event) => {
                     const target = event.target as HTMLElement | null;
                     if (target?.closest("button, a")) return;
                     event.preventDefault();
                     void downloadPhoto(photo, index);
                   }}
-                  onDragStart={(event) => {
-                    // Não inicia reorder se estiver arrastando arquivos do SO.
-                    if (hasFiles(event)) return;
-                    setDragIndex(index);
-                    event.dataTransfer.effectAllowed = "move";
-                    event.dataTransfer.setData("text/plain", String(index));
-                    event.dataTransfer.setData(
-                      "application/x-garagem-photo",
-                      photo.id,
-                    );
-                  }}
-                  onDragEnd={() => {
-                    setDragIndex(null);
-                    setOverIndex(null);
-                  }}
-                  onDragOver={(event) => {
-                    if (hasFiles(event)) return;
-                    if (dragIndex === null) return;
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.dataTransfer.dropEffect = "move";
-                    if (overIndex !== index) setOverIndex(index);
-                  }}
-                  onDragLeave={() => {
-                    if (overIndex === index) setOverIndex(null);
-                  }}
-                  onDrop={(event) => {
-                    if (hasFiles(event)) return;
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const from =
-                      dragIndex ??
-                      Number(event.dataTransfer.getData("text/plain"));
-                    if (Number.isFinite(from)) reorder(from, index);
-                    setDragIndex(null);
-                    setOverIndex(null);
-                  }}
-                  className={`group cursor-grab overflow-hidden border bg-asphalt active:cursor-grabbing ${
-                    isDragging
-                      ? "border-brand opacity-50"
-                      : isOver
-                        ? "border-brand ring-2 ring-brand/40"
-                        : "border-white/10"
-                  }`}
                 >
                   <div className="relative aspect-[4/3] bg-asphalt">
                     <VehicleImage
@@ -805,13 +760,12 @@ export function VehiclePhotoManager({
                       alt={`Foto ${index + 1} do veículo`}
                       fill
                       className="pointer-events-none object-cover [-webkit-touch-callout:none]"
-                      sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+                      sizes="(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 50vw"
                     />
                   </div>
 
                   <div className="flex items-center justify-between gap-2 bg-asphalt px-2 py-1.5">
                   <span className="flex items-center gap-1 text-cream">
-                    <IconGrip className="hidden h-3.5 w-3.5 text-muted lg:block" />
                     <span className="font-display text-xs font-semibold tabular-nums">
                       {index + 1}
                     </span>
@@ -931,10 +885,10 @@ export function VehiclePhotoManager({
                       <IconTrash className="h-4 w-4" />
                     </PhotoAction>
                   </div>
-                </li>
+                </div>
               );
-            })}
-          </ul>
+            }}
+          </PhotoGrid>
         </>
       ) : null}
 
