@@ -168,8 +168,7 @@ test.describe("wizard nos tamanhos configurados", () => {
       await next(page).click();
       await expect(form.locator('[name="description"]')).toHaveValue("Veículo revisado e bem cuidado.");
       await expect(form.getByRole("button", { name: "Remover Ar-condicionado", exact: true })).toBeVisible();
-      // Cidade e destaque ficam em "Mais detalhes" na etapa 3; o erro abre a seção sozinho.
-      await expect(page.locator("#vehicle-more-details")).not.toHaveAttribute("open", "");
+      // Cidade e destaque ficam em "Mais detalhes" na etapa 3; o erro (já disparado ao tentar avançar sem preço) abre a seção sozinho.
       await next(page).click();
       await expect(title(page)).toContainText("Etapa 3 de 4");
       await expect(page.getByText("Selecione a cidade onde o veículo está.", { exact: true }).first()).toBeVisible();
@@ -203,7 +202,7 @@ test.describe("wizard nos tamanhos configurados", () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       await uploadPhotos(page);
       await next(page).click();
-      await expect(page.locator("details", { hasText: "Mais detalhes (opcional)" })).not.toHaveAttribute("open", "");
+      await expect(page.locator("details:visible", { hasText: "Mais detalhes (opcional)" })).not.toHaveAttribute("open", "");
       await expect(page.locator('[name="engine"]')).toBeHidden();
       await fillVehicle(page, modelName);
       await next(page).click();
