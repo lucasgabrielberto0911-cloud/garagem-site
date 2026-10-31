@@ -19,7 +19,7 @@ test("EditLayout mantém as 4 etapas com botões de acesso direto, Salvar altera
   );
 
   // EditLayout tem navegação de etapas com botões clicáveis para qualquer etapa
-  assert.match(editLayout, /aria-label="Etapas do anúncio"/);
+  assert.match(editLayout, /<VehicleFormFooter>/);
   assert.match(editLayout, /onClick=\{\(\) => changeStep\(current\)\}/);
   // Rótulo curto da etapa 3 destaca Preço no celular
   assert.match(editLayout, /"Preço"/);

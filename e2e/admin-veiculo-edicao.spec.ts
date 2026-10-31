@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { randomInt, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import samples from "./public-samples.json";
+import { conferirRodapeDoAnuncio } from "./admin-form-footer";
 
 const database = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/");
 const localDatabase =
@@ -104,6 +105,35 @@ test.afterAll(async () => {
 });
 
 test.describe("edição M5: etapas com acesso direto, salvar sempre visível e ações do anúncio", () => {
+  test("M9: rodapé único acompanha altura, rolagem e navegação", async ({ page, fixture }, testInfo) => {
+    for (const [screen, path] of [
+      ["criacao", "/admin/veiculos/novo"],
+      ["edicao", `/admin/veiculos/${fixture.vehicleId}`],
+    ]) {
+      await page.goto(path);
+      await conferirRodapeDoAnuncio(page);
+      const footer = page.getByRole("navigation", { name: "Etapas do anúncio" });
+      await page.screenshot({ path: testInfo.outputPath(`${screen}.png`), fullPage: true });
+      const before = (await footer.boundingBox())!.height;
+      // Simula uma área segura maior, que altera a altura do rodapé.
+      await footer.evaluate(element => {
+        element.style.paddingBottom = "34px";
+      });
+      await expect.poll(async () => (await footer.boundingBox())!.height).toBeGreaterThan(before);
+      await conferirRodapeDoAnuncio(page);
+      console.log(`M9 ${screen} ${page.viewportSize()!.width}px: rodapé ${before}px; com área segura 34px: ${(await footer.boundingBox())!.height}px`);
+    }
+    await page.goto(`/admin/veiculos/${fixture.vehicleId}?view=operacao`);
+    await expect(page.locator("#vehicle-form")).toHaveCount(0);
+    if (page.viewportSize()!.width < 1024) {
+      await expect(page.getByRole("navigation", { name: "Atalhos do painel" })).toBeVisible();
+    }
+    await page.goto("/admin/veiculos/rascunhos");
+    if (page.viewportSize()!.width < 1024) {
+      await expect(page.getByRole("navigation", { name: "Atalhos do painel" })).toBeVisible();
+    }
+  });
+
   test("muda preço direto na etapa 3 sem 3 Próximo, mantém Salvar visível e expõe Ver no site, Kit, Iniciar venda e Excluir", async ({
     page,
     fixture,
@@ -121,6 +151,12 @@ test.describe("edição M5: etapas com acesso direto, salvar sempre visível e a
     });
 
     await expect(title).toContainText("Etapa 1 de 4");
+    await conferirRodapeDoAnuncio(page);
+    if (page.viewportSize()!.width < 1024) {
+      await page.getByRole("button", { name: "Menu do painel", exact: true }).click();
+      await expect(page.getByRole("dialog", { name: "Menu do painel" })).toBeVisible();
+      await page.getByRole("button", { name: "Fechar menu" }).click();
+    }
     await expect(
       page.locator('#secao-fotos input[type="file"]'),
     ).toBeEnabled();
@@ -139,6 +175,7 @@ test.describe("edição M5: etapas com acesso direto, salvar sempre visível e a
     // Acesso direto à etapa 3 (Preço) com 1 clique, sem precisar de 3 "Próximo".
     await nav.getByRole("button", { name: /^3\./ }).click();
     await expect(title).toContainText("Etapa 3 de 4");
+    await conferirRodapeDoAnuncio(page);
     const priceInput = page.locator('[name="priceDisplay"]');
     await expect(priceInput).toBeVisible();
     await priceInput.fill("64.800,00");
@@ -161,10 +198,12 @@ test.describe("edição M5: etapas com acesso direto, salvar sempre visível e a
     // Acesso direto às demais etapas (2, 4 e 1) e Salvar sempre visível em todas.
     await nav.getByRole("button", { name: /^2\./ }).click();
     await expect(title).toContainText("Etapa 2 de 4");
+    await conferirRodapeDoAnuncio(page);
     await expect(saveButton).toBeVisible();
 
     await nav.getByRole("button", { name: /^4\./ }).click();
     await expect(title).toContainText("Etapa 4 de 4");
+    await conferirRodapeDoAnuncio(page);
     await expect(saveButton).toBeVisible();
 
     // Menu "⋯" expõe Ver no site, Kit de divulgação, Iniciar venda e Excluir.
