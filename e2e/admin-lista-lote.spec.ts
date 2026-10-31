@@ -116,7 +116,7 @@ test("atalhos: / foca a busca e ? lista os atalhos", async ({ page, tag }) => {
   }).toPass({ timeout: 15_000 });
   await page.getByRole("searchbox", { name: /Buscar/ }).blur();
   await expect(async () => {
-    await page.locator("body").press("Shift+/");
+    await page.locator("body").press("?");
     await expect(page.getByText("Atalhos do teclado")).toBeVisible({
       timeout: 500,
     });
