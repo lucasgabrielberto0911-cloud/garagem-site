@@ -1,3 +1,4 @@
+import { FipePriceLine, type FipeForm } from "../FipeFields";
 import { WizardSection } from "../WizardSection";
 import { Field, btn, inputClass } from "@/components/admin/ui";
 import { errorBorder } from "../types";
@@ -9,7 +10,7 @@ import { STATUSES } from "../types";
 export function PriceStatusSection({
   form,
 }: {
-  form: Pick<
+  form: FipeForm & Pick<
     VehicleFormModel,
     | "values"
     | "setValues"
@@ -89,6 +90,7 @@ export function PriceStatusSection({
             ))}
           </select>
         </Field>
+        <FipePriceLine form={form} />
         <p className="col-span-2 -mt-2 text-xs leading-relaxed text-muted">
           {alreadySold
             ? "Já vendido. Disponível/reservado volta para o estoque ao salvar."

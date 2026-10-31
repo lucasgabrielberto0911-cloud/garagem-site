@@ -71,6 +71,8 @@ import {
   type VehicleWithPhotos,
 } from "./types";
 
+import { useVehicleFipe } from "./useVehicleFipe";
+
 const initialState: VehicleFormState = {};
 const sectionAnchor = (id: VehicleFormSectionId) => `secao-${id}`;
 
@@ -294,6 +296,7 @@ export function useVehicleFormState({
   const [yearModel, setYearModel] = useState(
     init?.yearModel != null ? String(init.yearModel) : "",
   );
+  const fipe = useVehicleFipe({ category, brand, model, version, yearModel, fuel });
   const [plate, setPlate] = useState(
     init?.plate ? formatPlateDisplay(init.plate) : "",
   );
@@ -511,6 +514,8 @@ export function useVehicleFormState({
     STATUSES.find((item) => item.value === status)?.label ?? status;
 
   return {
+    fipe,
+    fipeExcludeId: vehicle?.id,
     step,
     setStep,
     photos,
