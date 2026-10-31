@@ -12,6 +12,7 @@ export function VehicleDraftToolbar({
   restore,
   disabled,
   onSavingChange,
+  autoRestore,
 }: {
   draftKey: string;
   storageKey: string;
@@ -21,6 +22,7 @@ export function VehicleDraftToolbar({
   restore: (value: VehicleDraftPayload) => void;
   disabled: boolean;
   onSavingChange: (saving: boolean) => void;
+  autoRestore?: boolean;
 }) {
   const {
     draft,
@@ -28,11 +30,14 @@ export function VehicleDraftToolbar({
     note,
     save,
     resumed,
+    canResume,
     confirmDialog: saveConfirmDialog,
   } = useVehicleDraftAutosave({
     draftKey,
     storageKey,
     snapshot,
+    restore,
+    autoRestore,
     enabled,
     disabled,
     published,
@@ -64,7 +69,7 @@ export function VehicleDraftToolbar({
               ? "Tentar salvar rascunho"
               : "Guardar rascunho"}
         </button>
-        {draft ? (
+        {canResume && draft ? (
           <button
             type="button"
             disabled={disabled || pending}

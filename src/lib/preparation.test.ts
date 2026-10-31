@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { claimPreparation, PREPARATION_CLAIM_ERROR, preparationPhotoError, preparationPrefill, vehicleDraftScope } from "./preparation";
+import {
+  claimPreparation,
+  parsePreparationForm,
+  PREPARATION_CLAIM_ERROR,
+  preparationPhotoError,
+  preparationPrefill,
+  vehicleDraftScope,
+} from "./preparation";
 
 const item = { brand: "Fiat", model: "Argo", color: "Branco", year: null, km: null, plate: "ABC1D23", purchasePrice: 40000 };
 
@@ -50,7 +57,6 @@ test("rascunho do cadastro é isolado por preparação e do cadastro comum", () 
   assert.equal(vehicleDraftScope("v1", "A"), "v1");
 });
 
-
 test("cadastros independentes coexistem e retomam o mesmo identificador", () => {
   assert.equal(vehicleDraftScope(null, null, "a"), "new-a");
   assert.equal(vehicleDraftScope(null, null, "new-a"), "new-a");
@@ -61,4 +67,85 @@ test("cadastros independentes coexistem e retomam o mesmo identificador", () => 
   assert.notEqual(vehicleDraftScope(null, null, "a"), vehicleDraftScope(null, null, "b"));
   assert.equal(vehicleDraftScope("v1", "p1", "a"), "v1");
   assert.equal(vehicleDraftScope(null, "p1", "a"), "new-p1");
+});
+
+test("parsePreparationForm valida campos individuais com mensagens específicas", () => {
+  // Marca e modelo obrigatórios
+  const emptyForm = new FormData();
+  const emptyRes = parsePreparationForm(emptyForm);
+  assert.equal(emptyRes.ok, false);
+  if (!emptyRes.ok) {
+    assert.equal(emptyRes.errors.brand, "Informe a marca.");
+    assert.equal(emptyRes.errors.model, "Informe o modelo.");
+  }
+
+  // Ano inválido
+  const yearForm = new FormData();
+  yearForm.set("brand", "Chevrolet");
+  yearForm.set("model", "Onix");
+  yearForm.set("year", "1800");
+  const yearRes = parsePreparationForm(yearForm);
+  assert.equal(yearRes.ok, false);
+  if (!yearRes.ok) {
+    assert.equal(yearRes.errors.year, "Ano inválido.");
+  }
+
+  // KM inválido
+  const kmForm = new FormData();
+  kmForm.set("brand", "Chevrolet");
+  kmForm.set("model", "Onix");
+  kmForm.set("km", "-50");
+  const kmRes = parsePreparationForm(kmForm);
+  assert.equal(kmRes.ok, false);
+  if (!kmRes.ok) {
+    assert.equal(kmRes.errors.km, "KM inválido.");
+  }
+
+  // Placa inválida
+  const plateForm = new FormData();
+  plateForm.set("brand", "Chevrolet");
+  plateForm.set("model", "Onix");
+  plateForm.set("plate", "INVALID");
+  const plateRes = parsePreparationForm(plateForm);
+  assert.equal(plateRes.ok, false);
+  if (!plateRes.ok) {
+    assert.equal(plateRes.errors.plate, "Placa inválida.");
+  }
+
+  // Valor de compra inválido
+  const priceForm = new FormData();
+  priceForm.set("brand", "Chevrolet");
+  priceForm.set("model", "Onix");
+  priceForm.set("purchasePrice", "abc");
+  const priceRes = parsePreparationForm(priceForm);
+  assert.equal(priceRes.ok, false);
+  if (!priceRes.ok) {
+    assert.equal(priceRes.errors.purchasePrice, "Valor de compra inválido.");
+  }
+
+  // Formulário válido com normalização
+  const validForm = new FormData();
+  validForm.set("brand", "Chevrolet");
+  validForm.set("model", "Onix 1.0 Turbo");
+  validForm.set("color", "Preto");
+  validForm.set("year", "2023");
+  validForm.set("km", "25.000");
+  validForm.set("plate", "abc1d23");
+  validForm.set("purchasePrice", "75.000,00");
+  validForm.set("ready", "on");
+  validForm.set("posted", "on");
+
+  const validRes = parsePreparationForm(validForm);
+  assert.equal(validRes.ok, true);
+  if (validRes.ok) {
+    assert.equal(validRes.data.brand, "Chevrolet");
+    assert.equal(validRes.data.model, "Onix 1.0 Turbo");
+    assert.equal(validRes.data.color, "Preto");
+    assert.equal(validRes.data.year, 2023);
+    assert.equal(validRes.data.km, 25000);
+    assert.equal(validRes.data.plate, "ABC1D23");
+    assert.equal(validRes.data.purchasePrice, 75000);
+    assert.equal(validRes.data.ready, true);
+    assert.equal(validRes.data.posted, true);
+  }
 });

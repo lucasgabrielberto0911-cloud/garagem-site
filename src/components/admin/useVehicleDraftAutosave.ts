@@ -46,6 +46,8 @@ export function useVehicleDraftAutosave({
   draftKey,
   storageKey,
   snapshot,
+  restore,
+  autoRestore,
   enabled,
   disabled,
   published,
@@ -54,6 +56,8 @@ export function useVehicleDraftAutosave({
   draftKey: string;
   storageKey: string;
   snapshot: () => VehicleDraftPayload;
+  restore?: (value: VehicleDraftPayload) => void;
+  autoRestore?: boolean;
   enabled: boolean;
   disabled: boolean;
   published: boolean;
@@ -61,16 +65,27 @@ export function useVehicleDraftAutosave({
 }) {
   const [confirmAction, confirmDialog] = useConfirmDialog();
   const [draft, setDraft] = useState<VehicleDraftPayload | null>(null);
+  const [canResume, setCanResume] = useState(false);
   const [status, setStatus] = useState<Status>("loading");
   const [note, setNote] = useState("");
   const latest = useRef({
     snapshot,
+    restore,
+    autoRestore,
     enabled,
     disabled,
     published,
     onSavingChange,
   });
-  latest.current = { snapshot, enabled, disabled, published, onSavingChange };
+  latest.current = {
+    snapshot,
+    restore,
+    autoRestore,
+    enabled,
+    disabled,
+    published,
+    onSavingChange,
+  };
   const version = useRef<string | null>(null);
   const recovery = useRef(false);
   const conflict = useRef(false);
@@ -195,6 +210,17 @@ export function useVehicleDraftAutosave({
           writes.enqueue(payload);
       }, 1000);
     };
+    function wantsAutoRestore() {
+      if (latest.current.autoRestore) return true;
+      try {
+        const autoKey = `${storageKey}:auto-restore`;
+        if (sessionStorage.getItem(autoKey) === "1") {
+          sessionStorage.removeItem(autoKey);
+          return true;
+        }
+      } catch {}
+      return false;
+    }
     const read = async () => {
       try {
         const remote = await loadDraft(draftKey, loading.signal);
@@ -205,12 +231,23 @@ export function useVehicleDraftAutosave({
           local?.syncedVersion === null ? local.payload : remote?.payload;
         if (saved) {
           setDraft(saved);
-          recovery.current =
-            !latest.current.enabled ||
-            JSON.stringify(saved) !== JSON.stringify(latest.current.snapshot());
-          setNote(
-            "Há um rascunho privado para retomar. Ele não foi publicado.",
-          );
+          if (wantsAutoRestore() && latest.current.restore) {
+            latest.current.restore(saved);
+            recovery.current = false;
+            setCanResume(false);
+            fingerprint.current = JSON.stringify(saved);
+            store(saved, version.current);
+          } else {
+            const needsRecovery =
+              !latest.current.enabled ||
+              JSON.stringify(saved) !==
+                JSON.stringify(latest.current.snapshot());
+            recovery.current = needsRecovery;
+            setCanResume(needsRecovery);
+            setNote(
+              "Há um rascunho privado para retomar. Ele não foi publicado.",
+            );
+          }
         }
         setStatus("idle");
         ready.current = true;
@@ -221,7 +258,14 @@ export function useVehicleDraftAutosave({
           const local = readBackup(storageKey);
           if (local) {
             setDraft(local.payload);
-            recovery.current = true;
+            if (wantsAutoRestore() && latest.current.restore) {
+              latest.current.restore(local.payload);
+              recovery.current = false;
+              setCanResume(false);
+            } else {
+              recovery.current = true;
+              setCanResume(true);
+            }
           }
           setStatus("error");
           setNote(
@@ -265,6 +309,7 @@ export function useVehicleDraftAutosave({
           if (timer.current) clearTimeout(timer.current);
           setStatus("conflict");
           setDraft(other.payload);
+          setCanResume(true);
           setNote(
             "Outra aba alterou o rascunho. Seus campos foram mantidos; escolha qual versão guardar ou retomar.",
           );
@@ -336,6 +381,7 @@ export function useVehicleDraftAutosave({
       }
     }
     recovery.current = false;
+    setCanResume(false);
     conflict.current = false;
     if (timer.current) clearTimeout(timer.current);
     fingerprint.current = "";
@@ -364,9 +410,10 @@ export function useVehicleDraftAutosave({
       return;
     }
     recovery.current = false;
+    setCanResume(false);
     conflict.current = false;
     fingerprint.current = "";
     setTimeout(() => capture.current(), 0);
   }
-  return { draft, status, note, save, resumed, confirmDialog };
+  return { draft, status, note, save, resumed, canResume, confirmDialog };
 }

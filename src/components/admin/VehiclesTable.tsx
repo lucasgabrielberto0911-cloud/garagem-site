@@ -60,6 +60,7 @@ import { coverSrc } from "@/lib/stock-query";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import type { StockPending } from "@/lib/admin-stock-pending";
 import { stockListQuietNote } from "@/lib/stock-quality";
+import { rotateLocalDraftOnDuplicate } from "@/lib/admin-duplicate-vehicle";
 import {
   deleteVehicle,
   duplicateVehicle,
@@ -153,6 +154,7 @@ export function VehiclesTable({
   availableCount: availableCountProp,
   reservedCount: reservedCountProp,
   quality,
+  adminId,
 }: {
   vehicles: VehicleRow[];
   initialTotal: number;
@@ -171,6 +173,7 @@ export function VehiclesTable({
     stale: number;
     staleDays: number;
   };
+  adminId?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -193,6 +196,7 @@ export function VehiclesTable({
   const [loadError, setLoadError] = useState(false);
   const loadingRef = useRef(false);
   const [deleteTarget, setDeleteTarget] = useState<VehicleRow | null>(null);
+  const [duplicateConfirmTarget, setDuplicateConfirmTarget] = useState<VehicleRow | null>(null);
   const [soldTarget, setSoldTarget] = useState<VehicleRow | null>(null);
   const [simpleSoldTarget, setSimpleSoldTarget] = useState<VehicleRow | null>(null);
   const [promoTarget, setPromoTarget] = useState<VehicleRow | null>(null);
@@ -227,7 +231,15 @@ export function VehiclesTable({
   useEffect(() => {
     function onEscape(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
-      if (bulkTarget || soldTarget || simpleSoldTarget || deleteTarget || actionsTarget) return;
+      if (
+        bulkTarget ||
+        soldTarget ||
+        simpleSoldTarget ||
+        deleteTarget ||
+        actionsTarget ||
+        duplicateConfirmTarget
+      )
+        return;
       if (selected.length === 0 && !undoBanner) return;
       event.preventDefault();
       setSelected([]);
@@ -241,6 +253,7 @@ export function VehiclesTable({
     simpleSoldTarget,
     deleteTarget,
     actionsTarget,
+    duplicateConfirmTarget,
     selected.length,
     undoBanner,
   ]);
@@ -378,11 +391,18 @@ export function VehiclesTable({
     );
   }
 
-  function runQuickAction(
+  function runQuickAction<
+    T extends {
+      ok: boolean;
+      message: string;
+      redirectUrl?: string;
+    },
+  >(
     id: string,
-    action: () => Promise<{ ok: boolean; message: string }>,
-    onOk?: () => void,
+    action: () => Promise<T>,
+    onOk?: (result: T) => void,
     options?: { refresh?: boolean },
+    onError?: (result: T) => void,
   ) {
     setBusyId(id);
     startTransition(async () => {
@@ -390,12 +410,20 @@ export function VehiclesTable({
         const result = await action();
         if (result.ok) {
           toast.success(result.message);
-          onOk?.();
+          onOk?.(result);
+          if (result.redirectUrl) {
+            router.push(result.redirectUrl);
+            return;
+          }
           // Destaque só muda a estrela e o contador local. Recarregar a página
           // aqui repetia a lista e os números sem alterar o que está na tela.
           if (options?.refresh !== false) router.refresh();
         } else {
-          toast.error(result.message);
+          if (onError) {
+            onError(result);
+          } else {
+            toast.error(result.message);
+          }
         }
       } catch {
         toast.error("Não foi possível concluir a ação.");
@@ -595,12 +623,36 @@ export function VehiclesTable({
     );
   }
 
-  function duplicate(vehicle: VehicleRow) {
+  function duplicate(
+    vehicle: VehicleRow,
+    options?: { replaceDraft?: boolean },
+  ) {
     runQuickAction(
       vehicle.id,
-      () => duplicateVehicle(vehicle.id),
-      () => {
-        void fetchPage(1, sort, true);
+      () => duplicateVehicle(vehicle.id, options),
+      (result) => {
+        if (!result.ok) return;
+        const currentAdminId = result.adminId ?? adminId;
+        if (currentAdminId) {
+          try {
+            rotateLocalDraftOnDuplicate(
+              [window.sessionStorage, window.localStorage],
+              currentAdminId,
+              window.sessionStorage,
+            );
+          } catch {}
+        }
+        if (!result.redirectUrl) {
+          void fetchPage(1, sort, true);
+        }
+      },
+      undefined,
+      (result) => {
+        if ("hasExistingDraft" in result && result.hasExistingDraft) {
+          setDuplicateConfirmTarget(vehicle);
+          return;
+        }
+        toast.error(result.message);
       },
     );
   }
@@ -1078,6 +1130,27 @@ export function VehiclesTable({
           />
         ) : null}
       </ActionSheet>
+
+      <ConfirmDialog
+        open={duplicateConfirmTarget !== null}
+        title="Substituir rascunho em andamento?"
+        description={
+          duplicateConfirmTarget
+            ? `Já existe um rascunho de novo veículo em andamento. Deseja substituí-lo pelos dados de ${duplicateConfirmTarget.brand} ${duplicateConfirmTarget.model}? O rascunho anterior será preservado como cópia de segurança.`
+            : undefined
+        }
+        confirmLabel="Substituir rascunho"
+        danger
+        loading={busyId === duplicateConfirmTarget?.id}
+        onCancel={() => setDuplicateConfirmTarget(null)}
+        onConfirm={() => {
+          const target = duplicateConfirmTarget;
+          setDuplicateConfirmTarget(null);
+          if (target) {
+            duplicate(target, { replaceDraft: true });
+          }
+        }}
+      />
 
       <ConfirmDialog
         open={soldTarget !== null}

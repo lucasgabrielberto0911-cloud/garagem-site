@@ -8,12 +8,19 @@ import { vehicleDraftParam } from "@/lib/vehicle-draft-fields";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ prep?: string; draft?: string | string[] }> }) {
+export default async function NewVehiclePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ prep?: string; draft?: string | string[]; dup?: string }>;
+}) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const { prep, draft } = await searchParams;
-  const item = prep ? await prisma.preparationVehicle.findUnique({ where: { id: prep } }) : null;
+  const { prep, draft, dup } = await searchParams;
+  const isDuplicate = dup === "1" || dup === "true";
+  const item = prep
+    ? await prisma.preparationVehicle.findUnique({ where: { id: prep } })
+    : null;
 
   return (
     <div className="space-y-3 sm:space-y-6">
@@ -31,6 +38,7 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
         prefill={item ? preparationPrefill(item) : undefined}
         preparationId={item?.id}
         draftId={vehicleDraftParam(draft)}
+        autoRestoreDraft={isDuplicate}
       />
     </div>
   );

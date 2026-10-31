@@ -108,6 +108,7 @@ export default async function VehiclesPage({
           stale: stats.stale,
           staleDays: STALE_DAYS,
         }}
+        adminId={session.adminId}
       />
     </div>
   );
