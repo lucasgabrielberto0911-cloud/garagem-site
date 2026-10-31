@@ -54,6 +54,7 @@ test("depoimentos: sem rolagem lateral no celular", async ({ page }) => {
 test("veículos: seleção do card tem alvo de 44 px no celular", async ({ page }) => {
   test.skip(!isMobile(page), "Alvo de toque só importa no celular.");
   await page.goto("/admin/veiculos");
+  await page.getByRole("button", { name: "Selecionar", exact: true }).click();
   const label = page.locator("li label:visible", { has: page.locator("input[type=checkbox]") }).first();
   const box = await label.boundingBox();
   expect(box!.width).toBeGreaterThanOrEqual(44);

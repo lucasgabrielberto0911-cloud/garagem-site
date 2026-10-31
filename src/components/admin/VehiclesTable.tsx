@@ -593,6 +593,11 @@ export function VehiclesTable({
           break;
         }
         done += 1;
+        setFeaturedCount((count) => Math.max(0, count + (next ? 1 : -1)));
+        if (tab === "destaques" && !next) {
+          removeFromList(vehicle.id, "destaques");
+          continue;
+        }
         setItems((current) =>
           current.map((item) =>
             item.id === vehicle.id ? { ...item, featured: next } : item,
