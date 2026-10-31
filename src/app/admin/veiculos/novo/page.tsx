@@ -4,14 +4,15 @@ import { AdminPageHeader } from "@/components/admin/ui";
 import { getSession } from "@/lib/auth";
 import { preparationPrefill } from "@/lib/preparation";
 import { prisma } from "@/lib/prisma";
+import { vehicleDraftParam } from "@/lib/vehicle-draft-fields";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ prep?: string }> }) {
+export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ prep?: string; draft?: string | string[] }> }) {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  const { prep } = await searchParams;
+  const { prep, draft } = await searchParams;
   const item = prep ? await prisma.preparationVehicle.findUnique({ where: { id: prep } }) : null;
 
   return (
@@ -29,6 +30,7 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
         adminId={session.adminId}
         prefill={item ? preparationPrefill(item) : undefined}
         preparationId={item?.id}
+        draftId={vehicleDraftParam(draft)}
       />
     </div>
   );

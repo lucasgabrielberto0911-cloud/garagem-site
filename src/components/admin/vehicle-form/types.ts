@@ -7,6 +7,7 @@ export type VehicleFormProps = {
   /** Dados de um carro Em preparação para pré-preencher o cadastro novo. */
   prefill?: Partial<VehicleWithPhotos>;
   preparationId?: string;
+  draftId?: string;
   mode: "create" | "edit";
   adminId: string;
   /** Nota gravada no último Salvar. O formulário nunca chama o Jev. */

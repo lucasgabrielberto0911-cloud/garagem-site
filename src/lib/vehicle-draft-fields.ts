@@ -70,3 +70,8 @@ export function vehicleDraftHref(key: string, preparationId: string | null) {
   if (preparationId) params.set("prep", preparationId);
   return `/admin/veiculos/novo?${params}`;
 }
+
+export function vehicleDraftParam(value: unknown): string | undefined {
+  const first = Array.isArray(value) ? value[0] : value;
+  return typeof first === "string" && first.trim() ? first : undefined;
+}

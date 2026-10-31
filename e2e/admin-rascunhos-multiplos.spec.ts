@@ -52,6 +52,64 @@ const test = base.extend<{ adminId: string }>({
 test.skip(!localDatabase, "Requer banco local dedicado e E2E_TEST=1.");
 test.afterAll(async () => prisma.$disconnect());
 
+for (const draft of [undefined, "new", "new-a", "new-b"]) {
+  test(`retoma e salva apenas o rascunho ${draft ?? "legado sem parâmetro"}`, async ({
+    page,
+    adminId,
+    baseURL,
+  }) => {
+    const scopes = ["new", "new-a", "new-b"];
+    for (const scope of scopes) {
+      const response = await page.request.post("/api/admin/drafts", {
+        headers: { Origin: baseURL! },
+        data: {
+          key: `vehicle:${scope}`,
+          payload: { fields: {}, model: `Modelo ${scope}`, step: 2 },
+          photoUrls: [],
+          expectedUpdatedAt: null,
+        },
+      });
+      expect(response.ok()).toBeTruthy();
+    }
+
+    const scope = draft ?? "new";
+    const url = `/admin/veiculos/novo${draft ? `?draft=${draft}` : ""}`;
+    if (scope !== "new") {
+      await page.goto("/admin/veiculos/rascunhos");
+      await page.getByRole("listitem").filter({ hasText: `Modelo ${scope}` })
+        .getByRole("link", { name: "Continuar", exact: true }).click();
+      await expect(page).toHaveURL(url);
+    } else {
+      await page.goto(url);
+    }
+    await page.getByRole("button", { name: "Retomar rascunho", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Retomar", exact: true }).click();
+    await expect(page.locator('[name="model"]')).toHaveValue(`Modelo ${scope}`);
+    await page.locator('[name="model"]').fill(`Alterado ${scope}`);
+    const saved = page.waitForResponse((response) =>
+      response.url().endsWith("/api/admin/drafts") &&
+      response.request().method() === "POST" &&
+      response.request().postDataJSON().payload?.model === `Alterado ${scope}`,
+    );
+    await page.getByRole("button", { name: "Guardar rascunho", exact: true }).click();
+    const response = await saved;
+    expect(response.ok()).toBeTruthy();
+    expect(response.request().postDataJSON().key).toBe(`vehicle:${scope}`);
+    await expect(page.getByRole("button", { name: "Guardar rascunho", exact: true })).toBeEnabled();
+
+    await page.reload();
+    await page.getByRole("button", { name: "Retomar rascunho", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Retomar", exact: true }).click();
+    await expect(page.locator('[name="model"]')).toHaveValue(`Alterado ${scope}`);
+    for (const other of scopes.filter((item) => item !== scope)) {
+      const stored = await prisma.adminDraft.findUniqueOrThrow({
+        where: { adminId_key: { adminId, key: `vehicle:${other}` } },
+      });
+      expect(stored.payload).toEqual({ fields: {}, model: `Modelo ${other}`, step: 2 });
+    }
+  });
+}
+
 test("substituir o rascunho usa o diálogo do painel e cancelar preserva a versão salva", async ({
   page,
   adminId,
