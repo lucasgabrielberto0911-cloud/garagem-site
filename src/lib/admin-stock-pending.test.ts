@@ -24,7 +24,12 @@ test("parseStockPending: sanitiza entradas inválidas, nulas e desconhecidas", (
   assert.equal(parseStockPending("SEM-FOTOS"), "");
   assert.equal(parseStockPending("ANTIGOS"), "");
   assert.equal(parseStockPending("consignado"), "");
-  assert.equal(parseStockPending("sem-preco"), "");
+  assert.equal(parseStockPending("SEM-PRECO"), "");
+});
+
+test("pendência sem-preco filtra anúncios com preço zerado", () => {
+  assert.equal(parseStockPending("sem-preco"), "sem-preco");
+  assert.deepEqual(stockPendingWhere("sem-preco"), { price: { lte: 0 } });
 });
 
 test("stockPendingWhere: pendência de fotos usa photos.none para identificar veículos sem imagem", () => {
