@@ -1,5 +1,6 @@
 import { revalidateTag } from "next/cache";
 import { ADMIN_NEW_LEADS_TAG } from "@/lib/admin-cache";
+import { normalizeBrazilPhone } from "@/lib/phone-br";
 import {
   matchInterestVehicle,
   type ChatVehicleRecord,
@@ -40,8 +41,7 @@ export function parseCriarLeadArgs(raw: unknown): CriarLeadArgs | null {
 export function leadArgsAreComplete(args: CriarLeadArgs | null) {
   if (!args) return false;
   const name = args.nome?.trim() ?? "";
-  const phoneDigits = (args.telefone ?? "").replace(/\D/g, "");
-  return name.length >= 3 && phoneDigits.length >= 10;
+  return name.length >= 3 && normalizeBrazilPhone(args.telefone) != null;
 }
 
 export async function createChatLead(

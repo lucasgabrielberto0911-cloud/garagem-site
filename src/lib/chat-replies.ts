@@ -16,7 +16,7 @@ export const GREETING_TEMPLATES = {
   ping:
     "Oi, tô aqui com você. Me conta o orçamento ou o modelo que você procura — eu comparo o estoque em poucas linhas e a gente continua no WhatsApp.",
   hours:
-    `Atendemos todos os dias, das 8h às 23h, aqui e no WhatsApp. Pra ver um carro, a visita é com horário marcado: ${CHAT_WHATSAPP_URL}`,
+    `Atendemos todos os dias, das 8h às 23h, aqui e no WhatsApp. Pra ver um carro, a visita é com horário marcado, combinada com o consultor no WhatsApp: ${CHAT_WHATSAPP_URL}`,
   contact:
     `O WhatsApp da Garagem é ${site.whatsappLabel}, das 8h às 23h, todos os dias: ${CHAT_WHATSAPP_URL}`,
   social:

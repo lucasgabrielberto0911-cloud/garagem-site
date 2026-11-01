@@ -45,7 +45,9 @@ export function planChatSalesSearch(
   const more = asksForMoreChatVehicles(message);
   const exact = searchChatInventory(scopedMessage, stock);
   const unseen = stock.filter(vehicle => !shownIds.has(vehicle.id));
-  const found = searchChatInventory(scopedMessage, unseen);
+  // Só "mais opções" pula o que já apareceu. Uma pergunta nova ("SUV até 90 mil") busca no estoque
+  // inteiro, senão unidades que servem ao novo filtro (ex.: Creta) somem por já terem sido mostradas.
+  const found = searchChatInventory(scopedMessage, more ? unseen : stock);
   const gear = parseTransmissionFilter(scopedMessage);
   const price = parsePriceLimit(scopedMessage);
   const minPrice = parseChatSearchRanges(scopedMessage).minPrice;

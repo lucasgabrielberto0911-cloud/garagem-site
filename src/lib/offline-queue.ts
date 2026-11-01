@@ -31,6 +31,55 @@ export type OfflineIntent = (WhatsAppIntent | SellIntent | FavoriteIntent) & {
   createdAt: number;
 };
 
+/** Quanto tempo cada tipo de pedido guardado continua valendo antes de ser descartado sem enviar. */
+export const OFFLINE_INTENT_TTL_MS: Record<OfflineIntent["type"], number> = {
+  whatsapp: 3 * 24 * 60 * 60 * 1000,
+  sell: 7 * 24 * 60 * 60 * 1000,
+  favorite: 7 * 24 * 60 * 60 * 1000,
+};
+
+export function isIntentExpired(intent: Pick<OfflineIntent, "type" | "createdAt">, now = Date.now()) {
+  const createdAt = Number(intent.createdAt);
+  if (!Number.isFinite(createdAt)) return true;
+  return now - createdAt > OFFLINE_INTENT_TTL_MS[intent.type];
+}
+
+/** Separa o que ainda vale enviar do que ficou velho demais (o visitante já resolveu por outro meio). */
+export function partitionIntents<T extends Pick<OfflineIntent, "type" | "createdAt">>(items: T[], now = Date.now()) {
+  const fresh: T[] = [];
+  const expired: T[] = [];
+  for (const item of items) (isIntentExpired(item, now) ? expired : fresh).push(item);
+  return { fresh, expired };
+}
+
+const FLUSH_LOCK = "garagem-offline-flush";
+let flushing: Promise<void> | null = null;
+
+/**
+ * Uma única descarga da fila por vez: no mesmo documento (remontagem, eventos "online" seguidos)
+ * e entre abas, quando o navegador tem Web Locks. Quem chega durante a execução espera a mesma.
+ */
+export function runSingleFlush(task: () => Promise<void>): Promise<void> {
+  if (flushing) return flushing;
+  const run = async () => {
+    const locks = typeof navigator !== "undefined"
+      ? (navigator as Navigator & { locks?: LockManager }).locks
+      : undefined;
+    if (locks?.request) {
+      await locks.request(FLUSH_LOCK, { ifAvailable: true }, async (lock) => {
+        if (lock) await task();
+      });
+    } else {
+      await task();
+    }
+  };
+  const current = run().finally(() => {
+    if (flushing === current) flushing = null;
+  });
+  flushing = current;
+  return current;
+}
+
 export function isLikelyNetworkFailure(error?: unknown, online = true) {
   if (!online) return true;
   if (!error) return false;
