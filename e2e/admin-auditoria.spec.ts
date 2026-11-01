@@ -38,6 +38,36 @@ const test = base.extend<{ audit: Fixture }>({
 });
 test.afterAll(() => db.$disconnect());
 
+test("consulta clientes e reimprime notas antes da migration do admin", async ({ page, audit }) => {
+  const note = await db.promissoryNote.create({ data: {
+    customerId: audit.customerId, issuerName: audit.name, issuerCpf: "111.444.777-35",
+    issuerBirthDate: new Date("1980-01-01"), issuerPhone: "27999990000", issuerAddress: "Rua Fictícia, 1",
+    amount: 100, dueDate: new Date("2027-01-31"), issuedAt: new Date("2026-11-01"),
+    issuePlace: "Linhares/ES", paymentPlace: "Linhares/ES",
+  } });
+  // Renomear simula a migration ausente e preserva dados e índices na restauração.
+  await db.$transaction([
+    db.$executeRaw`ALTER TABLE "Customer" RENAME COLUMN "updatedAt" TO "updatedAt_teste"`,
+    db.$executeRaw`ALTER TABLE "PromissoryNote" RENAME COLUMN "issuanceKey" TO "issuanceKey_teste"`,
+    db.$executeRaw`ALTER TABLE "PromissoryNote" RENAME COLUMN "issuanceHash" TO "issuanceHash_teste"`,
+  ]);
+  try {
+    await page.goto(`/admin/clientes?q=${encodeURIComponent(audit.name)}`);
+    await expect(page.getByText(audit.name, { exact: true })).toBeVisible();
+    await page.goto("/admin/promissorias");
+    await expect(page.getByText(audit.name, { exact: true })).toBeVisible();
+    const pdf = await page.request.get(`/api/admin/promissorias/${note.id}`);
+    expect(pdf.status()).toBe(200);
+    expect(pdf.headers()["content-type"]).toBe("application/pdf");
+  } finally {
+    await db.$transaction([
+      db.$executeRaw`ALTER TABLE "Customer" RENAME COLUMN "updatedAt_teste" TO "updatedAt"`,
+      db.$executeRaw`ALTER TABLE "PromissoryNote" RENAME COLUMN "issuanceKey_teste" TO "issuanceKey"`,
+      db.$executeRaw`ALTER TABLE "PromissoryNote" RENAME COLUMN "issuanceHash_teste" TO "issuanceHash"`,
+    ]);
+  }
+});
+
 test("venda recupera rascunho privado, etapa e foco após recarregar", async ({ page, audit }) => {
   await page.goto(`/admin/vendas/nova?veiculo=${audit.vehicleId}&cliente=${audit.customerId}`);
   await expect(page.getByRole("button", { name: "Continuar", exact: true })).toBeEnabled();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { saleDraftFields } from "@/lib/sale-draft";
 import { useUnsavedChangesWarning } from "./useUnsavedChangesWarning";
 
@@ -15,6 +15,7 @@ export function useSaleDraft(key: string, value: ReturnType<typeof saleDraftFiel
   const chain = useRef(Promise.resolve());
   const latest = useRef("");
   const json = JSON.stringify(saleDraftFields(value));
+  const restoreFields = useEffectEvent(restore);
 
   useEffect(() => {
     let active = true;
@@ -24,7 +25,7 @@ export function useSaleDraft(key: string, value: ReturnType<typeof saleDraftFiel
       if (!active) return;
       if (draft?.payload?.fields) {
         const fields = saleDraftFields(draft.payload.fields);
-        restore(fields);
+        restoreFields(fields);
         version.current = draft.updatedAt;
         saved.current = JSON.stringify(fields);
         setStatus("Rascunho recuperado. Confira os dados antes de concluir.");
@@ -32,7 +33,7 @@ export function useSaleDraft(key: string, value: ReturnType<typeof saleDraftFiel
       setReady(true);
     }).catch(() => { if (active) setStatus("Rascunho indisponível. Recarregue para tentar novamente antes de preencher."); });
     return () => { active = false; };
-  }, [key, restore]);
+  }, [key]);
 
   const persist = useCallback((snapshot: string) => {
     if (closed.current || !snapshot || snapshot === saved.current) return;

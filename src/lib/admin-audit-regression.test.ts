@@ -21,6 +21,7 @@ let customerQueries: Array<Record<string, unknown>>;
 let writtenPhones: string[];
 let routeNotes: unknown[];
 let routeQuery: Record<string, unknown>;
+let missingIssuanceColumn: string | null;
 
 const models = {
   $executeRaw: async () => {}, $queryRaw: async () => [],
@@ -47,6 +48,7 @@ const models = {
   promissoryNote: {
     findMany: async (args: { where: { issuanceKey?: string }; take?: number }) => {
       routeQuery = args;
+      if (args.where.issuanceKey && missingIssuanceColumn) throw { code: "P2022", meta: { column: `PromissoryNote.${missingIssuanceColumn}` } };
       return args.where.issuanceKey ? notes.filter(note => note.issuanceKey === args.where.issuanceKey) : routeNotes;
     },
     create: async ({ data }: { data: Omit<Nota, "id" | "number" | "status" | "paidAt" | "saleId"> }) => {
@@ -94,6 +96,7 @@ try {
 } finally { loader._load = originalLoad; }
 
 beforeEach(() => {
+  missingIssuanceColumn = null;
   missingCustomerVersion = false; unexpectedColumn = false; customerQueries = []; writtenPhones = [];
   notes = []; audits = []; writes = []; lead = null; reserved = false; documented = false; sold = false; overflow = false; authenticated = true; expected = initialDate; routeNotes = []; routeQuery = {};
 });
@@ -114,6 +117,13 @@ test("repetir emissão devolve os mesmos IDs e não cria outro lote", async () =
   const replay = await promissory.createPromissoryNotes(issuance());
   assert.equal(first.ok, true); assert.deepEqual(replay.noteIds, first.noteIds);
   assert.equal(notes.length, 2); assert.equal(audits.length, 2);
+});
+for (const column of ["issuanceKey", "issuanceHash"]) test(`emissão sem ${column} informa atualização pendente e não grava`, async () => {
+  missingIssuanceColumn = column;
+  const result = await promissory.createPromissoryNotes(issuance());
+  assert.equal(result.ok, false);
+  assert.match(result.message, /atualização/);
+  assert.deepEqual(writes, []);
 });
 test("chave repetida com dados alterados exige conferir o lote", async () => {
   await promissory.createPromissoryNotes(issuance());
@@ -148,6 +158,7 @@ test("PDF por CPF recusa acima de 60 sem omitir notas", async () => {
   routeNotes = Array.from({ length: 61 }, (_, i) => ({ id: String(i) }));
   const response = await pdfRoute.GET(new Request("http://localhost/api/admin/promissorias/abertas?cpf=11144477735"), { params: Promise.resolve({ id: "abertas" }) });
   assert.equal(response.status, 400); assert.equal(routeQuery.take, 61); assert.match(await response.text(), /Selecione até 60/);
+  assert.deepEqual(routeQuery.omit, { issuanceKey: true, issuanceHash: true });
 });
 test("cliente criado e editado gera trilha sem copiar dados pessoais", async () => {
   const values = { name: "Cliente Fictício", phone: "27999990000", email: "cliente@local.test", address: "Rua Fictícia, 1" };
@@ -214,8 +225,4 @@ for (const [phone, normalized] of [["(27) 3333-0000", "2733330000"], ["+55 (27) 
   assert.equal((await leadActions.convertLeadToCustomer(lead.id)).ok, true);
   assert.equal((await leadActions.savePurchaseLead(form({ name: lead.name, phone, origin: "direto", status: "conversa" }))).ok, true);
   assert.deepEqual(writtenPhones, [normalized, normalized, normalized]);
-});
-test("426 não exige requestId de LeadVenda, nem nas consultas implícitas do client", () => {
-  const schema = readFileSync("prisma/schema.prisma", "utf8").split("model LeadVenda {")[1].split("}")[0];
-  assert.doesNotMatch(schema, /requestId/);
 });

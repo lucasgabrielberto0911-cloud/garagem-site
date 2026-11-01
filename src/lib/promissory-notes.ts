@@ -212,6 +212,9 @@ export function parsePromissoryForm(fields: Partial<PromissoryFormFields>, today
   }
 }
 
+/** Consultas históricas continuam funcionando antes da migration de idempotência. */
+export const PROMISSORY_COMPAT_OMIT = { issuanceKey: true, issuanceHash: true } as const;
+
 type NoteRow = {
   status?: string;
   paidAt?: Date | null;

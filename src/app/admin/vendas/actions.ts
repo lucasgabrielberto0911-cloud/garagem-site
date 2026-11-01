@@ -1,6 +1,7 @@
 "use server";
 
 import { normalizeAdminPhone } from "@/lib/admin-phone";
+import { PROMISSORY_COMPAT_OMIT } from "@/lib/promissory-notes";
 import { commercialStoreSnapshot } from "@/lib/commercial-store";
 
 import { scheduleAfterSale } from "@/lib/after-sale";
@@ -121,7 +122,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
 async function attachPromissorySnapshot(tx: Prisma.TransactionClient, payments: ContractPaymentItem[], buyer: { id: string; cpf: string | null }, saleId?: string) {
   const payment = payments.find((item) => item.method === "promissoria");
   if (!payment) return;
-  const notes = await tx.promissoryNote.findMany({ where: { id: { in: payment.noteIds } } });
+  const notes = await tx.promissoryNote.findMany({ where: { id: { in: payment.noteIds } }, omit: PROMISSORY_COMPAT_OMIT });
   payment.notes = salePromissorySnapshots(payment, notes.map((note) => ({ ...note, amount: Number(note.amount), dueDate: note.dueDate.toISOString().slice(0, 10) })), buyer, saleId);
 }
 

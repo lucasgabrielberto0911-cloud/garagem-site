@@ -2,7 +2,7 @@ import { getSession } from "@/lib/auth";
 import { formatCpfBR } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { promissoryBatchPdf, promissoryPdf } from "@/lib/promissory-pdf";
-import { PROMISSORY_MAX_INSTALLMENTS, promissoryRowToPdfInput } from "@/lib/promissory-notes";
+import { PROMISSORY_COMPAT_OMIT, PROMISSORY_MAX_INSTALLMENTS, promissoryRowToPdfInput } from "@/lib/promissory-notes";
 
 export const runtime = "nodejs";
 const headers = {
@@ -31,6 +31,7 @@ export async function GET(
       }
       const cpfVariants = Array.from(new Set([rawCpf, digits, formatCpfBR(digits)]));
       const notes = await prisma.promissoryNote.findMany({
+        omit: PROMISSORY_COMPAT_OMIT,
         where: {
           issuerCpf: { in: cpfVariants },
           status: { in: OPEN_STATUSES },
@@ -73,7 +74,7 @@ export async function GET(
     }
 
     if (ids.length === 1) {
-      const note = await prisma.promissoryNote.findUnique({ where: { id: ids[0] } });
+      const note = await prisma.promissoryNote.findUnique({ where: { id: ids[0] }, omit: PROMISSORY_COMPAT_OMIT });
       if (!note) {
         return new Response("Nota promissória não encontrada.", { status: 404, headers });
       }
@@ -91,6 +92,7 @@ export async function GET(
     }
 
     const notes = await prisma.promissoryNote.findMany({
+      omit: PROMISSORY_COMPAT_OMIT,
       where: { id: { in: ids } },
       orderBy: [{ number: "asc" }],
     });

@@ -8,7 +8,8 @@ import { getSession } from "@/lib/auth";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { localDateInput } from "@/lib/admin-date";
 import { prisma } from "@/lib/prisma";
-import { parsePromissoryForm, type PromissoryFormFields } from "@/lib/promissory-notes";
+import { PROMISSORY_COMPAT_OMIT, parsePromissoryForm, type PromissoryFormFields } from "@/lib/promissory-notes";
+import { isMissingColumnError } from "@/lib/prisma-errors";
 
 export type CreatedPromissorySummary = {
   id: string;
@@ -120,6 +121,7 @@ export async function createPromissoryNotes(formData: FormData): Promise<Promiss
       issuerName: parsed.issuer.name,
     };
   } catch (error) {
+    if (isMissingColumnError(error, "issuanceKey") || isMissingColumnError(error, "issuanceHash")) return { ok: false, message: "A emissão aguarda uma atualização do sistema. Nada foi salvo; tente novamente após a atualização." };
     if (error instanceof Error && error.message === "ISSUANCE_CONFLICT") return { ok: false, message: "Esta solicitação já foi emitida com outros dados. Confira o lote antes de iniciar outra emissão." };
     console.error("[admin/promissorias] falha ao emitir:", error);
     return { ok: false, message: "Não foi possível emitir as notas. Nada foi salvo." };
@@ -179,7 +181,7 @@ export async function reversePromissoryPayment(id: string, reason: string): Prom
   try {
     const done = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "PromissoryNote" WHERE "id" = ${id} FOR UPDATE`;
-      const note = await tx.promissoryNote.findUnique({ where: { id } });
+      const note = await tx.promissoryNote.findUnique({ where: { id }, omit: PROMISSORY_COMPAT_OMIT });
       if (!note || note.status !== "paga") return false;
       const updated = await tx.promissoryNote.updateMany({ where: { id, status: "paga" }, data: { status: note.saleId ? "vinculada" : "emitida", paidAt: null, paidNoticeDoneAt: null } });
       if (!updated.count) return false;
