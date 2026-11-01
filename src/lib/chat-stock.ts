@@ -2894,6 +2894,39 @@ function skipsChatMemory(mensagem: string) {
   return false;
 }
 
+/**
+ * Assunto novo na mesma conversa (outra categoria, financiamento, uso do carro ou
+ * um modelo que a loja não tem): nenhum filtro dito antes continua valendo.
+ * Seguimentos explícitos ("desses", "e o de menos km?", "mais opções") nunca contam como assunto novo.
+ */
+export function startsNewChatTopic(
+  mensagem: string,
+  rememberedCategory: "carro" | "moto" | null,
+) {
+  if (
+    isAnaphoricVehicleFollowUp(mensagem) ||
+    looksLikeShortlistFollowUp(mensagem) ||
+    asksForMoreChatVehicles(mensagem)
+  ) {
+    return false;
+  }
+  const folded = normalize(mensagem);
+  const category = parseVehicleCategoryFilter(mensagem);
+  if (category && category !== (rememberedCategory ?? "carro")) return true;
+  if (/\b(\d{1,2}\s*x|\d{1,2} (?:vezes|parcelas)|parcel\w*|financ\w*|entrada|prestac\w*|simul\w*)\b/.test(folded)) return true;
+  if (/\b(uber|99 ?pop|aplicativo|app de transporte|familia|familiar|porta ?malas?|viajar|viagens?|trabalho|entregas?)\b/.test(folded)) return true;
+  // "Tem Onyx?": pergunta de modelo sem nenhum filtro próprio.
+  const ask = folded.match(/^(?:(?:voces?|vcs?) )?(?:tem|tinha|trabalha(?:m)? com|vende(?:m)?)\s+(?:um |uma |o |a )?([a-z][a-z0-9-]+)/);
+  if (
+    ask &&
+    !hasChatStockFilter(mensagem) &&
+    !/^(?:algum|alguma|alguns|algumas|outro|outra|outros|outras|mais|ai|ainda|esse|essa|esses|essas|mesmo|mesma|disponivel|carro|carros|moto|motos|veiculo|veiculos|opcao|opcoes|modelo|modelos|barato|baratos|economico|economicos|novo|nova|novos|novas)$/.test(ask[1]!)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 const RANK_WORD: Partial<Record<ChatRankMode, string>> = {
   power: "forte",
   family: "família",
@@ -2916,6 +2949,12 @@ export function scopeChatMessage(
   if (skipsChatMemory(current)) return current;
   // Modelo escrito agora redefine o assunto; só valem os filtros desta mensagem.
   if (mentionedModelGroups(stock, current).size > 0) return current;
+  const priorCategory = historico
+    .filter((turn) => turn.role === "user")
+    .map((turn) => parseVehicleCategoryFilter(turn.content))
+    .reduce<"carro" | "moto" | null>((last, next) => next ?? last, null);
+  // Outro assunto (moto, parcelas, uso, modelo que não temos): começa do zero.
+  if (startsNewChatTopic(current, priorCategory)) return current;
   const prior = historico
     .filter((turn) => turn.role === "user" && turn.content.trim())
     .map((turn) => turn.content.trim());

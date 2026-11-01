@@ -5,7 +5,7 @@ import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { Container, PageHeader, ButtonLink, WhatsAppButton } from "@/components/site/ui";
 import { getStockLandingHistory } from "@/lib/stock-landing-data";
 import { stockLandingLinks, stockLandingCopy } from "@/lib/stock-landings";
-import { getCityShowcaseVehicles } from "@/lib/vehicles";
+import { getVehiclesByIds } from "@/lib/vehicles";
 import { breadcrumbJsonLd, buildPageMetadata, faqJsonLd, itemListJsonLd, SERVICE_CITIES } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { wantedVehicleHref } from "@/lib/wanted-vehicle-page";
@@ -29,7 +29,7 @@ export async function StockLanding({ kind, slug }: { kind: "marca" | "modelo"; s
   const copy = stockLandingCopy(kind, link.label, rows);
   const pedidoHref = wantedVehicleHref({ q: link.label });
   const ids = new Set(rows.filter(row => row.status === "disponivel").map(row => row.id));
-  const vehicles = ids.size ? (await getCityShowcaseVehicles()).filter(row => ids.has(row.id)) : [];
+  const vehicles = ids.size ? await getVehiclesByIds([...ids]) : [];
   const sold = rows.filter(row => row.status === "vendido");
   const faqs = [
     { question: `Como encontrar ${link.label} na Garagem?`, answer: copy.introduction },

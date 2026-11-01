@@ -41,8 +41,8 @@ export default function SiteLayout({
           Pular para o conteúdo
         </a>
         <main id="conteudo" tabIndex={-1} className="flex-1 pt-site-header outline-none">
-          <CookieConsent />
           {children}
+          <CookieConsent />
         </main>
         <SiteFooter />
         <div className="pb-site-nav lg:hidden" aria-hidden="true" />

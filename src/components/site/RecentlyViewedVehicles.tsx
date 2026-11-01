@@ -4,7 +4,13 @@ import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import { VehicleGrid } from "./VehicleGrid";
 import { VehicleCardSkeletonGrid } from "./VehicleCardSkeleton";
 import type { VehicleCardData } from "./VehicleCard";
-import { clearRecentVehicles, recentIdsSnapshot, RECENT_VEHICLES_EVENT, RECENT_VEHICLES_KEY } from "@/lib/recently-viewed";
+import {
+  clearRecentVehicles,
+  recentIdsSnapshot,
+  RECENT_VEHICLES_EVENT,
+  RECENT_VEHICLES_KEY,
+  shouldFetchRecentVehicles,
+} from "@/lib/recently-viewed";
 import { notifyError } from "@/lib/notify";
 
 function subscribe(changed: () => void) {
@@ -20,11 +26,24 @@ export function RecentlyViewedVehicles() {
   const regionId = useId();
   const [open, setOpen] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const [result, setResult] = useState<{ key: string; attempt: number; vehicles: VehicleCardData[]; failed: boolean } | null>(null);
-  const current = result?.key === ids && result.attempt === attempt ? result : null;
+  const [result, setResult] = useState<{
+    key: string;
+    attempt: number;
+    fetchedAt: number;
+    vehicles: VehicleCardData[];
+    failed: boolean;
+  } | null>(null);
+  const hasFreshCache =
+    result !== null &&
+    !shouldFetchRecentVehicles(result, ids) &&
+    result.attempt === attempt;
+  const current = result?.key === ids && (hasFreshCache || result.attempt === attempt) ? result : null;
 
   useEffect(() => {
     if (!open || !ids) return;
+    if (result && result.key === ids && !result.failed && result.attempt === attempt && !shouldFetchRecentVehicles(result, ids)) {
+      return;
+    }
     const controller = new AbortController();
     let active = true;
     const timeout = window.setTimeout(() => controller.abort(), 15_000);
@@ -33,18 +52,30 @@ export function RecentlyViewedVehicles() {
         if (!response.ok) throw new Error("Histórico indisponível");
         const data = await response.json();
         if (data.error || !Array.isArray(data.vehicles)) throw new Error("Resposta inválida");
-        if (active) setResult({ key: ids, attempt, vehicles: data.vehicles.slice(0, 4), failed: false });
+        if (active) setResult({ key: ids, attempt, fetchedAt: Date.now(), vehicles: data.vehicles.slice(0, 4), failed: false });
       })
-      .catch(() => { if (active) setResult({ key: ids, attempt, vehicles: [], failed: true }); })
+      .catch(() => { if (active) setResult({ key: ids, attempt, fetchedAt: Date.now(), vehicles: [], failed: true }); })
       .finally(() => window.clearTimeout(timeout));
     return () => { active = false; window.clearTimeout(timeout); controller.abort(); };
-  }, [ids, open, attempt]);
+  }, [ids, open, attempt, result]);
+
+  useEffect(() => {
+    if (!open || !result?.failed) return;
+    const onOnline = () => setAttempt(value => value + 1);
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [open, result?.failed]);
 
   if (!ids) return null;
   return (
     <section data-recent-vehicles="" className="my-5">
       <button type="button" aria-expanded={open} aria-controls={regionId}
-        onClick={() => { if (!open) setAttempt(value => value + 1); setOpen(value => !value); }}
+        onClick={() => {
+          if (!open && shouldFetchRecentVehicles(result, ids)) {
+            setAttempt(value => value + 1);
+          }
+          setOpen(value => !value);
+        }}
         className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-white/15 bg-ink/40 px-4 py-3 text-left text-sm font-semibold text-cream transition hover:text-brand-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
         Vistos recentemente <span aria-hidden="true">{open ? "−" : "+"}</span>
       </button>

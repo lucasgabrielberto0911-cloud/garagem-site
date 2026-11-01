@@ -1,5 +1,10 @@
 import { COVER_HD_WIDTH, hdCardCompanion, isCardVariantPath, isFramedCardUrl } from "@/lib/cover-frame";
 import { publicPhotoOriginal } from "@/lib/public-photo-url";
+import {
+  filterAccessoriesForCategory,
+  getFuels,
+  isVehicleCategory,
+} from "@/lib/vehicle-accessories";
 
 /** Tipos e parsers do estoque — seguro para o bundle do cliente. */
 
@@ -39,7 +44,7 @@ export type VehicleCardRecord = {
  * e não no arquivo 1280.
  */
 export const GALLERY_HERO_SIZES =
-  "(min-width: 1280px) 710px, (min-width: 1024px) calc((100vw - 96px) * 0.6), (min-width: 640px) 100vw, 60vw";
+  "(min-width: 1280px) 710px, (min-width: 1024px) calc((100vw - 96px) * 0.6), 100vw";
 
 /**
  * Card dentro do mesmo container: 2 colunas, 3 no lg, 4 no xl da home.
@@ -393,7 +398,92 @@ export function stockOrderBy(sort?: string | null): StockOrderBy {
 export type StockModelOption = {
   brand: string;
   model: string;
+  categories?: string[];
 };
+
+const MOTO_ONLY_BRANDS = new Set(["yamaha", "kawasaki", "harley", "harley-davidson"]);
+
+/**
+ * Ao trocar entre "carro" e "moto", limpa marca, modelo, combustível e opcionais
+ * incompatíveis com a nova categoria para evitar filtros contraditórios.
+ */
+export function sanitizeFiltersForCategory<
+  T extends {
+    category: string;
+    brand: string;
+    model: string;
+    fuel: string;
+    accessory: string;
+  },
+>(
+  current: T,
+  nextCategory: string,
+  models?: readonly StockModelOption[],
+): T {
+  const updated: T = { ...current, category: nextCategory };
+  if (!isVehicleCategory(nextCategory)) return updated;
+
+  const allowedFuels = new Set(
+    getFuels(nextCategory).map((item) => foldLabel(item)),
+  );
+  if (updated.fuel && !allowedFuels.has(foldLabel(updated.fuel))) {
+    updated.fuel = "";
+  }
+
+  if (updated.accessory) {
+    const rawParts = updated.accessory
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const strippedParts = rawParts.map((item) =>
+      item.replace(/^(?:Conforto|Segurança|Facilidades|Outros opcionais):\s*/i, ""),
+    );
+    const keptStripped = new Set(
+      filterAccessoriesForCategory(strippedParts, nextCategory).map((item) =>
+        foldLabel(item),
+      ),
+    );
+    updated.accessory = rawParts
+      .filter((item, idx) => keptStripped.has(foldLabel(strippedParts[idx] ?? item)))
+      .join(",");
+  }
+
+  const hasCategoryInfo = (models ?? []).some(
+    (item) => Array.isArray(item.categories) && item.categories.length > 0,
+  );
+  if (updated.brand) {
+    const brandFolded = foldLabel(updated.brand);
+    if (hasCategoryInfo) {
+      const brandMatchesCategory = (models ?? []).some(
+        (item) =>
+          foldLabel(item.brand) === brandFolded &&
+          (!item.categories?.length || item.categories.includes(nextCategory)),
+      );
+      if (!brandMatchesCategory) {
+        updated.brand = "";
+        updated.model = "";
+      }
+    } else if (nextCategory === "carro" && MOTO_ONLY_BRANDS.has(brandFolded)) {
+      updated.brand = "";
+      updated.model = "";
+    }
+  }
+
+  if (updated.model && hasCategoryInfo) {
+    const modelFolded = foldLabel(updated.model);
+    const modelMatchesCategory = (models ?? []).some(
+      (item) =>
+        foldLabel(item.model) === modelFolded &&
+        (!updated.brand || foldLabel(item.brand) === foldLabel(updated.brand)) &&
+        (!item.categories?.length || item.categories.includes(nextCategory)),
+    );
+    if (!modelMatchesCategory) {
+      updated.model = "";
+    }
+  }
+
+  return updated;
+}
 
 function foldLabel(value: string) {
   return value.trim().toLocaleLowerCase("pt-BR");

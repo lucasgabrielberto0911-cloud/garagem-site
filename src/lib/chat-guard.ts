@@ -14,8 +14,19 @@ const JAILBREAK_HINT =
 const FIPE_HINT =
   /\b(fipe|tabela fipe|preco fipe|valor fipe|preco da fipe|valor da fipe)\b/;
 
-const PING_ONLY =
-  /^(oi+|ola|eae+|e ai|eai+|falae|falai|salve|blz|beleza|tmj|suave|de boa|bom dia|boa tarde|boa noite|opa|fala|hey|hi|hello|obrigado|obrigada|valeu|ok|sim|nao|tudo bem|td bem|teste|test|ping)[\s!.?]*$/;
+const PING_WORD =
+  "(?:oi+|ola|eae+|e ai|eai+|falae|falai|salve|blz|beleza|tmj|suave|de boa|bom dia|boa tarde|boa noite|opa|fala|hey|hi|hello|obrigado|obrigada|valeu|ok|sim|nao|tudo bem|td bem|tudo bom|tudo certo|como vai|teste|test|ping)";
+// "Oi, tudo bem?" também é só cumprimento: resposta fixa, sem passar pela IA.
+const PING_ONLY = new RegExp(`^${PING_WORD}(?:[\\s,!.?]+${PING_WORD})*[\\s!.?]*$`);
+
+const GREETING_WORD =
+  "(?:oi+|ola|eae+|e ai|eai+|falae|falai|salve|opa|fala|hey|hi|hello|bom dia|boa tarde|boa noite|tudo bem|td bem|tudo bom|tudo certo|como vai|blz|beleza)";
+const GREETING_ONLY = new RegExp(`^${GREETING_WORD}(?:[\\s,!.?]+${GREETING_WORD})*[\\s!.?]*$`);
+
+/** Só cumprimento ("Oi, tudo bem?"): sem "sim", "ok" ou "obrigado", que dependem da pergunta anterior. */
+export function isGreetingOnly(message: string) {
+  return GREETING_ONLY.test(fold(message).trim());
+}
 
 const REDIRECT_HINT =
   /assuntos da garagem|so posso ajudar|chama no whatsapp pra outros/;

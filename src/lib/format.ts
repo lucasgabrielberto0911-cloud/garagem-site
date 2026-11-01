@@ -156,8 +156,31 @@ export function formatKmBR(value: number) {
   return `${formatNumberBR(value)} km`;
 }
 
+export function normalizeBrazilPhoneDigits(value: string) {
+  let digits = value.replace(/\D/g, "");
+  if (
+    (digits.length === 12 || digits.length === 13) &&
+    digits.startsWith("55")
+  ) {
+    digits = digits.slice(2);
+  }
+  return digits.slice(0, 11);
+}
+
+/** Telefone BR com DDD válido (11..99), 10 ou 11 dígitos, sem sequência repetida e celular iniciando com 9. */
+export function isValidBrazilPhone(value: string) {
+  const digits = normalizeBrazilPhoneDigits(value);
+  if (digits.length !== 10 && digits.length !== 11) return false;
+  if (/^(\d)\1+$/.test(digits)) return false;
+  const ddd = Number(digits.slice(0, 2));
+  if (!Number.isFinite(ddd) || ddd < 11 || ddd > 99) return false;
+  if (digits.length === 11 && digits[2] !== "9") return false;
+  if (digits.length === 10 && (digits[2] === "0" || digits[2] === "1")) return false;
+  return true;
+}
+
 export function formatPhoneBR(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
+  const digits = normalizeBrazilPhoneDigits(value);
   if (digits.length <= 2) return digits;
   if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
   if (digits.length <= 10) {

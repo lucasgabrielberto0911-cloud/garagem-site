@@ -29,7 +29,87 @@ export type FavoriteIntent = {
 export type OfflineIntent = (WhatsAppIntent | SellIntent | FavoriteIntent) & {
   id: string;
   createdAt: number;
+  claimedAt?: number;
 };
+
+/** Quanto tempo cada tipo de pedido guardado continua valendo antes de ser descartado sem enviar. */
+export const OFFLINE_INTENT_TTL_MS: Record<OfflineIntent["type"], number> = {
+  whatsapp: 3 * 24 * 60 * 60 * 1000,
+  sell: 7 * 24 * 60 * 60 * 1000,
+  favorite: 7 * 24 * 60 * 60 * 1000,
+};
+
+export const OFFLINE_CLAIM_LEASE_MS = 60_000;
+
+export function isIntentExpired(
+  intent: Pick<OfflineIntent, "type" | "createdAt">,
+  now = Date.now(),
+): boolean {
+  const createdAt = Number(intent.createdAt);
+  if (!Number.isFinite(createdAt)) return true;
+  // Tipo desconhecido (item gravado por versão antiga ou corrompido): usa o menor prazo.
+  const ttl =
+    OFFLINE_INTENT_TTL_MS[intent.type] ??
+    Math.min(...Object.values(OFFLINE_INTENT_TTL_MS));
+  return now - createdAt > ttl;
+}
+
+export function filterValidIntents(
+  intents: readonly OfflineIntent[],
+  now = Date.now(),
+): { valid: OfflineIntent[]; expiredIds: string[] } {
+  const valid: OfflineIntent[] = [];
+  const expiredIds: string[] = [];
+  for (const item of intents) {
+    if (isIntentExpired(item, now)) {
+      expiredIds.push(item.id);
+    } else {
+      valid.push(item);
+    }
+  }
+  valid.sort((a, b) => a.createdAt - b.createdAt);
+  return { valid, expiredIds };
+}
+
+/** Separa o que ainda vale enviar do que ficou velho demais (o visitante já resolveu por outro meio). */
+export function partitionIntents<T extends Pick<OfflineIntent, "type" | "createdAt">>(
+  items: T[],
+  now = Date.now(),
+) {
+  const fresh: T[] = [];
+  const expired: T[] = [];
+  for (const item of items) (isIntentExpired(item, now) ? expired : fresh).push(item);
+  return { fresh, expired };
+}
+
+const FLUSH_LOCK = "garagem-offline-flush";
+let flushing: Promise<void> | null = null;
+
+/**
+ * Uma única descarga da fila por vez: no mesmo documento (remontagem, eventos "online" seguidos)
+ * e entre abas, quando o navegador tem Web Locks. Quem chega durante a execução espera a mesma.
+ */
+export function runSingleFlush(task: () => Promise<void>): Promise<void> {
+  if (flushing) return flushing;
+  const run = async () => {
+    const locks =
+      typeof navigator !== "undefined"
+        ? (navigator as Navigator & { locks?: LockManager }).locks
+        : undefined;
+    if (locks?.request) {
+      await locks.request(FLUSH_LOCK, { ifAvailable: true }, async (lock) => {
+        if (lock) await task();
+      });
+    } else {
+      await task();
+    }
+  };
+  const current = run().finally(() => {
+    if (flushing === current) flushing = null;
+  });
+  flushing = current;
+  return current;
+}
 
 export function isLikelyNetworkFailure(error?: unknown, online = true) {
   if (!online) return true;
@@ -81,7 +161,7 @@ export async function enqueueIntent(intent: OfflineIntentDraft) {
   return row;
 }
 
-export async function listIntents(): Promise<OfflineIntent[]> {
+export async function listIntents(now = Date.now()): Promise<OfflineIntent[]> {
   const db = await openDb();
   const rows = await new Promise<OfflineIntent[]>((resolve, reject) => {
     const tx = db.transaction(OFFLINE_QUEUE_STORE, "readonly");
@@ -89,8 +169,69 @@ export async function listIntents(): Promise<OfflineIntent[]> {
     request.onsuccess = () => resolve((request.result ?? []) as OfflineIntent[]);
     request.onerror = () => reject(request.error ?? new Error("IDB getAll"));
   });
+  const { valid, expiredIds } = filterValidIntents(rows, now);
+  if (expiredIds.length > 0) {
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(OFFLINE_QUEUE_STORE, "readwrite");
+      const store = tx.objectStore(OFFLINE_QUEUE_STORE);
+      for (const id of expiredIds) {
+        store.delete(id);
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  }
   db.close();
-  return rows.sort((a, b) => a.createdAt - b.createdAt);
+  return valid;
+}
+
+export async function claimIntent(
+  id: string,
+  now = Date.now(),
+  leaseMs = OFFLINE_CLAIM_LEASE_MS,
+): Promise<boolean> {
+  const db = await openDb();
+  const claimed = await new Promise<boolean>((resolve) => {
+    const tx = db.transaction(OFFLINE_QUEUE_STORE, "readwrite");
+    const store = tx.objectStore(OFFLINE_QUEUE_STORE);
+    const getReq = store.get(id);
+    let ok = false;
+    getReq.onsuccess = () => {
+      const current = getReq.result as OfflineIntent | undefined;
+      if (!current || isIntentExpired(current, now)) {
+        if (current) store.delete(id);
+        return;
+      }
+      if (current.claimedAt && now - current.claimedAt < leaseMs) {
+        return;
+      }
+      store.put({ ...current, claimedAt: now });
+      ok = true;
+    };
+    tx.oncomplete = () => resolve(ok);
+    tx.onerror = () => resolve(false);
+  });
+  db.close();
+  return claimed;
+}
+
+export async function releaseIntentClaim(id: string): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve) => {
+    const tx = db.transaction(OFFLINE_QUEUE_STORE, "readwrite");
+    const store = tx.objectStore(OFFLINE_QUEUE_STORE);
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const current = getReq.result as OfflineIntent | undefined;
+      if (!current || !current.claimedAt) return;
+      const next = { ...current };
+      delete next.claimedAt;
+      store.put(next);
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => resolve();
+  });
+  db.close();
 }
 
 export async function deleteIntent(id: string) {

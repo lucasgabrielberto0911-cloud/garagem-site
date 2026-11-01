@@ -18,8 +18,13 @@ export function parseComparisonSession(raw: string | null): ComparisonSession {
   } catch { return { chosen: null, open: false }; }
 }
 export function readComparisonSession(): ComparisonSession {
-  try { return parseComparisonSession(sessionStorage.getItem(COMPARISON_SESSION_KEY)); }
-  catch { return { chosen: null, open: false }; }
+  try {
+    const raw = sessionStorage.getItem(COMPARISON_SESSION_KEY);
+    if (raw === null) return { chosen: null, open: true };
+    return parseComparisonSession(raw);
+  } catch {
+    return { chosen: null, open: true };
+  }
 }
 export function writeComparisonSession(state: ComparisonSession) {
   try { sessionStorage.setItem(COMPARISON_SESSION_KEY, JSON.stringify(state)); }
