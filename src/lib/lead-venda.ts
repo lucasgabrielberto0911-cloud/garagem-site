@@ -69,11 +69,57 @@ function isUniqueRequestKeyError(error: unknown) {
   return "code" in error && (error as { code?: string }).code === "P2002";
 }
 
+const RECENT_REQUEST_TTL_MS = 15 * 60 * 1000;
+const _RECENT_CONTENT_WINDOW_MS = 2 * 60 * 1000;
+const recentLeadRequests = new Map<string, { id: string; expiresAt: number }>();
+
+export function buildSellLeadIdempotencyKey(input: {
+  requestId?: string | null;
+  phone: string;
+  vehicleInfo: string;
+  plate?: string | null;
+}) {
+  const reqId = input.requestId?.trim();
+  if (reqId && /^[a-zA-Z0-9_-]{8,80}$/.test(reqId)) {
+    return `req:${reqId}`;
+  }
+  const phoneDigits = input.phone.replace(/\D/g, "");
+  const vehicle = input.vehicleInfo.trim().toLowerCase().replace(/\s+/g, " ");
+  const plate = (input.plate ?? "").trim().toUpperCase();
+  return `sig:${phoneDigits}:${vehicle}:${plate}`;
+}
+
+export function rememberLeadRequest(
+  key: string,
+  id: string,
+  now = Date.now(),
+  ttlMs = RECENT_REQUEST_TTL_MS,
+) {
+  for (const [k, entry] of recentLeadRequests) {
+    if (entry.expiresAt <= now) recentLeadRequests.delete(k);
+  }
+  recentLeadRequests.set(key, { id, expiresAt: now + ttlMs });
+}
+
+export function findRememberedLeadRequest(key: string, now = Date.now()): string | null {
+  const entry = recentLeadRequests.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= now) {
+    recentLeadRequests.delete(key);
+    return null;
+  }
+  return entry.id;
+}
+
+export function clearLeadRequestCacheForTests() {
+  recentLeadRequests.clear();
+}
+
 export async function createLeadVenda(data: {
   name: string;
   phone: string;
   vehicleInfo: string;
-  plate: string;
+  plate: string | null;
   km: number | null;
   notes: string | null;
   interestVehicleId: string | null;
@@ -81,8 +127,9 @@ export async function createLeadVenda(data: {
   photoUrls: string[];
   /** Identificador da solicitação (gerado no aparelho). Repetido, devolve o lead já criado. */
   requestKey?: string | null;
+  requestId?: string | null;
 }) {
-  const requestKey = normalizeRequestKey(data.requestKey);
+  const requestKey = normalizeRequestKey(data.requestKey ?? data.requestId);
   try {
     if (requestKey) {
       const existing = await prisma.leadVenda.findUnique({
@@ -99,7 +146,7 @@ export async function createLeadVenda(data: {
           name: data.name,
           phone: data.phone,
           vehicleInfo: data.vehicleInfo,
-          plate: data.plate,
+          plate: data.plate ?? undefined,
           km: data.km,
           notes: data.notes,
           interestVehicleId: data.interestVehicleId,
@@ -124,7 +171,7 @@ export async function createLeadVenda(data: {
         name: data.name,
         phone: data.phone,
         vehicleInfo: data.vehicleInfo,
-        plate: data.plate,
+        plate: data.plate ?? undefined,
         km: data.km,
         notes: data.notes,
         interestVehicleId: data.interestVehicleId,

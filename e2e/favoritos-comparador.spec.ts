@@ -32,7 +32,10 @@ for (const width of [320, 360, 390, 430, 1440]) {
     await page.setViewportSize({ width, height: 932 });
     await page.goto("/favoritos");
     await expect(page.getByText("Você já pode comparar seus favoritos lado a lado.")).toBeVisible();
-    await page.locator("summary").filter({ hasText: "Comparar favoritos" }).click();
+    const details = page.locator("details").filter({ hasText: "Comparar favoritos" });
+    if (!(await details.evaluate((el: HTMLDetailsElement) => el.open))) {
+      await details.locator("summary").click();
+    }
     const region = page.getByRole("region", { name: "Tabela de comparação dos veículos selecionados" });
     await expect(region).toBeVisible();
     await expect(region.getByRole("columnheader")).toHaveCount(3);
@@ -101,7 +104,10 @@ test("campos ausentes não viram zero nem diferença numérica", async ({ page }
     ...vehicles[1], price: null, km: null, yearModel: null,
   }] } }));
   await page.goto("/favoritos");
-  await page.locator("summary").filter({ hasText: "Comparar favoritos" }).click();
+  const details = page.locator("details").filter({ hasText: "Comparar favoritos" });
+  if (!(await details.evaluate((el: HTMLDetailsElement) => el.open))) {
+    await details.locator("summary").click();
+  }
   const table = page.getByRole("table");
   await expect(table.getByText("Não informado", { exact: true })).toHaveCount(5);
   await expect(table.locator("[data-comparison-difference]")).toHaveCount(0);

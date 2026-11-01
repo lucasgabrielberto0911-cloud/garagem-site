@@ -174,6 +174,25 @@ export type SiteQueryMeta = {
   error?: string;
 };
 
+export function attachQueryError<T>(
+  fallback: T,
+  message: string,
+): T & SiteQueryMeta {
+  if (Array.isArray(fallback)) {
+    const clone = [...fallback] as unknown as T & SiteQueryMeta;
+    Object.defineProperty(clone, "error", {
+      value: message,
+      enumerable: false,
+      configurable: true,
+    });
+    return clone;
+  }
+  if (dataIsObject(fallback)) {
+    return { ...fallback, error: message } as T & SiteQueryMeta;
+  }
+  return fallback as T & SiteQueryMeta;
+}
+
 /**
  * O site público evita quebrar por falha de banco, mas registra e sinaliza
  * o erro para a UI mostrar aviso (em vez de "estoque vazio" silencioso).
@@ -190,10 +209,7 @@ async function safeQuery<T>(
     console.error(`[site] falha ao consultar ${label}:`, error);
     const message =
       error instanceof Error ? error.message : `Falha ao consultar ${label}`;
-    if (dataIsObject(fallback)) {
-      return { ...fallback, error: message } as T & SiteQueryMeta;
-    }
-    return fallback as T & SiteQueryMeta;
+    return attachQueryError(fallback, message);
   }
 }
 
@@ -273,6 +289,32 @@ export const getCityShowcaseVehicles = cache(() =>
     [] as VehicleCardRecord[],
   ),
 );
+
+const loadVehiclesByIdsCached = unstable_cache(
+  async (sortedIdsKey: string): Promise<VehicleCardRecord[]> => {
+    const ids = sortedIdsKey.split(",").filter(Boolean);
+    if (ids.length === 0) return [];
+    return findCardVehicles({
+      where: { status: "disponivel", id: { in: ids } },
+      orderBy: { createdAt: "desc" },
+    });
+  },
+  ["vehicles-by-ids-v1"],
+  PUBLIC_CACHE,
+);
+
+/** Busca somente os veículos disponíveis de uma lista de IDs (ex.: landings de marca/modelo). */
+export const getVehiclesByIds = cache((ids: readonly string[]) => {
+  const normalized = [...new Set(ids.map((id) => id.trim()).filter(Boolean))].sort();
+  if (normalized.length === 0) {
+    return Promise.resolve([] as VehicleCardRecord[]);
+  }
+  return safeQuery(
+    "veículos por id",
+    () => loadVehiclesByIdsCached(normalized.join(",")),
+    [] as VehicleCardRecord[],
+  );
+});
 
 const loadVehicleByIdCached = unstable_cache(
   async (id: string) =>
@@ -431,6 +473,14 @@ export function buildStockWhere(filters: StockFilters, catalog: { brand: string;
   const and: object[] = [];
   if (filters.hasInspection) {
     and.push({ inspection: { not: null } }, { inspection: { not: "" } });
+  }
+  if (filters.accessories && filters.accessories.length > 0) {
+    for (const acc of filters.accessories) {
+      const variants = accessoryFilterVariants(acc);
+      if (variants.length > 0) {
+        and.push({ accessories: { hasSome: variants } });
+      }
+    }
   }
   and.push(...stockSearchWhere(filters.q ?? "", catalog));
   const gear = transmissionWhere(filters.transmission);
@@ -736,7 +786,7 @@ const loadStockFacetsCached = unstable_cache(
     });
     return buildStockFacets(rows);
   },
-  ["stock-facets-v7"],
+  ["stock-facets-v8"],
   PUBLIC_CACHE,
 );
 
