@@ -1026,7 +1026,7 @@ export function SalesManager({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 border-t border-white/10">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 border-t border-white/10">
                     {wa ? (
                       <a
                         href={`https://wa.me/55${wa}`}

@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   createIntentId,
+  offlineIntentState,
+  OFFLINE_AUTO_SEND_MS,
+  OFFLINE_RETENTION_MS,
   isLikelyNetworkFailure,
   snapshotsForIds,
   writeFavoriteSnapshot,
@@ -86,4 +89,14 @@ test("grava o lote em uma operação e preserva favoritos fora da lista", () => 
     store.localStorage.setItem = () => { throw new Error("QuotaExceededError"); };
     assert.doesNotThrow(() => writeFavoriteSnapshots([sample]));
   } finally { store.localStorage = previous; }
+});
+
+
+test("fila exige confirmação após 15 minutos e expira dados após sete dias", () => {
+  const now = 1800000000000;
+  assert.equal(offlineIntentState({ createdAt: now }, now), "fresh");
+  assert.equal(offlineIntentState({ createdAt: now - OFFLINE_AUTO_SEND_MS }, now), "confirm");
+  assert.equal(offlineIntentState({ createdAt: now - OFFLINE_RETENTION_MS }, now), "expired");
+  assert.equal(offlineIntentState({ createdAt: now + 1 }, now), "expired");
+  assert.equal(offlineIntentState({ createdAt: NaN }, now), "expired");
 });

@@ -40,11 +40,13 @@ function withLeadDefaults(
         | "nextAction"
         | "nextActionAt"
         | "lostReason"
+        | "requestId"
       >
     >,
 ): LeadVenda {
   return {
     ...row,
+    requestId: row.requestId ?? null,
     lostReason: row.lostReason ?? null,
     nextAction: row.nextAction ?? null,
     nextActionAt: row.nextActionAt ?? null,
@@ -56,6 +58,7 @@ function withLeadDefaults(
 }
 
 export async function createLeadVenda(data: {
+  requestId?: string;
   name: string;
   phone: string;
   vehicleInfo: string;
@@ -67,10 +70,15 @@ export async function createLeadVenda(data: {
   photoUrls: string[];
 }) {
   try {
-    return await withAdminStorageLock((tx) =>
-      tx.leadVenda.create({
+    return await withAdminStorageLock(async (tx) => {
+      if (data.requestId) {
+        const existing = await tx.leadVenda.findUnique({ where: { requestId: data.requestId }, select: { id: true } });
+        if (existing) return { ...existing, replayed: true };
+      }
+      const lead = await tx.leadVenda.create({
         select: { id: true },
         data: {
+          requestId: data.requestId,
           name: data.name,
           phone: data.phone,
           vehicleInfo: data.vehicleInfo,
@@ -81,10 +89,11 @@ export async function createLeadVenda(data: {
           source: data.source,
           photoUrls: data.photoUrls,
         },
-      }),
-    );
+      });
+      return { ...lead, replayed: false };
+    });
   } catch (error) {
-    if (!isMissingColumnError(error)) throw error;
+    if (data.requestId || !isMissingColumnError(error)) throw error;
     return prisma.leadVenda.create({
       select: { id: true },
       data: {

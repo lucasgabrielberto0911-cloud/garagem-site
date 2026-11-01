@@ -30,17 +30,20 @@ function parseCustomer(formData: FormData) {
 
   const fieldErrors: Record<string, string> = {};
   if (name.length < 2) fieldErrors.name = "Informe o nome do cliente.";
-  if (phone.length < 10) fieldErrors.phone = "Telefone incompleto.";
-  if (email && !email.includes("@")) fieldErrors.email = "E-mail inválido.";
+  if (![10, 11].includes(phone.length)) fieldErrors.phone = "Telefone incompleto.";
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fieldErrors.email = "E-mail inválido.";
   if (cpf && !isValidCpf(cpf)) fieldErrors.cpf = "CPF inválido. Confira os 11 dígitos.";
 
+  for (const [key, value, max] of [["name", name, 120], ["email", email, 254], ["address", address, 240], ["notes", notes, 3000]] as const) {
+    if (value && value.length > max) fieldErrors[key] = `Use até ${max} caracteres.`;
+  }
   return { data: { name, phone, cpf, email, address, notes }, fieldErrors };
 }
 
 export async function saveCustomer(
   formData: FormData,
 ): Promise<CustomerActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const id = String(formData.get("id") || "").trim();
   const { data, fieldErrors } = parseCustomer(formData);
@@ -59,10 +62,19 @@ export async function saveCustomer(
         },
       });
       if (duplicate) throw new Error("DUPLICATE_CUSTOMER");
-      if (id) await tx.customer.update({ where: { id }, data });
-      else await tx.customer.create({ data });
+      if (id) {
+        const expected = String(formData.get("expectedUpdatedAt") ?? "");
+        if (!expected || Number.isNaN(Date.parse(expected))) throw new Error("CUSTOMER_CONFLICT");
+        const saved = await tx.customer.updateMany({ where: { id, updatedAt: new Date(expected) }, data: { ...data, updatedAt: new Date(Math.max(Date.now(), Date.parse(expected) + 1)) } });
+        if (saved.count !== 1) throw new Error("CUSTOMER_CONFLICT");
+        await recordAdminAudit(tx, session.adminId, id, "customer.update", { fields: Object.keys(data) });
+      } else {
+        const saved = await tx.customer.create({ data });
+        await recordAdminAudit(tx, session.adminId, saved.id, "customer.create", { fields: Object.keys(data) });
+      }
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "CUSTOMER_CONFLICT") return { ok: false, message: "Este cadastro mudou em outra sessão. Seu preenchimento foi mantido. Reabra o cadastro para conferir antes de salvar." };
     if (error instanceof Error && error.message === "DUPLICATE_CUSTOMER")
       return {
         ok: false,

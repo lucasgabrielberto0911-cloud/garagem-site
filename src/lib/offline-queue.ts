@@ -29,6 +29,7 @@ export type FavoriteIntent = {
 export type OfflineIntent = (WhatsAppIntent | SellIntent | FavoriteIntent) & {
   id: string;
   createdAt: number;
+  lease?: { owner: string; until: number };
 };
 
 export function isLikelyNetworkFailure(error?: unknown, online = true) {
@@ -102,6 +103,54 @@ export async function deleteIntent(id: string) {
     tx.onerror = () => reject(tx.error ?? new Error("IDB delete"));
   });
   db.close();
+}
+
+export const OFFLINE_RETENTION_MS = 7 * 86400000;
+export const OFFLINE_AUTO_SEND_MS = 15 * 60000;
+export function offlineIntentState(item: Pick<OfflineIntent, "createdAt">, now = Date.now()) {
+  if (!Number.isFinite(item.createdAt) || item.createdAt > now || now - item.createdAt >= OFFLINE_RETENTION_MS) return "expired";
+  return now - item.createdAt >= OFFLINE_AUTO_SEND_MS ? "confirm" : "fresh";
+}
+
+/** Reserva atômica entre abas; a concessão expira se a aba cair no meio do envio. */
+export async function claimIntent(id: string, owner: string, now = Date.now()) {
+  const db = await openDb();
+  let claimed = false;
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(OFFLINE_QUEUE_STORE, "readwrite");
+      const store = tx.objectStore(OFFLINE_QUEUE_STORE);
+      const request = store.get(id);
+      request.onsuccess = () => {
+        const row = request.result as OfflineIntent | undefined;
+        if (!row || (row.lease && row.lease.until > now)) return;
+        store.put({ ...row, lease: { owner, until: now + 60000 } });
+        claimed = true;
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error("IDB claim"));
+      tx.onabort = () => reject(tx.error ?? new Error("IDB abort"));
+    });
+    return claimed;
+  } finally { db.close(); }
+}
+
+export async function releaseIntent(id: string, owner: string) {
+  const db = await openDb();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(OFFLINE_QUEUE_STORE, "readwrite");
+      const store = tx.objectStore(OFFLINE_QUEUE_STORE);
+      const request = store.get(id);
+      request.onsuccess = () => {
+        const row = request.result as OfflineIntent | undefined;
+        if (row?.lease?.owner === owner) store.put({ ...row, lease: undefined });
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error("IDB release"));
+      tx.onabort = () => reject(tx.error ?? new Error("IDB abort"));
+    });
+  } finally { db.close(); }
 }
 
 export type FavoriteSnapshot = {

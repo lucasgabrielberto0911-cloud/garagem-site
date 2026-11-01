@@ -1,5 +1,7 @@
 "use client";
 
+import { submissionId } from "@/lib/submission-id";
+
 import {
   useEffect,
   useRef,
@@ -73,6 +75,7 @@ export function SellForm({
     try {
       await enqueueIntent({
         type: "sell",
+        id: String(data.get("requestId")),
         fields,
         photoUrls: (data.getAll("photoUrls") as string[]).filter(
           (item) => typeof item === "string",
@@ -81,9 +84,11 @@ export function SellForm({
       trackPwaEvent("PwaOfflineQueued", { kind: "sell" });
       notifySuccess("Sem conexão. Guardamos a avaliação e enviamos quando a internet voltar.");
       setOutcome("queued");
+      return true;
     } catch {
       const message = "Não conseguimos guardar a avaliação neste aparelho. Seus dados continuam no formulário. Tente de novo quando a conexão voltar ou chame no WhatsApp.";
       setFormError(message);
+      return false;
     }
   }
 
@@ -113,9 +118,12 @@ export function SellForm({
     }
 
     startTransition(async () => {
+      let clearRequest: () => void;
+      try { clearRequest = await submissionId(data, "avaliacao"); }
+      catch { setFormError("Não conseguimos identificar o envio neste aparelho. Ative o armazenamento da sessão e tente novamente."); return; }
       const online = typeof navigator === "undefined" ? true : navigator.onLine;
       if (!online) {
-        await queueOffline(data);
+        if (await queueOffline(data)) clearRequest();
         return;
       }
 
@@ -125,6 +133,7 @@ export function SellForm({
         setErrors(fieldErrors);
 
         if (result.ok) {
+          clearRequest();
           trackLead({
             content_ids: [],
             content_name: "Vender/Trocar",
@@ -146,7 +155,7 @@ export function SellForm({
         }
       } catch (error) {
         if (isLikelyNetworkFailure(error, navigator.onLine)) {
-          await queueOffline(data);
+          if (await queueOffline(data)) clearRequest();
           return;
         }
         const message = "Não foi possível enviar agora. Seus dados continuam no formulário. Tente de novo.";

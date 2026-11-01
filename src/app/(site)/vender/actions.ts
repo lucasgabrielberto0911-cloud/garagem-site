@@ -94,7 +94,9 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
   const source = parseSource(text(data, "source", MAX_LENGTH.source));
   const photoUrls = parsePhotoUrls(data);
 
+  const requestId = String(data.get("requestId") ?? "");
   const fieldErrors: Record<string, string> = {};
+  if (!/^[a-zA-Z0-9_-]{16,100}$/.test(requestId)) fieldErrors.form = "Reabra o formulário para identificar sua solicitação.";
   if (name.length < 3) fieldErrors.name = "Informe seu nome completo.";
   if (phone.replace(/\D/g, "").length < 10) {
     fieldErrors.phone = "Informe um telefone com DDD.";
@@ -127,6 +129,7 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
 
   try {
     const lead = await createLeadVenda({
+      requestId,
       name,
       phone,
       vehicleInfo,
@@ -138,7 +141,7 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
       photoUrls,
     });
     updateTag(ADMIN_NEW_LEADS_TAG);
-    notifyNewLead({
+    if (!("replayed" in lead) || !lead.replayed) notifyNewLead({
       id: lead.id,
       name,
       phone,

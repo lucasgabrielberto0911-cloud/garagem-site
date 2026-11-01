@@ -91,3 +91,31 @@ test("contrato: cláusula de promissórias traz todas as notas, valores e vencim
   assert.ok(text.includes("não representa quitação"));
   assert.ok(drawn.every((item) => item.y >= 15), "nenhum texto abaixo da página");
 });
+
+
+test("proposta tem conteúdo próprio, sem cláusulas ou assinatura contratual", async () => {
+  const drawn: string[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) { drawn.push(text); return original.call(this, text, options); };
+  try {
+    const bytes = await commercialPdf("proposta", { ...base, payments: [{ method: "pix", amount: 1000 }], conditions: "Validade de três dias." }, "proposta-ficticia", 9);
+    assert.match((await PDFDocument.load(bytes)).getTitle()!, /Proposta comercial/);
+  } finally { PDFPage.prototype.drawText = original; }
+  const text = drawn.join(" ");
+  assert.match(text, /PROPOSTA COMERCIAL/);
+  assert.match(text, /não registra aceite, pagamento, quitação ou transferência/);
+  assert.match(text, /Validade de três dias/);
+  assert.doesNotMatch(text, /justo e contratado|CLÁUSULA|Contrato de compra e venda|TESTEMUNHA|Rubrique/);
+});
+
+test("reimpressão usa identificação da loja preservada na emissão", async () => {
+  const drawn: string[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) { drawn.push(text); return original.call(this, text, options); };
+  try {
+    await commercialPdf("contrato", { ...base, store: { ...PDF_STORE, version: 1, legalName: "Loja Fictícia Original", cnpj: "00.000.000/0001-00", city: "Cidade Fictícia", address: "Rua Fictícia, 1", registeredAddress: "Sede Fictícia Original", whatsappLabel: "(00) 00000-0000", email: "original@local.test" } }, "historico", 1);
+  } finally { PDFPage.prototype.drawText = original; }
+  const text = drawn.join(" ");
+  for (const expected of ["Loja Fictícia Original", "Sede Fictícia Original", "Rua Fictícia, 1", "original@local.test", "Cidade Fictícia"]) assert.ok(text.includes(expected), expected);
+  assert.ok(!text.includes(PDF_STORE.legalName));
+});

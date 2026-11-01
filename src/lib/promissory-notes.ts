@@ -216,6 +216,8 @@ export function parsePromissoryForm(fields: Partial<PromissoryFormFields>, today
 }
 
 type NoteRow = {
+  status?: string;
+  paidAt?: Date | null;
   number: number;
   amount: { toString(): string } | number;
   dueDate: Date;
@@ -239,6 +241,8 @@ export function dateOnly(value: Date) {
 export function promissoryRowToPdfInput(row: NoteRow): PromissoryInput {
   return {
     number: row.number,
+    status: row.status,
+    paidAt: row.paidAt?.toISOString() ?? null,
     amount: Number(row.amount.toString()),
     dueDate: dateOnly(row.dueDate),
     issuedAt: dateOnly(row.issuedAt),

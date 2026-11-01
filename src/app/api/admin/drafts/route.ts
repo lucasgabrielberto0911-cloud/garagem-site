@@ -140,7 +140,7 @@ export async function POST(request: Request) {
 
   try {
     const result = await withAdminStorageLock(async (tx) => {
-      const expiresAt = new Date(Date.now() + 30 * 86400000);
+      const expiresAt = new Date(Date.now() + (key.startsWith("sale:") ? 1 : 30) * 86400000);
       await tx.adminDraft.deleteMany({
         where: { adminId: session.adminId, expiresAt: { lte: new Date() } },
       });

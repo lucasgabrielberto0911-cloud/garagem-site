@@ -438,7 +438,8 @@ export function VehiclesTable({
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await deleteVehicle(deleteTarget.id);
+      const result = await deleteVehicle(deleteTarget.id);
+        if (result && !result.ok) { toast.error(result.message); return; }
       toast.success("Veículo excluído.");
       if (deleteTarget.featured) {
         setFeaturedCount((count) => Math.max(0, count - 1));

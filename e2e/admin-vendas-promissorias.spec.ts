@@ -29,9 +29,12 @@ const test = base.extend<{ saleData: { vehicleId: string; customerId: string; no
     } finally {
       await db.promissoryNote.deleteMany({ where: { customerId: customer.id } });
       await db.sale.deleteMany({ where: { vehicleId: vehicle.id } });
+      await db.commercialDocument.deleteMany({ where: { vehicleId: vehicle.id } });
+      await db.vehicleReservation.deleteMany({ where: { vehicleId: vehicle.id } });
       await db.vehicle.delete({ where: { id: vehicle.id } });
       await db.customer.delete({ where: { id: customer.id } });
       await db.adminAudit.deleteMany({ where: { adminId: admin.id } });
+      await db.adminDraft.deleteMany({ where: { adminId: admin.id } });
       await db.admin.delete({ where: { id: admin.id } });
     }
   },

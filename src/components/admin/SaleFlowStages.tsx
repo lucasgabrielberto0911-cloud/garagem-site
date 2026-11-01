@@ -1,5 +1,6 @@
 "use client";
 
+import { adminDate } from "@/lib/admin-date";
 import { SalePromissoryPayment } from "./SalePromissoryPayment";
 import { SearchSelect } from "@/components/admin/SearchSelect";
 import { AdminPageHeader, btn, inputClass } from "@/components/admin/ui";
@@ -42,7 +43,7 @@ function Control({ label, value, onChange, onBlur, type = "text", min, inputMode
 
 export async function searchVehicles(q: string, signal?: AbortSignal): Promise<VehicleOption[]> {
   const response = await fetch(`/api/admin/vendas/veiculos?q=${encodeURIComponent(q)}&take=20`, { signal });
-  if (!response.ok) return [];
+  if (!response.ok) throw new Error(response.status === 401 ? "Sessão expirada. Entre novamente." : "Não foi possível buscar. Tente novamente.");
   const data = await response.json();
   type ApiVehicle = Vehicle & {
     brand: string;
@@ -65,7 +66,7 @@ export async function searchVehicles(q: string, signal?: AbortSignal): Promise<V
 
 export async function searchCustomers(q: string, signal?: AbortSignal): Promise<Customer[]> {
   const response = await fetch(`/api/admin/clientes?q=${encodeURIComponent(q)}&take=20`, { signal });
-  if (!response.ok) return [];
+  if (!response.ok) throw new Error(response.status === 401 ? "Sessão expirada. Entre novamente." : "Não foi possível buscar. Tente novamente.");
   const data = await response.json();
   return (data.customers ?? []).map((item: Customer) => ({ ...item, phone: item.phone ?? "", cpf: item.cpf ?? "", rg: item.rg ?? "", address: item.address ?? "", label: `${item.name} · ${item.phone ?? ""}` }));
 }
@@ -87,7 +88,7 @@ export function StageProgress({ stage }: { stage: number }) {
   return (
     <ol className="grid grid-cols-5 gap-1" aria-label="Etapas">
       {stages.map((name, i) => (
-        <li key={name} className={`min-w-0 break-words border-b-2 py-2 text-[10px] sm:text-xs ${i === stage ? "border-brand font-semibold" : "border-line text-muted"}`}>
+        <li key={name} aria-current={i === stage ? "step" : undefined} className={`min-w-0 break-words border-b-2 py-2 text-[10px] sm:text-xs ${i === stage ? "border-brand font-semibold" : "border-line text-muted"}`}>
           <span className="block">{i + 1}.</span>{i === 4 ? "Revisão" : name}
         </li>
       ))}
@@ -98,7 +99,7 @@ export function StageProgress({ stage }: { stage: number }) {
 export function VehicleStage({ vehicle, ids, onVehicleChange, onIdsChange }: { vehicle: Vehicle | null; ids: SaleIds; onVehicleChange: (item: VehicleOption | null) => void; onIdsChange: (ids: SaleIds) => void }) {
   return (
     <>
-      <h2 className="text-lg font-semibold">Veículo</h2>
+      <h2 tabIndex={-1} className="text-lg font-semibold outline-none">Veículo</h2>
       <SearchSelect<VehicleOption> name="vehicle" value={vehicle?.id ?? ""} selectedLabel={vehicle?.label ?? ""} onChange={(_, item) => onVehicleChange(item)} loadOptions={searchVehicles} placeholder="Buscar veículo" />
       <p className="text-sm text-muted">Preço anunciado: {vehicle ? formatAdminMoney(vehicle.price) : "—"}. O valor negociado pode ser diferente.</p>
       {vehicle?.reservation && <p role="status">Reserva ativa de {vehicle.reservation.customerName}; sinal de {formatAdminMoney(vehicle.reservation.deposit)}.</p>}
@@ -111,7 +112,7 @@ export function VehicleStage({ vehicle, ids, onVehicleChange, onIdsChange }: { v
 export function CustomerStage({ customer, newCustomer, ids, onNewCustomerToggle, onCustomerPick, onCustomerEdit, onIdsChange }: { customer: Customer | null; newCustomer: boolean; ids: SaleIds; onNewCustomerToggle: (checked: boolean) => void; onCustomerPick: (customer: Customer | null) => void; onCustomerEdit: (customer: Customer) => void; onIdsChange: (ids: SaleIds) => void }) {
   return (
     <>
-      <h2 className="text-lg font-semibold">Cliente</h2>
+      <h2 tabIndex={-1} className="text-lg font-semibold outline-none">Cliente</h2>
       <label className="flex gap-2">
         <input type="checkbox" checked={newCustomer} onChange={(e) => onNewCustomerToggle(e.target.checked)} />
         Cadastrar cliente nesta venda
@@ -174,7 +175,7 @@ export function PaymentStage({ customer, notesBusy, onBusyChange, vehicle, total
   const hasReservedSignal = Boolean(vehicle?.reservation && vehicle.reservation.deposit > 0);
   return (
     <>
-      <h2 className="text-lg font-semibold">Pagamento</h2>
+      <h2 tabIndex={-1} className="text-lg font-semibold outline-none">Pagamento</h2>
       <Control label="Valor total negociado" inputMode="decimal" value={total} onChange={(e) => onTotalChange(e.target.value)} />
       <div className="flex flex-wrap gap-2">
         {(["pix", "financiamento", "troca", "cartao", "promissoria"] as ContractPaymentMethod[]).map((m) => (
@@ -198,7 +199,7 @@ export function PaymentStage({ customer, notesBusy, onBusyChange, vehicle, total
 export function SellerStage({ seller, commission, onSellerChange, onCommissionChange }: { seller: string; commission: string; onSellerChange: (value: string) => void; onCommissionChange: (value: string) => void }) {
   return (
     <>
-      <h2 className="text-lg font-semibold">Vendedor</h2>
+      <h2 tabIndex={-1} className="text-lg font-semibold outline-none">Vendedor</h2>
       <Control label="Responsável comercial" value={seller} onChange={(e) => onSellerChange(e.target.value)} />
       <Control label="Comissão (R$)" inputMode="decimal" value={commission} onChange={(e) => onCommissionChange(e.target.value)} />
     </>
@@ -220,11 +221,11 @@ export function ReviewStage({ vehicle, customer, totalNumber, selectedPayments, 
   const hasReservedSignal = Boolean(vehicle?.reservation && vehicle.reservation.deposit > 0);
   return (
     <>
-      <h2 className="text-lg font-semibold">Revisar e gerar contrato</h2>
+      <h2 tabIndex={-1} className="text-lg font-semibold outline-none">Revisar e gerar contrato</h2>
       <p>{vehicle?.label} · {customer?.name} · {customer?.phone}{customer?.cpf ? ` · CPF ${customer.cpf}` : ""}</p>
       <p>Total negociado: {formatAdminMoney(totalNumber)}</p>
       <ul className="list-inside list-disc text-sm">{selectedPayments.map((p) => <li key={p.method}>{describePayment(p, hasReservedSignal)}</li>)}</ul>
-      <p>Data: {new Date().toLocaleDateString("pt-BR")} · Vendedor: {seller || "—"} · Comissão: {formatAdminMoney(parseMoneyBR(commission) ?? 0)}</p>
+      <p>Registro efetivo na conclusão, no horário de Brasília. Data de referência: {adminDate(new Date())} · Vendedor: {seller || "—"} · Comissão: {formatAdminMoney(parseMoneyBR(commission) ?? 0)}</p>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={includeProposal} onChange={(event) => onIncludeProposalChange(event.target.checked)} />
         Gerar proposta junto com o contrato

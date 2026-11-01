@@ -5,6 +5,8 @@ import { site } from "./site";
 
 export type PromissoryInput = {
   number?: number;
+  status?: string;
+  paidAt?: string | null;
   amount: number;
   /** Datas civis no formato AAAA-MM-DD, sem horário nem conversão de fuso. */
   dueDate: string;

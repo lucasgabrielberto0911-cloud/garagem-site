@@ -36,7 +36,9 @@ export async function GET(
           status: { in: OPEN_STATUSES },
         },
         orderBy: [{ number: "asc" }],
+        take: PROMISSORY_MAX_INSTALLMENTS + 1,
       });
+      if (notes.length > PROMISSORY_MAX_INSTALLMENTS) return new Response("Há mais de 60 notas abertas. Selecione até 60 notas por lote na aba Promissórias.", { status: 400, headers });
       if (notes.length === 0) {
         return new Response("Nota promissória não encontrada.", { status: 404, headers });
       }

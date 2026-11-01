@@ -1,5 +1,7 @@
 "use server";
 
+import { createHash } from "node:crypto";
+import { validatePromissoryPages } from "@/lib/promissory-pdf";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
@@ -52,17 +54,32 @@ export async function createPromissoryNotes(formData: FormData): Promise<Promiss
   const parsed = parsePromissoryForm(fields, localDateInput());
   if (!parsed.ok) return { ok: false, message: parsed.fieldErrors.form ?? "Corrija os campos destacados.", fieldErrors: parsed.fieldErrors };
 
+  const requestId = String(formData.get("requestId") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(requestId)) return { ok: false, message: "Reabra o formulário para identificar esta emissão." };
+  const issuanceKey = `${session.adminId}:${requestId}`;
+  const issuanceHash = createHash("sha256").update(JSON.stringify(parsed)).digest("hex");
   try {
+    try {
+      await validatePromissoryPages(parsed.installments.map((item) => ({ ...item, number: 2147483647, issuer: parsed.issuer, issuedAt: parsed.issuedAt, issuePlace: parsed.issuePlace, paymentPlace: parsed.paymentPlace })));
+    } catch (error) {
+      return { ok: false, message: error instanceof Error ? error.message : "Não foi possível validar o A4. Tente novamente.", fieldErrors: { form: "Confira os dados e reduza os textos para caberem em uma página A4." } };
+    }
     if (parsed.customerId && !(await prisma.customer.findUnique({ where: { id: parsed.customerId }, select: { id: true } }))) {
       return { ok: false, message: "Cliente não encontrado. Busque de novo ou preencha os dados à mão.", fieldErrors: { customerId: "Cliente não encontrado." } };
     }
     const createdNotes = await prisma.$transaction(async (tx) => {
       // Serializa as emissões: os números do lote saem seguidos mesmo com duas emissões ao mesmo tempo.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${PROMISSORY_LOCK_KEY})`;
+      const existing = await tx.promissoryNote.findMany({ where: { issuanceKey }, orderBy: { installmentNo: "asc" } });
+      if (existing.length) {
+        if (existing.length !== parsed.installments.length || existing.some((note) => note.issuanceHash !== issuanceHash)) throw new Error("ISSUANCE_CONFLICT");
+        return existing.map((note) => ({ id: note.id, number: note.number, installmentNo: note.installmentNo, installmentCount: note.installmentCount, amount: Number(note.amount), dueDate: note.dueDate.toISOString().slice(0, 10) }));
+      }
       const created: CreatedPromissorySummary[] = [];
       for (const installment of parsed.installments) {
         const note = await tx.promissoryNote.create({
           data: {
+            issuanceKey, issuanceHash,
             customerId: parsed.customerId,
             issuerName: parsed.issuer.name,
             issuerCpf: parsed.issuer.cpf,
@@ -103,6 +120,7 @@ export async function createPromissoryNotes(formData: FormData): Promise<Promiss
       issuerName: parsed.issuer.name,
     };
   } catch (error) {
+    if (error instanceof Error && error.message === "ISSUANCE_CONFLICT") return { ok: false, message: "Esta solicitação já foi emitida com outros dados. Confira o lote antes de iniciar outra emissão." };
     console.error("[admin/promissorias] falha ao emitir:", error);
     return { ok: false, message: "Não foi possível emitir as notas. Nada foi salvo." };
   }
@@ -151,4 +169,27 @@ export async function dismissPromissoryNotice(id: string): Promise<void> {
   await requireAdmin();
   await prisma.promissoryNote.updateMany({ where: { id, status: "paga", paidNoticeDoneAt: null }, data: { paidNoticeDoneAt: new Date() } });
   refresh();
+}
+
+/** Retifica a baixa sem apagar o evento original da auditoria. */
+export async function reversePromissoryPayment(id: string, reason: string): Promise<PromissoryActionState> {
+  const session = await requireAdmin();
+  const motive = reason.trim();
+  if (motive.length < 10 || motive.length > 500) return { ok: false, message: "Informe um motivo entre 10 e 500 caracteres." };
+  try {
+    const done = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "PromissoryNote" WHERE "id" = ${id} FOR UPDATE`;
+      const note = await tx.promissoryNote.findUnique({ where: { id } });
+      if (!note || note.status !== "paga") return false;
+      const updated = await tx.promissoryNote.updateMany({ where: { id, status: "paga" }, data: { status: note.saleId ? "vinculada" : "emitida", paidAt: null, paidNoticeDoneAt: null } });
+      if (!updated.count) return false;
+      await recordAdminAudit(tx, session.adminId, id, "promissory.payment.reversed", { reason: motive, originalPaidAt: note.paidAt?.toISOString() ?? null });
+      return true;
+    });
+    if (!done) return { ok: false, message: "Só uma nota paga pode ter a baixa retificada." };
+    refresh();
+    return { ok: true, message: "Baixa retificada; nota novamente em aberto. Histórico preservado." };
+  } catch {
+    return { ok: false, message: "Não foi possível retificar a baixa." };
+  }
 }

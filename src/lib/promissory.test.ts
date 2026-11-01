@@ -3,7 +3,7 @@ import test from "node:test";
 import { PDFDocument, PDFPage, rgb } from "pdf-lib";
 import { integerWords } from "./money-words";
 import { promissoryClause, promissoryDateInWords, promissoryLongDate, validatePromissory, type PromissoryInput } from "./promissory";
-import { promissoryPdf } from "./promissory-pdf";
+import { promissoryPdf, validatePromissoryPages } from "./promissory-pdf";
 
 const base: PromissoryInput = {
   number: 1, amount: 7000, dueDate: "2026-12-31", issuedAt: "2026-10-29",
@@ -162,4 +162,25 @@ test("promissória: PDF recusa excesso de conteúdo em vez de cortar a via únic
     issuePlace: "W".repeat(100), paymentPlace: "W".repeat(100),
     issuer: { ...base.issuer, name: "W".repeat(120), address: "W".repeat(240), rg: "W".repeat(60), phone: "W".repeat(30) },
   }), /excedem o espaço de uma página A4/);
+});
+
+
+test("pré-validação usa o A4 real e rejeita textos aceitos pelo formulário que excedem a página", async () => {
+  const input = { ...base, amount: 999999.99, issuePlace: "W".repeat(100), paymentPlace: "W".repeat(100), issuer: { ...base.issuer, name: "W".repeat(120), rg: "W".repeat(60), address: "W".repeat(240) } };
+  assert.doesNotThrow(() => validatePromissory(input));
+  await assert.rejects(validatePromissoryPages([input]), /excedem.*A4/);
+  await validatePromissoryPages([base, { ...base, dueDate: "2027-02-28" }]);
+});
+
+test("nota paga imprime quitação, data e reimpressão histórica sem nova promessa de pagamento", async () => {
+  const texts: string[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) { texts.push(text); return original.call(this, text, options); };
+  try { await promissoryPdf({ ...base, status: "paga", paidAt: "2026-11-01T02:00:00.000Z" }); }
+  finally { PDFPage.prototype.drawText = original; }
+  const text = texts.join(" ");
+  assert.match(text, /QUITADA/);
+  assert.match(text, /Reimpressão histórica/);
+  assert.match(text, /31\/10\/2026/);
+  assert.doesNotMatch(text, /Via única|pagarei por esta/);
 });

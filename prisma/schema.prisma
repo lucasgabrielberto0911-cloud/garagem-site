@@ -185,6 +185,7 @@ model VehicleVerifiedInfo {
 }
 
 model Customer {
+  updatedAt DateTime @default(now()) @updatedAt
   id        String   @id @default(cuid())
   name      String
   cpf       String?
@@ -228,6 +229,7 @@ model Admin {
 }
 
 model LeadVenda {
+  requestId String? @unique
   id                String   @id @default(cuid())
   name              String
   phone             String
@@ -353,7 +355,7 @@ model LeadActivity {
 model VehicleReservation {
   id String @id @default(cuid())
   vehicleId String
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
   customerId String
   customer Customer @relation(fields: [customerId], references: [id])
   deposit Decimal @db.Decimal(12, 2)
@@ -393,7 +395,7 @@ model FinanceSimulation {
 model CommercialDocument {
   id String @id @default(cuid())
   vehicleId String
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
   kind String
   number Int @unique @default(autoincrement())
   snapshot Json
@@ -414,6 +416,8 @@ model AfterSaleTask {
 
 /** Nota promissória emitida pela loja (aba Promissórias do admin). Os dados do emitente são copiados na emissão. */
 model PromissoryNote {
+  issuanceKey String?
+  issuanceHash String?
   id String @id @default(cuid())
   number Int @unique @default(autoincrement())
   customerId String?
@@ -441,6 +445,7 @@ model PromissoryNote {
   notes String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@unique([issuanceKey, installmentNo])
   @@index([status, dueDate])
   @@index([customerId])
   @@index([saleId])

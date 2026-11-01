@@ -1,5 +1,7 @@
 "use client";
 
+import { submissionId } from "@/lib/submission-id";
+
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useTransition } from "react";
@@ -8,6 +10,7 @@ import {
   cancelPromissory,
   createPromissoryNotes,
   markPromissoryPaid,
+  reversePromissoryPayment,
   type CreatedPromissorySummary,
 } from "@/app/admin/promissorias/actions";
 import { SearchSelect } from "@/components/admin/SearchSelect";
@@ -182,6 +185,9 @@ export function PromissoryManager({
   const [customer, setCustomer] = useState<CustomerOption | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
+  const [reversal, setReversal] = useState<PromissoryRow | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [reason, setReason] = useState("");
   const [term, setTerm] = useState(query);
   const [recentBatch, setRecentBatch] = useState<{ issuerName: string; notes: CreatedPromissorySummary[] } | null>(null);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -253,7 +259,12 @@ export function PromissoryManager({
     const formElement = event.currentTarget;
     const formData = new FormData(formElement);
     startTransition(async () => {
-      const result = await adminMutation(() => createPromissoryNotes(formData));
+      const result = await adminMutation(async () => {
+        const clear = await submissionId(formData, "promissoria");
+        const result = await createPromissoryNotes(formData);
+        if (result.ok) clear();
+        return result;
+      });
       setErrors(result.fieldErrors ?? {});
       const first = Object.keys(result.fieldErrors ?? {})[0];
       if (first) focusAdminError(formElement, first);
@@ -323,6 +334,24 @@ export function PromissoryManager({
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <p>Selecione até 60 notas para imprimir um lote, inclusive entre páginas.</p>
+        {selectedIds.length > 0 && <><a className={btn.outline} target="_blank" rel="noopener noreferrer" href={`/api/admin/promissorias/${selectedIds.join(",")}?inline=1`}>Imprimir selecionadas ({selectedIds.length})</a><button type="button" className={btn.ghost} onClick={() => setSelectedIds([])}>Limpar seleção</button></>}
+      </div>
+      {reversal && <form aria-label="Retificar baixa" className="space-y-3 rounded border border-line p-4" onSubmit={(event) => {
+        event.preventDefault();
+        startTransition(async () => {
+          const result = await adminMutation(() => reversePromissoryPayment(reversal.id, reason));
+          if (result.ok) { setReversal(null); toast.success(result.message); router.refresh(); }
+          else toast.error(result.message);
+        });
+      }}>
+        <h2 className="font-display">Retificar baixa da nota nº {reversal.number}</h2>
+        <label className="block text-sm">Motivo da retificação<textarea className={inputClass} minLength={10} maxLength={500} required value={reason} onChange={(event) => setReason(event.target.value)} /></label>
+        <p className="text-sm text-muted">A nota voltará aos recebíveis em aberto. A baixa original e o motivo serão preservados na auditoria.</p>
+        <button disabled={isPending} className={btn.primary}>Confirmar retificação</button>{" "}
+        <button type="button" disabled={isPending} className={btn.outline} onClick={() => setReversal(null)}>Voltar</button>
+      </form>}
       {confirmDialog}
 
       {recentBatch ? (
@@ -602,17 +631,21 @@ export function PromissoryManager({
             const dueAlert = describePromissoryDue(note.dueDate, today, note.status);
             const canPay = canMarkPromissoryPaid(note.status);
             const canCancel = canCancelPromissory(note.status);
-            const actionCount = 2 + (canPay ? 1 : 0) + (canCancel ? 1 : 0);
+            const actionCount = 2 + (note.status === "paga" ? 1 : 0) + (canPay ? 1 : 0) + (canCancel ? 1 : 0);
             const actionGridClass =
               actionCount === 4
                 ? "grid-cols-2 sm:grid-cols-4"
                 : actionCount === 3
-                  ? "grid-cols-3"
+                  ? "grid-cols-2 sm:grid-cols-3"
                   : "grid-cols-2";
 
             return (
               <li key={note.id} data-testid="promissoria" className="flex flex-col justify-between overflow-hidden border border-white/10 bg-ink/50">
                 <div className="space-y-2 p-4 pb-3">
+                  {note.status !== "cancelada" && <label className="flex min-h-11 items-center gap-2 text-xs">
+                    <input type="checkbox" checked={selectedIds.includes(note.id)} disabled={!selectedIds.includes(note.id) && selectedIds.length >= 60} onChange={(event) => setSelectedIds((ids) => event.target.checked ? [...ids, note.id] : ids.filter((id) => id !== note.id))} />
+                    Selecionar nota {note.number}
+                  </label>}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-display text-sm font-semibold text-cream">
@@ -686,13 +719,14 @@ export function PromissoryManager({
                         type="button"
                         onClick={() => pay(note)}
                         disabled={isPending}
-                        className={`${mobileActionCell} ${actionCount === 4 ? "border-t border-white/10 sm:border-t-0 sm:border-l" : "border-l border-white/10"}`}
+                        className={`${mobileActionCell} ${actionCount === 3 ? "col-span-2 border-t border-white/10 sm:col-span-1 sm:border-t-0 sm:border-l" : "border-t border-white/10 sm:border-t-0 sm:border-l"}`}
                         aria-label={`Marcar nota ${note.number} como paga`}
                       >
                         <IconCheck className="h-4 w-4" />
                         Marcar paga
                       </button>
                     ) : null}
+                    {note.status === "paga" && <button type="button" disabled={isPending} className={`${mobileActionCell} col-span-2 border-t border-white/10 sm:col-span-1`} onClick={() => { setReversal(note); setReason(""); }}>Retificar baixa</button>}
                     {canCancel ? (
                       <button
                         type="button"
