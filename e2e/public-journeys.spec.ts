@@ -80,12 +80,16 @@ test("card, ficha, voltar, favoritos e WhatsApp oficial", async ({ page }, info)
   const cards = page.locator("article.listing-card");
   await expect(cards).toHaveCount(3);
   await expect(cards.nth(0)).toBeVisible(); await expect(cards.nth(1)).toBeVisible();
-  const [a, b] = await cards.evaluateAll(elements => elements.slice(0, 2).map(element => {
-    const rect = element.getBoundingClientRect(); return { y: rect.y, height: rect.height };
-  }));
   if (info.project.name.startsWith("mobile")) {
-    expect(Math.abs(a.y - b.y)).toBeLessThan(2);
-    expect(Math.abs(a.height - b.height)).toBeLessThan(2);
+    // A hidratação pode substituir os cards entre a contagem e a medição.
+    await expect(async () => {
+      const rects = await cards.evaluateAll(elements => elements.slice(0, 2).map(element => {
+        const rect = element.getBoundingClientRect(); return { y: rect.y, height: rect.height };
+      }));
+      expect(rects).toHaveLength(2);
+      expect(Math.abs(rects[0].y - rects[1].y)).toBeLessThan(2);
+      expect(Math.abs(rects[0].height - rects[1].height)).toBeLessThan(2);
+    }).toPass({ timeout: 10_000 });
     const nav = page.locator("[data-mobile-bottom-nav]"); await expect(nav).toBeVisible();
     const navBox = await nav.boundingBox(); expect(navBox!.y + navBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
     await expect(page.getByRole("button", { name: "Ajuda para escolher", exact: true }).first()).toBeVisible();

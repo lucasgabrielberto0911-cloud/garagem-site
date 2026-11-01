@@ -1,5 +1,7 @@
 "use client";
 
+import { submissionId } from "@/lib/submission-id";
+
 import { useEffect, useState } from "react";
 import { availableSalePromissories } from "@/app/admin/vendas/actions";
 import { createPromissoryNotes } from "@/app/admin/promissorias/actions";
@@ -56,6 +58,7 @@ export function SalePromissoryPayment({ payment, customer, remaining, onChange, 
     for (const key of ["name", "cpf", "phone", "rg", "address"] as const) form.set(key, customer?.[key] ?? "");
     setBusy(true); onBusyChange(true); setError(""); setErrors({});
     try {
+      const clearRequest = await submissionId(form, "promissoria");
       const response = await adminMutation(() => createPromissoryNotes(form));
       if (!response.ok) { setErrors(response.fieldErrors ?? {}); setError(response.message); return; }
       // Os IDs vêm da emissão, evitando selecionar notas antigas por engano.
@@ -67,7 +70,7 @@ export function SalePromissoryPayment({ payment, customer, remaining, onChange, 
         select([...selected, ...added]);
         setNotice(response.message);
       }
-      setNotes(rows); setCreating(false);
+      setNotes(rows); setCreating(false); clearRequest();
     } catch {
       setError("Confira a lista antes de tentar emitir novamente: as notas podem ter sido salvas.");
     } finally { setBusy(false); onBusyChange(false); }

@@ -1,5 +1,6 @@
 "use server";
 
+import { normalizeAdminPhone } from "@/lib/admin-phone";
 import { isLeadOrigin } from "@/lib/lead-origin";
 import { adminActionDate, businessDay } from "@/lib/admin-date";
 import { PURCHASE_STATUSES, PURCHASE_STATUS_LABEL, funnelActivity } from "@/lib/lead-funnel";
@@ -223,8 +224,8 @@ export async function convertLeadToCustomer(
     });
     if (!lead) return { ok: false, message: "Lead não encontrado." };
 
-    const phone = lead.phone.replace(/\D/g, "");
-    if (phone.length < 10)
+    const phone = normalizeAdminPhone(lead.phone);
+    if (!phone)
       return {
         ok: false,
         message: "Confira o telefone do contato antes de criar o cliente.",
@@ -301,7 +302,7 @@ export async function savePurchaseLead(form: FormData): Promise<LeadActionState>
     const value = (key: string) => String(form.get(key) || "").trim();
     const id = value("id");
     const name = value("name");
-    const phone = value("phone").replace(/\D/g, "");
+    const phone = normalizeAdminPhone(value("phone")) ?? "";
     const origin = value("origin");
     const status = value("status");
     const interestVehicleId = value("vehicle") || null;
@@ -314,7 +315,7 @@ export async function savePurchaseLead(form: FormData): Promise<LeadActionState>
     if (!name && !phone) return { ok: false, message: "Informe o nome ou o telefone." };
     if (
       name.length > 120 ||
-      (phone && !/^\d{10,13}$/.test(phone)) ||
+      (value("phone") && !phone) ||
       !isLeadOrigin(origin) ||
       !(PURCHASE_STATUSES as readonly string[]).includes(status) ||
       nextAction.length > 300 ||

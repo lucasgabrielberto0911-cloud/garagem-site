@@ -31,13 +31,22 @@ const test = base.extend<{ vehicle: { id: string; model: string } }>({
     } finally {
       const sale = await db.sale.findUnique({ where: { vehicleId: vehicle.id } });
       await db.sale.deleteMany({ where: { vehicleId: vehicle.id } });
+      await db.commercialDocument.deleteMany({ where: { vehicleId: vehicle.id } });
+      await db.vehicleReservation.deleteMany({ where: { vehicleId: vehicle.id } });
       await db.vehicle.delete({ where: { id: vehicle.id } });
       if (sale?.customerId) await db.customer.delete({ where: { id: sale.customerId } });
       await db.adminAudit.deleteMany({ where: { adminId: admin.id } });
+      await db.adminDraft.deleteMany({ where: { adminId: admin.id } });
       await db.admin.delete({ where: { id: admin.id } });
     }
   },
 });
+test.beforeEach(async ({ context }) => {
+  await context.route("**/fotos/**", route => route.fulfill({ path: "public/branding/placeholder-car.png", contentType: "image/png" }));
+  await context.route("**/_next/image?**", route => route.fulfill({ path: "public/branding/placeholder-car.png", contentType: "image/png" }));
+  await context.route("**/*.supabase.co/storage/**", route => route.abort());
+});
+
 test.skip(!localDatabase, "Requer banco local dedicado e E2E_TEST=1.");
 test.afterAll(async () => { await db.$disconnect(); });
 

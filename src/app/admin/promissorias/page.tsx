@@ -8,6 +8,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   PROMISSORY_DUE_FILTERS,
+  PROMISSORY_COMPAT_OMIT,
   PROMISSORY_FILTERS,
   addDaysCivil,
   dateOnly,
@@ -83,6 +84,7 @@ export default async function PromissoriasPage({
         : [{ number: "desc" as const }];
 
   const rows = await prisma.promissoryNote.findMany({
+    omit: PROMISSORY_COMPAT_OMIT,
     where,
     orderBy,
     skip: (page - 1) * PAGE_SIZE,

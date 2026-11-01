@@ -1,3 +1,4 @@
+import { normalizeAdminPhone } from "@/lib/admin-phone";
 export type AdminSellInput = {
   buyerName?: string;
   buyerPhone?: string;
@@ -49,8 +50,8 @@ export function parseAdminSellInput(value: unknown): ParsedAdminSellInput {
     if (typeof record.buyerPhone !== "string") {
       return { ok: false, message: "Telefone do comprador inválido." };
     }
-    const buyerPhone = record.buyerPhone.replace(/\D/g, "");
-    if (buyerPhone && (buyerPhone.length < 10 || buyerPhone.length > 13)) {
+    const buyerPhone = normalizeAdminPhone(record.buyerPhone);
+    if (record.buyerPhone.trim() && !buyerPhone) {
       return { ok: false, message: "Telefone do comprador inválido." };
     }
     if (buyerPhone) input.buyerPhone = buyerPhone;

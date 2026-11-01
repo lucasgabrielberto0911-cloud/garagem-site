@@ -1,3 +1,4 @@
+import { normalizeAdminPhone } from "@/lib/admin-phone";
 import type { Prisma } from "@prisma/client";
 import { parseMoneyBR } from "./admin-money";
 import { formatCpfBR, formatPhoneBR, isValidCpf } from "./format";
@@ -157,11 +158,7 @@ function clean(value: unknown) {
 }
 
 /** Telefone com DDD (10 ou 11 dígitos), aceitando o 55 na frente. Devolve só dígitos ou null. */
-export function normalizePromissoryPhone(value: string) {
-  let digits = value.replace(/\D/g, "");
-  if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) digits = digits.slice(2);
-  return digits.length === 10 || digits.length === 11 ? digits : null;
-}
+export const normalizePromissoryPhone = normalizeAdminPhone;
 
 /**
  * Valida o formulário da aba (emitente, valor, quantidade, datas) e monta as parcelas.
@@ -215,7 +212,12 @@ export function parsePromissoryForm(fields: Partial<PromissoryFormFields>, today
   }
 }
 
+/** Consultas históricas continuam funcionando antes da migration de idempotência. */
+export const PROMISSORY_COMPAT_OMIT = { issuanceKey: true, issuanceHash: true } as const;
+
 type NoteRow = {
+  status?: string;
+  paidAt?: Date | null;
   number: number;
   amount: { toString(): string } | number;
   dueDate: Date;
@@ -239,6 +241,8 @@ export function dateOnly(value: Date) {
 export function promissoryRowToPdfInput(row: NoteRow): PromissoryInput {
   return {
     number: row.number,
+    status: row.status,
+    paidAt: row.paidAt?.toISOString() ?? null,
     amount: Number(row.amount.toString()),
     dueDate: dateOnly(row.dueDate),
     issuedAt: dateOnly(row.issuedAt),

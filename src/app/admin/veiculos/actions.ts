@@ -524,18 +524,27 @@ export async function updateVehicle(
 }
 
 export async function deleteVehicle(id: string) {
-  await requireAdmin();
-
-  const vehicle = await prisma.vehicle.findUnique({
-    where: { id },
-    include: {
+  const session = await requireAdmin();
+  const vehicle = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "Vehicle" WHERE "id" = ${id} FOR UPDATE`;
+    const [reservation, document, sale] = await Promise.all([
+      tx.vehicleReservation.findFirst({ where: { vehicleId: id }, select: { id: true } }),
+      tx.commercialDocument.findFirst({ where: { vehicleId: id }, select: { id: true } }),
+      tx.sale.findUnique({ where: { vehicleId: id }, select: { id: true } }),
+    ]);
+    if (reservation || document || sale) {
+      await recordAdminAudit(tx, session.adminId, id, "vehicle.delete.blocked", { reservation: Boolean(reservation), document: Boolean(document), sale: Boolean(sale) });
+      return null;
+    }
+    const row = await tx.vehicle.delete({ where: { id }, include: {
       photos: { select: { url: true, thumbnailUrl: true } },
       costs: { select: { receiptUrl: true } },
       documents: { select: { fileUrl: true } },
-    },
+    } });
+    await recordAdminAudit(tx, session.adminId, id, "vehicle.delete", {});
+    return row;
   });
-
-  await prisma.vehicle.delete({ where: { id } });
+  if (!vehicle) return { ok: false, message: "Este anúncio tem reserva, venda ou documento comercial. Preserve o histórico da operação; ele não pode ser excluído." };
   await deleteUnusedAdminFiles([
     ...(vehicle?.photos.flatMap((photo) => [
       photo.url,
