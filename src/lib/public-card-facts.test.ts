@@ -232,8 +232,12 @@ function renderCard(overrides: Record<string, unknown> = {}, onStock = false) {
 
 test("o card completo tem um link para a ficha e uma ação separada para o WhatsApp", () => {
   const html = renderCard();
+  const linkTag = html.match(/<a[^>]*data-stock-card[^>]*>/)?.[0];
+  assert.ok(linkTag);
+  assert.match(linkTag, /aria-label="Honda HR-V 2016"/);
   const main = html.match(/<a[^>]*data-stock-card[^>]*>([\s\S]*?)<\/a>/)?.[1];
   assert.ok(main);
+  assert.match(main, /<img[^>]*alt=""/);
   assert.match(main, /data-vehicle-photo/);
   assert.match(main, />Honda</);
   assert.match(main, />HR-V</);

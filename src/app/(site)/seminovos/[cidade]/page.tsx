@@ -1,4 +1,4 @@
-import { stockLandingLinks } from "@/lib/stock-landings";
+import { canonicalSlugRedirect, stockLandingLinks } from "@/lib/stock-landings";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -40,8 +40,9 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { cidade } = await params;
-  if (cidade !== cidade.toLowerCase()) {
-    permanentRedirect(`/seminovos/${cidade.toLowerCase()}`);
+  const redirect = canonicalSlugRedirect("seminovos", cidade);
+  if (redirect) {
+    permanentRedirect(redirect);
   }
   const city = getServiceCity(cidade);
   if (!city) return {};
@@ -58,8 +59,9 @@ export default async function SeminovosCidadePage({
   params: Promise<Params>;
 }) {
   const { cidade } = await params;
-  if (cidade !== cidade.toLowerCase()) {
-    permanentRedirect(`/seminovos/${cidade.toLowerCase()}`);
+  const redirect = canonicalSlugRedirect("seminovos", cidade);
+  if (redirect) {
+    permanentRedirect(redirect);
   }
   const city = getServiceCity(cidade);
   if (!city) notFound();

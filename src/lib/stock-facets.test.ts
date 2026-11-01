@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildStockFacets } from "./stock-facets";
+import { buildStockWhere } from "./vehicles";
 
 const row = {
   category: "carro", brand: "Honda", model: "Civic", transmission: "Automático",
@@ -42,4 +43,18 @@ test("facetas normalizam opcionais com truncamento e grafias equivalentes", () =
     "GPS integrado",
     "Monitoramento de pressão dos pneus (TPMS)",
   ]);
+});
+
+test("filtro de opcionais casa com valores crus gravados no estoque", () => {
+  const where = buildStockWhere({ accessories: ["6 airbags"] }) as { AND: { accessories: { hasSome: string[] } }[] };
+  const condition = where.AND.find((item) => "accessories" in item);
+  assert.ok(condition);
+  assert.ok(condition.accessories.hasSome.includes("6 Air Bags"));
+  assert.ok(condition.accessories.hasSome.includes("6 airbags"));
+
+  const whereFrontais = buildStockWhere({ accessories: ["Airbags frontais"] }) as { AND: { accessories: { hasSome: string[] } }[] };
+  const conditionFrontais = whereFrontais.AND.find((item) => "accessories" in item);
+  assert.ok(conditionFrontais);
+  assert.ok(conditionFrontais.accessories.hasSome.includes("Airbag duplo"));
+  assert.ok(conditionFrontais.accessories.hasSome.includes("Airbags frontais"));
 });

@@ -403,6 +403,10 @@ export function buildVehicleFullLabel(input: {
   return collapseWhitespace(`${title}${version ? ` ${version}` : ""}${separator}${input.yearModel}`);
 }
 
+function escapeRegex(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /** Formata versão exibida nos cards do estoque, evitando repetição do modelo e normalizando caixa. */
 export function formatCardVersion(
   version: string | null | undefined,
@@ -412,8 +416,14 @@ export function formatCardVersion(
   if (!text) return "";
   const modelLower = model.trim().toLowerCase();
   const versionLower = text.toLowerCase();
-  if (modelLower && (modelLower === versionLower || modelLower.endsWith(versionLower))) {
-    return "";
+  if (modelLower) {
+    if (modelLower === versionLower) {
+      return "";
+    }
+    const wholeWordEnd = new RegExp(`(?:^|\\s+)${escapeRegex(versionLower)}$`, "i");
+    if (wholeWordEnd.test(modelLower)) {
+      return "";
+    }
   }
   if (/^[a-z]/.test(text)) {
     text = formatModelName(text);

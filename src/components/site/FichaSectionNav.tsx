@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   fichaSectionLinks,
   fichaSectionScrollTop,
+  focusFichaSection,
   type FichaSectionId,
 } from "@/lib/ficha-sections";
 
@@ -66,10 +67,7 @@ function scrollToSection(id: string, behavior: ScrollBehavior) {
     window.scrollY,
   );
   window.scrollTo({ top, behavior });
-  if (!target.hasAttribute("tabindex")) {
-    target.setAttribute("tabindex", "-1");
-  }
-  target.focus({ preventScroll: true });
+  focusFichaSection(target);
   return true;
 }
 

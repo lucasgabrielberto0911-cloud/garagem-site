@@ -53,3 +53,20 @@ export function vehicleSeoTitle(input: VehicleSeoTitleInput) {
   // Marca + modelo + ano + status já estouram o limite: devolve com sufixo mínimo sem quebrar.
   return `${[base, year].filter(Boolean).join(" ")}${status}${suffixes[suffixes.length - 1]}`;
 }
+
+/** Imagem de compartilhamento social (Open Graph / WhatsApp) com dimensões acessíveis ao crawler. */
+export function vehicleOpenGraphImage(input: {
+  url: string;
+  alt: string;
+  width?: number;
+  height?: number;
+  type?: string;
+}) {
+  return {
+    url: input.url,
+    width: input.width ?? 1200,
+    height: input.height ?? 800,
+    type: input.type ?? "image/webp",
+    alt: input.alt,
+  };
+}

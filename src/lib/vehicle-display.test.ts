@@ -160,6 +160,9 @@ test("normaliza versão iniciada em minúscula para exibição", () => {
 test("formatCardVersion remove repetição do modelo e normaliza grafias conhecidas", () => {
   assert.equal(formatCardVersion("160 Start", "CG 160 Start"), "");
   assert.equal(formatCardVersion("Start", "CG 160 Start"), "");
+  assert.equal(formatCardVersion("tart", "CG 160 Start"), "Tart");
+  assert.equal(formatCardVersion("ic", "Civic"), "Ic");
+  assert.equal(formatCardVersion("la", "Corolla"), "La");
   assert.equal(formatCardVersion("evolution 1.0", "HB20"), "Evolution 1.0");
   assert.equal(formatCardVersion("Ka+ SE PLUS 1.5", "Ka+"), "Ka+ SE Plus 1.5");
   assert.equal(formatCardVersion("EXL 1.5 CVT I-VTEC", "City"), "EXL 1.5 CVT i-VTEC");

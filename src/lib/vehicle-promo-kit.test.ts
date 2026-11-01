@@ -1,15 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import {
   buildWhatsAppPromo,
   buildInstagramPromo,
   type PromoVehicle,
 } from "./vehicle-promo-kit";
-
-const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+import { VehiclePromoKitModal } from "@/components/admin/VehiclePromoKitModal";
 
 const mockVehicle: PromoVehicle = {
   id: "cmshv22g9000fl204fk6qz9l2",
@@ -62,6 +60,13 @@ test("buildInstagramPromo: gera legenda com hashtags e respeita veículo vendido
 });
 
 test("VehiclePromoKitModal: botão fechar tem alvo de toque mínimo de 44x44px", () => {
-  const code = readFileSync(join(srcRoot, "components/admin/VehiclePromoKitModal.tsx"), "utf8");
-  assert.match(code, /h-11 w-11 items-center justify-center[\s\S]*aria-label="Fechar"/);
+  const html = renderToStaticMarkup(
+    createElement(VehiclePromoKitModal, {
+      vehicle: mockVehicle,
+      open: true,
+      onClose: () => {},
+    }),
+  );
+  assert.match(html, /<button\b[^>]*aria-label="Fechar"/);
+  assert.match(html, /class="[^"]*\bh-11\b[^"]*\bw-11\b[^"]*"[^>]*aria-label="Fechar"/);
 });

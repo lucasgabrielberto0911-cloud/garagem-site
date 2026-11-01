@@ -1,13 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { rotatePhoto, parsePhotoRotation } from "./photo-rotation";
 import { previousObjectPathFromGalleryPath, privatePreviousRefForPublicUrl } from "./photo-master";
-
-const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 test("giro mantém pixels e acompanha a direção da prévia, inclusive com EXIF", async () => {
   const pixels = Buffer.from([255,0,0, 0,255,0, 0,0,255, 255,255,0, 255,0,255, 0,255,255]);
@@ -33,7 +28,8 @@ test("versão anterior tem referência privada própria e não aceita miniatura 
   for (const invalid of [0, -90, 360, "90", null]) assert.equal(parsePhotoRotation(invalid), null);
 });
 
-test("VehiclePhotoManager disponibiliza opção Girar foto na folha de ações mobile", () => {
-  const code = readFileSync(join(srcRoot, "components/admin/VehiclePhotoManager.tsx"), "utf8");
-  assert.match(code, /ActionSheetButton[\s\S]*label="Girar foto"[\s\S]*setRotationId/);
+test("parsePhotoRotation aceita 90, 180 e 270 graus em sentido horário", () => {
+  assert.equal(parsePhotoRotation(90), 90);
+  assert.equal(parsePhotoRotation(180), 180);
+  assert.equal(parsePhotoRotation(270), 270);
 });

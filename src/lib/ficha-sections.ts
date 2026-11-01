@@ -35,3 +35,15 @@ export function fichaSectionScrollTop(
 ) {
   return Math.max(0, scrollY + targetTop - navBottom - 8);
 }
+
+/** Move o foco do teclado para a seção de destino sem salto brusco de scroll. */
+export function focusFichaSection(target: {
+  hasAttribute(name: string): boolean;
+  setAttribute(name: string, value: string): void;
+  focus(options?: { preventScroll?: boolean }): void;
+}) {
+  if (!target.hasAttribute("tabindex")) {
+    target.setAttribute("tabindex", "-1");
+  }
+  target.focus({ preventScroll: true });
+}

@@ -283,7 +283,7 @@ export function VehicleMobileBar({
                         vehicleSlug,
                       )
                     }
-                    className="inline-flex min-h-[44px] w-full items-center justify-center border border-white/25 px-3 font-display text-[11px] font-semibold uppercase tracking-wide text-cream touch-manipulation transition hover:border-white/50 active:border-white/50"
+                    className="inline-flex min-h-[38px] w-full items-center justify-center border border-white/25 px-3 font-display text-[11px] font-semibold uppercase tracking-wide text-cream touch-manipulation transition hover:border-white/50 active:border-white/50"
                   >
                     Agendar visita
                   </a>

@@ -175,11 +175,11 @@ export function sanitizeAccessory(raw: string, maxLen = Infinity): string {
 
   // Normalização de opcionais equivalentes / grafias
   text = text.replace(/\b6\s*air\s*bags\b/gi, "6 airbags");
-  text = text.replace(/\bairbags?\s*frontais\s*duplos?\b/gi, "Airbags frontais");
-  text = text.replace(/\bairbag\s*duplo\b/gi, "Airbags frontais");
+  text = text.replace(/(^|:\s*)airbags?\s*fronta(?:l|is)\s*duplos?(?=\s*$)/gi, "$1Airbags frontais");
+  text = text.replace(/(^|:\s*)airbag\s*duplo(?:\s*fronta(?:l|is))?(?=\s*$)/gi, "$1Airbags frontais");
   text = text.replace(/\balarme\s*perimétrico\b/gi, "Alarme antifurto");
   text = text.replace(/(^|:\s*)alarme(?=\s*$)/gi, "$1Alarme antifurto");
-  text = text.replace(/\b(?:iTPMS|TPMS)\b/g, "Monitoramento de pressão dos pneus (TPMS)");
+  text = text.replace(/(?<!Monitoramento de pressão dos pneus \()\b(?:iTPMS|TPMS)\b/g, "Monitoramento de pressão dos pneus (TPMS)");
 
   maxLen = Math.max(0, maxLen);
   if (text.length > maxLen) {
@@ -215,4 +215,54 @@ export function normalizeAccessories(raw: unknown): string[] {
   }
 
   return result.slice(0, 60);
+}
+
+/** Mapeia um opcional (sanitizado ou cru) para todas as grafias brutas correspondentes no banco. */
+export function accessoryFilterVariants(name: string): string[] {
+  const trimmed = (name ?? "").trim();
+  if (!trimmed) return [];
+
+  // Remove prefixo de grupo se presente para achar a base
+  const groupPrefixMatch = trimmed.match(/^(?:Conforto|Segurança|Facilidades|Outros opcionais):\s*/i);
+  const prefix = groupPrefixMatch ? groupPrefixMatch[0] : "";
+  const base = prefix ? trimmed.slice(prefix.length).trim() : trimmed;
+  const baseLower = base.toLowerCase();
+
+  const variantBases = new Set<string>([base]);
+
+  if (/^6\s*air\s*bags?$/i.test(baseLower)) {
+    variantBases.add("6 airbags");
+    variantBases.add("6 Air Bags");
+    variantBases.add("6 air bags");
+    variantBases.add("6 Airbags");
+  } else if (/^(?:airbag\s*duplo(?:\s*fronta(?:l|is))?|airbags?\s*fronta(?:l|is)\s*duplos?|airbags?\s*frontais)$/i.test(baseLower)) {
+    variantBases.add("Airbags frontais");
+    variantBases.add("Airbag duplo");
+    variantBases.add("Airbags frontais duplos");
+    variantBases.add("Airbag duplo frontal");
+    variantBases.add("Airbag frontal duplo");
+  } else if (/^(?:alarme\s*antifurto|alarme\s*perimétrico|alarme)$/i.test(baseLower)) {
+    variantBases.add("Alarme antifurto");
+    variantBases.add("Alarme perimétrico");
+    variantBases.add("Alarme");
+  } else if (/^(?:monitoramento de pressão dos pneus \(tpms\)|itpms|tpms)$/i.test(baseLower)) {
+    variantBases.add("Monitoramento de pressão dos pneus (TPMS)");
+    variantBases.add("iTPMS");
+    variantBases.add("TPMS");
+  } else if (/^(?:gps integrado|gps integ)$/i.test(baseLower)) {
+    variantBases.add("GPS integrado");
+    variantBases.add("GPS integ");
+  }
+
+  // Gera variantes com e sem prefixos de grupos conhecidos
+  const results = new Set<string>();
+  for (const v of variantBases) {
+    results.add(v);
+    results.add(`Segurança: ${v}`);
+    results.add(`Conforto: ${v}`);
+    results.add(`Outros opcionais: ${v}`);
+  }
+  results.add(trimmed);
+
+  return Array.from(results);
 }

@@ -14,6 +14,7 @@ import type { VehicleSpecRow } from "@/lib/vehicle-specs";
 import {
   fichaSectionLinks,
   fichaSectionScrollTop,
+  focusFichaSection,
 } from "./ficha-sections";
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -178,8 +179,19 @@ test("filtros do estoque e a vitrine real das cidades são preservados", () => {
   assert.match(form, /export function MissingModelForm/);
 });
 
-test("FichaSectionNav move o foco para a seção de destino com preventScroll", () => {
-  const code = readSrc("components/site/FichaSectionNav.tsx");
-  assert.match(code, /target\.setAttribute\("tabindex",\s*"-1"\)/);
-  assert.match(code, /target\.focus\(\{\s*preventScroll:\s*true\s*\}\)/);
+test("focusFichaSection move o foco para a seção de destino com preventScroll e tabindex -1", () => {
+  let focusedWith: { preventScroll?: boolean } | undefined;
+  let tabindexSet: string | undefined;
+  const mockTarget = {
+    hasAttribute: (attr: string) => attr === "id",
+    setAttribute: (attr: string, val: string) => {
+      if (attr === "tabindex") tabindexSet = val;
+    },
+    focus: (opts?: { preventScroll?: boolean }) => {
+      focusedWith = opts;
+    },
+  };
+  focusFichaSection(mockTarget);
+  assert.equal(tabindexSet, "-1");
+  assert.deepEqual(focusedWith, { preventScroll: true });
 });

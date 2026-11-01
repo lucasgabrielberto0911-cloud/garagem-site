@@ -1,4 +1,5 @@
 import { buildStockFacets, type StockFacets } from "@/lib/stock-facets";
+import { accessoryFilterVariants } from "@/lib/vehicle-accessories";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -407,7 +408,7 @@ export const getRelatedVehicles = cache(
     ),
 );
 
-function buildStockWhere(filters: StockFilters, catalog: { brand: string; model: string; version?: string | null }[] = []) {
+export function buildStockWhere(filters: StockFilters, catalog: { brand: string; model: string; version?: string | null }[] = []) {
   const priceFilter =
     filters.minPrice || filters.maxPrice
       ? {
@@ -434,6 +435,11 @@ function buildStockWhere(filters: StockFilters, catalog: { brand: string; model:
   and.push(...stockSearchWhere(filters.q ?? "", catalog));
   const gear = transmissionWhere(filters.transmission);
   if (Object.keys(gear).length > 0) and.push(gear);
+  if (filters.accessories && filters.accessories.length > 0) {
+    for (const acc of filters.accessories) {
+      and.push({ accessories: { hasSome: accessoryFilterVariants(acc) } });
+    }
+  }
 
   return {
     ...PUBLIC_SITEMAP_VEHICLE_WHERE,
@@ -451,9 +457,6 @@ function buildStockWhere(filters: StockFilters, catalog: { brand: string; model:
       : {}),
     ...(filters.fuel ? { fuel: filters.fuel } : {}),
     ...colorWhere(filters.color),
-    ...(filters.accessories && filters.accessories.length > 0
-      ? { accessories: { hasEvery: filters.accessories } }
-      : {}),
     ...priceFilter,
     ...yearFilter,
     ...(filters.maxKm ? { km: { lte: filters.maxKm } } : {}),
