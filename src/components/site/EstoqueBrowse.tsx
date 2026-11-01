@@ -152,9 +152,7 @@ export function EstoqueBrowse({
 }: {
   initialStock: StockPageResult;
 }) {
-  const [search, setSearch] = useState<string | null>(() =>
-    typeof window !== "undefined" ? window.location.search.replace(/^\?/, "") : null,
-  );
+  const [search, setSearch] = useState<string | null>(null);
   useEffect(() => {
     const syncFromLocation = () => {
       setSearch(window.location.search.replace(/^\?/, ""));
