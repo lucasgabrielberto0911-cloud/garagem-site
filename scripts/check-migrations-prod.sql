@@ -54,7 +54,9 @@ WITH alvos(migration, tipo, tabela, objeto) AS (VALUES
   ('20261029000100_nota_promissoria','tabela','PromissoryNote',NULL),
   ('20261029000100_nota_promissoria','indice','PromissoryNote','PromissoryNote_number_key'),
   ('20261029000100_nota_promissoria','constraint','PromissoryNote','promissory_status'),
-  ('20261029000100_nota_promissoria','constraint','PromissoryNote','promissory_values')
+  ('20261029000100_nota_promissoria','constraint','PromissoryNote','promissory_values'),
+  ('20261101000100_lead_venda_request_key','coluna','LeadVenda','requestKey'),
+  ('20261101000100_lead_venda_request_key','indice','LeadVenda','LeadVenda_requestKey_key')
 )
 SELECT a.migration, a.tipo, a.tabela, a.objeto,
   CASE a.tipo

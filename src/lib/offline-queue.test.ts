@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   createIntentId,
+  isIntentExpired,
   isLikelyNetworkFailure,
   snapshotsForIds,
   writeFavoriteSnapshot,
@@ -86,4 +87,14 @@ test("grava o lote em uma operação e preserva favoritos fora da lista", () => 
     store.localStorage.setItem = () => { throw new Error("QuotaExceededError"); };
     assert.doesNotThrow(() => writeFavoriteSnapshots([sample]));
   } finally { store.localStorage = previous; }
+});
+
+test("isIntentExpired: tipo desconhecido usa o menor prazo em vez de nunca expirar", () => {
+  const now = Date.now();
+  const dia = 24 * 60 * 60 * 1000;
+  const desconhecido = (idade: number) => ({ type: "outro" as never, createdAt: now - idade });
+  assert.equal(isIntentExpired(desconhecido(1 * dia), now), false);
+  assert.equal(isIntentExpired(desconhecido(4 * dia), now), true);
+  assert.equal(isIntentExpired({ type: "sell", createdAt: now - 4 * dia }, now), false);
+  assert.equal(isIntentExpired({ type: "whatsapp", createdAt: now - 4 * dia }, now), true);
 });

@@ -19,7 +19,8 @@ import { formatNumberBR, formatPhoneBR, formatPlateInput, isValidPlate } from "@
 import { SellPhotoUpload } from "./SellPhotoUpload";
 import { useSellDraft } from "./useSellDraft";
 import { trackLead, trackPwaEvent } from "@/lib/meta-pixel";
-import { enqueueIntent, isLikelyNetworkFailure } from "@/lib/offline-queue";
+import { normalizeBrazilPhone } from "@/lib/phone-br";
+import { createIntentId, enqueueIntent, isLikelyNetworkFailure } from "@/lib/offline-queue";
 import { sellReceivedLine } from "@/lib/sell-receipt";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
 import { SiteLeadHit } from "@/lib/funnel-events";
@@ -59,6 +60,7 @@ export function SellForm({
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [formError, setFormError] = useState("");
+  const requestKeyRef = useRef(createIntentId());
   const draft = useSellDraft(formRef, outcome === null, setPhone, setKm, setPlate);
 
   useEffect(() => {
@@ -92,6 +94,8 @@ export function SellForm({
     if (isPending || photoBusy) return;
     setFormError("");
     const data = new FormData(event.currentTarget);
+    // Mesma chave em todas as tentativas desta solicitação (online, fila offline, reenvio).
+    data.set("requestKey", requestKeyRef.current);
     const nextErrors: Record<string, string> = {};
     const name = String(data.get("name") ?? "").trim();
     const phoneDigits = String(data.get("phone") ?? "").replace(/\D/g, "");
@@ -100,7 +104,7 @@ export function SellForm({
     const year = String(data.get("year") ?? "").trim();
     const plate = String(data.get("plate") ?? "").trim();
     if (name.length < 3) nextErrors.name = "Informe seu nome completo.";
-    if (phoneDigits.length < 10) nextErrors.phone = "Informe um WhatsApp com DDD.";
+    if (!normalizeBrazilPhone(phoneDigits)) nextErrors.phone = "Informe um WhatsApp com DDD.";
     if (!brand) nextErrors.brand = "Informe a marca.";
     if (!model) nextErrors.model = "Informe o modelo.";
     if (!/^\d{4}$/.test(year)) nextErrors.year = "Informe o ano com 4 dígitos.";
@@ -132,6 +136,7 @@ export function SellForm({
           notifySuccess(result.message);
           setSentPhotoCount(photoUrls.length);
           setOutcome("sent");
+          requestKeyRef.current = createIntentId();
           setPhone("");
           setKm("");
           setPlate("");

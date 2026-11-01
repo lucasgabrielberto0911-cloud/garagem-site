@@ -40,11 +40,13 @@ function withLeadDefaults(
         | "nextAction"
         | "nextActionAt"
         | "lostReason"
+        | "requestKey"
       >
     >,
 ): LeadVenda {
   return {
     ...row,
+    requestKey: row.requestKey ?? null,
     lostReason: row.lostReason ?? null,
     nextAction: row.nextAction ?? null,
     nextActionAt: row.nextActionAt ?? null,
@@ -53,6 +55,18 @@ function withLeadDefaults(
     photoUrls: row.photoUrls ?? [],
     updatedAt: row.updatedAt ?? row.createdAt,
   };
+}
+
+const REQUEST_KEY_RE = /^[A-Za-z0-9_-]{8,64}$/;
+
+export function normalizeRequestKey(value: unknown): string | null {
+  const key = typeof value === "string" ? value.trim() : "";
+  return REQUEST_KEY_RE.test(key) ? key : null;
+}
+
+function isUniqueRequestKeyError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  return "code" in error && (error as { code?: string }).code === "P2002";
 }
 
 export async function createLeadVenda(data: {
@@ -65,12 +79,23 @@ export async function createLeadVenda(data: {
   interestVehicleId: string | null;
   source: string | null;
   photoUrls: string[];
+  /** Identificador da solicitação (gerado no aparelho). Repetido, devolve o lead já criado. */
+  requestKey?: string | null;
 }) {
+  const requestKey = normalizeRequestKey(data.requestKey);
   try {
+    if (requestKey) {
+      const existing = await prisma.leadVenda.findUnique({
+        where: { requestKey },
+        select: { id: true },
+      });
+      if (existing) return { ...existing, duplicate: true as const };
+    }
     return await withAdminStorageLock((tx) =>
       tx.leadVenda.create({
         select: { id: true },
         data: {
+          requestKey,
           name: data.name,
           phone: data.phone,
           vehicleInfo: data.vehicleInfo,
@@ -84,6 +109,14 @@ export async function createLeadVenda(data: {
       }),
     );
   } catch (error) {
+    // Duas chamadas ao mesmo tempo com a mesma chave: a segunda lê o lead da primeira.
+    if (requestKey && isUniqueRequestKeyError(error)) {
+      const existing = await prisma.leadVenda.findUnique({
+        where: { requestKey },
+        select: { id: true },
+      });
+      if (existing) return { ...existing, duplicate: true as const };
+    }
     if (!isMissingColumnError(error)) throw error;
     return prisma.leadVenda.create({
       select: { id: true },
@@ -94,6 +127,9 @@ export async function createLeadVenda(data: {
         plate: data.plate,
         km: data.km,
         notes: data.notes,
+        interestVehicleId: data.interestVehicleId,
+        source: data.source,
+        photoUrls: data.photoUrls,
       },
     });
   }

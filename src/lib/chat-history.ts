@@ -24,6 +24,15 @@ export function chatSearchContext(messages: ChatMessage[]): ChatSearchContext {
   };
 }
 
+/**
+ * Depois de um erro a pergunta fica no histórico e volta ao campo. Ao reenviar o mesmo texto,
+ * a tentativa anterior sai antes de acrescentar o novo turno, para não duplicar a pergunta.
+ */
+export function withoutFailedAttempt(messages: ChatMessage[], text: string): ChatMessage[] {
+  const last = messages[messages.length - 1];
+  return last?.role === "user" && last.content.trim() === text.trim() ? messages.slice(0, -1) : messages;
+}
+
 function readSearchContext(raw: unknown): ChatSearchContext | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const value = raw as Partial<ChatSearchContext>;
@@ -82,6 +91,8 @@ export function readVehicleCards(raw: unknown): ChatVehicleCard[] {
 export const CHAT_HISTORY_KEY = "garagem_site_chat_history_v3";
 export const CHAT_HISTORY_TTL = 24 * 60 * 60 * 1000;
 export const CHAT_HISTORY_MESSAGES = 24;
+/** Preço e status dos cards guardados valem por pouco tempo; depois disso só o texto da conversa volta. */
+export const CHAT_HISTORY_CARD_TTL = 60 * 60 * 1000;
 const MAX_CONTEXTS = 8;
 
 export type ChatHistoryStore = {
@@ -141,6 +152,16 @@ export function parseChatHistory(
               }
             : {}),
         });
+      }
+      if (messages.length && now - savedAt >= CHAT_HISTORY_CARD_TTL) {
+        // O anúncio pode ter mudado de preço ou saído do estoque: não restaura cards velhos,
+        // mas mantém os ids já mostrados para o assistente não repetir as mesmas unidades.
+        const context = chatSearchContext(messages);
+        for (const message of messages) {
+          delete message.vehicles;
+          delete message.stockHref;
+        }
+        messages[messages.length - 1] = { ...messages[messages.length - 1]!, searchContext: context };
       }
       if (messages.length) {
         store.byKey[key] = messages;
