@@ -2,11 +2,12 @@
 
 import { updateTag } from "next/cache";
 import { headers } from "next/headers";
-import { isValidPlate, normalizePlate } from "@/lib/format";
+import { isValidBrazilPhone, isValidPlate, normalizePlate } from "@/lib/format";
 import { notifyNewLead } from "@/lib/lead-notify";
 import { createLeadVenda } from "@/lib/lead-venda";
 import { checkSellLeadRateLimit } from "@/lib/rate-limit";
 import { ADMIN_NEW_LEADS_TAG } from "@/lib/admin-cache";
+import { MAX_SELL_PHOTOS } from "@/lib/sell-photo-upload";
 import { isVehicleCuid } from "@/lib/vehicle-slug";
 import { parseStoredFileRef } from "@/lib/supabase";
 
@@ -57,6 +58,7 @@ function parsePhotoUrls(data: FormData) {
     if (!parsed.path.startsWith("vender/")) continue;
     if (unique.includes(value)) continue;
     unique.push(value);
+    if (unique.length >= MAX_SELL_PHOTOS) break;
   }
   return unique;
 }
@@ -92,11 +94,12 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
   const interestRaw = text(data, "interestVehicleId");
   const interestVehicleId = isVehicleCuid(interestRaw) ? interestRaw : null;
   const source = parseSource(text(data, "source", MAX_LENGTH.source));
+  const requestId = text(data, "requestId", 80) || null;
   const photoUrls = parsePhotoUrls(data);
 
   const fieldErrors: Record<string, string> = {};
   if (name.length < 3) fieldErrors.name = "Informe seu nome completo.";
-  if (phone.replace(/\D/g, "").length < 10) {
+  if (!isValidBrazilPhone(phone)) {
     fieldErrors.phone = "Informe um telefone com DDD.";
   }
   if (!brand) fieldErrors.brand = "Informe a marca.";
@@ -136,20 +139,23 @@ export async function createSellLead(data: FormData): Promise<SellLeadState> {
       interestVehicleId,
       source,
       photoUrls,
+      requestId,
     });
     updateTag(ADMIN_NEW_LEADS_TAG);
-    notifyNewLead({
-      id: lead.id,
-      name,
-      phone,
-      vehicleInfo,
-      plate,
-      km: kmRaw ? Number(kmRaw) : null,
-      notes: notes || null,
-      source,
-      interestVehicleId,
-      photoCount: photoUrls.length,
-    });
+    if (!lead.deduplicated) {
+      notifyNewLead({
+        id: lead.id,
+        name,
+        phone,
+        vehicleInfo,
+        plate,
+        km: kmRaw ? Number(kmRaw) : null,
+        notes: notes || null,
+        source,
+        interestVehicleId,
+        photoCount: photoUrls.length,
+      });
+    }
   } catch (error) {
     console.error("[vender] falha ao registrar lead:", error);
     return {

@@ -42,9 +42,12 @@ export function VehicleGallery({
   photos: GalleryPhoto[];
   alt: string;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLUListElement>(null);
   const thumbsRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
+  const activeRef = useRef(0);
+  activeRef.current = active;
   const [neighbors, setNeighbors] = useState(false);
   const [showThumbs, setShowThumbs] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
@@ -109,6 +112,31 @@ export function VehicleGallery({
     return () => scroller.removeEventListener("scroll", onScroll);
   }, [total]);
 
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || total < 2) return;
+    let lastWidth = scroller.clientWidth;
+    const realign = () => {
+      const el = scrollerRef.current;
+      if (!el) return;
+      const width = el.clientWidth;
+      if (width <= 0 || width === lastWidth) return;
+      lastWidth = width;
+      el.scrollTo({
+        left: activeRef.current * width,
+        behavior: "auto",
+      });
+    };
+    const observer =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(realign) : null;
+    observer?.observe(scroller);
+    window.addEventListener("resize", realign);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", realign);
+    };
+  }, [total]);
+
   const goTo = useCallback((index: number) => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
@@ -123,6 +151,11 @@ export function VehicleGallery({
   useEffect(() => {
     if (zoomOpen || total < 2) return;
     function onKeyDown(event: KeyboardEvent) {
+      const root = rootRef.current;
+      const activeEl = document.activeElement;
+      if (!root || !activeEl || !root.contains(activeEl)) {
+        return;
+      }
       const target = event.target as HTMLElement | null;
       const tag = target?.tagName;
       if (
@@ -163,7 +196,7 @@ export function VehicleGallery({
   }
 
   return (
-    <div className="gallery-root flex h-full min-h-0 flex-col">
+    <div ref={rootRef} className="gallery-root flex h-full min-h-0 flex-col">
       <div className="gallery-frame relative min-h-[9rem] flex-1 overflow-hidden border border-white/10 bg-ink lg:aspect-[16/10] lg:min-h-0 lg:flex-none">
         <ul
           ref={scrollerRef}

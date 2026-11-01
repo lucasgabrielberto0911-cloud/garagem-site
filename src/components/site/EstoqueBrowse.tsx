@@ -152,7 +152,16 @@ export function EstoqueBrowse({
 }: {
   initialStock: StockPageResult;
 }) {
-  const [search, setSearch] = useState<string | null>(null);
+  const [search, setSearch] = useState<string | null>(() =>
+    typeof window !== "undefined" ? window.location.search.replace(/^\?/, "") : null,
+  );
+  useEffect(() => {
+    const syncFromLocation = () => {
+      setSearch(window.location.search.replace(/^\?/, ""));
+    };
+    window.addEventListener("popstate", syncFromLocation);
+    return () => window.removeEventListener("popstate", syncFromLocation);
+  }, []);
   const params = useMemo(
     () => paramsToRecord(new URLSearchParams(search ?? "")),
     [search],
@@ -176,8 +185,9 @@ export function EstoqueBrowse({
   const shownResult = needsFetch ? result : {
     key: initialKey, stock: initialStock, params: {} as EstoqueSearchParams, version: 0,
   };
+  const hasFetchedFilterResult = !needsFetch || shownResult.key === filterKey || shownResult.version > 0;
   const shown = shownResult.stock;
-  const previousResults = (loading || Boolean(error)) && shown.vehicles.length > 0;
+  const previousResults = (loading || Boolean(error)) && hasFetchedFilterResult && shown.vehicles.length > 0;
   const requestId = useRef(0);
 
   useEffect(() => {
@@ -286,7 +296,7 @@ export function EstoqueBrowse({
         </p>
       ) : null}
       <div className="mt-1 lg:mt-4" data-estoque-list="" aria-live="polite" aria-busy={loading}>
-        {loading && shown.vehicles.length === 0 ? (
+        {loading && (!hasFetchedFilterResult || shown.vehicles.length === 0) ? (
           <VehicleCardSkeletonGrid count={6} largePhoto />
         ) : (
           <StockInfiniteList

@@ -14,7 +14,7 @@ const BUDGET_LINKS = [
 ] as const;
 
 const CHIP_CLASS =
-  "inline-flex h-8 shrink-0 items-center border border-white/15 bg-asphalt/80 px-2.5 font-body text-xs font-medium text-cream/90 transition hover:border-brand hover:bg-white/5 hover:text-cream active:border-brand active:bg-white/5 touch-manipulation whitespace-nowrap";
+  "inline-flex min-h-[44px] sm:min-h-0 sm:h-8 shrink-0 items-center border border-white/15 bg-asphalt/80 px-3 sm:px-2.5 font-body text-xs font-medium text-cream/90 transition hover:border-brand hover:bg-white/5 hover:text-cream active:border-brand active:bg-white/5 touch-manipulation whitespace-nowrap";
 
 /**
  * Formulário nativo GET — busca no estoque sem esperar hidratação.
@@ -139,7 +139,7 @@ export function HeroSearch({
 
         {/* Fade indicador de rolagem à direita */}
         <div
-          className={`pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-10 bg-gradient-to-l from-asphalt to-transparent transition-opacity duration-200 sm:hidden ${
+          className={`pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-14 bg-gradient-to-l from-asphalt via-asphalt/90 to-transparent transition-opacity duration-200 sm:hidden ${
             canScrollRight ? "opacity-100" : "opacity-0"
           }`}
           aria-hidden="true"

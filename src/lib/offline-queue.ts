@@ -29,7 +29,42 @@ export type FavoriteIntent = {
 export type OfflineIntent = (WhatsAppIntent | SellIntent | FavoriteIntent) & {
   id: string;
   createdAt: number;
+  claimedAt?: number;
 };
+
+export const OFFLINE_INTENT_TTL_MS: Record<OfflineIntent["type"], number> = {
+  whatsapp: 24 * 60 * 60 * 1000,
+  favorite: 24 * 60 * 60 * 1000,
+  sell: 72 * 60 * 60 * 1000,
+};
+
+export const OFFLINE_CLAIM_LEASE_MS = 60_000;
+
+export function isIntentExpired(
+  intent: Pick<OfflineIntent, "type" | "createdAt">,
+  now = Date.now(),
+): boolean {
+  if (!Number.isFinite(intent.createdAt)) return true;
+  const ttl = OFFLINE_INTENT_TTL_MS[intent.type] ?? OFFLINE_INTENT_TTL_MS.whatsapp;
+  return now - intent.createdAt > ttl;
+}
+
+export function filterValidIntents(
+  intents: readonly OfflineIntent[],
+  now = Date.now(),
+): { valid: OfflineIntent[]; expiredIds: string[] } {
+  const valid: OfflineIntent[] = [];
+  const expiredIds: string[] = [];
+  for (const item of intents) {
+    if (isIntentExpired(item, now)) {
+      expiredIds.push(item.id);
+    } else {
+      valid.push(item);
+    }
+  }
+  valid.sort((a, b) => a.createdAt - b.createdAt);
+  return { valid, expiredIds };
+}
 
 export function isLikelyNetworkFailure(error?: unknown, online = true) {
   if (!online) return true;
@@ -81,7 +116,7 @@ export async function enqueueIntent(intent: OfflineIntentDraft) {
   return row;
 }
 
-export async function listIntents(): Promise<OfflineIntent[]> {
+export async function listIntents(now = Date.now()): Promise<OfflineIntent[]> {
   const db = await openDb();
   const rows = await new Promise<OfflineIntent[]>((resolve, reject) => {
     const tx = db.transaction(OFFLINE_QUEUE_STORE, "readonly");
@@ -89,8 +124,69 @@ export async function listIntents(): Promise<OfflineIntent[]> {
     request.onsuccess = () => resolve((request.result ?? []) as OfflineIntent[]);
     request.onerror = () => reject(request.error ?? new Error("IDB getAll"));
   });
+  const { valid, expiredIds } = filterValidIntents(rows, now);
+  if (expiredIds.length > 0) {
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(OFFLINE_QUEUE_STORE, "readwrite");
+      const store = tx.objectStore(OFFLINE_QUEUE_STORE);
+      for (const id of expiredIds) {
+        store.delete(id);
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  }
   db.close();
-  return rows.sort((a, b) => a.createdAt - b.createdAt);
+  return valid;
+}
+
+export async function claimIntent(
+  id: string,
+  now = Date.now(),
+  leaseMs = OFFLINE_CLAIM_LEASE_MS,
+): Promise<boolean> {
+  const db = await openDb();
+  const claimed = await new Promise<boolean>((resolve) => {
+    const tx = db.transaction(OFFLINE_QUEUE_STORE, "readwrite");
+    const store = tx.objectStore(OFFLINE_QUEUE_STORE);
+    const getReq = store.get(id);
+    let ok = false;
+    getReq.onsuccess = () => {
+      const current = getReq.result as OfflineIntent | undefined;
+      if (!current || isIntentExpired(current, now)) {
+        if (current) store.delete(id);
+        return;
+      }
+      if (current.claimedAt && now - current.claimedAt < leaseMs) {
+        return;
+      }
+      store.put({ ...current, claimedAt: now });
+      ok = true;
+    };
+    tx.oncomplete = () => resolve(ok);
+    tx.onerror = () => resolve(false);
+  });
+  db.close();
+  return claimed;
+}
+
+export async function releaseIntentClaim(id: string): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve) => {
+    const tx = db.transaction(OFFLINE_QUEUE_STORE, "readwrite");
+    const store = tx.objectStore(OFFLINE_QUEUE_STORE);
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const current = getReq.result as OfflineIntent | undefined;
+      if (!current || !current.claimedAt) return;
+      const next = { ...current };
+      delete next.claimedAt;
+      store.put(next);
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => resolve();
+  });
+  db.close();
 }
 
 export async function deleteIntent(id: string) {

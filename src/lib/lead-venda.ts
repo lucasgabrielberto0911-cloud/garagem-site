@@ -55,6 +55,52 @@ function withLeadDefaults(
   };
 }
 
+const RECENT_REQUEST_TTL_MS = 15 * 60 * 1000;
+const RECENT_CONTENT_WINDOW_MS = 2 * 60 * 1000;
+const recentLeadRequests = new Map<string, { id: string; expiresAt: number }>();
+
+export function buildSellLeadIdempotencyKey(input: {
+  requestId?: string | null;
+  phone: string;
+  vehicleInfo: string;
+  plate?: string | null;
+}) {
+  const reqId = input.requestId?.trim();
+  if (reqId && /^[a-zA-Z0-9_-]{8,80}$/.test(reqId)) {
+    return `req:${reqId}`;
+  }
+  const phoneDigits = input.phone.replace(/\D/g, "");
+  const vehicle = input.vehicleInfo.trim().toLowerCase().replace(/\s+/g, " ");
+  const plate = (input.plate ?? "").trim().toUpperCase();
+  return `sig:${phoneDigits}:${vehicle}:${plate}`;
+}
+
+export function rememberLeadRequest(
+  key: string,
+  id: string,
+  now = Date.now(),
+  ttlMs = RECENT_REQUEST_TTL_MS,
+) {
+  for (const [k, entry] of recentLeadRequests) {
+    if (entry.expiresAt <= now) recentLeadRequests.delete(k);
+  }
+  recentLeadRequests.set(key, { id, expiresAt: now + ttlMs });
+}
+
+export function findRememberedLeadRequest(key: string, now = Date.now()): string | null {
+  const entry = recentLeadRequests.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= now) {
+    recentLeadRequests.delete(key);
+    return null;
+  }
+  return entry.id;
+}
+
+export function clearLeadRequestCacheForTests() {
+  recentLeadRequests.clear();
+}
+
 export async function createLeadVenda(data: {
   name: string;
   phone: string;
@@ -65,10 +111,46 @@ export async function createLeadVenda(data: {
   interestVehicleId: string | null;
   source: string | null;
   photoUrls: string[];
-}) {
+  requestId?: string | null;
+}): Promise<{ id: string; deduplicated?: boolean }> {
+  const now = Date.now();
+  const requestKey = data.requestId
+    ? buildSellLeadIdempotencyKey({
+        requestId: data.requestId,
+        phone: data.phone,
+        vehicleInfo: data.vehicleInfo,
+        plate: data.plate,
+      })
+    : null;
+  const contentKey = buildSellLeadIdempotencyKey({
+    phone: data.phone,
+    vehicleInfo: data.vehicleInfo,
+    plate: data.plate,
+  });
+
+  const cachedId =
+    (requestKey ? findRememberedLeadRequest(requestKey, now) : null) ??
+    findRememberedLeadRequest(contentKey, now);
+  if (cachedId) {
+    return { id: cachedId, deduplicated: true };
+  }
+
   try {
-    return await withAdminStorageLock((tx) =>
-      tx.leadVenda.create({
+    const created = await withAdminStorageLock(async (tx) => {
+      const existing = await tx.leadVenda.findFirst({
+        where: {
+          phone: data.phone,
+          vehicleInfo: data.vehicleInfo,
+          plate: data.plate,
+          createdAt: { gte: new Date(now - RECENT_CONTENT_WINDOW_MS) },
+        },
+        select: { id: true },
+        orderBy: { createdAt: "desc" },
+      });
+      if (existing) {
+        return { id: existing.id, deduplicated: true };
+      }
+      const row = await tx.leadVenda.create({
         select: { id: true },
         data: {
           name: data.name,
@@ -81,11 +163,15 @@ export async function createLeadVenda(data: {
           source: data.source,
           photoUrls: data.photoUrls,
         },
-      }),
-    );
+      });
+      return { id: row.id, deduplicated: false };
+    });
+    if (requestKey) rememberLeadRequest(requestKey, created.id, now, RECENT_REQUEST_TTL_MS);
+    rememberLeadRequest(contentKey, created.id, now, RECENT_CONTENT_WINDOW_MS);
+    return created;
   } catch (error) {
     if (!isMissingColumnError(error)) throw error;
-    return prisma.leadVenda.create({
+    const row = await prisma.leadVenda.create({
       select: { id: true },
       data: {
         name: data.name,
@@ -96,6 +182,9 @@ export async function createLeadVenda(data: {
         notes: data.notes,
       },
     });
+    if (requestKey) rememberLeadRequest(requestKey, row.id, now, RECENT_REQUEST_TTL_MS);
+    rememberLeadRequest(contentKey, row.id, now, RECENT_CONTENT_WINDOW_MS);
+    return row;
   }
 }
 
