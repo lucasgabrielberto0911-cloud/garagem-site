@@ -40,11 +40,13 @@ function withLeadDefaults(
         | "nextAction"
         | "nextActionAt"
         | "lostReason"
+        | "requestKey"
       >
     >,
 ): LeadVenda {
   return {
     ...row,
+    requestKey: row.requestKey ?? null,
     lostReason: row.lostReason ?? null,
     nextAction: row.nextAction ?? null,
     nextActionAt: row.nextActionAt ?? null,
@@ -55,8 +57,20 @@ function withLeadDefaults(
   };
 }
 
+const REQUEST_KEY_RE = /^[A-Za-z0-9_-]{8,64}$/;
+
+export function normalizeRequestKey(value: unknown): string | null {
+  const key = typeof value === "string" ? value.trim() : "";
+  return REQUEST_KEY_RE.test(key) ? key : null;
+}
+
+function isUniqueRequestKeyError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  return "code" in error && (error as { code?: string }).code === "P2002";
+}
+
 const RECENT_REQUEST_TTL_MS = 15 * 60 * 1000;
-const RECENT_CONTENT_WINDOW_MS = 2 * 60 * 1000;
+const _RECENT_CONTENT_WINDOW_MS = 2 * 60 * 1000;
 const recentLeadRequests = new Map<string, { id: string; expiresAt: number }>();
 
 export function buildSellLeadIdempotencyKey(input: {
@@ -105,54 +119,30 @@ export async function createLeadVenda(data: {
   name: string;
   phone: string;
   vehicleInfo: string;
-  plate: string;
+  plate: string | null;
   km: number | null;
   notes: string | null;
   interestVehicleId: string | null;
   source: string | null;
   photoUrls: string[];
+  /** Identificador da solicitação (gerado no aparelho). Repetido, devolve o lead já criado. */
+  requestKey?: string | null;
   requestId?: string | null;
-}): Promise<{ id: string; deduplicated?: boolean }> {
-  const now = Date.now();
-  const requestKey = data.requestId
-    ? buildSellLeadIdempotencyKey({
-        requestId: data.requestId,
-        phone: data.phone,
-        vehicleInfo: data.vehicleInfo,
-        plate: data.plate,
-      })
-    : null;
-  const contentKey = buildSellLeadIdempotencyKey({
-    phone: data.phone,
-    vehicleInfo: data.vehicleInfo,
-    plate: data.plate,
-  });
-
-  const cachedId =
-    (requestKey ? findRememberedLeadRequest(requestKey, now) : null) ??
-    findRememberedLeadRequest(contentKey, now);
-  if (cachedId) {
-    return { id: cachedId, deduplicated: true };
-  }
-
+}) {
+  const requestKey = normalizeRequestKey(data.requestKey ?? data.requestId);
   try {
-    const created = await withAdminStorageLock(async (tx) => {
-      const existing = await tx.leadVenda.findFirst({
-        where: {
-          phone: data.phone,
-          vehicleInfo: data.vehicleInfo,
-          plate: data.plate,
-          createdAt: { gte: new Date(now - RECENT_CONTENT_WINDOW_MS) },
-        },
+    if (requestKey) {
+      const existing = await prisma.leadVenda.findUnique({
+        where: { requestKey },
         select: { id: true },
-        orderBy: { createdAt: "desc" },
       });
-      if (existing) {
-        return { id: existing.id, deduplicated: true };
-      }
-      const row = await tx.leadVenda.create({
+      if (existing) return { ...existing, duplicate: true as const };
+    }
+    return await withAdminStorageLock((tx) =>
+      tx.leadVenda.create({
         select: { id: true },
         data: {
+          requestKey,
           name: data.name,
           phone: data.phone,
           vehicleInfo: data.vehicleInfo,
@@ -163,15 +153,19 @@ export async function createLeadVenda(data: {
           source: data.source,
           photoUrls: data.photoUrls,
         },
-      });
-      return { id: row.id, deduplicated: false };
-    });
-    if (requestKey) rememberLeadRequest(requestKey, created.id, now, RECENT_REQUEST_TTL_MS);
-    rememberLeadRequest(contentKey, created.id, now, RECENT_CONTENT_WINDOW_MS);
-    return created;
+      }),
+    );
   } catch (error) {
+    // Duas chamadas ao mesmo tempo com a mesma chave: a segunda lê o lead da primeira.
+    if (requestKey && isUniqueRequestKeyError(error)) {
+      const existing = await prisma.leadVenda.findUnique({
+        where: { requestKey },
+        select: { id: true },
+      });
+      if (existing) return { ...existing, duplicate: true as const };
+    }
     if (!isMissingColumnError(error)) throw error;
-    const row = await prisma.leadVenda.create({
+    return prisma.leadVenda.create({
       select: { id: true },
       data: {
         name: data.name,
@@ -180,11 +174,11 @@ export async function createLeadVenda(data: {
         plate: data.plate,
         km: data.km,
         notes: data.notes,
+        interestVehicleId: data.interestVehicleId,
+        source: data.source,
+        photoUrls: data.photoUrls,
       },
     });
-    if (requestKey) rememberLeadRequest(requestKey, row.id, now, RECENT_REQUEST_TTL_MS);
-    rememberLeadRequest(contentKey, row.id, now, RECENT_CONTENT_WINDOW_MS);
-    return row;
   }
 }
 

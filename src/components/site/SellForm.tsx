@@ -25,6 +25,7 @@ import {
 import { SellPhotoUpload } from "./SellPhotoUpload";
 import { useSellDraft } from "./useSellDraft";
 import { trackLead, trackPwaEvent } from "@/lib/meta-pixel";
+import { normalizeBrazilPhone } from "@/lib/phone-br";
 import { createIntentId, enqueueIntent, isLikelyNetworkFailure } from "@/lib/offline-queue";
 import { sellReceivedLine } from "@/lib/sell-receipt";
 import { WHATSAPP_MESSAGES, site } from "@/lib/site";
@@ -65,7 +66,7 @@ export function SellForm({
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [formError, setFormError] = useState("");
-  const requestIdRef = useRef<string>("");
+  const requestKeyRef = useRef(createIntentId());
   const draft = useSellDraft(formRef, outcome === null, setPhone, setKm, setPlate);
 
   useEffect(() => {
@@ -108,19 +109,24 @@ export function SellForm({
     if (isPending || photoBusy) return;
     setFormError("");
     const data = new FormData(event.currentTarget);
-    if (!requestIdRef.current) {
-      requestIdRef.current = createIntentId();
+    if (!requestKeyRef.current) {
+      requestKeyRef.current = createIntentId();
     }
-    data.set("requestId", requestIdRef.current);
+    // Mesma chave em todas as tentativas desta solicitação (online, fila offline, reenvio).
+    data.set("requestKey", requestKeyRef.current);
+    data.set("requestId", requestKeyRef.current);
     const nextErrors: Record<string, string> = {};
     const name = String(data.get("name") ?? "").trim();
     const phoneRaw = String(data.get("phone") ?? "");
+    const phoneDigits = phoneRaw.replace(/\D/g, "");
     const brand = String(data.get("brand") ?? "").trim();
     const model = String(data.get("model") ?? "").trim();
     const year = String(data.get("year") ?? "").trim();
     const plate = String(data.get("plate") ?? "").trim();
     if (name.length < 3) nextErrors.name = "Informe seu nome completo.";
-    if (!isValidBrazilPhone(phoneRaw)) nextErrors.phone = "Informe um WhatsApp com DDD.";
+    if (!isValidBrazilPhone(phoneRaw) || !normalizeBrazilPhone(phoneDigits)) {
+      nextErrors.phone = "Informe um WhatsApp com DDD.";
+    }
     if (!brand) nextErrors.brand = "Informe a marca.";
     if (!model) nextErrors.model = "Informe o modelo.";
     if (!/^\d{4}$/.test(year)) nextErrors.year = "Informe o ano com 4 dígitos.";
@@ -152,11 +158,11 @@ export function SellForm({
           notifySuccess(result.message);
           setSentPhotoCount(photoUrls.length);
           setOutcome("sent");
+          requestKeyRef.current = createIntentId();
           setPhone("");
           setKm("");
           setPlate("");
           setPhotoUrls([]);
-          requestIdRef.current = "";
           formRef.current?.reset();
         } else {
           setFormError(result.message);
@@ -188,7 +194,7 @@ export function SellForm({
           setKm("");
           setPlate("");
           setPhotoUrls([]);
-          requestIdRef.current = "";
+          requestKeyRef.current = createIntentId();
           setErrors({});
           setFormError("");
           setOutcome(null);

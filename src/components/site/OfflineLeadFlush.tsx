@@ -8,7 +8,9 @@ import {
   claimIntent,
   deleteIntent,
   listIntents,
+  partitionIntents,
   releaseIntentClaim,
+  runSingleFlush,
   type OfflineIntent,
   type SellIntent,
 } from "@/lib/offline-queue";
@@ -20,6 +22,9 @@ function sellFormData(intent: SellIntent & { id?: string }) {
   for (const [key, value] of Object.entries(intent.fields)) {
     if (key === "photoUrls") continue;
     data.set(key, value);
+  }
+  if (!data.get("requestKey") && intent.id) {
+    data.set("requestKey", intent.id);
   }
   if (!data.get("requestId") && intent.id) {
     data.set("requestId", intent.id);
@@ -34,7 +39,17 @@ async function flushQueueInner() {
   if (typeof navigator !== "undefined" && !navigator.onLine) return;
   let items: OfflineIntent[];
   try {
-    items = await listIntents();
+    const stored = await listIntents();
+    // Pedido velho demais pode já ter sido resolvido por outro meio: sai sem enviar.
+    const { fresh, expired } = partitionIntents(stored);
+    for (const item of expired) {
+      try {
+        await deleteIntent(item.id);
+      } catch {
+        // Ignora erro de armazenamento local.
+      }
+    }
+    items = fresh;
   } catch {
     return;
   }
@@ -102,12 +117,15 @@ async function flushQueueInner() {
         : "Abrimos o WhatsApp com o recado que ficou guardado.",
     );
   } else {
+    // Pop-up bloqueado: o recado só sai da fila quando a pessoa abre ou descarta.
+    // Se o aviso sumir sozinho, ele volta na próxima visita.
     try {
       await releaseIntentClaim(first.id);
     } catch {
       // Mantém na fila para quando o usuário clicar em Abrir.
     }
     notify("Há um recado de interesse pronto. Toque para abrir o WhatsApp.", {
+      duration: Infinity,
       action: {
         label: "Abrir",
         onClick: () => {
@@ -116,6 +134,12 @@ async function flushQueueInner() {
             .finally(() => {
               window.location.href = first.url;
             });
+        },
+      },
+      cancel: {
+        label: "Descartar",
+        onClick: () => {
+          void deleteIntent(first.id).catch(() => {});
         },
       },
     });
@@ -156,10 +180,15 @@ export async function flushQueue() {
   return activeFlushPromise;
 }
 
+/** Falha ao abrir o IndexedDB (modo privado, cota) não pode virar promessa rejeitada: a fila fica como está. */
+function safeFlush() {
+  return runSingleFlush(flushQueue).catch(() => {});
+}
+
 export function OfflineLeadFlush() {
   useEffect(() => {
     function onOnline() {
-      void flushQueue();
+      void safeFlush();
     }
     window.addEventListener("online", onOnline);
     let cancelIdle: (() => void) | undefined;
@@ -169,10 +198,10 @@ export function OfflineLeadFlush() {
         cancelIdleCallback?: (id: number) => void;
       };
       if (typeof win.requestIdleCallback === "function") {
-        const id = win.requestIdleCallback(() => void flushQueue(), { timeout: 2500 });
+        const id = win.requestIdleCallback(() => void safeFlush(), { timeout: 2500 });
         cancelIdle = () => win.cancelIdleCallback?.(id);
       } else {
-        const timer = window.setTimeout(() => void flushQueue(), 600);
+        const timer = window.setTimeout(() => void safeFlush(), 600);
         cancelIdle = () => window.clearTimeout(timer);
       }
     }
