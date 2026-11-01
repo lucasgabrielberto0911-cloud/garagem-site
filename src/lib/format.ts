@@ -125,7 +125,7 @@ export function vehicleSeoDescription(input: {
   sold?: boolean;
   siteName?: string;
 }) {
-  const separator = input.version && /\bTech\s+Road\s+2$/i.test(input.version) ? " · " : " ";
+  const separator = input.version && /(?:^|\s)\d{1,2}$/.test(input.version) ? " · " : " ";
   const label = [
     formatVehicleLabel(input.brand, input.model),
     input.version ? `${input.version}${separator}${input.year}` : input.year,

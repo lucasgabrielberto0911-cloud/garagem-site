@@ -96,3 +96,9 @@ test("vehicleOpenGraphImage declara dimensões 1200x800 e tipo image/webp", () =
   assert.equal(og.alt, "Civic 2015");
   assert.equal(og.url, "https://exemplo.net/foto.webp");
 });
+
+test("descrição SEO separa o ano com ponto médio quando a versão termina em número solto", () => {
+  assert.match(vehicleSeoDescription({ ...civic, version: "Sport Pack 3" }), /Sport Pack 3 · 2015/);
+  assert.match(vehicleSeoDescription({ ...civic, version: "Tech Road 2" }), /Tech Road 2 · 2015/);
+  assert.doesNotMatch(vehicleSeoDescription(civic), /LXR · 2015/);
+});
