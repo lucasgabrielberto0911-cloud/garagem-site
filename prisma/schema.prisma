@@ -247,6 +247,8 @@ model LeadVenda {
   source            String?
   /** Refs privadas (`private://documentos/vender/...`) das fotos do usado. */
   photoUrls         String[] @default([])
+  /** Chave da solicitação gerada no aparelho: reenvio da mesma avaliação não cria outro lead. */
+  requestKey        String?  @unique
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

@@ -200,6 +200,8 @@ test("handoff do chat leva marca, modelo, ano, link, câmbio e teto reais, com U
         year: 2014,
         href: "/estoque/lancer-2014",
         category: "carro",
+        transmission: "Automático",
+        price: 99_000,
       },
     ],
     priceLimit: 109_000,
@@ -238,7 +240,7 @@ test("handoff do chat leva marca, modelo, ano, link, câmbio e teto reais, com U
     {
       handoff: {
         vehicles: [
-          { brand: "Mitsubishi", model: "Lancer", version: "2.0" },
+          { brand: "Mitsubishi", model: "Lancer", version: "2.0", transmission: "Automático", price: 62_900 },
         ],
         priceLimit: 109_000,
         transmission: "automatico",

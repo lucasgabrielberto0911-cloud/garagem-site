@@ -89,6 +89,8 @@ export function displayChatText(text: string) {
   let value = text
     .replace(new RegExp(String.raw`${connector}https?:\/\/wa\.me\/\S*?[.!]?(?=[ \t]*$)`, "gim"), ".")
     .replace(new RegExp(String.raw`${connector}(?=https?:\/\/wa\.me\/)`, "gi"), " ")
+    // "…horário marcado: <link>" no fim da linha: sem o link, o ":" fecha a frase (o botão vem abaixo).
+    .replace(/\s*:[ \t]*https?:\/\/wa\.me\/\S*[ \t]*$/gim, ".")
     .replace(URL_RE, "")
     .replace(/[ \t]{2,}/g, " ");
   value = value
@@ -109,6 +111,23 @@ export function displayChatText(text: string) {
   value = value.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n");
   value = value.replace(/\s+([.,;:])/g, "$1").trim();
   return value;
+}
+
+/**
+ * Texto para a região ao vivo do leitor de tela: a resposta já concluída (sem URL seca e sem
+ * narrar o streaming nem repetir os cards). Durante o envio só avisa que está consultando.
+ */
+export function chatLiveAnnouncement(
+  messages: Array<{ role: string; content: string }>,
+  pending: boolean,
+) {
+  if (pending) return "Consultando sua pergunta";
+  if (messages.length <= 1) return "Assistente aberto";
+  const last = messages[messages.length - 1];
+  if (last?.role !== "assistant") return "Assistente aberto";
+  const text = displayChatText(last.content).replace(/\s+/g, " ").trim();
+  if (!text) return "Resposta disponível no chat";
+  return text.length > 600 ? `${text.slice(0, 597).trimEnd()}…` : text;
 }
 
 export type ChatWhatsAppVehicle = {
@@ -231,6 +250,9 @@ export type ChatHandoffVehicle = {
   label?: string;
   category?: string;
   href?: string;
+  /** Câmbio e preço da unidade: sem eles o recorte da sessão não vai para o WhatsApp. */
+  transmission?: string | null;
+  price?: number | null;
 };
 
 export type ChatHandoffContext = {
@@ -271,19 +293,37 @@ export function formatChatHandoffMessage(input: ChatHandoffContext = {}) {
       .slice(0, labels.length)
       .every((vehicle) => vehicle.category === "moto");
   const article = moto ? "a" : "o";
+  // O recorte da sessão só entra na mensagem se TODOS os carros citados o cumprem;
+  // senão o WhatsApp diria "automático até R$ 90.000" de um carro manual.
+  const shown = (input.vehicles ?? []).slice(0, labels.length);
+  const gearOk = (vehicle: ChatHandoffVehicle) => {
+    const value = fold(vehicle.transmission ?? "");
+    if (!value || /semi/.test(value)) return false;
+    return input.transmission === "automatico"
+      ? /automatic|cvt/.test(value)
+      : /manual/.test(value) && !/automatic/.test(value);
+  };
+  const transmission =
+    input.transmission && shown.every(gearOk) ? input.transmission : null;
+  const priceLimit =
+    input.priceLimit != null &&
+    input.priceLimit > 0 &&
+    shown.every((vehicle) => vehicle.price != null && vehicle.price > 0 && vehicle.price <= input.priceLimit!)
+      ? input.priceLimit
+      : null;
   const gear =
-    input.transmission === "automatico"
+    transmission === "automatico"
       ? labels.length > 1
         ? "automáticos"
         : "automático"
-      : input.transmission === "manual"
+      : transmission === "manual"
         ? labels.length > 1
           ? "manuais"
           : "manual"
         : "";
   const budget =
-    input.priceLimit != null && input.priceLimit > 0
-      ? `até ${formatChatPrice(input.priceLimit)}`
+    priceLimit != null
+      ? `até ${formatChatPrice(priceLimit)}`
       : "";
   const context = [gear, budget].filter(Boolean).join(" ");
   const contextBit = context ? ` ${context}` : "";
