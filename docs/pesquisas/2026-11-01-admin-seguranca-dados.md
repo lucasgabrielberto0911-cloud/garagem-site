@@ -16,28 +16,27 @@ Lote solicitado a partir de `AUDITORIA-SITE.md`, `AUDITORIA-FLUXO.md` e `AUDITOR
 | SITE 35–39 (P1/P2) | O renderizador real confere todas as páginas A4 antes de persistir. Chave e hash da solicitação reconhecem reenvio; índice único reforça a proteção. Nota paga identifica quitação e data, sem nova promessa de pagamento. Retificação exige motivo e preserva baixa original na auditoria. Exportação por CPF limitada; seleção de até 60 notas permite montar lotes entre páginas. | Actions/rota de promissórias, `promissory-pdf.ts`, `submission-id.ts`, testes de PDF, emissão e navegador |
 | SITE 40–43 (P2) | Contadores identificados como atendimentos; busca aplicada a pós-venda e avisos; paginação independente e estável dos três conjuntos. Avisos de ciência explicitamente abrangem todos os períodos. | `src/app/admin/agenda/page.tsx`, e2e com 51 tarefas e 51 avisos fictícios |
 | SITE 44–46 (P2) | Criação/edição de cliente auditadas sem copiar contato para o log. Versão esperada impede sobrescrita concorrente. Limites e validação de e-mail/telefone no servidor. | Actions e manager de clientes, coluna `Customer.updatedAt`, regressões unitárias e e2e |
-| SITE 18–22 (P1/P2) | Avaliação tem chave persistente e criação idempotente; reenvio não repete notificação. Consumidor serial e reserva atômica no IndexedDB coordenam abas. Recados têm recuperação persistente e descarte. Retenção de sete dias; avaliações após 15 minutos exigem confirmação. Falhas de armazenamento são tratadas. | `lead-venda.ts`, action de avaliação, `offline-queue.ts`, `OfflineLeadFlush.tsx`, testes de submissão/fila e `e2e/offline-auditoria.spec.ts` |
 | SITE 49 (P1) | Agregador aguarda `migrations` e exige sucesso desse job. | `.github/workflows/ci.yml`, regressão de CI |
 | TÉCNICA 14–19 (P1/P2) | Giro móvel já estava no menu nesta base e ganhou validação de navegador. Grades de vendas/clientes/notas ajustadas; fechar do kit com 44×44px; editor de placa preserva área útil e rolagem, ocultando o cabeçalho no celular enquanto o zoom está ativo. | Componentes do admin e `e2e/admin-auditoria.spec.ts` |
 
 Os itens de chat, busca pública, SEO, performance geral e a ampliação global da matriz para WebKit/service worker pertencem a outros escopos. Nenhuma mudança em dados reais de anúncios ou clientes foi realizada.
 
-Referências centrais: `src/app/admin/veiculos/actions.ts:526`; `src/app/admin/promissorias/actions.ts:51` e `:175`; `src/lib/commercial-pdf.ts:62`; `src/components/admin/useSaleDraft.ts:7`; `src/app/admin/clientes/actions.ts:43`; `src/app/(site)/vender/actions.ts:64`; `.github/workflows/ci.yml:96`.
+Referências centrais: `src/app/admin/veiculos/actions.ts:526`; `src/app/admin/promissorias/actions.ts:51` e `:175`; `src/lib/commercial-pdf.ts:62`; `src/components/admin/useSaleDraft.ts:7`; `src/app/admin/clientes/actions.ts:43`; `.github/workflows/ci.yml:96`.
 
-## Validação
+## Ajustes da revisão do PR 426
 
-- `npm test`: 1.608 testes passaram.
-- `npm run lint`: passou.
-- `npm run build`: passou, usando banco descartável local.
-- `npx playwright test e2e/admin-auditoria.spec.ts e2e/offline-auditoria.spec.ts`: 52 cenários passaram, em 320, 390, 430 e 1440 px.
-- `npx tsc --noEmit --project tsconfig.test.json`: passou.
-- `scripts/check-migrations.sh origin/main`: passou.
-- Após o último ajuste de transporte do formulário, 12 testes específicos de formulário público, fila e chave de submissão também passaram.
-- Suítes comerciais existentes: 23 cenários passaram na rodada ampla de 390 px. Os dois cenários afetados pelas novas funções foram ajustados: um agora isola os casos em rascunhos separados, e o outro permite a retificação de baixa sem permitir cancelamento de nota paga.
-- `npx playwright test e2e/admin-auditoria.spec.ts e2e/admin-comercial.spec.ts e2e/admin-promissorias.spec.ts --grep 'fotos permitem|CPF duplicado|aba Promissórias'`: mais 12 verificações passaram nas quatro larguras, incluindo os dois cenários ajustados e o ganho de mais de 60 px da área útil no zoom móvel.
-- Regressões usam apenas pessoas, contatos e operações fictícias.
-- Banco local separado em `127.0.0.1:55432/garagem_e2e`; nenhum acesso a banco de produção.
-- Navegador usa fixture local para fotos e bloqueia Storage externo. As suítes comerciais existentes também receberam interceptação de fotos e limpeza compatível com as FKs restritivas.
+- Fila offline, formulário público de avaliação e `LeadVenda.requestId` saíram deste PR, inclusive migration, rollback e testes correspondentes. Pertencem ao [PR 423](https://github.com/lucasgabrielberto0911-cloud/garagem-site/pull/423). A compilação e o funcionamento do 426 não dependem do 423; o Prisma gerado pelo 426 não consulta `requestId` implicitamente. A uniformização final com a avaliação/chat públicos precisa ser coordenada no 423: o normalizador público dessa branch ainda inclui verificações adicionais de DDD/prefixo, fora deste lote.
+- `admin-customers.ts` repete a listagem com seleção explícita sem `Customer.updatedAt` somente se essa coluna faltar. Outros erros continuam visíveis. Sem versão, criação/edição retornam aviso de atualização pendente e preservam o preenchimento; nenhuma edição sem proteção de concorrência é aceita.
+- Promissórias ignoram destaques cujo `indexOf` devolve `-1`; o teste verifica a fonte no aviso de quitação.
+- Rascunho de venda usa lista fechada de etapa, valores, opções e parcelas. Não guarda cliente, CPF, RG, endereço, telefone ou texto livre. Cliente/veículo selecionados fora do contexto inicial precisam ser escolhidos novamente; textos de pagamento e condições precisam ser preenchidos de novo. IDs e resumos não sensíveis de notas emitidas são mantidos para não induzir nova emissão.
+- A API filtra POST e GET, limpa dados pessoais de rascunho legado ao ler sem alterar a versão e protege a limpeza contra edição concorrente. A migration descarta rascunhos de venda legados ainda não acessados. Não altera rascunhos de veículos.
+- Clientes, leads, venda simples, assistente de venda e promissórias compartilham normalização de telefone: formatação e prefixo brasileiro `55` são removidos; resultado tem exatamente 10 ou 11 dígitos nacionais.
+
+## Validação desta revisão
+
+Testes usam somente objetos e dados fictícios, sem banco externo, produção, Supabase ou arquivos `.env`. A API de drafts tem testes de gravação/leitura/reserva, campos malformados e sessão ausente; ações de clientes/leads verificam fallback, conflito e telefone normalizado.
+
+`npm test`: 1.634 testes passaram. `npx tsc --noEmit --project tsconfig.test.json`: passou. `npm run lint`: passou, sem avisos. Em PostgreSQL 16 descartável criado nesta sessão, a listagem funcionou após remover `Customer.updatedAt`; criação sem a coluna devolveu P2022 e a consulta de LeadVenda funcionou sem `requestId`. Depois o schema foi restaurado e os registros fictícios removidos. `npm run build -- --webpack`: passou em cópia isolada, sem `.env`, com PostgreSQL descartável local. O CI usa instalação própria para conferir o build padrão com Turbopack. E2E local e preview não foram executados nesta revisão; o cenário existente de recuperação foi ajustado para exigir que o endereço digitado não seja persistido.
 
 ## Prioridades e implantação
 
@@ -46,7 +45,7 @@ Referências centrais: `src/app/admin/veiculos/actions.ts:526`; `src/app/admin/p
 | P1 | Alto: histórico financeiro, duplicação de dívida e perda de trabalho | Médio | Bloqueios transacionais, idempotência, renderização prévia e rascunho privado |
 | P2 | Médio/alto: sobrescrita de dados, falta de rastreabilidade e operações inacessíveis | Baixo/médio | Versão esperada, auditoria, validações, paginação e ajustes de uso no celular |
 
-A migration `supabase/migrations/20261101175529_admin_integridade_emissoes.sql` e o rollback correspondente estão somente em arquivos. Não foram aplicados em produção. O coordenador deve planejar a aplicação antes do código que exige as novas colunas. O rollback preserva RESTRICT para não reintroduzir exclusão em cascata do histórico financeiro.
+A migration `supabase/migrations/20261101175529_admin_integridade_emissoes.sql` e o rollback correspondente estão somente em arquivos. Não foram aplicados em produção. Até a aplicação, a listagem de clientes funciona em consulta e as gravações que exigem versão são recusadas com aviso. A emissão idempotente de promissórias continua exigindo suas colunas; a implantação deve ser coordenada. O rollback preserva RESTRICT para não reintroduzir exclusão em cascata do histórico financeiro.
 
 Documentos antigos que nunca gravaram identificação da loja usam a identificação histórica conhecida nesta revisão; alterações históricas não registradas não podem ser reconstruídas.
 

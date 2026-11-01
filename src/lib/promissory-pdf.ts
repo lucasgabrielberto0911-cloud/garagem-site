@@ -113,7 +113,7 @@ function drawPromissoryPage(pdf: PDFDocument, assets: PdfAssets, data: ReturnTyp
   const highlights = [promissoryDateInWords(data.dueDate) + ",", "NOTA PROMISSÓRIA", `${site.legalName.toUpperCase()},`, site.cnpj, `${amount} (${moneyInWords(data.amount)})`].map(value => {
     const start = clause.indexOf(value);
     return { start, end: start + value.length };
-  });
+  }).filter(range => range.start !== -1);
   let x = margin;
   for (const word of clause.matchAll(/\S+/g)) {
     const font = highlights.some(range => word.index >= range.start && word.index < range.end) ? semi : regular;

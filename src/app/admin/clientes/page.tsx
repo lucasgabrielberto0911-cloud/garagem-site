@@ -1,3 +1,4 @@
+import { listAdminCustomers } from "@/lib/admin-customers";
 import { customerSearchWhere } from "@/lib/admin-customer-search";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -30,23 +31,7 @@ export default async function ClientesPage({
 
   const [customers, filteredTotal, globalTotal, buyersCount, revenueAgg] =
     await Promise.all([
-      prisma.customer.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          cpf: true,
-          email: true,
-          address: true,
-          notes: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
+      listAdminCustomers({ where, skip: (page - 1) * pageSize, take: pageSize }),
       prisma.customer.count({ where }),
       filtered ? prisma.customer.count() : Promise.resolve(0),
       prisma.customer.count({ where: { sales: { some: {} } } }),

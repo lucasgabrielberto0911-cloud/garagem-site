@@ -1,3 +1,4 @@
+import { safeAdminDraftPayload } from "@/lib/sale-draft";
 import { isSameOriginRequest } from "@/lib/admin-request-origin";
 import { withAdminStorageLock } from "@/lib/admin-storage-lock";
 import { NextResponse } from "next/server";
@@ -65,7 +66,14 @@ export async function GET(request: Request) {
     const draft = await prisma.adminDraft.findUnique({
       where: { adminId_key: { adminId: session.adminId, key } },
     });
-    return NextResponse.json({ draft }, { headers });
+    const safePayload = draft ? safeAdminDraftPayload(key, draft.payload) : null;
+    if (draft && key.startsWith("sale:") && JSON.stringify(safePayload) !== JSON.stringify(draft.payload)) {
+      await prisma.adminDraft.updateMany({
+        where: { id: draft.id, updatedAt: draft.updatedAt },
+        data: { payload: safePayload as Prisma.InputJsonValue, updatedAt: draft.updatedAt },
+      });
+    }
+    return NextResponse.json({ draft: draft ? { ...draft, payload: safePayload } : null }, { headers });
   } catch (error) {
     console.error("[admin/drafts GET]", error);
     return NextResponse.json(
@@ -115,7 +123,7 @@ export async function POST(request: Request) {
   const body = rawBody as Record<string, unknown>;
   const key = typeof body.key === "string" ? body.key : "";
   const reserve = Boolean(body.reserve);
-  const payload = body.payload;
+  const payload = safeAdminDraftPayload(key, body.payload);
   const photoUrls = body.photoUrls;
   const expectedUpdatedAt =
     typeof body.expectedUpdatedAt === "string" ||
@@ -127,7 +135,7 @@ export async function POST(request: Request) {
     typeof key !== "string" ||
     !validKey(key) ||
     (!reserve &&
-      (!payload || typeof payload !== "object" || Array.isArray(payload))) ||
+      (!body.payload || typeof body.payload !== "object" || Array.isArray(body.payload))) ||
     !Array.isArray(photoUrls) ||
     photoUrls.length > 100 ||
     photoUrls.some((p: unknown) => typeof p !== "string")
@@ -183,7 +191,9 @@ export async function POST(request: Request) {
           expiresAt,
         },
         update: {
-          ...(reserve ? {} : { payload: payload as Prisma.InputJsonValue }),
+          ...(reserve
+            ? (key.startsWith("sale:") ? { payload: safeAdminDraftPayload(key, existing?.payload ?? {}) as Prisma.InputJsonValue } : {})
+            : { payload: payload as Prisma.InputJsonValue }),
           photoUrls: protectedUrls,
           expiresAt,
           ...(existing

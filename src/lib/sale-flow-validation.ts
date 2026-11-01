@@ -1,3 +1,4 @@
+import { normalizeAdminPhone } from "@/lib/admin-phone";
 import { formatAdminMoney, moneyDifference, parseMoneyBR } from "./admin-money";
 import type { ContractPaymentItem } from "./admin-commercial";
 import { sumContractPayments } from "./admin-commercial";
@@ -24,7 +25,7 @@ export function validateSaleStage(stage: number, draft: SaleDraft): string | nul
   if (stage === SALE_STAGE.customer) {
     if (!draft.customer) return "Busque um cliente já cadastrado ou marque “Cadastrar cliente nesta venda”.";
     if (!draft.customer.name.trim()) return "Informe o nome do comprador.";
-    if (digits(draft.customer.phone).length < 10) return "Informe o telefone do comprador com DDD (10 ou 11 dígitos).";
+    if (!normalizeAdminPhone(draft.customer.phone)) return "Informe o telefone do comprador com DDD (10 ou 11 dígitos).";
     const cpf = digits(draft.customer.cpf);
     if (cpf && !isValidCpf(cpf)) return "CPF inválido. Confira os 11 dígitos ou deixe em branco.";
     return null;

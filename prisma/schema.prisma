@@ -229,7 +229,6 @@ model Admin {
 }
 
 model LeadVenda {
-  requestId String? @unique
   id                String   @id @default(cuid())
   name              String
   phone             String

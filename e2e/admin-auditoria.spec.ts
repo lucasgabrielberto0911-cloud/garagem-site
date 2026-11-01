@@ -44,16 +44,17 @@ test("venda recupera rascunho privado, etapa e foco após recarregar", async ({ 
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Cliente", exact: true })).toBeFocused();
   await expect(page.locator('[aria-current="step"]')).toContainText("Cliente");
-  await page.getByLabel("Endereço", { exact: false }).fill("Rua Fictícia Recuperada, 123");
+  await page.getByLabel("Endereço", { exact: false }).fill("Rua Fictícia Não Persistida, 123");
   await expect(page.getByRole("status").filter({ hasText: "Rascunho guardado" })).toBeVisible();
   const draft = await db.adminDraft.findFirstOrThrow({ where: { adminId: audit.adminId, key: { startsWith: "sale:" } } });
   expect(draft.photoUrls).toEqual([]);
+  expect(JSON.stringify(draft.payload)).not.toMatch(/Rua Fictícia Não Persistida|27999990000|11144477735|"rg"|"customer"/);
   expect(draft.expiresAt.getTime() - draft.updatedAt.getTime()).toBeLessThanOrEqual(86400000);
   await page.reload();
-  await expect(page.getByLabel("Endereço", { exact: false })).toHaveValue("Rua Fictícia Recuperada, 123");
+  await expect(page.getByLabel("Endereço", { exact: false })).toHaveValue("Rua Fictícia, 1");
   await expect(page.getByRole("heading", { name: "Cliente", exact: true })).toBeFocused();
   const serialized = await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }));
-  expect(serialized).not.toContain("Rua Fictícia Recuperada");
+  expect(serialized).not.toContain("Rua Fictícia Não Persistida");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

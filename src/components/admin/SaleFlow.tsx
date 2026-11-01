@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { saleDraftFields } from "@/lib/sale-draft";
 import { useSaleDraft } from "./useSaleDraft";
 import { stages } from "./SaleFlowStages";
 import { useRouter } from "next/navigation";
@@ -34,15 +35,16 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
   const [newCustomer, setNewCustomer] = useState(false);
   const [ids, setIds] = useState<SaleIds>({ chassis: initialVehicle?.chassis ?? "", renavam: initialVehicle?.renavam ?? "", rg: initialCustomer?.rg ?? "" });
   const section = useRef<HTMLElement>(null);
-  const restoreDraft = useCallback((saved: {
-    stage: number; vehicle: Vehicle | null; customer: Customer | null; total: string; payments: ContractPaymentItem[]; signal: boolean;
-    moneyDrafts: Record<string, string>; seller: string; commission: string; conditions: string; includeProposal: boolean; newCustomer: boolean; ids: SaleIds;
-  }) => {
-    setStage(saved.stage); setVehicle(saved.vehicle); setCustomer(saved.customer); setTotal(saved.total); setPayments(saved.payments);
-    setSignal(saved.signal); setMoneyDrafts(saved.moneyDrafts); setSeller(saved.seller); setCommission(saved.commission);
-    setConditions(saved.conditions); setIncludeProposal(saved.includeProposal); setNewCustomer(saved.newCustomer); setIds(saved.ids);
-  }, []);
-  const recovery = useSaleDraft(`sale:${initialVehicle?.id ?? "new"}:${initialCustomer?.id ?? "any"}`, { stage, vehicle, customer, total, payments, signal, moneyDrafts, seller, commission, conditions, includeProposal, newCustomer, ids }, restoreDraft);
+  const restoreDraft = useCallback((saved: ReturnType<typeof saleDraftFields>) => {
+    // Cliente e veículo escolhidos na busca precisam ser selecionados novamente.
+    const restoredVehicle = initialVehicle?.id === saved.vehicleId ? initialVehicle : null;
+    const restoredCustomer = initialCustomer?.id === saved.customerId ? initialCustomer : null;
+    setVehicle(restoredVehicle); setCustomer(restoredCustomer);
+    setStage(Math.min(saved.stage, restoredVehicle ? (restoredCustomer ? 4 : 1) : 0));
+    setTotal(saved.total); setPayments(saved.payments); setSignal(saved.signal);
+    setCommission(saved.commission); setIncludeProposal(saved.includeProposal);
+  }, [initialVehicle, initialCustomer]);
+  const recovery = useSaleDraft(`sale:${initialVehicle?.id ?? "new"}:${initialCustomer?.id ?? "any"}`, saleDraftFields({ stage, vehicleId: vehicle?.id, customerId: customer?.id, total, payments, signal, commission, includeProposal }), restoreDraft);
   useEffect(() => {
     if (recovery.ready) section.current?.querySelector<HTMLElement>("h2")?.focus();
   }, [stage, recovery.ready]);
@@ -167,6 +169,7 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
     <div className="mx-auto max-w-3xl space-y-6">
       <AdminPageHeader title="Iniciar venda" subtitle="Registre os dados do negócio e gere o contrato." />
       <p role="status" className="text-sm text-muted">{recovery.status}</p>
+      <p className="text-sm text-muted">Dados pessoais e textos livres digitados não ficam guardados no rascunho.</p>
       <button type="button" className={btn.outline} onClick={recovery.retry}>Guardar rascunho agora</button>
       <button type="button" className={btn.ghost} disabled={busy || issuingNotes || !recovery.ready} onClick={async () => {
         if (!window.confirm("Descartar o rascunho desta venda? Notas já emitidas continuam no histórico.")) return;

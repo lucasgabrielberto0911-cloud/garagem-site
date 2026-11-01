@@ -1,4 +1,5 @@
 "use client";
+import { normalizeAdminPhone } from "@/lib/admin-phone";
 import { formatAdminMoney as formatCurrencyBRL } from "@/lib/admin-money";
 import { normalizeSalesQuery } from "@/lib/admin-sales-search";
 
@@ -413,7 +414,7 @@ export function SalesManager({
     if (!isHistorical && !paymentMethod) problems.paymentMethod = "Escolha a forma de pagamento.";
     if (isNewCustomer && (customerName.trim() || phone.trim())) {
       if (!customerName.trim()) problems.customerName = "Informe o nome do cliente, ou apague o telefone para registrar sem cliente.";
-      if (phone.replace(/\D/g, "").length < 10) problems.customerPhone = "Telefone incompleto: informe com DDD (10 ou 11 dígitos).";
+      if (!normalizeAdminPhone(phone)) problems.customerPhone = "Telefone incompleto: informe com DDD (10 ou 11 dígitos).";
     }
     const problemNames = Object.keys(problems);
     if (problemNames.length > 0 || amount == null) {

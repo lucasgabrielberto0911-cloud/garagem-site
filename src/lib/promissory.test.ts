@@ -123,7 +123,7 @@ test("promissória: PDF em uma página A4 contém cláusula, campos e testemunha
   assert.equal(pdf.getPageCount(), 1);
   assert.deepEqual(pdf.getPage(0).getSize(), { width: 595.28, height: 841.89 });
   const content = drawn.map(item => item.text).join(" ");
-  for (const expected of ["Nº 1 · Via única", "R$ 7.000,00", promissoryClause(base), "Vitória/ES", "Linhares/ES, 29 de outubro de 2026", "Maria de Exemplo", "529.982.247-25", "1234567 SSP/ES", "15/01/1990", "(27) 99999-0000", base.issuer.address, "Assinatura do emitente", "TESTEMUNHA 1", "TESTEMUNHA 2"]) assert.ok(content.includes(expected), expected);
+  for (const expected of ["Nº 1 · Via única", "R$ 7.000,00", promissoryClause(base), "Vitória/ES", "Linhares/ES, 29 de outubro de 2026", "Maria de Exemplo", "529.982.247-25", "1234567 SSP/ES", "15/01/1990", "27999990000", base.issuer.address, "Assinatura do emitente", "TESTEMUNHA 1", "TESTEMUNHA 2"]) assert.ok(content.includes(expected), expected);
   assert.ok(drawn.every(item => item.x >= 34 && item.right <= 562 && item.y >= 30 && item.y <= 810));
   assert.ok(drawn.find(item => item.text === "Vencimento:")?.font.includes("SemiBold"));
   assert.ok(drawn.find(item => item.text === " 31 de dezembro de 2026")?.font.includes("Regular"));
@@ -160,7 +160,7 @@ test("promissória: PDF recusa excesso de conteúdo em vez de cortar a via únic
   await assert.rejects(promissoryPdf({
     ...base, amount: 9_999_999_999.99,
     issuePlace: "W".repeat(100), paymentPlace: "W".repeat(100),
-    issuer: { ...base.issuer, name: "W".repeat(120), address: "W".repeat(240), rg: "W".repeat(60), phone: "W".repeat(30) },
+    issuer: { ...base.issuer, name: "W".repeat(120), address: "W".repeat(240), rg: "W".repeat(60), phone: "27999990000" },
   }), /excedem o espaço de uma página A4/);
 });
 
@@ -183,4 +183,19 @@ test("nota paga imprime quitação, data e reimpressão histórica sem nova prom
   assert.match(text, /Reimpressão histórica/);
   assert.match(text, /31\/10\/2026/);
   assert.doesNotMatch(text, /Via única|pagarei por esta/);
+});
+
+test("promissória quitada não destaca trechos ausentes da cláusula original", async () => {
+  const drawn: Array<{ text: string; font: string; y: number }> = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) {
+    drawn.push({ text, font: options!.font!.name, y: options!.y! });
+    return original.call(this, text, options);
+  };
+  try {
+    await promissoryPdf({ ...base, status: "paga", paidAt: "2026-11-01T12:00:00Z" });
+  } finally { PDFPage.prototype.drawText = original; }
+  const first = drawn.find(item => item.text === "NOTA" && item.y === 612);
+  assert.ok(first?.font.includes("Regular"));
+  assert.ok(drawn.some(item => item.text.includes("QUITADA")));
 });

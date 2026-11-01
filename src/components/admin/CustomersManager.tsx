@@ -37,7 +37,7 @@ export type CustomerRow = {
   address: string | null;
   notes: string | null;
   createdAt: Date;
-  updatedAt: Date;
+  updatedAt: Date | null;
   purchases: number;
   totalSpent: number;
   lastPurchase: Date | null;
@@ -113,7 +113,7 @@ export function CustomersManager({
     setErrors({});
     setForm({
       id: customer.id,
-      expectedUpdatedAt: new Date(customer.updatedAt).toISOString(),
+      expectedUpdatedAt: customer.updatedAt ? new Date(customer.updatedAt).toISOString() : "",
       name: customer.name,
       phone: formatPhoneBR(customer.phone),
       cpf: customer.cpf ? formatCpfBR(customer.cpf) : "",

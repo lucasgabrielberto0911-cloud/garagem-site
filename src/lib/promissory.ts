@@ -1,3 +1,4 @@
+import { normalizeAdminPhone } from "@/lib/admin-phone";
 import { formatAdminMoney } from "./admin-money";
 import { formatCpfBR, isValidCpf } from "./format";
 import { integerWords, moneyInWords } from "./money-words";
@@ -66,6 +67,8 @@ export function validatePromissory(input: PromissoryInput) {
   const birthDate = text(input.issuer.birthDate, "Data de nascimento", 10);
   dateParts(birthDate);
   if (birthDate > input.issuedAt) throw new Error("A data de nascimento não pode ser posterior à emissão.");
+  const phone = normalizeAdminPhone(text(input.issuer.phone, "Telefone", 30));
+  if (!phone) throw new Error("Telefone inválido. Informe 10 ou 11 dígitos com DDD.");
   return {
     ...input,
     amount: Math.round(input.amount * 100) / 100,
@@ -75,7 +78,7 @@ export function validatePromissory(input: PromissoryInput) {
       name, cpf: formatCpfBR(cpf), birthDate,
       address: text(input.issuer.address, "Endereço do emitente", 240),
       rg: text(input.issuer.rg, "RG / órgão emissor", 60, false),
-      phone: text(input.issuer.phone, "Telefone", 30),
+      phone,
     },
   };
 }

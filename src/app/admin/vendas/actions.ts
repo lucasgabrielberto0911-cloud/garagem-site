@@ -1,5 +1,6 @@
 "use server";
 
+import { normalizeAdminPhone } from "@/lib/admin-phone";
 import { commercialStoreSnapshot } from "@/lib/commercial-store";
 
 import { scheduleAfterSale } from "@/lib/after-sale";
@@ -194,7 +195,7 @@ function parseSaleForm(formData: FormData): ParsedSaleForm {
 
   const customerId = String(formData.get("customerId") || "").trim();
   const customerName = String(formData.get("customerName") || "").trim();
-  const customerPhone = digitsOnly(formData.get("customerPhone"));
+  const customerPhone = normalizeAdminPhone(String(formData.get("customerPhone") ?? "")) ?? "";
   const paymentMethodRaw = String(formData.get("paymentMethod") || "").trim();
   const sellerName = String(formData.get("sellerName") || "").trim() || null;
   const commissionRaw = String(formData.get("commission") || "").trim();
@@ -229,9 +230,9 @@ function parseSaleForm(formData: FormData): ParsedSaleForm {
   }
 
   const isNewCustomer = customerId === "" || customerId === "novo";
-  if (isNewCustomer && (customerName || customerPhone)) {
+  if (isNewCustomer && (customerName || customerPhone || String(formData.get("customerPhone") ?? "").trim())) {
     if (!customerName) fieldErrors.customerName = "Informe o nome do cliente, ou apague o telefone para registrar sem cliente.";
-    if (customerPhone.length < 10) fieldErrors.customerPhone = "Telefone incompleto: informe com DDD (10 ou 11 dígitos).";
+    if (!customerPhone) fieldErrors.customerPhone = "Telefone incompleto: informe com DDD (10 ou 11 dígitos).";
   }
 
   const paymentMethod = paymentMethodRaw || (isHistorical ? "Histórico" : "");

@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { saleDraftFields } from "@/lib/sale-draft";
 import { useUnsavedChangesWarning } from "./useUnsavedChangesWarning";
 
 /** Reaproveita rascunhos privados do admin: sessão autenticada, versão e retenção de 24h. */
-export function useSaleDraft<T extends object>(key: string, value: T, restore: (value: T) => void) {
+export function useSaleDraft(key: string, value: ReturnType<typeof saleDraftFields>, restore: (value: ReturnType<typeof saleDraftFields>) => void) {
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState("Carregando rascunho…");
   const [pending, setPending] = useState(false);
@@ -13,7 +14,7 @@ export function useSaleDraft<T extends object>(key: string, value: T, restore: (
   const closed = useRef(false);
   const chain = useRef(Promise.resolve());
   const latest = useRef("");
-  const json = JSON.stringify(value);
+  const json = JSON.stringify(saleDraftFields(value));
 
   useEffect(() => {
     let active = true;
@@ -22,9 +23,10 @@ export function useSaleDraft<T extends object>(key: string, value: T, restore: (
       const { draft } = await response.json();
       if (!active) return;
       if (draft?.payload?.fields) {
-        restore(draft.payload.fields);
+        const fields = saleDraftFields(draft.payload.fields);
+        restore(fields);
         version.current = draft.updatedAt;
-        saved.current = JSON.stringify(draft.payload.fields);
+        saved.current = JSON.stringify(fields);
         setStatus("Rascunho recuperado. Confira os dados antes de concluir.");
       } else setStatus("O preenchimento será guardado por 24 horas, somente para seu usuário.");
       setReady(true);

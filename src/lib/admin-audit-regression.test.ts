@@ -14,7 +14,11 @@ let overflow: boolean;
 let authenticated: boolean;
 let expected: Date;
 const initialDate = new Date("2026-11-01T12:00:00Z");
-let lead: { id: string; requestId?: string } | null;
+let lead: { id: string; phone: string; name: string; source: string; notes: null; vehicleInfo: string; plate: null } | null;
+let missingCustomerVersion: boolean;
+let unexpectedColumn: boolean;
+let customerQueries: Array<Record<string, unknown>>;
+let writtenPhones: string[];
 let routeNotes: unknown[];
 let routeQuery: Record<string, unknown>;
 
@@ -27,8 +31,15 @@ const models = {
   adminAudit: { create: async ({ data }: { data: (typeof audits)[number] }) => { audits.push(data); } },
   customer: {
     findUnique: async () => ({ id: "cliente-ficticio" }), findFirst: async () => null,
-    create: async () => { writes.push("customer.create"); return { id: "cliente-ficticio" }; },
+    findMany: async (query: { select: Record<string, unknown> }) => {
+      customerQueries.push(query.select);
+      if (unexpectedColumn) throw { code: "P2022", meta: { column: "Customer.email" } };
+      if (missingCustomerVersion && query.select.updatedAt) throw { code: "P2022", meta: { column: "Customer.updatedAt" } };
+      return [{ id: "cliente-ficticio", name: "Cliente Fictício", phone: "27999990000", cpf: null, email: null, address: null, notes: null, createdAt: initialDate, ...(query.select.updatedAt ? { updatedAt: initialDate } : {}) }];
+    },
+    create: async ({ data }: { data: { phone: string } }) => { if (missingCustomerVersion) throw { code: "P2022", meta: { column: "Customer.updatedAt" } }; writes.push("customer.create"); writtenPhones.push(data.phone); return { id: "cliente-ficticio" }; },
     updateMany: async ({ where }: { where: { updatedAt: Date } }) => {
+      if (missingCustomerVersion) throw { code: "P2022", meta: { column: "Customer.updatedAt" } };
       if (where.updatedAt.getTime() !== expected.getTime()) return { count: 0 };
       expected = new Date(expected.getTime() + 1); writes.push("customer.update"); return { count: 1 };
     },
@@ -51,8 +62,9 @@ const models = {
   },
   leadVenda: {
     findUnique: async () => lead,
-    create: async ({ data }: { data: { requestId?: string } }) => { writes.push("lead.create"); lead = { id: "lead-ficticio", requestId: data.requestId }; return lead; },
+    create: async ({ data }: { data: { phone: string } }) => { writes.push("lead.create"); writtenPhones.push(data.phone); return { id: "lead-ficticio" }; },
   },
+  leadActivity: { create: async () => {} },
 };
 const client = { ...models, $transaction: async <T>(run: (tx: typeof models) => Promise<T>): Promise<T> => run(models) };
 const require = createRequire(import.meta.url);
@@ -62,24 +74,27 @@ loader._load = function (id, parent, isMain) {
   if (id === "@/lib/prisma") return { prisma: client };
   if (id === "@/lib/auth") return { getSession: async () => authenticated ? { adminId: "admin-ficticio" } : null };
   if (id === "next/navigation") return { redirect: () => { throw new Error("REDIRECT"); } };
-  if (id === "next/cache") return { revalidatePath: () => {}, updateTag: () => {}, unstable_cache: (fn: unknown) => fn };
+  if (id === "next/cache") return { revalidatePath: () => {}, updateTag: () => {}, revalidateTag: () => {}, unstable_cache: (fn: unknown) => fn };
   if (id === "@/lib/promissory-pdf") return { validatePromissoryPages: async () => { if (overflow) throw new Error("Os dados excedem o A4."); } };
   return originalLoad.call(this, id, parent, isMain);
 };
 let promissory: typeof import("../app/admin/promissorias/actions");
 let customer: typeof import("../app/admin/clientes/actions");
 let vehicle: typeof import("../app/admin/veiculos/actions");
-let leads: typeof import("./lead-venda");
+let adminCustomers: typeof import("./admin-customers");
+let leadActions: typeof import("../app/admin/leads/actions");
 let pdfRoute: typeof import("../app/api/admin/promissorias/[id]/route");
 try {
   promissory = require("../app/admin/promissorias/actions.ts");
+  adminCustomers = require("./admin-customers.ts");
+  leadActions = require("../app/admin/leads/actions.ts");
   customer = require("../app/admin/clientes/actions.ts");
   vehicle = require("../app/admin/veiculos/actions.ts");
-  leads = require("./lead-venda.ts");
   pdfRoute = require("../app/api/admin/promissorias/[id]/route.ts");
 } finally { loader._load = originalLoad; }
 
 beforeEach(() => {
+  missingCustomerVersion = false; unexpectedColumn = false; customerQueries = []; writtenPhones = [];
   notes = []; audits = []; writes = []; lead = null; reserved = false; documented = false; sold = false; overflow = false; authenticated = true; expected = initialDate; routeNotes = []; routeQuery = {};
 });
 function form(values: Record<string, string | undefined>) { const data = new FormData(); for (const [key, value] of Object.entries(values)) if (value !== undefined) data.set(key, value); return data; }
@@ -151,11 +166,6 @@ for (const invalid of [{ email: "cliente@" }, { name: "W".repeat(121) }, { addre
   const result = await customer.saveCustomer(form({ name: "Cliente Fictício", phone: "27999990000", ...invalid }));
   assert.equal(result.ok, false); assert.deepEqual(writes, []);
 });
-test("reenvio de avaliação cria um único lead", async () => {
-  const input = { requestId: "pedido-ficticio-12345", name: "Cliente Fictício", phone: "27999990000", vehicleInfo: "Veículo fictício", plate: "", km: null, notes: null, interestVehicleId: null, source: "vender", photoUrls: [] };
-  const first = await leads.createLeadVenda(input); const second = await leads.createLeadVenda(input);
-  assert.equal(first.id, second.id); assert.equal("replayed" in second && second.replayed, true); assert.deepEqual(writes, ["lead.create"]);
-});
 test("ações financeiras exigem sessão", async () => {
   authenticated = false;
   await assert.rejects(promissory.createPromissoryNotes(issuance()), /REDIRECT/);
@@ -167,4 +177,45 @@ test("agregador do CI espera migrations e falha se elas não passam", () => {
   const check = workflow.split("  check:")[1].split("  migrations:")[0];
   assert.match(check, /needs: \[unit, e2e, migrations\]/);
   assert.match(check, /needs\.migrations\.result.*!= "success"/);
+});
+
+test("clientes lista sem updatedAt durante implantação, com versão indisponível", async () => {
+  missingCustomerVersion = true;
+  const rows = await adminCustomers.listAdminCustomers({ where: {}, skip: 0, take: 40 });
+  assert.equal(rows[0].updatedAt, null);
+  assert.equal(rows[0].name, "Cliente Fictício");
+  assert.equal(customerQueries.length, 2);
+  assert.equal(customerQueries[1].updatedAt, undefined);
+});
+test("clientes não mascara coluna alheia ausente", async () => {
+  unexpectedColumn = true;
+  await assert.rejects(adminCustomers.listAdminCustomers({ where: {}, skip: 0, take: 40 }));
+  assert.equal(customerQueries.length, 1);
+});
+test("clientes bloqueia gravações sem migration e mantém o cadastro intacto", async () => {
+  missingCustomerVersion = true;
+  for (const values of [{}, { id: "cliente", expectedUpdatedAt: initialDate.toISOString() }, { id: "cliente" }]) {
+    const result = await customer.saveCustomer(form({ name: "Cliente Fictício", phone: "27999990000", ...values }));
+    assert.equal(result.ok, false);
+    assert.match(result.message, /atualização do banco/);
+  }
+  assert.deepEqual(writes, []);
+  assert.deepEqual(audits, []);
+});
+for (const phone of ["123456789", "123456789012", "12345678901234", "abc"]) test(`ações de leads recusam telefone inválido ${phone}`, async () => {
+  lead = { id: "lead-ficticio", name: "Cliente Fictício", phone, source: "whatsapp:direto", notes: null, vehicleInfo: "Fictício", plate: null };
+  assert.equal((await leadActions.convertLeadToCustomer(lead.id)).ok, false);
+  assert.equal((await leadActions.savePurchaseLead(form({ name: "Cliente Fictício", phone, origin: "direto", status: "conversa" }))).ok, false);
+  assert.deepEqual(writes, []);
+});
+for (const [phone, normalized] of [["(27) 3333-0000", "2733330000"], ["+55 (27) 99999-0000", "27999990000"]]) test(`ações usam o mesmo telefone normalizado: ${phone}`, async () => {
+  lead = { id: "lead-ficticio", name: "Cliente Fictício", phone, source: "whatsapp:direto", notes: null, vehicleInfo: "Fictício", plate: null };
+  assert.equal((await customer.saveCustomer(form({ name: lead.name, phone }))).ok, true);
+  assert.equal((await leadActions.convertLeadToCustomer(lead.id)).ok, true);
+  assert.equal((await leadActions.savePurchaseLead(form({ name: lead.name, phone, origin: "direto", status: "conversa" }))).ok, true);
+  assert.deepEqual(writtenPhones, [normalized, normalized, normalized]);
+});
+test("426 não exige requestId de LeadVenda, nem nas consultas implícitas do client", () => {
+  const schema = readFileSync("prisma/schema.prisma", "utf8").split("model LeadVenda {")[1].split("}")[0];
+  assert.doesNotMatch(schema, /requestId/);
 });
