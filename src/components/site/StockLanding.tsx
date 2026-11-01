@@ -5,7 +5,7 @@ import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { Container, PageHeader, ButtonLink, WhatsAppButton } from "@/components/site/ui";
 import { getStockLandingHistory } from "@/lib/stock-landing-data";
 import { canonicalSlugRedirect, stockLandingLinks, stockLandingCopy } from "@/lib/stock-landings";
-import { getCityShowcaseVehicles, getVehiclesByIds } from "@/lib/vehicles";
+import { getVehiclesByIds } from "@/lib/vehicles";
 import { breadcrumbJsonLd, buildPageMetadata, faqJsonLd, itemListJsonLd, SERVICE_CITIES } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { wantedVehicleHref } from "@/lib/wanted-vehicle-page";
