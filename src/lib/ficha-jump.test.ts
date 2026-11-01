@@ -177,3 +177,9 @@ test("filtros do estoque e a vitrine real das cidades são preservados", () => {
   assert.doesNotMatch(showcase, /locationCity|take:/);
   assert.match(form, /export function MissingModelForm/);
 });
+
+test("FichaSectionNav move o foco para a seção de destino com preventScroll", () => {
+  const code = readSrc("components/site/FichaSectionNav.tsx");
+  assert.match(code, /target\.setAttribute\("tabindex",\s*"-1"\)/);
+  assert.match(code, /target\.focus\(\{\s*preventScroll:\s*true\s*\}\)/);
+});

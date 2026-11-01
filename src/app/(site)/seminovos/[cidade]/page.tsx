@@ -1,7 +1,7 @@
 import { stockLandingLinks } from "@/lib/stock-landings";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { SiteLeadHit } from "@/lib/funnel-events";
@@ -40,6 +40,9 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { cidade } = await params;
+  if (cidade !== cidade.toLowerCase()) {
+    permanentRedirect(`/seminovos/${cidade.toLowerCase()}`);
+  }
   const city = getServiceCity(cidade);
   if (!city) return {};
   return buildPageMetadata({
@@ -55,6 +58,9 @@ export default async function SeminovosCidadePage({
   params: Promise<Params>;
 }) {
   const { cidade } = await params;
+  if (cidade !== cidade.toLowerCase()) {
+    permanentRedirect(`/seminovos/${cidade.toLowerCase()}`);
+  }
   const city = getServiceCity(cidade);
   if (!city) notFound();
 

@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import { vehiclePhotoAlt, vehicleSeoDescription } from "./format";
 import { VEHICLE_SEO_TITLE_MAX, vehicleSeoTitle } from "./vehicle-seo";
+
+const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const civic = {
   brand: "Honda",
@@ -86,4 +91,10 @@ test("vendido preserva identificação e busca regional, sem divulgar preço ant
 
 test("alt identifica o veículo e a posição real da foto sem inventar ângulo", () => {
   assert.equal(vehiclePhotoAlt("Honda Civic LXR 2015 · Prata", 0, 3), "Honda Civic LXR 2015 · Prata - foto 1 de 3");
+});
+
+test("ficha Open Graph declara dimensões 1200x800, tipo image/webp e siteName", () => {
+  const pageCode = readFileSync(join(srcRoot, "app/(vehicle)/estoque/[id]/page.tsx"), "utf8");
+  assert.match(pageCode, /siteName:\s*site\.name/);
+  assert.match(pageCode, /width:\s*1200,\s*height:\s*800,\s*type:\s*"image\/webp"/);
 });

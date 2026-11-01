@@ -23,6 +23,20 @@ test("sanitizeAccessory trunca em palavras inteiras e fecha parênteses", () => 
     "Assento largo (piloto + garupa)",
   );
 
+  assert.equal(
+    sanitizeAccessory("Central multimídia de 7\" com Apple CarPlay e GPS integ"),
+    "Central multimídia de 7\" com Apple CarPlay e GPS integrado",
+  );
+
+  assert.equal(sanitizeAccessory("6 Air Bags"), "6 airbags");
+  assert.equal(sanitizeAccessory("Airbag duplo"), "Airbags frontais");
+  assert.equal(sanitizeAccessory("Airbags frontais duplos"), "Airbags frontais");
+  assert.equal(sanitizeAccessory("Alarme"), "Alarme antifurto");
+  assert.equal(sanitizeAccessory("Alarme perimétrico"), "Alarme antifurto");
+  assert.equal(sanitizeAccessory("Segurança: Alarme"), "Segurança: Alarme antifurto");
+  assert.equal(sanitizeAccessory("TPMS"), "Monitoramento de pressão dos pneus (TPMS)");
+  assert.equal(sanitizeAccessory("iTPMS"), "Monitoramento de pressão dos pneus (TPMS)");
+
   // Trunca em palavra inteira sem cortar ao meio
   const longText = "Freios ABS com distribuição eletrônica de frenagem EBD e assistência de frenagem de urgência BAS";
   const truncated = sanitizeAccessory(longText, 60);

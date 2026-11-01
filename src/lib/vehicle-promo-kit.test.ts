@@ -1,10 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   buildWhatsAppPromo,
   buildInstagramPromo,
   type PromoVehicle,
 } from "./vehicle-promo-kit";
+
+const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const mockVehicle: PromoVehicle = {
   id: "cmshv22g9000fl204fk6qz9l2",
@@ -54,4 +59,9 @@ test("buildInstagramPromo: gera legenda com hashtags e respeita veículo vendido
   const soldText = buildInstagramPromo({ ...mockVehicle, status: "vendido" });
   assert.match(soldText, /🏷️ Vendido/);
   assert.doesNotMatch(soldText, /119\.900/);
+});
+
+test("VehiclePromoKitModal: botão fechar tem alvo de toque mínimo de 44x44px", () => {
+  const code = readFileSync(join(srcRoot, "components/admin/VehiclePromoKitModal.tsx"), "utf8");
+  assert.match(code, /h-11 w-11 items-center justify-center[\s\S]*aria-label="Fechar"/);
 });

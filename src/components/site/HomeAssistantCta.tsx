@@ -56,9 +56,8 @@ export function HomeAssistantAsk() {
 
   return (
     <div className="w-full sm:border sm:border-white/10 sm:bg-asphalt/70 sm:p-3 lg:px-2 lg:py-3">
-      <p className="mb-1.5 hidden text-[13px] lg:mb-2.5 font-medium leading-tight text-muted sm:block">Pergunte qualquer coisa sobre nossos carros</p>
+      <label htmlFor="home-assistant-input" className="mb-1.5 hidden text-[13px] lg:mb-2.5 font-medium leading-tight text-muted sm:block cursor-pointer">Pergunte qualquer coisa sobre nossos carros</label>
       <form onSubmit={submit} className="hidden items-center gap-2 sm:flex">
-        <label htmlFor="home-assistant-input" className="sr-only">Pergunte qualquer coisa sobre nossos carros</label>
         <input
           id="home-assistant-input"
           type="text"
@@ -76,7 +75,7 @@ export function HomeAssistantAsk() {
       </form>
       <div
         role="group"
-        aria-label="Pergunte qualquer coisa sobre nossos carros"
+        aria-label="Sugestões de perguntas"
         className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:mt-1.5 lg:mt-2 xl:mt-2.5 sm:flex-wrap sm:overflow-visible sm:px-0 lg:gap-1 xl:flex-nowrap xl:overflow-x-auto"
       >
         {SUGGESTIONS.map((suggestion) => (
@@ -84,7 +83,7 @@ export function HomeAssistantAsk() {
             key={suggestion}
             type="button"
             onClick={() => openAssistant("home-hero-sugestao", suggestion)}
-            className="h-8 shrink-0 lg:h-9 whitespace-nowrap rounded-full border border-white/15 bg-asphalt/60 px-3 text-[12px] lg:px-2.5 lg:text-[11.5px] leading-none text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation"
+            className="inline-flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-full border border-white/15 bg-asphalt/60 px-3.5 text-[12px] lg:px-3 lg:text-[11.5px] leading-none text-cream transition hover:border-brand hover:bg-white/5 touch-manipulation"
           >
             {suggestion}
           </button>

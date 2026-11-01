@@ -171,6 +171,15 @@ export function sanitizeAccessory(raw: string, maxLen = Infinity): string {
 
   // Corrige truncamento conhecido de palavra
   text = text.replace(/\bcombustíve\b/gi, "combustível");
+  text = text.replace(/\bGPS integ\b/gi, "GPS integrado");
+
+  // Normalização de opcionais equivalentes / grafias
+  text = text.replace(/\b6\s*air\s*bags\b/gi, "6 airbags");
+  text = text.replace(/\bairbags?\s*frontais\s*duplos?\b/gi, "Airbags frontais");
+  text = text.replace(/\bairbag\s*duplo\b/gi, "Airbags frontais");
+  text = text.replace(/\balarme\s*perimétrico\b/gi, "Alarme antifurto");
+  text = text.replace(/(^|:\s*)alarme(?=\s*$)/gi, "$1Alarme antifurto");
+  text = text.replace(/\b(?:iTPMS|TPMS)\b/g, "Monitoramento de pressão dos pneus (TPMS)");
 
   maxLen = Math.max(0, maxLen);
   if (text.length > maxLen) {

@@ -117,6 +117,7 @@ export async function generateMetadata({
     robots: sold ? { index: false, follow: true } : undefined,
     openGraph: {
       type: "website",
+      siteName: site.name,
       title,
       description,
       url: absoluteUrl(path),
@@ -124,6 +125,9 @@ export async function generateMetadata({
         ? [
             {
               url: cover,
+              width: 1200,
+              height: 800,
+              type: "image/webp",
               alt: label,
             },
           ]

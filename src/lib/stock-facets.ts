@@ -1,4 +1,5 @@
 import { accessoryGroup } from "./legend-parser";
+import { sanitizeAccessory } from "./vehicle-accessories";
 import { brandKey, formatBrandName, formatModelName } from "./format";
 import { formatColorLabel } from "./vehicle-display";
 import type { StockModelOption } from "./stock-query";
@@ -39,7 +40,7 @@ export function buildStockFacets(rows: FacetRow[]): StockFacets {
   const accessoryByKey = new Map<string, string>();
   for (const row of rows) {
     for (const item of row.accessories) {
-      const raw = item?.trim();
+      const raw = sanitizeAccessory(item?.trim() ?? "");
       if (!raw || accessoryGroup(raw).group === "Facilidades") continue;
       const key = raw.toLocaleLowerCase("pt-BR");
       if (!accessoryByKey.has(key)) accessoryByKey.set(key, raw);

@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { rotatePhoto, parsePhotoRotation } from "./photo-rotation";
 import { previousObjectPathFromGalleryPath, privatePreviousRefForPublicUrl } from "./photo-master";
+
+const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 test("giro mantém pixels e acompanha a direção da prévia, inclusive com EXIF", async () => {
   const pixels = Buffer.from([255,0,0, 0,255,0, 0,0,255, 255,255,0, 255,0,255, 0,255,255]);
@@ -26,4 +31,9 @@ test("versão anterior tem referência privada própria e não aceita miniatura 
   assert.equal(previousObjectPathFromGalleryPath("../segredo.jpg"), null);
   assert.equal(privatePreviousRefForPublicUrl(`https://example.supabase.co/storage/v1/object/public/veiculos/${stem}.webp`), `private://documentos/foto-master/${stem}-previous.jpg`);
   for (const invalid of [0, -90, 360, "90", null]) assert.equal(parsePhotoRotation(invalid), null);
+});
+
+test("VehiclePhotoManager disponibiliza opção Girar foto na folha de ações mobile", () => {
+  const code = readFileSync(join(srcRoot, "components/admin/VehiclePhotoManager.tsx"), "utf8");
+  assert.match(code, /ActionSheetButton[\s\S]*label="Girar foto"[\s\S]*setRotationId/);
 });

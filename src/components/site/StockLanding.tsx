@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { Container, PageHeader, ButtonLink, WhatsAppButton } from "@/components/site/ui";
@@ -12,6 +12,9 @@ import { wantedVehicleHref } from "@/lib/wanted-vehicle-page";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 async function landing(kind: "marca" | "modelo", slug: string) {
+  if (slug !== slug.toLowerCase()) {
+    permanentRedirect(`/${kind}/${slug.toLowerCase()}`);
+  }
   const history = await getStockLandingHistory();
   const path = `/${kind}/${slug}`;
   const link = stockLandingLinks(history).find(item => item.path === path);
@@ -20,6 +23,9 @@ async function landing(kind: "marca" | "modelo", slug: string) {
   return { path, link, rows };
 }
 export async function stockLandingMetadata(kind: "marca" | "modelo", slug: string) {
+  if (slug !== slug.toLowerCase()) {
+    permanentRedirect(`/${kind}/${slug.toLowerCase()}`);
+  }
   const { path, link, rows } = await landing(kind, slug);
   const copy = stockLandingCopy(kind, link.label, rows);
   return buildPageMetadata({ title: `${link.label} seminovo | Garagem`, description: copy.description, path });

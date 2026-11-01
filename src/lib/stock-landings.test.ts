@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import { stockLandingLinks, stockLandingSlug, stockLandingCopy } from "./stock-landings";
+
+const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 test("landings deduplicam caixa e acentos sem misturar marcas", () => {
   const links = stockLandingLinks([{ brand: "Honda", model: "Civic" }, { brand: "HONDA", model: "CIVIC" }, { brand: "Toyota", model: "Civic" }, { brand: "", model: "" }]);
   assert.equal(links.length, 4);
@@ -39,4 +44,11 @@ test("histórico vendido não promete disponibilidade nem inclui preço", () => 
   assert.match(copy.description, /Sem Honda Civic disponível/);
   assert.match(copy.introduction, /já vendidos, sem preço/);
   assert.doesNotMatch(copy.introduction, /R\$/);
+});
+
+test("URLs com letras maiúsculas em landings e cidades redirecionam para minúsculas", () => {
+  const landingCode = readFileSync(join(srcRoot, "components/site/StockLanding.tsx"), "utf8");
+  assert.match(landingCode, /slug !== slug\.toLowerCase\(\)[\s\S]*permanentRedirect\(`\/\$\{kind\}\/\$\{slug\.toLowerCase\(\)\}`\)/);
+  const cityCode = readFileSync(join(srcRoot, "app/(site)/seminovos/[cidade]/page.tsx"), "utf8");
+  assert.match(cityCode, /cidade !== cidade\.toLowerCase\(\)[\s\S]*permanentRedirect\(`\/seminovos\/\$\{cidade\.toLowerCase\(\)\}`\)/);
 });

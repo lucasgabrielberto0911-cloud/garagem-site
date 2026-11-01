@@ -95,3 +95,11 @@ test("favoritos: lista no WhatsApp com id, e vazio aponta estoque", () => {
   const comparison = readSrc("components/site/FavoritesComparison.tsx");
   assert.doesNotMatch(comparison, /vehicleLocationLabel|Cidade/);
 });
+
+test("HomeAssistantAsk tem label único sem duplicidade e touch targets acessíveis", () => {
+  const cta = readSrc("components/site/HomeAssistantCta.tsx");
+  assert.doesNotMatch(cta, /className="sr-only">Pergunte qualquer coisa/);
+  assert.match(cta, /<label htmlFor="home-assistant-input"/);
+  assert.match(cta, /aria-label="Sugestões de perguntas"/);
+  assert.match(cta, /min-h-\[44px\]/);
+});

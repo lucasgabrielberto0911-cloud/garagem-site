@@ -14,7 +14,7 @@ const BUDGET_LINKS = [
 ] as const;
 
 const CHIP_CLASS =
-  "inline-flex h-8 shrink-0 items-center border border-white/15 bg-asphalt/80 px-2.5 font-body text-xs font-medium text-cream/90 transition hover:border-brand hover:bg-white/5 hover:text-cream active:border-brand active:bg-white/5 touch-manipulation whitespace-nowrap";
+  "inline-flex min-h-[44px] shrink-0 items-center border border-white/15 bg-asphalt/80 px-2.5 font-body text-xs font-medium text-cream/90 transition hover:border-brand hover:bg-white/5 hover:text-cream active:border-brand active:bg-white/5 touch-manipulation whitespace-nowrap";
 
 /**
  * Formulário nativo GET — busca no estoque sem esperar hidratação.
@@ -72,7 +72,7 @@ export function HeroSearch({
             type="search"
             name="q"
             placeholder="Busque por marca ou modelo"
-            className="w-full min-w-0 bg-transparent py-1.5 font-body text-sm text-cream placeholder:text-muted/80 focus:outline-none sm:py-2.5 sm:text-base"
+            className="w-full min-w-0 bg-transparent py-1.5 font-body text-sm text-cream placeholder:text-muted focus:outline-none sm:py-2.5 sm:text-base"
           />
         </div>
         <button

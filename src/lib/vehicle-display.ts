@@ -351,6 +351,7 @@ export function shortVersion(
     text = applyPtAccents(formatModelName(text));
   }
   text = text.replace(/\bflexpower\b/gi, "Flex").replace(/\bflex\b/gi, "Flex");
+  text = text.replace(/\bSE\s+PLUS\b/gi, "SE Plus").replace(/\b[iI]-vtec\b/gi, "i-VTEC");
   return collapseWhitespace(text);
 }
 
@@ -398,7 +399,28 @@ export function buildVehicleFullLabel(input: {
 }) {
   const title = formatVehicleLabel(input.brand, input.model);
   const version = shortVersion(input.version, input.model);
-  return collapseWhitespace(`${title}${version ? ` ${version}` : ""} ${input.yearModel}`);
+  const separator = version && /\bTech\s+Road\s+2$/i.test(version) ? " · " : " ";
+  return collapseWhitespace(`${title}${version ? ` ${version}` : ""}${separator}${input.yearModel}`);
+}
+
+/** Formata versão exibida nos cards do estoque, evitando repetição do modelo e normalizando caixa. */
+export function formatCardVersion(
+  version: string | null | undefined,
+  model = "",
+) {
+  let text = collapseWhitespace(version ?? "");
+  if (!text) return "";
+  const modelLower = model.trim().toLowerCase();
+  const versionLower = text.toLowerCase();
+  if (modelLower && (modelLower === versionLower || modelLower.endsWith(versionLower))) {
+    return "";
+  }
+  if (/^[a-z]/.test(text)) {
+    text = formatModelName(text);
+  }
+  return text
+    .replace(/\bSE\s+PLUS\b/gi, "SE Plus")
+    .replace(/\b[iI]-vtec\b/gi, "i-VTEC");
 }
 
 export type VehicleWhatsAppIntent = CustomerWhatsAppVehicleIntent;

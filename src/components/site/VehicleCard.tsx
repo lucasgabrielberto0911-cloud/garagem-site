@@ -13,7 +13,7 @@ import {
   type VehicleCardRecord,
 } from "@/lib/stock-query";
 import {
-  collapseWhitespace,
+  formatCardVersion,
   formatVehicleDisplay,
   formatVehicleWhatsAppMessage,
 } from "@/lib/vehicle-display";
@@ -46,7 +46,7 @@ export function VehicleCard({
   const cover = coverSrc(vehicle.photos);
   const badge = STATUS_BADGE[vehicle.status];
   const facts = new Map(card.facts.map((fact) => [fact.label, fact]));
-  const version = collapseWhitespace(vehicle.version ?? "");
+  const version = formatCardVersion(vehicle.version, vehicle.model);
   const favoriteSnapshot = {
     id: vehicle.id,
     category: vehicle.category,
@@ -79,7 +79,7 @@ export function VehicleCard({
             src={cover}
             srcSet={coverSrcSet(vehicle.photos)}
             mobileSrcSet={coverMobileSrcSet(vehicle.photos)}
-            alt={display.titleWithYear}
+            alt=""
             fill
             width={480}
             height={360}

@@ -31,3 +31,15 @@ test("facetas incluem acessórios além do antigo limite de 400 e aceitam estoqu
 test("facilidades comerciais ficam fora do filtro de opcionais", () => {
   assert.deepEqual(buildStockFacets([{ ...row, accessories: ["Conforto: Direção elétrica", "Facilidades: Aceitamos troca"] }]).accessories, ["Conforto: Direção elétrica"]);
 });
+
+test("facetas normalizam opcionais com truncamento e grafias equivalentes", () => {
+  const result = buildStockFacets([
+    { ...row, accessories: ["6 Air Bags", "Alarme perimétrico", "GPS integ", "iTPMS"] },
+  ]);
+  assert.deepEqual(result.accessories, [
+    "6 airbags",
+    "Alarme antifurto",
+    "GPS integrado",
+    "Monitoramento de pressão dos pneus (TPMS)",
+  ]);
+});
