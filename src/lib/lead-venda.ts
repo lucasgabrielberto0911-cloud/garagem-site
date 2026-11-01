@@ -127,6 +127,9 @@ export async function createLeadVenda(data: {
         plate: data.plate,
         km: data.km,
         notes: data.notes,
+        interestVehicleId: data.interestVehicleId,
+        source: data.source,
+        photoUrls: data.photoUrls,
       },
     });
   }

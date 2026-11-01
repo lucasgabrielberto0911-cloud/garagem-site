@@ -41,7 +41,9 @@ export const OFFLINE_INTENT_TTL_MS: Record<OfflineIntent["type"], number> = {
 export function isIntentExpired(intent: Pick<OfflineIntent, "type" | "createdAt">, now = Date.now()) {
   const createdAt = Number(intent.createdAt);
   if (!Number.isFinite(createdAt)) return true;
-  return now - createdAt > OFFLINE_INTENT_TTL_MS[intent.type];
+  // Tipo desconhecido (item gravado por versão antiga ou corrompido): usa o menor prazo.
+  const ttl = OFFLINE_INTENT_TTL_MS[intent.type] ?? Math.min(...Object.values(OFFLINE_INTENT_TTL_MS));
+  return now - createdAt > ttl;
 }
 
 /** Separa o que ainda vale enviar do que ficou velho demais (o visitante já resolveu por outro meio). */

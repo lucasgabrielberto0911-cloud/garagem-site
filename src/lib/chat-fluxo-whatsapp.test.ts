@@ -270,3 +270,15 @@ test("telefone brasileiro: aceita DDD com ou sem 55 e recusa sequência longa ou
   assert.equal(normalizeBrazilPhone("9633-0706"), null);
   assert.equal(normalizeBrazilPhone(undefined), null);
 });
+
+for (const prefixo of ["você", "voce", "vc", "vcs", "vocês"]) {
+  test(`"${prefixo} tem Onyx?" começa assunto novo`, () => {
+    assert.equal(startsNewChatTopic(`${prefixo} tem Onyx?`, "carro"), true);
+  });
+}
+
+for (const pergunta of ["você tem algum automático?", "voce tem alguma opção?", "vc tem algum carro?", "tem algum SUV?"]) {
+  test(`"${pergunta}" não vira modelo`, () => {
+    assert.equal(startsNewChatTopic(pergunta, "carro"), false);
+  });
+}

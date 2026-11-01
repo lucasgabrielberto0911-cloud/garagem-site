@@ -2916,7 +2916,7 @@ export function startsNewChatTopic(
   if (/\b(\d{1,2}\s*x|\d{1,2} (?:vezes|parcelas)|parcel\w*|financ\w*|entrada|prestac\w*|simul\w*)\b/.test(folded)) return true;
   if (/\b(uber|99 ?pop|aplicativo|app de transporte|familia|familiar|porta ?malas?|viajar|viagens?|trabalho|entregas?)\b/.test(folded)) return true;
   // "Tem Onyx?": pergunta de modelo sem nenhum filtro próprio.
-  const ask = folded.match(/^(?:voces |vcs )?(?:tem|tinha|trabalha(?:m)? com|vende(?:m)?)\s+(?:um |uma |o |a )?([a-z][a-z0-9-]+)/);
+  const ask = folded.match(/^(?:(?:voces?|vcs?) )?(?:tem|tinha|trabalha(?:m)? com|vende(?:m)?)\s+(?:um |uma |o |a )?([a-z][a-z0-9-]+)/);
   if (
     ask &&
     !hasChatStockFilter(mensagem) &&
