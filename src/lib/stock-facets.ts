@@ -1,5 +1,6 @@
 import { accessoryGroup } from "./legend-parser";
 import { brandKey, formatBrandName, formatModelName } from "./format";
+import { canonicalStockAccessoryLabel } from "./vehicle-accessories";
 import { formatColorLabel } from "./vehicle-display";
 import type { StockModelOption } from "./stock-query";
 
@@ -41,18 +42,33 @@ export function buildStockFacets(rows: FacetRow[]): StockFacets {
     for (const item of row.accessories) {
       const raw = item?.trim();
       if (!raw || accessoryGroup(raw).group === "Facilidades") continue;
-      const key = raw.toLocaleLowerCase("pt-BR");
-      if (!accessoryByKey.has(key)) accessoryByKey.set(key, raw);
+      const canonical = canonicalStockAccessoryLabel(raw);
+      if (!canonical) continue;
+      const key = canonical.toLocaleLowerCase("pt-BR");
+      if (!accessoryByKey.has(key)) accessoryByKey.set(key, canonical);
     }
   }
 
   const modelsByKey = new Map<string, StockModelOption>();
+  const categoriesByModelKey = new Map<string, Set<string>>();
   for (const row of rows) {
     const brand = formatBrandName(row.brand ?? "");
     const model = formatModelName(row.model ?? "");
     if (!brand || !model) continue;
     const key = `${brandKey(brand)}|${brandKey(model)}`;
-    if (!modelsByKey.has(key)) modelsByKey.set(key, { brand, model });
+    if (!categoriesByModelKey.has(key)) {
+      categoriesByModelKey.set(key, new Set());
+    }
+    if (row.category) {
+      categoriesByModelKey.get(key)!.add(row.category);
+    }
+    if (!modelsByKey.has(key)) {
+      modelsByKey.set(key, { brand, model });
+    }
+  }
+
+  for (const [key, item] of modelsByKey) {
+    item.categories = Array.from(categoriesByModelKey.get(key) ?? []);
   }
 
   return {

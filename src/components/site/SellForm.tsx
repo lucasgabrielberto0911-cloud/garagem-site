@@ -15,7 +15,13 @@ import { notifySuccess } from "@/lib/notify";
 import { focusFormFeedback, useFormViewport } from "@/lib/form-feedback";
 import { WhatsAppButton } from "@/components/site/ui";
 import { createSellLead } from "@/app/(site)/vender/actions";
-import { formatNumberBR, formatPhoneBR, formatPlateInput, isValidPlate } from "@/lib/format";
+import {
+  formatNumberBR,
+  formatPhoneBR,
+  formatPlateInput,
+  isValidBrazilPhone,
+  isValidPlate,
+} from "@/lib/format";
 import { SellPhotoUpload } from "./SellPhotoUpload";
 import { useSellDraft } from "./useSellDraft";
 import { trackLead, trackPwaEvent } from "@/lib/meta-pixel";
@@ -67,6 +73,15 @@ export function SellForm({
     if (outcome) return focusFormFeedback(receiptRef.current);
   }, [outcome]);
 
+  useEffect(() => {
+    if (!isPending && !photoBusy) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [isPending, photoBusy]);
+
   async function queueOffline(data: FormData) {
     const fields: Record<string, string> = {};
     for (const [key, value] of data.entries()) {
@@ -94,17 +109,24 @@ export function SellForm({
     if (isPending || photoBusy) return;
     setFormError("");
     const data = new FormData(event.currentTarget);
+    if (!requestKeyRef.current) {
+      requestKeyRef.current = createIntentId();
+    }
     // Mesma chave em todas as tentativas desta solicitação (online, fila offline, reenvio).
     data.set("requestKey", requestKeyRef.current);
+    data.set("requestId", requestKeyRef.current);
     const nextErrors: Record<string, string> = {};
     const name = String(data.get("name") ?? "").trim();
-    const phoneDigits = String(data.get("phone") ?? "").replace(/\D/g, "");
+    const phoneRaw = String(data.get("phone") ?? "");
+    const phoneDigits = phoneRaw.replace(/\D/g, "");
     const brand = String(data.get("brand") ?? "").trim();
     const model = String(data.get("model") ?? "").trim();
     const year = String(data.get("year") ?? "").trim();
     const plate = String(data.get("plate") ?? "").trim();
     if (name.length < 3) nextErrors.name = "Informe seu nome completo.";
-    if (!normalizeBrazilPhone(phoneDigits)) nextErrors.phone = "Informe um WhatsApp com DDD.";
+    if (!isValidBrazilPhone(phoneRaw) || !normalizeBrazilPhone(phoneDigits)) {
+      nextErrors.phone = "Informe um WhatsApp com DDD.";
+    }
     if (!brand) nextErrors.brand = "Informe a marca.";
     if (!model) nextErrors.model = "Informe o modelo.";
     if (!/^\d{4}$/.test(year)) nextErrors.year = "Informe o ano com 4 dígitos.";
@@ -172,6 +194,7 @@ export function SellForm({
           setKm("");
           setPlate("");
           setPhotoUrls([]);
+          requestKeyRef.current = createIntentId();
           setErrors({});
           setFormError("");
           setOutcome(null);
@@ -185,6 +208,7 @@ export function SellForm({
     <form
       ref={formRef}
       onSubmit={handleSubmit}
+      onInvalid={(event) => event.preventDefault()}
       onChange={draft.remember}
       noValidate
       className="relative flex flex-col gap-3"
@@ -199,7 +223,7 @@ export function SellForm({
               <button type="button" onClick={() => { draft.discard(); setErrors({}); setFormError(""); }}
                 className="min-h-11 text-xs text-cream underline decoration-white/30 underline-offset-4">Apagar preenchimento</button>
             </div>
-            {!draft.failed ? <p className="text-[11px] leading-relaxed text-muted">O preenchimento fica guardado por até 24 horas, até você fechar a aba.</p> : null}
+            {!draft.failed ? <p className="text-[11px] leading-relaxed text-muted">Os textos ficam guardados por até 24 horas nesta aba (se recarregar a página, escolha as fotos novamente).</p> : null}
           </div>
         ) : null}
         {/* Honeypot anti-spam — oculto de leitores de tela e usuários. */}

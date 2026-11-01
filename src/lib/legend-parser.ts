@@ -1,4 +1,4 @@
-import { normalizeAccessories } from "./vehicle-accessories";
+import { normalizeAccessories, sanitizeAccessory } from "./vehicle-accessories";
 
 export const LEGEND_GROUPS = ["Conforto", "Segurança", "Facilidades", "Outros opcionais"] as const;
 export type LegendGroup = typeof LEGEND_GROUPS[number];
@@ -45,10 +45,12 @@ export function parseLegend(text: string): LegendParseResult {
     if (/^facilidades\s*:?$/.test(key)) { group = "Facilidades"; continue; }
     if (/^(?:outros opcionais|opcionais|acessorios)\s*:?$/.test(key)) { group = "Outros opcionais"; continue; }
     if (/^\s*[✅✔☑•*–-]/u.test(raw)) {
-      const itemKey = fold(line).replace(/\s+/g, " ");
+      const cleanedLine = sanitizeAccessory(line);
+      if (!cleanedLine) continue;
+      const itemKey = fold(cleanedLine).replace(/\s+/g, " ");
       if (!seen.has(itemKey)) {
         seen.add(itemKey);
-        result.accessories.push(`${group}: ${line}`);
+        result.accessories.push(`${group}: ${cleanedLine}`);
       }
       continue;
     }

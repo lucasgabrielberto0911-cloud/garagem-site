@@ -199,6 +199,7 @@ export function MissingModelForm({
       </p>
 
       <form ref={formRef} className="relative mt-4" noValidate onSubmit={handleSubmit}
+        onInvalid={(event) => event.preventDefault()}
         onInput={rememberDraft ? draft.remember : undefined}
         onChange={rememberDraft ? draft.remember : undefined}>
         <fieldset disabled={isPending} className="min-w-0">

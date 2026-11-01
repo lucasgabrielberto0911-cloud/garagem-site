@@ -50,14 +50,28 @@ function reveal(target: HTMLElement) {
   if (details && !details.open) details.open = true;
 }
 
+export function focusSectionTarget(target: HTMLElement) {
+  if (!target.hasAttribute("tabindex")) {
+    target.setAttribute("tabindex", "-1");
+  }
+  try {
+    target.focus({ preventScroll: true });
+  } catch {
+    // Ambientes sem suporte a preventScroll.
+  }
+}
+
 /**
  * Pula entre fotos, especificações e o texto do anúncio.
  * Não abre WhatsApp e não acrescenta bloco de preço.
  */
-function scrollToSection(id: string, behavior: ScrollBehavior) {
+function scrollToSection(id: string, behavior: ScrollBehavior, moveFocus = false) {
   const target = visibleSection(id);
   if (!target) return false;
   reveal(target);
+  if (moveFocus) {
+    focusSectionTarget(target);
+  }
   const nav = document.querySelector(".ficha-section-nav");
   const navBottom = nav?.getBoundingClientRect().bottom ?? 0;
   const top = fichaSectionScrollTop(
@@ -146,7 +160,7 @@ export function FichaSectionNav({ hasDetails }: { hasDetails: boolean }) {
   function onJump(event: MouseEvent<HTMLAnchorElement>, id: FichaSectionId) {
     event.preventDefault();
     const behavior: ScrollBehavior = prefersReducedMotion() ? "auto" : "smooth";
-    if (!scrollToSection(id, behavior)) return;
+    if (!scrollToSection(id, behavior, true)) return;
     pinned.current = id;
     setCurrent(id);
     const next = `${window.location.pathname}${window.location.search}#${id}`;
