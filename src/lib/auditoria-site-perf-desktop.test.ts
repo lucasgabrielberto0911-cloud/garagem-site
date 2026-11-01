@@ -269,6 +269,9 @@ test("Auditoria Fluxo #6, #7 e #8: truncamento de acessórios, deduplicação de
   const natural = extractNaturalStockClauses("Civic automático até 60 mil");
   assert.equal(natural.restQuery, "Civic");
   assert.equal(natural.clauses.length, 2);
+  const motor = extractNaturalStockClauses("Onix até 1.0");
+  assert.equal(motor.clauses.length, 0);
+  assert.equal(motor.restQuery, "Onix até 1.0");
 
   const catalog = [{ brand: "Chevrolet", model: "Onix", version: "LTZ" }];
   const onyxWhere = stockSearchWhere("onyx", catalog);

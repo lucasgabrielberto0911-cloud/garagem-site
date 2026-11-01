@@ -14,7 +14,8 @@ test("facetas deduplicam marcas, modelos, anos e acessórios sem perder opções
     { ...row, brand: "Toyota", model: "Corolla", color: null, yearModel: 2020 },
   ]);
   assert.deepEqual(result.brands, ["Honda", "Toyota"]);
-  assert.deepEqual(result.models, [{ brand: "Honda", model: "Civic" }, { brand: "Toyota", model: "Corolla" }]);
+  assert.deepEqual(result.models, [{ brand: "Honda", model: "Civic", categories: ["carro"] }, { brand: "Toyota", model: "Corolla", categories: ["carro"] }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.models)), result.models);
   assert.deepEqual(result.years, [2020, 2018]);
   assert.deepEqual(result.accessories, ["ABS", "Airbag"]);
   assert.deepEqual(result.categories, ["carro"]);

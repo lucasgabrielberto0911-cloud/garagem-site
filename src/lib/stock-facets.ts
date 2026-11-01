@@ -63,14 +63,12 @@ export function buildStockFacets(rows: FacetRow[]): StockFacets {
       categoriesByModelKey.get(key)!.add(row.category);
     }
     if (!modelsByKey.has(key)) {
-      const item: StockModelOption = { brand, model };
-      Object.defineProperty(item, "categories", {
-        get: () => Array.from(categoriesByModelKey.get(key) ?? []),
-        enumerable: false,
-        configurable: true,
-      });
-      modelsByKey.set(key, item);
+      modelsByKey.set(key, { brand, model });
     }
+  }
+
+  for (const [key, item] of modelsByKey) {
+    item.categories = Array.from(categoriesByModelKey.get(key) ?? []);
   }
 
   return {

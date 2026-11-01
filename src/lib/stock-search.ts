@@ -33,6 +33,8 @@ export function extractNaturalStockClauses(query: string): {
   rest = rest.replace(
     /\b(?:at[eé]|abaixo\s+de|menos\s+de)\s*(?:r\$\s*)?(\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*(mil|k)?\b/gi,
     (match, rawNum: string, unit?: string) => {
+      // "até 1.0" / "até 1,6" sem "mil"/"k" é motorização, não preço.
+      if (!unit && /^\d+[.,]\d{1,2}$/.test(rawNum)) return match;
       const amount = parsePriceAmount(rawNum, unit);
       if (amount && amount >= 5000) {
         clauses.push({ price: { lte: amount } });

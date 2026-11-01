@@ -781,7 +781,7 @@ const loadStockFacetsCached = unstable_cache(
     });
     return buildStockFacets(rows);
   },
-  ["stock-facets-v7"],
+  ["stock-facets-v8"],
   PUBLIC_CACHE,
 );
 
