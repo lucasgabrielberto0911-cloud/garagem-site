@@ -3,7 +3,7 @@
 
 @layer utilities {
   .vehicle-form {
-    padding-bottom: calc(var(--admin-form-footer-h, 9rem) + 1rem);
+    padding-bottom: calc(var(--admin-form-footer-h, 9rem) + 2.5rem);
   }
 
   .admin-shell:has(#vehicle-form) {
