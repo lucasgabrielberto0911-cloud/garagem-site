@@ -399,7 +399,8 @@ export function buildVehicleFullLabel(input: {
 }) {
   const title = formatVehicleLabel(input.brand, input.model);
   const version = shortVersion(input.version, input.model);
-  const separator = version && /\bTech\s+Road\s+2$/i.test(version) ? " · " : " ";
+  // Versão terminada em número solto ("... Road 2", "... Tipo 3") colaria no ano: usa separador.
+  const separator = version && /(?:^|\s)\d{1,2}$/.test(version) ? " · " : " ";
   return collapseWhitespace(`${title}${version ? ` ${version}` : ""}${separator}${input.yearModel}`);
 }
 

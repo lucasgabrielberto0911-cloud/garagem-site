@@ -169,7 +169,7 @@ test("formatCardVersion remove repetição do modelo e normaliza grafias conheci
   assert.equal(formatCardVersion("Dynamique 2.0 16V Tech Road 2", "Duster"), "Dynamique 2.0 16V Tech Road 2");
 });
 
-test("Duster Tech Road 2 separa o ano por travessão no título completo", () => {
+test("versão terminada em número solto separa o ano por travessão (regra geral)", () => {
   const duster = buildVehicleFullLabel({
     brand: "Renault",
     model: "Duster",
@@ -177,6 +177,10 @@ test("Duster Tech Road 2 separa o ano por travessão no título completo", () =>
     yearModel: 2014,
   });
   assert.match(duster, /Tech Road 2 · 2014/);
+  const outro = (version: string) =>
+    buildVehicleFullLabel({ brand: "Fiat", model: "Uno", version, yearModel: 2014 });
+  assert.match(outro("Sport Pack 3"), /Pack 3 · 2014$/);
+  assert.match(outro("Way 1.0"), /Way 1\.0 2014$/);
 });
 
 test("filtro de câmbio aceita o slug da URL e o rótulo gravado", () => {
