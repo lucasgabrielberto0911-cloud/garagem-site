@@ -967,15 +967,6 @@ export function VehiclePhotoManager({
                 setActionsId(null);
               }}
             />
-            <ActionSheetButton
-              icon={<IconRotate className="h-4 w-4" />}
-              label="Girar foto"
-              disabled={blurring || inFlight || rotating}
-              onClick={() => {
-                setRotationId(actionsPhoto.id);
-                setActionsId(null);
-              }}
-            />
             <div className="grid grid-cols-2 border-y border-white/10">
               <ActionSheetButton
                 icon={<IconArrowUp className="h-4 w-4 -rotate-90" />}
