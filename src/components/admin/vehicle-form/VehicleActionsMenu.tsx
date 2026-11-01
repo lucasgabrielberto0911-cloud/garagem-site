@@ -51,7 +51,8 @@ export function VehicleActionsMenu({
     if (!vehicle) return;
     startTransition(async () => {
       try {
-        await deleteVehicle(vehicle.id);
+        const result = await deleteVehicle(vehicle.id);
+        if (result && !result.ok) { toast.error(result.message); return; }
         toast.success("Veículo excluído.");
         router.push("/admin/veiculos");
       } catch {

@@ -96,7 +96,7 @@ function drawPromissoryPage(pdf: PDFDocument, assets: PdfAssets, data: ReturnTyp
   page.drawRectangle({ x: margin - 10, y: 66, width: width + 20, height: 661, borderColor: asphalt, borderWidth: 0.8 });
   page.drawLine({ start: { x: margin - 10, y: 727 }, end: { x: margin + width + 10, y: 727 }, color: brand, thickness: 4 });
   draw("NOTA PROMISSÓRIA", margin, 704, 18, title);
-  draw(`Nº ${data.number ?? "______"} · Via única`, margin, 682, 10, semi, muted);
+  draw(`Nº ${data.number ?? "______"} · ${data.status === "paga" ? "QUITADA · Reimpressão histórica" : "Via única"}`, margin, 682, 10, semi, muted);
   const amount = formatAdminMoney(data.amount).replace(/\u00a0/g, " ");
   const amountWidth = title.widthOfTextAtSize(amount, 18);
   page.drawRectangle({ x: margin + width - amountWidth - 20, y: 674, width: amountWidth + 20, height: 42, borderColor: asphalt, borderWidth: 0.8 });
@@ -107,11 +107,13 @@ function drawPromissoryPage(pdf: PDFDocument, assets: PdfAssets, data: ReturnTyp
   draw("Vencimento:", margin, y, 12, semi);
   draw(` ${promissoryLongDate(data.dueDate)}`, margin + semi.widthOfTextAtSize("Vencimento:", 12), y, 12);
   y -= 30;
-  const clause = promissoryClause(data);
+  const clause = data.status === "paga"
+    ? `NOTA QUITADA. Pagamento registrado${data.paidAt ? ` em ${new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short" }).format(new Date(data.paidAt))}` : " (data não disponível)"}. Reimpressão histórica da nota; não representa nova cobrança.`
+    : promissoryClause(data);
   const highlights = [promissoryDateInWords(data.dueDate) + ",", "NOTA PROMISSÓRIA", `${site.legalName.toUpperCase()},`, site.cnpj, `${amount} (${moneyInWords(data.amount)})`].map(value => {
     const start = clause.indexOf(value);
     return { start, end: start + value.length };
-  });
+  }).filter(range => range.start !== -1);
   let x = margin;
   for (const word of clause.matchAll(/\S+/g)) {
     const font = highlights.some(range => word.index >= range.start && word.index < range.end) ? semi : regular;
@@ -185,4 +187,10 @@ export async function promissoryBatchPdf(inputs: PromissoryInput[]) {
   pdf.setTitle(`Notas promissórias nº ${firstNo} a ${lastNo} · Garagem`);
   pdf.setAuthor(PDF_STORE.legalName);
   return pdf.save();
+}
+
+/** Usa exatamente o renderizador de impressão antes de persistir o lote. */
+export async function validatePromissoryPages(inputs: PromissoryInput[]) {
+  const { pdf, assets } = await createDocumentWithAssets();
+  for (const input of inputs) drawPromissoryPage(pdf, assets, validatePromissory(input));
 }

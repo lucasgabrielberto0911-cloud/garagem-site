@@ -1,5 +1,9 @@
 "use server";
 
+import { normalizeAdminPhone } from "@/lib/admin-phone";
+import { PROMISSORY_COMPAT_OMIT } from "@/lib/promissory-notes";
+import { commercialStoreSnapshot } from "@/lib/commercial-store";
+
 import { scheduleAfterSale } from "@/lib/after-sale";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { parseMoneyBR } from "@/lib/admin-money";
@@ -89,7 +93,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
         if (linked.count !== promissory.noteIds!.length) throw new Error("PROMISSORY_UNAVAILABLE");
         await recordAdminAudit(tx, session.adminId, row.id, "promissory.link", { noteIds: promissory.noteIds });
       }
-      const snapshot = { address: customer.address ?? "", signal, payments, customer: customer.name, customerId: customer.id, cpf: customer.cpf ?? "", rg: customer.rg ?? "", chassis: identifiers.chassis || vehicle.chassis || "", renavam: identifiers.renavam || vehicle.renavam || "", phone: customer.phone, vehicle: [vehicle.brand, vehicle.model, vehicle.version].filter(Boolean).join(" "), year: vehicle.year, yearModel: vehicle.yearModel, color: vehicle.color ?? "", warranty: vehicle.warranty ?? undefined, km: vehicle.km, total, plate: vehicle.plate ?? "", amount: total, conditions: String(input.conditions ?? "").slice(0, 3000), payment: summarizeContractPayments(payments), seller: "Garagem", responsibleSeller: sellerName, commission, date: new Date().toISOString(), reservationId: reservation?.id ?? null, saleId: row.id };
+      const snapshot = { store: commercialStoreSnapshot(), address: customer.address ?? "", signal, payments, customer: customer.name, customerId: customer.id, cpf: customer.cpf ?? "", rg: customer.rg ?? "", chassis: identifiers.chassis || vehicle.chassis || "", renavam: identifiers.renavam || vehicle.renavam || "", phone: customer.phone, vehicle: [vehicle.brand, vehicle.model, vehicle.version].filter(Boolean).join(" "), year: vehicle.year, yearModel: vehicle.yearModel, color: vehicle.color ?? "", warranty: vehicle.warranty ?? undefined, km: vehicle.km, total, plate: vehicle.plate ?? "", amount: total, conditions: String(input.conditions ?? "").slice(0, 3000), payment: summarizeContractPayments(payments), seller: "Garagem", responsibleSeller: sellerName, commission, date: new Date().toISOString(), reservationId: reservation?.id ?? null, saleId: row.id };
       let receipt = null;
       if (signal) {
         const heldReceipt = reservation ? await tx.commercialDocument.findFirst({ where: { vehicleId, kind: "recibo", snapshot: { path: ["reservationId"], equals: reservation.id } }, orderBy: { createdAt: "desc" } }) : null;
@@ -118,7 +122,7 @@ export async function finalizeSaleFlow(raw: string): Promise<{ ok: boolean; mess
 async function attachPromissorySnapshot(tx: Prisma.TransactionClient, payments: ContractPaymentItem[], buyer: { id: string; cpf: string | null }, saleId?: string) {
   const payment = payments.find((item) => item.method === "promissoria");
   if (!payment) return;
-  const notes = await tx.promissoryNote.findMany({ where: { id: { in: payment.noteIds } } });
+  const notes = await tx.promissoryNote.findMany({ where: { id: { in: payment.noteIds } }, omit: PROMISSORY_COMPAT_OMIT });
   payment.notes = salePromissorySnapshots(payment, notes.map((note) => ({ ...note, amount: Number(note.amount), dueDate: note.dueDate.toISOString().slice(0, 10) })), buyer, saleId);
 }
 
@@ -192,7 +196,7 @@ function parseSaleForm(formData: FormData): ParsedSaleForm {
 
   const customerId = String(formData.get("customerId") || "").trim();
   const customerName = String(formData.get("customerName") || "").trim();
-  const customerPhone = digitsOnly(formData.get("customerPhone"));
+  const customerPhone = normalizeAdminPhone(String(formData.get("customerPhone") ?? "")) ?? "";
   const paymentMethodRaw = String(formData.get("paymentMethod") || "").trim();
   const sellerName = String(formData.get("sellerName") || "").trim() || null;
   const commissionRaw = String(formData.get("commission") || "").trim();
@@ -227,9 +231,9 @@ function parseSaleForm(formData: FormData): ParsedSaleForm {
   }
 
   const isNewCustomer = customerId === "" || customerId === "novo";
-  if (isNewCustomer && (customerName || customerPhone)) {
+  if (isNewCustomer && (customerName || customerPhone || String(formData.get("customerPhone") ?? "").trim())) {
     if (!customerName) fieldErrors.customerName = "Informe o nome do cliente, ou apague o telefone para registrar sem cliente.";
-    if (customerPhone.length < 10) fieldErrors.customerPhone = "Telefone incompleto: informe com DDD (10 ou 11 dígitos).";
+    if (!customerPhone) fieldErrors.customerPhone = "Telefone incompleto: informe com DDD (10 ou 11 dígitos).";
   }
 
   const paymentMethod = paymentMethodRaw || (isHistorical ? "Histórico" : "");

@@ -14,6 +14,12 @@ async function limpar() {
   await db.customer.deleteMany({ where: { id: customerId } });
 }
 
+test.beforeEach(async ({ context }) => {
+  await context.route("**/fotos/**", route => route.fulfill({ path: "public/branding/placeholder-car.png", contentType: "image/png" }));
+  await context.route("**/_next/image?**", route => route.fulfill({ path: "public/branding/placeholder-car.png", contentType: "image/png" }));
+  await context.route("**/*.supabase.co/storage/**", route => route.abort());
+});
+
 test.beforeAll(async () => {
   await limpar();
   await db.customer.create({ data: { id: customerId, name: "Cliente Promissória E2E", phone: "27999990000", cpf: "52998224725", rg: "1234567 SSP/ES", address: "Rua de Exemplo, 100, Centro, Linhares/ES" } });
@@ -168,7 +174,9 @@ test("aba Promissórias: emite várias parcelas, lista, baixa o PDF, marca paga 
     await expect(cancelada.getByRole("link", { name: /Baixar PDF/ })).toHaveCount(0);
     expect((await page.request.get(`/api/admin/promissorias/${notas[1].id}`)).status()).toBe(409);
     await page.goto("/admin/promissorias?status=pagas");
-    await expect(page.getByTestId("promissoria").filter({ hasText: `Nota nº ${notas[0].number} ` }).getByRole("button")).toHaveCount(0);
+    const paidRow = page.getByTestId("promissoria").filter({ hasText: `Nota nº ${notas[0].number} ` });
+    await expect(paidRow.getByRole("button", { name: /Cancelar nota/ })).toHaveCount(0);
+    await expect(paidRow.getByRole("button", { name: "Retificar baixa", exact: true })).toBeVisible();
   });
 
   await test.step("filtros por vencimento, busca por número e sem overflow horizontal", async () => {

@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { saleDraftFields } from "@/lib/sale-draft";
+import { useSaleDraft } from "./useSaleDraft";
+import { stages } from "./SaleFlowStages";
 import { useRouter } from "next/navigation";
 import { finalizeSaleFlow } from "@/app/admin/vendas/actions";
 import { AdminPageHeader, btn } from "@/components/admin/ui";
@@ -31,6 +34,20 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
   const [issuingNotes, setIssuingNotes] = useState(false);
   const [newCustomer, setNewCustomer] = useState(false);
   const [ids, setIds] = useState<SaleIds>({ chassis: initialVehicle?.chassis ?? "", renavam: initialVehicle?.renavam ?? "", rg: initialCustomer?.rg ?? "" });
+  const section = useRef<HTMLElement>(null);
+  const restoreDraft = useCallback((saved: ReturnType<typeof saleDraftFields>) => {
+    // Cliente e veículo escolhidos na busca precisam ser selecionados novamente.
+    const restoredVehicle = initialVehicle?.id === saved.vehicleId ? initialVehicle : null;
+    const restoredCustomer = initialCustomer?.id === saved.customerId ? initialCustomer : null;
+    setVehicle(restoredVehicle); setCustomer(restoredCustomer);
+    setStage(Math.min(saved.stage, restoredVehicle ? (restoredCustomer ? 4 : 1) : 0));
+    setTotal(saved.total); setPayments(saved.payments); setSignal(saved.signal);
+    setCommission(saved.commission); setIncludeProposal(saved.includeProposal);
+  }, [initialVehicle, initialCustomer]);
+  const recovery = useSaleDraft(`sale:${initialVehicle?.id ?? "new"}:${initialCustomer?.id ?? "any"}`, saleDraftFields({ stage, vehicleId: vehicle?.id, customerId: customer?.id, total, payments, signal, commission, includeProposal }), restoreDraft);
+  useEffect(() => {
+    if (recovery.ready) section.current?.querySelector<HTMLElement>("h2")?.focus();
+  }, [stage, recovery.ready]);
   const totalNumber = parseMoneyBR(total) ?? 0;
   const heldDeposit = vehicle?.reservation && vehicle.reservation.deposit > 0 ? vehicle.reservation.deposit : null;
   const selectedPayments = signal
@@ -53,7 +70,11 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
 
   function advance() {
     const message = validateSaleStage(stage, draft) ?? notesProblem(stage);
-    if (message) { setError(message); return; }
+    if (message) { setError(message); requestAnimationFrame(() => {
+      const label = /nome/i.test(message) ? "Nome" : /telefone/i.test(message) ? "Telefone" : /CPF/.test(message) ? "CPF" : /comissão/i.test(message) ? "Comissão" : "";
+      const field = Array.from(section.current?.querySelectorAll("label") ?? []).find((item) => label && item.textContent?.trim().startsWith(label))?.querySelector<HTMLElement>("input");
+      (field ?? section.current?.querySelector<HTMLElement>("input,button"))?.focus();
+    }); return; }
     goTo(stage + 1);
   }
 
@@ -138,6 +159,7 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
     })));
     setBusy(false);
     if (!response.ok) { setError(response.message); return; }
+    try { await recovery.clear(); } catch { /* A venda já foi registrada; uma recuperação antiga será conferida pelo servidor. */ }
     setResult({ saleId: response.saleId!, contractId: response.contractId!, receiptId: response.receiptId, proposalId: response.proposalId });
     router.refresh();
   }
@@ -146,18 +168,27 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <AdminPageHeader title="Iniciar venda" subtitle="Registre os dados do negócio e gere o contrato." />
+      <p role="status" className="text-sm text-muted">{recovery.status}</p>
+      <p className="text-sm text-muted">Dados pessoais e textos livres digitados não ficam guardados no rascunho.</p>
+      <button type="button" className={btn.outline} onClick={recovery.retry}>Guardar rascunho agora</button>
+      <button type="button" className={btn.ghost} disabled={busy || issuingNotes || !recovery.ready} onClick={async () => {
+        if (!window.confirm("Descartar o rascunho desta venda? Notas já emitidas continuam no histórico.")) return;
+        try { await recovery.clear(); window.location.reload(); } catch (error) { setError(error instanceof Error ? error.message : "Não foi possível descartar."); }
+      }}>Descartar rascunho</button>
       <StageProgress stage={stage} />
-      <section className="space-y-4 rounded-xl border border-line p-4 sm:p-6">
+      <section ref={section} aria-label={stages[stage]} className="space-y-4 rounded-xl border border-line p-4 sm:p-6">
+        <fieldset disabled={!recovery.ready || busy} className="contents">
         {stage === 0 && <VehicleStage vehicle={vehicle} ids={ids} onVehicleChange={changeVehicle} onIdsChange={setIds} />}
         {stage === 1 && <CustomerStage customer={customer} newCustomer={newCustomer} ids={ids} onNewCustomerToggle={toggleNewCustomer} onCustomerPick={pickCustomer} onCustomerEdit={(item) => { if (item.cpf !== customer?.cpf) setPayments((rows) => rows.filter((payment) => payment.method !== "promissoria")); setCustomer(item); }} onIdsChange={setIds} />}
         {stage === 2 && <PaymentStage customer={customer ? { ...customer, rg: ids.rg } : null} notesBusy={issuingNotes} onBusyChange={setIssuingNotes} vehicle={vehicle} total={total} payments={payments} signal={signal} paymentTotal={paymentTotal} totalNumber={totalNumber} moneyField={moneyField} onTotalChange={setTotal} onToggle={toggle} updatePayment={updatePayment} />}
         {stage === 3 && <SellerStage seller={seller} commission={commission} onSellerChange={setSeller} onCommissionChange={setCommission} />}
         {stage === 4 && <ReviewStage vehicle={vehicle} customer={customer} totalNumber={totalNumber} selectedPayments={selectedPayments} seller={seller} commission={commission} includeProposal={includeProposal} conditions={conditions} onIncludeProposalChange={setIncludeProposal} onConditionsChange={setConditions} />}
-        {error && <p role="alert" className="rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700">{error}</p>}
+        {error && <p role="alert" className="rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">{error}</p>}
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
           <button type="button" className={`${btn.outline} w-full sm:w-auto`} disabled={stage === 0 || busy || issuingNotes} onClick={() => goTo(stage - 1)}>Voltar</button>
           {stage < 4 && <button type="button" className={`${btn.primary} w-full sm:w-auto`} disabled={issuingNotes} onClick={advance}>Continuar</button>}
         </div>
+        </fieldset>
       </section>
       {stage === 4 && <button type="button" className={`${btn.primary} w-full sm:w-auto`} disabled={busy || issuingNotes} onClick={submit}>{busy ? "Registrando…" : "Gerar contrato e registrar venda"}</button>}
     </div>
