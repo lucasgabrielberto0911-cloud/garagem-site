@@ -125,8 +125,15 @@ export function vehicleSeoDescription(input: {
   sold?: boolean;
   siteName?: string;
 }) {
-  const label = [formatVehicleLabel(input.brand, input.model), input.version, input.year]
-    .filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+  const separator = input.version && /(?:^|\s)\d{1,2}$/.test(input.version) ? " · " : " ";
+  const label = [
+    formatVehicleLabel(input.brand, input.model),
+    input.version ? `${input.version}${separator}${input.year}` : input.year,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
   const siteName = input.siteName ?? "Garagem";
   if (input.sold) {
     return `${label} (vendido), seminovo ES na ${siteName}. Veja veículos similares disponíveis e fale pelo WhatsApp.`;

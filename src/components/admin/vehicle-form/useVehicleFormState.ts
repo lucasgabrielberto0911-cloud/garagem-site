@@ -405,8 +405,11 @@ export function useVehicleFormState({
   function changeStep(next: VehicleWizardStep) {
     setStep(next);
     if (mode === "create") setDirty(true);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+    }
     requestAnimationFrame(() =>
-      document.getElementById("wizard-title")?.focus(),
+      document.getElementById("wizard-title")?.focus({ preventScroll: true }),
     );
   }
 

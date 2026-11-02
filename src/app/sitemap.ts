@@ -74,12 +74,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const latestStockDate = resolveLatestStockDate(vehicles, landings);
 
   return [
-    ...landings.map((link) => ({
-      url: absoluteUrl(link.path),
-      ...(link.lastModified ? { lastModified: link.lastModified } : {}),
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    })),
     ...STATIC_ROUTES.map((route) => ({
       url: absoluteUrl(route.path),
       ...(latestStockDate && STOCK_DRIVEN_STATIC_PATHS.has(route.path)
@@ -87,6 +81,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         : {}),
       changeFrequency: route.changeFrequency,
       priority: route.priority,
+    })),
+    ...landings.map((link) => ({
+      url: absoluteUrl(link.path),
+      ...(link.lastModified ? { lastModified: link.lastModified } : {}),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
     })),
     ...vehicles.map((vehicle) => {
       const images = [

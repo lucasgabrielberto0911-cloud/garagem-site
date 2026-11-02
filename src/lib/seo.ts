@@ -23,6 +23,7 @@ import {
 } from "@/lib/vehicle-location";
 import {
   buildVehicleFullLabel,
+  collapseWhitespace,
   formatVehicleDisplay,
 } from "@/lib/vehicle-display";
 import { vehiclePath } from "@/lib/vehicle-slug";
@@ -361,8 +362,9 @@ export function vehicleJsonLd(vehicle: {
   const path = display.path;
   const priceOk = vehicle.status !== "vendido" && hasPublishablePrice(vehicle.price);
   const availability = vehicleAvailabilityUrl(vehicle.status);
-  const description = publicVehicleDescription(vehicle.description, vehicle.status === "vendido")
+  const rawDescription = publicVehicleDescription(vehicle.description, vehicle.status === "vendido")
     || vehicleSeoDescription({ ...vehicle, version: display.version, year: vehicle.yearModel, sold: vehicle.status === "vendido" });
+  const description = rawDescription ? collapseWhitespace(rawDescription) : null;
 
   const offers: Record<string, unknown> = {
     "@type": "Offer",

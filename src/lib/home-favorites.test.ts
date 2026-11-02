@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { HomeAssistantAsk } from "@/components/site/HomeAssistantCta";
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -94,4 +97,12 @@ test("favoritos: lista no WhatsApp com id, e vazio aponta estoque", () => {
   assert.doesNotMatch(rememberSnap, /requestIdleCallback/);
   const comparison = readSrc("components/site/FavoritesComparison.tsx");
   assert.doesNotMatch(comparison, /vehicleLocationLabel|Cidade/);
+});
+
+test("HomeAssistantAsk tem label único sem duplicidade e touch targets acessíveis", () => {
+  const html = renderToStaticMarkup(createElement(HomeAssistantAsk));
+  assert.match(html, /<label\b[^>]*for="home-assistant-input"/);
+  assert.equal((html.match(/for="home-assistant-input"/g) || []).length, 1);
+  assert.match(html, /aria-label="Sugestões de perguntas"/);
+  assert.match(html, /min-h-\[44px\]/);
 });

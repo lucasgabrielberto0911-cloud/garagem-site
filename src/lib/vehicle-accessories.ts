@@ -170,11 +170,18 @@ export function sanitizeAccessory(raw: string, maxLen = Infinity): string {
   if (!text) return "";
 
   // Corrige truncamento conhecido de palavra
-  text = text
-    .replace(/\bcombustíve\b/gi, "combustível")
-    .replace(/\bcombustive\b/gi, "combustível")
-    .replace(/\bGPS\s+integ\b/gi, "GPS integrado")
-    .replace(/\binteg$/gi, "integrado");
+  text = text.replace(/\bcombustíve\b/gi, "combustível");
+  text = text.replace(/\bGPS integ\b/gi, "GPS integrado");
+
+  // Normalização de opcionais equivalentes / grafias
+  text = text.replace(/\b6\s*air\s*bags\b/gi, "6 airbags");
+  text = text.replace(/(^|:\s*)airbags?\s*fronta(?:l|is)\s*duplos?(?=\s*$)/gi, "$1Airbags frontais");
+  text = text.replace(/(^|:\s*)airbag\s*duplo(?:\s*fronta(?:l|is))?(?=\s*$)/gi, "$1Airbags frontais");
+  text = text.replace(/\balarme\s*perimétrico\b/gi, "Alarme antifurto");
+  text = text.replace(/(^|:\s*)alarme(?=\s*$)/gi, "$1Alarme antifurto");
+  text = text.replace(/(^|:\s*)(?:iTPMS|TPMS)(?=\s*$)/g, "$1Monitoramento de pressão dos pneus (TPMS)");
+  text = text.replace(/\bcombustive\b/gi, "combustível");
+  text = text.replace(/\binteg$/gi, "integrado");
 
   maxLen = Math.max(0, maxLen);
   if (text.length > maxLen) {
@@ -242,6 +249,8 @@ const ACCESSORY_CANONICAL_GROUPS: ReadonlyArray<{
       "airbags frontais duplos",
       "airbag duplo frontal",
       "duplo airbag",
+      "airbags frontais",
+      "airbag frontal duplo",
     ],
   },
   {

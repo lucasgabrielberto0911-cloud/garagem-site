@@ -1,4 +1,5 @@
 import { buildStockFacets, type StockFacets } from "@/lib/stock-facets";
+import { accessoryFilterVariants } from "@/lib/vehicle-accessories";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -22,7 +23,6 @@ import {
   colorWhere,
   transmissionWhere,
 } from "@/lib/vehicle-display";
-import { accessoryFilterVariants } from "@/lib/vehicle-accessories";
 import { MAX_HOME_FEATURED } from "@/lib/featured";
 import { queryPublicVehicleCards } from "@/lib/public-vehicle-cards";
 import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
@@ -450,7 +450,7 @@ export const getRelatedVehicles = cache(
     ),
 );
 
-function buildStockWhere(filters: StockFilters, catalog: { brand: string; model: string; version?: string | null }[] = []) {
+export function buildStockWhere(filters: StockFilters, catalog: { brand: string; model: string; version?: string | null }[] = []) {
   const priceFilter =
     filters.minPrice || filters.maxPrice
       ? {
@@ -485,6 +485,11 @@ function buildStockWhere(filters: StockFilters, catalog: { brand: string; model:
   and.push(...stockSearchWhere(filters.q ?? "", catalog));
   const gear = transmissionWhere(filters.transmission);
   if (Object.keys(gear).length > 0) and.push(gear);
+  if (filters.accessories && filters.accessories.length > 0) {
+    for (const acc of filters.accessories) {
+      and.push({ accessories: { hasSome: accessoryFilterVariants(acc) } });
+    }
+  }
 
   return {
     ...PUBLIC_SITEMAP_VEHICLE_WHERE,

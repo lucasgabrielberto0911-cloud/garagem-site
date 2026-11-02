@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { stockLandingLinks, stockLandingSlug, stockLandingCopy } from "./stock-landings";
+import { canonicalSlugRedirect, stockLandingLinks, stockLandingSlug, stockLandingCopy } from "./stock-landings";
 test("landings deduplicam caixa e acentos sem misturar marcas", () => {
   const links = stockLandingLinks([{ brand: "Honda", model: "Civic" }, { brand: "HONDA", model: "CIVIC" }, { brand: "Toyota", model: "Civic" }, { brand: "", model: "" }]);
   assert.equal(links.length, 4);
@@ -39,4 +39,13 @@ test("histórico vendido não promete disponibilidade nem inclui preço", () => 
   assert.match(copy.description, /Sem Honda Civic disponível/);
   assert.match(copy.introduction, /já vendidos, sem preço/);
   assert.doesNotMatch(copy.introduction, /R\$/);
+});
+
+test("canonicalSlugRedirect identifica URLs com maiúsculas e devolve o caminho canônico em minúsculas", () => {
+  assert.equal(canonicalSlugRedirect("marca", "Honda"), "/marca/honda");
+  assert.equal(canonicalSlugRedirect("marca", "honda"), null);
+  assert.equal(canonicalSlugRedirect("modelo", "Civic"), "/modelo/civic");
+  assert.equal(canonicalSlugRedirect("modelo", "civic"), null);
+  assert.equal(canonicalSlugRedirect("seminovos", "Linhares"), "/seminovos/linhares");
+  assert.equal(canonicalSlugRedirect("seminovos", "linhares"), null);
 });

@@ -72,7 +72,7 @@ export function HeroSearch({
             type="search"
             name="q"
             placeholder="Busque por marca ou modelo"
-            className="w-full min-w-0 bg-transparent py-1.5 font-body text-sm text-cream placeholder:text-muted/80 focus:outline-none sm:py-2.5 sm:text-base"
+            className="w-full min-w-0 bg-transparent py-1.5 font-body text-sm text-cream placeholder:text-muted focus:outline-none sm:py-2.5 sm:text-base"
           />
         </div>
         <button

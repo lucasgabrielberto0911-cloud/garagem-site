@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { vehiclePhotoAlt, vehicleSeoDescription } from "./format";
-import { VEHICLE_SEO_TITLE_MAX, vehicleSeoTitle } from "./vehicle-seo";
+import { VEHICLE_SEO_TITLE_MAX, vehicleOpenGraphImage, vehicleSeoTitle } from "./vehicle-seo";
 
 const civic = {
   brand: "Honda",
@@ -86,4 +86,19 @@ test("vendido preserva identificação e busca regional, sem divulgar preço ant
 
 test("alt identifica o veículo e a posição real da foto sem inventar ângulo", () => {
   assert.equal(vehiclePhotoAlt("Honda Civic LXR 2015 · Prata", 0, 3), "Honda Civic LXR 2015 · Prata - foto 1 de 3");
+});
+
+test("vehicleOpenGraphImage declara dimensões 1200x800 e tipo image/webp", () => {
+  const og = vehicleOpenGraphImage({ url: "https://exemplo.net/foto.webp", alt: "Civic 2015" });
+  assert.equal(og.width, 1200);
+  assert.equal(og.height, 800);
+  assert.equal(og.type, "image/webp");
+  assert.equal(og.alt, "Civic 2015");
+  assert.equal(og.url, "https://exemplo.net/foto.webp");
+});
+
+test("descrição SEO separa o ano com ponto médio quando a versão termina em número solto", () => {
+  assert.match(vehicleSeoDescription({ ...civic, version: "Sport Pack 3" }), /Sport Pack 3 · 2015/);
+  assert.match(vehicleSeoDescription({ ...civic, version: "Tech Road 2" }), /Tech Road 2 · 2015/);
+  assert.doesNotMatch(vehicleSeoDescription(civic), /LXR · 2015/);
 });

@@ -246,7 +246,7 @@ export function VehiclePromoKitModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center text-muted hover:text-cream"
+              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center text-muted hover:text-cream touch-manipulation"
               aria-label="Fechar"
             >
               ✕

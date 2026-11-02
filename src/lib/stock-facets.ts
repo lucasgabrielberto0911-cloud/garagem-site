@@ -1,4 +1,5 @@
 import { accessoryGroup } from "./legend-parser";
+import { sanitizeAccessory } from "./vehicle-accessories";
 import { brandKey, formatBrandName, formatModelName } from "./format";
 import { canonicalStockAccessoryLabel } from "./vehicle-accessories";
 import { formatColorLabel } from "./vehicle-display";
@@ -40,7 +41,7 @@ export function buildStockFacets(rows: FacetRow[]): StockFacets {
   const accessoryByKey = new Map<string, string>();
   for (const row of rows) {
     for (const item of row.accessories) {
-      const raw = item?.trim();
+      const raw = sanitizeAccessory(item?.trim() ?? "");
       if (!raw || accessoryGroup(raw).group === "Facilidades") continue;
       const canonical = canonicalStockAccessoryLabel(raw);
       if (!canonical) continue;

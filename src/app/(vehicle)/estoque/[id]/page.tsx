@@ -32,7 +32,7 @@ import { VehicleChatContext } from "@/components/site/VehicleChatContext";
 import { MissingModelForm } from "@/components/site/MissingModelForm";
 import { stockLandingLinks } from "@/lib/stock-landings";
 import { JsonLd } from "@/components/JsonLd";
-import { vehicleSeoTitle } from "@/lib/vehicle-seo";
+import { vehicleOpenGraphImage, vehicleSeoTitle } from "@/lib/vehicle-seo";
 import { formatCurrencyBRL, formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import { ListedAgo } from "@/components/site/ListedAgo";
 import { buildVehiclePublicSpecs } from "@/lib/vehicle-specs";
@@ -117,16 +117,12 @@ export async function generateMetadata({
     robots: sold ? { index: false, follow: true } : undefined,
     openGraph: {
       type: "website",
+      siteName: site.name,
       title,
       description,
       url: absoluteUrl(path),
       images: cover
-        ? [
-            {
-              url: cover,
-              alt: label,
-            },
-          ]
+        ? [vehicleOpenGraphImage({ url: cover, alt: label })]
         : [
             {
               url: absoluteUrl("/og.png"),

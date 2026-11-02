@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { normalizeAccessories, sanitizeAccessory } from "./vehicle-accessories";
+import { accessoryFilterVariants, normalizeAccessories, sanitizeAccessory } from "./vehicle-accessories";
 
 test("sanitizeAccessory trunca em palavras inteiras e fecha parênteses", () => {
   assert.equal(
@@ -22,6 +22,27 @@ test("sanitizeAccessory trunca em palavras inteiras e fecha parênteses", () => 
     sanitizeAccessory("Assento largo (piloto + garupa"),
     "Assento largo (piloto + garupa)",
   );
+
+  assert.equal(
+    sanitizeAccessory("Central multimídia de 7\" com Apple CarPlay e GPS integ"),
+    "Central multimídia de 7\" com Apple CarPlay e GPS integrado",
+  );
+
+  assert.equal(sanitizeAccessory("6 Air Bags"), "6 airbags");
+  assert.equal(sanitizeAccessory("Airbag duplo"), "Airbags frontais");
+  assert.equal(sanitizeAccessory("Airbags frontais duplos"), "Airbags frontais");
+  assert.equal(sanitizeAccessory("Segurança: Airbag duplo"), "Segurança: Airbags frontais");
+  assert.equal(sanitizeAccessory("Airbag duplo e lateral"), "Airbag duplo e lateral");
+  assert.equal(sanitizeAccessory("Airbag duplo e freios ABS"), "Airbag duplo e freios ABS");
+  assert.equal(sanitizeAccessory("Alarme"), "Alarme antifurto");
+  assert.equal(sanitizeAccessory("Alarme perimétrico"), "Alarme antifurto");
+  assert.equal(sanitizeAccessory("Segurança: Alarme"), "Segurança: Alarme antifurto");
+  assert.equal(sanitizeAccessory("TPMS"), "Monitoramento de pressão dos pneus (TPMS)");
+  assert.equal(sanitizeAccessory("iTPMS"), "Monitoramento de pressão dos pneus (TPMS)");
+  // Regra de TPMS idempotente
+  assert.equal(sanitizeAccessory(sanitizeAccessory("TPMS")), "Monitoramento de pressão dos pneus (TPMS)");
+  assert.equal(sanitizeAccessory(sanitizeAccessory("iTPMS")), "Monitoramento de pressão dos pneus (TPMS)");
+  assert.equal(sanitizeAccessory("Monitoramento de pressão dos pneus (TPMS)"), "Monitoramento de pressão dos pneus (TPMS)");
 
   // Trunca em palavra inteira sem cortar ao meio
   const longText = "Freios ABS com distribuição eletrônica de frenagem EBD e assistência de frenagem de urgência BAS";
@@ -53,4 +74,28 @@ test("exibição preserva textos longos válidos; entrada respeita limite com pa
   const nested = sanitizeAccessory("Rádio (USB (dianteiro e traseiro", 31);
   assert.equal(nested, "Rádio (USB (dianteiro e))");
   assert.ok(normalizeAccessories([text])[0].length <= 100);
+});
+
+test("accessoryFilterVariants gera equivalentes crus e com prefixo de grupo", () => {
+  const airbags = accessoryFilterVariants("6 airbags");
+  assert.ok(airbags.includes("6 Air Bags"));
+  assert.ok(airbags.includes("6 airbags"));
+  assert.ok(airbags.includes("Segurança: 6 Air Bags"));
+
+  const duplos = accessoryFilterVariants("Airbags frontais");
+  assert.ok(duplos.includes("Airbag duplo"));
+  assert.ok(duplos.includes("Airbags frontais"));
+  assert.ok(duplos.includes("Airbags frontais duplos"));
+
+  const tpms = accessoryFilterVariants("Monitoramento de pressão dos pneus (TPMS)");
+  assert.ok(tpms.includes("iTPMS"));
+  assert.ok(tpms.includes("TPMS"));
+
+  const alarme = accessoryFilterVariants("Alarme antifurto");
+  assert.ok(alarme.includes("Alarme perimétrico"));
+  assert.ok(alarme.includes("Alarme"));
+
+  const generic = accessoryFilterVariants("Bancos de couro");
+  assert.ok(generic.includes("Bancos de couro"));
+  assert.ok(generic.includes("Conforto: Bancos de couro"));
 });

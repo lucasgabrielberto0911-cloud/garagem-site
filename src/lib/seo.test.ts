@@ -110,6 +110,15 @@ test("JSON-LD do veículo traz versão e não inventa prazo de validade da ofert
   assert.equal("priceValidUntil" in sold.offers, false);
 });
 
+test("JSON-LD sanitiza quebras de linha brutas na descrição do veículo", () => {
+  const data = vehicleJsonLd({
+    ...hb20,
+    description: "Carro completo.\r\n\r\nÚnico dono.\r\n\r\nRevisões em dia.",
+  }) as { description?: string };
+  assert.equal(data.description, "Carro completo. Único dono. Revisões em dia.");
+  assert.doesNotMatch(data.description ?? "", /\r|\n/);
+});
+
 
 test("JSON-LD completo preserva dados reais e usa Car ou Motorcycle como subtipos de Vehicle", () => {
   const data = vehicleJsonLd(hb20);
