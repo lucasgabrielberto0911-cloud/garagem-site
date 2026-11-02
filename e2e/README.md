@@ -13,6 +13,7 @@ Os PRs só devem ser mergeados depois dos checks **e** da leitura do diff/confer
 Com as mesmas variáveis e build local, execute `npx playwright install --with-deps webkit`
 e `npx playwright test --config=playwright.compat.config.ts`. O shard 1 do CI também executa essa suíte,
 e suas falhas impedem o agregador `check` de passar.
+O job E2E usa Ubuntu 24.04: a versão fixada do Playwright (1.57) não suporta WebKit em Ubuntu 26.04.
 
 O WebKit cobre login, fonte dos campos, foco, erro acessível, largura e preservação do cadastro
 ao recusar saída em 320, 390 e 430 px. O administrador é fictício e removido ao terminar;

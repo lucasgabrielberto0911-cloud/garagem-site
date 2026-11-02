@@ -53,6 +53,7 @@ O item 01 também é explicitamente proibido: nenhum depoimento foi alterado ou 
 ## Evidências e limites da nova cobertura
 
 - `playwright.compat.config.ts`: reutiliza as proteções da configuração principal contra banco externo e notificações.
+- `.github/workflows/ci.yml`: fixa o job E2E em Ubuntu 24.04, compatível com Playwright 1.57. A primeira execução confirmou que `ubuntu-latest` já resolve para 26.04 e falha ao instalar WebKit; não foi necessário atualizar dependências.
 - `e2e/compatibilidade/webkit.spec.ts`: login com erro acessível, foco, fonte de pelo menos 16 px, largura sem transbordamento e preservação de cadastro ao recusar saída. Administrador fictício criado e removido no banco local; cliente não é gravado.
 - `e2e/compatibilidade/service-worker.spec.ts`: executa o código real de `public/sw.js` em HTTP local, com HTML fictício e versão controlada. Confere atualização sem perder formulário, ativação do controlador novo sem recarregar o formulário, limpeza de cache, navegação offline, ficha sem cache e reconexão. Não substitui deploy completo de Next nem teste do consumidor de leads do Claude.
 - Observação no navegador: `skipWaiting()` ativa o controlador novo na aba existente, mesmo sem `clients.claim()`. O comentário atual de `public/sw.js` descreve retenção do controlador antigo; o teste comprova preservação do formulário sem recarga e a navegação seguinte na versão nova. A revisão desse comentário/estratégia fica na área técnica reservada ao Gemini.
