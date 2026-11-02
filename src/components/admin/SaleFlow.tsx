@@ -68,13 +68,31 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
     return "Promissória: emita as notas antes de continuar.";
   }
 
+  function focusProblem(message: string) {
+    requestAnimationFrame(() => {
+      let label = /nome/i.test(message) ? "Nome" : /telefone/i.test(message) ? "Telefone" : /CPF/.test(message) ? "CPF" : /comissão/i.test(message) ? "Comissão" : "";
+      let scope: HTMLElement | null | undefined = section.current;
+      if (message.startsWith("Financiamento:")) label = "Número de parcelas";
+      else if (message.startsWith("Cartão:")) label = "Parcelas";
+      else if (message.startsWith("Troca:")) {
+        label = payments.find((p) => p.method === "troca")?.tradeVehicle?.trim() ? "Placa" : "Veículo/descrição";
+      } else if (message.startsWith("Informe o valor de cada")) {
+        const payment = selectedPayments.find((p) => p.amount <= 0);
+        if (payment?.method === "sinal") label = "Valor do sinal";
+        else if (payment) {
+          scope = section.current?.querySelector<HTMLElement>(`[data-sale-payment="${payment.method}"]`);
+          label = payment.method === "financiamento" ? "Valor financiado" : "Valor";
+        }
+      } else if (/valor total|Faltam |pagamentos passam/.test(message)) label = "Valor total negociado";
+      const field = Array.from(scope?.querySelectorAll("label") ?? []).find((item) => label && item.textContent?.trim().startsWith(label))?.querySelector<HTMLElement>("input");
+      const fallback = section.current?.querySelector<HTMLElement>(message.startsWith("Escolha pelo menos") ? "button[aria-pressed]" : "input:not([type=hidden]):not([type=checkbox]),button");
+      (field ?? fallback)?.focus();
+    });
+  }
+
   function advance() {
     const message = validateSaleStage(stage, draft) ?? notesProblem(stage);
-    if (message) { setError(message); requestAnimationFrame(() => {
-      const label = /nome/i.test(message) ? "Nome" : /telefone/i.test(message) ? "Telefone" : /CPF/.test(message) ? "CPF" : /comissão/i.test(message) ? "Comissão" : "";
-      const field = Array.from(section.current?.querySelectorAll("label") ?? []).find((item) => label && item.textContent?.trim().startsWith(label))?.querySelector<HTMLElement>("input");
-      (field ?? section.current?.querySelector<HTMLElement>("input,button"))?.focus();
-    }); return; }
+    if (message) { setError(message); focusProblem(message); return; }
     goTo(stage + 1);
   }
 
@@ -138,8 +156,8 @@ export function SaleFlow({ initialVehicle, initialCustomer }: { initialVehicle: 
   async function submit() {
     const problem = firstSaleProblem(draft);
     const notes = notesProblem(2);
-    if (!problem && notes) { setStage(2); setError(notes); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
-    if (problem) { setStage(problem.stage); setError(problem.message); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (!problem && notes) { setStage(2); setError(notes); focusProblem(notes); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (problem) { setStage(problem.stage); setError(problem.message); focusProblem(problem.message); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setBusy(true); setError("");
     const response = await adminMutation(() => finalizeSaleFlow(JSON.stringify({
       vehicleId: vehicle?.id,

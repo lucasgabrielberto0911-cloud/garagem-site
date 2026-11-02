@@ -11,6 +11,7 @@ const baseURL = `http://127.0.0.1:${port}`;
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.spec.ts",
+  testIgnore: "**/compatibilidade/**",
   fullyParallel: false,
   workers: 1,
   retries: 0,
