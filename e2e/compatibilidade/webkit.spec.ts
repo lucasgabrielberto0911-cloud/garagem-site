@@ -9,6 +9,9 @@ test.afterAll(async () => { await db.$disconnect(); });
 test.beforeEach(async ({ context, baseURL }) => {
   await context.route("**/*", (route) => {
     const url = new URL(route.request().url());
+    if (/\/(?:api\/)?(?:fotos|catalog-jpg)\//.test(url.pathname) || url.pathname === "/_next/image") {
+      return route.fulfill({ path: "public/branding/placeholder-car.png", contentType: "image/png" });
+    }
     return url.origin === new URL(baseURL!).origin ? route.continue() : route.abort();
   });
 });
