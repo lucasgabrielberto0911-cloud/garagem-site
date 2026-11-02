@@ -8,6 +8,23 @@ Para executar, use um banco exclusivo `ci` ou `garagem_e2e` em localhost, sem no
 
 Os PRs só devem ser mergeados depois dos checks **e** da leitura do diff/conferência visual. Configure o check `CI / check` como obrigatório na proteção da main para impedir o merge manual com falhas; este PR não muda permissões do GitHub.
 
+## Compatibilidade WebKit e service worker
+
+Com as mesmas variáveis e build local, execute `npx playwright install --with-deps webkit`
+e `npx playwright test --config=playwright.compat.config.ts`. O shard 1 do CI também executa essa suíte,
+e suas falhas impedem o agregador `check` de passar.
+O job E2E usa Ubuntu 24.04: a versão fixada do Playwright (1.57) não suporta WebKit em Ubuntu 26.04.
+
+O WebKit cobre login, fonte dos campos, foco, erro acessível, largura e preservação do cadastro
+ao recusar saída em 320, 390 e 430 px. O administrador é fictício e removido ao terminar;
+nenhum cadastro de cliente ou depoimento é gravado. Isso não substitui teclado/zoom em iPhone físico.
+
+O Chromium permite service workers numa origem HTTP local exclusiva por teste. Usa o código
+real de `public/sw.js` com versão de deploy controlada e HTML fictício: atualização sem perder
+formulário, ativação do controlador novo, limpeza do cache antigo, navegação
+offline, fallback da ficha e reconexão. As requisições externas são bloqueadas. O teste
+de atualização verifica o ciclo do SW; não simula um deploy completo do Next nem o envio de leads.
+
 ## Conversa HTTP com filtros de vendedor
 
 Com o banco local dedicado e `E2E_TEST=1`, rode `E2E_CHAT_CONVERSA=1 npm run e2e:seed`

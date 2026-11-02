@@ -52,6 +52,45 @@ async function paymentStage(page: Page) {
   await page.getByRole("button", { name: "+ Promissória", exact: true }).click();
 }
 
+test("venda: erro posiciona foco na busca, parcela, placa e valor inválidos", async ({ page, saleData }) => {
+  await page.goto("/admin/vendas/nova");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByRole("combobox")).toBeFocused();
+  await page.goto(`/admin/vendas/nova?veiculo=${saleData.vehicleId}`);
+  await next(page, "Cliente");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByRole("combobox")).toBeFocused();
+  await expect(page.getByRole("status").filter({ hasText: "Rascunho guardado" })).toBeVisible();
+  await page.goto(`/admin/vendas/nova?veiculo=${saleData.vehicleId}&cliente=${saleData.customerId}`);
+  await next(page, "Cliente");
+  await expect(page.getByRole("heading", { name: "Cliente", exact: true })).toBeFocused();
+  await expect(page.locator('[aria-current="step"]')).toContainText("Cliente");
+  await next(page, "Pagamento");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByRole("button", { name: "+ À vista/PIX", exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "+ Financiamento", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Número de parcelas", { exact: true })).toBeFocused();
+  await page.getByLabel("Número de parcelas", { exact: true }).fill("12");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Valor financiado", { exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "✓ Financiamento", exact: true }).click();
+  await page.getByRole("button", { name: "+ Troca", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Veículo/descrição", { exact: true })).toBeFocused();
+  await page.getByLabel("Veículo/descrição", { exact: true }).fill("Veículo fictício");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Placa", { exact: true })).toBeFocused();
+  await page.getByLabel("Placa", { exact: true }).fill("ABC1D23");
+  await page.getByRole("button", { name: "+ Cartão", exact: true }).click();
+  await page.getByLabel("Valor", { exact: true }).first().fill("1.000,00");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Parcelas", { exact: true })).toBeFocused();
+  await page.getByLabel("Parcelas", { exact: true }).fill("2");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.getByLabel("Valor", { exact: true }).last()).toBeFocused();
+});
+
 async function review(page: Page) {
   await next(page, "Vendedor");
   await next(page, "Revisar e gerar contrato");
