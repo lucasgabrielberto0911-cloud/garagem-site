@@ -227,7 +227,7 @@ export function StockInfiniteList({
           <MemoVehicleGrid
             vehicles={vehicles}
             returnTo={returnTo}
-            priorityCount={2}
+            priorityCount={1}
             photoLayout="stock"
           />
         </HideStockCardInterest>

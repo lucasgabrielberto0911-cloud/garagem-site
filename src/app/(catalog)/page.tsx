@@ -227,7 +227,7 @@ export default async function HomePage() {
           ) : (
             <VehicleGrid
               vehicles={featured}
-              priorityCount={2}
+              priorityCount={1}
               desktopCols={4}
               destaqueLimit={0}
             />

@@ -29,9 +29,11 @@ export function DeferredMarketing() {
       if (started || cancelled) return;
       started = true;
       cleanup();
+      const telemetryEnabled = process.env.NODE_ENV === "production"
+        && !["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
       void Promise.all([
-        import("@vercel/analytics/next"),
-        import("@vercel/speed-insights/next"),
+        telemetryEnabled ? import("@vercel/analytics/next") : Promise.resolve({ Analytics: () => null }),
+        telemetryEnabled ? import("@vercel/speed-insights/next") : Promise.resolve({ SpeedInsights: () => null }),
         import("@/components/site/SiteExtras"),
       ]).then(([{ Analytics }, { SpeedInsights }, { SiteExtras }]) => {
         if (cancelled) return;
