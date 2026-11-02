@@ -9,8 +9,10 @@ test("Auditoria Fluxo #14: 'Pular para o conteúdo' vem antes do cabeçalho", ()
   assert.ok(layout.indexOf("Pular para o conteúdo") < layout.indexOf("<SiteHeader />"));
 });
 
-test("Auditoria Fluxo #15: texto do banner de cookies é claro", () => {
-  assert.match(read("src/components/CookieConsent.tsx"), /Usamos cookies só para medir o uso do site/);
+test("Auditoria Fluxo #15: texto do banner de cookies é claro e cita atribuição publicitária", () => {
+  const cookieBanner = read("src/components/CookieConsent.tsx");
+  assert.match(cookieBanner, /Usamos cookies para medir o site e anúncios/);
+  assert.match(cookieBanner, /atribuição publicitária, Meta\/GA4/);
 });
 
 test("Auditoria Fluxo #10: marca/modelo sem estoque mostra Avise-me e alternativas", () => {
