@@ -566,3 +566,12 @@ test("PR-5 ficha: lista verificada tem dica sutil de vídeo e dossiê mobile evi
   // Não duplica a introdução longa quando os itens de condições já estão presentes
   assert.doesNotMatch(mobileMarkup, /Todo seminovo passa por checagem na loja antes do anúncio/);
 });
+
+test("barra do celular: botão Agendar visita possui alvo de toque mínimo de 44px (min-h-11)", () => {
+  const bar = readSrc("components/site/VehicleMobileBar.tsx");
+  assert.match(
+    bar,
+    /className="[^"]*\bmin-h-11\b[^"]*"[^>]*>\s*Agendar visita/s,
+  );
+});
+
