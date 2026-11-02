@@ -68,7 +68,8 @@ test("modelo só vendido mantém histórico e pedido preenchido sem preço", asy
   await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
   await page.goto("/modelo/honda-fit");
   await expect(page.getByRole("heading", { name: "Já passaram pela Garagem" })).toBeVisible();
-  await expect(page.locator("article.listing-card")).toHaveCount(0);
+  // Alternativas em destaque podem aparecer, mas nunca um card do modelo vendido.
+  await expect(page.locator("article.listing-card", { hasText: "Honda Fit" })).toHaveCount(0);
   await expect(page.locator("main")).not.toContainText("54.321");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Sem Honda Fit disponível/);
   await page.getByRole("link", { name: "Pedir Honda Fit", exact: true }).click();
