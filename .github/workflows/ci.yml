@@ -74,6 +74,9 @@ jobs:
       - name: Playwright (deps)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
+      - name: WebKit para a suíte de compatibilidade
+        if: matrix.shard == 1
+        run: npx playwright install --with-deps webkit
       - name: Cache .next/cache
         uses: actions/cache@v4
         with:
@@ -84,6 +87,9 @@ jobs:
       - run: npm run e2e:seed
       - run: npm run build
       - run: npx playwright test --shard=${{ matrix.shard }}/4
+      - name: WebKit e service worker real
+        if: matrix.shard == 1
+        run: npx playwright test --config=playwright.compat.config.ts
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

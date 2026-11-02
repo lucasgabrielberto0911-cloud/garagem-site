@@ -136,7 +136,7 @@ function PaymentCard({ p, moneyField, updatePayment }: { p: ContractPaymentItem;
     <Control label={label} type="number" inputMode="numeric" min="1" value={p.installments ?? ""} onChange={(e) => updatePayment(p.method, { installments: Number(e.target.value) })} />
   );
   return (
-    <div className="grid gap-3 rounded border p-3 sm:grid-cols-2">
+    <div data-sale-payment={p.method} className="grid gap-3 rounded border p-3 sm:grid-cols-2">
       <strong>{methodLabel(p.method)}</strong>
       {p.method !== "financiamento" && <Control label="Valor" inputMode="decimal" {...moneyField(p.method, p.amount, (amount) => updatePayment(p.method, { amount }))} />}
       {p.method === "financiamento" && (
