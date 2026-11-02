@@ -2,8 +2,8 @@
 
 import { cloneElement, isValidElement, useId, type Dispatch, type SetStateAction, type ReactNode } from "react";
 import type { Facets, FilterValues } from "./StockFilters";
-import { CATEGORY_FILTER_OPTIONS, BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, KM_OPTIONS, selectClass, selectedOption, toggleAccessoryValue, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
-import { modelAfterBrandChange, modelFilterOptions } from "@/lib/stock-query";
+import { CATEGORY_FILTER_OPTIONS, BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
+import { modelAfterBrandChange, modelFilterOptions, sanitizeFiltersForCategory } from "@/lib/stock-query";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import { transmissionFilterOptions, transmissionFilterParam } from "@/lib/vehicle-display";
 import { stockRangeError } from "@/lib/stock-range-validation";
@@ -13,6 +13,8 @@ export type StockFilterFieldsProps = {
 };
 export function StockFilterFields({ facets, draft, setDraft, onApply, resultCount }: StockFilterFieldsProps) {
   const rangeError = stockRangeError(draft);
+  const priceLabelId = useId();
+  const accessoryLabelId = useId();
   /** Só os campos que existem dentro do painel do celular (a busca fica fora). */
   const draftFilterCount = [
     draft.category,
@@ -38,7 +40,13 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                   <select
                     value={draft.category}
                     onChange={(event) =>
-                      setDraft({ ...draft, category: event.target.value })
+                      setDraft(
+                        sanitizeFiltersForCategory(
+                          draft,
+                          event.target.value,
+                          facets.models,
+                        ),
+                      )
                     }
                     className={selectClass}
                   >
@@ -108,10 +116,10 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                 </select>
               </MobileField>
               <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
+                <p id={priceLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
                   Faixa de preço
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div role="group" aria-labelledby={priceLabelId} className="flex flex-wrap gap-2">
                   {BUDGET_CHIPS.map((chip) => {
                     const active =
                       (draft.minPrice || "") === chip.minPrice &&
@@ -156,7 +164,7 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                   onChange={(event) => setDraft({ ...draft, maxKm: event.target.value })}
                   className={selectClass}
                 >
-                  {KM_OPTIONS.map((option) => (
+                  {kmFilterOptions(draft.maxKm).map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
@@ -195,12 +203,13 @@ export function StockFilterFields({ facets, draft, setDraft, onApply, resultCoun
                   ) : null}
                   {(facets.accessories ?? []).length > 0 ? (
                     <div>
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
+                      <p id={accessoryLabelId} className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
                         Acessórios
                       </p>
                       <AccessoryChips
                         options={facets.accessories ?? []}
                         value={draft.accessory}
+                        labelledBy={accessoryLabelId}
                         onToggle={(name) =>
                           setDraft({
                             ...draft,

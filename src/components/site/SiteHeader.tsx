@@ -14,6 +14,7 @@ import { ChatOpenButton } from "@/components/site/ChatOpenButton";
 import { InstallAppHeaderButton, InstallAppMenuItem } from "@/components/site/InstallAppButton";
 import { SiteWordmark } from "@/components/site/SiteWordmark";
 import { usePageWhatsAppTarget } from "@/components/site/usePageWhatsAppHref";
+import { handleFocusTrap } from "@/lib/focus-trap";
 import { trackCatalogWhatsAppClick, trackWhatsAppClick } from "@/lib/meta-pixel";
 import {
   DESKTOP_NAV_LINKS,
@@ -37,6 +38,8 @@ export function SiteHeader() {
   // Entrada extra no histórico enquanto o menu está aberto: o "voltar" do
   // celular fecha o menu em vez de sair da página (ex.: ficha do veículo).
   const menuHistoryEntry = useRef(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const onVehiclePage = /^\/estoque\/[^/]+/.test(pathname);
 
   const openMenu = useCallback(() => {
@@ -89,11 +92,24 @@ export function SiteHeader() {
 
   useEffect(() => {
     if (!open) return;
+    const frame = requestAnimationFrame(() => {
+      closeButtonRef.current?.focus();
+    });
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") closeMenu();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMenu();
+        return;
+      }
+      if (menuRef.current) {
+        handleFocusTrap(event, menuRef.current);
+      }
     }
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, [open, closeMenu]);
 
   return (
@@ -204,23 +220,23 @@ export function SiteHeader() {
       </header>
 
       {open ? (
-        <div className="fixed inset-0 z-[70] lg:hidden" id="menu-mobile">
+        <div
+          ref={menuRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu principal"
+          className="fixed inset-0 z-[70] lg:hidden"
+          id="menu-mobile"
+        >
           <div
-            role="button"
-            tabIndex={0}
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={closeMenu}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                closeMenu();
-              }
-            }}
-            aria-label="Fechar menu"
+            aria-hidden="true"
           />
           <div className="relative mt-[calc(4.5rem+env(safe-area-inset-top,0px))] h-[calc(100dvh-4.5rem-env(safe-area-inset-top,0px))] overflow-y-auto overscroll-contain border-t border-white/10 bg-asphalt animate-slide-up pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
             <nav className="px-5 py-4" aria-label="Menu mobile">
               <button
+                ref={closeButtonRef}
                 type="button"
                 onClick={closeMenu}
                 className="mb-3 flex min-h-[52px] w-full items-center justify-center gap-2.5 border border-white/15 px-4 py-3 font-display text-base font-semibold text-cream transition active:bg-white/5 touch-manipulation"

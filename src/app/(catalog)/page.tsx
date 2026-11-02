@@ -179,24 +179,51 @@ export default async function HomePage() {
 
         <div className="mt-2 sm:mt-4">
           {featured.length === 0 ? (
-            <div className="max-w-2xl border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-left">
-              <p className="font-display text-lg font-semibold text-cream">
-                Estoque sendo montado
-              </p>
-              <p className="mt-2 max-w-md text-sm leading-snug text-muted">
-                Estamos selecionando os próximos veículos. Diga o que você
-                procura — buscamos para você.
-              </p>
-              <SiteLeadHit contentName="Avise-me">
-                <WhatsAppButton
-                  className="mt-4"
-                  trackingLabel="home-wanted"
-                  message={WHATSAPP_MESSAGES.wanted()}
-                >
-                  Quero avisar o que procuro
-                </WhatsAppButton>
-              </SiteLeadHit>
-            </div>
+            featured.error ? (
+              <div
+                role="status"
+                className="max-w-2xl border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-left"
+              >
+                <p className="font-display text-lg font-semibold text-cream">
+                  Não foi possível carregar os veículos em destaque agora
+                </p>
+                <p className="mt-2 max-w-md text-sm leading-snug text-muted">
+                  Tente atualizar a página em instantes ou confira o estoque e fale direto pelo WhatsApp.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <ButtonLink href="/estoque" variant="outline">
+                    Ver estoque
+                  </ButtonLink>
+                  <SiteLeadHit contentName="Avise-me">
+                    <WhatsAppButton
+                      trackingLabel="home-wanted"
+                      message={WHATSAPP_MESSAGES.wanted()}
+                    >
+                      Quero avisar o que procuro
+                    </WhatsAppButton>
+                  </SiteLeadHit>
+                </div>
+              </div>
+            ) : (
+              <div className="max-w-2xl border border-dashed border-white/15 bg-ink/40 px-5 py-8 text-left">
+                <p className="font-display text-lg font-semibold text-cream">
+                  Estoque sendo montado
+                </p>
+                <p className="mt-2 max-w-md text-sm leading-snug text-muted">
+                  Estamos selecionando os próximos veículos. Diga o que você
+                  procura — buscamos para você.
+                </p>
+                <SiteLeadHit contentName="Avise-me">
+                  <WhatsAppButton
+                    className="mt-4"
+                    trackingLabel="home-wanted"
+                    message={WHATSAPP_MESSAGES.wanted()}
+                  >
+                    Quero avisar o que procuro
+                  </WhatsAppButton>
+                </SiteLeadHit>
+              </div>
+            )
           ) : (
             <VehicleGrid
               vehicles={featured}

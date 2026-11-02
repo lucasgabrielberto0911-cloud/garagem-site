@@ -71,3 +71,51 @@ test("PDF de preparação quebra palavras longas sem cortar o conteúdo e usa a 
   assert.ok(longWordLines.length > 1);
   assert.ok(longWordLines.every(text => (drawn.find(item => item.text === text && item.x === modelX)?.font?.widthOfTextAtSize(text, 7) ?? 0) <= 104));
 });
+
+test("contrato: cláusula de promissórias traz todas as notas, valores e vencimentos e pagina lotes longos", async () => {
+  const drawn: { text: string; y: number }[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) {
+    drawn.push({ text, y: options?.y ?? 0 });
+    return original.call(this, text, options);
+  };
+  const notes = Array.from({ length: 60 }, (_, index) => ({ id: `nota-${index}`, number: index + 1, amount: 100.01, dueDate: "2027-01-31" }));
+  try {
+    const count = await pages("contrato", { ...base, amount: 6000.60, total: 6000.60, payments: [{ method: "promissoria", amount: 6000.60, noteIds: notes.map((note) => note.id), notes }] });
+    assert.ok(count >= 3);
+  } finally { PDFPage.prototype.drawText = original; }
+  const text = drawn.map((item) => item.text).join(" ");
+  for (const note of notes) assert.ok(text.includes(`Nota promissória nº ${note.number} ·`));
+  assert.ok(text.includes("100,01"));
+  assert.ok(text.includes("31/01/2027"));
+  assert.ok(text.includes("não representa quitação"));
+  assert.ok(drawn.every((item) => item.y >= 15), "nenhum texto abaixo da página");
+});
+
+
+test("proposta tem conteúdo próprio, sem cláusulas ou assinatura contratual", async () => {
+  const drawn: string[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) { drawn.push(text); return original.call(this, text, options); };
+  try {
+    const bytes = await commercialPdf("proposta", { ...base, payments: [{ method: "pix", amount: 1000 }], conditions: "Validade de três dias." }, "proposta-ficticia", 9);
+    assert.match((await PDFDocument.load(bytes)).getTitle()!, /Proposta comercial/);
+  } finally { PDFPage.prototype.drawText = original; }
+  const text = drawn.join(" ");
+  assert.match(text, /PROPOSTA COMERCIAL/);
+  assert.match(text, /não registra aceite, pagamento, quitação ou transferência/);
+  assert.match(text, /Validade de três dias/);
+  assert.doesNotMatch(text, /justo e contratado|CLÁUSULA|Contrato de compra e venda|TESTEMUNHA|Rubrique/);
+});
+
+test("reimpressão usa identificação da loja preservada na emissão", async () => {
+  const drawn: string[] = [];
+  const original = PDFPage.prototype.drawText;
+  PDFPage.prototype.drawText = function (text, options) { drawn.push(text); return original.call(this, text, options); };
+  try {
+    await commercialPdf("contrato", { ...base, store: { ...PDF_STORE, version: 1, legalName: "Loja Fictícia Original", cnpj: "00.000.000/0001-00", city: "Cidade Fictícia", address: "Rua Fictícia, 1", registeredAddress: "Sede Fictícia Original", whatsappLabel: "(00) 00000-0000", email: "original@local.test" } }, "historico", 1);
+  } finally { PDFPage.prototype.drawText = original; }
+  const text = drawn.join(" ");
+  for (const expected of ["Loja Fictícia Original", "Sede Fictícia Original", "Rua Fictícia, 1", "original@local.test", "Cidade Fictícia"]) assert.ok(text.includes(expected), expected);
+  assert.ok(!text.includes(PDF_STORE.legalName));
+});

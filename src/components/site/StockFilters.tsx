@@ -1,14 +1,15 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
-import { BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, KM_OPTIONS, selectClass, selectedOption, toggleAccessoryValue, splitAccessories, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { BUDGET_CHIPS, MIN_PRICE_OPTIONS, MAX_PRICE_OPTIONS, kmFilterOptions, selectClass, selectedOption, toggleAccessoryValue, splitAccessories, AccessoryChips, Chip, formatCompactNumber } from "./StockFilterControls";
 import { IconClose, IconSearch, IconShare } from "@/components/site/icons";
 import { useStockPendingOptional } from "@/components/site/StockPending";
 import { formatBrandName, formatModelName } from "@/lib/format";
 import {
   modelAfterBrandChange,
   modelFilterOptions,
+  sanitizeFiltersForCategory,
   type StockModelOption,
 } from "@/lib/stock-query";
 import { handleFocusTrap } from "@/lib/focus-trap";
@@ -69,6 +70,9 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const [open, setOpen] = useState(false);
   const sheetRef = useRef<HTMLElement>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const shortcutsLabelId = useId();
+  const desktopAccessoryLabelId = useId();
+  const activeFiltersLabelId = useId();
 
   const current: FilterValues = {
     q: params.get("q") ?? "",
@@ -93,7 +97,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
   const searchTimer = useRef<number | undefined>(undefined);
   const currentRef = useRef(current);
   currentRef.current = current;
-  const [draftTotal, setDraftTotal] = useState<number | null>(null);
+  const [draftCount, setDraftCount] = useState<{ key: string; total: number } | null>(null);
   const [FilterFields, setFilterFields] = useState<ComponentType<import("./StockFilterFields").StockFilterFieldsProps> | null>(null);
   const [fieldsFailed, setFieldsFailed] = useState(false);
   const [fieldsAttempt, setFieldsAttempt] = useState(0);
@@ -255,7 +259,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
     });
   }
 
-  function navigate(values: FilterValues) {
+  function navigate(values: FilterValues, options?: { replace?: boolean }) {
     const normalized: FilterValues = {
       ...values,
       transmission: transmissionFilterParam(values.transmission),
@@ -271,12 +275,15 @@ export function StockFilters({ facets }: { facets: Facets }) {
     const query = next.toString();
     startTransition(() => {
       const href = query ? `/estoque?${query}` : "/estoque";
-      if (
-        typeof window !== "undefined" &&
-        window.matchMedia("(min-width: 1024px)").matches
-      ) {
-        router.replace(href);
-      } else if (window.location.pathname === "/estoque") {
+      if (options?.replace) {
+        if (typeof window !== "undefined" && window.location.pathname === "/estoque") {
+          if (href !== window.location.pathname + window.location.search) {
+            window.history.replaceState(null, "", href);
+          }
+        } else {
+          router.replace(href);
+        }
+      } else if (typeof window !== "undefined" && window.location.pathname === "/estoque") {
         // A lista já busca a API ao mudar a URL; não refaça o payload da página.
         if (href !== window.location.pathname + window.location.search) {
           window.history.pushState(null, "", href);
@@ -287,8 +294,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
     });
   }
 
-  function update(patch: Partial<FilterValues>) {
-    navigate({ ...current, ...patch });
+  function update(patch: Partial<FilterValues>, options?: { replace?: boolean }) {
+    navigate({ ...current, ...patch }, options);
   }
 
   const updateRef = useRef(update);
@@ -325,13 +332,27 @@ export function StockFilters({ facets }: { facets: Facets }) {
       key: "carro",
       label: "Carros",
       active: current.category === "carro",
-      onClick: () => update({ category: current.category === "carro" ? "" : "carro" }),
+      onClick: () =>
+        navigate(
+          sanitizeFiltersForCategory(
+            current,
+            current.category === "carro" ? "" : "carro",
+            facets.models,
+          ),
+        ),
     },
     {
       key: "moto",
       label: "Motos",
       active: current.category === "moto",
-      onClick: () => update({ category: current.category === "moto" ? "" : "moto" }),
+      onClick: () =>
+        navigate(
+          sanitizeFiltersForCategory(
+            current,
+            current.category === "moto" ? "" : "moto",
+            facets.models,
+          ),
+        ),
     },
     {
       key: "automatico",
@@ -353,6 +374,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
 
   // "Ver X veículos": conta o resultado do rascunho enquanto a gaveta está aberta.
   const draftKey = JSON.stringify({ ...draft, sort: "", transmission: transmissionFilterParam(draft.transmission) });
+  const draftTotal = draftCount?.key === draftKey ? draftCount.total : null;
   useEffect(() => {
     if (!open) return;
     const controller = new AbortController();
@@ -366,9 +388,17 @@ export function StockFilters({ facets }: { facets: Facets }) {
       fetch(`/api/estoque?${query.toString()}`, { signal: controller.signal })
         .then((response) => (response.ok ? response.json() : null))
         .then((data) => {
-          if (data && Number.isFinite(data.total)) setDraftTotal(data.total);
+          if (data && Number.isFinite(data.total)) {
+            setDraftCount({ key: draftKey, total: data.total });
+          } else {
+            setDraftCount((prev) => (prev?.key === draftKey ? null : prev));
+          }
         })
-        .catch(() => {});
+        .catch(() => {
+          if (!controller.signal.aborted) {
+            setDraftCount((prev) => (prev?.key === draftKey ? null : prev));
+          }
+        });
     }, 300);
     return () => {
       window.clearTimeout(timer);
@@ -394,7 +424,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
           className="mx-auto max-w-2xl"
           role="search"
         >
-          <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand lg:min-h-[48px]">
+          <div className="flex min-h-11 items-center gap-2.5 border border-white/10 bg-asphalt px-3.5 transition focus-within:border-brand focus-within:outline focus-within:outline-2 focus-within:outline-offset-[3px] focus-within:outline-brand lg:min-h-[48px]">
             <IconSearch className="h-4 w-4 shrink-0 text-muted" />
             <label htmlFor="estoque-busca" className="sr-only">
               Buscar por marca, modelo ou versão
@@ -411,7 +441,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                 setQText(value);
                 if (searchTimer.current) window.clearTimeout(searchTimer.current);
                 searchTimer.current = window.setTimeout(() => {
-                  if (value.trim() !== currentRef.current.q) updateRef.current({ q: value.trim() });
+                  if (value.trim() !== currentRef.current.q) updateRef.current({ q: value.trim() }, { replace: true });
                 }, 600);
               }}
               placeholder="Marca, modelo ou versão"
@@ -423,10 +453,10 @@ export function StockFilters({ facets }: { facets: Facets }) {
         {/* Desktop: filtros completos, sem rolagem interna. */}
         <div className="mt-5 hidden lg:block">
           <div>
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+            <p id={shortcutsLabelId} className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
               Atalhos
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div role="group" aria-labelledby={shortcutsLabelId} className="flex flex-wrap gap-2">
               {quickChips.map((chip) => (
                 <Chip key={chip.key} active={chip.active} onClick={chip.onClick}>
                   {chip.label}
@@ -566,7 +596,7 @@ export function StockFilters({ facets }: { facets: Facets }) {
                   onChange={(event) => update({ maxKm: event.target.value })}
                   className={selectClass}
                 >
-                  {KM_OPTIONS.map((option) => (
+                  {kmFilterOptions(current.maxKm).map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -575,12 +605,13 @@ export function StockFilters({ facets }: { facets: Facets }) {
               </DesktopField>
               {(facets.accessories ?? []).length > 0 ? (
                 <div>
-                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+                  <p id={desktopAccessoryLabelId} className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
                     Acessórios
                   </p>
                   <AccessoryChips
                     options={facets.accessories ?? []}
                     value={current.accessory}
+                    labelledBy={desktopAccessoryLabelId}
                     onToggle={(name) =>
                       update({
                         accessory: toggleAccessoryValue(current.accessory, name),
@@ -606,12 +637,17 @@ export function StockFilters({ facets }: { facets: Facets }) {
           {activeFilters.length > 0 ? (
             <div className="mt-5 border-t border-white/10 pt-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+                <p
+                  id={activeFiltersLabelId}
+                  className="text-[10px] font-medium uppercase tracking-wider text-muted"
+                >
                   Filtros ativos
                 </p>
                 <ShareSearchButton />
               </div>
-              <ActiveFilterChips filters={activeFilters} onRemove={removeFilter} />
+              <div role="group" aria-labelledby={activeFiltersLabelId}>
+                <ActiveFilterChips filters={activeFilters} onRemove={removeFilter} />
+              </div>
             </div>
           ) : null}
 
@@ -739,7 +775,8 @@ export function StockFilters({ facets }: { facets: Facets }) {
         <div className="fixed inset-0 z-[70] lg:hidden">
           <button
             type="button"
-            aria-label="Fechar filtros"
+            aria-hidden="true"
+            tabIndex={-1}
             onClick={() => setOpen(false)}
             className="absolute inset-0 bg-black/65 backdrop-blur-sm animate-fade-in"
           />
@@ -825,6 +862,7 @@ function MobileChipRow({
   children: ReactNode;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const labelId = useId();
 
   useLayoutEffect(() => {
     const track = trackRef.current;
@@ -880,8 +918,8 @@ function MobileChipRow({
 
   return (
     <div className="stock-chip-row">
-      <p className="stock-chip-label">{label}</p>
-      <div ref={trackRef} className="stock-chip-track scrollbar-hide">
+      <p id={labelId} className="stock-chip-label">{label}</p>
+      <div ref={trackRef} role="group" aria-labelledby={labelId} className="stock-chip-track scrollbar-hide">
         {children}
       </div>
     </div>

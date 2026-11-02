@@ -148,16 +148,17 @@ test("cidade física exige uma cidade válida quando o campo vem no form", () =>
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 test("formulário e actions travam disponível com preço divergente no texto", () => {
-  const form = readFileSync(join(srcRoot, "components/admin/VehicleForm.tsx"), "utf8");
+  const form = readFileSync(join(srcRoot, "components/admin/vehicle-form/VehicleForm.tsx"), "utf8");
+  const legend = readFileSync(join(srcRoot, "components/admin/vehicle-form/sections/LegendSection.tsx"), "utf8");
+  const validation = readFileSync(join(srcRoot, "lib/admin-vehicle-form-validate.ts"), "utf8");
   const actions = readFileSync(join(srcRoot, "app/admin/veiculos/actions.ts"), "utf8");
 
-  assert.match(form, /descriptionPriceMismatchBlocksSave/);
+  assert.match(validation, /descriptionPriceMismatchBlocksSave/);
   assert.match(form, /priceSaveBlocked/);
   assert.match(form, /blockMessage/);
-  assert.match(form, /Não dá para salvar assim/);
-  assert.match(form, /Corrija o preço da descrição/);
+  assert.match(legend, /Não dá para salvar assim/);
   assert.match(form, /event\.preventDefault\(\)/);
-  assert.match(form, /disabled=\{photosUploading \|\| priceSaveBlocked(?: \|\| draftSaving)?\}/);
+  assert.match(form, /if \(!validate\(\)\)/);
 
   assert.match(actions, /descriptionPriceSaveError/);
   assert.match(actions, /status === "disponivel"/);

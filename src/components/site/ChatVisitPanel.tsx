@@ -13,7 +13,7 @@ import { queueWhatsAppIfOffline } from "@/lib/offline-whatsapp";
 import { trackEvent } from "@/lib/track-event";
 
 const FIELD =
-  "w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-cream placeholder:text-cream/40 focus:border-white/25 focus:outline-none";
+  "w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-base text-cream placeholder:text-cream/60 lg:text-[13px] focus:border-white/25 focus:outline-none";
 
 /** Coleta carro, dúvidas e horário e abre o WhatsApp com a mensagem pronta. */
 export function ChatVisitPanel({

@@ -37,12 +37,14 @@ export type CustomerRow = {
   address: string | null;
   notes: string | null;
   createdAt: Date;
+  updatedAt: Date | null;
   purchases: number;
   totalSpent: number;
   lastPurchase: Date | null;
 };
 
 const emptyForm = {
+  expectedUpdatedAt: "",
   id: "",
   name: "",
   phone: "",
@@ -111,6 +113,7 @@ export function CustomersManager({
     setErrors({});
     setForm({
       id: customer.id,
+      expectedUpdatedAt: customer.updatedAt ? new Date(customer.updatedAt).toISOString() : "",
       name: customer.name,
       phone: formatPhoneBR(customer.phone),
       cpf: customer.cpf ? formatCpfBR(customer.cpf) : "",
@@ -174,6 +177,7 @@ export function CustomersManager({
           >
             <fieldset disabled={isPending} className="min-w-0 space-y-4">
               <input type="hidden" name="id" value={form.id} />
+              <input type="hidden" name="expectedUpdatedAt" value={form.expectedUpdatedAt} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Nome" required error={errors.name}>
                   <input
@@ -245,7 +249,7 @@ export function CustomersManager({
                     className={inputClass}
                   />
                 </Field>
-                <Field label="Endereço" className="sm:col-span-2">
+                <Field label="Endereço" error={errors.address} className="sm:col-span-2">
                   <input
                     name="address"
                     value={form.address}
@@ -260,7 +264,7 @@ export function CustomersManager({
                     className={inputClass}
                   />
                 </Field>
-                <Field label="Observações" className="sm:col-span-2">
+                <Field label="Observações" error={errors.notes} className="sm:col-span-2">
                   <textarea
                     name="notes"
                     rows={3}
@@ -413,7 +417,7 @@ export function CustomersManager({
                 ) : null}
               </div>
 
-              <div className="grid grid-cols-5 border-t border-white/10">
+              <div className="grid grid-cols-2 sm:grid-cols-3 border-t border-white/10">
                 <Link href={`/admin/vendas/nova?cliente=${customer.id}`} className={mobileActionCell}>Iniciar venda</Link>
                 <a
                   href={`https://wa.me/55${customer.phone}`}

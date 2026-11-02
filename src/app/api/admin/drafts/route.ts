@@ -1,10 +1,13 @@
+import { safeAdminDraftPayload } from "@/lib/sale-draft";
 import { isSameOriginRequest } from "@/lib/admin-request-origin";
 import { withAdminStorageLock } from "@/lib/admin-storage-lock";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { draftVersionMatches } from "@/lib/admin-draft-version";
+
+import { vehicleDraftSummary } from "@/lib/vehicle-draft-fields";
 
 const headers = { "Cache-Control": "private, no-store" };
 
@@ -21,7 +24,36 @@ export async function GET(request: Request) {
     );
 
   try {
-    const key = new URL(request.url).searchParams.get("key") || "";
+    const params = new URL(request.url).searchParams;
+    const prefix = params.get("prefix");
+    const key = params.get("key") || "";
+    if (prefix !== null) {
+      if (prefix !== "vehicle:new" || params.has("key"))
+        return NextResponse.json(
+          { error: "Prefixo de rascunho inválido." },
+          { status: 400, headers },
+        );
+      const drafts = await prisma.adminDraft.findMany({
+        where: {
+          adminId: session.adminId,
+          expiresAt: { gt: new Date() },
+          OR: [{ key: "vehicle:new" }, { key: { startsWith: "vehicle:new-" } }],
+          payload: { path: ["fields"], not: Prisma.JsonNull },
+        },
+        select: { key: true, payload: true, updatedAt: true },
+        orderBy: [{ updatedAt: "desc" }, { key: "asc" }],
+      });
+      return NextResponse.json(
+        {
+          drafts: drafts.map((draft) => ({
+            key: draft.key,
+            updatedAt: draft.updatedAt,
+            ...vehicleDraftSummary(draft.payload),
+          })),
+        },
+        { headers },
+      );
+    }
     if (!validKey(key))
       return NextResponse.json(
         { error: "Rascunho inválido." },
@@ -34,7 +66,14 @@ export async function GET(request: Request) {
     const draft = await prisma.adminDraft.findUnique({
       where: { adminId_key: { adminId: session.adminId, key } },
     });
-    return NextResponse.json({ draft }, { headers });
+    const safePayload = draft ? safeAdminDraftPayload(key, draft.payload) : null;
+    if (draft && key.startsWith("sale:") && JSON.stringify(safePayload) !== JSON.stringify(draft.payload)) {
+      await prisma.adminDraft.updateMany({
+        where: { id: draft.id, updatedAt: draft.updatedAt },
+        data: { payload: safePayload as Prisma.InputJsonValue, updatedAt: draft.updatedAt },
+      });
+    }
+    return NextResponse.json({ draft: draft ? { ...draft, payload: safePayload } : null }, { headers });
   } catch (error) {
     console.error("[admin/drafts GET]", error);
     return NextResponse.json(
@@ -84,10 +123,11 @@ export async function POST(request: Request) {
   const body = rawBody as Record<string, unknown>;
   const key = typeof body.key === "string" ? body.key : "";
   const reserve = Boolean(body.reserve);
-  const payload = body.payload;
+  const payload = safeAdminDraftPayload(key, body.payload);
   const photoUrls = body.photoUrls;
   const expectedUpdatedAt =
-    typeof body.expectedUpdatedAt === "string" || body.expectedUpdatedAt === null
+    typeof body.expectedUpdatedAt === "string" ||
+    body.expectedUpdatedAt === null
       ? body.expectedUpdatedAt
       : undefined;
 
@@ -95,7 +135,7 @@ export async function POST(request: Request) {
     typeof key !== "string" ||
     !validKey(key) ||
     (!reserve &&
-      (!payload || typeof payload !== "object" || Array.isArray(payload))) ||
+      (!body.payload || typeof body.payload !== "object" || Array.isArray(body.payload))) ||
     !Array.isArray(photoUrls) ||
     photoUrls.length > 100 ||
     photoUrls.some((p: unknown) => typeof p !== "string")
@@ -108,7 +148,7 @@ export async function POST(request: Request) {
 
   try {
     const result = await withAdminStorageLock(async (tx) => {
-      const expiresAt = new Date(Date.now() + 30 * 86400000);
+      const expiresAt = new Date(Date.now() + (key.startsWith("sale:") ? 1 : 30) * 86400000);
       await tx.adminDraft.deleteMany({
         where: { adminId: session.adminId, expiresAt: { lte: new Date() } },
       });
@@ -132,8 +172,7 @@ export async function POST(request: Request) {
         };
       }
       const stored = existing?.payload as
-        | { photos?: Array<{ url?: string; thumbnailUrl?: string }> }
-        | undefined;
+        { photos?: Array<{ url?: string; thumbnailUrl?: string }> } | undefined;
       const savedUrls = Array.isArray(stored?.photos)
         ? stored.photos.flatMap((p) =>
             [p.url, p.thumbnailUrl].filter(
@@ -152,7 +191,9 @@ export async function POST(request: Request) {
           expiresAt,
         },
         update: {
-          ...(reserve ? {} : { payload: payload as Prisma.InputJsonValue }),
+          ...(reserve
+            ? (key.startsWith("sale:") ? { payload: safeAdminDraftPayload(key, existing?.payload ?? {}) as Prisma.InputJsonValue } : {})
+            : { payload: payload as Prisma.InputJsonValue }),
           photoUrls: protectedUrls,
           expiresAt,
           ...(existing

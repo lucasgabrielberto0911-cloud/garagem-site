@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 const grupos = {
   Hoje: [["Dashboard", "/admin"], ["Agenda", "/admin/agenda"]],
   Estoque: [["Veículos", "/admin/veiculos"], ["Em preparação", "/admin/em-preparacao"]],
-  Relacionamento: [["Leads", "/admin/leads"], ["Clientes", "/admin/clientes"], ["Vendas", "/admin/vendas"]],
+  Relacionamento: [["Leads", "/admin/leads"], ["Clientes", "/admin/clientes"], ["Vendas", "/admin/vendas"], ["Promissórias", "/admin/promissorias"]],
   Site: [["Depoimentos", "/admin/depoimentos"], ["Dados do site", "/admin/site"]],
 };
 
@@ -47,7 +47,8 @@ async function conferirGrupos(menu: Locator) {
 }
 
 test("menu agrupado mantém todas as rotas e indica a página atual", async ({ page }) => {
-  await page.goto("/admin/veiculos/novo");
+  // O formulário tem rodapé próprio; os atalhos do painel ficam na listagem.
+  await page.goto("/admin/veiculos");
   const mobile = page.viewportSize()!.width < 1024;
   const atalhos = page.getByRole("navigation", { name: "Atalhos do painel" });
   const mais = atalhos.getByRole("button", { name: "Mais", exact: true });

@@ -2,7 +2,17 @@ import { test as base, expect, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { randomInt, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import samples from "./public-samples.json";
+import { conferirRodapeDoAnuncio } from "./admin-form-footer";
+
+async function guardarAgora(page: Page) {
+  const guardar = page.getByRole("button", { name: "Guardar agora", exact: true });
+  if (!(await guardar.isVisible())) {
+    await page.locator("button[aria-expanded]").filter({ hasText: /Rascunho automático|Salvo às|Salvando|Sem conexão|Outra aba/ }).click();
+  }
+  await guardar.click();
+}
 
 const database = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/");
 const localDatabase = process.env.E2E_TEST === "1"
@@ -20,6 +30,9 @@ const test = base.extend<{ modelName: string }>({
     } });
     try {
       page.on("dialog", dialog => dialog.accept());
+      const photoFixture = readFileSync("public/branding/placeholder-car.png");
+      await page.route("**/fotos/**", route => route.fulfill({ contentType: "image/png", body: photoFixture }));
+      await page.route("https://*.supabase.co/storage/**", route => route.fulfill({ contentType: "image/png", body: photoFixture }));
       await page.setExtraHTTPHeaders({ "X-Forwarded-For": `198.18.${randomInt(256)}.${randomInt(1, 255)}` });
       await page.addInitScript(() => localStorage.setItem("garagem_consent", "essential"));
       const login = await page.request.post("/api/auth/login", { data: { email, password } });
@@ -87,20 +100,43 @@ async function fillVehicle(page: Page, modelName: string) {
   await page.locator('[name="transmission"]').selectOption({ label: "Automático" });
 }
 
-for (const width of [390, 1440]) {
-  test.describe(`wizard em ${width}px`, () => {
-    test.use({ viewport: { width, height: 900 } });
+test.describe("wizard nos tamanhos configurados", () => {
 
     test("cria anúncio, bloqueia etapas inválidas e preserva campos ao voltar", async ({ page, modelName }) => {
       await page.goto("/admin/veiculos/novo");
       await expect(title(page)).toContainText("Etapa 1 de 4");
+      await conferirRodapeDoAnuncio(page);
       await expect(back(page)).toBeDisabled();
       expect((await next(page).boundingBox())!.height).toBeGreaterThanOrEqual(44);
       await next(page).click();
       await expect(page.getByText("Adicione pelo menos uma foto.", { exact: true })).toBeVisible();
       await uploadPhotos(page);
       const original = JSON.parse(await page.locator('[name="photoUrls"]').inputValue());
-      if (width < 1024) await page.getByRole("button", { name: "Mais ações da foto 2", exact: true }).click();
+      const order = async () => (JSON.parse(await page.locator('[name="photoUrls"]').inputValue()) as { url: string }[]).map(photo => photo.url);
+      const dragSecondOntoFirst = async () => {
+        const handleButton = page.getByRole("button", { name: /^Reordenar foto 2\./ });
+        const targetItem = page.locator('[data-photo-index="0"]');
+        // O mouse do Playwright usa coordenadas da janela: as duas fotos precisam estar visíveis.
+        // Centralizado, longe das bordas onde o arraste rola a página sozinho; "instant" porque o html tem scroll-behavior: smooth.
+        await targetItem.evaluate(element => element.scrollIntoView({ block: "center", behavior: "instant" }));
+        const handle = (await handleButton.boundingBox())!;
+        const target = (await targetItem.boundingBox())!;
+        await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 5 });
+        await page.mouse.up();
+      };
+      await dragSecondOntoFirst();
+      expect(await order()).toEqual([original[1].url, original[0].url]);
+      await dragSecondOntoFirst();
+      expect(await order()).toEqual(original.map((photo: { url: string }) => photo.url));
+      await page.getByRole("button", { name: /^Reordenar foto 1\./ }).focus();
+      await page.keyboard.press("ArrowRight");
+      expect(await order()).toEqual([original[1].url, original[0].url]);
+      // O foco acompanha a foto movida: a mesma alça volta com ArrowLeft.
+      await page.keyboard.press("ArrowLeft");
+      expect(await order()).toEqual(original.map((photo: { url: string }) => photo.url));
+      if (page.viewportSize()!.width < 1024) await page.getByRole("button", { name: "Mais ações da foto 2", exact: true }).click();
       await page.getByRole("button", { name: "Definir como capa", exact: true }).last().click();
       const reordered = JSON.parse(await page.locator('[name="photoUrls"]').inputValue());
       expect(reordered[0].url).toBe(original[1].url);
@@ -134,16 +170,30 @@ for (const width of [390, 1440]) {
       await next(page).click();
       await expect(form.locator('[name="description"]')).toHaveValue("Veículo revisado e bem cuidado.");
       await expect(form.getByRole("button", { name: "Remover Ar-condicionado", exact: true })).toBeVisible();
+      // Cidade e destaque ficam em "Mais detalhes" na etapa 3; o erro (já disparado ao tentar avançar sem preço) abre a seção sozinho.
       await next(page).click();
-      await expect(title(page)).toContainText("Etapa 4 de 4");
-      await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
-      await expect(page.getByText("Selecione a cidade onde o veículo está.", { exact: true })).toBeVisible();
+      await expect(title(page)).toContainText("Etapa 3 de 4");
+      await expect(page.getByText("Selecione a cidade onde o veículo está.", { exact: true }).first()).toBeVisible();
+      await expect(page.locator("#vehicle-more-details")).toHaveAttribute("open", "");
       await page.getByRole("button", { name: "Linhares ES", exact: true }).click();
       await page.locator('[name="featured"]').check();
-      await back(page).click();
       await next(page).click();
+      await expect(title(page)).toContainText("Etapa 4 de 4");
+      await expect(page.getByRole("button", { name: "Linhares ES", exact: true })).toBeHidden();
+      await back(page).click();
       await expect(page.locator('[name="featured"]')).toBeChecked();
+      await next(page).click();
+      // Prévia sob demanda: fechada ao chegar na revisão; abre com a foto local, preço e sem cidade.
+      await expect(page.getByTestId("listing-preview")).toBeHidden();
+      await page.getByRole("button", { name: "Ver como fica no site", exact: true }).click();
+      const preview = page.getByTestId("listing-preview");
+      await expect(preview).toBeVisible();
+      await expect(preview).toContainText("59.900");
+      await expect(preview).not.toContainText("Linhares");
+      await expect(preview.locator("img")).toHaveAttribute("src", /.+/);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+      await page.getByRole("button", { name: "Esconder prévia", exact: true }).click();
+      await expect(preview).toBeHidden();
       await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
       await expect(page).toHaveURL(/\/admin\/veiculos\/(?!novo$)[^/?]+$/);
       await expect.poll(() => prisma.vehicle.findFirst({ where: { model: modelName } })).not.toBeNull();
@@ -157,6 +207,28 @@ for (const width of [390, 1440]) {
       await expect(page.getByText(modelName, { exact: false }).first()).toBeVisible();
     });
 
+    test("tela inicial limpa: status do rascunho em texto e detalhes recolhidos; guarda e sai", async ({ page, modelName }) => {
+      await page.goto("/admin/veiculos/novo");
+      await expect(page.getByRole("button", { name: "Continuar", exact: true })).toBeHidden();
+      await expect(page.getByRole("button", { name: "Guardar agora", exact: true })).toBeHidden();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+      await uploadPhotos(page);
+      await next(page).click();
+      await expect(page.locator("details:visible", { hasText: "Mais detalhes (opcional)" })).not.toHaveAttribute("open", "");
+      await expect(page.locator('[name="engine"]')).toBeHidden();
+      await fillVehicle(page, modelName);
+      await next(page).click();
+      await expect(page.locator("#vehicle-more-details")).not.toHaveAttribute("open", "");
+      await expect(page.locator('[name="purchasePrice"]')).toBeHidden();
+      const status = page.locator("button[aria-expanded]").filter({ hasText: /Rascunho automático|Salvo às|Salvando/ });
+      await status.click();
+      await page.getByRole("button", { name: "Guardar e sair", exact: true }).click();
+      await expect(page).toHaveURL(/\/admin\/veiculos$/);
+      if (page.viewportSize()!.width < 1024) {
+        await expect(page.getByRole("navigation", { name: "Atalhos do painel" })).toBeVisible();
+      }
+    });
+
     test("retoma a etapa e os campos do rascunho após reload", async ({ page, modelName }) => {
       await page.goto("/admin/veiculos/novo");
       await uploadPhotos(page);
@@ -165,10 +237,10 @@ for (const width of [390, 1440]) {
       await next(page).click();
       const form = page.locator("#vehicle-form");
       await form.getByLabel("Colar legenda", { exact: true }).fill("Texto preservado no rascunho.");
-      await page.getByRole("button", { name: "Guardar rascunho", exact: true }).click();
-      await expect(page.getByRole("button", { name: "Guardar rascunho", exact: true })).toBeEnabled();
+      await guardarAgora(page);
+      await expect(page.getByRole("button", { name: "Guardar agora", exact: true })).toBeEnabled();
       await page.reload();
-      await page.getByRole("button", { name: "Retomar rascunho", exact: true }).click();
+      await page.getByRole("button", { name: "Continuar", exact: true }).click();
       await page.getByRole("button", { name: "Retomar", exact: true }).click();
       await expect(title(page)).toContainText("Etapa 3 de 4");
       await expect(form.locator('[name="description"]')).toHaveValue("Texto preservado no rascunho.");
@@ -199,7 +271,7 @@ for (const width of [390, 1440]) {
           if (request.headers()["next-action"] && request.headers()["content-type"]?.startsWith("multipart/form-data")) submissions++;
         });
         await page.goto("/admin/veiculos/novo");
-        await page.getByRole("button", { name: "Retomar rascunho", exact: true }).click();
+        await page.getByRole("button", { name: "Continuar", exact: true }).click();
         await page.getByRole("button", { name: "Retomar", exact: true }).click();
         await expect(title(page)).toContainText("Etapa 4 de 4");
         await page.getByRole("button", { name: "Cadastrar veículo", exact: true }).click();
@@ -245,5 +317,4 @@ for (const width of [390, 1440]) {
         await prisma.vehicle.updateMany({ where: { id: samples[0].id, model: modelName }, data: { model: original.model } });
       }
     });
-  });
-}
+});

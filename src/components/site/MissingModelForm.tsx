@@ -132,10 +132,10 @@ export function MissingModelForm({
         const result = await createWantedLead(data);
         if (result.ok) {
           if (rememberDraft) draft.clear();
+          // Sem o modelo digitado: texto livre não vai para Meta/GA4.
           trackLead({
             content_ids: [],
             content_name: "Não encontrou o modelo",
-            search_string: parsed.lead?.model,
           });
           notifySuccess(result.message);
           setSent(true);
@@ -199,6 +199,7 @@ export function MissingModelForm({
       </p>
 
       <form ref={formRef} className="relative mt-4" noValidate onSubmit={handleSubmit}
+        onInvalid={(event) => event.preventDefault()}
         onInput={rememberDraft ? draft.remember : undefined}
         onChange={rememberDraft ? draft.remember : undefined}>
         <fieldset disabled={isPending} className="min-w-0">

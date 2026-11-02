@@ -3,7 +3,7 @@ import { absoluteUrl } from "@/lib/seo";
 
 const PUBLIC_RULE = {
   allow: "/",
-  disallow: ["/admin", "/api"] as string[],
+  disallow: ["/admin", "/api", "/atalho", "/atalho/"] as string[],
 };
 
 const AI_USER_AGENTS = [

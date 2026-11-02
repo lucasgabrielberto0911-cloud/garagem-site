@@ -10,11 +10,14 @@ export function InfiniteSentinel({
   onVisible,
   disabled = false,
   rootMargin = "720px 0px",
+  watchKey,
   children,
 }: {
   onVisible: () => void;
   disabled?: boolean;
   rootMargin?: string;
+  /** Muda a cada página nova: recria o observer para reavaliar um marcador que continua visível. */
+  watchKey?: unknown;
   children?: ReactNode;
 }) {
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -34,7 +37,7 @@ export function InfiniteSentinel({
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [disabled, rootMargin]);
+  }, [disabled, rootMargin, watchKey]);
 
   return (
     <div ref={nodeRef} className="flex flex-col items-center justify-center py-6">

@@ -1,12 +1,12 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { lockCustomerIdentity } from "@/lib/admin-customer-lock";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { scheduleAfterSale } from "@/lib/after-sale";
 import { prisma } from "@/lib/prisma";
 import { revalidatePublicStock } from "@/lib/public-stock-revalidate";
 import { parseAdminSellInput } from "@/lib/admin-sell";
+import { resolveBuyer } from "@/lib/sale-flow";
 
 const headers = {
   "Cache-Control": "private, no-store",
@@ -70,31 +70,33 @@ export async function PATCH(
 
       let saleId: string | undefined;
       if (parsed.mode === "complete") {
-        let customerId: string;
-        if (reservation) {
-          const sameCustomer =
-            reservation.customer.name === parsed.input.buyerName &&
-            reservation.customer.phone.replace(/\D/g, "") ===
-              parsed.input.buyerPhone;
-          if (!sameCustomer) throw new Error("RESERVATION_CUSTOMER");
-          customerId = reservation.customerId;
-        } else {
-          await lockCustomerIdentity(tx, parsed.input.buyerPhone);
-          const existingCustomer = await tx.customer.findFirst({
-            where: { phone: parsed.input.buyerPhone },
-            select: { id: true, name: true },
-          });
-          if (existingCustomer && existingCustomer.name !== parsed.input.buyerName) {
-            throw new Error("DUPLICATE_CUSTOMER");
-          }
-          customerId = existingCustomer?.id ?? (await tx.customer.create({
-            data: {
-              name: parsed.input.buyerName,
-              phone: parsed.input.buyerPhone,
-            },
-            select: { id: true },
-          })).id;
-        }
+        // Mesma regra de cliente do assistente (resolveBuyer): reserva manda no comprador, telefone/CPF repetido não duplica.
+        const buyerPhone = parsed.input.buyerPhone;
+        const sameAsReservation = reservation
+          ? reservation.customer.name === parsed.input.buyerName &&
+            reservation.customer.phone.replace(/\D/g, "") === buyerPhone
+          : false;
+        const existingCustomer = reservation
+          ? null
+          : await tx.customer.findFirst({
+              where: { phone: buyerPhone },
+              select: { id: true, name: true },
+            });
+        const customer = await resolveBuyer(tx, {
+          customerId: sameAsReservation
+            ? reservation!.customerId
+            : existingCustomer && existingCustomer.name === parsed.input.buyerName
+              ? existingCustomer.id
+              : "novo",
+          customerName: parsed.input.buyerName,
+          customerPhone: buyerPhone,
+          cpf: "",
+          rg: "",
+          address: undefined,
+          reservationCustomerId: reservation?.customerId,
+          hasReservation: Boolean(reservation),
+        });
+        const customerId = customer.id;
 
         const sale = await tx.sale.create({
           data: {
@@ -162,17 +164,18 @@ export async function PATCH(
       : message === "RESERVATION_CUSTOMER"
         ? "A venda deve usar os dados do cliente da reserva."
         : message === "RESERVATION_SIGNAL_REQUIRED"
-          ? "A reserva tem sinal; conclua a venda pela tela completa do painel."
+          ? "A reserva tem sinal. Abrindo o assistente de venda para concluir."
         : message === "DUPLICATE_CUSTOMER"
-          ? "Este telefone já pertence a outro cliente; registre a venda pela tela completa do painel."
+          ? "Já existe um cliente com este telefone em outro nome. Abrindo o assistente de venda para escolher o cadastro certo."
           : status === 409
             ? "Este veículo já foi vendido ou tem uma venda registrada."
             : parsed.mode === "complete"
               ? "Não foi possível registrar a venda."
               : "Não foi possível marcar o veículo como vendido.";
     if (status === 500) console.error("[api/admin/vehicles/[id]/sell] falha ao registrar venda");
+    const needsFullFlow = message === "RESERVATION_SIGNAL_REQUIRED" || message === "DUPLICATE_CUSTOMER";
     return NextResponse.json(
-      { ok: false, message: errorMessage },
+      { ok: false, message: errorMessage, ...(needsFullFlow ? { nextUrl: `/admin/vendas/nova?veiculo=${encodeURIComponent(id)}` } : {}) },
       { status, headers },
     );
   }

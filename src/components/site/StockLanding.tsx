@@ -1,17 +1,21 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { VehicleGrid } from "@/components/site/VehicleGrid";
 import { Container, PageHeader, ButtonLink, WhatsAppButton } from "@/components/site/ui";
 import { getStockLandingHistory } from "@/lib/stock-landing-data";
-import { stockLandingLinks, stockLandingCopy } from "@/lib/stock-landings";
-import { getCityShowcaseVehicles } from "@/lib/vehicles";
+import { canonicalSlugRedirect, stockLandingLinks, stockLandingCopy } from "@/lib/stock-landings";
+import { getVehiclesByIds } from "@/lib/vehicles";
 import { breadcrumbJsonLd, buildPageMetadata, faqJsonLd, itemListJsonLd, SERVICE_CITIES } from "@/lib/seo";
 import { site } from "@/lib/site";
 import { wantedVehicleHref } from "@/lib/wanted-vehicle-page";
 import { vehiclePath } from "@/lib/vehicle-slug";
 
 async function landing(kind: "marca" | "modelo", slug: string) {
+  const redirect = canonicalSlugRedirect(kind, slug);
+  if (redirect) {
+    permanentRedirect(redirect);
+  }
   const history = await getStockLandingHistory();
   const path = `/${kind}/${slug}`;
   const link = stockLandingLinks(history).find(item => item.path === path);
@@ -20,6 +24,10 @@ async function landing(kind: "marca" | "modelo", slug: string) {
   return { path, link, rows };
 }
 export async function stockLandingMetadata(kind: "marca" | "modelo", slug: string) {
+  const redirect = canonicalSlugRedirect(kind, slug);
+  if (redirect) {
+    permanentRedirect(redirect);
+  }
   const { path, link, rows } = await landing(kind, slug);
   const copy = stockLandingCopy(kind, link.label, rows);
   return buildPageMetadata({ title: `${link.label} seminovo | Garagem`, description: copy.description, path });
@@ -29,7 +37,7 @@ export async function StockLanding({ kind, slug }: { kind: "marca" | "modelo"; s
   const copy = stockLandingCopy(kind, link.label, rows);
   const pedidoHref = wantedVehicleHref({ q: link.label });
   const ids = new Set(rows.filter(row => row.status === "disponivel").map(row => row.id));
-  const vehicles = ids.size ? (await getCityShowcaseVehicles()).filter(row => ids.has(row.id)) : [];
+  const vehicles = ids.size ? await getVehiclesByIds([...ids]) : [];
   const sold = rows.filter(row => row.status === "vendido");
   const faqs = [
     { question: `Como encontrar ${link.label} na Garagem?`, answer: copy.introduction },

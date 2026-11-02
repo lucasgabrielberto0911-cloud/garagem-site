@@ -36,6 +36,7 @@ import {
 import {
   emptyHistory,
   chatSearchContext,
+  withoutFailedAttempt,
   readHistoryStore,
   writeHistoryStore,
   saveHistoryForKey,
@@ -53,6 +54,7 @@ import { requestChatReply, ChatRequestError } from "@/lib/chat-client-request";
 import { readChatResearch } from "@/lib/chat-research-data";
 import {
   chatHeaderWhatsAppMessage,
+  chatLiveAnnouncement,
   chatSessionHints,
   chatWhatsAppCta,
   chatReplyCtaIntent,
@@ -211,17 +213,19 @@ function ChatWhatsAppButton({
   href,
   label,
   benefit,
+  trackingLabel = "chat",
 }: {
   href: string;
   label: string;
   benefit: string;
+  trackingLabel?: string;
 }) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={() => trackWhatsAppClick("chat", chatFunnelRef())}
+      onClick={() => trackWhatsAppClick(trackingLabel, chatFunnelRef())}
       className="group flex min-h-14 w-full items-center gap-3 rounded-2xl bg-brand py-2.5 pl-2.5 pr-4 text-left text-white transition hover:bg-brand/90 active:bg-brand/80 touch-manipulation"
     >
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/10">
@@ -267,6 +271,8 @@ function ChatVehicleMini({
             label,
             category: vehicle.category,
             href: vehicle.href,
+            transmission: vehicle.transmission,
+            price: vehicle.sold ? null : vehicle.price,
           },
         ],
         priceLimit: handoff?.priceLimit,
@@ -412,6 +418,8 @@ function ChatText({
                   label: vehicle.title,
                   category: vehicle.category,
                   href: vehicle.href,
+                  transmission: vehicle.transmission,
+                  price: vehicle.sold ? null : vehicle.price,
                 }))
               : handoff?.vehicles,
           priceLimit: handoff?.priceLimit,
@@ -464,6 +472,7 @@ function ChatText({
           href={cta.href}
           label={cta.label}
           benefit={cta.benefit}
+          trackingLabel={cta.trackingLabel}
         />
       ) : null}
       {followups.length > 0 && onFollowup ? (
@@ -994,8 +1003,10 @@ export function SiteChat() {
       });
     }
 
+    // Reenvio após erro: a tentativa anterior da mesma pergunta não conta duas vezes.
+    const priorMessages = withoutFailedAttempt(messages, mensagem);
     const nextHistory = [
-      ...messages,
+      ...priorMessages,
       { role: "user" as const, content: mensagem },
     ];
     setMessages(nextHistory);
@@ -1021,15 +1032,15 @@ export function SiteChat() {
       const data = await requestChatReply(
         {
           mensagem,
-          previousVehicleIds: lastShownChatVehicles(messages).map(vehicle => vehicle.id),
-          ...chatSearchContext(messages),
+          previousVehicleIds: lastShownChatVehicles(priorMessages).map(vehicle => vehicle.id),
+          ...chatSearchContext(priorMessages),
           vehicleId: resolveChatRequestVehicleId({
             mensagem,
             pageVehicleId: vehicleContext?.id,
-            lastSingleCardId: lastSingleChatVehicleId(messages),
-            shownCards: lastShownChatVehicles(messages),
+            lastSingleCardId: lastSingleChatVehicleId(priorMessages),
+            shownCards: lastShownChatVehicles(priorMessages),
           }),
-          historico: messages
+          historico: priorMessages
             .filter(
               (item, index) => index !== 0 || item.content !== OPENING.content,
             )
@@ -1372,11 +1383,7 @@ export function SiteChat() {
           </div>
 
           <p role="status" aria-live="polite" className="sr-only">
-            {pending
-              ? "Consultando sua pergunta"
-              : messages.length > 1
-                ? "Resposta disponível no chat"
-                : "Assistente aberto"}
+            {chatLiveAnnouncement(messages, pending)}
           </p>
           {showLatest ? <button type="button" data-chat-scroll-latest="" aria-label="Ver última resposta" title="Ver última resposta" className="absolute bottom-3 right-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-asphalt/90 text-cream shadow-lg backdrop-blur transition hover:border-brand hover:bg-brand active:scale-95 touch-manipulation animate-[fadeIn_.15s_ease_both] motion-reduce:animate-none" onClick={() => {
             followScrollRef.current = true; userScrolledUpRef.current = false; setShowLatest(false); scrollToLatest(true); listRef.current?.focus({ preventScroll: true });

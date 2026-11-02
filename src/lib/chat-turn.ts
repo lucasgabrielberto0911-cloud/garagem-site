@@ -12,6 +12,7 @@ import {
 } from "@/lib/chat-cards";
 import {
   isChatPing,
+  isGreetingOnly,
   isFipeQuestion,
   isOffScopeMessage,
   looksLikeOffScopeRedirect,
@@ -431,6 +432,11 @@ async function runChatTurnInternal(input: {
     const reply = offScopeReply(input.historico);
     emit(reply);
     return finish(reply, false, { cards: false, offScope: true });
+  }
+  // Cumprimento puro tem texto fixo: a IA já devolveu frases cortadas ("Que bom te ver por.").
+  if (isGreetingOnly(visitorMessage)) {
+    emit(CHAT_PING_REPLY);
+    return finish(CHAT_PING_REPLY, false, { cards: false, plain: true, policy: "greeting" });
   }
   if (isFipeQuestion(scopedMessage)) {
     emit(CHAT_FIPE_REPLY);

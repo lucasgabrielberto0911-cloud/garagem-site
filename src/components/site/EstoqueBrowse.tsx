@@ -152,9 +152,16 @@ export function EstoqueBrowse({
 }: {
   initialStock: StockPageResult;
 }) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState<string | null>(null);
+  useEffect(() => {
+    const syncFromLocation = () => {
+      setSearch(window.location.search.replace(/^\?/, ""));
+    };
+    window.addEventListener("popstate", syncFromLocation);
+    return () => window.removeEventListener("popstate", syncFromLocation);
+  }, []);
   const params = useMemo(
-    () => paramsToRecord(new URLSearchParams(search)),
+    () => paramsToRecord(new URLSearchParams(search ?? "")),
     [search],
   );
   const filtered = hasActiveFilters(params);
@@ -176,8 +183,9 @@ export function EstoqueBrowse({
   const shownResult = needsFetch ? result : {
     key: initialKey, stock: initialStock, params: {} as EstoqueSearchParams, version: 0,
   };
+  const hasFetchedFilterResult = !needsFetch || shownResult.key === filterKey || shownResult.version > 0;
   const shown = shownResult.stock;
-  const previousResults = (loading || Boolean(error)) && shown.vehicles.length > 0;
+  const previousResults = (loading || Boolean(error)) && hasFetchedFilterResult && shown.vehicles.length > 0;
   const requestId = useRef(0);
 
   useEffect(() => {
@@ -286,7 +294,7 @@ export function EstoqueBrowse({
         </p>
       ) : null}
       <div className="mt-1 lg:mt-4" data-estoque-list="" aria-live="polite" aria-busy={loading}>
-        {loading && shown.vehicles.length === 0 ? (
+        {loading && (!hasFetchedFilterResult || shown.vehicles.length === 0) ? (
           <VehicleCardSkeletonGrid count={6} largePhoto />
         ) : (
           <StockInfiniteList
@@ -296,7 +304,7 @@ export function EstoqueBrowse({
             pageSize={shown.pageSize ?? filters.pageSize ?? STOCK_PAGE_SIZE}
             query={shownQuery}
             returnTo={buildReturnTo(shownResult.params)}
-            paused={loading || Boolean(error)}
+            paused={search === null || loading || Boolean(error)}
             empty={
               <div data-stock-empty="" className="mx-auto max-w-2xl rounded-xl border border-white/15 bg-ink px-4 py-6 text-center sm:px-6 sm:py-10">
                 <p className="font-display text-lg font-semibold text-cream [overflow-wrap:anywhere]">

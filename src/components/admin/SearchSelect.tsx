@@ -49,7 +49,7 @@ export function SearchSelect<T extends SearchSelectItem>({
   const [loading, setLoading] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const requestId = useRef(0);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
 
   const closedLabel =
@@ -65,7 +65,7 @@ export function SearchSelect<T extends SearchSelectItem>({
     const id = ++requestId.current;
     const controller = new AbortController();
     setOptions([]);
-    setError(false);
+    setError("");
     setLoading(true);
     const handle = window.setTimeout(async () => {
       setLoading(true);
@@ -74,10 +74,10 @@ export function SearchSelect<T extends SearchSelectItem>({
         if (controller.signal.aborted || id !== requestId.current) return;
         setOptions(items);
         setHighlight(0);
-      } catch {
+      } catch (failure) {
         if (controller.signal.aborted || id !== requestId.current) return;
         setOptions([]);
-        setError(true);
+        setError(failure instanceof Error ? failure.message : "A busca falhou. Confira a conexão.");
       } finally {
         if (!controller.signal.aborted && id === requestId.current)
           setLoading(false);
@@ -186,7 +186,7 @@ export function SearchSelect<T extends SearchSelectItem>({
         >
           {error ? (
             <li role="presentation" className="p-3 text-sm">
-              <p role="alert">A busca falhou. Confira a conexão.</p>
+              <p role="alert">{error}</p>
               <button
                 type="button"
                 className="mt-2 min-h-11 text-brand"

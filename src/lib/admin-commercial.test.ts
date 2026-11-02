@@ -86,13 +86,13 @@ test("PDF com Sora e Inter preserva acentos e pagina condições longas", async 
   assert.equal(Buffer.from(bytes).subarray(0, 5).toString(), "%PDF-");
   const pdf = await PDFDocument.load(bytes);
   assert.ok(pdf.getPageCount() >= 2);
-  assert.equal(pdf.getTitle(), "Garagem — Contrato de compra e venda");
+  assert.equal(pdf.getTitle(), "Garagem — Proposta comercial");
 });
 test("recibo de sinal típico cabe em uma página e assina como a empresa", async () => {
   const data = { customer: "João Gonçalves", cpf: "123.456.789-09", phone: "27999990000", vehicle: "Citroën C3", plate: "ABC1D23", amount: 5000, total: 60000, payment: "Pix", conditions: "Reserva por 7 dias.", seller: "vendedor@exemplo.com", date: "2026-10-19T12:00:00Z", year: 2019, yearModel: 2020, color: "Prata", km: 48200 };
   const pdf = await PDFDocument.load(await commercialPdf("recibo", data, "teste-local"));
   assert.equal(pdf.getPageCount(), 1);
-  const contrato = await PDFDocument.load(await commercialPdf("proposta", data, "teste-local"));
+  const contrato = await PDFDocument.load(await commercialPdf("contrato", data, "teste-local"));
   assert.equal(contrato.getTitle(), "Garagem — Contrato de compra e venda");
 });
 test("recibo com dados no tamanho máximo e observação curta continua em uma página", async () => {
@@ -442,4 +442,17 @@ test("trocar o cliente limpa o RG digitado para não gravar no cliente errado", 
   assert.equal(rgAfterCustomerChange("a", "b", "12345"), "");
   assert.equal(rgAfterCustomerChange("a", "", "12345"), "");
   assert.equal(rgAfterCustomerChange("a", "a", "12345"), "12345");
+});
+
+test("contrato: promissória é preservada no parser e comparada pelos IDs sem depender da ordem", () => {
+  const payment = { method: "promissoria" as const, amount: 1500, noteIds: ["nota-2", "nota-1"] };
+  const parsed = parseContractPaymentsJson(JSON.stringify([payment]));
+  assert.deepEqual(parsed, [payment]);
+  assert.match(summarizeContractPayments([payment]), /Promissória/);
+  assert.match(formatContractPaymentRow(payment), /Promissórias/);
+  const sale = { customerId: "cliente", cpf: "52998224725", total: 1500, payments: [payment] };
+  const snapshot = { ...sale, payments: [{ ...payment, noteIds: ["nota-1", "nota-2"], notes: [{ id: "nota-1", number: 1, amount: 1500, dueDate: "2027-01-31" }] }] };
+  assert.equal(matchesSaleDocumentSnapshot(snapshot, sale), true);
+  assert.equal(matchesSaleDocumentSnapshot({ ...sale, payments: [{ ...payment, noteIds: ["nota-3"] }] }, sale), false);
+  assert.equal(sumContractPayments([payment, { method: "pix", amount: 0.01 }]), 1500.01);
 });

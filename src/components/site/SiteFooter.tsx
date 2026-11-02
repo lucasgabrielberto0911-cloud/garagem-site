@@ -81,7 +81,7 @@ export async function SiteFooter() {
                   <Link
                     href={link.href}
                     prefetch={false}
-                    className="inline-flex min-h-[36px] items-center text-sm text-muted transition hover:text-cream"
+                    className="inline-flex min-h-[44px] items-center text-sm text-muted transition hover:text-cream"
                   >
                     {link.label}
                   </Link>
@@ -100,7 +100,7 @@ export async function SiteFooter() {
                   <Link
                     href={service.href}
                     prefetch={false}
-                    className="inline-flex min-h-[36px] items-center text-sm text-muted transition hover:text-cream"
+                    className="inline-flex min-h-[44px] items-center text-sm text-muted transition hover:text-cream"
                   >
                     {service.label}
                   </Link>
@@ -128,7 +128,7 @@ export async function SiteFooter() {
                 <li key={phone.digits}>
                   <a
                     href={telUrl(index)}
-                    className="inline-flex min-h-[36px] items-center gap-2 transition hover:text-cream"
+                    className="inline-flex min-h-[44px] items-center gap-2 transition hover:text-cream"
                   >
                     <IconPhone className="h-4 w-4 shrink-0 text-brand-light" />
                     <span>{phone.label}</span>
@@ -139,7 +139,7 @@ export async function SiteFooter() {
                 <TrackedWhatsAppLink
                   href={whatsappUrl()}
                   trackingLabel="footer"
-                  className="inline-flex min-h-[36px] items-center gap-2 transition hover:text-cream"
+                  className="inline-flex min-h-[44px] items-center gap-2 transition hover:text-cream"
                 >
                   WhatsApp
                 </TrackedWhatsAppLink>
@@ -147,7 +147,7 @@ export async function SiteFooter() {
               <li>
                 <a
                   href={`mailto:${site.email}`}
-                  className="inline-flex min-h-[36px] items-center gap-2 transition hover:text-cream"
+                  className="inline-flex min-h-[44px] items-center gap-2 transition hover:text-cream"
                 >
                   <IconMail className="h-4 w-4 shrink-0 text-brand-light" />
                   <span className="flex flex-col">
@@ -162,7 +162,7 @@ export async function SiteFooter() {
                     href={mapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-[36px] items-center gap-2 transition hover:text-cream"
+                    className="inline-flex min-h-[44px] items-center gap-2 transition hover:text-cream"
                   >
                     <IconMapPin className="h-4 w-4 shrink-0 text-brand-light" />
                     <span>Google Maps</span>

@@ -30,6 +30,7 @@ test("busca de um card seguida por fotos/vídeo mantém o carro e o CTA correto"
     assert.doesNotMatch(result.reply, /Não achei|não está|vendido/);
     const cta = chatWhatsAppCta(result.reply, resolveChatWhatsAppVehicle(null, result.vehicles), { userText: mensagem });
     assert.equal(cta?.label, mensagem.includes("vídeo") ? "Pedir vídeo" : "Pedir mais fotos");
+    assert.equal(cta?.trackingLabel, mensagem.includes("vídeo") ? "chat-video" : undefined);
     assert.match(decodeURIComponent(cta?.href ?? ""), /City/);
     assert.doesNotMatch(decodeURIComponent(cta?.href ?? ""), /Onix|Civic|quando chegar/);
   }

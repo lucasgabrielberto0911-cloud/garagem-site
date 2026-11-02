@@ -1,5 +1,7 @@
 "use server";
 
+import { commercialStoreSnapshot } from "@/lib/commercial-store";
+
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -134,6 +136,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
         const rg = resolveIdField(form.has("rg"), ids.rg, customer.rg);
         const isContract = kind === "proposta" || kind === "contrato";
         const parsedPayments = isContract ? parseContractPaymentsJson(text("payments")) : undefined;
+        if (parsedPayments?.some((payment) => payment.method === "promissoria")) throw new CommercialError("Para usar promissórias, registre a venda pelo assistente em Vendas > Iniciar venda.");
         let paymentText = text("payment");
         if (!paymentText && parsedPayments) {
           paymentText = summarizeContractPayments(parsedPayments);
@@ -222,6 +225,7 @@ export async function saveCommercial(vehicleId: string, form: FormData): Promise
             vehicleId,
             kind,
             snapshot: {
+              store: commercialStoreSnapshot(),
               address: customer.address ?? "",
               signal,
               downPayment: downPayment && downPayment > 0 ? downPayment : undefined,

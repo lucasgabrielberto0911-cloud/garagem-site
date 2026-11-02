@@ -1,4 +1,19 @@
 export const SELL_PHOTO_TIMEOUT_MS = 60_000;
+export const MAX_SELL_PHOTOS = 10;
+export const MAX_SELL_PHOTO_BYTES = 15 * 1024 * 1024;
+
+export function limitSellPhotoSelection<T>(
+  currentCount: number,
+  incoming: readonly T[],
+  maxPhotos = MAX_SELL_PHOTOS,
+): { accepted: T[]; ignoredCount: number } {
+  const remaining = Math.max(0, maxPhotos - Math.max(0, currentCount));
+  const accepted = incoming.slice(0, remaining);
+  return {
+    accepted,
+    ignoredCount: Math.max(0, incoming.length - accepted.length),
+  };
+}
 
 /** Inclui a preparação local, que nem sempre responde ao AbortSignal. */
 export async function prepareSellPhoto(file: File, signal: AbortSignal, prepare: (file: File) => Promise<File>, timeoutMs = SELL_PHOTO_TIMEOUT_MS): Promise<File> {

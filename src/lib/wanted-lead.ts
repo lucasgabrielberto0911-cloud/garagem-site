@@ -4,7 +4,12 @@
  * O modelo pedido fica em vehicleInfo; valor máximo e dados antigos ficam nas observações.
  */
 
-import { formatCurrencyBRL, formatNumberBR } from "@/lib/format";
+import {
+  formatCurrencyBRL,
+  formatNumberBR,
+  isValidBrazilPhone,
+  normalizeBrazilPhoneDigits,
+} from "@/lib/format";
 import { WANTED_LEAD_SOURCE } from "@/lib/leads";
 import { isVehicleCuid } from "@/lib/vehicle-slug";
 
@@ -52,14 +57,7 @@ function text(data: FormData, key: string) {
 }
 
 function phoneDigits(value: string) {
-  let digits = value.replace(/\D/g, "");
-  if (
-    (digits.length === 12 || digits.length === 13) &&
-    digits.startsWith("55")
-  ) {
-    digits = digits.slice(2);
-  }
-  return digits;
+  return normalizeBrazilPhoneDigits(value);
 }
 
 function parseYear(raw: string): number | null | "invalid" {
@@ -187,7 +185,7 @@ export function parseWantedLeadForm(data: FormData): ParsedWantedLead {
   const interestVehicleId = isVehicleCuid(interestRaw) ? interestRaw : null;
 
   const fieldErrors: Record<string, string> = {};
-  if (phone.length < 10 || phone.length > 11) {
+  if (!isValidBrazilPhone(phone)) {
     fieldErrors.phone = "Informe um telefone com DDD.";
   }
 
