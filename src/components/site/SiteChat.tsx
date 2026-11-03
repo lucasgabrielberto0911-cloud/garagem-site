@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ChatBubbleBody } from "./ChatBubbleBody";
-import { publicPhotoSrc } from "@/lib/public-photo-url";
+import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChatVisitPanel } from "@/components/site/ChatVisitPanel";
@@ -294,7 +294,7 @@ function ChatVehicleMini({
       <Link href={vehicle.href} prefetch={false} onClick={() => onVehicleClick?.(vehicle)} aria-label={`${label} — ${chatVehiclePrice(vehicle)}. Abrir ficha`} className="absolute inset-0 rounded-xl touch-manipulation" />
       <span className="pointer-events-none relative aspect-[4/3] w-[72px] shrink-0 overflow-hidden rounded-lg bg-asphalt max-[359px]:w-16">
         {/* eslint-disable-next-line @next/next/no-img-element -- capa remota, sem cota /_next/image */}
-        <img src={publicPhotoSrc(photo)} alt="" width={144} height={108} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" onError={(event) => {
+        <img src={publicVehiclePhotoSrc(photo)} alt="" width={144} height={108} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" onError={(event) => {
           const image = event.currentTarget;
           if (image.dataset.fallbackUsed === "1") return;
           image.dataset.fallbackUsed = "1"; image.src = VEHICLE_PLACEHOLDER;

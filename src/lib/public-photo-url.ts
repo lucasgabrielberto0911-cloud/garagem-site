@@ -2,6 +2,7 @@
 import { galleryPreviewObjectPath } from "./gallery-preview-path";
 export const PHOTO_STORAGE_ORIGIN = "https://vesmqhyxautgtvgccweo.supabase.co";
 export const PUBLIC_PHOTO_PREFIX = "/fotos/v1/";
+export const VEHICLE_PHOTO_VARIANT = "1280-contain-q78";
 const OBJECT_PREFIX = "/storage/v1/object/public/veiculos/";
 const RENDER_PREFIX = "/storage/v1/render/image/public/veiculos/";
 
@@ -45,10 +46,18 @@ export function publicPhotoSrc(value: string): string {
   } catch { return value; }
 }
 
-export function publicPhotoSrcSet(value?: string) {
+/** Fotos de veículos nunca anunciam o original sem limite de resolução. */
+export function publicVehiclePhotoSrc(value: string): string {
+  const src = publicPhotoSrc(value);
+  const match = src.match(/^(https?:\/\/[^/]+)?(\/fotos\/v1\/original\/)(.+)$/);
+  if (!match || /-card(?:[.-]|$)/i.test(match[3]) || !validPublicPhotoKey(match[3].split("/"))) return src;
+  return `${match[1] ?? ""}${PUBLIC_PHOTO_PREFIX}${VEHICLE_PHOTO_VARIANT}/${match[3]}`;
+}
+
+export function publicPhotoSrcSet(value?: string, toSrc = publicPhotoSrc) {
   return value?.split(",").map(item => {
     const [url, ...descriptor] = item.trim().split(/\s+/);
-    return [publicPhotoSrc(url), ...descriptor].join(" ");
+    return [toSrc(url), ...descriptor].join(" ");
   }).join(", ");
 }
 
@@ -69,6 +78,7 @@ export function publicPhotoUpstream(parts: string[]) {
   const [version, variant, ...key] = parts;
   if (version !== "v1" || !validPublicPhotoKey(key)) return null;
   if (variant === "original") return PHOTO_STORAGE_ORIGIN + OBJECT_PREFIX + key.join("/");
+  if (variant === VEHICLE_PHOTO_VARIANT) return PHOTO_STORAGE_ORIGIN + OBJECT_PREFIX + key.join("/");
   if (!Object.hasOwn(PUBLIC_PHOTO_VARIANTS, variant)) return null;
   const preview = variant === "800-contain-q80" ? galleryPreviewObjectPath(key.join("/")) : null;
   if (preview) return PHOTO_STORAGE_ORIGIN + OBJECT_PREFIX + preview;

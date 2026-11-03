@@ -401,3 +401,13 @@ test("campos do pixel batem com o mesmo veículo do feed", () => {
   assert.equal(pixel.postal_code, "29900-000");
   assert.equal(pixel.exterior_color, "Branco");
 });
+
+test("JPG e PNG do Supabase passam pelo JPEG reduzido e cacheado do site", () => {
+  for (const extension of ["jpg", "png", "webp"]) {
+    const url = catalogFeedImageUrl("https://www.suagaragem.net", VEHICLE_CUID, {
+      id: "photoaaaaaaaaaaaaaaaaaa",
+      url: `https://vesmqhyxautgtvgccweo.supabase.co/storage/v1/object/public/veiculos/camera.${extension}`,
+    });
+    assert.equal(url, `https://www.suagaragem.net/api/catalog-jpg/${VEHICLE_CUID}/photoaaaaaaaaaaaaaaaaaa`);
+  }
+});

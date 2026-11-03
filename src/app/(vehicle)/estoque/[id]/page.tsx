@@ -1,6 +1,6 @@
 import { publicVehicleDescription } from "@/lib/public-vehicle-description";
 import type { Metadata } from "next";
-import { publicPhotoSrc } from "@/lib/public-photo-url";
+import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import Link from "next/link";
 import { RememberRecentVehicle } from "@/components/site/RememberRecentVehicle";
 import { Suspense } from "react";
@@ -107,7 +107,7 @@ export async function generateMetadata({
     siteName: site.name,
   });
   const rawCover = vehicle.photos[0]?.url;
-  const cover = rawCover ? absoluteUrl(publicPhotoSrc(rawCover)) : null;
+  const cover = rawCover ? absoluteUrl(publicVehiclePhotoSrc(rawCover)) : null;
   const path = vehiclePath(vehicle);
 
   return {

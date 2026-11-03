@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import samples from "./public-samples.json";
 import { vehiclePath } from "../src/lib/vehicle-slug";
-import { publicPhotoSrc } from "../src/lib/public-photo-url";
+import { publicVehiclePhotoSrc } from "../src/lib/public-photo-url";
 import { formatCurrencyBRL } from "../src/lib/format";
 import { buildVehicleFullLabel } from "../src/lib/vehicle-display";
 import { stockLandingLinks } from "../src/lib/stock-landings";
@@ -36,7 +36,7 @@ test("fichas têm metadados únicos, foto principal, Vehicle/Offer e navegação
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", origin + path);
     await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
     for (const selector of ['meta[property="og:image"]', 'meta[name="twitter:image"]']) {
-      await expect(page.locator(selector)).toHaveAttribute("content", origin + publicPhotoSrc(car.photos[0].url));
+      await expect(page.locator(selector)).toHaveAttribute("content", origin + publicVehiclePhotoSrc(car.photos[0].url));
     }
     await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", origin + path);
     await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", title);
@@ -49,7 +49,7 @@ test("fichas têm metadados únicos, foto principal, Vehicle/Offer e navegação
     expect(vehicle.name).toBe(buildVehicleFullLabel(car));
     expect(vehicle.offers).toMatchObject({ "@type": "Offer", price: car.price, priceCurrency: "BRL", availability: "https://schema.org/InStock", url: origin + path });
     expect(vehicle.mileageFromOdometer).toMatchObject({ value: car.km, unitCode: "KMT" });
-    expect(vehicle.image[0]).toBe(origin + publicPhotoSrc(car.photos[0].url));
+    expect(vehicle.image[0]).toBe(origin + publicVehiclePhotoSrc(car.photos[0].url));
     expect(vehicle).not.toHaveProperty("aggregateRating");
     expect(vehicle).not.toHaveProperty("locationCity");
     const breadcrumbs = schemas.find(schema => schema["@type"] === "BreadcrumbList").itemListElement;

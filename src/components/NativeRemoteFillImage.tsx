@@ -1,11 +1,13 @@
 "use client";
 
+import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
+
 import { supabaseOriginalSrc } from "@/lib/stock-query";
 import { RecoverableVehicleImage } from "@/components/RecoverableVehicleImage";
 
 /**
  * Capa remota sem o wrapper do next/image.
- * Se o recorte do Storage falhar, troca para o arquivo original.
+ * Se o recorte do Storage falhar, troca para a cópia pública limitada a 1280 px.
  */
 export function NativeRemoteFillImage({
   src,
@@ -52,7 +54,7 @@ export function NativeRemoteFillImage({
       onError={(event) => {
         const image = event.currentTarget;
         if (image.dataset.fallbackUsed === "1") return;
-        const fallback = supabaseOriginalSrc(image.currentSrc || image.src);
+        const fallback = publicVehiclePhotoSrc(supabaseOriginalSrc(image.currentSrc || image.src));
         if (!fallback || fallback === image.src) return;
         image.dataset.fallbackUsed = "1";
         // Sem isto o <picture> insistiria no recorte que acabou de falhar.
