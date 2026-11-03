@@ -1,3 +1,4 @@
+import { e2ePhotoFixture } from "./e2e-photo-fixture";
 import { encodeMasterJpeg } from "@/lib/photo-jpeg";
 import {
   masterObjectPathFromGalleryPath,
@@ -26,6 +27,8 @@ export async function downloadPrivateMaster(
   path: string,
 ): Promise<Uint8Array | null> {
   if (!isMasterPath(path)) return null;
+  const fixture = await e2ePhotoFixture();
+  if (fixture) return fixture;
   try {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase.storage

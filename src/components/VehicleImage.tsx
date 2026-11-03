@@ -1,5 +1,5 @@
 import { NativeRemoteFillImage } from "@/components/NativeRemoteFillImage";
-import { publicPhotoSrc, publicPhotoSrcSet } from "@/lib/public-photo-url";
+import { publicVehiclePhotoSrc, publicPhotoSrcSet } from "@/lib/public-photo-url";
 import { preload } from "react-dom";
 
 export const VEHICLE_PLACEHOLDER = "/branding/placeholder-car.png";
@@ -46,9 +46,9 @@ export function VehicleImage({
    */
   quality?: number;
 }) {
-  const finalSrc = publicPhotoSrc(src || VEHICLE_PLACEHOLDER);
-  const finalSet = publicPhotoSrcSet(srcSet);
-  const mobileSet = publicPhotoSrcSet(mobileSrcSet);
+  const finalSrc = publicVehiclePhotoSrc(src || VEHICLE_PLACEHOLDER);
+  const finalSet = publicPhotoSrcSet(srcSet, publicVehiclePhotoSrc);
+  const mobileSet = publicPhotoSrcSet(mobileSrcSet, publicVehiclePhotoSrc);
 
   // Só a capa do LCP entra no preload e na prioridade alta. A segunda
   // foto da primeira dobra ainda baixa cedo, mas com prioridade baixa,

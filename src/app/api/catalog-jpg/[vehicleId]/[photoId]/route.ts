@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loadGalleryJpeg } from "@/lib/photo-archive-download";
+import { loadCatalogJpeg } from "@/lib/photo-archive-download";
 import { prisma } from "@/lib/prisma";
 import { extractVehicleIdFromParam } from "@/lib/vehicle-slug";
 
@@ -37,7 +37,7 @@ export async function GET(
     return NextResponse.json({ error: "Foto não encontrada." }, { status: 404 });
   }
 
-  const bytes = await loadGalleryJpeg(photo.url);
+  const bytes = await loadCatalogJpeg(photo.url);
   if (!bytes) {
     return NextResponse.json(
       { error: "Não foi possível preparar o JPG." },

@@ -29,7 +29,13 @@ No Commerce Manager, substitua o upload manual por essa URL, mantenha o catálog
 
 ## Image Optimization
 
-A cota Hobby de `/_next/image` já esgotou neste projeto (`unoptimized: true` em `next.config.mjs`). Cards usam o WebP 480×300 gerado no upload (`thumbnailUrl`). Não religar o otimizador da Vercel sem upgrade de plano.
+A cota Hobby de `/_next/image` já esgotou neste projeto (`unoptimized: true` em `next.config.mjs`). Não religar sem verificar a cota: o erro 402 deixa o estoque sem fotos. `remotePatterns` só permite origens; não ativa otimização e não há loader personalizado.
+
+Fotos de veículos passam por `/fotos/v1/...`: cards usam o WebP 480×360 do upload; a cópia ampla e o fallback usam `1280-contain-q78`, reduzida pela Function com `sharp` e cacheada na CDN da Vercel. Essa cópia nunca entrega o master privado. Os recortes responsivos existentes e os previews `-g800-preview.webp` continuam funcionando. O cache da Vercel recebe `Vercel-CDN-Cache-Control`: um ano para cópias versionadas; 30 dias, sem `immutable`, para cards que o backfill pode regravar. Um cache MISS ainda transfere a fonte do Supabase; HIT não precisa buscá-la.
+
+Meta recebe JPEG de até 1280 px pelo site, inclusive para fontes JPG/PNG antigas do Supabase. O JPEG do catálogo mantém CDN de um dia; sitemap, JSON-LD e Open Graph anunciam a cópia pública reduzida. O zoom de até 2200 px só carrega por gesto, com cache próprio; downloads administrativos continuam autenticados.
+
+No E2E (`E2E_TEST=1` e banco local dedicado), as buscas do servidor em fotos públicas, arquivos e zoom usam `public/branding/placeholder-car.png`. Não basta interceptar `page.route`: o fetch Node da rota de fotos e `APIRequestContext` escapam dessa interceptação. Nenhuma foto real deve ser baixada para testes.
 
 ## Medir a primeira pintura (FCP/LCP) no celular
 

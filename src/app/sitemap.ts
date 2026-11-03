@@ -4,7 +4,7 @@ import { getStockLandingHistory } from "@/lib/stock-landing-data";
 import { stockLandingLinks } from "@/lib/stock-landings";
 import { BUYING_GUIDES } from "@/lib/buying-guides";
 import type { MetadataRoute } from "next";
-import { publicPhotoSrc } from "@/lib/public-photo-url";
+import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import { prisma } from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-errors";
 import { PUBLIC_SITEMAP_VEHICLE_WHERE } from "@/lib/public-stock";
@@ -92,7 +92,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const images = [
         ...new Set(
           vehicle.photos
-            .map((photo) => (photo.url ? absoluteUrl(publicPhotoSrc(photo.url)) : ""))
+            .map((photo) => (photo.url ? absoluteUrl(publicVehiclePhotoSrc(photo.url)) : ""))
             .filter(Boolean),
         ),
       ];

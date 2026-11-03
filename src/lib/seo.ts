@@ -1,6 +1,6 @@
 import { publicVehicleDescription } from "./public-vehicle-description";
 import type { Metadata } from "next";
-import { publicPhotoSrc } from "@/lib/public-photo-url";
+import { publicVehiclePhotoSrc } from "@/lib/public-photo-url";
 import { formatBrandName, formatModelName, vehicleSeoDescription } from "@/lib/format";
 import {
   publicGoogleUrl,
@@ -380,7 +380,7 @@ export function vehicleJsonLd(vehicle: {
   const images = [
     ...new Set(
       vehicle.photos
-        .map((photo) => (photo.url ? absoluteUrl(publicPhotoSrc(photo.url)) : ""))
+        .map((photo) => (photo.url ? absoluteUrl(publicVehiclePhotoSrc(photo.url)) : ""))
         .filter(Boolean),
     ),
   ];
