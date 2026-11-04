@@ -11,7 +11,7 @@ export function NotFoundContent() {
         Página não encontrada
       </h1>
       <div className="mx-auto mt-5 h-0.5 w-16 bg-brand-gradient" aria-hidden="true" />
-      <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-muted">
+      <p className="mx-auto mt-5 max-w-md font-body text-sm leading-relaxed text-muted">
         O link que você tentou acessar não existe, foi alterado ou o veículo já foi vendido.
         Veja as opções disponíveis no nosso estoque ou fale com a nossa equipe.
       </p>
