@@ -2,6 +2,7 @@ import { test as base, expect, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { randomInt, randomUUID } from "node:crypto";
+import { conferirRodapeDoAnuncio } from "./admin-form-footer";
 
 const database = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/");
 const local = process.env.E2E_TEST === "1" && ["localhost", "127.0.0.1", "[::1]"].includes(database.hostname) && ["/ci", "/garagem_e2e"].includes(database.pathname);
@@ -85,10 +86,13 @@ test("preenche pela FIPE sem placa, preserva fabricação e exige Usar para alte
   await page.screenshot({ path: test.info().outputPath("fipe-preco.png") });
   await page.getByRole("button", { name: /^Usar R\$/ }).click();
   await expect(page.locator('[name="priceDisplay"]')).toHaveValue("82.400,00");
+  await page.getByRole("button", { name: /^Usar média do estoque/ }).click();
+  await expect(page.locator('[name="priceDisplay"]')).toHaveValue("82.950,00");
   await step(page, 2);
   await page.locator('[name="yearModel"]').fill("2021");
   await step(page, 3);
   await expect(page.getByRole("button", { name: /^Usar R\$/ })).toBeHidden();
+  await expect(page.getByRole("button", { name: /^Usar média do estoque/ })).toBeHidden();
   await expect(page.getByRole("button", { name: "Consultar referência FIPE" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
 });
@@ -110,4 +114,16 @@ test("consulta só abre por intenção, recupera falha e fecha com Escape", asyn
   await page.getByRole("button", { name: "Buscar na FIPE", exact: true }).click();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
+});
+
+test("edição mantém Salvar visível nas quatro etapas", async ({ page, vehicleId }) => {
+  await page.goto(`/admin/veiculos/${vehicleId}`);
+  for (const number of [1, 2, 3, 4]) {
+    await step(page, number);
+    await conferirRodapeDoAnuncio(page);
+    const save = page.getByRole("navigation", { name: "Etapas do anúncio" })
+      .getByRole("button", { name: /^Salvar/ });
+    await expect(save).toBeVisible();
+    await expect(save).toBeInViewport();
+  }
 });
